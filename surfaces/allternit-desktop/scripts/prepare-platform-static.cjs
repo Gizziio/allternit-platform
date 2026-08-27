@@ -93,6 +93,16 @@ function checkRequiredBinaries() {
   log(`voice service present at ${voiceBin}`);
 }
 
+function loadCompanyClerkKey() {
+  const companyPath = path.resolve(desktopDir, '..', '..', 'resources', 'company.json');
+  try {
+    const company = JSON.parse(fs.readFileSync(companyPath, 'utf8'));
+    return company.clerkPublishableKey || '';
+  } catch {
+    return '';
+  }
+}
+
 function main() {
   checkRequiredBinaries();
 
@@ -107,7 +117,19 @@ function main() {
   // platform-auth-client.tsx). Without it, every packaged desktop build falls
   // through to requiring a full Clerk sign-in and the runtime-pairing screen
   // is a dead end even after pairing succeeds in the main process.
-  runBuild(platformDir, 'build', { CLOUDFLARE_PAGES: '1', NEXT_PUBLIC_ALLTERNIT_DESKTOP_AUTH: '1' });
+  const clerkKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || loadCompanyClerkKey();
+  const buildEnv = {
+    CLOUDFLARE_PAGES: '1',
+    NEXT_PUBLIC_ALLTERNIT_DESKTOP_AUTH: '1',
+    NEXT_PUBLIC_ALLTERNIT_CLOUD_API_URL: 'https://api.allternit.com',
+    NEXT_PUBLIC_CLERK_SIGN_IN_URL: 'https://platform.allternit.com/sign-in',
+    NEXT_PUBLIC_CLERK_SIGN_UP_URL: 'https://platform.allternit.com/sign-up',
+  };
+  if (clerkKey) {
+    buildEnv.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = clerkKey;
+    buildEnv.VITE_CLERK_PUBLISHABLE_KEY = clerkKey;
+  }
+  runBuild(platformDir, 'build', buildEnv);
   copyExport(path.join(platformDir, 'dist'), platformResourcesDir, 'Platform');
 }
 

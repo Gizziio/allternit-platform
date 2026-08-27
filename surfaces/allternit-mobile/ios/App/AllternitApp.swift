@@ -4,6 +4,7 @@ import ClerkKitUI
 
 @main
 struct AllternitApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var authManager = AuthManager.shared
     /// Platform mode state (chat/cowork/code/browser) + composer agent
     /// state, available environment-wide so every surface reads the same
@@ -14,15 +15,27 @@ struct AllternitApp: App {
     /// the root swap from OnboardingView to the workspace.
     @StateObject private var onboardingStore = OnboardingStore.shared
     @Environment(\.scenePhase) private var scenePhase
+    @State private var openedDocumentURL: URL?
 
     init() {
         AuthManager.shared.configure(publishableKey: AppConfig.clerkPublishableKey)
+        // Must register before this initializer returns — BGTaskScheduler
+        // requires the handler in place before app launch completes.
+        BackgroundRefreshManager.register()
         #if DEBUG
+        AuthManager.shared.seedSignInIfNeeded()
         // `-reset-onboarding` (DEBUG only): also clears the Phase-10
         // onboarding gate (the ChatView site clears the dictation/priming
         // flags). Clearing here means THIS launch lands on page 1.
         if CommandLine.arguments.contains("-reset-onboarding") {
             OnboardingStore.shared.reset()
+        }
+        // `-auto-skip-auth` (DEBUG only): jump straight into the workspace
+        // for UI regression screenshots. Simctl has no tap injection, so the
+        // normal sign-in/onboarding gates would block automation.
+        if CommandLine.arguments.contains("-auto-skip-auth") {
+            AuthManager.shared.skipAuth()
+            OnboardingStore.shared.complete()
         }
         #endif
     }
@@ -52,6 +65,19 @@ struct AllternitApp: App {
             .onChange(of: scenePhase) { _, newPhase in
                 if newPhase == .active {
                     authManager.refreshAuthState()
+                } else if newPhase == .background {
+                    BackgroundRefreshManager.scheduleNextRefresh()
+                }
+            }
+            .onOpenURL { url in
+                openedDocumentURL = url
+            }
+            .sheet(isPresented: Binding(
+                get: { openedDocumentURL != nil },
+                set: { if !$0 { openedDocumentURL = nil } }
+            )) {
+                if let url = openedDocumentURL {
+                    LocalDocumentView(fileURL: url)
                 }
             }
         }
@@ -59,7 +85,7 @@ struct AllternitApp: App {
 
     @ViewBuilder
     private var gatedContent: some View {
-        if authManager.isSignedIn || Self.skipAuthForTesting {
+        if authManager.isSignedIn || authManager.isSkippingAuth || Self.skipAuthForTesting {
             // Phase 10: first-launch onboarding runs BEFORE the workspace
             // (root swap — it never covers LoginGateView). Completing or
             // skipping flips `isComplete` and swaps in the workspace.
@@ -112,6 +138,7 @@ struct AllternitApp: App {
             || args.contains("-open-agent-sheet")
             || args.contains("-open-agent-hub")
             || args.contains("-open-agent-detail")
+            || args.contains("-open-bot-home-demo")
             || args.contains("-open-avatar-editor")
             || args.contains("-open-new-workspace-file")
             || args.contains("-open-workspace-file")
@@ -136,7 +163,8 @@ struct LoginGateView: View {
         VStack(spacing: 32) {
             Spacer()
 
-            // Logo with ambient glow matching LaunchHeader
+            // Wordmark with ambient glow matching LaunchHeader.
+            // The ATernitWordmark asset has light/dark appearance variants.
             ZStack {
                 Circle()
                     .fill(Color("AccentPrimary").opacity(logoGlowing ? 0.12 : 0.04))
@@ -144,16 +172,10 @@ struct LoginGateView: View {
                     .blur(radius: 35)
                     .animation(.easeInOut(duration: 2.5).repeatForever(autoreverses: true), value: logoGlowing)
 
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Text("A://")
-                        .foregroundColor(Color("AccentPrimary"))
-                        .font(.system(.title2, design: .monospaced))
-                        .bold()
-                    Text("LLTERNIT")
-                        .foregroundColor(Color("TextPrimary"))
-                        .font(.system(.title2, design: .serif))
-                        .tracking(4.0)
-                }
+                Image("ATernitWordmark")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(height: 30)
             }
 
             Text("Your native workspace for autonomous AI execution.")
@@ -198,6 +220,12 @@ struct LoginGateView: View {
             .disabled(!auth.isClerkConfigured)
             .opacity(auth.isClerkConfigured ? 1 : 0.5)
             .padding(.horizontal, 32)
+
+            Button(action: auth.skipAuth) {
+                Text("Continue without signing in")
+                    .font(.subheadline)
+                    .foregroundColor(Color("TextSecondary"))
+            }
             .padding(.bottom, 48)
         }
         .background(Color("BgPrimary").edgesIgnoringSafeArea(.all))

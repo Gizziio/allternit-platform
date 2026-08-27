@@ -1,0 +1,101 @@
+---
+title: Token & Cost Budgets
+description: Control spend with per-key budgets, token estimation, and usage monitoring
+---
+
+## Virtual key budgets
+
+Each virtual LLM key can have a monthly spend limit:
+
+```json
+{
+  "name": "production-key",
+  "budget_monthly_usd": 100,
+  "model_allowlist": ["gizzi-pro", "gizzi-fast"]
+}
+```
+
+When the budget is exhausted, the key is blocked until the next billing period. Set `budget_monthly_usd: 0` for unlimited spend.
+
+## Token estimation
+
+Estimate token count and cost before sending a request:
+
+```bash
+curl http://localhost:8013/api/v1/estimate \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gizzi-pro",
+    "input_tokens": 1000,
+    "output_tokens": 500
+  }'
+```
+
+Response:
+
+```json
+{
+  "model": "gizzi-pro",
+  "input_tokens": 1000,
+  "output_tokens": 500,
+  "estimated_cost_usd": 0.045,
+  "input_cost_per_1k": 0.03,
+  "output_cost_per_1k": 0.06
+}
+```
+
+## Usage monitoring
+
+Query usage by key, model, or time range:
+
+```bash
+curl http://localhost:8013/api/audit/usage \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN" \
+  -G -d "key_id=key_abc123&from=2026-08-01"
+```
+
+Each usage event includes:
+
+- Input/output token counts
+- Estimated cost
+- Model and provider
+- Latency
+- Routing decision
+
+## Budget alerts
+
+Configure webhook alerts when a key approaches its budget limit:
+
+```bash
+curl -X POST http://localhost:8013/api/admin/webhooks \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "event": "budget.warning",
+    "url": "https://my-app.com/webhooks/budget",
+    "threshold_percent": 80
+  }'
+```
+
+Events:
+
+| Event | Trigger |
+|-------|---------|
+| `budget.warning` | Key has used `threshold_percent` of its monthly budget |
+| `budget.exceeded` | Key has reached its monthly budget and is blocked |
+| `budget.reset` | Monthly budget counter has reset |
+
+## Tool call budgets
+
+For agent runs that use many tools, set a per-run token budget:
+
+```typescript
+const run = await client.agents.run(agent.id, {
+  input: 'Analyze the entire codebase',
+  max_tokens: 100000,
+  max_tool_calls: 50,
+});
+```
+
+When either limit is reached, the run is terminated with a `BUDGET_EXCEEDED` error.

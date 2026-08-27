@@ -8,8 +8,16 @@ import SwiftUI
 /// Code | ACI] tab list lives in the sidebar header instead
 /// (HistorySidebarView). Cowork is NOT a tab destination; it's a
 /// composer-level toggle inside Chats (BottomDock.tsx ChatCoworkToggle).
+extension Notification.Name {
+    /// Posted by BotHomeView when the user taps a task row or starts a new
+    /// chat/task for a bot. MainWorkspaceView switches to the Chats tab,
+    /// selects the session, and mounts the bot in the composer.
+    static let openChatSession = Notification.Name("com.allternit.openChatSession")
+}
+
 struct MainWorkspaceView: View {
     @EnvironmentObject private var modeStore: AppModeStore
+    @EnvironmentObject private var agentModeStore: AgentModeStore
     @State private var isSidebarOpen = false
     @State private var dragOffset: CGFloat = 0
     @State private var selectedSessionId: String? = nil
@@ -166,6 +174,19 @@ struct MainWorkspaceView: View {
             }
             #endif
         }
+        .onReceive(NotificationCenter.default.publisher(for: .openChatSession)) { notification in
+            guard let sessionId = notification.userInfo?["sessionId"] as? String else { return }
+            if let agentId = notification.userInfo?["agentId"] as? String {
+                agentModeStore.setAgentEnabled(true, for: .chat)
+                agentModeStore.selectAgentId(agentId, for: .chat)
+                agentModeStore.fetchAgentsIfNeeded(force: true)
+            }
+            selectedSessionId = sessionId
+            modeStore.selectBarItem(.chats)
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.86, blendDuration: 0)) {
+                isSidebarOpen = false
+            }
+        }
     }
 
     /// Drawer drag: swiping right from the left margin opens, dragging left
@@ -205,13 +226,13 @@ struct ModePlaceholderView: View {
         VStack(spacing: 16) {
             Image(systemName: mode.theme.icon)
                 .font(.system(size: 28, weight: .medium))
-                .foregroundColor(mode.theme.accent)
+                .foregroundColor(Color("TextSecondary"))
                 .frame(width: 64, height: 64)
-                .background(mode.theme.accentSoft)
+                .background(Color("BgPanel"))
                 .clipShape(RoundedRectangle(cornerRadius: Theme.radiusLG))
                 .overlay(
                     RoundedRectangle(cornerRadius: Theme.radiusLG)
-                        .stroke(mode.theme.accentGlow, lineWidth: 1)
+                        .stroke(Theme.borderWarmDefault, lineWidth: 1)
                 )
 
             Text("\(mode.label) mode — coming in UX-4")
@@ -224,7 +245,7 @@ struct ModePlaceholderView: View {
                 .foregroundColor(Color("TextSecondary"))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color("BgSecondary"))
+        .background(Color("BgPrimary"))
     }
 }
 
@@ -270,14 +291,14 @@ struct ChatView: View {
             VStack(spacing: 8) {
                 HStack(spacing: 8) {
                     if isInChat {
-                        floatingIcon("chevron.left") {
+                        floatingIcon("chevron.left", accessibilityLabel: "Back to new chat") {
                             selectedSessionId = nil
                             viewModel.startNewSession()
                             viewModel.isTemporaryChat = false
                         }
                     }
 
-                    floatingIcon("line.3.horizontal") {
+                    floatingIcon("line.3.horizontal", accessibilityLabel: "Open sidebar") {
                         isSidebarOpen.toggle()
                     }
 
@@ -286,14 +307,18 @@ struct ChatView: View {
                     // Incognito chat (Phase 6, Claude parity): starts an
                     // ephemeral session stamped `metadata.ephemeral` —
                     // excluded from history, purged on abort server-side.
-                    floatingIcon(Self.incognitoSymbolName, isActive: viewModel.isIncognito) {
+                    floatingIcon(
+                        Self.incognitoSymbolName,
+                        isActive: viewModel.isIncognito,
+                        accessibilityLabel: viewModel.isIncognito ? "Incognito chat active" : "Start incognito chat"
+                    ) {
                         selectedSessionId = nil
                         viewModel.startNewSession(ephemeral: true)
                     }
 
                     // Intelli-Schedule panel — only offered in Cowork mode.
                     if modeStore.mode == .cowork {
-                        floatingIcon("calendar.badge.clock") {
+                        floatingIcon("calendar.badge.clock", accessibilityLabel: "Open IntelliSchedule") {
                             isIntelliSchedulePresented = true
                         }
                     }
@@ -333,7 +358,12 @@ struct ChatView: View {
         #endif
     }
 
-    private func floatingIcon(_ systemName: String, isActive: Bool = false, action: @escaping () -> Void) -> some View {
+    private func floatingIcon(
+        _ systemName: String,
+        isActive: Bool = false,
+        accessibilityLabel: String? = nil,
+        action: @escaping () -> Void
+    ) -> some View {
         Button(action: {
             let generator = UIImpactFeedbackGenerator(style: .medium)
             generator.impactOccurred()
@@ -367,6 +397,7 @@ struct ChatView: View {
                 )
                 .shadow(color: isActive ? Color("AccentPrimary").opacity(0.25) : Color.black.opacity(0.10), radius: 10, y: 3)
         }
+        .accessibilityLabel(accessibilityLabel ?? systemName)
     }
 }
 
@@ -721,6 +752,14 @@ struct ChatContentView: View {
                 },
                 onVoiceMode: {
                     isVoiceModePresented = true
+                },
+                onAgentModeChanged: { isOn in
+                    if isOn, viewModel.currentSessionId == nil, viewModel.messages.isEmpty {
+                        // Mount a fresh bot session context when there is no
+                        // active conversation so the first message creates a
+                        // session bound to the selected/default bot.
+                        viewModel.startNewSession()
+                    }
                 }
             )
             .background(Color("BgSecondary"))
@@ -872,6 +911,7 @@ private enum DeckMotion {
 private func toolbarIconButton(
     _ systemName: String,
     tint: Color? = nil,
+    accessibilityLabel: String? = nil,
     action: @escaping () -> Void
 ) -> some View {
     Button(action: {
@@ -886,6 +926,7 @@ private func toolbarIconButton(
             .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
+    .accessibilityLabel(accessibilityLabel ?? systemName)
 }
 
 /// The platform composer: one card holding the editor and a toolbar row,
@@ -920,6 +961,9 @@ struct ComposerView: View {
     let onDictationError: (String) -> Void
     /// Waveform button (Phase 7b): presents the full-screen voice mode.
     let onVoiceMode: () -> Void
+    /// Called whenever the agent/bot toggle changes state so the host can
+    /// mount or unmount a bot session context.
+    var onAgentModeChanged: ((Bool) -> Void)? = nil
 
     @EnvironmentObject private var modeStore: AppModeStore
     @EnvironmentObject private var agentModeStore: AgentModeStore
@@ -1114,6 +1158,7 @@ struct ComposerView: View {
                 // mode-injected starter text leaves with the chip.
                 inputText = ""
             }
+            onAgentModeChanged?(on)
         }
         .onChange(of: dictation.transcript) { _, transcript in
             // Live partials replace the tail of the field; the base keeps
@@ -1182,7 +1227,7 @@ struct ComposerView: View {
                 // Opens the "+" sheet (ComposerPlusSheet): attachments
                 // (camera/photos/files), tool toggles, tool access, and
                 // the Connectors entry — Claude iOS "Add to Chat" parity.
-                toolbarIconButton("plus") {
+                toolbarIconButton("plus", accessibilityLabel: "Add attachment") {
                     isPlusSheetPresented = true
                 }
 
@@ -1195,21 +1240,25 @@ struct ComposerView: View {
                 // Cowork workspace launchpad — opens the full workspace when
                 // in Cowork mode and no session is active.
                 if !hasActiveSession, mode == .cowork {
-                    toolbarIconButton("arrow.up.forward.square") {
+                    toolbarIconButton("arrow.up.forward.square", accessibilityLabel: "Open cowork workspace") {
                         isCoworkWorkspacePresented = true
                     }
                 }
 
-                // Agent On/Off toggle — plain cpu icon. Not offered in code
-                // mode: the terminal session has no agent deck.
+                // Agent | Bot toggle chip. Not offered in code mode: the
+                // terminal session has no agent deck.
                 if !isTerminal {
-                    AgentPill()
+                    AgentBotChip()
                 }
 
                 Spacer(minLength: 2)
 
                 // Dictation mic: plain icon, red while recording.
-                toolbarIconButton(dictation.isRecording ? "mic.fill" : "mic", tint: dictation.isRecording ? .red : nil) {
+                toolbarIconButton(
+                    dictation.isRecording ? "mic.fill" : "mic",
+                    tint: dictation.isRecording ? .red : nil,
+                    accessibilityLabel: dictation.isRecording ? "Stop dictation" : "Start dictation"
+                ) {
                     toggleDictation()
                 }
                 .symbolEffect(.pulse, isActive: dictation.isRecording)
@@ -1236,6 +1285,7 @@ struct ComposerView: View {
                     .frame(height: 26)
                     .frame(maxWidth: 78)
                 }
+                .accessibilityLabel("Select model")
 
                 if isStreaming {
                     Button(action: onStop) {
@@ -1253,6 +1303,7 @@ struct ComposerView: View {
                                 .clipShape(Circle())
                         }
                     }
+                    .accessibilityLabel("Stop generating")
                 } else if canSend {
                     Button(action: sendTapped) {
                         if isTerminal {
@@ -1270,6 +1321,7 @@ struct ComposerView: View {
                                 .clipShape(Circle())
                         }
                     }
+                    .accessibilityLabel("Send message")
                 }
             }
         }
@@ -1406,69 +1458,113 @@ struct ComposerView: View {
 
 // MARK: - Chat / Cowork toggle
 
-/// Icon-only 28pt segmented pair [Chat | Cowork] (BottomDock.tsx
-/// ChatCoworkToggle, lines 18-63). Cowork is a composer-level mode, not a
-/// tab: selecting it sets the app mode (accent turns purple, the top deck
-/// appears); selecting Chat returns. Pre-session only — the caller hides it
-/// once a session is active.
+/// Single capsule toggle for Chat/Cowork (BottomDock.tsx ChatCoworkToggle).
+/// Cowork is a composer-level mode, not a tab: tapping cycles between Chat
+/// and Cowork, the active mode gets the mode accent and soft fill, and the
+/// top deck appears for Cowork. Pre-session only — the caller hides it once
+/// a session is active.
 struct ChatCoworkToggle: View {
     @EnvironmentObject private var modeStore: AppModeStore
 
-    var body: some View {
-        HStack(spacing: 0) {
-            segment(mode: .chat, icon: "message", label: "Chat")
-            Rectangle()
-                .fill(Theme.borderWarmDefault)
-                .frame(width: 1, height: 14)
-            segment(mode: .cowork, icon: "person.3", label: "Cowork")
-        }
-        .frame(height: 26)
-        .clipShape(RoundedRectangle(cornerRadius: 7))
-        .overlay(
-            RoundedRectangle(cornerRadius: 7)
-                .stroke(Theme.borderWarmDefault, lineWidth: 1)
-        )
-    }
+    private var isCowork: Bool { modeStore.mode == .cowork }
+    private var activeMode: AppMode { isCowork ? .cowork : .chat }
 
-    private func segment(mode: AppMode, icon: String, label: String) -> some View {
-        let isActive = modeStore.mode == mode
-        return Button(action: {
-            let generator = UIImpactFeedbackGenerator(style: .light)
-            generator.impactOccurred()
-            modeStore.mode = mode
-        }) {
-            Image(systemName: icon)
-                .font(.system(size: 11, weight: .semibold))
-            // Active = soft bg + mode accent (web bg-composer-soft);
-            // inactive = muted.
-            .foregroundColor(isActive ? mode.theme.accent : Color("TextSecondary"))
+    var body: some View {
+        Button(action: toggle) {
+            HStack(spacing: 6) {
+                Image(systemName: isCowork ? "person.3" : "message")
+                    .font(.system(size: 11, weight: .semibold))
+                Text(isCowork ? "Cowork" : "Chat")
+                    .font(.system(size: 11, weight: .semibold))
+            }
+            .foregroundColor(isCowork ? activeMode.theme.accent : Color("TextSecondary"))
             .padding(.horizontal, 10)
             .frame(height: 26)
-            .background(isActive ? mode.theme.accentSoft : Color.clear)
-            .contentShape(Rectangle())
+            .background(isCowork ? activeMode.theme.accentSoft : Color.clear)
+            .clipShape(Capsule())
+            .overlay(
+                Capsule()
+                    .stroke(Theme.borderWarmDefault, lineWidth: 1)
+            )
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(label)
+        .accessibilityLabel("Switch to \(isCowork ? "Chat" : "Cowork")")
+    }
+
+    private func toggle() {
+        let generator = UIImpactFeedbackGenerator(style: .light)
+        generator.impactOccurred()
+        modeStore.mode = isCowork ? .chat : .cowork
     }
 }
 
-// MARK: - Agent pill
+// MARK: - Agent | Bot toggle chip
 
-/// Agent On/Off toggle — plain icon, no bubble border or "Agent" label.
-/// Tapping the robot icon toggles agent mode for the current surface.
-struct AgentPill: View {
+/// Bot Off / Bot On chip. Tapping toggles agent mode for the current surface.
+/// When on, the chip shows the selected agent's avatar (or the default sparkles
+/// glyph) and opens the agent/bot selection sheet on a secondary tap.
+struct AgentBotChip: View {
     @EnvironmentObject private var modeStore: AppModeStore
     @EnvironmentObject private var agentModeStore: AgentModeStore
+    @State private var isSelectionSheetPresented = false
 
     private var mode: AppMode { modeStore.mode }
     private var theme: ModeTheme { mode.theme }
     private var agentOn: Bool { agentModeStore.isAgentEnabled(for: mode) }
+    private var selectedAgent: AgentRecord? { agentModeStore.selectedAgent(for: mode) }
 
     var body: some View {
-        toolbarIconButton("cpu", tint: agentOn ? theme.accent : Color("TextSecondary")) {
-            agentModeStore.toggleAgent(for: mode)
+        Button(action: {
+            let generator = UIImpactFeedbackGenerator(style: .light)
+            generator.impactOccurred()
+            if agentOn {
+                isSelectionSheetPresented = true
+            } else {
+                agentModeStore.toggleAgent(for: mode)
+            }
+        }) {
+            HStack(spacing: 6) {
+                if agentOn {
+                    Image("GizziMascot")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 18, height: 18)
+                        .clipShape(Circle())
+                    Text("Bot on")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(theme.accent)
+                } else {
+                    Image(systemName: "cpu")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(Color("TextSecondary"))
+                    Text("Bot off")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(Color("TextSecondary"))
+                }
+            }
+            .padding(.horizontal, 10)
+            .frame(height: 26)
+            .background(
+                Capsule()
+                    .fill(agentOn ? theme.accentSoft : Color("BgPanel").opacity(0.55))
+                    .background(.ultraThinMaterial, in: Capsule())
+            )
+            .overlay(
+                Capsule()
+                    .stroke(agentOn ? theme.accentGlow : Color("BorderSubtle").opacity(0.55), lineWidth: 1)
+            )
         }
-        .accessibilityLabel(agentOn ? "Agent on" : "Agent off")
+        .buttonStyle(.plain)
+        .layoutPriority(1)
+        .accessibilityLabel(agentOn ? "Bot on" : "Bot off")
+        .sheet(isPresented: $isSelectionSheetPresented) {
+            AgentSelectionSheet()
+        }
+        .onLongPressGesture {
+            let generator = UIImpactFeedbackGenerator(style: .light)
+            generator.impactOccurred()
+            agentModeStore.setAgentEnabled(false, for: mode)
+        }
     }
 }
 
@@ -1695,7 +1791,8 @@ private struct ComposerTextView: UIViewRepresentable {
 // MARK: - Deck pill chrome
 
 /// Shared deck-pill chrome (project / permission / agent selectors): a
-/// compact capsule so the tray stays a sliver above the composer card.
+/// compact glass capsule so the tray stays a sliver above the composer card.
+/// Text uses the primary color for legibility against the blurred backing.
 private func deckPill(icon: String, iconColor: Color, text: String) -> some View {
     HStack(spacing: 4) {
         Image(systemName: icon)
@@ -1703,7 +1800,7 @@ private func deckPill(icon: String, iconColor: Color, text: String) -> some View
             .foregroundColor(iconColor)
         Text(text)
             .font(.system(size: 10, weight: .semibold))
-            .foregroundColor(Color("TextSecondary"))
+            .foregroundColor(Color("TextPrimary"))
             .lineLimit(1)
             .frame(maxWidth: 88)
         Image(systemName: "chevron.down")
@@ -1711,11 +1808,14 @@ private func deckPill(icon: String, iconColor: Color, text: String) -> some View
             .foregroundColor(Color("TextSecondary"))
             .opacity(0.7)
     }
-    .padding(.horizontal, 7)
-    .frame(height: 22)
-    .background(Color("BgSecondary"))
-    .clipShape(Capsule())
-    .overlay(Capsule().stroke(Theme.borderWarmDefault, lineWidth: 1))
+    .padding(.horizontal, 8)
+    .frame(height: 24)
+    .background(
+        Capsule()
+            .fill(Color("BgSecondary").opacity(0.45))
+            .background(.ultraThinMaterial, in: Capsule())
+    )
+    .overlay(Capsule().stroke(Color("BorderSubtle").opacity(0.55), lineWidth: 1))
 }
 
 // MARK: - Agent selection menu
@@ -1789,13 +1889,15 @@ struct CoworkTopDeck: View {
         .padding(.bottom, 12) // tucked portion hidden under the card
         .frame(height: 56)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color("BgPanel"))
-        .clipShape(
+        .background(
             UnevenRoundedRectangle(topLeadingRadius: Theme.radiusLG, topTrailingRadius: Theme.radiusLG)
+                .fill(Color("BgPanel").opacity(0.72))
+                .background(.ultraThinMaterial, in:
+                    UnevenRoundedRectangle(topLeadingRadius: Theme.radiusLG, topTrailingRadius: Theme.radiusLG))
         )
         .overlay(
             UnevenRoundedRectangle(topLeadingRadius: Theme.radiusLG, topTrailingRadius: Theme.radiusLG)
-                .stroke(Theme.borderWarmDefault, lineWidth: 1)
+                .stroke(Color("BorderSubtle").opacity(0.55), lineWidth: 1)
         )
         .padding(.bottom, -12) // the card overlaps the deck's bottom
         .onAppear {
@@ -1874,13 +1976,15 @@ struct AgentTopDeck: View {
         .padding(.bottom, 12) // tucked portion hidden under the card
         .frame(height: 56)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color("BgPanel"))
-        .clipShape(
+        .background(
             UnevenRoundedRectangle(topLeadingRadius: Theme.radiusLG, topTrailingRadius: Theme.radiusLG)
+                .fill(Color("BgPanel").opacity(0.72))
+                .background(.ultraThinMaterial, in:
+                    UnevenRoundedRectangle(topLeadingRadius: Theme.radiusLG, topTrailingRadius: Theme.radiusLG))
         )
         .overlay(
             UnevenRoundedRectangle(topLeadingRadius: Theme.radiusLG, topTrailingRadius: Theme.radiusLG)
-                .stroke(Theme.borderWarmDefault, lineWidth: 1)
+                .stroke(Color("BorderSubtle").opacity(0.55), lineWidth: 1)
         )
         .padding(.bottom, -12) // the card overlaps the deck's bottom
         .onAppear { agentModeStore.fetchAgentsIfNeeded() }
@@ -1916,117 +2020,99 @@ struct AgentModeBottomDeck: View {
                 collapsedTemplates
             }
         }
-        .background(Color("BgPanel"))
-        .clipShape(
+        .background(
             UnevenRoundedRectangle(bottomLeadingRadius: Theme.radiusLG, bottomTrailingRadius: Theme.radiusLG)
+                .fill(Color("BgPanel").opacity(0.72))
+                .background(.ultraThinMaterial, in:
+                    UnevenRoundedRectangle(bottomLeadingRadius: Theme.radiusLG, bottomTrailingRadius: Theme.radiusLG))
         )
         .overlay(
             UnevenRoundedRectangle(bottomLeadingRadius: Theme.radiusLG, bottomTrailingRadius: Theme.radiusLG)
-                .stroke(Theme.borderWarmDefault, lineWidth: 1)
+                .stroke(Color("BorderSubtle").opacity(0.55), lineWidth: 1)
         )
         .padding(.top, -12) // the card overlaps the deck's top
         .zIndex(0)
         .animation(DeckMotion.animation, value: expanded)
     }
 
-    /// Expanded: one row of 3 tiles at a time — the rest of the 3-column
-    /// grid scrolls vertically (a sliver of the next row hints at it).
+    /// Expanded: a wrapping grid of mode pills so every tile is reachable
+    /// without a horizontal tab strip.
     private var expandedTiles: some View {
-        ScrollView(.vertical, showsIndicators: false) {
-            LazyVGrid(
-                columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3),
-                spacing: 8
-            ) {
-                ForEach(AgentModeTile.visibleTiles(for: surface), id: \.self) { tile in
-                    tileButton(tile)
-                }
+        let tiles = AgentModeTile.visibleTiles(for: surface)
+        return LazyVGrid(
+            columns: [GridItem(.adaptive(minimum: 80), spacing: 8)],
+            spacing: 8
+        ) {
+            ForEach(tiles, id: \.self) { tile in
+                modeTab(tile)
             }
-            .padding(.horizontal, 12)
         }
-        .frame(height: 72) // one row (58) + a peek at the next
+        .padding(.horizontal, 12)
         .padding(.top, 16) // tucked portion hidden under the card
         .padding(.bottom, 10)
     }
 
     /// Collapsed: full-width deck listing the selected mode's templates as
-    /// stacked rows. Stays compact at ~2 rows with a sliver of the third
-    /// peeking in as the scroll affordance; the rest scroll vertically.
+    /// horizontally scrolling chips. Tapping a chip fills the composer.
     private var collapsedTemplates: some View {
-        ScrollView(.vertical, showsIndicators: false) {
-            VStack(spacing: 6) {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
                 ForEach(tile.templates, id: \.self) { template in
                     Button(action: {
                         let generator = UIImpactFeedbackGenerator(style: .light)
                         generator.impactOccurred()
                         inputText = template
                     }) {
-                        HStack(spacing: 8) {
+                        HStack(spacing: 6) {
                             Image(systemName: "sparkles")
-                                .font(.system(size: 11, weight: .semibold))
+                                .font(.system(size: 10, weight: .semibold))
                                 .foregroundColor(tile.color)
                             Text(template)
-                                .font(.system(size: 13, weight: .medium, design: isTerminal ? .monospaced : .default))
+                                .font(.system(size: 12, weight: .medium, design: isTerminal ? .monospaced : .default))
                                 .foregroundColor(Color("TextPrimary"))
                                 .lineLimit(1)
-                                .truncationMode(.tail)
-                            Spacer(minLength: 4)
-                            Image(systemName: "arrow.up.left")
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundColor(Color("TextSecondary"))
-                                .opacity(0.6)
                         }
                         .padding(.horizontal, 12)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 38)
-                        .background(Color("BgSecondary"))
-                        .clipShape(RoundedRectangle(cornerRadius: Theme.radiusMD))
+                        .frame(height: 32)
+                        .background(Color("BgSecondary").opacity(0.55))
+                        .clipShape(Capsule())
                         .overlay(
-                            RoundedRectangle(cornerRadius: Theme.radiusMD)
+                            Capsule()
                                 .stroke(Theme.borderWarmDefault, lineWidth: 1)
                         )
-                        .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                 }
             }
             .padding(.horizontal, 12)
         }
-        // 2 rows (38 + 6 spacing each) + a sliver of the 3rd so it's clear
-        // there's more; ~70pt of scroll travel reaches the rest.
-        .frame(height: 100)
+        .frame(height: 44)
         .padding(.top, 16) // tucked portion hidden under the card
         .padding(.bottom, 12)
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// One grid cell: icon over label, centered, full column width. The
-    /// selected tile keeps its accent tint + border.
-    private func tileButton(_ tile: AgentModeTile) -> some View {
+    /// One mode tab: icon + label, tinted when selected.
+    @ViewBuilder
+    private func modeTab(_ tile: AgentModeTile) -> some View {
         let isSelected = agentModeStore.selectedTile(for: surface) == tile
-        return Button(action: {
+        Button(action: {
             let generator = UIImpactFeedbackGenerator(style: .light)
             generator.impactOccurred()
             agentModeStore.selectTile(tile, for: surface)
             inputText = tile.taskPrompt
         }) {
-            VStack(spacing: 5) {
+            HStack(spacing: 5) {
                 Image(systemName: tile.icon)
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: 12, weight: .semibold))
                 Text(tile.label)
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: 12, weight: .semibold))
                     .lineLimit(1)
-                    .minimumScaleFactor(0.8)
             }
             .foregroundColor(isSelected ? tile.color : Color("TextSecondary"))
-            .frame(maxWidth: .infinity)
-            .frame(height: 58)
-            .background(isSelected ? tile.color.opacity(0.15) : Color.clear)
-            .clipShape(RoundedRectangle(cornerRadius: Theme.radiusMD))
-            .overlay(
-                RoundedRectangle(cornerRadius: Theme.radiusMD)
-                    .stroke(isSelected ? tile.color.opacity(0.45) : Theme.borderWarmSubtle, lineWidth: 1)
-            )
-            .contentShape(Rectangle())
+            .padding(.horizontal, 10)
+            .frame(height: 30)
+            .background(isSelected ? tile.color.opacity(0.14) : Color.clear)
+            .clipShape(Capsule())
         }
         .buttonStyle(.plain)
     }
@@ -2133,6 +2219,7 @@ struct EmptyChatStateView: View {
                     .resizable()
                     .scaledToFit()
                     .frame(width: 160, height: 160)
+                    .colorMultiply(Color("TextPrimary"))
                     .shadow(color: Color("AccentPrimary").opacity(0.15), radius: 12, y: 4)
             }
             .padding(.bottom, 24)
@@ -2369,17 +2456,23 @@ private struct TerminalCursor: View {
 
 // MARK: - Gizzi mascot
 
-/// Gizzi mascot perched on the top edge of the composer bar while agent
+/// Agent/bot mascot perched on the top edge of the composer bar while agent
 /// mode is active. It follows the user's finger: touch and drag along the
-/// bar and Gizzi walks that way (leaning into the direction), staying where
+/// bar and it walks that way (leaning into the direction), staying where
 /// it's left — no autonomous movement.
+///
+/// When a default bot is selected, the mascot shows that bot's avatar;
+/// otherwise it falls back to the classic Gizzi image.
 private struct GizziMascotPill: View {
+    @EnvironmentObject private var modeStore: AppModeStore
+    @EnvironmentObject private var agentModeStore: AgentModeStore
+
     /// Committed walk position along the bar (points from center).
     @State private var walkOffset: CGFloat = 0
     /// Live drag translation while a finger is down.
     @GestureState private var dragOffset: CGFloat = 0
 
-    /// Farthest Gizzi may roam from center — keeps it on the composer card.
+    /// Farthest the mascot may roam from center — keeps it on the composer card.
     private let maxWalk: CGFloat = 150
     /// Resting perch, near the card's right corner: clear of the top-deck
     /// pills that hug the card's leading edge when agent mode is on.
@@ -2389,29 +2482,40 @@ private struct GizziMascotPill: View {
         restX + min(max(walkOffset + dragOffset, -maxWalk - restX), maxWalk - restX)
     }
 
+    private var selectedAgent: AgentRecord? {
+        agentModeStore.selectedAgent(for: modeStore.mode)
+    }
+
     var body: some View {
-        Image("GizziMascot")
-            .resizable()
-            .scaledToFit()
-            .frame(width: 44, height: 44)
-            // Lean into the walk direction while being dragged.
-            .rotationEffect(.degrees(dragOffset == 0 ? 0 : (dragOffset > 0 ? 7 : -7)))
-            // Feet sit on the top edge of the card (a few points inside so it
-            // looks grounded, not hovering).
-            .offset(x: totalOffset, y: -38)
-            .contentShape(Rectangle())
-            .gesture(
-                DragGesture(minimumDistance: 3)
-                    .updating($dragOffset) { value, state, _ in
-                        state = value.translation.width
+        Group {
+            if let agent = selectedAgent {
+                AgentAvatarView(agent: agent, size: 44)
+                    .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+            } else {
+                Image("GizziMascot")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 44, height: 44)
+            }
+        }
+        // Lean into the walk direction while being dragged.
+        .rotationEffect(.degrees(dragOffset == 0 ? 0 : (dragOffset > 0 ? 7 : -7)))
+        // Feet sit on the top edge of the card (a few points inside so it
+        // looks grounded, not hovering).
+        .offset(x: totalOffset, y: -38)
+        .contentShape(Rectangle())
+        .gesture(
+            DragGesture(minimumDistance: 3)
+                .updating($dragOffset) { value, state, _ in
+                    state = value.translation.width
+                }
+                .onEnded { value in
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.72)) {
+                        walkOffset = min(max(walkOffset + value.translation.width, -maxWalk - restX), maxWalk - restX)
                     }
-                    .onEnded { value in
-                        withAnimation(.spring(response: 0.4, dampingFraction: 0.72)) {
-                            walkOffset = min(max(walkOffset + value.translation.width, -maxWalk - restX), maxWalk - restX)
-                        }
-                    }
-            )
-            .transition(.scale.combined(with: .opacity))
-            .accessibilityLabel("Gizzi")
+                }
+        )
+        .transition(.scale.combined(with: .opacity))
+        .accessibilityLabel(selectedAgent?.name ?? "Gizzi")
     }
 }

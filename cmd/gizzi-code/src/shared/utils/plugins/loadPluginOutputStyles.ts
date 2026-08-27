@@ -9,7 +9,6 @@ import {
   parseFrontmatter,
 } from '../frontmatterParser.js'
 import { getFsImplementation, isDuplicatePath } from '../fsOperations.js'
-import { extractDescriptionFromMarkdown } from '../markdownConfigLoader.js'
 import { loadAllPluginsCacheOnly } from './pluginLoader.js'
 import { walkPluginMarkdown } from './walkPluginMarkdown.js'
 
@@ -56,7 +55,9 @@ async function loadOutputStyleFromFile(
     const name = `${pluginName}:${baseStyleName}`
     const description =
       coerceDescriptionToString(frontmatter.description, name) ??
-      extractDescriptionFromMarkdown(
+      (
+        await import('../markdownConfigLoader.js')
+      ).extractDescriptionFromMarkdown(
         markdownContent,
         `Output style from ${pluginName} plugin`,
       )

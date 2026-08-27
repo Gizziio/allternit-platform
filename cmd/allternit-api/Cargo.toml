@@ -34,6 +34,8 @@ allternit-gc-agents = { workspace = true }
 # Internal crates - Execution
 allternit-driver-interface = { path = "../../platform/contracts/driver-interface" }
 allternit-firecracker-driver = { path = "../../drivers/firecracker" }
+allternit-apple-vf-driver = { path = "../../drivers/apple-vf" }
+allternit-opensandbox-driver = { path = "../../drivers/opensandbox" }
 allternit-session-manager = { path = "../../services/session-manager" }
 
 # WebSocket
@@ -48,6 +50,7 @@ refinery = { version = "0.9", features = ["rusqlite"] }
 uuid = { version = "1", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 thiserror = "1"
+rand = "0.8"
 anyhow = "1"
 dirs = "5"
 jsonwebtoken = "10"
@@ -56,6 +59,7 @@ async-trait = "0.1"
 hostname = "0.4"
 hex = "0.4"
 once_cell = { workspace = true }
+rustls-pemfile = "2"
 
 # HTTP middleware
 tower-http = { workspace = true, features = ["fs", "cors"] }
@@ -68,6 +72,7 @@ hmac = "0.12"
 sha2 = "0.10"
 md5 = "0.7"
 aes-gcm = "0.10"
+ed25519-dalek = { version = "2", features = ["rand_core"] }
 
 # SSH client
 russh = "0.60"
@@ -85,9 +90,13 @@ printpdf = "0.6"
 [target.'cfg(target_os = "macos")'.dependencies]
 allternit-apple-vf-driver = { path = "../../drivers/apple-vf" }
 
+# Token counting
+tiktoken-rs = "0.12.0"
+
 # Testing
 [dev-dependencies]
 axum-test = "14"
+tempfile = "3"
 # `ServiceExt::oneshot` for in-process route tests (workspace tower is 0.5;
 # the util feature is additive and matches axum 0.7's service traits).
 tower = { workspace = true, features = ["util"] }

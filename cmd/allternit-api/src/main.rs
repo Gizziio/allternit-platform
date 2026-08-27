@@ -24,11 +24,22 @@ use tracing::warn;
 
 // Import from library
 use allternit_api::aci_routes::aci_router;
+use allternit_api::admin_mcp_tunnel_routes::router as admin_mcp_tunnel_router;
 use allternit_api::agent_operations_routes;
+use allternit_api::federation_routes::router as federation_router;
+use allternit_api::outcome_rubric_routes::router as outcome_rubric_router;
+use allternit_api::page_agent_routes::page_agent_router;
+use allternit_api::allternit_bus_routes::{allternit_bus_router, allternit_bus_webhook_router};
+use allternit_api::quickstart_routes::router as quickstart_router;
 use allternit_api::agent_preferences_routes::agent_preferences_router;
 use allternit_api::agent_routes::agent_router;
 use allternit_api::agent_runtime_routes::agent_runtime_router;
 use allternit_api::agent_session_routes::agent_session_router;
+use allternit_api::beta_deployment_routes::beta_deployment_router;
+use allternit_api::beta_memory_store_routes::beta_memory_store_router;
+use allternit_api::beta_session_routes::beta_session_router;
+use allternit_api::beta_work_routes::beta_work_router;
+use allternit_api::user_profile_routes::{enrollment_router, user_profile_router};
 use allternit_api::agent_workspace_routes::agent_workspace_router;
 use allternit_api::agents_v1_routes::agents_v1_router;
 use allternit_api::alabs_routes::alabs_router;
@@ -40,12 +51,15 @@ use allternit_api::automation_routes::automation_router;
 use allternit_api::backend_install_routes::backend_install_router;
 use allternit_api::board_routes::board_router;
 use allternit_api::board_stream_routes::board_stream_router;
+use allternit_api::bot_desktop_routes::bot_desktop_router;
+use allternit_api::bot_desktop_stream::bot_desktop_stream_router;
 use allternit_api::brain_routes::{brain_git_router, brain_router};
 use allternit_api::canvas_routes::canvas_router;
 use allternit_api::checkpoints_routes::checkpoints_router;
 use allternit_api::conversation_routes::conversation_router;
 use allternit_api::cowork::background_service::CoworkBackgroundService;
 use allternit_api::cowork::routes::{background_router, CoworkBgState};
+use allternit_api::cowork_preferences_routes::cowork_preferences_router;
 use allternit_api::cowork_routes::cowork_router;
 use allternit_api::cowork_team_routes::cowork_team_router;
 use allternit_api::db::DbHandle;
@@ -53,23 +67,32 @@ use allternit_api::design_connector_routes::{design_connector_router, DesignSkil
 use allternit_api::fallback_routes::fallback_router;
 use allternit_api::file_routes::file_router;
 use allternit_api::h5i_routes::h5i_router;
+use allternit_api::har_api_routes::har_api_router;
 use allternit_api::health::health_router;
+use allternit_api::hud_routes::hud_router;
+use allternit_api::idempotency::idempotency_middleware;
 use allternit_api::inbox_routes::inbox_router;
 use allternit_api::library_routes::library_router;
 use allternit_api::local_brain_routes::local_brain_router;
+use allternit_api::local_engine_routes::local_engine_router;
+use allternit_api::local_studio_routes::local_studio_router;
 use allternit_api::mcp_routes::mcp_router;
 use allternit_api::me_routes::me_router;
+use allternit_api::memory_reconstruction_routes::memory_reconstruction_router;
 use allternit_api::memory_routes::memory_router;
 use allternit_api::metrics::metrics_router;
 use allternit_api::oauth_routes::oauth_router;
 use allternit_api::office_cli_routes::office_cli_router;
+use allternit_api::office_engine_routes::{office_engine_router, office_engine_v1_router};
 use allternit_api::office_routes::office_router;
 use allternit_api::onboarding_routes::onboarding_router;
 use allternit_api::orchestrator_routes::orchestrator_router;
 use allternit_api::platform_static::platform_service;
 use allternit_api::playground_routes::playground_router;
 use allternit_api::provider_routes::provider_router;
+use allternit_api::rate_limit::rate_limit_middleware;
 use allternit_api::rails::{rails_router, RailsState};
+use allternit_api::remote_control_routes::remote_control_router;
 use allternit_api::rails_client_impl::create_local_rails_client;
 use allternit_api::runtime_backend_routes::runtime_backend_router;
 use allternit_api::runtime_discover_routes::runtime_discover_router;
@@ -82,6 +105,7 @@ use allternit_api::swarm_routes::swarm_router;
 use allternit_api::task_routes;
 use allternit_api::team_skill_routes::team_skill_router;
 use allternit_api::terminal_routes::{terminal_router, TerminalSessionStore};
+use allternit_api::permission_policy::ApprovalStore;
 use allternit_api::tool_routes;
 use allternit_api::udemy_routes::udemy_router;
 use allternit_api::v1_routes::{agent_chat_router, v1_router};
@@ -89,6 +113,10 @@ use allternit_api::viz_routes::viz_router;
 use allternit_api::vm_session_routes::{new_vm_session_store, vm_session_router};
 use allternit_api::web_proxy_routes::web_proxy_router;
 use allternit_api::webhook_routes::webhook_router;
+use allternit_api::webhook_subscription_routes::webhook_subscription_router;
+use allternit_api::webhook_trigger_routes::{
+    webhook_trigger_public_router, webhook_trigger_router,
+};
 use allternit_api::workflow_routes::workflow_router;
 use allternit_api::workspace_routes::workspace_router;
 use allternit_api::AppState;
@@ -223,9 +251,11 @@ async fn main() {
     let state = Arc::new(AppState {
         config: app_config.clone(),
         db,
+        data_dir: data_dir.clone(),
         jwks,
         auth_config,
         vm_driver,
+        bot_desktop_sessions: Arc::new(RwLock::new(HashMap::new())),
         rails,
         vm_sessions: new_vm_session_store(),
         cowork_scheduler,
@@ -238,7 +268,12 @@ async fn main() {
         office_cli_mcp_sessions: Arc::new(RwLock::new(HashMap::new())),
         design_skill_cache,
         terminal_sessions: TerminalSessionStore::new(),
+        mcp_dispatcher: allternit_api::mcp_dispatcher::McpDispatcher::new(),
+        approval_store: Arc::new(ApprovalStore::new()),
     });
+
+    // Phase 5: start the in-process batch execution/polling worker.
+    allternit_api::llm_gateway::batches::spawn_batch_worker(Arc::clone(&state));
 
     // OfficeCLI idle reaper: evicts stale docs, closes idle resident sessions,
     // kills idle watch processes and MCP sessions.
@@ -285,13 +320,24 @@ async fn main() {
         .merge(swarm_router())
         .merge(board_router())
         .merge(cowork_router())
+        .merge(cowork_preferences_router())
         .merge(allternit_api::rails::routes_cowork::cowork_routes())
         .merge(agent_router())
+        .merge(allternit_api::agent_email_routes::agent_email_router())
         .merge(agent_preferences_router())
         .merge(agent_workspace_router())
         .merge(agent_session_router())
+        .merge(beta_session_router())
+        .merge(beta_deployment_router())
+        .merge(beta_work_router())
+        .merge(webhook_subscription_router())
+        .merge(webhook_trigger_router())
+        .merge(beta_memory_store_router())
+        .merge(memory_reconstruction_router())
+        .merge(user_profile_router())
         .merge(canvas_router())
         .merge(v1_router())
+        .merge(allternit_bus_router())
         .merge(task_routes::task_router())
         .merge(agent_operations_routes::agent_operations_router())
         .merge(allternit_api::queue_routes::queue_router())
@@ -305,30 +351,68 @@ async fn main() {
         .merge(cowork_team_router())
         .merge(board_stream_router())
         .merge(runtime_backend_router())
+        .merge(remote_control_router())
         .merge(agents_v1_router())
+        .merge(bot_desktop_router())
         .merge(allternit_api::connector_routes::connector_router())
         .merge(allternit_api::cloud_credentials_routes::cloud_credentials_router())
         .merge(allternit_api::usage_routes::usage_router())
         .merge(allternit_api::upload_routes::upload_router())
         .merge(allternit_api::llm_gateway::gateway_keys_router())
         .merge(allternit_api::llm_gateway::admin_routes::gateway_admin_router())
+        .merge(allternit_api::enterprise_auth::router())
+        .merge(allternit_api::eval_routes::router())
+        .merge(allternit_api::eval_metric_routes::router())
+        .merge(allternit_api::fallback_credit_routes::router())
+        .merge(allternit_api::fallback_retry_policy_routes::router())
+        .merge(allternit_api::groundedness_check_routes::router())
+        .merge(allternit_api::latency_budget_routes::router())
+        .merge(allternit_api::prompt_leak_routes::router())
+        .merge(allternit_api::server_tool_routes::router())
+        .merge(allternit_api::sandbox_template_routes::router())
+        .merge(allternit_api::allternit_vault::router())
+        .merge(allternit_api::admin_workspace_routes::router())
+        .merge(allternit_api::admin_service_account_routes::router())
+        .merge(allternit_api::admin_access_token_routes::router())
+        .merge(allternit_api::admin_spend_limit_routes::router())
+        .merge(allternit_api::marketplace_routes::router())
+        .merge(admin_mcp_tunnel_router())
+        .merge(outcome_rubric_router())
+        .merge(federation_router())
+        .merge(quickstart_router())
+        .merge(allternit_api::rbac_routes::router())
+        .merge(allternit_api::external_keys_routes::router())
+        .merge(allternit_api::scim_routes::router())
+        .merge(allternit_api::admin_audit_routes::router())
+        .merge(allternit_api::compliance_routes::router())
+        .merge(allternit_api::data_residency_routes::router())
+        .merge(allternit_api::device_attestation_routes::router())
         .merge(workspace_router())
         .merge(artifact_router())
         .merge(conversation_router())
         .merge(office_router())
         .merge(office_cli_router())
+        .merge(office_engine_v1_router())
         .merge(orchestrator_router())
         .merge(alabs_router())
         .merge(automation_router())
-        .merge(brain_router());
+        .merge(brain_router())
+        .merge(hud_router());
 
     // ── Protected routes (require authentication) ─────────────────────────────
     let protected = Router::new()
         .nest("/api/v1", v1_routes)
+        // The tool registry is also served under /api/v1 because the
+        // web/desktop surface (`native-agent-api.ts`, `recording.store.ts`,
+        // `tool-registry.store.ts`) calls `/api/v1/tools[/execute]`.
+        .nest("/api/v1", tool_routes::tool_router())
         // API routes (not under /v1)
         .nest("/api", agent_chat_router())
         .nest("/api", tool_routes::tool_router())
         .nest("/api", local_brain_router())
+        .nest("/api", local_engine_router())
+        .nest("/api", local_studio_router())
+        .nest("/api", har_api_router())
         // Feature routes
         .nest("/viz", viz_router())
         .nest("/sandbox", sandbox_router())
@@ -336,6 +420,7 @@ async fn main() {
         .nest("/rails", rails_router())
         .nest("/api/rails", rails_router())
         .nest("/stream", stream_router())
+        .nest("/ws/bots", bot_desktop_stream_router())
         .nest("/terminal", terminal_router())
         .nest(
             "/mcp",
@@ -346,12 +431,24 @@ async fn main() {
         .nest("/api", oauth_router())
         .nest("/api", onboarding_router())
         .nest("/api", aci_router())
+        .nest("/api", page_agent_router())
         .nest("/api", analytics_router())
         .nest("/api", playground_router())
         .nest("/api", checkpoints_router())
         .nest("/api", design_connector_router())
+        .nest("/api", office_engine_router())
         .nest("/api", provider_router())
-        // Auth middleware applied to everything above
+        // Idempotency replay for POST/PUT/PATCH on the protected surface.
+        .layer(axum::middleware::from_fn_with_state(
+            state.clone(),
+            idempotency_middleware,
+        ))
+        // Per-organization rate-limit enforcement.
+        .layer(axum::middleware::from_fn_with_state(
+            state.clone(),
+            rate_limit_middleware,
+        ))
+        // Auth middleware applied to everything above (runs first).
         .layer(axum::middleware::from_fn_with_state(
             state.clone(),
             auth_middleware,
@@ -361,12 +458,20 @@ async fn main() {
     let mut public = Router::new()
         .nest("/health", health_router())
         .nest("/api", web_proxy_router())
+        .nest("/beta", enrollment_router())
         .merge(status_router())
         .merge(webhook_router())
+        .merge(webhook_trigger_public_router())
         // Slack signs every request itself (`verify_slack_signature`), so
         // this is public the same way `webhook_router()` above is — no
         // Clerk session exists for a server-to-server call from Slack.
         .merge(allternit_api::slack_webhook_routes::slack_webhook_router())
+        // Photon.codes inbound-message webhook is also server-to-server and
+        // carries no Clerk session; route it to the recipient bot's inbox.
+        .merge(allternit_bus_webhook_router())
+        // mailflare inbound-email webhook is likewise server-to-server; it is
+        // HMAC-verified per handler (ALLTERNIT_MAILFLARE_WEBHOOK_SECRET).
+        .merge(allternit_api::agent_email_routes::agent_email_webhook_router())
         // OAuth provider redirect targets — the browser arrives from the
         // provider's consent screen with no Clerk JWT, so these must be
         // public: the curated-3 loopback callback (moved out of the protected
@@ -445,6 +550,7 @@ async fn main() {
                 HeaderName::from_static("x-allternit-user-id"),
                 HeaderName::from_static("x-allternit-user-email"),
                 HeaderName::from_static("x-allternit-user-name"),
+                HeaderName::from_static("x-allternit-tenant-id"),
                 // OfficeCLI document upload headers (browser taskpane)
                 HeaderName::from_static("x-office-filename"),
                 HeaderName::from_static("x-office-host"),
@@ -704,6 +810,23 @@ async fn initialize_cowork_scheduler(
 async fn initialize_vm_driver(
     app_config: &allternit_api::config::AppConfig,
 ) -> Option<Arc<dyn allternit_driver_interface::ExecutionDriver>> {
+    // If OpenSandbox is explicitly configured, prefer it over the local
+    // platform driver so bots can use a persistent cloud sandbox.
+    if let Ok(open_sandbox_url) = std::env::var("OPEN_SANDBOX_URL") {
+        use allternit_driver_interface::ExecutionDriver;
+        use allternit_opensandbox_driver::{OpenSandboxConfig, OpenSandboxDriver};
+        let config = OpenSandboxConfig::new(open_sandbox_url);
+        let driver = OpenSandboxDriver::new(config);
+        match driver.health_check().await {
+            Ok(health) if health.healthy => {
+                info!("OpenSandbox driver initialized from OPEN_SANDBOX_URL");
+                return Some(Arc::new(driver));
+            }
+            Ok(health) => warn!("OpenSandbox health check returned unhealthy: {:?}", health),
+            Err(e) => warn!("OpenSandbox health check failed: {}", e),
+        }
+    }
+
     // Get packaged VM directory from desktop app (if available)
     let vm_dir = app_config.vm_dir().map(|p| p.to_string_lossy().to_string());
     if let Some(ref dir) = vm_dir {

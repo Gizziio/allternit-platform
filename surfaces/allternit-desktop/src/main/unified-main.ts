@@ -9,7 +9,7 @@
 
 import { app, BrowserWindow, ipcMain, nativeTheme, safeStorage, shell, Tray, Menu, dialog, globalShortcut, screen, protocol } from 'electron';
 import { fileURLToPath } from 'node:url';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, resolve, basename } from 'node:path';
 import * as fs from 'node:fs';
 import * as net from 'node:net';
 import * as http from 'node:http';
@@ -21,8 +21,18 @@ import log from 'electron-log';
 import { updateElectronApp } from 'update-electron-app';
 import fixPath from 'fix-path';
 import { backendManager } from './backend-manager.js';
+import { officeEngineManager } from './office-engine-manager.js';
+import {
+  editorForFile,
+  extractOfficeFileArg,
+  isOfficeTarget,
+  officePathFor,
+  officeTitleFor,
+  type OfficeTarget,
+} from './office-programs.js';
 import { bonsaiCompanion } from './bonsai-companion-manager.js';
 import { gizziManager } from './gizzi-manager.js';
+import { connectorSidecarManager } from './connector-sidecar-manager.js';
 import { gizziDaemonManager } from './gizzi-daemon-manager.js';
 import { PORTS, URLS, devUiUrl, apiUrl, notebookUrl, staticUiUrl } from './config.js';
 import { installMiniApp, startMiniApp, stopMiniApp, getMiniAppStatus, launchMiniAppDesktop, getMiniAppApproval, reviewAndApproveMiniApp, revokeMiniAppApproval, removeMiniAppRuntime, rollbackMiniAppRuntime, setMiniAppOAuthTokenResolver } from './mini-apps-manager.js';
@@ -53,6 +63,11 @@ import { workerBus } from './workers/worker-bus.js';
 import { mcpHostManager } from './mcp-host-manager.js';
 import { isLimaInstalled, installLima, startVM, stopVM, getVMStatus } from './lima.js';
 import { computerUseDriverManager } from './computer-use-driver-manager.js';
+import {
+  createCaptureSession,
+  stopCaptureSession,
+  isCaptureAvailable,
+} from './browser-capture-manager.js';
 
 // Fix PATH for macOS
 fixPath();
@@ -100,9 +115,17 @@ function isSelfHostedBuild(): boolean {
 function resolveLocalPlatformStaticPath(): string | null {
   // __dirname is dist/main; go up four levels to reach the repo root.
   const repoRoot = resolve(__dirname, '..', '..', '..', '..');
+  // Unpackaged runs prefer resources/platform — the same output
+  // prepare-platform-static.cjs builds for packaged apps, with
+  // NEXT_PUBLIC_ALLTERNIT_DESKTOP_AUTH baked in so the desktop shell bypasses
+  // Clerk instead of hitting its production-domain origin lock. The raw
+  // ai.allternit.com/dist candidates are a last-resort fallback only:
+  // whatever's sitting there could have been built by a plain `vite build`
+  // with no desktop flags at all, which is exactly what broke this before.
   const candidates = app.isPackaged
     ? [join(process.resourcesPath ?? '', 'platform')]
     : [
+        join(repoRoot, 'surfaces', 'allternit-desktop', 'resources', 'platform'),
         join(repoRoot, 'surfaces', 'ai.allternit.com', 'dist'),
         join(repoRoot, 'surfaces', 'ai.allternit.com', 'out'),
         join(repoRoot, 'surfaces', 'platform', 'dist'),
@@ -134,6 +157,10 @@ const isMac = process.platform === 'darwin';
 
 let mainWindow: BrowserWindow | null = null;
 let designWindow: BrowserWindow | null = null;
+let hudWindow: BrowserWindow | null = null;
+let remoteControlWindow: BrowserWindow | null = null;
+/** One office editor window per target (docs/sheets/slides/pdf/launcher). */
+const officeWindows = new Map<OfficeTarget, BrowserWindow>();
 let splashWindow: BrowserWindow | null = null;
 
 // Service state for splash screen progress (module-level so IPC handlers can update it)
@@ -149,9 +176,14 @@ let pushServiceState = () => {
 };
 let miniWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
-let activePlatformUrl: string = isDev ? URLS.DEV_UI : 'https://ai.allternit.com';
+let activePlatformUrl: string = isDev ? URLS.DEV_UI : 'https://platform.allternit.com';
 
 const QUICK_CHAT_HOTKEY = 'CommandOrControl+Shift+A';
+// Hermes Desktop uses ⌘/Ctrl+Shift+H for its global HUD toggle.  Register that
+// as the primary shortcut and keep Alt+Shift+H as a fallback for users whose
+// muscle memory expects it.
+const HUD_HOTKEY = 'CommandOrControl+Shift+H';
+const HUD_HOTKEY_FALLBACK = 'Alt+Shift+H';
 const MINI_WINDOW_WIDTH = 520;
 const MINI_WINDOW_HEIGHT = 600;
 /** Resolved backend URL — set once the app initializes. Used by sdk:get-backend-url IPC. */
@@ -200,7 +232,12 @@ async function startGizziRuntime(): Promise<string> {
       log.warn('[GizziManager] Legacy daemon migration deferred:', error);
     }
   }
-  return gizziManager.start({ existingPassword });
+  const session = authManager.getSessionSnapshot();
+  return gizziManager.start({
+    existingPassword,
+    apiToken: session?.accessToken,
+    extraEnv: authManager.getConnectorSidecarEnvironment(),
+  });
 }
 
 async function installAlwaysOnGizziRuntime(): Promise<void> {
@@ -507,6 +544,21 @@ function createMainWindow(): BrowserWindow {
         };
       }
 
+      if (requestedUrl.pathname === '/remote-control.html') {
+        return {
+          action: 'allow',
+          overrideBrowserWindowOptions: {
+            width: 1280,
+            height: 840,
+            minWidth: 820,
+            minHeight: 560,
+            backgroundColor: '#0F0C0A',
+            autoHideMenuBar: true,
+            title: 'Allternit Remote Control',
+          },
+        };
+      }
+
       if (
         (requestedUrl.pathname === '/platform' || requestedUrl.pathname === '/shell') &&
         requestedUrl.searchParams.get('detachedSurface') === 'code'
@@ -669,6 +721,36 @@ async function initializeBundledMode(): Promise<void> {
       await new Promise(r => setTimeout(r, 1000));
     }
 
+    // Step 1.5 — connector sidecar (open-connector, port ${PORTS.CONNECTOR_SIDECAR}).
+    // allternit-api's connector routes proxy to this; non-fatal if it fails
+    // to start (connector-backed sources just stay unavailable, same as
+    // gizzi-code above).
+    {
+      const sidecarEnv = authManager.getConnectorSidecarEnvironment();
+      try {
+        await connectorSidecarManager.start({
+          encryptionKey: authManager.getPlatformEncryptionEnvironment().ALLTERNIT_ENCRYPTION_KEY,
+          adminToken: sidecarEnv.ALLTERNIT_CONNECTOR_SIDECAR_ADMIN_TOKEN,
+          runtimeToken: sidecarEnv.ALLTERNIT_CONNECTOR_SIDECAR_RUNTIME_TOKEN,
+        });
+        log.info('[Main] Connector sidecar started successfully');
+      } catch (sidecarErr) {
+        log.warn('[Main] Connector sidecar failed to start, continuing without it:', sidecarErr);
+      }
+    }
+
+    // Step 1.6 — office-engine sidecar (services/office-engine, port 8099).
+    // The gateway's /api/office/* routes proxy to this; non-fatal if it fails
+    // (the gateway answers 502, same pattern as the connector sidecar).
+    {
+      const engineUrl = await officeEngineManager.start();
+      if (engineUrl) {
+        log.info(`[Main] Office engine ready (${officeEngineManager.getMode()}) at ${engineUrl}`);
+      } else {
+        log.warn('[Main] Office engine unavailable, continuing without it');
+      }
+    }
+
     // Step 2 — allternit-api (Rust operator API, port ${PORTS.API} — VM, rails, terminal)
     const apiStatus = await backendManager.getStatus();
     if (!apiStatus.installed) {
@@ -692,6 +774,7 @@ async function initializeBundledMode(): Promise<void> {
       extraEnv: {
         ...computerUseDriverManager.getLaunchEnvironment(),
         ...authManager.getPlatformEncryptionEnvironment(),
+        ...authManager.getConnectorSidecarEnvironment(),
       },
     });
     serviceState.api = { status: 'up', detail: `Connected on ${URLS.API}` };
@@ -708,13 +791,31 @@ async function initializeBundledMode(): Promise<void> {
 
     // Step 3 — Platform URL
     // Dev:        local Next.js dev server on port ${PORTS.DEV_UI}
+    // Dev(static): ALLTERNIT_DESKTOP_USE_STATIC_UI forces the dev build to load
+    //              the local platform static export instead of the Vite server.
     // Bundled:    Prefer the local static UI build so the desktop app always
     //              ships with the matching platform version and is not at the
     //              mercy of a stale ai.allternit.com deployment. Fall back to
     //              the remote URL only when no local build is present.
     // Offline:    If remote URL is unreachable, fall back to local static files
     //              served by the Rust API at the local API URL.
-    let platformUrl: string = isDev ? URLS.DEV_UI : 'https://ai.allternit.com';
+    // Allow ALLTERNIT_PLATFORM_URL to override the platform URL in dev/bundled
+    // mode so local worktree UI builds (e.g. Vite on a non-default port) can be
+    // tested without repackaging the desktop.
+    let platformUrl: string = process.env.ALLTERNIT_PLATFORM_URL?.trim()
+      || (isDev ? URLS.DEV_UI : 'https://platform.allternit.com');
+
+    if (isDev && process.env.ALLTERNIT_DESKTOP_USE_STATIC_UI) {
+      const localStaticPath = resolveLocalPlatformStaticPath();
+      if (localStaticPath) {
+        log.info(`[Main] Dev mode forced to local platform static UI from ${localStaticPath}`);
+        platformUrl = staticUiUrl();
+        serviceState.platform = { status: 'up', detail: 'Local static UI (dev)' };
+      } else {
+        log.warn('[Main] ALLTERNIT_DESKTOP_USE_STATIC_UI set but no local static UI found; using dev server');
+      }
+      pushServiceState();
+    }
 
     if (!isDev) {
       const localStaticPath = resolveLocalPlatformStaticPath();
@@ -753,13 +854,13 @@ async function initializeBundledMode(): Promise<void> {
     }
 
     // Preserve offline/static detail if we fell back; otherwise set the normal label.
-    if (!['Offline mode (local static)', 'Local static UI'].includes(serviceState.platform.detail)) {
+    if (!['Offline mode (local static)', 'Local static UI', 'Local static UI (dev)'].includes(serviceState.platform.detail)) {
       serviceState.platform = { status: 'up', detail: isDev ? `Dev on port ${PORTS.DEV_UI}` : 'ai.allternit.com' };
       pushServiceState();
     }
 
-    activePlatformUrl = platformUrl;
-    log.info(`[Main] Platform URL: ${platformUrl}`);
+    activePlatformUrl = process.env.ALLTERNIT_PLATFORM_URL || platformUrl;
+    log.info(`[Main] Platform URL: ${activePlatformUrl}`);
     // Clerk authenticates the human in the browser. The desktop waits for the
     // separately scoped runtime pairing that was started alongside boot.
     if (showStartupWizard) {
@@ -790,11 +891,20 @@ async function initializeBundledMode(): Promise<void> {
     mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
       log.error(`[Main] Window failed to load: ${errorDescription} (${errorCode}) at ${validatedURL}`);
     });
+    mainWindow.webContents.on('did-navigate', (_event, url) => {
+      log.info(`[Main] Window did-navigate: ${url}`);
+    });
+    mainWindow.webContents.on('did-navigate-in-page', (_event, url) => {
+      log.info(`[Main] Window did-navigate-in-page: ${url}`);
+    });
+    mainWindow.on('close', (event) => {
+      log.warn('[Main] mainWindow close event fired', { destroyed: mainWindow?.isDestroyed() });
+    });
     mainWindow.webContents.on('dom-ready', () => {
       log.info('[Main] DOM ready');
     });
     
-    mainWindow.loadURL(platformUrl);
+    mainWindow.loadURL(activePlatformUrl);
 
     // First launch: used for permission onboarding gating below
     const isFirstLaunch = !store.get('onboardingComplete');
@@ -980,7 +1090,9 @@ async function initializeRemoteMode(remoteUrl: string): Promise<void> {
 }
 
 async function initializeDevelopmentMode(): Promise<void> {
-  log.info('[Main] Development mode');
+  const platformUrl = process.env.ALLTERNIT_PLATFORM_URL?.trim() || URLS.DEV_UI;
+  activePlatformUrl = platformUrl;
+  log.info('[Main] Development mode', { platformUrl });
   activeBackendUrl = URLS.DEV_UI;
 
   // Adopt or start the local Gizzi runtime so the sidecar can broker
@@ -996,7 +1108,9 @@ async function initializeDevelopmentMode(): Promise<void> {
   }
 
   mainWindow = createMainWindow();
-  mainWindow.loadURL(URLS.DEV_UI);
+  activePlatformUrl = process.env.ALLTERNIT_PLATFORM_URL || platformUrl;
+  log.info(`[Main] Dev mode loading platform URL: ${activePlatformUrl}`);
+  mainWindow.loadURL(activePlatformUrl);
   mainWindow.webContents.openDevTools();
   mainWindow.show();
 }
@@ -1298,7 +1412,18 @@ async function updateTrayMenu(): Promise<void> {
     },
     ...(permItem ? [permItem, { type: 'separator' } as Electron.MenuItemConstructorOptions] : []),
     { label: 'Show Window', click: () => mainWindow?.show() },
+    {
+      label: 'Allternit Office',
+      submenu: [
+        { label: 'Launcher', click: () => openOfficeWindow('launcher') },
+        { label: 'Docs', click: () => openOfficeWindow('docs') },
+        { label: 'Sheets', click: () => openOfficeWindow('sheets') },
+        { label: 'Slides', click: () => openOfficeWindow('slides') },
+        { label: 'PDF', click: () => openOfficeWindow('pdf') },
+      ],
+    },
     { label: 'Quick Chat', accelerator: QUICK_CHAT_HOTKEY, click: () => toggleMiniWindow() },
+    { label: 'Toggle HUD', accelerator: HUD_HOTKEY, click: () => toggleHudWindow() },
     { type: 'separator' },
     { label: 'Quit', click: () => app.quit() },
   ] as any);
@@ -1348,6 +1473,12 @@ let authManagerReady = false;
 async function handleProtocolCallback(url: string | null): Promise<void> {
   if (!url) return;
   log.info('[Main] handleProtocolCallback:', url);
+
+  // Platform deep links handled directly by the desktop shell.
+  if (url === 'allternit://hud' || url === 'allternit://open/hud') {
+    toggleHudWindow();
+    return;
+  }
 
   // Buffer if auth manager hasn't initialized yet — will be flushed after initialize()
   if (!authManagerReady) {
@@ -1407,14 +1538,41 @@ app.on('second-instance', (_event, argv) => {
   const url = extractProtocolUrl(argv);
   log.info('[Main] second-instance fired, URL:', url);
   void handleProtocolCallback(url);
+  // File-association launch (Windows/Linux pass the file in argv).
+  const officeFile = extractOfficeFileArg(argv);
+  if (officeFile) openOfficeWithFile(officeFile);
   if (mainWindow) {
     if (mainWindow.isMinimized()) mainWindow.restore();
     mainWindow.focus();
   }
 });
 
+// macOS file association ("Open with Allternit").
+app.on('open-file', (event, filePath) => {
+  event.preventDefault();
+  log.info('[Main] open-file:', filePath);
+  if (app.isReady()) {
+    openOfficeWithFile(filePath);
+  } else {
+    app.whenReady().then(() => openOfficeWithFile(filePath));
+  }
+});
+
 app.whenReady().then(async () => {
   console.log('[Main] App is ready...');
+
+  // Phase 0 convenience hook: open the Allternit Docs editor window on startup
+  // when explicitly requested (e.g. dev smoke test).
+  if (process.env.ALLTERNIT_OPEN_DOCS_ON_START) {
+    openDocsWindow();
+  }
+
+  // Cold-start file association (Windows/Linux first instance).
+  const officeFileArg = extractOfficeFileArg(process.argv);
+  if (officeFileArg) {
+    openOfficeWithFile(officeFileArg);
+  }
+
   console.log('[Main] Initializing auth manager...');
   await authManager.initialize();
   authManagerReady = true;
@@ -1592,6 +1750,20 @@ app.whenReady().then(async () => {
     log.warn(`[Main] Failed to register global hotkey: ${QUICK_CHAT_HOTKEY}`);
   }
 
+  // Global hotkey: ⌘/Ctrl+Shift+H (Hermes-style) → toggle floating HUD window
+  const hudHotkeyRegistered = globalShortcut.register(HUD_HOTKEY, toggleHudWindow);
+  if (hudHotkeyRegistered) {
+    log.info(`[Main] Registered global HUD hotkey: ${HUD_HOTKEY}`);
+  } else {
+    log.warn(`[Main] Failed to register global hotkey: ${HUD_HOTKEY}. On macOS this usually means Allternit needs Accessibility permission in System Settings > Privacy & Security > Accessibility.`);
+  }
+
+  // Fallback global hotkey for users who expect the earlier Alt+Shift+H binding.
+  const hudHotkeyFallbackRegistered = globalShortcut.register(HUD_HOTKEY_FALLBACK, toggleHudWindow);
+  if (hudHotkeyFallbackRegistered) {
+    log.info(`[Main] Registered fallback global HUD hotkey: ${HUD_HOTKEY_FALLBACK}`);
+  }
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       initializeApp();
@@ -1643,6 +1815,8 @@ app.on('before-quit', async () => {
   await backendManager.stopBackend();
 
   gizziManager.stop();
+  connectorSidecarManager.stop();
+  officeEngineManager.stop();
   meshManager.stop().catch(() => {}); // best-effort mesh sidecar shutdown
   notebookManager.stop();
   voiceManager.stop();
@@ -1675,6 +1849,7 @@ ipcMain.handle('backend:restart', async () => {
     extraEnv: {
       ...computerUseDriverManager.getLaunchEnvironment(),
       ...authManager.getPlatformEncryptionEnvironment(),
+      ...authManager.getConnectorSidecarEnvironment(),
     },
   });
 });
@@ -1757,6 +1932,337 @@ ipcMain.handle('shell:open-design', () => {
   designWindow.on('closed', () => { designWindow = null; });
   void designWindow.loadURL(new URL('/design', activePlatformUrl).toString());
 });
+
+// HUD mode defaults — a chrome-free floating panel anchored near the bottom
+// of the primary display, inspired by Hermes Desktop's HUD windowing profile.
+// The default shape is a wide, short bar so the composer dominates, matching
+// Hermes' 620×320 bottom-band layout.
+const HUD_WIDTH = 720;
+const HUD_HEIGHT = 220;
+const HUD_BOTTOM_MARGIN = 72;
+
+function computeHudBounds() {
+  const { width: screenW, height: screenH } = screen.getPrimaryDisplay().workAreaSize;
+  return {
+    width: Math.min(HUD_WIDTH, screenW),
+    height: Math.min(HUD_HEIGHT, screenH),
+    x: Math.round((screenW - Math.min(HUD_WIDTH, screenW)) / 2),
+    y: Math.round(Math.max(0, screenH - Math.min(HUD_HEIGHT, screenH) - HUD_BOTTOM_MARGIN)),
+  };
+}
+
+function createHudWindow(): BrowserWindow {
+  const win = new BrowserWindow({
+    ...computeHudBounds(),
+    minWidth: 380,
+    minHeight: 160,
+    maxWidth: 1600,
+    maxHeight: 1000,
+    title: 'Allternit HUD',
+    frame: false,
+    transparent: true,
+    // Keep resizable false so a transparent frameless window does not expose a
+    // system-level edge-resize hot-zone (Windows grows a few px per drag when
+    // this is true).  Resizing is done by the renderer's corner handles if we
+    // add them later; dragging is handled by the renderer drag handle + IPC.
+    resizable: false,
+    movable: true,
+    minimizable: false,
+    maximizable: false,
+    fullscreenable: false,
+    skipTaskbar: !isMac,
+    hasShadow: false,
+    alwaysOnTop: true,
+    // NSPanel on macOS keeps the HUD out of the cmd-tab anchor and lets it
+    // float above fullscreen apps like Hermes' HUD.
+    type: isMac ? 'panel' : undefined,
+    roundedCorners: true,
+    visualEffectState: 'active',
+    hiddenInMissionControl: isMac,
+    show: false,
+    backgroundColor: '#00000000',
+    webPreferences: {
+      preload: join(__dirname, '../preload/index.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+
+  // Ensure the panel floats above normal windows and appears on all macOS
+  // Spaces while fullscreen apps are running.
+  win.setAlwaysOnTop(true, isMac ? 'floating' : 'screen-saver');
+  try {
+    win.setVisibleOnAllWorkspaces?.(true, { visibleOnFullScreen: true, skipTransformProcessType: true });
+  } catch {
+    // Best effort — not supported on every platform/configuration.
+  }
+
+  return win;
+}
+
+function openHudWindow(): void {
+  log.info('[HUD] openHudWindow called', { activePlatformUrl });
+  if (hudWindow && !hudWindow.isDestroyed()) {
+    const url = new URL('/hud', activePlatformUrl).toString();
+    log.info('[HUD] Reusing existing HUD window:', url);
+    void hudWindow.loadURL(url);
+    hudWindow.show();
+    hudWindow.focus();
+    hudWindow.moveTop();
+    return;
+  }
+
+  log.info('[HUD] Creating new floating HUD window');
+  hudWindow = createHudWindow();
+
+  log.info('[HUD] HUD window created', { id: hudWindow.id, bounds: hudWindow.getBounds(), visible: hudWindow.isVisible() });
+
+  hudWindow.webContents.setWindowOpenHandler(({ url }) => {
+    void shell.openExternal(url);
+    return { action: 'deny' };
+  });
+  hudWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription) => {
+    log.error('[HUD] Failed to load HUD window:', errorCode, errorDescription);
+  });
+  hudWindow.webContents.on('did-finish-load', () => {
+    log.info('[HUD] HUD window finished loading', { url: hudWindow?.webContents.getURL(), title: hudWindow?.getTitle() });
+  });
+  hudWindow.webContents.on('did-navigate', (_event, url) => {
+    log.info('[HUD] HUD window did-navigate:', url);
+  });
+  hudWindow.once('ready-to-show', () => {
+    log.info('[HUD] HUD window ready-to-show');
+    hudWindow?.show();
+    hudWindow?.focus();
+    hudWindow?.moveTop();
+  });
+  hudWindow.on('closed', () => { log.info('[HUD] HUD window closed'); hudWindow = null; });
+  const hudUrl = new URL('/hud', activePlatformUrl).toString();
+  log.info('[HUD] Loading HUD window URL:', hudUrl);
+  void hudWindow.loadURL(hudUrl);
+}
+
+function toggleHudWindow(): void {
+  log.info('[HUD] toggleHudWindow called');
+  if (hudWindow && !hudWindow.isDestroyed()) {
+    if (hudWindow.isVisible() && hudWindow.isFocused()) {
+      log.info('[HUD] HUD is visible and focused — closing');
+      hudWindow.close();
+      return;
+    }
+    log.info('[HUD] HUD exists — showing and focusing');
+    hudWindow.show();
+    hudWindow.focus();
+    hudWindow.moveTop();
+    return;
+  }
+  openHudWindow();
+}
+
+ipcMain.handle('shell:open-hud', openHudWindow);
+ipcMain.handle('shell:close-hud', () => {
+  if (hudWindow && !hudWindow.isDestroyed()) {
+    hudWindow.close();
+  }
+});
+ipcMain.handle('shell:toggle-hud', toggleHudWindow);
+ipcMain.handle('shell:move-hud', (_event, delta: { x: number; y: number; width: number; height: number }) => {
+  if (!hudWindow || hudWindow.isDestroyed()) return;
+  const dx = Number(delta?.x ?? 0);
+  const dy = Number(delta?.y ?? 0);
+  const width = Number(delta?.width ?? HUD_WIDTH);
+  const height = Number(delta?.height ?? HUD_HEIGHT);
+  if (![dx, dy, width, height].every(Number.isFinite)) return;
+  const [x, y] = hudWindow.getPosition();
+  // setBounds (not setPosition) keeps a transparent frameless window from
+  // drifting on Windows per Electron frameless-transparent quirks.
+  const wasResizable = hudWindow.isResizable();
+  if (!wasResizable) hudWindow.setResizable(true);
+  try {
+    hudWindow.setBounds({
+      x: Math.round(x + dx),
+      y: Math.round(y + dy),
+      width: Math.max(380, Math.round(width)),
+      height: Math.max(160, Math.round(height)),
+    });
+  } finally {
+    if (!wasResizable && !hudWindow.isDestroyed()) hudWindow.setResizable(false);
+  }
+});
+ipcMain.handle('shell:resize-hud', (_event, bounds: { height: number }) => {
+  if (!hudWindow || hudWindow.isDestroyed()) return;
+  const requestedHeight = Math.max(160, Math.round(Number(bounds?.height ?? HUD_HEIGHT)));
+  const [x, y] = hudWindow.getPosition();
+  const [width] = hudWindow.getSize();
+  const currentBottom = y + hudWindow.getSize()[1];
+  // Keep the window's bottom edge anchored so it grows/collapses upward,
+  // mirroring the Hermes HUD expansion behavior.
+  const newY = Math.max(0, Math.round(currentBottom - requestedHeight));
+  const newHeight = Math.min(1000, Math.max(160, Math.round(currentBottom - newY)));
+  const wasResizable = hudWindow.isResizable();
+  if (!wasResizable) hudWindow.setResizable(true);
+  try {
+    hudWindow.setBounds({ x, y: newY, width, height: newHeight });
+  } finally {
+    if (!wasResizable && !hudWindow.isDestroyed()) hudWindow.setResizable(false);
+  }
+});
+
+ipcMain.handle('shell:open-remote-control', () => {
+  if (remoteControlWindow && !remoteControlWindow.isDestroyed()) {
+    remoteControlWindow.show();
+    remoteControlWindow.focus();
+    return;
+  }
+
+  remoteControlWindow = new BrowserWindow({
+    width: 1280,
+    height: 840,
+    minWidth: 820,
+    minHeight: 560,
+    title: 'Allternit Remote Control',
+    titleBarStyle: isMac ? 'hiddenInset' : 'default',
+    trafficLightPosition: { x: 16, y: 16 },
+    show: false,
+    backgroundColor: '#0F0C0A',
+    webPreferences: {
+      preload: join(__dirname, '../preload/index.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+
+  remoteControlWindow.webContents.setWindowOpenHandler(({ url }) => {
+    void shell.openExternal(url);
+    return { action: 'deny' };
+  });
+  remoteControlWindow.once('ready-to-show', () => remoteControlWindow?.show());
+  remoteControlWindow.on('closed', () => { remoteControlWindow = null; });
+  const dashboardUrl = process.env.ALLTERNIT_REMOTE_CONTROL_URL
+    ? new URL('/', process.env.ALLTERNIT_REMOTE_CONTROL_URL).toString()
+    : activePlatformUrl.includes('localhost') || activePlatformUrl.includes('127.0.0.1')
+      ? new URL('/remote-control.html', activePlatformUrl).toString()
+      : 'https://remotecontrol.allternit.com';
+  void remoteControlWindow.loadURL(dashboardUrl);
+});
+
+function resolveOfficeUrl(target: OfficeTarget, artifactId?: string): string {
+  // The office editors live on the platform surface (same pattern as the
+  // design window). ALLTERNIT_PLATFORM_URL overrides the platform base
+  // (e.g. for e2e tests pointing at a local dev server).
+  const base = process.env.ALLTERNIT_PLATFORM_URL || activePlatformUrl;
+  return new URL(officePathFor(target, artifactId), base).toString();
+}
+
+function openOfficeWindow(target: OfficeTarget = 'launcher', artifactId?: string): BrowserWindow {
+  const existing = officeWindows.get(target);
+  if (existing && !existing.isDestroyed()) {
+    void existing.loadURL(resolveOfficeUrl(target, artifactId));
+    existing.show();
+    existing.focus();
+    return existing;
+  }
+
+  const title = officeTitleFor(target);
+  const window = new BrowserWindow({
+    width: 1280,
+    height: 900,
+    minWidth: 800,
+    minHeight: 600,
+    title,
+    titleBarStyle: isMac ? 'hiddenInset' : 'default',
+    trafficLightPosition: { x: 16, y: 16 },
+    show: false,
+    backgroundColor: '#0F0C0A',
+    webPreferences: {
+      preload: join(__dirname, '../preload/index.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+
+  window.webContents.setWindowOpenHandler(({ url }) => {
+    void shell.openExternal(url);
+    return { action: 'deny' };
+  });
+  window.webContents.on('did-finish-load', () => {
+    log.info(`[Office] ${title} window finished loading:`, window.webContents.getURL());
+  });
+  window.webContents.on('did-fail-load', (_event, errorCode, errorDescription) => {
+    log.error(`[Office] ${title} window failed to load:`, errorCode, errorDescription);
+  });
+  window.once('ready-to-show', () => window.show());
+  window.on('closed', () => { officeWindows.delete(target); });
+  officeWindows.set(target, window);
+  const url = resolveOfficeUrl(target, artifactId);
+  log.info(`[Office] Loading ${title} URL:`, url);
+  void window.loadURL(url);
+  return window;
+}
+
+/**
+ * Open a file from a file-association ("Open with Allternit") in its editor.
+ * The bytes are delivered to the platform surface over IPC after load; the
+ * web app's office desktop bridge stashes and routes them (file-handoff).
+ */
+function openOfficeWithFile(filePath: string): void {
+  const editor = editorForFile(filePath);
+  if (!editor) {
+    log.warn('[Office] Unsupported file association:', filePath);
+    return;
+  }
+  let bytes: Buffer;
+  try {
+    bytes = fs.readFileSync(filePath);
+  } catch (error) {
+    log.error('[Office] Failed to read associated file:', filePath, error);
+    return;
+  }
+  const payload = { name: basename(filePath), bytes };
+  const window = openOfficeWindow(editor);
+  const deliver = () => {
+    if (!window.isDestroyed()) {
+      window.webContents.send('office:open-file', payload);
+      window.show();
+      window.focus();
+    }
+  };
+  if (window.webContents.isLoading()) {
+    window.webContents.once('did-finish-load', deliver);
+  } else {
+    deliver();
+  }
+}
+
+/** Back-compat wrapper: the docs window is an office window for 'docs'. */
+function openDocsWindow(artifactId?: string): void {
+  openOfficeWindow('docs', artifactId);
+}
+
+ipcMain.handle('shell:open-docs', (_event, artifactId?: unknown) => {
+  openDocsWindow(typeof artifactId === 'string' && artifactId ? artifactId : undefined);
+});
+
+const openOfficeFromIpc = (target?: unknown, artifactId?: unknown) => {
+  openOfficeWindow(
+    isOfficeTarget(target) ? target : 'launcher',
+    typeof artifactId === 'string' && artifactId ? artifactId : undefined,
+  );
+};
+
+ipcMain.handle('shell:open-office', (_event, target?: unknown, artifactId?: unknown) => {
+  openOfficeFromIpc(target, artifactId);
+});
+
+// `ipcMain.handle` registers an invoke-handler, not an EventEmitter listener,
+// so tests (and fire-and-forget senders) use the `ipcMain.on` path.
+ipcMain.on('shell:open-office', (_event, target?: unknown, artifactId?: unknown) => {
+  openOfficeFromIpc(target, artifactId);
+});
+
 const codeSessionWindows = new Map<string, BrowserWindow>();
 
 ipcMain.handle('shell:open-session', (_event, options: { sessionId: string; workspaceId?: string; title?: string }) => {
@@ -1856,7 +2362,10 @@ ipcMain.handle('window:maximize', () => {
   return { maximized: true };
 });
 
-ipcMain.handle('window:close', () => { mainWindow?.close(); });
+ipcMain.handle('window:close', (event) => {
+  log.warn('[Main] window:close invoked by renderer at', event.sender.getURL());
+  mainWindow?.close();
+});
 
 ipcMain.handle('window:is-maximized', () => mainWindow?.isMaximized() ?? false);
 
@@ -2613,3 +3122,25 @@ ipcMain.handle('miniApps:oauthCancel', (_event, flowId: string) => oauthBroker()
 ipcMain.handle('miniApps:oauthAccounts', (_event, appId: string) => oauthBroker().listAccounts(appId));
 ipcMain.handle('miniApps:oauthDisconnect', (_event, appId: string, providerId: string, accountId: string) =>
   oauthBroker().disconnect(appId, providerId, accountId));
+
+// ─── Browser API Capture (HAR-derived API client) ───────────────────────────
+// Records network traffic from the default Electron session and returns a HAR
+// archive that the platform ingests to derive reusable API contracts.
+
+ipcMain.handle('browser-capture:is-available', () => isCaptureAvailable());
+ipcMain.handle('browser-capture:start', (_event, options?: { filterUrls?: string[] }) => {
+  try {
+    const { sessionId } = createCaptureSession(options);
+    return { success: true as const, sessionId };
+  } catch (error) {
+    log.error('[BrowserCapture] Failed to start session:', error);
+    return { success: false as const, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+});
+ipcMain.handle('browser-capture:stop', (_event, sessionId: string) => {
+  const result = stopCaptureSession(sessionId);
+  if (!result) {
+    return { success: false as const, error: 'Session not found' };
+  }
+  return { success: true as const, har: result.har };
+});

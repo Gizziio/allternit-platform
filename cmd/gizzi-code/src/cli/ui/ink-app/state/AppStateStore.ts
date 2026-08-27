@@ -9,7 +9,7 @@ import type {
   MCPServerConnection,
   ServerResource,
 } from '../services/mcp/types.js'
-import { shouldEnablePromptSuggestion } from '../services/PromptSuggestion/promptSuggestion.js'
+import { shouldEnablePromptSuggestion } from '../services/PromptSuggestion/promptSuggestionGate.js'
 import {
   getEmptyToolPermissionContext,
   type Tool,

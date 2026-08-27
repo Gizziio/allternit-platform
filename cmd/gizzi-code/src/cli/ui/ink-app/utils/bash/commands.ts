@@ -1,11 +1,9 @@
 // @ts-nocheck
 import { randomBytes } from 'crypto'
 import type { ControlOperator, ParseEntry } from 'shell-quote'
-import {
-  type CommandPrefixResult,
-  type CommandSubcommandPrefixResult,
-  createCommandPrefixExtractor,
-  createSubcommandPrefixExtractor,
+import type {
+  CommandPrefixResult,
+  CommandSubcommandPrefixResult,
 } from '../shell/prefix.js'
 import { extractHeredocs, restoreHeredocs } from './heredoc.js'
 import { quote, tryParseShellCommand } from './shellQuote.js'
@@ -499,26 +497,59 @@ Note that not every command has a prefix. If a command has no prefix, return "no
 
 ONLY return the prefix. Do not return any other text, markdown markers, or other content or formatting.`
 
-const getCommandPrefix = createCommandPrefixExtractor({
-  toolName: 'Bash',
-  policySpec: BASH_POLICY_SPEC,
-  eventName: 'tengu_bash_prefix',
-  querySource: 'bash_extract_prefix',
-  preCheck: command =>
-    isHelpCommand(command) ? { commandPrefix: command } : null,
-})
+// Lazily constructed to avoid a static circular import through
+// ../shell/prefix.js (which pulls in the API/query graph and requires async
+// module init). getCommandSubcommandPrefix is already Promise-returning, so
+// callers see no behavior change — only creation of the underlying
+// memoized extractors is deferred to first use.
+let commandPrefixExtractor:
+  | ReturnType<typeof createCommandPrefixExtractor>
+  | undefined
+let commandSubcommandPrefixExtractor:
+  | ReturnType<typeof createSubcommandPrefixExtractor>
+  | undefined
 
-export const getCommandSubcommandPrefix = createSubcommandPrefixExtractor(
-  getCommandPrefix,
-  splitCommand_DEPRECATED,
-)
+async function ensureCommandPrefixExtractors(): Promise<{
+  commandPrefix: ReturnType<typeof createCommandPrefixExtractor>
+  commandSubcommandPrefix: ReturnType<typeof createSubcommandPrefixExtractor>
+}> {
+  if (!commandPrefixExtractor || !commandSubcommandPrefixExtractor) {
+    const { createCommandPrefixExtractor: create, createSubcommandPrefixExtractor: createSub } =
+      await import('../shell/prefix.js')
+    commandPrefixExtractor = create({
+      toolName: 'Bash',
+      policySpec: BASH_POLICY_SPEC,
+      eventName: 'tengu_bash_prefix',
+      querySource: 'bash_extract_prefix',
+      preCheck: command =>
+        isHelpCommand(command) ? { commandPrefix: command } : null,
+    })
+    commandSubcommandPrefixExtractor = createSub(
+      commandPrefixExtractor,
+      splitCommand_DEPRECATED,
+    )
+  }
+  return {
+    commandPrefix: commandPrefixExtractor,
+    commandSubcommandPrefix: commandSubcommandPrefixExtractor,
+  }
+}
+
+export async function getCommandSubcommandPrefix(
+  command: string,
+  abortSignal: AbortSignal,
+  isNonInteractiveSession: boolean,
+): Promise<CommandSubcommandPrefixResult | null> {
+  const { commandSubcommandPrefix } = await ensureCommandPrefixExtractors()
+  return commandSubcommandPrefix(command, abortSignal, isNonInteractiveSession)
+}
 
 /**
  * Clear both command prefix caches. Called on /clear to release memory.
  */
 export function clearCommandPrefixCaches(): void {
-  getCommandPrefix.cache.clear()
-  getCommandSubcommandPrefix.cache.clear()
+  commandPrefixExtractor?.cache.clear()
+  commandSubcommandPrefixExtractor?.cache.clear()
 }
 
 const COMMAND_LIST_SEPARATORS = new Set<ControlOperator>([

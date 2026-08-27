@@ -1,0 +1,143 @@
+---
+title: Data Residency
+description: Pin inference and storage to specific regions and enforce region pinning for your organization.
+---
+
+# Data Residency
+
+Allternit's Data Residency API lets organization owners and admins pin data processing and storage to a set of approved cloud regions. You can also enforce region pinning so that requests are rejected if they cannot be served from the pinned regions.
+
+## Authentication and authorization
+
+Data residency endpoints require a Clerk JWT or a valid organization access token. Only organization owners and admins can view or modify the policy.
+
+## Base URL
+
+```text
+/api/v1/admin/data-residency
+```
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/admin/data-residency` | Get the organization's data residency policy |
+| `POST` | `/api/v1/admin/data-residency` | Set the organization's data residency policy |
+| `GET` | `/api/v1/admin/data-residency/regions` | List available regions |
+
+## Available regions
+
+```bash
+curl https://api.allternit.com/api/v1/admin/data-residency/regions \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN"
+```
+
+### Response
+
+```json
+{
+  "regions": [
+    "us-east-1",
+    "us-west-2",
+    "eu-west-1",
+    "eu-central-1",
+    "ap-southeast-1",
+    "ap-northeast-1",
+    "ca-central-1",
+    "gb-london-1"
+  ]
+}
+```
+
+## Get the current policy
+
+```bash
+curl https://api.allternit.com/api/v1/admin/data-residency \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN"
+```
+
+### Response
+
+```json
+{
+  "org_id": "org_01hqx8x7x7x7x7x7x7x7x7x",
+  "pinned_regions": ["us-east-1", "eu-west-1"],
+  "default_region": "us-east-1",
+  "enforce_region_pinning": true,
+  "created_at": "2026-01-01T00:00:00Z",
+  "updated_at": "2026-08-13T18:00:00Z"
+}
+```
+
+If no policy has been set, the response returns the organization ID with an empty region list, no default region, and `enforce_region_pinning` set to `false`.
+
+## Set the residency policy
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/admin/data-residency \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "pinned_regions": ["us-east-1", "eu-west-1"],
+    "default_region": "us-east-1",
+    "enforce_region_pinning": true
+  }'
+```
+
+### Request body
+
+```json
+{
+  "pinned_regions": ["us-east-1", "eu-west-1"],
+  "default_region": "us-east-1",
+  "enforce_region_pinning": true
+}
+```
+
+### Response
+
+```json
+{
+  "org_id": "org_01hqx8x7x7x7x7x7x7x7x7x",
+  "pinned_regions": ["us-east-1", "eu-west-1"],
+  "default_region": "us-east-1",
+  "enforce_region_pinning": true,
+  "created_at": "2026-01-01T00:00:00Z",
+  "updated_at": "2026-08-13T18:05:00Z"
+}
+```
+
+`default_region` must be one of the `pinned_regions`. All regions in `pinned_regions` must be from the supported region list.
+
+## Policy behavior
+
+- **Pinned regions** — inference and storage requests are routed to one of the listed regions when possible.
+- **Default region** — the preferred region when no explicit region is requested.
+- **Enforce region pinning** — when `true`, requests that cannot be served from a pinned region are rejected.
+
+## Request/response fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `org_id` | string | Organization identifier |
+| `pinned_regions` | string[] | Approved cloud regions |
+| `default_region` | string \| null | Preferred region, must be in `pinned_regions` |
+| `enforce_region_pinning` | boolean | Whether to reject requests outside pinned regions |
+| `created_at` | string \| null | ISO 8601 timestamp |
+| `updated_at` | string \| null | ISO 8601 timestamp |
+
+## Error codes
+
+| HTTP | Code | Meaning |
+|------|------|---------|
+| `400` | `invalid_region` | A region is empty or not supported |
+| `400` | `invalid_default_region` | `default_region` is not in `pinned_regions` |
+| `403` | `organization_required` | Caller has no active organization |
+| `403` | `insufficient_role` | Caller is not an owner/admin |
+| `500` | `internal_error` | Unexpected server error |
+
+## Related pages
+
+- [Compliance](/security/compliance) — Retention policies and zero data residence
+- [BYOC runtime](/byoc/overview) — Self-hosted deployments for full data control
+- [Security model](/security/security-model) — Trust boundaries and data flows

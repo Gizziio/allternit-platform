@@ -43,6 +43,7 @@ import { getMemoryPath } from '../../utils/config.js'
 import { COMPACT_MAX_OUTPUT_TOKENS } from '../../utils/context.js'
 import {
   analyzeContext,
+  ensureContextAnalysisMessagesModule,
   tokenStatsToStatsigMetrics,
 } from '../../utils/contextAnalysis.js'
 import { logForDebugging } from '../../utils/debug.js'
@@ -112,7 +113,7 @@ import { logPermissionContextForAnts } from '../internalLogging.js'
 import {
   roughTokenCountEstimation,
   roughTokenCountEstimationForMessages,
-} from '../tokenEstimation.js'
+} from '../roughTokenEstimation.js'
 import { groupMessagesByApiRound } from './grouping.js'
 import {
   getCompactPrompt,
@@ -644,6 +645,11 @@ export async function compactConversation(
 
     // Extract compaction API usage metrics
     const compactionUsage = getTokenUsage(summaryResponse)
+
+    // Warm the lazily-loaded messages module analyzeContext() needs, so the
+    // synchronous walk below (see comment at its call site) doesn't hit an
+    // unpopulated lazy reference.
+    await ensureContextAnalysisMessagesModule()
 
     const querySourceForEvent =
       recompactionInfo?.querySource ?? context.options.querySource ?? 'unknown'

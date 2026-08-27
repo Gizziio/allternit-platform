@@ -1,0 +1,203 @@
+---
+title: Realtime Audio
+description: Low-latency speech-to-text and text-to-speech sessions through the Allternit LLM gateway
+---
+
+## Overview
+
+The Realtime Audio API provides session-based voice interaction. A session defines the model, voice, modalities, and turn-detection behavior. Clients connect to a session over WebSocket and stream audio or text in real time.
+
+## Base URL
+
+```
+https://api.allternit.com/v1
+```
+
+For local development:
+
+```
+http://127.0.0.1:8013/v1
+```
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/v1/realtime/sessions` | Create a realtime session |
+| `GET`  | `/v1/realtime/sessions` | List realtime sessions |
+| `GET`  | `/v1/realtime/sessions/:id` | Retrieve a session |
+| `DELETE` | `/v1/realtime/sessions/:id` | Delete a session |
+| `WS`   | `/v1/realtime/sessions/:id/ws` | WebSocket connection for the session |
+
+## Authentication
+
+REST endpoints require a virtual key in the `Authorization` header. The WebSocket endpoint accepts the same key as a query parameter or header, depending on client support. See [Authentication](/api/authentication).
+
+## Create a session
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `model` | string | no | `allternit-realtime-1` or `allternit-realtime-1-mini`. Defaults to `allternit-realtime-1`. |
+| `modalities` | string[] | no | `text` and/or `audio`. Defaults to `["text", "audio"]`. |
+| `voice` | string | no | Voice id. Defaults to `alloy`. |
+| `instructions` | string | no | System instructions for the session. |
+| `temperature` | number | no | Sampling temperature. Defaults to `0.8`. |
+| `max_response_output_tokens` | integer | no | Maximum output tokens per response. |
+| `input_audio_format` | string | no | Audio format for input. |
+| `output_audio_format` | string | no | Audio format for output. |
+| `turn_detection` | object | no | Turn-detection configuration. |
+
+### Voices
+
+| Voice | Description |
+|-------|-------------|
+| `alloy` | Neutral, balanced |
+| `echo` | Warm, calm |
+| `fable` | British, story-like |
+| `onyx` | Deep, authoritative |
+| `nova` | Bright, energetic |
+| `shimmer` | Clear, optimistic |
+
+### Turn detection
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `type` | string | Turn-detection strategy. |
+| `threshold` | number | Activation threshold. |
+| `prefix_padding_ms` | integer | Audio padding before the detected speech. |
+| `silence_duration_ms` | integer | Silence required to end a turn. |
+
+### Example request
+
+```bash
+curl -X POST https://api.allternit.com/v1/realtime/sessions \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "allternit-realtime-1",
+    "modalities": ["text", "audio"],
+    "voice": "alloy",
+    "instructions": "You are a helpful assistant. Keep answers concise.",
+    "temperature": 0.8,
+    "turn_detection": {
+      "type": "server_vad",
+      "threshold": 0.5,
+      "prefix_padding_ms": 300,
+      "silence_duration_ms": 500
+    }
+  }'
+```
+
+### Example response
+
+```json
+{
+  "id": "sess_abc123",
+  "object": "realtime.session",
+  "model": "allternit-realtime-1",
+  "modalities": ["text", "audio"],
+  "voice": "alloy",
+  "instructions": "You are a helpful assistant. Keep answers concise.",
+  "temperature": 0.8,
+  "status": "active",
+  "created_at": 1723500000
+}
+```
+
+## List sessions
+
+```bash
+curl https://api.allternit.com/v1/realtime/sessions \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+```json
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "sess_abc123",
+      "object": "realtime.session",
+      "model": "allternit-realtime-1",
+      "modalities": ["text", "audio"],
+      "voice": "alloy",
+      "status": "active",
+      "created_at": 1723500000
+    }
+  ]
+}
+```
+
+## Retrieve a session
+
+```bash
+curl https://api.allternit.com/v1/realtime/sessions/sess_abc123 \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+## Delete a session
+
+```bash
+curl -X DELETE https://api.allternit.com/v1/realtime/sessions/sess_abc123 \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+```json
+{
+  "id": "sess_abc123",
+  "object": "realtime.session.deleted",
+  "deleted": true
+}
+```
+
+## WebSocket events
+
+Connect to the session WebSocket and exchange events:
+
+| Event | Direction | Description |
+|-------|-----------|-------------|
+| `session.created` | server → client | Sent when the session is ready. |
+| `input_audio_buffer.append` | client → server | Stream raw audio chunks. |
+| `input_audio_buffer.commit` | client → server | Signal end of user audio. |
+| `response.created` | client → server | Ask the model to generate a response. |
+| `response.done` | server → client | Response generation finished. |
+| `error` | server → client | Session or transport error. |
+
+### Example WebSocket connection
+
+```javascript
+const ws = new WebSocket(
+  'wss://api.allternit.com/v1/realtime/sessions/sess_abc123/ws'
+);
+
+ws.onopen = () => {
+  ws.send(JSON.stringify({
+    type: 'input_audio_buffer.append',
+    audio: base64AudioChunk
+  }));
+};
+
+ws.onmessage = (event) => {
+  const msg = JSON.parse(event.data);
+  console.log(msg.type, msg);
+};
+```
+
+## Error codes
+
+| HTTP status | Code | Meaning |
+|-------------|------|---------|
+| 400 | `allternit.invalid_request` | Invalid `model`, `modalities`, `voice`, or `temperature`. |
+| 401 | `allternit.authentication_failed` | Missing or invalid API key. |
+| 404 | `allternit.invalid_request` | Session not found. |
+| 429 | `allternit.rate_limited` | Per-key rate limit exceeded. |
+| 429 | `allternit.budget_exceeded` | Monthly key or tenant budget exhausted. |
+| 500 | `allternit.internal_error` | Internal gateway error. |
+| 503 | `allternit.upstream_error` | Session store unavailable. |
+
+## Related pages
+
+- [Chat Completions](/api/chat-completions) — text-based conversational AI
+- [Files](/api/files) — store audio files for offline processing

@@ -5,6 +5,7 @@ import {
   checkStatsigFeatureGate_CACHED_MAY_BE_STALE,
   getFeatureValue_CACHED_MAY_BE_STALE,
 } from './../services/analytics/growthbook.ts'
+import { registerBetasCache } from './betasCache.js'
 import { getIsNonInteractiveSession, getSdkBetas } from '../bootstrap/state.js'
 import {
   BEDROCK_EXTRA_PARAMS_HEADERS,
@@ -232,7 +233,7 @@ export function shouldUseGlobalCacheScope(): boolean {
   )
 }
 
-export const getAllModelBetas = memoize((model: string): string[] => {
+export const getAllModelBetas = registerBetasCache(memoize((model: string): string[] => {
   const betaHeaders = []
   const isHaiku = getCanonicalName(model).includes('haiku')
   const provider = getAPIProvider()
@@ -367,22 +368,22 @@ export const getAllModelBetas = memoize((model: string): string[] => {
     )
   }
   return betaHeaders
-})
+}))
 
-export const getModelBetas = memoize((model: string): string[] => {
+export const getModelBetas = registerBetasCache(memoize((model: string): string[] => {
   const modelBetas = getAllModelBetas(model)
   if (getAPIProvider() === 'bedrock') {
     return modelBetas.filter(b => !BEDROCK_EXTRA_PARAMS_HEADERS.has(b))
   }
   return modelBetas
-})
+}))
 
-export const getBedrockExtraBodyParamsBetas = memoize(
+export const getBedrockExtraBodyParamsBetas = registerBetasCache(memoize(
   (model: string): string[] => {
     const modelBetas = getAllModelBetas(model)
     return modelBetas.filter(b => BEDROCK_EXTRA_PARAMS_HEADERS.has(b))
   },
-)
+))
 
 /**
  * Merge SDK-provided betas with auto-detected model betas.
@@ -428,8 +429,4 @@ export function getMergedBetas(
   return [...baseBetas, ...sdkBetas.filter(b => !baseBetas.includes(b))]
 }
 
-export function clearBetasCaches(): void {
-  getAllModelBetas.cache?.clear?.()
-  getModelBetas.cache?.clear?.()
-  getBedrockExtraBodyParamsBetas.cache?.clear?.()
-}
+

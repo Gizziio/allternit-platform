@@ -197,9 +197,7 @@ export function isEphemeralToolProgress(dataType: unknown): boolean {
   return typeof dataType === 'string' && EPHEMERAL_PROGRESS_TYPES.has(dataType)
 }
 
-export function getProjectsDir(): string {
-  return join(getClaudeConfigHomeDir(), 'projects')
-}
+export { getProjectDir, getProjectsDir } from './projectDir.js'
 
 export function getTranscriptPath(): string {
   const projectDir = getSessionProjectDir() ?? getProjectDir(getOriginalCwd())
@@ -435,10 +433,6 @@ export function isCustomTitleEnabled(): boolean {
 // string; homedir/env/regex are all session-invariant so the result is
 // stable for a given input. Worktree switches just change the key — no
 // cache clear needed.
-export const getProjectDir = memoize((projectDir: string): string => {
-  return join(getProjectsDir(), sanitizePath(projectDir))
-})
-
 let project: Project | null = null
 let cleanupRegistered = false
 

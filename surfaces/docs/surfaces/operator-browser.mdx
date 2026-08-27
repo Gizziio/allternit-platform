@@ -1,0 +1,144 @@
+---
+title: Operator Browser
+description: Browser automation and control surface for Allternit agents
+---
+
+## Overview
+
+**Operator Browser** is the Allternit surface for browser automation and control. It lets agents and users create browser tasks, monitor their status, inspect actions and screenshots, and chat with a browser-focused agent in a dedicated session.
+
+## Base URL / usage
+
+Operator Browser runs inside the platform shell:
+
+```text
+https://app.allternit.com/shell?view=operator
+```
+
+Open programmatically:
+
+```typescript
+open('operator');
+```
+
+API base:
+
+```text
+https://api.allternit.com/api/v1/operator/browser
+```
+
+## Task actions
+
+| Action | Description |
+|---|---|
+| `navigate` | Load a target URL |
+| `click` | Click an element matching a selector |
+| `type` | Type text into an input |
+| `extract` | Extract data from the page |
+| `screenshot` | Capture a page screenshot |
+| `wait` | Pause for a condition or duration |
+
+## Endpoints / commands
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/v1/operator/browser/health` | Operator and browser liveness |
+| `POST` | `/api/v1/operator/browser/tasks` | Create a new browser task |
+| `GET` | `/api/v1/operator/browser/tasks/:id` | Get task status and result |
+
+## Agent harness
+
+The surface supports binding an agent and configuring its harness. Available harness modes include `byok`, `cloud`, `local`, and `subprocess`.
+
+## JSON request / response examples
+
+### Health check
+
+```bash
+curl https://api.allternit.com/api/v1/operator/browser/health \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+Response:
+
+```json
+{
+  "browser_available": true,
+  "active_tasks": 0
+}
+```
+
+### Create a browser task
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/operator/browser/tasks \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://example.com",
+    "agent_id": "agent_018f3a7c...",
+    "actions": [
+      { "type": "navigate", "url": "https://example.com" },
+      { "type": "screenshot" }
+    ]
+  }'
+```
+
+Response:
+
+```json
+{
+  "id": "task_1a2b...",
+  "url": "https://example.com",
+  "status": "running",
+  "createdAt": "2026-08-13T18:00:00Z",
+  "actions": [
+    { "type": "navigate", "url": "https://example.com", "status": "completed" },
+    { "type": "screenshot", "status": "pending" }
+  ]
+}
+```
+
+### Get task result
+
+```bash
+curl https://api.allternit.com/api/v1/operator/browser/tasks/task_1a2b... \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+Response:
+
+```json
+{
+  "id": "task_1a2b...",
+  "url": "https://example.com",
+  "status": "completed",
+  "completedAt": "2026-08-13T18:00:12Z",
+  "actions": [
+    { "type": "navigate", "status": "completed" },
+    { "type": "screenshot", "status": "completed" }
+  ],
+  "result": {
+    "success": true,
+    "screenshot": "data:image/png;base64,iVBORw0KGgo..."
+  }
+}
+```
+
+## Error codes
+
+| HTTP | Code | Meaning |
+|---|---|---|
+| 200 | — | Task created or retrieved |
+| 400 | `invalid_task` | Missing URL or invalid actions |
+| 401 | `unauthorized` | Missing or invalid bearer token |
+| 404 | `not_found` | Task does not exist |
+| 503 | `operator_offline` | Browser operator is not available |
+| 500 | `browser_error` | Automation step failed |
+
+## Related links
+
+- [ACI API](/api/aci)
+- [Computer Use MCP](/tools/computer-use-mcp)
+- [Agent Studio](/surfaces/agent-studio)
+- [Tool Belt](/tools/tool-belt)

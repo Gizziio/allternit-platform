@@ -226,9 +226,10 @@ export function AgentAvatarPicker({ name, config, onChange }: AgentAvatarPickerP
 }
 
 export function createDefaultAvatarPickerConfig(name: string): AvatarPickerConfig {
-  const colors = PALETTE[Math.abs(name.charCodeAt(0)) % PALETTE.length];
+  const safeName = name || "A";
+  const colors = PALETTE[Math.abs(safeName.charCodeAt(0)) % PALETTE.length];
   return {
-    initial: name.charAt(0).toUpperCase(),
+    initial: safeName.charAt(0).toUpperCase(),
     bgColor: colors.bg,
     textColor: colors.text,
     shape: "rounded",

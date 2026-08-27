@@ -149,7 +149,7 @@ describe("file/time", () => {
       })
     })
 
-    test("skips check when OPENCODE_DISABLE_FILETIME_CHECK is true", async () => {
+    test("skips check when GIZZI_DISABLE_FILETIME_CHECK is true", async () => {
       await using tmp = await tmpdir()
       const filepath = path.join(tmp.path, "file.txt")
       await fs.writeFile(filepath, "content", "utf-8")
@@ -157,15 +157,15 @@ describe("file/time", () => {
       await Instance.provide({
         directory: tmp.path,
         fn: async () => {
-          const { Flag } = await import("../../src/flag/flag")
-          const original = Flag.OPENCODE_DISABLE_FILETIME_CHECK
-          ;(Flag as { OPENCODE_DISABLE_FILETIME_CHECK: boolean }).OPENCODE_DISABLE_FILETIME_CHECK = true
+          const { Flag } = await import("../../src/runtime/context/flag/flag")
+          const original = Flag.GIZZI_DISABLE_FILETIME_CHECK
+          ;(Flag as { GIZZI_DISABLE_FILETIME_CHECK: boolean }).GIZZI_DISABLE_FILETIME_CHECK = true
 
           try {
             // Should not throw even though file wasn't read
             await FileTime.assert(sessionID, filepath)
           } finally {
-            ;(Flag as { OPENCODE_DISABLE_FILETIME_CHECK: boolean }).OPENCODE_DISABLE_FILETIME_CHECK = original
+            ;(Flag as { GIZZI_DISABLE_FILETIME_CHECK: boolean }).GIZZI_DISABLE_FILETIME_CHECK = original
           }
         },
       })

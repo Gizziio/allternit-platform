@@ -114,7 +114,7 @@ pub fn map_http_status(status: u16) -> ProviderErrorKind {
 
 | # | Provider | Type | Auth Strategy | Discovery |
 |---|----------|------|---------------|-----------|
-| 1 | OpenCode | CLI | OAuth CLI wizard | Freeform |
+| 1 | Gizzi Code | CLI | OAuth CLI wizard | Freeform |
 | 2 | Gemini | CLI | OAuth CLI wizard | Freeform |
 | 3 | Claude | CLI | OAuth CLI wizard | Freeform |
 | 4 | Kimi | CLI | None (optional) | Freeform |
@@ -224,7 +224,7 @@ pub async fn list_provider_models<S>(
 
 | Fixture | Purpose |
 |---------|---------|
-| `opencode_acp_stream.jsonl` | Basic ACP streaming |
+| `allternit_acp_stream.jsonl` | Basic ACP streaming |
 | `claude_acp_stream.jsonl` | Tool call roundtrip |
 | `gemini_jsonl_stream.jsonl` | JSONL mode differences |
 | `ollama_stream.jsonl` | Local provider |

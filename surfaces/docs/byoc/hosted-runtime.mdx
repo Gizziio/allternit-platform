@@ -1,0 +1,221 @@
+---
+title: 'Hosted Runtime'
+description: 'Managed Allternit runtime as a Fly Machine for paid plans.'
+---
+
+## Overview
+
+The Allternit Hosted Runtime is a containerized runtime delivered as a Fly Machine. It bundles a pinned Gizzi Code headless binary, the agent-daemon relay, and `allternit-mux`. Paid users can provision hosted runtimes directly from the platform without managing their own VPS.
+
+The image is published to `ghcr.io/gizziio/allternit-hosted-runtime:latest` and built from `cmd/allternit-hosted-runtime`.
+
+## What runs inside the container
+
+```
+┌─────────────────────────────────────────┐
+│  Allternit Hosted Runtime container     │
+│  ┌─────────────────────────────────┐   │
+│  │ Gizzi Code gateway (port 8013)  │   │
+│  └─────────────────────────────────┘   │
+│  ┌─────────────────────────────────┐   │
+│  │ agent-daemon relay              │   │
+│  └─────────────────────────────────┘   │
+│  ┌─────────────────────────────────┐   │
+│  │ allternit-mux                   │   │
+│  └─────────────────────────────────┘   │
+└─────────────────────────────────────────┘
+```
+
+The container entrypoint:
+
+1. Starts the local Gizzi gateway on `127.0.0.1:8013`.
+2. Waits for the gateway health endpoint.
+3. Starts the agent-daemon, which auto-pairs with the cloud API.
+
+## One-time setup
+
+1. Publish the hosted runtime image:
+
+   ```bash
+   # Trigger the 'Publish Hosted Runtime Image' workflow.
+   # The GHCR package must be public so Fly Machines can pull it.
+   ```
+
+2. Configure the Cloud API Fly app with secrets:
+
+   ```bash
+   fly secrets set \
+     FLY_API_TOKEN=... \
+     FLY_ORG_SLUG=... \
+     ALLTERNIT_BILLING_SYNC_SECRET=... \
+     --app allternit-cloud-api
+   ```
+
+   - `FLY_API_TOKEN`: organization-scoped Fly token with permission to manage the hosted-runtime app.
+   - `FLY_ORG_SLUG`: explicit organization slug to prevent falling back to a personal account.
+   - `ALLTERNIT_BILLING_SYNC_SECRET`: random value of at least 32 characters.
+
+3. Optional environment variables:
+
+   | Variable | Purpose |
+   |----------|---------|
+   | `FLY_HOSTED_APP` | Fly app name for hosted runtimes. |
+   | `HOSTED_RUNTIME_IMAGE` | Override the container image. |
+   | `HOSTED_RUNTIME_IDLE_TIMEOUT_MINUTES` | Stop idle machines after this many minutes (default 15). |
+
+## Provisioning a hosted runtime
+
+Users with an entitled plan can create a hosted runtime through the Cloud API:
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/hosted-runtimes \
+  -H "Authorization: Bearer <clerk-session-token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "region": "lax",
+    "memoryMb": 1024,
+    "name": "Allternit Hosted (lax)"
+  }'
+```
+
+### Response
+
+```json
+{
+  "id": "hr_abc123",
+  "name": "Allternit Hosted (lax)",
+  "region": "lax",
+  "status": "starting",
+  "runtimeDeviceId": null,
+  "cpus": 1,
+  "memoryMb": 1024,
+  "idleTimeoutMinutes": 15,
+  "lastActivityAt": "2026-08-13T19:50:00Z",
+  "stopReason": null,
+  "monthlyUsageSeconds": 0,
+  "monthlyEstimatedCostUsd": 0.0,
+  "createdAt": "2026-08-13T19:50:00Z",
+  "startedAt": "2026-08-13T19:50:00Z",
+  "stoppedAt": null
+}
+```
+
+The machine starts, the agent-daemon auto-pairs, and `runtimeDeviceId` is populated once pairing completes.
+
+## Lifecycle operations
+
+| Operation | Endpoint |
+|-----------|----------|
+| List | `GET /api/v1/hosted-runtimes` |
+| Create | `POST /api/v1/hosted-runtimes` |
+| Entitlement | `GET /api/v1/hosted-runtimes/entitlement` |
+| Start | `POST /api/v1/hosted-runtimes/:id/start` |
+| Stop | `POST /api/v1/hosted-runtimes/:id/stop` |
+| Destroy | `DELETE /api/v1/hosted-runtimes/:id` |
+
+Start a stopped runtime:
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/hosted-runtimes/hr_abc123/start \
+  -H "Authorization: Bearer <clerk-session-token>"
+```
+
+## Entitlements
+
+The entitlement endpoint returns plan limits and current usage:
+
+```bash
+curl https://api.allternit.com/api/v1/hosted-runtimes/entitlement \
+  -H "Authorization: Bearer <clerk-session-token>"
+```
+
+### Response
+
+```json
+{
+  "planTierId": "pro",
+  "planDisplayName": "Pro",
+  "canCreateHostedRuntime": true,
+  "maxHostedRuntimes": 1,
+  "maxMemoryMb": 1024,
+  "maxHoursMonthly": 100,
+  "usedSecondsMonthly": 3600,
+  "remainingSecondsMonthly": 356400,
+  "estimatedCostUsdMonthly": 0.05,
+  "activeInstances": 1,
+  "idleTimeoutMinutes": 15,
+  "allowedRegions": ["lax"],
+  "upgradeUrl": "https://allternit.com/pricing",
+  "billingPortalUrl": ""
+}
+```
+
+Defaults:
+
+| Plan | Machines | Memory | Monthly hours |
+|------|----------|--------|---------------|
+| Pro | 1 | 1 GB | 100 |
+| Team | 5 | 2 GB each | 500 |
+
+## Billing and metering
+
+The billing system synchronizes entitlements through an internal endpoint:
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/internal/billing/hosted-entitlement \
+  -H "Content-Type: application/json" \
+  -H "X-Allternit-Billing-Secret: $ALLTERNIT_BILLING_SYNC_SECRET" \
+  -d '{
+    "eventId": "subscription-event-id",
+    "userId": "user_clerk_id",
+    "email": "customer@example.com",
+    "planTierId": "pro",
+    "source": "subscription"
+  }'
+```
+
+Use `planTierId: "free"` with a new event ID to revoke managed hosting. The lifecycle reconciler stops any running hosted machine within the configured reconcile interval.
+
+Actual charges are determined by the Fly invoice, which may also include stopped root filesystem, volume, network, and other account charges.
+
+## Container environment
+
+The Dockerfile sets the following environment variables:
+
+| Variable | Value | Purpose |
+|----------|-------|---------|
+| `ALLTERNIT_GATEWAY_URL` | `http://127.0.0.1:8013` | Local gateway URL. |
+| `ALLTERNIT_RUNTIME_IDENTITY_PATH` | `/data/runtime-identity.json` | Paired identity path. |
+| `XDG_DATA_HOME` / `XDG_CONFIG_HOME` / `XDG_STATE_HOME` / `XDG_CACHE_HOME` | `/data/...` | XDG directories. |
+| `GIZZI_CONFIG_DIR` | `/data/.config/gizzi-code` | Gizzi Code config directory. |
+| `GIZZI_DISABLE_AUTOUPDATE` | `1` | Disable auto-update. |
+| `ALLTERNIT_SIDECAR_DISABLED` | `1` | Disable the local sidecar. |
+| `NODE_ENV` | `production` | Node environment. |
+| `PORT` | `8013` | Gateway port. |
+
+The `/data` directory is a persistent volume.
+
+## Idle timeout
+
+The lifecycle reconciler stops a machine when:
+
+- It has been idle longer than `HOSTED_RUNTIME_IDLE_TIMEOUT_MINUTES`.
+- The plan is revoked.
+- Monthly hours are exhausted.
+- Fly reports the machine stopped.
+
+A stopped machine automatically wakes when a browser targets it through the runtime relay.
+
+## Security
+
+- The runtime image pins both the Gizzi release tag and SHA-256 checksum.
+- Auto-pairing uses a one-time bootstrap token stored as a hash server-side.
+- The container runs the gateway on loopback only; no ports are exposed publicly.
+- Outbound relay connections mean no inbound firewall rules are required.
+
+## Related pages
+
+- [Cloud API](/api/cloud-api)
+- [Agent Daemon](/cli/agent-daemon)
+- [allternit-mux](/cli/allternit-mux)
+- [BYOC Deploy Wizard](/byoc/deploy-wizard)

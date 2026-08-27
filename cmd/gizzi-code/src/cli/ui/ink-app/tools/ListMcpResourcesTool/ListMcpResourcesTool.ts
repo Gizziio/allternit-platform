@@ -1,9 +1,5 @@
 // @ts-nocheck
 import { z } from 'zod/v4'
-import {
-  ensureConnectedClient,
-  fetchResourcesForClient,
-} from '../../services/mcp/client.js'
 import { buildTool, type ToolDef } from '../../Tool.js'
 import { errorMessage } from '../../utils/errors.js'
 import { lazySchema } from '../../utils/lazySchema.js'
@@ -82,6 +78,9 @@ export const ListMcpResourcesTool = buildTool({
     // resources/list_changed notifications, so results are never stale.
     // ensureConnectedClient is a no-op when healthy (memoize hit), but after
     // onclose it returns a fresh connection so the re-fetch succeeds.
+    const { ensureConnectedClient, fetchResourcesForClient } = await import(
+      '../../services/mcp/client.js'
+    )
     const results = await Promise.all(
       clientsToProcess.map(async client => {
         if (client.type !== 'connected') return []

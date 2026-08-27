@@ -1,0 +1,148 @@
+---
+title: 'Visualizations API'
+description: 'Render bar, line, and pie charts to SVG, PNG, or PDF.'
+---
+
+## Overview
+
+The Visualizations API renders chart data into SVG, PNG, or PDF formats. It is useful for generating quick charts from tabular or aggregated data in agent workflows, reports, and dashboards.
+
+## Base URL
+
+```
+https://api.allternit.com/api/v1/viz
+```
+
+For local development:
+
+```
+http://127.0.0.1:8013/api/v1/viz
+```
+
+## Authentication
+
+Visualization routes inherit the standard bearer-token auth middleware. See [Authentication](/api/authentication).
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/viz` | Service status and supported formats. |
+| `POST` | `/api/v1/viz/render/svg` | Render a chart to SVG. |
+| `POST` | `/api/v1/viz/render/png` | Render a chart to base64 PNG. |
+| `POST` | `/api/v1/viz/render/pdf` | Render a chart to base64 PDF. |
+
+## Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `chart_type` | string | No | `bar`, `line`, or `pie`; defaults to `bar`. |
+| `title` | string | No | Chart title. |
+| `width` | integer | No | Width in pixels; defaults to `800`. |
+| `height` | integer | No | Height in pixels; defaults to `600`. |
+| `data` | array | Yes | Array of `{ label, value }` data points. |
+| `colors` | string[] | No | Color overrides. |
+
+### Data point
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `label` | string | Data point label. |
+| `value` | number | Data point value. |
+
+## Render to SVG
+
+```http
+POST /api/v1/viz/render/svg
+```
+
+### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/viz/render/svg \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "chart_type": "bar",
+    "title": "Monthly Active Users",
+    "width": 800,
+    "height": 400,
+    "data": [
+      { "label": "Jan", "value": 120 },
+      { "label": "Feb", "value": 190 },
+      { "label": "Mar", "value": 150 }
+    ],
+    "colors": ["#3b82f6", "#8b5cf6", "#ec4899"]
+  }'
+```
+
+### Example response
+
+```json
+{
+  "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"800\" height=\"400\">...</svg>"
+}
+```
+
+## Render to PNG
+
+```http
+POST /api/v1/viz/render/png
+```
+
+Returns the rendered PNG as a base64-encoded string.
+
+### Example response
+
+```json
+{
+  "png_base64": "iVBORw0KGgoAAAANSUhEUg..."
+}
+```
+
+## Render to PDF
+
+```http
+POST /api/v1/viz/render/pdf
+```
+
+Returns the rendered PDF as a base64-encoded string.
+
+### Example response
+
+```json
+{
+  "pdf_base64": "JVBERi0xLjQK..."
+}
+```
+
+## Service status
+
+```http
+GET /api/v1/viz
+```
+
+### Example response
+
+```json
+{
+  "status": "ok",
+  "service": "viz",
+  "renders": ["svg", "png", "pdf"]
+}
+```
+
+## Error codes
+
+| Status | Code | Meaning |
+|--------|------|---------|
+| `200 OK` | — | Render succeeded. |
+| `400 Bad Request` | `SVG_PARSE_ERROR` | Could not parse generated SVG. |
+| `401 Unauthorized` | — | Missing or invalid bearer token. |
+| `500 Internal Server Error` | `RENDER_ERROR` / `PNG_ENCODE_ERROR` / `PDF_SAVE_ERROR` | Rendering or encoding failure. |
+
+## Related pages
+
+- [Authentication](/api/authentication)
+- [Analytics API](/api/analytics)
+- [Files API](/api/files)

@@ -1,0 +1,39 @@
+---
+title: Admin API Overview
+description: Organization-scoped admin APIs for workspaces, RBAC, billing, and governance.
+---
+
+# Admin API Overview
+
+Allternit's Admin API gives organization owners and admins programmatic control over the control plane. Every endpoint is scoped to an organization and requires an admin or owner role.
+
+## Base URL
+
+```text
+/api/v1/admin
+```
+
+## Areas
+
+- [Workspaces](/admin/workspaces) — create workspaces, invite members, manage roles, and configure IP allowlists.
+- [RBAC](/admin/rbac) — custom roles, groups, and group membership.
+- [Service accounts](/admin/service-accounts) — scoped API keys for automation.
+- [Access tokens](/admin/access-tokens) — organization access tokens for CLI and headless surfaces.
+- [Spend limits](/admin/spend-limits) — monthly caps, increase requests, and balance checks.
+- [MCP tunnels](/admin/mcp-tunnels) — secure MCP server ingress with mTLS and OAuth.
+- [Analytics](/admin/analytics) — cost, token, and request volume reports.
+- [Inference hooks](/admin/inference-hooks) — pre/post middleware for every LLM request.
+- [External keys](/admin/external-keys) — BYO KMS and CMEK configuration.
+- [User profiles](/admin/user-profiles) — enrollment URLs and consent tracking.
+- [Federation](/admin/federation) — external identity issuer rules and claim-to-role mapping.
+- [Outcome rubrics](/admin/outcome-rubrics) — eval scoring criteria.
+- [Eval](/admin/eval) — datasets and runs for agent evaluation.
+- [Fallback credits](/admin/fallback-credits) — credit policy and reconciliation.
+
+## Authentication
+
+Use a service-account or admin API key in the `Authorization: Bearer <token>` header. See [Authentication](/api/authentication).
+
+## Organization scoping
+
+All admin endpoints require the caller to be a member of an organization with role `owner` or `admin`. Calls from users without an organization, or from members with only the `member` role, return `403 Forbidden`.

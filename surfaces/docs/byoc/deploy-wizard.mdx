@@ -1,0 +1,243 @@
+---
+title: 'BYOC Deploy Wizard'
+description: 'Deploy self-hosted Allternit runtimes to Hetzner, DigitalOcean, AWS, or a manual SSH target.'
+---
+
+## Overview
+
+The BYOC Deploy Wizard provisions a self-hosted Allternit runtime on your own VPS. It automates server creation, SSH bootstrap, mesh enrollment, runtime pairing, and registration in the platform gizzi instance registry. The wizard is hosted by the Allternit Cloud API and driven through a stateful HTTP API at `/api/v1/cloud/wizard/deployments`.
+
+The wizard supports two credential modes:
+
+- **API mode**: provide a provider API token and the wizard creates the server for you.
+- **Manual SSH mode**: provide an existing SSH host and credentials; the wizard skips cloud provisioning and runs bootstrap directly.
+
+## Base URL
+
+```
+https://api.allternit.com/api/v1/cloud/wizard
+```
+
+All wizard endpoints require a Clerk session JWT in the `Authorization: Bearer <token>` header.
+
+## Wizard steps
+
+| Step | Description |
+|------|-------------|
+| `SelectProvider` | Choose provider and instance configuration. |
+| `AgentAssistedSignup` | Optional signup guidance. |
+| `EnterCredentials` | Capture API token or SSH credentials. |
+| `ValidateCredentials` | Validate the token or SSH login. |
+| `Preflight` | Run preflight checks. |
+| `Provisioning` | Create the cloud server (API mode) or skip (manual mode). |
+| `Bootstrap` | SSH into the box, install gizzi-code, join the mesh, and pair the runtime. |
+| `Verification` | Confirm the box is reachable and registered. |
+| `Complete` | Wizard finished successfully. |
+| `Failed` | Terminal failure; may be retryable. |
+| `Cancelled` | Cancelled by the user. |
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/v1/cloud/wizard/deployments` | Start a new wizard session. |
+| GET | `/api/v1/cloud/wizard/deployments` | List your wizard sessions. |
+| GET | `/api/v1/cloud/wizard/deployments/:id` | Get the redacted wizard state. |
+| POST | `/api/v1/cloud/wizard/deployments/:id/advance` | Execute and advance the current step. |
+| POST | `/api/v1/cloud/wizard/deployments/:id/resume` | Resume after a human checkpoint. |
+| POST | `/api/v1/cloud/wizard/deployments/:id/cancel` | Cancel the session. |
+| DELETE | `/api/v1/cloud/wizard/deployments/:id` | Delete a terminal session. |
+| POST | `/api/v1/cloud/wizard/deployments/:id/bootstrap` | Run or retry the bootstrap step. |
+
+## Start a wizard
+
+### API mode
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/cloud/wizard/deployments \
+  -H "Authorization: Bearer <clerk-session-token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "provider": "hetzner",
+    "apiToken": "hetzner-api-token",
+    "instanceName": "allternit-prod-01",
+    "region": "fsn1",
+    "instanceType": "cx21",
+    "storageGb": 50
+  }'
+```
+
+### Manual SSH mode
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/cloud/wizard/deployments \
+  -H "Authorization: Bearer <clerk-session-token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "provider": "manual",
+    "sshHost": "203.0.113.5",
+    "sshPort": 22,
+    "sshUsername": "root",
+    "sshPrivateKey": "-----BEGIN OPENSSH PRIVATE KEY-----\n...",
+    "instanceName": "allternit-existing-01"
+  }'
+```
+
+### Response
+
+```json
+{
+  "deploymentId": "dep_abc123",
+  "currentStep": "SelectProvider",
+  "totalSteps": 8,
+  "completedSteps": [],
+  "context": {
+    "provider": "hetzner",
+    "instanceName": "allternit-prod-01",
+    "region": "fsn1",
+    "instanceType": "cx21",
+    "storageGb": 50,
+    "apiToken": null,
+    "sshPrivateKey": null,
+    "sshPassword": null
+  },
+  "agentGuidance": [],
+  "canProceed": true
+}
+```
+
+Secrets are redacted from every response but retained server-side for later steps.
+
+## Advance the wizard
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/cloud/wizard/deployments/dep_abc123/advance \
+  -H "Authorization: Bearer <clerk-session-token>"
+```
+
+### Response
+
+```json
+{
+  "deploymentId": "dep_abc123",
+  "currentStep": "ValidateCredentials",
+  "completedSteps": ["SelectProvider", "AgentAssistedSignup", "EnterCredentials"],
+  "context": { ... },
+  "agentGuidance": ["Credentials validated successfully"],
+  "canProceed": true
+}
+```
+
+Advance is idempotent per step: duplicate requests return the current state without re-executing.
+
+## Bootstrap the box
+
+When the wizard reaches the `Bootstrap` step, call the dedicated bootstrap endpoint. It is long-running because it downloads and installs software over SSH.
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/cloud/wizard/deployments/dep_abc123/bootstrap \
+  -H "Authorization: Bearer <clerk-session-token>"
+```
+
+### Response on success
+
+```json
+{
+  "deploymentId": "dep_abc123",
+  "status": "complete",
+  "meshIp": "100.64.0.5",
+  "instanceName": "allternit-prod-01",
+  "url": "http://100.64.0.5:8013",
+  "paired": true,
+  "runtimeId": "rt_xyz789",
+  "wizard": { ... }
+}
+```
+
+### Retryable failures
+
+If bootstrap fails for a recoverable reason (transient SSH or script failure), call the same endpoint again. The bootstrap script is idempotent. The response includes the attempt count:
+
+```json
+{
+  "error": "bootstrap_failed",
+  "message": "SSH connection timed out",
+  "recoverable": true,
+  "bootstrapAttempts": 1,
+  "maxBootstrapAttempts": 3
+}
+```
+
+Once `maxBootstrapAttempts` is reached, or the failure is non-recoverable (auth or validation), retry returns HTTP `409`:
+
+```json
+{
+  "error": "bootstrap_not_retryable",
+  "message": "Bootstrap failure is not recoverable",
+  "recoverable": false,
+  "bootstrapAttempts": 3,
+  "maxBootstrapAttempts": 3
+}
+```
+
+## Resume after a human checkpoint
+
+Some steps require human action (for example, confirming a provider account). Use `resume` to record the action and advance.
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/cloud/wizard/deployments/dep_abc123/resume \
+  -H "Authorization: Bearer <clerk-session-token>" \
+  -H "Content-Type: application/json" \
+  -d '{"checkpointType": "payment_completed"}'
+```
+
+## Cancel or delete
+
+```bash
+# Cancel an in-progress session
+curl -X POST https://api.allternit.com/api/v1/cloud/wizard/deployments/dep_abc123/cancel \
+  -H "Authorization: Bearer <clerk-session-token>"
+
+# Delete a terminal session (Complete, Failed, or Cancelled)
+curl -X DELETE https://api.allternit.com/api/v1/cloud/wizard/deployments/dep_abc123 \
+  -H "Authorization: Bearer <clerk-session-token>"
+```
+
+## Supported providers
+
+| Provider | Mode | Default region | Default type | Default image |
+|----------|------|----------------|--------------|---------------|
+| Hetzner | API | `fsn1` | `cx21` | `ubuntu-22.04` |
+| DigitalOcean | API | `nyc3` | `s-1vcpu-2gb` | `ubuntu-22-04-x64` |
+| AWS | API | `us-east-1` | `t3.small` | `ubuntu-24.04` |
+| Manual | SSH | — | — | — |
+
+## Security model
+
+- Provider API tokens and SSH private keys are stored encrypted at rest when `ALLTERNIT_CREDENTIALS_KEY` is configured.
+- Tokens and keys are never echoed in API responses.
+- Mesh preauth keys and runtime-pairing bootstrap tokens are minted before the SSH run and only ever written to the `0600` env file on the box.
+- The platform writes the gizzi instance registry row directly; credentials are never handed to the VPS.
+
+## Error codes
+
+| Status | Meaning | Typical cause |
+|--------|---------|---------------|
+| 200 | Success | Step advanced or bootstrap retried. |
+| 201 | Created | Wizard session started. |
+| 204 | No content | Terminal session deleted. |
+| 400 | Bad request | Missing credentials for the chosen mode. |
+| 401 | Unauthorized | Missing or invalid Clerk session. |
+| 403 | Forbidden | Not the session owner. |
+| 404 | Not found | Unknown session. |
+| 409 | Conflict | Non-retryable bootstrap, wrong step, or session not terminal. |
+| 502 | Bad gateway | Provider or mesh upstream error. |
+| 503 | Service unavailable | Mesh or pairing bootstrap not configured. |
+
+## Related pages
+
+- [Cloud API](/api/cloud-api)
+- [BYOC Overview](/byoc/overview)
+- [BYOC Installation](/byoc/installation)
+- [Hosted Runtime](/byoc/hosted-runtime)
+- [Agent Daemon](/cli/agent-daemon)

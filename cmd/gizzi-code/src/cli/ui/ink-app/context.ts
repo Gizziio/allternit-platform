@@ -6,11 +6,6 @@ import {
   setCachedClaudeMdContent,
 } from './bootstrap/state.js'
 import { getLocalISODate } from './constants/common.js'
-import {
-  filterInjectedMemoryFiles,
-  getClaudeMds,
-  getMemoryFiles,
-} from './utils/gizzimd.js'
 import { logForDiagnosticsNoPII } from './utils/diagLogs.js'
 import { isBareMode, isEnvTruthy } from './utils/envUtils.js'
 import { execFileNoThrow } from './utils/execFileNoThrow.js'
@@ -168,9 +163,12 @@ export const getUserContext = memoize(
       (isBareMode() && getAdditionalDirectoriesForClaudeMd().length === 0)
     // Await the async I/O (readFile/readdir directory walk) so the event
     // loop yields naturally at the first fs.readFile.
-    const claudeMd = shouldDisableClaudeMd
-      ? null
-      : getClaudeMds(filterInjectedMemoryFiles(await getMemoryFiles()))
+    let claudeMd: string | null = null
+    if (!shouldDisableClaudeMd) {
+      const { filterInjectedMemoryFiles, getClaudeMds, getMemoryFiles } =
+        await import('./utils/gizzimd.js')
+      claudeMd = getClaudeMds(filterInjectedMemoryFiles(await getMemoryFiles()))
+    }
     // Cache for the auto-mode classifier (yoloClassifier.ts reads this
     // instead of importing claudemd.ts directly, which would create a
     // cycle through permissions/filesystem → permissions → yoloClassifier).

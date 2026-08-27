@@ -21,7 +21,7 @@ import {
   TOOL_USE_ID_TAG,
 } from '../constants/xml.js'
 import { type QueryParams, query } from '../query.js'
-import { roughTokenCountEstimation } from '../services/tokenEstimation.js'
+import { roughTokenCountEstimation } from '../services/roughTokenEstimation.js'
 import type { SetAppState } from '../Task.js'
 import { createTaskStateBase } from '../Task.js'
 import type {

@@ -1,10 +1,7 @@
 import { readdir, rm, stat, unlink, writeFile } from 'fs/promises'
 import { join } from 'path'
-import { clearCommandsCache } from '@/commands.js'
 import { clearAllOutputStylesCache } from '@/constants/outputStyles.js'
-import { clearAgentDefinitionsCache } from '../../../cli/ui/ink-app/tools/AgentTool/loadAgentsDir.js'
 import { clearPromptCache } from '../../tools/SkillTool/prompt.js'
-import { resetSentSkillNames } from '../attachments.js'
 import { logForDebugging } from '../debug.js'
 import { getErrnoCode } from '../errors.js'
 import { logError } from '../log.js'
@@ -43,9 +40,19 @@ export function clearAllPluginCaches(): void {
 
 export function clearAllCaches(): void {
   clearAllPluginCaches()
+  clearPromptCache()
+  void clearCommandAndAttachmentCaches()
+}
+
+async function clearCommandAndAttachmentCaches(): Promise<void> {
+  const [{ clearCommandsCache }, { clearAgentDefinitionsCache }, { resetSentSkillNames }] =
+    await Promise.all([
+      import('@/commands.js'),
+      import('../../../cli/ui/ink-app/tools/AgentTool/loadAgentsDir.js'),
+      import('../attachments.js'),
+    ])
   clearCommandsCache()
   clearAgentDefinitionsCache()
-  clearPromptCache()
   resetSentSkillNames()
 }
 

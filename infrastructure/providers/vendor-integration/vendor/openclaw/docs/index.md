@@ -94,7 +94,7 @@ Most operations flow through the **Gateway** (`openclaw gateway`), a single long
 - 📱 **iOS node** — Pairs as a node and exposes a Canvas surface
 - 📱 **Android node** — Pairs as a node and exposes Canvas + Chat + Camera
 
-Note: legacy Claude/Codex/Gemini/Opencode paths have been removed; Pi is the only coding-agent path.
+Note: legacy Claude/Codex/Gemini paths have been removed; Pi is the only coding-agent path.
 
 ## Quick start
 

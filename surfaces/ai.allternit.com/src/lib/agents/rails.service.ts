@@ -266,24 +266,64 @@ export interface MailThread {
   thread_id: string;
   topic: string;
   created_at: string;
+  participants?: string[];
 }
 
 export interface MailMessage {
   message_id: string;
   thread_id: string;
   from_agent: string;
+  to_agent?: string;
+  to_agents?: string[];
   body: string;
+  body_ref?: string;
+  body_path?: string;
   timestamp: string;
   acknowledged?: boolean;
+  ack_required?: boolean;
+  /** Message subject/topic (mirrors MailSendRequest). */
+  subject?: string;
+  /** Message priority. */
+  priority?: 'low' | 'normal' | 'high' | 'urgent';
+  /** Backend importance (low/normal/high). */
+  importance?: 'low' | 'normal' | 'high';
 }
 
 export interface MailShareResponse {
   share_id: string;
 }
 
+/** Response of POST /mail/decide. `email` is present only when the thread
+ * belongs to a pending outbound agent email (`mail:email-out-*`). */
+export interface MailDecideResponse {
+  decided: boolean;
+  thread_id: string;
+  email?: {
+    actioned: boolean;
+    /** Present when actioned: the resulting outbound status. */
+    status?: 'sent' | 'rejected';
+    /** Present when the provider-side action failed (decision still stands). */
+    error?: string;
+  };
+}
+
 export interface MailSendRequest {
   thread_id: string;
-  body_ref: string;
+  body_ref?: string;
+  /** Message body (newer backends accept this directly). */
+  body?: string;
+  /** Sender agent id (typed envelope path). */
+  from_agent?: string;
+  /** Recipients for typed envelope path. */
+  to_agents?: string[];
+  /** Single-recipient alias for typed envelope path. */
+  to_agent_id?: string;
+  /** Message subject/topic. */
+  subject?: string;
+  /** Message priority; maps to backend `importance`. */
+  priority?: 'low' | 'normal' | 'high' | 'urgent';
+  /** Request read acknowledgement. */
+  requires_ack?: boolean;
   attachments?: string[];
 }
 
@@ -296,6 +336,13 @@ export interface MailThreadSummary {
 export interface MailInboxRequest {
   agent_id: string;
   limit?: number;
+}
+
+export interface MailAckRequest {
+  thread_id: string;
+  message_id: string;
+  agent_id?: string;
+  note?: string;
 }
 
 // Gate - Policy enforcement
@@ -548,13 +595,16 @@ export const railsApi = {
   
   mail: {
     /** Ensure/create thread */
-    ensureThread: (topic: string) => apiRequestWithError<{ thread_id: string }>(
-      `${RAILS_BASE}/mail/threads`,
-      { method: "POST", body: JSON.stringify({ topic }) }
-    ),
+    ensureThread: (topic: string, _participants?: string[]) => {
+      const canonicalTopic = /^((dag|wih|mail):)/.test(topic) ? topic : `mail:${topic}`;
+      return apiRequestWithError<{ thread_id: string }>(
+        `${RAILS_BASE}/mail/threads`,
+        { method: "POST", body: JSON.stringify({ topic: canonicalTopic }) }
+      );
+    },
 
     /** Send message */
-    send: (req: MailSendRequest) => apiRequestWithError<{ sent: boolean }>(
+    send: (req: MailSendRequest) => apiRequestWithError<{ sent: boolean; thread_id?: string; message_id?: string }>(
       `${RAILS_BASE}/mail/send`,
       { method: "POST", body: JSON.stringify(req) }
     ),
@@ -585,14 +635,21 @@ export const railsApi = {
       { method: "POST", body: JSON.stringify({ thread_id: threadId, message_id: messageId, note }) }
     ),
 
+    /** Acknowledge message (explicit request object). */
+    ackMessage: (req: MailAckRequest) => apiRequestWithError<{ acknowledged: boolean }>(
+      `${RAILS_BASE}/mail/ack`,
+      { method: "POST", body: JSON.stringify(req) }
+    ),
+
     /** Request review */
     requestReview: (threadId: string, wihId: string, diffRef: string) => apiRequestWithError<void>(
       `${RAILS_BASE}/mail/review`,
       { method: "POST", body: JSON.stringify({ thread_id: threadId, wih_id: wihId, diff_ref: diffRef }) }
     ),
 
-    /** Decide on review */
-    decide: (threadId: string, approve: boolean, notesRef?: string) => apiRequestWithError<void>(
+    /** Decide on review. For `mail:email-out-*` threads the response carries an
+     * `email` object with the provider-side outcome (rails/mod.rs mail_decide). */
+    decide: (threadId: string, approve: boolean, notesRef?: string) => apiRequestWithError<MailDecideResponse>(
       `${RAILS_BASE}/mail/decide`,
       { method: "POST", body: JSON.stringify({ thread_id: threadId, approve, notes_ref: notesRef }) }
     ),

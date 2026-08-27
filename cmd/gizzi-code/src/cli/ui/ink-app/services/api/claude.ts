@@ -1042,7 +1042,7 @@ async function* queryModel(
     ).activated
   ) {
     logEvent('tengu_off_switch_query', {})
-    yield getAssistantMessageFromError(
+    yield await getAssistantMessageFromError(
       new Error(CUSTOM_OFF_SWITCH_MESSAGE),
       options.model,
     )
@@ -2741,7 +2741,7 @@ async function* queryModel(
           return
         }
 
-        yield getAssistantMessageFromError(error, errorModel, {
+        yield await getAssistantMessageFromError(error, errorModel, {
           messages,
           messagesForAPI,
         })
@@ -2799,7 +2799,7 @@ async function* queryModel(
         return
       }
 
-      yield getAssistantMessageFromError(error, errorModel, {
+      yield await getAssistantMessageFromError(error, errorModel, {
         messages,
         messagesForAPI,
       })

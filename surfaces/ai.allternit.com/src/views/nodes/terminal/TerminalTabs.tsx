@@ -246,9 +246,9 @@ export function TerminalTabs({ initialNodeId, className = '' }: TerminalTabsProp
   if (sessions.length === 0) {
     return (
       <div className={`flex flex-col items-center justify-center h-full ${className}`}>
-        <Terminal className="size-12  text-muted-foreground mb-4" />
-        <h3 className="text-lg font-semibold mb-2">No Active Terminals</h3>
-        <p className="text-sm text-muted-foreground text-center max-w-sm mb-4">
+        <Terminal className="size-12 text-[var(--text-tertiary)] mb-4" />
+        <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">No Active Terminals</h3>
+        <p className="text-sm text-[var(--text-secondary)] text-center max-w-sm mb-4">
           Open a terminal to connect to a node's shell.
         </p>
         <Button onClick={() => setShowNewDialog(true)}>
@@ -283,7 +283,7 @@ export function TerminalTabs({ initialNodeId, className = '' }: TerminalTabsProp
   return (
     <div className={`flex flex-col h-full ${className}`}>
       {/* Tab bar */}
-      <div className="flex items-center gap-2 px-2 py-1 bg-muted border-b">
+      <div className="flex items-center gap-2 px-2 py-1 bg-[var(--surface-panel)]/50 backdrop-blur border-b border-[var(--border-subtle)]">
         <div className="flex-1 flex gap-1 overflow-x-auto">
           {sessions.map((session) => (
             (() => {
@@ -298,30 +298,30 @@ export function TerminalTabs({ initialNodeId, className = '' }: TerminalTabsProp
                   onClick={() => setActiveSessionId(session.id)}
                   className={`flex items-center gap-2 px-3 py-1.5 text-xs rounded-md whitespace-nowrap transition-colors ${
                     activeSessionId === session.id
-                      ? 'bg-background text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+                      ? 'bg-[var(--accent-code)] text-[var(--text-inverse)] shadow-sm'
+                      : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-panel)]/80'
                   }`}
                 >
                   <div
-                    className={`size-2  rounded-full ${
-                      connected ? 'bg-green-500' : degraded ? 'bg-red-500' : 'bg-amber-500'
+                    className={`size-2 rounded-full ${
+                      connected ? 'bg-[var(--status-success)]' : degraded ? 'bg-[var(--status-error)]' : 'bg-[var(--status-warning)]'
                     }`}
                   />
                   <span className="max-w-[120px] truncate">
                     {session.nodeId.slice(0, 8)}...
                   </span>
                   {restored ? (
-                    <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+                    <span className="px-1.5 py-0.5 rounded bg-[var(--status-success)]/10 text-[var(--status-success)]">
                       restored
                     </span>
                   ) : null}
                   {!connected && hasSnapshot ? (
-                    <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-600 dark:text-amber-400">
+                    <span className="px-1.5 py-0.5 rounded bg-[var(--status-warning)]/10 text-[var(--status-warning)]">
                       replay
                     </span>
                   ) : null}
                   {degraded ? (
-                    <span className="px-1.5 py-0.5 rounded bg-red-500/15 text-red-600 dark:text-red-400">
+                    <span className="px-1.5 py-0.5 rounded bg-[var(--status-error)]/10 text-[var(--status-error)]">
                       degraded
                     </span>
                   ) : null}
@@ -330,7 +330,7 @@ export function TerminalTabs({ initialNodeId, className = '' }: TerminalTabsProp
                       e.stopPropagation();
                       closeSession(session.id);
                     }}
-                    className="ml-1 p-0.5 hover:bg-muted-foreground/20 rounded"
+                    className="ml-1 p-0.5 hover:bg-[var(--text-secondary)]/20 rounded text-[var(--text-secondary)]"
                   >
                     <X size={12} />
                   </button>
@@ -341,18 +341,18 @@ export function TerminalTabs({ initialNodeId, className = '' }: TerminalTabsProp
         </div>
 
         <div className="hidden md:flex items-center gap-1 text-[12px]">
-          <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-zinc-700 text-zinc-100">
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-[var(--bg-secondary)] text-[var(--text-primary)] border border-[var(--border-subtle)]">
             <Cube size={12} />
             sidecar
           </span>
-          <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-zinc-700 text-zinc-100">
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-[var(--bg-secondary)] text-[var(--text-primary)] border border-[var(--border-subtle)]">
             <Shield size={12} />
             snapshots
           </span>
         </div>
 
         <button type="button"
-          className="size-7  flex items-center justify-center rounded hover:bg-white/10 transition-colors"
+          className="size-7 flex items-center justify-center rounded text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors"
           onClick={() => setShowNewDialog(true)}
         >
           <Plus size={16} />
@@ -455,7 +455,7 @@ function NewTerminalDialog({
           <div className="space-y-2">
             <Label>Node</Label>
             {nodes.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-2">
+              <p className="text-sm text-[var(--text-secondary)] py-2">
                 No online nodes available. Connect a node first.
               </p>
             ) : (
@@ -466,16 +466,16 @@ function NewTerminalDialog({
                     onClick={() => onSelect(node.id)}
                     className={`flex items-center justify-between p-3 rounded-md border transition-colors text-left ${
                       selectedNodeId === node.id
-                        ? 'border-primary bg-primary/5'
-                        : 'hover:bg-muted'
+                        ? 'border-[var(--accent-code)] bg-[var(--accent-code)]/5'
+                        : 'hover:bg-[var(--surface-hover)]'
                     }`}
                   >
                     <div>
                       <p className="font-medium text-sm">{node.hostname}</p>
-                      <p className="text-xs text-muted-foreground">{node.id}</p>
+                      <p className="text-xs text-[var(--text-secondary)]">{node.id}</p>
                     </div>
                     {selectedNodeId === node.id && (
-                      <div className="size-4  rounded-full bg-primary" />
+                      <div className="size-4  rounded-full bg-[var(--accent-code)]" />
                     )}
                   </button>
                 ))}
@@ -508,7 +508,7 @@ function NewTerminalDialog({
           {/* Advanced Options Toggle */}
           <button type="button"
             onClick={() => setShowAdvanced(!showAdvanced)}
-            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            className="flex items-center gap-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
           >
             <GearSix size={16} />
             Advanced Options
@@ -533,7 +533,7 @@ function NewTerminalDialog({
                     setOptions((prev) => ({ ...prev, workingDir: e.target.value }))
                   }
                 />
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-[var(--text-secondary)]">
                   Directory where the shell will start. Leave empty for default.
                 </p>
               </div>
@@ -544,7 +544,7 @@ function NewTerminalDialog({
                   <Label>Environment Variables</Label>
                   <button type="button"
                     onClick={addEnvVar}
-                    className="text-xs text-primary hover:underline"
+                    className="text-xs text-[var(--accent-code)] hover:underline"
                   >
                     + Add Variable
                   </button>
@@ -566,14 +566,14 @@ function NewTerminalDialog({
                       />
                       <button type="button"
                         onClick={() => removeEnvVar(index)}
-                        className="p-2 hover:bg-muted rounded"
+                        className="p-2 hover:bg-[var(--surface-hover)] rounded"
                       >
                         <X size={16} />
                       </button>
                     </div>
                   ))}
                   {options.envVars.length === 0 && (
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-[var(--text-secondary)]">
                       No environment variables set.
                     </p>
                   )}
@@ -619,7 +619,7 @@ function NewTerminalDialog({
               {/* Sandbox Mode */}
               <div className="space-y-4 pt-4 border-t">
                 <div className="flex items-center gap-2">
-                  <Cube className="size-4  text-primary" />
+                  <Cube className="size-4  text-[var(--accent-code)]" />
                   <Label className="font-medium">Sandbox Mode</Label>
                 </div>
                 
@@ -640,7 +640,7 @@ function NewTerminalDialog({
                 </div>
 
                 {options.sandbox.enabled && (
-                  <div className="space-y-4 pl-6 border-none bg-black/5 rounded-lg py-3 pr-3">
+                  <div className="space-y-4 pl-6 border-none bg-[var(--surface-panel)]/50 rounded-lg py-3 pr-3">
                     {/* Docker Image */}
                     <div className="space-y-2">
                       <Label htmlFor="sandbox-image">Docker Image</Label>
@@ -655,7 +655,7 @@ function NewTerminalDialog({
                           }))
                         }
                       />
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-[var(--text-secondary)]">
                         Container image to use for the terminal session
                       </p>
                     </div>
@@ -704,7 +704,7 @@ function NewTerminalDialog({
                         <Label>Volume Mounts</Label>
                         <button type="button"
                           onClick={addVolumeMount}
-                          className="text-xs text-primary hover:underline"
+                          className="text-xs text-[var(--accent-code)] hover:underline"
                         >
                           + Add Volume
                         </button>
@@ -718,7 +718,7 @@ function NewTerminalDialog({
                               onChange={(e) => updateVolumeMount?.(index, 'source', e.target.value)}
                               className="flex-1"
                             />
-                            <span className="text-muted-foreground">:</span>
+                            <span className="text-[var(--text-secondary)]">:</span>
                             <Input
                               placeholder="Container path"
                               value={vol.target}
@@ -739,14 +739,14 @@ function NewTerminalDialog({
                             </div>
                             <button type="button"
                               onClick={() => removeVolumeMount?.(index)}
-                              className="p-2 hover:bg-muted rounded"
+                              className="p-2 hover:bg-[var(--surface-hover)] rounded"
                             >
                               <X size={16} />
                             </button>
                           </div>
                         ))}
                         {options.sandbox.volumes.length === 0 && (
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-sm text-[var(--text-secondary)]">
                             No volume mounts configured.
                           </p>
                         )}
@@ -756,7 +756,7 @@ function NewTerminalDialog({
                     {/* Security Options */}
                     <div className="space-y-3 pt-2">
                       <div className="flex items-center gap-2">
-                        <Shield className="size-4  text-primary" />
+                        <Shield className="size-4  text-[var(--accent-code)]" />
                         <Label className="text-sm font-medium">Security Options</Label>
                       </div>
                       

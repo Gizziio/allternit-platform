@@ -40,9 +40,10 @@ export function UniverDocEditor({ projectName }: Props) {
           locales: { [LocaleType.EN_US]: merge({}, docsLocale) },
           theme: defaultTheme,
           presets: [
+            // See UniverSheetEditor.tsx: legacy 0.21 editor vs Univer 0.25 type collision.
             UniverDocsCorePreset({
               container: containerRef.current,
-            }),
+            } as any) as any,
           ],
         });
 

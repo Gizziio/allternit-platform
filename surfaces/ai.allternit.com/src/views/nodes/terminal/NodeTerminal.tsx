@@ -84,7 +84,7 @@ export function NodeTerminal({
         black: '#0d1117',
         red: '#ff7b72',
         green: '#3fb950',
-        yellow: '#d29922',
+        yellow: '#f59e0b',
         blue: '#58a6ff',
         magenta: '#bc8cff',
         cyan: '#39c5cf',
@@ -92,7 +92,7 @@ export function NodeTerminal({
         brightBlack: '#484f58',
         brightRed: '#ffa198',
         brightGreen: '#56d364',
-        brightYellow: '#e3b341',
+        brightYellow: '#fbbf24',
         brightBlue: '#79c0ff',
         brightMagenta: '#d2a8ff',
         brightCyan: '#56d4dd',
@@ -179,7 +179,7 @@ export function NodeTerminal({
           // No more reconnection attempts
           term.writeln('\r\n\x1b[1;31m[Disconnected]\x1b[0m');
         } else {
-          term.writeln(`\r\n\x1b[1;33m[Reconnecting... attempt ${attempt}]\x1b[0m`);
+          term.writeln(`\r\n\x1b[1;36m[Reconnecting... attempt ${attempt}]\x1b[0m`);
         }
       } else {
         setReconnectionAttempt(0);
@@ -483,23 +483,23 @@ export function NodeTerminal({
   return (
     <div className={cn("flex flex-col h-full", className)}>
       {/* Terminal header */}
-      <div className="flex items-center justify-between px-3 py-2 bg-muted border-b">
+      <div className="flex items-center justify-between px-3 py-2 bg-[var(--surface-panel)]/50 backdrop-blur border-b border-[var(--border-subtle)]">
         <div className="flex items-center gap-2">
           <div 
             className={cn(
-              "size-2  rounded-full",
+              "size-2 rounded-full",
               isConnected 
-                ? 'bg-green-500' 
+                ? 'bg-[var(--status-success)]' 
                 : isReconnecting 
-                  ? 'bg-yellow-500 animate-pulse' 
-                  : 'bg-red-500'
+                  ? 'bg-[var(--status-warning)] animate-pulse' 
+                  : 'bg-[var(--status-error)]'
             )} 
           />
           <span className="text-xs font-medium">
             {session.shell} on {session.nodeId.slice(0, 8)}...
           </span>
           {session.isReconnected && (
-            <span className="text-xs text-blue-500">(reconnected)</span>
+            <span className="text-xs text-[var(--status-info)]">(reconnected)</span>
           )}
         </div>
         <div className="flex items-center gap-2">
@@ -508,7 +508,7 @@ export function NodeTerminal({
               variant="ghost"
               size="sm"
               onClick={() => setShowFileBrowser(!showFileBrowser)}
-              className={cn(showFileBrowser && "bg-accent")}
+              className={cn(showFileBrowser && "bg-[var(--surface-panel)]")}
             >
               {showFileBrowser ? (
                 <PanelLeftClose size={16} />
@@ -520,14 +520,14 @@ export function NodeTerminal({
           {!isConnected && !isReconnecting && (
             <button type="button"
               onClick={handleManualReconnect}
-              className="text-xs px-2 py-1 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+              className="text-xs px-2 py-1 bg-[var(--accent-code)] text-[var(--text-inverse)] rounded hover:bg-[var(--accent-code)]/90 transition-colors"
             >
               Reconnect
             </button>
           )}
           <button type="button"
             onClick={onClose}
-            className="text-muted-foreground hover:text-foreground text-xs"
+            className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-xs"
           >
             Close
           </button>
@@ -536,10 +536,10 @@ export function NodeTerminal({
 
       {/* Timeout Warning Banner */}
       {showTimeoutWarning && timeoutWarning && (
-        <div className="bg-yellow-500/10 border-b border-yellow-500/30 px-3 py-2 flex items-center justify-between">
+        <div className="bg-[var(--status-warning)]/10 border-b border-[var(--status-warning)]/30 px-3 py-2 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <svg 
-              className="size-4  text-yellow-500" 
+              className="size-4 text-[var(--status-warning)]" 
               fill="none" 
               stroke="currentColor" 
               viewBox="0 0 24 24"
@@ -551,13 +551,13 @@ export function NodeTerminal({
                 d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" 
               />
             </svg>
-            <span className="text-sm text-yellow-700 dark:text-yellow-400">
+            <span className="text-sm text-[var(--status-warning)]">
               Session expires in {formatRemainingTime(timeoutWarning.remaining_seconds)}
             </span>
           </div>
           <button type="button"
             onClick={handleKeepAlive}
-            className="text-xs px-3 py-1 bg-yellow-500 hover:bg-yellow-600 text-white rounded transition-colors font-medium"
+            className="text-xs px-3 py-1 bg-[var(--accent-code)] hover:bg-[var(--accent-code)]/90 text-[var(--text-inverse)] rounded transition-colors font-medium"
           >
             Keep Alive
           </button>
@@ -566,9 +566,9 @@ export function NodeTerminal({
 
       {/* Reconnection Status */}
       {isReconnecting && (
-        <div className="bg-blue-500/10 border-b border-blue-500/30 px-3 py-2 flex items-center justify-center gap-2">
-          <div className="size-3  border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-          <span className="text-sm text-blue-700 dark:text-blue-400">
+        <div className="bg-[var(--status-info)]/10 border-b border-[var(--status-info)]/30 px-3 py-2 flex items-center justify-center gap-2">
+          <div className="size-3 border-2 border-[var(--status-info)] border-t-transparent rounded-full animate-spin" />
+          <span className="text-sm text-[var(--status-info)]">
             Reconnecting... {reconnectionAttempt > 0 && `(attempt ${reconnectionAttempt})`}
           </span>
         </div>
@@ -580,8 +580,8 @@ export function NodeTerminal({
         <div 
           ref={dropZoneRef}
           className={cn(
-            "flex-1 relative bg-[#0d1117]",
-            isDragging && "ring-2 ring-primary ring-inset"
+            "flex-1 relative bg-[var(--surface-canvas)]",
+            isDragging && "ring-2 ring-[var(--accent-code)] ring-inset"
           )}
           onDragEnter={handleDragEnter}
           onDragLeave={handleDragLeave}
@@ -592,8 +592,8 @@ export function NodeTerminal({
           
           {/* Drag overlay */}
           {isDragging && (
-            <div className="absolute inset-0 bg-primary/10 flex items-center justify-center pointer-events-none">
-              <div className="bg-background/90 px-6 py-4 rounded-lg shadow-lg text-center">
+            <div className="absolute inset-0 bg-[var(--accent-code)]/10 flex items-center justify-center pointer-events-none">
+              <div className="bg-[var(--surface-floating)]/90 px-6 py-4 rounded-lg shadow-lg text-center">
                 <UploadSimple className="size-8  mx-auto mb-2 text-primary" />
                 <p className="font-medium">Drop files to upload</p>
               </div>
@@ -601,22 +601,22 @@ export function NodeTerminal({
           )}
           
           {error && (
-            <div className="absolute inset-0 flex items-center justify-center bg-background/90">
+            <div className="absolute inset-0 flex items-center justify-center bg-[var(--surface-overlay)]/90">
               <div className="text-center">
-                <p className="text-destructive mb-2">{error}</p>
+                <p className="text-[var(--status-error)] mb-2">{error}</p>
                 <div className="flex gap-2 justify-center">
                   <button type="button"
                     onClick={() => {
                       setError(null);
                       handleManualReconnect();
                     }}
-                    className="text-xs px-3 py-1 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+                    className="text-xs px-3 py-1 bg-[var(--accent-code)] text-[var(--text-inverse)] rounded hover:bg-[var(--accent-code)]/90 transition-colors"
                   >
                     Retry
                   </button>
                   <button type="button"
                     onClick={() => setError(null)}
-                    className="text-xs text-primary hover:underline"
+                    className="text-xs text-[var(--accent-code)] hover:underline"
                   >
                     Dismiss
                   </button>
@@ -627,11 +627,11 @@ export function NodeTerminal({
 
           {/* Disconnected overlay */}
           {!isConnected && !isReconnecting && !error && (
-            <div className="absolute inset-0 flex items-center justify-center bg-background/80 pointer-events-none">
+            <div className="absolute inset-0 flex items-center justify-center bg-[var(--surface-overlay)]/80 pointer-events-none">
               <div className="text-center pointer-events-auto">
-                <div className="size-12  mx-auto mb-3 rounded-full bg-red-500/10 flex items-center justify-center">
+                <div className="size-12 mx-auto mb-3 rounded-full bg-[var(--status-error)]/10 flex items-center justify-center">
                   <svg 
-                    className="size-6  text-red-500" 
+                    className="size-6 text-[var(--status-error)]" 
                     fill="none" 
                     stroke="currentColor" 
                     viewBox="0 0 24 24"
@@ -644,10 +644,10 @@ export function NodeTerminal({
                     />
                   </svg>
                 </div>
-                <p className="text-muted-foreground mb-3">Disconnected from terminal</p>
+                <p className="text-[var(--text-secondary)] mb-3">Disconnected from terminal</p>
                 <button type="button"
                   onClick={handleManualReconnect}
-                  className="text-xs px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+                  className="text-xs px-4 py-2 bg-[var(--accent-code)] text-[var(--text-inverse)] rounded hover:bg-[var(--accent-code)]/90 transition-colors"
                 >
                   Reconnect Now
                 </button>
@@ -662,52 +662,52 @@ export function NodeTerminal({
                 <div 
                   key={transfer.id}
                   className={cn(
-                    "bg-background/95 border rounded-lg p-3 shadow-lg",
-                    transfer.status === 'completed' && "border-green-500/50",
-                    transfer.status === 'error' && "border-destructive/50"
+                    "bg-[var(--surface-floating)]/95 border border-[var(--border-subtle)] rounded-lg p-3 shadow-lg",
+                    transfer.status === 'completed' && "border-[var(--status-success)]/50",
+                    transfer.status === 'error' && "border-[var(--status-error)]/50"
                   )}
                 >
                   <div className="flex items-center gap-2">
                     {transfer.type === 'upload' ? (
-                      <UploadSimple className="size-4  text-muted-foreground" />
+                      <UploadSimple className="size-4 text-[var(--text-secondary)]" />
                     ) : (
-                      <DownloadSimple className="size-4  text-muted-foreground" />
+                      <DownloadSimple className="size-4 text-[var(--text-secondary)]" />
                     )}
-                    <span className="flex-1 text-sm truncate">{transfer.filename}</span>
+                    <span className="flex-1 text-sm truncate text-[var(--text-primary)]">{transfer.filename}</span>
                     {transfer.status === 'completed' && (
-                      <CheckCircle className="size-4  text-green-500" />
+                      <CheckCircle className="size-4 text-[var(--status-success)]" />
                     )}
                     {transfer.status === 'error' && (
-                      <Warning className="size-4  text-destructive" />
+                      <Warning className="size-4 text-[var(--status-error)]" />
                     )}
                     <button type="button"
                       onClick={() => setTransfers(prev => prev.filter(t => t.id !== transfer.id))}
-                      className="text-muted-foreground hover:text-foreground"
+                      className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                     >
                       <X size={12} />
                     </button>
                   </div>
                   {transfer.status === 'transferring' && (
                     <div className="mt-2">
-                      <div className="h-1 bg-muted rounded-full overflow-hidden">
+                      <div className="h-1 bg-[var(--surface-panel)] rounded-full overflow-hidden">
                         <div 
-                          className="h-full bg-primary transition-all duration-300"
+                          className="h-full bg-[var(--accent-code)] transition-all duration-300"
                           style={{ width: `${transfer.progress}%` }}
                         />
                       </div>
-                      <div className="flex justify-between mt-1 text-xs text-muted-foreground">
+                      <div className="flex justify-between mt-1 text-xs text-[var(--text-secondary)]">
                         <span>{formatSize(transfer.transferredBytes)}</span>
                         <span>{formatSize(transfer.totalBytes)}</span>
                       </div>
                     </div>
                   )}
                   {transfer.status === 'error' && transfer.error && (
-                    <p className="mt-1 text-xs text-destructive">{transfer.error}</p>
+                    <p className="mt-1 text-xs text-[var(--status-error)]">{transfer.error}</p>
                   )}
                 </div>
               ))}
               {transfers.length > 3 && (
-                <div className="bg-background/95 border rounded-lg p-2 text-center text-xs text-muted-foreground">
+                <div className="bg-[var(--surface-floating)]/95 border border-[var(--border-subtle)] rounded-lg p-2 text-center text-xs text-[var(--text-secondary)]">
                   +{transfers.length - 3} more transfers
                 </div>
               )}
@@ -717,7 +717,7 @@ export function NodeTerminal({
 
         {/* File Browser */}
         {enableFileBrowser && showFileBrowser && (
-          <div className="w-80 border-l bg-background">
+          <div className="w-80 border-l border-[var(--border-subtle)] bg-[var(--surface-panel)]">
             <TerminalFileBrowser
               sessionId={session.id}
               nodeId={session.nodeId}

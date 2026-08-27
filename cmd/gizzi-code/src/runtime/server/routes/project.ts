@@ -4,6 +4,7 @@ import { describeRoute, validator, resolver } from "@/runtime/server/openapi"
 import z from "zod/v4"
 import { Project } from "@/runtime/context/project/project"
 import { Instance } from "@/runtime/context/project/instance"
+import { initializeProject } from "@/runtime/project/init"
 import { errors } from "@/runtime/server/error"
 
 export const ProjectRoutes = () =>
@@ -80,5 +81,37 @@ export const ProjectRoutes = () =>
         const input = c.req.valid("json") as any
         const project = await Project.update({ ...input, projectID })
         return c.json(project)
+      },
+    )
+    .post(
+      "/init",
+      describeRoute({
+        summary: "Initialize Gizzi in a directory",
+        description:
+          "Run `gizzi init` against an arbitrary directory over HTTP. Creates .gizzi/, GIZZI.md, ANTI_PATTERNS.md, example skill/command, scratch/, and the deterministic codemap (unless skipped).",
+        operationId: "project.init",
+        responses: {
+          200: {
+            description: "Initialization result",
+            content: {
+              "application/json": {
+                schema: resolver(z.any()),
+              },
+            },
+          },
+          ...errors(400, 500),
+        },
+      }),
+      validator(
+        "json",
+        z.object({
+          dir: z.string().min(1),
+          skipCodemap: z.boolean().optional(),
+        }),
+      ),
+      async (c) => {
+        const input = c.req.valid("json")
+        const result = await initializeProject(input.dir, { skipCodemap: input.skipCodemap })
+        return c.json(result)
       },
     )

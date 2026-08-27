@@ -3,7 +3,7 @@
  * https://azure.microsoft.com/en-us/services/cognitive-services/openai-service/
  */
 
-import { Message, Tool, HarnessError, HarnessErrorCode, HarnessResponse } from '../../harness/types';
+import { Message, Tool, HarnessError, HarnessErrorCode, HarnessResponse, messageContentToString } from '../../harness/types';
 
 export interface AzureOpenAIConfig {
   apiKey: string;
@@ -163,7 +163,7 @@ export class AllternitAzureOpenAI {
   private transformMessages(messages: Message[]): AzureOpenAIRequest['messages'] {
     return messages.map(msg => ({
       role: msg.role,
-      content: msg.content,
+      content: messageContentToString(msg.content),
       ...(msg.name && { name: msg.name }),
       ...(msg.tool_calls && {
         tool_calls: msg.tool_calls.map(tc => ({

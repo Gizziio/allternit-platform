@@ -1,0 +1,181 @@
+---
+title: External Keys & CMEK
+description: Register and validate BYO KMS and customer-managed encryption keys.
+---
+
+# External Keys & CMEK
+
+The External Keys API lets organizations register cloud-provider KMS keys for bring-your-own-key (BYOK) and customer-managed encryption key (CMEK) scenarios. Supported providers include AWS KMS, Azure, and GCP.
+
+<Note>
+  This is a scaffold API. Key validation marks a key as `valid` locally without calling the cloud provider. Real provider-side verification and full cloud KMS operations are follow-on work.
+</Note>
+
+## Base URL
+
+```text
+/api/v1/admin/external-keys
+```
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/v1/admin/external-keys` | Register an external key |
+| `GET` | `/api/v1/admin/external-keys` | List external keys |
+| `GET` | `/api/v1/admin/external-keys/:id` | Get an external key |
+| `PUT` | `/api/v1/admin/external-keys/:id` | Update an external key |
+| `DELETE` | `/api/v1/admin/external-keys/:id` | Delete an external key |
+| `POST` | `/api/v1/admin/external-keys/:id/validate` | Validate an external key |
+| `POST` | `/api/v1/admin/external-keys/:id/encrypt` | Encrypt data with an `aws_kms` key |
+| `POST` | `/api/v1/admin/external-keys/:id/decrypt` | Decrypt data with an `aws_kms` key |
+
+## Supported providers
+
+| Provider | Value | Notes |
+|----------|-------|-------|
+| AWS KMS | `aws_kms` | `key_ref` must be a valid KMS key ARN. |
+| AWS | `aws` | Generic AWS key reference. |
+| Azure | `azure` | Azure Key Vault key reference. |
+| GCP | `gcp` | Cloud KMS key reference. |
+
+## Register an external key
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/admin/external-keys \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "provider": "aws_kms",
+    "key_ref": "arn:aws:kms:us-east-1:123456789:key/12345678-1234-1234-1234-123456789abc",
+    "name": "Production CMEK"
+  }'
+```
+
+### Request body
+
+```json
+{
+  "provider": "aws_kms",
+  "key_ref": "arn:aws:kms:us-east-1:123456789:key/12345678-1234-1234-1234-123456789abc",
+  "name": "Production CMEK"
+}
+```
+
+### Response
+
+```json
+{
+  "id": "ek_01hqx8x7x7x7x7x7x7x7x7x",
+  "provider": "aws_kms",
+  "key_ref": "arn:aws:kms:us-east-1:123456789:key/12345678-1234-1234-1234-123456789abc",
+  "name": "Production CMEK",
+  "validation_status": "pending",
+  "last_validated_at": null,
+  "created_by": "usr_01hqx8x7x7x7x7x7x7x7x7x",
+  "created_at": "2026-08-13T18:00:00Z",
+  "updated_at": "2026-08-13T18:00:00Z"
+}
+```
+
+## Validate an external key
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/admin/external-keys/ek_01hqx8x7x7x7x7x7x7x7x7x/validate \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+### Response
+
+```json
+{
+  "id": "ek_01hqx8x7x7x7x7x7x7x7x7x",
+  "provider": "aws_kms",
+  "key_ref": "arn:aws:kms:us-east-1:123456789:key/12345678-1234-1234-1234-123456789abc",
+  "name": "Production CMEK",
+  "validation_status": "valid",
+  "last_validated_at": "2026-08-13T18:05:00Z",
+  "created_by": "usr_01hqx8x7x7x7x7x7x7x7x7x",
+  "created_at": "2026-08-13T18:00:00Z",
+  "updated_at": "2026-08-13T18:05:00Z"
+}
+```
+
+## Update an external key
+
+```bash
+curl -X PUT https://api.allternit.com/api/v1/admin/external-keys/ek_01hqx8x7x7x7x7x7x7x7x7x \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Production CMEK - Updated"
+  }'
+```
+
+Updating `key_ref` resets `validation_status` to `pending` and clears `last_validated_at`.
+
+## Encrypt with an `aws_kms` key
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/admin/external-keys/ek_01hqx8x7x7x7x7x7x7x7x7x/encrypt \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "plaintext": "sensitive data"
+  }'
+```
+
+### Response
+
+```json
+{
+  "ciphertext": "kms:ek_01hqx8x7x7x7x7x7x7x7x7x:c2Vuc2l0aXZlIGRhdGE=",
+  "key_id": "ek_01hqx8x7x7x7x7x7x7x7x7x"
+}
+```
+
+## Decrypt with an `aws_kms` key
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/admin/external-keys/ek_01hqx8x7x7x7x7x7x7x7x7x/decrypt \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "ciphertext": "kms:ek_01hqx8x7x7x7x7x7x7x7x7x:c2Vuc2l0aXZlIGRhdGE="
+  }'
+```
+
+### Response
+
+```json
+{
+  "plaintext": "sensitive data",
+  "key_id": "ek_01hqx8x7x7x7x7x7x7x7x7x"
+}
+```
+
+## AWS KMS setup
+
+1. Create a symmetric KMS key in your AWS account.
+2. Grant Allternit's service account `kms:Decrypt` and `kms:GenerateDataKey*` permissions.
+3. Register the key ARN via the Admin API or dashboard.
+4. Validate the key to mark it ready for use.
+
+## Error codes
+
+| Status | Code | Description |
+|--------|------|-------------|
+| `400` | `invalid_provider` | Provider must be `aws`, `azure`, `gcp`, or `aws_kms`. |
+| `400` | `invalid_key_ref` | `key_ref` is empty or, for `aws_kms`, not a valid ARN. |
+| `400` | `invalid_name` | Name must be 1–128 characters. |
+| `400` | `unsupported_provider` | `encrypt`/`decrypt` is only supported for `aws_kms`. |
+| `400` | `invalid_plaintext` | Plaintext must not be empty. |
+| `400` | `invalid_ciphertext` | Ciphertext is malformed or was not produced by this key. |
+| `403` | `organization_required` | Caller is not associated with an organization. |
+| `403` | `insufficient_role` | Caller is not an organization owner or admin. |
+| `404` | `external_key_not_found` | External key does not exist. |
+
+## Related pages
+
+- [Security / Vault](/security/vault) — credential storage and encryption
+- [Security / Compliance](/security/compliance) — key governance and audit

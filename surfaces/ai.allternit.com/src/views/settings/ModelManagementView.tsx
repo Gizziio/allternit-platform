@@ -122,7 +122,7 @@ export function ModelManagementView(): React.ReactNode {
             <GlassCard key={engine.id} style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div style={{
-                  width: 40, height: 40, borderRadius: 10, background: 'rgba(0,0,0,0.05)',
+                  width: 40, height: 40, borderRadius: 10, background: 'var(--bg-secondary)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center'
                 }}>
                   {providerIcon(engine.provider)}
@@ -153,7 +153,7 @@ export function ModelManagementView(): React.ReactNode {
 
               <div style={{ marginTop: 'auto' }}>
                 <button type="button" style={{
-                  width: '100%', background: 'rgba(0,0,0,0.05)', border: 'none', borderRadius: 6,
+                  width: '100%', background: 'var(--bg-secondary)', border: 'none', borderRadius: 6,
                   padding: '8px', fontSize: 12, fontWeight: 700, cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6
                 }}>

@@ -1,0 +1,76 @@
+---
+title: 'Usage API'
+description: 'Retrieve metered organization usage summaries for billing and cost analysis.'
+---
+
+## Overview
+
+The Usage API aggregates `usage_events` into an on-demand invoice draft for an organization. It is scoped to organization owners and admins and covers a caller-specified billing period.
+
+## Base URL
+
+```
+https://api.allternit.com/v1/usage/summary
+```
+
+All endpoints require a valid Bearer token in the `Authorization` header. See [Authentication](/api/authentication) for details.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/usage/summary` | Get a usage summary invoice draft. |
+
+## Get usage summary
+
+```bash
+GET /api/v1/usage/summary?organization_id=org_abc123&period_start=2026-08-01T00:00:00Z&period_end=2026-09-01T00:00:00Z
+```
+
+Query parameters:
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `organization_id` | string | Organization to query. Must match the active organization. |
+| `period_start` | string | ISO 8601 start timestamp (inclusive). |
+| `period_end` | string | ISO 8601 end timestamp (exclusive). |
+
+Response:
+
+```json
+{
+  "organization_id": "org_abc123",
+  "period_start": "2026-08-01T00:00:00Z",
+  "period_end": "2026-09-01T00:00:00Z",
+  "line_items": [
+    {
+      "description": "llm_tokens (token)",
+      "resource_type": "llm_tokens",
+      "quantity": 1250000,
+      "unit": "token",
+      "subtotal_cents": 2500
+    }
+  ],
+  "total_cents": 2500,
+  "seller_legal_name": "Allternit, Inc.",
+  "seller_address_lines": ["123 Example St", "San Francisco, CA 94102"],
+  "payment_terms": "Net 30"
+}
+```
+
+## Error codes
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 200 | — | Success. |
+| 401 | `unauthorized` | Missing or invalid authentication. |
+| 403 | `inactive_organization` | Requested organization is not the active organization. |
+| 403 | `insufficient_role` | Only organization owners/admins may view metered usage. |
+| 500 | `db_error` / `task_join_error` | Database or task error. |
+
+## Related links
+
+- [Authentication](/api/authentication)
+- [Analytics API](/api/analytics)
+- [Me API](/api/me)
+- [Admin Spend Limits](/admin/spend-limits)

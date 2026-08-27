@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAgentStore } from "@/lib/agents/agent.store";
-import { useAgentInboxStore } from "@/lib/agents/agent-inbox.store";
+import { useCommRailsUnreadCount } from "@/lib/bots/comrails-mail.store";
 import { cn } from "@/lib/utils";
 import { X, Zap, Sparkles } from "lucide-react";
 import { AgentAvatar } from "@/components/Avatar/AgentAvatar";
@@ -47,7 +47,8 @@ function savePosition(pos: { x: number; y: number }) {
 
 export function FloatingAvatar({ className }: FloatingAvatarProps) {
   const { agents, activeAgentId, updateAgent } = useAgentStore();
-  const { unreadCount, fetchInbox } = useAgentInboxStore();
+  const activeAgent = agents.find((a) => a.id === activeAgentId) || agents[0];
+  const unreadCount = useCommRailsUnreadCount(activeAgent?.id || '');
   const STUDIO_THEME = useStudioTheme();
   const [isOpen, setIsOpen] = useState(false);
   const [status, setStatus] = useState<"idle" | "thinking" | "active">("idle");
@@ -62,8 +63,6 @@ export function FloatingAvatar({ className }: FloatingAvatarProps) {
     origX: 0,
     origY: 0,
   });
-
-  const activeAgent = agents.find((a) => a.id === activeAgentId) || agents[0];
 
   // Load position on mount — prefer agent config, fall back to localStorage
   useEffect(() => {
@@ -116,12 +115,6 @@ export function FloatingAvatar({ className }: FloatingAvatarProps) {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, [setPosition]);
-
-  useEffect(() => {
-    fetchInbox();
-    const interval = setInterval(fetchInbox, 30000);
-    return () => clearInterval(interval);
-  }, [fetchInbox]);
 
   // Derive status from actual agent state instead of random simulation
   useEffect(() => {

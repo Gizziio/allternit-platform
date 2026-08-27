@@ -27,7 +27,7 @@ import {
 import { getAntModelOverrideConfig } from '../cli/ui/ink-app/utils/model/antModels.js'
 import { getSkillToolCommands } from '@/commands.js'
 import { SKILL_TOOL_NAME } from '../cli/ui/ink-app/tools/SkillTool/constants.js'
-import { getOutputStyleConfig } from './outputStyles.js'
+import { getOutputStyleConfig } from './outputStyleConfig.js'
 import type {
   MCPServerConnection,
   ConnectedMCPServer,

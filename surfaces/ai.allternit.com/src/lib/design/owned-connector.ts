@@ -46,14 +46,28 @@ export async function listOwnedConnectors(): Promise<OwnedConnector[]> {
 
 export async function connectOwned(
   id: string,
-  opts?: { via?: string; api_key?: string },
+  opts?: { via?: string; api_key?: string; values?: Record<string, string>; agent_id?: string },
 ): Promise<OwnedConnectStatus> {
   const res = await fetch(`${BASE}/${encodeURIComponent(id)}/connect`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(opts ?? {}),
   });
-  return res.json();
+  const data = (await res.json()) as Record<string, unknown>;
+  if (!res.ok) {
+    // OAuth sidecars without a configured Google/owned client return
+    // oauth_app_not_configured + a human setup_hint — surface the hint, not the code.
+    const message =
+      data.error === 'oauth_app_not_configured' && typeof data.setup_hint === 'string'
+        ? data.setup_hint
+        : typeof data.message === 'string'
+          ? data.message
+          : typeof data.error === 'string'
+            ? data.error
+            : `Connect failed (${res.status})`;
+    throw new Error(message);
+  }
+  return data as OwnedConnectStatus;
 }
 
 export async function refreshOwned(id: string): Promise<OwnedConnectStatus> {
@@ -64,4 +78,29 @@ export async function refreshOwned(id: string): Promise<OwnedConnectStatus> {
 export async function disconnectOwned(id: string): Promise<{ status: string }> {
   const res = await fetch(`${BASE}/${encodeURIComponent(id)}/disconnect`, { method: 'DELETE' });
   return res.json();
+}
+
+export interface ConnectorSetupStatusCheck {
+  configured?: boolean;
+  reachable?: boolean;
+  healthy?: boolean;
+  domain?: string | null;
+  url?: string;
+  setup_hint?: string | null;
+}
+
+export interface ConnectorSetupStatus {
+  ready: boolean;
+  checks: {
+    allternit_mail: ConnectorSetupStatusCheck;
+    sidecar: ConnectorSetupStatusCheck;
+    gmail: ConnectorSetupStatusCheck;
+    google_drive: ConnectorSetupStatusCheck;
+  };
+}
+
+export async function getConnectorSetupStatus(): Promise<ConnectorSetupStatus | null> {
+  const res = await fetch(`${BASE}/setup-status`);
+  if (!res.ok) return null;
+  return (await res.json()) as ConnectorSetupStatus;
 }

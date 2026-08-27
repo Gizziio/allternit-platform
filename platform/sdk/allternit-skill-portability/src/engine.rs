@@ -360,7 +360,7 @@ mod tests {
         let skill = Skill::new("test-skill", "# Test");
 
         let results = engine
-            .install(&skill, &[LLMType::Claude, LLMType::OpenCode], SyncScope::Workspace)
+            .install(&skill, &[LLMType::Claude, LLMType::Codex], SyncScope::Workspace)
             .await
             .unwrap();
 

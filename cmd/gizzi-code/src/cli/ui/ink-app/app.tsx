@@ -17,6 +17,9 @@ import { getCommands } from './commands'
 import { createUserMessage } from './utils/messages'
 import { setCwdState, setOriginalCwd, setSessionTrustAccepted } from './bootstrap/state'
 import { Log } from '../../../shared/util/log'
+import { registerRailsPeer } from '../../../runtime/gizzi-core/services/railsPeer.js'
+import { RailsInboxBridge } from './components/RailsInboxBridge'
+import { getSessionId } from './bootstrap/state.js'
 
 export async function tui(options?: any): Promise<void> {
   const currentCwd = process.cwd()
@@ -26,6 +29,16 @@ export async function tui(options?: any): Promise<void> {
 
   enableConfigs()
   enableSharedConfigs()
+
+  // Register as a Rails peer so other local agents can discover and message
+  // this session. Fire-and-forget: failures are logged but never block TUI.
+  // The actual inbox listener is mounted inside the React tree by
+  // <RailsInboxBridge /> so it can post messages to the mailbox context.
+  registerRailsPeer(getSessionId()).catch((err) => {
+    Log.Default.info('tui: rails peer registration failed', {
+      error: err?.message || String(err),
+    })
+  })
 
   if (options?.fetch) {
     globalThis.fetch = options.fetch
@@ -48,13 +61,16 @@ export async function tui(options?: any): Promise<void> {
         stats={createStatsStore()}
         getFpsMetrics={() => undefined}
       >
-        <REPL
-          commands={initialCommands}
-          debug={false}
-          initialTools={initialTools}
-          initialMessages={initialMessages}
-          thinkingConfig={{ enabled: false, budgetTokens: 0 }}
-        />
+        <>
+          <REPL
+            commands={initialCommands}
+            debug={false}
+            initialTools={initialTools}
+            initialMessages={initialMessages}
+            thinkingConfig={{ enabled: false, budgetTokens: 0 }}
+          />
+          <RailsInboxBridge />
+        </>
       </App>
     )
 

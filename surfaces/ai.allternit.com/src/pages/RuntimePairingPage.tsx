@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Check, Laptop, Server, ShieldCheck } from 'lucide-react';
-import { MatrixLogo } from '@/components/ai-elements/MatrixLogo';
 import { env } from '@/lib/env';
 import { usePlatformAuth, usePlatformUser } from '@/lib/platform-auth-client';
 
@@ -11,7 +10,7 @@ type PairingInfo = {
   pairingId: string;
   userCode: string;
   name: string;
-  runtimeType: 'desktop' | 'vps';
+  runtimeType: 'desktop' | 'vps' | 'ios';
   hostname?: string;
   platform?: string;
   publicKeyFingerprint: string;
@@ -257,7 +256,7 @@ function PairingShell({ children }: { children: ReactNode }) {
         @media (max-width: 520px) { .pair-page { padding: 0; align-items: stretch; }.pair-card { width: 100%; min-height: 100vh; padding: 28px 22px; border: 0; border-radius: 0; box-shadow: none; } }
       `}</style>
       <section className="pair-card">
-        <div className="pair-brand"><MatrixLogo state="idle" size={28} /><span>Allternit</span></div>
+        <div className="pair-brand"><img src="/brand/matrix/matrix-logo.svg" alt="Allternit" style={{ width: 28, height: 28 }} /><span>Allternit</span></div>
         {children}
       </section>
     </main>

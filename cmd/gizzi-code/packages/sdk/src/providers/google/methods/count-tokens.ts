@@ -41,5 +41,5 @@ export async function countTokens(
     JSON.stringify(formattedParams),
     singleRequestOptions
   );
-  return response.json();
+  return response.json() as Promise<CountTokensResponse>;
 }

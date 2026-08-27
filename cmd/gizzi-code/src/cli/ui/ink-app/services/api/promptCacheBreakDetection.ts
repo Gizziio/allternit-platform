@@ -9,7 +9,7 @@ import type { Message } from './../../types/message.ts'
 import { logForDebugging } from './../../utils/debug.ts'
 import { djb2Hash } from './../../utils/hash.ts'
 import { logError } from './../../utils/log.ts'
-import { getClaudeTempDir } from './../../utils/permissions/filesystem.ts'
+import { getClaudeTempDir } from './../../utils/permissions/tempDir.ts'
 import { jsonStringify } from './../../utils/slowOperations.ts'
 import type { QuerySource } from '../../constants/querySource.js'
 import {

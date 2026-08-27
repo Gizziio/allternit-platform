@@ -1,5 +1,25 @@
 import type { ToolDefinition } from './types.js';
 import type { ToolRegistry } from './registry.js';
+import { NativeWebTools, type WebToolOptions } from './web.js';
+import {
+  attachMcpServer,
+  createMcpServerAttachment,
+  loadMcpServerDirectory,
+  type McpServerAttachment,
+  type McpServerConfig,
+} from './mcp.js';
+import { TextEditorTool, type TextEditorOptions } from './text-editor.js';
+import { BashTool, type BashRunner, type BashToolOptions } from './bash.js';
+import { CodeExecutionTool, type CodeExecutionOptions, type CodeExecutionRunner } from './code-execution.js';
+import { MemoryTool, type MemoryToolOptions } from './memory.js';
+import { PdfTool, type PdfToolOptions } from './pdf.js';
+
+export interface NativeToolBeltOptions extends WebToolOptions, TextEditorOptions, MemoryToolOptions, PdfToolOptions {
+  bashRunner?: BashRunner;
+  codeExecutionRunner?: CodeExecutionRunner;
+  /** Override the default ~/.allternit/mcp-servers.json path. */
+  mcpDirectoryPath?: string;
+}
 
 /**
  * tool_search Tool Definition
@@ -32,7 +52,10 @@ export const TOOL_ACTIVATE_DEFINITION: ToolDefinition = {
 };
 
 export class NativeToolBelt {
-  constructor(private registry: ToolRegistry) {
+  /** Resolves once the initial ~/.allternit/mcp-servers.json directory load finishes. */
+  public readonly mcpDirectoryLoaded: Promise<void>;
+
+  constructor(private registry: ToolRegistry, options: NativeToolBeltOptions = {}) {
     // Register the search and activate tools themselves
     this.registry.registerTool({
       ...TOOL_SEARCH_DEFINITION,
@@ -49,6 +72,29 @@ export class NativeToolBelt {
         return `Tool ${args.toolId} successfully activated and ready for use.`;
       }
     });
+
+    for (const tool of new NativeWebTools(options).definitions()) {
+      this.registry.registerTool(tool, { strict: true });
+    }
+    this.registry.registerTool(new TextEditorTool(options).definition(), { strict: true });
+    this.registry.registerTool(new BashTool({ runner: options.bashRunner }).definition(), { strict: true });
+    this.registry.registerTool(new CodeExecutionTool({ runner: options.codeExecutionRunner }).definition(), { strict: true });
+    this.registry.registerTool(new MemoryTool(options).definition(), { strict: true });
+    this.registry.registerTool(new PdfTool(options).definition(), { strict: true });
+
+    this.mcpDirectoryLoaded = loadMcpServerDirectory(
+      { attachMcpServer: (cfg) => this.attachMcpServer(cfg) },
+      { path: options.mcpDirectoryPath, fetch: options.fetch },
+    );
+  }
+
+  public attachMcpServer(server: McpServerAttachment): Promise<string[]>;
+  public attachMcpServer(config: McpServerConfig): Promise<string[]>;
+  public attachMcpServer(serverOrConfig: McpServerAttachment | McpServerConfig): Promise<string[]> {
+    if ('listTools' in serverOrConfig) {
+      return attachMcpServer(this.registry, serverOrConfig);
+    }
+    return attachMcpServer(this.registry, createMcpServerAttachment(serverOrConfig));
   }
 
   public getRegistry() {

@@ -151,7 +151,7 @@ export function DrawerRoot() {
         style={{
           height,
           width: '100%',
-          background: 'var(--surface-canvas)',
+          background: 'var(--bg-elevated)',
           color: 'var(--text-primary)',
           borderTop: '1px solid var(--border-subtle)',
           transition: isDragging.current ? 'none' : 'height 0.3s cubic-bezier(0.16, 1, 0.3, 1)',

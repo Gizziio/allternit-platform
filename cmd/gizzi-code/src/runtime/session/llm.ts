@@ -45,6 +45,7 @@ export namespace LLM {
     retries?: number
     toolChoice?: "auto" | "required" | "none"
     mode?: 'plan' | 'build'  // Execution mode for system prompt
+    plan?: Provider.AuthPlan
   }
 
   export type StreamOutput = StreamTextResult<ToolSet, any>
@@ -63,7 +64,7 @@ export namespace LLM {
       providerID: input.model.providerID,
     })
     const [language, cfg, provider, auth] = await Promise.all([
-      Provider.getLanguage(input.model),
+      Provider.getLanguage(input.model, input.plan),
       Config.get(),
       Provider.getProvider(input.model.providerID),
       Auth.get(input.model.providerID),
@@ -108,7 +109,7 @@ export namespace LLM {
           sessionID: input.sessionID,
           providerOptions: provider.options,
         })
-    const options: Record<string, any> = pipe(
+    let options: Record<string, any> = pipe(
       base,
       mergeDeep(input.model.options),
       mergeDeep(input.agent.options),
@@ -116,6 +117,15 @@ export namespace LLM {
     )
     if (isCodex) {
       options.instructions = SystemPrompt.instructions()
+    }
+    // Forward service tier from API bridges (e.g. OpenAI `service_tier`) into
+    // provider-specific options so the AI SDK can set the request body field.
+    const serviceTier = input.user.metadata?.service_tier
+    if (typeof serviceTier === "string") {
+      options = mergeDeep(
+        options,
+        ProviderTransform.providerOptions(input.model, { serviceTier }),
+      )
     }
 
     const params = await Plugin.trigger(

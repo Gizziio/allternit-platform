@@ -2,6 +2,8 @@
 // The project references React APIs but does not install @types/react.
 // We keep the surface intentionally loose so downstream code type-checks.
 
+export {}
+
 declare module 'react' {
   export type ReactNode = any
   export type ReactElement<P = any, T = any> = any
@@ -60,6 +62,15 @@ declare module 'react' {
   export type Ref<T> = any
 
   export namespace JSX {
+    interface IntrinsicElements {
+      [elemName: string]: any
+    }
+  }
+}
+
+declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
+  namespace JSX {
     interface IntrinsicElements {
       [elemName: string]: any
     }

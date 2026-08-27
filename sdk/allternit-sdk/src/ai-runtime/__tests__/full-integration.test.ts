@@ -20,7 +20,7 @@ import {
   AllternitCohere,
   AllternitGroq,
   AllternitTogether,
-  AllternitAzure,
+  AllternitAzureOpenAI as AllternitAzure,
   AllternitBedrock,
   
   // Registry
@@ -104,8 +104,8 @@ describe('Full SDK Integration', () => {
       // Azure
       expect(() => new AllternitAzure({ 
         apiKey: 'test', 
-        endpoint: 'https://test.openai.azure.com',
-        deploymentId: 'test'
+        resourceName: 'test',
+        deploymentName: 'test'
       })).not.toThrow();
       
       // Bedrock
@@ -130,7 +130,8 @@ describe('Full SDK Integration', () => {
       expect(providers).toContain('together');
       expect(providers).toContain('azure');
       expect(providers).toContain('bedrock');
-      expect(providers).toHaveLength(10);
+      expect(providers).toContain('mlx');
+      expect(providers).toHaveLength(11);
     });
 
     it('should retrieve provider metadata', () => {
@@ -374,7 +375,7 @@ describe('Full SDK Integration', () => {
       });
 
       expect(harness).toBeDefined();
-      expect(providers.length).toBe(10);
+      expect(providers.length).toBe(11);
     });
 
     it('should integrate ACP with harness', async () => {

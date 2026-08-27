@@ -1,0 +1,178 @@
+---
+title: 'Memory Reconstruction API (Beta)'
+description: 'Create and run memory reconstruction jobs that summarize or enrich agent memory from sessions, memory stores, or files.'
+---
+
+## Overview
+
+The Memory Reconstruction API manages long-running or synchronous jobs that reconstruct an agent's memory from session events, memory stores, or uploaded source material. Jobs are organization-scoped and require organization admin access.
+
+## Base URL
+
+```
+https://api.allternit.com/v1/beta/memory-reconstruction
+```
+
+All endpoints require a valid Bearer token in the `Authorization` header and an active organization. See [Authentication](/api/authentication) for details.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/beta/memory-reconstruction` | List reconstruction jobs. |
+| POST | `/beta/memory-reconstruction` | Create a reconstruction job. |
+| GET | `/beta/memory-reconstruction/:id` | Get a job. |
+| DELETE | `/beta/memory-reconstruction/:id` | Delete a job. |
+| POST | `/beta/memory-reconstruction/:id/run` | Run a job synchronously. |
+
+## Create job
+
+```bash
+POST /api/v1/beta/memory-reconstruction
+```
+
+Request body:
+
+```json
+{
+  "name": "Reconstruct onboarding session memory",
+  "description": "Summarize the last onboarding session.",
+  "source_type": "session",
+  "source_id": "sess_2f8a9c4e5d3b",
+  "config": {
+    "topics": ["goals", "decisions", "blockers"]
+  }
+}
+```
+
+Allowed `source_type` values: `session`, `memory_store`, `file`.
+
+Response:
+
+```json
+{
+  "id": "job_1a2b3c4d",
+  "organization_id": "org_abc123",
+  "user_id": "user_abc123",
+  "name": "Reconstruct onboarding session memory",
+  "description": "Summarize the last onboarding session.",
+  "source_type": "session",
+  "source_id": "sess_2f8a9c4e5d3b",
+  "config": { "topics": ["goals", "decisions", "blockers"] },
+  "status": "pending",
+  "result": {},
+  "created_by": "user_abc123",
+  "created_at": "2026-08-13T10:00:00Z",
+  "updated_at": "2026-08-13T10:00:00Z"
+}
+```
+
+## List jobs
+
+```bash
+GET /api/v1/beta/memory-reconstruction
+```
+
+Response:
+
+```json
+{
+  "items": [
+    {
+      "id": "job_1a2b3c4d",
+      "organization_id": "org_abc123",
+      "user_id": "user_abc123",
+      "name": "Reconstruct onboarding session memory",
+      "description": "Summarize the last onboarding session.",
+      "source_type": "session",
+      "source_id": "sess_2f8a9c4e5d3b",
+      "config": { "topics": ["goals", "decisions", "blockers"] },
+      "status": "pending",
+      "result": {},
+      "created_by": "user_abc123",
+      "created_at": "2026-08-13T10:00:00Z",
+      "updated_at": "2026-08-13T10:00:00Z"
+    }
+  ]
+}
+```
+
+## Run job
+
+```bash
+POST /api/v1/beta/memory-reconstruction/job_1a2b3c4d/run
+```
+
+The synchronous runner produces a memory outline from the configured topics and source metadata. Future releases will support asynchronous worker execution with progress streaming.
+
+Response:
+
+```json
+{
+  "job": {
+    "id": "job_1a2b3c4d",
+    "organization_id": "org_abc123",
+    "user_id": "user_abc123",
+    "name": "Reconstruct onboarding session memory",
+    "description": "Summarize the last onboarding session.",
+    "source_type": "session",
+    "source_id": "sess_2f8a9c4e5d3b",
+    "config": { "topics": ["goals", "decisions", "blockers"] },
+    "status": "completed",
+    "result": {
+      "memory_outline": [
+        { "type": "summary", "content": "Reconstructed memory from session sess_2f8a9c4e5d3b" },
+        { "type": "topic", "content": "goals" },
+        { "type": "topic", "content": "decisions" },
+        { "type": "topic", "content": "blockers" },
+        { "type": "metadata", "content": { "reconstructed_at": "2026-08-13T10:01:00Z", "source_type": "session", "source_id": "sess_2f8a9c4e5d3b" } }
+      ],
+      "chunks_generated": 5,
+      "note": "Phase 1 synchronous scaffold. Async worker execution is Phase 2."
+    },
+    "created_by": "user_abc123",
+    "created_at": "2026-08-13T10:00:00Z",
+    "updated_at": "2026-08-13T10:01:00Z"
+  },
+  "result": {
+    "memory_outline": [ ... ],
+    "chunks_generated": 5,
+    "note": "Phase 1 synchronous scaffold. Async worker execution is Phase 2."
+  }
+}
+```
+
+## Delete job
+
+```bash
+DELETE /api/v1/beta/memory-reconstruction/job_1a2b3c4d
+```
+
+Response:
+
+```json
+{ "deleted": true }
+```
+
+## Error codes
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 200 | — | Success. |
+| 201 | — | Created successfully. |
+| 400 | `invalid_name` | Name must be 1–128 characters. |
+| 400 | `invalid_source_type` | Source type is not `session`, `memory_store`, or `file`. |
+| 400 | `invalid_config` | Config must be an object. |
+| 401 | `unauthorized` | Missing or invalid authentication. |
+| 403 | `organization_required` | Active organization required. |
+| 403 | `insufficient_role` | Only organization owners/admins may manage jobs. |
+| 404 | `job_not_found` | Job does not exist. |
+| 409 | `job_already_running` | The job is already running. |
+| 500 | `internal_error` / `reconstruction_failed` | Unexpected server or reconstruction error. |
+
+## Related links
+
+- [Authentication](/api/authentication)
+- [Sessions API](/api/sessions)
+- [Memory API](/api/memory)
+- [Memory Stores API](/api/memory-stores)

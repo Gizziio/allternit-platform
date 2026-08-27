@@ -9,7 +9,6 @@
 set -e
 
 TOOLS=(
-  "opencode:OpenCode:#3b82f6"
   "claude-code:Claude Code:#d97706"
   "amp:Amp (Sourcegraph):#f97316"
   "aider:Aider:#10b981"
@@ -36,9 +35,6 @@ generate_icon() {
     local brand_icon=""
 
     case "$tool_name" in
-        "opencode")
-            brand_icon='M2 10a7 1 4a1 4h2.2L12 12-12H9a6 9h6a1 1 8c0 0z"'
-            ;;
         "claude-code")
             brand_icon='M21 6h12a1 1 1-12 12a21 1 1-1H3a6 3H6a6 3-2.5L20.6L21 21 21l-4.5L17 17-4.5L13 13c0 0z"'
             ;;

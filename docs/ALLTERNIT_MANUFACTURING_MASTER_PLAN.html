@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Allternit Manufacturing — Review Deck</title>
+  <style>
+    :root {
+      --bg: #0b0b0c;
+      --bg-elev: #151518;
+      --bg-card: #1a1a1e;
+      --border: rgba(255,255,255,0.08);
+      --text: #e5e5e5;
+      --text-secondary: #a1a1aa;
+      --text-muted: #71717a;
+      --accent: #d97706;
+      --accent-light: #f59e0b;
+      --blue: #5B8DEF;
+      --green: #22c55e;
+      --purple: #8b5cf6;
+      --red: #ef4444;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .page {
+      width: 100%;
+      min-height: 100vh;
+      padding: 64px 72px;
+      page-break-after: always;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative;
+    }
+
+    .page:last-child { page-break-after: auto; }
+
+    .no-center { justify-content: flex-start; }
+
+    .bg-glow {
+      position: absolute;
+      top: -20%;
+      right: -10%;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(217,119,6,0.12) 0%, transparent 65%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .bg-glow-blue {
+      background: radial-gradient(circle, rgba(91,141,239,0.1) 0%, transparent 65%);
+    }
+
+    .content { position: relative; z-index: 1; }
+
+    h1 {
+      font-size: 72px;
+      font-weight: 900;
+      letter-spacing: -0.04em;
+      line-height: 1.05;
+      margin: 0 0 24px 0;
+    }
+
+    h1 span {
+      background: linear-gradient(135deg, var(--accent-light), var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    h2 {
+      font-size: 40px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin: 0 0 32px 0;
+    }
+
+    h3 {
+      font-size: 22px;
+      font-weight: 700;
+      margin: 0 0 10px 0;
+    }
+
+    .subtitle {
+      font-size: 24px;
+      color: var(--text-secondary);
+      max-width: 680px;
+      line-height: 1.5;
+    }
+
+    .meta {
+      margin-top: 48px;
+      display: flex;
+      gap: 32px;
+      font-size: 14px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(217,119,6,0.08);
+      color: var(--accent-light);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 24px;
+    }
+
+    .tag::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent-light);
+    }
+
+    p {
+      color: var(--text-secondary);
+      margin: 0 0 16px 0;
+      font-size: 17px;
+    }
+
+    .lead {
+      font-size: 22px;
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    .grid {
+      display: grid;
+      gap: 20px;
+    }
+
+    .grid-2 { grid-template-columns: repeat(2, 1fr); }
+    .grid-3 { grid-template-columns: repeat(3, 1fr); }
+    .grid-4 { grid-template-columns: repeat(4, 1fr); }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 28px;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+
+    .card:hover {
+      border-color: rgba(217,119,6,0.3);
+      transform: translateY(-2px);
+    }
+
+    .card h3 { color: var(--text); }
+
+    .card p { font-size: 15px; margin-bottom: 0; }
+
+    .card .icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: rgba(217,119,6,0.12);
+      color: var(--accent-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      margin-bottom: 18px;
+    }
+
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 28px;
+      text-align: center;
+    }
+
+    .stat-card .number {
+      font-size: 48px;
+      font-weight: 900;
+      color: var(--accent-light);
+      letter-spacing: -0.03em;
+    }
+
+    .stat-card .label {
+      font-size: 14px;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-top: 8px;
+    }
+
+    .problem {
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+    }
+
+    .problem-number {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--accent), #b45309);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      font-weight: 900;
+      color: white;
+      flex-shrink: 0;
+    }
+
+    .problem h3 { margin-bottom: 6px; }
+
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border), transparent);
+      margin: 48px 0;
+    }
+
+    .pipeline {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 24px 0;
+    }
+
+    .pipeline-step {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .pipeline-arrow {
+      color: var(--accent-light);
+      font-size: 18px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 15px;
+      margin-top: 16px;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-size: 12px;
+    }
+
+    td { color: var(--text-secondary); }
+
+    tr:last-child td { border-bottom: none; }
+
+    .roadmap {
+      display: flex;
+      gap: 24px;
+      margin-top: 24px;
+    }
+
+    .roadmap-phase {
+      flex: 1;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 28px;
+      position: relative;
+    }
+
+    .roadmap-phase::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 28px;
+      right: 28px;
+      height: 3px;
+      background: linear-gradient(90deg, var(--accent), var(--accent-light));
+      border-radius: 0 0 3px 3px;
+    }
+
+    .roadmap-phase h3 { margin-bottom: 6px; }
+    .roadmap-phase .time { color: var(--text-muted); font-size: 13px; margin-bottom: 16px; display: block; }
+    .roadmap-phase ul { margin: 0; padding-left: 18px; color: var(--text-secondary); font-size: 14px; }
+    .roadmap-phase li { margin-bottom: 8px; }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 48px;
+    }
+
+    ul.clean {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    ul.clean li {
+      padding: 8px 0;
+      padding-left: 24px;
+      position: relative;
+      color: var(--text-secondary);
+      font-size: 15px;
+    }
+
+    ul.clean li::before {
+      content: '›';
+      position: absolute;
+      left: 0;
+      color: var(--accent-light);
+      font-weight: 700;
+      font-size: 18px;
+    }
+
+    .footnote {
+      margin-top: auto;
+      padding-top: 48px;
+      font-size: 12px;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    @media print {
+      .page {
+        padding: 48px 56px;
+        background: var(--bg) !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Cover -->
+  <section class="page">
+    <div class="bg-glow"></div>
+    <div class="content">
+      <div class="tag">Strategic Review</div>
+      <h1>Allternit <span>Manufacturing</span></h1>
+      <p class="subtitle">A digital microfactory for AI hardware, B2B production, and distributed manufacturing.</p>
+      <div class="meta">
+        <span>Allternit LLC</span>
+        <span>•</span>
+        <span>Brainstorm → Review</span>
+        <span>•</span>
+        <span>August 2026</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Strategic Thesis -->
+  <section class="page no-center">
+    <div class="content">
+      <div class="tag">Strategic Thesis</div>
+      <h2>Bigger than a print farm</h2>
+      <p class="lead">
+        Allternit Manufacturing is the physical production arm of the company. It produces our own hardware,
+        monetizes excess capacity, and becomes a rapid prototyping lab — all while building software that can
+        eventually be licensed to other factories.
+      </p>
+      <div class="divider"></div>
+      <div class="grid grid-3">
+        <div class="stat-card">
+          <div class="number">3</div>
+          <div class="label">Problems Solved</div>
+        </div>
+        <div class="stat-card">
+          <div class="number">6</div>
+          <div class="label">Operating Divisions</div>
+        </div>
+        <div class="stat-card">
+          <div class="number">10</div>
+          <div class="label">Year Roadmap</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Three Problems -->
+  <section class="page no-center">
+    <div class="content">
+      <div class="tag">Why Now</div>
+      <h2>Three problems, one division</h2>
+      <div class="grid grid-3" style="margin-top: 40px;">
+        <div class="card">
+          <div class="problem">
+            <div class="problem-number">1</div>
+            <div>
+              <h3>Internal Manufacturing</h3>
+              <p>Print every Allternit product: compute box enclosures, battery housings, rack mounts, cooling ducts, cable management, and development fixtures.</p>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="problem">
+            <div class="problem-number">2</div>
+            <div>
+              <h3>Cash Flow</h3>
+              <p>Sell excess machine time to local businesses. Replacement parts, jigs, fixtures, and prototypes — same day, not same month.</p>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="problem">
+            <div class="problem-number">3</div>
+            <div>
+              <h3>Rapid Prototyping</h3>
+              <p>Turn weeks of outsourced prototyping into hours. Iterate on hardware designs the same day an idea appears.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <p class="lead" style="font-size: 20px;">
+        The question is no longer <em>“What should we print?”</em><br>
+        It is <strong>“How do we build a small digital factory that monetizes unused machine time?”</strong>
+      </p>
+    </div>
+  </section>
+
+  <!-- Six Divisions -->
+  <section class="page no-center">
+    <div class="content">
+      <div class="tag">Organization</div>
+      <h2>Six operating divisions</h2>
+      <div class="grid grid-3">
+        <div class="card">
+          <div class="icon">💡</div>
+          <h3>Design Studio</h3>
+          <p>Industrial design, CAD modeling, reverse engineering, 3D scanning, material selection, and DFM/DFA reviews.</p>
+        </div>
+        <div class="card">
+          <div class="icon">⚗️</div>
+          <h3>Prototype Lab</h3>
+          <p>Same-day iteration. CAD → print → test → revise → print again. Fit checks, airflow tests, layout validation.</p>
+        </div>
+        <div class="card">
+          <div class="icon">🏭</div>
+          <h3>Digital Manufacturing</h3>
+          <p>Material-specific print farms: PLA/PETG, ABS/ASA, engineering nylon, carbon fiber, resin, large-format FDM.</p>
+        </div>
+        <div class="card">
+          <div class="icon">📦</div>
+          <h3>Product Manufacturing</h3>
+          <p>Allternit’s own catalog: compute enclosures, rack accessories, cable organizers, battery holders, docking stations.</p>
+        </div>
+        <div class="card">
+          <div class="icon">⚙️</div>
+          <h3>Manufacturing Services</h3>
+          <p>B2B production: replacement parts, jigs, fixtures, low-volume runs, emergency turnaround, engineering consulting.</p>
+        </div>
+        <div class="card">
+          <div class="icon">🧠</div>
+          <h3>Hardware R&D</h3>
+          <p>Portable AI stations, edge servers, AI kiosks, robotics platforms, IoT devices, custom electronics enclosures.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- B2B Targets -->
+  <section class="page no-center">
+    <div class="content">
+      <div class="tag">Go-to-Market</div>
+      <h2>Become a bottleneck solver</h2>
+      <p class="lead">Don’t become “a 3D printing company.” Become the company that removes manufacturing bottlenecks for other businesses.</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Vertical</th>
+            <th>Examples We Print</th>
+            <th>Pricing Model</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Machine Shops</td>
+            <td>Drill guides, fixtures, jigs, spacers, alignment tools</td>
+            <td>Monthly retainer + per-part</td>
+          </tr>
+          <tr>
+            <td>HVAC</td>
+            <td>Duct adapters, mounting brackets, sensor housings</td>
+            <td>Per-job quoting</td>
+          </tr>
+          <tr>
+            <td>Electricians</td>
+            <td>Junction box adapters, labeling fixtures, conduit tools</td>
+            <td>Per-job quoting</td>
+          </tr>
+          <tr>
+            <td>Construction</td>
+            <td>Concrete forms, layout templates, measuring tools, pipe spacers</td>
+            <td>Project-based</td>
+          </tr>
+          <tr>
+            <td>Universities</td>
+            <td>Robotics parts, custom mounts, sensor brackets, experiment hardware</td>
+            <td>Lab account + grants</td>
+          </tr>
+          <tr>
+            <td>Manufacturing Plants</td>
+            <td>Same-day functional replacements for broken plastic parts</td>
+            <td>Urgent premium + retainer</td>
+          </tr>
+          <tr>
+            <td>Real Estate Developers</td>
+            <td>Site models, floor-plan 3D models, digital twin geometry, marketing renders</td>
+            <td>Project-based + licensing</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Revenue Model -->
+  <section class="page no-center">
+    <div class="content">
+      <div class="tag">Business Model</div>
+      <h2>Revenue mix & ladder</h2>
+      <div class="two-col">
+        <div>
+          <h3>Target Mix</h3>
+          <table>
+            <thead>
+              <tr><th>Source</th><th>Target</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Internal product manufacturing</td><td>25%</td></tr>
+              <tr><td>B2B industrial printing / MaaS</td><td>25%</td></tr>
+              <tr><td>Engineering & CAD services</td><td>20%</td></tr>
+              <tr><td>CAD-as-a-Service</td><td>15%</td></tr>
+              <tr><td>Software & licensing</td><td>5%</td></tr>
+              <tr><td>Consumer / catalog products</td><td>5%</td></tr>
+              <tr><td>Prototyping for startups</td><td>5%</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <h3>Value Ladder</h3>
+          <ul class="clean">
+            <li><strong>Level 1</strong> — Print products</li>
+            <li><strong>Level 2</strong> — Design products</li>
+            <li><strong>Level 3</strong> — Engineer products</li>
+            <li><strong>Level 4</strong> — Manufacture products</li>
+            <li><strong>Level 5</strong> — Automate factories</li>
+            <li><strong>Level 6</strong> — License factory software</li>
+          </ul>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <p class="lead">Diversification means we are not dependent on Etsy, a single client, or a single product category.</p>
+    </div>
+  </section>
+
+  <!-- CAD-as-a-Service -->
+  <section class="page no-center">
+    <div class="content">
+      <div class="tag">High-Margin Services</div>
+      <h2>CAD-as-a-Service & software revenue</h2>
+      <p class="lead">
+        Printing is the fulfillment layer. CAD, design, and the software that orchestrates production are the high-margin layers.
+      </p>
+      <div class="grid grid-2" style="margin-top: 32px;">
+        <div class="card">
+          <h3>CAD-as-a-Service verticals</h3>
+          <ul class="clean">
+            <li><strong>Real estate developers</strong> — site models, floor-plan 3D models, digital twins, marketing renders</li>
+            <li><strong>Product companies</strong> — production-ready part files, enclosures, mounting hardware</li>
+            <li><strong>Startups</strong> — full design packages for crowdfunding/hardware MVPs</li>
+            <li><strong>Robotics builders</strong> — URDF/SDF assemblies, joint brackets, end-effectors</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Software & licensing products</h3>
+          <ul class="clean">
+            <li><strong>Manufacturing OS</strong> — quoting, scheduling, QA, inventory, customer portal</li>
+            <li><strong>CAD-as-a-Service API</strong> — text-to-CAD, URDF/SDF generation, DFM checks</li>
+            <li><strong>Print Farm Management</strong> — fleet monitoring, failure detection, auto-reordering</li>
+            <li><strong>Network License</strong> — certified partner shops run Allternit software</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CAD Tool Stack -->
+  <section class="page no-center">
+    <div class="content">
+      <div class="tag">Tools</div>
+      <h2>CAD, 3D AI & digital twin stack</h2>
+      <table>
+        <thead>
+          <tr><th>Category</th><th>Tool</th><th>Cost</th><th>Best For</th></tr>
+        </thead>
+        <tbody>
+          <tr><td rowspan="3">Parametric CAD</td><td>FreeCAD</td><td>Free</td><td>Mechanical design, enclosures</td></tr>
+          <tr><td>Onshape</td><td>Paid</td><td>Cloud collaboration</td></tr>
+          <tr><td>Fusion 360</td><td>Paid</td><td>Integrated CAD/CAM</td></tr>
+          <tr><td rowspan="3">3D AI / Generative</td><td>text-to-cad</td><td>Free</td><td>Text → STEP/STL/URDF/gcode</td></tr>
+          <tr><td>Blender + MCP</td><td>Free</td><td>Agent-controlled 3D scenes</td></tr>
+          <tr><td>LumaLabs AI</td><td>Paid</td><td>Photorealistic 3D captures</td></tr>
+          <tr><td rowspan="2">Digital Twins</td><td>PlayCanvas SuperSplat</td><td>Free</td><td>Browser walkable real estate twins</td></tr>
+          <tr><td>Photogrammetry</td><td>Free/Paid</td><td>3D models from photos</td></tr>
+        </tbody>
+      </table>
+      <p class="lead" style="margin-top: 24px; font-size: 18px;">
+        Recommended start: <strong>FreeCAD + CadQuery + text-to-cad</strong> for mechanical automation, <strong>Blender + MCP</strong> for visualization, <strong>SuperSplat</strong> for real estate twins.
+      </p>
+    </div>
+  </section>
+
+  <!-- Robotics Resources -->
+  <section class="page no-center">
+    <div class="content">
+      <div class="tag">Robotics</div>
+      <h2>Robotics & hardware design resources</h2>
+      <div class="grid grid-2">
+        <div class="card">
+          <h3>Open-source humanoid robots</h3>
+          <ul class="clean">
+            <li><strong>Asimov 1</strong> — ~$15K DIY kit, full open-source stack</li>
+            <li><strong>Berkeley Humanoid Lite</strong> — sub-$5K, 3D-printed</li>
+            <li><strong>HopeJR</strong> — ~$3K, Hugging Face</li>
+            <li><strong>ROBOTIS K0</strong> — full-size open-source platform</li>
+            <li><strong>Vibe A1</strong> — mini humanoid from $649</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Reference sites & media</h3>
+          <ul class="clean">
+            <li><strong>humanityslastmachine.com</strong> — interactive humanoid component breakdowns and sourcing</li>
+            <li><strong>Asimov DIY kit</strong> — https://asimov.inc/diy-kit</li>
+            <li><strong>text-to-cad repo</strong> — https://github.com/earthtojake/text-to-cad</li>
+            <li><strong>Robotics CAD videos</strong> — Desktop/Twitter Bookmarks/organized/tech/robotics-cad/</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Manufacturing Stack -->
+  <section class="page no-center">
+    <div class="content">
+      <div class="tag">Software</div>
+      <h2>The Allternit Manufacturing Stack</h2>
+      <p class="lead">A software-controlled pipeline where every step can eventually be automated.</p>
+      <div class="pipeline">
+        <span class="pipeline-step">Customer Order</span>
+        <span class="pipeline-arrow">→</span>
+        <span class="pipeline-step">AI Quoting</span>
+        <span class="pipeline-arrow">→</span>
+        <span class="pipeline-step">Engineering Review</span>
+        <span class="pipeline-arrow">→</span>
+        <span class="pipeline-step">CAD / CAM</span>
+        <span class="pipeline-arrow">→</span>
+        <span class="pipeline-step">Print Queue</span>
+        <span class="pipeline-arrow">→</span>
+        <span class="pipeline-step">Camera Monitoring</span>
+        <span class="pipeline-arrow">→</span>
+        <span class="pipeline-step">Quality Check</span>
+        <span class="pipeline-arrow">→</span>
+        <span class="pipeline-step">Packaging</span>
+        <span class="pipeline-arrow">→</span>
+        <span class="pipeline-step">Shipping</span>
+        <span class="pipeline-arrow">→</span>
+        <span class="pipeline-step">Invoice</span>
+        <span class="pipeline-arrow">→</span>
+        <span class="pipeline-step">Customer Portal</span>
+      </div>
+      <div class="grid grid-3" style="margin-top: 32px;">
+        <div class="card">
+          <h3>Sales Agent</h3>
+          <p>Receives requests, asks clarifying questions, generates quotes.</p>
+        </div>
+        <div class="card">
+          <h3>Engineering Agent</h3>
+          <p>Validates CAD, checks tolerances, suggests DFM improvements.</p>
+        </div>
+        <div class="card">
+          <h3>Manufacturing Agent</h3>
+          <p>Schedules printers, chooses filament, estimates completion.</p>
+        </div>
+        <div class="card">
+          <h3>Operations Agent</h3>
+          <p>Orders filament, tracks inventory, predicts shortages.</p>
+        </div>
+        <div class="card">
+          <h3>Quality Agent</h3>
+          <p>Uses computer vision to detect defects and reject bad parts.</p>
+        </div>
+        <div class="card">
+          <h3>Customer Agent</h3>
+          <p>Updates order status, sends shipping notifications, collects feedback.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Build Phases -->
+  <section class="page no-center">
+    <div class="content">
+      <div class="tag">Execution</div>
+      <h2>Build phases</h2>
+      <div class="roadmap">
+        <div class="roadmap-phase">
+          <h3>Phase 1 — Validate</h3>
+          <span class="time">Months 1–3</span>
+          <ul>
+            <li>3 printers, 1 workstation, 1 shipping station</li>
+            <li>First internal compute box prototype</li>
+            <li>3–5 pilot B2B customers</li>
+            <li>$2k–$5k monthly revenue</li>
+          </ul>
+        </div>
+        <div class="roadmap-phase">
+          <h3>Phase 2 — Scale</h3>
+          <span class="time">Months 4–12</span>
+          <ul>
+            <li>10 printers + resin capability</li>
+            <li>Standard service packages</li>
+            <li>Internal manufacturing queue software</li>
+            <li>$10k+ monthly revenue</li>
+          </ul>
+        </div>
+        <div class="roadmap-phase">
+          <h3>Phase 3 — Automate</h3>
+          <span class="time">Year 2+</span>
+          <ul>
+            <li>40 printers across material farms</li>
+            <li>AI scheduling and failure detection</li>
+            <li>Customer portal live</li>
+            <li>$30k+ monthly revenue</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10-Year Roadmap -->
+  <section class="page no-center">
+    <div class="content">
+      <div class="tag">Long Term</div>
+      <h2>Ten-year roadmap</h2>
+      <table>
+        <thead>
+          <tr><th>Years</th><th>Focus</th><th>Milestones</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1–2</td>
+            <td>Profitable microfactory</td>
+            <td>5–20 printers, B2B focus, internal hardware production</td>
+          </tr>
+          <tr>
+            <td>3–5</td>
+            <td>Expanded capabilities</td>
+            <td>CNC, laser, electronics assembly, proprietary product catalog</td>
+          </tr>
+          <tr>
+            <td>5–7</td>
+            <td>Manufacturing OS</td>
+            <td>Release Allternit Manufacturing OS: quoting, scheduling, QA, inventory</td>
+          </tr>
+          <tr>
+            <td>7–10</td>
+            <td>Distributed network</td>
+            <td>Certified partner shops run Allternit software; orchestration layer</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="divider"></div>
+      <p class="lead">
+        The end state: Allternit does not need to own 1,000 printers. It coordinates 1,000 printers through a distributed manufacturing network.
+      </p>
+    </div>
+  </section>
+
+  <!-- Equipment & Materials -->
+  <section class="page no-center">
+    <div class="content">
+      <div class="tag">Operations</div>
+      <h2>Equipment & materials</h2>
+      <div class="two-col">
+        <div>
+          <h3>Printers</h3>
+          <ul class="clean">
+            <li><strong>Workhorse:</strong> Bambu Lab P1S / X1 Carbon</li>
+            <li><strong>Budget starter:</strong> Prusa MK4, Creality K1 Max</li>
+            <li><strong>Large format:</strong> Creality K1 Max, Voron 2.4</li>
+            <li><strong>Resin:</strong> Elegoo Saturn 4 Ultra, Formlabs Form 4</li>
+          </ul>
+          <h3 style="margin-top: 28px;">Post-Processing</h3>
+          <ul class="clean">
+            <li>Wash + cure station</li>
+            <li>Heat treatment oven</li>
+            <li>Sanding / vapor smoothing station</li>
+            <li>Ultrasonic cleaner</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Materials</h3>
+          <table>
+            <thead>
+              <tr><th>Material</th><th>Use Case</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>PLA</td><td>Prototypes, indoor parts</td></tr>
+              <tr><td>PETG</td><td>General purpose, outdoor</td></tr>
+              <tr><td>ABS / ASA</td><td>Heat / UV resistance</td></tr>
+              <tr><td>Nylon</td><td>Wear parts, structural</td></tr>
+              <tr><td>Carbon-fiber nylon</td><td>High stiffness, lightweight</td></tr>
+              <tr><td>Polycarbonate</td><td>Impact resistance</td></tr>
+              <tr><td>Resin</td><td>Detail, dental, miniatures</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Integration -->
+  <section class="page no-center">
+    <div class="content">
+      <div class="tag">Ecosystem</div>
+      <h2>Fits into everything Allternit builds</h2>
+      <div class="grid grid-3">
+        <div class="card">
+          <h3>Local Brain</h3>
+          <p>Runs CAD, slicing, queue, and vision QA entirely offline.</p>
+        </div>
+        <div class="card">
+          <h3>Computer Use</h3>
+          <p>Monitors printers, captures failure images, interacts with printer UIs.</p>
+        </div>
+        <div class="card">
+          <h3>Swarm ADE</h3>
+          <p>Orchestrates sales, engineering, scheduling, QA, and customer agents.</p>
+        </div>
+        <div class="card">
+          <h3>Allternit Code</h3>
+          <p>Builds and maintains the manufacturing software.</p>
+        </div>
+        <div class="card">
+          <h3>Canvas</h3>
+          <p>Documents procedures, specs, and customer reports.</p>
+        </div>
+        <div class="card">
+          <h3>A://Labs</h3>
+          <p>Trains team and certifies operators on the microfactory workflow.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Product Catalog Ideas -->
+  <section class="page no-center">
+    <div class="content">
+      <div class="tag">Products</div>
+      <h2>Catalog ideas</h2>
+      <div class="grid grid-2">
+        <div class="card">
+          <h3>AI Hardware</h3>
+          <p>Compute box shells, battery packs, cooling systems, docking stations, cable organizers, rack accessories.</p>
+        </div>
+        <div class="card">
+          <h3>Networking</h3>
+          <p>Mini rack systems, router mounts, switch brackets, fiber organizers.</p>
+        </div>
+        <div class="card">
+          <h3>Workshop & Office</h3>
+          <p>Laptop stands, phone docks, camera mounts, tool holders, jig systems, drawer organizers.</p>
+        </div>
+        <div class="card">
+          <h3>Emerging</h3>
+          <p>Agriculture irrigation parts, energy battery enclosures, robotics frames, home automation brackets.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Risks & Next Steps -->
+  <section class="page no-center">
+    <div class="content">
+      <div class="tag">Decision</div>
+      <h2>Risks & next steps</h2>
+      <div class="two-col">
+        <div>
+          <h3>Key risks</h3>
+          <ul class="clean">
+            <li>Printer downtime → maintain spare parts and redundant capacity</li>
+            <li>Failed prints → camera monitoring + AI failure detection</li>
+            <li>Material moisture → dry cabinets + tracking</li>
+            <li>Tolerance issues → standardize profiles and qualify each printer</li>
+            <li>Regulatory (medical) → stay in industrial/consumer markets first</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Immediate next steps</h3>
+          <ul class="clean">
+            <li>Approve master plan and Phase 1 budget</li>
+            <li>Validate CAD-as-a-Service pricing with 2–3 real estate or product clients</li>
+            <li>Select first printers and reserve physical space</li>
+            <li>Build internal part backlog for Allternit products</li>
+            <li>Identify 5 pilot B2B customers for printing or CAD</li>
+            <li>Choose CAD/CAM toolchain (FreeCAD + CadQuery + text-to-cad)</li>
+            <li>Prototype text-to-cad pipeline for one Allternit part</li>
+          </ul>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <p class="lead" style="text-align: center;">
+        This is a brainstorm turned into a reviewable plan.<br>
+        <strong>Nothing is committed until you decide to move to Phase 1.</strong>
+      </p>
+      <div class="footnote">
+        Source: docs/ALLTERNIT_MANUFACTURING_MASTER_PLAN.md • Generated for visual review
+      </div>
+    </div>
+  </section>
+
+</body>
+</html>

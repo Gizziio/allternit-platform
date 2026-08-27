@@ -1,0 +1,73 @@
+---
+title: Configuration
+description: Configure Gizzi Code via config.toml, environment variables, and flags
+---
+
+## Configuration sources
+
+Gizzi Code reads configuration from three sources, in order of precedence:
+
+1. **Command-line flags** — highest priority
+2. **Environment variables** — e.g. `ALLTERNIT_API_KEY`
+3. **`config.toml`** — `~/.config/gizzi-code/config.toml`
+
+## config.toml reference
+
+```toml
+# ~/.config/gizzi-code/config.toml
+
+[model]
+provider = "allternit"         # Provider identifier
+model = "gizzi-pro"            # Default model alias
+temperature = 0.7
+
+[auth]
+credential_store = "auto"      # "file" | "keyring" | "auto"
+default_profile = "work"
+
+[permissions]
+default_mode = "suggest"       # "suggest" | "ask" | "dontAsk"
+allow = ["read", "web_search"]
+deny = ["rm -rf"]
+
+[ui]
+theme = "auto"                 # "auto" | "dark" | "light"
+syntax_highlighting = true
+code_wrap = true
+
+[telemetry]
+enabled = true
+otel_endpoint = "http://localhost:4318"
+```
+
+## Named profiles
+
+`gizzi config profile` manages named **permission profiles** that bundle approval rules. Profiles are merged into the active permission set on startup.
+
+```bash
+# List profiles
+gizzi config profile list
+
+# Create a strict profile
+gizzi config profile add strict --rule bash=ask --rule edit=ask
+
+# Activate it
+gizzi config profile set-active strict
+
+# Remove
+gizzi config profile remove strict
+```
+
+## Environment variables
+
+| Variable | Purpose |
+|----------|---------|
+| `ALLTERNIT_API_KEY` | API key for the LLM gateway |
+| `ALLTERNIT_ENDPOINT` | Override the default API endpoint |
+| `GIZZI_CONFIG_PATH` | Override the `config.toml` location |
+| `GIZZI_CREDENTIAL_STORE` | Override `auth.credential_store` |
+| `GIZZI_ENABLE_RAILS_PEER` | Register the session as a CommRails peer |
+
+## File permissions
+
+The `config.toml` file is created with `0o600` permissions when auth profiles containing secrets are written.

@@ -80,6 +80,10 @@ final class SSHConnectionsStore: ObservableObject {
         testResult = nil
     }
 
+    func clearCreateError() {
+        createError = nil
+    }
+
     func deleteConnection(_ id: String) async throws {
         isDeletingId = id
         defer { isDeletingId = nil }

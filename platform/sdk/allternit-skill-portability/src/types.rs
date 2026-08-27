@@ -1,7 +1,7 @@
 //! Core types for skill portability
 //!
 //! This module defines the types and traits used for managing skills
-//! across different LLM tools (Claude Code, Codex, OpenCode, Kimi).
+//! across different LLM tools (Claude Code, Codex, Kimi).
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -20,8 +20,6 @@ pub enum LLMType {
     Claude,
     /// OpenAI Codex
     Codex,
-    /// OpenCode (open source)
-    OpenCode,
     /// Kimi CLI
     Kimi,
     /// Google Antigravity
@@ -34,7 +32,6 @@ impl LLMType {
         match self {
             LLMType::Claude => "Claude Code",
             LLMType::Codex => "OpenAI Codex",
-            LLMType::OpenCode => "OpenCode",
             LLMType::Kimi => "Kimi",
             LLMType::Antigravity => "Antigravity",
         }
@@ -45,7 +42,6 @@ impl LLMType {
         match self {
             LLMType::Claude => ".claude",
             LLMType::Codex => ".codex",
-            LLMType::OpenCode => ".opencode",
             LLMType::Kimi => ".kimi",
             LLMType::Antigravity => ".antigravity",
         }
@@ -56,7 +52,6 @@ impl LLMType {
         vec![
             LLMType::Claude,
             LLMType::Codex,
-            LLMType::OpenCode,
             LLMType::Kimi,
             LLMType::Antigravity,
         ]

@@ -13,11 +13,11 @@ interface ThemeState {
 export const useThemeStore = create<ThemeState>()(
   persist(
     (set) => ({
-      theme: 'dark',
+      theme: 'light',
       setTheme: (theme) => set({ theme }),
     }),
     {
-      name: 'allternit-theme-storage',
+      name: 'allternit-theme-storage-v2',
       storage: createBrowserJSONStorage(),
     }
   )

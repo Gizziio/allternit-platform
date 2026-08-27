@@ -1,0 +1,118 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "allternit-agent-mail",
+	"main": "./worker.ts",
+	"compatibility_date": "2026-05-20",
+	"keep_vars": true,
+	"compatibility_flags": [
+		"nodejs_compat",
+		"global_fetch_strictly_public"
+	],
+	"assets": {
+		"binding": "ASSETS",
+		"directory": ".open-next/assets",
+	},
+	"images": {
+		"binding": "IMAGES",
+	},
+	"services": [
+		{
+			"binding": "WORKER_SELF_REFERENCE",
+			"service": "allternit-agent-mail",
+		},
+	],
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "REALTIME",
+				"class_name": "RealtimeHub",
+			},
+		],
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_sqlite_classes": [
+				"RealtimeHub",
+			],
+		},
+	],
+	// Database-backup workflow disabled: requires the Workflows product enabled on
+	// the account and R2. Re-add this block to re-enable scheduled D1 backups:
+	// "workflows": [{ "name": "allternit-agent-mail-database-backup", "binding": "DATABASE_BACKUP_WORKFLOW", "class_name": "DatabaseBackupWorkflow", "schedules": ["0 2 * * *"] }],
+	"ratelimits": [
+		{
+			"name": "LOGIN_RATE_LIMIT",
+			"namespace_id": "1001",
+			"simple": {
+				"limit": 20,
+				"period": 60,
+			},
+		},
+		{
+			"name": "SEND_RATE_LIMIT",
+			"namespace_id": "1002",
+			"simple": {
+				"limit": 30,
+				"period": 60,
+			},
+		},
+	],
+	"vars": {
+		// This fork gates outbound mail behind human approval by default; set to
+		// "false" to restore synchronous sending.
+		"REQUIRE_SEND_APPROVAL": "true",
+		"CF_EMAIL_WORKER_NAME": "allternit-agent-mail",
+		// Outbound transport: "cloudflare" (default, requires Workers Paid + Email
+		// Sending entitlement) or "resend" (uses resend.com; free tier 100/day).
+		"EMAIL_TRANSPORT": "cloudflare",
+	},
+	"observability": {
+		"enabled": true,
+	},
+	"upload_source_maps": true,
+	"send_email": [
+		{
+			"name": "EMAIL",
+			"remote": true,
+		},
+	],
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "allternit-agent-mail",
+			"database_id": "6182a39e-3b5c-4977-9e28-f69c2949aed6",
+			"migrations_dir": "drizzle/migrations",
+		},
+	],
+	"r2_buckets": [
+		{
+			"binding": "BUCKET",
+			"bucket_name": "allternit-agent-mail-raw",
+		},
+	],
+	"queues": {
+		"producers": [
+			{
+				"binding": "INBOUND_QUEUE",
+				"queue": "allternit-agent-mail-inbound",
+			},
+			{
+				"binding": "OUTBOUND_QUEUE",
+				"queue": "allternit-agent-mail-outbound",
+			},
+		],
+		"consumers": [
+			{
+				"queue": "allternit-agent-mail-inbound",
+				"max_batch_size": 5,
+				"max_retries": 3,
+			},
+			{
+				"queue": "allternit-agent-mail-outbound",
+				"max_batch_size": 5,
+				"max_retries": 3,
+			},
+		],
+	},
+}

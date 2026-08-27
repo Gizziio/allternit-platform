@@ -1,0 +1,39 @@
+---
+title: Cookbooks
+description: Allternit-native recipes for common agent patterns
+---
+
+## What are cookbooks?
+
+Cookbooks are end-to-end, copy-pasteable recipes that solve a specific problem with Allternit. Each cookbook includes complete code, explains the design choices, and links to the relevant API reference.
+
+<Note>
+All cookbooks use the Allternit SDK and assume you have an API key. See [Quickstart](/quickstart) if you haven't set up yet.
+</Note>
+
+## Available cookbooks
+
+<CardGroup cols={2}>
+  <Card title="Multi-Agent Orchestration" icon="users" href="/cookbooks/multi-agent-orchestration">
+    Coordinate multiple agents on a shared task with the CommRails communication protocol
+  </Card>
+  <Card title="Browser Automation" icon="globe" href="/cookbooks/browser-automation">
+    Automate web tasks with the Allternit Computer Interface (ACI)
+  </Card>
+  <Card title="RAG Pipeline" icon="database" href="/cookbooks/rag-pipeline">
+    Build a retrieval-augmented generation pipeline with memory stores
+  </Card>
+  <Card title="CI/CD Integration" icon="git-branch" href="/cookbooks/ci-cd-integration">
+    Run Gizzi Code in GitHub Actions, GitLab CI, and other pipelines
+  </Card>
+</CardGroup>
+
+## Conventions
+
+Every cookbook follows this structure:
+
+1. **Goal** — What we're building and why.
+2. **Prerequisites** — What you need before starting.
+3. **Step-by-step** — Implementation with complete code.
+4. **Explanation** — Why each step matters.
+5. **Next steps** — How to extend the recipe.

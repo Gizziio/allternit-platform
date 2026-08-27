@@ -9,11 +9,8 @@ import {
   getPatchFromContents,
 } from '../../utils/diff.js'
 import { errorMessage, isENOENT } from '../../utils/errors.js'
-import {
-  addLineNumbers,
-  convertLeadingTabsToSpaces,
-  readFileSyncCached,
-} from '../../utils/file.js'
+import { convertLeadingTabsToSpaces, readFileSyncCached } from '../../utils/file.js'
+import { addLineNumbers } from '../../utils/fileLineNumbers.js'
 import type { EditInput, FileEdit } from './types.js'
 
 // Claude can't output curly quotes, so we define them as constants here for Claude to use

@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { AllternitLogo } from "@/components/AllternitLogo";
 import type {
   ExtensionSidepanelActivity,
   ExtensionSidepanelAdapter,
@@ -424,24 +425,8 @@ function timeAgo(ts: number): string {
 
 function Logo({ className }: { className?: string }) {
   return (
-    <div
-      className={className}
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        borderRadius: "8px",
-        background: "var(--primary)",
-        color: "var(--primary-foreground)",
-        fontSize: '12px',
-        fontWeight: 700,
-        letterSpacing: "0.05em",
-      }}
-    >
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="10" />
-        <path d="m9 12 2 2 4-4" />
-      </svg>
+    <div className={className}>
+      <AllternitLogo size="lg" variant="icon-only" showText={false} />
     </div>
   );
 }
@@ -458,14 +443,14 @@ function MotionOverlay({ active }: { active: boolean }) {
         className="absolute inset-0 rounded-[inherit]"
         style={{
           background:
-            "linear-gradient(180deg, rgba(5, 7, 10, 0.04), rgba(5, 7, 10, 0.08)), radial-gradient(circle at 16% 18%, rgba(68, 128, 255, 0.16), transparent 30%), radial-gradient(circle at 84% 82%, rgba(51, 216, 168, 0.12), transparent 30%)",
+            "linear-gradient(180deg, rgba(5, 7, 10, 0.04), rgba(5, 7, 10, 0.08)), radial-gradient(circle at 16% 18%, rgba(217, 119, 87, 0.18), transparent 30%), radial-gradient(circle at 84% 82%, rgba(176, 141, 110, 0.14), transparent 30%)",
         }}
       />
       <div
         className="absolute inset-[-14px] rounded-[inherit] blur-[10px]"
         style={{
           background:
-            "conic-gradient(from 180deg, rgba(92, 136, 255, 0.32), rgba(83, 196, 255, 0.12), rgba(179, 96, 255, 0.26), rgba(92, 136, 255, 0.32))",
+            "conic-gradient(from 180deg, rgba(217, 119, 87, 0.32), rgba(176, 141, 110, 0.14), rgba(200, 189, 180, 0.24), rgba(217, 119, 87, 0.32))",
           animation: "extension-sidepanel-overlay-glow-a 4.8s ease-in-out infinite",
         }}
       />
@@ -473,7 +458,7 @@ function MotionOverlay({ active }: { active: boolean }) {
         className="absolute inset-[-14px] rounded-[inherit] blur-[10px]"
         style={{
           background:
-            "conic-gradient(from 0deg, rgba(70, 212, 255, 0.22), rgba(92, 136, 255, 0.12), rgba(74, 208, 157, 0.24), rgba(70, 212, 255, 0.22))",
+            "conic-gradient(from 0deg, rgba(176, 141, 110, 0.24), rgba(217, 119, 87, 0.16), rgba(230, 213, 195, 0.22), rgba(176, 141, 110, 0.24))",
           animation: "extension-sidepanel-overlay-glow-b 4.8s ease-in-out infinite",
         }}
       />
@@ -609,18 +594,18 @@ function EmptyState({
       <style>{EXTENSION_SIDEPANEL_ANIMATIONS}</style>
       <div className="pointer-events-none relative select-none">
         <div
-          className="absolute inset-0 -m-6 rounded-full blur-[10px]"
+          className="absolute inset-0 -m-6 rounded-full blur-[12px]"
           style={{
             background:
-              "conic-gradient(from 180deg, oklch(0.55 0.2 280), oklch(0.5 0.15 230), oklch(0.6 0.18 310), oklch(0.55 0.2 280))",
+              "conic-gradient(from 180deg, #D97757, #B08D6E, #C8BDB4, #D97757)",
             animation: "extension-sidepanel-glow-a 5s ease-in-out infinite",
           }}
         />
         <div
-          className="absolute inset-0 -m-6 rounded-full blur-[10px]"
+          className="absolute inset-0 -m-6 rounded-full blur-[12px]"
           style={{
             background:
-              "conic-gradient(from 0deg, oklch(0.55 0.18 160), oklch(0.5 0.2 200), oklch(0.6 0.15 120), oklch(0.55 0.18 160))",
+              "conic-gradient(from 0deg, #B08D6E, #D97757, #E6D5C3, #B08D6E)",
             animation: "extension-sidepanel-glow-b 5s ease-in-out infinite",
           }}
         />

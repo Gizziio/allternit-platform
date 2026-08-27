@@ -393,7 +393,7 @@ class AgentCronScheduler {
       logger.debug(`Job ${job.id} completed: ${result.success ? 'success' : 'failed'}`);
 
     } catch (error) {
-      logger.error({ err: error }, 'Job ${job.id} failed:');
+      logger.error({ err: error, jobId: job.id }, 'Job failed');
       store.recordExecution(job.id, {
         success: false,
         error: error instanceof Error ? error.message : String(error),
@@ -463,7 +463,7 @@ class AgentCronScheduler {
 export const agentCronScheduler = new AgentCronScheduler();
 
 // React hook for using the scheduler
-function useAgentCronScheduler(agentId?: string) {
+export function useAgentCronScheduler(agentId?: string) {
   const store = useCronScheduler();
   
   return {

@@ -8,7 +8,7 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::{collections::HashSet, sync::Arc};
 use tracing::warn;
@@ -51,8 +51,12 @@ pub fn provider_router() -> Router<Arc<AppState>> {
         )
         .route("/providers/auth/status", get(list_provider_auth_status))
         .route("/providers/video/generate", post(generate_video))
+        .route("/media/providers", get(list_media_providers))
+        .route("/media/:mode/providers", get(list_media_providers_for_mode))
+        .route("/media/:mode/generate", post(generate_media))
         .route("/provider/ollama/status", get(ollama_live_status))
         .route("/provider/ollama/models", get(list_ollama_models))
+        .route("/provider/huggingface/search", get(search_huggingface))
 }
 
 async fn generate_video(headers: HeaderMap, Json(payload): Json<serde_json::Value>) -> Response {
@@ -61,6 +65,62 @@ async fn generate_video(headers: HeaderMap, Json(payload): Json<serde_json::Valu
         None => return unauthorized(),
     };
     match crate::gizzi_provider_auth::generate_video(payload).await {
+        Ok((status, payload)) => (
+            StatusCode::from_u16(status).unwrap_or(StatusCode::BAD_GATEWAY),
+            Json(payload),
+        )
+            .into_response(),
+        Err(error) => (
+            StatusCode::BAD_GATEWAY,
+            Json(json!({ "error": "gizzi_provider_error", "message": error })),
+        )
+            .into_response(),
+    }
+}
+
+async fn list_media_providers(headers: HeaderMap) -> Response {
+    let _user = match get_user(&headers) {
+        Some(user) => user,
+        None => return unauthorized(),
+    };
+    match crate::gizzi_provider_auth::list_media_providers().await {
+        Ok(payload) => Json(payload).into_response(),
+        Err(error) => (
+            StatusCode::BAD_GATEWAY,
+            Json(json!({ "error": "gizzi_provider_error", "message": error })),
+        )
+            .into_response(),
+    }
+}
+
+async fn list_media_providers_for_mode(
+    headers: HeaderMap,
+    Path(mode): Path<String>,
+) -> Response {
+    let _user = match get_user(&headers) {
+        Some(user) => user,
+        None => return unauthorized(),
+    };
+    match crate::gizzi_provider_auth::list_media_providers_for_mode(mode).await {
+        Ok(payload) => Json(payload).into_response(),
+        Err(error) => (
+            StatusCode::BAD_GATEWAY,
+            Json(json!({ "error": "gizzi_provider_error", "message": error })),
+        )
+            .into_response(),
+    }
+}
+
+async fn generate_media(
+    headers: HeaderMap,
+    Path(mode): Path<String>,
+    Json(payload): Json<serde_json::Value>,
+) -> Response {
+    let _user = match get_user(&headers) {
+        Some(user) => user,
+        None => return unauthorized(),
+    };
+    match crate::gizzi_provider_auth::generate_media(mode, payload).await {
         Ok((status, payload)) => (
             StatusCode::from_u16(status).unwrap_or(StatusCode::BAD_GATEWAY),
             Json(payload),
@@ -126,8 +186,10 @@ async fn ollama_live_status(State(state): State<Arc<AppState>>, headers: HeaderM
     }
 }
 
-/// Probe a local OpenAI-compatible brain (Ollama/LM Studio) for reachability and
-/// its installed models. Cheap local GET with a short timeout; never throws.
+/// Probe a local OpenAI-compatible brain (Ollama/LM Studio/Local Engine) for
+/// reachability and its installed models. Cheap local GET with a short timeout;
+/// never throws. Tries the Ollama `/api/tags` endpoint first, then falls back
+/// to the OpenAI-compatible `/v1/models` endpoint.
 async fn probe_local_brain(url: &str) -> (bool, Vec<String>) {
     let url = url.trim_end_matches('/').to_string();
     tokio::task::spawn_blocking(move || {
@@ -138,8 +200,10 @@ async fn probe_local_brain(url: &str) -> (bool, Vec<String>) {
             Ok(c) => c,
             Err(_) => return (false, Vec::<String>::new()),
         };
-        match client.get(format!("{}/api/tags", url)).send() {
-            Ok(res) if res.status().is_success() => {
+
+        // Ollama-style endpoint.
+        if let Ok(res) = client.get(format!("{}/api/tags", url)).send() {
+            if res.status().is_success() {
                 let models = res
                     .json::<serde_json::Value>()
                     .ok()
@@ -154,10 +218,32 @@ async fn probe_local_brain(url: &str) -> (bool, Vec<String>) {
                             .collect()
                     })
                     .unwrap_or_default();
-                (true, models)
+                return (true, models);
             }
-            _ => (false, vec![]),
         }
+
+        // OpenAI-compatible endpoint (Local Engine, LM Studio, vLLM, etc.).
+        if let Ok(res) = client.get(format!("{}/v1/models", url)).send() {
+            if res.status().is_success() {
+                let models = res
+                    .json::<serde_json::Value>()
+                    .ok()
+                    .and_then(|b| b.get("data").and_then(|d| d.as_array()).cloned())
+                    .map(|arr| {
+                        arr.iter()
+                            .filter_map(|m| {
+                                m.get("id")
+                                    .and_then(|v| v.as_str())
+                                    .map(|s| s.to_string())
+                            })
+                            .collect()
+                    })
+                    .unwrap_or_default();
+                return (true, models);
+            }
+        }
+
+        (false, vec![])
     })
     .await
     .unwrap_or((false, vec![]))
@@ -174,6 +260,25 @@ struct ProviderRow {
     api_key_set: bool,
     models: Vec<String>,
     status: String,
+}
+
+/// Frontend-facing provider shape returned by `GET /api/v1/providers`.
+#[derive(Serialize, Clone)]
+struct ProviderInfo {
+    id: String,
+    name: String,
+    provider_type: String,
+    base_url: Option<String>,
+    api_key_set: bool,
+    models: Vec<ModelInfo>,
+    status: String,
+}
+
+/// Frontend-facing model shape returned by `GET /api/v1/providers`.
+#[derive(Serialize, Clone)]
+struct ModelInfo {
+    id: String,
+    name: String,
 }
 
 /// Static specs for ENV-key providers: (id, display name, api-key env var, models).
@@ -231,12 +336,33 @@ static ENV_PROVIDER_SPECS: &[(&str, &str, &str, &[&str])] = &[
 /// Static specs for CLI/subprocess brains: (id, display name, binary, default model).
 /// IDs and default models must match what the gizzi runtime registers
 /// (cmd/gizzi-code src/runtime/providers/discovery/subprocess.ts).
+/// This list mirrors the agent-runtime surface used by Multica: the user brings
+/// their own installed + authenticated CLI tool, and Allternit routes to it.
 static CLI_PROVIDER_SPECS: &[(&str, &str, &str, &str)] = &[
     ("claude-cli", "Claude CLI", "claude", "claude-sonnet-4-6"),
     ("codex-cli", "Codex CLI", "codex", "codex-mini-latest"),
     ("qwen-cli", "Qwen CLI", "qwen", "qwen-plus"),
     ("kimi-cli", "Kimi CLI", "kimi", "kimi-k2"),
     ("antigravity", "Antigravity", "agy", "antigravity"),
+    ("cursor-agent", "Cursor Agent", "cursor-agent", "cursor-agent"),
+    ("copilot", "GitHub Copilot CLI", "copilot", "copilot"),
+    ("opencode", "OpenCode", "opencode", "opencode"),
+    ("openclaw", "OpenClaw", "openclaw", "openclaw"),
+    ("hermes", "Hermes", "hermes", "hermes"),
+    ("pi", "Pi", "pi", "pi"),
+    ("codebuddy", "CodeBuddy", "codebuddy", "codebuddy"),
+    ("deveco", "DevEco Code", "deveco", "deveco"),
+    ("grok", "Grok", "grok", "grok"),
+    ("kiro-cli", "Kiro CLI", "kiro-cli", "kiro-cli"),
+    ("qodercli", "Qoder CLI", "qodercli", "qodercli"),
+    ("qoderclicn", "Qoder CN", "qoderclicn", "qoderclicn"),
+    ("qwenpaw", "QwenPaw", "qwenpaw", "qwenpaw"),
+    ("reasonix", "Reasonix", "reasonix", "reasonix"),
+    ("traecli", "Trae CLI", "traecli", "traecli"),
+    ("dsh", "DeepSeek Harness", "dsh", "dsh"),
+    ("omp", "Oh-My-Pi", "omp", "omp"),
+    ("mcode", "MiniMax Code", "mcode", "mcode"),
+    ("dim", "Dim", "dim", "dim"),
 ];
 
 /// Per-model display metadata: (model id, description, tier, supports_effort).
@@ -573,6 +699,119 @@ fn merge_provider_sources(sources: Vec<Vec<ProviderRow>>) -> Vec<ProviderRow> {
     map.into_values().collect()
 }
 
+/// Parse the `connected` array from a Gizzi `/provider` response.
+fn parse_connected(payload: &serde_json::Value) -> HashSet<String> {
+    payload
+        .get("connected")
+        .and_then(|value| value.as_array())
+        .into_iter()
+        .flatten()
+        .filter_map(|value| value.as_str().map(str::to_owned))
+        .collect()
+}
+
+/// Transform one Gizzi provider object into the frontend `ProviderInfo` shape.
+fn provider_info_from_gizzi(
+    provider: &serde_json::Value,
+    connected: &HashSet<String>,
+) -> Option<ProviderInfo> {
+    let id = provider.get("id")?.as_str()?.to_owned();
+    let name = provider
+        .get("name")
+        .and_then(|v| v.as_str())
+        .unwrap_or(&id)
+        .to_owned();
+    let auth_type = provider
+        .get("auth_type")
+        .and_then(|v| v.as_str())
+        .unwrap_or("api_key");
+
+    let provider_type = if auth_type == "subprocess" || provider.get("subprocess_cmd").is_some() {
+        "subprocess"
+    } else if auth_type == "none" {
+        "local"
+    } else {
+        "api"
+    }
+    .to_owned();
+
+    let base_url = provider
+        .get("options")
+        .and_then(|o| o.get("baseURL"))
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_owned());
+
+    let api_key_set = connected.contains(&id) || auth_type == "none";
+
+    let models: Vec<ModelInfo> = provider
+        .get("models")
+        .and_then(|m| m.as_object())
+        .map(|m| {
+            m.values()
+                .filter_map(|model| {
+                    let obj = model.as_object()?;
+                    let model_id = obj.get("id")?.as_str()?.to_owned();
+                    let model_name = obj
+                        .get("name")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or(&model_id)
+                        .to_owned();
+                    Some(ModelInfo {
+                        id: model_id,
+                        name: model_name,
+                    })
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+
+    let status = if connected.contains(&id) || auth_type == "none" {
+        "active"
+    } else {
+        "unconfigured"
+    }
+    .to_owned();
+
+    Some(ProviderInfo {
+        id,
+        name,
+        provider_type,
+        base_url,
+        api_key_set,
+        models,
+        status,
+    })
+}
+
+/// Convert a legacy merged `ProviderRow` into the frontend `ProviderInfo` shape.
+fn provider_info_from_row(row: &ProviderRow) -> ProviderInfo {
+    let status = match row.status.as_str() {
+        "active" => "active",
+        "offline" => "offline",
+        "unknown" => "unknown",
+        "ready" | "ready_no_models" => "active",
+        _ => "unconfigured",
+    }
+    .to_owned();
+
+    ProviderInfo {
+        id: row.id.clone(),
+        name: row.name.clone(),
+        provider_type: row.provider_type.clone(),
+        base_url: row.base_url.clone(),
+        api_key_set: row.api_key_set,
+        models: row
+            .models
+            .iter()
+            .map(|m| ModelInfo {
+                id: m.clone(),
+                name: m.clone(),
+            })
+            .collect(),
+        status,
+    }
+}
+
 // ─── List providers ───────────────────────────────────────────────────────────
 
 async fn list_providers(State(state): State<Arc<AppState>>, headers: HeaderMap) -> Response {
@@ -580,6 +819,25 @@ async fn list_providers(State(state): State<Arc<AppState>>, headers: HeaderMap) 
         Some(u) => u,
         None => return unauthorized(),
     };
+
+    // Prefer live Gizzi-discovered providers; fall back to the static merge if
+    // the runtime is unreachable so the UI never renders an empty list.
+    match crate::gizzi_provider_auth::discover_providers().await {
+        Ok(payload) => {
+            let connected = parse_connected(&payload);
+            let providers: Vec<ProviderInfo> = payload
+                .get("all")
+                .and_then(|value| value.as_array())
+                .into_iter()
+                .flatten()
+                .filter_map(|provider| provider_info_from_gizzi(provider, &connected))
+                .collect();
+            return Json(json!({ "providers": providers, "all": providers })).into_response();
+        }
+        Err(error) => {
+            warn!("Gizzi provider discovery failed, falling back to static providers: {}", error);
+        }
+    }
 
     // Scoped so the !Send rusqlite handles drop before any `.await` below.
     let db_providers: Vec<ProviderRow> = {
@@ -632,6 +890,10 @@ async fn list_providers(State(state): State<Arc<AppState>>, headers: HeaderMap) 
         }
     }
 
+    let providers: Vec<ProviderInfo> = providers
+        .iter()
+        .map(provider_info_from_row)
+        .collect();
     Json(json!({ "providers": providers, "all": providers })).into_response()
 }
 
@@ -838,6 +1100,92 @@ fn auth_status_from_row(row: &ProviderRow) -> ProviderAuthStatusRow {
     }
 }
 
+/// Transform a Gizzi provider object into the frontend auth-status row shape.
+fn auth_status_from_gizzi_provider(
+    provider: &serde_json::Value,
+    connected: &HashSet<String>,
+) -> Option<ProviderAuthStatusRow> {
+    let id = provider.get("id")?.as_str()?.to_owned();
+    let auth_type = provider
+        .get("auth_type")
+        .and_then(|v| v.as_str())
+        .unwrap_or("api_key");
+
+    let provider_type = if auth_type == "subprocess" || provider.get("subprocess_cmd").is_some() {
+        "subprocess"
+    } else if auth_type == "none" {
+        "local"
+    } else {
+        "api"
+    }
+    .to_owned();
+
+    let model_count = provider
+        .get("models")
+        .and_then(|m| m.as_object())
+        .map(|m| m.len())
+        .unwrap_or(0);
+
+    let auth_required = auth_type != "none";
+    let authenticated = connected.contains(&id)
+        || auth_type == "none"
+        || (auth_type == "subprocess" && provider.get("subprocess_cmd").is_some());
+
+    let status = if !auth_required {
+        "not_required"
+    } else if authenticated {
+        "ok"
+    } else {
+        "missing"
+    }
+    .to_owned();
+
+    Some(ProviderAuthStatusRow {
+        provider_id: id,
+        status,
+        authenticated,
+        auth_required,
+        auth_profile_id: None,
+        chat_profile_ids: Vec::new(),
+        details: Some(json!({
+            "provider_type": provider_type,
+            "model_count": model_count,
+        })),
+    })
+}
+
+/// Convert a legacy merged `ProviderRow` into the live auth-status row shape.
+fn auth_status_live_from_row(row: &ProviderRow) -> ProviderAuthStatusRow {
+    let is_local = row.provider_type == "local";
+    let auth_required = !is_local;
+
+    let status = match row.status.as_str() {
+        "active" => "ok",
+        "missing_key" => "missing",
+        "offline" => "unknown",
+        "ready_no_models" => "not_required",
+        _ if is_local => "not_required",
+        _ if row.api_key_set => "ok",
+        _ => "missing",
+    }
+    .to_string();
+
+    let authenticated = status == "ok" || status == "not_required";
+
+    ProviderAuthStatusRow {
+        provider_id: row.id.clone(),
+        status,
+        authenticated,
+        auth_required,
+        auth_profile_id: None,
+        chat_profile_ids: Vec::new(),
+        details: Some(json!({
+            "provider_type": row.provider_type.clone(),
+            "model_count": row.models.len(),
+        })),
+    }
+}
+
 async fn list_provider_auth_status(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
@@ -846,6 +1194,40 @@ async fn list_provider_auth_status(
         Some(u) => u,
         None => return unauthorized(),
     };
+
+    // Prefer live Gizzi auth metadata; fall back to the static merge if either
+    // Gizzi call fails so the auth-status panel never goes blank.
+    match (
+        crate::gizzi_provider_auth::discover_providers().await,
+        crate::gizzi_provider_auth::provider_auth_methods().await,
+    ) {
+        (Ok(providers_payload), Ok(_auth_methods_payload)) => {
+            let connected = parse_connected(&providers_payload);
+            let providers: Vec<ProviderAuthStatusRow> = providers_payload
+                .get("all")
+                .and_then(|value| value.as_array())
+                .into_iter()
+                .flatten()
+                .filter_map(|provider| auth_status_from_gizzi_provider(provider, &connected))
+                .collect();
+            return Json(json!({ "providers": providers })).into_response();
+        }
+        (discover_result, auth_result) => {
+            if let Err(error) = discover_result {
+                warn!(
+                    "Gizzi provider discovery failed, falling back to static auth status: {}",
+                    error
+                );
+            }
+            if let Err(error) = auth_result {
+                warn!(
+                    "Gizzi provider auth methods failed, falling back to static auth status: {}",
+                    error
+                );
+            }
+        }
+    }
+
     let connected = crate::gizzi_provider_auth::connected_provider_ids().await;
 
     let conn = match state.db.connect() {
@@ -878,7 +1260,7 @@ async fn list_provider_auth_status(
         vec![ollama_provider_row(state.config.ollama_url())],
     ]);
 
-    let providers: Vec<ProviderAuthStatusRow> = all.iter().map(auth_status_from_row).collect();
+    let providers: Vec<ProviderAuthStatusRow> = all.iter().map(auth_status_live_from_row).collect();
 
     Json(json!({ "providers": providers })).into_response()
 }
@@ -944,7 +1326,13 @@ async fn discover_provider_models(
         None => return unauthorized(),
     };
 
-    if id == "ollama" {
+    // Normalize chat-profile ids (e.g. "omlx-default") back to provider ids.
+    let normalized_id = id
+        .trim_end_matches("-default")
+        .trim_end_matches("-auth")
+        .to_string();
+
+    if normalized_id == "ollama" {
         return list_ollama_models(State(state), Extension(_user), headers)
             .await
             .into_response();
@@ -954,7 +1342,7 @@ async fn discover_provider_models(
 
     // For env-driven API providers, return the static model list.
     let env = env_provider_rows();
-    if let Some(row) = env.into_iter().find(|p| p.id == id) {
+    if let Some(row) = env.into_iter().find(|p| p.id == normalized_id) {
         return Json(json!({
             "supported": true,
             "models": row.models.iter().map(|m| json!({ "id": m, "name": m })).collect::<Vec<_>>(),
@@ -966,7 +1354,7 @@ async fn discover_provider_models(
 
     // For Gizzi-configured providers, return the configured models.
     let gizzi = read_gizzi_providers(&connected);
-    if let Some(row) = gizzi.into_iter().find(|p| p.id == id) {
+    if let Some(row) = gizzi.into_iter().find(|p| p.id == normalized_id) {
         return Json(json!({
             "supported": true,
             "models": row.models.iter().map(|m| json!({ "id": m, "name": m })).collect::<Vec<_>>(),
@@ -978,7 +1366,7 @@ async fn discover_provider_models(
 
     // For subprocess providers, the runtime owns model discovery.
     let subprocess = subprocess_provider_rows(&connected);
-    if let Some(row) = subprocess.into_iter().find(|p| p.id == id) {
+    if let Some(row) = subprocess.into_iter().find(|p| p.id == normalized_id) {
         return Json(json!({
             "supported": false,
             "models": row.models.iter().map(|m| json!({ "id": m, "name": m })).collect::<Vec<_>>(),
@@ -1076,6 +1464,215 @@ fn subscription_provider(id: &str) -> Option<(&'static str, SubscriptionProvider
                 api_key_only: false,
             },
         )),
+        "cursor-agent" => Some((
+            "cursor-agent",
+            SubscriptionProvider {
+                id: "cursor-agent",
+                label: "Cursor Agent",
+                model: "cursor-agent",
+                login: &[],
+                page: "https://cursor.com/",
+                api_key_only: false,
+            },
+        )),
+        "copilot" => Some((
+            "copilot",
+            SubscriptionProvider {
+                id: "copilot",
+                label: "GitHub Copilot CLI",
+                model: "copilot",
+                login: &[],
+                page: "https://github.com/features/copilot",
+                api_key_only: false,
+            },
+        )),
+        "opencode" => Some((
+            "opencode",
+            SubscriptionProvider {
+                id: "opencode",
+                label: "OpenCode",
+                model: "opencode",
+                login: &[],
+                page: "https://opencode.ai/",
+                api_key_only: false,
+            },
+        )),
+        "openclaw" => Some((
+            "openclaw",
+            SubscriptionProvider {
+                id: "openclaw",
+                label: "OpenClaw",
+                model: "openclaw",
+                login: &[],
+                page: "https://github.com/ConlinJoe/ai-platform",
+                api_key_only: false,
+            },
+        )),
+        "hermes" => Some((
+            "hermes",
+            SubscriptionProvider {
+                id: "hermes",
+                label: "Hermes",
+                model: "hermes",
+                login: &[],
+                page: "https://hermes.cx/",
+                api_key_only: false,
+            },
+        )),
+        "pi" => Some((
+            "pi",
+            SubscriptionProvider {
+                id: "pi",
+                label: "Pi",
+                model: "pi",
+                login: &[],
+                page: "https://pi.ai/",
+                api_key_only: false,
+            },
+        )),
+        "codebuddy" => Some((
+            "codebuddy",
+            SubscriptionProvider {
+                id: "codebuddy",
+                label: "CodeBuddy",
+                model: "codebuddy",
+                login: &[],
+                page: "https://codebuddy.ai/",
+                api_key_only: false,
+            },
+        )),
+        "deveco" => Some((
+            "deveco",
+            SubscriptionProvider {
+                id: "deveco",
+                label: "DevEco Code",
+                model: "deveco",
+                login: &[],
+                page: "https://developer.huawei.com/",
+                api_key_only: false,
+            },
+        )),
+        "grok" => Some((
+            "grok",
+            SubscriptionProvider {
+                id: "grok",
+                label: "Grok",
+                model: "grok",
+                login: &[],
+                page: "https://grok.com/",
+                api_key_only: false,
+            },
+        )),
+        "kiro-cli" => Some((
+            "kiro-cli",
+            SubscriptionProvider {
+                id: "kiro-cli",
+                label: "Kiro CLI",
+                model: "kiro-cli",
+                login: &[],
+                page: "https://kiro.dev/",
+                api_key_only: false,
+            },
+        )),
+        "qodercli" => Some((
+            "qodercli",
+            SubscriptionProvider {
+                id: "qodercli",
+                label: "Qoder CLI",
+                model: "qodercli",
+                login: &[],
+                page: "https://qoder.ai/",
+                api_key_only: false,
+            },
+        )),
+        "qoderclicn" => Some((
+            "qoderclicn",
+            SubscriptionProvider {
+                id: "qoderclicn",
+                label: "Qoder CN",
+                model: "qoderclicn",
+                login: &[],
+                page: "https://qoder.ai/",
+                api_key_only: false,
+            },
+        )),
+        "qwenpaw" => Some((
+            "qwenpaw",
+            SubscriptionProvider {
+                id: "qwenpaw",
+                label: "QwenPaw",
+                model: "qwenpaw",
+                login: &[],
+                page: "https://qwen.ai/",
+                api_key_only: false,
+            },
+        )),
+        "reasonix" => Some((
+            "reasonix",
+            SubscriptionProvider {
+                id: "reasonix",
+                label: "Reasonix",
+                model: "reasonix",
+                login: &[],
+                page: "https://reasonix.ai/",
+                api_key_only: false,
+            },
+        )),
+        "traecli" => Some((
+            "traecli",
+            SubscriptionProvider {
+                id: "traecli",
+                label: "Trae CLI",
+                model: "traecli",
+                login: &[],
+                page: "https://trae.ai/",
+                api_key_only: false,
+            },
+        )),
+        "dsh" => Some((
+            "dsh",
+            SubscriptionProvider {
+                id: "dsh",
+                label: "DeepSeek Harness",
+                model: "dsh",
+                login: &[],
+                page: "https://deepseek.com/",
+                api_key_only: false,
+            },
+        )),
+        "omp" => Some((
+            "omp",
+            SubscriptionProvider {
+                id: "omp",
+                label: "Oh-My-Pi",
+                model: "omp",
+                login: &[],
+                page: "https://oh-my-pi.dev/",
+                api_key_only: false,
+            },
+        )),
+        "mcode" => Some((
+            "mcode",
+            SubscriptionProvider {
+                id: "mcode",
+                label: "MiniMax Code",
+                model: "mcode",
+                login: &[],
+                page: "https://minimaxi.com/",
+                api_key_only: false,
+            },
+        )),
+        "dim" => Some((
+            "dim",
+            SubscriptionProvider {
+                id: "dim",
+                label: "Dim",
+                model: "dim",
+                login: &[],
+                page: "https://dim.ai/",
+                api_key_only: false,
+            },
+        )),
         // Z.ai sells the GLM Coding Plan subscription, but today it has no public
         // OAuth/device-flow for third parties (Z.ai/ZCode OAuth is in progress).
         // The standard path is a console-created API key, so we treat it as key-based.
@@ -1163,7 +1760,13 @@ fn subscription_auth_check(id: &str, binary: &str) -> bool {
         "zai" | "z.ai" | "glm" => {
             std::env::var("ZAI_API_KEY").is_ok() || std::env::var("ZHIPU_API_KEY").is_ok()
         }
-        _ => false,
+        // Generic agent-runtime CLI: if the binary is on PATH and answers a
+        // version/help probe, assume the user has already installed and
+        // authenticated it locally. This matches the Multica model where users
+        // bring their own CLI tools.
+        _ => cli_alive(binary, &["--version"], None)
+            || cli_alive(binary, &["-v"], None)
+            || cli_alive(binary, &["--help"], None),
     }
 }
 
@@ -1372,4 +1975,104 @@ async fn confirm_provider_connect(
     // Promote to default so the one-click flow actually routes agents to it.
     crate::onboarding_routes::persist_cli_default(&state, meta.id, meta.label, binary, meta.model);
     Json(json!({ "status": "success", "provider": id, "confirmed": true })).into_response()
+}
+
+// ─── Hugging Face GGUF search (PocketPal-style local model discovery) ────────
+
+#[derive(Deserialize)]
+struct HuggingFaceSearchQuery {
+    q: Option<String>,
+    limit: Option<u32>,
+}
+
+#[derive(Serialize)]
+struct HuggingFaceModelResult {
+    #[serde(rename = "repoId")]
+    repo_id: String,
+    downloads: u64,
+    likes: u64,
+}
+
+/// Searches HuggingFace's public model API for GGUF-tagged repos, so the
+/// Models settings panel can offer any GGUF (not just a fixed catalog) the
+/// same way PocketPal's model picker does. No auth needed for public repos.
+/// Installing a result reuses Ollama's own `hf.co/<repo>` pull support via
+/// `POST /api/local-brain/pull-custom`.
+async fn search_huggingface(
+    Extension(_user): Extension<AuthUser>,
+    headers: HeaderMap,
+    axum::extract::Query(query): axum::extract::Query<HuggingFaceSearchQuery>,
+) -> Response {
+    if get_user(&headers).is_none() {
+        return unauthorized();
+    }
+
+    let search_term = query.q.unwrap_or_default();
+    let limit = query.limit.unwrap_or(20).min(50);
+
+    let client = reqwest::Client::new();
+    let response = client
+        .get("https://huggingface.co/api/models")
+        .query(&[
+            ("search", search_term.as_str()),
+            ("filter", "gguf"),
+            ("sort", "downloads"),
+            ("direction", "-1"),
+            ("limit", &limit.to_string()),
+        ])
+        .timeout(std::time::Duration::from_secs(8))
+        .send()
+        .await;
+
+    let response = match response {
+        Ok(res) if res.status().is_success() => res,
+        Ok(res) => {
+            return (
+                StatusCode::BAD_GATEWAY,
+                Json(json!({ "error": "huggingface_error", "status": res.status().as_u16() })),
+            )
+                .into_response();
+        }
+        Err(err) => {
+            warn!("huggingface search request failed: {}", err);
+            return (
+                StatusCode::BAD_GATEWAY,
+                Json(json!({ "error": "huggingface_unreachable", "message": err.to_string() })),
+            )
+                .into_response();
+        }
+    };
+
+    let body = match response.json::<serde_json::Value>().await {
+        Ok(value) => value,
+        Err(err) => {
+            return (
+                StatusCode::BAD_GATEWAY,
+                Json(json!({ "error": "huggingface_parse_error", "message": err.to_string() })),
+            )
+                .into_response();
+        }
+    };
+
+    let results: Vec<HuggingFaceModelResult> = body
+        .as_array()
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|m| {
+                    let repo_id = m
+                        .get("id")
+                        .or_else(|| m.get("modelId"))
+                        .and_then(|v| v.as_str())?
+                        .to_string();
+                    Some(HuggingFaceModelResult {
+                        repo_id,
+                        downloads: m.get("downloads").and_then(|v| v.as_u64()).unwrap_or(0),
+                        likes: m.get("likes").and_then(|v| v.as_u64()).unwrap_or(0),
+                    })
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+
+    Json(json!({ "models": results })).into_response()
 }

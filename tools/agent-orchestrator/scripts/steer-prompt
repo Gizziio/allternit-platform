@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# steer-prompt <file1> [file2 ...]
+# Generate the pointer prompt for the user to paste into the target session.
+# Output goes to stdout and, when available, the macOS clipboard (pbcopy).
+set -euo pipefail
+[ $# -ge 1 ] || { echo "usage: steer-prompt <file1> [file2 ...]" >&2; exit 2; }
+
+# Absolutize and verify every path
+FILES=()
+for f in "$@"; do
+  if [ ! -f "$f" ]; then
+    echo "error: file not found: $f" >&2
+    exit 1
+  fi
+  FILES+=("$(cd "$(dirname "$f")" && pwd)/$(basename "$f")")
+done
+
+PROMPT="Read these files and follow them exactly:
+"
+i=1
+for f in "${FILES[@]}"; do
+  PROMPT+="$i. $f
+"
+  i=$((i+1))
+done
+PROMPT+="
+They contain steering instructions from a parallel agent working on the same project. Do not continue implementing your current plan until you have read all of them. After reading, update your plan and todo list to reflect the reconciled direction, note any conflicts, and then proceed."
+
+printf '%s\n' "$PROMPT"
+
+if command -v pbcopy >/dev/null 2>&1; then
+  printf '%s' "$PROMPT" | pbcopy
+  echo >&2
+  echo "(copied to clipboard — paste into the target session)" >&2
+fi

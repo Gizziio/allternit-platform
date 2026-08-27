@@ -59,7 +59,7 @@ export const SelectTrigger: React.FC<SelectTriggerProps> = ({
       borderRadius: '8px',
       border: '1px solid var(--ui-border-default)',
       background: 'var(--surface-hover)',
-      color: '#fff',
+      color: 'var(--text-primary)',
       fontSize: '14px',
       cursor: 'pointer',
       display: 'flex',
@@ -68,7 +68,7 @@ export const SelectTrigger: React.FC<SelectTriggerProps> = ({
       ...style,
     }}
   >
-    {value || children}
+    {children ?? value}
   </button>
 );
 

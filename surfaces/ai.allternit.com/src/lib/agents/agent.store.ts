@@ -1017,13 +1017,15 @@ export const useAgentStore = create<AgentState & AgentActions>()(
 
       acknowledgeMail: async (agentId, messageId) => {
         try {
-          await agentService.acknowledgeMail(agentId, messageId);
+          const messages = get().mail[agentId] || [];
+          const threadId = messages.find((m) => m.id === messageId)?.threadId;
+          await agentService.acknowledgeMail(agentId, messageId, threadId);
           set(state => {
-            const messages = state.mail[agentId] || [];
+            const nextMessages = state.mail[agentId] || [];
             return {
               mail: {
                 ...state.mail,
-                [agentId]: messages.map(m =>
+                [agentId]: nextMessages.map(m =>
                   m.id === messageId ? { ...m, status: 'acknowledged' as const } : m
                 )
               },

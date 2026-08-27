@@ -453,7 +453,7 @@ function useCommands() {
   };
 }
 
-function useConnectors() {
+export function useConnectors() {
   const core = useCapabilitiesCore();
   return {
     connectors: core.connectors,

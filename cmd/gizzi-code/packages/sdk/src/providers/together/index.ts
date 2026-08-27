@@ -130,7 +130,7 @@ export class AllternitTogether {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: { message: 'Unknown error' } }));
+      const error = await response.json().catch(() => ({ error: { message: 'Unknown error' } })) as { error?: { message?: string } };
       throw new HarnessError(
         error.error?.message || `Together AI error: ${response.status}`,
         HarnessErrorCode.PROVIDER_ERROR,
@@ -169,7 +169,7 @@ export class AllternitTogether {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: { message: 'Unknown error' } }));
+      const error = await response.json().catch(() => ({ error: { message: 'Unknown error' } })) as { error?: { message?: string } };
       throw new HarnessError(
         error.error?.message || `Together AI error: ${response.status}`,
         HarnessErrorCode.PROVIDER_ERROR,

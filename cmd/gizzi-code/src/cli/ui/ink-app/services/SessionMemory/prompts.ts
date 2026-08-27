@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { readFile } from 'fs/promises'
 import { join } from 'path'
-import { roughTokenCountEstimation } from '../../services/tokenEstimation.js'
+import { roughTokenCountEstimation } from '../../services/roughTokenEstimation.js'
 import { getClaudeConfigHomeDir } from '../../utils/envUtils.js'
 import { getErrnoCode, toError } from '../../utils/errors.js'
 import { logError } from '../../utils/log.js'

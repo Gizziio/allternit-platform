@@ -1,0 +1,40 @@
+---
+title: Verifying Webhook Signatures
+description: Validate X-Allternit-Signature on incoming webhook deliveries.
+---
+
+# Verifying Webhook Signatures
+
+Allternit signs every webhook delivery with HMAC-SHA256. Verify the signature to ensure the payload came from Allternit.
+
+## Headers
+
+- `X-Allternit-Signature` — `sha256=<hex>`
+- `X-Allternit-Request-Id` — unique delivery ID
+
+## TypeScript example
+
+```typescript
+import { createHmac, timingSafeEqual } from 'crypto';
+
+function verifyWebhook(payload: string, signature: string, secret: string): boolean {
+  const expected = 'sha256=' + createHmac('sha256', secret).update(payload).digest('hex');
+  return timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
+}
+```
+
+## Python example
+
+```python
+import hmac, hashlib
+
+def verify_webhook(payload: bytes, signature: str, secret: bytes) -> bool:
+    expected = 'sha256=' + hmac.new(secret, payload, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(signature, expected)
+```
+
+## Best practices
+
+- Use a constant-time comparison function.
+- Reject payloads with mismatched signatures.
+- Store the webhook secret in [Allternit Vault](/security/vault) or your own KMS.

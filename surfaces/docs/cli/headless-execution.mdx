@@ -1,0 +1,68 @@
+---
+title: Headless Execution
+description: Run agents non-interactively with gizzi exec
+---
+
+## Overview
+
+`gizzi exec` is a pipe-safe, non-interactive alias for `gizzi run`. It prints the response and exits without launching the TUI — ideal for scripts, CI pipelines, and shell automation.
+
+## Basic usage
+
+```bash
+# Single prompt
+gizzi exec "Write a commit message for the staged changes"
+
+# Pipe input from another command
+git diff --staged | gizzi exec "Summarize these changes"
+
+# Explicit command with piped context
+cat error.log | gizzi exec "Diagnose the root cause"
+```
+
+## Output formats
+
+| Flag | Output |
+|------|--------|
+| *(default)* | Plain text response |
+| `--output-format json` | JSON response object |
+| `--output-format stream-json` | Streaming JSON event objects, one per line |
+
+```bash
+gizzi exec --output-format stream-json "List the top 5 TODO items in this repo"
+```
+
+Each `stream-json` event is a JSON object with a `type` field (`message`, `tool_use`, `result`, etc.), suitable for piping into `jq` or another tool.
+
+## Permission modes
+
+In headless mode, `exec` defaults to the `dontAsk` permission mode — commands and edits run without interactive confirmation.
+
+Override with a named profile:
+
+```bash
+gizzi exec --permission-profile strict "Refactor the auth module"
+```
+
+See [Permission Profiles](/cli/permission-profiles) for profile syntax.
+
+## Piping and composition
+
+Because `exec` is pipe-safe, it composes naturally with standard Unix tools:
+
+```bash
+# Summarize and pipe into a notification
+gizzi exec "Summarize today's git log" | notify-send "Daily summary"
+
+# Chain multiple agent passes
+gizzi exec "Draft release notes from CHANGELOG.md" \
+  | gizzi exec "Proofread and tighten the language"
+```
+
+## Exit codes
+
+| Code | Meaning |
+|------|---------|
+| `0` | Success |
+| `1` | Agent returned an error or was interrupted |
+| `2` | Configuration or authentication failure |

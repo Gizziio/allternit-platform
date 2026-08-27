@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, ReactNode } from "react";
-import type { Session } from "@/lib/auth";
+import type { Session } from "@/lib/auth-browser";
 
 const SessionContext = createContext<Session | null>(null);
 

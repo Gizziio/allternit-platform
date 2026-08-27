@@ -1,11 +1,15 @@
 /**
  * Provider Registry
- * 
- * Maps provider IDs to visual metadata:
- * - Brand names
- * - Hex colors
- * - Icons (SVG names from assets/runtime-logos/)
+ *
+ * Maps provider IDs to visual + installation metadata:
+ * - Brand names, hex colors, icons (SVG names from assets/runtime-logos/)
+ * - kind: how Allternit talks to the provider ('api' | 'cli' | 'local')
+ * - CLI metadata (binary, install command, homepage) mirrors the backend
+ *   CLI_PROVIDER_SPECS in cmd/allternit-api/src/provider_routes.rs — the user
+ *   brings their own installed + authenticated CLI, Allternit routes to it.
  */
+
+export type ProviderKind = 'api' | 'cli' | 'local';
 
 export interface ProviderMeta {
   id: string;
@@ -13,15 +17,35 @@ export interface ProviderMeta {
   color: string;
   icon: string;
   textColor?: string;
+  /** Transport class: hosted API key, local CLI subprocess, or built-in/local engine. */
+  kind: ProviderKind;
+  /** Binary name on PATH for CLI providers (matches backend CLI_PROVIDER_SPECS). */
+  cliCommand?: string;
+  /** Canonical install command for CLI/local providers. */
+  installCommand?: string;
+  /**
+   * Terminal command that starts the provider's own sign-in flow.
+   * Mirrors the backend `login` argv in cmd/allternit-api/src/provider_routes.rs;
+   * absent when the CLI has no dedicated auth subcommand (run the CLI itself).
+   */
+  authCommand?: string;
+  /** Product or vendor homepage. */
+  homepage: string;
+  /** One-line description of the provider. */
+  description: string;
 }
 
-const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
+export const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
+  // ── API-key providers ─────────────────────────────────────────────────────
   anthropic: {
     id: 'anthropic',
     name: 'Anthropic',
     color: '#D97757',
     icon: 'claude-logo.svg',
     textColor: '#FFFFFF',
+    kind: 'api',
+    homepage: 'https://www.anthropic.com/',
+    description: 'Claude models via the Anthropic API (ANTHROPIC_API_KEY).',
   },
   claude: { // Alias
     id: 'claude',
@@ -29,6 +53,25 @@ const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
     color: '#D97757',
     icon: 'claude-logo.svg',
     textColor: '#FFFFFF',
+    kind: 'cli',
+    cliCommand: 'claude',
+    installCommand: 'npm install -g @anthropic-ai/claude-code',
+    authCommand: 'claude auth login',
+    homepage: 'https://claude.ai/',
+    description: 'Alias for the Claude Code CLI (subscription or Pro).',
+  },
+  'claude-cli': {
+    id: 'claude-cli',
+    name: 'Claude CLI',
+    color: '#D97757',
+    icon: 'claude-logo.svg',
+    textColor: '#FFFFFF',
+    kind: 'cli',
+    cliCommand: 'claude',
+    installCommand: 'npm install -g @anthropic-ai/claude-code',
+    authCommand: 'claude auth login',
+    homepage: 'https://claude.ai/',
+    description: 'Anthropic Claude Code agentic coding CLI (subscription or Pro).',
   },
   openai: {
     id: 'openai',
@@ -36,6 +79,35 @@ const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
     color: '#10A37F',
     icon: 'openai-logo.svg',
     textColor: '#FFFFFF',
+    kind: 'api',
+    homepage: 'https://openai.com/',
+    description: 'GPT and DALL·E models via the OpenAI API (OPENAI_API_KEY).',
+  },
+  'codex-cli': {
+    id: 'codex-cli',
+    name: 'Codex CLI',
+    color: '#10A37F',
+    icon: 'openai-logo.svg',
+    textColor: '#FFFFFF',
+    kind: 'cli',
+    cliCommand: 'codex',
+    installCommand: 'npm install -g @openai/codex',
+    authCommand: 'codex login',
+    homepage: 'https://chatgpt.com/',
+    description: 'OpenAI Codex coding agent CLI (subscription or API key).',
+  },
+  codex: { // Alias
+    id: 'codex',
+    name: 'Codex',
+    color: '#10A37F',
+    icon: 'openai-logo.svg',
+    textColor: '#FFFFFF',
+    kind: 'cli',
+    cliCommand: 'codex',
+    installCommand: 'npm install -g @openai/codex',
+    authCommand: 'codex login',
+    homepage: 'https://chatgpt.com/',
+    description: 'Alias for the OpenAI Codex CLI.',
   },
   google: {
     id: 'google',
@@ -43,6 +115,9 @@ const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
     color: '#4285F4',
     icon: 'gemini-logo.svg',
     textColor: '#FFFFFF',
+    kind: 'api',
+    homepage: 'https://ai.google.dev/',
+    description: 'Gemini models via the Google AI API (GOOGLE_GENERATIVE_AI_API_KEY).',
   },
   gemini: { // Alias
     id: 'gemini',
@@ -50,6 +125,9 @@ const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
     color: '#4285F4',
     icon: 'gemini-logo.svg',
     textColor: '#FFFFFF',
+    kind: 'api',
+    homepage: 'https://ai.google.dev/',
+    description: 'Alias for Google Gemini (API key).',
   },
   ollama: {
     id: 'ollama',
@@ -57,13 +135,44 @@ const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
     color: '#000000',
     icon: 'ollama-logo.svg',
     textColor: '#FFFFFF',
+    kind: 'local',
+    cliCommand: 'ollama',
+    installCommand: 'curl -fsSL https://ollama.com/install.sh | sh',
+    homepage: 'https://ollama.com/',
+    description: 'Run LLaMA, Mistral, and other open models locally.',
   },
   kimi: {
     id: 'kimi',
     name: 'Kimi',
-    color: '#5B4CF3',
-    icon: 'zai-logo.svg', // Kimi often uses ZAI logo or similar
+    color: '#1783FF',
+    icon: 'kimi-logo.svg',
     textColor: '#FFFFFF',
+    kind: 'api',
+    homepage: 'https://www.kimi.com/',
+    description: 'Kimi models via the Moonshot AI API.',
+  },
+  'kimi-cli': {
+    id: 'kimi-cli',
+    name: 'Kimi CLI',
+    color: '#1783FF',
+    icon: 'kimi-logo.svg',
+    textColor: '#FFFFFF',
+    kind: 'cli',
+    cliCommand: 'kimi',
+    installCommand: 'npm install -g @moonshot-ai/kimi-code',
+    authCommand: 'kimi login',
+    homepage: 'https://www.kimi.com/',
+    description: 'Moonshot Kimi Code CLI (subscription or API key).',
+  },
+  zai: {
+    id: 'zai',
+    name: 'ZAI',
+    color: '#5B4CF3',
+    icon: 'zai-logo.svg',
+    textColor: '#FFFFFF',
+    kind: 'api',
+    homepage: 'https://z.ai/',
+    description: 'GLM models via the Z.ai API (ZAI_API_KEY).',
   },
   qwen: {
     id: 'qwen',
@@ -71,27 +180,406 @@ const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
     color: '#551DB0',
     icon: 'qwen-logo.svg',
     textColor: '#FFFFFF',
+    kind: 'api',
+    homepage: 'https://qwen.ai/',
+    description: 'Qwen models via the Alibaba Cloud API.',
   },
-  codex: {
-    id: 'codex',
-    name: 'Codex',
-    color: '#000000',
-    icon: 'openai-logo.svg', // Codex is OpenAI
+  'qwen-cli': {
+    id: 'qwen-cli',
+    name: 'Qwen CLI',
+    color: '#551DB0',
+    icon: 'qwen-logo.svg',
     textColor: '#FFFFFF',
+    kind: 'cli',
+    cliCommand: 'qwen',
+    installCommand: 'npm install -g @qwen-code/qwen-code',
+    authCommand: 'qwen auth',
+    homepage: 'https://qwen.ai/',
+    description: 'Alibaba Qwen Code agentic coding CLI (subscription).',
+  },
+  xai: {
+    id: 'xai',
+    name: 'xAI',
+    color: '#000000',
+    icon: 'xai-logo.svg',
+    textColor: '#FFFFFF',
+    kind: 'api',
+    homepage: 'https://x.ai/',
+    description: 'Grok models via the xAI API (XAI_API_KEY).',
+  },
+  grok: { // Alias for xAI
+    id: 'grok',
+    name: 'Grok',
+    color: '#000000',
+    icon: 'xai-logo.svg',
+    textColor: '#FFFFFF',
+    kind: 'cli',
+    cliCommand: 'grok',
+    installCommand: 'npm install -g @xai-official/grok',
+    homepage: 'https://grok.com/',
+    description: 'xAI Grok Build coding CLI (SuperGrok subscription).',
+  },
+  deepseek: {
+    id: 'deepseek',
+    name: 'DeepSeek',
+    color: '#4D6BFA',
+    icon: 'deepseek-logo.svg',
+    textColor: '#FFFFFF',
+    kind: 'api',
+    homepage: 'https://www.deepseek.com/',
+    description: 'DeepSeek models via the DeepSeek API (DEEPSEEK_API_KEY).',
+  },
+  groq: {
+    id: 'groq',
+    name: 'Groq',
+    color: '#F55036',
+    icon: 'groq-logo.svg',
+    textColor: '#FFFFFF',
+    kind: 'api',
+    homepage: 'https://groq.com/',
+    description: 'Fast open-model inference via the Groq API (GROQ_API_KEY).',
+  },
+  mistral: {
+    id: 'mistral',
+    name: 'Mistral',
+    color: '#FF7000',
+    icon: 'mistral-logo.svg',
+    textColor: '#FFFFFF',
+    kind: 'api',
+    homepage: 'https://mistral.ai/',
+    description: 'Mistral models via the Mistral AI API (MISTRAL_API_KEY).',
+  },
+  cohere: {
+    id: 'cohere',
+    name: 'Cohere',
+    color: '#D18EE2',
+    icon: 'cohere-logo.svg',
+    textColor: '#FFFFFF',
+    kind: 'api',
+    homepage: 'https://cohere.com/',
+    description: 'Command models via the Cohere API (COHERE_API_KEY).',
+  },
+  togetherai: {
+    id: 'togetherai',
+    name: 'Together AI',
+    color: '#0D3B66',
+    icon: 'togetherai-logo.svg',
+    textColor: '#FFFFFF',
+    kind: 'api',
+    homepage: 'https://www.together.ai/',
+    description: 'Open-model hosting via the Together AI API (TOGETHER_API_KEY).',
+  },
+  perplexity: {
+    id: 'perplexity',
+    name: 'Perplexity',
+    color: '#20B8FB',
+    icon: 'perplexity-logo.svg',
+    textColor: '#FFFFFF',
+    kind: 'api',
+    homepage: 'https://www.perplexity.ai/',
+    description: 'Web-grounded Sonar models via the Perplexity API (PERPLEXITY_API_KEY).',
+  },
+  'amazon-bedrock': {
+    id: 'amazon-bedrock',
+    name: 'Amazon Bedrock',
+    color: '#FF9900',
+    icon: 'amazon-bedrock-logo.svg',
+    textColor: '#FFFFFF',
+    kind: 'api',
+    homepage: 'https://aws.amazon.com/bedrock/',
+    description: 'Managed foundation models via Amazon Bedrock (AWS credentials).',
+  },
+  bedrock: { // Alias
+    id: 'bedrock',
+    name: 'Bedrock',
+    color: '#FF9900',
+    icon: 'amazon-bedrock-logo.svg',
+    textColor: '#FFFFFF',
+    kind: 'api',
+    homepage: 'https://aws.amazon.com/bedrock/',
+    description: 'Alias for Amazon Bedrock.',
+  },
+  alibaba: {
+    id: 'alibaba',
+    name: 'Alibaba Cloud',
+    color: '#FF6A00',
+    icon: 'alibaba-logo.svg',
+    textColor: '#FFFFFF',
+    kind: 'api',
+    homepage: 'https://www.alibabacloud.com/',
+    description: 'Qwen models via Alibaba Cloud Model Studio (ALIBABA_API_KEY).',
+  },
+  antigravity: {
+    id: 'antigravity',
+    name: 'Antigravity',
+    color: '#6366F1',
+    icon: 'antigravity.svg',
+    textColor: '#FFFFFF',
+    kind: 'cli',
+    cliCommand: 'agy',
+    installCommand: 'brew install --cask antigravity',
+    homepage: 'https://antigravity.google/',
+    description: 'Google Antigravity agentic coding CLI (agy, subscription).',
+  },
+  agy: { // Alias
+    id: 'agy',
+    name: 'Antigravity',
+    color: '#6366F1',
+    icon: 'agy.svg',
+    textColor: '#FFFFFF',
+    kind: 'cli',
+    cliCommand: 'agy',
+    installCommand: 'brew install --cask antigravity',
+    homepage: 'https://antigravity.google/',
+    description: 'Alias for the Antigravity (agy) CLI.',
+  },
+  // Agent-runtime CLI tools (Multica-style: user brings their own installed CLI).
+  'cursor-agent': {
+    id: 'cursor-agent',
+    name: 'Cursor Agent',
+    color: '#1E1E1E',
+    icon: 'cursor-agent.svg',
+    textColor: '#FFFFFF',
+    kind: 'cli',
+    cliCommand: 'cursor-agent',
+    installCommand: 'curl https://cursor.com/install -fsS | bash',
+    homepage: 'https://cursor.com/',
+    description: 'Cursor agentic coding CLI (Cursor subscription).',
+  },
+  copilot: {
+    id: 'copilot',
+    name: 'GitHub Copilot CLI',
+    color: '#2D333B',
+    icon: 'copilot.svg',
+    textColor: '#FFFFFF',
+    kind: 'cli',
+    cliCommand: 'copilot',
+    installCommand: 'npm install -g @github/copilot',
+    homepage: 'https://github.com/features/copilot',
+    description: 'GitHub Copilot coding agent CLI (Copilot subscription).',
   },
   opencode: {
     id: 'opencode',
     name: 'OpenCode',
-    color: '#000000',
-    icon: 'open-code-logo.svg',
+    color: '#FF6B35',
+    icon: 'opencode.svg',
     textColor: '#FFFFFF',
+    kind: 'cli',
+    cliCommand: 'opencode',
+    installCommand: 'npm install -g opencode-ai',
+    homepage: 'https://opencode.ai/',
+    description: 'Open-source agentic coding CLI (bring your own provider).',
   },
+  openclaw: {
+    id: 'openclaw',
+    name: 'OpenClaw',
+    color: '#8B5CF6',
+    icon: 'openclaw.svg',
+    textColor: '#FFFFFF',
+    kind: 'cli',
+    cliCommand: 'openclaw',
+    installCommand: 'npm install -g openclaw@latest',
+    homepage: 'https://openclaw.ai/',
+    description: 'OpenClaw local-first personal AI assistant and agent gateway.',
+  },
+  hermes: {
+    id: 'hermes',
+    name: 'Hermes',
+    color: '#F59E0B',
+    icon: 'hermes.svg',
+    textColor: '#FFFFFF',
+    kind: 'cli',
+    cliCommand: 'hermes',
+    installCommand: 'curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash',
+    homepage: 'https://hermes.cx/',
+    description: 'Nous Research Hermes agent runtime (ACP).',
+  },
+  pi: {
+    id: 'pi',
+    name: 'Pi',
+    color: '#10B981',
+    icon: 'pi.svg',
+    textColor: '#FFFFFF',
+    kind: 'cli',
+    cliCommand: 'pi',
+    installCommand: 'npm install -g @mariozechner/pi-coding-agent',
+    homepage: 'https://pi.ai/',
+    description: 'Minimalist high-performance coding agent CLI (pi-mono).',
+  },
+  codebuddy: {
+    id: 'codebuddy',
+    name: 'CodeBuddy',
+    color: '#3B82F6',
+    icon: 'codebuddy.svg',
+    textColor: '#FFFFFF',
+    kind: 'cli',
+    cliCommand: 'codebuddy',
+    installCommand: 'npm install -g @tencent-ai/codebuddy-code',
+    homepage: 'https://codebuddy.ai/',
+    description: 'Tencent CodeBuddy Code agentic coding CLI.',
+  },
+  deveco: {
+    id: 'deveco',
+    name: 'DevEco Code',
+    color: '#00A0E9',
+    icon: 'deveco.svg',
+    textColor: '#FFFFFF',
+    kind: 'cli',
+    cliCommand: 'deveco',
+    // Bundled with Huawei DevEco Studio — no standalone CLI install command.
+    homepage: 'https://developer.huawei.com/',
+    description: 'Huawei DevEco Code AI assistant CLI for HarmonyOS development.',
+  },
+  'kiro-cli': {
+    id: 'kiro-cli',
+    name: 'Kiro CLI',
+    color: '#6366F1',
+    icon: 'kiro-cli.svg',
+    textColor: '#FFFFFF',
+    kind: 'cli',
+    cliCommand: 'kiro-cli',
+    installCommand: 'curl -fsSL https://cli.kiro.dev/install | bash',
+    homepage: 'https://kiro.dev/',
+    description: 'AWS Kiro agentic coding CLI (formerly Amazon Q Developer CLI).',
+  },
+  qodercli: {
+    id: 'qodercli',
+    name: 'Qoder CLI',
+    color: '#14B8A6',
+    icon: 'qodercli.svg',
+    textColor: '#FFFFFF',
+    kind: 'cli',
+    cliCommand: 'qodercli',
+    installCommand: 'npm install -g @qoder-ai/qodercli',
+    homepage: 'https://qoder.ai/',
+    description: 'Alibaba Qoder agentic coding CLI.',
+  },
+  qoderclicn: {
+    id: 'qoderclicn',
+    name: 'Qoder CN',
+    color: '#14B8A6',
+    icon: 'qoderclicn.svg',
+    textColor: '#FFFFFF',
+    kind: 'cli',
+    cliCommand: 'qoderclicn',
+    installCommand: 'curl -fsSL https://qoder.com.cn/install | bash',
+    homepage: 'https://qoder.ai/',
+    description: 'Alibaba Qoder agentic coding CLI (China region).',
+  },
+  qwenpaw: {
+    id: 'qwenpaw',
+    name: 'QwenPaw',
+    color: '#551DB0',
+    icon: 'qwenpaw.svg',
+    textColor: '#FFFFFF',
+    kind: 'cli',
+    cliCommand: 'qwenpaw',
+    installCommand: 'pip install qwenpaw',
+    homepage: 'https://qwen.ai/',
+    description: 'AgentScope QwenPaw personal AI assistant (ACP).',
+  },
+  reasonix: {
+    id: 'reasonix',
+    name: 'Reasonix',
+    color: '#EC4899',
+    icon: 'reasonix.svg',
+    textColor: '#FFFFFF',
+    kind: 'cli',
+    cliCommand: 'reasonix',
+    installCommand: 'npm install -g reasonix',
+    homepage: 'https://reasonix.ai/',
+    description: 'DeepSeek-native terminal coding agent CLI.',
+  },
+  traecli: {
+    id: 'traecli',
+    name: 'Trae CLI',
+    color: '#0EA5E9',
+    icon: 'traecli.svg',
+    textColor: '#FFFFFF',
+    kind: 'cli',
+    cliCommand: 'traecli',
+    installCommand: 'npm install -g traecli',
+    homepage: 'https://trae.ai/',
+    description: 'ByteDance Trae agentic coding CLI.',
+  },
+  dsh: {
+    id: 'dsh',
+    name: 'DeepSeek Harness',
+    color: '#4D6BFA',
+    icon: 'deepseek-logo.svg',
+    textColor: '#FFFFFF',
+    kind: 'cli',
+    cliCommand: 'dsh',
+    installCommand: 'npm install -g @deepseek-ai/dsh',
+    homepage: 'https://deepseek.com/',
+    description: 'DeepSeek Harness open-source agent runtime (plugin-based).',
+  },
+  omp: {
+    id: 'omp',
+    name: 'Oh-My-Pi',
+    color: '#F97316',
+    icon: 'omp.svg',
+    textColor: '#FFFFFF',
+    kind: 'cli',
+    cliCommand: 'omp',
+    installCommand: 'curl -fsSL https://omp.sh/install | sh',
+    homepage: 'https://oh-my-pi.dev/',
+    description: 'Oh-My-Pi companion runtime for the pi coding agent (ACP).',
+  },
+  mcode: {
+    id: 'mcode',
+    name: 'MiniMax Code',
+    color: '#FF6B6B',
+    icon: 'mcode.svg',
+    textColor: '#FFFFFF',
+    kind: 'cli',
+    cliCommand: 'mcode',
+    installCommand: 'curl -fsSL https://filecdn.minimax.chat/public/install.sh | bash',
+    homepage: 'https://minimaxi.com/',
+    description: 'MiniMax Code agentic coding CLI (MiniMax subscription).',
+  },
+  dim: {
+    id: 'dim',
+    name: 'Dim',
+    color: '#8B5CF6',
+    icon: 'dim.svg',
+    textColor: '#FFFFFF',
+    kind: 'cli',
+    cliCommand: 'dim',
+    installCommand: 'npm install -g dimcode',
+    homepage: 'https://dim.ai/',
+    description: 'Dim (DimCode) AI coding agent CLI (ACP).',
+  },
+  // ── Built-in / local runtimes ─────────────────────────────────────────────
   allternit: {
     id: 'allternit',
     name: 'Allternit',
     color: '#6366F1',
     icon: 'allternit-logo.svg',
     textColor: '#FFFFFF',
+    kind: 'local',
+    homepage: 'https://allternit.com/',
+    description: 'Allternit built-in agent runtime.',
+  },
+  'allternit-local-engine': {
+    id: 'allternit-local-engine',
+    name: 'Local Engine',
+    color: '#22c55e',
+    icon: 'allternit-logo.svg',
+    textColor: '#FFFFFF',
+    kind: 'local',
+    homepage: 'https://allternit.com/',
+    description: 'Allternit local inference engine.',
+  },
+  'allternit-sidecar': {
+    id: 'allternit-sidecar',
+    name: 'Sidecar',
+    color: '#22c55e',
+    icon: 'ollama-logo.svg',
+    textColor: '#FFFFFF',
+    kind: 'local',
+    homepage: 'https://allternit.com/',
+    description: 'Allternit sidecar runtime backed by local Ollama models.',
   },
 };
 
@@ -100,20 +588,32 @@ const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
  */
 export function getProviderMeta(id: string | undefined): ProviderMeta {
   if (!id) return PROVIDER_REGISTRY.allternit;
-  
+
+  const normalized = id.toLowerCase();
+
   // Try direct match
-  const meta = PROVIDER_REGISTRY[id.toLowerCase()];
+  const meta = PROVIDER_REGISTRY[normalized];
   if (meta) return meta;
-  
-  // Try partial match
-  const key = Object.keys(PROVIDER_REGISTRY).find(k => id.toLowerCase().includes(k));
+
+  // Try partial match for CLI suffixes and compound IDs
+  const key = Object.keys(PROVIDER_REGISTRY).find((k) => normalized.includes(k));
   if (key) return PROVIDER_REGISTRY[key];
-  
+
   // Default fallback
   return {
     id,
     name: id.charAt(0).toUpperCase() + id.slice(1),
     color: '#6B7280',
-    icon: 'bot',
+    icon: '',
+    kind: 'api',
+    homepage: '',
+    description: '',
   };
+}
+
+/**
+ * Returns a stable display name for a provider ID.
+ */
+export function getProviderName(id: string | undefined): string {
+  return getProviderMeta(id).name;
 }

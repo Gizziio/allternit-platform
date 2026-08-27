@@ -126,9 +126,9 @@
 
 ---
 
-## 🟣 PHASE 8: OpenCode TUI Fork Integration (Delta 0007)
-*Goal: Replace the legacy Rust TUI with a mature, TypeScript-based OpenCode TUI fork and ensure a realtime, no-silence UX.*
-- [ ] **TASK 8.1:** Fork and adapt the OpenCode TUI core components.
+## 🟣 PHASE 8: Gizzi Code TUI Fork Integration (Delta 0007)
+*Goal: Replace the legacy Rust TUI with a mature, TypeScript-based Gizzi Code TUI fork and ensure a realtime, no-silence UX.*
+- [ ] **TASK 8.1:** Fork and adapt the Gizzi Code TUI core components.
 - [ ] **TASK 8.2:** Build the `@allternit/sdk` TypeScript adapter for the TUI.
 - [ ] **TASK 8.3:** Implement TUI compatibility API routes (`api/v1/sessions`, `api/v1/config`) in the Rust gateway.
 - [ ] **TASK 8.4:** Wire SSE streams for real-time TUI event synchronization.

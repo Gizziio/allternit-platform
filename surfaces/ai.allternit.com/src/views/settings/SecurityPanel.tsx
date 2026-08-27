@@ -76,7 +76,7 @@ export function SecurityPanel() {
 
   return (
     <div className="max-w-4xl">
-      <div className="flex gap-0 border-b border-solid border-white/10 mb-8 overflow-x-auto no-scrollbar">
+      <div className="flex gap-0 border-b border-solid border-[var(--ui-border-muted)] mb-8 overflow-x-auto no-scrollbar">
         {[
           { id: 'overview', label: 'Overview', icon: Shield },
           { id: 'policies', label: 'Policies', icon: FileCheck, count: policies.filter((p: any) => p.status === 'active').length },
@@ -171,7 +171,7 @@ export function SecurityPanel() {
                     <div className="flex items-center gap-4">
                       <div className={cn(
                         "size-11 rounded-xl flex items-center justify-center shadow-lg transition-colors",
-                        policy.status === 'active' ? "bg-emerald-500/10 text-emerald-500 shadow-emerald-500/5" : "bg-zinc-800 text-zinc-500"
+                        policy.status === 'active' ? "bg-emerald-500/10 text-emerald-500 shadow-emerald-500/5" : "bg-[var(--bg-tertiary)] text-[var(--ui-text-muted)]"
                       )}>
                         <Shield size={22} weight={policy.status === 'active' ? "fill" : "regular"} />
                       </div>
@@ -239,7 +239,7 @@ export function SecurityPanel() {
 
           {securityTab === 'purpose' && (
             <div className="text-center py-24 bg-[var(--surface-panel)] rounded-2xl border border-solid border-[var(--ui-border-muted)]">
-              <Target size={64} className="text-white/10 mx-auto mb-6" weight="thin" />
+              <Target size={64} className="text-[var(--ui-text-muted)] opacity-20 mx-auto mb-6" weight="thin" />
               <h3 className="text-lg font-bold text-[var(--ui-text-inverse)] m-0 mb-2">Purpose Binding Architecture</h3>
               <p className="text-[14px] text-[var(--ui-text-muted)] max-w-sm mx-auto leading-relaxed">Agent goals are restricted to verified project scopes. Configure binding levels in the DAG / Project view.</p>
               <button type="button" className={cn(QUIET_BUTTON_CLASS, "mt-8")}>Open DAG workspace</button>
@@ -262,10 +262,10 @@ export function SecurityPanel() {
                 <SectionHeading>Enforced frameworks</SectionHeading>
                 <div className="flex flex-col gap-2">
                   {complianceStatus?.frameworks?.map((fw: any) => (
-                    <div key={fw.id} className="p-4 bg-[var(--surface-panel)] rounded-xl border border-solid border-[var(--ui-border-muted)] flex items-center justify-between hover:bg-white/[0.02] transition-colors">
+                    <div key={fw.id} className="p-4 bg-[var(--surface-panel)] rounded-xl border border-solid border-[var(--ui-border-muted)] flex items-center justify-between hover:bg-[var(--surface-hover)] transition-colors">
                       <div className="text-sm font-bold text-[var(--ui-text-inverse)]">{fw.name}</div>
                       <div className="flex items-center gap-6">
-                        <div className="w-32 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                        <div className="w-32 h-1.5 bg-[var(--bg-tertiary)] rounded-full overflow-hidden">
                           <div className={cn(
                             "h-full rounded-full transition-all duration-1000 ease-in-out",
                             fw.score >= 80 ? "bg-[var(--status-success)]" : fw.score >= 60 ? "bg-[var(--status-warning)]" : "bg-[var(--status-error)]"

@@ -118,7 +118,7 @@ export namespace Config {
 
     // Project config overrides global and remote config.
     if (!Flag.GIZZI_DISABLE_PROJECT_CONFIG) {
-      for (const file of ["gizzi.jsonc", "gizzi.json"]) {
+      for (const file of ["config.toml", "gizzi.jsonc", "gizzi.json"]) {
         const found = await Filesystem.findUp(file, Instance.directory, Instance.worktree)
         for (const resolved of found.toReversed()) {
           result = merge(result, await loadFile(resolved))
@@ -162,7 +162,7 @@ export namespace Config {
 
     for (const dir of unique(directories)) {
       if (dir.endsWith(".gizzi") || dir === Flag.GIZZI_CONFIG_DIR) {
-        for (const file of ["gizzi.jsonc", "gizzi.json"]) {
+        for (const file of ["config.toml", "gizzi.jsonc", "gizzi.json"]) {
           log.debug(`loading config from ${path.join(dir, file)}`)
           result = merge(result, await loadFile(path.join(dir, file)))
           // to satisfy the type checker
@@ -253,6 +253,67 @@ export namespace Config {
         perms[tool] = action
       }
       result.permission = mergeDeep(perms, result.permission ?? {})
+    }
+
+    // Apply sandbox mode presets as defaults; explicit enabled/allow_network always win.
+    if (result.sandbox?.mode) {
+      const presets: Record<string, { enabled: boolean; allow_network: boolean }> = {
+        "read-only": { enabled: true, allow_network: false },
+        "workspace-write": { enabled: true, allow_network: false },
+        "danger-full-access": { enabled: false, allow_network: true },
+      }
+      const preset = presets[result.sandbox.mode]
+      if (preset) {
+        result.sandbox = {
+          enabled: preset.enabled,
+          allow_network: preset.allow_network,
+          ...result.sandbox,
+        }
+      }
+    }
+
+    // Apply approval_policy as defaults for the permission system; explicit `permission` rules always win.
+    if (result.approval_policy) {
+      const policy = result.approval_policy
+      const modeDefaults: Record<string, Config.PermissionAction> = {
+        untrusted: "ask",
+        "on-request": "ask",
+        "on-failure": "allow",
+        never: "allow",
+      }
+      const defaultAction = policy.mode ? modeDefaults[policy.mode] : undefined
+      if (defaultAction) {
+        result.permission = mergeDeep({ "*": defaultAction }, result.permission ?? {})
+      }
+      if (policy.granular?.rules) {
+        result.permission = mergeDeep(policy.granular.rules, result.permission ?? {})
+      }
+      if (policy.granular?.skill_approval !== undefined) {
+        result.permission = mergeDeep(
+          { skill: policy.granular.skill_approval ? "ask" : "allow" },
+          result.permission ?? {},
+        )
+      }
+      if (policy.granular?.web_search !== undefined) {
+        result.permission = mergeDeep(
+          { websearch: policy.granular.web_search === "live" ? "allow" : "deny" },
+          result.permission ?? {},
+        )
+      }
+      if (policy.granular?.sandbox_approval !== undefined) {
+        result.permission = mergeDeep(
+          { bash: policy.granular.sandbox_approval ? "ask" : "allow" },
+          result.permission ?? {},
+        )
+      }
+    }
+
+    // Apply the active named permission profile as defaults; explicit `permission` rules always win.
+    if (result.permission_profiles?.active_profile) {
+      const activeProfile = result.permission_profiles.profiles?.[result.permission_profiles.active_profile]
+      if (activeProfile?.rules) {
+        result.permission = mergeDeep(activeProfile.rules, result.permission ?? {})
+      }
     }
 
     if (!result.username) result.username = os.userInfo().username
@@ -707,8 +768,32 @@ export namespace Config {
         .or(PermissionAction),
     )
     .transform(permissionTransform)
-    
+
   export type Permission = z.infer<typeof Permission>
+
+  export const ApprovalPolicyMode = z.enum(["untrusted", "on-failure", "on-request", "never", "granular"])
+  export type ApprovalPolicyMode = z.infer<typeof ApprovalPolicyMode>
+
+  export const WebSearchApproval = z.enum(["disabled", "live"])
+  export type WebSearchApproval = z.infer<typeof WebSearchApproval>
+
+  export const ApprovalPolicy = z
+    .object({
+      mode: ApprovalPolicyMode.optional().describe(
+        "Approval policy preset. 'granular' defers to the 'granular' block for per-category rules.",
+      ),
+      granular: z
+        .object({
+          rules: Permission.optional().describe("Per-tool approval rules, same shape as the top-level 'permission' field"),
+          sandbox_approval: z.boolean().optional().describe("Require approval before sandboxed command execution"),
+          skill_approval: z.boolean().optional().describe("Require approval before running skills"),
+          web_search: WebSearchApproval.optional().describe("Web search approval mode: 'disabled' or 'live'"),
+        })
+        .optional()
+        .describe("Granular approval rules, used when mode is 'granular' (or as overrides alongside any mode)"),
+    })
+    .describe("Approval policy applied as defaults to the permission system on load")
+  export type ApprovalPolicy = z.infer<typeof ApprovalPolicy>
 
   export const Command = z.object({
     template: z.string(),
@@ -1092,10 +1177,12 @@ export namespace Config {
       auth_type: z.enum(["api_key", "none", "bearer", "subprocess"]).optional(),
       token: z.string().optional().describe("Bearer token for auth_type: bearer"),
       subprocess_cmd: z.string().optional().describe("CLI command for auth_type: subprocess, e.g. 'claude -p'"),
+      runtime: z.enum(["sdk", "subprocess", "auto"]).optional().describe("Execution runtime for this provider's models"),
       models: z
         .record(
           z.string(),
           ModelsDev.Model.partial().extend({
+            runtime: z.enum(["sdk", "subprocess", "auto"]).optional().describe("Execution runtime for this model"),
             variants: z
               .record(
                 z.string(),
@@ -1181,6 +1268,53 @@ export namespace Config {
         .optional()
         .describe("When set, ONLY these providers will be enabled. All other providers will be ignored"),
       model: ModelId.describe("Model to use in the format of provider/model, eg anthropic/claude-2").optional(),
+      auth: z
+        .object({
+          active_profile: z.string().optional(),
+          credential_store: z.enum(["file", "keyring", "auto"]).optional(),
+          profiles: z
+            .record(
+              z.string(),
+              z.object({
+                provider: z.string(),
+                api_key: z.string().optional(),
+                api_key_env: z.string().optional(),
+                base_url: z.string().optional(),
+              }),
+            )
+            .optional(),
+        })
+        .optional()
+        .describe("Named authentication profiles for CLI and provider selection"),
+      permission_profiles: z
+        .object({
+          active_profile: z.string().optional(),
+          profiles: z
+            .record(
+              z.string(),
+              z.object({
+                rules: z.record(z.string(), PermissionAction),
+              }),
+            )
+            .optional(),
+        })
+        .optional()
+        .describe("Named permission profiles managed via `gizzi config profile`"),
+      sandbox: z
+        .object({
+          enabled: z.boolean().optional(),
+          allow_network: z.boolean().optional(),
+          allowed_domains: z.array(z.string()).optional(),
+          mode: z
+            .enum(["read-only", "workspace-write", "danger-full-access"])
+            .optional()
+            .describe(
+              "Sandbox mode preset. Fills in 'enabled'/'allow_network' defaults when not explicitly set.",
+            ),
+        })
+        .optional()
+        .describe("Default sandbox preferences for non-interactive execution"),
+      approval_policy: ApprovalPolicy.optional(),
       small_model: ModelId.describe(
         "Small model to use for tasks like title generation in the format of provider/model",
       ).optional(),
@@ -1431,9 +1565,11 @@ export namespace Config {
     result = mergeDeep(result, await loadFile(path.join(legacyConfigDir, "config.json")))
     result = mergeDeep(result, await loadFile(path.join(legacyConfigDir, "gizzi.json")))
     result = mergeDeep(result, await loadFile(path.join(legacyConfigDir, "gizzi.jsonc")))
+    result = mergeDeep(result, await loadFile(path.join(legacyConfigDir, "config.toml")))
     result = mergeDeep(result, await loadFile(path.join(Global.Path.config, "config.json")))
     result = mergeDeep(result, await loadFile(path.join(Global.Path.config, "gizzi.json")))
     result = mergeDeep(result, await loadFile(path.join(Global.Path.config, "gizzi.jsonc")))
+    result = mergeDeep(result, await loadFile(path.join(Global.Path.config, "config.toml")))
 
     const legacy = path.join(Global.Path.config, "config")
     if (existsSync(legacy)) {
@@ -1463,7 +1599,22 @@ export namespace Config {
       throw new JsonError({ path: filepath }, { cause: err })
     })
     if (!text) return {}
+    if (filepath.endsWith(".toml")) return loadToml(text, filepath)
     return load(text, { path: filepath })
+  }
+
+  function loadToml(text: string, filepath: string): Info {
+    try {
+      const parsed = Bun.TOML.parse(text) as Record<string, unknown>
+      const { default_model, ...config } = parsed
+      if (default_model !== undefined && config.model === undefined) config.model = default_model
+      return Info.parse(config)
+    } catch (error) {
+      throw new InvalidError(
+        { path: filepath, message: error instanceof Error ? error.message : String(error) },
+        { cause: error },
+      )
+    }
   }
 
   async function load(text: string, options: { path: string } | { dir: string; source: string }) {

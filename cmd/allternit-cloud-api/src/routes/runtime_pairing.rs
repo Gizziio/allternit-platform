@@ -41,6 +41,7 @@ const DEFAULT_CAPABILITIES: &[&str] = &[
     "runtime:execute",
     "runtime:files",
     "runtime:terminal",
+    "runtime:remote_control",
     "providers:connect",
     "providers:use",
 ];
@@ -363,17 +364,9 @@ async fn approve_pairing(
         ));
     }
 
-    // Ensure the user has a quota row and enforce guardrails before approval.
-    let quota = state.quota_service.ensure_quota(&user.id).await?;
-    state
-        .quota_service
-        .check_spend_cap(&user.id, &quota)
-        .await?;
-    state
-        .quota_service
-        .record_pairing_approved(&user.id)
-        .await?;
-
+    // Persist the Clerk-authenticated user before quota checks so that the
+    // user_runtime_quotas foreign key (REFERENCES users(id)) is satisfied when
+    // ensure_quota lazily creates the quota row.
     let email = user
         .email
         .clone()
@@ -399,6 +392,17 @@ async fn approve_pairing(
     .bind(image_url)
     .execute(&state.db)
     .await?;
+
+    // Ensure the user has a quota row and enforce guardrails before approval.
+    let quota = state.quota_service.ensure_quota(&user.id).await?;
+    state
+        .quota_service
+        .check_spend_cap(&user.id, &quota)
+        .await?;
+    state
+        .quota_service
+        .record_pairing_approved(&user.id)
+        .await?;
 
     sqlx::query(
         r#"
@@ -1040,9 +1044,9 @@ fn validate_pairing_request(request: &CreatePairingRequest) -> Result<(), ApiErr
             "Runtime name must be 1-100 characters".to_string(),
         ));
     }
-    if !matches!(request.runtime_type.as_str(), "desktop" | "vps" | "hosted") {
+    if !matches!(request.runtime_type.as_str(), "desktop" | "vps" | "hosted" | "ios") {
         return Err(ApiError::BadRequest(
-            "runtimeType must be desktop, vps, or hosted".to_string(),
+            "runtimeType must be desktop, vps, hosted, or ios".to_string(),
         ));
     }
     decode_public_key(&request.public_key)?;

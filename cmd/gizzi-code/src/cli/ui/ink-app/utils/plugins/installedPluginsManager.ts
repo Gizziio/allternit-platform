@@ -54,7 +54,10 @@ import {
   parsePluginIdentifier,
   settingSourceToScope,
 } from './pluginIdentifier.js'
-import { getPluginCachePath, getVersionedCachePath } from './pluginLoader.js'
+import {
+  getPluginCachePath,
+  getVersionedCachePath,
+} from './pluginCachePaths.js'
 
 // Migration state to prevent running migration multiple times per session
 let migrationCompleted = false

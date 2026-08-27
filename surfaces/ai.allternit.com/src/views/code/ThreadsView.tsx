@@ -134,8 +134,17 @@ export function ThreadsView(): React.ReactNode {
 
   const openSession = useCallback((session: CodeSession) => {
     setActiveSession(session.id);
+    const isAgent = session.metadata?.sessionMode === 'agent';
+    const viewType = isAgent ? 'code-agent-session' : 'code';
     window.dispatchEvent(new CustomEvent('allternit:switch-mode', { detail: { mode: 'code' } }));
-    window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType: 'code' } }));
+    window.dispatchEvent(
+      new CustomEvent('allternit:open-view', {
+        detail: {
+          viewType,
+          context: isAgent ? { sessionId: session.id, originView: 'code' } : undefined,
+        },
+      }),
+    );
   }, [setActiveSession]);
 
   const hasFilters =

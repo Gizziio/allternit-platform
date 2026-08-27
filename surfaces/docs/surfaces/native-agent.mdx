@@ -1,0 +1,146 @@
+---
+title: Native Agent
+description: The autonomous agent chat surface inside the Allternit platform shell
+---
+
+## Overview
+
+**Native Agent** is the primary chat surface for running autonomous agents inside the Allternit platform. It combines a conversational message stream with a live execution canvas so you can watch an agent think, plan, call tools, and report progress in real time.
+
+Unlike the general chat view, Native Agent sessions are isolated by origin surface (`chat`), load agent workspace context, and surface structured agent output such as milestone roadmaps and tool execution traces.
+
+## How to access it
+
+Native Agent runs inside the platform shell. Open it from the shell navigation or programmatically:
+
+```text
+https://app.allternit.com/shell?view=native-agent
+```
+
+From shell code:
+
+```typescript
+open('native-agent');
+```
+
+The surface is registered as a singleton view (`native-agent`), so only one instance can be open at a time.
+
+## Features
+
+<CardGroup cols={2}>
+  <Card title="Session Management" icon="message-circle">
+    Create, rename, switch, and delete agent sessions from a single dropdown
+  </Card>
+  <Card title="Split Chat + Canvas" icon="layout">
+    Toggle between split, chat-only, and canvas-only layouts
+  </Card>
+  <Card title="Streaming Messages" icon="zap">
+    Real-time assistant responses with thinking indicators and tool-call events
+  </Card>
+  <Card title="Milestone Progress" icon="route">
+    Visual roadmap of agent missions, waves, and completed tasks
+  </Card>
+  <Card title="Tool Call Visualization" icon="wrench">
+    Expandable cards for every tool call, argument, result, and error
+  </Card>
+  <Card title="Runtime Ops" icon="terminal">
+    One-click access to runtime controls, execution mode, and backend status
+  </Card>
+</CardGroup>
+
+## Layout modes
+
+Use the control bar in the header to change how the chat and canvas are arranged.
+
+| Mode | Behavior |
+|---|---|
+| **Split** | Chat panel on the left (40% width) and canvas on the right |
+| **Chat only** | Full-width conversation stream |
+| **Canvas only** | Full-width execution canvas with milestones and tool calls |
+
+## Key concepts
+
+### Session
+
+A Native Agent session is a persistent conversation tied to the `chat` origin surface. Sessions are stored through the backend at `/api/v1/agent-sessions` and can operate in either `regular` or `agent` mode. Agent-mode sessions load an agent workspace and attach its context pack to every message.
+
+### Context pack
+
+When a session runs in `agent` mode, the platform builds a context pack from the agent's workspace files:
+
+| File | Purpose |
+|---|---|
+| `IDENTITY.md` | Agent identity and role |
+| `VOICE.md` | Voice and tone guidelines |
+| `POLICY.md` | Behavior policies |
+| `SOUL.md` | Trust tiers and permissions |
+| `PLAYBOOK.md` | Operational playbooks |
+| `TOOLS.md` | Available tools and usage |
+
+The pack is cached by content hash and refreshed automatically when workspace files change.
+
+### Canvas
+
+The right-hand canvas visualizes the agent's execution state. It renders two primary components:
+
+- **MilestoneProgress** — a linear roadmap of milestones plus the active mission's task path.
+- **ToolCallVisualization** — a list of tool calls with arguments, results, execution times, and retry actions.
+
+### Tool calls
+
+Tool calls are rendered as collapsible cards grouped by category (File System, System, Code, Automation, Interactive). Each card shows:
+
+- Tool name and category
+- Live execution status
+- Arguments
+- Result or error output
+- Execution time
+
+### Runtime Ops
+
+The **Runtime Ops** button in the header opens the runtime operations view, where you can inspect execution mode, backend health, and active sessions.
+
+## Endpoints
+
+Native Agent uses the N20 Native Agent API client (`native-agent-api`). Key routes:
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/v1/agent-sessions` | List sessions |
+| `POST` | `/api/v1/agent-sessions` | Create a session |
+| `PATCH` | `/api/v1/agent-sessions/:id` | Update a session |
+| `DELETE` | `/api/v1/agent-sessions/:id` | Delete a session |
+| `POST` | `/api/v1/agent-sessions/:id/messages` | Append a message |
+| `POST` | `/api/agent-chat` | Stream a chat response |
+| `GET` | `/api/v1/agent-sessions/sync` | SSE session sync channel |
+| `GET` | `/api/v1/tools` | List available tools |
+| `POST` | `/api/v1/tools/execute` | Execute a tool |
+
+## Session modes
+
+| Mode | Description |
+|---|---|
+| `regular` | Standard chat session without an agent workspace |
+| `agent` | Loads an agent workspace, trust tiers, and context pack |
+
+Set the mode when creating a session via `session_mode` in the request payload, or programmatically through the mode session store.
+
+## Runtime execution modes
+
+The runtime API supports three execution modes that control how aggressively the agent acts:
+
+| Mode | Behavior |
+|---|---|
+| `plan` | Ask before executing tools |
+| `safe` | Run safe tools automatically, prompt for destructive ones |
+| `auto` | Execute tools automatically within policy boundaries |
+
+Change the mode through Runtime Ops or by calling `PUT /api/v1/runtime/execution-mode`.
+
+## Related links
+
+- [Platform](/surfaces/platform)
+- [Agent Studio](/surfaces/agent-studio)
+- [Canvas](/surfaces/canvas)
+- [Tool Belt](/tools/tool-belt)
+- [MCP servers](/api/mcp-servers)

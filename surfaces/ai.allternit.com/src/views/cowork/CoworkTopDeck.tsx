@@ -44,10 +44,10 @@ function TopDeckDropdown({ label, value, icon, options, onSelect, isOpen, onTogg
         type="button"
         onClick={onToggle}
         className={cn(
-          'flex items-center gap-1.5 h-7 pl-2 pr-1.5 rounded-full text-xs font-semibold border transition-all',
+          'flex items-center gap-1.5 h-7 pl-2 pr-1.5 rounded-full text-xs font-semibold border backdrop-blur-md transition-all',
           isOpen
-            ? 'bg-composer-hover border-composer-border text-primary'
-            : 'bg-composer-soft border-composer-border text-secondary hover:text-primary hover:bg-composer-hover'
+            ? 'bg-[var(--glass-bg)]/35 border-[var(--border-subtle)]/60 text-[var(--text-primary)] shadow-sm'
+            : 'bg-[var(--glass-bg)]/25 border-[var(--border-subtle)]/50 text-[var(--text-primary)] hover:bg-[var(--glass-bg)]/40'
         )}
       >
         {icon}
@@ -56,9 +56,9 @@ function TopDeckDropdown({ label, value, icon, options, onSelect, isOpen, onTogg
       </button>
 
       {isOpen && (
-        <div className="absolute bottom-full left-0 mb-2 w-64 bg-menu-bg backdrop-blur-[20px] rounded-xl border border-menu-border shadow-xl z-[200] overflow-hidden">
-          <div className="px-3 py-2 border-b border-input-border">
-            <div className="text-[10px] font-extrabold text-muted uppercase tracking-wider">{label}</div>
+        <div className="absolute bottom-full left-0 mb-2 w-64 bg-[var(--glass-bg-thick)] backdrop-blur-[20px] rounded-xl border border-[var(--border-subtle)] shadow-xl z-[200] overflow-hidden">
+          <div className="px-3 py-2 border-b border-[var(--border-subtle)]">
+            <div className="text-[10px] font-extrabold text-[var(--text-tertiary)] uppercase tracking-wider">{label}</div>
           </div>
           <div className="p-1.5 max-h-64 overflow-y-auto">
             {options.map((option) => (
@@ -71,16 +71,16 @@ function TopDeckDropdown({ label, value, icon, options, onSelect, isOpen, onTogg
                 }}
                 className={cn(
                   'w-full text-left p-2 rounded-lg transition-colors flex items-start gap-2',
-                  value === option.label ? 'bg-composer-hover' : 'hover:bg-hover'
+                  value === option.label ? 'bg-[var(--surface-hover)]' : 'hover:bg-[var(--surface-hover)]'
                 )}
               >
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-primary flex items-center gap-1.5">
-                    {value === option.label && <Check size={12} className="text-accent" />}
+                  <div className="text-sm font-medium text-[var(--text-primary)] flex items-center gap-1.5">
+                    {value === option.label && <Check size={12} className="text-[var(--accent-chat)]" />}
                     {option.label}
                   </div>
                   {option.description ? (
-                    <div className="text-xs text-muted mt-0.5 leading-snug">{option.description}</div>
+                    <div className="text-xs text-[var(--text-tertiary)] mt-0.5 leading-snug">{option.description}</div>
                   ) : null}
                 </div>
               </button>
@@ -118,7 +118,7 @@ export function CoworkTopDeck(): React.ReactNode {
     // behind on mount. Visible height stays LAUNCH_TOP_ACTIONS_HEIGHT (44px)
     // so the composer box never moves.
     <div
-      className="relative z-0 w-full h-[56px] -mb-3 box-border bg-input-bg border-t border-r border-l border-input-border rounded-t-2xl px-4 pb-3 flex items-center gap-3 animate-deck-rise"
+      className="relative z-0 w-full h-[56px] -mb-3 box-border bg-[var(--chat-composer-bg)]/60 border-t border-r border-l border-[var(--chat-composer-border)]/60 rounded-t-2xl px-4 pb-3 flex items-center gap-3 animate-deck-rise backdrop-blur-md"
     >
       <TopDeckDropdown
         label="Project"

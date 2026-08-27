@@ -45,6 +45,8 @@ import {
   Globe,
   ShieldCheck,
   CloudArrowDown,
+  MagnifyingGlass,
+  Trash,
 } from '@phosphor-icons/react';
 import { useOnboardingStore } from '@/stores/onboarding-store';
 import { useThemeStore, getSystemTheme } from '@/design/ThemeStore';
@@ -118,7 +120,7 @@ function StepSidebar({ screen }: { screen: Screen }) {
     <div className="flex w-[196px] flex-shrink-0 flex-col gap-0 border-r border-ui-border-subtle bg-surface-panel px-5 py-7">
       {/* Logo + brand */}
       <div className="mb-8 flex items-center gap-2.5">
-        <MatrixLogo state="idle" size={36} />
+        <img src="/brand/matrix/matrix-logo.svg" alt="Allternit" style={{ width: 36, height: 36 }} />
         <div>
           <div className="text-[13px] font-bold tracking-[-0.01em] text-ui-text-primary">
             Allternit
@@ -311,6 +313,33 @@ function getUserOS(): 'mac' | 'windows' | 'linux' {
   return 'mac';
 }
 
+/**
+ * Confirms `baseUrl` is an actual Allternit backend (allternit-api or
+ * gizzi-code), not just something that answered on the port. A bare
+ * `res.ok` check on a guessed health path isn't enough: any static file
+ * server with SPA-style fallback routing (this repo runs several, on
+ * several ports, including the marketing site) returns 200 + index.html
+ * for literally any path, including a plausible-looking /health. Requiring
+ * JSON content plus a recognized status shape rules that out.
+ */
+async function isAllternitBackend(baseUrl: string, signal?: AbortSignal): Promise<boolean> {
+  try {
+    const ctrl = new AbortController();
+    const timeout = setTimeout(() => ctrl.abort(), 2500);
+    const combined = signal
+      ? (() => { signal.addEventListener('abort', () => ctrl.abort()); return ctrl.signal; })()
+      : ctrl.signal;
+    const res = await fetch(`${baseUrl.replace(/\/$/, '')}/health`, { signal: combined });
+    clearTimeout(timeout);
+    if (!res.ok) return false;
+    if (!(res.headers.get('content-type') ?? '').includes('application/json')) return false;
+    const body = await res.json().catch(() => null) as { status?: string } | null;
+    return typeof body?.status === 'string';
+  } catch {
+    return false;
+  }
+}
+
 const inputClassName = "flex-1 px-3 py-2.5 rounded-lg text-[13px] bg-surface-canvas border border-ui-border-default text-ui-text-primary outline-none";
 
 
@@ -351,13 +380,12 @@ function InfraStep({ data, onUpdate, onLocalFound }: { data: WizardData; onUpdat
         }
       } catch { /* fall through to port probe */ }
     }
-    for (const port of [8013, 4096, 3001, 8080]) {
-      try {
-        const ctrl = new AbortController();
-        setTimeout(() => ctrl.abort(), 2000);
-        const res = await fetch(`http://localhost:${port}/v1/global/health`, { signal: ctrl.signal });
-        if (res.ok) { setLocalStatus('found'); setLocalUrl(`http://localhost:${port}`); return; }
-      } catch { /* next port */ }
+    for (const port of [8013, 4096]) {
+      if (await isAllternitBackend(`http://localhost:${port}`)) {
+        setLocalStatus('found');
+        setLocalUrl(`http://localhost:${port}`);
+        return;
+      }
     }
     setLocalStatus('not-found');
   }, [isElectron]);
@@ -412,11 +440,11 @@ function InfraStep({ data, onUpdate, onLocalFound }: { data: WizardData; onUpdat
       const normalized = url.startsWith('http') ? url : `https://${url}`;
       const ctrl = new AbortController();
       setTimeout(() => ctrl.abort(), 6000);
-      const res = await fetch(`${normalized.replace(/\/$/, '')}/v1/global/health`, { signal: ctrl.signal });
-      if (res.ok) {
+      const ok = await isAllternitBackend(normalized, ctrl.signal);
+      if (ok) {
         setUrlTestStatus('ok');
         if (!manualName) setManualName(new URL(normalized).hostname.split('.')[0] || 'My Backend');
-      } else { setUrlTestStatus('fail'); setUrlTestError(`Server returned ${res.status}`); }
+      } else { setUrlTestStatus('fail'); setUrlTestError('Not an Allternit backend — no valid /health response'); }
     } catch (e: any) {
       setUrlTestStatus('fail');
       setUrlTestError(e?.name === 'AbortError' ? 'Timed out — unreachable' : 'Could not connect');
@@ -1295,6 +1323,120 @@ function ModesStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
     }
   }
 
+  // ── Sidecar-backed arbitrary local model management ─────────────────────────
+  const [sidecarModels, setSidecarModels] = useState<Array<{ tag: string; sizeBytes?: number }>>([]);
+  const [sidecarLoading, setSidecarLoading] = useState(false);
+  const [hfQuery, setHfQuery] = useState('');
+  const [hfResults, setHfResults] = useState<Array<{ repoId: string; downloads: number; likes: number }>>([]);
+  const [hfSearching, setHfSearching] = useState(false);
+  const [installingTag, setInstallingTag] = useState<string | null>(null);
+  const [installProgress, setInstallProgress] = useState<{ tag: string; status: string; percent?: number } | null>(null);
+  const [installError, setInstallError] = useState<string | null>(null);
+  const [removingTag, setRemovingTag] = useState<string | null>(null);
+
+  const sidecarAvailable = discovery?.ollama.running ?? false;
+
+  async function refreshSidecarModels() {
+    setSidecarLoading(true);
+    try {
+      const { models } = await setupApi.listLocalModels();
+      setSidecarModels(models ?? []);
+    } catch {
+      setSidecarModels([]);
+    } finally {
+      setSidecarLoading(false);
+    }
+  }
+
+  async function searchHuggingFace() {
+    const q = hfQuery.trim();
+    if (!q) return;
+    setHfSearching(true);
+    setHfResults([]);
+    try {
+      const { models } = await setupApi.searchLocalModels(q, 10);
+      setHfResults(models ?? []);
+    } catch {
+      setHfResults([]);
+    } finally {
+      setHfSearching(false);
+    }
+  }
+
+  async function installSidecarModel(repoId: string, quantTag?: string) {
+    const tag = quantTag ? `hf.co/${repoId}:${quantTag}` : `hf.co/${repoId}`;
+    setInstallingTag(tag);
+    setInstallProgress({ tag, status: 'Preparing…' });
+    setInstallError(null);
+    try {
+      const res = await setupApi.installLocalModel(repoId, quantTag);
+      if (!res.ok || !res.body) {
+        setInstallError('Install request failed');
+        setInstallingTag(null);
+        return;
+      }
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
+      let buf = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const lines = buf.split('\n');
+        buf = lines.pop() ?? '';
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const ev = JSON.parse(line.slice(6)) as {
+              status: string;
+              total?: number;
+              completed?: number;
+              error?: string;
+              tag?: string;
+            };
+            const pct = ev.total && ev.completed ? Math.round((ev.completed / ev.total) * 100) : undefined;
+            setInstallProgress({ tag, status: ev.status, percent: pct });
+            if (ev.status === 'success' || ev.status === 'done') {
+              await refreshSidecarModels();
+              onUpdate({ defaultProvider: 'sidecar', defaultModelId: ev.tag ?? tag });
+            } else if (ev.status === 'error') {
+              setInstallError(ev.error ?? 'Install failed');
+            }
+          } catch {}
+        }
+      }
+    } catch (e: any) {
+      setInstallError(e.message || 'Install failed');
+    } finally {
+      setInstallingTag(null);
+      setInstallProgress(null);
+    }
+  }
+
+  async function removeSidecarModel(tag: string) {
+    setRemovingTag(tag);
+    try {
+      await setupApi.removeLocalModel(tag);
+      setSidecarModels((prev) => prev.filter((m) => m.tag !== tag));
+      if (data.defaultProvider === 'sidecar' && data.defaultModelId === tag) {
+        onUpdate({ defaultProvider: undefined, defaultModelId: undefined });
+      }
+    } catch {
+      // Non-fatal; user can retry in Settings.
+    } finally {
+      setRemovingTag(null);
+    }
+  }
+
+  function selectSidecarModel(tag: string) {
+    onUpdate({ defaultProvider: 'sidecar', defaultModelId: tag });
+  }
+
+  useEffect(() => {
+    if (!sidecarAvailable) return;
+    refreshSidecarModels();
+  }, [sidecarAvailable]);
+
   // Run discovery on mount
   useEffect(() => {
     setScanning(true);
@@ -1677,13 +1819,13 @@ function ModesStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
       </div>
 
       {/* ── Local Brain section ── */}
-      {!scanning && !localBrainAlreadyPulled && (
+      {!scanning && (
         <div>
           <div className="mb-2 text-xs font-bold uppercase tracking-widest text-ui-text-muted">
             Local Brain
           </div>
 
-          {!discovery?.ollama.running ? (
+          {!sidecarAvailable ? (
             <div className="flex items-center gap-2.5 rounded-xl border border-ui-border-subtle bg-surface-panel px-3.5 py-3 text-xs text-ui-text-muted">
               <HardDrive size={16} className="flex-shrink-0" />
               <span>
@@ -1700,92 +1842,182 @@ function ModesStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
                 </a>
               </span>
             </div>
-          ) : lbPullState === 'pulling' ? (
-            <div className="rounded-xl border-2 border-accent-primary bg-[color-mix(in_srgb,var(--accent-primary)_5%,var(--surface-panel))] p-3">
-              <div className="mb-2 flex items-center gap-2">
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
-                  className="flex text-accent-primary"
-                >
-                  <ArrowClockwise size={13} />
-                </motion.div>
-                <span className="text-[13px] font-semibold text-ui-text-primary">
-                  Downloading Local Brain
-                </span>
-                {lbPullPct !== null && (
-                  <span className="ml-auto text-xs text-accent-primary">
-                    {lbPullPct}%
+          ) : (
+            <div className="flex flex-col gap-3">
+              {/* Installed models */}
+              <div className="rounded-xl border border-ui-border-subtle bg-surface-panel p-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-[13px] font-semibold text-ui-text-primary">
+                    Installed models
                   </span>
+                  <button
+                    type="button"
+                    onClick={refreshSidecarModels}
+                    disabled={sidecarLoading}
+                    className="flex cursor-pointer items-center gap-1 rounded border-none bg-transparent px-1.5 py-0.5 text-xs font-semibold text-accent-primary disabled:text-ui-text-muted"
+                  >
+                    <ArrowClockwise size={12} className={sidecarLoading ? 'animate-spin' : ''} />
+                    {sidecarLoading ? 'Refreshing…' : 'Refresh'}
+                  </button>
+                </div>
+
+                {sidecarModels.length === 0 ? (
+                  <div className="text-xs text-ui-text-muted">
+                    No local models installed yet. Search below to add one.
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-1.5">
+                    {sidecarModels.map((m) => {
+                      const sel = data.defaultProvider === 'sidecar' && data.defaultModelId === m.tag;
+                      return (
+                        <div
+                          key={m.tag}
+                          className={`flex items-center gap-2 rounded-lg border px-2.5 py-2 ${sel ? 'border-accent-primary bg-[color-mix(in_srgb,var(--accent-primary)_8%,var(--surface-panel))]' : 'border-ui-border-subtle bg-surface-panel-muted'}`}
+                        >
+                          <div className={`flex size-7 flex-shrink-0 items-center justify-center rounded-md font-mono text-[10px] font-bold ${sel ? 'bg-[color-mix(in_srgb,var(--accent-primary)_16%,var(--surface-panel))] text-accent-primary' : 'bg-surface-panel text-ui-text-muted'}`}>
+                            LB
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className={`truncate text-[13px] ${sel ? 'font-semibold text-ui-text-primary' : 'text-ui-text-primary'}`}>
+                              {m.tag}
+                            </div>
+                            {m.sizeBytes !== undefined && (
+                              <div className="text-xs text-ui-text-muted">
+                                {(m.sizeBytes / 1_000_000_000).toFixed(2)} GB
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex flex-shrink-0 items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => selectSidecarModel(m.tag)}
+                              disabled={sel}
+                              className={`rounded border-none px-2 py-1 text-xs font-bold ${sel ? 'bg-surface-panel-muted text-ui-text-muted' : 'bg-accent-primary text-text-inverse'}`}
+                            >
+                              {sel ? 'Selected' : 'Use'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => removeSidecarModel(m.tag)}
+                              disabled={removingTag === m.tag}
+                              className="flex cursor-pointer items-center rounded border-none bg-transparent px-1.5 py-1 text-ui-text-muted hover:text-status-error"
+                              aria-label={`Remove ${m.tag}`}
+                            >
+                              {removingTag === m.tag ? (
+                                <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}>
+                                  <ArrowClockwise size={14} />
+                                </motion.div>
+                              ) : (
+                                <Trash size={14} />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
-              <div className="h-1 overflow-hidden rounded bg-ui-border-subtle">
-                <div
-                  className="h-full rounded bg-accent-primary transition-width duration-300 ease-in-out"
-                  style={{ width: lbPullPct !== null ? `${lbPullPct}%` : '5%' }}
-                 />
+
+              {/* HuggingFace search */}
+              <div className="rounded-xl border border-ui-border-subtle bg-surface-panel p-3">
+                <div className="mb-2 text-[13px] font-semibold text-ui-text-primary">
+                  Add a model from HuggingFace
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={hfQuery}
+                    onChange={(e) => setHfQuery(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') searchHuggingFace(); }}
+                    placeholder="e.g. llama-3.2-3b-instruct"
+                    className={`${inputClassName} min-w-0 flex-1`}
+                  />
+                  <button
+                    type="button"
+                    onClick={searchHuggingFace}
+                    disabled={hfSearching || !hfQuery.trim()}
+                    className="flex flex-shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border-none bg-accent-primary px-3 py-2 text-xs font-bold text-text-inverse disabled:bg-surface-panel-muted disabled:text-ui-text-muted"
+                  >
+                    {hfSearching ? (
+                      <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}>
+                        <ArrowClockwise size={13} />
+                      </motion.div>
+                    ) : (
+                      <MagnifyingGlass size={13} />
+                    )}
+                    Search
+                  </button>
+                </div>
+
+                {hfResults.length > 0 && (
+                  <div className="mt-2 flex flex-col gap-1.5">
+                    {hfResults.map((r) => (
+                      <div
+                        key={r.repoId}
+                        className="flex items-center gap-2 rounded-lg border border-ui-border-subtle bg-surface-panel-muted px-2.5 py-2"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-[13px] font-medium text-ui-text-primary">
+                            {r.repoId}
+                          </div>
+                          <div className="text-xs text-ui-text-muted">
+                            {r.downloads.toLocaleString()} downloads · {r.likes.toLocaleString()} likes
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => installSidecarModel(r.repoId)}
+                          disabled={installingTag !== null}
+                          className="flex-shrink-0 cursor-pointer rounded border-none bg-accent-primary px-2.5 py-1 text-xs font-bold text-text-inverse disabled:bg-surface-panel-muted disabled:text-ui-text-muted"
+                        >
+                          {installingTag?.startsWith(`hf.co/${r.repoId}`) ? 'Installing…' : 'Install'}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-              <div className="mt-1.5 text-xs text-ui-text-muted">
-                {lbPullProgress?.status ?? 'Preparing…'} · llama3.2:3b (~2 GB)
-              </div>
+
+              {/* Install progress */}
+              {installingTag && installProgress && (
+                <div className="rounded-xl border-2 border-accent-primary bg-[color-mix(in_srgb,var(--accent-primary)_5%,var(--surface-panel))] p-3">
+                  <div className="mb-2 flex items-center gap-2">
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+                      className="flex text-accent-primary"
+                    >
+                      <ArrowClockwise size={13} />
+                    </motion.div>
+                    <span className="text-[13px] font-semibold text-ui-text-primary">
+                      Downloading {installProgress.tag}
+                    </span>
+                    {installProgress.percent !== undefined && (
+                      <span className="ml-auto text-xs text-accent-primary">
+                        {installProgress.percent}%
+                      </span>
+                    )}
+                  </div>
+                  <div className="h-1 overflow-hidden rounded bg-ui-border-subtle">
+                    <div
+                      className="h-full rounded bg-accent-primary transition-all duration-300 ease-in-out"
+                      style={{ width: installProgress.percent !== undefined ? `${installProgress.percent}%` : '5%' }}
+                    />
+                  </div>
+                  <div className="mt-1.5 text-xs text-ui-text-muted">
+                    {installProgress.status}
+                  </div>
+                </div>
+              )}
+
+              {installError && (
+                <div className="flex items-center gap-2 rounded-xl bg-status-error-bg px-3 py-2 text-xs text-status-error">
+                  <Warning size={14} />
+                  {installError}
+                </div>
+              )}
             </div>
-          ) : lbPullState === 'done' ? (
-            <motion.div
-              initial={{ scale: 0.97, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="flex items-center gap-2.5 rounded-xl border-2 border-[#10b981] bg-[color-mix(in_srgb,#10b981_8%,var(--surface-panel))] p-3"
-            >
-              <CheckCircle size={20} weight="fill" className="flex-shrink-0 text-status-success" />
-              <div>
-                <div className="text-[13px] font-semibold text-ui-text-primary">
-                  Local Brain ready
-                </div>
-                <div className="text-xs text-ui-text-muted">
-                  llama3.2:3b · offline · selected as your brain
-                </div>
-              </div>
-            </motion.div>
-          ) : lbPullState === 'error' ? (
-            <div className="flex items-center gap-2.5 rounded-xl border border-ui-border-subtle bg-surface-panel p-3 text-xs">
-              <Warning size={15} className="flex-shrink-0 text-status-error" />
-              <span className="text-ui-text-muted">Download failed — </span>
-              <button type="button"
-                onClick={startLocalBrainDownload}
-                className="cursor-pointer border-none bg-transparent p-0 text-xs font-semibold text-accent-primary"
-              >
-                try again
-              </button>
-            </div>
-          ) : (
-            <motion.button
-              onClick={startLocalBrainDownload}
-              whileHover={{ scale: 1.01 }}
-              whileTap={{ scale: 0.99 }}
-              className="w-full cursor-pointer items-center gap-3 rounded-xl border-none p-3 text-left bg-surface-panel outline-2 outline-ui-border-subtle transition-all duration-150 flex"
-            >
-              <div className="flex size-8 flex-shrink-0 items-center justify-center rounded-lg bg-[color-mix(in_srgb,var(--accent-primary)_12%,transparent)] text-accent-primary">
-                <CloudArrowDown size={18} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[13px] font-semibold text-ui-text-primary">
-                    Local Brain
-                  </span>
-                  <span className="rounded bg-[color-mix(in_srgb,var(--accent-primary)_12%,transparent)] px-1 py-0.5 text-xs font-bold text-accent-primary">
-                    ~2 GB
-                  </span>
-                  <span className="rounded bg-[color-mix(in_srgb,#10b981_15%,transparent)] px-1.5 py-0.5 text-xs font-bold tracking-wider text-status-success">
-                    Offline · private
-                  </span>
-                </div>
-                <div className="mt-px text-xs text-ui-text-muted">
-                  llama3.2:3b — works on any machine, no API key needed
-                </div>
-              </div>
-              <div className="flex-shrink-0 rounded bg-accent-primary px-2.5 py-1 text-xs font-bold text-text-inverse">
-                Download
-              </div>
-            </motion.button>
           )}
         </div>
       )}
@@ -2388,7 +2620,7 @@ function DoneScreen({ data, onFinish }: { data: WizardData; onFinish: () => void
     <div className="flex h-full min-h-0 items-stretch gap-0">
       {/* Left — celebration + summary + CTA */}
       <div className="flex w-80 flex-shrink-0 flex-col items-center justify-center border-r border-ui-border-subtle px-8 pb-9 pt-10 text-center">
-        {/* MatrixLogo with success ring */}
+        {/* Matrix brand mark with success ring */}
         <motion.div
           initial={{ scale: 0.5, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -2400,7 +2632,7 @@ function DoneScreen({ data, onFinish }: { data: WizardData; onFinish: () => void
             transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
             className="pointer-events-none absolute inset-[-14px] rounded-full border border-solid border-[color-mix(in_srgb,var(--accent-primary)_35%,transparent)]"
           />
-          <MatrixLogo state="idle" size={52} />
+          <img src="/brand/matrix/matrix-logo.svg" alt="Allternit" style={{ width: 52, height: 52 }} />
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
@@ -2441,6 +2673,7 @@ function DoneScreen({ data, onFinish }: { data: WizardData; onFinish: () => void
             { label: 'Runs on',  value: infraLabel },
             ...(modelLabel ? [{ label: 'AI model', value: modelLabel }] : []),
             { label: 'API keys', value: keyCount > 0 ? `${keyCount} configured` : 'None — use local models' },
+            { label: 'Workspace', value: data.workspacePath },
             { label: 'Modes',    value: `${data.selectedModes.length} enabled` },
           ].map(({ label, value }) => (
             <div key={label} className="flex items-center justify-between text-xs">
@@ -2524,6 +2757,16 @@ export function OnboardingFlow() {
   };
 
   const finish = async () => {
+    // Initialize the workspace with GIZZI.md + codemap before completing.
+    // Best-effort: a missing project or offline Gizzi must not block onboarding.
+    try {
+      await setupApi.initProject(data.workspacePath);
+    } catch (err) {
+      if (process.env.NODE_ENV === 'development') {
+        console.debug('[Onboarding] initProject failed:', err);
+      }
+    }
+
     // Persist final user preferences (default model, onboarding complete) to
     // the backend. Provider keys are already owned by Gizzi on the runtime.
     const defaultModel = data.defaultModelId

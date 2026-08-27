@@ -1,0 +1,212 @@
+---
+title: Workflows API
+description: Define, update, and execute node-based workflows on the Allternit platform.
+---
+
+## Overview
+
+The Workflows API stores node-based workflow definitions as JSON graphs of nodes and edges, then schedules executions against them. Each workflow is user-scoped; executions are tracked independently with statuses such as `pending`, `running`, `completed`, `failed`, and `cancelled`.
+
+## Base URL
+
+```text
+https://api.allternit.com/api
+```
+
+For local development:
+
+```text
+http://127.0.0.1:8013/api
+```
+
+## Authentication
+
+All requests require a valid bearer token in the `Authorization` header. See [Authentication](/api/authentication) for details.
+
+## Workflow object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique workflow identifier. |
+| `name` | string | Workflow name. |
+| `title` | string | Same as name for compatibility. |
+| `description` | string \| null | Optional description. |
+| `nodes` | object[] | Workflow nodes. |
+| `edges` | object[] | Connections between nodes. |
+| `node_count` | integer | Number of nodes. |
+| `status` | string | Always `draft` in this revision. |
+| `created_at` | string | ISO 8601 creation timestamp. |
+| `updated_at` | string | ISO 8601 update timestamp. |
+
+## Execution object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique execution identifier. |
+| `workflow_id` | string | Parent workflow id. |
+| `status` | string | `pending`, `running`, `completed`, `failed`, `cancelled`. |
+| `started_at` | string \| null | ISO 8601 start timestamp. |
+| `completed_at` | string \| null | ISO 8601 completion timestamp. |
+| `result` | string \| null | Optional serialized result. |
+| `error` | string \| null | Optional error message. |
+| `created_at` | string | ISO 8601 creation timestamp. |
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/workflows` | List workflows. |
+| `POST` | `/workflows` | Create a workflow. |
+| `GET` | `/workflows/:id` | Get a workflow. |
+| `PUT` | `/workflows/:id` | Update a workflow. |
+| `DELETE` | `/workflows/:id` | Delete a workflow. |
+| `POST` | `/workflows/:id/execute` | Start a new execution. |
+| `GET` | `/workflows/:id/executions` | List executions. |
+| `GET` | `/workflows/:id/executions/:exec_id` | Get an execution. |
+| `POST` | `/workflows/:id/executions/:exec_id/cancel` | Cancel a running execution. |
+
+## List workflows
+
+```bash
+curl https://api.allternit.com/api/workflows \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Response
+
+```json
+{
+  "workflows": [
+    {
+      "id": "wf_01hqx8x7x7x7x7x7x7x7x7x",
+      "name": "Onboard tenant",
+      "title": "Onboard tenant",
+      "description": "Provision workspace, agent, and credentials.",
+      "nodes": [...],
+      "edges": [...],
+      "node_count": 4,
+      "created_at": "2026-08-13T18:00:00Z",
+      "updated_at": "2026-08-13T18:05:00Z",
+      "status": "draft"
+    }
+  ],
+  "total": 1
+}
+```
+
+## Create workflow
+
+```bash
+curl -X POST https://api.allternit.com/api/workflows \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Deploy local model",
+    "description": "Pull, quantize, and register a local model.",
+    "nodes": [
+      {"id": "pull", "type": "action", "label": "Pull weights"},
+      {"id": "register", "type": "action", "label": "Register with runtime"}
+    ],
+    "edges": [
+      {"source": "pull", "target": "register"}
+    ]
+  }'
+```
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` or `title` | string | yes | Workflow name. |
+| `description` | string | no | Optional description. |
+| `nodes` | object[] | no | Workflow nodes. |
+| `edges` | object[] | no | Workflow edges. |
+
+### Response
+
+```json
+{
+  "id": "wf_02hqx8x7x7x7x7x7x7x7x7x",
+  "name": "Deploy local model",
+  "title": "Deploy local model",
+  "description": "Pull, quantize, and register a local model.",
+  "node_count": 0,
+  "status": "draft"
+}
+```
+
+## Execute workflow
+
+```bash
+curl -X POST https://api.allternit.com/api/workflows/wf_02hqx8x7x7x7x7x7x7x7x7x/execute \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Response
+
+```json
+{
+  "execution_id": "exec_01hqx8x7x7x7x7x7x7x7x7x",
+  "status": "pending"
+}
+```
+
+## List executions
+
+```bash
+curl https://api.allternit.com/api/workflows/wf_02hqx8x7x7x7x7x7x7x7x7x/executions \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Response
+
+```json
+{
+  "executions": [
+    {
+      "id": "exec_01hqx8x7x7x7x7x7x7x7x7x",
+      "workflow_id": "wf_02hqx8x7x7x7x7x7x7x7x7x",
+      "status": "running",
+      "started_at": "2026-08-13T18:00:00Z",
+      "completed_at": null,
+      "result": null,
+      "error": null,
+      "created_at": "2026-08-13T18:00:00Z"
+    }
+  ]
+}
+```
+
+## Cancel execution
+
+```bash
+curl -X POST https://api.allternit.com/api/workflows/wf_02hqx8x7x7x7x7x7x7x7x7x/executions/exec_01hqx8x7x7x7x7x7x7x7x7x/cancel \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Response
+
+```json
+{
+  "execution_id": "exec_01hqx8x7x7x7x7x7x7x7x7x",
+  "workflow_id": "wf_02hqx8x7x7x7x7x7x7x7x7x",
+  "status": "cancelled",
+  "completed_at": "2026-08-13T18:05:00Z"
+}
+```
+
+## Error codes
+
+| Status | Code | Description |
+|--------|------|-------------|
+| `401` | `Unauthorized` | Missing or invalid bearer token. |
+| `404` | `not_found` / `Workflow not found` / `Execution not found` | Resource not found. |
+| `403` | `Access denied` | Workflow belongs to another user. |
+| `409` | `Cannot cancel execution with status ...` | Terminal execution cannot be cancelled. |
+| `500` | `internal_error` | Database or server error. |
+
+## Related pages
+
+- [Swarm](/api/swarm)
+- [Orchestrator](/api/orchestrator)
+- [Tasks](/api/tasks)

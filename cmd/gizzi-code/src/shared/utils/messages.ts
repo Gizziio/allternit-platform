@@ -24,7 +24,29 @@ import { sanitizeToolNameForAnalytics } from '@/services/analytics/metadata.js'
 import type { AgentId } from '@/types/ids.js'
 import { companionIntroText } from '../buddy/prompt.js'
 import { NO_CONTENT_MESSAGE } from '@/constants/messages.js'
-import { OUTPUT_STYLE_CONFIG } from '@/constants/outputStyles.js'
+import { OUTPUT_STYLE_CONFIG } from '@/constants/outputStyleConstants.js'
+import {
+  baseCreateAssistantMessage,
+  createAssistantAPIErrorMessage,
+} from './apiErrorMessage.js'
+import {
+  CANCEL_MESSAGE,
+  INTERRUPT_MESSAGE,
+  INTERRUPT_MESSAGE_FOR_TOOL_USE,
+  NO_RESPONSE_REQUESTED,
+  REJECT_MESSAGE,
+  SYNTHETIC_MESSAGES,
+  SYNTHETIC_MODEL,
+} from './syntheticMessages.js'
+export {
+  CANCEL_MESSAGE,
+  INTERRUPT_MESSAGE,
+  INTERRUPT_MESSAGE_FOR_TOOL_USE,
+  NO_RESPONSE_REQUESTED,
+  REJECT_MESSAGE,
+  SYNTHETIC_MESSAGES,
+  SYNTHETIC_MODEL,
+} from './syntheticMessages.js'
 import { isAutoMemoryEnabled } from '../memdir/paths.js'
 import {
   checkStatsigFeatureGate_CACHED_MAY_BE_STALE,
@@ -87,6 +109,7 @@ import { quote } from './bash/shellQuote.js'
 import { formatNumber, formatTokens } from './format.js'
 import { getPewterLedgerVariant } from './planModeV2.js'
 import { jsonStringify } from './slowOperations.js'
+import { createUserMessage } from './createUserMessage.js'
 
 // Type guard to check if content is an array
 function isContentArray(content: string | unknown[] | unknown): content is unknown[] {
@@ -157,7 +180,7 @@ import { TASK_CREATE_TOOL_NAME } from '../../runtime/tools/builtins/taskcreateto
 import { TASK_OUTPUT_TOOL_NAME } from '../../cli/ui/ink-app/tools/TaskOutputTool/constants.js'
 import { TASK_UPDATE_TOOL_NAME } from '../../runtime/tools/builtins/taskupdatetool/constants.js'
 import type { PermissionMode } from '@/types/permissions.js'
-import { normalizeToolInput, normalizeToolInputForAPI } from './api.js'
+import { normalizeToolInput, normalizeToolInputForAPI } from './normalizeToolInput.js'
 import { getCurrentProjectConfig } from './config.js'
 import { logAntError, logForDebugging } from './debug.js'
 import { stripIdeContextTags } from './displayTags.js'
@@ -184,7 +207,7 @@ function getTeammateMailbox(): typeof import('./teammateMailbox.js') {
 import {
   isToolReferenceBlock,
   isToolSearchEnabledOptimistic,
-} from './toolSearch.js'
+} from './toolSearchMode.js'
 
 const MEMORY_CORRECTION_HINT =
   "\n\nNote: The user's next message may contain a correction or preference. Pay close attention — if they explain what went wrong or how they'd prefer you to work, consider saving that to memory for future sessions."
@@ -217,13 +240,6 @@ export function deriveShortMessageId(uuid: string): string {
   return parseInt(hex, 16).toString(36).slice(0, 6)
 }
 
-export const INTERRUPT_MESSAGE = '[Request interrupted by user]'
-export const INTERRUPT_MESSAGE_FOR_TOOL_USE =
-  '[Request interrupted by user for tool use]'
-export const CANCEL_MESSAGE =
-  "The user doesn't want to take this action right now. STOP what you are doing and wait for the user to tell you how to proceed."
-export const REJECT_MESSAGE =
-  "The user doesn't want to proceed with this tool use. The tool use was rejected (eg. if it was a file edit, the new_string was NOT written to the file). STOP what you are doing and wait for the user to tell you how to proceed."
 export const REJECT_MESSAGE_WITH_REASON_PREFIX =
   "The user doesn't want to proceed with this tool use. The tool use was rejected (eg. if it was a file edit, the new_string was NOT written to the file). To tell you how to proceed, the user said:\n"
 export const SUBAGENT_REJECT_MESSAGE =
@@ -250,8 +266,6 @@ export function AUTO_REJECT_MESSAGE(toolName: string): string {
 export function DONT_ASK_REJECT_MESSAGE(toolName: string): string {
   return `Permission to use ${toolName} has been denied because Gizzi is running in don't ask mode. ${DENIAL_WORKAROUND_GUIDANCE}`
 }
-export const NO_RESPONSE_REQUESTED = 'No response requested.'
-
 // Synthetic tool_result content inserted by ensureToolResultPairing when a
 // tool_use block has no matching tool_result. Exported so HFI submission can
 // reject any payload containing it — placeholder satisfies pairing structurally
@@ -310,16 +324,6 @@ export function buildClassifierUnavailableMessage(
   )
 }
 
-export const SYNTHETIC_MODEL = '<synthetic>'
-
-export const SYNTHETIC_MESSAGES = new Set([
-  INTERRUPT_MESSAGE,
-  INTERRUPT_MESSAGE_FOR_TOOL_USE,
-  CANCEL_MESSAGE,
-  REJECT_MESSAGE,
-  NO_RESPONSE_REQUESTED,
-])
-
 export function isSyntheticMessage(message: Message): boolean {
   return (
     message.type !== 'progress' &&
@@ -365,62 +369,6 @@ export function hasToolCallsInLastAssistantTurn(messages: Message[]): boolean {
   return false
 }
 
-function baseCreateAssistantMessage({
-  content,
-  isApiErrorMessage = false,
-  apiError,
-  error,
-  errorDetails,
-  isVirtual,
-  usage = {
-    input_tokens: 0,
-    output_tokens: 0,
-    cache_creation_input_tokens: 0,
-    cache_read_input_tokens: 0,
-    server_tool_use: { web_search_requests: 0, web_fetch_requests: 0 },
-    service_tier: null,
-    cache_creation: {
-      ephemeral_1h_input_tokens: 0,
-      ephemeral_5m_input_tokens: 0,
-    },
-    inference_geo: null,
-    iterations: null,
-    speed: null,
-  },
-}: {
-  content: BetaContentBlock[]
-  isApiErrorMessage?: boolean
-  apiError?: AssistantMessage['apiError']
-  error?: SDKAssistantMessageError
-  errorDetails?: string
-  isVirtual?: true
-  usage?: Usage
-}): AssistantMessage {
-  return {
-    type: 'assistant',
-    uuid: randomUUID(),
-    timestamp: new Date().toISOString(),
-    message: {
-      id: randomUUID(),
-      container: null,
-      model: SYNTHETIC_MODEL,
-      role: 'assistant',
-      stop_reason: 'stop_sequence',
-      stop_sequence: '',
-      type: 'message',
-      usage,
-      content: content as unknown as ContentBlock[] as any,
-      context_management: null,
-    },
-    requestId: undefined,
-    apiError,
-    error: error as Error | string | undefined,
-    errorDetails,
-    isApiErrorMessage,
-    isVirtual,
-  }
-}
-
 export function createAssistantMessage({
   content,
   usage,
@@ -445,95 +393,8 @@ export function createAssistantMessage({
   })
 }
 
-export function createAssistantAPIErrorMessage({
-  content,
-  apiError,
-  error,
-  errorDetails,
-}: {
-  content: string
-  apiError?: AssistantMessage['apiError']
-  error?: SDKAssistantMessageError | string
-  errorDetails?: string
-}): AssistantMessage {
-  return baseCreateAssistantMessage({
-    content: [
-      {
-        type: 'text' as const,
-        text: content === '' ? NO_CONTENT_MESSAGE : content,
-      } as BetaContentBlock, // NOTE: citations field is not supported in Bedrock API
-    ],
-    isApiErrorMessage: true,
-    apiError,
-    error: error as SDKAssistantMessageError,
-    errorDetails,
-  })
-}
-
-export function createUserMessage({
-  content,
-  isMeta,
-  isVisibleInTranscriptOnly,
-  isVirtual,
-  isCompactSummary,
-  summarizeMetadata,
-  toolUseResult,
-  mcpMeta,
-  uuid,
-  timestamp,
-  imagePasteIds,
-  sourceToolAssistantUUID,
-  permissionMode,
-  origin,
-}: {
-  content: string | ContentBlockParam[]
-  isMeta?: true
-  isVisibleInTranscriptOnly?: true
-  isVirtual?: true
-  isCompactSummary?: true
-  toolUseResult?: unknown // Matches tool's `Output` type
-  /** MCP protocol metadata to pass through to SDK consumers (never sent to model) */
-  mcpMeta?: {
-    _meta?: Record<string, unknown>
-    structuredContent?: Record<string, unknown>
-  }
-  uuid?: UUID | string
-  timestamp?: string
-  imagePasteIds?: number[]
-  // For tool_result messages: the UUID of the assistant message containing the matching tool_use
-  sourceToolAssistantUUID?: UUID
-  // Permission mode when message was sent (for rewind restoration)
-  permissionMode?: PermissionMode
-  summarizeMetadata?: {
-    messagesSummarized: number
-    userContext?: string
-    direction?: PartialCompactDirection
-  }
-  // Provenance of this message. undefined = human (keyboard).
-  origin?: MessageOrigin
-}): UserMessage {
-  const m: UserMessage = {
-    type: 'user',
-    message: {
-      role: 'user',
-      content: (content || NO_CONTENT_MESSAGE) as any, // Make sure we don't send empty messages
-    },
-    isMeta,
-    isVisibleInTranscriptOnly,
-    isVirtual,
-    isCompactSummary,
-    summarizeMetadata,
-    uuid: (uuid as UUID | undefined) || randomUUID(),
-    timestamp: timestamp ?? new Date().toISOString(),
-    toolUseResult: toolUseResult as ToolUseResult | undefined as ToolUseResult | undefined,
-    mcpMeta: mcpMeta as { _meta?: Record<string, unknown>; structuredContent?: Record<string, unknown> } | undefined,
-    imagePasteIds: imagePasteIds as number[] | undefined,
-    sourceToolAssistantUUID: sourceToolAssistantUUID as UUID | undefined,
-    permissionMode: permissionMode as PermissionMode | undefined,
-    origin: origin as MessageOrigin | undefined,
-  }
-  return m as UserMessage
-}
+export { createAssistantAPIErrorMessage } from './apiErrorMessage.js'
+export { createUserMessage }
 
 export function prepareUserContent({
   inputString,
@@ -4606,25 +4467,7 @@ export function createMicrocompactBoundaryMessage(
   }
 }
 
-export function createSystemAPIErrorMessage(
-  error: APIError,
-  retryInMs: number,
-  retryAttempt: number,
-  maxRetries: number,
-): SystemAPIErrorMessage {
-  return {
-    type: 'system',
-    subtype: 'api_error',
-    level: 'error',
-    cause: error.cause instanceof Error ? error.cause : undefined,
-    error,
-    retryInMs,
-    retryAttempt,
-    maxRetries,
-    timestamp: new Date().toISOString(),
-    uuid: randomUUID(),
-  }
-}
+export { createSystemAPIErrorMessage } from './systemAPIErrorMessage.js'
 
 /**
  * Checks if a message is a compact boundary marker

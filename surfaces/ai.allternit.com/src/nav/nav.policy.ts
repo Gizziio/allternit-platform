@@ -22,7 +22,9 @@ export const DEFAULT_POLICIES: Record<ViewType, SpawnPolicy> = {
   memory: { singleton: true, maxInstances: 1, allowNew: false, surface: "view", ownsTabs: false },
   settings: { singleton: true, maxInstances: 1, allowNew: false, surface: "view", ownsTabs: false },
   "agent-hub": { singleton: true, maxInstances: 1, allowNew: false, surface: "view", ownsTabs: false },
-  
+  "bot-home": { singleton: false, maxInstances: 10, allowNew: true, surface: "view", ownsTabs: false },
+  "bot-inbox": { singleton: false, maxInstances: 10, allowNew: true, surface: "view", ownsTabs: false },
+
   // Mode-specific Agent Session views
   "chat-agent-session": { singleton: false, maxInstances: 10, allowNew: true, surface: "view", ownsTabs: false },
   "cowork-agent-session": { singleton: false, maxInstances: 10, allowNew: true, surface: "view", ownsTabs: false },
@@ -39,6 +41,7 @@ export const DEFAULT_POLICIES: Record<ViewType, SpawnPolicy> = {
   monitor: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   hermes: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   'oh-my-pi': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
+  'vault-viewer': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   openclaw: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   'openclaw-chat': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   'openclaw-sessions': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
@@ -100,8 +103,14 @@ export const DEFAULT_POLICIES: Record<ViewType, SpawnPolicy> = {
   'memory-kernel': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   acf: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
 
+  // HUD view
+  hud: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
+
   // Verification view
   verification: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
+
+  // HUD view
+  hud: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
 
   // AllternitOS view
   'allternit-os': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
@@ -130,6 +139,7 @@ export const DEFAULT_POLICIES: Record<ViewType, SpawnPolicy> = {
   'loops-list': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   'cron': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   'dispatch': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
+  'remote-control': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
 
   // Code views
   'new-file': { singleton: false, maxInstances: 20, allowNew: true, surface: 'view', ownsTabs: false },
@@ -179,6 +189,23 @@ export const DEFAULT_POLICIES: Record<ViewType, SpawnPolicy> = {
   "design-view-market": { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   "design-view-compare": { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   "design-marketplace": { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
+
+  // Docs editor (GenOffice)
+  docs: { singleton: false, maxInstances: 5, allowNew: true, surface: 'view', ownsTabs: false },
+  // Slides editor (GenOffice)
+  slides: { singleton: false, maxInstances: 5, allowNew: true, surface: 'view', ownsTabs: false },
+  // Sheets editor (GenOffice)
+  sheets: { singleton: false, maxInstances: 5, allowNew: true, surface: 'view', ownsTabs: false },
+  // PDF viewer (GenOffice)
+  pdf: { singleton: false, maxInstances: 5, allowNew: true, surface: 'view', ownsTabs: false },
+  // Markdown preview (anydoc)
+  'markdown-preview': { singleton: false, maxInstances: 5, allowNew: true, surface: 'view', ownsTabs: false },
+  // API Capture / Site APIs
+  'site-apis': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
+  // Model Lab
+  'model-lab': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
+  // Allternit Sign (native client-side PDF signing)
+  sign: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
 
 };
 

@@ -5,7 +5,7 @@ import { useBrowserStore } from '../capsules/browser';
 import { useBrowserShortcutsStore, getFaviconUrl } from '../capsules/browser/browserShortcuts.store';
 import { useBrowserAgentStore } from '../capsules/browser/browserAgent.store';
 import { GizziMascot, type GizziEmotion } from '../components/ai-elements/GizziMascot';
-import { MatrixLogo } from '../components/ai-elements/MatrixLogo';
+
 import { Globe, MagnifyingGlass, X, Plus, Clock, PuzzlePiece } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 
@@ -236,7 +236,7 @@ export function BrowserPaneWrapper({ children }: { children: React.ReactNode }):
             <div className="mb-6 relative cursor-pointer" onMouseEnter={() => { setIsHovering(true); pulseMascot('pleased'); }} onMouseLeave={() => { setIsHovering(false); setMascotEmotion('steady'); }}>
               <div className={cn("absolute -inset-6 rounded-full blur-[10px] pointer-events-none transition-all duration-400 ease", isHovering ? "scale-110 opacity-100" : "scale-80 opacity-0")} style={{ background: browserTokens.soft }} />
               <div className={cn("transition-transform duration-300 ease", isHovering ? "scale-110" : "scale-100")}>
-                <MatrixLogo state="idle" size={84} />
+                <img src="/brand/matrix/matrix-logo.svg" alt="Allternit" style={{ width: 84, height: 84 }} />
               </div>
             </div>
             <h1 className="text-[32px] font-medium text-[var(--text-primary)] mb-2 font-[var(--font-research)]" style={{ animation: `${greeting.titleAnim} 0.6s ease-out 100ms both` }}>{greeting.title}</h1>

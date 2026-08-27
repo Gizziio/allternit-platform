@@ -1,0 +1,176 @@
+---
+title: 'allternit-mux'
+description: 'Unified agent terminal multiplexer daemon and CLI.'
+---
+
+## Overview
+
+`allternit-mux` is a local terminal multiplexer daemon designed for agent workflows. It manages sessions, panes, and PTY processes over a Unix domain socket and exposes an NDJSON request/response API. The CLI can start the daemon, create sessions, split panes, run commands, send input, and inspect agent state.
+
+`allternit-mux` is used by Gizzi Code for terminal and PTY features and is bundled into the Allternit Hosted Runtime image.
+
+## Socket path
+
+By default the daemon listens on:
+
+```
+~/.allternit/mux/mux.sock
+```
+
+Override with:
+
+```bash
+allternit-mux --socket /tmp/custom-mux.sock ...
+allternit-mux --state-dir /tmp/mux ...
+```
+
+The environment variable `ALLTERNIT_MUX_SOCKET` also overrides the socket path.
+
+## Start the daemon
+
+```bash
+allternit-mux serve
+```
+
+The daemon runs until it receives `SIGINT`, `SIGTERM`, or a `server.stop` request.
+
+## CLI commands
+
+| Command | Description |
+|---------|-------------|
+| `serve` | Run the multiplexer daemon. |
+| `session create` | Create a session. |
+| `session list` | List sessions. |
+| `session close <id>` | Close a session. |
+| `pane create <session_id>` | Create a root pane. |
+| `pane split <session_id>` | Split a pane. |
+| `pane list <session_id>` | List panes. |
+| `pane run <pane_id> -- <command...>` | Run a command in a pane. |
+| `pane read <pane_id>` | Read pane scrollback or screen. |
+| `pane send <pane_id> <text>` | Send text to a pane. |
+| `pane resize <pane_id>` | Resize a pane. |
+| `pane close <pane_id>` | Close a pane. |
+| `agent list` | List detected agents. |
+| `agent state <pane_id>` | Get agent state for a pane. |
+| `attach <pane_id>` | Attach this terminal to a pane. |
+| `wait <pane_id> --status <status>` | Block until an agent reaches a state. |
+| `wait-file <path>` | Block until a file exists. |
+| `stop` | Stop the daemon. |
+
+## Examples
+
+### Create a session and pane
+
+```bash
+allternit-mux session create --label "prod-debug"
+# { "type": "session", "session": { "id": "sess_abc", "label": "prod-debug", ... } }
+
+allternit-mux pane create sess_abc
+# { "type": "pane", "pane": { "id": "pane_xyz", ... } }
+```
+
+### Run a command
+
+```bash
+allternit-mux pane run pane_xyz -- ls -la
+```
+
+### Send input
+
+```bash
+allternit-mux pane send pane_xyz "echo hello"
+```
+
+Use `--verified` to confirm the text renders before pressing Enter:
+
+```bash
+allternit-mux pane send pane_xyz "confirm deploy" --verified
+```
+
+### Read output
+
+```bash
+# Recent scrollback
+allternit-mux pane read pane_xyz --lines 50
+
+# Currently visible screen
+allternit-mux pane read pane_xyz --source screen
+```
+
+### Attach interactively
+
+```bash
+allternit-mux attach pane_xyz
+```
+
+Detach with `Ctrl-b q`.
+
+### Wait for an agent state
+
+```bash
+allternit-mux wait pane_xyz --status idle --timeout-secs 300
+```
+
+## Daemon API protocol
+
+Clients connect over the Unix socket and send one JSON object per line. The daemon responds with one JSON object per line. Event subscriptions use the `events.subscribe` method.
+
+### Request format
+
+```json
+{ "id": "1", "method": "session.create", "params": { "label": "example" } }
+```
+
+### Response format
+
+```json
+{ "id": "1", "result": { "type": "session", "session": { "id": "sess_abc" } } }
+```
+
+### Error format
+
+```json
+{ "id": "1", "error": { "code": "not_found", "message": "pane not found" } }
+```
+
+## Daemon methods
+
+| Method | Params | Description |
+|--------|--------|-------------|
+| `ping` | — | Returns `{ "type": "pong", "protocol": 1 }`. |
+| `server.status` | — | Daemon status and session count. |
+| `server.stop` | — | Shuts down the daemon. |
+| `events.subscribe` | `{ "types": [...] }` | Subscribe to pane events. |
+| `session.create` | `{ "label", "cwd" }` | Create a session. |
+| `session.list` | — | List sessions. |
+| `session.get` | `{ "session_id" }` | Get a session. |
+| `session.close` | `{ "session_id" }` | Close a session. |
+| `pane.split` | `{ "session_id", "direction", "ratio", "cols", "rows", "command", "env" }` | Split a pane. |
+| `pane.create` | `{ "session_id", "cols", "rows", "command", "env" }` | Create a root pane. |
+| `pane.list` | `{ "session_id" }` | List panes. |
+| `pane.get` | `{ "pane_id" }` | Get pane info and agent state. |
+| `pane.run` | `{ "pane_id", "command": [...], "env": {} }` | Run a command. |
+| `pane.send_input` | `{ "pane_id", "data" }` | Send raw input. |
+| `pane.send_verified` | `{ "pane_id", "data", "timeout_ms" }` | Send input after verifying it appears. |
+| `pane.read` | `{ "pane_id", "lines", "source" }` | Read output. |
+| `pane.resize` | `{ "pane_id", "cols", "rows" }` | Resize pane. |
+| `pane.close` | `{ "pane_id" }` | Close pane. |
+| `agent.list` | — | List detected agents. |
+| `agent.state` | `{ "pane_id" }` | Get agent state. |
+| `wait.file` | `{ "path", "timeout_ms" }` | Wait for a file. |
+
+## Error codes
+
+| Code | Meaning |
+|------|---------|
+| `parse_error` | Invalid JSON on the socket. |
+| `not_found` | Session or pane does not exist. |
+| `invalid_params` | Missing or invalid parameters. |
+| `internal` | Unexpected daemon error. |
+| `unknown_method` | Method not implemented. |
+
+## Related pages
+
+- [Gizzi Code CLI](/cli/overview)
+- [Hosted Runtime](/byoc/hosted-runtime)
+- [Agent Daemon](/cli/agent-daemon)

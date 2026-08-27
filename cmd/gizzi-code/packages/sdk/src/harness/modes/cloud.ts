@@ -332,7 +332,11 @@ export async function completeViaCloud(
     );
   }
 
-  return response.json();
+  return response.json() as Promise<{
+    content: string;
+    tool_calls?: Array<{ id: string; name: string; arguments: Record<string, unknown> }>;
+    usage: { input_tokens: number; output_tokens: number };
+  }>;
 }
 
 /**
@@ -374,6 +378,8 @@ export async function listCloudModels(
     );
   }
 
-  const data = await response.json();
+  const data = await response.json() as {
+    models?: Array<{ id: string; name: string; provider: string; tier: string; capabilities: string[] }>;
+  };
   return data.models || [];
 }

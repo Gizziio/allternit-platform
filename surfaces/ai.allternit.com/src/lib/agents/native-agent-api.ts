@@ -77,6 +77,12 @@ export interface AgentContext {
   governanceContext?: {
     workspaceFiles?: string[];
   };
+  /** Runtime env vars resolved from harness, vault secrets, and connectors. */
+  runtimeEnv?: Record<string, string>;
+  /** Bot messaging and cross-surface configuration. */
+  messagingConfig?: Record<string, unknown>;
+  /** Bot-owned identity channels (email, phone, wallet). */
+  identityChannels?: Record<string, unknown>;
   [key: string]: unknown;
 }
 
@@ -134,12 +140,18 @@ interface BackendSessionListResponse {
   count: number;
 }
 
+export interface BrainRef {
+  providerID: string;
+  modelID: string;
+  authProfileId?: string;
+}
+
 export interface CreateNativeAgentSessionRequest {
   name?: string;
   description?: string;
   agentId?: string;
   agentName?: string;
-  model?: string;
+  model?: BrainRef;
   tags?: string[];
   metadata?: Record<string, unknown>;
   /** Origin surface (chat, cowork, code, browser) */

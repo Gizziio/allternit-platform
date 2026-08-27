@@ -6,9 +6,21 @@
  */
 
 import { useState, useEffect } from "react"
+import { ThinkingOrb, type OrbState } from "thinking-orbs"
 import { useAllternitTheme, AllternitRuntimeState, getStatusColor } from "../theme/allternit-theme.tsx"
 import { cn } from "@/lib/utils"
 import { useIsClient } from "@/lib/hooks/use-is-client"
+
+const RUNTIME_STATE_TO_ORB: Record<AllternitRuntimeState, OrbState> = {
+  idle: "breathing",
+  connecting: "connecting",
+  hydrating: "connecting",
+  planning: "breathing",
+  web: "searching",
+  executing: "working",
+  responding: "composing",
+  compacting: "solving",
+}
 
 export interface StatusBarProps {
   /** Current runtime state */
@@ -80,7 +92,7 @@ export function StatusBar({
         {/* Status Indicator */}
         <div className="flex items-center gap-2">
           {state !== "idle" && (
-            <StatusIndicator color={statusColor} />
+            <ThinkingOrb state={RUNTIME_STATE_TO_ORB[state]} size={20} />
           )}
           <span className="font-bold" style={{ color: statusColor }}>
             {theme.glyph.status} {statusLabel}
@@ -167,18 +179,6 @@ export function StatusBar({
         )}
       </div>
     </div>
-  )
-}
-
-/** Animated status indicator */
-function StatusIndicator({ color }: { color: string }) {
-  return (
-    <span
-      className="inline-block size-2 rounded-full animate-pulse"
-      style={{
-        background: color,
-      }}
-    />
   )
 }
 

@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { CheckCircle } from "@phosphor-icons/react";
 import { useAgentStore } from "@/lib/agents/agent.store";
-import type { Agent, HarnessConfig, AppMode, AgentType } from "@/lib/agents/agent.types";
+import type { Agent, CreateAgentInput, HarnessConfig, AppMode, AgentType, BotProfile, BotCategory, AgentConnectorBinding, AgentSecretRef, AgentMessagingConfig, AgentIdentityChannels, AgentVMOperatorConfig } from "@/lib/agents/agent.types";
 import { STUDIO_THEME } from "../AgentView.constants";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,6 +19,9 @@ import {
 } from "@/components/ui/select";
 import { validateAgentCreationChecklist } from "@/lib/agents";
 import { createModuleLogger } from "@/lib/logger";
+import { ConnectorsStep } from "../steps/ConnectorsStep";
+import { IdentityChannelsStep } from "../steps/IdentityChannelsStep";
+import { VMOperatorStep } from "../steps/VMOperatorStep";
 
 const logger = createModuleLogger('EditAgentForm');
 
@@ -36,15 +39,63 @@ export function EditAgentForm({ agent, onCancel, onSaved }: { agent: Agent; onCa
   const [allowedSurfaces, setAllowedSurfaces] = useState<AppMode[]>(agent.allowedSurfaces ?? ['chat']);
   const [trustTier, setTrustTier] = useState<Agent['trustTier']>(agent.trustTier ?? 'standard');
   const [writeScope, setWriteScope] = useState(agent.writeScope ?? 'workspace');
+  const [isBot, setIsBot] = useState(agent.isBot === true);
+  const [botProfile, setBotProfile] = useState<BotProfile | undefined>(agent.botProfile);
+  const [connectorBindings, setConnectorBindings] = useState<AgentConnectorBinding[]>(agent.connectorBindings ?? []);
+  const [secretRefs, setSecretRefs] = useState<AgentSecretRef[]>(agent.secretRefs ?? []);
+  const [messagingConfig, setMessagingConfig] = useState<AgentMessagingConfig | undefined>(agent.messagingConfig);
+  const [identityChannels, setIdentityChannels] = useState<AgentIdentityChannels | undefined>(agent.identityChannels);
+  const [vmOperator, setVMOperator] = useState<AgentVMOperatorConfig | undefined>(agent.vmOperator);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [checklistError, setChecklistError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const formData: Partial<CreateAgentInput> = useMemo(() => ({
+    name,
+    description,
+    type,
+    harness,
+    allowedSurfaces,
+    trustTier,
+    writeScope,
+    isBot,
+    botProfile: isBot ? botProfile : undefined,
+    connectorBindings,
+    secretRefs,
+    messagingConfig,
+    identityChannels,
+    vmOperator,
+  }), [name, description, type, harness, allowedSurfaces, trustTier, writeScope, isBot, botProfile, connectorBindings, secretRefs, messagingConfig, identityChannels, vmOperator]);
+
+  const setFormData = (updater: React.SetStateAction<Partial<CreateAgentInput>>) => {
+    const next = typeof updater === 'function' ? (updater as (prev: Partial<CreateAgentInput>) => Partial<CreateAgentInput>)(formData) : updater;
+    if (next.connectorBindings !== undefined) setConnectorBindings(next.connectorBindings ?? []);
+    if (next.secretRefs !== undefined) setSecretRefs(next.secretRefs ?? []);
+    if (next.messagingConfig !== undefined) setMessagingConfig(next.messagingConfig);
+    if (next.identityChannels !== undefined) setIdentityChannels(next.identityChannels);
+    if (next.vmOperator !== undefined) setVMOperator(next.vmOperator);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setChecklistError(null);
     setSubmitError(null);
-    const updates = { name, description, type, harness, allowedSurfaces, trustTier, writeScope };
+    const updates: Partial<CreateAgentInput> = {
+      name,
+      description,
+      type,
+      harness,
+      allowedSurfaces,
+      trustTier,
+      writeScope,
+      isBot,
+      botProfile: isBot ? botProfile : undefined,
+      connectorBindings,
+      secretRefs,
+      messagingConfig,
+      identityChannels,
+      vmOperator,
+    };
     const merged = { ...agent, ...updates };
     const checklist = validateAgentCreationChecklist(merged);
     if (!checklist.isValid) {
@@ -151,6 +202,117 @@ export function EditAgentForm({ agent, onCancel, onSaved }: { agent: Agent; onCa
               />
             </div>
           </div>
+
+          <div className="space-y-4 rounded-xl border border-solid border-[var(--border-subtle)] bg-[var(--bg-card)] p-5">
+            <div className="flex items-center justify-between">
+              <Label style={{ color: STUDIO_THEME.textPrimary }}>Package as Bot</Label>
+              <input
+                type="checkbox"
+                checked={isBot}
+                onChange={(e) => {
+                  const next = e.target.checked;
+                  setIsBot(next);
+                  if (next && !botProfile) {
+                    setBotProfile({
+                      displayName: name,
+                      tagline: description,
+                      welcomeMessage: `Hi, I'm ${name}. How can I help?`,
+                      starterPrompts: [],
+                      accentColor: '#6366f1',
+                      groupChatEnabled: false,
+                      botCategory: 'custom',
+                    });
+                  }
+                }}
+                className="size-4 accent-[var(--accent-primary)]"
+              />
+            </div>
+
+            {isBot && botProfile && (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-2 sm:col-span-2">
+                  <Label style={{ color: STUDIO_THEME.textSecondary }}>Display Name</Label>
+                  <Input
+                    value={botProfile.displayName}
+                    onChange={(e) => setBotProfile({ ...botProfile, displayName: e.target.value })}
+                    style={{ background: STUDIO_THEME.bg, borderColor: STUDIO_THEME.borderSubtle, color: STUDIO_THEME.textPrimary }}
+                  />
+                </div>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label style={{ color: STUDIO_THEME.textSecondary }}>Tagline</Label>
+                  <Input
+                    value={botProfile.tagline || ''}
+                    onChange={(e) => setBotProfile({ ...botProfile, tagline: e.target.value })}
+                    style={{ background: STUDIO_THEME.bg, borderColor: STUDIO_THEME.borderSubtle, color: STUDIO_THEME.textPrimary }}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label style={{ color: STUDIO_THEME.textSecondary }}>Accent Color</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="color"
+                      value={botProfile.accentColor || '#6366f1'}
+                      onChange={(e) => setBotProfile({ ...botProfile, accentColor: e.target.value })}
+                      className="h-10 w-14"
+                      style={{ background: STUDIO_THEME.bg, borderColor: STUDIO_THEME.borderSubtle }}
+                    />
+                    <Input
+                      value={botProfile.accentColor || '#6366f1'}
+                      onChange={(e) => setBotProfile({ ...botProfile, accentColor: e.target.value })}
+                      style={{ background: STUDIO_THEME.bg, borderColor: STUDIO_THEME.borderSubtle, color: STUDIO_THEME.textPrimary }}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label style={{ color: STUDIO_THEME.textSecondary }}>Bot Category</Label>
+                  <Select
+                    value={botProfile.botCategory || 'custom'}
+                    onValueChange={(value) => setBotProfile({ ...botProfile, botCategory: value as BotCategory })}
+                  >
+                    <SelectTrigger style={{ background: STUDIO_THEME.bg, borderColor: STUDIO_THEME.borderSubtle, color: STUDIO_THEME.textPrimary }}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="research">Research</SelectItem>
+                      <SelectItem value="code">Code</SelectItem>
+                      <SelectItem value="writing">Writing</SelectItem>
+                      <SelectItem value="data">Data</SelectItem>
+                      <SelectItem value="sales">Sales</SelectItem>
+                      <SelectItem value="design">Design</SelectItem>
+                      <SelectItem value="ops">Operations</SelectItem>
+                      <SelectItem value="custom">Custom</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label style={{ color: STUDIO_THEME.textSecondary }}>Welcome Message</Label>
+                  <Textarea
+                    value={botProfile.welcomeMessage || ''}
+                    onChange={(e) => setBotProfile({ ...botProfile, welcomeMessage: e.target.value })}
+                    rows={2}
+                    style={{ background: STUDIO_THEME.bg, borderColor: STUDIO_THEME.borderSubtle, color: STUDIO_THEME.textPrimary }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          <ConnectorsStep
+            formData={formData}
+            setFormData={setFormData}
+            isBotMode={isBot}
+          />
+
+          <IdentityChannelsStep
+            formData={formData}
+            setFormData={setFormData}
+            agentId={agent.id}
+          />
+
+          <VMOperatorStep
+            formData={formData}
+            setFormData={setFormData}
+          />
 
           {checklistError && (
             <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-[var(--status-error)] text-sm">

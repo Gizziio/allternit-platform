@@ -20,20 +20,40 @@ import {
   parseShellFrontmatter,
 } from '../frontmatterParser.js'
 import { getFsImplementation, isDuplicatePath } from '../fsOperations.js'
-import {
-  extractDescriptionFromMarkdown,
-  parseSlashCommandToolsFromFrontmatter,
-} from '../markdownConfigLoader.js'
 import { parseUserSpecifiedModel } from '../model/model.js'
 import { executeShellCommandsInPrompt } from '../promptShellExecution.js'
-import { loadAllPluginsCacheOnly } from './pluginLoader.js'
-import {
-  loadPluginOptions,
-  substitutePluginVariables,
-  substituteUserConfigInContent,
-} from './pluginOptionsStorage.js'
 import type { CommandMetadata, PluginManifest } from './schemas.js'
 import { walkPluginMarkdown } from './walkPluginMarkdown.js'
+
+// Lazily loaded to avoid a static circular import through markdownConfigLoader.js.
+// Populated by ensureMarkdownConfigLoader() before any synchronous use.
+let markdownConfigLoaderModule:
+  | typeof import('../markdownConfigLoader.js')
+  | undefined
+
+async function ensureMarkdownConfigLoader(): Promise<
+  typeof import('../markdownConfigLoader.js')
+> {
+  if (!markdownConfigLoaderModule) {
+    markdownConfigLoaderModule = await import('../markdownConfigLoader.js')
+  }
+  return markdownConfigLoaderModule
+}
+
+// Lazily loaded to avoid a static circular import through pluginOptionsStorage.js.
+// Populated by ensurePluginOptionsStorage() before any synchronous use.
+let pluginOptionsStorageModule:
+  | typeof import('./pluginOptionsStorage.js')
+  | undefined
+
+async function ensurePluginOptionsStorage(): Promise<
+  typeof import('./pluginOptionsStorage.js')
+> {
+  if (!pluginOptionsStorageModule) {
+    pluginOptionsStorageModule = await import('./pluginOptionsStorage.js')
+  }
+  return pluginOptionsStorageModule
+}
 
 // Similar to MarkdownFile but for plugin sources
 type PluginMarkdownFile = {
@@ -234,7 +254,7 @@ function createPluginCommand(
     )
     const description =
       validatedDescription ??
-      extractDescriptionFromMarkdown(
+      markdownConfigLoaderModule!.extractDescriptionFromMarkdown(
         content,
         isSkill ? 'Plugin skill' : 'Plugin command',
       )
@@ -243,23 +263,24 @@ function createPluginCommand(
     const rawAllowedTools = frontmatter['allowed-tools']
     const substitutedAllowedTools =
       typeof rawAllowedTools === 'string'
-        ? substitutePluginVariables(rawAllowedTools, {
-            path: pluginPath,
-            source: sourceName,
-          })
+        ? pluginOptionsStorageModule!.substitutePluginVariables(
+            rawAllowedTools,
+            { path: pluginPath, source: sourceName },
+          )
         : Array.isArray(rawAllowedTools)
           ? rawAllowedTools.map(tool =>
               typeof tool === 'string'
-                ? substitutePluginVariables(tool, {
+                ? pluginOptionsStorageModule!.substitutePluginVariables(tool, {
                     path: pluginPath,
                     source: sourceName,
                   })
                 : tool,
             )
           : rawAllowedTools
-    const allowedTools = parseSlashCommandToolsFromFrontmatter(
-      substitutedAllowedTools,
-    )
+    const allowedTools =
+      markdownConfigLoaderModule!.parseSlashCommandToolsFromFrontmatter(
+        substitutedAllowedTools,
+      )
 
     const argumentHint = frontmatter['argument-hint'] as string | undefined
     const argumentNames = parseArgumentNames(
@@ -338,6 +359,11 @@ function createPluginCommand(
         )
 
         // Replace ${CLAUDE_PLUGIN_ROOT} and ${CLAUDE_PLUGIN_DATA} with their paths
+        const {
+          substitutePluginVariables,
+          substituteUserConfigInContent,
+          loadPluginOptions,
+        } = await import('./pluginOptionsStorage.js')
         finalContent = substitutePluginVariables(finalContent, {
           path: pluginPath,
           source: sourceName,
@@ -420,7 +446,9 @@ export const getPluginCommands = memoize(async (): Promise<Command[]> => {
   if (isBareMode() && getInlinePlugins().length === 0) {
     return []
   }
+  await Promise.all([ensureMarkdownConfigLoader(), ensurePluginOptionsStorage()])
   // Only load commands from enabled plugins
+  const { loadAllPluginsCacheOnly } = await import('./pluginLoader.js')
   const { enabled, errors } = await loadAllPluginsCacheOnly()
 
   if (errors.length > 0) {
@@ -844,7 +872,9 @@ export const getPluginSkills = memoize(async (): Promise<Command[]> => {
   if (isBareMode() && getInlinePlugins().length === 0) {
     return []
   }
+  await Promise.all([ensureMarkdownConfigLoader(), ensurePluginOptionsStorage()])
   // Only load skills from enabled plugins
+  const { loadAllPluginsCacheOnly } = await import('./pluginLoader.js')
   const { enabled, errors } = await loadAllPluginsCacheOnly()
 
   if (errors.length > 0) {

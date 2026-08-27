@@ -1,0 +1,16 @@
+{
+  "chips": [
+    { "pattern": "Apple M4", "base_tok_per_sec_q4_7b_4k": 50.0 },
+    { "pattern": "Apple M3", "base_tok_per_sec_q4_7b_4k": 35.0 },
+    { "pattern": "Apple M2", "base_tok_per_sec_q4_7b_4k": 25.0 },
+    { "pattern": "Apple M1", "base_tok_per_sec_q4_7b_4k": 18.0 },
+    { "pattern": "RTX 4090", "base_tok_per_sec_q4_7b_4k": 130.0 },
+    { "pattern": "RTX 4080", "base_tok_per_sec_q4_7b_4k": 100.0 },
+    { "pattern": "RTX 3090", "base_tok_per_sec_q4_7b_4k": 80.0 },
+    { "pattern": "RTX 3080", "base_tok_per_sec_q4_7b_4k": 65.0 },
+    { "pattern": "A100", "base_tok_per_sec_q4_7b_4k": 150.0 },
+    { "pattern": "A10", "base_tok_per_sec_q4_7b_4k": 55.0 },
+    { "pattern": "RX 7900", "base_tok_per_sec_q4_7b_4k": 70.0 }
+  ],
+  "cpu_fallback_base_tok_per_sec_q4_7b_4k": 5.0
+}

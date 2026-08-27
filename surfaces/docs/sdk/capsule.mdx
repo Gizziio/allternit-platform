@@ -1,0 +1,235 @@
+---
+title: Capsule SDK
+description: Headless SDK for Allternit capsule lifecycle, contracts, and guardrails.
+---
+
+# Capsule SDK
+
+The Capsule SDK (`@allternit/capsule-sdk`) is a headless library for building and controlling Allternit capsules. A capsule is a runtime-surface contract that declares **where** and **when** UI happens, while A2UI / AG-UI remains the source of visual truth. The SDK enforces lifecycle state, capabilities, event semantics, action registration, and UX minimums.
+
+## Overview
+
+Use the Capsule SDK when you are building:
+
+- A custom renderer or agent-facing surface.
+- A browser, desktop, or embedded capsule that must report its state to Allternit.
+- A tool that needs to register actions and prevent dead UI buttons.
+
+## Installation
+
+```bash
+npm install @allternit/capsule-sdk
+```
+
+## Quick start
+
+```typescript
+import {
+  createCapsuleController,
+  createStageController,
+  createRendererController,
+  BROWSER_ACTIONS,
+  createActionBuilder,
+} from '@allternit/capsule-sdk';
+
+const capsule = createCapsuleController({
+  spaceId: 'workspace-1',
+  type: 'browser',
+  capabilities: {
+    staged: true,
+    streaming: true,
+    gpu: true,
+    multiTab: true,
+    agentControllable: true,
+  },
+});
+
+// Register an action
+capsule.actions.register(
+  capsule.id,
+  createActionBuilder()
+    .id(BROWSER_ACTIONS.NAV_BACK)
+    .label('Back')
+    .enabled(true)
+    .run(() => navigateBack())
+    .build()
+);
+
+// Update lifecycle
+capsule.setLifecycle({ phase: 'ready' });
+
+const state = capsule.getLifecycle();
+console.log(state.phase); // 'ready'
+```
+
+## Core concepts
+
+### Lifecycle
+
+Every capsule follows the same state machine. Transitions are validated by the SDK.
+
+```
+init → connecting → ready ↔ busy
+  ↓                    ↓
+error ↔ suspended → disposed
+```
+
+| Phase | Description |
+|-------|-------------|
+| `init` | Capsule is initializing. |
+| `connecting` | Establishing connection to a service or resource. |
+| `ready` | Ready for interaction. |
+| `busy` | Processing an operation. |
+| `error` | Error state that requires attention. |
+| `suspended` | Paused; can be resumed. |
+| `disposed` | Cleaned up and no longer functional. |
+
+```typescript
+import { isValidTransition, getValidNextPhases } from '@allternit/capsule-sdk';
+
+console.log(isValidTransition('ready', 'busy')); // true
+console.log(getValidNextPhases('ready')); // ['busy', 'error', 'suspended', 'disposed']
+```
+
+### Capabilities
+
+Capabilities declare what a capsule supports. A2UI queries these to decide how to render the surface.
+
+| Capability | Description |
+|------------|-------------|
+| `staged` | Supports staged presentation modes (e.g., 50/70/100%). |
+| `streaming` | Supports streaming content. |
+| `gpu` | Supports GPU-accelerated rendering. |
+| `multiTab` | Supports multiple tabs. |
+| `agentControllable` | Can be controlled by an agent (default `true`). |
+
+```typescript
+import { supportsStreaming, mergeCapabilities } from '@allternit/capsule-sdk';
+
+const merged = mergeCapabilities(
+  { streaming: false },
+  { streaming: true, gpu: true }
+);
+console.log(supportsStreaming(merged)); // true
+```
+
+### Events
+
+State changes emit events on the capsule's event bus. A2UI subscribes to these events and decides how to render.
+
+| Event constant | Emitted when |
+|----------------|--------------|
+| `EVENT_LIFECYCLE_CHANGED` | The capsule phase or status text changes. |
+| `EVENT_CAPABILITIES_CHANGED` | Capabilities are updated. |
+| `EVENT_PRESENTATION_CHANGED` | Presentation mode changes. |
+| `EVENT_STAGE_CHANGED` | Stage state changes. |
+| `EVENT_RENDERER_CHANGED` | Renderer state changes. |
+| `EVENT_ACTION_MISSING` | A requested action is not registered. |
+| `EVENT_ERROR` | An error occurs. |
+
+```typescript
+capsule.events.on(EVENT_LIFECYCLE_CHANGED, (event) => {
+  console.log(event.payload.lifecycle.phase);
+});
+```
+
+### Actions
+
+Actions must be registered before A2UI can render them. This prevents dead buttons.
+
+```typescript
+import { createActionRegistry, createActionBuilder, BROWSER_ACTIONS } from '@allternit/capsule-sdk';
+
+const registry = createActionRegistry();
+const action = createActionBuilder()
+  .id(BROWSER_ACTIONS.NAV_RELOAD)
+  .label('Reload')
+  .icon('refresh')
+  .enabled(true)
+  .run(async () => await reloadPage())
+  .build();
+
+registry.register('capsule-1', action);
+```
+
+Common browser action IDs:
+
+| Constant | ID |
+|----------|-----|
+| `NAV_BACK` | `nav.back` |
+| `NAV_FORWARD` | `nav.forward` |
+| `NAV_RELOAD` | `nav.reload` |
+| `MODE_INSPECT` | `mode.inspect` |
+| `MODE_LIVE` | `mode.live` |
+| `RENDERER_STREAM` | `renderer.stream` |
+| `RENDERER_GPU` | `renderer.gpu` |
+| `STAGE_ENTER` | `stage.enter` |
+| `STAGE_EXIT` | `stage.exit` |
+| `STAGE_PRESET_50` | `stage.preset.50` |
+| `STAGE_PRESET_70` | `stage.preset.70` |
+| `STAGE_PRESET_100` | `stage.preset.100` |
+| `TAB_NEW` | `tab.new` |
+| `TAB_CLOSE` | `tab.close` |
+| `TAB_SWITCH` | `tab.switch` |
+
+## Controllers
+
+| Controller | Factory | Responsibility |
+|------------|---------|----------------|
+| `CapsuleController` | `createCapsuleController(options)` | Lifecycle, capabilities, presentation, actions, and events for one capsule. |
+| `StageController` | `createStageController(spaceId, capsuleId)` | Stage state and preset transitions. |
+| `RendererController` | `createRendererController(spaceId, capsuleId, opts?)` | Renderer mode selection and URL-based suggestions. |
+
+### Capsule controller options
+
+```typescript
+interface CapsuleControllerOptions {
+  id?: CapsuleId;
+  spaceId: SpaceId;
+  type: string;
+  capabilities?: CapsuleCapabilities;
+  eventBus?: EventBus;
+  onLifecycleChange?: (state: CapsuleLifecycleState) => void;
+  onCapabilitiesChange?: (capabilities: CapsuleCapabilities) => void;
+  onPresentationChange?: (presentation: Presentation) => void;
+}
+```
+
+### Capsule controller methods
+
+| Method | Description |
+|--------|-------------|
+| `getLifecycle()` | Get the current lifecycle state. |
+| `setLifecycle(partial)` | Update phase, status text, or error. |
+| `getCapabilities()` | Get current capabilities. |
+| `setCapabilities(caps)` | Replace capabilities. |
+| `getPresentation()` | Get current presentation mode. |
+| `setPresentation(p)` | Set presentation mode. |
+| `actions` | Action registry for the capsule. |
+| `events` | Event bus for the capsule. |
+
+## Guards
+
+The SDK provides runtime guards that validate invariants and action usage.
+
+```typescript
+import { runGuards, validateLifecycle, createActionGuard } from '@allternit/capsule-sdk';
+
+const actionGuard = createActionGuard(registry);
+const canRun = actionGuard.canExecute(capsuleId, BROWSER_ACTIONS.NAV_BACK);
+```
+
+## Error handling
+
+| Scenario | Behavior |
+|----------|----------|
+| Invalid lifecycle transition | Transition is rejected with a warning. |
+| Missing action ID in builder | `createActionBuilder().build()` throws `"Action ID is required"`. |
+| Unregistered action requested | Emits `EVENT_ACTION_MISSING`. |
+
+## Related pages
+
+- [Surfaces overview](/surfaces/platform) — how A2UI consumes capsules
+- [Agent Studio](/surfaces/agent-studio) — design-time surface for capsule agents
+- [Gizzi Runtime](/core/gizzi-runtime) — execution engine behind capsules
+- [Capsule Manager](/surfaces/capsule-manager) — operational surface for capsule fleets

@@ -9,6 +9,16 @@ import { designSkillsPlugin } from './src/lib/design/design-skills-plugin'
 
 const require = createRequire(import.meta.url)
 const blocksuiteIconsLit = require.resolve('@blocksuite/icons/lit')
+// Force Univer to use the same @univerjs/core that office-sheets-app depends
+// on. Without this, the platform surface's legacy design-mode editor pins
+// @univerjs/core@0.21.1, which conflicts with office-sheets-app's 0.25.x
+// plugins and silently breaks the grid render.
+const univerCoreEntry = require.resolve('@univerjs/core', {
+  paths: [path.resolve(__dirname, '../../packages/@allternit/office-sheets-app')],
+})
+// require.resolve returns lib/{cjs|es}/index.js; the alias must point at the
+// package root so subpath imports like @univerjs/core/facade still resolve.
+const univerCore = path.dirname(path.dirname(path.dirname(univerCoreEntry)))
 
 /**
  * Development-only dispatch handoff endpoints.
@@ -16,6 +26,31 @@ const blocksuiteIconsLit = require.resolve('@blocksuite/icons/lit')
  * Production builds must replace this with a real backend implementation
  * (e.g. /api/v1/dispatch/claim and /api/v1/dispatch/status backed by Redis/SQLite).
  */
+/**
+ * Dev-only: Vite's MPA server matches `/remote-control` to `remote-control.html`
+ * because of the rollup input key. The platform route `/remote-control` must
+ * serve `index.html` (the SPA shell) so the hub page renders, while
+ * `/remote-control.html` continues to serve the standalone dashboard entry.
+ */
+function remoteControlRoutePlugin(): Plugin {
+  return {
+    name: 'allternit-remote-control-route',
+    configureServer(server) {
+      server.middlewares.use('/remote-control', (req, res, next) => {
+        if (req.method !== 'GET') return next();
+        const url = req.url ?? '/';
+        // Only rewrite the exact hub path (with optional query string), not
+        // static assets under /remote-control/ or the standalone entrypoint.
+        if (url !== '/' && !url.startsWith('?')) return next();
+        // Rewrite to the platform SPA shell so Vite injects the React refresh
+        // preamble and processes the HTML transform pipeline.
+        req.url = '/index.html' + (url.startsWith('?') ? url : '');
+        next();
+      });
+    },
+  };
+}
+
 function dispatchHandoffPlugin(): Plugin {
   const claims = new Map<string, { claimedAt: number; device?: string }>();
 
@@ -89,6 +124,7 @@ function dispatchHandoffPlugin(): Plugin {
 export default defineConfig({
   plugins: [
     react(),
+    remoteControlRoutePlugin(),
     dispatchHandoffPlugin(),
     designSkillsPlugin(),
     process.env.ANALYZE === '1' && visualizer({
@@ -107,20 +143,52 @@ export default defineConfig({
   // broaden this to arbitrary process environment variables.
   envPrefix: ['VITE_', 'NEXT_PUBLIC_'],
   resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
+    alias: [
+      { find: '@', replacement: path.resolve(__dirname, './src') },
+      // The workspace root can resolve React 19 (e.g. from framer-motion dev
+      // dependencies) while this surface pins React 18. Without explicit
+      // aliases, transitive workspace imports can pull in the root React
+      // instance alongside the surface's React 18, which breaks the hook
+      // dispatcher and produces "Cannot read properties of null (reading
+      // 'useState' / 'useContext')" crashes. Force every react/react-dom
+      // import to this surface's copy.
+      { find: /^react$/, replacement: path.resolve(__dirname, './node_modules/react/index.js') },
+      { find: /^react\/jsx-runtime$/, replacement: path.resolve(__dirname, './node_modules/react/jsx-runtime.js') },
+      { find: /^react\/jsx-dev-runtime$/, replacement: path.resolve(__dirname, './node_modules/react/jsx-dev-runtime.js') },
+      { find: /^react-dom$/, replacement: path.resolve(__dirname, './node_modules/react-dom/index.js') },
+      { find: /^react-dom\/client$/, replacement: path.resolve(__dirname, './node_modules/react-dom/client.js') },
+      // Force Univer to use the same @univerjs/core@0.25.1 that
+      // office-sheets-app depends on. The bare import and every subpath
+      // (e.g. @univerjs/core/facade, @univerjs/core/lib/facade) must be
+      // rewritten to the ESM build or preserved under lib/ respectively.
+      { find: /^@univerjs\/core$/, replacement: path.resolve(univerCore, 'lib/es/index.js') },
+      // Both @univerjs/core/facade and the legacy @univerjs/core/lib/facade
+      // must resolve to the same module instance, or Univer's facade mixin
+      // extensions (e.g. getActiveWorkbook) are applied to the wrong FUniver
+      // class and the sheets renderer crashes at runtime.
+      { find: /^@univerjs\/core\/lib\/(.+)$/, replacement: `${univerCore}/lib/es/$1` },
+      { find: /^@univerjs\/core\/(.+)$/, replacement: `${univerCore}/lib/es/$1` },
       // @blocksuite/data-view@0.19.5 imports a misspelled icon name that was
       // removed from @blocksuite/icons. Keep the workaround in source so a
       // clean frozen-lockfile CI install behaves exactly like local builds.
-      '@blocksuite/icons/lit': path.resolve(__dirname, './src/shims/blocksuite-icons-lit.ts'),
-      'virtual:allternit-blocksuite-icons-lit-original': blocksuiteIconsLit,
-    },
+      { find: '@blocksuite/icons/lit', replacement: path.resolve(__dirname, './src/shims/blocksuite-icons-lit.ts') },
+      { find: 'virtual:allternit-blocksuite-icons-lit-original', replacement: blocksuiteIconsLit },
+    ],
+    // Force a single copy of packages that break when duplicated across the
+    // workspace graph (e.g. office-slides-app on React 18 must resolve the
+    // same react as the platform surface; Univer plugins must all share one
+    // @univerjs/core instance).
+    dedupe: ['react', 'react-dom', '@univerjs/core'],
   },
   build: {
     outDir: 'dist',
     sourcemap: process.env.SOURCEMAP === '1',
     chunkSizeWarningLimit: 2000,
     rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, 'index.html'),
+        'remote-control': path.resolve(__dirname, 'remote-control.html'),
+      },
       external: [
         /.*domains\/agent\/allternit-agent-workspace\/pkg.*/,
         'better-sqlite3',
@@ -150,6 +218,12 @@ export default defineConfig({
         target: 'http://127.0.0.1:8090',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/local-ai/, ''),
+      },
+      // Chat streaming is handled by the local gizzi runtime in dev; the
+      // allternit-api backend does not yet implement /agent-chat.
+      '/api/agent-chat': {
+        target: 'http://127.0.0.1:4096',
+        changeOrigin: true,
       },
       '/api': {
         target: 'http://127.0.0.1:8013',

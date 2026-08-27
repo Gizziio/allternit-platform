@@ -1,7 +1,6 @@
 // @ts-nocheck
 import figures from 'figures'
 import { logError } from './../utils/log.ts'
-import { callIdeRpc } from '../services/mcp/client.js'
 import type { MCPServerConnection } from '../services/mcp/types.js'
 import { ClaudeError } from '../utils/errors.js'
 import { normalizePathForComparison, pathsEqual } from '../utils/file.js'
@@ -111,6 +110,7 @@ export class DiagnosticTrackingService {
     }
 
     try {
+      const { callIdeRpc } = await import('../services/mcp/client.js')
       // Call the openFile tool to ensure the file is loaded
       await callIdeRpc(
         'openFile',
@@ -145,6 +145,7 @@ export class DiagnosticTrackingService {
     const timestamp = Date.now()
 
     try {
+      const { callIdeRpc } = await import('../services/mcp/client.js')
       const result = await callIdeRpc(
         'getDiagnostics',
         { uri: `file://${filePath}` },
@@ -198,6 +199,7 @@ export class DiagnosticTrackingService {
     // Check if we have any files with diagnostic changes
     let allDiagnosticFiles: DiagnosticFile[] = []
     try {
+      const { callIdeRpc } = await import('../services/mcp/client.js')
       const result = await callIdeRpc(
         'getDiagnostics',
         {}, // Empty params fetches all diagnostics

@@ -1,0 +1,216 @@
+---
+title: 'Translate'
+description: 'Wire-format translation layer for the Allternit LLM gateway'
+---
+
+## Overview
+
+The gateway's translate layer converts the public chat-completions request format into the runtime's native shape and maps runtime events back to a standard response format. It also produces a consistent error body across all gateway endpoints so existing client libraries can surface failures uniformly.
+
+This page documents the supported request fields, response shapes, streaming chunks, and error format.
+
+## Base URL
+
+```
+https://api.allternit.com/v1
+```
+
+For local development:
+
+```
+http://127.0.0.1:8013/v1
+```
+
+## Request translation
+
+### Chat completion request
+
+| Field | Accepted values | Notes |
+|-------|-----------------|-------|
+| `model` | policy alias, `provider/model`, or bare id | Required. |
+| `messages` | array of message objects | Required. At least one message. |
+| `temperature` | number `0`–`2` | Sampling temperature. |
+| `top_p` | number `0`–`1` | Nucleus sampling. |
+| `max_tokens` | integer `>= 1` | Maximum response tokens. |
+| `stop` | string or string[] | Stop sequences. |
+| `presence_penalty` | number | Presence penalty. |
+| `frequency_penalty` | number | Frequency penalty. |
+| `stream` | boolean | Enable SSE streaming. |
+| `stream_options` | `{ "include_usage": boolean }` | Final usage chunk. |
+| `response_format` | `{ "type": "text" \| "json_object" \| "json_schema" }` | JSON schema requires `json_schema` or normalized `schema`. |
+| `tools` | array of `{ "type": "function", "function": {...} }` | Only `function` tools are supported. |
+| `tool_choice` | string or object | Tool-selection strategy. |
+| `parallel_tool_calls` | boolean | Allow parallel tool calls. |
+| `reasoning_effort` | `none`, `minimal`, `low`, `medium`, `high`, `xhigh` | Reasoning control. |
+| `service_tier` | `auto`, `default`, `flex`, `priority`, `scale` | Provider service tier. |
+| `citations` | boolean | Request source citations. |
+| `context_cache_id` | string | Prepend a context cache. |
+| `n` | integer `1`–`10` | Number of candidates for best-of. |
+| `best_of` | boolean | Return only the best candidate. |
+| `user` | string | End-user identifier. |
+
+Unknown fields are tolerated on the request body so client SDKs can send extra metadata without causing validation errors.
+
+### Message roles
+
+| Role | Description |
+|------|-------------|
+| `system` | System instructions. Multiple system messages are concatenated. |
+| `user` | User turn. Supports `name`. |
+| `assistant` | Assistant turn. May include `tool_calls`. |
+| `tool` | Tool result. Requires `tool_call_id`. |
+
+### Message content
+
+Content may be a plain string or an array of parts:
+
+- `text`
+- `image_url`
+- `input_image`
+- `video_url`
+- `input_video`
+- `file_id`
+
+The gateway preserves images and videos as runtime `file` parts so vision-capable models receive the actual media.
+
+## Response translation
+
+### Chat completion response
+
+```json
+{
+  "id": "chatcmpl-abc123",
+  "object": "chat.completion",
+  "created": 1723500000,
+  "model": "auto",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "...",
+        "tool_calls": null,
+        "annotations": null,
+        "refusal": null
+      },
+      "finish_reason": "stop",
+      "refusal": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 25,
+    "completion_tokens": 50,
+    "total_tokens": 75,
+    "completion_tokens_details": {
+      "reasoning_tokens": 10
+    },
+    "prompt_tokens_details": {
+      "cached_tokens": 5
+    }
+  },
+  "citations": null
+}
+```
+
+### Finish reasons
+
+| Reason | Meaning |
+|--------|---------|
+| `stop` | Natural end of generation. |
+| `length` | Hit `max_tokens` or a provider length limit. |
+| `tool_calls` | The model emitted tool calls. |
+| `content_filter` | Blocked by a provider content filter. |
+| `refusal` | Gateway detected a refusal pattern in the output. |
+
+## Streaming chunks
+
+Streaming responses use server-sent events. Each `data:` line contains a chunk object.
+
+### Chunk types
+
+1. **Role chunk** — announces the assistant role.
+2. **Content delta chunk** — incremental text.
+3. **Tool-call delta chunk** — incremental tool-call arguments.
+4. **Finish chunk** — empty delta with `finish_reason`.
+5. **Usage chunk** — final usage object when `stream_options.include_usage` is true.
+
+```text
+data: {"id":"chatcmpl-...","object":"chat.completion.chunk","created":1723500000,"model":"auto","choices":[{"index":0,"delta":{"role":"assistant"}}]}
+
+data: {"id":"chatcmpl-...","object":"chat.completion.chunk","created":1723500000,"model":"auto","choices":[{"index":0,"delta":{"content":"Hello"}}]}
+
+data: {"id":"chatcmpl-...","object":"chat.completion.chunk","created":1723500000,"model":"auto","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
+
+data: [DONE]
+```
+
+Mid-stream errors emit a standard error frame before the final `[DONE]`.
+
+## Citations and annotations
+
+When `citations` is enabled and the provider supports native citations, the assistant message includes `annotations`:
+
+```json
+{
+  "annotations": [
+    {
+      "type": "url_citation",
+      "url_citation": {
+        "url": "https://example.com/doc",
+        "title": "Example doc"
+      }
+    },
+    {
+      "type": "file_citation",
+      "file_citation": {
+        "file_id": "file_abc123"
+      }
+    }
+  ]
+}
+```
+
+For providers without native citation support, the gateway prepends a RAG context block and parses `[cite:<id>]` markers from the response, returning them in the top-level `citations` array.
+
+## Error format
+
+All gateway errors return the same JSON shape:
+
+```json
+{
+  "error": {
+    "message": "...",
+    "type": "invalid_request_error",
+    "param": "model",
+    "code": "allternit.invalid_request"
+  }
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `message` | Human-readable error message. |
+| `type` | Error category, e.g. `invalid_request_error`, `server_error`. |
+| `param` | The request parameter that caused the error, if known. |
+| `code` | Machine-readable Allternit error code. |
+
+## Error codes
+
+| Code | Typical HTTP status | Meaning |
+|------|---------------------|---------|
+| `allternit.invalid_request` | 400 | Malformed request. |
+| `allternit.authentication_failed` | 401 | Invalid or missing API key. |
+| `allternit.permission_denied` | 403 | Key is not allowed to use the resource. |
+| `allternit.rate_limited` | 429 | Rate limit exceeded. |
+| `allternit.budget_exceeded` | 429 | Spend cap exceeded. |
+| `allternit.idempotency_conflict` | 409 | Idempotency key conflict. |
+| `allternit.model_not_found` | 404 | Unknown model. |
+| `allternit.upstream_error` | 502 | Runtime or provider error. |
+| `allternit.internal_error` | 500 | Internal gateway error. |
+| `allternit.content_policy_violation` | 400 | Safety classifier block. |
+
+## Related pages
+
+- [Chat Completions](/api/chat-completions) — translated request/response examples
+- [Proxy](/api/proxy) — middleware and routing that uses the translate layer
+- [Models](/api/models) — model identifiers used in requests

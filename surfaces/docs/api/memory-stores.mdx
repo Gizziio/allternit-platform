@@ -1,0 +1,191 @@
+---
+title: 'Memory Stores API (Beta)'
+description: 'Create and manage named memory stores for long-term agent context.'
+---
+
+## Overview
+
+A memory store is a named, user-scoped container that agents can read from and write to for long-term memory. Each store carries a `redaction_policy` that is applied to content before it is persisted or surfaced to a model.
+
+This scaffold owns the store record itself: create, list, get, and delete. Reading and writing individual memory entries through a store is handled by the agent runtime and memory APIs.
+
+Memory stores are scoped to the authenticated user. The `organization_id` is captured at creation time for billing and audit grouping.
+
+## Base URL
+
+```
+https://api.allternit.com/v1/beta/memory-stores
+```
+
+All requests require a Bearer token. See [Authentication](/api/authentication).
+
+## The memory store object
+
+```json
+{
+  "id": "ms_9a8b7c6d",
+  "organization_id": "org_1",
+  "name": "product-docs",
+  "redaction_policy": {
+    "pii": true,
+    "mask_emails": true
+  },
+  "metadata": {
+    "department": "engineering",
+    "domain": "support"
+  },
+  "created_at": "2026-08-13T10:00:00Z",
+  "updated_at": "2026-08-13T10:00:00Z"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique store identifier. |
+| `organization_id` | string? | Organization captured at creation. |
+| `name` | string | Human-readable, unique name per user. |
+| `redaction_policy` | object | Policy applied to stored or retrieved content. |
+| `metadata` | object | Caller-provided key/value object. |
+| `created_at` | string | ISO 8601 timestamp. |
+| `updated_at` | string | ISO 8601 timestamp. |
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/v1/beta/memory-stores` | List memory stores. |
+| POST | `/api/v1/beta/memory-stores` | Create a memory store. |
+| GET | `/api/v1/beta/memory-stores/:id` | Get a memory store. |
+| DELETE | `/api/v1/beta/memory-stores/:id` | Delete a memory store. |
+
+## List memory stores
+
+```bash
+curl https://api.allternit.com/v1/beta/memory-stores \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+### Response
+
+```json
+{
+  "memory_stores": [
+    {
+      "id": "ms_9a8b7c6d",
+      "organization_id": "org_1",
+      "name": "product-docs",
+      "redaction_policy": { "pii": true },
+      "metadata": { "department": "engineering" },
+      "created_at": "2026-08-13T10:00:00Z",
+      "updated_at": "2026-08-13T10:00:00Z"
+    }
+  ]
+}
+```
+
+## Create a memory store
+
+```bash
+curl -X POST https://api.allternit.com/v1/beta/memory-stores \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "product-docs",
+    "redaction_policy": {
+      "pii": true,
+      "mask_emails": true
+    },
+    "metadata": {
+      "department": "engineering",
+      "domain": "support"
+    }
+  }'
+```
+
+### Request body
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | Store name. Must be non-empty and unique for the user. |
+| `redaction_policy` | object | Defaults to `{}`. Must be an object. |
+| `metadata` | object | Defaults to `{}`. Must be an object. |
+
+### Response
+
+```json
+{
+  "memory_store": {
+    "id": "ms_9a8b7c6d",
+    "organization_id": "org_1",
+    "name": "product-docs",
+    "redaction_policy": { "pii": true, "mask_emails": true },
+    "metadata": { "department": "engineering", "domain": "support" },
+    "created_at": "2026-08-13T10:00:00Z",
+    "updated_at": "2026-08-13T10:00:00Z"
+  },
+  "id": "ms_9a8b7c6d"
+}
+```
+
+Duplicate names for the same user return `400 Bad Request`.
+
+## Get a memory store
+
+```bash
+curl https://api.allternit.com/v1/beta/memory-stores/ms_9a8b7c6d \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+### Response
+
+```json
+{
+  "memory_store": { ... }
+}
+```
+
+## Delete a memory store
+
+```bash
+curl -X DELETE https://api.allternit.com/v1/beta/memory-stores/ms_9a8b7c6d \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+Returns `204 No Content`.
+
+<Warning>
+  Deleting a memory store removes its record. Ensure any entries relying on the store have been migrated or are no longer needed.
+</Warning>
+
+## Redaction policy
+
+The `redaction_policy` object is interpreted by the agent runtime before memory is persisted or returned to a model. Common fields include:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `pii` | boolean? | Whether to detect and redact personally identifiable information. |
+| `mask_emails` | boolean? | Whether to mask email addresses. |
+| `mask_phone_numbers` | boolean? | Whether to mask phone numbers. |
+
+The exact set of supported keys depends on the configured memory pipeline. Unknown keys are ignored.
+
+## Error codes
+
+| Status | Meaning | Typical cause |
+|--------|---------|---------------|
+| 200 OK | Success | Request succeeded. |
+| 201 Created | Created | Store created. |
+| 204 No Content | No content | Store deleted. |
+| 400 Bad Request | Invalid request | Empty name, duplicate name, `redaction_policy`/`metadata` not objects. |
+| 401 Unauthorized | Unauthorized | Missing or invalid bearer token. |
+| 404 Not Found | Not found | Unknown store or access to another user's store. |
+| 429 Too Many Requests | Rate limited | Exceeded the request rate limit for the key. |
+| 500 Internal Server Error | Server error | Contact support. |
+
+## Related pages
+
+- [Authentication](/api/authentication)
+- [Sessions](/api/sessions)
+- [Agents](/api/agents)
+- [Memory API](/api/memory)
+- [RAG Pipeline cookbook](/cookbooks/rag-pipeline)

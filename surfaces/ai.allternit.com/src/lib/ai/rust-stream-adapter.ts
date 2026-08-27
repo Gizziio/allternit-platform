@@ -1829,8 +1829,8 @@ export function useRustStreamAdapter(
           });
         }
 
-        let providerID = "opencode";
-        let modelID = "big-pickle";
+        let providerID = "allternit";
+        let modelID = "default";
 
         if (runtimeModelId && runtimeModelId.includes("/")) {
           const parts = runtimeModelId.split("/");
@@ -1844,9 +1844,7 @@ export function useRustStreamAdapter(
           // Use the modelId as-is (e.g., "big-pickle", "gpt-4o", etc.)
           modelID = modelId;
           // Infer provider from known model patterns
-          if (modelId === "big-pickle" || modelId.startsWith("minimax")) {
-            providerID = "opencode";
-          } else if (modelId.startsWith("gpt") || modelId.startsWith("o1") || modelId.startsWith("o3")) {
+          if (modelId.startsWith("gpt") || modelId.startsWith("o1") || modelId.startsWith("o3")) {
             providerID = "openai";
           } else if (modelId.startsWith("claude")) {
             providerID = "anthropic";

@@ -3,7 +3,7 @@
  * https://www.together.ai/
  * OpenAI-compatible API for open source models
  */
-import { HarnessError, HarnessErrorCode } from '../../harness/types';
+import { HarnessError, HarnessErrorCode, messageContentToString } from '../../harness/types';
 /**
  * Popular Together AI models
  */
@@ -50,7 +50,7 @@ export class AllternitTogether {
     transformMessages(messages) {
         return messages.map(msg => ({
             role: msg.role,
-            content: msg.content,
+            content: messageContentToString(msg.content),
             ...(msg.name && { name: msg.name }),
             ...(msg.tool_calls && {
                 tool_calls: msg.tool_calls.map(tc => ({

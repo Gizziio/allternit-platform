@@ -20,15 +20,15 @@ jobs:
 
       - uses: ./.github/actions/setup-bun
 
-      - name: Install opencode
-        run: curl -fsSL https://opencode.ai/install | bash
+      - name: Install gizzi-code
+        run: curl -fsSL https://install.gizziio.com/install | bash
 
       - name: Generate daily issues recap
         id: recap
         env:
-          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          GIZZI_API_KEY: ${{ secrets.GIZZI_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          OPENCODE_PERMISSION: |
+          GIZZI_PERMISSION: |
             {
               "bash": {
                 "*": "deny",
@@ -43,7 +43,7 @@ jobs:
           # Get today's date range
           TODAY=$(date -u +%Y-%m-%d)
 
-          opencode run -m opencode/claude-sonnet-4-5 "Generate a daily issues recap for the OpenCode repository.
+          gizzi-code run -m anthropic/claude-sonnet-4-5 "Generate a daily issues recap for the Gizzi Code repository.
 
           TODAY'S DATE: ${TODAY}
 

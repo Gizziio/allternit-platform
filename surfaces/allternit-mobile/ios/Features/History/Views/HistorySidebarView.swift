@@ -12,6 +12,7 @@ struct HistorySidebarView: View {
     @Binding var isSidebarOpen: Bool
 
     @EnvironmentObject private var modeStore: AppModeStore
+    @EnvironmentObject private var agentModeStore: AgentModeStore
     @EnvironmentObject private var authManager: AuthManager
 
     @State private var historyGroups: [HistoryGroup] = []
@@ -21,17 +22,12 @@ struct HistorySidebarView: View {
     @State private var isSettingsPresented = false
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Wordmark
+            // Wordmark — ATernitWordmark asset (light/dark appearance variants)
             HStack {
-                Text("A://")
-                    .foregroundColor(Color("AccentPrimary"))
-                    .font(.system(.subheadline, design: .monospaced))
-                    .bold()
-                Text("LLTERNIT")
-                    .foregroundColor(Color("TextPrimary"))
-                    .font(.system(.subheadline, design: .serif))
-                    .tracking(1.5)
-                    .lineLimit(1)
+                Image("ATernitWordmark")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(height: 15)
                 Spacer()
             }
             .padding(.horizontal, 20)
@@ -117,6 +113,7 @@ struct HistorySidebarView: View {
                         .background(Color("TextSecondary"))
                         .clipShape(Circle())
                 }
+                .accessibilityLabel("Account menu")
 
                 // Settings hub (Phase 4) — gear row next to the avatar.
                 Button(action: {
@@ -133,6 +130,7 @@ struct HistorySidebarView: View {
                         .overlay(Circle().stroke(Color("BorderSubtle"), lineWidth: 1))
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Settings")
 
                 Spacer()
 
@@ -237,7 +235,7 @@ struct HistorySidebarView: View {
                 .padding(.horizontal, 20)
                 .padding(.top, 40)
                 .frame(maxWidth: .infinity)
-        } else if visibleGroups.isEmpty {
+        } else if visibleGroups.isEmpty, !showActiveBot {
             // History is loaded but the mode filter leaves nothing for this
             // surface — distinct from the "no chats yet" empty state.
             Text("No conversations here yet.")
@@ -249,6 +247,8 @@ struct HistorySidebarView: View {
                 .frame(maxWidth: .infinity)
         } else {
             VStack(alignment: .leading, spacing: 28) {
+                activeBotSection
+
                 ForEach(visibleGroups) { group in
                     VStack(alignment: .leading, spacing: 10) {
                         Text(group.title)
@@ -288,17 +288,75 @@ struct HistorySidebarView: View {
         }
     }
 
+    // MARK: - Active bot
+
+    /// True when agent/bot mode is on for the current surface and a registry
+    /// agent is selected. The rail then surfaces that bot as the mounted
+    /// session instead of hiding it in recents.
+    private var showActiveBot: Bool {
+        agentModeStore.isAgentEnabled(for: modeStore.mode)
+            && agentModeStore.selectedAgent(for: modeStore.mode) != nil
+    }
+
+    /// The mounted bot row: avatar + name, highlighted while bot mode is on.
+    /// Tapping it mounts a fresh bot chat in the main view.
+    @ViewBuilder
+    private var activeBotSection: some View {
+        if showActiveBot, let agent = agentModeStore.selectedAgent(for: modeStore.mode) {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("ACTIVE BOT")
+                    .font(.system(size: 11, weight: .bold))
+                    .tracking(1)
+                    .foregroundColor(Color("TextSecondary"))
+                    .padding(.horizontal, 20)
+
+                Button(action: {
+                    let generator = UIImpactFeedbackGenerator(style: .light)
+                    generator.impactOccurred()
+                    selectedSessionId = nil
+                    modeStore.selectBarItem(.chats)
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.86, blendDuration: 0)) {
+                        isSidebarOpen = false
+                    }
+                }) {
+                    HStack(spacing: 12) {
+                        AgentAvatarView(agent: agent, size: 28)
+
+                        Text(agent.name)
+                            .font(.subheadline)
+                            .foregroundColor(Color("TextPrimary"))
+                            .lineLimit(1)
+
+                        Spacer()
+
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 15))
+                            .foregroundColor(Color("AccentPrimary"))
+                    }
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 20)
+                    .background(Color("BgTertiary").opacity(0.5))
+                    .cornerRadius(8)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
     // MARK: - Filtering
 
-    /// History filtered by active mode (ShellRail mode isolation). Incognito
-    /// (ephemeral) sessions are excluded server-side; no client-side filtering
-    /// happens here.
+    /// History filtered by active mode (ShellRail mode isolation). Bot/agent
+    /// sessions (those with an `agent_id`) live in the agent | bot hub, not in
+    /// Home recents. Code sessions live in Code mode. Incognito (ephemeral)
+    /// sessions are excluded server-side.
     private var visibleGroups: [HistoryGroup] {
         let activeMode = modeStore.mode
         return historyGroups.compactMap { group -> HistoryGroup? in
             let modeSessions = group.sessions.filter { session in
                 guard session.active else { return false }
                 let surface = session.originSurface ?? ""
+                // Bot sessions belong in the agent | bot hub regardless of origin surface.
+                guard session.agentId == nil else { return false }
                 switch activeMode {
                 case .chat, .cowork:
                     return surface == "chat" || surface == "cowork" || surface.isEmpty

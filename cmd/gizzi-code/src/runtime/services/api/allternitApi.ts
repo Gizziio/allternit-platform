@@ -411,3 +411,95 @@ export async function getApiCanvas(
     `/api/v1/canvases/${encodeURIComponent(canvasId)}`,
   )
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Rails peers (cross-session messaging)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export type ApiPeer = {
+  peer_id: string
+  name: string
+  cwd: string
+  vendor: string
+  inbox_socket: string
+  status: string
+  registered_at: string
+  last_heartbeat_at: string
+}
+
+export type ApiPeerListResponse = {
+  peers: ApiPeer[]
+}
+
+export type ApiPeerRegisterResponse = {
+  peer_id: string
+  name: string
+  inbox_socket: string
+}
+
+export type ApiPeerSendResponse = {
+  delivered: boolean
+  error?: string
+}
+
+export type ApiPeerInboxMessage = {
+  id: number
+  correlation_id: string
+  to: string
+  from: string
+  kind: string
+  payload: Record<string, unknown>
+  transport: string
+  status: string
+  created_at: string
+}
+
+export type ApiPeerInboxResponse = {
+  messages: ApiPeerInboxMessage[]
+}
+
+export async function listApiPeers(
+  config: AllternitApiConfig,
+): Promise<ApiPeerListResponse> {
+  return apiFetchJson<ApiPeerListResponse>(config, '/api/rails/peers')
+}
+
+export async function registerApiPeer(
+  config: AllternitApiConfig,
+  input: { name: string; vendor?: string; cwd?: string },
+): Promise<ApiPeerRegisterResponse> {
+  return apiFetchJson<ApiPeerRegisterResponse>(config, '/api/rails/peers', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
+}
+
+export async function sendApiPeerMessage(
+  config: AllternitApiConfig,
+  name: string,
+  body: string,
+  from?: string,
+): Promise<ApiPeerSendResponse> {
+  return apiFetchJson<ApiPeerSendResponse>(
+    config,
+    `/api/rails/peers/${encodeURIComponent(name)}/send`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ body, ...(from ? { from } : {}) }),
+    },
+  )
+}
+
+export async function pollApiPeerInbox(
+  config: AllternitApiConfig,
+  name: string,
+  limit?: number,
+): Promise<ApiPeerInboxResponse> {
+  const params = new URLSearchParams()
+  if (limit !== undefined) params.set('limit', String(limit))
+  const qs = params.toString()
+  return apiFetchJson<ApiPeerInboxResponse>(
+    config,
+    `/api/rails/peers/${encodeURIComponent(name)}/inbox${qs ? `?${qs}` : ''}`,
+  )
+}

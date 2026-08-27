@@ -13,6 +13,20 @@ if ! [ -f "$BINARY" ]; then
     exit 1
 fi
 
+# Start the open-connector sidecar first. allternit-api proxies connector
+# auth/execution through it, so without it most connectors show as unavailable.
+# This script writes a token env file that we source below.
+"${SCRIPT_DIR}/start-connector-sidecar.sh"
+
+# Source the sidecar tokens so allternit-api can authenticate to it.
+ENV_FILE="${ALLTERNIT_CONNECTOR_SIDECAR_ENV_FILE:-/tmp/allternit-connector-sidecar.env}"
+if [ -f "$ENV_FILE" ]; then
+    set -a
+    # shellcheck source=/dev/null
+    source "$ENV_FILE"
+    set +a
+fi
+
 # Kill any existing instance on port 8013
 if lsof -ti:8013 > /dev/null 2>&1; then
     echo "[start-api] Stopping existing process on port 8013..."

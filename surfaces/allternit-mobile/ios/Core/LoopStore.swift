@@ -44,6 +44,7 @@ final class LoopStore: ObservableObject {
             }
             do {
                 self.loops = try await self.client.listLoops()
+                LoopLiveActivityManager.shared.sync(with: self.loops)
             } catch is CancellationError {
                 // View went away mid-flight — keep current state.
             } catch {
@@ -60,6 +61,7 @@ final class LoopStore: ObservableObject {
         loadError = nil
         do {
             loops = try await client.listLoops()
+            LoopLiveActivityManager.shared.sync(with: loops)
         } catch is CancellationError {
             // View went away mid-flight — keep current state.
         } catch {
@@ -96,5 +98,6 @@ final class LoopStore: ObservableObject {
     func deleteLoop(id: String) async throws {
         try await client.deleteLoop(id: id)
         loops.removeAll { $0.id == id }
+        LoopLiveActivityManager.shared.sync(with: loops)
     }
 }

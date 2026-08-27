@@ -1,11 +1,7 @@
 // @ts-nocheck
 import { memoize } from 'lodash-es'
 import type { Command } from './../../commands.ts'
-import {
-  getCommandName,
-  getSkillToolCommands,
-  getSlashCommandToolSkills,
-} from './../../commands.ts'
+import { getCommandName } from './../../types/command.js'
 import { COMMAND_NAME_TAG } from '../../constants/xml.js'
 import { stringWidth } from '../../ink/stringWidth.js'
 import {
@@ -200,6 +196,7 @@ export async function getSkillToolInfo(cwd: string): Promise<{
   totalCommands: number
   includedCommands: number
 }> {
+  const { getSkillToolCommands } = await import('./../../commands.js')
   const agentCommands = await getSkillToolCommands(cwd)
 
   return {
@@ -211,7 +208,10 @@ export async function getSkillToolInfo(cwd: string): Promise<{
 // Returns the commands included in the SkillTool prompt.
 // All commands are always included (descriptions may be truncated to fit budget).
 // Used by analyzeContext to count skill tokens.
-export function getLimitedSkillToolCommands(cwd: string): Promise<Command[]> {
+export async function getLimitedSkillToolCommands(
+  cwd: string,
+): Promise<Command[]> {
+  const { getSkillToolCommands } = await import('./../../commands.js')
   return getSkillToolCommands(cwd)
 }
 
@@ -224,6 +224,7 @@ export async function getSkillInfo(cwd: string): Promise<{
   includedSkills: number
 }> {
   try {
+    const { getSlashCommandToolSkills } = await import('./../../commands.js')
     const skills = await getSlashCommandToolSkills(cwd)
 
     return {

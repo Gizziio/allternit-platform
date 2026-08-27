@@ -79,6 +79,7 @@ export const SubagentTool = memo(function SubagentTool({
   return (
     <div className="an-tool-task">
       <ToolRowBase
+        orbState="connecting"
         completeLabel="Completed Subagent"
         shimmerLabel="Running Subagent"
         isAnimating={isPending}

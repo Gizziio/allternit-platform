@@ -38,11 +38,11 @@ impl AuthStatus {
 /// Authentication configuration for a CLI provider
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProviderAuthConfig {
-    /// Provider ID (e.g., "opencode", "gemini", "claude")
+    /// Provider ID (e.g., "gemini", "claude")
     pub provider_id: String,
-    /// Command to check auth status (e.g., ["opencode", "auth", "list"])
+    /// Command to check auth status (e.g., ["claude", "auth", "status"])
     pub status_cmd: Vec<String>,
-    /// Command to launch login wizard (e.g., ["opencode", "auth", "login"])
+    /// Command to launch login wizard (e.g., ["claude", "auth", "login"])
     pub login_cmd: Vec<String>,
     /// Command to logout (optional)
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -57,7 +57,7 @@ pub struct ProviderAuthConfig {
     /// Chat profile IDs (protocol mode for usage)
     pub chat_profile_ids: Vec<String>,
     /// Command to list available models (optional)
-    /// e.g., ["opencode", "models", "list", "--json"]
+    /// e.g., ["ollama", "list", "--json"]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub models_cmd: Option<Vec<String>>,
 }
@@ -97,34 +97,6 @@ impl ProviderAuthRegistry {
 
     /// Register built-in provider auth configs
     fn register_builtin_providers(&mut self) {
-        // OpenCode
-        // Note: opencode auth list returns exit 0 even with 0 credentials,
-        // so we check for "0 credentials" in stdout
-        self.register(ProviderAuthConfig {
-            provider_id: "opencode".to_string(),
-            status_cmd: vec![
-                "opencode".to_string(),
-                "auth".to_string(),
-                "list".to_string(),
-            ],
-            login_cmd: vec![
-                "opencode".to_string(),
-                "auth".to_string(),
-                "login".to_string(),
-            ],
-            logout_cmd: Some(vec![
-                "opencode".to_string(),
-                "auth".to_string(),
-                "logout".to_string(),
-            ]),
-            credential_files: Some(vec![PathBuf::from("~/.local/share/opencode/auth.json")]),
-            status_check: StatusCheckMode::NotAuthenticatedIfContains("0 credentials".to_string()),
-            auth_profile_id: "opencode-auth".to_string(),
-            chat_profile_ids: vec!["opencode-acp".to_string()],
-            models_cmd: None, // OpenCode doesn't have a headless models list command
-                              // Models are discovered via ACP or freeform entry
-        });
-
         // Gemini CLI
         self.register(ProviderAuthConfig {
             provider_id: "gemini".to_string(),
@@ -509,7 +481,7 @@ impl ProviderAuthRegistry {
         }
 
         // Fallback: allow freeform with opaque model IDs
-        // The runtime (OpenCode, Gemini, etc.) owns the model list, not the kernel
+        // The runtime owns the model list, not the kernel
         Ok(ModelsResponse {
             profile_id: profile_id.to_string(),
             authenticated,

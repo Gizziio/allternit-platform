@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# steer — top-level dispatcher for the steer-parallel-agent toolkit.
+#
+#   steer discover [--project <substr>] [--self <session-id>]
+#   steer context <session-id>
+#   steer checkpoint <repo-path> <from-name> [-f <file>]
+#   steer prompt <file1> [file2 ...]
+#   steer verify <session-id> <path> [--since <epoch_ms>]
+#   steer send <session-id> <file1> [file2 ...]
+#       Full flow: generate pointer prompt, copy to clipboard, then poll
+#       steer-verify until the target reads the first file (max 10 min).
+#
+set -euo pipefail
+
+HERE="$(cd "$(dirname "$0")" && pwd)"
+
+[ $# -ge 1 ] || { sed -n '2,14p' "$0" >&2; exit 2; }
+CMD="$1"; shift
+
+case "$CMD" in
+  discover)  exec "$HERE/steer-discover" "$@" ;;
+  context)   exec "$HERE/steer-context" "$@" ;;
+  checkpoint) exec "$HERE/steer-checkpoint" "$@" ;;
+  prompt)    exec "$HERE/steer-prompt" "$@" ;;
+  verify)    exec "$HERE/steer-verify" "$@" ;;
+  send)
+    [ $# -ge 2 ] || { echo "usage: steer send <session-id> <file1> [file2 ...]" >&2; exit 2; }
+    SID="$1"; shift
+    "$HERE/steer-prompt" "$@"
+    FIRST="$1"
+    echo >&2
+    echo "Waiting for $SID to read $FIRST (max 10 min, Ctrl-C to stop)..." >&2
+    DEADLINE=$(( $(date +%s) + 600 ))
+    while [ "$(date +%s)" -lt "$DEADLINE" ]; do
+      if "$HERE/steer-verify" "$SID" "$FIRST" >/dev/null 2>&1; then
+        echo "steering landed: $SID read $FIRST" >&2
+        exit 0
+      fi
+      sleep 10
+    done
+    echo "timeout: $SID did not read $FIRST within 10 minutes" >&2
+    exit 1
+    ;;
+  *)
+    echo "unknown command: $CMD" >&2
+    sed -n '2,14p' "$0" >&2
+    exit 2
+    ;;
+esac

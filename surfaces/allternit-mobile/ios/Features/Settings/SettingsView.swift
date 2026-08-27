@@ -533,7 +533,7 @@ struct SettingsView: View {
                 }
             }) {
                 HStack {
-                    Text("Manage agents")
+                    Text("agent | bot hub")
                         .font(.subheadline)
                         .foregroundColor(Color("TextPrimary"))
                     Spacer()
@@ -549,6 +549,10 @@ struct SettingsView: View {
         } footer: {
             if let error = preferences.saveError {
                 Text("Couldn't sync preferences: \(error)")
+            } else if let lastSavedAt = preferences.lastSavedAt, Date().timeIntervalSince(lastSavedAt) < 2 {
+                Text("Saved")
+                    .font(.caption)
+                    .foregroundColor(.green)
             } else {
                 Text("Applies to every chat and syncs to your agents' workspace files (STYLE.md).")
             }

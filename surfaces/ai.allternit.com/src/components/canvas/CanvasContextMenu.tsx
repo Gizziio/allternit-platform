@@ -1,7 +1,7 @@
 "use client";
 
 import React, { Fragment, useEffect, useRef } from "react";
-import { BookBookmark, Browser, ChatTeardropText, GitDiff, Graph, NotePencil, SquaresFour, Target, Terminal, TerminalIcon } from "@phosphor-icons/react";
+import { Browser, ChatTeardropText, GitDiff, SquaresFour, Target, TerminalIcon } from "@phosphor-icons/react";
 import type { CodeCanvasTile } from '@/views/code/CodeModeStore';
 
 interface ContextMenuItem {
@@ -106,33 +106,6 @@ export function CanvasContextMenu({
           icon: <TerminalIcon size={14} />,
           onClick: () => {
             onSpawnTile('terminal');
-            onClose();
-          },
-        },
-        {
-          id: 'notes',
-          label: 'Notes',
-          icon: <NotePencil size={14} />,
-          onClick: () => {
-            onSpawnTile('notes');
-            onClose();
-          },
-        },
-        {
-          id: 'knowledge',
-          label: 'Knowledge',
-          icon: <BookBookmark size={14} />,
-          onClick: () => {
-            onSpawnTile('knowledge');
-            onClose();
-          },
-        },
-        {
-          id: 'knowledge-graph',
-          label: 'Knowledge Graph',
-          icon: <Graph size={14} />,
-          onClick: () => {
-            onSpawnTile('knowledge-graph');
             onClose();
           },
         },

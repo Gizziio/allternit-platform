@@ -1,0 +1,209 @@
+---
+title: 'MCP Servers API'
+description: 'Expose Allternit tools through the Model Context Protocol (MCP) server surface.'
+---
+
+## Overview
+
+The MCP Servers API lets allternit-api act as an MCP server. External MCP clients can connect to `/mcp/server` with a Clerk bearer token and call the same tool registry exposed by the REST tool routes. The surface uses the MCP Streamable HTTP transport: single JSON-RPC requests with plain JSON responses, stateless and without server-initiated push.
+
+An internal variant at `/internal/tools/mcp` is available for the local Gizzi runtime's MCP client, gated by the internal service token and `x-allternit-user-id`.
+
+## Base URL
+
+Clerk-authenticated surface:
+
+```
+https://api.allternit.com/mcp/server
+```
+
+Internal surface:
+
+```
+https://api.allternit.com/internal/tools/mcp
+```
+
+For local development:
+
+```
+http://127.0.0.1:8013/mcp/server
+http://127.0.0.1:8013/internal/tools/mcp
+```
+
+## Authentication
+
+- `/mcp/server` requires a valid Clerk bearer token.
+- `/internal/tools/mcp` requires the internal service token and the `x-allternit-user-id` header.
+
+See [Authentication](/api/authentication).
+
+## Supported JSON-RPC methods
+
+| Method | Description |
+|--------|-------------|
+| `initialize` | Return protocol version, capabilities, and server info. |
+| `ping` | Health check. |
+| `tools/list` | List available tools. |
+| `tools/call` | Execute a tool by name. |
+
+## Tool catalog
+
+The `tools/list` response includes:
+
+- Native host tools: `shell.exec`, `file.read`, `file.write`, `file.list`, `file.exists`, `file.remove`, `system.info`, `system.env`, `http.get`, `http.post`, `time.now`.
+- Office-engine Markdown conversion tools.
+- Tools from attached MCP servers registered in the dispatcher.
+
+## Initialize
+
+### Example request
+
+```bash
+curl -X POST https://api.allternit.com/mcp/server \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "initialize",
+    "params": {
+      "protocolVersion": "2025-03-26",
+      "capabilities": {},
+      "clientInfo": { "name": "example-client", "version": "1.0.0" }
+    }
+  }'
+```
+
+### Example response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "protocolVersion": "2025-03-26",
+    "capabilities": { "tools": {} },
+    "serverInfo": { "name": "allternit-api", "version": "0.1.0" }
+  }
+}
+```
+
+## List tools
+
+```bash
+curl -X POST https://api.allternit.com/mcp/server \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 2,
+    "method": "tools/list",
+    "params": {}
+  }'
+```
+
+### Example response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {
+    "tools": [
+      {
+        "name": "shell.exec",
+        "description": "Execute a shell command on the allternit-api host.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "command": { "type": "string" },
+            "cwd": { "type": "string" }
+          },
+          "required": ["command"]
+        }
+      }
+    ]
+  }
+}
+```
+
+## Call a tool
+
+### Request body
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | Tool name. |
+| `arguments` | object | Tool arguments. |
+
+Tools whose names contain a `.` are first dispatched to attached MCP servers; otherwise they run through the internal tool registry.
+
+### Example request
+
+```bash
+curl -X POST https://api.allternit.com/mcp/server \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 3,
+    "method": "tools/call",
+    "params": {
+      "name": "time.now",
+      "arguments": {}
+    }
+  }'
+```
+
+### Example response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "result": {
+    "content": [
+      { "type": "text", "text": "2026-08-13T10:00:00Z" }
+    ],
+    "isError": false
+  }
+}
+```
+
+## Internal MCP endpoint
+
+The internal endpoint uses the same JSON-RPC contract but is intended for peer services.
+
+### Required headers
+
+| Header | Description |
+|--------|-------------|
+| `Authorization` | `Bearer <internal-service-token>`. |
+| `x-allternit-user-id` | User id the request is running as. |
+| `x-allternit-organization-id` | Optional organization id. |
+
+## Error codes
+
+JSON-RPC errors are returned with standard JSON-RPC error codes:
+
+| Code | Meaning |
+|------|---------|
+| `-32001` | MCP tunnel auth failed. |
+| `-32601` | Method not found. |
+| `-32700` to `-32603` | Standard JSON-RPC parse/invalid-request/internal errors. |
+
+HTTP status codes:
+
+| Status | Meaning |
+|--------|---------|
+| `200 OK` | Successful JSON-RPC response. |
+| `202 Accepted` | JSON-RPC notification received (no `id`). |
+| `400 Bad Request` | Malformed JSON-RPC request or missing `x-allternit-user-id`. |
+| `401 Unauthorized` | Missing or invalid auth token. |
+
+## Related pages
+
+- [Authentication](/api/authentication)
+- [Connectors API](/api/connectors)
+- [Server Tools API](/api/server-tools)
+- [Tools guide](/tools/tool-belt)

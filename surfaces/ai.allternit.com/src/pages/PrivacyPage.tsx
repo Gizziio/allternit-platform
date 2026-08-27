@@ -1,4 +1,5 @@
 import React from 'react';
+import { AProtocolWordmark } from '../components/AProtocolWordmark';
 const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
   <section className="mb-10">
     <h2 style={{ fontFamily: 'var(--font-research)', fontWeight: 400, fontSize: 22, color: 'var(--ui-text-inverse)', marginBottom: 12 }}>
@@ -13,9 +14,8 @@ export default function PrivacyPage() {
     <div style={{ background: '#FDF8F3', minHeight: '100vh' }}>
       {/* Nav */}
       <nav style={{ borderBottom: '1px solid #E8D9C8', padding: '0 32px', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <a href="/" style={{ display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none' }}>
-          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 18, color: '#D97757' }}>A://</span>
-          <span style={{ fontFamily: 'var(--font-research)', fontSize: 18, color: 'var(--ui-text-inverse)' }}>LLTERNIT</span>
+        <a href="/" style={{ display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none' }} aria-label="Allternit">
+          <AProtocolWordmark theme="ink" height={16} />
         </a>
         <a href="https://allternit.com" style={{ fontSize: 13, color: 'var(--ui-text-secondary)', textDecoration: 'none' }}>← allternit.com</a>
       </nav>

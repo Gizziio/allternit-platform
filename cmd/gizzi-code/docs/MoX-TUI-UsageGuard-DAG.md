@@ -16,10 +16,10 @@ This plan integrates:
 ## External Dependencies (Fork/Integrate)
 
 ### 1. openusage → allternit-usage-collector
-**Source**: External tool (opencode-stats, ccusage, tokscale patterns)
+**Source**: External tool (gizzi-stats, ccusage, tokscale patterns)
 **Location**: New crate `crates/allternit-usage-collector/`
 **What to Fork**:
-- Provider-specific parsers (Claude, OpenCode, Codex, Copilot)
+- Provider-specific parsers (Claude, Gizzi Code, Codex, Copilot)
 - Token counting algorithms
 - OTel GenAI metrics format
 
@@ -164,7 +164,7 @@ From: openusage/ccusage/tokscale patterns
 To: crates/allternit-usage-collector/
   - src/parsers/
     - claude.rs      (ccusage patterns)
-    - opencode.rs    (opencode stats)
+    - gizzi.rs    (gizzi-code stats)
     - codex.rs       (codex patterns)
     - copilot.rs     (copilot patterns)
   - src/metrics.rs   (OTel GenAI format)

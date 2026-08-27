@@ -8,9 +8,44 @@
 
 Every agent session in this repo works in its OWN linked worktree — never in the shared main checkout. On your first prompt (or SessionStart), a hook injects the ritual: create-or-reuse `<repo>-session-<id>` on branch `session/<id>` and `cd` into it. A PreToolUse guard blocks `git commit/checkout/switch/merge/push/rebase/reset` and `branch -d` in the shared checkout (escape for human/orchestrator merges: `STEER_GUARD_OFF=1`). Rationale: concurrent sessions sharing one HEAD collide on branches, commits, and dirty files. gizzi-code additionally has native `--worktree` support (`src/shared/utils/worktree.ts`); making it default-on is tracked as phase W2. Linked worktrees pass all guards automatically (detected via the git dir path).
 
+## Session landing — worktree cleanup
+
+A session's worktree is temporary scaffolding, not a permanent workspace. Clean up so the machine does not accumulate orphaned worktrees, branches, or scratch files.
+
+### Ongoing hygiene
+
+Clean as you go, but never discard work that might be needed to resume.
+
+- **Checkpoint frequently.** Commit meaningful progress and push the `session/<id>` branch to origin often so an interrupted session does not lose work.
+- **Clean only disposable scratch.** During the session, delete temporary logs, debug dumps, and downloaded artifacts as soon as they are no longer needed.
+- **Protect active work.** Do not delete a worktree, branch, or uncommitted changes that contain unfinished but viable work. If you are unsure whether something is still needed, leave it and document its purpose in `.steering/checkpoint.md` or the session summary.
+- **Leave resumable state.** If the session stops for any reason, another agent (or a resumed session) should be able to inspect `git status`, `git branch`, and `git worktree list` and understand what was in progress.
+
+### Final cleanup
+
+Final cleanup happens only after the change is safely in the canonical codebase.
+
+- **Merge first, then clean up.** Push and merge the change to the GitHub codebase, then merge it into the local `main` checkout, before doing any cleanup.
+- **Write the session attestation.** Before deleting the worktree, record what was done, how it works, the commit SHA, and any unfinished work. Create a dated summary file in `agent-ledger/summaries/` using the naming convention `YYYY-MM-DD-HHMM-<session-id>-<agent-family>-<brief-topic>.md`. Append a short entry to `agent-ledger/LEDGER.md` that links to the summary file. Treat this as a signed ledger: be honest about what was actually completed versus what was deferred or left unfinished.
+- **Delete the session worktree.** Once the work is merged and no longer needed, remove the `<repo>-session-<id>` worktree directory and delete the `session/<id>` branch. Do not leave stale session worktrees on the machine.
+- **Remove scratch artifacts.** Delete local logs, temporary scripts, build outputs, downloaded dependencies, and debug files that are not intended to be committed.
+- **Restore the original branch.** Return to the branch you started from unless the task explicitly required switching branches.
+- **Verify the final state.** Before ending the session, run a quick status check (`git status`, `git worktree list`) and confirm nothing unexpected remains.
+- **No local technical debt.** The machine should be left in the same clean state it was in before the task started, with no orphaned branches, worktrees, or leftover files.
+
 ## Steering checkpoints
 
 This repo is wired for hook-based steering: when an agent session working here ends a turn, a `Stop` hook consults a **separate steering agent** (a different model family, run via the agent-orchestrator tmux tooling) — but only if `.steering/checkpoint.md` changed since the last review. So at every meaningful checkpoint (subtask finished, design decision made, before a risky change), update `.steering/checkpoint.md`: `Goal`, `Just did`, `Next`, `Open questions`. The steering agent's answers/guidance come back injected as a `[steering]` message — treat them as authoritative and act on them before continuing. Additionally, `git commit`/`git push` pass through a hard gate: they only execute after the steering agent approves. See `.steering/README.md`. Kill switch: `touch .steering/off`.
+
+## Planning and task tracking
+
+Use a written plan as the source of truth for the session.
+
+- **Create a plan file.** After scoping the feature or fix with the user, use plan mode to produce a plan file with detailed, checkable todos.
+- **Make todos concrete.** Each todo should describe a single deliverable or verification step that can be clearly marked done.
+- **Check off as you finish.** Update the plan file as work is completed. Checked items should coincide with commits, checkpoints in `.steering/checkpoint.md`, and cleanup milestones.
+- **Use the plan to verify work.** Before calling a task complete, review the plan and ensure every todo is either done or explicitly deferred with a reason.
+- **Clean up the plan file.** Remove or archive the plan file once the work is merged and the session is finished, unless the project requires keeping it.
 
 ## Agent creation checklist
 
@@ -337,6 +372,16 @@ Output: /Users/macbook/Desktop/allternit-workspace/allternit/alabs-generated-cou
 - [ ] Build module generation directly into template system (agents output JSON, build script wraps)
 - [ ] Add completion webhooks (Canvas → platform notifications)
 
+## Tool Belt, MCP, and ACI Documentation
+
+Phase 4 added public docs for the agent runtime surfaces. When working on tools, MCP integrations, or computer-use features, consult the relevant reference first:
+
+- [`docs/public/tools/tool-belt.md`](./docs/public/tools/tool-belt.md) — Native Tool Belt: `web_search`, `web_fetch`, `bash`, `code_execution`, `memory`, `str_replace_editor`, and `computer`.
+- [`docs/public/tools/mcp.md`](./docs/public/tools/mcp.md) — Attaching MCP servers, server-side execution, bundled/remote directory pattern, and tunnel security.
+- [`docs/public/tools/strict-tool-use.md`](./docs/public/tools/strict-tool-use.md) — Strict JSON Schema validation and grammar-constrained inputs.
+- [`docs/public/aci/index.md`](./docs/public/aci/index.md) — Allternit Computer Interface overview, browser automation, and vision coordinates.
+- [`docs/public/guides/build-a-tool.md`](./docs/public/guides/build-a-tool.md) — Step-by-step guide for registering custom tools.
+
 ## Key Contacts / Context
 
 - **Canvas Instance:** Free For Teacher, `canvas.instructure.com`
@@ -378,4 +423,88 @@ After generating new modules:
 When adding new courses/modules, update:
 - `surfaces/ai.allternit.com/src/views/LabsView.tsx` — `ALABS_COURSES` array
 - Module counts, descriptions, demo URLs
-- Ensure `ADV` tier is included in the rendering loop
+
+---
+
+## Rails — agent communication and coordination
+
+This repo uses the **Allternit Agent System Rails** as its unified communication and coordination substrate:
+
+- `rails` — Rust library (`allternit-agent-system-rails`).
+- `cmd/allternit-api/src/rails/mod.rs` — HTTP surface mounted at `/api/rails` and `/rails`.
+- `cmd/gizzi-code/src/runtime/gizzi-core/services/railsPeer.ts` — gizzi-code peer registration + HTTP inbox poller.
+- `cmd/gizzi-code/src/cli/ui/ink-app/components/RailsInboxBridge.tsx` — bridges polled envelopes into the TUI mailbox.
+
+Every local agent session can register itself as a **peer** under `.allternit/peers/`. Peers can discover each other and send plain-text messages — the Allternit equivalent of Claude Code's `ListAgents` / `SendMessage`. Messages never leave the machine. UDS sockets are supported for direct push; gizzi-code uses HTTP polling of the durable Bus inbox. Any CLI can participate by registering and polling the HTTP inbox; `.allternit/mux` is not required for Rails messaging.
+
+### Current status (Phase 1–7 complete)
+
+The peer registry, UDS inbox transport, steering checkpoint, `/api/rails/peers` HTTP routes, `/api/rails/steer/*` routes, `allternit-rails` CLI commands, gizzi-code runtime tools, `ao-*` shims, and `.steering/bin` hook delegation are implemented and verified:
+
+- `POST /api/rails/peers` — register a peer (`{ name, cwd, vendor }`).
+- `GET /api/rails/peers` — list peers.
+- `POST /api/rails/peers/:name/send` — send a message to a peer by name.
+- `POST /api/rails/peers/:name/heartbeat` — keep a peer marked active.
+- `POST /api/rails/steer/checkpoint` — hash `.steering/checkpoint.md` and emit a `SteeringCheckpoint` ledger event when it changes.
+- `POST /api/rails/steer/consult` — build steering context and consult the configured backend.
+- `POST /api/rails/steer/commit-gate` — commit/push approval consult.
+
+From the shell:
+
+```bash
+allternit-rails peer register <name> --vendor <agent-family>
+allternit-rails peer list
+allternit-rails peer send <name> "<message>"
+allternit-rails peer heartbeat <name>
+allternit-rails peer inbox <name>
+allternit-rails orchestrator doctor
+allternit-rails steer checkpoint --cwd <dir>
+allternit-rails steer consult --cwd <dir>
+allternit-rails steer commit-gate --cwd <dir>
+```
+
+From gizzi-code, the runtime exposes:
+
+- `ListPeers` (alias `ListAgents`) — discover local agent peers.
+- `SendMessage` (alias `SendMessageToPeer`) — send to a Rails peer by name, with `uds:` and `bridge:` address support and teammate-mailbox fallback.
+
+### Enabling Rails peer mode in gizzi-code
+
+The `UDS_INBOX` bundle feature is disabled in local dev builds. To opt into Rails peer registration and the new messaging tools:
+
+```bash
+GIZZI_ENABLE_RAILS_PEER=1 gizzi
+```
+
+This registers the session as `gizzi-<sessionId>` with the Rails API and polls the HTTP inbox for peer messages. The process also exports:
+
+- `ALLTERNIT_RAILS_PEER_NAME`
+- `ALLTERNIT_RAILS_INBOX`
+
+### Verification
+
+- `cargo test -p allternit-agent-system-rails` ✅
+- `cargo build -p allternit-api` ✅
+- `bun run typecheck` in `cmd/gizzi-code` ✅
+- `cmd/gizzi-code/test/rails-peer-e2e.ts` registers two peers, lists them, and confirms Bus/UDS message delivery.
+- `tmp/rails-two-session-test/run.sh` automates a two-session `GIZZI_ENABLE_RAILS_PEER=1 gizzi-code` TUI exchange and saves evidence to `tmp/rails-two-session-test/evidence/`.
+- Two live `GIZZI_ENABLE_RAILS_PEER=1 gizzi` sessions exchanged a `ListPeers` / `SendMessage` round-trip (see `docs/RAILS_PRODUCT_UPDATE_SYSTEM_PROMPT.md`).
+
+### Product-update system prompts
+
+Load these into agent sessions to teach the Rails workflow:
+
+- `docs/RAILS_PRODUCT_UPDATE_SYSTEM_PROMPT.md` — full product update / system prompt.
+- `.allternit/context-packs/rails-product-update/inputs/INSTRUCTIONS.md` — concise agent-instruction context pack.
+- `.allternit/context-packs/rails-product-update/inputs/templates/QUICKSTART.md` — copy-paste quickstart.
+
+See `docs/RAILS_UNIFIED_COMMUNICATION_PLAN.md` for the full roadmap.
+
+## Agent email rail (services/mailflare)
+
+`services/mailflare/` is a **vendored fork** of [hieunc229/mailflare](https://github.com/hieunc229/mailflare) that gives agents real internet email (inbound webhook → Rails Mail threads; outbound via the Rails Mail review gate). Conventions:
+
+- It is a plain **npm** project with its own `package-lock.json` and OpenNext/Cloudflare build — like `services/open-connector`, it is **excluded from the pnpm workspace** (`!services/mailflare` in `pnpm-workspace.yaml`). Never add it to the workspace; root `pnpm install` ingesting it breaks its Next.js build.
+- Verify changes with `npm run build` (lint has pre-existing upstream errors; don't add new ones). Type checking is `ignoreBuildErrors`-gated upstream, so run `npx tsc --noEmit` when touching TS.
+- Per-installation deploys go to the installing user's own Cloudflare account via `services/mailflare/setup.sh`.
+- Full architecture, ops, and reputation guidance: `docs/AGENT_EMAIL_RAIL.md`.

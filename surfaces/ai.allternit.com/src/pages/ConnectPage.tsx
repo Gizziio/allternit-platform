@@ -3,7 +3,6 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShieldCheck } from 'lucide-react';
-import { MatrixLogo } from '@/components/ai-elements/MatrixLogo';
 
 /**
  * Compatibility landing page for old Desktop “Web Access” links.
@@ -21,7 +20,7 @@ export default function ConnectPage() {
   return (
     <main className="min-h-screen grid place-items-center p-6 bg-[#faf9f7] text-[#1a1916]">
       <section className="w-full max-w-[420px] rounded-2xl border border-[#e1e5eb] bg-[#fffefc] p-9 text-center shadow-[0_24px_70px_rgba(28,27,26,0.09)]">
-        <div className="flex justify-center mb-6"><MatrixLogo state="idle" size={42} /></div>
+        <div className="flex justify-center mb-6"><img src="/brand/matrix/matrix-logo.svg" alt="Allternit" style={{ width: 42, height: 42 }} /></div>
         <div className="mx-auto mb-5 grid size-12 place-items-center rounded-full bg-[#e8f7ee] text-[#1f7a3a]">
           <ShieldCheck size={26} />
         </div>

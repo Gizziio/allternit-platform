@@ -4,16 +4,16 @@ import path from "path"
 import { tmpdir } from "../fixture/fixture"
 import { Instance } from "../../src/project/instance"
 import { Config } from "../../src/config/config"
-import { Agent as AgentSvc } from "../../src/agent/agent"
-import { Color } from "../../src/util/color"
+import { Agent as AgentSvc } from "../../src/runtime/loop/agent"
+import { Color } from "../../src/runtime/util/color"
 
 test("agent color parsed from project config", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
       await Bun.write(
-        path.join(dir, "opencode.json"),
+        path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://opencode.ai/config.json",
+          $schema: "https://gizzi.io/config.json",
           agent: {
             build: { color: "#FFA500" },
             plan: { color: "primary" },
@@ -36,9 +36,9 @@ test("Agent.get includes color from config", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
       await Bun.write(
-        path.join(dir, "opencode.json"),
+        path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://opencode.ai/config.json",
+          $schema: "https://gizzi.io/config.json",
           agent: {
             plan: { color: "#A855F7" },
             build: { color: "accent" },

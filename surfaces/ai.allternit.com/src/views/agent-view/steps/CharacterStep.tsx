@@ -11,7 +11,7 @@ import {
   BAN_CATEGORY_OPTIONS,
   SETUP_CAPABILITY_PRESETS,
 } from "../AgentView.constants";
-import { getSpecialtyOptions, getSetupStatDefinitions } from "@/lib/agents";
+import { getSpecialtyOptions } from "@/lib/agents";
 import {
   Input,
   Textarea,
@@ -67,10 +67,8 @@ export function CharacterStep({
   setBlueprint,
   cardSeed,
   setCardSeed,
-  projectedStats,
+  projectedStats: _projectedStats,
 }: CharacterStepProps) {
-  const setupStatDefinitions = getSetupStatDefinitions(blueprint.setup);
-
   const applySetupDefaults = (setupId: AgentSetup) => {
     setBlueprint(prev => ({
       ...prev,
@@ -218,66 +216,6 @@ export function CharacterStep({
           </div>
         </div>
 
-        <div className="rounded-xl border border-solid border-[var(--border-subtle)] bg-[var(--bg-card)] p-6 mb-6">
-          <h3 className="text-[16px] font-semibold text-[var(--text-primary)] m-0 mb-4">Projected Level</h3>
-          <p className="text-[13px] text-[var(--text-secondary)] m-0 mb-3">Based on setup baseline + specialties.</p>
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <span className="text-[13px] text-[var(--text-secondary)]">Class</span>
-              <span className="text-[12px] px-2 py-0.5 rounded-full border border-solid border-[var(--border-subtle)] text-[var(--text-primary)]">
-                {projectedStats.class}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-[13px] text-[var(--text-secondary)]">Level</span>
-              <span className="text-[18px] font-semibold text-[var(--text-primary)]">Lv {projectedStats.level}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-[13px] text-[var(--text-secondary)]">XP</span>
-              <span className="text-[13px] font-medium text-[var(--text-primary)]">{projectedStats.xp.toFixed(2)}</span>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              {(blueprint.specialtySkills ?? []).slice(0, 3).map((skill) => (
-                <div key={skill} className="flex items-center justify-between p-1.5 px-2.5 rounded-md border border-solid border-[var(--border-subtle)] text-[12px]">
-                  <span className="text-[var(--text-secondary)]">{skill}</span>
-                  <span className="text-[var(--text-primary)] font-medium">{projectedStats.specialtyScores[skill] ?? 0}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="rounded-xl border border-solid border-[var(--border-subtle)] bg-[var(--bg-card)] p-6 mb-6">
-        <h3 className="text-[16px] font-semibold text-[var(--text-primary)] m-0 mb-4">Measured Setup Stats</h3>
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3">
-          {setupStatDefinitions.map((definition) => {
-            const value = projectedStats.stats[definition.key] ?? 0;
-            return (
-              <div key={definition.key} className="p-4 rounded-lg border border-solid border-[var(--border-subtle)] bg-[var(--bg-primary)]">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-medium text-[14px] text-[var(--text-primary)]">{definition.label}</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[12px] px-1.5 py-0.5 rounded border border-solid border-[var(--border-subtle)] text-[var(--text-secondary)]">
-                      {definition.key}
-                    </span>
-                    <span className="text-[13px] font-bold text-[var(--accent-primary)]">{value}</span>
-                  </div>
-                </div>
-                <div className="h-1.5 rounded-full bg-[var(--bg-card)] overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-[var(--accent-primary)] to-[#B08D6E] transition-[width] duration-300 ease-out"
-                    style={{ width: `${Math.max(4, value)}%` }}
-                  />
-                </div>
-                <p className="text-[12px] text-[var(--text-secondary)] m-0 mt-2">{definition.description}</p>
-                <p className="text-[12px] text-[var(--text-muted)] m-0 mt-1">
-                  Signals: {definition.signals.join(", ")}
-                </p>
-              </div>
-            );
-          })}
-        </div>
       </div>
 
       <div className="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-4">

@@ -4,6 +4,9 @@
   "version": "1.2.10",
   "type": "module",
   "license": "MIT",
+  "scripts": {
+    "build:runtime": "tsc --project tsconfig.runtime.json"
+  },
   "exports": {
     ".": {
       "import": "./dist/index.js",
@@ -81,10 +84,19 @@
       "import": "./dist/acp/index.js",
       "types": "./dist/acp/index.d.ts"
     },
+    "./runtime": {
+      "import": "./dist/runtime/index.js",
+      "types": "./dist/runtime/index.d.ts"
+    },
     "./meta": {
       "import": "./dist/meta.js",
       "types": "./dist/meta.d.ts"
     }
+  },
+  "dependencies": {
+    "pdfjs-dist": "^5.4.54",
+    "@napi-rs/canvas": "^0.1.88",
+    "zod": "^3.x"
   },
   "files": [
     "dist",

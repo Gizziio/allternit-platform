@@ -2,7 +2,7 @@
  * Mistral AI Provider for Allternit SDK
  * https://docs.mistral.ai/
  */
-import { HarnessError, HarnessErrorCode } from '../../harness/types';
+import { HarnessError, HarnessErrorCode, messageContentToString } from '../../harness/types';
 /**
  * Supported Mistral models
  */
@@ -31,7 +31,7 @@ export class AllternitMistral {
     transformMessages(messages) {
         return messages.map(msg => ({
             role: msg.role,
-            content: msg.content,
+            content: messageContentToString(msg.content),
             ...(msg.name && { name: msg.name }),
             ...(msg.tool_calls && {
                 tool_calls: msg.tool_calls.map(tc => ({

@@ -140,7 +140,10 @@ type WindowState = {
 const windowAPI = {
   minimize: (): Promise<void> => ipcRenderer.invoke('window:minimize'),
   maximize: (): Promise<{ maximized: boolean }> => ipcRenderer.invoke('window:maximize'),
-  close: (): Promise<void> => ipcRenderer.invoke('window:close'),
+  close: (): Promise<void> => {
+    console.warn('[preload] window.close() invoked from renderer', new Error('trace').stack);
+    return ipcRenderer.invoke('window:close');
+  },
   isMaximized: (): Promise<boolean> => ipcRenderer.invoke('window:is-maximized'),
   fullscreen: (enabled?: boolean): Promise<{ fullscreen: boolean }> =>
     ipcRenderer.invoke('window:fullscreen', enabled),
@@ -279,6 +282,64 @@ const meshAPI = {
 const shellAPI = {
   openExternal: (url: string): Promise<void> => ipcRenderer.invoke('shell:open-external', url),
   openDesign: (): Promise<void> => ipcRenderer.invoke('shell:open-design'),
+  openRemoteControl: (): Promise<void> => ipcRenderer.invoke('shell:open-remote-control'),
+  openHud: (): Promise<void> => ipcRenderer.invoke('shell:open-hud'),
+  closeHud: (): Promise<void> => ipcRenderer.invoke('shell:close-hud'),
+  toggleHud: (): Promise<void> => ipcRenderer.invoke('shell:toggle-hud'),
+  moveHudBy: (delta: { x: number; y: number; width: number; height: number }): Promise<void> =>
+    ipcRenderer.invoke('shell:move-hud', delta),
+  setHudBounds: (bounds: { x?: number; y?: number; width?: number; height?: number }): Promise<void> =>
+    ipcRenderer.invoke('shell:set-hud-bounds', bounds),
+  // HUD mode: chrome-free floating composer. These mirror the Hermes Desktop
+  // HUD bridge but are namespaced under `window.allternit.shell.hud` and use
+  // `shell:*` / `shell:hud:*` IPC channels.
+  hud: {
+    open: (): Promise<void> => ipcRenderer.invoke('shell:open-hud'),
+    close: (): Promise<void> => ipcRenderer.invoke('shell:close-hud'),
+    toggle: (): Promise<void> => ipcRenderer.invoke('shell:toggle-hud'),
+    setIgnoreMouse: (ignore: boolean): void => ipcRenderer.send('shell:hud:ignore-mouse', ignore),
+    moveBy: (delta: { x: number; y: number; width: number; height: number }): Promise<void> =>
+      ipcRenderer.invoke('shell:move-hud', delta),
+    setBounds: (bounds: { x?: number; y?: number; width?: number; height?: number }): Promise<void> =>
+      ipcRenderer.invoke('shell:set-hud-bounds', bounds),
+    resetLayout: (): Promise<{ ok: boolean }> => ipcRenderer.invoke('shell:hud:reset-layout'),
+    setFrost: (showing: boolean): Promise<{ ok: boolean }> => ipcRenderer.invoke('shell:hud:frost', showing),
+    setWorkspaceTransfer: (transferring: boolean): void =>
+      ipcRenderer.send('shell:hud:workspace-transfer', transferring),
+    reportSession: (sessionId: string | null): void =>
+      ipcRenderer.send('shell:hud:session', sessionId),
+    onCursor: (callback: (point: { x: number; y: number } | null) => void): (() => void) => {
+      const listener = (_: IpcRendererEvent, point: unknown) =>
+        callback(point as { x: number; y: number } | null);
+      ipcRenderer.on('shell:hud:cursor', listener);
+      return () => ipcRenderer.removeListener('shell:hud:cursor', listener);
+    },
+    onGameOverlay: (callback: (state: unknown) => void): (() => void) => {
+      const listener = (_: IpcRendererEvent, state: unknown) => callback(state);
+      ipcRenderer.on('shell:hud:game-overlay', listener);
+      return () => ipcRenderer.removeListener('shell:hud:game-overlay', listener);
+    },
+    onGoto: (callback: (sessionId: string) => void): (() => void) => {
+      const listener = (_: IpcRendererEvent, sessionId: string) => callback(sessionId);
+      ipcRenderer.on('shell:hud:goto', listener);
+      return () => ipcRenderer.removeListener('shell:hud:goto', listener);
+    },
+    onChanged: (callback: (state: { open: boolean; sessionId: string | null }) => void): (() => void) => {
+      const listener = (_: IpcRendererEvent, state: unknown) =>
+        callback(state as { open: boolean; sessionId: string | null });
+      ipcRenderer.on('shell:hud:state', listener);
+      return () => ipcRenderer.removeListener('shell:hud:state', listener);
+    },
+    windowing: ipcRenderer.sendSync('shell:hud:windowing') as {
+      clientPlacement: boolean;
+      controlDrag: boolean;
+      nativeDrag: boolean;
+      workspaceTransfer: boolean;
+    },
+  },
+  openDocs: (artifactId?: string): Promise<void> => ipcRenderer.invoke('shell:open-docs', artifactId),
+  openOffice: (target?: string, artifactId?: string): Promise<void> =>
+    ipcRenderer.invoke('shell:open-office', target, artifactId),
   openSession: (options: { sessionId: string; workspaceId?: string; title?: string }): Promise<void> =>
     ipcRenderer.invoke('shell:open-session', options),
   getOfficeHostStatus: (): Promise<Record<'word' | 'excel' | 'powerpoint', {
@@ -288,6 +349,25 @@ const shellAPI = {
   }>> => ipcRenderer.invoke('shell:get-office-host-status'),
   showSave: (options: unknown): Promise<unknown> => ipcRenderer.invoke('dialog:show-save', options),
   showOpen: (options: unknown): Promise<unknown> => ipcRenderer.invoke('dialog:show-open', options),
+};
+
+// ─── Office programs ─────────────────────────────────────────────────────────
+// File-association delivery: the main process sends `office:open-file` with
+// { name, bytes } after the editor window loads; the platform surface's
+// office desktop bridge registers a handler here and routes the bytes via
+// its file-handoff store.
+
+const officeAPI = {
+  onOpenFile: (
+    callback: (payload: { name: string; bytes: Uint8Array }) => void,
+  ): (() => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, payload: { name: string; bytes: Uint8Array }) =>
+      callback(payload);
+    ipcRenderer.on('office:open-file', listener);
+    return () => {
+      ipcRenderer.removeListener('office:open-file', listener);
+    };
+  },
 };
 
 const officeAddinsAPI = {
@@ -578,6 +658,18 @@ const hyperframesAPI = {
   },
 };
 
+// ─── Browser API Capture ─────────────────────────────────────────────────────
+// Records network traffic from the ACI browser and returns a HAR archive for
+// the platform's HAR-derived API service.
+
+const browserCaptureAPI = {
+  isAvailable: (): Promise<boolean> => ipcRenderer.invoke('browser-capture:is-available'),
+  start: (options?: { filterUrls?: string[] }): Promise<{ success: boolean; sessionId?: string; error?: string }> =>
+    ipcRenderer.invoke('browser-capture:start', options),
+  stop: (sessionId: string): Promise<{ success: boolean; har?: string; error?: string }> =>
+    ipcRenderer.invoke('browser-capture:stop', sessionId),
+};
+
 // ─── Expose ───────────────────────────────────────────────────────────────────
 
 const allternitDesktopAPI = {
@@ -594,6 +686,7 @@ const allternitDesktopAPI = {
   devicePairing: devicePairingAPI,
   mesh: meshAPI,
   shell: shellAPI,
+  office: officeAPI,
   officeAddins: officeAddinsAPI,
   theme: themeAPI,
   extension: extensionAPI,
@@ -609,9 +702,18 @@ const allternitDesktopAPI = {
   worker: workerAPI,
   hyperframes: hyperframesAPI,
   miniApps: miniAppsAPI,
+  browserCapture: browserCaptureAPI,
 };
 
 contextBridge.exposeInMainWorld('allternit', allternitDesktopAPI);
+
+// Temporary diagnostic: log a stack trace for native window.close() calls
+// (e.g. TerminalClerkPage.tsx's self-close), which bypass windowAPI.close above.
+const nativeWindowClose = window.close.bind(window);
+window.close = () => {
+  console.warn('[preload] native window.close() invoked', new Error('trace').stack);
+  nativeWindowClose();
+};
 
 // ─── allternitSidecar bridge ──────────────────────────────────────────────────
 // The platform renderer calls window.allternitSidecar to detect Electron and

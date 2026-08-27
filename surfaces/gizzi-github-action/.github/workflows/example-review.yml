@@ -1,0 +1,32 @@
+# Example: Automatic PR code review with Gizzi Code
+#
+# This workflow runs on every pull request and uses the Gizzi Code
+# GitHub Action to review changed files for bugs, security issues,
+# and code quality problems. Findings are posted as inline comments
+# and a summary comment on the PR.
+
+name: Gizzi Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    name: AI Code Review
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Gizzi Code Review
+        uses: allternit/gizzi-github-action@v1
+        with:
+          action: review
+          api-key: ${{ secrets.ALLTERNIT_API_KEY }}
+          model: default
+          max-tokens: '4096'

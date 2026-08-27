@@ -59,7 +59,7 @@ import { createModuleLogger } from '@/lib/logger';
 const logger = createModuleLogger('DesignModeView');
 
 const VideoEditorView = lazy(() => import("./video/VideoEditorView").then((m) => ({ default: m.VideoEditorView })));
-const OfficeWorkspace = lazy(() => import("./office/OfficeWorkspace").then((m) => ({ default: m.OfficeWorkspace })));
+const OfficeLauncherView = lazy(() => import("../office/OfficeLauncherView").then((m) => ({ default: m.OfficeLauncherView })));
 const MobilePreviewView = lazy(() => import("./mobile/MobilePreviewView").then((m) => ({ default: m.MobilePreviewView })));
 const DesignRegistryView = lazy(() => import("./DesignRegistryView").then((m) => ({ default: m.DesignRegistryView })));
 const BrandKitEditor = lazy(() => import("./office/BrandKitEditor").then((m) => ({ default: m.BrandKitEditor })));
@@ -84,7 +84,6 @@ type ProjectType =
   | 'other';
 type CanvasTab = 'files' | 'system' | 'questions' | 'sketch' | 'mobile' | 'video' | 'docs' | 'handoff' | 'graph' | 'pipeline' | 'team' | 'market' | 'brand' | 'live' | 'orbit' | 'hyperframes' | 'critique';
 type Specialist = 'architect' | 'growth' | 'purist' | 'creative';
-type OfficeDocType = 'slides' | 'spreadsheet' | 'document';
 
 interface Project {
   id: string;
@@ -100,17 +99,8 @@ interface DesignModeViewProps {
   initialTab?: CanvasTab;
   initialDesignMd?: string;
   initialStream?: string;
-}
-
-function getOfficeDocTypeForProject(type: ProjectType): OfficeDocType {
-  switch (type) {
-    case 'slides':
-      return 'slides';
-    case 'dashboard':
-      return 'spreadsheet';
-    default:
-      return 'document';
-  }
+  /** Shell context: open office editors as ACI shell views (from the ViewRegistry). */
+  openView?: (viewType: string, context?: unknown) => void;
 }
 
 function buildDirectProject(initialTab: CanvasTab): Project {
@@ -278,7 +268,7 @@ function TabLoadingState({ label = "Loading workspace…" }: { label?: string })
 
 // ─── Main Studio Component ───────────────────────────────────────────────────
 
-export default function DesignModeView({ initialTab, initialDesignMd, initialStream }: DesignModeViewProps) {
+export default function DesignModeView({ initialTab, initialDesignMd, initialStream, openView }: DesignModeViewProps) {
   useNav();
   const defaultSelection = useDefaultModelSelection();
   // Bridge mode tab selection to canvas/renderer opening (parity with Chat/Cowork)
@@ -666,11 +656,7 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
                   {activeTab === 'docs' && (
                     <div style={{ flex: 1, height: '100%', overflow: 'hidden' }}>
                       <Suspense fallback={<TabLoadingState label="Loading documents…" />}>
-                        <OfficeWorkspace
-                          projectName={activeProject.name}
-                          initialDocType={getOfficeDocTypeForProject(activeProject.type)}
-                          projectId={activeProject.id}
-                        />
+                        <OfficeLauncherView openView={openView} />
                       </Suspense>
                     </div>
                   )}

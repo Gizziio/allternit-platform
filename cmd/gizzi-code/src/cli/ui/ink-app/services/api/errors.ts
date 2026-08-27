@@ -21,10 +21,8 @@ import {
   getOauthAccountInfo,
   isClaudeAISubscriber,
 } from './../../utils/auth.ts'
-import {
-  createAssistantAPIErrorMessage,
-  NO_RESPONSE_REQUESTED,
-} from './../../utils/messages.ts'
+import { createAssistantAPIErrorMessage } from '../../utils/apiErrorMessage.js'
+import { NO_RESPONSE_REQUESTED } from '../../utils/syntheticMessages.js'
 import {
   getDefaultMainLoopModelSetting,
   isNonCustomOpusModel,
@@ -44,10 +42,9 @@ import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
 } from '../analytics/index.js'
-import {
-  type ClaudeAILimits,
-  getRateLimitErrorMessage,
-  type OverageDisabledReason,
+import type {
+  ClaudeAILimits,
+  OverageDisabledReason,
 } from '../claudeAiLimits.js'
 import { shouldProcessRateLimits } from '../rateLimitMocking.js' // Used for /mock-limits command
 import { extractConnectionErrorDetails, formatAPIError } from './errorUtils.js'
@@ -423,14 +420,14 @@ export function extractUnknownErrorFormat(value: unknown): string | undefined {
   return undefined
 }
 
-export function getAssistantMessageFromError(
+export async function getAssistantMessageFromError(
   error: unknown,
   model: string,
   options?: {
     messages?: Message[]
     messagesForAPI?: (UserMessage | AssistantMessage)[]
   },
-): AssistantMessage {
+): Promise<AssistantMessage> {
   // Check for SDK timeout errors
   if (
     error instanceof APIConnectionTimeoutError ||
@@ -517,6 +514,7 @@ export function getAssistantMessageFromError(
       }
 
       // Use the new message format for all new API rate limits
+      const { getRateLimitErrorMessage } = await import('../claudeAiLimits.js')
       const specificErrorMessage = getRateLimitErrorMessage(limits, model)
       if (specificErrorMessage) {
         return createAssistantAPIErrorMessage({

@@ -1,0 +1,67 @@
+---
+title: Authentication
+description: Sign in, manage profiles, and store credentials
+---
+
+## Sign in
+
+### With an API key
+
+```bash
+gizzi auth login --api-key $ALLTERNIT_API_KEY --provider allternit --profile work
+```
+
+If `--api-key` is omitted, the CLI prompts interactively. The key is stored according to `auth.credential_store` in `config.toml`.
+
+### With a third-party provider
+
+```bash
+gizzi auth login --api-key $PROVIDER_KEY --provider local --base-url http://localhost:11434/v1
+```
+
+## Check status
+
+```bash
+gizzi auth status
+```
+
+Output is one of:
+
+- `Authenticated via OAuth token`
+- `Authenticated via API key: <profile>`
+- `Not authenticated`
+
+## Authentication profiles
+
+Each profile stores a provider, optional API key, `api_key_env` reference, and `base_url`. The first profile created becomes the active profile automatically.
+
+```bash
+gizzi auth profile list
+gizzi auth profile add local --provider local --base-url http://localhost:11434/v1
+gizzi auth profile set-active work
+gizzi auth profile remove local
+```
+
+## Credential store
+
+The `auth.credential_store` setting controls where secrets are persisted:
+
+| Store | Behavior |
+|-------|----------|
+| `file` | Secrets are written inline in `config.toml` under the auth profile. |
+| `keyring` | Secrets are delegated to the OS keyring via a pluggable backend. |
+| `auto` | Prefer keyring; fall back to `file` if no keyring backend is available. |
+
+<Warning>
+  Never commit `config.toml` to version control when it contains API keys. Add it to `.gitignore`.
+</Warning>
+
+## Headless / CI authentication
+
+For headless environments, pass the API key via environment variable — no interactive login is required:
+
+```bash
+ALLTERNIT_API_KEY=ak-... gizzi exec "Summarize README.md"
+```
+
+See [CI Mode](/cli/ci-mode) for full CI pipeline guidance.

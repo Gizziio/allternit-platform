@@ -3,7 +3,7 @@ use axum::{
     extract::{Query, State},
     http::{HeaderMap, StatusCode},
     response::Json,
-    routing::{get, post},
+    routing::{delete, get, post},
     Router,
 };
 use rusqlite::params;
@@ -13,6 +13,10 @@ use std::sync::Arc;
 
 use crate::auth::get_user;
 use crate::auth::AuthUser;
+use crate::session_memory_service::{
+    delete_session_memory, list_session_memory, read_session_memory, write_session_memory,
+    DeleteSessionMemoryQuery, ReadSessionMemoryQuery, WriteSessionMemoryRequest,
+};
 use crate::AppState;
 
 pub fn memory_router() -> Router<Arc<AppState>> {
@@ -29,6 +33,16 @@ pub fn memory_router() -> Router<Arc<AppState>> {
         .route("/memory/edges", get(list_edges))
         .route("/memory/entities", get(list_entities).post(create_entity))
         .route("/memory/stats", get(memory_stats))
+        .route("/memory/session", get(read_session_memory_handler))
+        .route("/memory/session/list", get(list_session_memory_handler))
+        .route("/memory/session", post(write_session_memory_handler))
+        .route("/memory/session", delete(delete_session_memory_handler))
+        .route("/memory/v2/observation", post(record_observation_v2_handler))
+        .route("/memory/v2/observations", get(list_observations_v2_handler))
+        .route("/memory/v2/recall", post(recall_v2_handler))
+        .route("/memory/v2/retain", post(retain_turn_v2_handler))
+        .route("/memory/v2/facts", get(list_facts_v2_handler))
+        .route("/memory/v2/entities", get(list_entities_v2_handler))
 }
 
 // ── Health ──────────────────────────────────────────────────────────────────
@@ -786,5 +800,346 @@ async fn memory_stats(
                 "vectors": 0,
             })),
         ),
+    }
+}
+
+// ── Session Memory (model-facing `memory` tool) ───────────────────────────────
+
+async fn read_session_memory_handler(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Query(params): Query<ReadSessionMemoryQuery>,
+) -> impl axum::response::IntoResponse {
+    let user = match get_user(&headers) {
+        Some(u) => u,
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            ) as (StatusCode, Json<serde_json::Value>)
+        }
+    };
+
+    if params.session_id.is_empty() || params.key.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "session_id and key are required"})),
+        );
+    }
+
+    match read_session_memory(&state.db, &user.user_id, &params.session_id, &params.key) {
+        Ok(Some(entry)) => (StatusCode::OK, Json(json!(entry))),
+        Ok(None) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"key": params.key, "value": serde_json::Value::Null})),
+        ),
+        Err(e) => {
+            tracing::warn!("Session memory read error: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+        }
+    }
+}
+
+async fn list_session_memory_handler(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Query(params): Query<std::collections::HashMap<String, String>>,
+) -> impl axum::response::IntoResponse {
+    let user = match get_user(&headers) {
+        Some(u) => u,
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            ) as (StatusCode, Json<serde_json::Value>)
+        }
+    };
+
+    let session_id = match params.get("session_id") {
+        Some(s) if !s.is_empty() => s.clone(),
+        _ => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(json!({"error": "session_id is required"})),
+            );
+        }
+    };
+
+    match list_session_memory(&state.db, &user.user_id, &session_id) {
+        Ok(entries) => (StatusCode::OK, Json(json!({"entries": entries}))),
+        Err(e) => {
+            tracing::warn!("Session memory list error: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+        }
+    }
+}
+
+async fn write_session_memory_handler(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Json(body): Json<WriteSessionMemoryRequest>,
+) -> impl axum::response::IntoResponse {
+    let user = match get_user(&headers) {
+        Some(u) => u,
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            )
+        }
+    };
+
+    if body.session_id.is_empty() || body.key.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "session_id and key are required"})),
+        );
+    }
+
+    match write_session_memory(&state.db, &user.user_id, &body.session_id, &body.key, &body.value) {
+        Ok(entry) => (StatusCode::OK, Json(json!(entry))),
+        Err(e) => {
+            tracing::warn!("Session memory write error: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+        }
+    }
+}
+
+async fn delete_session_memory_handler(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Query(params): Query<DeleteSessionMemoryQuery>,
+) -> impl axum::response::IntoResponse {
+    let user = match get_user(&headers) {
+        Some(u) => u,
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            )
+        }
+    };
+
+    if params.session_id.is_empty() || params.key.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "session_id and key are required"})),
+        );
+    }
+
+    match delete_session_memory(&state.db, &user.user_id, &params.session_id, &params.key) {
+        Ok(deleted) => (
+            StatusCode::OK,
+            Json(json!({"key": params.key, "deleted": deleted})),
+        ),
+        Err(e) => {
+            tracing::warn!("Session memory delete error: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+        }
+    }
+}
+
+// ── Memory Kernel V2 Handlers ───────────────────────────────────────────────
+
+#[derive(Debug, Deserialize)]
+pub struct ListV2Query {
+    pub agent_id: Option<String>,
+    pub limit: Option<usize>,
+}
+
+async fn record_observation_v2_handler(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Json(payload): Json<crate::memory_kernel_service::RecordObservationRequest>,
+) -> impl axum::response::IntoResponse {
+    let user = match get_user(&headers) {
+        Some(u) => u,
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            )
+        }
+    };
+
+    match crate::memory_kernel_service::record_observation(
+        &state.db,
+        &user.user_id,
+        payload.agent_id.as_deref(),
+        payload.session_id.as_deref(),
+        &payload.kind,
+        &payload.content,
+        payload.source.as_deref(),
+    ) {
+        Ok(id) => (StatusCode::CREATED, Json(json!({"id": id, "status": "recorded"}))),
+        Err(e) => {
+            tracing::warn!("Record observation error: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()})))
+        }
+    }
+}
+
+async fn recall_v2_handler(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Json(payload): Json<crate::memory_kernel_service::RecallQuery>,
+) -> impl axum::response::IntoResponse {
+    let user = match get_user(&headers) {
+        Some(u) => u,
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            )
+        }
+    };
+
+    let limit = payload.limit.unwrap_or(10);
+    match crate::memory_kernel_service::recall(
+        &state.db,
+        &user.user_id,
+        payload.agent_id.as_deref(),
+        payload.session_id.as_deref(),
+        &payload.query,
+        limit,
+    ) {
+        Ok(results) => (StatusCode::OK, Json(json!({"results": results, "count": results.len()}))),
+        Err(e) => {
+            tracing::warn!("Recall error: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()})))
+        }
+    }
+}
+
+async fn retain_turn_v2_handler(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Json(payload): Json<crate::memory_kernel_service::RetainTurnRequest>,
+) -> impl axum::response::IntoResponse {
+    let user = match get_user(&headers) {
+        Some(u) => u,
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            )
+        }
+    };
+
+    match crate::memory_kernel_service::retain_turn(
+        &state.db,
+        &user.user_id,
+        payload.agent_id.as_deref(),
+        payload.session_id.as_deref(),
+        &payload.role,
+        &payload.content,
+    ) {
+        Ok(id) => (StatusCode::OK, Json(json!({"observation_id": id, "status": "retained"}))),
+        Err(e) => {
+            tracing::warn!("Retain turn error: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()})))
+        }
+    }
+}
+
+async fn list_observations_v2_handler(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Query(params): Query<ListV2Query>,
+) -> impl axum::response::IntoResponse {
+    let user = match get_user(&headers) {
+        Some(u) => u,
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            )
+        }
+    };
+
+    let limit = params.limit.unwrap_or(50);
+    match crate::memory_kernel_service::list_observations(
+        &state.db,
+        &user.user_id,
+        params.agent_id.as_deref(),
+        limit,
+    ) {
+        Ok(observations) => (StatusCode::OK, Json(json!({"observations": observations, "count": observations.len()}))),
+        Err(e) => {
+            tracing::warn!("List observations error: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()})))
+        }
+    }
+}
+
+async fn list_facts_v2_handler(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Query(params): Query<ListV2Query>,
+) -> impl axum::response::IntoResponse {
+    let user = match get_user(&headers) {
+        Some(u) => u,
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            )
+        }
+    };
+
+    let limit = params.limit.unwrap_or(50);
+    match crate::memory_kernel_service::list_facts(
+        &state.db,
+        &user.user_id,
+        params.agent_id.as_deref(),
+        limit,
+    ) {
+        Ok(facts) => (StatusCode::OK, Json(json!({"facts": facts, "count": facts.len()}))),
+        Err(e) => {
+            tracing::warn!("List facts error: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()})))
+        }
+    }
+}
+
+async fn list_entities_v2_handler(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Query(params): Query<ListV2Query>,
+) -> impl axum::response::IntoResponse {
+    let user = match get_user(&headers) {
+        Some(u) => u,
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            )
+        }
+    };
+
+    let limit = params.limit.unwrap_or(50);
+    match crate::memory_kernel_service::list_entities(
+        &state.db,
+        &user.user_id,
+        params.agent_id.as_deref(),
+        limit,
+    ) {
+        Ok(entities) => (StatusCode::OK, Json(json!({"entities": entities, "count": entities.len()}))),
+        Err(e) => {
+            tracing::warn!("List entities error: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()})))
+        }
     }
 }

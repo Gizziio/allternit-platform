@@ -23,7 +23,7 @@
 //!   and the derived fallback chain is sent to Gizzi as `fallbackModels`.
 
 use axum::{
-    extract::{Extension, State},
+    extract::{Extension, Path, State},
     http::{header, HeaderMap, HeaderName, HeaderValue, StatusCode},
     response::{
         sse::{Event, KeepAlive, Sse},
@@ -31,11 +31,12 @@ use axum::{
     },
     Json,
 };
+use base64::{engine::general_purpose::STANDARD, Engine as _};
 use futures::StreamExt;
-use rusqlite::OptionalExtension;
+use rusqlite::{params, OptionalExtension};
 use serde::Deserialize;
 use serde_json::{json, Value};
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::convert::Infallible;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -47,12 +48,18 @@ use crate::AppState;
 
 use super::auth::LlmKeyContext;
 use super::gizzi_bus::{self, GizziEvent};
+use super::inference_hooks::{self, InferenceHooks, PreHookOutcome};
 use super::llm_pricing::{self, TokenBreakdown};
+use super::refusal;
 use super::router::{self, RoutingDecision};
+use super::safety;
 use super::translate::{
-    map_finish_reason, messages_to_prompt, new_completion_id, stream_error_data, validate_request,
-    ChatCompletionChunk, ChatCompletionRequest, ChatCompletionResponse, OpenAiErrorResponse, Usage,
+    message_to_gizzi_parts, messages_to_gizzi_parts, new_completion_id, stream_error_data,
+    validate_request, Annotation, ChatCompletionChunk, ChatCompletionRequest,
+    ChatCompletionResponse, ChatMessage, FileCitation, ImageUrlPart, MessageContent,
+    OpenAiErrorResponse, ToolCall, ToolCallDelta, ToolCallFunction, UrlCitation, Usage,
 };
+use super::context_cache;
 
 /// Hard cap on a single completion, from send to `session.status` idle.
 const COMPLETION_TIMEOUT: Duration = Duration::from_secs(120);
@@ -68,6 +75,131 @@ pub const POLICY_ALIASES: [&str; 6] = [
     "allternit-knowledge",
     "allternit-instruct",
 ];
+
+/// Whether the resolved provider is Anthropic, which supports native citations.
+fn is_anthropic_provider(requested: &str, resolved: &ResolvedModel) -> bool {
+    requested.starts_with("anthropic/")
+        || resolved.provider_id == "anthropic"
+        || requested.starts_with("claude-")
+        || resolved.model_id.starts_with("claude-")
+}
+
+/// Resolve any `file_id` references in message content to inline base64 data
+/// URLs. Session-scoped files are checked first, then the global files table.
+async fn resolve_file_references(
+    db: &DbHandle,
+    messages: Vec<ChatMessage>,
+) -> Result<Vec<ChatMessage>, OpenAiErrorResponse> {
+    let mut out = messages;
+    for message in &mut out {
+        let Some(MessageContent::Parts(parts)) = message.content.as_mut() else {
+            continue;
+        };
+        for part in parts {
+            let Some(file_id) = part.file_id.as_deref().filter(|s| !s.is_empty()) else {
+                continue;
+            };
+            let (mime, bytes) = load_file_by_id(db, file_id).await?;
+            let data_url = format!("data:{};base64,{}", mime, STANDARD.encode(&bytes));
+            part.image_url = Some(ImageUrlPart {
+                url: data_url,
+                detail: None,
+            });
+            part.file_id = None;
+        }
+    }
+    Ok(out)
+}
+
+async fn load_file_by_id(
+    db: &DbHandle,
+    file_id: &str,
+) -> Result<(String, Vec<u8>), OpenAiErrorResponse> {
+    let db = db.clone();
+    let file_id = file_id.to_string();
+    tokio::task::spawn_blocking(move || {
+        let conn = db.connect().map_err(|e| {
+            OpenAiErrorResponse::new(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("failed to open database: {e}"),
+                "server_error",
+                None,
+                Some(crate::llm_gateway::translate::error_code::INTERNAL_ERROR),
+            )
+        })?;
+
+        // Prefer session-scoped files.
+        let session_row: Option<(String, String)> = conn
+            .query_row(
+                "SELECT storage_path, mime_type FROM session_files WHERE id = ?1",
+                params![file_id],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .optional()
+            .map_err(|e| {
+                OpenAiErrorResponse::new(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("database error: {e}"),
+                    "server_error",
+                    None,
+                    Some(crate::llm_gateway::translate::error_code::INTERNAL_ERROR),
+                )
+            })?;
+        if let Some((path, mime)) = session_row {
+            let bytes = std::fs::read(&path).map_err(|e| {
+                OpenAiErrorResponse::new(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("failed to read session file: {e}"),
+                    "server_error",
+                    None,
+                    Some(crate::llm_gateway::translate::error_code::INTERNAL_ERROR),
+                )
+            })?;
+            return Ok((mime, bytes));
+        }
+
+        // Fall back to the global files table used by /v1/files.
+        let global_row: Option<(Vec<u8>, String)> = conn
+            .query_row(
+                "SELECT bytes, filename FROM files WHERE id = ?1",
+                params![file_id],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .optional()
+            .map_err(|e| {
+                OpenAiErrorResponse::new(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("database error: {e}"),
+                    "server_error",
+                    None,
+                    Some(crate::llm_gateway::translate::error_code::INTERNAL_ERROR),
+                )
+            })?;
+        if let Some((bytes, filename)) = global_row {
+            let mime = if filename.ends_with(".pdf") {
+                "application/pdf"
+            } else {
+                "application/octet-stream"
+            };
+            return Ok((mime.to_string(), bytes));
+        }
+
+        Err(OpenAiErrorResponse::invalid_request(
+            format!("file_id `{file_id}` not found."),
+            Some("file_id"),
+        ))
+    })
+    .await
+    .map_err(|e| {
+        OpenAiErrorResponse::new(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to load file: {e}"),
+            "server_error",
+            None,
+            Some(crate::llm_gateway::translate::error_code::INTERNAL_ERROR),
+        )
+    })?
+}
 
 /// An `in_progress` idempotency row older than this is assumed abandoned
 /// (worker died mid-request) and may be retried.
@@ -155,6 +287,20 @@ pub struct ModelEntry {
     pub status: Option<String>,
     #[serde(default)]
     pub cost: Option<ModelCost>,
+    #[serde(default)]
+    pub limit: Option<ModelLimit>,
+    #[serde(default)]
+    pub deprecated: Option<bool>,
+    #[serde(default)]
+    pub replacement: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, Default, Deserialize)]
+pub struct ModelLimit {
+    #[serde(default)]
+    pub context: u64,
+    #[serde(default)]
+    pub output: u64,
 }
 
 /// $ per 1M tokens as reported by the Gizzi catalog (extra fields ignored).
@@ -221,12 +367,10 @@ async fn resolve_model(
             let db = db.clone();
             let tenant_id = tenant_id.map(str::to_string);
             let requested = requested.to_string();
-            tokio::task::spawn_blocking(
-                move || -> Result<RoutingDecision, router::RouterError> {
-                    let conn = db.connect().map_err(router::RouterError::from)?;
-                    router::resolve(&conn, tenant_id.as_deref(), &requested, &catalog)
-                },
-            )
+            tokio::task::spawn_blocking(move || -> Result<RoutingDecision, router::RouterError> {
+                let conn = db.connect().map_err(router::RouterError::from)?;
+                router::resolve(&conn, tenant_id.as_deref(), &requested, &catalog)
+            })
             .await
         };
         return match decision {
@@ -269,8 +413,7 @@ async fn resolve_model(
                 Some("model"),
             ));
         }
-        let fallbacks =
-            explicit_fallbacks(db, tenant_id, client, base, provider, model).await;
+        let fallbacks = explicit_fallbacks(db, tenant_id, client, base, provider, model).await;
         return Ok(ResolvedModel {
             policy: None,
             provider_id: provider.to_string(),
@@ -291,7 +434,8 @@ async fn resolve_model(
 
     match found {
         Some(provider) => {
-            let fallbacks = derive_fallbacks(db, tenant_id, &catalog, &provider.id, requested).await;
+            let fallbacks =
+                derive_fallbacks(db, tenant_id, &catalog, &provider.id, requested).await;
             Ok(ResolvedModel {
                 policy: None,
                 provider_id: provider.id.clone(),
@@ -305,7 +449,7 @@ async fn resolve_model(
             format!("The model `{requested}` does not exist or is not offered by any provider."),
             "invalid_request_error",
             Some("model"),
-            Some("model_not_found"),
+            Some(crate::llm_gateway::translate::error_code::MODEL_NOT_FOUND),
         )),
     }
 }
@@ -396,7 +540,10 @@ async fn create_session(
         .and_then(Value::as_str)
         .map(str::to_string)
         .ok_or_else(|| {
-            OpenAiErrorResponse::upstream("Gizzi session creation returned no id.", "upstream_error")
+            OpenAiErrorResponse::upstream(
+                "Gizzi session creation returned no id.",
+                "upstream_error",
+            )
         })
 }
 
@@ -424,8 +571,16 @@ pub struct GizziUsage {
 enum EventEffect {
     None,
     TextDelta(String),
+    ToolCallDelta(ToolCallDelta),
     Done,
     Error(String, String),
+}
+
+/// Accumulates incremental tool-call arguments for one tool call index.
+struct ToolCallAccumulator {
+    id: String,
+    name: String,
+    arguments: String,
 }
 
 /// Per-request aggregation of Gizzi bus events.
@@ -438,6 +593,8 @@ struct Collector {
     fallback_from: Option<String>,
     fallback_to: Option<String>,
     ttft: Option<Duration>,
+    citations: Vec<Annotation>,
+    tool_calls: BTreeMap<u32, ToolCallAccumulator>,
 }
 
 impl Collector {
@@ -451,7 +608,29 @@ impl Collector {
             fallback_from: None,
             fallback_to: None,
             ttft: None,
+            citations: Vec::new(),
+            tool_calls: BTreeMap::new(),
         }
+    }
+
+    /// Assemble the final tool_calls list from accumulated deltas, if any.
+    fn final_tool_calls(&self) -> Option<Vec<ToolCall>> {
+        if self.tool_calls.is_empty() {
+            return None;
+        }
+        Some(
+            self.tool_calls
+                .values()
+                .map(|acc| ToolCall {
+                    id: acc.id.clone(),
+                    call_type: "function".to_string(),
+                    function: ToolCallFunction {
+                        name: acc.name.clone(),
+                        arguments: acc.arguments.clone(),
+                    },
+                })
+                .collect(),
+        )
     }
 
     /// Fold one bus event (already filtered to this session) into the
@@ -461,15 +640,46 @@ impl Collector {
         match event.event_type.as_str() {
             "message.part.delta" => {
                 let field = props.get("field").and_then(Value::as_str).unwrap_or("text");
-                if field != "text" {
-                    return EventEffect::None;
-                }
-                if let Some(delta) = props.get("delta").and_then(Value::as_str) {
-                    if self.ttft.is_none() {
-                        self.ttft = Some(self.started.elapsed());
+                match field {
+                    "text" => {
+                        if let Some(delta) = props.get("delta").and_then(Value::as_str) {
+                            if self.ttft.is_none() {
+                                self.ttft = Some(self.started.elapsed());
+                            }
+                            self.text.push_str(delta);
+                            return EventEffect::TextDelta(delta.to_string());
+                        }
                     }
-                    self.text.push_str(delta);
-                    return EventEffect::TextDelta(delta.to_string());
+                    "tool_calls" => {
+                        if let Some(delta_json) = props.get("delta").and_then(Value::as_str) {
+                            if let Ok(delta) = serde_json::from_str::<ToolCallDelta>(delta_json) {
+                                if self.ttft.is_none() {
+                                    self.ttft = Some(self.started.elapsed());
+                                }
+                                let acc = self.tool_calls.entry(delta.index).or_insert_with(|| {
+                                    ToolCallAccumulator {
+                                        id: delta.id.clone().unwrap_or_default(),
+                                        name: delta
+                                            .function
+                                            .as_ref()
+                                            .and_then(|f| f.name.clone())
+                                            .unwrap_or_default(),
+                                        arguments: String::new(),
+                                    }
+                                });
+                                if let Some(func) = &delta.function {
+                                    if let Some(name) = &func.name {
+                                        acc.name.clone_from(name);
+                                    }
+                                    if let Some(args) = &func.arguments {
+                                        acc.arguments.push_str(args);
+                                    }
+                                }
+                                return EventEffect::ToolCallDelta(delta);
+                            }
+                        }
+                    }
+                    _ => {}
                 }
                 EventEffect::None
             }
@@ -481,6 +691,7 @@ impl Collector {
                     return EventEffect::None;
                 }
                 self.usage = parse_assistant_usage(info);
+                self.citations = extract_citations(info);
                 if let Some(error) = info.get("error") {
                     let name = error
                         .get("name")
@@ -580,6 +791,45 @@ fn parse_assistant_usage(info: &Value) -> GizziUsage {
             .and_then(Value::as_str)
             .map(str::to_string),
     }
+}
+
+/// Extract citation annotations from a Gizzi assistant `message.updated` info
+/// block. The runtime currently does not emit structured citations, so this
+/// parses the documented shape ahead of the upstream landing and surfaces
+/// OpenAI-style `message.annotations` when present.
+fn extract_citations(info: &Value) -> Vec<Annotation> {
+    let Some(citations) = info.get("citations").and_then(Value::as_array) else {
+        return Vec::new();
+    };
+    citations
+        .iter()
+        .filter_map(|citation| {
+            let cited_text = citation.get("cited_text").and_then(Value::as_str)?;
+            if let Some(url) = citation.get("url").and_then(Value::as_str) {
+                return Some(Annotation::UrlCitation {
+                    url_citation: UrlCitation {
+                        url: url.to_string(),
+                        title: citation.get("title").and_then(Value::as_str).map(str::to_string),
+                    },
+                });
+            }
+            if let Some(file_id) = citation.get("file_id").and_then(Value::as_str) {
+                return Some(Annotation::FileCitation {
+                    file_citation: FileCitation {
+                        file_id: file_id.to_string(),
+                    },
+                });
+            }
+            // No recognized source: emit a URL citation using the cited text as
+            // the URL so the annotation is not silently dropped.
+            Some(Annotation::UrlCitation {
+                url_citation: UrlCitation {
+                    url: cited_text.to_string(),
+                    title: citation.get("title").and_then(Value::as_str).map(str::to_string),
+                },
+            })
+        })
+        .collect()
 }
 
 /// Everything learned about one completed request. This is the struct B4
@@ -950,7 +1200,7 @@ fn idempotency_conflict(message: &str) -> Response {
         message,
         "invalid_request_error",
         None,
-        Some("idempotency_key_in_use"),
+        Some(crate::llm_gateway::translate::error_code::IDEMPOTENCY_CONFLICT),
     )
     .into_response()
 }
@@ -969,8 +1219,9 @@ async fn idempotency_begin(db: &DbHandle, key: &LlmKeyContext, idem_key: &str) -
                 "SELECT status, response_body,
                         CAST(strftime('%s', 'now') AS INTEGER)
                           - CAST(strftime('%s', created_at) AS INTEGER) AS age_secs
-                 FROM llm_usage_events WHERE idempotency_key = ?1",
-                rusqlite::params![idem],
+                 FROM llm_usage_events
+                 WHERE idempotency_key = ?1 AND virtual_key_id = ?2",
+                rusqlite::params![idem, key_id],
                 |row| {
                     Ok((
                         row.get::<_, String>(0)?,
@@ -986,8 +1237,8 @@ async fn idempotency_begin(db: &DbHandle, key: &LlmKeyContext, idem_key: &str) -
                 ("in_progress", _) if age_secs > IDEMPOTENCY_STALE_SECS => {
                     // Abandoned attempt (process died mid-request): allow retry.
                     conn.execute(
-                        "DELETE FROM llm_usage_events WHERE idempotency_key = ?1",
-                        rusqlite::params![idem],
+                        "DELETE FROM llm_usage_events WHERE idempotency_key = ?1 AND virtual_key_id = ?2",
+                        rusqlite::params![idem, key_id],
                     )?;
                 }
                 ("in_progress", _) => {
@@ -1040,7 +1291,7 @@ async fn idempotency_begin(db: &DbHandle, key: &LlmKeyContext, idem_key: &str) -
                     format!("Internal error: {err}"),
                     "server_error",
                     None,
-                    None,
+                    Some(crate::llm_gateway::translate::error_code::INTERNAL_ERROR),
                 )
                 .into_response(),
             )
@@ -1053,7 +1304,7 @@ async fn idempotency_begin(db: &DbHandle, key: &LlmKeyContext, idem_key: &str) -
                     format!("Internal error: {err}"),
                     "server_error",
                     None,
-                    None,
+                    Some(crate::llm_gateway::translate::error_code::INTERNAL_ERROR),
                 )
                 .into_response(),
             )
@@ -1063,17 +1314,135 @@ async fn idempotency_begin(db: &DbHandle, key: &LlmKeyContext, idem_key: &str) -
 
 // ─── Handlers ───────────────────────────────────────────────────────────────
 
-/// `POST /chat/completions` — OpenAI-compatible completion via Gizzi.
-#[tracing::instrument(skip_all, name = "llm_gateway.chat_completions")]
-pub async fn chat_completions(
+/// Deterministic, provider-independent estimate used for preflight sizing.
+/// Four UTF-8 characters per token is intentionally simple and stable.
+pub fn estimate_tokens(request: &ChatCompletionRequest) -> u64 {
+    let characters = request
+        .messages
+        .iter()
+        .map(|message| message.role.chars().count() + message.content_text().chars().count())
+        .sum::<usize>();
+    ((characters + 3) / 4) as u64
+}
+
+/// Token count for a chat-completions-shaped body.
+///
+/// OpenAI models are counted with `tiktoken-rs` so the preflight estimate
+/// matches the upstream tokenizer. Unsupported model names fall back to the
+/// provider-independent heuristic.
+pub fn count_tokens_request(request: &ChatCompletionRequest) -> u64 {
+    let model = strip_openai_prefix(&request.model);
+    let messages: Vec<tiktoken_rs::ChatCompletionRequestMessage> = request
+        .messages
+        .iter()
+        .map(|message| tiktoken_rs::ChatCompletionRequestMessage {
+            role: message.role.clone(),
+            content: Some(message.content_text()),
+            name: message.name.clone(),
+            function_call: None,
+            tool_calls: Vec::new(),
+            refusal: None,
+        })
+        .collect();
+
+    tiktoken_rs::num_tokens_from_messages(model, &messages)
+        .map(|count| count as u64)
+        .unwrap_or_else(|_| estimate_tokens(request))
+}
+
+fn strip_openai_prefix(model: &str) -> &str {
+    model
+        .strip_prefix("openai/")
+        .or_else(|| model.strip_prefix("azure/"))
+        .unwrap_or(model)
+}
+
+/// `POST /tokens` — estimate input tokens and cost for a chat-completions-shaped body.
+pub async fn count_tokens(
+    Extension(key): Extension<LlmKeyContext>,
+    body: axum::body::Bytes,
+) -> Response {
+    let request: ChatCompletionRequest = match serde_json::from_slice(&body) {
+        Ok(request) => request,
+        Err(err) => {
+            return OpenAiErrorResponse::invalid_request(
+                format!("Invalid request body: {err}"),
+                None,
+            )
+            .into_response()
+        }
+    };
+    if let Err(response) = validate_request(&request) {
+        return response.into_response();
+    }
+    if !key.model_allowed(&request.model) {
+        return OpenAiErrorResponse::new(
+            StatusCode::FORBIDDEN,
+            format!(
+                "This API key is not allowed to use model `{}`.",
+                request.model
+            ),
+            "permission_error",
+            Some("model"),
+            Some(crate::llm_gateway::translate::error_code::PERMISSION_DENIED),
+        )
+        .into_response();
+    }
+    let input_tokens = count_tokens_request(&request);
+    let estimated_cost = estimate_request_cost(&request.model, input_tokens, request.max_tokens);
+    Json(json!({
+        "object": "token_count",
+        "model": request.model,
+        "input_tokens": input_tokens,
+        "estimated_cost": estimated_cost,
+    }))
+    .into_response()
+}
+
+fn estimate_request_cost(model: &str, input_tokens: u64, max_tokens: Option<u32>) -> Value {
+    let snapshot = llm_pricing::pricing_snapshot();
+    // Try exact match, then bare-model suffix match.
+    let pricing = snapshot.get(model).or_else(|| {
+        let suffix = format!("/{model}");
+        snapshot.iter().find(|(k, _)| k.ends_with(&suffix)).map(|(_, v)| v)
+    });
+    let output_tokens = max_tokens.unwrap_or(0) as u64;
+    match pricing {
+        Some(p) => {
+            let input_cost = (input_tokens as f64 * p.input) / 1_000_000.0;
+            let output_cost = (output_tokens as f64 * p.output) / 1_000_000.0;
+            json!({
+                "currency": "USD",
+                "input_cost": input_cost,
+                "output_cost": output_cost,
+                "total_cost": input_cost + output_cost,
+                "priced": true,
+            })
+        }
+        None => json!({
+            "currency": "USD",
+            "input_cost": null,
+            "output_cost": null,
+            "total_cost": null,
+            "priced": false,
+        }),
+    }
+}
+
+fn local_api_base(state: &AppState) -> String {
+    format!("http://127.0.0.1:{}", state.config.api_port())
+}
+
+/// `POST /chat/completions:best-of` — generate N candidates and return the
+/// full set (or the single best when `best_of` is true). This is the native
+/// Allternit partial / best-of sampling surface.
+pub async fn best_of_completions(
     State(state): State<Arc<AppState>>,
     Extension(key): Extension<LlmKeyContext>,
     headers: HeaderMap,
     body: axum::body::Bytes,
 ) -> Response {
-    let started = Instant::now();
-
-    let request: ChatCompletionRequest = match serde_json::from_slice(&body) {
+    let mut request: ChatCompletionRequest = match serde_json::from_slice(&body) {
         Ok(request) => request,
         Err(err) => {
             return OpenAiErrorResponse::invalid_request(
@@ -1085,6 +1454,225 @@ pub async fn chat_completions(
     };
     if let Err(response) = validate_request(&request) {
         return response.into_response();
+    }
+    if !key.model_allowed(&request.model) {
+        return OpenAiErrorResponse::new(
+            StatusCode::FORBIDDEN,
+            format!("This API key is not allowed to use model `{}`.", request.model),
+            "permission_error",
+            Some("model"),
+            Some(crate::llm_gateway::translate::error_code::PERMISSION_DENIED),
+        )
+        .into_response();
+    }
+
+    let n = request.n.unwrap_or(1).min(10).max(1);
+    let best_only = request.best_of.unwrap_or(false);
+    request.stream = Some(false);
+    request.n = None;
+    request.best_of = None;
+
+    let auth_header = headers
+        .get(header::AUTHORIZATION)
+        .and_then(|v| v.to_str().ok())
+        .map(str::to_string);
+
+    let base = local_api_base(&state);
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(120))
+        .build()
+        .unwrap_or_default();
+
+    let body_json = match serde_json::to_value(&request) {
+        Ok(v) => v,
+        Err(err) => {
+            return OpenAiErrorResponse::new(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Failed to serialize request: {err}"),
+                "server_error",
+                None,
+                Some(crate::llm_gateway::translate::error_code::INTERNAL_ERROR),
+            )
+            .into_response()
+        }
+    };
+
+    let mut candidates: Vec<Value> = Vec::with_capacity(n as usize);
+    for index in 0..n {
+        let mut req = client
+            .post(format!("{base}/v1/chat/completions"))
+            .json(&body_json);
+        if let Some(auth) = &auth_header {
+            req = req.header(header::AUTHORIZATION, auth.clone());
+        }
+        match req.send().await {
+            Ok(resp) => {
+                let status = resp.status();
+                let text = resp.text().await.unwrap_or_default();
+                let mut value: Value = match serde_json::from_str(&text) {
+                    Ok(v) => v,
+                    Err(_) => {
+                        candidates.push(json!({
+                            "index": index,
+                            "error": { "message": text, "type": "parse_error" }
+                        }));
+                        continue;
+                    }
+                };
+                if let Some(obj) = value.as_object_mut() {
+                    obj.insert("index".to_string(), json!(index));
+                }
+                if !status.is_success() {
+                    candidates.push(json!({
+                        "index": index,
+                        "error": value,
+                        "status": status.as_u16()
+                    }));
+                    continue;
+                }
+                candidates.push(value);
+            }
+            Err(err) => {
+                candidates.push(json!({
+                    "index": index,
+                    "error": { "message": err.to_string(), "type": "request_error" }
+                }));
+            }
+        }
+    }
+
+    if best_only {
+        let best = candidates
+            .iter()
+            .filter_map(|c| {
+                let content = c
+                    .get("choices")?
+                    .get(0)?
+                    .get("message")?
+                    .get("content")?
+                    .as_str()?;
+                let len = content.len();
+                Some((len, c))
+            })
+            .max_by_key(|(len, _)| *len)
+            .map(|(_, c)| c.clone())
+            .unwrap_or_else(|| candidates.into_iter().next().unwrap_or(json!({})));
+        return Json(best).into_response();
+    }
+
+    Json(json!({
+        "object": "chat.completion.best_of",
+        "model": request.model,
+        "n": n,
+        "candidates": candidates,
+    }))
+    .into_response()
+}
+
+/// `POST /chat/completions` — OpenAI-compatible completion via Gizzi.
+#[tracing::instrument(skip_all, name = "llm_gateway.chat_completions")]
+pub async fn chat_completions(
+    State(state): State<Arc<AppState>>,
+    Extension(key): Extension<LlmKeyContext>,
+    headers: HeaderMap,
+    body: axum::body::Bytes,
+) -> Response {
+    let started = Instant::now();
+
+    let mut request: ChatCompletionRequest = match serde_json::from_slice(&body) {
+        Ok(request) => request,
+        Err(err) => {
+            return OpenAiErrorResponse::invalid_request(
+                format!("Invalid request body: {err}"),
+                None,
+            )
+            .into_response();
+        }
+    };
+    if let Err(response) = validate_request(&request) {
+        return response.into_response();
+    }
+
+    // On-premise safety classifier: reject obvious jailbreak / prompt-injection
+    // attempts before any routing or spend occurs.
+    if let Some(result) = safety::classify_messages(&request.messages) {
+        warn!(category = %result.category, "Safety classifier blocked request");
+        return OpenAiErrorResponse::new(
+            StatusCode::BAD_REQUEST,
+            format!("{}: {}", result.reason, result.category),
+            "content_filter",
+            None,
+            Some(crate::llm_gateway::translate::error_code::CONTENT_POLICY_VIOLATION),
+        )
+        .into_response();
+    }
+
+    // Load organization-level inference hooks. Pre-hooks run before routing so
+    // mutations (e.g., model overrides) participate in allowlist checks.
+    let hooks: Option<InferenceHooks> = key
+        .tenant_id
+        .as_deref()
+        .and_then(|org| inference_hooks::load_hooks(&state.db, org).ok().flatten());
+
+    let mut body = body;
+    if let Some(hooks) = &hooks {
+        let hook_client = inference_hooks::hook_client();
+        match inference_hooks::run_pre_hook(&hook_client, hooks, body.clone()).await {
+            PreHookOutcome::Proceed(new_body) => {
+                if new_body != body {
+                    body = new_body;
+                    request = match serde_json::from_slice(&body) {
+                        Ok(request) => request,
+                        Err(err) => {
+                            return OpenAiErrorResponse::invalid_request(
+                                format!("Pre-hook returned invalid request body: {err}"),
+                                None,
+                            )
+                            .into_response();
+                        }
+                    };
+                    if let Err(response) = validate_request(&request) {
+                        return response.into_response();
+                    }
+                }
+            }
+            PreHookOutcome::Abort(response) => return response,
+        }
+    }
+
+    // Resolve session-scoped (or global) file_id references to inline data so
+    // downstream Gizzi parts carry the actual file bytes.
+    request.messages = match resolve_file_references(&state.db, request.messages).await {
+        Ok(messages) => messages,
+        Err(response) => return response.into_response(),
+    };
+
+    // Prepend cached context messages when a cache id is supplied.
+    if let Some(cache_id) = &request.context_cache_id {
+        match context_cache::load_cache_messages(&state.db, &key.key_id, cache_id) {
+            Ok(Some(cached)) => {
+                let mut combined = cached;
+                combined.extend(request.messages);
+                request.messages = combined;
+            }
+            Ok(None) => {
+                return OpenAiErrorResponse::invalid_request(
+                    format!("context_cache_id `{cache_id}` not found or expired."),
+                    Some("context_cache_id"),
+                )
+                .into_response();
+            }
+            Err(err) => {
+                return OpenAiErrorResponse::new(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("Failed to load context cache: {err}"),
+                    "server_error",
+                    Some("context_cache_id"),
+                    Some(crate::llm_gateway::translate::error_code::INTERNAL_ERROR),
+                )
+                .into_response();
+            }
+        }
     }
 
     let stream = request.stream.unwrap_or(false);
@@ -1106,7 +1694,15 @@ pub async fn chat_completions(
 
     // Resolve the requested model (policy alias, provider/model, or bare id).
     // Policy aliases go through B5 routing (winner + fallback chain).
-    let resolved = match resolve_model(&state.db, key.tenant_id.as_deref(), &client, &base, &request.model).await {
+    let resolved = match resolve_model(
+        &state.db,
+        key.tenant_id.as_deref(),
+        &client,
+        &base,
+        &request.model,
+    )
+    .await
+    {
         Ok(resolved) => resolved,
         Err(response) => return response.into_response(),
     };
@@ -1120,16 +1716,34 @@ pub async fn chat_completions(
     if !allowed {
         return OpenAiErrorResponse::new(
             StatusCode::FORBIDDEN,
-            format!("This API key is not allowed to use model `{}`.", request.model),
+            format!(
+                "This API key is not allowed to use model `{}`.",
+                request.model
+            ),
             "permission_error",
             Some("model"),
-            Some("model_not_allowed"),
+            Some(crate::llm_gateway::translate::error_code::PERMISSION_DENIED),
         )
         .into_response();
     }
 
-    // Prompt: system messages → Gizzi `system` field; history → transcript.
-    let (system, transcript) = messages_to_prompt(&request.messages);
+    // Prompt: system messages → Gizzi `system` field; history → Gizzi parts.
+    // Image content is preserved as `file` parts for vision-capable models.
+    let (system, all_parts) = messages_to_gizzi_parts(&request.messages);
+
+    // RAG-attribution fallback: non-Anthropic providers get an explicit
+    // citations context block prepended to the system prompt.
+    let system = if request.citations == Some(true) && resolved.provider_id != "anthropic" {
+        match super::citations::CitationsService::global().format_prompt_context() {
+            Some(ctx) => Some(match system {
+                Some(existing) => format!("{ctx}\n\n{existing}"),
+                None => ctx,
+            }),
+            None => system,
+        }
+    } else {
+        system
+    };
 
     // Session strategy: fresh session titled `gateway:<key_prefix>`, or
     // reuse via header — then only the last user message is sent and Gizzi's
@@ -1141,17 +1755,30 @@ pub async fn chat_completions(
         .filter(|s| !s.is_empty())
         .map(str::to_string);
 
-    let (session_id, prompt_text) = match &reuse_session_id {
+    // Keep the full conversation so retries can create a fresh session with
+    // complete context. Session reuse narrows `prompt_parts` to the last user
+    // message only.
+    let conversation_parts = all_parts.clone();
+
+    let (mut session_id, prompt_parts) = match &reuse_session_id {
         Some(existing) => {
             let last_user = request
                 .messages
                 .iter()
                 .rev()
-                .find(|m| m.role == "user")
-                .map(|m| m.content_text())
-                .filter(|t| !t.trim().is_empty());
+                .find(|m| m.role == "user");
             match last_user {
-                Some(text) => (existing.clone(), text),
+                Some(message) => {
+                    let parts = message_to_gizzi_parts(message);
+                    if parts.is_empty() {
+                        return OpenAiErrorResponse::invalid_request(
+                            "`messages` must contain a non-empty user message when reusing a session.",
+                            Some("messages"),
+                        )
+                        .into_response();
+                    }
+                    (existing.clone(), parts)
+                }
                 None => {
                     return OpenAiErrorResponse::invalid_request(
                         "`messages` must contain a non-empty user message when reusing a session.",
@@ -1164,13 +1791,13 @@ pub async fn chat_completions(
         None => {
             let title = format!("gateway:{}", key.key_prefix);
             match create_session(&client, &base, &title).await {
-                Ok(id) => (id, transcript),
+                Ok(id) => (id, all_parts),
                 Err(response) => return response.into_response(),
             }
         }
     };
 
-    if prompt_text.trim().is_empty() && system.is_none() {
+    if prompt_parts.is_empty() && system.is_none() {
         return OpenAiErrorResponse::invalid_request(
             "`messages` contain no usable content.",
             Some("messages"),
@@ -1202,14 +1829,44 @@ pub async fn chat_completions(
     }
 
     // Subscribe to the session's bus events BEFORE sending the message.
-    let events = gizzi_bus::session_events(session_id.clone()).await;
+    let mut events = gizzi_bus::session_events(session_id.clone()).await;
 
     let mut payload = json!({
-        "parts": [{ "type": "text", "text": prompt_text }],
+        "parts": prompt_parts,
         "model": { "providerID": resolved.provider_id, "modelID": resolved.model_id },
     });
     if let Some(system) = &system {
         payload["system"] = json!(system);
+    }
+    if let Some(format) = &request.response_format {
+        if format.format_type == "json_schema" {
+            let schema = format
+                .json_schema
+                .as_ref()
+                .map(|value| value.schema.clone())
+                .or_else(|| format.schema.clone())
+                .unwrap_or_else(|| json!({}));
+            payload["format"] = json!({ "type": "json_schema", "schema": schema });
+        }
+    }
+    // Gizzi variants are the provider-neutral reasoning control and are
+    // translated by its provider adapters to reasoning_effort/thinking.
+    if let Some(effort) = &request.reasoning_effort {
+        payload["variant"] = json!(effort);
+    }
+    // Service tier is forwarded as message metadata so Gizzi can set the
+    // provider-specific option (e.g. OpenAI's `service_tier`).
+    if let Some(tier) = &request.service_tier {
+        payload["metadata"] = json!({ "service_tier": tier });
+    }
+    // Citations: Anthropic supports native citations; other providers get the
+    // explicit RAG context block prepended above and the native flag disabled.
+    if request.citations == Some(true) {
+        if is_anthropic_provider(&request.model, &resolved) {
+            payload["citations"] = json!({ "enabled": true });
+        } else {
+            payload["citations"] = json!({ "enabled": false });
+        }
     }
     // B5: the router-derived failover chain (top 3 distinct providers).
     // Gizzi switches down this list on non-retryable provider errors and
@@ -1224,12 +1881,12 @@ pub async fn chat_completions(
             }))
             .collect::<Vec<_>>());
     }
-
     let message_url = format!(
         "{base}/v1/session/{}/message",
         urlencoding::encode(&session_id)
     );
-    let send_task = tokio::spawn(client.post(message_url).json(&payload).send());
+    let mut send_task = tokio::spawn(client.post(message_url).json(&payload).send());
+    let mut current_provider_id = resolved.provider_id.clone();
 
     info!(
         session_id = %session_id,
@@ -1239,56 +1896,220 @@ pub async fn chat_completions(
         "LLM gateway request dispatched to Gizzi"
     );
 
-    let idem_for_record = if idem_active { idempotency_key } else { None };
-
-    if stream {
+    let response = if stream {
         stream_completion(
             state,
-            key,
+            key.clone(),
             send_task,
             events,
             started,
             session_id,
-            request.model,
+            request.model.clone(),
             resolved.policy,
             resolved.routing_decision,
             request
                 .stream_options
                 .and_then(|o| o.include_usage)
                 .unwrap_or(false),
-            idem_for_record,
+            if idem_active { idempotency_key.clone() } else { None },
         )
         .await
     } else {
-        nonstream_completion(
-            state,
-            key,
-            send_task,
-            events,
-            started,
-            session_id,
-            request.model,
-            resolved.policy,
-            resolved.routing_decision,
-            idem_for_record,
-        )
-        .await
+        // P9: non-streaming requests retry across the fallback chain on
+        // retryable errors or refusals. Only the final outcome is persisted.
+        let primary = super::failover::ModelRef {
+            provider_id: resolved.provider_id.clone(),
+            model_id: resolved.model_id.clone(),
+        };
+        let fallback_refs: Vec<super::failover::ModelRef> = resolved
+            .fallbacks
+            .iter()
+            .map(|c| super::failover::ModelRef {
+                provider_id: c.provider_id.clone(),
+                model_id: c.model_id.clone(),
+            })
+            .collect();
+        let policy = key
+            .tenant_id
+            .as_deref()
+            .map(|org| {
+                super::failover::load_policy(&state.db, org)
+                    .unwrap_or_else(|_| super::failover::RetryPolicy::default())
+            })
+            .unwrap_or_default();
+
+        let mut attempt: u32 = 1;
+        let (mut response, mut outcome): (Response, RequestOutcome);
+
+        loop {
+            (response, outcome) = nonstream_completion(
+                key.clone(),
+                send_task,
+                events,
+                started,
+                session_id.clone(),
+                request.model.clone(),
+                current_provider_id.clone(),
+                request.citations == Some(true),
+                resolved.policy.clone(),
+                resolved.routing_decision.clone(),
+            )
+            .await;
+
+            if outcome.status == "ok" {
+                break;
+            }
+
+            attempt += 1;
+            let error_type = outcome.error_type.as_deref();
+            if !super::failover::should_retry(outcome.status, error_type, attempt, &policy) {
+                break;
+            }
+            let Some(next_model) =
+                super::failover::select_fallback(attempt, &primary, &fallback_refs, &policy)
+            else {
+                break;
+            };
+
+            let backoff =
+                super::failover::next_backoff_ms(attempt, policy.base_delay_ms, policy.max_delay_ms);
+            tokio::time::sleep(Duration::from_millis(backoff)).await;
+
+            // Create a fresh session for the retry; a reused session may be in a
+            // failed state.
+            let title = format!("gateway:{}", key.key_prefix);
+            match create_session(&client, &base, &title).await {
+                Ok(new_session_id) => session_id = new_session_id,
+                Err(err_response) => {
+                    response = err_response.into_response();
+                    outcome = RequestOutcome {
+                        status: "error",
+                        error_type: Some("upstream_error".to_string()),
+                        usage: GizziUsage::default(),
+                        policy: resolved.policy.clone(),
+                        fallback_from: None,
+                        gizzi_session_id: None,
+                        latency_ms: started.elapsed().as_millis() as i64,
+                        ttft_ms: None,
+                        response_body: None,
+                        routing_decision: resolved.routing_decision.clone(),
+                    };
+                    break;
+                }
+            }
+
+            events = gizzi_bus::session_events(session_id.clone()).await;
+
+            let mut payload = json!({
+                "parts": conversation_parts.clone(),
+                "model": { "providerID": next_model.provider_id, "modelID": next_model.model_id },
+            });
+            if let Some(system) = &system {
+                payload["system"] = json!(system);
+            }
+            if let Some(format) = &request.response_format {
+                if format.format_type == "json_schema" {
+                    let schema = format
+                        .json_schema
+                        .as_ref()
+                        .map(|value| value.schema.clone())
+                        .or_else(|| format.schema.clone())
+                        .unwrap_or_else(|| json!({}));
+                    payload["format"] = json!({ "type": "json_schema", "schema": schema });
+                }
+            }
+            if let Some(effort) = &request.reasoning_effort {
+                payload["variant"] = json!(effort);
+            }
+            if request.citations == Some(true) {
+                let is_anthropic = next_model.provider_id == "anthropic"
+                    || next_model.model_id.starts_with("claude-")
+                    || request.model.starts_with("anthropic/")
+                    || request.model.starts_with("claude-");
+                payload["citations"] = json!({ "enabled": is_anthropic });
+            }
+            let remaining_fallbacks: Vec<_> = fallback_refs
+                .iter()
+                .skip(attempt.saturating_sub(1) as usize)
+                .map(|f| json!({ "providerID": f.provider_id, "modelID": f.model_id }))
+                .collect();
+            if !remaining_fallbacks.is_empty() {
+                payload["fallbackModels"] = json!(remaining_fallbacks);
+            }
+
+            let message_url = format!(
+                "{base}/v1/session/{}/message",
+                urlencoding::encode(&session_id)
+            );
+            send_task = tokio::spawn(client.post(message_url).json(&payload).send());
+            current_provider_id = next_model.provider_id.clone();
+
+            info!(
+                session_id = %session_id,
+                model = %request.model,
+                attempt,
+                fallback_provider = %current_provider_id,
+                "LLM gateway retry dispatched to Gizzi"
+            );
+        }
+
+        // Persist the final outcome once. For idempotent requests this
+        // finalizes the pre-inserted in_progress row; for non-idempotent
+        // requests it inserts the usage row.
+        let idem_for_record = if idem_active { idempotency_key.clone() } else { None };
+        let db = state.db.clone();
+        let key_for_record = key.clone();
+        tokio::task::spawn_blocking(move || {
+            record_usage_event(
+                &db,
+                &key_for_record,
+                &outcome,
+                idem_for_record.as_deref(),
+            )
+        });
+
+        response
+    };
+
+    // Inference hooks: post-hook runs after provider inference.
+    if let Some(hooks) = hooks {
+        let hook_client = inference_hooks::hook_client();
+        let latency_ms = started.elapsed().as_millis() as u64;
+        if stream {
+            inference_hooks::fire_post_hook(
+                &hook_client,
+                &hooks,
+                body,
+                response.status().as_u16(),
+                latency_ms,
+            )
+            .await;
+            response
+        } else {
+            inference_hooks::run_post_hook(&hook_client, &hooks, body, response, latency_ms).await
+        }
+    } else {
+        response
     }
 }
 
 /// Non-streaming path: collect to completion, return one chat.completion.
+///
+/// The [`RequestOutcome`] is returned alongside the HTTP response so callers
+/// can implement retry/failover loops without re-parsing the body. The caller
+/// is responsible for persisting the final outcome with [`record_usage_event`].
 async fn nonstream_completion(
-    state: Arc<AppState>,
-    key: LlmKeyContext,
+    _key: LlmKeyContext,
     send_task: JoinHandle<Result<reqwest::Response, reqwest::Error>>,
     events: impl futures::Stream<Item = GizziEvent> + Send + 'static,
     started: Instant,
     session_id: String,
     requested_model: String,
+    provider_id: String,
+    citations_enabled: bool,
     policy: Option<String>,
     routing_decision: Option<RoutingDecision>,
-    idempotency_key: Option<String>,
-) -> Response {
+) -> (Response, RequestOutcome) {
     let Collection { collector, failure } = collect(send_task, events, started).await;
     let latency_ms = started.elapsed().as_millis() as i64;
 
@@ -1306,37 +2127,69 @@ async fn nonstream_completion(
                 response_body: None,
                 routing_decision,
             };
-            let db = state.db.clone();
-            let key_ctx = key.clone();
-            tokio::task::spawn_blocking(move || {
-                record_usage_event(&db, &key_ctx, &outcome, idempotency_key.as_deref())
-            });
-            OpenAiErrorResponse::upstream(message, &error_type).into_response()
+            (
+                OpenAiErrorResponse::upstream(message, &error_type).into_response(),
+                outcome,
+            )
         }
         None => {
             let completion_id = new_completion_id();
             let created = chrono::Utc::now().timestamp();
-            let finish = map_finish_reason(collector.usage.finish.as_deref());
+            let refusal = refusal::detect_refusal(&collector.text);
+            let upstream_finish = collector.usage.finish.as_deref();
+            let finish = refusal::normalized_finish_reason(upstream_finish, &collector.text);
+            let is_refusal = finish == "refusal";
             let usage = Usage::new(
                 collector.usage.prompt_tokens,
                 collector.usage.completion_tokens,
                 collector.usage.reasoning_tokens,
                 collector.usage.cached_tokens,
             );
-            let response = ChatCompletionResponse::new(
-                completion_id,
+            let rag_citations = if citations_enabled && provider_id != "anthropic" && !is_refusal {
+                super::citations::CitationsService::global().parse_citations(&collector.text)
+            } else {
+                Vec::new()
+            };
+            let assistant_message = if is_refusal {
+                super::translate::AssistantMessage::with_refusal(
+                    collector.text.clone(),
+                    refusal::refusal_message().to_string(),
+                )
+            } else {
+                collector
+                    .final_tool_calls()
+                    .map(|tc| {
+                        super::translate::AssistantMessage::with_tool_calls(
+                            collector.text.clone(),
+                            tc,
+                        )
+                    })
+                    .unwrap_or_else(|| super::translate::AssistantMessage::new(collector.text.clone()))
+            };
+            let mut response = ChatCompletionResponse {
+                id: completion_id,
+                object: "chat.completion".to_string(),
                 created,
-                requested_model,
-                collector.text.clone(),
-                finish.to_string(),
-                Some(usage),
-            );
+                model: requested_model,
+                choices: vec![super::translate::Choice {
+                    index: 0,
+                    message: assistant_message,
+                    finish_reason: finish.clone(),
+                    refusal: refusal.map(|_| refusal::refusal_message().to_string()),
+                }],
+                usage: Some(usage),
+                citations: None,
+            }
+            .with_citations(rag_citations);
+            if !collector.citations.is_empty() && !is_refusal {
+                response = response.with_annotations(collector.citations.clone());
+            }
             let body = serde_json::to_value(&response)
                 .unwrap_or_else(|_| json!({"error": "serialization failure"}));
 
             let outcome = RequestOutcome {
-                status: "ok",
-                error_type: None,
+                status: if is_refusal { "refused" } else { "ok" },
+                error_type: if is_refusal { Some("refusal".to_string()) } else { None },
                 usage: collector.usage,
                 policy,
                 fallback_from: collector.fallback_from.clone(),
@@ -1346,11 +2199,6 @@ async fn nonstream_completion(
                 response_body: Some(body.clone()),
                 routing_decision,
             };
-            let db = state.db.clone();
-            tokio::task::spawn_blocking(move || {
-                record_usage_event(&db, &key, &outcome, idempotency_key.as_deref())
-            });
-
             let mut resp = (StatusCode::OK, Json(body)).into_response();
             if let Ok(value) = HeaderValue::from_str(&session_id) {
                 resp.headers_mut()
@@ -1362,7 +2210,7 @@ async fn nonstream_completion(
                         .insert(HeaderName::from_static(FALLBACK_HEADER), value);
                 }
             }
-            resp
+            (resp, outcome)
         }
     }
 }
@@ -1372,6 +2220,7 @@ async fn nonstream_completion(
 enum Progress {
     Continue,
     Delta(String),
+    ToolCallDelta(ToolCallDelta),
     Done,
     Failed(String, String),
 }
@@ -1458,6 +2307,7 @@ async fn stream_completion(
                             }
                             match effect {
                                 EventEffect::TextDelta(delta) => Progress::Delta(delta),
+                                EventEffect::ToolCallDelta(delta) => Progress::ToolCallDelta(delta),
                                 EventEffect::Done => Progress::Done,
                                 EventEffect::Error(name, message) => Progress::Failed(name, message),
                                 EventEffect::None => Progress::Continue,
@@ -1481,6 +2331,14 @@ async fn stream_completion(
                     yield Ok(Event::default().data(
                         ChatCompletionChunk::content_chunk(
                             &completion_id, created, &wire_model, &delta,
+                        )
+                        .to_sse_data(),
+                    ));
+                }
+                Progress::ToolCallDelta(delta) => {
+                    yield Ok(Event::default().data(
+                        ChatCompletionChunk::tool_calls_chunk(
+                            &completion_id, created, &wire_model, vec![delta],
                         )
                         .to_sse_data(),
                     ));
@@ -1523,10 +2381,15 @@ async fn stream_completion(
                 };
             }
             None => {
-                let finish = map_finish_reason(collector.usage.finish.as_deref());
+                let refusal = refusal::detect_refusal(&collector.text);
+                let finish = refusal::normalized_finish_reason(collector.usage.finish.as_deref(), &collector.text);
+                let is_refusal = finish == "refusal";
                 yield Ok(Event::default().data(
-                    ChatCompletionChunk::finish_chunk(&completion_id, created, &wire_model, finish)
-                        .to_sse_data(),
+                    ChatCompletionChunk::finish_chunk_with_refusal(
+                        &completion_id, created, &wire_model, &finish,
+                        refusal.map(|_| refusal::refusal_message().to_string()),
+                    )
+                    .to_sse_data(),
                 ));
                 if include_usage {
                     let usage = Usage::new(
@@ -1544,8 +2407,8 @@ async fn stream_completion(
                 }
                 yield Ok(Event::default().data("[DONE]"));
                 outcome = RequestOutcome {
-                    status: "ok",
-                    error_type: None,
+                    status: if is_refusal { "refused" } else { "ok" },
+                    error_type: if is_refusal { Some("refusal".to_string()) } else { None },
                     usage: collector.usage,
                     policy,
                     fallback_from: collector.fallback_from,
@@ -1602,33 +2465,418 @@ pub async fn list_models(
         }
     }
 
-    let mut entries: Vec<(String, String, i64)> = Vec::new();
+    let mut entries: Vec<(String, String, i64, ModelEntry)> = Vec::new();
     for provider in &catalog.all {
         for model_id in provider.models.keys() {
             let full_id = format!("{}/{}", provider.id, model_id);
             if !(key.model_allowed(&full_id) || key.model_allowed(model_id)) {
                 continue;
             }
-            let created = provider
-                .models
-                .get(model_id)
-                .and_then(|m| m.release_date.as_deref())
+            let model = provider.models.get(model_id).cloned().unwrap_or_default();
+            let created = model
+                .release_date
+                .as_deref()
                 .and_then(|d| chrono::NaiveDate::parse_from_str(d, "%Y-%m-%d").ok())
                 .and_then(|d| d.and_hms_opt(0, 0, 0))
                 .map(|dt| dt.and_utc().timestamp())
                 .unwrap_or(0);
-            entries.push((full_id, provider.id.clone(), created));
+            entries.push((full_id, provider.id.clone(), created, model));
         }
     }
     entries.sort_by(|a, b| a.0.cmp(&b.0));
-    for (full_id, provider_id, created) in entries {
+    for (full_id, provider_id, created, model) in entries {
         data.push(json!({
             "id": full_id,
             "object": "model",
             "created": created,
             "owned_by": provider_id,
+            "context_window": model.limit.map(|value| value.context),
+            "max_output_tokens": model.limit.map(|value| value.output),
+            "deprecated": model.deprecated.unwrap_or(false),
+            "replacement": model.replacement,
         }));
     }
 
     Json(json!({ "object": "list", "data": data })).into_response()
+}
+
+/// `GET /models/:id` — OpenAI-compatible model retrieval.
+pub async fn get_model(
+    State(_state): State<Arc<AppState>>,
+    Extension(key): Extension<LlmKeyContext>,
+    Path(model_id): Path<String>,
+) -> Response {
+    let base = gizzi_base();
+    let client = http_client();
+
+    // Policy aliases are allowed synthetic models.
+    if POLICY_ALIASES.contains(&model_id.as_str()) && key.model_allowed(&model_id) {
+        return Json(json!({
+            "id": model_id,
+            "object": "model",
+            "created": 0,
+            "owned_by": "allternit",
+        }))
+        .into_response();
+    }
+
+    let catalog = match fetch_catalog(&client, &base).await {
+        Ok(catalog) => catalog,
+        Err(response) => return response.into_response(),
+    };
+
+    for provider in &catalog.all {
+        for (id, model) in &provider.models {
+            let full_id = format!("{}/{}", provider.id, id);
+            if full_id != model_id && id != &model_id {
+                continue;
+            }
+            if !(key.model_allowed(&full_id) || key.model_allowed(id)) {
+                break;
+            }
+            let created = model
+                .release_date
+                .as_deref()
+                .and_then(|d| chrono::NaiveDate::parse_from_str(d, "%Y-%m-%d").ok())
+                .and_then(|d| d.and_hms_opt(0, 0, 0))
+                .map(|dt| dt.and_utc().timestamp())
+                .unwrap_or(0);
+            return Json(json!({
+                "id": full_id,
+                "object": "model",
+                "created": created,
+                "owned_by": provider.id,
+                "context_window": model.limit.map(|value| value.context),
+                "max_output_tokens": model.limit.map(|value| value.output),
+                "deprecated": model.deprecated.unwrap_or(false),
+                "replacement": model.replacement,
+            }))
+            .into_response();
+        }
+    }
+
+    OpenAiErrorResponse::new(
+        StatusCode::NOT_FOUND,
+        format!("The model `{model_id}` does not exist or you do not have access to it."),
+        "invalid_request_error",
+        Some("model"),
+        Some(crate::llm_gateway::translate::error_code::MODEL_NOT_FOUND),
+    )
+    .into_response()
+}
+
+/// `GET /pricing` — cross-provider per-model pricing snapshot.
+///
+/// Returns the current models.dev cache rates as an OpenAI-style list of
+/// `model_pricing` objects. Rates are dollars per 1M tokens.
+pub async fn list_pricing() -> Response {
+    Json(build_pricing_response(&llm_pricing::pricing_snapshot())).into_response()
+}
+
+fn build_pricing_response(map: &llm_pricing::PricingMap) -> Value {
+    let mut data: Vec<Value> = map
+        .iter()
+        .map(|(id, pricing)| {
+            let mut value = serde_json::to_value(pricing).unwrap_or_else(|_| json!({}));
+            if let Some(obj) = value.as_object_mut() {
+                obj.insert("id".to_string(), json!(id));
+                obj.insert("object".to_string(), json!("model_pricing"));
+            }
+            value
+        })
+        .collect();
+    data.sort_by(|a, b| {
+        a.get("id")
+            .and_then(|v| v.as_str())
+            .cmp(&b.get("id").and_then(|v| v.as_str()))
+    });
+    json!({ "object": "list", "data": data })
+}
+
+/// `GET /rate-limits` — caller quota snapshot derived from the key's rate
+/// limit, key monthly budget, and tenant hard cap (when present).
+pub async fn rate_limits(
+    State(state): State<Arc<AppState>>,
+    Extension(key): Extension<LlmKeyContext>,
+) -> Response {
+    let limit = key
+        .rate_limit_rpm
+        .unwrap_or(super::auth::DEFAULT_RATE_LIMIT_RPM)
+        .max(1) as usize;
+    let rate = super::auth::rate_limit_status(&key.key_id, limit);
+
+    let budget = tokio::task::spawn_blocking({
+        let db = state.db.clone();
+        let key = key.clone();
+        move || -> Result<super::auth::TokenBudgetStatus, rusqlite::Error> {
+            let conn = db.connect()?;
+            super::auth::token_budget_status(&conn, &key)
+        }
+    })
+    .await;
+
+    match budget {
+        Ok(Ok(budget)) => {
+            let reset_at = chrono::Utc::now()
+                + chrono::Duration::seconds(rate.reset_in_secs as i64);
+            Json(json!({
+                "object": "rate_limits",
+                "requests_remaining": rate.remaining,
+                "requests_limit": rate.limit,
+                "tokens_remaining": budget.remaining_cents,
+                "tokens_limit": budget.limit_cents,
+                "reset_at": reset_at.to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+            }))
+            .into_response()
+        }
+        Ok(Err(err)) => {
+            warn!(error = %err, "rate_limits DB query failed");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({
+                    "error": {
+                        "message": format!("Internal error: {err}"),
+                        "type": "server_error",
+                    }
+                })),
+            )
+                .into_response()
+        }
+        Err(err) => {
+            warn!(error = %err, "rate_limits task failed");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({
+                    "error": {
+                        "message": format!("Internal error: {err}"),
+                        "type": "server_error",
+                    }
+                })),
+            )
+                .into_response()
+        }
+    }
+}
+
+#[cfg(test)]
+mod token_tests {
+    use super::*;
+
+    #[test]
+    fn token_estimate_is_deterministic_and_rounds_up() {
+        let request: ChatCompletionRequest = serde_json::from_value(json!({
+            "model": "test/model",
+            "messages": [{ "role": "user", "content": "hello" }]
+        }))
+        .unwrap();
+        // "user" + "hello" = 9 characters, rounded up at four chars/token.
+        assert_eq!(estimate_tokens(&request), 3);
+    }
+
+    #[test]
+    fn count_tokens_uses_tiktoken_for_openai_models() {
+        let request: ChatCompletionRequest = serde_json::from_value(json!({
+            "model": "gpt-4o",
+            "messages": [
+                { "role": "system", "content": "You are a helpful assistant." },
+                { "role": "user", "content": "Hello" }
+            ]
+        }))
+        .unwrap();
+
+        let count = count_tokens_request(&request);
+        let expected = tiktoken_rs::num_tokens_from_messages("gpt-4o", &[
+            tiktoken_rs::ChatCompletionRequestMessage {
+                role: "system".to_string(),
+                content: Some("You are a helpful assistant.".to_string()),
+                name: None,
+                function_call: None,
+                tool_calls: Vec::new(),
+                refusal: None,
+            },
+            tiktoken_rs::ChatCompletionRequestMessage {
+                role: "user".to_string(),
+                content: Some("Hello".to_string()),
+                name: None,
+                function_call: None,
+                tool_calls: Vec::new(),
+                refusal: None,
+            },
+        ])
+        .unwrap() as u64;
+
+        assert!(count > 0);
+        assert_eq!(count, expected);
+    }
+
+    #[test]
+    fn count_tokens_strips_openai_provider_prefix() {
+        let prefixed: ChatCompletionRequest = serde_json::from_value(json!({
+            "model": "openai/gpt-4o",
+            "messages": [
+                { "role": "system", "content": "You are a helpful assistant." },
+                { "role": "user", "content": "Hello" }
+            ]
+        }))
+        .unwrap();
+        let bare: ChatCompletionRequest = serde_json::from_value(json!({
+            "model": "gpt-4o",
+            "messages": [
+                { "role": "system", "content": "You are a helpful assistant." },
+                { "role": "user", "content": "Hello" }
+            ]
+        }))
+        .unwrap();
+
+        assert_eq!(count_tokens_request(&prefixed), count_tokens_request(&bare));
+    }
+
+    #[test]
+    fn count_tokens_falls_back_to_heuristic_for_unknown_models() {
+        let request: ChatCompletionRequest = serde_json::from_value(json!({
+            "model": "unknown-provider/unknown-model",
+            "messages": [{ "role": "user", "content": "hello" }]
+        }))
+        .unwrap();
+
+        assert_eq!(count_tokens_request(&request), estimate_tokens(&request));
+    }
+}
+
+#[cfg(test)]
+mod citation_tests {
+    use super::*;
+    use serde_json::json;
+
+    fn resolved(provider_id: &str, model_id: &str) -> ResolvedModel {
+        ResolvedModel {
+            policy: None,
+            provider_id: provider_id.to_string(),
+            model_id: model_id.to_string(),
+            fallbacks: Vec::new(),
+            routing_decision: None,
+        }
+    }
+
+    #[test]
+    fn detects_anthropic_provider() {
+        assert!(is_anthropic_provider(
+            "anthropic/claude-sonnet-4",
+            &resolved("anthropic", "claude-sonnet-4")
+        ));
+        assert!(is_anthropic_provider(
+            "allternit-balanced",
+            &resolved("anthropic", "claude-sonnet-4")
+        ));
+        assert!(is_anthropic_provider(
+            "claude-sonnet-4",
+            &resolved("openai", "gpt-4o")
+        ));
+        assert!(!is_anthropic_provider(
+            "openai/gpt-4o",
+            &resolved("openai", "gpt-4o")
+        ));
+    }
+
+    #[test]
+    fn extracts_citations_from_message_info() {
+        let info = json!({
+            "role": "assistant",
+            "citations": [
+                { "cited_text": "source one", "url": "https://example.com/1", "title": "One" },
+                { "cited_text": "source two", "file_id": "file_abc" }
+            ]
+        });
+        let annotations = extract_citations(&info);
+        assert_eq!(annotations.len(), 2);
+        match &annotations[0] {
+            Annotation::UrlCitation { url_citation } => {
+                assert_eq!(url_citation.url, "https://example.com/1");
+                assert_eq!(url_citation.title.as_deref(), Some("One"));
+            }
+            _ => panic!("expected URL citation"),
+        }
+        match &annotations[1] {
+            Annotation::FileCitation { file_citation } => {
+                assert_eq!(file_citation.file_id, "file_abc");
+            }
+            _ => panic!("expected file citation"),
+        }
+    }
+}
+
+#[cfg(test)]
+mod model_deprecation_tests {
+    use super::ModelEntry;
+    use serde_json::json;
+
+    #[test]
+    fn model_entry_parses_deprecation_fields() {
+        let entry: ModelEntry = serde_json::from_value(json!({
+            "release_date": "2024-01-01",
+            "status": "active",
+            "deprecated": true,
+            "replacement": "openai/gpt-5"
+        }))
+        .unwrap();
+        assert_eq!(entry.deprecated, Some(true));
+        assert_eq!(entry.replacement.as_deref(), Some("openai/gpt-5"));
+    }
+
+    #[test]
+    fn model_entry_defaults_deprecation_to_none() {
+        let entry: ModelEntry = serde_json::from_value(json!({
+            "release_date": "2024-01-01"
+        }))
+        .unwrap();
+        assert_eq!(entry.deprecated, None);
+        assert_eq!(entry.replacement, None);
+    }
+}
+
+#[cfg(test)]
+mod pricing_tests {
+    use super::{build_pricing_response, llm_pricing::ModelPricing};
+    use std::collections::HashMap;
+
+    #[test]
+    fn pricing_response_lists_models_sorted() {
+        let mut map = HashMap::new();
+        map.insert(
+            "openai/gpt-4o".to_string(),
+            ModelPricing {
+                input: 2.5,
+                output: 10.0,
+                cache_read: 1.25,
+                cache_write: 0.0,
+                context_over_200k: None,
+            },
+        );
+        map.insert(
+            "anthropic/claude-sonnet-4-5".to_string(),
+            ModelPricing {
+                input: 3.0,
+                output: 15.0,
+                cache_read: 0.3,
+                cache_write: 3.75,
+                context_over_200k: None,
+            },
+        );
+
+        let resp = build_pricing_response(&map);
+        let data = resp["data"].as_array().unwrap();
+        assert_eq!(data.len(), 2);
+        assert_eq!(data[0]["id"], "anthropic/claude-sonnet-4-5");
+        assert_eq!(data[0]["object"], "model_pricing");
+        assert_eq!(data[0]["input"], 3.0);
+        assert_eq!(data[1]["id"], "openai/gpt-4o");
+        assert_eq!(data[1]["output"], 10.0);
+    }
+
+    #[test]
+    fn pricing_response_empty_when_no_cache() {
+        let resp = build_pricing_response(&HashMap::new());
+        assert_eq!(resp["data"].as_array().unwrap().len(), 0);
+        assert_eq!(resp["object"], "list");
+    }
 }

@@ -135,7 +135,7 @@ export class AllternitQwen {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Unknown error' }));
+      const error = await response.json().catch(() => ({ message: 'Unknown error' })) as { message?: string };
       throw new HarnessError(
         error.message || `Qwen API error: ${response.status}`,
         HarnessErrorCode.PROVIDER_ERROR,
@@ -174,7 +174,7 @@ export class AllternitQwen {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Unknown error' }));
+      const error = await response.json().catch(() => ({ message: 'Unknown error' })) as { message?: string };
       throw new HarnessError(
         error.message || `Qwen API error: ${response.status}`,
         HarnessErrorCode.PROVIDER_ERROR,

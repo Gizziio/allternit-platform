@@ -108,12 +108,12 @@ INFO:     Application startup complete
 
 ```bash
 # List available tools
-a2 brain which opencode
+a2 brain which gizzi
 a2 brain which claude-code
 a2 brain which aider
 
 # Start a brain session
-a2 brain start --tool opencode
+a2 brain start --tool gizzi
 
 # List active sessions
 a2 brain list
@@ -129,7 +129,7 @@ a2 brain stop --session-id <session-id>
 ```
 Starting Brain Session
 ═══════════════════════════════════════════════════
-  → Tool: opencode
+  → Tool: gizzi
   → Workspace: /Users/macbook/Desktop/allternit-workspace
 
 ✓ Brain session created successfully!
@@ -146,7 +146,7 @@ Active Brain Sessions
 
   ●
     Session ID: abc123-def456
-    Brain ID:   opencode
+    Brain ID:   gizzi
     Status:     Running
     PID:        12345
 
@@ -160,7 +160,7 @@ Active Brain Sessions
 1. Open Shell UI at `http://localhost:5713`
 2. Verify LeftRail icons are SVG (not emoji):
    - OpenWork icon (layers/cube)
-   - Brain tool icons (opencode, claude-code, etc.)
+   - Brain tool icons (gizzi, claude-code, etc.)
 3. Verify TabStrip icons use SVG
 4. Verify DockBar icons use SVG
 
@@ -215,7 +215,7 @@ curl http://localhost:3004/v1/tools/gui/status
     "configured_brain": "qwen",
     "source": "A2_VISION_BRAIN environment variable",
     "default_brain": "claude-code",
-    "available_brains": ["claude-code", "gemini-cli", "qwen", "opencode", "cursor"],
+    "available_brains": ["claude-code", "gemini-cli", "qwen", "gizzi", "cursor"],
     "set_via_env": "export A2_VISION_BRAIN=<brain>",
     "example": "export A2_VISION_BRAIN=qwen"
   }
@@ -389,7 +389,7 @@ curl http://localhost:3004/v1/tools/gui/status | jq '.ui_tars_operator'
 │  [Ops Center] ◄───►│  │  ┌───────────────────────────────────────────┐ │   │
 │  [Registry]        │  │  │  Session Management                         │ │   │
 │  [Brain Tools]     │  │  │  Brain Status                               │ │   │
-│     ├─[opencode]   │  │  │  Integration Links                          │ │   │
+│     ├─[gizzi]   │  │  │  Integration Links                          │ │   │
 │     ├─[claude]     │  │  └───────────────────────────────────────────┘ │   │
 │     └─[aider]      │  └─────────────────────────────────────────────────┘   │
 │                                                                              │

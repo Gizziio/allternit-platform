@@ -1,0 +1,188 @@
+---
+title: Device Attestation
+description: Register and verify organization-managed device attestation tokens.
+---
+
+# Device Attestation
+
+The Device Attestation API lets organization owners and admins register attestation tokens from platform attestation services (such as Apple DeviceCheck, Google Play Integrity, or Windows Hello) and verify that a user's device is trusted before allowing access to sensitive resources.
+
+## Authentication and authorization
+
+Device attestation endpoints require a Clerk JWT or a valid organization access token. Only organization owners and admins can register, list, revoke, or verify attestation records.
+
+## Base URL
+
+```text
+/api/v1/admin/device-attestation
+```
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/v1/admin/device-attestation` | Register an attestation record |
+| `GET` | `/api/v1/admin/device-attestation` | List attestation records |
+| `GET` | `/api/v1/admin/device-attestation/:id` | Get an attestation record |
+| `DELETE` | `/api/v1/admin/device-attestation/:id` | Revoke an attestation record |
+| `POST` | `/api/v1/admin/device-attestation/verify` | Verify an attestation token |
+
+## Supported platforms
+
+| Platform | Value |
+|----------|-------|
+| iOS | `ios` |
+| Android | `android` |
+| macOS | `macos` |
+| Windows | `windows` |
+| Web | `web` |
+
+## Register an attestation record
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/admin/device-attestation \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_id": "usr_01hqx8x7x7x7x7x7x7x7x7x",
+    "platform": "ios",
+    "attestation_token": "AEFjlhds...",
+    "expires_at": "2027-08-13T18:00:00Z"
+  }'
+```
+
+### Request body
+
+```json
+{
+  "user_id": "usr_01hqx8x7x7x7x7x7x7x7x7x",
+  "platform": "ios",
+  "attestation_token": "AEFjlhds...",
+  "expires_at": "2027-08-13T18:00:00Z"
+}
+```
+
+### Response
+
+```json
+{
+  "id": "att_01hqx8x7x7x7x7x7x7x7x7x",
+  "org_id": "org_01hqx8x7x7x7x7x7x7x7x7x",
+  "user_id": "usr_01hqx8x7x7x7x7x7x7x7x7x",
+  "platform": "ios",
+  "attestation_token": "AEFjlhds...",
+  "status": "valid",
+  "expires_at": "2027-08-13T18:00:00Z",
+  "created_at": "2026-08-13T18:00:00Z",
+  "updated_at": "2026-08-13T18:00:00Z"
+}
+```
+
+## List attestation records
+
+```bash
+curl "https://api.allternit.com/api/v1/admin/device-attestation?user_id=usr_01hqx8x7x7x7x7x7x7x7x7x&platform=ios" \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN"
+```
+
+### Response
+
+```json
+{
+  "attestations": [
+    {
+      "id": "att_01hqx8x7x7x7x7x7x7x7x7x",
+      "org_id": "org_01hqx8x7x7x7x7x7x7x7x7x",
+      "user_id": "usr_01hqx8x7x7x7x7x7x7x7x7x",
+      "platform": "ios",
+      "attestation_token": "AEFjlhds...",
+      "status": "valid",
+      "expires_at": "2027-08-13T18:00:00Z",
+      "created_at": "2026-08-13T18:00:00Z",
+      "updated_at": "2026-08-13T18:00:00Z"
+    }
+  ]
+}
+```
+
+### Query parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `user_id` | string | Filter by user |
+| `platform` | string | Filter by platform |
+
+## Revoke an attestation record
+
+```bash
+curl -X DELETE https://api.allternit.com/api/v1/admin/device-attestation/att_01hqx8x7x7x7x7x7x7x7x7x \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN"
+```
+
+Returns `204 No Content` on success.
+
+## Verify an attestation token
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/admin/device-attestation/verify \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_id": "usr_01hqx8x7x7x7x7x7x7x7x7x",
+    "platform": "ios",
+    "attestation_token": "AEFjlhds..."
+  }'
+```
+
+### Response
+
+```json
+{
+  "valid": true,
+  "record": {
+    "id": "att_01hqx8x7x7x7x7x7x7x7x7x",
+    "org_id": "org_01hqx8x7x7x7x7x7x7x7x7x",
+    "user_id": "usr_01hqx8x7x7x7x7x7x7x7x7x",
+    "platform": "ios",
+    "attestation_token": "AEFjlhds...",
+    "status": "valid",
+    "expires_at": "2027-08-13T18:00:00Z",
+    "created_at": "2026-08-13T18:00:00Z",
+    "updated_at": "2026-08-13T18:00:00Z"
+  }
+}
+```
+
+Verification succeeds only when a matching record exists, has status `valid`, and has not expired.
+
+## Request/response fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Attestation record identifier |
+| `org_id` | string | Organization identifier |
+| `user_id` | string | User identifier |
+| `platform` | string | One of `ios`, `android`, `macos`, `windows`, `web` |
+| `attestation_token` | string | Platform attestation token |
+| `status` | string | `valid` or `revoked` |
+| `expires_at` | string \| null | ISO 8601 expiration |
+| `created_at` | string | ISO 8601 timestamp |
+| `updated_at` | string | ISO 8601 timestamp |
+
+## Error codes
+
+| HTTP | Code | Meaning |
+|------|------|---------|
+| `400` | `invalid_platform` | Platform is not one of the supported values |
+| `400` | `invalid_token` | Attestation token is empty |
+| `400` | `invalid_expiration` | `expires_at` is not RFC 3339 |
+| `403` | `organization_required` | Caller has no active organization |
+| `403` | `insufficient_role` | Caller is not an owner/admin |
+| `404` | `attestation_not_found` | Record does not exist or is already revoked |
+| `500` | `internal_error` | Unexpected server error |
+
+## Related pages
+
+- [Security model](/security/security-model) — Trust boundaries and device trust
+- [Authentication](/api/authentication) — Bearer token and identity flows
+- [Compliance](/security/compliance) — Data lifecycle and retention

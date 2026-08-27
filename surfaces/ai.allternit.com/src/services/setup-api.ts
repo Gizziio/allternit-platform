@@ -6,7 +6,7 @@
  * provider metadata to the Gizzi runtime config.
  */
 
-import { api } from '@/integration/api-client';
+import { api, GATEWAY_BASE_URL } from '@/integration/api-client';
 
 export interface CompanyConfig {
   clerkPublishableKey?: string;
@@ -157,5 +157,53 @@ export const setupApi = {
   /** User-attested completion of an interactive sign-in we could not auto-detect. */
   confirmProviderConnect(id: string): Promise<{ status: string; provider: string; confirmed?: boolean }> {
     return api.post(`/api/v1/providers/${id}/connect/confirm`, {});
+  },
+
+  /** Sidecar-installed local models (embedded sidecar + arbitrary HuggingFace GGUF). */
+  listLocalModels(): Promise<{ models: Array<{ tag: string; sizeBytes?: number }> }> {
+    return api.get('/api/local-brain/models');
+  },
+
+  searchLocalModels(query: string, limit = 20): Promise<{
+    models: Array<{
+      repoId: string;
+      downloads: number;
+      likes: number;
+      tags?: string[];
+      pipeline_tag?: string;
+      lastModified?: string;
+      sizeBytes?: number;
+    }>;
+  }> {
+    const qs = new URLSearchParams({ q: query, limit: String(limit) });
+    return api.get(`/api/local-brain/models/search?${qs.toString()}`);
+  },
+
+  /** Streamed install of a HuggingFace GGUF model into the sidecar. Returns the raw SSE Response. */
+  installLocalModel(repoId: string, quantTag?: string): Promise<Response> {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('allternit_token') : null;
+    return fetch(`${GATEWAY_BASE_URL}/api/local-brain/models`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ repoId, quantTag }),
+    });
+  },
+
+  removeLocalModel(tag: string): Promise<{ removed: boolean }> {
+    return api.delete(`/api/local-brain/models/${encodeURIComponent(tag)}`);
+  },
+
+  /** Run `gizzi init` against a directory (creates GIZZI.md, .gizzi/, codemap). */
+  initProject(dir: string, skipCodemap = false): Promise<{
+    ok: boolean;
+    dir: string;
+    project?: { name: string; language: string; buildFile: string };
+    created: string[];
+    warnings: string[];
+  }> {
+    return api.post('/api/onboarding/init-project', { dir, skipCodemap });
   },
 };

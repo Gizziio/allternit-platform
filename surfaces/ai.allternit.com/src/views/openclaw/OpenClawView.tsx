@@ -20,10 +20,15 @@ import {
   Robot,
   ArrowSquareOut,
   Gear,
+  CheckCircle,
 } from '@phosphor-icons/react';
 import { openInBrowser } from '@/lib/openInBrowser';
 import { MiniAppRuntimeSurface } from '@/views/aci/MiniAppRuntimeSurface';
 import type { InstalledMiniApp } from '@/views/aci/mini-app.types';
+import { Button } from '@/components/ui/button';
+import { Pill } from '@/components/ui/Pill';
+import { Text } from '@/components/typography/Text';
+import { cn } from '@/lib/utils';
 
 // ============================================================================
 // Gateway config
@@ -99,10 +104,10 @@ export function OpenClawView() {
 
   if (checking) {
     return (
-      <div className="h-full flex items-center justify-center">
-        <div className="text-center space-y-3 opacity-50">
-          <ArrowsClockwise size={28} className="mx-auto animate-spin" />
-          <p className="text-sm">Connecting to OpenClaw gateway…</p>
+      <div className="h-full flex items-center justify-center bg-[var(--bg-elevated)] text-[var(--text-primary)]">
+        <div className="flex flex-col items-center gap-3 text-[var(--text-secondary)]">
+          <ArrowsClockwise size={28} className="animate-spin" />
+          <Text variant="caption">Connecting to OpenClaw gateway…</Text>
         </div>
       </div>
     );
@@ -122,34 +127,29 @@ export function OpenClawView() {
   }
 
   return (
-    <div
-      className="h-full flex flex-col overflow-hidden"
-      style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}
-    >
+    <div className="h-full w-full flex flex-col bg-[var(--bg-elevated)] text-[var(--text-primary)] overflow-hidden">
       {/* Header */}
-      <div
-        className="shrink-0 px-5 py-3 border-b flex items-center gap-3"
-        style={{ borderColor: 'var(--border-subtle)' }}
-      >
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          <Robot size={20} style={{ color: 'var(--accent-primary)' }} />
-          <span className="font-semibold text-sm">OpenClaw</span>
-          <span
-            className="text-xs px-1.5 py-0.5 rounded-full"
-            style={{ backgroundColor: 'rgba(120,220,100,0.15)', color: '#78dc64' }}
-          >
-            Connected
-          </span>
-        </div>
+      <div className="shrink-0 px-6 py-4 border-b border-[var(--border-subtle)] flex items-center gap-3">
+        <Robot size={22} className="text-[var(--accent-primary)] shrink-0" />
+        <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">OpenClaw</h1>
+        <Pill
+          size="sm"
+          icon={<CheckCircle size={11} className="text-[var(--status-success)]" />}
+          className="border-[var(--status-success)]/30 bg-[var(--status-success)]/10 text-[var(--status-success)]"
+        >
+          Connected
+        </Pill>
+        <div className="flex-1" />
         <TabBar active={activeTab} onChange={setActiveTab} />
-        <button type="button"
+        <Button
+          variant="outline"
+          size="sm"
           onClick={() => openInBrowser(OPENCLAW_GATEWAY_URL)}
-          className="size-7 flex items-center justify-center rounded-lg border-none cursor-pointer transition-colors"
-          style={{ background: 'transparent', color: 'var(--ui-text-muted)' }}
+          aria-label="Open in browser"
           title="Open in browser"
         >
-          <ArrowSquareOut size={15} />
-        </button>
+          <ArrowSquareOut size={14} />
+        </Button>
       </div>
 
       {/* Content */}
@@ -174,16 +174,16 @@ function TabBar({ active, onChange }: { active: ViewTab; onChange: (t: ViewTab) 
   return (
     <div className="flex gap-1">
       {TABS.map(({ id, label, icon: Icon }) => (
-        <button type="button"
+        <button
+          type="button"
           key={id}
           onClick={() => onChange(id)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
-          style={{
-            backgroundColor: active === id ? 'var(--surface-active)' : 'transparent',
-            color:           active === id ? 'var(--ui-text-primary)' : 'var(--ui-text-muted)',
-            border: 'none',
-            cursor: 'pointer',
-          }}
+          className={cn(
+            'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border-none cursor-pointer',
+            active === id
+              ? 'bg-[var(--surface-active)] text-[var(--text-primary)]'
+              : 'bg-transparent text-[var(--text-tertiary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-secondary)]'
+          )}
         >
           <Icon size={13} />
           {label}
@@ -208,28 +208,25 @@ function GatewayUiTab() {
 function OverviewTab({ status }: { status: GatewayStatus }) {
   return (
     <div className="p-6 max-w-lg mx-auto space-y-4 pt-10">
-      <div
-        className="p-4 rounded-xl"
-        style={{ backgroundColor: 'var(--surface-hover)', border: '1px solid var(--border-subtle)' }}
-      >
-        <div className="text-xs font-semibold mb-3" style={{ color: 'var(--text-secondary)' }}>
-          GATEWAY STATUS
-        </div>
+      <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4">
+        <Text variant="label" className="text-[10px] uppercase tracking-wide text-[var(--text-secondary)] mb-3">
+          Gateway status
+        </Text>
         <div className="space-y-2 text-sm">
-          <Row label="Status"   value={<span style={{ color: '#78dc64' }}>Connected</span>} />
+          <Row label="Status"   value={<span className="text-[var(--status-success)]">Connected</span>} />
           {status.version && <Row label="Version"  value={`v${status.version}`} />}
           <Row label="Endpoint" value={OPENCLAW_GATEWAY_URL} />
         </div>
       </div>
 
-      <button type="button"
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={() => openInBrowser(OPENCLAW_GATEWAY_URL)}
-        className="flex items-center gap-2 text-sm"
-        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}
       >
         <ArrowSquareOut size={14} />
         Open gateway in browser
-      </button>
+      </Button>
     </div>
   );
 }
@@ -237,8 +234,8 @@ function OverviewTab({ status }: { status: GatewayStatus }) {
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-4">
-      <span style={{ color: 'var(--text-secondary)' }}>{label}</span>
-      <span style={{ color: 'var(--text-primary)' }}>{value}</span>
+      <Text variant="caption" className="text-[var(--text-secondary)]">{label}</Text>
+      <Text variant="code" className="text-[var(--text-primary)] text-right">{value}</Text>
     </div>
   );
 }
@@ -277,52 +274,71 @@ function GatewayOffline({ onRetry }: { onRetry: () => Promise<void> }) {
   };
 
   return (
-    <div className="h-full flex items-center justify-center p-8">
-      <div className="max-w-sm w-full space-y-5">
-        <div className="flex items-center gap-3">
-          <Warning size={24} style={{ color: '#f87171' }} />
-          <div>
-            <div className="font-semibold">OpenClaw Not Running</div>
-            <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-              Gateway unreachable at {OPENCLAW_GATEWAY_URL}
-            </div>
-          </div>
+    <div className="h-full flex items-center justify-center p-8 bg-[var(--bg-elevated)] text-[var(--text-primary)]">
+      <div className="max-w-md w-full flex flex-col items-center text-center gap-5 rounded-xl border border-dashed border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-8">
+        <div className="text-[var(--status-error)]">
+          <Warning size={48} />
+        </div>
+        <div>
+          <h3 className="text-[16px] font-semibold text-[var(--text-primary)]">OpenClaw Not Running</h3>
+          <p className="text-[13px] text-[var(--text-secondary)] mt-1">
+            Gateway unreachable at {OPENCLAW_GATEWAY_URL}
+          </p>
         </div>
 
-        <div
-          className="p-4 rounded-xl text-sm space-y-1.5"
-          style={{ backgroundColor: 'var(--surface-hover)', border: '1px solid var(--border-subtle)' }}
-        >
-          <div className="font-medium mb-2">To start OpenClaw:</div>
+        <div className="w-full max-w-sm rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4 text-left space-y-1.5">
+          <Text variant="label" className="text-[10px] uppercase tracking-wide text-[var(--text-secondary)] block mb-2">
+            Start OpenClaw
+          </Text>
           <div
-            className="font-mono text-xs p-2 rounded"
+            className="font-mono text-xs p-2 rounded-lg"
             style={{ backgroundColor: 'var(--surface-active)', color: 'var(--text-primary)' }}
           >
             openclaw gateway --port 18789
           </div>
-          <div className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+          <Text variant="caption" className="text-[var(--text-tertiary)] block">
             First-time setup: openclaw onboard --install-daemon
-          </div>
-          <div className="text-xs pt-1" style={{ color: 'var(--text-tertiary)' }}>
+          </Text>
+          <Text variant="caption" className="text-[var(--text-tertiary)] block">
             Override URL: set <code>window.__ALLTERNIT_OPENCLAW_URL__</code>
-          </div>
+          </Text>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-        {miniApps && <button type="button" onClick={install} disabled={Boolean(working)} className="flex items-center gap-2 px-4 py-2 rounded-lg border-none cursor-pointer text-sm font-medium disabled:opacity-50" style={{ backgroundColor: 'var(--accent-primary)', color: 'var(--bg-primary)' }}>{working === 'install' ? 'Installing…' : 'Install or update'}</button>}
-        {miniApps && <button type="button" onClick={start} disabled={Boolean(working)} className="flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer text-sm font-medium disabled:opacity-50" style={{ backgroundColor: 'transparent', border: '1px solid var(--border-subtle)', color: 'var(--text-primary)' }}>{working === 'start' ? 'Starting…' : 'Start gateway'}</button>}
-        <button type="button"
-          onClick={retry}
-          disabled={retrying}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg border-none cursor-pointer text-sm font-medium transition-opacity disabled:opacity-50"
-          style={{ backgroundColor: 'var(--surface-active)', color: 'var(--text-primary)' }}
-        >
-          <ArrowsClockwise size={14} className={retrying ? 'animate-spin' : ''} />
-          {retrying ? 'Checking…' : 'Retry Connection'}
-        </button>
-        <button type="button" onClick={() => openInBrowser('https://github.com/openclaw/openclaw')} className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm" style={{ background: 'transparent', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)' }}><ArrowSquareOut size={14}/>GitHub</button>
+        <div className="flex flex-wrap gap-2 justify-center">
+          {miniApps && (
+            <Button onClick={install} disabled={Boolean(working)}>
+              {working === 'install' ? 'Installing…' : 'Install or update'}
+            </Button>
+          )}
+          {miniApps && (
+            <Button variant="outline" onClick={start} disabled={Boolean(working)}>
+              {working === 'start' ? 'Starting…' : 'Start gateway'}
+            </Button>
+          )}
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={retry}
+            disabled={retrying}
+          >
+            <ArrowsClockwise size={14} className={retrying ? 'animate-spin' : ''} />
+            {retrying ? 'Checking…' : 'Retry Connection'}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => openInBrowser('https://github.com/openclaw/openclaw')}
+          >
+            <ArrowSquareOut size={14} />
+            GitHub
+          </Button>
         </div>
-        {error && <p className="text-xs text-red-500">{error}</p>}
+
+        {error && (
+          <p className="text-xs text-[var(--status-error)] bg-[var(--status-error)]/10 border border-[var(--status-error)]/20 rounded-lg px-3 py-2">
+            {error}
+          </p>
+        )}
       </div>
     </div>
   );

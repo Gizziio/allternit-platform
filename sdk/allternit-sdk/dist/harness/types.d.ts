@@ -2,6 +2,7 @@
  * AllternitHarness Types
  * Core type definitions for the harness SDK
  */
+import type { RetryOptions } from './retry.js';
 /**
  * Supported execution modes for the harness
  */
@@ -38,36 +39,154 @@ export interface SubprocessConfig {
 /**
  * Main harness configuration
  */
+export type PermissionAction = 'allow' | 'deny' | 'ask';
+export interface PermissionRule {
+    tool?: string;
+    file_path?: string;
+    network_host?: string;
+    action: PermissionAction;
+}
+export interface PermissionPolicy {
+    name?: string;
+    active?: boolean;
+    rules: PermissionRule[];
+}
 export interface HarnessConfig {
     mode: HarnessMode;
     byok?: {
         anthropic?: BYOKProviderConfig;
         openai?: BYOKProviderConfig;
         google?: BYOKProviderConfig;
+        vertex?: BYOKProviderConfig;
+        kimi?: BYOKProviderConfig;
     };
     cloud?: CloudConfig;
     local?: LocalConfig;
     subprocess?: SubprocessConfig;
+    /** Retry/backoff behavior for provider fetch calls. Omit to use defaults. */
+    retry?: RetryOptions;
+    /** Middleware hooks applied to every request/response. */
+    middleware?: HarnessMiddleware | HarnessMiddleware[];
+    /** Fallback models to try when a provider refuses or content-filters a request. */
+    fallbackModels?: Array<{
+        provider: string;
+        model: string;
+    }>;
+    /** Optional agent-level permission policy applied to tool execution requests. */
+    permissionPolicy?: PermissionPolicy;
 }
 /**
  * Message role types
  */
 export type MessageRole = 'system' | 'user' | 'assistant' | 'tool';
 /**
+ * Text content block
+ */
+export interface TextContentBlock {
+    type: 'text';
+    text: string;
+}
+/**
+ * Search-result content block.
+ */
+export interface SearchResultBlock {
+    type: 'search_result';
+    title: string;
+    url: string;
+    content: string;
+    score?: number;
+}
+/**
+ * Vision content block — image input for vision-capable models
+ */
+export interface VisionContentBlock {
+    type: 'vision';
+    source: {
+        type: 'base64';
+        media_type: string;
+        data: string;
+    } | {
+        type: 'url';
+        url: string;
+        media_type?: string;
+    };
+}
+/**
+ * Vision coordinates content block — model-returned pointing coordinates
+ */
+export interface VisionCoordinatesContentBlock {
+    type: 'vision_coordinates';
+    x: number;
+    y: number;
+}
+/**
+ * PDF content block — document input for models that support PDFs
+ */
+export interface PdfContentBlock {
+    type: 'pdf';
+    source: 'base64' | 'url' | 'file_id';
+    data?: string;
+    url?: string;
+    fileId?: string;
+    title?: string;
+}
+/**
+ * Tool result content block — returned output from a tool invocation.
+ */
+export interface ToolResultContentBlock {
+    type: 'tool_result';
+    tool_use_id: string;
+    content: string;
+    is_error?: boolean;
+    cache?: boolean;
+    cache_control?: CacheControl;
+}
+/**
+ * Union of content blocks that can appear in a message
+ */
+export type ContentBlock = TextContentBlock | SearchResultBlock | VisionContentBlock | VisionCoordinatesContentBlock | PdfContentBlock | ToolResultContentBlock;
+/**
  * Chat message structure
  */
 export interface Message {
     role: MessageRole;
-    content: string;
+    content: string | ContentBlock[];
     name?: string;
     tool_calls?: ToolCall[];
     tool_call_id?: string;
+    cache?: boolean;
+    cache_control?: CacheControl;
+}
+/**
+ * Normalize a message's content to a plain string for providers that only
+ * accept string content. Vision blocks are ignored; text blocks and tool
+ * results are concatenated.
+ */
+export declare function messageContentToString(content: string | ContentBlock[]): string;
+export interface CacheControl {
+    type: 'ephemeral';
+    ttl?: '5m' | '1h';
+}
+export type ReasoningEffort = 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh';
+/** Normalized reason a model turn ended. */
+export type HarnessStopReason = 'end_turn' | 'max_tokens' | 'stop_sequence' | 'tool_use' | 'pause_turn' | 'refusal';
+export interface ThinkingConfig {
+    enabled?: boolean;
+    budgetTokens?: number;
+    effort?: ReasoningEffort;
+}
+export interface JsonSchemaResponseFormat {
+    type: 'json_schema';
+    schema: Record<string, unknown>;
+    name?: string;
+    description?: string;
+    strict?: boolean;
 }
 /**
  * Tool parameter schema
  */
 export interface ToolParameter {
-    type: string;
+    type: 'object' | 'array' | 'string' | 'number' | 'integer' | 'boolean' | 'null' | 'image' | string;
     description?: string;
     enum?: string[];
     properties?: Record<string, ToolParameter>;
@@ -78,6 +197,17 @@ export interface ToolParameter {
  * Tool definition
  */
 export interface Tool {
+    name: string;
+    description: string;
+    parameters: ToolParameter;
+    strict?: boolean;
+    cache?: boolean;
+    cache_control?: CacheControl;
+}
+/**
+ * Legacy OpenAI function-calling definition.
+ */
+export interface FunctionDefinition {
     name: string;
     description: string;
     parameters: ToolParameter;
@@ -102,7 +232,35 @@ export interface StreamRequest {
     topP?: number;
     topK?: number;
     tools?: Tool[];
+    toolChoice?: 'auto' | 'none' | 'required' | {
+        name: string;
+    };
+    /** Legacy OpenAI function-calling format. When set, overrides `tools`. */
+    functions?: FunctionDefinition[];
+    parallelToolCalls?: boolean;
+    reasoning?: ThinkingConfig;
+    responseFormat?: JsonSchemaResponseFormat;
+    systemCacheControl?: CacheControl;
+    /** Ask providers that support source citations to include them. */
+    citations?: boolean;
     stream?: boolean;
+}
+/** Provider-agnostic citation attached to generated text. */
+export interface Citation {
+    type: 'citation';
+    citedText?: string;
+    title?: string;
+    url?: string;
+    documentTitle?: string;
+    pageNumber?: number;
+    documentIndex?: number;
+    startCharIndex?: number;
+    endCharIndex?: number;
+    providerData?: Record<string, unknown>;
+}
+export interface CitationChunk {
+    type: 'citation';
+    citation: Citation;
 }
 /**
  * Text content chunk
@@ -110,6 +268,20 @@ export interface StreamRequest {
 export interface TextChunk {
     type: 'text';
     text: string;
+}
+/**
+ * Anthropic thinking content delta
+ */
+export interface ThinkingDeltaChunk {
+    type: 'thinking_delta';
+    thinking: string;
+}
+/**
+ * Anthropic signature delta for a thinking block
+ */
+export interface SignatureDeltaChunk {
+    type: 'signature_delta';
+    signature: string;
 }
 /**
  * Tool call chunk (streaming)
@@ -155,22 +327,25 @@ export interface DoneChunk {
         completionTokens: number;
         totalTokens: number;
     };
+    stopReason?: HarnessStopReason;
 }
 /**
  * All possible harness stream chunk types
  */
-export type HarnessStreamChunk = TextChunk | ToolCallChunk | ToolCallCompleteChunk | ToolResultChunk | ErrorChunk | DoneChunk;
+export type HarnessStreamChunk = TextChunk | ThinkingDeltaChunk | SignatureDeltaChunk | ToolCallChunk | ToolCallCompleteChunk | ToolResultChunk | CitationChunk | ErrorChunk | DoneChunk;
 /**
  * Harness response (non-streaming)
  */
 export interface HarnessResponse {
     content: string;
     toolCalls?: ToolCall[];
+    citations?: Citation[];
     usage?: {
         promptTokens: number;
         completionTokens: number;
         totalTokens: number;
     };
+    stopReason?: HarnessStopReason;
 }
 /**
  * Provider-specific request transformation
@@ -183,6 +358,46 @@ export interface ProviderRequestTransform {
  */
 export interface ProviderResponseTransform {
     (response: unknown): HarnessStreamChunk;
+}
+/**
+ * Context passed to middleware error handlers.
+ */
+export interface HarnessMiddlewareContext {
+    /** Request as seen by the harness after beforeRequest hooks. */
+    request: StreamRequest;
+    /** Harness instance for middleware that needs to re-invoke streaming. */
+    harness: {
+        stream(request: StreamRequest): AsyncGenerator<HarnessStreamChunk>;
+    };
+}
+/**
+ * Middleware hook system for the harness.
+ *
+ * Middleware runs on every request/response. The default harness configuration
+ * always includes a retry middleware; callers may add custom middleware to
+ * observe, mutate, or recover from failures.
+ */
+export interface HarnessMiddleware {
+    /** Optional human-readable name for logging/debugging. */
+    name?: string;
+    /**
+     * Transform the request before it is routed to the provider.
+     * Called after request validation but before system/provider prompt injection.
+     */
+    beforeRequest?: (request: StreamRequest) => StreamRequest | Promise<StreamRequest>;
+    /**
+     * Transform the collected response before it is returned by run()/complete().
+     * Not applied when consuming the raw stream() generator.
+     */
+    afterResponse?: (response: HarnessResponse) => HarnessResponse | Promise<HarnessResponse>;
+    /**
+     * Handle an error thrown during streaming.
+     *
+     * Returning/yielding an async generator substitutes a replacement stream.
+     * Returning undefined passes control to the next onError hook. Throwing
+     * propagates the thrown error.
+     */
+    onError?: (error: HarnessError, context: HarnessMiddlewareContext) => AsyncGenerator<HarnessStreamChunk> | Promise<AsyncGenerator<HarnessStreamChunk>> | void | Promise<void>;
 }
 /**
  * Error codes for harness operations

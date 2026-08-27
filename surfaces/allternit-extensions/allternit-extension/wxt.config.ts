@@ -72,7 +72,29 @@ export default defineConfig({
       'storage',
       'tabs',
       'nativeMessaging',
+      // polish features
+      'notifications',
+      'downloads',
+      'contextMenus',
+      // api capture fallback (debugger primary, webRequest fallback)
+      'debugger',
+      'webRequest',
+      // webRequestBlocking is MV2-only and intentionally omitted for this MV3 extension
     ],
+    commands: {
+      'open-sidepanel': {
+        suggested_key: { default: 'Alt+Shift+A' },
+        description: 'Open Allternit sidepanel',
+      },
+      'capture-page': {
+        suggested_key: { default: 'Alt+Shift+C' },
+        description: 'Capture current page for HTML to Figma',
+      },
+      'quick-task': {
+        suggested_key: { default: 'Alt+Shift+T' },
+        description: 'Open quick task input',
+      },
+    },
     host_permissions: ['<all_urls>'],
     background: {
       service_worker: 'background.js',

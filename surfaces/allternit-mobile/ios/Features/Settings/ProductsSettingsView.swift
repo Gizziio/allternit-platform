@@ -3,8 +3,7 @@ import SwiftUI
 /// Settings > Products parity — Gizziio Code, Cowork, and Extensions.
 ///
 /// Phase 1 surfaces the user-facing toggles that map to the web's products
-/// group. Most are local preference flags; the marketplace extension list
-/// is intentionally deferred until the plugin marketplace UI is wired.
+/// group. Most are local preference flags.
 struct ProductsSettingsView: View {
     @EnvironmentObject private var modeStore: AppModeStore
     @ObservedObject private var settings = SettingsStore.shared
@@ -140,7 +139,7 @@ struct ProductsSettingsView: View {
             }
             .tint(Color("AccentPrimary"))
 
-            Text("Installed marketplace extensions are managed in the Plugin Registry.")
+            Text("Installed marketplace extensions are managed automatically.")
                 .font(.caption)
                 .foregroundColor(Color("TextSecondary"))
         } header: {

@@ -1,0 +1,170 @@
+---
+title: 'ACI API'
+description: 'Start, stream, and control Allternit Computer Interface (ACI) browser-automation runs through the gateway.'
+---
+
+## Overview
+
+The ACI API is the gateway surface for the Allternit Computer Interface (ACI). It forwards browser-automation requests to the ACU computer-use gateway (`domains/computer-use/core`) and adapts the upstream SSE event stream into a stable client contract. Use it to start intent-driven browser runs, stream progress, stop active runs, and approve or deny permission prompts.
+
+ACI runs are stateless across the gateway: the gateway drains the upstream event stream into an in-process replay buffer so clients can attach to `/api/aci/stream/:id` at any time and see the full history.
+
+## Base URL
+
+Management and control endpoints:
+
+```
+https://api.allternit.com/api/aci
+```
+
+For local development:
+
+```
+http://127.0.0.1:8013/api/aci
+```
+
+## Authentication
+
+All ACI management routes require a valid bearer token via the platform auth middleware. See [Authentication](/api/authentication).
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/aci/run` | Start a new browser-automation run. |
+| `GET` | `/api/aci/stream/:id` | SSE stream of run events (replay + live tail). |
+| `POST` | `/api/aci/stop/:id` | Cancel an active run. |
+| `POST` | `/api/aci/approve/:id?deny=true` | Approve or deny a pending permission prompt. |
+
+## Start a run
+
+```http
+POST /api/aci/run
+```
+
+Kicks off an intent-driven browser run in the ACU gateway. The gateway returns a `sessionId` that is also the run id for streaming, stopping, and approval.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `goal` | string | Yes | The task description for the browser run. |
+| `model` | string | No | Override the model used for planning. |
+| `allowedSites` | any | No | Allowed site list passed verbatim to ACU. |
+| `autoVerify` | boolean | No | Whether ACU should auto-verify actions. |
+| `openLinksInBrowser` | boolean | No | Open links inside the browser context. |
+| `sessionPersistence` | any | No | Session persistence hint passed verbatim. |
+
+### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/aci/run \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "goal": "Find the latest Allternit release notes",
+    "model": "auto",
+    "allowedSites": ["allternit.com"],
+    "openLinksInBrowser": true
+  }'
+```
+
+### Example response
+
+```json
+{
+  "sessionId": "550e8400-e29b-41d4-a716-446655440000",
+  "adapterId": "browser"
+}
+```
+
+## Stream run events
+
+```http
+GET /api/aci/stream/:id
+```
+
+Returns a Server-Sent Events stream for the run. The stream replays buffered events, tails new events, and ends with a `done` frame. Runs started in the current gateway process are served from an in-process buffer; older runs fall back to proxying ACU's events endpoint.
+
+### Stream frame types
+
+| Type | Description |
+|------|-------------|
+| `trace` | Human-readable progress message from ACU. |
+| `state` | Structured state update from ACU. |
+| `done` | Run ended. |
+
+### Example curl
+
+```bash
+curl -N https://api.allternit.com/api/aci/stream/550e8400-e29b-41d4-a716-446655440000 \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Accept: text/event-stream"
+```
+
+### Example event
+
+```text
+event: message
+data: {"type":"trace","data":{"message":"Navigating to allternit.com","event_type":"browser.navigate","data":{}},"ts":1754541600000}
+```
+
+## Stop a run
+
+```http
+POST /api/aci/stop/:id
+```
+
+Cancels the run in ACU and returns the upstream response.
+
+### Example response
+
+```json
+{
+  "run_id": "550e8400-e29b-41d4-a716-446655440000",
+  "status": "cancelled"
+}
+```
+
+## Approve or deny a prompt
+
+```http
+POST /api/aci/approve/:id
+POST /api/aci/approve/:id?deny=true
+```
+
+Sends an approval decision for a permission prompt raised by the run. Omit `deny` or set it to `false` to approve; set `deny=true` to deny.
+
+### Example request
+
+```bash
+curl -X POST "https://api.allternit.com/api/aci/approve/550e8400-e29b-41d4-a716-446655440000" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Example response
+
+```json
+{
+  "run_id": "550e8400-e29b-41d4-a716-446655440000",
+  "decision": "approve"
+}
+```
+
+## Error codes
+
+| Status | Code | Meaning |
+|--------|------|---------|
+| `200 OK` | — | Request succeeded. |
+| `400 Bad Request` | `goal is required` | Empty or missing `goal` in `/run`. |
+| `401 Unauthorized` | — | Missing or invalid bearer token. |
+| `502 Bad Gateway` | `acu_unavailable` | ACU gateway could not be reached. |
+| `502 Bad Gateway` | `acu_error` | ACU returned a non-success status. |
+| `404 Not Found` | — | Stream id not known and ACU has no events for it. |
+
+## Related pages
+
+- [Authentication](/api/authentication)
+- [Agents API](/api/agents)
+- [Sessions API](/api/sessions)
+- [Realtime Audio](/api/realtime-audio)

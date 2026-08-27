@@ -90,6 +90,33 @@ describe('AgentModeGizzi', () => {
     expect(mascot).toBeInTheDocument();
   });
 
+  it('renders bot avatar instead of mascot when selectedAgent is a bot', () => {
+    const bot = {
+      id: 'deep-researcher',
+      name: 'Deep Researcher',
+      isBot: true,
+      botProfile: {
+        displayName: 'Deep Researcher',
+        accentColor: '#8b5cf6',
+      },
+      allowedSurfaces: ['chat'],
+    } as const;
+
+    render(
+      <AgentModeGizzi
+        active
+        pulse={1}
+        surface="chat"
+        selectedAgentName={bot.name}
+        selectedAgent={bot as any}
+        theme={theme}
+      />,
+    );
+
+    expect(screen.getByTestId('agent-mode-bot-avatar')).toBeInTheDocument();
+    expect(screen.queryByTestId('gizzi-mascot')).not.toBeInTheDocument();
+  });
+
   it('updates emotion based on selected agent', () => {
     const { rerender } = render(
       <AgentModeGizzi

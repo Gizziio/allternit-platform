@@ -147,3 +147,50 @@ declare module '../dev-portal/src/App' {
   const App: ComponentType<Record<string, unknown>>;
   export default App;
 }
+
+declare module '@novnc/novnc' {
+  export * from '@novnc/novnc/core/rfb';
+  export { default } from '@novnc/novnc/core/rfb';
+}
+
+declare module '@novnc/novnc/core/rfb' {
+  export interface RFBOptions {
+    shared?: boolean;
+    credentials?: Record<string, string>;
+    repeaterID?: string;
+    wsProtocols?: string | string[];
+    scaleViewport?: boolean;
+    resizeSession?: boolean;
+    clipViewport?: boolean;
+    dragViewport?: boolean;
+    trackpadDrag?: boolean;
+    touchButton?: number;
+  }
+
+  export default class RFB {
+    constructor(target: HTMLElement | null, url: string, options?: RFBOptions);
+    disconnect(): void;
+    connect(url: string, options?: RFBOptions): void;
+    sendCredentials(credentials: Record<string, string>): void;
+    sendCtrlAltDel(): void;
+    sendKey(keysym: number, code: string, down: boolean): void;
+    clipboardPasteFrom(text: string): void;
+    focus(): void;
+    blur(): void;
+    viewOnly: boolean;
+    scaleViewport: boolean;
+    resizeSession: boolean;
+    clipViewport: boolean;
+    dragViewport: boolean;
+    trackpadDrag: boolean;
+    touchButton: number;
+    onconnect?: () => void;
+    ondisconnect?: (event?: { clean: boolean }) => void;
+    oncredentialsrequired?: () => void;
+    onsecurityfailure?: (event?: { reason: number; reasonString: string }) => void;
+    onclipboard?: (event?: { text: string }) => void;
+    onbell?: () => void;
+    ondesktopname?: (event?: { name: string }) => void;
+    oncapabilities?: () => void;
+  }
+}

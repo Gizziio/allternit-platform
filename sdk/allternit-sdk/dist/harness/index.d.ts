@@ -2,13 +2,14 @@
  * AllternitHarness
  * Core SDK implementation for unified AI provider access
  */
-import { HarnessConfig, StreamRequest, HarnessStreamChunk } from './types.js';
+import { HarnessConfig, StreamRequest, HarnessStreamChunk, HarnessResponse } from './types.js';
 /**
  * AllternitHarness provides a unified interface for streaming
  * AI completions across multiple providers and deployment modes.
  */
 export declare class AllternitHarness {
     private config;
+    private middleware;
     /**
      * Creates a new AllternitHarness instance
      *
@@ -16,6 +17,12 @@ export declare class AllternitHarness {
      * @throws HarnessError if configuration is invalid
      */
     constructor(config: HarnessConfig);
+    /**
+     * Builds the middleware chain. Fallback is first so it can intercept refusals
+     * before the retry middleware, followed by user middleware, then the default
+     * retry middleware for backward compatibility with the legacy retry option.
+     */
+    private buildMiddleware;
     /**
      * Validates the harness configuration
      *
@@ -35,6 +42,11 @@ export declare class AllternitHarness {
      */
     stream(request: StreamRequest): AsyncGenerator<HarnessStreamChunk>;
     /**
+     * Invokes onError middleware. Returns a replacement stream if any middleware
+     * yields one; otherwise returns undefined so the original error is thrown.
+     */
+    private applyOnError;
+    /**
      * Complete a request and return the full response text
      * Collects all stream chunks into a single string
      *
@@ -43,6 +55,8 @@ export declare class AllternitHarness {
      * @throws HarnessError for configuration or routing errors
      */
     complete(request: StreamRequest): Promise<string>;
+    /** Collect a stream into a response while retaining citations, usage, and stop reason. */
+    run(request: StreamRequest): Promise<HarnessResponse>;
     /**
      * Stream from Allternit Cloud service
      *
@@ -80,6 +94,14 @@ export declare class AllternitHarness {
      * @yields HarnessStreamChunk
      */
     private streamFromGoogle;
+    /**
+     * Stream from Google Vertex AI API
+     *
+     * @param request - Stream request configured for Vertex
+     * @yields HarnessStreamChunk
+     */
+    private streamFromVertex;
+    private streamFromKimi;
     /**
      * Stream from local model (e.g., Ollama)
      *
@@ -123,4 +145,8 @@ export declare class AllternitHarness {
 }
 export * from './types.js';
 export * from './prompts.js';
+export * from './provider-request.js';
+export * from './model-registry.js';
+export * from './retry.js';
+export * from './middleware.js';
 export default AllternitHarness;

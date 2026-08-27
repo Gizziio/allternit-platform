@@ -1,99 +1,153 @@
 ---
 title: Authentication
-description: API authentication and API keys
+description: Virtual keys and authentication for the Allternit LLM gateway
 ---
 
-## API Keys
+## Overview
 
-All API requests require authentication using an API key. Include your key in the `Authorization` header:
+The Allternit LLM gateway uses virtual keys for authentication. Each virtual key is a scoped, rotatable credential that maps to a tenant, organization, or user profile. Virtual keys are used for all public `/v1` gateway routes, including chat completions, embeddings, files, and batches.
+
+Organization-scoped admin routes under `/api/v1/gateway/*` require a Clerk JWT and appropriate organization role (owner or admin).
+
+## Virtual keys
+
+Virtual keys start with `ak-`. The gateway stores only the SHA-256 hash of the key; the plaintext is shown once at creation and cannot be recovered.
 
 ```bash
-curl -H "Authorization: Bearer allternit_live_xxxxxxxxxxxxxxxx" \
-  https://api.allternit.com/v1/agents
+curl https://api.allternit.com/v1/chat/completions \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"auto","messages":[{"role":"user","content":"Hello"}]}'
 ```
 
-## Getting an API Key
+## Base URL
 
-1. Go to [platform.gizziio.com/settings/api-keys](https://platform.gizziio.com/settings/api-keys)
-2. Click "Create New Key"
-3. Copy the key (shown only once)
+```
+https://api.allternit.com/v1
+```
 
-## Key Types
+For local development:
 
-| Type | Prefix | Description |
-|------|--------|-------------|
-| Live | `allternit_live_` | Production use |
-| Test | `allternit_test_` | Development/testing |
-| Runtime | `allternit_rt_` | BYOC runtime agents |
+```
+http://127.0.0.1:8013/v1
+```
 
-## Scopes
+## Create a virtual key
 
-API keys can be scoped to specific operations:
+<Note>
+This endpoint requires a Clerk JWT and organization owner or admin role.
+</Note>
 
 ```bash
-# Create a scoped key
-POST /v1/keys
+curl -X POST https://api.allternit.com/api/v1/gateway/keys \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "production-chat",
+    "monthly_budget_cents": 10000,
+    "rate_limit_rpm": 600,
+    "allowed_models": ["auto", "allternit-balanced", "allternit-code"]
+  }'
+```
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | no | Human-readable name for the key. |
+| `monthly_budget_cents` | integer | no | Monthly spend cap in cents. `0` or omitted means no cap. |
+| `rate_limit_rpm` | integer | no | Requests-per-minute limit. Must be at least `1` when provided. |
+| `allowed_models` | string[] | no | Model ids and policy aliases this key may use. Omit to allow all. |
+
+### Example response
+
+```json
 {
-  "name": "analysis-agent",
-  "scopes": ["agents:read", "agents:write"],
-  "channels": ["workspace.*"],
-  "rate_limit": "100/min"
+  "id": "key_abc123",
+  "name": "production-chat",
+  "key_prefix": "ak-prod",
+  "key": "ak-prod-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "warning": "This key is shown only once. Store it securely.",
+  "monthly_budget_cents": 10000,
+  "rate_limit_rpm": 600,
+  "allowed_models": ["auto", "allternit-balanced", "allternit-code"],
+  "created_at": 1723500000
 }
 ```
 
-Available scopes:
-- `agents:read` - List and get agents
-- `agents:write` - Create and modify agents
-- `agents:run` - Execute agents
-- `sessions:read` - Access session data
-- `sessions:write` - Create sessions
-- `admin:*` - Full access (owner only)
-
-## Rate Limiting
-
-API requests are rate limited per key:
-
-| Plan | Rate Limit |
-|------|------------|
-| Free | 60/min |
-| Pro | 600/min |
-| Enterprise | Custom |
-
-Rate limit headers:
-```
-X-RateLimit-Limit: 600
-X-RateLimit-Remaining: 599
-X-RateLimit-Reset: 1640995200
-```
-
-## WebSocket Authentication
-
-For WebSocket connections, pass the key as a query parameter:
-
-```javascript
-const ws = new WebSocket(
-  'wss://runtime.your-domain.com/events?token=allternit_live_xxx'
-);
-```
-
-## Revoking Keys
-
-Revoke a compromised key immediately:
+## List virtual keys
 
 ```bash
-DELETE /v1/keys/key_abc123
+curl https://api.allternit.com/api/v1/gateway/keys \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN"
 ```
 
-Or via the dashboard at [platform.gizziio.com/settings/api-keys](https://platform.gizziio.com/settings/api-keys).
+```json
+{
+  "keys": [
+    {
+      "id": "key_abc123",
+      "name": "production-chat",
+      "key_prefix": "ak-prod",
+      "monthly_budget_cents": 10000,
+      "rate_limit_rpm": 600,
+      "allowed_models": ["auto", "allternit-balanced", "allternit-code"],
+      "created_at": 1723500000
+    }
+  ]
+}
+```
 
-## Security Best Practices
+## Update a virtual key
+
+```bash
+curl -X PATCH https://api.allternit.com/api/v1/gateway/keys/key_abc123 \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "monthly_budget_cents": 20000,
+    "allowed_models": ["auto"]
+  }'
+```
+
+## Revoke a virtual key
+
+```bash
+curl -X DELETE https://api.allternit.com/api/v1/gateway/keys/key_abc123 \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN"
+```
+
+```json
+{
+  "id": "key_abc123",
+  "revoked": true
+}
+```
+
+## Authentication errors
+
+| HTTP status | Code | Meaning |
+|-------------|------|---------|
+| 401 | `allternit.authentication_failed` | Missing, malformed, or invalid virtual key. |
+| 401 | `invalid_request_error` | Key is revoked or expired. |
+| 403 | `allternit.permission_denied` | Key is not allowed to use the requested model. |
+| 429 | `allternit.rate_limited` | Per-key rate limit exceeded. |
+| 429 | `allternit.budget_exceeded` | Monthly key, tenant, or organization budget exhausted. |
+
+## Security best practices
 
 <Warning>
-Never commit API keys to version control!
+Never commit virtual keys to version control.
 </Warning>
 
-- Store keys in environment variables
-- Rotate keys regularly
-- Use separate keys for different environments
-- Monitor key usage for anomalies
-- Revoke unused keys
+- Store keys in environment variables or a secrets manager.
+- Rotate keys regularly and revoke unused keys.
+- Use separate keys for production, staging, and development.
+- Set `monthly_budget_cents` and `rate_limit_rpm` on every key.
+- Restrict `allowed_models` to the smallest set required.
+
+## Related pages
+
+- [Chat Completions](/api/chat-completions) — primary gateway endpoint
+- [Proxy](/api/proxy) — gateway middleware and request lifecycle
+- [Rate Limits](/api/rate-limits) — quota and budget details

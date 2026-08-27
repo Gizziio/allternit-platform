@@ -21,7 +21,7 @@
     "paths": {
       "@gizzi/*": ["./src/*"]
     },
-    "types": ["bun", "node"]
+    "types": ["bun", "node", "react"]
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]

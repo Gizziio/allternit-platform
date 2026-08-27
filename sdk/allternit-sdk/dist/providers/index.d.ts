@@ -8,5 +8,6 @@ export * from './groq';
 export * from './together';
 export * from './azure';
 export * from './bedrock';
+export * from './mlx';
 export * from './registry';
 export * from './discovery';

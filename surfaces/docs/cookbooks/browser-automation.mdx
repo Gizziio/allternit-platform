@@ -1,0 +1,126 @@
+---
+title: "Cookbook: Browser Automation"
+description: Automate web tasks with the Allternit Computer Interface (ACI)
+---
+
+## Goal
+
+Build an agent that automates a browser task: navigate to a website, extract data, and save it to a file — all with human-in-the-loop approval for sensitive actions.
+
+## Prerequisites
+
+- An Allternit API key
+- The ACU gateway running locally (`http://127.0.0.1:8760`)
+- `@allternit/sdk` installed
+
+## Implementation
+
+### 1. Set up the computer capability
+
+```typescript
+import { ComputerUseCapability } from '@allternit/sdk/ai-runtime/capabilities/computer-use';
+import { ToolRegistry } from '@allternit/sdk/ai-runtime/tools';
+
+const registry = new ToolRegistry();
+
+const computer = new ComputerUseCapability({
+  displayWidthPx: 1280,
+  displayHeightPx: 720,
+});
+
+registry.registerTool(computer.getTool(), { strict: true });
+```
+
+### 2. Start a browser run
+
+```typescript
+const response = await fetch('http://127.0.0.1:8013/api/aci/run', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    goal: 'Go to https://news.ycombinator.com and extract the top 10 story titles and URLs',
+    model: 'gizzi-pro',
+    allowedSites: ['news.ycombinator.com'],
+    autoVerify: false,
+  }),
+});
+
+const { sessionId } = await response.json();
+console.log('Run started:', sessionId);
+```
+
+### 3. Stream events
+
+```typescript
+const eventSource = new EventSource(
+  `http://127.0.0.1:8013/api/aci/stream/${sessionId}`
+);
+
+eventSource.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+
+  switch (data.type) {
+    case 'trace':
+      console.log('Progress:', data.message);
+      break;
+    case 'state':
+      if (data.requiresApproval) {
+        console.log('Action needs approval:', data.action);
+        // Approve or deny
+        approveAction(sessionId, data.actionId, true);
+      }
+      break;
+    case 'done':
+      console.log('Run completed:', data.result);
+      eventSource.close();
+      break;
+  }
+};
+```
+
+### 4. Approve actions programmatically
+
+```typescript
+async function approveAction(
+  sessionId: string,
+  actionId: string,
+  approved: boolean
+) {
+  await fetch(
+    `http://127.0.0.1:8013/api/aci/approve/${sessionId}?deny=${!approved}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ actionId }),
+    }
+  );
+}
+```
+
+### 5. Save the results
+
+```typescript
+// After the run completes, extract the data
+const result = data.result;
+const stories = result.extractedData;
+
+console.table(stories);
+// ┌─────────┬────────────────────────────────┬──────────────────────────┐
+// │ (index) │ title                          │ url                      │
+// ├─────────┼────────────────────────────────┼──────────────────────────┤
+// │ 0       │ 'Show HN: My new project'      │ 'https://...'            │
+// │ 1       │ 'The future of AI agents'      │ 'https://...'            │
+// └─────────┴────────────────────────────────┴──────────────────────────┘
+```
+
+## Explanation
+
+- **`allowedSites`** — Restricts the browser to specific domains. The agent cannot navigate to other sites.
+- **`autoVerify: false`** — Requires human approval before each action. Set to `true` for read-only tasks.
+- **Vision coordinates** — The agent uses screenshot-based vision to understand the page layout. Pixel coordinates are mapped to the display dimensions.
+
+## Next steps
+
+- Add **multi-tab support** for tasks that require navigating between pages.
+- Use **ACI in Gizzi Code** — the CLI has built-in computer-use support via the `computer` tool.
+- Combine with the **memory store** to persist extracted data across runs.

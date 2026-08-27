@@ -2,6 +2,12 @@
 dist/
 release/
 
+# Staged office-engine sidecar bundle (prepare:office-engine)
+resources/office-engine/
+
+# Staged Cua Driver binary (prepare:cua-driver downloads this at build time)
+resources/computer-use/cua-driver
+
 # Logs
 *.log
 

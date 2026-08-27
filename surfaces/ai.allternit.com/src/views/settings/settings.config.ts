@@ -40,6 +40,7 @@ import {
   Database,
   Image,
   FilmStrip,
+  WebhooksLogo,
 } from '@phosphor-icons/react';
 
 export type SettingsGroup = 'account' | 'platform' | 'products' | 'infrastructure' | 'customize' | 'about';
@@ -65,7 +66,7 @@ export const SETTINGS_NAV_ITEMS: SettingsNavItem[] = [
   { id: 'api-keys', label: 'API Keys', icon: React.createElement(Key, { size: 18 }), group: 'platform' },
   { id: 'shortcuts', label: 'Shortcuts', icon: React.createElement(Keyboard, { size: 18 }), group: 'platform' },
   { id: 'permissions', label: 'Permissions', icon: React.createElement(ShieldCheck, { size: 18 }), group: 'platform' },
-  { id: 'dispatch', label: 'Dispatch', icon: React.createElement(DeviceMobile, { size: 18 }), group: 'platform' },
+  { id: 'remote-control', label: 'Remote Control', icon: React.createElement(DeviceMobile, { size: 18 }), group: 'platform' },
   { id: 'devices', label: 'Devices', icon: React.createElement(Devices, { size: 18 }), group: 'platform' },
   { id: 'cloud-instances', label: 'Cloud instances', icon: React.createElement(CloudArrowUp, { size: 18 }), group: 'platform' },
   { id: 'diagnostics', label: 'Diagnostics', icon: React.createElement(Activity, { size: 18 }), group: 'platform' },
@@ -78,6 +79,7 @@ export const SETTINGS_NAV_ITEMS: SettingsNavItem[] = [
   { id: 'environment', label: 'Environment', icon: React.createElement(SlidersHorizontal, { size: 18 }), group: 'infrastructure' },
   { id: 'security', label: 'Security', icon: React.createElement(Shield, { size: 18 }), group: 'infrastructure' },
   { id: 'agents', label: 'Agents', icon: React.createElement(Robot, { size: 18 }), group: 'infrastructure' },
+  { id: 'webhooks', label: 'Webhooks', icon: React.createElement(WebhooksLogo, { size: 18 }), group: 'infrastructure' },
   { id: 'skills', label: 'Skills', icon: React.createElement(Sparkle, { size: 18 }), group: 'customize' },
   { id: 'response-style', label: 'Response style', icon: React.createElement(ChatCircleText, { size: 18 }), group: 'customize' },
   { id: 'connectors', label: 'Connectors', icon: React.createElement(PlugsConnected, { size: 18 }), group: 'customize' },

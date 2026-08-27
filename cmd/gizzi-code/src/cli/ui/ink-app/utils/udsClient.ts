@@ -1,14 +1,12 @@
 // @ts-nocheck
 /**
- * UDS client stub
+ * UDS client for local peer-to-peer messaging (UI re-export).
  */
 
-export interface UDSClient {
-  connected: boolean
-}
-export function createUDSClient(): UDSClient {
-  return { connected: false }
-export function sendMessage(_client: UDSClient, _message: any): void {
-}
-}
-  // Stub
+export {
+  createUDSClient,
+  sendMessage,
+  sendToUdsSocket,
+  type PeerEnvelope,
+  type UDSClient,
+} from '../../../shared/utils/udsClient.js'

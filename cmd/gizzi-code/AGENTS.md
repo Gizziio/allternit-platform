@@ -290,3 +290,109 @@ bun run build
 # Type check (note: tsc --noEmit is heavy and may OOM on full project)
 bun run typecheck
 ```
+
+---
+
+## Rails cross-session messaging
+
+gizzi-code integrates with the Allternit Agent System Rails so any local agent session can discover and message any other local agent session on the same machine.
+
+### Runtime tools
+
+- `ListPeers` (alias `ListAgents`) — lists local Rails peers: name, vendor, cwd, status.
+- `SendMessage` (alias `SendMessageToPeer`) — sends a message to a peer by name.
+
+`SendMessage.to` accepts:
+- A Rails peer name from `ListPeers` (tries Rails first, falls back to teammate mailbox).
+- `uds:/path/to.sock` for direct UDS delivery.
+- `bridge:<session_id>` for the existing Remote Control inter-session path (requires `UDS_INBOX`).
+
+### Files
+
+| Path | Purpose |
+|------|---------|
+| `src/runtime/tools/ListPeersTool/ListPeersTool.ts` | `ListPeers` runtime tool |
+| `src/runtime/tools/SendMessageTool/SendMessageTool.ts` | `SendMessage` runtime tool |
+| `src/runtime/gizzi-core/services/railsPeer.ts` | Peer registration + HTTP inbox poller |
+| `src/cli/ui/ink-app/components/RailsInboxBridge.tsx` | Bridges polled Rails envelopes into the TUI mailbox |
+| `src/shared/utils/udsClient.ts` | Node UDS client for direct socket sends |
+| `src/runtime/services/api/allternitApi.ts` | `listApiPeers`, `registerApiPeer`, `sendApiPeerMessage`, `pollApiPeerInbox` |
+
+### Enabling
+
+Local dev builds have `UDS_INBOX` disabled. To register as a Rails peer and enable the new tools:
+
+```bash
+GIZZI_ENABLE_RAILS_PEER=1 gizzi
+```
+
+On startup the session registers as `gizzi-<sessionId>`, polls the HTTP inbox for peer messages, and exports `ALLTERNIT_RAILS_PEER_NAME` / `ALLTERNIT_RAILS_INBOX`.
+
+### Steering checkpoint
+
+The Rails steering coordinator is also exposed over `/api/rails/steer/*` and via `allternit-rails steer`:
+
+- `POST /api/rails/steer/checkpoint` — hash `.steering/checkpoint.md` and emit a ledger event on change.
+- `POST /api/rails/steer/consult` — build prompt context and consult the configured steering backend.
+- `POST /api/rails/steer/commit-gate` — commit/push approval consult.
+
+### Testing
+
+- `bun run typecheck` ✅
+- `cargo test -p allternit-agent-system-rails` ✅
+- `cargo build -p allternit-api` ✅
+- `test/rails-peer-e2e.ts` — registers two peers via `/api/rails/peers`, lists them, and confirms Bus/UDS message delivery.
+- `../tmp/rails-two-session-test/run.sh` — automated two-session gizzi-code TUI exchange (evidence saved to `../tmp/rails-two-session-test/evidence/`).
+- `allternit-rails --root <repo> steer checkpoint --cwd <repo>` — verified from the shell.
+- Two live `GIZZI_ENABLE_RAILS_PEER=1 gizzi` sessions exchanged a `ListPeers` / `SendMessage` round-trip.
+
+### Product-update system prompts
+
+Load these into agent sessions to teach the Rails workflow:
+
+- `docs/RAILS_PRODUCT_UPDATE_SYSTEM_PROMPT.md` — full product update / system prompt.
+- `.allternit/context-packs/rails-product-update/inputs/INSTRUCTIONS.md` — concise agent-instruction context pack.
+- `.allternit/context-packs/rails-product-update/inputs/templates/QUICKSTART.md` — copy-paste quickstart.
+
+## Agent email tools + dispatch-time hard bans
+
+Bots/agents running under gizzi-code can send external email via the Allternit
+Mail (mailflare) rail, and character-card hard bans are enforced at tool-dispatch
+time (not just pre-run).
+
+### Runtime tools (builtin registry, opencode-style session loop)
+
+- `send_agent_email` — sends external email from the agent's provisioned address.
+  Sends are held for human approval (mailflare `REQUIRE_SEND_APPROVAL` default);
+  the tool returns the `mail:email-out-<uuid>` review thread id. `agent_id`
+  param optional; defaults to `ALLTERNIT_AGENT_ID`.
+- `get_agent_email_status` — mailflare rail diagnostics.
+
+| Path | Purpose |
+|------|---------|
+| `src/runtime/tools/builtins/agent-email.ts` | The two tools (`Tool.define`, registered in `builtins/registry.ts`) |
+| `src/runtime/services/api/agentEmail.ts` | Shared `/api/v1/agent-email/*` client (runtime + CLI) |
+| `src/cli/agent-email-client.ts` | Re-export shim keeping the CLI import surface stable |
+| `src/shared/utils/agentHardBans.ts` | Dispatch-time hard-ban guard (pure, data-driven) |
+
+### Hard-ban enforcement contract (bot runner → gizzi-code)
+
+The runtime learns the active agent's policy via env (same path as
+`ALLTERNIT_USER_ID` / `ALLTERNIT_INTERNAL_SERVICE_TOKEN`):
+
+- `ALLTERNIT_AGENT_ID` — platform agent id for the session.
+- `ALLTERNIT_AGENT_HARD_BANS` — JSON array: plain category strings
+  (`"email_send"`) or RoleHardBan-shaped objects
+  (`{category, enforcement?, label?}`); only `tool-block` (or unspecified)
+  entries are enforced, matching `detectBanViolation` semantics in
+  `surfaces/ai.allternit.com/src/lib/agents/character.service.ts`.
+
+The guard runs in `ToolDispatcher.executeInitialized`
+(`src/runtime/tools/dispatch.ts`) and in both legacy `runToolUse` copies
+(`src/{runtime,cli/ui/ink-app}/services/tools/toolExecution.ts`). Categories
+`email_send` / `external_communication` block: native `send_agent_email`, MCP
+`allternit_mail.send` / direct `*_send_email`/`*_reply_email` tools, and
+connectors-MCP `execute_action` calls whose `actionId` matches
+`gmail.send_email` / `*.send_email` / `*.reply_email`. Denials are structured
+tool results beginning `blocked by agent policy: <category>`. Other categories
+and tools are untouched. Tests: `test/shared/agentHardBans.test.ts`.

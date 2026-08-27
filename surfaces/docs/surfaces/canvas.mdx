@@ -1,0 +1,131 @@
+---
+title: Canvas
+description: Allternit-Canvas — the rich artifact computer inside the platform shell
+---
+
+## Overview
+
+**Allternit-Canvas** is the platform's artifact computer. It is a split-pane surface that renders rich artifacts (documents, slides, sheets, code, images, video, audio, diagrams) alongside the conversation or workflow that produced them. The canvas is not just a viewer: it hosts specialized renderers per content type and supports Mixture of Agents (MoA) creative workflows.
+
+## Base URL / usage
+
+Canvas runs inside the platform shell:
+
+```text
+https://app.allternit.com/shell
+```
+
+Open the protocol canvas view:
+
+```typescript
+open('canvas');
+```
+
+Open an Allternit-Canvas session tied to a source view and session:
+
+```typescript
+open('allternit-canvas', {
+  viewId: 'sess_9c1d...',
+  sourceView: 'chat'
+});
+```
+
+Supported source views: `chat`, `cowork`, `code`, `browser`, `design`.
+
+## Renderer types
+
+| Renderer | Artifact type | Description |
+|---|---|---|
+| Document | `document` | GenOffice document editor |
+| Slides | `slides` | Slide deck renderer |
+| Sheets | `sheet` | Spreadsheet renderer |
+| Code | `html`, `jsx` | Code / component preview |
+| Image | `image`, `svg` | Image viewer |
+| Video | `video` | Video player |
+| Audio | `audio` | Audio player |
+| Mermaid | `mermaid` | Diagram renderer |
+
+## Toolbar commands
+
+| Command | Action |
+|---|---|
+| Toggle layout | Switch between horizontal and vertical split |
+| Show / hide chat | Collapse or restore the conversation panel |
+| Toggle drive | Show the Allternit Drive sidebar |
+| Undo / redo | History controls (UI-level) |
+| Zoom in / out | Canvas zoom |
+| Download | Download the active artifact |
+| Share | Share the artifact |
+| Fullscreen | Expand canvas to full view |
+
+## Endpoints / commands
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/artifacts/:id` | Load the active artifact |
+| `GET` | `/api/sessions/:id/stream` | Stream artifact updates for the canvas |
+| `POST` | `/api/v1/moa/tasks` | Submit MoA creative tasks |
+
+## JSON request / response examples
+
+### Load an artifact into canvas
+
+```bash
+curl https://api.allternit.com/api/artifacts/art_018f3a7c... \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+Response:
+
+```json
+{
+  "id": "art_018f3a7c...",
+  "title": "Landing Page",
+  "kind": "jsx",
+  "content": "export default function Page() { return <h1>Hello</h1>; }",
+  "session_id": "sess_9c1d...",
+  "created_at": "2026-08-13T18:00:00Z"
+}
+```
+
+### MoA creative task update
+
+```json
+{
+  "tasks": [
+    {
+      "id": "task_1a2b...",
+      "type": "copywriting",
+      "status": "running",
+      "progress": 35,
+      "title": "Drafting headline variants"
+    }
+  ]
+}
+```
+
+### Layout state payload
+
+```json
+{
+  "layoutMode": "horizontal",
+  "chatSize": 30,
+  "canvasSize": 70
+}
+```
+
+## Error codes
+
+| HTTP | Code | Meaning |
+|---|---|---|
+| 200 | — | Artifact loaded or task updated |
+| 400 | `invalid_artifact` | Unsupported artifact kind |
+| 404 | `not_found` | Artifact or session not found |
+| 500 | `renderer_error` | Renderer failed to load content |
+
+## Related links
+
+- [Artifacts API](/api/artifacts)
+- [Agent Studio](/surfaces/agent-studio)
+- [Operator Browser](/surfaces/operator-browser)
+- [Tool Belt](/tools/tool-belt)

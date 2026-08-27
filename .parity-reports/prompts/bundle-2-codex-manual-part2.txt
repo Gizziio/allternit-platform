@@ -1,0 +1,144 @@
+You are a technical documentation writer working in `/Users/joe/Desktop/allternit-parity-workspace` on branch `parity/swarm-sprint`.
+
+Read the task spec at `.parity-reports/TASK_SPEC.md` for context.
+
+Your assignment: create Allternit parity documentation for the following OpenAI ChatGPT/Codex handoff categories:
+
+codex-manual-part2
+
+The unchecked items for these categories are listed below. For each item, research whether Allternit has an equivalent capability by reading the codebase and existing docs (e.g., `cmd/allternit-api/src/`, `cmd/gizzi-code/`, `packages/@allternit/`, `sdk/allternit-sdk/`, `docs/public/`). Then create one docs page per category:
+
+- docs/public/parity/codex-manual-part2.md
+
+Each page should:
+- Briefly explain the original ChatGPT/Codex concept.
+- Map it to the equivalent Allternit feature, config, CLI command, API endpoint, tool, or workflow.
+- Include concrete examples (TOML config, curl, CLI commands) where applicable.
+- If a concept has no Allternit equivalent and is not applicable to the self-host/BYOC model, document it as "Not applicable / roadmap" and explain why.
+
+Do NOT edit `/Users/joe/Desktop/allternit-parity-handoff.md`. Do NOT run `git commit` or other git mutations. Run `cargo check -p allternit-api` only if you change Rust code; docs-only changes do not need builds.
+
+When finished, write a report file `.parity-reports/codex-manual-part2.md` with YAML frontmatter containing `status`, `files_changed`, `items_covered`, `items_missing`, and `notes`, followed by prose.
+
+Here are the unchecked items to cover:
+
+### Category: codex-manual-part2 (handoff lines 2411-2528)
+- [ ] [GAP] **History (table)**
+- [ ] [GAP] **If you use --yolo or another full access sandbox setting, web search defaults to live.**
+- [ ] [GAP] **Image generation**
+- [ ] [GAP] **Import from another agent**
+- [ ] [GAP] **Improving the threat model**
+- [ ] [GAP] **In-product notices (mostly set automatically by Codex).**
+- [ ] [GAP] **Include user prompt text in logs. Default: false**
+- [ ] [GAP] **Inline override for the history compaction prompt. Default: unset.**
+- [ ] [GAP] **Install and run Codex in WSL**
+- [ ] [GAP] **Install default Linux distribution (like Ubuntu)**
+- [ ] [GAP] **Install dependencies**
+- [ ] [GAP] **Install type checker**
+- [ ] [GAP] **Instruction Overrides**
+- [ ] [GAP] **Integrated terminal**
+- [ ] [GAP] **Internal tooltip state keyed by model slug. Usually managed by Codex.**
+- [ ] [GAP] **Leave this table empty to accept defaults. Set explicit booleans to opt in/out.**
+- [ ] [GAP] **Leave unset to choose when the current and saved session directories differ.**
+- [ ] [GAP] **Lifecycle hooks can be configured here inline or in a sibling hooks.json.**
+- [ ] [GAP] **Load the compact prompt override from a file. Default: unset.**
+- [ ] [GAP] **Local environments**
+- [ ] [GAP] **Long-running work**
+- [ ] [GAP] **MCP server and UI quickstart**
+- [ ] [GAP] **MCP server review requirements**
+- [ ] [GAP] **Manage app updates**
+- [ ] [GAP] **Mark specific worktrees as trusted or untrusted.**
+- [ ] [GAP] **Max bytes from AGENTS.md to embed into first-turn instructions. Default: 32768**
+- [ ] [GAP] **Maximum bytes for history file; oldest entries are trimmed when exceeded. Example: 5242880**
+- [ ] [GAP] **Maximum concurrently open spawned-agent threads, excluding the primary thread. When unset, Codex chooses the default.**
+- [ ] [GAP] **Memories (table)**
+- [ ] [GAP] **Metrics exporter: none | statsig | otlp-http | otlp-grpc**
+- [ ] [GAP] **Model Context Protocol**
+- [ ] [GAP] **Named permissions profile to apply by default. Built-ins:**
+- [ ] [GAP] **Native Windows sandbox mode (Windows only): unelevated | elevated**
+- [ ] [GAP] **Non-interactive mode**
+- [ ] [GAP] **Noninteractive and Programmatic Interfaces**
+- [ ] [GAP] **Notification mechanism for terminal alerts: auto | osc9 | bel. Default: "auto"**
+- [ ] [GAP] **Open Source**
+- [ ] [GAP] **OpenAI Developers plugin**
+- [ ] [GAP] **OpenTelemetry (OTEL) - disabled by default**
+- [ ] [GAP] **Optimize Metadata**
+- [ ] [GAP] **Optional MCP OAuth callback overrides (used by `codex mcp login`)**
+- [ ] [GAP] **Optional base URL override for the built-in OpenAI provider.**
+- [ ] [GAP] **Optional fixed port for MCP OAuth callback: 1-65535. Default: unset.**
+- [ ] [GAP] **Optional manual model metadata. When unset, Codex uses model or preset defaults.**
+- [ ] [GAP] **Optional model override for /review. Default: unset (uses current session model).**
+- [ ] [GAP] **Optional override used when Codex runs in plan mode: none | minimal | low | medium | high | xhigh**
+- [ ] [GAP] **Optional per-app controls.**
+- [ ] [GAP] **Optional redirect URI override for MCP OAuth login (for example, remote devbox ingress).**
+- [ ] [GAP] **Optional reminder_interval_tokens defaults to 10% of limit_tokens.**
+- [ ] [GAP] **Ordered fallbacks when AGENTS.md is missing at a directory level. Default: []**
+- [ ] [GAP] **Ordered list of footer status-line item IDs. When unset, Codex uses:**
+- [ ] [GAP] **Ordered list of terminal window/tab title item IDs. When unset, Codex uses:**
+- [ ] [GAP] **Override built-in base instructions with a file path. Default: unset.**
+- [ ] [GAP] **Package your plugin**
+- [ ] [GAP] **Permissions** — Fine-tuning appears only in outbound third-party connectors (e.g. services/open-connector Mistral executors).
+- [ ] [GAP] **Personalize ChatGPT**
+- [ ] [GAP] **Place fixed arguments before the opened path.**
+- [ ] [GAP] **Platform, Enterprise, and Caveats**
+- [ ] [GAP] **Plugin architecture**
+- [ ] [GAP] **Plugin controls**
+- [ ] [GAP] **Plugin submission errors**
+- [ ] [GAP] **Preferred service tier. Use fast or another tier supported by the active model.**
+- [ ] [GAP] **Preferred store for MCP OAuth credentials: auto (default) | file | keyring**
+- [ ] [GAP] **Pricing**
+- [ ] [GAP] **Prisma AIRS**
+- [ ] [GAP] **Project Documentation Controls**
+- [ ] [GAP] **Project root marker filenames used when searching parent directories. Default: [".git"]**
+- [ ] [GAP] **Projects (trust levels)**
+- [ ] [GAP] **Projects and chats**
+- [ ] [GAP] **Prompting**
+- [ ] [GAP] **Propose security hardening**
+- [ ] [GAP] **Provider id selected from [model_providers]. Default: "openai".**
+- [ ] [GAP] **Quickstart**
+- [ ] [GAP] **Reasoning & Verbosity (Responses API capable models)**
+- [ ] [GAP] **Reasoning effort: minimal | low | medium | high | xhigh**
+- [ ] [GAP] **Reasoning summary: auto | concise | detailed | none**
+- [ ] [GAP] **Record & Replay**
+- [ ] [GAP] **Record a model-visible message when an agent turn is interrupted. Default: true**
+- [ ] [GAP] **Register the full derived URI with your provider, not just the base host or unsuffixed path.**
+- [ ] [GAP] **Remote connections**
+- [ ] [GAP] **Resources**
+- [ ] [GAP] **Restrict ChatGPT login to a specific workspace id. Default: unset.**
+- [ ] [GAP] **Review GitHub pull requests with Codex**
+- [ ] [GAP] **Roles and workspace permissions**
+- [ ] [GAP] **Rollout budget tracking. This feature is under development and off by default.**
+- [ ] [GAP] **Run Codex Security in CI**
+- [ ] [GAP] **Run a Codex Security scan**
+- [ ] [GAP] **Run a deep security scan**
+- [ ] [GAP] **Sample Configuration**
+- [ ] [GAP] **Sandbox settings (tables)**
+- [ ] [GAP] **Sandboxed networking settings**
+- [ ] [GAP] **Security & Privacy**
+- [ ] [GAP] **Security Review**
+- [ ] [GAP] **Select it with codex --profile ci.**
+- [ ] [GAP] **Set `default_permissions = "workspace"` before enabling this profile.**
+- [ ] [GAP] **Set conservative defaults**
+- [ ] [GAP] **Set false to remove those variables before applying explicit filters.**
+- [ ] [GAP] **Set to [] to hide the footer.**
+- [ ] [GAP] **Shell Environment Policy for spawned processes (table)**
+- [ ] [GAP] **Show onboarding tooltips in the welcome screen. Default: true**
+- [ ] [GAP] **Show raw reasoning content when available. Default: false**
+- [ ] [GAP] **Skill controls**
+- [ ] [GAP] **Skills & Plugins**
+- [ ] [GAP] **Skills (per-skill overrides)**
+- [ ] [GAP] **Skip automatic filtering for names containing KEY/SECRET/TOKEN. Default: true.**
+- [ ] [GAP] **Start a shell inside Windows Subsystem for Linux**
+- [ ] [GAP] **Submit plugins**
+- [ ] [GAP] **Suppress internal reasoning events from output. Default: false**
+- [ ] [GAP] **Suppress the warning shown when under-development feature flags are enabled.**
+- [ ] [GAP] **Surfaces and experiences**
+- [ ] [GAP] **Syntax-highlighting theme (kebab-case). Use /theme in the TUI to preview and save.**
+- [ ] [GAP] **Tenant Risk Taxonomy and Allow/Deny Rules**
+- [ ] [GAP] **These IDs are reserved. Use a different ID for custom providers.**
+- [ ] [GAP] **This file lists the main keys Codex reads from config.toml, along with default**
+- [ ] [GAP] **Though in practice, a software agent needs to be able to read folders that**
+- [ ] [GAP] **To create a config profile, put overrides in a separate profile file under $CODEX_HOME.**
+- [ ] [GAP] **Token weights default to 1.0.**
+- [ ] [GAP] **Trace exporter: none (default) | otlp-http | otlp-grpc**
+

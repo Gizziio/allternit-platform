@@ -17,7 +17,9 @@ export class RunState {
         return this.toolRegistry.getActiveTools().map(tool => ({
             name: tool.name,
             description: tool.description,
-            input_schema: tool.input_schema
+            input_schema: tool.input_schema,
+            strict: tool.strict,
+            cache: tool.cache,
         }));
     }
     /**
@@ -27,6 +29,10 @@ export class RunState {
         const tool = this.toolRegistry.getActiveTools().find(t => t.name === name);
         if (!tool)
             return null;
+        const validation = this.toolRegistry.validateInput(name, args);
+        if (!validation.valid) {
+            throw new Error(`Invalid input for ${name}: ${validation.errors.join('; ')}`);
+        }
         // 1. Pre-execution hook
         if (tool.preExecute) {
             const { proceed, reason } = await tool.preExecute(args, context);
@@ -56,6 +62,12 @@ export class RunState {
             this.emitLifecycleEvent('tool.failed', { toolName: name, callId: context.callId, error: String(error) });
             throw error;
         }
+    }
+    /**
+     * Record the normalized stop reason for this run and emit a lifecycle event.
+     */
+    recordStopReason(reason) {
+        this.emitLifecycleEvent('run.stop', { stopReason: reason });
     }
     emitLifecycleEvent(type, data) {
         this.toolRegistry.emit('event', { type, ...data });

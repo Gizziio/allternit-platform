@@ -109,7 +109,7 @@ function baseConfig(extra?: Record<string, unknown>) {
 async function withTmpdir<T>(config: Record<string, unknown>, fn: (tmp: { path: string }) => Promise<T>): Promise<T> {
   const tmp = await tmpdir({
     git: true,
-    // NOTE: the config loader reads gizzi.json{,c} (not opencode.json), so write it directly
+    // NOTE: the config loader reads gizzi.json{,c} (not the legacy name), so write it directly
     init: async (dir) => {
       await Bun.write(path.join(dir, "gizzi.json"), JSON.stringify(config))
     },

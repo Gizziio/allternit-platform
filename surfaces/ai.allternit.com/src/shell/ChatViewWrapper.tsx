@@ -7,15 +7,16 @@ import { useChatSessionStore } from '../views/chat/ChatSessionStore';
 import { ChatIdProvider } from '../providers/chat-id-provider';
 import { DataStreamProvider } from '../providers/data-stream-provider';
 import { MessageTreeProvider } from '../providers/message-tree-provider';
-import { ChatInputProvider } from '../providers/chat-input-provider';
 import { PromptInputProvider } from '@/components/ai-elements/prompt-input';
-import { ChatModelsProvider } from '../providers/chat-models-provider';
 import { ModelSelectionProvider } from '../providers/model-selection-provider';
+import { ChatInputProvider } from '../providers/chat-input-provider';
+import { ChatModelsProvider } from '../providers/chat-models-provider';
 import { ErrorBoundary } from '../components/error-boundary';
 import { ChatErrorFallback } from './ShellFallbacks';
 import { useDefaultModelSelection } from '../hooks/use-default-model-selection';
 import type { AppMode } from './ShellHeader';
 import type { CanonicalAgentModeId } from '@/lib/agents/agent-mode-contracts';
+import type { Agent } from '@/lib/agents/agent.types';
 
 const lazy = <T extends React.ComponentType<any>>(
   factory: () => Promise<any>,
@@ -27,7 +28,10 @@ const lazy = <T extends React.ComponentType<any>>(
 );
 
 type ChatViewProps = {
+  hideEmptyState?: boolean;
+  hudMode?: boolean;
   onOpenAgentSession?: (text: string, surface: AppMode, execution?: { modeId: CanonicalAgentModeId; templateTitle?: string }) => void;
+  onStartBotSession?: (agent: Agent) => void;
 };
 const ChatView = React.lazy(async () => {
   const module = await import('../views/ChatView');
@@ -36,9 +40,15 @@ const ChatView = React.lazy(async () => {
 const ProjectView = lazy(() => import('../views/ProjectView'), 'ProjectView');
 
 export const ChatViewWrapper = React.memo(function ChatViewWrapper({
-  onOpenAgentSession
+  onOpenAgentSession,
+  onStartBotSession,
+  hideEmptyState = false,
+  hudMode = false,
 }: {
   onOpenAgentSession?: (text: string, surface: AppMode, execution?: { modeId: CanonicalAgentModeId; templateTitle?: string }) => void;
+  onStartBotSession?: (agent: Agent) => void;
+  hideEmptyState?: boolean;
+  hudMode?: boolean;
 }): React.ReactNode {
   const { activeProjectId, activeThreadId } = useChatStore();
   const embeddedChatSessionId = useChatSessionStore(
@@ -92,7 +102,7 @@ export const ChatViewWrapper = React.memo(function ChatViewWrapper({
               <ChatInputProvider>
                 <ChatModelsProvider>
                   <ModelSelectionProvider defaultSelection={defaultModelSelection}>
-                    <ChatView key={effectiveChatId} onOpenAgentSession={onOpenAgentSession} />
+                    <ChatView key={effectiveChatId} hideEmptyState={hideEmptyState} hudMode={hudMode} onOpenAgentSession={onOpenAgentSession} onStartBotSession={onStartBotSession} />
                   </ModelSelectionProvider>
                 </ChatModelsProvider>
               </ChatInputProvider>

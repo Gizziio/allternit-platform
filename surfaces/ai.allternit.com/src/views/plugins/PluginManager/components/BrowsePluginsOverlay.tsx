@@ -220,11 +220,11 @@ export function BrowsePluginsOverlay({
 
   return (
     <div
-      style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0, 0, 0, 0.48)', backdropFilter: 'blur(3px)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 40 }}
+      style={{ position: 'fixed', inset: 0, backgroundColor: 'var(--shell-overlay-backdrop)', backdropFilter: 'blur(8px)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 40 }}
       onClick={onClose}
     >
       <section
-        style={{ width: 'min(940px, calc(100vw - 80px))', height: 'min(700px, calc(100vh - 80px))', display: 'flex', flexDirection: 'column', overflow: 'hidden', borderRadius: 10, border: `1px solid ${THEME.border}`, backgroundColor: 'var(--surface-floating)', boxShadow: '0 24px 80px rgba(0,0,0,0.35)' }}
+        style={{ width: 'min(940px, calc(100vw - 80px))', height: 'min(700px, calc(100vh - 80px))', display: 'flex', flexDirection: 'column', overflow: 'hidden', borderRadius: 14, border: `1px solid ${THEME.border}`, backgroundColor: 'var(--surface-floating)', boxShadow: 'var(--shadow-xl)' }}
         role="dialog"
         aria-modal="true"
         aria-label="Browse marketplace"

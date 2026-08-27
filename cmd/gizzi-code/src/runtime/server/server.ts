@@ -34,6 +34,8 @@ import { FileRoutes } from "@/runtime/server/routes/file"
 import { ConfigRoutes } from "@/runtime/server/routes/config"
 import { ExperimentalRoutes } from "@/runtime/server/routes/experimental"
 import { ProviderRoutes } from "@/runtime/server/routes/provider"
+import { SidecarRoutes } from "@/runtime/server/routes/sidecar"
+import { Pty } from "@/runtime/integrations/pty"
 import { lazy } from "@/shared/util/lazy"
 import { InstanceBootstrap } from "@/runtime/context/project/bootstrap"
 import { NotFoundError } from "@/runtime/session/storage/db"
@@ -68,6 +70,7 @@ import { VcsRoutes } from "@/runtime/server/routes/vcs"
 import { PathRoutes } from "@/runtime/server/routes/path"
 import { MemoryRoutes } from "@/runtime/server/routes/memory"
 import { VaultRoutes } from "@/runtime/server/routes/vault"
+import { BrainRoutes } from "@/runtime/server/routes/brain"
 import { SandboxRoutes } from "@/runtime/server/routes/sandbox"
 import { VmSessionRoutes } from "@/runtime/server/routes/vm-session"
 import { WorkspaceRoutes } from "@/runtime/server/routes/workspace"
@@ -76,6 +79,9 @@ import { CoworkRoutes } from "@/runtime/server/routes/cowork"
 import { AcpRoutes } from "@/runtime/server/routes/acp"
 import { PeerRoutes } from "@/runtime/server/routes/peers"
 import { OrchestratorRoutes } from "@/runtime/server/routes/orchestrator"
+import { RuntimeHeartbeat } from "@/runtime/runtime-heartbeat"
+import { RuntimeRoutes } from "@/runtime/server/routes/runtime"
+import { RemoteControlRoutes } from "@/runtime/server/routes/remote_control"
 import { AgentCompatRoutes } from "@/runtime/server/routes/agent-compat"
 import { createHash, randomUUID } from "node:crypto"
 
@@ -370,6 +376,7 @@ export namespace Server {
         .route("/permission", PermissionRoutes())
         .route("/question", QuestionRoutes())
         .route("/provider", ProviderRoutes())
+        .route("/sidecar", SidecarRoutes())
         .route("/", FileRoutes())
         .route("/mcp", McpRoutes())
         .route("/tui", TuiRoutes())
@@ -386,11 +393,13 @@ export namespace Server {
         .route("/skill", SkillRoutes())
         .route("/memory", MemoryRoutes())
         .route("/vault", VaultRoutes())
+        .route("/brain", BrainRoutes())
         .route("/sandbox", SandboxRoutes())
         .route("/vm-session", VmSessionRoutes())
         .route("/plugin", PluginRoutes())
         .route("/cowork", CoworkRoutes())
         .route("/acp", AcpRoutes())
+        .route("/runtime", RuntimeRoutes())
         .post(
           "/log",
           describeRoute({
@@ -448,6 +457,7 @@ export namespace Server {
         // /api/agent-chat) — lets any gizzi instance serve as the app's
         // agent brain without allternit-api in the middle.
         .route("/api", AgentCompatRoutes())
+        .route("/v1beta/remote-control", RemoteControlRoutes())
         // /v1/ — versioned API surface (same handlers, new path prefix)
         .route(
           "/v1",
@@ -460,6 +470,7 @@ export namespace Server {
             .route("/agent", AgentRoutes())
             .route("/command", CommandRoutes())
             .route("/provider", ProviderRoutes())
+            .route("/sidecar", SidecarRoutes())
             .route("/config", ConfigRoutes())
             .route("/mcp", McpRoutes())
             .route("/cron", CronRoutes())
@@ -476,6 +487,7 @@ export namespace Server {
             .route("/skill", SkillRoutes())
             .route("/memory", MemoryRoutes())
             .route("/vault", VaultRoutes())
+            .route("/brain", BrainRoutes())
             .route("/sandbox", SandboxRoutes())
             .route("/vm-session", VmSessionRoutes())
             .route("/plugin", PluginRoutes())
@@ -490,6 +502,8 @@ export namespace Server {
             .route("/experimental", ExperimentalRoutes())
             .route("/tui", TuiRoutes())
             .route("/acp", AcpRoutes())
+            .route("/runtime", RuntimeRoutes())
+            .route("/remote-control", RemoteControlRoutes())
             .route("/workspace", WorkspaceRoutes()) as unknown as Hono,
         )
         .all("/*", async (c) => {
@@ -639,6 +653,10 @@ export namespace Server {
 
     _url = server.url
 
+    // Eagerly start the mux daemon so platform /terminal routes (served by
+    // allternit-api) find the socket ready instead of failing on first use.
+    void Pty.warmup()
+
     // Initialize local cron scheduler so /cron routes are functional.
     // The scheduler lifetime is bound to the gizzi server process (Kimi-style local scheduling).
     try {
@@ -652,6 +670,14 @@ export namespace Server {
       log.info("cron service initialized")
     } catch (err) {
       log.error("failed to initialize cron service", { error: err })
+    }
+
+    // Start runtime heartbeat to keep local/remote runtime status fresh.
+    try {
+      RuntimeHeartbeat.start()
+      log.info("runtime heartbeat started")
+    } catch (err) {
+      log.error("failed to start runtime heartbeat", { error: err })
     }
 
     const shouldPublishMDNS =

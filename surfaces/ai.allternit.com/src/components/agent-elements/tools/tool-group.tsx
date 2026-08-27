@@ -215,6 +215,7 @@ export const ToolGroup = memo(function ToolGroup({
 
   return (
     <ToolRowBase
+      orbState="connecting"
       completeLabel={completeLabel}
       shimmerLabel={shimmerLabel}
       isAnimating={isPending}

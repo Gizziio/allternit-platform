@@ -224,7 +224,7 @@ UX-002 ────────────────────────�
 ---
 
 ### UX-401: Allternit copy/literals sweep
-**Objective:** remove remaining OpenCode-era mental-model wording from active chat surfaces.
+**Objective:** remove remaining Gizzi Code-era mental-model wording from active chat surfaces.
 
 **Subtasks**
 - Move remaining literals in session/prompt/sidebar dialogs into `AllternitCopy`.

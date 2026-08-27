@@ -1,0 +1,179 @@
+---
+title: 'Sandbox Templates API'
+description: 'Manage reusable cloud sandbox templates and their launched instances for organization-scoped execution.'
+---
+
+## Overview
+
+The Sandbox Templates API lets organization admins define reusable cloud sandbox templates and launch instances from them. Templates declare a runtime, base image, source code, environment variables, resources, network policy, and timeout. Instances track execution status and output.
+
+## Base URL
+
+```
+https://api.allternit.com/v1/admin
+```
+
+All endpoints require a valid Bearer token in the `Authorization` header and organization owner or admin access. See [Authentication](/api/authentication) for details.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/admin/sandbox-templates` | List sandbox templates. |
+| POST | `/admin/sandbox-templates` | Create a sandbox template. |
+| GET | `/admin/sandbox-templates/:id` | Get a sandbox template. |
+| PUT | `/admin/sandbox-templates/:id` | Update a sandbox template. |
+| DELETE | `/admin/sandbox-templates/:id` | Delete a sandbox template. |
+| GET | `/admin/sandbox-instances` | List sandbox instances. |
+| POST | `/admin/sandbox-instances` | Launch a sandbox instance. |
+| GET | `/admin/sandbox-instances/:id` | Get a sandbox instance. |
+| POST | `/admin/sandbox-instances/:id/stop` | Stop a sandbox instance. |
+
+## Create template
+
+```bash
+POST /api/v1/admin/sandbox-templates
+```
+
+Request body:
+
+```json
+{
+  "name": "python-base",
+  "description": "Basic Python sandbox.",
+  "runtime": "python",
+  "image": "ubuntu-22.04-minimal",
+  "source": "print('sandbox ready')",
+  "resources": { "cpu_cores": 2, "memory_mb": 2048 },
+  "network_enabled": true,
+  "env": { "PYTHONUNBUFFERED": "1" },
+  "timeout_secs": 300
+}
+```
+
+Allowed `runtime` values: `bash`, `python`, `node`, `rust`.
+
+Response:
+
+```json
+{
+  "id": "tpl_2f8a9c4e5d3b",
+  "org_id": "org_abc123",
+  "name": "python-base",
+  "description": "Basic Python sandbox.",
+  "runtime": "python",
+  "image": "ubuntu-22.04-minimal",
+  "source": "print('sandbox ready')",
+  "resources": { "cpu_cores": 2, "memory_mb": 2048 },
+  "network_enabled": true,
+  "env": { "PYTHONUNBUFFERED": "1" },
+  "timeout_secs": 300,
+  "created_at": "2026-08-13T10:00:00Z",
+  "updated_at": "2026-08-13T10:00:00Z"
+}
+```
+
+## List templates
+
+```bash
+GET /api/v1/admin/sandbox-templates
+```
+
+Response:
+
+```json
+{
+  "items": [
+    {
+      "id": "tpl_2f8a9c4e5d3b",
+      "org_id": "org_abc123",
+      "name": "python-base",
+      "description": "Basic Python sandbox.",
+      "runtime": "python",
+      "image": "ubuntu-22.04-minimal",
+      "source": "print('sandbox ready')",
+      "resources": { "cpu_cores": 2, "memory_mb": 2048 },
+      "network_enabled": true,
+      "env": { "PYTHONUNBUFFERED": "1" },
+      "timeout_secs": 300,
+      "created_at": "2026-08-13T10:00:00Z",
+      "updated_at": "2026-08-13T10:00:00Z"
+    }
+  ]
+}
+```
+
+## Launch instance
+
+```bash
+POST /api/v1/admin/sandbox-instances
+```
+
+Request body:
+
+```json
+{
+  "template_id": "tpl_2f8a9c4e5d3b",
+  "name": "ci-check-run-42"
+}
+```
+
+Response:
+
+```json
+{
+  "id": "inst_7e1a2b3c",
+  "status": "running",
+  "session_id": "sess_5e6f7a8b",
+  "exit_code": 0,
+  "stdout": "sandbox ready\n",
+  "stderr": ""
+}
+```
+
+## Stop instance
+
+```bash
+POST /api/v1/admin/sandbox-instances/inst_7e1a2b3c/stop
+```
+
+Response:
+
+```json
+{
+  "id": "inst_7e1a2b3c",
+  "org_id": "org_abc123",
+  "template_id": "tpl_2f8a9c4e5d3b",
+  "name": "ci-check-run-42",
+  "status": "stopped",
+  "session_id": "sess_5e6f7a8b",
+  "exit_code": 0,
+  "stdout": "sandbox ready\n",
+  "stderr": "",
+  "started_at": "2026-08-13T10:00:00Z",
+  "stopped_at": "2026-08-13T10:05:00Z",
+  "created_at": "2026-08-13T10:00:00Z"
+}
+```
+
+## Error codes
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 200 | — | Success. |
+| 201 | — | Created successfully. |
+| 400 | `invalid_name` | Name does not match the allowed pattern. |
+| 400 | `invalid_runtime` | Runtime is not one of the allowed values. |
+| 400 | `invalid_timeout` | `timeout_secs` must be between 1 and 3600. |
+| 401 | `unauthorized` | Missing or invalid authentication. |
+| 403 | `organization_required` / `insufficient_role` | Active organization and admin role required. |
+| 404 | `not_found` | Template or instance not found. |
+| 409 | `duplicate_name` | Template name already exists in the organization. |
+| 500 | `internal_error` | Unexpected server error. |
+
+## Related links
+
+- [Authentication](/api/authentication)
+- [Sandbox API](/api/sandbox)
+- [VM Sessions API](/api/vm-sessions)
+- [BYOC Runtime](/byoc/overview)

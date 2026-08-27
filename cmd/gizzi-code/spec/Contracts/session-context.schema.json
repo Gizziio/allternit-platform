@@ -34,12 +34,12 @@
     "source_tool": {
       "type": "string",
       "description": "Tool that generated this context",
-      "enum": ["opencode", "claude_code", "codex", "copilot", "allternit_shell", "unknown"]
+      "enum": ["gizzi-code", "claude_code", "codex", "copilot", "allternit_shell", "unknown"]
     },
     "target_tool": {
       "type": "string",
       "description": "Intended recipient tool for handoff",
-      "enum": ["opencode", "claude_code", "codex", "copilot", "allternit_shell", "any"]
+      "enum": ["gizzi-code", "claude_code", "codex", "copilot", "allternit_shell", "any"]
     },
     "workspace_path": {
       "type": "string",

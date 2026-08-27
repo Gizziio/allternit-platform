@@ -7,6 +7,7 @@ import {
 } from '../utils/messageQueueManager.js'
 import type { QueryGuard } from '../utils/QueryGuard.js'
 import { processQueueIfReady } from '../utils/queueProcessor.js'
+import { logForDiagnosticsNoPII } from '../utils/diagLogs.js'
 
 type UseQueueProcessorParams = {
   executeQueuedInput: (commands: QueuedCommand[]) => Promise<void>
@@ -47,6 +48,11 @@ export function useQueueProcessor({
   )
 
   useEffect(() => {
+    logForDiagnosticsNoPII('info', 'queue_processor_check', {
+      is_query_active: isQueryActive,
+      has_local_jsx_ui: hasActiveLocalJsxUI,
+      queue_length: queueSnapshot.length,
+    })
     if (isQueryActive) return
     if (hasActiveLocalJsxUI) return
     if (queueSnapshot.length === 0) return
@@ -58,7 +64,8 @@ export function useQueueProcessor({
     // snapshot change), isQueryActive is already true (dispatching) and the
     // guard above returns early. handlePromptSubmit's finally releases the
     // reservation via cancelReservation() (no-op if onQuery already ran end()).
-    processQueueIfReady({ executeInput: executeQueuedInput })
+    const result = processQueueIfReady({ executeInput: executeQueuedInput })
+    logForDiagnosticsNoPII('info', 'queue_processor_result', { processed: result.processed })
   }, [
     queueSnapshot,
     isQueryActive,

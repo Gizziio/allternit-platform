@@ -3,7 +3,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 use chrono::{DateTime, Duration as ChronoDuration, Utc};
 use clap::{Parser, Subcommand};
 use serde::{Deserialize, Serialize};
@@ -29,8 +29,9 @@ use allternit_agent_system_rails::work::projection::project_dag;
 use allternit_agent_system_rails::work::types::DagState;
 use allternit_agent_system_rails::{
     AllternitEvent, Actor, ActorType, DagMutation, EventScope, Gate, Index, IndexOptions, LeaseRequest,
-    Leases, Ledger, LedgerQuery, Mail, MailOptions, ReceiptStore, ReceiptStoreOptions, Vault,
-    VaultOptions, WorkOps,
+    Leases, Ledger, LedgerQuery, Mail, MailOptions, Orchestrator, PeerEnvelope, PeerRegistry,
+    PeerSocket, ReceiptStore, ReceiptStoreOptions, SpawnOptions, Steer, Vault, VaultOptions, WatchOutcome,
+    WorkOps, send_envelope,
 };
 use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
@@ -82,6 +83,12 @@ enum Commands {
     Ticket(TicketCmd),
     #[command(subcommand)]
     Graph(GraphCmd),
+    #[command(subcommand)]
+    Peer(PeerCmd),
+    #[command(subcommand)]
+    Orchestrator(OrchestratorCmd),
+    #[command(subcommand)]
+    Steer(SteerCmd),
 }
 
 #[derive(Subcommand)]
@@ -95,6 +102,113 @@ enum GraphCmd {
     /// impact, centrality ranks.
     Impact {
         ticket_id: String,
+    },
+}
+
+#[derive(Subcommand)]
+enum PeerCmd {
+    /// Register this session as a local peer and print its id + inbox socket.
+    Register {
+        name: String,
+        #[arg(long, default_value = "agent")]
+        vendor: String,
+        #[arg(long)]
+        cwd: Option<PathBuf>,
+    },
+    /// Remove a peer from the registry.
+    Unregister {
+        id_or_name: String,
+    },
+    /// List local peers.
+    List {
+        #[arg(long)]
+        json: bool,
+    },
+    /// Send a heartbeat for a peer.
+    Heartbeat {
+        id_or_name: String,
+    },
+    /// Listen on a peer's inbox socket and print incoming envelopes.
+    Inbox {
+        id_or_name: String,
+    },
+    /// Send a plain-text message to a peer's inbox.
+    Send {
+        to: String,
+        message: String,
+    },
+}
+
+#[derive(Subcommand)]
+enum OrchestratorCmd {
+    /// Spawn a tmux session for an agent and register it as a Rails peer.
+    Spawn {
+        slug: String,
+        repo: PathBuf,
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true, required = true)]
+        cmd: Vec<String>,
+        #[arg(long)]
+        worktree: bool,
+        #[arg(long, default_value = "agent")]
+        vendor: String,
+        #[arg(long, default_value = "interactive")]
+        mode: String,
+        #[arg(long)]
+        task_file: Option<PathBuf>,
+        #[arg(long)]
+        notes_sentinel: Option<PathBuf>,
+    },
+    /// Send data to a running executor session.
+    Send {
+        slug: String,
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true, required = true)]
+        data: Vec<String>,
+    },
+    /// Block until the sentinel file exists, the pane dies, or timeout.
+    Watch {
+        slug: String,
+        sentinel: PathBuf,
+        #[arg(long, default_value_t = 3600)]
+        timeout_seconds: u64,
+        #[arg(long, default_value_t = 20)]
+        interval_seconds: u64,
+    },
+    /// Show status for all ao-* sessions or one specific session.
+    Status {
+        slug: Option<String>,
+        #[arg(long, default_value_t = 25)]
+        lines: usize,
+    },
+    /// Kill a session and unregister its peer.
+    Kill {
+        slug: String,
+        #[arg(long)]
+        rm_worktree: bool,
+    },
+    /// Verify the delegation toolchain.
+    Doctor,
+}
+
+#[derive(Subcommand)]
+enum SteerCmd {
+    /// Hash .steering/checkpoint.md and emit a SteeringCheckpoint ledger event
+    /// when it changed. Prints the hash and whether it changed.
+    Checkpoint {
+        #[arg(long)]
+        cwd: Option<PathBuf>,
+    },
+    /// Build steering context and consult the configured steering agent.
+    /// Prints the raw answer; first line is APPROVE or STEER.
+    Consult {
+        #[arg(long)]
+        cwd: Option<PathBuf>,
+        #[arg(long)]
+        prompt_file: Option<PathBuf>,
+    },
+    /// Run a commit-gate consult. Exits 0 on APPROVE, 2 on STEER.
+    CommitGate {
+        #[arg(long)]
+        cwd: Option<PathBuf>,
     },
 }
 
@@ -1115,8 +1229,214 @@ async fn main() -> Result<()> {
                 }
             }
         }
+        Commands::Peer(cmd) => {
+            run_peer_command(&root, cmd).await?;
+        }
+        Commands::Orchestrator(cmd) => {
+            run_orchestrator_command(&root, cmd).await?;
+        }
+        Commands::Steer(cmd) => {
+            run_steer_command(&root, cmd).await?;
+        }
     }
 
+    Ok(())
+}
+
+async fn run_steer_command(root: &Path, cmd: SteerCmd) -> Result<()> {
+    let ledger = Arc::new(Ledger::new(LedgerOptions {
+        root_dir: Some(root.to_path_buf()),
+        ledger_dir: Some(PathBuf::from(".allternit/ledger")),
+    }));
+    let steer = Steer::new(ledger);
+
+    match cmd {
+        SteerCmd::Checkpoint { cwd } => {
+            let cwd = cwd.unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| root.to_path_buf()));
+            let result = steer.checkpoint(&cwd).await?;
+            println!("hash: {}", result.hash);
+            println!("changed: {}", result.changed);
+            if let Some(id) = result.event_id {
+                println!("event_id: {}", id);
+            }
+        }
+        SteerCmd::Consult { cwd, prompt_file } => {
+            let cwd = cwd.unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| root.to_path_buf()));
+            let context = if let Some(path) = prompt_file {
+                std::fs::read_to_string(&path)
+                    .with_context(|| format!("reading prompt file {}", path.display()))?
+            } else {
+                steer.build_context(&cwd)?
+            };
+            let answer = steer.consult(&cwd, &context).await?;
+            println!("{}", answer);
+        }
+        SteerCmd::CommitGate { cwd } => {
+            let cwd = cwd.unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| root.to_path_buf()));
+            let result = steer.commit_gate(&cwd).await?;
+            println!("verdict: {}", result.verdict);
+            println!("{}", result.body);
+            if result.verdict != "APPROVE" {
+                std::process::exit(2);
+            }
+        }
+    }
+    Ok(())
+}
+
+async fn run_peer_command(root: &Path, cmd: PeerCmd) -> Result<()> {
+    let registry = PeerRegistry::new(root)?;
+    match cmd {
+        PeerCmd::Register { name, vendor, cwd } => {
+            let cwd = cwd.unwrap_or_else(|| std::env::current_dir().unwrap());
+            let peer = registry.register(&name, cwd, &vendor)?;
+            println!("peer_id: {}", peer.peer_id);
+            println!("name: {}", peer.name);
+            println!("inbox: {}", peer.inbox_socket.display());
+        }
+        PeerCmd::Unregister { id_or_name } => {
+            if registry.unregister(&id_or_name)? {
+                println!("unregistered");
+            } else {
+                eprintln!("peer not found: {}", id_or_name);
+                std::process::exit(1);
+            }
+        }
+        PeerCmd::List { json } => {
+            let peers = registry.list();
+            if json {
+                println!("{}", serde_json::to_string_pretty(&peers)?);
+            } else {
+                if peers.is_empty() {
+                    println!("no peers");
+                }
+                for p in peers {
+                    println!(
+                        "{}  {}  {}  {}  {:?}  {}",
+                        p.peer_id,
+                        p.name,
+                        p.vendor,
+                        p.cwd.display(),
+                        p.status,
+                        p.inbox_socket.display()
+                    );
+                }
+            }
+        }
+        PeerCmd::Heartbeat { id_or_name } => {
+            registry.heartbeat(&id_or_name)?;
+            println!("ok");
+        }
+        PeerCmd::Inbox { id_or_name } => {
+            let peer = registry
+                .resolve(&id_or_name)
+                .context(format!("peer not found: {}", id_or_name))?;
+            let mut socket = PeerSocket::bind(&peer.inbox_socket).await?;
+            println!("inbox_bound: {}", socket.socket_path().display());
+            loop {
+                let (envelope, _) = socket.accept_envelope().await?;
+                println!("{}", serde_json::to_string_pretty(&envelope)?);
+            }
+        }
+        PeerCmd::Send { to, message } => {
+            let peer = registry
+                .resolve(&to)
+                .context(format!("peer not found: {}", to))?;
+            let envelope = PeerEnvelope::new("cli", &peer.name, message);
+            let receipt = send_envelope(
+                &peer.inbox_socket,
+                &envelope,
+                TokioDuration::from_secs(5),
+            )
+            .await?;
+            if receipt.delivered {
+                println!("delivered");
+            } else {
+                bail!(
+                    "{}",
+                    receipt.error.unwrap_or_else(|| "unknown delivery failure".to_string())
+                );
+            }
+        }
+    }
+    Ok(())
+}
+
+async fn run_orchestrator_command(root: &Path, cmd: OrchestratorCmd) -> Result<()> {
+    let orch = Orchestrator::new(root.to_path_buf())?;
+    match cmd {
+        OrchestratorCmd::Spawn {
+            slug,
+            repo,
+            cmd,
+            worktree,
+            vendor,
+            mode,
+            task_file,
+            notes_sentinel,
+        } => {
+            let result = orch
+                .spawn(SpawnOptions {
+                    slug: &slug,
+                    repo: &repo,
+                    cmd: &cmd,
+                    worktree,
+                    vendor: &vendor,
+                    mode: &mode,
+                    task_file: task_file.as_deref(),
+                    notes_sentinel: notes_sentinel.as_deref(),
+                })
+                .await?;
+            println!(
+                "{} {} {} {} {}",
+                result.session,
+                result.workdir.display(),
+                result.logfile.display(),
+                result.peer_id,
+                result.inbox_socket.display()
+            );
+        }
+        OrchestratorCmd::Send { slug, data } => {
+            let text = data.join(" ");
+            orch.send(&slug, &text).await?;
+            println!("submitted to ao-{}", slug);
+        }
+        OrchestratorCmd::Watch {
+            slug,
+            sentinel,
+            timeout_seconds,
+            interval_seconds,
+        } => {
+            match orch.watch(&slug, &sentinel, timeout_seconds, interval_seconds).await? {
+                WatchOutcome::Done => {
+                    println!("DONE {}", sentinel.display());
+                }
+                WatchOutcome::Dead => {
+                    println!("PANE-DEAD ao-{} (agent exited or session gone)", slug);
+                    std::process::exit(3);
+                }
+                WatchOutcome::Timeout => {
+                    println!(
+                        "TIMEOUT after {}s; sentinel absent, pane alive",
+                        timeout_seconds
+                    );
+                    std::process::exit(4);
+                }
+            }
+        }
+        OrchestratorCmd::Status { slug, lines } => {
+            let output = orch.status(slug.as_deref(), lines).await?;
+            println!("{}", output);
+        }
+        OrchestratorCmd::Kill { slug, rm_worktree } => {
+            orch.kill(&slug, rm_worktree).await?;
+            println!("killed ao-{}", slug);
+        }
+        OrchestratorCmd::Doctor => {
+            orch.doctor().await?;
+            println!("orchestrator doctor: OK");
+        }
+    }
     Ok(())
 }
 

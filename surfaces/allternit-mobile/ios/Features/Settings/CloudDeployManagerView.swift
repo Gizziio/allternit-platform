@@ -50,6 +50,7 @@ struct CloudDeployManagerView: View {
                     .background(Color("BgPanel"))
                     .clipShape(Circle())
             }
+            .accessibilityLabel("Close")
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
@@ -122,6 +123,7 @@ struct CloudDeployManagerView: View {
                 )
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Refresh")
 
             Button(action: { isCreateSheetPresented = true }) {
                 HStack(spacing: 6) {
@@ -444,7 +446,7 @@ struct CloudDeployCreateSheet: View {
                             Text("Manual (existing VPS)").tag("manual")
                             Text("Automated (API token)").tag("automated")
                         }
-                        .pickerStyle(.segmented)
+                        .pickerStyle(.menu)
                     }
 
                     if mode == "automated" {
@@ -520,7 +522,7 @@ struct CloudDeployCreateSheet: View {
     }
 
     private func create() {
-        store.createError = nil
+        store.setCreateError(nil)
         guard let storage = Int(storageGb) else { return }
         let request = DeploymentCreateRequest(
             providerId: providerId.trimmingCharacters(in: .whitespaces),
@@ -542,7 +544,7 @@ struct CloudDeployCreateSheet: View {
                     dismiss()
                 }
             } catch {
-                store.createError = error.localizedDescription
+                store.setCreateError(error.localizedDescription)
             }
         }
     }

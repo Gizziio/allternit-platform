@@ -1,0 +1,686 @@
+---
+title: 'Sessions API (Beta)'
+description: 'Create, manage, and observe durable agent sessions with events, budgets, files, resources, and context controls.'
+---
+
+## Overview
+
+The `/beta/sessions` API is the durable, server-side contract for managed agent runs. A session represents a long-lived conversation thread or task run between a user and an agent. It tracks message history as immutable events, enforces execution budgets (tokens, turns, tool calls), supports child threads via `parent_thread_id`, and can carry session-scoped files and credentials.
+
+Sessions are scoped to the authenticated user. Accessing another user's session returns `404 Not Found` so existence is never leaked.
+
+## Base URL
+
+All beta session endpoints are mounted under:
+
+```
+https://api.allternit.com/v1/beta/sessions
+```
+
+Authentication is required via a Bearer token in the `Authorization` header. See [Authentication](/api/authentication) for details.
+
+## The session object
+
+```json
+{
+  "id": "sess_2f8a9c4e5d3b",
+  "agent_id": "ag_analyzer",
+  "name": "Auth module review",
+  "parent_thread_id": null,
+  "status": "active",
+  "metadata": { "project": "my-app" },
+  "budget": {
+    "max_tokens": 10000,
+    "max_turns": 50,
+    "max_tool_calls": 100,
+    "tokens_used": 1240,
+    "turns_used": 3,
+    "tool_calls_used": 5
+  },
+  "context": {
+    "context_window": 8000,
+    "truncation_strategy": "drop_oldest_user"
+  },
+  "created_at": "2026-08-13T10:00:00Z",
+  "updated_at": "2026-08-13T10:05:00Z",
+  "archived_at": null
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique session identifier. |
+| `agent_id` | string? | Agent associated with the session. |
+| `name` | string? | Human-readable name. |
+| `parent_thread_id` | string? | Parent session for child threads. |
+| `status` | string | `active` or `archived`. |
+| `metadata` | object | Caller-provided key/value object. |
+| `budget` | object | Limits and cumulative usage. |
+| `context` | object | `context_window` and `truncation_strategy`. |
+| `created_at` | string | ISO 8601 timestamp. |
+| `updated_at` | string | ISO 8601 timestamp. |
+| `archived_at` | string? | Set when the session is archived. |
+
+### Budget and truncation strategies
+
+Budgets are optional limits enforced when events are appended.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `max_tokens` | integer? | Maximum cumulative tokens. |
+| `max_turns` | integer? | Maximum turns. |
+| `max_tool_calls` | integer? | Maximum tool invocations. |
+| `context_window` | integer? | Soft context-window threshold. |
+| `truncation_strategy` | string | `none`, `drop_oldest_user`, or `summarize`. |
+
+When `context_window` is set and projected usage crosses 80%, a `context_warning` event is emitted. When a hard `max_*` limit is exceeded, the append is rejected and a `budget_exceeded` event is recorded.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/v1/beta/sessions` | List sessions. |
+| POST | `/api/v1/beta/sessions` | Create a session. |
+| GET | `/api/v1/beta/sessions/:id` | Get a session. |
+| PATCH | `/api/v1/beta/sessions/:id` | Update a session. |
+| DELETE | `/api/v1/beta/sessions/:id` | Archive a session. |
+| GET | `/api/v1/beta/sessions/:id/events` | Stream events over SSE. |
+| POST | `/api/v1/beta/sessions/:id/events` | Append an event. |
+| GET | `/api/v1/beta/sessions/:id/events/list` | List events as JSON. |
+| GET | `/api/v1/beta/sessions/:id/events/ws` | Stream events over WebSocket. |
+| GET | `/api/v1/beta/sessions/:id/memory/search` | Search session event memory. |
+| POST | `/api/v1/beta/sessions/:id/interrupt` | Send a user interrupt. |
+| GET | `/api/v1/beta/sessions/:id/resources` | List attached resources. |
+| POST | `/api/v1/beta/sessions/:id/resources` | Attach a resource. |
+| DELETE | `/api/v1/beta/sessions/:id/resources/:resource_id` | Delete a resource. |
+| GET | `/api/v1/beta/sessions/:id/files` | List session files. |
+| POST | `/api/v1/beta/sessions/:id/files` | Upload a session file. |
+| GET | `/api/v1/beta/sessions/:id/files/:file_id` | Get a file with content. |
+| DELETE | `/api/v1/beta/sessions/:id/files/:file_id` | Delete a session file. |
+| POST | `/api/v1/beta/sessions/:id/context/edit` | Edit the context window. |
+| GET | `/api/v1/beta/sessions/:id/tool-context` | Get tool-context budget. |
+| PUT | `/api/v1/beta/sessions/:id/tool-context` | Set tool-context budget. |
+
+## List sessions
+
+```bash
+curl -G https://api.allternit.com/v1/beta/sessions \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -d "status=active" \
+  -d "parent_thread_id=sess_parent"
+```
+
+### Query parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `status` | string? | Filter by `active` or `archived`. |
+| `parent_thread_id` | string? | Filter by parent thread. |
+
+### Response
+
+```json
+{
+  "sessions": [
+    {
+      "id": "sess_2f8a9c4e5d3b",
+      "agent_id": "ag_analyzer",
+      "name": "Auth module review",
+      "status": "active",
+      ...
+    }
+  ]
+}
+```
+
+## Create a session
+
+```bash
+curl -X POST https://api.allternit.com/v1/beta/sessions \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "agent_id": "ag_analyzer",
+    "name": "Auth module review",
+    "metadata": { "project": "my-app" },
+    "budget": {
+      "max_tokens": 10000,
+      "max_turns": 50,
+      "max_tool_calls": 100,
+      "context_window": 8000,
+      "truncation_strategy": "drop_oldest_user"
+    }
+  }'
+```
+
+### Request body
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `agent_id` | string? | Agent to associate. |
+| `name` | string? | Session name. |
+| `parent_thread_id` | string? | Existing session ID to use as parent. |
+| `metadata` | object | Defaults to `{}`. Must be an object. |
+| `budget` | object | Optional budget limits. |
+
+### Response
+
+```json
+{
+  "session": {
+    "id": "sess_2f8a9c4e5d3b",
+    "agent_id": "ag_analyzer",
+    "name": "Auth module review",
+    "parent_thread_id": null,
+    "status": "active",
+    "metadata": { "project": "my-app" },
+    "budget": {
+      "max_tokens": 10000,
+      "max_turns": 50,
+      "max_tool_calls": 100,
+      "tokens_used": 0,
+      "turns_used": 0,
+      "tool_calls_used": 0
+    },
+    "context": {
+      "context_window": 8000,
+      "truncation_strategy": "drop_oldest_user"
+    },
+    "created_at": "2026-08-13T10:00:00Z",
+    "updated_at": "2026-08-13T10:00:00Z",
+    "archived_at": null
+  },
+  "id": "sess_2f8a9c4e5d3b"
+}
+```
+
+## Get a session
+
+```bash
+curl https://api.allternit.com/v1/beta/sessions/sess_2f8a9c4e5d3b \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+### Response
+
+```json
+{
+  "session": { ... }
+}
+```
+
+## Update a session
+
+```bash
+curl -X PATCH https://api.allternit.com/v1/beta/sessions/sess_2f8a9c4e5d3b \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Auth module review — extended",
+    "metadata": { "project": "my-app", "priority": "high" },
+    "budget": { "max_tokens": 20000 }
+  }'
+```
+
+### Request body
+
+At least one field must be provided.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string? | New session name. |
+| `metadata` | object? | Replaces the existing metadata object. Must be an object. |
+| `budget` | object? | Updates budget limits; omitted fields keep current values. |
+
+### Response
+
+```json
+{
+  "session": { ... }
+}
+```
+
+## Archive a session
+
+Archiving sets `status` to `archived`, sets `archived_at`, and prevents new events from being appended or the session from being interrupted.
+
+```bash
+curl -X DELETE https://api.allternit.com/v1/beta/sessions/sess_2f8a9c4e5d3b \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+### Response
+
+```json
+{
+  "archived": true
+}
+```
+
+<Warning>
+  Archiving is currently a soft-delete. Archived sessions cannot receive new events or interrupts.
+</Warning>
+
+## Append an event
+
+Events are the immutable audit trail of a session. Only a subset of event types may be appended by callers.
+
+```bash
+curl -X POST https://api.allternit.com/v1/beta/sessions/sess_2f8a9c4e5d3b/events \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "tool_calls",
+    "data": { "calls": [{ "name": "bash", "input": { "command": "cargo test" } }] },
+    "usage": { "tokens": 120, "turns": 1, "tool_calls": 1 }
+  }'
+```
+
+### Request body
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `type` | string | One of `thinking_delta`, `content_block_delta`, `tool_calls`, `refusal`. |
+| `data` | object | Event payload. Defaults to `{}`. |
+| `usage` | object | Usage delta to apply: `tokens`, `turns`, `tool_calls`. Defaults to `0`. |
+
+### Response
+
+```json
+{
+  "accepted": true,
+  "event": {
+    "id": "evt_9f3d2a1b",
+    "sequence": 7,
+    "session_id": "sess_2f8a9c4e5d3b",
+    "type": "tool_calls",
+    "data": { "calls": [{ "name": "bash", "input": { "command": "cargo test" } }] }
+  }
+}
+```
+
+If the event would exceed a budget limit, `accepted` is `false` and the returned event has type `budget_exceeded`:
+
+```json
+{
+  "accepted": false,
+  "event": {
+    "type": "budget_exceeded",
+    "data": { "resource": "tokens", "usage": { "tokens": 120, ... }, "budget": { ... } }
+  }
+}
+```
+
+## List events
+
+```bash
+curl https://api.allternit.com/v1/beta/sessions/sess_2f8a9c4e5d3b/events/list \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+### Response
+
+```json
+{
+  "events": [
+    {
+      "id": "7",
+      "type": "tool_calls",
+      "data": { "calls": [...] },
+      "created_at": "2026-08-13T10:05:00Z"
+    }
+  ]
+}
+```
+
+The list is ordered by descending sequence and limited to the most recent 200 events.
+
+## Stream events (SSE)
+
+Open a long-lived Server-Sent Events stream. Each event corresponds to one row in `beta_session_events`.
+
+```bash
+curl -N https://api.allternit.com/v1/beta/sessions/sess_2f8a9c4e5d3b/events \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+Optional query parameter `after=<sequence>` resumes the stream after a known sequence number.
+
+### Stream format
+
+```text
+event: tool_calls
+id: 7
+data: {"calls":[{"name":"bash","input":{"command":"cargo test"}}]}
+```
+
+The server emits a keep-alive comment every 15 seconds.
+
+## Stream events (WebSocket)
+
+The WebSocket endpoint delivers the same events as SSE and is useful when you need bidirectional control, such as sending an interrupt.
+
+```bash
+websocat -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  wss://api.allternit.com/v1/beta/sessions/sess_2f8a9c4e5d3b/events/ws
+```
+
+Each message is a JSON object:
+
+```json
+{
+  "sequence": 7,
+  "type": "tool_calls",
+  "data": { "calls": [...] }
+}
+```
+
+Use the `after` query parameter to resume from a known sequence.
+
+## Search session memory
+
+Performs a simple substring search across the most recent 200 events.
+
+```bash
+curl -G https://api.allternit.com/v1/beta/sessions/sess_2f8a9c4e5d3b/memory/search \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -d "q=cargo"
+```
+
+### Response
+
+```json
+{
+  "results": [
+    {
+      "sequence": 7,
+      "type": "tool_calls",
+      "excerpt": "{\"calls\":[{\"name\":\"bash\",\"input\":{\"command\":\"cargo test\"}}]}"
+    }
+  ]
+}
+```
+
+## Interrupt a session
+
+Emit a `user_interrupt` event into an active session. The payload must be an object.
+
+```bash
+curl -X POST https://api.allternit.com/v1/beta/sessions/sess_2f8a9c4e5d3b/interrupt \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "data": { "reason": "user_requested_stop" } }'
+```
+
+### Response
+
+```json
+{
+  "event": {
+    "id": "evt_8e7c6b5a",
+    "sequence": 8,
+    "session_id": "sess_2f8a9c4e5d3b",
+    "type": "user_interrupt",
+    "data": { "reason": "user_requested_stop" }
+  }
+}
+```
+
+## Edit context
+
+Delete or summarize ranges of events to manage the context window. This mutates event history and reduces `tokens_used`.
+
+```bash
+curl -X POST https://api.allternit.com/v1/beta/sessions/sess_2f8a9c4e5d3b/context/edit \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "operations": [
+      {
+        "action": "summarize",
+        "start_sequence": 2,
+        "end_sequence": 5,
+        "summary": "Initial project overview and requirements.",
+        "tokens_removed": 400
+      },
+      {
+        "action": "delete",
+        "start_sequence": 6,
+        "end_sequence": 6,
+        "tokens_removed": 120
+      }
+    ]
+  }'
+```
+
+### Operation object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `action` | string | `delete` or `summarize`. |
+| `start_sequence` | integer | First event sequence in the range (≥1). |
+| `end_sequence` | integer | Last event sequence in the range (≥ start_sequence). |
+| `summary` | string | Required for `summarize`; ignored for `delete`. |
+| `tokens_removed` | integer | Tokens subtracted from `tokens_used`. |
+
+### Response
+
+```json
+{
+  "result": {
+    "operations_applied": 2,
+    "events_deleted": 5,
+    "events_inserted": 1,
+    "tokens_used_after": 1320
+  }
+}
+```
+
+## Session resources
+
+Resources attach credentials or references to a session. Values are encrypted at rest; references point to an external vault or secret store.
+
+### Supported resource kinds
+
+| Kind | Description |
+|------|-------------|
+| `github_token` | GitHub personal access token. |
+| `vault_credential` | Reference to a vault credential. |
+| `api_key` | Generic API key. |
+
+### Attach a resource
+
+```bash
+curl -X POST https://api.allternit.com/v1/beta/sessions/sess_2f8a9c4e5d3b/resources \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "github",
+    "kind": "github_token",
+    "value": "ghp_xxxxxxxxxxxxxxxx"
+  }'
+```
+
+Either `value` or `ref` must be provided, but not both.
+
+### Response
+
+```json
+{
+  "resource": {
+    "id": "res_4b7c8d9e",
+    "name": "github",
+    "kind": "github_token",
+    "created_at": "2026-08-13T10:00:00Z"
+  }
+}
+```
+
+### List resources
+
+```bash
+curl https://api.allternit.com/v1/beta/sessions/sess_2f8a9c4e5d3b/resources \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+### Delete a resource
+
+```bash
+curl -X DELETE https://api.allternit.com/v1/beta/sessions/sess_2f8a9c4e5d3b/resources/res_4b7c8d9e \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+Returns `204 No Content` on success.
+
+## Session files
+
+Upload and retrieve binary files scoped to a session. Files are stored on the server's local `data_dir/session-files` and returned as base64.
+
+### Upload a file
+
+```bash
+curl -X POST https://api.allternit.com/v1/beta/sessions/sess_2f8a9c4e5d3b/files \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "filename": "auth.rs",
+    "mime_type": "text/plain",
+    "content_base64": "cHViIGZuIG1haW4oKSB7fQ=="
+  }'
+```
+
+### Response
+
+```json
+{
+  "file": {
+    "id": "file_a1b2c3d4",
+    "session_id": "sess_2f8a9c4e5d3b",
+    "org_id": "org_1",
+    "filename": "auth.rs",
+    "mime_type": "text/plain",
+    "size_bytes": 21,
+    "created_at": "2026-08-13T10:00:00Z"
+  }
+}
+```
+
+### List files
+
+```bash
+curl https://api.allternit.com/v1/beta/sessions/sess_2f8a9c4e5d3b/files \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+### Get a file
+
+```bash
+curl https://api.allternit.com/v1/beta/sessions/sess_2f8a9c4e5d3b/files/file_a1b2c3d4 \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+The response includes the base64 content:
+
+```json
+{
+  "file": {
+    "id": "file_a1b2c3d4",
+    "session_id": "sess_2f8a9c4e5d3b",
+    "filename": "auth.rs",
+    "mime_type": "text/plain",
+    "size_bytes": 21,
+    "content_base64": "cHViIGZuIG1haW4oKSB7fQ==",
+    "created_at": "2026-08-13T10:00:00Z"
+  }
+}
+```
+
+### Delete a file
+
+```bash
+curl -X DELETE https://api.allternit.com/v1/beta/sessions/sess_2f8a9c4e5d3b/files/file_a1b2c3d4 \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+Returns `204 No Content`.
+
+## Tool context budget
+
+Control how tool results occupy the active context window.
+
+### Get tool context
+
+```bash
+curl https://api.allternit.com/v1/beta/sessions/sess_2f8a9c4e5d3b/tool-context \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+### Response
+
+```json
+{
+  "session_id": "sess_2f8a9c4e5d3b",
+  "config": {
+    "max_tool_result_tokens": 2000,
+    "max_concurrent_tools": 4,
+    "per_tool_budgets": { "bash": 500 },
+    "auto_truncate": true
+  },
+  "active_tools": [
+    {
+      "tool_name": "bash",
+      "call_id": "call_123",
+      "tokens_estimate": 300,
+      "created_at": "2026-08-13T10:00:00Z"
+    }
+  ],
+  "updated_at": "2026-08-13T10:00:00Z"
+}
+```
+
+### Set tool context
+
+```bash
+curl -X PUT https://api.allternit.com/v1/beta/sessions/sess_2f8a9c4e5d3b/tool-context \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "max_tool_result_tokens": 2000,
+    "max_concurrent_tools": 4,
+    "per_tool_budgets": { "bash": 500 },
+    "auto_truncate": true
+  }'
+```
+
+### Tool-context config fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `max_tool_result_tokens` | integer? | Max tokens of tool output kept in context. |
+| `max_concurrent_tools` | integer? | Max concurrent tool executions. |
+| `per_tool_budgets` | object? | Per-tool token limits keyed by tool name. |
+| `auto_truncate` | boolean? | Auto-truncate tool results to fit context. |
+
+## Error codes
+
+| Status | Meaning | Typical cause |
+|--------|---------|---------------|
+| 200 OK | Success | Request succeeded. |
+| 201 Created | Created | POST created a resource. |
+| 204 No Content | No content | DELETE archived or removed a resource. |
+| 400 Bad Request | Invalid request | Missing required fields, unsupported event/resource kind, malformed JSON, metadata not an object, invalid context-edit range. |
+| 401 Unauthorized | Unauthorized | Missing or invalid bearer token. |
+| 404 Not Found | Not found | Unknown session, file, resource, or access to another user's resource. |
+| 429 Too Many Requests | Rate limited | Exceeded the request rate limit for the key. |
+| 500 Internal Server Error | Server error | Contact support. |
+
+## Related pages
+
+- [Authentication](/api/authentication)
+- [Event Stream](/api/event-stream)
+- [Deployments](/api/deployments)
+- [Work Queue](/api/work-queue)
+- [Memory Stores](/api/memory-stores)
+- [Memory API](/api/memory)
+- [Webhooks](/api/webhooks)
+- [Token Budgets guide](/guides/token-budgets)

@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Connector setup: one path, one signal, one place to see it — Allternit Blog</title>
+<meta name="description" content="This week the connectors workstream concentrated on the setup boundary: the gap between deciding to use a connector and knowing it is ready to run. We shipped three related changes under commit `afddcf70` (`feat(connectors): unified installer, setup-status endpoint, UI banner`) t">
+<meta name="generator" content="Allternit publications pipeline">
+<link rel="canonical" href="https://ai.allternit.com/editions/builders-notebook-2026-w34.html">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,700;1,6..72,400;1,6..72,700&amp;display=swap" rel="stylesheet">
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: #F5F3EF;
+    color: #1A1A1A;
+    font-family: 'Newsreader', Georgia, 'Times New Roman', serif;
+    font-size: 19px;
+    line-height: 1.62;
+    padding-bottom: 96px; /* clear the fixed action bar */
+  }
+  article.edition {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 48px 40px 64px;
+  }
+
+  /* Masthead — publication name in black serif, edition line, hairline */
+  .masthead-row {
+    display: flex;
+    align-items: baseline;
+    gap: 18px;
+  }
+  .masthead-tick {
+    flex: 0 0 auto;
+    width: 14px;
+    height: 14px;
+    background: var(--accent);
+    transform: translateY(1px);
+  }
+  .nameplate {
+    font-weight: 700;
+    font-size: 30px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #1A1A1A;
+  }
+  .edition-line {
+    margin-left: auto;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 14px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #6B6B6B;
+  }
+  .hairline {
+    position: relative;
+    border-top: 1px solid #1A1A1A;
+    margin: 14px 0 0;
+  }
+  .hairline .lead {
+    position: absolute;
+    left: 0;
+    top: -2px;
+    width: 168px;
+    border-top: 3px solid var(--accent);
+  }
+
+  /* Cover banner */
+  figure.cover {
+    margin: 36px 0 0;
+    break-inside: avoid;
+  }
+  figure.cover svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    border: 1px solid rgba(26, 26, 26, 0.22);
+  }
+
+  /* Title block */
+  .titleblock { margin: 44px 0 0; }
+  .kicker {
+    margin: 0 0 14px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 14px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  h1.display {
+    margin: 0;
+    font-size: clamp(42px, 6.4vw, 76px);
+    font-weight: 700;
+    line-height: 1.04;
+    letter-spacing: -0.015em;
+  }
+  .deck {
+    margin: 22px 0 0;
+    max-width: 46em;
+    font-style: italic;
+    font-size: 23px;
+    line-height: 1.45;
+    color: #1A1A1A;
+  }
+  .byline, .dateline {
+    margin: 26px 0 0;
+    font-variant-caps: small-caps;
+    letter-spacing: 0.08em;
+    font-size: 17px;
+  }
+  .byline { color: #1A1A1A; }
+  .dateline { margin-top: 6px; color: #6B6B6B; }
+
+  /* Body — justified multi-column with hairline rules */
+  .columns {
+    margin-top: 40px;
+    column-width: 320px;
+    column-gap: 44px;
+    column-rule: 1px solid rgba(26, 26, 26, 0.18);
+    text-align: justify;
+    hyphens: auto;
+  }
+  .columns p { margin: 0 0 1em; break-inside: avoid; }
+  .columns h2, .columns h3, .columns h4 {
+    break-after: avoid;
+    line-height: 1.2;
+  }
+  .columns h2 {
+    margin: 1.1em 0 0.55em;
+    font-size: 27px;
+    font-weight: 700;
+  }
+  .columns h2::before {
+    content: '';
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    margin-right: 10px;
+    background: var(--accent);
+  }
+  .columns h2.department { margin-top: 1.3em; }
+  .columns h2.department::before { content: none; }
+  .columns h2 .chip {
+    display: inline-block;
+    padding: 6px 14px 7px;
+    border: 1px solid #1A1A1A;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #1A1A1A;
+    background: transparent;
+  }
+  .columns h3 { margin: 1.1em 0 0.4em; font-size: 21px; font-weight: 700; }
+  .columns h4 { margin: 1em 0 0.4em; font-size: 18px; font-weight: 700; }
+  .columns ul, .columns ol { margin: 0 0 1em; padding-left: 1.25em; }
+  .columns li { margin-bottom: 0.45em; }
+  .columns a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  .columns code {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.86em;
+    background: rgba(26, 26, 26, 0.06);
+    padding: 0.08em 0.3em;
+  }
+
+  /* Blockquotes → oversized serif pull quotes with hairline rules */
+  .columns blockquote {
+    margin: 1.6em 0;
+    padding: 20px 4px;
+    border-top: 1px solid #1A1A1A;
+    border-bottom: 1px solid #1A1A1A;
+    break-inside: avoid;
+  }
+  .columns blockquote p {
+    margin: 0;
+    font-size: 27px;
+    line-height: 1.35;
+    text-align: left;
+  }
+  .columns blockquote p::before {
+    content: '\201C';
+    color: var(--accent);
+    margin-right: 2px;
+  }
+
+  hr.rule {
+    border: none;
+    border-top: 1px solid rgba(26, 26, 26, 0.35);
+    margin: 1.8em 0;
+  }
+
+  /* Footer / colophon */
+  footer.colophon { margin-top: 56px; }
+  footer.colophon .hairline { margin-bottom: 22px; }
+  footer.colophon p {
+    margin: 0 0 6px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 13px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #6B6B6B;
+  }
+  footer.colophon a { color: var(--accent); }
+
+  /* Fixed action bar — the only JS on the page */
+  .action-bar {
+    position: fixed;
+    left: 50%;
+    bottom: 20px;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: #1A1A1A;
+    color: #F5F3EF;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 13px;
+    letter-spacing: 0.06em;
+    box-shadow: 0 6px 24px rgba(26, 26, 26, 0.28);
+    z-index: 10;
+  }
+  .action-bar .bar-title {
+    padding-right: 6px;
+    border-right: 1px solid rgba(245, 243, 239, 0.35);
+    text-transform: uppercase;
+  }
+  .action-bar button {
+    appearance: none;
+    border: 1px solid #F5F3EF;
+    background: transparent;
+    color: #F5F3EF;
+    font: inherit;
+    padding: 7px 14px;
+    cursor: pointer;
+    text-transform: uppercase;
+  }
+  .action-bar button:hover, .action-bar button:focus-visible {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #1A1A1A;
+    outline: none;
+  }
+
+  @media (max-width: 640px) {
+    article.edition { padding: 32px 20px 56px; }
+    .nameplate { font-size: 22px; }
+    .masthead-row { flex-wrap: wrap; }
+    .edition-line { margin-left: 0; width: 100%; }
+  }
+
+  @media print {
+    @page { margin: 18mm 16mm; }
+    body { padding-bottom: 0; }
+    .action-bar { display: none !important; }
+    figure.cover, .columns blockquote { break-inside: avoid; }
+    /* Each ## department heading starts a fresh page — except the first
+       block of the body, which would leave the title page blank. */
+    .columns > h2 { break-before: page; }
+    .columns > h2:first-child { break-before: auto; }
+    a { color: #1A1A1A; }
+  }
+</style>
+</head>
+<body>
+<article class="edition" style="--accent: #059669;">
+  <header class="masthead">
+    <div class="masthead-row">
+      <span class="masthead-tick" aria-hidden="true"></span>
+      <span class="nameplate">Allternit Blog</span>
+      <span class="edition-line">Edition 2026-W34</span>
+    </div>
+    <div class="hairline" aria-hidden="true"><span class="lead"></span></div>
+  </header>
+
+  <figure class="cover">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+<title>Connector setup: one path, one signal, one place to see it</title>
+<rect width="1200" height="630" fill="#F5F3EF"/>
+<rect x="0" y="0" width="12" height="630" fill="#059669"/>
+<rect x="80" y="62" width="16" height="16" fill="#059669"/>
+<text x="108" y="77" font-family="'Courier New', Courier, monospace" font-size="21" letter-spacing="5" fill="#1A1A1A">ALLTERNIT BLOG</text>
+<text x="1120" y="77" text-anchor="end" font-family="'Courier New', Courier, monospace" font-size="17" letter-spacing="2" fill="#6B6B6B">EDITION 2026-W34</text>
+<line x1="80" y1="96" x2="1120" y2="96" stroke="#1A1A1A" stroke-width="1"/>
+<line x1="80" y1="96" x2="248" y2="96" stroke="#059669" stroke-width="3"/>
+<text x="80" y="250" font-family="Georgia, 'Times New Roman', serif" font-size="64" font-weight="bold" fill="#1A1A1A">Connector setup: one path,</text>
+<text x="80" y="326" font-family="Georgia, 'Times New Roman', serif" font-size="64" font-weight="bold" fill="#1A1A1A">one signal, one place to</text>
+<text x="80" y="402" font-family="Georgia, 'Times New Roman', serif" font-size="64" font-weight="bold" fill="#1A1A1A">see it</text>
+<line x1="80" y1="580" x2="1120" y2="580" stroke="#1A1A1A" stroke-width="1"/>
+<text x="80" y="608" font-family="'Courier New', Courier, monospace" font-size="15" letter-spacing="2" fill="#6B6B6B">AI.ALLTERNIT.COM · DISCOVERY</text>
+<text x="1120" y="608" text-anchor="end" font-family="'Courier New', Courier, monospace" font-size="15" letter-spacing="2" fill="#6B6B6B">3 MIN READ</text>
+</svg>
+  </figure>
+
+  <header class="titleblock">
+    <p class="kicker">Builder&#39;s Notebook</p>
+    <h1 class="display">Connector setup: one path, one signal, one place to see it</h1>
+    <p class="deck">Allternit Blog · Builder&#39;s Notebook · August 20, 2026</p>
+    <p class="byline">By Allternit Blog · research desk</p>
+    <p class="dateline">August 20, 2026 · 3 min read</p>
+    <div class="hairline" aria-hidden="true"></div>
+  </header>
+
+  <div class="columns">
+<p>This week the connectors workstream concentrated on the setup boundary: the gap between deciding to use a connector and knowing it is ready to run. We shipped three related changes under commit <code>afddcf70</code> (<code>feat(connectors): unified installer, setup-status endpoint, UI banner</code>) that consolidate how connectors are installed and make their setup state easier to observe.</p>
+<h2>What shipped</h2>
+<h3>A unified installer for connectors</h3>
+<p>We shipped a unified installer for connectors. The goal is to remove the &quot;which script do I run?&quot; step from connector onboarding. Rather than tracking down a different install path for each connector, operators now have a single entry point for standing one up. That reduces the documentation surface the support team has to maintain and lowers the chance that someone picks the wrong bootstrap command. The installer does not change a connector&#39;s runtime behavior; it only consolidates how the connector is first placed into the environment.</p>
+<h3>A setup-status endpoint</h3>
+<p>We added a <code>setup-status</code> endpoint for connectors. The service can now answer whether a connector&#39;s setup is complete. That gives health checks, dashboards, and downstream automations a single, explicit signal to query instead of inferring readiness from logs, environment variables, or side effects. For the engineering team, this means we can stop writing one-off checks for each connector and start depending on a shared interface.</p>
+<h3>A UI banner for setup state</h3>
+<p>We shipped a UI banner that reflects connector setup status. The banner surfaces setup state inside the product, so a user who has not finished connector configuration sees a clear indicator in the context where they are working. This addresses the quieter failure mode where setup issues surface only later, such as when an integration run fails or expected data does not appear.</p>
+<h2>Why it matters</h2>
+<p>Connector onboarding is a place where small inconsistencies tend to compound. Different installers per connector, no shared way to verify completion, and invisible error states all push the cost of setup onto the user and onto support. This week&#39;s changes shrink each of those gaps.</p>
+<p>The unified installer removes one class of setup mistakes. When every connector has its own bootstrap path, operators have to remember or look up which one applies; support has to keep instructions current for each; and debugging starts with figuring out which path was actually used. A single entry point does not eliminate all of that, but it collapses the decision tree at the moment someone is trying to get something running.</p>
+<p>The <code>setup-status</code> endpoint is the piece that makes the rest of the system easier to reason about. Once setup readiness is queryable, health checks can ask the service directly, automations can gate work on a real state, and the UI can display something accurate without each team wiring up its own detection logic. It turns an implicit property of the environment into an explicit API contract.</p>
+<p>The UI banner makes that contract visible to humans. A banner is not a replacement for proper setup validation, but it does move the signal closer to the user. Instead of discovering a connector issue through a failed downstream run, a user sees the incomplete state early and can act on it while the context is fresh.</p>
+<p>Together, these changes make connector onboarding more robust. They do not add new connector capabilities, but they make the existing ones easier to stand up and easier to verify.</p>
+  </div>
+
+  <footer class="colophon">
+    <div class="hairline" aria-hidden="true"><span class="lead"></span></div>
+    <p>Canonical: <a href="https://allternit.com/blog">allternit.com/blog</a></p>
+    <p>Generated by the Allternit publications pipeline</p>
+  </footer>
+</article>
+
+<div class="action-bar" role="toolbar" aria-label="Edition actions" style="--accent: #059669;">
+  <span class="bar-title">Allternit Blog</span>
+  <button type="button" id="save-pdf">Save as PDF</button>
+  <button type="button" id="download-html">Download HTML</button>
+</div>
+<script>(function () {
+  var slug = "builders-notebook-2026-w34";
+  document.getElementById('save-pdf').addEventListener('click', function () {
+    window.print();
+  });
+  document.getElementById('download-html').addEventListener('click', function () {
+    var html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+    var a = document.createElement('a');
+    a.href = 'data:text/html;charset=utf-8,' + encodeURIComponent(html);
+    a.download = slug + '.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  });
+})();</script>
+</body>
+</html>

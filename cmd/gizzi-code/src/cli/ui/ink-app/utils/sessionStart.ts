@@ -5,7 +5,6 @@ import { createAttachmentMessage } from './attachments.js'
 import { logForDebugging } from './debug.js'
 import { withDiagnosticsTiming } from './diagLogs.js'
 import { isBareMode } from './envUtils.js'
-import { updateWatchPaths } from './hooks/fileChangedWatcher.js'
 import { shouldAllowManagedHooksOnly } from './hooks/hooksConfigSnapshot.js'
 import { executeSessionStartHooks, executeSetupHooks } from './hooks.js'
 import { logError } from './log.js'
@@ -157,6 +156,7 @@ export async function processSessionStartHooks(
   }
 
   if (allWatchPaths.length > 0) {
+    const { updateWatchPaths } = await import('./hooks/fileChangedWatcher.js')
     updateWatchPaths(allWatchPaths)
   }
 

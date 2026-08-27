@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { test, expect, beforeAll, afterAll } from "bun:test"
-import { Skill } from "../../src/skill"
+import { Skill } from "../../src/runtime/skills/skill"
 import { Instance } from "../../src/project/instance"
 import { tmpdir } from "../fixture/fixture"
 import path from "path"
@@ -28,11 +28,11 @@ This skill is loaded from the global home directory.
   )
 }
 
-test("discovers skills from .opencode/skill/ directory", async () => {
+test("discovers skills from .gizzi/skill/ directory", async () => {
   await using tmp = await tmpdir({
     git: true,
     init: async (dir) => {
-      const skillDir = path.join(dir, ".opencode", "skill", "test-skill")
+      const skillDir = path.join(dir, ".gizzi", "skill", "test-skill")
       await Bun.write(
         path.join(skillDir, "SKILL.md"),
         `---
@@ -65,7 +65,7 @@ test("returns skill directories from Skill.dirs", async () => {
   await using tmp = await tmpdir({
     git: true,
     init: async (dir) => {
-      const skillDir = path.join(dir, ".opencode", "skill", "dir-skill")
+      const skillDir = path.join(dir, ".gizzi", "skill", "dir-skill")
       await Bun.write(
         path.join(skillDir, "SKILL.md"),
         `---
@@ -79,30 +79,30 @@ description: Skill for dirs test.
     },
   })
 
-  const home = process.env.Allternit_TEST_HOME
-  process.env.Allternit_TEST_HOME = tmp.path
+  const home = process.env.GIZZI_TEST_HOME
+  process.env.GIZZI_TEST_HOME = tmp.path
 
   try {
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
         const dirs = await Skill.dirs()
-        const skillDir = path.join(tmp.path, ".opencode", "skill", "dir-skill")
+        const skillDir = path.join(tmp.path, ".gizzi", "skill", "dir-skill")
         expect(dirs).toContain(skillDir)
         expect(dirs.length).toBe(1)
       },
     })
   } finally {
-    process.env.Allternit_TEST_HOME = home
+    process.env.GIZZI_TEST_HOME = home
   }
 })
 
-test("discovers multiple skills from .opencode/skill/ directory", async () => {
+test("discovers multiple skills from .gizzi/skill/ directory", async () => {
   await using tmp = await tmpdir({
     git: true,
     init: async (dir) => {
-      const skillDir1 = path.join(dir, ".opencode", "skill", "skill-one")
-      const skillDir2 = path.join(dir, ".opencode", "skill", "skill-two")
+      const skillDir1 = path.join(dir, ".gizzi", "skill", "skill-one")
+      const skillDir2 = path.join(dir, ".gizzi", "skill", "skill-two")
       await Bun.write(
         path.join(skillDir1, "SKILL.md"),
         `---
@@ -141,7 +141,7 @@ test("skips skills with missing frontmatter", async () => {
   await using tmp = await tmpdir({
     git: true,
     init: async (dir) => {
-      const skillDir = path.join(dir, ".opencode", "skill", "no-frontmatter")
+      const skillDir = path.join(dir, ".gizzi", "skill", "no-frontmatter")
       await Bun.write(
         path.join(skillDir, "SKILL.md"),
         `# No Frontmatter
@@ -194,8 +194,8 @@ description: A skill in the .claude/skills directory.
 test("discovers global skills from ~/.claude/skills/ directory", async () => {
   await using tmp = await tmpdir({ git: true })
 
-  const originalHome = process.env.Allternit_TEST_HOME
-  process.env.Allternit_TEST_HOME = tmp.path
+  const originalHome = process.env.GIZZI_TEST_HOME
+  process.env.GIZZI_TEST_HOME = tmp.path
 
   try {
     await createGlobalSkill(tmp.path)
@@ -210,7 +210,7 @@ test("discovers global skills from ~/.claude/skills/ directory", async () => {
       },
     })
   } finally {
-    process.env.Allternit_TEST_HOME = originalHome
+    process.env.GIZZI_TEST_HOME = originalHome
   }
 })
 
@@ -259,8 +259,8 @@ description: A skill in the .agents/skills directory.
 test("discovers global skills from ~/.agents/skills/ directory", async () => {
   await using tmp = await tmpdir({ git: true })
 
-  const originalHome = process.env.Allternit_TEST_HOME
-  process.env.Allternit_TEST_HOME = tmp.path
+  const originalHome = process.env.GIZZI_TEST_HOME
+  process.env.GIZZI_TEST_HOME = tmp.path
 
   try {
     const skillDir = path.join(tmp.path, ".agents", "skills", "global-agent-skill")
@@ -289,7 +289,7 @@ This skill is loaded from the global home directory.
       },
     })
   } finally {
-    process.env.Allternit_TEST_HOME = originalHome
+    process.env.GIZZI_TEST_HOME = originalHome
   }
 })
 
@@ -337,8 +337,8 @@ test("properly resolves directories that skills live in", async () => {
   await using tmp = await tmpdir({
     git: true,
     init: async (dir) => {
-      const opencodeSkillDir = path.join(dir, ".opencode", "skill", "agent-skill")
-      const opencodeSkillsDir = path.join(dir, ".opencode", "skills", "agent-skill")
+      const gizziSkillDir = path.join(dir, ".gizzi", "skill", "agent-skill")
+      const gizziSkillsDir = path.join(dir, ".gizzi", "skills", "agent-skill")
       const claudeDir = path.join(dir, ".claude", "skills", "claude-skill")
       const agentDir = path.join(dir, ".agents", "skills", "agent-skill")
       await Bun.write(
@@ -362,23 +362,23 @@ description: A skill in the .agents/skills directory.
 `,
       )
       await Bun.write(
-        path.join(opencodeSkillDir, "SKILL.md"),
+        path.join(gizziSkillDir, "SKILL.md"),
         `---
-name: opencode-skill
-description: A skill in the .opencode/skill directory.
+name: gizzi-skill
+description: A skill in the .gizzi/skill directory.
 ---
 
-# OpenCode Skill
+# Gizzi Skill
 `,
       )
       await Bun.write(
-        path.join(opencodeSkillsDir, "SKILL.md"),
+        path.join(gizziSkillsDir, "SKILL.md"),
         `---
-name: opencode-skill
-description: A skill in the .opencode/skills directory.
+name: gizzi-skill
+description: A skill in the .gizzi/skills directory.
 ---
 
-# OpenCode Skill
+# Gizzi Skill
 `,
       )
     },
@@ -388,7 +388,10 @@ description: A skill in the .opencode/skills directory.
     directory: tmp.path,
     fn: async () => {
       const dirs = await Skill.dirs()
-      expect(dirs.length).toBe(4)
+      // The two .gizzi skills share the name "gizzi-skill", so the source's
+      // name-based collision resolution (src/runtime/skills/skill.ts) keeps a
+      // single winner — 3 unique directories, not 4.
+      expect(dirs.length).toBe(3)
     },
   })
 })

@@ -310,7 +310,7 @@ export class ReceiptGenerator {
   }
 
   /**
-   * Get receipts for Ralph Loop decision making
+   * Get receipts for goal/task loop decision making
    */
   async getReceiptsForNode(runId: string, nodeId: string): Promise<{
     isComplete: boolean;

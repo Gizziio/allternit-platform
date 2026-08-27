@@ -3,26 +3,26 @@
 import React from "react";
 import { createContext, useContext, useState, useCallback, ReactNode, useMemo, useRef, useEffect } from "react";
 import type { ModelSelection } from "@/components/model-picker";
+import type { ModelOption } from "@/components/prompt-kit/prompt-model-selector";
+import { usePendingChatModelStore } from "@/stores/pending-chat-model.store";
+import { useAvailableBrainModels } from "@/hooks/use-available-brain-models";
 
 interface ModelSelectionContextType {
   // Current selection
   selection: ModelSelection | null;
-  
+
+  // Available models from discovery
+  availableModels: ModelOption[];
+  isLoading: boolean;
+
   // Selection state
   isSelecting: boolean;
-  
+
   // Actions
   selectModel: (selection: ModelSelection) => void;
   clearSelection: () => void;
   startSelection: () => void;
   cancelSelection: () => void;
-  
-  // Helper to create a brain session with current selection
-  getBrainSessionConfig: () => {
-    brain_profile_id: string;
-    source: "chat";
-    runtime_overrides?: { model_id: string };
-  } | null;
 }
 
 const ModelSelectionContext = createContext<ModelSelectionContextType | undefined>(undefined);
@@ -32,13 +32,14 @@ interface ModelSelectionProviderProps {
   defaultSelection?: ModelSelection | null;
 }
 
-export function ModelSelectionProvider({ 
-  children, 
-  defaultSelection = null 
+export function ModelSelectionProvider({
+  children,
+  defaultSelection = null
 }: ModelSelectionProviderProps) {
   const [selection, setSelection] = useState<ModelSelection | null>(defaultSelection);
   const [isSelecting, setIsSelecting] = useState(false);
   const hasAppliedDefault = useRef(false);
+  const { models: availableModels, isLoading } = useAvailableBrainModels();
 
   // Sync with defaultSelection when it becomes available (e.g. after onboarding completes)
   useEffect(() => {
@@ -48,15 +49,24 @@ export function ModelSelectionProvider({
     }
   }, [defaultSelection]);
 
-  // Persist the selection so non-React code (e.g. the session store building
-  // the agent-chat payload) can resolve the current provider/model.
+  // Apply a model selection requested from outside the chat surface (e.g. Model Lab).
+  // This runs on mount and whenever a new pending request arrives.
   useEffect(() => {
-    try {
-      if (selection) {
-        window.localStorage.setItem('allternit:model-selection', JSON.stringify(selection));
+    const pending = usePendingChatModelStore.getState().pending;
+    if (pending) {
+      setSelection(pending);
+      usePendingChatModelStore.getState().setPending(null);
+    }
+
+    const unsubscribe = usePendingChatModelStore.subscribe((state, prevState) => {
+      if (state.pending && state.pending !== prevState.pending) {
+        setSelection(state.pending);
+        usePendingChatModelStore.getState().setPending(null);
       }
-    } catch { /* storage unavailable */ }
-  }, [selection]);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const selectModel = useCallback((newSelection: ModelSelection) => {
     setSelection(newSelection);
@@ -75,32 +85,24 @@ export function ModelSelectionProvider({
     setIsSelecting(false);
   }, []);
 
-  const getBrainSessionConfig = useCallback(() => {
-    if (!selection) return null;
-
-    return {
-      brain_profile_id: selection.profileId,
-      source: "chat" as const,
-      runtime_overrides: selection.modelId ? { model_id: selection.modelId } : undefined,
-    };
-  }, [selection]);
-
   const value = useMemo(() => ({
     selection,
+    availableModels,
+    isLoading,
     isSelecting,
     selectModel,
     clearSelection,
     startSelection,
     cancelSelection,
-    getBrainSessionConfig,
   }), [
     selection,
+    availableModels,
+    isLoading,
     isSelecting,
     selectModel,
     clearSelection,
     startSelection,
     cancelSelection,
-    getBrainSessionConfig,
   ]);
 
   return (

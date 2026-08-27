@@ -102,5 +102,5 @@ export async function generateCodemap(dir: string): Promise<GenerateCodemapResul
   await Filesystem.write(path.join(codemapDir, "codemap.html"), html)
   await Filesystem.writeJson(path.join(codemapDir, "codemap.lock"), lock)
 
-  return { ok: true, staleModules }
+  return { ok: true, staleModules, codemap: json }
 }

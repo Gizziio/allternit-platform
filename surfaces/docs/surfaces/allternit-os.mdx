@@ -1,0 +1,185 @@
+---
+title: AllternitOS
+description: The Super-Agent OS surface — program launcher, multi-session console, and chat-to-program integration
+---
+
+## Overview
+
+**AllternitOS** is the Super-Agent OS surface inside the Allternit platform. It gives users and agents a unified desktop-like environment for launching specialized programs, monitoring active work, chatting with the agent runtime, and controlling real terminals and automations from a single view.
+
+AllternitOS is exposed as a first-class view in the platform shell. It combines a program launcher, an active-programs manager, an agent chat pane, and the **Allternit Console** — a side panel with a real multi-session terminal, kanban board, and automation hub.
+
+## How to access it
+
+AllternitOS runs inside the platform shell:
+
+```text
+https://app.allternit.com/shell?view=allternit-os
+```
+
+Open programmatically from shell code:
+
+```typescript
+open('allternit-os');
+```
+
+## Features
+
+<CardGroup cols={2}>
+  <Card title="Program Launcher" icon="squares-four">
+    Launch any of the nine built-in programs from a grid or the sidebar dock
+  </Card>
+  <Card title="Active Programs" icon="play">
+    See and manage running program instances with minimize, focus, and close actions
+  </Card>
+  <Card title="Agent Chat" icon="message-circle">
+    Chat with the agent runtime and spawn programs inline with `@` commands
+  </Card>
+  <Card title="Allternit Console" icon="terminal">
+    Real multi-session terminal, kanban task board, and automation sequencer in a side drawer
+  </Card>
+  <Card title="Program Dock" icon="layout">
+    Persistent sidebar with one-click access to every program type
+  </Card>
+  <Card title="URI Launch" icon="link">
+    Deep-link into programs via the <code>allternit://</code> scheme or XML launch directives
+  </Card>
+  <Card title="Kernel Bridge" icon="cpu">
+    Connect to the Brain Runtime over WebSocket, Electron IPC, or a mock backend
+  </Card>
+  <Card title="Streaming State" icon="activity">
+    Live updates, streaming content, and progress tracking for long-running programs
+  </Card>
+</CardGroup>
+
+## Built-in programs
+
+| Program | ID | What it does |
+|---|---|---|
+| **ResearchDoc** | `researchdoc` | Rich research documents with citations and evidence |
+| **DataGrid** | `datagrid` | Spreadsheet with formulas, rows, and built-in visualizations |
+| **Presentation** | `presentation` | Slide decks with themes, presenter notes, and exports |
+| **CodePreview** | `codepreview` | Multi-file code browser with live preview and console logs |
+| **AssetManager** | `assetmanager` | Image and file management with grid, list, and gallery views |
+| **Orchestrator** | `orchestrator` | Mixture-of-Agents execution dashboard and task DAG |
+| **WorkflowBuilder** | `workflowbuilder` | Visual DAG builder with Rails integration |
+| **ACI** | `browser` | Web citations and screenshot capture |
+| **A://Labs** | `labs` | Live AI learning tracks — opens the Labs view |
+
+## Key concepts
+
+### Program Launcher
+
+The launcher is the default tab in AllternitOS. Each program is shown as a card with its icon, name, description, and URI. Click any card, or click the matching icon in the left dock, to open a new program instance.
+
+Quick launch commands also work in chat:
+
+```text
+@researchdoc Quarterly Report
+@datagrid sales_2024.csv
+@presentation Q4 Review
+@orchestrator Build Pipeline
+```
+
+### Active Programs
+
+Switch to the **Active** tab to see every running program instance. Each row shows the program type, title, and status, with controls to minimize or close the instance.
+
+### Allternit Console
+
+The console is a collapsible side drawer with three tabs:
+
+| Tab | Purpose |
+|---|---|
+| **Terminal** | Real multi-session PTY terminal via `TerminalTabs`, with snapshot restore and replay |
+| **Kanban** | Drag-and-drop task board for tracking agent and user tasks |
+| **Automation** | Trigger, pause, and monitor scheduled automation sequences |
+
+Toggle the console from the header or use the command palette.
+
+### Chat-to-Program
+
+The **Chat** tab demonstrates agent-driven program creation. Agents can respond with XML-style launch directives that AllternitOS parses and executes automatically:
+
+```xml
+<launch_utility type="research-doc" title="AI Agent Survey">
+{
+  "topic": "AI Agent Survey",
+  "sections": []
+}
+</launch_utility>
+```
+
+Supported launch types include `research-doc`, `data-grid`, `presentation`, `code-preview`, `asset-manager`, `orchestrator`, and `workflow-builder`.
+
+### URI scheme
+
+Programs can be launched via the `allternit://` URI scheme:
+
+```text
+allternit://launch/researchdoc
+allternit://launch/datagrid
+```
+
+The view also dispatches the `allternit:open-labs` browser event when the **A://Labs** program is selected, routing users to the Labs learning surface.
+
+### Kernel bridge
+
+AllternitOS connects to the Brain Runtime through a kernel bridge. The bridge auto-detects the best available backend:
+
+| Backend | When it is used |
+|---|---|
+| `electron` | Running inside the desktop app with Electron IPC available |
+| `websocket` | Direct WebSocket connection to a kernel gateway |
+| `mock` | Fallback when no runtime is configured |
+
+Configure the endpoint in the `AllternitOSProvider`:
+
+```tsx
+<AllternitOSProvider config={{ kernelEndpoint: 'ws://localhost:3001/cable' }}>
+  <AllternitOSView context={context} />
+</AllternitOSProvider>
+```
+
+### Sidecar store
+
+Program state is managed by `useSidecarStore`, a Zustand store with Immer and localStorage persistence. It tracks:
+
+- Program registry and tab order
+- Active and suspended programs
+- Streaming chunks and live agent text
+- UI state such as panel width and expansion
+
+## Kernel protocol messages
+
+When connected to a kernel, the runtime sends typed messages that update programs:
+
+| Message type | Purpose |
+|---|---|
+| `program.launch` | Open a new program instance |
+| `program.update` | Replace the program state |
+| `program.stream` | Append a streaming content chunk |
+| `program.stream.end` | Mark a stream as finished |
+| `program.complete` | Mark generation as complete |
+| `program.error` | Surface a program error |
+| `orchestrator.agent.update` | Update agent progress in the Orchestrator |
+| `orchestrator.task.update` | Update task node status in the Orchestrator DAG |
+| `datagrid.row.add` | Append a row to a DataGrid |
+| `datagrid.viz.complete` | Complete a DataGrid visualization |
+| `presentation.slide.add` | Add a slide to a Presentation |
+
+## Environment
+
+AllternitOS is bundled into the platform surface at `surfaces/ai.allternit.com`. It requires no separate server, but some programs — such as the Terminal and Orchestrator — depend on platform APIs or a connected kernel/runtime.
+
+## Related links
+
+- [Platform](/surfaces/platform)
+- [Canvas](/surfaces/canvas)
+- [Agent Studio](/surfaces/agent-studio)
+- [Operator Browser](/surfaces/operator-browser)
+- [Desktop](/surfaces/desktop)
+- [Tool Belt](/tools/tool-belt)
+- [Orchestrator API](/api/orchestrator)
+- [Terminal API](/api/terminal)
+- [Agents API](/api/agents)

@@ -5,7 +5,7 @@ import { getAttributionTexts } from '@/shared/utils/attribution.js'
 import { hasEmbeddedSearchTools } from '@/shared/utils/embeddedTools.js'
 import { isEnvTruthy } from '@/shared/utils/envUtils.js'
 import { shouldIncludeGitInstructions } from '@/shared/utils/gitSettings.js'
-import { getClaudeTempDir } from '@/shared/utils/permissions/filesystem.js'
+import { getClaudeTempDir } from '@/shared/utils/permissions/tempDir.js'
 import { SandboxManager } from '@/shared/utils/sandbox/sandbox-adapter.js'
 import { jsonStringify } from '@/shared/utils/slowOperations.js'
 import {

@@ -1,0 +1,462 @@
+{
+  "auditor": "kimi-k3",
+  "focus": "kimi-api-platform-vs-allternit",
+  "generated_at": "2026-08-08",
+  "method": "read-only source inspection; no builds or tests run",
+  "categories": [
+    {
+      "category": "api",
+      "findings": [
+        {
+          "kimi_feature": "API 概述 / OpenAI 兼容端点",
+          "allternit_equivalent": "Allternit LLM Gateway exposes POST /v1/chat/completions and GET /v1/models with OpenAI-shaped request/response types.",
+          "status": "present",
+          "evidence": [
+            "cmd/allternit-api/src/llm_gateway/mod.rs:56-59",
+            "cmd/allternit-api/src/llm_gateway/proxy.rs:1-6",
+            "cmd/allternit-api/src/llm_gateway/translate.rs:1-7",
+            "cmd/allternit-api/src/main.rs:493"
+          ],
+          "notes": "Public router uses virtual-key auth, rate limit, DLP, and budget middleware; supports streaming and non-streaming completions."
+        },
+        {
+          "kimi_feature": "创建对话补全 (chat completions)",
+          "allternit_equivalent": "proxy::chat_completions handler backed by the Gizzi runtime.",
+          "status": "present",
+          "evidence": [
+            "cmd/allternit-api/src/llm_gateway/mod.rs:58",
+            "cmd/allternit-api/src/llm_gateway/proxy.rs:105-168",
+            "cmd/allternit-api/src/llm_gateway/translate.rs:86-116"
+          ],
+          "notes": "Supports OpenAI-compatible request fields (model, messages, temperature, top_p, max_tokens, stop, stream, response_format, tools, tool_choice, user)."
+        },
+        {
+          "kimi_feature": "列出模型 (list models)",
+          "allternit_equivalent": "GET /v1/models returns a flattened provider/model catalog plus policy aliases.",
+          "status": "present",
+          "evidence": [
+            "cmd/allternit-api/src/llm_gateway/mod.rs:59",
+            "cmd/allternit-api/src/llm_gateway/proxy.rs:169-228",
+            "cmd/allternit-api/src/llm_gateway/proxy.rs:60-70"
+          ],
+          "notes": "Policy aliases include auto, allternit-balanced, allternit-code, allternit-reasoning, allternit-knowledge, allternit-instruct."
+        },
+        {
+          "kimi_feature": "计算 Token (token estimation)",
+          "allternit_equivalent": "No platform endpoint for counting or estimating tokens.",
+          "status": "gap",
+          "evidence": [],
+          "notes": "Open-connector's openai.get_input_token_counts action can count tokens against OpenAI's API, but there is no Allternit-native /v1/tokenizers/estimate-token-count equivalent."
+        },
+        {
+          "kimi_feature": "文件接口 (file upload / list / retrieve / delete / content)",
+          "allternit_equivalent": "Workspace upload and file APIs exist, but not a model-facing /v1/files lifecycle with purpose=batch/file-extract.",
+          "status": "partial",
+          "evidence": [
+            "cmd/allternit-api/src/upload_routes.rs:31-34",
+            "cmd/allternit-api/src/file_routes.rs:15-24",
+            "services/open-connector/src/providers/openai/actions.ts:236-520"
+          ],
+          "notes": "POST /api/v1/uploads stages attachments; /api/v1/files/* provides workspace file CRUD. Open-connector can proxy OpenAI file/batch operations, but Allternit has no native purpose-driven file API for model use."
+        },
+        {
+          "kimi_feature": "批处理任务 (batch jobs: create / list / retrieve / cancel)",
+          "allternit_equivalent": "No native /v1/batches API. Open-connector can call OpenAI batch endpoints on the user's behalf.",
+          "status": "gap",
+          "evidence": [
+            "services/open-connector/src/providers/openai/actions.ts:504-520",
+            "services/open-connector/src/providers/openai/executors.ts:287-318"
+          ],
+          "notes": "Connector-level batch proxy is present, but the platform does not expose its own asynchronous batch inference API."
+        },
+        {
+          "kimi_feature": "查询余额 (balance)",
+          "allternit_equivalent": "GET /me/usage returns plan, weeklyUsed, weeklyLimit, credits; gateway budgets and per-key spend exist.",
+          "status": "partial",
+          "evidence": [
+            "cmd/allternit-api/src/me_routes.rs:24",
+            "cmd/allternit-api/src/me_routes.rs:169-253",
+            "cmd/allternit-api/src/llm_gateway/keys.rs:47-67",
+            "cmd/allternit-api/src/llm_gateway/admin_routes.rs:748-849"
+          ],
+          "notes": "No single Kimi-style /v1/users/me/balance endpoint. Usage is split across /me/usage, /gateway/budgets, and per-key monthly budgets."
+        },
+        {
+          "kimi_feature": "常见错误码说明 (error responses)",
+          "allternit_equivalent": "OpenAI-shaped error bodies with type, message, param, code.",
+          "status": "present",
+          "evidence": [
+            "cmd/allternit-api/src/llm_gateway/translate.rs:21-79",
+            "cmd/allternit-api/src/llm_gateway/auth.rs:74-86"
+          ],
+          "notes": "Gateway returns invalid_request_error, invalid_api_key, rate_limit_exceeded, upstream_error, server_error in OpenAI-compatible shape."
+        },
+        {
+          "kimi_feature": "限速 (rate limits)",
+          "allternit_equivalent": "Per-key sliding-window RPM limits and monthly/tenant budget caps.",
+          "status": "present",
+          "evidence": [
+            "cmd/allternit-api/src/llm_gateway/auth.rs:35-39",
+            "cmd/allternit-api/src/llm_gateway/auth.rs:179-236",
+            "cmd/allternit-api/src/llm_gateway/keys.rs:47-67"
+          ],
+          "notes": "Default 600 RPM per key, overridable via rate_limit_rpm. Rate-limit responses include Retry-After."
+        }
+      ]
+    },
+    {
+      "category": "guide",
+      "findings": [
+        {
+          "kimi_feature": "快速开始 / SDK 安装",
+          "allternit_equivalent": "TS/Node packages (@allternit/sdk, @allternit/api-client) and the gizzi-code CLI exist; Python SDK is computer-use only.",
+          "status": "partial",
+          "evidence": [
+            "sdk/allternit-sdk/package.json",
+            "sdk/allternit-sdk/src/ai-runtime/agents/client.ts:20",
+            "packages/@allternit/api-client/src/index.ts:62",
+            "cmd/gizzi-code/cli-package/README.md:1-35"
+          ],
+          "notes": "No public pip-installable Allternit platform Python SDK. Some top-tier provider harness paths in the SDK are stubs."
+        },
+        {
+          "kimi_feature": "配置多轮对话参数",
+          "allternit_equivalent": "Chat UI and message types support multi-turn message lists; runtime maintains session history.",
+          "status": "present",
+          "evidence": [
+            "surfaces/ai.allternit.com/src/lib/ai/types.ts:104-119",
+            "surfaces/ai.allternit.com/src/views/ChatView.tsx",
+            "cmd/allternit-api/src/llm_gateway/proxy.rs:76-78"
+          ],
+          "notes": "Clients maintain messages arrays; gateway supports x-allternit-session-id for session reuse."
+        },
+        {
+          "kimi_feature": "使用 Kimi API 完成工具调用 (tool_calls)",
+          "allternit_equivalent": "Full tool-call lifecycle with approval, execution, and result capture; orchestrator loop feeds results back into history.",
+          "status": "present",
+          "evidence": [
+            "surfaces/ai.allternit.com/src/core/contracts/tool-call.ts:3-39",
+            "surfaces/ai.allternit.com/src/core/contracts/message.ts:6-7",
+            "services/orchestration/control-plane/allternit-orchestrator/src/orchestrator.ts:12-48",
+            "mcp/core/src/tool_bridge.rs:136-172"
+          ],
+          "notes": "Tool calls are validated at the OpenAI gateway but executed by Gizzi's agent loop, not forwarded through the gateway."
+        },
+        {
+          "kimi_feature": "工具调用约束 (tool_choice auto/none/required/function)",
+          "allternit_equivalent": "Tool registry supports native, mcp, custom, and kernel tools; governance defines approval tiers.",
+          "status": "present",
+          "evidence": [
+            "surfaces/ai.allternit.com/src/lib/agents/tool-registry.store.ts:1-770",
+            "surfaces/ai.allternit.com/src/lib/agents/agent.types.ts:280-339",
+            "surfaces/ai.allternit.com/src/core/contracts/tool-call.ts:14-21"
+          ],
+          "notes": "Allowed-tools and governance tiers provide equivalent control, though not via the exact OpenAI tool_choice shape."
+        },
+        {
+          "kimi_feature": "使用 Kimi API 的联网搜索功能 ($web_search)",
+          "allternit_equivalent": "webSearch tool implemented in the Research plugin using public APIs and Computer Use SDK.",
+          "status": "present",
+          "evidence": [
+            "surfaces/ai.allternit.com/src/lib/ai/types.ts:22-23",
+            "surfaces/ai.allternit.com/src/plugins/built-in/research/plugin.ts:50-56",
+            "surfaces/ai.allternit.com/src/plugins/built-in/research/plugin.ts:208-242",
+            "surfaces/ai.allternit.com/src/components/agent-elements/tools/search-tool.tsx:144-182"
+          ],
+          "notes": "Allternit exposes webSearch as a first-class tool rather than a magic $web_search formula."
+        },
+        {
+          "kimi_feature": "使用 response_format 控制模型输出格式 / JSON Mode",
+          "allternit_equivalent": "Gateway parses response_format; structured output schemas exist for agents and local models.",
+          "status": "partial",
+          "evidence": [
+            "cmd/allternit-api/src/llm_gateway/translate.rs:107",
+            "cmd/allternit-api/src/llm_gateway/translate.rs:197-200",
+            "surfaces/ai.allternit.com/src/lib/agents/agent.types.ts:252",
+            "surfaces/ai.allternit.com/src/lib/local-models/types.ts:9",
+            "surfaces/ai.allternit.com/src/lib/local-models/catalog.ts:12"
+          ],
+          "notes": "No top-level chat-completion enforcement of json_object/json_schema was found in the main gateway proxy. Structured output is primarily agent/skill/local-model metadata."
+        },
+        {
+          "kimi_feature": "使用 Kimi API 的 Partial Mode",
+          "allternit_equivalent": "No partial/best-of/n-sampling mode in the platform chat/orchestration APIs.",
+          "status": "gap",
+          "evidence": [],
+          "notes": "Only found in gizzi-code SDK provider code, not exposed as a platform capability."
+        },
+        {
+          "kimi_feature": "推理强度 / 思考模型 (reasoning_effort / thinking)",
+          "allternit_equivalent": "Reasoning content is streamed and displayed; a routing policy alias selects reasoning-optimized models.",
+          "status": "present",
+          "evidence": [
+            "surfaces/ai.allternit.com/src/lib/ai/types.ts:86",
+            "surfaces/ai.allternit.com/src/lib/ai/rust-stream-adapter.ts:56-59",
+            "surfaces/ai.allternit.com/src/lib/ai/rust-stream-adapter.ts:122-128",
+            "cmd/allternit-api/src/llm_gateway/proxy.rs:60-70",
+            "cmd/allternit-api/src/llm_gateway/router.rs:135-142"
+          ],
+          "notes": "Allternit surfaces reasoning/thinking deltas and has an allternit-reasoning policy, but no user-facing reasoning_effort parameter matching Kimi K3."
+        },
+        {
+          "kimi_feature": "配置 Kimi 视觉模型 / 多模态图片输入",
+          "allternit_equivalent": "Message parts support image URLs; model catalog flags vision support; chat composer supports image attachments.",
+          "status": "present",
+          "evidence": [
+            "surfaces/ai.allternit.com/src/lib/ai/types.ts:90",
+            "surfaces/ai.allternit.com/src/lib/ai/types.ts:138",
+            "surfaces/ai.allternit.com/src/core/contracts/message.ts:9",
+            "cmd/allternit-api/src/llm_gateway/translate.rs:151-167"
+          ],
+          "notes": "Gateway accepts typed content parts but content_text() currently replaces non-text parts with placeholders before forwarding to Gizzi."
+        },
+        {
+          "kimi_feature": "多模态视频输入",
+          "allternit_equivalent": "Real-time vision/audio WebSocket streaming component exists; artifact kinds include video.",
+          "status": "partial",
+          "evidence": [
+            "surfaces/ai.allternit.com/src/views/MultimodalInput/MultimodalInput.tsx:1-120",
+            "surfaces/ai.allternit.com/src/lib/ai/rust-stream-adapter.ts:131-142"
+          ],
+          "notes": "MultimodalInput is wired to /api/v1/multimodal/ws; video as a chat attachment is partially supported through file uploads."
+        },
+        {
+          "kimi_feature": "使用 Kimi API 进行文件问答 (file-based Q&A)",
+          "allternit_equivalent": "Memory agent ingests files and answers questions; chat composer supports attachments.",
+          "status": "present",
+          "evidence": [
+            "surfaces/ai.allternit.com/src/lib/ai/types.ts:54-61",
+            "surfaces/ai.allternit.com/src/views/chat/ChatComposer.tsx:172-177",
+            "services/memory/agent/src/types/memory.types.ts:20-25",
+            "services/memory/agent/src/models/local-model.ts:90"
+          ],
+          "notes": "Files are ingested into the memory agent and queried via RAG-style retrieval."
+        },
+        {
+          "kimi_feature": "使用 Kimi API 的 Context Caching 功能",
+          "allternit_equivalent": "No cache_control or context-cache API. Pricing schema includes cache-read/write cost fields.",
+          "status": "gap",
+          "evidence": [
+            "surfaces/ai.allternit.com/src/lib/ai/ai-gateway-models-schemas.ts:33-34",
+            "surfaces/ai.allternit.com/src/lib/tokenlens/index.ts:39"
+          ],
+          "notes": "Allternit models price fields for prompt caching but does not expose a context-caching feature."
+        },
+        {
+          "kimi_feature": "使用 Batch API 批量处理任务",
+          "allternit_equivalent": "No native batch inference API; only swarm agent batch UI operations and OpenAI connector batch proxy.",
+          "status": "gap",
+          "evidence": [
+            "services/open-connector/src/providers/openai/actions.ts:504-520",
+            "surfaces/ai.allternit.com/src/views/swarm/components/BatchToolbar.tsx"
+          ],
+          "notes": "BatchToolbar is for restarting/stopping multiple swarm agents, not LLM batch jobs."
+        },
+        {
+          "kimi_feature": "动态加载工具",
+          "allternit_equivalent": "MCP app bridge and tool registry support dynamic tool listing, calling, and context updates.",
+          "status": "present",
+          "evidence": [
+            "mcp/mcp-client/src/lib.rs:88-224",
+            "surfaces/ai.allternit.com/src/lib/ai/mcp/apps.ts:1-17",
+            "surfaces/ai.allternit.com/src/lib/ai/mcp/app-bridge-api.ts:18-38",
+            "surfaces/ai.allternit.com/src/lib/agents/tool-registry.store.ts:29"
+          ],
+          "notes": "MCP servers can be registered at runtime; tools are listed and invoked through the bridge."
+        },
+        {
+          "kimi_feature": "自动断线重连",
+          "allternit_equivalent": "Gizzi event bus maintains a reconnecting SSE connection to the runtime.",
+          "status": "present",
+          "evidence": [
+            "cmd/allternit-api/src/llm_gateway/gizzi_bus.rs",
+            "surfaces/ai.allternit.com/src/lib/ai/rust-stream-adapter.ts"
+          ],
+          "notes": "Stream adapter handles SSE deltas and reconnection is built into the Gizzi bus."
+        },
+        {
+          "kimi_feature": "Prompt 最佳实践",
+          "allternit_equivalent": "Documentation exists for prompt styles and agent preferences.",
+          "status": "not-applicable",
+          "evidence": [],
+          "notes": "Best-practice documentation is Kimi-specific guidance, not a platform capability."
+        },
+        {
+          "kimi_feature": "基准测试最佳实践",
+          "allternit_equivalent": "LLM gateway router uses benchmark scores (humaneval, mmlu, gpqa, gsm8k, arena_elo, aider) to rank models.",
+          "status": "partial",
+          "evidence": [
+            "cmd/allternit-api/src/llm_gateway/router.rs:35-44",
+            "cmd/allternit-api/src/llm_gateway/router.rs:118-162",
+            "cmd/allternit-api/src/llm_gateway/benchmarks.rs"
+          ],
+          "notes": "Allternit consumes benchmark data for routing, but does not publish benchmark best-practice guides."
+        },
+        {
+          "kimi_feature": "账号与财务 / 建立并认证你的组织",
+          "allternit_equivalent": "Workspaces, organization members, invites, cloud credentials, and billing dashboards exist.",
+          "status": "partial",
+          "evidence": [
+            "cmd/allternit-api/src/workspace_routes.rs:22-38",
+            "cmd/allternit-api/src/me_routes.rs:25",
+            "cmd/allternit-api/src/me_routes.rs:265-325",
+            "surfaces/ai.allternit.com/src/views/settings/SettingsView.tsx:31-33",
+            "surfaces/ai.allternit.com/src/components/settings/ComputeBillingPanel.tsx"
+          ],
+          "notes": "Workspaces and org management are present, but there is no full Kimi-style organization/project/limit API."
+        },
+        {
+          "kimi_feature": "在 Claude Code / Codex CLI / Kimi Code CLI / Gizzi Code / Hermes Agent / OpenClaw 中使用 Kimi",
+          "allternit_equivalent": "Allternit ships gizzi-code CLI and has Claude integration planning docs; no Kimi-branded distribution guides.",
+          "status": "partial",
+          "evidence": [
+            "cmd/gizzi-code/cli-package/README.md:1-35",
+            "cmd/gizzi-code/CLAUDE_INTEGRATION_MASTER_PLAN.md",
+            "cmd/gizzi-code/CLAUDE_INTEGRATION_STATUS.md",
+            "cmd/allternit-api/src/onboarding_routes.rs:878"
+          ],
+          "notes": "gizzi-code is the native CLI agent. Third-party IDE/agent integration docs exist for Claude but are not yet shipped as public guides for Codex/Gizzi Code/Hermes/OpenClaw."
+        },
+        {
+          "kimi_feature": "在 Playground 中配置 MCP 服务器 / 使用 Playground 调试模型",
+          "allternit_equivalent": "MCP configuration and tool registry are present; the Playground UI is demo-only and not wired to real inference.",
+          "status": "partial",
+          "evidence": [
+            "surfaces/ai.allternit.com/src/views/PlaygroundView.tsx",
+            "surfaces/ai.allternit.com/src/views/playground/main/usePlaygroundManager.ts:49-81",
+            "surfaces/ai.allternit.com/src/lib/ai/mcp/app-context.tsx"
+          ],
+          "notes": "usePlaygroundManager simulates streaming with setInterval and fake artifacts. MCP configuration is real in chat/agent flows."
+        },
+        {
+          "kimi_feature": "Kimi K3 / K2.6 / K2.7 Code / Moonshot V1 模型",
+          "allternit_equivalent": "Allternit is model-agnostic; no Kimi proprietary models.",
+          "status": "not-applicable",
+          "evidence": [
+            "cmd/allternit-api/src/llm_gateway/proxy.rs:132-168"
+          ],
+          "notes": "Kimi model families are Kimi-specific. Allternit can route to Kimi via the OpenAI-compatible endpoint if a provider connector exists."
+        }
+      ]
+    },
+    {
+      "category": "pricing",
+      "findings": [
+        {
+          "kimi_feature": "模型推理价格说明 / 各模型定价",
+          "allternit_equivalent": "Per-model cost fields and server-side pricing recompute are stored in usage events.",
+          "status": "partial",
+          "evidence": [
+            "cmd/allternit-api/src/llm_gateway/llm_pricing.rs:21-40",
+            "cmd/allternit-api/src/llm_gateway/proxy.rs:160-168",
+            "surfaces/ai.allternit.com/src/lib/ai/models.generated.ts"
+          ],
+          "notes": "Pricing is provider/model-specific and recomputed server-side; no unified public pricing page was found."
+        },
+        {
+          "kimi_feature": "批量推理定价",
+          "allternit_equivalent": "No native batch inference API, therefore no batch pricing.",
+          "status": "gap",
+          "evidence": [],
+          "notes": "Open-connector batch proxy passes through provider pricing."
+        },
+        {
+          "kimi_feature": "联网搜索定价 / 工具定价",
+          "allternit_equivalent": "Tool/web-search usage is tracked but no separate public pricing model.",
+          "status": "gap",
+          "evidence": [
+            "surfaces/ai.allternit.com/src/lib/ai/ai-gateway-models-schemas.ts:33-34"
+          ],
+          "notes": "Pricing schema has input/output/cache fields only; no tool surcharge field."
+        },
+        {
+          "kimi_feature": "充值与限速",
+          "allternit_equivalent": "Per-key RPM limits, monthly budgets, tenant hard caps, and usage dashboards.",
+          "status": "present",
+          "evidence": [
+            "cmd/allternit-api/src/llm_gateway/auth.rs:35-39",
+            "cmd/allternit-api/src/llm_gateway/auth.rs:238-367",
+            "cmd/allternit-api/src/llm_gateway/keys.rs:47-67",
+            "cmd/allternit-api/src/llm_gateway/admin_routes.rs:748-849",
+            "surfaces/ai.allternit.com/src/components/usage/ResourceUsageDashboard.tsx"
+          ],
+          "notes": "Limits are key/tenant-scoped rather than tier-based."
+        }
+      ]
+    },
+    {
+      "category": "docs",
+      "findings": [
+        {
+          "kimi_feature": "主要概念 / 模型列表 / 快速开始",
+          "allternit_equivalent": "README, REPO_STRUCTURE, service docs, and model catalog.",
+          "status": "present",
+          "evidence": [
+            "README.md:1-78",
+            "cmd/allternit-api/src/llm_gateway/proxy.rs:132-168",
+            "surfaces/ai.allternit.com/src/lib/ai/models.generated.ts"
+          ],
+          "notes": "Allternit docs describe the layered architecture and service ports."
+        }
+      ]
+    },
+    {
+      "category": "changelog",
+      "findings": [
+        {
+          "kimi_feature": "平台新功能发布记录 / 研究笔记",
+          "allternit_equivalent": "No centralized platform changelog or research-notes publication.",
+          "status": "gap",
+          "evidence": [],
+          "notes": "Individual specs and ADRs exist in docs/, but no equivalent to Kimi's public changelog page."
+        }
+      ]
+    },
+    {
+      "category": "agreement",
+      "findings": [
+        {
+          "kimi_feature": "Kimi 开放平台服务协议 / 隐私政策 / 充值协议",
+          "allternit_equivalent": "Allternit-specific legal terms are outside the scope of this technical parity audit.",
+          "status": "not-applicable",
+          "evidence": [],
+          "notes": "Legal agreements are vendor-specific and not platform capabilities."
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "present": 18,
+    "partial": 11,
+    "gap": 9,
+    "not_applicable": 4
+  },
+  "top_gaps": [
+    "No native /v1/batches asynchronous batch inference API (only OpenAI connector proxy).",
+    "No token-count/estimate endpoint in the Allternit platform API.",
+    "No purpose-driven /v1/files lifecycle for model use (batch, file-extract).",
+    "No context-caching / prompt-caching feature exposed to callers.",
+    "No Partial Mode / n-sampling in the platform chat/orchestration APIs.",
+    "Playground UI is demo-only and not connected to real inference.",
+    "No public platform changelog or research-notes page.",
+    "SDK support is fragmented: no full Python platform SDK and some TS provider stubs."
+  ],
+  "quick_wins": [
+    "Promote the existing OpenAI-compatible gateway /v1/chat/completions as the primary external API.",
+    "Surface per-key usage and budgets through a single /v1/balance-shaped endpoint.",
+    "Wire the existing response_format parsing into JSON-mode enforcement.",
+    "Replace the simulated Playground streaming with a real call to /v1/chat/completions.",
+    "Add a token-count endpoint that calls Gizzi's tokenizer or provider tokenizers.",
+    "Document Claude/Codex/Gizzi Code integration using the existing OpenAI-compatible base URL."
+  ],
+  "extra_allternit_capabilities": [
+    "Computer Use desktop + browser hybrid automation (53-command macOS accessibility adapter plus Playwright/CDP/browser-use).",
+    "MCP server/client bridge with dynamic tool loading.",
+    "Rails DAG/WIH execution backend for agents.",
+    "Memory agent with file ingestion, vector search, and consolidation.",
+    "Governance/policy engine with trust tiers, tool approvals, and gate/review flows.",
+    "Session manager with process/VM/Firecracker/AppleVF isolation.",
+    "A2A agent cards with input/output schemas.",
+    "Skill + mini-app/capsule registry (ACI)."
+  ]
+}

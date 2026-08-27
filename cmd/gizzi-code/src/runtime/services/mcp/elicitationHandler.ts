@@ -6,11 +6,6 @@ import {
   type ElicitResult,
 } from '@modelcontextprotocol/sdk/types.js'
 import type { AppState } from '@/state/AppState.js'
-import {
-  executeElicitationHooks,
-  executeElicitationResultHooks,
-  executeNotificationHooks,
-} from '../../../shared/utils/hooks.js'
 import { logMCPDebug, logMCPError } from '../../../shared/utils/log.js'
 import { jsonStringify } from '../../../shared/utils/slowOperations.js'
 import {
@@ -180,10 +175,13 @@ export function registerElicitationHandler(
           serverName,
           `Received elicitation completion notification: ${elicitationId}`,
         )
-        void executeNotificationHooks({
-          message: `MCP server "${serverName}" confirmed elicitation ${elicitationId} complete`,
-          notificationType: 'elicitation_complete',
-        })
+        void import('../../../shared/utils/hooks.js').then(
+          ({ executeNotificationHooks }) =>
+            executeNotificationHooks({
+              message: `MCP server "${serverName}" confirmed elicitation ${elicitationId} complete`,
+              notificationType: 'elicitation_complete',
+            }),
+        )
         let found = false
         ;(setAppState as any)(prev => {
           const idx = findElicitationInQueue(
@@ -224,6 +222,9 @@ export async function runElicitationHooks(
         ? (params.elicitationId as string | undefined)
         : undefined
 
+    const { executeElicitationHooks } = await import(
+      '../../../shared/utils/hooks.js'
+    )
     const { elicitationResponse, blockingError } =
       await executeElicitationHooks({
         serverName,
@@ -269,6 +270,8 @@ export async function runElicitationResultHooks(
   mode?: 'form' | 'url',
   elicitationId?: string,
 ): Promise<ElicitResult> {
+  const { executeElicitationResultHooks, executeNotificationHooks } =
+    await import('../../../shared/utils/hooks.js')
   try {
     const { elicitationResultResponse, blockingError } =
       await executeElicitationResultHooks({

@@ -1,0 +1,610 @@
+---
+title: Computer Use Protocol
+description: Canonical Zod schemas and types for Allternit browser and computer-use runs across surfaces and providers.
+---
+
+# Computer Use Protocol
+
+The Computer Use Protocol package (`@allternit/computer-use-protocol`) provides the canonical Zod schemas and TypeScript types that power Allternit browser and computer-use runs. It is the shared wire contract between surfaces such as the web platform, desktop agent, Gizzi Code, browser extension, and API clients, and the providers that actually drive browsers and desktops.
+
+Use this package when you are:
+
+- Building a provider or surface that participates in an Allternit computer-use run.
+- Validating inbound/outbound messages in a gateway, adapter, or MCP server.
+- Serializing runs, observations, actions, approvals, and trajectories to durable storage.
+- Sharing structured run data between the Allternit platform and external tools.
+
+## Installation
+
+```bash
+npm install @allternit/computer-use-protocol
+```
+
+The package is ESM-only and has one runtime dependency, `zod`.
+
+## Quick start
+
+```typescript
+import {
+  COMPUTER_USE_PROTOCOL_VERSION,
+  BrowserRunSchema,
+  ActionIntentSchema,
+  BrowserEventSchema,
+} from '@allternit/computer-use-protocol';
+
+const run = BrowserRunSchema.parse({
+  schemaVersion: COMPUTER_USE_PROTOCOL_VERSION,
+  runId: 'run_01hqx8x7x7x7x7x7x7x7x',
+  conversationId: 'conv_01',
+  accountId: 'acct_01',
+  sessionId: 'sess_01',
+  objective: 'Find the latest pricing',
+  state: 'running',
+  startedBy: 'platform-web',
+  provider: 'extension-tab',
+  createdAt: '2026-07-10T12:00:00.000Z',
+  updatedAt: '2026-07-10T12:00:00.000Z',
+});
+
+const action = ActionIntentSchema.parse({
+  schemaVersion: COMPUTER_USE_PROTOCOL_VERSION,
+  actionId: 'action_1',
+  runId: run.runId,
+  sessionId: run.sessionId,
+  kind: 'click',
+  reason: 'Submit the verified form',
+  targetRef: 'e12',
+});
+
+const event = BrowserEventSchema.parse({
+  schemaVersion: COMPUTER_USE_PROTOCOL_VERSION,
+  eventId: 'event_1',
+  runId: run.runId,
+  sessionId: run.sessionId,
+  sequence: 3,
+  emittedAt: '2026-07-10T12:00:01.000Z',
+  sourceSurface: 'extension',
+  type: 'action.state_changed',
+  payload: { actionId: action.actionId, state: 'executing' },
+});
+```
+
+## Schema version
+
+Every top-level schema carries a `schemaVersion` field that must match `COMPUTER_USE_PROTOCOL_VERSION` (`"1.0"`). This lets consumers reject documents from an incompatible protocol revision before processing them.
+
+```typescript
+import { COMPUTER_USE_PROTOCOL_VERSION } from '@allternit/computer-use-protocol';
+
+console.log(COMPUTER_USE_PROTOCOL_VERSION); // "1.0"
+```
+
+## Surfaces, providers, and capabilities
+
+### Surfaces
+
+A surface is an Allternit runtime that can start, observe, or control a run.
+
+| Surface | Value |
+|---------|-------|
+| Platform web | `platform-web` |
+| Desktop | `desktop` |
+| Gizzi Code | `gizzi` |
+| Browser extension | `extension` |
+| API | `api` |
+
+### Providers
+
+A provider is the concrete driver that executes browser actions.
+
+| Provider | Value |
+|----------|-------|
+| Local Playwright | `local-playwright` |
+| Extension tab | `extension-tab` |
+| Browser-use | `browser-use` |
+| Stagehand | `stagehand` |
+
+### Capabilities
+
+Capabilities describe what a provider or surface can do.
+
+| Capability | Value |
+|------------|-------|
+| Navigate | `navigate` |
+| Observe DOM | `observe.dom` |
+| Observe accessibility tree | `observe.accessibility` |
+| Observe screenshot | `observe.screenshot` |
+| Pointer interaction | `interact.pointer` |
+| Keyboard interaction | `interact.keyboard` |
+| Tab management | `tabs` |
+| Frame handling | `frames` |
+| Dialog handling | `dialogs` |
+| File upload | `files.upload` |
+| File download | `files.download` |
+| Network inspection | `network.inspect` |
+| Console inspection | `console.inspect` |
+| Record | `record` |
+| Replay | `replay` |
+
+```typescript
+import { ProviderCapabilitiesSchema } from '@allternit/computer-use-protocol';
+
+const capabilities = ProviderCapabilitiesSchema.parse({
+  provider: 'extension-tab',
+  capabilities: ['navigate', 'observe.accessibility', 'interact.pointer', 'tabs'],
+  local: true,
+  attachedToUserSession: true,
+  supportsPrivateNetwork: true,
+  supportsPersistentProfile: true,
+});
+```
+
+## Sessions and devices
+
+### Session spec
+
+A `SessionSpec` ties a run to an account, conversation, and surface.
+
+```typescript
+import { SessionSpecSchema } from '@allternit/computer-use-protocol';
+
+const session = SessionSpecSchema.parse({
+  schemaVersion: '1.0',
+  sessionId: 'sess_01',
+  accountId: 'acct_01',
+  conversationId: 'conv_01',
+  createdBySurface: 'platform-web',
+  provider: 'extension-tab',
+  deviceId: 'device_macbook',
+  createdAt: '2026-07-10T12:00:00.000Z',
+});
+```
+
+### Paired devices
+
+Devices pair with an account so the platform knows which surfaces are trusted and where runs can be handed off.
+
+```typescript
+import { PairedDeviceSchema, DeviceTrustSchema } from '@allternit/computer-use-protocol';
+
+const device = PairedDeviceSchema.parse({
+  schemaVersion: '1.0',
+  deviceId: 'device_macbook',
+  accountId: 'acct_01',
+  displayName: 'MacBook Pro',
+  surfaces: ['desktop', 'extension'],
+  trust: 'trusted',
+  publicKeyThumbprint: 'a1b2c3d4e5f6789012345678',
+  pairedAt: '2026-07-10T12:00:00.000Z',
+  lastSeenAt: '2026-07-10T12:05:00.000Z',
+});
+```
+
+Device trust states: `unpaired`, `pending`, `trusted`, `revoked`.
+
+### Surface presence
+
+Surfaces broadcast presence so the platform can route runs to an online instance.
+
+```typescript
+import { SurfacePresenceSchema } from '@allternit/computer-use-protocol';
+
+const presence = SurfacePresenceSchema.parse({
+  surfaceInstanceId: 'platform_tab_1',
+  surface: 'platform-web',
+  accountId: 'acct_01',
+  deviceId: 'device_macbook',
+  status: 'online',
+  capabilities: ['navigate', 'observe.dom', 'interact.pointer'],
+  observedAt: '2026-07-10T12:00:00.000Z',
+});
+```
+
+## Runs and execution control
+
+### Browser run
+
+A `BrowserRun` is the top-level record of a task.
+
+```typescript
+import { BrowserRunSchema } from '@allternit/computer-use-protocol';
+
+const now = new Date().toISOString();
+
+const run = BrowserRunSchema.parse({
+  schemaVersion: '1.0',
+  runId: 'run_1',
+  conversationId: 'conv_1',
+  accountId: 'acct_1',
+  sessionId: 'sess_1',
+  objective: 'Find pricing',
+  state: 'running',
+  startedBy: 'platform-web',
+  provider: 'extension-tab',
+  createdAt: now,
+  updatedAt: now,
+  lastSequence: 0,
+});
+```
+
+Run states: `queued`, `running`, `approval_pending`, `paused`, `recovering`, `completed`, `failed`, `cancelled`.
+
+### Execution lease
+
+A lease prevents two surfaces from controlling the same run at the same time. The monotonic `epoch` lets receivers reject stale leases.
+
+```typescript
+import { ExecutionLeaseSchema } from '@allternit/computer-use-protocol';
+
+const lease = ExecutionLeaseSchema.parse({
+  leaseId: 'lease_1',
+  runId: 'run_1',
+  ownerSurfaceInstanceId: 'extension_window_1',
+  ownerDeviceId: 'device_macbook',
+  issuedAt: '2026-07-10T12:00:00.000Z',
+  expiresAt: '2026-07-10T12:05:00.000Z',
+  epoch: 2,
+  nonce: '0123456789abcdef',
+});
+```
+
+### Handoff and resume
+
+When a run moves between surfaces, a `HandoffRequest` carries the last acknowledged sequence so the new surface can resume from the right place.
+
+```typescript
+import { HandoffRequestSchema, ResumeCursorSchema } from '@allternit/computer-use-protocol';
+
+const handoff = HandoffRequestSchema.parse({
+  handoffId: 'handoff_1',
+  runId: 'run_1',
+  fromSurfaceInstanceId: 'platform_tab_1',
+  toSurfaceInstanceId: 'extension_window_1',
+  requestedAt: '2026-07-10T12:00:00.000Z',
+  lastAcknowledgedSequence: 41,
+  reason: 'User switched to the browser extension',
+});
+
+const cursor = ResumeCursorSchema.parse({
+  runId: 'run_1',
+  surfaceInstanceId: 'extension_window_1',
+  afterSequence: 41,
+  leaseEpoch: 2,
+});
+```
+
+## Observations and artifacts
+
+### Browser observation
+
+An observation is a snapshot of the browser state at a point in time.
+
+```typescript
+import { BrowserObservationSchema } from '@allternit/computer-use-protocol';
+
+const observation = BrowserObservationSchema.parse({
+  schemaVersion: '1.0',
+  observationId: 'obs_1',
+  sessionId: 'sess_1',
+  url: 'https://example.com/pricing',
+  title: 'Pricing',
+  capturedAt: '2026-07-10T12:00:00.000Z',
+  format: 'accessibility',
+  text: 'Starter $9 / Pro $29',
+  refs: [{
+    ref: 'e12',
+    role: 'button',
+    name: 'Buy Pro',
+    selector: 'button.buy-pro',
+  }],
+  artifacts: [],
+  truncated: false,
+  redactions: [],
+});
+```
+
+Observation formats: `accessibility`, `dom`, `screenshot`, `hybrid`.
+
+### Artifacts
+
+Artifacts attach binary or structured evidence to observations, actions, and receipts.
+
+```typescript
+import { ArtifactRefSchema } from '@allternit/computer-use-protocol';
+
+const screenshot = ArtifactRefSchema.parse({
+  artifactId: 'art_1',
+  kind: 'screenshot',
+  mediaType: 'image/png',
+  uri: 'https://api.allternit.com/artifacts/art_1',
+  sha256: 'a1b2c3d4e5f6...',
+  redacted: false,
+});
+```
+
+Artifact kinds: `screenshot`, `download`, `upload`, `trace`, `recording`, `receipt`.
+
+## Actions, approvals, and receipts
+
+### Action intent
+
+An `ActionIntent` describes a single step the provider should execute.
+
+```typescript
+import { ActionIntentSchema } from '@allternit/computer-use-protocol';
+
+const action = ActionIntentSchema.parse({
+  schemaVersion: '1.0',
+  actionId: 'action_1',
+  runId: 'run_1',
+  sessionId: 'sess_1',
+  kind: 'navigate',
+  reason: 'Open the pricing page',
+  targetRef: 'e12',
+  targetDescription: 'Pricing link',
+  input: { url: 'https://example.com/pricing' },
+  idempotencyKey: 'nav-pricing-1',
+});
+```
+
+Action kinds: `navigate`, `click`, `type`, `press`, `scroll`, `select`, `hover`, `wait`, `tab.open`, `tab.focus`, `tab.close`, `dialog.accept`, `dialog.dismiss`, `file.upload`, `download`, `extract`, `screenshot`.
+
+### Action state
+
+Actions move through a lifecycle: `planned`, `resolved`, `policy_checked`, `approval_pending`, `executing`, `observed`, `verified`, `committed`, `recovering`, `failed`.
+
+### Policy decisions and approvals
+
+Before a risky action runs, the policy layer can allow, deny, or require explicit approval.
+
+```typescript
+import { PolicyDecisionSchema, ApprovalRequestSchema } from '@allternit/computer-use-protocol';
+
+const decision = PolicyDecisionSchema.parse({
+  decision: 'require_approval',
+  policyId: 'policy_payment',
+  reason: 'Action targets a checkout button',
+  risk: 'high',
+});
+
+const approval = ApprovalRequestSchema.parse({
+  approvalId: 'approval_1',
+  runId: 'run_1',
+  actionId: 'action_1',
+  requestedAt: '2026-07-10T12:00:00.000Z',
+  summary: 'Click the checkout button',
+  sideEffect: 'May initiate a purchase',
+  risk: 'high',
+  expiresAt: '2026-07-10T12:05:00.000Z',
+});
+```
+
+### Receipts
+
+A `Receipt` is the durable outcome of an action or run.
+
+```typescript
+import { ReceiptSchema } from '@allternit/computer-use-protocol';
+
+const receipt = ReceiptSchema.parse({
+  receiptId: 'rcpt_1',
+  runId: 'run_1',
+  actionId: 'action_1',
+  outcome: 'committed',
+  evidence: [],
+  issuedAt: '2026-07-10T12:00:00.000Z',
+});
+```
+
+Receipt outcomes: `committed`, `denied`, `failed`, `cancelled`.
+
+## Events
+
+`BrowserEvent` is the ordered, sequenced envelope used for run streaming and audit logs.
+
+```typescript
+import { BrowserEventSchema } from '@allternit/computer-use-protocol';
+
+const event = BrowserEventSchema.parse({
+  schemaVersion: '1.0',
+  eventId: 'event_1',
+  runId: 'run_1',
+  sessionId: 'sess_1',
+  sequence: 3,
+  emittedAt: '2026-07-10T12:00:01.000Z',
+  sourceSurface: 'extension',
+  type: 'action.state_changed',
+  payload: { actionId: 'action_1', state: 'executing' },
+});
+```
+
+Event types: `run.started`, `run.paused`, `run.resumed`, `run.completed`, `run.failed`, `run.cancelled`, `action.state_changed`, `observation.created`, `approval.required`, `approval.resolved`, `artifact.created`, `receipt.issued`, `handoff.requested`, `handoff.completed`.
+
+## Trajectories, workflows, and skills
+
+### Browser trajectory
+
+A trajectory records the full sequence of actions, observations, and receipts for a run.
+
+```typescript
+import { BrowserTrajectorySchema } from '@allternit/computer-use-protocol';
+
+const trajectory = BrowserTrajectorySchema.parse({
+  schemaVersion: '1.0',
+  trajectoryId: 'traj_1',
+  runId: 'run_1',
+  sessionId: 'sess_1',
+  objective: 'Find pricing',
+  createdAt: '2026-07-10T12:00:00.000Z',
+  provider: 'extension-tab',
+  steps: [{
+    stepId: 'step_1',
+    action: {
+      schemaVersion: '1.0',
+      actionId: 'action_1',
+      runId: 'run_1',
+      sessionId: 'sess_1',
+      kind: 'navigate',
+      reason: 'Open the pricing page',
+      input: { url: 'https://example.com/pricing' },
+    },
+    status: 'committed',
+  }],
+  observations: [],
+  receipts: [],
+});
+```
+
+### Workflow spec
+
+A `BrowserWorkflowSpec` turns a successful trajectory into a reusable, parameterizable workflow.
+
+```typescript
+import { BrowserWorkflowSpecSchema } from '@allternit/computer-use-protocol';
+
+const workflow = BrowserWorkflowSpecSchema.parse({
+  schemaVersion: '1.0',
+  workflowId: 'workflow_1',
+  title: 'Find pricing',
+  description: 'Repeat the pricing lookup',
+  sourceRunId: 'run_1',
+  provider: 'extension-tab',
+  inputs: [
+    { name: 'site', description: 'Site to search', required: true, secret: false },
+  ],
+  steps: [{
+    id: 'step_1',
+    kind: 'navigate',
+    input: { url: 'https://example.com/pricing' },
+    reason: 'Open the pricing page',
+  }],
+  safety: {
+    requiresApprovalFor: ['click'],
+    redactions: [],
+  },
+  createdAt: '2026-07-10T12:00:00.000Z',
+});
+```
+
+### Skill manifest
+
+A skill manifest publishes a workflow as a reusable Allternit skill.
+
+```typescript
+import { BrowserSkillManifestSchema } from '@allternit/computer-use-protocol';
+
+const skill = BrowserSkillManifestSchema.parse({
+  schemaVersion: '1.0',
+  skillId: 'skill_1',
+  name: 'Find pricing',
+  description: 'Repeat the pricing lookup',
+  workflowId: 'workflow_1',
+  version: '1.0.0',
+  tags: ['browser', 'workflow'],
+  createdAt: '2026-07-10T12:00:00.000Z',
+});
+```
+
+## Implementing a provider
+
+The package exports a `BrowserProvider` interface that any concrete driver can implement.
+
+```typescript
+import type { BrowserProvider } from '@allternit/computer-use-protocol';
+
+class MyPlaywrightProvider implements BrowserProvider {
+  readonly capabilities = {
+    provider: 'local-playwright',
+    capabilities: ['navigate', 'observe.dom', 'interact.pointer', 'interact.keyboard'],
+    local: true,
+    attachedToUserSession: false,
+    supportsPrivateNetwork: true,
+    supportsPersistentProfile: true,
+  } as const;
+
+  async observe(sessionId: string) {
+    // Return a BrowserObservation
+  }
+
+  async execute(action) {
+    // Execute the action and return BrowserEvent[]
+  }
+
+  async close(sessionId: string) {
+    // Clean up the session
+  }
+}
+```
+
+## Validation and error handling
+
+Every export is a Zod schema, so invalid data throws a `ZodError` with detailed path information.
+
+```typescript
+import { z } from 'zod';
+import { BrowserObservationSchema } from '@allternit/computer-use-protocol';
+
+try {
+  BrowserObservationSchema.parse({ schemaVersion: '0.9' /* ... */ });
+} catch (error) {
+  if (error instanceof z.ZodError) {
+    console.error(error.issues);
+  }
+}
+```
+
+You can also use `.safeParse()` for non-throwing validation:
+
+```typescript
+const result = BrowserObservationSchema.safeParse(unknownPayload);
+
+if (!result.success) {
+  console.error(result.error.flatten());
+} else {
+  const observation = result.data;
+}
+```
+
+## TypeScript types
+
+All schemas export inferred TypeScript types:
+
+```typescript
+import type {
+  Surface,
+  ProviderKind,
+  Capability,
+  ProviderCapabilities,
+  SessionSpec,
+  PairedDevice,
+  SurfacePresence,
+  BrowserRun,
+  ExecutionLease,
+  HandoffRequest,
+  ResumeCursor,
+  BrowserObservation,
+  ObservationRef,
+  ArtifactRef,
+  ActionIntent,
+  ActionKind,
+  ActionState,
+  PolicyDecision,
+  ApprovalRequest,
+  Receipt,
+  BrowserEvent,
+  BrowserTrajectory,
+  BrowserWorkflowSpec,
+  BrowserSkillManifest,
+  BrowserProvider,
+} from '@allternit/computer-use-protocol';
+```
+
+## Related pages
+
+- [Computer Use SDK](/sdk/computer-use) — HTTP client for the Allternit Computer Use Engine
+- [ACI API](/api/aci) — gateway surface for browser-automation runs
+- [Computer Use MCP Server](/tools/computer-use-mcp) — local desktop automation over MCP
+- [Computer Use Tools](/tools/computer-use) — engine-level computer-use tools
+- [Tool Belt](/tools/tool-belt) — native Allternit tools
+- [Build a Custom Tool](/tools/build-a-tool) — registering custom tools
+- [Capsule SDK](/sdk/capsule) — runtime-surface lifecycle contracts

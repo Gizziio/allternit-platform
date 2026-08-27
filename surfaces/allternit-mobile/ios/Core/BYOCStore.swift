@@ -18,6 +18,12 @@ final class BYOCStore: ObservableObject {
     @Published private(set) var isCreating = false
     @Published private(set) var createError: String? = nil
     @Published private(set) var isRevokingId: String? = nil
+
+    /// Views report/update create-flow errors through this setter; the
+    /// property stays `private(set)` so all mutation goes through the store.
+    func setCreateError(_ message: String?) {
+        createError = message
+    }
     @Published private(set) var isTesting = false
     @Published private(set) var testResult: CloudCredentialTestResult? = nil
 

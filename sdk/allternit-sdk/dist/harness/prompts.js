@@ -82,7 +82,9 @@ export function injectSystemPrompt(messages, hasTools = false) {
     }
     // System message exists - prepend Allternit prompt
     const existingContent = messages[systemIndex].content;
-    const mergedContent = `${fullSystemPrompt}\n\n---\n\n${existingContent}`;
+    const mergedContent = typeof existingContent === 'string'
+        ? `${fullSystemPrompt}\n\n---\n\n${existingContent}`
+        : [{ type: 'text', text: fullSystemPrompt }, { type: 'text', text: '---' }, ...existingContent];
     const newMessages = [...messages];
     newMessages[systemIndex] = {
         ...messages[systemIndex],
@@ -106,10 +108,14 @@ export function injectProviderPrompt(messages, provider) {
     if (systemIndex === -1) {
         return messages;
     }
+    const existingContent = messages[systemIndex].content;
+    const mergedContent = typeof existingContent === 'string'
+        ? `${existingContent}\n\n${providerAddendum}`
+        : [...existingContent, { type: 'text', text: providerAddendum }];
     const newMessages = [...messages];
     newMessages[systemIndex] = {
         ...messages[systemIndex],
-        content: `${messages[systemIndex].content}\n\n${providerAddendum}`,
+        content: mergedContent,
     };
     return newMessages;
 }
@@ -134,8 +140,16 @@ export function validateMessages(messages) {
         if (!validRoles.includes(message.role)) {
             throw new Error(`Message at index ${index} has invalid role: ${message.role}`);
         }
-        if (typeof message.content !== 'string') {
-            throw new Error(`Message at index ${index} content must be a string`);
+        const content = message.content;
+        if (typeof content !== 'string' && !Array.isArray(content)) {
+            throw new Error(`Message at index ${index} content must be a string or array of content blocks`);
+        }
+        if (Array.isArray(content)) {
+            for (const [blockIndex, block] of content.entries()) {
+                if (!block || typeof block !== 'object' || !('type' in block)) {
+                    throw new Error(`Message at index ${index} content block ${blockIndex} missing type`);
+                }
+            }
         }
     }
     return true;

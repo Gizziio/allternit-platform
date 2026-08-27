@@ -13,7 +13,16 @@
  */
 
 import { getOauthConfig } from '../constants/oauth'
-import { getClaudeAIOAuthTokens } from '../utils/auth'
+
+// Lazily loaded to avoid a static circular import through utils/auth.js
+// (requires async module init). getBridgeAccessToken must stay synchronous
+// — it's called directly by sync code paths and handed out as a plain
+// callback reference (getAccessToken: getBridgeAccessToken) elsewhere — so
+// this is kicked off eagerly at module load rather than awaited inline.
+let authModule: typeof import('../utils/auth') | undefined
+void import('../utils/auth').then(m => {
+  authModule = m
+})
 
 /** Ant-only dev override: CLAUDE_BRIDGE_OAUTH_TOKEN, else undefined. */
 export function getBridgeTokenOverride(): string | undefined {
@@ -37,7 +46,9 @@ export function getBridgeBaseUrlOverride(): string | undefined {
  * keychain. Undefined means "not logged in".
  */
 export function getBridgeAccessToken(): string | undefined {
-  return getBridgeTokenOverride() ?? getClaudeAIOAuthTokens()?.accessToken
+  return (
+    getBridgeTokenOverride() ?? authModule?.getClaudeAIOAuthTokens()?.accessToken
+  )
 }
 
 /**

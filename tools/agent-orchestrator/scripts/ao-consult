@@ -1,37 +1,20 @@
 #!/usr/bin/env bash
-# ao-consult [repo-dir] — synchronous one-shot consult of the persistent
-# steering session "ao-steer". Reads the request on stdin, prints the steering
-# agent's answer on stdout. Bridges the agent-orchestrator tmux tooling into
-# hook scripts (e.g. .steering/bin/steer-stop.sh) that need a blocking
-# question -> answer round-trip against a SEPARATE, persistent agent session.
-#
-# Protocol (bootstrapped once into ao-steer): when sent a request file path,
-# the steering agent writes its full reply to <dir>/answer.md (first line
-# APPROVE or STEER) and then touches <dir>/answer.sentinel.
-#
-# Fails non-zero on any transport problem — callers should fail open.
-set -uo pipefail
+# ao-consult [repo-dir] — thin shim over `allternit-rails steer consult`.
+# Reads the steering request on stdin, prints the steering agent's answer on
+# stdout. Maintains the same blocking question -> answer contract as the
+# original tmux-based implementation, but uses the Rails steering coordinator
+# instead of a persistent `ao-steer` session.
+set -euo pipefail
+
+command -v allternit-rails >/dev/null 2>&1 || {
+  echo "error: allternit-rails is not on PATH" >&2
+  exit 1
+}
 
 REPO="${1:-$PWD}"
-SLUG="${AO_CONSULT_SLUG:-steer}"
-TIMEOUT="${AO_CONSULT_TIMEOUT:-540}"
-# Default steering agent is a DIFFERENT model family than the usual worker
-# (kimi) — same-model checkers share the worker's blind spots. Override per
-# machine with AO_CONSULT_AGENT_CMD.
-AGENT_CMD="${AO_CONSULT_AGENT_CMD:-claude --dangerously-skip-permissions}"
+TMPFILE=$(mktemp -t ao-consult-prompt)
+trap 'rm -f "$TMPFILE"' EXIT
+cat > "$TMPFILE"
+[ -s "$TMPFILE" ] || { echo "ao-consult: empty request on stdin" >&2; exit 1; }
 
-REQDIR="$HOME/.agent-orchestrator/consults/$(date +%Y%m%d-%H%M%S)-$$"
-mkdir -p "$REQDIR"
-cat > "$REQDIR/request.md"
-[ -s "$REQDIR/request.md" ] || { echo "ao-consult: empty request on stdin" >&2; exit 1; }
-
-if ! tmux has-session -t "=ao-$SLUG:" 2>/dev/null; then
-  ao-spawn "$SLUG" "$REPO" "$AGENT_CMD" >/dev/null || exit 1
-  sleep 8  # let the TUI finish starting before pasting
-  ao-send "$SLUG" "You are the steering reviewer for this repository — a separate working agent consults you at checkpoints. You are READ-ONLY: never modify files, never run destructive commands. Protocol: whenever I send you a path to a request file, read it, write your full reply to <same-dir>/answer.md whose FIRST LINE is exactly APPROVE or STEER (per the instructions in the request), then run: touch <same-dir>/answer.sentinel — the sentinel is mandatory, it is how the requester unblocks. Acknowledge with one line." >&2 || exit 1
-  sleep 5
-fi
-
-ao-send "$SLUG" "New steering request: $REQDIR/request.md — read it and follow your steering protocol." >&2 || exit 1
-ao-watch "$SLUG" "$REQDIR/answer.sentinel" "$TIMEOUT" 10 >/dev/null || exit 1
-cat "$REQDIR/answer.md"
+exec allternit-rails --root "$REPO" steer consult --cwd "$REPO" --prompt-file "$TMPFILE"

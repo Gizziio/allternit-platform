@@ -1,0 +1,29 @@
+{
+  "name": "@allternit/office-sheets-editor",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared Allternit Sheets editor component (GenOffice xlsx sidecar via office-engine gateway)",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    }
+  },
+  "dependencies": {
+    "jszip": "^3.10.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.28",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  }
+}

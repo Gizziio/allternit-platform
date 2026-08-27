@@ -9,10 +9,11 @@ import { spawn, ChildProcess } from 'node:child_process';
 import * as net from 'node:net';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { createHash } from 'node:crypto';
-import { app, dialog } from 'electron';
+import * as os from 'node:os';
+import { createHash, randomBytes } from 'node:crypto';
+import { app, dialog, session } from 'electron';
 import log from 'electron-log';
-import { deleteAllMiniAppSecrets, getMiniAppSecretEnvironment, listMiniAppSecrets } from './mini-app-secrets.js';
+import { deleteAllMiniAppSecrets, getMiniAppSecretEnvironment, listMiniAppSecrets, setMiniAppSecret } from './mini-app-secrets.js';
 import { sandboxCommand, type MiniAppSandboxPermissions } from './mini-app-sandbox.js';
 import { startMiniAppPolicyProxy, type MiniAppPolicyProxy } from './mini-app-policy-proxy.js';
 import { buildOAuthEnv, collectOAuthProviders } from './mini-app-oauth-inject.js';
@@ -134,8 +135,115 @@ function processEnvironment(config: MiniAppConfig): NodeJS.ProcessEnv {
   return { ...environment, ...getMiniAppSecretEnvironment(config.appId, config.requestedSecrets || []), ALLTERNIT_MINIAPP_ID: config.appId };
 }
 
+// ─── Vault Viewer (vendored WebObsidian) ────────────────────────────────────
+// See services/vault-viewer/PROVENANCE.md for the full integration writeup
+// (why vendored, auth model, config surface).
+
+let resolvedVaultViewerRoot: string | null | undefined;
+
+function resolveVaultViewerRoot(): string | null {
+  if (resolvedVaultViewerRoot !== undefined) return resolvedVaultViewerRoot;
+  const candidates = app.isPackaged
+    ? [path.join(process.resourcesPath ?? '', 'vault-viewer')]
+    : [path.join(app.getAppPath(), '..', '..', 'services', 'vault-viewer')];
+  for (const candidate of candidates) {
+    try {
+      if (fs.existsSync(candidate)) {
+        resolvedVaultViewerRoot = candidate;
+        return candidate;
+      }
+    } catch {
+      // keep checking
+    }
+  }
+  resolvedVaultViewerRoot = null;
+  return null;
+}
+
+/**
+ * Matches gizzi-code's own DEFAULT_BRAIN_PATH (cmd/gizzi-code/src/cli/commands/brain/lib.ts).
+ * Known v1 limitation: does not read a customized `userSettings.brain.path`
+ * override (that lives in gizzi-code's own settings store, not reachable
+ * from this process without a cross-service call) — the default covers the
+ * overwhelmingly common case.
+ */
+function vaultViewerVaultPath(): string {
+  return path.join(os.homedir(), 'brain');
+}
+
+function vaultViewerEnvironment(): NodeJS.ProcessEnv {
+  const vaultPath = vaultViewerVaultPath();
+  if (!listMiniAppSecrets('vault-viewer').includes('WEBOBSIDIAN_PASSWORD')) {
+    setMiniAppSecret('vault-viewer', 'WEBOBSIDIAN_PASSWORD', randomBytes(24).toString('hex'));
+  }
+  const { WEBOBSIDIAN_PASSWORD } = getMiniAppSecretEnvironment('vault-viewer', ['WEBOBSIDIAN_PASSWORD']);
+  return {
+    VAULT_PATH: vaultPath,
+    ALLOWED_ROOTS: vaultPath,
+    DATA_DIR: path.join(app.getPath('userData'), 'vault-viewer-data'),
+    HOST: '127.0.0.1',
+    PORT: '8787',
+    WEBOBSIDIAN_PASSWORD,
+  };
+}
+
+/**
+ * Logs in with the generated WEBOBSIDIAN_PASSWORD, one-time-promotes it to
+ * the stored user password if this is the first login (so `mustChangePassword`
+ * never becomes true and the forced password-change screen never shows —
+ * see PROVENANCE.md's "Auth model" section), then injects the resulting
+ * session cookie directly into the mini app's Electron partition so the
+ * embedded webview loads already authenticated.
+ */
+async function authenticateVaultViewer(port: number): Promise<{ success: boolean; error?: string }> {
+  const { WEBOBSIDIAN_PASSWORD: password } = getMiniAppSecretEnvironment('vault-viewer', ['WEBOBSIDIAN_PASSWORD']);
+  if (!password) return { success: false, error: 'vault-viewer password unavailable' };
+  const base = `http://127.0.0.1:${port}`;
+  try {
+    const loginRes = await fetch(`${base}/auth/login`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ password }),
+    });
+    if (!loginRes.ok) return { success: false, error: `vault-viewer login failed (${loginRes.status})` };
+    const loginBody = (await loginRes.json()) as { mustChangePassword?: boolean };
+
+    const setCookieHeaders =
+      typeof (loginRes.headers as { getSetCookie?: () => string[] }).getSetCookie === 'function'
+        ? (loginRes.headers as unknown as { getSetCookie: () => string[] }).getSetCookie()
+        : [loginRes.headers.get('set-cookie') || ''];
+    const tokenCookie = setCookieHeaders.find((c) => c.startsWith('webobsidian_token='));
+    if (!tokenCookie) return { success: false, error: 'vault-viewer login did not return a session cookie' };
+    const token = tokenCookie.split(';')[0]!.split('=')[1]!;
+
+    if (loginBody.mustChangePassword) {
+      await fetch(`${base}/auth/change-password`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', cookie: `webobsidian_token=${token}` },
+        body: JSON.stringify({ currentPassword: password, newPassword: password }),
+      });
+    }
+
+    const expirationDate = Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60;
+    await session.fromPartition('persist:allternit-vault-viewer').cookies.set({
+      url: base,
+      name: 'webobsidian_token',
+      value: token,
+      httpOnly: true,
+      expirationDate,
+    });
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
 function resolveConfig(id: string): MiniAppConfig | undefined {
-  return MINI_APP_CONFIGS[id] || dynamicConfig(id) || undefined;
+  const base = MINI_APP_CONFIGS[id];
+  if (base && id === 'vault-viewer') {
+    return { ...base, workingDirectory: resolveVaultViewerRoot() ?? undefined };
+  }
+  return base || dynamicConfig(id) || undefined;
 }
 
 // ─── OAuth token injection ───────────────────────────────────────────────────
@@ -248,6 +356,18 @@ export const MINI_APP_CONFIGS: Record<string, MiniAppConfig> = {
     port: 0,
     harnessManaged: true,
   },
+  // Vendored WebObsidian — see services/vault-viewer/PROVENANCE.md. Unlike
+  // the above (globally npm/curl-installed binaries), this is a vendored
+  // monorepo directory needing a one-time local build; `workingDirectory`
+  // is injected lazily by resolveConfig() since it depends on app.isPackaged.
+  'vault-viewer': {
+    packageName: 'vault-viewer',
+    installCommand: '/bin/bash',
+    installArgs: ['-lc', 'npm install && npm run build'],
+    binary: 'node',
+    startArgs: ['server/dist/index.js'],
+    port: 8787,
+  },
 };
 
 // ─── State ────────────────────────────────────────────────────────────────────
@@ -326,7 +446,7 @@ export async function installMiniApp(
 
   return new Promise((resolve) => {
     const proc = spawn(command.binary, command.args, {
-      env: processEnvironment(config),
+      env: { ...processEnvironment(config), ...(id === 'vault-viewer' ? vaultViewerEnvironment() : {}) },
       cwd: config.workingDirectory,
       shell: !config.dynamic,
     });
@@ -403,7 +523,12 @@ export async function startMiniApp(
   }
 
   const proc = spawn(command.binary, command.args, {
-    env: { ...processEnvironment(config), ...(proxy?.environment || {}), ...(await oauthEnvironment(config)) },
+    env: {
+      ...processEnvironment(config),
+      ...(proxy?.environment || {}),
+      ...(await oauthEnvironment(config)),
+      ...(id === 'vault-viewer' ? vaultViewerEnvironment() : {}),
+    },
     cwd: config.workingDirectory,
     shell: !config.dynamic,
     detached: false,
@@ -450,6 +575,14 @@ export async function startMiniApp(
     await new Promise((r) => setTimeout(r, 500));
     const up = await isPortOpen(config.port, 500);
     if (up) {
+      if (id === 'vault-viewer') {
+        const auth = await authenticateVaultViewer(config.port);
+        if (!auth.success) {
+          // Non-fatal: the webview falls back to showing its own login
+          // screen (degraded, but not broken) if cookie priming fails.
+          onProgress?.({ id, line: `⚠ vault-viewer auto-login failed: ${auth.error}`, type: 'stderr' });
+        }
+      }
       onProgress?.({ id, line: `✓ ${config.binary} is running on :${config.port}`, type: 'info' });
       return { success: true };
     }

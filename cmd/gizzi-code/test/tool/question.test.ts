@@ -1,8 +1,8 @@
 // @ts-nocheck
 import { describe, expect, test, spyOn, beforeEach, afterEach } from "bun:test"
 import { z } from "zod"
-import { QuestionTool } from "../../src/tool/question"
-import * as QuestionModule from "../../src/question"
+import { QuestionTool } from "../../src/runtime/tools/builtins/question"
+import * as QuestionModule from "../../src/runtime/integrations/question"
 
 const ctx = {
   sessionID: "test-session",

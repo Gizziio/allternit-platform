@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Camera, CircleAlert, TriangleAlert } from 'lucide-react';
+import { AProtocolWordmark } from '@/components/AProtocolWordmark';
 
 /**
  * Post-install onboarding for the Allternit browser extension.
@@ -101,11 +102,8 @@ export default function ExtensionInstalledPage() {
   return (
     <main className="min-h-screen bg-[#1A1612] text-[#E8E2DA] flex flex-col items-center px-6 py-10 select-none">
       {/* Wordmark */}
-      <div className="flex items-baseline gap-1.5 mb-4" aria-label="Allternit">
-        <span className="text-[#D97757] font-mono text-lg tracking-wide">A://</span>
-        <span className="text-[#C8BDB4] text-lg tracking-[0.18em] font-[var(--font-research)]">
-          LLTERNIT
-        </span>
+      <div className="mb-4" aria-label="Allternit">
+        <AProtocolWordmark theme="light" height={18} />
       </div>
 
       {/* Extension status pill */}

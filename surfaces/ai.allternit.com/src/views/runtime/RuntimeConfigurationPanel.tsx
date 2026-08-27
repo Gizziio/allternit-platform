@@ -28,7 +28,8 @@ type RuntimeManagementView =
   | "runtime-ops"
   | "budget-dashboard"
   | "replay-manager"
-  | "prewarm-manager";
+  | "prewarm-manager"
+  | "hud";
 
 interface RuntimeConfigurationPanelProps {
   settings: RuntimeSettings | null;
@@ -704,6 +705,11 @@ export function RuntimeConfigurationPanel({
               onClick={
                 onOpenView ? () => onOpenView("prewarm-manager") : undefined
               }
+            />
+            <ManagementLink
+              label="HUD"
+              description="Live operational dashboard for the local runtime."
+              onClick={onOpenView ? () => onOpenView("hud") : undefined}
             />
           </div>
         </div>

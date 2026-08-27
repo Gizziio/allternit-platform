@@ -3,7 +3,7 @@
  * https://docs.mistral.ai/
  */
 
-import { Message, Tool, HarnessError, HarnessErrorCode, HarnessResponse } from '../../harness/types';
+import { Message, Tool, HarnessError, HarnessErrorCode, HarnessResponse, messageContentToString } from '../../harness/types';
 
 export interface MistralConfig {
   apiKey: string;
@@ -131,7 +131,7 @@ export class AllternitMistral {
   private transformMessages(messages: Message[]): MistralRequest['messages'] {
     return messages.map(msg => ({
       role: msg.role,
-      content: msg.content,
+      content: messageContentToString(msg.content),
       ...(msg.name && { name: msg.name }),
       ...(msg.tool_calls && {
         tool_calls: msg.tool_calls.map(tc => ({

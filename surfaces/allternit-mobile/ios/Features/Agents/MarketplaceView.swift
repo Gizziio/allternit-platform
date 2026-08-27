@@ -1,7 +1,8 @@
 import SwiftUI
 
-/// Agent marketplace — browse/search/install/rate shared agents
-/// (PalsHub-equivalent). Reached from AgentHubView's "Discover" entry point.
+/// Agent | bot marketplace — browse/search/install/rate shared agents
+/// and bots (PalsHub-equivalent). Reached from AgentHubView's "Discover"
+/// entry point.
 struct MarketplaceView: View {
     @StateObject private var store = MarketplaceStore.shared
     @State private var searchText = ""
@@ -18,7 +19,7 @@ struct MarketplaceView: View {
                     .font(.caption)
                     .foregroundColor(Theme.statusWarning)
             } else if store.listings.isEmpty {
-                Text("No published agents yet.")
+                Text("No published agents or bots yet.")
                     .font(.caption)
                     .foregroundColor(Color("TextSecondary"))
             } else {
@@ -26,13 +27,16 @@ struct MarketplaceView: View {
                     NavigationLink(destination: MarketplaceListingDetailView(listingId: listing.id)) {
                         MarketplaceListingRow(listing: listing)
                     }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("\(listing.title). \(listing.description)")
+                    .accessibilityHint("Opens details")
                 }
             }
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
         .background(Color("BgPrimary"))
-        .navigationTitle("Discover Agents")
+        .navigationTitle("Discover agents | bots")
         .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $searchText, prompt: "Search agents")
         .onChange(of: searchText) { _, newValue in
@@ -57,22 +61,25 @@ private struct MarketplaceListingRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(listing.title)
+            Text(listing.title.isEmpty ? "Untitled agent" : listing.title)
                 .font(.subheadline)
                 .fontWeight(.medium)
                 .foregroundColor(Color("TextPrimary"))
-            Text(listing.description)
+            Text(listing.description.isEmpty ? "No description provided." : listing.description)
                 .font(.caption)
-                .foregroundColor(Color("TextSecondary"))
+                .foregroundColor(listing.description.isEmpty ? Color("TextSecondary").opacity(0.7) : Color("TextSecondary"))
                 .lineLimit(2)
             HStack(spacing: 10) {
                 if let publisherName = listing.publisherName {
                     Label(publisherName, systemImage: "person.circle")
+                        .accessibilityLabel("Published by \(publisherName)")
                 }
                 if listing.ratingCount > 0 {
                     Label(String(format: "%.1f (%d)", listing.ratingAvg, listing.ratingCount), systemImage: "star.fill")
+                        .accessibilityLabel("Rating \(String(format: "%.1f", listing.ratingAvg)) out of 5 from \(listing.ratingCount) reviews")
                 }
                 Label("\(listing.installCount)", systemImage: "arrow.down.circle")
+                    .accessibilityLabel("\(listing.installCount) installs")
             }
             .font(.caption2)
             .foregroundColor(Color("TextSecondary"))
@@ -224,12 +231,21 @@ private struct RateListingSheet: View {
         NavigationStack {
             Form {
                 Section {
-                    Picker("Rating", selection: $rating) {
+                    HStack(spacing: 8) {
                         ForEach(1...5, id: \.self) { value in
-                            Text(String(repeating: "★", count: value)).tag(value)
+                            Button(action: { rating = value }) {
+                                Image(systemName: value <= rating ? "star.fill" : "star")
+                                    .font(.system(size: 28, weight: .semibold))
+                                    .foregroundColor(.yellow)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("\(value) stars")
                         }
                     }
-                    .pickerStyle(.segmented)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 8)
+                } header: {
+                    Text("Rating")
                 }
                 Section {
                     TextEditor(text: $review)
@@ -295,6 +311,11 @@ struct PublishAgentSheet: View {
     @State private var isSaving = false
     @State private var saveError: String? = nil
 
+    private var selectedAgentName: String {
+        guard let selectedAgentId else { return "Choose an agent" }
+        return hubStore.agents.first { $0.id == selectedAgentId }?.name ?? "Choose an agent"
+    }
+
     init(sourceAgent: AgentRecord? = nil) {
         self.sourceAgent = sourceAgent
         _selectedAgentId = State(initialValue: sourceAgent?.id)
@@ -306,12 +327,37 @@ struct PublishAgentSheet: View {
             Form {
                 if sourceAgent == nil {
                     Section {
-                        Picker("Agent", selection: $selectedAgentId) {
-                            Text("Choose an agent").tag(String?.none)
+                        Menu {
+                            Button(action: { selectedAgentId = nil }) {
+                                HStack {
+                                    if selectedAgentId == nil {
+                                        Image(systemName: "checkmark")
+                                    }
+                                    Text("Choose an agent")
+                                }
+                            }
                             ForEach(hubStore.agents) { agent in
-                                Text(agent.name).tag(agent.id as String?)
+                                Button(action: { selectedAgentId = agent.id }) {
+                                    HStack {
+                                        if selectedAgentId == agent.id {
+                                            Image(systemName: "checkmark")
+                                        }
+                                        Text(agent.name)
+                                    }
+                                }
+                            }
+                        } label: {
+                            HStack {
+                                Text(selectedAgentName)
+                                    .foregroundColor(Color("TextPrimary"))
+                                Spacer()
+                                Image(systemName: "chevron.up.chevron.down")
+                                    .font(.caption)
+                                    .foregroundColor(Color("TextSecondary"))
                             }
                         }
+                    } header: {
+                        Text("Agent")
                     }
                 }
                 Section {

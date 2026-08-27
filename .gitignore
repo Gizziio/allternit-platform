@@ -1,5 +1,7 @@
 node_modules/
 services/open-connector/data/
+services/vault-viewer/data/
+services/vault-viewer/server/public/
 dist/
 dist-bundle/
 target/
@@ -8,6 +10,7 @@ rails/reference/beads/
 .beads/
 *.log
 *.png
+!surfaces/ai.allternit.com/public/remote-control-*.png
 *.mov
 *.zip
 *.tgz
@@ -103,6 +106,7 @@ dispatch-screenshots/
 # level-2 reorg 2026-07-22: tenant secrets + committed browser profiles
 *.env
 !.env.example
+.dev.vars
 canvas_demo_profile/
 __pycache__/
 *.egg-info/
@@ -111,6 +115,7 @@ domains/computer-use/build/
 # untracked 2026-07-23: gateway secrets were committed; rotated + removed from tree
 .openclaw.env
 .terminal-server.env
+.wrangler/
 cmd/gizzi-code/packages/sdk/dist/
 
 # large vendored binaries — fetch/build via scripts, not git (see infrastructure/mesh/tsnet-ios/build-sidecar.sh)
@@ -124,3 +129,4 @@ infrastructure/mesh/tsnet-ios/Harness/harness
 
 # Publication edition photos are pipeline artifacts and deploy with the site
 !surfaces/ai.allternit.com/public/images/editions/**/*.png
+.parity-reports-archive/

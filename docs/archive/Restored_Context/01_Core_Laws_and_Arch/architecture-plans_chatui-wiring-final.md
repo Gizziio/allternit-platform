@@ -56,7 +56,7 @@ POST /v1/sessions
 **Required payload:**
 ```json
 {
-  "brain_profile_id": "opencode-acp",
+  "brain_profile_id": "gizzi-acp",
   "source": "chat"
 }
 ```

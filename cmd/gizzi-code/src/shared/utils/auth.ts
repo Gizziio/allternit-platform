@@ -20,10 +20,8 @@ import {
 } from '../../runtime/services/mockRateLimits.js'
 import {
   isOAuthTokenExpired,
-  refreshOAuthToken,
   shouldUseClaudeAIAuth,
-} from '../../runtime/services/oauth/client.js'
-import { getOauthProfileFromOauthToken } from '../../runtime/services/oauth/getOauthProfile.js'
+} from '../../runtime/services/oauth/scopes.js'
 import type { OAuthTokens, SubscriptionType } from '../../runtime/services/oauth/types.js'
 import {
   getApiKeyFromFileDescriptor,
@@ -33,7 +31,7 @@ import {
   maybeRemoveApiKeyFromMacOSKeychainThrows,
   normalizeApiKeyForConfig,
 } from './authPortable.js'
-import { clearBetasCaches } from './betas.js'
+import { clearBetasCaches } from './betasCache.js'
 import {
   type AccountInfo,
   checkHasTrustDialogAccepted,
@@ -872,6 +870,9 @@ async function checkAndRefreshOAuthTokenIfNeededImpl(
     }
 
     logEvent('tengu_oauth_token_refresh_starting', {})
+    const { refreshOAuthToken } = await import(
+      '../../runtime/services/oauth/client.js'
+    )
     const refreshedTokens = await refreshOAuthToken(lockedTokens.refreshToken, {
       scopes: shouldUseClaudeAIAuth(lockedTokens.scopes)
         ? undefined
@@ -1125,6 +1126,9 @@ export async function validateForceLoginOrg(): Promise<OrgValidationResult> {
     source === 'GIZZI_OAUTH_TOKEN' ||
     source === 'GIZZI_OAUTH_TOKEN_FILE_DESCRIPTOR'
 
+  const { getOauthProfileFromOauthToken } = await import(
+    '../../runtime/services/oauth/getOauthProfile.js'
+  )
   const profile = await getOauthProfileFromOauthToken(tokens.accessToken)
   if (!profile) {
     return {

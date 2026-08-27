@@ -1,0 +1,201 @@
+---
+title: Fallback Credits
+description: Credit policy and ledger for primary-provider failures resolved by fallback providers.
+---
+
+# Fallback Credits
+
+When a request fails on the primary provider but succeeds on a fallback provider, Allternit can credit the primary failure back to your organization's spend limit. This prevents double-charging for retried requests.
+
+The fallback credit policy is organization-scoped and gated to owners and admins.
+
+## Base URL
+
+```text
+https://api.allternit.com/api/v1/admin/fallback-credits
+```
+
+For local development:
+
+```text
+http://127.0.0.1:8013/api/v1/admin/fallback-credits
+```
+
+## Policy configuration
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `enabled` | boolean | Whether reconciliation runs at all |
+| `eligible_statuses` | string[] | Failure statuses eligible for credit |
+| `max_credit_percent` | integer | Maximum credit as a percent of the original cost (0–100) |
+| `credit_window_hours` | integer | Lookback window for matching fallback events |
+| `auto_apply` | boolean | Whether credits are applied automatically |
+
+Eligible statuses: `refusal`, `error`, `rate_limited`, `budget_exceeded`, `dlp_blocked`, `client_disconnected`, `in_progress`.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/admin/fallback-credit-policy` | Get the credit policy |
+| `PUT` | `/api/v1/admin/fallback-credit-policy` | Update the credit policy |
+| `GET` | `/api/v1/admin/fallback-credits` | List credit ledger entries |
+| `POST` | `/api/v1/admin/fallback-credits/reconcile` | Scan for eligible credits |
+| `GET` | `/api/v1/admin/fallback-credits/:id` | Get a credit entry |
+| `POST` | `/api/v1/admin/fallback-credits/:id/apply` | Apply a pending credit |
+
+## Get the policy
+
+```bash
+curl https://api.allternit.com/api/v1/admin/fallback-credit-policy \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+### Response
+
+```json
+{
+  "org_id": "org_01hqx8x7x7x7x7x7x7x7x7x",
+  "enabled": true,
+  "eligible_statuses": ["refusal", "error"],
+  "max_credit_percent": 100,
+  "credit_window_hours": 24,
+  "auto_apply": false,
+  "created_at": "2026-08-13T18:00:00Z",
+  "updated_at": "2026-08-13T18:00:00Z"
+}
+```
+
+## Update the policy
+
+```bash
+curl -X PUT https://api.allternit.com/api/v1/admin/fallback-credit-policy \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "enabled": true,
+    "eligible_statuses": ["refusal", "error", "rate_limited"],
+    "max_credit_percent": 80,
+    "credit_window_hours": 12,
+    "auto_apply": true
+  }'
+```
+
+### Response
+
+```json
+{
+  "org_id": "org_01hqx8x7x7x7x7x7x7x7x7x",
+  "enabled": true,
+  "eligible_statuses": ["refusal", "error", "rate_limited"],
+  "max_credit_percent": 80,
+  "credit_window_hours": 12,
+  "auto_apply": true,
+  "created_at": "2026-08-13T18:00:00Z",
+  "updated_at": "2026-08-13T18:05:00Z"
+}
+```
+
+## Reconcile credits
+
+Reconciliation scans `llm_usage_events` for eligible primary failures that were followed by a successful fallback event within the configured window, then creates pending credit ledger rows.
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/admin/fallback-credits/reconcile \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "start": "2026-08-01T00:00:00Z",
+    "end": "2026-08-08T00:00:00Z"
+  }'
+```
+
+If `start` and `end` are omitted, the API uses the policy's `credit_window_hours` to define the window.
+
+### Response
+
+```json
+{
+  "created": 3,
+  "applied": 3
+}
+```
+
+When `auto_apply` is enabled, eligible credits are applied during reconciliation and count toward `applied`.
+
+## List credits
+
+```bash
+curl -G https://api.allternit.com/api/v1/admin/fallback-credits \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -d "status=pending" \
+  -d "limit=20" \
+  -d "offset=0"
+```
+
+### Response
+
+```json
+{
+  "items": [
+    {
+      "id": "fc_01hqx8x7x7x7x7x7x7x7x7x",
+      "org_id": "org_01hqx8x7x7x7x7x7x7x7x7x",
+      "original_event_id": "evt_01hqx8x7x7x7x7x7x7x7x7x",
+      "fallback_event_id": "evt_02hqx8x7x7x7x7x7x7x7x7x",
+      "amount_microdollars": 5000,
+      "reason": "fallback_credit:provider-a/model-a-large",
+      "status": "pending",
+      "created_at": "2026-08-13T18:00:00Z",
+      "applied_at": null
+    }
+  ],
+  "limit": 20,
+  "offset": 0
+}
+```
+
+## Apply a pending credit
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/admin/fallback-credits/fc_01hqx8x7x7x7x7x7x7x7x7x/apply \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+### Response
+
+```json
+{
+  "id": "fc_01hqx8x7x7x7x7x7x7x7x7x",
+  "org_id": "org_01hqx8x7x7x7x7x7x7x7x7x",
+  "original_event_id": "evt_01hqx8x7x7x7x7x7x7x7x7x",
+  "fallback_event_id": "evt_02hqx8x7x7x7x7x7x7x7x7x",
+  "amount_microdollars": 5000,
+  "reason": "fallback_credit:provider-a/model-a-large",
+  "status": "applied",
+  "created_at": "2026-08-13T18:00:00Z",
+  "applied_at": "2026-08-13T18:05:00Z"
+}
+```
+
+Applying a credit decrements the organization's `current_month_spend` by the credit amount.
+
+## Error codes
+
+| Status | Code | Description |
+|--------|------|-------------|
+| `400` | `invalid_percent` | `max_credit_percent` must be between 0 and 100. |
+| `400` | `invalid_window` | `credit_window_hours` must be positive. |
+| `400` | `invalid_statuses` | `eligible_statuses` must be a non-empty array. |
+| `400` | `invalid_status` | Status is not eligible for fallback credit or not a valid ledger status. |
+| `400` | `not_pending` | Credit is not in `pending` status. |
+| `403` | `organization_required` | Caller is not associated with an organization. |
+| `403` | `insufficient_role` | Caller is not an organization owner or admin. |
+| `404` | `not_found` | Credit entry not found. |
+| `500` | `internal_error` | Database or server error. |
+
+## Related pages
+
+- [Fallback Retry Policy](/admin/fallback-retry-policy) — configure retries and fallback chains
+- [Spend Limits](/admin/spend-limits) — manage organization budgets
+- [Admin Analytics](/admin/analytics) — monitor usage and costs

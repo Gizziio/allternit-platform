@@ -1,0 +1,289 @@
+---
+title: 'Cloud Sandboxes'
+description: 'Administer sandbox templates and instances, and execute code in isolated VMs'
+---
+
+## Overview
+
+Allternit Cloud Sandboxes run untrusted code in isolated virtual machines instead of the host process. Organization admins define **sandbox templates** that describe the runtime, source code, environment, and resource limits. A template can then be launched as a **sandbox instance**.
+
+A separate lower-level `/sandbox/*` execution API is also available for ad-hoc code execution.
+
+## Base URLs
+
+Templates and instances are managed under the organization-scoped admin prefix:
+
+```text
+https://api.allternit.com/api/v1/admin
+```
+
+The ad-hoc execution API is mounted at:
+
+```text
+https://api.allternit.com/sandbox
+```
+
+Local development:
+
+```text
+http://127.0.0.1:8013/api/v1/admin
+http://127.0.0.1:8013/sandbox
+```
+
+## Sandbox templates
+
+Sandbox templates are scoped to an organization and can only be managed by organization owners or admins.
+
+### Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/v1/admin/sandbox-templates` | List templates for the organization |
+| POST | `/api/v1/admin/sandbox-templates` | Create a template |
+| GET | `/api/v1/admin/sandbox-templates/:id` | Get a template |
+| PUT | `/api/v1/admin/sandbox-templates/:id` | Update a template |
+| DELETE | `/api/v1/admin/sandbox-templates/:id` | Delete a template |
+
+### Template schema
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | yes | 1-64 lowercase alphanumeric characters, dots, dashes, or underscores |
+| `description` | string | no | Human-readable description |
+| `runtime` | string | yes | One of `bash`, `python`, `node`, `rust` |
+| `image` | string | no | VM image; defaults to `ubuntu-22.04-minimal` |
+| `source` | string | no | Source code or script to execute |
+| `resources` | object | no | Resource limits (driver-specific) |
+| `network_enabled` | boolean | no | Whether the sandbox may access the network; defaults to `false` |
+| `env` | object | no | Environment variables as key/value strings |
+| `timeout_secs` | integer | no | Timeout in seconds; defaults to 300, max 3600 |
+
+### Create a template
+
+```bash
+curl -X POST http://127.0.0.1:8013/api/v1/admin/sandbox-templates \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -H "x-allternit-organization-id: org_456" \
+  -d '{
+    "name": "python-base",
+    "description": "Base Python sandbox",
+    "runtime": "python",
+    "source": "print('sandbox ready')",
+    "env": { "PYTHONUNBUFFERED": "1" },
+    "timeout_secs": 120
+  }'
+```
+
+Response (HTTP 201):
+
+```json
+{
+  "id": "tpl_123",
+  "org_id": "org_456",
+  "name": "python-base",
+  "description": "Base Python sandbox",
+  "runtime": "python",
+  "image": "ubuntu-22.04-minimal",
+  "source": "print('sandbox ready')",
+  "resources": {},
+  "network_enabled": false,
+  "env": { "PYTHONUNBUFFERED": "1" },
+  "timeout_secs": 120,
+  "created_at": "2026-04-01T12:00:00Z",
+  "updated_at": "2026-04-01T12:00:00Z"
+}
+```
+
+### List templates
+
+```bash
+curl -X GET http://127.0.0.1:8013/api/v1/admin/sandbox-templates \
+  -H "Authorization: Bearer <token>" \
+  -H "x-allternit-organization-id: org_456"
+```
+
+Response:
+
+```json
+{
+  "items": [
+    {
+      "id": "tpl_123",
+      "org_id": "org_456",
+      "name": "python-base",
+      "runtime": "python",
+      "image": "ubuntu-22.04-minimal",
+      "source": "print('sandbox ready')",
+      "resources": {},
+      "network_enabled": false,
+      "env": { "PYTHONUNBUFFERED": "1" },
+      "timeout_secs": 120,
+      "created_at": "2026-04-01T12:00:00Z",
+      "updated_at": "2026-04-01T12:00:00Z"
+    }
+  ]
+}
+```
+
+## Sandbox instances
+
+Launching an instance runs the template source inside the sandbox runtime and records the result.
+
+### Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/v1/admin/sandbox-instances` | List instances for the organization |
+| POST | `/api/v1/admin/sandbox-instances` | Launch an instance from a template |
+| GET | `/api/v1/admin/sandbox-instances/:id` | Get an instance |
+| POST | `/api/v1/admin/sandbox-instances/:id/stop` | Mark an instance as stopped |
+
+### Launch an instance
+
+```bash
+curl -X POST http://127.0.0.1:8013/api/v1/admin/sandbox-instances \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -H "x-allternit-organization-id: org_456" \
+  -d '{
+    "template_id": "tpl_123",
+    "name": "daily-report-run"
+  }'
+```
+
+Response (HTTP 201):
+
+```json
+{
+  "id": "inst_789",
+  "status": "running",
+  "session_id": "sess_abc",
+  "exit_code": 0,
+  "stdout": "sandbox ready\n",
+  "stderr": ""
+}
+```
+
+### Instance schema
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Instance ID |
+| `org_id` | string | Owning organization |
+| `template_id` | string | Source template ID |
+| `name` | string | Optional display name |
+| `status` | string | `running`, `error`, `stopped`, etc. |
+| `session_id` | string | Sandbox session ID if available |
+| `exit_code` | integer | Process exit code |
+| `stdout` | string | Captured standard output |
+| `stderr` | string | Captured standard error |
+| `started_at` | string | ISO 8601 start time |
+| `stopped_at` | string | ISO 8601 stop time |
+| `created_at` | string | ISO 8601 creation time |
+
+### Stop an instance
+
+```bash
+curl -X POST http://127.0.0.1:8013/api/v1/admin/sandbox-instances/inst_789/stop \
+  -H "Authorization: Bearer <token>" \
+  -H "x-allternit-organization-id: org_456"
+```
+
+Response:
+
+```json
+{
+  "id": "inst_789",
+  "status": "stopped",
+  "stopped_at": "2026-04-01T12:05:00Z"
+}
+```
+
+## Sandbox execution API
+
+For ad-hoc execution, the `/sandbox/*` routes run code directly without creating a template or instance.
+
+### Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/sandbox/` | Service status |
+| POST | `/sandbox/execute` | Execute code synchronously |
+| POST | `/sandbox/execute/stream` | Execute code with streaming output |
+| GET | `/sandbox/capabilities` | Driver capabilities |
+| GET | `/sandbox/health` | Driver health |
+
+### Execute code
+
+```bash
+curl -X POST http://127.0.0.1:8013/sandbox/execute \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{
+    "code": "print(21 + 21)",
+    "language": "python",
+    "timeout_secs": 60,
+    "env": { "FOO": "bar" },
+    "network_enabled": false
+  }'
+```
+
+Response:
+
+```json
+{
+  "exit_code": 0,
+  "stdout": "42\n",
+  "stderr": "",
+  "duration_ms": 340,
+  "session_id": "sess_xyz"
+}
+```
+
+### Streaming execution
+
+```bash
+curl -N -X POST http://127.0.0.1:8013/sandbox/execute/stream \
+  -H "Content-Type: application/json" \
+  -H "Accept: text/event-stream" \
+  -H "Authorization: Bearer <token>" \
+  -d '{
+    "code": "for i in range(3): print(i)",
+    "language": "python"
+  }'
+```
+
+The stream emits one SSE event per output line and ends with a `done` event:
+
+```
+data: {"type":"stdout","line":"0"}
+
+data: {"type":"stdout","line":"1"}
+
+data: {"type":"stdout","line":"2"}
+
+data: {"type":"done","exit_code":0}
+```
+
+## Error codes
+
+| HTTP | Code / Message | Meaning |
+|------|----------------|---------|
+| 200 | — | Success |
+| 201 | — | Template or instance created |
+| 400 | `invalid_runtime` | Runtime not in `bash`, `python`, `node`, `rust` |
+| 400 | `invalid_name` | Template/instance name does not match the allowed pattern |
+| 400 | `invalid_timeout` | `timeout_secs` is not between 1 and 3600 |
+| 400 | `missing_source` | Server tool source is empty |
+| 403 | `organization_required` | No active organization in the session |
+| 403 | `insufficient_role` | Caller is not an organization owner/admin |
+| 404 | `not_found` | Template or instance not found |
+| 409 | `duplicate_name` | A template with this name already exists |
+| 503 | `VM driver not available` | No VM driver is initialized |
+
+## Related pages
+
+- [Native Tool Belt](/tools/tool-belt)
+- [Server Tools](/tools/server-tools)
+- [MCP Servers](/tools/mcp)

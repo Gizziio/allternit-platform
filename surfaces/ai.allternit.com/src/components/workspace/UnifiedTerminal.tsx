@@ -62,7 +62,7 @@ async function loadXterm() {
   return true;
 }
 
-type TerminalMode = 'single' | 'grid';
+export type TerminalMode = 'single' | 'grid';
 
 type TerminalTabStatus = 'connecting' | 'connected' | 'error';
 
@@ -80,6 +80,14 @@ interface UnifiedTerminalProps {
   terminalContext?: TerminalContext;
   /** Command sent to the first tab's shell once it connects (e.g. launch an agent CLI). */
   startupCommand?: string;
+  /** Initial layout mode. */
+  defaultMode?: TerminalMode;
+  /** Controlled layout mode. */
+  mode?: TerminalMode;
+  /** Called when the layout mode changes. */
+  onModeChange?: (mode: TerminalMode) => void;
+  /** Called when a grid tile is clicked. */
+  onGridTileClick?: (tabId: string) => void;
 }
 
 interface TerminalSession {
@@ -180,19 +188,22 @@ function terminalPersistenceKey(sessionId: string): string {
   return `${terminalRuntimeIdentity()}:${sessionId}`;
 }
 
-export function terminalThemeFromElement(element: HTMLElement): import('xterm').ITheme {
-  const elementStyle = getComputedStyle(element);
+export function terminalThemeFromElement(_element: HTMLElement): import('xterm').ITheme {
   const rootStyle = getComputedStyle(document.documentElement);
   const token = (name: string, fallback: string) =>
     rootStyle.getPropertyValue(name).trim() || fallback;
-  const foreground = elementStyle.color || token('--text-primary', '#2a1f16');
+
+  // Always render the terminal on a dark, code-branded surface so it never
+  // inherits the warm sand canvas color and stays readable in both themes.
+  const terminalBg = '#111415';
+  const terminalFg = '#e8e4df';
 
   return {
-    background: elementStyle.backgroundColor || token('--surface-panel', '#f7efe7'),
-    foreground,
-    cursor: foreground,
-    cursorAccent: elementStyle.backgroundColor || token('--surface-panel', '#f7efe7'),
-    selectionBackground: token('--surface-active', 'rgba(124, 92, 66, 0.2)'),
+    background: terminalBg,
+    foreground: terminalFg,
+    cursor: terminalFg,
+    cursorAccent: terminalBg,
+    selectionBackground: token('--surface-active', 'rgba(107, 154, 123, 0.3)'),
     black: '#111827',
     red: token('--status-error', '#ef4444'),
     green: token('--status-success', '#10b981'),
@@ -200,7 +211,7 @@ export function terminalThemeFromElement(element: HTMLElement): import('xterm').
     blue: token('--status-info', '#3b82f6'),
     magenta: '#8b5cf6',
     cyan: token('--accent-code', '#0891b2'),
-    white: foreground,
+    white: terminalFg,
     brightBlack: token('--text-tertiary', '#6b7280'),
     brightRed: '#f87171',
     brightGreen: '#34d399',
@@ -208,7 +219,7 @@ export function terminalThemeFromElement(element: HTMLElement): import('xterm').
     brightBlue: '#60a5fa',
     brightMagenta: '#c084fc',
     brightCyan: '#67e8f9',
-    brightWhite: foreground,
+    brightWhite: terminalFg,
   };
 }
 
@@ -450,8 +461,19 @@ export function UnifiedTerminal({
   workingDir,
   terminalContext,
   startupCommand,
+  defaultMode = 'single',
+  mode: controlledMode,
+  onModeChange,
+  onGridTileClick,
 }: UnifiedTerminalProps) {
-  const [mode, setMode] = useState<TerminalMode>('single');
+  const [internalMode, setInternalMode] = useState<TerminalMode>(defaultMode);
+  const mode = controlledMode ?? internalMode;
+  const setMode = useCallback((next: TerminalMode) => {
+    if (controlledMode === undefined) {
+      setInternalMode(next);
+    }
+    onModeChange?.(next);
+  }, [controlledMode, onModeChange]);
   const [tabs, setTabs] = useState<TerminalSession[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -1213,7 +1235,10 @@ export function UnifiedTerminal({
                   role="button"
                   tabIndex={0}
                   style={{ flex: 1, minHeight: 0 }}
-                  onClick={() => setActiveTabId(tab.id)}
+                  onClick={() => {
+                    setActiveTabId(tab.id);
+                    onGridTileClick?.(tab.id);
+                  }}
                 >
                   {tab.remoteSessionId && (
                     <TerminalSurface

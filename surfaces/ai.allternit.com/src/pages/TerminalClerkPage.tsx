@@ -2,7 +2,6 @@
 
 import { Suspense, useEffect, useRef, useState } from "react"
 import { useSearchParams } from "react-router-dom"
-import { MatrixLogo } from "@/components/ai-elements/MatrixLogo"
 import { AuthPreview } from "@/components/auth/AuthPreview"
 import { SiteFooter } from "@/components/auth/SiteFooter"
 import { PlatformSignIn, usePlatformAuth } from "@/lib/platform-auth-client"
@@ -228,7 +227,7 @@ function TerminalClerkContent() {
       <div className="terminal-auth-page">
         <nav className="terminal-auth-nav">
           <a href="/" className="terminal-auth-logo">
-            <MatrixLogo state="idle" size={28} />
+            <img src="/brand/matrix/matrix-logo.svg" alt="Allternit" style={{ width: 28, height: 28 }} />
             <span className="terminal-auth-logo-text">Allternit</span>
           </a>
           <a href="/sign-in" className="terminal-auth-nav-link">

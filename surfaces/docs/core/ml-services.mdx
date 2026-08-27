@@ -1,0 +1,162 @@
+---
+title: 'ML Services'
+description: 'Pattern recognition and prompt-pack services for the Allternit ML layer.'
+---
+
+## Overview
+
+The **Allternit ML Services** layer provides pattern recognition, prompt-pack management, and rendering services that support model-driven workflows across the platform.
+
+## Components
+
+| Service | Path | Purpose |
+|---------|------|---------|
+| Prompt Pack Service | `services/ml/prompt-pack-service` | Versioned prompt template registry and renderer |
+| Pattern Service | `services/ml/pattern-service` | Pattern recognition and verification |
+
+## Prompt Pack Service
+
+The Prompt Pack Service manages versioned collections of prompt templates and renders them with variables.
+
+### Base URL
+
+```text
+http://127.0.0.1:3010
+```
+
+When mounted behind the Allternit platform gateway:
+
+```text
+https://api.allternit.com/api/ml/prompt-packs
+```
+
+### Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/health` | Service health |
+| GET | `/v1/packs` | List prompt packs |
+| POST | `/v1/packs` | Create a pack |
+| GET | `/v1/packs/:pack_id` | Get pack metadata |
+| GET | `/v1/packs/:pack_id/versions` | List versions |
+| POST | `/v1/packs/:pack_id/versions` | Publish a version |
+| GET | `/v1/packs/:pack_id/versions/:version` | Get a specific version |
+| GET | `/v1/packs/:pack_id/diff` | Diff two versions |
+| POST | `/v1/render` | Render a prompt |
+| POST | `/v1/render/batch` | Render multiple prompts |
+| POST | `/v1/render/contextual` | Context-aware render |
+| POST | `/v1/validate` | Validate a pack |
+| POST | `/v1/test-render` | Test render without storing |
+| GET | `/v1/receipts/:receipt_id` | Get a render receipt |
+| POST | `/v1/receipts/:receipt_id` | Record a ledger transaction |
+
+### Pack structure
+
+```json
+{
+  "pack_id": "onboarding",
+  "name": "Onboarding Pack",
+  "description": "Prompts for user onboarding",
+  "version": "1.0.0",
+  "deterministic": true,
+  "author": "team@allternit.com",
+  "tags": ["onboarding"],
+  "dependencies": [],
+  "variables": [
+    {
+      "name": "user_name",
+      "type": "string",
+      "required": true
+    }
+  ],
+  "prompts": [
+    {
+      "id": "welcome",
+      "template": "welcome.md",
+      "description": "Welcome message"
+    }
+  ],
+  "created_at": "2026-08-13T19:00:00.000Z",
+  "content_hash": "sha256:..."
+}
+```
+
+### Render a prompt
+
+```bash
+curl -X POST http://127.0.0.1:3010/v1/render \
+  -H 'content-type: application/json' \
+  -d '{
+    "pack_id": "onboarding",
+    "prompt_id": "welcome",
+    "version": "latest",
+    "variables": { "user_name": "Alice" }
+  }'
+```
+
+Response:
+
+```json
+{
+  "rendered": "Welcome, Alice! ...",
+  "content_hash": "sha256:...",
+  "rendered_hash": "sha256:...",
+  "receipt_id": "rpt_...",
+  "pack_id": "onboarding",
+  "prompt_id": "welcome",
+  "version": "1.0.0",
+  "rendered_at": "2026-08-13T19:00:00.000Z",
+  "deterministic": true
+}
+```
+
+## Pattern Service
+
+The Pattern Service recognizes recurring intents and verifies pattern reliability.
+
+### Base URL
+
+```text
+http://127.0.0.1:3020
+```
+
+### Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/health` | Service health |
+
+### Pattern spec
+
+```json
+{
+  "pattern_id": "summarize-document",
+  "intent_class": "summarization",
+  "trigger_signals": ["document", "summarize", "tl;dr"],
+  "inputs_schema": { "type": "object" },
+  "tool_plan_template": {},
+  "control_flow": {},
+  "guardrails": {},
+  "eval_suite": ["test-1", "test-2"],
+  "status": "active",
+  "reliability": 0.92,
+  "sample_count": 120
+}
+```
+
+## Error codes
+
+| HTTP | Code | Meaning |
+|------|------|---------|
+| 200 | — | Success |
+| 400 | `validation_failed` | Pack or render request invalid |
+| 404 | `not_found` | Pack, version, or receipt not found |
+| 409 | `pack_id_mismatch` | Path and body pack IDs do not match |
+| 422 | `render_failed` | Template rendering failed |
+| 500 | `internal_error` | Unexpected service error |
+
+## Related pages
+
+- [Gizzi Runtime](/core/gizzi-runtime)
+- [Memory Fabric](/core/memory-fabric)
+- [Native Tool Belt](/tools/tool-belt)

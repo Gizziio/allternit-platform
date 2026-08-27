@@ -171,6 +171,58 @@ export interface ApiErrorDetails {
   details?: Record<string, unknown>;
 }
 
+export interface UsageSummaryTokens {
+  input: number;
+  output: number;
+  total: number;
+}
+
+export interface UsageSummary {
+  /** Billable requests served in the reporting period. */
+  requests: number;
+  /** Aggregate token consumption for the period. */
+  tokens: UsageSummaryTokens;
+  /** Total spend for the period, in `currency`. */
+  cost: number;
+  /** ISO 4217 currency code for `cost`. */
+  currency: string;
+  /** Optional reporting window bounds (ISO timestamps). */
+  periodStart?: string;
+  periodEnd?: string;
+}
+
+/**
+ * Normalize the gateway's usage summary payload into a stable shape.
+ * The backend has shipped a few field spellings over time; accept the common
+ * ones so the UI never renders NaN.
+ */
+function normalizeUsageSummary(raw: unknown): UsageSummary {
+  const record = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+  const tokensRecord = (record.tokens && typeof record.tokens === 'object'
+    ? record.tokens
+    : {}) as Record<string, unknown>;
+
+  const toNumber = (value: unknown): number => {
+    const n = typeof value === 'string' ? Number(value) : value;
+    return typeof n === 'number' && Number.isFinite(n) ? n : 0;
+  };
+
+  const input = toNumber(tokensRecord.input ?? record.input_tokens ?? record.tokens_input);
+  const output = toNumber(tokensRecord.output ?? record.output_tokens ?? record.tokens_output);
+  const total = toNumber(tokensRecord.total ?? record.total_tokens) || input + output;
+  const cents = toNumber(record.total_cents);
+  const cost = toNumber(record.cost ?? record.cost_usd ?? record.total_cost) || cents / 100;
+
+  return {
+    requests: toNumber(record.requests ?? record.total_requests ?? record.request_count),
+    tokens: { input, output, total },
+    cost,
+    currency: typeof record.currency === 'string' && record.currency ? record.currency : 'USD',
+    periodStart: typeof record.period_start === 'string' ? record.period_start : undefined,
+    periodEnd: typeof record.period_end === 'string' ? record.period_end : undefined,
+  };
+}
+
 // ============================================================================
 // Error Handling
 // ============================================================================
@@ -488,7 +540,7 @@ class AllternitApiClient {
   /**
    * Create a brain session for AI chat (kernel-managed)
    *
-   * @param brainProfileId - The brain profile ID (e.g., "opencode-acp", "claude-code")
+   * @param brainProfileId - The brain profile ID (e.g., "allternit-acp", "claude-code")
    * @param source - "chat" or "terminal"
    * @param runtimeOverrides - Optional model selection and config overrides
    * @param workspaceDir - Optional workspace directory
@@ -836,7 +888,7 @@ class AllternitApiClient {
   /**
    * List all providers with their authentication status
    */
-  async listProviderAuthStatus(): Promise<{
+  async listProviderAuthStatus(options?: RequestInit): Promise<{
     providers: Array<{
       provider_id: string;
       status: 'ok' | 'missing' | 'expired' | 'unknown' | 'not_required';
@@ -845,14 +897,14 @@ class AllternitApiClient {
       chat_profile_ids: string[];
     }>;
   }> {
-    return this.get('/api/v1/providers/auth/status');
+    return this.get('/api/v1/providers/auth/status', options);
   }
 
   /**
    * List all providers and their models from the real models.json registry
    */
-  async listProviders(): Promise<ProviderListResponse> {
-    return this.get('/api/v1/providers');
+  async listProviders(options?: RequestInit): Promise<ProviderListResponse> {
+    return this.get('/api/v1/providers', options);
   }
 
   /**
@@ -984,6 +1036,18 @@ class AllternitApiClient {
    */
   async operatorHealth(): Promise<{ status: string; type: string }> {
     return this.get('/api/v1/operator/health');
+  }
+
+  // ==========================================================================
+  // USAGE API
+  // ==========================================================================
+
+  /**
+   * Get real usage stats (requests, tokens, cost) for the current user.
+   */
+  async getUsageSummary(): Promise<UsageSummary> {
+    const raw = await this.get<unknown>('/api/v1/usage/summary');
+    return normalizeUsageSummary(raw);
   }
 
   // ==========================================================================
@@ -1194,6 +1258,36 @@ export function useSkills() {
 }
 
 // =============================================================================
+// USAGE SUMMARY HOOK
+// =============================================================================
+
+export function useUsageSummary() {
+  const [summary, setSummary] = useState<UsageSummary | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<AllternitApiError | null>(null);
+
+  const fetchSummary = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await api.getUsageSummary();
+      setSummary(data);
+    } catch (err) {
+      setSummary(null);
+      setError(err as AllternitApiError);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchSummary();
+  }, [fetchSummary]);
+
+  return { summary, loading, error, refetch: fetchSummary };
+}
+
+// =============================================================================
 // MODEL DISCOVERY HOOK
 // =============================================================================
 
@@ -1283,12 +1377,14 @@ export function useModelDiscovery() {
       setProvidersLoading(true);
       setProvidersError(null);
       
-      // Fetch both auth status and real models registry
+      // Fetch both auth status and real models registry. Cap the wait so a
+      // missing backend never leaves the UI stuck on a spinner.
+      const signal = AbortSignal.timeout(3000);
       const [authResponse, registryResponse] = await Promise.all([
-        api.listProviderAuthStatus(),
-        api.listProviders().catch(() => ({ all: [], default: {}, connected: [] }))
+        api.listProviderAuthStatus({ signal }),
+        api.listProviders({ signal }).catch(() => ({ all: [], default: {}, connected: [] }))
       ]);
-      
+
       setProviders(authResponse.providers);
       setRealModels(registryResponse.all);
       
@@ -1336,12 +1432,10 @@ export function useModelDiscovery() {
     }
   }, []);
 
-  // Get provider by profile ID (e.g., "opencode-acp" -> "opencode")
+  // Get provider by profile ID (e.g., "claude-acp" -> "claude")
   const getProviderByProfileId = useCallback((profileId: string): ProviderAuthStatus | undefined => {
     // Map profile IDs to provider IDs
     const profileToProvider: Record<string, string> = {
-      'opencode-acp': 'opencode',
-      'opencode-auth': 'opencode',
       'gemini-acp': 'gemini',
       'gemini-cli': 'gemini',
       'gemini-auth': 'gemini',

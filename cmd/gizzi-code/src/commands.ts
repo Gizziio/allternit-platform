@@ -25,3 +25,12 @@ export type {
 } from './types/command.js'
 
 export * from './cli/ui/ink-app/commands.js'
+
+// Re-export shell parsing helpers that legacy relative-path imports reach through
+// this barrel (e.g. `../../../../../commands.js`).
+export {
+  clearCommandPrefixCaches,
+  extractOutputRedirections,
+  splitCommand_DEPRECATED,
+  splitCommandWithOperators,
+} from './shared/utils/bash/commands.js'

@@ -238,8 +238,44 @@ export async function createAgent(input: CreateAgentInput): Promise<Agent> {
     tags: input.tags,
     data_classification: input.dataClassification,
     write_scope: input.writeScope,
+    is_bot: input.isBot,
+    bot_profile: input.botProfile,
+    brain_id: input.brainId,
+    connector_bindings: input.connectorBindings,
+    secret_refs: input.secretRefs,
+    messaging_config: input.messagingConfig,
+    identity_channels: input.identityChannels,
   };
-  
+
+  // Persist bot metadata in config as a fallback for backends that don't have
+  // dedicated columns yet. This lets the UI treat packaged bots consistently
+  // regardless of whether the registry supports top-level bot fields.
+  if (input.isBot) {
+    apiInput.config = {
+      ...(apiInput.config as Record<string, unknown> || {}),
+      isBot: true,
+      botProfile: input.botProfile,
+      ...(input.brainId ? { brainId: input.brainId } : {}),
+    };
+  }
+
+  // Persist autonomous primitive metadata in config as a fallback for backends
+  // that don't have dedicated columns yet.
+  if (
+    input.connectorBindings ||
+    input.secretRefs ||
+    input.messagingConfig ||
+    input.identityChannels
+  ) {
+    apiInput.config = {
+      ...(apiInput.config as Record<string, unknown> || {}),
+      ...(input.connectorBindings ? { connectorBindings: input.connectorBindings } : {}),
+      ...(input.secretRefs ? { secretRefs: input.secretRefs } : {}),
+      ...(input.messagingConfig ? { messagingConfig: input.messagingConfig } : {}),
+      ...(input.identityChannels ? { identityChannels: input.identityChannels } : {}),
+    };
+  }
+
   logger.debug('Creating agent: ' + String(input.name));
   const startTime = Date.now();
   
@@ -350,6 +386,33 @@ export function transformAgentFromApi(apiAgent: unknown): Agent {
     tags: Array.isArray(a.tags) ? (a.tags as string[]) : undefined,
     dataClassification: pick<string>(a.data_classification, a.dataClassification),
     writeScope: pick<string>(a.write_scope, a.writeScope),
+    isBot: pick<boolean>(a.is_bot, a.isBot, config.isBot) ?? false,
+    botProfile: pick<Agent['botProfile']>(
+      a.bot_profile as Agent['botProfile'],
+      a.botProfile as Agent['botProfile'],
+      config.botProfile as Agent['botProfile'],
+    ) || undefined,
+    brainId: pick<string>(a.brain_id, a.brainId, config.brainId as string),
+    connectorBindings: pick<Agent['connectorBindings']>(
+      Array.isArray(a.connector_bindings) ? a.connector_bindings : undefined,
+      Array.isArray(a.connectorBindings) ? a.connectorBindings : undefined,
+      config.connectorBindings as Agent['connectorBindings'],
+    ),
+    secretRefs: pick<Agent['secretRefs']>(
+      Array.isArray(a.secret_refs) ? a.secret_refs : undefined,
+      Array.isArray(a.secretRefs) ? a.secretRefs : undefined,
+      config.secretRefs as Agent['secretRefs'],
+    ),
+    messagingConfig: pick<Agent['messagingConfig']>(
+      a.messaging_config as Agent['messagingConfig'],
+      a.messagingConfig as Agent['messagingConfig'],
+      config.messagingConfig as Agent['messagingConfig'],
+    ),
+    identityChannels: pick<Agent['identityChannels']>(
+      a.identity_channels as Agent['identityChannels'],
+      a.identityChannels as Agent['identityChannels'],
+      config.identityChannels as Agent['identityChannels'],
+    ),
   };
 }
 
@@ -401,6 +464,34 @@ export async function updateAgent(
   if (updates.tags !== undefined) apiUpdates.tags = updates.tags;
   if (updates.dataClassification !== undefined) apiUpdates.data_classification = updates.dataClassification;
   if (updates.writeScope !== undefined) apiUpdates.write_scope = updates.writeScope;
+  if (updates.isBot !== undefined) apiUpdates.is_bot = updates.isBot;
+  if (updates.botProfile !== undefined) apiUpdates.bot_profile = updates.botProfile;
+  if (updates.brainId !== undefined) apiUpdates.brain_id = updates.brainId;
+  if (updates.connectorBindings !== undefined) apiUpdates.connector_bindings = updates.connectorBindings;
+  if (updates.secretRefs !== undefined) apiUpdates.secret_refs = updates.secretRefs;
+  if (updates.messagingConfig !== undefined) apiUpdates.messaging_config = updates.messagingConfig;
+  if (updates.identityChannels !== undefined) apiUpdates.identity_channels = updates.identityChannels;
+
+  // Mirror bot metadata and autonomous primitives into config so backends
+  // without dedicated columns still round-trip them.
+  if (
+    updates.isBot !== undefined ||
+    updates.botProfile !== undefined ||
+    updates.connectorBindings !== undefined ||
+    updates.secretRefs !== undefined ||
+    updates.messagingConfig !== undefined ||
+    updates.identityChannels !== undefined
+  ) {
+    apiUpdates.config = {
+      ...((apiUpdates.config as Record<string, unknown>) || {}),
+      ...(updates.isBot !== undefined ? { isBot: updates.isBot } : {}),
+      ...(updates.botProfile !== undefined ? { botProfile: updates.botProfile } : {}),
+      ...(updates.connectorBindings !== undefined ? { connectorBindings: updates.connectorBindings } : {}),
+      ...(updates.secretRefs !== undefined ? { secretRefs: updates.secretRefs } : {}),
+      ...(updates.messagingConfig !== undefined ? { messagingConfig: updates.messagingConfig } : {}),
+      ...(updates.identityChannels !== undefined ? { identityChannels: updates.identityChannels } : {}),
+    };
+  }
 
   try {
     // allternit-api's update response is just { success: true } — no row —
@@ -1037,65 +1128,74 @@ export async function mutateViaGate(
 import type { AgentMailMessage, AgentMailThread, SendMailInput } from './agent.types';
 
 /**
- * Get agent inbox messages
+ * Get agent inbox messages from the Rails mail backend.
+ * This is the single CommRails mail implementation; there is no local fallback.
  */
 export async function getAgentInbox(agentId: string, limit: number = 50): Promise<AgentMailMessage[]> {
   // Real endpoint: GET /mail/inbox/:agent_id (issue #16). The old
   // POST /mail/inbox route does not exist on the backend.
   const response = await railsApi.mail.inbox({ agent_id: agentId, limit });
-  
+
   // Transform messages - filter by recipient
   const messages = (response.messages || []) as unknown[];
   return messages.map((msg: unknown): AgentMailMessage => {
     const m = msg as Record<string, unknown>;
+    const toAgents = Array.isArray(m.to_agents) ? m.to_agents as string[] : [];
+    const requiresAck = Boolean(m.ack_required);
     return {
       id: String(m.message_id || m.id || ''),
       threadId: String(m.thread_id || 'default'),
       fromAgentId: String(m.from_agent || ''),
       fromAgentName: undefined,
-      toAgentId: undefined,
-      subject: 'Message', // Rails mail doesn't have subject per message, topic is on thread
+      toAgentId: toAgents[0] || (typeof m.to_agent === 'string' ? m.to_agent : undefined),
+      subject: typeof m.subject === 'string' ? m.subject : 'Message',
       body: String(m.body || ''),
-      bodyRef: undefined,
-      status: m.acknowledged ? 'acknowledged' : 'unread',
-      priority: 'normal',
+      bodyRef: typeof m.body_ref === 'string' ? m.body_ref : undefined,
+      status: requiresAck ? 'unread' : 'read',
+      priority: mapMailPriority(m.priority ?? m.importance),
       timestamp: String(m.timestamp || new Date().toISOString()),
-      requiresAck: !m.acknowledged,
-      ackedAt: m.acknowledged ? String(m.timestamp) : undefined,
+      requiresAck,
     };
   });
+}
+
+function mapMailPriority(value: unknown): AgentMailMessage['priority'] {
+  if (typeof value !== 'string') return 'normal';
+  switch (value.toLowerCase()) {
+    case 'low': return 'low';
+    case 'high':
+    case 'urgent': return 'high';
+    default: return 'normal';
+  }
 }
 
 /**
  * Get mail threads for an agent
  */
 export async function getAgentThreads(agentId: string): Promise<AgentMailThread[]> {
-  // Get all messages and group by thread
+  const response = await railsApi.mail.threads();
+  const summaries = (response.threads || []) as Array<{ thread_id: string; messages: number; last_ts: string }>;
+
   const messages = await getAgentInbox(agentId, 1000);
-  
-  const threads = new Map<string, AgentMailThread>();
-  
-  for (const msg of messages) {
-    const existing = threads.get(msg.threadId);
-    if (existing) {
-      existing.messageCount++;
-      existing.lastMessageAt = msg.timestamp;
-      if (msg.status === 'unread') existing.unreadCount++;
-    } else {
-      threads.set(msg.threadId, {
-        id: msg.threadId,
-        subject: msg.subject,
-        participants: [msg.fromAgentId],
-        messageCount: 1,
-        lastMessageAt: msg.timestamp,
-        unreadCount: msg.status === 'unread' ? 1 : 0,
-      });
-    }
-  }
-  
-  return Array.from(threads.values()).sort(
-    (a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime()
-  );
+
+  return summaries.map((t) => {
+    const threadMessages = messages.filter((m) => m.threadId === t.thread_id);
+    const participants = Array.from(
+      new Set(
+        threadMessages.flatMap((m) => [m.fromAgentId, m.toAgentId]).filter((p): p is string => typeof p === 'string'),
+      ),
+    );
+    const unreadCount = threadMessages.filter((m) => m.toAgentId === agentId && m.status === 'unread').length;
+
+    return {
+      id: t.thread_id,
+      subject: threadMessages[0]?.subject || 'Message',
+      participants,
+      messageCount: t.messages,
+      lastMessageAt: t.last_ts,
+      unreadCount,
+    };
+  });
 }
 
 /**
@@ -1105,30 +1205,53 @@ export async function sendAgentMail(
   fromAgentId: string,
   input: SendMailInput
 ): Promise<{ sent: boolean; messageId?: string }> {
-  try {
-    // Ensure thread exists - use subject as topic
-    const thread = await railsApi.mail.ensureThread(input.subject);
-    
-    const bodyRef = `body-${Date.now()}`;
-    await railsApi.mail.send({
-      thread_id: thread.thread_id,
-      body_ref: bodyRef,
-    });
-    
-    return { sent: true };
-  } catch (error) {
-    logger.error({ err: error }, 'Failed to send mail');
-    return { sent: false };
-  }
+  // Ensure thread exists - use subject as topic and include sender/recipient
+  // as participants so the thread is visible to both agents.
+  const participants = [fromAgentId, input.toAgentId].filter(Boolean) as string[];
+  const thread = await railsApi.mail.ensureThread(input.subject, participants);
+
+  const result = await railsApi.mail.send({
+    thread_id: thread.thread_id,
+    body: input.body,
+    from_agent: fromAgentId,
+    to_agents: [input.toAgentId],
+    subject: input.subject,
+    priority: input.priority,
+    requires_ack: input.requiresAck,
+    attachments: input.attachments?.map((a) => a.ref),
+  });
+
+  return { sent: result.sent, messageId: result.message_id };
+}
+
+/**
+ * Hand off a task/message from one bot to another bot's inbox.
+ * This is the runtime implementation of the `@mention` handoff pattern.
+ */
+export async function handoffToBot(
+  fromAgentId: string,
+  toAgentId: string,
+  content: string,
+  subject = 'Handoff',
+  priority: AgentMailMessage['priority'] = 'normal'
+): Promise<{ sent: boolean; messageId?: string }> {
+  return sendAgentMail(fromAgentId, {
+    toAgentId,
+    subject,
+    body: content,
+    priority,
+  });
 }
 
 /**
  * Acknowledge a message
  */
-export async function acknowledgeMail(agentId: string, messageId: string): Promise<void> {
-  // Extract thread ID from message (messageId format is typically "thread-msg")
-  const threadId = messageId.split('-')[0] || 'default';
-  await railsApi.mail.ack(threadId, messageId);
+export async function acknowledgeMail(
+  _agentId: string,
+  messageId: string,
+  threadId?: string,
+): Promise<void> {
+  await railsApi.mail.ack(threadId || 'default', messageId);
 }
 
 /**

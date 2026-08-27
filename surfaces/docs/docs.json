@@ -1,5 +1,7 @@
 {
   "name": "Allternit Docs",
+  "theme": "mint",
+  "description": "Allternit documentation for Gizzi Code, the ACI platform, BYOC runtime, SDKs, and APIs.",
   "logo": {
     "light": "/logo/light.svg",
     "dark": "/logo/dark.svg"
@@ -8,102 +10,455 @@
   "colors": {
     "primary": "#FA7921",
     "light": "#FA7921",
-    "dark": "#E56A17",
-    "anchors": {
-      "from": "#FA7921",
-      "to": "#E56A17"
+    "dark": "#E56A17"
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "Support",
+        "href": "mailto:support@allternit.com"
+      }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "Dashboard",
+      "href": "https://platform.allternit.com"
     }
   },
-  "topbarLinks": [
-    {
-      "name": "Support",
-      "url": "mailto:support@allternit.com"
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "architecture"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "core/gizzi-runtime",
+              "core/gizzi-core",
+              "core/commrails",
+              "core/communication",
+              "core/memory-fabric",
+              "core/agent-workspace",
+              "core/a2a-delegation",
+              "core/canonical-computer-use",
+              "core/intent-graph-kernel",
+              "core/memory-kernel",
+              "core/hooks-system",
+              "core/evolution-layer",
+              "core/git-dag",
+              "core/skills",
+              "core/orchestration",
+              "core/process-driver",
+              "core/registry",
+              "core/runtime-adapter",
+              "core/self-improve",
+              "core/session-manager",
+              "core/ml-services"
+            ]
+          },
+          {
+            "group": "Gizzi Code CLI",
+            "pages": [
+              "cli/overview",
+              "cli/installation",
+              "cli/configuration",
+              "cli/authentication",
+              "cli/headless-execution",
+              "cli/permission-profiles",
+              "cli/skills",
+              "cli/mcp",
+              "cli/plugin",
+              "cli/runtime",
+              "cli/session",
+              "cli/tasks",
+              "cli/doctor",
+              "cli/context",
+              "cli/usage",
+              "cli/plan",
+              "cli/ci-mode",
+              "cli/commrails-cli",
+              "cli/cli-typescript",
+              "cli/agent-daemon",
+              "cli/allternit-mux",
+              "cli/allternit-wrapper"
+            ]
+          },
+          {
+            "group": "Tools & ACI",
+            "pages": [
+              "tools/overview",
+              "tools/tool-belt",
+              "tools/mcp",
+              "tools/computer-use",
+              "tools/computer-use-mcp",
+              "tools/strict-tool-use",
+              "tools/build-a-tool",
+              "tools/plugin-adapters",
+              "tools/sandbox",
+              "tools/server-tools",
+              "tools/agent-swarm",
+              "tools/gateway",
+              "tools/etrid",
+              "tools/local-engine",
+              "tools/voice",
+              "tools/android-bridge",
+              "tools/cloud-backend",
+              "tools/office-cli",
+              "tools/office-engine",
+              "tools/open-connector",
+              "tools/document-generator",
+              "tools/open-notebook",
+              "tools/kernel-tools"
+            ]
+          },
+          {
+            "group": "Security & Enterprise",
+            "pages": [
+              "security/overview",
+              "security/security-model",
+              "security/rbac",
+              "security/vault",
+              "security/compliance",
+              "security/audit",
+              "security/scim",
+              "security/cloud-credentials",
+              "security/data-residency",
+              "security/device-attestation",
+              "security/permission-policies",
+              "security/dlp",
+              "security/prompt-leak-detection",
+              "security/inference-hooks"
+            ]
+          },
+          {
+            "group": "Admin API",
+            "pages": [
+              "admin/overview",
+              "admin/quickstart",
+              "admin/workspaces",
+              "admin/service-accounts",
+              "admin/access-tokens",
+              "admin/enterprise-auth",
+              "admin/spend-limits",
+              "admin/mcp-tunnels",
+              "admin/analytics",
+              "admin/latency-budgets",
+              "admin/groundedness-checks",
+              "admin/external-keys",
+              "admin/gateway",
+              "admin/inference-hooks",
+              "admin/user-profiles",
+              "admin/rbac",
+              "admin/federation",
+              "admin/outcome-rubrics",
+              "admin/eval",
+              "admin/eval-metrics",
+              "admin/fallback-credits",
+              "admin/fallback-retry-policy"
+            ]
+          },
+          {
+            "group": "BYOC Runtime",
+            "pages": [
+              "byoc/overview",
+              "byoc/installation",
+              "byoc/configuration",
+              "byoc/deployment",
+              "byoc/managed-agents",
+              "byoc/deploy-wizard",
+              "byoc/launcher",
+              "byoc/hosted-runtime",
+              "byoc/cloud-backend",
+              "byoc/local-models",
+              "byoc/vm-executor"
+            ]
+          },
+          {
+            "group": "Surfaces",
+            "pages": [
+              "surfaces/desktop",
+              "surfaces/platform",
+              "surfaces/agent-studio",
+              "surfaces/agent-hub",
+              "surfaces/bots",
+              "surfaces/canvas",
+              "surfaces/operator-browser",
+              "surfaces/swarm-dashboard",
+              "surfaces/autonomous-code-factory",
+              "surfaces/marketplace",
+              "surfaces/capsule-manager",
+              "surfaces/office-suite",
+              "surfaces/office-docs",
+              "surfaces/office-addin",
+              "surfaces/extensions",
+              "surfaces/anydoc",
+              "surfaces/site-apis",
+              "surfaces/model-lab",
+              "surfaces/allternit-os",
+              "surfaces/playground",
+              "surfaces/manufacturing",
+              "surfaces/native-agent",
+              "surfaces/mobile",
+              "surfaces/vscode",
+              "surfaces/docmost",
+              "surfaces/vault"
+            ]
+          },
+          {
+            "group": "CI CD",
+            "pages": [
+              "ci-cd/github-action"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/agent-lifecycle",
+              "guides/model-migration",
+              "guides/openai-migration",
+              "guides/idempotency-and-retries",
+              "guides/token-budgets",
+              "guides/webhooks",
+              "guides/pdf-citations"
+            ]
+          },
+          {
+            "group": "Cookbooks",
+            "pages": [
+              "cookbooks/overview",
+              "cookbooks/multi-agent-orchestration",
+              "cookbooks/browser-automation",
+              "cookbooks/rag-pipeline",
+              "cookbooks/ci-cd-integration"
+            ]
+          },
+          {
+            "group": "Release Notes",
+            "pages": [
+              "release-notes"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "api/authentication",
+              "api/endpoints",
+              "api/rate-limits",
+              "api/event-stream",
+              "api/status",
+              "api/me",
+              "api/quickstart"
+            ]
+          },
+          {
+            "group": "LLM Gateway",
+            "pages": [
+              "api/models",
+              "api/providers",
+              "api/chat-completions",
+              "api/embeddings",
+              "api/images",
+              "api/realtime-audio",
+              "api/cache",
+              "api/context-caches",
+              "api/vector-stores",
+              "api/estimates",
+              "api/proxy",
+              "api/translate",
+              "api/local-engine"
+            ]
+          },
+          {
+            "group": "Agents & Runtime",
+            "pages": [
+              "api/agents",
+              "api/agents-v1",
+              "api/agent-operations",
+              "api/agent-runtimes",
+              "api/agent-workspaces",
+              "api/agent-preferences",
+              "api/cowork-preferences",
+              "api/agent-sessions",
+              "api/sessions",
+              "api/memory-stores",
+              "api/memory",
+              "api/page-agents",
+              "api/local-brains",
+              "api/brains",
+              "api/memory-reconstruction",
+              "api/checkpoints",
+              "api/enrollment",
+              "api/team-skills"
+            ]
+          },
+          {
+            "group": "Work Queue & Deployments",
+            "pages": [
+              "api/work-queue",
+              "api/deployments",
+              "api/batches",
+              "api/beta"
+            ]
+          },
+          {
+            "group": "Files, Webhooks & Sandbox",
+            "pages": [
+              "api/files",
+              "api/workspace-files",
+              "api/webhooks",
+              "api/webhook-subscriptions",
+              "api/slack-webhooks",
+              "api/sandbox",
+              "api/sandbox-templates",
+              "api/uploads"
+            ]
+          },
+          {
+            "group": "Tools & Connectors",
+            "pages": [
+              "api/aci",
+              "api/connectors",
+              "api/tools",
+              "api/office",
+              "api/office-engine",
+              "api/voice",
+              "api/server-tools",
+              "api/mcp-servers",
+              "api/design-connector",
+              "api/automation",
+              "api/library",
+              "api/marketplace"
+            ]
+          },
+          {
+            "group": "Collaboration & Workflows",
+            "pages": [
+              "api/agent-chat",
+              "api/conversations",
+              "api/artifacts",
+              "api/boards",
+              "api/board-streams",
+              "api/inbox",
+              "api/allternit-bus",
+              "api/cowork",
+              "api/cowork-teams",
+              "api/workflows",
+              "api/tasks",
+              "api/orchestrator",
+              "api/swarm"
+            ]
+          },
+          {
+            "group": "Infrastructure & Platform",
+            "pages": [
+              "api/terminal",
+              "api/vm-sessions",
+              "api/ssh",
+              "api/ssh-keys",
+              "api/web-proxy",
+              "api/usage",
+              "api/analytics",
+              "api/audit-logs",
+              "api/runtime-backend",
+              "api/runtime-discovery",
+              "api/platform-v1",
+              "api/h5i",
+              "api/visualizations",
+              "api/workspaces",
+              "api/har",
+              "api/oauth",
+              "api/pricing",
+              "api/backend-install",
+              "api/brain-git",
+              "api/cloud-api",
+              "api/udemy"
+            ]
+          },
+          {
+            "group": "Canvases",
+            "pages": [
+              "api/canvases"
+            ]
+          },
+          {
+            "group": "Onboarding",
+            "pages": [
+              "api/onboarding"
+            ]
+          },
+          {
+            "group": "A Labs",
+            "pages": [
+              "api/alabs"
+            ]
+          },
+          {
+            "group": "Playground",
+            "pages": [
+              "api/playground"
+            ]
+          },
+          {
+            "group": "Users & Profiles",
+            "pages": [
+              "api/user-profiles"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "SDK",
+        "groups": [
+          {
+            "group": "SDK",
+            "pages": [
+              "sdk/typescript",
+              "sdk/python",
+              "sdk/api-client",
+              "sdk/plugin-sdk",
+              "sdk/workflow-engine",
+              "sdk/browser-tools",
+              "sdk/computer-use-protocol",
+              "sdk/capsule",
+              "sdk/computer-use"
+            ]
+          }
+        ]
+      }
+    ],
+    "global": {
+      "anchors": [
+        {
+          "anchor": "GitHub",
+          "icon": "github",
+          "href": "https://github.com/allternit"
+        },
+        {
+          "anchor": "Community",
+          "icon": "discord",
+          "href": "https://discord.gg/allternit"
+        }
+      ]
     }
-  ],
-  "topbarCtaButton": {
-    "name": "Dashboard",
-    "url": "https://platform.allternit.com"
   },
-  "tabs": [
-    {
-      "name": "Documentation",
-      "url": ""
-    },
-    {
-      "name": "API Reference",
-      "url": "api"
-    },
-    {
-      "name": "SDK",
-      "url": "sdk"
+  "footer": {
+    "socials": {
+      "x": "https://twitter.com/allternit",
+      "github": "https://github.com/allternit",
+      "discord": "https://discord.gg/allternit"
     }
-  ],
-  "anchors": [
-    {
-      "name": "GitHub",
-      "icon": "github",
-      "url": "https://github.com/allternit"
-    },
-    {
-      "name": "Community",
-      "icon": "discord",
-      "url": "https://discord.gg/allternit"
-    }
-  ],
-  "navigation": [
-    {
-      "group": "Get Started",
-      "pages": [
-        "introduction",
-        "quickstart",
-        "architecture"
-      ]
-    },
-    {
-      "group": "Core Concepts",
-      "pages": [
-        "core/gizzi-runtime",
-        "core/communication",
-        "core/git-dag",
-        "core/skills"
-      ]
-    },
-    {
-      "group": "BYOC Runtime",
-      "pages": [
-        "byoc/overview",
-        "byoc/installation",
-        "byoc/configuration",
-        "byoc/deployment"
-      ]
-    },
-    {
-      "group": "Surfaces",
-      "pages": [
-        "surfaces/desktop",
-        "surfaces/platform",
-        "surfaces/extensions"
-      ]
-    },
-    {
-      "group": "API Reference",
-      "pages": [
-        "api/authentication",
-        "api/endpoints",
-        "api/event-stream"
-      ]
-    },
-    {
-      "group": "SDK",
-      "pages": [
-        "sdk/typescript",
-        "sdk/python"
-      ]
-    }
-  ],
-  "footerSocials": {
-    "twitter": "https://twitter.com/allternit",
-    "github": "https://github.com/allternit",
-    "discord": "https://discord.gg/allternit"
   }
 }

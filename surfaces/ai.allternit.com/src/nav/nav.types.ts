@@ -16,6 +16,8 @@ export type ViewType =
   | "addin-ppt"
   // Agent views
   | "agent-hub"
+  | "bot-home"
+  | "bot-inbox"
   | "native-agent"
   | "registry"
   | "memory"
@@ -26,6 +28,7 @@ export type ViewType =
   | "openclaw"
   | "openclaw-chat"
   | "openclaw-sessions"
+  | "vault-viewer"
   | "dag"
   // Infrastructure views (P4 DAG tasks)
   | "swarm"
@@ -70,6 +73,9 @@ export type ViewType =
   | "context-control"
   | "memory-kernel"
   | "acf"
+  // Agents Sessions & Memory views
+  | "allternit-playground"
+  | "agent-studio"
   // AllternitOS View
   | "allternit-os"
   // Other views
@@ -103,6 +109,7 @@ export type ViewType =
   | "loops-list"
   | "cron"
   | "dispatch"
+  | "remote-control"
   // Code views
   | "new-file"
   | "code-project"
@@ -131,6 +138,8 @@ export type ViewType =
   | "design-agent-session"
   // Product Discovery
   | "products"
+  // Manufacturing
+  | "manufacturing"
   // Library (generated artifacts)
   | "library"
   // A://Labs - Course Management
@@ -150,8 +159,26 @@ export type ViewType =
   | "design-view-market"
   | "design-view-compare"
   | "design-marketplace"
+  // Docs editor (GenOffice)
+  | "docs"
+  // Slides editor (GenOffice)
+  | "slides"
+  // Sheets editor (GenOffice)
+  | "sheets"
+  // PDF viewer (GenOffice)
+  | "pdf"
+  // Markdown preview (anydoc conversion)
+  | "markdown-preview"
   // Browser Extensions hub
-  | "browser-extensions";
+  | "browser-extensions"
+  // API Capture / Site APIs
+  | "site-apis"
+  // Model Lab
+  | "model-lab"
+  // Allternit Sign (native client-side PDF signing)
+  | "sign"
+  // Floating chat HUD
+  | "hud";
 
 export type ViewId = string;
 

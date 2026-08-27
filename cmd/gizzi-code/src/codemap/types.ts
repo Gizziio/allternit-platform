@@ -97,4 +97,8 @@ export interface GenerateCodemapResult {
   ok: boolean
   reason?: string
   staleModules: string[]
+  /** The assembled codemap, present whenever ok is true. Lets callers (e.g.
+   * `gizzi codemap generate --vault-export`) reuse the already-validated
+   * data without a redundant re-read of codemap.json from disk. */
+  codemap?: CodemapJson
 }

@@ -1,0 +1,122 @@
+---
+title: 'Task Audit Logs API'
+description: 'Query and append audit logs for tasks across workspaces.'
+---
+
+## Overview
+
+The Task Audit Logs API records actions taken on tasks. Each log entry identifies the task, the action, the actor type and ID, an optional JSON payload, and a timestamp. Access is scoped to tasks owned by the caller or tasks in workspaces where the caller is a member.
+
+## Base URL
+
+```text
+https://api.allternit.com/api
+```
+
+For local development:
+
+```text
+http://127.0.0.1:8013/api
+```
+
+## Authentication
+
+All routes require a valid bearer token in the `Authorization` header. See [Authentication](/api/authentication) for details.
+
+## Audit log object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique log entry identifier. |
+| `task_id` | string | Task the action relates to. |
+| `action` | string | Action name, e.g. `created`, `updated`, `agent_run`. |
+| `actor_type` | string | `user`, `agent`, `system`, etc. |
+| `actor_id` | string | Identifier of the actor. |
+| `payload` | string \| null | JSON-serialized action payload. |
+| `created_at` | string | ISO 8601 timestamp. |
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/audit-log` | Service status. |
+| `GET` | `/audit-logs` | List audit logs with pagination. |
+| `POST` | `/audit-logs` | Create a new audit log entry. |
+
+## List audit logs
+
+```bash
+curl "https://api.allternit.com/api/audit-logs?taskId=task_abc123&page=1&limit=50" \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+### Query parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `taskId` | string | Filter to a single task. |
+| `page` | integer | Page number (default 1, minimum 1). |
+| `limit` | integer | Page size (default 50, maximum 100). |
+
+### Response
+
+```json
+{
+  "logs": [
+    {
+      "id": "log_abc123",
+      "taskId": "task_abc123",
+      "action": "agent_run",
+      "actorType": "agent",
+      "actorId": "agent_01J8X...",
+      "payload": "{\"status\":\"completed\"}",
+      "createdAt": "2026-08-13T12:00:00Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 50,
+    "total": 120,
+    "pages": 3
+  }
+}
+```
+
+When `taskId` is omitted, the endpoint returns audit logs for all tasks the caller can access.
+
+## Create an audit log entry
+
+```bash
+curl -X POST https://api.allternit.com/api/audit-logs \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "taskId": "task_abc123",
+    "action": "reviewed",
+    "actor_type": "user",
+    "actor_id": "user_123",
+    "payload": {"outcome": "approved"}
+  }'
+```
+
+### Response
+
+```json
+{
+  "id": "log_def456"
+}
+```
+
+## Error codes
+
+| HTTP status | Code | Meaning |
+|-------------|------|---------|
+| 401 | `allternit.authentication_failed` | Missing or invalid bearer token. |
+| 403 | `allternit.access_denied` | Caller cannot access the requested task. |
+| 500 | `allternit.internal_error` | Database or runtime internal error. |
+
+## Related pages
+
+- [Tasks](/api/tasks) — task management
+- [Agent Runs](/api/agent-operations) — agent execution events
+- [Workspaces](/api/cowork-teams) — workspace membership and access

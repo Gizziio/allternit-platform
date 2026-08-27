@@ -8,16 +8,31 @@ import {
   HarnessMode,
   StreamRequest,
   HarnessStreamChunk,
+  ToolCallChunk,
+  ToolCallCompleteChunk,
   HarnessError,
   HarnessErrorCode,
   Message,
   Tool,
+  HarnessResponse,
+  Citation,
 } from './types.js';
+import { mapStopReason, toAnthropicRequest } from './provider-request.js';
+import { getModelMetadata } from './model-registry.js';
+import { RETRYABLE_STATUS_CODES } from './retry.js';
 import {
   injectSystemPrompt,
   injectProviderPrompt,
   validateMessages,
 } from './prompts.js';
+import {
+  applyAfterResponse,
+  applyBeforeRequest,
+  createRefusalFallbackMiddleware,
+  createRetryMiddleware,
+  normalizeMiddleware,
+} from './middleware.js';
+import type { HarnessMiddleware } from './types.js';
 
 /**
  * AllternitHarness provides a unified interface for streaming
@@ -25,6 +40,7 @@ import {
  */
 export class AllternitHarness {
   private config: HarnessConfig;
+  private middleware: HarnessMiddleware[];
 
   /**
    * Creates a new AllternitHarness instance
@@ -35,6 +51,22 @@ export class AllternitHarness {
   constructor(config: HarnessConfig) {
     this.validateConfig(config);
     this.config = config;
+    this.middleware = this.buildMiddleware();
+  }
+
+  /**
+   * Builds the middleware chain. Fallback is first so it can intercept refusals
+   * before the retry middleware, followed by user middleware, then the default
+   * retry middleware for backward compatibility with the legacy retry option.
+   */
+  private buildMiddleware(): HarnessMiddleware[] {
+    const list: HarnessMiddleware[] = [];
+    if (this.config.fallbackModels && this.config.fallbackModels.length > 0) {
+      list.push(createRefusalFallbackMiddleware(this.config.fallbackModels));
+    }
+    list.push(...normalizeMiddleware(this.config.middleware));
+    list.push(createRetryMiddleware(this.config.retry));
+    return list;
   }
 
   /**
@@ -78,11 +110,13 @@ export class AllternitHarness {
         if (
           !config.byok.anthropic?.apiKey &&
           !config.byok.openai?.apiKey &&
-          !config.byok.google?.apiKey
+          !config.byok.google?.apiKey &&
+          !config.byok.vertex?.apiKey &&
+          !config.byok.kimi?.apiKey
         ) {
           throw new HarnessError(
             HarnessErrorCode.CONFIG_INVALID,
-            'BYOK mode requires at least one provider API key (anthropic, openai, or google)'
+            'BYOK mode requires at least one provider API key (anthropic, openai, google, vertex, or kimi)'
           );
         }
         break;
@@ -146,16 +180,28 @@ export class AllternitHarness {
 
     // Validate and inject system prompts
     validateMessages(request.messages);
-    
-    const hasTools = !!request.tools && request.tools.length > 0;
-    let messages = injectSystemPrompt(request.messages, hasTools);
-    messages = injectProviderPrompt(messages, request.provider);
+
+    // Apply beforeRequest middleware before provider-specific prompt injection.
+    const middlewareRequest = await applyBeforeRequest(this.middleware, request);
+
+    const hasTools = !!middlewareRequest.tools && middlewareRequest.tools.length > 0;
+    let messages = injectSystemPrompt(middlewareRequest.messages, hasTools);
+    messages = injectProviderPrompt(messages, middlewareRequest.provider);
 
     // Create modified request with injected prompts
-    const modifiedRequest: StreamRequest = {
-      ...request,
+    let modifiedRequest: StreamRequest = {
+      ...middlewareRequest,
       messages,
     };
+
+    // Fall back to the registry's max_output_tokens when the caller does not
+    // supply an explicit limit.
+    if (modifiedRequest.maxTokens === undefined) {
+      const metadata = getModelMetadata(modifiedRequest.provider, modifiedRequest.model);
+      if (metadata) {
+        modifiedRequest = { ...modifiedRequest, maxTokens: metadata.maxOutputTokens };
+      }
+    }
 
     // Route to appropriate mode
     try {
@@ -180,16 +226,46 @@ export class AllternitHarness {
       }
     } catch (error) {
       // Re-wrap errors for consistent handling
-      if (error instanceof HarnessError) {
-        throw error;
+      const harnessError =
+        error instanceof HarnessError
+          ? error
+          : new HarnessError(
+              HarnessErrorCode.UNKNOWN_ERROR,
+              error instanceof Error ? error.message : 'Unknown error during streaming',
+              error
+            );
+
+      // Allow middleware to recover from the error.
+      const replacement = await this.applyOnError(harnessError, middlewareRequest);
+      if (replacement) {
+        yield* replacement;
+        return;
       }
 
-      throw new HarnessError(
-        HarnessErrorCode.UNKNOWN_ERROR,
-        error instanceof Error ? error.message : 'Unknown error during streaming',
-        error
-      );
+      throw harnessError;
     }
+  }
+
+  /**
+   * Invokes onError middleware. Returns a replacement stream if any middleware
+   * yields one; otherwise returns undefined so the original error is thrown.
+   */
+  private async applyOnError(
+    error: HarnessError,
+    request: StreamRequest
+  ): Promise<AsyncGenerator<HarnessStreamChunk> | undefined> {
+    for (const middleware of this.middleware) {
+      if (!middleware.onError) continue;
+      const result = await middleware.onError(error, {
+        request,
+        harness: this,
+      });
+      if (result && typeof (result as AsyncIterable<HarnessStreamChunk>)[Symbol.asyncIterator] === 'function') {
+        return result as AsyncGenerator<HarnessStreamChunk>;
+      }
+      // Undefined result means try the next middleware; thrown errors propagate.
+    }
+    return undefined;
   }
 
   /**
@@ -201,13 +277,32 @@ export class AllternitHarness {
    * @throws HarnessError for configuration or routing errors
    */
   async complete(request: StreamRequest): Promise<string> {
+    return (await this.run(request)).content;
+  }
+
+  /** Collect a stream into a response while retaining citations, usage, and stop reason. */
+  async run(request: StreamRequest): Promise<HarnessResponse> {
     const chunks: string[] = [];
+    const citations: Citation[] = [];
+    let usage: HarnessResponse['usage'];
+    let stopReason: HarnessResponse['stopReason'];
     for await (const chunk of this.stream(request)) {
       if (chunk.type === 'text' && chunk.text) {
         chunks.push(chunk.text);
+      } else if (chunk.type === 'citation') {
+        citations.push(chunk.citation);
+      } else if (chunk.type === 'done') {
+        usage = chunk.usage;
+        stopReason = chunk.stopReason;
       }
     }
-    return chunks.join('');
+    const response: HarnessResponse = {
+      content: chunks.join(''),
+      ...(citations.length ? { citations } : {}),
+      ...(usage ? { usage } : {}),
+      ...(stopReason ? { stopReason } : {}),
+    };
+    return applyAfterResponse(this.middleware, response);
   }
 
   /**
@@ -253,10 +348,17 @@ export class AllternitHarness {
       case 'google':
         yield* this.streamFromGoogle(request);
         break;
+      case 'vertex':
+        yield* this.streamFromVertex(request);
+        break;
+      case 'kimi':
+      case 'moonshot':
+        yield* this.streamFromKimi(request);
+        break;
       default:
         throw new HarnessError(
           HarnessErrorCode.PROVIDER_NOT_FOUND,
-          `Provider "${provider}" not supported in BYOK mode. Supported: anthropic, openai, google`
+          `Provider "${provider}" not supported in BYOK mode. Supported: anthropic, openai, google, vertex, kimi`
         );
     }
   }
@@ -279,16 +381,136 @@ export class AllternitHarness {
       );
     }
 
-    // TODO: Implement Anthropic streaming
-    // - Use Messages API
-    // - Handle streaming responses
-    // - Transform to HarnessStreamChunk format
-    // - Support tool use
+    const baseURL = this.config.byok?.anthropic?.baseURL ?? 'https://api.anthropic.com';
 
-    throw new HarnessError(
-      HarnessErrorCode.API_ERROR,
-      'Anthropic streaming not yet implemented'
-    );
+    let response: Response;
+    try {
+      response = await fetch(
+        `${baseURL.replace(/\/$/, '')}/v1/messages`,
+        {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+          },
+          body: JSON.stringify(toAnthropicRequest({ ...request, stream: true })),
+        }
+      );
+    } catch (error) {
+      throw new HarnessError(
+        HarnessErrorCode.NETWORK_ERROR,
+        error instanceof Error ? error.message : 'Network error during Anthropic request',
+        error
+      );
+    }
+
+    if (!response.ok) {
+      let bodyText = '';
+      try {
+        bodyText = await response.text();
+      } catch {
+        // Ignore body-read failures.
+      }
+      const isRetryable = RETRYABLE_STATUS_CODES.has(response.status);
+      throw new HarnessError(
+        HarnessErrorCode.API_ERROR,
+        `Anthropic request failed with ${isRetryable ? 'retryable ' : ''}status ${response.status}${bodyText ? `: ${bodyText}` : ''}`,
+        { status: response.status, body: bodyText }
+      );
+    }
+
+    if (!response.body) {
+      throw new HarnessError(
+        HarnessErrorCode.API_ERROR,
+        'Anthropic response missing body'
+      );
+    }
+
+    let inputTokens = 0;
+    let outputTokens = 0;
+    let stopReason: import('./types.js').HarnessStopReason | undefined;
+    // Per-tool-call streaming state: index → { id, name, argumentsJson }
+    const pendingToolCalls = new Map<number, { id: string; name: string; argumentsJson: string }>();
+    for await (const event of readSseJson(response.body)) {
+      const message = event as Record<string, any>;
+      if (message.type === 'message_start') inputTokens = message.message?.usage?.input_tokens ?? 0;
+      if (message.type === 'message_delta') {
+        outputTokens = message.usage?.output_tokens ?? outputTokens;
+        stopReason = mapStopReason('anthropic', message.delta?.stop_reason ?? message.stop_reason) ?? stopReason;
+      }
+      if (message.type === 'message_stop') {
+        stopReason = mapStopReason('anthropic', message.message?.stop_reason) ?? stopReason;
+      }
+      // Track tool_use content block starts for fine-grained streaming
+      if (message.type === 'content_block_start' && message.content_block?.type === 'tool_use') {
+        const idx = message.index as number;
+        pendingToolCalls.set(idx, {
+          id: message.content_block.id ?? '',
+          name: message.content_block.name ?? '',
+          argumentsJson: '',
+        });
+        yield {
+          type: 'tool_call',
+          id: message.content_block.id ?? '',
+          name: message.content_block.name ?? '',
+          arguments: '',
+        } satisfies ToolCallChunk;
+      }
+      if (message.type === 'content_block_delta' && message.delta?.type === 'input_json_delta') {
+        const idx = message.index as number;
+        const pending = pendingToolCalls.get(idx);
+        if (pending) {
+          const partial = message.delta.partial_json ?? '';
+          pending.argumentsJson += partial;
+          yield {
+            type: 'tool_call',
+            id: pending.id,
+            name: pending.name,
+            arguments: partial,
+          } satisfies ToolCallChunk;
+        }
+      }
+      if (message.type === 'content_block_stop') {
+        const idx = message.index as number;
+        const pending = pendingToolCalls.get(idx);
+        if (pending) {
+          let parsed: Record<string, unknown> = {};
+          try {
+            parsed = JSON.parse(pending.argumentsJson || '{}');
+          } catch {
+            parsed = { _raw: pending.argumentsJson };
+          }
+          yield {
+            type: 'tool_call_complete',
+            id: pending.id,
+            name: pending.name,
+            arguments: parsed,
+          } satisfies ToolCallCompleteChunk;
+          pendingToolCalls.delete(idx);
+        }
+      }
+      if (message.type === 'content_block_delta' && message.delta?.type === 'text_delta') {
+        yield { type: 'text', text: message.delta.text ?? '' };
+      }
+      if (message.type === 'content_block_delta' && message.delta?.type === 'thinking_delta') {
+        yield { type: 'thinking_delta', thinking: message.delta.thinking ?? '' };
+      }
+      if (message.type === 'content_block_delta' && message.delta?.type === 'signature_delta') {
+        yield { type: 'signature_delta', signature: message.delta.signature ?? '' };
+      }
+      if (message.type === 'content_block_delta' && message.delta?.type === 'citations_delta') {
+        yield { type: 'citation', citation: anthropicCitation(message.delta.citation ?? {}) };
+      }
+      if (message.type === 'error') {
+        throw new HarnessError(HarnessErrorCode.API_ERROR, message.error?.message ?? 'Anthropic stream error');
+      }
+    }
+    yield { type: 'done', usage: {
+      promptTokens: inputTokens,
+      completionTokens: outputTokens,
+      totalTokens: inputTokens + outputTokens,
+    }, stopReason };
   }
 
   /**
@@ -349,6 +571,45 @@ export class AllternitHarness {
       HarnessErrorCode.API_ERROR,
       'Google streaming not yet implemented'
     );
+  }
+
+  /**
+   * Stream from Google Vertex AI API
+   *
+   * @param request - Stream request configured for Vertex
+   * @yields HarnessStreamChunk
+   */
+  private async *streamFromVertex(
+    request: StreamRequest
+  ): AsyncGenerator<HarnessStreamChunk> {
+    const apiKey = this.config.byok?.vertex?.apiKey;
+
+    if (!apiKey) {
+      throw new HarnessError(
+        HarnessErrorCode.AUTHENTICATION_ERROR,
+        'Vertex API key not configured'
+      );
+    }
+
+    // TODO: Implement Vertex streaming
+    // - Use Gemini API over Vertex AI endpoints
+    // - Handle streaming responses
+    // - Transform to HarnessStreamChunk format
+    // - Support function calling
+
+    throw new HarnessError(
+      HarnessErrorCode.API_ERROR,
+      'Vertex streaming not yet implemented'
+    );
+  }
+
+  private async *streamFromKimi(
+    request: StreamRequest
+  ): AsyncGenerator<HarnessStreamChunk> {
+    if (!this.config.byok?.kimi?.apiKey) {
+      throw new HarnessError(HarnessErrorCode.AUTHENTICATION_ERROR, 'Kimi API key not configured');
+    }
+    throw new HarnessError(HarnessErrorCode.API_ERROR, 'Kimi streaming not yet implemented');
   }
 
   /**
@@ -430,7 +691,9 @@ export class AllternitHarness {
             configured: !!(
               this.config.byok.anthropic?.apiKey ||
               this.config.byok.openai?.apiKey ||
-              this.config.byok.google?.apiKey
+              this.config.byok.google?.apiKey ||
+              this.config.byok.vertex?.apiKey ||
+              this.config.byok.kimi?.apiKey
             ),
           }
         : undefined,
@@ -458,6 +721,57 @@ export class AllternitHarness {
 // Re-export types for convenience
 export * from './types.js';
 export * from './prompts.js';
+export * from './provider-request.js';
+export * from './model-registry.js';
+export * from './retry.js';
+export * from './middleware.js';
 
 // Default export
 export default AllternitHarness;
+
+async function* readSseJson(body: ReadableStream<Uint8Array>): AsyncGenerator<unknown> {
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      buffer += decoder.decode(value, { stream: !done });
+      let boundary: number;
+      while ((boundary = buffer.indexOf('\n\n')) >= 0) {
+        const frame = buffer.slice(0, boundary);
+        buffer = buffer.slice(boundary + 2);
+        const data = frame.split('\n').filter(line => line.startsWith('data:'))
+          .map(line => line.slice(5).trimStart()).join('\n');
+        if (data && data !== '[DONE]') yield JSON.parse(data);
+      }
+      if (done) break;
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}
+
+function anthropicCitation(value: Record<string, unknown>): Citation {
+  const known = new Set([
+    'cited_text',
+    'document_title',
+    'url',
+    'document_index',
+    'start_char_index',
+    'end_char_index',
+    'page_number',
+  ]);
+  return {
+    type: 'citation',
+    citedText: value.cited_text as string | undefined,
+    title: value.document_title as string | undefined,
+    url: value.url as string | undefined,
+    documentTitle: value.document_title as string | undefined,
+    pageNumber: typeof value.page_number === 'number' ? value.page_number : undefined,
+    documentIndex: value.document_index as number | undefined,
+    startCharIndex: value.start_char_index as number | undefined,
+    endCharIndex: value.end_char_index as number | undefined,
+    providerData: Object.fromEntries(Object.entries(value).filter(([key]) => !known.has(key))),
+  };
+}

@@ -4,7 +4,7 @@ import { tmpdir } from "os";
 import { join } from "path";
 const FORK_REPO = "anomalyco/zed-extensions";
 const UPSTREAM_REPO = "zed-industries/extensions";
-const EXTENSION_NAME = "opencode";
+const EXTENSION_NAME = "gizzi";
 async function main() {
     const version = process.argv[2];
     if (!version)
@@ -68,7 +68,7 @@ async function main() {
     const commitMessage = `Update ${EXTENSION_NAME} to v${cleanVersion}`;
     await $ `git commit -m ${commitMessage}`;
     console.log(`✅ Changes committed`);
-    // Delete any existing branches for opencode updates
+    // Delete any existing branches for gizzi updates
     console.log(`🔍 Checking for existing branches...`);
     const branches = await $ `git ls-remote --heads https://x-access-token:${token}@github.com/${FORK_REPO}.git`.text();
     const branchPattern = `refs/heads/update-${EXTENSION_NAME}-`;
@@ -87,7 +87,7 @@ async function main() {
     console.log(`🚀 Pushing to fork...`);
     await $ `git push https://x-access-token:${token}@github.com/${FORK_REPO}.git ${branchName}`;
     console.log(`📬 Creating pull request...`);
-    const prResult = await $ `gh pr create --repo ${UPSTREAM_REPO} --base main --head ${FORK_REPO.split("/")[0]}:${branchName} --title "Update ${EXTENSION_NAME} to v${cleanVersion}" --body "Updating OpenCode extension to v${cleanVersion}"`
+    const prResult = await $ `gh pr create --repo ${UPSTREAM_REPO} --base main --head ${FORK_REPO.split("/")[0]}:${branchName} --title "Update ${EXTENSION_NAME} to v${cleanVersion}" --body "Updating Gizzi extension to v${cleanVersion}"`
         .env({ ...process.env, GH_TOKEN: prToken })
         .nothrow();
     if (prResult.exitCode !== 0) {

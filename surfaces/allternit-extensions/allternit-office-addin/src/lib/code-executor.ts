@@ -8,6 +8,98 @@
 
 import { validateCode } from './code-validator'
 
+// ── Freeform execution gate ──────────────────────────────────────────────────
+//
+// Two execution paths exist:
+//  1. STRUCTURED — code built by `buildToolCallCode` from validated tool
+//     calls (trusted templates, escaped arguments). Always allowed.
+//  2. FREEFORM — arbitrary AI-generated code extracted from a text response.
+//     Default-DENIED since it runs via `new Function()`; an explicit user
+//     opt-in (persisted setting) is required. The blocklist in
+//     code-validator.ts remains as defense-in-depth on BOTH paths.
+
+const FREEFORM_SETTING_KEY = 'allternit.addin.allowFreeformCode'
+
+// Non-browser environments (tests, SSR) have no localStorage; keep the
+// setting process-local there instead of silently dropping it.
+const memoryFallback = new Map<string, string>()
+
+function storageGet(key: string): string | null {
+  try {
+    return globalThis.localStorage?.getItem(key) ?? memoryFallback.get(key) ?? null
+  } catch {
+    return memoryFallback.get(key) ?? null
+  }
+}
+
+function storageSet(key: string, value: string): void {
+  memoryFallback.set(key, value)
+  try {
+    globalThis.localStorage?.setItem(key, value)
+  } catch {
+    // localStorage unavailable — the in-memory copy already covers it.
+  }
+}
+
+export function isFreeformExecutionAllowed(): boolean {
+  return storageGet(FREEFORM_SETTING_KEY) === 'true'
+}
+
+export function setFreeformExecutionAllowed(allowed: boolean): void {
+  storageSet(FREEFORM_SETTING_KEY, allowed ? 'true' : 'false')
+}
+
+/** Shared runner: validation + async-IIFE evaluation with Office globals. */
+async function runOfficeJs(code: string, start: number): Promise<ExecutionResult> {
+  try {
+    // Wrap code in async IIFE to support top-level await
+    const wrappedCode = `
+      return (async () => {
+        ${code}
+      })();
+    `
+
+    // Execute with Office namespace available as local
+    // eslint-disable-next-line no-new-func
+    const fn = new Function('Excel', 'Word', 'PowerPoint', 'Office', wrappedCode)
+    const result = await fn(
+      typeof Excel !== 'undefined' ? Excel : undefined,
+      typeof Word !== 'undefined' ? Word : undefined,
+      typeof PowerPoint !== 'undefined' ? PowerPoint : undefined,
+      typeof Office !== 'undefined' ? Office : undefined,
+    )
+
+    return {
+      success: true,
+      output: result,
+      durationMs: performance.now() - start,
+      codeExecuted: code,
+    }
+  } catch (err) {
+    return {
+      success: false,
+      error: categorizeError(err),
+      durationMs: performance.now() - start,
+      codeExecuted: code,
+    }
+  }
+}
+
+function securityRejection(code: string, message: string, start: number): ExecutionResult {
+  return {
+    success: false,
+    error: {
+      category: 'syntax',
+      message,
+      raw: message,
+      retryable: false,
+      suggestion: 'This code contains patterns that are not allowed for security reasons.',
+    },
+    durationMs: performance.now() - start,
+    codeExecuted: code,
+  }
+}
+
 // ── Types ────────────────────────────────────────────────────────────────────
 
 export interface ExecutionResult {
@@ -150,62 +242,46 @@ function categorizeError(err: unknown): CodeExecutionError {
  * The Office namespace (Excel, Word, PowerPoint) is passed as a parameter
  * to ensure the correct context is available.
  *
- * SECURITY: Only call this with AI-generated code in a controlled environment.
- * The add-in sandbox limits what the code can access, but be aware that
- * arbitrary JS is being evaluated.
+ * SECURITY: This is the FREEFORM path — arbitrary AI-generated code. It is
+ * default-DENIED: callers must enable it explicitly via
+ * `setFreeformExecutionAllowed(true)` (a persisted user opt-in). Structured
+ * tool calls go through `executeStructuredCode` instead, which always runs.
  */
 export async function executeCode(code: string): Promise<ExecutionResult> {
   const start = performance.now()
 
+  if (!isFreeformExecutionAllowed()) {
+    return securityRejection(
+      code,
+      'Freeform AI code execution is disabled. Structured office tools still work; enable freeform execution in settings to run generated code.',
+      start,
+    )
+  }
+
   // Security validation: block dangerous patterns before execution
   const validation = validateCode(code)
   if (!validation.safe) {
-    return {
-      success: false,
-      error: {
-        category: 'syntax',
-        message: 'Code failed security validation: ' + validation.violations.join('; '),
-        raw: validation.violations.join('\n'),
-        retryable: false,
-        suggestion: 'This code contains patterns that are not allowed for security reasons.',
-      },
-      durationMs: performance.now() - start,
-      codeExecuted: code,
-    }
+    return securityRejection(code, 'Code failed security validation: ' + validation.violations.join('; '), start)
   }
 
-  try {
-    // Wrap code in async IIFE to support top-level await
-    const wrappedCode = `
-      return (async () => {
-        ${code}
-      })();
-    `
+  return runOfficeJs(code, start)
+}
 
-    // Execute with Office namespace available as local
-    // eslint-disable-next-line no-new-func
-    const fn = new Function('Excel', 'Word', 'PowerPoint', 'Office', wrappedCode)
-    const result = await fn(
-      typeof Excel !== 'undefined' ? Excel : undefined,
-      typeof Word !== 'undefined' ? Word : undefined,
-      typeof PowerPoint !== 'undefined' ? PowerPoint : undefined,
-      typeof Office !== 'undefined' ? Office : undefined,
-    )
+/**
+ * Executes code built by `buildToolCallCode` from a validated tool call.
+ * This is the STRUCTURED path: the code comes from trusted templates with
+ * escaped arguments, never from freeform AI text, so it bypasses the
+ * freeform gate. The blocklist validator still runs as defense-in-depth.
+ */
+export async function executeStructuredCode(code: string): Promise<ExecutionResult> {
+  const start = performance.now()
 
-    return {
-      success: true,
-      output: result,
-      durationMs: performance.now() - start,
-      codeExecuted: code,
-    }
-  } catch (err) {
-    return {
-      success: false,
-      error: categorizeError(err),
-      durationMs: performance.now() - start,
-      codeExecuted: code,
-    }
+  const validation = validateCode(code)
+  if (!validation.safe) {
+    return securityRejection(code, 'Structured tool code failed security validation: ' + validation.violations.join('; '), start)
   }
+
+  return runOfficeJs(code, start)
 }
 
 // ── Retry Logic ──────────────────────────────────────────────────────────────

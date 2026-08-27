@@ -1,0 +1,197 @@
+---
+title: 'Allternit Computer Interface (ACI)'
+description: 'Browser and desktop automation endpoints that stream run progress over SSE'
+---
+
+## Overview
+
+The **Allternit Computer Interface (ACI)** is the platform layer that lets an agent observe and control a computer — typically a browser — through a live screenshot stream, mouse/keyboard actions, and human-in-the-loop approvals.
+
+ACI routes requests through the Allternit Computer Use (ACU) gateway and surfaces the run state to web, desktop, and mobile clients.
+
+<Note>
+ACI runs on infrastructure you control. Code, screenshots, and credentials stay on the host.
+</Note>
+
+## ACI vs managed sandboxes
+
+| | ACI / self-hosted | Managed cloud sandbox |
+|---|---|---|
+| **Hosting** | Your machine, a private VPS, or a self-managed VM | Vendor-managed cloud account |
+| **Data residency** | Stays on the host | Leaves the host by default |
+| **Network access** | Same network as the host | Typically limited to public endpoints |
+| **Approval model** | Pauses for human approval before destructive actions | Depends on the provider |
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/aci/run` | Start a browser automation run |
+| GET | `/api/aci/stream/:id` | SSE stream of run events |
+| POST | `/api/aci/stop/:id` | Cancel a run |
+| POST | `/api/aci/approve/:id` | Approve a pending action |
+| POST | `/api/aci/approve/:id?deny=true` | Deny a pending action |
+
+## Start a run
+
+```bash
+curl -X POST http://127.0.0.1:8013/api/aci/run \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{
+    "goal": "Find the latest release notes on github.com/allternit/allternit",
+    "model": "gizzi-pro",
+    "allowedSites": ["github.com"],
+    "openLinksInBrowser": true,
+    "autoVerify": false,
+    "sessionPersistence": "dont-keep"
+  }'
+```
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `goal` | string | yes | Natural-language objective for the run |
+| `model` | string | no | Model identifier to use for planning |
+| `allowedSites` | array / any | no | Sites the run is allowed to interact with |
+| `openLinksInBrowser` | boolean | no | Whether links should open in the browser |
+| `autoVerify` | boolean | no | Skip human approvals for read-only runs |
+| `sessionPersistence` | any | no | Passed through to the ACU gateway verbatim |
+
+Response:
+
+```json
+{
+  "sessionId": "550e8400-e29b-41d4-a716-446655440000",
+  "adapterId": "browser"
+}
+```
+
+The returned `sessionId` is used to attach to the event stream and to stop or approve the run.
+
+## Stream events
+
+Run progress is delivered as Server-Sent Events at `/api/aci/stream/{sessionId}`.
+
+```bash
+curl -N http://127.0.0.1:8013/api/aci/stream/550e8400-e29b-41d4-a716-446655440000 \
+  -H "Accept: text/event-stream" \
+  -H "Authorization: Bearer <token>"
+```
+
+Each event is a JSON object wrapped in a `data:` line:
+
+```
+data: {"type":"trace","data":{"message":"Navigating to github.com","event_type":"browser.navigate","data":{}},"ts":1712345678901}
+
+data: {"type":"state","data":{"url":"https://github.com/allternit/allternit"},"ts":1712345679200}
+
+data: {"type":"done","data":{"status":"completed"},"ts":1712345681000}
+```
+
+### Event types
+
+| Type | Meaning |
+|------|---------|
+| `trace` | Human-readable progress message from the ACU gateway |
+| `state` | Structured state update from the planning loop |
+| `done` | Run completed or was cancelled |
+
+The API keeps an in-process replay buffer for each run started in the current process, so clients can attach late and still see the full history. Runs created by another process fall back to proxying ACU's single-consumer queue.
+
+## Stop a run
+
+```bash
+curl -X POST http://127.0.0.1:8013/api/aci/stop/550e8400-e29b-41d4-a716-446655440000 \
+  -H "Authorization: Bearer <token>"
+```
+
+Response:
+
+```json
+{
+  "run_id": "550e8400-e29b-41d4-a716-446655440000",
+  "status": "cancelled"
+}
+```
+
+## Approve or deny an action
+
+When `autoVerify` is false, the ACU gateway pauses for human approval before destructive actions. Use the approve endpoint to continue or reject the action.
+
+Approve:
+
+```bash
+curl -X POST http://127.0.0.1:8013/api/aci/approve/550e8400-e29b-41d4-a716-446655440000 \
+  -H "Authorization: Bearer <token>"
+```
+
+Deny:
+
+```bash
+curl -X POST "http://127.0.0.1:8013/api/aci/approve/550e8400-e29b-41d4-a716-446655440000?deny=true" \
+  -H "Authorization: Bearer <token>"
+```
+
+Response:
+
+```json
+{
+  "run_id": "550e8400-e29b-41d4-a716-446655440000",
+  "decision": "approve"
+}
+```
+
+## The `computer` tool
+
+The SDK's `ComputerUseCapability` exposes a `computer` tool that follows the standard computer-use schema. It forwards actions to the Allternit Computer Use gateway.
+
+```typescript
+import { ComputerUseCapability } from '@allternit/sdk/ai-runtime/capabilities/computer-use';
+
+const computer = new ComputerUseCapability({
+  displayWidthPx: 1280,
+  displayHeightPx: 720,
+});
+
+const tool = computer.getTool();
+const screenshot = await tool.execute!({ action: 'screenshot' }, {});
+```
+
+### Vision coordinates
+
+ACI uses absolute pixel coordinates for mouse actions. The capability advertises the display size in tool metadata so the model can reason about coordinates.
+
+### Supported actions
+
+| Action | Needs coordinate | Needs text |
+|--------|-----------------|------------|
+| `mouse_move`, `left_click`, `right_click`, `double_click`, `triple_click`, `left_click_drag` | yes | no |
+| `scroll` | yes | no |
+| `type`, `key`, `hold_key` | no | yes |
+| `screenshot`, `cursor_position`, `wait` | no | no |
+
+## Desktop tool
+
+In addition to browser automation, ACI provides a desktop-level tool that can control any window on the host machine. This is used by Gizzi Code for tasks like:
+
+- Filling forms in native applications
+- Reading data from GUI applications
+- Automating repetitive desktop workflows
+
+The desktop tool uses the same coordinate system and event streaming as browser automation.
+
+## Error handling
+
+| HTTP | Code / Message | Meaning |
+|------|----------------|---------|
+| 200 | — | Run started, streamed, stopped, or approved successfully |
+| 400 | `goal is required` | Missing or empty `goal` in the run request |
+| 502 | `acu_unavailable` | The ACU gateway could not be reached |
+| 502 | `acu_error` | The ACU gateway returned a non-success status |
+
+## Related pages
+
+- [Native Tool Belt](/tools/tool-belt)
+- [Cloud Sandboxes](/tools/sandbox)

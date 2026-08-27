@@ -18,9 +18,11 @@ members = [
     "drivers/apple-vf",
     "drivers/firecracker",
     "drivers/firecracker-guest-agent",
+    "drivers/opensandbox",
     "services/session-manager",
     "services/vm-executor",
     "services/self-improve",
+    "services/etrid",
     "mcp/core",
     "mcp/mcp-client",
     "infrastructure/cloud",
@@ -49,6 +51,7 @@ members = [
     "platform/sdk/adapters/rust/marketplace",
     "platform/types/a2ui-types",
     "domains/governance/evidence-management/receipts-schema",
+    "services/local-engine",
     "services/memory",
     "services/memory/data/memory-fabric",
     # Referenced by workspace.dependencies but previously outside the workspace
@@ -139,6 +142,7 @@ unexpected_cfgs = { level = "allow", check-cfg = ['cfg(ALL_TESTS_DISABLED)'] }
 allternit-driver-interface = { path = "platform/contracts/driver-interface" }
 allternit-apple-vf-driver = { path = "drivers/apple-vf" }
 allternit-firecracker-driver = { path = "drivers/firecracker" }
+allternit-opensandbox-driver = { path = "drivers/opensandbox" }
 allternit-session-manager = { path = "services/session-manager" }
 allternit-vm-executor = { path = "services/vm-executor" }
 allternit-self-improve = { path = "services/self-improve" }

@@ -1,0 +1,206 @@
+---
+title: MCP Tunnels
+description: Secure ingress for Model Context Protocol servers with mTLS and OAuth validation.
+---
+
+# MCP Tunnels
+
+MCP tunnels connect Allternit to externally hosted MCP servers over HTTPS. Each tunnel has a unique token that the MCP server uses to authenticate inbound connections, plus optional mTLS client certificates and OAuth issuer/audience validation enforced by `mcp_tunnel_auth`.
+
+## Base URL
+
+```text
+/api/v1/admin/mcp-tunnels
+```
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/v1/admin/mcp-tunnels` | Create a tunnel |
+| `GET` | `/api/v1/admin/mcp-tunnels` | List tunnels |
+| `GET` | `/api/v1/admin/mcp-tunnels/:id` | Get a tunnel |
+| `PUT` | `/api/v1/admin/mcp-tunnels/:id` | Update a tunnel |
+| `DELETE` | `/api/v1/admin/mcp-tunnels/:id` | Delete a tunnel |
+| `POST` | `/api/v1/admin/mcp-tunnels/:id/rotate` | Rotate the tunnel token |
+| `POST` | `/api/v1/admin/mcp-tunnels/:id/reveal` | Reveal the tunnel token |
+
+## Create a tunnel
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/admin/mcp-tunnels \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "internal-search",
+    "description": "Internal search MCP server",
+    "endpoint_url": "https://mcp.example.com/sse",
+    "oauth_issuer": "https://auth.example.com",
+    "audience": "mcp-audience"
+  }'
+```
+
+### Request body
+
+```json
+{
+  "name": "internal-search",
+  "description": "Internal search MCP server",
+  "endpoint_url": "https://mcp.example.com/sse",
+  "oauth_issuer": "https://auth.example.com",
+  "audience": "mcp-audience"
+}
+```
+
+### Response
+
+```json
+{
+  "id": "amt_01hqx8x7x7x7x7x7x7x7x7x",
+  "organization_id": "org_01hqx8x7x7x7x7x7x7x7x7x",
+  "name": "internal-search",
+  "description": "Internal search MCP server",
+  "endpoint_url": "https://mcp.example.com/sse",
+  "client_cert_pem": null,
+  "oauth_issuer": "https://auth.example.com",
+  "audience": "mcp-audience",
+  "created_by": "usr_01hqx8x7x7x7x7x7x7x7x7x",
+  "created_at": "2026-08-13T18:00:00Z",
+  "updated_at": "2026-08-13T18:00:00Z",
+  "tunnel_token": "amt_550e8400e29b41d4a716446655440000"
+}
+```
+
+<Warning>
+  Save the `tunnel_token` immediately. It can be revealed later, but treat it as a secret.
+</Warning>
+
+## List tunnels
+
+```bash
+curl -X GET https://api.allternit.com/api/v1/admin/mcp-tunnels \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+### Response
+
+```json
+{
+  "items": [
+    {
+      "id": "amt_01hqx8x7x7x7x7x7x7x7x7x",
+      "organization_id": "org_01hqx8x7x7x7x7x7x7x7x7x",
+      "name": "internal-search",
+      "description": "Internal search MCP server",
+      "endpoint_url": "https://mcp.example.com/sse",
+      "client_cert_pem": null,
+      "oauth_issuer": "https://auth.example.com",
+      "audience": "mcp-audience",
+      "created_by": "usr_01hqx8x7x7x7x7x7x7x7x7x",
+      "created_at": "2026-08-13T18:00:00Z",
+      "updated_at": "2026-08-13T18:00:00Z"
+    }
+  ]
+}
+```
+
+## Update a tunnel
+
+```bash
+curl -X PUT https://api.allternit.com/api/v1/admin/mcp-tunnels/amt_01hqx8x7x7x7x7x7x7x7x7x \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "internal-search-v2",
+    "endpoint_url": "https://mcp.example.com/v2/sse"
+  }'
+```
+
+### Response
+
+```json
+{
+  "id": "amt_01hqx8x7x7x7x7x7x7x7x7x",
+  "organization_id": "org_01hqx8x7x7x7x7x7x7x7x7x",
+  "name": "internal-search-v2",
+  "description": "Internal search MCP server",
+  "endpoint_url": "https://mcp.example.com/v2/sse",
+  "client_cert_pem": null,
+  "oauth_issuer": "https://auth.example.com",
+  "audience": "mcp-audience",
+  "created_by": "usr_01hqx8x7x7x7x7x7x7x7x7x",
+  "created_at": "2026-08-13T18:00:00Z",
+  "updated_at": "2026-08-13T18:05:00Z"
+}
+```
+
+## Rotate the tunnel token
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/admin/mcp-tunnels/amt_01hqx8x7x7x7x7x7x7x7x7x/rotate \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+### Response
+
+```json
+{
+  "id": "amt_01hqx8x7x7x7x7x7x7x7x7x",
+  "tunnel_token": "amt_7c9e6f5d4c3b2a1908e7f6d5c4b3a291",
+  "updated_at": "2026-08-13T18:10:00Z"
+}
+```
+
+## Reveal the tunnel token
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/admin/mcp-tunnels/amt_01hqx8x7x7x7x7x7x7x7x7x/reveal \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+### Response
+
+```json
+{
+  "id": "amt_01hqx8x7x7x7x7x7x7x7x7x",
+  "tunnel_token": "amt_7c9e6f5d4c3b2a1908e7f6d5c4b3a291"
+}
+```
+
+## Delete a tunnel
+
+```bash
+curl -X DELETE https://api.allternit.com/api/v1/admin/mcp-tunnels/amt_01hqx8x7x7x7x7x7x7x7x7x \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+### Response
+
+```json
+{
+  "deleted": true
+}
+```
+
+## Authentication policy
+
+Tunnels support three layers of security:
+
+1. **Tunnel token** — a shared secret presented by the MCP server.
+2. **mTLS client certificate** — `client_cert_pem` can be provided for mutual TLS.
+3. **OAuth issuer and audience** — JWT bearer tokens from the configured issuer are validated for the given audience.
+
+## Error codes
+
+| Status | Code | Description |
+|--------|------|-------------|
+| `400` | `invalid_name` | Name must be 1–128 characters. |
+| `400` | `invalid_endpoint_url` | URL must start with `http://` or `https://` and be ≤ 2048 characters. |
+| `403` | `organization_required` | Caller is not associated with an organization. |
+| `403` | `insufficient_role` | Caller is not an organization owner or admin. |
+| `404` | `tunnel_not_found` | Tunnel does not exist or belongs to another organization. |
+
+## Related pages
+
+- [Tools / MCP](/tools/mcp) — attaching MCP servers and server-side execution
+- [Workspaces](/admin/workspaces) — scope tunnels to workspaces

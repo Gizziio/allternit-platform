@@ -92,3 +92,17 @@ class AllternitComputerUseClient:
 
     def routing_cells(self) -> Dict[str, Any]:
         return self._request("GET", "/routing/cells")
+
+    def history_status(self) -> Dict[str, Any]:
+        return self._request("POST", "/history/status", {})
+
+    def history_query(self, *, limit: int = 50, session_id: Optional[str] = None,
+                      since_sequence: Optional[int] = None, until_sequence: Optional[int] = None) -> Dict[str, Any]:
+        body: Dict[str, Any] = {"limit": limit}
+        if session_id is not None:
+            body["session_id"] = session_id
+        if since_sequence is not None:
+            body["since_sequence"] = since_sequence
+        if until_sequence is not None:
+            body["until_sequence"] = until_sequence
+        return self._request("POST", "/history/query", body)

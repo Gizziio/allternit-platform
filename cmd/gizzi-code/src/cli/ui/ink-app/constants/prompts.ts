@@ -26,7 +26,7 @@ import {
 } from '../utils/model/model.js'
 import { getSkillToolCommands } from './../commands.ts'
 import { SKILL_TOOL_NAME } from '../tools/SkillTool/constants.js'
-import { getOutputStyleConfig } from './outputStyles.js'
+import { getOutputStyleConfig } from './outputStyleConfig.js'
 import type {
   MCPServerConnection,
   ConnectedMCPServer,

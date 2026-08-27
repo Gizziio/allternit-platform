@@ -2,7 +2,7 @@
 
 ## Overview
 
-The kernel implements a **runtime-owned model discovery** pattern. Model IDs are opaque strings that only the runtime (OpenCode, Gemini, etc.) understands. The kernel never parses, validates format, or hardcodes model lists.
+The kernel implements a **runtime-owned model discovery** pattern. Model IDs are opaque strings that only the runtime (Gizzi Code, Gemini, etc.) understands. The kernel never parses, validates format, or hardcodes model lists.
 
 ## Two-Layer Selection
 
@@ -10,7 +10,7 @@ The kernel implements a **runtime-owned model discovery** pattern. Model IDs are
 ┌─────────────────────────────────────────────────────────────┐
 │  Step 1: Select Runtime (Brain Profile)                     │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
-│  │ opencode-acp│  │ gemini-acp  │  │ claude-acp  │  ...     │
+│  │ gizzi-acp│  │ gemini-acp  │  │ claude-acp  │  ...     │
 │  │  [Auth ✓]   │  │ [Auth ✗]    │  │ [Auth ✓]    │          │
 │  └─────────────┘  └─────────────┘  └─────────────┘         │
 │                                                             │
@@ -32,7 +32,7 @@ The kernel implements a **runtime-owned model discovery** pattern. Model IDs are
 │  ELSE (freeform):                                           │
 │  ┌─────────────────────────────────────────┐               │
 │  │ Model ID: [____________________]       │               │
-│  │ Hint: Enter OpenCode model ID          │               │
+│  │ Hint: Enter Gizzi Code model ID          │               │
 │  │       (e.g., anthropic:claude-3-7)     │               │
 │  └─────────────────────────────────────────┘               │
 │                                                             │
@@ -50,11 +50,11 @@ Response:
 {
   "providers": [
     {
-      "provider_id": "opencode",
+      "provider_id": "gizzi",
       "status": "ok",
       "authenticated": true,
-      "auth_profile_id": "opencode-auth",
-      "chat_profile_ids": ["opencode-acp"]
+      "auth_profile_id": "gizzi-auth",
+      "chat_profile_ids": ["gizzi-acp"]
     },
     {
       "provider_id": "gemini", 
@@ -71,14 +71,14 @@ Response:
 ```http
 GET /v1/providers/:provider/models
 
-# Example: GET /v1/providers/opencode/models
+# Example: GET /v1/providers/gizzi/models
 Response (when discovery not supported):
 {
   "supported": false,
   "models": null,
   "default_model_id": null,
   "allow_freeform": true,
-  "freeform_hint": "Enter OpenCode model ID (e.g., anthropic:claude-3-7-sonnet)",
+  "freeform_hint": "Enter Gizzi Code model ID (e.g., anthropic:claude-3-7-sonnet)",
   "error": null
 }
 
@@ -113,7 +113,7 @@ Response:
   "model": {
     "id": "anthropic:claude-3-7-sonnet",
     "name": "anthropic:claude-3-7-sonnet",
-    "description": "OpenCode model: anthropic:claude-3-7-sonnet",
+    "description": "Gizzi Code model: anthropic:claude-3-7-sonnet",
     "capabilities": ["code", "tools"],
     "context_window": null
   },
@@ -127,8 +127,8 @@ Response:
 POST /v1/sessions
 {
   "config": {
-    "id": "opencode-acp",
-    "name": "OpenCode (ACP Native)",
+    "id": "gizzi-acp",
+    "name": "Gizzi Code (ACP Native)",
     "brain_type": "cli",
     "event_mode": "acp"
   },
@@ -198,7 +198,7 @@ for profile in &profiles {
     if !is_authenticated(&profile.config.id) {
         ui.show_auth_button(&profile.config.id, || {
             // Launch auth wizard
-            create_session("opencode-auth", source: "terminal");
+            create_session("gizzi-auth", source: "terminal");
         });
     }
 }
@@ -279,21 +279,21 @@ async fn get_cached_models(provider_id: &str) -> Option<Vec<ProviderModel>> {
 1. User opens ChatUI
    ↓
 2. UI fetches GET /v1/providers/auth/status
-   → Shows: opencode [✓], gemini [✗], claude [✓]
+   → Shows: gizzi [✓], gemini [✗], claude [✓]
    ↓
-3. User clicks on opencode (authenticated)
+3. User clicks on gizzi (authenticated)
    ↓
-4. UI fetches GET /v1/providers/opencode/models
+4. UI fetches GET /v1/providers/gizzi/models
    → Returns: { supported: false, allow_freeform: true }
    ↓
 5. UI shows freeform input:
-   "Enter OpenCode model ID (e.g., anthropic:claude-3-7-sonnet)"
+   "Enter Gizzi Code model ID (e.g., anthropic:claude-3-7-sonnet)"
    [____________________] [Validate]
    ↓
 6. User types: "anthropic:claude-3-7-sonnet"
    Clicks [Validate]
    ↓
-7. UI POST /v1/providers/opencode/models/validate
+7. UI POST /v1/providers/gizzi/models/validate
    → Returns: { valid: true }
    ↓
 8. UI enables [Start Session] button
@@ -302,17 +302,17 @@ async fn get_cached_models(provider_id: &str) -> Option<Vec<ProviderModel>> {
    ↓
 10. UI POST /v1/sessions
     {
-      "config": { "id": "opencode-acp", ... },
+      "config": { "id": "gizzi-acp", ... },
       "source": "chat",
       "runtime_overrides": {
         "model_id": "anthropic:claude-3-7-sonnet"
       }
     }
     ↓
-11. Kernel spawns opencode with ACP protocol
+11. Kernel spawns gizzi with ACP protocol
     Sends model_id via runtime_overrides
     ↓
-12. OpenCode uses the specified model for the session
+12. Gizzi Code uses the specified model for the session
 ```
 
 ## Critical Invariants

@@ -1,4 +1,24 @@
 {
+  "allternit-mail": {
+    "auth_type": "allternit_native",
+    "tier": 1,
+    "mcp_backed": true,
+    "connectable": true,
+    "scopes": [],
+    "allternit_native": {
+      "kind": "agent_email",
+      "status_route": "/api/v1/agent-email/status",
+      "mcp_tools": ["allternit_mail.send", "allternit_mail.status"]
+    }
+  },
+  "photon": {
+    "auth_type": "api_key",
+    "base_url": "https://api.photon.codes",
+    "tier": 1,
+    "mcp_backed": false,
+    "connectable": true,
+    "scopes": []
+  },
   "github": {
     "auth_type": "local_cli",
     "alt": ["device_flow"],

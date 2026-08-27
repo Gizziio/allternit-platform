@@ -1,0 +1,174 @@
+---
+title: 'Enrollment API (Beta)'
+description: 'Create user profiles, generate time-bound enrollment URLs, and accept enrollment on behalf of human users.'
+---
+
+## Overview
+
+The Enrollment API binds a human user (email + display name) to an agent within an organization. Admins create profiles, generate signed, time-bound enrollment URLs, and send them to the human. The human accepts by calling the public enrollment endpoint, which records consent and activates the profile.
+
+## Base URL
+
+Profile management:
+
+```
+https://api.allternit.com/v1/beta/user-profiles
+```
+
+Public enrollment acceptor:
+
+```
+https://api.allternit.com/beta/enroll
+```
+
+Profile endpoints require a valid Bearer token. The enrollment acceptor is public because the signed token is the credential. See [Authentication](/api/authentication) for details.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/beta/user-profiles` | List user profiles. |
+| POST | `/beta/user-profiles` | Create a user profile. |
+| GET | `/beta/user-profiles/:id` | Get a user profile. |
+| PATCH | `/beta/user-profiles/:id` | Update a user profile. |
+| DELETE | `/beta/user-profiles/:id` | Delete a user profile. |
+| POST | `/beta/user-profiles/:id/enrollment-url` | Generate an enrollment URL. |
+| POST | `/beta/enroll` | Accept enrollment using a token. |
+
+## Create profile
+
+```bash
+POST /api/v1/beta/user-profiles
+```
+
+Request body:
+
+```json
+{
+  "agent_id": "ag_scheduler",
+  "email": "human@example.com",
+  "display_name": "Human User",
+  "metadata": { "department": "engineering" }
+}
+```
+
+Response:
+
+```json
+{
+  "profile": {
+    "id": "prof_2f8a9c4e5d3b",
+    "org_id": "org_abc123",
+    "agent_id": "ag_scheduler",
+    "email": "human@example.com",
+    "display_name": "Human User",
+    "consent_given_at": null,
+    "enrollment_status": "pending",
+    "metadata": { "department": "engineering" },
+    "created_at": "2026-08-13T10:00:00Z",
+    "updated_at": "2026-08-13T10:00:00Z"
+  },
+  "id": "prof_2f8a9c4e5d3b"
+}
+```
+
+## Generate enrollment URL
+
+```bash
+POST /api/v1/beta/user-profiles/prof_2f8a9c4e5d3b/enrollment-url
+```
+
+Generates an HMAC-signed URL valid for 48 hours. The enrollment secret is resolved from the server config.
+
+Response:
+
+```json
+{
+  "enrollment_url": "https://api.allternit.com/beta/enroll?token=abc123...",
+  "expires_at": "2026-08-15T10:00:00Z"
+}
+```
+
+## Accept enrollment
+
+```bash
+POST /beta/enroll
+```
+
+Request body:
+
+```json
+{
+  "token": "abc123..."
+}
+```
+
+Response:
+
+```json
+{
+  "enrolled": true,
+  "profile_id": "prof_2f8a9c4e5d3b"
+}
+```
+
+Accepting enrollment marks the profile as `enrolled`, records `consent_given_at`, and invalidates the token so it cannot be reused.
+
+## Update profile
+
+```bash
+PATCH /api/v1/beta/user-profiles/prof_2f8a9c4e5d3b
+```
+
+Request body:
+
+```json
+{
+  "email": "human+updated@example.com",
+  "display_name": "Updated Name",
+  "enrollment_status": "revoked",
+  "metadata": { "department": "engineering", "tier": "premium" }
+}
+```
+
+Allowed `enrollment_status` values: `pending`, `enrolled`, `revoked`.
+
+Response:
+
+```json
+{
+  "profile": {
+    "id": "prof_2f8a9c4e5d3b",
+    "org_id": "org_abc123",
+    "agent_id": "ag_scheduler",
+    "email": "human+updated@example.com",
+    "display_name": "Updated Name",
+    "consent_given_at": "2026-08-13T10:05:00Z",
+    "enrollment_status": "revoked",
+    "metadata": { "department": "engineering", "tier": "premium" },
+    "created_at": "2026-08-13T10:00:00Z",
+    "updated_at": "2026-08-13T10:05:00Z"
+  }
+}
+```
+
+## Error codes
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 200 | — | Success. |
+| 201 | — | Created successfully. |
+| 204 | — | Deleted successfully. |
+| 400 | `bad_request` | Invalid body, missing organization scope, duplicate profile, or invalid metadata. |
+| 400 | `invalid or expired enrollment token` | Token signature invalid or expired. |
+| 400 | `enrollment token already used` | Token was already consumed. |
+| 400 | `enrollment token not found` | Token hash not recorded. |
+| 401 | `unauthorized` | Missing or invalid authentication (profile endpoints). |
+| 404 | `not_found` | Profile not found. |
+| 500 | `internal_error` | Unexpected server error or missing enrollment secret. |
+
+## Related links
+
+- [Authentication](/api/authentication)
+- [Agents API](/api/agents)
+- [User Profiles API](/api/user-profiles)

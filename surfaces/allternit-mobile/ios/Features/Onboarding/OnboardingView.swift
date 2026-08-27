@@ -5,7 +5,7 @@ import SwiftUI
 /// sign-in, gated by `OnboardingStore.isComplete` in AllternitApp (root
 /// swap — never over LoginGateView).
 ///
-///   1. Welcome — aurora background, A:// monogram with the
+///   1. Welcome — aurora background, A://TERNIT wordmark with the
 ///      EmptyChatStateView glow, "Hey, <first name>!" (Clerk first name;
 ///      "Hey there!" fallback under skip-auth), tagline.
 ///   2. Work profile — "Which best describes your work?" 12-option radio
@@ -198,8 +198,9 @@ struct OnboardingView: View {
         VStack(spacing: 0) {
             Spacer(minLength: 40)
 
-            // A:// monogram with the ambient glow from EmptyChatStateView /
-            // LoginGateView (accent circle, blurred, slow pulse).
+            // A://TERNIT wordmark (pixel construct) with the ambient glow from
+            // EmptyChatStateView / LoginGateView (accent circle, blurred, slow
+            // pulse). The asset has light/dark appearance variants.
             ZStack {
                 Circle()
                     .fill(Color("AccentPrimary").opacity(logoGlowing ? 0.12 : 0.04))
@@ -207,16 +208,10 @@ struct OnboardingView: View {
                     .blur(radius: 35)
                     .animation(.easeInOut(duration: 2.5).repeatForever(autoreverses: true), value: logoGlowing)
 
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Text("A://")
-                        .foregroundColor(Color("AccentPrimary"))
-                        .font(.system(.title2, design: .monospaced))
-                        .bold()
-                    Text("LLTERNIT")
-                        .foregroundColor(Color("TextPrimary"))
-                        .font(.system(.title2, design: .serif))
-                        .tracking(4.0)
-                }
+                Image("ATernitWordmark")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(height: 30)
             }
             .padding(.bottom, 32)
 

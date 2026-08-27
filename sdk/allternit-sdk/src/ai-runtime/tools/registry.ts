@@ -6,6 +6,20 @@ import type {
   ToolPolicy,
   ToolLifecycleEvent
 } from './types.js';
+import { toStrictJsonSchema, validateJsonSchema } from './schema.js';
+
+export interface ToolRegistrationOptions {
+  namespace?: string;
+  strict?: boolean;
+}
+
+const NAMESPACE_PATTERN = /^[A-Za-z][A-Za-z0-9_-]*$/;
+
+export function qualifyToolName(namespace: string | undefined, name: string): string {
+  if (!namespace) return name;
+  if (!NAMESPACE_PATTERN.test(namespace)) throw new Error(`Invalid tool namespace: ${namespace}`);
+  return `${namespace}.${name}`;
+}
 
 export class ToolRegistry extends EventEmitter {
   private tools: Map<string, ToolDefinition> = new Map();
@@ -21,10 +35,18 @@ export class ToolRegistry extends EventEmitter {
   /**
    * Global registration (Startup)
    */
-  public registerTool(tool: ToolDefinition) {
-    this.tools.set(tool.name, tool);
-    this.activeTools.add(tool.name); // By default, registered tools are active
-    this.emit('event', { type: 'tool.registered', tool } satisfies ToolLifecycleEvent);
+  public registerTool(tool: ToolDefinition, options: ToolRegistrationOptions = {}) {
+    const namespace = options.namespace ?? tool.namespace;
+    const name = qualifyToolName(namespace, tool.name);
+    const registered = {
+      ...tool,
+      name,
+      namespace,
+      input_schema: options.strict ? toStrictJsonSchema(tool.input_schema) : tool.input_schema,
+    };
+    this.tools.set(name, registered);
+    this.activeTools.add(name); // By default, registered tools are active
+    this.emit('event', { type: 'tool.registered', tool: registered } satisfies ToolLifecycleEvent);
   }
 
   public registerDeferredTool(tool: DeferredToolDefinition) {
@@ -62,6 +84,12 @@ export class ToolRegistry extends EventEmitter {
 
   public getTool(name: string): ToolDefinition | undefined {
     return this.tools.get(name);
+  }
+
+  public validateInput(toolName: string, input: unknown) {
+    const tool = this.tools.get(toolName);
+    if (!tool) throw new Error(`Tool ${toolName} not found`);
+    return validateJsonSchema(tool.input_schema, input);
   }
 
   public setPolicy(toolName: string, policy: ToolPolicy) {

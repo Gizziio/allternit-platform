@@ -23,13 +23,13 @@ struct CodeModeView: View {
 
     @EnvironmentObject private var modeStore: AppModeStore
     @StateObject private var environmentStore = EnvironmentStore.shared
+    @StateObject private var usageStore = UsageStore.shared
 
     @State private var sessions: [AgentSession] = []
     @State private var isLoading = false
     @State private var loadError: String? = nil
     @State private var threadTarget: CodeThreadTarget? = nil
     @State private var isPairingPresented = false
-    @State private var isSkillsPresented = false
     @State private var isCanvasPresented = false
     /// Phase 8 status filter (Claude "Filter by status" sheet parity).
     @State private var statusFilter: CodeStatusFilter = .all
@@ -92,9 +92,6 @@ struct CodeModeView: View {
                     accent: theme.accent
                 )
                 .presentationDetents([.medium])
-            }
-            .sheet(isPresented: $isSkillsPresented) {
-                CodeSkillsView()
             }
             .sheet(isPresented: $isCanvasPresented) {
                 CodeCanvasView()
@@ -171,6 +168,7 @@ struct CodeModeView: View {
                     .foregroundColor(Color("TextPrimary"))
                     .frame(width: 44, height: 44)
             }
+            .accessibilityLabel("Open sidebar")
 
             Text("Code")
                 .font(.system(.title3, design: .serif))
@@ -193,17 +191,7 @@ struct CodeModeView: View {
                     .foregroundColor(statusFilter == .all ? Color("TextPrimary") : theme.accent)
                     .frame(width: 44, height: 44)
             }
-
-            Button(action: {
-                let generator = UIImpactFeedbackGenerator(style: .light)
-                generator.impactOccurred()
-                isSkillsPresented = true
-            }) {
-                Image(systemName: "puzzlepiece.extension")
-                    .font(.title3)
-                    .foregroundColor(Color("TextPrimary"))
-                    .frame(width: 44, height: 44)
-            }
+            .accessibilityLabel("Filter")
 
             Button(action: {
                 let generator = UIImpactFeedbackGenerator(style: .light)
@@ -343,21 +331,22 @@ struct CodeModeView: View {
             VStack(spacing: 16) {
                 Image(systemName: theme.icon)
                     .font(.system(size: 24, weight: .medium))
-                    .foregroundColor(theme.accent)
+                    .foregroundColor(Color("TextSecondary"))
                     .frame(width: 56, height: 56)
-                    .background(theme.accentSoft)
+                    .background(Color("BgPanel"))
                     .clipShape(RoundedRectangle(cornerRadius: Theme.radiusLG))
                     .overlay(
                         RoundedRectangle(cornerRadius: Theme.radiusLG)
-                            .stroke(theme.accentGlow, lineWidth: 1)
+                            .stroke(Theme.borderWarmDefault, lineWidth: 1)
                     )
 
                 Text("No code sessions yet")
-                    .font(.subheadline)
+                    .font(.system(.title3, design: .serif))
+                    .fontWeight(.medium)
                     .foregroundColor(Color("TextPrimary"))
 
                 Text("Start a new thread and it will show up here.")
-                    .font(.caption)
+                    .font(.subheadline)
                     .foregroundColor(Color("TextSecondary"))
                     .multilineTextAlignment(.center)
 
@@ -376,7 +365,13 @@ struct CodeModeView: View {
             .padding(.top, 60)
             .frame(maxWidth: .infinity)
         } else {
-            VStack(alignment: .leading, spacing: 28) {
+            VStack(alignment: .leading, spacing: 20) {
+                if usageStore.availability == .available {
+                    CodeUsageCard()
+                        .padding(.horizontal, 20)
+                        .padding(.top, 16)
+                }
+
                 ForEach(groups) { group in
                     VStack(alignment: .leading, spacing: 10) {
                         Text(group.title)
@@ -603,7 +598,8 @@ private struct CodeThreadTarget: Hashable, Identifiable {
 /// rebuilding it against the new host. When no host resolves at all
 /// (release build with no registered instance), the flip lands on a
 /// no-instance empty state with a Retry that re-fetches the registry.
-private struct CodeThreadChatView: View {
+/// Shared with CodeCanvasView (same destination), so not fileprivate.
+struct CodeThreadChatView: View {
     let sessionId: String?
     let title: String?
 
@@ -612,6 +608,9 @@ private struct CodeThreadChatView: View {
     @State private var terminalSession: PtySession? = nil
     @State private var showTerminal = false
     @State private var resolvingTerminalHost = false
+    @State private var isFileBrowserPresented = false
+    @State private var isDiffViewerPresented = false
+    @State private var isDevPreviewPresented = false
 
     /// Pending gizzi-code approval requests for this thread's own session
     /// (`GET /v1/permission`, filtered to `sessionID == sessionId`), kept
@@ -674,12 +673,58 @@ private struct CodeThreadChatView: View {
                 }
                 .accessibilityLabel(showTerminal ? "Show chat" : "Show terminal")
             }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    isFileBrowserPresented = true
+                } label: {
+                    Image(systemName: "folder")
+                }
+                .accessibilityLabel("Browse files")
+            }
+            // A brand-new thread has no session yet to diff (same guard
+            // `pollPendingPermissions()` applies below).
+            if sessionId != nil {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        isDiffViewerPresented = true
+                    } label: {
+                        Image(systemName: "plus.forwardslash.minus")
+                    }
+                    .accessibilityLabel("View changes")
+                }
+            }
+            // Only meaningful once a pty is actually live (`ptyId` is set
+            // once `createPty` returns — flipping to terminal alone isn't
+            // enough, there has to be a real session to detect ports on).
+            if terminalSession?.ptyId != nil {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        isDevPreviewPresented = true
+                    } label: {
+                        Image(systemName: "globe")
+                    }
+                    .accessibilityLabel("Preview dev server")
+                }
+            }
             // Only multi-instance users get the picker; with zero or one
             // registered instance the toolbar is exactly the terminal toggle.
             if instanceStore.instances.count > 1 {
                 ToolbarItem(placement: .topBarTrailing) {
                     instanceMenu
                 }
+            }
+        }
+        .sheet(isPresented: $isFileBrowserPresented) {
+            FileBrowserView(instanceStore: instanceStore)
+        }
+        .sheet(isPresented: $isDiffViewerPresented) {
+            if let sessionId {
+                SessionDiffListView(sessionId: sessionId, instanceStore: instanceStore)
+            }
+        }
+        .sheet(isPresented: $isDevPreviewPresented) {
+            if let ptyID = terminalSession?.ptyId {
+                DevServerPortsView(ptyID: ptyID, instanceStore: instanceStore)
             }
         }
         .task {
@@ -756,7 +801,32 @@ private struct CodeThreadChatView: View {
                     .filter { $0.sessionID == sessionId }
                     .sorted { $0.id < $1.id }
             }
-            try? await Task.sleep(for: .seconds(4))
+            
+            do {
+                let stream = PermissionClient.shared.subscribeToEvents()
+                for try await event in stream {
+                    try Task.checkCancellation()
+                    switch event {
+                    case .asked(let request):
+                        if request.sessionID == sessionId {
+                            if !pendingPermissions.contains(where: { $0.id == request.id }) {
+                                pendingPermissions.append(request)
+                                pendingPermissions.sort { $0.id < $1.id }
+                            }
+                        }
+                    case .replied(let info):
+                        if info.sessionID == sessionId {
+                            pendingPermissions.removeAll { $0.id == info.requestID }
+                        }
+                    case .ignored:
+                        break
+                    }
+                }
+            } catch {
+                // Stream disconnected; wait and retry next iteration
+            }
+            
+            try? await Task.sleep(for: .seconds(2))
         }
     }
 
@@ -768,54 +838,13 @@ private struct CodeThreadChatView: View {
     /// no registered instance) — the caller shows the no-instance state
     /// instead of attempting a connection.
     ///
-    /// Mesh instances (100.64.0.0/10 URLs) can't be reached by URLSession
-    /// directly — the tailnet is in-process userspace — so they attach
-    /// through MeshClient's loopback proxy. When the mesh can't be brought
-    /// up, resolution falls back to the preferred non-mesh instance, then
-    /// to the static URL.
+    /// Base URL resolution (mesh-proxy dance included) lives in
+    /// `InstanceConnection`, shared with the file browser and diff viewer's
+    /// REST clients so none of them duplicate this logic.
     @MainActor
     private static func makeTerminalSession(from store: InstanceStore) async -> PtySession? {
-        if let instance = store.preferredInstance, let url = instance.instanceURL {
-            if !url.isMeshAddress {
-                return PtySession(client: PtyClient(baseURL: url), attachedInstanceName: instance.name)
-            }
-            if let proxyURL = await resolveMeshProxyBaseURL(for: url) {
-                return PtySession(client: PtyClient(baseURL: proxyURL), attachedInstanceName: instance.name)
-            }
-            // Mesh instance preferred but unreachable — try the non-mesh
-            // fallback before giving up on the registry.
-            if let fallback = store.nonMeshFallbackInstance,
-               fallback.id != instance.id,
-               let fallbackURL = fallback.instanceURL {
-                return PtySession(client: PtyClient(baseURL: fallbackURL), attachedInstanceName: fallback.name)
-            }
-            return nil
-        }
-        guard AppConfig.hasUsableGizziCodeURL else { return nil }
-        return PtySession()
-    }
-
-    /// Resolves the loopback base URL (`http://127.0.0.1:<port>`) for a mesh
-    /// instance: with the node already up, straight to the proxy; otherwise
-    /// starts it via platform enrollment (a DEBUG auth key takes precedence
-    /// inside MeshClient) and waits for the join (enroll plus the Go-side
-    /// start, which blocks up to ~60s — the caller's "Connecting…" spinner
-    /// covers this). nil when the mesh can't be used: a failed enroll or
-    /// start leaves state `.failed`.
-    @MainActor
-    private static func resolveMeshProxyBaseURL(for url: URL) async -> URL? {
-        let mesh = MeshClient.shared
-        if !mesh.state.isUp {
-            await mesh.startWithPlatformAuth()
-            // start() is fire-and-forget; poll the published state until
-            // the join settles.
-            while mesh.state == .starting {
-                try? await Task.sleep(for: .milliseconds(250))
-                if Task.isCancelled { return nil }
-            }
-            guard mesh.state.isUp else { return nil }
-        }
-        return try? await mesh.localProxyBaseURL(forMeshURL: url)
+        guard let resolved = await InstanceConnection.resolve(from: store) else { return nil }
+        return PtySession(client: PtyClient(baseURL: resolved.baseURL), attachedInstanceName: resolved.instanceName)
     }
 
     /// Shown in place of the terminal when no host resolved (release build
@@ -1539,5 +1568,95 @@ private struct CodeStatusFilterSheet: View {
             Spacer()
         }
         .background(Color("BgPrimary"))
+    }
+}
+
+
+// MARK: - Code usage card
+
+/// Horizontal usage summary for the Code tab. Mirrors the web settings usage
+/// summary but laid out horizontally so it doesn't push the composer out of
+/// frame. Shows plan, consumed %, credits balance, and reset time.
+private struct CodeUsageCard: View {
+    @StateObject private var usageStore = UsageStore.shared
+
+    var body: some View {
+        HStack(spacing: 14) {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 8) {
+                    Text(usageStore.snapshot?.plan.capitalized ?? "Plan")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(Color("TextPrimary"))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Color("AccentPrimary").opacity(0.14))
+                        .clipShape(Capsule())
+
+                    if let credits = usageStore.snapshot?.credits {
+                        Label(
+                            String(format: "%.0f credits", credits),
+                            systemImage: "dollarsign.circle"
+                        )
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(Color("TextSecondary"))
+                    }
+                }
+
+                if let percent = usageStore.percentUsed {
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            RoundedRectangle(cornerRadius: 3)
+                                .fill(Color("BorderSubtle").opacity(0.4))
+                                .frame(height: 6)
+                            RoundedRectangle(cornerRadius: 3)
+                                .fill(barColor(for: percent))
+                                .frame(width: max(4, geo.size.width * CGFloat(min(percent, 100) / 100)), height: 6)
+                        }
+                    }
+                    .frame(height: 6)
+
+                    Text("\(Int(percent.rounded()))% used")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(barColor(for: percent))
+                }
+
+                if let resetsLabel = usageStore.resetsLabel {
+                    Text("Resets \(resetsLabel)")
+                        .font(.caption)
+                        .foregroundColor(Color("TextSecondary"))
+                }
+            }
+
+            Spacer(minLength: 4)
+
+            Button(action: { usageStore.refresh() }) {
+                Image(systemName: "arrow.clockwise")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(Color("TextSecondary"))
+                    .frame(width: 32, height: 32)
+                    .background(Color("BgPanel").opacity(0.55))
+                    .clipShape(Circle())
+            }
+            .accessibilityLabel("Refresh")
+            .buttonStyle(.plain)
+            .disabled(usageStore.isLoading)
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.radiusLG)
+                .fill(Color("BgPanel").opacity(0.55))
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: Theme.radiusLG))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.radiusLG)
+                .stroke(Color("BorderSubtle").opacity(0.55), lineWidth: 1)
+        )
+        .onAppear { usageStore.fetchUsageIfNeeded() }
+    }
+
+    private func barColor(for percent: Double) -> Color {
+        if percent >= 100 { return Theme.statusError }
+        if percent >= 80 { return Theme.statusWarning }
+        return Theme.statusSuccess
     }
 }

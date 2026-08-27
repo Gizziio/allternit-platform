@@ -1,8 +1,8 @@
 // @ts-nocheck
 import type { BetaUsage as Usage } from '@allternit/sdk/providers/anthropic/resources/beta/messages/messages.mjs'
-import { roughTokenCountEstimationForMessages } from '../services/tokenEstimation.js'
+import { roughTokenCountEstimationForMessages } from '../services/roughTokenEstimation.js'
 import type { AssistantMessage, Message } from '../types/message.js'
-import { SYNTHETIC_MESSAGES, SYNTHETIC_MODEL } from './messages.js'
+import { SYNTHETIC_MESSAGES, SYNTHETIC_MODEL } from './syntheticMessages.js'
 import { jsonStringify } from './slowOperations.js'
 
 export function getTokenUsage(message: Message): Usage | undefined {

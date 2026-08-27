@@ -43,7 +43,7 @@ export const AttachmentButton = memo(function AttachmentButton({
     <button
       type="button"
       className={cn(
-        "size-7 rounded-full flex items-center justify-center bg-transparent transition-colors cursor-pointer",
+        "size-7 rounded-full flex items-center justify-center bg-[var(--chat-composer-glass-bg)] border border-[var(--chat-composer-glass-border)] backdrop-blur-md transition-colors cursor-pointer hover:bg-composer-hover",
         className,
       )}
       aria-label="Attach"

@@ -1,0 +1,348 @@
+---
+title: 'Cowork API'
+description: 'Manage cowork sessions, projects, personas, memory, and execution for agent-assisted workspaces.'
+---
+
+## Overview
+
+The Cowork API powers shared, agent-assisted workspaces in Allternit. It lets you create and manage cowork sessions, projects, personas, project files, memory entries, and lightweight execution jobs. Everything is scoped to the authenticated user.
+
+## Base URL
+
+```
+https://api.allternit.com/v1/cowork
+```
+
+All endpoints require a valid Bearer token in the `Authorization` header. See [Authentication](/api/authentication) for details.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/cowork` | Service status check. |
+| GET | `/cowork/sessions` | List cowork sessions. |
+| POST | `/cowork/sessions` | Create a cowork session. |
+| GET | `/cowork/sessions/:id` | Get a cowork session. |
+| PUT / PATCH | `/cowork/sessions/:id` | Update a cowork session. |
+| DELETE | `/cowork/sessions/:id` | Delete a cowork session. |
+| GET | `/cowork/personas` | List personas. |
+| POST | `/cowork/personas` | Create a persona. |
+| GET | `/cowork/personas/:id` | Get a persona. |
+| PUT / PATCH | `/cowork/personas/:id` | Update a persona. |
+| DELETE | `/cowork/personas/:id` | Delete a persona. |
+| GET | `/cowork/projects` | List projects. |
+| POST | `/cowork/projects` | Create a project. |
+| GET | `/cowork/projects/:id` | Get a project. |
+| PUT / PATCH | `/cowork/projects/:id` | Update a project. |
+| DELETE | `/cowork/projects/:id` | Delete a project. |
+| GET | `/cowork/projects/:id/files` | List files attached to a project. |
+| POST | `/cowork/projects/:id/files` | Attach a file to a project. |
+| DELETE | `/cowork/projects/:id/files/:file_id` | Remove a file from a project. |
+| GET | `/cowork/memory` | List memory entries. |
+| POST | `/cowork/memory` | Store a memory entry. |
+| GET / POST | `/cowork/memory/search` | Search memory entries. |
+| GET | `/cowork/memory/health` | Memory store health check. |
+| GET | `/cowork/connectors` | List cowork connectors. |
+| GET | `/cowork/approvals` | List pending approvals. |
+| GET | `/cowork/suggestions` | List suggestions. |
+| POST | `/cowork/suggestions` | Create a suggestion. |
+| POST | `/cowork/team-execute` | Queue a team execution. |
+| POST | `/cowork/run-agent` | Start an agent execution. |
+
+## Sessions
+
+### List sessions
+
+```bash
+GET /api/v1/cowork/sessions
+```
+
+Response:
+
+```json
+{
+  "sessions": [
+    {
+      "id": "sess_2f8a9c4e5d3b",
+      "user_id": "user_abc123",
+      "project_id": "proj_7e1a2b3c",
+      "title": "API onboarding",
+      "status": "idle",
+      "mode": "agent",
+      "checkpoint": null,
+      "metadata": "{}",
+      "started_at": "2026-08-13T10:00:00Z",
+      "completed_at": null,
+      "created_at": "2026-08-13T10:00:00Z",
+      "updated_at": "2026-08-13T10:05:00Z"
+    }
+  ]
+}
+```
+
+### Create session
+
+```bash
+POST /api/v1/cowork/sessions
+```
+
+Request body:
+
+```json
+{
+  "project_id": "proj_7e1a2b3c",
+  "title": "API onboarding",
+  "status": "idle",
+  "mode": "agent",
+  "checkpoint": null,
+  "metadata": "{}",
+  "started_at": "2026-08-13T10:00:00Z",
+  "completed_at": null
+}
+```
+
+Response:
+
+```json
+{
+  "session": { "id": "sess_2f8a9c4e5d3b" }
+}
+```
+
+### Update session
+
+```bash
+PATCH /api/v1/cowork/sessions/sess_2f8a9c4e5d3b
+```
+
+Request body:
+
+```json
+{
+  "status": "running",
+  "title": "API onboarding — in progress",
+  "checkpoint": "checkpoint-1",
+  "metadata": "{\"step\":2}",
+  "completed_at": null
+}
+```
+
+Response:
+
+```json
+{ "ok": true }
+```
+
+## Personas
+
+### Create persona
+
+```bash
+POST /api/v1/cowork/personas
+```
+
+Request body:
+
+```json
+{
+  "name": "Code Reviewer",
+  "description": "Focuses on correctness and idioms.",
+  "system_prompt": "You are a careful code reviewer.",
+  "tools": "[\"bash\", \"code_execution\"]",
+  "isDefault": false
+}
+```
+
+Response:
+
+```json
+{
+  "persona": { "id": "pers_9d8e7f6a" }
+}
+```
+
+## Projects
+
+### Create project
+
+```bash
+POST /api/v1/cowork/projects
+```
+
+Request body:
+
+```json
+{
+  "title": "API docs migration",
+  "description": "Migrate runtime API docs to Mintlify.",
+  "instructions": "Use the runtime route files as the source of truth.",
+  "metadata": "{\"priority\":\"high\"}",
+  "git_remote": "https://github.com/allternit/docs",
+  "default_branch": "main"
+}
+```
+
+Response:
+
+```json
+{
+  "project": { "id": "proj_7e1a2b3c" }
+}
+```
+
+### Attach a file to a project
+
+```bash
+POST /api/v1/cowork/projects/proj_7e1a2b3c/files
+```
+
+Request body:
+
+```json
+{
+  "name": "routes.md",
+  "url": null,
+  "upload_id": "abc123upload",
+  "media_type": "text/markdown"
+}
+```
+
+Response:
+
+```json
+{
+  "file": { "id": "file_1a2b3c4d" }
+}
+```
+
+## Memory
+
+### Store memory
+
+```bash
+POST /api/v1/cowork/memory
+```
+
+Request body:
+
+```json
+{
+  "project_id": "proj_7e1a2b3c",
+  "session_id": "sess_2f8a9c4e5d3b",
+  "content": "Customer prefers REST over GraphQL.",
+  "type": "fact",
+  "tags": "preferences,architecture",
+  "source": "cowork-session"
+}
+```
+
+Response:
+
+```json
+{
+  "memory": { "id": "mem_5e6f7a8b" }
+}
+```
+
+### Search memory
+
+```bash
+POST /api/v1/cowork/memory/search
+```
+
+Request body:
+
+```json
+{ "query": "GraphQL" }
+```
+
+Response:
+
+```json
+{
+  "results": [
+    {
+      "id": "mem_5e6f7a8b",
+      "user_id": "user_abc123",
+      "project_id": "proj_7e1a2b3c",
+      "session_id": "sess_2f8a9c4e5d3b",
+      "content": "Customer prefers REST over GraphQL.",
+      "type": "fact",
+      "tags": "preferences,architecture",
+      "source": "cowork-session",
+      "created_at": "2026-08-13T10:00:00Z"
+    }
+  ]
+}
+```
+
+## Execution
+
+### Run an agent
+
+```bash
+POST /api/v1/cowork/run-agent
+```
+
+Request body:
+
+```json
+{
+  "agent_id": "ag_analyzer",
+  "role": "reviewer",
+  "prompt": "Review the auth module.",
+  "spec": { "id": "ag_analyzer", "prompt": "Review the auth module." }
+}
+```
+
+Response:
+
+```json
+{
+  "execution_id": "exec_1a2b3c4d",
+  "status": "running"
+}
+```
+
+### Queue a team execution
+
+```bash
+POST /api/v1/cowork/team-execute
+```
+
+Request body:
+
+```json
+{
+  "command": "cargo test",
+  "agent_id": "ag_analyzer",
+  "prompt": "Run the test suite and summarize failures."
+}
+```
+
+Response:
+
+```json
+{
+  "execution_id": "exec_9d8e7f6a",
+  "status": "queued"
+}
+```
+
+## Error codes
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 200 | — | Success. |
+| 201 | — | Created successfully. |
+| 400 | `bad_request` | Invalid request body or parameters. |
+| 401 | `unauthorized` | Missing or invalid authentication. |
+| 404 | `not_found` | Requested resource does not exist or is not owned by the caller. |
+| 500 | `internal_error` | Unexpected server error. |
+
+## Related links
+
+- [Authentication](/api/authentication)
+- [Cowork Teams API](/api/cowork-teams)
+- [Sessions API](/api/sessions)
+- [Memory API](/api/memory)

@@ -335,6 +335,9 @@ export namespace Sidecar {
     repoId: string
     downloads: number
     likes: number
+    tags?: string[]
+    pipeline_tag?: string
+    lastModified?: string
   }
 
   /**
@@ -355,12 +358,23 @@ export namespace Sidecar {
         log.warn("huggingface search failed", { status: resp.status })
         return []
       }
-      const data = (await resp.json()) as Array<{ id?: string; modelId?: string; downloads?: number; likes?: number }>
+      const data = (await resp.json()) as Array<{
+        id?: string
+        modelId?: string
+        downloads?: number
+        likes?: number
+        tags?: string[]
+        pipeline_tag?: string
+        lastModified?: string
+      }>
       return data
         .map((m) => ({
           repoId: m.id ?? m.modelId ?? "",
           downloads: m.downloads ?? 0,
           likes: m.likes ?? 0,
+          tags: m.tags ?? [],
+          pipeline_tag: m.pipeline_tag,
+          lastModified: m.lastModified,
         }))
         .filter((m) => m.repoId.length > 0)
     } catch (err) {

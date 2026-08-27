@@ -1,40 +1,30 @@
 import React from "react";
-import { AgentView } from "../../AgentView";
-import { PerformanceAnalyticsView } from "@/components/agents/PerformanceAnalyticsView";
-import { AgentSessionsTab } from "./AgentSessionsTab";
-import { AgentWorkspacePanel } from "@/components/agent-workspace/AgentWorkspacePanel";
+import { BotHubHomeTab } from "./BotHubHomeTab";
+import { BotHubSessionsTab } from "./BotHubSessionsTab";
 import type { AgentTab } from "./AgentHub.constants";
 
 interface AgentHubContentProps {
   activeTab: AgentTab;
+  onSessionStarted?: (sessionId: string) => void;
+  onCreate?: () => void;
 }
 
-export const AgentHubContent: React.FC<AgentHubContentProps> = ({ activeTab }) => {
+export const AgentHubContent: React.FC<AgentHubContentProps> = ({
+  activeTab,
+  onSessionStarted,
+  onCreate,
+}) => {
   switch (activeTab) {
-    case 'studio':
+    case 'bots':
       return (
         <div className="flex-1 overflow-hidden">
-          <AgentView title="Agent Studio" hideHeader />
+          <BotHubHomeTab onCreate={onCreate} />
         </div>
       );
     case 'sessions':
       return (
         <div className="flex-1 overflow-hidden">
-          <AgentSessionsTab />
-        </div>
-      );
-    case 'analytics':
-      return (
-        <div className="flex-1 overflow-auto">
-          <div className="mx-auto w-full max-w-6xl px-8 pb-12 pt-8">
-            <PerformanceAnalyticsView />
-          </div>
-        </div>
-      );
-    case 'workspace':
-      return (
-        <div className="flex-1 overflow-hidden flex flex-col">
-          <AgentWorkspacePanel />
+          <BotHubSessionsTab onSessionStarted={onSessionStarted} />
         </div>
       );
     default:

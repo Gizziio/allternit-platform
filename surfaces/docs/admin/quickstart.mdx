@@ -1,0 +1,158 @@
+---
+title: Admin Quickstart
+description: Organization-scoped onboarding checklist for managed agents.
+---
+
+# Admin Quickstart
+
+The Admin Quickstart API exposes a predefined, organization-scoped checklist that guides owners and admins through their first managed-agent deployment in Allternit. The frontend reads the checklist and completion state, then marks steps done as the admin finishes them.
+
+## Base URL
+
+```text
+/api/v1/admin/quickstart
+```
+
+## Authentication
+
+Requires a service-account or admin API key in the `Authorization: Bearer <token>` header. The caller must be an `owner` or `admin` of an active organization. See [Authentication](/api/authentication) and [RBAC](/admin/rbac).
+
+## Quickstart steps
+
+| Step ID | Label |
+|---------|-------|
+| `create_agent` | Create your first managed agent |
+| `run_agent` | Run the agent with a prompt |
+| `add_tool` | Add a tool to the agent |
+| `enable_mcp` | Connect an MCP server |
+| `invite_member` | Invite a team member |
+| `deploy_agent` | Deploy the agent to a workspace |
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/admin/quickstart` | Get the organization's quickstart progress |
+| `PUT` | `/api/v1/admin/quickstart/:step` | Mark a step as complete |
+| `DELETE` | `/api/v1/admin/quickstart/:step` | Unmark a step as complete |
+| `POST` | `/api/v1/admin/quickstart/reset` | Reset all quickstart progress |
+
+## Get quickstart progress
+
+```bash
+curl -X GET https://api.allternit.com/api/v1/admin/quickstart \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+### Response
+
+```json
+{
+  "organization_id": "org_01hqx8x7x7x7x7x7x7x7x7x",
+  "steps": [
+    {
+      "id": "create_agent",
+      "label": "Create your first managed agent",
+      "completed": false
+    },
+    {
+      "id": "run_agent",
+      "label": "Run the agent with a prompt",
+      "completed": false
+    },
+    {
+      "id": "add_tool",
+      "label": "Add a tool to the agent",
+      "completed": false
+    },
+    {
+      "id": "enable_mcp",
+      "label": "Connect an MCP server",
+      "completed": false
+    },
+    {
+      "id": "invite_member",
+      "label": "Invite a team member",
+      "completed": false
+    },
+    {
+      "id": "deploy_agent",
+      "label": "Deploy the agent to a workspace",
+      "completed": false
+    }
+  ],
+  "completed_count": 0,
+  "total": 6
+}
+```
+
+## Mark a step complete
+
+```bash
+curl -X PUT https://api.allternit.com/api/v1/admin/quickstart/create_agent \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+### Response
+
+```json
+{
+  "organization_id": "org_01hqx8x7x7x7x7x7x7x7x7x",
+  "step": "create_agent",
+  "completed": true,
+  "completed_count": 1,
+  "total": 6
+}
+```
+
+## Unmark a step
+
+```bash
+curl -X DELETE https://api.allternit.com/api/v1/admin/quickstart/create_agent \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+### Response
+
+```json
+{
+  "organization_id": "org_01hqx8x7x7x7x7x7x7x7x7x",
+  "step": "create_agent",
+  "completed": false,
+  "completed_count": 0,
+  "total": 6
+}
+```
+
+## Reset progress
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/admin/quickstart/reset \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+### Response
+
+```json
+{
+  "organization_id": "org_01hqx8x7x7x7x7x7x7x7x7x",
+  "completed_count": 0,
+  "total": 6
+}
+```
+
+## Error codes
+
+| Status | Code | Description |
+|--------|------|-------------|
+| `400` | `invalid_step` | The requested step ID is not in the predefined checklist. |
+| `403` | `organization_required` | The caller is not associated with an active organization. |
+| `403` | `insufficient_role` | Only organization owners or admins can manage quickstart progress. |
+| `500` | `internal_error` | A database or serialization error occurred. |
+
+## Related pages
+
+- [Workspaces](/admin/workspaces) — create the workspace used in the final quickstart step
+- [RBAC](/admin/rbac) — organization roles and permissions
+- [Service accounts](/admin/service-accounts) — machine identities for headless setup flows
+- [BYOC managed agents](/byoc/managed-agents) — deploy agents to your own infrastructure

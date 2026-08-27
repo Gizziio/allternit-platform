@@ -19,6 +19,8 @@ pub mod mail;
 pub mod mcp;
 pub mod memory;
 pub mod merge_locks;
+pub mod orchestrator;
+pub mod peer;
 pub mod policy;
 pub mod projections;
 pub mod templates;
@@ -28,6 +30,7 @@ pub mod rails_id;
 pub mod receipts;
 pub mod service;
 pub mod setup;
+pub mod steer;
 pub mod sync;
 pub mod tickets;
 pub mod vault;
@@ -56,7 +59,12 @@ pub use crate::mail::{
     MailIndexOptions, MailMessage, MailOptions, MailSearchHit, OverdueMessage, TypedMessage,
     DEFAULT_MAIL_THREAD,
 };
+pub use crate::orchestrator::{ExecutorProbe, Orchestrator, SpawnOptions, WatchOutcome};
+pub use crate::peer::{
+    DeliveryReceipt, Peer, PeerEnvelope, PeerRegistry, PeerSocket, PeerStatus, send_envelope,
+};
 pub use crate::prompt::{project_prompt, PromptTimeline};
 pub use crate::receipts::{ReceiptStore, ReceiptStoreOptions};
+pub use crate::steer::{CheckpointResult, ConsultResult, Steer};
 pub use crate::vault::{Vault, VaultOptions};
 pub use crate::work::{project_dag, WorkOps};

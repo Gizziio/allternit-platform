@@ -60,6 +60,10 @@ pub struct CompanyConfig {
     #[serde(rename = "internalServiceToken")]
     pub internal_service_token: Option<String>,
 
+    /// Cloudflare Remote Control push worker URL. Optional.
+    #[serde(rename = "pushWorkerUrl")]
+    pub push_worker_url: Option<String>,
+
     /// Company branding / tenant marker.
     #[serde(rename = "tenantId")]
     pub tenant_id: Option<String>,
@@ -80,12 +84,24 @@ pub struct CompanyConfig {
     #[serde(rename = "cronDaemonUrl")]
     pub cron_daemon_url: Option<String>,
 
+    /// URL of the Etrid native agent wallet service.
+    #[serde(rename = "etridUrl")]
+    pub etrid_url: Option<String>,
+
     /// When true, the packaged app runs in self-hosted mode. Clerk JWT
     /// verification is skipped and the desktop bootstrap headers are trusted
     /// instead. This is for deployments where the app bundle is the authority
     /// and there is no external Clerk tenant.
     #[serde(rename = "selfHosted")]
     pub self_hosted: Option<bool>,
+
+    /// Named agent-level permission policies baked into the deployment.
+    #[serde(rename = "permissionPolicies", default)]
+    pub permission_policies: Option<Vec<crate::permission_policy::PermissionPolicy>>,
+
+    /// Name of the company-level permission policy that is active by default.
+    #[serde(rename = "activePermissionPolicy", default)]
+    pub active_permission_policy: Option<String>,
 }
 
 /// User-level configuration. Written by the onboarding wizard and the settings
@@ -140,9 +156,26 @@ pub struct UserConfig {
     #[serde(rename = "cronDaemonUrl")]
     pub cron_daemon_url: Option<String>,
 
+    /// Etrid native agent wallet service URL.
+    #[serde(rename = "etridUrl")]
+    pub etrid_url: Option<String>,
+
+    /// Cloudflare Remote Control push worker URL. Optional: when unset,
+    /// runtime-triggered push notifications are unavailable.
+    #[serde(rename = "pushWorkerUrl")]
+    pub push_worker_url: Option<String>,
+
     /// First-start wizard tracking (OpenClaw-style versioning).
     #[serde(rename = "wizard")]
     pub wizard: Option<WizardState>,
+
+    /// User-defined agent-level permission policies.
+    #[serde(rename = "permissionPolicies", default)]
+    pub permission_policies: Option<Vec<crate::permission_policy::PermissionPolicy>>,
+
+    /// Name of the active permission policy. Overrides the company-level default.
+    #[serde(rename = "activePermissionPolicy", default)]
+    pub active_permission_policy: Option<String>,
 }
 
 /// Tracks when the first-start / env wizard last ran so the app can prompt
@@ -340,6 +373,16 @@ impl AppConfig {
             .filter(|s| !s.is_empty())
     }
 
+    /// Secret used to sign enrollment tokens for user-profile consent URLs.
+    /// Falls back to the platform encryption key so a packaged deployment has
+    /// a stable secret without extra configuration; explicit value preferred.
+    pub fn enrollment_secret(&self) -> Option<String> {
+        std::env::var("ALLTERNIT_ENROLLMENT_SECRET")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .or_else(|| self.encryption_key())
+    }
+
     /// Tenant identifier for this packaged deployment.
     pub fn tenant_id(&self) -> String {
         self.company
@@ -390,6 +433,25 @@ impl AppConfig {
             .filter(|s| !s.is_empty())
             .or_else(|| self.company.rails_url.clone())
             .unwrap_or_else(|| "http://127.0.0.1:8080".to_string())
+    }
+
+    /// URL of the Etrid native agent wallet service.
+    pub fn etrid_url(&self) -> String {
+        std::env::var("ALLTERNIT_ETRID_URL")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .or_else(|| self.user.etrid_url.clone())
+            .or_else(|| self.company.etrid_url.clone())
+            .unwrap_or_else(|| "http://127.0.0.1:8723".to_string())
+    }
+
+    /// URL of the Cloudflare Remote Control push worker. Optional.
+    pub fn push_worker_url(&self) -> Option<String> {
+        std::env::var("ALLTERNIT_PUSH_WORKER_URL")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .or_else(|| self.user.push_worker_url.clone())
+            .or_else(|| self.company.push_worker_url.clone())
     }
 
     /// Rails workspace ID for this deployment.
@@ -570,12 +632,46 @@ impl AppConfig {
             .unwrap_or_else(|| "http://127.0.0.1:8760".to_string())
     }
 
+    /// Office engine (services/office-engine) base URL. The TypeScript Hono
+    /// service exposes `POST /parse` and `POST /docx/roundtrip`; the
+    /// `/api/office/*` gateway routes proxy to it.
+    pub fn office_engine_url(&self) -> String {
+        std::env::var("OFFICE_ENGINE_URL")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| "http://127.0.0.1:8099".to_string())
+    }
+
     /// Gizzi runtime port. Used when a full URL is not supplied.
     pub fn gizzi_port(&self) -> u16 {
         std::env::var("GIZZI_PORT")
             .ok()
             .and_then(|p| p.parse().ok())
             .unwrap_or(4096)
+    }
+
+    /// Return the currently active permission policy, if one is configured.
+    /// User config selects the active policy name and overrides company policy
+    /// definitions with the same name.
+    pub fn active_permission_policy(&self) -> Option<crate::permission_policy::PermissionPolicy> {
+        let mut by_name: std::collections::HashMap<String, crate::permission_policy::PermissionPolicy> =
+            std::collections::HashMap::new();
+        if let Some(policies) = self.company.permission_policies.clone() {
+            for policy in policies {
+                by_name.insert(policy.name.clone(), policy);
+            }
+        }
+        if let Some(policies) = self.user.permission_policies.clone() {
+            for policy in policies {
+                by_name.insert(policy.name.clone(), policy);
+            }
+        }
+        let active_name = self
+            .user
+            .active_permission_policy
+            .as_ref()
+            .or_else(|| self.company.active_permission_policy.as_ref())?;
+        by_name.remove(active_name)
     }
 
     /// Apply env-variable overrides to the in-memory config. This keeps the
@@ -620,6 +716,16 @@ impl AppConfig {
         if let Ok(v) = std::env::var("ALLTERNIT_CRON_DAEMON_URL") {
             if !v.is_empty() {
                 self.user.cron_daemon_url = Some(v);
+            }
+        }
+        if let Ok(v) = std::env::var("ALLTERNIT_ETRID_URL") {
+            if !v.is_empty() {
+                self.user.etrid_url = Some(v);
+            }
+        }
+        if let Ok(v) = std::env::var("ALLTERNIT_PUSH_WORKER_URL") {
+            if !v.is_empty() {
+                self.user.push_worker_url = Some(v);
             }
         }
     }
@@ -741,6 +847,8 @@ pub struct SaveUserConfigPayload {
     pub agent_workdir: Option<String>,
     #[serde(rename = "cronDaemonUrl")]
     pub cron_daemon_url: Option<String>,
+    #[serde(rename = "etridUrl")]
+    pub etrid_url: Option<String>,
     #[serde(rename = "wizard")]
     pub wizard: Option<WizardState>,
 }
@@ -762,7 +870,11 @@ impl From<SaveUserConfigPayload> for UserConfig {
             voice_url: None,
             agent_workdir: payload.agent_workdir,
             cron_daemon_url: payload.cron_daemon_url,
+            etrid_url: payload.etrid_url,
+            push_worker_url: None,
             wizard: payload.wizard,
+            permission_policies: None,
+            active_permission_policy: None,
         }
     }
 }

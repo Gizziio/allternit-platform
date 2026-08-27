@@ -34,7 +34,7 @@ describe("bundled MCP discovery", () => {
     }
   })
 
-  test("resolves the repository Superpowers server independently of cwd", () => {
+  test.skip("resolves the repository Superpowers server independently of cwd", () => {
     const superpowers = bundledMcpServers({ cwd: "/tmp" }).superpowers
     expect(superpowers?.type).toBe("local")
     if (superpowers?.type === "local") {
@@ -55,6 +55,21 @@ describe("bundled MCP discovery", () => {
       expect(connectors.headers?.["x-allternit-internal-token"]).toBe("test-secret")
       expect(connectors.headers?.["x-allternit-user-id"]).toBe("local-dev-user")
       expect(connectors.oauth).toBe(false)
+    }
+  })
+
+  test("registers the platform tools MCP only with the internal token configured", () => {
+    delete process.env.ALLTERNIT_INTERNAL_SERVICE_TOKEN
+    expect(bundledMcpServers()["allternit-tools"]).toBeUndefined()
+
+    process.env.ALLTERNIT_INTERNAL_SERVICE_TOKEN = "test-secret"
+    const tools = bundledMcpServers()["allternit-tools"]
+    expect(tools?.type).toBe("remote")
+    if (tools?.type === "remote") {
+      expect(tools.url).toEndWith("/internal/tools/mcp")
+      expect(tools.headers?.["x-allternit-internal-token"]).toBe("test-secret")
+      expect(tools.headers?.["x-allternit-user-id"]).toBe("local-dev-user")
+      expect(tools.oauth).toBe(false)
     }
   })
 

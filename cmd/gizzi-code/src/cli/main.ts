@@ -5,7 +5,7 @@ import "drizzle-orm/sqlite-core/session.js"
 import "drizzle-orm/bun-sqlite/session.js"
 import yargs from "yargs"
 import { hideBin } from "yargs/helpers"
-import { RunCommand } from "@/cli/commands/run"
+import { ExecCommand, RunCommand } from "@/cli/commands/run"
 import { GenerateCommand } from "@/cli/commands/generate"
 import { Log } from "@/shared/util/log"
 import { ConnectCommand } from "@/cli/commands/connect"
@@ -13,12 +13,13 @@ import { SkillsCommand } from "@/cli/commands/skills"
 import { UpgradeCommand } from "@/cli/commands/upgrade"
 import { UninstallCommand } from "@/cli/commands/uninstall"
 import { ModelsCommand } from "@/cli/commands/models"
+import { HardwareCommand } from "@/cli/commands/hardware"
 import { UI } from "@/cli/ui"
 import { Installation } from "@/shared/installation"
 import { NamedErrorBase } from "@allternit/gizzi-util/error.js"
 import { FormatError } from "@/shared/error/format"
 import { ServeCommand } from "@/cli/commands/serve"
-import { PairCommand } from "@/cli/commands/pair"
+import { PairCommand, LoginCommand } from "@/cli/commands/pair"
 import { Filesystem } from "@/shared/util/filesystem"
 import { DebugCommand } from "@/cli/commands/debug"
 import { StatsCommand } from "@/cli/commands/stats"
@@ -58,6 +59,13 @@ import { LabsCommand } from "@/cli/commands/labs"
 import { UdemyCommand } from "@/cli/commands/udemy"
 import { VaultCommand } from "@/cli/commands/vault"
 import { CodemapCommand } from "@/cli/commands/codemap"
+import { AuthCommand } from "@/cli/commands/auth"
+import { ConfigCommand } from "@/cli/commands/config"
+import { ProfileCommand } from "@/cli/commands/profile"
+import { PermissionProfileCommand } from "@/cli/commands/permission-profile"
+import { CompletionsCommand } from "@/cli/commands/completions"
+import { RemoteCommand } from "@/cli/commands/remote"
+import { CIMode } from "@/cli/ci"
 import path from "path"
 import { Global, init as initGlobal } from "@/runtime/context/global"
 import { JsonMigration } from "@/runtime/session/storage/json-migration"
@@ -110,6 +118,15 @@ const cli = yargs(hideBin(process.argv))
     describe: "force the setup onboarding wizard",
     type: "boolean",
   })
+  .option("ci", {
+    describe: "run in CI/non-interactive mode (structured output, no prompts)",
+    type: "boolean",
+  })
+  .option("ci-format", {
+    describe: "CI output format",
+    choices: ["ndjson", "text", "markdown"],
+    default: "ndjson",
+  })
   .middleware(async (opts) => {
     await initGlobal()
     if (opts.onboarding) {
@@ -127,6 +144,13 @@ const cli = yargs(hideBin(process.argv))
     RuntimeTelemetry.attach((record) => {
       Log.Default.info("runtime.telemetry", record)
     })
+
+    // Activate CI mode if --ci flag or CI environment detected
+    if (opts.ci || CIMode.isCIEnvironment()) {
+      CIMode.activate({
+        format: opts.ciFormat as "ndjson" | "text" | "markdown" | undefined,
+      })
+    }
 
     process.env.AGENT = "1"
     process.env.GIZZI = "1"
@@ -182,6 +206,7 @@ const cli = yargs(hideBin(process.argv))
   .command(TuiThreadCommand)
   .command(AttachCommand)
   .command(RunCommand)
+  .command(ExecCommand)
   .command(GenerateCommand)
   .command(DebugCommand)
   .command(ConnectCommand)
@@ -190,8 +215,10 @@ const cli = yargs(hideBin(process.argv))
   .command(UninstallCommand)
   .command(ServeCommand)
   .command(PairCommand)
+  .command(LoginCommand)
   .command(WebCommand)
   .command(ModelsCommand)
+  .command(HardwareCommand)
   .command(StatsCommand)
   .command(StatusCommand)
   .command(ExportCommand)
@@ -223,6 +250,12 @@ const cli = yargs(hideBin(process.argv))
   .command(UdemyCommand)
   .command(VaultCommand)
   .command(CodemapCommand)
+  .command(AuthCommand)
+  .command(ConfigCommand)
+  .command(ProfileCommand)
+  .command(PermissionProfileCommand)
+  .command(CompletionsCommand)
+  .command(RemoteCommand)
   .fail((msg, err) => {
     if (
       msg?.startsWith("Unknown argument") ||

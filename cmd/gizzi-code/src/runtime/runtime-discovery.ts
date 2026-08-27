@@ -1,45 +1,23 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { SUBPROCESS_PROVIDERS, type SubprocessSpec, resolveCliPath, PROVIDER_ENV_KEYS } from '@/runtime/providers/discovery/subprocess';
 
 const execFileAsync = promisify(execFile);
 
-// Agent CLIs that gizzi can discover (from Multica daemon discovery pattern)
-const KNOWN_AGENT_CLIS = [
-  'claude',
-  'codex',
-  'openclaw',
-  'aider',
-  'cursor',
-  'continue',
-  'codewhisperer',
-  'copilot',
-  'gizzi',
-] as const;
-
-export type AgentCliName = (typeof KNOWN_AGENT_CLIS)[number];
+export { PROVIDER_ENV_KEYS };
 
 export interface DiscoveredCli {
-  name: AgentCliName;
+  name: string;
   path: string;
   version: string;
+  icon: string;
 }
 
 export interface DiscoveredRuntime {
   host: string;
   agentClis: DiscoveredCli[];
   discoveredAt: number;
-}
-
-async function resolveCliPath(name: string): Promise<string | null> {
-  try {
-    const { stdout } = await execFileAsync('which', [name], { timeout: 3000 });
-    const p = stdout.trim();
-    return p.length > 0 && existsSync(p) ? p : null;
-  } catch {
-    return null;
-  }
 }
 
 async function getCliVersion(path: string): Promise<string> {
@@ -55,15 +33,29 @@ async function getCliVersion(path: string): Promise<string> {
   return 'unknown';
 }
 
+async function runProbe(bin: string, spec: SubprocessSpec): Promise<boolean> {
+  if (!spec.probe) return true;
+  try {
+    const { stdout, stderr } = await execFileAsync(bin, spec.probe.args, { timeout: 3000 });
+    const out = (stdout + stderr).trim();
+    const { expect } = spec.probe;
+    return typeof expect === 'string' ? out.includes(expect) : expect.test(out);
+  } catch {
+    return false;
+  }
+}
+
 export async function discoverLocalAgentClis(): Promise<DiscoveredCli[]> {
   const results: DiscoveredCli[] = [];
 
   await Promise.all(
-    KNOWN_AGENT_CLIS.map(async (name) => {
-      const path = await resolveCliPath(name);
+    SUBPROCESS_PROVIDERS.map(async (spec) => {
+      const path = await resolveCliPath(spec);
       if (!path) return;
+      const alive = await runProbe(path, spec);
+      if (!alive) return;
       const version = await getCliVersion(path);
-      results.push({ name, path, version });
+      results.push({ name: spec.id, path, version, icon: spec.icon ?? spec.id });
     })
   );
 

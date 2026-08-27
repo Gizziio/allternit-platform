@@ -2,7 +2,7 @@
 import type { ToolResultBlockParam } from '@allternit/sdk/providers/anthropic/resources/index.mjs';
 import React from 'react';
 import { MessageResponse } from './../../components/MessageResponse.tsx';
-import { extractTag } from './../../utils/messages.ts';
+import { extractTag } from './../../utils/extractTag.js';
 import { FallbackToolUseErrorMessage } from '../../components/FallbackToolUseErrorMessage';
 import { TOOL_SUMMARY_MAX_LENGTH } from '../../constants/toolLimits';
 import { Text } from '../../ink';

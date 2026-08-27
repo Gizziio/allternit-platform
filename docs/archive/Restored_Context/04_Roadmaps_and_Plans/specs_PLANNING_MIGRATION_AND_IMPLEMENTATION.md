@@ -6,7 +6,7 @@ This document outlines the complete plan to address:
 1. **System Law Violations**: Remove all stub/placeholder code from Shell UI components
 2. **Kernel Sync**: Implement (not just design) real kernel synchronization
 3. **Tauri → Electron Migration**: Unify the desktop shell under Electron
-4. **Naming Migration**: Complete opencode → allternit rebrand
+4. **Naming Migration**: Complete gizzi → allternit rebrand
 
 **Status**: PLANNING PHASE - No code changes until this plan is approved.
 
@@ -22,7 +22,7 @@ This document outlines the complete plan to address:
 │  ┌─────────────────────┐      ┌─────────────────────────────┐  │
 │  │  Tauri (Rust)       │      │  Electron (Node.js)         │  │
 │  │  ─────────────      │      │  ─────────────────          │  │
-│  │  opencode-desktop   │      │  @allternit/shell-electron │  │
+│  │  allternit-desktop   │      │  @allternit/shell-electron │  │
 │  │  • src-tauri/       │      │  • main/                    │  │
 │  │  • Spawns CLI       │      │  • preload/                 │  │
 │  │  • Native features  │      │  • (basic implementation)   │  │
@@ -37,9 +37,9 @@ This document outlines the complete plan to address:
 │  ┌───────────────────────────────────────────────────────────┐  │
 │  │  cmd/cli/src/ (Rust)                                   │  │
 │  │  ─────────────────────────                                │  │
-│  │  • Binary name: opencode → allternit                            │  │
+│  │  • Binary name: gizzi → allternit                            │  │
 │  │  • Package: allternit-cli                                │  │
-│  │  • Commands use "opencode" naming                         │  │
+│  │  • Commands use "gizzi" naming                         │  │
 │  │  • Serves HTTP API on localhost                           │  │
 │  └───────────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────┘
@@ -62,14 +62,14 @@ This document outlines the complete plan to address:
 
 | Location | Current | Target | Count |
 |----------|---------|--------|-------|
-| CLI binary | `opencode` | `allternit` | 1 |
-| CLI commands | `opencode *` | `allternit *` | All |
-| Tauri package | `opencode-desktop` | `allternit-desktop` | 1 |
-| Tauri lib | `opencode_lib` | `allternit_desktop` | 1 |
-| Env vars | `OPENCODE_*` | `ALLTERNIT_*` | ~20 |
-| Config dir | `.opencode/` | `.allternit/` | 1 |
-| Binary cache | `.opencode/bin` | `.allternit/bin` | 1 |
-| Auth tokens | `opencode_*` | `allternit_*` | Multiple |
+| CLI binary | `gizzi` | `allternit` | 1 |
+| CLI commands | `gizzi *` | `allternit *` | All |
+| Tauri package | `allternit-desktop` | `allternit-desktop` | 1 |
+| Tauri lib | `allternit_desktop_lib` | `allternit_desktop` | 1 |
+| Env vars | `GIZZI_*` | `ALLTERNIT_*` | ~20 |
+| Config dir | `.gizzi/` | `.allternit/` | 1 |
+| Binary cache | `.gizzi/bin` | `.allternit/bin` | 1 |
+| Auth tokens | `gizzi_*` | `allternit_*` | Multiple |
 
 ### 1.3 Stub Code Inventory (VIOLATIONS)
 
@@ -537,13 +537,13 @@ cmd/
 | File | Changes |
 |------|---------|
 | `cmd/cli/Cargo.toml` | `name = "allternit"` |
-| `cmd/cli/src/main.rs` | Change all "opencode" references |
+| `cmd/cli/src/main.rs` | Change all "gizzi" references |
 | All command files | Update descriptions, help text |
 
 ```rust
 // Before
-const BINARY_NAME: &str = "opencode";
-const APP_NAME: &str = "OpenCode";
+const BINARY_NAME: &str = "gizzi";
+const APP_NAME: &str = "Gizzi Code";
 
 // After
 const BINARY_NAME: &str = "allternit";
@@ -554,10 +554,10 @@ const APP_NAME: &str = "Allternit";
 
 | Old | New |
 |-----|-----|
-| `OPENCODE_SERVER_PASSWORD` | `ALLTERNIT_SERVER_PASSWORD` |
-| `OPENCODE_SERVER_USERNAME` | `ALLTERNIT_SERVER_USERNAME` |
-| `OPENCODE_CLIENT` | `ALLTERNIT_CLIENT` |
-| `OPENCODE_EXPERIMENTAL_*` | `ALLTERNIT_EXPERIMENTAL_*` |
+| `ALLTERNIT_SERVER_PASSWORD` | `ALLTERNIT_SERVER_PASSWORD` |
+| `ALLTERNIT_SERVER_USERNAME` | `ALLTERNIT_SERVER_USERNAME` |
+| `ALLTERNIT_CLIENT` | `ALLTERNIT_CLIENT` |
+| `ALLTERNIT_EXPERIMENTAL_*` | `ALLTERNIT_EXPERIMENTAL_*` |
 
 **Migration strategy for env vars**:
 1. Support both old and new names during transition
@@ -572,9 +572,9 @@ pub fn get_env_var(name: &str) -> Option<String> {
     }
     
     // Fall back to old name with warning
-    if let Ok(value) = env::var(format!("OPENCODE_{}", name)) {
+    if let Ok(value) = env::var(format!("GIZZI_{}", name)) {
         tracing::warn!(
-            "OPENCODE_{} is deprecated, use ALLTERNIT_{} instead",
+            "GIZZI_{} is deprecated, use ALLTERNIT_{} instead",
             name, name
         );
         return Some(value);
@@ -588,16 +588,16 @@ pub fn get_env_var(name: &str) -> Option<String> {
 
 | Old Path | New Path |
 |----------|----------|
-| `~/.opencode/` | `~/.allternit/` |
-| `~/.opencode/bin/` | `~/.allternit/bin/` |
-| `~/.config/opencode/` | `~/.config/allternit/` |
+| `~/.gizzi/` | `~/.allternit/` |
+| `~/.gizzi/bin/` | `~/.allternit/bin/` |
+| `~/.config/gizzi/` | `~/.config/allternit/` |
 
 **Migration code**:
 
 ```rust
 pub fn get_config_dir() -> PathBuf {
     let new_dir = dirs::config_dir().unwrap().join("allternit");
-    let old_dir = dirs::config_dir().unwrap().join("opencode");
+    let old_dir = dirs::config_dir().unwrap().join("gizzi");
     
     // If old exists and new doesn't, migrate
     if old_dir.exists() && !new_dir.exists() {
@@ -613,8 +613,8 @@ pub fn get_config_dir() -> PathBuf {
 
 | Old | New |
 |-----|-----|
-| `opencode-desktop` | `allternit-desktop` |
-| `opencode_lib` | `allternit_desktop_lib` |
+| `allternit-desktop` | `allternit-desktop` |
+| `allternit_desktop_lib` | `allternit_desktop_lib` |
 | `@allternit/shell-electron` | `@allternit/shell` |
 
 ---
@@ -685,7 +685,7 @@ pub fn get_config_dir() -> PathBuf {
 1. **No Stubs**: `grep -r "mock\|TODO.*implement\|placeholder" --include="*.tsx" surfaces/allternit-platform/src/components/workspace/` returns nothing
 2. **Kernel Sync Works**: Can pull receipts from kernel and push policy changes
 3. **Electron Shell Works**: Feature parity with Tauri version
-4. **Naming Complete**: `grep -r "opencode" --include="*.rs" --include="*.ts" cmd/` returns only historical references
+4. **Naming Complete**: `grep -r "gizzi" --include="*.rs" --include="*.ts" cmd/` returns only historical references
 5. **All Tests Pass**: Unit tests, integration tests, e2e tests
 
 ---

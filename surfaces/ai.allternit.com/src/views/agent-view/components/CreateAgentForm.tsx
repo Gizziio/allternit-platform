@@ -27,6 +27,7 @@ import {
 } from "@/lib/agents";
 import { voiceService, type Voice } from "@/lib/agents/voice.service";
 import type { HardBanCategory } from "@/lib/agents/character.types";
+import { sealAgentSecrets } from "@/lib/agents/agent-secrets.service";
 import { api } from "@/integration/api-client";
 import { BrowserCompatibilityWarningComponent } from "./BrowserCompatibilityWarning";
 import { detectBrowserCompatibility } from "@/components/agents/AgentCreationWizard.validations";
@@ -35,6 +36,9 @@ import { CharacterStep } from "../steps/CharacterStep";
 import { AvatarStep } from "../steps/AvatarStep";
 import { RuntimeStep } from "../steps/RuntimeStep";
 import { HarnessStep } from "../steps/HarnessStep";
+import { ConnectorsStep } from "../steps/ConnectorsStep";
+import { IdentityChannelsStep } from "../steps/IdentityChannelsStep";
+import { VMOperatorStep } from "../steps/VMOperatorStep";
 import { ReviewStep } from "../steps/ReviewStep";
 import type { AvatarPickerConfig } from "./AgentAvatarPicker";
 
@@ -86,8 +90,22 @@ const CREATE_FLOW_STEPS: StepInfo[] = [
   { id: "character", label: "Character", description: "Traits, stats, and specialties" },
   { id: "avatar", label: "Avatar", description: "Visual representation" },
   { id: "runtime", label: "Runtime", description: "Model and voice settings" },
+  { id: "connectors", label: "Connectors", description: "Integrations and secrets" },
+  { id: "identityChannels", label: "Channels", description: "Email, phone, and wallet" },
   { id: "harness", label: "Harness", description: "AI routing and mode surfaces" },
   { id: "review", label: "Review", description: "Final confirmation" },
+];
+
+const BOT_FLOW_STEPS: StepInfo[] = [
+  { id: "identity", label: "Identity", description: "Bot name, handle, and tagline" },
+  { id: "character", label: "Character", description: "Personality and role" },
+  { id: "avatar", label: "Avatar", description: "Visual representation" },
+  { id: "runtime", label: "Runtime", description: "Model and voice settings" },
+  { id: "connectors", label: "Connectors", description: "Integrations and secrets" },
+  { id: "identityChannels", label: "Channels", description: "Email, phone, and wallet" },
+  { id: "vmOperator", label: "Computer", description: "Virtual computer and sandbox" },
+  { id: "harness", label: "Package", description: "Bot profile and surfaces" },
+  { id: "review", label: "Review", description: "Preview and launch" },
 ];
 
 const DEFAULT_LAYER_CONFIG: WorkspaceLayerConfig = {
@@ -213,7 +231,7 @@ function buildCharacterLayer(
 }
 
 export function CreateAgentForm({ onClose, onSuccess }: CreateAgentFormProps) {
-  const { createAgent, agents, isCreating, draftAgent, clearDraftAgent } = useAgentStore();
+  const { createAgent, updateAgent, agents, isCreating, draftAgent, clearDraftAgent } = useAgentStore();
   const orchestrators = agents.filter((a) => a.type === 'orchestrator');
   const [activeStep, setActiveStep] = useState<string>("identity");
   const [error, setError] = useState<string | null>(null);
@@ -287,6 +305,11 @@ export function CreateAgentForm({ onClose, onSuccess }: CreateAgentFormProps) {
   const [voiceLoading, setVoiceLoading] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [previewAudio, setPreviewAudio] = useState<HTMLAudioElement | null>(null);
+  const [pendingProvisioning, setPendingProvisioning] = useState<Record<'email' | 'phone' | 'wallet', boolean>>({
+    email: false,
+    phone: false,
+    wallet: false,
+  });
   const browserCompatibility = detectBrowserCompatibility();
 
   // Prefill from draft agent (template/duplicate flow) on mount
@@ -303,12 +326,27 @@ export function CreateAgentForm({ onClose, onSuccess }: CreateAgentFormProps) {
       allowedTools: draftAgent.allowedTools ?? prev.allowedTools,
       tags: draftAgent.tags ?? prev.tags,
       harness: draftAgent.harness ?? prev.harness,
+      isBot: draftAgent.isBot ?? prev.isBot,
+      botProfile: draftAgent.botProfile ?? prev.botProfile,
     }));
     clearDraftAgent();
   }, []);
 
-  const activeStepIndex = CREATE_FLOW_STEPS.findIndex((s) => s.id === activeStep);
-  const currentStepDescription = CREATE_FLOW_STEPS[activeStepIndex]?.description;
+  const isBotMode = formData.isBot === true;
+  const flowSteps = isBotMode ? BOT_FLOW_STEPS : CREATE_FLOW_STEPS;
+
+  // If the user toggles "Package as Bot" mid-flow, the active step may no longer
+  // exist in the new flow (e.g. "vmOperator" disappears when switching to agent
+  // mode). Reset to the first step in that case to avoid out-of-bounds footers.
+  const activeStepIndex = flowSteps.findIndex((s) => s.id === activeStep);
+  const safeActiveStepIndex = activeStepIndex >= 0 ? activeStepIndex : 0;
+  const currentStepDescription = flowSteps[safeActiveStepIndex]?.description;
+
+  useEffect(() => {
+    if (activeStepIndex < 0) {
+      setActiveStep(flowSteps[0].id);
+    }
+  }, [activeStepIndex, flowSteps]);
 
   // Derived calculations
   const projectedStats = useMemo(() => 
@@ -332,22 +370,26 @@ export function CreateAgentForm({ onClose, onSuccess }: CreateAgentFormProps) {
 
   const isReadyForCreate = useMemo(() => checklist.isValid, [checklist.isValid]);
 
+  const botProfileItem = checklist.items.find((i) => i.id === 'botProfile');
   const stepValidation = useMemo(() => ({
     identity: !!(formData.name && formData.name.length >= 3 && formData.description && formData.description.length >= 10),
     character: !!(blueprint.setup && blueprint.specialtySkills.length >= 1),
     avatar: true,
     runtime: true,
-    harness: Boolean(formData.harness?.mode) && (formData.allowedSurfaces || []).length > 0,
-    review: isReadyForCreate,
-  }) as Record<string, boolean>, [formData.name, formData.description, blueprint, formData.harness, formData.allowedSurfaces, isReadyForCreate]);
+    connectors: true,
+    identityChannels: true,
+    vmOperator: true,
+    harness: Boolean(formData.harness?.mode) && (formData.allowedSurfaces || []).length > 0 && (!isBotMode || botProfileItem?.satisfied !== false),
+    review: isReadyForCreate && (!isBotMode || botProfileItem?.satisfied === true),
+  }) as Record<string, boolean>, [formData.name, formData.description, blueprint, formData.harness, formData.allowedSurfaces, isReadyForCreate, isBotMode, botProfileItem]);
 
   // Methods
   const canJumpToStep = (stepId: string) => {
-    const idx = CREATE_FLOW_STEPS.findIndex(s => s.id === stepId);
-    if (idx === 0) return true;
+    const idx = flowSteps.findIndex(s => s.id === stepId);
+    if (idx <= 0) return true;
     // Can jump if all previous steps are valid
     for (let i = 0; i < idx; i++) {
-      if (!stepValidation[CREATE_FLOW_STEPS[i].id as keyof typeof stepValidation]) return false;
+      if (!stepValidation[flowSteps[i].id as keyof typeof stepValidation]) return false;
     }
     return true;
   };
@@ -445,7 +487,7 @@ export function CreateAgentForm({ onClose, onSuccess }: CreateAgentFormProps) {
       if (!stepValidation[activeStep]) {
         return;
       }
-      const nextStep = CREATE_FLOW_STEPS[activeStepIndex + 1];
+      const nextStep = flowSteps[safeActiveStepIndex + 1];
       if (nextStep) {
         setActiveStep(nextStep.id);
       }
@@ -561,6 +603,36 @@ export function CreateAgentForm({ onClose, onSuccess }: CreateAgentFormProps) {
           setWorkspaceWarning("Agent created, but workspace initialization failed.");
         }
 
+        // 3. Seal any secret values declared during creation
+        const secretValues = (payload.secretRefs ?? [])
+          .filter((s) => s.value && s.value.trim().length > 0)
+          .map((s) => ({ key: s.key, value: s.value!.trim() }));
+
+        if (secretValues.length > 0) {
+          try {
+            const sealResult = await sealAgentSecrets(createdAgent.id, secretValues);
+            if (sealResult.failed.length > 0) {
+              logger.warn({ failed: sealResult.failed }, '[CreateAgentForm] Some secrets failed to seal');
+              setWorkspaceWarning(
+                `Agent created, but ${sealResult.failed.length} secret(s) could not be sealed: ${sealResult.failed.map((f) => f.key).join(', ')}.`
+              );
+            }
+          } catch (sealError) {
+            logger.error({ err: sealError }, 'Secret sealing failed');
+            setWorkspaceWarning('Agent created, but secret sealing failed.');
+          }
+        }
+
+        // 4. Identity channels declared during creation are already part of the
+        // agent payload. Credential binding (sealing secrets + connecting
+        // connectors) happens after creation via the Bot Runtime Config modal or
+        // the Edit Agent form, where an agentId is guaranteed.
+        if (pendingProvisioning.email || pendingProvisioning.phone || pendingProvisioning.wallet) {
+          setWorkspaceWarning(
+            "Agent created. Bind real email/phone/wallet credentials from the bot's runtime config."
+          );
+        }
+
         setSubmitStatus({ type: 'success', message: 'Agent created successfully!' });
         
         if (onSuccess && createdAgent) {
@@ -622,9 +694,9 @@ export function CreateAgentForm({ onClose, onSuccess }: CreateAgentFormProps) {
         {/* Step Navigation */}
         <div className="rounded-xl border border-solid border-[var(--border-subtle)] bg-[var(--bg-card)] p-6 mb-6">
           <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3">
-            {CREATE_FLOW_STEPS.map((step, idx) => {
+            {flowSteps.map((step, idx) => {
               const selected = step.id === activeStep;
-              const completed = idx < activeStepIndex && stepValidation[step.id];
+              const completed = idx < safeActiveStepIndex && stepValidation[step.id];
               const unlocked = canJumpToStep(step.id);
               return (
                 <button
@@ -654,7 +726,7 @@ export function CreateAgentForm({ onClose, onSuccess }: CreateAgentFormProps) {
             })}
           </div>
           <div className="mt-3 p-2.5 px-3.5 rounded-md border border-solid border-[var(--border-subtle)] text-[12px] text-[var(--text-secondary)]">
-            Step {activeStepIndex + 1} of {CREATE_FLOW_STEPS.length}: {currentStepDescription}
+            Step {safeActiveStepIndex + 1} of {flowSteps.length}: {currentStepDescription}
           </div>
         </div>
 
@@ -674,6 +746,7 @@ export function CreateAgentForm({ onClose, onSuccess }: CreateAgentFormProps) {
                 personality={personality}
                 setPersonality={setPersonality}
                 orchestrators={orchestrators}
+                isBotMode={isBotMode}
               />
             )}
             {activeStep === "character" && (
@@ -707,10 +780,31 @@ export function CreateAgentForm({ onClose, onSuccess }: CreateAgentFormProps) {
                 handleVoicePreview={handleVoicePreview}
               />
             )}
+            {activeStep === "connectors" && (
+              <ConnectorsStep
+                formData={formData}
+                setFormData={setFormData}
+                isBotMode={isBotMode}
+              />
+            )}
+            {activeStep === "identityChannels" && (
+              <IdentityChannelsStep
+                formData={formData}
+                setFormData={setFormData}
+                pendingProvisioning={pendingProvisioning}
+                onTogglePendingProvision={(kind) =>
+                  setPendingProvisioning((prev) => ({ ...prev, [kind]: !prev[kind] }))
+                }
+              />
+            )}
+            {activeStep === "vmOperator" && (
+              <VMOperatorStep formData={formData} setFormData={setFormData} />
+            )}
             {activeStep === "harness" && (
               <HarnessStep
                 formData={formData}
                 setFormData={setFormData}
+                isBotMode={isBotMode}
               />
             )}
             {activeStep === "review" && (
@@ -719,6 +813,7 @@ export function CreateAgentForm({ onClose, onSuccess }: CreateAgentFormProps) {
                 blueprint={blueprint}
                 cardSeed={cardSeed}
                 projectedStats={projectedStats}
+                isBotMode={isBotMode}
               />
             )}
           </motion.div>
@@ -728,14 +823,14 @@ export function CreateAgentForm({ onClose, onSuccess }: CreateAgentFormProps) {
         <div className="sticky bottom-0 z-10 flex items-center justify-between p-4 px-5 bg-[var(--bg-card)] rounded-xl border border-solid border-[var(--border-subtle)] mt-6 gap-3 shadow-lg">
           <button
             type="button"
-            onClick={activeStepIndex === 0 ? onClose : () => setActiveStep(CREATE_FLOW_STEPS[activeStepIndex - 1].id)}
+            onClick={safeActiveStepIndex === 0 ? onClose : () => setActiveStep(flowSteps[safeActiveStepIndex - 1].id)}
             className="px-5 py-2.5 rounded-lg bg-transparent text-[var(--text-primary)] text-[14px] font-medium border border-solid border-[var(--border-subtle)] cursor-pointer hover:bg-[var(--surface-hover)] transition-colors"
           >
-            {activeStepIndex === 0 ? "Cancel" : "Previous"}
+            {safeActiveStepIndex === 0 ? "Cancel" : "Previous"}
           </button>
           
           <div className="flex gap-3">
-            {activeStepIndex < CREATE_FLOW_STEPS.length - 1 ? (
+            {safeActiveStepIndex < flowSteps.length - 1 ? (
               <button
                 type="submit"
                 disabled={!stepValidation[activeStep]}
@@ -758,7 +853,7 @@ export function CreateAgentForm({ onClose, onSuccess }: CreateAgentFormProps) {
                 ) : (
                   <>
                     <CheckCircle size={16} />
-                    Finalize & Launch
+                    {isBotMode ? "Package & Launch Bot" : "Finalize & Launch"}
                   </>
                 )}
               </button>

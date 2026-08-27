@@ -1,84 +1,101 @@
 ---
 title: Quickstart
-description: Get up and running with Allternit in minutes
+description: Get up and running with Gizzi Code in minutes
 ---
 
 ## Prerequisites
 
-Before you begin, ensure you have the following installed:
+Before you begin, ensure you have the following:
 
 - Node.js 18+
 - Git
-- API key from [platform.gizziio.com](https://platform.gizziio.com)
+- An API key from [platform.allternit.com](https://platform.allternit.com)
 
-## Install the CLI
+## Install Gizzi Code
+
+Gizzi Code is the unified Allternit CLI. Install it globally:
 
 <CodeGroup>
 ```bash npm
-npm install -g @allternit/cli
+npm install -g @allternit/gizzi-code
 ```
 
 ```bash yarn
-yarn global add @allternit/cli
+yarn global add @allternit/gizzi-code
 ```
 
 ```bash pnpm
-pnpm add -g @allternit/cli
+pnpm add -g @allternit/gizzi-code
+```
+
+```bash bun
+bun add -g @allternit/gizzi-code
 ```
 </CodeGroup>
 
-## Create Your First Project
-
-Initialize a new Allternit project:
-
-```bash
-allternit init my-first-agent
-cd my-first-agent
-```
-
-## Configure Your Environment
-
-Create a `.env` file with your API key:
-
-```bash
-ALLTERNIT_API_KEY=your_api_key_here
-```
-
-## Start Development
-
-Start the development environment:
-
-```bash
-allternit dev
-```
-
-This will start all services and open the Web Platform at `http://localhost:3001`.
-
-## Deploy to Production
-
-### Option 1: Allternit Cloud
-
-```bash
-allternit deploy
-```
-
-### Option 2: BYOC (Your Infrastructure)
+Or use the one-line installer for the full BYOC runtime:
 
 ```bash
 curl -fsSL https://install.allternit.com | bash
-allternit-runtime --config runtime.yaml
 ```
 
-## Next Steps
+## Authenticate
+
+Set your API key so Gizzi Code can talk to the Allternit platform:
+
+```bash
+export ALLTERNIT_API_KEY="your_api_key_here"
+```
+
+For persistent configuration, run:
+
+```bash
+gizzi auth login
+```
+
+## Start the interactive TUI
+
+Launch the terminal user interface and start an agent session:
+
+```bash
+gizzi
+```
+
+From the TUI you can:
+
+- Chat with agents
+- Run tools and browse the web
+- Edit files and review diffs
+- Switch profiles and models
+
+## Run a headless command
+
+You can also run a single prompt and exit:
+
+```bash
+gizzi exec "Explain the latest changes in this git diff"
+```
+
+## Start the web platform (optional)
+
+If you installed the full BYOC runtime, start the local platform:
+
+```bash
+gizzi platform start
+```
+
+Then open [http://localhost:3001](http://localhost:3001).
+
+## Next steps
 
 <CardGroup cols={3}>
+  <Card title="CLI overview" icon="terminal" href="/cli/overview">
+    Learn everything Gizzi Code can do
+  </Card>
+  <Card title="Configuration" icon="gear" href="/cli/configuration">
+    Profiles, models, and runtime options
+  </Card>
   <Card title="Architecture" icon="building" href="/architecture">
     Understand how Allternit works
-  </Card>
-  <Card title="Gizzi Runtime" icon="cpu" href="/core/gizzi-runtime">
-    Learn about the core runtime
-  </Card>
-  <Card title="SDK" icon="code" href="/sdk/typescript">
-    Build with our TypeScript SDK
   </Card>
 </CardGroup>

@@ -4,14 +4,28 @@ import type {
   ContentBlock,
   ContentBlockParam,
 } from '@allternit/sdk/providers/anthropic/resources/index.mjs'
-import { roughTokenCountEstimation as countTokens } from '../services/tokenEstimation.js'
+import { roughTokenCountEstimation as countTokens } from '../services/roughTokenEstimation.js'
 import type {
   AssistantMessage,
   Message,
   UserMessage,
 } from '../types/message.js'
-import { normalizeMessagesForAPI } from './messages.js'
 import { jsonStringify } from './slowOperations.js'
+
+// Lazily loaded to avoid a static circular import through messages.js.
+// Populated by ensureContextAnalysisMessagesModule() before analyzeContext()
+// is called — analyzeContext() itself stays synchronous (see call site in
+// compact.ts for why: it's a deliberate blocking walk).
+let messagesModule: typeof import('./messages.js') | undefined
+
+export async function ensureContextAnalysisMessagesModule(): Promise<
+  typeof import('./messages.js')
+> {
+  if (!messagesModule) {
+    messagesModule = await import('./messages.js')
+  }
+  return messagesModule
+}
 
 type TokenStats = {
   toolRequests: Map<string, number>
@@ -52,7 +66,7 @@ export function analyzeContext(messages: Message[]): TokenStats {
     }
   })
 
-  const normalizedMessages = normalizeMessagesForAPI(messages)
+  const normalizedMessages = messagesModule!.normalizeMessagesForAPI(messages)
   normalizedMessages.forEach(msg => {
     const { content } = msg.message
 

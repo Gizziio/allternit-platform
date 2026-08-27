@@ -62,6 +62,7 @@ function SearchGroupRich({
         />
       ))}
       <ToolRowBase
+        orbState="searching"
         shimmerLabel="Searching..."
         completeLabel={`Found ${totalResults} results`}
         isAnimating={anyAnimating}

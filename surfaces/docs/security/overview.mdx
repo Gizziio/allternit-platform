@@ -1,0 +1,77 @@
+---
+title: Security Overview
+description: Security architecture, trust boundaries, and compliance for Allternit
+---
+
+## Security architecture
+
+Allternit is designed for enterprise deployments where data protection, auditability, and access control are non-negotiable. The platform enforces security at every layer:
+
+<CardGroup cols={3}>
+  <Card title="Security Model" icon="shield" href="/security/security-model">
+    Trust boundaries, data flows, and threat mitigations
+  </Card>
+  <Card title="Vault" icon="lock" href="/security/vault">
+    Encrypted credential storage for provider keys and tokens
+  </Card>
+  <Card title="Cloud Credentials" icon="cloud" href="/security/cloud-credentials">
+    BYOC credential management for AWS, GCP, and Azure
+  </Card>
+  <Card title="Compliance" icon="check" href="/security/compliance">
+    Data export, deletion workflows, and retention policies
+  </Card>
+  <Card title="Audit Logs" icon="list" href="/security/audit">
+    Organization-scoped administrative and resource events
+  </Card>
+  <Card title="SCIM" icon="users" href="/security/scim">
+    Automated user and group provisioning
+  </Card>
+  <Card title="Inference Hooks" icon="rotate" href="/security/inference-hooks">
+    Pre- and post-inference HTTP hooks
+  </Card>
+</CardGroup>
+
+## Authentication
+
+Allternit uses two primary authentication modes:
+
+1. **Clerk JWTs** for the web/desktop UI and admin APIs. Sessions are scoped to an organization and role (owner/admin/member).
+2. **Virtual LLM keys** (`ak-…`) for the wire-compatible `/v1` surface. Each key is tied to an organization, optional model allowlist, monthly budget, and rate limit.
+
+## Authorization
+
+- **RBAC** — Organization owners and admins can manage workspaces, keys, budgets, DLP rules, and analytics. Members are restricted to permitted resources.
+- **Model allowlists** — Virtual keys can be restricted to specific models or aliases, preventing calls to unapproved providers.
+- **Workspace isolation** — Resources (agents, sessions, files, memory) are scoped to an organization and, where applicable, to individual users.
+
+## Data protection
+
+- **Encryption in transit** — All external and internal API traffic uses TLS.
+- **Encryption at rest** — SQLite databases and the vault store sensitive values. Connector tokens and vault entries are encrypted with a configurable encryption key.
+- **DLP scanning** — The LLM gateway scans outgoing requests for secrets, PII, and prompt-injection patterns. Detections can `warn`, `redact`, or `block`.
+- **Prompt leak detection** — Admin endpoints let operators score user text against system prompts to detect accidental leakage.
+
+## Audit and compliance
+
+- **Audit logs** — Administrative actions, key lifecycle events, and compliance requests are persisted per organization.
+- **Usage events** — Every LLM request is recorded with tokens, cost, status, latency, and routing decision.
+- **Compliance requests** — Org admins can request data export or deletion workflows.
+
+## Self-hosting / BYOC
+
+Allternit is designed so the hosting infrastructure can be passed to the user:
+
+- The API server, Gizzi runtime, and CommRails DAG engine can run on customer-managed infrastructure.
+- Encryption keys, provider credentials, and IP allow-lists remain under customer control.
+- The `GET /regions` endpoint publishes egress IP ranges for firewall allow-listing.
+
+## Threats and mitigations
+
+| Threat | Mitigation |
+|--------|------------|
+| Stolen virtual key | Per-key rate limits, budgets, model allowlists, and revocation |
+| Secret exfiltration in prompts | DLP scanning with block/redact actions |
+| Prompt injection | Injection scoring in DLP; strict tool-use validation |
+| Provider key exposure | Provider keys stored in vault/external keys, not returned to clients |
+| Privilege escalation | RBAC with org-scoped ownership checks on every admin route |
+| Data residency | Self-hosted deployments pin data to customer regions |

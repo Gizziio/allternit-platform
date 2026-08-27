@@ -85,6 +85,8 @@ struct RevisionRow {
 
 #[derive(Deserialize)]
 struct ListQuery {
+    // The web surface's artifacts client sends camelCase query params.
+    #[serde(alias = "workspaceId")]
     workspace_id: Option<String>,
     status: Option<String>,
     #[serde(rename = "type")]
@@ -95,6 +97,7 @@ struct ListQuery {
 #[derive(Deserialize)]
 struct SearchQuery {
     q: Option<String>,
+    #[serde(alias = "workspaceId")]
     workspace_id: Option<String>,
 }
 

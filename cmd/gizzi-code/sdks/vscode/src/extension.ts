@@ -2,7 +2,6 @@ import * as vscode from "vscode"
 
 const TERMINAL_NAME = "Gizzi Code"
 const PORT_ENV = "_EXTENSION_GIZZI_PORT"
-const LEGACY_PORT_ENV = "_EXTENSION_OPENCODE_PORT"
 const MIN_PORT = 16_384
 const MAX_PORT = 65_535
 
@@ -37,9 +36,7 @@ export function activate(context: vscode.ExtensionContext) {
       location: { viewColumn: vscode.ViewColumn.Beside, preserveFocus: false },
       env: {
         [PORT_ENV]: String(port),
-        [LEGACY_PORT_ENV]: String(port),
         GIZZI_CALLER: "vscode",
-        OPENCODE_CALLER: "vscode",
       },
     })
     terminal.show()
@@ -98,10 +95,6 @@ export function activate(context: vscode.ExtensionContext) {
     "gizzi.addFilepathToTerminal": insertFile,
     "gizzi.reconnect": reconnect,
     "gizzi.showLogs": showLogs,
-    // Compatibility for users upgrading from the original opencode extension.
-    "opencode.openTerminal": focusOrOpen,
-    "opencode.openNewTerminal": openNew,
-    "opencode.addFilepathToTerminal": insertFile,
   }
   for (const [command, handler] of Object.entries(handlers)) {
     context.subscriptions.push(vscode.commands.registerCommand(command, handler))
@@ -150,7 +143,7 @@ function gizziTerminals() {
 
 function terminalPort(terminal: vscode.Terminal): number | undefined {
   const env = terminal.creationOptions && "env" in terminal.creationOptions ? terminal.creationOptions.env : undefined
-  const raw = env?.[PORT_ENV] ?? env?.[LEGACY_PORT_ENV]
+  const raw = env?.[PORT_ENV]
   const port = typeof raw === "string" ? Number(raw) : NaN
   return Number.isInteger(port) ? port : undefined
 }

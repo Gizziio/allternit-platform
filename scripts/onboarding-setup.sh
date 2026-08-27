@@ -22,6 +22,7 @@ REPO_URL="https://github.com/allternit/allternit.git"
 INSTALL_DIR="${INSTALL_DIR:-$HOME/allternit-workspace}"
 ALLTERNIT_DIR="$INSTALL_DIR/allternit"
 LOG_DIR="$ALLTERNIT_DIR/.logs"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Version requirements
 NODE_VERSION="18"
@@ -326,6 +327,49 @@ install_chrome_streaming() {
 }
 
 # =============================================================================
+# INSTALL AGENT EMAIL (OPTIONAL - REQUIRES A CLOUDFLARE ACCOUNT)
+# =============================================================================
+
+install_agent_email() {
+    print_section "AGENT EMAIL RAIL (Optional)"
+
+    print_info "Agent Email gives each agent a real mailbox on your own domain:"
+    print_info "  • Per-agent mailboxes on a dedicated subdomain (agents.<your-domain>)"
+    print_info "  • Scoped API keys + approval-gated outbound mail"
+    print_info "  • Deploys to YOUR Cloudflare account (services/mailflare)"
+    print_info ""
+    print_info "Requires: a Cloudflare account, a domain on Cloudflare nameservers,"
+    print_info "and a scoped API token (the installer prints exact permissions)."
+
+    read -p "Set up Agent Email now? (y/N) " -n 1 -r
+    echo
+
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        # Prefer the copy inside the cloned repo; fall back to the script's own
+        # checkout (useful when running onboarding from an existing clone).
+        local mailflare_setup="$ALLTERNIT_DIR/services/mailflare/setup.sh"
+        if [ ! -f "$mailflare_setup" ]; then
+            mailflare_setup="$SCRIPT_DIR/../services/mailflare/setup.sh"
+        fi
+        if [ -f "$mailflare_setup" ]; then
+            print_step "Running the mailflare installer..."
+            if bash "$mailflare_setup"; then
+                print_success "Agent Email installed!"
+            else
+                print_warning "Agent Email installer exited with an error."
+                print_info "You can re-run it later with: ./services/mailflare/setup.sh"
+            fi
+        else
+            print_warning "mailflare installer not found (expected services/mailflare/setup.sh)"
+            print_info "You can install it later with: ./services/mailflare/setup.sh"
+        fi
+    else
+        print_info "Skipping Agent Email setup"
+        print_info "You can install it later with: ./services/mailflare/setup.sh"
+    fi
+}
+
+# =============================================================================
 # CLONE REPOSITORY
 # =============================================================================
 
@@ -501,6 +545,15 @@ Allternit_REGISTRY_PORT=8080
 # OLLAMA (Local LLM - Optional)
 # -----------------------------------------------------------------------------
 OLLAMA_BASE_URL=http://127.0.0.1:11434
+
+# -----------------------------------------------------------------------------
+# AGENT EMAIL (Optional - services/mailflare on your Cloudflare account)
+# Filled in automatically by services/mailflare/setup.sh
+# -----------------------------------------------------------------------------
+# ALLTERNIT_MAILFLARE_URL=
+# ALLTERNIT_MAILFLARE_ADMIN_KEY=
+# ALLTERNIT_BOT_EMAIL_DOMAIN=
+# ALLTERNIT_MAILFLARE_WEBHOOK_SECRET=
 
 # -----------------------------------------------------------------------------
 # GATEWAY AUTH (Optional)
@@ -980,6 +1033,7 @@ main() {
     clone_repository
     install_project_deps
     create_env_files
+    install_agent_email    # NEW: Agent Email after env files exist
     setup_api_keys
     check_ports
     create_startup_script

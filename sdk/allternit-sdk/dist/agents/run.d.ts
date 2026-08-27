@@ -23,6 +23,8 @@ export declare class AgentRun extends EventEmitter {
     submitReply(outcome: ReplyOutcome): Promise<void>;
     execute(): Promise<void>;
     private serializeMessagesForHarness;
+    private serializeContentForHarness;
+    private executeSingleToolCall;
     private handleToolCalls;
     private addToolResult;
     private updateStatus;
@@ -41,6 +43,20 @@ type RuntimeContentBlock = {
     tool_use_id: string;
     content: string;
     is_error?: boolean;
+} | {
+    type: 'vision';
+    source: {
+        type: 'base64';
+        media_type: string;
+        data: string;
+    } | {
+        type: 'url';
+        url: string;
+    };
+} | {
+    type: 'vision_coordinates';
+    x: number;
+    y: number;
 };
 type RuntimeMessage = Omit<Message, 'content'> & {
     content: string | RuntimeContentBlock[];

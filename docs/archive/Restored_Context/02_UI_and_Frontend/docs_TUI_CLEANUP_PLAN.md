@@ -12,7 +12,7 @@ Duplicate TUI implementations have been removed. The workspace now has a clean T
 
 This is the PRIMARY TUI that should be kept:
 - Integrated with the main CLI (`allternit` binary)
-- Has brain profile support (opencode-acp, kimi-acp, gemini-acp, qwen-acp)
+- Has brain profile support (gizzi-acp, kimi-acp, gemini-acp, qwen-acp)
 - Uses ACP protocol for brain sessions
 - Has model selection, session management, etc.
 

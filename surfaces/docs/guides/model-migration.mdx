@@ -1,0 +1,104 @@
+---
+title: Model Migration
+description: Switch between LLM providers and models without changing your application code
+---
+
+## Overview
+
+Allternit's LLM gateway provides a unified API across multiple model providers. Switching models — or running multiple models in parallel — requires no code changes, just configuration.
+
+## Supported providers
+
+| Provider | Models | How to connect |
+|----------|--------|----------------|
+| Allternit Gateway | Policy aliases and connected models | Default |
+| Local (Ollama) | Any GGUF/MLX model | Connect via [Providers API](/api/providers) |
+| Commercial API providers | Provider-native model catalogs | Connect via [Providers API](/api/providers) |
+
+## Using policy aliases
+
+Policy aliases are the simplest way to migrate. The gateway resolves an alias to a concrete provider/model pair and derives a cross-provider fallback chain automatically.
+
+| Alias | Optimization target |
+|-------|---------------------|
+| `auto` | Same as `allternit-balanced`. |
+| `allternit-balanced` | Balanced quality and cost across all benchmarks. |
+| `allternit-code` | Coding and software-engineering tasks. |
+| `allternit-reasoning` | Reasoning, math, and science tasks. |
+| `allternit-knowledge` | Knowledge and recall tasks. |
+| `allternit-instruct` | Instruction-following and chat quality. |
+
+```typescript
+const response = await client.chat.completions.create({
+  model: 'allternit-code',
+  messages: [{ role: 'user', content: 'Refactor this function' }],
+});
+```
+
+## Using explicit provider/model ids
+
+For deterministic routing, pass a connected provider and model directly:
+
+```typescript
+const response = await client.chat.completions.create({
+  model: 'provider-id/model-id',
+  messages: [{ role: 'user', content: 'Hello' }],
+});
+```
+
+## Migration checklist
+
+1. **List connected models** with `GET /v1/models`.
+2. **Test with a small workload** using a policy alias or explicit model.
+3. **Compare outputs, latency, and cost** via the [Estimates API](/api/estimates) and [Usage logs](/admin/gateway).
+4. **Update your application** to use the new model string.
+5. **Monitor usage** via the audit log for the first 24 hours.
+
+## Cost comparison
+
+Use the cost estimation API before migrating:
+
+```bash
+curl -X POST https://api.allternit.com/v1/estimates/cost \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "allternit-code",
+    "messages": [
+      {"role": "user", "content": "Refactor this function"}
+    ],
+    "max_tokens": 500
+  }'
+```
+
+## Prompt caching
+
+Allternit supports prompt caching for models that advertise it. Cached prompts reduce latency and cost for repeated system prompts:
+
+```typescript
+const response = await client.chat.completions.create({
+  model: 'allternit-balanced',
+  messages: [
+    {
+      role: 'system',
+      content: 'You are a code reviewer...',
+      cache_control: { type: 'ephemeral' }
+    },
+    { role: 'user', content: diff }
+  ],
+});
+```
+
+For caching entire message arrays, see [Context Caches](/api/context-caches).
+
+## Reasoning mode
+
+Enable extended thinking for complex tasks:
+
+```typescript
+const response = await client.chat.completions.create({
+  model: 'allternit-reasoning',
+  messages: [{ role: 'user', content: 'Prove this theorem' }],
+  reasoning_effort: 'high'
+});
+```

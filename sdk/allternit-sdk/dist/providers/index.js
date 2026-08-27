@@ -9,6 +9,7 @@ export * from './groq';
 export * from './together';
 export * from './azure';
 export * from './bedrock';
+export * from './mlx';
 // Provider registry and discovery
 export * from './registry';
 export * from './discovery';

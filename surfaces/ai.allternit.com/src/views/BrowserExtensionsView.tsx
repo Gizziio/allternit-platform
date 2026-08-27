@@ -17,8 +17,14 @@ import type { Extension } from './browser-extensions/main/BrowserExtensions.type
 import { ExtensionDetailView } from './browser-extensions/main/ExtensionDetailView';
 import { EXTENSION_MARKETPLACE } from './browser-extensions/main/extension-marketplace';
 import { Modal, ModalHeader, ModalBody, ModalFooter, ModalButton } from '@/components/ui/Modal';
+import { OfficeSuiteSection } from './office/OfficeSuiteSection';
 
-export function BrowserExtensionsView() {
+export interface BrowserExtensionsViewProps {
+  /** Shell context: open office editors as ACI shell views (from the ViewRegistry). */
+  openView?: (viewType: string, context?: unknown) => void;
+}
+
+export function BrowserExtensionsView({ openView }: BrowserExtensionsViewProps) {
   const [selectedExtensionId, setSelectedExtensionId] = useState<string | null>(null);
   const [selectedMarketplaceExtension, setSelectedMarketplaceExtension] = useState<Extension | null>(null);
   const [showMarketplace, setShowMarketplace] = useState(false);
@@ -66,24 +72,38 @@ export function BrowserExtensionsView() {
       )}
 
       <div className="mx-auto flex w-full max-w-6xl flex-col px-8 pb-12 pt-10">
-        <div className="flex items-center justify-between gap-4">
-          <h1 className="m-0 text-3xl font-medium tracking-tight" style={{ fontFamily: 'var(--font-serif)' }}>Extensions</h1>
-          <button
-            type="button"
-            onClick={() => setShowMarketplace((value) => !value)}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] px-3.5 text-sm text-[var(--text-secondary)] hover:border-[var(--border-hover)]"
-          >
-            <Storefront size={16} />
-            {showMarketplace ? 'My Extensions' : 'Marketplace'}
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowUpload(true)}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[var(--text-primary)] px-4 text-sm font-medium text-[var(--bg-elevated)] transition-opacity hover:opacity-90"
-          >
-            <Plus size={16} weight="bold" />
-            Upload Extension
-          </button>
+        <h1 className="m-0 text-3xl font-medium tracking-tight" style={{ fontFamily: 'var(--font-serif)' }}>Office &amp; Extensions</h1>
+
+        <section className="mt-8" data-testid="office-suite-block">
+          <div className="mb-5">
+            <h2 className="text-lg font-semibold">Allternit Office</h2>
+            <p className="mt-1 text-sm text-[var(--text-secondary)]">
+              Create and edit Word, Excel, PowerPoint, and PDF files — saved as Allternit artifacts.
+            </p>
+          </div>
+          <OfficeSuiteSection openView={openView} />
+        </section>
+
+        <div className="mt-10 flex items-center justify-between gap-4">
+          <h2 className="m-0 text-lg font-semibold tracking-tight">Browser Extensions</h2>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button
+              type="button"
+              onClick={() => setShowMarketplace((value) => !value)}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] px-3.5 text-sm text-[var(--text-secondary)] transition-colors hover:border-[var(--border-hover)]"
+            >
+              <Storefront size={16} />
+              {showMarketplace ? 'My Extensions' : 'Marketplace'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowUpload(true)}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[var(--text-primary)] px-4 text-sm font-medium text-[var(--bg-elevated)] transition-opacity hover:opacity-90"
+            >
+              <Plus size={16} weight="bold" />
+              Upload Extension
+            </button>
+          </div>
         </div>
 
         <div className="relative mt-6">
@@ -94,7 +114,7 @@ export function BrowserExtensionsView() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search installed and available extensions…"
-              className="h-11 w-full rounded-xl border border-[var(--border-default)] bg-[var(--bg-elevated)] pl-10 pr-4 text-[15px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-tertiary)] focus:border-[var(--accent-primary)]"
+              className="h-11 w-full rounded-xl border border-[var(--border-default)] bg-[var(--bg-elevated)] pl-10 pr-4 text-[15px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-tertiary)] focus:border-[var(--text-primary)]"
             />
         </div>
 

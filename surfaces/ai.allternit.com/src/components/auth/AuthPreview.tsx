@@ -93,32 +93,32 @@ function ChatMockup({ accent }: { accent: string }) {
       <div className="flex-1 flex flex-col gap-2.5 mb-3.5 overflow-hidden">
         {/* User */}
         <div className="flex justify-end">
-          <div className="max-w-[78%] p-[9px_13px] rounded-[14px_14px_3px_14px] bg-[#1A1612] text-[#F5EDE3] text-[12.5px] leading-relaxed">
+          <div className="max-w-[78%] p-[9px_13px] rounded-[14px_14px_3px_14px] bg-accent-primary text-text-inverse text-[12.5px] leading-relaxed">
             Can you analyze this research and write a structured summary?
           </div>
         </div>
 
         {/* AI */}
         <div className="flex gap-2 items-start">
-          <div className="size-6 rounded-full shrink-0 flex items-center justify-center text-[12px] font-extrabold text-[var(--ui-text-primary)] font-mono" style={{ background: accent }}>G</div>
-          <div className="max-w-[80%] p-[9px_13px] rounded-[3px_14px_14px_14px] bg-white border border-solid border-black/5 text-[12.5px] leading-relaxed text-[#1A1612]">
+          <div className="size-6 rounded-full shrink-0 flex items-center justify-center text-[12px] font-extrabold text-text-inverse font-mono" style={{ background: accent }}>G</div>
+          <div className="max-w-[80%] p-[9px_13px] rounded-[3px_14px_14px_14px] bg-surface-panel border border-solid border-ui-border-subtle text-[12.5px] leading-relaxed text-ui-text-primary">
             <div className="mb-1 font-semibold">Here&apos;s the structured summary:</div>
-            <div style={{ color: accent }}>→ <span className="text-[#4a3628]">Key finding: methodology validated</span></div>
-            <div className="text-[var(--status-success)]">→ <span className="text-[#4a3628]">Results: 94% accuracy across trials</span></div>
-            <div className="text-[#6366f1]">→ <span className="text-[#4a3628]">Next: expand to larger dataset</span></div>
+            <div style={{ color: accent }}>→ <span className="text-ui-text-secondary">Key finding: methodology validated</span></div>
+            <div className="text-[var(--status-success)]">→ <span className="text-ui-text-secondary">Results: 94% accuracy across trials</span></div>
+            <div className="text-[#6366f1]">→ <span className="text-ui-text-secondary">Next: expand to larger dataset</span></div>
           </div>
         </div>
 
         {/* Typing indicator */}
         <div className="flex gap-2 items-center opacity-50">
-          <div className="size-6 rounded-full bg-[#e8ddd4] shrink-0" />
-          <div className="flex gap-0.5 p-[8px_12px] bg-white rounded-xl border border-solid border-black/5">
+          <div className="size-6 rounded-full bg-ui-border-default shrink-0" />
+          <div className="flex gap-0.5 p-[8px_12px] bg-surface-panel rounded-xl border border-solid border-ui-border-subtle">
             {[0, 1, 2].map(i => (
               <motion.div
                 key={i}
                 animate={{ y: [0, -4, 0] }}
                 transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.15 }}
-                className="size-1 rounded-full bg-[#8a7060]"
+                className="size-1 rounded-full bg-ui-text-muted"
               />
             ))}
           </div>
@@ -126,10 +126,10 @@ function ChatMockup({ accent }: { accent: string }) {
       </div>
 
       {/* Input */}
-      <div className="flex gap-2 items-center p-[9px_12px] rounded-xl bg-white border border-solid border-black/10 shadow-[0_1px_4px_rgba(0,0,0,0.06)]">
-        <span className="flex-1 text-[12.5px] text-[#9B8070]">Ask Gizzi anything…</span>
+      <div className="flex gap-2 items-center p-[9px_12px] rounded-xl bg-surface-panel border border-solid border-ui-border-default shadow-[0_1px_4px_rgba(0,0,0,0.06)]">
+        <span className="flex-1 text-[12.5px] text-ui-text-muted">Ask Gizzi anything…</span>
         <div className="size-[26px] rounded-lg flex items-center justify-center shrink-0" style={{ background: accent }}>
-          <span className="text-[var(--ui-text-primary)] text-[13px] leading-none">→</span>
+          <span className="text-text-inverse text-[13px] leading-none">→</span>
         </div>
       </div>
     </div>
@@ -142,8 +142,8 @@ function CoworkMockup({ accent }: { accent: string }) {
   return (
     <div className="flex h-full gap-0">
       {/* Left — chat pane */}
-      <div className="w-[38%] border-r border-solid border-black/10 flex flex-col p-4">
-        <div className="text-[12px] font-bold tracking-wider text-[#9B8070] uppercase mb-3">
+      <div className="w-[38%] border-r border-solid border-ui-border-subtle flex flex-col p-4">
+        <div className="text-[12px] font-bold tracking-wider text-ui-text-muted uppercase mb-3">
           Conversation
         </div>
         <div className="flex flex-col gap-2 flex-1">
@@ -153,24 +153,24 @@ function CoworkMockup({ accent }: { accent: string }) {
           ].map((m, i) => (
             <div key={`${m.text}-${i}`} className={cn(
               "p-[7px_10px] rounded-lg text-[12px] leading-relaxed",
-              m.user ? "bg-[#1A1612] text-[#F5EDE3]" : "bg-white text-[#1A1612] border border-solid border-black/5"
+              m.user ? "bg-accent-primary text-text-inverse" : "bg-surface-panel text-ui-text-primary border border-solid border-ui-border-subtle"
             )}>{m.text}</div>
           ))}
         </div>
-        <div className="mt-2.5 p-[7px_10px] rounded-lg text-[12px] bg-white border border-solid border-black/10 text-[#9B8070]">Reply…</div>
+        <div className="mt-2.5 p-[7px_10px] rounded-lg text-[12px] bg-surface-panel border border-solid border-ui-border-default text-ui-text-muted">Reply…</div>
       </div>
 
       {/* Right — artifact pane */}
       <div className="flex-1 p-4 overflow-hidden">
-        <div className="text-[12px] font-bold tracking-wider text-[#9B8070] uppercase mb-3">
+        <div className="text-[12px] font-bold tracking-wider text-ui-text-muted uppercase mb-3">
           Artifact · GTM Plan
         </div>
-        <div className="text-[12.5px] text-[#1A1612] leading-relaxed">
+        <div className="text-[12.5px] text-ui-text-primary leading-relaxed">
           <div className="font-bold mb-1.5">Go-to-Market Strategy</div>
           <div className="font-semibold mb-1" style={{ color: accent }}>Phase 1 — Positioning</div>
-          <div className="text-[#5a4030] mb-2">Define ICP and core value prop across segments…</div>
+          <div className="text-ui-text-secondary mb-2">Define ICP and core value prop across segments…</div>
           <div className="text-[var(--status-success)] font-semibold mb-1">Phase 2 — Channels</div>
-          <div className="text-[#5a4030]">Identify top 3 acquisition loops with lowest CAC…</div>
+          <div className="text-ui-text-secondary">Identify top 3 acquisition loops with lowest CAC…</div>
         </div>
         <motion.div
           animate={{ opacity: [0.4, 1, 0.4] }}
@@ -189,20 +189,20 @@ function CodeMockup({ accent }: { accent: string }) {
   return (
     <div className="flex flex-col h-full">
       {/* Tab bar */}
-      <div className="flex items-center gap-1.5 p-[10px_16px] border-b border-solid border-black/10 bg-black/5">
+      <div className="flex items-center gap-1.5 p-[10px_16px] border-b border-solid border-ui-border-subtle bg-surface-canvas">
         {['#ff5f56', '#ffbd2e', '#27c93f'].map((c) => (
           <div key={c} className="size-[9px] rounded-full" style={{ background: c }} />
         ))}
-        <div className="ml-2 text-[12.5px] text-[#8a7060] font-mono">agent.ts</div>
+        <div className="ml-2 text-[12.5px] text-ui-text-muted font-mono">agent.ts</div>
       </div>
 
       {/* Code */}
       <div className="flex-1 p-[14px_16px] font-mono text-[12px] leading-loose overflow-hidden">
-        <div><span className="text-[#9b8070]">1 </span><span className="text-[#6366f1]">async function</span> <span style={{ color: accent }}>createAgent</span><span className="text-[#4a3628]">(config: AgentConfig) {'{'}</span></div>
-        <div><span className="text-[#9b8070]">2 </span><span className="text-[#4a3628]">  </span><span className="text-[#6366f1]">const</span><span className="text-[#4a3628]"> agent = </span><span className="text-[#6366f1]">await</span><span className="text-[#4a3628]"> Gizzi.spawn(config)</span></div>
-        <div><span className="text-[#9b8070]">3 </span><span className="text-[#4a3628]">  </span><span className="text-[#6366f1]">await</span><span className="text-[#4a3628]"> agent.run()</span></div>
-        <div><span className="text-[#9b8070]">4 </span><span className="text-[#4a3628]">  </span><span className="text-[#6366f1]">return</span><span className="text-[#4a3628]"> agent.result</span></div>
-        <div><span className="text-[#9b8070]">5 </span><span className="text-[#4a3628]">{'}'}</span></div>
+        <div><span className="text-ui-text-muted">1 </span><span className="text-[#6366f1]">async function</span> <span style={{ color: accent }}>createAgent</span><span className="text-ui-text-secondary">(config: AgentConfig) {'{'}</span></div>
+        <div><span className="text-ui-text-muted">2 </span><span className="text-ui-text-secondary">  </span><span className="text-[#6366f1]">const</span><span className="text-ui-text-secondary"> agent = </span><span className="text-[#6366f1]">await</span><span className="text-ui-text-secondary"> Gizzi.spawn(config)</span></div>
+        <div><span className="text-ui-text-muted">3 </span><span className="text-ui-text-secondary">  </span><span className="text-[#6366f1]">await</span><span className="text-ui-text-secondary"> agent.run()</span></div>
+        <div><span className="text-ui-text-muted">4 </span><span className="text-ui-text-secondary">  </span><span className="text-[#6366f1]">return</span><span className="text-ui-text-secondary"> agent.result</span></div>
+        <div><span className="text-ui-text-muted">5 </span><span className="text-ui-text-secondary">{'}'}</span></div>
       </div>
 
       {/* AI suggestion */}
@@ -212,14 +212,14 @@ function CodeMockup({ accent }: { accent: string }) {
         transition={{ delay: 0.6 }}
         className="m-[0_12px_12px] p-[9px_12px] rounded-lg border border-solid flex items-center gap-2"
         style={{
-          background: `color-mix(in srgb, ${accent} 8%, #fff)`,
+          background: `color-mix(in srgb, ${accent} 8%, var(--surface-panel))`,
           borderColor: `color-mix(in srgb, ${accent} 22%, transparent)`,
         }}
       >
         <div className="size-[18px] rounded-md flex items-center justify-center shrink-0" style={{ background: accent }}>
-          <span className="text-[var(--ui-text-primary)] text-[12px] font-extrabold">AI</span>
+          <span className="text-text-inverse text-[12px] font-extrabold">AI</span>
         </div>
-        <span className="text-[12px] text-[#1A1612]">Add error handling for network timeouts</span>
+        <span className="text-[12px] text-ui-text-primary">Add error handling for network timeouts</span>
         <span className="ml-auto text-[12px] font-semibold cursor-pointer" style={{ color: accent }}>Apply →</span>
       </motion.div>
     </div>
@@ -232,24 +232,24 @@ function BrowserMockup({ accent }: { accent: string }) {
   return (
     <div className="flex flex-col h-full">
       {/* URL bar */}
-      <div className="flex items-center gap-2 p-[10px_14px] border-b border-solid border-black/10 bg-black/5">
+      <div className="flex items-center gap-2 p-[10px_14px] border-b border-solid border-ui-border-subtle bg-surface-canvas">
         {['←', '→', '⟳'].map((a) => (
-          <div key={a} className="text-[12px] text-[#9B8070] cursor-pointer w-4 text-center">{a}</div>
+          <div key={a} className="text-[12px] text-ui-text-muted cursor-pointer w-4 text-center">{a}</div>
         ))}
-        <div className="flex-1 p-[4px_10px] rounded-lg bg-white border border-solid border-black/10 text-[12.5px] text-[#4a3628] font-mono">
+        <div className="flex-1 p-[4px_10px] rounded-lg bg-surface-panel border border-solid border-ui-border-default text-[12.5px] text-ui-text-secondary font-mono">
           docs.allternit.com/agents
         </div>
       </div>
 
       {/* Page content */}
       <div className="flex-1 p-[14px_16px] relative overflow-hidden">
-        <div className="text-[13px] font-bold text-[#1A1612] mb-1.5">Agent Documentation</div>
-        <div className="text-[12px] text-[#5a4030] leading-relaxed mb-2.5">
+        <div className="text-[13px] font-bold text-ui-text-primary mb-1.5">Agent Documentation</div>
+        <div className="text-[12px] text-ui-text-secondary leading-relaxed mb-2.5">
           Gizzi agents are autonomous workers that can execute multi-step tasks, call tools, and report back results without human intervention…
         </div>
         <div className="flex gap-1.5 flex-wrap">
           {['Spawning', 'Tools', 'Memory', 'Delegation'].map(tag => (
-            <div key={tag} className="p-[3px_9px] rounded-md text-[12px] bg-white border border-solid border-black/10 text-[#5a4030]">{tag}</div>
+            <div key={tag} className="p-[3px_9px] rounded-md text-[12px] bg-surface-panel border border-solid border-ui-border-default text-ui-text-secondary">{tag}</div>
           ))}
         </div>
 
@@ -258,16 +258,16 @@ function BrowserMockup({ accent }: { accent: string }) {
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
-          className="absolute bottom-3 left-3 right-3 p-[10px_13px] rounded-xl bg-[#1A1612] border border-solid shadow-[0_4px_20px_rgba(0,0,0,0.25)] flex items-center gap-2.5"
+          className="absolute bottom-3 left-3 right-3 p-[10px_13px] rounded-xl bg-accent-primary border border-solid shadow-[0_4px_20px_rgba(0,0,0,0.25)] flex items-center gap-2.5"
           style={{
             borderColor: `color-mix(in srgb, ${accent} 30%, transparent)`,
           }}
         >
-          <div className="size-[22px] rounded-md shrink-0 flex items-center justify-center text-[12px] font-extrabold text-[var(--ui-text-primary)]" style={{ background: accent }}>G</div>
-          <span className="text-[12px] text-[#C4A78A] flex-1">
+          <div className="size-[22px] rounded-md shrink-0 flex items-center justify-center text-[12px] font-extrabold text-text-inverse" style={{ background: accent }}>G</div>
+          <span className="text-[12px] text-text-inverse opacity-80 flex-1">
             Found the agent API docs. Want me to extract the key endpoints?
           </span>
-          <div className="p-[4px_10px] rounded-md text-[12px] font-bold text-[var(--ui-text-primary)] cursor-pointer" style={{ background: accent }}>Yes →</div>
+          <div className="p-[4px_10px] rounded-md text-[12px] font-bold text-text-inverse cursor-pointer" style={{ background: accent }}>Yes →</div>
         </motion.div>
       </div>
     </div>
@@ -308,21 +308,21 @@ export function AuthPreview() {
             </span>
             <div className="flex-1 h-px" style={{ background: `color-mix(in srgb, ${slide.accent} 20%, transparent)` }} />
           </div>
-          <p className="text-[13px] text-[#74716B] leading-relaxed m-0">
+          <p className="text-[13px] text-ui-text-muted leading-relaxed m-0">
             {slide.desc}
           </p>
         </motion.div>
       </AnimatePresence>
 
       {/* Preview card */}
-      <div className="h-80 bg-[#F5EDE3] rounded-[20px] border border-solid border-black/5 shadow-[0_24px_70px_rgba(30,25,20,0.14)] overflow-hidden relative">
+      <div className="h-80 bg-surface-panel rounded-[20px] border border-solid border-ui-border-subtle shadow-[0_24px_70px_rgba(30,25,20,0.14)] overflow-hidden relative">
         {/* Grid */}
-        <div 
-          className="absolute inset-0 pointer-events-none" 
+        <div
+          className="absolute inset-0 pointer-events-none opacity-40"
           style={{
-            backgroundImage: 'linear-gradient(rgba(26,22,18,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(26,22,18,0.04) 1px, transparent 1px)',
+            backgroundImage: 'linear-gradient(var(--ui-border-subtle) 1px, transparent 1px), linear-gradient(90deg, var(--ui-border-subtle) 1px, transparent 1px)',
             backgroundSize: '30px 30px',
-          }} 
+          }}
         />
 
         <AnimatePresence mode="wait" custom={direction}>
@@ -333,7 +333,7 @@ export function AuthPreview() {
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: direction * -40, opacity: 0 }}
             transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
-            className="absolute inset-0 w-full h-full flex items-center justify-center bg-[#F4EFE8]"
+            className="absolute inset-0 w-full h-full flex items-center justify-center bg-surface-canvas"
           >
             {slide.videoUrl ? (
               <video
@@ -359,7 +359,7 @@ export function AuthPreview() {
             onClick={() => { setDirection(i > active ? 1 : -1); setActive(i); }}
             className={cn(
               "h-1.5 rounded-full border-none cursor-pointer p-0 transition-all duration-300",
-              i === active ? "w-6" : "w-1.5 bg-black/15"
+              i === active ? "w-6" : "w-1.5 bg-ui-border-default"
             )}
             style={i === active ? { background: slide.accent } : undefined}
           />
@@ -375,61 +375,61 @@ export function AuthPreview() {
           transition={{ duration: 0.35 }}
           className="rounded-[20px] p-[28px_28px_24px] shadow-[0_20px_60px_rgba(30,25,20,0.09)] border border-solid"
           style={{
-            background: `linear-gradient(180deg, color-mix(in srgb, ${slide.accent} 4%, #fffefc), #f7f4ef 72%)`,
-            borderColor: `color-mix(in srgb, ${slide.accent} 16%, #e1e0dc)`,
+            background: `linear-gradient(180deg, color-mix(in srgb, ${slide.accent} 4%, var(--surface-panel)), var(--surface-canvas) 72%)`,
+            borderColor: `color-mix(in srgb, ${slide.accent} 16%, var(--ui-border-default))`,
           }}
         >
           <div className="flex items-center gap-3 mb-4.5">
             <div className="w-11 h-px" style={{ background: `linear-gradient(90deg, ${slide.accent}, transparent)` }} />
-            <span className="text-[12px] tracking-[0.14em] uppercase text-[#74716B] font-bold">
+            <span className="text-[12px] tracking-[0.14em] uppercase text-ui-text-muted font-bold">
               {slide.promoKicker}
             </span>
           </div>
 
           <div className="grid gap-4.5">
             <div className="max-w-[500px]">
-              <div className="text-[34px] leading-[1.02] tracking-tight text-[#0D0C0A] font-bold">
+              <div className="text-[34px] leading-[1.02] tracking-tight text-ui-text-primary font-bold">
                 {slide.promoTitle}
               </div>
-              <p className="mt-3.5 text-[14px] leading-relaxed text-[#74716B] m-0">
+              <p className="mt-3.5 text-[14px] leading-relaxed text-ui-text-muted m-0">
                 {slide.promoCopy}
               </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-[1.2fr_0.8fr] gap-4.5 items-stretch">
-              <div className="rounded-2xl p-[18px_18px_16px] bg-white/70 border border-solid border-[#E1E0DC]">
-                <div className="text-[12px] tracking-[0.12em] uppercase text-[#74716B] mb-3.5 font-bold">
+              <div className="rounded-2xl p-[18px_18px_16px] bg-surface-panel/70 border border-solid border-ui-border-subtle">
+                <div className="text-[12px] tracking-[0.12em] uppercase text-ui-text-muted mb-3.5 font-bold">
                   Why teams choose it
                 </div>
                 <div className="grid gap-3.5">
                   {slide.promoStats.map((item) => (
                     <div key={item.value} className="grid gap-1">
-                      <div className="text-[#1A1916] text-[15px] font-bold tracking-tight">{item.value}</div>
-                      <div className="text-[#74716B] text-[12.5px] leading-relaxed">{item.label}</div>
+                      <div className="text-ui-text-primary text-[15px] font-bold tracking-tight">{item.value}</div>
+                      <div className="text-ui-text-muted text-[12.5px] leading-relaxed">{item.label}</div>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div 
+              <div
                 className="rounded-2xl p-[18px_18px_16px] border border-solid flex flex-col justify-between min-h-[216px]"
                 style={{
-                  background: `linear-gradient(180deg, color-mix(in srgb, ${slide.accent} 7%, #fff), rgba(255,255,255,0.75))`,
-                  borderColor: `color-mix(in srgb, ${slide.accent} 16%, #e1e0dc)`,
+                  background: `linear-gradient(180deg, color-mix(in srgb, ${slide.accent} 7%, var(--surface-panel)), color-mix(in srgb, var(--surface-panel) 75%, transparent))`,
+                  borderColor: `color-mix(in srgb, ${slide.accent} 16%, var(--ui-border-default))`,
                 }}
               >
                 <div>
-                  <div className="text-[12px] tracking-[0.12em] uppercase text-[#74716B] mb-3 font-bold">
+                  <div className="text-[12px] tracking-[0.12em] uppercase text-ui-text-muted mb-3 font-bold">
                     Branded experience
                   </div>
-                  <p className="m-0 text-[13px] leading-relaxed text-[#403E39]">
+                  <p className="m-0 text-[13px] leading-relaxed text-ui-text-secondary">
                     {slide.promoNote}
                   </p>
                 </div>
 
-                <div className="mt-4.5 pt-4 border-t border-solid border-[#E1E0DC] grid gap-2">
-                  <div className="text-[#1A1916] text-[12px] font-bold leading-snug">Gizzi keeps the product feeling guided, not generic.</div>
-                  <div className="text-[#74716B] text-[12.5px] leading-relaxed">
+                <div className="mt-4.5 pt-4 border-t border-solid border-ui-border-subtle grid gap-2">
+                  <div className="text-ui-text-primary text-[12px] font-bold leading-snug">Gizzi keeps the product feeling guided, not generic.</div>
+                  <div className="text-ui-text-muted text-[12.5px] leading-relaxed">
                     A clearer voice, a stronger brand surface, and a workflow that reads like a finished product.
                   </div>
                 </div>

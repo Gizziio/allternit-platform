@@ -16,6 +16,61 @@ import { checkOpus1mAccess, checkSonnet1mAccess } from '../../utils/model/check1
 import { getDefaultMainLoopModelSetting, isOpus1mMergeEnabled, renderDefaultModelSetting } from '../../utils/model/model';
 import { isModelAllowed } from '../../utils/model/modelAllowlist';
 import { validateModel } from '../../utils/model/validateModel';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { homedir } from 'node:os';
+const execFileAsync = promisify(execFile);
+
+// Local providers this machine's ~/mlx-bench/switch-model.sh manages. Only one
+// of these servers can run at a time (Qwen ~19GB + Muse ~18GB + Maple ~5-7GB
+// together exceed 32GB RAM), so selecting one here must also start its
+// server and stop whichever other one is running — otherwise /model just
+// changes a config pointer and the next message 503s against a dead port.
+const LOCAL_PROVIDER_SWITCH_ARG: Record<string, string> = {
+  'local-mlx': 'qwen',
+  'muse-glimmer': 'muse',
+  'maple-preview': 'maple',
+};
+const LOCAL_PROVIDER_PORT: Record<string, number> = {
+  'local-mlx': 8081,
+  'muse-glimmer': 8080,
+  'maple-preview': 8082,
+};
+
+/**
+ * If modelValue belongs to one of the locally-hosted providers above, make
+ * sure its server is actually running (starting it via switch-model.sh if
+ * needed) before the model selection is considered complete. Returns a short
+ * status suffix to append to the "Set model to X" message, or null if this
+ * isn't a locally-hosted model or its server was already up.
+ */
+async function ensureLocalModelServerRunning(modelValue: string | null): Promise<string | null> {
+  if (!modelValue) return null;
+  const slashIdx = modelValue.indexOf('/');
+  if (slashIdx === -1) return null;
+  const providerID = modelValue.slice(0, slashIdx);
+  const switchArg = LOCAL_PROVIDER_SWITCH_ARG[providerID];
+  const port = LOCAL_PROVIDER_PORT[providerID];
+  if (!switchArg || !port) return null;
+
+  try {
+    const res = await fetch(`http://127.0.0.1:${port}/health`, {
+      signal: AbortSignal.timeout(1500),
+    });
+    if (res.ok) return null; // already running, nothing to do
+  } catch {
+    // not reachable — fall through and start it
+  }
+
+  try {
+    await execFileAsync(`${homedir()}/mlx-bench/switch-model.sh`, [switchArg], {
+      timeout: 120000,
+    });
+    return `local server started (${switchArg})`;
+  } catch (error) {
+    return `WARNING: failed to start local server — ${(error as Error).message}`;
+  }
+}
 function ModelPickerWrapper(t0) {
   const $ = _c(17);
   const {
@@ -45,7 +100,7 @@ function ModelPickerWrapper(t0) {
   const handleCancel = t1;
   let t2;
   if ($[3] !== isFastMode || $[4] !== mainLoopModel || $[5] !== onDone || $[6] !== setAppState) {
-    t2 = function handleSelect(model, effort) {
+    t2 = async function handleSelect(model, effort) {
       logEvent("tengu_model_command_menu", {
         action: model as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         from_model: mainLoopModel as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
@@ -56,7 +111,9 @@ function ModelPickerWrapper(t0) {
         mainLoopModel: model,
         mainLoopModelForSession: null
       }));
+      const localServerStatus = await ensureLocalModelServerRunning(model);
       let message = `Set model to ${chalk.bold(renderModelLabel(model))}`;
+      if (localServerStatus) message = message + ` \xB7 ${localServerStatus}`;
       if (effort !== undefined) {
         message = message + ` with ${chalk.bold(effort)} effort`;
       }
@@ -165,13 +222,13 @@ function SetModelAndClose({
 
       // Skip validation for default model
       if (!model) {
-        setModel(null);
+        await setModel(null);
         return;
       }
 
       // Skip validation for known aliases - they're predefined and should work
       if (isKnownAlias(model)) {
-        setModel(model);
+        await setModel(model);
         return;
       }
 
@@ -184,7 +241,7 @@ function SetModelAndClose({
           error: error_0
         } = await validateModel(model);
         if (valid) {
-          setModel(model);
+          await setModel(model);
         } else {
           onDone(error_0 || `Model '${model}' not found`, {
             display: 'system'
@@ -196,13 +253,15 @@ function SetModelAndClose({
         });
       }
     }
-    function setModel(modelValue: string | null): void {
+    async function setModel(modelValue: string | null): Promise<void> {
       setAppState(prev => ({
         ...prev,
         mainLoopModel: modelValue,
         mainLoopModelForSession: null
       }));
+      const localServerStatus = await ensureLocalModelServerRunning(modelValue);
       let message = `Set model to ${chalk.bold(renderModelLabel(modelValue))}`;
+      if (localServerStatus) message += ` · ${localServerStatus}`;
       let wasFastModeToggledOn = undefined;
       if (isFastModeEnabled()) {
         clearFastModeCooldown();

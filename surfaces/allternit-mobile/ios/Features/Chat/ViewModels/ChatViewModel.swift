@@ -299,14 +299,17 @@ final class ChatViewModel: ObservableObject {    @Published var messages: [Messa
     /// are the composer's staged files — each is uploaded
     /// (`POST /api/v1/uploads`) before the stream starts and referenced from
     /// the agent-chat body; an upload failure fails the send.
-    func sendMessage(_ text: String, attachments: [StagedAttachment] = [], runtimeModelId: String? = nil, effort: String? = nil) {
+    func sendMessage(_ text: String, attachments: [StagedAttachment] = [], runtimeModelId: String? = nil, effort: String? = nil, enrich: Bool = true) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, !isStreaming, !isCreatingSession else { return }
 
         let userMessageId = UUID().uuidString
         messages.append(MessageRecord(id: userMessageId, role: "user", content: trimmed))
 
-        startStream(text: trimmed, runtimeModelId: runtimeModelId, effort: effort, stagedAttachments: attachments, userMessageId: userMessageId)
+        // The UI shows the user's original text; prefixes (web search, style)
+        // are injected only into the stream payload (ChatComposer.tsx parity).
+        let streamText = enrich ? ToolOptionsStore.shared.enrichedText(trimmed) : trimmed
+        startStream(text: streamText, runtimeModelId: runtimeModelId, effort: effort, stagedAttachments: attachments, userMessageId: userMessageId)
     }
 
     /// Error-card "Retry": drops the failed assistant placeholder and
@@ -381,7 +384,9 @@ final class ChatViewModel: ObservableObject {    @Published var messages: [Messa
             }
         }
         messages.removeSubrange(index...)
-        sendMessage(newText, attachments: attachments, runtimeModelId: runtimeModelId, effort: effort)
+        // Re-apply active composer prefixes to the edited resend.
+        let enriched = ToolOptionsStore.shared.enrichedText(newText)
+        sendMessage(enriched, attachments: attachments, runtimeModelId: runtimeModelId, effort: effort, enrich: false)
     }
 
     /// The last user text actually handed to the stream — the retry source.

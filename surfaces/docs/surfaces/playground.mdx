@@ -1,0 +1,165 @@
+---
+title: Allternit Playground
+description: Debug agents, search session memory, attach tools, and replay session events
+---
+
+## Overview
+
+**Allternit Playground** is a session-level debugging surface inside the Allternit platform. It lets you send ad-hoc prompts against a live session, inspect the memory that session has accumulated, toggle which tools the agent can use, and replay the event stream that led to the current state.
+
+Use it when you need to reproduce a behavior, verify that a session remembers the right context, or iterate on a system prompt without leaving the platform shell.
+
+## How to access it
+
+Allternit Playground runs inside the platform shell:
+
+```text
+https://app.allternit.com/shell?view=allternit-playground
+```
+
+Open programmatically from shell code:
+
+```typescript
+open('allternit-playground');
+```
+
+The surface is a singleton view, so only one Allternit Playground tab can be open at a time.
+
+## Features
+
+<CardGroup cols={2}>
+  <Card title="Prompt runner" icon="terminal">
+    Send system and user messages to a live session and inspect the raw response
+  </Card>
+  <Card title="Memory search" icon="search">
+    Query session memory by keyword and see ranked excerpts with section, line, and score
+  </Card>
+  <Card title="Tool selector" icon="tool">
+    Attach built-in tools such as web search, bash, text editor, computer use, and MCP registry
+  </Card>
+  <Card title="Event replay" icon="clock-counter-clockwise">
+    List every event recorded for a session, including type, timestamp, and full payload
+  </Card>
+</CardGroup>
+
+## Playground tabs
+
+| Tab | Purpose |
+|---|---|
+| **Prompt** | Compose a system instruction and user message, then run them against the target session |
+| **Memory** | Search the session's memory store for relevant excerpts |
+| **Tools** | Choose which tools are available for the playground run |
+| **Events** | Load and inspect the chronological event log for the session |
+
+## Session ID
+
+Every tab scopes its work to a single **Session ID**. Enter the ID in the header input before running prompts, searching memory, or loading events. The Events tab fetches automatically once a session ID is present; the other tabs run on demand.
+
+## Prompt tab
+
+The Prompt tab sends a two-message payload to the session run endpoint:
+
+```json
+{
+  "messages": [
+    { "role": "system", "content": "You are a helpful Allternit agent." },
+    { "role": "user", "content": "<your message>" }
+  ],
+  "tools": ["web_search", "bash"]
+}
+```
+
+| Field | Default | Description |
+|---|---|---|
+| `system` | `You are a helpful Allternit agent.` | System instruction for the run |
+| `user` | `—` | The user message sent to the agent |
+| `tools` | `[]` | Enabled tool IDs for this run |
+
+The raw JSON response is rendered in a scrollable output panel. Use **Clear output** to reset it.
+
+## Memory tab
+
+Enter a query and press **Search** (or hit Enter) to search the session memory. Results show:
+
+| Field | Description |
+|---|---|
+| `section` | Memory section the match came from |
+| `line` | Line number of the excerpt |
+| `excerpt` | Matching text snippet |
+| `score` | Relevance score |
+
+## Tools tab
+
+The Tools tab lets you toggle which capabilities the playground run can invoke. Available tool IDs:
+
+| Tool ID | Description |
+|---|---|
+| `web_search` | Search the web for current information |
+| `bash` | Run shell commands in a sandbox |
+| `text_editor` | Read and edit files |
+| `computer_use` | Control a desktop environment |
+| `mcp_registry` | Use registered MCP tools |
+
+Only selected tools are passed to the run endpoint. If no tools are selected, the request omits the `tools` field.
+
+## Events tab
+
+The Events tab loads the full event ledger for the session. Each event displays:
+
+- `type` — the event type
+- `created_at` — ISO timestamp
+- `data` — full event payload as formatted JSON
+
+Events are fetched automatically when you switch to the tab and a session ID is set.
+
+## Endpoints
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/v1/beta/sessions/{sessionId}/memory/search?q={query}` | Search session memory |
+| `GET` | `/api/v1/beta/sessions/{sessionId}/events/list` | List session events |
+| `POST` | `/api/v1/beta/sessions/{sessionId}/run` | Run a prompt against the session |
+
+## Request example
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/beta/sessions/{sessionId}/run \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "messages": [
+      { "role": "system", "content": "You are a helpful Allternit agent." },
+      { "role": "user", "content": "What did we decide about the retry policy?" }
+    ],
+    "tools": ["memory"]
+  }'
+```
+
+## Error handling
+
+Allternit Playground surfaces errors as in-app toasts. Common causes:
+
+| Symptom | Cause |
+|---|---|
+| "Failed to search session memory" | Missing session ID, empty query, or backend error |
+| "Failed to load session events" | Invalid session ID or events service unavailable |
+| "Session ID and user prompt are required" | Prompt tab submitted without both fields filled |
+| "Run failed" | The `/run` endpoint returned a non-2xx response |
+
+Toasts auto-dismiss after five seconds and can be closed manually.
+
+## Key concepts
+
+- **Session-first debugging** — every action is scoped to a single session ID, so you can inspect the exact context an agent is working with.
+- **Ad-hoc runs** — send one-off prompts without creating or saving an agent configuration.
+- **Tool attachment** — toggle tools per run to reproduce issues caused by specific capabilities.
+- **Memory inspection** — verify what the session remembers and how relevant memories are ranked.
+- **Event replay** — trace the sequence of events that produced the current session state.
+
+## Related links
+
+- [Agent Studio](/surfaces/agent-studio)
+- [Platform](/surfaces/platform)
+- [Memory API](/api/memory)
+- [Tool Belt](/tools/tool-belt)
+- [MCP servers](/tools/mcp)

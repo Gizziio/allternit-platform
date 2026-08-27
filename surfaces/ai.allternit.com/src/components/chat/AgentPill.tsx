@@ -4,6 +4,7 @@ import React from "react";
 import { X } from "@phosphor-icons/react";
 import { AgentAvatar } from "@/components/Avatar";
 import type { Agent } from "@/lib/agents";
+import { getBotDisplayName } from "@/lib/bots/bot-profile";
 
 interface AgentPillProps {
   agent: Agent;
@@ -21,9 +22,12 @@ const THEME = {
 export function AgentPill({ agent, onRemove }: AgentPillProps) {
   const avatarConfig =
     (agent.config?.avatar as Record<string, unknown>) || undefined;
+  const isBot = agent.isBot === true;
 
   return (
     <div
+      title={isBot ? `Bot: ${getBotDisplayName(agent)}` : `Agent: ${agent.name}`}
+      aria-label={isBot ? `Bot: ${getBotDisplayName(agent)}` : `Agent: ${agent.name}`}
       style={{
         display: "inline-flex",
         alignItems: "center",
@@ -74,7 +78,7 @@ export function AgentPill({ agent, onRemove }: AgentPillProps) {
               color: "#fff",
             }}
           >
-            {agent.name.charAt(0).toUpperCase()}
+            {getBotDisplayName(agent).charAt(0).toUpperCase()}
           </div>
         )}
       </div>
@@ -86,7 +90,7 @@ export function AgentPill({ agent, onRemove }: AgentPillProps) {
           maxWidth: 160,
         }}
       >
-        {agent.name}
+        {agent.isBot ? '@' : ''}{getBotDisplayName(agent)}
       </span>
       <button
         type="button"

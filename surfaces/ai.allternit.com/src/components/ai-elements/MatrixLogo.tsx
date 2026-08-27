@@ -32,6 +32,9 @@ export const MatrixLogo = memo(({
   const isListening = state === "listening";
   const isCompacting = state === "compacting";
   const isAsleep = state === "asleep";
+  // The construct is authored at a 64px base size (blockSize 10, span ~44px).
+  // Scale the whole mark proportionally so it always fits the requested size.
+  const scale = size / 64;
   const isSmall = size <= 48;
 
   // Global mouse tracking
@@ -55,13 +58,14 @@ export const MatrixLogo = memo(({
     mouseY.set(0);
   };
 
-  // The "A" construct with depth metadata
+  // The "A" construct with depth metadata — same pixel-A letterform as the
+  // brand construct mark: apex, shoulders, crossbar row, coral core, legs.
   const blocks = useMemo(() => [
     { x: -2, y: 2, z: 20 }, { x: -2, y: 1, z: 10 }, { x: -2, y: 0, z: 0 }, { x: -1, y: -1, z: 15 },
-    { x: 0, y: -2, z: 30 }, 
+    { x: 0, y: -2, z: 30 },
     { x: 1, y: -1, z: 15 }, { x: 2, y: 0, z: 0 }, { x: 2, y: 1, z: 10 }, { x: 2, y: 2, z: 20 },
     { x: -1, y: 0, z: 5 }, { x: 1, y: 0, z: 5 },
-    { x: 0, y: 1, z: 40, accent: true },
+    { x: 0, y: 0, z: 40, accent: true },
   ], []);
 
   // Structural extensions (Technical Rays)
@@ -100,8 +104,9 @@ export const MatrixLogo = memo(({
         <m.div
           animate={state}
           style={{
-            width: '100%',
-            height: '100%',
+            width: 64,
+            height: 64,
+            scale,
             rotateX,
             rotateY,
             transformStyle: "preserve-3d",
@@ -166,22 +171,22 @@ export const MatrixLogo = memo(({
           ))}
           {/* Center Core Light */}
           <m.div
-            className="absolute size-1 bg-[#D4B08C] rounded-full"
+            className="absolute size-1 bg-[var(--accent-primary)] rounded-full"
             style={{
               transform: `translateZ(${isSmall ? 30 : 60}px)`,
-              boxShadow: `0 0 ${8 + energy * (isSmall ? 2 : 2)}px #D4B08C`
+              boxShadow: `0 0 ${8 + energy * (isSmall ? 2 : 2)}px var(--accent-primary)`
             }}
             animate={isCompacting ? {
               scale: [1, 10, 1],
               opacity: [0.2, 1, 0.2],
-              boxShadow: [`0 0 4px #D4B08C`, `0 0 10px #D4B08C`, `0 0 4px #D4B08C`]
+              boxShadow: [`0 0 4px var(--accent-primary)`, `0 0 10px var(--accent-primary)`, `0 0 4px var(--accent-primary)`]
             } : isThinking ? {
               opacity: [0.4, 1, 0.4],
               scale: [1, 2.5, 1]
             } : isListening ? {
               opacity: [0.5, 1, 0.5],
               scale: [1, 1.8, 1],
-              boxShadow: [`0 0 4px #D4B08C`, `0 0 10px #D4B08C`, `0 0 4px #D4B08C`]
+              boxShadow: [`0 0 4px var(--accent-primary)`, `0 0 10px var(--accent-primary)`, `0 0 4px var(--accent-primary)`]
             } : isSpeaking ? {
               opacity: [0.6, 1, 0.6],
               scale: [1, 2, 1]
@@ -305,8 +310,8 @@ const Block = ({ data, mouseX, mouseY, state, energy, isSmall }: any) => {
         }
       }}
     >
-      <div className="absolute inset-0 bg-[#D4B08C]/30" style={{ transform: `rotateY(90deg) translateZ(${blockSize / 2}px)` }} />
-      <div className="absolute inset-0 bg-[#D4B08C]/15" style={{ transform: `rotateX(90deg) translateZ(${blockSize / 2}px)` }} />
+      <div className="absolute inset-0 bg-[var(--accent-primary)]/30" style={{ transform: `rotateY(90deg) translateZ(${blockSize / 2}px)` }} />
+      <div className="absolute inset-0 bg-[var(--accent-primary)]/15" style={{ transform: `rotateX(90deg) translateZ(${blockSize / 2}px)` }} />
       
       <m.div 
         className="absolute inset-0 bg-white"

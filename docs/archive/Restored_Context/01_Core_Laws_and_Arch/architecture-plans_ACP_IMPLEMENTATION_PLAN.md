@@ -2,7 +2,7 @@
 
 ## Summary
 
-This document describes the implementation of ACP-first architecture for Allternit kernel, enabling OpenCode-style "CLI as brain runtime" with clean semantic event streams.
+This document describes the implementation of ACP-first architecture for Allternit kernel, enabling Gizzi Code-style "CLI as brain runtime" with clean semantic event streams.
 
 ## Architecture Changes
 
@@ -199,18 +199,18 @@ To add a new ACP-capable CLI:
 
 1. Check ACP Registry for spawn command
 2. Add brain profile with `event_mode: Some(EventMode::Acp)`
-3. Set command/args to ACP mode (e.g., `opencode acp`)
+3. Set command/args to ACP mode (e.g., `gizzi acp`)
 
 Example:
 ```rust
 model_router
     .register_profile(BrainProfile {
         config: BrainConfig {
-            id: "opencode".to_string(),
-            name: "OpenCode".to_string(),
+            id: "gizzi".to_string(),
+            name: "Gizzi Code".to_string(),
             brain_type: BrainType::Cli,
             event_mode: Some(EventMode::Acp),  // ← KEY
-            command: Some("opencode".to_string()),
+            command: Some("gizzi".to_string()),
             args: Some(vec!["acp".to_string()]), // ← ACP mode
             // ...
         },
@@ -276,5 +276,5 @@ curl http://localhost:3004/v1/brain/profiles \
 
 - ACP Specification: https://agentclientprotocol.com/
 - ACP Registry: https://agentclientprotocol.com/registry
-- OpenCode ACP: `opencode acp`
+- Gizzi Code ACP: `gizzi acp`
 - Claude Code JSONL: `claude --output-format stream-json`

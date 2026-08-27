@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { expect, test, describe } from "bun:test"
-import { ConfigMarkdown } from "../../src/config/markdown"
+import { ConfigMarkdown } from "../../src/runtime/context/config/markdown"
 
 describe("ConfigMarkdown: normal template", () => {
   const template = `This is a @valid/path/to/a/file and it should also match at

@@ -10,7 +10,11 @@
 //! `crate::open_connector_proxy`: the sidecar holds the real credential in its
 //! own encrypted SQLite and Rust keeps only an index row (backend='open_connector',
 //! V17, tokens NULL). Connection state for both backends lives in
-//! `connector_connections`, scoped by (connector_id, user_id).
+//! `connector_connections`, scoped by (connector_id, user_id). A third
+//! backend, `allternit_native`, marks the Allternit Mail connector: its row is
+//! index-only like the sidecar rows, but the credential is the per-agent
+//! mailflare key sealed in `agent_identity_channels`, and its MCP tools
+//! (`allternit_mail.*`) are served in-process on the internal MCP endpoint.
 
 use axum::{
     extract::{Path, Query, State},
@@ -93,6 +97,7 @@ pub fn connector_router() -> Router<Arc<AppState>> {
     // unauthenticated in main.rs) alongside the sidecar's `/oauth/callback`.
     Router::new()
         .route("/connectors", get(list_connectors))
+        .route("/connectors/setup-status", get(connectors_setup_status))
         .route("/connectors/mcp", post(mcp_proxy))
         .route("/connectors/:id", get(get_connector))
         .route("/connectors/:id/connect", post(connect_connector))
@@ -221,35 +226,121 @@ pub(crate) async fn verify_runtime_device_token(
 ///    authenticated the *service*.
 ///
 /// Anything else is 401 — there is no silent admin bypass.
+///
+/// The `allternit_mail.*` tools are answered in-process (they are not sidecar
+/// tools): `tools/list` merges them into the sidecar's list, and
+/// `tools/call` dispatches to `agent_email_routes::call_mail_mcp_tool` with
+/// the user_id resolved above.
 pub async fn mcp_proxy_internal(
     State(state): State<Arc<AppState>>,
     headers: axum::http::HeaderMap,
     Json(body): Json<Value>,
 ) -> impl IntoResponse {
-    if let Some(token) = device_token_from_headers(&headers) {
+    let user_id = if let Some(token) = device_token_from_headers(&headers) {
         let token = token.to_string();
-        return match verify_runtime_device_token(&state, &token).await {
-            Ok(user_id) => proxy_mcp_response(user_id, body).await,
-            Err(resp) => resp,
-        };
-    }
+        match verify_runtime_device_token(&state, &token).await {
+            Ok(user_id) => user_id,
+            Err(resp) => return resp,
+        }
+    } else {
+        if let Err(status) = crate::internal_auth::require_internal_token(&headers, &state) {
+            return (status, Json(json!({"error": "unauthorized"}))).into_response();
+        }
+        let user_id = headers
+            .get("x-allternit-user-id")
+            .and_then(|v| v.to_str().ok())
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(str::to_string);
+        match user_id {
+            Some(user_id) => user_id,
+            None => {
+                return (
+                    StatusCode::BAD_REQUEST,
+                    Json(json!({"error": "x-allternit-user-id header is required"})),
+                )
+                    .into_response()
+            }
+        }
+    };
 
-    if let Err(status) = crate::internal_auth::require_internal_token(&headers, &state) {
-        return (status, Json(json!({"error": "unauthorized"}))).into_response();
+    // Allternit Mail is served in-process, not by the sidecar: intercept its
+    // tools here (ownership is enforced against the authenticated user_id
+    // inside the tool handlers, same as the REST surface).
+    if let Some(resp) = handle_allternit_mail_mcp(&state, &user_id, &body).await {
+        return resp;
     }
-    let user_id = headers
-        .get("x-allternit-user-id")
-        .and_then(|v| v.to_str().ok())
-        .map(str::trim)
-        .filter(|s| !s.is_empty())
-        .map(str::to_string);
-    match user_id {
-        Some(user_id) => proxy_mcp_response(user_id, body).await,
-        None => (
-            StatusCode::BAD_REQUEST,
-            Json(json!({"error": "x-allternit-user-id header is required"})),
+    proxy_mcp_response(user_id, body).await
+}
+
+/// Serve the `allternit_mail.*` tools on the internal MCP endpoint. Returns
+/// `None` (caller should proxy to the sidecar) for anything that isn't a
+/// `tools/list` or an `allternit_mail.*` `tools/call`.
+async fn handle_allternit_mail_mcp(
+    state: &Arc<AppState>,
+    user_id: &str,
+    body: &Value,
+) -> Option<axum::response::Response> {
+    let method = body.get("method").and_then(|m| m.as_str())?;
+    let id = body.get("id").cloned().unwrap_or(Value::Null);
+    let rpc_ok = |result: Value| {
+        (
+            StatusCode::OK,
+            Json(json!({ "jsonrpc": "2.0", "id": id, "result": result })),
         )
-            .into_response(),
+            .into_response()
+    };
+    // MCP tool results carry payloads as text content; handler errors map to
+    // isError:true (JSON-RPC 200), so MCP clients surface them as tool errors.
+    let rpc_tool = |out: Result<Value, (StatusCode, Json<Value>)>| match out {
+        Ok(payload) => rpc_ok(json!({
+            "content": [{ "type": "text", "text": payload.to_string() }],
+            "isError": false,
+        })),
+        Err((_, Json(e))) => rpc_ok(json!({
+            "content": [{ "type": "text", "text": e.to_string() }],
+            "isError": true,
+        })),
+    };
+
+    match method {
+        "tools/list" => {
+            // Merge with the sidecar's own tools when reachable; the
+            // allternit_mail tools must stay listed even when it is down.
+            let mut tools = match crate::open_connector_proxy::proxy_mcp(user_id, body.clone()).await
+            {
+                Ok(resp) => resp
+                    .get("result")
+                    .and_then(|r| r.get("tools"))
+                    .and_then(|t| t.as_array())
+                    .cloned()
+                    .unwrap_or_default(),
+                Err(_) => Vec::new(),
+            };
+            if let Some(own) = crate::agent_email_routes::mail_mcp_tools().as_array() {
+                tools.extend(own.iter().cloned());
+            }
+            Some(rpc_ok(json!({ "tools": tools })))
+        }
+        "tools/call" => {
+            let name = body
+                .get("params")
+                .and_then(|p| p.get("name"))
+                .and_then(|n| n.as_str())
+                .unwrap_or("");
+            if !name.starts_with("allternit_mail.") {
+                return None;
+            }
+            let args = body
+                .get("params")
+                .and_then(|p| p.get("arguments"))
+                .cloned()
+                .unwrap_or_else(|| json!({}));
+            Some(rpc_tool(
+                crate::agent_email_routes::call_mail_mcp_tool(state, user_id, name, args).await,
+            ))
+        }
+        _ => None,
     }
 }
 
@@ -325,6 +416,144 @@ fn caller(headers: &axum::http::HeaderMap) -> String {
 fn is_curated(id: &str) -> bool {
     meta().get(id).is_some()
 }
+
+/// Catalog id of Allternit's own agent-email connector. It lives in
+/// `connectors.meta.json` (so `is_curated` is true and the catalog merge never
+/// consults the sidecar for it), but connect/disconnect are special-cased:
+/// the credential is a per-AGENT mailflare key sealed in
+/// `agent_identity_channels`, and the `connector_connections` row is an
+/// index-only marker (backend='allternit_native', tokens NULL).
+pub(crate) const ALLTERNIT_MAIL_ID: &str = "allternit-mail";
+
+/// Connect handler for the Allternit Mail connector. Connections are per-user
+/// but mailboxes are per-agent, so:
+/// - With `agent_id` in the body: verify ownership, provision (idempotently)
+///   the agent's mailflare mailbox via the same logic as
+///   `POST /agents/:id/identity/email`, and upsert the index-only
+///   connector_connections row (no tokens — the key stays sealed in
+///   agent_identity_channels).
+/// - Without `agent_id`: report the rail status so the UI can render a setup
+///   hint when the mailflare env is missing.
+async fn connect_allternit_mail(
+    state: &Arc<AppState>,
+    user_id: &str,
+    body: ConnectBody,
+) -> (StatusCode, Json<Value>) {
+    let Some(agent_id) = body.agent_id.filter(|s| !s.trim().is_empty()) else {
+        let rail = crate::agent_email_routes::agent_email_status_value().await;
+        let configured = rail
+            .get("configured")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+        return (
+            StatusCode::OK,
+            Json(json!({
+                "status": if configured { "available" } else { "unconfigured" },
+                "connector": ALLTERNIT_MAIL_ID,
+                "backend": "allternit_native",
+                "owned": true,
+                "rail": rail,
+                "setup_hint": if configured {
+                    "Pass {\"agent_id\":\"...\"} to provision (or adopt) the agent's mailbox and mark this connector connected."
+                } else {
+                    "Allternit Mail is not configured on this deployment: set ALLTERNIT_MAILFLARE_URL, ALLTERNIT_MAILFLARE_ADMIN_KEY and ALLTERNIT_BOT_EMAIL_DOMAIN, then connect with {\"agent_id\":\"...\"}."
+                },
+            })),
+        );
+    };
+
+    if let Err((status, Json(e))) =
+        crate::agent_email_routes::require_agent_owner_id(state, user_id, &agent_id)
+    {
+        return (status, Json(e));
+    }
+    let Some(client) = crate::mailflare_client::MailflareClient::from_env() else {
+        return (
+            StatusCode::NOT_IMPLEMENTED,
+            Json(json!({
+                "error": "mailflare_not_configured",
+                "id": ALLTERNIT_MAIL_ID,
+                "message": "ALLTERNIT_MAILFLARE_URL/ALLTERNIT_MAILFLARE_ADMIN_KEY are not configured.",
+            })),
+        );
+    };
+    let address = match crate::allternit_bus_routes::provision_email_mailflare(
+        state, user_id, &agent_id, client,
+    )
+    .await
+    {
+        Ok(address) => address,
+        Err((status, Json(e))) => return (status, Json(e)),
+    };
+
+    // Index-only row: backend='allternit_native', tokens NULL. account carries
+    // the provisioned address; metadata ties the row to the agent so later
+    // connects for OTHER agents of the same user remain visible.
+    let metadata = json!({ "agent_id": agent_id }).to_string();
+    let res = {
+        let db = state.db.clone();
+        let uid = user_id.to_string();
+        let acc = address.clone();
+        tokio::task::spawn_blocking(move || {
+            let conn = db.connect().map_err(|e| e.to_string())?;
+            conn.execute(
+                "INSERT INTO connector_connections (id, connector_id, user_id, auth_type, status, account, metadata, backend)
+                 VALUES (?1, ?2, ?3, 'allternit_native', 'connected', ?4, ?5, 'allternit_native')
+                 ON CONFLICT(connector_id, user_id) DO UPDATE SET
+                   auth_type='allternit_native', status='connected', account=excluded.account,
+                   metadata=excluded.metadata, backend='allternit_native',
+                   access_token=NULL, refresh_token=NULL, updated_at=CURRENT_TIMESTAMP",
+                params![uuid::Uuid::new_v4().to_string(), ALLTERNIT_MAIL_ID, uid, acc, metadata],
+            )
+            .map_err(|e| e.to_string())?;
+            Ok::<_, String>(())
+        })
+        .await
+        .map_err(|e| format!("db task: {e}"))
+    };
+    match res {
+        Ok(Ok(())) => (
+            StatusCode::OK,
+            Json(json!({
+                "status": "connected",
+                "connector": ALLTERNIT_MAIL_ID,
+                "backend": "allternit_native",
+                "owned": true,
+                "agent_id": agent_id,
+                "address": address,
+                "account": address,
+            })),
+        ),
+        Ok(Err(e)) | Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": e })),
+        ),
+    }
+}
+
+/// True when the sidecar rejected an OAuth start because no OAuth client is
+/// registered for the provider (`oauth_client_config_required` — the sidecar
+/// flattens to HTTP 400; the proxy embeds the code in its message string).
+fn sidecar_oauth_app_missing(e: &crate::open_connector_proxy::ProxyError) -> bool {
+    !e.unreachable && e.message.contains("oauth_client_config_required")
+}
+
+/// Structured answer for `sidecar_oauth_app_missing`, mirroring the
+/// rust-native `oauth_registration_required` shape: tell the caller exactly
+/// which one-time admin step unblocks Connect.
+fn oauth_app_not_configured(id: &str) -> (StatusCode, Json<Value>) {
+    let service = crate::open_connector_proxy::sidecar_id(id);
+    (
+        StatusCode::BAD_REQUEST,
+        Json(json!({
+            "error": "oauth_app_not_configured",
+            "id": id,
+            "message": format!("No OAuth client is registered for '{service}' on the connector sidecar, so an authorization URL cannot be issued yet."),
+            "setup_hint": format!("One-time admin step: register the OAuth app for '{service}' via the sidecar admin endpoint PUT /api/oauth/configs/{service} (see services/open-connector docs; GET /api/oauth/configs lists what is already configured), then retry Connect."),
+        })),
+    )
+}
+
 
 /// Snapshot of sidecar state for one catalog render: the slim provider map
 /// (`None` = sidecar unreachable — degrade gracefully) and THIS user's live
@@ -720,6 +949,78 @@ async fn list_connectors(
     }))
 }
 
+/// Aggregate setup status for the three first-party connectors. This is
+/// deployment-level state (not per-user) so the UI can show a single
+/// "Finish setup" banner when any connector is not yet provisioned.
+async fn connectors_setup_status(
+    State(_state): State<Arc<AppState>>,
+    headers: axum::http::HeaderMap,
+) -> impl IntoResponse {
+    let _user_id = caller(&headers);
+
+    let mail_status = crate::agent_email_routes::agent_email_status_value().await;
+    let mail_configured = mail_status
+        .get("configured")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    let mail_reachable = mail_status
+        .get("reachable")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    let mail_domain = mail_status
+        .get("domain")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+
+    let sidecar_healthy = crate::open_connector_proxy::is_reachable().await;
+    let sidecar_url = crate::open_connector_proxy::sidecar_url();
+
+    let configured_oauth: std::collections::HashSet<String> =
+        match crate::open_connector_proxy::configured_oauth_services().await {
+            Ok(services) => services.into_iter().collect(),
+            Err(_) => std::collections::HashSet::new(),
+        };
+
+    let oauth_check = |service: &str| -> Value {
+        let configured = configured_oauth.contains(service);
+        json!({
+            "configured": configured,
+            "setup_hint": if configured {
+                Value::Null
+            } else {
+                json!(format!("Run ./scripts/install-connectors.sh to register the OAuth app for {service}."))
+            }
+        })
+    };
+
+    let all_ready = mail_configured && mail_reachable && sidecar_healthy
+        && configured_oauth.contains("gmail")
+        && configured_oauth.contains("googledrive");
+
+    Json(json!({
+        "ready": all_ready,
+        "checks": {
+            "allternit_mail": {
+                "configured": mail_configured,
+                "reachable": mail_reachable,
+                "domain": mail_domain,
+                "setup_hint": if mail_configured { Value::Null } else {
+                    json!("Run ./scripts/install-connectors.sh to deploy Allternit Mail to your Cloudflare account.")
+                }
+            },
+            "sidecar": {
+                "healthy": sidecar_healthy,
+                "url": sidecar_url,
+                "setup_hint": if sidecar_healthy { Value::Null } else {
+                    json!("Start the open-connector sidecar with ./dev/scripts/start-connector-sidecar.sh, or run ./scripts/install-connectors.sh.")
+                }
+            },
+            "gmail": oauth_check("gmail"),
+            "google_drive": oauth_check("googledrive"),
+        }
+    }))
+}
+
 async fn get_connector(
     State(state): State<Arc<AppState>>,
     headers: axum::http::HeaderMap,
@@ -760,6 +1061,9 @@ async fn get_connector(
 struct ConnectBody {
     via: Option<String>,
     api_key: Option<String>,
+    values: Option<Value>,
+    /// `allternit-mail` only: the agent to provision a mailbox for.
+    agent_id: Option<String>,
 }
 
 async fn connect_connector(
@@ -778,7 +1082,12 @@ async fn connect_connector(
     let body = body.map(|Json(b)| b).unwrap_or(ConnectBody {
         via: None,
         api_key: None,
+        values: None,
+        agent_id: None,
     });
+    if id == ALLTERNIT_MAIL_ID {
+        return connect_allternit_mail(&state, &user_id, body).await;
+    }
     if !is_curated(&id) {
         return connect_sidecar(&state, &user_id, &id, &c, body).await;
     }
@@ -791,7 +1100,17 @@ async fn connect_connector(
 
     match via.as_str() {
         "local_cli" => connect_local_cli(&state, &user_id, &id, &c, &m).await,
-        "api_key" => connect_api_key(&state, &user_id, &id, &c, body.api_key.as_deref()).await,
+        "api_key" => {
+            connect_api_key(
+                &state,
+                &user_id,
+                &id,
+                &c,
+                body.api_key.as_deref(),
+                body.values.as_ref(),
+            )
+            .await
+        }
         "oauth2" => connect_oauth2(&state, &user_id, &id, &c, &m).await,
         "device_flow" => connect_device(&state, &user_id, &id, &c, &m).await,
         other => (
@@ -855,6 +1174,9 @@ async fn connect_sidecar(
                             json!({ "error": "sidecar_unavailable", "id": id, "message": "Connector sidecar unavailable — the open-connector process is down or still starting." }),
                         ),
                     );
+                }
+                Err(e) if sidecar_oauth_app_missing(&e) => {
+                    return oauth_app_not_configured(id);
                 }
                 Err(e) => {
                     return (
@@ -923,12 +1245,27 @@ async fn connect_sidecar(
                 sidecar::upsert_credential(id, user_id, json!({ "authType": "no_auth" })).await;
             finish_sidecar_connect(state, user_id, id, c, "no_auth", resp).await
         }
-        "custom_credential" => (
-            StatusCode::BAD_REQUEST,
-            Json(
-                json!({ "error": "custom_credential_requires_values", "id": id, "message": "This provider needs structured credentials the connect dialog cannot collect yet." }),
-            ),
-        ),
+        "custom_credential" => {
+            let values = body
+                .values
+                .and_then(|v| v.as_object().cloned())
+                .unwrap_or_default();
+            if values.is_empty() {
+                return (
+                    StatusCode::BAD_REQUEST,
+                    Json(
+                        json!({ "error": "custom_credential_requires_values", "id": id, "message": "This provider needs structured credentials. Pass them in `values`." }),
+                    ),
+                );
+            }
+            let resp = sidecar::upsert_credential(
+                id,
+                user_id,
+                json!({ "authType": "custom_credential", "values": values }),
+            )
+            .await;
+            finish_sidecar_connect(state, user_id, id, c, "custom_credential", resp).await
+        }
         other => (
             StatusCode::BAD_REQUEST,
             Json(json!({ "error": "unsupported_auth_type", "via": other })),
@@ -1082,6 +1419,8 @@ async fn refresh_connector(
                     ConnectBody {
                         via: Some(other.to_string()),
                         api_key: None,
+                        values: None,
+                        agent_id: None,
                     },
                 )
                 .await
@@ -1250,8 +1589,26 @@ async fn connect_api_key(
     id: &str,
     c: &Value,
     api_key: Option<&str>,
+    values: Option<&Value>,
 ) -> (StatusCode, Json<Value>) {
-    let key = api_key.map(|s| s.trim().to_string()).unwrap_or_default();
+    let key = if let Some(k) = api_key.map(str::trim).filter(|s| !s.is_empty()) {
+        k.to_string()
+    } else if let Some(v) = values {
+        if let Some(s) = v.as_str() {
+            s.trim().to_string()
+        } else if v.is_object() && !v.as_object().unwrap().is_empty() {
+            if let Some(ak) = v.get("apiKey").or_else(|| v.get("api_key")).and_then(|s| s.as_str()) {
+                ak.trim().to_string()
+            } else {
+                v.to_string()
+            }
+        } else {
+            String::new()
+        }
+    } else {
+        String::new()
+    };
+
     if key.is_empty() {
         return (
             StatusCode::BAD_REQUEST,
@@ -1700,6 +2057,35 @@ async fn disconnect_connector(
     Path(id): Path<String>,
 ) -> impl IntoResponse {
     let user_id = caller(&headers);
+    if id == ALLTERNIT_MAIL_ID {
+        // Remove only the index row — never the agent's mailbox or its sealed
+        // key (mailbox teardown is tied to agent deletion, not connector
+        // toggles).
+        let db = state.db.clone();
+        let res = tokio::task::spawn_blocking(move || {
+            let conn = db.connect()?;
+            conn.execute(
+                "DELETE FROM connector_connections WHERE connector_id=?1 AND user_id=?2",
+                params![ALLTERNIT_MAIL_ID, user_id],
+            )?;
+            Ok::<_, rusqlite::Error>(())
+        })
+        .await;
+        return match res {
+            Ok(Ok(())) => (
+                StatusCode::OK,
+                Json(json!({ "status": "disconnected", "connector": id })),
+            ),
+            Ok(Err(e)) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            ),
+            Err(e) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": format!("db task: {}", e) })),
+            ),
+        };
+    }
     if !is_curated(&id) {
         // Proxy the real disconnect to the sidecar first. If it is down, bail
         // so the user can retry — otherwise the sidecar would keep the secret
@@ -2305,4 +2691,414 @@ fn urlencoding(s: &str) -> String {
         }
     }
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::body::Body;
+    use axum::http::Request;
+    use http_body_util::BodyExt;
+    use std::path::Path;
+    use tower::ServiceExt;
+
+    #[test]
+    fn catalog_contains_allternit_mail() {
+        let entry = find_catalog(ALLTERNIT_MAIL_ID).expect("allternit-mail in catalog");
+        assert_eq!(
+            entry.get("name").and_then(|v| v.as_str()),
+            Some("Allternit Mail")
+        );
+        assert_eq!(
+            entry.get("category").and_then(|v| v.as_str()),
+            Some("Email")
+        );
+        let tools: Vec<&str> = entry
+            .get("allowedToolNames")
+            .and_then(|v| v.as_array())
+            .map(|a| a.iter().filter_map(|t| t.as_str()).collect())
+            .unwrap_or_default();
+        assert_eq!(tools, vec!["allternit_mail.send", "allternit_mail.status"]);
+
+        // Meta entry makes it curated (catalog merge never consults the
+        // sidecar for it) and marks the native backend.
+        assert!(is_curated(ALLTERNIT_MAIL_ID));
+        let m = meta_for(ALLTERNIT_MAIL_ID);
+        assert_eq!(
+            m.get("auth_type").and_then(|v| v.as_str()),
+            Some("allternit_native")
+        );
+        assert_eq!(
+            m.get("connectable").and_then(|v| v.as_bool()),
+            Some(true)
+        );
+    }
+
+    #[test]
+    fn oauth_app_missing_detection() {
+        let missing = crate::open_connector_proxy::ProxyError {
+            status: 400,
+            message: "open-connector sidecar returned 400: {\"error\":{\"code\":\"oauth_client_config_required\",\"message\":\"Configure an OAuth client for gmail first.\"}}"
+                .to_string(),
+            unreachable: false,
+        };
+        assert!(sidecar_oauth_app_missing(&missing));
+
+        let other = crate::open_connector_proxy::ProxyError {
+            status: 400,
+            message: "open-connector sidecar returned 400: {\"error\":{\"code\":\"invalid_input\"}}"
+                .to_string(),
+            unreachable: false,
+        };
+        assert!(!sidecar_oauth_app_missing(&other));
+
+        let down = crate::open_connector_proxy::ProxyError {
+            status: 502,
+            message: "open-connector sidecar unreachable: connection refused".to_string(),
+            unreachable: true,
+        };
+        assert!(!sidecar_oauth_app_missing(&down));
+
+        let (status, Json(body)) = oauth_app_not_configured("gmail");
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        assert_eq!(
+            body.get("error").and_then(|v| v.as_str()),
+            Some("oauth_app_not_configured")
+        );
+        let hint = body
+            .get("setup_hint")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+        assert!(hint.contains("PUT /api/oauth/configs/gmail"), "hint: {hint}");
+    }
+
+    async fn test_app_state(temp: &Path) -> Arc<AppState> {
+        let config = crate::AppConfig {
+            company: Default::default(),
+            user: Default::default(),
+        };
+        let db = crate::db::DbHandle::new(temp.join("test.db")).expect("test db");
+        let auth_config = crate::auth::AuthConfig::from_app_config(&config);
+        let jwks = crate::auth::JwksManager::new(&auth_config);
+        let rails = crate::rails::RailsState::new(temp.join("rails"))
+            .await
+            .expect("test rails");
+        Arc::new(AppState {
+            config,
+            db,
+            data_dir: temp.to_path_buf(),
+            jwks,
+            auth_config,
+            vm_driver: None,
+            bot_desktop_sessions: Arc::new(tokio::sync::RwLock::new(std::collections::HashMap::new())),
+            rails,
+            vm_sessions: crate::vm_session_routes::new_vm_session_store(),
+            cowork_scheduler: None,
+            cowork_background: None,
+            cowork_run_manager: None,
+            webhook_secret: None,
+            office_runtime: Arc::new(tokio::sync::RwLock::new(
+                crate::office_routes::OfficeRuntimeFile::default(),
+            )),
+            office_cli_docs: Arc::new(tokio::sync::RwLock::new(std::collections::HashMap::new())),
+            office_cli_watches: Arc::new(tokio::sync::RwLock::new(std::collections::HashMap::new())),
+            office_cli_mcp_sessions: Arc::new(tokio::sync::RwLock::new(std::collections::HashMap::new())),
+            design_skill_cache: crate::design_connector_routes::DesignSkillCache::new(),
+            terminal_sessions: crate::terminal_routes::TerminalSessionStore::new(),
+            mcp_dispatcher: crate::mcp_dispatcher::McpDispatcher::new(),
+            approval_store: Arc::new(crate::permission_policy::ApprovalStore::new()),
+        })
+    }
+
+    async fn body_json(body: Body) -> Value {
+        let bytes = body.collect().await.unwrap().to_bytes();
+        serde_json::from_slice(&bytes).unwrap()
+    }
+
+    #[tokio::test]
+    async fn connect_allternit_mail_without_agent_returns_rail_status() {
+        let temp = tempfile::tempdir().unwrap().keep();
+        let state = test_app_state(&temp).await;
+        let app = connector_router().with_state(state);
+
+        let resp = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/connectors/allternit-mail/connect")
+                    .header("content-type", "application/json")
+                    .header("x-allternit-user-id", "user-1")
+                    .body(Body::from("{}"))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        // No mailflare env in tests → the rail reports unconfigured with a
+        // setup hint instead of attempting a connect.
+        assert_eq!(body["status"], "unconfigured");
+        assert_eq!(body["backend"], "allternit_native");
+        assert_eq!(body["rail"]["configured"], false);
+        assert!(
+            body["setup_hint"]
+                .as_str()
+                .unwrap()
+                .contains("ALLTERNIT_MAILFLARE_URL"),
+            "hint: {}",
+            body["setup_hint"]
+        );
+    }
+
+    #[tokio::test]
+    async fn disconnect_allternit_mail_removes_row_only() {
+        let temp = tempfile::tempdir().unwrap().keep();
+        let state = test_app_state(&temp).await;
+        {
+            let conn = state.db.connect().unwrap();
+            conn.execute(
+                "INSERT INTO connector_connections (id, connector_id, user_id, auth_type, status, account, backend)
+                 VALUES ('c1', 'allternit-mail', 'user-1', 'allternit_native', 'connected', 'a@b.c', 'allternit_native')",
+                [],
+            )
+            .unwrap();
+        }
+        let app = connector_router().with_state(state.clone());
+        let resp = app
+            .oneshot(
+                Request::builder()
+                    .method("DELETE")
+                    .uri("/connectors/allternit-mail/disconnect")
+                    .header("x-allternit-user-id", "user-1")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["status"], "disconnected");
+        let conn = state.db.connect().unwrap();
+        let n: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM connector_connections WHERE connector_id='allternit-mail' AND user_id='user-1'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(n, 0, "disconnect must delete the index row");
+    }
+
+    #[tokio::test]
+    async fn mcp_tools_list_and_status_are_served_in_process() {
+        let temp = tempfile::tempdir().unwrap().keep();
+        let state = test_app_state(&temp).await;
+
+        // tools/list: sidecar is down in tests, but the allternit_mail tools
+        // must still be listed.
+        let resp = handle_allternit_mail_mcp(
+            &state,
+            "user-1",
+            &json!({ "jsonrpc": "2.0", "id": 1, "method": "tools/list" }),
+        )
+        .await
+        .expect("tools/list intercepted");
+        let body = body_json(resp.into_body()).await;
+        let tools = body["result"]["tools"].as_array().unwrap();
+        let names: Vec<&str> = tools.iter().filter_map(|t| t["name"].as_str()).collect();
+        assert!(names.contains(&"allternit_mail.send"), "tools: {names:?}");
+        assert!(names.contains(&"allternit_mail.status"), "tools: {names:?}");
+        assert_eq!(body["id"], 1);
+
+        // allternit_mail.status without agent_id: rail status only (no
+        // mailflare env in tests → configured:false).
+        let resp = handle_allternit_mail_mcp(
+            &state,
+            "user-1",
+            &json!({
+                "jsonrpc": "2.0", "id": 2, "method": "tools/call",
+                "params": { "name": "allternit_mail.status", "arguments": {} }
+            }),
+        )
+        .await
+        .expect("status tool intercepted");
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["result"]["isError"], false);
+        let payload: Value =
+            serde_json::from_str(body["result"]["content"][0]["text"].as_str().unwrap()).unwrap();
+        assert_eq!(payload["configured"], false);
+
+        // Unknown allternit_mail tool → MCP tool error, not a proxy fallback.
+        let resp = handle_allternit_mail_mcp(
+            &state,
+            "user-1",
+            &json!({
+                "jsonrpc": "2.0", "id": 3, "method": "tools/call",
+                "params": { "name": "allternit_mail.nope", "arguments": {} }
+            }),
+        )
+        .await
+        .expect("unknown mail tool intercepted");
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["result"]["isError"], true);
+
+        // Non-mail tools/call and other methods fall through to the sidecar.
+        assert!(handle_allternit_mail_mcp(
+            &state,
+            "user-1",
+            &json!({
+                "jsonrpc": "2.0", "id": 4, "method": "tools/call",
+                "params": { "name": "list_apps", "arguments": {} }
+            }),
+        )
+        .await
+        .is_none());
+    }
+
+    #[tokio::test]
+    async fn mcp_send_enforces_agent_ownership() {
+        let temp = tempfile::tempdir().unwrap().keep();
+        let state = test_app_state(&temp).await;
+        {
+            let conn = state.db.connect().unwrap();
+            conn.execute(
+                "INSERT INTO agents (id, user_id, name, model, provider) VALUES ('agent-1', 'owner-1', 'A', 'm', 'p')",
+                [],
+            )
+            .unwrap();
+        }
+        // A different user cannot send through someone else's agent.
+        let resp = handle_allternit_mail_mcp(
+            &state,
+            "intruder",
+            &json!({
+                "jsonrpc": "2.0", "id": 5, "method": "tools/call",
+                "params": { "name": "allternit_mail.send", "arguments": {
+                    "agent_id": "agent-1", "to": "x@y.z", "subject": "hi", "text": "body"
+                } }
+            }),
+        )
+        .await
+        .expect("send intercepted");
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["result"]["isError"], true);
+        let payload: Value =
+            serde_json::from_str(body["result"]["content"][0]["text"].as_str().unwrap()).unwrap();
+        assert_eq!(payload["error"], "forbidden");
+    }
+
+    #[tokio::test]
+    async fn resolver_marks_sidecar_and_native_connections() {
+        let temp = tempfile::tempdir().unwrap().keep();
+        let state = test_app_state(&temp).await;
+        {
+            let conn = state.db.connect().unwrap();
+            conn.execute(
+                "INSERT INTO agents (id, user_id, name, model, provider) VALUES ('agent-1', 'user-1', 'A', 'm', 'p')",
+                [],
+            )
+            .unwrap();
+            conn.execute(
+                "INSERT INTO connector_connections (id, connector_id, user_id, auth_type, status, backend)
+                 VALUES ('c1', 'gmail', 'user-1', 'oauth2', 'connected', 'open_connector')",
+                [],
+            )
+            .unwrap();
+            conn.execute(
+                "INSERT INTO connector_connections (id, connector_id, user_id, auth_type, status, account, backend)
+                 VALUES ('c2', 'allternit-mail', 'user-1', 'allternit_native', 'connected', 'agent-1@agents.test', 'allternit_native')",
+                [],
+            )
+            .unwrap();
+            conn.execute(
+                "INSERT INTO agent_identity_channels (id, agent_id, user_id, email_address, email_provider, email_send_enabled, email_receive_enabled)
+                 VALUES ('ch1', 'agent-1', 'user-1', 'agent-1@agents.test', 'mailflare', 1, 1)",
+                [],
+            )
+            .unwrap();
+        }
+        let app = crate::allternit_bus_routes::allternit_bus_router().with_state(state);
+        let user = crate::auth::AuthUser {
+            user_id: "user-1".to_string(),
+            email: None,
+            name: None,
+            avatar_url: None,
+            tenant_id: None,
+            organization_id: None,
+            organization_role: None,
+            organization_slug: None,
+        };
+        let resp = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/agents/agent-1/connectors/resolve")
+                    .header("content-type", "application/json")
+                    .extension(user)
+                    .body(Body::from(
+                        json!({ "bindings": [
+                            { "connector_id": "gmail", "provider": "gmail", "label": "Gmail" },
+                            { "connector_id": "allternit-mail", "provider": "allternit-mail", "label": "Allternit Mail" }
+                        ] })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["missing"].as_array().unwrap().len(), 0);
+        assert_eq!(body["credentials"].as_array().unwrap().len(), 0);
+        let conns = body["connections"].as_array().unwrap();
+        assert_eq!(conns.len(), 2, "connections: {conns:?}");
+        let gmail = conns
+            .iter()
+            .find(|c| c["connector_id"] == "gmail")
+            .expect("gmail marker");
+        assert_eq!(gmail["backend"], "open_connector");
+        assert_eq!(gmail["via"], "mcp");
+        assert_eq!(gmail["connected"], true);
+        let mail = conns
+            .iter()
+            .find(|c| c["connector_id"] == "allternit-mail")
+            .expect("mail marker");
+        assert_eq!(mail["backend"], "allternit_native");
+        assert_eq!(mail["via"], "agent_email");
+        assert_eq!(mail["address"], "agent-1@agents.test");
+    }
+
+    #[tokio::test]
+    async fn connectors_setup_status_returns_shape_when_unconfigured() {
+        let temp = tempfile::tempdir().unwrap().keep();
+        let state = test_app_state(&temp).await;
+        let app = connector_router().with_state(state);
+
+        let resp = app
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/connectors/setup-status")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["ready"], false);
+        let checks = body.get("checks").expect("checks object");
+        assert!(checks.get("allternit_mail").is_some());
+        assert!(checks.get("sidecar").is_some());
+        assert!(checks.get("gmail").is_some());
+        assert!(checks.get("google_drive").is_some());
+        // Allternit Mail is definitely unconfigured in this test (no env vars).
+        assert_eq!(checks["allternit_mail"]["configured"], false);
+        // Sidecar / OAuth state depends on the host environment; only assert shape.
+        assert!(checks["sidecar"]["healthy"].is_boolean());
+        assert!(checks["gmail"]["configured"].is_boolean());
+        assert!(checks["google_drive"]["configured"].is_boolean());
+        assert!(checks["gmail"]["setup_hint"].is_string());
+    }
 }

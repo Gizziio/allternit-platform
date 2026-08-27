@@ -9,6 +9,10 @@
 
 import { agentWorkspaceFS } from './agent-workspace-files';
 import { AgentTrustTiers } from './agent-trust-tiers';
+import { useAgentCheckpointStore } from './agent-checkpoint-store';
+import { buildTeamAlignment, renderTeamAlignmentMarkdown } from './agent-review';
+import { createModuleLogger } from '@/lib/logger';
+import { memoryClient } from './memory-client';
 
 export type TaskFrequency = 'startup' | 'daily' | 'weekly' | 'monthly';
 
@@ -211,7 +215,12 @@ async function executeTaskAction(
   if (action.includes('tool') || action.includes('verify')) {
     return executeToolVerification();
   }
-  
+
+  // Nexus Nightly Review — consolidate bot checkpoints into TEAM_ALIGNMENT.md
+  if (action.includes('nexus nightly review') || action.includes('team alignment')) {
+    return executeNightlyReview(options.agentId);
+  }
+
   // Unknown task — report honestly rather than silently succeeding
   return {
     success: false,
@@ -312,6 +321,79 @@ async function executeDocumentationSync(): Promise<{ success: boolean; output?: 
 async function executeToolVerification(): Promise<{ success: boolean; output?: string; error?: string }> {
   const { runToolVerification } = await loadHeartbeatShellModule();
   return runToolVerification();
+}
+
+/**
+ * Execute Nexus Nightly Review.
+ *
+ * Collects active/blocked checkpoints, builds TEAM_ALIGNMENT.md, and returns
+ * the markdown + any notifications. The review engine never modifies bot
+ * identity, memory, skills, credentials, or another bot's files.
+ */
+async function executeNightlyReview(
+  agentId: string,
+): Promise<{ success: boolean; output?: string; error?: string }> {
+  const logger = createModuleLogger('NightlyReview');
+
+  try {
+    const store = useAgentCheckpointStore.getState();
+    const collection = store.buildCollection();
+
+    if (collection.checkpoints.length === 0) {
+      logger.info({ agentId }, 'No active or blocked checkpoints; exiting silently');
+      return { success: true, output: 'No active or blocked checkpoints. No file written.' };
+    }
+
+    const { alignment, notifications, wroteFile } = buildTeamAlignment(collection);
+    const markdown = renderTeamAlignmentMarkdown(alignment);
+
+    // Write TEAM_ALIGNMENT.md to the orchestrator bot's workspace
+    const written = await agentWorkspaceFS.writeFile(agentId, 'TEAM_ALIGNMENT.md', markdown);
+
+    if (!written) {
+      return {
+        success: false,
+        error: 'Failed to write TEAM_ALIGNMENT.md',
+      };
+    }
+
+    const notificationSummary = notifications.length
+      ? `Notifications:\n${notifications.map((n) => `- [${n.severity}] ${n.subject}: ${n.body}`).join('\n')}`
+      : 'No notifications required.';
+
+    // Log decision observation to Memory Kernel
+    try {
+      void memoryClient.recordObservation(
+        'decision',
+        `Nexus Nightly Review complete: ${alignment.sections.aligned.length} aligned, ${alignment.sections.blocked.length} blocked, ${alignment.sections.conflicts.length} conflicts.`,
+        {
+          agentId,
+          source: 'NightlyReview',
+        }
+      );
+    } catch {
+      // Degrade silently
+    }
+
+    return {
+      success: true,
+      output: [
+        `Nexus Nightly Review complete.`,
+        `Wrote TEAM_ALIGNMENT.md: ${wroteFile}`,
+        `Aligned: ${alignment.sections.aligned.length}`,
+        `Active: ${alignment.sections.active.length}`,
+        `Blocked: ${alignment.sections.blocked.length}`,
+        `Conflicts: ${alignment.sections.conflicts.length}`,
+        `Stale: ${alignment.sections.stale.length}`,
+        notificationSummary,
+      ].join('\n'),
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
 }
 
 // ============================================================================

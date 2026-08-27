@@ -124,9 +124,10 @@ const coordinatorModeModule = feature('COORDINATOR_MODE')
 const SnipTool = feature('HISTORY_SNIP')
   ? require('./tools/SnipTool/SnipTool.js').SnipTool
   : null
-const ListPeersTool = feature('UDS_INBOX')
-  ? require('./tools/ListPeersTool/ListPeersTool.js').ListPeersTool
-  : null
+const ListPeersTool =
+  feature('UDS_INBOX') || !isEnvDefinedFalsy(process.env.GIZZI_ENABLE_RAILS_PEER)
+    ? require('./tools/ListPeersTool/ListPeersTool.js').ListPeersTool
+    : null
 const WorkflowTool = feature('WORKFLOW_SCRIPTS')
   ? (() => {
       require('./tools/WorkflowTool/bundled/index.js').initBundledWorkflows()
@@ -137,7 +138,7 @@ const WorkflowTool = feature('WORKFLOW_SCRIPTS')
 import type { ToolPermissionContext } from '@/Tool.js'
 import { getDenyRuleForTool } from '../cli/ui/ink-app/utils/permissions/permissions.js'
 import { hasEmbeddedSearchTools } from '../shared/utils/embeddedTools.js'
-import { isEnvTruthy } from '../shared/utils/envUtils.js'
+import { isEnvDefinedFalsy, isEnvTruthy } from '../shared/utils/envUtils.js'
 import { isPowerShellToolEnabled } from '../cli/ui/ink-app/utils/shell/shellToolUtils.js'
 import { isAgentSwarmsEnabled } from '../shared/utils/agentSwarmsEnabled.js'
 import { isWorktreeModeEnabled } from '../shared/utils/worktreeModeEnabled.js'

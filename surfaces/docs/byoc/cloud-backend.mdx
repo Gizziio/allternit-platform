@@ -1,0 +1,223 @@
+---
+title: 'Cloud Backend'
+description: 'WebSocket backend for browser extensions and thin clients.'
+---
+
+## Overview
+
+The Allternit Cloud Backend (`@allternit/cloud-backend-service`) is a lightweight WebSocket server for browser extension and thin-client integrations. It handles client authentication, session management, and real-time message forwarding between browser extensions and controlling clients.
+
+It is built from `cmd/cloud-backend` and runs as a standalone Node service.
+
+## Base URL
+
+```
+ws://<host>:<port>/ws/extension
+```
+
+Default HTTP port: `8080`.
+
+## Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PORT` | `8080` | HTTP server port. |
+| `HOST` | `0.0.0.0` | HTTP server host. |
+
+## Health check
+
+```bash
+curl http://localhost:8080/health
+```
+
+### Response
+
+```json
+{
+  "status": "ok",
+  "service": "Allternit Cloud Backend",
+  "connections": 0,
+  "sessions": 0,
+  "uptime": 12.34,
+  "version": "1.0.0",
+  "timestamp": "2026-08-13T19:50:00.000Z"
+}
+```
+
+## Client types
+
+| Type | Description |
+|------|-------------|
+| `browser-extension` | Browser extension that executes actions in the page. |
+| `thin-client` | Lightweight chat or control client. |
+| `agent` | Agent session participant. |
+
+## WebSocket message format
+
+```json
+{
+  "id": "uuid",
+  "type": "auth",
+  "payload": { ... },
+  "timestamp": 1723575600000
+}
+```
+
+## WebSocket message types
+
+| Type | Direction | Description |
+|------|-----------|-------------|
+| `auth` | Inbound | Authenticate the connection. |
+| `auth:response` | Outbound | Authentication result. |
+| `ping` | Inbound | Client keepalive. |
+| `pong` | Outbound | Server keepalive response. |
+| `connected` | Outbound | Sent to a newly connected client. |
+| `execute` | Inbound | Request a browser action. |
+| `execute:error` | Outbound | Error executing an action. |
+| `getTabs` | Inbound | Request the list of browser tabs. |
+| `tabs` | Outbound | Tab list response. |
+| `tab:activated` | Both | Tab activated event. |
+| `tab:updated` | Both | Tab updated event. |
+| `action:complete` | Both | Action completion event. |
+| `chat` | Inbound | Chat message from a thin client. |
+| `chat:response` | Outbound | Chat response. |
+| `error` | Outbound | Generic error. |
+
+## Authentication
+
+Connect to the WebSocket and send an `auth` message:
+
+```json
+{
+  "id": "auth-1",
+  "type": "auth",
+  "payload": {
+    "token": "your-token",
+    "clientType": "browser-extension",
+    "version": "1.0.0"
+  },
+  "timestamp": 1723575600000
+}
+```
+
+### Response
+
+```json
+{
+  "id": "auth-1",
+  "type": "auth:response",
+  "payload": {
+    "success": true,
+    "sessionId": "sess_abc",
+    "clientId": "client_xyz"
+  },
+  "timestamp": 1723575600000
+}
+```
+
+The current implementation accepts any non-empty token and derives a user ID from it. Production deployments should validate tokens against an auth service.
+
+## Execute a browser action
+
+A thin client or agent can request a browser action:
+
+```json
+{
+  "id": "exec-1",
+  "type": "execute",
+  "payload": {
+    "action": "click",
+    "selector": "#submit"
+  },
+  "timestamp": 1723575600000
+}
+```
+
+The server forwards the message to a `browser-extension` client in the same session. If no extension is connected, the caller receives:
+
+```json
+{
+  "id": "exec-1",
+  "type": "execute:error",
+  "payload": {
+    "message": "No browser extension connected in this session"
+  },
+  "timestamp": 1723575600000
+}
+```
+
+## Get browser tabs
+
+```json
+{
+  "id": "tabs-1",
+  "type": "getTabs",
+  "timestamp": 1723575600000
+}
+```
+
+Forwarded to the browser extension. If no extension is connected, the response is an empty array:
+
+```json
+{
+  "id": "tabs-1",
+  "type": "tabs",
+  "payload": [],
+  "timestamp": 1723575600000
+}
+```
+
+## Chat messages
+
+Thin clients can send chat messages:
+
+```json
+{
+  "id": "chat-1",
+  "type": "chat",
+  "payload": {
+    "message": "Hello"
+  },
+  "timestamp": 1723575600000
+}
+```
+
+The current implementation echoes the message back. In production, chat is forwarded to the AI runtime.
+
+## Session broadcast
+
+Messages of type `action:complete`, `tab:activated`, and `tab:updated` are broadcast to all clients in the same session except the sender.
+
+## Connection cleanup
+
+The server pings clients every 30 seconds and removes connections that have not sent any message or pong within 60 seconds.
+
+## Error codes
+
+| Status / message | Meaning |
+|------------------|---------|
+| `Invalid message format` | The WebSocket frame was not valid JSON. |
+| `Not authenticated` | An authenticated action was sent before `auth`. |
+| `No browser extension connected in this session` | `execute` or `getTabs` with no extension peer. |
+| `Unknown message type: <type>` | The server does not recognize the message type. |
+
+## Running the service
+
+```bash
+cd cmd/cloud-backend
+npm install
+npm run build
+npm start
+```
+
+Development:
+
+```bash
+npm run dev
+```
+
+## Related pages
+
+- [Surfaces: Extensions](/surfaces/extensions)
+- [Surfaces: Platform](/surfaces/platform)
+- [Cloud API](/api/cloud-api)

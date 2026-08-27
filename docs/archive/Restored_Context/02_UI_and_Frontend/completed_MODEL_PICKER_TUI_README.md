@@ -63,7 +63,7 @@ const {
 ┌─────────────────────────────────────────────┐
 │  Step 1: Select Runtime (Brain Profile)     │
 │  ┌─────────────────────────────────────┐   │
-│  │  OpenCode                           │   │
+│  │  Gizzi Code                           │   │
 │  │  Google Gemini                      │   │
 │  │  ✓ Kimi (Authenticated)            │   │
 │  │  Claude                             │   │
@@ -233,7 +233,7 @@ To authenticate a provider:
 # Launch auth wizard via kernel
 POST /v1/sessions
 {
-  "brain_profile_id": "opencode-auth",
+  "brain_profile_id": "gizzi-auth",
   "source": "terminal"
 }
 ```
@@ -254,7 +254,7 @@ interface ModelDiscoveryResult {
   }>;
   default_model_id?: string;
   allow_freeform: boolean;      // Always true as fallback
-  freeform_hint?: string;       // e.g., "Enter OpenCode model ID"
+  freeform_hint?: string;       // e.g., "Enter Gizzi Code model ID"
   error?: string;               // "Not authenticated" etc.
 }
 ```
@@ -318,7 +318,7 @@ curl -X POST http://127.0.0.1:3004/v1/providers/kimi/models/validate \
 
 | Provider | Discovery | Mode | Notes |
 |----------|-----------|------|-------|
-| OpenCode | Freeform | ACP | Placeholder for CLI discovery |
+| Gizzi Code | Freeform | ACP | Placeholder for CLI discovery |
 | Gemini | Freeform | ACP | No CLI models command yet |
 | Claude | Freeform | ACP | Suggests known models |
 | Kimi | Freeform | ACP | No auth required |

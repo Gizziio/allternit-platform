@@ -22,7 +22,8 @@ import type { OrphanedPermission } from '../types/textInputTypes.js'
 import { logForDebugging } from './debug.js'
 import { isEnvTruthy } from './envUtils.js'
 import { isFsInaccessible } from './errors.js'
-import { getFileModificationTime, stripLineNumberPrefix } from './file.js'
+import { getFileModificationTime } from './file.js'
+import { stripLineNumberPrefix } from './fileLineNumbers.js'
 import { readFileSyncWithMetadata } from './fileRead.js'
 import {
   createFileStateCacheWithSizeLimit,

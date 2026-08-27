@@ -44,7 +44,7 @@ final class CloudInstancesClient: @unchecked Sendable {
     func cancelSession(id: String) async throws {
         let escaped = id.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? id
         let url = baseURL.appendingPathComponent("api/v1/cloud/wizard/deployments/\(escaped)/cancel")
-        _ = try await post(url: url, body: [String: String]())
+        let _: [String: String] = try await post(url: url, body: [String: String]())
     }
 
     func deleteSession(id: String) async throws {

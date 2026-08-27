@@ -1,0 +1,157 @@
+---
+title: Allternit TypeScript CLI
+description: Local parallel execution CLI built on the Allternit Runtime bridge.
+---
+
+# Allternit TypeScript CLI
+
+The Allternit TypeScript CLI (`@allternit/cli-typescript`) is a lightweight command-line package that demonstrates local parallel execution through the Allternit Runtime bridge. It is distributed as the `allternit` bin entry and is intended for scripting, CI pipelines, and custom tooling surfaces.
+
+## Overview
+
+The CLI wraps `@allternit/runtime` and executes a configured goal across multiple variants. Each variant runs in sequence within the local process, with results collected into a single run report. The package is a thin integration surface; production agent orchestration should use [Gizzi Code](/cli/overview) or the [Allternit API](/api/authentication).
+
+## Installation
+
+```bash
+npm install -g @allternit/cli-typescript
+```
+
+Or add it to a project:
+
+```bash
+npm install @allternit/cli-typescript
+```
+
+The package exposes the `allternit` binary:
+
+```json
+{
+  "bin": {
+    "allternit": "./bin/allternit-parallel.js"
+  }
+}
+```
+
+## Usage
+
+After installation, the `allternit` command is available:
+
+```bash
+allternit --help
+```
+
+The current implementation focuses on local executor integration. A typical invocation creates a run configuration with a goal and one or more variants, then executes them through the runtime bridge.
+
+## Local executor API
+
+The `LocalExecutor` class is the core of the CLI. It initializes an `AllternitRuntimeBridge` and runs variants locally.
+
+```javascript
+const { LocalExecutor } = require('@allternit/cli-typescript');
+
+const executor = new LocalExecutor({
+  // Optional configuration overrides
+});
+
+const result = await executor.execute({
+  runId: 'run_01hqx8x7x7x7x7x7x7x7x7x',
+  goal: 'Refactor the auth module',
+  variants: [
+    { variantId: 'variant-a', agentType: 'coder' },
+    { variantId: 'variant-b', agentType: 'reviewer' }
+  ]
+});
+
+console.log(result.status);
+```
+
+### Constructor
+
+```javascript
+new LocalExecutor(config)
+```
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `config` | `object` | Optional runtime configuration. Defaults are used when omitted. |
+
+The constructor creates an `AllternitRuntimeBridge` rooted at `process.cwd()` and stores receipts in `./.allternit/receipts`.
+
+### Methods
+
+| Method | Description |
+|--------|-------------|
+| `execute(runConfig)` | Execute the goal across all configured variants. |
+
+### Run configuration
+
+```json
+{
+  "runId": "run_01hqx8x7x7x7x7x7x7x7x7x",
+  "goal": "Refactor the auth module",
+  "variants": [
+    { "variantId": "variant-a" },
+    { "variantId": "variant-b" }
+  ]
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `runId` | `string` | Unique identifier for the run. |
+| `goal` | `string` | Natural language goal passed to each variant. |
+| `variants` | `array` | Variant configurations to execute in sequence. |
+
+### Response
+
+```json
+{
+  "runId": "run_01hqx8x7x7x7x7x7x7x7x7x",
+  "status": "completed",
+  "results": [
+    {
+      "variantId": "variant-a",
+      "status": "completed",
+      "startTime": "2026-08-13T18:00:00.000Z",
+      "endTime": "2026-08-13T18:00:05.000Z",
+      "duration": 5000,
+      "output": "Simulating agent work for goal: Refactor the auth module"
+    }
+  ]
+}
+```
+
+The top-level `status` is `completed` only when every variant completes successfully; otherwise it is `failed`.
+
+## Package metadata
+
+```json
+{
+  "name": "@allternit/cli-typescript",
+  "version": "1.0.0",
+  "description": "Allternit CLI with Superconductor integration",
+  "license": "MIT"
+}
+```
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `allternit` | Main CLI entry point. Run with `--help` for available options. |
+
+## Error handling
+
+| Status | Description |
+|--------|-------------|
+| `failed` | A variant threw an exception or the runtime bridge returned an unsuccessful tool execution. |
+
+Tool errors are surfaced in the variant's `output` field as the error message.
+
+## Related pages
+
+- [Gizzi Code CLI](/cli/overview) — the primary interactive CLI for the Allternit runtime
+- [Headless Execution](/cli/headless-execution) — running Gizzi Code in CI and scripts
+- [BYOC Deployment](/byoc/deployment) — deploying agents to your own infrastructure
+- [Allternit Runtime](/core/gizzi-runtime) — the execution engine used by the CLI

@@ -89,7 +89,7 @@ function fetchConnectorTargets(): Promise<PluginMentionTarget[]> {
           id: c.id,
           name: c.name,
           description: c.description,
-          iconUrl: getConnectorLogoUrl(c.base_url),
+          iconUrl: getConnectorLogoUrl(c.base_url, c.id).url,
           category: c.category,
           connected: c.connection?.status === 'connected',
         })),

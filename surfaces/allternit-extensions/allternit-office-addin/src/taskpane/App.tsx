@@ -2,6 +2,12 @@ import { useEffect, useMemo, useState } from 'react'
 import { getBridge } from '@/lib/bridge-factory'
 import { getOfficeHost, getOfficeHostDisplayName, getOfficeManifestUrl, getOfficeProductTarget } from '@/lib/host-detector'
 import {
+  convertBytesToMarkdown,
+  filenameForConversion,
+  readCurrentDocumentBytes,
+  type MarkdownConversionResult,
+} from '@/lib/markdown-conversion'
+import {
   bootstrapOfficeRuntime,
   getOfficeBootstrapState,
   getPlatformOrigin,
@@ -12,6 +18,12 @@ import {
 } from '@/lib/platform-gateway'
 
 type BridgeStatus = 'connecting' | 'connected' | 'error' | 'companion'
+
+type MarkdownPanelState =
+  | { kind: 'idle' }
+  | { kind: 'loading' }
+  | { kind: 'ready'; result: MarkdownConversionResult }
+  | { kind: 'error'; message: string }
 
 function useSyncDarkClass() {
   useEffect(() => {
@@ -64,8 +76,21 @@ export default function App() {
   const [documentLabel, setDocumentLabel] = useState(`${hostLabel} document`)
   const [error, setError] = useState<string | null>(null)
   const [connectionAttempt, setConnectionAttempt] = useState(0)
+  const [markdownPanel, setMarkdownPanel] = useState<MarkdownPanelState>({ kind: 'idle' })
   const platformOrigin = useMemo(() => getPlatformOrigin(), [])
   const product = HOST_PRODUCTS[host]
+
+  const viewAsMarkdown = async () => {
+    setMarkdownPanel({ kind: 'loading' })
+    try {
+      const bytes = await readCurrentDocumentBytes()
+      const documentUrl = typeof Office !== 'undefined' ? Office.context?.document?.url : undefined
+      const result = await convertBytesToMarkdown(bytes, filenameForConversion(host, documentUrl))
+      setMarkdownPanel({ kind: 'ready', result })
+    } catch (reason) {
+      setMarkdownPanel({ kind: 'error', message: reason instanceof Error ? reason.message : String(reason) })
+    }
+  }
 
   const connectAllternit = () => {
     const authUrl = `${platformOrigin}/office-auth-bridge`
@@ -192,6 +217,63 @@ export default function App() {
               {binding?.workspace_id && <span className="rounded-full bg-[var(--bg-secondary)] px-2 py-1">Workspace attached</span>}
               {binding?.project_id && <span className="rounded-full bg-[var(--bg-secondary)] px-2 py-1">Project attached</span>}
             </div>
+            {status === 'connected' && markdownPanel.kind === 'idle' && (
+              <button
+                type="button"
+                onClick={() => void viewAsMarkdown()}
+                className="mt-3 rounded-lg px-3 py-2 text-[11px] font-bold text-white"
+                style={{ background: accent }}
+                data-testid="view-as-markdown"
+              >
+                View as Markdown
+              </button>
+            )}
+            {markdownPanel.kind === 'loading' && (
+              <div className="mt-3 text-[11px] text-[var(--text-secondary)]">Converting to Markdown…</div>
+            )}
+            {markdownPanel.kind === 'error' && (
+              <div className="mt-3 rounded-xl border border-red-500/20 bg-red-500/5 p-3 text-[11px] leading-relaxed text-red-600">
+                <div>{markdownPanel.message}</div>
+                <button
+                  type="button"
+                  onClick={() => void viewAsMarkdown()}
+                  className="mt-2 rounded-lg px-3 py-1.5 text-[11px] font-bold text-white"
+                  style={{ background: accent }}
+                >
+                  Retry
+                </button>
+              </div>
+            )}
+            {markdownPanel.kind === 'ready' && (
+              <div className="mt-3" data-testid="markdown-panel">
+                <div className="mb-1.5 flex items-center justify-between gap-2">
+                  <span className="rounded-full bg-[var(--bg-secondary)] px-2 py-1 text-[10px] font-semibold uppercase text-[var(--text-tertiary)]">
+                    {markdownPanel.result.format ?? 'markdown'}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <a
+                      href={`${platformOrigin}/markdown-preview`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[11px] font-semibold underline"
+                      style={{ color: accent }}
+                    >
+                      Open in platform
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => setMarkdownPanel({ kind: 'idle' })}
+                      className="text-[11px] font-semibold text-[var(--text-tertiary)]"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+                <pre className="max-h-72 overflow-auto whitespace-pre-wrap break-words rounded-xl border border-[var(--border-default)] bg-[var(--bg-primary)] p-3 font-mono text-[11px] leading-relaxed text-[var(--text-secondary)]">
+                  {markdownPanel.result.markdown}
+                </pre>
+              </div>
+            )}
           </div>
 
           <div className="rounded-2xl border border-[var(--border-default)] p-4" style={{ background: `color-mix(in srgb, ${accent} 7%, var(--bg-primary))` }}>

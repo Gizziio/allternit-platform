@@ -1,0 +1,340 @@
+---
+title: 'Memory API'
+description: 'Store, query, and manage memory documents, events, entities, edges, and session-scoped key-value memory for agents.'
+---
+
+## Overview
+
+The `/api/memory` surface gives agents durable memory primitives: documents, events, entities, edges, semantic query, and session-scoped key/value storage. It proxies to the memory service when available and falls back to local SQLite-backed storage when it is not. Session memory powers the model-facing `memory` tool, letting an agent read and write values keyed by session.
+
+## Base URL
+
+```
+https://api.allternit.com/api
+```
+
+## Authentication
+
+All endpoints require a valid bearer token in the `Authorization` header. See [Authentication](/api/authentication) for details.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET`  | `/api/memory` | Stub memory summary (documents, events, entities, edges). |
+| `GET`  | `/api/memory/health` | Health of Ollama, database, and memory watcher. |
+| `POST` | `/api/memory/consolidate` | Trigger memory consolidation. |
+| `GET`  | `/api/memory/documents` | List memory documents. |
+| `POST` | `/api/memory/documents` | Create a memory document. |
+| `GET`  | `/api/memory/events` | List memory events. |
+| `POST` | `/api/memory/events` | Create a memory event. |
+| `POST` | `/api/memory/query` | Query memory with a natural-language prompt. |
+| `GET`  | `/api/memory/edges` | List memory edges. |
+| `GET`  | `/api/memory/entities` | List memory entities. |
+| `POST` | `/api/memory/entities` | Create a memory entity. |
+| `GET`  | `/api/memory/stats` | Memory statistics. |
+| `GET`  | `/api/memory/session` | Read a session memory key. |
+| `GET`  | `/api/memory/session/list` | List all keys for a session. |
+| `POST` | `/api/memory/session` | Write a session memory key. |
+| `DELETE` | `/api/memory/session` | Delete a session memory key. |
+
+## Health
+
+```http
+GET /api/memory/health
+```
+
+### Example response
+
+```json
+{
+  "status": "healthy",
+  "memory": {
+    "ollamaConnected": true,
+    "databaseConnected": true,
+    "watcherActive": true
+  },
+  "timestamp": "2026-08-13T10:00:00Z"
+}
+```
+
+## Documents
+
+### List documents
+
+```http
+GET /api/memory/documents?agent_id=:agent_id
+```
+
+### Example response
+
+```json
+[
+  {
+    "id": "doc_1a2b3c",
+    "agent_id": "ag_researcher",
+    "title": "Q3 platform goals",
+    "source_type": "upload",
+    "source_url": null,
+    "chunk_count": 4,
+    "is_indexed": true,
+    "created_at": "2026-08-13T10:00:00Z",
+    "updated_at": "2026-08-13T10:00:00Z"
+  }
+]
+```
+
+### Create a document
+
+```http
+POST /api/memory/documents
+```
+
+#### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `title` | string | Yes | Document title. |
+| `agent_id` | string | No | Associated agent. |
+| `content` | string | No | Raw document content. |
+| `source_type` | string | No | Defaults to `upload`. |
+| `source_url` | string | No | Source URL. |
+| `chunk_count` | integer | No | Chunk count. |
+
+#### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/memory/documents \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Q3 platform goals",
+    "content": "Improve reliability, ship BYOC v2, expand ACI coverage.",
+    "agent_id": "ag_researcher"
+  }'
+```
+
+#### Example response
+
+```json
+{
+  "id": "doc_1a2b3c",
+  "title": "Q3 platform goals",
+  "isIndexed": false
+}
+```
+
+## Events
+
+### List events
+
+```http
+GET /api/memory/events?agent_id=:agent_id&type=:type&limit=:limit
+```
+
+### Example response
+
+```json
+[
+  {
+    "id": "evt_2b3c4d",
+    "timestamp": "2026-08-13T10:00:00Z",
+    "type": "user_query",
+    "payload": "{\"query\":\"deploy status\"}",
+    "agent_id": "ag_researcher",
+    "source": "chat"
+  }
+]
+```
+
+### Create an event
+
+```http
+POST /api/memory/events
+```
+
+#### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `type` | string | Yes | Event type. |
+| `agent_id` | string | No | Associated agent. |
+| `payload` | string | No | JSON-serialized payload. |
+| `source` | string | No | Defaults to `user`. |
+
+## Query memory
+
+```http
+POST /api/memory/query
+```
+
+Proxies the query to the memory agent when available; otherwise returns a keyword-search stub.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `query` | string | Yes | Natural-language query. |
+
+### Example response
+
+```json
+{
+  "results": [],
+  "query": "How do I rotate credentials?"
+}
+```
+
+## Edges
+
+```http
+GET /api/memory/edges?source=:source
+```
+
+### Example response
+
+```json
+{
+  "edges": [
+    {
+      "id": "edge_3c4d5e",
+      "source": "auth-service",
+      "relationship": "depends_on",
+      "target": "postgres",
+      "confidence": 0.92,
+      "created_at": "2026-08-13T10:00:00Z"
+    }
+  ]
+}
+```
+
+## Entities
+
+### List entities
+
+```http
+GET /api/memory/entities?agentId=:agentId&type=:type&q=:q
+```
+
+### Create an entity
+
+```http
+POST /api/memory/entities
+```
+
+#### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | Yes | Entity name. |
+| `agentId` / `agent_id` | string | No | Associated agent. |
+| `entityId` / `entity_id` | string | No | External entity id (defaults to a new id). |
+| `type` / `entity_type` | string | No | Defaults to `General`. |
+| `content` | string | No | Free-form content. |
+| `vectorId` / `vector_id` | string | No | Vector store reference. |
+
+#### Example response
+
+```json
+{
+  "success": true,
+  "entity": {
+    "id": "ent_4d5e6f"
+  }
+}
+```
+
+## Memory stats
+
+```http
+GET /api/memory/stats
+```
+
+### Example response
+
+```json
+{
+  "memories": { "total": 42 },
+  "insights": 17,
+  "connections": 8,
+  "vectors": 12
+}
+```
+
+## Session memory
+
+Session memory stores JSON values keyed by `(user_id, session_id, key)`. It is the backing store for the agent `memory` tool.
+
+### Read a key
+
+```http
+GET /api/memory/session?session_id=:session_id&key=:key
+```
+
+### Example response
+
+```json
+{
+  "id": "sm_5e6f7a",
+  "user_id": "user_1a2b",
+  "session_id": "sess_2f8a9c",
+  "key": "mode",
+  "value": "fast",
+  "created_at": "2026-08-13T10:00:00Z",
+  "updated_at": "2026-08-13T10:00:00Z"
+}
+```
+
+### List keys
+
+```http
+GET /api/memory/session/list?session_id=:session_id
+```
+
+### Write a key
+
+```http
+POST /api/memory/session
+```
+
+#### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `session_id` | string | Yes | Session id. |
+| `key` | string | Yes | Memory key. |
+| `value` | any | Yes | JSON value. |
+
+### Delete a key
+
+```http
+DELETE /api/memory/session?session_id=:session_id&key=:key
+```
+
+### Example response
+
+```json
+{
+  "key": "mode",
+  "deleted": true
+}
+```
+
+## Error codes
+
+| Status | Meaning | Typical cause |
+|--------|---------|---------------|
+| `200 OK` | Success | Request succeeded. |
+| `201 Created` | Created | Document, event, or entity created. |
+| `400 Bad Request` | Invalid request | Missing `session_id`/`key`, invalid body. |
+| `401 Unauthorized` | Unauthorized | Missing or invalid bearer token. |
+| `404 Not Found` | Not found | Session memory key not found. |
+| `503 Service Unavailable` | Unavailable | Memory service unreachable during consolidation/query. |
+| `500 Internal Server Error` | Server error | Contact support. |
+
+## Related pages
+
+- [Memory Stores API](/api/memory-stores)
+- [Sessions API](/api/sessions)
+- [Local Brains API](/api/local-brains)
+- [RAG Pipeline cookbook](/cookbooks/rag-pipeline)

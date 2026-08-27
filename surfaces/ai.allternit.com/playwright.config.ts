@@ -30,7 +30,7 @@ export default defineConfig({
   // Shared settings for all the projects below
   use: {
     // Base URL to use in actions
-    baseURL: process.env.TEST_BASE_URL || 'http://localhost:3013',
+    baseURL: process.env.TEST_BASE_URL || 'http://localhost:5177',
     
     // Collect trace when retrying the failed test
     trace: 'on-first-retry',
@@ -96,8 +96,8 @@ export default defineConfig({
   
   // Web server configuration (optional - can start dev server automatically)
   webServer: {
-    command: 'pnpm exec vite --port 3013',
-    url: 'http://localhost:3013',
+    command: 'pnpm exec vite --port 5177',
+    url: 'http://localhost:5177',
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
   },

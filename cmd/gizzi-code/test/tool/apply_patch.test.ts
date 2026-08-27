@@ -2,7 +2,7 @@
 import { describe, expect, test } from "bun:test"
 import path from "path"
 import * as fs from "fs/promises"
-import { ApplyPatchTool } from "../../src/tool/apply_patch"
+import { ApplyPatchTool } from "../../src/runtime/tools/builtins/apply_patch"
 import { Instance } from "../../src/project/instance"
 import { tmpdir } from "../fixture/fixture"
 

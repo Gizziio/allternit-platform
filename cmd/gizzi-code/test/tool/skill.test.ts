@@ -3,9 +3,9 @@ import { describe, expect, test } from "bun:test"
 import path from "path"
 import { pathToFileURL } from "url"
 import type { PermissionNext } from "../../src/permission/next"
-import type { Tool } from "../../src/tool/tool"
+import type { Tool } from "../../src/runtime/tools/builtins/tool"
 import { Instance } from "../../src/project/instance"
-import { SkillTool } from "../../src/tool/skill"
+import { SkillTool } from "../../src/runtime/tools/builtins/skill"
 import { tmpdir } from "../fixture/fixture"
 
 const baseCtx: Omit<Tool.Context, "ask"> = {
@@ -23,7 +23,7 @@ describe("tool.skill", () => {
     await using tmp = await tmpdir({
       git: true,
       init: async (dir) => {
-        const skillDir = path.join(dir, ".opencode", "skill", "tool-skill")
+        const skillDir = path.join(dir, ".gizzi", "skill", "tool-skill")
         await Bun.write(
           path.join(skillDir, "SKILL.md"),
           `---
@@ -37,20 +37,20 @@ description: Skill for tool tests.
       },
     })
 
-    const home = process.env.Allternit_TEST_HOME
-    process.env.Allternit_TEST_HOME = tmp.path
+    const home = process.env.GIZZI_TEST_HOME
+    process.env.GIZZI_TEST_HOME = tmp.path
 
     try {
       await Instance.provide({
         directory: tmp.path,
         fn: async () => {
           const tool = await SkillTool.init()
-          const skillPath = path.join(tmp.path, ".opencode", "skill", "tool-skill", "SKILL.md")
+          const skillPath = path.join(tmp.path, ".gizzi", "skill", "tool-skill", "SKILL.md")
           expect(tool.description).toContain(`<location>${pathToFileURL(skillPath).href}</location>`)
         },
       })
     } finally {
-      process.env.Allternit_TEST_HOME = home
+      process.env.GIZZI_TEST_HOME = home
     }
   })
 
@@ -58,7 +58,7 @@ description: Skill for tool tests.
     await using tmp = await tmpdir({
       git: true,
       init: async (dir) => {
-        const skillDir = path.join(dir, ".opencode", "skill", "tool-skill")
+        const skillDir = path.join(dir, ".gizzi", "skill", "tool-skill")
         await Bun.write(
           path.join(skillDir, "SKILL.md"),
           `---
@@ -75,8 +75,8 @@ Use this skill.
       },
     })
 
-    const home = process.env.Allternit_TEST_HOME
-    process.env.Allternit_TEST_HOME = tmp.path
+    const home = process.env.GIZZI_TEST_HOME
+    process.env.GIZZI_TEST_HOME = tmp.path
 
     try {
       await Instance.provide({
@@ -92,7 +92,7 @@ Use this skill.
           }
 
           const result = await tool.execute({ name: "tool-skill" }, ctx)
-          const dir = path.join(tmp.path, ".opencode", "skill", "tool-skill")
+          const dir = path.join(tmp.path, ".gizzi", "skill", "tool-skill")
           const file = path.resolve(dir, "scripts", "demo.txt")
 
           expect(requests.length).toBe(1)
@@ -107,7 +107,7 @@ Use this skill.
         },
       })
     } finally {
-      process.env.Allternit_TEST_HOME = home
+      process.env.GIZZI_TEST_HOME = home
     }
   })
 })

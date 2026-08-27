@@ -1,0 +1,55 @@
+[package]
+name = "allternit-local-engine"
+version = "0.1.0"
+edition = "2021"
+description = "Local model download and runtime lifecycle engine"
+license = "MIT OR Apache-2.0"
+
+[[bin]]
+name = "local-engine"
+path = "src/main.rs"
+
+[dependencies]
+# Core async
+tokio = { workspace = true }
+
+# HTTP/API
+axum = { workspace = true }
+reqwest = { workspace = true }
+tower-http = { workspace = true, features = ["cors"] }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+
+# Observability
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+# IDs/Time
+uuid = { workspace = true, features = ["v4", "serde"] }
+chrono = { workspace = true, features = ["serde"] }
+
+# System info (disk, GPU detection support)
+sysinfo = "0.30"
+
+# Body handling for chat proxy
+bytes = { workspace = true }
+
+# Directories
+dirs = { workspace = true }
+
+# Hardware hash
+blake3 = { workspace = true }
+
+# Model assessment
+regex = { workspace = true }
+urlencoding = { workspace = true }
+
+[dev-dependencies]
+tokio-test = { workspace = true }
+tempfile = { workspace = true }

@@ -62,7 +62,7 @@ import { FILE_EDIT_TOOL_NAME } from '../../../cli/ui/ink-app/tools/FileEditTool/
 import { FILE_READ_TOOL_NAME } from '../../../cli/ui/ink-app/tools/FileReadTool/prompt.js'
 import { WEB_FETCH_TOOL_NAME } from '../../../cli/ui/ink-app/tools/WebFetchTool/prompt.js'
 import { errorMessage } from '../errors.js'
-import { getClaudeTempDir } from '../permissions/filesystem.js'
+import { getClaudeTempDir } from '../permissions/tempDir.js'
 import type { PermissionRuleValue } from '../permissions/PermissionRule.js'
 import { ripgrepCommand } from '../ripgrep.js'
 

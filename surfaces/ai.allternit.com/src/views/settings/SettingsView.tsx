@@ -59,7 +59,9 @@ import { SecurityPanel } from './SecurityPanel';
 import { SkillsSettingsPanel } from './SkillsSettingsPanel';
 import { LensSettingsPanel } from './LensSettingsPanel';
 import { PluginsSettingsPanel } from './PluginsSettingsPanel';
+import { WebhooksSettingsPanel } from './WebhooksSettingsPanel';
 import { DispatchSettingsPanel } from './DispatchSettingsPanel';
+import { CoworkPreferencesPanel } from './CoworkPreferencesPanel';
 import { ResponseStylePanel } from './ResponseStylePanel';
 import { PluginManager } from '../plugins';
 import type { TabId as FullManagerTabId } from '../plugins/PluginManager/types';
@@ -1071,12 +1073,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       </SettingsRow>
 
       <SectionHeading>Access</SectionHeading>
-      <SettingsRow label="Trusted folders" description="Folders Cowork agents may read and write">
-        <span className="text-[13px] text-[var(--text-tertiary)]">Coming soon</span>
-      </SettingsRow>
-      <SettingsRow label="Global instructions" description="Instructions applied to every Cowork session">
-        <span className="text-[13px] text-[var(--text-tertiary)]">Coming soon</span>
-      </SettingsRow>
+      <CoworkPreferencesPanel />
     </div>
   );
 
@@ -1276,7 +1273,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           <div className="flex flex-col gap-2">
             {visibleConnectors.map((c) => {
               const isConnected = c.connection?.status === 'connected';
-              const logoUrl = getConnectorLogoUrl(c.base_url);
+              const { url: logoUrl } = getConnectorLogoUrl(c.base_url, c.id);
               return (
                 <div
                   key={c.id}
@@ -1284,11 +1281,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     isConnected ? 'border-[rgba(34,197,94,0.2)] bg-[rgba(34,197,94,0.04)]' : 'border-[var(--border-subtle)]'
                   }`}
                 >
-                  <div className="shrink-0 size-8 rounded-lg overflow-hidden flex items-center justify-center bg-[var(--bg-secondary)]">
+                  <div
+                    className="shrink-0 size-8 rounded-lg overflow-hidden flex items-center justify-center"
+                    style={{ background: 'color-mix(in srgb, var(--accent-primary) 14%, transparent)' }}
+                  >
                     {logoUrl ? (
                       <img src={logoUrl} alt="" className="size-5 object-contain" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                     ) : (
-                      <PlugsConnected size={16} className="text-[var(--text-tertiary)]" />
+                      <span className="text-[12px] font-bold uppercase text-[var(--accent-primary)]">
+                        {c.name.charAt(0)}
+                      </span>
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -1386,7 +1388,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       case 'api-keys': return renderApiKeysPanel();
       case 'shortcuts': return renderShortcutsPanel();
       case 'permissions': return <PermissionsPanel />;
-      case 'dispatch': return <DispatchSettingsPanel />;
+      case 'remote-control': return <DispatchSettingsPanel />;
       case 'gizziio-code': return renderGizziioCodePanel();
       case 'cowork': return renderCoworkPanel();
       case 'extensions': return renderExtensionsPanel();
@@ -1398,6 +1400,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       case 'environment': return <ToastProvider><EnvironmentSettings /></ToastProvider>;
       case 'security': return <SecurityPanel />;
       case 'agents': return <AgentOpsPanel />;
+      case 'webhooks': return <WebhooksSettingsPanel />;
       case 'about': return renderAboutPanel();
       case 'signin': return <ClerkAuthPanel />;
       case 'organization': return <OrganizationAccessPanel />;

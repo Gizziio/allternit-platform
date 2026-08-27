@@ -42,6 +42,7 @@ struct IntelliSchedulePanel: View {
                     .background(Color("BgPanel"))
                     .clipShape(Circle())
             }
+            .accessibilityLabel("Close")
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
@@ -95,7 +96,7 @@ struct IntelliSchedulePanel: View {
                     .padding(.horizontal, 20)
                 }
 
-                ForEach(output.schedule) { entry in
+                ForEach(output.schedule, id: \.taskId) { entry in
                     scheduleRow(entry: entry)
                 }
             }

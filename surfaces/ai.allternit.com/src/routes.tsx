@@ -1,5 +1,7 @@
-import { Suspense, lazy } from 'react'
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Suspense, lazy, useEffect } from 'react'
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
+import { installOfficeDesktopBridge } from './views/office/desktop-bridge'
+import { AProtocolWordmark } from './components/AProtocolWordmark'
 
 const AppLoader = () => (
   <div
@@ -18,10 +20,7 @@ const AppLoader = () => (
       gap: '28px',
     }}
   >
-    <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', userSelect: 'none' }}>
-      <span style={{ color: '#D97757', fontFamily: 'var(--font-mono)', fontSize: 22, fontWeight: 400, letterSpacing: '0.04em' }}>A://</span>
-      <span style={{ color: '#C8BDB4', fontFamily: 'var(--font-research)', fontSize: 22, fontWeight: 400, letterSpacing: '0.18em' }}>LLTERNIT</span>
-    </div>
+    <AProtocolWordmark theme="light" height={22} />
     <div style={{ width: '120px', height: '1px', background: 'rgba(200,168,140,0.12)', position: 'relative', overflow: 'hidden', borderRadius: '1px' }}>
       <div
         style={{
@@ -56,7 +55,9 @@ const SettingsPreviewPage = lazy(() =>
 const SessionsPage = lazy(() => import('./pages/SessionsPage'))
 const SignInPage = lazy(() => import('./pages/SignInPage'))
 const SignUpPage = lazy(() => import('./pages/SignUpPage'))
+const SignOutPage = lazy(() => import('./pages/SignOutPage'))
 const RuntimePairingPage = lazy(() => import('./pages/RuntimePairingPage'))
+const RuntimesPage = lazy(() => import('./pages/RuntimesPage'))
 const AuthorizePage = lazy(() => import('./pages/OAuthAuthorizePage'))
 const SelectAccountPage = lazy(() => import('./pages/OAuthSelectAccountPage'))
 const SuccessPage = lazy(() => import('./pages/OAuthSuccessPage'))
@@ -81,20 +82,40 @@ const TerminalClerkPage = lazy(() => import('./pages/TerminalClerkPage'))
 const OfficeAuthBridgePage = lazy(() => import('./pages/OfficeAuthBridgePage'))
 const DispatchJoinPage = lazy(() => import('./pages/DispatchJoinPage'))
 const DesignPage = lazy(() => import('./pages/DesignPage'))
+const DocsPage = lazy(() => import('./pages/DocsPage'))
+const SlidesPage = lazy(() => import('./pages/SlidesPage'))
+const SheetsPage = lazy(() => import('./pages/SheetsPage'))
+const PdfPage = lazy(() => import('./pages/PdfPage'))
+const MarkdownPreviewPage = lazy(() => import('./pages/MarkdownPreviewPage'))
+const OfficeLauncherPage = lazy(() => import('./pages/OfficeLauncherPage'))
+const SignDocumentPage = lazy(() => import('./pages/SignDocumentPage'))
 
 export default function AppRoutes() {
+  const navigate = useNavigate();
+
+  // Receive "Open with Allternit" file payloads when running in the desktop
+  // shell; no-op in the browser.
+  useEffect(() => {
+    installOfficeDesktopBridge((path, options) => navigate(path, options));
+  }, [navigate]);
+
   return (
     <Suspense fallback={<AppLoader />}>
       <Routes>
         <Route path="/" element={<HomePage />} />
+        <Route path="/hud" element={<ShellPage />} />
         <Route path="/shell" element={<ShellPage />} />
+        <Route path="/hud" element={<ShellPage />} />
         <Route path="/settings-preview" element={<SettingsPreviewPage />} />
         <Route path="/shell/sessions" element={<SessionsPage />} />
         <Route path="/shell/recents" element={<ShellPage />} />
         <Route path="/shell/new" element={<Navigate to="/shell" replace />} />
         <Route path="/sign-in" element={<SignInPage />} />
         <Route path="/sign-up" element={<SignUpPage />} />
+        <Route path="/sign-out" element={<SignOutPage />} />
         <Route path="/pair" element={<RuntimePairingPage />} />
+        <Route path="/runtimes" element={<RuntimesPage />} />
+        <Route path="/remote" element={<RuntimesPage />} />
         <Route path="/oauth/authorize" element={<AuthorizePage />} />
         <Route path="/oauth/select-account" element={<SelectAccountPage />} />
         <Route path="/oauth/success" element={<SuccessPage />} />
@@ -119,6 +140,13 @@ export default function AppRoutes() {
         <Route path="/office-auth-bridge" element={<OfficeAuthBridgePage />} />
         <Route path="/dispatch/join" element={<DispatchJoinPage />} />
         <Route path="/design" element={<DesignPage />} />
+        <Route path="/docs/:artifactId?" element={<DocsPage />} />
+        <Route path="/slides/:artifactId?" element={<SlidesPage />} />
+        <Route path="/sheets/:artifactId?" element={<SheetsPage />} />
+        <Route path="/pdf/:artifactId?" element={<PdfPage />} />
+        <Route path="/markdown-preview" element={<MarkdownPreviewPage />} />
+        <Route path="/office" element={<OfficeLauncherPage />} />
+        <Route path="/sign" element={<SignDocumentPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>

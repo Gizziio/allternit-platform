@@ -18,7 +18,7 @@ The ChatUI now operates in a **protocol-separated architecture**:
 │  🤖 Select AI Model                     │
 ├─────────────────────────────────────────┤
 │                                         │
-│  ┌─ OpenCode (opencode-acp) ─────────┐ │
+│  ┌─ Gizzi Code (gizzi-acp) ─────────┐ │
 │  │  ✅ Authenticated                 │ │
 │  │  Model: [Claude 3.7 Sonnet ▼]    │ │
 │  │  [Refresh models] Updated 2h ago │ │
@@ -57,7 +57,7 @@ Chat UI                          API                    Kernel
    │  POST /v1/sessions            │                       │
    │  {                            │                       │
    │    "brain_profile_id":        │                       │
-   │      "opencode-auth",         │                       │
+   │      "gizzi-auth",         │                       │
    │    "source": "terminal"       │                       │
    │  }                            │                       │
    │──────────────────────────────>│                       │
@@ -78,11 +78,11 @@ Chat UI                          API                    Kernel
    │  Open Terminal View           │                       │
    │  attached to session s1       │                       │
    │                               │                       │
-   │  User runs: opencode login    │                       │
+   │  User runs: gizzi login    │                       │
    │                               │                       │
    │  [Done] button clicked        │                       │
    │                               │                       │
-   │  GET /v1/providers/opencode/  │                       │
+   │  GET /v1/providers/gizzi/  │                       │
    │  auth/status                  │                       │
    │──────────────────────────────>│                       │
    │                               │                       │
@@ -111,14 +111,14 @@ Chat UI                          API                    Kernel
 Chat UI                          API                    Kernel
    │                               │                       │
    │  User selected:               │                       │
-   │  - Provider: opencode-acp     │                       │
+   │  - Provider: gizzi-acp     │                       │
    │  - Model: anthropic:claude-3-7│                       │
    │                               │                       │
    │  POST /chat                   │                       │
    │  {                            │                       │
    │    "chatId": "c1",            │                       │
    │    "message": "Hello!",       │                       │
-   │    "modelId": "opencode-acp"  │                       │
+   │    "modelId": "gizzi-acp"  │                       │
    │  }                            │                       │
    │──────────────────────────────>│                       │
    │                               │                       │
@@ -171,7 +171,7 @@ Event 1: session.started
     "session_id": "s1",
     "event_mode": "acp",      ← UI checks this
     "source": "chat",
-    "brain_profile_id": "opencode-acp"
+    "brain_profile_id": "gizzi-acp"
   }
 }
 ↓
@@ -315,11 +315,11 @@ UI shows:
 ### Dropdown Population
 
 ```
-User opens model picker for OpenCode
+User opens model picker for Gizzi Code
   ↓
-UI calls: GET /v1/providers/opencode/models?profile_id=opencode-acp
+UI calls: GET /v1/providers/gizzi/models?profile_id=gizzi-acp
   ↓
-Kernel queries runtime: opencode acp --list-models (or ACP method)
+Kernel queries runtime: gizzi acp --list-models (or ACP method)
   ↓
 Response:
 {
@@ -364,10 +364,10 @@ If user clicks Refresh:
 
 1. User opens ChatUI
 2. Sees provider list with lock icons
-3. Clicks "Authenticate" on OpenCode
-4. Terminal opens, runs `opencode login`
+3. Clicks "Authenticate" on Gizzi Code
+4. Terminal opens, runs `gizzi login`
 5. User logs in, closes terminal
-6. UI refreshes, shows OpenCode unlocked
+6. UI refreshes, shows Gizzi Code unlocked
 7. User selects model from dropdown
 8. Starts chatting
 

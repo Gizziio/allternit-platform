@@ -4,18 +4,6 @@
   "description": "allternit - AI Governance and Workflow System",
   "type": "module",
   "private": true,
-  "pnpm": {
-    "overrides": {
-      "@types/react": "^18.3.28",
-      "@types/react-dom": "^18.3.1",
-      "@reduxjs/toolkit": "^2.2.7",
-      "react-redux": "^9.1.2",
-      "redux": "^5.0.1"
-    },
-    "patchedDependencies": {
-      "follow-redirects@1.15.11": "patches/follow-redirects@1.15.11.patch"
-    }
-  },
   "scripts": {
     "build": "pnpm -r build",
     "dev": "concurrently \"cd cmd/allternit-api && cargo run\" \"pnpm --filter @allternit/runtime serve\" \"pnpm --filter @allternit/desktop dev\"",
@@ -27,6 +15,7 @@
     "dev:gizzi:watch": "node scripts/dev-stack-watch.cjs --gizzi-only",
     "config:company": "node scripts/generate-company-config.cjs",
     "config:company:write": "node scripts/generate-company-config.cjs --out=resources/company.json",
+    "docs:lint": "node scripts/docs-lint.cjs",
     "dev:api": "cd cmd/allternit-api && cargo run",
     "dev:research": "bash services/open-notebook/dev.sh",
     "test": "vitest run",
@@ -67,9 +56,9 @@
   "devDependencies": {
     "@playwright/test": "^1.58.2",
     "@types/node": "^20.0.0",
+    "@types/react": "18.3.28",
     "@vitest/coverage-v8": "^1.0.0",
     "concurrently": "^8.2.2",
-    "framer-motion": "^12.29.2",
     "playwright": "^1.58.2",
     "typescript": "^5.3.0",
     "vitest": "^1.0.0"

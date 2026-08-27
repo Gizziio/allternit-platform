@@ -86,7 +86,9 @@ export function isClerkDisabledByEnv(): boolean {
 }
 
 export function isSelfHosted(): boolean {
-  return envFlag('ALLTERNIT_SELF_HOSTED');
+  // Vite only exposes env vars prefixed with VITE_ / NEXT_PUBLIC_, so the
+  // self-hosted build flag must also be readable through NEXT_PUBLIC_.
+  return envFlag('ALLTERNIT_SELF_HOSTED') || envFlag('NEXT_PUBLIC_ALLTERNIT_SELF_HOSTED');
 }
 
 export function isDesktopAuthEnabled(): boolean {

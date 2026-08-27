@@ -53,6 +53,10 @@ import {
   executeLintCheck,
   executeTypeCheck,
 } from "./test-tools";
+import {
+  AGENT_COMMUNICATION_TOOL_DEFINITION,
+  executeAgentCommunicationTool,
+} from "./agent-comm.tool";
 
 import { designExtractorTool } from "./design-extractor.tool";
 import { videoUseTool } from "./video-use.tool";
@@ -204,6 +208,11 @@ registerTool(CHECK_COVERAGE_DEFINITION, executeCheckCoverage);
 registerTool(LINT_CHECK_DEFINITION, executeLintCheck);
 registerTool(TYPE_CHECK_DEFINITION, executeTypeCheck);
 
+// Agent-to-Agent Communication Tool
+registerTool(AGENT_COMMUNICATION_TOOL_DEFINITION, async (context, parameters) => {
+  return executeAgentCommunicationTool(context.sessionId, context.toolCallId, parameters);
+});
+
 // Design & Marketing Tools
 registerTool(designExtractorTool as any, designExtractorTool.execute as any);
 registerTool(videoUseTool as any, videoUseTool.execute as any);
@@ -237,3 +246,4 @@ export {
 export { FETCH_JSON_DEFINITION, HTTP_REQUEST_DEFINITION, WEBHOOK_DEFINITION, executeFetchJson, executeHttpRequest, executeSendWebhook } from './api-tools';
 export { GIT_BRANCH_DEFINITION, GIT_DIFF_DEFINITION, GIT_LOG_DEFINITION, GIT_SHOW_DEFINITION, GIT_STATUS_DEFINITION, executeGitBranch, executeGitDiff, executeGitLog, executeGitShow, executeGitStatus } from './git-tools';
 export { CHECK_COVERAGE_DEFINITION, LINT_CHECK_DEFINITION, RUN_TESTS_DEFINITION, TYPE_CHECK_DEFINITION, executeCheckCoverage, executeLintCheck, executeRunTests, executeTypeCheck } from './test-tools';
+export { AGENT_COMMUNICATION_TOOL_DEFINITION, executeAgentCommunicationTool } from './agent-comm.tool';

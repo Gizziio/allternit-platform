@@ -61,6 +61,23 @@ packages:
   # own pnpm-lock. Excluded so root pnpm does not ingest it as a package.
   - '!services/docmost'
   - '!services/docmost/**'
+  # Vendored mailflare fork (agent email rail) — own npm package-lock and
+  # OpenNext/Cloudflare build. Managed via plain npm, not pnpm.
+  - '!services/mailflare'
+  - '!services/mailflare/**'
+
+# pnpm 10 reads overrides from this file, not from package.json.
+overrides:
+  '@types/react': ^18.3.28
+  '@types/react-dom': ^18.3.1
+  '@types/express-serve-static-core': ^4.19.8
+  '@reduxjs/toolkit': ^2.2.7
+  react-redux: ^9.1.2
+  redux: ^5.0.1
+  # wxt 0.20 uses Rollup hook filters, which require Vite >= 6.3. Vite 5
+  # silently ignores them, so wxt's download plugin then runs on every module
+  # and `wxt prepare` fails with "Failed to parse URL from <entrypoint>".
+  'wxt>vite': ^8.0.0
 
 onlyBuiltDependencies:
   - '@whiskeysockets/baileys'

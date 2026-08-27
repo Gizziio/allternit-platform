@@ -1,0 +1,240 @@
+---
+title: Tasks API
+description: Create, assign, and track personal and workspace tasks on the Allternit platform.
+---
+
+## Overview
+
+The Tasks API manages user-owned tasks with optional workspace scoping. Tasks support status, priority, assignment metadata, due dates, tags, and audit logging. Comments can be attached to any task.
+
+## Base URL
+
+```text
+https://api.allternit.com/api
+```
+
+For local development:
+
+```text
+http://127.0.0.1:8013/api
+```
+
+## Authentication
+
+All requests require a valid bearer token in the `Authorization` header. See [Authentication](/api/authentication) for details.
+
+## Task object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique task identifier. |
+| `user_id` | string | Owner identifier. |
+| `workspace_id` | string \| null | Optional workspace identifier. |
+| `title` | string | Task title. |
+| `description` | string \| null | Optional description. |
+| `status` | string | Current status, default `todo`. |
+| `priority` | string | Priority value or label. |
+| `assignee_id` | string \| null | Assigned user id. |
+| `assignee_type` | string \| null | `human`, `agent`, etc. |
+| `assignee_name` | string \| null | Display name of assignee. |
+| `due_date` | string \| null | Optional due date. |
+| `tags` | string \| null | Comma or serialized tag list. |
+| `metadata` | string \| null | Optional serialized metadata. |
+| `created_at` | string | ISO 8601 creation timestamp. |
+| `updated_at` | string | ISO 8601 update timestamp. |
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/tasks` | List tasks. |
+| `POST` | `/tasks` | Create a task. |
+| `GET` | `/tasks/:id` | Get a task. |
+| `PUT` | `/tasks/:id` | Update a task. |
+| `DELETE` | `/tasks/:id` | Delete a task. |
+| `POST` | `/tasks/:id/assign` | Assign a task. |
+| `GET` | `/tasks/:id/comments` | List task comments. |
+| `POST` | `/tasks/:id/comments` | Add a comment. |
+| `GET` | `/tasks/:id/audit-logs` | List task audit logs. |
+
+## List tasks
+
+```bash
+curl "https://api.allternit.com/api/tasks?workspace_id=ws_01hqx8x7x7x7x7x7x7x7x7x&status=todo&limit=20&offset=0" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Query parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `workspace_id` | string | Filter by workspace. |
+| `status` | string | Filter by status. |
+| `limit` | integer | Page size, default `100`. |
+| `offset` | integer | Pagination offset, default `0`. |
+
+### Response
+
+```json
+{
+  "tasks": [
+    {
+      "id": "task_01hqx8x7x7x7x7x7x7x7x7x",
+      "user_id": "user_2d9e...",
+      "workspace_id": "ws_01hqx8x7x7x7x7x7x7x7x7x",
+      "title": "Review ACI adapter PR",
+      "description": "Check provider-neutral adapter changes.",
+      "status": "todo",
+      "priority": "50",
+      "assignee_id": "",
+      "assignee_type": "",
+      "assignee_name": "",
+      "due_date": "",
+      "tags": "",
+      "metadata": "",
+      "created_at": "2026-08-13T18:00:00Z",
+      "updated_at": "2026-08-13T18:00:00Z"
+    }
+  ],
+  "count": 1
+}
+```
+
+## Create task
+
+```bash
+curl -X POST https://api.allternit.com/api/tasks \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Document ACI endpoints",
+    "workspace_id": "ws_01hqx8x7x7x7x7x7x7x7x7x",
+    "description": "Write Mintlify pages for ACI routes.",
+    "status": "todo",
+    "priority": 3,
+    "due_date": "2026-08-20",
+    "tags": "docs,aci"
+  }'
+```
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `title` | string | yes | Task title. |
+| `workspace_id` | string | no | Workspace identifier. |
+| `description` | string | no | Optional description. |
+| `status` | string | no | Status, default `todo`. |
+| `priority` | string \| number \| boolean | no | Priority value. |
+| `assignee_id` | string | no | Assignee user id. |
+| `due_date` | string | no | Due date. |
+| `tags` | string | no | Tag string. |
+| `metadata` | string | no | Serialized metadata. |
+| `assignee_type` | string | no | Assignee type. |
+| `assignee_name` | string | no | Assignee display name. |
+
+### Response
+
+```json
+{
+  "task": {
+    "id": "task_02hqx8x7x7x7x7x7x7x7x7x",
+    "user_id": "user_2d9e...",
+    "workspace_id": "ws_01hqx8x7x7x7x7x7x7x7x7x",
+    "title": "Document ACI endpoints",
+    "description": "Write Mintlify pages for ACI routes.",
+    "status": "todo",
+    "priority": "3",
+    ...
+  }
+}
+```
+
+## Assign task
+
+```bash
+curl -X POST https://api.allternit.com/api/tasks/task_02hqx8x7x7x7x7x7x7x7x7x/assign \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "assignee_type": "agent",
+    "assignee_id": "agent_018f3a7c...",
+    "assignee_name": "Doc Writer"
+  }'
+```
+
+### Response
+
+```json
+{
+  "id": "task_02hqx8x7x7x7x7x7x7x7x7x",
+  "user_id": "user_2d9e...",
+  "workspace_id": "ws_01hqx8x7x7x7x7x7x7x7x7x",
+  "title": "Document ACI endpoints",
+  "assignee_type": "agent",
+  "assignee_id": "agent_018f3a7c...",
+  "assignee_name": "Doc Writer",
+  ...
+}
+```
+
+## Add comment
+
+```bash
+curl -X POST https://api.allternit.com/api/tasks/task_02hqx8x7x7x7x7x7x7x7x7x/comments \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"body": "Draft ready in artifacts."}'
+```
+
+### Response
+
+```json
+{
+  "id": "cm_01hqx8x7x7x7x7x7x7x7x7x",
+  "task_id": "task_02hqx8x7x7x7x7x7x7x7x7x",
+  "body": "Draft ready in artifacts.",
+  "author_id": "user_2d9e...",
+  "author_name": "user@allternit.com",
+  "created_at": "2026-08-13T18:05:00Z"
+}
+```
+
+## Audit logs
+
+```bash
+curl https://api.allternit.com/api/tasks/task_02hqx8x7x7x7x7x7x7x7x7x/audit-logs \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Response
+
+```json
+[
+  {
+    "id": "log_01hqx8x7x7x7x7x7x7x7x7x",
+    "task_id": "task_02hqx8x7x7x7x7x7x7x7x7x",
+    "action": "create",
+    "actor_type": "human",
+    "actor_id": "user_2d9e...",
+    "payload": "{...}",
+    "created_at": "2026-08-13T18:00:00Z"
+  }
+]
+```
+
+## Error codes
+
+| Status | Code | Description |
+|--------|------|-------------|
+| `400` | `No fields to update` | Empty update body. |
+| `401` | `Unauthorized` | Missing or invalid bearer token. |
+| `403` | `Access denied` | Task belongs to another user. |
+| `404` | `Task not found` | Task id not found. |
+| `500` | `Database error` / `Query error` / `Failed to ...` | Database or server error. |
+
+## Related pages
+
+- [Boards](/api/boards)
+- [Workflows](/api/workflows)
+- [Artifacts](/api/artifacts)

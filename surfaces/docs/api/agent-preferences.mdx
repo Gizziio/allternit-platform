@@ -1,0 +1,134 @@
+---
+title: 'Agent Preferences API'
+description: 'Manage per-user response-style preferences that propagate into agent workspaces.'
+---
+
+## Overview
+
+The Agent Preferences API stores per-user response-style settings. On every successful update, the platform regenerates a managed `STYLE.md` file in every agent workspace owned by the user. These preferences are also injected into agent-chat system instructions at send time.
+
+Supported response styles are:
+
+- `concise` — brief, direct responses without preamble.
+- `balanced` — the default, thorough enough to be useful but concise enough to stay readable.
+- `detailed` — full reasoning, context, and edge cases.
+- `custom` — driven entirely by `custom_instructions`.
+
+## Base URL
+
+```
+https://api.allternit.com/api
+```
+
+## Authentication
+
+All requests must include a valid bearer token in the `Authorization` header.
+
+## Preference object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `response_style` | string | One of `concise`, `balanced`, `detailed`, `custom`. |
+| `custom_instructions` | string | Free-form instructions appended to `STYLE.md`. |
+| `updated_at` | string | ISO 8601 timestamp of the last update. |
+
+## Endpoints
+
+### Get preferences
+
+```http
+GET /api/agent-preferences
+```
+
+Returns the caller's preferences. If no row exists, returns the default style `balanced` with empty custom instructions.
+
+#### Example request
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" \
+  https://api.allternit.com/api/agent-preferences
+```
+
+#### Example response
+
+```json
+{
+  "response_style": "detailed",
+  "custom_instructions": "Always include concrete code examples when explaining a concept.",
+  "updated_at": "2026-08-13T14:22:00Z"
+}
+```
+
+### Set preferences
+
+```http
+PUT /api/agent-preferences
+```
+
+Updates the caller's preferences. Omitted fields are merged with existing values. After the database update, the gateway best-effort regenerates `STYLE.md` in every agent workspace the user owns.
+
+#### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `response_style` | string | No | Must be one of the supported styles. |
+| `custom_instructions` | string | No | Free-form custom instructions. |
+
+#### Example request
+
+```bash
+curl -X PUT https://api.allternit.com/api/agent-preferences \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "response_style": "detailed",
+    "custom_instructions": "Always include concrete code examples when explaining a concept."
+  }'
+```
+
+#### Example response
+
+```json
+{
+  "response_style": "detailed",
+  "custom_instructions": "Always include concrete code examples when explaining a concept.",
+  "updated_at": "2026-08-13T14:22:00Z"
+}
+```
+
+## STYLE.md format
+
+The managed `STYLE.md` written to each workspace looks like this:
+
+```markdown
+<!-- Managed by Allternit response-style settings.
+     This file is regenerated on every settings change and will be
+     overwritten — do not hand-edit. -->
+
+# Response Style
+
+Respond in detail. Explain your reasoning, include relevant context, and cover edge cases.
+
+## Custom Instructions
+
+Always include concrete code examples when explaining a concept.
+```
+
+<Warning>
+  Do not hand-edit `STYLE.md`. The gateway overwrites it on every preference update.
+</Warning>
+
+## Error codes
+
+| Status | Meaning |
+|--------|---------|
+| `200` | Success. |
+| `400` | Invalid `response_style`. |
+| `401` | Unauthorized. |
+| `500` | Internal server error. |
+
+## Related pages
+
+- [Agents API](/api/agents)
+- [Agent Workspaces](/api/agent-workspaces)
+- [Agent Sessions](/api/agent-sessions)

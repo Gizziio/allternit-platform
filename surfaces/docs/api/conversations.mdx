@@ -1,0 +1,289 @@
+---
+title: Conversations API
+description: Persist, fork, and retrieve chat conversations and messages on the Allternit platform.
+---
+
+## Overview
+
+The Conversations API provides local SQLite-backed persistence for chat threads. It mirrors the legacy Next.js `/api/v1/conversations` layer and supports branching via fork and reply endpoints. All conversation objects are scoped to the authenticated user.
+
+## Base URL
+
+```text
+https://api.allternit.com/api
+```
+
+For local development:
+
+```text
+http://127.0.0.1:8013/api
+```
+
+## Authentication
+
+All requests require a valid bearer token in the `Authorization` header. See [Authentication](/api/authentication) for details.
+
+## Conversation object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique conversation identifier. |
+| `created_at` | string | ISO 8601 creation timestamp. |
+| `updated_at` | string | ISO 8601 update timestamp. |
+| `title` | string \| null | Optional conversation title. |
+| `user_id` | string | Owner identifier. |
+| `parent_conversation_id` | string \| null | Parent conversation when branched. |
+| `message_count` | integer | Number of messages in the conversation. |
+| `branch_count` | integer | Number of child branches. |
+
+## Message object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique message identifier. |
+| `created_at` | string | ISO 8601 creation timestamp. |
+| `conversation_id` | string | Parent conversation id. |
+| `role` | string | `user`, `assistant`, or another role label. |
+| `content` | string | Message text. |
+| `parent_message_id` | string \| null | For threaded replies. |
+| `metadata` | object \| null | Optional JSON metadata. |
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/conversations` | List the user's conversations. |
+| `POST` | `/conversations` | Create a new conversation. |
+| `GET` | `/conversations/:id` | Get a single conversation. |
+| `GET` | `/conversations/:id/messages` | List messages in a conversation. |
+| `POST` | `/conversations/:id/messages` | Add a message to a conversation. |
+| `GET` | `/conversations/:id/replies` | List child branch conversations. |
+| `POST` | `/conversations/:id/fork` | Fork a conversation at an optional message. |
+
+## List conversations
+
+```bash
+curl https://api.allternit.com/api/conversations \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Query parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `user_id` | string | Reserved; currently derived from auth. |
+
+### Response
+
+```json
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "conv_01hqx8x7x7x7x7x7x7x7x7x",
+      "created_at": "2026-08-13T18:00:00Z",
+      "updated_at": "2026-08-13T18:05:00Z",
+      "title": "CommRails planning",
+      "user_id": "user_2d9e...",
+      "parent_conversation_id": null,
+      "message_count": 4,
+      "branch_count": 1
+    }
+  ],
+  "has_more": false
+}
+```
+
+## Create conversation
+
+```bash
+curl -X POST https://api.allternit.com/api/conversations \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "conversationId": "conv_custom_001",
+    "title": "BYOC deployment review",
+    "metadata": {"project": "acme-corp"}
+  }'
+```
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `conversationId` | string | no | Optional explicit id; auto-generated if omitted. |
+| `title` | string | no | Conversation title. |
+| `metadata` | object | no | Optional metadata. |
+
+### Response
+
+```json
+{
+  "id": "conv_custom_001",
+  "object": "conversation",
+  "created_at": 1723579200,
+  "metadata": {"project": "acme-corp"}
+}
+```
+
+## Get conversation
+
+```bash
+curl https://api.allternit.com/api/conversations/conv_01hqx8x7x7x7x7x7x7x7x7x \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Response
+
+```json
+{
+  "id": "conv_01hqx8x7x7x7x7x7x7x7x7x",
+  "created_at": "2026-08-13T18:00:00Z",
+  "updated_at": "2026-08-13T18:05:00Z",
+  "title": "CommRails planning",
+  "user_id": "user_2d9e...",
+  "parent_conversation_id": null,
+  "message_count": 4,
+  "branch_count": 1
+}
+```
+
+## List messages
+
+```bash
+curl https://api.allternit.com/api/conversations/conv_01hqx8x7x7x7x7x7x7x7x7x/messages \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Response
+
+```json
+{
+  "object": "list",
+  "conversation_id": "conv_01hqx8x7x7x7x7x7x7x7x7x",
+  "data": [
+    {
+      "id": "msg_01hqx8x7x7x7x7x7x7x7x7x",
+      "object": "conversation.message",
+      "created_at": "2026-08-13T18:00:00Z",
+      "conversation_id": "conv_01hqx8x7x7x7x7x7x7x7x7x",
+      "role": "user",
+      "content": "Design a CommRails topology.",
+      "parent_message_id": null,
+      "metadata": null
+    }
+  ],
+  "has_more": false
+}
+```
+
+## Create message
+
+```bash
+curl -X POST https://api.allternit.com/api/conversations/conv_01hqx8x7x7x7x7x7x7x7x7x/messages \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "role": "user",
+    "content": "Add a failover node.",
+    "parentMessageId": "msg_01hqx8x7x7x7x7x7x7x7x7x",
+    "metadata": {"intent": "edit"}
+  }'
+```
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `role` | string | yes | Message role. |
+| `content` | string | yes | Message text. |
+| `parentMessageId` | string | no | Parent message for threading. |
+| `metadata` | object | no | Optional JSON metadata. |
+
+### Response
+
+```json
+{
+  "id": "msg_02hqx8x7x7x7x7x7x7x7x7x",
+  "conversation_id": "conv_01hqx8x7x7x7x7x7x7x7x7x",
+  "role": "user",
+  "content": "Add a failover node.",
+  "created_at": 1723579500
+}
+```
+
+## List replies
+
+```bash
+curl https://api.allternit.com/api/conversations/conv_01hqx8x7x7x7x7x7x7x7x7x/replies \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Response
+
+```json
+{
+  "object": "list",
+  "conversation_id": "conv_01hqx8x7x7x7x7x7x7x7x7x",
+  "data": [
+    {
+      "id": "conv_branch_001",
+      "object": "conversation",
+      "created_at": "2026-08-13T18:10:00Z",
+      "updated_at": "2026-08-13T18:10:00Z",
+      "title": null,
+      "parent_conversation_id": "conv_01hqx8x7x7x7x7x7x7x7x7x",
+      "message_count": 2
+    }
+  ],
+  "has_more": false
+}
+```
+
+## Fork conversation
+
+```bash
+curl -X POST https://api.allternit.com/api/conversations/conv_01hqx8x7x7x7x7x7x7x7x7x/fork \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "fromMessageId": "msg_01hqx8x7x7x7x7x7x7x7x7x",
+    "title": "Failover branch"
+  }'
+```
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `fromMessageId` | string | no | Fork at this message id; copies all messages up to and including it. |
+| `title` | string | no | Optional title for the new branch. |
+
+### Response
+
+```json
+{
+  "id": "conv_branch_002",
+  "object": "conversation",
+  "created_at": 1723579800,
+  "title": "Failover branch",
+  "parent_conversation_id": "conv_01hqx8x7x7x7x7x7x7x7x7x",
+  "forked_from_message_id": "msg_01hqx8x7x7x7x7x7x7x7x7x",
+  "message_count": 1
+}
+```
+
+## Error codes
+
+| Status | Code | Description |
+|--------|------|-------------|
+| `401` | `Unauthorized` | Missing or invalid bearer token. |
+| `403` | `Access denied` | Conversation belongs to another user. |
+| `404` | `not_found` | Conversation not found. |
+| `500` | `internal_error` | Database or server error. |
+
+## Related pages
+
+- [Agent Chat](/api/agent-chat)
+- [Agent Sessions](/api/agent-sessions)
+- [Artifacts](/api/artifacts)

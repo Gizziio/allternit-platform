@@ -1,0 +1,179 @@
+---
+title: 'Runtime Backend API'
+description: 'Configure and switch between local and remote Gizzi Runtime backends, including BYOC and VPS targets.'
+---
+
+## Overview
+
+The Runtime Backend API manages where agent workloads execute. It supports a local desktop runtime, remote backends reached over SSH or a manual gateway URL (BYOC / VPS), and an execution mode that governs how much autonomy the runtime has.
+
+## Base URL
+
+```text
+https://api.allternit.com/api
+```
+
+For local development:
+
+```text
+http://127.0.0.1:8013/api
+```
+
+## Authentication
+
+All routes require a valid bearer token in the `Authorization` header. Some read paths also accept the `x-allternit-user-id` header as a fallback identity.
+
+## Execution modes
+
+| Mode | Description |
+|------|-------------|
+| `plan` | The runtime proposes actions but waits for explicit approval. |
+| `safe` | The runtime runs low-risk actions and asks for confirmation on destructive ones. |
+| `auto` | The runtime acts autonomously within the agent's trust tier. |
+
+## Backend target object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique target identifier. |
+| `ssh_connection_id` | string \| null | Associated SSH connection, if any. |
+| `name` | string | Human-readable name. |
+| `status` | string | `ready`, `pending`, `error`, etc. |
+| `install_state` | string | Installation state on the remote host. |
+| `backend_url` | string \| null | Runtime HTTP URL. |
+| `gateway_url` | string \| null | Gateway HTTP URL. |
+| `gateway_ws_url` | string \| null | Gateway WebSocket URL. |
+| `installed_version` | string \| null | Installed runtime version. |
+| `supported_client_range` | string \| null | Compatible client version range. |
+| `last_verified_at` | string \| null | ISO 8601 last health-check timestamp. |
+| `last_heartbeat_at` | string \| null | ISO 8601 last heartbeat timestamp. |
+| `last_error` | string \| null | Last recorded error message. |
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/runtime-backend` | Service status. |
+| `GET` | `/runtime/backend` | Get current backend preference and available targets. |
+| `POST` | `/runtime/backend` | Set the active backend preference. |
+| `POST` | `/runtime/backend/manual` | Register a manual gateway backend. |
+| `GET` | `/runtime/execution-mode` | Get the current execution mode. |
+| `PUT` | `/runtime/execution-mode` | Set the execution mode. |
+
+## Get execution mode
+
+```bash
+curl https://api.allternit.com/api/runtime/execution-mode \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+### Response
+
+```json
+{
+  "mode": "safe",
+  "updated_at": "2026-08-13T12:00:00Z",
+  "supported_modes": ["plan", "safe", "auto"]
+}
+```
+
+## Set execution mode
+
+```bash
+curl -X PUT https://api.allternit.com/api/runtime/execution-mode \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"mode": "plan"}'
+```
+
+## Get current backend
+
+```bash
+curl https://api.allternit.com/api/runtime/backend \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+### Response
+
+```json
+{
+  "mode": "local",
+  "fallback_mode": "local",
+  "source": "desktop",
+  "gateway_url": "http://127.0.0.1:8013",
+  "gateway_ws_url": "ws://127.0.0.1:8013",
+  "active_backend": {
+    "id": "local-desktop",
+    "name": "Allternit Desktop (local)",
+    "status": "ready",
+    "install_state": "installed",
+    "backend_url": "http://127.0.0.1:8013",
+    "gateway_url": "http://127.0.0.1:8013",
+    "gateway_ws_url": "ws://127.0.0.1:8013"
+  },
+  "available_backends": []
+}
+```
+
+## Set backend preference
+
+```bash
+curl -X POST https://api.allternit.com/api/runtime/backend \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "mode": "byoc-vps",
+    "fallbackMode": "local",
+    "backendTargetId": "target_abc123"
+  }'
+```
+
+You may supply `backendTargetId` or `sshConnectionId`; the latter is resolved to the matching target.
+
+## Register a manual backend
+
+Register a remote gateway by URL for BYOC or VPS deployments.
+
+```bash
+curl -X POST https://api.allternit.com/api/runtime/backend/manual \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Production VPS",
+    "gatewayUrl": "https://runtime.example.com",
+    "gatewayWsUrl": "wss://runtime.example.com",
+    "gatewayToken": "gwp_..."
+  }'
+```
+
+The endpoint performs a health check against `gatewayUrl/health` before upserting the target and setting it as the active preference.
+
+### Response
+
+```json
+{
+  "success": true,
+  "message": "Runtime backend registered",
+  "backend_target": {
+    "id": "target_xyz789",
+    "name": "Production VPS",
+    "status": "ready",
+    "install_state": "installed",
+    "backend_url": "https://runtime.example.com"
+  }
+}
+```
+
+## Error codes
+
+| HTTP status | Code | Meaning |
+|-------------|------|---------|
+| 400 | `allternit.invalid_request` | Invalid execution mode or missing `gatewayUrl`. |
+| 401 | `allternit.authentication_failed` | Missing or invalid bearer token. |
+| 500 | `allternit.internal_error` | Database or runtime internal error. |
+
+## Related pages
+
+- [Runtime Discovery](/api/runtime-discovery) — discover available runtimes
+- [BYOC](/byoc) — bring your own compute setup
+- [Agent Runtimes](/api/agent-runtimes) — runtime harness and execution

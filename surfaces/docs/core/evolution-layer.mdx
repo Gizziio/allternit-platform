@@ -1,0 +1,270 @@
+---
+title: Evolution Layer
+description: Allternit's self-improving agent infrastructure — five coordinated engines that evolve memory, skills, routing, organization, and reasoning trajectories.
+---
+
+## Overview
+
+The **Allternit Evolution Layer** (`allternit-evolution-layer`) is the kernel's self-improvement infrastructure. It runs as a Rust library inside the platform runtime and exposes five coordinated engines that continuously adapt agent behavior based on outcomes, cost, and task structure:
+
+- **Memory Evolution Engine (MEE)** — schema competition and retrieval-strategy selection.
+- **Skill Evolution Engine (SEE)** — trajectory distillation into reusable, evolving skills.
+- **Confidence Routing Layer (CRL)** — adaptive model-tier escalation from small to frontier.
+- **Organizational Evolution Engine (OEE)** — dynamic role specialization and workflow mutation.
+- **Trajectory Optimization Engine (TOE)** — boundary-aware reasoning compression and continuation control.
+
+Together these engines form a closed feedback loop: execution produces trajectories, trajectories are distilled into skills and memory schemas, the routing layer learns when to escalate, and the organization engine reshapes workflows to fit task complexity.
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    Allternit Evolution Layer                    │
+├─────────────┬─────────────┬─────────────┬───────────┬───────────┤
+│     MEE     │     SEE     │     CRL     │    OEE    │    TOE    │
+│   Memory    │    Skill    │  Confidence │    Org    │ Trajectory│
+│  Evolution  │  Evolution  │   Routing   │ Evolution │Optimization│
+└──────┬──────┴──────┬──────┴──────┬──────┴─────┬─────┴─────┬─────┘
+       │             │             │            │           │
+       ▼             ▼             ▼            ▼           ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                        Unified Status Surface                    │
+│  memory_schemas  skills  routing_decisions  workflows  trajectories│
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│              System Law Engine  +  Harness Engineering           │
+│              (policy guardrails, safety evaluation)              │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+The `EvolutionLayer` struct owns one instance of each engine and is constructed with references to the system-law and harness-engineering engines. Every engine is independently addressable, so callers can use a single engine or coordinate all five.
+
+## Key concepts
+
+### Memory schema competition (MEE)
+
+A **memory schema** defines how an agent stores, retrieves, and updates context for a domain. MEE keeps an archive of schemas, evaluates each one on retrieval precision, context compression, and task-success correlation, then promotes the best-performing candidate to active use.
+
+Schema lifecycle:
+
+1. Register a schema for a domain.
+2. Evaluate it on live tasks to produce scores.
+3. Generate mutated candidates from high-performing schemas.
+4. Promote the winner and set it as the active schema.
+
+### Skill extraction from trajectories (SEE)
+
+A **skill** is a reusable pattern distilled from a successful trajectory. SEE records trajectories (ordered steps with tools, observations, and outcomes), extracts behavior patterns and tool sequences, and tracks success rates over time. Skills can be retrieved by trigger signature or domain tag.
+
+### Confidence-based routing (CRL)
+
+CRL routes requests to a model tier (`Small`, `Medium`, `Frontier`) based on task complexity, historical failure rate, and an uncertainty estimate. When a tier fails, CRL escalates the task signature to the next tier. The layer records every decision so cost and quality can be audited.
+
+### Organizational evolution (OEE)
+
+OEE represents multi-agent workflows as **workflow configs**: a set of roles, iteration cycles, escalation thresholds, and parallelism flags. Workflows mutate over time by adding or removing roles, changing iteration depth, or toggling parallel execution. OEE selects the optimal workflow for a given task complexity.
+
+### Trajectory optimization (TOE)
+
+TOE manages long reasoning chains by chunking them, tracking average confidence, and summarizing when a boundary condition is reached. An efficiency reward penalizes excessive token use, encouraging concise reasoning.
+
+## Installation
+
+The crate is a workspace dependency in the Allternit monorepo:
+
+```toml
+[dependencies]
+allternit-evolution-layer = { workspace = true }
+```
+
+It is not distributed as a standalone HTTP service; downstream services instantiate `EvolutionLayer` directly.
+
+## Usage
+
+### Initialize the layer
+
+```rust
+use std::sync::Arc;
+use allternit_evolution_layer::EvolutionLayer;
+use allternit_system_law::SystemLawEngine;
+use allternit_harness_engineering::HarnessEngineeringEngine;
+
+let system_law = Arc::new(SystemLawEngine::new());
+let harness = Arc::new(HarnessEngineeringEngine::new(system_law.clone()));
+
+let layer = EvolutionLayer::new(system_law, harness);
+```
+
+### Register and evaluate a memory schema
+
+```rust
+use allternit_evolution_layer::{
+    MemoryEvolutionEngine, MemorySchema, SchemaPerformanceMetrics,
+};
+use chrono::Utc;
+
+let engine = MemoryEvolutionEngine::new();
+
+let schema = MemorySchema {
+    schema_id: "schema_001".to_string(),
+    name: "Codebase Context".to_string(),
+    domain: "code".to_string(),
+    retrieval_strategy: "hybrid_vector".to_string(),
+    update_strategy: "append_with_decay".to_string(),
+    version: "1.0.0".to_string(),
+    performance_metrics: SchemaPerformanceMetrics::default(),
+    created_at: Utc::now(),
+    last_evaluated: None,
+};
+
+engine.register_schema(schema).await;
+engine.evaluate_schema("schema_001", 0.92, 0.74, 0.88).await.unwrap();
+```
+
+### Extract a skill from a trajectory
+
+```rust
+use allternit_evolution_layer::{
+    SkillEvolutionEngine, Trajectory, TrajectoryStep,
+};
+use chrono::Utc;
+
+let engine = SkillEvolutionEngine::new();
+
+let trajectory = Trajectory {
+    trajectory_id: "traj_001".to_string(),
+    task_id: "TASK-42".to_string(),
+    steps: vec![
+        TrajectoryStep {
+            step_id: "s1".to_string(),
+            action: "read_routing_config".to_string(),
+            tool_used: Some("fs.read".to_string()),
+            observation: "Found REST endpoint list".to_string(),
+        },
+        TrajectoryStep {
+            step_id: "s2".to_string(),
+            action: "add_health_check".to_string(),
+            tool_used: Some("fs.write".to_string()),
+            observation: "Wrote /health route".to_string(),
+        },
+    ],
+    outcome: "API health endpoint added".to_string(),
+    success: true,
+    timestamp: Utc::now(),
+};
+
+engine.record_trajectory(trajectory).await;
+let skill_id = engine.extract_skill("traj_001").await.unwrap();
+engine.update_skill_performance(&skill_id, true).await.unwrap();
+```
+
+### Route a task and learn from outcomes
+
+```rust
+use allternit_evolution_layer::ConfidenceRoutingLayer;
+
+let router = ConfidenceRoutingLayer::new();
+
+let decision = router.route_task("summarize_ticket", 0.3).await;
+println!("selected tier: {:?}", decision.selected_tier);
+
+router.record_outcome("summarize_ticket", true, decision.selected_tier).await;
+
+// After repeated failures, escalate to a larger tier
+let escalated = router.escalate("refactor_module").await;
+```
+
+### Register and mutate a workflow
+
+```rust
+use allternit_evolution_layer::{
+    AgentRole, OrganizationalEvolutionEngine, WorkflowConfig, WorkflowMutation,
+};
+
+let engine = OrganizationalEvolutionEngine::new();
+
+let workflow = WorkflowConfig {
+    workflow_id: "wf_secure_feature".to_string(),
+    name: "Secure Feature Pipeline".to_string(),
+    roles: vec![AgentRole::Engineer, AgentRole::Reviewer],
+    iteration_cycles: 3,
+    escalation_threshold: 2,
+    parallel_allowed: false,
+};
+
+engine.register_workflow(workflow).await;
+engine.assign_role("agent_7", AgentRole::Engineer).await;
+
+// Add a security role after observing policy-heavy tasks
+engine.mutate_workflow("wf_secure_feature", WorkflowMutation::AddRole(AgentRole::Security))
+    .await
+    .unwrap();
+
+let optimal = engine.get_optimal_workflow(0.5).await;
+```
+
+### Optimize a reasoning trajectory
+
+```rust
+use allternit_evolution_layer::TrajectoryOptimizationEngine;
+
+let engine = TrajectoryOptimizationEngine::new();
+let state_id = engine.create_state().await;
+
+engine.add_chunk(&state_id, "Search vector index for related work", 0.9).await.unwrap();
+engine.add_chunk(&state_id, "Draft code changes with tool calls", 0.85).await.unwrap();
+
+if engine.should_continue(&state_id).await {
+    // Continue reasoning...
+} else {
+    let summary = engine.summarize(&state_id).await.unwrap();
+    println!("compressed trajectory: {}", summary);
+}
+```
+
+### Inspect layer status
+
+```rust
+let status = layer.get_status().await;
+println!("{:?}", status);
+```
+
+The returned `EvolutionStatus` contains counts for memory schemas, skills, routing decisions, workflows, and tracked trajectories.
+
+## Engine reference
+
+| Engine | Primary type | What it evolves | Key output |
+|---|---|---|---|
+| MEE | `MemoryEvolutionEngine` | Retrieval/update schemas | Best active `MemorySchema` |
+| SEE | `SkillEvolutionEngine` | Reusable skills from trajectories | `EvolvedSkill` archive |
+| CRL | `ConfidenceRoutingLayer` | Model tier per task signature | `RoutingDecision` |
+| OEE | `OrganizationalEvolutionEngine` | Multi-agent workflows | `WorkflowConfig` mutations |
+| TOE | `TrajectoryOptimizationEngine` | Long reasoning chains | Compressed summaries |
+
+## Error handling
+
+All fallible engine methods return `Result<T, EvolutionError>`:
+
+| Variant | Meaning |
+|---|---|
+| `NotFound` | Requested schema, candidate, skill, workflow, or trajectory state does not exist |
+| `Io` | Underlying I/O failure |
+| `Json` | `serde_json` serialization or deserialization error |
+
+## Observability
+
+The crate uses `tracing` for structured logging. Each engine emits spans around candidate generation, routing decisions, workflow mutation, and trajectory summarization. Downstream services can correlate these spans with the `decision_id`, `schema_id`, `skill_id`, and `state_id` fields returned by the engines.
+
+## Security and policy integration
+
+`EvolutionLayer` is constructed with `SystemLawEngine` and `HarnessEngineeringEngine` references. These provide policy guardrails and evaluation harnesses so that evolved schemas, skills, workflows, and routing decisions can be validated before they are promoted to active use. Individual engines do not bypass these guards; callers should gate promotion behind harness evaluation.
+
+## Related pages
+
+- [Self-Improve](/core/self-improve) — agents-as-diffs lineage and staged evaluation
+- [Memory Fabric](/core/memory-fabric) — persistent memory backend used by MEE schemas
+- [Gizzi Runtime](/core/gizzi-runtime) — runtime that consumes evolved skills and routing decisions
+- [Orchestration](/core/orchestration) — multi-agent coordination that consumes OEE workflows
+- [ML Services](/core/ml-services) — model tiers exposed to CRL routing

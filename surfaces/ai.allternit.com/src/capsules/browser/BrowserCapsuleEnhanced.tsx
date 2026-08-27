@@ -18,6 +18,7 @@ import {
   MagnifyingGlass,
   Minus,
   Plus,
+  Plugs,
   PushPin as Pin,
   PuzzlePiece as Puzzle,
   Shield,
@@ -63,6 +64,7 @@ import { BrowserIframeSkeleton } from './BrowserIframeSkeleton';
 import { BrowserNewTabPage } from './BrowserNewTabPage';
 import { BrowserFindBar } from './BrowserFindBar';
 import { BrowserDownloadBar } from './BrowserDownloadBar';
+import { BrowserApiCaptureButton } from './BrowserApiCaptureButton';
 
 // ============================================================================
 // Types & Constants
@@ -596,13 +598,9 @@ function AgentPopup({ open, onClose }: { open: boolean; onClose: () => void }) {
 // ============================================================================
 
 function ScaledMatrixLogo({ state, displaySize }: { state: "idle" | "listening" | "thinking" | "speaking" | "asleep" | "compacting"; displaySize: number }) {
-  const baseSize = 48;
-  const scale = displaySize / baseSize;
   return (
-    <div className="flex items-center justify-center shrink-0 overflow-hidden" style={{ width: displaySize, height: displaySize }}>
-      <div className="shrink-0" style={{ transform: `scale(${scale})`, transformOrigin: 'center center', width: baseSize, height: baseSize }}>
-        <MatrixLogo state={state} size={baseSize} />
-      </div>
+    <div className="flex items-center justify-center shrink-0" style={{ width: displaySize, height: displaySize }}>
+      <MatrixLogo state={state} size={displaySize} />
     </div>
   );
 }
@@ -989,7 +987,7 @@ function OfficeExtensionPopup({ extension, currentUrl, attached, onClose, onOpen
 // Main Browser Component
 // ============================================================================
 
-const NavBtn = ({ children, title, onClick, active, disabled }: { children: React.ReactNode; title: string; onClick?: () => void; active?: boolean; disabled?: boolean }) => (
+export const NavBtn = ({ children, title, onClick, active, disabled }: { children: React.ReactNode; title: string; onClick?: () => void; active?: boolean; disabled?: boolean }) => (
   <m.button
     onClick={onClick} title={title} disabled={disabled}
     whileHover={disabled ? {} : { y: -1, scale: 1.05 }}
@@ -1203,6 +1201,15 @@ export function BrowserCapsuleEnhanced({
     const url = (activeTab as WebTab).url;
     return shortcuts.some((s) => s.url === url);
   }, [activeTab, shortcuts]);
+
+  const activeDomain = useMemo(() => {
+    if (!activeTab || activeTab.contentType !== 'web') return undefined;
+    try {
+      return new URL((activeTab as WebTab).url).hostname;
+    } catch {
+      return undefined;
+    }
+  }, [activeTab]);
 
   useEffect(() => { setFindBarOpen(false); }, [activeTabId]);
 
@@ -1503,6 +1510,7 @@ export function BrowserCapsuleEnhanced({
           </form>
           <NavBtn title={isBookmarked ? "Bookmarked" : "Bookmark this page"} onClick={handleBookmark} active={isBookmarked}><Star className="size-4" style={{ fill: isBookmarked ? 'var(--accent-primary)' : 'none' }} /></NavBtn>
           <NavBtn title="Find in page" onClick={() => setFindBarOpen((v) => !v)} active={findBarOpen}><MagnifyingGlass className="size-4" /></NavBtn>
+          <BrowserApiCaptureButton domain={activeDomain} disabled={!activeTab || activeTab.contentType !== 'web' || (activeTab as WebTab).url === 'about:blank'} onOpenSiteApis={toggleChatPane} />
           <NavBtn title={activeSplit ? "Add another tab to Split View" : "Split with another tab"} onClick={addNextTabToSplit} disabled={visibleTabs.length < 2 || splitTabs.length >= 4} active={splitTabs.length > 1}><SquaresFour className="size-4" /></NavBtn>
           {activeSplit && <div className="flex items-center rounded-lg bg-[var(--bg-primary)] p-0.5">
             <button type="button" title="Side-by-side Split View" onClick={() => setSplitLayout('horizontal')} className={cn("px-1.5 py-1 border-none rounded cursor-pointer text-[10px]", activeSplit.layout === 'horizontal' ? "bg-[var(--bg-active)] text-[var(--accent-primary)]" : "bg-transparent text-[var(--text-tertiary)]")}>Ⅱ</button>
@@ -1632,6 +1640,7 @@ export function BrowserCapsuleEnhanced({
               </div>
             </>
           )}
+
         </div>
         {isResizingChatPane && <div aria-hidden="true" onPointerMove={(e) => updateChatPaneResize(e.clientX)} onPointerUp={stopChatPaneResize} onPointerCancel={stopChatPaneResize} onMouseMove={(e) => updateChatPaneResize(e.clientX)} onMouseUp={stopChatPaneResize} className="absolute inset-0 z-50 cursor-col-resize bg-transparent pointer-events-auto" />}
       </div>

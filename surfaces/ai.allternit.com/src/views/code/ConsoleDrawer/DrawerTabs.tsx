@@ -3,11 +3,11 @@ import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import {
   CaretDown,
   CaretUp,
-  DotsSixVertical,
   GitDiff,
   Package,
   RocketLaunch,
   Terminal,
+  Command,
 } from '@phosphor-icons/react';
 
 export type DrawerTabId =
@@ -56,9 +56,9 @@ export function DrawerTabs({
         display: 'flex',
         alignItems: 'stretch',
         padding: '0 max(10px, env(safe-area-inset-left, 0px))',
-        borderTop: '1px solid var(--border-strong)',
+        borderTop: '1px solid var(--border-subtle)',
         borderBottom: isOpen ? '1px solid var(--border-subtle)' : 'none',
-        background: 'var(--surface-floating)',
+        background: 'var(--bg-elevated)',
         backdropFilter: 'blur(20px) saturate(170%)',
         WebkitBackdropFilter: 'blur(20px) saturate(170%)',
         boxShadow: isOpen ? 'var(--shadow-sm)' : 'var(--shadow-lg)',
@@ -73,22 +73,34 @@ export function DrawerTabs({
           height: 38,
           display: 'flex',
           alignItems: 'center',
-          gap: 6,
-          padding: '0 10px 0 4px',
+          gap: 8,
+          padding: '0 12px 0 10px',
           color: 'var(--text-tertiary)',
           flexShrink: 0,
         }}
       >
-        <DotsSixVertical size={13} weight="bold" />
-        <span
+        <div
           style={{
-            fontSize: 9,
-            fontWeight: 800,
-            letterSpacing: '0.12em',
-            color: 'var(--text-secondary)',
+            width: 22,
+            height: 22,
+            display: 'grid',
+            placeItems: 'center',
+            borderRadius: 6,
+            background: 'linear-gradient(135deg, var(--accent-code), color-mix(in srgb, var(--accent-code) 55%, #000))',
+            boxShadow: '0 0 12px color-mix(in srgb, var(--accent-code) 45%, transparent)',
           }}
         >
-          CONSOLE
+          <Command size={13} weight="fill" color="#fff" />
+        </div>
+        <span
+          style={{
+            fontSize: 10,
+            fontWeight: 800,
+            letterSpacing: '0.1em',
+            color: 'var(--text-primary)',
+          }}
+        >
+          Console
         </span>
       </div>
 
@@ -176,7 +188,7 @@ function Tab({
         alignItems: 'center',
         gap: 6,
         padding: '0 11px',
-        background: active && isOpen ? 'var(--shell-mode-code-soft)' : 'transparent',
+        background: active && isOpen ? 'color-mix(in srgb, var(--accent-code) 12%, transparent)' : 'transparent',
         border: 'none',
         color: active ? 'var(--text-primary)' : 'var(--text-tertiary)',
         fontSize: 11,

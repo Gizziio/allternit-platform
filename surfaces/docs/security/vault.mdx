@@ -1,0 +1,252 @@
+---
+title: Vault
+description: Encrypted credential storage for OAuth tokens, provider keys, and organization secrets
+---
+
+The Allternit Vault provides encrypted, organization-scoped storage for credentials. It supports both a legacy agent/session credential store and a first-class vault resource model for managing collections of secrets.
+
+## Authentication and authorization
+
+All vault endpoints require a Clerk JWT or a scoped API credential. The caller must belong to an active organization. Write operations additionally require organization owner or admin role, or a credential context that grants the relevant vault scope.
+
+## Encryption
+
+Values are sealed at rest using the same `token_crypto::seal` primitive used for connector tokens. The encryption key is configurable in self-hosted deployments; in headless mode a runtime key is generated on first use. Decrypted values are never returned by the read/list endpoints.
+
+## Legacy credentials
+
+These endpoints store OAuth-style credentials keyed by provider, optional `agent_id`, and optional `session_id`. They are retained for existing callers and are not associated with a named vault.
+
+### Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/v1/vault/credentials` | Store or replace a legacy credential |
+| DELETE | `/api/v1/vault/credentials/{id}` | Revoke a legacy credential |
+
+### Store a legacy credential
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/vault/credentials \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "provider": "github",
+    "agent_id": "agent_01J",
+    "session_id": "session_01J",
+    "oauth_value": "gho_xxxxxxxx",
+    "expires_at": "2026-09-01T00:00:00Z"
+  }'
+```
+
+<Note>
+  Either `agent_id` or `session_id` is required for legacy credentials.
+</Note>
+
+**Response `201 Created`**
+
+```json
+{
+  "id": "cred_01J4N",
+  "provider": "github",
+  "agent_id": "agent_01J",
+  "session_id": "session_01J",
+  "expires_at": "2026-09-01T00:00:00Z"
+}
+```
+
+### Revoke a legacy credential
+
+```bash
+curl -X DELETE https://api.allternit.com/api/v1/vault/credentials/cred_01J4N \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN"
+```
+
+**Response `204 No Content`**
+
+## Vault resources (beta)
+
+Vault resources let you group related credentials under a named container. Credentials inside a vault are stored independently from legacy credentials and are revoked when the vault is deleted.
+
+### Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/v1/beta/vaults` | Create a vault |
+| GET | `/api/v1/beta/vaults` | List organization vaults |
+| GET | `/api/v1/beta/vaults/{id}` | Retrieve a vault |
+| DELETE | `/api/v1/beta/vaults/{id}` | Delete a vault and revoke its credentials |
+| POST | `/api/v1/beta/vaults/{id}/credentials` | Add or update a credential in a vault |
+| GET | `/api/v1/beta/vaults/{id}/credentials` | List credentials in a vault |
+| DELETE | `/api/v1/beta/vaults/{id}/credentials/{credential_id}` | Revoke a vault credential |
+
+### Create a vault
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/beta/vaults \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Production Provider Keys",
+    "description": "Sealed keys for production inference providers"
+  }'
+```
+
+**Response `201 Created`**
+
+```json
+{
+  "id": "vault_01J4N",
+  "name": "Production Provider Keys",
+  "description": "Sealed keys for production inference providers"
+}
+```
+
+### List vaults
+
+```bash
+curl https://api.allternit.com/api/v1/beta/vaults \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN"
+```
+
+**Response `200 OK`**
+
+```json
+{
+  "vaults": [
+    {
+      "id": "vault_01J4N",
+      "name": "Production Provider Keys",
+      "description": "Sealed keys for production inference providers",
+      "created_by": "user_01J",
+      "created_at": "2026-08-12T10:00:00Z",
+      "updated_at": "2026-08-12T10:00:00Z"
+    }
+  ]
+}
+```
+
+### Retrieve a vault
+
+```bash
+curl https://api.allternit.com/api/v1/beta/vaults/vault_01J4N \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN"
+```
+
+### Delete a vault
+
+```bash
+curl -X DELETE https://api.allternit.com/api/v1/beta/vaults/vault_01J4N \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN"
+```
+
+**Response `204 No Content`**
+
+### Add a credential to a vault
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/beta/vaults/vault_01J4N/credentials \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "provider": "compatible-llm",
+    "agent_id": "agent_01J",
+    "session_id": "session_01J",
+    "oauth_value": "sk-xxxxxxxx",
+    "expires_at": "2026-09-01T00:00:00Z"
+  }'
+```
+
+**Response `201 Created`**
+
+```json
+{
+  "id": "cred_01J4N",
+  "vault_id": "vault_01J4N",
+  "provider": "compatible-llm",
+  "agent_id": "agent_01J",
+  "session_id": "session_01J",
+  "expires_at": "2026-09-01T00:00:00Z"
+}
+```
+
+### List vault credentials
+
+```bash
+curl https://api.allternit.com/api/v1/beta/vaults/vault_01J4N/credentials \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN"
+```
+
+**Response `200 OK`**
+
+```json
+{
+  "credentials": [
+    {
+      "id": "cred_01J4N",
+      "provider": "compatible-llm",
+      "agent_id": "agent_01J",
+      "session_id": "session_01J",
+      "expires_at": "2026-09-01T00:00:00Z",
+      "created_at": "2026-08-12T10:00:00Z",
+      "updated_at": "2026-08-12T10:00:00Z"
+    }
+  ]
+}
+```
+
+### Revoke a vault credential
+
+```bash
+curl -X DELETE https://api.allternit.com/api/v1/beta/vaults/vault_01J4N/credentials/cred_01J4N \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN"
+```
+
+**Response `204 No Content`**
+
+## Request/response fields
+
+### `Vault` object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Vault unique identifier |
+| `name` | string | Human-readable name (1-128 characters) |
+| `description` | string \| null | Optional description |
+| `created_by` | string | User ID that created the vault |
+| `created_at` | string | ISO 8601 timestamp |
+| `updated_at` | string | ISO 8601 timestamp |
+
+### `Credential` object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Credential unique identifier |
+| `provider` | string | Provider or credential type |
+| `agent_id` | string \| null | Optional agent scope |
+| `session_id` | string \| null | Optional session scope |
+| `expires_at` | string \| null | Optional ISO 8601 expiration |
+| `created_at` | string | ISO 8601 timestamp |
+| `updated_at` | string | ISO 8601 timestamp |
+
+The `oauth_value` is write-only and never returned.
+
+## Error codes
+
+| HTTP | Code | Meaning |
+|------|------|---------|
+| 400 | `invalid_name` | Vault name is empty or exceeds 128 characters |
+| 400 | `invalid_request` | `provider` and `oauth_value` are required, or `agent_id`/`session_id` missing for legacy credentials |
+| 403 | `organization_required` | Caller has no active organization |
+| 403 | `insufficient_scope` | Credential context lacks the required vault scope |
+| 403 | `insufficient_role` | Caller is not an organization owner/admin |
+| 404 | `vault_not_found` | Vault does not exist or is not in this organization |
+| 404 | `credential_not_found` | Credential does not exist or was already revoked |
+| 500 | `vault_error` / `internal_error` | Unexpected server error |
+
+## Related pages
+
+- [Cloud credentials](/security/cloud-credentials) — BYOC provider credentials for AWS, GCP, and Azure
+- [Compliance](/security/compliance) — Data retention and deletion workflows
+- [Audit logs](/security/audit) — Query administrative actions
+- [Security model](/security/security-model) — Trust boundaries and encryption

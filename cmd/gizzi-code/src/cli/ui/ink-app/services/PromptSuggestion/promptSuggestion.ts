@@ -1,10 +1,7 @@
 // @ts-nocheck
-import { getIsNonInteractiveSession } from '../../bootstrap/state.js'
 import type { AppState } from '../../state/AppState.js'
 import type { Message } from '../../types/message.js'
-import { isAgentSwarmsEnabled } from '../../utils/agentSwarmsEnabled.js'
 import { count } from '../../utils/array.js'
-import { isEnvDefinedFalsy, isEnvTruthy } from '../../utils/envUtils.js'
 import { toError } from '../../utils/errors.js'
 import {
   type CacheSafeParams,
@@ -17,9 +14,6 @@ import {
   createUserMessage,
   getLastAssistantMessage,
 } from '../../utils/messages.js'
-import { getInitialSettings } from '../../utils/settings/settings.js'
-import { isTeammate } from '../../utils/teammate.js'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../analytics/growthbook.js'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
@@ -27,71 +21,14 @@ import {
 import { currentLimits } from '../claudeAiLimits.js'
 import { isSpeculationEnabled, startSpeculation } from './speculation.js'
 
+export { shouldEnablePromptSuggestion } from './promptSuggestionGate.js'
+
 let currentAbortController: AbortController | null = null
 
 export type PromptVariant = 'user_intent' | 'stated_intent'
 
 export function getPromptVariant(): PromptVariant {
   return 'user_intent'
-}
-
-export function shouldEnablePromptSuggestion(): boolean {
-  // Env var overrides everything (for testing)
-  const envOverride = process.env.CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION
-  if (isEnvDefinedFalsy(envOverride)) {
-    logEvent('tengu_prompt_suggestion_init', {
-      enabled: false,
-      source:
-        'env' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-    })
-    return false
-  }
-  if (isEnvTruthy(envOverride)) {
-    logEvent('tengu_prompt_suggestion_init', {
-      enabled: true,
-      source:
-        'env' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-    })
-    return true
-  }
-
-  // Keep default in sync with Config.tsx (settings toggle visibility)
-  if (!getFeatureValue_CACHED_MAY_BE_STALE('tengu_chomp_inflection', false)) {
-    logEvent('tengu_prompt_suggestion_init', {
-      enabled: false,
-      source:
-        'growthbook' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-    })
-    return false
-  }
-
-  // Disable in non-interactive mode (print mode, piped input, SDK)
-  if (getIsNonInteractiveSession()) {
-    logEvent('tengu_prompt_suggestion_init', {
-      enabled: false,
-      source:
-        'non_interactive' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-    })
-    return false
-  }
-
-  // Disable for swarm teammates (only leader should show suggestions)
-  if (isAgentSwarmsEnabled() && isTeammate()) {
-    logEvent('tengu_prompt_suggestion_init', {
-      enabled: false,
-      source:
-        'swarm_teammate' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-    })
-    return false
-  }
-
-  const enabled = getInitialSettings()?.promptSuggestionEnabled !== false
-  logEvent('tengu_prompt_suggestion_init', {
-    enabled,
-    source:
-      'setting' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-  })
-  return enabled
 }
 
 export function abortPromptSuggestion(): void {

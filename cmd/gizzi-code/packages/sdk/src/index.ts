@@ -219,10 +219,10 @@ export * as ACP from '@agentclientprotocol/sdk';
 
 // Re-export the generated HTTP client — this is what acp.ts and other consumers
 // need for session management, globalEvents, prompt(), etc.
-export { createAllternitClient, AllternitClient } from '../dist/gen/allternit-client.js';
-export type { Event } from '../dist/gen/entity-types.js';
-export * from '../dist/gen/entity-types.js';
-export * from '../dist/gen/types.gen.js';
+export { createAllternitClient, AllternitClient } from './gen/allternit-client.js';
+export type { Event } from './gen/entity-types.js';
+export * from './gen/entity-types.js';
+export * from './gen/types.gen.js';
 
 // ============================================================================
 // Version

@@ -1,0 +1,196 @@
+---
+title: Swarm API
+description: Register and execute multi-agent swarms on the Allternit platform.
+---
+
+## Overview
+
+The Swarm API stores multi-agent swarm configurations as `orchestrator`-type agents and tracks their executions through the workflow executions table. A swarm defines a set of participating agents and a maximum round count; executing a swarm creates a running execution record.
+
+## Base URL
+
+```text
+https://api.allternit.com/api
+```
+
+For local development:
+
+```text
+http://127.0.0.1:8013/api
+```
+
+## Authentication
+
+All requests require a valid bearer token in the `Authorization` header. See [Authentication](/api/authentication) for details.
+
+## Swarm object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique swarm identifier. |
+| `user_id` | string | Owner identifier. |
+| `name` | string | Swarm name. |
+| `description` | string \| null | Optional description. |
+| `type` | string | Always `orchestrator`. |
+| `config` | string \| null | Serialized swarm configuration. |
+| `status` | string | Current status, e.g. `idle`. |
+| `created_at` | string | ISO 8601 creation timestamp. |
+| `updated_at` | string | ISO 8601 update timestamp. |
+
+## Execution object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique execution identifier. |
+| `workflow_id` | string | Swarm id used as workflow id. |
+| `status` | string | Execution status. |
+| `started_at` | string \| null | ISO 8601 start timestamp. |
+| `completed_at` | string \| null | ISO 8601 completion timestamp. |
+| `result` | string \| null | Optional serialized result. |
+| `error` | string \| null | Optional error message. |
+| `created_at` | string | ISO 8601 creation timestamp. |
+| `updated_at` | string | ISO 8601 update timestamp. |
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/swarms` | List swarms for the authenticated user. |
+| `POST` | `/swarms` | Create a swarm configuration. |
+| `POST` | `/swarms/:id/execute` | Start a swarm execution. |
+| `GET` | `/swarm/threads` | List swarm threads (stub). |
+| `GET` | `/swarm/health` | Swarm health check. |
+| `GET` | `/swarm/executions/:id` | Get a swarm execution. |
+
+## List swarms
+
+```bash
+curl https://api.allternit.com/api/swarms \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Response
+
+```json
+{
+  "swarms": [
+    {
+      "id": "swarm_01hqx8x7x7x7x7x7x7x7x7x",
+      "user_id": "user_2d9e...",
+      "name": "Code review council",
+      "description": "Multi-agent review for security and style.",
+      "type": "orchestrator",
+      "config": "{\"agents\":[{...}],\"max_rounds\":5}",
+      "status": "idle",
+      "created_at": "2026-08-13T18:00:00Z",
+      "updated_at": "2026-08-13T18:05:00Z"
+    }
+  ]
+}
+```
+
+## Create swarm
+
+```bash
+curl -X POST https://api.allternit.com/api/swarms \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Incident response swarm",
+    "description": "Triage and remediate production alerts.",
+    "agents": [
+      {"agent_id": "agent_018f3a7c...", "role": "triage"},
+      {"agent_id": "agent_018f3a7d...", "role": "remediate"}
+    ],
+    "max_rounds": 5
+  }'
+```
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | yes | Swarm name. |
+| `description` | string | no | Optional description. |
+| `agents` | object[] | no | Participating agents and roles. |
+| `max_rounds` | integer | no | Maximum discussion rounds, default `5`. |
+
+### Response
+
+```json
+{
+  "id": "swarm_02hqx8x7x7x7x7x7x7x7x7x",
+  "name": "Incident response swarm"
+}
+```
+
+## Execute swarm
+
+```bash
+curl -X POST https://api.allternit.com/api/swarms/swarm_02hqx8x7x7x7x7x7x7x7x7x/execute \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Response
+
+```json
+{
+  "execution_id": "exec_01hqx8x7x7x7x7x7x7x7x7x",
+  "status": "running"
+}
+```
+
+## Get execution
+
+```bash
+curl https://api.allternit.com/api/swarm/executions/exec_01hqx8x7x7x7x7x7x7x7x7x \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Response
+
+```json
+{
+  "execution": {
+    "id": "exec_01hqx8x7x7x7x7x7x7x7x7x",
+    "workflow_id": "swarm_02hqx8x7x7x7x7x7x7x7x7x",
+    "status": "running",
+    "started_at": "2026-08-13T18:00:00Z",
+    "completed_at": null,
+    "result": null,
+    "error": null,
+    "created_at": "2026-08-13T18:00:00Z",
+    "updated_at": "2026-08-13T18:00:00Z"
+  }
+}
+```
+
+## Swarm health
+
+```bash
+curl https://api.allternit.com/api/swarm/health \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Response
+
+```json
+{
+  "status": "healthy",
+  "swarm": "operational"
+}
+```
+
+## Error codes
+
+| Status | Code | Description |
+|--------|------|-------------|
+| `401` | `Unauthorized` | Missing or invalid bearer token. |
+| `404` | `not_found` | Swarm or execution not found. |
+| `500` | `internal_error` | Database or server error. |
+
+## Related pages
+
+- [Orchestrator](/api/orchestrator)
+- [Workflows](/api/workflows)
+- [Agents API](/api/agents)

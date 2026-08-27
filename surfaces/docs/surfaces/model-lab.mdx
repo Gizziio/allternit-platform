@@ -1,0 +1,255 @@
+---
+title: Model Lab
+description: Train, deploy, and chat with open-weights models locally or in the cloud from the Allternit platform shell
+---
+
+## Overview
+
+**Model Lab** is the model operations surface inside the Allternit platform shell. It brings together local inference, fine-tuning, model discovery, and cloud deployment so teams can work with open-weights models without leaving the Allternit workspace.
+
+The surface is built around a tabbed view that polls the underlying services every few seconds while it is open, keeping runtime status, job progress, and telemetry live.
+
+## Base URL / usage
+
+Model Lab runs inside the platform shell:
+
+```text
+https://app.allternit.com/shell?view=model-lab
+```
+
+Open programmatically from shell code:
+
+```typescript
+open('model-lab');
+```
+
+The underlying APIs are served from the Allternit gateway:
+
+```text
+https://api.allternit.com/api/model-lab
+https://api.allternit.com/api/local-engine
+https://api.allternit.com/api/local-studio
+```
+
+## Features
+
+<CardGroup cols={2}>
+  <Card title="Engine" icon="gauge">
+    Inspect telemetry, manage cached models, launch inference runtimes, and run export/merge/evaluation jobs against the Local Engine controller.
+  </Card>
+  <Card title="Catalog" icon="book-open">
+    Browse Unsloth guides and search the Hugging Face model catalog with hardware-fit estimates.
+  </Card>
+  <Card title="Train" icon="flask-conical">
+    Fine-tune, export, merge, and evaluate open-weights models using job templates and a live job monitor.
+  </Card>
+  <Card title="Studio" icon="cpu">
+    Connect to a Local Studio controller, view GPUs and usage, and manage serving recipes.
+  </Card>
+  <Card title="Cloud Deploy" icon="cloud">
+    Register and test serverless endpoints for trained models.
+  </Card>
+  <Card title="Playground" icon="message-square">
+    Chat with any running local runtime through a streaming chat interface.
+  </Card>
+</CardGroup>
+
+## Tabs
+
+| Tab | Purpose |
+|---|---|
+| **Engine** | Health, status, cached models, active runtimes, and one-click model operations. |
+| **Catalog** | Discover guides and search public model repositories. |
+| **Train** | Create training/export/merge/evaluation jobs and track their progress. |
+| **Studio** | Native Local Studio controller integration for recipes and serving. |
+| **Cloud** | Save and test cloud endpoint credentials for deployed models. |
+| **Playground** | Send messages to a running runtime and inspect token throughput. |
+
+## Key concepts
+
+### Local Engine
+
+The **Allternit Local Engine** is the controller that owns cached models and inference runtimes on the host. Model Lab's Engine tab is a visual wrapper around its health, model cache, and runtime lifecycle APIs.
+
+### Cached models
+
+A model tracked by the Local Engine has a source such as `local_path`, `hugging_face`, or `unsloth_output`, plus a filesystem path and a status like `ready`, `downloading`, or `failed`.
+
+### Runtime recipes
+
+A recipe tells the Local Engine which backend to use and how to launch it. Supported backends:
+
+| Backend | Typical use |
+|---|---|
+| `vllm` | High-throughput GPU serving |
+| `sglang` | Structured generation and fast decoding |
+| `llama_cpp` | CPU/GPU GGUF inference |
+| `mlx` | Apple Silicon inference |
+
+### Model Lab jobs
+
+Long-running work is submitted as jobs. Job types map to the operations you can queue from the Engine and Train tabs:
+
+| Type | Purpose |
+|---|---|
+| `training` | Fine-tune a base model, typically with LoRA or GRPO |
+| `export` | Quantize or export a trained model |
+| `merge` | Merge a LoRA adapter into a base model |
+| `evaluation` | Run a benchmark such as MMLU, ARC, HellaSwag, TruthfulQA, or Winogrande |
+
+### Brain registration
+
+The Engine tab can register the Local Engine or a local sidecar as a **brain provider**. Once registered, the models served by that runtime appear in the platform's model picker and chat composer.
+
+### Local Studio
+
+**Local Studio** is a separate controller for advanced local serving. The Studio tab connects to it, lists detected GPUs, tracks usage, exposes logs, and lets you author and save serving recipes.
+
+### Cloud endpoints
+
+The Cloud tab stores endpoint credentials locally in the browser and runs a lightweight reachability test against `/v1/models` or `/models`. It is a registry for models you have already deployed elsewhere.
+
+## Endpoints / commands
+
+### Model Lab jobs
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/model-lab/jobs` | List all jobs |
+| `POST` | `/api/model-lab/jobs` | Create a new job |
+| `GET` | `/api/model-lab/jobs/:id` | Fetch a single job |
+
+### Local Engine
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/local-engine/health` | Controller health check |
+| `GET` | `/api/local-engine/status` | Host telemetry and engine state |
+| `GET` | `/api/local-engine/models` | List cached models |
+| `POST` | `/api/local-engine/models/import` | Import a model from disk |
+| `POST` | `/api/local-engine/models/download` | Queue a model download |
+| `GET` | `/api/local-engine/runtimes` | List active runtimes |
+| `POST` | `/api/local-engine/runtimes/launch` | Launch a runtime from a recipe |
+| `POST` | `/api/local-engine/runtimes/:id/stop` | Stop a runtime |
+| `POST` | `/api/local-engine/v1/chat/completions` | Streaming or non-streaming chat completion |
+
+### Local Studio
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/local-studio/health` | Studio controller health |
+| `GET` | `/api/local-studio/status` | Serving process status |
+| `GET` | `/api/local-studio/gpus` | GPU inventory and memory |
+| `GET` | `/api/local-studio/v1/models` | Available serving recipes/models |
+| `GET` | `/api/local-studio/usage` | Request/token usage over a window |
+| `GET` | `/api/local-studio/logs` | Recent controller logs |
+
+## JSON request / response examples
+
+### Create a training job
+
+```bash
+curl -X POST https://api.allternit.com/api/model-lab/jobs \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model_id": "unsloth/Meta-Llama-3.1-8B-Instruct",
+    "type": "training",
+    "metadata": {
+      "dataset": "my-dataset.jsonl",
+      "lora_rank": 16,
+      "epochs": 3,
+      "learning_rate": 0.0002,
+      "quantization": "q4_k_m",
+      "max_seq_length": 2048,
+      "description": "SFT fine-tune via Unsloth"
+    }
+  }'
+```
+
+Response:
+
+```json
+{
+  "id": "job_0192a3b4",
+  "model_id": "unsloth/Meta-Llama-3.1-8B-Instruct",
+  "type": "training",
+  "status": "pending",
+  "created_at": "2026-08-17T18:00:00Z"
+}
+```
+
+### Launch a local runtime
+
+```bash
+curl -X POST https://api.allternit.com/api/local-engine/runtimes/launch \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model_id": "local--Llama-3.2-3B-Instruct-1723500000000",
+    "recipe": {
+      "backend": "llama_cpp",
+      "model_path": "/Users/joe/.cache/allternit/models/Llama-3.2-3B-Instruct/Llama-3.2-3B-Instruct.Q4_K_M.gguf",
+      "n_gpu_layers": -1,
+      "n_ctx": 4096
+    }
+  }'
+```
+
+Response:
+
+```json
+{
+  "runtime": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "model_id": "local--Llama-3.2-3B-Instruct-1723500000000",
+    "recipe": { "backend": "llama_cpp", "model_path": "...", "n_ctx": 4096 },
+    "port": 49231,
+    "status": "starting"
+  }
+}
+```
+
+### Chat with a running runtime
+
+```bash
+curl -N -X POST https://api.allternit.com/api/local-engine/v1/chat/completions \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "Accept: text/event-stream" \
+  -d '{
+    "model": "local--Llama-3.2-3B-Instruct-1723500000000",
+    "messages": [{"role": "user", "content": "Summarize the Local Engine routing in one sentence."}],
+    "stream": true,
+    "temperature": 0.7
+  }'
+```
+
+Stream chunk:
+
+```text
+data: {"id":"chatcmpl-local-abc123","object":"chat.completion.chunk","created":1723500000,"model":"local--Llama-3.2-3B-Instruct-1723500000000","choices":[{"index":0,"delta":{"content":"The Local Engine forwards "}}]}
+
+data: [DONE]
+```
+
+## Error codes
+
+| HTTP | Code | Meaning |
+|---|---|---|
+| 200 | — | Request succeeded |
+| 400 | `invalid_request` | Malformed body or invalid parameters |
+| 401 | `unauthorized` | Missing or invalid bearer token |
+| 404 | `runtime_not_found` / `no_running_runtime` | Runtime does not exist or is not healthy |
+| 409 | `model import already tracked` | Model is already in the cache |
+| 502 | `local_engine_unavailable` | Local Engine controller is unreachable |
+| 503 | `no_free_port` | Controller could not allocate a TCP port |
+| 500 | — | Unexpected platform or controller error |
+
+## Related links
+
+- [Local Engine API](/api/local-engine)
+- [Platform](/surfaces/platform)
+- [Agent Studio](/surfaces/agent-studio)
+- [Runtime Backend API](/api/runtime-backend)
+- [Runtime Discovery API](/api/runtime-discovery)

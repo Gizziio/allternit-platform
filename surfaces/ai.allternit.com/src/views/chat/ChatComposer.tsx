@@ -10,6 +10,7 @@ import {
   ArrowUp,
   ArrowElbowDownRight,
   CaretDown,
+  CaretUp,
   Folder,
   Code,
   Pen as PenTool,
@@ -54,9 +55,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useModelDiscovery } from '@/integration/api-client';
 import { useAgentSurfaceModeStore, type AgentModeSurface, type AgentModeId } from '@/stores/agent-surface-mode.store';
 import { getProviderMeta } from '@/lib/providers/provider-registry';
+import { useModelSelection } from '@/providers/model-selection-provider';
 import { useRuntimeExecutionMode } from '@/hooks/useRuntimeExecutionMode';
 import { useIsMobile } from '@/hooks/useMediaQuery';
 import type { RuntimeExecutionMode } from '@/lib/agents/native-agent-api';
@@ -73,89 +74,31 @@ import {
   type Agent,
   type OpenClawDiscoveredAgent,
 } from '@/lib/agents';
+import { getBotDisplayName } from '@/lib/bots/bot-profile';
+import { useMentionHandoff } from '@/lib/bots/use-mention-handoff';
+import { parseMentions } from '@/lib/bots/mention-handoff.service';
 import { useActiveChatSession } from './ChatSessionStore';
+import { useChatStore } from './ChatStore';
 import { AgentModeGizzi } from './AgentModeGizzi';
 import { getAgentModeSurfaceTheme } from './agentModeSurfaceTheme';
 import { useRecordingStore } from '@/stores/recording.store';
 import { useBrowserAgentStore } from '@/capsules/browser/browserAgent.store';
 import { useUnifiedStore } from '@/lib/agents/unified.store';
 import { TaskBar } from './components/TaskBar';
-import { ModeDock } from './components/ModeDock';
+import { ModeDock, MODE_TABS, SURFACE_MODES } from './components/ModeDock';
 import { TemplateGallery } from './components/TemplateGallery';
 import { SwarmSubModeTabs } from './components/SwarmSubModeTabs';
+import { ComposerPlusSheet, type ToolAccessLevel, type ResponseStyle } from './components/ComposerPlusSheet';
+import { ConnectorMarketplaceDialog } from './components/ConnectorMarketplaceDialog';
 import { MiroFishPanel } from './panels/MiroFishPanel';
 import { useMiroFishRunStore } from '@/stores/mirofish-run.store';
 import { BottomDock } from './components/BottomDock';
 import { isCanonicalAgentMode, type CanonicalAgentModeId } from '@/lib/agents/agent-mode-contracts';
 import { CoworkTopDeck } from '@/views/cowork/CoworkTopDeck';
-import { PromptModelSelector } from '@/components/prompt-kit/prompt-model-selector';
+import { ModelPicker, type ModelSelection } from '@/components/model-picker';
 import { ProviderGallery } from '@/components/chat/ProviderGallery';
 import { enrichCreationPrompt, isCreationMode, getDefaultFormatSelection, type FormatSelection } from '@/views/create/presets';
-
-// Terminal Server URL for fetching real models
-declare const __TERMINAL_SERVER_URL__: string | undefined;
-function getProviderDiscoveryUrl(): string {
-  if (typeof window === 'undefined') return '/api/v1/providers';
-  try {
-    const stored = window.localStorage.getItem('allternit.runtime-backend.snapshot');
-    if (stored) {
-      const snap = JSON.parse(stored) as { resolved_gateway_url?: string };
-      const gw = snap?.resolved_gateway_url ?? '';
-      if (gw && !/^https?:\/\/(?:127\.0\.0\.1|localhost)/.test(gw)) return `${gw}/api/v1/providers`;
-    }
-  } catch {
-    // storage unavailable
-  }
-  return '/api/v1/providers';
-}
-
-async function fetchRegisteredProviders(signal: AbortSignal): Promise<Response> {
-  const sidecar = typeof window !== 'undefined' ? window.allternitSidecar : undefined;
-  if (sidecar && typeof sidecar.getApiUrl === 'function') {
-    const apiUrl = await sidecar.getApiUrl();
-    if (apiUrl) {
-      return fetch(`${apiUrl.replace(/\/$/, '')}/provider`, {
-        signal,
-      });
-    }
-  }
-  return fetch(getProviderDiscoveryUrl(), { signal });
-}
-
-// Provider discovery is slow (~2-5s) and the composer remounts whenever the
-// code-mode canvas swaps sessions, which left the model pill stuck on
-// "Loading..." after every session switch. Cache the discovery payload in
-// memory + localStorage (10 min TTL) so remounts render models instantly and
-// refresh silently in the background.
-const PROVIDER_DISCOVERY_CACHE_KEY = 'allternit-provider-discovery-cache-v2';
-const PROVIDER_DISCOVERY_TTL_MS = 10 * 60 * 1000;
-let providerDiscoveryMemoryCache: any[] | null = null;
-
-function readProviderDiscoveryCache(): any[] | null {
-  if (providerDiscoveryMemoryCache) return providerDiscoveryMemoryCache;
-  if (typeof window === 'undefined') return null;
-  try {
-    const raw = window.localStorage.getItem(PROVIDER_DISCOVERY_CACHE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as { ts?: number; models?: any[] };
-    if (!parsed?.models?.length) return null;
-    if (typeof parsed.ts === 'number' && Date.now() - parsed.ts > PROVIDER_DISCOVERY_TTL_MS) return null;
-    providerDiscoveryMemoryCache = parsed.models;
-    return parsed.models;
-  } catch {
-    return null;
-  }
-}
-
-function writeProviderDiscoveryCache(models: any[]): void {
-  providerDiscoveryMemoryCache = models;
-  if (typeof window === 'undefined') return;
-  try {
-    window.localStorage.setItem(PROVIDER_DISCOVERY_CACHE_KEY, JSON.stringify({ ts: Date.now(), models }));
-  } catch {
-    // storage unavailable
-  }
-}
+import { useNav } from '@/nav/useNav';
 
 const THEME = {
   bg: 'var(--surface-canvas)',
@@ -176,7 +119,6 @@ export interface ChatAttachment {
   dataUrl: string;
   type: 'image' | 'screenshot' | 'gif' | 'document' | 'code' | 'json' | 'spreadsheet' | 'other';
 }
-
 export interface SlashCommand {
   command: string;
   label: string;
@@ -193,10 +135,6 @@ interface ChatComposerProps {
   onSend: (text: string) => void;
   isLoading?: boolean;
   onStop?: () => void;
-  selectedModel?: string;
-  selectedModelDisplayName?: string;
-  onOpenModelPicker?: () => void;
-  onSelectModel?: (selection: any) => void;
   placeholder?: string;
   variant?: 'default' | 'large';
   showTopActions?: boolean;
@@ -212,6 +150,8 @@ interface ChatComposerProps {
   onAddAttachment?: (attachment: ChatAttachment) => void;
   /** Called when sending in agent mode - if provided, opens full agent session view instead of embedded chat */
   onAgentSend?: (text: string, execution?: { modeId: CanonicalAgentModeId; templateTitle?: string }) => void;
+  /** Called when bot mode is toggled on or a bot is selected from the home-view composer; starts a real bot session. */
+  onStartBotSession?: (agent: Agent) => void;
   /** Called when the @mention agent selection changes (Phase 2: per-message routing) */
   onMentionAgentChange?: (agentId: string | null) => void;
   /** Called when the @mention plugin/connector selection changes */
@@ -230,6 +170,8 @@ interface ChatComposerProps {
   bottomDockContent?: React.ReactNode;
   /** Show the Chat/Cowork mode toggle in the bottom dock. Pass false for in-session composers, which are locked to their session's mode. */
   showModeToggle?: boolean;
+  /** Floating HUD mode: single-row composer, no landing chrome, compact navy styling. */
+  hudMode?: boolean;
   /** Optional inline info bar rendered at the top of the composer shell. */
   topInfoBarContent?: React.ReactNode;
   /** Optional inline question bar rendered between info and textarea. */
@@ -238,6 +180,14 @@ interface ChatComposerProps {
   bottomInfoBarContent?: React.ReactNode;
   /** Optional top deck content rendered inside the composer card, above the input area. */
   topDeckContent?: React.ReactNode;
+  /** Optional externally-controlled selected model ID. When provided, the composer uses this instead of the global model selection. */
+  selectedModel?: string;
+  /** Optional externally-controlled selected model display name. */
+  selectedModelDisplayName?: string;
+  /** Called when the user picks a model from the composer's model picker. When provided alongside onOpenModelPicker, external model selection mode is active. */
+  onSelectModel?: (selection: ModelSelection) => void;
+  /** Called when the user clicks the model selector pill. Enables external model selection mode when provided. */
+  onOpenModelPicker?: () => void;
 }
 
 const CATEGORY_EMOTIONS: Record<string, { hover: GizziEmotion; select: GizziEmotion }> = {
@@ -336,34 +286,6 @@ const ACTION_CATEGORIES = [
   },
 ];
 
-const PLUS_MENU_ITEMS: ComposerMenuItem[] = [
-  { id: 'files', label: 'Add files or photos', icon: <ImageIcon size={16} /> },
-  {
-    id: 'project',
-    label: 'Add to project',
-    icon: <Folder size={16} />,
-    hasSubmenu: true,
-    submenuItems: [
-      { id: 'new-project', label: 'Start a new project', icon: <Plus size={14} /> },
-      { id: 'existing-project', label: 'How to use Allternit', icon: <FileText size={14} /> },
-    ]
-  },
-  { id: 'github', label: 'Add from GitHub', icon: <Github size={16} /> },
-  { id: 'web', label: 'Web search', icon: <Globe size={16} />, isActive: true },
-  {
-    id: 'style',
-    label: 'Use style',
-    icon: <PenTool size={16} />,
-    hasSubmenu: true,
-    submenuItems: [
-      { id: 'formal', label: 'Formal' },
-      { id: 'creative', label: 'Creative' },
-      { id: 'technical', label: 'Technical' },
-    ]
-  },
-  { id: 'connectors', label: 'Add connectors', icon: <Lightning size={16} /> },
-];
-
 function getTextareaCaretPosition(
   textarea: HTMLTextAreaElement,
   text: string,
@@ -407,10 +329,6 @@ export function ChatComposer({
   onSend,
   isLoading,
   onStop,
-  selectedModel,
-  selectedModelDisplayName,
-  onOpenModelPicker,
-  onSelectModel,
   placeholder = "How can I help you today?",
   variant = 'default',
   showTopActions = true,
@@ -429,10 +347,53 @@ export function ChatComposer({
   mentionAgentId: externalMentionAgentId,
   bottomDockContent,
   showModeToggle,
+  hudMode = false,
   topInfoBarContent,
   questionBarContent,
   topDeckContent,
+  onStartBotSession,
+  selectedModel: externalSelectedModel,
+  selectedModelDisplayName: externalSelectedModelDisplayName,
+  onSelectModel: externalOnSelectModel,
+  onOpenModelPicker: externalOnOpenModelPicker,
 }: ChatComposerProps) {
+  const {
+    selection: modelSelection,
+    availableModels,
+    isLoading: modelsLoading,
+    isSelecting: internalIsModelSelecting,
+    selectModel: internalSelectModel,
+    startSelection: internalStartModelSelection,
+    cancelSelection: internalCancelModelSelection,
+  } = useModelSelection();
+
+  const isExternalModelSelection = Boolean(externalOnOpenModelPicker);
+  const selectedModel = externalSelectedModel ?? modelSelection?.modelId ?? null;
+  const selectedModelDisplayName = externalSelectedModelDisplayName ?? modelSelection?.modelName ?? modelSelection?.modelId ?? null;
+  const isModelSelecting = isExternalModelSelection ? false : internalIsModelSelecting;
+
+  const startModelSelection = useCallback(() => {
+    if (isExternalModelSelection) {
+      externalOnOpenModelPicker?.();
+    } else {
+      internalStartModelSelection();
+    }
+  }, [isExternalModelSelection, externalOnOpenModelPicker, internalStartModelSelection]);
+
+  const cancelModelSelection = useCallback(() => {
+    if (!isExternalModelSelection) {
+      internalCancelModelSelection();
+    }
+  }, [isExternalModelSelection, internalCancelModelSelection]);
+
+  const selectModel = useCallback((selection: ModelSelection) => {
+    if (isExternalModelSelection) {
+      externalOnSelectModel?.(selection);
+    } else {
+      internalSelectModel(selection);
+    }
+  }, [isExternalModelSelection, externalOnSelectModel, internalSelectModel]);
+
   const [input, setInput] = useState(inputValue);
   const isMobile = useIsMobile();
   const {
@@ -458,15 +419,20 @@ export function ChatComposer({
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [showPlusMenu, setShowPlusMenu] = useState(false);
   const [webSearchEnabled, setWebSearchEnabled] = useState(false);
-  const [activeStyle, setActiveStyle] = useState<'formal' | 'creative' | 'technical' | null>(null);
-  const [showGitHubInput, setShowGitHubInput] = useState(false);
+  const [researchEnabled, setResearchEnabled] = useState(false);
+  const [toolAccess, setToolAccess] = useState<ToolAccessLevel>('all');
+  const [activeStyle, setActiveStyle] = useState<ResponseStyle | null>(null);
+  const chatProjects = useChatStore((s) => s.projects);
+  const chatActiveProjectId = useChatStore((s) => s.activeProjectId);
+  const chatSetActiveProject = useChatStore((s) => s.setActiveProject);
+  const chatCreateProject = useChatStore((s) => s.createProject);
   const [githubUrl, setGithubUrl] = useState('');
   const [githubLoading, setGithubLoading] = useState(false);
   const [showAgentMenu, setShowAgentMenu] = useState(false);
-  const [showModelMenu, setShowModelMenu] = useState(false);
+  const [showModeSelectorMenu, setShowModeSelectorMenu] = useState(false);
   const [showProviderConnect, setShowProviderConnect] = useState(false);
+  const [showConnectorMarketplace, setShowConnectorMarketplace] = useState(false);
   const [showOpenClawImportDialog, setShowOpenClawImportDialog] = useState(false);
-  const [activeSubMenu, setActiveSubMenu] = useState<string | null>(null);
   const [openClawCandidates, setOpenClawCandidates] = useState<OpenClawDiscoveredAgent[]>([]);
   const [isLoadingOpenClawCandidates, setIsLoadingOpenClawCandidates] = useState(false);
   const [openClawError, setOpenClawError] = useState<string | null>(null);
@@ -520,10 +486,6 @@ export function ChatComposer({
     });
   }, [isSavingExecMode, optimisticMode, setExecutionMode]);
 
-  const handleToggleAgentMode = useCallback(() => {
-    setLocallyEnabled((prev) => !prev);
-  }, []);
-  
   const [showAgentGuidePadding, setShowAgentGuidePadding] = useState(
     Boolean(agentModeEnabled && showAgentRailGuide),
   );
@@ -593,6 +555,7 @@ export function ChatComposer({
   );
   const setSwarmSubMode = useAgentSurfaceModeStore((state) => state.setSwarmSubMode);
   const agents = useAgentsWithSwarms();
+  const { isHandingOff, handoff: runMentionHandoff } = useMentionHandoff();
 
   const selectedMentionAgent = useMemo(() => {
     if (!selectedMentionAgentId) return null;
@@ -604,7 +567,9 @@ export function ChatComposer({
     const q = mentionQuery.toLowerCase();
     return agents.filter(
       (a) =>
-        a.name.toLowerCase().includes(q) &&
+        a.isBot === true &&
+        (a.name.toLowerCase().includes(q) ||
+          (a.botProfile?.displayName ?? '').toLowerCase().includes(q)) &&
         isAgentAllowedOnSurface(a, agentModeSurface ?? 'chat'),
     );
   }, [mentionOpen, mentionQuery, agents, agentModeSurface]);
@@ -640,10 +605,15 @@ export function ChatComposer({
     setMentionOpen(false);
     setMentionQuery('');
     setMentionIndex(0);
+    // If the user @mentioned a bot, also bind it as the surface's selected bot
+    // so the composer and session creation are aligned.
+    if (agent.isBot && agentModeSurface) {
+      setSelectedSurfaceAgent(agentModeSurface, agent.id);
+    }
     window.requestAnimationFrame(() => {
       textareaRef.current?.focus();
     });
-  }, [input, mentionQuery, onMentionAgentChange, onPluginMentionChange]);
+  }, [input, mentionQuery, onMentionAgentChange, onPluginMentionChange, agentModeSurface, setSelectedSurfaceAgent]);
 
   const handleSelectPluginMention = useCallback((target: PluginMentionTarget) => {
     const lastAtIndex = input.lastIndexOf('@');
@@ -740,8 +710,6 @@ export function ChatComposer({
   const compileCharacterLayer = useAgentStore((state) => state.compileCharacterLayer);
   const loadCharacterLayer = useAgentStore((state) => state.loadCharacterLayer);
 
-  const { discoveryResult, fetchProviders, realModels } = useModelDiscovery();
-
   const selectedSurfaceAgent = useMemo(
     () =>
       selectedSurfaceAgentId
@@ -749,6 +717,26 @@ export function ChatComposer({
         : null,
     [agents, selectedSurfaceAgentId],
   );
+
+  const handleToggleAgentMode = useCallback(() => {
+    setLocallyEnabled((prev) => {
+      const next = !prev;
+      if (next) {
+        // When a bot is already selected, mount its session in the rail
+        // instead of leaving the user on a generic home chat.
+        if (selectedSurfaceAgent?.isBot && onStartBotSession) {
+          onStartBotSession(selectedSurfaceAgent);
+          return next;
+        }
+        // When turning bot mode on and no bot is selected, open the bot picker
+        // so the user can choose one immediately.
+        if (!selectedSurfaceAgent && agents.some((a) => a.isBot)) {
+          setShowAgentMenu(true);
+        }
+      }
+      return next;
+    });
+  }, [selectedSurfaceAgent, agents, onStartBotSession]);
 
   const selectedWorkspacePreview = useMemo<AgentWorkspacePreview>(() => {
     if (!selectedSurfaceAgent) {
@@ -775,68 +763,6 @@ export function ChatComposer({
   const agentModeTheme = useMemo(() => {
     return getAgentModeSurfaceTheme(agentModeSurface);
   }, [agentModeSurface]);
-
-  const cachedProviderModels = useMemo(() => readProviderDiscoveryCache(), []);
-  const [terminalModels, setTerminalModels] = useState<any[]>(cachedProviderModels ?? []);
-  const [terminalModelsLoading, setTerminalModelsLoading] = useState(cachedProviderModels === null);
-
-  useEffect(() => {
-    // The web client already loads the provider registry through
-    // useModelDiscovery below. A second eager GET here duplicated the same
-    // request on every composer mount and doubled the console/network noise
-    // when a runtime was offline. Keep this path only for Electron's sidecar,
-    // whose /provider response is a distinct local source.
-    if (!window.allternitSidecar) {
-      setTerminalModelsLoading(false);
-      return;
-    }
-    let cancelled = false;
-    async function fetchTerminalModels() {
-      try {
-        const response = await fetchRegisteredProviders(AbortSignal.timeout(5000));
-        if (!response.ok || cancelled) return;
-        const data = await response.json();
-        const allModels: any[] = [];
-        if (data.all && Array.isArray(data.all)) {
-          // Normalize two backend shapes:
-          // - Gizzi runtime: { all: [...], connected: ['id', ...] }
-          // - allternit-api: { all: [...] } with per-provider status field
-          const connected = Array.isArray(data.connected) ? new Set<string>(data.connected) : null;
-          const registeredProviders = data.all.filter((provider: any) => {
-            if (provider.id === 'echo') return false;
-            if (connected?.size) return connected.has(provider.id);
-            return provider.status === 'active';
-          });
-          registeredProviders.forEach((provider: any) => {
-            if (!provider.models) return;
-            const entries = Array.isArray(provider.models)
-              ? provider.models.map((m: string) => [m, { name: m }] as const)
-              : Object.entries(provider.models);
-            entries.forEach(([modelId, modelData]: [string, any]) => {
-              allModels.push({
-                id: `${provider.id}/${modelId}`,
-                name: modelData?.name || modelId,
-                providerId: provider.id,
-                providerName: provider.name || provider.id,
-              });
-            });
-          });
-        }
-        if (!cancelled && allModels.length > 0) {
-          setTerminalModels(allModels);
-          writeProviderDiscoveryCache(allModels);
-        }
-      } catch {
-        // provider discovery failed; leave cache as-is
-      } finally {
-        if (!cancelled) setTerminalModelsLoading(false);
-      }
-    }
-    void fetchTerminalModels();
-    return () => { cancelled = true; };
-  }, []);
-
-  useEffect(() => { fetchProviders(); }, [fetchProviders]);
 
   useEffect(() => {
     if (!agentModeSurface || !agentModeEnabled || isLoadingAgents) {
@@ -974,6 +900,15 @@ export function ChatComposer({
     }
   }, [agentModeEnabled, showAgentMenu]);
 
+  // When a bot is selected as the surface agent, surface it as an @mention chip
+  // in the composer so the user sees which bot will handle the message.
+  useEffect(() => {
+    if (selectedSurfaceAgent?.isBot) {
+      setSelectedMentionAgentId(selectedSurfaceAgent.id);
+      setLocallyEnabled(true);
+    }
+  }, [selectedSurfaceAgent?.id, selectedSurfaceAgent?.isBot]);
+
   useEffect(() => {
     const handler = (e: Event) => {
       const { agentId, agentName } = (e as CustomEvent).detail;
@@ -1025,69 +960,6 @@ export function ChatComposer({
     setInput(inputValue);
   }
 
-  const allModels = useMemo(() => {
-    const modelMap = new Map<string, any>();
-
-    // 1) Runtime-discovered models (e.g. terminal server / gateway providers)
-    terminalModels.forEach((model) => {
-      if (!model?.id) return;
-      modelMap.set(model.id, model);
-    });
-
-    // 2) Registry models from Allternit Brain / Gizzi provider catalog
-    (realModels || []).forEach((provider) => {
-      const modelsList = Array.isArray(provider.models)
-        ? provider.models
-        : provider.models
-          ? Object.entries(provider.models as Record<string, any>).map(([id, data]) => ({ id, ...data }))
-          : [];
-      modelsList.forEach((model: any) => {
-        if (!model?.id) return;
-        const existing = modelMap.get(model.id);
-        const enriched = {
-          ...model,
-          providerId: provider.id,
-          providerName: provider.name,
-        };
-        modelMap.set(model.id, existing ? { ...existing, ...enriched } : enriched);
-      });
-    });
-
-    // 3) Provider-specific discovery result (lowest priority, fills gaps)
-    (discoveryResult?.models || []).forEach((model: any) => {
-      if (!model?.id || modelMap.has(model.id)) return;
-      modelMap.set(model.id, model);
-    });
-
-    return Array.from(modelMap.values());
-  }, [discoveryResult, realModels, terminalModels]);
-
-  // Model lookup map for performance
-  const modelsMap = useMemo(() => {
-    return new Map<string, any>(allModels.map((m) => [m.id, m]));
-  }, [allModels]);
-
-  const handleModelSelect = useCallback((model: any) => {
-    if (onSelectModel) {
-      const providerId = model.providerId || 'allternit';
-      onSelectModel({
-        providerId,
-        profileId: `${providerId}-acp`,
-        modelId: model.id,
-        modelName: model.name,
-      });
-    }
-    setShowModelMenu(false);
-  }, [onSelectModel]);
-
-  useEffect(() => {
-    if (!selectedModel && allModels.length > 0) {
-      // Pick the first real model returned by the registry/terminal discovery.
-      // Avoid hardcoding model IDs that may not exist on this machine.
-      handleModelSelect(allModels[0]);
-    }
-  }, [allModels, selectedModel, handleModelSelect]);
-
   useEffect(() => {
     if (variant !== 'large') {
       const raf = window.requestAnimationFrame(() => {
@@ -1108,7 +980,18 @@ export function ChatComposer({
   const requiresAgentSelection = Boolean(
     agentModeSurface && agentModeEnabled && !isCanonicalAgentMode(selectedModeId),
   );
-  const canSubmit = Boolean(input.trim()) && !isLoading && (!requiresAgentSelection || Boolean(selectedSurfaceAgent));
+  const canSubmit = Boolean(input.trim()) && !isLoading && !isHandingOff && (!requiresAgentSelection || Boolean(selectedSurfaceAgent));
+
+  const buildEnrichedInput = useCallback((baseInput: string) => {
+    const parts: string[] = [];
+    if (webSearchEnabled) parts.push('[web_search_enabled]');
+    if (researchEnabled) parts.push('[research_enabled]');
+    if (toolAccess !== 'all') parts.push(`[tool_access:${toolAccess}]`);
+    const stylePrefix = activeStyle
+      ? { formal: 'Respond in a formal, professional tone. ', creative: 'Respond in a creative, imaginative style. ', technical: 'Respond in a precise, technical manner. ' }[activeStyle]
+      : '';
+    return `${parts.join(' ')}${parts.length > 0 ? ' ' : ''}${stylePrefix}${baseInput}`.trim();
+  }, [activeStyle, researchEnabled, toolAccess, webSearchEnabled]);
 
   const enterVoiceMode = useCallback(async () => {
     clearVoiceTranscript();
@@ -1127,6 +1010,61 @@ export function ChatComposer({
     setInteractionMode('text');
   }, [isVoiceRecording, setInteractionMode, stopVoiceRecording]);
 
+  // Core send path shared by text submit and voice submit. Resolves inline
+  // @mentions, hands them off, and routes the enriched prompt to the right
+  // consumer (browser agent, MiroFish, agent-mode send, or plain chat).
+  const submitMessage = useCallback(async (rawText: string) => {
+    let messageText = rawText;
+
+    // Inline @mention handoff: resolve, execute, and append replies before
+    // sending to the active agent.
+    const inlineMentions = parseMentions(messageText);
+    if (inlineMentions.length > 0) {
+      try {
+        const handoff = await runMentionHandoff(messageText, selectedSurfaceAgent ?? undefined);
+        messageText = `${handoff.cleanText}${handoff.handoffNote}`;
+      } catch (err) {
+        // If handoff fails, send the original text with a note so the user
+        // knows the mention could not be routed.
+        messageText = `${messageText}\n\n[@mention routing failed: ${err instanceof Error ? err.message : String(err)}]`;
+      }
+    }
+
+    const enrichedInput = enrichCreationPrompt(
+      buildEnrichedInput(messageText),
+      selectedModeId,
+      activeFormatSelection,
+    );
+
+    if (selectedModeId === 'computer-use') {
+      useBrowserAgentStore.getState().runAcuTask(enrichedInput);
+    }
+
+    if (selectedModeId === 'swarms' && selectedSwarmSubMode === 'population-simulation') {
+      // MiroFish's single entry point is this composer: the prompt goes to
+      // the results-only panel below, which interprets and runs it — never
+      // through the normal agent-mode send.
+      useMiroFishRunStore.getState().requestRun(enrichedInput);
+    } else if (onAgentSend && agentModeSurface && (agentModeEnabled || isCanonicalAgentMode(selectedModeId))) {
+      onAgentSend(enrichedInput, selectedModeId ? { modeId: selectedModeId as CanonicalAgentModeId, templateTitle: selectedTemplateTitle } : undefined);
+    } else {
+      onSend(enrichedInput);
+    }
+  }, [
+    agentModeEnabled,
+    agentModeSurface,
+    activeFormatSelection,
+    buildEnrichedInput,
+    isCanonicalAgentMode,
+    onAgentSend,
+    onSend,
+    runMentionHandoff,
+    selectedModeId,
+    selectedSurfaceAgent,
+    selectedSwarmSubMode,
+    selectedTemplateTitle,
+  ]);
+
   useEffect(() => {
     if (!voiceModeActive || !voiceTranscript?.trim()) return;
     const spokenInput = voiceTranscript.trim();
@@ -1138,39 +1076,18 @@ export function ChatComposer({
       return;
     }
 
-    const stylePrefix = activeStyle
-      ? { formal: 'Respond in a formal, professional tone. ', creative: 'Respond in a creative, imaginative style. ', technical: 'Respond in a precise, technical manner. ' }[activeStyle]
-      : '';
-    const webSearchPrefix = webSearchEnabled ? '[web_search_enabled] ' : '';
-    const baseInput = `${webSearchPrefix}${stylePrefix}${spokenInput}`.trim();
-    const enrichedInput = enrichCreationPrompt(baseInput, selectedModeId, activeFormatSelection);
-
-    if (selectedModeId === 'computer-use') {
-      useBrowserAgentStore.getState().runAcuTask(enrichedInput);
-    }
-    if (onAgentSend && agentModeSurface && (agentModeEnabled || isCanonicalAgentMode(selectedModeId))) {
-      onAgentSend(enrichedInput, selectedModeId ? { modeId: selectedModeId as CanonicalAgentModeId, templateTitle: selectedTemplateTitle } : undefined);
-    } else {
-      onSend(enrichedInput);
-    }
+    void submitMessage(spokenInput);
 
     setVoiceModeActive(false);
     clearVoiceTranscript();
   }, [
-    activeStyle,
-    activeFormatSelection,
-    agentModeEnabled,
-    agentModeSurface,
     clearVoiceTranscript,
-    onAgentSend,
-    onSend,
     requiresAgentSelection,
-    selectedModeId,
     selectedSurfaceAgent,
     setInteractionMode,
+    submitMessage,
     voiceModeActive,
     voiceTranscript,
-    webSearchEnabled,
   ]);
   const hasTopInfoBar = Boolean(topInfoBarContent);
   const hasQuestionBar = Boolean(questionBarContent);
@@ -1179,21 +1096,22 @@ export function ChatComposer({
     : selectedWorkspacePreview.source === 'openclaw'
       ? 'OpenClaw workspace linked'
     : 'Workspace profile will compile on first use';
+  const availableBots = useMemo(() => agents.filter((a) => a.isBot === true), [agents]);
   const agentHelperText = !requiresAgentSelection
     ? null
       : selectedSurfaceAgent
-        ? `${selectedSurfaceAgent.name} active. ${agentWorkspaceSummary}.`
-        : isLoadingAgents && agents.length === 0
-          ? 'Loading agents...'
-          : agents.length > 0
-            ? 'Choose an agent before sending so this surface can bind to a real agent workspace.'
+        ? `${getBotDisplayName(selectedSurfaceAgent)} active. ${agentWorkspaceSummary}.`
+        : isLoadingAgents && availableBots.length === 0
+          ? 'Loading bots...'
+          : availableBots.length > 0
+            ? 'Choose a bot before sending so this surface can bind to a real bot workspace.'
             : openClawCandidates.length > 0
               ? openClawCandidates.length === 1 && openClawCandidates[0]?.display_name
                 ? `Found "${openClawCandidates[0].display_name}" OpenClaw agent. Import to continue.`
                 : `Detected ${openClawCandidates.length} OpenClaw agent${openClawCandidates.length === 1 ? '' : 's'} on this machine. Import one to continue.`
               : agentError === 'API_OFFLINE'
-                ? 'Agent registry is offline. Turn Agent Off or bring the gateway back to choose an agent.'
-                : 'No agents are available yet. Create one in Agent Studio first.';
+                ? 'Bot registry is offline. Turn Bot Off or bring the gateway back to choose a bot.'
+                : 'No bots are available yet. Create one in Agent Studio and package it as a bot.';
 
   const closeOpenClawPrompt = useCallback(() => {
     setShowOpenClawImportDialog(false);
@@ -1267,30 +1185,9 @@ export function ChatComposer({
     setSelectedSurfaceAgent,
   ]);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!canSubmit) return;
-
-    const stylePrefix = activeStyle
-      ? { formal: 'Respond in a formal, professional tone. ', creative: 'Respond in a creative, imaginative style. ', technical: 'Respond in a precise, technical manner. ' }[activeStyle]
-      : '';
-    const webSearchPrefix = webSearchEnabled ? '[web_search_enabled] ' : '';
-    const baseInput = `${webSearchPrefix}${stylePrefix}${input}`.trim();
-    const enrichedInput = enrichCreationPrompt(baseInput, selectedModeId, activeFormatSelection);
-
-    if (selectedModeId === 'computer-use') {
-      useBrowserAgentStore.getState().runAcuTask(enrichedInput);
-    }
-
-    if (selectedModeId === 'swarms' && selectedSwarmSubMode === 'population-simulation') {
-      // MiroFish's single entry point is this composer: the prompt goes to
-      // the results-only panel below, which interprets and runs it — never
-      // through the normal agent-mode send.
-      useMiroFishRunStore.getState().requestRun(enrichedInput);
-    } else if (onAgentSend && agentModeSurface && (agentModeEnabled || isCanonicalAgentMode(selectedModeId))) {
-      onAgentSend(enrichedInput, selectedModeId ? { modeId: selectedModeId as CanonicalAgentModeId, templateTitle: selectedTemplateTitle } : undefined);
-    } else {
-      onSend(enrichedInput);
-    }
+    await submitMessage(input);
 
     setInput('');
     setActiveCategory(null);
@@ -1358,7 +1255,6 @@ export function ChatComposer({
     } finally {
       setGithubLoading(false);
       setGithubUrl('');
-      setShowGitHubInput(false);
       setShowPlusMenu(false);
     }
   }, [githubUrl, addAttachment]);
@@ -1516,27 +1412,42 @@ export function ChatComposer({
     }
   };
 
-  const handleBrowseAllModels = useCallback(() => {
-    setShowModelMenu(false);
-    onOpenModelPicker?.();
-  }, [onOpenModelPicker]);
+  const selectedModelData = useMemo(() => {
+    return availableModels.find((m) => m.id === selectedModel);
+  }, [availableModels, selectedModel]);
 
-  const displayModelName = selectedModelDisplayName || (modelsMap.get(selectedModel)?.name || allModels[0]?.name || "Select Model");
-  
+  const displayModelName = selectedModelDisplayName || selectedModelData?.name || availableModels[0]?.name || "Select Model";
+
   const selectedProviderMeta = useMemo(() => {
     if (!selectedModel) return getProviderMeta('allternit');
-    
-    const model = modelsMap.get(selectedModel);
-    if (model && 'providerId' in model) {
-      const providerId = (model as any).providerId || (model as any).provider;
+
+    if (selectedModelData) {
+      const providerId = selectedModelData.providerId || selectedModelData.provider;
       if (providerId) return getProviderMeta(providerId);
     }
-    
+
     const parts = selectedModel.split('/');
     if (parts.length > 1) return getProviderMeta(parts[0]);
-    
+
     return getProviderMeta('allternit');
-  }, [selectedModel, modelsMap]);
+  }, [selectedModel, selectedModelData]);
+
+  // Real provider logo from the registry. When the registry has no icon — or
+  // the file fails to load — the pill renders no image at all (no fallback
+  // box) and keeps the real provider name as text. Failure is tracked per
+  // logo src so switching providers resets it.
+  const [failedProviderLogo, setFailedProviderLogo] = useState<string | null>(null);
+  const providerLogoSrc = selectedProviderMeta.icon
+    ? `/assets/runtime-logos/${selectedProviderMeta.icon}`
+    : null;
+  const showProviderLogo = providerLogoSrc !== null && failedProviderLogo !== providerLogoSrc;
+
+  const modelPillLabel = useMemo(() => {
+    if (displayModelName.toLowerCase().startsWith(selectedProviderMeta.name.toLowerCase())) {
+      return displayModelName;
+    }
+    return `${selectedProviderMeta.name} · ${displayModelName}`;
+  }, [displayModelName, selectedProviderMeta]);
   
   const setTrackingAttention = useCallback((x: number, y: number, state: GizziAttention['state'] = 'tracking') => {
     onAttentionChange?.({
@@ -1665,24 +1576,14 @@ export function ChatComposer({
                 onInteractionSignal?.(CATEGORY_EMOTIONS[cat.id]?.select ?? 'focused');
               }}
               className={cn(
-                'flex items-center gap-1.5 py-1.5 px-3.5 rounded-lg text-sm transition-all',
+                'flex items-center gap-1.5 py-1.5 px-3.5 rounded-lg text-sm border backdrop-blur-md transition-all',
                 activeCategory === cat.id
-                  ? 'bg-chat-mode-pill-active-bg border-accent-chat/30 text-chat-mode-pill-active-fg font-semibold'
-                  : 'bg-chat-mode-pill-bg border-input-border text-chat-mode-pill-fg font-medium'
+                  ? 'bg-[var(--accent-chat)]/15 border-[var(--accent-chat)]/30 text-[var(--text-primary)] font-semibold'
+                  : 'bg-[var(--surface-panel)]/30 border-[var(--border-subtle)]/40 text-[var(--text-primary)] font-medium hover:bg-[var(--surface-panel)]/50'
               )}
-              onMouseEnter={(e) => {
+              onMouseEnter={() => {
                 onInteractionSignal?.(CATEGORY_EMOTIONS[cat.id]?.hover ?? 'curious');
                 setTrackingAttention((index - (ACTION_CATEGORIES.length - 1) / 2) * 0.24, 0.18, 'locked-on');
-                if (activeCategory !== cat.id) {
-                  e.currentTarget.style.background = THEME.hoverBg;
-                  e.currentTarget.style.color = THEME.textPrimary;
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (activeCategory !== cat.id) {
-                  e.currentTarget.style.background = 'var(--chat-mode-pill-bg)';
-                  e.currentTarget.style.color = 'var(--chat-mode-pill-fg)';
-                }
               }}
             >
               {cat.icon}
@@ -1751,6 +1652,7 @@ export function ChatComposer({
             pulse={agentModePulse}
             surface={agentModeSurface || 'chat'}
             selectedAgentName={selectedSurfaceAgent?.name ?? null}
+            selectedAgent={selectedSurfaceAgent}
             theme={agentModeTheme}
             hasActionPills={showTopActions}
           />
@@ -1759,11 +1661,13 @@ export function ChatComposer({
         <div
           className={cn(
             'w-full rounded-2xl flex flex-col overflow-visible transition-shadow z-10 relative',
-            useGlassComposer
-              ? 'bg-composer-glass-bg border border-composer-glass-border backdrop-blur-xl backdrop-saturate-150 shadow-xl'
-              : 'bg-input-bg border border-input-border',
+            hudMode
+              ? 'bg-[rgba(23,33,64,0.85)] border border-white/10 backdrop-blur-xl shadow-xl'
+              : useGlassComposer
+                ? 'bg-composer-glass-bg border border-composer-glass-border backdrop-blur-xl backdrop-saturate-150 shadow-xl'
+                : 'bg-input-bg border border-input-border',
             agentModeEnabled && 'border-glow shadow-glow',
-            composerFocused && !agentModeEnabled && 'shadow-glow-accent'
+            composerFocused && !agentModeEnabled && !hudMode && 'shadow-glow-accent'
           )}
           onFocusCapture={() => setComposerFocused(true)}
           onBlurCapture={(event) => {
@@ -1918,10 +1822,13 @@ export function ChatComposer({
               <div className="flex items-center gap-2 py-2 px-3">
                 <AttachmentButton
                   onClick={() => fileInputRef.current?.click()}
-                  className="size-7 transition-colors bg-transparent shadow-none border-none text-composer-muted hover:text-primary"
+                  className={cn(
+                    'rounded-full border border-[var(--border-subtle)] bg-[var(--surface-panel)]/40 backdrop-blur-md text-[var(--text-primary)] transition-all hover:scale-105 hover:brightness-110 hover:bg-[var(--surface-panel)]/70',
+                    isMobile ? 'size-11' : 'size-8'
+                  )}
                   icon={
                     <Plus
-                      size={18}
+                      size={isMobile ? 22 : 20}
                       strokeWidth={2.5}
                       className="transition-transform"
                     />
@@ -1977,75 +1884,92 @@ export function ChatComposer({
                   >
                     <Waveform size={17} weight="bold" />
                   </button>
+                  {hudMode && (
+                    <button
+                      type="button"
+                      onClick={handleCaptureScreenshot}
+                      aria-label="Capture screenshot"
+                      title="Capture screenshot"
+                      className={cn(
+                        'rounded-full border-none bg-transparent text-composer-muted hover:text-primary hover:bg-composer-soft transition-colors flex items-center justify-center cursor-pointer',
+                        isMobile ? 'size-11' : 'size-7'
+                      )}
+                    >
+                      <Camera size={17} weight="bold" />
+                    </button>
+                  )}
                   <button type="button"
-                    onClick={() => setShowModelMenu(!showModelMenu)}
-                    disabled={terminalModelsLoading && allModels.length === 0}
+                    data-testid="model-picker-trigger"
+                    onClick={() => startModelSelection()}
+                    disabled={modelsLoading && availableModels.length === 0}
                     className={cn(
                       'flex items-center gap-1 px-2 rounded-full text-xs font-medium transition-all',
                       isMobile ? 'py-3.5' : 'py-1'
                     )}
                     style={{
-                      background: showModelMenu ? THEME.hoverBg : 'transparent',
-                      color: terminalModelsLoading && allModels.length === 0 ? THEME.textMuted : THEME.textSecondary,
-                      cursor: terminalModelsLoading && allModels.length === 0 ? 'wait' : 'pointer',
-                      opacity: terminalModelsLoading && allModels.length === 0 ? 0.7 : 1,
+                      background: isModelSelecting ? THEME.hoverBg : 'transparent',
+                      color: modelsLoading && availableModels.length === 0 ? THEME.textMuted : THEME.textSecondary,
+                      cursor: modelsLoading && availableModels.length === 0 ? 'wait' : 'pointer',
+                      opacity: modelsLoading && availableModels.length === 0 ? 0.7 : 1,
                     }}
                     onMouseEnter={(e) => {
-                      if (!(terminalModelsLoading && allModels.length === 0)) {
+                      if (!(modelsLoading && availableModels.length === 0)) {
                         e.currentTarget.style.color = THEME.textPrimary;
                         onInteractionSignal?.('curious');
                         setTrackingAttention(0.4, 0.56, 'locked-on');
                       }
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.color = showModelMenu ? THEME.textPrimary : THEME.textSecondary;
+                      e.currentTarget.style.color = isModelSelecting ? THEME.textPrimary : THEME.textSecondary;
                       setTrackingAttention(0, 0.44);
                     }}
                   >
-                    {terminalModelsLoading && allModels.length === 0 ? (
+                    {modelsLoading && availableModels.length === 0 ? (
                       <span className="flex items-center gap-1.5">
                         <span className="size-3 border-2 border-muted border-t-transparent rounded-full animate-spin" />
                       </span>
                     ) : (
                       <>
-                        <div
-                          className="size-4 rounded-md flex items-center justify-center flex-shrink-0 overflow-hidden"
-                          style={{
-                            background: `${selectedProviderMeta.color}18`,
-                            border: `1px solid ${selectedProviderMeta.color}40`,
-                          }}
-                        >
-                          <img
-                            src={`/assets/runtime-logos/${selectedProviderMeta.icon}`}
-                            alt={selectedProviderMeta.name}
-                            className="w-3 h-3 object-contain"
-                          />
-                        </div>
-                        <span className="font-medium hidden sm:inline">{displayModelName}</span>
+                        {showProviderLogo && providerLogoSrc ? (
+                          <div
+                            className="size-4 rounded-md flex items-center justify-center flex-shrink-0 overflow-hidden"
+                            style={{
+                              background: `${selectedProviderMeta.color}18`,
+                              border: `1px solid ${selectedProviderMeta.color}40`,
+                            }}
+                          >
+                            <img
+                              src={providerLogoSrc}
+                              alt=""
+                              className="w-3 h-3 object-contain"
+                              onError={() => setFailedProviderLogo(providerLogoSrc)}
+                            />
+                          </div>
+                        ) : null}
+                        <span className="font-medium hidden sm:inline">{modelPillLabel}</span>
                       </>
                     )}
-                    <CaretDown size={11} className={cn('transition-transform opacity-80', showModelMenu && 'rotate-180')} />
+                    <CaretDown size={11} className={cn('transition-transform opacity-80', isModelSelecting && 'rotate-180')} />
                   </button>
-
-                  {showModelMenu && (
-                    <PromptModelSelector
-                      models={allModels}
-                      selectedModel={selectedModel}
-                      onSelect={handleModelSelect}
-                      onClose={() => setShowModelMenu(false)}
-                      onBrowseAllModels={handleBrowseAllModels}
-                      onOpenProviderConnect={() => setShowProviderConnect(true)}
-                      isTerminalModels={terminalModels.length > 0}
-                      triggerless
-                    />
-                  )}
 
                   <ProviderGallery
                     isOpen={showProviderConnect}
                     onClose={() => setShowProviderConnect(false)}
                   />
 
-                  {isLoading ? (
+                  {isHandingOff ? (
+                    <button
+                      disabled
+                      type="button"
+                      className={cn(
+                        'rounded-full bg-composer-soft border border-input-border text-accent flex items-center justify-center transition-all',
+                        isMobile ? 'size-11' : 'size-7'
+                      )}
+                      title="Routing @mentions..."
+                    >
+                      <CircleNotch size={14} className="animate-spin" />
+                    </button>
+                  ) : isLoading ? (
                     <button
                       onClick={onStop}
                       type="button"
@@ -2245,19 +2169,17 @@ export function ChatComposer({
           {!compact && (<div className={cn('flex items-center justify-between', isMobile ? 'p-2' : 'p-3')}>
             <div className="flex items-center gap-1 relative">
               <AttachmentButton
-                onClick={() => { setShowPlusMenu(!showPlusMenu); setActiveSubMenu(null); }}
+                onClick={() => { setShowPlusMenu(!showPlusMenu); }}
                 className={cn(
-                  'transition-colors bg-transparent shadow-none border-none',
-                  isMobile ? 'size-11' : 'size-8'
+                  'rounded-full border border-[var(--border-subtle)] bg-[var(--surface-panel)]/40 backdrop-blur-md text-[var(--text-primary)] transition-all hover:scale-105 hover:brightness-110 hover:bg-[var(--surface-panel)]/70',
+                  isMobile ? 'size-11' : 'size-8',
+                  showPlusMenu && 'bg-[var(--surface-panel)]/70'
                 )}
                 icon={
                   <Plus
-                    size={20}
+                    size={isMobile ? 22 : 20}
                     strokeWidth={2.5}
-                    className={cn(
-                      'text-composer-muted transition-transform',
-                      showPlusMenu && 'rotate-45'
-                    )}
+                    className={cn('transition-transform duration-200', showPlusMenu && 'rotate-45')}
                   />
                 }
                 onMouseEnter={() => {
@@ -2281,6 +2203,8 @@ export function ChatComposer({
                 onToggleAgentMode={handleToggleAgentMode}
                 customLeftContent={bottomDockContent}
                 showModeToggle={showModeToggle}
+                sessionLocked={showModeToggle === false}
+                onOpenModeMenu={() => setShowModeSelectorMenu(true)}
                 agents={agents}
                 isLoadingAgents={isLoadingAgents}
                 selectedSurfaceAgentId={selectedSurfaceAgentId}
@@ -2290,187 +2214,122 @@ export function ChatComposer({
                 onOpenImportWizard={() => setShowOpenClawImportDialog(true)}
                 onSelectAgent={(agent) => {
                   if (agentModeSurface) setSelectedSurfaceAgent(agentModeSurface, agent.id);
+                  // Selecting a bot from the home-view picker mounts a real bot
+                  // session in the rail rather than just changing the surface agent.
+                  if (agent.isBot && onStartBotSession) {
+                    onStartBotSession(agent);
+                  }
                 }}
                 onClearAgent={() => {
                   if (agentModeSurface) setSelectedSurfaceAgent(agentModeSurface, null);
                 }}
               />
 
-              {showPlusMenu && (
+              {showModeSelectorMenu && agentModeSurface && (
                 <div
-                  className="absolute bottom-[calc(100%+12px)] left-0 w-60 bg-menu-bg backdrop-blur-[20px] rounded-xl border border-menu-border shadow-xl p-1.5 z-200"
-                  onMouseEnter={() => setTrackingAttention(-0.48, 0.5, 'locked-on')}
+                  className="absolute bottom-[calc(100%+12px)] left-4 mb-2 w-[340px] p-3 bg-menu-bg backdrop-blur-[20px] rounded-2xl border border-menu-border shadow-xl z-200"
+                  onMouseEnter={() => setTrackingAttention(-0.4, 0.5, 'locked-on')}
                   onMouseLeave={() => {
-                    if (!activeSubMenu) setShowPlusMenu(false);
+                    setShowModeSelectorMenu(false);
                     setTrackingAttention(0, 0.44);
                   }}
                 >
-                  {isBrowserSurface && (
-                    <>
-                      <button
-                        type="button"
-                        onClick={handleCaptureScreenshot}
-                        className="w-full flex items-center gap-2.5 py-2 px-3 rounded-lg bg-transparent border-none text-primary text-sm cursor-pointer transition-colors hover:bg-hover"
-                      >
-                        <span className="text-secondary"><Camera size={16} /></span>
-                        <span>Take a screenshot</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleToggleGifRecording}
-                        className={cn(
-                          'w-full flex items-center gap-2.5 py-2 px-3 rounded-lg border-none text-sm cursor-pointer transition-colors',
-                          isGifRecording ? 'bg-status-error-bg text-status-error hover:bg-status-error/18' : 'bg-transparent text-primary hover:bg-hover'
-                        )}
-                      >
-                        <span className={cn(isGifRecording ? 'text-status-error' : 'text-secondary')}>
-                          {isGifRecording ? <Square size={16} fill="currentColor" /> : <Video size={16} />}
-                        </span>
-                        <span>{isGifRecording ? `Stop recording (${gifDuration}s)` : 'Record screen (GIF)'}</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => { fileInputRef.current?.click(); setShowPlusMenu(false); }}
-                        className="w-full flex items-center gap-2.5 py-2 px-3 rounded-lg bg-transparent border-none text-primary text-sm cursor-pointer transition-colors hover:bg-hover"
-                      >
-                        <span className="text-secondary"><ImageIcon size={16} /></span>
-                        <span>Add an image</span>
-                      </button>
-                      <div className="h-px bg-menu-border my-1 mx-2" />
-                    </>
-                  )}
-                  {showGitHubInput && (
-                    <div className="p-2">
-                      <div className="flex items-center gap-1.5 bg-hover rounded-lg p-2 border border-menu-border">
-                        <LinkIcon size={13} className="text-secondary flex-shrink-0" />
-                        <input aria-label="GitHub file URL" autoFocus
-                          value={githubUrl}
-                          onChange={(e) => setGithubUrl(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === 'Enter') handleGitHubFetch(); if (e.key === 'Escape') { setShowGitHubInput(false); setGithubUrl(''); } }}
-                          placeholder="github.com/user/repo/blob/main/file"
-                          className="flex-1 bg-transparent border-none outline-none text-xs text-primary"
-                        />
-                        {githubLoading
-                          ? <CircleNotch size={13} className="text-secondary animate-spin" />
-                          : <button type="button" onClick={handleGitHubFetch} className="bg-transparent border-none cursor-pointer text-accent text-xs font-semibold p-0">Add</button>
-                        }
-                      </div>
+                  <div className="mb-2">
+                    <div className="text-xs font-extrabold text-muted tracking-wider uppercase">
+                      Bot mode
                     </div>
-                  )}
-                  <div className="py-0.5 px-2 text-xs font-semibold text-muted tracking-widest uppercase">Attach</div>
-                  {PLUS_MENU_ITEMS.filter(i => ['files', 'github'].includes(i.id)).map((item) => (
-                    <div key={item.id} className="relative">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (item.id === 'files') { fileInputRef.current?.click(); setShowPlusMenu(false); }
-                          if (item.id === 'github') { setShowGitHubInput((v) => !v); setActiveSubMenu(null); }
-                        }}
-                        onMouseEnter={() => { setActiveSubMenu(null); setTrackingAttention(-0.48, 0.5, 'locked-on'); }}
-                        className={cn(
-                          'w-full flex items-center gap-2.5 py-2 px-3 rounded-lg border-none text-primary text-sm cursor-pointer transition-colors',
-                          item.id === 'github' && showGitHubInput ? 'bg-hover' : 'bg-transparent'
-                        )}
-                      >
-                        <span className="text-secondary">{item.icon}</span>
-                        <span className="flex-1 text-left">{item.label}</span>
-                      </button>
-                    </div>
-                  ))}
-                  <div className="h-px bg-menu-border my-1 mx-2" />
-                  <div className="py-0.5 px-2 text-xs font-semibold text-muted tracking-widest uppercase">Context</div>
-                  {PLUS_MENU_ITEMS.filter(i => ['project', 'web'].includes(i.id)).map((item) => (
-                    <div key={item.id} className="relative">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (item.id === 'web') { setWebSearchEnabled((v) => !v); setShowPlusMenu(false); }
-                        }}
-                        onMouseEnter={() => {
-                          if (item.hasSubmenu) setActiveSubMenu(item.id); else setActiveSubMenu(null);
-                          setTrackingAttention(-0.48, 0.5, 'locked-on');
-                        }}
-                        className={cn(
-                          'w-full flex items-center gap-2.5 py-2 px-3 rounded-lg border-none text-sm cursor-pointer transition-colors',
-                          (item.id === 'web' && webSearchEnabled) ? 'bg-accent/12 text-accent' : activeSubMenu === item.id ? 'bg-hover text-primary' : 'bg-transparent text-primary'
-                        )}
-                      >
-                        <span className={cn((item.id === 'web' && webSearchEnabled) ? 'text-accent' : 'text-secondary')}>{item.icon}</span>
-                        <span className="flex-1 text-left">{item.label}</span>
-                        {item.hasSubmenu && <CaretRight size={14} className="opacity-50" />}
-                        {item.id === 'web' && webSearchEnabled && <Check size={14} className="text-accent" />}
-                      </button>
-                      {activeSubMenu === item.id && item.submenuItems && (
-                        <div
-                          className="absolute left-[calc(100%+10px)] bottom-0 w-52 bg-menu-bg backdrop-blur-[20px] rounded-xl border border-menu-border shadow-xl p-1.5 z-210"
-                          onMouseEnter={() => setTrackingAttention(-0.26, 0.46, 'locked-on')}
-                          onMouseLeave={() => setTrackingAttention(-0.48, 0.5, 'locked-on')}
+                  </div>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {MODE_TABS.filter((mode) => {
+                      const allowed = agentModeSurface ? SURFACE_MODES[agentModeSurface] : MODE_TABS.map((m) => m.id);
+                      return allowed.includes(mode.id);
+                    }).map((mode) => {
+                      const isSelected = selectedModeId === mode.id;
+                      const ModeIcon = mode.icon;
+                      return (
+                        <button
+                          type="button"
+                          key={mode.id}
+                          onClick={() => {
+                            if (agentModeSurface) {
+                              setSelectedMode(agentModeSurface, mode.id as AgentModeId);
+                              setSelectedTemplateTitle(undefined);
+                            }
+                            setShowModeSelectorMenu(false);
+                          }}
+                          className={cn(
+                            'group relative flex flex-col items-center gap-1 p-1.5 rounded-xl text-center transition-all',
+                            isSelected ? 'bg-composer-hover' : 'hover:bg-hover'
+                          )}
+                          style={isSelected ? { boxShadow: `inset 0 0 0 1.5px ${mode.color}50` } : undefined}
                         >
-                          {item.submenuItems.map((sub) => (
-                            <button
-                              key={sub.id}
-                              type="button"
-                              onClick={() => { if (item.id === 'project' && sub.id === 'new-project') { import('@/views/chat/ChatStore').then(m => m.useChatStore.getState().createProject('New Project')); setShowPlusMenu(false); } }}
-                              className="w-full flex items-center gap-2 py-2 px-3 rounded-lg bg-transparent border-none text-primary text-sm cursor-pointer hover:bg-hover"
-                              onMouseEnter={() => setTrackingAttention(-0.24, 0.46, 'locked-on')}
+                          <div
+                            className="flex items-center justify-center size-9 rounded-lg transition-transform group-hover:scale-105"
+                            style={{ background: `${mode.color}18`, color: mode.color }}
+                          >
+                            <ModeIcon size={16} weight={isSelected ? 'fill' : 'bold'} />
+                          </div>
+                          <span
+                            className={cn(
+                              'text-[10px] leading-tight',
+                              isSelected ? 'font-bold text-primary' : 'font-medium text-secondary'
+                            )}
+                          >
+                            {mode.label}
+                          </span>
+                          {isSelected && (
+                            <div
+                              className="absolute top-1 right-1 size-3 rounded-full flex items-center justify-center"
+                              style={{ background: mode.color }}
                             >
-                              {sub.icon && <span className="text-secondary">{sub.icon}</span>}
-                              <span>{sub.label}</span>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                  <div className="h-px bg-menu-border my-1 mx-2" />
-                  <div className="py-0.5 px-2 text-xs font-semibold text-muted tracking-widest uppercase">Style</div>
-                  {PLUS_MENU_ITEMS.filter(i => ['style', 'connectors'].includes(i.id)).map((item) => (
-                    <div key={item.id} className="relative">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (item.id === 'connectors') { setShowProviderConnect(true); setShowPlusMenu(false); }
-                        }}
-                        onMouseEnter={() => {
-                          if (item.hasSubmenu) setActiveSubMenu(item.id); else setActiveSubMenu(null);
-                          setTrackingAttention(-0.48, 0.5, 'locked-on');
-                        }}
-                        className={cn(
-                          'w-full flex items-center gap-2.5 py-2 px-3 rounded-lg border-none text-sm cursor-pointer transition-colors',
-                          (item.id === 'style' && activeStyle) ? 'bg-accent/12 text-accent' : activeSubMenu === item.id ? 'bg-hover text-primary' : 'bg-transparent text-primary'
-                        )}
-                      >
-                        <span className={cn((item.id === 'style' && activeStyle) ? 'text-accent' : 'text-secondary')}>{item.icon}</span>
-                        <span className="flex-1 text-left">{item.id === 'style' && activeStyle ? `Style: ${activeStyle.charAt(0).toUpperCase() + activeStyle.slice(1)}` : item.label}</span>
-                        {item.hasSubmenu && <CaretRight size={14} className="opacity-50" />}
-                        {item.id === 'style' && activeStyle && <Check size={14} className="text-accent" />}
-                      </button>
-                      {activeSubMenu === item.id && item.submenuItems && (
-                        <div
-                          className="absolute left-[calc(100%+10px)] bottom-0 w-52 bg-menu-bg backdrop-blur-[20px] rounded-xl border border-menu-border shadow-xl p-1.5 z-210"
-                          onMouseEnter={() => setTrackingAttention(-0.26, 0.46, 'locked-on')}
-                          onMouseLeave={() => setTrackingAttention(-0.48, 0.5, 'locked-on')}
-                        >
-                          {item.submenuItems.map((sub) => (
-                            <button
-                              key={sub.id}
-                              type="button"
-                              onClick={() => { if (item.id === 'style') { setActiveStyle(activeStyle === sub.id ? null : sub.id as 'formal' | 'creative' | 'technical'); setShowPlusMenu(false); } }}
-                              className={cn(
-                                'w-full flex items-center gap-2 py-2 px-3 rounded-lg border-none text-sm cursor-pointer',
-                                activeStyle === sub.id ? 'bg-accent/12 text-accent' : 'bg-transparent text-primary hover:bg-hover'
-                              )}
-                            >
-                              {activeStyle === sub.id && <Check size={12} className="text-accent" />}
-                              <span>{sub.label}</span>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                              <Check size={7} weight="bold" className="text-white" />
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
+
+              <ComposerPlusSheet
+                open={showPlusMenu}
+                onClose={() => { setShowPlusMenu(false); }}
+                isBrowserSurface={isBrowserSurface}
+                onFilesClick={() => { fileInputRef.current?.click(); }}
+                onCameraClick={() => { fileInputRef.current?.click(); }}
+                onScreenshotClick={handleCaptureScreenshot}
+                onGifClick={handleToggleGifRecording}
+                isGifRecording={isGifRecording}
+                gifDuration={gifDuration}
+                githubUrl={githubUrl}
+                setGithubUrl={setGithubUrl}
+                githubLoading={githubLoading}
+                onGitHubFetch={handleGitHubFetch}
+                webSearchEnabled={webSearchEnabled}
+                setWebSearchEnabled={setWebSearchEnabled}
+                researchEnabled={researchEnabled}
+                setResearchEnabled={setResearchEnabled}
+                activeStyle={activeStyle}
+                setActiveStyle={setActiveStyle}
+                toolAccess={toolAccess}
+                setToolAccess={setToolAccess}
+                projects={chatProjects.map((p) => ({ id: p.id, title: p.title }))}
+                activeProjectId={chatActiveProjectId}
+                setActiveProjectId={(id) => chatSetActiveProject(id)}
+                onCreateProject={() => { void chatCreateProject('New Project'); }}
+                onOpenConnectors={() => setShowConnectorMarketplace(true)}
+                onOpenFormSurfaces={() => window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType: 'form-surfaces' } }))}
+                onOpenBrainCapture={() => window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType: 'brain' } }))}
+                onOpenCoworkTasks={() => window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType: 'cowork-tasks' } }))}
+                onOpenAgentActivity={() => window.dispatchEvent(new CustomEvent('allternit:open-agent-activity'))}
+                onOpenPermissions={() => window.dispatchEvent(new CustomEvent('allternit:open-settings', { detail: { section: 'permissions' } }))}
+              />
+
+              <ConnectorMarketplaceDialog
+                open={showConnectorMarketplace}
+                onClose={() => setShowConnectorMarketplace(false)}
+              />
             </div>
 
             <div className="flex items-center gap-1 flex-1 pl-1 overflow-hidden">
@@ -2504,68 +2363,59 @@ export function ChatComposer({
                 <Waveform size={17} weight="bold" />
               </button>
               <button type="button"
-                onClick={() => setShowModelMenu(!showModelMenu)}
-                disabled={terminalModelsLoading && allModels.length === 0}
+                data-testid="model-picker-trigger"
+                onClick={() => startModelSelection()}
+                disabled={modelsLoading && availableModels.length === 0}
                 className={cn(
                   'flex items-center gap-1 px-2.5 rounded-full text-sm font-medium transition-all',
                   isMobile ? 'py-3' : 'py-1'
                 )}
                 style={{
-                  background: showModelMenu ? THEME.hoverBg : 'transparent',
-                  color: terminalModelsLoading && allModels.length === 0 ? THEME.textMuted : THEME.textSecondary,
-                  cursor: terminalModelsLoading && allModels.length === 0 ? 'wait' : 'pointer',
-                  opacity: terminalModelsLoading && allModels.length === 0 ? 0.7 : 1,
+                  background: isModelSelecting ? THEME.hoverBg : 'transparent',
+                  color: modelsLoading && availableModels.length === 0 ? THEME.textMuted : THEME.textSecondary,
+                  cursor: modelsLoading && availableModels.length === 0 ? 'wait' : 'pointer',
+                  opacity: modelsLoading && availableModels.length === 0 ? 0.7 : 1,
                 }}
                 onMouseEnter={(e) => {
-                  if (!(terminalModelsLoading && allModels.length === 0)) {
+                  if (!(modelsLoading && availableModels.length === 0)) {
                     e.currentTarget.style.color = THEME.textPrimary;
                     onInteractionSignal?.('curious');
                     setTrackingAttention(0.4, 0.56, 'locked-on');
                   }
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.color = showModelMenu ? THEME.textPrimary : THEME.textSecondary;
+                  e.currentTarget.style.color = isModelSelecting ? THEME.textPrimary : THEME.textSecondary;
                   setTrackingAttention(0, 0.44);
                 }}
               >
-                {terminalModelsLoading && allModels.length === 0 ? (
+                {modelsLoading && availableModels.length === 0 ? (
                   <span className="flex items-center gap-1.5">
                     <span className="size-3 border-2 border-muted border-t-transparent rounded-full animate-spin" />
                     Loading...
                   </span>
                 ) : (
                   <>
-                    <div
-                      className="size-5 rounded-md flex items-center justify-center flex-shrink-0 overflow-hidden"
-                      style={{
-                        background: `${selectedProviderMeta.color}18`,
-                        border: `1px solid ${selectedProviderMeta.color}40`,
-                      }}
-                    >
-                      <img
-                        src={`/assets/runtime-logos/${selectedProviderMeta.icon}`}
-                        alt={selectedProviderMeta.name}
-                        className="w-3.5 h-3.5 object-contain"
-                      />
-                    </div>
-                    <span className="font-medium">{displayModelName}</span>
+                    {showProviderLogo && providerLogoSrc ? (
+                      <div
+                        className="size-5 rounded-md flex items-center justify-center flex-shrink-0 overflow-hidden"
+                        style={{
+                          background: `${selectedProviderMeta.color}18`,
+                          border: `1px solid ${selectedProviderMeta.color}40`,
+                        }}
+                      >
+                        <img
+                          src={providerLogoSrc}
+                          alt=""
+                          className="w-3.5 h-3.5 object-contain"
+                          onError={() => setFailedProviderLogo(providerLogoSrc)}
+                        />
+                      </div>
+                    ) : null}
+                    <span className="font-medium">{modelPillLabel}</span>
                   </>
                 )}
-                <CaretDown size={12} className={cn('transition-transform opacity-80', showModelMenu && 'rotate-180')} />
+                <CaretDown size={12} className={cn('transition-transform opacity-80', isModelSelecting && 'rotate-180')} />
               </button>
-
-              {showModelMenu && (
-                <PromptModelSelector
-                  models={allModels}
-                  selectedModel={selectedModel}
-                  onSelect={handleModelSelect}
-                  onClose={() => setShowModelMenu(false)}
-                  onBrowseAllModels={handleBrowseAllModels}
-                  onOpenProviderConnect={() => setShowProviderConnect(true)}
-                  isTerminalModels={terminalModels.length > 0}
-                  triggerless
-                />
-              )}
 
               <ProviderGallery
                 isOpen={showProviderConnect}
@@ -2634,10 +2484,23 @@ export function ChatComposer({
         </div>
       </div>
 
+      {!isExternalModelSelection && (
+        <ModelPicker
+          open={isModelSelecting}
+          onOpenChange={(open) => {
+            if (!open) cancelModelSelection();
+          }}
+          onSelect={selectModel}
+          onCancel={cancelModelSelection}
+          onOpenProviderConnect={() => setShowProviderConnect(true)}
+          onOpenModelLab={() => useNav.getState().dispatch({ type: 'OPEN_VIEW', viewType: 'model-lab' })}
+        />
+      )}
+
       {/* Agent-mode bottom deck — tray tucked behind the card's bottom
           edge (z-0 under the composer card's z-10), sliding down from behind
           with the same deck-rise/fall motion as the top deck. */}
-      {agentModeSurface && agentModeEnabled && !voiceModeActive && (
+      {agentModeSurface && agentModeEnabled && selectedSurfaceAgent && !voiceModeActive && (
         <div className="w-full max-w-[600px] lg:max-w-[760px] flex flex-col items-center">
           <div className="relative z-0 w-full h-[60px] -mt-3 box-border bg-input-bg border-b border-r border-l border-input-border rounded-b-2xl px-4 pt-4 flex items-start gap-3 animate-deck-fall">
             <ModeDock
@@ -2703,6 +2566,7 @@ export function ChatComposer({
           onHoverIndex={setMentionIndex}
           pluginTargets={filteredPluginTargets}
           onSelectPluginTarget={handleSelectPluginMention}
+          activeAgentId={selectedSurfaceAgent?.id}
           onClose={() => {
             setMentionOpen(false);
             setMentionQuery('');

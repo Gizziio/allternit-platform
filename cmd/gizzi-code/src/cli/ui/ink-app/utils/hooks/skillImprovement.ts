@@ -17,9 +17,9 @@ import { toError } from '../errors.js'
 import { logError } from '../log.js'
 import {
   createUserMessage,
-  extractTag,
   extractTextContent,
 } from '../messages.js'
+import { extractTag } from '../extractTag.js'
 import { getSmallFastModel } from '../model/model.js'
 import { jsonParse } from '../slowOperations.js'
 import { asSystemPrompt } from '../systemPromptType.js'

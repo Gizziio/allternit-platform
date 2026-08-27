@@ -151,7 +151,7 @@ export class AllternitBedrock {
     const response = await fetch(request);
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Unknown error' }));
+      const error = await response.json().catch(() => ({ message: 'Unknown error' })) as { message?: string };
       throw new HarnessError(
         error.message || `Bedrock error: ${response.status}`,
         HarnessErrorCode.PROVIDER_ERROR,
@@ -194,7 +194,7 @@ export class AllternitBedrock {
     const response = await fetch(request);
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Unknown error' }));
+      const error = await response.json().catch(() => ({ message: 'Unknown error' })) as { message?: string };
       throw new HarnessError(
         error.message || `Bedrock error: ${response.status}`,
         HarnessErrorCode.PROVIDER_ERROR,

@@ -29,6 +29,10 @@ const HEALTH_TIMEOUT_MS = 30_000;
 export interface GizziStartConfig {
   /** Credential persisted by the installed always-on daemon, when present. */
   existingPassword?: string | null;
+  /** Allternit API bearer token gizzi-code should use for outbound platform
+   * API calls (e.g. brain provisioning). In the desktop shell this is the
+   * paired runtime-device token; the renderer never sees it. */
+  apiToken?: string | null;
   /** Extra env vars merged into the spawned process, e.g. connector sidecar
    * tokens from authManager.getConnectorSidecarEnvironment() — gizzi-code
    * hosts the Lens vault MCP server, which needs these to reach the
@@ -103,6 +107,7 @@ export class GizziManager {
       // Point at allternit-api for operator-level routes (vm-session, rails, etc.)
       ALLTERNIT_API_URL: URLS.API,
       NODE_ENV: 'production',
+      ...(config.apiToken ? { ALLTERNIT_API_TOKEN: config.apiToken } : {}),
       ...(config.extraEnv ?? {}),
     };
 

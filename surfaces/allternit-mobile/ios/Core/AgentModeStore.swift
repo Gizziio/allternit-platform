@@ -117,11 +117,26 @@ final class AgentModeStore: ObservableObject {
         defaults.set(enabled, forKey: Keys.enabled(mode))
         if enabled {
             isAgentModeDeckExpanded[mode] = true
+            // Mount the default bot for this surface so the Gizzi mascot
+            // immediately becomes the selected bot's avatar and the composer
+            // is ready to create an agent session.
+            if selectedAgentId(for: mode) == nil,
+               let defaultAgent = defaultAgent(for: mode) {
+                selectAgent(defaultAgent, for: mode)
+            }
         }
     }
 
     func toggleAgent(for mode: AppMode) {
         setAgentEnabled(!isAgentEnabled(for: mode), for: mode)
+    }
+
+    /// The default bot for a surface: the primary agent if it supports the
+    /// surface, otherwise the first visible agent. nil when the registry is
+    /// empty — the backend will bind the session to its own default.
+    func defaultAgent(for mode: AppMode) -> AgentRecord? {
+        let surfaceAgents = agentsForSurface(mode)
+        return surfaceAgents.first { $0.isPrimary } ?? surfaceAgents.first
     }
 
     func isAgentModeDeckExpanded(for mode: AppMode) -> Bool {
@@ -156,8 +171,14 @@ final class AgentModeStore: ObservableObject {
     /// nil clears the selection (the web dropdown's "clear" action — the
     /// backend then binds the session to its default agent).
     func selectAgent(_ agent: AgentRecord?, for mode: AppMode) {
-        agentIdByMode[mode] = agent?.id
-        defaults.set(agent?.id, forKey: Keys.agentId(mode))
+        selectAgentId(agent?.id, for: mode)
+    }
+
+    /// Selects an agent by id alone, used when only the identifier is
+    /// available (e.g. opening a bot's chat session from a deep-link).
+    func selectAgentId(_ agentId: String?, for mode: AppMode) {
+        agentIdByMode[mode] = agentId
+        defaults.set(agentId, forKey: Keys.agentId(mode))
     }
 
     /// Agents selectable on the given surface (BottomDock.tsx:231-234).
@@ -172,6 +193,7 @@ final class AgentModeStore: ObservableObject {
     /// (ModeDock.tsx:63-67).
     func selectedTile(for surface: AppMode) -> AgentModeTile {
         let visible = AgentModeTile.visibleTiles(for: surface)
+        guard !visible.isEmpty else { return .swarms }
         if let tile = tileByMode[surface], visible.contains(tile) {
             return tile
         }

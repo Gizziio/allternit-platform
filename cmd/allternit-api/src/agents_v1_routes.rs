@@ -514,7 +514,7 @@ fn build_deferred_tools(agent: &AgentRow) -> Vec<Value> {
             parse_json_string_array(config.get("mcpServerIds").and_then(|v| v.as_str()))
         });
 
-    deferred_tool_ids
+    let mut tools: Vec<Value> = deferred_tool_ids
         .iter()
         .enumerate()
         .map(|(i, id)| {
@@ -531,7 +531,33 @@ fn build_deferred_tools(agent: &AgentRow) -> Vec<Value> {
                 },
             })
         })
-        .collect()
+        .collect();
+
+    // Built-in platform tools (office-engine markdown conversion) are always
+    // listable/searchable/activatable — they execute on the gateway itself
+    // (`tool_routes::execute_tool_internal`), so they don't need to be
+    // declared in each agent's DB config.
+    for builtin in crate::tool_routes::markdown_builtin_tools() {
+        let id = builtin
+            .get("id")
+            .and_then(|v| v.as_str())
+            .unwrap_or_default();
+        if tools
+            .iter()
+            .any(|t| t.get("id").and_then(|v| v.as_str()) == Some(id))
+        {
+            continue;
+        }
+        tools.push(json!({
+            "id": id,
+            "label": builtin.get("label").cloned().unwrap_or(Value::Null),
+            "serverId": "allternit-api",
+            "description": builtin.get("description").cloned().unwrap_or(Value::Null),
+            "parameters": builtin.get("parameters").cloned().unwrap_or(json!({})),
+        }));
+    }
+
+    tools
 }
 
 // ─── POST /agents/v1/tools/search ─────────────────────────────────────────────

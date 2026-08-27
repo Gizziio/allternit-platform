@@ -89,7 +89,7 @@ impl TerminalAppDriver {
 ```rust
 pub enum ProtocolMode {
     /// Native ACP (Agent Client Protocol) - JSON-RPC over stdio
-    /// Used by: opencode, future versions of claude/gemini/kimi
+    /// Used by: gizzi, future versions of claude/gemini/kimi
     Acp,
     
     /// Headless CLI mode with structured output
@@ -115,7 +115,7 @@ pub struct BrainProtocolDriver {
 **Protocol**: Agent Client Protocol (ACP) - JSON-RPC 2.0 over stdio
 
 **Supported Agents**:
-- OpenCode (`opencode acp`)
+- Gizzi Code (`gizzi acp`)
 - Gemini CLI (via ACP mode)
 - Future: Claude Code, Kimi CLI (when they add native ACP)
 
@@ -123,7 +123,7 @@ pub struct BrainProtocolDriver {
 ```
 ┌─────────────┐     initialize      ┌─────────────┐
 │   Client    │ ──────────────────> │    Agent    │
-│ (Allternit)│ <────────────────── │  (opencode) │
+│ (Allternit)│ <────────────────── │  (gizzi) │
 └─────────────┘   InitializeResponse └─────────────┘
        │
        │ session/new
@@ -209,7 +209,7 @@ impl AcpBrainDriver {
 - Tool use support
 
 **Cons**:
-- Limited agent support today (mostly opencode)
+- Limited agent support today (mostly gizzi)
 - Requires Rust ACP SDK (available: `agent-client-protocol` crate)
 
 ### Approach B: Headless CLI Mode (Immediate Solution)
@@ -372,7 +372,7 @@ impl BrainDriver for HeadlessCliDriver {
 3. **Support bidirectional tools**:
    - Agent requests file reads → platform serves
    - Agent requests terminal → platform spawns
-4. **Migrate opencode support** from PTY to ACP
+4. **Migrate gizzi support** from PTY to ACP
 
 ### Phase 4: Hybrid Architecture
 
@@ -463,15 +463,15 @@ pub enum OutputFormat {
 }
 ```
 
-**OpenCode (ACP)**:
+**Gizzi Code (ACP)**:
 ```json
 {
-  "id": "opencode-acp",
-  "name": "OpenCode (ACP)",
+  "id": "gizzi-acp",
+  "name": "Gizzi Code (ACP)",
   "brain_type": "acp",
-  "command": "opencode",
+  "command": "gizzi",
   "args": ["acp"],
-  "requirements": [{ "kind": "binary", "name": "opencode" }]
+  "requirements": [{ "kind": "binary", "name": "gizzi" }]
 }
 ```
 
@@ -558,7 +558,7 @@ const CLI_TERMINAL = [
 ## References
 
 - [ACP Specification](https://agentclientprotocol.com/)
-- [OpenCode ACP Docs](https://opencode.ai/docs/acp/)
+- [Gizzi Code ACP Docs](https://allternit.dev/docs/acp/)
 - [Zed ACP Docs](https://zed.dev/acp)
 - [Claude Code CLI Reference](https://code.claude.com/docs/en/cli-reference)
 - [agent-client-protocol Crate](https://docs.rs/agent-client-protocol/latest/agent_client_protocol/)

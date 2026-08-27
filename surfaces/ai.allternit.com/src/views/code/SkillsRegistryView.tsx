@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Code, MagnifyingGlass, Play, PencilSimple, Trash } from '@phosphor-icons/react';
 import { GlassCard } from '../../design/glass/GlassCard';
 import { listPromotedDocumentWorkflows, removePromotedDocumentWorkflow } from '../documents/document-workflows';
+import { loadPersistedApiSkills } from '@/lib/api-capture/api';
 
 type SkillMode = 'Network' | 'DOM' | 'API';
 type ModeFilter = 'All' | 'Network' | 'DOM' | 'API';
@@ -14,9 +15,10 @@ interface Skill {
   lastUsed: string;
   confidence: number;
   status: 'active' | 'inactive';
-  origin?: 'server' | 'document-workflow';
+  origin?: 'server' | 'document-workflow' | 'api-capture';
   instruction?: string;
   host?: string;
+  contractId?: string;
 }
 
 
@@ -37,7 +39,7 @@ export function SkillsRegistryView() {
 
   useEffect(() => {
     const load = () => {
-      const localSkills: Skill[] = listPromotedDocumentWorkflows().map((workflow) => ({
+      const documentSkills: Skill[] = listPromotedDocumentWorkflows().map((workflow) => ({
         id: workflow.id,
         name: workflow.name,
         description: `Reusable ${workflow.host} workflow with ${workflow.steps.length} verified step${workflow.steps.length === 1 ? '' : 's'}.`,
@@ -49,6 +51,20 @@ export function SkillsRegistryView() {
         instruction: workflow.steps.map((step) => step.instruction).join('\n'),
         host: workflow.host,
       }));
+      const apiSkills: Skill[] = loadPersistedApiSkills().map((skill) => ({
+        id: skill.id,
+        name: skill.name,
+        description: skill.description,
+        modes: [skill.mode],
+        lastUsed: skill.createdAt,
+        confidence: 85,
+        status: skill.status,
+        origin: 'api-capture',
+        instruction: `Captured API workflow for ${skill.domain}. Endpoints:\n${skill.endpoints.map((e) => `- ${e.method} ${e.path_template}`).join('\n')}`,
+        host: skill.domain,
+        contractId: skill.contractId,
+      }));
+      const localSkills = [...documentSkills, ...apiSkills];
       fetch('/api/v1/skills/registry')
         .then(r => r.json())
         .then((data: Skill[]) => setSkills([...localSkills, ...data.map((skill) => ({ ...skill, origin: 'server' as const }))]))
@@ -56,7 +72,11 @@ export function SkillsRegistryView() {
     };
     load();
     window.addEventListener('allternit:document-workflows-changed', load);
-    return () => window.removeEventListener('allternit:document-workflows-changed', load);
+    window.addEventListener('allternit:api-skills-changed', load);
+    return () => {
+      window.removeEventListener('allternit:document-workflows-changed', load);
+      window.removeEventListener('allternit:api-skills-changed', load);
+    };
   }, []);
 
   const filteredSkills = skills.filter(skill => {
@@ -215,6 +235,9 @@ export function SkillsRegistryView() {
                       e.stopPropagation();
                       if (skill.origin === 'document-workflow' && skill.instruction) {
                         window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType: 'chat', context: { initialPrompt: skill.instruction, documentHost: skill.host, workflowId: skill.id } } }));
+                      } else if (skill.origin === 'api-capture' && skill.contractId) {
+                        window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType: 'browser' } }));
+                        window.dispatchEvent(new CustomEvent('allternit:agent-pane-tab', { detail: { tab: 'site-apis', contractId: skill.contractId } }));
                       }
                     }}
                     style={{

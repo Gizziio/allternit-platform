@@ -358,7 +358,7 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
         // Production: Restrictive CORS
         let allowed_origins: Vec<_> = std::env::var("CORS_ALLOWED_ORIGINS")
             .unwrap_or_else(|_| {
-                "http://localhost:3013,https://platform.allternit.com,https://ai.allternit.com"
+                "http://localhost:3013,https://platform.allternit.com,https://ai.allternit.com,https://remotecontrol.allternit.com"
                     .to_string()
             })
             .split(',')
@@ -381,6 +381,8 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
                 header::ACCEPT,
                 header::ORIGIN,
                 header::HeaderName::from_static("x-requested-with"),
+                header::HeaderName::from_static("x-client-version"),
+                header::HeaderName::from_static("x-allternit-tenant-id"),
             ])
             .allow_credentials(true)
             .max_age(std::time::Duration::from_secs(3600))

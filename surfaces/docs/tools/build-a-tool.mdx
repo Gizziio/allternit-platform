@@ -1,0 +1,133 @@
+---
+title: Build a Custom Tool
+description: Register, validate, and expose custom tools in the Allternit Tool Belt
+---
+
+## 1. Define the tool contract
+
+A tool needs a name, description, JSON Schema input, and an `execute` function.
+
+```typescript
+import type { ToolDefinition } from '@allternit/sdk/ai-runtime/tools';
+
+const weatherTool: ToolDefinition = {
+  name: 'weather',
+  description: 'Get the current weather for a city',
+  input_schema: {
+    type: 'object',
+    properties: {
+      city: { type: 'string', description: 'City name' },
+      units: { type: 'string', enum: ['metric', 'imperial'] }
+    },
+    required: ['city']
+  },
+  execute: async (args: { city: string; units?: string }) => {
+    const { city, units = 'metric' } = args;
+    return { city, temperature: 22, units, condition: 'sunny' };
+  }
+};
+```
+
+## 2. Register the tool
+
+Add the tool to a `ToolRegistry`. Use a namespace to prevent naming collisions.
+
+```typescript
+import { ToolRegistry } from '@allternit/sdk/ai-runtime/tools';
+
+const registry = new ToolRegistry();
+registry.registerTool(weatherTool, { namespace: 'demo', strict: true });
+
+console.log(registry.getTool('demo.weather'));
+```
+
+The qualified name becomes `demo.weather`.
+
+## 3. Validate arguments
+
+Before executing, validate inputs against the schema:
+
+```typescript
+const valid = registry.validateInput('demo.weather', { city: 'Austin', units: 'imperial' });
+console.log(valid.valid); // => true
+
+const invalid = registry.validateInput('demo.weather', { city: 'Austin', timezone: 'CDT' });
+console.log(invalid.errors); // => ["$.timezone is not allowed"]
+```
+
+## 4. Use the tool
+
+Tools are normally executed by the harness, but you can call one directly for testing:
+
+```typescript
+const tool = registry.getTool('demo.weather')!;
+const result = await tool.execute!(
+  { city: 'Austin', units: 'imperial' },
+  { callId: 'weather-1' }
+);
+// => { city: 'Austin', temperature: 22, units: 'imperial', condition: 'sunny' }
+```
+
+## 5. Register a deferred tool
+
+Deferred tools are known to the registry but not injected into active schemas until the model calls `tool_activate`:
+
+```typescript
+registry.registerDeferredTool({
+  id: 'db-tool',
+  name: 'query_db',
+  description: 'Run a read-only SQL query',
+  input_schema: {
+    type: 'object',
+    properties: { query: { type: 'string' } },
+    required: ['query']
+  },
+  tags: ['database', 'sql']
+});
+```
+
+The model discovers deferred tools through `tool_search` and activates them through `tool_activate`.
+
+## 6. Expose over MCP
+
+Make the same tool available to external MCP clients:
+
+```typescript
+const belt = new NativeToolBelt(registry);
+await belt.attachMcpServer({
+  serverId: 'demo',
+  listTools: async () => [{
+    name: 'weather',
+    description: weatherTool.description,
+    inputSchema: weatherTool.input_schema
+  }],
+  callTool: async (name, args) => {
+    if (name !== 'weather') throw new Error('Unknown tool');
+    return weatherTool.execute!(args, { callId: 'mcp-weather' });
+  }
+});
+```
+
+## 7. Snapshot and rehydrate
+
+Persist tool registry state across turns or sessions:
+
+```typescript
+const snapshot = registry.snapshot();
+const restored = new ToolRegistry();
+restored.rehydrate(snapshot);
+```
+
+## Hosting tools on the platform
+
+For tools that need organization-wide sharing, sandbox isolation, or access to shared secrets, register them as **server tools** instead of local custom tools. Server tools run inside the Cloud Sandbox and shadow native tools with the same name.
+
+See [Server Tools](/tools/server-tools) for the admin API and execution flow.
+
+## Related pages
+
+- [Native Tool Belt](/tools/tool-belt)
+- [Strict Tool Schemas](/tools/strict-tool-use)
+- [Server Tools](/tools/server-tools)
+- [MCP Servers](/tools/mcp)
+- [Cloud Sandboxes](/tools/sandbox)

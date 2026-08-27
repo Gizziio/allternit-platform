@@ -6,7 +6,7 @@ import { dirname, isAbsolute, join, normalize, sep as pathSep } from 'path'
 import type { ToolUseContext } from '../Tool.js'
 import type { Command } from '../types/command.js'
 import { logForDebugging } from '../utils/debug.js'
-import { getBundledSkillsRoot } from '../utils/permissions/filesystem.js'
+import { getBundledSkillsRoot } from '../utils/permissions/tempDir.js'
 import type { HooksSettings } from '../utils/settings/types.js'
 
 /**

@@ -1,5 +1,10 @@
 import { EventEmitter } from 'events';
 import type { ToolDefinition, DeferredToolDefinition, ToolRegistrySnapshot, ToolPolicy } from './types.js';
+export interface ToolRegistrationOptions {
+    namespace?: string;
+    strict?: boolean;
+}
+export declare function qualifyToolName(namespace: string | undefined, name: string): string;
 export declare class ToolRegistry extends EventEmitter {
     private tools;
     private deferredTools;
@@ -10,7 +15,7 @@ export declare class ToolRegistry extends EventEmitter {
     /**
      * Global registration (Startup)
      */
-    registerTool(tool: ToolDefinition): void;
+    registerTool(tool: ToolDefinition, options?: ToolRegistrationOptions): void;
     registerDeferredTool(tool: DeferredToolDefinition): void;
     /**
      * Session-scoped Activation
@@ -18,6 +23,7 @@ export declare class ToolRegistry extends EventEmitter {
     activateTool(toolId: string): void;
     getActiveTools(): ToolDefinition[];
     getTool(name: string): ToolDefinition | undefined;
+    validateInput(toolName: string, input: unknown): import("./schema.js").SchemaValidationResult;
     setPolicy(toolName: string, policy: ToolPolicy): void;
     getPolicy(toolName: string): ToolPolicy;
     /**

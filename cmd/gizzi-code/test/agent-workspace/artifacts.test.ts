@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { describe, expect, it, beforeAll, afterAll } from "bun:test"
-import { AgentWorkspace } from "@/agent-workspace"
+import { AgentWorkspace } from "../../src/runtime/memory/memory"
 import { rmdir, mkdir, writeFile, readFile } from "fs/promises"
 import path from "path"
 
@@ -21,7 +21,7 @@ describe("AgentWorkspace", () => {
     it("should return all 5-layer paths", () => {
       const paths = AgentWorkspace.getPaths(testWorkspace)
       
-      expect(paths.root).toContain(".allternit")
+      expect(paths.root).toContain(".gizzi")
       expect(paths.manifest).toContain("manifest.json")
       expect(paths.l1_cognitive).toContain("L1-COGNITIVE")
       expect(paths.l2_identity).toContain("L2-IDENTITY")
@@ -54,14 +54,14 @@ describe("AgentWorkspace", () => {
       const testDir = path.join(testWorkspace, "test-init")
       const paths = await AgentWorkspace.initialize(testDir, {
         sessionId: "test-session-123",
-        runner: "opencode",
+        runner: "gizzi",
       })
       
       // Check manifest exists
       const manifest = await AgentWorkspace.readManifest(testDir)
       expect(manifest).not.toBeNull()
       expect(manifest.session.session_id).toBe("test-session-123")
-      expect(manifest.session.runner).toBe("opencode")
+      expect(manifest.session.runner).toBe("gizzi")
       
       // Check all L1 directories exist
       expect(await Bun.file(paths.l1_state).exists()).toBe(true)

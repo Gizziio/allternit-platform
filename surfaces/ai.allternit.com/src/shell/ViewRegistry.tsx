@@ -16,19 +16,25 @@ import {
   ElementsView 
 } from './ShellFallbacks';
 import { createViewRegistry } from '../views/registry';
-import type { ViewContext } from '../nav/nav.types';
+import type { ViewContext, ViewType } from '../nav/nav.types';
+import { HudShell } from './hud/HudShell';
+import { useCoworkSessionStore } from '../views/cowork/CoworkSessionStore';
 import type { AppMode } from './ShellHeader';
 import type { CanonicalAgentModeId } from '@/lib/agents/agent-mode-contracts';
+import type { Agent } from '@/lib/agents/agent.types';
+import { ToastProvider } from '@/components/ui/toast-provider';
 
 const SkillsRegistryView   = lazy(() => import('../views/code/SkillsRegistryView').then(m => ({ default: m.SkillsRegistryView })));
 const DesignRegistryView   = lazy(() => import('../views/design/DesignRegistryView').then(m => ({ default: m.DesignRegistryView })));
 const OpenClawView         = lazy(() => import('../views/openclaw/OpenClawView').then(m => ({ default: m.OpenClawView })));
 const HermesView           = lazy(() => import('../views/hermes/HermesView').then(m => ({ default: m.HermesView })));
+const VaultViewerView      = lazy(() => import('../views/vault-viewer/VaultViewerView').then(m => ({ default: m.VaultViewerView })));
 const OhMyPiView           = lazy(() => import('../views/omp/OhMyPiView').then(m => ({ default: m.OhMyPiView })));
 const ChatModeAgentSession = lazy(() => import('../views/agent-sessions/ChatModeAgentSession').then(m => ({ default: m.ChatModeAgentSession })));
-const CoworkModeAgentTasks = lazy(() => import('../views/agent-sessions/CoworkModeAgentTasks').then(m => ({ default: m.CoworkModeAgentTasks })));
 const CodeModeAgentSession = lazy(() => import('../views/agent-sessions/CodeModeAgentSession').then(m => ({ default: m.CodeModeAgentSession })));
 const DesignModeAgentSession = lazy(() => import('../views/agent-sessions/DesignModeAgentSession').then(m => ({ default: m.DesignModeAgentSession })));
+const BotInboxView = lazy(() => import('../views/bots/BotInboxView').then(m => ({ default: m.BotInboxView })));
+const BotHomeView = lazy(() => import('../views/bots/BotHomeView').then(m => ({ default: m.BotHomeView })));
 const SwarmADE             = lazy(() => import('../views/swarm').then(m => ({ default: m.SwarmADE })));
 const AllternitCanvasView  = lazy(() => import('../views/AllternitCanvasView').then(m => ({ default: m.AllternitCanvasView })));
 const CoworkRoot           = lazy(() => import('../views/cowork/CoworkRoot').then(m => ({ default: m.CoworkRoot })));
@@ -48,6 +54,8 @@ const RunReplayView        = lazy(() => import('../views/code/RunReplayView').th
 const AppsExtensionsView     = lazy(() => import('../views/AppsExtensionsView').then(m => ({ default: m.AppsExtensionsView })));
 const DispatchView           = lazy(() => import('../views/DispatchView').then(m => ({ default: m.DispatchView })));
 const PlaygroundView       = lazy(() => import('../views/PlaygroundView').then(m => ({ default: m.PlaygroundView })));
+const AllternitPlaygroundView = lazy(() => import('../views/AllternitPlaygroundView').then(m => ({ default: m.AllternitPlaygroundView })));
+const AgentStudioView      = lazy(() => import('../views/AgentStudioView').then(m => ({ default: m.AgentStudioView })));
 const DagIntegrationPage   = lazy(() => import('../views/DagIntegrationPage').then(m => ({ default: m.DagIntegrationPage })));
 const CloudDeployView      = lazy(() => import('../views/cloud-deploy/CloudDeployView').then(m => ({ default: m.CloudDeployView })));
 const DesignModeView         = lazy(() => import('../views/design/DesignModeView').then(m => ({ default: m.default })));
@@ -107,10 +115,12 @@ const TablesView             = lazy(() => import('../views/cowork/TablesView').t
 const FilesView              = lazy(() => import('../views/cowork/FilesView').then(m => ({ default: m.FilesView })));
 const ExportsView            = lazy(() => import('../views/cowork/ExportsView').then(m => ({ default: m.ExportsView })));
 const ProductsDiscoveryView  = lazy(() => import('../views/products/ProductsDiscoveryView').then(m => ({ default: m.ProductsDiscoveryView })));
+const ManufacturingView      = lazy(() => import('../views/manufacturing/ManufacturingView').then(m => ({ default: m.ManufacturingView })));
 const LibraryView            = lazy(() => import('../views/library/LibraryView').then(m => ({ default: m.LibraryView })));
 const LabsView               = lazy(() => import('../views/LabsView').then(m => ({ default: m.LabsView })));
 const BrainView              = lazy(() => import('../views/brain/BrainView').then(m => ({ default: m.BrainView })));
 const CatalogView            = lazy(() => import('../views/CatalogView').then(m => ({ default: m.CatalogView })));
+const ModelLabView           = lazy(() => import('../views/model-lab').then(m => ({ default: m.ModelLabView })));
 const ExplorerView           = lazy(() => import('../views/code/ExplorerView').then(m => ({ default: m.ExplorerView })));
 const GitView                = lazy(() => import('../views/code/GitView').then(m => ({ default: m.GitView })));
 const ThreadsView            = lazy(() => import('../views/code/ThreadsView').then(m => ({ default: m.ThreadsView })));
@@ -123,17 +133,25 @@ const GoalsListView          = lazy(() => import('../views/automation/GoalsListV
 const GoalDetailView         = lazy(() => import('../views/automation/GoalDetailView').then(m => ({ default: m.GoalDetailView })));
 const RoutinesListView       = lazy(() => import('../views/automation/RoutinesListView').then(m => ({ default: m.RoutinesListView })));
 const LoopsListView          = lazy(() => import('../views/automation/LoopsListView').then(m => ({ default: m.LoopsListView })));
+const DocsView               = lazy(() => import('../views/docs/DocsView').then(m => ({ default: m.DocsView })));
+const SlidesView             = lazy(() => import('../views/slides/SlidesView').then(m => ({ default: m.SlidesView })));
+const SheetsView             = lazy(() => import('../views/sheets/SheetsView').then(m => ({ default: m.SheetsView })));
+const PdfView                = lazy(() => import('../views/pdf/PdfView').then(m => ({ default: m.PdfView })));
+const MarkdownPreviewView    = lazy(() => import('../views/office/MarkdownPreviewView').then(m => ({ default: m.MarkdownPreviewView })));
+const ApiCaptureView         = lazy(() => import('../views/api-capture/ApiCaptureView').then(m => ({ default: m.ApiCaptureView })));
+const NativeSigningView      = lazy(() => import('../views/office/NativeSigningView').then(m => ({ default: m.NativeSigningView })));
 
 export function getShellViewRegistry(handlers: {
   handleOpenAgentSession: (text: string, surface: AppMode, execution?: { modeId: CanonicalAgentModeId; templateTitle?: string }) => void;
+  handleStartBotSession?: (agent: Agent) => void;
   open: (viewType: any, context?: any) => void;
 }) {
-  const { handleOpenAgentSession, open } = handlers;
-  
+  const { handleOpenAgentSession, handleStartBotSession, open } = handlers;
+
   return createViewRegistry({
-    home: () => <ChatViewWrapper onOpenAgentSession={handleOpenAgentSession} />,
-    chat: () => <ChatViewWrapper onOpenAgentSession={handleOpenAgentSession} />,
-    "chat-legacy": () => <ChatViewWrapper onOpenAgentSession={handleOpenAgentSession} />,
+    home: () => <ChatViewWrapper onOpenAgentSession={handleOpenAgentSession} onStartBotSession={handleStartBotSession} />,
+    chat: () => <ChatViewWrapper onOpenAgentSession={handleOpenAgentSession} onStartBotSession={handleStartBotSession} />,
+    "chat-legacy": () => <ChatViewWrapper onOpenAgentSession={handleOpenAgentSession} onStartBotSession={handleStartBotSession} />,
     project: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Projects" />}>
         <ProjectView />
@@ -229,7 +247,7 @@ export function getShellViewRegistry(handlers: {
     ),
     'browser-extensions': () => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Office & Extensions" />}>
-        <BrowserExtensionsView />
+        <BrowserExtensionsView openView={open} />
       </ErrorBoundary>
     ),
     terminal: ({ context }: { context?: ViewContext }) => (
@@ -267,16 +285,42 @@ export function getShellViewRegistry(handlers: {
         <PlaygroundView />
       </ErrorBoundary>
     ),
+    "allternit-playground": ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Allternit Playground" />}>
+        <AllternitPlaygroundView />
+      </ErrorBoundary>
+    ),
+    "agent-studio": ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Agent Studio" />}>
+        <AgentStudioView />
+      </ErrorBoundary>
+    ),
     elements: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Elements" />}>
         <ElementsView />
       </ErrorBoundary>
     ),
     'agent-hub': ({ context }: { context?: ViewContext }) => (
-      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Agent Hub" />}>
-        <AgentHub />
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Agent | Bot Hub" />}>
+        <AgentHub onSessionStarted={(sessionId) => open('chat-agent-session', { sessionId })} />
       </ErrorBoundary>
     ),
+    'bot-inbox': ({ context }: { context?: ViewContext }) => {
+      const ctx = context?.context as { botId?: string } | undefined;
+      return (
+        <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Bot Inbox" />}>
+          <BotInboxView botId={ctx?.botId ?? context?.viewId ?? ''} />
+        </ErrorBoundary>
+      );
+    },
+    'bot-home': ({ context }: { context?: ViewContext }) => {
+      const ctx = context?.context as { botId?: string } | undefined;
+      return (
+        <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Bot Home" />}>
+          <BotHomeView botId={ctx?.botId ?? context?.viewId ?? ''} />
+        </ErrorBoundary>
+      );
+    },
     "native-agent": ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Native Agent" />}>
         <NativeAgentView onOpenRuntimeOps={() => open("runtime-ops")} />
@@ -305,6 +349,11 @@ export function getShellViewRegistry(handlers: {
     'oh-my-pi': () => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Oh My Pi" />}>
         <OhMyPiView />
+      </ErrorBoundary>
+    ),
+    'vault-viewer': () => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Vault Viewer" />}>
+        <VaultViewerView />
       </ErrorBoundary>
     ),
     dag: ({ context }: { context?: ViewContext }) => (
@@ -336,48 +385,48 @@ export function getShellViewRegistry(handlers: {
       const ctx = context?.context as any;
       return (
         <ErrorBoundary fallback={<div>Failed to load Design Workspace</div>}>
-          <DesignModeView initialDesignMd={ctx?.designMd} initialStream={ctx?.stream} />
+          <DesignModeView openView={open} initialDesignMd={ctx?.designMd} initialStream={ctx?.stream} />
         </ErrorBoundary>
       );
     },
     design: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<div>Failed to load Design Workspace</div>}>
-        <DesignModeView />
+        <DesignModeView openView={open} />
       </ErrorBoundary>
     ),
     "design-view-questions": ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<div>Failed to load Design Discovery</div>}>
-        <DesignModeView initialTab="questions" />
+        <DesignModeView openView={open} initialTab="questions" />
       </ErrorBoundary>
     ),
     "design-view-mobile": ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<div>Failed to load Mobile View</div>}>
-        <DesignModeView initialTab="mobile" />
+        <DesignModeView openView={open} initialTab="mobile" />
       </ErrorBoundary>
     ),
     "design-view-video": ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<div>Failed to load Video Editor</div>}>
-        <DesignModeView initialTab="video" />
+        <DesignModeView openView={open} initialTab="video" />
       </ErrorBoundary>
     ),
     "design-view-docs": ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<div>Failed to load Documents View</div>}>
-        <DesignModeView initialTab="docs" />
+        <DesignModeView openView={open} initialTab="docs" />
       </ErrorBoundary>
     ),
     "design-view-handoff": ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<div>Failed to load Handoff View</div>}>
-        <DesignModeView initialTab="handoff" />
+        <DesignModeView openView={open} initialTab="handoff" />
       </ErrorBoundary>
     ),
     "design-view-graph": ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<div>Failed to load Skill Graph</div>}>
-        <DesignModeView initialTab="graph" />
+        <DesignModeView openView={open} initialTab="graph" />
       </ErrorBoundary>
     ),
     "design-view-pipeline": ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<div>Failed to load Pipeline View</div>}>
-        <DesignModeView initialTab="pipeline" />
+        <DesignModeView openView={open} initialTab="pipeline" />
       </ErrorBoundary>
     ),
     "design-view-market": ({ context }: { context?: ViewContext }) => (
@@ -393,6 +442,51 @@ export function getShellViewRegistry(handlers: {
     "design-marketplace": ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<div>Failed to load Hyperdesign Marketplace</div>}>
         <DesignRegistryView />
+      </ErrorBoundary>
+    ),
+    docs: ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Docs" />}>
+        <DocsView
+          artifactId={(context?.context as { artifactId?: string } | undefined)?.artifactId ?? context?.viewId}
+          handoffId={(context?.context as { handoffId?: string } | undefined)?.handoffId}
+        />
+      </ErrorBoundary>
+    ),
+    slides: ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Slides" />}>
+        <SlidesView
+          artifactId={(context?.context as { artifactId?: string } | undefined)?.artifactId ?? context?.viewId}
+          handoffId={(context?.context as { handoffId?: string } | undefined)?.handoffId}
+        />
+      </ErrorBoundary>
+    ),
+    sheets: ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Sheets" />}>
+        <SheetsView
+          artifactId={(context?.context as { artifactId?: string } | undefined)?.artifactId ?? context?.viewId}
+          handoffId={(context?.context as { handoffId?: string } | undefined)?.handoffId}
+        />
+      </ErrorBoundary>
+    ),
+    pdf: ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="PDF" />}>
+        <PdfView
+          artifactId={(context?.context as { artifactId?: string } | undefined)?.artifactId ?? context?.viewId}
+          handoffId={(context?.context as { handoffId?: string } | undefined)?.handoffId}
+        />
+      </ErrorBoundary>
+    ),
+    "markdown-preview": ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Markdown Preview" />}>
+        <MarkdownPreviewView
+          handoffId={(context?.context as { handoffId?: string } | undefined)?.handoffId}
+          sourceUrl={(context?.context as { sourceUrl?: string } | undefined)?.sourceUrl}
+        />
+      </ErrorBoundary>
+    ),
+    sign: () => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Allternit Sign" />}>
+        <NativeSigningView />
       </ErrorBoundary>
     ),
     "form-surfaces": ({ context }: { context?: ViewContext }) => (
@@ -615,7 +709,7 @@ export function getShellViewRegistry(handlers: {
     ),
     'cowork-documents': ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Documents" />}>
-        <DocumentsView />
+        <DocumentsView openView={open} />
       </ErrorBoundary>
     ),
     'cowork-tables': ({ context }: { context?: ViewContext }) => (
@@ -643,6 +737,11 @@ export function getShellViewRegistry(handlers: {
         <ProductsDiscoveryView />
       </ErrorBoundary>
     ),
+    manufacturing: ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Allternit Manufacturing" />}>
+        <ManufacturingView />
+      </ErrorBoundary>
+    ),
     library: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Artifacts Library" />}>
         <LibraryView openView={open} />
@@ -654,13 +753,20 @@ export function getShellViewRegistry(handlers: {
       </ErrorBoundary>
     ),
     brain: ({ context }: { context?: ViewContext }) => (
-      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Brain" />}>
-        <BrainView />
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Second Brain" />}>
+        <ToastProvider>
+          <BrainView />
+        </ToastProvider>
       </ErrorBoundary>
     ),
     catalog: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Udemy Catalog" />}>
         <CatalogView />
+      </ErrorBoundary>
+    ),
+    'model-lab': ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Model Lab" />}>
+        <ModelLabView />
       </ErrorBoundary>
     ),
     'code-explorer': ({ context }: { context?: ViewContext }) => (
@@ -693,27 +799,46 @@ export function getShellViewRegistry(handlers: {
         <CodeProjectView />
       </ErrorBoundary>
     ),
-    'chat-agent-session': ({ context }: { context?: ViewContext }) => (
-      <ChatModeAgentSession
-        mode="chat"
-        sessionId={(context?.context as any)?.sessionId ?? context!.viewId}
-        context={typeof window !== 'undefined' ? window.sessionStorage.getItem('allternit-pending-agent-message') || undefined : undefined}
-        onClose={() => open('chat')}
-      />
-    ),
-    'cowork-agent-session': ({ context }: { context?: ViewContext }) => (
-      <CoworkModeAgentTasks mode="cowork" onClose={() => open('workspace')} />
-    ),
-    'code-agent-session': ({ context }: { context?: ViewContext }) => (
-      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Code Agent Workspace" />}>
-        <CodeModeAgentSession sessionId={context!.viewId} onClose={() => open('code')} />
-      </ErrorBoundary>
-    ),
-    'design-agent-session': ({ context }: { context?: ViewContext }) => (
-      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Design Agent Workspace" />}>
-        <DesignModeAgentSession sessionId={context!.viewId} onClose={() => open('design')} />
-      </ErrorBoundary>
-    ),
+    'chat-agent-session': ({ context }: { context?: ViewContext }) => {
+      const ctx = context?.context as { sessionId?: string; originView?: ViewType } | undefined;
+      return (
+        <ChatModeAgentSession
+          mode="chat"
+          sessionId={ctx?.sessionId ?? context!.viewId}
+          context={typeof window !== 'undefined' ? window.sessionStorage.getItem('allternit-pending-agent-message') || undefined : undefined}
+          onClose={() => open(ctx?.originView ?? 'chat')}
+        />
+      );
+    },
+    'cowork-agent-session': ({ context }: { context?: ViewContext }) => {
+      const ctx = context?.context as { sessionId?: string; originView?: ViewType } | undefined;
+      React.useEffect(() => {
+        if (ctx?.sessionId) {
+          useCoworkSessionStore.getState().setActiveSession(ctx.sessionId);
+        }
+      }, [ctx?.sessionId]);
+      return (
+        <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Cowork Agent Workspace" />}>
+          <CoworkRoot />
+        </ErrorBoundary>
+      );
+    },
+    'code-agent-session': ({ context }: { context?: ViewContext }) => {
+      const ctx = context?.context as { sessionId?: string; originView?: ViewType } | undefined;
+      return (
+        <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Code Agent Workspace" />}>
+          <CodeModeAgentSession sessionId={ctx?.sessionId ?? context!.viewId} onClose={() => open(ctx?.originView ?? 'code')} />
+        </ErrorBoundary>
+      );
+    },
+    'design-agent-session': ({ context }: { context?: ViewContext }) => {
+      const ctx = context?.context as { sessionId?: string; originView?: ViewType } | undefined;
+      return (
+        <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Design Agent Workspace" />}>
+          <DesignModeAgentSession sessionId={ctx?.sessionId ?? context!.viewId} onClose={() => open(ctx?.originView ?? 'design')} />
+        </ErrorBoundary>
+      );
+    },
     'new-document': ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<div style={{ padding: 16, color: 'var(--text-secondary)' }}>Failed to load</div>}>
         <CoworkRoot />
@@ -727,6 +852,11 @@ export function getShellViewRegistry(handlers: {
     verification: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Visual Verification" />}>
         <VerificationView />
+      </ErrorBoundary>
+    ),
+    'site-apis': ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Site APIs" />}>
+        <ApiCaptureView />
       </ErrorBoundary>
     ),
     'goals-list': ({ context }: { context?: ViewContext }) => (
@@ -758,8 +888,18 @@ export function getShellViewRegistry(handlers: {
       </ErrorBoundary>
     ),
     'dispatch': ({ context }: { context?: ViewContext }) => (
-      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Dispatch" />}>
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Remote Control" />}>
         <DispatchView />
+      </ErrorBoundary>
+    ),
+    'remote-control': ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Remote Control" />}>
+        <DispatchView />
+      </ErrorBoundary>
+    ),
+    'hud': () => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="HUD" />}>
+        <HudShell />
       </ErrorBoundary>
     ),
   });

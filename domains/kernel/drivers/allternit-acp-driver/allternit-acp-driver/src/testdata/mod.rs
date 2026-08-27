@@ -11,10 +11,10 @@ pub fn parse_transcript(transcript: &str) -> Vec<Value> {
         .collect()
 }
 
-/// Sample OpenCode ACP session transcript
-pub const OPENCODE_SESSION_TRANSCRIPT: &str = r#"
+/// Sample ACP session transcript
+pub const SAMPLE_SESSION_TRANSCRIPT: &str = r#"
 {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"allternit-acp-driver","version":"0.1.0"}}}
-{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2024-11-05","capabilities":{"experimental":{},"tools":{"listChanged":false}},"serverInfo":{"name":"opencode","version":"0.1.0"}}}
+{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2024-11-05","capabilities":{"experimental":{},"tools":{"listChanged":false}},"serverInfo":{"name":"allternit","version":"0.1.0"}}}
 {"jsonrpc":"2.0","id":2,"method":"session/new","params":{"cwd":"/tmp","source":"chat","event_mode":"acp"}}
 {"jsonrpc":"2.0","id":2,"result":{"sessionId":"sess_abc123"}}
 {"jsonrpc":"2.0","method":"session/started","params":{"sessionId":"sess_abc123","timestamp":"2026-02-16T10:00:00Z"}}
@@ -47,7 +47,7 @@ mod tests {
 
     #[test]
     fn test_parse_transcript() {
-        let lines = parse_transcript(OPENCODE_SESSION_TRANSCRIPT);
+        let lines = parse_transcript(SAMPLE_SESSION_TRANSCRIPT);
         assert!(!lines.is_empty(), "Transcript should have lines");
 
         // First line should be initialize request

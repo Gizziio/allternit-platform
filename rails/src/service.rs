@@ -17,15 +17,18 @@ use serde_json::json;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::Duration;
+use tokio::time::sleep;
 
 use crate::core::types::EventScope;
 use crate::leases::leases::LeasesOptions;
 use crate::ledger::ledger::LedgerOptions;
 use crate::{
+    bus::{Bus, NewBusMessage},
     context::{ContextPackStore, ContextPackStoreOptions},
     policy, ActorType, DagMutation, Gate, GateOptions, Index, IndexOptions, LeaseRequest, Leases,
-    Ledger, LedgerQuery, Mail, MailOptions, ReceiptStore, ReceiptStoreOptions, Vault, VaultOptions,
-    WihPickupOptions, WorkOps,
+    Ledger, LedgerQuery, Mail, MailOptions, PeerEnvelope, PeerRegistry, ReceiptStore,
+    ReceiptStoreOptions, Steer, Vault, VaultOptions, WihPickupOptions, WorkOps, send_envelope,
 };
 
 /// Service state shared across handlers
@@ -41,6 +44,9 @@ pub struct ServiceState {
     pub receipts: Arc<ReceiptStore>,
     pub work_ops: Arc<WorkOps>,
     pub context_packs: Arc<ContextPackStore>,
+    pub peers: Arc<PeerRegistry>,
+    pub bus: Arc<Bus>,
+    pub steer: Arc<Steer>,
     pub root_dir: PathBuf,
 }
 
@@ -120,6 +126,20 @@ impl ServiceState {
             mail_index: None,
         }));
 
+        let peers = Arc::new(PeerRegistry::new(root_dir.clone())?);
+
+        let bus = Arc::new(
+            Bus::new(crate::bus::BusOptions {
+                root_dir: root_dir.clone(),
+                ledger: ledger.clone(),
+                actor_id: Some("service".to_string()),
+                actor_type: Some(ActorType::Gate),
+            })
+            .await?,
+        );
+
+        let steer = Arc::new(Steer::new(ledger.clone()));
+
         Ok(Self {
             ledger,
             gate,
@@ -131,6 +151,9 @@ impl ServiceState {
             receipts,
             work_ops,
             context_packs,
+            peers,
+            bus,
+            steer,
             root_dir,
         })
     }
@@ -145,6 +168,94 @@ pub struct HealthResponse {
     pub status: String,
     pub service: String,
     pub version: String,
+}
+
+// ============================================================================
+// PEER endpoints
+// ============================================================================
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PeerInfoResponse {
+    pub peer_id: String,
+    pub name: String,
+    pub cwd: String,
+    pub vendor: String,
+    pub inbox_socket: String,
+    pub status: String,
+    pub registered_at: String,
+    pub last_heartbeat_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PeerListResponse {
+    pub peers: Vec<PeerInfoResponse>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PeerRegisterRequest {
+    pub name: String,
+    #[serde(default)]
+    pub vendor: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cwd: Option<PathBuf>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PeerRegisterResponse {
+    pub peer_id: String,
+    pub name: String,
+    pub inbox_socket: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PeerSendRequest {
+    pub body: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub from: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PeerSendResponse {
+    pub delivered: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PeerInboxResponse {
+    pub messages: Vec<crate::bus::BusMessage>,
+}
+
+// ============================================================================
+// STEER endpoints
+// ============================================================================
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SteerCheckpointRequest {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cwd: Option<PathBuf>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SteerCheckpointResponse {
+    pub changed: bool,
+    pub hash: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_id: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SteerConsultRequest {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cwd: Option<PathBuf>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub prompt: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SteerConsultResponse {
+    pub verdict: String,
+    pub body: String,
 }
 
 // ============================================================================
@@ -688,6 +799,190 @@ async fn health_check() -> impl IntoResponse {
     })
 }
 
+// ----------------------------------------------------------------------------
+// PEER handlers
+// ----------------------------------------------------------------------------
+
+fn peer_to_response(peer: &crate::peer::Peer) -> PeerInfoResponse {
+    PeerInfoResponse {
+        peer_id: peer.peer_id.clone(),
+        name: peer.name.clone(),
+        cwd: peer.cwd.to_string_lossy().to_string(),
+        vendor: peer.vendor.clone(),
+        inbox_socket: peer.inbox_socket.to_string_lossy().to_string(),
+        status: format!("{:?}", peer.status).to_lowercase(),
+        registered_at: peer.registered_at.clone(),
+        last_heartbeat_at: peer.last_heartbeat_at.clone(),
+    }
+}
+
+async fn list_peers(State(state): State<Arc<ServiceState>>) -> impl IntoResponse {
+    let peers = state.peers.list();
+    let response = PeerListResponse {
+        peers: peers.iter().map(peer_to_response).collect(),
+    };
+    (StatusCode::OK, Json(response))
+}
+
+async fn register_peer(
+    State(state): State<Arc<ServiceState>>,
+    Json(request): Json<PeerRegisterRequest>,
+) -> impl IntoResponse {
+    let cwd = request.cwd.unwrap_or_else(|| state.root_dir.clone());
+    match state.peers.register(&request.name, cwd, &request.vendor) {
+        Ok(peer) => (
+            StatusCode::CREATED,
+            Json(PeerRegisterResponse {
+                peer_id: peer.peer_id,
+                name: peer.name,
+                inbox_socket: peer.inbox_socket.to_string_lossy().to_string(),
+            }),
+        )
+            .into_response(),
+        Err(e) => (
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "error": e.to_string() })),
+        )
+            .into_response(),
+    }
+}
+
+async fn unregister_peer(
+    State(state): State<Arc<ServiceState>>,
+    Path(id_or_name): Path<String>,
+) -> impl IntoResponse {
+    match state.peers.unregister(&id_or_name) {
+        Ok(true) => (StatusCode::OK, Json(json!({ "unregistered": true }))).into_response(),
+        Ok(false) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({ "error": "peer not found" })),
+        )
+            .into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": e.to_string() })),
+        )
+            .into_response(),
+    }
+}
+
+async fn heartbeat_peer(
+    State(state): State<Arc<ServiceState>>,
+    Path(id_or_name): Path<String>,
+) -> impl IntoResponse {
+    match state.peers.heartbeat(&id_or_name) {
+        Ok(()) => (StatusCode::OK, Json(json!({ "ok": true }))).into_response(),
+        Err(_) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({ "error": "peer not found" })),
+        )
+            .into_response(),
+    }
+}
+
+async fn send_to_peer(
+    State(state): State<Arc<ServiceState>>,
+    Path(id_or_name): Path<String>,
+    Json(request): Json<PeerSendRequest>,
+) -> impl IntoResponse {
+    let peer = match state.peers.resolve(&id_or_name) {
+        Some(p) => p,
+        None => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(json!({ "error": "peer not found" })),
+            )
+                .into_response();
+        }
+    };
+
+    let from = request.from.unwrap_or_else(|| "api".to_string());
+    let body = request.body;
+
+    // Persist the envelope to the bus so HTTP-polling peers can retrieve it.
+    let bus_msg = NewBusMessage {
+        correlation_id: uuid::Uuid::new_v4().to_string(),
+        to: format!("peer:{}", peer.name),
+        from: from.clone(),
+        kind: "peer_envelope".to_string(),
+        payload: json!({ "body": body.clone(), "from": from.clone() }),
+        transport: "http".to_string(),
+    };
+    let bus_id = match state.bus.send_message(bus_msg).await {
+        Ok(id) => Some(id),
+        Err(e) => {
+            tracing::warn!("failed to persist peer envelope to bus: {}", e);
+            None
+        }
+    };
+
+    let envelope = PeerEnvelope::new(&from, &peer.name, body);
+    let receipt = send_envelope(&peer.inbox_socket, &envelope, Duration::from_secs(5)).await;
+
+    if let (Ok(ref receipt), Some(bus_id)) = (&receipt, bus_id) {
+        if receipt.delivered {
+            let _ = state.bus.mark_delivered(bus_id).await;
+        }
+    }
+
+    match receipt {
+        Ok(receipt) => (
+            StatusCode::OK,
+            Json(PeerSendResponse {
+                delivered: receipt.delivered,
+                error: receipt.error,
+            }),
+        )
+            .into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": e.to_string() })),
+        )
+            .into_response(),
+    }
+}
+
+async fn poll_peer_inbox(
+    State(state): State<Arc<ServiceState>>,
+    Path(id_or_name): Path<String>,
+    Query(params): Query<HashMap<String, String>>,
+) -> impl IntoResponse {
+    let peer = match state.peers.resolve(&id_or_name) {
+        Some(p) => p,
+        None => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(json!({ "error": "peer not found" })),
+            )
+                .into_response();
+        }
+    };
+
+    let limit = params
+        .get("limit")
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(20);
+    let recipient = format!("peer:{}", peer.name);
+    match state
+        .bus
+        .poll_pending_for(&recipient, Some("http"), limit)
+        .await
+    {
+        Ok(messages) => {
+            // Mark polled messages delivered so they are not returned again.
+            for msg in &messages {
+                let _ = state.bus.mark_delivered(msg.id).await;
+            }
+            (StatusCode::OK, Json(PeerInboxResponse { messages })).into_response()
+        }
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": e.to_string() })),
+        )
+            .into_response(),
+    }
+}
+
 async fn ensure_policy_injected(
     state: &ServiceState,
     scope: Option<EventScope>,
@@ -705,6 +1000,87 @@ async fn ensure_policy_injected(
             tracing::error!("policy injection failed: {}", err);
             StatusCode::INTERNAL_SERVER_ERROR
         })
+}
+
+// ============================================================================
+// STEER handlers
+// ============================================================================
+
+async fn steer_checkpoint(
+    State(state): State<Arc<ServiceState>>,
+    Json(request): Json<SteerCheckpointRequest>,
+) -> Result<impl IntoResponse, StatusCode> {
+    let cwd = request
+        .cwd
+        .unwrap_or_else(|| state.root_dir.clone());
+    match state.steer.checkpoint(&cwd).await {
+        Ok(result) => Ok((StatusCode::OK, Json(result))),
+        Err(err) => {
+            tracing::error!("steer checkpoint failed: {}", err);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn steer_consult(
+    State(state): State<Arc<ServiceState>>,
+    Json(request): Json<SteerConsultRequest>,
+) -> Result<impl IntoResponse, StatusCode> {
+    let cwd = request
+        .cwd
+        .unwrap_or_else(|| state.root_dir.clone());
+    let context = match request.prompt {
+        Some(p) => p,
+        None => match state.steer.build_context(&cwd) {
+            Ok(ctx) => ctx,
+            Err(err) => {
+                tracing::error!("steer build_context failed: {}", err);
+                return Err(StatusCode::INTERNAL_SERVER_ERROR);
+            }
+        },
+    };
+    match state.steer.consult(&cwd, &context).await {
+        Ok(answer) => {
+            let lines: Vec<&str> = answer.lines().collect();
+            let first = lines
+                .first()
+                .map(|s| s.trim().trim_start_matches("• ").to_string())
+                .unwrap_or_default();
+            let verdict = if first.to_uppercase().starts_with("APPROVE") {
+                "APPROVE".to_string()
+            } else {
+                "STEER".to_string()
+            };
+            Ok((StatusCode::OK, Json(SteerConsultResponse { verdict, body: answer })))
+        }
+        Err(err) => {
+            tracing::error!("steer consult failed: {}", err);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn steer_commit_gate(
+    State(state): State<Arc<ServiceState>>,
+    Json(request): Json<SteerConsultRequest>,
+) -> Result<impl IntoResponse, StatusCode> {
+    let cwd = request
+        .cwd
+        .unwrap_or_else(|| state.root_dir.clone());
+    match state.steer.commit_gate(&cwd).await {
+        Ok(result) => {
+            let status = if result.verdict == "APPROVE" {
+                StatusCode::OK
+            } else {
+                StatusCode::OK
+            };
+            Ok((status, Json(result)))
+        }
+        Err(err) => {
+            tracing::error!("steer commit_gate failed: {}", err);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
 }
 
 // ============================================================================
@@ -2441,6 +2817,16 @@ pub fn create_router(state: Arc<ServiceState>) -> Router {
     Router::new()
         // Health
         .route("/health", get(health_check))
+        // PEERS
+        .route("/v1/peers", get(list_peers).post(register_peer))
+        .route("/v1/peers/:id_or_name", delete(unregister_peer))
+        .route("/v1/peers/:id_or_name/heartbeat", post(heartbeat_peer))
+        .route("/v1/peers/:id_or_name/send", post(send_to_peer))
+        .route("/v1/peers/:id_or_name/inbox", get(poll_peer_inbox))
+        // STEER
+        .route("/v1/steer/checkpoint", post(steer_checkpoint))
+        .route("/v1/steer/consult", post(steer_consult))
+        .route("/v1/steer/commit-gate", post(steer_commit_gate))
         // PLAN
         .route("/v1/plan", post(plan_new))
         .route("/v1/plan/refine", post(plan_refine))
@@ -2518,6 +2904,18 @@ pub async fn run_service(bind_addr: &str, root_dir: PathBuf) -> anyhow::Result<(
     init_stores(&root_dir).await?;
 
     let state = Arc::new(ServiceState::new(root_dir).await?);
+
+    // Background UDS delivery loop for bus messages addressed to local peers.
+    let delivery_state = state.clone();
+    tokio::spawn(async move {
+        loop {
+            if let Err(e) = deliver_uds_messages(&delivery_state).await {
+                tracing::error!("uds delivery loop error: {}", e);
+            }
+            sleep(Duration::from_secs(2)).await;
+        }
+    });
+
     let app = create_router(state);
 
     let listener = tokio::net::TcpListener::bind(bind_addr).await?;
@@ -2527,6 +2925,62 @@ pub async fn run_service(bind_addr: &str, root_dir: PathBuf) -> anyhow::Result<(
     );
 
     axum::serve(listener, app).await?;
+    Ok(())
+}
+
+/// Poll pending UDS bus messages and attempt delivery to local peer sockets.
+async fn deliver_uds_messages(state: &ServiceState) -> anyhow::Result<()> {
+    let pending = state.bus.poll_pending(32).await?;
+    for msg in pending {
+        if msg.transport != "uds" {
+            continue;
+        }
+
+        // Recipient may be "peer:<name>" or a literal socket path.
+        let target = if let Some(name) = msg.to.strip_prefix("peer:") {
+            match state.peers.resolve(name) {
+                Some(p) => p.inbox_socket,
+                None => {
+                    state
+                        .bus
+                        .mark_failed(msg.id, "recipient peer not found")
+                        .await?;
+                    continue;
+                }
+            }
+        } else {
+            PathBuf::from(&msg.to)
+        };
+
+        let body = msg
+            .payload
+            .get("body")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+        let from = msg
+            .payload
+            .get("from")
+            .and_then(|v| v.as_str())
+            .unwrap_or("rails")
+            .to_string();
+        let envelope = PeerEnvelope::new(&from, &msg.to, body);
+
+        match send_envelope(&target, &envelope, Duration::from_secs(5)).await {
+            Ok(receipt) if receipt.delivered => {
+                state.bus.mark_delivered(msg.id).await?;
+            }
+            Ok(receipt) => {
+                state
+                    .bus
+                    .mark_failed(msg.id, &receipt.error.unwrap_or_default())
+                    .await?;
+            }
+            Err(e) => {
+                state.bus.mark_failed(msg.id, &e.to_string()).await?;
+            }
+        }
+    }
     Ok(())
 }
 

@@ -22,10 +22,8 @@ import {
 } from '../services/mockRateLimits.js'
 import {
   isOAuthTokenExpired,
-  refreshOAuthToken,
   shouldUseClaudeAIAuth,
-} from '../services/oauth/client.js'
-import { getOauthProfileFromOauthToken } from '../services/oauth/getOauthProfile.js'
+} from '../services/oauth/scopes.js'
 import type { OAuthTokens, SubscriptionType } from '../services/oauth/types.js'
 import {
   getApiKeyFromFileDescriptor,
@@ -41,7 +39,7 @@ import {
   isValidAwsStsOutput,
 } from './aws.js'
 import { AwsAuthStatusManager } from './awsAuthStatusManager.js'
-import { clearBetasCaches } from './betas.js'
+import { clearBetasCaches } from './betasCache.js'
 import {
   type AccountInfo,
   checkHasTrustDialogAccepted,
@@ -1529,6 +1527,7 @@ async function checkAndRefreshOAuthTokenIfNeededImpl(
     }
 
     logEvent('tengu_oauth_token_refresh_starting', {})
+    const { refreshOAuthToken } = await import('../services/oauth/client.js')
     const refreshedTokens = await refreshOAuthToken(lockedTokens.refreshToken, {
       // For Claude.ai subscribers, omit scopes so the default
       // CLAUDE_AI_OAUTH_SCOPES applies — this allows scope expansion
@@ -1956,6 +1955,9 @@ export async function validateForceLoginOrg(): Promise<OrgValidationResult> {
     source === 'CLAUDE_CODE_OAUTH_TOKEN' ||
     source === 'CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR'
 
+  const { getOauthProfileFromOauthToken } = await import(
+    '../services/oauth/getOauthProfile.js'
+  )
   const profile = await getOauthProfileFromOauthToken(tokens.accessToken)
   if (!profile) {
     // Fail closed — we can't verify the org

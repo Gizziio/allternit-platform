@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Clock, Plus, Play, Trash, Pencil } from '@phosphor-icons/react';
 import GlassSurface from '@/design/GlassSurface';
 import { Button } from '@/components/ui/button';
@@ -35,7 +35,13 @@ const statusColor: Record<string, string> = {
   error: 'var(--status-error)',
 };
 
-export function RoutinesListView() {
+interface RoutinesListViewProps {
+  agentId?: string;
+  title?: string;
+  hideAgentSelector?: boolean;
+}
+
+export function RoutinesListView({ agentId, title, hideAgentSelector }: RoutinesListViewProps) {
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [metrics, setMetrics] = useState<Record<string, RoutineMetrics>>({});
@@ -46,6 +52,11 @@ export function RoutinesListView() {
   const [runningId, setRunningId] = useState<string | null>(null);
 
   const { agents } = useAgentStore();
+
+  const visibleRoutines = useMemo(
+    () => (agentId ? routines.filter((r) => r.agent_id === agentId) : routines),
+    [routines, agentId]
+  );
 
   const [form, setForm] = useState<{
     name: string;
@@ -63,7 +74,7 @@ export function RoutinesListView() {
     schedule_expression: '0 9 * * *',
     timezone: 'UTC',
     execution_domain: 'local',
-    agent_id: '',
+    agent_id: agentId || '',
     goal_id: '',
   });
 
@@ -104,7 +115,7 @@ export function RoutinesListView() {
       schedule_expression: '0 9 * * *',
       timezone: 'UTC',
       execution_domain: 'local',
-      agent_id: '',
+      agent_id: agentId || '',
       goal_id: '',
     });
   };
@@ -198,10 +209,10 @@ export function RoutinesListView() {
           </div>
           <div>
             <h1 className="text-2xl font-semibold" style={{ color: 'var(--text-primary)' }}>
-              Routines
+              {title || 'Routines'}
             </h1>
             <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-              Persistent scheduled jobs
+              {agentId ? 'Scheduled jobs for this bot' : 'Persistent scheduled jobs'}
             </p>
           </div>
         </div>
@@ -302,30 +313,32 @@ export function RoutinesListView() {
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <Label className="text-[var(--text-primary)] text-[13px] mb-2 block">Agent</Label>
-                <Select
-                  value={form.agent_id || 'none'}
-                  onValueChange={(value) => setForm((f) => ({ ...f, agent_id: value === 'none' ? '' : value }))}
-                >
-                  <SelectTrigger className="bg-[var(--bg-primary)] border-[var(--border-subtle)] text-[var(--text-primary)]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-[var(--bg-card)] border-[var(--border-subtle)]">
-                    <SelectItem value="none">No agent selected</SelectItem>
-                    {agents.map((agent) => (
-                      <SelectItem key={agent.id} value={agent.id}>
-                        {agent.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {form.agent_id && (
-                  <p className="text-xs mt-1.5" style={{ color: 'var(--text-tertiary)' }}>
-                    Harness: {agents.find((a) => a.id === form.agent_id)?.harness?.mode || 'cloud'}
-                  </p>
-                )}
-              </div>
+              {!hideAgentSelector && (
+                <div>
+                  <Label className="text-[var(--text-primary)] text-[13px] mb-2 block">Agent</Label>
+                  <Select
+                    value={form.agent_id || 'none'}
+                    onValueChange={(value) => setForm((f) => ({ ...f, agent_id: value === 'none' ? '' : value }))}
+                  >
+                    <SelectTrigger className="bg-[var(--bg-primary)] border-[var(--border-subtle)] text-[var(--text-primary)]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[var(--bg-card)] border-[var(--border-subtle)]">
+                      <SelectItem value="none">No agent selected</SelectItem>
+                      {agents.map((agent) => (
+                        <SelectItem key={agent.id} value={agent.id}>
+                          {agent.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {form.agent_id && (
+                    <p className="text-xs mt-1.5" style={{ color: 'var(--text-tertiary)' }}>
+                      Harness: {agents.find((a) => a.id === form.agent_id)?.harness?.mode || 'cloud'}
+                    </p>
+                  )}
+                </div>
+              )}
               <div>
                 <Label className="text-[var(--text-primary)] text-[13px] mb-2 block">Goal</Label>
                 <Select
@@ -373,14 +386,16 @@ export function RoutinesListView() {
         <div className="flex items-center justify-center h-64">
           <div className="size-8 border-2 border-solid border-[rgba(212,176,140,0.2)] border-t-[var(--accent-primary)] rounded-full animate-spin" />
         </div>
-      ) : routines.length === 0 ? (
+      ) : visibleRoutines.length === 0 ? (
         <GlassSurface className="p-8 rounded-lg text-center">
           <Clock size={40} className="mx-auto mb-4" style={{ color: 'var(--accent-primary)' }} />
           <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
-            No routines yet
+            {agentId ? 'No automation tasks for this bot yet' : 'No routines yet'}
           </h3>
           <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
-            Create a routine to run a job on a schedule.
+            {agentId
+              ? 'Create a scheduled task for this bot to run autonomously.'
+              : 'Create a routine to run a job on a schedule.'}
           </p>
           <Button
             onClick={() => {
@@ -395,7 +410,7 @@ export function RoutinesListView() {
         </GlassSurface>
       ) : (
         <div className="flex flex-col gap-4">
-          {routines.map((routine) => (
+          {visibleRoutines.map((routine) => (
             <GlassSurface key={routine.id} className="p-5 rounded-lg">
               <div className="flex items-start justify-between gap-4 mb-3">
                 <div className="flex-1 min-w-0">
@@ -466,7 +481,7 @@ export function RoutinesListView() {
                     Goal: {goals.find((g) => g.id === routine.goal_id)?.title || routine.goal_id}
                   </span>
                 )}
-                {routine.agent_id && (
+                {routine.agent_id && !agentId && (
                   <span className="px-2 py-1 rounded border border-[var(--border-subtle)]">
                     Agent: {agents.find((a) => a.id === routine.agent_id)?.name || routine.agent_id}
                     {' · '}

@@ -1,0 +1,228 @@
+---
+title: SCIM Provisioning
+description: SCIM 2.0 user and group provisioning for enterprise identity providers
+---
+
+Allternit exposes a SCIM 2.0-compatible API for automated user and group provisioning. Connect your identity provider to create, update, activate, and deactivate users and groups inside your organization.
+
+## Authentication and authorization
+
+SCIM endpoints require a Clerk JWT and organization admin privileges. The caller must be an owner or admin of the active organization.
+
+## SCIM base URL
+
+```
+https://api.allternit.com/api/v1/scim/v2
+```
+
+Configure your identity provider with this base URL and a bearer token issued from the Allternit dashboard.
+
+## User provisioning
+
+### Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/v1/scim/v2/Users` | List SCIM users |
+| POST | `/api/v1/scim/v2/Users` | Create a SCIM user |
+| GET | `/api/v1/scim/v2/Users/{id}` | Retrieve a user |
+| PUT | `/api/v1/scim/v2/Users/{id}` | Replace a user |
+| PATCH | `/api/v1/scim/v2/Users/{id}` | Update a user partially (active flag only) |
+| DELETE | `/api/v1/scim/v2/Users/{id}` | Delete a SCIM user |
+
+### Create a user
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/scim/v2/Users \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+    "externalId": "emp_12345",
+    "userName": "alice@example.com",
+    "name": {
+      "givenName": "Alice",
+      "familyName": "Anderson"
+    },
+    "emails": [
+      {
+        "value": "alice@example.com",
+        "primary": true,
+        "type": "work"
+      }
+    ],
+    "active": true,
+    "roles": [
+      {
+        "value": "Engineering"
+      }
+    ]
+  }'
+```
+
+**Response `201 Created`**
+
+```json
+{
+  "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+  "id": "scim_user_01J4N",
+  "externalId": "emp_12345",
+  "userName": "alice@example.com",
+  "name": {
+    "givenName": "Alice",
+    "familyName": "Anderson"
+  },
+  "emails": [
+    {
+      "value": "alice@example.com",
+      "primary": true,
+      "type": "work"
+    }
+  ],
+  "active": true,
+  "roles": [
+    {
+      "value": "role_01J"
+    }
+  ],
+  "meta": {
+    "resourceType": "User",
+    "created": "2026-08-12T10:00:00Z",
+    "lastModified": "2026-08-12T10:00:00Z"
+  }
+}
+```
+
+### List users
+
+```bash
+curl "https://api.allternit.com/api/v1/scim/v2/Users?startIndex=1&count=100" \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN"
+```
+
+**Response `200 OK`**
+
+```json
+{
+  "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponse"],
+  "totalResults": 1,
+  "startIndex": 1,
+  "itemsPerPage": 1,
+  "Resources": [
+    {
+      "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+      "id": "scim_user_01J4N",
+      "userName": "alice@example.com",
+      "active": true,
+      "meta": {
+        "resourceType": "User",
+        "created": "2026-08-12T10:00:00Z",
+        "lastModified": "2026-08-12T10:00:00Z"
+      }
+    }
+  ]
+}
+```
+
+### Deactivate a user
+
+```bash
+curl -X PATCH https://api.allternit.com/api/v1/scim/v2/Users/scim_user_01J4N \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "active": false
+  }'
+```
+
+## Group provisioning
+
+SCIM groups can be mapped to RBAC groups by matching `displayName` to an existing group name in your organization.
+
+### Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/v1/scim/v2/Groups` | List SCIM groups |
+| POST | `/api/v1/scim/v2/Groups` | Create a SCIM group |
+| GET | `/api/v1/scim/v2/Groups/{id}` | Retrieve a group |
+| PUT | `/api/v1/scim/v2/Groups/{id}` | Replace a group |
+| DELETE | `/api/v1/scim/v2/Groups/{id}` | Delete a SCIM group |
+
+### Create a group
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/scim/v2/Groups \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],
+    "externalId": "group_12345",
+    "displayName": "Engineering",
+    "members": [
+      {
+        "value": "scim_user_01J4N",
+        "type": "User"
+      }
+    ]
+  }'
+```
+
+**Response `201 Created`**
+
+```json
+{
+  "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],
+  "id": "scim_group_01J4N",
+  "externalId": "group_12345",
+  "displayName": "Engineering",
+  "members": [
+    {
+      "value": "scim_user_01J4N",
+      "type": "User"
+    }
+  ],
+  "meta": {
+    "resourceType": "Group",
+    "created": "2026-08-12T10:00:00Z",
+    "lastModified": "2026-08-12T10:00:00Z"
+  }
+}
+```
+
+## Role mapping
+
+SCIM roles and groups are mapped to Allternit RBAC as follows:
+
+- A user's first SCIM role `display`/`value` of `owner` maps to the organization `owner` role.
+- `admin` or `administrator` maps to the `admin` role.
+- All other values map to `member`.
+- A SCIM group whose `displayName` matches an existing RBAC group is linked via `scim_group_rbac_group_mappings`.
+- A SCIM role whose `display`/`value` matches an existing RBAC role name is linked via `scim_user_rbac_role_mappings`.
+
+## Query parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `startIndex` | integer | 1 | 1-based pagination offset |
+| `count` | integer | 100 | Items per page (max 100) |
+
+## Error codes
+
+| HTTP | Code | Meaning |
+|------|------|---------|
+| 400 | `invalid_value` | `userName` or `displayName` is empty |
+| 403 | `organization_required` | Caller has no active organization |
+| 403 | `insufficient_role` | Caller is not an owner/admin |
+| 404 | `not_found` | User or group does not exist in this organization |
+| 500 | `internal_error` | Unexpected server error |
+
+## Supported identity providers
+
+Any SCIM 2.0-compliant provider can connect, including Microsoft Entra ID, Okta, OneLogin, JumpCloud, and Google Workspace.
+
+## Related pages
+
+- [RBAC](/security/rbac) — Roles, groups, and workspace scoping
+- [Security model](/security/security-model) — Trust boundaries and data flows
+- [Compliance](/security/compliance) — Data retention and deletion workflows

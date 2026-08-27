@@ -1,0 +1,800 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AllternitOS — The Platform Becomes the OS</title>
+  <style>
+    :root {
+      --ink: #edf0eb;
+      --muted: #9ca59e;
+      --paper: #0b0e0c;
+      --panel: #111612;
+      --panel-2: #171d18;
+      --line: #293129;
+      --lime: #b7f36b;
+      --mint: #75e6aa;
+      --blue: #79b8ff;
+      --amber: #efbd68;
+      --rose: #ee8e96;
+      --radius: 18px;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 10% -5%, rgba(183,243,107,.12), transparent 28rem),
+        radial-gradient(circle at 92% 18%, rgba(121,184,255,.09), transparent 25rem),
+        var(--paper);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.5;
+    }
+    a { color: inherit; }
+    .shell { width: min(1180px, calc(100% - 32px)); margin: 0 auto; }
+    .topbar {
+      position: sticky; top: 0; z-index: 20;
+      border-bottom: 1px solid rgba(255,255,255,.07);
+      background: rgba(11,14,12,.83); backdrop-filter: blur(18px);
+    }
+    .topbar .shell { min-height: 58px; display: flex; align-items: center; gap: 20px; }
+    .brand { font-weight: 750; letter-spacing: -.02em; }
+    .brand span { color: var(--lime); }
+    nav { display: flex; gap: 16px; margin-left: auto; overflow-x: auto; }
+    nav a { color: var(--muted); text-decoration: none; font-size: 13px; white-space: nowrap; }
+    nav a:hover { color: var(--ink); }
+    .hero { padding: 96px 0 54px; }
+    .eyebrow { color: var(--lime); text-transform: uppercase; letter-spacing: .18em; font-size: 12px; font-weight: 800; }
+    h1 { max-width: 900px; margin: 16px 0 20px; font-size: clamp(44px, 8vw, 92px); line-height: .96; letter-spacing: -.065em; }
+    .lede { max-width: 770px; color: #c4cbc5; font-size: clamp(18px, 2.2vw, 24px); line-height: 1.5; }
+    .thesis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 42px; }
+    .metric { padding: 20px; border: 1px solid var(--line); background: rgba(17,22,18,.75); border-radius: 14px; }
+    .metric strong { display: block; font-size: 24px; color: var(--lime); }
+    .metric span { color: var(--muted); font-size: 13px; }
+    section { padding: 68px 0; border-top: 1px solid rgba(255,255,255,.06); }
+    .section-head { display: grid; grid-template-columns: .7fr 1.3fr; gap: 30px; margin-bottom: 30px; }
+    h2 { margin: 0; font-size: clamp(30px, 4vw, 50px); line-height: 1.05; letter-spacing: -.045em; }
+    .section-head p { margin: 4px 0 0; color: var(--muted); font-size: 17px; max-width: 680px; }
+    .architecture { display: grid; gap: 12px; }
+    .layer { border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; background: linear-gradient(145deg, rgba(23,29,24,.92), rgba(14,18,15,.92)); }
+    .layer.os { border-color: rgba(183,243,107,.48); box-shadow: inset 0 0 45px rgba(183,243,107,.035); }
+    .layer-title { display: flex; align-items: baseline; justify-content: space-between; gap: 20px; margin-bottom: 16px; }
+    .layer-title h3 { margin: 0; font-size: 19px; }
+    .layer-title small { color: var(--muted); }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip { padding: 8px 11px; border-radius: 999px; border: 1px solid #313a32; background: #111512; color: #cbd1cc; font-size: 13px; }
+    .os .chip { border-color: rgba(183,243,107,.24); }
+    .arrow { height: 18px; display: grid; place-items: center; color: var(--lime); font-size: 18px; }
+    .callout { margin-top: 18px; padding: 18px 20px; border-left: 3px solid var(--lime); background: rgba(183,243,107,.055); color: #cfd6d0; }
+    .domain-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .domain { padding: 20px; border: 1px solid var(--line); border-radius: 15px; background: var(--panel); }
+    .domain .index { color: var(--lime); font: 750 11px ui-monospace, monospace; letter-spacing: .08em; }
+    .domain h3 { margin: 12px 0 10px; font-size: 17px; }
+    .domain p { margin: 0; color: var(--muted); font-size: 13px; }
+    .benchmark-flow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 18px; }
+    .benchmark-flow div { padding: 15px; border-radius: 12px; border: 1px solid rgba(121,184,255,.18); background: rgba(121,184,255,.055); }
+    .benchmark-flow b { display: block; color: var(--blue); font-size: 12px; margin-bottom: 5px; }
+    .benchmark-flow span { color: #b8c0ba; font-size: 12px; }
+    .system-diagram { width: 100%; display: block; margin-top: 18px; }
+    .system-diagram text { font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+    .principle-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 18px; }
+    .principle { padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); }
+    .principle b { display: block; margin-bottom: 7px; color: var(--mint); font-size: 14px; }
+    .principle.avoid b { color: var(--rose); }
+    .principle span { color: var(--muted); font-size: 13px; }
+    .feature-atlas { margin-top: 22px; }
+    .feature-atlas h3 { margin: 0 0 6px; font-size: 24px; letter-spacing: -.03em; }
+    .feature-atlas > p { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
+    .feature-atlas table { min-width: 1040px; }
+    .feature-atlas td:first-child { color: var(--lime); font: 750 12px ui-monospace, monospace; white-space: nowrap; }
+    .feature-atlas td:nth-child(2) { color: var(--ink); font-weight: 650; }
+    .program-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .program { min-height: 190px; padding: 20px; border: 1px solid var(--line); border-radius: 16px; background: var(--panel); transition: transform .18s ease, border-color .18s ease; }
+    .program:hover { transform: translateY(-3px); border-color: #485449; }
+    .program .num { color: var(--lime); font: 700 12px ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .program h3 { margin: 18px 0 8px; font-size: 20px; letter-spacing: -.02em; }
+    .program p { margin: 0; color: var(--muted); font-size: 14px; }
+    .program footer { margin-top: 18px; color: #cbd2cc; font-size: 12px; }
+    .spine { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 18px; }
+    .spine div { padding: 12px 8px; text-align: center; border-radius: 10px; background: rgba(183,243,107,.08); border: 1px solid rgba(183,243,107,.16); color: #d8e9c8; font-size: 12px; }
+    .journey { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+    .journey .step { position: relative; padding: 18px 14px; min-height: 138px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); }
+    .journey .step:not(:last-child)::after { content: "→"; position: absolute; right: -9px; top: 50%; z-index: 2; color: var(--lime); }
+    .step b { display: block; color: var(--lime); font-size: 12px; margin-bottom: 10px; }
+    .step span { font-size: 13px; color: #c3cac4; }
+    .matrix { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); }
+    table { width: 100%; border-collapse: collapse; min-width: 820px; background: rgba(17,22,18,.72); }
+    th, td { padding: 15px 16px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { color: var(--lime); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; background: #131814; }
+    td { color: #c4cbc5; font-size: 13px; }
+    tr:last-child td { border-bottom: 0; }
+    .tag { display: inline-block; padding: 3px 7px; border-radius: 6px; background: #202721; color: var(--mint); font-size: 11px; white-space: nowrap; }
+    .roadmap { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; counter-reset: phase; }
+    .phase { counter-increment: phase; padding: 20px; border: 1px solid var(--line); border-radius: 15px; background: var(--panel); }
+    .phase::before { content: "0" counter(phase); color: var(--lime); font: 800 12px ui-monospace, monospace; }
+    .phase h3 { margin: 18px 0 8px; font-size: 17px; }
+    .phase p { margin: 0; color: var(--muted); font-size: 13px; }
+    .decision { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .decision article { padding: 24px; border-radius: 16px; border: 1px solid var(--line); background: var(--panel); }
+    .decision h3 { margin-top: 0; }
+    .yes { color: var(--mint); } .later { color: var(--amber); }
+    .sources { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .source { display: block; padding: 15px; border: 1px solid var(--line); border-radius: 12px; text-decoration: none; background: var(--panel); }
+    .source:hover { border-color: var(--lime); }
+    .source b { display: block; font-size: 14px; }
+    .source span { color: var(--muted); font-size: 12px; }
+    .footer { padding: 42px 0 70px; color: var(--muted); font-size: 13px; border-top: 1px solid var(--line); }
+    @media (max-width: 900px) {
+      .thesis, .program-grid, .roadmap, .domain-grid, .principle-grid { grid-template-columns: repeat(2, 1fr); }
+      .journey { grid-template-columns: repeat(3, 1fr); }
+      .sources { grid-template-columns: repeat(2, 1fr); }
+      .section-head { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 600px) {
+      .hero { padding-top: 68px; }
+      .thesis, .program-grid, .roadmap, .decision, .sources, .domain-grid, .benchmark-flow, .principle-grid { grid-template-columns: 1fr; }
+      .journey { grid-template-columns: 1fr 1fr; }
+      .spine { grid-template-columns: repeat(2, 1fr); }
+      nav { display: none; }
+    }
+    @media print {
+      @page { size: A4 landscape; margin: 0; background: #0b0e0c; }
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+      html, body { background: #0b0e0c !important; }
+      .topbar { position: static; }
+      .shell { width: calc(100% - 22mm); }
+      .topbar .shell { width: calc(100% - 22mm); }
+      .hero { padding-top: 44px; }
+      section { break-before: auto; padding: 28px 0; }
+      h2, h3 { break-after: avoid; }
+      .section-head { break-inside: avoid; }
+      .domain, .program, .phase, .decision article, .layer, .callout { break-inside: avoid; }
+      .feature-atlas { break-before: page; }
+      .feature-atlas .matrix { overflow: visible; }
+      .feature-atlas table { min-width: 0; table-layout: fixed; }
+      .feature-atlas th, .feature-atlas td { padding: 7px 8px; font-size: 8.5px; }
+      .feature-atlas th:first-child { width: 5%; }
+      .feature-atlas th:nth-child(2) { width: 17%; }
+      .feature-atlas th:nth-child(3) { width: 27%; }
+      .feature-atlas th:nth-child(4) { width: 27%; }
+      .feature-atlas th:nth-child(5) { width: 24%; }
+      .domain-grid { grid-template-columns: repeat(4, 1fr); gap: 7px; }
+      .domain { padding: 12px; }
+      .domain h3 { margin: 7px 0 6px; font-size: 13px; }
+      .domain p { font-size: 10px; line-height: 1.35; }
+      .domain .index { font-size: 8px; }
+      #architecture { break-before: page; }
+      #sources { break-before: page; }
+      .weight-block { break-before: page; break-inside: avoid; }
+      #architecture .layer { padding: 14px; }
+      #architecture .chip { padding: 5px 8px; font-size: 10px; }
+      #architecture .callout { padding: 12px 16px; font-size: 11px; }
+      .sources { grid-template-columns: repeat(5, 1fr); gap: 6px; }
+      .source { padding: 9px; }
+      .source b { font-size: 11px; }
+      .source span { font-size: 9px; }
+      #omarchy { break-before: page; }
+      .system-diagram { break-inside: avoid; }
+      .principle { padding: 12px; }
+      .footer { display: none; }
+      thead { display: table-header-group; }
+      tr { break-inside: avoid; }
+      a { text-decoration: none; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="shell">
+      <div class="brand">ALLTERNIT<span>://OS</span></div>
+      <nav aria-label="Artifact sections">
+        <a href="#architecture">Architecture</a>
+        <a href="#benchmark">OS benchmark</a>
+        <a href="#programs">Programs</a>
+        <a href="#learning">Learning</a>
+        <a href="#evolution">Evolution</a>
+        <a href="#omarchy">Omarchy</a>
+        <a href="#comparisons">References</a>
+        <a href="#sourcing">Source plan</a>
+        <a href="#gaps">Gap register</a>
+        <a href="#roadmap">Roadmap</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero shell" style="border-top:0">
+      <div class="eyebrow">Living architecture artifact · August 2026</div>
+      <h1>The platform<br>becomes the OS.</h1>
+      <p class="lede">Allternit does not need another simulated desktop. It already has the ingredients of an agentic operating system. The work now is to map, modularize, govern, and package them behind one durable runtime.</p>
+      <div class="thesis">
+        <div class="metric"><strong>1</strong><span>shared operating runtime</span></div>
+        <div class="metric"><strong>6+</strong><span>surfaces as OS clients</span></div>
+        <div class="metric"><strong>14</strong><span>first-party program families</span></div>
+        <div class="metric"><strong>∞</strong><span>qualified generated capabilities</span></div>
+      </div>
+    </section>
+
+    <section id="benchmark">
+      <div class="shell">
+        <div class="section-head">
+          <h2>What a real OS<br>must contain.</h2>
+          <p>Linux, macOS, Windows, and Android—not agent-OS marketing—set the benchmark. The canonical inventory contains 48 responsibilities across the complete lifecycle. Allternit translates each one into an agentic kernel obligation.</p>
+        </div>
+        <div class="domain-grid">
+          <article class="domain"><span class="index">01 · TRUST & BOOT</span><h3>Start from known-good state</h3><p>Root keys, signed and measured boot, hardware/runtime inventory, early authority, safe mode, and external recovery.</p></article>
+          <article class="domain"><span class="index">02 · KERNEL OBJECTS</span><h3>Name and govern everything</h3><p>Principals, workloads, steps, agents, models, artifacts, packages, leases, approvals, receipts, and explicit lifecycles.</p></article>
+          <article class="domain"><span class="index">03 · SCHEDULING & MEMORY</span><h3>Allocate scarce intelligence</h3><p>Structured concurrency, deadlines, budgets, model and executor placement, context paging, KV/VRAM pressure, cancellation.</p></article>
+          <article class="domain"><span class="index">04 · SYSCALLS & IPC</span><h3>Mediate every transition</h3><p>Typed capability calls, revocable leases, events, streams, locks, backpressure, deadlines, and attenuation across handoffs.</p></article>
+          <article class="domain"><span class="index">05 · DRIVERS & I/O</span><h3>Treat the world as devices</h3><p>Apps, APIs, browsers, models, robots, SaaS, and hardware use stable adapters with discovery, health, receipts, and hot removal.</p></article>
+          <article class="domain"><span class="index">06 · DATA & NETWORK</span><h3>Durable truth, governed movement</h3><p>Artifact namespaces, connectors, transactions, provenance, indexes, encrypted stores, egress rules, offline queues, backup.</p></article>
+          <article class="domain"><span class="index">07 · IDENTITY & SECURITY</span><h3>Authority outside the model</h3><p>Human, org, agent, package, device and runtime principals; purpose-bound leases; secrets; tenancy; isolation; deletion.</p></article>
+          <article class="domain"><span class="index">08 · SERVICES & PACKAGES</span><h3>Operate software transactionally</h3><p>Supervision, health, configuration, dependencies, signing, staged install/update/remove, rollback, revocation, compatibility.</p></article>
+          <article class="domain"><span class="index">09 · EXPERIENCE</span><h3>Many projections, one truth</h3><p>Desktop, Web, iOS, TUI, Office, API and voice share workload state, attention, approvals, interruption, accessibility.</p></article>
+          <article class="domain"><span class="index">10 · EVIDENCE & FAILURE</span><h3>Know what actually happened</h3><p>Journals, traces, receipts, costs, outcomes, watchdogs, checkpoints, replay, compensation, crash bundles, quarantine.</p></article>
+          <article class="domain"><span class="index">11 · VIRTUALIZATION & FLEET</span><h3>Place work by risk</h3><p>WASM, containers, microVMs, GUI VMs, remote runtimes, enrollment, attestation, sync, snapshots, placement, remote stop.</p></article>
+          <article class="domain"><span class="index">12 · ADMIN & CONFORMANCE</span><h3>Make the constitution testable</h3><p>Shell/API, debugger, policy simulation, package inspection, metrics, updates, migration, chaos tests, certification.</p></article>
+        </div>
+        <div class="feature-atlas">
+          <h3>Complete 48-feature implementation atlas</h3>
+          <p>Every canonical operating-system responsibility, translated into an agentic obligation and mapped to the intended Allternit implementation.</p>
+          <div class="matrix">
+            <table>
+              <thead><tr><th>#</th><th>OS responsibility</th><th>Traditional benchmark</th><th>Agentic equivalent</th><th>Allternit mapping</th></tr></thead>
+              <tbody>
+                <tr><td>01</td><td>Constitution & ABI</td><td>Invariants, privilege boundaries, compatibility and change rules.</td><td>System law, package ABI and protocol compatibility.</td><td>Versioned OS protocol, ADRs, conformance suite.</td></tr>
+                <tr><td>02</td><td>Hardware inventory</td><td>Discover CPU, RAM, accelerators, storage, radios and security hardware.</td><td>Discover models, tools, apps, runtimes, devices, people, cost and trust.</td><td>Capability inventory, health and attestation.</td></tr>
+                <tr><td>03</td><td>Root of trust</td><td>Hardware or immutable signing roots establish trusted code.</td><td>Authorize kernel, policy, package, model and update signers.</td><td>Offline root, release keys, device identities, signed manifests.</td></tr>
+                <tr><td>04</td><td>Secure measured boot</td><td>Verify and measure every stage before execution.</td><td>Verify daemon, policy, registry, weights and executor images.</td><td>Signed bootstrap, measurement log, safe-mode path.</td></tr>
+                <tr><td>05</td><td>Bootloader & early system</td><td>Select image, load kernel and provide recovery.</td><td>Start minimal authority and journal before optional agents.</td><td>Small supervisor independent of mutable models.</td></tr>
+                <tr><td>06</td><td>Hardware abstraction</td><td>Hide architecture differences behind stable interfaces.</td><td>Hide provider, model, browser, device and executor variation.</td><td>Model, Tool, Device, Voice, Browser and Executor contracts.</td></tr>
+                <tr><td>07</td><td>Kernel object model</td><td>Objects have identity, ownership, handles and lifecycles.</td><td>Workloads, steps, agents, artifacts, leases, approvals, receipts and packages.</td><td>Canonical schemas, state machines and garbage collection.</td></tr>
+                <tr><td>08</td><td>Interrupts, clocks & timers</td><td>Urgent events, monotonic time, deadlines and timers.</td><td>Interruption, cancellation, triggers, expiry and voice barge-in.</td><td>Priority event path independent of model cooperation.</td></tr>
+                <tr><td>09</td><td>Scheduler</td><td>Allocate CPU with fairness, priority and preemption.</td><td>Allocate models, tools, tokens, time, money, devices and attention.</td><td>Risk-, deadline-, budget- and capability-aware scheduler.</td></tr>
+                <tr><td>10</td><td>Threads & concurrency</td><td>Parallelism, locks, synchronization and deadlock handling.</td><td>Steps, subagents, branches, shared resources and human gates.</td><td>Structured concurrency, DAGs, locks and cancellation propagation.</td></tr>
+                <tr><td>11</td><td>Virtual memory</td><td>Isolated address spaces, paging and reclaim.</td><td>Bounded context, retrieval, compression and cache eviction.</td><td>Context Manager backed by durable event and artifact state.</td></tr>
+                <tr><td>12</td><td>Physical memory</td><td>Account for and reclaim scarce RAM.</td><td>Manage RAM, VRAM, KV cache, embeddings and model residency.</td><td>Hardware-aware residency and pressure policy.</td></tr>
+                <tr><td>13</td><td>Process & job lifecycle</td><td>Spawn, signal, suspend, resume, terminate and reap.</td><td>Admit, run, wait, pause, checkpoint, recover and archive work.</td><td>Durable Workload and Step state machines.</td></tr>
+                <tr><td>14</td><td>IPC & synchronization</td><td>Pipes, sockets, events, mutexes, shared memory and RPC.</td><td>Typed events, streams, requests, handoffs, artifacts and locks.</td><td>Local OS protocol and event bus; MCP/A2A adapters.</td></tr>
+                <tr><td>15</td><td>System-call boundary</td><td>Validate transitions into privileged kernel services.</td><td>Validate consequential agent requests before action.</td><td>Capability API; models never directly invoke privileged executors.</td></tr>
+                <tr><td>16</td><td>Device drivers</td><td>Translate stable operations into device-specific behavior.</td><td>Translate intent into API, app, browser, robot and data operations.</td><td>Signed drivers/tools plus generated-driver qualification lab.</td></tr>
+                <tr><td>17</td><td>Plug and Play</td><td>Discover, bind, configure and safely remove devices.</td><td>Discover MCP servers, accounts, apps, runtimes and model packs.</td><td>Negotiation, attestation, hot add/remove and quarantine.</td></tr>
+                <tr><td>18</td><td>I/O manager</td><td>Route async I/O, buffering, cancellation and completion.</td><td>Route tool calls with deadlines, retries, idempotency and receipts.</td><td>Executor gateway with typed results and cancellation.</td></tr>
+                <tr><td>19</td><td>Filesystem & VFS</td><td>Name, mount, protect, journal and recover data.</td><td>Name artifacts, memories, datasets, packages and remote stores.</td><td>Artifact namespace, governed mounts and transactions.</td></tr>
+                <tr><td>20</td><td>Storage & volumes</td><td>Encrypt, snapshot, quota, repair and migrate storage.</td><td>Separate system, user, org and workload stores with retention.</td><td>Encrypted stores, quotas, snapshots, backup and restore.</td></tr>
+                <tr><td>21</td><td>Networking stack</td><td>Addressing, routing, transport, DNS, firewalling and QoS.</td><td>Connect agents, devices, relays, models and services under policy.</td><td>Identity-bound transport, discovery, egress rules and offline queues.</td></tr>
+                <tr><td>22</td><td>Identity & sessions</td><td>Authenticate users, services, devices and login sessions.</td><td>Authenticate people, orgs, agents, packages, models and runtimes.</td><td>Unified principals, delegation chains, presence and sessions.</td></tr>
+                <tr><td>23</td><td>Authorization monitor</td><td>Mediate every protected-object access path.</td><td>Decide whether agents may read, infer, spend, communicate or mutate.</td><td>Non-bypassable policy decision and enforcement points.</td></tr>
+                <tr><td>24</td><td>Access tokens & handles</td><td>Carry scoped rights, ownership and impersonation constraints.</td><td>Carry time-, object-, purpose-, action- and budget-scoped authority.</td><td>Revocable capability leases with attenuation and provenance.</td></tr>
+                <tr><td>25</td><td>Isolation & sandboxing</td><td>Address spaces, ACLs, namespaces, jails, sandboxes and VMs.</td><td>Separate workloads, tenants, generated code, identities and networks.</td><td>Declarative to WASM, process, container, microVM and GUI VM ladder.</td></tr>
+                <tr><td>26</td><td>Crypto & secrets</td><td>Protect keys/data at rest and in transit; secure randomness.</td><td>Protect credentials, user data, memory, packages, models and receipts.</td><td>Secret handles, envelope encryption, redaction and rotation.</td></tr>
+                <tr><td>27</td><td>Accounting & quotas</td><td>Track CPU, memory, storage, network and power.</td><td>Track tokens, inference, spend, latency, calls, storage and attention.</td><td>Per-principal/workload/package budgets and chargeback.</td></tr>
+                <tr><td>28</td><td>Service manager / init</td><td>Order, start, supervise, health-check and restart daemons.</td><td>Supervise agents, model servers, connectors and triggers.</td><td>Declarative dependencies, health, backoff and circuit breakers.</td></tr>
+                <tr><td>29</td><td>Configuration database</td><td>Layer system, user and service settings with precedence.</td><td>Store routes, policy, package settings, accounts and feature flags.</td><td>Typed, layered, migratable configuration with provenance.</td></tr>
+                <tr><td>30</td><td>Runtime, compiler & linker</td><td>Load binaries/libraries, compile code and resolve dependencies.</td><td>Load agents/tools/skills and compile learned/generated capability.</td><td>Package loader, WASM lane, Tool/Driver/Harness Foundries.</td></tr>
+                <tr><td>31</td><td>Package & app lifecycle</td><td>Verify, install, resolve, configure, update, remove and roll back.</td><td>Manage agents, models, skills, tools, workflows, policy and UI.</td><td>Signed manifests, solver, staged activation, rollback and revocation.</td></tr>
+                <tr><td>32</td><td>User & app data model</td><td>Separate system, app, user, cache and portable document data.</td><td>Separate kernel truth, workload state, memory, artifacts, secrets and cache.</td><td>Explicit data classes with ownership, retention and deletion.</td></tr>
+                <tr><td>33</td><td>Search & indexing</td><td>Index files, metadata and content without violating ACLs.</td><td>Retrieve memory, artifacts, capabilities and episodes under authority.</td><td>Permission-preserving hybrid index with citations and freshness.</td></tr>
+                <tr><td>34</td><td>GUI, session & windows</td><td>Compose windows, focus, clipboard, notifications and displays.</td><td>Project shared state into Desktop, Web, iOS, TUI, Office, voice and API.</td><td>Surface-neutral state plus declarative projections.</td></tr>
+                <tr><td>35</td><td>Input, accessibility & media</td><td>Normalize keyboard, pointer, touch, speech, camera and assistive tech.</td><td>Normalize text, voice, screen, files, sensors and accessibility trees.</td><td>Multimodal input plane and shared Turn Manager.</td></tr>
+                <tr><td>36</td><td>Notifications & background</td><td>Deliver events under focus, power and preference policy.</td><td>Request attention, approval and exceptions without alert fatigue.</td><td>Priority inbox, resumable approvals and quiet-hours escalation.</td></tr>
+                <tr><td>37</td><td>Observability & audit</td><td>Metrics, logs, traces, crash reports and security events.</td><td>Record decisions, policy, actions, evidence, cost, state and outcomes.</td><td>Append-only journal, receipts, trace correlation and evidence UI.</td></tr>
+                <tr><td>38</td><td>Fault containment</td><td>Contain crashes, hangs, corruption and resource exhaustion.</td><td>Contain runaway agents, loops, bad tools, providers and poisoned context.</td><td>Watchdogs, deadlines, bounded retries and quarantine.</td></tr>
+                <tr><td>39</td><td>Checkpoint & recovery</td><td>Journal, snapshot, resume, repair and enter safe mode.</td><td>Restore workloads after daemon, model, executor or device failure.</td><td>Idempotent steps, checkpoints, compensation and replay.</td></tr>
+                <tr><td>40</td><td>Updates & migration</td><td>Signed atomic updates, schema migration and rollback.</td><td>Update kernel, policy, packages, models, memory and skills safely.</td><td>Channels, staged rollout, health gates and compatibility checks.</td></tr>
+                <tr><td>41</td><td>Backup, restore & reset</td><td>Restore data/system independently and support factory reset.</td><td>Restore identity, artifacts, history, packages and policy selectively.</td><td>Encrypted backup, selective restore, portable export and safe reset.</td></tr>
+                <tr><td>42</td><td>Virtualization & containers</td><td>Isolated machines and portable workload envelopes.</td><td>Disposable browsers/desktops and reproducible risky-code environments.</td><td>Native virtualization, QEMU lab and cloud microVMs.</td></tr>
+                <tr><td>43</td><td>Distributed fleet</td><td>Enroll devices, deploy policy, update and reconcile offline state.</td><td>Place work across desktops, phones, servers, robots and remote agents.</td><td>Runtime identity, relay, placement, sync, fleet policy and remote stop.</td></tr>
+                <tr><td>44</td><td>Power & thermal</td><td>Adapt performance to battery, thermals, sleep and wake.</td><td>Adapt model size, concurrency, acceleration and background work.</td><td>Energy-aware scheduler, sleep checkpoints and low-power models.</td></tr>
+                <tr><td>45</td><td>Admin & developer tools</td><td>Shells, APIs, debuggers, profilers, policy and diagnostics.</td><td>Inspect, explain, simulate, control, debug and extend agentic work.</td><td>gizzi-code TUI, admin UI/API, replay debugger and policy simulator.</td></tr>
+                <tr><td>46</td><td>Compatibility & conformance</td><td>Maintain ABI/API behavior and certify software/hardware.</td><td>Ensure packages and surfaces share authority, state and recovery semantics.</td><td>Golden protocol, executor, package and chaos test suites.</td></tr>
+                <tr><td>47</td><td>Privacy, deletion & tenancy</td><td>Enforce separation, consent, retention, deletion and ownership.</td><td>Prevent cross-user/org/workload leakage and govern learned state.</td><td>Tenant keys, purpose binding, retention and derived-data deletion ledger.</td></tr>
+                <tr><td>48</td><td>Localization & accessibility</td><td>Operate across language, ability and interaction modality.</td><td>Keep agents, approvals, explanations and voice equivalent across surfaces.</td><td>Semantic UI, captions, keyboard/voice parity and locale-aware agents.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="benchmark-flow">
+          <div><b>TRADITIONAL PROCESS</b><span>Workload with durable objective, owner, policy, budget, checkpoints, and outcome</span></div>
+          <div><b>TRADITIONAL SYSCALL</b><span>Typed capability request checked outside the model before an executor acts</span></div>
+          <div><b>TRADITIONAL FILE</b><span>Artifact with identity, provenance, policy, versions, retention, and portable content</span></div>
+          <div><b>TRADITIONAL WINDOW</b><span>Revocable projection of shared state—never the owner of the work</span></div>
+        </div>
+        <div class="callout"><strong>The claim gate:</strong> shared durable workloads, non-bypassable authority, transactional packages, bounded work, qualified isolation, truthful evidence, restart recovery, external emergency stop, and public conformance. Hosted ships first; Native is designed in parallel.</div>
+      </div>
+    </section>
+
+    <section id="architecture">
+      <div class="shell">
+        <div class="section-head">
+          <h2>One system.<br>Many faces.</h2>
+          <p>The operating system is the shared platform beneath every experience. A window, chat, terminal, or mobile screen is a projection of durable OS state—not a separate brain.</p>
+        </div>
+        <div class="architecture">
+          <div class="layer">
+            <div class="layer-title"><h3>Surfaces</h3><small>Interaction, observation, approval</small></div>
+            <div class="chips"><span class="chip">Desktop</span><span class="chip">Web</span><span class="chip">iOS</span><span class="chip">gizzi-code TUI</span><span class="chip">Office</span><span class="chip">Extensions</span><span class="chip">SDK / API</span></div>
+          </div>
+          <div class="arrow">↓ Allternit OS Protocol</div>
+          <div class="layer os">
+            <div class="layer-title"><h3>Allternit Platform = Agentic OS</h3><small>Durable authority and shared truth</small></div>
+            <div class="chips"><span class="chip">Workloads</span><span class="chip">Identity</span><span class="chip">Policy</span><span class="chip">Agents</span><span class="chip">Models</span><span class="chip">Packages</span><span class="chip">Scheduler</span><span class="chip">Memory</span><span class="chip">Artifacts</span><span class="chip">Approvals</span><span class="chip">Receipts</span><span class="chip">Experience Compiler</span><span class="chip">Recovery</span></div>
+          </div>
+          <div class="arrow">↓ Capability-gated execution</div>
+          <div class="layer">
+            <div class="layer-title"><h3>Execution fabric</h3><small>Selected by risk and environment</small></div>
+            <div class="chips"><span class="chip">Declarative</span><span class="chip">WASM</span><span class="chip">Restricted process</span><span class="chip">Container / gVisor</span><span class="chip">MicroVM</span><span class="chip">GUI VM</span><span class="chip">Remote runtime</span><span class="chip">Device / robot</span></div>
+          </div>
+        </div>
+        <div class="callout"><strong>Constitutional rule:</strong> models and surfaces propose; policy authorizes; executors act; receipts attest. No program gets a private path around this chain.</div>
+      </div>
+    </section>
+
+    <section id="programs">
+      <div class="shell">
+        <div class="section-head">
+          <h2>The year of work<br>becomes programs.</h2>
+          <p>Existing Platform and gizzi-code capabilities are not thrown away. They become independently runnable packages that interoperate through kernel objects rather than private imports.</p>
+        </div>
+        <div class="program-grid">
+          <article class="program"><span class="num">01</span><h3>Operator</h3><p>Intent, workloads, approvals, system explanations, and specialist handoff.</p><footer>Chat + agents + gizzi runtime</footer></article>
+          <article class="program"><span class="num">02</span><h3>Gizzi Code Studio</h3><p>Repositories, terminal, environments, diffs, software delivery, tools, and harnesses.</p><footer>gizzi-code + Code surfaces</footer></article>
+          <article class="program"><span class="num">03</span><h3>Cowork</h3><p>Long-running projects, teams, goals, tasks, files, and collaborative agent work.</p><footer>Cowork engine + durable goals</footer></article>
+          <article class="program"><span class="num">04</span><h3>Browser / ACI</h3><p>Isolated sessions, evidence, citations, forms, downloads, and verified web actions.</p><footer>ACI + browser capsule + extension</footer></article>
+          <article class="program"><span class="num">05</span><h3>Computer</h3><p>Host accessibility and isolated agent desktops for cross-application work.</p><footer>Computer-use engine + protocol</footer></article>
+          <article class="program"><span class="num">06</span><h3>Research</h3><p>Evidence collection, synthesis, citations, knowledge, and defensible reports.</p><footer>Research + memory + browser</footer></article>
+          <article class="program"><span class="num">07</span><h3>Documents</h3><p>Documents, data, presentations, Office automation, export, and verification.</p><footer>Office plugins + artifacts</footer></article>
+          <article class="program"><span class="num">08</span><h3>Design / UI Forge</h3><p>Interfaces, mini-apps, visual artifacts, declarative UI, and visual verification.</p><footer>Design + OpenUI + A2UI</footer></article>
+          <article class="program"><span class="num">09</span><h3>Workflow / Rails</h3><p>Schedules, triggers, DAGs, retries, checkpoints, and deterministic procedures.</p><footer>Rails + workflow engine</footer></article>
+          <article class="program"><span class="num">10</span><h3>Swarm / Teams</h3><p>Delegation, parallel work, consensus, simulation, and multi-agent topology.</p><footer>Swarm + orchestrator + MiroFish</footer></article>
+          <article class="program"><span class="num">11</span><h3>Skill Studio</h3><p>Teach Mode, skill authoring, harness generation, replay, evaluation, and promotion.</p><footer>Skills + plugins + Experience Compiler</footer></article>
+          <article class="program"><span class="num">12</span><h3>Model Lab</h3><p>Install, benchmark, route, inspect, and manage local and remote intelligence.</p><footer>Local models + providers + Playground</footer></article>
+          <article class="program"><span class="num">13</span><h3>Runtime / Fleet</h3><p>Devices, environments, executors, BYOC, health, upgrades, budgets, and recovery.</p><footer>Pairing + relay + infrastructure</footer></article>
+          <article class="program"><span class="num">14</span><h3>Native System + A://Labs</h3><p>Bootable AllternitOS, recovery, generated drivers, hardware qualification, and experimental packages.</p><footer>Native product track + isolated research channel</footer></article>
+        </div>
+        <div class="spine"><div>Workload</div><div>Artifact</div><div>Capability</div><div>Approval</div><div>Receipt</div><div>Package</div><div>Agent</div><div>Model</div><div>Checkpoint</div><div>Memory</div></div>
+      </div>
+    </section>
+
+    <section id="learning">
+      <div class="shell">
+        <div class="section-head">
+          <h2>Experience becomes<br>compiled capability.</h2>
+          <p>Fable shows runtime creation. Hermes shows procedural memory. Microsoft Skill Recorder shows learning by demonstration. Allternit combines them with evidence, isolation, policy, and rollback.</p>
+        </div>
+        <div class="journey">
+          <div class="step"><b>01 · Capture</b><span>Verified trace, receipts, screen/DOM/accessibility evidence, optional narration.</span></div>
+          <div class="step"><b>02 · Understand</b><span>Recover intent, semantic steps, parameters, dependencies, and postconditions.</span></div>
+          <div class="step"><b>03 · Compile</b><span>Create memory, skill, workflow, WASM tool, driver, or harness candidate.</span></div>
+          <div class="step"><b>04 · Prove</b><span>Redact secrets, replay in isolation, vary fixtures, and evaluate independently.</span></div>
+          <div class="step"><b>05 · Promote</b><span>Shadow, approve, activate, monitor, version, expire, or revert.</span></div>
+          <div class="step"><b>06 · Accelerate</b><span>Use deterministic code for known steps and reserve models for ambiguity.</span></div>
+        </div>
+        <div class="callout"><strong>A successful turn is evidence—not permission to self-modify.</strong> Reusable behavior earns trust through outcome verification, replay, independent evaluation, and operational history.</div>
+      </div>
+    </section>
+
+    <section id="evolution">
+      <div class="shell">
+        <div class="section-head">
+          <h2>The OS can<br>evolve itself.</h2>
+          <p>Agents may generate specialized kernels, schedulers, harnesses, model adapters, drivers, and environments. They cannot rewrite the constitutional layer that grants authority, evaluates candidates, signs releases, or performs recovery.</p>
+        </div>
+        <div class="architecture">
+          <div class="layer os">
+            <div class="layer-title"><h3>Immutable constitutional kernel</h3><small>Outside agent self-modification</small></div>
+            <div class="chips"><span class="chip">Trust roots</span><span class="chip">Identity</span><span class="chip">Capability enforcement</span><span class="chip">Package verification</span><span class="chip">Receipts</span><span class="chip">Emergency stop</span><span class="chip">Recovery</span><span class="chip">Audit retention</span><span class="chip">Evaluation thresholds</span><span class="chip">Release signing</span></div>
+          </div>
+          <div class="arrow">↓ Defines boundaries and promotion gates</div>
+          <div class="layer">
+            <div class="layer-title"><h3>Evolutionary systems layer</h3><small>Generated, measured, replaceable, reversible</small></div>
+            <div class="chips"><span class="chip">Workload kernels</span><span class="chip">Harness kernels</span><span class="chip">Model kernels</span><span class="chip">Environment kernels</span><span class="chip">Device drivers</span><span class="chip">Schedulers</span><span class="chip">Interface kernels</span><span class="chip">Linux variants</span></div>
+          </div>
+        </div>
+
+        <div class="feature-atlas" style="margin-top:28px">
+          <h3>Eight things agents can rebuild</h3>
+          <p>“Kernel” is a family of control loops, not only the hardware kernel.</p>
+          <div class="matrix">
+            <table>
+              <thead><tr><th>#</th><th>Generated kernel</th><th>What it controls</th><th>Hosted form</th><th>Native form</th></tr></thead>
+              <tbody>
+                <tr><td>01</td><td>Workload kernel</td><td>Planning, steps, state, retries, verification and completion.</td><td>Per-workload WASM component under the daemon.</td><td>Same component scheduled as a native OS workload.</td></tr>
+                <tr><td>02</td><td>Harness kernel</td><td>Prompts, tools, context layout, evaluators and stopping rules.</td><td>Versioned agent package with replay harness.</td><td>System-integrated package with local model and device profiles.</td></tr>
+                <tr><td>03</td><td>Model kernel</td><td>Inference graph, quantization, adapters, speculative decoding and KV policy.</td><td>Model Manager selects runtime and adapter packages.</td><td>Co-designed with GPU/NPU, memory, thermal and residency services.</td></tr>
+                <tr><td>04</td><td>Environment kernel</td><td>Packages, filesystem, processes, services, network and credentials.</td><td>Generated container or microVM manifest.</td><td>Native sandbox, microVM or disposable agent desktop.</td></tr>
+                <tr><td>05</td><td>Device kernel</td><td>Browser, application, API, robot and hardware driver behavior.</td><td>Userspace adapter behind host-sanctioned APIs.</td><td>Userspace driver first; kernel candidate only through hardware lab.</td></tr>
+                <tr><td>06</td><td>Scheduling kernel</td><td>Placement across agents, models, CPUs, GPUs, devices, cost and time.</td><td>Daemon-level workload and model router.</td><td>Daemon router plus qualified sched_ext/BPF system scheduler.</td></tr>
+                <tr><td>07</td><td>Interface kernel</td><td>Workload UI, voice turn behavior, attention and secure handoff.</td><td>Declarative projections in Desktop, Web, iOS and TUI.</td><td>Compositor-integrated projections; secure surfaces remain immutable.</td></tr>
+                <tr><td>08</td><td>Linux system variant</td><td>Kernel configuration, I/O, memory, services, drivers and power policy.</td><td>Guest VM candidate only.</td><td>Separate signed boot deployment with probation and rollback.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="section-head" style="margin-top:34px;margin-bottom:18px">
+          <h2 style="font-size:32px">Hosted vs. Native.</h2>
+          <p>Hosted builds a nested agentic computer inside the host. Native can co-optimize the whole machine while retaining a known-good Linux and recovery fallback.</p>
+        </div>
+        <div class="matrix">
+          <table>
+            <thead><tr><th>Capability</th><th>Hosted app + daemon</th><th>Native AllternitOS</th><th>Promotion boundary</th></tr></thead>
+            <tbody>
+              <tr><td>Kernel synthesis</td><td>Generate WASM workload kernels, harnesses and microVM guests.</td><td>Add system schedulers, image compositions, kernel configs and driver candidates.</td><td>Candidate cannot replace supervisor, trust, policy or recovery.</td></tr>
+              <tr><td>Environment optimization</td><td>Compose files, packages, tools, network, models and credentials per workload.</td><td>Also control boot services, memory reservation, accelerator brokers, power and thermal profiles.</td><td>Reproducible manifest, bounded authority, destroy/rollback behavior.</td></tr>
+              <tr><td>Driver generation</td><td>App/API/browser/device adapters through host APIs.</td><td>Userspace drivers; kernel drivers only after QEMU, fuzz, hotplug and hardware qualification.</td><td>Human review and signed inactive deployment for kernel mode.</td></tr>
+              <tr><td>Model optimization</td><td>Routing, caching, quantization, adapters, distillation and runtime selection.</td><td>Add model/OS co-design: residency, shared weights, GPU/NPU, energy, thermals and prefetch.</td><td>Never mutate active base weights; activate signed model packages.</td></tr>
+              <tr><td>System scheduling</td><td>Schedule workloads, steps, models, tools, tokens, money and remote devices.</td><td>Also propose sched_ext/BPF CPU policy with watchdog and automatic bypass.</td><td>Fallback scheduler remains outside agent control.</td></tr>
+              <tr><td>System evolution</td><td>Shadow and canary new packages inside host-contained boundaries.</td><td>Boot candidate deployment under probation; bless or automatically roll back.</td><td>Known-good and recovery deployments always retained.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="weight-block">
+          <div class="section-head" style="margin-top:34px;margin-bottom:18px">
+            <h2 style="font-size:32px">Weights evolve<br>by evidence.</h2>
+            <p>The system optimizes reversibly before touching weights, then moves through adapters and distillation. Online agents never rewrite their active base model in place.</p>
+          </div>
+          <div class="journey" style="grid-template-columns:repeat(4,1fr)">
+            <div class="step"><b>01 · Runtime</b><span>Prompt/context packing, retrieval, caches, constrained decoding, routing, quantization and speculative execution.</span></div>
+            <div class="step"><b>02 · Adapters</b><span>Train scoped LoRA/PEFT packages from consented, verified episodes; switch and remove independently.</span></div>
+            <div class="step"><b>03 · Distillation</b><span>Train a smaller specialist from filtered teacher traces; prove held-out quality, safety, cost and latency.</span></div>
+            <div class="step"><b>04 · Base release</b><span>Full training occurs offline and becomes a new immutable model package with signature, evaluation and rollback.</span></div>
+          </div>
+        </div>
+
+        <div class="section-head" style="margin-top:34px;margin-bottom:18px">
+          <h2 style="font-size:32px">Evolution has<br>a system call.</h2>
+          <p>Every generated optimization crosses the same qualification pipeline. The candidate cannot alter its evaluator or erase the evidence used to judge it.</p>
+        </div>
+        <div class="roadmap">
+          <article class="phase"><h3>Observe</h3><p>Collect verified outcomes, traces, cost, latency, energy, failures and environment facts.</p></article>
+          <article class="phase"><h3>Propose</h3><p>Generate a kernel, harness, adapter, scheduler, driver or environment candidate.</p></article>
+          <article class="phase"><h3>Build</h3><p>Compile reproducibly with declared dependencies, capabilities and rollback target.</p></article>
+          <article class="phase"><h3>Attack</h3><p>Static checks, replay, fuzzing, adversarial fixtures, fault injection and escape tests.</p></article>
+          <article class="phase"><h3>Compare</h3><p>Measure quality, safety, recovery, speed, spend, memory, energy and regression.</p></article>
+          <article class="phase"><h3>Shadow</h3><p>Run without authority beside production; compare decisions and outcomes.</p></article>
+          <article class="phase"><h3>Canary</h3><p>Limited signed activation with watchdog, health gates and automatic rollback.</p></article>
+          <article class="phase"><h3>Promote</h3><p>Human or policy approval, immutable receipt, continuous monitoring and retained fallback.</p></article>
+        </div>
+        <div class="callout"><strong>Core rule:</strong> agents can search the space of better systems; they cannot redefine trust, grant themselves authority, lower their own acceptance threshold, replace recovery, or destroy the evidence against them.</div>
+      </div>
+    </section>
+
+    <section id="omarchy">
+      <div class="shell">
+        <div class="section-head">
+          <h2>Omarchy proves<br>the product layer.</h2>
+          <p>Omarchy is a real installable Arch-based Linux distribution: ISO, bootloader, compositor, custom shell, applications, command center, migrations, update channels, hardware fixes, themes, and snapshot recovery. Its lesson is coherence—not a new kernel.</p>
+        </div>
+
+        <svg class="system-diagram" viewBox="0 0 1100 430" role="img" aria-labelledby="omarchy-diagram-title omarchy-diagram-desc">
+          <title id="omarchy-diagram-title">Omarchy to AllternitOS architecture bridge</title>
+          <desc id="omarchy-diagram-desc">Omarchy combines Linux, Arch, Hyprland, Quickshell, applications and an opinionated command experience. Allternit retains that product coherence and adds durable workloads, governed agents, model services, evidence, isolation and atomic recovery.</desc>
+          <defs>
+            <linearGradient id="omarchyGlow" x1="0" x2="1"><stop stop-color="#b7f36b" stop-opacity=".18"/><stop offset="1" stop-color="#79b8ff" stop-opacity=".05"/></linearGradient>
+            <marker id="arrowHead" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#b7f36b"/></marker>
+          </defs>
+          <rect x="1" y="1" width="1098" height="428" rx="22" fill="#101511" stroke="#293129"/>
+          <text x="38" y="42" fill="#b7f36b" font-size="13" font-weight="700" letter-spacing="2">OMARCHY · COHERENT NATIVE PRODUCT</text>
+          <text x="648" y="42" fill="#79b8ff" font-size="13" font-weight="700" letter-spacing="2">ALLTERNIT · AGENT-NATIVE SYSTEM</text>
+
+          <g>
+            <rect x="38" y="70" width="380" height="52" rx="12" fill="#171d18" stroke="#354035"/><text x="228" y="101" text-anchor="middle" fill="#edf0eb" font-size="17" font-weight="650">Opinionated apps + developer workflow</text>
+            <rect x="38" y="132" width="380" height="52" rx="12" fill="#171d18" stroke="#354035"/><text x="228" y="163" text-anchor="middle" fill="#edf0eb" font-size="17" font-weight="650">Quickshell desktop + unified CLI</text>
+            <rect x="38" y="194" width="380" height="52" rx="12" fill="#171d18" stroke="#354035"/><text x="228" y="225" text-anchor="middle" fill="#edf0eb" font-size="17" font-weight="650">Hyprland + Wayland services</text>
+            <rect x="38" y="256" width="380" height="52" rx="12" fill="#171d18" stroke="#354035"/><text x="228" y="287" text-anchor="middle" fill="#edf0eb" font-size="17" font-weight="650">Arch + Pacman/AUR + migrations</text>
+            <rect x="38" y="318" width="380" height="72" rx="12" fill="#171d18" stroke="#354035"/><text x="228" y="348" text-anchor="middle" fill="#edf0eb" font-size="17" font-weight="650">Linux + Btrfs/Snapper + Limine</text><text x="228" y="371" text-anchor="middle" fill="#9ca59e" font-size="12">Installable machine, visible recovery, chosen defaults</text>
+          </g>
+
+          <path d="M450 230 C505 230, 520 230, 574 230" fill="none" stroke="#b7f36b" stroke-width="2" marker-end="url(#arrowHead)"/>
+          <text x="512" y="210" text-anchor="middle" fill="#b7f36b" font-size="12" font-weight="700">BORROW</text>
+          <text x="512" y="257" text-anchor="middle" fill="#9ca59e" font-size="11">coherence</text>
+
+          <g>
+            <rect x="606" y="70" width="456" height="52" rx="12" fill="url(#omarchyGlow)" stroke="#4c6b37"/><text x="834" y="101" text-anchor="middle" fill="#edf0eb" font-size="17" font-weight="650">Workload shell + programs + artifact shelf</text>
+            <rect x="606" y="132" width="456" height="52" rx="12" fill="#171d18" stroke="#354035"/><text x="834" y="163" text-anchor="middle" fill="#edf0eb" font-size="17" font-weight="650">Agents + models + voice + experience compiler</text>
+            <rect x="606" y="194" width="456" height="52" rx="12" fill="#171d18" stroke="#354035"/><text x="834" y="225" text-anchor="middle" fill="#edf0eb" font-size="17" font-weight="650">Capabilities + evidence + package transactions</text>
+            <rect x="606" y="256" width="456" height="52" rx="12" fill="#171d18" stroke="#354035"/><text x="834" y="287" text-anchor="middle" fill="#edf0eb" font-size="17" font-weight="650">WASM + app sandbox + microVM + agent desktop</text>
+            <rect x="606" y="318" width="456" height="72" rx="12" fill="#171d18" stroke="#354035"/><text x="834" y="348" text-anchor="middle" fill="#edf0eb" font-size="17" font-weight="650">Verified immutable Linux + recovery system</text><text x="834" y="371" text-anchor="middle" fill="#9ca59e" font-size="12">Same coherence; stronger trust, isolation and lifecycle</text>
+          </g>
+        </svg>
+
+        <div class="section-head" style="margin-top:34px;margin-bottom:18px">
+          <h2 style="font-size:32px">What we borrow.</h2>
+          <p>Omarchy fills a gap in our outline: the daily human experience must be specified as rigorously as the kernel.</p>
+        </div>
+        <div class="principle-grid">
+          <article class="principle"><b>One designed system</b><span>One compositor, shell, settings language, CLI, update flow, recovery path, application set, and interaction grammar.</span></article>
+          <article class="principle"><b>Persistent warm shell</b><span>A long-running experience host shares services and summons panels through IPC instead of cold-starting disconnected utilities.</span></article>
+          <article class="principle"><b>Unified command center</b><span>One discoverable CLI powers system menus, automation, diagnostics and agents; Allternit makes it a typed OS-protocol client.</span></article>
+          <article class="principle"><b>Opinionated keyboard grammar</b><span>System-wide shortcuts for search, programs, settings, workloads, voice, approvals, evidence and emergency stop.</span></article>
+          <article class="principle"><b>Themes as system resources</b><span>Coordinated color, typography, motion, sound, terminal, editor, documents, voice and accessibility—not isolated skins.</span></article>
+          <article class="principle"><b>Visible update and recovery</b><span>Channels, migrations, pre-update recovery and human-readable repair paths become signed deployments, probation and rollback.</span></article>
+          <article class="principle"><b>Hardware knowledge</b><span>Qualified profiles connect device IDs, firmware, drivers, power, model performance, repair procedures and release evidence.</span></article>
+          <article class="principle"><b>Agent-readable OS guidance</b><span>A live signed system skill describes contracts, safe customization, installed capabilities, policy and recovery.</span></article>
+        </div>
+
+        <div class="section-head" style="margin-top:34px;margin-bottom:18px">
+          <h2 style="font-size:32px">Where Allternit<br>must go further.</h2>
+          <p>Omarchy optimizes a personal developer workstation. Autonomous agents expand the threat model and require stronger constitutional boundaries.</p>
+        </div>
+        <div class="principle-grid">
+          <article class="principle avoid"><b>No unsandboxed shell plugins</b><span>Generated and third-party surfaces run declaratively, in WASM, or out of process. Login, approvals, evidence and recovery remain compositor-owned.</span></article>
+          <article class="principle avoid"><b>No in-place rolling foundation</b><span>The production base is signed and immutable, staged inactive, booted under probation and automatically rolled back on failure.</span></article>
+          <article class="principle avoid"><b>No script-distributed authority</b><span>Privileged operations use typed requests, caller identity, capability leases, policy, cancellation, transactions and receipts.</span></article>
+          <article class="principle avoid"><b>No ambient agent root</b><span>Agents request bounded system changes; they do not rewrite arbitrary configuration or inherit passwordless administrator authority.</span></article>
+          <article class="principle avoid"><b>No single shell blast radius</b><span>A coherent visual shell remains, while secure surfaces and extension processes have separate failure and trust domains.</span></article>
+          <article class="principle avoid"><b>No windows-as-truth model</b><span>Windows are projections. Durable workloads, artifacts, approvals and evidence remain authoritative outside the shell.</span></article>
+        </div>
+
+        <div class="matrix" style="margin-top:28px">
+          <table>
+            <thead><tr><th>Layer</th><th>Omarchy pattern</th><th>AllternitOS adaptation</th></tr></thead>
+            <tbody>
+              <tr><td>Distribution</td><td>Arch-based installable ISO and selected defaults.</td><td>Hosted plus Native; signed atomic Linux image and one portable OS contract.</td></tr>
+              <tr><td>Shell</td><td>Hyprland with a persistent Quickshell experience and plugin registry.</td><td>Allternit compositor/Experience Manager with isolated extensions and secure surfaces.</td></tr>
+              <tr><td>Primary object</td><td>Application and window.</td><td>Durable workload and artifact; windows are projections.</td></tr>
+              <tr><td>Updates</td><td>Pacman/AUR, scripts, migrations and pre-update snapshots.</td><td>Signed inactive deployment, migrations, boot probation, health gates and rollback.</td></tr>
+              <tr><td>Agents</td><td>Agent-facing skill for operating and customizing the system.</td><td>Live capability inventory and signed system-introspection skill; no direct ambient root.</td></tr>
+              <tr><td>Extensions</td><td>Git/QML shell plugins; current documentation warns they run unsandboxed.</td><td>Declarative/WASM/out-of-process packages with explicit capabilities and receipts.</td></tr>
+              <tr><td>Recovery</td><td>Btrfs/Snapper pre-update snapshots and boot restore.</td><td>Known-good deployment plus separate recovery system usable without any model.</td></tr>
+              <tr><td>Hardware</td><td>Practical vendor/device fixes and opinionated performance tuning.</td><td>Signed qualification registry, evidence, repair workflows and agent-generated candidates in labs.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout"><strong>Strategic conclusion:</strong> Omarchy is the reference for making Native AllternitOS feel deliberately designed on day one. It is not the reference for agent authority, isolation, evidence, self-evolution, or atomic system trust.</div>
+      </div>
+    </section>
+
+    <section id="comparisons">
+      <div class="shell">
+        <div class="section-head">
+          <h2>What the field<br>is converging on.</h2>
+          <p>Allternit can take the strongest idea from each system without inheriting its weakest trust assumption.</p>
+        </div>
+        <div class="matrix">
+          <table>
+            <thead><tr><th>Reference</th><th>What it proves</th><th>What Allternit adds</th><th>Mapping</th></tr></thead>
+            <tbody>
+              <tr><td>Fable OS</td><td>Agents can author drivers, apps, compiled programs, persistent capabilities, and repairs.</td><td>Isolation, package transactions, independent evaluation, external rollback.</td><td><span class="tag">Generative systems</span></td></tr>
+              <tr><td>AIOS</td><td>Kernel/SDK separation for model, memory, tools, scheduling, and agents.</td><td>Capabilities, receipts, packages, recovery, cross-surface workload semantics.</td><td><span class="tag">Kernel spine</span></td></tr>
+              <tr><td>Microsoft UFO² / UFO³</td><td>Hybrid GUI/API desktop control can evolve into dynamic DAG orchestration across devices.</td><td>Kernel objects, durable authority, package lifecycle, local data and recovery constitution.</td><td><span class="tag">Device galaxy</span></td></tr>
+              <tr><td>Skill Recorder</td><td>A demonstrated screen workflow can become a reusable skill or automation.</td><td>Local redaction, DOM/AX capture, harnesses, isolated replay, promotion gates.</td><td><span class="tag">Teach Mode</span></td></tr>
+              <tr><td>iii AgentOS</td><td>Workers, functions, triggers, tenants, goals, budgets, governance, and runtime improvement can share a control plane.</td><td>Signed supply chain, device/data lifecycle, isolation qualification, recovery.</td><td><span class="tag">Service control plane</span></td></tr>
+              <tr><td>CoWork OS</td><td>A local-first workbench can unify tasks, memory, skills, approvals, devices, automations, and artifacts.</td><td>Non-bypassable authority, transactional lifecycle, conformance and recovery proof.</td><td><span class="tag">Product convergence</span></td></tr>
+              <tr><td>Omarchy</td><td>An opinionated Linux distribution can turn existing kernel, compositor, applications, CLI, themes and recovery into a coherent native product.</td><td>Workload-native shell, isolated extensions, capabilities, evidence, models, atomic deployments and model-independent recovery.</td><td><span class="tag">Native product layer</span></td></tr>
+              <tr><td>Hermes Agent</td><td>Agents can manage procedural skills and load them progressively.</td><td>Verified outcomes, versioning, drift metrics, shadow evaluation, compilation.</td><td><span class="tag">Experience Compiler</span></td></tr>
+              <tr><td>Open Interpreter</td><td>Native desktop distribution and useful local computer work.</td><td>Persistent shared daemon, durable workload identity, package ecosystem.</td><td><span class="tag">Product shell</span></td></tr>
+              <tr><td>Browser Use / Playwright</td><td>Practical semantic browser automation.</td><td>Isolated profiles, authority leases, risk policy, evidence and receipts.</td><td><span class="tag">Browser executor</span></td></tr>
+              <tr><td>OSWorld</td><td>Real cross-application tasks need reproducible environments and evaluation.</td><td>Long-horizon recovery, approval, receipt, and learning conformance.</td><td><span class="tag">Evaluation</span></td></tr>
+              <tr><td>Moshi / Pipecat</td><td>Full-duplex dialogue and realtime multimodal pipelines are feasible.</td><td>Turn Manager, capability leases, interruption truth, shared workloads.</td><td><span class="tag">Voice plane</span></td></tr>
+              <tr><td>llama.cpp / MLX</td><td>Portable and Apple-optimized local inference lanes.</td><td>Model manifests, lifecycle, hardware policy, provenance, workload routing.</td><td><span class="tag">Model manager</span></td></tr>
+              <tr><td>Firecracker / Kata / gVisor</td><td>Isolation can be selected by workload and deployment needs.</td><td>One executor contract and policy-driven placement across all backends.</td><td><span class="tag">Execution fabric</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="deployment">
+      <div class="shell">
+        <div class="section-head"><h2>Hosted first.<br>Native in parallel.</h2><p>One operating-system contract ships in two distributions. Hosted reaches users first; Native is designed now to own the complete boot-to-experience machine.</p></div>
+        <div class="decision">
+          <article><h3 class="yes">Hosted distribution</h3><p>Signed app + persistent daemon on macOS, Windows, and Linux. It proves the kernel, migrates existing code, and delivers immediate reach without forking OS semantics.</p></article>
+          <article><h3 class="yes">Native distribution</h3><p>UEFI → signed kernel image → immutable Linux → Allternit compositor and shell. Own login, programs, models, voice, packages, isolation, updates, recovery, and hardware qualification.</p></article>
+        </div>
+        <div class="architecture" style="margin-top:22px">
+          <div class="layer">
+            <div class="layer-title"><h3>Allternit Shell</h3><small>The machine experience—not a full-screen app</small></div>
+            <div class="chips"><span class="chip">Home</span><span class="chip">Spaces</span><span class="chip">Workload canvas</span><span class="chip">Programs</span><span class="chip">Artifact shelf</span><span class="chip">Evidence</span><span class="chip">Approvals</span><span class="chip">Voice</span><span class="chip">System layer</span><span class="chip">Secure attention</span></div>
+          </div>
+          <div class="arrow">↓ Wayland compositor + secure system surfaces</div>
+          <div class="layer os">
+            <div class="layer-title"><h3>Agentic kernel and system services</h3><small>Same contracts as Hosted</small></div>
+            <div class="chips"><span class="chip">Workloads</span><span class="chip">Scheduler</span><span class="chip">Capabilities</span><span class="chip">Packages</span><span class="chip">Artifact VFS</span><span class="chip">Models</span><span class="chip">Voice</span><span class="chip">Journal</span><span class="chip">Recovery</span><span class="chip">Fleet</span></div>
+          </div>
+          <div class="arrow">↓ Policy-selected isolation</div>
+          <div class="layer">
+            <div class="layer-title"><h3>Native system substrate</h3><small>Linux supplies hardware support; Allternit owns the OS</small></div>
+            <div class="chips"><span class="chip">WASM</span><span class="chip">Namespaces / cgroups / LSM</span><span class="chip">KVM microVMs</span><span class="chip">PipeWire</span><span class="chip">udev</span><span class="chip">Mesa / Vulkan</span><span class="chip">Network / Bluetooth</span><span class="chip">Power / thermal</span></div>
+          </div>
+          <div class="arrow">↓ Verified boot chain</div>
+          <div class="layer">
+            <div class="layer-title"><h3>Bootable immutable system</h3><small>Recoverable without a model</small></div>
+            <div class="chips"><span class="chip">UEFI Secure Boot</span><span class="chip">Signed UKI</span><span class="chip">TPM identity</span><span class="chip">Encrypted state</span><span class="chip">Atomic deployment</span><span class="chip">Known-good rollback</span><span class="chip">Recovery image</span></div>
+          </div>
+        </div>
+        <div class="callout"><strong>Native release sequence:</strong> signed QEMU image → one qualified x86-64 workstation → application compatibility and isolated agent desktops → daily-driver preview → ARM64, fleet, and OEM appliance.</div>
+      </div>
+    </section>
+
+    <section id="sourcing">
+      <div class="shell">
+        <div class="section-head">
+          <h2>Assemble the OS.<br>Own the constitution.</h2>
+          <p>The 30-day plan does not rebuild mature operating-system machinery. It uses one controlled product fork, upstream packages, replaceable adapters and Allternit’s existing platform—then concentrates new work on the contracts that make the result one agentic OS.</p>
+        </div>
+        <svg class="system-diagram" viewBox="0 0 1100 430" role="img" aria-labelledby="source-title source-desc">
+          <title id="source-title">AllternitOS upstream composition strategy</title>
+          <desc id="source-desc">Omarchy supplies the native distribution fork, mature upstream projects supply mechanisms, existing Allternit supplies agent capabilities, and a small constitutional layer joins them.</desc>
+          <defs><marker id="sourceArrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#b7f36b"/></marker></defs>
+          <rect x="1" y="1" width="1098" height="428" rx="22" fill="#101511" stroke="#293129"/>
+          <text x="38" y="42" fill="#b7f36b" font-size="13" font-weight="750" letter-spacing="2">UPSTREAM MECHANISMS → ALLTERNIT PRODUCT</text>
+          <g>
+            <rect x="38" y="74" width="294" height="126" rx="15" fill="#171d18" stroke="#4c6b37"/>
+            <text x="58" y="104" fill="#b7f36b" font-size="12" font-weight="750">PRODUCT FORK</text>
+            <text x="58" y="137" fill="#edf0eb" font-size="20" font-weight="700">Omarchy → AllternitOS</text>
+            <text x="58" y="167" fill="#9ca59e" font-size="12">Installer · shell · defaults · themes</text>
+            <text x="58" y="185" fill="#9ca59e" font-size="12">menus · migrations · release composition</text>
+
+            <rect x="403" y="74" width="294" height="126" rx="15" fill="#15191d" stroke="#385675"/>
+            <text x="423" y="104" fill="#79b8ff" font-size="12" font-weight="750">UPSTREAM COMPONENTS</text>
+            <text x="423" y="137" fill="#edf0eb" font-size="18" font-weight="700">Linux · systemd · Hyprland</text>
+            <text x="423" y="166" fill="#9ca59e" font-size="12">QEMU · Firecracker · Flatpak</text>
+            <text x="423" y="184" fill="#9ca59e" font-size="12">llama.cpp · whisper.cpp · PipeWire</text>
+
+            <rect x="768" y="74" width="294" height="126" rx="15" fill="#191714" stroke="#765f38"/>
+            <text x="788" y="104" fill="#efbd68" font-size="12" font-weight="750">ALLTERNIT FOUNDATIONS</text>
+            <text x="788" y="137" fill="#edf0eb" font-size="18" font-weight="700">Platform · gizzi-code · Cowork</text>
+            <text x="788" y="166" fill="#9ca59e" font-size="12">Policy · receipts · workflows · artifacts</text>
+            <text x="788" y="184" fill="#9ca59e" font-size="12">models · voice · browser · surfaces</text>
+          </g>
+          <path d="M185 212V247H484" fill="none" stroke="#b7f36b" stroke-width="1.5" marker-end="url(#sourceArrow)"/>
+          <path d="M550 212V247" fill="none" stroke="#b7f36b" stroke-width="1.5" marker-end="url(#sourceArrow)"/>
+          <path d="M915 212V247H616" fill="none" stroke="#b7f36b" stroke-width="1.5" marker-end="url(#sourceArrow)"/>
+          <rect x="248" y="260" width="604" height="122" rx="16" fill="rgba(183,243,107,.06)" stroke="#6e9449"/>
+          <text x="550" y="292" text-anchor="middle" fill="#b7f36b" font-size="12" font-weight="750" letter-spacing="1.5">ALLTERNIT-OWNED CONSTITUTIONAL GLUE</text>
+          <text x="550" y="326" text-anchor="middle" fill="#edf0eb" font-size="19" font-weight="700">Workloads · capability leases · evidence · artifacts</text>
+          <text x="550" y="354" text-anchor="middle" fill="#c2cac3" font-size="13">One protocol · one authority graph · one history · every surface</text>
+          <text x="550" y="408" text-anchor="middle" fill="#9ca59e" font-size="12">One broad fork. Replaceable backends. Minimal divergence. Upstream security updates remain consumable.</text>
+        </svg>
+
+        <div class="section-head" style="margin-top:34px;margin-bottom:18px">
+          <h2 style="font-size:32px">Fork selectively.<br>Borrow deliberately.</h2>
+          <p>Every dependency now has an explicit action and boundary in the upstream sourcing register.</p>
+        </div>
+        <div class="matrix">
+          <table>
+            <thead><tr><th>Source</th><th>Action</th><th>Use</th><th>Boundary</th></tr></thead>
+            <tbody>
+              <tr><td>Omarchy</td><td><span class="tag">Product fork</span></td><td>Installable Native distribution, shell composition and daily system coherence.</td><td>Keep Arch/Linux/Hyprland upstream; carry a small branded patch series.</td></tr>
+              <tr><td>Skill Recorder</td><td><span class="tag">Selective fork</span></td><td>Teach Mode capture and reusable workflow construction.</td><td>Replace Copilot coupling; add Allternit leases, redaction, replay and promotion.</td></tr>
+              <tr><td>Linux/systemd/Hyprland/QEMU</td><td><span class="tag">Adopt</span></td><td>Kernel, services, compositor and conformance VM.</td><td>Pin packages and configure; do not fork without a proven blocker.</td></tr>
+              <tr><td>Firecracker/llama.cpp/whisper.cpp</td><td><span class="tag">Adapter</span></td><td>Isolation, local inference and offline speech recognition.</td><td>Backend never owns Allternit workload or policy semantics.</td></tr>
+              <tr><td>AIOS / iii AgentOS</td><td><span class="tag">Borrow + qualify</span></td><td>Manager, syscall, worker, function, trigger and routing patterns.</td><td>No second top-level kernel; import code only after module bake-off and license review.</td></tr>
+              <tr><td>Fable OS</td><td><span class="tag">Research only</span></td><td>Generative driver/compiler, persistent capability and kernel-evidence ideas.</td><td>No code copied while the repository lacks an explicit license.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout"><strong>Accounting rule:</strong> all 48 responsibilities now identify the upstream source, action, Allternit customization, authority boundary and day-30 proof. No dependency can quietly become a competing identity, workload, policy, package or evidence authority.</div>
+      </div>
+    </section>
+
+    <section id="gaps">
+      <div class="shell">
+        <div class="section-head">
+          <h2>Features are claims.<br>Traceability is proof.</h2>
+          <p>The 48-feature atlas now has a canonical Gap and Traceability Register. Every responsibility must connect ownership, contract, authority, durable state, failure, recovery, evidence and a conformance test. Missing ownership, recovery or testing is an architectural gap even when code or UI exists.</p>
+        </div>
+
+        <svg class="system-diagram" viewBox="0 0 1100 440" role="img" aria-labelledby="trace-title trace-desc">
+          <title id="trace-title">AllternitOS traceability and independence model</title>
+          <desc id="trace-desc">A chain from requirement through owner, contract, authority, state, failure, recovery, evidence and test, with independent control, data and evidence planes.</desc>
+          <defs><marker id="traceArrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#b7f36b"/></marker></defs>
+          <rect x="1" y="1" width="1098" height="438" rx="22" fill="#101511" stroke="#293129"/>
+          <text x="38" y="43" fill="#b7f36b" font-size="13" font-weight="750" letter-spacing="2">ONE GUARANTEE · ONE UNBROKEN PROOF CHAIN</text>
+          <g fill="#171d18" stroke="#354035">
+            <rect x="38" y="72" width="126" height="56" rx="11"/><rect x="180" y="72" width="126" height="56" rx="11"/><rect x="322" y="72" width="126" height="56" rx="11"/><rect x="464" y="72" width="126" height="56" rx="11"/><rect x="606" y="72" width="126" height="56" rx="11"/><rect x="748" y="72" width="126" height="56" rx="11"/><rect x="890" y="72" width="172" height="56" rx="11"/>
+          </g>
+          <g fill="#edf0eb" font-size="13" font-weight="650" text-anchor="middle">
+            <text x="101" y="105">Requirement</text><text x="243" y="105">Owner</text><text x="385" y="105">Contract</text><text x="527" y="105">Authority</text><text x="669" y="105">Durable state</text><text x="811" y="105">Recovery</text><text x="976" y="105">Evidence + test</text>
+          </g>
+          <g stroke="#b7f36b" stroke-width="1.5" marker-end="url(#traceArrow)">
+            <path d="M164 100H176"/><path d="M306 100H318"/><path d="M448 100H460"/><path d="M590 100H602"/><path d="M732 100H744"/><path d="M874 100H886"/>
+          </g>
+          <text x="38" y="170" fill="#9ca59e" font-size="12">The implementation is accepted only if the complete chain survives happy paths, hostile inputs, interruption, crash, rollback and deletion.</text>
+
+          <g>
+            <rect x="38" y="206" width="316" height="170" rx="15" fill="#151b16" stroke="#4c6b37"/>
+            <text x="58" y="237" fill="#b7f36b" font-size="12" font-weight="750" letter-spacing="1.4">CONTROL PLANE</text>
+            <text x="58" y="270" fill="#edf0eb" font-size="17" font-weight="650">Identity · policy · leases</text>
+            <text x="58" y="297" fill="#edf0eb" font-size="17" font-weight="650">scheduling · packages · recovery</text>
+            <text x="58" y="337" fill="#9ca59e" font-size="12">Grants authority. It cannot be rewritten</text>
+            <text x="58" y="356" fill="#9ca59e" font-size="12">by the agent or component it controls.</text>
+
+            <rect x="392" y="206" width="316" height="170" rx="15" fill="#15191d" stroke="#385675"/>
+            <text x="412" y="237" fill="#79b8ff" font-size="12" font-weight="750" letter-spacing="1.4">DATA PLANE</text>
+            <text x="412" y="270" fill="#edf0eb" font-size="17" font-weight="650">Models · context · tools</text>
+            <text x="412" y="297" fill="#edf0eb" font-size="17" font-weight="650">browser · voice · files · devices</text>
+            <text x="412" y="337" fill="#9ca59e" font-size="12">Performs work under revocable leases.</text>
+            <text x="412" y="356" fill="#9ca59e" font-size="12">Replaceable, isolated and failure-bounded.</text>
+
+            <rect x="746" y="206" width="316" height="170" rx="15" fill="#1a1813" stroke="#765f38"/>
+            <text x="766" y="237" fill="#efbd68" font-size="12" font-weight="750" letter-spacing="1.4">EVIDENCE PLANE</text>
+            <text x="766" y="270" fill="#edf0eb" font-size="17" font-weight="650">Events · receipts · hashes</text>
+            <text x="766" y="297" fill="#edf0eb" font-size="17" font-weight="650">evaluations · costs · outcomes</text>
+            <text x="766" y="337" fill="#9ca59e" font-size="12">Independently records what happened.</text>
+            <text x="766" y="356" fill="#9ca59e" font-size="12">Candidates cannot forge promotion evidence.</text>
+          </g>
+          <text x="550" y="416" text-anchor="middle" fill="#ee8e96" font-size="13" font-weight="700">A compromised data-plane agent may influence neither control authority nor evidence history.</text>
+        </svg>
+
+        <div class="section-head" style="margin-top:34px;margin-bottom:18px">
+          <h2 style="font-size:32px">Four audits expose<br>the real gaps.</h2>
+          <p>A responsibility matrix alone is necessary but insufficient. The same architecture must survive complete journeys, hostile actors, formal transitions and failure injection.</p>
+        </div>
+        <div class="principle-grid">
+          <article class="principle"><b>48 responsibility records</b><span>Requirement, Hosted/Native owner, code evidence, contract, authority, state, failure, recovery, evidence, test, disposition and maturity.</span></article>
+          <article class="principle"><b>20 end-to-end journeys</b><span>Trace intent through identity, admission, planning, authority, scheduling, execution, evidence, artifact, interruption, failure, recovery and deletion.</span></article>
+          <article class="principle"><b>14 object state machines</b><span>Workload, Step, leases, approvals, artifacts, packages, generated kernels, learned skills, deployment, enrollment, sessions, backup and incidents.</span></article>
+          <article class="principle"><b>16 explicit threat actors</b><span>Malicious users, agents, models, episodes, packages, MCP servers, content, providers, administrators, supply chain, collusion and evidence gaming.</span></article>
+        </div>
+
+        <div class="matrix" style="margin-top:28px">
+          <table>
+            <thead><tr><th>Severity</th><th>Meaning</th><th>Highest-priority examples</th></tr></thead>
+            <tbody>
+              <tr><td><span class="tag">G0 · kernel blocker</span></td><td>A safe system cannot make the guarantee.</td><td>Protocol/object model, reference monitor, leases, journal/evidence, package transactions, recovery, tenancy and evaluator independence.</td></tr>
+              <tr><td><span class="tag">G1 · product blocker</span></td><td>The system cannot behave as one coherent product.</td><td>Inventory, scheduling, context/resource pressure, drivers, artifacts, cross-surface convergence, backup, fleet and app compatibility.</td></tr>
+              <tr><td><span class="tag">G2 · scale blocker</span></td><td>The architecture works narrowly but not across hardware or fleets.</td><td>Energy/thermal adaptation, hardware qualification, marketplace and broader portability.</td></tr>
+              <tr><td><span class="tag">G3 · improvement</span></td><td>The guarantee exists and needs optimization or refinement.</td><td>No subsystem is assigned G3 until its conformance evidence exists.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout"><strong>Current result:</strong> Allternit has meaningful prototype foundations but no responsibility is yet accepted as a unified production OS guarantee. “Prototype” means candidate code exists; it does not mean the full traceability chain passes.</div>
+      </div>
+    </section>
+
+    <section id="roadmap">
+      <div class="shell">
+        <div class="section-head"><h2>How we begin.</h2><p>Constitution, traceability and one trustworthy vertical slice come first. The first proof is a useful cross-surface workload—not a new mock desktop.</p></div>
+        <div class="roadmap">
+          <article class="phase"><h3>Disposition</h3><p>Classify every subsystem and draw the authority, executor, state-owner and bypass graphs before deletion.</p></article>
+          <article class="phase"><h3>Constitution</h3><p>Ratify protocol, canonical objects, state machines, journal, daemon, capability and evidence boundaries.</p></article>
+          <article class="phase"><h3>Kernel proof</h3><p>Build one Workload → Lease → Executor → Receipt → Artifact chain with crash recovery.</p></article>
+          <article class="phase"><h3>Surface proof</h3><p>Start in gizzi-code or Desktop, continue elsewhere, interrupt, recover and delete without state forks.</p></article>
+          <article class="phase"><h3>Packages</h3><p>Unify agents, models, tools, skills, drivers, policy and UI under signed staged lifecycle.</p></article>
+          <article class="phase"><h3>Native N0</h3><p>Signed QEMU image, immutable deployment, shell, local model and recovery that needs no LLM.</p></article>
+          <article class="phase"><h3>Learning lab</h3><p>Consent, lineage, replay, adversarial evaluation, shadow, canary, rollback and derived deletion.</p></article>
+          <article class="phase"><h3>Generative OS</h3><p>Promote tools, harnesses, drivers and schedulers only through independent evidence and known-good recovery.</p></article>
+        </div>
+        <div class="callout"><strong>First executable target:</strong> one research workload crosses identity, admission, policy, capability lease, scheduler, isolated browser, signed receipt, artifact commit, daemon crash/restart, and a second surface while preserving one authoritative history.</div>
+      </div>
+    </section>
+
+    <section id="sources">
+      <div class="shell">
+        <div class="section-head"><h2>Primary references.</h2><p>Architecture should stay evidence-led. These projects and papers are reference points, not wholesale dependencies.</p></div>
+        <div class="sources">
+          <a class="source" href="https://github.com/robiot/fable-os"><b>Fable OS</b><span>Runtime compiler, drivers, capabilities</span></a>
+          <a class="source" href="https://github.com/agiresearch/AIOS"><b>AIOS</b><span>Agent kernel and SDK</span></a>
+          <a class="source" href="https://github.com/microsoft/UFO"><b>Microsoft UFO³</b><span>Desktop and multi-device agent orchestration</span></a>
+          <a class="source" href="https://github.com/microsoft/skill-recorder"><b>Microsoft Skill Recorder</b><span>Workflow demonstration → skill</span></a>
+          <a class="source" href="https://github.com/iii-hq/agentos"><b>iii AgentOS</b><span>Worker/function/trigger control plane</span></a>
+          <a class="source" href="https://github.com/CoWork-OS/CoWork-OS"><b>CoWork OS</b><span>Local-first agentic workbench</span></a>
+          <a class="source" href="https://github.com/basecamp/omarchy"><b>Omarchy</b><span>Opinionated native Linux product experience</span></a>
+          <a class="source" href="https://github.com/NousResearch/hermes-agent"><b>Hermes Agent</b><span>Agent-managed procedural skills</span></a>
+          <a class="source" href="https://github.com/openinterpreter/open-interpreter"><b>Open Interpreter</b><span>Native local computer agent</span></a>
+          <a class="source" href="https://github.com/browser-use/browser-use"><b>Browser Use</b><span>Agent browser automation</span></a>
+          <a class="source" href="https://arxiv.org/abs/2404.07972"><b>OSWorld</b><span>Real computer-use benchmark</span></a>
+          <a class="source" href="https://github.com/kyutai-labs/moshi"><b>Moshi</b><span>Open full-duplex speech model</span></a>
+          <a class="source" href="https://github.com/pipecat-ai/pipecat"><b>Pipecat</b><span>Realtime voice/multimodal pipelines</span></a>
+          <a class="source" href="https://github.com/ggml-org/llama.cpp"><b>llama.cpp</b><span>Portable local inference</span></a>
+          <a class="source" href="https://github.com/firecracker-microvm/firecracker"><b>Firecracker</b><span>Lightweight hardware isolation</span></a>
+          <a class="source" href="https://github.com/kata-containers/kata-containers"><b>Kata Containers</b><span>VM-isolated container workloads</span></a>
+          <a class="source" href="https://docs.kernel.org/"><b>Linux kernel</b><span>Canonical subsystems and userspace contracts</span></a>
+          <a class="source" href="https://developer.apple.com/library/archive/documentation/Darwin/Conceptual/KernelProgramming/Architecture/Architecture.html"><b>Darwin / XNU</b><span>Mach, BSD, and I/O Kit architecture</span></a>
+          <a class="source" href="https://learn.microsoft.com/en-us/windows-hardware/drivers/kernel/"><b>Windows NT</b><span>Kernel executive and object/security model</span></a>
+          <a class="source" href="https://source.android.com/docs/security/enhancements"><b>Android</b><span>Application sandbox, verified boot, permissions</span></a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="shell">AllternitOS living architecture artifact · Sources of truth: <code>ALLTERNIT_OS_LIVING_ROADMAP.md</code> and <code>ALLTERNIT_OS_GAP_AND_TRACEABILITY_REGISTER.md</code> · Update the documents and this artifact together when decisions change.</div>
+  </footer>
+</body>
+</html>

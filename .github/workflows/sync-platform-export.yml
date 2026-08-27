@@ -49,8 +49,7 @@ jobs:
           fi
 
       - name: Build static export
-        working-directory: surfaces/ai.allternit.com
-        run: pnpm build
+        run: pnpm --filter '@allternit/ai...' run --if-present build
         env:
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
           NEXT_PUBLIC_ALLTERNIT_DESKTOP_AUTH: 'true'
@@ -58,7 +57,7 @@ jobs:
 
       - name: Clone Allternit-websites repo
         env:
-          PAT: ${{ secrets.ALLTERNIT_WEBSITES_PAT }}
+          PAT: ${{ secrets.ALLTERNIT_WEBSITES_PAT || secrets.GITHUB_TOKEN }}
         run: |
           git clone --depth 1 "https://x-access-token:${PAT}@github.com/Gizziio/Allternit-websites.git" /tmp/websites
 

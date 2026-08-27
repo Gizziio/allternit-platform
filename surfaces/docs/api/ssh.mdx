@@ -1,0 +1,164 @@
+---
+title: 'SSH Connections API'
+description: 'Manage SSH connection records and execute commands on remote hosts through the Allternit API.'
+---
+
+## Overview
+
+The SSH Connections API stores SSH connection metadata and lets you test, connect, disconnect, and execute commands on remote hosts. Credentials are stored encrypted in the database and decrypted only at execution time.
+
+## Base URL
+
+```
+https://api.allternit.com/v1/ssh-connections
+```
+
+All endpoints require a valid Bearer token in the `Authorization` header. See [Authentication](/api/authentication) for details.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/ssh-connections` | List SSH connections. |
+| POST | `/ssh-connections` | Create an SSH connection record. |
+| GET | `/ssh-connections/:id` | Get an SSH connection. |
+| PUT | `/ssh-connections/:id` | Update an SSH connection. |
+| DELETE | `/ssh-connections/:id` | Delete an SSH connection. |
+| POST | `/ssh-connections/:id/connect` | Mark a connection as connected. |
+| POST | `/ssh-connections/:id/disconnect` | Mark a connection as disconnected. |
+| POST | `/ssh-connections/:id/execute` | Execute a command over SSH. |
+| POST | `/ssh-connections/test` | Test reachability of all connections. |
+
+## Create connection
+
+```bash
+POST /api/v1/ssh-connections
+```
+
+Request body:
+
+```json
+{
+  "name": "Production API",
+  "host": "api.example.com",
+  "port": 22,
+  "username": "deploy",
+  "auth_type": "private_key",
+  "private_key": "-----BEGIN OPENSSH PRIVATE KEY-----\n...",
+  "password": null
+}
+```
+
+Allowed `auth_type` values: `password`, `private_key`.
+
+Response:
+
+```json
+{
+  "id": "ssh_2f8a9c4e5d3b",
+  "name": "Production API",
+  "host": "api.example.com",
+  "port": 22,
+  "username": "deploy",
+  "status": "disconnected"
+}
+```
+
+## List connections
+
+```bash
+GET /api/v1/ssh-connections
+```
+
+Response:
+
+```json
+[
+  {
+    "id": "ssh_2f8a9c4e5d3b",
+    "name": "Production API",
+    "host": "api.example.com",
+    "port": 22,
+    "username": "deploy",
+    "status": "disconnected",
+    "os": "Ubuntu",
+    "architecture": "x86_64",
+    "docker_installed": true,
+    "allternit_installed": true,
+    "allternit_version": "1.2.3",
+    "last_connected": "2026-08-13T10:00:00Z",
+    "created_at": "2026-08-01T10:00:00Z",
+    "updated_at": "2026-08-13T10:00:00Z"
+  }
+]
+```
+
+## Execute command
+
+```bash
+POST /api/v1/ssh-connections/ssh_2f8a9c4e5d3b/execute
+```
+
+Request body:
+
+```json
+{
+  "command": "uptime"
+}
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "stdout": "10:00:00 up 30 days, ...",
+  "stderr": "",
+  "exit_code": 0
+}
+```
+
+## Test reachability
+
+```bash
+POST /api/v1/ssh-connections/test
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "connections": [
+    {
+      "id": "ssh_2f8a9c4e5d3b",
+      "name": "Production API",
+      "host": "api.example.com",
+      "port": 22,
+      "reachable": true,
+      "latency_ms": 12
+    }
+  ],
+  "reachable": 1,
+  "total": 1,
+  "avg_latency_ms": 12
+}
+```
+
+## Error codes
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 200 | — | Success. |
+| 201 | — | Created successfully. |
+| 401 | `unauthorized` | Missing or invalid authentication. |
+| 404 | `not_found` | Connection does not exist. |
+| 422 | `missing_password` / `missing_private_key` / `invalid_private_key` / `unsupported_auth_type` | Credential or auth configuration problem. |
+| 503 | `connection_failed` | TCP connection to the host failed. |
+| 500 | `internal_error` | Unexpected server error. |
+
+## Related links
+
+- [Authentication](/api/authentication)
+- [SSH Keys API](/api/ssh-keys)
+- [BYOC Runtime](/byoc/overview)

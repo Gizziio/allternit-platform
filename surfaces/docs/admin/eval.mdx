@@ -1,0 +1,271 @@
+---
+title: Evaluation Datasets & Runs
+description: Create datasets, schedule evaluation runs, and record scores for agent benchmarks.
+---
+
+# Evaluation Datasets & Runs
+
+The Eval API provides organization-scoped scaffolding for defining evaluation datasets, scheduling runs against an agent and rubric, and recording per-case results and aggregate scores. Automated execution is driven by the agent runtime worker; this API owns the durable state.
+
+All eval endpoints require the caller to be an organization owner or admin.
+
+## Base URL
+
+```text
+https://api.allternit.com/api/v1/admin/eval
+```
+
+For local development:
+
+```text
+http://127.0.0.1:8013/api/v1/admin/eval
+```
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/admin/eval/datasets` | List datasets |
+| `POST` | `/api/v1/admin/eval/datasets` | Create a dataset |
+| `GET` | `/api/v1/admin/eval/datasets/:id` | Get a dataset |
+| `PUT` | `/api/v1/admin/eval/datasets/:id` | Update a dataset |
+| `DELETE` | `/api/v1/admin/eval/datasets/:id` | Delete a dataset |
+| `GET` | `/api/v1/admin/eval/runs` | List runs |
+| `POST` | `/api/v1/admin/eval/runs` | Create a run |
+| `GET` | `/api/v1/admin/eval/runs/:id` | Get a run |
+| `DELETE` | `/api/v1/admin/eval/runs/:id` | Delete a run |
+| `POST` | `/api/v1/admin/eval/runs/:id/scores` | Record run scores and status |
+| `POST` | `/api/v1/admin/eval/runs/:id/grade` | Grade a run against its rubric |
+
+## Datasets
+
+A dataset is a named collection of test cases. Each case is a free-form JSON object; common fields are `input` and `expected_output`.
+
+### Create a dataset
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/admin/eval/datasets \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Greeting benchmark",
+    "description": "Basic greeting eval",
+    "cases": [
+      { "input": "Say hello", "expected_output": "hello" },
+      { "input": "Greet in Spanish", "expected_output": "hola" }
+    ]
+  }'
+```
+
+### Request body
+
+```json
+{
+  "name": "Greeting benchmark",
+  "description": "Basic greeting eval",
+  "cases": [
+    { "input": "Say hello", "expected_output": "hello" }
+  ]
+}
+```
+
+### Response
+
+```json
+{
+  "id": "ds_01hqx8x7x7x7x7x7x7x7x7x",
+  "organization_id": "org_01hqx8x7x7x7x7x7x7x7x7x",
+  "name": "Greeting benchmark",
+  "description": "Basic greeting eval",
+  "cases": [
+    { "input": "Say hello", "expected_output": "hello" }
+  ],
+  "created_by": "usr_01hqx8x7x7x7x7x7x7x7x7x",
+  "created_at": "2026-08-13T18:00:00Z",
+  "updated_at": "2026-08-13T18:00:00Z"
+}
+```
+
+### Update a dataset
+
+```bash
+curl -X PUT https://api.allternit.com/api/v1/admin/eval/datasets/ds_01hqx8x7x7x7x7x7x7x7x7x \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "description": "Updated description",
+    "cases": [
+      { "input": "Say hello", "expected_output": "hello" }
+    ]
+  }'
+```
+
+### Delete a dataset
+
+```bash
+curl -X DELETE https://api.allternit.com/api/v1/admin/eval/datasets/ds_01hqx8x7x7x7x7x7x7x7x7x \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+### Response
+
+```json
+{
+  "deleted": true
+}
+```
+
+## Runs
+
+A run binds a dataset to an agent and optional rubric. The runtime worker executes the run and records results.
+
+### Create a run
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/admin/eval/runs \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "dataset_id": "ds_01hqx8x7x7x7x7x7x7x7x7x",
+    "rubric_id": "or_01hqx8x7x7x7x7x7x7x7x7x",
+    "agent_id": "agent_01hqx8x7x7x7x7x7x7x7x7x",
+    "name": "Run 1"
+  }'
+```
+
+### Request body
+
+```json
+{
+  "dataset_id": "ds_01hqx8x7x7x7x7x7x7x7x7x",
+  "rubric_id": "or_01hqx8x7x7x7x7x7x7x7x7x",
+  "agent_id": "agent_01hqx8x7x7x7x7x7x7x7x7x",
+  "name": "Run 1"
+}
+```
+
+### Response
+
+```json
+{
+  "id": "run_01hqx8x7x7x7x7x7x7x7x7x",
+  "organization_id": "org_01hqx8x7x7x7x7x7x7x7x7x",
+  "dataset_id": "ds_01hqx8x7x7x7x7x7x7x7x7x",
+  "rubric_id": "or_01hqx8x7x7x7x7x7x7x7x7x",
+  "agent_id": "agent_01hqx8x7x7x7x7x7x7x7x7x",
+  "name": "Run 1",
+  "status": "pending",
+  "results": [],
+  "scores": {},
+  "created_by": "usr_01hqx8x7x7x7x7x7x7x7x7x",
+  "created_at": "2026-08-13T18:00:00Z",
+  "updated_at": "2026-08-13T18:00:00Z"
+}
+```
+
+### Record scores
+
+After a run completes, record per-case results and aggregate scores.
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/admin/eval/runs/run_01hqx8x7x7x7x7x7x7x7x7x/scores \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status": "completed",
+    "results": [
+      { "case_index": 0, "prediction": "hello", "expected": "hello", "score": 1.0 },
+      { "case_index": 1, "prediction": "hi", "expected": "hola", "score": 0.0 }
+    ],
+    "scores": {
+      "total": 0.5,
+      "exact_match": 0.5
+    }
+  }'
+```
+
+### Request body
+
+```json
+{
+  "status": "completed",
+  "results": [
+    { "case_index": 0, "prediction": "hello", "expected": "hello", "score": 1.0 }
+  ],
+  "scores": {
+    "total": 1.0
+  }
+}
+```
+
+### Response
+
+```json
+{
+  "id": "run_01hqx8x7x7x7x7x7x7x7x7x",
+  "status": "completed",
+  "results": [
+    { "case_index": 0, "prediction": "hello", "expected": "hello", "score": 1.0 }
+  ],
+  "scores": {
+    "total": 1.0
+  },
+  "updated_at": "2026-08-13T18:05:00Z"
+}
+```
+
+Valid statuses: `pending`, `running`, `completed`, `failed`.
+
+### Grade a run against a rubric
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/admin/eval/runs/run_01hqx8x7x7x7x7x7x7x7x7x/grade \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "rubric_id": "or_01hqx8x7x7x7x7x7x7x7x7x"
+  }'
+```
+
+If `rubric_id` is omitted, the rubric set on the run is used.
+
+### Response
+
+```json
+{
+  "id": "run_01hqx8x7x7x7x7x7x7x7x7x",
+  "scores": {
+    "rubric_grades": {
+      "rubric_id": "or_01hqx8x7x7x7x7x7x7x7x7x",
+      "grades": [
+        {
+          "case_index": 0,
+          "criterion_scores": [
+            { "criterion_id": "instructions_followed", "criterion_name": "Instructions followed", "score": 1.0 }
+          ]
+        }
+      ]
+    }
+  },
+  "updated_at": "2026-08-13T18:05:00Z"
+}
+```
+
+## Error codes
+
+| Status | Code | Description |
+|--------|------|-------------|
+| `400` | `invalid_name` | Name must be 1–128 characters. |
+| `400` | `invalid_status` | Status must be one of `pending`, `running`, `completed`, `failed`. |
+| `400` | `rubric_not_found` | Specified rubric does not exist or belongs to another organization. |
+| `400` | `rubric_required` | A `rubric_id` must be provided or set on the run. |
+| `403` | `organization_required` | Caller is not associated with an organization. |
+| `403` | `insufficient_role` | Caller is not an organization owner or admin. |
+| `404` | `dataset_not_found` | Dataset does not exist or belongs to another organization. |
+| `404` | `run_not_found` | Run does not exist or belongs to another organization. |
+| `500` | `internal_error` | Database or server error. |
+
+## Related pages
+
+- [Outcome Rubrics](/admin/outcome-rubrics) — define scoring criteria
+- [Eval Metrics](/admin/eval-metrics) — built-in metrics and scoring helpers

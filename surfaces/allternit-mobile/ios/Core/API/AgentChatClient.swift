@@ -7,6 +7,8 @@ struct ToolOptions: Encodable, Sendable {
     let research: Bool
     /// "auto" | "on_demand" | "always" (ToolAccess raw values).
     let toolAccess: String
+    /// Optional response style override: "formal" | "creative" | "technical".
+    let style: String?
 }
 
 /// One composer-staged attachment in the agent-chat body. `url` is the
@@ -34,9 +36,10 @@ struct AttachmentRef: Encodable, Sendable {
 ///
 /// Reference: the web client's `sessionApi` / `chatApi` in
 /// surfaces/ai.allternit.com/src/lib/agents/native-agent-api.ts:423-579,635-830.
-/// Auth is just the Clerk Bearer (via APIClient) — no `X-Allternit-*` tenant
-/// headers (desktop-shell-only).
-final class AgentChatClient: @unchecked Sendable {
+/// Auth flows through `APIClient.effectiveToken()` (runtime device token,
+/// falling back to Clerk Bearer) — no `X-Allternit-*` tenant headers
+/// (desktop-shell-only).
+final class AgentChatClient: ObservableObject, @unchecked Sendable {
     private let client: APIClient
     private let chatURL: URL
 

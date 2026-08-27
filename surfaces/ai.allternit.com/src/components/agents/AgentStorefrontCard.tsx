@@ -4,6 +4,7 @@ import React from "react";
 import { Star, Zap, Shield, Users, TrendingUp, Clock } from "lucide-react";
 import { AgentAvatar } from "@/components/Avatar";
 import type { Agent } from "@/lib/agents/agent.types";
+import { getBotDisplayName, getBotTagline } from "@/lib/bots/bot-profile";
 
 interface AgentStorefrontCardProps {
   agent: Agent;
@@ -87,14 +88,14 @@ export function AgentStorefrontCard({ agent, onClick, onMention, compact, style 
           {avatarConfig ? (
             <AgentAvatar config={avatarConfig as any} size={32} emotion="steady" isAnimating={false} showGlow={false} />
           ) : (
-            <div style={{ width: 32, height: 32, borderRadius: 8, background: "var(--accent-chat)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 700 }}>
-              {agent.name.charAt(0).toUpperCase()}
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: agent.botProfile?.accentColor || "var(--accent-chat)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 700 }}>
+              {getBotDisplayName(agent).charAt(0).toUpperCase()}
             </div>
           )}
         </div>
         <div style={{ minWidth: 0, flex: 1 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--ui-text-primary)" }}>{agent.name}</span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--ui-text-primary)" }}>{agent.isBot ? '@' : ''}{getBotDisplayName(agent)}</span>
             {isSwarm && (
               <span style={{ fontSize: 12, padding: "1px 5px", borderRadius: 4, background: "#8b5cf620", color: "#8b5cf6", fontWeight: 600 }}>
                 SWARM
@@ -157,14 +158,14 @@ export function AgentStorefrontCard({ agent, onClick, onMention, compact, style 
           {avatarConfig ? (
             <AgentAvatar config={avatarConfig as any} size={48} emotion="steady" isAnimating={false} showGlow={false} />
           ) : (
-            <div style={{ width: 48, height: 48, borderRadius: 12, background: "var(--accent-chat)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 18, fontWeight: 700 }}>
-              {agent.name.charAt(0).toUpperCase()}
+            <div style={{ width: 48, height: 48, borderRadius: 12, background: agent.botProfile?.accentColor || "var(--accent-chat)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 18, fontWeight: 700 }}>
+              {getBotDisplayName(agent).charAt(0).toUpperCase()}
             </div>
           )}
         </div>
         <div style={{ minWidth: 0, flex: 1 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 15, fontWeight: 700, color: "var(--ui-text-primary)" }}>{agent.name}</span>
+            <span style={{ fontSize: 15, fontWeight: 700, color: "var(--ui-text-primary)" }}>{agent.isBot ? '@' : ''}{getBotDisplayName(agent)}</span>
             {isSwarm && (
               <span style={{ fontSize: 12, padding: "2px 8px", borderRadius: 6, background: "#8b5cf620", color: "#8b5cf6", fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
                 <Users size={10} />
@@ -178,7 +179,7 @@ export function AgentStorefrontCard({ agent, onClick, onMention, compact, style 
             )}
           </div>
           <p style={{ margin: "4px 0 0 0", fontSize: 13, color: "var(--ui-text-secondary)", lineHeight: 1.4 }}>
-            {agent.agentCard?.tagline || agent.description}
+            {agent.isBot ? getBotTagline(agent) : (agent.agentCard?.tagline || agent.description)}
           </p>
           <div style={{ marginTop: 6 }}>
             <RatingStars rating={agent.rating} count={agent.reviewCount} />
@@ -249,7 +250,7 @@ export function AgentStorefrontCard({ agent, onClick, onMention, compact, style 
           }}
         >
           <Zap size={14} />
-          Use @{agent.name.split(" ")[0]}
+          Use @{getBotDisplayName(agent).split(" ")[0]}
         </button>
       )}
     </div>

@@ -10,12 +10,31 @@ const logger = createModuleLogger('useAgentBootstrap');
 const BOOTSTRAP_KEY = 'allternit:agent-bootstrap:v1';
 
 const GIZZI_SEED: AgentDefinition = {
-  name: 'Gizzi',
+  name: 'gizzi',
   description: 'Your personal Allternit platform assistant. Always here to help.',
   instructions: 'You are Gizzi, the friendly platform assistant for Allternit. Help users navigate and use the platform effectively.',
   capabilities: ['chat', 'help', 'navigation'],
   source: 'personal',
   allowedSurfaces: ['chat', 'cowork', 'code', 'design', 'browser'],
+  isBot: true,
+  botProfile: {
+    displayName: 'Gizzi',
+    tagline: 'Your default assistant',
+    welcomeMessage: 'Hey, I’m Gizzi. What are we working on?',
+    starterPrompts: [
+      'Help me get started with Allternit',
+      'Summarize my recent activity',
+      'Walk me through creating a bot',
+    ],
+    accentColor: '#06b6d4',
+    groupChatEnabled: false,
+    botCategory: 'custom',
+  },
+  avatar: {
+    type: 'mascot',
+    mascotTemplate: 'gizzi',
+    currentEmotion: 'pleased',
+  },
   character: {
     className: 'Assistant',
     personalityTraits: ['friendly', 'helpful'],
@@ -71,26 +90,34 @@ export function useAgentBootstrap({ enabled = true }: UseAgentBootstrapOptions =
   useEffect(() => {
     if (!enabled) return;
     if (bootstrappedRef.current) return;
-    if (typeof window !== 'undefined' && localStorage.getItem(BOOTSTRAP_KEY)) return;
 
     const bootstrap = async () => {
       bootstrappedRef.current = true;
+      const hasBootstrapped = typeof window !== 'undefined' && localStorage.getItem(BOOTSTRAP_KEY) === '1';
 
       await fetchAgents();
-      const currentAgents = useAgentStore.getState().agents;
+      let currentAgents = useAgentStore.getState().agents;
 
-      // Deduplicate Gizzi
-      const gizziAgents = currentAgents.filter((a) => a.name === 'Gizzi');
-      if (gizziAgents.length > 1) {
+      // Ensure exactly one canonical Gizzi packaged bot exists. Keep a single
+      // lowercase packaged bot if it already exists; remove all other variants
+      // (capitalized names, legacy non-bot rows, etc.) that cause duplicates.
+      const canonicalGizzi = currentAgents.find(
+        (a) => a.name === 'gizzi' && a.isBot === true,
+      );
+      const gizziVariants = currentAgents.filter(
+        (a) => a.name.toLowerCase() === 'gizzi' && a.id !== canonicalGizzi?.id,
+      );
+      if (gizziVariants.length > 0) {
         const { deleteAgent } = useAgentStore.getState();
-        for (let i = 1; i < gizziAgents.length; i++) {
-          try { await deleteAgent(gizziAgents[i].id); } catch {}
+        for (const variant of gizziVariants) {
+          try { await deleteAgent(variant.id); } catch {}
         }
         await fetchAgents();
+        currentAgents = useAgentStore.getState().agents;
       }
 
-      // Seed personal agent: Gizzi
-      if (gizziAgents.length === 0) {
+      const gizziExists = currentAgents.some((a) => a.name === 'gizzi' && a.isBot === true);
+      if (!gizziExists) {
         try {
           const gizziInput = defineAgent(GIZZI_SEED);
           // agentWorkspaceService.create() registers the agent record itself
@@ -102,15 +129,17 @@ export function useAgentBootstrap({ enabled = true }: UseAgentBootstrapOptions =
         }
       }
 
-      // Seed vendor and organization agents
-      for (const seed of [...VENDOR_SEEDS, ...ORG_SEEDS]) {
-        // Legacy rows predate source persistence (a.source === undefined) — match them by name.
-        const exists = currentAgents.some((a) => a.name === seed.name && (a.source === seed.source || a.source === undefined));
-        if (!exists) {
-          try {
-            await createAgent(defineAgent(seed));
-          } catch (e) {
-            logger.error({ err: e }, `Failed to seed ${seed.source} agent ${seed.name}:`);
+      // Seed vendor and organization agents only once.
+      if (!hasBootstrapped) {
+        for (const seed of [...VENDOR_SEEDS, ...ORG_SEEDS]) {
+          // Legacy rows predate source persistence (a.source === undefined) — match them by name.
+          const exists = currentAgents.some((a) => a.name === seed.name && (a.source === seed.source || a.source === undefined));
+          if (!exists) {
+            try {
+              await createAgent(defineAgent(seed));
+            } catch (e) {
+              logger.error({ err: e }, `Failed to seed ${seed.source} agent ${seed.name}:`);
+            }
           }
         }
       }

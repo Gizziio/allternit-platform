@@ -420,6 +420,8 @@ const message = await createUserMessage(input)
             )
           : lastUser.model
 
+      const plan = await Provider.prepareAuth(resolvedModelRef)
+
       const model = await Provider.getModel(resolvedModelRef.providerID, resolvedModelRef.modelID).catch(async (e) => {
         // Try fallback model if configured
         if (Flag.GIZZI_FALLBACK_MODEL) {
@@ -814,6 +816,7 @@ const message = await createUserMessage(input)
         tools,
         model,
         toolChoice: format.type === "json_schema" ? "required" : undefined,
+        plan,
       }).finally(() => {
         if (deadlineTimer !== undefined) clearTimeout(deadlineTimer)
       })
@@ -954,6 +957,8 @@ const message = await createUserMessage(input)
   })
 
   async function lastModel(sessionID: string) {
+    const session = await Session.get(sessionID)
+    if (session.defaultModel) return session.defaultModel
     for await (const item of MessageV2.stream(sessionID)) {
       if (item.info.role === "user" && item.info.model) return item.info.model
     }

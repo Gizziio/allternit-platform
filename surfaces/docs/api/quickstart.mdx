@@ -1,0 +1,135 @@
+---
+title: 'Quickstart API'
+description: 'Track managed-agent onboarding progress with an organization-scoped checklist.'
+---
+
+## Overview
+
+The Quickstart API manages the managed-agent onboarding checklist for an organization. It returns predefined steps and records which steps the user has completed. Progress can be advanced, reverted, or reset entirely.
+
+## Base URL
+
+```
+https://api.allternit.com/v1/admin/quickstart
+```
+
+All endpoints require a valid Bearer token in the `Authorization` header and organization owner or admin access. See [Authentication](/api/authentication) for details.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/admin/quickstart` | Get onboarding progress. |
+| PUT | `/admin/quickstart/:step` | Mark a step complete. |
+| DELETE | `/admin/quickstart/:step` | Mark a step incomplete. |
+| POST | `/admin/quickstart/reset` | Reset all progress. |
+
+## Quickstart steps
+
+The checklist contains the following fixed steps:
+
+| Step ID | Label |
+|---------|-------|
+| `create_agent` | Create your first managed agent |
+| `run_agent` | Run the agent with a prompt |
+| `add_tool` | Add a tool to the agent |
+| `enable_mcp` | Connect an MCP server |
+| `invite_member` | Invite a team member |
+| `deploy_agent` | Deploy the agent to a workspace |
+
+## Get progress
+
+```bash
+GET /api/v1/admin/quickstart
+```
+
+Response:
+
+```json
+{
+  "organization_id": "org_abc123",
+  "steps": [
+    {
+      "id": "create_agent",
+      "label": "Create your first managed agent",
+      "completed": false
+    },
+    {
+      "id": "run_agent",
+      "label": "Run the agent with a prompt",
+      "completed": false
+    }
+  ],
+  "completed_count": 0,
+  "total": 6
+}
+```
+
+## Complete step
+
+```bash
+PUT /api/v1/admin/quickstart/create_agent
+```
+
+Response:
+
+```json
+{
+  "organization_id": "org_abc123",
+  "step": "create_agent",
+  "completed": true,
+  "completed_count": 1,
+  "total": 6
+}
+```
+
+## Uncomplete step
+
+```bash
+DELETE /api/v1/admin/quickstart/create_agent
+```
+
+Response:
+
+```json
+{
+  "organization_id": "org_abc123",
+  "step": "create_agent",
+  "completed": false,
+  "completed_count": 0,
+  "total": 6
+}
+```
+
+## Reset progress
+
+```bash
+POST /api/v1/admin/quickstart/reset
+```
+
+Response:
+
+```json
+{
+  "organization_id": "org_abc123",
+  "completed_count": 0,
+  "total": 6
+}
+```
+
+## Error codes
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 200 | — | Success. |
+| 400 | `invalid_step` | Unknown quickstart step. |
+| 401 | `unauthorized` | Missing or invalid authentication. |
+| 403 | `organization_required` / `insufficient_role` | Active organization and admin role required. |
+| 500 | `internal_error` | Unexpected server error. |
+
+## Related links
+
+- [Authentication](/api/authentication)
+- [Agents API](/api/agents)
+- [MCP Servers API](/api/mcp-servers)
+- [Workspaces API](/api/boards)

@@ -88,7 +88,7 @@ final class MiniAppCatalogStore: ObservableObject {
         return servers.compactMap(Self.decodeMCPRecord)
     }
 
-    private static func decodeMCPRecord(_ record: [String: Any]) -> MiniApp? {
+    private static nonisolated func decodeMCPRecord(_ record: [String: Any]) -> MiniApp? {
         guard let server = record["server"] as? [String: Any],
               let name = server["name"] as? String else { return nil }
         let title = server["title"] as? String

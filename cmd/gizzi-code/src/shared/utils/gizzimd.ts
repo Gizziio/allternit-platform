@@ -70,15 +70,13 @@ import {
 } from './frontmatterParser.js'
 import { getFsImplementation, safeResolvePath } from './fsOperations.js'
 import { findCanonicalGitRoot, findGitRoot } from './git.js'
-import {
-  executeInstructionsLoadedHooks,
-  hasInstructionsLoadedHook,
-  type InstructionsLoadReason,
-  type InstructionsMemoryType,
+import type {
+  InstructionsLoadReason,
+  InstructionsMemoryType,
 } from './hooks.js'
 import type { MemoryType } from './memory/types.js'
 import { expandPath } from './path.js'
-import { pathInWorkingPath } from './permissions/filesystem.js'
+import { pathInWorkingPath } from './permissions/pathInWorkingPath.js'
 import { isSettingSourceEnabled } from './settings/constants.js'
 import { getInitialSettings } from './settings/settings.js'
 
@@ -1068,19 +1066,24 @@ export const getMemoryFiles = memoize(
     // 'session_start' reason.
     if (!forceIncludeExternal) {
       const eagerLoadReason = consumeNextEagerLoadReason()
-      if (eagerLoadReason !== undefined && hasInstructionsLoadedHook()) {
-        for (const file of result) {
-          if (!isInstructionsMemoryType(file.type)) continue
-          const loadReason = file.parent ? 'include' : eagerLoadReason
-          void executeInstructionsLoadedHooks(
-            file.path,
-            file.type,
-            loadReason,
-            {
-              globs: file.globs,
-              parentFilePath: file.parent,
-            },
-          )
+      if (eagerLoadReason !== undefined) {
+        // Dynamic import breaks the gizzimd -> hooks -> attachments -> gizzimd cycle.
+        const { hasInstructionsLoadedHook, executeInstructionsLoadedHooks } =
+          await import('./hooks.js')
+        if (hasInstructionsLoadedHook()) {
+          for (const file of result) {
+            if (!isInstructionsMemoryType(file.type)) continue
+            const loadReason = file.parent ? 'include' : eagerLoadReason
+            void executeInstructionsLoadedHooks(
+              file.path,
+              file.type,
+              loadReason,
+              {
+                globs: file.globs,
+                parentFilePath: file.parent,
+              },
+            )
+          }
         }
       }
     }

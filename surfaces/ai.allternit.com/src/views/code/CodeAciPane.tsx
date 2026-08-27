@@ -1,10 +1,12 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowsOut, CursorClick, DotsThree, Globe, NotePencil, X } from '@phosphor-icons/react';
+import { ArrowsOut, CursorClick, DotsThree, Globe, NotePencil, Terminal as TerminalIcon, X } from '@phosphor-icons/react';
 import { ACIComputerUseView } from '@/capsules/browser/ACIComputerUseView';
 import { useBrowserAgentStore } from '@/capsules/browser/browserAgent.store';
 import { getPlatformComputerUseBaseUrl } from '@/integration/computer-use-engine';
+import { UnifiedTerminal } from '@/components/workspace/UnifiedTerminal';
+import { useCodeModeStore } from './CodeModeStore';
 
 type PersistenceMode = 'dont-keep' | 'shared' | 'separate';
 
@@ -27,6 +29,11 @@ export function CodeAciPane({ onClose }: { onClose: () => void }): React.ReactNo
   const [tool, setTool] = useState<'annotate' | 'select' | null>(null);
   const [annotations, setAnnotations] = useState<Array<{ x: number; y: number; id: number }>>([]);
   const [selectedPoint, setSelectedPoint] = useState<{ x: number; y: number } | null>(null);
+  const [terminalOpen, setTerminalOpen] = useState(true);
+  const activeWorkspaceId = useCodeModeStore((s) => s.activeWorkspaceId);
+  const workspacePath = useCodeModeStore(
+    (s) => s.workspaces.find((w) => w.workspace_id === activeWorkspaceId)?.root_path,
+  );
   const fileRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -123,14 +130,52 @@ export function CodeAciPane({ onClose }: { onClose: () => void }): React.ReactNo
             </div>
           ) : null}
         </div>
+        <button type="button" aria-label={terminalOpen ? 'Hide terminal sideline' : 'Show terminal sideline'} title={terminalOpen ? 'Hide terminal sideline' : 'Show terminal sideline'} onClick={() => setTerminalOpen((value) => !value)} style={{ ...headerButton, background: terminalOpen ? 'var(--surface-active)' : 'transparent' }}><TerminalIcon size={15} /></button>
         <button type="button" aria-label="Expand ACI" onClick={() => setFullscreen((value) => !value)} style={headerButton}><ArrowsOut size={15} /></button>
         <button type="button" aria-label="Close ACI" onClick={onClose} style={headerButton}><X size={15} /></button>
       </div>
       {!engineHealthy ? <div role="status" style={{ padding: '7px 10px', borderBottom: '1px solid var(--border-subtle)', color: 'var(--status-warning)', fontSize: 11 }}>ACI backend unavailable{engineStatusMessage ? ` · ${engineStatusMessage}` : ''}</div> : null}
-      <div onClick={useCanvasTool} style={{ position: 'relative', flex: 1, minHeight: 0, cursor: tool === 'select' ? 'crosshair' : tool === 'annotate' ? 'cell' : 'default' }}>
-        <ACIComputerUseView agentBarHeight={0} />
-        {annotations.map((annotation, index) => <span key={annotation.id} style={{ position: 'absolute', zIndex: 30, left: annotation.x - 9, top: annotation.y - 9, width: 18, height: 18, borderRadius: 9, display: 'grid', placeItems: 'center', background: 'var(--accent-primary)', color: 'var(--surface-canvas)', fontSize: 10, fontWeight: 700, pointerEvents: 'none' }}>{index + 1}</span>)}
-        {selectedPoint ? <span style={{ position: 'absolute', zIndex: 30, left: selectedPoint.x - 12, top: selectedPoint.y - 12, width: 24, height: 24, border: '1px solid var(--accent-primary)', borderRadius: 5, boxShadow: '0 0 0 3px color-mix(in srgb, var(--accent-primary) 18%, transparent)', pointerEvents: 'none' }} /> : null}
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'row', overflow: 'hidden' }}>
+        <div onClick={useCanvasTool} style={{ position: 'relative', flex: 1, minWidth: 0, cursor: tool === 'select' ? 'crosshair' : tool === 'annotate' ? 'cell' : 'default' }}>
+          <ACIComputerUseView agentBarHeight={0} />
+          {annotations.map((annotation, index) => <span key={annotation.id} style={{ position: 'absolute', zIndex: 30, left: annotation.x - 9, top: annotation.y - 9, width: 18, height: 18, borderRadius: 9, display: 'grid', placeItems: 'center', background: 'var(--accent-primary)', color: 'var(--surface-canvas)', fontSize: 10, fontWeight: 700, pointerEvents: 'none' }}>{index + 1}</span>)}
+          {selectedPoint ? <span style={{ position: 'absolute', zIndex: 30, left: selectedPoint.x - 12, top: selectedPoint.y - 12, width: 24, height: 24, border: '1px solid var(--accent-primary)', borderRadius: 5, boxShadow: '0 0 0 3px color-mix(in srgb, var(--accent-primary) 18%, transparent)', pointerEvents: 'none' }} /> : null}
+        </div>
+        {terminalOpen && (
+          <div
+            style={{
+              width: 360,
+              flexShrink: 0,
+              borderLeft: '1px solid var(--border-subtle)',
+              background: 'var(--surface-panel)',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <div
+              style={{
+                height: 32,
+                flexShrink: 0,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '0 10px',
+                borderBottom: '1px solid var(--border-subtle)',
+                fontSize: 11,
+                fontWeight: 700,
+                color: 'var(--text-secondary)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+              }}
+            >
+              <TerminalIcon size={13} color="var(--accent-code)" />
+              Dev server terminal
+            </div>
+            <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+              <UnifiedTerminal sessionId="aci-dev-server" workingDir={workspacePath} />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

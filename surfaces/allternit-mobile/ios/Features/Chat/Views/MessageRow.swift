@@ -40,11 +40,11 @@ struct MessageRow: View {
             if message.role == "user" {
                 Spacer(minLength: 40)
             } else {
-                // Agent Avatar Icon
-                Text("A://")
-                    .font(.system(.caption, design: .monospaced))
-                    .bold()
-                    .foregroundColor(Color("AccentPrimary"))
+                // Agent Avatar Icon — A:// protocol mark (light/dark variants)
+                Image("AProtocol")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 18, height: 18)
                     .frame(width: 32, height: 32)
                     .background(Color("BgSecondary"))
                     .clipShape(Circle())
@@ -200,8 +200,7 @@ struct MessageRow: View {
             Group {
                 switch status.state {
                 case .running:
-                    ProgressView()
-                        .scaleEffect(0.6)
+                    ThinkingOrb(state: .forToolName(status.toolName), size: .inline)
                 case .done:
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundColor(Color("AccentPrimary"))
@@ -210,7 +209,7 @@ struct MessageRow: View {
                         .foregroundColor(.orange)
                 }
             }
-            .frame(width: 14, height: 14)
+            .frame(width: 20, height: 20)
 
             Text(status.text)
                 .font(.caption)

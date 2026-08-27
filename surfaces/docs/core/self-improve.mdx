@@ -1,0 +1,112 @@
+---
+title: 'Self-Improve'
+description: 'Evolutionary self-improvement scaffolding for Allternit agents.'
+---
+
+## Overview
+
+The **Allternit Self-Improve** crate provides scaffolding for an evolutionary self-improvement loop in the agents-as-diffs pattern. A meta-agent rewrites a task-agent's code, and every generation is stored as a diff from its parent. A protected evaluation surface can never appear in a produced diff, and a staged evaluation gate runs a cheap subset before paying for a full evaluation.
+
+## Base URL
+
+The crate is consumed as a Rust library. It does not expose HTTP endpoints directly.
+
+## Components
+
+| Module | Purpose |
+|--------|---------|
+| `lineage` | Agents-as-diffs archive, parent selection, and patch-chain reconstruction |
+| `working_copy` | Scratch-copy lifecycle, patch application, and protected-path filtering |
+| `eval` | Staged evaluation gate traits and orchestration |
+
+## The pattern
+
+1. `LineageArchive::record` stores each generation as `{ id, parent_id, patches, valid, score }`.
+2. `ParentSelection` chooses the next breeding parent:
+   - `Latest`
+   - `Best` (highest score)
+   - `ScoreProportional` (sigmoid-weighted sampling with an over-use penalty)
+3. `WorkingCopy::create` scratch-copies a target repo, excluding protected paths.
+4. `WorkingCopy::apply_patches` runs `git apply` over the reconstructed patch chain.
+5. `WorkingCopy::finalize_diff` force-resets protected paths and filters the resulting diff.
+6. `StagedGate` runs a `ValidityCheck`, then a subset `Evaluator::eval_subset`, then the full evaluation if all staged scores are positive.
+
+## Safety rules
+
+- **Protected paths can never appear in a produced diff.** Filtering is verified by re-scanning the diff for the protected path string.
+- **No network assumptions.** The crate only invokes local `git apply` and `git diff`.
+- **Validity before evaluation.** A generation that does not compile or typecheck never reaches an evaluator.
+- **Staged before full.** Full evaluation only runs after every staged score clears the `> 0` bar.
+
+## Configuration
+
+```rust
+pub struct ArbitrationConfig {
+    pub adjacent_line_threshold: usize,  // Default: 3
+    pub priority_weight: f32,            // Default: 0.4
+    pub evidence_weight: f32,            // Default: 0.6
+    pub auto_resolve_threshold: f32,     // Default: 0.8
+}
+```
+
+## JSON examples
+
+### Record a generation
+
+```rust
+use allternit_self_improve::lineage::{LineageArchive, Generation, ParentSelection};
+
+let mut archive = LineageArchive::new("./archive")?;
+archive.record(Generation {
+    id: "gen_2".to_string(),
+    parent_id: Some("gen_1".to_string()),
+    patches: vec!["gen_2.patch".to_string()],
+    valid: true,
+    score: 0.85,
+})?;
+```
+
+### Reconstruct a working copy
+
+```rust
+use allternit_self_improve::working_copy::WorkingCopy;
+
+let protected = vec!["tests/golden".to_string(), "eval/harness".to_string()];
+let mut wc = WorkingCopy::create(
+    "/path/to/repo",
+    "./scratch",
+    &protected,
+)?;
+
+wc.apply_patches(&archive.patch_chain("gen_2")?)?;
+let diff = wc.finalize_diff()?;
+```
+
+### Run staged evaluation
+
+```rust
+use allternit_self_improve::eval::{StagedGate, Evaluator, ValidityCheck};
+
+let gate = StagedGate::new(
+    Box::new(MyValidityCheck),
+    Box::new(MyEvaluator),
+    0.2, // subset fraction
+);
+
+let report = gate.evaluate(&wc).await?;
+```
+
+## Error codes
+
+| Error | Meaning |
+|-------|---------|
+| `ProtectedPathLeak` | A protected path string was found in the produced diff |
+| `PatchApplyFailed` | `git apply` failed for a patch in the chain |
+| `InvalidGeneration` | Generation ID or parent chain is invalid |
+| `EvaluationFailed` | Staged or full evaluation failed |
+
+## Related pages
+
+- [Gizzi Runtime](/core/gizzi-runtime)
+- [Process Driver](/core/process-driver)
+- [VM Executor](/byoc/vm-executor)

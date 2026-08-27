@@ -24,7 +24,7 @@ export interface ProviderEntry {
 /**
  * Registry of all supported providers
  */
-export declare const PROVIDER_REGISTRY: Map<string, ProviderEntry>;
+export declare const PROVIDER_REGISTRY: ProviderEntry[];
 /**
  * Create a provider instance
  * @param name - Provider name
@@ -50,7 +50,7 @@ export declare function getProvider(name: string): ProviderMetadata | undefined;
  */
 export declare function findProvidersByFeature(...features: ProviderFeature[]): ProviderMetadata[];
 declare const _default: {
-    PROVIDER_REGISTRY: Map<string, ProviderEntry>;
+    PROVIDER_REGISTRY: ProviderEntry[];
     createProvider: typeof createProvider;
     listProviders: typeof listProviders;
     getProvider: typeof getProvider;

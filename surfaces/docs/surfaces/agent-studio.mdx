@@ -1,0 +1,128 @@
+---
+title: Agent Studio
+description: Prototype, configure, and test Allternit agents in the platform shell
+---
+
+## Overview
+
+**Agent Studio** is the visual agent builder in the Allternit platform. It lets you prototype an agent, choose its brain and parameters, bind tools, and run a test conversation before saving the configuration to the platform.
+
+## Base URL / usage
+
+Agent Studio runs inside the platform shell:
+
+```text
+https://app.allternit.com/shell?view=agent-studio
+```
+
+Open programmatically from shell code:
+
+```typescript
+open('agent-studio');
+```
+
+## Configuration tabs
+
+| Tab | Purpose |
+|---|---|
+| **Agent** | Set name, description, system prompt, model, temperature, and max tokens |
+| **Tools** | Toggle tools the prototype may call |
+| **Run** | Send a test message and inspect the raw response |
+
+## Prototype configuration
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `name` | string | `My Agent` | Agent display name |
+| `description` | string | `""` | What the agent does |
+| `system_prompt` | string | `You are a helpful Allternit agent.` | System instructions |
+| `model` | string | `allternit-large` | Brain model identifier |
+| `temperature` | number | `0.7` | Sampling temperature |
+| `max_tokens` | integer | `4096` | Token limit |
+| `tools` | string[] | `[]` | Enabled tool IDs |
+
+### Built-in prototype tools
+
+| Tool ID | Name | Description |
+|---|---|---|
+| `web_search` | Web Search | Search the web for current information |
+| `bash` | Bash | Run shell commands in a sandbox |
+| `text_editor` | Text Editor | Read and edit files |
+| `computer_use` | Computer Use | Control a desktop environment |
+| `mcp_registry` | MCP Registry | Use registered MCP tools |
+
+## Endpoints / commands
+
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/api/v1/agents/prototype` | Run a prototype agent with the configured settings |
+| `POST` | `/api/v1/agents` | Save the configured agent (Phase 2) |
+
+## JSON request / response examples
+
+### Run a prototype
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/agents/prototype \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Research Agent",
+    "description": "Performs deep technical research.",
+    "system_prompt": "You are a research assistant. Cite sources.",
+    "model": "allternit-reasoning",
+    "temperature": 0.5,
+    "max_tokens": 4096,
+    "tools": ["web_search", "mcp_registry"],
+    "messages": [{"role":"user","content":"Summarize local model quantization."}]
+  }'
+```
+
+Response:
+
+```json
+{
+  "role": "assistant",
+  "content": "Local model quantization reduces...",
+  "tool_calls": [
+    {
+      "id": "call_1a2b...",
+      "type": "web_search",
+      "arguments": { "query": "local model quantization techniques" }
+    }
+  ]
+}
+```
+
+### Offline fallback payload
+
+If the prototype endpoint is unavailable, Agent Studio surfaces the request payload so the UI works offline:
+
+```json
+{
+  "name": "Research Agent",
+  "description": "Performs deep technical research.",
+  "system_prompt": "You are a research assistant. Cite sources.",
+  "model": "allternit-reasoning",
+  "temperature": 0.5,
+  "max_tokens": 4096,
+  "tools": ["web_search", "mcp_registry"],
+  "messages": [{"role":"user","content":"Summarize local model quantization."}]
+}
+```
+
+## Error codes
+
+| HTTP | Code | Meaning |
+|---|---|---|
+| 200 | — | Prototype completed |
+| 400 | `invalid_request` | Missing required fields or invalid tool IDs |
+| 401 | `unauthorized` | Missing or invalid bearer token |
+| 500 | `prototype_failed` | Brain or runtime error during the prototype run |
+
+## Related links
+
+- [Agents API](/api/agents)
+- [Gizzi Code CLI](/cli/cli-typescript)
+- [Tool Belt](/tools/tool-belt)
+- [MCP servers](/tools/mcp)

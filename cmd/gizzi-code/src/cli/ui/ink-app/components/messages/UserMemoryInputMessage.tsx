@@ -4,7 +4,7 @@ import sample from 'lodash-es/sample';
 import * as React from 'react';
 import { useMemo } from 'react';
 import { Box, Text } from '../../ink';
-import { extractTag } from '../../utils/messages';
+import { extractTag } from '../../utils/extractTag.js';
 import { MessageResponse } from '../MessageResponse';
 function getSavingMessage(): string {
   return sample(['Got it.', 'Good to know.', 'Noted.']);

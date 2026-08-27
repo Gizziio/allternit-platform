@@ -29,17 +29,18 @@ import type { Message, SystemCompactBoundaryMessage, ToolReferenceContentBlock, 
 import {
   countToolDefinitionTokens,
   TOOL_TOKEN_COUNT_OVERHEAD,
-} from './analyzeContext.js'
+} from './analyzeContextTokens.js'
 import { count } from './array.js'
 import { getMergedBetas } from './betas.js'
 import { getContextWindowForModel } from './context.js'
 import { logForDebugging } from './debug.js'
-import { isEnvDefinedFalsy, isEnvTruthy } from './envUtils.js'
-import {
-  getAPIProvider,
-  isFirstPartyAnthropicBaseUrl,
-} from './model/providers.js'
 import { jsonStringify } from './slowOperations.js'
+import {
+  type ToolSearchMode,
+  getToolSearchMode,
+  isToolReferenceBlock,
+  isToolSearchEnabledOptimistic,
+} from './toolSearchMode.js'
 import { zodToJsonSchema } from './zodToJsonSchema.js'
 
 /**
@@ -153,58 +154,6 @@ const getDeferredToolTokenCount = memoize(
 )
 
 /**
- * Tool search mode. Determines how deferrable tools (MCP + shouldDefer) are
- * surfaced:
- *   - 'tst': Tool Search Tool — deferred tools discovered via ToolSearchTool (always enabled)
- *   - 'tst-auto': auto — tools deferred only when they exceed threshold
- *   - 'standard': tool search disabled — all tools exposed inline
- */
-export type ToolSearchMode = 'tst' | 'tst-auto' | 'standard'
-
-/**
- * Determines the tool search mode from ENABLE_TOOL_SEARCH.
- *
- *   ENABLE_TOOL_SEARCH    Mode
- *   auto / auto:1-99      tst-auto
- *   true / auto:0         tst
- *   false / auto:100      standard
- *   (unset)               tst (default: always defer MCP and shouldDefer tools)
- */
-export function getToolSearchMode(): ToolSearchMode {
-  // GIZZI_DISABLE_EXPERIMENTAL_BETAS is a kill switch for beta API
-  // features. Tool search emits defer_loading on tool definitions and
-  // tool_reference content blocks — both require the API to accept a beta
-  // header. When the kill switch is set, force 'standard' so no beta shapes
-  // reach the wire, even if ENABLE_TOOL_SEARCH is also set. This is the
-  // explicit escape hatch for proxy gateways that the heuristic in
-  // isToolSearchEnabledOptimistic doesn't cover.
-  // github.com/anthropics/gizzi/issues/20031
-  if (isEnvTruthy(process.env.GIZZI_DISABLE_EXPERIMENTAL_BETAS)) {
-    return 'standard'
-  }
-
-  const value = process.env.ENABLE_TOOL_SEARCH
-
-  // Handle auto:N syntax - check edge cases first
-  const autoPercent = value ? parseAutoPercentage(value) : null
-  if (autoPercent === 0) return 'tst' // auto:0 = always enabled
-  if (autoPercent === 100) return 'standard'
-  if (isAutoToolSearchMode(value)) {
-    return 'tst-auto' // auto or auto:1-99
-  }
-
-  if (isEnvTruthy(value)) return 'tst'
-  if (isEnvDefinedFalsy(process.env.ENABLE_TOOL_SEARCH)) return 'standard'
-  return 'tst' // default: always defer MCP and shouldDefer tools
-}
-
-/**
- * Default patterns for models that do NOT support tool_reference.
- * New models are assumed to support tool_reference unless explicitly listed here.
- */
-const DEFAULT_UNSUPPORTED_MODEL_PATTERNS = ['haiku']
-
-/**
  * Get the list of model patterns that do NOT support tool_reference.
  * Can be configured via GrowthBook for live updates without code changes.
  */
@@ -249,74 +198,6 @@ export function modelSupportsToolReference(model: string): boolean {
   }
 
   // New models are assumed to support tool_reference
-  return true
-}
-
-/**
- * Check if tool search *might* be enabled (optimistic check).
- *
- * Returns true if tool search could potentially be enabled, without checking
- * dynamic factors like model support or threshold. Use this for:
- * - Including ToolSearchTool in base tools (so it's available if needed)
- * - Preserving tool_reference fields in messages (can be stripped later)
- * - Checking if ToolSearchTool should report itself as enabled
- *
- * Returns false only when tool search is definitively disabled (standard mode).
- *
- * For the definitive check that includes model support and threshold,
- * use isToolSearchEnabled().
- */
-let loggedOptimistic = false
-
-export function isToolSearchEnabledOptimistic(): boolean {
-  const mode = getToolSearchMode()
-  if (mode === 'standard') {
-    if (!loggedOptimistic) {
-      loggedOptimistic = true
-      logForDebugging(
-        `[ToolSearch:optimistic] mode=${mode}, ENABLE_TOOL_SEARCH=${process.env.ENABLE_TOOL_SEARCH}, result=false`,
-      )
-    }
-    return false
-  }
-
-  // tool_reference is a beta content type that third-party API gateways
-  // (ANTHROPIC_BASE_URL proxies) typically don't support. When the provider
-  // is 'firstParty' but the base URL points elsewhere, the proxy will reject
-  // tool_reference blocks with a 400. Vertex/Bedrock/Foundry are unaffected —
-  // they have their own endpoints and beta headers.
-  // https://github.com/anthropics/gizzi/issues/30912
-  //
-  // HOWEVER: some proxies DO support tool_reference (LiteLLM passthrough,
-  // Cloudflare AI Gateway, corp gateways that forward beta headers). The
-  // blanket disable breaks defer_loading for those users — all MCP tools
-  // loaded into main context instead of on-demand (gh-31936 / CC-457,
-  // likely the real cause of CC-330 "v2.1.70 defer_loading regression").
-  // This gate only applies when ENABLE_TOOL_SEARCH is unset/empty (default
-  // behavior). Setting any non-empty value — 'true', 'auto', 'auto:N' —
-  // means the user is explicitly configuring tool search and asserts their
-  // setup supports it. The falsy check (rather than === undefined) aligns
-  // with getToolSearchMode(), which also treats "" as unset.
-  if (
-    !process.env.ENABLE_TOOL_SEARCH &&
-    getAPIProvider() === 'firstParty' &&
-    !isFirstPartyAnthropicBaseUrl()
-  ) {
-    if (!loggedOptimistic) {
-      loggedOptimistic = true
-      logForDebugging(
-        `[ToolSearch:optimistic] disabled: ANTHROPIC_BASE_URL=${process.env.ANTHROPIC_BASE_URL} is not a first-party Anthropic host. Set ENABLE_TOOL_SEARCH=true (or auto / auto:N) if your proxy forwards tool_reference blocks.`,
-      )
-    }
-    return false
-  }
-
-  if (!loggedOptimistic) {
-    loggedOptimistic = true
-    logForDebugging(
-      `[ToolSearch:optimistic] mode=${mode}, ENABLE_TOOL_SEARCH=${process.env.ENABLE_TOOL_SEARCH}, result=true`,
-    )
-  }
   return true
 }
 
@@ -471,19 +352,6 @@ export async function isToolSearchEnabled(
       logModeDecision(false, mode, 'standard_mode')
       return false
   }
-}
-
-/**
- * Check if an object is a tool_reference block.
- * tool_reference is a beta feature not in the SDK types, so we need runtime checks.
- */
-export function isToolReferenceBlock(obj: unknown): boolean {
-  return (
-    typeof obj === 'object' &&
-    obj !== null &&
-    'type' in obj &&
-    (obj as { type: unknown }).type === 'tool_reference'
-  )
 }
 
 /**
@@ -785,3 +653,10 @@ async function checkAutoThreshold(
     metrics: { deferredToolDescriptionChars, charThreshold },
   }
 }
+
+export {
+  type ToolSearchMode,
+  getToolSearchMode,
+  isToolReferenceBlock,
+  isToolSearchEnabledOptimistic,
+} from './toolSearchMode.js'

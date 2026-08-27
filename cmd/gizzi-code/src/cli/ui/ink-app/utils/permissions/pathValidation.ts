@@ -12,6 +12,7 @@ import {
 import { containsPathTraversal } from '../path.js'
 import { SandboxManager } from '../sandbox/sandbox-adapter.js'
 import { containsVulnerableUncPath } from '../shell/readOnlyCommandValidation.js'
+import { expandTilde } from './expandTilde.js'
 import {
   checkEditableInternalPath,
   checkPathSafetyForAutoEdit,
@@ -74,20 +75,7 @@ export function getGlobBaseDirectory(path: string): string {
   return beforeGlob.substring(0, lastSepIndex) || '/'
 }
 
-/**
- * Expands tilde (~) at the start of a path to the user's home directory.
- * Note: ~username expansion is not supported for security reasons.
- */
-export function expandTilde(path: string): string {
-  if (
-    path === '~' ||
-    path.startsWith('~/') ||
-    (process.platform === 'win32' && path.startsWith('~\\'))
-  ) {
-    return homedir() + path.slice(1)
-  }
-  return path
-}
+export { expandTilde } from './expandTilde.js'
 
 /**
  * Checks if a resolved path is writable according to the sandbox write allowlist.

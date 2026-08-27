@@ -1,0 +1,189 @@
+---
+title: 'Registry'
+description: 'App, tool, and auth registry for Allternit agents and surfaces.'
+---
+
+## Overview
+
+The **Allternit Registry** stores app definitions, tool schemas, UI card templates, and user authentication records so agents and surfaces can discover and execute tools through a consistent contract.
+
+## Base URL
+
+Local development:
+
+```text
+http://127.0.0.1:8080
+```
+
+When deployed behind the Allternit platform gateway:
+
+```text
+https://api.allternit.com/api/registry
+```
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/registry/apps` | Register an app |
+| GET | `/api/registry/apps` | List registered apps |
+| GET | `/api/registry/apps/:id` | Get an app definition |
+| POST | `/api/registry/apps/search` | Search and filter apps |
+| POST | `/api/registry/apps/:id/auth` | Authenticate a user for an app |
+| POST | `/api/registry/apps/:id/tools/:tool_id/execute` | Execute a tool |
+
+## App definition
+
+```json
+{
+  "id": "calendar",
+  "name": "Calendar",
+  "description": "Manage calendar events",
+  "version": "1.0.0",
+  "developer": "Allternit",
+  "website": "https://allternit.com",
+  "icon_url": "https://allternit.com/icons/calendar.png",
+  "categories": ["productivity"],
+  "auth_type": "oauth2",
+  "oauth_config": {
+    "authorization_url": "https://provider.com/oauth/authorize",
+    "token_url": "https://provider.com/oauth/token",
+    "client_id": "client_id",
+    "scopes": ["read", "write"]
+  },
+  "capabilities": ["create_event", "list_events"],
+  "supported_platforms": ["web", "desktop"],
+  "tools": [
+    {
+      "id": "create_event",
+      "name": "Create Event",
+      "description": "Create a calendar event",
+      "category": "calendar",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string" },
+          "start_time": { "type": "string" },
+          "end_time": { "type": "string" }
+        },
+        "required": ["title", "start_time"]
+      },
+      "returns": { "type": "object" },
+      "risk_level": "medium",
+      "requires_confirmation": false,
+      "execution_time_estimate_ms": 500
+    }
+  ],
+  "ui_cards": [
+    {
+      "card_type": "basic",
+      "title_template": "Event Created",
+      "content_template": { "text": "{title}" },
+      "actions": []
+    }
+  ]
+}
+```
+
+## JSON examples
+
+### Register an app
+
+```bash
+curl -X POST http://127.0.0.1:8080/api/registry/apps \
+  -H 'content-type: application/json' \
+  -d @app-definition.json
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "app_id": "calendar"
+}
+```
+
+### Search apps
+
+```bash
+curl -X POST http://127.0.0.1:8080/api/registry/apps/search \
+  -H 'content-type: application/json' \
+  -d '{
+    "category": "productivity",
+    "platform": "web",
+    "search": "calendar",
+    "limit": 10
+  }'
+```
+
+Response:
+
+```json
+[
+  {
+    "id": "calendar",
+    "name": "Calendar",
+    "description": "Manage calendar events",
+    "version": "1.0.0",
+    "developer": "Allternit",
+    "icon_url": "https://allternit.com/icons/calendar.png",
+    "categories": ["productivity"],
+    "supported_platforms": ["web", "desktop"]
+  }
+]
+```
+
+### Execute a tool
+
+```bash
+curl -X POST http://127.0.0.1:8080/api/registry/apps/calendar/tools/create_event/execute \
+  -H 'content-type: application/json' \
+  -d '{
+    "app_id": "calendar",
+    "tool_id": "create_event",
+    "user_id": "user_123",
+    "parameters": {
+      "title": "Team Standup",
+      "start_time": "2026-08-14T10:00:00Z",
+      "end_time": "2026-08-14T10:30:00Z"
+    }
+  }'
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "result": {
+    "event_id": "event_550e8400-e29b-41d4-a716-446655440000",
+    "status": "created",
+    "title": "Team Standup",
+    "start_time": "2026-08-14T10:00:00Z",
+    "end_time": "2026-08-14T10:30:00Z"
+  },
+  "ui_card": {
+    "card_type": "basic",
+    "title_template": "Event Created",
+    "content_template": { "text": "Team Standup" },
+    "actions": []
+  }
+}
+```
+
+## Error codes
+
+| HTTP | Code | Meaning |
+|------|------|---------|
+| 200 | — | Success |
+| 400 | `bad_request` | Invalid app or tool definition |
+| 401 | `unauthorized` | Missing auth |
+| 404 | `not_found` | App or tool not found |
+| 500 | `internal_error` | Registry error |
+
+## Related pages
+
+- [Open Connector](/tools/open-connector)
+- [Server Tools](/tools/server-tools)
+- [Native Tool Belt](/tools/tool-belt)

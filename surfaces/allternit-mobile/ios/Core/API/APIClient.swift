@@ -36,24 +36,26 @@ enum APIRoute: Sendable {
 
 /// Thin async/await REST client for the Allternit gateway.
 ///
-/// The request builder *awaits* the Clerk Bearer token before returning the
-/// request, so the Authorization header is always attached before the request
-/// leaves the client — the v1 race (header applied inside a detached Task
-/// after the request had already been returned) is gone by construction.
+/// The request builder *awaits* the runtime device token (falling back to the
+/// Clerk Bearer token) before returning the request, so the Authorization
+/// header is always attached before the request leaves the client — the v1
+/// race (header applied inside a detached Task after the request had already
+/// been returned) is gone by construction.
 ///
 /// JSON is decoded with a plain `JSONDecoder`: models carry explicit
 /// `CodingKeys` wherever the wire casing differs (snake_case conversations,
 /// camelCase replies), so no key-decoding strategy is applied globally.
 final class APIClient: @unchecked Sendable {
     static let shared = APIClient(
-        tokenProvider: { try await AuthManager.shared.getToken() },
+        tokenProvider: { try await AuthManager.shared.effectiveToken() },
         routeProvider: { await EnvironmentStore.shared.apiRoute() }
     )
 
     let baseURL: URL
     let session: URLSession
 
-    /// Awaits the current Clerk session token; nil when signed out.
+    /// Awaits the current runtime device token, falling back to the Clerk
+    /// session token; nil when signed out.
     private let tokenProvider: @Sendable () async throws -> String?
 
     /// Resolves how the next request reaches the runtime. Called per send,
@@ -209,6 +211,14 @@ final class APIClient: @unchecked Sendable {
         } catch {
             throw APIError.decoding(error)
         }
+    }
+
+    /// POST with a JSON body and no decoded response payload.
+    func post<B: Encodable>(path: String, body: B) async throws {
+        var request = try await authorizedRequest(path: path, method: "POST")
+        request.httpBody = try JSONEncoder().encode(body)
+        let (data, response) = try await send(request)
+        try validate(response, data: data)
     }
 
     /// POST with no body and no response payload (e.g. reply cancel).

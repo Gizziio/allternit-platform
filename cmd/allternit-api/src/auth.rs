@@ -694,6 +694,7 @@ pub async fn auth_middleware(
     mut request: Request,
     next: Next,
 ) -> Response {
+    // 1. Desktop bootstrap shared-secret (signed desktop process or trusted peer).
     if let Some(mut user) = extract_desktop_bootstrap_user(request.headers(), &state.config) {
         match ensure_user_in_db(&state.db, &user) {
             Ok(organization_id) => user.organization_id = organization_id,
@@ -706,41 +707,86 @@ pub async fn auth_middleware(
         return next.run(request).await;
     }
 
-    // Cloud-issued runtime-device token (`Authorization: Bearer
+    // 2. Cloud-issued runtime-device token (`Authorization: Bearer
     // allternit_runtime_…`), the same mechanism already proven for
     // `mcp_proxy_internal`/`/internal/*`. Introspected against
-    // allternit-cloud-api; the token-derived user_id is the identity, exactly
-    // as `verify_runtime_device_token` resolves it there — no separate
-    // identity model for this path.
-    if let Some(token) = crate::connector_routes::device_token_from_headers(request.headers()) {
-        let token = token.to_string();
-        return match crate::connector_routes::verify_runtime_device_token(&state, &token).await {
-            Ok(user_id) => {
-                let mut user = AuthUser {
-                    user_id,
-                    email: None,
-                    name: None,
-                    avatar_url: None,
-                    tenant_id: None,
-                    organization_id: None,
-                    organization_role: None,
-                    organization_slug: None,
-                };
-                match ensure_user_in_db(&state.db, &user) {
-                    Ok(organization_id) => user.organization_id = organization_id,
-                    Err(e) => return e.into_response(),
+    // allternit-cloud-api; the token-derived user_id is the identity.
+    // Only run when a cloud-api URL is configured; without one the token is
+    // not verifiable, and self-hosted/local fallbacks below take over.
+    if state.config.cloud_api_url().is_some() {
+        if let Some(token) = crate::connector_routes::device_token_from_headers(request.headers()) {
+            let token = token.to_string();
+            return match crate::connector_routes::verify_runtime_device_token(&state, &token).await {
+                Ok(user_id) => {
+                    let mut user = AuthUser {
+                        user_id,
+                        email: None,
+                        name: None,
+                        avatar_url: None,
+                        tenant_id: None,
+                        organization_id: None,
+                        organization_role: None,
+                        organization_slug: None,
+                    };
+                    match ensure_user_in_db(&state.db, &user) {
+                        Ok(organization_id) => user.organization_id = organization_id,
+                        Err(e) => return e.into_response(),
+                    }
+                    let headers = request.headers_mut();
+                    insert_user_headers(headers, &user);
+                    request.extensions_mut().insert(user);
+                    next.run(request).await
                 }
-                let headers = request.headers_mut();
-                insert_user_headers(headers, &user);
-                request.extensions_mut().insert(user);
-                next.run(request).await
-            }
-            Err(resp) => resp,
-        };
+                Err(resp) => resp,
+            };
+        }
     }
 
-    // Try Clerk JWT first
+    // 3. Clerk JWT bearer token.
     if let Some(token) = extract_bearer_token(request.headers()) {
+        if token.starts_with("at-") {
+            let db = state.db.clone();
+            let token_for_lookup = token.clone();
+            return match tokio::task::spawn_blocking(move || {
+                crate::admin_access_token_routes::authenticate_access_token(&db, &token_for_lookup)
+            })
+            .await
+            {
+                Ok(Some(user)) => {
+                    insert_user_headers(request.headers_mut(), &user);
+                    request.extensions_mut().insert(user);
+                    next.run(request).await
+                }
+                Ok(None) => AuthError::TokenDecode("Unknown, revoked, or expired access token".into()).into_response(),
+                Err(e) => AuthError::DbError(e.to_string()).into_response(),
+            };
+        }
+
+        if token.starts_with("allternit_admin_") || token.starts_with("allternit_access_") {
+            let db = state.db.clone();
+            let token_for_lookup = token.clone();
+            match tokio::task::spawn_blocking(move || crate::enterprise_auth::authenticate_bearer(&db, &token_for_lookup)).await {
+                Ok(Ok(Some((user, credential)))) => {
+                    if !credential.allows_request(request.method(), request.uri().path()) {
+                        return (
+                            StatusCode::FORBIDDEN,
+                            Json(json!({
+                                "error": "Forbidden",
+                                "message": "Credential does not grant the required scope"
+                            })),
+                        )
+                            .into_response();
+                    }
+                    insert_user_headers(request.headers_mut(), &user);
+                    request.extensions_mut().insert(user);
+                    request.extensions_mut().insert(credential);
+                    return next.run(request).await;
+                }
+                Ok(Ok(None)) => return AuthError::TokenDecode("Unknown, revoked, or expired enterprise credential".into()).into_response(),
+                Ok(Err(e)) => return AuthError::DbError(e.to_string()).into_response(),
+                Err(e) => return AuthError::DbError(e.to_string()).into_response(),
+            }
+        }
         match verify_token(&state.jwks, &token, &state.auth_config).await {
             Ok(mut user) => {
                 // Sync only the signed active Clerk organization into the
@@ -760,12 +806,13 @@ pub async fn auth_middleware(
                 return next.run(request).await;
             }
             Err(e) => {
-                // Local development bypass: if the token is invalid but we're
-                // running in local dev mode from localhost, fall back to the
-                // default local user instead of hard-failing. This handles
-                // stale localStorage tokens during development.
-                if state.config.local_dev_bypass() && is_localhost_origin(request.headers()) {
-                    warn!(error = %e, "JWT verification failed; falling back to local dev user");
+                // Local/self-hosted fallback: if the token is invalid but the
+                // request is clearly from the local app, continue to the
+                // localhost bypass below instead of hard-failing.
+                if (state.config.local_dev_bypass() || state.config.self_hosted())
+                    && is_localhost_origin(request.headers())
+                {
+                    warn!(error = %e, "JWT verification failed; falling back to local user");
                 } else {
                     return e.into_response();
                 }
@@ -773,10 +820,12 @@ pub async fn auth_middleware(
         }
     }
 
-    // Local development bypass: when enabled and the request is from localhost,
-    // treat it as the default local user. This keeps the packaged-app and
-    // browser dev flows working without distributing Clerk tokens to devs.
-    if state.config.local_dev_bypass() && is_localhost_origin(request.headers()) {
+    // 4. Self-hosted / local-dev fallback: when the deployment is local and no
+    // cloud auth succeeded, trust the loopback origin as the default local user.
+    // This keeps packaged apps and browser dev flows working without Clerk tokens.
+    if (state.config.self_hosted() || state.config.local_dev_bypass())
+        && is_localhost_origin(request.headers())
+    {
         let mut user = local_dev_user(Some(state.config.tenant_id()));
         match ensure_user_in_db(&state.db, &user) {
             Ok(organization_id) => user.organization_id = organization_id,
@@ -786,33 +835,6 @@ pub async fn auth_middleware(
         insert_user_headers(headers, &user);
         request.extensions_mut().insert(user);
         return next.run(request).await;
-    }
-
-    // Self-hosted bypass: packaged apps that ship without Clerk keys trust the
-    // local desktop bootstrap headers or localhost origin.
-    if state.config.self_hosted() {
-        if let Some(mut user) = extract_desktop_bootstrap_user(request.headers(), &state.config) {
-            match ensure_user_in_db(&state.db, &user) {
-                Ok(organization_id) => user.organization_id = organization_id,
-                Err(e) => return e.into_response(),
-            }
-            let headers = request.headers_mut();
-            insert_user_headers(headers, &user);
-            request.extensions_mut().insert(user);
-            return next.run(request).await;
-        }
-
-        if is_localhost_origin(request.headers()) {
-            let mut user = local_dev_user(Some(state.config.tenant_id()));
-            match ensure_user_in_db(&state.db, &user) {
-                Ok(organization_id) => user.organization_id = organization_id,
-                Err(e) => return e.into_response(),
-            }
-            let headers = request.headers_mut();
-            insert_user_headers(headers, &user);
-            request.extensions_mut().insert(user);
-            return next.run(request).await;
-        }
     }
 
     AuthError::MissingToken.into_response()

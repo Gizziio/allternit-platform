@@ -26,6 +26,10 @@ export namespace Vault {
     "domain",
     "runbook",
     "idea",
+    // Added for codemap → vault export (`gizzi codemap generate
+    // --vault-export`, see src/codemap/vault-export.ts) — one per exported
+    // repo module. The repo-level hub note reuses "project" instead.
+    "module",
   ])
   export type EntityType = z.infer<typeof EntityType>
 

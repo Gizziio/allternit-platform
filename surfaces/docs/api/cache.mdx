@@ -1,0 +1,154 @@
+---
+title: 'Cache'
+description: 'Reusable prompt caches for the Allternit LLM gateway'
+---
+
+## Overview
+
+The Cache API stores frequently reused prompt prefixes so they can be referenced across chat-completion requests without re-sending the full text. This reduces latency and cost for workloads that repeat large system prompts or reference documents.
+
+The prompt cache is keyed by content hash, so identical prompts are deduplicated automatically.
+
+## Base URL
+
+```
+https://api.allternit.com/v1
+```
+
+For local development:
+
+```
+http://127.0.0.1:8013/v1
+```
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/v1/cache/prompts` | Create a cached prompt |
+| `GET` | `/v1/cache/prompts` | List cached prompts |
+| `GET` | `/v1/cache/prompts/:id` | Retrieve a cached prompt |
+| `DELETE` | `/v1/cache/prompts/:id` | Delete a cached prompt |
+
+## Create a cached prompt
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `content` | string | yes | Prompt text to cache. |
+| `name` | string | no | Human-readable label. |
+| `ttl_seconds` | integer | no | Time-to-live. Defaults to `3600` (1 hour). Must be between `60` and `2592000` (30 days). |
+| `metadata` | object | no | Arbitrary metadata. |
+
+### Example request
+
+```bash
+curl -X POST https://api.allternit.com/v1/cache/prompts \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "content": "You are a senior code reviewer. Be concise and focus on correctness.",
+    "name": "code-reviewer-prompt",
+    "ttl_seconds": 86400,
+    "metadata": {"team": "platform"}
+  }'
+```
+
+### Example response
+
+```json
+{
+  "id": "cache_abc123",
+  "object": "prompt_cache",
+  "content_hash": "a1b2c3d4...",
+  "name": "code-reviewer-prompt",
+  "status": "active",
+  "tokens": 18,
+  "created_at": 1723500000,
+  "expires_at": 1723586400,
+  "metadata": {"team": "platform"}
+}
+```
+
+If a cache entry with identical content already exists, the existing object is returned with status `200`. Otherwise the gateway returns `201`.
+
+## List cached prompts
+
+```bash
+curl https://api.allternit.com/v1/cache/prompts \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+```json
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "cache_abc123",
+      "object": "prompt_cache",
+      "content_hash": "a1b2c3d4...",
+      "name": "code-reviewer-prompt",
+      "status": "active",
+      "tokens": 18,
+      "created_at": 1723500000,
+      "expires_at": 1723586400,
+      "metadata": {"team": "platform"}
+    }
+  ]
+}
+```
+
+## Retrieve a cached prompt
+
+```bash
+curl https://api.allternit.com/v1/cache/prompts/cache_abc123 \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+## Delete a cached prompt
+
+```bash
+curl -X DELETE https://api.allternit.com/v1/cache/prompts/cache_abc123 \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+```json
+{
+  "id": "cache_abc123",
+  "object": "prompt_cache.deleted",
+  "deleted": true
+}
+```
+
+## Using a cached prompt in completions
+
+Reference a cached prompt in a chat-completion system message using `cache_id`:
+
+```json
+{
+  "model": "auto",
+  "messages": [
+    {"role": "system", "cache_id": "cache_abc123"},
+    {"role": "user", "content": "Review this diff."}
+  ]
+}
+```
+
+For caching entire message arrays, see the context-cache surface referenced in the [Chat Completions](/api/chat-completions) documentation.
+
+## Error codes
+
+| HTTP status | Code | Meaning |
+|-------------|------|---------|
+| 400 | `allternit.invalid_request` | Empty content or invalid `ttl_seconds`. |
+| 401 | `allternit.authentication_failed` | Missing or invalid API key. |
+| 404 | `allternit.invalid_request` | Cache entry not found or expired. |
+| 429 | `allternit.rate_limited` | Per-key rate limit exceeded. |
+| 429 | `allternit.budget_exceeded` | Monthly key or tenant budget exhausted. |
+| 500 | `allternit.internal_error` | Internal gateway error. |
+
+## Related pages
+
+- [Chat Completions](/api/chat-completions) — use cached prompts in messages
+- [Proxy](/api/proxy) — gateway middleware and routing

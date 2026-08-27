@@ -28,8 +28,13 @@ import type { ViewType } from '../nav/nav.types';
 import { ConsoleDrawer } from '../drawers/ConsoleDrawer';
 import { useRunnerStore } from '../runner/runner.store';
 import { useSidecarStore } from '../stores/sidecar-store';
+import { usePendingChatModelStore } from '../stores/pending-chat-model.store';
 import { useAgentStore } from '../lib/agents';
+import type { Agent } from '../lib/agents/agent.types';
 import { useAgentBootstrap } from '../lib/agents/useAgentBootstrap';
+import { isBot } from '@/lib/bots/bot-profile';
+import { useStartBotSession } from '@/lib/bots/useStartBotSession';
+import { useStackProviders } from '@/lib/bots/use-stack-providers';
 import { NativeAgentApiError } from '../lib/agents/native-agent-api';
 import { useChatSessionStore } from '../views/chat/ChatSessionStore';
 import { useCodeSessionStore } from '../views/code/CodeSessionStore';
@@ -38,6 +43,8 @@ import { useCoworkSessionStore } from '../views/cowork/CoworkSessionStore';
 import { useDesignSessionStore } from '../views/design/DesignSessionStore';
 // Modularized Shell Components
 import { getShellViewRegistry } from './ViewRegistry';
+import { HudShell } from './hud/HudShell';
+import { useHudHandoff } from './hud/handoff';
 
 import { useResolvedTheme, useThemeStore } from '../design/ThemeStore';
 import { usePanelLayout } from '../hooks/usePanelLayout';
@@ -53,7 +60,6 @@ import { useAgentSurfaceModeStore } from '../stores/agent-surface-mode.store';
 import { FloatingAvatar } from '../components/agents/FloatingAvatar';
 import { SessionProvider } from '../providers/session-provider';
 import { RailControls } from './FloatingWidgets';
-import { SearchOverlay } from './SearchOverlay';
 import { FindInPageOverlay } from './FindInPageOverlay';
 import { ArtifactSidecar } from './ArtifactSidecar';
 
@@ -77,6 +83,7 @@ const BROWSER_MODE_VIEW_TYPES = new Set<ViewType>([
   'browserview',
   'mini-apps-store',
   'browser-extensions',
+  'site-apis',
   'mini-app',
   'addin-word',
   'addin-excel',
@@ -85,17 +92,54 @@ const BROWSER_MODE_VIEW_TYPES = new Set<ViewType>([
   'openclaw',
   'openclaw-chat',
   'openclaw-sessions',
+  // Builtin mini-apps surfaced in the ACI Mini-apps rail section.
+  'brain',
+  'vault-viewer',
+  'oh-my-pi',
+  // Allternit Office editors are surfaced from the ACI "Office & Extensions"
+  // launcher and should stay in browser mode so the rail remains expanded.
+  'docs',
+  'sheets',
+  'slides',
+  'pdf',
+  'sign',
 ]);
 
 // Inner app component that uses mode context
 function ShellAppInner(): React.ReactNode {
+  const navigate = useNavigate();
   const detachedParams = useMemo(() => new URLSearchParams(window.location.search), []);
+
   const detachedSessionId = detachedParams.get('detachedSessionId');
   const detachedWorkspaceId = detachedParams.get('detachedWorkspaceId');
   const isDetachedCodeSession = detachedParams.get('detachedSurface') === 'code' && Boolean(detachedSessionId);
+  // The Electron desktop opens the HUD in a chrome-free floating BrowserWindow
+  // pointed at /hud.  In that window we strip the normal shell chrome (rail,
+  // header, rail controls) and render only the HUD view.
+  const isHudWindow = typeof window !== 'undefined' && window.location.pathname === '/hud';
   const [nav, dispatch] = useReducer(navReducer, undefined, createInitialNavState);
   const active = selectActiveView(nav)!;
+
+  const { startSession: startBotSession } = useStartBotSession(
+    useCallback((sessionId: string) => {
+      dispatch({ type: 'OPEN_VIEW', viewType: 'chat-agent-session', context: { sessionId, originView: active.viewType } });
+    }, [active.viewType])
+  );
+  useStackProviders();
+  // When the HUD window closes, resume its active session in the main window.
+  useHudHandoff();
   const { mode: activeMode, setMode: setActiveMode, isLoaded: modeLoaded } = useMode();
+
+  const handleStartBotSession = useCallback(async (agent: Agent) => {
+    const surfaceModeState = useAgentSurfaceModeStore.getState();
+    // Bot sessions are always chat-origin sessions (created in ChatSessionStore),
+    // so the surface agent binding is for the chat surface.
+    const modeId = surfaceModeState.selectedModeBySurface['chat'];
+    const sessionId = await startBotSession(agent, { modeId: modeId ?? undefined });
+    if (sessionId) {
+      useAgentSurfaceModeStore.getState().setSelectedAgent('chat', agent.id);
+    }
+  }, [startBotSession]);
   const { isLoaded: authLoaded, isSignedIn } = usePlatformUser();
   const { config: companyConfig } = useCompanyConfig();
   const desktopSelfHosted = isDesktopShell() && companyConfig?.selfHosted === true;
@@ -106,7 +150,6 @@ function ShellAppInner(): React.ReactNode {
   const [hoveredModeIcon, setHoveredModeIcon] = useState<AppMode | null>(null);
   const [railHovered, setRailHovered] = useState(false);
   const [isRailPeekOpen, setIsRailPeekOpen] = useState(false);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isFindInPageOpen, setIsFindInPageOpen] = useState(false);
   const { railWidth, setRailWidth } = usePanelLayout();
 
@@ -144,9 +187,11 @@ function ShellAppInner(): React.ReactNode {
   useEffect(() => {
     if (!isDetachedCodeSession || !detachedSessionId) return;
     setActiveMode('code');
-    useCodeSessionStore.getState().setActiveSession(detachedSessionId);
-    if (detachedWorkspaceId) useCodeModeStore.getState().setActiveWorkspace(detachedWorkspaceId);
-    dispatch({ type: 'OPEN_VIEW', viewType: 'code' });
+    void useCodeSessionStore.getState().loadSessions().then(() => {
+      useCodeSessionStore.getState().setActiveSession(detachedSessionId);
+      if (detachedWorkspaceId) useCodeModeStore.getState().setActiveWorkspace(detachedWorkspaceId);
+      dispatch({ type: 'OPEN_VIEW', viewType: 'code' });
+    });
   }, [detachedSessionId, detachedWorkspaceId, isDetachedCodeSession, setActiveMode]);
 
   const {
@@ -202,6 +247,8 @@ function ShellAppInner(): React.ReactNode {
     }
   }, [])
 
+
+
   // One-time agent seeding bootstrap after auth loads
   useAgentBootstrap({ enabled: authLoaded && (isSignedIn || isPlatformAuthDisabled() || desktopSelfHosted) });
 
@@ -222,7 +269,8 @@ function ShellAppInner(): React.ReactNode {
             (((error as { statusCode?: unknown }).statusCode) === 403));
 
     const initSessionSync = async () => {
-      if (!isSignedIn) {
+      const canSync = isSignedIn || isPlatformAuthDisabled() || desktopSelfHosted;
+      if (!canSync) {
         return;
       }
 
@@ -289,6 +337,17 @@ function ShellAppInner(): React.ReactNode {
     dispatch({ type: 'OPEN_VIEW', viewType, allowNew: true });
   }, []);
 
+  // When another surface requests "chat with this model" (e.g. Model Lab),
+  // open the chat view and let the mounted ModelSelectionProvider apply it.
+  useEffect(() => {
+    const unsubscribe = usePendingChatModelStore.subscribe((state, prevState) => {
+      if (state.pending && state.pending !== prevState.pending) {
+        dispatch({ type: 'OPEN_VIEW', viewType: 'chat' });
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
   // Sync view to persisted mode once mode is loaded from localStorage, or when
   // the user explicitly changes mode. Do not override a view that was just
   // opened because the mode-sync effect changed mode in response to that view.
@@ -332,6 +391,10 @@ function ShellAppInner(): React.ReactNode {
         event.preventDefault();
         setIsFindInPageOpen(true);
       }
+      if (isMeta && event.shiftKey && event.key.toLowerCase() === "h") {
+        event.preventDefault();
+        window.allternit?.shell?.toggleHud?.();
+      }
     };
 
     window.addEventListener("keydown", handleKeydown);
@@ -351,6 +414,28 @@ function ShellAppInner(): React.ReactNode {
   ) => {
     const surfaceModeState = useAgentSurfaceModeStore.getState();
     const selectedAgentId = surfaceModeState.selectedAgentIdBySurface[surface];
+    const selectedAgent = useAgentStore.getState().agents.find((a) => a.id === selectedAgentId);
+
+    // If the user selected a packaged bot, start a dedicated bot session that
+    // reuses an existing bot chat session when one exists, then stream the
+    // opening message so it behaves like a real bot session rather than a
+    // generic home chat.
+    if (selectedAgent && isBot(selectedAgent)) {
+      try {
+        const modeId = execution?.modeId ?? surfaceModeState.selectedModeBySurface[surface];
+        const sessionId = await startBotSession(selectedAgent, { modeId: modeId ?? undefined });
+        if (!sessionId) {
+          logger.error({ surface }, 'Failed to start bot session');
+          return;
+        }
+        void useChatSessionStore.getState().sendMessageStream(sessionId, { text });
+        return;
+      } catch (err) {
+        logger.error({ err: err }, 'Failed to create bot session');
+        return;
+      }
+    }
+
     const modeId = execution?.modeId ?? surfaceModeState.selectedModeBySurface[surface];
     const contract = getAgentModeContract(modeId);
 
@@ -386,30 +471,26 @@ function ShellAppInner(): React.ReactNode {
           requiredCapabilities: contract.requiredCapabilities,
           requiredEvidence: contract.requiredEvidence,
           executionStatus: 'pending',
+          originSurface: targetSurface,
         },
       });
 
       store.getState().setActiveSession(sessionId);
 
-      const viewTypeMap: Record<AppMode, ViewType> = {
-        chat: 'chat',
-        cowork: 'workspace',
-        code: 'code',
-        design: 'design',
-        browser: 'browser',
-      };
-      if (targetSurface === 'design') {
-        openDesignWindow();
-      } else {
-        dispatch({ type: 'OPEN_VIEW', viewType: viewTypeMap[targetSurface] });
-      }
+      const agentSessionViewType = `${targetSurface}-agent-session` as ViewType;
+      const originView = active.viewType;
+      dispatch({
+        type: 'OPEN_VIEW',
+        viewType: agentSessionViewType,
+        context: { sessionId, originView },
+      });
       void store.getState().sendMessageStream(sessionId, { text });
     } catch (err) {
       logger.error({ err: err }, 'Failed to create session');
     }
-  }, []);
+  }, [active.viewType, dispatch, startBotSession]);
 
-  const registry = useMemo(() => getShellViewRegistry({ handleOpenAgentSession, open }), [handleOpenAgentSession, open]);
+  const registry = useMemo(() => getShellViewRegistry({ handleOpenAgentSession, handleStartBotSession, open }), [handleOpenAgentSession, handleStartBotSession, open]);
 
   useEffect(() => {
     const cleanup = initBrowserSurfaceBridge();
@@ -460,6 +541,7 @@ function ShellAppInner(): React.ReactNode {
   useEffect(() => {
     const handleOpenView = (e: Event): void => {
       const detail = (e as CustomEvent<{ viewType?: ViewType; allowNew?: boolean; context?: unknown }>).detail;
+      logger.info('[ShellApp] allternit:open-view received', { detail, isHudWindow });
       if (!detail?.viewType) return;
       if (detail.viewType === 'design') {
         openDesignWindow();
@@ -473,7 +555,23 @@ function ShellAppInner(): React.ReactNode {
       });
     };
     window.addEventListener('allternit:open-view', handleOpenView);
+    // If this renderer was loaded at /hud (the desktop's floating HUD window),
+    // dispatch the open event now that the listener is attached.  Doing this in
+    // the same effect guarantees we don't race the listener registration.
+    console.warn('[ShellApp] HUD listener attached', { isHudWindow, pathname: window.location.pathname });
+    if (isHudWindow) {
+      console.warn('[ShellApp] Dispatching hud open from /hud window');
+      window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType: 'hud' } }));
+    }
     return () => window.removeEventListener('allternit:open-view', handleOpenView);
+  }, [isHudWindow]);
+
+  useEffect(() => {
+    const handleOpenAgentActivity = (): void => {
+      setAgentActivityPanelOpen(true);
+    };
+    window.addEventListener('allternit:open-agent-activity', handleOpenAgentActivity);
+    return () => window.removeEventListener('allternit:open-agent-activity', handleOpenAgentActivity);
   }, []);
 
   const handleModeChange = useCallback((mode: AppMode): void => {
@@ -530,14 +628,37 @@ function ShellAppInner(): React.ReactNode {
   const [session, setSession] = useState(null);
   useEffect(() => { void getSession().then(setSession); }, []);
 
+  if (isHudWindow) {
+    return (
+      <TooltipProvider>
+        <VoiceProvider>
+          <SessionProvider session={session}>
+            <HudShell />
+          </SessionProvider>
+        </VoiceProvider>
+      </TooltipProvider>
+    );
+  }
+
   const [agentActivityPanelOpen, setAgentActivityPanelOpen] = useState(false);
   const { unreadCount: agentActivityUnreadCount } = useMonitorThreads();
   const [isControlCenterOpen, setIsControlCenterOpen] = useState(false);
   const permissions = usePermissionGuide();
+  const [permissionBannerDismissed, setPermissionBannerDismissed] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.localStorage.getItem('allternit-permission-banner-dismissed') === '1';
+  });
 
   const shouldHideRail = active.viewType === 'labs';
   const effectiveRailCollapsed = isRailCollapsed || shouldHideRail;
   const peekRail = isRailCollapsed && !shouldHideRail && isRailPeekOpen;
+
+  // Persist rail collapse state on the document root so embedded surfaces
+  // (Allternit Office, PDF viewer) can shift their top chrome clear of the
+  // fixed rail-controls widget / window traffic lights.
+  useEffect(() => {
+    document.documentElement.setAttribute('data-rail-collapsed', String(effectiveRailCollapsed));
+  }, [effectiveRailCollapsed]);
 
   return (
     <TooltipProvider>
@@ -546,7 +667,7 @@ function ShellAppInner(): React.ReactNode {
         <VisionGlass />
         <VoicePresence compact={false} />
 
-        {permissions.isSupported && permissions.anyDenied && (
+        {permissions.isSupported && permissions.anyDenied && !permissionBannerDismissed && (
           <div style={{
             position: 'fixed', top: 0, left: 0, right: 0, zIndex: 220,
             background: 'var(--status-warning)', color: 'var(--ui-text-inverse)', padding: '8px 16px',
@@ -581,6 +702,20 @@ function ShellAppInner(): React.ReactNode {
               }}
             >
               Settings
+            </button>
+            <button type="button"
+              onClick={() => {
+                setPermissionBannerDismissed(true);
+                window.localStorage.setItem('allternit-permission-banner-dismissed', '1');
+                void permissions.dismiss();
+              }}
+              style={{
+                padding: '4px 12px', borderRadius: 4, border: 'none',
+                background: 'transparent', color: 'var(--ui-text-inverse)', fontSize: 12,
+                textDecoration: 'underline', cursor: 'pointer', marginLeft: 8
+              }}
+            >
+              Dismiss
             </button>
           </div>
         )}
@@ -666,6 +801,7 @@ function ShellAppInner(): React.ReactNode {
                             .getState()
                             .agents.find((agent) => agent.id === selectedAgentId) ?? null
                         : null;
+                    const originView = active.viewType;
                     try {
                       if (originSurface === 'browser') {
                         open('browser');
@@ -684,6 +820,7 @@ function ShellAppInner(): React.ReactNode {
                         sessionMode: 'agent',
                         agentId: selectedAgent?.id,
                         agentName: selectedAgent?.name,
+                        metadata: { originSurface },
                       });
 
                       store.getState().setActiveSession(sessionId);
@@ -694,38 +831,37 @@ function ShellAppInner(): React.ReactNode {
                           .setSelectedAgent(originSurface, selectedAgent.id);
                       }
 
-                      if (originSurface === 'cowork') {
-                        handleModeChange('cowork');
-                        return;
-                      }
-
-                      if (originSurface === 'design') {
-                        handleModeChange('design');
-                        return;
-                      }
-
-                      handleModeChange(originSurface === 'code' ? 'code' : 'chat');
+                      const agentSessionViewType = `${originSurface}-agent-session` as ViewType;
+                      dispatch({
+                        type: 'OPEN_VIEW',
+                        viewType: agentSessionViewType,
+                        context: { sessionId, originView },
+                      });
                     } catch (error) {
                       logger.error({ err: error }, '[ShellApp] Failed to create agent session from rail controls');
                       open('native-agent');
                     }
                   }}
                   isRailCollapsed={isRailCollapsed}
-                  onSearchOpen={() => setIsSearchOpen(true)}
+                  onBack={() => dispatch({ type: 'BACK' })}
+                  onForward={() => dispatch({ type: 'FORWARD' })}
+                  canGoBack={nav.history.length > 1}
+                  canGoForward={nav.future.length > 0}
                 />}
-                <SearchOverlay open={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
         <FindInPageOverlay open={isFindInPageOpen} onClose={() => setIsFindInPageOpen(false)} />
         {active.viewType === 'code' && <ConsoleDrawer />}
         <AgentActivityPanel
           open={agentActivityPanelOpen}
           onClose={() => setAgentActivityPanelOpen(false)}
         />
-        <ControlCenter
-          isOpen={isControlCenterOpen}
-          onClose={() => setIsControlCenterOpen(false)}
-          isDevMode={process.env.NODE_ENV === 'development'}
-          onOpenView={open as (viewType: string) => void}
-        />
+        <React.Suspense fallback={null}>
+          <ControlCenter
+            isOpen={isControlCenterOpen}
+            onClose={() => setIsControlCenterOpen(false)}
+            isDevMode={process.env.NODE_ENV === 'development'}
+            onOpenView={open as (viewType: string) => void}
+          />
+        </React.Suspense>
         {settingsOpen && (
           <React.Suspense fallback={null}>
             {/* Settings now renders PluginManager as its own nested overlay

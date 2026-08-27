@@ -1,0 +1,130 @@
+---
+title: Audit Logs
+description: Access Transparency audit feed for administrative actions and resource lifecycle events
+---
+
+The Audit Logs API provides an append-only, organization-scoped event feed. Every administrative action, resource change, and compliance operation can be recorded and queried with cursor pagination.
+
+## Authentication and authorization
+
+Audit endpoints require a Clerk JWT and an active organization. Only organization owners and admins can write or list audit events.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/v1/admin/audit` | Write an audit event |
+| GET | `/api/v1/admin/audit` | List audit events with cursor pagination |
+
+## Write an audit event
+
+Applications and integrations can emit custom audit events to the organization feed.
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/admin/audit \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "action": "vault.credential.revoked",
+    "resource_type": "vault_credential",
+    "resource_id": "cred_01J4N",
+    "metadata": {
+      "reason": "rotation",
+      "source_ip": "203.0.113.10"
+    }
+  }'
+```
+
+**Response `201 Created`**
+
+```json
+{
+  "id": "evt_01J4N"
+}
+```
+
+## List audit events
+
+Events are returned in ascending chronological order. Use `cursor` to page forward and `limit` to control page size.
+
+```bash
+curl "https://api.allternit.com/api/v1/admin/audit?limit=50" \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN"
+```
+
+**Response `200 OK`**
+
+```json
+{
+  "events": [
+    {
+      "id": "evt_01J4N",
+      "actor_id": "user_01J",
+      "action": "vault.credential.revoked",
+      "resource_type": "vault_credential",
+      "resource_id": "cred_01J4N",
+      "metadata": {
+        "reason": "rotation",
+        "source_ip": "203.0.113.10"
+      },
+      "created_at": "2026-08-12T10:00:00Z"
+    }
+  ],
+  "next_cursor": "2026-08-12T10:00:00Z|evt_01J4N",
+  "limit": 50
+}
+```
+
+### Pagination with cursor
+
+```bash
+curl "https://api.allternit.com/api/v1/admin/audit?limit=50&cursor=2026-08-12T10:00:00Z|evt_01J4N" \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN"
+```
+
+The cursor format is `created_at|id`.
+
+## Query parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `limit` | integer | 50 | Maximum events per page (max 100) |
+| `cursor` | string | none | `created_at|id` cursor from a previous page |
+
+## Request/response fields
+
+### Event object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique event identifier |
+| `actor_id` | string | User ID that performed the action |
+| `action` | string | Action name, e.g. `vault.credential.revoked` |
+| `resource_type` | string | Category of resource affected |
+| `resource_id` | string | Identifier of the affected resource |
+| `metadata` | object \| null | Free-form JSON context |
+| `created_at` | string | ISO 8601 timestamp |
+
+### Write request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `action` | string | yes | Action name |
+| `resource_type` | string | yes | Resource category |
+| `resource_id` | string | yes | Resource identifier |
+| `metadata` | object \| null | no | Additional context |
+
+## Error codes
+
+| HTTP | Code | Meaning |
+|------|------|---------|
+| 400 | `invalid_cursor` | Cursor is not in `created_at|id` format |
+| 403 | `organization_required` | Caller has no active organization |
+| 403 | `insufficient_role` | Caller is not an owner/admin |
+| 500 | `internal_error` | Unexpected server error |
+
+## Related pages
+
+- [Compliance](/security/compliance) — Data export, deletion, and retention requests
+- [Vault](/security/vault) — Encrypted credential storage
+- [Security model](/security/security-model) — Trust boundaries and controls

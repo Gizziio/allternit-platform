@@ -13,6 +13,7 @@ import { AllternitGroq } from './groq/index.js';
 import { AllternitTogether } from './together/index.js';
 import { AllternitAzureOpenAI } from './azure/index.js';
 import { AllternitBedrock } from './bedrock/index.js';
+import { AllternitMLX } from './mlx/index.js';
 
 export interface ProviderMetadata {
   name: string;
@@ -47,8 +48,8 @@ export interface ProviderEntry {
 /**
  * Registry of all supported providers
  */
-export const PROVIDER_REGISTRY: Map<string, ProviderEntry> = new Map([
-  ['anthropic', {
+export const PROVIDER_REGISTRY: ProviderEntry[] = [
+  {
     name: 'anthropic',
     class: AllternitAI,
     metadata: {
@@ -69,8 +70,8 @@ export const PROVIDER_REGISTRY: Map<string, ProviderEntry> = new Map([
       supportsTools: true,
       supportsVision: true,
     },
-  }],
-  ['openai', {
+  },
+  {
     name: 'openai',
     class: AllternitOpenAI,
     metadata: {
@@ -91,8 +92,8 @@ export const PROVIDER_REGISTRY: Map<string, ProviderEntry> = new Map([
       supportsTools: true,
       supportsVision: true,
     },
-  }],
-  ['google', {
+  },
+  {
     name: 'google',
     class: AllternitGoogleAI,
     metadata: {
@@ -112,8 +113,8 @@ export const PROVIDER_REGISTRY: Map<string, ProviderEntry> = new Map([
       supportsTools: true,
       supportsVision: true,
     },
-  }],
-  ['ollama', {
+  },
+  {
     name: 'ollama',
     class: AllternitOllama,
     metadata: {
@@ -137,8 +138,8 @@ export const PROVIDER_REGISTRY: Map<string, ProviderEntry> = new Map([
       supportsTools: true,
       supportsVision: false,
     },
-  }],
-  ['mistral', {
+  },
+  {
     name: 'mistral',
     class: AllternitMistral,
     metadata: {
@@ -160,8 +161,8 @@ export const PROVIDER_REGISTRY: Map<string, ProviderEntry> = new Map([
       supportsTools: true,
       supportsVision: false,
     },
-  }],
-  ['cohere', {
+  },
+  {
     name: 'cohere',
     class: AllternitCohere,
     metadata: {
@@ -181,8 +182,8 @@ export const PROVIDER_REGISTRY: Map<string, ProviderEntry> = new Map([
       supportsTools: true,
       supportsVision: false,
     },
-  }],
-  ['groq', {
+  },
+  {
     name: 'groq',
     class: AllternitGroq,
     metadata: {
@@ -202,8 +203,8 @@ export const PROVIDER_REGISTRY: Map<string, ProviderEntry> = new Map([
       supportsTools: true,
       supportsVision: false,
     },
-  }],
-  ['together', {
+  },
+  {
     name: 'together',
     class: AllternitTogether,
     metadata: {
@@ -223,8 +224,8 @@ export const PROVIDER_REGISTRY: Map<string, ProviderEntry> = new Map([
       supportsTools: true,
       supportsVision: false,
     },
-  }],
-  ['azure', {
+  },
+  {
     name: 'azure',
     class: AllternitAzureOpenAI,
     metadata: {
@@ -245,8 +246,8 @@ export const PROVIDER_REGISTRY: Map<string, ProviderEntry> = new Map([
       supportsTools: true,
       supportsVision: true,
     },
-  }],
-  ['bedrock', {
+  },
+  {
     name: 'bedrock',
     class: AllternitBedrock,
     metadata: {
@@ -266,8 +267,29 @@ export const PROVIDER_REGISTRY: Map<string, ProviderEntry> = new Map([
       supportsTools: true,
       supportsVision: true,
     },
-  }],
-]);
+  },
+  {
+    name: 'mlx',
+    class: AllternitMLX,
+    metadata: {
+      name: 'mlx',
+      displayName: 'Apple MLX',
+      description: 'Local on-device inference via Apple MLX',
+      features: ['streaming', 'system-prompt'],
+      defaultModel: 'default',
+      models: [
+        'default',
+        'mlx-community/Qwen2.5-7B-Instruct-4bit',
+        'mlx-community/Meta-Llama-3.1-8B-Instruct-4bit',
+        'mlx-community/Mistral-7B-Instruct-v0.3-4bit',
+      ],
+      requiresApiKey: false,
+      supportsStreaming: true,
+      supportsTools: false,
+      supportsVision: false,
+    },
+  },
+];
 
 /**
  * Create a provider instance
@@ -276,7 +298,7 @@ export const PROVIDER_REGISTRY: Map<string, ProviderEntry> = new Map([
  * @returns Provider instance
  */
 export function createProvider(name: string, config: unknown): unknown {
-  const entry = PROVIDER_REGISTRY.get(name.toLowerCase());
+  const entry = PROVIDER_REGISTRY.find(e => e.name === name.toLowerCase());
   if (!entry) {
     throw new Error(`Provider "${name}" not found. Available: ${listProviders().join(', ')}`);
   }
@@ -288,7 +310,7 @@ export function createProvider(name: string, config: unknown): unknown {
  * @returns Array of provider names
  */
 export function listProviders(): string[] {
-  return Array.from(PROVIDER_REGISTRY.keys());
+  return PROVIDER_REGISTRY.map(entry => entry.name);
 }
 
 /**
@@ -297,7 +319,7 @@ export function listProviders(): string[] {
  * @returns Provider metadata or undefined if not found
  */
 export function getProvider(name: string): ProviderMetadata | undefined {
-  return PROVIDER_REGISTRY.get(name.toLowerCase())?.metadata;
+  return PROVIDER_REGISTRY.find(e => e.name === name.toLowerCase())?.metadata;
 }
 
 /**
@@ -306,7 +328,7 @@ export function getProvider(name: string): ProviderMetadata | undefined {
  * @returns Array of provider metadata matching all features
  */
 export function findProvidersByFeature(...features: ProviderFeature[]): ProviderMetadata[] {
-  return Array.from(PROVIDER_REGISTRY.values())
+  return PROVIDER_REGISTRY
     .filter(entry => features.every(f => entry.metadata.features.includes(f)))
     .map(entry => entry.metadata);
 }

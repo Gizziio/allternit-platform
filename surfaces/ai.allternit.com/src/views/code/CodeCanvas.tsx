@@ -23,7 +23,6 @@ import {
   useRustStreamAdapter,
   type ChatMessage as StreamChatMessage,
 } from '@/lib/ai/rust-stream-adapter';
-import { useDrawerStore } from '../../drawers/drawer.store';
 import {
   getActiveSession,
   getActiveWorkspace,
@@ -35,6 +34,8 @@ import { CodeLaunchBranding } from './CodeLaunchBranding';
 import { CodeWorkspaceBar } from './CodeWorkspaceBar';
 import { CodeBottomStatusBar } from './CodeBottomStatusBar';
 import { CodeUsageDashboard } from './CodeUsageDashboard';
+import { CodeTerminalCanvas } from './CodeTerminalCanvas';
+
 import {
   buildAgentConversationContext,
   useSurfaceAgentSelection,
@@ -247,12 +248,14 @@ const pillControlStyle: React.CSSProperties = {
   gap: 6,
   padding: '6px 12px',
   borderRadius: 10,
-  border: '1px solid rgba(255, 255, 255, 0.08)',
-  background: 'rgba(255, 255, 255, 0.03)',
-  color: 'var(--text-secondary)',
+  border: '1px solid color-mix(in srgb, var(--border-subtle) 50%, transparent)',
+  background: 'color-mix(in srgb, var(--surface-panel) 30%, transparent)',
+  color: 'var(--text-primary)',
   fontSize: 12,
   fontWeight: 600,
   cursor: 'pointer',
+  backdropFilter: 'blur(12px)',
+  WebkitBackdropFilter: 'blur(12px)',
 };
 
 const codeMenuTheme = {
@@ -266,8 +269,6 @@ const codeMenuTheme = {
 };
 
 export function CodeCanvas(_props: CodeCanvasProps) {
-  const openDrawer = useDrawerStore((state) => state.openDrawer);
-  const setConsoleTab = useDrawerStore((state) => state.setConsoleTab);
   const embeddedSessionId = useCodeSessionStore((s) => s.activeSessionId);
   const embeddedSession = useCodeSessionStore((s) =>
     s.activeSessionId ? s.sessions.find((sess) => sess.id === s.activeSessionId) ?? null : null,
@@ -324,6 +325,7 @@ export function CodeCanvas(_props: CodeCanvasProps) {
 
   const [selectedModel, setSelectedModel] = useState('claude-code');
   const [selectedModelDisplayName, setSelectedModelDisplayName] = useState(CODE_MODEL_NAMES['claude-code']);
+  const [terminalCanvasOpen, setTerminalCanvasOpen] = useState(false);
   const userPickedModelRef = useRef(false);
   const backendDefaultModel = useDefaultModelSelection();
   // Unified brain: code mode follows the platform's configured default model
@@ -417,9 +419,8 @@ export function CodeCanvas(_props: CodeCanvasProps) {
     setShowSessionPicker(false);
   };
 
-  const handleOpenConsole = (): void => {
-    setConsoleTab('terminal');
-    openDrawer('console', { tab: 'terminal', minHeight: 320 });
+  const handleToggleTerminalCanvas = (): void => {
+    setTerminalCanvasOpen((open) => !open);
   };
 
   // Stabilize onMessagesChange callback to prevent infinite loops in rust-stream-adapter
@@ -514,7 +515,8 @@ export function CodeCanvas(_props: CodeCanvasProps) {
       initialMessages={cachedMessages}
       onMessagesChange={handleMessagesChange}
       onDismissEmbeddedAgentSession={() => setActiveCodeSession(null)}
-      onOpenConsole={handleOpenConsole}
+      onToggleTerminalCanvas={handleToggleTerminalCanvas}
+      terminalCanvasOpen={terminalCanvasOpen}
       onSelectModel={(selection: { modelId: string; modelName?: string }) => {
         userPickedModelRef.current = true;
         setSelectedModel(selection.modelId);
@@ -573,7 +575,8 @@ interface CodeSessionSurfaceProps {
   initialMessages: StreamChatMessage[];
   onMessagesChange: (messages: StreamChatMessage[]) => void;
   onDismissEmbeddedAgentSession: () => void;
-  onOpenConsole: () => void;
+  onToggleTerminalCanvas: () => void;
+  terminalCanvasOpen: boolean;
   onSelectModel: (selection: CodeModelSelection) => void;
   onPreviewTemplate: (prompt: string) => void;
   onSelectTemplate: (prompt: string) => void;
@@ -616,7 +619,8 @@ function CodeSessionSurface({
   initialMessages,
   onMessagesChange,
   onDismissEmbeddedAgentSession,
-  onOpenConsole,
+  onToggleTerminalCanvas,
+  terminalCanvasOpen,
   onSelectModel,
   onPreviewTemplate,
   onSelectTemplate,
@@ -709,6 +713,20 @@ function CodeSessionSurface({
     activeSession?.mode ?? 'DEFAULT',
   );
   useEffect(() => {
+    if (!activeWorkspaceId || layoutMode !== 'canvas') return;
+    const hasTerminal = activeWorkspace?.canvasTiles?.some((tile) => tile.type === 'terminal') ?? false;
+    if (hasTerminal) return;
+    useCodeModeStore.getState().addCanvasTile(activeWorkspaceId, {
+      type: 'terminal',
+      x: 48,
+      y: 48,
+      width: 480,
+      height: 320,
+      zIndex: Date.now(),
+      label: 'Terminal',
+    });
+  }, [activeWorkspaceId, layoutMode, activeWorkspace]);
+  useEffect(() => {
     setSessionMode(activeSession?.mode ?? 'DEFAULT');
   }, [activeSession?.mode, activeSession?.session_id]);
   const handleSessionModeChange = useCallback(
@@ -735,13 +753,6 @@ function CodeSessionSurface({
     },
     [activeSession?.session_id, updateCodeSession],
   );
-  const handleToggleLayoutMode = useCallback(() => {
-    if (!activeWorkspaceId) return;
-    useCodeModeStore.getState().setWorkspaceLayoutMode(
-      activeWorkspaceId,
-      layoutMode === 'thread' ? 'canvas' : 'thread',
-    );
-  }, [activeWorkspaceId, layoutMode]);
   const codeSession = embeddedAgentSession?.session as CodeSession | null | undefined;
   const worktreeEnabled = isEmbeddedAgentSession
     ? codeSession?.metadata?.isolation === 'worktree'
@@ -963,30 +974,85 @@ function CodeSessionSurface({
     <CodeBottomStatusBar
       sessionMode={sessionMode}
       onSessionModeChange={handleSessionModeChange}
+      onOpenTerminals={onToggleTerminalCanvas}
+      terminalsOpen={terminalCanvasOpen}
     />
   );
 
   if (hasMessages) {
     return (
-      <ConversationStage
-        activeAction={activeAction}
-        activeSession={activeSession}
+      <>
+        <ConversationStage
+          activeAction={activeAction}
+          activeSession={activeSession}
+          activeWorkspace={activeWorkspace}
+          agentContextStrip={embeddedAgentStrip}
+          composerSeed={composerSeed}
+          composerVersion={composerVersion}
+          isEmbeddedAgentSession={isEmbeddedAgentSession}
+          isProcessing={isProcessing}
+          messages={displayMessages}
+          onToggleTerminalCanvas={onToggleTerminalCanvas}
+          terminalCanvasOpen={terminalCanvasOpen}
+          onRegenerate={handleRegenerate}
+          onSelectModel={onSelectModel}
+          onPreviewTemplate={onPreviewTemplate}
+          onSelectTemplate={onSelectTemplate}
+          onSend={handleSend}
+          onSetActiveSession={onSetActiveSession}
+          onStop={handleStop}
+          onToggleAction={onToggleAction}
+          onToggleSessionPicker={onToggleSessionPicker}
+          onToggleWorkspacePicker={onToggleWorkspacePicker}
+          selectedModel={selectedModel}
+          selectedModelDisplayName={selectedModelDisplayName}
+          showSessionPicker={showSessionPicker}
+          showWorkspacePicker={showWorkspacePicker}
+          workspaceReady={effectiveWorkspaceReady}
+          workspaceSessions={workspaceSessions}
+          workspaces={workspaces}
+          activeSessionId={activeSessionId}
+          activeWorkspaceId={activeWorkspaceId}
+          agentModeEnabled={agentModeEnabled}
+          agentModePulse={agentModePulse}
+          selectedAgentName={selectedAgent?.name ?? null}
+          onConfirmWorkspace={onConfirmWorkspace}
+          attachments={attachments}
+          onRemoveAttachment={onRemoveAttachment}
+          onAddChatAttachment={onAddChatAttachment}
+          attachmentPreviewItems={attachmentPreviewItems}
+          onPreviewAttachment={onPreviewAttachment}
+          previewItem={previewItem}
+          previewModalOpen={previewModalOpen}
+          onClosePreviewModal={onClosePreviewModal}
+          composerTopInfoBar={composerTopInfoBar}
+          composerQuestionBar={composerQuestionBar}
+          bottomDockContent={bottomDockContent}
+          onOpenFolder={handleOpenFolder}
+          onRefreshWorkspace={handleRefreshWorkspace}
+          onToggleWorktree={handleToggleWorktree}
+          worktreeEnabled={worktreeEnabled}
+          onSwitchBranch={handleSwitchBranch}
+        />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <LaunchpadStage
         activeWorkspace={activeWorkspace}
+        activeSession={activeSession}
         agentContextStrip={embeddedAgentStrip}
         composerSeed={composerSeed}
         composerVersion={composerVersion}
         isEmbeddedAgentSession={isEmbeddedAgentSession}
         isProcessing={isProcessing}
-        messages={displayMessages}
-        onOpenConsole={onOpenConsole}
-        onRegenerate={handleRegenerate}
+        onToggleTerminalCanvas={onToggleTerminalCanvas}
+        terminalCanvasOpen={terminalCanvasOpen}
         onSelectModel={onSelectModel}
-        onPreviewTemplate={onPreviewTemplate}
-        onSelectTemplate={onSelectTemplate}
         onSend={handleSend}
         onSetActiveSession={onSetActiveSession}
-        onStop={handleStop}
-        onToggleAction={onToggleAction}
         onToggleSessionPicker={onToggleSessionPicker}
         onToggleWorkspacePicker={onToggleWorkspacePicker}
         selectedModel={selectedModel}
@@ -1019,54 +1085,7 @@ function CodeSessionSurface({
         worktreeEnabled={worktreeEnabled}
         onSwitchBranch={handleSwitchBranch}
       />
-    );
-  }
-
-  return (
-    <LaunchpadStage
-      activeWorkspace={activeWorkspace}
-      activeSession={activeSession}
-      agentContextStrip={embeddedAgentStrip}
-      composerSeed={composerSeed}
-      composerVersion={composerVersion}
-      isEmbeddedAgentSession={isEmbeddedAgentSession}
-      isProcessing={isProcessing}
-      onOpenConsole={onOpenConsole}
-      onSelectModel={onSelectModel}
-      onSend={handleSend}
-      onSetActiveSession={onSetActiveSession}
-      onToggleSessionPicker={onToggleSessionPicker}
-      onToggleWorkspacePicker={onToggleWorkspacePicker}
-      selectedModel={selectedModel}
-      selectedModelDisplayName={selectedModelDisplayName}
-      showSessionPicker={showSessionPicker}
-      showWorkspacePicker={showWorkspacePicker}
-      workspaceReady={effectiveWorkspaceReady}
-      workspaceSessions={workspaceSessions}
-      workspaces={workspaces}
-      activeSessionId={activeSessionId}
-      activeWorkspaceId={activeWorkspaceId}
-      agentModeEnabled={agentModeEnabled}
-      agentModePulse={agentModePulse}
-      selectedAgentName={selectedAgent?.name ?? null}
-      onConfirmWorkspace={onConfirmWorkspace}
-      attachments={attachments}
-      onRemoveAttachment={onRemoveAttachment}
-      onAddChatAttachment={onAddChatAttachment}
-      attachmentPreviewItems={attachmentPreviewItems}
-      onPreviewAttachment={onPreviewAttachment}
-      previewItem={previewItem}
-      previewModalOpen={previewModalOpen}
-      onClosePreviewModal={onClosePreviewModal}
-      composerTopInfoBar={composerTopInfoBar}
-      composerQuestionBar={composerQuestionBar}
-      bottomDockContent={bottomDockContent}
-      onOpenFolder={handleOpenFolder}
-      onRefreshWorkspace={handleRefreshWorkspace}
-      onToggleWorktree={handleToggleWorktree}
-      worktreeEnabled={worktreeEnabled}
-      onSwitchBranch={handleSwitchBranch}
-    />
+    </>
   );
 }
 
@@ -1078,7 +1097,8 @@ function LaunchpadStage({
   composerVersion,
   isEmbeddedAgentSession,
   isProcessing,
-  onOpenConsole,
+  onToggleTerminalCanvas,
+  terminalCanvasOpen,
   onSelectModel,
   onSend,
   onSetActiveSession,
@@ -1121,7 +1141,8 @@ function LaunchpadStage({
   composerVersion: number;
   isEmbeddedAgentSession: boolean;
   isProcessing: boolean;
-  onOpenConsole: () => void;
+  onToggleTerminalCanvas: () => void;
+  terminalCanvasOpen: boolean;
   onSelectModel: (selection: CodeModelSelection) => void;
   onSend: (text: string) => void;
   onSetActiveSession: (sessionId: string) => void;
@@ -1192,56 +1213,83 @@ function LaunchpadStage({
         </div>
       ) : null}
 
-      {/* Top command-center header */}
-      <div style={{ width: '100%', maxWidth: 720, margin: '0 auto', paddingTop: 24 }}>
-        <div
-          data-testid="code-launchpad-greeting"
-          style={{
-            fontSize: 28,
-            lineHeight: 1.2,
-            fontWeight: 600,
-            letterSpacing: '-0.02em',
-            color: 'var(--text-primary)',
-            fontFamily: 'var(--font-research)',
-            minHeight: '1.2em',
-          }}
-        >
-          {greeting}
-        </div>
+      {terminalCanvasOpen ? (
         <div
           style={{
-            marginTop: 8,
-            fontSize: 14,
-            lineHeight: 1.5,
-            color: 'var(--text-secondary)',
+            flex: 1,
+            minHeight: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            margin: '0 -32px -40px',
+            overflow: 'hidden',
           }}
         >
-          Run a command or describe a task to start coding.
-        </div>
-        {showUsage ? (
-          <div style={{ marginTop: 24 }}>
-            <CodeUsageDashboard onClose={() => setShowUsage(false)} />
-          </div>
-        ) : (
-          <button
-            type="button"
-            data-testid="code-show-usage"
-            onClick={() => setShowUsage(true)}
-            style={{
-              ...pillControlStyle,
-              marginTop: 24,
-              width: 'fit-content',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
+          <CodeTerminalCanvas
+            isOpen={terminalCanvasOpen}
+            onToggle={onToggleTerminalCanvas}
+            sessionId={activeSessionId || 'code-canvas-terminals'}
+            workingDir={activeWorkspace?.root_path}
+            terminalContext={{
+              repoName: activeWorkspace?.display_name,
+              branch: activeWorkspace?.repo_status?.branch,
+              shortSha: activeWorkspace?.repo_status?.last_commit?.slice(0, 7),
             }}
-          >
-            <ChartBar size={14} />
-            Show usage
-          </button>
-        )}
-      </div>
+          />
+        </div>
+      ) : (
+        <>
+          {/* Top command-center header */}
+          <div style={{ width: '100%', maxWidth: 720, margin: '0 auto', paddingTop: 24 }}>
+            <div
+              data-testid="code-launchpad-greeting"
+              style={{
+                fontSize: 28,
+                lineHeight: 1.2,
+                fontWeight: 600,
+                letterSpacing: '-0.02em',
+                color: 'var(--text-primary)',
+                fontFamily: 'var(--font-research)',
+                minHeight: '1.2em',
+              }}
+            >
+              {greeting}
+            </div>
+            <div
+              style={{
+                marginTop: 8,
+                fontSize: 14,
+                lineHeight: 1.5,
+                color: 'var(--text-secondary)',
+              }}
+            >
+              Run a command or describe a task to start coding.
+            </div>
+            {showUsage ? (
+              <div style={{ marginTop: 16 }}>
+                <CodeUsageDashboard onClose={() => setShowUsage(false)} />
+              </div>
+            ) : (
+              <button
+                type="button"
+                data-testid="code-show-usage"
+                onClick={() => setShowUsage(true)}
+                style={{
+                  ...pillControlStyle,
+                  marginTop: 24,
+                  width: 'fit-content',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                }}
+              >
+                <ChartBar size={14} />
+                Show usage
+              </button>
+            )}
+          </div>
 
-      {/* Spacer pushes composer to the bottom */}
-      <div style={{ flex: 1, minHeight: 40 }} />
+          {/* Spacer pushes composer to the bottom */}
+          <div style={{ flex: 1, minHeight: 40 }} />
+        </>
+      )}
 
       {/* Bottom command input area */}
       <div className="w-full max-w-[600px] lg:max-w-[760px] mx-auto">
@@ -1266,6 +1314,8 @@ function LaunchpadStage({
             onRefresh={onRefreshWorkspace}
             onToggleWorktree={onToggleWorktree}
             onSwitchBranch={onSwitchBranch}
+            terminalCanvasOpen={terminalCanvasOpen}
+            onToggleTerminalCanvas={onToggleTerminalCanvas}
           />
         </div>
         <div data-testid="code-shared-composer" style={{ position: 'relative', zIndex: 2 }}>
@@ -1337,7 +1387,8 @@ function ConversationStage({
   isEmbeddedAgentSession,
   isProcessing,
   messages,
-  onOpenConsole,
+  onToggleTerminalCanvas,
+  terminalCanvasOpen,
   onRegenerate,
   onSelectModel,
   onPreviewTemplate,
@@ -1387,7 +1438,8 @@ function ConversationStage({
   isEmbeddedAgentSession: boolean;
   isProcessing: boolean;
   messages: StreamChatMessage[];
-  onOpenConsole: () => void;
+  onToggleTerminalCanvas: () => void;
+  terminalCanvasOpen: boolean;
   onRegenerate: () => void;
   onSelectModel: (selection: CodeModelSelection) => void;
   onPreviewTemplate: (prompt: string) => void;
@@ -1526,32 +1578,48 @@ function ConversationStage({
           {activeWorkspace?.display_name ?? 'Workspace'}
         </span>
       </div>
-      <Conversation style={{ minHeight: 0 }}>
-        <ConversationContent>
-          <div
-            style={{
-              width: '100%',
-              maxWidth: CONTENT_WIDTH,
-              margin: '0 auto',
-              padding: '34px 20px 40px',
-              boxSizing: 'border-box',
-              minHeight: 0,
+      {terminalCanvasOpen ? (
+        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <CodeTerminalCanvas
+            isOpen={terminalCanvasOpen}
+            onToggle={onToggleTerminalCanvas}
+            sessionId={activeSessionId || 'code-canvas-terminals'}
+            workingDir={activeWorkspace?.root_path}
+            terminalContext={{
+              repoName: activeWorkspace?.display_name,
+              branch: activeWorkspace?.repo_status?.branch,
+              shortSha: activeWorkspace?.repo_status?.last_commit?.slice(0, 7),
             }}
-          >
-            {agentContextStrip}
-            {messages.map((message, index) => (
-              <StreamingChatComposer
-                key={message.id}
-                message={message}
-                isLoading={isProcessing && index === messages.length - 1}
-                isLast={index === messages.length - 1}
-                onRegenerate={onRegenerate}
-              />
-            ))}
-          </div>
-        </ConversationContent>
-        <ConversationScrollButton />
-      </Conversation>
+          />
+        </div>
+      ) : (
+        <Conversation style={{ minHeight: 0 }}>
+          <ConversationContent>
+            <div
+              style={{
+                width: '100%',
+                maxWidth: CONTENT_WIDTH,
+                margin: '0 auto',
+                padding: '34px 20px 40px',
+                boxSizing: 'border-box',
+                minHeight: 0,
+              }}
+            >
+              {agentContextStrip}
+              {messages.map((message, index) => (
+                <StreamingChatComposer
+                  key={message.id}
+                  message={message}
+                  isLoading={isProcessing && index === messages.length - 1}
+                  isLast={index === messages.length - 1}
+                  onRegenerate={onRegenerate}
+                />
+              ))}
+            </div>
+          </ConversationContent>
+          <ConversationScrollButton />
+        </Conversation>
+      )}
 
       {/* Bottom Input Dock - Standardized with Cowork mode */}
       <div

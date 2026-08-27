@@ -1,0 +1,193 @@
+---
+title: 'Kernel Tools'
+description: 'Built-in file system, search, and GUI automation tools for the Allternit kernel.'
+---
+
+## Overview
+
+**Allternit Kernel Tools** are built-in Rust tools used by the Allternit kernel. They provide file-system operations, web search, and GUI automation primitives that agents can invoke through the tool gateway.
+
+## Base URL
+
+The tools are exposed as Rust library modules and surfaced through the platform tool gateway:
+
+```text
+https://api.allternit.com/api/v1/tools/execute
+```
+
+## Tool modules
+
+| Module | Tools |
+|--------|-------|
+| `fs` | `fs.write`, `fs.read`, `fs.list` |
+| `search` | `web.search` |
+| `gui` | `gui.screenshot`, `gui.click`, `gui.type_text`, `gui.scroll` |
+
+## File system tools
+
+### `fs.write`
+
+Write content to a file within a configured root.
+
+```json
+{
+  "tool": "fs.write",
+  "args": {
+    "path": "notes/todo.md",
+    "content": "- Review PR\n- Update docs"
+  }
+}
+```
+
+Response:
+
+```json
+{
+  "text": "Successfully wrote 26 bytes to notes/todo.md",
+  "data": {
+    "path": "notes/todo.md",
+    "size": 26
+  }
+}
+```
+
+### `fs.read`
+
+Read a file's contents.
+
+```json
+{
+  "tool": "fs.read",
+  "args": { "path": "notes/todo.md" }
+}
+```
+
+### `fs.list`
+
+List directory entries.
+
+```json
+{
+  "tool": "fs.list",
+  "args": { "path": "notes" }
+}
+```
+
+## Search tool
+
+### `web.search`
+
+Search the web using DuckDuckGo HTML results.
+
+```json
+{
+  "tool": "web.search",
+  "args": { "query": "Allternit platform" }
+}
+```
+
+Response:
+
+```json
+{
+  "text": "- Allternit (https://allternit.com)\n  AI agent platform...",
+  "data": {
+    "results": [
+      {
+        "title": "Allternit",
+        "snippet": "AI agent platform",
+        "link": "https://allternit.com"
+      }
+    ]
+  }
+}
+```
+
+## GUI automation tools
+
+<Warning>
+GUI automation tools require explicit user approval and can interact with the host desktop. Use with caution.
+</Warning>
+
+### `gui.screenshot`
+
+Capture a screenshot.
+
+```json
+{
+  "tool": "gui.screenshot",
+  "args": {}
+}
+```
+
+Response:
+
+```json
+{
+  "base64_image": "iVBORw0KGgoAAAANSUhEUgAA...",
+  "width": 1920,
+  "height": 1080,
+  "timestamp": 1755120000
+}
+```
+
+### `gui.click`
+
+Click at screen coordinates.
+
+```json
+{
+  "tool": "gui.click",
+  "args": {
+    "x": 100,
+    "y": 200,
+    "button": "left",
+    "count": 1
+  }
+}
+```
+
+### `gui.type_text`
+
+Type text.
+
+```json
+{
+  "tool": "gui.type_text",
+  "args": {
+    "text": "Hello, Allternit",
+    "delay_ms": 50
+  }
+}
+```
+
+### `gui.scroll`
+
+Scroll the screen.
+
+```json
+{
+  "tool": "gui.scroll",
+  "args": {
+    "dx": 0,
+    "dy": 3,
+    "amount": 3
+  }
+}
+```
+
+## Error codes
+
+| Error | Meaning |
+|-------|---------|
+| `path_not_allowed` | Requested path is outside the configured root |
+| `read_failed` | File could not be read |
+| `write_failed` | File could not be written |
+| `search_failed` | Web search returned no results or was blocked |
+| `gui_automation_failed` | Screenshot or input action failed |
+
+## Related pages
+
+- [Native Tool Belt](/tools/tool-belt)
+- [Computer Use & ACI](/tools/computer-use)
+- [Server Tools](/tools/server-tools)

@@ -290,8 +290,34 @@ final class PtySession: ObservableObject {
 
     private func connectionEnded() {
         guard !intentionalClose else { return }
-        // A closed socket mid-replay means the attach failed; after the meta
-        // frame it means the pty's process exited (protocol doc §Close).
-        state = readyForInput ? .exited : .failed("Connection closed by the server.")
+        
+        let wasExitedCleanly = webSocket?.closeCode != .invalid && webSocket?.closeCode != .abnormalClosure
+        
+        if readyForInput, !wasExitedCleanly, let ptyId {
+            state = .connecting
+            readyForInput = false
+            Task {
+                var attempt = 0
+                while attempt < 5 && !intentionalClose && !Task.isCancelled {
+                    attempt += 1
+                    do {
+                        let socket = try await client.connectWebSocket(ptyId: ptyId)
+                        webSocket = socket
+                        socket.resume()
+                        startReceiveLoop(socket)
+                        return // Reconnection initiated!
+                    } catch {
+                        // Transport/network error, keep retrying
+                    }
+                    try? await Task.sleep(for: .seconds(Double(attempt) * 1.5))
+                }
+                
+                state = .exited
+            }
+        } else {
+            // A closed socket mid-replay means the attach failed; after the meta
+            // frame it means the pty's process exited (protocol doc §Close).
+            state = readyForInput ? .exited : .failed("Connection closed by the server.")
+        }
     }
 }

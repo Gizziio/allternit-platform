@@ -1,0 +1,231 @@
+---
+title: 'Agents v1 API'
+description: 'Remote-model-compatible agent discovery, model, tool, and response endpoints for the Allternit platform.'
+---
+
+## Overview
+
+The Agents v1 API exposes a remote-model-compatible surface for discovering agent-backed models, listing deferred tools, activating tools for a session, and retrieving completed responses. It mirrors the shape expected by remote-model clients so that Allternit agents can be consumed through standard SDKs while still preserving Allternit-specific profile metadata.
+
+## Base URL
+
+```text
+https://api.allternit.com/api
+```
+
+For local development:
+
+```text
+http://127.0.0.1:8013/api
+```
+
+## Authentication
+
+All routes require a valid bearer token in the `Authorization` header. See [Authentication](/api/authentication) for details.
+
+## Agent profile object
+
+A remote model entry returned by this API wraps an Allternit agent profile.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `agentId` | string | Unique agent identifier. |
+| `version` | string | Profile version. |
+| `avatarUrl` | string \| null | Agent avatar URL. |
+| `instructions` | string | Composed system instructions. |
+| `modelConfig` | object | `provider`, `model`, `temperature`, `maxContextTokens`, `maxOutputTokens`, `maxSteps`. |
+| `capabilities` | object | Capability flags such as `execute_code`, `file_search`, `mcp_tools`, `artifacts`, `computer_use`, etc. |
+| `toolPolicy` | object | `builtInToolIds`, `mcpServerIds`, `allowedMcpToolIds`, `deferredToolIds`. |
+| `files` | any \| null | Attached file references. |
+| `artifactPolicy` | any \| null | Artifact publishing policy. |
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/agents-v1` | Service status. |
+| `GET` | `/agents/v1/models` | List agent-backed models for the authenticated user. |
+| `GET` | `/agents/v1/models/:model` | Retrieve a single agent-backed model. |
+| `GET` | `/agents/v1/responses/models` | Alias for listing agent-backed models. |
+| `GET` | `/agents/v1/tools` | List tools available to a model. |
+| `POST` | `/agents/v1/tools/search` | Search tools available to a model. |
+| `POST` | `/agents/v1/tools/activate` | Activate tools for a session. |
+| `GET` | `/agents/v1/responses/:id` | Retrieve a completed response by ID. |
+
+## List agent-backed models
+
+```bash
+curl https://api.allternit.com/api/agents/v1/models \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+### Response
+
+```json
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "agent_01J8X...",
+      "object": "model",
+      "created": 1723500000,
+      "owned_by": "allternit",
+      "profile": {
+        "agentId": "agent_01J8X...",
+        "version": "1",
+        "instructions": "You are a helpful coding assistant.",
+        "modelConfig": {
+          "provider": "allternit-local",
+          "model": "qwen-coder",
+          "temperature": 0.2,
+          "maxContextTokens": null,
+          "maxOutputTokens": null,
+          "maxSteps": 10
+        },
+        "capabilities": {
+          "execute_code": true,
+          "mcp_tools": true
+        },
+        "toolPolicy": {
+          "builtInToolIds": ["markdown-to-doc"],
+          "mcpServerIds": [],
+          "allowedMcpToolIds": [],
+          "deferredToolIds": []
+        }
+      }
+    }
+  ]
+}
+```
+
+## Retrieve a model
+
+```bash
+curl https://api.allternit.com/api/agents/v1/models/agent_01J8X... \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+Returns a single model object identical to the items returned by the list endpoint.
+
+## List tools
+
+```bash
+curl "https://api.allternit.com/api/agents/v1/tools?model=agent_01J8X..." \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+### Response
+
+```json
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "markdown-to-doc",
+      "label": "Markdown to document",
+      "serverId": "allternit-api",
+      "description": "Convert markdown content to a formatted document.",
+      "parameters": {}
+    }
+  ],
+  "model": "agent_01J8X..."
+}
+```
+
+## Search tools
+
+```bash
+curl -X POST https://api.allternit.com/api/agents/v1/tools/search \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "agent_01J8X...",
+    "query": "markdown"
+  }'
+```
+
+Filters the model's available tools by `id`, `label`, or `description`.
+
+## Activate tools
+
+Activate one or more tools for a session so they appear in the runtime tool snapshot.
+
+```bash
+curl -X POST https://api.allternit.com/api/agents/v1/tools/activate \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "agent_01J8X...",
+    "session_id": "ses_abc123",
+    "tool_ids": ["markdown-to-doc"]
+  }'
+```
+
+### Response
+
+```json
+{
+  "success": true,
+  "sessionId": "ses_abc123",
+  "model": "agent_01J8X...",
+  "activatedToolIds": ["markdown-to-doc"]
+}
+```
+
+## Retrieve a response
+
+Fetch a previously generated assistant response by its response ID.
+
+```bash
+curl https://api.allternit.com/api/agents/v1/responses/resp_abc123 \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+### Response
+
+```json
+{
+  "id": "resp_abc123",
+  "object": "response",
+  "created_at": 1723500000,
+  "status": "completed",
+  "model": "agent_01J8X...",
+  "output_text": "The answer is 42.",
+  "output": [
+    {
+      "id": "msg_resp_abc123",
+      "type": "message",
+      "role": "assistant",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "The answer is 42.",
+          "annotations": [],
+          "logprobs": []
+        }
+      ]
+    }
+  ],
+  "allternit": {
+    "conversation_id": "conv_abc123",
+    "agent_profile": null,
+    "artifacts": []
+  }
+}
+```
+
+## Error codes
+
+| HTTP status | Code | Meaning |
+|-------------|------|---------|
+| 400 | `allternit.invalid_request` | Missing required fields such as `tool_ids`. |
+| 401 | `allternit.authentication_failed` | Missing or invalid bearer token. |
+| 404 | `allternit.not_found` | Agent, model, or response not found. |
+| 500 | `allternit.internal_error` | Database or runtime internal error. |
+
+## Related pages
+
+- [Agents API](/api/agents) — create and manage agents
+- [Agent Sessions](/api/agent-sessions) — chat sessions and message history
+- [MCP Servers](/api/mcp-servers) — attach model context protocol servers

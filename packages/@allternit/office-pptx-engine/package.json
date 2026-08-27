@@ -1,0 +1,54 @@
+{
+  "name": "@allternit/office-pptx-engine",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "private": true,
+  "type": "module",
+  "description": "pptx parsing (Slide element tree with byte anchors + inheritance resolution), OOXML fragment generation, element-patch save",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./table-grid": {
+      "import": "./dist/table-grid.js",
+      "types": "./dist/table-grid.d.ts"
+    },
+    "./background-promote": {
+      "import": "./dist/background-promote.js",
+      "types": "./dist/background-promote.d.ts"
+    },
+    "./smartart-layout": {
+      "import": "./dist/smartart-layout.js",
+      "types": "./dist/smartart-layout.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "buffer": "^6.0.3",
+    "fast-xml-parser": "^5.3.4",
+    "jszip": "^3.10.1",
+    "pako": "^2.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "pptxgenjs": "^4.0.1",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1",
+    "@types/pako": "^2.0.3"
+  },
+  "author": "Allternit"
+}

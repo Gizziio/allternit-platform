@@ -6,7 +6,7 @@ import * as React from 'react';
 import { Suspense, use, useState } from 'react';
 import { FileEditToolUseRejectedMessage } from './../../components/FileEditToolUseRejectedMessage.tsx';
 import { MessageResponse } from './../../components/MessageResponse.tsx';
-import { extractTag } from './../../utils/messages.ts';
+import { extractTag } from './../../utils/extractTag.js';
 import { FallbackToolUseErrorMessage } from '../../components/FallbackToolUseErrorMessage';
 import { FileEditToolUpdatedMessage } from '../../components/FileEditToolUpdatedMessage';
 import { FilePathLink } from '../../components/FilePathLink';

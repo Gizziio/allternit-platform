@@ -1,0 +1,121 @@
+---
+title: "Cookbook: Multi-Agent Orchestration"
+description: Coordinate multiple agents on a shared task using the CommRails communication protocol
+---
+
+## Goal
+
+Build a system where three specialized agents collaborate on a task:
+
+- **Researcher** — gathers information from the web
+- **Writer** — synthesizes research into a draft document
+- **Reviewer** — reviews the draft and provides feedback
+
+The agents communicate through the Allternit CommRails protocol and coordinate via a shared message channel.
+
+## Prerequisites
+
+- An Allternit API key
+- `@allternit/sdk` installed
+- `TAVILY_API_KEY` for web search
+
+## Implementation
+
+### 1. Set up the tool registry
+
+```typescript
+import { AllternitClient } from '@allternit/sdk';
+import { ToolRegistry } from '@allternit/sdk/ai-runtime/tools';
+import { NativeToolBelt } from '@allternit/sdk/ai-runtime/tools/search';
+
+const client = new AllternitClient({
+  apiKey: process.env.ALLTERNIT_API_KEY!,
+});
+
+const registry = new ToolRegistry();
+new NativeToolBelt(registry, {
+  provider: 'tavily',
+  apiKeys: { tavily: process.env.TAVILY_API_KEY! },
+  workspaceRoot: process.cwd(),
+});
+```
+
+### 2. Create the agents
+
+```typescript
+const researcher = await client.agents.create({
+  name: 'researcher',
+  runtime: 'gizzi-pro',
+  skills: ['web_search', 'web_fetch'],
+  systemPrompt: `You are a research agent. Given a topic, search the web for
+    relevant information and produce a structured summary with sources.`,
+});
+
+const writer = await client.agents.create({
+  name: 'writer',
+  runtime: 'gizzi-pro',
+  skills: ['str_replace_editor'],
+  systemPrompt: `You are a writing agent. Given research notes, write a clear,
+    well-structured document. Save it to output.md.`,
+});
+
+const reviewer = await client.agents.create({
+  name: 'reviewer',
+  runtime: 'gizzi-pro',
+  skills: ['str_replace_editor'],
+  systemPrompt: `You are a review agent. Read a document and provide specific,
+    actionable feedback. If the document is ready, say APPROVED.`,
+});
+```
+
+### 3. Orchestrate the workflow
+
+```typescript
+// Step 1: Research
+const research = await client.agents.run(researcher.id, {
+  input: 'Research the benefits of multi-agent systems in software engineering',
+});
+const researchNotes = research.output;
+
+// Step 2: Write
+const draft = await client.agents.run(writer.id, {
+  input: `Write a document based on these research notes:\n\n${researchNotes}`,
+});
+
+// Step 3: Review (loop until approved)
+let feedback = '';
+let iterations = 0;
+const MAX_ITERATIONS = 3;
+
+while (iterations < MAX_ITERATIONS) {
+  const review = await client.agents.run(reviewer.id, {
+    input: `Review this document and provide feedback:\n\n${draft.output}\n\nPrevious feedback: ${feedback}`,
+  });
+
+  if (review.output.includes('APPROVED')) {
+    console.log('Document approved!');
+    break;
+  }
+
+  feedback = review.output;
+
+  // Revise
+  const revision = await client.agents.run(writer.id, {
+    input: `Revise the document based on this feedback:\n\nFeedback: ${feedback}\n\nCurrent draft: ${draft.output}`,
+  });
+  draft.output = revision.output;
+  iterations++;
+}
+```
+
+## Explanation
+
+- **Sequential coordination** — The orchestrator runs agents one at a time, passing output from one as input to the next. This is the simplest coordination pattern.
+- **Feedback loops** — The reviewer-writer loop runs until the reviewer approves or the iteration limit is reached. This prevents infinite loops.
+- **Specialized agents** — Each agent has a focused system prompt and limited tool set, reducing the chance of hallucination.
+
+## Next steps
+
+- Replace sequential calls with **async parallel runs** for the research phase (fan out multiple researchers).
+- Use the **CommRails protocol** for persistent inter-agent messaging across sessions.
+- Add a **budget limit** per agent run to control costs.

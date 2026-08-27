@@ -4,13 +4,23 @@ import { isAbsolute, join } from 'path'
 import { registerCleanup } from '../cleanupRegistry.js'
 import { logForDebugging } from '../debug.js'
 import { errorMessage } from '../errors.js'
-import {
-  executeCwdChangedHooks,
-  executeFileChangedHooks,
-  type HookOutsideReplResult,
-} from '../hooks.js'
+import type { HookOutsideReplResult } from '../hooks.js'
 import { clearCwdEnvFiles } from '../sessionEnvironment.js'
 import { getHooksConfigFromSnapshot } from './hooksConfigSnapshot.js'
+
+// Dynamic imports to avoid a static circular import through hooks.js.
+async function executeFileChangedHooks(
+  path: string,
+  event: 'change' | 'add' | 'unlink',
+) {
+  const { executeFileChangedHooks: run } = await import('../hooks.js')
+  return run(path, event)
+}
+
+async function executeCwdChangedHooks(oldCwd: string, newCwd: string) {
+  const { executeCwdChangedHooks: run } = await import('../hooks.js')
+  return run(oldCwd, newCwd)
+}
 
 let watcher: FSWatcher | null = null
 let currentCwd: string

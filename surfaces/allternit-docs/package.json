@@ -1,0 +1,26 @@
+{
+  "name": "@allternit/office-docs",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Allternit Docs \u2014 GenOffice-powered document editor surface",
+  "scripts": {
+    "dev": "vite --port 3014",
+    "build": "vite build",
+    "preview": "vite preview --port 3014",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@allternit/office-docs-app": "workspace:*",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "@types/react": "^18.3.28",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.1",
+    "typescript": "^5.9.3",
+    "vite": "^5.4.0"
+  }
+}

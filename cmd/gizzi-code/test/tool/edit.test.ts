@@ -2,10 +2,10 @@
 import { describe, test, expect } from "bun:test"
 import path from "path"
 import fs from "fs/promises"
-import { EditTool } from "../../src/tool/edit"
+import { EditTool } from "../../src/runtime/tools/builtins/edit"
 import { Instance } from "../../src/project/instance"
 import { tmpdir } from "../fixture/fixture"
-import { FileTime } from "../../src/file/time"
+import { FileTime } from "../../src/shared/file/time"
 
 const ctx = {
   sessionID: "test-edit-session",
@@ -75,9 +75,9 @@ describe("tool.edit", () => {
       await Instance.provide({
         directory: tmp.path,
         fn: async () => {
-          const { Bus } = await import("../../src/bus")
-          const { File } = await import("../../src/file")
-          const { FileWatcher } = await import("../../src/file/watcher")
+          const { Bus } = await import("../../src/shared/bus")
+          const { File } = await import("../../src/shared/file")
+          const { FileWatcher } = await import("../../src/shared/file/watcher")
 
           const events: string[] = []
           const unsubEdited = Bus.subscribe(File.Event.Edited, () => events.push("edited"))
@@ -296,9 +296,9 @@ describe("tool.edit", () => {
         fn: async () => {
           FileTime.read(ctx.sessionID, filepath)
 
-          const { Bus } = await import("../../src/bus")
-          const { File } = await import("../../src/file")
-          const { FileWatcher } = await import("../../src/file/watcher")
+          const { Bus } = await import("../../src/shared/bus")
+          const { File } = await import("../../src/shared/file")
+          const { FileWatcher } = await import("../../src/shared/file/watcher")
 
           const events: string[] = []
           const unsubEdited = Bus.subscribe(File.Event.Edited, () => events.push("edited"))

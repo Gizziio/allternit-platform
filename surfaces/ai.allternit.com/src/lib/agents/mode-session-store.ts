@@ -27,9 +27,10 @@ import {
   type BackendSession,
   type BackendMessage,
   type AgentContext,
+  type BrainRef,
 } from './native-agent-api';
 import { useAgentStore } from './agent.store';
-import type { HarnessConfig } from './agent.types';
+import type { Agent, HarnessConfig } from './agent.types';
 import { subscribeSSE } from '../sse/global-sse-manager';
 import { createModuleLogger } from '@/lib/logger';
 import { emitArtifact } from '@/lib/canvas/canvas-artifact-events';
@@ -38,6 +39,8 @@ import type { AgentArtifactKind, CanonicalAgentModeId } from './agent-mode-contr
 import { getAgentModeContract, validateAgentModeExecution } from './agent-mode-contracts';
 import { executeAgentMode } from './agent-mode-executor';
 import { gizziBaseUrl } from './api-config';
+import { buildBotRuntimeEnv } from '@/lib/bots/bot-runtime-env';
+import { memoryClient } from './memory-client';
 
 const logger = createModuleLogger('ModeSessionStore');
 import type {
@@ -104,6 +107,12 @@ export interface ModeSession {
     isolation?: 'worktree' | 'none';
     codePermissionMode?: 'default' | 'acceptEdits' | 'plan';
     gizziPermissionModeApplied?: 'default' | 'acceptEdits' | 'plan';
+    resolvedSecrets?: Array<import('@/lib/agents/agent-secrets-resolver').ResolvedSecret>;
+    missingSecrets?: string[];
+    resolvedConnectors?: Array<import('@/lib/agents/agent-connectors-resolver').ResolvedConnectorCredential>;
+    missingConnectors?: string[];
+    messagingConfig?: Record<string, unknown>;
+    identityChannels?: Record<string, unknown>;
   };
   // Runtime context pack (not persisted, rebuilt on load)
   _contextPack?: AgentContextPack;
@@ -119,6 +128,7 @@ export interface CreateModeSessionOptions {
   sessionMode?: 'regular' | 'agent';
   agentId?: string;
   agentName?: string;
+  model?: BrainRef;
   projectId?: string;
   taskId?: string;
   workspaceId?: string;
@@ -528,27 +538,34 @@ async function sendMessageWithContext(
   });
 }
 
-/**
- * Resolve the provider/model string the kernel expects (`provider/modelId`).
- * Reads the composer's persisted model selection; falls back to the embedded
- * local model (sidecar, no API key required) so offline sends always work.
- */
-const MODEL_SELECTION_STORAGE_KEY = 'allternit:model-selection';
-const EMBEDDED_FALLBACK_MODEL_ID = 'sidecar/qwen3.5:4b';
-
-function resolveRuntimeModelId(): string {
+async function resolveFallbackRuntimeModelId(): Promise<string | undefined> {
+  // Prefer the backend's configured default model. This matches what the
+  // composer/model picker shows by default and keeps bot sessions on a brain
+  // that actually works (e.g. the gizzi sidecar embedded model in dev).
   try {
-    const raw = typeof window !== 'undefined'
-      ? window.localStorage.getItem(MODEL_SELECTION_STORAGE_KEY)
-      : null;
-    if (raw) {
-      const parsed = JSON.parse(raw) as { providerId?: string; modelId?: string } | null;
-      if (parsed?.providerId && parsed?.modelId) {
-        return `${parsed.providerId}/${parsed.modelId}`;
+    const res = await fetch('/api/onboarding/config');
+    if (res.ok) {
+      const data = await res.json() as { user?: { defaultModel?: string } };
+      const defaultModel = data.user?.defaultModel;
+      if (defaultModel && defaultModel.includes('/')) {
+        return defaultModel;
       }
     }
-  } catch { /* malformed or unavailable storage */ }
-  return EMBEDDED_FALLBACK_MODEL_ID;
+  } catch { /* onboarding config unavailable */ }
+
+  // Last resort: use a locally-pulled Ollama model.
+  try {
+    const res = await fetch('/api/local-brain');
+    if (!res.ok) return undefined;
+    const data = await res.json() as { ollamaRunning?: boolean; modelId?: string; pulledModels?: string[] };
+    if (data.ollamaRunning && data.modelId) {
+      return `ollama/${data.modelId}`;
+    }
+    if (data.ollamaRunning && data.pulledModels?.length) {
+      return `ollama/${data.pulledModels[0]}`;
+    }
+  } catch { /* local brain unavailable */ }
+  return undefined;
 }
 
 /**
@@ -561,11 +578,14 @@ async function streamMessageWithContext(
   chatApi: ChatApi,
 ): Promise<void> {
   const { text, skipContext, callbacks } = options;
-  // The kernel splits runtimeModelId into provider/model — sending nothing
-  // makes gizzi reject with ProviderModelNotFoundError and the bridge returns
-  // an empty 200, so the message vanishes. Always resolve a model: explicit
-  // option → persisted composer selection → embedded local fallback.
-  const modelId = options.modelId ?? resolveRuntimeModelId();
+  // The kernel splits runtimeModelId into provider/model. Use an explicit
+  // option first, then fall back to the backend-configured default / local
+  // brain. If nothing is available, omit the field so the runtime can fall
+  // back to its own default instead of sending an invalid hard-coded model.
+  let modelId = options.modelId;
+  if (!modelId) {
+    modelId = await resolveFallbackRuntimeModelId();
+  }
 
   if (
     session.metadata.executionPersistence === 'local' &&
@@ -602,6 +622,14 @@ async function streamMessageWithContext(
         ? useAgentStore.getState().agents.find((a) => a.id === session.metadata.agentId)
         : undefined;
       // Convert to API context format
+      const runtimeEnv = buildBotRuntimeEnv({
+        harness: agent?.harness,
+        resolvedSecrets: session.metadata.resolvedSecrets as import('@/lib/agents/agent-secrets-resolver').ResolvedSecret[] | undefined,
+        resolvedConnectors: session.metadata.resolvedConnectors as import('@/lib/agents/agent-connectors-resolver').ResolvedConnectorCredential[] | undefined,
+        vmOperator: (session.metadata.vmOperator as Agent['vmOperator']) ?? agent?.vmOperator,
+        agentId: agent?.id ?? (session.metadata.agentId as string | undefined),
+        characterLayer: agent?.characterLayer,
+      });
       agentContext = {
         agentId: contextPack.agentId,
         agentName: contextPack.agentName || agent?.name,
@@ -623,6 +651,9 @@ async function streamMessageWithContext(
         governanceContext: {
           workspaceFiles: contextPack.workspaceFiles,
         },
+        runtimeEnv: runtimeEnv.env,
+        messagingConfig: session.metadata.messagingConfig as Record<string, unknown> | undefined,
+        identityChannels: session.metadata.identityChannels as Record<string, unknown> | undefined,
       };
     } else if (session.metadata.systemPrompt) {
       // Session has a custom system prompt but no agent workspace (e.g. Studio mode)
@@ -646,6 +677,39 @@ async function streamMessageWithContext(
         ? `${agentContext.systemPrompt}\n\n${mentionNote}`
         : mentionNote,
     };
+  }
+  
+  // PreTurn Hook: Recall relevant memories and inject into prompt context
+  if (!skipContext) {
+    try {
+      const memoryItems = await memoryClient.recall(text, {
+        agentId: session.metadata.agentId,
+        sessionId: session.id,
+        limit: 5,
+      });
+      if (memoryItems && memoryItems.length > 0) {
+        const memoryLines = memoryItems.map((m) => `- [${m.item_type}] ${m.content}`);
+        const memoryBlock = `Memory Context (relevant facts & knowledge):\n${memoryLines.join('\n')}`;
+        agentContext = {
+          ...(agentContext ?? {}),
+          systemPrompt: agentContext?.systemPrompt
+            ? `${agentContext.systemPrompt}\n\n${memoryBlock}`
+            : memoryBlock,
+        };
+      }
+    } catch {
+      // Degrade silently if memory recall fails
+    }
+
+    // Retain user turn observation in background
+    try {
+      void memoryClient.retainTurn('user', text, {
+        agentId: session.metadata.agentId,
+        sessionId: session.id,
+      });
+    } catch {
+      // Degrade silently
+    }
   }
   
   // Use chat API with context
@@ -733,7 +797,7 @@ async function streamLocalCodeMessageThroughGizzi(
   }
 
   const separator = modelId.indexOf('/');
-  const providerID = separator > 0 ? modelId.slice(0, separator) : 'opencode';
+  const providerID = separator > 0 ? modelId.slice(0, separator) : 'allternit';
   const runtimeModelID = separator > 0 ? modelId.slice(separator + 1) : modelId;
   const response = await fetch(`${base}/v1/session/${encodeURIComponent(gizziSessionId)}/message`, {
     method: 'POST',
@@ -939,6 +1003,7 @@ export function createModeSessionStore(config: StoreConfig) {
                 session_mode: options.sessionMode || 'regular',
                 agentId: options.agentId,
                 agentName: options.agentName,
+                model: options.model,
                 project_id: options.projectId,
                 metadata: {
                   ...options.metadata,
@@ -1356,6 +1421,22 @@ export function createModeSessionStore(config: StoreConfig) {
                     // canvas view can render them without requiring a backend artifact
                     // event. This mirrors the behavior in rust-stream-adapter.ts.
                     const tr = toolResult as { toolName?: string; result?: unknown } | undefined;
+                    if (tr?.toolName && tr.toolName !== 'read_session_memory') {
+                      try {
+                        const preview = typeof tr.result === 'string' ? tr.result : JSON.stringify(tr.result ?? '');
+                        void memoryClient.recordObservation(
+                          'tool',
+                          `${tr.toolName}: ${preview.slice(0, 400)}`,
+                          {
+                            agentId: session.metadata.agentId,
+                            sessionId: session.id,
+                            source: tr.toolName,
+                          }
+                        );
+                      } catch {
+                        // Degrade silently
+                      }
+                    }
                     if (tr?.toolName === 'generateWebArtifact' && tr.result && typeof tr.result === 'object') {
                       const r = tr.result as { content?: string; kind?: string; title?: string };
                       if (r.content) {
@@ -1496,6 +1577,18 @@ export function createModeSessionStore(config: StoreConfig) {
                           : s
                       ),
                     }));
+                    // PostTurn Hook: Retain assistant response and extract facts in background
+                    if (assistantContent.trim()) {
+                      try {
+                        void memoryClient.retainTurn('assistant', assistantContent, {
+                          agentId: session.metadata.agentId,
+                          sessionId: session.id,
+                        });
+                      } catch {
+                        // Degrade silently
+                      }
+                    }
+
                     options.callbacks?.onDone?.();
                   },
                   onError: (error) => {

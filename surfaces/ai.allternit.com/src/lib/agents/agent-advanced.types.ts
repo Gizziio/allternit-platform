@@ -92,7 +92,7 @@ interface SwarmAgentConfig {
   canTerminate: boolean;
 }
 
-type SwarmRole = 
+export type SwarmRole = 
   | 'leader'      // Coordinates other agents
   | 'worker'      // Executes tasks
   | 'critic'      // Reviews and validates
@@ -100,7 +100,7 @@ type SwarmRole =
   | 'specialist'  // Domain expert
   | 'observer';   // Monitors and reports
 
-type SwarmStrategy = 
+export type SwarmStrategy = 
   | 'round-robin'     // Each agent takes turns
   | 'hierarchical'    // Leader delegates to workers
   | 'democratic'      // Voting-based decisions

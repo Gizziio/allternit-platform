@@ -38,7 +38,7 @@ const SANDBOX_STORAGE_SHIM = `<script data-allternit-artifact-storage-shim>
 })();
 </script>`;
 
-function injectSandboxStorageShim(htmlContent: string): string {
+export function injectSandboxStorageShim(htmlContent: string): string {
   if (htmlContent.includes('data-allternit-artifact-storage-shim')) return htmlContent;
   const headTag = htmlContent.match(/<head(?:\s[^>]*)?>/i);
   if (headTag) {

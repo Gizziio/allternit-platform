@@ -1,5 +1,8 @@
 // @ts-nocheck
-export { Info, InvalidError, NameMismatchError, Skill, all, dirs, get, state } from "@/runtime/skills/skill";
+// skill.ts exposes a single `Skill` namespace (Skill.Info, Skill.all(), ...) —
+// the named members are not top-level exports, so only the namespace can be
+// re-exported here.
+export { Skill } from "@/runtime/skills/skill";
 export { SkillCreator } from "@/runtime/skills/creator";
 export type { CreateSkillOptions, CreationStep, SkillCreationSession, SkillExample, SkillTemplate } from "@/runtime/skills/creator";
 export { createSkillFromGenerated, createSkillWithAI, generateInterviewQuestions, generateSkill } from "@/runtime/skills/skill-generator";

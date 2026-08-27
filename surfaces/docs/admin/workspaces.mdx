@@ -1,0 +1,229 @@
+---
+title: Workspaces
+description: Create and manage organization-scoped workspaces, members, and IP allowlists.
+---
+
+# Workspaces
+
+Workspaces are organization-scoped resource containers that isolate projects, data, and spend. Each workspace has its own member roster with `owner`, `admin`, and `member` roles, and can optionally restrict access by client IP address.
+
+All workspace endpoints are gated to organization owners and admins.
+
+## Base URL
+
+```text
+/api/v1/admin/workspaces
+```
+
+## Workspace endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/v1/admin/workspaces` | Create a workspace |
+| `GET` | `/api/v1/admin/workspaces` | List workspaces |
+| `GET` | `/api/v1/admin/workspaces/:id` | Get a workspace |
+| `PUT` | `/api/v1/admin/workspaces/:id` | Update a workspace |
+| `DELETE` | `/api/v1/admin/workspaces/:id` | Delete a workspace |
+
+## Member endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/admin/workspaces/:id/members` | List members |
+| `POST` | `/api/v1/admin/workspaces/:id/members` | Add or update a member |
+| `PUT` | `/api/v1/admin/workspaces/:id/members/:member_id` | Set a member's role |
+| `DELETE` | `/api/v1/admin/workspaces/:id/members/:member_id` | Remove a member |
+
+## IP allowlist endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/admin/workspaces/:id/ip-allowlist` | List allowlist entries |
+| `POST` | `/api/v1/admin/workspaces/:id/ip-allowlist` | Add an allowlist entry |
+| `DELETE` | `/api/v1/admin/workspaces/:id/ip-allowlist/:entry_id` | Remove an allowlist entry |
+
+## Roles
+
+| Role | Description |
+|------|-------------|
+| `owner` | Full control over the workspace and its members. |
+| `admin` | Can manage workspace resources and members. |
+| `member` | Standard access to workspace resources. |
+
+## Create a workspace
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/admin/workspaces \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Engineering",
+    "description": "Production engineering workspace"
+  }'
+```
+
+### Request body
+
+```json
+{
+  "name": "Engineering",
+  "description": "Production engineering workspace"
+}
+```
+
+### Response
+
+```json
+{
+  "id": "ws_01hqx8x7x7x7x7x7x7x7x7x7x",
+  "name": "Engineering",
+  "description": "Production engineering workspace",
+  "created_by": "usr_01hqx8x7x7x7x7x7x7x7x7x7x",
+  "created_at": "2026-08-13T18:00:00Z",
+  "updated_at": "2026-08-13T18:00:00Z"
+}
+```
+
+The caller is automatically added as the workspace `owner`.
+
+## List workspaces
+
+```bash
+curl -X GET https://api.allternit.com/api/v1/admin/workspaces \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+### Response
+
+```json
+{
+  "workspaces": [
+    {
+      "id": "ws_01hqx8x7x7x7x7x7x7x7x7x",
+      "name": "Engineering",
+      "description": "Production engineering workspace",
+      "created_by": "usr_01hqx8x7x7x7x7x7x7x7x7x",
+      "created_at": "2026-08-13T18:00:00Z",
+      "updated_at": "2026-08-13T18:00:00Z"
+    }
+  ]
+}
+```
+
+## Update a workspace
+
+```bash
+curl -X PUT https://api.allternit.com/api/v1/admin/workspaces/ws_01hqx8x7x7x7x7x7x7x7x7x \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Engineering - Platform",
+    "description": "Updated description"
+  }'
+```
+
+### Response
+
+```json
+{
+  "id": "ws_01hqx8x7x7x7x7x7x7x7x7x",
+  "name": "Engineering - Platform",
+  "description": "Updated description",
+  "created_by": "usr_01hqx8x7x7x7x7x7x7x7x7x",
+  "created_at": "2026-08-13T18:00:00Z",
+  "updated_at": "2026-08-13T18:05:00Z"
+}
+```
+
+## Add a member
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/admin/workspaces/ws_01hqx8x7x7x7x7x7x7x7x7x/members \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_id": "usr_01hqx8x7x7x7x7x7x7x7x7x",
+    "role": "member"
+  }'
+```
+
+### Response
+
+```json
+{
+  "workspace_id": "ws_01hqx8x7x7x7x7x7x7x7x7x",
+  "user_id": "usr_01hqx8x7x7x7x7x7x7x7x7x",
+  "role": "member"
+}
+```
+
+If the user is already a member, their role is updated.
+
+## Set a member's role
+
+```bash
+curl -X PUT https://api.allternit.com/api/v1/admin/workspaces/ws_01hqx8x7x7x7x7x7x7x7x7x/members/usr_01hqx8x7x7x7x7x7x7x7x7x \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"role": "admin"}'
+```
+
+Returns `204 No Content` on success.
+
+## Remove a member
+
+```bash
+curl -X DELETE https://api.allternit.com/api/v1/admin/workspaces/ws_01hqx8x7x7x7x7x7x7x7x7x/members/usr_01hqx8x7x7x7x7x7x7x7x7x \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+Returns `204 No Content` on success.
+
+## Add an IP allowlist entry
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/admin/workspaces/ws_01hqx8x7x7x7x7x7x7x7x7x/ip-allowlist \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "ip_range": "203.0.113.0/24",
+    "description": "Office network",
+    "enabled": true
+  }'
+```
+
+### Response
+
+```json
+{
+  "id": "wal_01hqx8x7x7x7x7x7x7x7x7x",
+  "workspace_id": "ws_01hqx8x7x7x7x7x7x7x7x7x",
+  "org_id": "org_01hqx8x7x7x7x7x7x7x7x7x",
+  "ip_range": "203.0.113.0/24",
+  "description": "Office network",
+  "enabled": true,
+  "created_at": "2026-08-13T18:00:00Z",
+  "updated_at": "2026-08-13T18:00:00Z"
+}
+```
+
+An empty allowlist allows all IPs. `ip_range` must be a valid CIDR such as `203.0.113.0/24`.
+
+## Error codes
+
+| Status | Code | Description |
+|--------|------|-------------|
+| `400` | `invalid_name` | Workspace name must be 1–128 characters. |
+| `400` | `invalid_role` | Role must be `owner`, `admin`, or `member`. |
+| `400` | `invalid_cidr` | IP range must be a valid CIDR. |
+| `403` | `organization_required` | Caller is not associated with an organization. |
+| `403` | `insufficient_role` | Caller is not an organization owner or admin. |
+| `404` | `workspace_not_found` | Workspace does not exist or is not in the organization. |
+| `404` | `member_not_found` | Member does not exist in the workspace. |
+| `404` | `entry_not_found` | IP allowlist entry does not exist. |
+
+## Related pages
+
+- [RBAC](/admin/rbac) — custom roles and groups
+- [Service accounts](/admin/service-accounts) — machine identities for workspace automation
+- [Spend limits](/admin/spend-limits) — organization spend caps

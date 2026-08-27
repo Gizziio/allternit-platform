@@ -63,7 +63,7 @@ export class ProviderDiscoveryService {
    * Probe a single provider to check availability
    */
   async probeProvider(providerId: string, config?: any): Promise<ProviderDiscoveryResult> {
-    const metadata = PROVIDER_REGISTRY.get(providerId)?.metadata;
+    const metadata = PROVIDER_REGISTRY.find(e => e.name === providerId)?.metadata;
     if (!metadata) {
       return {
         id: providerId,
@@ -145,7 +145,7 @@ export class ProviderDiscoveryService {
    * Probe all registered providers
    */
   async probeAllProviders(configs?: Record<string, any>): Promise<ProviderDiscoveryResult[]> {
-    const providerIds = Array.from(PROVIDER_REGISTRY.keys());
+    const providerIds = PROVIDER_REGISTRY.map(entry => entry.name);
 
     if (this.options.parallel) {
       // Probe all providers in parallel
@@ -168,7 +168,7 @@ export class ProviderDiscoveryService {
    * Validate an API key for a specific provider
    */
   async validateApiKey(providerId: string, apiKey: string): Promise<ApiKeyValidationResult> {
-    const metadata = PROVIDER_REGISTRY.get(providerId)?.metadata;
+    const metadata = PROVIDER_REGISTRY.find(e => e.name === providerId)?.metadata;
     if (!metadata) {
       return {
         valid: false,
@@ -266,7 +266,7 @@ export class ProviderDiscoveryService {
     const allResults = await this.probeAllProviders(configs);
     
     return allResults.filter(result => {
-      const metadata = PROVIDER_REGISTRY.get(result.id)?.metadata;
+      const metadata = PROVIDER_REGISTRY.find(e => e.name === result.id)?.metadata;
       return result.available && metadata?.features.includes(feature);
     });
   }

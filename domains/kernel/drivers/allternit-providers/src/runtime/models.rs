@@ -79,7 +79,7 @@ pub struct ValidateModelResponse {
 /// Model IDs are opaque strings - the kernel never parses or validates format.
 #[async_trait]
 pub trait ProviderModelAdapter: Send + Sync {
-    /// Provider ID this adapter handles (e.g., "opencode", "gemini", "claude")
+    /// Provider ID this adapter handles (e.g., "gemini", "claude")
     fn provider_id(&self) -> &str;
 
     /// Check if this provider supports model discovery
@@ -118,9 +118,6 @@ impl ModelAdapterRegistry {
         // Register adapters for providers that support model discovery
         // Note: Most CLI tools don't have a models list command yet,
         // so we only register adapters for those that do.
-
-        // OpenCode - currently no models list command, uses freeform
-        self.register(Box::new(OpenCodeModelAdapter::new()));
 
         // Gemini - no official models list command yet
         self.register(Box::new(GeminiModelAdapter::new()));
@@ -299,105 +296,6 @@ impl Default for ModelAdapterRegistry {
 // =============================================================================
 // Provider-Specific Adapters
 // =============================================================================
-
-/// OpenCode model adapter
-/// Note: OpenCode currently doesn't expose a models list command.
-/// This adapter exists as a placeholder for when that functionality is added.
-pub struct OpenCodeModelAdapter;
-
-impl Default for OpenCodeModelAdapter {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl OpenCodeModelAdapter {
-    pub fn new() -> Self {
-        Self
-    }
-}
-
-#[async_trait]
-impl ProviderModelAdapter for OpenCodeModelAdapter {
-    fn provider_id(&self) -> &str {
-        "opencode"
-    }
-
-    fn supports_discovery(&self) -> bool {
-        // OpenCode doesn't currently have a models list command
-        // When/if it does, change this to true and implement discover_models
-        false
-    }
-
-    async fn discover_models(&self) -> Result<ModelDiscoveryResponse> {
-        // Try to detect if opencode has models command
-        // This is a placeholder for when opencode adds models support
-        match Command::new("opencode")
-            .args(["models", "list", "--json"])
-            .output()
-            .await
-        {
-            Ok(output) if output.status.success() => {
-                let stdout = String::from_utf8_lossy(&output.stdout);
-                match parse_models_json(&stdout) {
-                    Ok(models) => {
-                        let default_model_id = models.first().map(|m| m.id.clone());
-                        Ok(ModelDiscoveryResponse {
-                            supported: true,
-                            models: Some(models),
-                            default_model_id,
-                            allow_freeform: true,
-                            freeform_hint: None,
-                            error: None,
-                        })
-                    }
-                    Err(e) => Err(anyhow!("Failed to parse models: {}", e)),
-                }
-            }
-            _ => {
-                // Command failed or doesn't exist - not supported
-                Ok(ModelDiscoveryResponse {
-                    supported: false,
-                    models: None,
-                    default_model_id: None,
-                    allow_freeform: true,
-                    freeform_hint: Some(
-                        "Enter OpenCode model ID (e.g., anthropic:claude-3-7-sonnet)".to_string(),
-                    ),
-                    error: None,
-                })
-            }
-        }
-    }
-
-    async fn validate_model(&self, model_id: &str) -> Result<ValidateModelResponse> {
-        // OpenCode model IDs are opaque - we don't parse them
-        // Just check non-empty
-        if model_id.trim().is_empty() {
-            return Ok(ValidateModelResponse {
-                valid: false,
-                model: None,
-                suggested: None,
-                message: Some("Model ID cannot be empty".to_string()),
-            });
-        }
-
-        // Try to validate with opencode if possible
-        // For now, accept any non-empty ID
-        Ok(ValidateModelResponse {
-            valid: true,
-            model: Some(ProviderModel {
-                id: model_id.to_string(),
-                name: model_id.to_string(),
-                description: Some(format!("OpenCode model: {}", model_id)),
-                capabilities: vec!["code".to_string(), "tools".to_string()],
-                context_window: None,
-            }),
-            suggested: None,
-            message: None,
-        })
-    }
-}
 
 /// Gemini model adapter
 /// Note: Gemini CLI doesn't currently expose models list.
@@ -1275,7 +1173,7 @@ impl ProviderModelAdapter for MistralModelAdapter {
     }
 }
 
-/// OpenAI API adapter (for direct API access, not OpenCode)
+/// OpenAI API adapter (for direct API access)
 /// Provides access to GPT models via OpenAI API
 pub struct OpenAiModelAdapter;
 
@@ -1738,8 +1636,8 @@ mod tests {
     #[test]
     fn test_profile_to_provider_id() {
         assert_eq!(
-            profile_to_provider_id("opencode-acp"),
-            Some("opencode".to_string())
+            profile_to_provider_id("claude-acp"),
+            Some("claude".to_string())
         );
         assert_eq!(
             profile_to_provider_id("gemini-auth"),
@@ -1754,7 +1652,7 @@ mod tests {
 
     #[test]
     fn test_provider_to_profile_id() {
-        assert_eq!(provider_to_profile_id("opencode"), "opencode-acp");
+        assert_eq!(provider_to_profile_id("claude"), "claude-acp");
         assert_eq!(provider_to_profile_id("gemini"), "gemini-acp");
     }
 

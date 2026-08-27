@@ -10,7 +10,7 @@ import type { QuerySource } from '@/constants/querySource.js'
 import type { SystemAPIErrorMessage } from '@/types/message.js'
 import { logForDebugging } from '../../../shared/utils/debug.js'
 import { logError } from '../../../shared/utils/log.js'
-import { createSystemAPIErrorMessage } from '../../../shared/utils/messages.js'
+import { createSystemAPIErrorMessage } from '../../../shared/utils/systemAPIErrorMessage.js'
 import { getAPIProviderForStatsig } from '../../../utils/model/providers.js'
 import {
   clearApiKeyHelperCache,

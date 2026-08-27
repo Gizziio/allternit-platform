@@ -1,0 +1,122 @@
+---
+title: 'Cowork Preferences API'
+description: 'Manage trusted folders and global instructions for Cowork sessions.'
+---
+
+## Overview
+
+The Cowork Preferences API stores per-user settings that govern what Cowork agents can access on the local filesystem. Each user can define a list of trusted folders and global instructions that are applied to every Cowork session. These preferences are stored in SQLite and mirror the storage pattern used by the Agent Preferences API.
+
+## Base URL
+
+```
+https://api.allternit.com/api
+```
+
+## Authentication
+
+All requests must include a valid bearer token in the `Authorization` header. See [Authentication](/api/authentication) for details.
+
+## The preference object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `trusted_folders` | array | Absolute paths that Cowork agents may read and write. |
+| `global_instructions` | string | Free-form instructions appended to every Cowork session. |
+| `updated_at` | string | ISO 8601 timestamp of the last update. |
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/cowork-preferences` | Get the caller's Cowork preferences. |
+| `PUT` | `/api/cowork-preferences` | Update the caller's Cowork preferences. |
+
+## Get preferences
+
+```http
+GET /api/cowork-preferences
+```
+
+If no preferences have been saved, the endpoint returns empty defaults.
+
+### Example request
+
+```bash
+curl https://api.allternit.com/api/cowork-preferences \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Example response
+
+```json
+{
+  "trusted_folders": [
+    "/Users/joe/projects",
+    "/Users/joe/workspace"
+  ],
+  "global_instructions": "Always run tests after editing code. Prefer cargo for Rust projects.",
+  "updated_at": "2026-08-13T10:00:00Z"
+}
+```
+
+## Update preferences
+
+```http
+PUT /api/cowork-preferences
+```
+
+Updates the caller's preferences. Omitted fields keep their current values. The request is merged with the existing row.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `trusted_folders` | array | No | Absolute folder paths. Maximum 50 entries. |
+| `global_instructions` | string | No | Free-form instructions. Maximum 20,000 characters. |
+
+### Trusted folder rules
+
+- Each entry must be an absolute path (starts with `/` on macOS/Linux or `X:\` on Windows).
+- Empty entries are ignored.
+- Duplicate entries are deduplicated.
+
+### Example request
+
+```bash
+curl -X PUT https://api.allternit.com/api/cowork-preferences \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "trusted_folders": ["/Users/joe/projects", "/Users/joe/workspace"],
+    "global_instructions": "Always run tests after editing code. Prefer cargo for Rust projects."
+  }'
+```
+
+### Example response
+
+```json
+{
+  "trusted_folders": [
+    "/Users/joe/projects",
+    "/Users/joe/workspace"
+  ],
+  "global_instructions": "Always run tests after editing code. Prefer cargo for Rust projects.",
+  "updated_at": "2026-08-13T10:05:00Z"
+}
+```
+
+## Error codes
+
+| Status | Meaning | Typical cause |
+|--------|---------|---------------|
+| `200 OK` | Success | Preferences returned or updated. |
+| `400 Bad Request` | Invalid request | Non-absolute trusted folder, more than 50 folders, or instructions too long. |
+| `401 Unauthorized` | Unauthorized | Missing or invalid bearer token. |
+| `500 Internal Server Error` | Server error | Contact support. |
+
+## Related pages
+
+- [Agent Preferences API](/api/agent-preferences)
+- [Agent Workspaces](/api/agent-workspaces)
+- [Agents API](/api/agents)

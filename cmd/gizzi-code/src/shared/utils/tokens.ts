@@ -9,7 +9,7 @@ import {
   isRedactedThinkingBlock,
   hasArrayContent,
 } from '@/types/message.js'
-import { SYNTHETIC_MESSAGES, SYNTHETIC_MODEL } from './messages.js'
+import { SYNTHETIC_MESSAGES, SYNTHETIC_MODEL } from './syntheticMessages.js'
 import { jsonStringify } from './slowOperations.js'
 
 export function getTokenUsage(message: Message): Usage | undefined {

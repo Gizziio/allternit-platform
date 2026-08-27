@@ -2,7 +2,9 @@
 
 import React, { useRef, useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence } from "framer-motion";
-import { CheckCircle, CircleDashed, ListChecks, SpinnerGap } from "@phosphor-icons/react";
+import { CheckCircle, CircleDashed, ListChecks, PaperPlaneRight, SpinnerGap, Square } from "@phosphor-icons/react";
+import { MatrixLogo } from "@/components/ai-elements/MatrixLogo";
+import { cn } from "@/lib/utils";
 import type { ExtensionSidepanelComposerProps } from "./ExtensionSidepanelShell.types";
 import {
   RADIUS,
@@ -66,8 +68,8 @@ function buildAciTodos(
 function AciTodoTopDeck({ todos }: { todos: AciTodo[] }) {
   const done = todos.filter((t) => t.status === 'completed').length;
   return (
-    <div className="relative z-0 w-full max-h-[132px] -mb-3 box-border overflow-y-auto bg-input-bg border-t border-r border-l border-input-border rounded-t-2xl px-4 pt-2.5 pb-5 flex flex-col gap-1.5 animate-deck-rise">
-      <div className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground">
+    <div className="relative z-0 w-full max-h-[132px] -mb-3 box-border overflow-y-auto bg-white/5 backdrop-blur-md border-t border-r border-l border-white/10 rounded-t-2xl px-4 pt-2.5 pb-5 flex flex-col gap-1.5 animate-deck-rise">
+      <div className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider text-foreground">
         <ListChecks size={12} className="text-accent" />
         <span>Todos</span>
         <span className="ml-auto font-bold normal-case tracking-normal">{done}/{todos.length}</span>
@@ -81,7 +83,7 @@ function AciTodoTopDeck({ todos }: { todos: AciTodo[] }) {
           ) : (
             <CircleDashed size={13} className="shrink-0 text-muted-foreground" />
           )}
-          <span className={`truncate text-xs ${todo.status === 'completed' ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
+          <span className={`truncate text-xs text-foreground ${todo.status === 'completed' ? 'line-through opacity-70' : ''}`}>
             {todo.content}
           </span>
         </div>
@@ -243,7 +245,9 @@ export function BrowserExtensionComposer({
         }}
         tabIndex={-1}
       >
-        <span aria-hidden="true" style={{ alignSelf: "center", color: browser.accent, fontSize: 10, fontWeight: 900, letterSpacing: "-0.04em" }}>A//</span>
+        <div aria-hidden="true" style={{ alignSelf: "center", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <MatrixLogo state="idle" size={14} />
+        </div>
         <textarea
           className="focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]"
           aria-label={placeholder}
@@ -267,52 +271,24 @@ export function BrowserExtensionComposer({
             padding: 0,
           }}
         />
-        <button type="button"
+        <button
+          type="button"
           onClick={() => (isRunning ? onStop() : canSubmit ? onSubmit(value) : undefined)}
-          style={{
-            width: 32,
-            height: 32,
-            flexShrink: 0,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            borderRadius: 999,
-            border: "none",
-            cursor: canSubmit || isRunning ? "pointer" : "default",
-            background: isRunning
-              ? "rgba(248,113,113,0.15)"
+          className={cn(
+            "shrink-0 flex items-center justify-center rounded-full border-none transition-all w-8 h-8",
+            isRunning
+              ? "bg-red-500 text-white hover:bg-red-600 cursor-pointer scale-100"
               : canSubmit
-              ? browser.accent
-              : "var(--surface-hover)",
-            color: isRunning
-              ? "#f87171"
-              : canSubmit
-              ? "#ffffff"
-              : "var(--ui-text-muted)",
-            transition: ANIMATION.base,
-            transform: canSubmit || isRunning ? "scale(1)" : "scale(0.95)",
-          }}
+              ? "bg-white text-black hover:bg-gray-100 cursor-pointer shadow-sm scale-100"
+              : "bg-transparent text-[var(--ui-text-muted)] cursor-default scale-95"
+          )}
           disabled={!canSubmit && !isRunning}
           aria-label={isRunning ? "Stop" : "Send"}
         >
           {isRunning ? (
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-              <rect x="6" y="6" width="12" height="12" rx="2" />
-            </svg>
+            <Square size={14} weight="fill" />
           ) : (
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M22 2L11 13" />
-              <path d="m22 2-7 20-4-9-9-4Z" />
-            </svg>
+            <PaperPlaneRight size={16} weight="bold" />
           )}
         </button>
       </div>

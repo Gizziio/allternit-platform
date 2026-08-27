@@ -1,0 +1,406 @@
+---
+title: 'Native Tool Belt'
+description: 'Built-in tools and REST execution surface for the Allternit agent runtime'
+---
+
+## Overview
+
+The **Native Tool Belt** is the set of general-purpose tools that every Allternit agent can call without installing an external server. The belt is initialized by `NativeToolBelt` and registers tools into a `ToolRegistry`, and the same tool set is also exposed through the REST API.
+
+## Base URL
+
+The tool registry is mounted on the protected router at both `/api/v1/tools` and `/api/tools`:
+
+```text
+https://api.allternit.com/api/v1/tools
+```
+
+Local development:
+
+```text
+http://127.0.0.1:8013/api/v1/tools
+```
+
+```typescript
+import { ToolRegistry } from '@allternit/sdk/ai-runtime/tools';
+import { NativeToolBelt } from '@allternit/sdk/ai-runtime/tools/search';
+
+const registry = new ToolRegistry();
+new NativeToolBelt(registry, {
+  provider: 'tavily',
+  apiKeys: { tavily: process.env.TAVILY_API_KEY },
+  workspaceRoot: process.cwd(),
+});
+```
+
+## Registry primitives
+
+| Tool | Purpose |
+|------|---------|
+| `tool_search` | Search deferred tools known but not yet active |
+| `tool_activate` | Move a deferred tool into the active set |
+
+## Web tools
+
+### `web_search`
+
+Search the web using a configurable adapter. Results are cached per query and clamped to a maximum of 10 entries.
+
+**Supported providers**
+
+| Provider | API key env var |
+|----------|----------------|
+| `tavily` | `TAVILY_API_KEY` |
+| `perplexity` | `PERPLEXITY_API_KEY` |
+| `bing` | `BING_SEARCH_API_KEY` |
+| `duckduckgo` | *(none required)* |
+
+```json
+{
+  "name": "web_search",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "query": { "type": "string" },
+      "mode": { "type": "string", "enum": ["cached", "indexed", "live"] },
+      "limit": { "type": "integer" }
+    },
+    "required": ["query"]
+  }
+}
+```
+
+### `web_fetch`
+
+Fetch a URL and return readable text. HTML responses have scripts and styles stripped. Output is truncated at 50,000 characters by default.
+
+```json
+{
+  "name": "web_fetch",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "url": { "type": "string" }
+    },
+    "required": ["url"]
+  }
+}
+```
+
+## Workspace tool
+
+### `str_replace_editor`
+
+A file editor that operates within a single workspace root. All paths are resolved relative to the workspace and constrained to stay within it.
+
+Commands: `view`, `str_replace`, `create`, `insert`, `undo`, `undo_edit`.
+
+```typescript
+const editor = registry.getTool('str_replace_editor')!;
+await editor.execute!({ command: 'create', path: 'hello.txt', file_text: 'Hello\n' }, {});
+await editor.execute!({ command: 'str_replace', path: 'hello.txt', old_str: 'Hello', new_str: 'World' }, {});
+```
+
+## System tools
+
+### `bash`
+
+Execute a shell command with optional timeout (default 30s) and restart control.
+
+```json
+{
+  "name": "bash",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "command": { "type": "string" },
+      "timeout": { "type": "integer" },
+      "restart": { "type": "boolean" }
+    },
+    "required": ["command"]
+  }
+}
+```
+
+### `code_execution`
+
+Run code in a sandboxed environment. Supports `python`, `node`, `bash`, and `rust`.
+
+```json
+{
+  "name": "code_execution",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "language": { "type": "string", "enum": ["python", "node", "bash", "rust"] },
+      "code": { "type": "string" },
+      "timeout_seconds": { "type": "integer" },
+      "dependencies": { "type": "array", "items": { "type": "string" } }
+    },
+    "required": ["language", "code"]
+  }
+}
+```
+
+### `memory`
+
+Session-scoped key/value store. In-memory by default; production deployments inject a persistent store.
+
+```typescript
+await registry.getTool('memory')!.execute!({ operation: 'write', key: 'mode', value: 'fast' }, {});
+const entry = await registry.getTool('memory')!.execute!({ operation: 'read', key: 'mode' }, {});
+```
+
+## REST execution surface
+
+The same tool registry is reachable over REST so desktop, web, and mobile clients can call it with the same shape.
+
+### Authentication
+
+The `execute` handler requires the `x-allternit-user-id` header. Organization-scoped behavior (such as resolving server-side tools) uses `x-allternit-organization-id` or `x-allternit-tenant-id`.
+
+```bash
+curl -X POST http://127.0.0.1:8013/api/v1/tools/execute \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -H "x-allternit-user-id: user_123" \
+  -H "x-allternit-organization-id: org_456" \
+  -d '{"tool":"bash","args":{"command":"echo hello"}}'
+```
+
+### Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/v1/tools` | List all native tools and their input schemas |
+| POST | `/api/v1/tools/execute` | Execute a tool by name with arguments |
+| POST | `/api/v1/beta/approvals/:id/approve` | Approve a pending tool execution request |
+| POST | `/api/v1/beta/approvals/:id/deny` | Deny a pending tool execution request |
+
+The same routes are also reachable under `/api/tools`, `/api/tools/execute`, and `/api/beta/approvals/:id`.
+
+### List tools
+
+```bash
+curl -X GET http://127.0.0.1:8013/api/v1/tools \
+  -H "Authorization: Bearer <token>"
+```
+
+Response:
+
+```json
+{
+  "tools": [
+    { "id": "bash", "name": "Bash", "description": "Execute a shell command..." },
+    { "id": "file.read", "name": "File Read", "description": "Read file contents" }
+  ],
+  "native": [
+    { "id": "bash", "name": "Bash", "description": "Execute a shell command..." }
+  ],
+  "total": 2
+}
+```
+
+### Execute a tool
+
+**Request body**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `tool` / `tool_name` | string | yes | Tool identifier, e.g. `bash`, `file.read`, `http.get` |
+| `args` / `parameters` | object | yes | Arguments for the selected tool |
+| `timeout` | integer | no | Global timeout in seconds (default: 30) |
+| `workspace_id` | string | no | Workspace context for the request |
+| `cache` | boolean | no | When `true`, large results may include a `cache_control` hint |
+
+```bash
+curl -X POST http://127.0.0.1:8013/api/v1/tools/execute \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -H "x-allternit-user-id: user_123" \
+  -d '{
+    "tool": "bash",
+    "args": { "command": "uname -a" },
+    "timeout": 10
+  }'
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "result": {
+    "stdout": "Darwin host 23.0.0 ...\n",
+    "stderr": "",
+    "exit_code": 0,
+    "success": true
+  },
+  "execution_time_ms": 42,
+  "cache_control": null
+}
+```
+
+Failed tool executions still return HTTP 200 with `success: false` and an `error` string:
+
+```json
+{
+  "success": false,
+  "error": "Missing 'command' argument",
+  "execution_time_ms": 1
+}
+```
+
+## Permission policies and approvals
+
+Tool execution can be gated by the active permission policy. A policy is an ordered list of rules that classify each request as `allow`, `deny`, or `ask`. The first matching rule wins; if no rule matches, the request is allowed.
+
+A rule can match by:
+
+- `tool` — exact name or glob (`file.*`, `http.*`)
+- `filePath` — path or prefix (`/etc/*`)
+- `networkHost` — host or wildcard (`*.internal.example.com`)
+- `action` — `allow`, `deny`, or `ask`
+
+When a request matches an `ask` rule, the API returns HTTP 202 with an approval ID:
+
+```json
+{
+  "status": "approval_required",
+  "approval_id": "550e8400-e29b-41d4-a716-446655440000",
+  "tool": "file.write"
+}
+```
+
+Approve or deny the request later:
+
+```bash
+curl -X POST http://127.0.0.1:8013/api/v1/beta/approvals/550e8400-e29b-41d4-a716-446655440000/approve \
+  -H "Authorization: Bearer <token>"
+```
+
+```json
+{ "approval_id": "550e8400-e29b-41d4-a716-446655440000", "status": "approved" }
+```
+
+<Note>
+Approvals are stored in memory for the lifetime of the API process. If the process restarts, pending approvals are lost.
+</Note>
+
+## Result caching
+
+When `cache: true` is set on an execution request, results larger than ~4,000 serialized JSON characters include a `cache_control` hint:
+
+```json
+{
+  "cache_control": { "type": "ephemeral" }
+}
+```
+
+This hint can be passed back to providers that support prompt caching. Small results omit the field entirely.
+
+## Native tool reference
+
+The following tools are implemented by `tool_routes.rs`. Tools that are also registered as server-side tools for the caller's organization take precedence over the native implementations.
+
+### Shell
+
+| Tool | Description |
+|------|-------------|
+| `shell.exec` | Run a shell command via `sh -c` |
+| `shell.eval` | Alias for `shell.exec` |
+| `bash` | Run a shell command with per-argument timeout and restart control |
+
+### Code execution
+
+| Tool | Description |
+|------|-------------|
+| `code_execution` | Run code in `python`, `node`, `bash`, or `rust` |
+
+### File system
+
+| Tool | Description |
+|------|-------------|
+| `file.read` | Read a file's contents |
+| `file.write` | Write content to a file |
+| `file.list` | List directory entries |
+| `file.exists` | Check whether a path exists |
+| `file.remove` | Delete a file |
+
+### System and network
+
+| Tool | Description |
+|------|-------------|
+| `system.info` | Host platform, architecture, hostname, cwd, PID |
+| `system.env` | Read one env var or list all env vars |
+| `http.get` | Make an HTTP GET request |
+| `http.post` | Make an HTTP POST request with optional body and headers |
+| `time.now` | Current UTC time as ISO 8601 and Unix timestamp |
+| `echo` | Return the provided arguments unchanged |
+
+### Document conversion
+
+| Tool | Description |
+|------|-------------|
+| `document_to_markdown` | Convert an uploaded file or artifact to Markdown |
+| `url_to_markdown` | Fetch a URL and convert it to Markdown |
+
+For `document_to_markdown`, upload the file first with `POST /api/v1/uploads` and pass the returned `uploadId`, or pass an existing `artifactId`.
+
+```bash
+curl -X POST http://127.0.0.1:8013/api/v1/tools/execute \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -H "x-allternit-user-id: user_123" \
+  -d '{
+    "tool": "document_to_markdown",
+    "args": { "uploadId": "a1b2c3d4" },
+    "timeout": 120
+  }'
+```
+
+```json
+{
+  "success": true,
+  "result": {
+    "markdown": "# Quarterly report\n\nRevenue increased...",
+    "truncated": false,
+    "title": "Quarterly report",
+    "format": "docx",
+    "sourceUrl": null
+  },
+  "execution_time_ms": 890
+}
+```
+
+Long Markdown output is truncated at 30,000 characters with a note appended and `truncated: true`.
+
+## Error codes
+
+| HTTP | Code | Meaning |
+|------|------|---------|
+| 200 | — | Tool executed; check `success` for the tool-level result |
+| 202 | `approval_required` | The active policy requires human approval |
+| 401 | `Unauthorized` | Missing `x-allternit-user-id` or session |
+| 403 | `Tool execution denied by permission policy` | The active policy denied the request |
+| 404 | `Approval request not found` | The approval ID does not exist |
+
+## Customizing execution backends
+
+`NativeToolBelt` accepts injectable backends so the same tool contract works in tests, local CLI, and remote sandbox deployments:
+
+| Option | Type | Used by |
+|--------|------|---------|
+| `runner.run` | `BashRunner` | `bash` |
+| `runner.execute` | `CodeExecutionRunner` | `code_execution` |
+| `store` | `MemoryStore` | `memory` |
+| `fetch` | `typeof fetch` | `web_search`, `web_fetch` |
+| `workspaceRoot` | `string` | `str_replace_editor` |
+
+## Related pages
+
+- [Strict Tool Schemas](/tools/strict-tool-use)
+- [MCP Servers](/tools/mcp)
+- [Build a Custom Tool](/tools/build-a-tool)
+- [Server Tools](/tools/server-tools)
+- [Cloud Sandboxes](/tools/sandbox)

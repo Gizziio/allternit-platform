@@ -1,16 +1,16 @@
 // @ts-nocheck
 import { describe, expect, it, beforeAll, afterAll } from "bun:test"
-import { ResumeSession, ResumeError } from "@/agent-workspace/resume"
-import type { ResumeContext, ResumeOptions } from "@/agent-workspace/resume"
-import type { HandoffBaton, SessionContext } from "@/continuity/types"
-import { Filesystem } from "@/util/filesystem"
+import { ResumeSession, ResumeError } from "../../src/runtime/session/resume"
+import type { ResumeContext, ResumeOptions } from "../../src/runtime/session/resume"
+import type { HandoffBaton, SessionContext } from "../../src/runtime/session/continuity/types"
+import { Filesystem } from "../../src/util/filesystem"
 import path from "path"
 import { mkdir, writeFile, rmdir } from "fs/promises"
 
 describe("ResumeSession", () => {
   const testDir = "/tmp/allternit-resume-test"
   const testWorkspace = path.join(testDir, "workspace")
-  const batonsDir = path.join(testWorkspace, ".allternit", "L1-COGNITIVE", "brain", "batons")
+  const batonsDir = path.join(testWorkspace, ".gizzi", "L1-COGNITIVE", "brain", "batons")
 
   beforeAll(async () => {
     // Create test directories
@@ -35,10 +35,10 @@ describe("ResumeSession", () => {
   })
 
   // Sample baton markdown content for testing
-  const sampleBatonContent = `# Allternit Session Baton
+  const sampleBatonContent = `# GIZZI Session Baton
 
 **Session:** test-session-abc123  
-**Tool:** opencode  
+**Tool:** gizzi  
 **Workspace:** ${testWorkspace}  
 **Generated:** ${new Date().toISOString()}  
 **Reason:** threshold
@@ -133,7 +133,7 @@ Implement user authentication system with JWT tokens and session management.
 ## Evidence Pointers
 
 - **Session ID:** test-session-abc123
-- **Source Tool:** opencode
+- **Source Tool:** gizzi
 - **Workspace:** ${testWorkspace}
 - **Time Range:** ${new Date().toISOString()} - ongoing
 
@@ -158,7 +158,7 @@ Implement user authentication system with JWT tokens and session management.
       expect(context.parseErrors).toHaveLength(0)
       expect(context.batonPath).toBe(sampleBatonPath)
       expect(context.metadata.sessionId).toBe("test-session-abc123")
-      expect(context.metadata.sourceTool).toBe("opencode")
+      expect(context.metadata.sourceTool).toBe("gizzi")
       expect(context.metadata.workspacePath).toBe(testWorkspace)
       expect(context.sessionContext.objective).toContain("authentication")
     })
@@ -215,7 +215,7 @@ Implement user authentication system with JWT tokens and session management.
     it("should extract metadata correctly", async () => {
       const context = await ResumeSession.load(sampleBatonPath)
 
-      expect(context.metadata.sourceTool).toBe("opencode")
+      expect(context.metadata.sourceTool).toBe("gizzi")
       expect(context.metadata.compactReason).toBe("threshold")
       expect(context.metadata.generatedAt).toBeGreaterThan(0)
     })
@@ -301,9 +301,9 @@ Implement user authentication system with JWT tokens and session management.
 
       const display = ResumeSession.present(context)
 
-      expect(display).toContain("Allternit SESSION HANDOFF BATON")
+      expect(display).toContain("GIZZI SESSION HANDOFF BATON")
       expect(display).toContain(context.metadata.sessionId)
-      expect(display).toContain("opencode")
+      expect(display).toContain("gizzi")
       expect(display).toContain("Objective")
     })
 
@@ -348,7 +348,7 @@ Implement user authentication system with JWT tokens and session management.
       const context = await ResumeSession.load(invalidPath)
       const display = ResumeSession.present(context)
 
-      expect(display).toContain("Allternit SESSION HANDOFF BATON")
+      expect(display).toContain("GIZZI SESSION HANDOFF BATON")
       // Should still show something even for invalid batons
     })
 
@@ -505,7 +505,7 @@ Implement user authentication system with JWT tokens and session management.
 
   describe("edge cases", () => {
     it("should handle baton with minimal content", async () => {
-      const minimalContent = `# Allternit Session Baton
+      const minimalContent = `# GIZZI Session Baton
 
 **Session:** minimal-session  
 **Tool:** unknown  

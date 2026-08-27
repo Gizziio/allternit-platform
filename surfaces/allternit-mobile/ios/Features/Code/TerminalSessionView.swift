@@ -91,6 +91,20 @@ private struct PtyTerminalRepresentable: UIViewRepresentable {
         session.onOutput = { [weak terminalView] text in
             terminalView?.feed(text: text)
         }
+
+        // Accessory row (voice-to-terminal, image-to-terminal, control
+        // keys) docked above the system keyboard — the hosting controller
+        // is retained on the Coordinator, since `inputAccessoryView` does
+        // not retain the controller that owns its view.
+        let accessoryController = TerminalAccessoryController(session: session)
+        let hostingController = UIHostingController(rootView: TerminalAccessoryView(controller: accessoryController))
+        hostingController.view.backgroundColor = .clear
+        let targetWidth = UIScreen.main.bounds.width
+        let fittingSize = hostingController.sizeThatFits(in: CGSize(width: targetWidth, height: .greatestFiniteMagnitude))
+        hostingController.view.frame = CGRect(x: 0, y: 0, width: targetWidth, height: fittingSize.height)
+        context.coordinator.accessoryHostingController = hostingController
+        terminalView.inputAccessoryView = hostingController.view
+
         return terminalView
     }
 
@@ -104,6 +118,12 @@ private struct PtyTerminalRepresentable: UIViewRepresentable {
     /// witnesses; calls into the @MainActor session hop explicitly.
     final class Coordinator: NSObject {
         let session: PtySession
+        /// Retained here — `inputAccessoryView` does not retain the
+        /// `UIHostingController` that owns its view. Built in `makeUIView`
+        /// (properly MainActor-isolated), not here: this plain `NSObject`
+        /// initializer is nonisolated, so it can't synchronously call
+        /// `TerminalAccessoryController`'s `@MainActor` initializer.
+        var accessoryHostingController: UIHostingController<TerminalAccessoryView>?
 
         init(session: PtySession) {
             self.session = session

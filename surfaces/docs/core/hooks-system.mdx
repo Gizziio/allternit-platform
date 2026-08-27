@@ -1,0 +1,272 @@
+---
+title: Hooks System
+description: Event-triggered synthetic habit system for Allternit agents
+---
+
+## Overview
+
+The **Allternit Hooks System** is the agent operating system's event-triggered policy and habit layer. It turns operational conventions — "verify specs before editing files", "ask before running destructive tools", "escalate ambiguous security decisions" — into executable hooks that run automatically as agents work.
+
+Hooks observe events across four layers of the stack, match them against registered handlers, and either allow the action, block it with a `SYSTEM_LAW` violation, or escalate it to a human approver. Over time, proven habits can be promoted from informal documentation all the way to non-bypassable hard gates through the **Habit Promotion Protocol**.
+
+The Hooks System is implemented as the `allternit-hooks-system` Rust crate and is consumed by the kernel, runtimes, and CLI surfaces.
+
+## Key concepts
+
+### Hook layers
+
+Hooks are organized by scope. Each layer sees a different class of events and enforces a different kind of boundary.
+
+| Layer | Concern | Example events |
+|---|---|---|
+| **Kernel** | Boot integrity, tool gates, policy enforcement | `boot`, `tool_invoke` |
+| **Workspace** | `SYSTEM_LAW` validation, spec presence, ADR enforcement | `file_system`, `spec_validation` |
+| **Task** | Output schema validation, structured formatting | `task_output` |
+| **Human** | Escalation and approval triggers | `escalation`, `approval` |
+
+### Hook events
+
+Every hook is triggered by a typed event. The engine logs the event, finds matching registered hooks, and executes them in priority order.
+
+```rust
+pub enum HookEvent {
+    Boot(BootEvent),
+    ToolInvoke(ToolInvokeEvent),
+    FileSystem(FileSystemEvent),
+    SpecValidation(SpecValidationEvent),
+    TaskOutput(TaskOutputEvent),
+    Escalation(EscalationEvent),
+    Approval(ApprovalEvent),
+}
+```
+
+Events carry enough context for the handler to make a decision without re-querying the runtime: the tool ID and safety tier for tool invocations, the spec type and validity for workspace checks, the escalation reason for human-layer gates, and so on.
+
+### Safety tiers
+
+Tools are classified by how much damage they can cause. The Hooks System uses this tier to decide whether preconditions must be verified before execution.
+
+| Tier | Meaning | Typical controls |
+|---|---|---|
+| `Safe` | Read-only or low-risk operations | Log only |
+| `Caution` | Mutations inside allowed paths | Verify path allowlist |
+| `Dangerous` | Destructive or wide-scope changes | Require preconditions and receipt |
+| `Critical` | Security, identity, or infra operations | Require explicit approval |
+
+A `Dangerous` or `Critical` tool invoked without satisfied preconditions is blocked and recorded as a hard `SYSTEM_LAW` violation.
+
+### Tool types
+
+The Hooks System recognizes four tool categories that influence which policy bundle is applied:
+
+- `Read` — file or resource inspection
+- `Write` — file creation or mutation
+- `Destructive` — deletes, renames, or irreversible changes
+- `Network` — outbound calls or tunnel operations
+
+### Hook definition
+
+A hook is a small, registered rule. It declares which events it handles, whether it is blocking, and its execution priority.
+
+```rust
+pub struct HookDefinition {
+    pub hook_id: String,
+    pub name: String,
+    pub layer: HookLayer,
+    pub event_types: Vec<String>,
+    pub handler: String,
+    pub priority: u32,
+    pub blocking: bool,
+    pub enabled: bool,
+}
+```
+
+When a hook blocks an action, it returns a `HookResult` with `blocked: true`, a human-readable message, and any `SYSTEM_LAW` violations that were raised.
+
+## Architecture
+
+The `HooksSystemEngine` sits between agent runtimes and the two governance engines: `allternit-system-law` for constitutional violations and `allternit-harness-engineering` for risk-tiered preflight checks.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     Agent Runtime                           │
+└─────────────────────┬───────────────────────────────────────┘
+                      │ emits events
+                      ▼
+┌─────────────────────────────────────────────────────────────┐
+│                 HooksSystemEngine                           │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
+│  │ Event log    │  │ Hook registry│  │ Habit records    │  │
+│  │ (append-only)│  │ (layered)    │  │ (promotion path) │  │
+│  └──────────────┘  └──────────────┘  └──────────────────┘  │
+└──────────┬──────────────────────────────────────────────────┘
+           │ routes decisions
+           ▼
+┌────────────────────────┐      ┌────────────────────────────┐
+│ allternit-system-law   │      │ allternit-harness-engineering│
+│ violations + hard gates│      │ risk tiers + preflight       │
+└────────────────────────┘      └────────────────────────────┘
+```
+
+The flow for a single event:
+
+1. The runtime emits a `HookEvent`.
+2. The engine appends it to the event log.
+3. Enabled hooks whose `event_types` match are collected and sorted by priority.
+4. Each hook's handler runs and produces a `HookResult`.
+5. If any blocking hook returns `blocked: true`, the underlying action is aborted.
+6. Violations are forwarded to `SystemLawEngine` for persistence and escalation.
+
+## Code examples
+
+### Register a kernel tool gate
+
+```rust
+use allternit_hooks_system::{HooksSystemEngine, HookDefinition, HookLayer};
+use std::sync::Arc;
+
+let system_law = Arc::new(SystemLawEngine::new());
+let harness = Arc::new(HarnessEngineeringEngine::new(system_law.clone()));
+let hooks = HooksSystemEngine::new(system_law, harness);
+
+let tool_gate = HookDefinition {
+    hook_id: "kernel_tool_gate".to_string(),
+    name: "Kernel Tool Gate".to_string(),
+    layer: HookLayer::Kernel,
+    event_types: vec!["tool_invoke".to_string()],
+    handler: "tool_gate_handler".to_string(),
+    priority: 1,
+    blocking: true,
+    enabled: true,
+};
+
+hooks.register_hook(tool_gate).await;
+```
+
+### Check a tool invocation
+
+```rust
+use allternit_hooks_system::{ToolType, SafetyTier};
+
+let results = hooks
+    .on_tool_invoke("fs.delete", ToolType::Destructive, SafetyTier::Dangerous)
+    .await;
+
+for result in results {
+    if result.blocked {
+        println!("Blocked: {:?}", result.message);
+        for violation in result.violations {
+            println!("Violation: {} - {}", violation.violation_id, violation.description);
+        }
+    }
+}
+```
+
+### Validate workspace spec presence
+
+```rust
+let results = hooks.on_spec_check("ADR-014-hooks-system").await;
+
+if results.iter().any(|r| r.blocked) {
+    eprintln!("Required spec missing or invalid; aborting task.");
+}
+```
+
+### Gate task output
+
+```rust
+let results = hooks.on_task_output("task_001", "code", true).await;
+assert!(results.iter().all(|r| r.success));
+```
+
+## Habit Promotion Protocol
+
+Not every convention should start as a hard gate. The Habit Promotion Protocol lets teams graduate a practice through six stages, each one more automated and more rigid than the last.
+
+| Stage | Form | Enforcement |
+|---|---|---|
+| `Documentation` | Wiki or README note | Voluntary |
+| `Checklist` | Explicit steps in a runbook | Manual verification |
+| `Template` | Reusable prompt or scaffold | Suggested |
+| `Skill` | Formalized procedure the agent can invoke | Agent-driven |
+| `Hook` | Automated event handler | Automatic, can be disabled |
+| `HardGate` | Non-bypassable system rule | Always enforced |
+
+A habit cannot reach `Hook` or `HardGate` until it passes a determinism test: repeated runs with the same inputs must produce the same decision. Teams must also document failure modes and a rollback plan before final promotion.
+
+```rust
+let habit_id = hooks.register_habit("Verify spec before file writes").await;
+
+// Promote through early stages
+hooks.promote_habit(&habit_id, "team", "Checklist adopted").await?;
+hooks.promote_habit(&habit_id, "team", "Template created").await?;
+hooks.promote_habit(&habit_id, "team", "Skill registered").await?;
+
+// Pass determinism test before Hook stage
+hooks.run_determinism_test(&habit_id).await?;
+hooks.set_failure_mode_analysis(&habit_id, "False positives block valid edits").await?;
+hooks.set_rollback_plan(&habit_id, "Disable hook via admin override").await?;
+
+hooks.promote_habit(&habit_id, "team", "Determinism verified").await?;
+```
+
+## Human-layer gates
+
+Some decisions should never be fully automated. The Hooks System provides escalation and approval events that hand control back to a person.
+
+```rust
+use allternit_hooks_system::EscalationLevel;
+
+let results = hooks
+    .on_escalation(
+        EscalationLevel::Agent,
+        EscalationLevel::Human,
+        "Request to delete production database",
+    )
+    .await;
+```
+
+Approval events record who authorized an action and why, producing an audit trail that can be reviewed later:
+
+```rust
+let results = hooks.on_approval("deploy", true, "ops-lead-42").await;
+```
+
+## Integration with governance engines
+
+The Hooks System does not store constitutional law itself. It delegates hard decisions to two sibling crates:
+
+- **`allternit-system-law`** — records violations, severity, and unresolved hard gates. When a dangerous tool is invoked without preconditions, the hook creates a `ViolationSeverity::Hard` entry under a law such as `LAW-TOOL-001`.
+- **`allternit-harness-engineering`** — evaluates risk tiers, runs preflight checks, and supplies remediation plans. The Hooks System can call into the harness before allowing a `Dangerous` or `Critical` action.
+
+This separation keeps the Hooks System focused on *when* to evaluate policy and leaves the *what* of the policy to the dedicated governance layers.
+
+## Error codes
+
+| Error | Meaning |
+|---|---|
+| `HookNotFound` | The requested hook ID is not registered |
+| `HabitNotFound` | The requested habit ID does not exist |
+| `AlreadyAtHighestStage` | A habit cannot be promoted beyond `HardGate` |
+| `DeterminismTestFailed` | A habit failed the determinism check required for `Hook`/`HardGate` |
+| `Io` / `Json` | Underlying serialization or I/O failure |
+
+## Event log
+
+Every event processed by the engine is retained in an append-only log. This log is useful for debugging, auditing, and training new habits.
+
+```rust
+let all_events = hooks.get_event_log().await;
+let kernel_events = hooks.get_events_by_layer(HookLayer::Kernel).await;
+```
+
+Because the log is scoped by layer and event type, security review tools can quickly surface every blocked `tool_invoke` or every human-layer escalation in a session.
+
+## Related links
+
+- [Gizzi Runtime](/core/gizzi-runtime)
+- [CommRails](/core/commrails)
+- [Session Manager](/core/session-manager)
+- [Orchestration](/core/orchestration)
+- [Process Driver](/core/process-driver)
+- [Self-Improve](/core/self-improve)

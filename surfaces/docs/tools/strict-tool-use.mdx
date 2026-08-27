@@ -1,0 +1,75 @@
+---
+title: Strict Tool Schemas
+description: Strict JSON Schema validation for tool arguments
+---
+
+## Overview
+
+Allternit supports **strict tool schemas** — a mode where the LLM provider validates tool arguments against the declared JSON Schema before the tool is executed. Arguments outside the schema are rejected at the provider level, preventing malformed inputs from reaching your tool's `execute` function.
+
+## Enabling strict mode
+
+Strict mode is enabled per-tool at registration:
+
+```typescript
+registry.registerTool(myTool, { strict: true });
+```
+
+All native tools in the `NativeToolBelt` are registered with `strict: true` by default.
+
+## What strict mode enforces
+
+| Check | Behavior |
+|-------|----------|
+| Required properties | Missing required fields are rejected |
+| Type matching | Wrong types (`string` vs `number`) are rejected |
+| Enum values | Values outside declared enums are rejected |
+| Additional properties | Unknown keys are rejected (closed schema) |
+| Array items | Items that don't match `items` schema are rejected |
+
+## Schema requirements
+
+For strict mode to work with provider-level validation, your schema must:
+
+1. Declare `type: "object"` at the root.
+2. List all properties explicitly in `properties`.
+3. Include a `required` array listing all mandatory fields.
+4. Not use `$ref`, `oneOf`, `anyOf`, or `allOf` at the top level (provider limitation).
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "city": { "type": "string" },
+    "units": { "type": "string", "enum": ["metric", "imperial"] }
+  },
+  "required": ["city"],
+  "additionalProperties": false
+}
+```
+
+## Error handling
+
+When strict validation fails, the provider returns an error before your tool is called. The harness surfaces this as a tool error:
+
+```json
+{
+  "type": "error",
+  "error": {
+    "type": "invalid_tool_input",
+    "message": "Validation failed: $.timezone is not allowed"
+  }
+}
+```
+
+## When to use strict mode
+
+- **Use strict mode** for tools with well-defined, stable schemas — especially tools exposed to external models or MCP clients.
+- **Skip strict mode** for tools that accept freeform input or that need to evolve their schema without versioning.
+
+## Related pages
+
+- [Native Tool Belt](/tools/tool-belt)
+- [Build a Custom Tool](/tools/build-a-tool)
+- [Server Tools](/tools/server-tools)
+- [MCP Servers](/tools/mcp)

@@ -39,15 +39,19 @@ done
 
 cd "$WORKSPACE_ROOT"
 
-# ── 1. Build Platform (standalone) ───────────────────────────────────────────
+# ── 1. Build Platform static export ──────────────────────────────────────────
+# The Electron app loads the hosted platform by default; the static export is
+# built later by prepare-platform-static (Vite) for offline fallback. The
+# legacy Next.js standalone server build is skipped because the platform is
+# now a Vite app and the standalone output is no longer consumed.
 if [ "$SKIP_PLATFORM" = false ]; then
-  step "Building Next.js platform (standalone mode)…"
+  step "Building platform static export (Vite)…"
   cd "$PLATFORM_DIR"
-  npm run build:desktop-server
+  NEXT_PUBLIC_ALLTERNIT_DESKTOP_AUTH=1 pnpm run build
   
-  PLATFORM_OUT="$DESKTOP_DIR/resources/platform-server"
+  PLATFORM_OUT="$PLATFORM_DIR/dist"
   [ -d "$PLATFORM_OUT" ] || die "Platform build failed — output directory not found at $PLATFORM_OUT"
-  ok "Platform server → $PLATFORM_OUT"
+  ok "Platform static export → $PLATFORM_OUT"
 fi
 
 # ── 2. Build Gizzi Code Binary ───────────────────────────────────────────────

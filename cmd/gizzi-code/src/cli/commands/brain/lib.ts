@@ -550,3 +550,44 @@ export async function setBrainRemote(dir: string, url: string): Promise<void> {
     await git(path, ["commit", "-m", "Set brain remote"])
   }
 }
+
+/* -------------------------------------------------------------------------- */
+/* clone                                                                      */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Clone an existing brain remote into `dir`. Refuses to overwrite an existing
+ * directory. After cloning, the repo's brain.yaml is updated to record the
+ * remote so subsequent `syncBrain` calls know where to push/pull.
+ */
+export async function cloneBrain(dir: string, url: string): Promise<void> {
+  const path = expandBrainPath(dir)
+  if (existsSync(path)) {
+    const entries = await readdir(path)
+    if (entries.length > 0) {
+      throw new BrainError(
+        `refusing to clone over non-empty directory: ${path}`,
+      )
+    }
+  }
+
+  const clone = await git(dirname(path), ["clone", url, path])
+  if (clone.code !== 0) {
+    throw new BrainError(`git clone failed: ${clone.stderr}`)
+  }
+
+  const yamlPath = join(path, "brain.yaml")
+  if (existsSync(yamlPath)) {
+    const yaml = await readFile(yamlPath, "utf8")
+    const line = `remote: "${url}"`
+    const next = /^remote:.*$/m.test(yaml)
+      ? yaml.replace(/^remote:.*$/m, line)
+      : yaml.replace(/\n?$/, `\n${line}\n`)
+    await writeFile(yamlPath, next, "utf8")
+    await git(path, ["add", "brain.yaml"])
+    const status = await git(path, ["status", "--porcelain"])
+    if (status.stdout.trim().length > 0) {
+      await git(path, ["commit", "-m", "Record brain remote"])
+    }
+  }
+}

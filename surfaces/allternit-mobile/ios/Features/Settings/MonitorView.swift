@@ -71,6 +71,9 @@ struct MonitorView: View {
                     .background(Color("BgPanel"))
                     .clipShape(Circle())
             }
+            .accessibilityLabel("Refresh")
+
+            tabMenu
 
             Button(action: { dismiss() }) {
                 Image(systemName: "xmark")
@@ -80,6 +83,7 @@ struct MonitorView: View {
                     .background(Color("BgPanel"))
                     .clipShape(Circle())
             }
+            .accessibilityLabel("Close")
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
@@ -116,7 +120,6 @@ struct MonitorView: View {
                 VStack(spacing: 16) {
                     metricsRow
                     statsRow
-                    tabBar
 
                     switch activeTab {
                     case .agents:
@@ -173,7 +176,7 @@ struct MonitorView: View {
     }
 
     private func color(for hex: String) -> Color {
-        Color(hex: hex) ?? Color("AccentPrimary")
+        Color(hex: hex)
     }
 
     private func trendIcon(for trend: MonitorTrend) -> String {
@@ -222,25 +225,35 @@ struct MonitorView: View {
         )
     }
 
-    // MARK: - Tabs
-
-    private var tabBar: some View {
-        HStack(spacing: 0) {
+    private var tabMenu: some View {
+        Menu {
             ForEach(Tab.allCases, id: \.self) { tab in
                 Button(action: { activeTab = tab }) {
-                    VStack(spacing: 6) {
+                    HStack {
+                        if activeTab == tab { Image(systemName: "checkmark") }
                         Text(tab.rawValue)
-                            .font(.system(size: 14, weight: tab == activeTab ? .bold : .regular))
-                            .foregroundColor(tab == activeTab ? Color("TextPrimary") : Color("TextSecondary"))
-                        Rectangle()
-                            .fill(tab == activeTab ? Color("AccentChat") : Color.clear)
-                            .frame(height: 2)
                     }
                 }
-                .buttonStyle(.plain)
             }
+        } label: {
+            HStack(spacing: 4) {
+                Text(activeTab.rawValue)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(Color("TextPrimary"))
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundColor(Color("TextSecondary"))
+            }
+            .padding(.horizontal, 10)
+            .frame(height: 28)
+            .background(Color("BgPanel"))
+            .clipShape(Capsule())
+            .overlay(
+                Capsule()
+                    .stroke(Theme.borderWarmDefault, lineWidth: 1)
+            )
         }
-        .padding(.top, 8)
+        .accessibilityLabel("Switch view")
     }
 
     // MARK: - Agents tab
@@ -488,20 +501,5 @@ private struct FlowLayout: Layout {
             }
             self.size = CGSize(width: maxWidth, height: y + lineHeight)
         }
-    }
-}
-
-// MARK: - Hex color helper
-
-private extension Color {
-    init?(hex: String) {
-        var hexSanitized = hex.trimmingCharacters(in: .whitespacesAndNewlines)
-        hexSanitized = hexSanitized.replacingOccurrences(of: "#", with: "")
-        var rgb: UInt64 = 0
-        guard Scanner(string: hexSanitized).scanHexInt64(&rgb) else { return nil }
-        let r = Double((rgb & 0xFF0000) >> 16) / 255
-        let g = Double((rgb & 0x00FF00) >> 8) / 255
-        let b = Double(rgb & 0x0000FF) / 255
-        self.init(red: r, green: g, blue: b)
     }
 }

@@ -32,7 +32,7 @@ not need a process-wide destructive rollback.
 
 - ACP clients on older SDKs continue receiving `models`, `modes`, and `_meta`; newer clients also
   receive `configOptions` and `config_option_update`.
-- The VS Code extension registers old `opencode.*` commands as aliases, while menus and settings use
+- The VS Code extension registers old `gizzi.*` commands as aliases, while menus and settings use
   `gizzi.*`.
 - Remote server binds require `GIZZI_SERVER_PASSWORD`; loopback remains password-optional.
 - Loopback servers reject unrecognized Host headers, every response carries request/protocol IDs,

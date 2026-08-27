@@ -65,6 +65,18 @@ const CATEGORY_ICONS: Record<FilterType, React.ElementType> = {
   Documents: BookOpen,
 };
 
+function isAgentSession(sessionId: string, surface: 'chat' | 'cowork' | 'code'): boolean {
+  let session;
+  if (surface === 'chat') {
+    session = useChatSessionStore.getState().sessions.find((s) => s.id === sessionId);
+  } else if (surface === 'code') {
+    session = useCodeSessionStore.getState().sessions.find((s) => s.id === sessionId);
+  } else {
+    session = useCoworkSessionStore.getState().sessions.find((s) => s.id === sessionId);
+  }
+  return session?.metadata?.sessionMode === 'agent';
+}
+
 function navigateToSession(sessionId: string, surface: 'chat' | 'cowork' | 'code') {
   // Set the session as active in the right store
   if (surface === 'chat') {
@@ -76,9 +88,16 @@ function navigateToSession(sessionId: string, surface: 'chat' | 'cowork' | 'code
   }
 
   // Navigate via the global event bus (picked up by ShellApp)
-  const viewType = SURFACE_TO_VIEW[surface] ?? 'chat';
+  const defaultView = SURFACE_TO_VIEW[surface] ?? 'chat';
+  const isAgent = isAgentSession(sessionId, surface);
+  const viewType = isAgent ? `${surface}-agent-session` : defaultView;
   window.dispatchEvent(
-    new CustomEvent('allternit:open-view', { detail: { viewType } })
+    new CustomEvent('allternit:open-view', {
+      detail: {
+        viewType,
+        context: isAgent ? { sessionId, originView: defaultView } : undefined,
+      },
+    }),
   );
 }
 

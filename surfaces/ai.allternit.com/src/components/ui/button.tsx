@@ -11,11 +11,11 @@ export const buttonVariants = (options?: { variant?: string; size?: string }) =>
   const size = options?.size || 'default';
   
   const variantStyles: Record<string, string> = {
-    default: 'bg-[#d4b08c] text-[#0a0a0a]',
-    secondary: 'bg-white/10 text-white',
-    outline: 'bg-transparent text-[#d4b08c] border border-[#d4b08c]',
-    ghost: 'bg-transparent text-zinc-400',
-    destructive: 'bg-red-500 text-white',
+    default: 'bg-[var(--accent-primary)] text-[var(--ui-text-inverse)]',
+    secondary: 'bg-[var(--ui-border-default)] text-[var(--ui-text-inverse)]',
+    outline: 'bg-transparent text-[var(--accent-primary)] border border-[var(--accent-primary)]',
+    ghost: 'bg-transparent text-[var(--ui-text-muted)]',
+    destructive: 'bg-[var(--status-error)] text-[var(--ui-text-inverse)]',
   };
   
   const sizeStyles: Record<string, string> = {
@@ -32,10 +32,10 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ children, variant = 'default', size = 'default', style, ...props }, ref) => {
     const variantStyles = {
       default: { background: 'var(--accent-primary)', color: 'var(--ui-text-inverse)', border: 'none' },
-      secondary: { background: 'var(--ui-border-default)', color: '#fff', border: 'none' },
-      outline: { background: 'transparent', color: 'var(--accent-primary)', border: '1px solid #d4b08c' },
+      secondary: { background: 'var(--ui-border-default)', color: 'var(--ui-text-inverse)', border: 'none' },
+      outline: { background: 'transparent', color: 'var(--accent-primary)', border: '1px solid var(--accent-primary)' },
       ghost: { background: 'transparent', color: 'var(--ui-text-muted)', border: 'none' },
-      destructive: { background: 'var(--status-error)', color: '#fff', border: 'none' },
+      destructive: { background: 'var(--status-error)', color: 'var(--ui-text-inverse)', border: 'none' },
     };
     
     const sizeStyles = {

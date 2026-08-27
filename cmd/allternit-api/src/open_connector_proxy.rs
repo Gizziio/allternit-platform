@@ -51,13 +51,24 @@ fn aliases() -> &'static HashMap<String, String> {
 
 /// Reverse lookup: sidecar provider id -> Allternit catalog id. Used when the
 /// sidecar reports live connections under its own spelling.
+/// When a sidecar id maps to multiple Allternit ids (e.g. "monday" serves both
+/// legacy "monday" and aliased "mondaymcp"), prefer the exact-spelling match.
 fn reverse_aliases() -> &'static HashMap<String, String> {
     static R: OnceLock<HashMap<String, String>> = OnceLock::new();
     R.get_or_init(|| {
-        aliases()
-            .iter()
-            .map(|(k, v)| (v.clone(), k.clone()))
-            .collect()
+        let mut map: HashMap<String, String> = HashMap::new();
+        for (allternit_id, sidecar_id) in aliases().iter() {
+            // First pass: only exact matches, so they can't be overwritten.
+            if allternit_id == sidecar_id {
+                map.insert(sidecar_id.clone(), allternit_id.clone());
+            }
+        }
+        for (allternit_id, sidecar_id) in aliases().iter() {
+            // Second pass: fill in aliases for sidecar ids that don't already
+            // have an exact-spelling Allternit id.
+            map.entry(sidecar_id.clone()).or_insert_with(|| allternit_id.clone());
+        }
+        map
     })
 }
 
@@ -78,24 +89,59 @@ pub fn allternit_id(sidecar_id: &str) -> Option<String> {
     reverse_aliases().get(sidecar_id).cloned()
 }
 
+/// Fallback env file written by `dev/scripts/start-connector-sidecar.sh`.
+/// When the sidecar tokens are not present in the process environment, the
+/// proxy reads them from this file so `allternit-api` can talk to a sidecar
+/// that was started independently (e.g. by the desktop main process or the
+/// dev stack script). The path itself can be overridden via env var.
+fn env_file_path() -> String {
+    std::env::var("ALLTERNIT_CONNECTOR_SIDECAR_ENV_FILE")
+        .ok()
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| "/tmp/allternit-connector-sidecar.env".to_string())
+}
+
+fn env_file_values() -> &'static HashMap<String, String> {
+    static CACHE: OnceLock<HashMap<String, String>> = OnceLock::new();
+    CACHE.get_or_init(|| {
+        let path = env_file_path();
+        let contents = std::fs::read_to_string(&path).unwrap_or_default();
+        let mut map = HashMap::new();
+        for line in contents.lines() {
+            let line = line.trim();
+            if line.is_empty() || line.starts_with('#') {
+                continue;
+            }
+            if let Some((k, v)) = line.split_once('=') {
+                map.insert(k.to_string(), v.to_string());
+            }
+        }
+        map
+    })
+}
+
+fn env_or_file(key: &str) -> Option<String> {
+    std::env::var(key)
+        .ok()
+        .filter(|s| !s.is_empty())
+        .or_else(|| env_file_values().get(key).cloned())
+}
+
 /// Base URL of the sidecar. `dev-stack-watch.cjs` always sets this; the
 /// fallback matches its default port.
-fn sidecar_url() -> String {
-    std::env::var("ALLTERNIT_CONNECTOR_SIDECAR_URL")
-        .ok()
+pub(crate) fn sidecar_url() -> String {
+    env_or_file("ALLTERNIT_CONNECTOR_SIDECAR_URL")
         .filter(|s| !s.is_empty())
         .unwrap_or_else(|| "http://127.0.0.1:8014".to_string())
 }
 
 fn admin_token() -> Option<String> {
-    std::env::var("ALLTERNIT_CONNECTOR_SIDECAR_ADMIN_TOKEN")
-        .ok()
+    env_or_file("ALLTERNIT_CONNECTOR_SIDECAR_ADMIN_TOKEN")
         .filter(|s| !s.is_empty())
 }
 
 fn runtime_token() -> Option<String> {
-    std::env::var("ALLTERNIT_CONNECTOR_SIDECAR_RUNTIME_TOKEN")
-        .ok()
+    env_or_file("ALLTERNIT_CONNECTOR_SIDECAR_RUNTIME_TOKEN")
         .filter(|s| !s.is_empty())
 }
 
@@ -174,6 +220,28 @@ pub async fn is_reachable() -> bool {
         .unwrap_or(false)
 }
 
+/// Returns the list of services that have an OAuth client configured on the
+/// sidecar (`GET /api/oauth/configs`). Used by the connectors setup-status
+/// endpoint to tell the UI which first-party OAuth connectors are ready.
+pub(crate) async fn configured_oauth_services() -> Result<Vec<String>, ProxyError> {
+    let raw = admin_get("/api/oauth/configs").await?;
+    let list = raw.as_array().cloned().unwrap_or_default();
+    let mut services = Vec::new();
+    for entry in list {
+        let configured = entry
+            .get("configured")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+        if !configured {
+            continue;
+        }
+        if let Some(service) = entry.get("service").and_then(|v| v.as_str()) {
+            services.push(service.to_string());
+        }
+    }
+    Ok(services)
+}
+
 /// Slim per-provider view used by the connector catalog merge. Deliberately
 /// tiny: the full catalog is ~39MB across 1,000+ providers, so the hot path
 /// extracts only what `connector_routes::merge` needs and caches that.
@@ -240,16 +308,26 @@ pub async fn provider_summaries() -> Result<Arc<HashMap<String, ProviderSummary>
                 .and_then(|v| v.as_str())
                 .map(|s| s.to_string());
             // Expose under the Allternit catalog spelling when one exists.
-            let key = allternit_id(service).unwrap_or_else(|| service.to_string());
-            map.insert(
-                key,
-                ProviderSummary {
-                    auth_types,
-                    executable_actions,
-                    display_name,
-                    homepage_url,
-                },
-            );
+            // Also keep the sidecar's own spelling so an Allternit id that
+            // happens to equal the sidecar service id is still reachable
+            // (e.g. legacy "monday" alongside aliased "mondaymcp" -> "monday").
+            let keys: std::collections::HashSet<String> = [
+                allternit_id(service).unwrap_or_else(|| service.to_string()),
+                service.to_string(),
+            ]
+            .into_iter()
+            .collect();
+            for key in keys {
+                map.insert(
+                    key,
+                    ProviderSummary {
+                        auth_types: auth_types.clone(),
+                        executable_actions,
+                        display_name: display_name.clone(),
+                        homepage_url: homepage_url.clone(),
+                    },
+                );
+            }
         }
     }
     let map = Arc::new(map);

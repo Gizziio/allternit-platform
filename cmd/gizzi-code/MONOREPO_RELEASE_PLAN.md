@@ -25,7 +25,7 @@
 **Current (broken):**
 ```bash
 APP=allternit
-url="https://github.com/anomalyco/opencode/releases/latest/download/$filename"
+url="https://github.com/Gizziio/allternit-platform/releases/latest/download/$filename"
 ```
 
 **Fixed:**
@@ -291,7 +291,7 @@ install.gizziio.com/
 cd cmd/gizzi-code
 
 # Fix install script
-sed -i.bak 's/anomalyco\/opencode/Gizziio\/allternit-platform/g' install
+sed -i.bak 's/anomalyco\/gizzi/Gizziio\/allternit-platform/g' install
 sed -i.bak 's/APP=allternit/APP=gizzi-code/g' install
 sed -i.bak 's/~\/.allternit/~\/.gizzi/g' install
 

@@ -12,7 +12,7 @@ export class AgentRun extends EventEmitter {
         super();
         this.id = id;
         this.agent = agent;
-        this.messages = [...initialRequest.messages];
+        this.messages = initialRequest.messages.map((m) => ({ ...m, content: m.content }));
         this.currentRequest = { ...initialRequest };
         this.runState = new RunState();
         // Wire up tool registry events to the run emitter
@@ -90,20 +90,53 @@ export class AgentRun extends EventEmitter {
             name: message.name,
             tool_calls: message.tool_calls,
             tool_call_id: message.tool_call_id,
-            content: Array.isArray(message.content)
-                ? message.content
-                    .map((block) => {
-                    if (block.type === 'text') {
-                        return block.text;
-                    }
-                    if (block.type === 'tool_use') {
-                        return `[tool_use:${block.name}] ${JSON.stringify(block.input)}`;
-                    }
-                    return `[tool_result:${block.tool_use_id}] ${block.content}`;
-                })
-                    .join('\n')
-                : message.content,
+            content: this.serializeContentForHarness(message.content),
         }));
+    }
+    serializeContentForHarness(content) {
+        if (typeof content === 'string')
+            return content;
+        const hasVision = content.some((block) => block.type === 'vision' || block.type === 'vision_coordinates');
+        if (!hasVision) {
+            return content
+                .map((block) => {
+                if (block.type === 'text')
+                    return block.text;
+                if (block.type === 'tool_use') {
+                    return `[tool_use:${block.name}] ${JSON.stringify(block.input)}`;
+                }
+                if (block.type === 'tool_result') {
+                    return `[tool_result:${block.tool_use_id}] ${block.content}`;
+                }
+                return '';
+            })
+                .join('\n');
+        }
+        return content.flatMap((block) => {
+            if (block.type === 'text')
+                return [{ type: 'text', text: block.text }];
+            if (block.type === 'vision')
+                return [{ type: 'vision', source: block.source }];
+            if (block.type === 'vision_coordinates')
+                return [{ type: 'vision_coordinates', x: block.x, y: block.y }];
+            if (block.type === 'tool_use') {
+                return [{ type: 'text', text: `[tool_use:${block.name}] ${JSON.stringify(block.input)}` }];
+            }
+            if (block.type === 'tool_result') {
+                return [{ type: 'text', text: `[tool_result:${block.tool_use_id}] ${block.content}` }];
+            }
+            return [];
+        });
+    }
+    async executeSingleToolCall(tc) {
+        // 1. Check if it's an internal tool (search/activate)
+        const internalResult = await this.runState.handleToolCall(tc.name, tc.arguments, { callId: tc.id, sessionID: this.id });
+        if (internalResult !== null) {
+            return { id: tc.id, result: JSON.stringify(internalResult), isError: false };
+        }
+        // 2. Otherwise route to agent capability
+        const result = await this.agent.executeTool(tc.name, tc.arguments);
+        return { id: tc.id, result, isError: false };
     }
     async handleToolCalls(toolCalls, assistantContent) {
         this.messages.push({
@@ -118,43 +151,58 @@ export class AgentRun extends EventEmitter {
                 }))
             ]
         });
-        for (const tc of toolCalls) {
-            // 1. Check if it's an internal tool (search/activate)
-            const internalResult = await this.runState.handleToolCall(tc.name, tc.arguments, { callId: tc.id, sessionID: this.id });
-            if (internalResult !== null) {
-                this.addToolResult(tc.id, JSON.stringify(internalResult));
-                continue;
-            }
-            // 2. Otherwise route to agent capability
-            const needsPermission = this.agent.checkToolPermission(tc.name);
-            if (needsPermission) {
-                this.updateStatus('requires_reply');
-                this.agent.saveRunState(this);
-                const handler = async (outcome) => {
-                    if (outcome.type === 'permission' && outcome.approved) {
-                        const result = await this.agent.executeTool(tc.name, tc.arguments);
-                        this.addToolResult(tc.id, result);
-                        this.execute();
-                    }
-                    else {
-                        this.addToolResult(tc.id, outcome.type === 'permission' ? outcome.reason || 'Rejected' : 'Error', true);
-                        this.execute();
-                    }
-                };
-                this.setPendingReplyHandler(handler);
-                const replyRequest = {
-                    id: tc.id,
-                    type: 'permission',
-                    payload: { title: tc.name, description: `Execute ${tc.name}?` },
-                    submit: handler,
-                };
-                this.emit('reply_requested', replyRequest);
-                return;
+        const permissionCalls = [];
+        const nonPermissionCalls = [];
+        for (const [index, tc] of toolCalls.entries()) {
+            if (this.agent.checkToolPermission(tc.name)) {
+                permissionCalls.push(tc);
             }
             else {
-                const result = await this.agent.executeTool(tc.name, tc.arguments);
-                this.addToolResult(tc.id, result);
+                nonPermissionCalls.push({ index, tc });
             }
+        }
+        // Execute non-permission tool calls concurrently with a bounded concurrency limit.
+        const PARALLEL_TOOL_LIMIT = 5;
+        const results = [];
+        let callIndex = 0;
+        async function worker(execute) {
+            while (callIndex < nonPermissionCalls.length) {
+                const { index, tc } = nonPermissionCalls[callIndex++];
+                const res = await execute(tc);
+                results.push({ index, ...res });
+            }
+        }
+        await Promise.all(Array.from({ length: Math.min(PARALLEL_TOOL_LIMIT, nonPermissionCalls.length) }, () => worker(this.executeSingleToolCall.bind(this))));
+        // Add results in original call order.
+        results.sort((a, b) => a.index - b.index);
+        for (const res of results) {
+            this.addToolResult(res.id, res.result, res.isError);
+        }
+        // Handle the first permission-required tool sequentially.
+        const firstPermission = permissionCalls[0];
+        if (firstPermission) {
+            this.updateStatus('requires_reply');
+            this.agent.saveRunState(this);
+            const tc = firstPermission;
+            const handler = async (outcome) => {
+                if (outcome.type === 'permission' && outcome.approved) {
+                    const result = await this.agent.executeTool(tc.name, tc.arguments);
+                    this.addToolResult(tc.id, result);
+                }
+                else {
+                    this.addToolResult(tc.id, outcome.type === 'permission' ? outcome.reason || 'Rejected' : 'Error', true);
+                }
+                this.execute();
+            };
+            this.setPendingReplyHandler(handler);
+            const replyRequest = {
+                id: tc.id,
+                type: 'permission',
+                payload: { title: tc.name, description: `Execute ${tc.name}?` },
+                submit: handler,
+            };
+            this.emit('reply_requested', replyRequest);
+            return;
         }
         this.execute();
     }

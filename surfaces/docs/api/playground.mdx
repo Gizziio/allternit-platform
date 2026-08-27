@@ -1,0 +1,60 @@
+---
+title: 'Playground API'
+description: 'Placeholder surface for interactive Allternit playground experiments.'
+---
+
+## Overview
+
+The Playground API is a stub surface reserved for interactive experiments in the Allternit platform. It currently accepts any JSON body and returns a status payload. As the playground feature matures, this endpoint will carry real request/response contracts.
+
+## Base URL
+
+```
+https://api.allternit.com/api/v1/playground
+```
+
+For local development:
+
+```
+http://127.0.0.1:8013/api/v1/playground
+```
+
+## Authentication
+
+The playground route inherits the standard bearer-token auth middleware. See [Authentication](/api/authentication).
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/v1/playground` | Stub playground handler. |
+
+## Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/playground \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"experiment": "example"}'
+```
+
+## Example response
+
+```json
+{
+  "status": "ok",
+  "stub": true
+}
+```
+
+## Error codes
+
+| Status | Meaning |
+|--------|---------|
+| `200 OK` | Request received; response is a stub. |
+| `401 Unauthorized` | Missing or invalid bearer token. |
+
+## Related pages
+
+- [Authentication](/api/authentication)
+- [Agents API](/api/agents)

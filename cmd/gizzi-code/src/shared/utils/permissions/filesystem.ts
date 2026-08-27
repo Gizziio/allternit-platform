@@ -1,9 +1,8 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle'
-import { randomBytes } from 'crypto'
 import ignore from 'ignore'
 import memoize from 'lodash-es/memoize.js'
-import { homedir, tmpdir } from 'os'
+import { homedir } from 'os'
 import { join, normalize, posix, sep } from 'path'
 import { hasAutoMemPathOverride, isAutoMemPath } from 'src/memdir/paths.js'
 import { isAgentMemoryPath } from 'src/tools/AgentTool/agentMemory.js'
@@ -14,7 +13,6 @@ import {
 } from '../../../cli/ui/ink-app/tools/FileEditTool/constants.js'
 import type { z } from 'zod/v4'
 import { getOriginalCwd, getSessionId } from '@/bootstrap/state.js'
-import { checkStatsigFeatureGate_CACHED_MAY_BE_STALE } from '@/services/analytics/growthbook.js'
 import type { AnyObject, Tool, ToolPermissionContext } from '@/Tool.js'
 import { FILE_READ_TOOL_NAME } from '../../tools/FileReadTool/prompt.js'
 import { getCwd } from '../cwd.js'
@@ -31,7 +29,7 @@ import {
 } from '../path.js'
 import { getPlanSlug, getPlansDirectory } from '../plans.js'
 import { getPlatform } from '../platform.js'
-import { getProjectDir } from '../sessionStorage.js'
+import { getProjectDir } from '../projectDir.js'
 import { SETTING_SOURCES } from '../settings/constants.js'
 import {
   getSettingsFilePathForSource,
@@ -40,6 +38,11 @@ import {
 import { containsVulnerableUncPath } from '../shell/readOnlyCommandValidation.js'
 import { getToolResultsDir } from '../toolResultStorage.js'
 import { windowsPathToPosixPath } from '../windowsPaths.js'
+import {
+  normalizeCaseForComparison,
+  pathInWorkingPath,
+  relativePath,
+} from './pathInWorkingPath.js'
 import type {
   PermissionDecision,
   PermissionResult,
@@ -48,6 +51,21 @@ import type { PermissionRule, PermissionRuleSource } from './PermissionRule.js'
 import { createReadRuleSuggestion } from './PermissionUpdate.js'
 import type { PermissionUpdate } from './PermissionUpdateSchema.js'
 import { getRuleByContentsForToolName } from './permissions.js'
+import {
+  ensureScratchpadDir,
+  getBundledSkillsRoot,
+  getScratchpadDir,
+  isScratchpadEnabled,
+} from './tempDir.js'
+export {
+  ensureScratchpadDir,
+  getBundledSkillsRoot,
+  getClaudeTempDir,
+  getClaudeTempDirName,
+  getProjectTempDir,
+  getScratchpadDir,
+  isScratchpadEnabled,
+} from './tempDir.js'
 
 declare const MACRO: { VERSION: string }
 
@@ -81,16 +99,9 @@ export const DANGEROUS_DIRECTORIES = [
 
 /**
  * Normalizes a path for case-insensitive comparison.
- * This prevents bypassing security checks using mixed-case paths on case-insensitive
- * filesystems (macOS/Windows) like `.cLauDe/Settings.locaL.json`.
- *
- * We always normalize to lowercase regardless of platform for consistent security.
- * @param path The path to normalize
- * @returns The lowercase path for safe comparison
+ * Re-exported from pathInWorkingPath.ts to avoid duplicating the helper.
  */
-export function normalizeCaseForComparison(path: string): string {
-  return path.toLowerCase()
-}
+export { normalizeCaseForComparison } from './pathInWorkingPath.js'
 
 /**
  * If filePath is inside a .claude/skills/{name}/ directory (project or global),
@@ -163,34 +174,15 @@ const DIR_SEP = posix.sep
 
 /**
  * Cross-platform relative path calculation that returns POSIX-style paths.
- * Handles Windows path conversion internally.
- * @param from The base path
- * @param to The target path
- * @returns A POSIX-style relative path
+ * Re-exported from pathInWorkingPath.ts to avoid duplicating the helper.
  */
-export function relativePath(from: string, to: string): string {
-  if (getPlatform() === 'windows') {
-    // Convert Windows paths to POSIX for consistent comparison
-    const posixFrom = windowsPathToPosixPath(from)
-    const posixTo = windowsPathToPosixPath(to)
-    return posix.relative(posixFrom, posixTo)
-  }
-  // Use POSIX paths directly
-  return posix.relative(from, to)
-}
+export { relativePath } from './pathInWorkingPath.js'
 
 /**
  * Converts a path to POSIX format for pattern matching.
- * Handles Windows path conversion internally.
- * @param path The path to convert
- * @returns A POSIX-style path
+ * Re-exported from pathInWorkingPath.ts to avoid duplicating the helper.
  */
-export function toPosixPath(path: string): string {
-  if (getPlatform() === 'windows') {
-    return windowsPathToPosixPath(path)
-  }
-  return path
-}
+export { toPosixPath } from './pathInWorkingPath.js'
 
 function getSettingsPaths(): string[] {
   return SETTING_SOURCES.map(source =>
@@ -289,122 +281,6 @@ function isProjectDirPath(absolutePath: string): boolean {
   return (
     normalizedPath === projectDir || normalizedPath.startsWith(projectDir + sep)
   )
-}
-
-/**
- * Checks if the scratchpad directory feature is enabled.
- * The scratchpad is a per-session directory for Claude to write temporary files.
- * Controlled by the tengu_scratch Statsig gate.
- */
-export function isScratchpadEnabled(): boolean {
-  return checkStatsigFeatureGate_CACHED_MAY_BE_STALE('tengu_scratch')
-}
-
-/**
- * Returns the user-specific Claude temp directory name.
- * On Unix: 'claude-{uid}' to prevent multi-user permission conflicts
- * On Windows: 'claude' (tmpdir() is already per-user)
- */
-export function getClaudeTempDirName(): string {
-  if (getPlatform() === 'windows') {
-    return 'claude'
-  }
-  // Use UID to create per-user directories, preventing permission conflicts
-  // when multiple users share the same /tmp directory
-  const uid = process.getuid?.() ?? 0
-  return `claude-${uid}`
-}
-
-/**
- * Returns the Claude temp directory path with symlinks resolved.
- * Uses TMPDIR env var if set, otherwise:
- * - On Unix: /tmp/claude-{uid}/ (resolved to /private/tmp/claude-{uid}/ on macOS)
- * - On Windows: {tmpdir}/claude/ (e.g., C:\Users\{user}\AppData\Local\Temp\claude\)
- * This is a per-user temporary directory used by Gizzi for all temp files.
- *
- * NOTE: We resolve symlinks to ensure this path matches the resolved paths used
- * in permission checks. On macOS, /tmp is a symlink to /private/tmp, so without
- * resolution, paths like /tmp/claude-{uid}/... wouldn't match /private/tmp/claude-{uid}/...
- */
-// Memoized: called per-tool from permission checks (yoloClassifier, sandbox-adapter)
-// and per-turn from BashTool prompt. Inputs (GIZZI_TMPDIR env + platform) are
-// fixed at startup, and the realpath of the system tmp dir does not change mid-session.
-export const getClaudeTempDir = memoize(function getClaudeTempDir(): string {
-  const baseTmpDir =
-    process.env.GIZZI_TMPDIR ||
-    (getPlatform() === 'windows' ? tmpdir() : '/tmp')
-
-  // Resolve symlinks in the base temp directory (e.g., /tmp -> /private/tmp on macOS)
-  // This ensures the path matches resolved paths in permission checks
-  const fs = getFsImplementation()
-  let resolvedBaseTmpDir = baseTmpDir
-  try {
-    resolvedBaseTmpDir = fs.realpathSync(baseTmpDir)
-  } catch {
-    // If resolution fails, use the original path
-  }
-
-  return join(resolvedBaseTmpDir, getClaudeTempDirName()) + sep
-})
-
-/**
- * Root for bundled-skill file extraction (see bundledSkills.ts).
- *
- * SECURITY: The per-process random nonce is the load-bearing defense here.
- * Every other path component (uid, VERSION, skill name, file keys) is public
- * knowledge, so without it a local attacker can pre-create the tree on a
- * shared /tmp — sticky bit prevents deletion, not creation — and either
- * symlink an intermediate directory (O_NOFOLLOW only checks the final
- * component) or own a parent dir and swap file contents post-write for prompt
- * injection via the read allowlist. diskOutput.ts gets the same property from
- * the session-ID UUID in its path.
- *
- * Memoized so the extraction writes and the permission check agree on the
- * path for the life of the process. Version-scoped so stale extractions from
- * other binaries don't fall under the allowlist.
- */
-export const getBundledSkillsRoot = memoize(
-  function getBundledSkillsRoot(): string {
-    const nonce = randomBytes(16).toString('hex')
-    return join(getClaudeTempDir(), 'bundled-skills', MACRO.VERSION, nonce)
-  },
-)
-
-/**
- * Returns the project temp directory path with trailing separator.
- * Path format: /tmp/claude-{uid}/{sanitized-cwd}/
- */
-export function getProjectTempDir(): string {
-  return join(getClaudeTempDir(), sanitizePath(getOriginalCwd())) + sep
-}
-
-/**
- * Returns the scratchpad directory path for the current session.
- * Path format: /tmp/claude-{uid}/{sanitized-cwd}/{sessionId}/scratchpad/
- */
-export function getScratchpadDir(): string {
-  return join(getProjectTempDir(), getSessionId(), 'scratchpad')
-}
-
-/**
- * Ensures the scratchpad directory exists for the current session.
- * Creates the directory with secure permissions (0o700) if it doesn't exist.
- * Returns the path to the scratchpad directory.
- * @throws If scratchpad feature is not enabled
- */
-export async function ensureScratchpadDir(): Promise<string> {
-  if (!isScratchpadEnabled()) {
-    throw new Error('Scratchpad directory feature is not enabled')
-  }
-
-  const fs = getFsImplementation()
-  const scratchpadDir = getScratchpadDir()
-
-  // Create directory recursively with secure permissions (owner-only access)
-  // FsOperations.mkdir handles recursive: true internally and is a no-op if dir exists
-  await fs.mkdir(scratchpadDir, { mode: 0o700 })
-
-  return scratchpadDir
 }
 
 // Check if file is within the scratchpad directory
@@ -707,42 +583,12 @@ export function pathInAllowedWorkingPath(
   )
 }
 
-export function pathInWorkingPath(path: string, workingPath: string): boolean {
-  const absolutePath = expandPath(path)
-  const absoluteWorkingPath = expandPath(workingPath)
-
-  // On macOS, handle common symlink issues:
-  // - /var -> /private/var
-  // - /tmp -> /private/tmp
-  const normalizedPath = absolutePath
-    .replace(/^\/private\/var\//, '/var/')
-    .replace(/^\/private\/tmp(\/|$)/, '/tmp$1')
-  const normalizedWorkingPath = absoluteWorkingPath
-    .replace(/^\/private\/var\//, '/var/')
-    .replace(/^\/private\/tmp(\/|$)/, '/tmp$1')
-
-  // Normalize case for case-insensitive comparison to prevent bypassing security
-  // checks on case-insensitive filesystems (macOS/Windows) like .cLauDe/CoMmAnDs
-  const caseNormalizedPath = normalizeCaseForComparison(normalizedPath)
-  const caseNormalizedWorkingPath = normalizeCaseForComparison(
-    normalizedWorkingPath,
-  )
-
-  // Use cross-platform relative path helper
-  const relative = relativePath(caseNormalizedWorkingPath, caseNormalizedPath)
-
-  // Same path
-  if (relative === '') {
-    return true
-  }
-
-  if (containsPathTraversal(relative)) {
-    return false
-  }
-
-  // Path is inside (relative path that doesn't go up)
-  return !posix.isAbsolute(relative)
-}
+/**
+ * Returns true when `path` is inside `workingPath`.
+ * Re-exported from pathInWorkingPath.ts so callers can import it without pulling
+ * in the full permission-system graph.
+ */
+export { pathInWorkingPath } from './pathInWorkingPath.js'
 
 function rootPathForSource(source: PermissionRuleSource): string {
   switch (source) {

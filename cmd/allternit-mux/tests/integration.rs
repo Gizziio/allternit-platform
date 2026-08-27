@@ -461,6 +461,92 @@ async fn blocked_state_from_screen_manifest() {
 }
 
 #[tokio::test]
+async fn close_session_kills_child_process_tree() {
+    let d = start_daemon().await;
+    let mut c = d.client().await;
+
+    let out = c.request("session.create", json!({})).await.unwrap();
+    let sid = out["session"]["session_id"].as_str().unwrap().to_string();
+    let out = c
+        .request("pane.create", json!({ "session_id": sid }))
+        .await
+        .unwrap();
+    let pane_id = out["pane"]["pane_id"].as_str().unwrap().to_string();
+
+    // Start a unique long-running background job inside the shell so we can
+    // verify the whole process group is terminated, not just the shell itself.
+    let tag = format!("mux-kill-test-{}", uuid::Uuid::new_v4());
+    c.request(
+        "pane.send_input",
+        json!({ "pane_id": pane_id, "data": "set +H\n" }),
+    )
+    .await
+    .unwrap();
+    c.request(
+        "pane.send_input",
+        json!({ "pane_id": pane_id, "data": format!("sleep 300000 & echo \"{}:$!\"\n", tag) }),
+    )
+    .await
+    .unwrap();
+
+    // Read until the shell echoes the PID line.
+    let sleep_pid = {
+        let deadline = std::time::Instant::now() + Duration::from_secs(10);
+        loop {
+            let out = c
+                .request("pane.read", json!({ "pane_id": pane_id }))
+                .await
+                .unwrap();
+            let text = out["output"].as_str().unwrap_or("");
+            if let Some(start) = text.rfind(&format!("{}:", tag)) {
+                let rest = &text[start + tag.len() + 1..];
+                if let Some(end) = rest.find(|c: char| !c.is_ascii_digit()) {
+                    if let Ok(pid) = rest[..end].parse::<u32>() {
+                        break pid;
+                    }
+                } else if let Ok(pid) = rest.parse::<u32>() {
+                    break pid;
+                }
+            }
+            assert!(
+                std::time::Instant::now() < deadline,
+                "never saw pid line; got: {text:?}"
+            );
+            tokio::time::sleep(Duration::from_millis(100)).await;
+        }
+    };
+
+    let is_alive = |pid: u32| -> bool {
+        std::process::Command::new("kill")
+            .args(["-0", &pid.to_string()])
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false)
+    };
+    assert!(is_alive(sleep_pid), "sleep child process should exist before close");
+
+    // Closing the session must kill the shell and its background descendant.
+    c.request("session.close", json!({ "session_id": sid }))
+        .await
+        .unwrap();
+
+    let deadline = std::time::Instant::now() + Duration::from_secs(5);
+    while std::time::Instant::now() < deadline {
+        if !is_alive(sleep_pid) {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
+
+    assert!(
+        !is_alive(sleep_pid),
+        "child process {sleep_pid} outlived session close"
+    );
+
+    d.stop().await;
+}
+
+#[tokio::test]
 async fn restore_after_restart_replays_scrollback() {
     let tmp = tempfile::tempdir().unwrap();
     let state_dir = tmp.path().join("mux-state");

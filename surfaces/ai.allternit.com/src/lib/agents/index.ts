@@ -68,7 +68,7 @@ export { AGENT_TYPES } from "./agent.types";
 export { AGENT_MODELS, getDefaultAgentModel } from "./agent-models";
 export type { AgentModelOption } from "./agent-models";
 
-export { acknowledgeMail, buildSeedTelemetryEvents, cancelAgentRun, checkGateStatus, connectAgentEventStream, createAgent, createCheckpoint, createCommit, createDefaultAvatarConfig, createExecutionPlan, deleteAgent, dequeueTask, detectPluginConflicts, enqueueTask, generateEnhancedWorkspaceDocuments, getAgent, getAgentInbox, getAgentRun, getAgentTask, getAgentThreads, getCommit, getExecutionPlan, getGateRules, getPendingReviews, listAgentRuns, listAgentTasks, listAgents, listCheckpoints, listCommits, listQueueItems, mutateViaGate, pauseAgentRun, requestAgentReview, restoreCheckpoint, resumeAgentRun, sendAgentMail, setupSeedDefaults, splitLines, startAgentRun, submitGateDecision, updateAgent, updateTaskStatus } from './agent.service';
+export { acknowledgeMail, buildSeedTelemetryEvents, cancelAgentRun, checkGateStatus, connectAgentEventStream, createAgent, createCheckpoint, createCommit, createDefaultAvatarConfig, createExecutionPlan, deleteAgent, dequeueTask, detectPluginConflicts, enqueueTask, generateEnhancedWorkspaceDocuments, getAgent, getAgentInbox, getAgentRun, getAgentTask, getAgentThreads, getCommit, getExecutionPlan, getGateRules, getPendingReviews, handoffToBot, listAgentRuns, listAgentTasks, listAgents, listCheckpoints, listCommits, listQueueItems, mutateViaGate, pauseAgentRun, requestAgentReview, restoreCheckpoint, resumeAgentRun, sendAgentMail, setupSeedDefaults, splitLines, startAgentRun, submitGateDecision, updateAgent, updateTaskStatus } from './agent.service';
 export {
   AGENT_CREATION_CHECKLIST,
   validateAgentCreationChecklist,
@@ -474,6 +474,19 @@ export {
   type SpecialistTemplate,
   type AgentCategory,
 } from './agent-templates.specialist';
+
+// ============================================================================
+// Memory Kernel V2 Client
+// ============================================================================
+
+export {
+  MemoryClient,
+  memoryClient,
+  type MemoryRecallResult,
+  type MemoryObservation,
+  type MemoryFact,
+  type MemoryEntity as MemoryEntityV2,
+} from './memory-client';
 
 // ============================================================================
 // Import/Export Service

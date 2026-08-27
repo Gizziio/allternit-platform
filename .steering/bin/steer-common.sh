@@ -62,11 +62,15 @@ steer_build_context() {
 }
 
 # steer_consult <cwd> <prompt-file> -> answer on stdout (may be empty on failure)
+# Delegates to the Rails steering coordinator via allternit-rails. Falls back
+# to the legacy ao-consult / kimi paths only when allternit-rails is missing.
 steer_consult() {
   local cwd=$1 prompt_file=$2
   if [ -n "${STEER_CONSULT_CMD:-}" ]; then
     # Test/override path, e.g. STEER_CONSULT_CMD="cat canned-answer.txt"
     $STEER_CONSULT_CMD < "$prompt_file"
+  elif command -v allternit-rails >/dev/null 2>&1; then
+    allternit-rails --root "$cwd" steer consult --cwd "$cwd" --prompt-file "$prompt_file"
   elif command -v ao-consult >/dev/null 2>&1; then
     ao-consult < "$prompt_file"
   else

@@ -1,0 +1,44 @@
+{
+  "name": "@allternit/office-file-parse",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "private": true,
+  "type": "module",
+  "description": "shared attachment parsing: pdf/docx/pptx/xlsx and plain-text formats to text; images flagged for multimodal input",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./xlsx": {
+      "import": "./dist/xlsx.js",
+      "types": "./dist/xlsx.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@allternit/office-docx-engine": "workspace:*",
+    "fast-xml-parser": "^5.3.4",
+    "jszip": "^3.10.1",
+    "pdfjs-dist": "^5.4.54"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1"
+  },
+  "author": "Allternit"
+}

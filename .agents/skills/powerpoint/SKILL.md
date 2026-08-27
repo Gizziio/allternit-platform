@@ -1,6 +1,6 @@
 ---
 name: powerpoint
-description: "Generate PowerPoint presentations (.pptx) from prompts, data outlines, or Excel summaries. Supports title slides, bullet slides, chart slides, and speaker notes. Uses the Summit Copilot Skills FastAPI service for production output."
+description: "Generate PowerPoint presentations (.pptx) from prompts, data outlines, or Excel summaries. Supports title slides, bullet slides, chart slides, and speaker notes. Parse, round-trip, and extract text via the Allternit office-engine service."
 tags: ["presentations", "powerpoint", "pptx", "office", "slides"]
 tools: ["llm", "filesystem"]
 entrypoint: "SKILL.md"
@@ -8,10 +8,11 @@ entrypoint: "SKILL.md"
 
 # PowerPoint
 
-Generate production-ready Microsoft PowerPoint presentations (.pptx) from structured outlines, user prompts, or Excel data summaries. This skill wraps the Summit Copilot Skills FastAPI service with opinionated styling and slide patterns so agents can produce consistent, professional decks without wrestling with low-level formatting.
+Generate production-ready Microsoft PowerPoint presentations (.pptx) from structured outlines, user prompts, or Excel data summaries. This skill uses opinionated styling and slide patterns so agents can produce consistent, professional decks without wrestling with low-level formatting.
 
-> **STATUS:** Production  
-> **Backend Tool:** `tools/agent-swarm/document-generator/mod.ts` (action: `generatePhotoCardDeck`)
+> **STATUS:** Engine operations (parse / extract / round-trip / verify) — Production via office-engine service. Generative rendering — migrating off the legacy document-generator backend.  
+> **Engine Service:** `services/office-engine` (HTTP, `OFFICE_ENGINE_URL`, default `http://127.0.0.1:8099`; also proxied by the gateway at `/api/office/*`)  
+> **Legacy Backend Tool:** `tools/agent-swarm/document-generator/mod.ts` (action: `generatePhotoCardDeck`) — **deprecated**, do not use for new work.
 
 ---
 
@@ -88,24 +89,17 @@ Show the outline to the user for approval before rendering.
 
 ### Step 3: Render
 
-Call the backend tool at:
-
-```
-tools/agent-swarm/powerpoint/index.ts
-```
-
-> **⚠️ Stale:** this `powerpoint/index.ts` backend tool does not exist (and did not exist at the old `domains/agent-swarm/tools/` location either). The live backend is `tools/agent-swarm/document-generator/mod.ts` (see the frontmatter). This section needs a rewrite before use.
-
-Import `createDeck` and pass the approved outline as `CreatePptxParams`:
+Render the approved outline to `.pptx` bytes (legacy path shown below; it is deprecated — see the Engine Service Reference). After rendering, ALWAYS verify the output through the office-engine (`/pptx/roundtrip` + `/pptx/parse`) before delivering.
 
 ```typescript
-import { createDeck } from '../tools/agent-swarm/powerpoint/index.ts';
+// LEGACY (deprecated): tools/agent-swarm/document-generator/mod.ts
+import { execute } from '../tools/agent-swarm/document-generator/mod.ts';
 
-const result = await createDeck({
-  title: "Q3 Infrastructure Review",
-  slides: outline,
-  outputPath: `/tmp/allternit-pptx-${Date.now()}.pptx`,
-  theme: 'dark-blue'
+const result = await execute({
+  action: 'generatePhotoCardDeck',
+  title: outlineTitle,
+  slide_count: outline.length,
+  key_points: outline.flatMap((s) => s.bullets ?? []),
 });
 ```
 
@@ -171,16 +165,34 @@ Input: workbook_file, sheet_name, max_slides
 
 ---
 
-## Backend Tool Reference
+## Engine Service Reference (office-engine)
 
-| Export | Path |
-|--------|------|
-| Export | Path |
-|--------|------|
-| `execute` | `tools/agent-swarm/document-generator/mod.ts` |
-| `inputSchema` | `tools/agent-swarm/document-generator/mod.ts` |
+Base URL: `OFFICE_ENGINE_URL` (default `http://127.0.0.1:8099`). The same routes are proxied through the Allternit gateway at `/api/office/*` (port 8013, auth required) — prefer the gateway path when running inside the platform.
 
-Dependencies: `document-generator-skills` FastAPI service (Python) running at `SUMMIT_COPILOT_URL`.
+| Endpoint | Body | Returns |
+|----------|------|---------|
+| `POST /pptx/parse` | raw `.pptx` bytes + `x-office-filename` header | artifact JSON `{id, type: "office-presentation", title, extractedText, stats.slideCount, …}` |
+| `POST /pptx/roundtrip` | raw `.pptx` bytes | `{originalSize, outputSize, changed}` — use to verify a generated deck parses and re-serializes cleanly |
+| `POST /extract` | raw bytes of docx/pptx/xlsx/pdf/txt + `x-office-filename` | artifact JSON with `extractedText` (format auto-detected from extension) |
+| `POST /markdown` | raw bytes + `x-office-filename` (pptx/docx/xlsx/pdf/odf/rtf/epub/csv incl. legacy .ppt/.doc/.xls) | `{markdown, format, title, stats}` — LLM-ready GFM via anydoc; slide text and speaker notes survive as structure |
+| `POST /markdown-url` | JSON `{url}` | `{markdown, title, sourceUrl, format}` — readability-extracted GFM; document content-types pass through anydoc; private/loopback hosts refused |
+| `GET /health` | — | `{status: "ok", engines: {…}}` |
+
+Prefer `/markdown` over `/extract` when the output is meant for an LLM (structure survives as GFM).
+
+Example — verify a generated deck end-to-end:
+
+```bash
+curl -s -X POST "$OFFICE_ENGINE_URL/pptx/roundtrip" \
+  --data-binary @/path/to/output.pptx
+curl -s -X POST "$OFFICE_ENGINE_URL/pptx/parse" \
+  -H "x-office-filename: output.pptx" \
+  --data-binary @/path/to/output.pptx
+```
+
+Errors: `400 {"error":"empty body"}`, `422 {"error":"parse failed","detail":…}`.
+
+Legacy generation backend (`tools/agent-swarm/document-generator/mod.ts` → `document-generator-skills` FastAPI at `SUMMIT_COPILOT_URL`) is **deprecated**; it is retained only until generative rendering moves onto the forked `@allternit/office-pptx-engine` (see `GENOFFICE_INTEGRATION_PLAN.md`). The nonexistent `tools/agent-swarm/powerpoint/index.ts` previously referenced here was removed from this document.
 
 ---
 
