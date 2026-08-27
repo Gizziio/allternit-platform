@@ -40,7 +40,7 @@ struct ChangesetReviewSheet: View {
                     if let errorMessage {
                         Text(errorMessage)
                             .font(.caption)
-                            .foregroundColor(.red)
+                            .foregroundColor(Theme.statusError)
                     }
                 }
                 .padding(16)
@@ -80,7 +80,7 @@ struct ChangesetReviewSheet: View {
                     }
                     if let deletions = counts.deletions, deletions > 0 {
                         Text("-\(deletions)")
-                            .foregroundColor(.red)
+                            .foregroundColor(Theme.statusError)
                     }
                 }
                 .font(.system(.caption, design: .monospaced).weight(.semibold))
@@ -116,7 +116,7 @@ struct ChangesetReviewSheet: View {
                 Text("Reject")
                     .frame(maxWidth: .infinity)
             }
-            .foregroundColor(.red)
+            .foregroundColor(Theme.statusError)
 
             Button {
                 Task { await submit(.always) }

@@ -66,6 +66,7 @@ struct BudgetDashboardView: View {
                     .background(Color("BgPanel"))
                     .clipShape(Circle())
             }
+            .accessibilityLabel("Close")
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
@@ -81,21 +82,15 @@ struct BudgetDashboardView: View {
             Spacer()
         } else if let loadError = store.loadError, store.budget == nil {
             Spacer()
-            VStack(spacing: 12) {
-                Text("Failed to load runtime budget")
-                    .font(.subheadline)
-                    .foregroundColor(Color("TextPrimary"))
-                Text(loadError)
-                    .font(.caption)
-                    .foregroundColor(Color("TextSecondary"))
-                    .multilineTextAlignment(.center)
-                Button("Retry") {
-                    store.fetchIfNeeded(force: true)
-                }
-                .font(.subheadline)
-                .foregroundColor(Color("AccentPrimary"))
-            }
-            .padding(.horizontal, 20)
+            let offline = isConnectionFailure(loadError)
+            FriendlyStateView(
+                style: offline ? .offline : .error,
+                icon: offline ? "wifi.slash" : "exclamationmark.triangle",
+                title: "Failed to load runtime budget",
+                message: FriendlyErrorMessage.from(loadError),
+                actionTitle: "Retry",
+                action: { store.fetchIfNeeded(force: true) }
+            )
             Spacer()
         } else {
             ScrollView {
@@ -442,9 +437,12 @@ struct BudgetDashboardView: View {
                 .foregroundColor(Color("TextPrimary"))
 
             if store.budgetAlerts.isEmpty {
-                Text("No alerts")
-                    .font(.caption)
-                    .foregroundColor(Color("TextSecondary"))
+                FriendlyInlineStateView(
+                    style: .empty,
+                    icon: "bell.slash",
+                    title: "No alerts",
+                    message: "Budget alerts will appear here when triggered."
+                )
             } else {
                 VStack(spacing: 8) {
                     ForEach(store.budgetAlerts.prefix(3)) { alert in
@@ -491,5 +489,14 @@ struct BudgetDashboardView: View {
     private func formatCredits(_ value: Double) -> String {
         guard value.isFinite else { return "0.0" }
         return value >= 10 ? String(format: "%.0f", value) : String(format: "%.1f", value)
+    }
+
+    private func isConnectionFailure(_ error: String) -> Bool {
+        let lowered = error.lowercased()
+        return lowered.contains("could not connect")
+            || lowered.contains("failed to connect")
+            || lowered.contains("offline")
+            || lowered.contains("no network")
+            || lowered.contains("network connection was lost")
     }
 }

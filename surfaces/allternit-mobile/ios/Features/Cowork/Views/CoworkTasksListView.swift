@@ -52,6 +52,7 @@ struct CoworkTasksListView: View {
                             .background(Color("BgPanel"))
                             .clipShape(Circle())
                     }
+                    .accessibilityLabel("New task")
                     Button(action: { dismiss() }) {
                         Image(systemName: "xmark")
                             .font(.system(size: 13, weight: .semibold))
@@ -60,6 +61,7 @@ struct CoworkTasksListView: View {
                             .background(Color("BgPanel"))
                             .clipShape(Circle())
                     }
+                    .accessibilityLabel("Close")
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 14)
@@ -114,21 +116,14 @@ struct CoworkTasksListView: View {
                 Spacer()
             } else if let loadError = tasksStore.loadError, tasksStore.tasks.isEmpty {
                 Spacer()
-                VStack(spacing: 12) {
-                    Text("Couldn't load tasks")
-                        .font(.subheadline)
-                        .foregroundColor(Color("TextPrimary"))
-                    Text(loadError)
-                        .font(.caption)
-                        .foregroundColor(Color("TextSecondary"))
-                        .multilineTextAlignment(.center)
-                    Button("Retry") {
-                        tasksStore.fetchTasksIfNeeded(force: true)
-                    }
-                    .font(.subheadline)
-                    .foregroundColor(Color("AccentPrimary"))
-                }
-                .padding(.horizontal, 20)
+                FriendlyStateView(
+                    style: .offline,
+                    icon: "wifi.slash",
+                    title: "Couldn't load tasks",
+                    message: FriendlyErrorMessage.from(loadError),
+                    actionTitle: "Retry",
+                    action: { tasksStore.fetchTasksIfNeeded(force: true) }
+                )
                 Spacer()
             } else if visibleTasks.isEmpty {
                 Spacer()
@@ -141,23 +136,18 @@ struct CoworkTasksListView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "checklist")
-                .font(.system(size: 24, weight: .medium))
-                .foregroundColor(Color("TextSecondary"))
-                .frame(width: 56, height: 56)
-                .background(Color("BgPanel"))
-                .clipShape(RoundedRectangle(cornerRadius: Theme.radiusLG))
-                .overlay(
-                    RoundedRectangle(cornerRadius: Theme.radiusLG)
-                        .stroke(Theme.borderWarmDefault, lineWidth: 1)
-                )
-            Text(selectedSegment == .agentTasks ? "No agent tasks yet" : "No tasks yet")
-                .font(.subheadline)
-                .foregroundColor(Color("TextSecondary"))
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
-        }
+        FriendlyStateView(
+            style: .empty,
+            icon: "checklist",
+            title: selectedSegment == .agentTasks ? "No agent tasks yet" : "No tasks yet",
+            message: "Create a task to get started.",
+            actionTitle: "Create task",
+            action: {
+                let generator = UIImpactFeedbackGenerator(style: .light)
+                generator.impactOccurred()
+                isCreateSheetPresented = true
+            }
+        )
     }
 
     private var listContent: some View {

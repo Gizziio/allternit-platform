@@ -135,7 +135,7 @@ struct MainWorkspaceView: View {
             // Response-style preferences: loaded here so the very first
             // send can already inject the directive (plan Phase 6).
             PreferencesStore.shared.fetchIfNeeded()
-            if CommandLine.arguments.contains("-sidebar") {
+            if launchArgumentEnabled("sidebar") {
                 isSidebarOpen = true
             }
             #if DEBUG
@@ -148,20 +148,20 @@ struct MainWorkspaceView: View {
             }
             // `-open-projects` / `-open-artifacts` (DEBUG only): land on a
             // tab surface directly (no tap injection in simctl).
-            if CommandLine.arguments.contains("-open-projects") {
+            if launchArgumentEnabled("open-projects") {
                 modeStore.selectBarItem(.projects)
             }
-            if CommandLine.arguments.contains("-open-artifacts") {
+            if launchArgumentEnabled("open-artifacts") {
                 modeStore.selectBarItem(.artifacts)
             }
             // `-open-agent-hub` (DEBUG only): land on the Agents tab
             // directly (no tap injection in simctl).
-            if CommandLine.arguments.contains("-open-agent-hub") {
+            if launchArgumentEnabled("open-agent-hub") {
                 modeStore.selectBarItem(.agents)
             }
             // `-open-code-filter` (DEBUG only): land on the Code tab —
             // CodeModeView presents the Phase-8 status filter sheet itself.
-            if CommandLine.arguments.contains("-open-code-filter") {
+            if launchArgumentEnabled("open-code-filter") {
                 modeStore.selectBarItem(.code)
             }
             #endif
@@ -202,27 +202,12 @@ struct ModePlaceholderView: View {
     let mode: AppMode
 
     var body: some View {
-        VStack(spacing: 16) {
-            Image(systemName: mode.theme.icon)
-                .font(.system(size: 28, weight: .medium))
-                .foregroundColor(mode.theme.accent)
-                .frame(width: 64, height: 64)
-                .background(mode.theme.accentSoft)
-                .clipShape(RoundedRectangle(cornerRadius: Theme.radiusLG))
-                .overlay(
-                    RoundedRectangle(cornerRadius: Theme.radiusLG)
-                        .stroke(mode.theme.accentGlow, lineWidth: 1)
-                )
-
-            Text("\(mode.label) mode — coming in UX-4")
-                .font(.system(.title3, design: .serif))
-                .fontWeight(.medium)
-                .foregroundColor(Color("TextPrimary"))
-
-            Text("This surface isn't part of the iOS app yet.")
-                .font(.subheadline)
-                .foregroundColor(Color("TextSecondary"))
-        }
+        FriendlyStateView(
+            style: .empty,
+            icon: mode.theme.icon,
+            title: "\(mode.label) mode — coming in UX-4",
+            message: "This surface isn't part of the iOS app yet."
+        )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color("BgSecondary"))
     }
@@ -270,14 +255,14 @@ struct ChatView: View {
             VStack(spacing: 8) {
                 HStack(spacing: 8) {
                     if isInChat {
-                        floatingIcon("chevron.left") {
+                        floatingIcon("chevron.left", accessibilityLabel: "Back") {
                             selectedSessionId = nil
                             viewModel.startNewSession()
                             viewModel.isTemporaryChat = false
                         }
                     }
 
-                    floatingIcon("line.3.horizontal") {
+                    floatingIcon("line.3.horizontal", accessibilityLabel: "Open sidebar") {
                         isSidebarOpen.toggle()
                     }
 
@@ -286,14 +271,14 @@ struct ChatView: View {
                     // Incognito chat (Phase 6, Claude parity): starts an
                     // ephemeral session stamped `metadata.ephemeral` —
                     // excluded from history, purged on abort server-side.
-                    floatingIcon(Self.incognitoSymbolName, isActive: viewModel.isIncognito) {
+                    floatingIcon(Self.incognitoSymbolName, isActive: viewModel.isIncognito, accessibilityLabel: "Incognito chat") {
                         selectedSessionId = nil
                         viewModel.startNewSession(ephemeral: true)
                     }
 
                     // Intelli-Schedule panel — only offered in Cowork mode.
                     if modeStore.mode == .cowork {
-                        floatingIcon("calendar.badge.clock") {
+                        floatingIcon("calendar.badge.clock", accessibilityLabel: "Open Intelli-Schedule") {
                             isIntelliSchedulePresented = true
                         }
                     }
@@ -323,17 +308,22 @@ struct ChatView: View {
         // `-open-incognito` (DEBUG only): start an incognito chat on launch
         // so the explainer empty state can be screenshot-verified.
         .onAppear {
-            if CommandLine.arguments.contains("-temporary-chat"), !viewModel.isTemporaryChat {
+            if launchArgumentEnabled("temporary-chat"), !viewModel.isTemporaryChat {
                 viewModel.toggleTemporaryChat()
             }
-            if CommandLine.arguments.contains("-open-incognito"), !viewModel.isIncognito {
+            if launchArgumentEnabled("open-incognito"), !viewModel.isIncognito {
                 viewModel.startNewSession(ephemeral: true)
             }
         }
         #endif
     }
 
-    private func floatingIcon(_ systemName: String, isActive: Bool = false, action: @escaping () -> Void) -> some View {
+    private func floatingIcon(
+        _ systemName: String,
+        isActive: Bool = false,
+        accessibilityLabel: String? = nil,
+        action: @escaping () -> Void
+    ) -> some View {
         Button(action: {
             let generator = UIImpactFeedbackGenerator(style: .medium)
             generator.impactOccurred()
@@ -367,6 +357,7 @@ struct ChatView: View {
                 )
                 .shadow(color: isActive ? Color("AccentPrimary").opacity(0.25) : Color.black.opacity(0.10), radius: 10, y: 3)
         }
+        .accessibilityLabel(accessibilityLabel ?? "")
     }
 }
 
@@ -437,7 +428,7 @@ struct ChatContentView: View {
         // and the code terminal keeps its boot header clean.
         guard !viewModel.isIncognito, !isTerminal else { return false }
         #if DEBUG
-        if CommandLine.arguments.contains("-open-notifications-card") {
+        if launchArgumentEnabled("open-notifications-card") {
             return true
         }
         #endif
@@ -786,7 +777,7 @@ struct ChatContentView: View {
             // tap-injection or photo-library fixtures. Runs before the
             // `-autosend` branch below so combining both args exercises the
             // upload path end-to-end.
-            if CommandLine.arguments.contains("-stage-test-attachment") {
+            if launchArgumentEnabled("stage-test-attachment") {
                 stageTestAttachment()
             }
             // `-open-voice-mode` / `-open-voice-settings` (DEBUG only):
@@ -794,8 +785,8 @@ struct ChatContentView: View {
             // settings variant lands on the voice settings sheet. Combine
             // with `-voice-state listening|thinking|speaking` to pin a
             // gradient state for screenshots.
-            if CommandLine.arguments.contains("-open-voice-mode")
-                || CommandLine.arguments.contains("-open-voice-settings") {
+            if launchArgumentEnabled("open-voice-mode")
+                || launchArgumentEnabled("open-voice-settings") {
                 isVoiceModePresented = true
             }
             // `-voice-summary <seconds>` (DEBUG only): files a "Voice chat
@@ -1071,7 +1062,7 @@ struct ComposerView: View {
             // first-run sheets show again. Runs before the `-open-*` args.
             // (The Phase-10 onboarding gate itself is cleared earlier, in
             // AllternitApp.init, so this launch lands on its page 1.)
-            if CommandLine.arguments.contains("-reset-onboarding") {
+            if launchArgumentEnabled("reset-onboarding") {
                 DictationOnboardingSheet.resetShown()
                 AppPermission.resetAllPriming()
             }
@@ -1079,37 +1070,37 @@ struct ComposerView: View {
             // (DEBUG only): jump straight to a composer sheet for UI
             // testing/screenshots — simctl has no tap-injection, so this is
             // the way to reach sheet content without a real touch.
-            if CommandLine.arguments.contains("-open-plus-sheet") {
+            if launchArgumentEnabled("open-plus-sheet") {
                 isPlusSheetPresented = true
             }
-            if CommandLine.arguments.contains("-open-connectors") {
+            if launchArgumentEnabled("open-connectors") {
                 isConnectorsPresented = true
             }
-            if CommandLine.arguments.contains("-open-model-picker") {
+            if launchArgumentEnabled("open-model-picker") {
                 isModelPickerPresented = true
             }
             // `-open-dictation-onboarding` (DEBUG only): shows the first-run
             // dictation onboarding sheet for screenshot verification. Does
             // NOT mark it shown (only Continue does).
-            if CommandLine.arguments.contains("-open-dictation-onboarding") {
+            if launchArgumentEnabled("open-dictation-onboarding") {
                 isDictationOnboardingPresented = true
             }
             // `-open-mic-priming` (DEBUG only): shows the mic permission-
             // priming sheet for screenshot verification. NOTE: presenting it
             // this way marks the mic permission primed (shows-once flag).
-            if CommandLine.arguments.contains("-open-mic-priming") {
+            if launchArgumentEnabled("open-mic-priming") {
                 isMicPrimingPresented = true
             }
             // `-enable-agent-mode` (DEBUG only): turn on agent mode at launch
             // so the agent pill, bottom deck, and Gizzi mascot can be
             // screenshot-verified without simctl tap injection.
-            if CommandLine.arguments.contains("-enable-agent-mode"), !agentOn {
+            if launchArgumentEnabled("enable-agent-mode"), !agentOn {
                 agentModeStore.toggleAgent(for: mode)
             }
             // `-select-website-mode` (DEBUG only): pre-select the Websites tile
             // and fill the composer so the collapsed agent-mode UX can be
             // screenshot-verified.
-            if CommandLine.arguments.contains("-select-website-mode") {
+            if launchArgumentEnabled("select-website-mode") {
                 agentModeStore.selectTile(.website, for: mode)
                 inputText = AgentModeTile.website.taskPrompt
             }
@@ -1197,6 +1188,7 @@ struct ComposerView: View {
                 toolbarIconButton("plus") {
                     isPlusSheetPresented = true
                 }
+                .accessibilityLabel("Add attachment")
 
                 // Chat/Cowork toggle is a Home composer control
                 // (pre-session only); the Code surface never offers it.
@@ -1210,6 +1202,7 @@ struct ComposerView: View {
                     toolbarIconButton("arrow.up.forward.square") {
                         isCoworkWorkspacePresented = true
                     }
+                    .accessibilityLabel("Open Cowork workspace")
                 }
 
                 // Agent | Bot toggle chip. Not offered in code mode: the
@@ -1221,7 +1214,7 @@ struct ComposerView: View {
                 Spacer(minLength: 2)
 
                 // Dictation mic: plain icon, red while recording.
-                toolbarIconButton(dictation.isRecording ? "mic.fill" : "mic", tint: dictation.isRecording ? .red : nil) {
+                toolbarIconButton(dictation.isRecording ? "mic.fill" : "mic", tint: dictation.isRecording ? Theme.statusError : nil) {
                     toggleDictation()
                 }
                 .symbolEffect(.pulse, isActive: dictation.isRecording)
@@ -1614,7 +1607,7 @@ private struct ComposerTextView: UIViewRepresentable {
         // `-focus-composer` (DEBUG only): focus the editor on launch so the
         // caret's alignment can be screenshot-verified (no tap injection in
         // simctl).
-        if CommandLine.arguments.contains("-focus-composer"), !textView.isFirstResponder {
+        if launchArgumentEnabled("focus-composer"), !textView.isFirstResponder {
             DispatchQueue.main.async { textView.becomeFirstResponder() }
         }
         #endif
@@ -1817,7 +1810,7 @@ private struct AgentSelectionMenu: View {
             #if DEBUG
             // `-open-agent-sheet` (DEBUG only): open the picker on launch
             // for screenshot verification (no tap injection in simctl).
-            if CommandLine.arguments.contains("-open-agent-sheet") {
+            if launchArgumentEnabled("open-agent-sheet") {
                 isSheetPresented = true
             }
             #endif
@@ -2246,40 +2239,14 @@ struct IncognitoEmptyStateView: View {
     let onLearnMore: () -> Void
 
     var body: some View {
-        VStack(spacing: 0) {
-            // ── Ghost glyph with accent glow (mirrors the brand mark) ──
-            ZStack {
-                Circle()
-                    .fill(Color("AccentPrimary").opacity(0.08))
-                    .frame(width: 120, height: 120)
-                    .blur(radius: 30)
-
-                Image(systemName: ChatView.incognitoSymbolName)
-                    .font(.system(size: 64, weight: .light))
-                    .foregroundColor(Color("TextPrimary"))
-            }
-            .padding(.bottom, 24)
-
-            // ── Privacy explainer (Claude's incognito copy, verbatim) ──
-            Text("Incognito chats can't access memory. They aren't saved to history, added to memory, or used to train models.")
-                .font(.body)
-                .foregroundColor(Color("TextSecondary"))
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
-                .padding(.bottom, 12)
-
-            // ── Underlined learn-more link → Safari sheet ──
-            Button(action: {
-                let generator = UIImpactFeedbackGenerator(style: .light)
-                generator.impactOccurred()
-                onLearnMore()
-            }) {
-                Text("Learn more about how your data is used.")
-                    .font(.body)
-                    .underline()
-                    .foregroundColor(Color("TextPrimary"))
-            }
-        }
+        FriendlyStateView(
+            style: .empty,
+            icon: ChatView.incognitoSymbolName,
+            title: "Incognito chat",
+            message: "Incognito chats can't access memory. They aren't saved to history, added to memory, or used to train models.",
+            actionTitle: "Learn more about how your data is used.",
+            action: onLearnMore
+        )
     }
 }
 
@@ -2294,7 +2261,7 @@ struct TransientErrorBanner: View {
         HStack(spacing: 10) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.subheadline)
-                .foregroundColor(.red)
+                .foregroundColor(Theme.statusError)
 
             Text(message)
                 .font(.subheadline)
@@ -2359,7 +2326,7 @@ private struct TerminalMessageRow: View {
                             .lineLimit(2)
                         Spacer(minLength: 4)
                         Text(toolGlyph(tool.state))
-                            .foregroundColor(tool.state == .failed ? .orange : TerminalTheme.accent)
+                            .foregroundColor(tool.state == .failed ? Theme.statusWarning : TerminalTheme.accent)
                     }
                     .font(.system(size: 12, design: .monospaced))
                 }

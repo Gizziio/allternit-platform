@@ -42,6 +42,7 @@ struct CreateAutomationTaskSheet: View {
                         .background(Color("BgPanel"))
                         .clipShape(Circle())
                 }
+                .accessibilityLabel("Close")
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 14)
@@ -80,6 +81,25 @@ struct CreateAutomationTaskSheet: View {
                         Text("A cron expression (e.g. \"0 9 * * *\" for 9am daily) or plain-language schedule — the server validates it.")
                             .font(.caption2)
                             .foregroundColor(Color("TextSecondary"))
+                    }
+
+                    // Day-of-week shortcut (parity with the web cowork
+                    // `DayOfWeekSelector`). Only shown for cron-shaped input —
+                    // plain-language schedules have no dow field to edit.
+                    if schedule.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        || schedule.split(separator: " ").count == 5 {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Days of week")
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                                .foregroundColor(Color("TextSecondary"))
+                            DayOfWeekSelector(
+                                selectedDays: CronDays.parseCronDays(schedule),
+                                onChange: { days in
+                                    schedule = CronDays.applyCronDays(schedule, days: days)
+                                }
+                            )
+                        }
                     }
 
                     Button(action: create) {

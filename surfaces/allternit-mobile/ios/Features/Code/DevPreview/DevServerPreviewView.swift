@@ -87,7 +87,7 @@ struct DevServerPreviewView: View {
                 if let loadError = controller.loadError {
                     Text(loadError)
                         .font(.caption)
-                        .foregroundColor(.red)
+                        .foregroundColor(Theme.statusError)
                         .frame(maxWidth: .infinity)
                         .padding(8)
                         .background(Color("BgPanel"))

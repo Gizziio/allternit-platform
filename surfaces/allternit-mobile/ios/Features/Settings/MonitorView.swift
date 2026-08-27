@@ -71,6 +71,7 @@ struct MonitorView: View {
                     .background(Color("BgPanel"))
                     .clipShape(Circle())
             }
+            .accessibilityLabel("Refresh monitor")
 
             Button(action: { dismiss() }) {
                 Image(systemName: "xmark")
@@ -80,6 +81,7 @@ struct MonitorView: View {
                     .background(Color("BgPanel"))
                     .clipShape(Circle())
             }
+            .accessibilityLabel("Close")
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
@@ -95,21 +97,14 @@ struct MonitorView: View {
             Spacer()
         } else if let loadError = store.loadError, store.agents.isEmpty && store.systemMetrics.isEmpty {
             Spacer()
-            VStack(spacing: 12) {
-                Text("Couldn't load monitor")
-                    .font(.subheadline)
-                    .foregroundColor(Color("TextPrimary"))
-                Text(loadError)
-                    .font(.caption)
-                    .foregroundColor(Color("TextSecondary"))
-                    .multilineTextAlignment(.center)
-                Button("Retry") {
-                    store.fetchIfNeeded(force: true)
-                }
-                .font(.subheadline)
-                .foregroundColor(Color("AccentPrimary"))
-            }
-            .padding(.horizontal, 20)
+            FriendlyStateView(
+                style: .offline,
+                icon: "wifi.slash",
+                title: "Couldn't load monitor",
+                message: FriendlyErrorMessage.from(loadError),
+                actionTitle: "Retry",
+                action: { store.fetchIfNeeded(force: true) }
+            )
             Spacer()
         } else {
             ScrollView {

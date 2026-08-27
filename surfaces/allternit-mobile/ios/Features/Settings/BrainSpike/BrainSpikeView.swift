@@ -89,7 +89,7 @@ struct BrainSpikeView: View {
         .onAppear {
             // `-brain-spike-auto` (DEBUG only): run the whole proof without
             // taps — the result JSON is the harness-readable verdict.
-            guard !didAutoRun, CommandLine.arguments.contains("-brain-spike-auto") else { return }
+            guard !didAutoRun, launchArgumentEnabled("brain-spike-auto") else { return }
             didAutoRun = true
             remoteURL = Self.launchArgValue("-brain-spike-url") ?? Self.defaultRemoteURL
             token = Self.launchArgValue("-brain-spike-token") ?? Self.defaultToken

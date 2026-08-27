@@ -54,33 +54,22 @@ struct DevServerPortsView: View {
         } else if client == nil {
             noInstanceView
         } else if let loadError, ports.isEmpty {
-            VStack(spacing: 12) {
-                Text("Couldn't load ports")
-                    .font(.subheadline)
-                    .foregroundColor(Color("TextPrimary"))
-                Text(loadError)
-                    .font(.caption)
-                    .foregroundColor(Color("TextSecondary"))
-                    .multilineTextAlignment(.center)
-                Button("Retry") { Task { await refresh() } }
-                    .font(.subheadline)
-            }
-            .padding(.horizontal, 20)
+            FriendlyStateView(
+                style: .offline,
+                icon: "wifi.slash",
+                title: "Couldn't load ports",
+                message: FriendlyErrorMessage.from(loadError),
+                actionTitle: "Retry",
+                action: { Task { await refresh() } }
+            )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if ports.isEmpty {
-            VStack(spacing: 8) {
-                Image(systemName: "globe")
-                    .font(.title2)
-                    .foregroundColor(Color("TextSecondary"))
-                Text("No dev servers detected")
-                    .font(.subheadline)
-                    .foregroundColor(Color("TextPrimary"))
-                Text("Start something like `npm run dev` in the terminal — it'll show up here.")
-                    .font(.caption)
-                    .foregroundColor(Color("TextSecondary"))
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 30)
-            }
+            FriendlyStateView(
+                style: .empty,
+                icon: "globe",
+                title: "No dev servers detected",
+                message: "Start something like `npm run dev` in the terminal — it'll show up here."
+            )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
             List(ports) { port in
@@ -96,7 +85,7 @@ struct DevServerPortsView: View {
                 if let mintError {
                     Text(mintError)
                         .font(.caption)
-                        .foregroundColor(.red)
+                        .foregroundColor(Theme.statusError)
                         .padding(8)
                         .background(Color("BgPanel"))
                         .clipShape(RoundedRectangle(cornerRadius: 8))
@@ -133,17 +122,14 @@ struct DevServerPortsView: View {
     }
 
     private var noInstanceView: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "globe")
-                .font(.title2)
-                .foregroundColor(Color("TextSecondary"))
-            Text("No instance available")
-                .font(.subheadline)
-                .foregroundColor(Color("TextPrimary"))
-            Button("Retry") { Task { await resolve() } }
-                .font(.subheadline)
-        }
-        .padding(.horizontal, 20)
+        FriendlyStateView(
+            style: .error,
+            icon: "globe",
+            title: "No instance available",
+            message: "Start `gizzi serve --tunnel` on your computer, then retry.",
+            actionTitle: "Retry",
+            action: { Task { await resolve() } }
+        )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 

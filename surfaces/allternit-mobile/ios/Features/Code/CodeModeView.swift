@@ -108,10 +108,10 @@ struct CodeModeView: View {
                 // stack pops back here, and re-applying the push would
                 // swallow the Back navigation.
                 if !didApplyDebugArgs {
-                    if CommandLine.arguments.contains("-open-code-filter") {
+                    if launchArgumentEnabled("open-code-filter") {
                         isFilterSheetPresented = true
                     }
-                    if CommandLine.arguments.contains("-open-code-thread") {
+                    if launchArgumentEnabled("open-code-thread") {
                         threadTarget = CodeThreadTarget(sessionId: nil, title: nil)
                     }
                     // `-open-code-thread-id <id>` (DEBUG only): open an
@@ -123,7 +123,7 @@ struct CodeModeView: View {
                     // `-mesh-proxy-selfcheck` (DEBUG only): verify the mesh
                     // proxy URL helpers (100.64.0.0/10 classification,
                     // target parsing) — results go to the console.
-                    if CommandLine.arguments.contains("-mesh-proxy-selfcheck") {
+                    if launchArgumentEnabled("mesh-proxy-selfcheck") {
                         MeshClient.runProxySelfCheck()
                     }
                     didApplyDebugArgs = true
@@ -168,6 +168,7 @@ struct CodeModeView: View {
                     .foregroundColor(Color("TextPrimary"))
                     .frame(width: 44, height: 44)
             }
+            .accessibilityLabel("Open sidebar")
 
             Text("Code")
                 .font(.system(.title3, design: .serif))
@@ -190,6 +191,7 @@ struct CodeModeView: View {
                     .foregroundColor(statusFilter == .all ? Color("TextPrimary") : theme.accent)
                     .frame(width: 44, height: 44)
             }
+            .accessibilityLabel("Filter sessions")
 
             Button(action: {
                 let generator = UIImpactFeedbackGenerator(style: .light)
@@ -201,6 +203,7 @@ struct CodeModeView: View {
                     .foregroundColor(Color("TextPrimary"))
                     .frame(width: 44, height: 44)
             }
+            .accessibilityLabel("Open canvas")
 
             Button(action: startNewThread) {
                 Image(systemName: "square.and.pencil")
@@ -208,6 +211,7 @@ struct CodeModeView: View {
                     .foregroundColor(Color("TextPrimary"))
                     .frame(width: 44, height: 44)
             }
+            .accessibilityLabel("New thread")
         }
         .padding(.leading, 8)
         .padding(.trailing, 8)
@@ -272,24 +276,14 @@ struct CodeModeView: View {
     /// runtime call fails with the interceptor's 503 `runtime_unavailable`
     /// (fetch-interceptor.ts:470-478), so say so up front.
     private var cloudUnpairedNotice: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .font(.subheadline)
-                .foregroundColor(Theme.statusWarning)
-
-            Text("Allternit Cloud relays through a paired runtime — pair one to use it.")
-                .font(.subheadline)
-                .foregroundColor(Color("TextPrimary"))
-                .lineLimit(2)
-
-            Spacer(minLength: 8)
-
-            Button(action: { isPairingPresented = true }) {
-                Text("Pair…")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(theme.accent)
-            }
-        }
+        FriendlyInlineStateView(
+            style: .offline,
+            icon: "exclamationmark.triangle.fill",
+            title: "Allternit Cloud needs a paired runtime",
+            message: "Pair one to use it.",
+            actionTitle: "Pair…",
+            action: { isPairingPresented = true }
+        )
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
         .background(Color("BgSecondary"))
@@ -308,58 +302,24 @@ struct CodeModeView: View {
                 Spacer()
             }
         } else if let loadError, groups.isEmpty {
-            VStack(spacing: 12) {
-                Text("Couldn't load code sessions")
-                    .font(.subheadline)
-                    .foregroundColor(Color("TextPrimary"))
-                Text(loadError)
-                    .font(.caption)
-                    .foregroundColor(Color("TextSecondary"))
-                    .multilineTextAlignment(.center)
-                Button("Retry") {
-                    Task { await loadSessions() }
-                }
-                .font(.subheadline)
-                .foregroundColor(theme.accent)
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 40)
+            FriendlyStateView(
+                style: .offline,
+                icon: "wifi.slash",
+                title: "Couldn't load code sessions",
+                message: FriendlyErrorMessage.from(loadError),
+                actionTitle: "Retry",
+                action: { Task { await loadSessions() } }
+            )
             .frame(maxWidth: .infinity)
         } else if groups.isEmpty {
-            VStack(spacing: 16) {
-                Image(systemName: theme.icon)
-                    .font(.system(size: 24, weight: .medium))
-                    .foregroundColor(theme.accent)
-                    .frame(width: 56, height: 56)
-                    .background(theme.accentSoft)
-                    .clipShape(RoundedRectangle(cornerRadius: Theme.radiusLG))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Theme.radiusLG)
-                            .stroke(theme.accentGlow, lineWidth: 1)
-                    )
-
-                Text("No code sessions yet")
-                    .font(.subheadline)
-                    .foregroundColor(Color("TextPrimary"))
-
-                Text("Start a new thread and it will show up here.")
-                    .font(.caption)
-                    .foregroundColor(Color("TextSecondary"))
-                    .multilineTextAlignment(.center)
-
-                Button(action: startNewThread) {
-                    Text("New Thread")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.black)
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 10)
-                        .background(theme.accent)
-                        .cornerRadius(10)
-                }
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 60)
+            FriendlyStateView(
+                style: .empty,
+                icon: theme.icon,
+                title: "No code sessions yet",
+                message: "Start a new thread and it will show up here.",
+                actionTitle: "New Thread",
+                action: startNewThread
+            )
             .frame(maxWidth: .infinity)
         } else {
             VStack(alignment: .leading, spacing: 20) {
@@ -849,26 +809,19 @@ struct CodeThreadChatView: View {
     /// re-fetches the registry and rebuilds the session if an instance
     /// appeared. Copy mirrors the session list's error state.
     private var noInstanceView: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "terminal")
-                .font(.title2)
-                .foregroundColor(Color("TextSecondary"))
-            Text("No instance available")
-                .font(.subheadline)
-                .foregroundColor(Color("TextPrimary"))
-            Text("Start `gizzi serve --tunnel` on your computer, then retry.")
-                .font(.caption)
-                .foregroundColor(Color("TextSecondary"))
-                .multilineTextAlignment(.center)
-            Button("Retry") {
+        FriendlyStateView(
+            style: .error,
+            icon: "terminal",
+            title: "No instance available",
+            message: "Start `gizzi serve --tunnel` on your computer, then retry.",
+            actionTitle: "Retry",
+            action: {
                 Task {
                     await instanceStore.refresh()
                     terminalSession = await Self.makeTerminalSession(from: instanceStore)
                 }
             }
-            .font(.subheadline)
-        }
-        .padding(.horizontal, 20)
+        )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
@@ -1021,7 +974,7 @@ private struct RuntimePairingView: View {
                 environmentStore.unpair()
             }
             .font(.subheadline)
-            .foregroundColor(.red)
+            .foregroundColor(Theme.statusError)
         }
         .padding(14)
         .background(Color("BgPanel"))
@@ -1057,22 +1010,21 @@ private struct RuntimePairingView: View {
                     Spacer()
                 }
             } else if let runtimesError, runtimes.isEmpty {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(runtimesError)
-                        .font(.caption)
-                        .foregroundColor(.red)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Button("Retry") {
-                        Task { await loadRuntimes() }
-                    }
-                    .font(.subheadline)
-                    .foregroundColor(theme.accent)
-                }
+                FriendlyInlineStateView(
+                    style: .error,
+                    icon: "wifi.slash",
+                    title: "Couldn't load runtimes",
+                    message: FriendlyErrorMessage.from(runtimesError),
+                    actionTitle: "Retry",
+                    action: { Task { await loadRuntimes() } }
+                )
             } else if runtimes.isEmpty {
-                Text("No runtimes yet — pair one with a code below.")
-                    .font(.caption)
-                    .foregroundColor(Color("TextSecondary"))
-                    .fixedSize(horizontal: false, vertical: true)
+                FriendlyInlineStateView(
+                    style: .empty,
+                    icon: "server.rack",
+                    title: "No runtimes yet",
+                    message: "Pair one with a code below."
+                )
             } else {
                 VStack(spacing: 0) {
                     ForEach(runtimes) { runtime in
@@ -1209,7 +1161,7 @@ private struct RuntimePairingView: View {
             if let codeError {
                 Text(codeError)
                     .font(.caption)
-                    .foregroundColor(.red)
+                    .foregroundColor(Theme.statusError)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -1277,7 +1229,7 @@ private struct RuntimePairingView: View {
                         .font(.subheadline)
                         .fontWeight(.semibold)
                 }
-                .foregroundColor(.red)
+                .foregroundColor(Theme.statusError)
                 .disabled(isApproving || isDenying)
                 .opacity(isDenying ? 0.5 : 1)
 

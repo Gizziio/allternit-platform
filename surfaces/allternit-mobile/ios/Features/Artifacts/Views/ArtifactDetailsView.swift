@@ -148,6 +148,7 @@ struct ArtifactDetailsView: View {
                             .foregroundColor(Color("TextPrimary"))
                     }
                     .disabled(loader.content == nil)
+                    .accessibilityLabel("Copy content")
                 }
             }
             .preferredColorScheme(.dark)
@@ -172,32 +173,23 @@ struct ArtifactDetailsView: View {
             }
 
         case .failed(let message):
-            VStack(spacing: 12) {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .font(.title2)
-                    .foregroundColor(.orange)
-                Text("Couldn't load this artifact")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(Color("TextPrimary"))
-                Text(message)
-                    .font(.caption)
-                    .foregroundColor(Color("TextSecondary"))
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 32)
-                Button("Retry") {
-                    Task { await loader.retry(artifact: artifact) }
-                }
-                .font(.subheadline)
-                .foregroundColor(Color("AccentPrimary"))
-                .padding(.top, 4)
-            }
+            FriendlyStateView(
+                style: .offline,
+                icon: "wifi.slash",
+                title: "Couldn't load this artifact",
+                message: FriendlyErrorMessage.from(message),
+                actionTitle: "Retry",
+                action: { Task { await loader.retry(artifact: artifact) } }
+            )
 
         case .loaded(let text):
             if text.isEmpty {
-                Text("This artifact is empty.")
-                    .font(.subheadline)
-                    .foregroundColor(Color("TextSecondary"))
+                FriendlyStateView(
+                    style: .empty,
+                    icon: "doc.text",
+                    title: "This artifact is empty",
+                    message: "Nothing was captured for this artifact."
+                )
             } else if selectedTab == 0 && artifact.isPreviewable {
                 // Sandboxed execution preview (custom scheme + CSP, no network).
                 SandboxedArtifactWebView(content: text, artifactType: artifact.fileType)

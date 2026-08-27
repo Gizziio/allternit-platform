@@ -56,7 +56,7 @@ struct ComposerPlusSheet: View {
     /// verification can see every section (simctl can't scroll sheets).
     private static var sheetDetents: Set<PresentationDetent> {
         #if DEBUG
-        if CommandLine.arguments.contains("-open-plus-sheet") { return [.large] }
+        if launchArgumentEnabled("open-plus-sheet") { return [.large] }
         #endif
         return [.medium, .large]
     }
@@ -77,6 +77,7 @@ struct ComposerPlusSheet: View {
                         .background(.ultraThinMaterial, in: Circle())
                         .overlay(Circle().stroke(Color("BorderSubtle"), lineWidth: 1))
                 }
+                .accessibilityLabel("Close")
             }
             .padding(.horizontal, 20)
             .padding(.top, 12)
@@ -167,21 +168,11 @@ struct ComposerPlusSheet: View {
     }
 
     private func errorBanner(_ message: String) -> some View {
-        HStack(spacing: 10) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundColor(Theme.statusWarning)
-            Text(message)
-                .font(.caption)
-                .foregroundColor(Color("TextPrimary"))
-            Spacer()
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .background(Theme.statusWarning.opacity(0.12))
-        .clipShape(RoundedRectangle(cornerRadius: Theme.radiusMD))
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.radiusMD)
-                .stroke(Theme.statusWarning.opacity(0.35), lineWidth: 1)
+        FriendlyInlineStateView(
+            style: .error,
+            icon: "exclamationmark.triangle.fill",
+            title: "Something went wrong",
+            message: message
         )
     }
 
@@ -300,6 +291,7 @@ struct ComposerPlusSheet: View {
             .frame(maxWidth: .infinity)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(label)
     }
 
     // MARK: - GitHub fetch
@@ -600,11 +592,23 @@ struct ComposerPlusSheet: View {
                 }
             }
             if projectStore.isLoading && projectStore.projects.isEmpty {
-                Text("Loading projects…")
-            } else if projectStore.loadError != nil, projectStore.projects.isEmpty {
-                Button(action: { projectStore.fetchProjectsIfNeeded(force: true) }) {
-                    Text("Couldn't load projects — tap to retry")
-                }
+                FriendlyInlineStateView(
+                    style: .empty,
+                    icon: "arrow.clockwise",
+                    title: "Loading projects",
+                    message: "Hang tight…"
+                )
+            } else if let loadError = projectStore.loadError, projectStore.projects.isEmpty {
+                let isOffline = loadError.lowercased().contains("could not connect")
+                    || loadError.lowercased().contains("failed to connect")
+                FriendlyInlineStateView(
+                    style: isOffline ? .offline : .error,
+                    icon: isOffline ? "wifi.slash" : "exclamationmark.triangle",
+                    title: "Couldn't load projects",
+                    message: FriendlyErrorMessage.from(loadError),
+                    actionTitle: "Retry",
+                    action: { projectStore.fetchProjectsIfNeeded(force: true) }
+                )
             }
             ForEach(projectStore.projects) { project in
                 Button(action: { selectProject(project.id) }) {

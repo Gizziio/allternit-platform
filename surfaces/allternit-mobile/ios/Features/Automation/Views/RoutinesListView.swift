@@ -48,6 +48,7 @@ struct RoutinesListView: View {
                             .foregroundColor(Color("TextPrimary"))
                             .frame(width: 44, height: 44)
                     }
+                    .accessibilityLabel("Open sidebar")
 
                     Text("Automation Tasks")
                         .font(.system(.title3, design: .serif))
@@ -70,7 +71,7 @@ struct RoutinesListView: View {
                     }
                 }
                 .padding(.horizontal, 8)
-                .padding(.vertical, 6)
+                .padding(.vertical, 10)
                 .background(Color("BgPrimary"))
 
                 Divider().background(Color("BorderSubtle"))
@@ -115,21 +116,14 @@ struct RoutinesListView: View {
                 Spacer()
             } else if let loadError = routineStore.loadError, routineStore.routines.isEmpty {
                 Spacer()
-                VStack(spacing: 12) {
-                    Text("Couldn't load routines")
-                        .font(.subheadline)
-                        .foregroundColor(Color("TextPrimary"))
-                    Text(loadError)
-                        .font(.caption)
-                        .foregroundColor(Color("TextSecondary"))
-                        .multilineTextAlignment(.center)
-                    Button("Retry") {
-                        routineStore.fetchRoutinesIfNeeded(force: true)
-                    }
-                    .font(.subheadline)
-                    .foregroundColor(Color("AccentPrimary"))
-                }
-                .padding(.horizontal, 20)
+                FriendlyStateView(
+                    style: errorStyle(loadError),
+                    icon: "wifi.slash",
+                    title: "Couldn't load routines",
+                    message: FriendlyErrorMessage.from(loadError),
+                    actionTitle: "Retry",
+                    action: { routineStore.fetchRoutinesIfNeeded(force: true) }
+                )
                 Spacer()
             } else if routineStore.routines.isEmpty {
                 Spacer()
@@ -169,11 +163,12 @@ struct RoutinesListView: View {
             .padding(.bottom, 12)
 
             if let actionError {
-                Text(actionError)
-                    .font(.caption)
-                    .foregroundColor(Theme.statusWarning)
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 8)
+                FriendlyInlineStateView(
+                    style: .error,
+                    icon: "exclamationmark.triangle",
+                    title: "Action failed",
+                    message: actionError
+                )
             }
 
             ScrollView {
@@ -182,14 +177,12 @@ struct RoutinesListView: View {
                         routineRow(routine)
                     }
                     if visibleRoutines.isEmpty {
-                        VStack(spacing: 10) {
-                            Image(systemName: "magnifyingglass")
-                                .font(.system(size: 20, weight: .medium))
-                                .foregroundColor(Color("TextSecondary"))
-                            Text("No routines match.")
-                                .font(.subheadline)
-                                .foregroundColor(Color("TextSecondary"))
-                        }
+                        FriendlyInlineStateView(
+                            style: .empty,
+                            icon: "magnifyingglass",
+                            title: "No matches",
+                            message: "No routines match."
+                        )
                         .padding(.top, 24)
                     }
                 }
@@ -244,37 +237,18 @@ struct RoutinesListView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "list.bullet.rectangle")
-                .font(.system(size: 24, weight: .medium))
-                .foregroundColor(Color("TextSecondary"))
-                .frame(width: 56, height: 56)
-                .background(Color("BgPanel"))
-                .clipShape(RoundedRectangle(cornerRadius: Theme.radiusLG))
-                .overlay(
-                    RoundedRectangle(cornerRadius: Theme.radiusLG)
-                        .stroke(Theme.borderWarmDefault, lineWidth: 1)
-                )
-            Text("Chain a few commands into a named routine you can run on demand, anytime.")
-                .font(.subheadline)
-                .foregroundColor(Color("TextSecondary"))
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
-            Button(action: {
+        FriendlyStateView(
+            style: .empty,
+            icon: "list.bullet.rectangle",
+            title: "No routines",
+            message: "Chain a few commands into a named routine you can run on demand, anytime.",
+            actionTitle: "Create routine",
+            action: {
                 let generator = UIImpactFeedbackGenerator(style: .light)
                 generator.impactOccurred()
                 isCreateSheetPresented = true
-            }) {
-                Text("Create routine")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(Color("TextPrimary"))
-                    .padding(.horizontal, 14)
-                    .frame(height: 36)
-                    .background(Color("BgSecondary"))
-                    .clipShape(Capsule())
-                    .overlay(Capsule().stroke(Color("BorderSubtle"), lineWidth: 1))
             }
-        }
+        )
     }
 
     // MARK: - Actions
@@ -334,5 +308,17 @@ struct RoutinesListView: View {
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .abbreviated
         return formatter.localizedString(for: date, relativeTo: Date())
+    }
+
+    private func errorStyle(_ error: String) -> FriendlyStateView.Style {
+        let lowered = error.lowercased()
+        if lowered.contains("could not connect")
+            || lowered.contains("failed to connect")
+            || lowered.contains("internet connection")
+            || lowered.contains("offline")
+            || lowered.contains("network") {
+            return .offline
+        }
+        return .error
     }
 }

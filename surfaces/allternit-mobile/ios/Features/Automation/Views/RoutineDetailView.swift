@@ -29,9 +29,12 @@ struct RoutineDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 if let actionError {
-                    Text(actionError)
-                        .font(.caption)
-                        .foregroundColor(Theme.statusWarning)
+                    FriendlyInlineStateView(
+                        style: .error,
+                        icon: "exclamationmark.triangle",
+                        title: "Action failed",
+                        message: actionError
+                    )
                 }
 
                 headerSection
@@ -134,9 +137,12 @@ struct RoutineDetailView: View {
                 .foregroundColor(Color("TextSecondary"))
 
             if liveRoutine.steps.isEmpty {
-                Text("No steps.")
-                    .font(.caption)
-                    .foregroundColor(Color("TextSecondary"))
+                FriendlyInlineStateView(
+                    style: .empty,
+                    icon: "list.bullet",
+                    title: "No steps",
+                    message: "This routine doesn't have any steps yet."
+                )
             } else {
                 VStack(spacing: 8) {
                     ForEach(Array(liveRoutine.steps.enumerated()), id: \.offset) { index, step in

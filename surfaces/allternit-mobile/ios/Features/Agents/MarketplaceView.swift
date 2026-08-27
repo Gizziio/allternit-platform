@@ -15,13 +15,23 @@ struct MarketplaceView: View {
                     .frame(maxWidth: .infinity, alignment: .center)
                     .listRowSeparator(.hidden)
             } else if let error = store.error {
-                Text(error)
-                    .font(.caption)
-                    .foregroundColor(Theme.statusWarning)
+                FriendlyInlineStateView(
+                    style: .offline,
+                    icon: "wifi.slash",
+                    title: "Couldn't load agents",
+                    message: FriendlyErrorMessage.from(error),
+                    actionTitle: "Retry",
+                    action: { store.search(query: searchText.isEmpty ? nil : searchText) }
+                )
+                .listRowSeparator(.hidden)
             } else if store.listings.isEmpty {
-                Text("No published agents or bots yet.")
-                    .font(.caption)
-                    .foregroundColor(Color("TextSecondary"))
+                FriendlyInlineStateView(
+                    style: .empty,
+                    icon: "square.grid.2x2",
+                    title: "No published agents or bots yet",
+                    message: "Check back later or publish your own from the workspace."
+                )
+                .listRowSeparator(.hidden)
             } else {
                 ForEach(store.listings) { listing in
                     NavigationLink(destination: MarketplaceListingDetailView(listingId: listing.id)) {
@@ -119,7 +129,7 @@ struct MarketplaceListingDetailView: View {
                     Section {
                         if installedAgentId != nil {
                             Label("Installed", systemImage: "checkmark.circle.fill")
-                                .foregroundColor(.green)
+                                .foregroundColor(Theme.statusSuccess)
                         } else {
                             Button(action: install) {
                                 if isInstalling {
@@ -149,7 +159,7 @@ struct MarketplaceListingDetailView: View {
                                         Spacer()
                                         Text(String(repeating: "★", count: rating.rating))
                                             .font(.caption)
-                                            .foregroundColor(.yellow)
+                                            .foregroundColor(Theme.statusWarning)
                                     }
                                     if let review = rating.review, !review.isEmpty {
                                         Text(review)
@@ -169,9 +179,14 @@ struct MarketplaceListingDetailView: View {
             } else if isLoading {
                 ProgressView()
             } else if let loadError {
-                Text(loadError)
-                    .font(.caption)
-                    .foregroundColor(Theme.statusWarning)
+                FriendlyStateView(
+                    style: .offline,
+                    icon: "wifi.slash",
+                    title: "Couldn't load agent details",
+                    message: FriendlyErrorMessage.from(loadError),
+                    actionTitle: "Retry",
+                    action: { Task { await load() } }
+                )
             }
         }
         .navigationTitle(detail?.listing.title ?? "Agent")

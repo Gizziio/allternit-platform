@@ -70,6 +70,7 @@ struct MiniAppsStoreView: View {
                         .background(Color("BgPanel"))
                         .clipShape(Circle())
                 }
+                .accessibilityLabel("Close")
             }
 
             HStack(spacing: 8) {
@@ -143,21 +144,14 @@ struct MiniAppsStoreView: View {
             Spacer()
         } else if let loadError = store.loadError, store.apps.isEmpty {
             Spacer()
-            VStack(spacing: 12) {
-                Text("Couldn't load catalog")
-                    .font(.subheadline)
-                    .foregroundColor(Color("TextPrimary"))
-                Text(loadError)
-                    .font(.caption)
-                    .foregroundColor(Color("TextSecondary"))
-                    .multilineTextAlignment(.center)
-                Button("Retry") {
-                    store.fetchCatalogIfNeeded(force: true)
-                }
-                .font(.subheadline)
-                .foregroundColor(theme.accent)
-            }
-            .padding(.horizontal, 20)
+            FriendlyStateView(
+                style: .offline,
+                icon: "wifi.slash",
+                title: "Couldn't load catalog",
+                message: FriendlyErrorMessage.from(loadError),
+                actionTitle: "Retry",
+                action: { store.fetchCatalogIfNeeded(force: true) }
+            )
             Spacer()
         } else if filteredApps.isEmpty {
             Spacer()
@@ -169,23 +163,14 @@ struct MiniAppsStoreView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "app.window")
-                .font(.system(size: 24, weight: .medium))
-                .foregroundColor(Color("TextSecondary"))
-                .frame(width: 56, height: 56)
-                .background(Color("BgPanel"))
-                .clipShape(RoundedRectangle(cornerRadius: Theme.radiusLG))
-                .overlay(
-                    RoundedRectangle(cornerRadius: Theme.radiusLG)
-                        .stroke(Theme.borderWarmDefault, lineWidth: 1)
-                )
-            Text("No mini apps found")
-                .font(.subheadline)
-                .foregroundColor(Color("TextSecondary"))
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
-        }
+        FriendlyStateView(
+            style: .empty,
+            icon: searchText.isEmpty ? "app.window" : "magnifyingglass",
+            title: "No mini apps found",
+            message: searchText.isEmpty
+                ? "Browse connectors, runtimes, and tools."
+                : "No mini apps match your search."
+        )
     }
 
     private var listContent: some View {
@@ -282,6 +267,7 @@ struct MiniAppsStoreView: View {
                         .clipShape(RoundedRectangle(cornerRadius: Theme.radiusSM))
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(app.isPinned ? "Unpin app" : "Pin app")
 
                 Spacer()
             }

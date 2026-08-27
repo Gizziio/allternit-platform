@@ -29,6 +29,7 @@ struct ModelsTabView: View {
                             .foregroundColor(Color("TextPrimary"))
                             .frame(width: 44, height: 44)
                     }
+                    .accessibilityLabel("Open sidebar")
 
                     Text("Models")
                         .font(.system(.title3, design: .serif))
@@ -50,9 +51,10 @@ struct ModelsTabView: View {
                             .clipShape(Circle())
                     }
                     .disabled(store.isLoading)
+                    .accessibilityLabel("Refresh models")
                 }
                 .padding(.horizontal, 8)
-                .padding(.vertical, 6)
+                .padding(.vertical, 10)
 
                 ModelManagementListContent(modelStore: modelStore, store: store)
             }

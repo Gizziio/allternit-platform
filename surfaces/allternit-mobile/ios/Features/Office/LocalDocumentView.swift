@@ -19,10 +19,13 @@ struct LocalDocumentView: View {
         NavigationStack {
             Group {
                 if let error = loadError {
-                    ContentUnavailableView(
-                        "Couldn't open document",
-                        systemImage: "exclamationmark.triangle",
-                        description: Text(error)
+                    FriendlyStateView(
+                        style: .error,
+                        icon: "exclamationmark.triangle",
+                        title: "Couldn't open document",
+                        message: FriendlyErrorMessage.from(error),
+                        actionTitle: "Try Again",
+                        action: { loadError = nil; loadText() }
                     )
                 } else {
                     documentBody
@@ -55,10 +58,11 @@ struct LocalDocumentView: View {
                 LocalPDFKitView(document: pdf)
                     .padding(8)
             } else {
-                ContentUnavailableView(
-                    "PDF preview unavailable",
-                    systemImage: "doc.text",
-                    description: Text("The file could not be rendered.")
+                FriendlyStateView(
+                    style: .empty,
+                    icon: "doc.text",
+                    title: "PDF preview unavailable",
+                    message: "The file could not be rendered."
                 )
             }
         case .markdown, .plainText:

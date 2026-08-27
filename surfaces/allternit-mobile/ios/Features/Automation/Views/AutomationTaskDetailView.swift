@@ -52,6 +52,7 @@ struct AutomationTaskDetailView: View {
                         .font(.system(size: 15, weight: .medium))
                         .foregroundColor(Color("TextSecondary"))
                 }
+                .accessibilityLabel("Delete task")
             }
         }
         .alert("Delete this automation task?", isPresented: $isDeleteConfirmPresented) {
@@ -176,13 +177,21 @@ struct AutomationTaskDetailView: View {
                 }
                 .padding(.vertical, 12)
             } else if let runsError {
-                Text(runsError)
-                    .font(.caption)
-                    .foregroundColor(Theme.statusWarning)
+                FriendlyInlineStateView(
+                    style: .error,
+                    icon: "exclamationmark.triangle",
+                    title: "Couldn't load runs",
+                    message: FriendlyErrorMessage.from(runsError),
+                    actionTitle: "Retry",
+                    action: { Task { await loadRuns() } }
+                )
             } else if runs.isEmpty {
-                Text("No runs yet.")
-                    .font(.caption)
-                    .foregroundColor(Color("TextSecondary"))
+                FriendlyInlineStateView(
+                    style: .empty,
+                    icon: "play.circle",
+                    title: "No runs yet",
+                    message: "Runs for this task will appear here."
+                )
             } else {
                 VStack(spacing: 8) {
                     ForEach(runs) { run in
@@ -255,7 +264,7 @@ struct AutomationTaskDetailView: View {
     private static func runStatusColor(_ status: String) -> Color {
         switch status {
         case "success": return Theme.statusSuccess
-        case "failed", "timeout": return .red
+        case "failed", "timeout": return Theme.statusError
         case "cancelled": return Color("TextSecondary")
         case "running", "pending": return Theme.statusInfo
         default: return Color("TextSecondary")
@@ -337,7 +346,7 @@ struct AutomationTaskDetailView: View {
         } catch is CancellationError {
             // View went away mid-flight — keep current state.
         } catch {
-            runsError = "Couldn't load run history: \(error.localizedDescription)"
+            runsError = error.localizedDescription
         }
         isLoadingRuns = false
     }

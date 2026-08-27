@@ -84,6 +84,7 @@ struct CoworkSessionWorkspaceView: View {
                     .background(Color("BgPanel"))
                     .clipShape(Circle())
             }
+            .accessibilityLabel("Close")
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(sessionTitle)

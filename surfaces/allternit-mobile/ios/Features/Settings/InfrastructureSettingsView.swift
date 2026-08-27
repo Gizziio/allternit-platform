@@ -60,7 +60,7 @@ struct InfrastructureSettingsView: View {
                     } else {
                         Text("None")
                             .font(.caption)
-                            .foregroundColor(.red)
+                            .foregroundColor(Theme.statusError)
                     }
                 }
 
@@ -68,7 +68,7 @@ struct InfrastructureSettingsView: View {
                     environment.unpair()
                 }
                 .font(.subheadline)
-                .foregroundColor(.red)
+                .foregroundColor(Theme.statusError)
                 .disabled(environment.pairedRuntimeId == nil)
             }
         } header: {
@@ -98,7 +98,7 @@ struct InfrastructureSettingsView: View {
                 case .up(let ip):
                     Text(ip).font(.caption).foregroundColor(Color("TextPrimary"))
                 case .failed(let message):
-                    Text(message).font(.caption).foregroundColor(.red).lineLimit(1)
+                    Text(message).font(.caption).foregroundColor(Theme.statusError).lineLimit(1)
                 }
             }
 
@@ -123,15 +123,22 @@ struct InfrastructureSettingsView: View {
     private var cloudInstancesSection: some View {
         Section {
             if let error = instanceStore.lastError {
-                Text(error)
-                    .font(.caption)
-                    .foregroundColor(Theme.statusWarning)
+                let offline = isConnectionFailure(error)
+                FriendlyInlineStateView(
+                    style: offline ? .offline : .error,
+                    icon: offline ? "wifi.slash" : "exclamationmark.triangle",
+                    title: "Could not load cloud instances",
+                    message: FriendlyErrorMessage.from(error)
+                )
             }
 
             if instanceStore.instances.isEmpty {
-                Text("No registered instances.")
-                    .font(.caption)
-                    .foregroundColor(Color("TextSecondary"))
+                FriendlyInlineStateView(
+                    style: .empty,
+                    icon: "desktopcomputer",
+                    title: "No registered instances",
+                    message: "Cloud instances will appear here once registered."
+                )
             } else {
                 ForEach(instanceStore.instances) { instance in
                     HStack {
@@ -147,7 +154,7 @@ struct InfrastructureSettingsView: View {
                         Spacer()
                         Text(instance.status)
                             .font(.caption)
-                            .foregroundColor(instance.isOnline ? Color.green : Color("TextSecondary"))
+                            .foregroundColor(instance.isOnline ? Theme.statusSuccess : Color("TextSecondary"))
                     }
                 }
             }
@@ -157,6 +164,15 @@ struct InfrastructureSettingsView: View {
     }
 
     // MARK: - BYOC / VPS
+
+    private func isConnectionFailure(_ error: String) -> Bool {
+        let lowered = error.lowercased()
+        return lowered.contains("could not connect")
+            || lowered.contains("failed to connect")
+            || lowered.contains("offline")
+            || lowered.contains("no network")
+            || lowered.contains("network connection was lost")
+    }
 
     private var byocSection: some View {
         Section {

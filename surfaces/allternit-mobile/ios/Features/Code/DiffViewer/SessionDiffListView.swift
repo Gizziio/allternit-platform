@@ -37,28 +37,26 @@ struct SessionDiffListView: View {
             ProgressView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if let loadError, diffs.isEmpty {
-            VStack(spacing: 12) {
-                Text("Couldn't load changes")
-                    .font(.subheadline)
-                    .foregroundColor(Color("TextPrimary"))
-                Text(loadError)
-                    .font(.caption)
-                    .foregroundColor(Color("TextSecondary"))
-                    .multilineTextAlignment(.center)
-                Button("Retry") { Task { await load() } }
-                    .font(.subheadline)
-            }
-            .padding(.horizontal, 20)
+            FriendlyStateView(
+                style: .offline,
+                icon: "wifi.slash",
+                title: "Couldn't load changes",
+                message: FriendlyErrorMessage.from(loadError),
+                actionTitle: "Retry",
+                action: { Task { await load() } }
+            )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if diffs.isEmpty {
             // Covers both "nothing changed yet" and "not summarized yet" —
             // pull-to-refresh is the mitigation for the latter.
             ScrollView {
-                Text("No changes yet")
-                    .font(.subheadline)
-                    .foregroundColor(Color("TextSecondary"))
-                    .padding(.top, 60)
-                    .frame(maxWidth: .infinity)
+                FriendlyStateView(
+                    style: .empty,
+                    icon: "plus.forwardslash.minus",
+                    title: "No changes yet",
+                    message: "When this session edits files, they'll appear here."
+                )
+                .frame(maxWidth: .infinity)
             }
             .refreshable { await load() }
         } else {
@@ -93,7 +91,7 @@ struct SessionDiffListView: View {
                 }
                 if diff.deletions > 0 {
                     Text("-\(diff.deletions)")
-                        .foregroundColor(.red)
+                        .foregroundColor(Theme.statusError)
                 }
             }
             .font(.system(.caption, design: .monospaced).weight(.semibold))
@@ -102,17 +100,14 @@ struct SessionDiffListView: View {
     }
 
     private var noInstanceView: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "plus.forwardslash.minus")
-                .font(.title2)
-                .foregroundColor(Color("TextSecondary"))
-            Text("No instance available")
-                .font(.subheadline)
-                .foregroundColor(Color("TextPrimary"))
-            Button("Retry") { Task { await resolveAndLoad() } }
-                .font(.subheadline)
-        }
-        .padding(.horizontal, 20)
+        FriendlyStateView(
+            style: .error,
+            icon: "plus.forwardslash.minus",
+            title: "No instance available",
+            message: "Start `gizzi serve --tunnel` on your computer, then retry.",
+            actionTitle: "Retry",
+            action: { Task { await resolveAndLoad() } }
+        )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 

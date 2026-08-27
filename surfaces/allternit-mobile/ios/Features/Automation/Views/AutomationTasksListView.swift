@@ -61,6 +61,7 @@ struct AutomationTasksListView: View {
                             .foregroundColor(Color("TextPrimary"))
                             .frame(width: 44, height: 44)
                     }
+                    .accessibilityLabel("Open sidebar")
 
                     Text("Automation Tasks")
                         .font(.system(.title3, design: .serif))
@@ -81,9 +82,10 @@ struct AutomationTasksListView: View {
                             .background(Color("BgPanel"))
                             .clipShape(Circle())
                     }
+                    .accessibilityLabel("New automation task")
                 }
                 .padding(.horizontal, 8)
-                .padding(.vertical, 6)
+                .padding(.vertical, 10)
                 .background(Color("BgPrimary"))
 
                 Divider().background(Color("BorderSubtle"))
@@ -139,21 +141,14 @@ struct AutomationTasksListView: View {
                 Spacer()
             } else if let loadError = jobStore.loadError, jobStore.jobs.isEmpty {
                 Spacer()
-                VStack(spacing: 12) {
-                    Text("Couldn't load automation tasks")
-                        .font(.subheadline)
-                        .foregroundColor(Color("TextPrimary"))
-                    Text(loadError)
-                        .font(.caption)
-                        .foregroundColor(Color("TextSecondary"))
-                        .multilineTextAlignment(.center)
-                    Button("Retry") {
-                        jobStore.fetchJobsIfNeeded(force: true)
-                    }
-                    .font(.subheadline)
-                    .foregroundColor(Color("AccentPrimary"))
-                }
-                .padding(.horizontal, 20)
+                FriendlyStateView(
+                    style: errorStyle(loadError),
+                    icon: "wifi.slash",
+                    title: "Couldn't load automation tasks",
+                    message: FriendlyErrorMessage.from(loadError),
+                    actionTitle: "Retry",
+                    action: { jobStore.fetchJobsIfNeeded(force: true) }
+                )
                 Spacer()
             } else if jobStore.jobs.isEmpty {
                 Spacer()
@@ -192,11 +187,12 @@ struct AutomationTasksListView: View {
             .padding(.bottom, 12)
 
             if let actionError {
-                Text(actionError)
-                    .font(.caption)
-                    .foregroundColor(Theme.statusWarning)
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 8)
+                FriendlyInlineStateView(
+                    style: .error,
+                    icon: "exclamationmark.triangle",
+                    title: "Action failed",
+                    message: actionError
+                )
             }
 
             ScrollView {
@@ -205,14 +201,12 @@ struct AutomationTasksListView: View {
                         jobRow(job)
                     }
                     if visibleJobs.isEmpty {
-                        VStack(spacing: 10) {
-                            Image(systemName: "magnifyingglass")
-                                .font(.system(size: 20, weight: .medium))
-                                .foregroundColor(Color("TextSecondary"))
-                            Text("No automation tasks match.")
-                                .font(.subheadline)
-                                .foregroundColor(Color("TextSecondary"))
-                        }
+                        FriendlyInlineStateView(
+                            style: .empty,
+                            icon: "magnifyingglass",
+                            title: "No matches",
+                            message: "No automation tasks match."
+                        )
                         .padding(.top, 24)
                     }
                 }
@@ -272,37 +266,18 @@ struct AutomationTasksListView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "clock.arrow.circlepath")
-                .font(.system(size: 24, weight: .medium))
-                .foregroundColor(Color("TextSecondary"))
-                .frame(width: 56, height: 56)
-                .background(Color("BgPanel"))
-                .clipShape(RoundedRectangle(cornerRadius: Theme.radiusLG))
-                .overlay(
-                    RoundedRectangle(cornerRadius: Theme.radiusLG)
-                        .stroke(Theme.borderWarmDefault, lineWidth: 1)
-                )
-            Text("Schedule a prompt to run automatically — daily digests, recurring reminders, anything on a timer.")
-                .font(.subheadline)
-                .foregroundColor(Color("TextSecondary"))
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
-            Button(action: {
+        FriendlyStateView(
+            style: .empty,
+            icon: "clock.arrow.circlepath",
+            title: "No automation tasks",
+            message: "Schedule a prompt to run automatically — daily digests, recurring reminders, anything on a timer.",
+            actionTitle: "Create automation task",
+            action: {
                 let generator = UIImpactFeedbackGenerator(style: .light)
                 generator.impactOccurred()
                 isCreateSheetPresented = true
-            }) {
-                Text("Create automation task")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(Color("TextPrimary"))
-                    .padding(.horizontal, 14)
-                    .frame(height: 36)
-                    .background(Color("BgSecondary"))
-                    .clipShape(Capsule())
-                    .overlay(Capsule().stroke(Color("BorderSubtle"), lineWidth: 1))
             }
-        }
+        )
     }
 
     // MARK: - Actions
@@ -325,7 +300,7 @@ struct AutomationTasksListView: View {
         switch status {
         case "active": return Theme.statusSuccess
         case "paused": return Theme.statusWarning
-        case "error": return .red
+        case "error": return Theme.statusError
         default: return Color("TextSecondary")
         }
     }
@@ -355,5 +330,17 @@ struct AutomationTasksListView: View {
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .abbreviated
         return formatter.localizedString(for: date, relativeTo: Date())
+    }
+
+    private func errorStyle(_ error: String) -> FriendlyStateView.Style {
+        let lowered = error.lowercased()
+        if lowered.contains("could not connect")
+            || lowered.contains("failed to connect")
+            || lowered.contains("internet connection")
+            || lowered.contains("offline")
+            || lowered.contains("network") {
+            return .offline
+        }
+        return .error
     }
 }

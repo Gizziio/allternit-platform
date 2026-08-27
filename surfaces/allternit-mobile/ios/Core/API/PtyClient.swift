@@ -81,7 +81,7 @@ final class PtyClient: @unchecked Sendable {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
         #if DEBUG
-        if CommandLine.arguments.contains("-skip-auth") {
+        if launchArgumentEnabled("skip-auth") {
             request.setValue("dev-ios-tester", forHTTPHeaderField: "x-allternit-user-id")
             request.setValue("dev", forHTTPHeaderField: "x-allternit-desktop-access-token")
             if request.value(forHTTPHeaderField: "Authorization") == nil {

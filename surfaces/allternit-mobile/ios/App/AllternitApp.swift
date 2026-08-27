@@ -16,6 +16,9 @@ struct AllternitApp: App {
     @StateObject private var onboardingStore = OnboardingStore.shared
     @Environment(\.scenePhase) private var scenePhase
     @State private var openedDocumentURL: URL?
+    /// DEBUG-only manual bypass from the login gate so the app can be opened
+    /// without signing in (addresses the "open app without auth" gap).
+    @State private var skipAuthRequested = false
 
     init() {
         AuthManager.shared.configure(publishableKey: AppConfig.clerkPublishableKey)
@@ -26,7 +29,7 @@ struct AllternitApp: App {
         // `-reset-onboarding` (DEBUG only): also clears the Phase-10
         // onboarding gate (the ChatView site clears the dictation/priming
         // flags). Clearing here means THIS launch lands on page 1.
-        if CommandLine.arguments.contains("-reset-onboarding") {
+        if launchArgumentEnabled("reset-onboarding") {
             OnboardingStore.shared.reset()
         }
         #endif
@@ -35,24 +38,41 @@ struct AllternitApp: App {
     var body: some Scene {
         WindowGroup {
             Group {
-                if authManager.isClerkConfigured {
-                    gatedContent
-                        // ClerkKitUI views (AuthView) read Clerk from the environment.
-                        .environment(Clerk.shared)
+                if authManager.isClerkConfigured || shouldSkipAuth {
+                    // Only inject Clerk.shared when the SDK was actually
+                    // configured; otherwise `Clerk.shared` traps on access.
+                    if authManager.isClerkConfigured {
+                        gatedContent
+                            // ClerkKitUI views (AuthView) read Clerk from the environment.
+                            .environment(Clerk.shared)
+                    } else {
+                        gatedContent
+                    }
                 } else {
                     // Publishable key placeholder not filled in — LoginGateView
                     // shows the setup hint instead of crashing on Clerk.shared.
-                    LoginGateView()
+                    // DEBUG: still expose the skip-auth affordance so the app can
+                    // be opened without a configured Clerk app.
+                    LoginGateView(onSkipAuth: {
+                        skipAuthRequested = true
+                    })
                 }
             }
             .environmentObject(authManager)
             .sheet(isPresented: $authManager.isPresentingAuth, onDismiss: {
                 authManager.refreshAuthState()
             }) {
-                AuthView(
-                    mode: authManager.authEntryMode == .signUp ? .signUp : .signIn
-                )
-                    .environment(Clerk.shared)
+                // The sheet is only presented after Clerk is configured, but
+                // SwiftUI may evaluate the content view eagerly. Avoid touching
+                // Clerk.shared unless the SDK is actually configured.
+                if authManager.isClerkConfigured {
+                    AuthView(
+                        mode: authManager.authEntryMode == .signUp ? .signUp : .signIn
+                    )
+                        .environment(Clerk.shared)
+                } else {
+                    EmptyView()
+                }
             }
             .onChange(of: scenePhase) { _, newPhase in
                 if newPhase == .active {
@@ -77,11 +97,11 @@ struct AllternitApp: App {
 
     @ViewBuilder
     private var gatedContent: some View {
-        if authManager.isSignedIn || Self.skipAuthForTesting {
+        if authManager.isSignedIn || shouldSkipAuth {
             // Phase 10: first-launch onboarding runs BEFORE the workspace
             // (root swap — it never covers LoginGateView). Completing or
             // skipping flips `isComplete` and swaps in the workspace.
-            if (!onboardingStore.isComplete && !Self.bypassOnboardingForTesting)
+            if (!onboardingStore.isComplete && !shouldBypassOnboarding)
                 || Self.forceOnboardingForTesting {
                 OnboardingView()
             } else {
@@ -90,8 +110,30 @@ struct AllternitApp: App {
                     .environmentObject(agentModeStore)
             }
         } else {
-            LoginGateView()
+            LoginGateView(onSkipAuth: {
+                skipAuthRequested = true
+            })
         }
+    }
+
+    /// DEBUG-only: true when the `-skip-auth` launch argument is present or
+    /// the user tapped the login gate's skip button.
+    private var shouldSkipAuth: Bool {
+        #if DEBUG
+        Self.skipAuthForTesting || skipAuthRequested
+        #else
+        false
+        #endif
+    }
+
+    /// DEBUG-only: bypass onboarding when skipping auth so the workspace is
+    /// reachable immediately.
+    private var shouldBypassOnboarding: Bool {
+        #if DEBUG
+        Self.bypassOnboardingForTesting || skipAuthRequested
+        #else
+        false
+        #endif
     }
 
     /// `-skip-auth` (DEBUG builds only): bypasses the Clerk gate to exercise
@@ -99,7 +141,7 @@ struct AllternitApp: App {
     /// Bearer token, so backend-fed views show their error/empty states.
     private static var skipAuthForTesting: Bool {
         #if DEBUG
-        CommandLine.arguments.contains("-skip-auth")
+        launchArgumentEnabled("skip-auth")
         #else
         false
         #endif
@@ -109,7 +151,7 @@ struct AllternitApp: App {
     /// onboarding flow regardless of the complete flag, for screenshots.
     private static var forceOnboardingForTesting: Bool {
         #if DEBUG
-        CommandLine.arguments.contains("-open-onboarding")
+        launchArgumentEnabled("open-onboarding")
         #else
         false
         #endif
@@ -121,24 +163,39 @@ struct AllternitApp: App {
     /// install before they ever reach the workspace.
     private static var bypassOnboardingForTesting: Bool {
         #if DEBUG
-        let args = CommandLine.arguments
-        return args.contains("-autosend")
-            || args.contains("-open-settings")
-            || args.contains("-open-plus-sheet")
-            || args.contains("-open-incognito")
-            || args.contains("-enable-agent-mode")
-            || args.contains("-open-agent-sheet")
-            || args.contains("-open-agent-hub")
-            || args.contains("-open-agent-detail")
-            || args.contains("-open-avatar-editor")
-            || args.contains("-open-new-workspace-file")
-            || args.contains("-open-workspace-file")
-            || args.contains("-open-voice-mode")
-            || args.contains("-open-voice-settings")
-            || args.contains("-open-code-thread")
-            || args.contains("-open-code-thread-id")
-            || args.contains("-open-settings-brain-spike")
-            || args.contains("-brain-spike-auto")
+        launchArgumentEnabled("autosend")
+            || launchArgumentEnabled("open-settings")
+            || launchArgumentEnabled("open-settings-memory")
+            || launchArgumentEnabled("open-settings-platform")
+            || launchArgumentEnabled("open-settings-data")
+            || launchArgumentEnabled("open-settings-brain-spike")
+            || launchArgumentEnabled("open-plus-sheet")
+            || launchArgumentEnabled("open-incognito")
+            || launchArgumentEnabled("enable-agent-mode")
+            || launchArgumentEnabled("open-agent-sheet")
+            || launchArgumentEnabled("open-agent-hub")
+            || launchArgumentEnabled("open-agent-detail")
+            || launchArgumentEnabled("open-avatar-editor")
+            || launchArgumentEnabled("open-new-workspace-file")
+            || launchArgumentEnabled("open-workspace-file")
+            || launchArgumentEnabled("open-voice-mode")
+            || launchArgumentEnabled("open-voice-settings")
+            || launchArgumentEnabled("open-code-thread")
+            || launchArgumentEnabled("open-code-thread-id")
+            || launchArgumentEnabled("open-code-filter")
+            || launchArgumentEnabled("open-projects")
+            || launchArgumentEnabled("open-project-detail")
+            || launchArgumentEnabled("open-new-project")
+            || launchArgumentEnabled("open-artifacts")
+            || launchArgumentEnabled("open-browser-chat")
+            || launchArgumentEnabled("open-connectors")
+            || launchArgumentEnabled("open-automation")
+            || launchArgumentEnabled("open-models")
+            || launchArgumentEnabled("open-aci")
+            || launchArgumentEnabled("brain-spike-auto")
+            || launchArgumentEnabled("chat")
+            || launchArgumentEnabled("code")
+            || launchArgumentEnabled("browser")
         #else
         false
         #endif
@@ -147,6 +204,8 @@ struct AllternitApp: App {
 
 struct LoginGateView: View {
     @EnvironmentObject var auth: AuthManager
+
+    var onSkipAuth: (() -> Void)? = nil
 
     @State private var logoGlowing = false
 
@@ -162,16 +221,7 @@ struct LoginGateView: View {
                     .blur(radius: 35)
                     .animation(.easeInOut(duration: 2.5).repeatForever(autoreverses: true), value: logoGlowing)
 
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Text("A://")
-                        .foregroundColor(Color("AccentPrimary"))
-                        .font(.system(.title2, design: .monospaced))
-                        .bold()
-                    Text("LLTERNIT")
-                        .foregroundColor(Color("TextPrimary"))
-                        .font(.system(.title2, design: .serif))
-                        .tracking(4.0)
-                }
+                WordmarkView(height: 28)
             }
 
             Text("Your native workspace for autonomous AI execution.")
@@ -216,7 +266,25 @@ struct LoginGateView: View {
             .disabled(!auth.isClerkConfigured)
             .opacity(auth.isClerkConfigured ? 1 : 0.5)
             .padding(.horizontal, 32)
-            .padding(.bottom, 48)
+
+            #if DEBUG
+            if let onSkipAuth {
+                Button(action: {
+                    let generator = UIImpactFeedbackGenerator(style: .light)
+                    generator.impactOccurred()
+                    onSkipAuth()
+                }) {
+                    Text("Continue without signing in")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(Color("TextSecondary"))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                }
+                .padding(.horizontal, 32)
+                .padding(.bottom, 64)
+            }
+            #endif
         }
         .background(Color("BgPrimary").edgesIgnoringSafeArea(.all))
         .onAppear { logoGlowing = true }

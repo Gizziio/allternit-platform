@@ -121,3 +121,27 @@
 
 5. **Research**
    - Codex code sessions → define parity scope before building.
+
+---
+
+## 8. Bot parity update (2026-08-19, branch `session/ios-bot-parity`)
+
+The Aug 17–18 web bot work (webhook triggers `b7655b34f`, OpenMausBot Phase 2 bot ops state `c690648cd`, bot hub `6673a8b78`/`1ad05d965`, bot desktop VMs `4441da4fe`, cowork day-of-week selector) was ported to iOS:
+
+| Web feature | iOS landing |
+|-------------|-------------|
+| `BotHubHomeTab`/`BotHubCard` bot grid (bots from `GET /api/v1/agents` filtered `isBot`, accent color, category filter, session counts) | `AgentHubView` home tab bot grid; `Core/API/Models/BotProfile.swift` (`BotProfile`, `BotCategory`, `AgentRecord.isBot/botProfile/…` over the `config` bag — the backend merges `isBot`/`botProfile` into `config`, there are no wire columns) |
+| Bot operational status (`bot-operational-state.store.ts` taxonomy + precedence) | `Core/API/Models/BotOperationalState.swift` + `Core/BotStatusStore.swift`; status pill in hub + detail. Fed by `GET /api/v1/agents/:id/events` SSE via new `Core/API/AgentEventsClient.swift` (the web's `bot-event-store` is browser-localStorage and not portable). Note: the stream only emits `agent.run.started/completed/failed` + `agent.created`, so `waiting_approval`/`waiting_input`/`blocked` have no event source yet |
+| Bot activity feed (`bot-activity-api.ts`) | `AgentDetailView` "Activity" section rendering the SSE-derived recent-events feed (live while subscribed; no server-side history exists yet) |
+| `WebhooksSettingsPanel` CRUD + deliveries | `Features/Settings/WebhooksSettingsView.swift` (+ row in `SettingsView` agent section); `Core/API/WebhookTriggersClient.swift` + `Core/WebhookTriggersStore.swift`. Secrets are never displayed (server never returns them) |
+| `BotHomeView` Webhooks status card | `AgentDetailView` "Webhooks" card ("N triggers wake this bot") linking to the settings panel |
+| `BotDesktopView` VM status + observe/take-over/hand-back | `AgentDetailView` "Desktop" section; `Core/API/BotDesktopClient.swift` + `Core/BotDesktopStore.swift` (`/api/v1/bots/:id/desktop*`) |
+| `DayOfWeekSelector` cron dow editing | `Core/CronDays.swift` (`parseCronDays`/`applyCronDays` port) + `Features/Automation/Views/DayOfWeekSelector.swift`, wired into `CreateRoutineSheet` and `CreateAutomationTaskSheet` (latter only for cron-shaped input, since it also accepts plain-language schedules) |
+
+**Follow-ups — resolved 2026-08-19 (same branch):**
+- ~~Server-owned bot event ledger~~ — **done**: `cmd/allternit-api/src/bot_event_routes.rs` + migration `V92__bot_events.sql` (`POST/GET /api/v1/bots/:id/events` with cursor pagination + idempotent append, `GET /api/v1/bots/:id/operational-state` computed on read). Web reconciled: `bot-events-api.ts` client, `GoalLoopRecorder` dual-writes server + localStorage replica, `BotActivityAPI` reads from the server, `bot-operational-state.store` fetches the server projection. iOS: `BotEventsClient` + `BotStatusStore` bootstrap (server snapshot first, SSE live after).
+- ~~Approval/input-request events~~ — **done**: allternit-api `POST /api/v1/agents/:id/events/ingest` (allowlisted `agent.run.waiting_approval/approval_resolved/waiting_input/blocked`); `agent_chat_bridge`/`run_agent` pass `x-allternit-agent-id`/`x-allternit-run-id` to gizzi-code; gizzi-code `agent-event-bridge.ts` maps permission/question bus events onto the ingest route; iOS `BotStatusStore` folds them into `waiting_approval`/`waiting_input`/`blocked`.
+- ~~VNC desktop streaming~~ — **done (native)**: `Features/Agents/Desktop/` — a native RFB 3.8 client (`RFBClient`/`RFBProtocol`/`RFBDecoder`: Raw + CopyRect + ZRLE, incremental parsing, keysym input) over `URLSessionWebSocketTask` with bearer auth on the upgrade (WKWebView can't set WS headers), plus the fullscreen `BotDesktopView` viewer. Observe mode is view-only on both sides: the iOS viewer disables input in observe mode, and `cmd/allternit-api/src/bot_desktop_stream.rs` now drops observer WebSocket input messages server-side so the VNC server never receives them.
+- Also fixed: web `vm-operator.ts` built control URLs as `desktop?sandbox_id=X/observe` (verb inside the query value → 405); now `/desktop/observe?sandbox_id=…`.
+
+**Still open:** server-side search for bot activity (`BotActivityAPI.search` is local-only); VNC live verification needs `OPEN_SANDBOX_URL` configured.

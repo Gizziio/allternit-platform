@@ -122,7 +122,7 @@ final class BrainStore: ObservableObject {
             // token, then sabotage it so the auth-failure path can be
             // exercised end to end — clone must fail and must NOT be masked
             // by the empty-remote init fallback below.
-            if CommandLine.arguments.contains("-brain-corrupt-token") {
+            if launchArgumentEnabled("brain-corrupt-token") {
                 token = GitToken(
                     id: token.id,
                     token: "allternit_git_00000000000000000000000000000000",

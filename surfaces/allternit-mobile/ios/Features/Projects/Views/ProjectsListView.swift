@@ -66,6 +66,7 @@ struct ProjectsListView: View {
                                 .foregroundColor(Color("TextPrimary"))
                                 .frame(width: 44, height: 44)
                         }
+                        .accessibilityLabel("Open sidebar")
                     }
                     Text("Projects")
                         .font(.system(.title3, design: .serif))
@@ -84,6 +85,7 @@ struct ProjectsListView: View {
                             .background(Color("BgPanel"))
                             .clipShape(Circle())
                     }
+                    .accessibilityLabel("Create project")
                     if onOpenSidebar == nil {
                         Button(action: { dismiss() }) {
                             Image(systemName: "xmark")
@@ -93,6 +95,7 @@ struct ProjectsListView: View {
                                 .background(Color("BgPanel"))
                                 .clipShape(Circle())
                         }
+                        .accessibilityLabel("Close")
                     }
                 }
                 .padding(.horizontal, onOpenSidebar == nil ? 20 : 12)
@@ -126,12 +129,12 @@ struct ProjectsListView: View {
             // `-open-project-detail` (DEBUG only): deep-links into the first
             // project (or a mock when the backend has none) so the detail
             // view can be screenshot-verified without tap injection.
-            if CommandLine.arguments.contains("-open-project-detail"), detailProject == nil {
+            if launchArgumentEnabled("open-project-detail"), detailProject == nil {
                 detailProject = projectStore.projects.first ?? Self.debugMockProject
             }
             // `-open-new-project` (DEBUG only): opens the create sheet
             // directly for screenshot verification.
-            if CommandLine.arguments.contains("-open-new-project") {
+            if launchArgumentEnabled("open-new-project") {
                 isCreateSheetPresented = true
             }
         }
@@ -157,10 +160,11 @@ struct ProjectsListView: View {
                 // No sharing backend yet — honest empty state instead of
                 // echoing the user's own projects under a wrong label.
                 Spacer()
-                emptyState(
+                FriendlyStateView(
+                    style: .empty,
                     icon: "person.2",
-                    message: "No shared chats yet",
-                    showsCreateButton: false
+                    title: "No shared chats",
+                    message: "No shared chats yet"
                 )
                 Spacer()
             } else if projectStore.isLoading && projectStore.projects.isEmpty {
@@ -169,29 +173,31 @@ struct ProjectsListView: View {
                 Spacer()
             } else if let loadError = projectStore.loadError, projectStore.projects.isEmpty {
                 Spacer()
-                VStack(spacing: 12) {
-                    Text("Couldn't load projects")
-                        .font(.subheadline)
-                        .foregroundColor(Color("TextPrimary"))
-                    Text(loadError)
-                        .font(.caption)
-                        .foregroundColor(Color("TextSecondary"))
-                        .multilineTextAlignment(.center)
-                    Button("Retry") {
+                FriendlyStateView(
+                    style: .offline,
+                    icon: "wifi.slash",
+                    title: "Couldn't load projects",
+                    message: FriendlyErrorMessage.from(loadError),
+                    actionTitle: "Retry",
+                    action: {
                         projectStore.fetchProjectsIfNeeded(force: true)
                         Task { await loadChatCounts() }
                     }
-                    .font(.subheadline)
-                    .foregroundColor(Color("AccentPrimary"))
-                }
-                .padding(.horizontal, 20)
+                )
                 Spacer()
             } else if projectStore.projects.isEmpty {
                 Spacer()
-                emptyState(
+                FriendlyStateView(
+                    style: .empty,
                     icon: "folder",
+                    title: "No projects yet",
                     message: "Projects keep related chats, files, and instructions together",
-                    showsCreateButton: true
+                    actionTitle: "Create project",
+                    action: {
+                        let generator = UIImpactFeedbackGenerator(style: .light)
+                        generator.impactOccurred()
+                        isCreateSheetPresented = true
+                    }
                 )
                 Spacer()
             } else {
@@ -243,14 +249,12 @@ struct ProjectsListView: View {
                     if visibleProjects.isEmpty {
                         // Search no-results (the no-projects-at-all state
                         // with a create CTA lives in `content`).
-                        VStack(spacing: 10) {
-                            Image(systemName: "magnifyingglass")
-                                .font(.system(size: 20, weight: .medium))
-                                .foregroundColor(Color("TextSecondary"))
-                            Text("No projects match your search.")
-                                .font(.subheadline)
-                                .foregroundColor(Color("TextSecondary"))
-                        }
+                        FriendlyInlineStateView(
+                            style: .empty,
+                            icon: "magnifyingglass",
+                            title: "No matches",
+                            message: "No projects match your search."
+                        )
                         .padding(.top, 24)
                     }
                 }
@@ -302,42 +306,6 @@ struct ProjectsListView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-    }
-
-    private func emptyState(icon: String, message: String, showsCreateButton: Bool) -> some View {
-        VStack(spacing: 16) {
-            Image(systemName: icon)
-                .font(.system(size: 24, weight: .medium))
-                .foregroundColor(Color("TextSecondary"))
-                .frame(width: 56, height: 56)
-                .background(Color("BgPanel"))
-                .clipShape(RoundedRectangle(cornerRadius: Theme.radiusLG))
-                .overlay(
-                    RoundedRectangle(cornerRadius: Theme.radiusLG)
-                        .stroke(Theme.borderWarmDefault, lineWidth: 1)
-                )
-            Text(message)
-                .font(.subheadline)
-                .foregroundColor(Color("TextSecondary"))
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
-            if showsCreateButton {
-                Button(action: {
-                    let generator = UIImpactFeedbackGenerator(style: .light)
-                    generator.impactOccurred()
-                    isCreateSheetPresented = true
-                }) {
-                    Text("Create project")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(Color("TextPrimary"))
-                        .padding(.horizontal, 14)
-                        .frame(height: 36)
-                        .background(Color("BgSecondary"))
-                        .clipShape(Capsule())
-                        .overlay(Capsule().stroke(Color("BorderSubtle"), lineWidth: 1))
-                }
-            }
-        }
     }
 
     // MARK: - Actions

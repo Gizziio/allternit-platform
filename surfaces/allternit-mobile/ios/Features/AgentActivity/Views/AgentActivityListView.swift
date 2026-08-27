@@ -77,21 +77,14 @@ struct AgentActivityListView: View {
             Spacer()
         } else if let loadError = store.loadError, store.threads.isEmpty {
             Spacer()
-            VStack(spacing: 12) {
-                Text("Couldn't load agent activity")
-                    .font(.subheadline)
-                    .foregroundColor(Color("TextPrimary"))
-                Text(loadError)
-                    .font(.caption)
-                    .foregroundColor(Color("TextSecondary"))
-                    .multilineTextAlignment(.center)
-                Button("Retry") {
-                    store.fetchIfNeeded(force: true)
-                }
-                .font(.subheadline)
-                .foregroundColor(Color("AccentPrimary"))
-            }
-            .padding(.horizontal, 20)
+            FriendlyStateView(
+                style: .offline,
+                icon: "wifi.slash",
+                title: "Couldn't load agent activity",
+                message: FriendlyErrorMessage.from(loadError),
+                actionTitle: "Retry",
+                action: { store.fetchIfNeeded(force: true) }
+            )
             Spacer()
         } else if store.threads.isEmpty {
             Spacer()
@@ -234,23 +227,12 @@ struct AgentActivityListView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "bubble.left.and.bubble.right")
-                .font(.system(size: 24, weight: .medium))
-                .foregroundColor(Color("TextSecondary"))
-                .frame(width: 56, height: 56)
-                .background(Color("BgPanel"))
-                .clipShape(RoundedRectangle(cornerRadius: Theme.radiusLG))
-                .overlay(
-                    RoundedRectangle(cornerRadius: Theme.radiusLG)
-                        .stroke(Theme.borderWarmDefault, lineWidth: 1)
-                )
-            Text("No agent activity yet — threads show up here as agents send mail through Rails Mail.")
-                .font(.subheadline)
-                .foregroundColor(Color("TextSecondary"))
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
-        }
+        FriendlyStateView(
+            style: .empty,
+            icon: "bubble.left.and.bubble.right",
+            title: "No agent activity yet",
+            message: "Threads show up here as agents send mail through Rails Mail."
+        )
     }
 
     // MARK: - Formatting (shared with AgentActivityDetailView)

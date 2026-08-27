@@ -50,6 +50,7 @@ struct CloudDeployManagerView: View {
                     .background(Color("BgPanel"))
                     .clipShape(Circle())
             }
+            .accessibilityLabel("Close")
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
@@ -65,21 +66,15 @@ struct CloudDeployManagerView: View {
             Spacer()
         } else if let loadError = store.loadError, store.deployments.isEmpty {
             Spacer()
-            VStack(spacing: 12) {
-                Text("Failed to load deployments")
-                    .font(.subheadline)
-                    .foregroundColor(Color("TextPrimary"))
-                Text(loadError)
-                    .font(.caption)
-                    .foregroundColor(Color("TextSecondary"))
-                    .multilineTextAlignment(.center)
-                Button("Retry") {
-                    store.fetchIfNeeded(force: true)
-                }
-                .font(.subheadline)
-                .foregroundColor(Color("AccentPrimary"))
-            }
-            .padding(.horizontal, 20)
+            let offline = isConnectionFailure(loadError)
+            FriendlyStateView(
+                style: offline ? .offline : .error,
+                icon: offline ? "wifi.slash" : "exclamationmark.triangle",
+                title: "Failed to load deployments",
+                message: FriendlyErrorMessage.from(loadError),
+                actionTitle: "Retry",
+                action: { store.fetchIfNeeded(force: true) }
+            )
             Spacer()
         } else {
             ScrollView {
@@ -200,34 +195,15 @@ struct CloudDeployManagerView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "cloud")
-                .font(.system(size: 36))
-                .foregroundColor(Color("TextSecondary").opacity(0.5))
-            Text("No deployments yet")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(Color("TextPrimary"))
-            Text("Provision a new cloud instance to run Allternit.")
-                .font(.caption)
-                .foregroundColor(Color("TextSecondary"))
-                .multilineTextAlignment(.center)
-            Button(action: { isCreateSheetPresented = true }) {
-                HStack(spacing: 6) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 12, weight: .semibold))
-                    Text("New Deployment")
-                        .font(.system(size: 13, weight: .semibold))
-                }
-                .foregroundColor(Color("AccentPrimary"))
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-                .background(Color("AccentPrimary").opacity(0.12))
-                .clipShape(RoundedRectangle(cornerRadius: Theme.radiusMD))
-            }
-            .buttonStyle(.plain)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 40)
+        FriendlyStateView(
+            style: .empty,
+            icon: "rocket",
+            title: "No deployments yet",
+            message: "Provision a new cloud instance to run Allternit.",
+            actionTitle: "New Deployment",
+            action: { isCreateSheetPresented = true }
+        )
+        .padding(.vertical, 24)
         .background(Color("BgPanel"))
         .clipShape(RoundedRectangle(cornerRadius: Theme.radiusLG))
         .overlay(
@@ -321,6 +297,15 @@ struct CloudDeployManagerView: View {
             RoundedRectangle(cornerRadius: Theme.radiusLG)
                 .stroke(Theme.borderWarmDefault, lineWidth: 1)
         )
+    }
+
+    private func isConnectionFailure(_ error: String) -> Bool {
+        let lowered = error.lowercased()
+        return lowered.contains("could not connect")
+            || lowered.contains("failed to connect")
+            || lowered.contains("offline")
+            || lowered.contains("no network")
+            || lowered.contains("network connection was lost")
     }
 
     private func statusBadge(_ status: String) -> some View {

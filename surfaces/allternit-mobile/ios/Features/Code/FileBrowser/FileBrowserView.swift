@@ -42,21 +42,14 @@ struct FileBrowserView: View {
     }
 
     private var noInstanceView: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "folder")
-                .font(.title2)
-                .foregroundColor(Color("TextSecondary"))
-            Text("No instance available")
-                .font(.subheadline)
-                .foregroundColor(Color("TextPrimary"))
-            Text("Start `gizzi serve --tunnel` on your computer, then retry.")
-                .font(.caption)
-                .foregroundColor(Color("TextSecondary"))
-                .multilineTextAlignment(.center)
-            Button("Retry") { Task { await resolve() } }
-                .font(.subheadline)
-        }
-        .padding(.horizontal, 20)
+        FriendlyStateView(
+            style: .error,
+            icon: "folder",
+            title: "No instance available",
+            message: "Start `gizzi serve --tunnel` on your computer, then retry.",
+            actionTitle: "Retry",
+            action: { Task { await resolve() } }
+        )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .navigationTitle("Files")
         .navigationBarTitleDisplayMode(.inline)

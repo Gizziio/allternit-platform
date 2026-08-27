@@ -76,7 +76,7 @@ struct ComputeBillingView: View {
                     let percent = (usageStore.percentUsed ?? 0) / 100
                     ProgressView(value: min(max(percent, 0), 1))
                         .tint(percent >= 1
-                              ? Color.red
+                              ? Theme.statusError
                               : (percent >= 0.8 ? Theme.statusWarning : Color("AccentPrimary")))
 
                     if let resetsLabel = usageStore.resetsLabel {
@@ -87,13 +87,19 @@ struct ComputeBillingView: View {
                 }
                 .padding(.vertical, 4)
             } else if case .unavailable(let message) = usageStore.availability {
-                Text(message)
-                    .font(.caption)
-                    .foregroundColor(Color("TextSecondary"))
+                FriendlyInlineStateView(
+                    style: .empty,
+                    icon: "gauge.with.dots.needle.67percent",
+                    title: "Usage unavailable",
+                    message: message
+                )
             } else {
-                Text("Usage metering isn't available on this backend.")
-                    .font(.caption)
-                    .foregroundColor(Color("TextSecondary"))
+                FriendlyInlineStateView(
+                    style: .empty,
+                    icon: "gauge.with.dots.needle.67percent",
+                    title: "Usage metering unavailable",
+                    message: "Usage metering isn't available on this backend."
+                )
             }
         } header: {
             Text("Usage")
@@ -115,9 +121,12 @@ struct ComputeBillingView: View {
                         .foregroundColor(Color("TextSecondary"))
                 }
             } else {
-                Text("No credits balance returned by this backend.")
-                    .font(.caption)
-                    .foregroundColor(Color("TextSecondary"))
+                FriendlyInlineStateView(
+                    style: .empty,
+                    icon: "creditcard",
+                    title: "No credits balance",
+                    message: "No credits balance returned by this backend."
+                )
             }
         } header: {
             Text("Credits")

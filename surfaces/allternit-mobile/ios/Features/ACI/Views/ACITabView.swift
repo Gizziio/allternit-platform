@@ -42,7 +42,7 @@ struct ACITabView: View {
     init(isSidebarOpen: Binding<Bool>, selectedSessionId: Binding<String?>) {
         self._isSidebarOpen = isSidebarOpen
         self._selectedSessionId = selectedSessionId
-        if CommandLine.arguments.contains("-extension") {
+        if launchArgumentEnabled("extension") {
             self._destination = State(initialValue: .browser(URL(string: "https://news.ycombinator.com")!))
         } else {
             self._destination = State(initialValue: .landing)
@@ -64,6 +64,7 @@ struct ACITabView: View {
                             .foregroundColor(Color("TextPrimary"))
                             .frame(width: 44, height: 44)
                     }
+                    .accessibilityLabel("Open sidebar")
 
                     Spacer()
 
@@ -116,7 +117,7 @@ struct ACITabView: View {
             #if DEBUG
             // `-open-browser-chat` (DEBUG only): open a fresh browser chat
             // for screenshot/send-path verification.
-            if CommandLine.arguments.contains("-open-browser-chat") {
+            if launchArgumentEnabled("open-browser-chat") {
                 destination = .chat(sessionId: nil)
             }
             #endif
@@ -242,6 +243,7 @@ struct ACITabView: View {
             }
             .buttonStyle(.plain)
             .disabled(input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            .accessibilityLabel(agentActive ? "Start agent run" : "Submit")
         }
         .padding(.leading, 16)
         .padding(.trailing, 8)
@@ -303,7 +305,7 @@ struct ACITabView: View {
             VStack(spacing: 8) {
                 ZStack {
                     Circle().fill(theme.accentSoft)
-                    Image(systemName: "app.window")
+                    Image(systemName: "square.grid.2x2")
                         .font(.system(size: 16))
                         .foregroundColor(theme.accent)
                 }

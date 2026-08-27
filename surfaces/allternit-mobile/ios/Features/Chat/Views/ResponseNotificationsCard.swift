@@ -51,6 +51,7 @@ struct ResponseNotificationsCard: View {
                     .foregroundColor(Color("TextSecondary"))
                     .frame(width: 28, height: 28)
             }
+            .accessibilityLabel("Dismiss notifications prompt")
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)

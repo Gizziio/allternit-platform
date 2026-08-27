@@ -69,9 +69,14 @@ struct ModelManagementListContent: View {
             if modelStore.isLoading {
                 ProgressView()
             } else if let error = modelStore.loadError {
-                Text(error)
-                    .font(.caption)
-                    .foregroundColor(Theme.statusWarning)
+                FriendlyInlineStateView(
+                    style: .offline,
+                    icon: "wifi.slash",
+                    title: "Couldn't load default model",
+                    message: FriendlyErrorMessage.from(error),
+                    actionTitle: "Retry",
+                    action: { modelStore.fetchModelsIfNeeded(force: true) }
+                )
             } else {
                 Picker("Default model", selection: Binding(
                     get: { modelStore.selectedModelId },
@@ -106,13 +111,21 @@ struct ModelManagementListContent: View {
                 ProgressView()
                     .frame(maxWidth: .infinity, alignment: .center)
             } else if let error = store.error {
-                Text(error)
-                    .font(.caption)
-                    .foregroundColor(Theme.statusWarning)
+                FriendlyInlineStateView(
+                    style: .offline,
+                    icon: "wifi.slash",
+                    title: "Couldn't load engines",
+                    message: FriendlyErrorMessage.from(error),
+                    actionTitle: "Retry",
+                    action: { Task { await store.load() } }
+                )
             } else if store.engines.isEmpty {
-                Text("No providers configured.")
-                    .font(.caption)
-                    .foregroundColor(Color("TextSecondary"))
+                FriendlyInlineStateView(
+                    style: .empty,
+                    icon: "cpu",
+                    title: "No engines configured",
+                    message: "Add a model provider in Platform settings to see engines here."
+                )
             } else {
                 ForEach(store.engines) { engine in
                     EngineRow(engine: engine)
@@ -160,10 +173,10 @@ private struct EngineRow: View {
 
             Text(engine.status.uppercased())
                 .font(.system(size: 10, weight: .bold))
-                .foregroundColor(engine.isReady ? Color.green : Color.red)
+                .foregroundColor(engine.isReady ? Theme.statusSuccess : Theme.statusError)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
-                .background(engine.isReady ? Color.green.opacity(0.1) : Color.red.opacity(0.1))
+                .background(engine.isReady ? Theme.statusSuccess.opacity(0.1) : Theme.statusError.opacity(0.1))
                 .clipShape(RoundedRectangle(cornerRadius: Theme.radiusSM))
         }
         .padding(.vertical, 4)

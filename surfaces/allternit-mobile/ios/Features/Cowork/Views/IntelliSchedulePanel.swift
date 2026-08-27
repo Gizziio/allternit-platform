@@ -42,6 +42,7 @@ struct IntelliSchedulePanel: View {
                     .background(Color("BgPanel"))
                     .clipShape(Circle())
             }
+            .accessibilityLabel("Close")
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
@@ -56,27 +57,33 @@ struct IntelliSchedulePanel: View {
             ProgressView()
             Spacer()
         } else if let errorMessage = store.errorMessage, store.tasks.isEmpty {
-            Spacer()
-            Text(errorMessage)
-                .font(.subheadline)
-                .foregroundColor(.red)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 20)
-            Spacer()
+            FriendlyStateView(
+                style: .error,
+                icon: "exclamationmark.triangle",
+                title: "Couldn't build schedule",
+                message: FriendlyErrorMessage.from(errorMessage),
+                actionTitle: "Retry",
+                action: { store.fetchAndOptimizeIfNeeded() }
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if let output = store.output, output.orderedTasks.isEmpty {
-            Spacer()
-            Text("No runnable tasks.")
-                .font(.subheadline)
-                .foregroundColor(Color("TextSecondary"))
-            Spacer()
+            FriendlyStateView(
+                style: .empty,
+                icon: "checkmark.circle",
+                title: "No runnable tasks",
+                message: "All tasks are blocked or already scheduled."
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if let output = store.output {
             scheduleList(output: output)
         } else {
-            Spacer()
-            Text("No schedule yet.")
-                .font(.subheadline)
-                .foregroundColor(Color("TextSecondary"))
-            Spacer()
+            FriendlyStateView(
+                style: .empty,
+                icon: "calendar.badge.clock",
+                title: "No schedule yet",
+                message: "Add Cowork tasks and run the optimizer to see a plan."
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 
@@ -86,10 +93,10 @@ struct IntelliSchedulePanel: View {
                 if !output.unrunnable.isEmpty {
                     HStack {
                         Image(systemName: "exclamationmark.triangle")
-                            .foregroundColor(.orange)
+                            .foregroundColor(Theme.statusWarning)
                         Text("\(output.unrunnable.count) task(s) cannot fit before their deadlines")
                             .font(.caption)
-                            .foregroundColor(.orange)
+                            .foregroundColor(Theme.statusWarning)
                         Spacer()
                     }
                     .padding(.horizontal, 20)
@@ -138,9 +145,9 @@ struct IntelliSchedulePanel: View {
     private func riskIndicator(_ risk: IntelliScheduleRisk) -> some View {
         let color: Color = {
             switch risk {
-            case .low: return .green
-            case .medium: return .yellow
-            case .high: return .red
+            case .low: return Theme.statusSuccess
+            case .medium: return Theme.statusWarning
+            case .high: return Theme.statusError
             }
         }()
 

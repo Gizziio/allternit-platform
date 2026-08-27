@@ -36,24 +36,23 @@ struct FileBrowserDirectoryView: View {
             ProgressView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if let loadError, nodes.isEmpty {
-            VStack(spacing: 12) {
-                Text("Couldn't load directory")
-                    .font(.subheadline)
-                    .foregroundColor(Color("TextPrimary"))
-                Text(loadError)
-                    .font(.caption)
-                    .foregroundColor(Color("TextSecondary"))
-                    .multilineTextAlignment(.center)
-                Button("Retry") { Task { await load() } }
-                    .font(.subheadline)
-            }
-            .padding(.horizontal, 20)
+            FriendlyStateView(
+                style: .offline,
+                icon: "wifi.slash",
+                title: "Couldn't load directory",
+                message: FriendlyErrorMessage.from(loadError),
+                actionTitle: "Retry",
+                action: { Task { await load() } }
+            )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if nodes.isEmpty {
-            Text("Empty directory")
-                .font(.subheadline)
-                .foregroundColor(Color("TextSecondary"))
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            FriendlyStateView(
+                style: .empty,
+                icon: "folder",
+                title: "Empty directory",
+                message: "This folder has no files."
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
             List(nodes) { node in
                 if node.type == .directory {

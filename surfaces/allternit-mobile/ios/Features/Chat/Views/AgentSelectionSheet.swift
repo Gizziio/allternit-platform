@@ -38,18 +38,21 @@ struct AgentSelectionSheet: View {
                     }
 
                     if agentModeStore.isLoadingAgents, agentModeStore.agents.isEmpty {
-                        HStack {
-                            Spacer()
-                            ProgressView()
-                            Spacer()
-                        }
-                        .padding(.vertical, 16)
+                        FriendlyInlineStateView(
+                            style: .empty,
+                            icon: "arrow.clockwise",
+                            title: "Loading agents",
+                            message: "Hang tight…"
+                        )
                     } else if let error = agentModeStore.agentsError {
-                        Text("Couldn't load agents: \(error)")
-                            .font(.caption)
-                            .foregroundColor(Color("TextSecondary"))
-                            .multilineTextAlignment(.center)
-                            .padding(.vertical, 8)
+                        FriendlyInlineStateView(
+                            style: .offline,
+                            icon: "wifi.slash",
+                            title: "Couldn't load agents",
+                            message: FriendlyErrorMessage.from(error),
+                            actionTitle: "Retry",
+                            action: { agentModeStore.fetchAgentsIfNeeded(force: true) }
+                        )
                     }
 
                     actionCard("New from template", systemImage: "plus", action: openHub)

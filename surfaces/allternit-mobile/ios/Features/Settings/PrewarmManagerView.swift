@@ -58,6 +58,7 @@ struct PrewarmManagerView: View {
                     .background(Color("BgPanel"))
                     .clipShape(Circle())
             }
+            .accessibilityLabel("Close")
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
@@ -73,21 +74,15 @@ struct PrewarmManagerView: View {
             Spacer()
         } else if let loadError = store.loadError, status == nil {
             Spacer()
-            VStack(spacing: 12) {
-                Text("Failed to load prewarm status")
-                    .font(.subheadline)
-                    .foregroundColor(Color("TextPrimary"))
-                Text(loadError)
-                    .font(.caption)
-                    .foregroundColor(Color("TextSecondary"))
-                    .multilineTextAlignment(.center)
-                Button("Retry") {
-                    store.fetchIfNeeded(force: true)
-                }
-                .font(.subheadline)
-                .foregroundColor(Color("AccentPrimary"))
-            }
-            .padding(.horizontal, 20)
+            let offline = isConnectionFailure(loadError)
+            FriendlyStateView(
+                style: offline ? .offline : .error,
+                icon: offline ? "wifi.slash" : "exclamationmark.triangle",
+                title: "Failed to load prewarm status",
+                message: FriendlyErrorMessage.from(loadError),
+                actionTitle: "Retry",
+                action: { store.fetchIfNeeded(force: true) }
+            )
             Spacer()
         } else {
             ScrollView {
@@ -377,19 +372,14 @@ struct PrewarmManagerView: View {
                 .foregroundColor(Color("TextSecondary"))
 
             if let status = status, status.pools.isEmpty {
-                VStack(spacing: 10) {
-                    Image(systemName: "thermometer")
-                        .font(.system(size: 30))
-                        .foregroundColor(Color("TextSecondary").opacity(0.5))
-                    Text("No prewarm pools reported")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(Color("TextPrimary"))
-                    Text("Increase the pool size to initialize the default pool.")
-                        .font(.caption)
-                        .foregroundColor(Color("TextSecondary"))
-                }
+                FriendlyInlineStateView(
+                    style: .empty,
+                    icon: "thermometer",
+                    title: "No prewarm pools reported",
+                    message: "Increase the pool size to initialize the default pool."
+                )
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 24)
+                .padding(.vertical, 16)
                 .background(Color("BgSecondary"))
                 .clipShape(RoundedRectangle(cornerRadius: Theme.radiusLG))
             } else if let status {
@@ -502,10 +492,13 @@ struct PrewarmManagerView: View {
             }
 
             if activities.isEmpty {
-                Text("No recent GUI-driven prewarm activity.")
-                    .font(.caption)
-                    .foregroundColor(Color("TextSecondary"))
-                    .padding(.vertical, 8)
+                FriendlyInlineStateView(
+                    style: .empty,
+                    icon: "clock.arrow.2.circlepath",
+                    title: "No recent activity",
+                    message: "No recent GUI-driven prewarm activity."
+                )
+                .padding(.vertical, 8)
             } else {
                 VStack(spacing: 8) {
                     ForEach(activities.prefix(10)) { activity in
@@ -553,6 +546,15 @@ struct PrewarmManagerView: View {
     }
 
     // MARK: - Health helpers
+
+    private func isConnectionFailure(_ error: String) -> Bool {
+        let lowered = error.lowercased()
+        return lowered.contains("could not connect")
+            || lowered.contains("failed to connect")
+            || lowered.contains("offline")
+            || lowered.contains("no network")
+            || lowered.contains("network connection was lost")
+    }
 
     private var healthyPools: [BackendPoolStatus] {
         (status?.pools ?? []).filter { poolHealth($0) == .healthy }

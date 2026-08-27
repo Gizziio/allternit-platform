@@ -23,6 +23,9 @@ rails/reference/beads/
 !.env.production
 /debug/
 release/
+
+# iOS local secrets (xcconfig). The example file is tracked.
+surfaces/allternit-mobile/ios/Config/Secrets.xcconfig
 .aider/
 .claude/*
 !.claude/settings.json
@@ -101,6 +104,9 @@ services/voice/.packaging-venv/
 Desktop/
 output/
 dispatch-screenshots/
+
+# the iOS bot-desktop viewer lives in a Features/Agents/Desktop directory — not scratch output
+!surfaces/allternit-mobile/ios/Features/Agents/Desktop/
 
 # level-2 reorg 2026-07-22: tenant secrets + committed browser profiles
 *.env

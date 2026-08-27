@@ -96,6 +96,7 @@ struct EnterpriseBYOCPanelView: View {
                     .background(Color("BgPanel"))
                     .clipShape(Circle())
             }
+            .accessibilityLabel("Close")
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
@@ -137,43 +138,33 @@ struct EnterpriseBYOCPanelView: View {
             Spacer()
         } else if let loadError = store.loadError, store.profile == nil {
             Spacer()
-            VStack(spacing: 12) {
-                Text("Failed to load BYOC profile")
-                    .font(.subheadline)
-                    .foregroundColor(Color("TextPrimary"))
-                Text(loadError)
-                    .font(.caption)
-                    .foregroundColor(Color("TextSecondary"))
-                    .multilineTextAlignment(.center)
-                Button("Retry") {
-                    store.fetchIfNeeded(force: true)
-                }
-                .font(.subheadline)
-                .foregroundColor(Color("AccentPrimary"))
-            }
-            .padding(.horizontal, 20)
+            let offline = isConnectionFailure(loadError)
+            FriendlyStateView(
+                style: offline ? .offline : .error,
+                icon: offline ? "wifi.slash" : "exclamationmark.triangle",
+                title: "Failed to load BYOC profile",
+                message: FriendlyErrorMessage.from(loadError),
+                actionTitle: "Retry",
+                action: { store.fetchIfNeeded(force: true) }
+            )
             Spacer()
         } else if store.profile == nil {
             Spacer()
-            Text("Sign in to manage Enterprise BYOC.")
-                .font(.caption)
-                .foregroundColor(Color("TextSecondary"))
+            FriendlyStateView(
+                style: .empty,
+                icon: "person.crop.circle.badge.exclamationmark",
+                title: "Sign in required",
+                message: "Sign in to manage Enterprise BYOC."
+            )
             Spacer()
         } else if !store.canManageBilling {
             Spacer()
-            VStack(spacing: 12) {
-                Image(systemName: "shield.checkerboard")
-                    .font(.system(size: 36))
-                    .foregroundColor(Color("TextSecondary").opacity(0.5))
-                Text("Owner or admin access required")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(Color("TextPrimary"))
-                Text("Only organization owners and admins can manage cloud credentials or view metered billing.")
-                    .font(.caption)
-                    .foregroundColor(Color("TextSecondary"))
-                    .multilineTextAlignment(.center)
-            }
-            .padding(.horizontal, 20)
+            FriendlyStateView(
+                style: .empty,
+                icon: "lock.shield",
+                title: "Owner or admin access required",
+                message: "Only organization owners and admins can manage cloud credentials or view metered billing."
+            )
             Spacer()
         } else {
             ScrollView {
@@ -318,20 +309,15 @@ struct EnterpriseBYOCPanelView: View {
             }
 
             if store.credentials.isEmpty {
-                VStack(spacing: 12) {
-                    Image(systemName: "cloud")
-                        .font(.system(size: 36))
-                        .foregroundColor(Color("TextSecondary").opacity(0.5))
-                    Text("No cloud accounts")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(Color("TextPrimary"))
-                    Text("Connect a scoped AWS, GCP, or Azure identity for enterprise BYOC environments.")
-                        .font(.caption)
-                        .foregroundColor(Color("TextSecondary"))
-                        .multilineTextAlignment(.center)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 40)
+                FriendlyStateView(
+                    style: .empty,
+                    icon: "cloud",
+                    title: "No cloud accounts",
+                    message: "Connect a scoped AWS, GCP, or Azure identity for enterprise BYOC environments.",
+                    actionTitle: "Add account",
+                    action: { isCreateSheetPresented = true }
+                )
+                .padding(.vertical, 24)
                 .background(Color("BgPanel"))
                 .clipShape(RoundedRectangle(cornerRadius: Theme.radiusLG))
                 .overlay(
@@ -441,10 +427,13 @@ struct EnterpriseBYOCPanelView: View {
                     .padding(.vertical, 40)
             } else if let summary = store.usageSummary {
                 if summary.lineItems.isEmpty {
-                    Text("No metered usage this month.")
-                        .font(.caption)
-                        .foregroundColor(Color("TextSecondary"))
-                        .padding(.vertical, 20)
+                    FriendlyInlineStateView(
+                        style: .empty,
+                        icon: "doc.text",
+                        title: "No metered usage this month",
+                        message: "Usage will appear here once BYOC resources are consumed."
+                    )
+                    .padding(.vertical, 12)
                 } else {
                     VStack(spacing: 8) {
                         ForEach(summary.lineItems, id: \.description) { item in
@@ -491,18 +480,15 @@ struct EnterpriseBYOCPanelView: View {
                     )
                 }
             } else {
-                VStack(spacing: 12) {
-                    Text("Load this billing period to see metered usage.")
-                        .font(.caption)
-                        .foregroundColor(Color("TextSecondary"))
-                        .multilineTextAlignment(.center)
-                    Button("Load usage") {
-                        Task { await store.refreshUsage() }
-                    }
-                    .font(.subheadline)
-                    .foregroundColor(Color("AccentPrimary"))
-                }
-                .padding(.vertical, 40)
+                FriendlyInlineStateView(
+                    style: .empty,
+                    icon: "doc.text",
+                    title: "Usage not loaded",
+                    message: "Load this billing period to see metered usage.",
+                    actionTitle: "Load usage",
+                    action: { Task { await store.refreshUsage() } }
+                )
+                .padding(.vertical, 24)
             }
         }
     }
@@ -534,6 +520,15 @@ struct EnterpriseBYOCPanelView: View {
     }
 
     // MARK: - Actions
+
+    private func isConnectionFailure(_ error: String) -> Bool {
+        let lowered = error.lowercased()
+        return lowered.contains("could not connect")
+            || lowered.contains("failed to connect")
+            || lowered.contains("offline")
+            || lowered.contains("no network")
+            || lowered.contains("network connection was lost")
+    }
 
     private func revoke(_ credential: CloudCredential) {
         actionError = nil

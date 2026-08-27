@@ -49,6 +49,7 @@ struct CreateRoutineSheet: View {
                         .background(Color("BgPanel"))
                         .clipShape(Circle())
                 }
+                .accessibilityLabel("Close")
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 14)
@@ -92,6 +93,24 @@ struct CreateRoutineSheet: View {
                         Text("A routine can also be run manually — trigger and schedule are both optional.")
                             .font(.caption2)
                             .foregroundColor(Color("TextSecondary"))
+                    }
+
+                    // Day-of-week toggles supplementing the cron expression —
+                    // same pairing as the web (AutomationTasksView.tsx): the
+                    // schedule string stays the single source of truth, read
+                    // via `CronDays.parseCronDays` and rewritten via
+                    // `CronDays.applyCronDays` on change.
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Days of week")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundColor(Color("TextSecondary"))
+                        DayOfWeekSelector(
+                            selectedDays: CronDays.parseCronDays(schedule),
+                            onChange: { days in
+                                schedule = CronDays.applyCronDays(schedule, days: days)
+                            }
+                        )
                     }
 
                     Button(action: create) {

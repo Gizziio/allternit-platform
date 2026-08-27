@@ -66,6 +66,7 @@ struct CodeCanvasView: View {
                     .background(Color("BgPanel"))
                     .clipShape(Circle())
             }
+            .accessibilityLabel("Close")
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
@@ -115,21 +116,14 @@ struct CodeCanvasView: View {
             Spacer()
         } else if let loadError, codeSessions.isEmpty {
             Spacer()
-            VStack(spacing: 12) {
-                Text("Couldn't load canvas")
-                    .font(.subheadline)
-                    .foregroundColor(Color("TextPrimary"))
-                Text(loadError)
-                    .font(.caption)
-                    .foregroundColor(Color("TextSecondary"))
-                    .multilineTextAlignment(.center)
-                Button("Retry") {
-                    Task { await loadSessions() }
-                }
-                .font(.subheadline)
-                .foregroundColor(theme.accent)
-            }
-            .padding(.horizontal, 20)
+            FriendlyStateView(
+                style: .offline,
+                icon: "wifi.slash",
+                title: "Couldn't load canvas",
+                message: FriendlyErrorMessage.from(loadError),
+                actionTitle: "Retry",
+                action: { Task { await loadSessions() } }
+            )
             Spacer()
         } else if codeSessions.isEmpty {
             Spacer()
@@ -141,23 +135,12 @@ struct CodeCanvasView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "square.grid.2x2")
-                .font(.system(size: 24, weight: .medium))
-                .foregroundColor(Color("TextSecondary"))
-                .frame(width: 56, height: 56)
-                .background(Color("BgPanel"))
-                .clipShape(RoundedRectangle(cornerRadius: Theme.radiusLG))
-                .overlay(
-                    RoundedRectangle(cornerRadius: Theme.radiusLG)
-                        .stroke(Theme.borderWarmDefault, lineWidth: 1)
-                )
-            Text("No code sessions yet")
-                .font(.subheadline)
-                .foregroundColor(Color("TextSecondary"))
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
-        }
+        FriendlyStateView(
+            style: .empty,
+            icon: "square.grid.2x2",
+            title: "No code sessions yet",
+            message: "Start a new thread from the Code tab and it will show up here."
+        )
     }
 
     private var tileGrid: some View {

@@ -1,0 +1,13 @@
+appId: com.allternit.mobile
+---
+- launchApp:
+    appId: com.allternit.mobile
+    clearState: true
+    arguments:
+      skip-auth: true
+      sidebar: true
+- tapOn: "ACI"
+- takeScreenshot: aci_landing
+- tapOn: "Open sidebar"
+- takeScreenshot: aci_sidebar_open
+- stopApp

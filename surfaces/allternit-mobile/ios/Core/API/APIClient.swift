@@ -117,7 +117,7 @@ final class APIClient: @unchecked Sendable {
         // satisfies allternit-cloud-api's dev shortcut
         // (auth/middleware.rs + dispatch handoff) when `-cloud-url` points
         // at a locally running cloud-api.
-        if CommandLine.arguments.contains("-skip-auth") {
+        if launchArgumentEnabled("skip-auth") {
             request.setValue("dev-ios-tester", forHTTPHeaderField: "x-allternit-user-id")
             request.setValue("dev", forHTTPHeaderField: "x-allternit-desktop-access-token")
             if request.value(forHTTPHeaderField: "Authorization") == nil {

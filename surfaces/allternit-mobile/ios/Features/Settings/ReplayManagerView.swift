@@ -62,6 +62,7 @@ struct ReplayManagerView: View {
                     .background(Color("BgPanel"))
                     .clipShape(Circle())
             }
+            .accessibilityLabel("Close")
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
@@ -77,21 +78,15 @@ struct ReplayManagerView: View {
             Spacer()
         } else if let loadError = store.loadError, store.replayManifests.isEmpty {
             Spacer()
-            VStack(spacing: 12) {
-                Text("Failed to load replay sessions")
-                    .font(.subheadline)
-                    .foregroundColor(Color("TextPrimary"))
-                Text(loadError)
-                    .font(.caption)
-                    .foregroundColor(Color("TextSecondary"))
-                    .multilineTextAlignment(.center)
-                Button("Retry") {
-                    store.fetchIfNeeded(force: true)
-                }
-                .font(.subheadline)
-                .foregroundColor(Color("AccentPrimary"))
-            }
-            .padding(.horizontal, 20)
+            let offline = isConnectionFailure(loadError)
+            FriendlyStateView(
+                style: offline ? .offline : .error,
+                icon: offline ? "wifi.slash" : "exclamationmark.triangle",
+                title: "Failed to load replay sessions",
+                message: FriendlyErrorMessage.from(loadError),
+                actionTitle: "Retry",
+                action: { store.fetchIfNeeded(force: true) }
+            )
             Spacer()
         } else {
             ScrollView {
@@ -272,24 +267,15 @@ struct ReplayManagerView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "clock.arrow.circlepath")
-                .font(.system(size: 36))
-                .foregroundColor(Color("TextSecondary").opacity(0.5))
-            Text("No replay sessions found")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(Color("TextPrimary"))
-            Text(
-                searchText.isEmpty && captureFilter == .all
-                    ? "Run tools or workflows with replay enabled to populate this view."
-                    : "Clear the filters to inspect the full capture catalog."
-            )
-            .font(.caption)
-            .foregroundColor(Color("TextSecondary"))
-            .multilineTextAlignment(.center)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 40)
+        FriendlyStateView(
+            style: .empty,
+            icon: "clock.arrow.circlepath",
+            title: "No replay sessions found",
+            message: searchText.isEmpty && captureFilter == .all
+                ? "Run tools or workflows with replay enabled to populate this view."
+                : "Clear the filters to inspect the full capture catalog."
+        )
+        .padding(.vertical, 24)
         .background(Color("BgPanel"))
         .clipShape(RoundedRectangle(cornerRadius: Theme.radiusLG))
         .overlay(
@@ -392,6 +378,15 @@ struct ReplayManagerView: View {
     }
 
     // MARK: - Filter model
+
+    private func isConnectionFailure(_ error: String) -> Bool {
+        let lowered = error.lowercased()
+        return lowered.contains("could not connect")
+            || lowered.contains("failed to connect")
+            || lowered.contains("offline")
+            || lowered.contains("no network")
+            || lowered.contains("network connection was lost")
+    }
 
     private enum CaptureFilter: String, CaseIterable, Identifiable {
         case all

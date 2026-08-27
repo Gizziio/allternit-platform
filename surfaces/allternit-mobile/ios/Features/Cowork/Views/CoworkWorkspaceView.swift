@@ -49,6 +49,7 @@ struct CoworkWorkspaceView: View {
                     .background(Color("BgPanel"))
                     .clipShape(Circle())
             }
+            .accessibilityLabel("Close")
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
@@ -63,10 +64,15 @@ struct CoworkWorkspaceView: View {
                 newSessionSection
 
                 if let createError {
-                    Text(createError)
-                        .font(.subheadline)
-                        .foregroundColor(.red)
-                        .padding(.horizontal, 20)
+                    FriendlyInlineStateView(
+                        style: .error,
+                        icon: "exclamationmark.triangle",
+                        title: "Couldn't create session",
+                        message: FriendlyErrorMessage.from(createError),
+                        actionTitle: "Retry",
+                        action: { startNewSession() }
+                    )
+                    .padding(.horizontal, 20)
                 }
 
                 recentSessionsSection
@@ -130,17 +136,21 @@ struct CoworkWorkspaceView: View {
             }
 
             if let errorMessage = store.errorMessage, store.sessions.isEmpty {
-                Text(errorMessage)
-                    .font(.subheadline)
-                    .foregroundColor(.red)
-                    .padding(.vertical, 20)
-                    .frame(maxWidth: .infinity, alignment: .center)
+                FriendlyInlineStateView(
+                    style: .error,
+                    icon: "exclamationmark.triangle",
+                    title: "Couldn't load sessions",
+                    message: FriendlyErrorMessage.from(errorMessage),
+                    actionTitle: "Retry",
+                    action: { Task { await store.refresh() } }
+                )
             } else if store.sessions.isEmpty && !store.isLoading {
-                Text("No sessions yet. Start your first Cowork session above.")
-                    .font(.subheadline)
-                    .foregroundColor(Color("TextSecondary"))
-                    .padding(.vertical, 20)
-                    .frame(maxWidth: .infinity, alignment: .center)
+                FriendlyInlineStateView(
+                    style: .empty,
+                    icon: "bubble.left.and.bubble.right",
+                    title: "No sessions yet",
+                    message: "Start your first Cowork session above."
+                )
             } else {
                 LazyVStack(spacing: 8) {
                     ForEach(store.sessions) { session in
@@ -178,9 +188,10 @@ struct CoworkWorkspaceView: View {
                             }) {
                                 Image(systemName: "trash")
                                     .font(.system(size: 13, weight: .medium))
-                                    .foregroundColor(.red.opacity(0.8))
+                                    .foregroundColor(Theme.statusError)
                                     .frame(width: 32, height: 32)
                             }
+                            .accessibilityLabel("Delete session")
                         }
                         .padding(.horizontal, 16)
                         .padding(.vertical, 12)

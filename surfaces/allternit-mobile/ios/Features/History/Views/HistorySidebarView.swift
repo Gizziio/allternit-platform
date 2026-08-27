@@ -24,15 +24,7 @@ struct HistorySidebarView: View {
         VStack(alignment: .leading, spacing: 0) {
             // Wordmark
             HStack {
-                Text("A://")
-                    .foregroundColor(Color("AccentPrimary"))
-                    .font(.system(.subheadline, design: .monospaced))
-                    .bold()
-                Text("LLTERNIT")
-                    .foregroundColor(Color("TextPrimary"))
-                    .font(.system(.subheadline, design: .serif))
-                    .tracking(1.5)
-                    .lineLimit(1)
+                WordmarkView(height: 18)
                 Spacer()
             }
             .padding(.horizontal, 20)
@@ -44,47 +36,7 @@ struct HistorySidebarView: View {
             .padding(.top, 16)
             .padding(.bottom, 12)
 
-            // Tab list as labeled nav rows (icon + text, full-width tap
-            // target): Chats / Projects / Artifacts Library / Agents /
-            // Automation Tasks / Code / ACI.
-            // The active tab is shown by highlight only — no chevrons or
-            // other trailing accessories on these rows.
-            VStack(spacing: 2) {
-                ForEach(ModeBarItem.allCases, id: \.self) { item in
-                    let isActive = modeStore.activeTab == item
-                    Button(action: {
-                        let generator = UIImpactFeedbackGenerator(style: .light)
-                        generator.impactOccurred()
-                        modeStore.selectBarItem(item)
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.86, blendDuration: 0)) {
-                            isSidebarOpen = false
-                        }
-                    }) {
-                        HStack(spacing: 12) {
-                            Image(systemName: item.icon)
-                                .font(.system(size: 15, weight: .semibold))
-                                .frame(width: 20)
-                            Text(item.label)
-                                .font(.subheadline)
-                                .fontWeight(isActive ? .semibold : .regular)
-                            Spacer()
-                        }
-                        .foregroundColor(isActive ? modeStore.mode.theme.accent : Color("TextPrimary"))
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 9)
-                        // Accent-tinted active highlight (web
-                        // --shell-item-active-bg) — BgSecondary matches the
-                        // sidebar background in light mode now, so a plain
-                        // fill would be invisible.
-                        .background(isActive ? modeStore.mode.theme.accentSoft : Color.clear)
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(.horizontal, 8)
-            .padding(.bottom, 12)
+            tabList
 
             // History Group List
             ScrollView {
@@ -97,70 +49,7 @@ struct HistorySidebarView: View {
 
             Spacer()
 
-            // Footer: account avatar + "New chat" pill floating over the
-            // sidebar background — no separator bar (Claude-parity layout;
-            // the avatar shows the real signed-in initial from Clerk and its
-            // menu is the sign-out affordance).
-            HStack {
-                Menu {
-                    Text(authManager.displayName)
-                    Button(role: .destructive, action: {
-                        Task { try? await authManager.signOut() }
-                    }) {
-                        Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
-                    }
-                } label: {
-                    Text(authManager.avatarInitial)
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(Color("BgPrimary"))
-                        .frame(width: 36, height: 36)
-                        .background(Color("TextSecondary"))
-                        .clipShape(Circle())
-                }
-
-                // Settings hub (Phase 4) — gear row next to the avatar.
-                Button(action: {
-                    let generator = UIImpactFeedbackGenerator(style: .light)
-                    generator.impactOccurred()
-                    isSettingsPresented = true
-                }) {
-                    Image(systemName: "gearshape")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundColor(Color("TextPrimary"))
-                        .frame(width: 36, height: 36)
-                        .background(Color("BgPanel"))
-                        .clipShape(Circle())
-                        .overlay(Circle().stroke(Color("BorderSubtle"), lineWidth: 1))
-                }
-                .buttonStyle(.plain)
-
-                Spacer()
-
-                Button(action: {
-                    let generator = UIImpactFeedbackGenerator(style: .light)
-                    generator.impactOccurred()
-                    selectedSessionId = nil
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.86, blendDuration: 0)) {
-                        isSidebarOpen = false
-                    }
-                }) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "square.and.pencil")
-                            .font(.system(size: 13, weight: .semibold))
-                        Text("New chat")
-                            .font(.system(size: 13, weight: .semibold))
-                    }
-                    .foregroundColor(Color("TextPrimary"))
-                    .padding(.horizontal, 14)
-                    .frame(height: 36)
-                    .background(Color("BgPanel"))
-                    .clipShape(Capsule())
-                    .overlay(Capsule().stroke(Color("BorderSubtle"), lineWidth: 1))
-                }
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 20)
+            footer
         }
         .frame(width: 280)
         // Only the background bleeds edge-to-edge (behind the status bar /
@@ -182,10 +71,10 @@ struct HistorySidebarView: View {
             // SettingsView; `-open-usage` targets the Phase-5 Usage section,
             // near the top) for UI testing/screenshots — no tap injection
             // in simctl.
-            if CommandLine.arguments.contains("-open-settings")
-                || CommandLine.arguments.contains("-open-settings-memory")
-                || CommandLine.arguments.contains("-open-settings-brain-spike")
-                || CommandLine.arguments.contains("-open-usage") {
+            if launchArgumentEnabled("open-settings")
+                || launchArgumentEnabled("open-settings-memory")
+                || launchArgumentEnabled("open-settings-brain-spike")
+                || launchArgumentEnabled("open-usage") {
                 isSettingsPresented = true
             }
             #endif
@@ -201,6 +90,122 @@ struct HistorySidebarView: View {
         }
     }
 
+    // MARK: - Sections
+
+    /// Tab list as labeled nav rows (icon + text, full-width tap target):
+    /// Chats / Projects / Artifacts Library / Agents / Automation Tasks /
+    /// Code / ACI. The active tab is shown by highlight only — no chevrons
+    /// or other trailing accessories on these rows.
+    private var tabList: some View {
+        VStack(spacing: 2) {
+            ForEach(ModeBarItem.allCases, id: \.self) { item in
+                tabRow(for: item)
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.bottom, 12)
+    }
+
+    private func tabRow(for item: ModeBarItem) -> some View {
+        let isActive = modeStore.activeTab == item
+        return Button(action: {
+            let generator = UIImpactFeedbackGenerator(style: .light)
+            generator.impactOccurred()
+            modeStore.selectBarItem(item)
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.86, blendDuration: 0)) {
+                isSidebarOpen = false
+            }
+        }) {
+            HStack(spacing: 12) {
+                Image(systemName: item.icon)
+                    .font(.system(size: 15, weight: .semibold))
+                    .frame(width: 20)
+                Text(item.label)
+                    .font(.subheadline)
+                    .fontWeight(isActive ? .semibold : .regular)
+                Spacer()
+            }
+            .foregroundColor(isActive ? modeStore.mode.theme.accent : Color("TextPrimary"))
+            .padding(.horizontal, 12)
+            .padding(.vertical, 9)
+            // Accent-tinted active highlight (web --shell-item-active-bg).
+            .background(isActive ? modeStore.mode.theme.accentSoft : Color.clear)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(item.label)
+        .accessibilityIdentifier("sidebarTab\(item.rawValue)")
+    }
+
+    /// Footer: account avatar + "New chat" pill floating over the sidebar
+    /// background — no separator bar (Claude-parity layout).
+    private var footer: some View {
+        HStack {
+            Menu {
+                Text(authManager.displayName)
+                Button(role: .destructive, action: {
+                    Task { try? await authManager.signOut() }
+                }) {
+                    Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
+                }
+            } label: {
+                Text(authManager.avatarInitial)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(Color("BgPrimary"))
+                    .frame(width: 36, height: 36)
+                    .background(Color("TextSecondary"))
+                    .clipShape(Circle())
+            }
+            .accessibilityLabel("Account, \(authManager.displayName)")
+
+            // Settings hub (Phase 4) — gear row next to the avatar.
+            Button(action: {
+                let generator = UIImpactFeedbackGenerator(style: .light)
+                generator.impactOccurred()
+                isSettingsPresented = true
+            }) {
+                Image(systemName: "gearshape")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(Color("TextPrimary"))
+                    .frame(width: 36, height: 36)
+                    .background(Color("BgPanel"))
+                    .clipShape(Circle())
+                    .overlay(Circle().stroke(Color("BorderSubtle"), lineWidth: 1))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Open settings")
+
+            Spacer()
+
+            Button(action: {
+                let generator = UIImpactFeedbackGenerator(style: .light)
+                generator.impactOccurred()
+                selectedSessionId = nil
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.86, blendDuration: 0)) {
+                    isSidebarOpen = false
+                }
+            }) {
+                HStack(spacing: 6) {
+                    Image(systemName: "square.and.pencil")
+                        .font(.system(size: 13, weight: .semibold))
+                    Text("New chat")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+                .foregroundColor(Color("TextPrimary"))
+                .padding(.horizontal, 14)
+                .frame(height: 36)
+                .background(Color("BgPanel"))
+                .clipShape(Capsule())
+                .overlay(Capsule().stroke(Color("BorderSubtle"), lineWidth: 1))
+            }
+            .accessibilityLabel("New chat")
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 20)
+    }
+
     // MARK: - Content
 
     @ViewBuilder
@@ -213,41 +218,39 @@ struct HistorySidebarView: View {
                 Spacer()
             }
         } else if let loadError, historyGroups.isEmpty {
-            VStack(spacing: 12) {
-                Text("Couldn't load conversations")
-                    .font(.subheadline)
-                    .foregroundColor(Color("TextPrimary"))
-                Text(loadError)
-                    .font(.caption)
-                    .foregroundColor(Color("TextSecondary"))
-                    .multilineTextAlignment(.center)
-                Button("Retry") {
-                    Task { await loadSessions() }
-                }
-                .font(.subheadline)
-                .foregroundColor(Color("AccentPrimary"))
-            }
+            FriendlyInlineStateView(
+                style: .offline,
+                icon: "wifi.slash",
+                title: "Couldn't load conversations",
+                message: FriendlyErrorMessage.from(loadError),
+                actionTitle: "Retry",
+                action: { Task { await loadSessions() } }
+            )
             .padding(.horizontal, 20)
-            .padding(.top, 40)
+            .padding(.top, 24)
             .frame(maxWidth: .infinity)
         } else if historyGroups.isEmpty {
-            Text("No conversations yet.\nStart a new chat to see it here.")
-                .font(.subheadline)
-                .foregroundColor(Color("TextSecondary"))
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 20)
-                .padding(.top, 40)
-                .frame(maxWidth: .infinity)
+            FriendlyInlineStateView(
+                style: .empty,
+                icon: "bubble.left",
+                title: "No conversations yet",
+                message: "Start a new chat to see it here."
+            )
+            .padding(.horizontal, 20)
+            .padding(.top, 24)
+            .frame(maxWidth: .infinity)
         } else if visibleGroups.isEmpty, !showActiveBot {
             // History is loaded but the mode filter leaves nothing for this
             // surface — distinct from the "no chats yet" empty state.
-            Text("No conversations here yet.")
-                .font(.subheadline)
-                .foregroundColor(Color("TextSecondary"))
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 20)
-                .padding(.top, 40)
-                .frame(maxWidth: .infinity)
+            FriendlyInlineStateView(
+                style: .empty,
+                icon: "bubble.left.and.bubble.right",
+                title: "No conversations here yet",
+                message: "Switch modes or start a new chat to see it here."
+            )
+            .padding(.horizontal, 20)
+            .padding(.top, 24)
+            .frame(maxWidth: .infinity)
         } else {
             VStack(alignment: .leading, spacing: 28) {
                 activeBotSection

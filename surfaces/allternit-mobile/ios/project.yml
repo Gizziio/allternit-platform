@@ -63,6 +63,10 @@ targets:
       - path: Core
       - path: Features
       - path: Assets.xcassets
+      - path: Config
+    configFiles:
+      Debug: Config/Secrets.xcconfig
+      Release: Config/Secrets.xcconfig
     settings:
       base:
         INFOPLIST_FILE: Info.plist
@@ -74,9 +78,11 @@ targets:
         MARKETING_VERSION: "1.0"
         CURRENT_PROJECT_VERSION: "1"
         CODE_SIGN_ENTITLEMENTS: Allternit.entitlements
-        # Clerk publishable key (client-public by design) — the production
-        # instance, same value the web ships in .env.production.
-        CLERK_PUBLISHABLE_KEY: pk_live_Y2xlcmsucGxhdGZvcm0uYWxsdGVybml0LmNvbSQ
+        # Clerk publishable key is injected via Config/Secrets.xcconfig (which
+        # is gitignored; copy from Config/Secrets.xcconfig.example). This keeps
+        # the production key out of version control while letting contributors
+        # plug in their own Clerk instance.
+        CLERK_PUBLISHABLE_KEY: $(CLERK_PUBLISHABLE_KEY)
         # Placeholder — set your team for device builds.
         DEVELOPMENT_TEAM: ""
         CODE_SIGN_STYLE: Automatic
@@ -88,6 +94,10 @@ targets:
         debug:
           ALLTERNIT_API_BASE_URL: http://127.0.0.1:8013/api/v1
           ALLTERNIT_GIZZI_CODE_URL: http://127.0.0.1:4096
+          # Xcode 16's debug dylib is intermittently unsigned when installed via
+          # simctl, causing launch crashes. Disable it for Debug simulator builds;
+          # Previews still work without it in this project.
+          ENABLE_DEBUG_DYLIB: NO
         release:
           # TODO: verify the public mobile gateway host before App Store submission.
           # The gizzi clients default to https://api.allternit.com; mobile may share
@@ -172,3 +182,24 @@ targets:
         DEVELOPMENT_TEAM: ""
         CODE_SIGN_STYLE: Automatic
         SKIP_INSTALL: true
+  # Unit tests for the iOS app. Hosts the app so tests can `@testable import Allternit`.
+  AllternitTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: Tests
+    dependencies:
+      - target: Allternit
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.allternit.mobile.tests
+        PRODUCT_NAME: AllternitTests
+        SWIFT_VERSION: "6.0"
+        IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        DEVELOPMENT_TEAM: ""
+        CODE_SIGN_STYLE: Automatic
+        GENERATE_INFOPLIST_FILE: YES

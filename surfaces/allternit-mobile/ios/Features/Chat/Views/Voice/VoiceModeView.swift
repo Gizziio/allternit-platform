@@ -83,7 +83,7 @@ struct VoiceModeView: View {
             #if DEBUG
             // `-open-voice-settings` (DEBUG only): opens the voice settings
             // sheet straight away for screenshot verification.
-            if CommandLine.arguments.contains("-open-voice-settings") {
+            if launchArgumentEnabled("open-voice-settings") {
                 isSettingsPresented = true
             }
             #endif

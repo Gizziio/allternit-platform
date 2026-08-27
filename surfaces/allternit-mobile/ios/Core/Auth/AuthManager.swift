@@ -114,8 +114,8 @@ final class AuthManager: ObservableObject {
     /// ("Hey, Joe!"); nil when signed out / skip-auth / no first name, so
     /// the caller falls back to "Hey there!".
     var firstName: String? {
-        guard isClerkConfigured,
-              let firstName = Clerk.shared.user?.firstName,
+        guard isClerkConfigured else { return nil }
+        guard let firstName = Clerk.shared.user?.firstName,
               !firstName.isEmpty else { return nil }
         return firstName
     }
@@ -123,7 +123,7 @@ final class AuthManager: ObservableObject {
     /// Display name for the sidebar footer: first name, full name, or the
     /// primary email's local part — whichever resolves first.
     var displayName: String {
-        guard let user = Clerk.shared.user else { return "" }
+        guard isClerkConfigured, let user = Clerk.shared.user else { return "Guest" }
         if let firstName = user.firstName, !firstName.isEmpty {
             return firstName
         }
@@ -136,12 +136,14 @@ final class AuthManager: ObservableObject {
     /// Sidebar avatar initial — the first character of `displayName`,
     /// uppercased (matches the reference app's single-letter avatar).
     var avatarInitial: String {
-        displayName.first.map { String($0).uppercased() } ?? "?"
+        guard isClerkConfigured else { return "A" }
+        return displayName.first.map { String($0).uppercased() } ?? "?"
     }
 
     /// The signed-in user's primary email address (Settings account row);
     /// nil when signed out or the account has no email.
     var primaryEmail: String? {
-        Clerk.shared.user?.emailAddresses.first?.emailAddress
+        guard isClerkConfigured else { return nil }
+        return Clerk.shared.user?.emailAddresses.first?.emailAddress
     }
 }

@@ -156,13 +156,13 @@ struct OnboardingView: View {
                 ?? OnboardingPersona.allCases.first(where: { $0.label == raw }) {
                 store.persona = persona
             }
-            if CommandLine.arguments.contains("-onboarding-skip-dialog") {
+            if launchArgumentEnabled("onboarding-skip-dialog") {
                 showSkipDialog = true
             }
             // `-brain-create-auto` (D3 live verification): run "Create my
             // brain" automatically and record the outcome to
             // <Documents>/brain-create-result.json for the simctl harness.
-            if CommandLine.arguments.contains("-brain-create-auto"), !brainAutoRan {
+            if launchArgumentEnabled("brain-create-auto"), !brainAutoRan {
                 brainAutoRan = true
                 Task {
                     do {
@@ -207,16 +207,7 @@ struct OnboardingView: View {
                     .blur(radius: 35)
                     .animation(.easeInOut(duration: 2.5).repeatForever(autoreverses: true), value: logoGlowing)
 
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Text("A://")
-                        .foregroundColor(Color("AccentPrimary"))
-                        .font(.system(.title2, design: .monospaced))
-                        .bold()
-                    Text("LLTERNIT")
-                        .foregroundColor(Color("TextPrimary"))
-                        .font(.system(.title2, design: .serif))
-                        .tracking(4.0)
-                }
+                WordmarkView(height: 28)
             }
             .padding(.bottom, 32)
 

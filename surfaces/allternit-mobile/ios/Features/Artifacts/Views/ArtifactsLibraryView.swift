@@ -38,6 +38,7 @@ struct ArtifactsLibraryView: View {
                         .foregroundColor(Color("TextPrimary"))
                         .frame(width: 44, height: 44)
                 }
+                .accessibilityLabel("Open sidebar")
 
                 Text("Artifacts Library")
                     .font(.system(.title3, design: .serif))
@@ -125,27 +126,12 @@ struct ArtifactsLibraryView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "archivebox")
-                .font(.system(size: 24, weight: .medium))
-                .foregroundColor(Color("TextSecondary"))
-                .frame(width: 56, height: 56)
-                .background(Color("BgPanel"))
-                .clipShape(RoundedRectangle(cornerRadius: Theme.radiusLG))
-                .overlay(
-                    RoundedRectangle(cornerRadius: Theme.radiusLG)
-                        .stroke(Theme.borderWarmDefault, lineWidth: 1)
-                )
-            Text("No artifacts yet")
-                .font(.system(.title3, design: .serif))
-                .fontWeight(.medium)
-                .foregroundColor(Color("TextPrimary"))
-            Text("Artifacts created in your chats are saved here.")
-                .font(.subheadline)
-                .foregroundColor(Color("TextSecondary"))
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
-        }
+        FriendlyStateView(
+            style: .empty,
+            icon: "archivebox",
+            title: "No artifacts yet",
+            message: "Artifacts created in your chats are saved here."
+        )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color("BgSecondary"))
     }

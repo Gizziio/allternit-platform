@@ -95,6 +95,7 @@ private struct FormSchemaListView: View {
                         .background(Color("BgPanel"))
                         .clipShape(Circle())
                 }
+                .accessibilityLabel("Close")
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 14)
@@ -253,7 +254,7 @@ private struct FormFieldRow: View {
                     .foregroundColor(Color("TextPrimary"))
                 if field.required {
                     Text("*")
-                        .foregroundColor(.red)
+                        .foregroundColor(Theme.statusError)
                 }
             }
 

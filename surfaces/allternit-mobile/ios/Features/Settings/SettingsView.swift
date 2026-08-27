@@ -40,6 +40,9 @@ struct SettingsView: View {
     @State private var isOrganizationAccessPresented = false
     /// Pushed custom-instructions editor (Agent section).
     @State private var isInstructionsPresented = false
+    /// Pushed Webhook Triggers panel (Agent section; also pushed from the
+    /// bot detail's Webhooks card).
+    @State private var isWebhooksPresented = false
     /// Pushed Monitor view (infra section).
     @State private var isMonitorPresented = false
     /// Pushed Runtime Operations view (infra section).
@@ -138,6 +141,9 @@ struct SettingsView: View {
             .navigationDestination(isPresented: $isInstructionsPresented) {
                 CustomInstructionsView()
             }
+            .navigationDestination(isPresented: $isWebhooksPresented) {
+                WebhooksSettingsView()
+            }
             .navigationDestination(isPresented: $isMonitorPresented) {
                 MonitorView()
             }
@@ -198,13 +204,18 @@ struct SettingsView: View {
                 // `-open-settings-memory` (DEBUG only): deep-link straight
                 // into the Memory section for screenshots (the sidebar's
                 // `-open-settings` handling also opens this sheet on it).
-                if CommandLine.arguments.contains("-open-settings-memory") {
+                if launchArgumentEnabled("open-settings-memory") {
                     isMemoryPresented = true
+                }
+                // `-open-settings-platform` (DEBUG only): deep-link straight
+                // into the Platform section for Maestro screenshot coverage.
+                if launchArgumentEnabled("open-settings-platform") {
+                    isPlatformPresented = true
                 }
                 // `-open-settings-data` (DEBUG only): scroll to the bottom
                 // sections (Data controls / About) for screenshots — simctl
                 // has no scroll injection. Delayed so the List has laid out.
-                if CommandLine.arguments.contains("-open-settings-data") {
+                if launchArgumentEnabled("open-settings-data") {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
                         withAnimation { proxy.scrollTo("aboutSection", anchor: .bottom) }
                     }
@@ -212,7 +223,7 @@ struct SettingsView: View {
                 // `-open-settings-brain-spike` (DEBUG only): deep-link
                 // straight into the D3 spike screen for the automated proof
                 // run (`-brain-spike-auto` takes it from there).
-                if CommandLine.arguments.contains("-open-settings-brain-spike") {
+                if launchArgumentEnabled("open-settings-brain-spike") {
                     isBrainSpikePresented = true
                 }
                 #endif
@@ -358,7 +369,7 @@ struct SettingsView: View {
                     let percent = (usageStore.percentUsed ?? 0) / 100
                     ProgressView(value: min(max(percent, 0), 1))
                         .tint(percent >= 1
-                              ? Color.red
+                              ? Theme.statusError
                               : (percent >= 0.8 ? Theme.statusWarning : Color("AccentPrimary")))
 
                     if let resetsLabel = usageStore.resetsLabel {
@@ -396,17 +407,21 @@ struct SettingsView: View {
                 }
             } else {
                 // The backend's own words when metering isn't configured
-                // (503 `usage_metering_unavailable`); a generic line while
-                // the first fetch is still in flight.
-                if case .unavailable(let message) = usageStore.availability {
-                    Text(message)
-                        .font(.subheadline)
-                        .foregroundColor(Color("TextSecondary"))
-                } else {
-                    Text("Usage metering isn't available on this backend.")
-                        .font(.subheadline)
-                        .foregroundColor(Color("TextSecondary"))
-                }
+                // (503 `usage_metering_unavailable`); a generic friendly state
+                // while the first fetch is still in flight.
+                let message: String = {
+                    if case .unavailable(let backendMessage) = usageStore.availability {
+                        return FriendlyErrorMessage.from(backendMessage)
+                    }
+                    return "Usage metering isn't available on this backend."
+                }()
+                FriendlyStateView(
+                    style: .empty,
+                    icon: "chart.bar",
+                    title: "Usage unavailable",
+                    message: message
+                )
+                .padding(.vertical, 12)
             }
         } header: {
             Text("Usage")
@@ -526,6 +541,24 @@ struct SettingsView: View {
             .buttonStyle(.plain)
 
             Button(action: {
+                let generator = UIImpactFeedbackGenerator(style: .light)
+                generator.impactOccurred()
+                isWebhooksPresented = true
+            }) {
+                HStack {
+                    Text("Webhooks")
+                        .font(.subheadline)
+                        .foregroundColor(Color("TextPrimary"))
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(Color("TextSecondary"))
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            Button(action: {
                 // The hub is a sidebar tab — close the sheet and hop to it.
                 dismiss()
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
@@ -548,7 +581,12 @@ struct SettingsView: View {
             Text("Agent")
         } footer: {
             if let error = preferences.saveError {
-                Text("Couldn't sync preferences: \(error)")
+                FriendlyInlineStateView(
+                    style: .error,
+                    icon: "exclamationmark.triangle",
+                    title: "Couldn't sync preferences",
+                    message: FriendlyErrorMessage.from(error)
+                )
             } else {
                 Text("Applies to every chat and syncs to your agents' workspace files (STYLE.md).")
             }
@@ -738,7 +776,7 @@ struct SettingsView: View {
                 .font(.subheadline)
             Spacer()
         }
-        .foregroundColor(destructive ? Color.red : Color("TextPrimary"))
+        .foregroundColor(destructive ? Theme.statusError : Color("TextPrimary"))
         .contentShape(Rectangle())
     }
 
@@ -783,7 +821,7 @@ struct SettingsView: View {
                 case .failed(let message):
                     Text(message)
                         .font(.caption)
-                        .foregroundColor(.red)
+                        .foregroundColor(Theme.statusError)
                         .lineLimit(2)
                 }
             }

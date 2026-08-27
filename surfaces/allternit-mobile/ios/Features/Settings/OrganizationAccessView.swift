@@ -40,9 +40,13 @@ struct OrganizationAccessView: View {
                 ProgressView()
                     .frame(maxWidth: .infinity, alignment: .center)
             } else if let error, profile == nil {
-                Text(error)
-                    .font(.caption)
-                    .foregroundColor(Theme.statusWarning)
+                let offline = isConnectionFailure(error)
+                FriendlyInlineStateView(
+                    style: offline ? .offline : .error,
+                    icon: offline ? "wifi.slash" : "exclamationmark.triangle",
+                    title: "Could not load profile",
+                    message: FriendlyErrorMessage.from(error)
+                )
             } else if let profile {
                 HStack(spacing: 12) {
                     Text(initials(for: profile.displayName))
@@ -115,9 +119,12 @@ struct OrganizationAccessView: View {
                             .foregroundColor(Color("TextSecondary"))
                     }
                 } else {
-                    Text("No organization resolved for this account.")
-                        .font(.caption)
-                        .foregroundColor(Color("TextSecondary"))
+                    FriendlyInlineStateView(
+                        style: .empty,
+                        icon: "building.2",
+                        title: "No organization",
+                        message: "No organization resolved for this account."
+                    )
 
                     Button(action: {
                         Task { await createOrganization() }
@@ -139,9 +146,13 @@ struct OrganizationAccessView: View {
             }
 
             if let error {
-                Text(error)
-                    .font(.caption)
-                    .foregroundColor(Theme.statusWarning)
+                let offline = isConnectionFailure(error)
+                FriendlyInlineStateView(
+                    style: offline ? .offline : .error,
+                    icon: offline ? "wifi.slash" : "exclamationmark.triangle",
+                    title: "Could not create organization",
+                    message: FriendlyErrorMessage.from(error)
+                )
             }
         } header: {
             Text("Organization")
@@ -174,6 +185,15 @@ struct OrganizationAccessView: View {
             self.error = error.localizedDescription
         }
         isCreating = false
+    }
+
+    private func isConnectionFailure(_ error: String) -> Bool {
+        let lowered = error.lowercased()
+        return lowered.contains("could not connect")
+            || lowered.contains("failed to connect")
+            || lowered.contains("offline")
+            || lowered.contains("no network")
+            || lowered.contains("network connection was lost")
     }
 
     private func initials(for name: String) -> String {

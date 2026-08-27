@@ -34,25 +34,14 @@ struct OnDeviceChatView: View {
     // MARK: - Pre-loaded states
 
     private var loadPrompt: some View {
-        VStack(spacing: 16) {
-            Spacer()
-            Image(systemName: "brain.head.profile")
-                .font(.system(size: 40))
-                .foregroundColor(Color("TextSecondary"))
-            Text("Llama 3.2 1B (4-bit)")
-                .font(.headline)
-                .foregroundColor(Color("TextPrimary"))
-            Text("Runs entirely on this device, offline, once downloaded (~700MB, first time only). No shell/file tools yet — chat only.")
-                .font(.caption)
-                .foregroundColor(Color("TextSecondary"))
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
-            Button("Download & Load") {
-                Task { await harness.ensureLoaded() }
-            }
-            .buttonStyle(.borderedProminent)
-            Spacer()
-        }
+        FriendlyStateView(
+            style: .empty,
+            icon: "brain.head.profile",
+            title: "Llama 3.2 1B (4-bit)",
+            message: "Download the model to chat on-device.",
+            actionTitle: "Download & Load",
+            action: { Task { await harness.ensureLoaded() } }
+        )
     }
 
     private func downloadProgress(_ progress: Double) -> some View {
@@ -68,21 +57,14 @@ struct OnDeviceChatView: View {
     }
 
     private func failedState(_ message: String) -> some View {
-        VStack(spacing: 12) {
-            Spacer()
-            Text("Couldn't load the model")
-                .font(.subheadline)
-                .foregroundColor(Color("TextPrimary"))
-            Text(message)
-                .font(.caption)
-                .foregroundColor(Theme.statusWarning)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 24)
-            Button("Retry") {
-                Task { await harness.ensureLoaded() }
-            }
-            Spacer()
-        }
+        FriendlyStateView(
+            style: .offline,
+            icon: "wifi.slash",
+            title: "Couldn't load the model",
+            message: FriendlyErrorMessage.from(message),
+            actionTitle: "Retry",
+            action: { Task { await harness.ensureLoaded() } }
+        )
     }
 
     // MARK: - Chat
@@ -122,6 +104,7 @@ struct OnDeviceChatView: View {
                         .font(.title2)
                 }
                 .disabled(isGenerating || inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .accessibilityLabel("Send")
             }
             .padding(12)
         }

@@ -48,6 +48,7 @@ struct LoopsListView: View {
                             .foregroundColor(Color("TextPrimary"))
                             .frame(width: 44, height: 44)
                     }
+                    .accessibilityLabel("Open sidebar")
 
                     Text("Automation Tasks")
                         .font(.system(.title3, design: .serif))
@@ -68,9 +69,10 @@ struct LoopsListView: View {
                             .background(Color("BgPanel"))
                             .clipShape(Circle())
                     }
+                    .accessibilityLabel("New loop")
                 }
                 .padding(.horizontal, 8)
-                .padding(.vertical, 6)
+                .padding(.vertical, 10)
                 .background(Color("BgPrimary"))
 
                 Divider().background(Color("BorderSubtle"))
@@ -115,21 +117,14 @@ struct LoopsListView: View {
                 Spacer()
             } else if let loadError = loopStore.loadError, loopStore.loops.isEmpty {
                 Spacer()
-                VStack(spacing: 12) {
-                    Text("Couldn't load loops")
-                        .font(.subheadline)
-                        .foregroundColor(Color("TextPrimary"))
-                    Text(loadError)
-                        .font(.caption)
-                        .foregroundColor(Color("TextSecondary"))
-                        .multilineTextAlignment(.center)
-                    Button("Retry") {
-                        loopStore.fetchLoopsIfNeeded(force: true)
-                    }
-                    .font(.subheadline)
-                    .foregroundColor(Color("AccentPrimary"))
-                }
-                .padding(.horizontal, 20)
+                FriendlyStateView(
+                    style: errorStyle(loadError),
+                    icon: "wifi.slash",
+                    title: "Couldn't load loops",
+                    message: FriendlyErrorMessage.from(loadError),
+                    actionTitle: "Retry",
+                    action: { loopStore.fetchLoopsIfNeeded(force: true) }
+                )
                 Spacer()
             } else if loopStore.loops.isEmpty {
                 Spacer()
@@ -169,11 +164,12 @@ struct LoopsListView: View {
             .padding(.bottom, 12)
 
             if let actionError {
-                Text(actionError)
-                    .font(.caption)
-                    .foregroundColor(Theme.statusWarning)
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 8)
+                FriendlyInlineStateView(
+                    style: .error,
+                    icon: "exclamationmark.triangle",
+                    title: "Action failed",
+                    message: actionError
+                )
             }
 
             ScrollView {
@@ -182,14 +178,12 @@ struct LoopsListView: View {
                         loopRow(loop)
                     }
                     if visibleLoops.isEmpty {
-                        VStack(spacing: 10) {
-                            Image(systemName: "magnifyingglass")
-                                .font(.system(size: 20, weight: .medium))
-                                .foregroundColor(Color("TextSecondary"))
-                            Text("No loops match.")
-                                .font(.subheadline)
-                                .foregroundColor(Color("TextSecondary"))
-                        }
+                        FriendlyInlineStateView(
+                            style: .empty,
+                            icon: "magnifyingglass",
+                            title: "No matches",
+                            message: "No loops match."
+                        )
                         .padding(.top, 24)
                     }
                 }
@@ -241,37 +235,18 @@ struct LoopsListView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "repeat")
-                .font(.system(size: 24, weight: .medium))
-                .foregroundColor(Color("TextSecondary"))
-                .frame(width: 56, height: 56)
-                .background(Color("BgPanel"))
-                .clipShape(RoundedRectangle(cornerRadius: Theme.radiusLG))
-                .overlay(
-                    RoundedRectangle(cornerRadius: Theme.radiusLG)
-                        .stroke(Theme.borderWarmDefault, lineWidth: 1)
-                )
-            Text("Run a command on repeat until it exits clean or hits its iteration cap.")
-                .font(.subheadline)
-                .foregroundColor(Color("TextSecondary"))
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
-            Button(action: {
+        FriendlyStateView(
+            style: .empty,
+            icon: "repeat",
+            title: "No loops",
+            message: "Run a command on repeat until it exits clean or hits its iteration cap.",
+            actionTitle: "Create loop",
+            action: {
                 let generator = UIImpactFeedbackGenerator(style: .light)
                 generator.impactOccurred()
                 isCreateSheetPresented = true
-            }) {
-                Text("Create loop")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(Color("TextPrimary"))
-                    .padding(.horizontal, 14)
-                    .frame(height: 36)
-                    .background(Color("BgSecondary"))
-                    .clipShape(Capsule())
-                    .overlay(Capsule().stroke(Color("BorderSubtle"), lineWidth: 1))
             }
-        }
+        )
     }
 
     // MARK: - Actions
@@ -331,5 +306,17 @@ struct LoopsListView: View {
     /// as Routine (RoutinesListView.relativeText).
     static func relativeText(_ msEpoch: Double?) -> String? {
         RoutinesListView.relativeText(msEpoch)
+    }
+
+    private func errorStyle(_ error: String) -> FriendlyStateView.Style {
+        let lowered = error.lowercased()
+        if lowered.contains("could not connect")
+            || lowered.contains("failed to connect")
+            || lowered.contains("internet connection")
+            || lowered.contains("offline")
+            || lowered.contains("network") {
+            return .offline
+        }
+        return .error
     }
 }
