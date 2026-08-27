@@ -1,19 +1,48 @@
 /**
  * Video Generation Mode Service
- * 
- * Handles text-to-video and image-to-video generation
- * Integrates with MiniMax video-01, Runway, Pika, Stable Video Diffusion
- * 
- * Similar to: MiniMax video-01, GenSpark video generation
+ *
+ * Provider registry for text-to-video and image-to-video generation.
+ * MiniMax is no longer the default or only path. Providers include free
+ * options (Pollinations), API-key aggregators (Replicate, fal.ai), direct
+ * APIs (Kling, Runway, Pika, Luma, Stability), and a bring-your-own endpoint.
  */
 
+export type VideoProviderId =
+  | 'pollinations'
+  | 'replicate'
+  | 'fal'
+  | 'huggingface'
+  | 'minimax'
+  | 'kling'
+  | 'runway'
+  | 'pika'
+  | 'luma'
+  | 'stability'
+  | 'custom';
+
+export interface VideoProviderApiKeys {
+  pollinations?: string;
+  replicate?: string;
+  fal?: string;
+  huggingface?: string;
+  minimax?: string;
+  kling?: string;
+  runway?: string;
+  pika?: string;
+  luma?: string;
+  stability?: string;
+  custom?: string;
+  customBaseURL?: string;
+}
+
 export interface VideoGenerationConfig {
-  provider: 'minimax' | 'runway' | 'pika' | 'stable' | 'custom';
+  provider: VideoProviderId;
   model?: string;
   duration?: 6 | 10 | 15; // seconds
   resolution?: '768p' | '1080p';
   fps?: 24 | 30 | 60;
   aspectRatio?: '16:9' | '9:16' | '1:1' | '4:3';
+  apiKey?: string;
 }
 
 export interface GeneratedVideo {
@@ -42,101 +71,88 @@ export interface VideoGenerationResult {
   };
 }
 
+export interface VideoProviderInfo {
+  id: VideoProviderId;
+  name: string;
+  type: 'free' | 'api_key' | 'subscription' | 'local';
+  defaultModel: string;
+  description: string;
+  isAvailable: boolean;
+  isDefault: boolean;
+}
+
+function defaultVideoConfig(config: Partial<VideoGenerationConfig> = {}): VideoGenerationConfig {
+  const provider = config.provider ?? 'pollinations';
+  const providerInfo = VIDEO_PROVIDERS[provider as keyof typeof VIDEO_PROVIDERS];
+  return {
+    provider,
+    model: config.model ?? providerInfo?.models[0]?.id ?? 'default',
+    duration: config.duration ?? 6,
+    resolution: config.resolution ?? '1080p',
+    fps: config.fps ?? 24,
+    aspectRatio: config.aspectRatio ?? '16:9',
+    apiKey: config.apiKey,
+  };
+}
+
 /**
- * Generate video from text prompt
- * 
- * How MiniMax does it:
- * - video-01 model: 720p, 6s clips
- * - T2V-01: Text-to-video
- * - T2V-01-Director: Camera control
- * - Cost: $0.43 per 6s clip
- * 
- * How GenSpark does it:
- * - Multiple providers (Kling, PixVerse, Luma)
- * - Auto-contextual generation
- * - Timeline editing
+ * Generate video from a text prompt.
+ *
+ * The request is forwarded to `/api/v1/providers/video/generate`, which proxies
+ * to the configured runtime. The provider ID and any configured API key are
+ * included in the payload so the runtime can route to Pollinations, Replicate,
+ * MiniMax, etc. as configured.
  */
 export async function generateVideo(
   prompt: string,
   config: Partial<VideoGenerationConfig> = {},
 ): Promise<VideoGenerationResult> {
-  const defaultConfig: VideoGenerationConfig = {
-    provider: 'minimax',
-    model: 'MiniMax-Hailuo-2.3',
-    duration: 6,
-    resolution: '1080p',
-    fps: 24,
-    aspectRatio: '16:9',
-    ...config,
-  };
+  const resolved = defaultVideoConfig(config);
 
-  switch (defaultConfig.provider) {
-    case 'minimax': {
-      const response = await fetch('/api/v1/providers/video/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, ...defaultConfig }),
-      });
-      const payload = await response.json().catch(() => ({})) as VideoGenerationResult & { message?: string };
-      if (!response.ok) throw new Error(payload.message || `Video generation failed (${response.status}).`);
-      return payload;
-    }
-    case 'runway': {
-      const key = typeof process !== 'undefined' ? process.env.RUNWAY_API_KEY : undefined;
-      if (!key) {
-        throw new Error('Video generation requires a Runway API key. Add RUNWAY_API_KEY to your environment or provide it in settings.');
-      }
-      throw new Error('Runway integration is not yet implemented. Use MiniMax instead.');
-    }
-    default:
-      throw new Error(`Video provider '${defaultConfig.provider}' is not yet integrated.`);
-  }
+  const response = await fetch('/api/v1/providers/video/generate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt, ...resolved }),
+  });
+  const payload = (await response.json().catch(() => ({}))) as VideoGenerationResult & { message?: string };
+  if (!response.ok) throw new Error(payload.message || `Video generation failed (${response.status}).`);
+  return payload;
 }
 
 /**
- * Generate video from image (Image-to-Video)
- * 
- * MiniMax models:
- * - I2V-01: Image to video
- * - I2V-01-Director: Image + camera control
- * - S2V-01: Subject reference video (maintains subject consistency)
- * - I2V-01-live: Live video style
+ * Generate video from an image (image-to-video).
  */
 export async function generateVideoFromImage(
   imageUrl: string,
   prompt: string,
-  config: Partial<VideoGenerationConfig> = {}
+  config: Partial<VideoGenerationConfig> = {},
 ): Promise<VideoGenerationResult> {
-  const defaultConfig: VideoGenerationConfig = {
-    provider: 'minimax',
-    model: 'I2V-01',
-    duration: 6,
-    resolution: '1080p',
-    fps: 24,
-    aspectRatio: '16:9',
-    ...config,
-  };
+  const resolved = defaultVideoConfig(config);
 
-  throw new Error('Image-to-video generation requires a MiniMax API key with I2V model access. Add MINIMAX_API_KEY to your environment.');
+  const response = await fetch('/api/v1/providers/video/generate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt, imageUrl, ...resolved }),
+  });
+  const payload = (await response.json().catch(() => ({}))) as VideoGenerationResult & { message?: string };
+  if (!response.ok) throw new Error(payload.message || `Image-to-video generation failed (${response.status}).`);
+  return payload;
 }
 
 /**
  * Extend video duration
- * 
+ *
  * Some providers allow extending videos beyond initial duration
  */
-export async function extendVideo(
-  videoId: string,
-  additionalSeconds: number
-): Promise<GeneratedVideo> {
+export async function extendVideo(videoId: string, additionalSeconds: number): Promise<GeneratedVideo> {
   throw new Error(
-    `Video extension is unavailable for video '${videoId}'. No validated provider integration exists for extending clips by ${additionalSeconds} seconds.`
+    `Video extension is unavailable for video '${videoId}'. No validated provider integration exists for extending clips by ${additionalSeconds} seconds.`,
   );
 }
 
 /**
  * Edit video (trim, merge, add effects)
- * 
+ *
  * Basic video editing capabilities
  */
 interface VideoEditOperation {
@@ -144,20 +160,126 @@ interface VideoEditOperation {
   params: Record<string, unknown>;
 }
 
-export async function editVideo(
-  videoId: string,
-  operations: VideoEditOperation[]
-): Promise<GeneratedVideo> {
+export async function editVideo(videoId: string, operations: VideoEditOperation[]): Promise<GeneratedVideo> {
   throw new Error(
-    `Video editing is unavailable for video '${videoId}'. No validated provider integration exists for ${operations.length} requested operation(s).`
+    `Video editing is unavailable for video '${videoId}'. No validated provider integration exists for ${operations.length} requested operation(s).`,
   );
 }
 
+function isVideoProviderAvailable(
+  entry: (typeof VIDEO_PROVIDERS)[VideoProviderId],
+  keys?: VideoProviderApiKeys,
+): boolean {
+  if (entry.type === 'free') return true;
+  if (entry.type === 'local') return true;
+  if (!keys) return false;
+  switch (entry.id) {
+    case 'pollinations':
+      return true; // optional key
+    case 'replicate':
+      return Boolean(keys.replicate);
+    case 'fal':
+      return Boolean(keys.fal);
+    case 'huggingface':
+      return Boolean(keys.huggingface);
+    case 'minimax':
+      return Boolean(keys.minimax);
+    case 'kling':
+      return Boolean(keys.kling);
+    case 'runway':
+      return Boolean(keys.runway);
+    case 'pika':
+      return Boolean(keys.pika);
+    case 'luma':
+      return Boolean(keys.luma);
+    case 'stability':
+      return Boolean(keys.stability);
+    case 'custom':
+      return Boolean(keys.custom && keys.customBaseURL);
+    default:
+      return false;
+  }
+}
+
+/**
+ * Return the list of supported video providers.
+ */
+export function getVideoProviders(keys?: VideoProviderApiKeys): VideoProviderInfo[] {
+  return Object.entries(VIDEO_PROVIDERS).map(([id, info]) => ({
+    id: id as VideoProviderId,
+    name: info.name,
+    type: info.type,
+    defaultModel: info.models[0]?.id ?? '',
+    description: info.description,
+    isAvailable: isVideoProviderAvailable(info, keys),
+    isDefault: id === 'pollinations',
+  }));
+}
+
 // API Providers Registry for Video Mode
-export const VIDEO_PROVIDERS = {
+export const VIDEO_PROVIDERS: Record<
+  VideoProviderId,
+  {
+    id: VideoProviderId;
+    name: string;
+    url: string;
+    type: VideoProviderInfo['type'];
+    description: string;
+    models: Array<{ id: string; type: string; cost: number | null; duration: number; features?: string[] }>;
+  }
+> = {
+  pollinations: {
+    id: 'pollinations',
+    name: 'Pollinations',
+    url: 'gen.pollinations.ai',
+    type: 'free',
+    description: 'Free text/image/video generation via Pollinations. Optional key for higher limits.',
+    models: [
+      { id: 'pollinations-video', type: 'text-to-video', cost: 0, duration: 6 },
+      { id: 'pollinations-image-to-video', type: 'image-to-video', cost: 0, duration: 6 },
+    ],
+  },
+  replicate: {
+    id: 'replicate',
+    name: 'Replicate',
+    url: 'replicate.com',
+    type: 'api_key',
+    description: 'Model aggregator (Wan, CogVideoX, Mochi, etc.).',
+    models: [
+      { id: 'wan-2.1', type: 'text-to-video', cost: null, duration: 6 },
+      { id: 'cogvideox-5b', type: 'text-to-video', cost: null, duration: 6 },
+      { id: 'mochi-1', type: 'text-to-video', cost: null, duration: 6 },
+    ],
+  },
+  fal: {
+    id: 'fal',
+    name: 'fal.ai',
+    url: 'fal.ai',
+    type: 'api_key',
+    description: 'Fast video inference API hosting many models.',
+    models: [
+      { id: 'fal-luma', type: 'text-to-video', cost: null, duration: 5 },
+      { id: 'fal-kling', type: 'text-to-video', cost: null, duration: 10 },
+      { id: 'fal-runway', type: 'text-to-video', cost: null, duration: 10 },
+    ],
+  },
+  huggingface: {
+    id: 'huggingface',
+    name: 'HuggingFace Inference',
+    url: 'huggingface.co',
+    type: 'api_key',
+    description: 'Free read-token access to open video models like Zeroscope.',
+    models: [
+      { id: 'zeroscope', type: 'text-to-video', cost: null, duration: 4 },
+      { id: 'stable-video-diffusion', type: 'image-to-video', cost: null, duration: 4 },
+    ],
+  },
   minimax: {
+    id: 'minimax',
     name: 'MiniMax',
     url: 'api.minimax.chat',
+    type: 'api_key',
+    description: 'Hailuo video models with text-to-video and image-to-video support.',
     models: [
       { id: 'T2V-01', type: 'text-to-video', cost: 0.43, duration: 6 },
       { id: 'T2V-01-Director', type: 'text-to-video', cost: 0.43, duration: 6, features: ['camera-control'] },
@@ -167,31 +289,64 @@ export const VIDEO_PROVIDERS = {
       { id: 'I2V-01-live', type: 'live-style', cost: 0.43, duration: 6 },
     ],
   },
+  kling: {
+    id: 'kling',
+    name: 'Kling',
+    url: 'klingai.com',
+    type: 'api_key',
+    description: 'High-quality cinematic video generation.',
+    models: [
+      { id: 'kling-1.5', type: 'text-to-video', cost: null, duration: 5 },
+      { id: 'kling-1.5-pro', type: 'text-to-video', cost: null, duration: 10 },
+    ],
+  },
   runway: {
+    id: 'runway',
     name: 'Runway',
     url: 'runwayml.com',
+    type: 'api_key',
+    description: 'Gen-2/Gen-3 video generation and motion controls.',
     models: [
       { id: 'gen-2', type: 'text-to-video', cost: null, duration: 4 },
       { id: 'gen-3', type: 'text-to-video', cost: null, duration: 10 },
     ],
   },
   pika: {
+    id: 'pika',
     name: 'Pika Labs',
     url: 'pika.art',
-    models: [
-      { id: 'pika-1.0', type: 'text-to-video', cost: null, duration: 3 },
-    ],
+    type: 'api_key',
+    description: 'Short-form stylized video clips.',
+    models: [{ id: 'pika-1.0', type: 'text-to-video', cost: null, duration: 3 }],
+  },
+  luma: {
+    id: 'luma',
+    name: 'Luma Dream Machine',
+    url: 'lumalabs.ai',
+    type: 'api_key',
+    description: 'Fast, high-fidelity video generation.',
+    models: [{ id: 'dream-machine-1', type: 'text-to-video', cost: null, duration: 5 }],
   },
   stability: {
-    name: 'Stable Video',
+    id: 'stability',
+    name: 'Stability AI',
     url: 'stability.ai',
+    type: 'api_key',
+    description: 'Stable Video Diffusion image-to-video.',
     models: [
       { id: 'svd', type: 'image-to-video', cost: null, duration: 4 },
       { id: 'svd-xt', type: 'image-to-video', cost: null, duration: 25 },
     ],
   },
+  custom: {
+    id: 'custom',
+    name: 'Custom',
+    url: '',
+    type: 'api_key',
+    description: 'Bring your own OpenAI-compatible video endpoint.',
+    models: [{ id: 'custom', type: 'text-to-video', cost: null, duration: 6 }],
+  },
 };
-
 // Open Source Tools for Video
 const VIDEO_TOOLS = {
   animatediff: {

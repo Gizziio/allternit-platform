@@ -445,7 +445,6 @@ export function ChatComposer({
   const [locallyEnabled, setLocallyEnabled] = useState(false);
   const [selectedTemplateTitle, setSelectedTemplateTitle] = useState<string | undefined>();
   const [formatSelections, setFormatSelections] = useState<Record<string, FormatSelection>>({});
-  const activeFormatSelection = selectedModeId ? formatSelections[selectedModeId] ?? getDefaultFormatSelection(selectedModeId) : null;
   const agentModeEnabled = hasEmbeddedSession || locallyEnabled;
   const [agentModePulse, setAgentModePulse] = useState(0);
   const prevAgentModeEnabledRef = useRef(agentModeEnabled);
@@ -549,6 +548,9 @@ export function ChatComposer({
   const selectedModeId = useAgentSurfaceModeStore((state) =>
     agentModeSurface ? state.selectedModeBySurface[agentModeSurface] : null,
   );
+  const activeFormatSelection = selectedModeId
+    ? formatSelections[selectedModeId] ?? getDefaultFormatSelection(selectedModeId)
+    : null;
   const setSelectedMode = useAgentSurfaceModeStore((state) => state.setSelectedMode);
   const selectedSwarmSubMode = useAgentSurfaceModeStore((state) =>
     agentModeSurface ? state.swarmSubModeBySurface[agentModeSurface] : 'specialist-team',

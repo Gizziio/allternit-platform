@@ -18,14 +18,22 @@ import {
   generateVideo,
   generateVideoFromImage,
   VIDEO_PROVIDERS,
+  getVideoProviders,
+  type VideoGenerationConfig,
   type VideoGenerationResult,
   type GeneratedVideo,
+  type VideoProviderApiKeys,
 } from '@/lib/agents/modes/video-generation';
 
+const VIDEO_PROVIDER_PREFERENCE = 'allternit_video_provider_preference';
+const VIDEO_API_KEYS = 'allternit_video_api_keys';
+
+type VideoProviderId = VideoGenerationConfig['provider'];
+
 export interface VideoConfig extends PluginConfig {
-  provider?: 'minimax' | 'kling';
+  provider?: VideoProviderId;
   model?: string;
-  duration?: 6 | 10;
+  duration?: 6 | 10 | 15;
   resolution?: '768p' | '1080p';
 }
 
@@ -45,8 +53,8 @@ class VideoPlugin implements ModePlugin {
   isInitialized = false;
   isExecuting = false;
   config: VideoConfig = {
-    provider: 'minimax',
-    model: 'MiniMax-Hailuo-2.3',
+    provider: 'pollinations',
+    model: 'pollinations-video',
     duration: 6,
     resolution: '1080p',
   };
@@ -109,7 +117,7 @@ class VideoPlugin implements ModePlugin {
 
       switch (mode) {
         case 'text-to-video':
-          return await this.generateFromText(input.prompt);
+          return await this.generateFromText(input.prompt, input.options);
         case 'image-to-video':
           return await this.generateFromImage(
             input.options?.imageUrl as string,
@@ -118,7 +126,7 @@ class VideoPlugin implements ModePlugin {
         case 'extend':
           return await this.extendVideo(input.options?.videoId as string);
         default:
-          return await this.generateFromText(input.prompt);
+          return await this.generateFromText(input.prompt, input.options);
       }
 
     } catch (err) {
@@ -153,27 +161,82 @@ class VideoPlugin implements ModePlugin {
   }
 
   async health(): Promise<{ healthy: boolean; message?: string }> {
-    return { healthy: true };
+    const provider = this.selectedProvider();
+    const providerInfo = getVideoProviders(this.readApiKeys()).find((p) => p.id === provider);
+    return {
+      healthy: providerInfo?.isAvailable ?? false,
+      message: providerInfo?.isAvailable
+        ? `${providerInfo.name} video generation is ready.`
+        : `${providerInfo?.name ?? provider} video generation needs configuration.`,
+    };
   }
 
-  private async generateFromText(prompt: string): Promise<PluginOutput> {
-    this.emit({ 
-      type: 'progress', 
-      payload: { step: 'generating', message: `Generating ${this.config.duration}s video...` },
-      timestamp: Date.now() 
+  private resolveConfig(inputOptions?: Record<string, unknown>): {
+    provider: VideoProviderId;
+    model: string;
+    duration: 6 | 10 | 15;
+    resolution: '768p' | '1080p';
+  } {
+    const provider = (inputOptions?.provider as VideoProviderId) || this.selectedProvider();
+    const providerInfo = VIDEO_PROVIDERS[provider];
+    const duration = (inputOptions?.duration as 6 | 10 | 15) || this.config.duration || 6;
+    const resolution = (inputOptions?.resolution as '768p' | '1080p') || this.config.resolution || '1080p';
+    return {
+      provider,
+      model: (inputOptions?.model as string) || this.config.model || providerInfo?.models[0]?.id || 'MiniMax-Hailuo-2.3',
+      duration,
+      resolution,
+    };
+  }
+
+  private async generateFromText(prompt: string, inputOptions?: Record<string, unknown>): Promise<PluginOutput> {
+    const config = this.resolveConfig(inputOptions);
+    const style = (inputOptions?.style as string) || undefined;
+    const promptWithStyle = style ? `${style} style video. ${prompt}` : prompt;
+
+    this.emit({
+      type: 'progress',
+      payload: { step: 'generating', message: `Generating ${config.duration}s video with ${VIDEO_PROVIDERS[config.provider].name}...` },
+      timestamp: Date.now()
     });
 
-    // TODO: Call actual MiniMax/Kling API
-    const result = await generateVideo(prompt, {
-      provider: this.config.provider! as any,
-      model: this.config.model!,
-      duration: this.config.duration!,
-      resolution: this.config.resolution!,
+    const result = await generateVideo(promptWithStyle, {
+      ...config,
+      apiKey: this.readApiKeys()[config.provider],
     });
 
     return {
       success: true,
       content: this.formatVideoOutput(result),
+      artifacts: result.videos.map(v => ({
+        type: 'video',
+        url: v.url,
+        name: `video-${v.id}.mp4`,
+        metadata: {
+          duration: v.metadata.duration,
+          resolution: v.metadata.resolution,
+          provider: v.metadata.provider,
+        },
+      })),
+    };
+  }
+
+  private async generateFromImage(imageUrl: string, prompt: string, inputOptions?: Record<string, unknown>): Promise<PluginOutput> {
+    this.emit({ 
+      type: 'progress', 
+      payload: { step: 'generating', message: 'Animating image...' },
+      timestamp: Date.now() 
+    });
+
+    const config = this.resolveConfig(inputOptions);
+    const result = await generateVideoFromImage(imageUrl, prompt, {
+      ...config,
+      apiKey: this.readApiKeys()[config.provider],
+    });
+
+    return {
+      success: true,
+      content: `Video generated from image`,
       artifacts: result.videos.map(v => ({
         type: 'video',
         url: v.url,
@@ -187,53 +250,44 @@ class VideoPlugin implements ModePlugin {
     };
   }
 
-  private async generateFromImage(imageUrl: string, prompt: string): Promise<PluginOutput> {
-    this.emit({ 
-      type: 'progress', 
-      payload: { step: 'generating', message: 'Animating image...' },
-      timestamp: Date.now() 
-    });
-
-    const result = await generateVideoFromImage(imageUrl, prompt, {
-      provider: this.config.provider! as any,
-      model: this.config.model!,
-      duration: this.config.duration!,
-      resolution: this.config.resolution!,
-    });
-
-    return {
-      success: true,
-      content: `Video generated from image`,
-      artifacts: result.videos.map(v => ({
-        type: 'video',
-        url: v.url,
-        name: `video-${v.id}.mp4`,
-        metadata: { 
-          duration: v.metadata.duration,
-          resolution: v.metadata.resolution,
-        },
-      })),
-    };
-  }
-
   private async extendVideo(videoId: string): Promise<PluginOutput> {
     return {
       success: false,
       error: {
-        message: `Video extension requires a MiniMax API key. Video ID: ${videoId}`,
+        message: `Video extension is not yet available. Video ID: ${videoId}`,
         code: 'NOT_IMPLEMENTED',
         recoverable: false,
       },
     };
   }
 
+  private selectedProvider(): VideoProviderId {
+    if (typeof window !== 'undefined') {
+      const preference = localStorage.getItem(VIDEO_PROVIDER_PREFERENCE);
+      if (preference && preference in VIDEO_PROVIDERS) {
+        return preference as VideoProviderId;
+      }
+    }
+    return this.config.provider ?? 'minimax';
+  }
+
+  private readApiKeys(): VideoProviderApiKeys {
+    if (typeof window === 'undefined') return {};
+    try {
+      return JSON.parse(localStorage.getItem(VIDEO_API_KEYS) || '{}') as VideoProviderApiKeys;
+    } catch {
+      return {};
+    }
+  }
+
   private formatVideoOutput(result: VideoGenerationResult): string {
-    const providerInfo = VIDEO_PROVIDERS[result.config.provider as keyof typeof VIDEO_PROVIDERS];
+    const providerInfo = VIDEO_PROVIDERS[result.config.provider];
     return [
       `# Video Generated`,
       '',
       `**Prompt:** ${result.prompt}`,
       `**Provider:** ${providerInfo?.name || result.config.provider}`,
+      `**Model:** ${result.config.model}`,
       `**Duration:** ${result.config.duration}s`,
       `**Resolution:** ${result.config.resolution}`,
       '',
