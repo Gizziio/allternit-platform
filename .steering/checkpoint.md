@@ -1093,3 +1093,20 @@ Wire up backend CLI provider discovery and an OMB-style chat model picker so eac
 ### Next
 - Runtime smoke-test: open a bot chat, confirm picker shows detected providers, select a model, restart the bot, and verify the chosen model flows to the first streamed message.
 - Decide whether to surface the same picker in the agent studio / brain profile flows.
+
+## OMB "Pick a Brain" model picker integration (2026-08-27)
+
+### Goal
+Wire OMB-style "Pick a Brain" model picker into Allternit chat via backend CLI provider discovery and frontend model selection.
+
+### Just did
+- Fixed duplicate `inference_router_routes` module declaration in `cmd/allternit-api/src/lib.rs`.
+- Ran `cargo check -p allternit-api` — passed (only pre-existing warnings).
+- Ran TypeScript typecheck against `surfaces/ai.allternit.com/tsconfig.typecheck.json` — no errors in touched files or the `ai.allternit.com` surface; workspace-wide failures are isolated to unrelated `@allternit/office-*` packages due to missing native/binding installs (`better-sqlite3` compile failure on Node v26.5.0).
+
+### Next
+1. Stage all changes and commit on `session/omb-integration-phase0`.
+2. Push the session branch.
+
+### Open questions
+None.
