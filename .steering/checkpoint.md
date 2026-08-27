@@ -1067,7 +1067,9 @@ Re-implement slices 1–6 of the brain-selection handoff so the frontend-selecte
 ### Verification
 - `cargo check -p allternit-api`: ✅ passes.
 - `cd cmd/gizzi-code && bun run typecheck`: ✅ no errors in touched files; pre-existing missing `packages/sdk/dist/*` artifacts remain.
+- `cargo test -p allternit-api agent_session_routes::tests::create_session_forwards_selected_model_to_gizzi`: ✅ passes.
+- `pnpm exec tsc --project tsconfig.typecheck.json --noEmit` in `surfaces/ai.allternit.com`: ❌ only pre-existing office-package asset/type errors unrelated to brain selection.
 
 ### Next
-1. Slice 7: add E2E test that selected model reaches Gizzi session + message.
-2. Slice 8: final typecheck/build sweep and clean up any regressions.
+1. Resolve/merge the pre-existing office-package and frontend merge-conflict state if this branch is to land.
+2. Steering review and commit if the changes look good.

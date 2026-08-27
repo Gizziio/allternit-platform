@@ -1209,3 +1209,161 @@ async fn sync_sessions(
 
     Ok(Sse::new(stream).keep_alive(axum::response::sse::KeepAlive::default()))
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::body::Body;
+    use axum::http::{Request, StatusCode};
+    use serde_json::{json, Value};
+    use std::net::SocketAddr;
+    use std::path::Path;
+    use std::sync::{Arc, Mutex};
+    use tokio::net::TcpListener;
+    use tokio::task::JoinHandle;
+    use tower::ServiceExt;
+
+    static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    async fn test_app_state(temp: &Path) -> Arc<AppState> {
+        let config = crate::AppConfig {
+            company: Default::default(),
+            user: Default::default(),
+        };
+        let db = crate::db::DbHandle::new(temp.join("test.db")).expect("test db");
+        let conn = db.connect().expect("test db conn");
+        conn.execute(
+            "INSERT OR IGNORE INTO organizations (id, name) VALUES (?1, 'Test Org')",
+            rusqlite::params!["org-1"],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT OR IGNORE INTO users (id, email) VALUES (?1, ?2)",
+            rusqlite::params!["admin-1", "admin-1@test.local"],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT OR IGNORE INTO organization_members (id, organization_id, user_id, role) VALUES (?1, ?2, ?3, ?4)",
+            rusqlite::params!["org-1:admin-1", "org-1", "admin-1", "owner"],
+        )
+        .unwrap();
+        drop(conn);
+        let auth_config = crate::auth::AuthConfig::from_app_config(&config);
+        let jwks = crate::auth::JwksManager::new(&auth_config);
+        let rails = crate::rails::RailsState::new(temp.join("rails"))
+            .await
+            .expect("test rails");
+        Arc::new(AppState {
+            config,
+            db,
+            data_dir: temp.to_path_buf(),
+            jwks,
+            auth_config,
+            rails,
+            vm_driver: None,
+            bot_desktop_sessions: Arc::new(tokio::sync::RwLock::new(
+                std::collections::HashMap::new(),
+            )),
+            vm_sessions: crate::vm_session_routes::new_vm_session_store(),
+            cowork_scheduler: None,
+            cowork_background: None,
+            cowork_run_manager: None,
+            webhook_secret: None,
+            office_runtime: Arc::new(tokio::sync::RwLock::new(
+                crate::office_routes::OfficeRuntimeFile::default(),
+            )),
+            office_cli_docs: Arc::new(tokio::sync::RwLock::new(
+                std::collections::HashMap::new(),
+            )),
+            office_cli_watches: Arc::new(tokio::sync::RwLock::new(
+                std::collections::HashMap::new(),
+            )),
+            office_cli_mcp_sessions: Arc::new(tokio::sync::RwLock::new(
+                std::collections::HashMap::new(),
+            )),
+            design_skill_cache: crate::design_connector_routes::DesignSkillCache::new(),
+            terminal_sessions: crate::terminal_routes::TerminalSessionStore::new(),
+            mcp_dispatcher: crate::mcp_dispatcher::McpDispatcher::new(),
+            approval_store: Arc::new(crate::permission_policy::ApprovalStore::new()),
+        })
+    }
+
+    async fn mock_gizzi_server() -> (SocketAddr, JoinHandle<()>, Arc<Mutex<Option<Value>>>) {
+        let captured = Arc::new(Mutex::new(None::<Value>));
+        let captured_clone = captured.clone();
+        let app = Router::new().route(
+            "/v1/session",
+            post(move |Json(body): Json<Value>| async move {
+                *captured_clone.lock().unwrap() = Some(body);
+                Json(json!({ "id": "sess-test-1" }))
+            }),
+        );
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let handle = tokio::spawn(async move {
+            axum::serve(listener, app).await.unwrap();
+        });
+        (addr, handle, captured)
+    }
+
+    #[tokio::test]
+    async fn create_session_forwards_selected_model_to_gizzi() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        let (addr, handle, captured) = mock_gizzi_server().await;
+        std::env::set_var("TERMINAL_SERVER_URL", format!("http://{}", addr));
+
+        let temp = tempfile::tempdir().unwrap().keep();
+        let state = test_app_state(&temp).await;
+        let app = agent_session_router().with_state(state);
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/agent-sessions")
+                    .header("content-type", "application/json")
+                    .body(Body::from(
+                        json!({
+                            "model": {
+                                "providerID": "openai",
+                                "modelID": "gpt-5",
+                                "authProfileId": "profile-1"
+                            }
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let mut received = None;
+        for _ in 0..50 {
+            if let Some(body) = captured.lock().unwrap().clone() {
+                received = Some(body);
+                break;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        }
+
+        let body = received.expect("mock server did not receive request");
+        let model = body.get("model").expect("model missing from forwarded body");
+        assert_eq!(
+            model.get("providerID").and_then(|v| v.as_str()),
+            Some("openai")
+        );
+        assert_eq!(
+            model.get("modelID").and_then(|v| v.as_str()),
+            Some("gpt-5")
+        );
+        assert_eq!(
+            model.get("authProfileId").and_then(|v| v.as_str()),
+            Some("profile-1")
+        );
+
+        handle.abort();
+    }
+}
