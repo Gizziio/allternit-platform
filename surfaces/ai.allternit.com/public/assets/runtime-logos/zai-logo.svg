@@ -1,10 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
-  <defs>
-    <linearGradient id="zaiGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#2D2D2D;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#1A1A1A;stop-opacity:1" />
-    </linearGradient>
-  </defs>
-  <circle cx="50" cy="50" r="45" fill="url(#zaiGradient)" />
-  <text x="50" y="62" text-anchor="middle" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="white">Z.ai</text>
-</svg>
+<svg
+      fill="currentColor"
+      fillRule="evenodd"
+      height="24"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    ><path d="M12.105 2L9.927 4.953H.653L2.83 2h9.276zM23.254 19.048L21.078 22h-9.242l2.174-2.952h9.244zM24 2L9.264 22H0L14.736 2H24z" /></svg>

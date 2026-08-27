@@ -5,9 +5,9 @@
  * WorkbookReadContext closing over its refs.
  */
 import type { IRange } from '@univerjs/core'
-import { columnLabel, parseAddress } from '@allternit/allternit-office-suite/xlsx'
-import type { InMemoryWorkbookAdapter } from '@allternit/allternit-office-suite/xlsx'
-import type { CellFormatState, CellScalar } from '@allternit/allternit-office-suite/xlsx'
+import { columnLabel, parseAddress } from '@allternit/office-suite/xlsx'
+import type { InMemoryWorkbookAdapter } from '@allternit/office-suite/xlsx'
+import type { CellFormatState, CellScalar } from '@allternit/office-suite/xlsx'
 import { toSelectionFormat } from '../selection-format'
 import { lazyCellReader } from '../univer-sync'
 import type { LazyWorkbookState, UniverRuntime } from '../univer-state'

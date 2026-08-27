@@ -172,6 +172,8 @@ struct GizziModelRef {
     provider_id: String,
     #[serde(rename = "modelID")]
     model_id: String,
+    #[serde(rename = "authProfileId", skip_serializing_if = "Option::is_none")]
+    auth_profile_id: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -416,26 +418,36 @@ fn select_model(metadata: Option<&serde_json::Value>) -> serde_json::Value {
             return json!(GizziModelRef {
                 provider_id: provider_id.to_string(),
                 model_id: model_id.to_string(),
+                auth_profile_id: model
+                    .get("authProfileId")
+                    .and_then(|value| value.as_str())
+                    .map(|s| s.to_string()),
             });
         }
     }
 
-    if let Some((provider_id, model_id)) = metadata.and_then(|value| {
+    if let Some((provider_id, model_id, auth_profile_id)) = metadata.and_then(|value| {
         Some((
             value.get("providerID")?.as_str()?,
             value.get("modelID")?.as_str()?,
+            value
+                .get("authProfileId")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
         ))
     }) {
         return json!(GizziModelRef {
             provider_id: provider_id.to_string(),
             model_id: model_id.to_string(),
+            auth_profile_id,
         });
     }
 
     let (provider_id, model_id) = AppConfig::load().default_model();
     json!(GizziModelRef {
         provider_id,
-        model_id
+        model_id,
+        auth_profile_id: None,
     })
 }
 
@@ -686,6 +698,7 @@ async fn create_session(
         GizziModelRef {
             provider_id: default_provider,
             model_id: default_model_id,
+            auth_profile_id: None,
         }
     });
     payload.insert("model".to_string(), json!(model_ref));

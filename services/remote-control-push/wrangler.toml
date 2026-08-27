@@ -1,23 +1,29 @@
 name = "allternit-remote-control-push"
 main = "src/index.ts"
-compatibility_date = "2025-01-01"
+compatibility_date = "2024-08-15"
+compatibility_flags = ["nodejs_compat"]
 
-# Durable Object that holds a runtime's outbound WebSocket and proxies
-# browser HTTP / WebSocket traffic to it.
-[[durable_objects.bindings]]
-name = "RUNTIME_RELAY"
-class_name = "RuntimeRelay"
+# Custom domain for the push worker.
+[[routes]]
+pattern = "push.remotecontrol.allternit.com"
+custom_domain = true
 
+# Remove the Durable Object class introduced by the previous edge-relay
+# incarnation so this push-only worker can replace it.
 [[migrations]]
-tag = "v1"
-new_sqlite_classes = ["RuntimeRelay"]
+tag = "v2"
+deleted_classes = ["RuntimeRelay"]
 
+# KV namespace for push subscriptions and pending notification payloads.
 [[kv_namespaces]]
-binding = "PUSH_SUBSCRIPTIONS"
-id = "7a159a562ff24a5f9e9a1fe04d00abda"
+binding = "REMOTE_CONTROL_PUSH_KV"
+id = "81d4bf1cc2c14cc1a0ba7bec8aad9392"
 
 [vars]
-# VAPID keys for Web Push. Generate with: npx web-push generate-vapid-keys
-# VAPID_PUBLIC_KEY = "<base64url-public-key>"
-# VAPID_PRIVATE_KEY = "<base64url-private-key>"
-VAPID_SUBJECT = "mailto:remote-control@allternit.com"
+# Set VAPID_JWK and VAPID_PUBLIC_KEY via `wrangler secret put` for production.
+# Example:
+#   wrangler secret put VAPID_JWK
+#   wrangler secret put VAPID_PUBLIC_KEY
+# Generate keys with:
+#   npx web-push generate-vapid-keys
+# Then format the private key as a JWK (d, x, y, crv=P-256, kty=EC).

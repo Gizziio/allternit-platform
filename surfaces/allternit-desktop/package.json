@@ -13,7 +13,7 @@
     "dev": "npm run build:auth-renderer && NODE_ENV=development electron .",
     "dev:auth-renderer": "vite --config vite.auth-renderer.config.ts --port 5174",
     "prepare:platform-static": "node scripts/prepare-platform-static.cjs",
-    "prepare:office-addins": "ALLTERNIT_OFFICE_APP_BASE_URL=https://ai.allternit.com/office-addins ALLTERNIT_PLATFORM_URL=https://ai.allternit.com pnpm --dir ../allternit-extensions/allternit-office-addin manifest:generate",
+    "prepare:office-addins": "ALLTERNIT_OFFICE_APP_BASE_URL=https://platform.allternit.com/office-addins ALLTERNIT_PLATFORM_URL=https://platform.allternit.com pnpm --dir ../allternit-extensions/allternit-office-addin manifest:generate",
     "prepare:cua-driver": "node scripts/prepare-cua-driver.cjs",
     "prepare:mesh-node": "node scripts/prepare-mesh-node.cjs",
     "prepare:office-engine": "node scripts/prepare-office-engine.cjs",

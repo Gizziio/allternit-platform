@@ -90,82 +90,108 @@ Until then, the HUD is reachable in any browser at the platform URL `/hud` once 
 
 ## Cross-surface seeded auth + iOS runtime pairing (2026-08-23)
 
+## Site APIs / Cross-surface HAR capture
+
+### Goal
+Implement the cross-surface Site APIs / HAR-derived API capture redesign.
+
+### Just did
+- Added backend persistence, replay proxy, real client generation, and agent tools (`api_capture_record`, `api_capture_stop`, `api_capture_replay`).
+- Created frontend capture adapter (desktop → extension → upload) and migrated store to backend APIs.
+- Added extension capture fallback via `chrome.debugger`/`webRequest`.
+- **Fixed HAR camelCase bug**: backend extractor expected snake_case (`query_string`, `post_data`) but Electron/Chrome export camelCase (`queryString`, `postData`). Added `#[serde(rename_all = "camelCase")]` to HAR structs in `har_api_service.rs`.
+- Added headless smoke tests:
+  - `cmd/allternit-api/scripts/test-api-capture.mjs` — backend ingest → session → contract → replay → client.
+  - `surfaces/allternit-desktop/tests/api-capture-headless.spec.ts` — Electron desktop capture through the preload API without UI screenshots.
+- Both smoke tests pass.
+
+### Verification
+- `cargo check -p allternit-api` ✅
+- `cargo test -p allternit-api extract_endpoints` ✅
+- `cargo test -p allternit-api tool_routes` ✅ 21 passed
+- `pnpm exec tsc` in `surfaces/ai.allternit.com` ✅ no capture-file errors
+- `pnpm test` in `surfaces/allternit-desktop` ✅ 94 passed
+- `pnpm exec wxt build` in extension ✅
+- `node cmd/allternit-api/scripts/test-api-capture.mjs` ✅
+- `pnpm exec playwright test surfaces/allternit-desktop/tests/api-capture-headless.spec.ts` ✅
+
+### Commit / Push status
+- Worktree: `/Users/joe/Desktop/allternit-workspace/allternit-session-site-apis-capture`
+- Branch: `session/site-apis-capture`
+- Commit: `a68c49d7a`
+- Changes committed locally: backend HAR service fix, redesign plan, headless smoke tests, backend integration test, removal of flaky e2e spec.
+- **Steering consult blocked**: `ao-steer` (Claude Code reviewer session) is at a session limit dialog (`You've hit your session limit · resets 5am (America/Chicago)`) and cannot process the commit-gate request. `steer-stop.sh` returned `verdict=CONSULT_FAILED`.
+- Need explicit user approval (or `STEER_GUARD_OFF=1`) before `git push origin session/site-apis-capture` and PR/merge to `main`.
+
+---
+
+## Wave 2 — Goal, plan, task, validation, and loop runtime (2026-08-17)
+
 ### Goal
 
-Get the seeded Clerk account (`seed@allternit.dev` / `rogtem-najXab-rizne7`) to auto-login on iOS, web, and desktop, complete runtime pairing so API calls authorize with a long-lived device token, and verify chats/conversations load.
+Complete Wave 2 runtime for the packaged-bot work loop and keep Ralph
+deprecation on track per `OPENMAUSBOT_PHASE_2_IMPLEMENTATION_TODO.md`.
 
 ### Just did
 
-- Verified the workspace state on `session/connector-installer` in the main checkout.
-- Confirmed `cmd/allternit-cloud-api/migrations/023_ios_runtime_type.sql` is present and recreates `runtime_pairings`/`runtime_devices` with `'ios'` in the CHECK constraint.
-- Launched the iOS simulator build (`2CC27A61-C301-41C2-9B9E-76BF4DF3C84B`) with `-seed-auth` and seed credentials.
-  - Seed Clerk sign-in succeeded; JWT `sts: active` for `user_3IBvYk8VKt7EFS6lupIkNafkenk`.
-  - `RuntimePairing` POST to `https://allternit-cloud-api.fly.dev/api/v1/runtime-pairings` returned HTTP 500 `Database error` because the deployed Fly DB CHECK constraint still rejects `runtime_type = 'ios'`.
-  - Screenshot captured showing the main chat with the Matrix logo, the A://TERNIT wordmark, and the Gizzi mascot perched on the composer when agent mode is on.
-- Updated desktop seed auth (`surfaces/allternit-desktop/src/renderer/auth/AuthApp.tsx`) to mirror iOS/web: select an existing org membership or create an `Allternit Seed` org before `setActive`, so the session becomes active on Clerk instances with Organizations enabled.
-- `pnpm exec tsc --noEmit` in `surfaces/allternit-desktop` is clean; `surfaces/ai.allternit.com` still only shows pre-existing errors in `mode-session-store.ts`.
-- Local validation: ran `allternit-cloud-api` on `127.0.0.1:3020` with a fresh SQLite DB. `POST /api/v1/runtime-pairings` with `"runtimeType":"ios"` returned `201 Created`, proving the migration applies cleanly and the code path accepts iOS runtimes.
+- Expanded `ralph-deprecation.ts` with a complete inventory of 80+ Ralph-named
+  paths across TypeScript, Rust, DAK runners, docs, tests, and archive.
+- Kept legacy `RailsLoopIteration*` event prefix → canonical goal/task event map
+  and read-compatibility helpers.
+- Created `goal-task-contracts.ts` with canonical Zod schemas and types for
+  Goal (9 states), Plan, TaskGraph, Task (9 states), Attempt, ValidationResult,
+  BudgetPolicy/Usage, LoopPolicy/Strategy, and Delegation.
+- Implemented graph utilities (`detectCycle`, `validateDependencies`,
+  `topologicalOrder`), repeated-blocker audit, budget guard, retry backoff,
+  validation aggregator, and loop guard against unbounded iteration.
+- Added canonical event type enums and payload helpers for Goal/Plan/Task/
+  Attempt/Validation/Delegation events (W2-045).
+- Extended `orpc-contracts.ts` to re-export Wave 2 schemas/types and added REST
+  endpoints for goals, plans, tasks, attempts, validations, and delegations.
+- Added `goal-task-contracts.test.ts` with 22 focused unit tests; all pass.
+- Completed W2-003: scrubbed Ralph terminology from the web product surface.
+  - `bot-prompt-augmentation.ts` and `receiptService.ts` doc comments updated.
+  - `fileSystem.ts` slash commands renamed (`ralph-loop` → `agent-loop`,
+    `cancel-ralph` → `cancel-agent-loop`).
+  - `ralph-deprecation.ts` updated with a `resolvedWebSurface` registry.
+- Built `goal-loop-controller.ts`: state-machine runtime that materializes plans,
+  accepts plans, executes tasks in topological order, retries attempts, validates,
+  handles user input/approval pauses, cancels, enforces budgets, audits repeated
+  blockers, and guards against unbounded loops (W2-060–W2-072).
+- Added `goal-loop-controller.test.ts` with 10 lifecycle tests; all pass.
+- Created `bot-operational-projection.ts` to map `GoalLoopState` → partial
+  `BotOperationalState`.
+- Wired the loop controller into `bot-operational-state.store.ts` via a new
+  `applyGoalLoopState(botId, loopState)` action that merges the derived delta
+  while preserving server-sourced fields (`lastEventSequence`, `computerState`,
+  `nextRoutineRunAt`, `unreadMessagesCount`).
+- Added `bot-operational-state.store.test.ts` with 6 projection tests; all pass.
+- Built `bot-event-store.ts`: durable, append-only, localStorage-backed storage
+  for canonical goal/task events with SSR-safe memory fallback and test isolation.
+- Created `goal-loop-persistence.ts` with `GoalLoopRecorder` (records controller
+  events + emits `loop.snapshot` events), `rebuildGoalLoopState` (event-history
+  replay), and `resumeGoalLoopController` (rebuild + resume).
+- Added `goal-loop-persistence.test.ts` with 7 tests proving restart recovery,
+  approval-pause resumption, and full goal completion after simulated restart.
+- Checked `W2-GATE` in `OPENMAUSBOT_PHASE_2_IMPLEMENTATION_TODO.md`.
+
+### Verification
+
+- `vitest run src/lib/bots/goal-task-contracts.test.ts src/lib/bots/goal-loop-controller.test.ts src/lib/bots/bot-operational-state.store.test.ts src/lib/bots/goal-loop-persistence.test.ts` ✅ 45 passed.
+- `tsc --noEmit` across `surfaces/ai.allternit.com` reports no new errors in
+  Wave 2 files. Pre-existing errors remain in unrelated files
+  (`comrails-store.ts`, `bot-profile.ts`, `subagent-service.ts`).
+- Grep confirms no remaining Ralph-named product UI strings in
+  `surfaces/ai.allternit.com/src` outside the intentional deprecation registry.
 
 ### Next
 
-1. Apply/deploy `023_ios_runtime_type.sql` to the Fly `allternit-cloud-api` DB so iOS runtime pairing can create `runtime_type = 'ios'` rows.
-2. Re-launch iOS and confirm `[RuntimePairing] device credential received` in the logs.
-3. Verify the device token authorizes `https://api.allternit.com/api/v1/agent-sessions` and that chats/conversations load.
-4. Run the web surface with `VITE_CLERK_SEED_EMAIL`/`VITE_CLERK_SEED_PASSWORD` and verify the workspace loads.
-5. Run the desktop surface with seed env vars and verify auto-login + pairing.
-
-### Open questions
-
-- How should the Fly migration be applied? `flyctl deploy` requires auth; this shell has no `FLY_API_TOKEN`.
-
-## Agent email rail (mailflare fork → services/mailflare) — COMPLETE (uncommitted)
-
-### Goal
-Package the vendored mailflare fork as allternit's real-email provider for agents:
-per-agent mailboxes + scoped API keys, approval-gated outbound, inbound webhooks
-bridged into Rails Mail, per-user installer deploying to the installing user's own
-Cloudflare account. Approved plan, all 4 phases.
-
-### Just did (phases 0–4 all landed in worktree, branch session/agent-email, NOT committed)
-- Phase 0: vendored into `services/mailflare/`, renamed `@allternit/mailflare` /
-  worker `allternit-agent-mail`, removed upstream self-updater + leftovers.
-- Phase 1: per-mailbox scoped API keys + revoke + `admin` scope; v1 message body +
-  attachment reads; approval-gated outbound via OUTBOUND_QUEUE (REQUIRE_SEND_APPROVAL
-  default true); Idempotency-Key; SEND_RATE_LIMIT 30/min; webhook retries (backoff ×5)
-  + management routes; mailbox DELETE; seed updates. Migration `0010_illegal_cloak.sql`.
-- Phase 2: `services/mailflare/setup.sh` (idempotent per-user CF installer, shellcheck
-  clean), `install_agent_email()` in `scripts/onboarding-setup.sh`, `.env.example`
-  vars, fork README rewrite.
-- Phase 3 backend: `mailflare_client.rs` + `agent_email_routes.rs` (provision_email
-  rewrite with rollback, HMAC inbound bridge → Rails Mail `mail:email-in-<agent>`,
-  gated send `mail:email-out-<uuid>`, decide wiring inside existing `mail_decide`,
-  mailbox revoke on agent delete, status endpoint). Migration `V92__agent_email.sql`.
-  Also fixed pre-existing broken lib test target (17 missing-field test inits).
-- Phase 3 frontend/runtime: `'mailflare'` provider in agent.types.ts, identity
-  channels UI + email-rail status in BotRuntimeConfigModal, external-email badges in
-  mail monitor/agent activity, `gizzi mail send-external` + `agent-email-client.ts`.
-- Phase 4: `docs/AGENT_EMAIL_RAIL.md` (architecture, reputation ops, signup
-  guardrails, limitations), allternit-bus.mdx + AUTONOMOUS_BOT_PRIMITIVES.md updates,
-  AGENTS.md section.
-- Fixed pnpm workspace ingesting services/mailflare (added `!services/mailflare`
-  exclusions like open-connector; restored pnpm-lock.yaml incidental drift).
-
-### Verification (all real, all green)
-- `npm run build` in services/mailflare: exit 0 (after pnpm exclusion + reinstall).
-- `cargo check -p allternit-api`: clean. `cargo test -p allternit-api --lib`: 418/418
-  (incl. new HMAC test). `cargo test -p allternit-agent-system-rails`: 96/96.
-- Surface + gizzi-code typechecks: zero errors in touched files.
-- Backend e2e smoke vs mock mailflare: 18/18 (provision, gated send, decide-approve,
-  inbound HMAC, revoke).
-- mailflare live local e2e (Phase 1): approval flow, idempotent replay, 403 scoping,
-  rate-limit 429, webhook backoff, key revoke.
-
-### Next
-- Commit via steering commit-gate (human/orchestrator decision; nothing committed yet).
-- One live installer run against a real Cloudflare account before production docs
-  claim it works end-to-end (offline-verified only).
-- Follow-up: admin-scope API-key revocation in mailflare (currently session-only;
-  mailbox delete is the v1 revocation path).
+1. Stage W2-GATE evidence and consider W2-005 (delete obsolete Ralph execution
+   code now that replacement runtime parity exists).
+2. Build a React hook (`useGoalLoopController`) that instantiates the controller
+   for a bot session and subscribes the operational state store.
+3. Add WIH materialization when a structured plan is accepted (Wave 3).
+4. Implement durable activity/session APIs and event append protocol.
 
 ### Open questions
 
@@ -444,10 +470,10 @@ Implement the cross-surface Site APIs / HAR-derived API capture redesign: add ba
 ---
 
 ## Goal
-Implement the approved Allternit Office Suite standalone plan: create `@allternit/office-suite`, refactor the four office apps and Sign to use an injectable `OfficeHost` contract, decouple `@allternit/office-ai` and the xlsx engine from platform endpoints, and build `surfaces/office.allternit.com` as a standalone host. Platform (`surfaces/ai.allternit.com`) remains the primary entry point.
+Implement the approved Allternit Office Suite standalone plan: create `@allternit/allternit-office-suite`, refactor the four office apps and Sign to use an injectable `OfficeHost` contract, decouple `@allternit/office-ai` and the xlsx engine from platform endpoints, and build `surfaces/office.allternit.com` as a standalone host. Platform (`surfaces/ai.allternit.com`) remains the primary entry point.
 
 ## Milestones
-- [x] **Milestone 1**: Scaffold `@allternit/office-suite` with `OfficeHost`, `OfficeAiClient`, `XlsxEngineHost`, `OfficeStorageProvider`, bridge context, and theme.
+- [x] **Milestone 1**: Scaffold `@allternit/allternit-office-suite` with `OfficeHost`, `OfficeAiClient`, `XlsxEngineHost`, `OfficeStorageProvider`, bridge context, and theme.
 - [x] **Milestone 2**: Wrap Docs/Sheets/Slides/PDF with host-aware adapters; platform views provide a browser host that overrides `saveFile` with artifact persistence.
 - [ ] **Milestone 3**: Decouple `@allternit/office-ai` and the xlsx engine from platform endpoints via the host contract.
 - [ ] **Milestone 4**: Extract Allternit Sign into the suite and normalize its UI palette.
@@ -461,7 +487,6 @@ Implement the approved Allternit Office Suite standalone plan: create `@allterni
   - Updated platform views (`DocsView`, `SheetsView`, `SlidesView`, `PdfView`) to use `OfficeHostProvider`.
   - Added ambient declaration for `harfbuzzjs/hb.js` so the suite package typechecks cleanly.
   - Verified suite and platform surface typechecks pass.
-- **Build fix**: Renamed `@allternit/allternit-office-suite` → `@allternit/office-suite` so it is included in `pnpm --filter '@allternit/office*'` builds; added `build: tsc --noEmit` to `@allternit/office-suite` and `@allternit/office-slides-app` so the dependency graph forces `@allternit/office-pptx-render` to build before dependents. Verified `pnpm --filter '@allternit/office*' build`, `typecheck`, and `test` pass from a clean worktree.
 
 ## Next
 - **Milestone 4** (Sign extraction): move the native signing UI/utilities into the suite package as a host-aware `SignApp`, normalize its palette to match the office apps, and update the platform view to use it.
@@ -736,119 +761,91 @@ Multica drives the same CLIs through stable protocol families: `stream-json` (Cl
 - Do we want to keep `warm` pooling for stream-json agents, or switch to one-shot-per-task like Multica? Multica spawns per task, so parity suggests dropping pooling; keeping pooling is a performance optimization but risks protocol drift.
 - Should custom CLI args (`customArgs`) be filtered per-provider like Multica's `blockedArgs` maps? Production safety says yes.
 
-## Addendum — connectors feature (Claude-style) landed same branch
-- Chat "+" sheet Connectors now opens ConnectorMarketplaceDialog (featured: gmail, google_drive, allternit-mail); was miswired to ProviderGallery.
-- Backend: allternit-mail catalog entry (allternit_native), connect {agent_id?} → provision mailbox / rail status; disconnect removes marker row only; sidecar OAuth-missing → 400 oauth_app_not_configured + setup_hint; resolver additive `connections` markers (via mcp/agent_email); internal MCP tools allternit_mail.send/status. cargo test --lib 425/425.
-- Runtime: gizzi-code native send_agent_email/get_agent_email_status tools + dispatch-time hard-ban guard (email_send/external_communication block send tools incl. MCP gmail.send_email via execute_action). Env contract ALLTERNIT_AGENT_ID + ALLTERNIT_AGENT_HARD_BANS, now emitted by buildBotRuntimeEnv (3 callers wired). 16/16 guard tests.
-- bot-runtime-env tests 9/9; surface typecheck zero new errors.
-- OPS REMAINING (user): (1) edit CF token perms (email routing/sending groups) then bootstrap+smoke the live mailflare deploy; (2) one-time Google OAuth client for Gmail/Drive connect: Google Cloud Console → OAuth client, redirect {api origin}/oauth/callback, then sidecar PUT /api/oauth/configs/gmail + /googledrive.
-
 ---
 
-## Allternit Remote Control — Phase 3 start (2026-08-23)
+## Hybrid Remote Control dashboard and push notifications (2026-08-24)
 
 ### Goal
-Implement the approved unified Remote Control plan: evolve Dispatch into a multi-machine, browser/PWA remote control with proactive push notifications, and establish a migration path off Fly.io for the relay layer.
+
+Ship a cross-surface remote-control experience for Allternit that matches the Antigravity remote-control pattern: a web-based dashboard for monitoring/managing agent runtimes across machines, proactive push notifications when a machine needs input, and a mobile-installable PWA.
+
+### Background
+
+Antigravity's remote-control feature (https://antigravity.google/blog/remote-control-for-antigravity) solves the problem of being tied to one workstation while agents run. It provides:
+- A browser-based remote-control interface connecting to machines running Antigravity.
+- Multi-instance management (laptops, servers, desktops).
+- Untethered productivity: start work, walk away, monitor/execute from anywhere.
+- Local context retained: no need to recreate the environment elsewhere.
+- Proactive push notifications on mobile when an agent needs user input.
+
+Allternit already has runtime pairing, a desktop bridge (`replBridge`/remote-control terminology in gizzi-code), and the platform surface. This feature builds a dedicated remote-control UI and push-delivery worker on top of that foundation.
 
 ### Just did
-- Researched Google Antigravity Remote Control and Allternit's existing Dispatch + runtime pairing + cloud relay.
-- Wrote analysis to `docs/research/antigravity-remote-control-analysis.md`.
-- Merged the previous dedicated-PWA plan with the new Remote Control plan; saved to `/Users/joe/Desktop/allternit-pwa-plan.md`.
-- Got plan approval: unify Dispatch + Remote Control, keep Fly.io for compute VMs, move relay/push to Cloudflare.
-- Created linked worktree `allternit-session-remote-control` on branch `session/remote-control`.
 
-### Next
-1. Phase 3: expose runtime session-state endpoints in `cmd/gizzi-code`.
-2. Phase 3: add Clerk-protected mirror routes in `cmd/allternit-api`.
-3. Phase 3: add `runtime:remote_control` capability and extend SDK.
-4. Phase 2: scaffold Cloudflare push worker.
-5. Phase 0/4: begin unified Remote dashboard UI in `ai.allternit.com`.
-
-### Open questions
-- Should the runtime session API be a new `remote_control.ts` route file or added to existing `session.ts`?
-- Which existing session store/schema should be the source of truth for active sessions (gizzi-code runtime storage, allternit-api beta sessions, or both)?
-
----
-
-## Allternit Remote Control — Phase 3 merged into main (2026-08-23)
-
-### Goal
-Complete Phase 3 implementation of the unified Remote Control plan and merge into `main`, then continue with push-subscription UI, deployment, and end-to-end verification.
-
-### Just did
-- Implemented and committed in `session/remote-control` worktree:
-  - `cmd/gizzi-code/src/runtime/server/routes/remote_control.ts`: `GET /sessions`, `GET /sessions/:id`, `POST /sessions/:id/messages`, `POST /sessions/:id/abort`, `GET /sessions/:id/events` SSE.
-  - Mounted routes in `cmd/gizzi-code/src/runtime/server/server.ts` under `/v1/remote-control` and `/v1beta/remote-control`.
-  - Added `runtime:remote_control` capability in `cmd/agent-daemon/src/index.ts` and `cmd/allternit-cloud-api/src/routes/runtime_pairing.rs`.
-  - Updated cloud relay capability mapping in `cmd/allternit-cloud-api/src/routes/runtime_relay.rs`.
-  - Extended SDK `RemoteControlClient` in `sdk/allternit-sdk/src/ai-runtime/runtime/index.ts` with direct + relay modes, SSE/WebSocket streaming, and permission/question methods.
-  - Scaffolded Cloudflare worker `services/remote-control-push/` with Durable Object relay and push subscription endpoints.
-  - Built `RemoteSessionPanel.tsx` integrated into `surfaces/ai.allternit.com/src/views/DispatchView.tsx` with Handoff/Remote sessions tabs and pending action UI.
-  - Added PWA manifest, service worker, headers, and generated 192/512 icons to `surfaces/ai.allternit.com/public/`.
-- Verification before commit:
-  - `pnpm run build:runtime` in SDK: ✅
-  - `pnpm run typecheck` in `services/remote-control-push`: ✅
-  - `cargo check -p allternit-cloud-api`: ✅ (pre-existing warnings only)
-  - `sw.js` syntax check and `manifest.json` lint: ✅
-  - `bun run typecheck` in `cmd/gizzi-code`: blocked only by pre-existing `packages/sdk/scripts/verify-sdk.ts` missing dist artifacts.
-- Merged `session/remote-control` into `main` (merge commit `059d921c5`).
-
-### Merge note
-The shared main checkout had uncommitted `session/connector-installer` work. It was auto-stashed (`stash@{0}`: "Auto-stash before merging session/remote-control") so the merge could proceed. The stash pop failed because those changes conflict with `main`; the stash is preserved for manual restoration. The `session/remote-control` worktree was then fast-forwarded to `main`.
-
-### Next
-1. Add Clerk-protected remote-control mirror routes in `cmd/allternit-api`.
-2. Add push subscription registration UI in `RemoteSessionPanel`.
-3. Wire surface push registration to `services/remote-control-push` endpoints.
-4. Add Cloudflare Pages/Worker deployment config and documentation.
-5. Run end-to-end verification of remote control flow.
-
-### Open questions
-- Should the Clerk mirror routes proxy directly to the runtime, or should they read from the same session store the runtime will sync to?
-- Do we need VAPID keys for web push now, or can the first version use only the Cloudflare worker's internal push relay?
-
----
-
-## Allternit Remote Control — Phase 3 continuation (2026-08-23)
-
-### Goal
-Add Clerk-protected mirror routes, Web Push subscription UI, Cloudflare deployment config, and verify the end-to-end remote control flow.
-
-### Just did
-- Added `cmd/allternit-api/src/remote_control_routes.rs` with Clerk-protected mirror routes under `/api/v1/remote-control/*`:
-  - `GET /remote-control/sessions`
-  - `GET /remote-control/sessions/:id`
-  - `POST /remote-control/sessions/:id/messages`
-  - `POST /remote-control/sessions/:id/abort`
-  - `GET /remote-control/sessions/:id/events` (SSE proxy)
-  - Thin proxy to the local paired Gizzi runtime at `/v1/remote-control/*`.
-- Wired the router into `cmd/allternit-api/src/main.rs` and `cmd/allternit-api/src/lib.rs`.
-- Made `agent_session_routes::gizzi_base` `pub(crate)` so the mirror can share the runtime URL resolution.
-- Extended SDK `RemoteControlClient` (`sdk/allternit-sdk/src/ai-runtime/runtime/index.ts`):
-  - Added `pushBaseUrl` option.
-  - Added `PushSubscriptionJSON` type export.
-  - Added `getVapidPublicKey()`, `subscribePush()`, and `unsubscribePush()`.
-- Updated surface `surfaces/ai.allternit.com/src/lib/dispatch/remote-control.ts`:
-  - Reads `NEXT_PUBLIC_ALLTERNIT_PUSH_WORKER_URL` and passes it to the SDK.
-  - Exports `PushSubscriptionJSON`.
-- Added `NEXT_PUBLIC_ALLTERNIT_PUSH_WORKER_URL` to `surfaces/ai.allternit.com/.env.example`.
-- Added a bell toggle to `RemoteSessionPanel` that registers `/sw.js`, subscribes to Web Push with the worker's VAPID key, and stores the subscription keyed by runtime.
-- Added `GET /push/vapid-public-key` to `services/remote-control-push/src/index.ts`.
-- Added `.github/workflows/deploy-remote-control-push.yml` for automated Cloudflare Worker deployments on `main`.
-- Added `services/remote-control-push/README.md` with routes, local dev, VAPID key setup, KV setup, and deploy instructions.
+- Created `/remote-control` hub page inside `ai.allternit.com` (`surfaces/ai.allternit.com/src/pages/RemoteControlHubPage.tsx`) with runtime list, online counts, pending permissions, and pending questions.
+- Wired route `/remote-control` in `src/routes.tsx` and added a "Remote Control" rail item in `src/shell/ShellRail.tsx` using `DesktopTower`.
+- Added desktop detached window support:
+  - `shell:open-remote-control` IPC handler in `surfaces/allternit-desktop/src/main/unified-main.ts`.
+  - `remoteControlWindow` BrowserWindow with `setWindowOpenHandler` rule for `/remote-control.html`.
+  - Preload exposure `openRemoteControl` in `surfaces/allternit-desktop/src/preload/index.ts`.
+- Scaffolded standalone dashboard entry:
+  - `surfaces/ai.allternit.com/remote-control.html`
+  - `src/remote-control/main.tsx`, `App.tsx`, `pages/DashboardPage.tsx`, `types.ts`
+- Configured Vite multi-entry build in `surfaces/ai.allternit.com/vite.config.ts`.
+- Added PWA assets: `public/remote-control.webmanifest`, `public/remote-control-service-worker.js`, plus `_redirects` pass-throughs.
+- Created push worker service `services/remote-control-push/` (Hono + Wrangler + KV + VAPID signing) with `/vapid-public-key`, `/subscribe`, `/unsubscribe`, `/notify`, and `/pending` endpoints.
+- Added runtime push trigger `cmd/gizzi-code/src/runtime/integrations/remote-control-push.ts`, initialized in `cmd/gizzi-code/src/runtime/context/project/bootstrap.ts`.
+- Added deploy workflow `.github/workflows/deploy-remote-control-cloudflare.yml` for Pages + worker.
 
 ### Verification
-- `cargo check -p allternit-api`: ✅ (33 pre-existing warnings, no new errors)
-- `pnpm run build:runtime` in SDK: ✅
-- `pnpm exec tsc --project tsconfig.typecheck.json --noEmit` in `surfaces/ai.allternit.com` (touched files): ✅
-- `pnpm run typecheck` in `services/remote-control-push`: ✅
+
+- `cd services/remote-control-push && pnpm typecheck` ✅ clean.
+- `cd cmd/gizzi-code && bun run typecheck` ✅ only pre-existing `packages/sdk/scripts/verify-sdk.ts` errors; no remote-control-related errors.
+- `cd surfaces/ai.allternit.com && pnpm exec tsc --noEmit` ✅ only pre-existing office-package errors; no errors in touched remote-control files.
+- `pnpm install` succeeded and lockfile updated for the new service.
+
+### Open gaps
+
+- Production `pnpm build` is blocked by pre-existing missing PNG assets in office packages (`send-stop.png`, `attach-icon.png`, `send-enter-on.png`). The remote-control-specific build path has not been verified end-to-end.
+- Real Cloudflare Pages project `allternit-remote-control`, KV namespace, custom domain `remotecontrol.allternit.com`, and VAPID secrets still need to be created/set.
+- End-to-end screen recordings have not been produced yet.
+- Steering spec was just updated; this checkpoint needs steering review before commit/merge.
+
+### Update — dev verification completed (2026-08-24)
+
+- Fixed `surfaces/ai.allternit.com/vite.config.ts` `remoteControlRoutePlugin()` so `/remote-control` rewrites to `/index.html` and is processed by Vite's HTML transform pipeline. Previously it served raw `index.html`, which broke React Fast Refresh and left the hub page blank.
+- Fixed standalone dashboard dark-mode default:
+  - Added `src/remote-control/theme/RemoteControlThemeStore.ts` + `RemoteControlThemeProvider.tsx` with `dark` default and isolated storage key (`allternit-remote-control-theme-storage`).
+  - Updated `src/remote-control/main.tsx` to use the new provider.
+  - Updated `remote-control.html` inline script to seed dark mode and use the isolated storage key, so hydration no longer flashes light.
+- Verified in dev:
+  - `curl http://localhost:3013/remote-control` → 200, platform SPA shell renders.
+  - `curl http://localhost:3013/remote-control.html` → 200, standalone dashboard renders in dark mode.
+  - Chrome headless screenshot confirms dark theme.
+- Ran push worker locally (`services/remote-control-push` with `.dev.vars`) and verified all endpoints:
+  - `GET /health` → `{"ok":true}`
+  - `GET /vapid-public-key` → public key string
+  - `POST /subscribe` → `{"ok":true}`
+  - `POST /notify` → `{"ok":true,"delivered":0,"total":1}` (delivered 0 because endpoint is fake)
+  - `GET /pending?endpoint=...` → pending payload
+- Improved PWA/service-worker cross-origin support:
+  - `public/remote-control-service-worker.js` now accepts `SET_PUSH_WORKER_URL` message.
+  - `src/remote-control/App.tsx` sends the configured push-worker URL to the service worker after registration.
+  - `getPendingUrl()` uses the push-worker origin when available, fixing `/pending` fetches when dashboard and worker are on different subdomains.
+- Created `.steering/REMOTE_CONTROL_DEPLOYMENT.md` with step-by-step Cloudflare Pages project, KV namespace, custom domain, DNS, VAPID secret, and verification instructions.
+
+### Still blocked / needs real-world setup
+
+- Production Cloudflare Pages project `allternit-remote-control`, KV namespace, custom domains (`remotecontrol.allternit.com`, `push.remotecontrol.allternit.com`), and VAPID secrets require Cloudflare credentials and cannot be created from this dev environment.
+- End-to-end screen recordings are pending; will capture after documenting deployment steps.
 
 ### Next
-1. Stage and commit the Phase 3 continuation changes in the `session/remote-control` worktree.
-2. Merge the follow-up commit into `main` when approved.
-3. Generate real VAPID keys and create/bind the production KV namespace.
-4. Deploy the worker and set `NEXT_PUBLIC_ALLTERNIT_PUSH_WORKER_URL` for the platform surface.
-5. End-to-end browser test: pair a runtime, open the remote panel, enable push, trigger a permission/question, and confirm the notification arrives.
+
+1. Record end-to-end screen recordings of standalone dashboard, platform hub, push-worker endpoints, and PWA install prompt.
+2. Run steering consult on the spec + checkpoint.
+3. Commit and merge `session/remote-control-hybrid`.
+
+---
 
 ### Open questions
 - Should the platform API mirror also expose a `/push/notify` proxy so runtimes can trigger pushes through the existing cloud relay instead of calling the worker directly?

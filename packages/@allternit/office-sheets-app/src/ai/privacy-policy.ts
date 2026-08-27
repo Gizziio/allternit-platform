@@ -1,4 +1,4 @@
-import type { CellScalar } from '@allternit/allternit-office-suite/xlsx'
+import type { CellScalar } from '@allternit/office-suite/xlsx'
 
 export type UploadPolicy = 'allow' | 'redact' | 'statistics-only' | 'deny'
 

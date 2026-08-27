@@ -3,7 +3,7 @@
 /// referenced precedents) so a large, formula-light workbook can recalculate
 /// live without a full preload.
 
-import { FORMULA_REFERENCE_PATTERN, qualifierMatches } from '@allternit/allternit-office-suite/xlsx'
+import { FORMULA_REFERENCE_PATTERN, qualifierMatches } from '@allternit/office-suite/xlsx'
 
 export interface ClosureSheetInput {
   readonly id: string

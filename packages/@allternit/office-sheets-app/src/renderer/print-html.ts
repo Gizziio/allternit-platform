@@ -4,9 +4,9 @@
 /// headings). The main process turns the HTML into a PDF.
 
 import { htmlLang, type Lang } from './i18n/i18n-core'
-import { columnIndex, columnLabel } from '@allternit/allternit-office-suite/xlsx'
+import { columnIndex, columnLabel } from '@allternit/office-suite/xlsx'
 
-import type { WorkbookExportPdfRequest } from '@allternit/allternit-office-suite/xlsx'
+import type { WorkbookExportPdfRequest } from '@allternit/office-suite/xlsx'
 import type { HeaderFooterParts, PageSetupJournalState } from './edit-journal'
 import { getLang, t } from './i18n/locale'
 

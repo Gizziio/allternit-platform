@@ -5,7 +5,7 @@
  * Extracted from App.tsx; the App component passes a SaveContext built fresh
  * per call so refs and state never go stale.
  */
-import type { WorkbookFile, WorkbookFilterState } from '@allternit/allternit-office-suite/xlsx'
+import type { WorkbookFile, WorkbookFilterState } from '@allternit/office-suite/xlsx'
 import {
   isSheetRemoved,
   toSaveChartEdits,

@@ -98,35 +98,35 @@ import '@univerjs/preset-sheets-table/lib/index.css'
 import { greenTheme } from '@univerjs/themes'
 import { createUniver } from './create-univer'
 
-import { useOfficeAi, type OfficeAgentLoop } from '@allternit/allternit-office-suite/bridge'
+import { useOfficeAi, type OfficeAgentLoop } from '@allternit/office-suite/bridge'
 import { composeSkills, type AgentImage } from './ai/agent-stub'
 import type { AiSettings } from './ai/ai-stubs'
-import { type WorkbookOperation } from '@allternit/allternit-office-suite/xlsx'
-import { columnIndex, columnLabel, parseAddress, parseRange } from '@allternit/allternit-office-suite/xlsx'
+import { type WorkbookOperation } from '@allternit/office-suite/xlsx'
+import { columnIndex, columnLabel, parseAddress, parseRange } from '@allternit/office-suite/xlsx'
 import {
   applyChartStateEdit,
   chartSupportsDataLabels,
   chartSupportsSeriesReplace,
   withDefaultBarLabels,
   type CellBounds,
-} from '@allternit/allternit-office-suite/xlsx'
-import { InMemoryWorkbookAdapter } from '@allternit/allternit-office-suite/xlsx'
-import { iconSetSaveable } from '@allternit/allternit-office-suite/xlsx'
-import type { ApplyOutcome, ChangePlan } from '@allternit/allternit-office-suite/xlsx'
+} from '@allternit/office-suite/xlsx'
+import { InMemoryWorkbookAdapter } from '@allternit/office-suite/xlsx'
+import { iconSetSaveable } from '@allternit/office-suite/xlsx'
+import type { ApplyOutcome, ChangePlan } from '@allternit/office-suite/xlsx'
 import { createElectronTransport } from './ai/transport'
 import type { ActiveSheetInfo, SheetsSkillDeps } from './ai/tools'
 import type { AiChatMessage } from './ai/AiChatPanel'
 import { createWorkbookSkill } from './ai/workbook-skill'
 import { createFilesSkill } from './ai/files-skill'
 import { createSearchSkill } from './ai/search-skill'
-import { ATTACHMENT_IMAGE_EXTS } from '@allternit/allternit-office-suite/xlsx'
+import { ATTACHMENT_IMAGE_EXTS } from '@allternit/office-suite/xlsx'
 import type {
   AttachmentAddResult,
   AttachmentMeta,
   MenuAction,
   WorkbookFile,
   WorkbookVisualObject,
-} from '@allternit/allternit-office-suite/xlsx'
+} from '@allternit/office-suite/xlsx'
 import type { PageSetupJournalState } from './edit-journal'
 import {
   AUTO_FILL_COMMAND,

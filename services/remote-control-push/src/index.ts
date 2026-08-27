@@ -1,560 +1,258 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { DurableObject } from "cloudflare:workers";
+import type { Context, Env } from "hono";
 
-/**
- * Cloudflare edge relay for Allternit Remote Control.
- *
- * Mirrors the runtime-relay contract from cmd/allternit-cloud-api so the
- * remote-control dashboard / PWA can reach a paired runtime through the edge
- * instead of the Fly.io relay layer.
- *
- * Runtime (agent-daemon) connects upward on `/connect/:runtimeId`.
- * Browsers send HTTP through `/proxy/:runtimeId` and open SSE/WebSocket
- * streams via `/socket-ticket` + `/socket`.
- */
-
-export interface Env {
-  RUNTIME_RELAY: DurableObjectNamespace<RuntimeRelay>;
-  /** KV namespace storing Web Push subscriptions keyed by runtime. */
-  PUSH_SUBSCRIPTIONS: KVNamespace;
-  /** VAPID public key (URL-safe base64, no padding). */
-  VAPID_PUBLIC_KEY: string;
-  /** VAPID private key (URL-safe base64, no padding). */
-  VAPID_PRIVATE_KEY: string;
-  /** VAPID subscriber URI (mailto: or https:). */
-  VAPID_SUBJECT: string;
-}
-
-const app = new Hono<{ Bindings: Env }>();
-
-// Allow the dashboard / PWA to call the relay from any origin.
-app.use("/*", cors({ origin: "*", allowMethods: ["GET", "POST", "OPTIONS"], allowHeaders: ["Content-Type", "Authorization"] }));
-
-app.get("/connect/:runtimeId", async (c) => {
-  const runtimeId = c.req.param("runtimeId");
-  const upgrade = c.req.header("upgrade");
-  if (upgrade?.toLowerCase() !== "websocket") {
-    return c.json({ error: "websocket_required" }, 426);
-  }
-  const id = c.env.RUNTIME_RELAY.idFromName(runtimeId);
-  const relay = await c.env.RUNTIME_RELAY.get(id);
-  return relay.fetch(c.req.raw);
-});
-
-app.post("/proxy/:runtimeId", async (c) => {
-  const runtimeId = c.req.param("runtimeId");
-  const id = c.env.RUNTIME_RELAY.idFromName(runtimeId);
-  const relay = await c.env.RUNTIME_RELAY.get(id);
-  return relay.fetch(c.req.raw);
-});
-
-app.post("/socket-ticket/:runtimeId", async (c) => {
-  const runtimeId = c.req.param("runtimeId");
-  const id = c.env.RUNTIME_RELAY.idFromName(runtimeId);
-  const relay = await c.env.RUNTIME_RELAY.get(id);
-  return relay.fetch(c.req.raw);
-});
-
-app.get("/socket", async (c) => {
-  const ticket = c.req.query("ticket");
-  if (!ticket) return c.json({ error: "ticket_required" }, 400);
-  const runtimeId = decodeRuntimeIdFromTicket(ticket);
-  if (!runtimeId) return c.json({ error: "invalid_ticket" }, 400);
-  const id = c.env.RUNTIME_RELAY.idFromName(runtimeId);
-  const relay = await c.env.RUNTIME_RELAY.get(id);
-  return relay.fetch(c.req.raw);
-});
-
-// Push subscription management. Subscriptions are keyed by runtime so the
-// worker can fan out notifications when a runtime needs user attention.
-app.get("/push/vapid-public-key", async (c) => {
-  const key = c.env.VAPID_PUBLIC_KEY;
-  if (!key) return c.json({ error: "vapid_not_configured" }, 503);
-  return c.json({ publicKey: key });
-});
-
-app.post("/push/subscribe/:runtimeId", async (c) => {
-  const runtimeId = c.req.param("runtimeId");
-  const body = (await c.req.json()) as PushSubscriptionJSON;
-  if (!body || !body.endpoint) {
-    return c.json({ error: "subscription_required" }, 400);
-  }
-  const key = subscriptionKey(runtimeId, body.endpoint);
-  await c.env.PUSH_SUBSCRIPTIONS.put(key, JSON.stringify(body), { expirationTtl: 90 * 24 * 60 * 60 });
-  return c.json({ ok: true });
-});
-
-app.post("/push/unsubscribe/:runtimeId", async (c) => {
-  const runtimeId = c.req.param("runtimeId");
-  const body = (await c.req.json()) as { endpoint?: string };
-  if (!body || !body.endpoint) {
-    return c.json({ error: "endpoint_required" }, 400);
-  }
-  const key = subscriptionKey(runtimeId, body.endpoint);
-  await c.env.PUSH_SUBSCRIPTIONS.delete(key);
-  return c.json({ ok: true });
-});
-
-app.post("/push/notify/:runtimeId", async (c) => {
-  const runtimeId = c.req.param("runtimeId");
-  const payload = (await c.req.json()) as { title?: string; body?: string; tag?: string; data?: unknown };
-  const list = await c.env.PUSH_SUBSCRIPTIONS.list({ prefix: `push:${runtimeId}:` });
-  const results = await Promise.all(
-    list.keys.map(async (key) => {
-      const raw = await c.env.PUSH_SUBSCRIPTIONS.get(key.name);
-      if (!raw) return { key: key.name, ok: false };
-      try {
-        const sub = JSON.parse(raw) as PushSubscriptionJSON;
-        await sendPushNotification(c.env, sub, payload);
-        return { key: key.name, ok: true };
-      } catch (error) {
-        if (error instanceof Error && error.message?.includes("unsubscribed")) {
-          await c.env.PUSH_SUBSCRIPTIONS.delete(key.name);
-        }
-        return { key: key.name, ok: false, error: error instanceof Error ? error.message : String(error) };
-      }
-    })
-  );
-  return c.json({
-    ok: true,
-    sent: results.filter((r) => r.ok).length,
-    failed: results.filter((r) => !r.ok).length,
-    details: results,
-  });
-});
-
-export default app;
-
-// --- Durable Object ---
-
-interface PendingRequest {
-  resolve: (response: Response) => void;
-  reject: (reason?: unknown) => void;
-}
-
-interface BrowserSocket {
-  socket: WebSocket;
-  socketId: string;
-}
-
-export class RuntimeRelay extends DurableObject<Env> {
-  private runtimeSocket: WebSocket | null = null;
-  private runtimeSession: WebSocketSession | null = null;
-  private pending = new Map<string, PendingRequest>();
-  private browsers = new Map<string, BrowserSocket>();
-  private tickets = new Map<string, { path: string; expiresAt: number }>();
-
-  constructor(state: DurableObjectState, env: Env) {
-    super(state, env);
-  }
-
-  private runtimeId(): string {
-    return this.ctx.id.toString();
-  }
-
-  async fetch(request: Request): Promise<Response> {
-    const url = new URL(request.url);
-    const path = url.pathname;
-
-    if (path.endsWith("/connect/" + url.pathname.split("/").pop())) {
-      return this.handleRuntimeConnect(request);
-    }
-
-    if (path.endsWith("/proxy/" + url.pathname.split("/").pop())) {
-      return this.handleBrowserProxy(request);
-    }
-
-    if (path.endsWith("/socket-ticket/" + url.pathname.split("/").pop())) {
-      return this.handleSocketTicket(request);
-    }
-
-    if (path === "/socket") {
-      return this.handleBrowserSocket(request);
-    }
-
-    return new Response("not_found", { status: 404 });
-  }
-
-  private async handleRuntimeConnect(request: Request): Promise<Response> {
-    const pair = new WebSocketPair();
-    const [client, server] = Object.values(pair) as [WebSocket, WebSocket];
-
-    this.ctx.acceptWebSocket(server);
-    this.runtimeSocket = server;
-    this.runtimeSession = new WebSocketSession(server, {
-      onMessage: (data) => this.handleRuntimeMessage(data),
-      onClose: () => {
-        this.runtimeSocket = null;
-        this.runtimeSession = null;
-      },
-    });
-
-    return new Response(null, {
-      status: 101,
-      webSocket: client,
-    });
-  }
-
-  private async handleBrowserProxy(request: Request): Promise<Response> {
-    if (!this.runtimeSession) {
-      return new Response(JSON.stringify({ error: "runtime_offline" }), {
-        status: 503,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    const body = await request.text();
-    const requestId = crypto.randomUUID();
-
-    return new Promise((resolve, reject) => {
-      this.pending.set(requestId, { resolve, reject });
-
-      this.runtimeSession?.send(
-        JSON.stringify({
-          type: "request",
-          request_id: requestId,
-          method: request.method,
-          path: urlPathFromProxy(request),
-          headers: headersToRecord(request.headers),
-          body,
-          body_encoding: "utf8",
-        })
-      );
-
-      // Timeout guard
-      this.ctx.waitUntil(
-        new Promise<void>((res) => {
-          setTimeout(() => {
-            if (this.pending.has(requestId)) {
-              this.pending.delete(requestId);
-              reject(new Error("proxy_timeout"));
-            }
-            res();
-          }, 90_000);
-        })
-      );
-    });
-  }
-
-  private async handleSocketTicket(request: Request): Promise<Response> {
-    if (!this.runtimeSession) {
-      return new Response(
-        JSON.stringify({ error: "runtime_offline", message: "Runtime is offline" }),
-        { status: 503, headers: { "Content-Type": "application/json" } }
-      );
-    }
-
-    const { path } = (await request.json()) as { path: string };
-    const ticket = `${this.runtimeId()}:${crypto.randomUUID()}`;
-    const expiresAt = Date.now() + 30_000;
-    this.tickets.set(ticket, { path, expiresAt });
-    return new Response(JSON.stringify({ ticket, expiresInSeconds: 30 }), {
-      headers: { "Content-Type": "application/json" },
-    });
-  }
-
-  private async handleBrowserSocket(request: Request): Promise<Response> {
-    const url = new URL(request.url);
-    const ticket = url.searchParams.get("ticket");
-    if (!ticket) return new Response("ticket_required", { status: 400 });
-
-    const info = this.tickets.get(ticket);
-    this.tickets.delete(ticket);
-    if (!info || info.expiresAt < Date.now()) {
-      return new Response("invalid_ticket", { status: 401 });
-    }
-
-    if (!this.runtimeSession) {
-      return new Response("runtime_offline", { status: 503 });
-    }
-
-    const pair = new WebSocketPair();
-    const [client, server] = Object.values(pair) as [WebSocket, WebSocket];
-    this.ctx.acceptWebSocket(server);
-
-    const socketId = crypto.randomUUID();
-    this.browsers.set(socketId, { socket: server, socketId });
-
-    this.runtimeSession.send(
-      JSON.stringify({
-        type: "socket_open",
-        socket_id: socketId,
-        path: info.path,
-        headers: {},
-      })
-    );
-
-    server.addEventListener("message", (event) => {
-      const data = typeof event.data === "string" ? event.data : "";
-      this.runtimeSession?.send(
-        JSON.stringify({
-          type: "socket_data",
-          socket_id: socketId,
-          body: data,
-          body_encoding: "utf8",
-        })
-      );
-    });
-
-    server.addEventListener("close", () => {
-      this.browsers.delete(socketId);
-      this.runtimeSession?.send(
-        JSON.stringify({
-          type: "socket_close",
-          socket_id: socketId,
-          code: 1000,
-          reason: "Browser disconnected",
-        })
-      );
-    });
-
-    return new Response(null, {
-      status: 101,
-      webSocket: client,
-    });
-  }
-
-  private handleRuntimeMessage(raw: string): void {
-    let msg: RuntimeMessage;
-    try {
-      msg = JSON.parse(raw) as RuntimeMessage;
-    } catch {
-      return;
-    }
-
-    switch (msg.type) {
-      case "response": {
-        const pending = this.pending.get(msg.request_id);
-        if (!pending) return;
-        this.pending.delete(msg.request_id);
-        const status = msg.status ?? 200;
-        const headers = new Headers(msg.headers);
-        pending.resolve(
-          new Response(decodeBody(msg.body, msg.body_encoding), {
-            status,
-            headers,
-          })
-        );
-        break;
-      }
-      case "response_start": {
-        // Streaming responses are buffered into a single response for the scaffold.
-        break;
-      }
-      case "response_chunk": {
-        break;
-      }
-      case "response_end": {
-        const pending = this.pending.get(msg.request_id);
-        if (!pending) return;
-        this.pending.delete(msg.request_id);
-        pending.resolve(new Response(null, { status: 200 }));
-        break;
-      }
-      case "socket_data": {
-        const browser = this.browsers.get(msg.socket_id);
-        browser?.socket.send(decodeBody(msg.body, msg.body_encoding));
-        break;
-      }
-      case "socket_ready": {
-        const browser = this.browsers.get(msg.socket_id);
-        browser?.socket.send(JSON.stringify({ type: "allternit_socket_ready" }));
-        break;
-      }
-      case "socket_close": {
-        const browser = this.browsers.get(msg.socket_id);
-        browser?.socket.close(msg.code ?? 1000, msg.reason);
-        this.browsers.delete(msg.socket_id);
-        break;
-      }
-      case "pong":
-        break;
-    }
-  }
-}
-
-// --- Helpers ---
-
-interface PushSubscriptionJSON {
+interface PushSubscriptionRecord {
+  runtimeId: string;
   endpoint: string;
-  expirationTime?: number | null;
-  keys?: {
-    p256dh?: string;
-    auth?: string;
+  keys: {
+    p256dh: string;
+    auth: string;
   };
+  label?: string;
+  createdAt: number;
 }
 
-type RuntimeMessage =
-  | { type: "response"; request_id: string; status: number; headers: Record<string, string>; body: string; body_encoding: string }
-  | { type: "response_start"; request_id: string; status: number; headers: Record<string, string> }
-  | { type: "response_chunk"; request_id: string; body: string; body_encoding: string }
-  | { type: "response_end"; request_id: string }
-  | { type: "socket_data"; socket_id: string; body: string; body_encoding: string }
-  | { type: "socket_ready"; socket_id: string }
-  | { type: "socket_close"; socket_id: string; code?: number; reason?: string }
-  | { type: "pong" };
+interface PendingNotification {
+  title: string;
+  body: string;
+  tag: string;
+}
 
-class WebSocketSession {
-  constructor(
-    private ws: WebSocket,
-    private handlers: { onMessage: (data: string) => void; onClose: () => void }
-  ) {
-    this.ws.addEventListener("message", (event) => {
-      const data = typeof event.data === "string" ? event.data : "";
-      this.handlers.onMessage(data);
-    });
-    this.ws.addEventListener("close", () => this.handlers.onClose());
+interface WorkerEnv {
+  REMOTE_CONTROL_PUSH_KV: KVNamespace;
+  VAPID_JWK: string;
+  VAPID_PUBLIC_KEY: string;
+  REMOTE_CONTROL_DASHBOARD_ORIGIN?: string;
+}
+
+function getDashboardOrigin(c: Context<{ Bindings: WorkerEnv }>): string {
+  return c.env.REMOTE_CONTROL_DASHBOARD_ORIGIN ?? "https://remotecontrol.allternit.com";
+}
+
+function allowedOrigins(origin: string, dashboardOrigin: string): boolean {
+  if (origin === dashboardOrigin) return true;
+  if (origin === "https://platform.allternit.com") return true;
+  if (origin.startsWith("http://localhost:")) return true;
+  if (origin.startsWith("http://127.0.0.1:")) return true;
+  return false;
+}
+
+async function hashEndpoint(endpoint: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const digest = await crypto.subtle.digest("SHA-256", encoder.encode(endpoint));
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("")
+    .slice(0, 32);
+}
+
+async function importVapidPrivateKey(jwkJson: string): Promise<CryptoKey> {
+  const jwk = JSON.parse(jwkJson);
+  if (jwk.kty !== "EC" || jwk.crv !== "P-256") {
+    throw new Error("VAPID_JWK must be a P-256 EC JWK");
   }
-
-  send(data: string): void {
-    this.ws.send(data);
-  }
-}
-
-function headersToRecord(headers: Headers): Record<string, string> {
-  const out: Record<string, string> = {};
-  headers.forEach((value, key) => {
-    out[key] = value;
-  });
-  return out;
-}
-
-function decodeBody(body: string, encoding: string): string {
-  if (encoding === "base64") {
-    try {
-      return atob(body);
-    } catch {
-      return body;
-    }
-  }
-  return body;
-}
-
-function urlPathFromProxy(request: Request): string {
-  const url = new URL(request.url);
-  // The proxy request body carries the target path; fall back to the URL path.
-  return url.pathname.replace(/\/proxy\/[^/]+$/, "") || "/";
-}
-
-function decodeRuntimeIdFromTicket(ticket: string): string | null {
-  const idx = ticket.indexOf(":");
-  if (idx === -1) return null;
-  return ticket.slice(0, idx);
-}
-
-function subscriptionKey(runtimeId: string, endpoint: string): string {
-  const hash = crypto.subtle.digest("SHA-256", new TextEncoder().encode(endpoint)).then((buf) =>
-    Array.from(new Uint8Array(buf))
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("")
-  );
-  // Synchronous fallback for Workers runtime where crypto.subtle is async.
-  // We use the raw endpoint hash via a simple stable encoding for the key.
-  const stable = endpoint.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 200);
-  return `push:${runtimeId}:${stable}`;
-}
-
-async function sendPushNotification(
-  env: Env,
-  subscription: PushSubscriptionJSON,
-  payload: { title?: string; body?: string; tag?: string; data?: unknown }
-): Promise<void> {
-  if (!env.VAPID_PUBLIC_KEY || !env.VAPID_PRIVATE_KEY || !env.VAPID_SUBJECT) {
-    throw new Error("VAPID keys are not configured");
-  }
-  if (!subscription.endpoint) {
-    throw new Error("Subscription has no endpoint");
-  }
-
-  const origin = new URL(subscription.endpoint).origin;
-  const jwt = await signVapidJWT(env, origin);
-  const authHeader = `vapid t=${jwt}, k=${env.VAPID_PUBLIC_KEY}`;
-
-  // Send an empty push payload. The service worker displays a notification
-  // with the provided metadata by reading from the data query param or using
-  // defaults. Full payload encryption is left as a follow-up optimization.
-  const url = new URL(subscription.endpoint);
-  url.searchParams.set("title", encodeURIComponent(payload.title ?? "Allternit"));
-  url.searchParams.set("body", encodeURIComponent(payload.body ?? "Your remote session needs attention."));
-
-  const response = await fetch(url.toString(), {
-    method: "POST",
-    headers: {
-      Authorization: authHeader,
-      "Content-Length": "0",
-      "TTL": "60",
-    },
-  });
-
-  if (!response.ok) {
-    const text = await response.text().catch(() => "unknown");
-    if (response.status === 410 || response.status === 404) {
-      throw new Error("unsubscribed");
-    }
-    throw new Error(`push failed: ${response.status} ${text}`);
-  }
-}
-
-async function signVapidJWT(env: Env, audience: string): Promise<string> {
-  const header = { typ: "JWT", alg: "ES256" };
-  const now = Math.floor(Date.now() / 1000);
-  const payload = {
-    aud: audience,
-    exp: now + 12 * 60 * 60,
-    sub: env.VAPID_SUBJECT,
-  };
-
-  const encodedHeader = btoa(JSON.stringify(header)).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
-  const encodedPayload = btoa(JSON.stringify(payload)).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
-  const signingInput = `${encodedHeader}.${encodedPayload}`;
-
-  const key = await importVapidPrivateKey(env.VAPID_PRIVATE_KEY, env.VAPID_PUBLIC_KEY);
-  const signature = await crypto.subtle.sign(
-    { name: "ECDSA", hash: "SHA-256" },
-    key,
-    new TextEncoder().encode(signingInput)
-  );
-  const encodedSignature = btoa(String.fromCharCode(...new Uint8Array(signature)))
-    .replace(/=/g, "")
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_");
-
-  return `${signingInput}.${encodedSignature}`;
-}
-
-async function importVapidPrivateKey(privateKeyBase64: string, publicKeyBase64: string): Promise<CryptoKey> {
-  const privateKeyBytes = base64UrlToUint8Array(privateKeyBase64);
-  const publicKeyBytes = base64UrlToUint8Array(publicKeyBase64);
-  // VAPID public key is an uncompressed P-256 point: 0x04 || x || y.
-  if (publicKeyBytes.length !== 65 || publicKeyBytes[0] !== 0x04) {
-    throw new Error("VAPID public key must be an uncompressed P-256 point");
-  }
-  const x = bytesToBase64Url(publicKeyBytes.slice(1, 33));
-  const y = bytesToBase64Url(publicKeyBytes.slice(33, 65));
-  const d = bytesToBase64Url(privateKeyBytes);
-
   return crypto.subtle.importKey(
     "jwk",
-    { kty: "EC", crv: "P-256", x, y, d, ext: false },
+    jwk,
     { name: "ECDSA", namedCurve: "P-256" },
     false,
     ["sign"]
   );
 }
 
-function bytesToBase64Url(bytes: Uint8Array): string {
-  const binary = String.fromCharCode(...bytes);
-  return btoa(binary).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+function base64UrlEncode(buffer: ArrayBuffer | ArrayBufferView): string {
+  const bytes =
+    buffer instanceof ArrayBuffer ? new Uint8Array(buffer) : new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+  let binary = "";
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
 }
 
-function base64UrlToUint8Array(input: string): Uint8Array {
-  const padded = input.padEnd(input.length + ((4 - (input.length % 4)) % 4), "=");
-  const base64 = padded.replace(/-/g, "+").replace(/_/g, "/");
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  return bytes;
+async function signVapidJWT(
+  privateKey: CryptoKey,
+  publicKey: string,
+  audience: string,
+  subject: string
+): Promise<string> {
+  const now = Math.floor(Date.now() / 1000);
+  const header = { typ: "JWT", alg: "ES256" };
+  const payload = {
+    aud: audience,
+    exp: now + 12 * 60 * 60,
+    sub: subject,
+    iat: now,
+  };
+
+  const encodedHeader = base64UrlEncode(
+    new TextEncoder().encode(JSON.stringify(header))
+  );
+  const encodedPayload = base64UrlEncode(
+    new TextEncoder().encode(JSON.stringify(payload))
+  );
+  const signingInput = `${encodedHeader}.${encodedPayload}`;
+
+  const signature = await crypto.subtle.sign(
+    { name: "ECDSA", hash: "SHA-256" },
+    privateKey,
+    new TextEncoder().encode(signingInput)
+  );
+  const encodedSignature = base64UrlEncode(signature);
+
+  return `${signingInput}.${encodedSignature}`;
 }
+
+async function sendPushNotification(
+  subscription: PushSubscriptionRecord,
+  privateKey: CryptoKey,
+  publicKey: string
+): Promise<Response> {
+  const audience = new URL(subscription.endpoint).origin;
+  const jwt = await signVapidJWT(
+    privateKey,
+    publicKey,
+    audience,
+    "mailto:remote-control@allternit.com"
+  );
+
+  return fetch(subscription.endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/octet-stream",
+      TTL: "60",
+      Urgency: "high",
+      Authorization: `vapid t=${jwt}, k=${publicKey}`,
+    },
+  });
+}
+
+const app = new Hono<{ Bindings: WorkerEnv }>();
+
+app.use("*", async (c, next) => {
+  const dashboardOrigin = getDashboardOrigin(c);
+  return cors({
+    origin: (origin) => (allowedOrigins(origin, dashboardOrigin) ? origin : null),
+    allowMethods: ["GET", "POST", "OPTIONS"],
+    allowHeaders: ["Content-Type"],
+    credentials: true,
+  })(c, next);
+});
+
+app.get("/vapid-public-key", async (c) => {
+  const publicKey = c.env.VAPID_PUBLIC_KEY;
+  if (!publicKey) {
+    return c.text("VAPID public key is not configured", 500);
+  }
+  return c.text(publicKey);
+});
+
+app.post("/subscribe", async (c) => {
+  const body = await c.req.json<PushSubscriptionRecord>();
+  if (!body.runtimeId || !body.endpoint || !body.keys?.p256dh || !body.keys?.auth) {
+    return c.json({ error: "Missing required subscription fields" }, 400);
+  }
+
+  const record: PushSubscriptionRecord = {
+    runtimeId: body.runtimeId,
+    endpoint: body.endpoint,
+    keys: body.keys,
+    label: body.label,
+    createdAt: Date.now(),
+  };
+
+  const keyHash = await hashEndpoint(body.endpoint);
+  await c.env.REMOTE_CONTROL_PUSH_KV.put(
+    `sub:${body.runtimeId}:${keyHash}`,
+    JSON.stringify(record)
+  );
+  return c.json({ ok: true });
+});
+
+app.post("/unsubscribe", async (c) => {
+  const body = await c.req.json<{ runtimeId?: string; endpoint?: string }>();
+  if (!body.runtimeId || !body.endpoint) {
+    return c.json({ error: "runtimeId and endpoint are required" }, 400);
+  }
+  const keyHash = await hashEndpoint(body.endpoint);
+  await c.env.REMOTE_CONTROL_PUSH_KV.delete(`sub:${body.runtimeId}:${keyHash}`);
+  await c.env.REMOTE_CONTROL_PUSH_KV.delete(`pending:${keyHash}`);
+  return c.json({ ok: true });
+});
+
+app.post("/notify", async (c) => {
+  const body = await c.req.json<{
+    runtimeId?: string;
+    title?: string;
+    body?: string;
+    tag?: string;
+  }>();
+  if (!body.runtimeId) {
+    return c.json({ error: "runtimeId is required" }, 400);
+  }
+
+  const vapidJwk = c.env.VAPID_JWK;
+  const vapidPublicKey = c.env.VAPID_PUBLIC_KEY;
+  if (!vapidJwk || !vapidPublicKey) {
+    return c.json({ error: "VAPID is not configured" }, 500);
+  }
+
+  const privateKey = await importVapidPrivateKey(vapidJwk);
+  const pending: PendingNotification = {
+    title: body.title ?? "Allternit Remote Control",
+    body: body.body ?? "One of your machines needs input.",
+    tag: body.tag ?? "remote-control",
+  };
+
+  const prefix = `sub:${body.runtimeId}:`;
+  const list = await c.env.REMOTE_CONTROL_PUSH_KV.list({ prefix });
+  const results = await Promise.all(
+    list.keys.map(async (key) => {
+      const raw = await c.env.REMOTE_CONTROL_PUSH_KV.get(key.name);
+      if (!raw) return { ok: false, status: "missing" };
+      const subscription: PushSubscriptionRecord = JSON.parse(raw);
+      const endpointHash = await hashEndpoint(subscription.endpoint);
+      await c.env.REMOTE_CONTROL_PUSH_KV.put(
+        `pending:${endpointHash}`,
+        JSON.stringify(pending),
+        { expirationTtl: 300 }
+      );
+
+      try {
+        const response = await sendPushNotification(
+          subscription,
+          privateKey,
+          vapidPublicKey
+        );
+        if (response.status === 404 || response.status === 410) {
+          await c.env.REMOTE_CONTROL_PUSH_KV.delete(key.name);
+          return { ok: false, status: response.status };
+        }
+        return { ok: response.ok, status: response.status };
+      } catch {
+        return { ok: false, status: "exception" };
+      }
+    })
+  );
+
+  return c.json({ ok: true, delivered: results.filter((r) => r.ok).length, total: results.length });
+});
+
+app.get("/pending", async (c) => {
+  const endpoint = c.req.query("endpoint");
+  if (!endpoint) {
+    return c.json({ error: "endpoint is required" }, 400);
+  }
+  const endpointHash = await hashEndpoint(endpoint);
+  const raw = await c.env.REMOTE_CONTROL_PUSH_KV.get(`pending:${endpointHash}`);
+  if (!raw) {
+    return c.json({ title: "Allternit Remote Control", body: "One of your machines needs input.", tag: "remote-control" });
+  }
+  await c.env.REMOTE_CONTROL_PUSH_KV.delete(`pending:${endpointHash}`);
+  return c.json(JSON.parse(raw));
+});
+
+app.get("/health", (c) => c.json({ ok: true }));
+
+export default app;

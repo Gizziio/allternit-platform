@@ -3,21 +3,26 @@
 import React from "react";
 import { createContext, useContext, useState, useCallback, ReactNode, useMemo, useRef, useEffect } from "react";
 import type { ModelSelection } from "@/components/model-picker";
+import type { ModelOption } from "@/components/prompt-kit/prompt-model-selector";
 import { usePendingChatModelStore } from "@/stores/pending-chat-model.store";
+import { useAvailableBrainModels } from "@/hooks/use-available-brain-models";
 
 interface ModelSelectionContextType {
   // Current selection
   selection: ModelSelection | null;
-  
+
+  // Available models from discovery
+  availableModels: ModelOption[];
+  isLoading: boolean;
+
   // Selection state
   isSelecting: boolean;
-  
+
   // Actions
   selectModel: (selection: ModelSelection) => void;
   clearSelection: () => void;
   startSelection: () => void;
   cancelSelection: () => void;
-  
 }
 
 const ModelSelectionContext = createContext<ModelSelectionContextType | undefined>(undefined);
@@ -27,13 +32,14 @@ interface ModelSelectionProviderProps {
   defaultSelection?: ModelSelection | null;
 }
 
-export function ModelSelectionProvider({ 
-  children, 
-  defaultSelection = null 
+export function ModelSelectionProvider({
+  children,
+  defaultSelection = null
 }: ModelSelectionProviderProps) {
   const [selection, setSelection] = useState<ModelSelection | null>(defaultSelection);
   const [isSelecting, setIsSelecting] = useState(false);
   const hasAppliedDefault = useRef(false);
+  const { models: availableModels, isLoading } = useAvailableBrainModels();
 
   // Sync with defaultSelection when it becomes available (e.g. after onboarding completes)
   useEffect(() => {
@@ -81,6 +87,8 @@ export function ModelSelectionProvider({
 
   const value = useMemo(() => ({
     selection,
+    availableModels,
+    isLoading,
     isSelecting,
     selectModel,
     clearSelection,
@@ -88,6 +96,8 @@ export function ModelSelectionProvider({
     cancelSelection,
   }), [
     selection,
+    availableModels,
+    isLoading,
     isSelecting,
     selectModel,
     clearSelection,

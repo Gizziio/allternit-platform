@@ -4,7 +4,7 @@ import type {
   OfficeAgentLoopOptions,
   OfficeAiClient,
   OfficeAppKey,
-} from '@allternit/allternit-office-suite'
+} from '@allternit/office-suite'
 import { OfficeAgentLoop as CloudAgentLoop } from '@allternit/office-ai'
 
 const OVERRIDES_KEY = 'allternit-office-standalone:model-overrides'

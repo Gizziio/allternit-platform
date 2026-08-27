@@ -223,6 +223,11 @@ export const SessionRoutes = lazy(() =>
       validator("json", z.any()),
       async (c) => {
         const input = c.req.valid("json") as any
+        const model = input.model
+        if (model && !input.defaultModel) {
+          input.defaultModel = model
+          input.defaultModelSource = "user"
+        }
         const session = await Session.create(input)
         return c.json(session)
       },

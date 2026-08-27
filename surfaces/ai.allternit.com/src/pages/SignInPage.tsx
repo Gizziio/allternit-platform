@@ -2,10 +2,20 @@
 
 import { Suspense, useEffect } from "react"
 import { useSearchParams } from "react-router-dom"
-import { PlatformSignIn, isDesktopShell } from "@/lib/platform-auth-client"
+import { PlatformSignIn, getAllowedRedirectOrigins, isDesktopShell } from "@/lib/platform-auth-client"
 import { AuthPreview } from "@/components/auth/AuthPreview"
 import { SiteFooter } from "@/components/auth/SiteFooter"
 import { AProtocolWordmark } from "@/components/AProtocolWordmark"
+
+function isAllowedRedirectUrl(url: string | null): url is string {
+  if (!url) return false
+  if (url.startsWith("/")) return true
+  try {
+    return getAllowedRedirectOrigins().some((origin) => url === origin || url.startsWith(`${origin}/`))
+  } catch {
+    return false
+  }
+}
 
 function SignInContent() {
   const [searchParams] = useSearchParams()
@@ -31,10 +41,9 @@ function SignInContent() {
   }, [])
 
   const requestedRedirect = searchParams.get("redirect_url")
-  const redirectUrl =
-    requestedRedirect && requestedRedirect.startsWith("/")
-      ? requestedRedirect
-      : "/shell"
+  const redirectUrl = isAllowedRedirectUrl(requestedRedirect)
+    ? requestedRedirect
+    : "/shell"
   const signUpUrl = requestedRedirect
     ? `/sign-up?redirect_url=${encodeURIComponent(redirectUrl)}`
     : "/sign-up"

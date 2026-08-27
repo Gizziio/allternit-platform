@@ -35,6 +35,17 @@ const desktopAuthEnabled = isDesktopAuthEnabled()
 const clerkDisabledByEnv = isClerkDisabledByEnv()
 const DESKTOP_BROWSER_AUTH_PATH_PREFIXES = ["/sign-in", "/sign-up", "/pair", "/oauth", "/terminal/clerk", "/clerk_"]
 
+const STATIC_ALLOWED_REDIRECT_ORIGINS = [
+  "https://remotecontrol.allternit.com",
+  "https://platform.allternit.com",
+  "https://ai.allternit.com",
+]
+
+export function getAllowedRedirectOrigins(): string[] {
+  const current = typeof window !== "undefined" ? window.location.origin : "https://platform.allternit.com"
+  return Array.from(new Set([current, ...STATIC_ALLOWED_REDIRECT_ORIGINS]))
+}
+
 type DesktopSession = {
   userId: string
   userEmail: string
@@ -66,7 +77,35 @@ export interface PlatformOrganizationMembership {
   role?: string | null;
 }
 
-type PlatformAuthShape = ReturnType<typeof buildDisabledAuthValue>
+interface PlatformAuthShape {
+  user: {
+    isLoaded: boolean;
+    isSignedIn: boolean;
+    user: PlatformUser | null;
+  };
+  sessions: {
+    isLoaded: boolean;
+    sessions: any[];
+  };
+  organization: {
+    isLoaded: boolean;
+    organization: PlatformOrganization | null;
+    membership: PlatformOrganizationMembership | null;
+  };
+  auth: {
+    isLoaded: boolean;
+    isSignedIn: boolean | undefined;
+    userId: string | null | undefined;
+    sessionId: string | null | undefined;
+    orgId: string | null | undefined;
+    orgRole: string | null | undefined;
+    actor: unknown;
+    getToken: () => Promise<string | null>;
+  };
+  signOut: (_options?: any) => Promise<void>;
+  hardSignOut: (_options?: any) => Promise<void>;
+  clerk: any;
+}
 
 const PlatformAuthContext = createContext<PlatformAuthShape | null>(null)
 
@@ -270,6 +309,7 @@ export function PlatformAuthProvider({ children }: { children: ReactNode }) {
       appearance={clerkAppearance}
       signInUrl={SIGN_IN_URL}
       signUpUrl={SIGN_UP_URL}
+      allowedRedirectOrigins={getAllowedRedirectOrigins()}
     >
       <ClerkPlatformAuthBridge>{children}</ClerkPlatformAuthBridge>
     </ClerkProvider>
@@ -355,11 +395,22 @@ function buildDesktopUser(session: DesktopSession | null) {
 }
 
 function buildDisabledAuthValue() {
+  // DEV BYPASS: treat disabled auth as signed-in for local UI iteration.
+  // Remove before committing.
+  const mockUser: PlatformUser = {
+    id: 'dev-user',
+    firstName: 'Local',
+    lastName: 'Developer',
+    userEmail: 'dev@allternit.local',
+    primaryEmailAddress: { emailAddress: 'dev@allternit.local' },
+    emailAddresses: [{ emailAddress: 'dev@allternit.local' }],
+    imageUrl: null,
+  }
   return {
     user: {
       isLoaded: true as boolean,
-      isSignedIn: false as boolean,
-      user: null as PlatformUser | null,
+      isSignedIn: true as boolean,
+      user: mockUser,
     },
     sessions: {
       isLoaded: true as boolean,
@@ -372,13 +423,13 @@ function buildDisabledAuthValue() {
     },
     auth: {
       isLoaded: true as boolean,
-      isSignedIn: false as boolean | undefined,
-      userId: null as string | null | undefined,
-      sessionId: null as string | null | undefined,
-      orgId: null as string | null | undefined,
-      orgRole: null as string | null | undefined,
+      isSignedIn: true as boolean | undefined,
+      userId: 'dev-user' as string | null | undefined,
+      sessionId: 'dev-session' as string | null | undefined,
+      orgId: 'dev-org' as string | null | undefined,
+      orgRole: 'admin' as string | null | undefined,
       actor: null as unknown,
-      getToken: async () => null as string | null,
+      getToken: async () => 'dev-token' as string | null,
     },
     signOut: async (_options?: any) => {},
     hardSignOut: async (_options?: any) => {},
@@ -698,8 +749,8 @@ export function PlatformSignIn(props: {
       <SignIn
         appearance={clerkAppearance}
         forceRedirectUrl={redirectUrl}
-        path={SIGN_IN_PATH}
         routing="path"
+        path={SIGN_IN_PATH}
         signUpForceRedirectUrl={props.signUpForceRedirectUrl || redirectUrl}
         signUpUrl={props.signUpUrl || SIGN_UP_PATH}
       />
@@ -719,7 +770,7 @@ export function PlatformSignUp(props: {
   const selfHosted = companyConfig?.selfHosted ?? false
   const authDisabled = clerkDisabledByEnv || selfHosted || (!desktopAuthEnabled && !publishableKey)
 
-  if (desktopAuthEnabled && !browserAuthSurface) {
+  if (desktopAuthEnabled && isDesktopShell() && !browserAuthSurface) {
     return (
       <DisabledAuthCard
         title="Sign-up is handled on the hosted platform"
@@ -742,8 +793,8 @@ export function PlatformSignUp(props: {
     <SignUp
       appearance={clerkAppearance}
       forceRedirectUrl={redirectUrl}
-      path={SIGN_UP_PATH}
       routing="path"
+      path={SIGN_UP_PATH}
       signInForceRedirectUrl={props.signInForceRedirectUrl || redirectUrl}
       signInUrl={props.signInUrl || SIGN_IN_PATH}
     />

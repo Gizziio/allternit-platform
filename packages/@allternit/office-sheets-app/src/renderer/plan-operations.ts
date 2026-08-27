@@ -6,17 +6,17 @@
  * Extracted from App.tsx; App-scope state comes in through PlanContext.
  */
 import { planPrompt } from '../ai/deterministic-planner'
-import { parseAddress, parseRange, rangeCellCount } from '@allternit/allternit-office-suite/xlsx'
-import { CHART_EDIT_TYPES, chartDataFromValues } from '@allternit/allternit-office-suite/xlsx'
-import type { InMemoryWorkbookAdapter } from '@allternit/allternit-office-suite/xlsx'
+import { parseAddress, parseRange, rangeCellCount } from '@allternit/office-suite/xlsx'
+import { CHART_EDIT_TYPES, chartDataFromValues } from '@allternit/office-suite/xlsx'
+import type { InMemoryWorkbookAdapter } from '@allternit/office-suite/xlsx'
 import {
   expandToPrimitiveOps,
   isLayoutOp,
   isStructuralOp,
   workbookCommandBatchSchema,
   type WorkbookOperation,
-} from '@allternit/allternit-office-suite/xlsx'
-import type { ApplyOutcome, ChangePlan } from '@allternit/allternit-office-suite/xlsx'
+} from '@allternit/office-suite/xlsx'
+import type { ApplyOutcome, ChangePlan } from '@allternit/office-suite/xlsx'
 import { isSheetRemoved } from './edit-journal'
 import { t } from './i18n/locale'
 import { buildLazyChangePlan } from './lazy-plan'

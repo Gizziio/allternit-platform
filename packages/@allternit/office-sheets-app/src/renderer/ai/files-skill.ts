@@ -1,6 +1,6 @@
 import type { AgentSkill } from './agent-stub'
-import type { AttachmentMeta } from '@allternit/allternit-office-suite/xlsx'
-import { ATTACHMENT_IMAGE_EXTS } from '@allternit/allternit-office-suite/xlsx'
+import type { AttachmentMeta } from '@allternit/office-suite/xlsx'
+import { ATTACHMENT_IMAGE_EXTS } from '@allternit/office-suite/xlsx'
 import { t } from '../i18n/locale'
 
 /**

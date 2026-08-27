@@ -158,6 +158,7 @@ const isMac = process.platform === 'darwin';
 let mainWindow: BrowserWindow | null = null;
 let designWindow: BrowserWindow | null = null;
 let hudWindow: BrowserWindow | null = null;
+let remoteControlWindow: BrowserWindow | null = null;
 /** One office editor window per target (docs/sheets/slides/pdf/launcher). */
 const officeWindows = new Map<OfficeTarget, BrowserWindow>();
 let splashWindow: BrowserWindow | null = null;
@@ -175,7 +176,7 @@ let pushServiceState = () => {
 };
 let miniWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
-let activePlatformUrl: string = isDev ? URLS.DEV_UI : 'https://ai.allternit.com';
+let activePlatformUrl: string = isDev ? URLS.DEV_UI : 'https://platform.allternit.com';
 
 const QUICK_CHAT_HOTKEY = 'CommandOrControl+Shift+A';
 // Hermes Desktop uses ⌘/Ctrl+Shift+H for its global HUD toggle.  Register that
@@ -543,6 +544,21 @@ function createMainWindow(): BrowserWindow {
         };
       }
 
+      if (requestedUrl.pathname === '/remote-control.html') {
+        return {
+          action: 'allow',
+          overrideBrowserWindowOptions: {
+            width: 1280,
+            height: 840,
+            minWidth: 820,
+            minHeight: 560,
+            backgroundColor: '#0F0C0A',
+            autoHideMenuBar: true,
+            title: 'Allternit Remote Control',
+          },
+        };
+      }
+
       if (
         (requestedUrl.pathname === '/platform' || requestedUrl.pathname === '/shell') &&
         requestedUrl.searchParams.get('detachedSurface') === 'code'
@@ -787,7 +803,7 @@ async function initializeBundledMode(): Promise<void> {
     // mode so local worktree UI builds (e.g. Vite on a non-default port) can be
     // tested without repackaging the desktop.
     let platformUrl: string = process.env.ALLTERNIT_PLATFORM_URL?.trim()
-      || (isDev ? URLS.DEV_UI : 'https://ai.allternit.com');
+      || (isDev ? URLS.DEV_UI : 'https://platform.allternit.com');
 
     if (isDev && process.env.ALLTERNIT_DESKTOP_USE_STATIC_UI) {
       const localStaticPath = resolveLocalPlatformStaticPath();
@@ -843,8 +859,8 @@ async function initializeBundledMode(): Promise<void> {
       pushServiceState();
     }
 
-    activePlatformUrl = platformUrl;
-    log.info(`[Main] Platform URL: ${platformUrl}`);
+    activePlatformUrl = process.env.ALLTERNIT_PLATFORM_URL || platformUrl;
+    log.info(`[Main] Platform URL: ${activePlatformUrl}`);
     // Clerk authenticates the human in the browser. The desktop waits for the
     // separately scoped runtime pairing that was started alongside boot.
     if (showStartupWizard) {
@@ -888,7 +904,7 @@ async function initializeBundledMode(): Promise<void> {
       log.info('[Main] DOM ready');
     });
     
-    mainWindow.loadURL(platformUrl);
+    mainWindow.loadURL(activePlatformUrl);
 
     // First launch: used for permission onboarding gating below
     const isFirstLaunch = !store.get('onboardingComplete');
@@ -1092,7 +1108,9 @@ async function initializeDevelopmentMode(): Promise<void> {
   }
 
   mainWindow = createMainWindow();
-  mainWindow.loadURL(platformUrl);
+  activePlatformUrl = process.env.ALLTERNIT_PLATFORM_URL || platformUrl;
+  log.info(`[Main] Dev mode loading platform URL: ${activePlatformUrl}`);
+  mainWindow.loadURL(activePlatformUrl);
   mainWindow.webContents.openDevTools();
   mainWindow.show();
 }
@@ -2089,6 +2107,45 @@ ipcMain.handle('shell:resize-hud', (_event, bounds: { height: number }) => {
   } finally {
     if (!wasResizable && !hudWindow.isDestroyed()) hudWindow.setResizable(false);
   }
+});
+
+ipcMain.handle('shell:open-remote-control', () => {
+  if (remoteControlWindow && !remoteControlWindow.isDestroyed()) {
+    remoteControlWindow.show();
+    remoteControlWindow.focus();
+    return;
+  }
+
+  remoteControlWindow = new BrowserWindow({
+    width: 1280,
+    height: 840,
+    minWidth: 820,
+    minHeight: 560,
+    title: 'Allternit Remote Control',
+    titleBarStyle: isMac ? 'hiddenInset' : 'default',
+    trafficLightPosition: { x: 16, y: 16 },
+    show: false,
+    backgroundColor: '#0F0C0A',
+    webPreferences: {
+      preload: join(__dirname, '../preload/index.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+
+  remoteControlWindow.webContents.setWindowOpenHandler(({ url }) => {
+    void shell.openExternal(url);
+    return { action: 'deny' };
+  });
+  remoteControlWindow.once('ready-to-show', () => remoteControlWindow?.show());
+  remoteControlWindow.on('closed', () => { remoteControlWindow = null; });
+  const dashboardUrl = process.env.ALLTERNIT_REMOTE_CONTROL_URL
+    ? new URL('/', process.env.ALLTERNIT_REMOTE_CONTROL_URL).toString()
+    : activePlatformUrl.includes('localhost') || activePlatformUrl.includes('127.0.0.1')
+      ? new URL('/remote-control.html', activePlatformUrl).toString()
+      : 'https://remotecontrol.allternit.com';
+  void remoteControlWindow.loadURL(dashboardUrl);
 });
 
 function resolveOfficeUrl(target: OfficeTarget, artifactId?: string): string {
