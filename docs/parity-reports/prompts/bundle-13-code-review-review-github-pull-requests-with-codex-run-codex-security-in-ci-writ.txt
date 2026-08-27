@@ -1,0 +1,59 @@
+You are a technical documentation writer working in `/Users/joe/Desktop/allternit-parity-workspace` on branch `parity/swarm-sprint`.
+
+Read the task spec at `docs/parity-reports/TASK_SPEC.md` for context.
+
+Your assignment: create Allternit parity documentation for the following OpenAI ChatGPT/Codex handoff categories:
+
+Code review, Review GitHub pull requests with Codex, Run Codex Security in CI, Write vulnerability reports
+
+The unchecked items for these categories are listed below. For each item, research whether Allternit has an equivalent capability by reading the codebase and existing docs (e.g., `cmd/allternit-api/src/`, `cmd/gizzi-code/`, `packages/@allternit/`, `sdk/allternit-sdk/`, `docs/public/`). Then create one docs page per category:
+
+- docs/public/parity/code-review.md
+- docs/public/parity/review-github-pull-requests-with-codex.md
+- docs/public/parity/run-codex-security-in-ci.md
+- docs/public/parity/write-vulnerability-reports.md
+
+Each page should:
+- Briefly explain the original ChatGPT/Codex concept.
+- Map it to the equivalent Allternit feature, config, CLI command, API endpoint, tool, or workflow.
+- Include concrete examples (TOML config, curl, CLI commands) where applicable.
+- If a concept has no Allternit equivalent and is not applicable to the self-host/BYOC model, document it as "Not applicable / roadmap" and explain why.
+
+Do NOT edit `/Users/joe/Desktop/allternit-parity-handoff.md`. Do NOT run `git commit` or other git mutations. Run `cargo check -p allternit-api` only if you change Rust code; docs-only changes do not need builds.
+
+When finished, write a report file `docs/parity-reports/code-review-review-github-pull-requests-with-codex-run-codex-security-in-ci-write-vulnerability-reports.md` with YAML frontmatter containing `status`, `files_changed`, `items_covered`, `items_missing`, and `notes`, followed by prose.
+
+Here are the unchecked items to cover:
+
+### Category: Code review (handoff lines 1181-1193)
+- [ ] [GAP] **Choose a review scope**
+- [ ] [GAP] **Inline comments for feedback**
+- [ ] [GAP] **Navigating the review pane**
+- [ ] [GAP] **Pull request reviews**
+- [ ] [GAP] **Review multiple repositories**
+- [ ] [GAP] **Staged and unstaged states**
+- [ ] [GAP] **Staging and reverting files**
+- [ ] [GAP] **Start a review**
+- [ ] [GAP] **What changes it shows**
+- [ ] [GAP] **Work with review results**
+
+### Category: Review GitHub pull requests with Codex (handoff lines 1942-1950)
+- [ ] [GAP] **Act on review findings**
+- [ ] [GAP] **Customize what Codex reviews**
+- [ ] [GAP] **Enable automatic reviews**
+- [ ] [GAP] **Request a Codex review**
+- [ ] [GAP] **Request a Security Review**
+- [ ] [GAP] **Set up Security Review**
+
+### Category: Run Codex Security in CI (handoff lines 1973-1981)
+- [ ] [GAP] **Add the GitHub Actions workflow**
+- [ ] [GAP] **Add the GitLab CI/CD pipeline**
+- [ ] [GAP] **Choose a severity policy**
+- [ ] [GAP] **Prepare the workflow**
+- [ ] [GAP] **Retry with an existing result directory**
+- [ ] [GAP] **Troubleshoot a CI scan**
+
+### Category: Write vulnerability reports (handoff lines 2286-2290)
+- [ ] [GAP] **Review each report**
+- [ ] [GAP] **Use reports from a scan**
+

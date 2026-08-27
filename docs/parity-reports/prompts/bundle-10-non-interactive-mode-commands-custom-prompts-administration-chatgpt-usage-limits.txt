@@ -1,0 +1,62 @@
+You are a technical documentation writer working in `/Users/joe/Desktop/allternit-parity-workspace` on branch `parity/swarm-sprint`.
+
+Read the task spec at `docs/parity-reports/TASK_SPEC.md` for context.
+
+Your assignment: create Allternit parity documentation for the following OpenAI ChatGPT/Codex handoff categories:
+
+Non-interactive mode, Commands, Custom Prompts, Administration, ChatGPT usage limits and spend controls
+
+The unchecked items for these categories are listed below. For each item, research whether Allternit has an equivalent capability by reading the codebase and existing docs (e.g., `cmd/allternit-api/src/`, `cmd/gizzi-code/`, `packages/@allternit/`, `sdk/allternit-sdk/`, `docs/public/`). Then create one docs page per category:
+
+- docs/public/parity/non-interactive-mode.md
+- docs/public/parity/commands.md
+- docs/public/parity/custom-prompts.md
+- docs/public/parity/administration.md
+- docs/public/parity/chatgpt-usage-limits-and-spend-controls.md
+
+Each page should:
+- Briefly explain the original ChatGPT/Codex concept.
+- Map it to the equivalent Allternit feature, config, CLI command, API endpoint, tool, or workflow.
+- Include concrete examples (TOML config, curl, CLI commands) where applicable.
+- If a concept has no Allternit equivalent and is not applicable to the self-host/BYOC model, document it as "Not applicable / roadmap" and explain why.
+
+Do NOT edit `/Users/joe/Desktop/allternit-parity-handoff.md`. Do NOT run `git commit` or other git mutations. Run `cargo check -p allternit-api` only if you change Rust code; docs-only changes do not need builds.
+
+When finished, write a report file `docs/parity-reports/non-interactive-mode-commands-custom-prompts-administration-chatgpt-usage-limits-and-spend-controls.md` with YAML frontmatter containing `status`, `files_changed`, `items_covered`, `items_missing`, and `notes`, followed by prose.
+
+Here are the unchecked items to cover:
+
+### Category: Non-interactive mode (handoff lines 1755-1773)
+- [ ] [GAP] **Advanced stdin piping**
+- [ ] [GAP] **Authenticate in automation**
+- [ ] [GAP] **Basic usage**
+- [ ] [GAP] **Common automation patterns**
+- [ ] [GAP] **Create structured outputs with a schema**
+- [ ] [GAP] **Draft a pull request comment from CI logs**
+- [ ] [GAP] **Example: Autofix CI failures in GitHub Actions**
+- [ ] [GAP] **Git repository required**
+- [ ] [GAP] **Inspect TLS or HTTP issues**
+- [ ] [GAP] **Make output machine-readable**
+- [ ] [GAP] **Prepare a Slack-ready update**
+- [ ] [GAP] **Resume a non-interactive session**
+- [ ] [GAP] **Summarize logs**
+- [ ] [GAP] **Use `codex exec -` when stdin is the prompt**
+- [ ] [GAP] **Use prompt-plus-stdin**
+
+### Category: Commands (handoff lines 1453-1461)
+- [ ] [GAP] **Deep links**
+- [ ] [GAP] **Keyboard shortcuts**
+- [ ] [GAP] **Search past chats and find in a chat**
+- [ ] [GAP] **See also**
+- [ ] [GAP] **Settings**
+- [ ] [GAP] **Supported links**
+
+### Category: Custom Prompts (handoff lines 1479-1482)
+- [ ] [GAP] **Add metadata and arguments**
+
+### Category: Administration (handoff lines 940-943)
+- [ ] [GAP] **Administration**
+
+### Category: ChatGPT usage limits and spend controls (handoff lines 1141-1144)
+- [ ] [GAP] **Know when these controls apply**
+

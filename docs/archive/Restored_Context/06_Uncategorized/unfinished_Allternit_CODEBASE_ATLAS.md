@@ -22,7 +22,7 @@
 - `.codex/`: local Codex skill bundles and datasets. (.codex/skills/ui-ux-pro-max/SKILL.md)
 - `.gizzi/`: gizzi skill bundle mirror. (.gizzi/skills/ui-ux-pro-max/SKILL.md)
 - `.gemini/`: gemini skill bundle mirror. (.gemini/skills/ui-ux-pro-max/SKILL.md)
-- `.shared/`: shared skill datasets used by the bundled UI/UX skill. (.shared/ui-ux-pro-max/data/ui-reasoning.csv)
+- `docs/design/`: shared skill datasets used by the bundled UI/UX skill. (docs/design/ui-ux-pro-max/data/ui-reasoning.csv)
 - `.logs/`: log output directory referenced by startup scripts. (scripts/start-all.sh)
 - `.venv/`: python virtual environment directory pattern used by scripts (service-local venvs). (dev/run.sh, apps/cli/src/commands/daemon.rs)
 - `apps/`: application frontends and CLI. (apps/cli/src/main.rs, apps/shell/src/main.tsx, apps/shell-electron/main/index.cjs, apps/ui/src/a2ui/renderer.ts)

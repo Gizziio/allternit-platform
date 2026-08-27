@@ -1,11 +1,11 @@
 ---
 status: done
 files_changed:
-  - .pipeline/spec-rubric.md
-  - .pipeline/bin/check-spec.sh
-  - .pipeline/bin/check-spec-test.sh
-  - .pipeline/.gitignore
-  - .pipeline/README.md
+  - docs/pipeline/spec-rubric.md
+  - docs/pipeline/bin/check-spec.sh
+  - docs/pipeline/bin/check-spec-test.sh
+  - docs/pipeline/.gitignore
+  - docs/pipeline/README.md
   - .steering/checkpoint.md
   - .steering/spec.md
   - docs/PIPELINE_PHASE_3_NOTES.md
@@ -26,23 +26,23 @@ remaining:
     into spec Context, and make Gherkin Given/Then concrete. These are
     generator/brief-template improvements for a future iteration — Phase 3
     constraints forbade changing them now."
-  - "Executor consumption of .pipeline/queue/ (out of scope, later phase)."
+  - "Executor consumption of docs/pipeline/queue/ (out of scope, later phase)."
 ---
 
 # Phase 3 NOTES — Spec-checker loop + queue + memory lessons
 
 ## What was built
 
-1. **`.pipeline/spec-rubric.md`** — the spec-checker's review prompt, modeled
+1. **`docs/pipeline/spec-rubric.md`** — the spec-checker's review prompt, modeled
    on `.steering/prompt.md` but aimed at specs: (1) every requirement
    verdict-able DONE/PARTIAL/MISSING by a future builder, (2) acceptance
    scenarios that actually prove their requirement, (3) right-sized (one
    reviewable unit, not a disguised epic), (4) no conflict with
    `.steering/spec.md` phase boundaries. Verdict contract: first line exactly
    `READY` or `NEEDS-WORK`, then findings citing requirement IDs.
-2. **`.pipeline/bin/check-spec.sh`** (`set -uo pipefail`):
+2. **`docs/pipeline/bin/check-spec.sh`** (`set -uo pipefail`):
    - Runs `rails-ensure.sh` first; aborts non-zero on failure.
-   - Per `.pipeline/specs/*.md` without READY/STALLED in `verdicts.json`:
+   - Per `docs/pipeline/specs/*.md` without READY/STALLED in `verdicts.json`:
      assembles rubric + spec, consults via `SPEC_CHECK_CMD` (test hook) else
      `ao-consult`; bullet-prefix tolerant verdict parsing (`sed 's/^• //'`).
    - READY → **announce first** to `wih:pipeline-queue` (asset_ref = queue
@@ -56,7 +56,7 @@ remaining:
      to errors.log, advisory); 3rd round marks STALLED, skipped thereafter.
    - Empty/unparseable answer or transport failure → record nothing,
      continue (fail open per-spec).
-3. **`.pipeline/bin/check-spec-test.sh`** — stubbed consult (canned verdict
+3. **`docs/pipeline/bin/check-spec-test.sh`** — stubbed consult (canned verdict
    files per slug) + PATH-shimmed curl capture. 28 checks.
 4. **`.steering/spec.md`** — Phase 3 requirements R9–R12 + 4 Gherkin
    scenarios (added alongside implementation, applying the Phase 2 gate
@@ -73,7 +73,7 @@ The checker consult is the ONLY LLM step; everything else is bash + python3
 ### Offline test
 
 ```
-$ bash .pipeline/bin/check-spec-test.sh
+$ bash docs/pipeline/bin/check-spec-test.sh
 PASS: run 1 exits 0
 PASS: READY: spec moved to queue
 PASS: READY: spec removed from specs/
@@ -109,7 +109,7 @@ All checks passed.
 ### Real run with the live ao-steer (acceptance)
 
 ```
-$ bash .pipeline/bin/check-spec.sh
+$ bash docs/pipeline/bin/check-spec.sh
 rails: OK
 submitted to ao-steer
 check-spec: osreward-instituting-standardized-evaluation-for-cross-platf — NEEDS-WORK round 1; findings appended to specs/osreward-….review.md
@@ -118,7 +118,7 @@ check-spec: done — 1 spec(s) consulted
 
 `verdicts.json`: `{"osreward-…": {"verdict":"NEEDS-WORK","rounds":1, …}}`.
 The live reviewer's findings (verbatim in
-`.pipeline/specs/osreward-….review.md`) are substantive and correct:
+`docs/pipeline/specs/osreward-….review.md`) are substantive and correct:
 
 - **R1–R4 (Acceptance):** all Gherkin scenarios share the boilerplate Given
   and restate the SHALL text as Then — a stub returning "OK" would pass

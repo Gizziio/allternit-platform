@@ -1,9 +1,9 @@
 # PHASE 4 TASK — Queue consumption: build-queue.sh
 
 You are the executor. This file is your complete task spec. It builds the last
-link of the discovery pipeline: consuming `.pipeline/queue/` (READY specs) by
-spawning build executors. Read `.pipeline/README.md` and
-`.pipeline/bin/check-spec.sh` first to match conventions. Do NOT modify
+link of the discovery pipeline: consuming `docs/pipeline/queue/` (READY specs) by
+spawning build executors. Read `docs/pipeline/README.md` and
+`docs/pipeline/bin/check-spec.sh` first to match conventions. Do NOT modify
 scout/generate-spec/check-spec behavior.
 
 ## Workflow rules (same as before)
@@ -18,13 +18,13 @@ scout/generate-spec/check-spec behavior.
 
 ## Build
 
-1. **`.pipeline/bin/build-queue.sh`** (bash, `set -uo pipefail`):
+1. **`docs/pipeline/bin/build-queue.sh`** (bash, `set -uo pipefail`):
    - Usage: `build-queue.sh [--all] [slug ...]`. No args = list queue contents.
-   - Runs `.pipeline/bin/rails-ensure.sh` first; aborts non-zero if it fails.
-   - For each slug (or every `.pipeline/queue/*.md` with `--all`), skip any
-     already recorded as `building`/`built` in `.pipeline/builds.json`
+   - Runs `docs/pipeline/bin/rails-ensure.sh` first; aborts non-zero if it fails.
+   - For each slug (or every `docs/pipeline/queue/*.md` with `--all`), skip any
+     already recorded as `building`/`built` in `docs/pipeline/builds.json`
      (gitignored; python3 for JSON like `.steering/bin/` does):
-     a. Generate a task file `.pipeline/builds/<slug>-TASK.md` from the spec:
+     a. Generate a task file `docs/pipeline/builds/<slug>-TASK.md` from the spec:
         a header with the standard executor conventions (update
         `.steering/checkpoint.md` at checkpoints; `[steering]` is
         authoritative; NOTES file with YAML frontmatter + `.sentinel`; single
@@ -48,7 +48,7 @@ scout/generate-spec/check-spec behavior.
         same way. Announcement failure = hard error (errors.log + non-zero).
         There is NO auto-merge: a human merges `ao/build-<slug>` after review.
    - `--no-wait`: spawn and return immediately (for parallel/manual driving).
-2. **`.pipeline/bin/build-queue-test.sh`**:
+2. **`docs/pipeline/bin/build-queue-test.sh`**:
    - Stub `ao-spawn`, `ao-send`, `ao-watch`, `curl` via a PATH-shim dir
      (fake commands that log invocations to a capture file; ao-watch exits 0
      and creates the sentinel path it's given).
@@ -58,20 +58,20 @@ scout/generate-spec/check-spec behavior.
      rails announcement captured with the awaiting-merge note; already-built
      slug is skipped on re-run; `--no-wait` spawns without watching.
    - PASS/FAIL lines, non-zero on FAIL.
-3. Update `.pipeline/README.md`: Phase 4 section, the full-cycle diagram now
+3. Update `docs/pipeline/README.md`: Phase 4 section, the full-cycle diagram now
    ending in `build → human merge`, and the exact commands to drive it.
 
 ## Constraints
 
 - No changes to `rails-ensure.sh`, `scout.cjs`, `generate-spec.cjs`,
   `check-spec.sh` (bug fixes only, noted in NOTES).
-- All new state files gitignored via `.pipeline/.gitignore` (add `builds/`,
+- All new state files gitignored via `docs/pipeline/.gitignore` (add `builds/`,
   `builds.json` — task files under `builds/` are runtime artifacts).
 - The runner never runs `git merge` or `git push` — human merge is the boundary.
 
 ## Acceptance
 
-- `bash .pipeline/bin/build-queue-test.sh` passes (recorded in NOTES).
-- `bash .pipeline/bin/build-queue.sh` with an empty queue prints a sensible
+- `bash docs/pipeline/bin/build-queue-test.sh` passes (recorded in NOTES).
+- `bash docs/pipeline/bin/build-queue.sh` with an empty queue prints a sensible
   "queue is empty" message, exit 0.
 - NOTES + sentinel, then the commit above.

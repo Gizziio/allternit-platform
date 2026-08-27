@@ -33,7 +33,7 @@ These directories are legitimate root-level exceptions that should remain:
 - `.allternit/` - Agent workspace (root exception)
 - `.logs/` - Log files (root exception)
 - `.references/` - External references (root exception)
-- `.shared/` - Shared agent artifacts (root exception)
+- `docs/design/` - Shared agent artifacts (root exception)
 
 ### 🗂️ Need Classification (Non-Canonical Directories)
 - `agent/` → Should likely go to workspace/agent/ or remain as root exception

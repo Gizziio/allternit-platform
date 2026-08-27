@@ -25,27 +25,27 @@ format, then generate from structure, not prose.
      EARS-ish form: `WHEN <trigger>, THE SYSTEM SHALL <observable behavior>`
    The LLM path (callKimi) and the TODO(agent) fallback both emit this exact
    structure. Update scout-test.cjs fixtures accordingly.
-2. **`.pipeline/bin/generate-spec.cjs`** (Node CJS, no LLM calls, built-ins only):
-   - Reads a brief path (arg) or all unprocessed briefs in `.pipeline/briefs/`.
+2. **`docs/pipeline/bin/generate-spec.cjs`** (Node CJS, no LLM calls, built-ins only):
+   - Reads a brief path (arg) or all unprocessed briefs in `docs/pipeline/briefs/`.
    - Parses the structured sections (strict: a brief missing `Requirements seed`
      or with bullets not matching the WHEN/SHALL shape is rejected with a clear
      error naming the brief and the offending line).
-   - Emits `.pipeline/specs/<slug>.md` in the OpenSpec-profile layout mirroring
+   - Emits `docs/pipeline/specs/<slug>.md` in the OpenSpec-profile layout mirroring
      `.steering/spec.md`: Context (from What it is + source URL), Requirements
      (numbered R1..Rn from the seed bullets, verbatim), Out of scope
      (boilerplate + anything the brief marks as excluded), Acceptance (one
      Gherkin scenario per requirement, mechanically expanded: Given <trigger
      context>, When <trigger>, Then <observable behavior>).
    - Idempotent: regenerating from an unchanged brief overwrites the same spec
-     file; a `.pipeline/specs/.generated.json` manifest maps slug → brief hash.
+     file; a `docs/pipeline/specs/.generated.json` manifest maps slug → brief hash.
    - Deterministic: same brief in → byte-identical spec out (the test must
      prove this by running twice and diffing).
-3. **`.pipeline/bin/generate-spec-test.cjs`**: fixture briefs (valid + two
+3. **`docs/pipeline/bin/generate-spec-test.cjs`**: fixture briefs (valid + two
    malformed) → assert: valid brief produces spec with all seed requirements
    present and EARS form preserved; malformed briefs rejected with the right
    error lines; byte-identical regeneration; manifest updated. PASS/FAIL lines,
-   non-zero on FAIL. Must pass: `node .pipeline/bin/generate-spec-test.cjs`.
-4. Update `.pipeline/README.md` (phase 2 section) and the scout README example.
+   non-zero on FAIL. Must pass: `node docs/pipeline/bin/generate-spec-test.cjs`.
+4. Update `docs/pipeline/README.md` (phase 2 section) and the scout README example.
 
 ## Constraints
 
@@ -57,6 +57,6 @@ format, then generate from structure, not prose.
 ## Acceptance
 
 - Generator tests pass (recorded in NOTES).
-- One real brief from `.pipeline/briefs/` (any Phase 1 template brief) converts
+- One real brief from `docs/pipeline/briefs/` (any Phase 1 template brief) converts
   to a spec that the steering reviewer can gap-analyze.
 - NOTES with frontmatter + sentinel, then the commit above.

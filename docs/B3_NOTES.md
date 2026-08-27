@@ -1,15 +1,15 @@
 ---
 status: done
 files_changed:
-  - .pipeline/bin/check-spec.sh
-  - .pipeline/bin/build-queue.sh
-  - .pipeline/bin/record-outcome.sh
-  - .pipeline/bin/generate-spec.cjs
-  - .pipeline/bin/check-spec-test.sh
-  - .pipeline/bin/build-queue-test.sh
-  - .pipeline/bin/generate-spec-test.cjs
-  - .pipeline/bin/taste-test.sh
-  - .pipeline/README.md
+  - docs/pipeline/bin/check-spec.sh
+  - docs/pipeline/bin/build-queue.sh
+  - docs/pipeline/bin/record-outcome.sh
+  - docs/pipeline/bin/generate-spec.cjs
+  - docs/pipeline/bin/check-spec-test.sh
+  - docs/pipeline/bin/build-queue-test.sh
+  - docs/pipeline/bin/generate-spec-test.cjs
+  - docs/pipeline/bin/taste-test.sh
+  - docs/pipeline/README.md
   - .steering/checkpoint.md
   - docs/B3_NOTES.md
 tests_green: true

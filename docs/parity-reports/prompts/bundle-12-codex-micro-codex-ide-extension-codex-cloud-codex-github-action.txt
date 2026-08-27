@@ -1,0 +1,55 @@
+You are a technical documentation writer working in `/Users/joe/Desktop/allternit-parity-workspace` on branch `parity/swarm-sprint`.
+
+Read the task spec at `docs/parity-reports/TASK_SPEC.md` for context.
+
+Your assignment: create Allternit parity documentation for the following OpenAI ChatGPT/Codex handoff categories:
+
+Codex Micro, Codex IDE extension, Codex cloud, Codex GitHub Action
+
+The unchecked items for these categories are listed below. For each item, research whether Allternit has an equivalent capability by reading the codebase and existing docs (e.g., `cmd/allternit-api/src/`, `cmd/gizzi-code/`, `packages/@allternit/`, `sdk/allternit-sdk/`, `docs/public/`). Then create one docs page per category:
+
+- docs/public/parity/codex-micro.md
+- docs/public/parity/codex-ide-extension.md
+- docs/public/parity/codex-cloud.md
+- docs/public/parity/codex-github-action.md
+
+Each page should:
+- Briefly explain the original ChatGPT/Codex concept.
+- Map it to the equivalent Allternit feature, config, CLI command, API endpoint, tool, or workflow.
+- Include concrete examples (TOML config, curl, CLI commands) where applicable.
+- If a concept has no Allternit equivalent and is not applicable to the self-host/BYOC model, document it as "Not applicable / roadmap" and explain why.
+
+Do NOT edit `/Users/joe/Desktop/allternit-parity-handoff.md`. Do NOT run `git commit` or other git mutations. Run `cargo check -p allternit-api` only if you change Rust code; docs-only changes do not need builds.
+
+When finished, write a report file `docs/parity-reports/codex-micro-codex-ide-extension-codex-cloud-codex-github-action.md` with YAML frontmatter containing `status`, `files_changed`, `items_covered`, `items_missing`, and `notes`, followed by prose.
+
+Here are the unchecked items to cover:
+
+### Category: Codex Micro (handoff lines 1271-1284)
+- [ ] [GAP] **Add more layers**
+- [ ] [GAP] **Adjust lighting**
+- [ ] [GAP] **Fix Input Monitoring on macOS**
+- [ ] [GAP] **Fix connection interference**
+- [ ] [GAP] **Get a compatible Micro**
+- [ ] [GAP] **Get more Work Louder help**
+- [ ] [GAP] **Pair with Bluetooth**
+- [ ] [GAP] **Read and switch chats with Agent Keys**
+- [ ] [GAP] **Set up Codex Micro**
+- [ ] [GAP] **Use and customize Command Keys**
+- [ ] [GAP] **Use the analog stick and dial**
+
+### Category: Codex IDE extension (handoff lines 1266-1270)
+- [ ] [GAP] **Build with the context already in your editor**
+- [ ] [GAP] **See what Codex can do in your IDE**
+
+### Category: Codex cloud (handoff lines 1448-1452)
+- [ ] [GAP] **Run coding tasks in parallel cloud environments**
+- [ ] [GAP] **Start here**
+
+### Category: Codex GitHub Action (handoff lines 1258-1265)
+- [ ] [GAP] **Capture outputs**
+- [ ] [GAP] **Example workflow**
+- [ ] [GAP] **Manage privileges**
+- [ ] [GAP] **Prerequisites**
+- [ ] [GAP] **Security checklist**
+

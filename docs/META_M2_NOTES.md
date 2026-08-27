@@ -1,20 +1,20 @@
 ---
 status: done
 files_changed:
-  - .pipeline/bin/learn-reflect.sh
-  - .pipeline/bin/audit-proposal.sh
-  - .pipeline/bin/proposals-test.sh
-  - .pipeline/bin/learn-test.sh
-  - .pipeline/learn/reflect-prompt.md
-  - .pipeline/proposal-rubric.md
-  - .pipeline/.gitignore
-  - .pipeline/README.md
+  - docs/pipeline/bin/learn-reflect.sh
+  - docs/pipeline/bin/audit-proposal.sh
+  - docs/pipeline/bin/proposals-test.sh
+  - docs/pipeline/bin/learn-test.sh
+  - docs/pipeline/learn/reflect-prompt.md
+  - docs/pipeline/proposal-rubric.md
+  - docs/pipeline/.gitignore
+  - docs/pipeline/README.md
   - .steering/checkpoint.md
   - docs/META_M2_NOTES.md
 tests_green: true
 deviations:
   - "R1 same-kind counting is done on the rule's provenance refs (the `kind:` prefixes of `kind:refs@ts`), not by re-scanning events.jsonl — the provenance IS the distilled evidence, so counting it is deterministic and test-shimmable. Threshold: max same-kind count >= 3."
-  - "Proposal fm `kind` (data|code) is COMPUTED from target_artifact (allowlist: .steering/prompt.md, .pipeline/playbook.md, .pipeline/*-rubric.md = data; everything else = code), never taken from the consult — a consult can steer the target via an optional `PROPOSAL | <target> | <summary>` line (+ fenced block) in the reflection answer, but it cannot reclassify it."
+  - "Proposal fm `kind` (data|code) is COMPUTED from target_artifact (allowlist: .steering/prompt.md, docs/pipeline/playbook.md, docs/pipeline/*-rubric.md = data; everything else = code), never taken from the consult — a consult can steer the target via an optional `PROPOSAL | <target> | <summary>` line (+ fenced block) in the reflection answer, but it cannot reclassify it."
   - "Data-target application is APPEND-ONLY: the proposal's fenced Proposed-change block lands under an `<!-- adopted from proposal <slug> (<date>) -->` marker. Full-file rewrites and diff application are deliberately unsupported (reversibility + minimal blast radius; the marker doubles as the idempotency key)."
   - "REVISE re-audit is hash-gated: the verdict records the reviewed content's sha256 (findings appended BEFORE hashing, or the append itself would loop the re-audit), and a REVISE proposal is only re-audited after its content actually changes — the same pattern as the steering checkpoint hash."
   - "R4 outcome linkage is written directly to outcomes.jsonl as outcome `adopted` (not via record-outcome.sh, which validates merged|reverted|rejected|failed and would need a new outcome class + a memory-ingest decision for proposals)."
@@ -32,22 +32,22 @@ remaining:
 
 - The reflection parser now counts each rule's provenance refs by kind
   (`kind:refs@ts` prefix); max same-kind count >= 3 marks the playbook line
-  with `upgrade_candidate: true` and writes `.pipeline/proposals/<slug>.md`:
+  with `upgrade_candidate: true` and writes `docs/pipeline/proposals/<slug>.md`:
   frontmatter `schema_version`, `produced_by/at`, `status: pending`,
   `target_artifact`, `kind` (computed data|code), `evidence_kind`,
   `evidence_event_ids` (dashed list); body with an Evidence section and the
   proposed change as a fenced block.
-- The reflect prompt (`.pipeline/learn/reflect-prompt.md`) documents an
+- The reflect prompt (`docs/pipeline/learn/reflect-prompt.md`) documents an
   optional `PROPOSAL | <target> | <summary>` line (+ fenced block) paired
   with the preceding RULE so the consult can steer the target/content;
-  default is target `.pipeline/playbook.md` with the rule text as the
+  default is target `docs/pipeline/playbook.md` with the rule text as the
   change.
 
 ### R2 — the audit (audit-proposal.sh + proposal-rubric.md)
 
-- `.pipeline/proposal-rubric.md`: ADOPT/REVISE/REJECT instructions — evidence
+- `docs/pipeline/proposal-rubric.md`: ADOPT/REVISE/REJECT instructions — evidence
   support, minimal scope, charter conflict, target fit, reversibility.
-- `.pipeline/bin/audit-proposal.sh`: for each proposal without a final
+- `docs/pipeline/bin/audit-proposal.sh`: for each proposal without a final
   verdict, assembles rubric + charter + proposal, consults
   (`PROPOSAL_AUDIT_CMD` → `LEARN_CONSULT_CMD` → ao-consult), parses the first
   line bullet-tolerant/uppercase (check-spec convention), and records into
@@ -61,7 +61,7 @@ remaining:
 - Data targets (computed allowlist): append the fenced change under the
   adoption marker (idempotent — an existing marker skips re-application),
   `git add` target + proposal, commit `learn: adopt proposal <slug>`.
-- Code targets: emit `.pipeline/proposals/tasks/<slug>-TASK.md` (executor
+- Code targets: emit `docs/pipeline/proposals/tasks/<slug>-TASK.md` (executor
   conventions header + full proposal) and commit it as
   `learn: adopt proposal <slug> (task spec)` — code changes never happen
   here; they go through the full build pipeline.
@@ -70,7 +70,7 @@ remaining:
 ### R4 — outcome linkage
 
 - Every adoption appends `{ts, slug, outcome: "adopted", note: "commit
-  <short-ref>"}` to `.pipeline/outcomes.jsonl`.
+  <short-ref>"}` to `docs/pipeline/outcomes.jsonl`.
 
 ## Tests (all stubbed, no live calls)
 

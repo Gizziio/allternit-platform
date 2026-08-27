@@ -1,0 +1,144 @@
+You are a technical documentation writer working in `/Users/joe/Desktop/allternit-parity-workspace` on branch `parity/swarm-sprint`.
+
+Read the task spec at `docs/parity-reports/TASK_SPEC.md` for context.
+
+Your assignment: create Allternit parity documentation for the following OpenAI ChatGPT/Codex handoff categories:
+
+codex-manual-part3
+
+The unchecked items for these categories are listed below. For each item, research whether Allternit has an equivalent capability by reading the codebase and existing docs (e.g., `cmd/allternit-api/src/`, `cmd/gizzi-code/`, `packages/@allternit/`, `sdk/allternit-sdk/`, `docs/public/`). Then create one docs page per category:
+
+- docs/public/parity/codex-manual-part3.md
+
+Each page should:
+- Briefly explain the original ChatGPT/Codex concept.
+- Map it to the equivalent Allternit feature, config, CLI command, API endpoint, tool, or workflow.
+- Include concrete examples (TOML config, curl, CLI commands) where applicable.
+- If a concept has no Allternit equivalent and is not applicable to the self-host/BYOC model, document it as "Not applicable / roadmap" and explain why.
+
+Do NOT edit `/Users/joe/Desktop/allternit-parity-handoff.md`. Do NOT run `git commit` or other git mutations. Run `cargo check -p allternit-api` only if you change Rust code; docs-only changes do not need builds.
+
+When finished, write a report file `docs/parity-reports/codex-manual-part3.md` with YAML frontmatter containing `status`, `files_changed`, `items_covered`, `items_missing`, and `notes`, followed by prose.
+
+Here are the unchecked items to cover:
+
+### Category: codex-manual-part3 (handoff lines 2529-2646)
+- [ ] [GAP] **Track Windows onboarding acknowledgement (Windows only). Default: false**
+- [ ] [GAP] **Treat a directory as the project root when it contains any of these markers.**
+- [ ] [GAP] **Triage a backlog**
+- [ ] [GAP] **TypeScript**
+- [ ] [GAP] **UI guidelines**
+- [ ] [GAP] **UI, Notifications, and Misc**
+- [ ] [GAP] **UI, Notifications, and Misc (tables)**
+- [ ] [GAP] **URI scheme for clickable citations: vscode (default) | vscode-insiders | windsurf | cursor | none**
+- [ ] [GAP] **Use Codex in Linear**
+- [ ] [GAP] **Use Codex in Slack**
+- [ ] [GAP] **Use [] to unbind an action.**
+- [ ] [GAP] **Use a custom name such as "workspace" only when you also define [permissions.workspace].**
+- [ ] [GAP] **Use the Codex Security workbench**
+- [ ] [GAP] **Visualizations**
+- [ ] [GAP] **Web search mode: disabled | cached | indexed | live. Default: "cached"**
+- [ ] [GAP] **What's new**
+- [ ] [GAP] **When notifications fire: unfocused (default) | always**
+- [ ] [GAP] **When to ask for command approval:**
+- [ ] [GAP] **Where to persist CLI login credentials: file (default) | keyring | auto**
+- [ ] [GAP] **Who reviews eligible approval prompts: user (default) | auto_review**
+- [ ] [GAP] **Windows app**
+- [ ] [GAP] **Windows sandbox**
+- [ ] [GAP] **Working directory for resumed or forked sessions: current | session.**
+- [ ] [GAP] **Workspace analytics**
+- [ ] [GAP] **Workspace model availability**
+- [ ] [GAP] **Worktrees**
+- [ ] [GAP] **Write vulnerability reports**
+- [ ] [GAP] **You can also add custom .tmTheme files under $CODEX_HOME/themes.**
+- [ ] [GAP] **["model-with-reasoning", "context-remaining", "current-dir"].**
+- [ ] [GAP] **["spinner", "project"]. Set to [] to clear the title.**
+- [ ] [GAP] **[[hooks.PreToolUse.hooks]]**
+- [ ] [GAP] **[[hooks.PreToolUse]]**
+- [ ] [GAP] **[_default] applies to all apps unless overridden per app.**
+- [ ] [GAP] **[agents.reviewer]**
+- [ ] [GAP] **[apps._default]**
+- [ ] [GAP] **[apps.google_drive.tools."files/delete"]**
+- [ ] [GAP] **[apps.google_drive]**
+- [ ] [GAP] **[features.code_mode]**
+- [ ] [GAP] **[features.network_proxy]**
+- [ ] [GAP] **[features.rollout_budget]**
+- [ ] [GAP] **[mcp_servers.docs]**
+- [ ] [GAP] **[mcp_servers.github]**
+- [ ] [GAP] **[otel.exporter."otlp-http".headers]**
+- [ ] [GAP] **[otel.exporter."otlp-http".tls]**
+- [ ] [GAP] **[otel.exporter."otlp-http"]**
+- [ ] [GAP] **[otel.trace_exporter."otlp-grpc"]**
+- [ ] [GAP] **[permissions.workspace.filesystem]**
+- [ ] [GAP] **[permissions.workspace.network.domains]**
+- [ ] [GAP] **[permissions.workspace.network.unix_sockets]**
+- [ ] [GAP] **[permissions.workspace.network]**
+- [ ] [GAP] **[permissions.workspace.workspace_roots]**
+- [ ] [GAP] **[projects."/absolute/path/to/project"]**
+- [ ] [GAP] **[tool_suggest]**
+- [ ] [GAP] **[tui.keymap.chat]**
+- [ ] [GAP] **[tui.keymap.composer]**
+- [ ] [GAP] **[tui.keymap.global]**
+- [ ] [GAP] **[tui.model_availability_nux]**
+- [ ] [GAP] **`:workspace_roots` filesystem rules.**
+- [ ] [GAP] **`allow_local_binding = false` blocks loopback and private destinations by default.**
+- [ ] [GAP] **admin_url = "http://127.0.0.1:43129"**
+- [ ] [GAP] **allow_local_binding = false**
+- [ ] [GAP] **allow_upstream_proxy = false**
+- [ ] [GAP] **alternate_screen = "auto"**
+- [ ] [GAP] **and task-progress.**
+- [ ] [GAP] **approval_mode = "approve"**
+- [ ] [GAP] **approvals_reviewer = "user"**
+- [ ] [GAP] **apps = true**
+- [ ] [GAP] **args = ["--port", "4000"] # optional**
+- [ ] [GAP] **background_terminal_max_timeout = 300000 # ms; max empty write_stdin poll window (default 5m)**
+- [ ] [GAP] **base_url = "http://localhost:11434/v1"**
+- [ ] [GAP] **base_url = "https://YOUR_PROJECT_NAME.openai.azure.com/openai"**
+- [ ] [GAP] **base_url = "https://proxy.example.com/v1"**
+- [ ] [GAP] **base_url = "https://us.api.openai.com/v1" # example with 'us' domain prefix**
+- [ ] [GAP] **bearer_token_env_var = "GITHUB_TOKEN" # optional; Authorization: Bearer**
+- [ ] [GAP] **behaviors, recommended examples, and concise explanations. Adjust as needed.**
+- [ ] [GAP] **ca-certificate = "certs/otel-ca.pem"**
+- [ ] [GAP] **cached returns pre-indexed results; indexed gates external web access through**
+- [ ] [GAP] **cached serves results from a web search cache (an OpenAI-maintained index).**
+- [ ] [GAP] **client-certificate = "/etc/codex/certs/client.pem"**
+- [ ] [GAP] **client-private-key = "/etc/codex/certs/client-key.pem"**
+- [ ] [GAP] **command = "/usr/local/bin/fetch-codex-token"**
+- [ ] [GAP] **command = "docs-server" # required**
+- [ ] [GAP] **command = 'python3 "/absolute/path/to/pre_tool_use_policy.py"'**
+- [ ] [GAP] **compact_prompt = ""**
+- [ ] [GAP] **config_file = "./agents/reviewer.toml" # relative to the config.toml that defines it**
+- [ ] [GAP] **contain common tools, such as `/usr/bin`, to get work done, so grant access**
+- [ ] [GAP] **cwd = "/path/to/server" # optional working directory override**
+- [ ] [GAP] **dangerously_allow_all_unix_sockets = false**
+- [ ] [GAP] **dangerously_allow_non_loopback_admin = false**
+- [ ] [GAP] **dangerously_allow_non_loopback_proxy = false**
+- [ ] [GAP] **default, though you can deny access to them altogether, if desired.**
+- [ ] [GAP] **default_permissions = ":workspace"**
+- [ ] [GAP] **default_tools_approval_mode = "auto" # auto | prompt | writes | approve**
+- [ ] [GAP] **default_tools_approval_mode = "prompt" # auto | prompt | writes | approve**
+- [ ] [GAP] **default_tools_enabled = true**
+- [ ] [GAP] **description = "Find correctness, security, and test risks in code."**
+- [ ] [GAP] **destructive_enabled = false # block destructive-hint tools for this app**
+- [ ] [GAP] **destructive_enabled = true**
+- [ ] [GAP] **developer_instructions = ""**
+- [ ] [GAP] **direct_only_tool_namespaces = ["mcp__history"]**
+- [ ] [GAP] **disable_on_external_context = false # legacy alias: no_memories_if_mcp_or_web_search**
+- [ ] [GAP] **disabled_tools = [**
+- [ ] [GAP] **disabled_tools = ["delete_issue"] # optional deny-list**
+- [ ] [GAP] **disabled_tools = ["slow-tool"] # optional deny-list (applied after allow-list)**
+- [ ] [GAP] **discoverables = [**
+- [ ] [GAP] **domains = { "api.openai.com" = "allow", "example.com" = "deny" }**
+- [ ] [GAP] **enable_request_compression = true**
+- [ ] [GAP] **enable_socks5 = false**
+- [ ] [GAP] **enable_socks5_udp = false**
+- [ ] [GAP] **enabled = false**
+- [ ] [GAP] **enabled = true**
+- [ ] [GAP] **enabled = true # optional; default true**
+- [ ] [GAP] **enabled_tools = ["list_issues"] # optional allow-list**
+- [ ] [GAP] **enabled_tools = ["search", "summarize"] # optional allow-list**
+- [ ] [GAP] **endpoint = "https://otel.example.com/v1/logs"**
+- [ ] [GAP] **endpoint = "https://otel.example.com:4317"**
+- [ ] [GAP] **env = { "API_KEY" = "value" } # optional key/value pairs copied as-is**
+- [ ] [GAP] **env_http_headers = { "X-Auth" = "AUTH_ENV" } # optional headers populated from env vars**
+

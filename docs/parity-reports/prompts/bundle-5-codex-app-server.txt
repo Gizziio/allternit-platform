@@ -1,0 +1,83 @@
+You are a technical documentation writer working in `/Users/joe/Desktop/allternit-parity-workspace` on branch `parity/swarm-sprint`.
+
+Read the task spec at `docs/parity-reports/TASK_SPEC.md` for context.
+
+Your assignment: create Allternit parity documentation for the following OpenAI ChatGPT/Codex handoff categories:
+
+Codex App Server
+
+The unchecked items for these categories are listed below. For each item, research whether Allternit has an equivalent capability by reading the codebase and existing docs (e.g., `cmd/allternit-api/src/`, `cmd/gizzi-code/`, `packages/@allternit/`, `sdk/allternit-sdk/`, `docs/public/`). Then create one docs page per category:
+
+- docs/public/parity/codex-app-server.md
+
+Each page should:
+- Briefly explain the original ChatGPT/Codex concept.
+- Map it to the equivalent Allternit feature, config, CLI command, API endpoint, tool, or workflow.
+- Include concrete examples (TOML config, curl, CLI commands) where applicable.
+- If a concept has no Allternit equivalent and is not applicable to the self-host/BYOC model, document it as "Not applicable / roadmap" and explain why.
+
+Do NOT edit `/Users/joe/Desktop/allternit-parity-handoff.md`. Do NOT run `git commit` or other git mutations. Run `cargo check -p allternit-api` only if you change Rust code; docs-only changes do not need builds.
+
+When finished, write a report file `docs/parity-reports/codex-app-server.md` with YAML frontmatter containing `status`, `files_changed`, `items_covered`, `items_missing`, and `notes`, followed by prose.
+
+Here are the unchecked items to cover:
+
+### Category: Codex App Server (handoff lines 1194-1253)
+- [ ] [GAP] **3b) Log in with ChatGPT (device-code flow)**
+- [ ] [GAP] **3c) Log in with externally managed ChatGPT tokens (`chatgptAuthTokens`)**
+- [ ] [GAP] **API overview**
+- [ ] [GAP] **Approvals**
+- [ ] [GAP] **Apps (connectors)**
+- [ ] [GAP] **Archive a thread**
+- [ ] [GAP] **Auth endpoints**
+- [ ] [GAP] **Authentication modes**
+- [ ] [GAP] **Clean background terminals**
+- [ ] [GAP] **Command execution**
+- [ ] [GAP] **Command execution approvals**
+- [ ] [GAP] **Config RPC examples for app settings**
+- [ ] [GAP] **Core primitives**
+- [ ] [GAP] **Delete a thread**
+- [ ] [GAP] **Detect and import external agent config**
+- [ ] [GAP] **Dynamic tool calls (experimental)**
+- [ ] [GAP] **Errors**
+- [ ] [GAP] **Experimental API opt-in**
+- [ ] [GAP] **File change approvals**
+- [ ] [GAP] **Fuzzy file search events (experimental)**
+- [ ] [GAP] **Getting started**
+- [ ] [GAP] **Initialization**
+- [ ] [GAP] **Inject items into a thread**
+- [ ] [GAP] **Inspect an execution environment (experimental)**
+- [ ] [GAP] **Interrupt a turn**
+- [ ] [GAP] **Item deltas**
+- [ ] [GAP] **Lifecycle overview**
+- [ ] [GAP] **List experimental features (`experimentalFeature/list`)**
+- [ ] [GAP] **List loaded threads**
+- [ ] [GAP] **List models (`model/list`)**
+- [ ] [GAP] **List thread turns**
+- [ ] [GAP] **List threads (with pagination & filters)**
+- [ ] [GAP] **MCP server elicitation requests**
+- [ ] [GAP] **MCP tool-call approvals (apps)**
+- [ ] [GAP] **Manage a thread goal**
+- [ ] [GAP] **Notification opt-out**
+- [ ] [GAP] **Permission requests**
+- [ ] [GAP] **Process execution**
+- [ ] [GAP] **Protocol**
+- [ ] [GAP] **Read a stored thread (without resuming)**
+- [ ] [GAP] **Read admin requirements (`configRequirements/read`)**
+- [ ] [GAP] **Roll back recent turns**
+- [ ] [GAP] **Run a thread shell command**
+- [ ] [GAP] **Sandbox read access (`ReadOnlyAccess`)**
+- [ ] [GAP] **Start a turn**
+- [ ] [GAP] **Start a turn (invoke a skill)**
+- [ ] [GAP] **Start or resume a thread**
+- [ ] [GAP] **Steer an active turn**
+- [ ] [GAP] **Track thread status changes**
+- [ ] [GAP] **Trigger thread compaction**
+- [ ] [GAP] **Turn events**
+- [ ] [GAP] **Unarchive a thread**
+- [ ] [GAP] **Unsubscribe from a loaded thread**
+- [ ] [GAP] **Update stored thread metadata**
+- [ ] [GAP] **Warning events**
+- [ ] [GAP] **Windows sandbox setup (`windowsSandbox/setupStart`)**
+- [ ] [GAP] **Windows sandbox setup events**
+

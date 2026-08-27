@@ -1,5 +1,32 @@
 # Steering checkpoint
 
+## Repo hygiene follow-up — open items (2026-08-27)
+
+### Goal
+Resolve the three open items left after the initial repo-hygiene pass: commit the untracked audit file, delete `.beads/`, and reorganize the remaining runtime-state/content dot-directories that were safe to move.
+
+### Just did
+- Created session worktree `allternit-session-repo-hygiene-followup` on branch `session/repo-hygiene-followup`.
+- Moved `.parity-reports/allternit-audit.md` → `docs/audit/allternit-audit.md` and committed it.
+- Deleted root `.beads/` (daemon state; will be recreated at runtime).
+- Moved `.pipeline/` → `docs/pipeline/`, `.parity-reports/` → `docs/parity-reports/`, `.shared/` → `docs/design/ui-ux-pro-max/`.
+- Updated references in `.steering/bin/steer-common.sh`, `.steering/checkpoint.md`, `REPO_STRUCTURE.md`, `docs/pipeline/**/*.md`, `docs/pipeline/bin/*.cjs`, `docs/parity-reports/**/*.md`, `docs/parity-reports/**/*.txt`, `docs/parity-reports/**/*.py`, `docs/parity-reports/**/*.sh`, and archive docs.
+- Left `.allternit/`, `.gizzi/`, and `.steering/` at root because live code and `AGENTS.md` hardcode those paths.
+
+### Verification
+- `git status --short` shows only intended deletions, renames, and metadata updates.
+- `cargo check -p allternit-api`: passes (pre-existing warnings only).
+- No remaining `.pipeline/`, `.parity-reports/`, or `.shared/` references outside the moved directories, agent-ledger, and code defaults.
+
+### Next
+1. Commit the follow-up changes on `session/repo-hygiene-followup`.
+2. Merge into local `main`.
+3. Update agent ledger and clean up the session worktree.
+
+### Open questions
+- The `.parity-reports/` scripts still reference the external `/Users/joe/Desktop/allternit-parity-workspace/` with absolute paths. Should those be made relative or migrated to the main repo layout?
+- `.allternit/`, `.gizzi/`, `.steering/` remain at root; a future pass could make their paths configurable instead of hardcoded.
+
 ## Repo hygiene & root-level reorganization (2026-08-27)
 
 ### Goal
@@ -26,7 +53,7 @@ Audit the `allternit` monorepo, remove working-tree noise and improperly-linked 
 
 ### Open questions
 - Should the historical references in `docs/archive/` and `docs/Future_Blueprints/` to old `upstream/` / `marketing/` concepts be left as-is, or should they carry a deprecation note?
-- The `.parity-reports/allternit-audit.md` file is untracked in the main checkout; should it be committed under `docs/audit/` or kept as a working artifact?
+- The `.parity-reports/allternit-audit.md` file was untracked; moved to `docs/audit/allternit-audit.md` and committed.
 
 ## Hermes floating chat HUD port — completion (2026-08-26)
 

@@ -60,16 +60,31 @@ Inside `docs/`:
 ```
 docs/
 ├── ...                       # Existing documentation hub
+├── audit/                    # Platform audit reports
+├── design/
+│   └── ui-ux-pro-max/        # UI/UX reference data and scripts (was .shared/)
 ├── marketing/                # Brand/marketing templates and README
+├── parity-reports/           # Competitive parity reports (was .parity-reports/)
+├── pipeline/                 # Pipeline program docs and helper scripts (was .pipeline/)
 ├── upstream/                 # Upstream fork provenance (sources.yaml)
 ├── learning/
 │   └── remix-content/        # Remix pipeline course content + plans/
 └── projects/                 # Ephemeral project trackers (e.g., remote-control-gap-fix)
 ```
 
+### Runtime-state directories that must stay at root
+
+The following dot-directories are hardcoded into live code or required by `AGENTS.md`. They stay at the repository root:
+
+| Directory | Why it stays |
+|-----------|--------------|
+| `.allternit/` | Runtime state: peers, WIHs, artifacts, context-packs. Referenced by `cmd/allternit-api/`, `surfaces/ai.allternit.com/`, `sdk/allternit-sdk/`, `domains/computer-use/`, `dev/scripts/`, and `AGENTS.md`. |
+| `.gizzi/` | gizzi-code runtime state and brand files. Referenced by `cmd/gizzi-code/src/runtime/context/config/config.ts` and tests. |
+| `.steering/` | Steering checkpoint + hook system. Required by `AGENTS.md`. |
+
 > Reorganized 2026-07-22: removed `plugins/` (empty; card plugins live in `archive/plugins/`, runtime in `platform/plugins/`), root `src/`, `data/`, `public/`, `proof/`, `output/`, `dispatch-screenshots/`, `Desktop/` (accidental commit), and merged `analysis/` → `docs/gap-analysis/`, `reports/` → `docs/reports/`, `alabs-demos/` → `alabs-generated-courses/demos/`, `remix-plans/` → `remix-content/plans/`, `agent/`/`templates/`/`alabs-curator/` → `archive/`.
 >
-> Reorganized 2026-08-27: removed improperly-linked nested worktrees (`allternit-session-grok-bot-0-18-integration`, `allternit-session-multica-runtime-align`) and scratch `.tmp-*` entries from the index; moved `marketing/`, `upstream/`, and `remix-content/` into `docs/`; moved ad-hoc root scripts into `scripts/audit/`.
+> Reorganized 2026-08-27: removed improperly-linked nested worktrees (`allternit-session-grok-bot-0-18-integration`, `allternit-session-multica-runtime-align`) and scratch `.tmp-*` entries from the index; deleted `.beads/`; moved `marketing/`, `upstream/`, `remix-content/`, `.pipeline/`, `.parity-reports/`, and `.shared/` into `docs/`; moved ad-hoc root scripts into `scripts/audit/`.
 
 ## Satellite Repos
 

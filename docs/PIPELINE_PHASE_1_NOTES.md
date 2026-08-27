@@ -1,11 +1,11 @@
 ---
 status: done
 files_changed:
-  - .pipeline/bin/rails-ensure.sh
-  - .pipeline/bin/scout.cjs
-  - .pipeline/bin/scout-test.cjs
-  - .pipeline/.gitignore
-  - .pipeline/README.md
+  - docs/pipeline/bin/rails-ensure.sh
+  - docs/pipeline/bin/scout.cjs
+  - docs/pipeline/bin/scout-test.cjs
+  - docs/pipeline/.gitignore
+  - docs/pipeline/README.md
   - .steering/checkpoint.md
   - .steering/spec.md
   - docs/PIPELINE_PHASE_1_NOTES.md
@@ -37,32 +37,32 @@ remaining:
 
 ## What was built
 
-- `.pipeline/bin/rails-ensure.sh` (R0): probes `GET localhost:8013/health`
+- `docs/pipeline/bin/rails-ensure.sh` (R0): probes `GET localhost:8013/health`
   then a real probe POST to `/api/rails/mail/share` on thread
   `wih:pipeline-probe`. Success → `rails: OK`, exit 0. Port free or health
   failing → starts `dev/scripts/start-api.sh` (repo root via
   `git rev-parse --show-toplevel`), re-probes in a 2s loop up to 60s. Port
   held but probe rejected → exact blocker message to stderr, exit 1. Uses
   `localhost` (not 127.0.0.1) for the Host-header auth bypass. No fallback.
-- `.pipeline/bin/scout.cjs` (R1–R4): runs rails-ensure first (abort non-zero
+- `docs/pipeline/bin/scout.cjs` (R1–R4): runs rails-ensure first (abort non-zero
   on failure, before any brief). Calls `fetchAllSources()` from
   `.github/scripts/lib/pipeline.cjs` with `includeXCurated/includeBluesky/
   includeMastodon: false` (flags exist); twitter has no flag, so items with
   source ∈ {twitter, x, bluesky, mastodon} are post-filtered out of
   `.filtered`. Selection: dedup filter first (skip slugs already in
-  `.pipeline/seen.json`), then cap — top 5 by relevance score among unseen
+  `docs/pipeline/seen.json`), then cap — top 5 by relevance score among unseen
   items (drains the backlog across runs, never re-briefs). Writes
-  `.pipeline/briefs/<slug>.md` (sections: What it is / How it works
+  `docs/pipeline/briefs/<slug>.md` (sections: What it is / How it works
   internally / Candidate integration surface in this repo; via `callKimi()`
   when available, else TODO(agent) template), appends each slug to seen.json
   (persisted per brief), announces each brief to `wih:pipeline-discovery`
   with the absolute brief path as `asset_ref`. Announce failure → append to
-  `.pipeline/errors.log`, exit non-zero (R4). Slugs: lowercase alnum+dash,
+  `docs/pipeline/errors.log`, exit non-zero (R4). Slugs: lowercase alnum+dash,
   ≤60 chars, sha1(url)[:8] suffix on collision.
-- `.pipeline/.gitignore` (C3): `briefs/ specs/ queue/ seen.json errors.log`.
-- `.pipeline/README.md`: pipeline overview, run/test instructions, rails
+- `docs/pipeline/.gitignore` (C3): `briefs/ specs/ queue/ seen.json errors.log`.
+- `docs/pipeline/README.md`: pipeline overview, run/test instructions, rails
   dependency, phase roadmap.
-- `.pipeline/bin/scout-test.cjs`: fully offline (stubbed fetchAllSources via
+- `docs/pipeline/bin/scout-test.cjs`: fully offline (stubbed fetchAllSources via
   `SCOUT_PIPELINE_MODULE`, stubbed ensure via `SCOUT_RAILS_ENSURE`, captured
   announcements via `SCOUT_ANNOUNCER`). 20 checks, all PASS.
 
@@ -73,7 +73,7 @@ No changes to `.github/scripts/lib/pipeline.cjs`. Node built-ins only.
 ### Stubbed test (Gherkin scenarios a/b/c)
 
 ```
-$ node .pipeline/bin/scout-test.cjs
+$ node docs/pipeline/bin/scout-test.cjs
 PASS: (a) scout exits 0 on fresh run
 PASS: (a) exactly 5 briefs written
 PASS: (a) seen.json lists 5 slugs
@@ -101,7 +101,7 @@ All checks passed.
 ### rails-ensure, free port, no binary (real run)
 
 ```
-$ bash .pipeline/bin/rails-ensure.sh; echo "exit=$?"
+$ bash docs/pipeline/bin/rails-ensure.sh; echo "exit=$?"
 rails: probe rejected; starting dev API via dev/scripts/start-api.sh
 [start-api] Binary not found at .../target/debug/allternit-api
 [start-api] Run 'cargo build --bin allternit-api' from the workspace root first.
@@ -112,7 +112,7 @@ exit=1
 ### rails-ensure happy path (mock rails on 8013, accepts writes)
 
 ```
-$ bash .pipeline/bin/rails-ensure.sh; echo "exit=$?"
+$ bash docs/pipeline/bin/rails-ensure.sh; echo "exit=$?"
 rails: OK
 exit=0
 ```
@@ -120,7 +120,7 @@ exit=0
 ### rails-ensure blocker path (mock: health 200, share POST 401)
 
 ```
-$ bash .pipeline/bin/rails-ensure.sh; echo "exit=$?"
+$ bash docs/pipeline/bin/rails-ensure.sh; echo "exit=$?"
 rails: port 8013 held by an instance that rejects pipeline writes — run `make stop && make api` or stop the packaged app
 exit=1
 ```
@@ -130,7 +130,7 @@ exit=1
 Mock accepted the probe thread but returned 500 for `wih:pipeline-discovery`:
 
 ```
-$ SCOUT_DIR=/tmp/scout-live/state SCOUT_PIPELINE_MODULE=/tmp/scout-live/fixture.cjs node .pipeline/bin/scout.cjs; echo "exit=$?"
+$ SCOUT_DIR=/tmp/scout-live/state SCOUT_PIPELINE_MODULE=/tmp/scout-live/fixture.cjs node docs/pipeline/bin/scout.cjs; echo "exit=$?"
 rails: OK
 scout: brief written /tmp/scout-live/state/briefs/live-test-alpha.md
 scout: rails announcement failed for "live-test-alpha" — recorded in /tmp/scout-live/state/errors.log; aborting

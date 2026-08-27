@@ -1,0 +1,65 @@
+You are a technical documentation writer working in `/Users/joe/Desktop/allternit-parity-workspace` on branch `parity/swarm-sprint`.
+
+Read the task spec at `docs/parity-reports/TASK_SPEC.md` for context.
+
+Your assignment: create Allternit parity documentation for the following OpenAI ChatGPT/Codex handoff categories:
+
+Codex Security plugin changelog
+
+The unchecked items for these categories are listed below. For each item, research whether Allternit has an equivalent capability by reading the codebase and existing docs (e.g., `cmd/allternit-api/src/`, `cmd/gizzi-code/`, `packages/@allternit/`, `sdk/allternit-sdk/`, `docs/public/`). Then create one docs page per category:
+
+- docs/public/parity/codex-security-plugin-changelog.md
+
+Each page should:
+- Briefly explain the original ChatGPT/Codex concept.
+- Map it to the equivalent Allternit feature, config, CLI command, API endpoint, tool, or workflow.
+- Include concrete examples (TOML config, curl, CLI commands) where applicable.
+- If a concept has no Allternit equivalent and is not applicable to the self-host/BYOC model, document it as "Not applicable / roadmap" and explain why.
+
+Do NOT edit `/Users/joe/Desktop/allternit-parity-handoff.md`. Do NOT run `git commit` or other git mutations. Run `cargo check -p allternit-api` only if you change Rust code; docs-only changes do not need builds.
+
+When finished, write a report file `docs/parity-reports/codex-security-plugin-changelog.md` with YAML frontmatter containing `status`, `files_changed`, `items_covered`, `items_missing`, and `notes`, followed by prose.
+
+Here are the unchecked items to cover:
+
+### Category: Codex Security plugin changelog (handoff lines 1400-1441)
+- [ ] [GAP] **0.1.10 (June 23, 2026)**
+- [ ] [GAP] **0.1.11 (July 10, 2026)**
+- [ ] [GAP] **0.1.12 (July 23, 2026)**
+- [ ] [GAP] **0.1.13 (July 25, 2026)**
+- [ ] [GAP] **0.1.14 (July 28, 2026)**
+- [ ] [GAP] **0.1.15 (July 30, 2026)**
+- [ ] [GAP] **0.1.16 (August 4, 2026)**
+- [ ] [GAP] **0.1.17 (August 5, 2026)**
+- [ ] [GAP] **0.1.7 (June 4, 2026)**
+- [ ] [GAP] **0.1.9 (June 18, 2026)**
+- [ ] [GAP] **Apply repository guidance and coverage consistently**
+- [ ] [GAP] **Configure scans with fewer interruptions**
+- [ ] [GAP] **Define repository security policy**
+- [ ] [GAP] **Export portable, verifiable results**
+- [ ] [GAP] **Export results for existing security workflows**
+- [ ] [GAP] **Follow scan progress as it happens**
+- [ ] [GAP] **Give feedback and recover findings**
+- [ ] [GAP] **Handle more repository layouts and paths**
+- [ ] [GAP] **Improve Jira and Linear ticket intake**
+- [ ] [GAP] **Keep scan guidance and repository targets accurate**
+- [ ] [GAP] **Keep scans accurate as projects change**
+- [ ] [GAP] **Produce detailed finding and hardening reports**
+- [ ] [GAP] **Reduce unnecessary scan work**
+- [ ] [GAP] **Resume interrupted deep scans**
+- [ ] [GAP] **Review and remediate validated findings**
+- [ ] [GAP] **Review and rerun previous scans**
+- [ ] [GAP] **Review findings across more environments**
+- [ ] [GAP] **Review findings before tracking them**
+- [ ] [GAP] **Review scan history and recurring findings**
+- [ ] [GAP] **Run deeper scans with clearer progress**
+- [ ] [GAP] **Run deeper scans with consistent results**
+- [ ] [GAP] **Run evidence-backed security reviews**
+- [ ] [GAP] **Run reporting workflows directly**
+- [ ] [GAP] **Run scans with less setup**
+- [ ] [GAP] **Run standard scans with a simpler workflow**
+- [ ] [GAP] **Start and complete scans with less overhead**
+- [ ] [GAP] **Track measured scan usage**
+- [ ] [GAP] **Triage and track existing findings**
+- [ ] [GAP] **Write clearer vulnerability reports**
+

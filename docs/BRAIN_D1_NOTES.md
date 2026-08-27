@@ -13,8 +13,8 @@ files_changed:
   - cmd/gizzi-code/src/cli/ui/ink-app/utils/settings/types.ts
   - cmd/gizzi-code/test/cli/brain.test.ts
   - cmd/gizzi-code/AGENTS.md
-  - .pipeline/bin/wiki-ingest.sh
-  - .pipeline/bin/taste-ingest.sh
+  - docs/pipeline/bin/wiki-ingest.sh
+  - docs/pipeline/bin/taste-ingest.sh
   - docs/BRAIN_D1_NOTES.md
 tests_green: true
 deviations:
@@ -60,7 +60,7 @@ remaining:
      MEMORY.md explains to agents what the brain is, how to read it
      (identity → domains → decisions/runbooks/ideas), and how to write.
      The consumption half of R3 lives in the pipeline: both ingest scripts
-     (`.pipeline/bin/wiki-ingest.sh`, `.pipeline/bin/taste-ingest.sh`)
+     (`docs/pipeline/bin/wiki-ingest.sh`, `docs/pipeline/bin/taste-ingest.sh`)
      resolve the brain path as `$TASTE_BRAIN` → gizzi settings `brain.path`
      → `~/brain` (when it exists) → legacy `~/Desktop/allternit-brain`
      fallback, so a brain created by `gizzi brain init` is ingested with no
@@ -118,8 +118,8 @@ Ran 11 tests across 1 file. [2.23s]
 Pipeline suites after the D1-R3 ingestion bridge (both green):
 
 ```
-$ bash .pipeline/bin/wiki-test.sh    → All checks passed. (exit 0)
-$ bash .pipeline/bin/taste-test.sh   → All checks passed. (exit 0)
+$ bash docs/pipeline/bin/wiki-test.sh    → All checks passed. (exit 0)
+$ bash docs/pipeline/bin/taste-test.sh   → All checks passed. (exit 0)
 ```
 
 Brain-path resolution verified directly against `resolve_brain` extracted

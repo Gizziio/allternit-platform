@@ -1,10 +1,10 @@
 ---
 status: done
 files_changed:
-  - .pipeline/bin/build-queue.sh        # new: queue consumption runner (Phase 4)
-  - .pipeline/bin/build-queue-test.sh   # new: offline PATH-shim test (50 checks)
-  - .pipeline/README.md                 # Phase 4 section, full-cycle diagram, commands, testing/layout
-  - .pipeline/.gitignore                # added builds/ and builds.json
+  - docs/pipeline/bin/build-queue.sh        # new: queue consumption runner (Phase 4)
+  - docs/pipeline/bin/build-queue-test.sh   # new: offline PATH-shim test (50 checks)
+  - docs/pipeline/README.md                 # Phase 4 section, full-cycle diagram, commands, testing/layout
+  - docs/pipeline/.gitignore                # added builds/ and builds.json
   - .steering/checkpoint.md             # steering checkpoint for this phase
   - .steering/spec.md                   # R1-R10 + acceptance for Phase 4 (gate requirement)
   - docs/PIPELINE_PHASE_4_NOTES.md      # this file
@@ -14,7 +14,7 @@ deviations:
     with an empty queue side-effect-free (exit 0, 'queue is empty'), which
     the acceptance criteria require; the spec's 'rails-ensure first' is
     honored on every path that can spawn or announce."
-  - "The task file is generated under .pipeline/builds/ in the main repo and
+  - "The task file is generated under docs/pipeline/builds/ in the main repo and
     then copied into the ao worktree after spawn, because builds/ and queue/
     are gitignored and therefore absent from a fresh worktree; the spec
     content travels embedded in the task file itself."
@@ -39,15 +39,15 @@ remaining:
 
 ## What was built
 
-`.pipeline/bin/build-queue.sh` consumes `.pipeline/queue/` (READY specs):
+`docs/pipeline/bin/build-queue.sh` consumes `docs/pipeline/queue/` (READY specs):
 
 - `build-queue.sh` (no args) lists queue contents with builds.json status;
   empty queue prints "queue is empty" and exits 0.
 - `--all` or explicit slugs: runs `rails-ensure.sh` first (aborts non-zero
   on failure, before any spawn), then per slug — skipping anything already
-  `building`/`built` (and announced) in `.pipeline/builds.json` (python3
+  `building`/`built` (and announced) in `docs/pipeline/builds.json` (python3
   JSON helpers, same style as `check-spec.sh`):
-  1. Generates `.pipeline/builds/<slug>-TASK.md`: executor-conventions
+  1. Generates `docs/pipeline/builds/<slug>-TASK.md`: executor-conventions
      header (checkpoint updates, authoritative `[steering]`, NOTES with YAML
      frontmatter + `.sentinel`, single commit naming the slug, no merge/push)
      followed by the full spec content.
@@ -96,7 +96,7 @@ in this revision:
 
 ## Verification
 
-- `bash .pipeline/bin/build-queue-test.sh` — **all 50 checks PASS**
+- `bash docs/pipeline/bin/build-queue-test.sh` — **all 50 checks PASS**
   (rails-ensure abort before spawn; task file contains spec content +
   executor conventions; spawn/send/watch called with `build-<slug>` session
   names and the right paths; `built` recorded with timestamp; rails
@@ -109,5 +109,5 @@ in this revision:
   `announced: false` + stashed asset_ref/note + errors.log, and the retry
   run re-announces WITHOUT re-spawning then flips `announced` to true;
   `--all`; empty-queue exit 0 + message in both list and `--all` modes).
-- `bash .pipeline/bin/build-queue.sh` with an empty queue — prints
+- `bash docs/pipeline/bin/build-queue.sh` with an empty queue — prints
   "build-queue: queue is empty — nothing to build", exit 0.

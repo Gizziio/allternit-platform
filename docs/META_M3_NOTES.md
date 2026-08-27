@@ -1,17 +1,17 @@
 ---
 status: done
 files_changed:
-  - .pipeline/bin/brain-resolve.sh
-  - .pipeline/bin/learn-reflect.sh
-  - .pipeline/bin/learn-test.sh
-  - .pipeline/bin/taste-ingest.sh
-  - .pipeline/bin/wiki-ingest.sh
-  - .pipeline/README.md
+  - docs/pipeline/bin/brain-resolve.sh
+  - docs/pipeline/bin/learn-reflect.sh
+  - docs/pipeline/bin/learn-test.sh
+  - docs/pipeline/bin/taste-ingest.sh
+  - docs/pipeline/bin/wiki-ingest.sh
+  - docs/pipeline/README.md
   - .steering/checkpoint.md
   - docs/META_M3_NOTES.md
 tests_green: true
 deviations:
-  - "Brain resolution extraction (build map item 1): the resolve_brain logic was verbatim-duplicated in taste-ingest.sh and wiki-ingest.sh (24 lines each); it is now the executable .pipeline/bin/brain-resolve.sh (prints the resolved path, same TASTE_BRAIN → gizzi settings brain.path → ~/brain → legacy semantics), called via a BRAIN_RESOLVE override point. First attempt defaulted the helper path to $PIPELINE_DIR/bin/ — that broke taste/wiki tests (temp pipeline dirs have no bin/) and, inverted, would have let learn-test runs touch the operator's REAL brain. The default is now script-relative (committed code travels with the caller), and learn-test.sh exports TASTE_BRAIN to an unresolvable path globally, with per-scenario fixture overrides."
+  - "Brain resolution extraction (build map item 1): the resolve_brain logic was verbatim-duplicated in taste-ingest.sh and wiki-ingest.sh (24 lines each); it is now the executable docs/pipeline/bin/brain-resolve.sh (prints the resolved path, same TASTE_BRAIN → gizzi settings brain.path → ~/brain → legacy semantics), called via a BRAIN_RESOLVE override point. First attempt defaulted the helper path to $PIPELINE_DIR/bin/ — that broke taste/wiki tests (temp pipeline dirs have no bin/) and, inverted, would have let learn-test runs touch the operator's REAL brain. The default is now script-relative (committed code travels with the caller), and learn-test.sh exports TASTE_BRAIN to an unresolvable path globally, with per-scenario fixture overrides."
   - "R2 stale flip is driven by the brain page's own last_confirmed frontmatter (not playbook frontmatter as the build map parenthetically suggested): on every learn-reflect invocation — aging is time-based, so it also runs on no-new-events runs — learnings/*.md pages with status: active and last_confirmed 90+ days old flip to status: stale, in place, frontmatter-only. The playbook's inline last_confirmed remains the consult-side marker (M1-R4); the brain page is the persistence-side one."
   - "R3 commit message: the spec says `learn: <rule slug>`, the build map says `learn: <n> rules (<date>)` or the first slug. Implemented: 1 rule → `learn: <slug>`; n>1 → `learn: <n> rules (<date>)`; stale-flips-only → `learn: stale flips (<date>)`. Always exactly one commit per run covering new pages AND flips (add -- learnings only)."
   - "Re-distilled rule (same slug already in the brain): the page is refreshed (text/confidence/provenance) but keeps its original added / last_confirmed / status — re-distillation is not confirmation, so it must not reset the aging clock."
@@ -27,7 +27,7 @@ remaining:
 
 ### Shared brain resolution (build map item 1)
 
-- New executable `.pipeline/bin/brain-resolve.sh`: prints the resolved brain
+- New executable `docs/pipeline/bin/brain-resolve.sh`: prints the resolved brain
   path (`TASTE_BRAIN` → gizzi settings `brain.path` → `~/brain` → legacy
   `~/Desktop/allternit-brain`), extracted verbatim from the duplicated
   `resolve_brain` in `taste-ingest.sh` and `wiki-ingest.sh`. Both scripts now

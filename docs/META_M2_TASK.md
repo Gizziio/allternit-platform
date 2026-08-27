@@ -12,13 +12,13 @@ workflow: checkpoints, [steering] authoritative, NOTES + sentinel, then
    3+ same-kind events → upgrade_candidate flag + proposal file. Proposal
    format: frontmatter (target_artifact, kind, evidence_event_ids) + body
    (proposed change as a fenced diff or full replacement section).
-2. `.pipeline/proposal-rubric.md` + `.pipeline/bin/audit-proposal.sh`:
+2. `docs/pipeline/proposal-rubric.md` + `docs/pipeline/bin/audit-proposal.sh`:
    consult via LEARN_CONSULT_CMD/ao-consult; verdicts ADOPT/REVISE/REJECT
    (first line, bullet-tolerant like steer_verdict); verdicts.json with
    MERGE semantics (B3 lesson).
-3. Adopt path: data-file targets (.steering/prompt.md, .pipeline/*-rubric.md,
+3. Adopt path: data-file targets (.steering/prompt.md, docs/pipeline/*-rubric.md,
    playbook.md) applied by the script with the proposal slug in the commit
-   message; code targets emit a task spec file to .pipeline/proposals/
+   message; code targets emit a task spec file to docs/pipeline/proposals/
    tasks/ for a future executor (no auto-code-changes).
 4. outcomes.jsonl linkage on adopt.
 5. Tests (extend learn-test.sh or proposals-test.sh): same-kind counting

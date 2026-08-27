@@ -11,7 +11,7 @@ workflow: checkpoints, [steering] authoritative, NOTES + sentinel, then
 1. Extend learn-reflect.sh (M1): after playbook.md update, persist each new
    rule as brain/learnings/<slug>.md (slug from rule title). Reuse the
    brain resolution logic — extract it from taste-ingest.sh into a shared
-   helper if duplication exceeds a few lines (.pipeline/bin/brain-resolve.sh)
+   helper if duplication exceeds a few lines (docs/pipeline/bin/brain-resolve.sh)
    and convert taste-ingest/wiki-ingest to it.
 2. Stale flipping: track last_confirmed per rule (playbook frontmatter);
    on each run, rules unconfirmed 90+ days get status: stale in their page.

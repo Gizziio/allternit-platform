@@ -42,11 +42,11 @@ steer_build_context() {
     printf '\n=== EVIDENCE: git diff HEAD (first 16KB) ===\n'
     git -C "$cwd" diff HEAD 2>/dev/null | head -c 16384
     # M1-R3: learned playbook rules (advisory, 4KB-capped, [stale] at 90+ days).
-    if [ -x "$cwd/.pipeline/bin/learn-playbook.sh" ]; then
+    if [ -x "$cwd/docs/pipeline/bin/learn-playbook.sh" ]; then
       local playbook
-      playbook=$("$cwd/.pipeline/bin/learn-playbook.sh" "$cwd/.pipeline/playbook.md" 2>/dev/null)
+      playbook=$("$cwd/docs/pipeline/bin/learn-playbook.sh" "$cwd/docs/pipeline/playbook.md" 2>/dev/null)
       if [ -n "$(printf '%s' "$playbook" | tr -d '[:space:]')" ]; then
-        printf '\n\n=== LEARNED PLAYBOOK (.pipeline/playbook.md — advisory rules) ===\n%s\n' "$playbook"
+        printf '\n\n=== LEARNED PLAYBOOK (docs/pipeline/playbook.md — advisory rules) ===\n%s\n' "$playbook"
       fi
     fi
     if [ -f "$dir/test-command" ]; then
@@ -105,7 +105,7 @@ steer_log() {
 # steer_learn <cwd> <kind> <refs> <summary> — M1-R1 learning capture. Advisory:
 # missing helper or capture failure can never affect a verdict.
 steer_learn() {
-  local helper="$1/.pipeline/bin/learn-event.sh"
+  local helper="$1/docs/pipeline/bin/learn-event.sh"
   [ -x "$helper" ] || return 0
-  LEARN_PIPELINE_DIR="$1/.pipeline" "$helper" "$2" "$3" "$4" >/dev/null 2>&1 || true
+  LEARN_PIPELINE_DIR="$1/docs/pipeline" "$helper" "$2" "$3" "$4" >/dev/null 2>&1 || true
 }

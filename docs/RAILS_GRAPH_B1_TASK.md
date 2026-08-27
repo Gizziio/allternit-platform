@@ -2,7 +2,7 @@
 
 You are the executor. `.steering/spec.md` (Phase B1: R1–R3 + Gherkin acceptance)
 is the source of truth for WHAT — read it first. Also read the builder-trap
-warning in `.pipeline/TRACK-B-rails-graph.md` (top of file): the analytics
+warning in `docs/pipeline/TRACK-B-rails-graph.md` (top of file): the analytics
 operate on the TICKET dependency graph (`rails/src/dependencies.rs`,
 `DependencyGraph`), NOT `rails/src/work/graph.rs` (a different, out-of-scope
 system with deceptively similar function names).

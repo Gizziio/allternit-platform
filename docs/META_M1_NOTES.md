@@ -1,17 +1,17 @@
 ---
 status: done
 files_changed:
-  - .pipeline/bin/learn-event.sh
-  - .pipeline/bin/learn-playbook.sh
-  - .pipeline/bin/learn-reflect.sh
-  - .pipeline/bin/learn-test.sh
-  - .pipeline/learn/reflect-prompt.md
-  - .pipeline/bin/check-spec.sh
-  - .pipeline/bin/build-queue.sh
-  - .pipeline/bin/record-outcome.sh
-  - .pipeline/bin/dismiss.sh
-  - .pipeline/.gitignore
-  - .pipeline/README.md
+  - docs/pipeline/bin/learn-event.sh
+  - docs/pipeline/bin/learn-playbook.sh
+  - docs/pipeline/bin/learn-reflect.sh
+  - docs/pipeline/bin/learn-test.sh
+  - docs/pipeline/learn/reflect-prompt.md
+  - docs/pipeline/bin/check-spec.sh
+  - docs/pipeline/bin/build-queue.sh
+  - docs/pipeline/bin/record-outcome.sh
+  - docs/pipeline/bin/dismiss.sh
+  - docs/pipeline/.gitignore
+  - docs/pipeline/README.md
   - .steering/bin/steer-common.sh
   - .steering/bin/steer-stop.sh
   - .steering/bin/steer-pre-commit-gate.sh
@@ -35,9 +35,9 @@ remaining:
 
 ### R1 — capture at the moment (learn-event.sh + hook points)
 
-- New shared helper `.pipeline/bin/learn-event.sh <kind> <refs> <summary>`:
+- New shared helper `docs/pipeline/bin/learn-event.sh <kind> <refs> <summary>`:
   appends `{ts, kind, refs, summary}` as one JSON line to
-  `.pipeline/learn/events.jsonl` (gitignored). Inputs sanitized (whitespace
+  `docs/pipeline/learn/events.jsonl` (gitignored). Inputs sanitized (whitespace
   collapsed, kind/refs/summary capped at 40/300/500 chars), directory created
   on demand, `LEARN_PIPELINE_DIR` override for tests (same pattern as
   `TASTE_PIPELINE_DIR`).
@@ -57,12 +57,12 @@ remaining:
 
 ### R2 — reflection at completion (learn-reflect.sh + reflect-prompt.md)
 
-- `.pipeline/bin/learn-reflect.sh`: reads events since the watermark
-  (line count in `.pipeline/learn/watermark`), assembles
-  `.pipeline/learn/reflect-prompt.md` + the new events, consults ao-consult
+- `docs/pipeline/bin/learn-reflect.sh`: reads events since the watermark
+  (line count in `docs/pipeline/learn/watermark`), assembles
+  `docs/pipeline/learn/reflect-prompt.md` + the new events, consults ao-consult
   (`LEARN_CONSULT_CMD` override, same pattern as `SPEC_CHECK_CMD`), parses
   `RULE | text | confidence | provenance` lines from the answer, and appends
-  them to `.pipeline/playbook.md` with `added`/`last_confirmed` dates.
+  them to `docs/pipeline/playbook.md` with `added`/`last_confirmed` dates.
 - Advisory: empty/failed consult → errors.log entry, watermark NOT advanced,
   exit 0. Success advances the watermark even when zero rules distill.
 - Offered at the end of `check-spec.sh` and `build-queue.sh` runs
@@ -70,7 +70,7 @@ remaining:
 
 ### R3 — playbook reaches every consult (learn-playbook.sh)
 
-- New `.pipeline/bin/learn-playbook.sh [path]`: prints the playbook for
+- New `docs/pipeline/bin/learn-playbook.sh [path]`: prints the playbook for
   inclusion — 4KB-capped, exit 0 + empty output when absent.
 - `steer-common.sh steer_build_context`: a `=== LEARNED PLAYBOOK ===` section
   follows the spec/checkpoint evidence (steering + gate consults).
@@ -109,5 +109,5 @@ worktree-guard-test.
 - bash + python3 only; no new dependencies; memory stays advisory.
 - No verdict/gate behavior altered — every capture/reflection call is
   additive, `[ -x ]`-guarded, and `|| true`.
-- `.pipeline/.gitignore`: `learn/events.jsonl` + `learn/watermark` ignored;
+- `docs/pipeline/.gitignore`: `learn/events.jsonl` + `learn/watermark` ignored;
   `playbook.md` and `learn/reflect-prompt.md` committed.

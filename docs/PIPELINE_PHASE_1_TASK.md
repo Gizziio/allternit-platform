@@ -19,7 +19,7 @@ source of truth for WHAT. This file is the HOW. Do not start Phase 2 work
 
 ## Build these files
 
-1. `.pipeline/bin/rails-ensure.sh` (bash, `set -uo pipefail`):
+1. `docs/pipeline/bin/rails-ensure.sh` (bash, `set -uo pipefail`):
    - Probe: `curl -sf --max-time 5 http://localhost:8013/health`, then a REAL
      probe POST to `http://localhost:8013/api/rails/mail/share` with
      `{"thread":"wih:pipeline-probe","asset_ref":"/tmp/pipeline-probe","note":"probe"}`
@@ -34,14 +34,14 @@ source of truth for WHAT. This file is the HOW. Do not start Phase 2 work
      blocker to stderr ("rails: port 8013 held by an instance that rejects
      pipeline writes — run `make stop && make api` or stop the packaged app")
      and exit 1. NO fallback, NO skip.
-2. `.pipeline/bin/scout.cjs` (Node CJS, runs with `node .pipeline/bin/scout.cjs`):
+2. `docs/pipeline/bin/scout.cjs` (Node CJS, runs with `node docs/pipeline/bin/scout.cjs`):
    - Requires `.github/scripts/lib/pipeline.cjs` (check its `module.exports`
      first and use what it actually exports).
    - Runs `rails-ensure.sh` first; aborts non-zero if it fails (R1).
    - Calls `fetchAllSources()` with social sources disabled where option flags
      exist (check the function signature; if flags don't exist, filter out
      twitter/x/bluesky/mastodon items after the fetch). Uses `.filtered`.
-   - Loads `.pipeline/seen.json` (array of slugs; tolerate missing file).
+   - Loads `docs/pipeline/seen.json` (array of slugs; tolerate missing file).
    - Dedup filter first, then cap: top 5 by score among unseen items.
    - For each selected item, generates a mechanism brief: use the repo's
      existing `callKimi()` from pipeline.cjs if exported, else a plain HTTPS
@@ -49,20 +49,20 @@ source of truth for WHAT. This file is the HOW. Do not start Phase 2 work
      template with the item's title/url/score and a `TODO(agent)` body marker
      instead, and note the deviation in NOTES. Brief sections: What it is /
      How it works internally / Candidate integration surface in this repo.
-   - Writes `.pipeline/briefs/<slug>.md`, appends slug to `seen.json`, announces
+   - Writes `docs/pipeline/briefs/<slug>.md`, appends slug to `seen.json`, announces
      each brief to `wih:pipeline-discovery` via
      `POST http://localhost:8013/api/rails/mail/share`
      `{"thread":"wih:pipeline-discovery","asset_ref":"<abs path to brief>","note":"<title>"}`.
    - Announcement failure after a successful ensure: append to
-     `.pipeline/errors.log`, exit non-zero (R4).
+     `docs/pipeline/errors.log`, exit non-zero (R4).
    - Slug: lowercase alnum+dash from the item title, max 60 chars, dedupe by
      appending short hash if collision.
-3. `.pipeline/.gitignore`: `briefs/`, `specs/`, `queue/`, `seen.json`,
+3. `docs/pipeline/.gitignore`: `briefs/`, `specs/`, `queue/`, `seen.json`,
    `errors.log` (C3).
-4. `.pipeline/README.md`: what the pipeline is, how to run the scout
-   (`node .pipeline/bin/scout.cjs`), rails dependency (`rails-ensure.sh`,
+4. `docs/pipeline/README.md`: what the pipeline is, how to run the scout
+   (`node docs/pipeline/bin/scout.cjs`), rails dependency (`rails-ensure.sh`,
    `make api`), the phase roadmap (2: generator, 3: spec-checker+queue).
-5. `.pipeline/bin/scout-test.cjs`: a test that stubs the source fetch (DO NOT
+5. `docs/pipeline/bin/scout-test.cjs`: a test that stubs the source fetch (DO NOT
    hit the network — stub `fetchAllSources` via a local fixture or a
    dependency-injected module path) and verifies the three Gherkin scenarios
    from `.steering/spec.md` that are testable offline: (a) 8 items → exactly 5
@@ -78,7 +78,7 @@ source of truth for WHAT. This file is the HOW. Do not start Phase 2 work
 - No builds, no cargo, no test suites beyond scout-test.cjs.
 - No changes to `.github/scripts/lib/pipeline.cjs` itself.
 - Node built-ins only for scout.cjs (no new npm deps).
-- Run `node .pipeline/bin/scout-test.cjs` and record PASS output in NOTES.
+- Run `node docs/pipeline/bin/scout-test.cjs` and record PASS output in NOTES.
 
 ## Acceptance
 
