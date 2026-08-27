@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { cn } from "@/lib/utils";
 import { AgentModeBackdrop } from "../agentModeSurfaceTheme";
 import type { AgentModeSurface } from "@/stores/agent-surface-mode.store";
 
@@ -9,6 +10,7 @@ interface ChatBackgroundProps {
   mode: 'chat' | 'cowork' | 'code';
   effectiveAgentModeEnabled: boolean;
   agentSurface: AgentModeSurface;
+  hudMode?: boolean;
   children: React.ReactNode;
 }
 
@@ -17,6 +19,7 @@ export const ChatBackground: React.FC<ChatBackgroundProps> = ({
   mode,
   effectiveAgentModeEnabled,
   agentSurface,
+  hudMode = false,
   children,
 }) => {
   const getEmbeddedChatBackground = () => {
@@ -34,7 +37,7 @@ export const ChatBackground: React.FC<ChatBackgroundProps> = ({
 
   return (
     <div 
-      className="flex flex-col h-full w-full relative overflow-hidden isolation-isolate"
+      className={cn('flex flex-col w-full relative isolation-isolate', hudMode ? 'h-auto' : 'h-full overflow-hidden')}
       style={{
         background: getEmbeddedChatBackground(),
         boxShadow: getEmbeddedChatBoxShadow(),

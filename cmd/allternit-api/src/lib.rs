@@ -79,6 +79,7 @@ pub mod h5i_routes;
 pub mod har_api_routes;
 pub mod har_api_service;
 pub mod health;
+pub mod hud_routes;
 pub mod idempotency;
 pub mod inbox_routes;
 pub mod internal_auth;

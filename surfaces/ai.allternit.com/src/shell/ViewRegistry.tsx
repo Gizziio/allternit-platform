@@ -17,6 +17,7 @@ import {
 } from './ShellFallbacks';
 import { createViewRegistry } from '../views/registry';
 import type { ViewContext, ViewType } from '../nav/nav.types';
+import { HudShell } from './hud/HudShell';
 import { useCoworkSessionStore } from '../views/cowork/CoworkSessionStore';
 import type { AppMode } from './ShellHeader';
 import type { CanonicalAgentModeId } from '@/lib/agents/agent-mode-contracts';
@@ -889,6 +890,11 @@ export function getShellViewRegistry(handlers: {
     'dispatch': ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Dispatch" />}>
         <DispatchView />
+      </ErrorBoundary>
+    ),
+    'hud': () => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="HUD" />}>
+        <HudShell />
       </ErrorBoundary>
     ),
   });

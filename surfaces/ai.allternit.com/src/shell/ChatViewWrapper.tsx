@@ -9,6 +9,8 @@ import { DataStreamProvider } from '../providers/data-stream-provider';
 import { MessageTreeProvider } from '../providers/message-tree-provider';
 import { PromptInputProvider } from '@/components/ai-elements/prompt-input';
 import { ModelSelectionProvider } from '../providers/model-selection-provider';
+import { ChatInputProvider } from '../providers/chat-input-provider';
+import { ChatModelsProvider } from '../providers/chat-models-provider';
 import { ErrorBoundary } from '../components/error-boundary';
 import { ChatErrorFallback } from './ShellFallbacks';
 import { useDefaultModelSelection } from '../hooks/use-default-model-selection';
@@ -26,6 +28,8 @@ const lazy = <T extends React.ComponentType<any>>(
 );
 
 type ChatViewProps = {
+  hideEmptyState?: boolean;
+  hudMode?: boolean;
   onOpenAgentSession?: (text: string, surface: AppMode, execution?: { modeId: CanonicalAgentModeId; templateTitle?: string }) => void;
   onStartBotSession?: (agent: Agent) => void;
 };
@@ -38,9 +42,13 @@ const ProjectView = lazy(() => import('../views/ProjectView'), 'ProjectView');
 export const ChatViewWrapper = React.memo(function ChatViewWrapper({
   onOpenAgentSession,
   onStartBotSession,
+  hideEmptyState = false,
+  hudMode = false,
 }: {
   onOpenAgentSession?: (text: string, surface: AppMode, execution?: { modeId: CanonicalAgentModeId; templateTitle?: string }) => void;
   onStartBotSession?: (agent: Agent) => void;
+  hideEmptyState?: boolean;
+  hudMode?: boolean;
 }): React.ReactNode {
   const { activeProjectId, activeThreadId } = useChatStore();
   const embeddedChatSessionId = useChatSessionStore(
@@ -91,9 +99,13 @@ export const ChatViewWrapper = React.memo(function ChatViewWrapper({
         <DataStreamProvider>
           <MessageTreeProvider>
             <PromptInputProvider>
-              <ModelSelectionProvider defaultSelection={defaultModelSelection}>
-                <ChatView key={effectiveChatId} onOpenAgentSession={onOpenAgentSession} onStartBotSession={onStartBotSession} />
-              </ModelSelectionProvider>
+              <ChatInputProvider>
+                <ChatModelsProvider>
+                  <ModelSelectionProvider defaultSelection={defaultModelSelection}>
+                    <ChatView key={effectiveChatId} hideEmptyState={hideEmptyState} hudMode={hudMode} onOpenAgentSession={onOpenAgentSession} onStartBotSession={onStartBotSession} />
+                  </ModelSelectionProvider>
+                </ChatModelsProvider>
+              </ChatInputProvider>
             </PromptInputProvider>
           </MessageTreeProvider>
         </DataStreamProvider>

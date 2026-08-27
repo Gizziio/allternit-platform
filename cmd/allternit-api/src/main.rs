@@ -69,6 +69,7 @@ use allternit_api::file_routes::file_router;
 use allternit_api::h5i_routes::h5i_router;
 use allternit_api::har_api_routes::har_api_router;
 use allternit_api::health::health_router;
+use allternit_api::hud_routes::hud_router;
 use allternit_api::idempotency::idempotency_middleware;
 use allternit_api::inbox_routes::inbox_router;
 use allternit_api::library_routes::library_router;
@@ -395,7 +396,8 @@ async fn main() {
         .merge(orchestrator_router())
         .merge(alabs_router())
         .merge(automation_router())
-        .merge(brain_router());
+        .merge(brain_router())
+        .merge(hud_router());
 
     // ── Protected routes (require authentication) ─────────────────────────────
     let protected = Router::new()

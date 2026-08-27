@@ -145,6 +145,18 @@ export default defineConfig({
   resolve: {
     alias: [
       { find: '@', replacement: path.resolve(__dirname, './src') },
+      // The workspace root can resolve React 19 (e.g. from framer-motion dev
+      // dependencies) while this surface pins React 18. Without explicit
+      // aliases, transitive workspace imports can pull in the root React
+      // instance alongside the surface's React 18, which breaks the hook
+      // dispatcher and produces "Cannot read properties of null (reading
+      // 'useState' / 'useContext')" crashes. Force every react/react-dom
+      // import to this surface's copy.
+      { find: /^react$/, replacement: path.resolve(__dirname, './node_modules/react/index.js') },
+      { find: /^react\/jsx-runtime$/, replacement: path.resolve(__dirname, './node_modules/react/jsx-runtime.js') },
+      { find: /^react\/jsx-dev-runtime$/, replacement: path.resolve(__dirname, './node_modules/react/jsx-dev-runtime.js') },
+      { find: /^react-dom$/, replacement: path.resolve(__dirname, './node_modules/react-dom/index.js') },
+      { find: /^react-dom\/client$/, replacement: path.resolve(__dirname, './node_modules/react-dom/client.js') },
       // Force Univer to use the same @univerjs/core@0.25.1 that
       // office-sheets-app depends on. The bare import and every subpath
       // (e.g. @univerjs/core/facade, @univerjs/core/lib/facade) must be

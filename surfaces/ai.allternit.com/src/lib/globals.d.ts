@@ -138,7 +138,35 @@ declare global {
       shell?: {
         openExternal: (url: string) => Promise<void>;
         openDesign: () => Promise<void>;
+        openHud: () => Promise<void>;
+        closeHud: () => Promise<void>;
+        toggleHud: () => Promise<void>;
+        moveHudBy?: (delta: { x: number; y: number; width: number; height: number }) => Promise<void>;
+        setHudBounds?: (bounds: { x?: number; y?: number; width?: number; height?: number }) => Promise<void>;
         openRemoteControl: (runtimeId?: string) => Promise<void>;
+        /** HUD mode: chrome-free floating composer bridge. */
+        hud?: {
+          open: () => Promise<void>;
+          close: () => Promise<void>;
+          toggle: () => Promise<void>;
+          setIgnoreMouse: (ignore: boolean) => void;
+          moveBy: (delta: { x: number; y: number; width: number; height: number }) => Promise<void>;
+          setBounds: (bounds: { x?: number; y?: number; width?: number; height?: number }) => Promise<void>;
+          resetLayout: () => Promise<{ ok: boolean }>;
+          setFrost: (showing: boolean) => Promise<{ ok: boolean }>;
+          setWorkspaceTransfer: (transferring: boolean) => void;
+          reportSession: (sessionId: string | null) => void;
+          onCursor: (callback: (point: { x: number; y: number } | null) => void) => () => void;
+          onGameOverlay: (callback: (state: unknown) => void) => () => void;
+          onGoto: (callback: (sessionId: string) => void) => () => void;
+          onChanged: (callback: (state: { open: boolean; sessionId: string | null }) => void) => () => void;
+          windowing: {
+            clientPlacement: boolean;
+            controlDrag: boolean;
+            nativeDrag: boolean;
+            workspaceTransfer: boolean;
+          };
+        };
         openSession: (options: { sessionId: string; workspaceId?: string; title?: string }) => Promise<void>;
         getOfficeHostStatus: () => Promise<Record<'word' | 'excel' | 'powerpoint', {
           installed: boolean;

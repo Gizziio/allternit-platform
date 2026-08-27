@@ -1177,10 +1177,12 @@ export namespace Config {
       auth_type: z.enum(["api_key", "none", "bearer", "subprocess"]).optional(),
       token: z.string().optional().describe("Bearer token for auth_type: bearer"),
       subprocess_cmd: z.string().optional().describe("CLI command for auth_type: subprocess, e.g. 'claude -p'"),
+      runtime: z.enum(["sdk", "subprocess", "auto"]).optional().describe("Execution runtime for this provider's models"),
       models: z
         .record(
           z.string(),
           ModelsDev.Model.partial().extend({
+            runtime: z.enum(["sdk", "subprocess", "auto"]).optional().describe("Execution runtime for this model"),
             variants: z
               .record(
                 z.string(),

@@ -67,6 +67,7 @@ export namespace SessionProcessor {
           input.fallbackModels ?? (cfg.routing?.fallbacks ?? []).map((entry: string) => Provider.parseModel(entry))
         const tried = new Set<string>([`${input.model.providerID}/${input.model.id}`])
         let fallbackIndex = 0
+        const rotationState = Provider.createRotationState()
         // Provider error categories that are never worth retrying on the same model (mirrors
         // the non-retryable classification in shared/util/provider-error.ts / SessionRetry).
         const nonRetryableFallbackReason = (error: ReturnType<typeof MessageV2.fromError>): string | undefined => {
@@ -77,6 +78,25 @@ export namespace SessionProcessor {
             return info.code
           }
           return undefined
+        }
+        const tryRotateAuth = async (): Promise<boolean> => {
+          if (streamInput.plan?.profileId) {
+            rotationState.triedProfileIds.add(streamInput.plan.profileId)
+          }
+          const rotated = await Provider.rotateAuth(
+            { providerID: input.model.providerID, modelID: input.model.id },
+            rotationState,
+          )
+          if (!rotated) return false
+          streamInput.plan = rotated
+          attempt = 0
+          log.info("rotating auth profile", {
+            sessionID: input.sessionID,
+            providerID: input.model.providerID,
+            modelID: input.model.id,
+            profileId: rotated.profileId,
+          })
+          return true
         }
         const switchToFallbackModel = async (reason: string): Promise<boolean> => {
           if (input.abort.aborted) return false
@@ -106,6 +126,7 @@ export namespace SessionProcessor {
             })
             input.model = next
             streamInput.model = next
+            streamInput.plan = await Provider.prepareAuth({ providerID: next.providerID, modelID: next.id })
             input.assistantMessage.providerID = next.providerID
             input.assistantMessage.modelID = next.id
             await Session.updateMessage(input.assistantMessage)
@@ -673,8 +694,9 @@ export namespace SessionProcessor {
             const retry = SessionRetry.retryable(error)
             if (retry !== undefined) {
               if (attempt >= retryMaxAttempts) {
-                // Same-model retries exhausted: continue with the next fallback model when a
-                // chain is configured instead of failing the session.
+                // Same-model retries exhausted: try the next auth profile, then the next
+                // fallback model when a chain is configured instead of failing the session.
+                if (await tryRotateAuth()) continue
                 if (
                   await switchToFallbackModel(
                     `${retry} (retry limit reached after ${attempt} attempt${attempt === 1 ? "" : "s"})`,
@@ -719,7 +741,9 @@ export namespace SessionProcessor {
             } else {
               // Non-retryable provider errors (auth, insufficient balance, unsupported model,
               // context overflow) skip straight to the next fallback model when a chain exists.
+              // Auth errors first try the next credential/profile for the same provider/model.
               const reason = nonRetryableFallbackReason(error)
+              if (reason === "auth" && (await tryRotateAuth())) continue
               if (reason !== undefined && (await switchToFallbackModel(reason))) continue
             }
             if (!input.assistantMessage.error) {

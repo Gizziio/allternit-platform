@@ -45,6 +45,7 @@ export namespace LLM {
     retries?: number
     toolChoice?: "auto" | "required" | "none"
     mode?: 'plan' | 'build'  // Execution mode for system prompt
+    plan?: Provider.AuthPlan
   }
 
   export type StreamOutput = StreamTextResult<ToolSet, any>
@@ -63,7 +64,7 @@ export namespace LLM {
       providerID: input.model.providerID,
     })
     const [language, cfg, provider, auth] = await Promise.all([
-      Provider.getLanguage(input.model),
+      Provider.getLanguage(input.model, input.plan),
       Config.get(),
       Provider.getProvider(input.model.providerID),
       Auth.get(input.model.providerID),

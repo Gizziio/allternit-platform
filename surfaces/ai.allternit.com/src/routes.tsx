@@ -103,7 +103,9 @@ export default function AppRoutes() {
     <Suspense fallback={<AppLoader />}>
       <Routes>
         <Route path="/" element={<HomePage />} />
+        <Route path="/hud" element={<ShellPage />} />
         <Route path="/shell" element={<ShellPage />} />
+        <Route path="/hud" element={<ShellPage />} />
         <Route path="/settings-preview" element={<SettingsPreviewPage />} />
         <Route path="/shell/sessions" element={<SessionsPage />} />
         <Route path="/shell/recents" element={<ShellPage />} />

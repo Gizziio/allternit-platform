@@ -1,15 +1,18 @@
 import React from "react";
 import { ChatComposer } from "@/views/chat/ChatComposer";
+import { cn } from "@/lib/utils";
 import { THEME } from "./ChatView.constants";
 import type { GizziEmotion, GizziAttention } from "@/components/ai-elements/GizziMascot";
 import type { AgentModeSurface } from "@/stores/agent-surface-mode.store";
 import type { CanonicalAgentModeId } from "@/lib/agents/agent-mode-contracts";
 import type { PluginMentionTarget } from "@/lib/mentions/use-mention-targets";
+import type { ModelSelection } from "@/components/model-picker";
 
 interface ChatBottomBarProps {
   mode: 'chat' | 'cowork' | 'code';
   isChatEmpty: boolean;
   hideEmptyState: boolean;
+  hudMode?: boolean;
   handleSend: (text: string) => void;
   onOpenAgentSession?: (text: string, surface: AgentModeSurface, execution?: { modeId: CanonicalAgentModeId; templateTitle?: string }) => void;
   agentSurface: AgentModeSurface;
@@ -24,12 +27,17 @@ interface ChatBottomBarProps {
   useMonolithLogo: boolean;
   pulseMascot: (emotion: GizziEmotion) => void;
   setLaunchMascotAttention: (attention: GizziAttention | null) => void;
+  selectedModel: string;
+  modelSelection?: ModelSelection | null;
+  startSelection: () => void;
+  selectModel: (selection: ModelSelection) => void;
 }
 
 export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
   mode,
   isChatEmpty,
   hideEmptyState,
+  hudMode = false,
   handleSend,
   onOpenAgentSession,
   agentSurface,
@@ -44,16 +52,26 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
   useMonolithLogo,
   pulseMascot,
   setLaunchMascotAttention,
+  selectedModel,
+  modelSelection,
+  startSelection,
+  selectModel,
 }) => {
-  if (!(mode === 'cowork' || !isChatEmpty || hideEmptyState)) return null;
+  if (!(mode === 'cowork' || !isChatEmpty || hideEmptyState || hudMode)) return null;
 
   return (
-    <div className="absolute bottom-0 left-0 right-0 w-full flex flex-col items-center pointer-events-none pb-[calc(0.75rem_+_env(safe-area-inset-bottom,0px))] z-40"
+    <div
+      className={cn(
+        'w-full flex flex-col items-center pointer-events-none z-40',
+        hudMode
+          ? 'relative shrink-0 px-3 pt-1 pb-2'
+          : 'absolute bottom-0 left-0 right-0 pb-[calc(0.75rem_+_env(safe-area-inset-bottom,0px))]'
+      )}
       style={{
-        background: hideEmptyState || mode === 'cowork' || mode === 'chat' ? 'transparent' : THEME.bgGradient,
+        background: hideEmptyState || mode === 'cowork' || mode === 'chat' || hudMode ? 'transparent' : THEME.bgGradient,
       }}
     >
-      <div className="w-full max-w-[760px] pointer-events-auto px-2 md:px-5 box-border">
+      <div className={cn('w-full pointer-events-auto box-border', hudMode ? 'max-w-none' : 'max-w-[760px] px-2 md:px-5')}>
         <ChatComposer
           onSend={handleSend}
           onAgentSend={onOpenAgentSession ? (text, execution) => onOpenAgentSession(text, agentSurface, execution) : undefined}
@@ -62,9 +80,15 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
           onPluginMentionChange={setPluginMention}
           isLoading={activeIsLoading}
           onStop={handleStop}
-          placeholder="Reply…"
+          selectedModel={selectedModel}
+          selectedModelDisplayName={modelSelection?.modelName || modelSelection?.modelId}
+          onOpenModelPicker={startSelection}
+          onSelectModel={selectModel}
+          placeholder={hudMode ? 'Push it further' : 'Reply…'}
           showTopActions={false}
           showModeToggle={false}
+          compact={hudMode}
+          hudMode={hudMode}
           agentModeSurface={agentSurface}
           topInfoBarContent={composerTopInfoBar}
           questionBarContent={composerQuestionBar}
@@ -73,10 +97,12 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
           onAttentionChange={useMonolithLogo ? undefined : setLaunchMascotAttention}
         />
       </div>
-      {/* Disclaimer */}
-      <div className="mt-2 text-[12px] text-[var(--ui-text-muted)] text-center pointer-events-auto">
-        Allternit is AI and can make mistakes. Please double-check responses.
-      </div>
+      {/* Disclaimer — hidden in chrome-free floating HUD where vertical space is at a premium */}
+      {!hideEmptyState && !hudMode && (
+        <div className="mt-2 text-[12px] text-[var(--ui-text-muted)] text-center pointer-events-auto">
+          Allternit is AI and can make mistakes. Please double-check responses.
+        </div>
+      )}
     </div>
   );
 };
