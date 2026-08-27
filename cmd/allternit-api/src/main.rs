@@ -49,6 +49,7 @@ use allternit_api::audit_log_routes::audit_log_router;
 use allternit_api::auth::auth_middleware;
 use allternit_api::automation_routes::automation_router;
 use allternit_api::backend_install_routes::backend_install_router;
+use allternit_api::bb::bb_router;
 use allternit_api::board_routes::board_router;
 use allternit_api::board_stream_routes::board_stream_router;
 use allternit_api::bot_desktop_routes::bot_desktop_router;
@@ -402,6 +403,7 @@ async fn main() {
     // ── Protected routes (require authentication) ─────────────────────────────
     let protected = Router::new()
         .nest("/api/v1", v1_routes)
+        .nest("/api/v1", bb_router())
         // The tool registry is also served under /api/v1 because the
         // web/desktop surface (`native-agent-api.ts`, `recording.store.ts`,
         // `tool-registry.store.ts`) calls `/api/v1/tools[/execute]`.

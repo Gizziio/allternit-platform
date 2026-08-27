@@ -1157,3 +1157,38 @@ Close the remaining production gaps in Remote Control: secure push notifications
 - Build the remote-control entry to confirm bundling (pre-existing top-level-await blocker in a vendored dep is unrelated).
 - Run full manual E2E: pair runtime → open PWA → trigger permission/question → receive push → approve/respond.
 - Merged to `main` at `2c21d67e3`.
+
+## bb platform audit + incremental parity scaffold — Phase 1 (2026-08-27)
+
+### Goal
+Audit the Allternit platform and bb (getbb.app), map bb's capabilities 1:1 into Allternit, and scaffold the integration using Option A (incremental parity).
+
+### Just did
+- Produced comprehensive read-only audits:
+  - `.parity-reports/allternit-audit.md`
+  - `/Users/joe/bb-fork-analysis/docs/allternit-mapping/bb-audit.md`
+  - `/Users/joe/bb-fork-analysis/docs/allternit-mapping/bb-data-model-deep-dive.md`
+  - `.parity-reports/allternit-api-schema-deep-dive.md`
+  - `.parity-reports/allternit-web-schema-deep-dive.md`
+  - `.parity-reports/bb-allternit-gap-spec.md`
+- Created a detailed 1:1 gap specification for core bb entities (projects, threads, environments, hosts, events).
+- Added Rust migration `cmd/allternit-api/migrations/V92__bb_core_entities.sql` with bb-compatible tables.
+- Implemented `cmd/allternit-api/src/bb/` module (models, contracts, db layer, Axum routes).
+- Mounted `/api/v1/bb/*` router in `cmd/allternit-api/src/main.rs`.
+- Updated web platform Drizzle schema (`schema-sqlite.ts`) with bb columns and `UserPreference` table.
+- Added web migration `0001_bb_web_entities.sql`.
+- Added `src/lib/agents/bb-sync.ts` and `src/views/bb/BBProjectView.tsx`.
+
+### Verification
+- `cargo check -p allternit-api`: clean (no bb-related errors).
+- `cargo build -p allternit-api`: clean build.
+
+### Blockers
+- Web surface `pnpm install` fails while building `better-sqlite3` against Node v26.5.0 (6 compile errors in native add-on). This prevents `pnpm exec tsc --noEmit` from running. The TypeScript scaffold is written but not yet typechecked.
+
+### Next
+1. Resolve better-sqlite3 native build (pin compatible version, use matching Node, or install prebuilt binary).
+2. Run `pnpm exec tsc --noEmit` in `surfaces/ai.allternit.com` and fix any bb-related type errors.
+3. Wire `bb` mode into `useUnifiedProjects` / `ProjectDetailRouter` / `ShellRail`.
+4. Add API tests for `/api/v1/bb/*` CRUD routes.
+5. Continue Phase 2: host runtime bridge, terminal integration, plugin SDK mapping.

@@ -81,6 +81,8 @@ export const project = sqliteTable("Project", {
   instructions: text("instructions").notNull().default(""),
   icon: text("icon").notNull().default("folder"),
   iconColor: text("iconColor").notNull().default("gray"),
+  mode: text("mode").notNull().default("chat"),
+  bbProjectId: text("bbProjectId"),
 });
 
 export const chat = sqliteTable("Chat", {
@@ -95,6 +97,8 @@ export const chat = sqliteTable("Chat", {
   isPinned: integer("isPinned", { mode: "boolean" }).notNull().default(false),
   projectId: text("projectId").references(() => project.id, { onDelete: "set null" }),
   kernelSessionId: text("kernelSessionId"),
+  bbProjectId: text("bbProjectId"),
+  bbThreadId: text("bbThreadId"),
 });
 
 export const message = sqliteTable("Message", {
@@ -213,6 +217,18 @@ export const certification = sqliteTable("Certification", {
   pk: primaryKey({ columns: [table.userId, table.courseCode] }),
 }));
 
+export const userPreference = sqliteTable("UserPreference", {
+  userId: text("userId")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  key: text("key").notNull(),
+  value: text("value").notNull().default(""),
+  scope: text("scope").notNull().default("global"),
+  updatedAt: integer("updatedAt", { mode: "timestamp" }).default(sql`(unixepoch())`).notNull(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.userId, table.key, table.scope] }),
+}));
+
 export const schema = { 
   user, 
   session, 
@@ -228,6 +244,7 @@ export const schema = {
   mcpConnector,
   kernelSession,
   certification,
+  userPreference,
 };
 
 // ============================================================================
