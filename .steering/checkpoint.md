@@ -1,6 +1,6 @@
 # Steering checkpoint
 
-## iOS bot parity Phase 2 integration complete, pending commit gate (2026-08-26)
+## iOS bot parity Phase 2 integration complete (2026-08-26)
 
 ### Goal
 Complete the event-ledger, runtime/web bridge, web bot-state, and native iOS
@@ -24,11 +24,10 @@ Phase 3.
   for all changed TS/TSX, unique-migration validation, and `git diff --check`.
   Focused Vitest execution could not start because this worktree's existing
   Vitest symlink targets a missing package; dependencies were not installed.
+- Committed the reviewed Phase 2 integration as `9dcd564d4`.
 
 ### Next
-1. Write the required Phase 2 notes and remove the completed scratch plan.
-2. Request steering commit-gate approval.
-3. Commit coherent changes and push `origin/session/ios-bot-parity`.
+1. Push `session/ios-bot-parity` to origin as the final Phase 2 action.
 
 ### Open questions
 - None.
