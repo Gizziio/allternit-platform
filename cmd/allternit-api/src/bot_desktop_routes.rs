@@ -11,7 +11,7 @@
 use axum::extract::{Extension, Path, Query, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::routing::{get, post};
+use axum::routing::{delete, get, post};
 use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -21,19 +21,26 @@ use tracing::{debug, info, warn};
 use crate::auth::AuthUser;
 use crate::AppState;
 use crate::{BotDesktopControlState, BotDesktopSession};
+use base64::{engine::general_purpose::STANDARD, Engine as _};
 use allternit_agent_system_rails::core::types::{Actor, ActorType, AllternitEvent, EventScope};
 use allternit_driver_interface::{
-    DesktopEndpoint, DesktopProtocol, DriverError, EnvironmentSpec, NetworkPolicy, PolicySpec,
-    ResourceSpec, SpawnSpec, TenantId,
+    DesktopEndpoint, DesktopProtocol, DriverError, EnvironmentSpec, ExecutionHandle, ExecutionId,
+    NetworkPolicy, PolicySpec, ResourceSpec, SpawnSpec, TenantId,
 };
 
 pub fn bot_desktop_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/bots/:bot_id/desktop", get(get_desktop_status))
+        .route("/bots/:bot_id/desktop", delete(destroy_desktop))
         .route("/bots/:bot_id/desktop/provision", post(provision_desktop))
         .route("/bots/:bot_id/desktop/observe", post(observe_desktop))
         .route("/bots/:bot_id/desktop/take-over", post(take_over_desktop))
         .route("/bots/:bot_id/desktop/hand-back", post(hand_back_desktop))
+        .route("/bots/:bot_id/desktop/start", post(start_desktop))
+        .route("/bots/:bot_id/desktop/stop", post(stop_desktop))
+        .route("/bots/:bot_id/desktop/pause", post(pause_desktop))
+        .route("/bots/:bot_id/desktop/resume", post(resume_desktop))
+        .route("/bots/:bot_id/desktop/screenshot", post(screenshot_desktop))
 }
 
 #[derive(Debug, Deserialize)]
@@ -49,6 +56,10 @@ pub struct DesktopStatusResponse {
     pub ws_url: Option<String>,
     pub protocol: String,
     pub sandbox_id: String,
+    pub provider: Option<String>,
+    pub host: Option<String>,
+    pub viewer_url: Option<String>,
+    pub last_error: Option<String>,
     pub taken_over_by_user_id: Option<String>,
     pub taken_over_at: Option<String>,
 }
@@ -87,15 +98,30 @@ async fn get_desktop_status(
 
     let control_state = read_control_state(&state, &bot_id, &query.sandbox_id).await;
 
-    let endpoint = match resolve_desktop_endpoint(&state, &bot_id, &query.sandbox_id).await {
-        Ok(ep) => ep,
-        Err(e) => {
-            warn!(bot_id, sandbox_id = %query.sandbox_id, error = %e, "Failed to resolve desktop endpoint");
-            None
-        }
+    let record = match read_bot_sandbox(&state.db, &bot_id) {
+        Ok(Some(r)) if r.sandbox_id == query.sandbox_id => Some(r),
+        _ => None,
     };
 
-    let (status, ws_url, protocol) = match endpoint {
+    // The persisted record is the source of truth for lifecycle state. Only when
+    // it says running do we try to resolve a live desktop endpoint.
+    let (status, endpoint, last_error) = match record.as_ref().map(|r| r.status.as_str()) {
+        Some("running") | Some("creating") => {
+            match resolve_desktop_endpoint(&state, &bot_id, &query.sandbox_id).await {
+                Ok(Some(ep)) => ("running".to_string(), Some(ep), None),
+                Ok(None) => ("off".to_string(), None, Some("Desktop endpoint is not reachable".to_string())),
+                Err(e) => {
+                    warn!(bot_id, sandbox_id = %query.sandbox_id, error = %e, "Failed to resolve desktop endpoint");
+                    ("error".to_string(), None, Some(e.to_string()))
+                }
+            }
+        }
+        Some("stopped") => ("stopped".to_string(), None, None),
+        Some("error") => ("error".to_string(), None, Some("Sandbox is in an error state".to_string())),
+        _ => ("off".to_string(), None, None),
+    };
+
+    let (ws_url, protocol, viewer_url) = match endpoint {
         Some(ep) => {
             // Only the raw VNC protocol is proxied through the WebSocket handler.
             // noVNC HTTP endpoints are served directly by OpenSandbox and should
@@ -105,9 +131,14 @@ async fn get_desktop_status(
             } else {
                 None
             };
-            ("running".to_string(), ws_url, Some(ep.protocol))
+            let viewer_url = if matches!(ep.protocol, DesktopProtocol::NoVncHttp) {
+                Some(ep.url.clone())
+            } else {
+                None
+            };
+            (ws_url, Some(ep.protocol), viewer_url)
         }
-        None => ("off".to_string(), None, None),
+        None => (None, None, None),
     };
 
     let session = {
@@ -126,6 +157,10 @@ async fn get_desktop_status(
             })
             .unwrap_or_else(|| "none".to_string()),
         sandbox_id: query.sandbox_id,
+        provider: record.as_ref().map(|r| r.provider.clone()),
+        host: record.as_ref().and_then(|r| r.host.clone()),
+        viewer_url,
+        last_error,
         taken_over_by_user_id: session.as_ref().and_then(|s| s.taken_over_by_user_id.clone()),
         taken_over_at: session.as_ref().and_then(|s| s.taken_over_at.map(|t| t.to_rfc3339())),
     };
@@ -401,6 +436,249 @@ async fn hand_back_desktop(
     .into_response()
 }
 
+async fn start_desktop(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(bot_id): Path<String>,
+    Query(query): Query<DesktopQuery>,
+) -> impl IntoResponse {
+    if !verify_bot_ownership(&state, &user.user_id, &bot_id).await {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(json!({"error": "bot not found or access denied"})),
+        )
+            .into_response();
+    }
+
+    let record = match read_bot_sandbox(&state.db, &bot_id) {
+        Ok(Some(r)) if r.sandbox_id == query.sandbox_id => r,
+        _ => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(json!({"error": "desktop sandbox not found"})),
+            )
+                .into_response();
+        }
+    };
+
+    if let Some(driver) = state.vm_driver.as_ref() {
+        let handle = build_handle_from_record(&record, &bot_id);
+        if let Err(e) = driver.resume_vm(&handle).await {
+            warn!(bot_id, sandbox_id = %query.sandbox_id, error = %e, "Failed to resume desktop sandbox");
+        }
+    }
+
+    if let Err(e) = upsert_bot_sandbox(
+        &state.db,
+        &bot_id,
+        &record.sandbox_id,
+        &record.provider,
+        record.host.as_deref(),
+        "running",
+    ) {
+        warn!(bot_id, sandbox_id = %query.sandbox_id, error = %e, "Failed to update desktop sandbox status");
+    }
+
+    publish_desktop_event(&state, &bot_id, "bot.desktop.started", &user.user_id).await;
+
+    Json(json!({ "status": "running", "sandbox_id": query.sandbox_id })).into_response()
+}
+
+async fn stop_desktop(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(bot_id): Path<String>,
+    Query(query): Query<DesktopQuery>,
+) -> impl IntoResponse {
+    if !verify_bot_ownership(&state, &user.user_id, &bot_id).await {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(json!({"error": "bot not found or access denied"})),
+        )
+            .into_response();
+    }
+
+    let record = match read_bot_sandbox(&state.db, &bot_id) {
+        Ok(Some(r)) if r.sandbox_id == query.sandbox_id => r,
+        _ => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(json!({"error": "desktop sandbox not found"})),
+            )
+                .into_response();
+        }
+    };
+
+    if let Some(driver) = state.vm_driver.as_ref() {
+        let handle = build_handle_from_record(&record, &bot_id);
+        if let Err(e) = driver.pause_vm(&handle).await {
+            warn!(bot_id, sandbox_id = %query.sandbox_id, error = %e, "Failed to pause desktop sandbox");
+        }
+    }
+
+    if let Err(e) = upsert_bot_sandbox(
+        &state.db,
+        &bot_id,
+        &record.sandbox_id,
+        &record.provider,
+        record.host.as_deref(),
+        "stopped",
+    ) {
+        warn!(bot_id, sandbox_id = %query.sandbox_id, error = %e, "Failed to update desktop sandbox status");
+    }
+
+    publish_desktop_event(&state, &bot_id, "bot.desktop.stopped", &user.user_id).await;
+
+    Json(json!({ "status": "stopped", "sandbox_id": query.sandbox_id })).into_response()
+}
+
+async fn pause_desktop(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(bot_id): Path<String>,
+    Query(query): Query<DesktopQuery>,
+) -> impl IntoResponse {
+    // Pause is the same lifecycle action as stop for bot desktops; the difference
+    // is semantic in the UI (pause keeps the sandbox around, stop powers it down).
+    stop_desktop(State(state), Extension(user), Path(bot_id), Query(query)).await
+}
+
+async fn resume_desktop(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(bot_id): Path<String>,
+    Query(query): Query<DesktopQuery>,
+) -> impl IntoResponse {
+    // Resume is the same lifecycle action as start.
+    start_desktop(State(state), Extension(user), Path(bot_id), Query(query)).await
+}
+
+async fn destroy_desktop(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(bot_id): Path<String>,
+    Query(query): Query<DesktopQuery>,
+) -> impl IntoResponse {
+    if !verify_bot_ownership(&state, &user.user_id, &bot_id).await {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(json!({"error": "bot not found or access denied"})),
+        )
+            .into_response();
+    }
+
+    let record = match read_bot_sandbox(&state.db, &bot_id) {
+        Ok(Some(r)) if r.sandbox_id == query.sandbox_id => Some(r),
+        _ => None,
+    };
+
+    if let Some(record) = record {
+        if let Some(driver) = state.vm_driver.as_ref() {
+            let handle = build_handle_from_record(&record, &bot_id);
+            if let Err(e) = driver.destroy(&handle).await {
+                warn!(bot_id, sandbox_id = %query.sandbox_id, error = %e, "Failed to destroy desktop sandbox");
+            }
+        }
+    }
+
+    if let Err(e) = delete_bot_sandbox(&state.db, &bot_id) {
+        warn!(bot_id, sandbox_id = %query.sandbox_id, error = %e, "Failed to delete desktop sandbox record");
+    }
+
+    {
+        let mut sessions = state.bot_desktop_sessions.write().await;
+        sessions.remove(&bot_id);
+    }
+
+    publish_desktop_event(&state, &bot_id, "bot.desktop.destroyed", &user.user_id).await;
+
+    StatusCode::NO_CONTENT.into_response()
+}
+
+async fn screenshot_desktop(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(bot_id): Path<String>,
+    Query(query): Query<DesktopQuery>,
+) -> impl IntoResponse {
+    if !verify_bot_ownership(&state, &user.user_id, &bot_id).await {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(json!({"error": "bot not found or access denied"})),
+        )
+            .into_response();
+    }
+
+    // Only OpenSandbox-backed sandboxes currently expose a screenshot endpoint.
+    // In other configurations we return 204 so the UI can show a placeholder.
+    match read_bot_sandbox(&state.db, &bot_id) {
+        Ok(Some(r)) if r.sandbox_id == query.sandbox_id && r.provider == "opensandbox" => {}
+        _ => {
+            return StatusCode::NO_CONTENT.into_response();
+        }
+    }
+
+    let Some(base_url) = std::env::var("OPEN_SANDBOX_URL")
+        .ok()
+        .filter(|s| !s.is_empty())
+    else {
+        return StatusCode::NO_CONTENT.into_response();
+    };
+
+    let url = format!(
+        "{}/sandboxes/{}/screenshot",
+        base_url.trim_end_matches('/'),
+        urlencoding::encode(&query.sandbox_id)
+    );
+
+    let client = reqwest::Client::new();
+    match client.get(&url).timeout(std::time::Duration::from_secs(10)).send().await {
+        Ok(resp) if resp.status().is_success() => {
+            match resp.bytes().await {
+                Ok(bytes) => {
+                    let png = STANDARD.encode(&bytes);
+                    let mime = "image/png";
+                    Json(json!({ "png": png, "mime": mime })).into_response()
+                }
+                Err(e) => {
+                    warn!(bot_id, error = %e, "Failed to read screenshot bytes");
+                    StatusCode::NO_CONTENT.into_response()
+                }
+            }
+        }
+        Ok(resp) => {
+            debug!(bot_id, status = %resp.status(), "OpenSandbox screenshot endpoint returned non-success");
+            StatusCode::NO_CONTENT.into_response()
+        }
+        Err(e) => {
+            warn!(bot_id, error = %e, "Failed to request screenshot from OpenSandbox");
+            StatusCode::NO_CONTENT.into_response()
+        }
+    }
+}
+
+fn build_handle_from_record(record: &BotDesktopSandboxRecord, bot_id: &str) -> ExecutionHandle {
+    let mut driver_info = std::collections::HashMap::new();
+    driver_info.insert("native_id".to_string(), record.sandbox_id.clone());
+    if let Some(host) = &record.host {
+        driver_info.insert("host".to_string(), host.clone());
+    }
+    ExecutionHandle {
+        id: ExecutionId::new(),
+        tenant: TenantId::new(format!("bot-{}", bot_id)).unwrap_or_else(|_| TenantId::new("bot-unknown".to_string()).unwrap()),
+        driver_info,
+        env_spec: EnvironmentSpec {
+            spec_type: allternit_driver_interface::EnvSpecType::Oci,
+            image: "ubuntu-24.04-desktop".to_string(),
+            version: None,
+            packages: vec![],
+            env_vars: std::collections::HashMap::new(),
+            working_dir: Some("/workspace".to_string()),
+            mounts: vec![],
+        },
+    }
+}
+
 async fn verify_bot_ownership(state: &AppState, user_id: &str, bot_id: &str) -> bool {
     let db = state.db.clone();
     let bot_id = bot_id.to_string();
@@ -542,6 +820,15 @@ fn upsert_bot_sandbox(
              host = excluded.host,
              status = excluded.status",
         rusqlite::params![bot_id, sandbox_id, provider, host, status],
+    )?;
+    Ok(())
+}
+
+fn delete_bot_sandbox(db: &crate::db::DbHandle, bot_id: &str) -> Result<(), rusqlite::Error> {
+    let conn = db.connect()?;
+    conn.execute(
+        "DELETE FROM bot_desktop_sandboxes WHERE bot_id = ?1",
+        rusqlite::params![bot_id],
     )?;
     Ok(())
 }

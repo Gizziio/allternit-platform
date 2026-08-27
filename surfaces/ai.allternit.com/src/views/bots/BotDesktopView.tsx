@@ -12,21 +12,37 @@ import {
   CaretLeft,
   Robot,
   Eye,
+  Power,
+  Pause,
+  Stop,
+  Trash,
+  Monitor,
+  Cloud,
+  HardDrives,
+  ComputerTower,
 } from "@phosphor-icons/react";
 import type { Agent } from "@/lib/agents/agent.types";
 import { useChatSessionStore } from "@/views/chat/ChatSessionStore";
 import {
+  destroyBotDesktop,
+  getBotDesktopScreenshot,
   getBotDesktopStatus,
   handBackBotDesktop,
   observeBotDesktop,
+  pauseBotDesktop,
   provisionBotDesktop,
+  resumeBotDesktop,
+  startBotDesktop,
+  stopBotDesktop,
   takeOverBotDesktop,
-  type BotDesktopStatus,
   type BotDesktopSandbox,
+  type BotDesktopScreenshot,
+  type BotDesktopStatus,
 } from "@/lib/bots/vm-operator";
 import { getBotDisplayName } from "@/lib/bots/bot-profile";
 import { Button } from "@/components/ui/button";
 import { GlassSurface } from "@/design/GlassSurface";
+import { cn } from "@/lib/utils";
 
 interface BotDesktopViewProps {
   bot: Agent;
@@ -36,12 +52,51 @@ interface BotDesktopViewProps {
 }
 
 type ControlState = "bot_controls" | "human_observing" | "human_controls";
+type DesktopMode = "cloud" | "local-vm" | "host";
 
 function wsUrlFromPath(path: string): string {
   if (typeof window === "undefined") return path;
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
   const host = window.location.host;
   return `${protocol}//${host}${path}`;
+}
+
+function modeFromProvider(provider?: string): DesktopMode {
+  switch (provider) {
+    case "opensandbox":
+    case "cloud":
+      return "cloud";
+    case "docker":
+    case "kubernetes":
+    case "local":
+      return "local-vm";
+    case "host":
+      return "host";
+    default:
+      return "cloud";
+  }
+}
+
+function modeLabel(mode: DesktopMode): string {
+  switch (mode) {
+    case "cloud":
+      return "Cloud box";
+    case "local-vm":
+      return "Local VM";
+    case "host":
+      return "This computer";
+  }
+}
+
+function modeIcon(mode: DesktopMode): React.ElementType {
+  switch (mode) {
+    case "cloud":
+      return Cloud;
+    case "local-vm":
+      return HardDrives;
+    case "host":
+      return ComputerTower;
+  }
 }
 
 export function BotDesktopView({ bot, accentColor, activeVM, onBack }: BotDesktopViewProps) {
@@ -55,8 +110,13 @@ export function BotDesktopView({ bot, accentColor, activeVM, onBack }: BotDeskto
   const [vm, setVm] = useState<BotDesktopSandbox | null>(() =>
     activeVM ? { sandbox_id: activeVM.id, status: activeVM.status, provider: activeVM.provider } : null,
   );
+  const [screenshot, setScreenshot] = useState<BotDesktopScreenshot | null>(null);
+  const [screenshotLoading, setScreenshotLoading] = useState(false);
+  const [mode, setMode] = useState<DesktopMode>(() => modeFromProvider(bot.vmOperator?.provider));
+  const [hostOptIn, setHostOptIn] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const screenshotPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const RFBModuleRef = useRef<any>(null);
 
   useEffect(() => {
@@ -90,6 +150,43 @@ export function BotDesktopView({ bot, accentColor, activeVM, onBack }: BotDeskto
       if (pollRef.current) clearInterval(pollRef.current);
     };
   }, [loadStatus]);
+
+  const loadScreenshot = useCallback(async () => {
+    if (!sandboxId) return;
+    setScreenshotLoading(true);
+    const result = await getBotDesktopScreenshot(bot.id, sandboxId);
+    if (result.ok && result.data) {
+      setScreenshot(result.data);
+    } else {
+      setScreenshot(null);
+    }
+    setScreenshotLoading(false);
+  }, [bot.id, sandboxId]);
+
+  useEffect(() => {
+    // Poll screenshots when VNC is not connected so the panel still feels live.
+    const canConnect =
+      (status?.control_state === "human_controls" || status?.control_state === "human_observing") &&
+      !!status?.ws_url &&
+      status.protocol === "vnc";
+    if (canConnect) {
+      setScreenshot(null);
+      if (screenshotPollRef.current) {
+        clearInterval(screenshotPollRef.current);
+        screenshotPollRef.current = null;
+      }
+      return;
+    }
+
+    if (status?.status === "running") {
+      void loadScreenshot();
+      screenshotPollRef.current = setInterval(() => void loadScreenshot(), 4000);
+    }
+
+    return () => {
+      if (screenshotPollRef.current) clearInterval(screenshotPollRef.current);
+    };
+  }, [status, loadScreenshot]);
 
   const disconnectVnc = useCallback(() => {
     if (rfbRef.current) {
@@ -208,6 +305,77 @@ export function BotDesktopView({ bot, accentColor, activeVM, onBack }: BotDeskto
     setIsProvisioning(false);
   };
 
+  const handleStart = async () => {
+    if (!sandboxId) return;
+    setIsLoading(true);
+    const result = await startBotDesktop(bot.id, sandboxId);
+    if (result.ok) await loadStatus();
+    else setError(result.error ?? "Start failed");
+    setIsLoading(false);
+  };
+
+  const handleStop = async () => {
+    if (!sandboxId) return;
+    setIsLoading(true);
+    const result = await stopBotDesktop(bot.id, sandboxId);
+    if (result.ok) {
+      disconnectVnc();
+      await loadStatus();
+    } else {
+      setError(result.error ?? "Stop failed");
+    }
+    setIsLoading(false);
+  };
+
+  const handlePause = async () => {
+    if (!sandboxId) return;
+    setIsLoading(true);
+    const result = await pauseBotDesktop(bot.id, sandboxId);
+    if (result.ok) await loadStatus();
+    else setError(result.error ?? "Pause failed");
+    setIsLoading(false);
+  };
+
+  const handleResume = async () => {
+    if (!sandboxId) return;
+    setIsLoading(true);
+    const result = await resumeBotDesktop(bot.id, sandboxId);
+    if (result.ok) await loadStatus();
+    else setError(result.error ?? "Resume failed");
+    setIsLoading(false);
+  };
+
+  const handleDestroy = async () => {
+    if (!sandboxId) return;
+    if (!window.confirm(`Destroy ${getBotDisplayName(bot)}'s virtual computer? Files inside the sandbox may be lost.`)) {
+      return;
+    }
+    setIsLoading(true);
+    disconnectVnc();
+    const result = await destroyBotDesktop(bot.id, sandboxId);
+    if (result.ok) {
+      setVm(null);
+      setStatus(null);
+      setScreenshot(null);
+    } else {
+      setError(result.error ?? "Destroy failed");
+    }
+    setIsLoading(false);
+  };
+
+  const openDesktop = () => {
+    const viewerUrl = status?.viewer_url || status?.ws_url || vm?.host;
+    if (!viewerUrl) {
+      setError("No desktop viewer URL is available yet");
+      return;
+    }
+    const url = viewerUrl.startsWith("/")
+      ? `${window.location.protocol}//${window.location.host}${viewerUrl}`
+      : viewerUrl;
+    const tab = window.open(url, "_blank", "noopener,noreferrer");
+    if (!tab) setError("Your browser blocked the desktop tab");
+  };
+
   const toggleFullscreen = () => {
     if (!containerRef.current) return;
     if (!document.fullscreenElement) {
@@ -223,7 +391,38 @@ export function BotDesktopView({ bot, accentColor, activeVM, onBack }: BotDeskto
   const controlState = status?.control_state ?? "bot_controls";
   const isHumanControl = controlState === "human_controls";
   const isObserving = controlState === "human_observing";
-  const isRunning = status?.status === "running";
+  const statusValue = status?.status ?? "off";
+  const isRunning = statusValue === "running";
+  const isStopped = statusValue === "stopped";
+  const ModeIcon = modeIcon(mode);
+  const lastError = status?.last_error ?? null;
+
+  const statusBadge = {
+    running: {
+      bg: "color-mix(in srgb, var(--status-success) 14%, transparent)",
+      color: "var(--status-success)",
+      label: "Running",
+      pulse: true,
+    },
+    stopped: {
+      bg: "color-mix(in srgb, var(--status-warning) 14%, transparent)",
+      color: "var(--status-warning)",
+      label: "Stopped",
+      pulse: false,
+    },
+    off: {
+      bg: "color-mix(in srgb, var(--text-tertiary) 14%, transparent)",
+      color: "var(--text-tertiary)",
+      label: "Off",
+      pulse: false,
+    },
+    error: {
+      bg: "color-mix(in srgb, var(--status-error) 14%, transparent)",
+      color: "var(--status-error)",
+      label: "Error",
+      pulse: false,
+    },
+  }[statusValue];
 
   return (
     <div className="space-y-6" ref={containerRef}>
@@ -262,8 +461,19 @@ export function BotDesktopView({ bot, accentColor, activeVM, onBack }: BotDeskto
         </div>
 
         <div className="flex items-center gap-2">
-          {isRunning && (
+          {vm?.sandbox_id && (
             <>
+              {isRunning && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={openDesktop}
+                  className="gap-1.5"
+                >
+                  <Monitor size={14} />
+                  Open desktop
+                </Button>
+              )}
               {isHumanControl ? (
                 <Button
                   variant="outline"
@@ -281,7 +491,7 @@ export function BotDesktopView({ bot, accentColor, activeVM, onBack }: BotDeskto
                     variant="outline"
                     size="sm"
                     onClick={handleObserve}
-                    disabled={isLoading || isObserving}
+                    disabled={isLoading || isObserving || !isRunning}
                     className="gap-1.5"
                   >
                     <Eye size={14} />
@@ -290,7 +500,7 @@ export function BotDesktopView({ bot, accentColor, activeVM, onBack }: BotDeskto
                   <Button
                     size="sm"
                     onClick={handleTakeOver}
-                    disabled={isLoading}
+                    disabled={isLoading || !isRunning}
                     className="gap-1.5"
                     style={{ background: accentColor, color: "#fff" }}
                   >
@@ -313,10 +523,139 @@ export function BotDesktopView({ bot, accentColor, activeVM, onBack }: BotDeskto
         </div>
       </div>
 
+      {/* Mode selector + lifecycle controls */}
+      {vm?.sandbox_id && (
+        <GlassSurface className="p-3 rounded-xl flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-[12px] text-[var(--text-tertiary)] mr-1">Runs on</span>
+            <div className="flex overflow-hidden rounded-lg border border-[var(--border-subtle)]">
+              {(["cloud", "local-vm", "host"] as DesktopMode[]).map((m, i) => {
+                const Icon = modeIcon(m);
+                return (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setMode(m)}
+                    className={cn(
+                      "flex items-center gap-1.5 px-2.5 py-1.5 text-[12px] font-medium transition-colors",
+                      i > 0 && "border-l border-[var(--border-subtle)]",
+                      mode === m
+                        ? "bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]"
+                        : "text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]"
+                    )}
+                  >
+                    <Icon size={13} />
+                    {modeLabel(m)}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {(isStopped || statusValue === "off") && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleStart}
+                disabled={isLoading}
+                className="gap-1.5"
+              >
+                <Power size={14} />
+                Start
+              </Button>
+            )}
+            {isRunning && (
+              <>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handlePause}
+                  disabled={isLoading}
+                  className="gap-1.5"
+                >
+                  <Pause size={14} />
+                  Pause
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleStop}
+                  disabled={isLoading}
+                  className="gap-1.5"
+                >
+                  <Stop size={14} />
+                  Stop
+                </Button>
+              </>
+            )}
+            {isStopped && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleResume}
+                disabled={isLoading}
+                className="gap-1.5"
+              >
+                <Play size={14} weight="fill" />
+                Resume
+              </Button>
+            )}
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={handleDestroy}
+              disabled={isLoading}
+              className="gap-1.5"
+            >
+              <Trash size={14} />
+              Destroy
+            </Button>
+          </div>
+        </GlassSurface>
+      )}
+
+      {mode === "host" && (
+        <GlassSurface className="p-4 rounded-xl border border-dashed border-[var(--border-subtle)]">
+          <div className="flex items-start gap-3">
+            <Warning size={18} className="text-[var(--status-warning)] shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <div className="text-[13px] font-medium text-[var(--text-primary)]">
+                Host computer control
+              </div>
+              <p className="text-[13px] text-[var(--text-secondary)] mt-1">
+                In this mode the bot can view and control this computer. Enable it only when you
+                want the bot to use your local desktop as its workspace.
+              </p>
+              {!hostOptIn && (
+                <Button
+                  size="sm"
+                  onClick={() => setHostOptIn(true)}
+                  className="mt-3 gap-1.5"
+                  style={{ background: accentColor, color: "#fff" }}
+                >
+                  <Power size={14} />
+                  Enable host control
+                </Button>
+              )}
+            </div>
+          </div>
+        </GlassSurface>
+      )}
+
       {error && (
         <div className="rounded-xl border border-[var(--status-error)]/30 bg-[var(--status-error)]/10 p-3 flex items-start gap-3">
           <Warning size={18} className="text-[var(--status-error)] shrink-0 mt-0.5" />
           <div className="text-[13px] text-[var(--status-error)]">{error}</div>
+        </div>
+      )}
+
+      {lastError && (
+        <div className="rounded-xl border border-[var(--status-warning)]/30 bg-[var(--status-warning)]/10 p-3 flex items-start gap-3">
+          <Warning size={18} className="text-[var(--status-warning)] shrink-0 mt-0.5" />
+          <div className="text-[13px] text-[var(--status-warning)]">
+            <span className="font-medium">Desktop error:</span> {lastError}
+          </div>
         </div>
       )}
 
@@ -347,18 +686,43 @@ export function BotDesktopView({ bot, accentColor, activeVM, onBack }: BotDeskto
           <Spinner size={24} className="animate-spin mx-auto mb-3 text-[var(--accent-primary)]" />
           <p className="text-[13px] text-[var(--text-secondary)]">Connecting to desktop...</p>
         </GlassSurface>
-      ) : status?.status !== "running" ? (
+      ) : statusValue !== "running" ? (
         <GlassSurface className="p-10 text-center rounded-xl border border-dashed border-[var(--border-subtle)]">
           <Robot size={32} className="mx-auto mb-3 text-[var(--text-tertiary)]" />
-          <h3 className="text-[15px] font-semibold text-[var(--text-primary)]">Desktop is off</h3>
+          <h3 className="text-[15px] font-semibold text-[var(--text-primary)]">Desktop is {statusBadge.label.toLowerCase()}</h3>
           <p className="text-[13px] text-[var(--text-secondary)] mt-1">
-            The sandbox does not expose a VNC/desktop stream yet. Make sure the bot is configured with a desktop image and VNC enabled.
+            The sandbox does not expose a VNC/desktop stream yet. Start the computer or make sure the bot is configured with a desktop image and VNC enabled.
           </p>
+          {isStopped && (
+            <Button
+              size="sm"
+              onClick={handleStart}
+              disabled={isLoading}
+              className="gap-1.5 mt-4"
+              style={{ background: accentColor, color: "#fff" }}
+            >
+              <Power size={14} />
+              Start computer
+            </Button>
+          )}
         </GlassSurface>
       ) : (
         <GlassSurface className="rounded-xl overflow-hidden flex flex-col" style={{ minHeight: 480 }}>
           <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--border-subtle)] bg-[var(--bg-card)]">
             <div className="flex items-center gap-2">
+              <span
+                className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-full"
+                style={{
+                  background: statusBadge.bg,
+                  color: statusBadge.color,
+                }}
+              >
+                <span
+                  className={cn("size-1.5 rounded-full", statusBadge.pulse && "animate-pulse")}
+                  style={{ background: statusBadge.color }}
+                />
+                {statusBadge.label}
+              </span>
               <span
                 className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-full"
                 style={{
@@ -374,15 +738,6 @@ export function BotDesktopView({ bot, accentColor, activeVM, onBack }: BotDeskto
                       : "var(--status-success)",
                 }}
               >
-                <span
-                  className={`size-1.5 rounded-full ${
-                    isHumanControl
-                      ? "bg-[var(--status-warning)]"
-                      : isObserving
-                        ? "bg-[var(--accent-primary)]"
-                        : "bg-[var(--status-success)]"
-                  } ${!isHumanControl && !isObserving ? "animate-pulse" : ""}`}
-                />
                 {isHumanControl ? "You are driving" : isObserving ? "You are observing" : "Bot is driving"}
               </span>
               <span className="text-[11px] text-[var(--text-tertiary)]">
@@ -391,14 +746,31 @@ export function BotDesktopView({ bot, accentColor, activeVM, onBack }: BotDeskto
             </div>
             <div className="text-[11px] text-[var(--text-tertiary)]">
               {status?.protocol === "vnc" ? "VNC stream" : status?.protocol === "novnc" ? "noVNC" : "Desktop"}
+              {mode !== "cloud" && ` · ${modeLabel(mode)}`}
             </div>
           </div>
 
-          <div
-            ref={canvasRef}
-            className="flex-1 bg-black min-h-[480px] relative"
-            style={{ width: "100%", height: "100%" }}
-          />
+          <div className="flex-1 bg-black min-h-[480px] relative" style={{ width: "100%", height: "100%" }}>
+            <div
+              ref={canvasRef}
+              className="absolute inset-0 bg-black"
+              style={{ width: "100%", height: "100%" }}
+            />
+
+            {!isHumanControl && !isObserving && screenshot && !screenshotLoading && (
+              <img
+                src={`data:${screenshot.mime};base64,${screenshot.png}`}
+                alt={`${displayName}'s desktop preview`}
+                className="absolute inset-0 w-full h-full object-contain pointer-events-none"
+              />
+            )}
+
+            {screenshotLoading && !screenshot && !isHumanControl && !isObserving && (
+              <div className="absolute inset-0 flex items-center justify-center bg-[var(--bg-elevated)]/60 z-10">
+                <Spinner size={24} className="animate-spin text-[var(--accent-primary)]" />
+              </div>
+            )}
+          </div>
 
           {controlState === "bot_controls" && (
             <div className="absolute inset-0 flex items-center justify-center bg-[var(--bg-elevated)]/80 backdrop-blur-sm z-10">

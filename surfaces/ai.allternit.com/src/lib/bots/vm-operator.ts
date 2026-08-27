@@ -362,11 +362,20 @@ function pausedResult<T>(): VMOperatorResult<T> {
 }
 
 export interface BotDesktopStatus {
-  status: 'running' | 'off' | 'error';
+  status: 'running' | 'stopped' | 'off' | 'error';
   control_state: 'bot_controls' | 'human_controls' | 'human_observing';
   ws_url?: string;
   protocol: 'vnc' | 'novnc' | 'none';
   sandbox_id: string;
+  provider?: string;
+  host?: string;
+  viewer_url?: string;
+  last_error?: string;
+}
+
+export interface BotDesktopScreenshot {
+  png: string;
+  mime: string;
 }
 
 export interface BotDesktopSandbox {
@@ -486,5 +495,136 @@ export async function handBackBotDesktop(
   } catch (err) {
     logger.error({ err, botId, sandboxId }, 'Failed to hand back bot desktop');
     return { ok: false, error: err instanceof Error ? err.message : 'Hand back failed' };
+  }
+}
+
+/**
+ * Start a stopped bot desktop sandbox.
+ */
+export async function startBotDesktop(
+  botId: string,
+  sandboxId: string,
+): Promise<VMOperatorResult<{ status: string }>> {
+  try {
+    const res = await fetch(botDesktopUrl(botId, sandboxId) + '/start', { method: 'POST' });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Platform returned ${res.status}: ${text}`);
+    }
+    const data = (await res.json()) as { status: string };
+    return { ok: true, data };
+  } catch (err) {
+    logger.error({ err, botId, sandboxId }, 'Failed to start bot desktop');
+    return { ok: false, error: err instanceof Error ? err.message : 'Start failed' };
+  }
+}
+
+/**
+ * Stop a running bot desktop sandbox.
+ */
+export async function stopBotDesktop(
+  botId: string,
+  sandboxId: string,
+): Promise<VMOperatorResult<{ status: string }>> {
+  try {
+    const res = await fetch(botDesktopUrl(botId, sandboxId) + '/stop', { method: 'POST' });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Platform returned ${res.status}: ${text}`);
+    }
+    const data = (await res.json()) as { status: string };
+    return { ok: true, data };
+  } catch (err) {
+    logger.error({ err, botId, sandboxId }, 'Failed to stop bot desktop');
+    return { ok: false, error: err instanceof Error ? err.message : 'Stop failed' };
+  }
+}
+
+/**
+ * Pause a running bot desktop sandbox.
+ */
+export async function pauseBotDesktop(
+  botId: string,
+  sandboxId: string,
+): Promise<VMOperatorResult<{ status: string }>> {
+  try {
+    const res = await fetch(botDesktopUrl(botId, sandboxId) + '/pause', { method: 'POST' });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Platform returned ${res.status}: ${text}`);
+    }
+    const data = (await res.json()) as { status: string };
+    return { ok: true, data };
+  } catch (err) {
+    logger.error({ err, botId, sandboxId }, 'Failed to pause bot desktop');
+    return { ok: false, error: err instanceof Error ? err.message : 'Pause failed' };
+  }
+}
+
+/**
+ * Resume a paused bot desktop sandbox.
+ */
+export async function resumeBotDesktop(
+  botId: string,
+  sandboxId: string,
+): Promise<VMOperatorResult<{ status: string }>> {
+  try {
+    const res = await fetch(botDesktopUrl(botId, sandboxId) + '/resume', { method: 'POST' });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Platform returned ${res.status}: ${text}`);
+    }
+    const data = (await res.json()) as { status: string };
+    return { ok: true, data };
+  } catch (err) {
+    logger.error({ err, botId, sandboxId }, 'Failed to resume bot desktop');
+    return { ok: false, error: err instanceof Error ? err.message : 'Resume failed' };
+  }
+}
+
+/**
+ * Destroy a bot desktop sandbox and free its resources.
+ */
+export async function destroyBotDesktop(
+  botId: string,
+  sandboxId: string,
+): Promise<VMOperatorResult<void>> {
+  try {
+    const res = await fetch(botDesktopUrl(botId, sandboxId), { method: 'DELETE' });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Platform returned ${res.status}: ${text}`);
+    }
+    return { ok: true };
+  } catch (err) {
+    logger.error({ err, botId, sandboxId }, 'Failed to destroy bot desktop');
+    return { ok: false, error: err instanceof Error ? err.message : 'Destroy failed' };
+  }
+}
+
+/**
+ * Capture a screenshot of the bot's desktop.
+ *
+ * Returns a base64 PNG when the sandbox runtime supports it; otherwise the
+ * platform returns a clear 204/empty response and the UI shows a placeholder.
+ */
+export async function getBotDesktopScreenshot(
+  botId: string,
+  sandboxId: string,
+): Promise<VMOperatorResult<BotDesktopScreenshot>> {
+  try {
+    const res = await fetch(botDesktopUrl(botId, sandboxId) + '/screenshot', { method: 'POST' });
+    if (res.status === 204 || res.status === 404) {
+      return { ok: false, error: 'Screenshots are not available for this desktop provider' };
+    }
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Platform returned ${res.status}: ${text}`);
+    }
+    const data = (await res.json()) as BotDesktopScreenshot;
+    return { ok: true, data };
+  } catch (err) {
+    logger.error({ err, botId, sandboxId }, 'Failed to capture bot desktop screenshot');
+    return { ok: false, error: err instanceof Error ? err.message : 'Screenshot failed' };
   }
 }

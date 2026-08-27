@@ -495,7 +495,7 @@ export interface AgentVMOperatorConfig {
   /** Whether the bot may use a virtual computer to execute tasks */
   enabled: boolean;
   /** Runtime provider that provisions and manages the sandbox */
-  provider: 'opensandbox' | 'docker' | 'kubernetes' | 'local' | 'custom';
+  provider: 'opensandbox' | 'docker' | 'kubernetes' | 'local' | 'custom' | 'host';
   /** Sandbox image / environment (e.g. opensandbox/desktop:v1.0.0) */
   image?: string;
   /** Resource limits for the sandbox */
@@ -585,7 +585,7 @@ export const agentIdentityChannelsSchema = z.object({
 
 export const agentVMOperatorConfigSchema = z.object({
   enabled: z.boolean(),
-  provider: z.enum(['opensandbox', 'docker', 'kubernetes', 'local', 'custom']),
+  provider: z.enum(['opensandbox', 'docker', 'kubernetes', 'local', 'custom', 'host']),
   image: z.string().optional(),
   resources: z.object({
     cpu: z.string().optional(),
