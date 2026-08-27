@@ -1,5 +1,28 @@
 # Steering checkpoint
 
+## iOS bot parity Phase 1 cleanup complete (2026-08-26)
+
+### Goal
+Clean/split the WIP commit, merge current `origin/main`, resolve conflicts, run
+cheap syntax checks, and push `session/ios-bot-parity` without starting Phase 2.
+
+### Just did
+- Replaced WIP `1708779e4` with three coherent feature commits covering the API
+  event ledger, runtime/web bridge, and native iOS bot parity.
+- Fetched and merged `origin/main` at `30739a95d`, resolving all iOS conflicts
+  while preserving branch feature behavior and main's non-conflicting changes.
+- Parsed all 13 changed TS/TSX files and 6 changed Rust files successfully; no
+  build, typecheck, or dev server was run.
+- Wrote `docs/IOS_BOT_PARITY_PHASE_1_NOTES.md` with the completed handoff.
+
+### Next
+- Push `session/ios-bot-parity` and stop. Do not begin Phase 2.
+
+### Open questions
+- None.
+
+---
+
 ## Hermes floating chat HUD port — completion (2026-08-26)
 
 ### Goal
