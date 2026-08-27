@@ -17,6 +17,8 @@ import { TextShimmer } from '@/components/agent-elements/text-shimmer';
 import type { AgentModeSurface } from '@/stores/agent-surface-mode.store';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { FormatPicker } from '@/views/create/FormatPicker';
+import { isCreationMode, type FormatSelection } from '@/views/create/presets';
 
 interface ModeDockProps {
   selectedMode: string | null;
@@ -24,6 +26,8 @@ interface ModeDockProps {
   agentModeSurface: AgentModeSurface;
   isLoading?: boolean;
   selectedSurfaceAgent?: { name: string } | null;
+  formatSelection?: FormatSelection | null;
+  onFormatChange?: (selection: FormatSelection) => void;
 }
 
 export const MODE_TABS = [
@@ -51,6 +55,8 @@ export function ModeDock({
   agentModeSurface,
   isLoading,
   selectedSurfaceAgent,
+  formatSelection,
+  onFormatChange,
 }: ModeDockProps) {
   const [open, setOpen] = useState(false);
   const allowedModes = agentModeSurface ? SURFACE_MODES[agentModeSurface] : MODE_TABS.map((m) => m.id);
@@ -72,6 +78,7 @@ export function ModeDock({
   );
 
   const SelectedIcon = selectedModeData?.icon ?? null;
+  const creationMode = isCreationMode(selectedMode);
 
   return (
     <div className="w-full flex flex-col items-start gap-3">
@@ -178,6 +185,14 @@ export function ModeDock({
           </div>
         </PopoverContent>
       </Popover>
+      {creationMode && selectedMode && onFormatChange && (
+        <FormatPicker
+          modeId={selectedMode}
+          value={formatSelection}
+          onChange={onFormatChange}
+          color={selectedModeData?.color}
+        />
+      )}
     </div>
   );
 }

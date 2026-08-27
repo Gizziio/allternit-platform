@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { ModeDock } from './ModeDock';
+import { getDefaultFormatSelection } from '@/views/create/presets';
 
 describe('ModeDock', () => {
   it('defaults to the first available mode', () => {
@@ -82,5 +83,57 @@ describe('ModeDock', () => {
     expect(within(popover).queryByRole('button', { name: /^Code$/i })).not.toBeInTheDocument();
     expect(within(popover).queryByRole('button', { name: /^Flow$/i })).not.toBeInTheDocument();
     expect(within(popover).queryByRole('button', { name: /^Computer$/i })).not.toBeInTheDocument();
+  });
+
+  it('does not render a format picker for non-creation modes', () => {
+    render(
+      <ModeDock
+        selectedMode="research"
+        onSelectMode={() => {}}
+        agentModeSurface="chat"
+        onFormatChange={() => {}}
+      />
+    );
+
+    expect(screen.queryByRole('button', { name: /Type/i })).not.toBeInTheDocument();
+  });
+
+  it('renders a format picker when a creation mode is selected', () => {
+    render(
+      <ModeDock
+        selectedMode="docs"
+        onSelectMode={() => {}}
+        agentModeSurface="chat"
+        formatSelection={getDefaultFormatSelection('docs')}
+        onFormatChange={() => {}}
+      />
+    );
+
+    expect(screen.getByRole('button', { name: /Format: Type · Proposal/i })).toBeInTheDocument();
+  });
+
+  it('opens the format picker and selects a different option', async () => {
+    const onFormatChange = vi.fn();
+    render(
+      <ModeDock
+        selectedMode="docs"
+        onSelectMode={() => {}}
+        agentModeSurface="chat"
+        formatSelection={getDefaultFormatSelection('docs')}
+        onFormatChange={onFormatChange}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Format: Type · Proposal/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Report')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('Report'));
+    expect(onFormatChange).toHaveBeenCalled();
+    const lastCall = onFormatChange.mock.calls[onFormatChange.mock.calls.length - 1][0];
+    expect(lastCall.tabId).toBe('type');
+    expect(lastCall.optionId).toBe('report');
   });
 });

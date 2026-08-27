@@ -90,6 +90,7 @@ import { isCanonicalAgentMode, type CanonicalAgentModeId } from '@/lib/agents/ag
 import { CoworkTopDeck } from '@/views/cowork/CoworkTopDeck';
 import { PromptModelSelector } from '@/components/prompt-kit/prompt-model-selector';
 import { ProviderGallery } from '@/components/chat/ProviderGallery';
+import { enrichCreationPrompt, isCreationMode, getDefaultFormatSelection, type FormatSelection } from '@/views/create/presets';
 
 // Terminal Server URL for fetching real models
 declare const __TERMINAL_SERVER_URL__: string | undefined;
@@ -477,6 +478,8 @@ export function ChatComposer({
   );
   const [locallyEnabled, setLocallyEnabled] = useState(false);
   const [selectedTemplateTitle, setSelectedTemplateTitle] = useState<string | undefined>();
+  const [formatSelections, setFormatSelections] = useState<Record<string, FormatSelection>>({});
+  const activeFormatSelection = selectedModeId ? formatSelections[selectedModeId] ?? getDefaultFormatSelection(selectedModeId) : null;
   const agentModeEnabled = hasEmbeddedSession || locallyEnabled;
   const [agentModePulse, setAgentModePulse] = useState(0);
   const prevAgentModeEnabledRef = useRef(agentModeEnabled);
@@ -1139,7 +1142,8 @@ export function ChatComposer({
       ? { formal: 'Respond in a formal, professional tone. ', creative: 'Respond in a creative, imaginative style. ', technical: 'Respond in a precise, technical manner. ' }[activeStyle]
       : '';
     const webSearchPrefix = webSearchEnabled ? '[web_search_enabled] ' : '';
-    const enrichedInput = `${webSearchPrefix}${stylePrefix}${spokenInput}`.trim();
+    const baseInput = `${webSearchPrefix}${stylePrefix}${spokenInput}`.trim();
+    const enrichedInput = enrichCreationPrompt(baseInput, selectedModeId, activeFormatSelection);
 
     if (selectedModeId === 'computer-use') {
       useBrowserAgentStore.getState().runAcuTask(enrichedInput);
@@ -1154,6 +1158,7 @@ export function ChatComposer({
     clearVoiceTranscript();
   }, [
     activeStyle,
+    activeFormatSelection,
     agentModeEnabled,
     agentModeSurface,
     clearVoiceTranscript,
@@ -1269,7 +1274,8 @@ export function ChatComposer({
       ? { formal: 'Respond in a formal, professional tone. ', creative: 'Respond in a creative, imaginative style. ', technical: 'Respond in a precise, technical manner. ' }[activeStyle]
       : '';
     const webSearchPrefix = webSearchEnabled ? '[web_search_enabled] ' : '';
-    const enrichedInput = `${webSearchPrefix}${stylePrefix}${input}`.trim();
+    const baseInput = `${webSearchPrefix}${stylePrefix}${input}`.trim();
+    const enrichedInput = enrichCreationPrompt(baseInput, selectedModeId, activeFormatSelection);
 
     if (selectedModeId === 'computer-use') {
       useBrowserAgentStore.getState().runAcuTask(enrichedInput);
@@ -2640,11 +2646,21 @@ export function ChatComposer({
                 if (agentModeSurface) {
                   setSelectedMode(agentModeSurface, modeId as AgentModeId);
                   setSelectedTemplateTitle(undefined);
+                  if (isCreationMode(modeId)) {
+                    setFormatSelections((prev) => ({
+                      ...prev,
+                      [modeId]: prev[modeId] ?? getDefaultFormatSelection(modeId)!,
+                    }));
+                  }
                 }
               }}
               agentModeSurface={agentModeSurface}
               isLoading={isLoading}
               selectedSurfaceAgent={selectedSurfaceAgent}
+              formatSelection={activeFormatSelection}
+              onFormatChange={(selection) => {
+                setFormatSelections((prev) => ({ ...prev, [selection.modeId]: selection }));
+              }}
             />
           </div>
           {selectedModeId === 'swarms' && (
