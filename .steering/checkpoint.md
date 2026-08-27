@@ -1,5 +1,28 @@
 # Steering checkpoint
 
+## iOS local models marketplace — Phase 2 integration (2026-08-26)
+
+### Goal
+Integrate and polish the Phase 1 creation surfaces, verify focused behavior, document the result, and push the session branch without starting Phase 3.
+
+### Just did
+- Reviewed the Phase 1 commits and complete creation-feature diff against `origin/main`.
+- Fixed a render-time `selectedModeId` initialization-order bug in `ChatComposer`.
+- Restored the creation-specific provider registries/plugins that match the retained settings hooks and panels, preserving Bonsai local/WebGPU support.
+- Wired format payload parsing into `agent-mode-executor`, including deterministic DOCX/XLSX engines and concrete website/slides/image/video options.
+- Expanded executor tests across office artifacts, provider selection, artifact output, and missing-key settings navigation.
+- Attempted focused Vitest execution; it could not start because the existing Vitest package link points to a missing `vitest.mjs`.
+- Ran permitted parser/diff checks: Deno parsed every changed TS/TSX file (format differences reported) and `git diff --check` passed.
+- Wrote the required Phase 2 notes and updated the Phase 2 plan.
+
+### Next
+1. Obtain steering commit-gate approval.
+2. Commit the Phase 2 implementation and documentation coherently.
+3. Push `session/7d581442-d796-4e0e-bdac-2fec641c3677` to origin.
+
+### Open questions
+- The focused tests should be rerun when the workspace Vitest link is repaired; dependency repair is outside this phase and was not attempted.
+
 ## Hermes floating chat HUD port — completion (2026-08-26)
 
 ### Goal
