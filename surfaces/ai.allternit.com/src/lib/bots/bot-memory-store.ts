@@ -59,9 +59,20 @@ const INJECTION_PATTERNS = [
   /DAN\s*["']?/gi,
 ];
 
+export type CreateBotMemoryInput = Omit<
+  BotMemoryRecord,
+  'id' | 'createdAt' | 'updatedAt' | 'confidence' | 'sensitivity' | 'status' | 'contradictedByMemoryIds' | 'auditNotes'
+> &
+  Partial<
+    Pick<
+      BotMemoryRecord,
+      'confidence' | 'sensitivity' | 'status' | 'contradictedByMemoryIds' | 'auditNotes'
+    >
+  >;
+
 export interface BotMemoryStore {
   /** Propose a memory candidate. Runs prompt-injection and secret checks. */
-  proposeMemory(record: Omit<BotMemoryRecord, 'id' | 'createdAt' | 'updatedAt'>): BotMemoryRecord;
+  proposeMemory(record: CreateBotMemoryInput): BotMemoryRecord;
 
   /** Explicitly promote a candidate memory. */
   promoteMemory(tenantId: string, botId: string, memoryId: string, actorId?: string): BotMemoryRecord;

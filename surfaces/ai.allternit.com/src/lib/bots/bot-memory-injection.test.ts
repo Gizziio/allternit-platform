@@ -86,6 +86,7 @@ describe('recallBotMemories', () => {
       contains: 'preferences',
       status: ['promoted', 'pinned'],
       limit: 3,
+      includeExpired: false,
     });
     expect(result.memories).toHaveLength(1);
     expect(result.contextBlock).toContain('Ada prefers concise answers');

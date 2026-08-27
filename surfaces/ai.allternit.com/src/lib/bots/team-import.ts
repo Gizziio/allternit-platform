@@ -237,7 +237,7 @@ function parseTeamV1(root: Record<string, unknown>): PendingTeamImport {
     rooms.push({ name: requiredString(room.name, 'room name'), description: optionalString(room.bulletin) });
   }
   return {
-    manifest: root as TeamManifestPackage,
+    manifest: root as unknown as TeamManifestPackage,
     kind: 'team',
     name: requiredString(team.name, 'team name'),
     description: optionalString(team.description) ?? '',
@@ -254,7 +254,7 @@ function parseTeamV2(root: Record<string, unknown>): PendingTeamImport {
   const team = root.team as Record<string, unknown>;
   const members = parseMembers(team.members);
   return {
-    manifest: root as TeamManifestPackage,
+    manifest: root as unknown as TeamManifestPackage,
     kind: 'team',
     name: requiredString(team.name, 'team name'),
     description: optionalString(team.description) ?? '',
@@ -333,7 +333,7 @@ function parsePackage(root: Record<string, unknown>): PendingTeamImport {
   const apps = parseApps(pkg.requirements);
 
   return {
-    manifest: root as TeamManifestPackage,
+    manifest: root as unknown as TeamManifestPackage,
     kind: 'package',
     name: requiredString(pkg.name, 'package name'),
     description: optionalString(pkg.summary) ?? '',
@@ -439,7 +439,10 @@ function normalizeManifestToPackage(manifest: TeamManifestInput): TeamManifestPa
         description: m.description,
         appearance: m.appearance,
       })),
-      rooms: manifest.team.room ? [{ name: manifest.team.room.name, description: manifest.team.room.bulletin }] : [],
+      rooms:
+        manifest.version === 1 && 'room' in manifest.team && manifest.team.room
+          ? [{ name: manifest.team.room.name, description: manifest.team.room.bulletin }]
+          : [],
       playbooks: [],
       routines: [],
       requirements: { apps: [] },
