@@ -9,11 +9,13 @@ files_changed:
   - surfaces/allternit-mobile/ios/Features/Agents/Desktop/BotDesktopView.swift
   - surfaces/allternit-mobile/ios/Features/Settings/WebhooksSettingsView.swift
   - surfaces/allternit-mobile/ios/Allternit.xcodeproj/project.pbxproj
+  - surfaces/allternit-mobile/ios/Assets.xcassets/ATernitWordmark.imageset/Contents.json
   - docs/IOS_BOT_PARITY_MAP.md
   - docs/IOS_BOT_PARITY_PHASE_1_NOTES.md
   - .steering/checkpoint.md
 deviations:
   - "The WIP commit contained substantial feature work, so it was split into three coherent commits instead of being dropped."
+  - "A case-only asset-catalog collision was resolved by removing main's unbacked ATernitWordmark PNG catalog and retaining the branch's SVG-backed AternitWordmark catalog."
   - "rustfmt reported formatting and trailing-whitespace differences; they were left unchanged because Phase 1 forbids feature-logic or unrelated formatting edits."
 remaining:
   - "Phase 2 has not been started; any feature changes or full build/typecheck validation remain Phase 2 work."
@@ -37,7 +39,9 @@ limited to the iOS Xcode project and ten Swift UI files. The Xcode project kept
 both the branch's bot-parity file registrations and main's newer registrations.
 For overlapping Swift hunks, the branch implementation was retained as required
 by the task, while all cleanly merged main changes were preserved. No conflict
-markers remain.
+markers remain. A case-only wordmark asset collision, which Git did not flag on
+the case-insensitive worktree, was resolved in favor of the branch's tracked
+SVG; main's catalog referenced PNGs that were not present in the repository.
 
 Cheap syntax sanity checks were run only on the branch delta: Bun parsed all 13
 changed TS/TSX files with zero failures, and `rustfmt --check` parsed all 6

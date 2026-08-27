@@ -11,6 +11,8 @@ cheap syntax checks, and push `session/ios-bot-parity` without starting Phase 2.
   event ledger, runtime/web bridge, and native iOS bot parity.
 - Fetched and merged `origin/main` at `30739a95d`, resolving all iOS conflicts
   while preserving branch feature behavior and main's non-conflicting changes.
+- Resolved a hidden case-only wordmark asset collision in favor of the branch's
+  tracked SVG-backed catalog; main's competing catalog referenced absent PNGs.
 - Parsed all 13 changed TS/TSX files and 6 changed Rust files successfully; no
   build, typecheck, or dev server was run.
 - Wrote `docs/IOS_BOT_PARITY_PHASE_1_NOTES.md` with the completed handoff.
