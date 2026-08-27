@@ -146,10 +146,18 @@ async fn handle_bot_desktop_socket(
     });
 
     // Forward WebSocket receiver -> TCP.
+    let observer_bot_id = bot_id.clone();
+    let observer_user_id = user_id.clone();
     let ws_to_tcp = tokio::spawn(async move {
         while let Some(msg) = ws_receiver.next().await {
             match msg {
                 Ok(Message::Binary(data)) => {
+                    // Observe mode is view-only. The client also enforces this,
+                    // but the proxy must not trust it for server-side isolation.
+                    if control_state == BotDesktopControlState::HumanObserving {
+                        warn!(bot_id = observer_bot_id, user_id = observer_user_id, "Dropping observer input message; observe mode is view-only");
+                        continue;
+                    }
                     if tcp_write.write_all(&data).await.is_err() {
                         break;
                     }

@@ -434,6 +434,7 @@ mod tests {
             auth_config,
             rails,
             vm_driver: None,
+            bot_desktop_sessions: Arc::new(tokio::sync::RwLock::new(std::collections::HashMap::new())),
             vm_sessions: crate::vm_session_routes::new_vm_session_store(),
             cowork_scheduler: None,
             cowork_background: None,

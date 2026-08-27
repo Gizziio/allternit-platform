@@ -36,6 +36,7 @@ pub mod beta_session_routes;
 pub mod beta_work_routes;
 pub mod bot_desktop_routes;
 pub mod bot_desktop_stream;
+pub mod bot_event_routes;
 pub mod user_profile_routes;
 pub mod billing;
 pub mod board_routes;

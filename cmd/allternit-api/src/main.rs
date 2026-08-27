@@ -53,6 +53,7 @@ use allternit_api::board_routes::board_router;
 use allternit_api::board_stream_routes::board_stream_router;
 use allternit_api::bot_desktop_routes::bot_desktop_router;
 use allternit_api::bot_desktop_stream::bot_desktop_stream_router;
+use allternit_api::bot_event_routes::bot_event_router;
 use allternit_api::brain_routes::{brain_git_router, brain_router};
 use allternit_api::canvas_routes::canvas_router;
 use allternit_api::checkpoints_routes::checkpoints_router;
@@ -350,6 +351,7 @@ async fn main() {
         .merge(runtime_backend_router())
         .merge(agents_v1_router())
         .merge(bot_desktop_router())
+        .merge(bot_event_router())
         .merge(allternit_api::connector_routes::connector_router())
         .merge(allternit_api::cloud_credentials_routes::cloud_credentials_router())
         .merge(allternit_api::usage_routes::usage_router())

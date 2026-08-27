@@ -35,6 +35,8 @@ async fn get_or_create_gizzi_session(
     client: &reqwest::Client,
     gizzi: &str,
     chat_id: &str,
+    agent_id: Option<&str>,
+    run_id: Option<&str>,
 ) -> Result<String, String> {
     {
         let lock = GIZZI_CHAT_SESSIONS.lock().map_err(|e| e.to_string())?;
@@ -62,9 +64,20 @@ async fn get_or_create_gizzi_session(
         }
     }
 
-    let resp = client
+    // The x-allternit-agent-id / x-allternit-run-id headers bind the new gizzi
+    // session to its Allternit agent/run so gizzi's agent-event-bridge can
+    // attribute permission/question events back to this agent (see
+    // cmd/gizzi-code/src/runtime/services/agent-event-bridge.ts).
+    let mut req = client
         .post(format!("{}/session", gizzi))
-        .json(&json!({ "title": format!("Allternit chat {}", chat_id) }))
+        .json(&json!({ "title": format!("Allternit chat {}", chat_id) }));
+    if let Some(agent_id) = agent_id {
+        req = req.header("x-allternit-agent-id", agent_id);
+    }
+    if let Some(run_id) = run_id {
+        req = req.header("x-allternit-run-id", run_id);
+    }
+    let resp = req
         .send()
         .await
         .map_err(|e| format!("failed to create gizzi session: {}", e))?;
@@ -829,7 +842,15 @@ async fn agent_chat_bridge(
     let model_ref = json!({ "providerID": provider_id, "modelID": model_id });
     configure_harness_on_gizzi(&client, &gizzi, harness.as_ref(), &model_ref).await;
 
-    let gizzi_session_id = match get_or_create_gizzi_session(&client, &gizzi, &chat_id).await {
+    let gizzi_session_id = match get_or_create_gizzi_session(
+        &client,
+        &gizzi,
+        &chat_id,
+        agent_id.as_deref(),
+        chat_run.as_ref().map(|r| r.run_id.as_str()),
+    )
+    .await
+    {
         Ok(id) => id,
         Err(err) => {
             warn!(error = %err, "Failed to get or create Gizzi session");
@@ -843,6 +864,12 @@ async fn agent_chat_bridge(
     };
 
     info!(session_id = %chat_id, gizzi_session_id = %gizzi_session_id, model = %model_label, "agent-chat bridge → gizzi");
+
+    // Re-sent on every message POST: the session-create above only runs once
+    // per chatId (cached in GIZZI_CHAT_SESSIONS), while the agent-event-bridge
+    // binding in gizzi needs the current run id each turn.
+    let agent_id_for_messages = agent_id.clone();
+    let run_id_for_messages = chat_run.as_ref().map(|r| r.run_id.clone());
 
     let stream = async_stream::stream! {
         let msg_id = assistant_message_id.clone();
@@ -951,9 +978,16 @@ async fn agent_chat_bridge(
             gizzi_payload["metadata"] = json!({ "tools": tools.clone() });
         }
 
-        let _message_resp = match client
+        let mut message_req = client
             .post(format!("{}/session/{}/message", gizzi, session_id))
-            .json(&gizzi_payload)
+            .json(&gizzi_payload);
+        if let Some(agent_id) = agent_id_for_messages.as_deref() {
+            message_req = message_req.header("x-allternit-agent-id", agent_id);
+        }
+        if let Some(run_id) = run_id_for_messages.as_deref() {
+            message_req = message_req.header("x-allternit-run-id", run_id);
+        }
+        let _message_resp = match message_req
             .send()
             .await
         {
