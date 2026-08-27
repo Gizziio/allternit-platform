@@ -1110,3 +1110,29 @@ Wire OMB-style "Pick a Brain" model picker into Allternit chat via backend CLI p
 
 ### Open questions
 None.
+
+
+## OpenMausBot → Allternit Phase 4 — Bot memory, personality workspace, team import, marketplace (2026-08-27)
+
+### Goal
+Wire bot memory reads into chat/session context injection; expose personality workspace files in BotConfigTab with round-trip serialization and conflict detection; implement an OMB/BotMRR-compatible team import parser + wizard; build a connector marketplace UI over services/open-connector catalog with one-click OAuth and connector tool picker.
+
+### Just did
+- Created `surfaces/ai.allternit.com/src/lib/bots/bot-memory-context.ts` to read promoted/pinned memories from the canonical `bot-memory-store` and inject them into the session system prompt.
+- Wired memory injection into `useStartBotSession.ts`.
+- Added `getDefaultBotMemoryStore()` singleton export to `bot-memory-store.ts`.
+- Created `surfaces/ai.allternit.com/src/views/bots/BotWorkspaceEditor.tsx` for tabbed editing of AGENTS.md / SOUL.md / USER.md / TOOLS.md / HEARTBEAT.md with round-trip serialization and revision/conflict detection.
+- Updated `BotConfigTab.tsx` to use `BotWorkspaceEditor`, `ConnectorMarketplace`, and `BotConnectorToolPicker`.
+- Created `surfaces/ai.allternit.com/src/lib/bots/bot-team-import.ts` Markdown/YAML frontmatter parser and import driver for bots, channels, connectors, and routines.
+- Created `surfaces/ai.allternit.com/src/views/bots/BotTeamImportWizard.tsx` with source selection (disk / GitHub URL), review screen, import progress, and result summary.
+- Created `surfaces/ai.allternit.com/src/lib/connectors/connector-catalog.service.ts` and `surfaces/ai.allternit.com/src/views/bots/BotConnectorToolPicker.tsx` to expose open-connector actions as bot tools.
+
+### Verification
+- Pending: `pnpm exec tsc --noEmit` in `surfaces/ai.allternit.com`.
+- Pending: esbuild syntax checks on new/modified TSX/TS files.
+- Pending: commit and final status report.
+
+### Next
+1. Run TypeScript and syntax checks; fix any errors.
+2. Commit changes with descriptive message.
+3. Report files changed and blockers.

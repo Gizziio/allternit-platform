@@ -512,3 +512,20 @@ export function createBotMemoryStore(storeOptions: CreateBotMemoryStoreOptions =
 }
 
 export { BOT_MEMORY_SCHEMA_VERSION };
+
+// Singleton default store for surface-wide memory reads. Callers that need
+// isolated namespaces or durable persistence hooks should create their own
+// store via createBotMemoryStore().
+let defaultStore: BotMemoryStore | undefined;
+
+export function getDefaultBotMemoryStore(): BotMemoryStore {
+  if (!defaultStore) {
+    defaultStore = createBotMemoryStore();
+  }
+  return defaultStore;
+}
+
+/** Reset the singleton default store. Intended for tests only. */
+export function resetDefaultBotMemoryStore(): void {
+  defaultStore = undefined;
+}

@@ -9,6 +9,7 @@ import {
   type Sandbox,
 } from './vm-operator';
 import { useBotAllternitBusStore } from './bot-allternit-bus';
+import { injectBotMemoryIntoSystemPrompt } from './bot-memory-context';
 import type { Agent } from '../agents/agent.types';
 
 export interface UseStartBotSessionReturn {
@@ -141,7 +142,8 @@ function resolveRuntimeModelId(agent: Agent, modelOverride?: string): string | u
     }
 
     const basePrompt = agent.systemPrompt ?? '';
-    const systemPrompt = [basePrompt, vmPrompt, notice].filter(Boolean).join('\n\n');
+    const promptWithMemory = injectBotMemoryIntoSystemPrompt(agent, basePrompt);
+    const systemPrompt = [promptWithMemory, vmPrompt, notice].filter(Boolean).join('\n\n');
 
     const sessionId = await store.createSession({
       name: displayName,

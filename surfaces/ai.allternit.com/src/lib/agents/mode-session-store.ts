@@ -41,6 +41,7 @@ import { executeAgentMode } from './agent-mode-executor';
 import { gizziBaseUrl } from './api-config';
 import { buildBotRuntimeEnv } from '@/lib/bots/bot-runtime-env';
 import { memoryClient } from './memory-client';
+import { recallBotMemories } from '@/lib/bots/bot-memory-injection';
 
 const logger = createModuleLogger('ModeSessionStore');
 import type {
@@ -706,6 +707,33 @@ async function streamMessageWithContext(
       }
     } catch {
       // Degrade silently if memory recall fails
+    }
+
+    // Also inject isolated bot-memory-store promoted/pinned memories when an
+    // agent session is active. The records stay local; only a summary block is
+    // added to the prompt context.
+    try {
+      if (session.metadata.sessionMode === 'agent' && session.metadata.agentId) {
+        const tenantId = (session.metadata.userId as string | undefined)
+          || (session.metadata.tenantId as string | undefined)
+          || 'default';
+        const { contextBlock } = recallBotMemories({
+          tenantId,
+          botId: session.metadata.agentId,
+          query: text,
+          limit: 5,
+        });
+        if (contextBlock) {
+          agentContext = {
+            ...(agentContext ?? {}),
+            systemPrompt: agentContext?.systemPrompt
+              ? `${agentContext.systemPrompt}\n\n${contextBlock}`
+              : contextBlock,
+          };
+        }
+      }
+    } catch {
+      // Degrade silently if bot memory recall fails
     }
 
     // Retain user turn observation in background
