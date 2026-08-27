@@ -3,6 +3,7 @@
 import React, { useEffect, useRef } from "react";
 
 import { ChatViewWrapper } from "../ChatViewWrapper";
+import { useThemeStore, useResolvedTheme } from "@/design/ThemeStore";
 
 import { useHudClickThrough } from "./click-through";
 import { useHudComposerDrag } from "./composer-drag";
@@ -32,6 +33,10 @@ export function HudShell(): React.ReactNode {
 
   const rootRef = useRef<HTMLDivElement>(null);
   const hudContainerRef = useRef<HTMLDivElement>(null);
+
+  // Match the HUD surface to the app's theme (light/dark) instead of forcing dark.
+  const themePreference = useThemeStore((state) => state.theme);
+  const resolvedTheme = useResolvedTheme(themePreference);
 
   // Focus the composer textarea once it mounts so the HUD is ready to type.
   useEffect(() => {
@@ -112,17 +117,9 @@ export function HudShell(): React.ReactNode {
       style={
         {
           WebkitAppRegion: "no-drag",
-          colorScheme: "dark",
+          colorScheme: resolvedTheme,
           "--view-chat-bg": "transparent",
           "--surface-canvas": "transparent",
-          "--surface-floating": "rgba(255,255,255,0.04)",
-          "--chat-composer-bg": "rgba(22,22,24,0.82)",
-          "--chat-composer-border": "rgba(255, 255, 255, 0.10)",
-          "--chat-composer-glass-bg": "rgba(22,22,24,0.82)",
-          "--chat-composer-glass-border": "rgba(255, 255, 255, 0.10)",
-          "--chat-composer-muted": "rgba(255,255,255,0.55)",
-          "--ui-text-primary": "#f2f2f7",
-          "--ui-text-secondary": "#a1a1aa",
         } as React.CSSProperties
       }
     >
@@ -136,7 +133,7 @@ export function HudShell(): React.ReactNode {
         ref={hudContainerRef}
         data-hud-composer-bounds
         data-hud-grabbing={grabbing ? "" : undefined}
-        className="flex w-full flex-col overflow-visible rounded-2xl border border-[var(--chat-composer-border)] bg-[var(--chat-composer-bg)] text-[var(--text-primary)] shadow-xl backdrop-blur-xl"
+        className="flex w-full flex-col overflow-visible rounded-2xl border border-[var(--chat-composer-border)] bg-[var(--chat-composer-bg)] text-[var(--ui-text-primary)] shadow-xl backdrop-blur-xl"
         onPointerDown={onComposerPointerDown}
       >
         {/* Slim drag strip + close */}
@@ -147,7 +144,7 @@ export function HudShell(): React.ReactNode {
         >
           <div
             data-hud-grabber
-            className="flex items-center gap-1 text-white/40 cursor-grab active:cursor-grabbing hover:text-white/70"
+            className="flex items-center gap-1 text-[var(--ui-text-muted)] cursor-grab active:cursor-grabbing hover:text-[var(--ui-text-secondary)]"
           >
             <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
               <circle cx="5" cy="8" r="1.5" />
@@ -162,7 +159,7 @@ export function HudShell(): React.ReactNode {
             <button
               type="button"
               onClick={() => window.allternit?.shell?.hud?.close?.()}
-              className="rounded p-0.5 text-white/40 hover:bg-white/10 hover:text-white"
+              className="rounded p-0.5 text-[var(--ui-text-muted)] hover:bg-[var(--ui-border-muted)] hover:text-[var(--ui-text-primary)]"
               aria-label="Close HUD"
             >
               <svg width="8" height="8" viewBox="0 0 10 10" fill="currentColor">
