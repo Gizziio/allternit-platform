@@ -21,6 +21,14 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-08-27 15:29 — kimi — Brain Selector Modal Runtime Selection Fix
+
+- **Session ID / Branch:** `session/brain-selector-fix`
+- **Commit:** `140ed37a9` — merged into `main`
+- **How it works:** Makes provider/runtime rows in the chat ModelPicker selectable. Clicking a runtime row in single-select mode now selects the runtime's currently selected model (or its first model) and closes the modal. The chevron remains a separate expand/collapse affordance, and the provider containing the active selection auto-expands when the modal opens.
+- **Outstanding work:** None; multi-select mode intentionally keeps checkbox-only selection.
+- **Summary file:** [summaries/2026-08-27-1529-brain-selector-fix-kimi-runtime-selection.md](./summaries/2026-08-27-1529-brain-selector-fix-kimi-runtime-selection.md)
+
 ### 2026-08-27 09:42 — kimi — Repo Hygiene Follow-up (Open Items)
 
 - **Session ID / Branch:** `session/repo-hygiene-followup`
