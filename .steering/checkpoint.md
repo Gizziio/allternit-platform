@@ -1071,3 +1071,25 @@ Re-implement slices 1–6 of the brain-selection handoff so the frontend-selecte
 ### Next
 1. Slice 7: add E2E test that selected model reaches Gizzi session + message.
 2. Slice 8: final typecheck/build sweep and clean up any regressions.
+
+## OpenMausBot → Allternit integration — Phase 2 model picker + inference-router CLI detection (2026-08-27)
+
+### Goal
+Wire up backend CLI provider discovery and an OMB-style chat model picker so each bot/agent can have a per-bot default runtime model, and that model is passed through on bot-session startup.
+
+### What landed
+- Backend CLI provider detector (`cmd/allternit-api/src/cli_provider_detector.rs`) covering claude, codex, cursor, openrouter, hermes, openclaw, grok, and ollama with installed/available/reason/model metadata.
+- Inference-router route (`cmd/allternit-api/src/inference_router_routes.rs`) exposing `GET /api/v1/inference-router/cli-status`.
+- Modules declared in `cmd/allternit-api/src/lib.rs` and router mounted in `cmd/allternit-api/src/main.rs` under `/api/v1`.
+- API client additions (`surfaces/ai.allternit.com/src/integration/api-client.ts`): `InferenceRouterProvider`, `InferenceRouterCliStatusResponse`, and `getInferenceRouterCliStatus()`.
+- Chat `ModelPicker.tsx` (`surfaces/ai.allternit.com/src/views/chat/components/ModelPicker.tsx`) with provider rail, per-bot default fallback, unavailable tooltip, and persistence via `updateAgent` (`config.runtimeModelId`, `provider`, `model`).
+- `useStartBotSession.ts` now resolves `runtimeModelId` from the agent config and passes it as `modelId` to the first `sendMessageStream`.
+- `ChatBottomBar` already renders the picker when an `agent` prop is present.
+
+### Verification
+- `cargo check -p allternit-api` in workspace root: clean; no warnings from the new modules.
+- `pnpm typecheck:fast` (via direct `node node_modules/typescript/bin/tsc --project tsconfig.typecheck.json --noEmit`) in `surfaces/ai.allternit.com`: errors remain in unrelated office-suite packages, but no errors in `src/integration/api-client.ts`, `src/views/chat/components/ModelPicker.tsx`, `src/views/chat/hooks/useInferenceRouterCliStatus.ts`, `src/lib/bots/useStartBotSession.ts`, or `ChatBottomBar`.
+
+### Next
+- Runtime smoke-test: open a bot chat, confirm picker shows detected providers, select a model, restart the bot, and verify the chosen model flows to the first streamed message.
+- Decide whether to surface the same picker in the agent studio / brain profile flows.

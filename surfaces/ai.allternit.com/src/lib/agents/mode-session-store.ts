@@ -579,10 +579,17 @@ async function streamMessageWithContext(
 ): Promise<void> {
   const { text, skipContext, callbacks } = options;
   // The kernel splits runtimeModelId into provider/model. Use an explicit
-  // option first, then fall back to the backend-configured default / local
+  // option first, then the session's persisted runtimeModelId (set by bot
+  // session start), then fall back to the backend-configured default / local
   // brain. If nothing is available, omit the field so the runtime can fall
   // back to its own default instead of sending an invalid hard-coded model.
   let modelId = options.modelId;
+  if (!modelId) {
+    const sessionRuntimeModelId = session.metadata?.runtimeModelId;
+    if (typeof sessionRuntimeModelId === 'string' && sessionRuntimeModelId) {
+      modelId = sessionRuntimeModelId;
+    }
+  }
   if (!modelId) {
     modelId = await resolveFallbackRuntimeModelId();
   }

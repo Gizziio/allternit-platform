@@ -12,8 +12,8 @@ import { useBotAllternitBusStore } from './bot-allternit-bus';
 import type { Agent } from '../agents/agent.types';
 
 export interface UseStartBotSessionReturn {
-  startSession: (agent: Agent, options?: { modeId?: string }) => Promise<string | null>;
-  startTask: (agent: Agent, task: string, options?: { modeId?: string }) => Promise<string | null>;
+  startSession: (agent: Agent, options?: { modeId?: string; modelOverride?: string }) => Promise<string | null>;
+  startTask: (agent: Agent, task: string, options?: { modeId?: string; modelOverride?: string }) => Promise<string | null>;
   isStarting: boolean;
   error: string | null;
 }
@@ -68,9 +68,22 @@ export function useStartBotSession(
   const [isStarting, setIsStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const prepareBotSession = useCallback(async (agent: Agent, options?: { modeId?: string }): Promise<BotSessionStartResult | null> => {
+function resolveRuntimeModelId(agent: Agent, modelOverride?: string): string | undefined {
+  if (modelOverride) return modelOverride;
+  const config = (agent.config ?? {}) as Record<string, unknown>;
+  if (typeof config.runtimeModelId === 'string' && config.runtimeModelId) {
+    return config.runtimeModelId;
+  }
+  if (agent.provider && agent.model) {
+    return `${agent.provider}/${agent.model}`;
+  }
+  return undefined;
+}
+
+  const prepareBotSession = useCallback(async (agent: Agent, options?: { modeId?: string; modelOverride?: string }): Promise<BotSessionStartResult | null> => {
     const displayName = agent.botProfile?.displayName ?? agent.name;
     const store = useChatSessionStore.getState();
+    const runtimeModelId = resolveRuntimeModelId(agent, options?.modelOverride);
 
     // Each bot has one persistent chat session. Reuse the latest existing
     // session for this bot instead of creating a new one every time the user
@@ -142,6 +155,7 @@ export function useStartBotSession(
         botProfile: agent.botProfile,
         starterPrompts: agent.botProfile?.starterPrompts,
         model: agent.model,
+        runtimeModelId,
         tags: agent.tags,
         category: agent.category,
         trustTier: agent.trustTier,
@@ -198,7 +212,7 @@ export function useStartBotSession(
   );
 
   const startTask = useCallback(
-    async (agent: Agent, task: string, options?: { modeId?: string }): Promise<string | null> => {
+    async (agent: Agent, task: string, options?: { modeId?: string; modelOverride?: string }): Promise<string | null> => {
       if (!task.trim()) return null;
 
       setIsStarting(true);
@@ -223,7 +237,11 @@ export function useStartBotSession(
         const taskPrefix = agent.vmOperator?.enabled
           ? `[Task] ${task.trim()}\n\nIf this task requires a computer, browser, file system, or code execution, use your virtual computer.`
           : task.trim();
-        await store.sendMessageStream(sessionId, { text: taskPrefix });
+        const runtimeModelId = resolveRuntimeModelId(agent, options?.modelOverride);
+        await store.sendMessageStream(sessionId, {
+          text: taskPrefix,
+          ...(runtimeModelId ? { modelId: runtimeModelId } : {}),
+        });
 
         if (sandboxError) {
           setError(sandboxError);

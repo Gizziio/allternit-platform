@@ -603,6 +603,7 @@ export function ChatView({
           useMonolithLogo={useMonolithLogo}
           pulseMascot={pulseMascot}
           setLaunchMascotAttention={setLaunchMascotAttention}
+          agent={selectedAgent ?? undefined}
         />
       )}
 
@@ -702,6 +703,7 @@ export function ChatView({
           useMonolithLogo={useMonolithLogo}
           pulseMascot={pulseMascot}
           setLaunchMascotAttention={setLaunchMascotAttention}
+          agent={selectedAgent ?? undefined}
         />
       )}
 
