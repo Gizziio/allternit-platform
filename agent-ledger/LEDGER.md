@@ -21,6 +21,14 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-08-27 09:14 — kimi — Repo Hygiene & Root-Level Reorganization
+
+- **Session ID / Branch:** `session/repo-hygiene`
+- **Commit:** `3bbbec07c` — merged into `main`
+- **How it works:** Removes improperly-linked nested worktrees and scratch `.tmp-*` entries from the git index, deletes ignored working-tree noise (`.cache/`, `.references/`, `.pytest_cache/`, etc.), and consolidates root-level drift (`marketing/`, `upstream/`, `remix-content/`, ad-hoc scripts/docs) into `docs/` and `scripts/` so the root layout matches `REPO_STRUCTURE.md`.
+- **Outstanding work:** Historical references in `docs/archive/` and `docs/Future_Blueprints/` were left as-is; `.parity-reports/allternit-audit.md` remains untracked pending decision on whether to commit it.
+- **Summary file:** [summaries/2026-08-27-0914-repo-hygiene-kimi-cleanup.md](./summaries/2026-08-27-0914-repo-hygiene-kimi-cleanup.md)
+
 ### 2026-08-26 21:13 — kimi — Remote Control Gap Fix (secure push, PWA, UX polish)
 
 - **Session ID / Branch:** `session/remote-control-gap-fix`
