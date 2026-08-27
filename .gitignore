@@ -10,6 +10,7 @@ rails/reference/beads/
 .beads/
 *.log
 *.png
+!surfaces/ai.allternit.com/public/remote-control-*.png
 *.mov
 *.zip
 *.tgz

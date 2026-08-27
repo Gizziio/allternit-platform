@@ -411,6 +411,18 @@ export class RemoteControlClient {
     return this.json(`/sessions/${encodeURIComponent(sessionID)}/abort`, { method: "POST" });
   }
 
+  async createSession(input?: {
+    title?: string;
+    agentID?: string;
+    surface?: string;
+    permission?: unknown;
+  }): Promise<RemoteSession> {
+    return this.v1Json<RemoteSession>("/v1/session", {
+      method: "POST",
+      body: JSON.stringify(input ?? {}),
+    });
+  }
+
   async listPendingPermissions(): Promise<RemotePermissionRequest[]> {
     return this.v1Json<RemotePermissionRequest[]>("/v1/permission");
   }
@@ -444,20 +456,22 @@ export class RemoteControlClient {
   }
 
   async getVapidPublicKey(): Promise<string> {
-    const url = `${this.pushBaseUrl ?? this.baseUrl}/push/vapid-public-key`;
+    const url = `${this.pushBaseUrl ?? this.baseUrl}/vapid-public-key`;
     const res = await fetch(url, { headers: await this.authHeaders() });
     if (!res.ok) throw new RuntimeApiError("Failed to fetch VAPID public key", res.status, await res.text());
-    const data = (await res.json()) as { publicKey: string };
-    return data.publicKey;
+    return res.text();
   }
 
   async subscribePush(subscription: PushSubscriptionJSON): Promise<{ ok: boolean }> {
     const runtimeId = this.assertRuntimeId();
-    const url = `${this.pushBaseUrl ?? this.baseUrl}/push/subscribe/${encodeURIComponent(runtimeId)}`;
+    const url = `${this.pushBaseUrl ?? this.baseUrl}/subscribe`;
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json", ...(await this.authHeaders()) },
-      body: JSON.stringify(subscription),
+      body: JSON.stringify({
+        ...subscription,
+        runtimeId,
+      }),
     });
     if (!res.ok) throw new RuntimeApiError("Failed to subscribe push", res.status, await res.text());
     return res.json() as Promise<{ ok: boolean }>;
@@ -465,11 +479,11 @@ export class RemoteControlClient {
 
   async unsubscribePush(endpoint: string): Promise<{ ok: boolean }> {
     const runtimeId = this.assertRuntimeId();
-    const url = `${this.pushBaseUrl ?? this.baseUrl}/push/unsubscribe/${encodeURIComponent(runtimeId)}`;
+    const url = `${this.pushBaseUrl ?? this.baseUrl}/unsubscribe`;
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json", ...(await this.authHeaders()) },
-      body: JSON.stringify({ endpoint }),
+      body: JSON.stringify({ runtimeId, endpoint }),
     });
     if (!res.ok) throw new RuntimeApiError("Failed to unsubscribe push", res.status, await res.text());
     return res.json() as Promise<{ ok: boolean }>;

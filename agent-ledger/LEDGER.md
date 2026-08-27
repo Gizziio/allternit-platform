@@ -21,6 +21,14 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-08-26 21:13 — kimi — Remote Control Gap Fix (secure push, PWA, UX polish)
+
+- **Session ID / Branch:** `session/remote-control-gap-fix`
+- **Commit:** `2c21d67e3` — merged into `main`
+- **How it works:** Secures the push worker with Clerk-bearer `/subscribe` auth and service-secret/device-token `/notify` auth, adds KV TTL/rate-limiting/dead-subscription cleanup, hardens the Remote Control PWA with a precached offline app shell and iOS tags, fixes dashboard push permission/auth handling, and polishes setup UX with honest permission copy and empty states.
+- **Outstanding work:** Replace placeholder PWA icons/splash with final assets; run full manual E2E.
+- **Summary file:** [summaries/2026-08-26-2113-remote-control-gap-fix-kimi-secure-push-pwa-polish.md](./summaries/2026-08-26-2113-remote-control-gap-fix-kimi-secure-push-pwa-polish.md)
+
 ### 2026-08-26 10:13 — agent — Unified Compute & Desktop Cloud MVP
 
 - **Session ID / Branch:** `session/desktop-cloud-mvp`

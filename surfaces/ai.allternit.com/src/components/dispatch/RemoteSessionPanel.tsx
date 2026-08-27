@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Spinner, PaperPlaneRight, Circle, Pause, Check, X, Bell, BellSlash } from '@phosphor-icons/react';
+import { Spinner, PaperPlaneRight, Circle, Pause, Check, X, Bell, BellSlash, ChatTeardropText, ArrowSquareOut } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -295,7 +295,26 @@ export function RemoteSessionPanel({ runtimeId, getToken, baseUrl, direct }: Rem
         </div>
         <div className="flex-1 overflow-y-auto">
           {sessions.length === 0 && (
-            <div className="px-4 py-6 text-sm text-[var(--text-tertiary)]">No active sessions on this runtime.</div>
+            <div className="flex-1 flex flex-col items-center justify-center px-4 py-8 text-center">
+              <div className="rounded-2xl border border-dashed border-[var(--border-default)] bg-[var(--bg-elevated)] p-6 w-full">
+                <ChatTeardropText size={40} className="mx-auto mb-3 opacity-40" />
+                <p className="text-[14px] font-medium text-[var(--text-primary)] m-0 mb-1">No active sessions</p>
+                <p className="text-[12px] text-[var(--text-tertiary)] m-0 mb-4">
+                  Start a session from the desktop app or send a message below.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const composer = document.querySelector('[data-remote-composer]') as HTMLElement | null;
+                    composer?.focus();
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium bg-[var(--text-primary)] text-[var(--bg-elevated)] border-none cursor-pointer hover:opacity-90 transition-opacity"
+                >
+                  <ArrowSquareOut size={14} weight="bold" />
+                  Start a session
+                </button>
+              </div>
+            </div>
           )}
           {sessions.map(({ session, status }) => (
             <button
@@ -320,8 +339,14 @@ export function RemoteSessionPanel({ runtimeId, getToken, baseUrl, direct }: Rem
       {/* Detail / composer */}
       <div className="flex-1 flex flex-col min-w-0">
         {!selectedSession ? (
-          <div className="flex-1 flex items-center justify-center text-sm text-[var(--text-tertiary)]">
-            Select a session to remote control it.
+          <div className="flex-1 flex flex-col items-center justify-center px-4 py-8 text-center">
+            <div className="rounded-2xl border border-dashed border-[var(--border-default)] bg-[var(--bg-elevated)] p-6 max-w-xs">
+              <ChatTeardropText size={40} className="mx-auto mb-3 opacity-40" />
+              <p className="text-[14px] font-medium text-[var(--text-primary)] m-0 mb-1">Select a session</p>
+              <p className="text-[12px] text-[var(--text-tertiary)] m-0">
+                Choose an active session from the list to send messages and approve actions.
+              </p>
+            </div>
           </div>
         ) : (
           <>
@@ -406,6 +431,7 @@ export function RemoteSessionPanel({ runtimeId, getToken, baseUrl, direct }: Rem
             <div className="p-3 border-t border-[var(--border-default)]">
               <div className="flex items-end gap-2">
                 <textarea
+                  data-remote-composer
                   value={composerText}
                   onChange={(e) => setComposerText(e.target.value)}
                   onKeyDown={(e) => {

@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { Context, Env } from "hono";
+import { jwtVerify, createRemoteJWKSet, type JWTPayload } from "jose";
 
 interface PushSubscriptionRecord {
   runtimeId: string;
@@ -13,18 +14,30 @@ interface PushSubscriptionRecord {
   createdAt: number;
 }
 
+type NotificationType = "permission" | "question" | "completed" | "error";
+
 interface PendingNotification {
   title: string;
   body: string;
   tag: string;
+  type: NotificationType;
+  runtimeId: string;
+  sessionId?: string;
 }
 
 interface WorkerEnv {
   REMOTE_CONTROL_PUSH_KV: KVNamespace;
   VAPID_JWK: string;
   VAPID_PUBLIC_KEY: string;
+  NOTIFY_SECRET: string;
+  CLERK_JWKS_URL?: string;
+  ALLTERNIT_CLOUD_API_URL?: string;
   REMOTE_CONTROL_DASHBOARD_ORIGIN?: string;
 }
+
+const SUBSCRIPTION_TTL_SECONDS = 90 * 24 * 60 * 60; // 90 days
+const RATE_LIMIT_WINDOW_SECONDS = 60;
+const RATE_LIMIT_MAX_PER_RUNTIME = 30;
 
 function getDashboardOrigin(c: Context<{ Bindings: WorkerEnv }>): string {
   return c.env.REMOTE_CONTROL_DASHBOARD_ORIGIN ?? "https://remotecontrol.allternit.com";
@@ -45,6 +58,119 @@ async function hashEndpoint(endpoint: string): Promise<string> {
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("")
     .slice(0, 32);
+}
+
+let jwksCache: ReturnType<typeof createRemoteJWKSet> | null = null;
+let jwksUrlCache: string | null = null;
+
+function getJWKS(jwksUrl: string) {
+  if (jwksCache && jwksUrlCache === jwksUrl) return jwksCache;
+  jwksUrlCache = jwksUrl;
+  jwksCache = createRemoteJWKSet(new URL(jwksUrl), {
+    cooldownDuration: 300_000, // 5 min
+    cacheMaxAge: 86_400_000, // 24 hours
+  });
+  return jwksCache;
+}
+
+async function verifyClerkSessionToken(
+  c: Context<{ Bindings: WorkerEnv }>,
+  token: string
+): Promise<JWTPayload | null> {
+  const jwksUrl = c.env.CLERK_JWKS_URL;
+  if (!jwksUrl) return null;
+  try {
+    const { payload } = await jwtVerify(token, getJWKS(jwksUrl), {
+      issuer: undefined, // Clerk session tokens may use varying issuers; rely on signature + expiry
+      audience: undefined,
+      clockTolerance: 30,
+    });
+    return payload;
+  } catch (err) {
+    console.error("Clerk JWT verification failed", err);
+    return null;
+  }
+}
+
+function getBearerToken(c: Context<{ Bindings: WorkerEnv }>): string | null {
+  const auth = c.req.header("Authorization") ?? "";
+  const match = auth.match(/^Bearer\s+(.+)$/i);
+  return match?.[1] ?? null;
+}
+
+async function checkNotifyRateLimit(
+  kv: KVNamespace,
+  runtimeId: string
+): Promise<boolean> {
+  const key = `ratelimit:notify:${runtimeId}`;
+  const now = Math.floor(Date.now() / 1000);
+  const windowStart = Math.floor(now / RATE_LIMIT_WINDOW_SECONDS) * RATE_LIMIT_WINDOW_SECONDS;
+  const windowKey = `${key}:${windowStart}`;
+
+  const current = await kv.get(windowKey);
+  const count = current ? parseInt(current, 10) : 0;
+  if (count >= RATE_LIMIT_MAX_PER_RUNTIME) {
+    return false;
+  }
+  await kv.put(windowKey, String(count + 1), { expirationTtl: RATE_LIMIT_WINDOW_SECONDS + 1 });
+  return true;
+}
+
+interface VerifiedDevice {
+  runtimeId: string;
+  userId: string;
+  name?: string;
+  status?: string;
+}
+
+async function verifyDeviceToken(
+  c: Context<{ Bindings: WorkerEnv }>,
+  token: string
+): Promise<VerifiedDevice | null> {
+  const cloudUrl = c.env.ALLTERNIT_CLOUD_API_URL;
+  if (!cloudUrl) return null;
+  try {
+    const response = await fetch(`${cloudUrl.replace(/\/$/, "")}/api/v1/runtime-devices/verify-token`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
+    if (!response.ok) return null;
+    return (await response.json()) as VerifiedDevice;
+  } catch (err) {
+    console.error("Device token verification failed", err);
+    return null;
+  }
+}
+
+async function verifyUserOwnsRuntime(
+  c: Context<{ Bindings: WorkerEnv }>,
+  clerkToken: string,
+  runtimeId: string
+): Promise<boolean> {
+  const cloudUrl = c.env.ALLTERNIT_CLOUD_API_URL;
+  if (!cloudUrl) {
+    // When no cloud API is configured (local dev), accept the subscription
+    // without ownership proof. Production deployments must set the cloud URL.
+    return true;
+  }
+  try {
+    const response = await fetch(`${cloudUrl.replace(/\/$/, "")}/api/v1/runtime-devices`, {
+      headers: {
+        Authorization: `Bearer ${clerkToken}`,
+        Accept: "application/json",
+      },
+    });
+    if (!response.ok) return false;
+    const data = (await response.json()) as { runtimes?: Array<{ id: string }> } | Array<{ id: string }>;
+    const devices = Array.isArray(data) ? data : data.runtimes ?? [];
+    return devices.some((d) => d.id === runtimeId);
+  } catch (err) {
+    console.error("Runtime ownership check failed", err);
+    return false;
+  }
 }
 
 async function importVapidPrivateKey(jwkJson: string): Promise<CryptoKey> {
@@ -86,12 +212,8 @@ async function signVapidJWT(
     iat: now,
   };
 
-  const encodedHeader = base64UrlEncode(
-    new TextEncoder().encode(JSON.stringify(header))
-  );
-  const encodedPayload = base64UrlEncode(
-    new TextEncoder().encode(JSON.stringify(payload))
-  );
+  const encodedHeader = base64UrlEncode(new TextEncoder().encode(JSON.stringify(header)));
+  const encodedPayload = base64UrlEncode(new TextEncoder().encode(JSON.stringify(payload)));
   const signingInput = `${encodedHeader}.${encodedPayload}`;
 
   const signature = await crypto.subtle.sign(
@@ -107,7 +229,8 @@ async function signVapidJWT(
 async function sendPushNotification(
   subscription: PushSubscriptionRecord,
   privateKey: CryptoKey,
-  publicKey: string
+  publicKey: string,
+  payload: PendingNotification
 ): Promise<Response> {
   const audience = new URL(subscription.endpoint).origin;
   const jwt = await signVapidJWT(
@@ -117,14 +240,26 @@ async function sendPushNotification(
     "mailto:remote-control@allternit.com"
   );
 
+  const body = JSON.stringify({
+    title: payload.title,
+    body: payload.body,
+    tag: payload.tag,
+    data: {
+      runtimeId: subscription.runtimeId,
+      type: payload.type,
+      sessionId: payload.sessionId,
+    },
+  });
+
   return fetch(subscription.endpoint, {
     method: "POST",
     headers: {
-      "Content-Type": "application/octet-stream",
+      "Content-Type": "application/json",
       TTL: "60",
       Urgency: "high",
       Authorization: `vapid t=${jwt}, k=${publicKey}`,
     },
+    body,
   });
 }
 
@@ -135,7 +270,7 @@ app.use("*", async (c, next) => {
   return cors({
     origin: (origin) => (allowedOrigins(origin, dashboardOrigin) ? origin : null),
     allowMethods: ["GET", "POST", "OPTIONS"],
-    allowHeaders: ["Content-Type"],
+    allowHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   })(c, next);
 });
@@ -149,9 +284,23 @@ app.get("/vapid-public-key", async (c) => {
 });
 
 app.post("/subscribe", async (c) => {
+  const token = getBearerToken(c);
+  if (!token) {
+    return c.json({ error: "Authorization required" }, 401);
+  }
+  const claims = await verifyClerkSessionToken(c, token);
+  if (!claims) {
+    return c.json({ error: "Invalid or expired session token" }, 401);
+  }
+
   const body = await c.req.json<PushSubscriptionRecord>();
   if (!body.runtimeId || !body.endpoint || !body.keys?.p256dh || !body.keys?.auth) {
     return c.json({ error: "Missing required subscription fields" }, 400);
+  }
+
+  const ownsRuntime = await verifyUserOwnsRuntime(c, token, body.runtimeId);
+  if (!ownsRuntime) {
+    return c.json({ error: "Runtime not found or not owned by this user" }, 403);
   }
 
   const record: PushSubscriptionRecord = {
@@ -165,9 +314,10 @@ app.post("/subscribe", async (c) => {
   const keyHash = await hashEndpoint(body.endpoint);
   await c.env.REMOTE_CONTROL_PUSH_KV.put(
     `sub:${body.runtimeId}:${keyHash}`,
-    JSON.stringify(record)
+    JSON.stringify(record),
+    { expirationTtl: SUBSCRIPTION_TTL_SECONDS }
   );
-  return c.json({ ok: true });
+  return c.json({ ok: true, userId: claims.sub });
 });
 
 app.post("/unsubscribe", async (c) => {
@@ -181,15 +331,95 @@ app.post("/unsubscribe", async (c) => {
   return c.json({ ok: true });
 });
 
+app.get("/subscriptions", async (c) => {
+  const token = getBearerToken(c);
+  if (!token) {
+    return c.json({ error: "Authorization required" }, 401);
+  }
+  const claims = await verifyClerkSessionToken(c, token);
+  if (!claims) {
+    return c.json({ error: "Invalid or expired session token" }, 401);
+  }
+
+  const endpoint = c.req.query("endpoint");
+  if (!endpoint) {
+    return c.json({ error: "endpoint is required" }, 400);
+  }
+
+  // Only return runtimeIds the authenticated user actually owns.
+  const cloudUrl = c.env.ALLTERNIT_CLOUD_API_URL;
+  let ownedRuntimeIds: Set<string> | undefined;
+  if (cloudUrl) {
+    const response = await fetch(`${cloudUrl.replace(/\/$/, "")}/api/v1/runtime-devices`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+      },
+    });
+    if (!response.ok) {
+      return c.json({ error: "Ownership check failed" }, 500);
+    }
+    const data = (await response.json()) as { runtimes?: Array<{ id: string }> } | Array<{ id: string }>;
+    const devices = Array.isArray(data) ? data : data.runtimes ?? [];
+    ownedRuntimeIds = new Set(devices.map((d) => d.id));
+  }
+
+  const runtimeIds: string[] = [];
+  const prefix = "sub:";
+  const list = await c.env.REMOTE_CONTROL_PUSH_KV.list({ prefix });
+  for (const key of list.keys) {
+    const raw = await c.env.REMOTE_CONTROL_PUSH_KV.get(key.name);
+    if (!raw) continue;
+    const record: PushSubscriptionRecord = JSON.parse(raw);
+    if (record.endpoint === endpoint && (!ownedRuntimeIds || ownedRuntimeIds.has(record.runtimeId))) {
+      runtimeIds.push(record.runtimeId);
+    }
+  }
+
+  return c.json({ runtimeIds });
+});
+
 app.post("/notify", async (c) => {
+  const token = getBearerToken(c);
+  if (!token) {
+    return c.json({ error: "Authorization required" }, 401);
+  }
+
+  // Accept either the service secret (production, cloud-api → worker) or a
+  // valid paired runtime device token (local dev, gizzi → worker).
+  let notifyRuntimeId: string | null = null;
+  if (token === c.env.NOTIFY_SECRET) {
+    notifyRuntimeId = null; // derive from payload below
+  } else {
+    const device = await verifyDeviceToken(c, token);
+    if (!device) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+    notifyRuntimeId = device.runtimeId;
+  }
+
   const body = await c.req.json<{
     runtimeId?: string;
     title?: string;
     body?: string;
     tag?: string;
+    sessionId?: string;
+    type?: NotificationType;
   }>();
   if (!body.runtimeId) {
     return c.json({ error: "runtimeId is required" }, 400);
+  }
+
+  // When authenticated with a device token, the runtimeId in the payload must
+  // match the token's runtime. This prevents a leaked token from spamming
+  // another user's machine.
+  if (notifyRuntimeId && notifyRuntimeId !== body.runtimeId) {
+    return c.json({ error: "Runtime mismatch" }, 403);
+  }
+
+  const allowed = await checkNotifyRateLimit(c.env.REMOTE_CONTROL_PUSH_KV, body.runtimeId);
+  if (!allowed) {
+    return c.json({ error: "Rate limit exceeded" }, 429);
   }
 
   const vapidJwk = c.env.VAPID_JWK;
@@ -202,7 +432,10 @@ app.post("/notify", async (c) => {
   const pending: PendingNotification = {
     title: body.title ?? "Allternit Remote Control",
     body: body.body ?? "One of your machines needs input.",
-    tag: body.tag ?? "remote-control",
+    tag: body.tag ?? `remote-control:${body.sessionId ?? body.runtimeId}`,
+    type: body.type ?? "permission",
+    runtimeId: body.runtimeId,
+    sessionId: body.sessionId,
   };
 
   const prefix = `sub:${body.runtimeId}:`;
@@ -220,11 +453,7 @@ app.post("/notify", async (c) => {
       );
 
       try {
-        const response = await sendPushNotification(
-          subscription,
-          privateKey,
-          vapidPublicKey
-        );
+        const response = await sendPushNotification(subscription, privateKey, vapidPublicKey, pending);
         if (response.status === 404 || response.status === 410) {
           await c.env.REMOTE_CONTROL_PUSH_KV.delete(key.name);
           return { ok: false, status: response.status };

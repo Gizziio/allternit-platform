@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import * as QRCodeModule from 'react-qr-code';
 const QRCode = (QRCodeModule as any).default?.QRCode ?? (QRCodeModule as any).default ?? QRCodeModule;
 import {
@@ -19,7 +19,6 @@ import {
   Spinner,
   X,
   Sun,
-  Warning,
   DotsThreeVertical,
   Broom,
   ShieldWarning,
@@ -40,7 +39,10 @@ import { openRemoteControlWindow } from '@/lib/open-remote-control-window';
 import { RemoteSessionPanel } from '@/components/dispatch/RemoteSessionPanel';
 import { MachinesPanel } from '@/components/dispatch/MachinesPanel';
 import { useRuntimes } from '@/components/dispatch/useRuntimes';
+import { MockRuntimesBanner } from '@/components/dispatch/MockRuntimesBanner';
 import { useRuntimeSelection } from '@/components/dispatch/useRuntimeSelection';
+import { createRemoteControlClient } from '@/lib/dispatch/remote-control';
+import { useToast } from '@/hooks/use-toast';
 
 // ─── token generation ────────────────────────────────────────────────────────
 function generateDispatchToken(): string {
@@ -133,27 +135,25 @@ function SetupRow({ icon, title, description, variant, checked, onToggle, button
 interface SubPermRow {
   label: string;
   description: string;
-  granted: boolean;
-  onRequest?: () => void;
+  href?: string;
 }
 
-function SubPermissionRow({ label, description, granted, onRequest }: SubPermRow) {
+function SubPermissionRow({ label, description, href }: SubPermRow) {
   return (
     <div className="flex items-start gap-3 pt-4">
       <div className="flex-1 min-w-0">
         <div className="text-[14px] font-semibold text-[var(--text-primary)]">{label}</div>
         <div className="text-[12px] text-[var(--text-tertiary)] mt-0.5 leading-relaxed">{description}</div>
       </div>
-      {granted ? (
-        <Check size={16} className="text-[var(--text-secondary)] mt-0.5 shrink-0" weight="bold" />
-      ) : (
-        <button
-          type="button"
-          onClick={onRequest}
-          className="px-3.5 py-1.5 rounded-xl border border-solid border-[var(--border-default)] bg-[var(--bg-elevated)] text-[12px] font-medium text-[var(--text-primary)] cursor-pointer hover:bg-[var(--surface-hover)] transition-colors shrink-0"
+      {href ? (
+        <a
+          href={href}
+          className="px-3.5 py-1.5 rounded-xl border border-solid border-[var(--border-default)] bg-[var(--bg-elevated)] text-[12px] font-medium text-[var(--text-primary)] cursor-pointer hover:bg-[var(--surface-hover)] transition-colors shrink-0 no-underline"
         >
-          Request
-        </button>
+          Open System Settings
+        </a>
+      ) : (
+        <Check size={16} className="text-[var(--text-secondary)] mt-0.5 shrink-0" weight="bold" />
       )}
     </div>
   );
@@ -316,17 +316,14 @@ function TimestampSeparator() {
 // ─── Main View ────────────────────────────────────────────────────────────────
 export function DispatchView(): React.ReactNode {
   // ── persisted settings ──────────────────────────────────────────────────────
-  const [fileAccess, setFileAccess] = useSettingsState('dispatch.fileAccess', true);
   const [keepAwake, setKeepAwake] = useSettingsState('dispatch.keepAwake', false);
   const [notifications, setNotifications] = useSettingsState('dispatch.notifications', false);
-  const [computerControl, setComputerControl] = useSettingsState('dispatch.computerControl', false);
+  const [notifyPermission, setNotifyPermission] = useSettingsState('dispatch.notifyPermission', true);
+  const [notifyQuestion, setNotifyQuestion] = useSettingsState('dispatch.notifyQuestion', true);
+  const [notifyCompleted, setNotifyCompleted] = useSettingsState('dispatch.notifyCompleted', false);
+  const [notifyError, setNotifyError] = useSettingsState('dispatch.notifyError', true);
   const [setupComplete, setSetupComplete] = useSettingsState('dispatch.setupComplete', false);
   const [codePermission, setCodePermission] = useSettingsState<CodePermissionOption>('dispatch.codePermission', 'manual');
-
-  // sub-permissions for computer control (default accessibility to true so the
-  // setup screen matches the reference UI; screen recording still needs a request)
-  const [accessibilityGranted, setAccessibilityGranted] = useSettingsState('dispatch.accessibility', true);
-  const [screenRecordingGranted, setScreenRecordingGranted] = useSettingsState('dispatch.screenRecording', false);
 
   // ── QR / session ────────────────────────────────────────────────────────────
   const [token, setToken] = useState<string>(() => generateDispatchToken());
@@ -364,16 +361,25 @@ export function DispatchView(): React.ReactNode {
   const [qrPanelDismissed, setQrPanelDismissed] = useState(false);
 
   // ── composer ────────────────────────────────────────────────────────────────
+  const { addToast } = useToast();
   const [composerValue, setComposerValue] = useState('');
   const [messages, setMessages] = useState<Array<{ id: string; role: 'user'; text: string }>>([]);
+  const [sending, setSending] = useState(false);
 
   // ── remote hub tabs ─────────────────────────────────────────────────────────
   const [activeHubTab, setActiveHubTab] = useState<'handoff' | 'active-sessions' | 'remote-sessions'>('handoff');
 
   // ── machine selection / remote control ──────────────────────────────────────
-  const { runtimes, loading: runtimesLoading } = useRuntimes();
+  const { runtimes, loading: runtimesLoading, isMock } = useRuntimes();
   const [selectedRuntimeId, setSelectedRuntimeId] = useRuntimeSelection();
   const selectedRuntime = runtimes.find((r) => r.id === selectedRuntimeId);
+
+  // ── remote control client ────────────────────────────────────────────────────
+  const remoteClient = useMemo(() => {
+    const runtimeId = handoffStatus?.runtimeId ?? selectedRuntimeId;
+    if (!runtimeId) return null;
+    return createRemoteControlClient({ runtimeId, getToken });
+  }, [handoffStatus?.runtimeId, selectedRuntimeId, getToken]);
 
   // Build the QR URL. In development we ask the dev server for the LAN address
   // so a phone on the same network can actually reach this computer.
@@ -455,12 +461,30 @@ export function DispatchView(): React.ReactNode {
     }
   };
 
-  const handleSendMessage = useCallback(() => {
+  const handleSendMessage = useCallback(async () => {
     const text = composerValue.trim();
-    if (!text) return;
-    setMessages((prev) => [...prev, { id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, role: 'user', text }]);
-    setComposerValue('');
-  }, [composerValue]);
+    if (!text || sending) return;
+    if (!remoteClient) {
+      addToast({ title: 'No machine connected', description: 'Pair or select a runtime before sending.', type: 'error' });
+      return;
+    }
+    setSending(true);
+    try {
+      const session = await remoteClient.createSession({ title: 'Remote Control', surface: 'remote-control' });
+      await remoteClient.sendMessage(session.id, { text });
+      setMessages((prev) => [...prev, { id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, role: 'user', text }]);
+      setComposerValue('');
+      addToast({ title: 'Dispatched', description: 'Message sent to your machine.', type: 'success' });
+    } catch (err) {
+      addToast({
+        title: 'Dispatch failed',
+        description: err instanceof Error ? err.message : 'Could not send message to runtime.',
+        type: 'error',
+      });
+    } finally {
+      setSending(false);
+    }
+  }, [composerValue, sending, remoteClient, addToast]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -489,7 +513,7 @@ export function DispatchView(): React.ReactNode {
             <button
               type="button"
               className="text-blue-500 underline bg-transparent border-none cursor-pointer p-0 text-[14px]"
-              onClick={() => window.dispatchEvent(new CustomEvent('allternit:open-settings', { detail: { section: 'dispatch' } }))}
+              onClick={() => window.dispatchEvent(new CustomEvent('allternit:open-settings', { detail: { section: 'remote-control' } }))}
             >
               Settings
             </button>
@@ -497,59 +521,95 @@ export function DispatchView(): React.ReactNode {
           </p>
 
           <div className="w-full flex flex-col gap-3">
+            <p className="text-[13px] text-[var(--text-secondary)] m-0 mb-1">
+              These permissions are granted to the Allternit desktop app. You can update them anytime in{' '}
+              <button
+                type="button"
+                className="text-blue-500 underline bg-transparent border-none cursor-pointer p-0 text-[13px]"
+                onClick={() => window.dispatchEvent(new CustomEvent('allternit:open-settings', { detail: { section: 'remote-control' } }))}
+              >
+                Settings
+              </button>
+              .
+            </p>
             <SetupRow
               icon={<Folder size={20} />}
-              title="Give Allternit access to your files"
-              description="macOS will ask when you click Finish."
-              variant="toggle"
-              checked={fileAccess}
-              onToggle={setFileAccess}
+              title="Files & folders"
+              description="Granted by the Allternit desktop app during pairing."
+              variant="check"
             />
             <SetupRow
               icon={<Coffee size={20} />}
               title="Keep this computer awake"
-              description="Prevents sleep while Dispatch is running."
+              description="Prevents sleep while Remote Control is running."
               variant="toggle"
               checked={keepAwake}
               onToggle={setKeepAwake}
             />
             <SetupRow
-              icon={<Globe size={20} />}
-              title="Allternit is ready to use Chrome"
-              description="Lets Dispatch navigate, click, and fill forms in your browser."
-              variant="check"
-            />
-            <SetupRow
-              icon={<Monitor size={20} />}
-              title="Let Allternit control your computer"
-              description="Allows Allternit to click, type, and open apps."
+              icon={<Bell size={20} />}
+              title="Mobile notifications"
+              description="Get alerted when a machine needs input."
               variant="toggle"
-              checked={computerControl}
-              onToggle={(v) => {
-                setComputerControl(v);
-                if (v && !accessibilityGranted) setAccessibilityGranted(true);
+              checked={notifications}
+              onToggle={async (v) => {
+                if (v && 'Notification' in window) {
+                  const perm = await Notification.requestPermission();
+                  setNotifications(perm === 'granted');
+                } else {
+                  setNotifications(v);
+                }
               }}
             >
-              {computerControl && (
+              {notifications && (
                 <div className="divide-y divide-[var(--border-subtle)]">
                   <SubPermissionRow
-                    label="Accessibility"
-                    description="Required for mouse and keyboard tracking and control."
-                    granted={accessibilityGranted}
+                    label="Permission requests"
+                    description="Notify when a machine needs approval."
+                    href={undefined}
                   />
                   <SubPermissionRow
-                    label="Screen recording"
-                    description="Required for screen visibility. macOS may ask you to restart Allternit."
-                    granted={screenRecordingGranted}
-                    onRequest={() => setScreenRecordingGranted(true)}
+                    label="Questions"
+                    description="Notify when a machine asks a question."
+                    href={undefined}
+                  />
+                  <SubPermissionRow
+                    label="Errors"
+                    description="Notify when a machine reports an error."
+                    href={undefined}
                   />
                 </div>
               )}
             </SetupRow>
             <SetupRow
+              icon={<Globe size={20} />}
+              title="Browser automation"
+              description="Lets Remote Control navigate, click, and fill forms in your browser."
+              variant="check"
+            />
+            <SetupRow
+              icon={<Monitor size={20} />}
+              title="Computer control"
+              description="Allows Allternit to click, type, and open apps on the host machine."
+              variant="check"
+            >
+              <div className="divide-y divide-[var(--border-subtle)]">
+                <SubPermissionRow
+                  label="Accessibility"
+                  description="Required for mouse and keyboard tracking and control."
+                  href="x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
+                />
+                <SubPermissionRow
+                  label="Screen recording"
+                  description="Required for screen visibility. macOS may ask you to restart Allternit."
+                  href="x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture"
+                />
+              </div>
+            </SetupRow>
+            <SetupRow
               icon={<SquaresFour size={20} />}
               title="All connectors are on"
-              description="Dispatch can use every connector you've authenticated."
+              description="Remote Control can use every connector you've authenticated."
               variant="check"
             />
           </div>
@@ -593,6 +653,12 @@ export function DispatchView(): React.ReactNode {
           </div>
         </div>
 
+        {isMock && (
+          <div className="mt-6 shrink-0">
+            <MockRuntimesBanner />
+          </div>
+        )}
+
         <div className="flex-1 flex min-h-0 mt-8 border-t border-solid border-[var(--border-subtle)]">
           {/* ── Left sidebar ── */}
           <div className="w-[260px] shrink-0 border-r border-solid border-[var(--border-subtle)] flex flex-col overflow-y-auto">
@@ -615,16 +681,33 @@ export function DispatchView(): React.ReactNode {
                   <span className="flex-1 text-[13px] text-[var(--text-secondary)]">Mobile notifications</span>
                   <ToggleSwitch checked={notifications} onChange={handleNotificationsToggle} />
                 </div>
-                {/* Computer use */}
+                {notifications && (
+                  <div className="pl-7 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[12px] text-[var(--text-tertiary)]">Permission requests</span>
+                      <ToggleSwitch checked={notifyPermission} onChange={setNotifyPermission} />
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[12px] text-[var(--text-tertiary)]">Questions</span>
+                      <ToggleSwitch checked={notifyQuestion} onChange={setNotifyQuestion} />
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[12px] text-[var(--text-tertiary)]">Completed tasks</span>
+                      <ToggleSwitch checked={notifyCompleted} onChange={setNotifyCompleted} />
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[12px] text-[var(--text-tertiary)]">Errors</span>
+                      <ToggleSwitch checked={notifyError} onChange={setNotifyError} />
+                    </div>
+                  </div>
+                )}
+                {/* Host permissions */}
                 <div className="flex items-center gap-3">
                   <Monitor size={16} className="text-[var(--text-tertiary)]" />
-                  <span className="flex-1 text-[13px] text-[var(--text-secondary)]">Computer use</span>
-                  {computerControl && (
-                    <Warning size={14} className="text-amber-500 shrink-0" weight="fill" />
-                  )}
+                  <span className="flex-1 text-[13px] text-[var(--text-secondary)]">Host permissions</span>
                   <button
                     type="button"
-                    onClick={() => window.dispatchEvent(new CustomEvent('allternit:open-settings', { detail: { section: 'dispatch' } }))}
+                    onClick={() => window.dispatchEvent(new CustomEvent('allternit:open-settings', { detail: { section: 'remote-control' } }))}
                     className="text-[12px] text-[var(--text-primary)] border border-solid border-[var(--border-default)] rounded-lg px-2.5 py-1 bg-transparent cursor-pointer hover:bg-[var(--surface-hover)] transition-colors"
                   >
                     Open settings
@@ -799,13 +882,17 @@ export function DispatchView(): React.ReactNode {
                     <button
                       type="button"
                       onClick={handleSendMessage}
-                      disabled={!composerValue.trim()}
+                      disabled={!composerValue.trim() || sending}
                       className="size-8 flex items-center justify-center text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] disabled:opacity-40 bg-transparent border-none cursor-pointer"
                       aria-label="Send message"
                     >
-                      <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
-                        <path d="M3.5 13.09L20.5 4.5L12 20.5L10 14L3.5 13.09Z" />
-                      </svg>
+                      {sending ? (
+                        <Spinner size={18} className="animate-spin" />
+                      ) : (
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                          <path d="M3.5 13.09L20.5 4.5L12 20.5L10 14L3.5 13.09Z" />
+                        </svg>
+                      )}
                     </button>
                     <button
                       type="button"

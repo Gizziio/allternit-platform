@@ -1384,7 +1384,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       case 'api-keys': return renderApiKeysPanel();
       case 'shortcuts': return renderShortcutsPanel();
       case 'permissions': return <PermissionsPanel />;
-      case 'dispatch': return <DispatchSettingsPanel />;
+      case 'remote-control': return <DispatchSettingsPanel />;
       case 'gizziio-code': return renderGizziioCodePanel();
       case 'cowork': return renderCoworkPanel();
       case 'extensions': return renderExtensionsPanel();
