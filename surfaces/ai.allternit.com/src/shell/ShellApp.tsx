@@ -43,7 +43,8 @@ import { useCoworkSessionStore } from '../views/cowork/CoworkSessionStore';
 import { useDesignSessionStore } from '../views/design/DesignSessionStore';
 // Modularized Shell Components
 import { getShellViewRegistry } from './ViewRegistry';
-import { ChatViewWrapper } from './ChatViewWrapper';
+import { HudShell } from './hud/HudShell';
+import { useHudHandoff } from './hud/handoff';
 
 import { useResolvedTheme, useThemeStore } from '../design/ThemeStore';
 import { usePanelLayout } from '../hooks/usePanelLayout';
@@ -125,6 +126,8 @@ function ShellAppInner(): React.ReactNode {
     }, [active.viewType])
   );
   useStackProviders();
+  // When the HUD window closes, resume its active session in the main window.
+  useHudHandoff();
   const { mode: activeMode, setMode: setActiveMode, isLoaded: modeLoaded } = useMode();
 
   const handleStartBotSession = useCallback(async (agent: Agent) => {
@@ -225,17 +228,6 @@ function ShellAppInner(): React.ReactNode {
     document.documentElement.setAttribute('data-theme', theme);
     document.body.setAttribute('data-theme', theme);
   }, [theme]);
-
-  // Make the page root transparent when running in the floating HUD window so
-  // the frameless transparent BrowserWindow shows the view content, not a solid
-  // themed rectangle behind it.  (Matches Hermes HUD's anti-white-flash trick.)
-  useEffect(() => {
-    if (!isHudWindow) return;
-    const style = document.createElement('style');
-    style.textContent = 'html,body,#root{background:transparent !important;}';
-    document.head.appendChild(style);
-    return () => style.remove();
-  }, [isHudWindow]);
 
   // Fetch agents on mount for agent mode selection
   useEffect(() => {
@@ -636,144 +628,12 @@ function ShellAppInner(): React.ReactNode {
   const [session, setSession] = useState(null);
   useEffect(() => { void getSession().then(setSession); }, []);
 
-  // Drag state for the floating HUD handle.  We use renderer-side pointer
-  // deltas + a main-process move IPC so the whole bar is draggable on macOS
-  // without -webkit-app-region swallowing the close button clicks.
-  const hudDragRef = useRef<{ dragging: boolean; startX: number; startY: number } | null>(null);
-
-  useEffect(() => {
-    if (!isHudWindow) return;
-    let attempts = 0;
-    const id = setInterval(() => {
-      const ta = document.querySelector('textarea[aria-label="Text Area"]') as HTMLTextAreaElement | null;
-      if (ta) {
-        ta.focus();
-        clearInterval(id);
-      }
-      if (++attempts > 20) clearInterval(id);
-    }, 100);
-    return () => clearInterval(id);
-  }, [isHudWindow]);
-
-  const onHudDragDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    if (!window.allternit?.shell?.moveHudBy) return;
-    e.currentTarget.setPointerCapture(e.pointerId);
-    hudDragRef.current = { dragging: false, startX: e.clientX, startY: e.clientY };
-  }, []);
-
-  const onHudDragMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    const drag = hudDragRef.current;
-    if (!drag || !window.allternit?.shell?.moveHudBy) return;
-    const dx = e.clientX - drag.startX;
-    const dy = e.clientY - drag.startY;
-    if (!drag.dragging && Math.abs(dx) < 3 && Math.abs(dy) < 3) return;
-    drag.dragging = true;
-    void window.allternit.shell.moveHudBy({
-      x: dx,
-      y: dy,
-      width: window.outerWidth,
-      height: window.outerHeight,
-    });
-    drag.startX = e.clientX;
-    drag.startY = e.clientY;
-  }, []);
-
-  const onHudDragUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    e.currentTarget.releasePointerCapture?.(e.pointerId);
-    hudDragRef.current = null;
-  }, []);
-
-  // Chrome-free floating HUD: a Hermes-style floating chat panel.  No shell
-  // rail, header, or rail-controls; just a draggable handle, a close button,
-  // and the live chat surface mounted inside a translucent sheet.
-  const hudRef = useRef<HTMLDivElement>(null);
-  const hudResizeFrame = useRef<number | null>(null);
-  const lastHudHeight = useRef<number | null>(null);
-
-  useEffect(() => {
-    if (!isHudWindow) return;
-    const resize = () => {
-      if (!hudRef.current || !window.allternit?.shell?.resizeHud) return;
-      const height = hudRef.current.scrollHeight;
-      if (lastHudHeight.current !== null && Math.abs(lastHudHeight.current - height) < 4) return;
-      lastHudHeight.current = height;
-      void window.allternit.shell.resizeHud({ height });
-    };
-    const observer = new ResizeObserver(() => {
-      if (hudResizeFrame.current) cancelAnimationFrame(hudResizeFrame.current);
-      hudResizeFrame.current = requestAnimationFrame(resize);
-    });
-    if (hudRef.current) observer.observe(hudRef.current);
-    resize();
-    return () => {
-      observer.disconnect();
-      if (hudResizeFrame.current) cancelAnimationFrame(hudResizeFrame.current);
-    };
-  }, [isHudWindow]);
-
   if (isHudWindow) {
     return (
       <TooltipProvider>
         <VoiceProvider>
           <SessionProvider session={session}>
-            <div
-              ref={hudRef}
-              data-theme="dark"
-              data-hud-window
-              className="flex w-screen flex-col rounded-2xl border border-white/10 bg-[rgba(18,26,52,0.72)] text-[var(--text-primary)] shadow-2xl backdrop-blur-xl"
-              style={
-                {
-                  WebkitAppRegion: 'no-drag',
-                  colorScheme: 'dark',
-                  '--view-chat-bg': 'transparent',
-                  '--surface-canvas': 'transparent',
-                  '--surface-floating': 'rgba(255,255,255,0.06)',
-                  minHeight: 'auto',
-                } as React.CSSProperties
-              }
-            >
-              {/* Draggable handle + close */}
-              <div
-                className="h-7 shrink-0 flex items-center justify-between px-2 select-none"
-                style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-              >
-                <div
-                  className="flex items-center gap-1.5 text-white/50 cursor-grab active:cursor-grabbing hover:text-white/80"
-                  onPointerDown={onHudDragDown}
-                  onPointerMove={onHudDragMove}
-                  onPointerUp={onHudDragUp}
-                  onPointerCancel={onHudDragUp}
-                  style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-                >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                    <circle cx="5" cy="8" r="2" />
-                    <circle cx="12" cy="8" r="2" />
-                    <circle cx="19" cy="8" r="2" />
-                    <circle cx="5" cy="16" r="2" />
-                    <circle cx="12" cy="16" r="2" />
-                    <circle cx="19" cy="16" r="2" />
-                  </svg>
-                  <span className="text-[10px] font-semibold uppercase tracking-wide">HUD</span>
-                </div>
-                <div style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
-                  <button
-                    type="button"
-                    onClick={() => window.allternit?.shell?.closeHud?.()}
-                    className="rounded p-1 text-white/50 hover:bg-white/10 hover:text-white"
-                    aria-label="Close HUD"
-                  >
-                    <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
-                      <path d="M1 1 L9 9 M9 1 L1 9" stroke="currentColor" strokeWidth="1.5" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-              {/* Chat surface — composer on top, transcript below, collapsing to
-                  a minimal bar when there are no messages. */}
-              <div className="flex flex-col min-h-0">
-                <ChatViewWrapper hudMode />
-              </div>
-            </div>
+            <HudShell />
           </SessionProvider>
         </VoiceProvider>
       </TooltipProvider>
@@ -994,12 +854,14 @@ function ShellAppInner(): React.ReactNode {
           open={agentActivityPanelOpen}
           onClose={() => setAgentActivityPanelOpen(false)}
         />
-        <ControlCenter
-          isOpen={isControlCenterOpen}
-          onClose={() => setIsControlCenterOpen(false)}
-          isDevMode={process.env.NODE_ENV === 'development'}
-          onOpenView={open as (viewType: string) => void}
-        />
+        <React.Suspense fallback={null}>
+          <ControlCenter
+            isOpen={isControlCenterOpen}
+            onClose={() => setIsControlCenterOpen(false)}
+            isDevMode={process.env.NODE_ENV === 'development'}
+            onOpenView={open as (viewType: string) => void}
+          />
+        </React.Suspense>
         {settingsOpen && (
           <React.Suspense fallback={null}>
             {/* Settings now renders PluginManager as its own nested overlay

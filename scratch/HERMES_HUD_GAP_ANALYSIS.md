@@ -185,13 +185,12 @@ These routes are implemented and protected by Clerk, but the dashboard UI that c
 
 ### 3.3 Known issues / limitations
 
-- **Main app renderer crash** at `ControlCenter.tsx:32` — blocks normal app usage.
+- **Main app renderer crash** at `ControlCenter.tsx:32` — blocks normal app usage; appears unrelated to the HUD port.
 - **Global hotkey not manually verified** from another app; macOS Accessibility permission may block it.
-- **No click-through / ignore-mouse-events** for transparent areas.
-- **Window is non-resizable**; no renderer corner handles.
-- **No bot roster, avatars, routines, or bot-to-bot messaging** in the HUD.
-- **No session handoff** back to the main window on HUD close.
-- **No geometry persistence** for HUD position/size.
+- **Bot roster, avatars, routines, or bot-to-bot messaging** are not in the HUD surface (Hermes Bot Mode plugin scope, not the floating chat HUD).
+- **Profile-aware HUD spawning** is stubbed but not exercised; Allternit's session/agent model differs from Hermes profiles.
+- **Runtime/manual verification** of click-through, resize, snap, and session handoff has not been performed.
+- The original backend collector endpoints (`/api/v1/hud/*`) remain orphaned; no UI consumes them.
 
 ---
 
@@ -201,24 +200,24 @@ These routes are implemented and protected by Clerk, but the dashboard UI that c
 
 | Hermes feature | Allternit status | Severity | Notes |
 |---|---|---|---|
-| Click-through / ignore-mouse-events | ❌ Missing | High | Hermes has per-element hit-test; Allternit is a solid rectangle |
-| Native vibrancy / frost glass | ❌ Missing | Medium | Hermes uses macOS vibrancy behind the band; Allternit uses CSS only |
-| Game overlay detection | ❌ Missing | Low/Medium | Hermes detects fullscreen app and changes styling |
-| Linux cursor feed | ❌ Missing | Medium | Needed because `{ forward: true }` doesn't work on Linux |
-| Geometry persistence | ❌ Missing | Medium | Hermes saves/restores `hud-state.json` |
-| Reset layout | ❌ Missing | Low | Hermes has `hermes:hud:reset-layout` |
-| Snap-to-pointer shortcut | ❌ Missing | Low | Hermes uses `Cmd/Ctrl+Shift+G` |
-| Edge-aware composer placement | ❌ Missing | Low | Hermes flips composer top/bottom based on screen position |
-| Activity/held band visibility | Partial | Medium | Allternit hides empty state; Hermes has nuanced hold/fade logic |
+| Click-through / ignore-mouse-events | ✅ Ported | High | `src/shell/hud/click-through.ts` + `setIgnoreMouse` IPC; Linux cursor feed stubbed |
+| Native vibrancy / frost glass | ✅ Ported | Medium | `src/shell/hud/glass.ts` reports to main; CSS fallback is primary on non-macOS |
+| Game overlay detection | ✅ Ported | Low/Medium | `src/shell/hud/game-overlay.ts` + `hud-game-overlay.ts` main feed |
+| Linux cursor feed | ✅ Ported | Medium | `src/main/hud-cursor.ts` polls `getCursorScreenPoint()` and pushes to renderer |
+| Geometry persistence | ✅ Ported | Medium | `hud-state.json` in userData, validated against live displays |
+| Reset layout | ✅ Ported | Low | `window.allternit.shell.hud.resetLayout()` mapped to `applyHudResetBounds` |
+| Snap-to-pointer shortcut | ✅ Ported | Low | `Cmd/Ctrl+Shift+G` registered while HUD is open |
+| Edge-aware composer placement | ❌ Not ported | Low | Hermes flips composer top/bottom based on screen position; currently bottom-only |
+| Activity/held band visibility | Partial | Medium | Allternit hides empty state; Hermes has nuanced hold/fade logic not fully replicated |
 | Full chat composer parity | Partial | Medium | Allternit's HUD uses same composer but strips some chrome |
-| Session handoff on close | ❌ Missing | High | Hermes reports session id so app can resume; Allternit just closes |
-| Profile-aware HUD window | ❌ Missing | High | Allternit has no concept of spawning HUD bound to a specific agent profile |
-| Resize handles | ❌ Missing | Medium | Allternit is non-resizable; Hermes has renderer edge/corner handles |
-| Composer long-press drag | Partial | Low | Allternit has drag handle; Hermes drags by long-pressing composer |
-| Broadcast HUD state to all windows | ❌ Missing | Low | Hermes keeps every window's toggle state correct |
-| Stream unthrottling while blurred | ❌ Missing | Low | Hermes registers HUD with stream throttle |
-| Hide/restore main window | Partial | Low | Allternit doesn't hide main window on HUD open |
-| Platform windowing profile abstraction | ❌ Missing | Medium | Hermes has `hud-windowing.ts` for OS-specific capabilities |
+| Session handoff on close | ✅ Ported | High | `src/shell/hud/handoff.ts` reports session id and main broadcasts on close |
+| Profile-aware HUD window | Partial | High | Hermes respawns on profile change; Allternit session/agent model differs, stubbed |
+| Resize handles | ✅ Ported | Medium | `src/shell/hud/resize-handle.ts` + `setBounds` IPC; Wayland limited to e/se/s |
+| Composer long-press drag | ✅ Ported | Low | `src/shell/hud/composer-drag.ts` long-press + Ctrl-drag on X11 |
+| Broadcast HUD state to all windows | ✅ Ported | Low | `shell:hud:state` broadcast to all windows |
+| Stream unthrottling while blurred | ❌ Not ported | Low | Hermes registers HUD with stream throttle; not wired in Allternit |
+| Hide/restore main window | ✅ Ported | Low | Main window hidden on HUD open, restored on close |
+| Platform windowing profile abstraction | ✅ Ported | Medium | `src/main/hud-windowing.ts` exposes capability matrix to renderer |
 
 ### 4.2 Allternit has / Hermes HUD lacks
 
@@ -248,3 +247,45 @@ These routes are implemented and protected by Clerk, but the dashboard UI that c
 ## 6. Forkability assessment
 
 See the follow-up discussion for which Hermes files can be forked into Allternit, which need Allternit-specific redesign, and which non-TypeScript parts require analysis rather than direct porting.
+
+---
+
+## 7. Port status (updated after fork)
+
+The Hermes HUD code was forked into the `allternit-session-hud-mode` worktree via agent swarms. The plan file lives at `scratch/HERMES_HUD_PORT_PLAN.md`.
+
+### 7.1 What landed
+
+| Hermes capability | Allternit location | Status |
+|---|---|---|
+| HUD geometry (`hud-geometry.ts`) | `surfaces/allternit-desktop/src/main/hud-geometry.ts` | ✅ Ported |
+| Platform windowing profile (`hud-windowing.ts`) | `surfaces/allternit-desktop/src/main/hud-windowing.ts` | ✅ Ported |
+| Snap-to-pointer (`hud-snap.ts`) | `surfaces/allternit-desktop/src/main/hud-snap.ts` | ✅ Ported + `Cmd/Ctrl+Shift+G` shortcut |
+| Cursor feed / game overlay / window enumeration helpers | `surfaces/allternit-desktop/src/main/hud-cursor.ts`, `hud-game-overlay.ts`, `window-below.ts`, `hyprland.ts` | ✅ Ported |
+| Main-process HUD persistence, reset, broadcast, hide/restore main | `surfaces/allternit-desktop/src/main/unified-main.ts` | ✅ Integrated |
+| HUD preload bridge (`window.allternit.shell.hud.*`) | `surfaces/allternit-desktop/src/preload/index.ts` | ✅ Extended |
+| HUD bridge types | `surfaces/ai.allternit.com/src/lib/globals.d.ts` | ✅ Extended |
+| Click-through | `surfaces/ai.allternit.com/src/shell/hud/click-through.ts` | ✅ Ported + tests |
+| Composer drag | `surfaces/ai.allternit.com/src/shell/hud/composer-drag.ts` | ✅ Ported |
+| Resize handles | `surfaces/ai.allternit.com/src/shell/hud/resize-handle.ts` | ✅ Ported |
+| Thread focus preservation | `surfaces/ai.allternit.com/src/shell/hud/thread-focus.ts` | ✅ Ported |
+| Session handoff | `surfaces/ai.allternit.com/src/shell/hud/handoff.ts` | ✅ Ported |
+| Layout helper | `surfaces/ai.allternit.com/src/shell/hud/layout.ts` | ✅ Ported |
+| Frost/glass reporting | `surfaces/ai.allternit.com/src/shell/hud/glass.ts` | ✅ Ported |
+| Game overlay hook | `surfaces/ai.allternit.com/src/shell/hud/game-overlay.ts` | ✅ Ported |
+| HUD shell component + CSS | `surfaces/ai.allternit.com/src/shell/hud/HudShell.tsx`, `hud-shell.css` | ✅ Created + `ShellApp.tsx` refactored |
+
+### 7.2 Verification
+
+- `npm run typecheck` in `surfaces/allternit-desktop` ✅
+- `npm run build:main && npm run build:preload` in `surfaces/allternit-desktop` ✅
+- `pnpm exec vitest run src/shell/hud` — 8 tests pass ✅
+- `pnpm exec tsc --noEmit` in `surfaces/ai.allternit.com` — no HUD-related errors; remaining errors are pre-existing office-suite package issues and an unrelated `mode-session-store.ts` mismatch. A HUD-related `ChatActiveContent.tsx` prop mismatch (`linkedAgentSessionIds` → `linkedSessionIds`) was fixed.
+
+### 7.3 Remaining gaps / follow-up
+
+- The `ControlCenter.tsx:32` crash still blocks normal app usage; it is unrelated to the HUD port.
+- `window.allternit.shell.hud.windowing` was added to the preload bridge after the shell integration; it now exposes `clientPlacement`, `controlDrag`, `nativeDrag`, `workspaceTransfer`.
+- Runtime/manual verification of the global hotkey, click-through, resize, and session handoff has not been performed.
+- The original Allternit backend collector endpoints (`/api/v1/hud/*`) remain orphaned; no UI consumes them.
+- Profile-aware HUD spawning (Hermes respawns on profile change) is stubbed but not exercised because Allternit's profile/session model differs.

@@ -43,7 +43,10 @@
 - [x] Port `src/app/hud/resize-handle.ts` → `surfaces/ai.allternit.com/src/shell/hud/resize-handle.ts`
   - Edge/corner resize handles
   - Wire to `window.allternit.shell.hud.setBounds`
-- [ ] Add `data-hud-grabbing` attribute support in drag/resize to veto click-through
+- [x] Add `data-hud-grabbing` attribute support in drag/resize to veto click-through
+  - Composer drag sets `data-hud-grabbing` on the composer bounds wrapper.
+  - Resize handles set `data-hud-grabbing` while resizing.
+  - `useHudClickThrough` vetoes `setIgnoreMouse(true)` whenever `[data-hud-grabbing]` is present.
 
 ## Phase 3 — Session / visibility / polish
 
@@ -62,7 +65,7 @@
 
 ## Phase 4 — Shell integration
 
-- [ ] Refactor `surfaces/ai.allternit.com/src/shell/ShellApp.tsx`
+- [x] Refactor `surfaces/ai.allternit.com/src/shell/ShellApp.tsx`
   - Move HUD-specific logic into a new `HudShell` component under `src/shell/hud/HudShell.tsx`
   - Import and use `useHudClickThrough`, `useHudComposerDrag`, `useHudResizeHandle`, `useHudGlass`, `useHudGameOverlay`, `useHudThreadFocus`, `useHudHandoff`
   - Keep existing `isHudWindow` detection
@@ -71,14 +74,15 @@
   - Band/sheet fade timings
   - Resize handle cursors
   - Composer drag affordance
-- [ ] Update routes / view detection if needed
+- [x] Update routes / view detection if needed
 
 ## Phase 5 — Verify
 
 - [x] Run `npm run typecheck` in `surfaces/allternit-desktop` ✅
 - [x] Run `pnpm exec tsc --noEmit` in `surfaces/ai.allternit.com` (pre-existing office-suite errors unrelated to HUD)
 - [x] Build desktop main/preload ✅
-- [ ] Update `scratch/HERMES_HUD_GAP_ANALYSIS.md` with what landed
+- [x] Update `scratch/HERMES_HUD_GAP_ANALYSIS.md` with what landed
+- [x] Fix `ChatActiveContent.tsx` prop mismatch (`linkedAgentSessionIds` → `linkedSessionIds`)
 - [x] Update this plan file checkboxes as work completes
 
 ---

@@ -61,7 +61,7 @@ export function HudShell(): React.ReactNode {
       const height = Math.round(el.scrollHeight);
       if (height === lastHeight || height === 0) return;
       lastHeight = height;
-      void window.allternit.shell.setHudBounds({ height });
+      void window.allternit?.shell?.setHudBounds?.({ height });
     };
 
     const ro = new ResizeObserver(() => {
@@ -108,7 +108,6 @@ export function HudShell(): React.ReactNode {
       ref={rootRef}
       data-hud-shell
       data-hud-game={gameUnder ? "" : undefined}
-      data-hud-grabbing={grabbing || resizing ? "" : undefined}
       className="relative flex h-screen w-screen flex-col overflow-hidden"
       style={
         {
@@ -136,6 +135,7 @@ export function HudShell(): React.ReactNode {
       <div
         ref={hudContainerRef}
         data-hud-composer-bounds
+        data-hud-grabbing={grabbing ? "" : undefined}
         className="flex w-full flex-col overflow-visible rounded-2xl border border-white/[0.08] bg-[rgba(18,18,18,0.28)] text-[var(--text-primary)] shadow-xl backdrop-blur-xl"
         onPointerDown={onComposerPointerDown}
       >

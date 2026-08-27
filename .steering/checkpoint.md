@@ -1,5 +1,31 @@
 # Steering checkpoint
 
+## Hermes floating chat HUD port — completion (2026-08-26)
+
+### Goal
+Finish porting the Hermes Desktop floating chat HUD into the Allternit `session/hud-mode` worktree without redoing work the previous agent already landed.
+
+### Just did
+- Verified the existing `allternit-session-hud-mode` worktree already contains the bulk of the port (commits `8bc131d73` and `2f8d763cc`).
+- Fixed a HUD-related TypeScript prop mismatch in `surfaces/ai.allternit.com/src/views/chat/main/ChatActiveContent.tsx` (`linkedAgentSessionIds` → `linkedSessionIds`).
+- Refined `data-hud-grabbing` placement in `HudShell.tsx` so composer-drag and resize handles correctly veto click-through.
+- Updated `scratch/HERMES_HUD_PORT_PLAN.md` and `scratch/HERMES_HUD_GAP_ANALYSIS.md` to reflect the current state.
+
+### Verification
+- `npm run typecheck` in `surfaces/allternit-desktop`: clean.
+- `npm run build` in `surfaces/allternit-desktop`: clean (auth renderer + main + preload).
+- `pnpm exec vitest run src/shell/hud` in `surfaces/ai.allternit.com`: 8 tests pass.
+- `pnpm exec tsc --noEmit` in `surfaces/ai.allternit.com`: no HUD-related errors; remaining errors are pre-existing office-suite package issues.
+
+### Next
+1. Steering commit-gate review for the uncommitted HUD refinements.
+2. Merge `session/hud-mode` into the local main checkout.
+3. Runtime smoke-test: global hotkey, click-through, drag, resize, session handoff.
+
+### Open questions
+- Should the orphaned `/api/v1/hud/*` collector endpoints be removed or rebuilt into a dashboard UI?
+- Does the user want the branch merged to main now, or left in the session worktree for further polish?
+
 ## Hermes-style HUD mode for Allternit (2026-08-25)
 
 ### Goal
