@@ -22,13 +22,28 @@ was closed with `minutes = 2`.
 had 10 SQL placeholders but only 9 parameters, and `owner_id`/`bot_id` were bound
 to `session_id`. This caused the `computers` row insert to fail, so deprovision
 returned `NO_CONTENT` without destroying the VM or recording usage. Fixed the
-params to 11 placeholders and bound `owner_id`/`bot_id` to `bot_id`. Rebuilt and
-redeployed; the second smoke test passed.
+params to 11 placeholders and bound `owner_id`/`bot_id` to `bot_id`. Committed
+as `6e27513c2` and pushed to `origin/session/desktop-cloud-mvp`; redeployed and
+verified.
+
+## Stripe live validation (step B)
+- Retrieved Stripe test secret key from `~/.config/stripe/config.toml`.
+- Created Stripe test customer `cus_V9A2nYWWpM8dO9`, product
+`prod_V9A3WBfuCdHHNw`, metered price `price_1U8rjOANxEzOvVEHNp3fJ26z`, and
+subscription item `si_V9A3hepzKWwc54` (using legacy `Stripe-Version:
+2024-12-18.acacia` because current Basil API requires meters for metered
+prices).
+- Added `STRIPE_SECRET_KEY` and `STRIPE_DESKTOP_USAGE_SUBSCRIPTION_ITEM` to
+`/etc/allternit-api/api.env` and restarted `allternit-api`.
+- Provisioned/deprovisioned another desktop; Stripe usage-record summary shows
+`total_usage: 2`, credit balance dropped from 4999 → 4998 cents, and a second
+`usage_events` row was recorded.
 
 ## Open questions
 - Should the temporary `ALLTERNIT_DESKTOP_ACCESS_TOKEN` be removed from the VPS
 env now that validation is done?
-- Where are the Stripe keys for live validation step B?
+- Should the smoke-test Stripe customer/subscription be cleaned up or kept for
+future validation runs?
 
 ---
 
