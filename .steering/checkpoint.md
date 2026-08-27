@@ -1150,3 +1150,27 @@ Wire bot memory reads into chat/session context injection; expose personality wo
 ### Open questions / blockers
 - `tsc --noEmit` and `vitest run` require workspace dependencies to be installed/resolvable (typescript, vitest). Syntax checks passed via `bun`.
 - The existing `team-import.ts` and `team-import.test.ts` use vitest APIs not supported by `bun test`; running them requires `pnpm exec vitest run` in a fully installed workspace.
+
+## OpenMausBot → Allternit Phase 6 hardening (2026-08-27)
+
+### Goal
+Complete Phase 6 hardening for the OMB integration: fix TypeScript errors in touched bot/chat files, review and harden local CLI / host-control code paths, and add pagination/backpressure quick wins.
+
+### Just did
+- Verified `tsc --project surfaces/ai.allternit.com/tsconfig.typecheck.json --noEmit` reports no errors in the touched integration files (bot-team-import, BotWorkspaceEditor, GroupChatView, BotDesktopView, etc.).
+- Confirmed the security hardening is in place: host-control opt-in (`ALLTERNIT_HOST_CONTROL_ENABLED`), secret-stripped subprocess environments via `env_allowlist.rs`, `system.env` redaction, and guarded `local_exec` VM fallback.
+- Confirmed performance quick wins: screenshot polling uses AbortController, visibility pausing, in-flight dedupe, and exponential backoff; `CoworkTranscript` paginates at 100-message chunks; `bot-memory-context` caps retrieval.
+- Ran `cargo test -p allternit-api --lib tool_routes`: 21 tests passed.
+- Added `ALLTERNIT_HOST_CONTROL_ENABLED=false` to `.env.example`.
+
+### Verification
+- `node node_modules/typescript/bin/tsc --project surfaces/ai.allternit.com/tsconfig.typecheck.json --noEmit`: 0 errors in touched bot/chat/automation files; unrelated office-suite errors remain.
+- `cargo check -p allternit-api`: passes (32 pre-existing warnings).
+- `cargo test -p allternit-api --lib tool_routes`: 21 passed.
+
+### Next
+- Commit the remaining `.env.example` documentation change.
+- Report findings and any blockers to the parent agent.
+
+### Open questions / blockers
+- None remaining for this slice.
