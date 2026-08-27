@@ -6,7 +6,7 @@
  * and dispatching to the correct mode-specific detail view.
  */
 
-export type ProjectMode = 'chat' | 'cowork' | 'code' | 'design';
+export type ProjectMode = 'chat' | 'cowork' | 'code' | 'design' | 'bb';
 
 export interface UnifiedProject {
   /** Stable ID used by the Projects hub (mode-prefixed to avoid collisions). */
@@ -43,6 +43,7 @@ export interface ProjectStats {
   cowork: number;
   code: number;
   design: number;
+  bb: number;
   favorite: number;
   archived: number;
 }

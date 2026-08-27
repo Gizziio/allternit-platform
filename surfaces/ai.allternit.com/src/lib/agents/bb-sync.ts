@@ -85,6 +85,25 @@ export function createBBProject(input: BBProjectCreateInput): Promise<BBApiProje
   });
 }
 
+export function updateBBProject(
+  id: string,
+  input: { name?: string; gitRemoteUrl?: string | null },
+): Promise<BBApiProject> {
+  return api(`/projects/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    body: JSON.stringify({
+      name: input.name,
+      git_remote_url: input.gitRemoteUrl,
+    }),
+  });
+}
+
+export function deleteBBProject(id: string): Promise<void> {
+  return api(`/projects/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+}
+
 export function listBBThreads(projectId: string): Promise<{ items: BBApiThread[] }> {
   return api(`/threads?projectId=${encodeURIComponent(projectId)}`);
 }

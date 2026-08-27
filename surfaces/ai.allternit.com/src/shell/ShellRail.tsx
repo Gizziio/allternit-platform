@@ -223,7 +223,7 @@ export function ShellRail({
     }
   });
   const [startingBotId, setStartingBotId] = useState<string | null>(null);
-  const [typeFilter, setTypeFilter] = useState<'all' | 'chat' | 'cowork' | 'task' | 'agent' | 'browser' | 'code'>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'chat' | 'cowork' | 'task' | 'agent' | 'browser' | 'code' | 'bb'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'completed' | 'archived'>('all');
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week' | 'month'>('all');
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string; kind: string } | null>(null);
@@ -985,7 +985,7 @@ export function ShellRail({
                   <div className="flex flex-col gap-3">
                     <FilterRow label="Type" value={typeFilter === 'all' ? 'All' : typeFilter}>
                       <div className="flex flex-col gap-0.5">
-                        {(['all', 'chat', 'cowork', 'task', 'agent', 'browser', 'code'] as const).map((k) => (
+                        {(['all', 'chat', 'cowork', 'task', 'agent', 'browser', 'code', 'bb'] as const).map((k) => (
                           <button
                             key={k}
                             type="button"

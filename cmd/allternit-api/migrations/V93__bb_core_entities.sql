@@ -54,10 +54,10 @@ CREATE TABLE IF NOT EXISTS bb_project_sources (
     created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
     updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
     UNIQUE(project_id, host_id),
-    UNIQUE(project_id, is_default) WHERE is_default = 1,
     CHECK(source_type = 'local_path' AND host_id IS NOT NULL AND path IS NOT NULL)
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS bb_project_sources_project_default_idx ON bb_project_sources(project_id, is_default) WHERE is_default = 1;
 CREATE INDEX IF NOT EXISTS bb_project_sources_project_idx ON bb_project_sources(project_id);
 CREATE INDEX IF NOT EXISTS bb_project_sources_host_idx ON bb_project_sources(host_id);
 
