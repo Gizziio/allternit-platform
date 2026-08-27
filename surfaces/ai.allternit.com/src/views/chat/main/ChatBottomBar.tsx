@@ -6,6 +6,7 @@ import type { GizziEmotion, GizziAttention } from "@/components/ai-elements/Gizz
 import type { AgentModeSurface } from "@/stores/agent-surface-mode.store";
 import type { CanonicalAgentModeId } from "@/lib/agents/agent-mode-contracts";
 import type { PluginMentionTarget } from "@/lib/mentions/use-mention-targets";
+import type { ModelSelection } from "@/components/model-picker";
 
 interface ChatBottomBarProps {
   mode: 'chat' | 'cowork' | 'code';
@@ -26,6 +27,10 @@ interface ChatBottomBarProps {
   useMonolithLogo: boolean;
   pulseMascot: (emotion: GizziEmotion) => void;
   setLaunchMascotAttention: (attention: GizziAttention | null) => void;
+  selectedModel: string;
+  modelSelection?: ModelSelection | null;
+  startSelection: () => void;
+  selectModel: (selection: ModelSelection) => void;
 }
 
 export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
@@ -47,6 +52,10 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
   useMonolithLogo,
   pulseMascot,
   setLaunchMascotAttention,
+  selectedModel,
+  modelSelection,
+  startSelection,
+  selectModel,
 }) => {
   if (!(mode === 'cowork' || !isChatEmpty || hideEmptyState || hudMode)) return null;
 

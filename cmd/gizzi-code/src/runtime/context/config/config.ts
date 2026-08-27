@@ -1182,6 +1182,7 @@ export namespace Config {
         .record(
           z.string(),
           ModelsDev.Model.partial().extend({
+            runtime: z.enum(["sdk", "subprocess", "auto"]).optional().describe("Execution runtime for this model"),
             variants: z
               .record(
                 z.string(),

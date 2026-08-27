@@ -1048,3 +1048,26 @@ Make `GET /api/v1/providers` and `GET /api/v1/providers/auth/status` return live
 
 ### Open questions
 - Should the fallback path continue returning `ProviderInfo` forever, or do we eventually want to drop the static tables when Gizzi is mandatory?
+
+---
+
+## Brain selection handoff — AuthPlan + session pin (2026-08-26)
+
+### Goal
+Re-implement slices 1–6 of the brain-selection handoff so the frontend-selected brain reaches Gizzi sessions and auth resolution is explicit.
+
+### Just did
+- Added named auth profiles store (`Auth.Profile`, `~/.gizzi/auth-profiles.json`) in `cmd/gizzi-code/src/runtime/integrations/auth/auth.ts`.
+- Added `ModelRef`, `AuthPlan`, `prepareAuth`, `RuntimePolicy`, `resolveRuntimePolicy`, and `rotateAuth` in `cmd/gizzi-code/src/runtime/providers/provider.ts`.
+- Wired `AuthPlan` through `getLanguage`, `LLM.stream`, `SessionPrompt`, and `SessionProcessor`.
+- Added session-level `default_model` pin with Drizzle migration in `cmd/gizzi-code/src/runtime/session/*`.
+- Added `runtime` enum to `Config.Provider` and per-model config.
+- Forwarded `authProfileId` from the Allternit API into the Gizzi session payload in `cmd/allternit-api/src/agent_session_routes.rs`.
+
+### Verification
+- `cargo check -p allternit-api`: ✅ passes.
+- `cd cmd/gizzi-code && bun run typecheck`: ✅ no errors in touched files; pre-existing missing `packages/sdk/dist/*` artifacts remain.
+
+### Next
+1. Slice 7: add E2E test that selected model reaches Gizzi session + message.
+2. Slice 8: final typecheck/build sweep and clean up any regressions.

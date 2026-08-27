@@ -67,7 +67,6 @@ export const ChatActiveContent: React.FC<ChatActiveContentProps> = ({
             onSelectArtifact={onSelectArtifact}
             selectedArtifactTitle={selectedArtifactTitle}
             hideEmptyState={hideEmptyState}
-            showUserMessages={false}
           />
         </div>
       ) : (
@@ -78,7 +77,6 @@ export const ChatActiveContent: React.FC<ChatActiveContentProps> = ({
           onSelectArtifact={onSelectArtifact}
           selectedArtifactTitle={selectedArtifactTitle}
           hideEmptyState={hideEmptyState}
-          showUserMessages
         />
       )}
       
