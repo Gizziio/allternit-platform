@@ -21,6 +21,14 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-08-27 11:46 — kimi — bb Platform Audit + Incremental Parity Scaffold (Phase 1)
+
+- **Session ID / Branch:** `session/cacb228c-026d-4ea5-85fe-aa09788e3c7c`
+- **Commit:** `87de5f02c` — pushed to origin
+- **How it works:** Audited Allternit and bb, produced 1:1 capability mapping and gap spec, then scaffolded bb-compatible core entities (projects, threads, environments, hosts, events) as new `/api/v1/bb/*` routes in the Rust API plus Drizzle schema updates and a minimal web view.
+- **Outstanding work:** Web typecheck blocked by better-sqlite3 native build failure on Node 26.5.0; bb mode not yet wired into unified project projection; host-daemon bridge, terminal, plugin, CLI, mobile, desktop, and bb connect surfaces deferred to later phases.
+- **Summary file:** [summaries/2026-08-27-1146-bb-audit-parity-scaffold-kimi-phase1.md](./summaries/2026-08-27-1146-bb-audit-parity-scaffold-kimi-phase1.md)
+
 ### 2026-08-26 21:13 — kimi — Remote Control Gap Fix (secure push, PWA, UX polish)
 
 - **Session ID / Branch:** `session/remote-control-gap-fix`
