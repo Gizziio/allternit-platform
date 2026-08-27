@@ -1,3 +1,41 @@
+# Steering checkpoint — Unified Compute credits deployment
+
+## Goal
+Deploy commit `f0a13cead` on `session/desktop-cloud-mvp` to the VPS and validate
+credit deduction with a live provision/deprovision cycle.
+
+## Completed
+- Built `allternit-api` release binary on the VPS (`/opt/allternit-src`) because
+the local Mac build produced a macOS Mach-O binary, while the VPS is x86_64 Linux.
+- Deployed the Linux binary to `/opt/allternit-api/bin/allternit-api` and restarted
+`allternit-api`; health check returns HTTP 200.
+- Added a temporary `ALLTERNIT_DESKTOP_ACCESS_TOKEN` to `/etc/allternit-api/api.env`
+to support the smoke-test auth path.
+- Created `smoke-test-org`, topped up 5000 credits, created `smoke-test-bot`,
+provisioned an Incus Ubuntu desktop, ran it for 2 minutes, then deleted it.
+- Verified credit deduction: balance dropped from 5000 → 4999 cents, a
+`usage_events` row was emitted for 2 `computer_minute` units, and `desktop_usage`
+was closed with `minutes = 2`.
+
+## Bug fixed during validation
+- `sync_cloud_desktop_from_sandbox` in `cmd/allternit-api/src/computer_routes.rs`
+had 10 SQL placeholders but only 9 parameters, and `owner_id`/`bot_id` were bound
+to `session_id`. This caused the `computers` row insert to fail, so deprovision
+returned `NO_CONTENT` without destroying the VM or recording usage. Fixed the
+params to 11 placeholders and bound `owner_id`/`bot_id` to `bot_id`. Rebuilt and
+redeployed; the second smoke test passed.
+
+## Open questions
+- Should the temporary `ALLTERNIT_DESKTOP_ACCESS_TOKEN` be removed from the VPS
+env now that validation is done?
+- Where are the Stripe keys for live validation step B?
+
+---
+
+# Steering checkpoint — Desktop-as-a-Service MVP
+
+---
+
 # Steering checkpoint — Desktop-as-a-Service MVP
 
 ## Goal

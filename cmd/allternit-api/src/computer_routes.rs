@@ -497,7 +497,7 @@ fn sync_cloud_desktop_from_sandbox(
     let name = format!("Bot desktop {}", sandbox_id);
     conn.execute(
         "INSERT INTO computers (id, kind, provider, status, owner_type, owner_id, bot_id, session_id, name, os, memory_mb, host, native_id, billing_source) \
-         VALUES (?1, 'cloud_desktop', ?2, ?3, 'bot', ?4, ?4, ?5, ?6, ?7, ?8, ?9, ?10, 'credits') \
+         VALUES (?1, 'cloud_desktop', ?2, ?3, 'bot', ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, 'credits') \
          ON CONFLICT(id) DO UPDATE SET \
              status = excluded.status, \
              host = excluded.host, \
@@ -505,7 +505,7 @@ fn sync_cloud_desktop_from_sandbox(
              memory_mb = COALESCE(excluded.memory_mb, memory_mb), \
              session_id = COALESCE(excluded.session_id, session_id), \
              updated_at = CURRENT_TIMESTAMP",
-        rusqlite::params![sandbox_id, provider, status, session_id, name, os, memory_mb, host, sandbox_id],
+        rusqlite::params![sandbox_id, provider, status, bot_id, bot_id, session_id, name, os, memory_mb, host, sandbox_id],
     )?;
     conn.execute(
         "INSERT INTO computer_cloud_desktop (computer_id, sandbox_id, control_state, ws_url, protocol) \
