@@ -28,9 +28,11 @@
  *                              MessageAbortedError, which is a user abort, not
  *                              a blocked run.
  *   3. For sessions with a binding, each mapped event is POSTed to
- *      `{apiBase}/api/v1/agents/:id/events/ingest`, which appends it to the
- *      Rails ledger that `GET /api/v1/agents/:id/events` (SSE) replays and
- *      polls (cmd/allternit-api/src/agent_routes.rs).
+ *      `{apiBase}/api/v1/agents/:id/events/ingest`. The API mirrors canonical
+ *      task/run events into the bot ledger consumed by web activity/status
+ *      APIs and appends the agent event to the Rails ledger replayed by
+ *      `GET /api/v1/agents/:id/events` for iOS SSE
+ *      (cmd/allternit-api/src/agent_routes.rs).
  *
  * Sessions without a binding (plain CLI/TUI sessions never created through
  * allternit-api) are skipped silently at debug level — the bridge is

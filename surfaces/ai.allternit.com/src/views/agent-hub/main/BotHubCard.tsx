@@ -9,6 +9,7 @@ import { getBotAccentColor, getBotDisplayName, getBotTagline, BOT_CATEGORIES } f
 import { BotAvatar } from "@/views/bots/BotAvatar";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { cn } from "@/lib/utils";
+import { useBotStatus } from "@/lib/bots/bot-operational-state.store";
 
 interface BotHubCardProps {
   bot: Agent;
@@ -21,6 +22,7 @@ export function BotHubCard({ bot, sessionCount = 0, onClick, index = 0 }: BotHub
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const { deleteAgent, setDraftAgent, setIsCreating } = useAgentStore();
+  const { status, needsAttention } = useBotStatus(bot.id);
 
   const displayName = getBotDisplayName(bot);
   const tagline = getBotTagline(bot);
@@ -109,6 +111,15 @@ export function BotHubCard({ bot, sessionCount = 0, onClick, index = 0 }: BotHub
         </div>
 
         <div className="mt-4 flex items-center gap-2">
+          <span
+            className="rounded-md px-2 py-0.5 text-[10px] font-medium capitalize"
+            style={{
+              background: needsAttention ? "color-mix(in srgb, var(--status-warning) 14%, transparent)" : "var(--surface-hover)",
+              color: needsAttention ? "var(--status-warning)" : "var(--text-secondary)",
+            }}
+          >
+            {status.replaceAll("_", " ")}
+          </span>
           {categoryLabel && (
             <span
               className="rounded-md px-2 py-0.5 text-[10px] font-medium capitalize"

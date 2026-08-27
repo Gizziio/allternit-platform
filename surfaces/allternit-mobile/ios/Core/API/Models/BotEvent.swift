@@ -2,7 +2,7 @@ import Foundation
 
 // -----------------------------------------------------------------------------
 // BotEvent — one row of the server-owned bot event ledger (`bot_events`
-// table, migration cmd/allternit-api/migrations/V92__bot_events.sql), as
+// table, migration cmd/allternit-api/migrations/V93__bot_events.sql), as
 // serialized by `GET /api/v1/bots/:id/events`
 // (cmd/allternit-api/src/bot_event_routes.rs — `BotEventView` /
 // `ActivityPageView`, both `#[serde(rename_all = "camelCase")]`).

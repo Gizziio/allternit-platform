@@ -34,6 +34,7 @@
 
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
+import { useEffect } from 'react';
 import { createModuleLogger } from '@/lib/logger';
 import {
   type BotOperationalState,
@@ -446,12 +447,28 @@ export const useBotOperationalStateStore = create<BotOperationalStateStoreState>
  * Callers must NOT infer bot status from local state; always use this hook.
  */
 export function useBotStatus(botId: string) {
-  return useBotOperationalStateStore((s) => ({
-    status: s.getStatus(botId),
-    isWorking: s.isWorking(botId),
-    needsAttention: s.needsAttention(botId),
-    hasPendingApprovals: s.hasPendingApprovals(botId),
-    subscriptionState: s.projections[botId]?.subscriptionState ?? 'offline',
-    projection: s.projections[botId]?.state ?? null,
-  }));
+  const entry = useBotOperationalStateStore((s) => s.projections[botId]);
+
+  useEffect(() => {
+    let active = true;
+    const refresh = () => {
+      if (active) void useBotOperationalStateStore.getState().fetchOperationalState(botId);
+    };
+    refresh();
+    const interval = window.setInterval(refresh, 5_000);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, [botId]);
+
+  const status = entry?.state.status ?? 'offline';
+  return {
+    status,
+    isWorking: status === 'working' || status === 'waiting_input',
+    needsAttention: ['waiting_approval', 'blocked', 'failed', 'degraded'].includes(status),
+    hasPendingApprovals: (entry?.state.pendingApprovalsCount ?? 0) > 0,
+    subscriptionState: entry?.subscriptionState ?? 'offline',
+    projection: entry?.state ?? null,
+  };
 }

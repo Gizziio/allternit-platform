@@ -24,6 +24,5 @@ CREATE TABLE IF NOT EXISTS bot_events (
     UNIQUE(bot_id, idempotency_key)
 );
 
--- (bot_id, seq) scans are served by the UNIQUE(bot_id, seq) index above.
 CREATE INDEX IF NOT EXISTS idx_bot_events_bot_type
     ON bot_events(bot_id, event_type);

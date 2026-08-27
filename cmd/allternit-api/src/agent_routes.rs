@@ -240,6 +240,71 @@ async fn ingest_agent_event(
         payload.insert("run_id".to_string(), json!(run_id));
     }
 
+    // Mirror runtime wait-state events into the bot ledger consumed by the
+    // web activity/state APIs. Rails remains the live SSE transport for iOS.
+    let bot_event_type = match body.event_type.as_str() {
+        "agent.run.waiting_approval" => "task.waiting_for_approval",
+        "agent.run.approval_resolved" => "task.resumed",
+        "agent.run.waiting_input" => "task.waiting_for_input",
+        "agent.run.blocked" => "run.blocked",
+        _ => unreachable!("event type was allowlisted above"),
+    };
+    let session_id = payload
+        .get("session_id")
+        .and_then(|value| value.as_str())
+        .map(str::to_string);
+    let request_id = payload
+        .get("request_id")
+        .and_then(|value| value.as_str())
+        .unwrap_or("none");
+    let idempotency_key = format!(
+        "runtime:{}:{}:{}",
+        body.event_type,
+        session_id.as_deref().unwrap_or("none"),
+        request_id
+    );
+    let bot_body = crate::bot_event_routes::AppendEventBody {
+        event_type: bot_event_type.to_string(),
+        actor: crate::bot_event_routes::ActorBody {
+            r#type: "bot".to_string(),
+            id: agent_id.clone(),
+        },
+        payload: serde_json::Value::Object(payload.clone()),
+        occurred_at: None,
+        session_id,
+        goal_id: None,
+        wih_id: None,
+        task_id: None,
+        run_id: body.run_id.clone(),
+        idempotency_key: Some(idempotency_key),
+    };
+    let bot_db = state.db.clone();
+    let bot_id = agent_id.clone();
+    let occurred_at = chrono::Utc::now().to_rfc3339();
+    let bot_append = tokio::task::spawn_blocking(move || {
+        crate::bot_event_routes::append_event(&bot_db, &bot_id, &bot_body, &occurred_at)
+    })
+    .await;
+    match bot_append {
+        Ok(Ok(_)) => {}
+        Ok(Err(error)) => {
+            warn!("Failed to append runtime event to bot ledger: {}", error);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "bot event append failed"})),
+            )
+                .into_response();
+        }
+        Err(error) => {
+            warn!("Bot event append task panicked: {}", error);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "bot event append failed"})),
+            )
+                .into_response();
+        }
+    }
+
     let event = allternit_agent_system_rails::AllternitEvent {
         event_id: String::new(),
         ts: String::new(),
@@ -2716,9 +2781,9 @@ async fn record_run_metrics(
     }
 }
 
-/// Append an agent run lifecycle event to the same Rails ledger
-/// `agent.created` uses, so `GET /agents/:id/events` replays run activity.
-/// Best-effort, same posture as the creation write.
+/// Append an agent run lifecycle event to the Rails ledger used by the iOS SSE
+/// feed and mirror its canonical equivalent into the bot ledger used by web
+/// activity/status APIs. Best-effort, same posture as the creation write.
 async fn append_run_ledger_event(
     state: &AppState,
     user_id: &str,
@@ -2726,6 +2791,46 @@ async fn append_run_ledger_event(
     event_type: &str,
     payload: serde_json::Value,
 ) {
+    if let Some(agent_id) = payload.get("agent_id").and_then(|value| value.as_str()) {
+        let bot_event_type = match event_type {
+            "agent.run.started" => Some("run.started"),
+            "agent.run.completed" => Some("run.completed"),
+            "agent.run.failed" => Some("run.failed"),
+            _ => None,
+        };
+        if let Some(bot_event_type) = bot_event_type {
+            let body = crate::bot_event_routes::AppendEventBody {
+                event_type: bot_event_type.to_string(),
+                actor: crate::bot_event_routes::ActorBody {
+                    r#type: "bot".to_string(),
+                    id: agent_id.to_string(),
+                },
+                payload: payload.clone(),
+                occurred_at: None,
+                session_id: None,
+                goal_id: None,
+                wih_id: None,
+                task_id: None,
+                run_id: Some(run_id.to_string()),
+                idempotency_key: Some(format!("run:{}:{}", run_id, event_type)),
+            };
+            let db = state.db.clone();
+            let bot_id = agent_id.to_string();
+            let occurred_at = chrono::Utc::now().to_rfc3339();
+            match tokio::task::spawn_blocking(move || {
+                crate::bot_event_routes::append_event(&db, &bot_id, &body, &occurred_at)
+            })
+            .await
+            {
+                Ok(Ok(_)) => {}
+                Ok(Err(error)) => {
+                    warn!("Failed to mirror {} into bot ledger: {}", event_type, error)
+                }
+                Err(error) => warn!("Bot lifecycle mirror task panicked: {}", error),
+            }
+        }
+    }
+
     let event = allternit_agent_system_rails::AllternitEvent {
         event_id: String::new(),
         ts: String::new(),
@@ -3631,7 +3736,11 @@ mod tests {
             json!({
                 "type": "agent.run.waiting_approval",
                 "run_id": "run-1",
-                "payload": {"permission": "bash", "request_id": "perm-1"},
+                "payload": {
+                    "permission": "bash",
+                    "request_id": "perm-1",
+                    "session_id": "session-1"
+                },
             }),
         )
         .await;
@@ -3664,6 +3773,52 @@ mod tests {
             event.scope.as_ref().and_then(|s| s.run_id.as_deref()),
             Some("run-1")
         );
+
+        let conn = state.db.connect().unwrap();
+        let bot_row: (String, String, String, i64) = conn
+            .query_row(
+                "SELECT event_type, session_id, run_id, seq FROM bot_events WHERE bot_id = 'agent-1'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
+            )
+            .unwrap();
+        assert_eq!(
+            bot_row,
+            (
+                "task.waiting_for_approval".to_string(),
+                "session-1".to_string(),
+                "run-1".to_string(),
+                1
+            )
+        );
+        drop(conn);
+
+        // Runtime/HTTP retries must not create a second bot-ledger row.
+        let (status, _) = post_ingest(
+            &app,
+            "agent-1",
+            "user-a",
+            json!({
+                "type": "agent.run.waiting_approval",
+                "run_id": "run-1",
+                "payload": {
+                    "permission": "bash",
+                    "request_id": "perm-1",
+                    "session_id": "session-1"
+                },
+            }),
+        )
+        .await;
+        assert_eq!(status, StatusCode::ACCEPTED);
+        let conn = state.db.connect().unwrap();
+        let bot_count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM bot_events WHERE bot_id = 'agent-1'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(bot_count, 1);
     }
 
     #[tokio::test]

@@ -1,5 +1,64 @@
 # Steering checkpoint
 
+## iOS bot parity Phase 2 integration complete, pending commit gate (2026-08-26)
+
+### Goal
+Complete the event-ledger, runtime/web bridge, web bot-state, and native iOS
+integration audit from `docs/IOS_BOT_PARITY_PHASE_2_TASK.md` without entering
+Phase 3.
+
+### Just did
+- Renumbered the bot ledger migration from V92 to V93 because current main
+  already owns V92 for agent email; verified migration versions are unique.
+- Made event appends reject non-object payloads and reserve SQLite's write lock
+  before selecting the next per-bot sequence.
+- Mirrored runtime wait/resume/block events and agent run lifecycle events into
+  the canonical bot ledger while preserving Rails SSE delivery for iOS.
+- Wired web bot roster/hub cards to poll and render the authoritative server
+  projection rather than dormant or inferred state.
+- Fixed iOS bootstrap to fetch the newest ledger tail and dedupe replayed agent
+  SSE frames so reconnects cannot double-count approvals.
+- Added Rust coverage for payload validation, dual-ledger ingest, and retry
+  idempotency.
+- Passed Rust parse via rustfmt emit, Swift parse via `swiftc -parse`, Bun parse
+  for all changed TS/TSX, unique-migration validation, and `git diff --check`.
+  Focused Vitest execution could not start because this worktree's existing
+  Vitest symlink targets a missing package; dependencies were not installed.
+
+### Next
+1. Write the required Phase 2 notes and remove the completed scratch plan.
+2. Request steering commit-gate approval.
+3. Commit coherent changes and push `origin/session/ios-bot-parity`.
+
+### Open questions
+- None.
+
+---
+
+## iOS bot parity Phase 2 integration audit started (2026-08-26)
+
+### Goal
+Audit and complete the API event ledger, Gizzi-to-web event bridge, web bot
+activity state, and native iOS bot parity integrations specified by
+`docs/IOS_BOT_PARITY_PHASE_2_TASK.md`, without beginning Phase 3.
+
+### Just did
+- Read the full Phase 2 task and Phase 1 handoff/map.
+- Confirmed the worktree is on `session/ios-bot-parity`, aligned with its
+  remote, with the three Phase 1 feature commits and cleanup commits present.
+- Created `scratch/IOS_BOT_PARITY_PHASE_2_PLAN.md` as the session source of
+  truth.
+
+### Next
+1. Trace API contracts, route/state registration, migration ordering, and tests.
+2. Trace runtime bridge output through web clients/stores/hooks.
+3. Trace the native iOS clients/stores/views against those contracts.
+
+### Open questions
+- None yet; integration findings will determine the focused fixes.
+
+---
+
 ## iOS bot parity Phase 1 cleanup complete (2026-08-26)
 
 ### Goal

@@ -14,6 +14,7 @@ import { motion } from 'framer-motion';
 import { Gear, Play } from '@phosphor-icons/react';
 import type { BotAvatar } from '@/lib/bots/bot-avatar.service';
 import { BotAvatar as BotAvatarRenderer } from './BotAvatar';
+import { useBotStatus } from '@/lib/bots/bot-operational-state.store';
 
 import {
   TEXT,
@@ -55,6 +56,7 @@ export function BotRosterItem({
   onStartSession,
   onOpenSettings,
 }: BotRosterItemProps) {
+  const { status } = useBotStatus(bot.id);
   const handleClick = useCallback(() => {
     onSelect?.(bot.id);
   }, [bot.id, onSelect]);
@@ -82,8 +84,13 @@ export function BotRosterItem({
     [bot.id, onOpenSettings],
   );
 
-  const statusColor =
-    bot.status === 'busy' ? '#F59E0B' : bot.status === 'error' ? '#EF4444' : '#22C55E';
+  const statusColor = status === 'working' || status === 'waiting_input'
+    ? '#F59E0B'
+    : status === 'failed' || status === 'blocked'
+      ? '#EF4444'
+      : status === 'offline'
+        ? '#6B7280'
+        : '#22C55E';
 
   return (
     <motion.div
@@ -119,6 +126,7 @@ export function BotRosterItem({
     >
       {/* Status dot */}
       <div
+        title={status.replaceAll('_', ' ')}
         style={{
           position: 'absolute',
           left: 6,

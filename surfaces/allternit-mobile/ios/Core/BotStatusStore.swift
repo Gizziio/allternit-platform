@@ -120,6 +120,10 @@ final class BotStatusStore: ObservableObject {
     /// Server-ledger event ids already seeded into the feed, per bot — the
     /// dedupe guard when a re-subscribe re-fetches overlapping history.
     private var seededBotEventIds: [String: Set<String>] = [:]
+    /// Agent SSE replays its recent tail on every reconnect. Track stable
+    /// synthesized identities so replayed frames do not double-apply approval
+    /// counts or duplicate activity rows.
+    private var seenAgentEventIds: [String: Set<String>] = [:]
 
     private static let maxRecentEvents = 100
     /// Server history page seeded into the feed on subscribe (the server's
@@ -239,9 +243,16 @@ final class BotStatusStore: ObservableObject {
     /// store convention — never silently swallowed).
     private func bootstrap(botId: String) async {
         do {
-            async let state = botEventsClient.fetchOperationalState(botId: botId)
-            async let page = botEventsClient.fetchEvents(botId: botId, limit: Self.historyPageLimit)
-            let (serverState, serverPage) = try await (state, page)
+            let serverState = try await botEventsClient.fetchOperationalState(botId: botId)
+            // The events endpoint is ascending. Resume just before the server
+            // projection's head so the feed receives the newest page rather
+            // than the oldest page in a long-lived bot's history.
+            let afterSequence = max(0, serverState.lastEventSequence - Self.historyPageLimit)
+            let serverPage = try await botEventsClient.fetchEvents(
+                botId: botId,
+                afterSequence: afterSequence,
+                limit: Self.historyPageLimit
+            )
             guard !Task.isCancelled else { return }
             mergeBootstrap(state: serverState, page: serverPage, for: botId)
         } catch is CancellationError {
@@ -288,6 +299,11 @@ final class BotStatusStore: ObservableObject {
 
     /// Folds one stream event into the bot's projection + activity tail.
     private func apply(_ event: AgentRunEvent, to botId: String) {
+        let feedItem = FeedItem.run(event)
+        var seen = seenAgentEventIds[botId] ?? []
+        guard seen.insert(feedItem.id).inserted else { return }
+        seenAgentEventIds[botId] = seen
+
         var entry = entries[botId] ?? Entry(
             state: BotOperationalState(),
             subscriptionState: .connected,
@@ -298,7 +314,7 @@ final class BotStatusStore: ObservableObject {
 
         entry.subscriptionState = .connected
         entry.lastFetchedAt = Date()
-        entry.recentEvents.append(.run(event))
+        entry.recentEvents.append(feedItem)
         if entry.recentEvents.count > Self.maxRecentEvents {
             entry.recentEvents.removeFirst(entry.recentEvents.count - Self.maxRecentEvents)
         }

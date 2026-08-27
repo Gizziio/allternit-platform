@@ -25,7 +25,7 @@
 
 ## Representative changed files
 
-- API ledger: `cmd/allternit-api/migrations/V92__bot_events.sql`, `cmd/allternit-api/src/bot_event_routes.rs`, and required router/AppState wiring under `cmd/allternit-api/src/`.
+- API ledger: `cmd/allternit-api/migrations/V93__bot_events.sql`, `cmd/allternit-api/src/bot_event_routes.rs`, and required router/AppState wiring under `cmd/allternit-api/src/`.
 - Runtime/web bridge: `cmd/gizzi-code/src/runtime/services/agent-event-bridge.ts` and `surfaces/ai.allternit.com/src/lib/bots/`.
 - Native iOS parity: `surfaces/allternit-mobile/ios/Core/`, `Features/Agents/Desktop/`, `Features/Settings/WebhooksSettingsView.swift`, Live Activities, audit flows, and Xcode project registration.
 

@@ -1,4 +1,4 @@
-//! Server-owned bot event ledger (`bot_events` table, migration V92).
+//! Server-owned bot event ledger (`bot_events` table, migration V93).
 //!
 //! This module is the durable, server-side source of truth for bot activity:
 //! clients (web, iOS, agent runtimes) append canonical events with
@@ -47,7 +47,7 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::routing::get;
 use axum::{Json, Router};
-use rusqlite::{params, Connection, OptionalExtension};
+use rusqlite::{params, Connection, OptionalExtension, TransactionBehavior};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -78,23 +78,23 @@ pub fn bot_event_router() -> Router<Arc<AppState>> {
 /// Append request body (snake_case — server-internal convention).
 #[derive(Debug, Deserialize)]
 pub struct AppendEventBody {
-    event_type: String,
-    actor: ActorBody,
+    pub(crate) event_type: String,
+    pub(crate) actor: ActorBody,
     #[serde(default)]
-    payload: Value,
-    occurred_at: Option<String>,
-    session_id: Option<String>,
-    goal_id: Option<String>,
-    wih_id: Option<String>,
-    task_id: Option<String>,
-    run_id: Option<String>,
-    idempotency_key: Option<String>,
+    pub(crate) payload: Value,
+    pub(crate) occurred_at: Option<String>,
+    pub(crate) session_id: Option<String>,
+    pub(crate) goal_id: Option<String>,
+    pub(crate) wih_id: Option<String>,
+    pub(crate) task_id: Option<String>,
+    pub(crate) run_id: Option<String>,
+    pub(crate) idempotency_key: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ActorBody {
-    r#type: String,
-    id: String,
+    pub(crate) r#type: String,
+    pub(crate) id: String,
 }
 
 /// Event as returned to clients — camelCase, matching the web
@@ -169,7 +169,7 @@ struct OperationalStateView {
 // ─── Stored row ─────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone)]
-struct StoredBotEvent {
+pub(crate) struct StoredBotEvent {
     id: String,
     bot_id: String,
     seq: i64,
@@ -258,6 +258,13 @@ async fn append_bot_event(
         return (
             StatusCode::BAD_REQUEST,
             Json(json!({"error": "actor.type and actor.id are required"})),
+        )
+            .into_response();
+    }
+    if !body.payload.is_object() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "payload must be an object"})),
         )
             .into_response();
     }
@@ -424,7 +431,7 @@ async fn get_operational_state(
 /// Insert an event, assigning the next per-bot sequence in the same
 /// transaction. Returns the stored event and whether it was newly inserted
 /// (`false` when the idempotency key replayed an existing row).
-fn append_event(
+pub(crate) fn append_event(
     db: &DbHandle,
     bot_id: &str,
     body: &AppendEventBody,
@@ -455,7 +462,9 @@ fn append_event(
         occurred_at: occurred_at.to_string(),
     };
 
-    let tx = conn.transaction()?;
+    // Reserve the write lock before reading MAX(seq), otherwise concurrent
+    // deferred transactions can select the same next sequence.
+    let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
     let seq: i64 = tx.query_row(
         "SELECT COALESCE(MAX(seq), 0) + 1 FROM bot_events WHERE bot_id = ?1",
         params![bot_id],
@@ -757,7 +766,6 @@ async fn verify_bot_ownership(state: &AppState, user_id: &str, bot_id: &str) -> 
 
     match result {
         Ok(Ok(true)) => true,
-        Ok(Ok(false)) => false,
         Ok(Err(e)) => {
             warn!(error = %e, "DB error verifying bot ownership");
             false
@@ -1096,5 +1104,23 @@ mod tests {
         // Unknown bot id is indistinguishable from "not yours".
         let (status, _) = get_events(&app, "no-such-bot", "user-a", "").await;
         assert_eq!(status, StatusCode::FORBIDDEN);
+    }
+
+    #[tokio::test]
+    async fn append_rejects_non_object_payloads() {
+        let (app, _state) = setup("payload-shape").await;
+        let (status, body) = post_event(
+            &app,
+            "bot-1",
+            "user-a",
+            json!({
+                "event_type": "task.running",
+                "actor": {"type": "bot", "id": "bot-1"},
+                "payload": ["not", "an", "object"],
+            }),
+        )
+        .await;
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        assert_eq!(body["error"], "payload must be an object");
     }
 }
