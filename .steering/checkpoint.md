@@ -1,5 +1,33 @@
 # Steering checkpoint
 
+## Brain selector modal runtime selection fix (2026-08-27)
+
+### Goal
+Fix the brain/model selector modal so clicking a runtime/provider row actually selects the runtime instead of doing nothing.
+
+### Just did
+- Created session worktree `allternit-session-brain-selector-fix` on branch `session/brain-selector-fix`.
+- Identified the issue in `surfaces/ai.allternit.com/src/components/model-picker.tsx`:
+  - `ProviderRow` only toggled expansion on click; the runtime itself was not selectable.
+  - Users expected clicking the mounted/active runtime to select it.
+- Updated `ProviderRow` to accept an `onSelect` callback and use it as the row click handler in single-select mode.
+- Made the `CaretDown` chevron a separate toggle affordance so users can still expand/collapse to browse models.
+- Passed `onSelect` from `renderProviderSection` for single-select providers with models; it selects the currently selected model (if it belongs to that provider) or the first model.
+- Added a "No models discovered for this runtime." message when an expanded provider has zero models.
+- Auto-expanded the provider containing the currently selected model when the modal opens.
+
+### Verification
+- `pnpm typecheck:fast` in `@allternit/ai` passes for `model-picker.tsx` (monorepo typecheck has unrelated pre-existing errors in office packages).
+- No syntax errors introduced.
+
+### Next
+1. Commit the fix on `session/brain-selector-fix`.
+2. Push the branch and open a PR / merge into local `main`.
+3. Update agent ledger and clean up the session worktree.
+
+### Open questions
+- Should multi-select provider rows also be selectable via row click, or should they keep expand/collapse-only behavior with the checkbox as the only selection affordance? (Currently left as expand/collapse-only in multi-select mode.)
+
 ## Repo hygiene follow-up — open items (2026-08-27)
 
 ### Goal

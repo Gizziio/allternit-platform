@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Command } from "cmdk";
 import { useModelDiscovery, useUsageSummary } from "@/integration/api-client";
 import { useModelSelection } from "@/providers/model-selection-provider";
@@ -223,6 +223,8 @@ interface ProviderRowProps {
   multiSelect?: boolean;
   selected?: boolean;
   onToggleSelect?: () => void;
+  /** In single-select mode, clicking the provider row selects its model. */
+  onSelect?: () => void;
 }
 
 function ProviderRow({
@@ -238,6 +240,7 @@ function ProviderRow({
   multiSelect,
   selected,
   onToggleSelect,
+  onSelect,
 }: ProviderRowProps) {
   const kindLabel =
     kind === "cli" ? "CLI runtime" : kind === "local" ? "Local runtime" : "Cloud runtime";
@@ -250,24 +253,28 @@ function ProviderRow({
     .filter(Boolean)
     .join(" · ");
 
+  const handleRowClick = onSelect ?? onToggle;
+  const handleRowKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.currentTarget !== e.target) return;
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      (onSelect ?? onToggle)();
+    }
+  };
+
   return (
     <div
       role="button"
       tabIndex={0}
       aria-expanded={expanded}
-      onClick={onToggle}
-      onKeyDown={(e) => {
-        if (e.currentTarget !== e.target) return;
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onToggle();
-        }
-      }}
+      onClick={handleRowClick}
+      onKeyDown={handleRowKeyDown}
       className={cn(
         "group w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-chat)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--bg-elevated)]",
         expanded
           ? "bg-[var(--surface-panel)]"
-          : "hover:bg-[var(--surface-hover)]"
+          : "hover:bg-[var(--surface-hover)]",
+        onSelect && "cursor-pointer"
       )}
     >
       {multiSelect && (
@@ -310,6 +317,10 @@ function ProviderRow({
         )}
         <CaretDown
           size={14}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggle();
+          }}
           className={cn(
             "text-[var(--ui-text-muted)] transition-transform",
             expanded && "rotate-180"
@@ -419,6 +430,24 @@ export function ModelPickerUI({
       setSelectedProviderIds(new Set());
     }
   }, [open]);
+
+  // When the modal opens, expand the provider that contains the currently
+  // selected model so the user can see the active runtime.
+  const wasOpenRef = useRef(open);
+  useEffect(() => {
+    if (open && !wasOpenRef.current) {
+      const selectedModel = availableModels.find((m) => m.id === selectedModelId);
+      const providerName =
+        selectedModel?.providerName ||
+        (selectedModel?.providerId ? getProviderName(selectedModel.providerId) : undefined);
+      if (providerName) {
+        setExpandedProviders((prev) =>
+          prev.has(providerName) ? prev : new Set([...prev, providerName])
+        );
+      }
+    }
+    wasOpenRef.current = open;
+  }, [open, availableModels, selectedModelId]);
 
   useEffect(() => {
     const timeout = setTimeout(async () => {
@@ -762,7 +791,22 @@ export function ModelPickerUI({
                   multiSelect={multiSelect}
                   selected={selectedProviderIds.has(provider.provider_id)}
                   onToggleSelect={() => toggleProviderSelection(provider.provider_id)}
+                  onSelect={
+                    !multiSelect && models.length > 0
+                      ? () => {
+                          const selectedModel = selectedModelId
+                            ? models.find((m) => m.id === selectedModelId)
+                            : undefined;
+                          handleSelectModel(selectedModel ?? models[0]);
+                        }
+                      : undefined
+                  }
                 />
+                {expanded && models.length === 0 && (
+                  <div className="px-3 py-2 text-xs text-[var(--ui-text-muted)]">
+                    No models discovered for this runtime.
+                  </div>
+                )}
                 {expanded && models.length > 0 && (
                   <div className="grid gap-0.5 mt-1 pl-4 pr-1">
                     {models.map((model) => {
