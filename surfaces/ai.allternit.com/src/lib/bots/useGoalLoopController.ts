@@ -23,6 +23,7 @@ import {
 import { GoalLoopRecorder, resumeGoalLoopController } from './goal-loop-persistence';
 import { projectOperationalStateFromGoalLoop } from './bot-operational-projection';
 import { botEventStore, createMemoryBotEventStore } from './bot-event-store';
+import { botEventsApi } from './bot-events-api';
 import type { Goal, Plan } from './goal-task-contracts';
 
 export interface UseGoalLoopControllerOptions {
@@ -139,6 +140,7 @@ export function useGoalLoopController(options: UseGoalLoopControllerOptions): Us
       botId,
       goalId: controller.getState().goal.id,
       eventStore,
+      eventsApi: botEventsApi,
     });
     recorder.attach(controller);
     recorderRef.current = recorder;

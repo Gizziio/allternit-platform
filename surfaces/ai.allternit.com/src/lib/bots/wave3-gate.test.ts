@@ -10,9 +10,46 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { GoalLoopController, type TaskRunner, type Attempt } from './goal-loop-controller';
 import { GoalLoopRecorder } from './goal-loop-persistence';
 import { useBotSessionStore } from './bot-session-store';
-import { createMemoryBotEventStore } from './bot-event-store';
+import { createMemoryBotEventStore, type BotEventStore } from './bot-event-store';
 import { BotActivityAPI } from './bot-activity-api';
+import { type BotEventsApi, type BotEventRow } from './bot-events-api';
 import { GoalSchema, PlanSchema, TaskGraphSchema, type Goal } from './goal-task-contracts';
+
+/**
+ * Stub of the server event ledger backed by the local store, so the
+ * server-backed activity reads (replayGoal) can run without fetch.
+ */
+function stubEventsApiFromStore(eventStore: BotEventStore): BotEventsApi {
+  return {
+    appendBotEvent: vi.fn(),
+    getBotOperationalState: vi.fn(),
+    queryBotEvents: async (botId, query = {}) => {
+      let rows: BotEventRow[] = eventStore.readAllEvents(botId).map((e) => ({
+        id: `evt_${e.botId}_${e.goalId}_${e.sequence}`,
+        sequence: e.sequence,
+        botId: e.botId,
+        goalId: e.goalId,
+        eventType: e.type,
+        actor: { type: 'bot' as const, id: e.botId },
+        payload: e.payload as Record<string, unknown>,
+        occurredAt: e.occurredAt,
+      }));
+      if (query.eventTypes && query.eventTypes.length > 0) {
+        rows = rows.filter((r) => query.eventTypes?.includes(r.eventType));
+      }
+      if (query.afterSequence !== undefined) {
+        rows = rows.filter((r) => r.sequence > (query.afterSequence ?? 0));
+      }
+      const limit = query.limit ?? 50;
+      const page = rows.slice(0, limit);
+      return {
+        events: page,
+        nextCursor: page.length > 0 ? String(page[page.length - 1]?.sequence) : undefined,
+        hasMore: rows.length > limit,
+      };
+    },
+  };
+}
 
 const now = new Date().toISOString();
 
@@ -93,7 +130,7 @@ describe('Wave 3 exit gate', () => {
   it('completes several bounded sessions and WIHs, searches history, resumes work, and starts a clean new session', async () => {
     const eventStore = createMemoryBotEventStore();
     const sessionStore = useBotSessionStore.getState();
-    const activityAPI = new BotActivityAPI(eventStore);
+    const activityAPI = new BotActivityAPI(stubEventsApiFromStore(eventStore), eventStore);
 
     // ── Session 1: first goal ────────────────────────────────────────────────
     const session1 = sessionStore.createSession('b_1', 'First research session');

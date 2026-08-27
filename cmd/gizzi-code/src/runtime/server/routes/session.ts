@@ -23,6 +23,7 @@ import { lazy } from "@/shared/util/lazy"
 import { SessionTrace } from "@/runtime/session/trace"
 import { SessionSupportBundle } from "@/runtime/session/support-bundle"
 import { Scratchpad } from "@/runtime/session/scratchpad"
+import { AgentEventBridge } from "@/runtime/services/agent-event-bridge"
 
 const log = Log.create({ service: "server" })
 
@@ -224,6 +225,13 @@ export const SessionRoutes = lazy(() =>
       async (c) => {
         const input = c.req.valid("json") as any
         const session = await Session.create(input)
+        // Sessions created through allternit-api (agent-chat bridge, run_agent)
+        // carry the owning agent/run in headers so the agent-event-bridge can
+        // attribute this session's permission/question waits to that agent.
+        const agentId = c.req.header("x-allternit-agent-id")
+        if (agentId) {
+          AgentEventBridge.bindSession(session.id, agentId, c.req.header("x-allternit-run-id"))
+        }
         return c.json(session)
       },
     )
@@ -349,6 +357,13 @@ export const SessionRoutes = lazy(() =>
       async (c) => {
         const { sessionID } = c.req.valid("param") as any
         const input = c.req.valid("json") as any
+        // Refresh the agent binding every message: session create happens once
+        // per chat, but allternit-api mints a run id per turn and sends it
+        // here (x-allternit-run-id).
+        const agentId = c.req.header("x-allternit-agent-id")
+        if (agentId) {
+          AgentEventBridge.bindSession(sessionID, agentId, c.req.header("x-allternit-run-id"))
+        }
         const result = await SessionPrompt.prompt({ ...input, sessionID })
         return c.json(result)
       },
@@ -427,6 +442,7 @@ export const SessionRoutes = lazy(() =>
       async (c) => {
         const { sessionID } = c.req.valid("param") as any
         await Session.remove(sessionID)
+        AgentEventBridge.unbindSession(sessionID)
         return c.json(true)
       },
     )

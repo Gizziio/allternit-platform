@@ -380,6 +380,13 @@ function botDesktopUrl(botId: string, sandboxId: string) {
   return `${API_BASE_URL}/bots/${encodeURIComponent(botId)}/desktop?sandbox_id=${encodeURIComponent(sandboxId)}`;
 }
 
+// Control actions are path segments on the server (`POST …/desktop/observe`
+// etc., bot_desktop_routes.rs), with sandbox_id as a query param — appending
+// the verb after the query string would land it inside the sandbox_id value.
+function botDesktopActionUrl(botId: string, sandboxId: string, action: 'observe' | 'take-over' | 'hand-back') {
+  return `${API_BASE_URL}/bots/${encodeURIComponent(botId)}/desktop/${action}?sandbox_id=${encodeURIComponent(sandboxId)}`;
+}
+
 /**
  * Provision a persistent virtual computer for a bot.
  *
@@ -434,7 +441,7 @@ export async function observeBotDesktop(
   sandboxId: string,
 ): Promise<VMOperatorResult<{ control_state: string }>> {
   try {
-    const res = await fetch(botDesktopUrl(botId, sandboxId) + '/observe', { method: 'POST' });
+    const res = await fetch(botDesktopActionUrl(botId, sandboxId, 'observe'), { method: 'POST' });
     if (!res.ok) {
       const text = await res.text();
       throw new Error(`Platform returned ${res.status}: ${text}`);
@@ -455,7 +462,7 @@ export async function takeOverBotDesktop(
   sandboxId: string,
 ): Promise<VMOperatorResult<{ control_state: string }>> {
   try {
-    const res = await fetch(botDesktopUrl(botId, sandboxId) + '/take-over', { method: 'POST' });
+    const res = await fetch(botDesktopActionUrl(botId, sandboxId, 'take-over'), { method: 'POST' });
     if (!res.ok) {
       const text = await res.text();
       throw new Error(`Platform returned ${res.status}: ${text}`);
@@ -476,7 +483,7 @@ export async function handBackBotDesktop(
   sandboxId: string,
 ): Promise<VMOperatorResult<{ control_state: string }>> {
   try {
-    const res = await fetch(botDesktopUrl(botId, sandboxId) + '/hand-back', { method: 'POST' });
+    const res = await fetch(botDesktopActionUrl(botId, sandboxId, 'hand-back'), { method: 'POST' });
     if (!res.ok) {
       const text = await res.text();
       throw new Error(`Platform returned ${res.status}: ${text}`);

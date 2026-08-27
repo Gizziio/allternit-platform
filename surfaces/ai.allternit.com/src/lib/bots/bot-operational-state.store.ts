@@ -42,6 +42,7 @@ import {
 } from './orpc-contracts';
 import { type GoalLoopState } from './goal-loop-controller';
 import { projectOperationalStateFromGoalLoop } from './bot-operational-projection';
+import { getBotOperationalState } from './bot-events-api';
 
 const logger = createModuleLogger('BotOperationalState');
 
@@ -125,6 +126,14 @@ interface BotOperationalStateStoreState {
    * unreadMessagesCount) are preserved from the existing projection.
    */
   applyGoalLoopState: (botId: string, loopState: GoalLoopState) => void;
+
+  /**
+   * Fetch the server-owned operational state for a bot and merge it into the
+   * entry. Server-sourced fields (status, activityLabel, computerState,
+   * lastEventSequence, ...) win; subscriptionState and resume cursors are
+   * preserved. Returns false when the fetch fails; the entry is left untouched.
+   */
+  fetchOperationalState: (botId: string) => Promise<boolean>;
 
   /** Mark a bot as offline when its projection cannot be reached */
   markOffline: (botId: string) => void;
@@ -286,6 +295,40 @@ export const useBotOperationalStateStore = create<BotOperationalStateStoreState>
         );
 
         logger.debug({ botId, status: loopState.status }, 'Goal loop state applied to projection');
+      },
+
+      fetchOperationalState: async (botId) => {
+        get().setFetching(botId, true);
+        try {
+          const serverState = await getBotOperationalState(botId);
+
+          set(
+            (store) => {
+              const existing = store.projections[botId] ?? defaultEntry(botId);
+              // Server is authoritative for the fields it owns; preserve local
+              // subscription bookkeeping and resume cursors.
+              const newEntry: BotProjectionEntry = {
+                ...existing,
+                state: { ...existing.state, ...serverState },
+                lastFetchedAt: new Date().toISOString(),
+              };
+              return { projections: { ...store.projections, [botId]: newEntry } };
+            },
+            false,
+            'fetchOperationalState',
+          );
+
+          logger.debug(
+            { botId, status: serverState.status, seq: serverState.lastEventSequence },
+            'Operational state fetched from server',
+          );
+          return true;
+        } catch (err) {
+          logger.warn({ err, botId }, 'Failed to fetch operational state from server');
+          return false;
+        } finally {
+          get().setFetching(botId, false);
+        }
       },
 
       markOffline: (botId) => {

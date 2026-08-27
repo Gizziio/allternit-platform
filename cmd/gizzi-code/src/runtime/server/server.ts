@@ -80,6 +80,7 @@ import { AcpRoutes } from "@/runtime/server/routes/acp"
 import { PeerRoutes } from "@/runtime/server/routes/peers"
 import { OrchestratorRoutes } from "@/runtime/server/routes/orchestrator"
 import { RuntimeHeartbeat } from "@/runtime/runtime-heartbeat"
+import { AgentEventBridge } from "@/runtime/services/agent-event-bridge"
 import { RuntimeRoutes } from "@/runtime/server/routes/runtime"
 import { AgentCompatRoutes } from "@/runtime/server/routes/agent-compat"
 import { createHash, randomUUID } from "node:crypto"
@@ -675,6 +676,16 @@ export namespace Server {
       log.info("runtime heartbeat started")
     } catch (err) {
       log.error("failed to start runtime heartbeat", { error: err })
+    }
+
+    // Bridge permission/question wait-state bus events into the Allternit
+    // agent event stream for sessions bound to an agent via the
+    // x-allternit-agent-id header (agent-event-bridge.ts).
+    try {
+      AgentEventBridge.start()
+      log.info("agent event bridge started")
+    } catch (err) {
+      log.error("failed to start agent event bridge", { error: err })
     }
 
     const shouldPublishMDNS =
