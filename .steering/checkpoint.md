@@ -800,3 +800,46 @@ Close the critical gaps left by the previous remote-control implementation:
 
 - Should push worker add authentication now (Clerk bearer + device-token-signed `/notify`), or defer until after merge?
 - Should `/runtimes` redirect to `/remote`, or keep both as aliases?
+
+---
+
+## Remote Control Gap Fix (security, PWA, UX polish)
+
+### Goal
+Close the remaining production gaps in Remote Control: secure push notifications, PWA hardening, and honest setup UX.
+
+### Just did
+
+- **Push worker security (Phase 4)**
+  - `/subscribe` now requires a valid Clerk bearer token and verifies the user owns the requested `runtimeId`.
+  - `/notify` accepts either the service secret (cloud → worker) or a paired runtime device token (gizzi → worker), and enforces runtime-id matching for device tokens.
+  - Added KV TTL for subscriptions (90 days), pending-payload TTL (5 min), and dead-subscription cleanup on 404/410 push responses.
+  - Added per-runtime rate limiting on `/notify` (30/min).
+  - Rewrote `cmd/gizzi-code/src/runtime/integrations/remote-control-push.ts` to scope notifications to the cloud-paired `runtimeId`, include typed payloads (permission/question/completed/error), and subscribe to `Session.Event.Error`.
+  - Added notification-type toggles in settings.
+
+- **PWA hardening (Phase 5)**
+  - Updated `remote-control.webmanifest` with stable `id`, correct `start_url`, `scope`, and PNG icon references.
+  - Added iOS meta tags and `apple-touch-icon` / `apple-touch-startup-image` to `remote-control.html`.
+  - Rewrote `remote-control-service-worker.js` with precaching, offline app-shell fallback, and deep-link `notificationclick` handling.
+  - Generated placeholder PNG icons/splash (to be replaced by real design assets before launch).
+  - Added `Notification.requestPermission()` gate and per-runtime push state in `DashboardPage.tsx`.
+  - Added push-worker `/subscriptions` endpoint so the dashboard shows accurate per-runtime subscription state instead of a global guess.
+  - Fixed missing `Authorization` headers on `/subscribe` and `/unsubscribe` dashboard calls.
+
+- **UX cleanup (Phase 6)**
+  - Replaced fake macOS permission toggles with honest copy + "Open System Settings" deep-links in `DispatchView.tsx` and `DispatchSettingsPanel.tsx`.
+  - Added mock-runtime banner (`MockRuntimesBanner.tsx`), loading/status states in `RemoteControlHub.tsx`, and empty-state CTAs across `MachinesPanel.tsx`, `RemoteSessionPanel.tsx`, and `RemoteControlHub.tsx`.
+
+### Verification
+
+- `pnpm typecheck` in `services/remote-control-push` ✅.
+- `pnpm typecheck:fast` in `surfaces/ai.allternit.com` shows no new errors in touched `remote-control` / `dispatch` files; pre-existing errors remain in unrelated office-suite packages.
+- `bun run typecheck` in `cmd/gizzi-code` shows no errors in touched `remote-control-push.ts` / `pairing.ts`; pre-existing SDK `dist/` import errors remain.
+
+### Next
+
+- Replace placeholder PWA icons/splash with final design assets.
+- Build the remote-control entry to confirm bundling (pre-existing top-level-await blocker in a vendored dep is unrelated).
+- Run full manual E2E: pair runtime → open PWA → trigger permission/question → receive push → approve/respond.
+- Commit once steering approves; do not commit without approval per `AGENTS.md`.

@@ -54,28 +54,60 @@ function useVapidKey() {
   return vapidKey;
 }
 
-function usePushByRuntime(runtimes: RuntimeViewModel[]) {
+function usePushByRuntime(
+  runtimes: RuntimeViewModel[],
+  getToken: () => Promise<string | null>
+) {
   const [pushByRuntime, setPushByRuntime] = useState<Record<string, boolean>>({});
+
   useEffect(() => {
-    if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
+    if (typeof window === "undefined" || !("serviceWorker" in navigator) || runtimes.length === 0) {
+      return;
+    }
+    let cancelled = false;
+
     navigator.serviceWorker.ready
-      .then((reg) =>
-        Promise.all(
-          runtimes.map(async (rt) => {
-            const sub = await reg.pushManager.getSubscription();
-            return { id: rt.id, subscribed: Boolean(sub) };
-          })
-        )
-      )
-      .then((results) => {
+      .then(async (reg) => {
+        const sub = await reg.pushManager.getSubscription();
+        if (!sub) {
+          const map: Record<string, boolean> = {};
+          runtimes.forEach((r) => {
+            map[r.id] = false;
+          });
+          if (!cancelled) setPushByRuntime(map);
+          return;
+        }
+
+        const token = await getToken().catch(() => null);
+        if (!token) return;
+
+        const res = await fetch(
+          `${PUSH_WORKER_URL}/subscriptions?endpoint=${encodeURIComponent(sub.endpoint)}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (!res.ok) throw new Error("Failed to fetch push subscriptions");
+
+        const data = (await res.json()) as { runtimeIds?: string[] };
+        const ids = new Set(data.runtimeIds ?? []);
         const map: Record<string, boolean> = {};
-        results.forEach((r) => {
-          map[r.id] = r.subscribed;
+        runtimes.forEach((r) => {
+          map[r.id] = ids.has(r.id);
         });
-        setPushByRuntime(map);
+        if (!cancelled) setPushByRuntime(map);
       })
-      .catch(() => {});
-  }, [runtimes]);
+      .catch(() => {
+        const map: Record<string, boolean> = {};
+        runtimes.forEach((r) => {
+          map[r.id] = false;
+        });
+        if (!cancelled) setPushByRuntime(map);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [runtimes, getToken]);
+
   return { pushByRuntime, setPushByRuntime };
 }
 
@@ -92,7 +124,7 @@ export function DashboardPage({ installPrompt, onInstallClick }: DashboardPagePr
   const { permissions: pendingPermissions, questions: pendingQuestions } = useRemotePendingCounts(runtimes, auth.getToken);
 
   const vapidKey = useVapidKey();
-  const { pushByRuntime, setPushByRuntime } = usePushByRuntime(runtimes);
+  const { pushByRuntime, setPushByRuntime } = usePushByRuntime(runtimes, auth.getToken);
 
   const togglePush = useCallback(
     async (rt: RuntimeViewModel) => {
@@ -100,7 +132,7 @@ export function DashboardPage({ installPrompt, onInstallClick }: DashboardPagePr
         addToast({ title: "Push unavailable", description: "Push worker is not configured.", type: "error" });
         return;
       }
-      if (!("serviceWorker" in navigator)) {
+      if (!("serviceWorker" in navigator) || !("Notification" in window)) {
         addToast({
           title: "Push unavailable",
           description: "Your browser does not support push notifications.",
@@ -109,16 +141,34 @@ export function DashboardPage({ installPrompt, onInstallClick }: DashboardPagePr
         return;
       }
 
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") {
+        addToast({
+          title: "Notifications disabled",
+          description: "Please allow notification access in your browser settings.",
+          type: "error",
+        });
+        return;
+      }
+
+      const token = await auth.getToken();
+      if (!token) {
+        addToast({ title: "Sign in required", description: "Please sign in to manage push notifications.", type: "error" });
+        return;
+      }
+      const authHeaders = { Authorization: `Bearer ${token}` };
+
       try {
         const reg = await navigator.serviceWorker.ready;
         let sub = await reg.pushManager.getSubscription();
         const enabled = Boolean(pushByRuntime[rt.id]);
 
         if (enabled && sub) {
-          await sub.unsubscribe();
+          // Only remove this runtime's record on the worker. Keep the browser
+          // subscription alive so other runtimes can still notify this device.
           await fetch(`${PUSH_WORKER_URL}/unsubscribe`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", ...authHeaders },
             body: JSON.stringify({ runtimeId: rt.id, endpoint: sub.endpoint }),
           });
           setPushByRuntime((prev) => ({ ...prev, [rt.id]: false }));
@@ -132,7 +182,7 @@ export function DashboardPage({ installPrompt, onInstallClick }: DashboardPagePr
         });
         await fetch(`${PUSH_WORKER_URL}/subscribe`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...authHeaders },
           body: JSON.stringify({
             runtimeId: rt.id,
             endpoint: sub.endpoint,
@@ -159,7 +209,7 @@ export function DashboardPage({ installPrompt, onInstallClick }: DashboardPagePr
         });
       }
     },
-    [addToast, pushByRuntime, setPushByRuntime, vapidKey]
+    [addToast, auth, pushByRuntime, setPushByRuntime, vapidKey]
   );
 
   const pushAction = useCallback(

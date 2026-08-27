@@ -14,6 +14,7 @@ import {
   DeviceMobile,
   Spinner,
   X,
+  ArrowSquareOut,
 } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import { usePlatformAuth } from '@/lib/platform-auth-client';
@@ -30,6 +31,7 @@ import { RemoteSessionPanel } from './RemoteSessionPanel';
 import { useRuntimeSelection } from './useRuntimeSelection';
 import { useRuntimes } from './useRuntimes';
 import { useRemotePendingCounts } from './useRemotePendingCounts';
+import { MockRuntimesBanner } from './MockRuntimesBanner';
 
 function generateDispatchToken(): string {
   const arr = new Uint8Array(24);
@@ -235,7 +237,7 @@ function StatCard({
 
 export function RemoteControlHub(): React.ReactNode {
   const auth = usePlatformAuth();
-  const { runtimes, loading } = useRuntimes();
+  const { runtimes, loading, isMock, lastRefreshedAt } = useRuntimes();
   const [selectedId, setSelectedId] = useRuntimeSelection();
   const selected = runtimes.find((r) => r.id === selectedId);
   const onlineCount = runtimes.filter((r) => r.status === 'online').length;
@@ -244,6 +246,10 @@ export function RemoteControlHub(): React.ReactNode {
   const handleOpenDashboard = useCallback(() => {
     openRemoteControlWindow(selectedId ?? undefined);
   }, [selectedId]);
+
+  const lastRefreshedText = lastRefreshedAt
+    ? `Updated ${new Date(lastRefreshedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`
+    : null;
 
   return (
     <ToastProvider>
@@ -260,6 +266,17 @@ export function RemoteControlHub(): React.ReactNode {
               <p className="m-0 mt-1 text-sm text-[var(--text-secondary)]">
                 Monitor, hand off, and control your agents across machines.
               </p>
+              <div className="flex items-center gap-2 mt-2">
+                {loading && (
+                  <span className="inline-flex items-center gap-1.5 text-[12px] text-[var(--text-tertiary)]">
+                    <Spinner size={12} className="animate-spin" />
+                    Refreshing machines…
+                  </span>
+                )}
+                {lastRefreshedText && !loading && (
+                  <span className="text-[12px] text-[var(--text-tertiary)]">{lastRefreshedText}</span>
+                )}
+              </div>
             </div>
             <button
               type="button"
@@ -270,6 +287,8 @@ export function RemoteControlHub(): React.ReactNode {
               Open dashboard
             </button>
           </header>
+
+          {isMock && <div className="mb-6"><MockRuntimesBanner /></div>}
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
             <StatCard label="Online Machines" value={onlineCount} sub={`of ${runtimes.length} paired`} />
@@ -297,9 +316,20 @@ export function RemoteControlHub(): React.ReactNode {
               ) : (
                 <div className="rounded-2xl border border-dashed border-[var(--border-default)] bg-[var(--bg-elevated)] p-8 text-center">
                   <DesktopTower size={48} className="mx-auto mb-3 opacity-40" />
-                  <p className="text-[14px] text-[var(--text-secondary)] m-0">
-                    Select a machine to hand off or remote control it.
+                  <p className="text-[14px] font-medium text-[var(--text-primary)] m-0 mb-1">
+                    Select a machine
                   </p>
+                  <p className="text-[12px] text-[var(--text-tertiary)] m-0 mb-4">
+                    Choose a paired machine to hand off or remote control it.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleOpenDashboard}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium bg-[var(--text-primary)] text-[var(--bg-elevated)] border-none cursor-pointer hover:opacity-90 transition-opacity"
+                  >
+                    <ArrowSquareOut size={14} weight="bold" />
+                    Open dashboard
+                  </button>
                 </div>
               )}
             </div>

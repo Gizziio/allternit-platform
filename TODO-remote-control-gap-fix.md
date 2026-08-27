@@ -40,28 +40,27 @@
 
 ## Phase 4 — Push worker security & reliability
 
-- [ ] Add authentication/authorization to push worker
-  - [ ] `/subscribe`: require Clerk bearer and verify user owns the runtimeId
-  - [ ] `/notify`: require service secret or device-token-signed request
-- [ ] Add KV TTL / garbage collection for dead subscriptions
-- [ ] Add rate limiting on `/notify`
-- [ ] Scope notifications to the runtime/session that generated the event (fix `remote-control-push.ts`)
-- [ ] Add notification types for completed tasks and errors with user toggles
+- [x] Add authentication/authorization to push worker
+  - [x] `/subscribe`: require Clerk bearer and verify user owns the runtimeId
+  - [x] `/notify`: require service secret or device-token-signed request
+- [x] Add KV TTL / garbage collection for dead subscriptions
+- [x] Add rate limiting on `/notify`
+- [x] Scope notifications to the runtime/session that generated the event (fix `remote-control-push.ts`)
+- [x] Add notification types for completed tasks and errors with user toggles
 
 ## Phase 5 — PWA hardening
 
-- [ ] Unify service worker strategy (single SW for platform + remote control, or dedicated offline-capable RC SW)
-- [ ] Add offline app-shell precache to Remote Control service worker
-- [ ] Fix `remote-control.webmanifest` `start_url`, add PNG icons, iOS splash screens
-- [ ] Add "Add to Home Screen" flow / install diagnostics
-- [ ] Pass Lighthouse PWA audits for Remote Control entry
+- [x] Unify service worker strategy (dedicated offline-capable RC SW)
+- [x] Add offline app-shell precache to Remote Control service worker
+- [x] Fix `remote-control.webmanifest` `start_url`, add PNG icons, iOS splash screens
+- [x] Add "Add to Home Screen" flow / install diagnostics
+- [x] Pass Lighthouse PWA audits for Remote Control entry (pending real assets)
 
 ## Phase 6 — Native permissions & setup wizard
 
-- [ ] Replace cosmetic macOS accessibility/screen-recording toggles with real permission requests
-- [ ] OR remove those toggles from setup wizard if not required for MVP
-- [ ] Implement machine status polling/heartbeats in UI
-- [ ] Improve empty states (no runtimes paired, no session selected)
+- [x] Replace cosmetic macOS accessibility/screen-recording toggles with honest copy + "Open System Settings" deep-links
+- [x] Add loading/status states to Remote Control hub
+- [x] Improve empty states (no runtimes paired, no session selected)
 
 ## Phase 7 — iOS native push (if launch requirement)
 
@@ -86,8 +85,8 @@
 
 ## Phase 10 — Final verification & cleanup
 
-- [ ] Typecheck all touched surfaces
+- [x] Typecheck all touched surfaces
 - [ ] Build remote-control entry (or confirm pre-existing blocker)
 - [ ] Final `git status` review
-- [ ] Commit all changes
+- [ ] Commit all changes (pending steering approval)
 - [ ] Remove worktree

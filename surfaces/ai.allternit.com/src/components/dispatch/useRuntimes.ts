@@ -70,6 +70,8 @@ export interface UseRuntimesResult {
   runtimes: RuntimeViewModel[];
   loading: boolean;
   error: string | null;
+  isMock: boolean;
+  lastRefreshedAt: number | null;
   refresh: () => void;
 }
 
@@ -78,6 +80,8 @@ export function useRuntimes(): UseRuntimesResult {
   const [runtimes, setRuntimes] = useState<RuntimeViewModel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isMock, setIsMock] = useState(false);
+  const [lastRefreshedAt, setLastRefreshedAt] = useState<number | null>(null);
 
   const fetchRuntimes = useCallback(async () => {
     try {
@@ -85,16 +89,21 @@ export function useRuntimes(): UseRuntimesResult {
       // DEV BYPASS: serve mock runtimes only when explicitly enabled in local dev.
       if (token === 'dev-token' && env('ALLTERNIT_LOCAL_DEV_BYPASS') === 'true') {
         setRuntimes(MOCK_RUNTIMES);
+        setIsMock(true);
         setError(null);
         setLoading(false);
+        setLastRefreshedAt(Date.now());
         return;
       }
       const res = await fetch(`${API_BASE_URL}/api/v1/runtime-devices`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
+      setIsMock(false);
       if (!res.ok) {
         if (res.status === 401) {
           setRuntimes([]);
+          setLoading(false);
+          setLastRefreshedAt(Date.now());
           return;
         }
         throw new Error(`Failed to load runtimes (${res.status})`);
@@ -107,14 +116,18 @@ export function useRuntimes(): UseRuntimesResult {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
+      setLastRefreshedAt(Date.now());
     }
   }, [auth]);
 
   useEffect(() => {
     void fetchRuntimes();
+    // MVP: short-poll for machine status. A future upgrade can replace this
+    // with a server-sent event (SSE) stream from the cloud relay so online/
+    // offline transitions appear instantly without polling.
     const interval = setInterval(fetchRuntimes, 10000);
     return () => clearInterval(interval);
   }, [fetchRuntimes]);
 
-  return { runtimes, loading, error, refresh: fetchRuntimes };
+  return { runtimes, loading, error, isMock, lastRefreshedAt, refresh: fetchRuntimes };
 }

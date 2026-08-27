@@ -49,6 +49,7 @@ export namespace Pairing {
     "runtime:connect",
     "runtime:execute",
     "runtime:files",
+    "runtime:remote_control",
     "runtime:terminal",
     "providers:connect",
     "providers:use",

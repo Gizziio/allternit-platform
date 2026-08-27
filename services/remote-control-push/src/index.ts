@@ -14,10 +14,15 @@ interface PushSubscriptionRecord {
   createdAt: number;
 }
 
+type NotificationType = "permission" | "question" | "completed" | "error";
+
 interface PendingNotification {
   title: string;
   body: string;
   tag: string;
+  type: NotificationType;
+  runtimeId: string;
+  sessionId?: string;
 }
 
 interface WorkerEnv {
@@ -26,6 +31,7 @@ interface WorkerEnv {
   VAPID_PUBLIC_KEY: string;
   NOTIFY_SECRET: string;
   CLERK_JWKS_URL?: string;
+  ALLTERNIT_CLOUD_API_URL?: string;
   REMOTE_CONTROL_DASHBOARD_ORIGIN?: string;
 }
 
@@ -110,6 +116,63 @@ async function checkNotifyRateLimit(
   return true;
 }
 
+interface VerifiedDevice {
+  runtimeId: string;
+  userId: string;
+  name?: string;
+  status?: string;
+}
+
+async function verifyDeviceToken(
+  c: Context<{ Bindings: WorkerEnv }>,
+  token: string
+): Promise<VerifiedDevice | null> {
+  const cloudUrl = c.env.ALLTERNIT_CLOUD_API_URL;
+  if (!cloudUrl) return null;
+  try {
+    const response = await fetch(`${cloudUrl.replace(/\/$/, "")}/api/v1/runtime-devices/verify-token`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
+    if (!response.ok) return null;
+    return (await response.json()) as VerifiedDevice;
+  } catch (err) {
+    console.error("Device token verification failed", err);
+    return null;
+  }
+}
+
+async function verifyUserOwnsRuntime(
+  c: Context<{ Bindings: WorkerEnv }>,
+  clerkToken: string,
+  runtimeId: string
+): Promise<boolean> {
+  const cloudUrl = c.env.ALLTERNIT_CLOUD_API_URL;
+  if (!cloudUrl) {
+    // When no cloud API is configured (local dev), accept the subscription
+    // without ownership proof. Production deployments must set the cloud URL.
+    return true;
+  }
+  try {
+    const response = await fetch(`${cloudUrl.replace(/\/$/, "")}/api/v1/runtime-devices`, {
+      headers: {
+        Authorization: `Bearer ${clerkToken}`,
+        Accept: "application/json",
+      },
+    });
+    if (!response.ok) return false;
+    const data = (await response.json()) as { runtimes?: Array<{ id: string }> } | Array<{ id: string }>;
+    const devices = Array.isArray(data) ? data : data.runtimes ?? [];
+    return devices.some((d) => d.id === runtimeId);
+  } catch (err) {
+    console.error("Runtime ownership check failed", err);
+    return false;
+  }
+}
+
 async function importVapidPrivateKey(jwkJson: string): Promise<CryptoKey> {
   const jwk = JSON.parse(jwkJson);
   if (jwk.kty !== "EC" || jwk.crv !== "P-256") {
@@ -181,7 +244,11 @@ async function sendPushNotification(
     title: payload.title,
     body: payload.body,
     tag: payload.tag,
-    data: { runtimeId: subscription.runtimeId },
+    data: {
+      runtimeId: subscription.runtimeId,
+      type: payload.type,
+      sessionId: payload.sessionId,
+    },
   });
 
   return fetch(subscription.endpoint, {
@@ -231,6 +298,11 @@ app.post("/subscribe", async (c) => {
     return c.json({ error: "Missing required subscription fields" }, 400);
   }
 
+  const ownsRuntime = await verifyUserOwnsRuntime(c, token, body.runtimeId);
+  if (!ownsRuntime) {
+    return c.json({ error: "Runtime not found or not owned by this user" }, 403);
+  }
+
   const record: PushSubscriptionRecord = {
     runtimeId: body.runtimeId,
     endpoint: body.endpoint,
@@ -259,10 +331,71 @@ app.post("/unsubscribe", async (c) => {
   return c.json({ ok: true });
 });
 
+app.get("/subscriptions", async (c) => {
+  const token = getBearerToken(c);
+  if (!token) {
+    return c.json({ error: "Authorization required" }, 401);
+  }
+  const claims = await verifyClerkSessionToken(c, token);
+  if (!claims) {
+    return c.json({ error: "Invalid or expired session token" }, 401);
+  }
+
+  const endpoint = c.req.query("endpoint");
+  if (!endpoint) {
+    return c.json({ error: "endpoint is required" }, 400);
+  }
+
+  // Only return runtimeIds the authenticated user actually owns.
+  const cloudUrl = c.env.ALLTERNIT_CLOUD_API_URL;
+  let ownedRuntimeIds: Set<string> | undefined;
+  if (cloudUrl) {
+    const response = await fetch(`${cloudUrl.replace(/\/$/, "")}/api/v1/runtime-devices`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+      },
+    });
+    if (!response.ok) {
+      return c.json({ error: "Ownership check failed" }, 500);
+    }
+    const data = (await response.json()) as { runtimes?: Array<{ id: string }> } | Array<{ id: string }>;
+    const devices = Array.isArray(data) ? data : data.runtimes ?? [];
+    ownedRuntimeIds = new Set(devices.map((d) => d.id));
+  }
+
+  const runtimeIds: string[] = [];
+  const prefix = "sub:";
+  const list = await c.env.REMOTE_CONTROL_PUSH_KV.list({ prefix });
+  for (const key of list.keys) {
+    const raw = await c.env.REMOTE_CONTROL_PUSH_KV.get(key.name);
+    if (!raw) continue;
+    const record: PushSubscriptionRecord = JSON.parse(raw);
+    if (record.endpoint === endpoint && (!ownedRuntimeIds || ownedRuntimeIds.has(record.runtimeId))) {
+      runtimeIds.push(record.runtimeId);
+    }
+  }
+
+  return c.json({ runtimeIds });
+});
+
 app.post("/notify", async (c) => {
   const token = getBearerToken(c);
-  if (!token || token !== c.env.NOTIFY_SECRET) {
-    return c.json({ error: "Unauthorized" }, 401);
+  if (!token) {
+    return c.json({ error: "Authorization required" }, 401);
+  }
+
+  // Accept either the service secret (production, cloud-api → worker) or a
+  // valid paired runtime device token (local dev, gizzi → worker).
+  let notifyRuntimeId: string | null = null;
+  if (token === c.env.NOTIFY_SECRET) {
+    notifyRuntimeId = null; // derive from payload below
+  } else {
+    const device = await verifyDeviceToken(c, token);
+    if (!device) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+    notifyRuntimeId = device.runtimeId;
   }
 
   const body = await c.req.json<{
@@ -271,9 +404,17 @@ app.post("/notify", async (c) => {
     body?: string;
     tag?: string;
     sessionId?: string;
+    type?: NotificationType;
   }>();
   if (!body.runtimeId) {
     return c.json({ error: "runtimeId is required" }, 400);
+  }
+
+  // When authenticated with a device token, the runtimeId in the payload must
+  // match the token's runtime. This prevents a leaked token from spamming
+  // another user's machine.
+  if (notifyRuntimeId && notifyRuntimeId !== body.runtimeId) {
+    return c.json({ error: "Runtime mismatch" }, 403);
   }
 
   const allowed = await checkNotifyRateLimit(c.env.REMOTE_CONTROL_PUSH_KV, body.runtimeId);
@@ -292,6 +433,9 @@ app.post("/notify", async (c) => {
     title: body.title ?? "Allternit Remote Control",
     body: body.body ?? "One of your machines needs input.",
     tag: body.tag ?? `remote-control:${body.sessionId ?? body.runtimeId}`,
+    type: body.type ?? "permission",
+    runtimeId: body.runtimeId,
+    sessionId: body.sessionId,
   };
 
   const prefix = `sub:${body.runtimeId}:`;
