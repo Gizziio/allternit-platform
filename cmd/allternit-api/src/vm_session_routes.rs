@@ -29,6 +29,8 @@ use tokio::sync::RwLock;
 use tracing::{info, warn};
 use uuid::Uuid;
 
+use crate::tool_routes::{is_secret_key, safe_subprocess_env};
+
 use crate::AppState;
 
 // ─── Session state ────────────────────────────────────────────────────────────
@@ -1158,7 +1160,7 @@ async fn exec_in_session_handler(
         #[cfg(not(feature = "vm-driver"))]
         {
             let _ = (driver, handle_id);
-            local_exec(&request, &session).await?
+            local_exec(&request, &session, state.config.host_control_enabled()).await?
         }
     } else {
         // No VM driver available for this session. Previously this silently
@@ -1249,10 +1251,19 @@ async fn destroy_session_handler(
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /// Run the command locally as a subprocess (fallback when no VM driver).
+#[allow(dead_code)] // only called when the `vm-driver` feature is disabled
 async fn local_exec(
     request: &VmExecRequest,
     session: &VmSession,
+    host_control_enabled: bool,
 ) -> Result<(i32, String, String, bool), (StatusCode, String)> {
+    if !host_control_enabled {
+        return Err((
+            StatusCode::SERVICE_UNAVAILABLE,
+            "Unsandboxed local execution is disabled. Set ALLTERNIT_HOST_CONTROL_ENABLED=true or hostControlEnabled in config to enable.".to_string(),
+        ));
+    }
+
     let cwd = request
         .workdir
         .as_deref()
@@ -1262,10 +1273,21 @@ async fn local_exec(
     let timeout = tokio::time::Duration::from_secs(request.timeout_secs);
 
     let mut cmd = tokio::process::Command::new("bash");
+
+    // Start from a minimal, secret-free environment, then add only the
+    // caller-provided overrides that do not look like credentials.
+    let mut env = safe_subprocess_env();
+    for (k, v) in &request.env {
+        if !is_secret_key(k) {
+            env.insert(k.clone(), v.clone());
+        }
+    }
+
     cmd.arg("-c")
         .arg(&request.command)
         .current_dir(&cwd)
-        .envs(&request.env)
+        .env_clear()
+        .envs(env)
         .kill_on_drop(true);
 
     let result = tokio::time::timeout(timeout, cmd.output())

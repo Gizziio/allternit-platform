@@ -61,6 +61,8 @@ function relativeTime(iso: string): string {
   return `${day}d ago`;
 }
 
+const MESSAGE_PAGE_SIZE = 100;
+
 export function GroupChatView({ groupId, onBack }: GroupChatViewProps) {
   const group = useGroupChatStore((s: GroupChatState) => s.groups[groupId]);
   const addMessage = useGroupChatStore((s: GroupChatState) => s.addMessage);
@@ -85,11 +87,13 @@ export function GroupChatView({ groupId, onBack }: GroupChatViewProps) {
 
   const [isRunning, setIsRunning] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [visibleMessageCount, setVisibleMessageCount] = useState(MESSAGE_PAGE_SIZE);
   const logEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setActiveGroup(groupId);
     markGroupRead(groupId);
+    setVisibleMessageCount(MESSAGE_PAGE_SIZE);
     return () => {
       setActiveGroup(null);
     };
@@ -124,6 +128,12 @@ export function GroupChatView({ groupId, onBack }: GroupChatViewProps) {
     );
     return map;
   }, [group?.members]);
+
+  const visibleLog = useMemo(
+    () => group?.log.slice(-visibleMessageCount) ?? [],
+    [group?.log, visibleMessageCount]
+  );
+  const hasMoreMessages = (group?.log.length ?? 0) > visibleMessageCount;
 
   const handleSend = useCallback(
     async (text: string) => {
@@ -304,7 +314,16 @@ export function GroupChatView({ groupId, onBack }: GroupChatViewProps) {
           </GlassSurface>
         ) : (
           <div className="flex flex-col gap-4">
-            {group.log.map((message) => {
+            {hasMoreMessages && (
+              <button
+                type="button"
+                onClick={() => setVisibleMessageCount((c) => c + MESSAGE_PAGE_SIZE)}
+                className="mx-auto text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] py-1 px-3 rounded-full border border-[var(--border-subtle)] hover:bg-[var(--surface-hover)] transition-colors"
+              >
+                Load earlier messages
+              </button>
+            )}
+            {visibleLog.map((message) => {
               const isUser = message.from === "user";
               const member = memberMap.get(message.botId ?? "");
               const agent =

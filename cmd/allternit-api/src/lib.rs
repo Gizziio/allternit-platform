@@ -60,6 +60,7 @@ pub mod cowork_team_routes;
 pub mod cron_lite;
 pub mod db;
 pub mod design_connector_routes;
+pub mod env_allowlist;
 pub mod error;
 pub mod enterprise_auth;
 pub mod eval_metric_routes;

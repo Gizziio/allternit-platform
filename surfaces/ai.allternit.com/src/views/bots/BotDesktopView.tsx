@@ -120,6 +120,7 @@ export function BotDesktopView({ bot, accentColor, activeVM, onBack }: BotDeskto
   const statusAbortRef = useRef<AbortController | null>(null);
   const screenshotAbortRef = useRef<AbortController | null>(null);
   const screenshotInFlightRef = useRef(false);
+  const screenshotFailuresRef = useRef(0);
   const RFBModuleRef = useRef<any>(null);
 
   useEffect(() => {
@@ -196,9 +197,14 @@ export function BotDesktopView({ bot, accentColor, activeVM, onBack }: BotDeskto
       if (controller.signal.aborted) return;
       if (result.ok && result.data) {
         setScreenshot(result.data);
+        screenshotFailuresRef.current = 0;
       } else {
         setScreenshot(null);
+        screenshotFailuresRef.current += 1;
       }
+    } catch (err) {
+      screenshotFailuresRef.current += 1;
+      console.error("[BotDesktopView] screenshot load failed:", err);
     } finally {
       screenshotInFlightRef.current = false;
       setScreenshotLoading(false);
@@ -215,6 +221,7 @@ export function BotDesktopView({ bot, accentColor, activeVM, onBack }: BotDeskto
       status.protocol === "vnc";
     if (canConnect) {
       setScreenshot(null);
+      screenshotFailuresRef.current = 0;
       screenshotAbortRef.current?.abort();
       if (screenshotPollRef.current) {
         clearInterval(screenshotPollRef.current);
@@ -222,6 +229,12 @@ export function BotDesktopView({ bot, accentColor, activeVM, onBack }: BotDeskto
       }
       return;
     }
+
+    // Exponential backoff on repeated screenshot failures so a broken/stopped
+    // desktop does not hammer the API.
+    const baseIntervalMs = 4000;
+    const failureBackoff = Math.min(screenshotFailuresRef.current, 5);
+    const intervalMs = baseIntervalMs * (failureBackoff === 0 ? 1 : 2 ** failureBackoff);
 
     const onVisibility = () => {
       if (document.hidden) {
@@ -232,13 +245,13 @@ export function BotDesktopView({ bot, accentColor, activeVM, onBack }: BotDeskto
         screenshotAbortRef.current?.abort();
       } else if (status?.status === "running" && !screenshotPollRef.current) {
         void loadScreenshot();
-        screenshotPollRef.current = setInterval(() => void loadScreenshot(), 4000);
+        screenshotPollRef.current = setInterval(() => void loadScreenshot(), intervalMs);
       }
     };
 
     if (status?.status === "running") {
       void loadScreenshot();
-      screenshotPollRef.current = setInterval(() => void loadScreenshot(), 4000);
+      screenshotPollRef.current = setInterval(() => void loadScreenshot(), intervalMs);
     }
 
     document.addEventListener("visibilitychange", onVisibility);
@@ -362,6 +375,7 @@ export function BotDesktopView({ bot, accentColor, activeVM, onBack }: BotDeskto
     }
     setIsProvisioning(true);
     setError(null);
+    screenshotFailuresRef.current = 0;
     const result = await provisionBotDesktop(bot.id);
     if (result.ok && result.data) {
       setVm(result.data);
@@ -374,6 +388,7 @@ export function BotDesktopView({ bot, accentColor, activeVM, onBack }: BotDeskto
   const handleStart = async () => {
     if (!sandboxId) return;
     setIsLoading(true);
+    screenshotFailuresRef.current = 0;
     const result = await startBotDesktop(bot.id, sandboxId);
     if (result.ok) await loadStatus();
     else setError(result.error ?? "Start failed");
@@ -405,6 +420,7 @@ export function BotDesktopView({ bot, accentColor, activeVM, onBack }: BotDeskto
   const handleResume = async () => {
     if (!sandboxId) return;
     setIsLoading(true);
+    screenshotFailuresRef.current = 0;
     const result = await resumeBotDesktop(bot.id, sandboxId);
     if (result.ok) await loadStatus();
     else setError(result.error ?? "Resume failed");

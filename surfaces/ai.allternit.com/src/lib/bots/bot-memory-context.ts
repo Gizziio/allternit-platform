@@ -36,6 +36,8 @@ export interface BotMemoryContextOptions {
   maxSensitivity?: 'public' | 'internal' | 'confidential' | 'secret';
   /** Include pinned memories even if they would otherwise be excluded. */
   includePinned?: boolean;
+  /** Scope retrieval to a specific session when provided. */
+  sessionId?: string;
 }
 
 /**
@@ -53,6 +55,7 @@ export function buildBotMemoryContext(
     limit = 20,
     maxSensitivity = 'internal',
     includePinned = true,
+    sessionId,
   } = options;
 
   const store = getBotMemoryStore();
@@ -64,6 +67,7 @@ export function buildBotMemoryContext(
     maxSensitivity,
     includeExpired: false,
     limit,
+    sessionId,
   });
 
   if (activeMemories.length === 0) {

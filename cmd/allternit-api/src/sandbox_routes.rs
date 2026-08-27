@@ -23,6 +23,7 @@ use allternit_driver_interface::{
 };
 
 use crate::AppState;
+use crate::env_allowlist::minimal_child_env;
 
 /// Sandbox execution request
 #[derive(Debug, Deserialize)]
@@ -185,7 +186,8 @@ async fn execute_subprocess_fallback(
     let interpreter = get_interpreter(&request.language);
     let mut cmd = tokio::process::Command::new(&interpreter);
     cmd.arg("-c").arg(&request.code);
-    cmd.envs(&request.env);
+    // Strip the full API environment before applying the caller's explicit env.
+    cmd.env_clear().envs(minimal_child_env(Some(request.env.clone())));
     if let Some(dir) = &request.workdir {
         cmd.current_dir(dir);
     }
@@ -234,6 +236,8 @@ async fn execute_stream_handler(
     let stream_body = async_stream::stream! {
         let mut child = match tokio::process::Command::new(cmd)
             .args(&args)
+            .env_clear()
+            .envs(minimal_child_env(Some(request.env.clone())))
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped())
             .kill_on_drop(true)
