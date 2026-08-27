@@ -1655,7 +1655,7 @@ export function ChatComposer({
           className={cn(
             'w-full rounded-2xl flex flex-col overflow-visible transition-shadow z-10 relative',
             hudMode
-              ? 'bg-[rgba(23,33,64,0.85)] border border-white/10 backdrop-blur-xl shadow-xl'
+              ? 'bg-[var(--chat-composer-bg)] border border-[var(--chat-composer-border)] backdrop-blur-xl shadow-xl'
               : useGlassComposer
                 ? 'bg-composer-glass-bg border border-composer-glass-border backdrop-blur-xl backdrop-saturate-150 shadow-xl'
                 : 'bg-input-bg border border-input-border',

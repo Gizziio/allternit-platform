@@ -116,11 +116,11 @@ export function HudShell(): React.ReactNode {
           "--view-chat-bg": "transparent",
           "--surface-canvas": "transparent",
           "--surface-floating": "rgba(255,255,255,0.04)",
-          "--chat-composer-bg": "rgba(28,28,28,0.22)",
-          "--chat-composer-border": "rgba(255, 255, 255, 0.09)",
-          "--chat-composer-glass-bg": "rgba(28,28,28,0.22)",
-          "--chat-composer-glass-border": "rgba(255, 255, 255, 0.09)",
-          "--chat-composer-muted": "rgba(255,255,255,0.50)",
+          "--chat-composer-bg": "rgba(22,22,24,0.82)",
+          "--chat-composer-border": "rgba(255, 255, 255, 0.10)",
+          "--chat-composer-glass-bg": "rgba(22,22,24,0.82)",
+          "--chat-composer-glass-border": "rgba(255, 255, 255, 0.10)",
+          "--chat-composer-muted": "rgba(255,255,255,0.55)",
           "--ui-text-primary": "#f2f2f7",
           "--ui-text-secondary": "#a1a1aa",
         } as React.CSSProperties
@@ -136,7 +136,7 @@ export function HudShell(): React.ReactNode {
         ref={hudContainerRef}
         data-hud-composer-bounds
         data-hud-grabbing={grabbing ? "" : undefined}
-        className="flex w-full flex-col overflow-visible rounded-2xl border border-white/[0.08] bg-[rgba(18,18,18,0.28)] text-[var(--text-primary)] shadow-xl backdrop-blur-xl"
+        className="flex w-full flex-col overflow-visible rounded-2xl border border-[var(--chat-composer-border)] bg-[var(--chat-composer-bg)] text-[var(--text-primary)] shadow-xl backdrop-blur-xl"
         onPointerDown={onComposerPointerDown}
       >
         {/* Slim drag strip + close */}
