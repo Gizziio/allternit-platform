@@ -21,6 +21,14 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-08-27 09:42 — kimi — Repo Hygiene Follow-up (Open Items)
+
+- **Session ID / Branch:** `session/repo-hygiene-followup`
+- **Commit:** `aefcc6fa1` — merged into `main`
+- **How it works:** Commits the untracked platform audit under `docs/audit/`, deletes root `.beads/`, and moves `.pipeline/`, `.parity-reports/`, and `.shared/` into `docs/` with updated references. Leaves `.allternit/`, `.gizzi/`, and `.steering/` at root because live code hardcodes those paths.
+- **Outstanding work:** `.allternit/`, `.gizzi/`, `.steering/` could be made configurable in a future pass instead of hardcoded.
+- **Summary file:** [summaries/2026-08-27-0942-repo-hygiene-followup-kimi-cleanup.md](./summaries/2026-08-27-0942-repo-hygiene-followup-kimi-cleanup.md)
+
 ### 2026-08-27 09:14 — kimi — Repo Hygiene & Root-Level Reorganization
 
 - **Session ID / Branch:** `session/repo-hygiene`
