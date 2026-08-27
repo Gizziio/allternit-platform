@@ -29,6 +29,7 @@ import {
   type WorkspaceFileMap,
 } from "@/lib/bots/bot-workspace-serializer";
 import { isBot } from "@/lib/bots/bot-profile";
+import type { Bot as ContractBot } from "@/lib/bots/orpc-contracts";
 import { createModuleLogger } from "@/lib/logger";
 
 const logger = createModuleLogger("BotWorkspaceEditor");
@@ -101,8 +102,11 @@ export function BotWorkspaceEditor({ bot, accentColor }: BotWorkspaceEditorProps
       }
 
       // Merge server files with serialized bot defaults so missing files are
-      // backfilled with canonical content.
-      const canonicalBot = isBot(bot) ? bot : deserializeBotWorkspace(serverFiles);
+      // backfilled with canonical content. The workspace serializer uses the
+      // narrower oRPC Bot contract, so cast the runtime AgentBot shape.
+      const canonicalBot: ContractBot = isBot(bot)
+        ? (bot as unknown as ContractBot)
+        : deserializeBotWorkspace(serverFiles);
       const merged = serializeBotWorkspace(canonicalBot, serverFiles);
 
       // Seed the conflict-detection store.

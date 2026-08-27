@@ -463,9 +463,10 @@ function buildCreateAgentInput(
     connectorBindings: bot.connectorBindings,
     identityChannels: bot.identityChannels,
     secretRefs: bot.secretRefs?.map((ref) => ({
-      ...ref,
-      vaultRef: undefined,
-      value: undefined,
+      name: ref.name,
+      key: ref.key,
+      description: ref.description,
+      required: ref.required ?? false,
     })),
     allowedSurfaces: ['chat', 'cowork', 'code', 'design', 'browser'],
     trustTier: 'standard',

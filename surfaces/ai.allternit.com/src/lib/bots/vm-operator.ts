@@ -419,9 +419,10 @@ export async function provisionBotDesktop(
 export async function getBotDesktopStatus(
   botId: string,
   sandboxId: string,
+  signal?: AbortSignal,
 ): Promise<VMOperatorResult<BotDesktopStatus>> {
   try {
-    const res = await fetch(botDesktopUrl(botId, sandboxId));
+    const res = await fetch(botDesktopUrl(botId, sandboxId), { signal });
     if (!res.ok) {
       const text = await res.text();
       throw new Error(`Platform returned ${res.status}: ${text}`);
@@ -611,9 +612,10 @@ export async function destroyBotDesktop(
 export async function getBotDesktopScreenshot(
   botId: string,
   sandboxId: string,
+  signal?: AbortSignal,
 ): Promise<VMOperatorResult<BotDesktopScreenshot>> {
   try {
-    const res = await fetch(botDesktopUrl(botId, sandboxId) + '/screenshot', { method: 'POST' });
+    const res = await fetch(botDesktopUrl(botId, sandboxId) + '/screenshot', { method: 'POST', signal });
     if (res.status === 204 || res.status === 404) {
       return { ok: false, error: 'Screenshots are not available for this desktop provider' };
     }

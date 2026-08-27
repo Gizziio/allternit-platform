@@ -75,6 +75,14 @@ export function GroupChatView({ groupId, onBack }: GroupChatViewProps) {
   const fetchMail = useAgentStore((s) => s.fetchMail);
   const acknowledgeMail = useAgentStore((s) => s.acknowledgeMail);
 
+  const fetchMailForGroup = useCallback(
+    async (agentId: string) => {
+      await fetchMail(agentId);
+      return useAgentStore.getState().mail[agentId] ?? [];
+    },
+    [fetchMail]
+  );
+
   const [isRunning, setIsRunning] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const logEndRef = useRef<HTMLDivElement>(null);
@@ -102,13 +110,13 @@ export function GroupChatView({ groupId, onBack }: GroupChatViewProps) {
       nativeAgents: agents,
       stackedAgents,
       sendMail,
-      fetchMail,
+      fetchMail: fetchMailForGroup,
       acknowledgeMail,
       senderName: "Group Chat",
       senderHandle: "group",
       mailReplyTimeoutMs: 30_000,
     });
-  }, [agents, stackedAgents, sendMail, fetchMail, acknowledgeMail]);
+  }, [agents, stackedAgents, sendMail, fetchMailForGroup, acknowledgeMail]);
 
   const memberMap = useMemo(() => {
     const map = new Map(

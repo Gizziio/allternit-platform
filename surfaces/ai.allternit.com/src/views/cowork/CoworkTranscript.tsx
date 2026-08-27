@@ -252,7 +252,17 @@ export const CoworkTranscript = memo(function CoworkTranscript({
   // Legacy cowork events are no longer stored in CoworkStore.
   // Events come from the active session in CoworkSessionStore or are empty.
   const events: AnyCoworkEvent[] = [];
-  const timeline = mergeTimeline(messages, events);
+
+  // Pagination: large transcripts render only the most recent messages to keep
+  // DOM weight and render time bounded. A "load more" button reveals earlier
+  // history in chunks.
+  const PAGE_SIZE = 100;
+  const [renderLimit, setRenderLimit] = useState(PAGE_SIZE);
+  const displayedMessages = useMemo(
+    () => messages.slice(-renderLimit),
+    [messages, renderLimit],
+  );
+  const timeline = mergeTimeline(displayedMessages, events);
 
   // Native streaming parts come from mode-session-store, not CoworkStore.
   const nativePartsByMessage: Record<string, Record<string, unknown>[]> = {};
@@ -264,14 +274,32 @@ export const CoworkTranscript = memo(function CoworkTranscript({
     return unsub;
   }, []);
 
+  // Reset pagination when the conversation changes.
+  useEffect(() => {
+    setRenderLimit(PAGE_SIZE);
+  }, [conversationId]);
+
   // Merge transition loading into isLoading
   const isTransitioning =
     (transitionState.transitionState === 'switching' || transitionState.transitionState === 'loading') &&
     transitionState.intendedSessionId === conversationId;
   const effectiveIsLoading = isLoading || isTransitioning;
 
+  const canLoadMore = messages.length > renderLimit;
+
   return (
     <div className={cn('relative', hudMode ? 'space-y-2' : 'space-y-4')}>
+      {canLoadMore && (
+        <div className="flex justify-center py-2">
+          <button
+            type="button"
+            onClick={() => setRenderLimit((limit) => limit + PAGE_SIZE)}
+            className="text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] underline"
+          >
+            Load earlier messages ({messages.length - renderLimit} remaining)
+          </button>
+        </div>
+      )}
       {isTransitioning && (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/60 backdrop-blur-sm rounded-lg">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">

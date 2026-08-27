@@ -30,6 +30,9 @@ import {
 
 const logger = createModuleLogger('BotMemoryStore');
 
+// Bound the in-memory retrieval log so long-running sessions do not leak RAM.
+const MAX_RETRIEVAL_LOGS = 10_000;
+
 function generateId(prefix: string): string {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 }
@@ -238,6 +241,9 @@ export function createBotMemoryStore(storeOptions: CreateBotMemoryStoreOptions =
       occurredAt: nowIso(),
     });
     retrievalLogs.unshift(log);
+    if (retrievalLogs.length > MAX_RETRIEVAL_LOGS) {
+      retrievalLogs.length = MAX_RETRIEVAL_LOGS;
+    }
   }
 
   return {

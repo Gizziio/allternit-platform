@@ -117,6 +117,9 @@ export function BotDesktopView({ bot, accentColor, activeVM, onBack }: BotDeskto
   const containerRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const screenshotPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const statusAbortRef = useRef<AbortController | null>(null);
+  const screenshotAbortRef = useRef<AbortController | null>(null);
+  const screenshotInFlightRef = useRef(false);
   const RFBModuleRef = useRef<any>(null);
 
   useEffect(() => {
@@ -129,7 +132,14 @@ export function BotDesktopView({ bot, accentColor, activeVM, onBack }: BotDeskto
 
   const loadStatus = useCallback(async () => {
     if (!sandboxId) return;
-    const result = await getBotDesktopStatus(bot.id, sandboxId);
+    if (typeof document !== "undefined" && document.hidden) return;
+
+    statusAbortRef.current?.abort();
+    const controller = new AbortController();
+    statusAbortRef.current = controller;
+
+    const result = await getBotDesktopStatus(bot.id, sandboxId, controller.signal);
+    if (controller.signal.aborted) return;
     if (result.ok && result.data) {
       setStatus(result.data);
       setError(null);
@@ -139,6 +149,7 @@ export function BotDesktopView({ bot, accentColor, activeVM, onBack }: BotDeskto
   }, [bot.id, sandboxId]);
 
   useEffect(() => {
+    if (!sandboxId) return;
     setIsLoading(true);
     void loadStatus().finally(() => setIsLoading(false));
 
@@ -146,24 +157,57 @@ export function BotDesktopView({ bot, accentColor, activeVM, onBack }: BotDeskto
       void loadStatus();
     }, 5000);
 
+    const onVisibility = () => {
+      if (document.hidden) {
+        if (pollRef.current) {
+          clearInterval(pollRef.current);
+          pollRef.current = null;
+        }
+        statusAbortRef.current?.abort();
+      } else {
+        void loadStatus();
+        if (!pollRef.current) {
+          pollRef.current = setInterval(() => void loadStatus(), 5000);
+        }
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
+      document.removeEventListener("visibilitychange", onVisibility);
+      statusAbortRef.current?.abort();
     };
-  }, [loadStatus]);
+  }, [loadStatus, sandboxId]);
 
   const loadScreenshot = useCallback(async () => {
     if (!sandboxId) return;
+    if (typeof document !== "undefined" && document.hidden) return;
+    if (screenshotInFlightRef.current) return;
+
+    screenshotAbortRef.current?.abort();
+    const controller = new AbortController();
+    screenshotAbortRef.current = controller;
+    screenshotInFlightRef.current = true;
     setScreenshotLoading(true);
-    const result = await getBotDesktopScreenshot(bot.id, sandboxId);
-    if (result.ok && result.data) {
-      setScreenshot(result.data);
-    } else {
-      setScreenshot(null);
+
+    try {
+      const result = await getBotDesktopScreenshot(bot.id, sandboxId, controller.signal);
+      if (controller.signal.aborted) return;
+      if (result.ok && result.data) {
+        setScreenshot(result.data);
+      } else {
+        setScreenshot(null);
+      }
+    } finally {
+      screenshotInFlightRef.current = false;
+      setScreenshotLoading(false);
     }
-    setScreenshotLoading(false);
   }, [bot.id, sandboxId]);
 
   useEffect(() => {
+    if (!sandboxId) return;
+
     // Poll screenshots when VNC is not connected so the panel still feels live.
     const canConnect =
       (status?.control_state === "human_controls" || status?.control_state === "human_observing") &&
@@ -171,6 +215,7 @@ export function BotDesktopView({ bot, accentColor, activeVM, onBack }: BotDeskto
       status.protocol === "vnc";
     if (canConnect) {
       setScreenshot(null);
+      screenshotAbortRef.current?.abort();
       if (screenshotPollRef.current) {
         clearInterval(screenshotPollRef.current);
         screenshotPollRef.current = null;
@@ -178,15 +223,32 @@ export function BotDesktopView({ bot, accentColor, activeVM, onBack }: BotDeskto
       return;
     }
 
+    const onVisibility = () => {
+      if (document.hidden) {
+        if (screenshotPollRef.current) {
+          clearInterval(screenshotPollRef.current);
+          screenshotPollRef.current = null;
+        }
+        screenshotAbortRef.current?.abort();
+      } else if (status?.status === "running" && !screenshotPollRef.current) {
+        void loadScreenshot();
+        screenshotPollRef.current = setInterval(() => void loadScreenshot(), 4000);
+      }
+    };
+
     if (status?.status === "running") {
       void loadScreenshot();
       screenshotPollRef.current = setInterval(() => void loadScreenshot(), 4000);
     }
 
+    document.addEventListener("visibilitychange", onVisibility);
+
     return () => {
       if (screenshotPollRef.current) clearInterval(screenshotPollRef.current);
+      document.removeEventListener("visibilitychange", onVisibility);
+      screenshotAbortRef.current?.abort();
     };
-  }, [status, loadScreenshot]);
+  }, [status, loadScreenshot, sandboxId]);
 
   const disconnectVnc = useCallback(() => {
     if (rfbRef.current) {
@@ -294,6 +356,10 @@ export function BotDesktopView({ bot, accentColor, activeVM, onBack }: BotDeskto
   };
 
   const handleProvision = async () => {
+    if (mode === "host" && !hostOptIn) {
+      setError("Host computer control must be explicitly enabled before provisioning.");
+      return;
+    }
     setIsProvisioning(true);
     setError(null);
     const result = await provisionBotDesktop(bot.id);
