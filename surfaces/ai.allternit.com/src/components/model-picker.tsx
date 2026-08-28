@@ -436,7 +436,13 @@ export function ModelPickerUI({
   const wasOpenRef = useRef(open);
   useEffect(() => {
     if (open && !wasOpenRef.current) {
-      const selectedModel = availableModels.find((m) => m.id === selectedModelId);
+      const selectedModel = availableModels.find((m) => {
+        if (m.id === selectedModelId) return true;
+        const shortId = m.id.includes("/")
+          ? m.id.split("/").slice(1).join("/")
+          : m.id;
+        return shortId === selectedModelId;
+      });
       const providerName =
         selectedModel?.providerName ||
         (selectedModel?.providerId ? getProviderName(selectedModel.providerId) : undefined);

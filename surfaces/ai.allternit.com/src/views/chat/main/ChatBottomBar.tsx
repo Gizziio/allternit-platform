@@ -64,7 +64,7 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
       className={cn(
         'w-full flex flex-col items-center pointer-events-none z-40',
         hudMode
-          ? 'relative shrink-0 px-3 pt-1 pb-2'
+          ? 'relative shrink-0 px-1.5 pt-0.5 pb-1'
           : 'absolute bottom-0 left-0 right-0 pb-[calc(0.75rem_+_env(safe-area-inset-bottom,0px))]'
       )}
       style={{
@@ -84,7 +84,7 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
           selectedModelDisplayName={modelSelection?.modelName || modelSelection?.modelId}
           onOpenModelPicker={startSelection}
           onSelectModel={selectModel}
-          placeholder={hudMode ? 'Push it further' : 'Reply…'}
+          placeholder={'Reply…'}
           showTopActions={false}
           showModeToggle={false}
           compact={hudMode}

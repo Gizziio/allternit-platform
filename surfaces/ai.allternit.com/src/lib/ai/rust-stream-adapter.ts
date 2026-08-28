@@ -20,6 +20,7 @@ import type {
 } from "./mcp/apps";
 import { createModuleLogger } from "@/lib/logger";
 import { emitArtifact } from "@/lib/canvas/canvas-artifact-events";
+import { buildAuthHeaders } from "@/lib/agents/api-config";
 
 const logger = createModuleLogger("rust-stream-adapter");
 
@@ -1917,10 +1918,11 @@ export function useRustStreamAdapter(
               : attempt.url.replace(/\/session\/.*$/, '/session');
             
             const sessionTimeoutSignal = AbortSignal.timeout(30000);
+            const authHeaders = await buildAuthHeaders();
             const createRes = await fetch(sessionUrl, {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ 
+              headers: { "Content-Type": "application/json", ...authHeaders },
+              body: JSON.stringify({
                 id: chatId,
                 title: message.slice(0, 50) || 'New Chat'
               }),
@@ -1956,13 +1958,15 @@ export function useRustStreamAdapter(
           }
           
           const timeoutMs = 60000;
-          const timeoutSignal = externalSignal 
-            ? signal 
+          const timeoutSignal = externalSignal
+            ? signal
             : AbortSignal.timeout(timeoutMs);
-          
+
+          const authHeaders = await buildAuthHeaders();
+          console.debug('[rust-stream-adapter] chat fetch headers:', Object.keys(authHeaders), 'hasAuth:', Boolean(authHeaders.Authorization));
           const candidate = await fetch(fetchUrl, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", ...authHeaders },
             body: requestBody,
             signal: timeoutSignal,
           });

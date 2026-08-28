@@ -105,6 +105,8 @@ export const DEFAULT_POLICIES: Record<ViewType, SpawnPolicy> = {
 
   // HUD view
   hud: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
+  // HUD annotation overlay
+  'hud-annotate': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
 
   // Verification view
   verification: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },

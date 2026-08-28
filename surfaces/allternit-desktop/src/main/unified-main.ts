@@ -158,6 +158,7 @@ const isMac = process.platform === 'darwin';
 let mainWindow: BrowserWindow | null = null;
 let designWindow: BrowserWindow | null = null;
 let hudWindow: BrowserWindow | null = null;
+let annotationWindow: BrowserWindow | null = null;
 let remoteControlWindow: BrowserWindow | null = null;
 /** Active session id reported by the HUD renderer for app-window handoff. */
 let hudSessionId: string | null = null;
@@ -2062,6 +2063,9 @@ function openHudWindow(): void {
   });
   hudWindow.on('closed', () => {
     log.info('[HUD] HUD window closed');
+    if (annotationWindow && !annotationWindow.isDestroyed()) {
+      annotationWindow.close();
+    }
     hudWindow = null;
     pushHudState();
   });
@@ -2212,6 +2216,124 @@ ipcMain.on('shell:hud:windowing', (event) => {
     nativeDrag: false,
     workspaceTransfer: false,
   };
+});
+
+/** Broadcast the annotation overlay's open/closed state to the HUD window. */
+function pushAnnotationState() {
+  const open = annotationWindow !== null && !annotationWindow.isDestroyed() && annotationWindow.isVisible();
+  hudWindow?.webContents.send('shell:hud:annotation:state', { open });
+}
+
+function createAnnotationWindow(): BrowserWindow {
+  const hudBounds = hudWindow && !hudWindow.isDestroyed() ? hudWindow.getBounds() : undefined;
+  const display = hudBounds
+    ? screen.getDisplayNearestPoint({ x: hudBounds.x + hudBounds.width / 2, y: hudBounds.y + hudBounds.height / 2 })
+    : screen.getPrimaryDisplay();
+  const { x, y, width, height } = display.bounds;
+
+  const win = new BrowserWindow({
+    x,
+    y,
+    width,
+    height,
+    title: 'Allternit Annotation',
+    frame: false,
+    transparent: true,
+    resizable: false,
+    movable: false,
+    minimizable: false,
+    maximizable: false,
+    fullscreenable: false,
+    skipTaskbar: !isMac,
+    hasShadow: false,
+    alwaysOnTop: true,
+    type: isMac ? 'panel' : undefined,
+    roundedCorners: false,
+    visualEffectState: 'active',
+    hiddenInMissionControl: isMac,
+    show: true,
+    backgroundColor: '#00000000',
+    webPreferences: {
+      preload: join(__dirname, '../preload/index.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+
+  win.setAlwaysOnTop(true, isMac ? 'floating' : 'screen-saver');
+  try {
+    win.setVisibleOnAllWorkspaces?.(true, { visibleOnFullScreen: true, skipTransformProcessType: true });
+  } catch {
+    // Best effort — not supported on every platform/configuration.
+  }
+
+  return win;
+}
+
+function openAnnotationWindow(): void {
+  if (annotationWindow && !annotationWindow.isDestroyed()) {
+    annotationWindow.show();
+    annotationWindow.focus();
+    annotationWindow.moveTop();
+    pushAnnotationState();
+    return;
+  }
+
+  annotationWindow = createAnnotationWindow();
+
+  annotationWindow.webContents.setWindowOpenHandler(({ url }) => {
+    void shell.openExternal(url);
+    return { action: 'deny' };
+  });
+  annotationWindow.on('closed', () => {
+    annotationWindow = null;
+    pushAnnotationState();
+  });
+  annotationWindow.once('ready-to-show', () => {
+    annotationWindow?.show();
+    annotationWindow?.focus();
+    annotationWindow?.moveTop();
+    pushAnnotationState();
+  });
+
+  const url = new URL('/hud/annotate', activePlatformUrl).toString();
+  log.info('[Annotation] Loading annotation window URL:', url);
+  void annotationWindow.loadURL(url);
+}
+
+ipcMain.handle('shell:hud:annotation:open', openAnnotationWindow);
+ipcMain.handle('shell:hud:annotation:close', () => {
+  if (annotationWindow && !annotationWindow.isDestroyed()) {
+    annotationWindow.close();
+  }
+});
+ipcMain.on('shell:hud:annotation:clear', () => {
+  annotationWindow?.webContents.send('shell:hud:annotation:clear');
+});
+ipcMain.handle('shell:hud:annotation:save', async (_event, base64Png: string) => {
+  if (!base64Png || typeof base64Png !== 'string') {
+    return { success: false, error: 'No image data provided' };
+  }
+  const saveOptions = {
+    title: 'Save Annotation',
+    defaultPath: 'annotation.png',
+    filters: [{ name: 'PNG Images', extensions: ['png'] }],
+  };
+  const result = annotationWindow && !annotationWindow.isDestroyed()
+    ? await dialog.showSaveDialog(annotationWindow, saveOptions)
+    : await dialog.showSaveDialog(saveOptions);
+  if (result.canceled || !result.filePath) {
+    return { success: false };
+  }
+  try {
+    const data = base64Png.replace(/^data:image\/png;base64,/, '');
+    await fs.promises.writeFile(result.filePath, Buffer.from(data, 'base64'));
+    return { success: true, path: result.filePath };
+  } catch (error) {
+    log.warn('[Annotation] Failed to save image:', error);
+    return { success: false, error: String(error) };
+  }
 });
 
 ipcMain.handle('shell:open-remote-control', () => {

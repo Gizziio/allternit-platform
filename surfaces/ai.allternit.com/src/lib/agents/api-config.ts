@@ -119,7 +119,7 @@ type DesktopSession = {
   expiresAt: number;
 };
 
-async function buildAuthHeaders(): Promise<Record<string, string>> {
+export async function buildAuthHeaders(): Promise<Record<string, string>> {
   const headers: Record<string, string> = {};
 
   if (typeof window === 'undefined') {

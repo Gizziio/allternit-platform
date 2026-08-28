@@ -19,7 +19,25 @@
 // ============================================================================
 
 import type { ArtifactUIPart } from "@/lib/ai/ui-parts.types";
+import { buildAuthHeaders } from "@/lib/agents/api-config";
 import { getActiveRuntimeId, getRuntimeExecutionTarget } from "@/lib/runtime-target";
+
+/**
+ * Wrapper around fetch that injects the user's bearer token / desktop session
+ * headers. The raw `fetch` calls in this file were missing auth, causing
+ * `/api/agent-chat` and other agent routes to return 401 Unauthorized.
+ */
+const _nativeFetch = fetch;
+async function authFetch(url: string, options: RequestInit = {}): Promise<Response> {
+  const authHeaders = await buildAuthHeaders();
+  return _nativeFetch(url, {
+    ...options,
+    headers: {
+      ...authHeaders,
+      ...options.headers,
+    },
+  });
+}
 
 /**
  * When a cloudflared tunnel is active (set by /connect page), returns the
@@ -444,7 +462,7 @@ export const sessionApi = {
    * GET /api/v1/agent-sessions
    */
   async listSessions(): Promise<BackendSession[]> {
-    const response = await fetch(getAgentSessionBase());
+    const response = await authFetch(getAgentSessionBase());
     const data = await handleResponse<BackendSessionListResponse>(response);
     return data.sessions.map(normalizeSessionPayload);
   },
@@ -454,7 +472,7 @@ export const sessionApi = {
    * GET /api/v1/agent-sessions/:id
    */
   async getSession(sessionId: string): Promise<BackendSession> {
-    const response = await fetch(
+    const response = await authFetch(
       `${getAgentSessionBase()}/${encodeURIComponent(sessionId)}`,
     );
     const data = await handleResponse<BackendSessionPayload>(response);
@@ -468,7 +486,7 @@ export const sessionApi = {
   async createSession(
     options: CreateNativeAgentSessionRequest = {},
   ): Promise<BackendSession> {
-    const response = await fetch(getAgentSessionBase(), {
+    const response = await authFetch(getAgentSessionBase(), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -513,7 +531,7 @@ export const sessionApi = {
       };
     },
   ): Promise<BackendSession> {
-    const response = await fetch(
+    const response = await authFetch(
       `${getAgentSessionBase()}/${encodeURIComponent(sessionId)}`,
       {
         method: "PATCH",
@@ -544,7 +562,7 @@ export const sessionApi = {
   async deleteSession(sessionId: string): Promise<void> {
     const url = `${getAgentSessionBase()}/${encodeURIComponent(sessionId)}`;
     console.debug('[NativeAgentApi] DELETE request to:', url);
-    const response = await fetch(
+    const response = await authFetch(
       url,
       {
         method: "DELETE",
@@ -562,7 +580,7 @@ export const sessionApi = {
    * GET /api/v1/agent-sessions/:id/messages
    */
   async listMessages(sessionId: string): Promise<BackendMessage[]> {
-    const response = await fetch(
+    const response = await authFetch(
       `${getAgentSessionBase()}/${encodeURIComponent(sessionId)}/messages`,
     );
     return handleResponse<BackendMessage[]>(response);
@@ -576,7 +594,7 @@ export const sessionApi = {
     sessionId: string,
     message: { text: string; role?: string },
   ): Promise<BackendMessage> {
-    const response = await fetch(
+    const response = await authFetch(
       `${getAgentSessionBase()}/${encodeURIComponent(sessionId)}/messages`,
       {
         method: "POST",
@@ -602,14 +620,14 @@ export const sessionApi = {
 
 export const runtimeApi = {
   async getExecutionMode(): Promise<BackendRuntimeExecutionMode> {
-    const response = await fetch(`${getRuntimeBase()}/runtime/execution-mode`);
+    const response = await authFetch(`${getRuntimeBase()}/runtime/execution-mode`);
     return handleResponse<BackendRuntimeExecutionMode>(response);
   },
 
   async setExecutionMode(
     mode: RuntimeExecutionMode,
   ): Promise<BackendRuntimeExecutionMode> {
-    const response = await fetch(`${getRuntimeBase()}/runtime/execution-mode`, {
+    const response = await authFetch(`${getRuntimeBase()}/runtime/execution-mode`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ mode }),
@@ -658,7 +676,7 @@ export const chatApi = {
     signal?: AbortSignal,
     agentContext?: AgentContext,
   ): Promise<void> {
-    const response = await fetch(`${getAgentChatBase()}/agent-chat`, {
+    const response = await authFetch(`${getAgentChatBase()}/agent-chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ chatId: sessionId, message, runtimeModelId: modelId, ...(agentContext ?? {}) }),
@@ -834,7 +852,7 @@ export const chatApi = {
    * POST /api/v1/agent-sessions/:id/abort
    */
   async abortGeneration(sessionId: string): Promise<void> {
-    const response = await fetch(
+    const response = await authFetch(
       `${getAgentSessionBase()}/${encodeURIComponent(sessionId)}/abort`,
       {
         method: "POST",
@@ -856,7 +874,7 @@ export const chatApi = {
     message: string,
     role: string = "system",
   ): Promise<void> {
-    const response = await fetch(
+    const response = await authFetch(
       `${getAgentSessionBase()}/${encodeURIComponent(sessionId)}/messages`,
       {
         method: "POST",
@@ -880,7 +898,7 @@ export const toolsApi = {
    * GET /api/v1/tools
    */
   async listTools(): Promise<BackendTool[]> {
-    const response = await fetch(`${getToolsBase()}/tools`);
+    const response = await authFetch(`${getToolsBase()}/tools`);
     const data = await handleResponse<{
       native?: BackendTool[];
       mcp?: BackendTool[];
@@ -897,7 +915,7 @@ export const toolsApi = {
     toolId: string,
     args: Record<string, unknown>,
   ): Promise<BackendToolResult> {
-    const response = await fetch(`${getToolsBase()}/tools/execute`, {
+    const response = await authFetch(`${getToolsBase()}/tools/execute`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -972,7 +990,7 @@ export const canvasApi = {
    * GET /api/v1/agent-sessions/:id/canvases
    */
   async listCanvases(sessionId: string): Promise<BackendCanvas[]> {
-    const response = await fetch(
+    const response = await authFetch(
       `${getAgentSessionBase()}/${encodeURIComponent(sessionId)}/canvases`,
     );
     const data = await handleResponse<CanvasListResponse>(response);
@@ -992,7 +1010,7 @@ export const canvasApi = {
       metadata?: Record<string, unknown>;
     } = {},
   ): Promise<BackendCanvas> {
-    const response = await fetch(
+    const response = await authFetch(
       `${getAgentSessionBase()}/${encodeURIComponent(sessionId)}/canvases`,
       {
         method: "POST",
@@ -1009,7 +1027,7 @@ export const canvasApi = {
    * GET /api/v1/canvases/:id
    */
   async getCanvas(canvasId: string): Promise<BackendCanvas> {
-    const response = await fetch(
+    const response = await authFetch(
       `${getApiV1Base()}/canvases/${encodeURIComponent(canvasId)}`,
     );
     return handleResponse<BackendCanvas>(response);
@@ -1028,7 +1046,7 @@ export const canvasApi = {
       metadata?: Record<string, unknown>;
     },
   ): Promise<BackendCanvas> {
-    const response = await fetch(
+    const response = await authFetch(
       `${getApiV1Base()}/canvases/${encodeURIComponent(canvasId)}`,
       {
         method: "PATCH",
@@ -1059,7 +1077,7 @@ export const canvasApi = {
    * DELETE /api/v1/canvases/:id
    */
   async deleteCanvas(canvasId: string): Promise<void> {
-    const response = await fetch(
+    const response = await authFetch(
       `${getApiV1Base()}/canvases/${encodeURIComponent(canvasId)}`,
       {
         method: "DELETE",
@@ -1077,7 +1095,7 @@ export const canvasApi = {
 
 export const sessionLifecycleApi = {
   async revertSession(sessionId: string, messageId: string): Promise<BackendSession> {
-    const response = await fetch(`${getAgentSessionBase()}/${encodeURIComponent(sessionId)}/revert`, {
+    const response = await authFetch(`${getAgentSessionBase()}/${encodeURIComponent(sessionId)}/revert`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ messageId }),
@@ -1087,7 +1105,7 @@ export const sessionLifecycleApi = {
   },
 
   async unrevertSession(sessionId: string): Promise<BackendSession> {
-    const response = await fetch(`${getAgentSessionBase()}/${encodeURIComponent(sessionId)}/unrevert`, {
+    const response = await authFetch(`${getAgentSessionBase()}/${encodeURIComponent(sessionId)}/unrevert`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
     });
@@ -1096,7 +1114,7 @@ export const sessionLifecycleApi = {
   },
 
   async compactSession(sessionId: string, modelId?: string): Promise<void> {
-    const response = await fetch(`${getAgentSessionBase()}/${encodeURIComponent(sessionId)}/compact`, {
+    const response = await authFetch(`${getAgentSessionBase()}/${encodeURIComponent(sessionId)}/compact`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ modelId }),
@@ -1105,7 +1123,7 @@ export const sessionLifecycleApi = {
   },
 
   async abortSession(sessionId: string): Promise<void> {
-    const response = await fetch(`${getAgentSessionBase()}/${encodeURIComponent(sessionId)}/abort`, {
+    const response = await authFetch(`${getAgentSessionBase()}/${encodeURIComponent(sessionId)}/abort`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
     });
@@ -1123,7 +1141,7 @@ const permissionsApi = {
     reply: "once" | "always" | "reject",
     message?: string,
   ): Promise<void> {
-    const response = await fetch(
+    const response = await authFetch(
       `/api/v1/permissions/${encodeURIComponent(requestID)}/reply`,
       {
         method: "POST",
@@ -1146,7 +1164,7 @@ export const questionsApi = {
     requestID: string,
     answers: Array<{ questionIndex: number; answer: string | string[] }>,
   ): Promise<void> {
-    const response = await fetch(
+    const response = await authFetch(
       `/api/v1/questions/${encodeURIComponent(requestID)}/reply`,
       {
         method: "POST",
@@ -1160,7 +1178,7 @@ export const questionsApi = {
   },
 
   async rejectQuestion(requestID: string): Promise<void> {
-    const response = await fetch(
+    const response = await authFetch(
       `/api/v1/questions/${encodeURIComponent(requestID)}/reject`,
       {
         method: "POST",

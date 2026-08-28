@@ -160,6 +160,14 @@ declare global {
           onGameOverlay: (callback: (state: unknown) => void) => () => void;
           onGoto: (callback: (sessionId: string) => void) => () => void;
           onChanged: (callback: (state: { open: boolean; sessionId: string | null }) => void) => () => void;
+          annotation: {
+            open: () => Promise<void>;
+            close: () => Promise<void>;
+            clear: () => void;
+            save: (base64Png: string) => Promise<{ success: boolean; path?: string; error?: string }>;
+            onClear: (callback: () => void) => () => void;
+            onStateChange: (callback: (state: { open: boolean }) => void) => () => void;
+          };
           windowing: {
             clientPlacement: boolean;
             controlDrag: boolean;

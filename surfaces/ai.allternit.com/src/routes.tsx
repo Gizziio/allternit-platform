@@ -104,6 +104,7 @@ export default function AppRoutes() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/hud" element={<ShellPage />} />
+        <Route path="/hud/annotate" element={<ShellPage />} />
         <Route path="/shell" element={<ShellPage />} />
         <Route path="/hud" element={<ShellPage />} />
         <Route path="/settings-preview" element={<SettingsPreviewPage />} />

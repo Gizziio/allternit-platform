@@ -178,7 +178,9 @@ export type ViewType =
   // Allternit Sign (native client-side PDF signing)
   | "sign"
   // Floating chat HUD
-  | "hud";
+  | "hud"
+  // Full-screen annotation overlay
+  | "hud-annotate";
 
 export type ViewId = string;
 

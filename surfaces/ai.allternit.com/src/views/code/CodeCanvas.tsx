@@ -334,7 +334,9 @@ export function CodeCanvas(_props: CodeCanvasProps) {
   useEffect(() => {
     if (userPickedModelRef.current || !backendDefaultModel?.providerId) return;
     const raw = backendDefaultModel.modelId
-      ? `${backendDefaultModel.providerId}/${backendDefaultModel.modelId}`
+      ? backendDefaultModel.modelId.includes("/")
+        ? backendDefaultModel.modelId
+        : `${backendDefaultModel.providerId}/${backendDefaultModel.modelId}`
       : backendDefaultModel.providerId;
     setSelectedModel(raw);
     setSelectedModelDisplayName(backendDefaultModel.modelName || raw);

@@ -228,8 +228,13 @@ export function useAvailableBrainModels() {
       modelMap.set(model.id, model);
     });
 
-    // 3) Registry models from Allternit Brain / Gizzi provider catalog
+    // 3) Registry models from Allternit Brain / Gizzi provider catalog.
+    //    Model IDs are normalized to `{providerId}/{modelId}` so the same short
+    //    model id from different providers (e.g. anthropic vs claude-cli) does
+    //    not collide and end up under the wrong runtime row.
     (realModels || []).forEach((provider: any) => {
+      const providerId = provider.id;
+      if (!providerId) return;
       const modelsList = Array.isArray(provider.models)
         ? provider.models
         : provider.models
@@ -237,20 +242,34 @@ export function useAvailableBrainModels() {
           : [];
       modelsList.forEach((model: any) => {
         if (!model?.id) return;
-        const existing = modelMap.get(model.id);
-        const enriched = {
+        const shortId = model.id.includes("/")
+          ? model.id.split("/").slice(1).join("/")
+          : model.id;
+        const fullId = `${providerId}/${shortId}`;
+        const existing = modelMap.get(fullId);
+        const enriched: ModelOption = {
           ...model,
-          providerId: provider.id,
+          id: fullId,
+          providerId,
           providerName: provider.name,
         };
-        modelMap.set(model.id, existing ? { ...existing, ...enriched } : enriched);
+        modelMap.set(fullId, existing ? { ...existing, ...enriched } : enriched);
       });
     });
 
-    // 4) Provider-specific discovery result (lowest priority, fills gaps)
+    // 4) Provider-specific discovery result (lowest priority, fills gaps).
+    //    These come back as short ids; skip them if the registry already
+    //    supplied the same provider/model pair.
     (discoveryResult?.models || []).forEach((model: any) => {
-      if (!model?.id || modelMap.has(model.id)) return;
-      modelMap.set(model.id, model);
+      if (!model?.id) return;
+      const shortId = model.id.includes("/")
+        ? model.id.split("/").slice(1).join("/")
+        : model.id;
+      // We do not know the queried provider here, so keep the short id as a
+      // fallback key. If it overlaps with a normalized registry model it is
+      // ignored.
+      if (modelMap.has(shortId)) return;
+      modelMap.set(shortId, model);
     });
 
     return Array.from(modelMap.values());

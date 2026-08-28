@@ -113,10 +113,10 @@ function ShellAppInner(): React.ReactNode {
   const detachedSessionId = detachedParams.get('detachedSessionId');
   const detachedWorkspaceId = detachedParams.get('detachedWorkspaceId');
   const isDetachedCodeSession = detachedParams.get('detachedSurface') === 'code' && Boolean(detachedSessionId);
-  // The Electron desktop opens the HUD in a chrome-free floating BrowserWindow
-  // pointed at /hud.  In that window we strip the normal shell chrome (rail,
-  // header, rail controls) and render only the HUD view.
-  const isHudWindow = typeof window !== 'undefined' && window.location.pathname === '/hud';
+  // The Electron desktop opens HUD-mode windows at /hud and /hud/*.  In those
+  // windows we strip the normal shell chrome (rail, header, rail controls) and
+  // render only the HUD/annotation view.
+  const isHudWindow = typeof window !== 'undefined' && window.location.pathname.startsWith('/hud');
   const [nav, dispatch] = useReducer(navReducer, undefined, createInitialNavState);
   const active = selectActiveView(nav)!;
 
@@ -555,13 +555,15 @@ function ShellAppInner(): React.ReactNode {
       });
     };
     window.addEventListener('allternit:open-view', handleOpenView);
-    // If this renderer was loaded at /hud (the desktop's floating HUD window),
-    // dispatch the open event now that the listener is attached.  Doing this in
-    // the same effect guarantees we don't race the listener registration.
+    // If this renderer was loaded at /hud or /hud/* (the desktop's floating HUD
+    // window or the annotation overlay), dispatch the open event now that the
+    // listener is attached. Doing this in the same effect guarantees we don't
+    // race the listener registration.
     console.warn('[ShellApp] HUD listener attached', { isHudWindow, pathname: window.location.pathname });
     if (isHudWindow) {
-      console.warn('[ShellApp] Dispatching hud open from /hud window');
-      window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType: 'hud' } }));
+      const viewType = window.location.pathname === '/hud/annotate' ? 'hud-annotate' : 'hud';
+      console.warn('[ShellApp] Dispatching hud open from /hud window', { viewType });
+      window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType } }));
     }
     return () => window.removeEventListener('allternit:open-view', handleOpenView);
   }, [isHudWindow]);

@@ -595,8 +595,12 @@ export function getProviderMeta(id: string | undefined): ProviderMeta {
   const meta = PROVIDER_REGISTRY[normalized];
   if (meta) return meta;
 
-  // Try partial match for CLI suffixes and compound IDs
-  const key = Object.keys(PROVIDER_REGISTRY).find((k) => normalized.includes(k));
+  // Try partial match for CLI suffixes and compound IDs, preferring the
+  // longest match so "claude-cli" resolves to the claude-cli entry rather
+  // than the shorter "claude" alias.
+  const key = Object.keys(PROVIDER_REGISTRY)
+    .filter((k) => normalized.includes(k))
+    .sort((a, b) => b.length - a.length)[0];
   if (key) return PROVIDER_REGISTRY[key];
 
   // Default fallback

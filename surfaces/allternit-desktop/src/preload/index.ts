@@ -330,6 +330,23 @@ const shellAPI = {
       ipcRenderer.on('shell:hud:state', listener);
       return () => ipcRenderer.removeListener('shell:hud:state', listener);
     },
+    annotation: {
+      open: (): Promise<void> => ipcRenderer.invoke('shell:hud:annotation:open'),
+      close: (): Promise<void> => ipcRenderer.invoke('shell:hud:annotation:close'),
+      clear: (): void => ipcRenderer.send('shell:hud:annotation:clear'),
+      save: (base64Png: string): Promise<{ success: boolean; path?: string; error?: string }> =>
+        ipcRenderer.invoke('shell:hud:annotation:save', base64Png),
+      onClear: (callback: () => void): (() => void) => {
+        const listener = (_: IpcRendererEvent) => callback();
+        ipcRenderer.on('shell:hud:annotation:clear', listener);
+        return () => ipcRenderer.removeListener('shell:hud:annotation:clear', listener);
+      },
+      onStateChange: (callback: (state: { open: boolean }) => void): (() => void) => {
+        const listener = (_: IpcRendererEvent, state: unknown) => callback(state as { open: boolean });
+        ipcRenderer.on('shell:hud:annotation:state', listener);
+        return () => ipcRenderer.removeListener('shell:hud:annotation:state', listener);
+      },
+    },
     windowing: ipcRenderer.sendSync('shell:hud:windowing') as {
       clientPlacement: boolean;
       controlDrag: boolean;

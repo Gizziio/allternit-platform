@@ -32,6 +32,9 @@ interface HudComposerDragOptions {
   /** X11 escape hatch: Ctrl+primary-button grabs immediately instead of
    *  competing with Chromium's text-selection drag until the hold timer. */
   controlDrag?: boolean;
+  /** Grab immediately on press, with no hold timer. Use for dedicated drag
+   *  handles where a long-press would feel unresponsive. */
+  immediate?: boolean;
   /** X11/KWin only: keep the grabbed window visible while the user changes
    *  virtual desktops, then pin it to the destination desktop on release. */
   workspaceTransfer?: boolean;
@@ -84,7 +87,7 @@ function setWorkspaceTransfer(transferring: boolean): void {
  */
 export function useHudComposerDrag(
   enabled: boolean,
-  { controlDrag = false, workspaceTransfer = false }: HudComposerDragOptions = {}
+  { controlDrag = false, immediate = false, workspaceTransfer = false }: HudComposerDragOptions = {}
 ) {
   const [grabbing, setGrabbing] = useState(false);
   const stateRef = useRef<PressState | null>(null);
@@ -117,7 +120,7 @@ export function useHudComposerDrag(
       }
 
       const target = event.currentTarget;
-      const immediate = controlDrag && event.ctrlKey;
+      const immediate = (controlDrag && event.ctrlKey) || options.immediate;
 
       // A press over an existing contentEditable selection otherwise starts
       // Chromium's native text drag, which cancels our pointer stream. Cancel
@@ -187,7 +190,7 @@ export function useHudComposerDrag(
         }
       }, LONG_PRESS_MS);
     },
-    [controlDrag, enabled, workspaceTransfer]
+    [controlDrag, enabled, immediate, workspaceTransfer]
   );
 
   useEffect(() => {

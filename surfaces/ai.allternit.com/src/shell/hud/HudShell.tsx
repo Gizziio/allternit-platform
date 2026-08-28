@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 import { ChatViewWrapper } from "../ChatViewWrapper";
 import { useThemeStore, useResolvedTheme } from "@/design/ThemeStore";
@@ -84,10 +84,16 @@ export function HudShell(): React.ReactNode {
 
   const gameUnder = useHudGameOverlay();
 
-  // Long-press / Ctrl-drag to move the HUD window.
+  // Long-press / Ctrl-drag to move the HUD window from anywhere in the composer.
   const { grabbing, onPointerDown: onComposerPointerDown } = useHudComposerDrag(
     true,
     { controlDrag: true },
+  );
+
+  // Immediate drag from the dedicated drag strip at the top.
+  const { grabbing: stripGrabbing, onPointerDown: onDragStripPointerDown } = useHudComposerDrag(
+    true,
+    { immediate: true },
   );
 
   // Edge/corner resize handles.
@@ -102,6 +108,14 @@ export function HudShell(): React.ReactNode {
   const resizeDirections = hudResizeDirections(
     hudApi?.windowing?.clientPlacement !== false,
   );
+
+  // Reflect whether the annotation overlay is currently open.
+  const [annotationOpen, setAnnotationOpen] = useState(false);
+  useEffect(() => {
+    return window.allternit?.shell?.hud?.annotation?.onStateChange?.((state) => {
+      setAnnotationOpen(state.open);
+    });
+  }, []);
 
   // HUD shell hooks.
   useHudGlass(rootRef, /* filled */ true);
@@ -133,20 +147,22 @@ export function HudShell(): React.ReactNode {
         ref={hudContainerRef}
         data-hud-composer-bounds
         data-hud-grabbing={grabbing ? "" : undefined}
-        className="flex w-full flex-col overflow-visible rounded-2xl border border-[var(--chat-composer-border)] bg-[var(--chat-composer-bg)] text-[var(--ui-text-primary)] shadow-xl backdrop-blur-xl"
+        className="flex w-full flex-col overflow-visible rounded-2xl border border-white/25 dark:border-white/10 bg-white/75 dark:bg-neutral-900/75 text-neutral-900 dark:text-neutral-100 shadow-xl backdrop-blur-xl"
         onPointerDown={onComposerPointerDown}
       >
-        {/* Slim drag strip + close */}
+        {/* Drag strip — immediate grab for moving the HUD; buttons stay clickable. */}
         <div
           data-hud-drag-strip
-          className="h-[10px] shrink-0 flex items-center justify-between px-2 select-none bg-transparent"
+          data-hud-grabbing={stripGrabbing ? "" : undefined}
+          onPointerDown={onDragStripPointerDown}
+          className="h-[16px] shrink-0 flex items-center justify-between px-2 select-none bg-transparent cursor-grab active:cursor-grabbing"
           style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
         >
           <div
             data-hud-grabber
-            className="flex items-center gap-1 text-[var(--ui-text-muted)] cursor-grab active:cursor-grabbing hover:text-[var(--ui-text-secondary)]"
+            className="flex items-center gap-1 text-neutral-400 dark:text-neutral-500"
           >
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
               <circle cx="5" cy="8" r="1.5" />
               <circle cx="12" cy="8" r="1.5" />
               <circle cx="19" cy="8" r="1.5" />
@@ -155,11 +171,28 @@ export function HudShell(): React.ReactNode {
               <circle cx="19" cy="16" r="1.5" />
             </svg>
           </div>
-          <div style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
+          <div className="flex items-center gap-1" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
+            <button
+              type="button"
+              onClick={() => window.allternit?.shell?.hud?.annotation?.open?.()}
+              className={`rounded p-0.5 transition-colors ${
+                annotationOpen
+                  ? "text-blue-600 dark:text-blue-400 bg-blue-500/10"
+                  : "text-neutral-500 dark:text-neutral-400 hover:bg-neutral-200/50 dark:hover:bg-white/10 hover:text-neutral-900 dark:hover:text-neutral-100"
+              }`}
+              aria-label="Open annotation overlay"
+            >
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 19l7-7 3 3-7 7-3-3z" />
+                <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
+                <path d="M2 2l7.586 7.586" />
+                <circle cx="11" cy="11" r="2" />
+              </svg>
+            </button>
             <button
               type="button"
               onClick={() => window.allternit?.shell?.hud?.close?.()}
-              className="rounded p-0.5 text-[var(--ui-text-muted)] hover:bg-[var(--ui-border-muted)] hover:text-[var(--ui-text-primary)]"
+              className="rounded p-0.5 text-neutral-500 dark:text-neutral-400 hover:bg-neutral-200/50 dark:hover:bg-white/10 hover:text-neutral-900 dark:hover:text-neutral-100"
               aria-label="Close HUD"
             >
               <svg width="8" height="8" viewBox="0 0 10 10" fill="currentColor">

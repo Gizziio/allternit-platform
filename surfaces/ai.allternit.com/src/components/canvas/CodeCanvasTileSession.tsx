@@ -26,7 +26,9 @@ export function CodeCanvasTileSession(props: CodeCanvasTileSessionProps) {
   const defaultSelection = useDefaultModelSelection();
   const modelId = defaultSelection?.providerId
     ? defaultSelection.modelId
-      ? `${defaultSelection.providerId}/${defaultSelection.modelId}`
+      ? defaultSelection.modelId.includes("/")
+        ? defaultSelection.modelId
+        : `${defaultSelection.providerId}/${defaultSelection.modelId}`
       : defaultSelection.providerId
     : DEFAULT_CODE_MODEL;
   const providerKey = props.sessionId || `canvas-session-${props.workspaceId}`;

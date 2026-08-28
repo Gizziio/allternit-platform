@@ -609,6 +609,7 @@ class AllternitApiClient {
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'text/event-stream',
+        ...(this.token ? { 'Authorization': `Bearer ${this.token}` } : {}),
       },
       body: JSON.stringify({
         message,
