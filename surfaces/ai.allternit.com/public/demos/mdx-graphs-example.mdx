@@ -1,0 +1,26 @@
+# mdx-graphs example
+
+This file demonstrates the text-chart components available to agents.
+
+## Comparison
+
+<GraphBars
+  title="Monthly requests"
+  from={{ label: "March", values: [120, 180, 90, 210] }}
+  to={{ label: "April", values: [340, 290, 310, 380] }}
+/>
+
+## Rankings
+
+<GraphRank
+  title="Top issues"
+  items={[
+    { label: "Latency", value: 42 },
+    { label: "Errors", value: 28 },
+    { label: "Timeouts", value: 15 },
+  ]}
+/>
+
+## Progress
+
+<GraphMeter title="Storage used" value={73} />

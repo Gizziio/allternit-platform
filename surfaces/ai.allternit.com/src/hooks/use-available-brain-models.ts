@@ -253,7 +253,18 @@ export function useAvailableBrainModels() {
           providerId,
           providerName: provider.name,
         };
-        modelMap.set(fullId, existing ? { ...existing, ...enriched } : enriched);
+        modelMap.set(
+          fullId,
+          existing
+            ? {
+                ...existing,
+                ...enriched,
+                name: enriched.name || existing.name,
+                description: enriched.description ?? existing.description,
+                capabilities: enriched.capabilities ?? existing.capabilities,
+              }
+            : enriched
+        );
       });
     });
 

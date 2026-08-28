@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Check, Copy, DownloadSimple, FloppyDisk } from '@phosphor-icons/react';
 import { Markdown } from '@/components/agent-elements/markdown';
+import { MdxRenderer } from '@/components/mdx/MdxRenderer';
 import { createArtifact } from '@/services/artifacts-api';
 import { takeFile } from './file-handoff';
 
@@ -98,12 +99,13 @@ async function convertUrl(url: string): Promise<ConversionResult> {
 }
 
 function downloadMarkdown(result: ConversionResult) {
+  const isMdx = result.filename.toLowerCase().endsWith('.mdx');
   const base = result.filename.replace(/\.[^.]+$/, '').replace(/[^a-z0-9-_]+/gi, '_') || 'document';
-  const blob = new Blob([result.markdown], { type: 'text/markdown' });
+  const blob = new Blob([result.markdown], { type: isMdx ? 'text/mdx' : 'text/markdown' });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = url;
-  anchor.download = `${base}.md`;
+  anchor.download = `${base}.${isMdx ? 'mdx' : 'md'}`;
   anchor.click();
   URL.revokeObjectURL(url);
 }
@@ -333,7 +335,11 @@ export function MarkdownPreviewView({ handoffId, sourceUrl }: MarkdownPreviewVie
               className="mt-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-6"
               data-testid="markdown-preview-content"
             >
-              <Markdown content={state.result.markdown} />
+              {state.result.filename.toLowerCase().endsWith('.mdx') ? (
+                <MdxRenderer source={state.result.markdown} />
+              ) : (
+                <Markdown content={state.result.markdown} />
+              )}
             </article>
           </>
         )}

@@ -14,6 +14,7 @@ import { execEvents } from '@/integration/execution/exec.events';
 import { filesApi } from '@/lib/agents/files-api';
 import { useUnifiedStore } from '@/lib/agents/unified.store';
 import { Markdown } from '@/components/ai-elements/markdown';
+import { MdxRenderer } from '@/components/mdx/MdxRenderer';
 import { artifactFromReference, type CodeArtifact, type CodeArtifactKind } from './artifacts';
 
 export function ArtifactCenter(): React.ReactNode {
@@ -333,6 +334,13 @@ function ArtifactPreview({ artifact }: { artifact: CodeArtifact }): React.ReactN
       />
     );
   }
+  if (artifact.kind === 'mdx') {
+    return (
+      <div style={{ padding: 10, fontSize: 12 }}>
+        <MdxRenderer source={body} />
+      </div>
+    );
+  }
   if (artifact.kind === 'markdown' || artifact.kind === 'report') {
     return (
       <div style={{ padding: 10, fontSize: 12 }}>
@@ -448,7 +456,7 @@ function Metadata({ label, value, icon }: { label: string; value: string; icon?:
 function ArtifactIcon({ kind, large = false }: { kind: CodeArtifactKind; large?: boolean }): React.ReactNode {
   const Icon = kind === 'image'
     ? FileImage
-    : kind === 'html' || kind === 'json' || kind === 'diff'
+    : kind === 'html' || kind === 'json' || kind === 'diff' || kind === 'mdx'
       ? FileCode
       : kind === 'markdown' || kind === 'report'
         ? FileText

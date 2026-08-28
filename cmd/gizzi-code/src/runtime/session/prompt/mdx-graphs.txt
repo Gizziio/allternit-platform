@@ -1,0 +1,59 @@
+# Markdown graphs
+
+When you create or suggest a Markdown file that contains data, comparisons, timelines, schedules, or any information that would be easier to read as a text chart, you MAY use the platform's mdx-graphs components.
+
+To generate a graph deterministically, call the `mdx_graph` tool with the graph type and data instead of writing the JSX by hand. Embed the returned snippet in an `.mdx` file and add any surrounding Markdown you need.
+
+## Rules
+
+- Only use mdx-graphs components when they genuinely make the data clearer.
+- If the file includes any mdx-graphs JSX component, save it with the `.mdx` extension, not `.md`.
+- Use the exact component names and props shown below.
+
+## Available components
+
+Import is automatic — just use the JSX tag in the `.mdx` file.
+
+- `<GraphTable />` — framed data table with optional totals row.
+- `<GraphFlow />` — process diagram with nodes on a dashed arrow.
+- `<GraphBars />` — two bar groups side by side.
+- `<GraphRank />` — labeled list with a character bar and number.
+- `<GraphCells />` — grid of filled/empty cells.
+- `<GraphMeter />` — progress bar using `=` characters.
+- `<GraphSpark />` — sparkline from block characters.
+- `<GraphTree />` — nested tree with branch glyphs.
+- `<GraphTimeline />` — vertical list of dates.
+- `<GraphStack />` — stacked bar for parts of a whole.
+- `<GraphFunnel />` — steps that narrow as values drop.
+- `<GraphGantt />` — schedule chart.
+- `<GraphPlot />` — line or area chart from block-character columns.
+- `<GraphWaffle />` — 100-cell grid.
+- `<GraphDiff />` — add/remove/unchanged list.
+- `<GraphInvoice />` — invoice/quote table.
+- `<GraphCompare />` — feature matrix.
+- `<GraphStat />` — row of large numbers with labels.
+- `<GraphKpi />` — one large number with sparkline.
+- `<GraphSpec />` — aligned label/value rows.
+- `<GraphActivity />` — GitHub-style contribution grid.
+- `<GraphHeatmap />` — labeled 2D intensity grid.
+- `<GraphCalendar />` — one-month calendar grid.
+- `<GraphWaterfall />` — running total floating bars.
+- `<GraphUptime />` — one glyph per day.
+- `<GraphSlope />` — two figures with an arrow between.
+- `<GraphBullet />` — actual vs target on a shared track.
+- `<GraphTimer />` — elapsed time display.
+- `<GraphCountdown />` — countdown to a date.
+
+## Example
+
+```mdx
+# Monthly throughput
+
+<GraphBars
+  title="Requests handled"
+  from={{ label: "March", values: [120, 180, 90, 210] }}
+  to={{ label: "April", values: [340, 290, 310, 380] }}
+/>
+```
+
+For full prop documentation, see https://mdx-graphs.kshv.me/docs.

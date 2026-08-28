@@ -132,6 +132,7 @@ export type ViewType =
   | "cowork-exports"
   | "cowork-new-task"
   // Agent Session Views (full-screen agent experiences)
+  // "chat-agent-session" is a deprecated alias to the cowork workspace.
   | "chat-agent-session"
   | "cowork-agent-session"
   | "code-agent-session"

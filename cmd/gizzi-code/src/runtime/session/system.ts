@@ -13,6 +13,7 @@ import PROMPT_CODEX from "@/runtime/session/prompt/codex_header.txt"
 import PROMPT_TRINITY from "@/runtime/session/prompt/trinity.txt"
 import PROMPT_PLAN_MODE from "@/runtime/session/prompt/plan-mode.txt"
 import PROMPT_BUILD_MODE from "@/runtime/session/prompt/build-mode.txt"
+import PROMPT_MDX_GRAPHS from "@/runtime/session/prompt/mdx-graphs.txt"
 import type { Provider } from "@/runtime/providers/provider"
 
 export namespace SystemPrompt {
@@ -113,6 +114,7 @@ export namespace SystemPrompt {
         `</directories>`,
       ].join("\n"),
       await memoryPrompt(),
+      PROMPT_MDX_GRAPHS.trim(),
     ]
   }
 }

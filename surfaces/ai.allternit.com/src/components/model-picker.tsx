@@ -839,15 +839,16 @@ export function ModelPickerUI({
                               <span className="font-medium truncate">
                                 {model.name}
                               </span>
-                              {model.capabilities?.map((cap) => (
-                                <Badge
-                                  key={cap}
-                                  variant="secondary"
-                                  className="text-[10px] px-1.5 py-0 bg-[var(--surface-panel-muted)] text-[var(--ui-text-muted)] border-none"
-                                >
-                                  {cap}
-                                </Badge>
-                              ))}
+                              {Array.isArray(model.capabilities) &&
+                                model.capabilities.map((cap) => (
+                                  <Badge
+                                    key={cap}
+                                    variant="secondary"
+                                    className="text-[10px] px-1.5 py-0 bg-[var(--surface-panel-muted)] text-[var(--ui-text-muted)] border-none"
+                                  >
+                                    {cap}
+                                  </Badge>
+                                ))}
                             </div>
                             <div className="flex items-center gap-2 text-xs text-[var(--ui-text-muted)]">
                               {model.description && (

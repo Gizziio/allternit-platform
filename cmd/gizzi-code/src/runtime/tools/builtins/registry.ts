@@ -61,6 +61,7 @@ import {
   ScratchpadWriteTool,
 } from "@/runtime/tools/builtins/scratchpad"
 import { GetAgentEmailStatusTool, SendAgentEmailTool } from "@/runtime/tools/builtins/agent-email"
+import { MdxGraphTool } from "@/runtime/tools/builtins/mdx-graph"
 
 export namespace ToolRegistry {
   const log = Log.create({ service: "tool.registry" })
@@ -170,6 +171,7 @@ export namespace ToolRegistry {
       SkillImportApplyTool,
       ApplyPatchTool,
       NotebookEditTool,
+      MdxGraphTool,
       MemoryWriteTool,
       MemoryRecallTool,
       VaultQueryTool,

@@ -77,7 +77,13 @@ const config: Config = {
   			'composer-border': 'var(--chat-composer-border)',
   			'composer-soft': 'var(--chat-composer-soft)',
   			'composer-hover': 'var(--chat-composer-hover)',
-  			hover: 'var(--surface-hover)'
+  			hover: 'var(--surface-hover)',
+  			'graph-accent': 'var(--graph-accent)',
+  			'graph-accent-2': 'var(--graph-accent-2)',
+  			'graph-accent-3': 'var(--graph-accent-3)',
+  			'graph-frame': 'var(--graph-frame)',
+  			'graph-muted': 'var(--graph-muted)',
+  			'graph-faint': 'var(--graph-faint)',
   		},
   		borderRadius: {
   			lg: 'var(--radius)',

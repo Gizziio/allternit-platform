@@ -1,4 +1,4 @@
-export type CodeArtifactKind = 'file' | 'markdown' | 'html' | 'image' | 'json' | 'diff' | 'report' | 'link' | 'unknown';
+export type CodeArtifactKind = 'file' | 'markdown' | 'mdx' | 'html' | 'image' | 'json' | 'diff' | 'report' | 'link' | 'unknown';
 
 export interface CodeArtifact {
   id: string;
@@ -18,7 +18,8 @@ export interface CodeArtifact {
 
 export function inferArtifactKind(value: string): CodeArtifactKind {
   const clean = value.split(/[?#]/, 1)[0].toLowerCase();
-  if (clean.endsWith('.md') || clean.endsWith('.mdx')) return 'markdown';
+  if (clean.endsWith('.mdx')) return 'mdx';
+  if (clean.endsWith('.md')) return 'markdown';
   if (clean.endsWith('.html') || clean.endsWith('.htm')) return 'html';
   if (/\.(png|jpe?g|gif|webp|svg)$/.test(clean)) return 'image';
   if (clean.endsWith('.json')) return 'json';
