@@ -1,6 +1,5 @@
 import { Database as BunDatabase } from "bun:sqlite"
 import { drizzle, type SQLiteBunDatabase } from "drizzle-orm/bun-sqlite"
-import { migrate } from "drizzle-orm/bun-sqlite/migrator"
 import { SQLiteTransaction } from "drizzle-orm/sqlite-core/session"
 export * from "drizzle-orm"
 import { Context } from "@/shared/util/context"
@@ -11,9 +10,17 @@ import { NamedError } from "@allternit/gizzi-util/error.js"
 import z from "zod/v4"
 import path from "path"
 import { readFileSync, readdirSync, existsSync } from "fs"
+import { createHash } from "node:crypto"
 import * as schema from "@/runtime/session/storage/schema"
 
-declare const GIZZI_MIGRATIONS: { sql: string; timestamp: number }[] | undefined
+type MigrationMeta = {
+  sql: string[]
+  folderMillis: number
+  hash: string
+  bps: boolean
+}
+
+declare const GIZZI_MIGRATIONS: { sql: string; timestamp: number; hash?: string }[] | undefined
 
 export const NotFoundError = NamedError.create(
   "NotFoundError",
@@ -31,7 +38,11 @@ export namespace Database {
 
   type Client = SQLiteBunDatabase<Schema>
 
-  type Journal = { sql: string; timestamp: number }[]
+  type Journal = { sql: string; timestamp: number; hash?: string }[]
+
+  function hashSql(sql: string): string {
+    return createHash("sha256").update(sql).digest("hex")
+  }
 
   function time(tag: string) {
     const match = /^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/.exec(tag)
@@ -55,9 +66,11 @@ export namespace Database {
       .map((name) => {
         const file = path.join(dir, name, "migration.sql")
         if (!existsSync(file)) return
+        const sqlText = readFileSync(file, "utf-8")
         return {
-          sql: readFileSync(file, "utf-8"),
+          sql: sqlText,
           timestamp: time(name),
+          hash: hashSql(sqlText),
         }
       })
       .filter(Boolean) as Journal
@@ -89,7 +102,13 @@ export namespace Database {
         count: entries.length,
         mode: typeof GIZZI_MIGRATIONS !== "undefined" ? "bundled" : "dev",
       })
-      migrate(db, entries)
+      const migrationMeta: MigrationMeta[] = entries.map((entry) => ({
+        sql: entry.sql.split("--> statement-breakpoint"),
+        folderMillis: entry.timestamp,
+        hash: entry.hash ?? hashSql(entry.sql),
+        bps: true,
+      }))
+      ;(db as any).dialect.migrate(migrationMeta, (db as any).session, {})
     }
 
     return db

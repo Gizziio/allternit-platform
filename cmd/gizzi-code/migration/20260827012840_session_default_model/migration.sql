@@ -1,4 +1,4 @@
-CREATE TABLE `runtime_cli` (
+CREATE TABLE IF NOT EXISTS `runtime_cli` (
 	`id` text PRIMARY KEY,
 	`runtime_id` text NOT NULL,
 	`name` text NOT NULL,
@@ -12,7 +12,7 @@ CREATE TABLE `runtime_cli` (
 	CONSTRAINT `fk_runtime_cli_runtime_id_runtime_id_fk` FOREIGN KEY (`runtime_id`) REFERENCES `runtime`(`id`) ON DELETE CASCADE
 );
 --> statement-breakpoint
-CREATE TABLE `runtime_execution_log` (
+CREATE TABLE IF NOT EXISTS `runtime_execution_log` (
 	`id` text PRIMARY KEY,
 	`task_id` text NOT NULL,
 	`runtime_id` text NOT NULL,
@@ -29,7 +29,7 @@ CREATE TABLE `runtime_execution_log` (
 	CONSTRAINT `fk_runtime_execution_log_runtime_id_runtime_id_fk` FOREIGN KEY (`runtime_id`) REFERENCES `runtime`(`id`) ON DELETE CASCADE
 );
 --> statement-breakpoint
-CREATE TABLE `runtime` (
+CREATE TABLE IF NOT EXISTS `runtime` (
 	`id` text PRIMARY KEY,
 	`name` text NOT NULL,
 	`host` text NOT NULL,
@@ -43,7 +43,7 @@ CREATE TABLE `runtime` (
 	`time_updated` integer NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE `background_task` (
+CREATE TABLE IF NOT EXISTS `background_task` (
 	`id` text PRIMARY KEY,
 	`parent_session_id` text NOT NULL,
 	`child_session_id` text,
@@ -59,7 +59,7 @@ CREATE TABLE `background_task` (
 	CONSTRAINT `fk_background_task_child_session_id_session_id_fk` FOREIGN KEY (`child_session_id`) REFERENCES `session`(`id`) ON DELETE SET NULL
 );
 --> statement-breakpoint
-CREATE TABLE `goal` (
+CREATE TABLE IF NOT EXISTS `goal` (
 	`id` text PRIMARY KEY,
 	`agent_id` text,
 	`objective` text NOT NULL,
@@ -80,7 +80,7 @@ CREATE TABLE `goal` (
 	`time_updated` integer NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE `loop` (
+CREATE TABLE IF NOT EXISTS `loop` (
 	`id` text PRIMARY KEY,
 	`agent_id` text,
 	`command` text NOT NULL,
@@ -92,7 +92,7 @@ CREATE TABLE `loop` (
 	`time_updated` integer NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE `routine` (
+CREATE TABLE IF NOT EXISTS `routine` (
 	`id` text PRIMARY KEY,
 	`agent_id` text,
 	`name` text NOT NULL,
@@ -104,7 +104,7 @@ CREATE TABLE `routine` (
 	`time_updated` integer NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE `session_trace` (
+CREATE TABLE IF NOT EXISTS `session_trace` (
 	`sequence` integer PRIMARY KEY AUTOINCREMENT,
 	`session_id` text NOT NULL,
 	`kind` text NOT NULL,
@@ -115,27 +115,23 @@ CREATE TABLE `session_trace` (
 	CONSTRAINT `fk_session_trace_session_id_session_id_fk` FOREIGN KEY (`session_id`) REFERENCES `session`(`id`) ON DELETE CASCADE
 );
 --> statement-breakpoint
-ALTER TABLE `session` ADD `permission_mode` text;--> statement-breakpoint
-ALTER TABLE `session` ADD `surface` text;--> statement-breakpoint
-ALTER TABLE `session` ADD `harness` text;--> statement-breakpoint
-ALTER TABLE `session` ADD `pinned` integer;--> statement-breakpoint
 ALTER TABLE `session` ADD `default_model` text;--> statement-breakpoint
-CREATE INDEX `runtime_cli_runtime_idx` ON `runtime_cli` (`runtime_id`);--> statement-breakpoint
-CREATE INDEX `runtime_cli_name_idx` ON `runtime_cli` (`name`);--> statement-breakpoint
-CREATE INDEX `runtime_execution_log_task_idx` ON `runtime_execution_log` (`task_id`);--> statement-breakpoint
-CREATE INDEX `runtime_execution_log_runtime_idx` ON `runtime_execution_log` (`runtime_id`);--> statement-breakpoint
-CREATE INDEX `runtime_execution_log_status_idx` ON `runtime_execution_log` (`status`);--> statement-breakpoint
-CREATE INDEX `runtime_status_idx` ON `runtime` (`status`);--> statement-breakpoint
-CREATE INDEX `runtime_host_idx` ON `runtime` (`host`);--> statement-breakpoint
-CREATE INDEX `runtime_workspace_idx` ON `runtime` (`workspace_id`);--> statement-breakpoint
-CREATE INDEX `runtime_created_idx` ON `runtime` (`time_created`);--> statement-breakpoint
-CREATE INDEX `background_task_parent_idx` ON `background_task` (`parent_session_id`,`status`);--> statement-breakpoint
-CREATE INDEX `background_task_child_idx` ON `background_task` (`child_session_id`);--> statement-breakpoint
-CREATE INDEX `goal_agent_idx` ON `goal` (`agent_id`);--> statement-breakpoint
-CREATE INDEX `goal_state_queue_idx` ON `goal` (`state`,`queue_position`);--> statement-breakpoint
-CREATE INDEX `loop_agent_idx` ON `loop` (`agent_id`);--> statement-breakpoint
-CREATE INDEX `routine_agent_idx` ON `routine` (`agent_id`);--> statement-breakpoint
-CREATE INDEX `session_surface_idx` ON `session` (`surface`);--> statement-breakpoint
-CREATE INDEX `session_pinned_idx` ON `session` (`pinned`);--> statement-breakpoint
-CREATE INDEX `session_trace_cursor_idx` ON `session_trace` (`session_id`,`sequence`);--> statement-breakpoint
-CREATE INDEX `session_trace_message_idx` ON `session_trace` (`message_id`);
+CREATE INDEX IF NOT EXISTS `runtime_cli_runtime_idx` ON `runtime_cli` (`runtime_id`);--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS `runtime_cli_name_idx` ON `runtime_cli` (`name`);--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS `runtime_execution_log_task_idx` ON `runtime_execution_log` (`task_id`);--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS `runtime_execution_log_runtime_idx` ON `runtime_execution_log` (`runtime_id`);--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS `runtime_execution_log_status_idx` ON `runtime_execution_log` (`status`);--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS `runtime_status_idx` ON `runtime` (`status`);--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS `runtime_host_idx` ON `runtime` (`host`);--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS `runtime_workspace_idx` ON `runtime` (`workspace_id`);--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS `runtime_created_idx` ON `runtime` (`time_created`);--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS `background_task_parent_idx` ON `background_task` (`parent_session_id`,`status`);--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS `background_task_child_idx` ON `background_task` (`child_session_id`);--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS `goal_agent_idx` ON `goal` (`agent_id`);--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS `goal_state_queue_idx` ON `goal` (`state`,`queue_position`);--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS `loop_agent_idx` ON `loop` (`agent_id`);--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS `routine_agent_idx` ON `routine` (`agent_id`);--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS `session_surface_idx` ON `session` (`surface`);--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS `session_pinned_idx` ON `session` (`pinned`);--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS `session_trace_cursor_idx` ON `session_trace` (`session_id`,`sequence`);--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS `session_trace_message_idx` ON `session_trace` (`message_id`);

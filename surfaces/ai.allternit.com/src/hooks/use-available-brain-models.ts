@@ -7,6 +7,30 @@ import type { ModelOption } from "@/components/prompt-kit/prompt-model-selector"
 // Terminal Server URL for fetching real models
 declare const __TERMINAL_SERVER_URL__: string | undefined;
 
+/**
+ * Backends can return `capabilities` as either a string[] of tags or a rich
+ * capability object. The UI only needs a flat list of capability tags, so
+ * normalize both shapes here.
+ */
+function normalizeCapabilities(capabilities: unknown): string[] | undefined {
+  if (Array.isArray(capabilities)) {
+    return capabilities.filter((c): c is string => typeof c === "string");
+  }
+  if (capabilities && typeof capabilities === "object") {
+    const caps = capabilities as Record<string, unknown>;
+    const tags: string[] = [];
+    if (caps.tool_call === true || caps.toolcall === true) tags.push("tools");
+    if (caps.vision === true) tags.push("vision");
+    if (caps.reasoning === true) tags.push("reasoning");
+    if (caps.attachment === true) tags.push("attachments");
+    if (typeof caps.default_model === "string" && caps.default_model) {
+      tags.push(caps.default_model);
+    }
+    return tags.length > 0 ? tags : undefined;
+  }
+  return undefined;
+}
+
 function getProviderDiscoveryUrl(): string {
   if (typeof window === "undefined") return "/api/v1/providers";
   try {
@@ -173,7 +197,7 @@ export function useAvailableBrainModels() {
                 providerId: provider.id,
                 providerName: provider.name || provider.id,
                 description: modelData?.description,
-                capabilities: modelData?.capabilities,
+                capabilities: normalizeCapabilities(modelData?.capabilities),
                 context_window: modelData?.context_window ?? modelData?.context,
               });
             });
@@ -252,6 +276,7 @@ export function useAvailableBrainModels() {
           id: fullId,
           providerId,
           providerName: provider.name,
+          capabilities: normalizeCapabilities(model.capabilities),
         };
         modelMap.set(
           fullId,
@@ -280,7 +305,10 @@ export function useAvailableBrainModels() {
       // fallback key. If it overlaps with a normalized registry model it is
       // ignored.
       if (modelMap.has(shortId)) return;
-      modelMap.set(shortId, model);
+      modelMap.set(shortId, {
+        ...model,
+        capabilities: normalizeCapabilities(model.capabilities),
+      });
     });
 
     return Array.from(modelMap.values());

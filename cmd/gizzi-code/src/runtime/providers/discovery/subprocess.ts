@@ -192,9 +192,8 @@ export const SUBPROCESS_PROVIDERS: SubprocessSpec[] = [
     cmd: "claude -p",
     probe: { args: ["--version"], expect: /Claude Code/ },
     models: [
-      { id: "claude-sonnet-4-6",         name: "Claude Sonnet 4.6",  context: 200000, output: 64000 },
-      { id: "claude-opus-4-6",           name: "Claude Opus 4.6",    context: 200000, output: 32000 },
-      { id: "claude-haiku-4-5-20251001", name: "Claude Haiku 4.5",   context: 200000, output: 16000 },
+      { id: "claude-sonnet-4-20250514", name: "Claude Sonnet 4", context: 200000, output: 64000 },
+      { id: "claude-opus-4-20250514",   name: "Claude Opus 4",   context: 200000, output: 32000 },
     ],
   },
 
@@ -205,11 +204,9 @@ export const SUBPROCESS_PROVIDERS: SubprocessSpec[] = [
     name: "Kimi (CLI — subscription)",
     icon: "kimi",
     cmd: "kimi -p",
-    probe: { args: ["--version"], expect: /kimi/i },
+    probe: { args: ["--version"], expect: /\d+\.\d+/ },
     models: [
-      { id: "kimi-k2",           name: "Kimi K2",           context: 131072,  output: 16384 },
-      { id: "moonshot-v1-128k",  name: "Moonshot v1 128K",  context: 128000,  output: 8192  },
-      { id: "moonshot-v1-32k",   name: "Moonshot v1 32K",   context: 32000,   output: 8192  },
+      { id: "kimi-for-coding", name: "Kimi for Coding", context: 262144, output: 16384 },
     ],
   },
 
@@ -222,10 +219,8 @@ export const SUBPROCESS_PROVIDERS: SubprocessSpec[] = [
     cmd: "qwen -p",
     probe: { args: ["--version"], expect: /\d+\.\d+/ },
     models: [
-      { id: "qwen-max",          name: "Qwen Max",           context: 32768,   output: 8192  },
-      { id: "qwen-plus",         name: "Qwen Plus",          context: 131072,  output: 8192  },
-      { id: "qwq-32b",           name: "QwQ 32B (reasoning)",context: 32768,   output: 8192  },
-      { id: "qwen3-235b-a22b",   name: "Qwen3 235B",         context: 131072,  output: 16384 },
+      { id: "qwen-max",  name: "Qwen Max",  context: 131072, output: 8192 },
+      { id: "qwen-plus", name: "Qwen Plus", context: 131072, output: 8192 },
     ],
   },
 
@@ -238,10 +233,8 @@ export const SUBPROCESS_PROVIDERS: SubprocessSpec[] = [
     cmd: "codex",
     probe: { args: ["--version"], expect: /codex/i },
     models: [
-      { id: "codex-mini-latest",  name: "Codex Mini (latest)", context: 200000, output: 100000 },
-      { id: "o4-mini",            name: "o4-mini",              context: 200000, output: 100000 },
-      { id: "o3",                 name: "o3",                   context: 200000, output: 100000 },
-      { id: "gpt-4.1",            name: "GPT-4.1",              context: 1047576, output: 32768 },
+      { id: "gpt-5.6-sol", name: "GPT-5.6 Sol", context: 1047576, output: 32768 },
+      { id: "gpt-5.5",     name: "GPT-5.5",     context: 1047576, output: 32768 },
     ],
   },
 

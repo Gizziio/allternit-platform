@@ -88,11 +88,11 @@ const KNOWN_PROVIDERS: Array<{
   { id: "vllm",        name: "vLLM",         auth_type: "none",    base_url: "http://localhost:8000/v1",   models_hint: "(auto-detected from server)" },
   { id: "llamacpp",    name: "llama.cpp server", auth_type: "none", base_url: "http://localhost:8080/v1", models_hint: "(server's loaded model)" },
   // ── CLI / subscription ────────────────────────────────────────────────────
-  { id: "claude-cli",  name: "Claude CLI",   auth_type: "subprocess", subprocess_cmd: "claude -p",   models_hint: "claude-sonnet-4-6, claude-opus-4-6" },
-  { id: "kimi-cli",    name: "Kimi CLI",     auth_type: "subprocess", subprocess_cmd: "kimi -p",     models_hint: "kimi-k2" },
-  { id: "qwen-cli",    name: "Qwen Code CLI",auth_type: "subprocess", subprocess_cmd: "qwen -p",     models_hint: "qwen-max, qwq-32b" },
+  { id: "claude-cli",  name: "Claude CLI",   auth_type: "subprocess", subprocess_cmd: "claude -p",   models_hint: "claude-sonnet-4-20250514, claude-opus-4-20250514" },
+  { id: "kimi-cli",    name: "Kimi CLI",     auth_type: "subprocess", subprocess_cmd: "kimi -p",     models_hint: "kimi-for-coding" },
+  { id: "qwen-cli",    name: "Qwen Code CLI",auth_type: "subprocess", subprocess_cmd: "qwen -p",     models_hint: "qwen-max, qwen-plus" },
   { id: "gemini-cli",  name: "Gemini CLI",   auth_type: "subprocess", subprocess_cmd: "gemini -p",   models_hint: "gemini-2.5-pro" },
-  { id: "codex-cli",   name: "Codex CLI",    auth_type: "subprocess", subprocess_cmd: "codex",       models_hint: "codex-mini-latest, o3" },
+  { id: "codex-cli",   name: "Codex CLI",    auth_type: "subprocess", subprocess_cmd: "codex",       models_hint: "gpt-5.6-sol, gpt-5.5" },
 ]
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
