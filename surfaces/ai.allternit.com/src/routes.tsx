@@ -111,8 +111,11 @@ export default function AppRoutes() {
         <Route path="/shell/sessions" element={<SessionsPage />} />
         <Route path="/shell/recents" element={<ShellPage />} />
         <Route path="/shell/new" element={<Navigate to="/shell" replace />} />
-        <Route path="/sign-in" element={<SignInPage />} />
-        <Route path="/sign-up" element={<SignUpPage />} />
+        {/* Clerk's path-routed <SignIn>/<SignUp> components navigate to
+            sub-routes such as /sign-in/factor-one. Keep these wildcards so
+            React Router still renders the sign-in/up shell on those steps. */}
+        <Route path="/sign-in/*" element={<SignInPage />} />
+        <Route path="/sign-up/*" element={<SignUpPage />} />
         <Route path="/sign-out" element={<SignOutPage />} />
         <Route path="/pair" element={<RuntimePairingPage />} />
         <Route path="/runtimes" element={<RuntimesPage />} />
