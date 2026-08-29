@@ -1018,7 +1018,7 @@ Get the standalone remote-control dashboard at `remotecontrol.allternit.com` ful
 ### Just did
 - Re-deployed the push worker (`allternit-remote-control-push.allternitpbc.workers.dev`) after it had stopped serving requests (error 1042). Verified `/push/vapid-public-key` returns 200 with `access-control-allow-origin: *` from both `remotecontrol.allternit.com` and Pages preview origins.
 - Updated `surfaces/ai.allternit.com/.env.production`:
-  - Fixed the Clerk publishable key to the correct `pk_live_Y2xlcmsucGxhdGZvcm0uYWxsdGVybml0LmNvbSQ` value.
+  - Fixed the Clerk publishable key to the production dashboard value (`pk_live_Y2xlcmsuYWxsdGVybml0LmNvbSQ`, frontend API `clerk.allternit.com`).
   - Set `NEXT_PUBLIC_ALLTERNIT_CLOUD_API_URL=https://api.allternit.com`.
   - Set `NEXT_PUBLIC_ALLTERNIT_GATEWAY_URL=https://api.allternit.com` and `VITE_ALLTERNIT_GATEWAY_URL=https://api.allternit.com`.
   - Set `NEXT_PUBLIC_ALLTERNIT_PUSH_WORKER_URL=https://allternit-remote-control-push.allternitpbc.workers.dev`.

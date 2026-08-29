@@ -9,8 +9,8 @@
   "cronDaemonUrl": "http://127.0.0.1:4096/cron",
   "vmDir": "",
   "clerkPublishableKey": "pk_live_Y2xlcmsuYWxsdGVybml0LmNvbSQ",
-  "clerkJwksUrl": "",
-  "clerkIssuer": "https://clerk.platform.allternit.com",
+  "clerkJwksUrl": "https://clerk.allternit.com/.well-known/jwks.json",
+  "clerkIssuer": "https://clerk.allternit.com",
   "clerkWebhookSecret": "",
   "selfHosted": false,
   "encryptionKey": ""

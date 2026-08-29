@@ -395,22 +395,57 @@ function buildDesktopUser(session: DesktopSession | null) {
 }
 
 function buildDisabledAuthValue() {
-  // DEV BYPASS: treat disabled auth as signed-in for local UI iteration.
-  // Remove before committing.
-  const mockUser: PlatformUser = {
-    id: 'dev-user',
-    firstName: 'Local',
-    lastName: 'Developer',
-    userEmail: 'dev@allternit.local',
-    primaryEmailAddress: { emailAddress: 'dev@allternit.local' },
-    emailAddresses: [{ emailAddress: 'dev@allternit.local' }],
-    imageUrl: null,
+  // If an explicit dev bypass is requested, return a mock signed-in user so
+  // local UI work can proceed without Clerk credentials. This must never be
+  // the default: a build that ships without a Clerk key should fail closed,
+  // not silently authenticate everyone.
+  if (import.meta.env.DEV && envFlag("VITE_DEV_AUTH_BYPASS")) {
+    const mockUser: PlatformUser = {
+      id: "dev-user",
+      firstName: "Local",
+      lastName: "Developer",
+      userEmail: "dev@allternit.local",
+      primaryEmailAddress: { emailAddress: "dev@allternit.local" },
+      emailAddresses: [{ emailAddress: "dev@allternit.local" }],
+      imageUrl: null,
+    }
+    return {
+      user: {
+        isLoaded: true as boolean,
+        isSignedIn: true as boolean,
+        user: mockUser,
+      },
+      sessions: {
+        isLoaded: true as boolean,
+        sessions: [] as any[],
+      },
+      organization: {
+        isLoaded: true as boolean,
+        organization: null as PlatformOrganization | null,
+        membership: null as PlatformOrganizationMembership | null,
+      },
+      auth: {
+        isLoaded: true as boolean,
+        isSignedIn: true as boolean | undefined,
+        userId: "dev-user" as string | null | undefined,
+        sessionId: "dev-session" as string | null | undefined,
+        orgId: "dev-org" as string | null | undefined,
+        orgRole: "admin" as string | null | undefined,
+        actor: null as unknown,
+        getToken: async () => "dev-token" as string | null,
+      },
+      signOut: async (_options?: any) => {},
+      hardSignOut: async (_options?: any) => {},
+      clerk: null as any,
+    }
   }
+
+  // Fail closed: no Clerk key and no explicit bypass means signed-out.
   return {
     user: {
       isLoaded: true as boolean,
-      isSignedIn: true as boolean,
-      user: mockUser,
+      isSignedIn: false as boolean,
+      user: null,
     },
     sessions: {
       isLoaded: true as boolean,
@@ -423,13 +458,13 @@ function buildDisabledAuthValue() {
     },
     auth: {
       isLoaded: true as boolean,
-      isSignedIn: true as boolean | undefined,
-      userId: 'dev-user' as string | null | undefined,
-      sessionId: 'dev-session' as string | null | undefined,
-      orgId: 'dev-org' as string | null | undefined,
-      orgRole: 'admin' as string | null | undefined,
+      isSignedIn: false as boolean | undefined,
+      userId: null as string | null | undefined,
+      sessionId: null as string | null | undefined,
+      orgId: null as string | null | undefined,
+      orgRole: null as string | null | undefined,
       actor: null as unknown,
-      getToken: async () => 'dev-token' as string | null,
+      getToken: async () => null as string | null,
     },
     signOut: async (_options?: any) => {},
     hardSignOut: async (_options?: any) => {},

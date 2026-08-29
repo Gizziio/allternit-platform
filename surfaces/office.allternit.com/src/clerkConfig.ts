@@ -1,10 +1,9 @@
 /**
- * Clerk publishable key for the Allternit platform.
+ * Clerk publishable key for the Allternit Office surface.
  *
- * This is a public, frontend-safe key. It matches the key used by the mobile
- * and desktop surfaces. It can be overridden at build time via the
- * VITE_CLERK_PUBLISHABLE_KEY environment variable.
+ * This is a public, frontend-safe key. It must be supplied at build time via the
+ * VITE_CLERK_PUBLISHABLE_KEY environment variable. There is no committed
+ * fallback; shipping a placeholder key breaks sign-in silently.
  */
 export const CLERK_PUBLISHABLE_KEY =
-  import.meta.env?.VITE_CLERK_PUBLISHABLE_KEY ??
-  'pk_live_Y2xlcmsucGxhdGZvcm0uYWxsdGVybml0LmNvbSQ'
+  import.meta.env?.VITE_CLERK_PUBLISHABLE_KEY ?? ""

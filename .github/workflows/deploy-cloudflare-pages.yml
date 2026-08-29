@@ -67,8 +67,6 @@ jobs:
         run: pnpm --filter "@allternit/ai..." build
         env:
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
-          NEXT_PUBLIC_CLERK_SIGN_IN_URL: 'https://platform.allternit.com/sign-in'
-          NEXT_PUBLIC_CLERK_SIGN_UP_URL: 'https://platform.allternit.com/sign-up'
           NEXT_PUBLIC_ALLTERNIT_DESKTOP_AUTH: 'true'
           NEXT_PUBLIC_ALLTERNIT_CLOUD_API_URL: 'https://api.allternit.com'
           VITE_REMOTE_CONTROL_PUSH_URL: ${{ secrets.VITE_REMOTE_CONTROL_PUSH_URL }}

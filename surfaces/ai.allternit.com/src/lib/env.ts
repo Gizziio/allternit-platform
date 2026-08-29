@@ -1,17 +1,16 @@
 /**
  * Centralized runtime environment access for the Allternit platform shell.
  *
- * Vite exposes build-time env vars through `import.meta.env`. We keep a thin
- * typed wrapper here so the rest of the app does not scatter `process.env` /
- * `import.meta.env` reads, and so we can validate required values once at
- * startup.
+ * Vite exposes build-time env vars through `import.meta.env`, but only when they
+ * are accessed with static property names. Dynamic access (`import.meta.env[key]`)
+ * is not rewritten by Vite, so client-side reads of known variables must use
+ * literal property access. This file keeps that concentrated here so the rest of
+ * the app can use thin helpers.
  */
 
 function readEnv(key: string): string | undefined {
-  // Vite client env
-  if (typeof import.meta.env !== 'undefined' && import.meta.env[key]) {
-    return import.meta.env[key] as string;
-  }
+  // Vite client env — dynamic key access is intentionally NOT used here because
+  // Vite only replaces literal `import.meta.env.FOO` patterns at build time.
   // Node / build env fallback
   if (typeof process !== 'undefined' && process.env?.[key]) {
     return process.env[key];
@@ -46,8 +45,8 @@ export function validatePlatformEnv(): EnvValidationResult {
   const missing: string[] = [];
   const warnings: string[] = [];
 
-  const selfHosted = envFlag('ALLTERNIT_SELF_HOSTED');
-  const clerkKey = env('NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY');
+  const selfHosted = isSelfHosted();
+  const clerkKey = getBuildTimeClerkPublishableKey();
 
   // Clerk is resolved at runtime by PlatformAuthProvider from the baked company
   // config: self-hosted builds set selfHosted=true in resources/company.json and
@@ -76,21 +75,35 @@ export function validatePlatformEnv(): EnvValidationResult {
 /**
  * Clerk publishable key used by PlatformAuthProvider. Prefers the baked-in
  * company config at runtime; this build-time fallback is the escape hatch.
+ *
+ * Uses static `import.meta.env` access because Vite only replaces literal
+ * property names.
  */
 export function getBuildTimeClerkPublishableKey(): string {
-  return env('NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY') ?? '';
+  return (typeof import.meta.env !== 'undefined' && import.meta.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) || '';
 }
 
 export function isClerkDisabledByEnv(): boolean {
-  return envFlag('NEXT_PUBLIC_ALLTERNIT_PLATFORM_DISABLE_CLERK');
+  const value = typeof import.meta.env !== 'undefined'
+    ? import.meta.env.NEXT_PUBLIC_ALLTERNIT_PLATFORM_DISABLE_CLERK
+    : undefined;
+  return String(value).toLowerCase() === '1' || String(value).toLowerCase() === 'true';
 }
 
 export function isSelfHosted(): boolean {
   // Vite only exposes env vars prefixed with VITE_ / NEXT_PUBLIC_, so the
   // self-hosted build flag must also be readable through NEXT_PUBLIC_.
-  return envFlag('ALLTERNIT_SELF_HOSTED') || envFlag('NEXT_PUBLIC_ALLTERNIT_SELF_HOSTED');
+  const viteValue = typeof import.meta.env !== 'undefined'
+    ? import.meta.env.NEXT_PUBLIC_ALLTERNIT_SELF_HOSTED
+    : undefined;
+  const nodeValue = env('ALLTERNIT_SELF_HOSTED');
+  const value = viteValue ?? nodeValue;
+  return String(value).toLowerCase() === '1' || String(value).toLowerCase() === 'true';
 }
 
 export function isDesktopAuthEnabled(): boolean {
-  return envFlag('NEXT_PUBLIC_ALLTERNIT_DESKTOP_AUTH');
+  const value = typeof import.meta.env !== 'undefined'
+    ? import.meta.env.NEXT_PUBLIC_ALLTERNIT_DESKTOP_AUTH
+    : undefined;
+  return String(value).toLowerCase() === '1' || String(value).toLowerCase() === 'true';
 }

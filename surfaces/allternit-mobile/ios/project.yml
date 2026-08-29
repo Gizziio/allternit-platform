@@ -76,7 +76,7 @@ targets:
         CODE_SIGN_ENTITLEMENTS: Allternit.entitlements
         # Clerk publishable key (client-public by design) — the production
         # instance, same value the web ships in .env.production.
-        CLERK_PUBLISHABLE_KEY: pk_live_Y2xlcmsucGxhdGZvcm0uYWxsdGVybml0LmNvbSQ
+        CLERK_PUBLISHABLE_KEY: pk_live_Y2xlcmsuYWxsdGVybml0LmNvbSQ
         # Placeholder — set your team for device builds.
         DEVELOPMENT_TEAM: ""
         CODE_SIGN_STYLE: Automatic
