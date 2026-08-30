@@ -27,6 +27,11 @@ import {
 const ENV_PUBLISHABLE_KEY = getBuildTimeClerkPublishableKey()
 const SIGN_IN_URL = env("NEXT_PUBLIC_CLERK_SIGN_IN_URL") ?? "/sign-in"
 const SIGN_UP_URL = env("NEXT_PUBLIC_CLERK_SIGN_UP_URL") ?? "/sign-up"
+const PROXY_URL = env("NEXT_PUBLIC_CLERK_PROXY_URL")
+
+function getProxyUrl(): string | undefined {
+  return PROXY_URL
+}
 // The mounted path for the embedded <SignIn>/<SignUp> components must be a
 // path, not a full URL. The full URL above is only for ClerkProvider redirects.
 const SIGN_IN_PATH = "/sign-in"
@@ -309,6 +314,7 @@ export function PlatformAuthProvider({ children }: { children: ReactNode }) {
       appearance={clerkAppearance}
       signInUrl={SIGN_IN_URL}
       signUpUrl={SIGN_UP_URL}
+      proxyUrl={getProxyUrl()}
       allowedRedirectOrigins={getAllowedRedirectOrigins()}
     >
       <ClerkPlatformAuthBridge>{children}</ClerkPlatformAuthBridge>
