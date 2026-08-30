@@ -4,6 +4,7 @@
  * Tests for content-addressed storage and deterministic replay.
  */
 
+import { vi } from 'vitest';
 import { SnapshotStore } from '../src/snapshots/store';
 import { ReplayEngine, withSnapshots } from '../src/snapshots/replay';
 import { Snapshot } from '../src/snapshots/types';
@@ -252,7 +253,7 @@ describe('Tool Snapshots Integration', () => {
 
   describe('withSnapshots Wrapper', () => {
     it('should wrap tools transparently', async () => {
-      const liveTool = jest.fn().mockResolvedValue({ wrapped: true });
+      const liveTool = vi.fn().mockResolvedValue({ wrapped: true });
       
       const wrapped = withSnapshots('wrapped_tool', liveTool, store);
       

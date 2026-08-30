@@ -3,8 +3,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { normalizeGitHubWebhook, requiresAgentAction, inferAgentRole } from '../src/normalizer/github-normalizer.js';
-import type { GitHubWebhookPayload } from '../src/types/webhook.types.js';
+import { normalizeGitHubWebhook, requiresAgentAction, inferAgentRole } from '../../src/normalizer/github-normalizer.js';
+import type { GitHubWebhookPayload } from '../../src/types/webhook.types.js';
 
 describe('GitHub Normalizer', () => {
   const basePayload: GitHubWebhookPayload = {

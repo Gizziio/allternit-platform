@@ -22,9 +22,11 @@ describe('terminalThemeFromElement', () => {
 
     const theme = terminalThemeFromElement(element);
 
-    expect(theme.background).toBe('rgb(253, 248, 243)');
-    expect(theme.foreground).toBe('rgb(42, 31, 22)');
-    expect(theme.cursor).toBe('rgb(42, 31, 22)');
+    // The terminal is intentionally rendered on a dark, code-branded surface
+    // regardless of the surrounding canvas theme.
+    expect(theme.background).toBe('#111415');
+    expect(theme.foreground).toBe('#e8e4df');
+    expect(theme.cursor).toBe('#e8e4df');
     expect(theme.red).toBe('rgb(190, 24, 93)');
     expect(theme.green).toBe('rgb(5, 150, 105)');
     expect(theme.cyan).toBe('rgb(8, 145, 178)');

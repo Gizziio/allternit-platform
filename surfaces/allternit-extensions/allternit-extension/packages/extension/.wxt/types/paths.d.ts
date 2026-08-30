@@ -8,7 +8,6 @@ declare module "wxt/browser" {
     | "/_locales/en/messages.json"
     | "/_locales/zh_CN/messages.json"
     | "/assets/page-agent-256.webp"
-    | "/assets/page-agent-64.png"
     | "/background.js"
     | "/content-scripts/content.js"
     | "/main-world.js"

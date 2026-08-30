@@ -182,7 +182,7 @@ describe('Routing Functions', () => {
       expect(result.delegateTo).toBe('law-layer');
     });
 
-    it('should deny paths that escape workspace', () => {
+    it('should delegate protected absolute paths to law-layer', () => {
       const result = fileAccessRouter(
         { 
           ...baseContext, 
@@ -192,8 +192,8 @@ describe('Routing Functions', () => {
         },
         mockKernel
       );
-      expect(result.decision).toBe('deny');
-      expect(result.reason).toContain('escapes');
+      expect(result.decision).toBe('delegate');
+      expect(result.delegateTo).toBe('law-layer');
     });
 
     it('should allow valid paths within workspace', () => {
@@ -219,9 +219,10 @@ describe('Routing Functions', () => {
       workspaceRoot: '/workspace',
     };
 
-    it('should allow read operations', () => {
+    it('should delegate read operations on absolute paths to law-layer', () => {
       const result = readOnlyFileRouter(baseContext, mockKernel);
-      expect(result.decision).toBe('allow');
+      expect(result.decision).toBe('delegate');
+      expect(result.delegateTo).toBe('law-layer');
     });
 
     it('should deny write operations', () => {
@@ -243,6 +244,14 @@ describe('Routing Functions', () => {
   });
 
   describe('createCompositeRouter', () => {
+    const baseContext: ToolContext = {
+      toolName: 'read_file',
+      toolParams: { path: '/workspace/test.txt' },
+      sessionId: 'test-session',
+      agentId: 'test-agent',
+      workspaceRoot: '/workspace',
+    };
+
     it('should allow when all routers allow', async () => {
       const router1: import('../src/types').PreToolUseFunction = () => ({ 
         decision: 'allow' 

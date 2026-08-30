@@ -1273,3 +1273,22 @@ Fix failing Allternit platform workspace packages so `pnpm install` and `pnpm -r
 - User review and approval.
 - Commit on `session/caade5dc-3e9c-4ee6-889f-cd1276faec7c` and merge into `main`.
 - Delete the session worktree and branch after merge.
+
+---
+
+## Workspace test failures follow-up (2026-08-30)
+
+### Goal
+Fix remaining workspace package failures surfaced by `pnpm -r test`.
+
+### Just did
+- Created follow-up session worktree `allternit-session-821f7fc9-1cf6-47d2-a35b-11a76cac41a0` on branch `session/821f7fc9-1cf6-47d2-a35b-11a76cac41a0`.
+- Initial `pnpm -r test` run showed failures in `services/gateway/http` and several packages with no test files.
+
+### Next
+1. Install dependencies in the new worktree.
+2. Capture full test failure summary.
+3. Fix `vitest` "no test files" exits by enabling `passWithNoTests` where appropriate.
+4. Fix or segregate `services/gateway/http` integration tests that require a running server.
+5. Re-run `pnpm -r test` to verify.
+6. Commit, merge, and clean up.

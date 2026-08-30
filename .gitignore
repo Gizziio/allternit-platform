@@ -59,6 +59,9 @@ __pycache__/
 cmd/gizzi-code/trace_output/
 cmd/gizzi-code/.build/
 
+# VSCode test runtime downloads
+cmd/gizzi-code/sdks/vscode/.vscode-test/
+
 # Local dogfooding of gizzi-code's own `gizzi codemap generate` / `gizzi init`
 # against this monorepo — a real per-user-repo feature (docs/codemap/ is
 # meant to be committed for end users), but not something we want cluttering

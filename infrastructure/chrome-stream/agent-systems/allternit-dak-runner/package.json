@@ -37,7 +37,7 @@
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist",
     "prepublishOnly": "npm run clean && npm run build",
-    "test": "jest",
+    "test": "vitest run",
     "lint": "eslint src"
   },
   "engines": {
@@ -53,7 +53,8 @@
     "@types/node": "^20.19.33",
     "@types/uuid": "^9.0.0",
     "@types/ws": "^8.18.1",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "vitest": "^1.6.0"
   },
   "keywords": [
     "allternit",

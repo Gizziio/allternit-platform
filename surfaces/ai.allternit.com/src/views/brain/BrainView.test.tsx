@@ -4,10 +4,13 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrainView } from './BrainView';
 import { fetchBrains, fetchBrainPages } from '@/services/brain-api';
+import { ToastProvider } from '@/components/ui/toast-provider';
 
 vi.mock('@/services/brain-api', () => ({
   fetchBrains: vi.fn(),
   fetchBrainPages: vi.fn(),
+  createBrain: vi.fn(),
+  importBrain: vi.fn(),
 }));
 
 const mockFetchBrains = vi.mocked(fetchBrains);
@@ -19,7 +22,9 @@ function renderView() {
   });
   return render(
     <QueryClientProvider client={client}>
-      <BrainView />
+      <ToastProvider>
+        <BrainView />
+      </ToastProvider>
     </QueryClientProvider>
   );
 }
@@ -33,9 +38,9 @@ describe('BrainView', () => {
     mockFetchBrains.mockResolvedValue([]);
     renderView();
 
-    expect(await screen.findByText('No brains yet')).toBeInTheDocument();
-    expect(screen.getByText(/gizzi brain init/)).toBeInTheDocument();
-    expect(screen.getByText(/POST \/api\/v1\/brains/)).toBeInTheDocument();
+    expect(await screen.findByText('No second brain yet')).toBeInTheDocument();
+    expect(screen.getByText(/Create a new second brain or import an existing git repo/)).toBeInTheDocument();
+    expect(screen.getByText('Create second brain')).toBeInTheDocument();
   });
 
   it('dims stale lessons in the learning feed and shows provenance refs', async () => {

@@ -24,7 +24,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "test": "vitest",
+    "test": "vitest --passWithNoTests",
     "lint": "eslint src",
     "clean": "rm -rf dist",
     "prepublishOnly": "npm run clean && npm run build",

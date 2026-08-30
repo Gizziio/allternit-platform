@@ -141,8 +141,14 @@ describe('Policy Injection Integration', () => {
   describe('Injection Points', () => {
     it('should inject at session_start', async () => {
       await injector.loadBundle(mockBundle);
-      
-      const marker = await injector.injectForSession('sess_001', 'agent_001');
+
+      const marker = await injector.inject('session_start', {
+        session_id: 'sess_001',
+        dag_id: 'dag_001',
+        agent_id: 'agent_001',
+        timestamp: new Date(),
+        original_context: {},
+      });
 
       expect(marker.injection_point).toBe('session_start');
       expect(marker.session_id).toBe('sess_001');

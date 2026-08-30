@@ -180,6 +180,24 @@ export class SnapshotStore {
   }
 
   /**
+   * Clear all snapshots from memory and disk
+   */
+  async clear(): Promise<void> {
+    this.cache.clear();
+    this.index.clear();
+
+    const fs = await import('fs/promises');
+    try {
+      const entries = await fs.readdir(this.config.storage_dir);
+      await Promise.all(
+        entries.map(entry => fs.rm(`${this.config.storage_dir}/${entry}`, { recursive: true, force: true }))
+      );
+    } catch {
+      // Storage dir may not exist yet
+    }
+  }
+
+  /**
    * Get storage statistics
    */
   async getStats(): Promise<{
