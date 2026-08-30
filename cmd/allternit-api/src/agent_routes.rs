@@ -750,7 +750,7 @@ async fn ensure_companion(
     // unconfigured kimi fallback — then use the local Ollama brain so the
     // Companion actually runs out of the box.
     let (mut provider, mut model) = state.config.default_model();
-    if provider.is_empty() || provider == "kimi-for-coding" || provider == "echo" {
+    if provider.is_empty() || provider == "kimi-for-coding" || provider == "kimi-cli" || provider == "echo" {
         provider = "ollama".to_string();
         model = "qwen2.5:0.5b".to_string();
     }
@@ -1075,7 +1075,7 @@ async fn instantiate_template(
         Some(b) => (b.provider, b.model),
         None => state.config.default_model(),
     };
-    if provider.is_empty() || provider == "kimi-for-coding" || provider == "echo" {
+    if provider.is_empty() || provider == "kimi-for-coding" || provider == "kimi-cli" || provider == "echo" {
         provider = "ollama".to_string();
         model = "qwen2.5:0.5b".to_string();
     }

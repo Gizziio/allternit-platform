@@ -288,13 +288,13 @@ static ENV_PROVIDER_SPECS: &[(&str, &str, &str, &[&str])] = &[
         "openai",
         "OpenAI",
         "OPENAI_API_KEY",
-        &["gpt-5.6-sol", "gpt-5.5", "gpt-4o", "dall-e-3"],
+        &["gpt-5", "gpt-5-mini", "gpt-4o", "dall-e-3"],
     ),
     (
         "anthropic",
         "Anthropic",
         "ANTHROPIC_API_KEY",
-        &["claude-sonnet-4-20250514", "claude-opus-4-20250514"],
+        &["claude-sonnet-5", "claude-opus-5"],
     ),
     (
         "google",
@@ -339,10 +339,10 @@ static ENV_PROVIDER_SPECS: &[(&str, &str, &str, &[&str])] = &[
 /// This list mirrors the agent-runtime surface used by Multica: the user brings
 /// their own installed + authenticated CLI tool, and Allternit routes to it.
 static CLI_PROVIDER_SPECS: &[(&str, &str, &str, &str)] = &[
-    ("claude-cli", "Claude CLI", "claude", "claude-sonnet-4-20250514"),
-    ("codex-cli", "Codex CLI", "codex", "gpt-5.6-sol"),
+    ("claude-cli", "Claude CLI", "claude", "claude-sonnet-5"),
+    ("codex-cli", "Codex CLI", "codex", "codex-mini-latest"),
     ("qwen-cli", "Qwen CLI", "qwen", "qwen-plus"),
-    ("kimi-cli", "Kimi CLI", "kimi", "kimi-for-coding"),
+    ("kimi-cli", "Kimi CLI", "kimi", "kimi-k3"),
     ("antigravity", "Antigravity", "agy", "antigravity"),
     ("cursor-agent", "Cursor Agent", "cursor-agent", "cursor-agent"),
     ("copilot", "GitHub Copilot CLI", "copilot", "copilot"),
@@ -370,15 +370,18 @@ static CLI_PROVIDER_SPECS: &[(&str, &str, &str, &str)] = &[
 /// clients (the Claude-app sheet layout). Unknown models default to
 /// (no description, "standard", false).
 static MODEL_METADATA: &[(&str, &str, &str, bool)] = &[
-    ("claude-opus-4-20250514", "For your toughest challenges", "flagship", true),
-    ("claude-sonnet-4-20250514", "Most efficient for everyday tasks", "standard", true),
-    ("gpt-5.6-sol", "Latest Codex reasoning", "flagship", false),
-    ("gpt-5.5", "Strong generalist", "standard", false),
+    ("claude-opus-5", "For your toughest challenges", "flagship", true),
+    ("claude-sonnet-5", "Most efficient for everyday tasks", "standard", true),
+    ("gpt-5", "Latest GPT reasoning", "flagship", false),
+    ("gpt-5-mini", "Fast GPT mini", "fast", false),
     ("gpt-4o", "Prior-generation flagship", "legacy", true),
+    ("codex-mini-latest", "Lightweight Codex coding agent", "fast", false),
+    ("codex-latest", "Latest Codex coding agent", "flagship", false),
     ("gemini-2.5-pro", "Long-context reasoning", "flagship", false),
     ("gemini-2.5-flash", "Fastest for quick answers", "fast", false),
     ("sonar-pro", "Web-grounded answers", "standard", false),
-    ("kimi-for-coding", "Kimi coding assistant", "standard", false),
+    ("kimi-k3", "Kimi K3 reasoning", "flagship", false),
+    ("kimi-k2.7-code", "Kimi coding specialist", "standard", false),
     ("qwen-max", "Qwen Max", "flagship", false),
     ("qwen-plus", "Qwen Plus", "standard", false),
 ];
@@ -1041,14 +1044,14 @@ async fn list_ollama_models(
 fn provider_capabilities(id: &str) -> serde_json::Value {
     let (tool_call, vision, context, output, default_model): (bool, bool, u64, u64, &str) = match id
     {
-        "anthropic" => (true, true, 200_000, 32_000, "claude-sonnet-4-20250514"),
-        "openai" => (true, true, 128_000, 16_384, "gpt-5.6-sol"),
+        "anthropic" => (true, true, 200_000, 32_000, "claude-sonnet-5"),
+        "openai" => (true, true, 128_000, 16_384, "gpt-5"),
         "google" => (true, true, 1_000_000, 65_536, "gemini-2.5-pro"),
         "ollama" | "lmstudio" => (true, false, 128_000, 16_384, "llama3.2:3b"),
-        "claude-cli" => (true, true, 200_000, 32_000, "claude-sonnet-4-20250514"),
-        "codex-cli" => (true, false, 128_000, 16_384, "gpt-5.6-sol"),
+        "claude-cli" => (true, true, 200_000, 32_000, "claude-sonnet-5"),
+        "codex-cli" => (true, false, 128_000, 16_384, "codex-mini-latest"),
         "qwen" => (true, false, 128_000, 16_384, "qwen-plus"),
-        "kimi" => (true, false, 128_000, 16_384, "kimi-for-coding"),
+        "kimi" => (true, false, 128_000, 16_384, "kimi-k3"),
         "antigravity" | "agy" => (true, true, 1_000_000, 65_536, "gemini-2.5-pro"),
         "zai" | "z.ai" | "glm" => (true, false, 200_000, 16_384, "glm-4.6"),
         _ => (true, false, 128_000, 16_384, ""),
@@ -1414,7 +1417,7 @@ fn subscription_provider(id: &str) -> Option<(&'static str, SubscriptionProvider
             SubscriptionProvider {
                 id: "claude-cli",
                 label: "Claude",
-                model: "claude-sonnet-4-20250514",
+                model: "claude-sonnet-5",
                 login: &["auth", "login"],
                 page: "https://claude.ai/login",
                 api_key_only: false,
@@ -1425,7 +1428,7 @@ fn subscription_provider(id: &str) -> Option<(&'static str, SubscriptionProvider
             SubscriptionProvider {
                 id: "codex-cli",
                 label: "Codex",
-                model: "gpt-5.6-sol",
+                model: "codex-mini-latest",
                 login: &["login"],
                 page: "https://chatgpt.com/",
                 api_key_only: false,
@@ -1447,7 +1450,7 @@ fn subscription_provider(id: &str) -> Option<(&'static str, SubscriptionProvider
             SubscriptionProvider {
                 id: "kimi-cli",
                 label: "Kimi",
-                model: "kimi-for-coding",
+                model: "kimi-k3",
                 login: &["login"],
                 page: "https://www.kimi.com/",
                 api_key_only: false,

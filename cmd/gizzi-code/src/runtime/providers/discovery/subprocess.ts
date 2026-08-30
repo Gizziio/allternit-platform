@@ -192,8 +192,8 @@ export const SUBPROCESS_PROVIDERS: SubprocessSpec[] = [
     cmd: "claude -p",
     probe: { args: ["--version"], expect: /Claude Code/ },
     models: [
-      { id: "claude-sonnet-4-20250514", name: "Claude Sonnet 4", context: 200000, output: 64000 },
-      { id: "claude-opus-4-20250514",   name: "Claude Opus 4",   context: 200000, output: 32000 },
+      { id: "claude-sonnet-5", name: "Claude Sonnet 5", context: 200000, output: 64000 },
+      { id: "claude-opus-5",   name: "Claude Opus 5",   context: 200000, output: 32000 },
     ],
   },
 
@@ -206,7 +206,8 @@ export const SUBPROCESS_PROVIDERS: SubprocessSpec[] = [
     cmd: "kimi -p",
     probe: { args: ["--version"], expect: /\d+\.\d+/ },
     models: [
-      { id: "kimi-for-coding", name: "Kimi for Coding", context: 262144, output: 16384 },
+      { id: "kimi-k3",       name: "Kimi K3",       context: 262144, output: 16384 },
+      { id: "kimi-k2.7-code", name: "Kimi K2.7 Code", context: 262144, output: 16384 },
     ],
   },
 
@@ -233,8 +234,8 @@ export const SUBPROCESS_PROVIDERS: SubprocessSpec[] = [
     cmd: "codex",
     probe: { args: ["--version"], expect: /codex/i },
     models: [
-      { id: "gpt-5.6-sol", name: "GPT-5.6 Sol", context: 1047576, output: 32768 },
-      { id: "gpt-5.5",     name: "GPT-5.5",     context: 1047576, output: 32768 },
+      { id: "codex-mini-latest", name: "Codex Mini Latest", context: 1047576, output: 32768 },
+      { id: "codex-latest",      name: "Codex Latest",      context: 1047576, output: 32768 },
     ],
   },
 

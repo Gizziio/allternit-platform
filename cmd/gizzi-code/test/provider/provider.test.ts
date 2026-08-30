@@ -120,7 +120,7 @@ test.skip("model whitelist filters models for provider", async () => {
           $schema: "https://gizzi.io/config.json",
           provider: {
             anthropic: {
-              whitelist: ["claude-sonnet-4-20250514"],
+              whitelist: ["claude-sonnet-5"],
             },
           },
         }),
@@ -136,7 +136,7 @@ test.skip("model whitelist filters models for provider", async () => {
       const providers = await Provider.list()
       expect(providers["anthropic"]).toBeDefined()
       const models = Object.keys(providers["anthropic"].models)
-      expect(models).toContain("claude-sonnet-4-20250514")
+      expect(models).toContain("claude-sonnet-5")
       expect(models.length).toBe(1)
     },
   })
@@ -151,7 +151,7 @@ test.skip("model blacklist excludes specific models", async () => {
           $schema: "https://gizzi.io/config.json",
           provider: {
             anthropic: {
-              blacklist: ["claude-sonnet-4-20250514"],
+              blacklist: ["claude-sonnet-5"],
             },
           },
         }),
@@ -167,7 +167,7 @@ test.skip("model blacklist excludes specific models", async () => {
       const providers = await Provider.list()
       expect(providers["anthropic"]).toBeDefined()
       const models = Object.keys(providers["anthropic"].models)
-      expect(models).not.toContain("claude-sonnet-4-20250514")
+      expect(models).not.toContain("claude-sonnet-5")
     },
   })
 })
@@ -183,7 +183,7 @@ test.skip("custom model alias via config", async () => {
             anthropic: {
               models: {
                 "my-alias": {
-                  id: "claude-sonnet-4-20250514",
+                  id: "claude-sonnet-5",
                   name: "My Custom Alias",
                 },
               },
@@ -299,10 +299,10 @@ test.skip("getModel returns model for valid provider/model", async () => {
       Env.set("ANTHROPIC_API_KEY", "test-api-key")
     },
     fn: async () => {
-      const model = await Provider.getModel("anthropic", "claude-sonnet-4-20250514")
+      const model = await Provider.getModel("anthropic", "claude-sonnet-5")
       expect(model).toBeDefined()
       expect(model.providerID).toBe("anthropic")
-      expect(model.id).toBe("claude-sonnet-4-20250514")
+      expect(model.id).toBe("claude-sonnet-5")
       const language = await Provider.getLanguage(model)
       expect(language).toBeDefined()
     },
@@ -393,7 +393,7 @@ test.skip("defaultModel respects config model setting", async () => {
         path.join(dir, "gizzi.json"),
         JSON.stringify({
           $schema: "https://gizzi.io/config.json",
-          model: "anthropic/claude-sonnet-4-20250514",
+          model: "anthropic/claude-sonnet-5",
         }),
       )
     },
@@ -406,7 +406,7 @@ test.skip("defaultModel respects config model setting", async () => {
     fn: async () => {
       const model = await Provider.defaultModel()
       expect(model.providerID).toBe("anthropic")
-      expect(model.modelID).toBe("claude-sonnet-4-20250514")
+      expect(model.modelID).toBe("claude-sonnet-5")
     },
   })
 })
@@ -524,7 +524,7 @@ test.skip("model options are merged from existing model", async () => {
           provider: {
             anthropic: {
               models: {
-                "claude-sonnet-4-20250514": {
+                "claude-sonnet-5": {
                   options: {
                     customOption: "custom-value",
                   },
@@ -543,7 +543,7 @@ test.skip("model options are merged from existing model", async () => {
     },
     fn: async () => {
       const providers = await Provider.list()
-      const model = providers["anthropic"].models["claude-sonnet-4-20250514"]
+      const model = providers["anthropic"].models["claude-sonnet-5"]
       expect(model.options.customOption).toBe("custom-value")
     },
   })
@@ -633,7 +633,7 @@ test.skip("getModel uses realIdByKey for aliased models", async () => {
             anthropic: {
               models: {
                 "my-sonnet": {
-                  id: "claude-sonnet-4-20250514",
+                  id: "claude-sonnet-5",
                   name: "My Sonnet Alias",
                 },
               },
@@ -748,7 +748,7 @@ test.skip("model inherits properties from existing database model", async () => 
           provider: {
             anthropic: {
               models: {
-                "claude-sonnet-4-20250514": {
+                "claude-sonnet-5": {
                   name: "Custom Name for Sonnet",
                 },
               },
@@ -765,7 +765,7 @@ test.skip("model inherits properties from existing database model", async () => 
     },
     fn: async () => {
       const providers = await Provider.list()
-      const model = providers["anthropic"].models["claude-sonnet-4-20250514"]
+      const model = providers["anthropic"].models["claude-sonnet-5"]
       expect(model.name).toBe("Custom Name for Sonnet")
       expect(model.capabilities.toolcall).toBe(true)
       expect(model.capabilities.attachment).toBe(true)
@@ -832,8 +832,8 @@ test.skip("whitelist and blacklist can be combined", async () => {
           $schema: "https://gizzi.io/config.json",
           provider: {
             anthropic: {
-              whitelist: ["claude-sonnet-4-20250514", "claude-opus-4-20250514"],
-              blacklist: ["claude-opus-4-20250514"],
+              whitelist: ["claude-sonnet-5", "claude-opus-5"],
+              blacklist: ["claude-opus-5"],
             },
           },
         }),
@@ -849,8 +849,8 @@ test.skip("whitelist and blacklist can be combined", async () => {
       const providers = await Provider.list()
       expect(providers["anthropic"]).toBeDefined()
       const models = Object.keys(providers["anthropic"].models)
-      expect(models).toContain("claude-sonnet-4-20250514")
-      expect(models).not.toContain("claude-opus-4-20250514")
+      expect(models).toContain("claude-sonnet-5")
+      expect(models).not.toContain("claude-opus-5")
       expect(models.length).toBe(1)
     },
   })
@@ -969,7 +969,7 @@ test.skip("getSmallModel respects config small_model override", async () => {
         path.join(dir, "gizzi.json"),
         JSON.stringify({
           $schema: "https://gizzi.io/config.json",
-          small_model: "anthropic/claude-sonnet-4-20250514",
+          small_model: "anthropic/claude-sonnet-5",
         }),
       )
     },
@@ -983,7 +983,7 @@ test.skip("getSmallModel respects config small_model override", async () => {
       const model = await Provider.getSmallModel("anthropic")
       expect(model).toBeDefined()
       expect(model?.providerID).toBe("anthropic")
-      expect(model?.id).toBe("claude-sonnet-4-20250514")
+      expect(model?.id).toBe("claude-sonnet-5")
     },
   })
 })
@@ -1091,7 +1091,7 @@ test.skip("model alias name defaults to alias key when id differs", async () => 
             anthropic: {
               models: {
                 sonnet: {
-                  id: "claude-sonnet-4-20250514",
+                  id: "claude-sonnet-5",
                   // no name specified - should default to "sonnet" (the key)
                 },
               },
@@ -1207,7 +1207,7 @@ test.skip("model cost overrides existing cost values", async () => {
           provider: {
             anthropic: {
               models: {
-                "claude-sonnet-4-20250514": {
+                "claude-sonnet-5": {
                   cost: {
                     input: 999,
                     output: 888,
@@ -1227,7 +1227,7 @@ test.skip("model cost overrides existing cost values", async () => {
     },
     fn: async () => {
       const providers = await Provider.list()
-      const model = providers["anthropic"].models["claude-sonnet-4-20250514"]
+      const model = providers["anthropic"].models["claude-sonnet-5"]
       expect(model.cost.input).toBe(999)
       expect(model.cost.output).toBe(888)
     },
@@ -1488,8 +1488,8 @@ test.skip("getModel returns consistent results", async () => {
       Env.set("ANTHROPIC_API_KEY", "test-api-key")
     },
     fn: async () => {
-      const model1 = await Provider.getModel("anthropic", "claude-sonnet-4-20250514")
-      const model2 = await Provider.getModel("anthropic", "claude-sonnet-4-20250514")
+      const model1 = await Provider.getModel("anthropic", "claude-sonnet-5")
+      const model2 = await Provider.getModel("anthropic", "claude-sonnet-5")
       expect(model1.providerID).toEqual(model2.providerID)
       expect(model1.id).toEqual(model2.id)
       expect(model1).toEqual(model2)
@@ -1853,7 +1853,7 @@ test.skip("model variants are generated for reasoning models", async () => {
     fn: async () => {
       const providers = await Provider.list()
       // Claude sonnet 4 has reasoning capability
-      const model = providers["anthropic"].models["claude-sonnet-4-20250514"]
+      const model = providers["anthropic"].models["claude-sonnet-5"]
       expect(model.capabilities.reasoning).toBe(true)
       expect(model.variants).toBeDefined()
       expect(Object.keys(model.variants!).length).toBeGreaterThan(0)
@@ -1871,7 +1871,7 @@ test.skip("model variants can be disabled via config", async () => {
           provider: {
             anthropic: {
               models: {
-                "claude-sonnet-4-20250514": {
+                "claude-sonnet-5": {
                   variants: {
                     high: { disabled: true },
                   },
@@ -1890,7 +1890,7 @@ test.skip("model variants can be disabled via config", async () => {
     },
     fn: async () => {
       const providers = await Provider.list()
-      const model = providers["anthropic"].models["claude-sonnet-4-20250514"]
+      const model = providers["anthropic"].models["claude-sonnet-5"]
       expect(model.variants).toBeDefined()
       expect(model.variants!["high"]).toBeUndefined()
       // max variant should still exist
@@ -1909,7 +1909,7 @@ test.skip("model variants can be customized via config", async () => {
           provider: {
             anthropic: {
               models: {
-                "claude-sonnet-4-20250514": {
+                "claude-sonnet-5": {
                   variants: {
                     high: {
                       thinking: {
@@ -1933,7 +1933,7 @@ test.skip("model variants can be customized via config", async () => {
     },
     fn: async () => {
       const providers = await Provider.list()
-      const model = providers["anthropic"].models["claude-sonnet-4-20250514"]
+      const model = providers["anthropic"].models["claude-sonnet-5"]
       expect(model.variants!["high"]).toBeDefined()
       expect(model.variants!["high"].thinking.budgetTokens).toBe(20000)
     },
@@ -1950,7 +1950,7 @@ test.skip("disabled key is stripped from variant config", async () => {
           provider: {
             anthropic: {
               models: {
-                "claude-sonnet-4-20250514": {
+                "claude-sonnet-5": {
                   variants: {
                     max: {
                       disabled: false,
@@ -1972,7 +1972,7 @@ test.skip("disabled key is stripped from variant config", async () => {
     },
     fn: async () => {
       const providers = await Provider.list()
-      const model = providers["anthropic"].models["claude-sonnet-4-20250514"]
+      const model = providers["anthropic"].models["claude-sonnet-5"]
       expect(model.variants!["max"]).toBeDefined()
       expect(model.variants!["max"].disabled).toBeUndefined()
       expect(model.variants!["max"].customField).toBe("test")
@@ -1990,7 +1990,7 @@ test.skip("all variants can be disabled via config", async () => {
           provider: {
             anthropic: {
               models: {
-                "claude-sonnet-4-20250514": {
+                "claude-sonnet-5": {
                   variants: {
                     high: { disabled: true },
                     max: { disabled: true },
@@ -2010,7 +2010,7 @@ test.skip("all variants can be disabled via config", async () => {
     },
     fn: async () => {
       const providers = await Provider.list()
-      const model = providers["anthropic"].models["claude-sonnet-4-20250514"]
+      const model = providers["anthropic"].models["claude-sonnet-5"]
       expect(model.variants).toBeDefined()
       expect(Object.keys(model.variants!).length).toBe(0)
     },
@@ -2027,7 +2027,7 @@ test.skip("variant config merges with generated variants", async () => {
           provider: {
             anthropic: {
               models: {
-                "claude-sonnet-4-20250514": {
+                "claude-sonnet-5": {
                   variants: {
                     high: {
                       extraOption: "custom-value",
@@ -2048,7 +2048,7 @@ test.skip("variant config merges with generated variants", async () => {
     },
     fn: async () => {
       const providers = await Provider.list()
-      const model = providers["anthropic"].models["claude-sonnet-4-20250514"]
+      const model = providers["anthropic"].models["claude-sonnet-5"]
       expect(model.variants!["high"]).toBeDefined()
       // Should have both the generated thinking config and the custom option
       expect(model.variants!["high"].thinking).toBeDefined()

@@ -109,7 +109,7 @@ pub struct CompanyConfig {
 /// their provider credentials, and optional local overrides.
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 pub struct UserConfig {
-    /// Default LLM provider/model, e.g. `kimi-for-coding/kimi-k2`.
+    /// Default LLM provider/model, e.g. `kimi-cli/kimi-k3`.
     #[serde(rename = "defaultModel")]
     pub default_model: Option<String>,
 

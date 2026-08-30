@@ -68,8 +68,8 @@ const KNOWN_PROVIDERS: Array<{
   models_hint?: string // example model IDs
 }> = [
   // ── API key providers ────────────────────────────────────────────────────
-  { id: "anthropic",   name: "Anthropic",    auth_type: "api_key", base_url: "https://api.anthropic.com/v1",        env: "ANTHROPIC_API_KEY",   key_url: "https://console.anthropic.com/keys",     models_hint: "claude-sonnet-4-6" },
-  { id: "openai",      name: "OpenAI",       auth_type: "api_key", base_url: "https://api.openai.com/v1",           env: "OPENAI_API_KEY",      key_url: "https://platform.openai.com/api-keys",   models_hint: "gpt-4o, o4-mini" },
+  { id: "anthropic",   name: "Anthropic",    auth_type: "api_key", base_url: "https://api.anthropic.com/v1",        env: "ANTHROPIC_API_KEY",   key_url: "https://console.anthropic.com/keys",     models_hint: "claude-sonnet-5, claude-opus-5" },
+  { id: "openai",      name: "OpenAI",       auth_type: "api_key", base_url: "https://api.openai.com/v1",           env: "OPENAI_API_KEY",      key_url: "https://platform.openai.com/api-keys",   models_hint: "gpt-5, gpt-5-mini, gpt-4o" },
   { id: "google",      name: "Google AI",    auth_type: "api_key", base_url: "https://generativelanguage.googleapis.com/v1beta", env: "GEMINI_API_KEY", key_url: "https://aistudio.google.com/app/apikey", models_hint: "gemini-2.5-pro" },
   { id: "moonshot",    name: "Kimi (Moonshot)", auth_type: "api_key", base_url: "https://api.moonshot.ai/v1",      env: "MOONSHOT_API_KEY",    key_url: "https://platform.moonshot.cn/console",   models_hint: "kimi-k2, moonshot-v1-128k" },
   { id: "qwen",        name: "Qwen (Alibaba)", auth_type: "api_key", base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1", env: "DASHSCOPE_API_KEY", key_url: "https://dashscope.console.aliyun.com", models_hint: "qwen-max, qwen3-235b-a22b" },
@@ -88,11 +88,11 @@ const KNOWN_PROVIDERS: Array<{
   { id: "vllm",        name: "vLLM",         auth_type: "none",    base_url: "http://localhost:8000/v1",   models_hint: "(auto-detected from server)" },
   { id: "llamacpp",    name: "llama.cpp server", auth_type: "none", base_url: "http://localhost:8080/v1", models_hint: "(server's loaded model)" },
   // ── CLI / subscription ────────────────────────────────────────────────────
-  { id: "claude-cli",  name: "Claude CLI",   auth_type: "subprocess", subprocess_cmd: "claude -p",   models_hint: "claude-sonnet-4-20250514, claude-opus-4-20250514" },
-  { id: "kimi-cli",    name: "Kimi CLI",     auth_type: "subprocess", subprocess_cmd: "kimi -p",     models_hint: "kimi-for-coding" },
+  { id: "claude-cli",  name: "Claude CLI",   auth_type: "subprocess", subprocess_cmd: "claude -p",   models_hint: "claude-sonnet-5, claude-opus-5" },
+  { id: "kimi-cli",    name: "Kimi CLI",     auth_type: "subprocess", subprocess_cmd: "kimi -p",     models_hint: "kimi-k3, kimi-k2.7-code" },
   { id: "qwen-cli",    name: "Qwen Code CLI",auth_type: "subprocess", subprocess_cmd: "qwen -p",     models_hint: "qwen-max, qwen-plus" },
   { id: "gemini-cli",  name: "Gemini CLI",   auth_type: "subprocess", subprocess_cmd: "gemini -p",   models_hint: "gemini-2.5-pro" },
-  { id: "codex-cli",   name: "Codex CLI",    auth_type: "subprocess", subprocess_cmd: "codex",       models_hint: "gpt-5.6-sol, gpt-5.5" },
+  { id: "codex-cli",   name: "Codex CLI",    auth_type: "subprocess", subprocess_cmd: "codex",       models_hint: "codex-mini-latest, codex-latest" },
 ]
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

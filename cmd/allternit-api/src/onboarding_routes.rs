@@ -131,7 +131,7 @@ async fn save_config(
 
 #[derive(Debug, Deserialize)]
 struct SaveProviderPayload {
-    /// Provider identifier, e.g. "anthropic", "openai", "kimi-for-coding".
+    /// Provider identifier, e.g. "anthropic", "openai", "kimi-cli".
     provider: String,
     /// Human-readable provider name.
     #[serde(default)]
@@ -139,7 +139,7 @@ struct SaveProviderPayload {
     /// NPM package used by the AI SDK adapter (optional — Gizzi can infer it).
     #[serde(default)]
     npm: Option<String>,
-    /// Default model for this provider, e.g. "anthropic/claude-sonnet-4-6".
+    /// Default model for this provider, e.g. "anthropic/claude-sonnet-5".
     #[serde(rename = "defaultModel", default)]
     default_model: Option<String>,
     /// Provider API key. Handed directly to Gizzi's private credential store.

@@ -410,13 +410,13 @@ describe.skip("Bedrock cross-region prefix detection", () => {
   })
 
   test.skip("should detect jp. prefix", () => {
-    const modelID = "jp.anthropic.claude-sonnet-4-20250514-v1:0"
+    const modelID = "jp.anthropic.claude-sonnet-5-v1:0"
     const hasPrefix = crossRegionPrefixes.some((prefix) => modelID.startsWith(prefix))
     expect(hasPrefix).toBe(true)
   })
 
   test.skip("should detect apac. prefix", () => {
-    const modelID = "apac.anthropic.claude-sonnet-4-20250514-v1:0"
+    const modelID = "apac.anthropic.claude-sonnet-5-v1:0"
     const hasPrefix = crossRegionPrefixes.some((prefix) => modelID.startsWith(prefix))
     expect(hasPrefix).toBe(true)
   })
