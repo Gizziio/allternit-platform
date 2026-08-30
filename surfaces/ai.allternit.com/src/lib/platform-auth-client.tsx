@@ -25,8 +25,6 @@ import {
 } from "@/lib/env"
 
 const ENV_PUBLISHABLE_KEY = getBuildTimeClerkPublishableKey()
-const SIGN_IN_URL = env("NEXT_PUBLIC_CLERK_SIGN_IN_URL") ?? "/sign-in"
-const SIGN_UP_URL = env("NEXT_PUBLIC_CLERK_SIGN_UP_URL") ?? "/sign-up"
 const PROXY_URL = env("NEXT_PUBLIC_CLERK_PROXY_URL")
 
 function getProxyUrl(): string | undefined {
@@ -317,8 +315,8 @@ export function PlatformAuthProvider({ children }: { children: ReactNode }) {
     <ClerkProvider
       publishableKey={publishableKey}
       appearance={clerkAppearance}
-      signInUrl={SIGN_IN_URL}
-      signUpUrl={SIGN_UP_URL}
+      signInUrl={SIGN_IN_PATH}
+      signUpUrl={SIGN_UP_PATH}
       proxyUrl={getProxyUrl()}
       allowedRedirectOrigins={getAllowedRedirectOrigins()}
     >

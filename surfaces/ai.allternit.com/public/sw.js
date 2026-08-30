@@ -29,11 +29,15 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
 
-  // Skip non-GET, opaque, and API requests.
+  // Skip non-GET, opaque, API, and Clerk proxy requests. Clerk's Frontend
+  // API (/__clerk) must never be served from cache; a stale /v1/client
+  // response makes the sign-in flow lose its in-flight sign_in_attempt and
+  // bounce between /sign-in and /sign-in/factor-one.
   if (request.method !== 'GET') return;
   if (request.url.startsWith('chrome-extension://')) return;
   if (request.url.includes('/api/')) return;
   if (request.url.includes('/dispatch/')) return;
+  if (request.url.includes('/__clerk/')) return;
 
   // Never cache Vite's development module graph. Vite's URLs include
   // cache-busting query parameters (e.g. ?v=...) that change whenever
