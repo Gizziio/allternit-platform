@@ -43,6 +43,7 @@
     "test:a11y": "test-storybook --a11y",
     "chromatic": "chromatic --project-token=$CHROMATIC_PROJECT_TOKEN",
     "evidence:ui": "bash ../../scripts/ui-evidence-lane.sh",
+    "test:clerk:e2e": "node scripts/clerk-e2e-verify.mjs",
     "build:electron": "cd ../allternit-desktop && pnpm build:electron",
     "electron:dev": "cd ../allternit-desktop && pnpm dev"
   },

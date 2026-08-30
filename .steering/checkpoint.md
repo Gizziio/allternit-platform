@@ -1,5 +1,30 @@
 # Steering checkpoint
 
+## Clerk sign-in/sign-up e2e verification (2026-08-30)
+
+### Goal
+Make the hosted Clerk auth flow testable end-to-end with a real account and document the result so development is no longer blocked by auth uncertainty.
+
+### Just did
+- Verified the production Clerk instance with `clerk users list` and confirmed `cartlidge.joseph@yahoo.com` is verified and has `bypass_client_trust` enabled.
+- Created a secondary verified test user via `clerk users create` (plus-address on the same Yahoo account) and enabled `bypass_client_trust` for it.
+- Wrote `surfaces/ai.allternit.com/scripts/clerk-e2e-verify.mjs`:
+  - Signs in the primary real account and asserts redirect to `/shell`.
+  - Optionally signs in the secondary CLI-created account to prove the full credential lifecycle works.
+  - Verifies the hosted sign-up page renders and submits a new registration to Clerk (stops at the verification step because the mailbox is not programmatically accessible).
+- Wrote `surfaces/ai.allternit.com/tests/clerk-e2e.spec.ts` as a Playwright test suite for CI/repeatable runs.
+- Added `pnpm test:clerk:e2e` to run the smoke script.
+- Documented the test environment variables in `.env.example`.
+
+### Verification
+- `node scripts/clerk-e2e-verify.mjs` passes against `https://platform.allternit.com`.
+- `npx playwright test tests/clerk-e2e.spec.ts --project=chromium` passes (3/3).
+
+### Next
+1. Commit the new test files and package script on `session/clerk-fix`.
+2. Merge the session branch into local `main` so other agents have the e2e harness.
+3. (Optional) Wire the e2e test into CI once the GitHub Actions PAT/sync flow is fixed.
+
 ## Brain selector modal runtime selection fix (2026-08-27)
 
 ### Goal
