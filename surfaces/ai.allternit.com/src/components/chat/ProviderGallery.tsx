@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useModelDiscovery } from "@/integration/api-client";
-import { getProviderMeta, PROVIDER_REGISTRY, type ProviderKind } from "@/lib/providers/provider-registry";
+import { getProviderMeta, PROVIDER_REGISTRY, type ProviderKind, type ProviderMeta } from "@/lib/providers/provider-registry";
 import {
   Check,
   Shield,
@@ -8,7 +8,6 @@ import {
   Warning,
   CaretRight,
   CircleNotch,
-  Plus as PlusIcon,
   ArrowSquareOut,
   Download,
   Terminal,
@@ -53,47 +52,30 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
       type="button"
       onClick={onClick}
       className={cn(
-        "flex flex-col items-center gap-3 p-6 rounded-2xl border transition-all group relative overflow-hidden",
+        "flex flex-col items-center gap-3 p-5 rounded-2xl border transition-all group relative overflow-hidden",
         authenticated
-          ? "bg-[var(--surface-panel)] border-[var(--ui-border-default)]"
+          ? "bg-[var(--surface-hover)] border-[var(--ui-border-default)]"
           : "bg-transparent border-[var(--ui-border-muted)] hover:bg-[var(--surface-hover)]"
       )}
-      style={{
-        borderColor: authenticated ? `${color}40` : undefined,
-      }}
     >
-      {authenticated && (
-        <div
-          className="absolute inset-0 opacity-10 pointer-events-none"
-          style={{
-            background: `radial-gradient(circle at center, ${color} 0%, transparent 70%)`,
-          }}
-        />
-      )}
 
-      <div
-        className="size-16 rounded-2xl flex items-center justify-center relative z-10"
-        style={{
-          background: `${color}15`,
-          border: `1px solid ${color}30`,
-        }}
-      >
+      <div className="size-16 flex items-center justify-center relative z-10">
         {src ? (
           <img
             src={src}
             alt={name}
-            className="size-10 object-contain"
+            className="size-12 object-contain"
             onError={(e) => {
               (e.target as HTMLImageElement).style.display = "none";
             }}
           />
         ) : (
-          <Terminal size={32} style={{ color }} />
+          <Terminal size={40} className="text-[var(--ui-text-muted)]" />
         )}
 
         {authenticated && (
-          <div className="absolute -top-2 -right-2 size-6 rounded-full bg-status-success flex items-center justify-center border-2 border-[var(--surface-canvas)]">
-            <Check className="size-3.5 text-[var(--ui-text-inverse)]" />
+          <div className="absolute -top-1 -right-1 size-5 rounded-full bg-status-success flex items-center justify-center border-2 border-[var(--shell-view-bg)]">
+            <Check className="size-3 text-[var(--ui-text-inverse)]" />
           </div>
         )}
       </div>
@@ -146,11 +128,14 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
 interface ProviderGalleryProps {
   isOpen?: boolean;
   onClose?: () => void;
+  /** Pre-select a provider when the gallery opens (e.g. "claude" or "openai"). */
+  initialProvider?: string | null;
 }
 
 export const ProviderGallery: React.FC<ProviderGalleryProps> = ({
   isOpen = false,
   onClose,
+  initialProvider,
 }) => {
   const { providers, fetchProviders, providersLoading } = useModelDiscovery();
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
@@ -183,6 +168,15 @@ export const ProviderGallery: React.FC<ProviderGalleryProps> = ({
       fetchProviders();
     }
   }, [isOpen, fetchProviders]);
+
+  useEffect(() => {
+    if (isOpen && initialProvider) {
+      const meta = getProviderMeta(initialProvider);
+      if (meta.id !== "allternit") {
+        handleSelectProvider(meta.id);
+      }
+    }
+  }, [isOpen, initialProvider]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -364,6 +358,27 @@ export const ProviderGallery: React.FC<ProviderGalleryProps> = ({
     });
   };
 
+  const installCli = async (meta: ProviderMeta) => {
+    if (!meta.installCommand) return;
+    try {
+      await navigator.clipboard.writeText(meta.installCommand);
+      setCopiedCommand("install");
+      setCopied(true);
+      setTimeout(() => {
+        setCopied(false);
+        setCopiedCommand(null);
+      }, 1500);
+    } catch {
+      // Clipboard denied; fall through to opening terminal anyway.
+    }
+    // Ask the shell to open a terminal so the user can paste and run the command.
+    window.dispatchEvent(
+      new CustomEvent("allternit:open-terminal", {
+        detail: { command: meta.installCommand, provider: meta.id },
+      })
+    );
+  };
+
   const renderCliInstructions = () => {
     if (!currentMeta || currentMeta.kind !== "cli") return null;
     const { cliCommand, installCommand, authCommand, homepage, description } =
@@ -383,14 +398,25 @@ export const ProviderGallery: React.FC<ProviderGalleryProps> = ({
               Install
             </span>
             {installCommand && (
-              <button
-                type="button"
-                onClick={() => copyCommand(installCommand, "install")}
-                className="flex items-center gap-1 text-xs text-[var(--accent-chat)] hover:underline"
-              >
-                {copied && copiedCommand === "install" ? <Check size={12} /> : <Copy size={12} />}
-                {copied && copiedCommand === "install" ? "Copied" : "Copy"}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => installCli(currentMeta)}
+                  className="flex items-center gap-1 text-xs font-semibold text-[var(--accent-chat)] hover:underline"
+                >
+                  <Download size={12} />
+                  Install
+                </button>
+                <span className="text-[var(--ui-border-strong)]">|</span>
+                <button
+                  type="button"
+                  onClick={() => copyCommand(installCommand, "install")}
+                  className="flex items-center gap-1 text-xs text-[var(--accent-chat)] hover:underline"
+                >
+                  {copied && copiedCommand === "install" ? <Check size={12} /> : <Copy size={12} />}
+                  {copied && copiedCommand === "install" ? "Copied" : "Copy"}
+                </button>
+              </div>
             )}
           </div>
           {installCommand ? (
@@ -494,18 +520,18 @@ export const ProviderGallery: React.FC<ProviderGalleryProps> = ({
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose?.()}>
       <DialogContent
-        className="sm:max-w-3xl border-[var(--ui-border-default)] bg-[var(--bg-elevated)] text-[var(--ui-text-primary)] p-0 overflow-hidden"
+        className="sm:max-w-3xl border border-[var(--ui-border-default)] bg-[var(--shell-view-bg)] text-[var(--ui-text-primary)] p-0 overflow-hidden shadow-2xl"
         style={{
-          background: "var(--bg-elevated)",
+          background: "var(--shell-view-bg)",
           borderColor: "var(--ui-border-default)",
         }}
       >
         <div className="flex items-start justify-between gap-4 border-b border-[var(--ui-border-default)] px-6 py-5">
           <div>
-            <h2 className="text-xl font-bold text-[var(--ui-text-primary)] mb-1">
+            <h2 className="text-[var(--text-xl)] font-bold text-[var(--ui-text-primary)] mb-1">
               Connect Providers
             </h2>
-            <p className="text-[var(--ui-text-muted)] text-sm">
+            <p className="text-[var(--ui-text-muted)] text-[var(--text-sm)]">
               Bring your own CLI tools and API keys. Allternit routes to the
               runtimes you already have installed and authenticated.
             </p>
@@ -516,7 +542,7 @@ export const ProviderGallery: React.FC<ProviderGalleryProps> = ({
           {providersLoading ? (
             <div className="flex flex-col items-center justify-center py-16 gap-4">
               <CircleNotch className="size-8 text-[var(--ui-text-muted)] animate-spin" />
-              <p className="text-[var(--ui-text-muted)] text-sm">
+              <p className="text-[var(--ui-text-muted)] text-[var(--text-sm)]">
                 Loading providers…
               </p>
             </div>
@@ -539,19 +565,6 @@ export const ProviderGallery: React.FC<ProviderGalleryProps> = ({
                 );
               })}
 
-              <button
-                type="button"
-                className="flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border border-dashed border-[var(--ui-border-default)] bg-[var(--surface-hover)]/30 hover:bg-[var(--surface-hover)] transition-all group"
-              >
-                <div className="size-16 rounded-2xl flex items-center justify-center bg-[var(--surface-panel)] border border-[var(--ui-border-default)] group-hover:border-[var(--ui-border-strong)]">
-                  <PlusIcon className="size-6 text-[var(--ui-text-muted)]" />
-                </div>
-                <div className="text-center">
-                  <h3 className="font-semibold text-[var(--ui-text-muted)] text-sm italic">
-                    Coming Soon
-                  </h3>
-                </div>
-              </button>
             </div>
           )}
         </div>
@@ -563,9 +576,9 @@ export const ProviderGallery: React.FC<ProviderGalleryProps> = ({
         onOpenChange={(open) => !open && closeConnectDialog()}
       >
         <DialogContent
-          className="sm:max-w-md border-[var(--ui-border-default)] bg-[var(--bg-elevated)] text-[var(--ui-text-primary)] p-0 overflow-hidden rounded-2xl"
+          className="sm:max-w-md border border-[var(--ui-border-default)] bg-[var(--shell-view-bg)] text-[var(--ui-text-primary)] p-0 overflow-hidden rounded-2xl shadow-2xl"
           style={{
-            background: "var(--bg-elevated)",
+            background: "var(--shell-view-bg)",
             borderColor: "var(--ui-border-default)",
           }}
         >

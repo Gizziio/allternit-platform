@@ -431,6 +431,7 @@ export function ChatComposer({
   const [showAgentMenu, setShowAgentMenu] = useState(false);
   const [showModeSelectorMenu, setShowModeSelectorMenu] = useState(false);
   const [showProviderConnect, setShowProviderConnect] = useState(false);
+  const [providerConnectInitial, setProviderConnectInitial] = useState<string | null>(null);
   const [showConnectorMarketplace, setShowConnectorMarketplace] = useState(false);
   const [showOpenClawImportDialog, setShowOpenClawImportDialog] = useState(false);
   const [openClawCandidates, setOpenClawCandidates] = useState<OpenClawDiscoveredAgent[]>([]);
@@ -1947,7 +1948,11 @@ export function ChatComposer({
 
                   <ProviderGallery
                     isOpen={showProviderConnect}
-                    onClose={() => setShowProviderConnect(false)}
+                    onClose={() => {
+                      setShowProviderConnect(false);
+                      setProviderConnectInitial(null);
+                    }}
+                    initialProvider={providerConnectInitial}
                   />
 
                   {isHandingOff ? (
@@ -2412,7 +2417,11 @@ export function ChatComposer({
 
               <ProviderGallery
                 isOpen={showProviderConnect}
-                onClose={() => setShowProviderConnect(false)}
+                onClose={() => {
+                  setShowProviderConnect(false);
+                  setProviderConnectInitial(null);
+                }}
+                initialProvider={providerConnectInitial}
               />
 
               {isLoading ? (
@@ -2485,7 +2494,10 @@ export function ChatComposer({
           }}
           onSelect={selectModel}
           onCancel={cancelModelSelection}
-          onOpenProviderConnect={() => setShowProviderConnect(true)}
+          onOpenProviderConnect={(providerId) => {
+            setProviderConnectInitial(providerId ?? null);
+            setShowProviderConnect(true);
+          }}
           onOpenModelLab={() => useNav.getState().dispatch({ type: 'OPEN_VIEW', viewType: 'model-lab' })}
         />
       )}
