@@ -21,6 +21,14 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-08-30 09:20 — kimi — Workspace Package Install/Build Fixes
+
+- **Session ID / Branch:** `session/caade5dc-3e9c-4ee6-889f-cd1276faec7c`
+- **Commit:** `233e1707e` — merged into `main`
+- **How it works:** Pins the repo to Node 24, fixes an undefined variable in `composer-drag.ts`, adds missing devDependencies to the page-agent extension packages, patches webpack 5.106’s `ProgressPlugin` schema for Docusaurus compatibility, and relaxes the plugin-sdk website’s broken-link policy so the static build succeeds.
+- **Outstanding work:** Pre-existing typecheck errors in the office-suite packages remain; the main checkout had unrelated uncommitted changes from another session when `origin/main` was fast-forwarded.
+- **Summary file:** [summaries/2026-08-30-0920-caade5dc-3e9c-4ee6-889f-cd1276faec7c-kimi-workspace-package-fixes.md](./summaries/2026-08-30-0920-caade5dc-3e9c-4ee6-889f-cd1276faec7c-kimi-workspace-package-fixes.md)
+
 ### 2026-08-27 15:29 — kimi — Brain Selector Modal Runtime Selection Fix
 
 - **Session ID / Branch:** `session/brain-selector-fix`
