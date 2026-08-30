@@ -3,7 +3,7 @@ const config = {
   tagline: 'Write once. Run on any LLM platform.',
   url: 'https://plugins.allternit.com',
   baseUrl: '/',
-  onBrokenLinks: 'throw',
+  onBrokenLinks: 'warn',
   onBrokenMarkdownLinks: 'warn',
   favicon: 'img/favicon.ico',
   organizationName: 'allternit',

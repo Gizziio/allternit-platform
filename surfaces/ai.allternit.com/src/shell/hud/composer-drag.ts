@@ -120,21 +120,21 @@ export function useHudComposerDrag(
       }
 
       const target = event.currentTarget;
-      const immediate = (controlDrag && event.ctrlKey) || options.immediate;
+      const isImmediate = (controlDrag && event.ctrlKey) || immediate;
 
       // A press over an existing contentEditable selection otherwise starts
       // Chromium's native text drag, which cancels our pointer stream. Cancel
       // that default action before it is chosen; do not blur or rewrite the
       // Selection, so the user's selected text survives moving the window.
-      if (immediate) {
+      if (isImmediate) {
         event.preventDefault();
       }
 
       const state: PressState = {
-        armed: immediate,
+        armed: isImmediate,
         lastX: event.screenX,
         lastY: event.screenY,
-        mode: immediate ? 'control' : 'hold',
+        mode: isImmediate ? 'control' : 'hold',
         originH: window.outerHeight,
         originW: window.outerWidth,
         pointerId: event.pointerId,
@@ -150,7 +150,7 @@ export function useHudComposerDrag(
         window.clearTimeout(timerRef.current);
       }
 
-      if (immediate) {
+      if (isImmediate) {
         state.workspaceTransfer = workspaceTransfer;
 
         if (workspaceTransfer) {

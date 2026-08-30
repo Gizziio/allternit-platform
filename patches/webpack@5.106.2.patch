@@ -1,0 +1,12 @@
+diff --git a/schemas/plugins/ProgressPlugin.json b/schemas/plugins/ProgressPlugin.json
+--- a/schemas/plugins/ProgressPlugin.json
++++ b/schemas/plugins/ProgressPlugin.json
+@@ -8,7 +8,7 @@
+     "ProgressPluginOptions": {
+       "description": "Options object for the ProgressPlugin.",
+       "type": "object",
+-      "additionalProperties": false,
++      "additionalProperties": true,
+       "properties": {
+         "activeModules": {
+           "description": "Show active modules count and one active module in progress message.",

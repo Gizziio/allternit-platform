@@ -90,6 +90,7 @@ onlyBuiltDependencies:
 
 patchedDependencies:
   follow-redirects@1.15.11: patches/follow-redirects@1.15.11.patch
+  webpack@5.106.2: patches/webpack@5.106.2.patch
 
 # Release builds cross-compile (bun --compile) for every target on every
 # runner, so platform-conditional optional deps (e.g. @opentui/core-*) must
