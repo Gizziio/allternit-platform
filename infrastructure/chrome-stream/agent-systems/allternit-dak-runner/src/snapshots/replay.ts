@@ -284,11 +284,12 @@ export function withSnapshots<TRequest, TResponse>(
   const engine = new ReplayEngine(store, config);
   return async (request, context) => {
     const result = await engine.execute(toolName, request, liveExecute, context);
-    if (result.snapshot) {
-      if (result.snapshot.content_type === 'json') {
-        return JSON.parse(result.snapshot.content) as TResponse;
+    const snapshot = result.snapshot || result.new_snapshot;
+    if (snapshot) {
+      if (snapshot.content_type === 'json') {
+        return JSON.parse(snapshot.content) as TResponse;
       }
-      return result.snapshot.content as unknown as TResponse;
+      return snapshot.content as unknown as TResponse;
     }
     throw new Error('No snapshot found and fallback disabled');
   };

@@ -3,8 +3,8 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { createWebhookServer } from '../src/server/webhook-server.js';
-import type { WebhookServer } from '../src/server/webhook-server.js';
+import { createWebhookServer } from '../../src/server/webhook-server.js';
+import type { WebhookServer } from '../../src/server/webhook-server.js';
 
 describe('Webhook Server', () => {
   let server: WebhookServer;

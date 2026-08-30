@@ -13,6 +13,7 @@
   },
   "scripts": {
     "build": "tsc",
+    "prepare": "pnpm build",
     "typecheck": "tsc --noEmit"
   },
   "keywords": [

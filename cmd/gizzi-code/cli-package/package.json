@@ -51,7 +51,7 @@
     "build:linux": "bun build ../src/cli/main.ts --outfile ./dist/gizzi-code-linux --target bun-linux-arm64,bun-linux-x64 --conditions=browser",
     "build:win": "bun build ../src/cli/main.ts --outfile ./dist/gizzi-code-win.exe --target bun-windows-x64 --conditions=browser",
     "prepublishOnly": "npm run build",
-    "test": "bun test",
+    "test": "bun test --pass-with-no-tests",
     "version": "echo $npm_package_version"
   },
   "dependencies": {

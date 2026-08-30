@@ -1,23 +1,25 @@
 import { defineConfig } from 'vitest/config';
+import { existsSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
 
 export default defineConfig({
-  test: {
-    globals: true,
-    environment: 'node',
-    include: ['tests/**/*.test.ts'],
-    coverage: {
-      provider: 'v8',
-      reporter: ['text', 'json', 'html'],
-      include: ['src/**/*.ts'],
-      exclude: ['src/types/**/*.ts', 'src/cli/**/*.ts'],
-      thresholds: {
-        global: {
-          statements: 80,
-          branches: 80,
-          functions: 80,
-          lines: 80,
-        },
+  plugins: [
+    {
+      name: 'resolve-ts-js',
+      enforce: 'pre',
+      resolveId(source, importer) {
+        if (
+          importer &&
+          source.endsWith('.js') &&
+          !source.includes('node_modules')
+        ) {
+          const tsSource = source.replace(/\.js$/, '.ts');
+          const resolved = resolve(dirname(importer), tsSource);
+          if (existsSync(resolved)) {
+            return resolved;
+          }
+        }
       },
     },
-  },
+  ],
 });

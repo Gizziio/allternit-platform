@@ -3,13 +3,13 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { createWebhookServer } from '../src/server/webhook-server.js';
-import { createDefaultAllowlistValidator } from '../src/security/allowlist-validator.js';
-import { createWebhookRateLimiter } from '../src/security/rate-limiter.js';
-import { createDeduplicationStore } from '../src/idempotency/deduplication-store.js';
-import { createRailsEventEmitter } from '../src/rails/event-emitter.js';
-import { createReceiptRecorder } from '../src/rails/receipt-recorder.js';
-import type { WebhookServer } from '../src/server/webhook-server.js';
+import { createWebhookServer } from '../../src/server/webhook-server.js';
+import { createDefaultAllowlistValidator } from '../../src/security/allowlist-validator.js';
+import { createWebhookRateLimiter } from '../../src/security/rate-limiter.js';
+import { createDeduplicationStore } from '../../src/idempotency/deduplication-store.js';
+import { createRailsEventEmitter } from '../../src/rails/event-emitter.js';
+import { createReceiptRecorder } from '../../src/rails/receipt-recorder.js';
+import type { WebhookServer } from '../../src/server/webhook-server.js';
 
 describe('End-to-End Integration', () => {
   let server: WebhookServer;
@@ -19,7 +19,7 @@ describe('End-to-End Integration', () => {
     const port = 4000 + Math.floor(Math.random() * 1000);
     baseUrl = `http://127.0.0.1:${port}`;
 
-    server = new (createWebhookServer as any).constructor({
+    server = createWebhookServer({
       port,
       host: '127.0.0.1',
       corsOrigins: ['*'],

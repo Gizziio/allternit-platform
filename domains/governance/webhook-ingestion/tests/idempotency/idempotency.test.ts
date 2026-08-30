@@ -7,12 +7,12 @@ import {
   generateIdempotencyKey,
   validateIdempotencyKey,
   parseIdempotencyKey,
-} from '../src/idempotency/key-generator.js';
+} from '../../src/idempotency/key-generator.js';
 import {
   createDeduplicationStore,
   MemoryDeduplicationStore,
-} from '../src/idempotency/deduplication-store.js';
-import type { WebhookPayload } from '../src/types/webhook.types.js';
+} from '../../src/idempotency/deduplication-store.js';
+import type { WebhookPayload } from '../../src/types/webhook.types.js';
 
 describe('Key Generator', () => {
   const basePayload: WebhookPayload = {

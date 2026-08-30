@@ -6,14 +6,9 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { spawn, ChildProcess } from 'child_process';
+import { ChildProcess } from 'child_process';
 import { createInterface } from 'readline';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const GATEWAY_PATH = join(__dirname, '../index.ts');
+import { spawnGateway } from './helpers.js';
 
 // =============================================================================
 // Test Helpers
@@ -39,7 +34,7 @@ class StdioClient {
   private notificationHandlers: Array<(notification: JsonRpcResponse) => void> = [];
 
   constructor() {
-    this.gateway = spawn('tsx', [GATEWAY_PATH, '--transport', 'stdio'], {
+    this.gateway = spawnGateway(['--transport', 'stdio'], {
       stdio: ['pipe', 'pipe', 'pipe'],
     });
 
@@ -224,7 +219,9 @@ describe('Allternit Gateway stdio Transport', () => {
         session_id: 'invalid_session_id',
       });
 
-      expect(response.result).toBeNull();
+      expect(response.error).toBeDefined();
+      expect(response.error?.code).toBe(-32602);
+      expect(response.error?.message).toContain('Session not found');
     });
 
     it('session/list returns sessions array', async () => {

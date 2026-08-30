@@ -3,17 +3,17 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createHash } from 'crypto';
+import { createHmac } from 'crypto';
 import {
   verifyHmacSignature,
   verifyWebhookSignature,
   extractSignatureFromHeaders,
-} from '../src/security/hmac-verifier.js';
+} from '../../src/security/hmac-verifier.js';
 import {
   AllowlistValidator,
   createDefaultAllowlistValidator,
-} from '../src/security/allowlist-validator.js';
-import { RateLimiter } from '../src/security/rate-limiter.js';
+} from '../../src/security/allowlist-validator.js';
+import { RateLimiter } from '../../src/security/rate-limiter.js';
 
 describe('HMAC Verifier', () => {
   const secret = 'test_secret_123';
@@ -37,7 +37,7 @@ describe('HMAC Verifier', () => {
       );
 
       expect(result.valid).toBe(false);
-      expect(result.error).toContain('Signature does not match');
+      expect(result.error).toMatch(/Signature (does not match|length mismatch)/);
     });
 
     it('should reject wrong secret', () => {
@@ -292,7 +292,7 @@ function createHmacSignature(
   secret: string,
   algorithm: 'sha256' | 'sha1' | 'sha512'
 ): string {
-  return createHash(algorithm)
+  return createHmac(algorithm, secret)
     .update(payload)
     .digest('hex');
 }

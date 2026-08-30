@@ -222,7 +222,7 @@ export class AllowlistValidator {
 export function createDefaultAllowlistValidator(): AllowlistValidator {
   const validator = new AllowlistValidator({
     allowByDefault: false,
-    sources: ['github', 'discord', 'antfarm', 'moltbook'],
+    sources: ['github', 'discord', 'antfarm', 'moltbook', 'custom'],
   });
   
   // Allow common event types for GitHub

@@ -43,7 +43,11 @@ export function normalizeGitHubWebhook(
   const { eventType, repository, sender, timestamp, rawPayload: originalRaw } = rawPayload;
   
   // Extract base components
-  const [category, action] = eventType.split('.');
+  let [category, action] = eventType.split('.');
+  // GitHub "push" events are bare categories; normalize to updated
+  if (!action && category === 'push') {
+    action = 'updated';
+  }
   const normalizedAction = ACTION_MAP[action as string] || action;
   
   // Build actor
@@ -319,22 +323,38 @@ export function requiresAgentAction(payload: GitHubWebhookPayload): boolean {
  */
 export function inferAgentRole(payload: GitHubWebhookPayload): 'builder' | 'validator' | 'reviewer' | 'security' {
   const eventType = payload.eventType;
-  
-  // Security-related events
-  if (eventType.includes('security') || eventType.includes('vulnerability')) {
+  const textContent =
+    payload.comment?.body ||
+    payload.pullRequest?.body ||
+    payload.issue?.body ||
+    '';
+  const lowerText = textContent.toLowerCase();
+
+  // Security-related content or event types
+  if (
+    eventType.includes('security') ||
+    eventType.includes('vulnerability') ||
+    lowerText.includes('security') ||
+    lowerText.includes('vulnerability')
+  ) {
     return 'security';
   }
-  
-  // Review events
+
+  // Pull request events need a reviewer
+  if (eventType.startsWith('pull_request')) {
+    return 'reviewer';
+  }
+
+  // Review/comment events
   if (eventType.includes('review') || eventType.includes('comment')) {
     return 'reviewer';
   }
-  
+
   // PR/Issue opened - needs builder
-  if (eventType === 'pull_request.opened' || eventType === 'issues.opened') {
+  if (eventType === 'issues.opened') {
     return 'builder';
   }
-  
+
   // Default to builder
   return 'builder';
 }
