@@ -22,7 +22,7 @@ The WebSocket upgrade is an ordinary HTTP request and goes through the same
 auth middleware as REST:
 
 - `Authorization: Bearer <clerk-jwt>` — validated against Clerk JWKS
-  (RS256, issuer `https://clerk.platform.allternit.com`). A valid token
+  (RS256, issuer `https://clerk.allternit.com`). A valid token
   authorizes the request by itself; an invalid/expired one gets `401`.
 - Otherwise, if `GIZZI_SERVER_PASSWORD` is set, HTTP Basic auth
   (`GIZZI_SERVER_USERNAME`, default `gizzi`).

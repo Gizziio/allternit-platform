@@ -27,6 +27,16 @@ import {
 const ENV_PUBLISHABLE_KEY = getBuildTimeClerkPublishableKey()
 const SIGN_IN_URL = env("NEXT_PUBLIC_CLERK_SIGN_IN_URL") ?? "/sign-in"
 const SIGN_UP_URL = env("NEXT_PUBLIC_CLERK_SIGN_UP_URL") ?? "/sign-up"
+const PROXY_URL = env("NEXT_PUBLIC_CLERK_PROXY_URL")
+
+function getProxyUrl(): string | undefined {
+  // Prefer a same-origin proxy so Clerk session cookies stay first-party.
+  // Falls back to the baked env var for SSR/build-time paths.
+  if (typeof window !== "undefined") {
+    return `${window.location.origin}/__clerk`
+  }
+  return PROXY_URL
+}
 // The mounted path for the embedded <SignIn>/<SignUp> components must be a
 // path, not a full URL. The full URL above is only for ClerkProvider redirects.
 const SIGN_IN_PATH = "/sign-in"
@@ -309,6 +319,7 @@ export function PlatformAuthProvider({ children }: { children: ReactNode }) {
       appearance={clerkAppearance}
       signInUrl={SIGN_IN_URL}
       signUpUrl={SIGN_UP_URL}
+      proxyUrl={getProxyUrl()}
       allowedRedirectOrigins={getAllowedRedirectOrigins()}
     >
       <ClerkPlatformAuthBridge>{children}</ClerkPlatformAuthBridge>
@@ -395,22 +406,57 @@ function buildDesktopUser(session: DesktopSession | null) {
 }
 
 function buildDisabledAuthValue() {
-  // DEV BYPASS: treat disabled auth as signed-in for local UI iteration.
-  // Remove before committing.
-  const mockUser: PlatformUser = {
-    id: 'dev-user',
-    firstName: 'Local',
-    lastName: 'Developer',
-    userEmail: 'dev@allternit.local',
-    primaryEmailAddress: { emailAddress: 'dev@allternit.local' },
-    emailAddresses: [{ emailAddress: 'dev@allternit.local' }],
-    imageUrl: null,
+  // If an explicit dev bypass is requested, return a mock signed-in user so
+  // local UI work can proceed without Clerk credentials. This must never be
+  // the default: a build that ships without a Clerk key should fail closed,
+  // not silently authenticate everyone.
+  if (import.meta.env.DEV && envFlag("VITE_DEV_AUTH_BYPASS")) {
+    const mockUser: PlatformUser = {
+      id: "dev-user",
+      firstName: "Local",
+      lastName: "Developer",
+      userEmail: "dev@allternit.local",
+      primaryEmailAddress: { emailAddress: "dev@allternit.local" },
+      emailAddresses: [{ emailAddress: "dev@allternit.local" }],
+      imageUrl: null,
+    }
+    return {
+      user: {
+        isLoaded: true as boolean,
+        isSignedIn: true as boolean,
+        user: mockUser,
+      },
+      sessions: {
+        isLoaded: true as boolean,
+        sessions: [] as any[],
+      },
+      organization: {
+        isLoaded: true as boolean,
+        organization: null as PlatformOrganization | null,
+        membership: null as PlatformOrganizationMembership | null,
+      },
+      auth: {
+        isLoaded: true as boolean,
+        isSignedIn: true as boolean | undefined,
+        userId: "dev-user" as string | null | undefined,
+        sessionId: "dev-session" as string | null | undefined,
+        orgId: "dev-org" as string | null | undefined,
+        orgRole: "admin" as string | null | undefined,
+        actor: null as unknown,
+        getToken: async () => "dev-token" as string | null,
+      },
+      signOut: async (_options?: any) => {},
+      hardSignOut: async (_options?: any) => {},
+      clerk: null as any,
+    }
   }
+
+  // Fail closed: no Clerk key and no explicit bypass means signed-out.
   return {
     user: {
       isLoaded: true as boolean,
-      isSignedIn: true as boolean,
-      user: mockUser,
+      isSignedIn: false as boolean,
+      user: null,
     },
     sessions: {
       isLoaded: true as boolean,
@@ -423,13 +469,13 @@ function buildDisabledAuthValue() {
     },
     auth: {
       isLoaded: true as boolean,
-      isSignedIn: true as boolean | undefined,
-      userId: 'dev-user' as string | null | undefined,
-      sessionId: 'dev-session' as string | null | undefined,
-      orgId: 'dev-org' as string | null | undefined,
-      orgRole: 'admin' as string | null | undefined,
+      isSignedIn: false as boolean | undefined,
+      userId: null as string | null | undefined,
+      sessionId: null as string | null | undefined,
+      orgId: null as string | null | undefined,
+      orgRole: null as string | null | undefined,
       actor: null as unknown,
-      getToken: async () => 'dev-token' as string | null,
+      getToken: async () => null as string | null,
     },
     signOut: async (_options?: any) => {},
     hardSignOut: async (_options?: any) => {},

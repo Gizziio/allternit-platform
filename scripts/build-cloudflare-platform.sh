@@ -85,7 +85,6 @@ step "Building platform for Cloudflare Pages (static export)…"
 # shadow them. Setting a var to "" in a one-liner can be silently ignored by
 # some shells/npm runners — export guarantees it wins over .env.local.
 export NEXT_PUBLIC_ALLTERNIT_PLATFORM_DISABLE_CLERK=""
-export NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:-pk_live_Y2xlcmsucGxhdGZvcm0uYWxsdGVybml0LmNvbSQ}"
 export NEXT_PUBLIC_CLERK_SIGN_IN_URL="${NEXT_PUBLIC_CLERK_SIGN_IN_URL:-/sign-in}"
 export NEXT_PUBLIC_CLERK_SIGN_UP_URL="${NEXT_PUBLIC_CLERK_SIGN_UP_URL:-/sign-up}"
 

@@ -9,7 +9,9 @@ if (!email || !password) {
   process.exit(1);
 }
 
-const startUrl = 'https://platform.allternit.com/sign-in?redirect_url=https%3A%2F%2Fremotecontrol.allternit.com%2F';
+// Default to production; override with START_URL for local dev, e.g.
+// START_URL='http://localhost:3013/sign-in?redirect_url=http%3A%2F%2Flocalhost%3A3013%2Fshell'
+const startUrl = process.env.START_URL || 'https://platform.allternit.com/sign-in?redirect_url=https%3A%2F%2Fremotecontrol.allternit.com%2F';
 const outDir = '/tmp/allternit-signin-evidence';
 fs.mkdirSync(outDir, { recursive: true });
 

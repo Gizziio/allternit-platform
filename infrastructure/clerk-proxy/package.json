@@ -1,0 +1,6 @@
+{
+  "name": "@allternit/clerk-proxy",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Clerk Frontend API proxy for allternit.com"
+}

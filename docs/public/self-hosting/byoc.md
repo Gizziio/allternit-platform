@@ -36,8 +36,8 @@ The API verifies Clerk JWTs against a JWKS endpoint. Configure it through compan
 ```json
 {
   "clerkPublishableKey": "pk_test_...",
-  "clerkJwksUrl": "https://clerk.platform.allternit.com/.well-known/jwks.json",
-  "clerkIssuer": "https://clerk.platform.allternit.com",
+  "clerkJwksUrl": "https://clerk.allternit.com/.well-known/jwks.json",
+  "clerkIssuer": "https://clerk.allternit.com",
   "clerkWebhookSecret": "whsec_..."
 }
 ```
@@ -45,8 +45,8 @@ The API verifies Clerk JWTs against a JWKS endpoint. Configure it through compan
 Place the file at `~/.allternit/company.json` or set overrides:
 
 ```bash
-export CLERK_JWKS_URL="https://clerk.platform.allternit.com/.well-known/jwks.json"
-export CLERK_ISSUER="https://clerk.platform.allternit.com"
+export CLERK_JWKS_URL="https://clerk.allternit.com/.well-known/jwks.json"
+export CLERK_ISSUER="https://clerk.allternit.com"
 ```
 
 For fully offline/self-hosted deployments, set `selfHosted: true` in company config to skip Clerk JWT verification and trust the desktop bootstrap headers.

@@ -1727,7 +1727,7 @@
 				ALLTERNIT_GIZZI_CODE_URL = "";
 				ALLTERNIT_MESH_CONTROL_URL = "https://allternit-headscale.fly.dev";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CLERK_PUBLISHABLE_KEY = pk_live_Y2xlcmsucGxhdGZvcm0uYWxsdGVybml0LmNvbSQ;
+				CLERK_PUBLISHABLE_KEY = pk_live_Y2xlcmsuYWxsdGVybml0LmNvbSQ;
 				CODE_SIGN_ENTITLEMENTS = Allternit.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
@@ -1782,7 +1782,7 @@
 				ALLTERNIT_GIZZI_CODE_URL = "http://127.0.0.1:4096";
 				ALLTERNIT_MESH_CONTROL_URL = "https://allternit-headscale.fly.dev";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CLERK_PUBLISHABLE_KEY = pk_live_Y2xlcmsucGxhdGZvcm0uYWxsdGVybml0LmNvbSQ;
+				CLERK_PUBLISHABLE_KEY = pk_live_Y2xlcmsuYWxsdGVybml0LmNvbSQ;
 				CODE_SIGN_ENTITLEMENTS = Allternit.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;

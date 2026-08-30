@@ -27,8 +27,8 @@ The server starts on `http://localhost:8080` by default.
 |----------|---------|-------------|
 | `PORT` | `8080` | HTTP server port |
 | `DATABASE_URL` | `./data/api.db` | SQLite path or Postgres URL |
-| `CLERK_ISSUER` | `https://clerk.platform.allternit.com` | Clerk JWT issuer |
-| `CLERK_JWKS_URL` | `https://clerk.platform.allternit.com/.well-known/jwks.json` | Clerk signing keys |
+| `CLERK_ISSUER` | `https://clerk.allternit.com` | Clerk JWT issuer |
+| `CLERK_JWKS_URL` | `https://clerk.allternit.com/.well-known/jwks.json` | Clerk signing keys |
 | `ALLTERNIT_PLATFORM_URL` | `https://ai.allternit.com` | Browser pairing origin |
 | `CORS_ALLOWED_ORIGINS` | `https://ai.allternit.com` | Allowed browser origins |
 

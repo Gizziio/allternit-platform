@@ -53,8 +53,8 @@ const ORGANIZATION_SLUG_HEADER: &str = "x-allternit-organization-slug";
 
 // ─── Configuration ──────────────────────────────────────────────────────────
 
-const DEFAULT_CLERK_JWKS_URL: &str = "https://clerk.platform.allternit.com/.well-known/jwks.json";
-const DEFAULT_CLERK_ISSUER: &str = "https://clerk.platform.allternit.com";
+const DEFAULT_CLERK_JWKS_URL: &str = "https://clerk.allternit.com/.well-known/jwks.json";
+const DEFAULT_CLERK_ISSUER: &str = "https://clerk.allternit.com";
 
 /// How long to cache JWKS before refreshing
 const JWKS_CACHE_TTL: Duration = Duration::from_secs(3600);
