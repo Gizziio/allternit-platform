@@ -9,8 +9,13 @@
  */
 
 function readEnv(key: string): string | undefined {
-  // Vite client env — dynamic key access is intentionally NOT used here because
-  // Vite only replaces literal `import.meta.env.FOO` patterns at build time.
+  // Vite client env. In the production bundle `import.meta.env` is replaced
+  // with a static object of public env vars, so dynamic key access works at
+  // runtime. This is required for NEXT_PUBLIC_* values to be visible to the
+  // generic `env()` helper in the browser.
+  if (typeof import.meta.env !== 'undefined' && import.meta.env[key]) {
+    return import.meta.env[key] as string;
+  }
   // Node / build env fallback
   if (typeof process !== 'undefined' && process.env?.[key]) {
     return process.env[key];

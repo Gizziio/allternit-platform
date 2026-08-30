@@ -1,0 +1,10 @@
+name = "allternit-clerk-proxy"
+main = "index.js"
+compatibility_date = "2025-01-01"
+
+routes = [
+  { pattern = "allternit.com/__clerk/*", zone_id = "5ebf34ee08d574ea107bbeb83395723a" },
+  { pattern = "platform.allternit.com/__clerk/*", zone_id = "5ebf34ee08d574ea107bbeb83395723a" },
+  { pattern = "ai.allternit.com/__clerk/*", zone_id = "5ebf34ee08d574ea107bbeb83395723a" },
+  { pattern = "*allternit.com/__clerk/*", zone_id = "5ebf34ee08d574ea107bbeb83395723a" }
+]

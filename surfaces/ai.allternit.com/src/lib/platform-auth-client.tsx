@@ -30,6 +30,11 @@ const SIGN_UP_URL = env("NEXT_PUBLIC_CLERK_SIGN_UP_URL") ?? "/sign-up"
 const PROXY_URL = env("NEXT_PUBLIC_CLERK_PROXY_URL")
 
 function getProxyUrl(): string | undefined {
+  // Prefer a same-origin proxy so Clerk session cookies stay first-party.
+  // Falls back to the baked env var for SSR/build-time paths.
+  if (typeof window !== "undefined") {
+    return `${window.location.origin}/__clerk`
+  }
   return PROXY_URL
 }
 // The mounted path for the embedded <SignIn>/<SignUp> components must be a
