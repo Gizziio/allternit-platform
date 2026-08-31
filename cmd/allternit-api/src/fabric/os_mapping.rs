@@ -30,7 +30,7 @@
 //! source of truth.
 
 use crate::fabric::model_catalog::FabricModelRecord;
-use crate::fabric::node_registry::{FabricNodeAssignment, FabricNodeRecord, NodeCapacity};
+use crate::fabric::node_registry::{FabricNodeRecord, NodeCapacity};
 use crate::fabric::resources::{FabricPlacementSummary, FabricResource, FabricUsageEvent};
 use crate::fabric::sku::ResourceClass as CloudResourceClass;
 use crate::fabric_model_routes::ResponsesRequest;
@@ -278,27 +278,6 @@ pub fn placement_from_fabric_placement(
         termination_reason: None,
         created_at: Some(placement.started_at),
         updated_at: placement.ended_at,
-        labels: HashMap::new(),
-    }
-}
-
-/// Convert a Cloud node assignment into a canonical `Assignment`.
-pub fn assignment_from_fabric_assignment(
-    assignment: &FabricNodeAssignment,
-) -> contracts::Assignment {
-    contracts::Assignment {
-        id: with_prefix(&assignment.id, "asg_"),
-        node_id: with_prefix(&assignment.node_id, "node_"),
-        resource_id: with_prefix(&assignment.resource_id, "res_"),
-        kind: assignment.kind.clone(),
-        class: assignment.class.clone(),
-        requested_vcpu: assignment.requested_vcpu,
-        requested_memory_mib: assignment.requested_memory_mib,
-        requested_gpu_vram_mib: assignment.requested_gpu_vram_mib,
-        status: assignment.status.clone(),
-        payload: assignment.payload.clone(),
-        created_at: assignment.created_at,
-        updated_at: Some(assignment.updated_at),
         labels: HashMap::new(),
     }
 }
@@ -574,28 +553,6 @@ mod tests {
         let mapped = placement_from_fabric_placement(&placement, None);
         assert_eq!(mapped.offer_id, "off_unknown");
         assert_eq!(mapped.instance_type, "unknown");
-    }
-
-    #[test]
-    fn assignment_mapping_prefixes_node_and_resource_ids() {
-        let assignment = FabricNodeAssignment {
-            id: "asg-uuid".to_string(),
-            node_id: "n1".to_string(),
-            resource_id: "res-uuid".to_string(),
-            kind: "compute".to_string(),
-            class: "s".to_string(),
-            requested_vcpu: 1,
-            requested_memory_mib: 2048,
-            requested_gpu_vram_mib: 0,
-            status: "pending".to_string(),
-            payload: None,
-            created_at: Utc::now(),
-            updated_at: Utc::now(),
-        };
-        let mapped = assignment_from_fabric_assignment(&assignment);
-        assert!(mapped.id.starts_with("asg_"));
-        assert!(mapped.node_id.starts_with("node_"));
-        assert!(mapped.resource_id.starts_with("res_"));
     }
 
     #[test]

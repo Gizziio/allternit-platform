@@ -119,21 +119,10 @@ pub struct FabricNodeRecord {
 }
 
 /// A workload assignment sent to a Private Fabric node.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FabricNodeAssignment {
-    pub id: String,
-    pub node_id: String,
-    pub resource_id: String,
-    pub kind: String,
-    pub class: String,
-    pub requested_vcpu: i64,
-    pub requested_memory_mib: i64,
-    pub requested_gpu_vram_mib: i64,
-    pub status: String,
-    pub payload: Option<String>,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-}
+///
+/// Uses the canonical AllternitOS `assignment.schema.json` type so Cloud does
+/// not maintain a parallel view struct.
+pub use allternitos_cloud_contracts::Assignment as FabricNodeAssignment;
 
 /// An enrollment token created by an org admin for Private Fabric onboarding.
 #[derive(Debug, Clone)]
@@ -591,7 +580,8 @@ impl FabricNodeRegistry {
                 status: row.get(8)?,
                 payload: row.get(9)?,
                 created_at: row.get(10)?,
-                updated_at: row.get(11)?,
+                updated_at: Some(row.get(11)?),
+                labels: std::collections::HashMap::new(),
             })
         })?;
         rows.collect()
