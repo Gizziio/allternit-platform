@@ -5,6 +5,7 @@
 
 use chrono::{DateTime, Utc};
 use rusqlite::OptionalExtension;
+use std::collections::HashMap;
 
 use crate::db::DbHandle;
 
@@ -45,18 +46,10 @@ pub struct FabricPlacementSummary {
 }
 
 /// A Fabric usage event as seen by admins.
-#[derive(Debug, Clone)]
-pub struct FabricUsageEvent {
-    pub id: String,
-    pub resource_id: String,
-    pub placement_id: Option<String>,
-    pub event_type: String,
-    pub quantity: f64,
-    pub unit: String,
-    pub measured_at: DateTime<Utc>,
-    pub processed_at: Option<DateTime<Utc>>,
-    pub cost_event_id: Option<String>,
-}
+///
+/// Uses the canonical AllternitOS `usage-event.schema.json` type so Cloud does
+/// not maintain a parallel view struct.
+pub use allternitos_cloud_contracts::UsageEvent as FabricUsageEvent;
 
 /// Database access for Fabric resources and placements.
 #[derive(Debug, Clone)]
@@ -204,8 +197,9 @@ impl ResourceManager {
         let conn = self.db.connect()?;
         let (sql, params): (&str, Vec<Box<dyn rusqlite::ToSql>>) = if let Some(resource_id) = resource_id {
             (
-                "SELECT u.id, u.resource_id, u.placement_id, u.event_type, u.quantity,
-                        u.unit, u.measured_at, u.processed_at, u.cost_event_id
+                "SELECT u.id, u.resource_id, u.placement_id, u.node_id, u.event_type, u.quantity,
+                        u.unit, u.measured_at, u.processed_at, u.cost_event_id,
+                        u.metadata_json, u.labels_json, u.created_at
                  FROM fabric_usage_events u
                  JOIN fabric_resources r ON r.id = u.resource_id
                  WHERE r.organization_id = ?1 AND u.resource_id = ?2
@@ -215,8 +209,9 @@ impl ResourceManager {
             )
         } else {
             (
-                "SELECT u.id, u.resource_id, u.placement_id, u.event_type, u.quantity,
-                        u.unit, u.measured_at, u.processed_at, u.cost_event_id
+                "SELECT u.id, u.resource_id, u.placement_id, u.node_id, u.event_type, u.quantity,
+                        u.unit, u.measured_at, u.processed_at, u.cost_event_id,
+                        u.metadata_json, u.labels_json, u.created_at
                  FROM fabric_usage_events u
                  JOIN fabric_resources r ON r.id = u.resource_id
                  WHERE r.organization_id = ?1
@@ -289,16 +284,24 @@ impl ResourceManager {
     }
 
     fn parse_usage_event(row: &rusqlite::Row) -> Result<FabricUsageEvent, rusqlite::Error> {
+        let metadata_json: String = row.get("metadata_json")?;
+        let metadata = serde_json::from_str(&metadata_json).unwrap_or_default();
+        let labels_json: String = row.get("labels_json")?;
+        let labels: HashMap<String, String> = serde_json::from_str(&labels_json).unwrap_or_default();
         Ok(FabricUsageEvent {
             id: row.get("id")?,
             resource_id: row.get("resource_id")?,
             placement_id: row.get("placement_id")?,
+            node_id: row.get("node_id")?,
             event_type: row.get("event_type")?,
             quantity: row.get("quantity")?,
             unit: row.get("unit")?,
             measured_at: Self::parse_dt(row, "measured_at")?,
             processed_at: Self::parse_dt_optional(row, "processed_at")?,
             cost_event_id: row.get("cost_event_id")?,
+            metadata,
+            created_at: Some(Self::parse_dt(row, "created_at")?),
+            labels,
         })
     }
 

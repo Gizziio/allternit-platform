@@ -430,17 +430,7 @@ fn placement_json(placement: &FabricPlacementSummary) -> Value {
 }
 
 fn usage_event_json(event: &FabricUsageEvent) -> Value {
-    json!({
-        "id": event.id,
-        "resource_id": event.resource_id,
-        "placement_id": event.placement_id,
-        "event_type": event.event_type,
-        "quantity": event.quantity,
-        "unit": event.unit,
-        "measured_at": event.measured_at.to_rfc3339(),
-        "processed_at": event.processed_at.map(|d| d.to_rfc3339()),
-        "cost_event_id": event.cost_event_id,
-    })
+    serde_json::to_value(event).unwrap_or_else(|_| json!(null))
 }
 
 #[cfg(test)]

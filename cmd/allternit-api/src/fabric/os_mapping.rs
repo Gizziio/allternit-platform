@@ -31,7 +31,7 @@
 
 use crate::fabric::model_catalog::FabricModelRecord;
 use crate::fabric::node_registry::{FabricNodeRecord, NodeCapacity};
-use crate::fabric::resources::{FabricPlacementSummary, FabricResource, FabricUsageEvent};
+use crate::fabric::resources::{FabricPlacementSummary, FabricResource};
 use crate::fabric::sku::ResourceClass as CloudResourceClass;
 use crate::fabric_model_routes::ResponsesRequest;
 use allternitos_cloud_contracts as contracts;
@@ -286,35 +286,6 @@ pub fn placement_from_fabric_placement(
 /// `UsageEvent`.
 pub fn usage_event_from_cloud_usage_event(
     event: &crate::fabric::usage::UsageEvent,
-) -> contracts::UsageEvent {
-    let mut metadata = serde_json::Map::new();
-    if let Some(cost_event_id) = &event.cost_event_id {
-        metadata.insert(
-            "cost_event_id".to_string(),
-            serde_json::Value::String(cost_event_id.clone()),
-        );
-    }
-
-    contracts::UsageEvent {
-        id: with_prefix(&event.id, "uev_"),
-        resource_id: with_prefix(&event.resource_id, "res_"),
-        placement_id: event.placement_id.as_ref().map(|id| with_prefix(id, "plc_")),
-        node_id: None,
-        event_type: event.event_type.clone(),
-        quantity: event.quantity,
-        unit: event.unit.clone(),
-        measured_at: event.measured_at,
-        processed_at: event.processed_at,
-        cost_event_id: event.cost_event_id.clone(),
-        metadata,
-        created_at: None,
-        labels: HashMap::new(),
-    }
-}
-
-/// Convert a Fabric usage event into a canonical `UsageEvent`.
-pub fn usage_event_from_fabric_usage_event(
-    event: &FabricUsageEvent,
 ) -> contracts::UsageEvent {
     let mut metadata = serde_json::Map::new();
     if let Some(cost_event_id) = &event.cost_event_id {
