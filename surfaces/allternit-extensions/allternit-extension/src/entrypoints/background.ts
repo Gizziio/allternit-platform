@@ -179,6 +179,9 @@ export default defineBackground(() => {
     if (message.type === 'AUTOFILL_FILL_CREDENTIAL') {
       const credentialId = message.payload?.credentialId as string | undefined
       const tabId = sender.tab?.id
+      const origin =
+        (message.payload?.origin as string | undefined) ??
+        (sender.tab?.url ? new URL(sender.tab.url).hostname : undefined)
       if (!credentialId) {
         sendResponse({ ok: false, error: 'credentialId is required' })
         return undefined
@@ -187,7 +190,7 @@ export default defineBackground(() => {
         sendResponse({ ok: false, error: 'tabId is required' })
         return undefined
       }
-      fillCredential(credentialId)
+      fillCredential(credentialId, origin)
         .then(async (filled) => {
           await chrome.tabs.sendMessage(tabId, {
             type: 'AUTOFILL_FILL_FIELDS',
@@ -209,11 +212,14 @@ export default defineBackground(() => {
     }
     if (message.type === 'AUTOFILL_RECORD_USE') {
       const credentialId = message.payload?.credentialId as string | undefined
+      const origin =
+        (message.payload?.origin as string | undefined) ??
+        (sender.tab?.url ? new URL(sender.tab.url).hostname : undefined)
       if (!credentialId) {
         sendResponse({ ok: false, error: 'credentialId is required' })
         return undefined
       }
-      recordCredentialUse(credentialId)
+      recordCredentialUse(credentialId, origin)
         .then(() => sendResponse({ ok: true }))
         .catch((error) =>
           sendResponse({

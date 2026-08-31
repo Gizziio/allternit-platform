@@ -3,8 +3,11 @@
  *
  * Supports:
  *   - 1Password (.1pif, .csv)
+ *   - Apple Passwords / iCloud Keychain (csv)
  *   - Bitwarden (csv)
+ *   - Dashlane (csv)
  *   - Google Chrome / Chromium (csv)
+ *   - LastPass (csv)
  *   - Generic CSV with common column names
  *
  * All parsing is done locally in the extension; passwords are sent to the
@@ -18,7 +21,15 @@ export interface ImportCredential {
   originPattern: string;
 }
 
-export type ImportFormat = '1password' | 'bitwarden' | 'chrome' | 'generic' | 'unknown';
+export type ImportFormat =
+  | '1password'
+  | 'apple'
+  | 'bitwarden'
+  | 'chrome'
+  | 'dashlane'
+  | 'generic'
+  | 'lastpass'
+  | 'unknown';
 
 function normalizeOrigin(url: string): string {
   if (!url) return '';
@@ -90,11 +101,34 @@ function pickColumn(row: string[], headers: string[], candidates: string[]): str
 
 function detectFormat(headers: string[]): ImportFormat {
   const headerSet = new Set(headers);
-  if (headerSet.has('username') && headerSet.has('password') && headerSet.has('url')) {
-    if (headerSet.has('type') || headerSet.has('login_uri')) return 'bitwarden';
-    if (headerSet.has('website')) return '1password';
-    return 'chrome';
+
+  // Dashlane: unique columns not used by the other exporters.
+  if (
+    headerSet.has('otpurl') ||
+    headerSet.has('username2') ||
+    headerSet.has('username3') ||
+    (headerSet.has('category') && headerSet.has('note'))
+  ) {
+    return 'dashlane';
   }
+
+  // LastPass: classic export columns.
+  if (headerSet.has('grouping') && headerSet.has('fav')) {
+    return 'lastpass';
+  }
+
+  // Apple Passwords: Title/URL/Username/Password/Notes/OTPAuth.
+  if (
+    headerSet.has('title') &&
+    headerSet.has('url') &&
+    headerSet.has('username') &&
+    headerSet.has('password') &&
+    !headerSet.has('name') &&
+    !headerSet.has('website')
+  ) {
+    return 'apple';
+  }
+
   if (headerSet.has('login_username') || headerSet.has('login_uri')) return 'bitwarden';
   if (headerSet.has('website')) return '1password';
   if (headerSet.has('name') && headerSet.has('url') && headerSet.has('username') && headerSet.has('password')) {
@@ -117,6 +151,12 @@ function rowToCredential(row: string[], headers: string[], format: ImportFormat)
       password = pickColumn(row, headers, ['password']);
       originPattern = normalizeOrigin(pickColumn(row, headers, ['url', 'website', 'login_uri']));
       break;
+    case 'apple':
+      provider = pickColumn(row, headers, ['title']);
+      username = pickColumn(row, headers, ['username', 'email']);
+      password = pickColumn(row, headers, ['password']);
+      originPattern = normalizeOrigin(pickColumn(row, headers, ['url']));
+      break;
     case 'bitwarden':
       provider = pickColumn(row, headers, ['name']);
       username = pickColumn(row, headers, ['login_username', 'username', 'email']);
@@ -128,6 +168,18 @@ function rowToCredential(row: string[], headers: string[], format: ImportFormat)
       username = pickColumn(row, headers, ['username', 'email']);
       password = pickColumn(row, headers, ['password']);
       originPattern = normalizeOrigin(pickColumn(row, headers, ['url', 'website']));
+      break;
+    case 'dashlane':
+      provider = pickColumn(row, headers, ['title']);
+      username = pickColumn(row, headers, ['username', 'email', 'login_username']);
+      password = pickColumn(row, headers, ['password']);
+      originPattern = normalizeOrigin(pickColumn(row, headers, ['url', 'website']));
+      break;
+    case 'lastpass':
+      provider = pickColumn(row, headers, ['name']);
+      username = pickColumn(row, headers, ['username', 'email']);
+      password = pickColumn(row, headers, ['password']);
+      originPattern = normalizeOrigin(pickColumn(row, headers, ['url']));
       break;
     case 'generic':
       provider = pickColumn(row, headers, ['name', 'title', 'website', 'provider', 'site']);
@@ -174,10 +226,16 @@ export function formatLabel(format: ImportFormat): string {
   switch (format) {
     case '1password':
       return '1Password';
+    case 'apple':
+      return 'Apple Passwords';
     case 'bitwarden':
       return 'Bitwarden';
     case 'chrome':
       return 'Chrome';
+    case 'dashlane':
+      return 'Dashlane';
+    case 'lastpass':
+      return 'LastPass';
     case 'generic':
       return 'Generic CSV';
     default:

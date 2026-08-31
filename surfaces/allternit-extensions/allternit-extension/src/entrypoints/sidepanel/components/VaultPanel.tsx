@@ -162,7 +162,8 @@ export function VaultPanel({ onBack }: VaultPanelProps) {
           <p className="text-xs font-medium text-foreground">Agent-native password manager</p>
           <p className="text-[10px] text-muted-foreground">
             Credentials are encrypted server-side and only decrypted when the extension requests a
-            fill. Supports 1Password, Bitwarden, and Chrome CSV exports.
+            fill. Supports 1Password, Apple Passwords, Bitwarden, Chrome, Dashlane, and LastPass CSV
+            exports.
           </p>
         </div>
 

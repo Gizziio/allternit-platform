@@ -29,6 +29,7 @@ pub mod analytics_routes;
 pub mod artifact_routes;
 pub mod audit_log_routes;
 pub mod auth;
+pub mod benchmark_routes;
 pub mod automation_routes;
 pub mod backend_install_routes;
 pub mod beta_deployment_routes;

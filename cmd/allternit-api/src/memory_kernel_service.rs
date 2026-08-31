@@ -3,12 +3,15 @@
 //! Provides additive, lightweight SQLite-backed memory operations:
 //! observations, fact extraction, entity tracking, semantic/keyword recall, and turn retention.
 
-use rusqlite::params;
+use rusqlite::{params, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 
 use crate::db::DbHandle;
+use crate::llm_gateway::embeddings::generate_local_embedding;
+
+const EMBEDDING_DIM: usize = 384;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MemoryObservation {
@@ -103,6 +106,155 @@ pub enum MemoryKernelError {
     Internal(String),
 }
 
+fn f32_vec_to_bytes(vec: &[f32]) -> Vec<u8> {
+    vec.iter().flat_map(|v| v.to_le_bytes()).collect()
+}
+
+fn bytes_to_f32_vec(bytes: &[u8]) -> Vec<f32> {
+    bytes
+        .chunks_exact(4)
+        .map(|chunk| {
+            let mut arr = [0u8; 4];
+            arr.copy_from_slice(chunk);
+            f32::from_le_bytes(arr)
+        })
+        .collect()
+}
+
+/// Store or replace a local embedding for a memory target.
+pub fn store_embedding(
+    db: &DbHandle,
+    user_id: &str,
+    target_type: &str,
+    target_id: &str,
+    text: &str,
+) -> Result<String, MemoryKernelError> {
+    let id = format!("emb_{}", Uuid::new_v4().simple());
+    let embedding = generate_local_embedding(text, EMBEDDING_DIM);
+    let bytes = f32_vec_to_bytes(&embedding);
+    let conn = db.connect()?;
+    conn.execute(
+        "INSERT INTO memory_embeddings (id, user_id, target_type, target_id, embedding, model)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+         ON CONFLICT(user_id, target_type, target_id)
+         DO UPDATE SET embedding = excluded.embedding, model = excluded.model, created_at = CURRENT_TIMESTAMP",
+        params![id, user_id, target_type, target_id, bytes, "local-hash-384"],
+    )?;
+    Ok(id)
+}
+
+/// Load a single memory target as a RecallResult.
+fn load_memory_target(
+    conn: &rusqlite::Connection,
+    target_type: &str,
+    target_id: &str,
+) -> Result<Option<RecallResult>, MemoryKernelError> {
+    match target_type {
+        "fact" => conn
+            .query_row(
+                "SELECT id, fact, confidence, valid_from, source_observation_id FROM memory_facts WHERE id = ?1",
+                params![target_id],
+                |row| {
+                    Ok(RecallResult {
+                        id: row.get::<_, String>(0)?,
+                        item_type: "fact".to_string(),
+                        score: 0.0,
+                        content: row.get::<_, String>(1)?,
+                        metadata: serde_json::json!({
+                            "confidence": row.get::<_, f64>(2)?,
+                            "source_observation_id": row.get::<_, Option<String>>(3)?,
+                        }),
+                        timestamp: row.get::<_, String>(3)?,
+                    })
+                },
+            )
+            .optional()
+            .map_err(MemoryKernelError::from),
+        "entity" => conn
+            .query_row(
+                "SELECT id, entity_id, name, type, summary, last_updated FROM memory_entities WHERE id = ?1",
+                params![target_id],
+                |row| {
+                    let name: String = row.get(2)?;
+                    let etype: String = row.get(3)?;
+                    let summary: Option<String> = row.get(4)?;
+                    Ok(RecallResult {
+                        id: row.get::<_, String>(0)?,
+                        item_type: "entity".to_string(),
+                        score: 0.0,
+                        content: format!("[Entity: {} ({})] {}", name, etype, summary.as_deref().unwrap_or("")),
+                        metadata: serde_json::json!({
+                            "entity_id": row.get::<_, String>(1)?,
+                            "name": name,
+                            "type": etype,
+                            "summary": summary,
+                        }),
+                        timestamp: row.get::<_, String>(5)?,
+                    })
+                },
+            )
+            .optional()
+            .map_err(MemoryKernelError::from),
+        "observation" => conn
+            .query_row(
+                "SELECT id, kind, content, timestamp, source FROM memory_observations WHERE id = ?1",
+                params![target_id],
+                |row| {
+                    Ok(RecallResult {
+                        id: row.get::<_, String>(0)?,
+                        item_type: "observation".to_string(),
+                        score: 0.0,
+                        content: row.get::<_, String>(2)?,
+                        metadata: serde_json::json!({
+                            "kind": row.get::<_, String>(1)?,
+                            "source": row.get::<_, Option<String>>(4)?,
+                        }),
+                        timestamp: row.get::<_, String>(3)?,
+                    })
+                },
+            )
+            .optional()
+            .map_err(MemoryKernelError::from),
+        _ => Ok(None),
+    }
+}
+
+/// Find memory targets whose embeddings are most similar to the query text.
+pub fn recall_semantic(
+    db: &DbHandle,
+    user_id: &str,
+    query: &str,
+    limit: usize,
+) -> Result<Vec<(String, String, f64)>, MemoryKernelError> {
+    let conn = db.connect()?;
+    let query_vec = generate_local_embedding(query, EMBEDDING_DIM);
+    let mut stmt = conn.prepare(
+        "SELECT target_type, target_id, embedding FROM memory_embeddings WHERE user_id = ?1",
+    )?;
+    let rows = stmt.query_map(params![user_id], |row| {
+        Ok((
+            row.get::<_, String>(0)?,
+            row.get::<_, String>(1)?,
+            row.get::<_, Vec<u8>>(2)?,
+        ))
+    })?;
+
+    let mut scored: Vec<(String, String, f64)> = Vec::new();
+    for row in rows.flatten() {
+        let (target_type, target_id, bytes) = row;
+        let candidate = bytes_to_f32_vec(&bytes);
+        if candidate.len() == query_vec.len() {
+            let sim = cosine_similarity(&query_vec, &candidate) as f64;
+            if sim > 0.0 {
+                scored.push((target_type, target_id, sim));
+            }
+        }
+    }
+    scored.sort_by(|a, b| b.2.partial_cmp(&a.2).unwrap_or(std::cmp::Ordering::Equal));
+    scored.truncate(limit);
+    Ok(scored)
+}
+
 /// Record a raw observation (turn, tool execution, file event, decision, or checkpoint).
 pub fn record_observation(
     db: &DbHandle,
@@ -155,7 +307,7 @@ pub fn extract_facts_heuristic(content: &str) -> Vec<String> {
     facts
 }
 
-/// Persist extracted facts linked to an observation.
+/// Persist extracted facts linked to an observation and index embeddings for semantic recall.
 pub fn persist_facts(
     db: &DbHandle,
     user_id: &str,
@@ -173,6 +325,9 @@ pub fn persist_facts(
              VALUES (?1, ?2, ?3, ?4, 0.85, ?5)",
             params![fact_id, user_id, agent_id, fact, observation_id],
         )?;
+
+        // Best-effort embedding index; failures should not block fact persistence.
+        let _ = store_embedding(db, user_id, "fact", &fact_id, fact);
 
         persisted.push(MemoryFact {
             id: fact_id,
@@ -361,7 +516,24 @@ pub fn recall(
         }
     }
 
-    // 4-Way Reciprocal Rank Fusion (RRF):
+    // 4. Augment with semantic/embedding recall when embeddings exist.
+    let semantic_hits = recall_semantic(db, user_id, query, limit.max(20))?;
+    if !semantic_hits.is_empty() {
+        for (target_type, target_id, sim) in semantic_hits {
+            let key = format!("{}:{}", target_type, target_id);
+            if let Some(pos) = results.iter().position(|r| format!("{}:{}", r.item_type, r.id) == key) {
+                // Boost existing keyword result with semantic signal.
+                results[pos].score += sim * 0.35;
+                results[pos].metadata["semantic_similarity"] = serde_json::json!(sim);
+            } else if let Some(mut hit) = load_memory_target(&conn, &target_type, &target_id)? {
+                hit.score = sim * 0.35;
+                hit.metadata["semantic_similarity"] = serde_json::json!(sim);
+                results.push(hit);
+            }
+        }
+    }
+
+    // 5-Way Reciprocal Rank Fusion (RRF):
     // Blend Lexical (0.25), Confidence/Semantic (0.35), Graph Entity (0.20), and Recency (0.20)
     let k = 60.0;
     let now = chrono::Utc::now();
@@ -556,5 +728,19 @@ mod tests {
         assert!(facts.len() >= 2);
         assert!(facts.iter().any(|f| f.contains("Rust")));
         assert!(facts.iter().any(|f| f.contains("John Doe")));
+    }
+
+    #[test]
+    fn embedding_byte_roundtrip() {
+        let vec = vec![1.0f32, -2.5, 3.75, 0.0];
+        let bytes = f32_vec_to_bytes(&vec);
+        let restored = bytes_to_f32_vec(&bytes);
+        assert_eq!(vec, restored);
+    }
+
+    #[test]
+    fn local_embedding_has_configured_dimensions() {
+        let emb = generate_local_embedding("hello world", EMBEDDING_DIM);
+        assert_eq!(emb.len(), EMBEDDING_DIM);
     }
 }

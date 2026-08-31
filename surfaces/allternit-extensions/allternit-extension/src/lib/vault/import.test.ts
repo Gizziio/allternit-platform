@@ -17,6 +17,21 @@ describe('password import parsers', () => {
     expect(detectImportFormat(csv)).toBe('chrome');
   });
 
+  it('detects Apple Passwords CSV', () => {
+    const csv = 'Title,URL,Username,Password,Notes,OTPAuth\nExample,https://example.com,user@example.com,secret123,,';
+    expect(detectImportFormat(csv)).toBe('apple');
+  });
+
+  it('detects Dashlane CSV', () => {
+    const csv = 'username,username2,username3,title,password,note,url,category,otpUrl\nuser@example.com,,,Example,secret123,,https://example.com,Social,';
+    expect(detectImportFormat(csv)).toBe('dashlane');
+  });
+
+  it('detects LastPass CSV', () => {
+    const csv = 'url,username,password,extra,name,grouping,fav\nhttps://example.com,user@example.com,secret123,,Example,Social,0';
+    expect(detectImportFormat(csv)).toBe('lastpass');
+  });
+
   it('parses 1Password export', () => {
     const csv = `title,website,username,password,notes
 Example,https://example.com,user@example.com,secret123,
@@ -68,6 +83,57 @@ Another,http://another.org,alice,a1!`;
     });
   });
 
+  it('parses Apple Passwords export', () => {
+    const csv = `Title,URL,Username,Password,Notes,OTPAuth
+Example,https://example.com,user@example.com,secret123,,
+GitHub,https://github.com,octocat,gh_secret,Authenticator,`;
+    const result = parsePasswordExport(csv);
+    expect(result.format).toBe('apple');
+    expect(result.credentials).toHaveLength(2);
+    expect(result.credentials[0]).toEqual({
+      provider: 'Example',
+      username: 'user@example.com',
+      password: 'secret123',
+      originPattern: 'example.com',
+    });
+    expect(result.credentials[1]).toEqual({
+      provider: 'GitHub',
+      username: 'octocat',
+      password: 'gh_secret',
+      originPattern: 'github.com',
+    });
+  });
+
+  it('parses Dashlane export', () => {
+    const csv = `username,username2,username3,title,password,note,url,category,otpUrl
+user@example.com,,,Example,secret123,,https://example.com,Social,
+alice,,,GitHub,gh_secret,,https://github.com,Dev,`;
+    const result = parsePasswordExport(csv);
+    expect(result.format).toBe('dashlane');
+    expect(result.credentials).toHaveLength(2);
+    expect(result.credentials[1]).toEqual({
+      provider: 'GitHub',
+      username: 'alice',
+      password: 'gh_secret',
+      originPattern: 'github.com',
+    });
+  });
+
+  it('parses LastPass export', () => {
+    const csv = `url,username,password,extra,name,grouping,fav
+https://example.com,user@example.com,secret123,,Example,Social,0
+https://github.com,octocat,gh_secret,,GitHub,Dev,1`;
+    const result = parsePasswordExport(csv);
+    expect(result.format).toBe('lastpass');
+    expect(result.credentials).toHaveLength(2);
+    expect(result.credentials[1]).toEqual({
+      provider: 'GitHub',
+      username: 'octocat',
+      password: 'gh_secret',
+      originPattern: 'github.com',
+    });
+  });
+
   it('returns unknown for unsupported CSV', () => {
     const csv = 'a,b,c\n1,2,3';
     const result = parsePasswordExport(csv);
@@ -83,9 +149,12 @@ Another,http://another.org,alice,a1!`;
 
   it('labels formats', () => {
     expect(formatLabel('1password')).toBe('1Password');
+    expect(formatLabel('apple')).toBe('Apple Passwords');
     expect(formatLabel('bitwarden')).toBe('Bitwarden');
     expect(formatLabel('chrome')).toBe('Chrome');
+    expect(formatLabel('dashlane')).toBe('Dashlane');
     expect(formatLabel('generic')).toBe('Generic CSV');
+    expect(formatLabel('lastpass')).toBe('LastPass');
     expect(formatLabel('unknown')).toBe('Unknown format');
   });
 });

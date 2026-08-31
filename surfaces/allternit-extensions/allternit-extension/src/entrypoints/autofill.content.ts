@@ -71,7 +71,7 @@ function scanAndAutofill(): void {
         const best = response.credentials[0];
         return chrome.runtime.sendMessage({
           type: 'AUTOFILL_FILL_CREDENTIAL',
-          payload: { credentialId: best.id },
+          payload: { credentialId: best.id, origin },
         });
       }
     })

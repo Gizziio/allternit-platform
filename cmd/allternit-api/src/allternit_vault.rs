@@ -92,6 +92,10 @@ pub fn router() -> Router<Arc<AppState>> {
             "/beta/vaults/:id/credentials/:credential_id/use",
             post(record_credential_use),
         )
+        .route(
+            "/beta/vaults/:id/credentials/:credential_id/uses",
+            get(list_credential_uses),
+        )
 }
 
 type ApiError = (StatusCode, Json<Value>);
@@ -342,6 +346,7 @@ struct PasswordCredentialSite {
 struct CredentialUseRequest {
     actor: String,
     context: Option<String>,
+    origin: Option<String>,
 }
 
 fn valid_password_credential(body: &PutPasswordCredential) -> bool {
@@ -369,6 +374,73 @@ fn credential_json(row: &rusqlite::Row<'_>) -> rusqlite::Result<Value> {
         "created_at": row.get::<_, String>(10)?,
         "updated_at": row.get::<_, String>(11)?,
     }))
+}
+
+/// Returns true if `origin` is in the credential's allowed set.
+/// A credential with no origin restrictions is treated as globally usable
+/// (matching existing behavior for OAuth-style entries).
+fn origin_allowed(
+    conn: &rusqlite::Connection,
+    credential_id: &str,
+    origin: &str,
+) -> rusqlite::Result<bool> {
+    let normalized = normalize_origin(origin);
+    if normalized.is_empty() {
+        return Ok(true);
+    }
+    let pattern: Option<String> = conn
+        .query_row(
+            "SELECT origin_pattern FROM allternit_vault_credentials WHERE id = ?1",
+            params![credential_id],
+            |row| row.get::<_, Option<String>>(0),
+        )
+        .optional()?
+        .flatten();
+    if pattern.as_ref().is_some_and(|p| normalize_origin(p) == normalized) {
+        return Ok(true);
+    }
+    let count: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM vault_credential_sites WHERE credential_id = ?1 AND origin = ?2",
+        params![credential_id, normalized],
+        |row| row.get(0),
+    )?;
+    if count > 0 {
+        return Ok(true);
+    }
+    // Unrestricted credential: no pattern and no sites.
+    let site_count: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM vault_credential_sites WHERE credential_id = ?1",
+        params![credential_id],
+        |row| row.get(0),
+    )?;
+    Ok(pattern.is_none() && site_count == 0)
+}
+
+fn log_credential_use(
+    conn: &rusqlite::Connection,
+    org_id: &str,
+    user_id: &str,
+    credential_id: &str,
+    action: &str,
+    origin: Option<&str>,
+    actor: Option<&str>,
+    context: Option<&str>,
+) -> rusqlite::Result<()> {
+    let id = uuid::Uuid::new_v4().to_string();
+    conn.execute(
+        "INSERT INTO vault_credential_use_log (id, credential_id, organization_id, user_id, action, origin, actor, context) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+        params![
+            id,
+            credential_id,
+            org_id,
+            user_id,
+            action,
+            origin.map(normalize_origin),
+            actor,
+            context,
+        ],
+    )?;
+    Ok(())
 }
 
 async fn put_vault_credential(
@@ -633,6 +705,7 @@ async fn fill_vault_password_credential(
     };
     let actor = body.actor.clone();
     let context = body.context.clone();
+    let origin = body.origin.clone();
     let user_id = user.user_id.clone();
     let credential_id_clone = credential_id.clone();
     let result = tokio::task::spawn_blocking(move || {
@@ -643,6 +716,11 @@ async fn fill_vault_password_credential(
             params![credential_id_clone, id],
             |row| Ok((row.get(0)?, row.get(1)?)),
         ).map_err(internal)?;
+        if let Some(ref o) = origin {
+            if !origin_allowed(&conn, &credential_id_clone, o).map_err(internal)? {
+                return Err(err(StatusCode::FORBIDDEN, "origin_not_allowed", "Credential is not scoped for the requested origin."));
+            }
+        }
         let password = crate::token_crypto::open(&encrypted);
         if password.is_empty() {
             return Err(err(StatusCode::INTERNAL_SERVER_ERROR, "vault_error", "Failed to decrypt credential."));
@@ -657,7 +735,17 @@ async fn fill_vault_password_credential(
             &user_id,
             "vault.credential.filled",
             &credential_id_clone,
-            Some(json!({"actor": actor, "context": context})),
+            Some(json!({"actor": actor, "context": context, "origin": origin})),
+        ).map_err(internal)?;
+        log_credential_use(
+            &conn,
+            &org,
+            &user_id,
+            &credential_id_clone,
+            "fill",
+            origin.as_deref(),
+            Some(&actor),
+            context.as_deref(),
         ).map_err(internal)?;
         Ok::<_, ApiError>(json!({"credential_id": credential_id_clone, "username": username, "password": password}))
     }).await;
@@ -690,6 +778,7 @@ async fn record_credential_use(
     let actor = body.actor.clone();
     let actor_clone = actor.clone();
     let context = body.context.clone();
+    let origin = body.origin.clone();
     let user_id = user.user_id.clone();
     let result = tokio::task::spawn_blocking(move || {
         let conn = state.db.connect().map_err(internal)?;
@@ -705,7 +794,17 @@ async fn record_credential_use(
                 &user_id,
                 "vault.credential.used",
                 &credential_id_clone,
-                Some(json!({"actor": actor_clone, "context": context})),
+                Some(json!({"actor": actor_clone, "context": context, "origin": origin})),
+            ).map_err(internal)?;
+            log_credential_use(
+                &conn,
+                &org,
+                &user_id,
+                &credential_id_clone,
+                "use",
+                origin.as_deref(),
+                Some(&actor_clone),
+                context.as_deref(),
             ).map_err(internal)?;
         }
         Ok::<_, ApiError>(affected)
@@ -713,6 +812,56 @@ async fn record_credential_use(
     match result {
         Ok(Ok(0)) => err(StatusCode::NOT_FOUND, "credential_not_found", "No such credential.").into_response(),
         Ok(Ok(_)) => Json(json!({"credential_id": credential_id, "actor": actor, "recorded_at": chrono::Utc::now().to_rfc3339()})).into_response(),
+        Ok(Err(e)) => e.into_response(),
+        Err(e) => internal(e).into_response(),
+    }
+}
+
+async fn list_credential_uses(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    credential: Option<Extension<CredentialContext>>,
+    Path((id, credential_id)): Path<(String, String)>,
+) -> Response {
+    if let Err(e) = authorize(
+        credential.as_ref().map(|e| &e.0),
+        Method::GET,
+        &format!("/api/v1/beta/vaults/{id}/credentials/{credential_id}/uses"),
+    ) {
+        return e.into_response();
+    }
+    let org = match organization(&user) {
+        Ok(org) => org,
+        Err(e) => return e.into_response(),
+    };
+    let credential_id_clone = credential_id.clone();
+    let result = tokio::task::spawn_blocking(move || -> Result<Vec<Value>, ApiError> {
+        let conn = state.db.connect().map_err(internal)?;
+        find_vault(&conn, &id, &org)?;
+        let mut stmt = conn
+            .prepare(
+                "SELECT id, action, origin, actor, context, created_at FROM vault_credential_use_log WHERE credential_id = ?1 ORDER BY created_at DESC LIMIT 250",
+            )
+            .map_err(internal)?;
+        let rows = stmt
+            .query_map(params![credential_id_clone], |row| {
+                Ok(json!({
+                    "id": row.get::<_, String>(0)?,
+                    "action": row.get::<_, String>(1)?,
+                    "origin": row.get::<_, Option<String>>(2)?,
+                    "actor": row.get::<_, Option<String>>(3)?,
+                    "context": row.get::<_, Option<String>>(4)?,
+                    "created_at": row.get::<_, String>(5)?,
+                }))
+            })
+            .map_err(internal)?
+            .collect::<rusqlite::Result<Vec<_>>>()
+            .map_err(internal)?;
+        Ok(rows)
+    })
+    .await;
+    match result {
+        Ok(Ok(v)) => Json(json!({"uses": v})).into_response(),
         Ok(Err(e)) => e.into_response(),
         Err(e) => internal(e).into_response(),
     }
@@ -783,6 +932,7 @@ async fn revoke_legacy_credential(
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn enterprise_vault_paths_require_vault_scopes() {
         let ctx = CredentialContext {
@@ -791,5 +941,51 @@ mod tests {
             scopes: vec!["api:write".into()],
         };
         assert!(authorize(Some(&ctx), Method::POST, "/api/v1/beta/vaults").is_err());
+    }
+
+    #[test]
+    fn origin_allowed_respects_pattern_and_sites() {
+        let conn = rusqlite::Connection::open_in_memory().unwrap();
+        conn.execute(
+            "CREATE TABLE allternit_vault_credentials (id TEXT PRIMARY KEY, origin_pattern TEXT)",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "CREATE TABLE vault_credential_sites (credential_id TEXT, origin TEXT)",
+            [],
+        )
+        .unwrap();
+
+        // Credential scoped to a single origin pattern.
+        conn.execute(
+            "INSERT INTO allternit_vault_credentials (id, origin_pattern) VALUES ('c1', 'example.com')",
+            [],
+        )
+        .unwrap();
+        assert!(origin_allowed(&conn, "c1", "https://example.com/login").unwrap());
+        assert!(!origin_allowed(&conn, "c1", "https://evil.com").unwrap());
+
+        // Credential scoped via sites table.
+        conn.execute(
+            "INSERT INTO allternit_vault_credentials (id, origin_pattern) VALUES ('c2', NULL)",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO vault_credential_sites (credential_id, origin) VALUES ('c2', 'github.com')",
+            [],
+        )
+        .unwrap();
+        assert!(origin_allowed(&conn, "c2", "https://github.com").unwrap());
+        assert!(!origin_allowed(&conn, "c2", "https://gitlab.com").unwrap());
+
+        // Unrestricted credential.
+        conn.execute(
+            "INSERT INTO allternit_vault_credentials (id, origin_pattern) VALUES ('c3', NULL)",
+            [],
+        )
+        .unwrap();
+        assert!(origin_allowed(&conn, "c3", "https://anywhere.test").unwrap());
     }
 }

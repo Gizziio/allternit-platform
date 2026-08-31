@@ -206,24 +206,35 @@ export async function findMatchingCredentials(origin: string): Promise<StoredCre
   return data.credentials || [];
 }
 
-export async function fillCredential(credentialId: string): Promise<FilledCredential> {
+export async function fillCredential(
+  credentialId: string,
+  origin?: string,
+): Promise<FilledCredential> {
   const response = await fetchVault(
     `/credentials/${credentialId}/fill`,
     {
       method: 'POST',
-      body: JSON.stringify({ actor: 'browser-extension-autofill', context: 'login-form-autofill' }),
+      body: JSON.stringify({
+        actor: 'browser-extension-autofill',
+        context: 'login-form-autofill',
+        origin,
+      }),
     },
     'Vault fill',
   );
   return (await response.json()) as FilledCredential;
 }
 
-export async function recordCredentialUse(credentialId: string): Promise<void> {
+export async function recordCredentialUse(credentialId: string, origin?: string): Promise<void> {
   await fetchVault(
     `/credentials/${credentialId}/use`,
     {
       method: 'POST',
-      body: JSON.stringify({ actor: 'browser-extension-autofill', context: 'login-form-autofill' }),
+      body: JSON.stringify({
+        actor: 'browser-extension-autofill',
+        context: 'login-form-autofill',
+        origin,
+      }),
     },
     'Vault record use',
   );

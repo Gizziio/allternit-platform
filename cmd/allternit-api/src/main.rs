@@ -464,6 +464,7 @@ async fn main() {
         .merge(status_router())
         .merge(webhook_router())
         .merge(webhook_trigger_public_router())
+        .merge(allternit_api::benchmark_routes::benchmark_router())
         // Slack signs every request itself (`verify_slack_signature`), so
         // this is public the same way `webhook_router()` above is — no
         // Clerk session exists for a server-to-server call from Slack.

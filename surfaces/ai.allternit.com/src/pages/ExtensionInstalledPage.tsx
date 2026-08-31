@@ -45,7 +45,7 @@ export default function ExtensionInstalledPage() {
 
   const next = useCallback(() => {
     setDirection(1);
-    setStep((s) => Math.min(3, s + 1));
+    setStep((s) => Math.min(6, s + 1));
   }, []);
 
   // Detect the extension (content script stamps the <html> dataset at
@@ -125,6 +125,9 @@ export default function ExtensionInstalledPage() {
             {step === 1 && <AutomateStep />}
             {step === 2 && <TabGroupStep />}
             {step === 3 && <FirstTaskStep />}
+            {step === 4 && <VaultStep />}
+            {step === 5 && <MemoryStep />}
+            {step === 6 && <AllSetStep />}
           </motion.div>
         </AnimatePresence>
 
@@ -134,12 +137,12 @@ export default function ExtensionInstalledPage() {
           onClick={() => (step < 3 ? next() : navigate('/shell'))}
           className="mt-8 rounded-lg bg-[#E8E2DA] px-6 py-2.5 text-sm font-medium text-[#1A1612] transition-colors hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D4B08C]"
         >
-          {step === 0 ? 'I understand' : step < 3 ? 'Next' : "Let's go"}
+          {step === 0 ? 'I understand' : step < 6 ? 'Next' : "Let's go"}
         </button>
 
         {/* Progress dots */}
         <div className="mt-6 flex items-center gap-2" aria-hidden="true">
-          {[0, 1, 2, 3].map((i) => (
+          {[0, 1, 2, 3, 4, 5, 6].map((i) => (
             <span
               key={i}
               className="size-1.5 rounded-full transition-colors"
@@ -351,6 +354,85 @@ function FirstTaskStep() {
       <p className="m-0 max-w-[340px] text-sm leading-relaxed text-[#B0A79C]">
         Click the Allternit icon in your toolbar to open the side panel and describe a task —
         Allternit will navigate, click, and type to complete it.
+      </p>
+    </>
+  );
+}
+
+/* ─── Step 4: password vault ──────────────────────────────────────────────── */
+
+function VaultStep() {
+  return (
+    <>
+      <svg width="220" height="110" viewBox="0 0 220 110" fill="none" aria-hidden="true">
+        <rect x="40" y="10" width="140" height="90" rx="8" fill="#241E18" stroke="#2E2822" />
+        <circle cx="52" cy="20" r="2.5" fill="#D97757" />
+        <circle cx="60" cy="20" r="2.5" fill={SAND} opacity="0.6" />
+        <circle cx="68" cy="20" r="2.5" fill={SAND} opacity="0.35" />
+        {/* lock body */}
+        <rect x="90" y="48" width="40" height="34" rx="4" fill="#2A211A" stroke={SAND_BORDER} />
+        {/* lock shackle */}
+        <path d="M100 48 v-10 a10 10 0 0 1 20 0 v10" stroke={SAND} strokeWidth="3" fill="none" />
+        {/* keyhole */}
+        <circle cx="110" cy="62" r="3" fill={SAND} />
+        <rect x="109" y="64" width="2" height="7" fill={SAND} />
+      </svg>
+      <h1 className="font-[var(--font-research)] text-2xl mt-8 mb-3">Agent-native password vault</h1>
+      <p className="m-0 max-w-[340px] text-sm leading-relaxed text-[#B0A79C]">
+        Allternit can fill logins for you. Open the extension settings to import from 1Password,
+        Bitwarden, or Chrome, or add credentials manually.
+      </p>
+    </>
+  );
+}
+
+/* ─── Step 5: memory & history ────────────────────────────────────────────── */
+
+function MemoryStep() {
+  return (
+    <>
+      <svg width="220" height="110" viewBox="0 0 220 110" fill="none" aria-hidden="true">
+        <rect x="40" y="10" width="140" height="90" rx="8" fill="#241E18" stroke="#2E2822" />
+        <circle cx="52" cy="20" r="2.5" fill="#D97757" />
+        <circle cx="60" cy="20" r="2.5" fill={SAND} opacity="0.6" />
+        <circle cx="68" cy="20" r="2.5" fill={SAND} opacity="0.35" />
+        {/* brain / memory nodes */}
+        <circle cx="85" cy="52" r="5" fill={SAND} opacity="0.8" />
+        <circle cx="115" cy="42" r="5" fill={SAND} opacity="0.8" />
+        <circle cx="135" cy="58" r="5" fill={SAND} opacity="0.8" />
+        <circle cx="108" cy="72" r="5" fill={SAND} opacity="0.8" />
+        <line x1="89" y1="51" x2="111" y2="45" stroke={SAND} strokeWidth="1.5" opacity="0.5" />
+        <line x1="119" y1="45" x2="131" y2="54" stroke={SAND} strokeWidth="1.5" opacity="0.5" />
+        <line x1="105" y1="68" x2="113" y2="47" stroke={SAND} strokeWidth="1.5" opacity="0.5" />
+        <line x1="112" y1="70" x2="131" y2="61" stroke={SAND} strokeWidth="1.5" opacity="0.5" />
+      </svg>
+      <h1 className="font-[var(--font-research)] text-2xl mt-8 mb-3">Browsing memory</h1>
+      <p className="m-0 max-w-[340px] text-sm leading-relaxed text-[#B0A79C]">
+        Allternit remembers pages you visit and successful workflows so it can pick up where you
+        left off across sessions. You can clear this data anytime in extension settings.
+      </p>
+    </>
+  );
+}
+
+/* ─── Step 6: all set ─────────────────────────────────────────────────────── */
+
+function AllSetStep() {
+  return (
+    <>
+      <svg width="220" height="110" viewBox="0 0 220 110" fill="none" aria-hidden="true">
+        <rect x="40" y="10" width="140" height="90" rx="8" fill="#241E18" stroke="#2E2822" />
+        <circle cx="52" cy="20" r="2.5" fill="#D97757" />
+        <circle cx="60" cy="20" r="2.5" fill={SAND} opacity="0.6" />
+        <circle cx="68" cy="20" r="2.5" fill={SAND} opacity="0.35" />
+        {/* checkmark */}
+        <circle cx="110" cy="55" r="22" stroke={SAND} strokeWidth="2" opacity="0.3" />
+        <path d="M98 55 l8 8 l16 -18" stroke={SAND} strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+      <h1 className="font-[var(--font-research)] text-2xl mt-8 mb-3">You're all set</h1>
+      <p className="m-0 max-w-[340px] text-sm leading-relaxed text-[#B0A79C]">
+        Click the Allternit icon in your toolbar to open the side panel and start automating.
+        Use Ultrabrowse mode for deep research across multiple tabs.
       </p>
     </>
   );

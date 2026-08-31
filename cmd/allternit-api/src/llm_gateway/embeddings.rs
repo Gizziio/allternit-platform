@@ -96,7 +96,7 @@ const DEFAULT_DIMENSIONS: usize = 1536;
 /// This produces a normalized unit vector suitable for cosine similarity
 /// comparisons during development. In production, this is replaced by
 /// provider-proxied embeddings.
-fn generate_local_embedding(text: &str, dimensions: usize) -> Vec<f32> {
+pub fn generate_local_embedding(text: &str, dimensions: usize) -> Vec<f32> {
     let mut vec = vec![0.0f32; dimensions];
 
     // Use multiple hash passes to fill the vector.

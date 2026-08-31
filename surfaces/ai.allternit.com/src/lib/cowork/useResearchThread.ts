@@ -7,6 +7,16 @@ interface ResearchMessage {
   content: string;
 }
 
+interface ResearchTask {
+  id: string;
+  query: string;
+  status: string;
+  synthesis?: string | null;
+  sources?: unknown;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface ResearchThreadState {
   threadId: string | null;
   messages: ResearchMessage[];
@@ -15,6 +25,10 @@ export interface ResearchThreadState {
   error: string | null;
   isHealthy: boolean | null;
 }
+
+const API_BASE = '/api/v1/beta/research';
+const POLL_INTERVAL_MS = 2000;
+const POLL_TIMEOUT_MS = 120_000;
 
 export function useResearchThread() {
   const [state, setState] = useState<ResearchThreadState>({
@@ -27,15 +41,83 @@ export function useResearchThread() {
   });
 
   const abortRef = useRef<AbortController | null>(null);
+  const pollTimerRef = useRef<number | null>(null);
 
-  const ensureThread = useCallback(async (): Promise<string> => {
-    if (state.threadId) return state.threadId;
-    const res = await fetch('/api/v1/cowork/research/thread', { method: 'POST' });
-    const data = await res.json() as { threadId?: string; error?: string };
-    if (!res.ok || !data.threadId) throw new Error(data.error ?? 'Failed to create research thread');
-    setState((s) => ({ ...s, threadId: data.threadId! }));
-    return data.threadId!;
-  }, [state.threadId]);
+  const clearPoll = useCallback(() => {
+    if (pollTimerRef.current) {
+      window.clearTimeout(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
+  }, []);
+
+  const checkHealth = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE}?limit=1`);
+      setState((s) => ({ ...s, isHealthy: res.ok }));
+    } catch {
+      setState((s) => ({ ...s, isHealthy: false }));
+    }
+  }, []);
+
+  const pollTask = useCallback(async (taskId: string, startedAt: number) => {
+    try {
+      const res = await fetch(`${API_BASE}/${taskId}`);
+      if (!res.ok) throw new Error(`Task poll failed (${res.status})`);
+      const data = (await res.json()) as { task?: ResearchTask };
+      const task = data.task;
+
+      if (!task) throw new Error('Task response missing task');
+
+      if (task.status === 'completed' || task.status === 'failed') {
+        setState((s) => ({
+          ...s,
+          isStreaming: false,
+          streamBuffer: '',
+          messages: [
+            ...s.messages,
+            {
+              role: 'assistant',
+              content:
+                task.status === 'completed'
+                  ? task.synthesis || `Research complete for: ${task.query}`
+                  : `Research task failed for: ${task.query}`,
+            },
+          ],
+        }));
+        clearPoll();
+        return;
+      }
+
+      setState((s) => ({
+        ...s,
+        streamBuffer: `Research status: ${task.status}…`,
+      }));
+
+      if (Date.now() - startedAt > POLL_TIMEOUT_MS) {
+        setState((s) => ({
+          ...s,
+          isStreaming: false,
+          streamBuffer: '',
+          messages: [
+            ...s.messages,
+            { role: 'assistant', content: `Research task timed out: ${task.query}` },
+          ],
+        }));
+        clearPoll();
+        return;
+      }
+
+      pollTimerRef.current = window.setTimeout(() => pollTask(taskId, startedAt), POLL_INTERVAL_MS);
+    } catch (err) {
+      setState((s) => ({
+        ...s,
+        isStreaming: false,
+        streamBuffer: '',
+        error: err instanceof Error ? err.message : String(err),
+      }));
+      clearPoll();
+    }
+  }, [clearPoll]);
 
   const query = useCallback(async (message: string) => {
     if (state.isStreaming) return;
@@ -44,83 +126,34 @@ export function useResearchThread() {
     const ctrl = new AbortController();
     abortRef.current = ctrl;
 
+    clearPoll();
     setState((s) => ({
       ...s,
       isStreaming: true,
       error: null,
-      streamBuffer: '',
+      streamBuffer: 'Creating research task…',
       messages: [...s.messages, { role: 'user', content: message }],
     }));
 
     try {
-      const threadId = await ensureThread();
-
-      const res = await fetch('/api/v1/cowork/research/stream', {
+      const res = await fetch(API_BASE, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ threadId, message }),
+        body: JSON.stringify({ query: message, mode: 'ultrabrowse' }),
         signal: ctrl.signal,
       });
 
-      if (!res.ok || !res.body) {
-        throw new Error(`Research stream error (${res.status})`);
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
+        throw new Error(data.message ?? `Research create error (${res.status})`);
       }
 
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-      let accumulated = '';
+      const data = (await res.json()) as { task?: ResearchTask };
+      const task = data.task;
+      if (!task?.id) throw new Error('Research task response missing id');
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() ?? '';
-
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          const raw = line.slice(6).trim();
-          if (!raw || raw === '[DONE]') continue;
-
-          try {
-            const parsed = JSON.parse(raw) as { event?: string; data?: unknown };
-            const evType = parsed.event ?? '';
-
-            if (evType === 'messages/partial' || evType === 'values') {
-              const data = parsed.data as Array<{ type?: string; content?: string | Array<{ text?: string }> }> | undefined;
-              if (Array.isArray(data)) {
-                for (const msg of data) {
-                  if (msg.type === 'ai' || msg.type === 'assistant') {
-                    const text = typeof msg.content === 'string'
-                      ? msg.content
-                      : Array.isArray(msg.content)
-                        ? msg.content.map((c) => c.text ?? '').join('')
-                        : '';
-                    if (text) {
-                      accumulated = text;
-                      setState((s) => ({ ...s, streamBuffer: text }));
-                    }
-                  }
-                }
-              }
-            }
-          } catch {
-            // skip malformed frame
-          }
-        }
-      }
-
-      setState((s) => ({
-        ...s,
-        isStreaming: false,
-        streamBuffer: '',
-        messages: [
-          ...s.messages,
-          { role: 'assistant', content: accumulated || '(No response)' },
-        ],
-      }));
+      setState((s) => ({ ...s, threadId: task.id }));
+      void pollTask(task.id, Date.now());
     } catch (err) {
       if ((err as Error).name === 'AbortError') return;
       setState((s) => ({
@@ -129,23 +162,15 @@ export function useResearchThread() {
         streamBuffer: '',
         error: err instanceof Error ? err.message : String(err),
       }));
+      clearPoll();
     }
-  }, [state.isStreaming, ensureThread]);
+  }, [state.isStreaming, clearPoll, pollTask]);
 
   const reset = useCallback(() => {
     abortRef.current?.abort();
+    clearPoll();
     setState({ threadId: null, messages: [], isStreaming: false, streamBuffer: '', error: null, isHealthy: null });
-  }, []);
-
-  const checkHealth = useCallback(async () => {
-    try {
-      const res = await fetch('/api/v1/cowork/research/health');
-      const data = await res.json() as { healthy?: boolean };
-      setState((s) => ({ ...s, isHealthy: data.healthy ?? res.ok }));
-    } catch {
-      setState((s) => ({ ...s, isHealthy: false }));
-    }
-  }, []);
+  }, [clearPoll]);
 
   return { ...state, query, reset, checkHealth };
 }

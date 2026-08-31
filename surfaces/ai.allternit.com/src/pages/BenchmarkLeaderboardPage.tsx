@@ -40,17 +40,29 @@ export default function BenchmarkLeaderboardPage() {
   const [error, setError] = useState(false)
 
   useEffect(() => {
-    fetch("/benchmarks/computer-use-leaderboard.json", { cache: "no-store" })
-      .then((res) => {
+    const load = async () => {
+      try {
+        const res = await fetch("/api/v1/benchmarks/computer-use-leaderboard", { cache: "no-store" })
         if (!res.ok) throw new Error("Non-OK response")
-        return res.json() as Promise<LeaderboardData>
-      })
-      .then((json) => {
+        const json = (await res.json()) as LeaderboardData
         setData(json)
         setError(false)
-      })
-      .catch(() => setError(true))
-      .finally(() => setLoading(false))
+      } catch {
+        // Fall back to the static JSON export if the API is unavailable.
+        try {
+          const res = await fetch("/benchmarks/computer-use-leaderboard.json", { cache: "no-store" })
+          if (!res.ok) throw new Error("Non-OK response")
+          const json = (await res.json()) as LeaderboardData
+          setData(json)
+          setError(false)
+        } catch {
+          setError(true)
+        }
+      } finally {
+        setLoading(false)
+      }
+    }
+    void load()
   }, [])
 
   return (
