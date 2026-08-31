@@ -14,8 +14,10 @@ const page = await ctx.newPage();
 
 async function signIn() {
   await page.goto(`${ORIGIN}/sign-in?redirect_url=${encodeURIComponent(`${ORIGIN}/`)}`, { waitUntil: 'networkidle', timeout: 30000 });
+  await page.waitForSelector('input[name="identifier"], input[name="emailAddress"]', { state: 'visible', timeout: 30000 });
   await page.getByRole('textbox', { name: 'Email address' }).first().fill(EMAIL);
   await page.getByRole('button', { name: 'Continue', exact: true }).first().click();
+  await page.waitForSelector('input[name="password"]', { state: 'visible', timeout: 30000 });
   await page.getByRole('textbox', { name: 'Password' }).first().fill(PASSWORD);
   await page.getByRole('button', { name: 'Continue', exact: true }).first().click();
   await page.waitForURL(`${ORIGIN}/`, { timeout: 30000 });

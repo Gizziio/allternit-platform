@@ -3,6 +3,7 @@
 @tailwind utilities;
 
 :root {
+  --deploy-bump: "2026-08-31-01";
   --bg-primary: #0b0b0c;
   --bg-secondary: #141416;
   --bg-tertiary: #1c1c1f;
