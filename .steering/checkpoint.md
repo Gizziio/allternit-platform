@@ -1,5 +1,37 @@
 # Steering checkpoint
 
+## Agent-native password manager (Aside Phase 1) — 2026-08-31
+
+### Goal
+Add an agent-native password manager to Allternit's browser extension so credentials can be autofilled into login forms without ever exposing plaintext passwords to the agent LLM or backend.
+
+### Just did
+- Created session worktree `allternit-session-72ac1efa-a78a-4d9a-bda0-5c0ee738ca76` on branch `session/72ac1efa-a78a-4d9a-bda0-5c0ee738ca76`.
+- Wrote implementation plan for Aside-inspired computer-use additions (password manager, browser-history memory, Ultrabrowse research).
+- User approved phased delivery starting with the password manager.
+- Added migration `V113__agent_password_manager.sql` with credential type, username, origin scoping, and site patterns.
+- Extended `cmd/allternit-api/src/allternit_vault.rs`:
+  - `POST .../credentials/password` to store username/password credentials.
+  - `GET .../credentials/match?origin=...` to list matching credentials (no plaintext).
+  - `POST .../credentials/:id/fill` to return plaintext for extension autofill and audit the access.
+  - `POST .../credentials/:id/use` to record agent/autofill use.
+  - Audit events `vault.credential.created`, `vault.credential.filled` written to `audit_events`.
+- Built extension autofill content script `src/entrypoints/autofill.content.ts` that detects login forms without exposing passwords.
+- Added background wiring and vault API client (`src/lib/vault/api.ts`) for credential matching and fill.
+- Verified `cargo check -p allternit-api` passes.
+
+### Next
+1. Install extension dependencies and verify `pnpm build` passes.
+2. Add password manager import parsers and extension UI (Phase 1c).
+3. Add a platform-page flow to share Clerk JWT with the extension for authenticated vault calls.
+4. Write integration test: agent signs into a test site using saved credentials and never sees plaintext.
+5. Commit checkpoint and push session branch.
+
+### Open questions
+- Should passkeys be included in MVP or deferred?
+- Which import formats are required for launch? (Plan targets 1Password, Bitwarden, Chrome CSV as must-haves.)
+- Is user opt-in required for browser-history memory, or can it default to local-only?
+
 ## Clerk sign-in/sign-up e2e verification (2026-08-30)
 
 ### Goal

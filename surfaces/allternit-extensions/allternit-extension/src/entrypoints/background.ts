@@ -27,6 +27,11 @@ import {
   startCaptureSession,
   stopCaptureSession,
 } from '@/api-capture/background'
+import {
+  findMatchingCredentials,
+  fillCredential,
+  recordCredentialUse,
+} from '@/lib/vault/api'
 
 export default defineBackground(() => {
   console.log('[Allternit Extension] Background Service Worker started')
@@ -134,6 +139,71 @@ export default defineBackground(() => {
     if (message.type === 'PLATFORM_TASK_SUBSCRIBE') {
       sendResponse({ ok: true })
       return undefined
+    }
+
+    // Vault password-manager autofill messages
+    if (message.type === 'AUTOFILL_REQUEST_CREDENTIALS') {
+      const origin = message.payload?.origin as string | undefined
+      if (!origin) {
+        sendResponse({ ok: false, error: 'origin is required' })
+        return undefined
+      }
+      findMatchingCredentials(origin)
+        .then((credentials) => sendResponse({ ok: true, credentials }))
+        .catch((error) =>
+          sendResponse({
+            ok: false,
+            error: error instanceof Error ? error.message : String(error),
+          }),
+        )
+      return true
+    }
+    if (message.type === 'AUTOFILL_FILL_CREDENTIAL') {
+      const credentialId = message.payload?.credentialId as string | undefined
+      const tabId = sender.tab?.id
+      if (!credentialId) {
+        sendResponse({ ok: false, error: 'credentialId is required' })
+        return undefined
+      }
+      if (typeof tabId !== 'number') {
+        sendResponse({ ok: false, error: 'tabId is required' })
+        return undefined
+      }
+      fillCredential(credentialId)
+        .then(async (filled) => {
+          await chrome.tabs.sendMessage(tabId, {
+            type: 'AUTOFILL_FILL_FIELDS',
+            payload: {
+              credentialId: filled.credential_id,
+              username: filled.username,
+              password: filled.password,
+            },
+          })
+          sendResponse({ ok: true, credentialId: filled.credential_id })
+        })
+        .catch((error) =>
+          sendResponse({
+            ok: false,
+            error: error instanceof Error ? error.message : String(error),
+          }),
+        )
+      return true
+    }
+    if (message.type === 'AUTOFILL_RECORD_USE') {
+      const credentialId = message.payload?.credentialId as string | undefined
+      if (!credentialId) {
+        sendResponse({ ok: false, error: 'credentialId is required' })
+        return undefined
+      }
+      recordCredentialUse(credentialId)
+        .then(() => sendResponse({ ok: true }))
+        .catch((error) =>
+          sendResponse({
+            ok: false,
+            error: error instanceof Error ? error.message : String(error),
+          }),
+        )
+      return true
     }
 
     // API capture messages
