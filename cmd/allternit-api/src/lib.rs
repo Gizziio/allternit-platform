@@ -121,6 +121,8 @@ pub mod rails;
 pub mod remote_control_routes;
 pub mod rate_limit;
 pub mod rails_client_impl;
+pub mod research_task_service;
+pub mod research_task_routes;
 pub mod rbac;
 pub mod rbac_routes;
 pub mod runtime_backend_routes;

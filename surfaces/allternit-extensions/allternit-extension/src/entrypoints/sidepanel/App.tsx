@@ -10,6 +10,7 @@ import { HistoryList } from './components/HistoryList'
 import { useExtensionSidepanelAdapter } from './useExtensionSidepanelAdapter'
 import { HTMLToFigmaPanel } from '@/html-to-figma/ui/HTMLToFigmaPanel'
 import { CaptureComposer } from '@/html-to-figma/ui/CaptureComposer'
+import { ResearchComposer } from './components/ResearchComposer'
 
 const EXTENSION_SIDEPANEL_COPY = {
 	title: 'Allternit Extension',
@@ -89,7 +90,7 @@ export default function App() {
 			renderHistoryDetailView={({ sessionId, onBack }) => (
 				<HistoryDetail sessionId={sessionId} onBack={onBack} />
 			)}
-			renderComposer={(props) => <CaptureComposer {...props} />}
+			renderComposer={(props) => <ResearchComposer {...props} />}
 		/>
 	)
 }
