@@ -1,17 +1,21 @@
-name: Deploy Platform to Cloudflare Pages
+name: Deploy AI + Platform to Cloudflare Pages
 
 on:
   push:
     branches: [main]
     paths:
       - 'surfaces/ai.allternit.com/**'
+      - 'surfaces/platform.allternit.com/**'
       - 'packages/@allternit/**'
       - 'services/runtime/**'
       - '.github/workflows/deploy-cloudflare-pages.yml'
+      - 'pnpm-workspace.yaml'
+      - 'pnpm-lock.yaml'
   workflow_dispatch:
 
 jobs:
-  deploy:
+  deploy-ai:
+    name: Deploy ai.allternit.com
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -30,14 +34,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          # Cache disabled temporarily to clear a stale pnpm-store snapshot that
-          # resolved incompatible @blocksuite/icons transitive versions. Re-enable
-          # once this run produces a good store snapshot.
 
-      # Install from monorepo root so all workspace:* packages resolve correctly.
-      # Use --frozen-lockfile so CI matches the committed pnpm-lock.yaml and local
-      # builds; --no-frozen-lockfile was resolving newer transitive versions that
-      # broke production builds (e.g. @blocksuite/icons re-exports).
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
 
@@ -46,9 +43,6 @@ jobs:
         run: pnpm prisma generate
 
       - name: Copy discovery feed to public
-        # Makes discovery-pipeline.json available as a static file at /discovery-feed.json
-        # so the desktop app can fetch fresh briefings from platform.allternit.com without
-        # a full app rebuild. The _headers file already adds CORS for this path.
         run: |
           if [ -f surfaces/ai.allternit.com/src/data/discovery-pipeline.json ]; then
             cp surfaces/ai.allternit.com/src/data/discovery-pipeline.json surfaces/ai.allternit.com/public/discovery-feed.json
@@ -57,13 +51,7 @@ jobs:
             echo "No discovery-pipeline.json found, skipping"
           fi
 
-      - name: Build static export
-        # Build the full dependency graph (office-* engines, apps, etc.) so that
-        # packages whose `dist/` directories are not committed are available —
-        # same pattern as deploy-office-cloudflare.yml.
-        # Vite SPA build — outputs dist/, which the deploy step below publishes.
-        # NEXT_PUBLIC_ALLTERNIT_DESKTOP_AUTH enables the desktop session shim so
-        # the startup wizard sign-in is the only login inside the desktop shell.
+      - name: Build ai.allternit.com static export
         run: pnpm --filter "@allternit/ai..." build
         env:
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
@@ -72,9 +60,47 @@ jobs:
           VITE_REMOTE_CONTROL_PUSH_URL: ${{ secrets.VITE_REMOTE_CONTROL_PUSH_URL }}
           ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
 
-      - name: Deploy to Cloudflare Pages
+      - name: Deploy ai.allternit.com to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy surfaces/ai.allternit.com/dist --project-name=allternit-platform --branch=main
+          command: pages deploy surfaces/ai.allternit.com/dist --project-name=ai-allternit --branch=main
+
+  deploy-platform:
+    name: Deploy platform.allternit.com
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.0
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Build platform.allternit.com
+        run: pnpm --filter "@allternit/platform-console" build
+        env:
+          VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+          VITE_ALLTERNIT_GATEWAY_URL: 'https://api.allternit.com'
+          VITE_ALLTERNIT_CLOUD_API_URL: 'https://allternit-cloud-api.fly.dev'
+
+      - name: Deploy platform.allternit.com to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy surfaces/platform.allternit.com/dist --project-name=allternit-platform --branch=main

@@ -1,24 +1,19 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────────────────────
-# Allternit Platform — Cloudflare Pages Build
+# platform.allternit.com — Cloudflare Pages Build
 #
 # Usage:
 #   ./scripts/build-cloudflare-platform.sh [--no-zip]
 #
 # Outputs:
-#   surfaces/ai.allternit.com/dist/        (static export)
-#   allternit-websites/projects/platform-allternit/deploy.zip
-#
-# Notes:
-#   API routes are server-side only — they're excluded from the CF Pages build
-#   because: (a) static export can't serve them, (b) in tunnel mode all API
-#   calls route through the local desktop anyway.
+#   surfaces/platform.allternit.com/dist/  (Vite production build)
+#   allternit-websites/projects/platform.allternit.com/deploy.zip
 # ─────────────────────────────────────────────────────────────────────────────
 
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PLATFORM_DIR="$REPO_ROOT/surfaces/ai.allternit.com"
+CONSOLE_DIR="$REPO_ROOT/surfaces/platform.allternit.com"
 WEBSITES_DIR="$HOME/Desktop/allternit-websites/projects/platform.allternit.com"
 
 CREATE_ZIP=true
@@ -37,7 +32,7 @@ ok()   { echo -e "${GREEN}✓ $*${NC}"; }
 warn() { echo -e "${YELLOW}⚠ $*${NC}"; }
 die()  { echo -e "${RED}✗ $*${NC}"; exit 1; }
 
-cd "$PLATFORM_DIR"
+cd "$CONSOLE_DIR"
 
 if [ ! -d node_modules ]; then
   warn "node_modules missing — running pnpm install"
@@ -45,61 +40,32 @@ if [ ! -d node_modules ]; then
 fi
 
 # ---------------------------------------------------------------------------
-# Stash API routes — they require a running server and cannot be statically
-# exported. In tunnel mode the browser calls the local desktop directly.
-# ---------------------------------------------------------------------------
-API_DIR="$PLATFORM_DIR/src/app/api"
-API_STASH="$PLATFORM_DIR/src/app/_api_cf_stash"
-
-restore_api() {
-  if [ -d "$API_STASH" ]; then
-    mv "$API_STASH" "$API_DIR"
-    ok "API routes restored"
-  fi
-}
-trap restore_api EXIT INT TERM
-
-# ---------------------------------------------------------------------------
 # Check for Clerk publishable key
 # ---------------------------------------------------------------------------
-if [ -z "${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:-}" ]; then
-  # Try reading from .env.production
-  PROD_KEY=$(grep -E "^NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_" "$PLATFORM_DIR/.env.production" 2>/dev/null | cut -d= -f2 | head -1 || true)
-  if [ -z "$PROD_KEY" ]; then
-    die "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is not set.\n  Set it in .env.production or export it before running this script:\n  NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_xxx ./scripts/build-cloudflare-platform.sh"
+if [ -z "${VITE_CLERK_PUBLISHABLE_KEY:-}" ]; then
+  # Try reading from .env.local, then .env.production
+  LOCAL_KEY=$(grep -E "^VITE_CLERK_PUBLISHABLE_KEY=pk_" "$CONSOLE_DIR/.env.local" 2>/dev/null | cut -d= -f2 | head -1 || true)
+  PROD_KEY=$(grep -E "^VITE_CLERK_PUBLISHABLE_KEY=pk_" "$CONSOLE_DIR/.env.production" 2>/dev/null | cut -d= -f2 | head -1 || true)
+  FOUND_KEY="${LOCAL_KEY:-${PROD_KEY:-}}"
+  if [ -z "$FOUND_KEY" ]; then
+    die "VITE_CLERK_PUBLISHABLE_KEY is not set.\n  Set it in .env.local or export it before running this script:\n  VITE_CLERK_PUBLISHABLE_KEY=pk_live_xxx ./scripts/build-cloudflare-platform.sh"
   fi
-  export NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="$PROD_KEY"
-  ok "Clerk key loaded from .env.production"
+  export VITE_CLERK_PUBLISHABLE_KEY="$FOUND_KEY"
+  ok "Clerk key loaded from local env"
 fi
 
-step "Stashing API routes for static export…"
-if [ -d "$API_DIR" ]; then
-  mv "$API_DIR" "$API_STASH"
-  ok "API routes stashed (will be restored after build)"
-else
-  warn "No src/app/api directory found — skipping stash"
-fi
-
-step "Building platform for Cloudflare Pages (static export)…"
-# Explicitly export both Clerk vars at shell level so .env.local can never
-# shadow them. Setting a var to "" in a one-liner can be silently ignored by
-# some shells/npm runners — export guarantees it wins over .env.local.
-export NEXT_PUBLIC_ALLTERNIT_PLATFORM_DISABLE_CLERK=""
-export NEXT_PUBLIC_CLERK_SIGN_IN_URL="${NEXT_PUBLIC_CLERK_SIGN_IN_URL:-/sign-in}"
-export NEXT_PUBLIC_CLERK_SIGN_UP_URL="${NEXT_PUBLIC_CLERK_SIGN_UP_URL:-/sign-up}"
+step "Building platform.allternit.com for Cloudflare Pages…"
+export VITE_ALLTERNIT_GATEWAY_URL="${VITE_ALLTERNIT_GATEWAY_URL:-https://api.allternit.com}"
+export VITE_ALLTERNIT_CLOUD_API_URL="${VITE_ALLTERNIT_CLOUD_API_URL:-https://allternit-cloud-api.fly.dev}"
 
 NODE_OPTIONS="--max-old-space-size=6144" \
   CLOUDFLARE_PAGES=1 \
   pnpm build
 
-DIST_DIR="$PLATFORM_DIR/dist"
+DIST_DIR="$CONSOLE_DIR/dist"
 [ -d "$DIST_DIR" ] || die "Build failed — dist/ not found"
 
-ok "Static export → $DIST_DIR"
-
-# Restore API routes immediately (trap also handles abnormal exit)
-restore_api
-trap - EXIT INT TERM
+ok "Build output → $DIST_DIR"
 
 if [ "$CREATE_ZIP" = true ]; then
   step "Creating deploy.zip…"
@@ -112,7 +78,7 @@ if [ "$CREATE_ZIP" = true ]; then
   ok "deploy.zip ($SIZE) → $WEBSITES_DIR/deploy.zip"
   echo ""
   echo "Upload to Cloudflare Pages:"
-  echo "  Project name:  platform-allternit"
+  echo "  Project name:  allternit-platform"
   echo "  Custom domain: platform.allternit.com"
   echo "  Zip file:      $WEBSITES_DIR/deploy.zip"
 fi

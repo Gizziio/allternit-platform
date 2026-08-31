@@ -50,7 +50,7 @@ const STATIC_ALLOWED_REDIRECT_ORIGINS = [
 ]
 
 export function getAllowedRedirectOrigins(): string[] {
-  const current = typeof window !== "undefined" ? window.location.origin : "https://platform.allternit.com"
+  const current = typeof window !== "undefined" ? window.location.origin : "https://ai.allternit.com"
   return Array.from(new Set([current, ...STATIC_ALLOWED_REDIRECT_ORIGINS]))
 }
 
