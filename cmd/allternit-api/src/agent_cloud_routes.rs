@@ -501,23 +501,38 @@ async fn provision_harness(
         .or_else(|| harness_config.get("type"))
         .and_then(|v| v.as_str())
         .unwrap_or("gizzi");
-    if harness_type != "gizzi" {
-        return Err(error(
-            StatusCode::BAD_REQUEST,
-            "harness_type_unsupported",
-            format!("Unsupported managed harness type: {harness_type}"),
-        ));
-    }
+    // AllternitOS owns the canonical harness model; Cloud is the product layer
+    // that provisions/sells harness runtimes. Gizzi and OpenCode are both
+    // first-class harness backends today; additional harness types can be added
+    // by extending the canonical `harness.<type>.session` capability contract.
+    let harness_session_capability = match harness_type {
+        "gizzi" => "harness.gizzi.session",
+        "opencode" => "harness.opencode.session",
+        _ => {
+            return Err(error(
+                StatusCode::BAD_REQUEST,
+                "harness_type_unsupported",
+                format!("Unsupported managed harness type: {harness_type}"),
+            ));
+        }
+    };
 
-    // Resolve the resource class. Default to harness.gizzi for managed harness.
+    // Resolve the resource class. When the request does not explicitly specify
+    // a class, derive it from the configured harness type so that an opencode
+    // harness leases `harness.opencode` rather than defaulting to `harness.gizzi`.
+    let harness_class = if req.class == default_harness_class() && harness_type != "gizzi" {
+        harness_type.to_string()
+    } else {
+        req.class.clone()
+    };
     let full_class = match state
         .resource_class_catalog
         .classes()
         .iter()
-        .find(|c| c.class == req.class)
+        .find(|c| c.class == harness_class)
     {
         Some(class) => format!("{}.{}", class.kind, class.class),
-        None => format!("harness.{}", req.class),
+        None => format!("harness.{}", harness_class),
     };
 
     let class = state
@@ -582,7 +597,7 @@ async fn provision_harness(
             &resource_id,
             os_client,
             &fabric_req,
-            "harness.gizzi.session",
+            harness_session_capability,
             &["create".to_string()],
             "agent cloud harness provisioning",
             "harness runtime capacity",
@@ -1386,6 +1401,124 @@ mod tests {
         let config: Value = serde_json::from_str(&config).unwrap();
         assert_eq!(config["harness_status"], "active");
         assert_eq!(config["harness_class"], "harness.gizzi");
+        assert_eq!(config["harness_resource_id"], resource_id);
+    }
+
+    #[tokio::test]
+    async fn provision_harness_opencode_schedules_fabric_resource() {
+        let temp = tempfile::tempdir().unwrap().keep();
+        let state = app_state_with_fake_provider(&temp).await;
+        let conn = state.db.connect().unwrap();
+        seed_org_user(&conn, "org-1", "owner-1", "owner");
+        drop(conn);
+
+        let ledger = fabric::credits::CreditsLedger::new(state.db.clone());
+        ledger
+            .credit("org-1", 10_000, fabric::credits::TransactionType::Purchase, None, None, None, None)
+            .unwrap();
+
+        let agent_id = seed_agent_with_harness(&state.db, "owner-1", "Test Agent", r#"{"mode":"cloud","harness":"opencode"}"#);
+
+        let app = router().with_state(state.clone());
+        let resp = app
+            .oneshot(build_request(
+                "POST",
+                &format!("/agents/{}/harness/provision", agent_id),
+                auth_user(Some("org-1"), "owner-1"),
+                Some(json!({})),
+            ))
+            .await
+            .unwrap();
+
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["agent_id"], agent_id);
+        assert_eq!(body["status"], "active");
+        assert_eq!(body["harness_status"], "active");
+        assert_eq!(body["harness_type"], "opencode");
+        assert!(!body["resource_id"].as_str().unwrap().is_empty());
+
+        let conn = state.db.connect().unwrap();
+        let config: String = conn
+            .query_row(
+                "SELECT config FROM agents WHERE id = ?1",
+                rusqlite::params![agent_id],
+                |row| row.get(0),
+            )
+            .unwrap();
+        let config: Value = serde_json::from_str(&config).unwrap();
+        assert_eq!(config["harness_status"], "active");
+        assert_eq!(config["harness_class"], "harness.opencode");
+        assert!(!config["harness_resource_id"].as_str().unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn provision_harness_opencode_routes_through_real_os_control_plane() {
+        let (url, _child) = spawn_real_os_control_plane().await;
+        let os_client = crate::fabric::os_client::OsControlPlaneClient::new(url);
+
+        let temp = tempfile::tempdir().unwrap().keep();
+        let state = crate::test_helpers::app_state_with_driver_and_os(&temp, None, Some(os_client)).await;
+        let conn = state.db.connect().unwrap();
+        seed_org_user(&conn, "org-1", "owner-1", "owner");
+        drop(conn);
+
+        fabric::credits::CreditsLedger::new(state.db.clone())
+            .credit("org-1", 10_000, fabric::credits::TransactionType::Purchase, None, None, None, None)
+            .unwrap();
+
+        let agent_id = seed_agent_with_harness(&state.db, "owner-1", "Test Agent", r#"{"mode":"cloud","harness":"opencode"}"#);
+
+        let app = router().with_state(state.clone());
+        let resp = app
+            .oneshot(build_request(
+                "POST",
+                &format!("/agents/{}/harness/provision", agent_id),
+                auth_user(Some("org-1"), "owner-1"),
+                Some(json!({})),
+            ))
+            .await
+            .unwrap();
+
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["agent_id"], agent_id);
+        assert_eq!(body["status"], "active");
+        assert_eq!(body["harness_status"], "active");
+        assert_eq!(body["harness_type"], "opencode");
+        assert!(!body["resource_id"].as_str().unwrap().is_empty());
+        assert!(
+            body["provider_kind"].as_str().map_or(false, |s| !s.is_empty()),
+            "expected provider_kind in response, got {:?}",
+            body["provider_kind"]
+        );
+
+        // Verify the Cloud DB records the canonical OS placement.
+        let resource_id = body["resource_id"].as_str().unwrap();
+        let manager = ResourceManager::new(state.db.clone());
+        let resource = manager.get(resource_id).unwrap().expect("resource exists");
+        assert_eq!(resource.provider_kind.as_deref(), Some("fake"));
+        let placement = manager
+            .latest_placement(resource_id)
+            .unwrap()
+            .expect("placement exists");
+        assert!(
+            placement.offer_id.as_deref().map_or(false, |id| id.starts_with("off_")),
+            "expected real offer_id, got {:?}",
+            placement.offer_id
+        );
+
+        let conn = state.db.connect().unwrap();
+        let config: String = conn
+            .query_row(
+                "SELECT config FROM agents WHERE id = ?1",
+                rusqlite::params![agent_id],
+                |row| row.get(0),
+            )
+            .unwrap();
+        let config: Value = serde_json::from_str(&config).unwrap();
+        assert_eq!(config["harness_status"], "active");
+        assert_eq!(config["harness_class"], "harness.opencode");
         assert_eq!(config["harness_resource_id"], resource_id);
     }
 }

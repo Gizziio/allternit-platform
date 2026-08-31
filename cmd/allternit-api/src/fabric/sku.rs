@@ -151,6 +151,19 @@ pub fn builtin_classes() -> Vec<ResourceClass> {
             retail_price_per_request_cents: 5,
             retail_price_per_token_cents: 0,
         },
+        ResourceClass {
+            id: "harness.opencode".to_string(),
+            kind: ResourceKind::Harness,
+            class: "opencode".to_string(),
+            display_name: "OpenCode Harness Runtime".to_string(),
+            vcpu: 1,
+            memory_mib: 2048,
+            gpu_vram_mib: 0,
+            reliability_tier: ReliabilityTier::Standard,
+            retail_price_per_hour_cents: 8,
+            retail_price_per_request_cents: 5,
+            retail_price_per_token_cents: 0,
+        },
     ]
 }
 
