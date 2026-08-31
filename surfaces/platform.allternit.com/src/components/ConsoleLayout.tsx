@@ -5,6 +5,7 @@ import {
   SquaresFour,
   Buildings,
   ComputerTower,
+  Desktop,
   CreditCard,
   Key,
   BookOpen,
@@ -12,6 +13,9 @@ import {
   RocketLaunch,
   List,
   X,
+  Lifebuoy,
+  Circle,
+  Scroll,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import {
@@ -19,6 +23,7 @@ import {
   usePlatformOrganization,
   usePlatformUser,
 } from "@/lib/platform-auth-client";
+import { AllternitWordmark } from "@/components/AllternitWordmark";
 
 type PhosphorIcon = React.ComponentType<any>;
 
@@ -32,11 +37,18 @@ const navItems: NavItem[] = [
   { to: "/", label: "Dashboard", icon: SquaresFour },
   { to: "/organizations", label: "Organizations", icon: Buildings },
   { to: "/compute", label: "Compute", icon: ComputerTower },
+  { to: "/devices", label: "Devices", icon: Desktop },
   { to: "/billing", label: "Billing", icon: CreditCard },
   { to: "/api-keys", label: "API Keys", icon: Key },
   { to: "/docs", label: "Docs", icon: BookOpen },
   { to: "/settings", label: "Settings", icon: Gear },
 ];
+
+function currentPageLabel(pathname: string): string {
+  if (pathname === "/") return "Dashboard";
+  const match = navItems.find((item) => pathname === item.to || pathname.startsWith(`${item.to}/`));
+  return match?.label || "Console";
+}
 
 export function ConsoleLayout({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -61,7 +73,7 @@ export function ConsoleLayout({ children }: { children: React.ReactNode }) {
           />
           <aside className="fixed inset-y-0 left-0 z-50 w-64 flex flex-col border-r border-[var(--border-subtle)] bg-[var(--bg-secondary)] lg:hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border-subtle)]">
-              <span className="text-[14px] font-semibold tracking-tight">Allternit Platform</span>
+              <AllternitWordmark variant="light" height={24} />
               <button
                 type="button"
                 onClick={() => setMobileOpen(false)}
@@ -90,9 +102,7 @@ export function ConsoleLayout({ children }: { children: React.ReactNode }) {
             </button>
             <div className="hidden sm:flex items-center gap-2 text-[13px] text-[var(--text-secondary)]">
               <span className="text-[var(--text-tertiary)]">/</span>
-              <span className="capitalize">
-                {navItems.find((n) => n.to === location.pathname)?.label || "Console"}
-              </span>
+              <span className="capitalize">{currentPageLabel(location.pathname)}</span>
             </div>
           </div>
 
@@ -142,10 +152,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <>
       <div className="flex items-center gap-2 px-4 py-3 border-b border-[var(--border-subtle)]">
-        <div className="size-7 rounded-lg bg-[var(--accent-primary)] flex items-center justify-center">
-          <span className="text-[11px] font-bold text-[var(--ui-text-inverse)]">A</span>
-        </div>
-        <span className="text-[14px] font-semibold tracking-tight">Allternit Platform</span>
+        <AllternitWordmark variant="light" height={26} />
       </div>
 
       <nav className="flex-1 overflow-y-auto p-3 space-y-1">
@@ -169,7 +176,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         ))}
       </nav>
 
-      <div className="p-3 border-t border-[var(--border-subtle)]">
+      <div className="p-3 border-t border-[var(--border-subtle)] space-y-1">
         <a
           href="https://ai.allternit.com/shell"
           target="_blank"
@@ -178,6 +185,32 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         >
           <RocketLaunch size={18} /> Launch App
         </a>
+        <div className="flex items-center gap-1 px-3 pt-1">
+          <a
+            href="mailto:support@allternit.com"
+            className="inline-flex items-center gap-1 text-[11px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
+          >
+            <Lifebuoy size={12} /> Support
+          </a>
+          <span className="text-[var(--border-default)]">·</span>
+          <a
+            href="https://status.allternit.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-[11px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
+          >
+            <Circle size={8} weight="fill" className="text-[var(--status-success)]" /> Status
+          </a>
+          <span className="text-[var(--border-default)]">·</span>
+          <a
+            href="https://allternit.com/changelog"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-[11px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
+          >
+            <Scroll size={12} /> Changelog
+          </a>
+        </div>
       </div>
     </>
   );

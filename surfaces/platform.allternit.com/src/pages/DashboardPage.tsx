@@ -1,9 +1,10 @@
-import React from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   SquaresFour,
   Buildings,
   ComputerTower,
+  Desktop,
   CreditCard,
   Key,
   ArrowRight,
@@ -13,7 +14,11 @@ import { cn } from "@/lib/utils";
 import {
   usePlatformOrganization,
   usePlatformUser,
+  usePlatformAuth,
 } from "@/lib/platform-auth-client";
+import { PlatformUsageDashboard } from "@/components/PlatformUsageDashboard";
+import { listRuntimeDevices } from "@/lib/devices";
+import { getHostedEntitlement, type HostedRuntimeEntitlement } from "@/lib/hosted-compute";
 
 function DashboardCard({
   icon: Icon,
@@ -52,12 +57,47 @@ function DashboardCard({
 export function DashboardPage() {
   const { user } = usePlatformUser();
   const { organization, membership } = usePlatformOrganization();
+  const { getToken, isSignedIn } = usePlatformAuth();
+
+  const [deviceCount, setDeviceCount] = useState<number | null>(null);
+  const [hostedCount, setHostedCount] = useState<number | null>(null);
+  const [entitlement, setEntitlement] = useState<HostedRuntimeEntitlement | null>(null);
+
+  const loadCounts = useCallback(async () => {
+    if (!isSignedIn) return;
+    try {
+      const [devices, token] = await Promise.all([
+        listRuntimeDevices(),
+        getToken(),
+      ]);
+      setDeviceCount(devices.length);
+      if (token) {
+        const entitlementData = await getHostedEntitlement(token);
+        setEntitlement(entitlementData);
+        setHostedCount(entitlementData.activeInstances);
+      }
+    } catch {
+      // Non-fatal; cards will show placeholders.
+    }
+  }, [getToken, isSignedIn]);
+
+  useEffect(() => {
+    void loadCounts();
+  }, [loadCounts]);
 
   const email =
     user?.primaryEmailAddress?.emailAddress ||
     user?.userEmail ||
     user?.emailAddresses?.[0]?.emailAddress ||
     "—";
+
+  const quickLinks = [
+    { to: "/organizations", icon: Buildings, label: "Manage organization" },
+    { to: "/compute", icon: ComputerTower, label: "Configure compute" },
+    { to: "/devices", icon: Desktop, label: "Review devices" },
+    { to: "/billing", icon: CreditCard, label: "Billing overview" },
+    { to: "/api-keys", icon: Key, label: "API keys" },
+  ];
 
   return (
     <div className="space-y-6">
@@ -70,7 +110,7 @@ export function DashboardPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <DashboardCard
           icon={SquaresFour}
           title="Signed in as"
@@ -85,25 +125,33 @@ export function DashboardPage() {
           to="/organizations"
         />
         <DashboardCard
-          icon={ChartBar}
-          title="Usage summary"
-          value="Usage details →"
-          subtitle="Track tokens, sessions, and cost"
+          icon={Desktop}
+          title="Paired devices"
+          value={deviceCount !== null ? deviceCount.toLocaleString() : "—"}
+          subtitle={deviceCount === 0 ? "No devices paired yet" : "Active runtimes"}
+          to="/devices"
+        />
+        <DashboardCard
+          icon={ComputerTower}
+          title="Hosted runtimes"
+          value={
+            hostedCount !== null && entitlement
+              ? `${hostedCount} / ${entitlement.maxHostedRuntimes}`
+              : "—"
+          }
+          subtitle={entitlement?.planDisplayName || "Free plan"}
           to="/compute"
         />
       </div>
+
+      <PlatformUsageDashboard />
 
       <div className="rounded-xl border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)]/40 p-5">
         <h2 className="text-[14px] font-semibold text-[var(--text-primary)] mb-3">
           Quick links
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
-          {[
-            { to: "/organizations", icon: Buildings, label: "Manage organization" },
-            { to: "/compute", icon: ComputerTower, label: "Configure compute" },
-            { to: "/billing", icon: CreditCard, label: "Billing overview" },
-            { to: "/api-keys", icon: Key, label: "API keys" },
-          ].map((link) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
+          {quickLinks.map((link) => (
             <Link
               key={link.to}
               to={link.to}

@@ -9,6 +9,7 @@ const routes = [
   'dashboard',
   'organizations',
   'compute',
+  'devices',
   'billing',
   'api-keys',
   'docs',

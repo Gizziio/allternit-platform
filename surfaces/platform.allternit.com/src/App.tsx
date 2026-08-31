@@ -4,6 +4,7 @@ import { ConsoleLayout } from "@/components/ConsoleLayout";
 import { DashboardPage } from "@/pages/DashboardPage";
 import { OrganizationsPage } from "@/pages/OrganizationsPage";
 import { ComputePage } from "@/pages/ComputePage";
+import { DevicesPage } from "@/pages/DevicesPage";
 import { BillingPage } from "@/pages/BillingPage";
 import { ApiKeysPage } from "@/pages/ApiKeysPage";
 import { DocsPage } from "@/pages/DocsPage";
@@ -62,6 +63,14 @@ export default function App() {
         element={
           <ConsoleRoute>
             <ComputePage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/devices/*"
+        element={
+          <ConsoleRoute>
+            <DevicesPage />
           </ConsoleRoute>
         }
       />

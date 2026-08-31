@@ -70,6 +70,17 @@ The stress suite covers sign-in, sign-out, wrong passwords, session sharing
 across `platform.allternit.com` and `ai.allternit.com`, OAuth redirects, and
 token refresh.
 
+## Console surfaces to verify after changes
+
+- `/` — Dashboard with usage/cost cards, paired device count, hosted runtime count, and the usage dashboard.
+- `/organizations` — Organization access panel and org switcher.
+- `/compute` — Compute billing panel with hosted runtime management.
+- `/devices` — Paired runtime devices list, revoke action, and pairing-code approval.
+- `/billing` — Plan card, monthly runtime usage meter, estimated cost, and upgrade link.
+- `/api-keys` — Scoped API-key creation/revocation UI (keys are currently stored locally in the browser for UI testing; the backend contract is documented in `src/lib/api-keys.ts`).
+- `/docs` — Documentation landing.
+- `/settings` — Theme toggle, account info, and sign-out.
+
 ## Expected post-login behavior
 
 - On `platform.allternit.com`, signing in lands you on `/` (the dashboard).

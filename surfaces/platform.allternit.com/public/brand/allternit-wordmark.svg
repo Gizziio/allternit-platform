@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 120" fill="none">
+  <style>
+    .mark { fill: #9A7658; }
+    .word { fill: #0D0C0A; }
+  </style>
+  <!-- A mark -->
+  <g class="mark">
+    <path d="M36 96L54 36H66L84 96H72L68 80H52L48 96H36ZM55 70H65L60 50L55 70Z"/>
+    <rect x="52" y="18" width="16" height="10" rx="2"/>
+    <path d="M30 66C26 66 24 64 24 60C24 58 25 56 27 55L36 52V60C36 64 34 66 30 66Z"/>
+    <path d="M90 66C94 66 96 64 96 60C96 58 95 56 93 55L84 52V60C84 64 86 66 90 66Z"/>
+  </g>
+  <!-- Allternit word -->
+  <text x="112" y="78" class="word" font-family="Inter, ui-sans-serif, system-ui, -apple-system, sans-serif" font-size="68" font-weight="700" letter-spacing="-0.04em">Allternit</text>
+</svg>
