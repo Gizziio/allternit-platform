@@ -239,3 +239,120 @@ export async function recordCredentialUse(credentialId: string, origin?: string)
     'Vault record use',
   );
 }
+
+// Passkey / WebAuthn challenge/registration/authentication endpoints.
+//
+// Note: WebAuthn credentials are origin-bound. The extension sidepanel runs
+// under `chrome-extension://<id>` and cannot itself act as the relying-party
+// origin. These helpers call the backend, but the actual `navigator.credentials`
+// call must happen from the configured RP origin (e.g. the Allternit platform
+// page). The sidepanel UI attempts the call for convenience and falls back to
+// opening the platform page when the origin is rejected.
+
+export interface PasskeyChallenge {
+  challenge_id: string;
+  options: PublicKeyCredentialCreationOptions | PublicKeyCredentialRequestOptions;
+}
+
+function base64UrlToBuffer(value: string): ArrayBuffer {
+  const base64 = value.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
+  const binary = atob(padded);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes.buffer;
+}
+
+function decodePasskeyChallenge(challenge: PasskeyChallenge): PasskeyChallenge {
+  const options = challenge.options as Record<string, unknown>;
+  const decoded: Record<string, unknown> = { ...options };
+
+  if (typeof options.challenge === 'string') {
+    decoded.challenge = base64UrlToBuffer(options.challenge);
+  }
+  if (options.user && typeof (options.user as Record<string, unknown>).id === 'string') {
+    const user = { ...(options.user as Record<string, unknown>) };
+    user.id = base64UrlToBuffer(user.id as string);
+    decoded.user = user;
+  }
+  if (Array.isArray(options.excludeCredentials)) {
+    decoded.excludeCredentials = options.excludeCredentials.map((cred: Record<string, unknown>) => ({
+      ...cred,
+      id: typeof cred.id === 'string' ? base64UrlToBuffer(cred.id) : cred.id,
+    }));
+  }
+  if (Array.isArray(options.allowCredentials)) {
+    decoded.allowCredentials = options.allowCredentials.map((cred: Record<string, unknown>) => ({
+      ...cred,
+      id: typeof cred.id === 'string' ? base64UrlToBuffer(cred.id) : cred.id,
+    }));
+  }
+
+  return { ...challenge, options: decoded as PasskeyChallenge['options'] };
+}
+
+export async function createPasskeyChallenge(provider: string): Promise<PasskeyChallenge> {
+  const response = await fetchVault(
+    '/credentials/passkey/challenge/register',
+    {
+      method: 'POST',
+      body: JSON.stringify({ provider }),
+    },
+    'Passkey challenge create',
+  );
+  return decodePasskeyChallenge((await response.json()) as PasskeyChallenge);
+}
+
+export async function finishPasskeyRegistration(
+  challengeId: string,
+  credential: PublicKeyCredential,
+  provider: string,
+): Promise<{ id: string; credential_id: string; provider: string }> {
+  const response = await fetchVault(
+    '/credentials/passkey/register',
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        challenge_id: challengeId,
+        provider,
+        credential: credential.toJSON(),
+      }),
+    },
+    'Passkey register finish',
+  );
+  return (await response.json()) as { id: string; credential_id: string; provider: string };
+}
+
+export async function createPasskeyAuthenticationChallenge(
+  credentialId?: string,
+): Promise<PasskeyChallenge> {
+  const response = await fetchVault(
+    '/credentials/passkey/challenge/authenticate',
+    {
+      method: 'POST',
+      body: JSON.stringify({ credential_id: credentialId }),
+    },
+    'Passkey authentication challenge',
+  );
+  return decodePasskeyChallenge((await response.json()) as PasskeyChallenge);
+}
+
+export async function finishPasskeyAuthentication(
+  challengeId: string,
+  credential: PublicKeyCredential,
+): Promise<{ authenticated: boolean; credential_id: string }> {
+  const response = await fetchVault(
+    '/credentials/passkey/authenticate',
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        challenge_id: challengeId,
+        credential: credential.toJSON(),
+      }),
+    },
+    'Passkey authenticate finish',
+  );
+  return (await response.json()) as { authenticated: boolean; credential_id: string };
+}

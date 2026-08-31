@@ -3,6 +3,7 @@
 //! Shared state and route handlers for the Allternit API.
 
 pub mod aci_routes;
+pub mod aci_safety;
 pub mod admin_audit_routes;
 pub mod admin_mcp_tunnel_routes;
 pub mod admin_access_token_routes;
@@ -104,6 +105,7 @@ pub mod memory_routes;
 pub mod memory_kernel_service;
 pub mod metrics;
 pub mod oauth_routes;
+pub mod passkey_routes;
 pub mod office_cli_mcp;
 pub mod office_cli_routes;
 pub mod office_engine_routes;
@@ -212,6 +214,7 @@ pub mod test_helpers {
             terminal_sessions: TerminalSessionStore::new(),
             mcp_dispatcher: crate::mcp_dispatcher::McpDispatcher::new(),
             approval_store: Arc::new(permission_policy::ApprovalStore::new()),
+            passkey_state: None,
         })
     }
 }
@@ -305,6 +308,8 @@ pub struct AppState {
     pub mcp_dispatcher: crate::mcp_dispatcher::McpDispatcher,
     /// Pending/resolved tool-execution approval requests from `ask` policy decisions.
     pub approval_store: Arc<crate::permission_policy::ApprovalStore>,
+    /// Passkey / WebAuthn state for the vault.
+    pub passkey_state: Option<crate::passkey_routes::PasskeyState>,
 }
 
 /// Return the default LLM provider/model pair used when a request does not

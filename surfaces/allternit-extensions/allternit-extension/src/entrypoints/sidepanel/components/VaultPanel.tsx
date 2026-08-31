@@ -4,8 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
+  createPasskeyAuthenticationChallenge,
+  createPasskeyChallenge,
   createPasswordCredential,
   deleteVaultCredential,
+  finishPasskeyAuthentication,
+  finishPasskeyRegistration,
   listVaultCredentials,
   type StoredCredential,
 } from '@/lib/vault/api';
@@ -30,6 +34,9 @@ export function VaultPanel({ onBack }: VaultPanelProps) {
   const [password, setPassword] = useState('');
   const [origin, setOrigin] = useState('');
   const [adding, setAdding] = useState(false);
+
+  const [passkeyProvider, setPasskeyProvider] = useState('');
+  const [passkeyBusy, setPasskeyBusy] = useState(false);
 
   const [importText, setImportText] = useState('');
   const [detectedFormat, setDetectedFormat] = useState<ImportFormat>('unknown');
@@ -134,6 +141,68 @@ export function VaultPanel({ onBack }: VaultPanelProps) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       setImporting(false);
+    }
+  };
+
+  const handleRegisterPasskey = async () => {
+    if (!passkeyProvider) return;
+    if (!window.PublicKeyCredential) {
+      setError('Passkeys are not available in this browser context. Open the Allternit platform page to register a passkey.');
+      return;
+    }
+    setPasskeyBusy(true);
+    setError(null);
+    try {
+      const challenge = await createPasskeyChallenge(passkeyProvider);
+      const options = challenge.options as PublicKeyCredentialCreationOptions;
+      const credential = (await navigator.credentials.create({ publicKey: options })) as PublicKeyCredential | null;
+      if (!credential) {
+        throw new Error('Passkey registration was cancelled.');
+      }
+      await finishPasskeyRegistration(challenge.challenge_id, credential, passkeyProvider);
+      setPasskeyProvider('');
+      await load();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (message.includes('origin') || message.includes('NotAllowed') || message.includes('SecurityError')) {
+        setError(
+          'Passkeys must be registered from the Allternit platform origin. Open https://platform.allternit.com to add a passkey.',
+        );
+      } else {
+        setError(message);
+      }
+    } finally {
+      setPasskeyBusy(false);
+    }
+  };
+
+  const handleAuthenticatePasskey = async () => {
+    if (!window.PublicKeyCredential) {
+      setError('Passkeys are not available in this browser context. Open the Allternit platform page to sign in with a passkey.');
+      return;
+    }
+    setPasskeyBusy(true);
+    setError(null);
+    try {
+      const challenge = await createPasskeyAuthenticationChallenge();
+      const options = challenge.options as PublicKeyCredentialRequestOptions;
+      const credential = (await navigator.credentials.get({ publicKey: options })) as PublicKeyCredential | null;
+      if (!credential) {
+        throw new Error('Passkey authentication was cancelled.');
+      }
+      await finishPasskeyAuthentication(challenge.challenge_id, credential);
+      await load();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (message.includes('origin') || message.includes('NotAllowed') || message.includes('SecurityError')) {
+        setError(
+          'Passkeys must be used from the Allternit platform origin. Open https://platform.allternit.com to authenticate with a passkey.',
+        );
+      } else {
+        setError(message);
+      }
+    } finally {
+      setPasskeyBusy(false);
     }
   };
 
@@ -270,6 +339,44 @@ export function VaultPanel({ onBack }: VaultPanelProps) {
               </Button>
             </div>
           )}
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-xs font-medium">Passkeys</p>
+          <div className="rounded-md border bg-muted/30 p-3">
+            <p className="text-[10px] text-muted-foreground">
+              Passkeys are stored in the vault and can be used to sign in without a password. They
+              must be registered from the Allternit platform origin.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="col-span-2">
+              <Label className="text-[10px] text-muted-foreground">Passkey label</Label>
+              <Input
+                value={passkeyProvider}
+                onChange={(e) => setPasskeyProvider(e.target.value)}
+                placeholder="e.g. MacBook Touch ID"
+                className="h-8 text-xs"
+              />
+            </div>
+          </div>
+          <Button
+            size="sm"
+            disabled={!passkeyProvider || passkeyBusy}
+            onClick={handleRegisterPasskey}
+            className="h-8 w-full text-xs"
+          >
+            {passkeyBusy ? 'Working…' : 'Register new passkey'}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={passkeyBusy}
+            onClick={handleAuthenticatePasskey}
+            className="h-8 w-full text-xs"
+          >
+            {passkeyBusy ? 'Working…' : 'Sign in with passkey'}
+          </Button>
         </div>
 
         <div className="space-y-2">

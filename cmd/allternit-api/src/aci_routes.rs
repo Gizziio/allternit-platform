@@ -7,7 +7,7 @@
 //! Base URL: `AppConfig::acu_url()` (env `ALLTERNIT_ACU_URL`).
 
 use axum::{
-    extract::{Path, Query, State},
+    extract::{Extension, Path, Query, State},
     http::StatusCode,
     response::{
         sse::{Event, KeepAlive, Sse},
@@ -24,7 +24,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use tracing::warn;
 
-use crate::AppState;
+use crate::{auth::AuthUser, AppState};
 
 pub fn aci_router() -> Router<Arc<AppState>> {
     Router::new()
@@ -179,6 +179,7 @@ struct AciRunBody {
 
 async fn aci_run(
     State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
     Json(body): Json<AciRunBody>,
 ) -> impl IntoResponse {
     let goal = body.goal.trim().to_string();
@@ -186,6 +187,27 @@ async fn aci_run(
         return (
             StatusCode::BAD_REQUEST,
             Json(json!({"error": "goal is required"})),
+        )
+            .into_response();
+    }
+
+    // Backend safety policy enforcement: host allowlist, sensitive-data
+    // masking, and circuit-breaker rate limits. This mirrors the extension's
+    // `browser-agent/safety/` layer so a rogue client cannot bypass it.
+    let actor_key = format!(
+        "{}:{}",
+        user.organization_id.as_deref().unwrap_or("no-org"),
+        &user.user_id
+    );
+    let decision = crate::aci_safety::evaluate_request(&goal, &actor_key);
+    if !decision.allowed {
+        crate::aci_safety::record_aci_error(&actor_key);
+        return (
+            StatusCode::FORBIDDEN,
+            Json(json!({
+                "error": "aci_safety_violation",
+                "message": decision.reason.unwrap_or_else(|| "request blocked by safety policy".to_string()),
+            })),
         )
             .into_response();
     }
@@ -200,7 +222,7 @@ async fn aci_run(
     // regardless of when they attach.
     let payload = json!({
         "mode": "intent",
-        "task": goal,
+        "task": decision.sanitized_goal,
         "session_id": run_id,
         "run_id": run_id,
         "target_scope": "browser",
@@ -221,11 +243,16 @@ async fn aci_run(
         .await
     {
         Ok(r) => r,
-        Err(e) => return acu_unavailable(e),
+        Err(e) => {
+            crate::aci_safety::record_aci_error(&actor_key);
+            return acu_unavailable(e);
+        }
     };
     if !resp.status().is_success() {
+        crate::aci_safety::record_aci_error(&actor_key);
         return forward_acu_error(resp).await;
     }
+    crate::aci_safety::record_aci_success(&actor_key);
     buffer_create(&run_id);
     tokio::spawn(drain_acu_events(run_id.clone(), resp));
 

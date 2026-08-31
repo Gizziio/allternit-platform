@@ -185,6 +185,22 @@ async fn main() {
     let db = DbHandle::new(db_path.clone()).expect("Failed to initialize SQLite database");
     info!("Database ready at {}", db_path.display());
 
+    // Initialize passkey / WebAuthn state when configured.
+    let passkey_state = match initialize_passkey_state(db.clone()) {
+        Ok(Some(state)) => {
+            info!("Passkey support enabled");
+            Some(state)
+        }
+        Ok(None) => {
+            info!("Passkey support disabled: ALLTERNIT_PASSKEY_RP_ID and ALLTERNIT_PASSKEY_RP_ORIGIN not both set");
+            None
+        }
+        Err(e) => {
+            tracing::warn!("Passkey support disabled: {e}");
+            None
+        }
+    };
+
     // B5: seed published benchmark scores for LLM routing (idempotent).
     allternit_api::llm_gateway::benchmarks::sync_at_startup(&db);
 
@@ -271,6 +287,7 @@ async fn main() {
         terminal_sessions: TerminalSessionStore::new(),
         mcp_dispatcher: allternit_api::mcp_dispatcher::McpDispatcher::new(),
         approval_store: Arc::new(ApprovalStore::new()),
+        passkey_state,
     });
 
     // Phase 5: start the in-process batch execution/polling worker.
@@ -373,6 +390,7 @@ async fn main() {
         .merge(allternit_api::server_tool_routes::router())
         .merge(allternit_api::sandbox_template_routes::router())
         .merge(allternit_api::allternit_vault::router())
+        .merge(passkey_router(&state))
         .merge(allternit_api::admin_workspace_routes::router())
         .merge(allternit_api::admin_service_account_routes::router())
         .merge(allternit_api::admin_access_token_routes::router())
@@ -900,5 +918,41 @@ async fn initialize_vm_driver(
     {
         info!("VM execution not supported on this platform");
         return None;
+    }
+}
+
+/// Initialize WebAuthn / passkey support when the relying-party env vars are set.
+///
+/// `ALLTERNIT_PASSKEY_RP_ID` is the domain suffix bound to credentials (e.g.
+/// `allternit.com`). `ALLTERNIT_PASSKEY_RP_ORIGIN` is the full origin where
+/// registration/authentication happens (e.g. `https://platform.allternit.com`).
+/// The extension sidepanel cannot itself be an RP origin because it runs under
+/// `chrome-extension://<id>`; the platform page is the primary passkey surface.
+fn initialize_passkey_state(
+    db: allternit_api::db::DbHandle,
+) -> anyhow::Result<Option<allternit_api::passkey_routes::PasskeyState>> {
+    let rp_id = match std::env::var("ALLTERNIT_PASSKEY_RP_ID") {
+        Ok(v) if !v.trim().is_empty() => v.trim().to_owned(),
+        _ => return Ok(None),
+    };
+    let rp_origin_str = match std::env::var("ALLTERNIT_PASSKEY_RP_ORIGIN") {
+        Ok(v) if !v.trim().is_empty() => v.trim().to_owned(),
+        _ => return Ok(None),
+    };
+    let rp_origin = rp_origin_str
+        .parse::<url::Url>()
+        .map_err(|e| anyhow::anyhow!("invalid ALLTERNIT_PASSKEY_RP_ORIGIN: {e}"))?;
+    Ok(Some(allternit_api::passkey_routes::PasskeyState::new(
+        rp_id, rp_origin, db,
+    )?))
+}
+
+/// Return the passkey router when passkey support is enabled, otherwise an empty router.
+fn passkey_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
+    match state.passkey_state.as_ref() {
+        Some(passkey_state) => {
+            allternit_api::passkey_routes::passkey_router(passkey_state.clone())
+        }
+        None => Router::new(),
     }
 }

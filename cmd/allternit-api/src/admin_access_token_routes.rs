@@ -450,6 +450,7 @@ mod tests {
             terminal_sessions: crate::terminal_routes::TerminalSessionStore::new(),
             mcp_dispatcher: crate::mcp_dispatcher::McpDispatcher::new(),
             approval_store: Arc::new(crate::permission_policy::ApprovalStore::new()),
+            passkey_state: None,
         })
     }
 

@@ -136,7 +136,7 @@ fn emit_audit_event(
     Ok(())
 }
 
-fn authorize(
+pub(crate) fn authorize(
     credential: Option<&CredentialContext>,
     method: Method,
     path: &str,
@@ -151,7 +151,7 @@ fn authorize(
     Ok(())
 }
 
-fn organization(user: &AuthUser) -> Result<String, ApiError> {
+pub(crate) fn organization(user: &AuthUser) -> Result<String, ApiError> {
     user.organization_id.clone().ok_or_else(|| {
         err(
             StatusCode::FORBIDDEN,
@@ -243,7 +243,7 @@ async fn list_vaults(
     }
 }
 
-fn find_vault(conn: &rusqlite::Connection, id: &str, org: &str) -> Result<Value, ApiError> {
+pub(crate) fn find_vault(conn: &rusqlite::Connection, id: &str, org: &str) -> Result<Value, ApiError> {
     conn.query_row("SELECT id, name, description, created_by, created_at, updated_at FROM allternit_vaults WHERE id = ?1 AND organization_id = ?2", params![id, org], vault_json).optional().map_err(internal)?.ok_or_else(|| err(StatusCode::NOT_FOUND, "vault_not_found", "No such vault."))
 }
 
