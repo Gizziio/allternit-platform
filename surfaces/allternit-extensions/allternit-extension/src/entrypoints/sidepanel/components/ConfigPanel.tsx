@@ -4,6 +4,7 @@ import {
 	CornerUpLeft,
 	Eye,
 	EyeOff,
+	Key,
 	Loader2,
 	Palette,
 } from 'lucide-react'
@@ -14,6 +15,7 @@ import type { ExtConfig, LanguagePreference } from '@/agent/useAgent'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
+import { VaultPanel } from './VaultPanel'
 
 interface ConfigPanelProps {
 	config: ExtConfig | null
@@ -33,6 +35,11 @@ export function ConfigPanel({ config, onSave, onClose, onOpenHTMLToFigma }: Conf
 	const [userAuthToken, setUserAuthToken] = useState<string>('')
 	const [copied, setCopied] = useState(false)
 	const [showToken, setShowToken] = useState(false)
+	const [showVault, setShowVault] = useState(false)
+
+	if (showVault) {
+		return <VaultPanel onBack={() => setShowVault(false)} />
+	}
 
 	useEffect(() => {
 		setLanguage(config?.language)
@@ -141,6 +148,25 @@ export function ConfigPanel({ config, onSave, onClose, onOpenHTMLToFigma }: Conf
 					</Button>
 				</div>
 			)}
+
+			{/* Password Vault Section */}
+			<div className="flex flex-col gap-1.5 p-3 bg-gradient-to-r from-amber-500/10 to-orange-500/10 rounded-md border border-amber-500/20">
+				<div className="flex items-center gap-2">
+					<Key className="size-3.5 text-amber-600" />
+					<label className="text-xs font-medium text-foreground">Password Vault</label>
+				</div>
+				<p className="text-[10px] text-muted-foreground mb-1">
+					Store credentials for agent autofill. Import from 1Password, Bitwarden, or Chrome.
+				</p>
+				<Button
+					variant="outline"
+					size="sm"
+					onClick={() => setShowVault(true)}
+					className="w-full h-8 text-xs cursor-pointer border-amber-500/30 hover:bg-amber-500/10"
+				>
+					Open Vault
+				</Button>
+			</div>
 
 			{/* User Auth Token Section */}
 			<div className="flex flex-col gap-1.5 p-3 bg-muted/50 rounded-md border">

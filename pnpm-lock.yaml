@@ -948,6 +948,8 @@ importers:
         specifier: ^1.6.0
         version: 1.6.1(@edge-runtime/vm@3.2.0)(@types/node@20.19.40)(happy-dom@20.8.9)(jsdom@28.0.0(@noble/hashes@2.2.0)(canvas@3.2.1))(lightningcss@1.32.0)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)
 
+  infrastructure/clerk-proxy: {}
+
   infrastructure/executor/vm-sessions:
     dependencies:
       '@allternit/gizziclaw':
@@ -3108,8 +3110,6 @@ importers:
       wrangler:
         specifier: ^3.90.0
         version: 3.114.17(@cloudflare/workers-types@4.20260120.0)
-
-  surfaces/ai.allternit.com/src/generated/prisma: {}
 
   surfaces/allternit-desktop:
     dependencies:
