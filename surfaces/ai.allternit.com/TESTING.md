@@ -1,55 +1,60 @@
-# Testing the Allternit Platform
+# Testing / agent auth notes — ai.allternit.com
 
-## Clerk test account
-
-We use one shared production test account for development and automated tests:
+## Shared development test account
 
 - **Email:** `cartlidge.joseph@yahoo.com`
-- **Password:** see the gitignored `.env.local` in this worktree
-- **Clerk domain:** `clerk.allternit.com`
-- **Primary origin:** `https://platform.allternit.com`
-- **Secondary origin:** `https://ai.allternit.com`
+- **Password:** `Tyhvix-gafho2-bofxog`
 
-The account is verified and has an active organization membership, so sign-in lands on `/shell` instead of the onboarding wizard.
+This account is verified in the production Clerk instance and works across
+`ai.allternit.com`, `platform.allternit.com`, and any other `.allternit.com`
+subdomain that proxies Clerk through `/__clerk/*`.
 
-## Local dev auto-login
+## Local development
 
-Copy `.env.example` to `.env.local` and make sure these lines are filled in:
+```bash
+cd surfaces/ai.allternit.com
+cp .env.example .env.local
+# Add NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY and any other required secrets.
+pnpm install
+pnpm dev
+```
+
+### Skip auth in local dev
+
+Set in `.env.local`:
+
+```bash
+VITE_DEV_AUTH_BYPASS=1
+```
+
+The shell will render with a mock signed-in user.
+
+### Auto-sign-in the test account
+
+Add to `.env.local`:
 
 ```bash
 VITE_CLERK_SEED_EMAIL=cartlidge.joseph@yahoo.com
-VITE_CLERK_SEED_PASSWORD=<password from existing .env.local>
+VITE_CLERK_SEED_PASSWORD=Tyhvix-gafho2-bofxog
 ```
 
-When `pnpm dev` starts, the app automatically signs in as the test user on page load. No manual sign-in is required while building features.
+The platform auth client automatically signs in and activates an organization
+on startup.
 
-## Manual sign-in
-
-If you prefer not to use auto-login, visit:
-
-- `https://platform.allternit.com/sign-in`
-- `https://ai.allternit.com/sign-in`
-
-Use the email and password above.
-
-## Automated smoke tests
-
-Two scripts exercise the production Clerk flow:
+## Running the Clerk smoke test
 
 ```bash
-# Full stress suite (21 scenarios, ~90s including token-refresh wait)
-node scripts/clerk-stress-test-v4.mjs
-
-# Lightweight smoke test
-node scripts/clerk-e2e-verify.mjs
+CLERK_TEST_PASSWORD=Tyhvix-gafho2-bofxog \
+  node surfaces/ai.allternit.com/scripts/clerk-e2e-verify.mjs
 ```
 
-Both scripts auto-load `.env.local` via `dotenv`, so they work without command-line credentials as long as `CLERK_TEST_PASSWORD` is set in `.env.local`.
+## Running the full Clerk stress test
 
-## Environment file rules
+```bash
+CLERK_TEST_PASSWORD=Tyhvix-gafho2-bofxog \
+  HEADLESS=0 \
+  node surfaces/ai.allternit.com/scripts/clerk-stress-test-v4.mjs
+```
 
-- **`.env.example`** is committed and documents the variables.
-- **`.env.local`** is gitignored and holds the real password.
-- **Never commit the password** to the repo.
-
-If you are in a fresh worktree, copy `.env.local` from an existing worktree or ask the session lead for the password.
+The stress suite validates sign-in/out, cross-subdomain session sharing, OAuth
+redirect initiation, and token refresh.

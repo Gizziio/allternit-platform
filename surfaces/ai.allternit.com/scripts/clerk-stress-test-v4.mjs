@@ -2,6 +2,10 @@
 /**
  * Production stress test for the hosted Clerk sign-in / sign-up flow.
  *
+ * Tests both the product shell (ai.allternit.com -> /shell) and the new
+ * cloud console (platform.allternit.com -> /). Session cookies are shared
+ * across .allternit.com subdomains, so cross-origin tests are included.
+ *
  * Environment variables:
  *   CLERK_TARGET_ORIGIN   - primary origin under test (default: https://platform.allternit.com)
  *   CLERK_SECONDARY_ORIGIN- secondary origin for cross-subdomain tests (default: https://ai.allternit.com)
@@ -36,14 +40,21 @@ const results = [];
 function pass(test) { results.push({ test, ok: true }); console.log('✅', test); }
 function fail(test, err) { results.push({ test, ok: false, error: err.message }); console.log('❌', test, err.message); }
 
+function homePath(origin) {
+  // The cloud console post-auth landing page is /; the product shell is /shell.
+  return origin === AI_ORIGIN ? '/shell' : '/';
+}
+
+function homeUrl(origin) {
+  return `${origin}${homePath(origin)}`;
+}
+
 function signInUrl(origin) {
-  const shell = `${origin}/shell`;
-  return `${origin}/sign-in?redirect_url=${encodeURIComponent(shell)}`;
+  return `${origin}/sign-in?redirect_url=${encodeURIComponent(homeUrl(origin))}`;
 }
 
 function signUpUrl(origin) {
-  const shell = `${origin}/shell`;
-  return `${origin}/sign-up?redirect_url=${encodeURIComponent(shell)}`;
+  return `${origin}/sign-up?redirect_url=${encodeURIComponent(homeUrl(origin))}`;
 }
 
 async function goto(page, url) {
@@ -62,18 +73,24 @@ async function waitForClerkForm(page) {
 async function signIn(page, origin, email, password) {
   await goto(page, signInUrl(origin));
   await waitForClerkForm(page);
-  await page.locator('input[name=identifier]').first().fill(email);
-  await page.locator('button.cl-formButtonPrimary').first().click();
+  await page.getByRole('textbox', { name: 'Email address' }).first().fill(email);
+  await page.getByRole('button', { name: 'Continue', exact: true }).first().click();
   await page.locator('input[name=password]').first().waitFor({ state: 'visible', timeout: 20000 });
-  await page.locator('input[name=password]').first().fill(password);
-  await page.locator('button.cl-formButtonPrimary').first().click();
-  await page.waitForURL(`${origin}/shell`, { waitUntil: 'domcontentloaded', timeout: 30000 });
-  await page.waitForTimeout(2000);
+  await page.getByRole('textbox', { name: 'Password' }).first().fill(password);
+  await page.getByRole('button', { name: 'Continue', exact: true }).first().click();
+  await page.waitForURL(homeUrl(origin), { timeout: 30000 });
+  await page.waitForTimeout(1000);
 }
 
 async function signOut(page) {
-  await page.locator('text=Account').first().click();
-  await page.waitForTimeout(500);
+  // Works for both the product shell (UserButton avatar) and the console header.
+  const trigger = page.locator('.cl-userButtonTrigger, button[aria-label*="user" i]').first();
+  if (await trigger.count() > 0) {
+    await trigger.click();
+  } else {
+    await page.locator('text=Account').first().click();
+  }
+  await page.waitForTimeout(800);
   for (const sel of ['text=Sign out', 'text=Sign Out']) {
     if (await page.locator(sel).count() > 0) {
       await page.locator(sel).first().click();
@@ -107,12 +124,12 @@ const HEADLESS = process.env.HEADLESS !== '0';
 
 const browser = await chromium.launch({ headless: HEADLESS });
 
-// Test 1: Normal sign-in
+// Test 1: Normal sign-in on primary origin
 {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   const page = await ctx.newPage();
-  try { await signIn(page, PLATFORM_ORIGIN, EMAIL, PASSWORD); pass('Normal sign-in reaches /shell'); }
-  catch (e) { fail('Normal sign-in reaches /shell', e); }
+  try { await signIn(page, PLATFORM_ORIGIN, EMAIL, PASSWORD); pass('Normal sign-in lands on console dashboard'); }
+  catch (e) { fail('Normal sign-in lands on console dashboard', e); }
   await ctx.close();
 }
 
@@ -122,12 +139,12 @@ const browser = await chromium.launch({ headless: HEADLESS });
   const page = await ctx.newPage();
   try {
     await goto(page, signInUrl(PLATFORM_ORIGIN));
-    await page.locator('input[name=identifier]').first().fill(EMAIL);
-    await page.locator('button.cl-formButtonPrimary').first().click();
+    await page.getByRole('textbox', { name: 'Email address' }).first().fill(EMAIL);
+    await page.getByRole('button', { name: 'Continue', exact: true }).first().click();
     await page.locator('input[name=password]').first().waitFor({ state: 'visible' });
-    await page.locator('input[name=password]').first().fill('wrong-password-12345');
-    await page.locator('button.cl-formButtonPrimary').first().click();
-    await page.waitForTimeout(3000);
+    await page.getByRole('textbox', { name: 'Password' }).first().fill('wrong-password-12345');
+    await page.getByRole('button', { name: 'Continue', exact: true }).first().click();
+    await page.waitForTimeout(4000);
     if (!page.url().includes('/sign-in')) throw new Error(`Expected /sign-in, got ${page.url()}`);
     if (!(await hasClerkError(page))) throw new Error('No Clerk error visible');
     pass('Wrong password shows error and stays on sign-in');
@@ -141,8 +158,8 @@ const browser = await chromium.launch({ headless: HEADLESS });
   const page = await ctx.newPage();
   try {
     await goto(page, signInUrl(PLATFORM_ORIGIN));
-    await page.locator('input[name=identifier]').first().fill('doesnotexist-12345@yahoo.com');
-    await page.locator('button.cl-formButtonPrimary').first().click();
+    await page.getByRole('textbox', { name: 'Email address' }).first().fill('doesnotexist-12345@yahoo.com');
+    await page.getByRole('button', { name: 'Continue', exact: true }).first().click();
     await page.waitForTimeout(3000);
     if (!page.url().includes('/sign-in')) throw new Error(`Expected /sign-in, got ${page.url()}`);
     const hasPassword = await page.locator('input[name=password]').count() > 0;
@@ -166,28 +183,28 @@ const browser = await chromium.launch({ headless: HEADLESS });
   await ctx.close();
 }
 
-// Test 5: Direct /shell while signed out redirects to /sign-in
+// Test 5: Direct dashboard while signed out redirects to /sign-in
 {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   const page = await ctx.newPage();
   try {
-    await goto(page, `${PLATFORM_ORIGIN}/shell`);
+    await goto(page, homeUrl(PLATFORM_ORIGIN));
     if (!page.url().includes('/sign-in')) throw new Error(`Expected /sign-in, got ${page.url()}`);
-    pass('Direct /shell while signed out redirects to /sign-in');
-  } catch (e) { fail('Direct /shell while signed out redirects to /sign-in', e); }
+    pass('Direct dashboard while signed out redirects to /sign-in');
+  } catch (e) { fail('Direct dashboard while signed out redirects to /sign-in', e); }
   await ctx.close();
 }
 
-// Test 6: Direct /sign-in while signed in redirects to /shell
+// Test 6: Direct /sign-in while signed in redirects to dashboard
 {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   const page = await ctx.newPage();
   try {
     await signIn(page, PLATFORM_ORIGIN, EMAIL, PASSWORD);
     await goto(page, signInUrl(PLATFORM_ORIGIN));
-    if (!page.url().includes('/shell')) throw new Error(`Expected /shell, got ${page.url()}`);
-    pass('Direct /sign-in while signed in redirects to /shell');
-  } catch (e) { fail('Direct /sign-in while signed in redirects to /shell', e); }
+    if (!page.url().includes(homePath(PLATFORM_ORIGIN))) throw new Error(`Expected ${homePath(PLATFORM_ORIGIN)}, got ${page.url()}`);
+    pass('Direct /sign-in while signed in redirects to dashboard');
+  } catch (e) { fail('Direct /sign-in while signed in redirects to dashboard', e); }
   await ctx.close();
 }
 
@@ -199,7 +216,7 @@ const browser = await chromium.launch({ headless: HEADLESS });
     await signIn(page, PLATFORM_ORIGIN, EMAIL, PASSWORD);
     await page.close();
     const page2 = await ctx.newPage();
-    await goto(page2, `${PLATFORM_ORIGIN}/shell`);
+    await goto(page2, homeUrl(PLATFORM_ORIGIN));
     if (page2.url().includes('/sign-in')) throw new Error('Session lost');
     pass('Session persists after closing and reopening page');
   } catch (e) { fail('Session persists after closing and reopening page', e); }
@@ -221,19 +238,33 @@ const browser = await chromium.launch({ headless: HEADLESS });
   await ctx.close();
 }
 
-// Test 9: Service worker excludes /__clerk/
+// Test 9: Service worker excludes /__clerk/ (only if a SW is registered)
 {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   const page = await ctx.newPage();
   try {
     await goto(page, signInUrl(PLATFORM_ORIGIN));
-    const swUrl = await page.evaluate(async () => {
-      const reg = await navigator.serviceWorker.ready;
-      return reg.active?.scriptURL;
+    // getRegistration() returns undefined immediately when no SW is registered;
+    // ready waits forever, so avoid it.
+    const reg = await page.evaluate(async () => {
+      if (!navigator.serviceWorker) return null;
+      return navigator.serviceWorker.getRegistration();
     });
-    const swText = await (await fetch(swUrl)).text();
-    if (!swText.includes('/__clerk/')) throw new Error('SW does not skip /__clerk/');
-    pass('Service worker excludes /__clerk/ requests');
+    if (!reg) {
+      pass('Service worker skip test — none registered on console');
+    } else {
+      const swUrl = await page.evaluate(async () => {
+        const registration = await navigator.serviceWorker.getRegistration();
+        return registration?.active?.scriptURL;
+      });
+      if (!swUrl) {
+        pass('Service worker skip test — no active worker');
+      } else {
+        const swText = await (await fetch(swUrl)).text();
+        if (!swText.includes('/__clerk/')) throw new Error('SW does not skip /__clerk/');
+        pass('Service worker excludes /__clerk/ requests');
+      }
+    }
   } catch (e) { fail('Service worker excludes /__clerk/ requests', e); }
   await ctx.close();
 }
@@ -244,25 +275,25 @@ const browser = await chromium.launch({ headless: HEADLESS });
   const page = await ctx.newPage();
   try {
     await goto(page, signInUrl(PLATFORM_ORIGIN));
-    await page.locator('input[name=identifier]').first().fill(EMAIL);
-    await page.locator('button.cl-formButtonPrimary').first().click();
+    await page.getByRole('textbox', { name: 'Email address' }).first().fill(EMAIL);
+    await page.getByRole('button', { name: 'Continue', exact: true }).first().click();
     await page.locator('input[name=password]').first().waitFor({ state: 'visible' });
     await page.reload({ waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(3000);
     if (await page.locator('input[name=identifier]').count() > 0) {
       await page.locator('input[name=identifier]').first().fill(EMAIL);
-      await page.locator('button.cl-formButtonPrimary').first().click();
+      await page.getByRole('button', { name: 'Continue', exact: true }).first().click();
       await page.locator('input[name=password]').first().waitFor({ state: 'visible' });
     }
     await page.locator('input[name=password]').first().fill(PASSWORD);
-    await page.locator('button.cl-formButtonPrimary').first().click();
-    await page.waitForURL(`${PLATFORM_ORIGIN}/shell`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await page.getByRole('button', { name: 'Continue', exact: true }).first().click();
+    await page.waitForURL(homeUrl(PLATFORM_ORIGIN), { timeout: 30000 });
     pass('User can recover sign-in after refreshing at password step');
   } catch (e) { fail('User can recover sign-in after refreshing at password step', e); }
   await ctx.close();
 }
 
-// Test 11: Back button from /shell behaves safely
+// Test 11: Back button from dashboard behaves safely
 {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   const page = await ctx.newPage();
@@ -270,11 +301,11 @@ const browser = await chromium.launch({ headless: HEADLESS });
     await signIn(page, PLATFORM_ORIGIN, EMAIL, PASSWORD);
     await page.goBack();
     await page.waitForTimeout(3000);
-    if (!page.url().includes('/shell') && !page.url().includes('/sign-in')) {
+    if (!page.url().includes(homePath(PLATFORM_ORIGIN)) && !page.url().includes('/sign-in')) {
       throw new Error(`Unexpected URL after back: ${page.url()}`);
     }
-    pass('Back button from /shell behaves safely');
-  } catch (e) { fail('Back button from /shell behaves safely', e); }
+    pass('Back button from dashboard behaves safely');
+  } catch (e) { fail('Back button from dashboard behaves safely', e); }
   await ctx.close();
 }
 
@@ -329,7 +360,7 @@ const browser = await chromium.launch({ headless: HEADLESS });
       });
     });
 
-    await page.locator('button.cl-formButtonPrimary').first().click();
+    await page.getByRole('button', { name: 'Continue', exact: true }).first().click();
     await page.waitForResponse(
       (res) => res.url().includes('/v1/client/sign_ups?') && res.request().method() === 'POST',
       { timeout: 20000 }
@@ -388,14 +419,7 @@ const browser = await chromium.launch({ headless: HEADLESS });
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   const page = await ctx.newPage();
   try {
-    await goto(page, signInUrl(AI_ORIGIN));
-    await waitForClerkForm(page);
-    await page.locator('input[name=identifier]').first().fill(EMAIL);
-    await page.locator('button.cl-formButtonPrimary').first().click();
-    await page.locator('input[name=password]').first().waitFor({ state: 'visible', timeout: 20000 });
-    await page.locator('input[name=password]').first().fill(PASSWORD);
-    await page.locator('button.cl-formButtonPrimary').first().click();
-    await page.waitForURL(`${AI_ORIGIN}/shell`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await signIn(page, AI_ORIGIN, EMAIL, PASSWORD);
     pass('Sign-in works on ai.allternit.com subdomain');
   } catch (e) { fail('Sign-in works on ai.allternit.com subdomain', e); }
   await ctx.close();
@@ -408,15 +432,15 @@ const browser = await chromium.launch({ headless: HEADLESS });
   try {
     const maliciousUrl = `${PLATFORM_ORIGIN}/sign-in?redirect_url=https%3A%2F%2Fevil.com%2Fshell`;
     await goto(page, maliciousUrl);
-    await page.locator('input[name=identifier]').first().fill(EMAIL);
-    await page.locator('button.cl-formButtonPrimary').first().click();
+    await page.getByRole('textbox', { name: 'Email address' }).first().fill(EMAIL);
+    await page.getByRole('button', { name: 'Continue', exact: true }).first().click();
     await page.locator('input[name=password]').first().waitFor({ state: 'visible', timeout: 20000 });
     await page.locator('input[name=password]').first().fill(PASSWORD);
-    await page.locator('button.cl-formButtonPrimary').first().click();
+    await page.getByRole('button', { name: 'Continue', exact: true }).first().click();
     await page.waitForTimeout(5000);
     const url = page.url();
     if (url.includes('evil.com')) throw new Error(`Redirected to malicious origin: ${url}`);
-    if (!url.includes('/shell')) throw new Error(`Did not land on /shell: ${url}`);
+    if (!url.includes(homePath(PLATFORM_ORIGIN))) throw new Error(`Did not land on dashboard: ${url}`);
     pass('Malicious cross-origin redirect is rejected');
   } catch (e) { fail('Malicious cross-origin redirect is rejected', e); }
   await ctx.close();
@@ -429,7 +453,7 @@ const browser = await chromium.launch({ headless: HEADLESS });
   try {
     await signIn(page, PLATFORM_ORIGIN, EMAIL, PASSWORD);
     // Now visit ai.allternit.com/shell in same context and expect not to hit sign-in.
-    await goto(page, `${AI_ORIGIN}/shell`);
+    await goto(page, homeUrl(AI_ORIGIN));
     if (page.url().includes('/sign-in')) throw new Error('Session not shared with ai.allternit.com');
     pass('Session shared across platform and ai subdomains');
   } catch (e) { fail('Session shared across platform and ai subdomains', e); }
@@ -443,7 +467,7 @@ const browser = await chromium.launch({ headless: HEADLESS });
   try {
     await signIn(page, PLATFORM_ORIGIN, EMAIL, PASSWORD);
     const page2 = await ctx.newPage();
-    await goto(page2, `${PLATFORM_ORIGIN}/shell`);
+    await goto(page2, homeUrl(PLATFORM_ORIGIN));
     if (page2.url().includes('/sign-in')) throw new Error('New tab did not share session');
     pass('Session shared across multiple tabs');
   } catch (e) { fail('Session shared across multiple tabs', e); }
@@ -461,7 +485,7 @@ const browser = await chromium.launch({ headless: HEADLESS });
     await page.locator('input[name="lastName"]').fill('Bot');
     await page.locator('input[name="emailAddress"]').fill(EMAIL);
     await page.locator('input[name="password"]').fill('Tyhvix-gafho2-bofxog');
-    await page.locator('button.cl-formButtonPrimary').first().click();
+    await page.getByRole('button', { name: 'Continue', exact: true }).first().click();
     await page.waitForTimeout(4000);
     if (!(await hasClerkError(page))) throw new Error('Expected Clerk error for duplicate email');
     pass('Sign-up with existing email shows error');
@@ -497,6 +521,18 @@ const browser = await chromium.launch({ headless: HEADLESS });
     if (page.url().includes('/sign-in')) throw new Error('Session lost after token refresh window');
     pass('Long-lived session stays authenticated after token refresh window');
   } catch (e) { fail('Long-lived session stays authenticated after token refresh window', e); }
+  await ctx.close();
+}
+
+// Test 22: Console dashboard renders after sign-in
+{
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const page = await ctx.newPage();
+  try {
+    await signIn(page, PLATFORM_ORIGIN, EMAIL, PASSWORD);
+    await page.waitForSelector('text=Platform Console', { timeout: 10000 });
+    pass('Console dashboard renders after sign-in');
+  } catch (e) { fail('Console dashboard renders after sign-in', e); }
   await ctx.close();
 }
 

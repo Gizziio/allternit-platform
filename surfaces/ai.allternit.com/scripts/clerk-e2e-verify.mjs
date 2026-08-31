@@ -27,11 +27,20 @@ import { randomBytes } from 'crypto';
 config({ path: resolve(fileURLToPath(new URL('.', import.meta.url)), '../.env.local') });
 
 const ORIGIN = (process.env.CLERK_TARGET_ORIGIN || 'https://platform.allternit.com').replace(/\/$/, '');
+const AI_ORIGIN = (process.env.CLERK_SECONDARY_ORIGIN || 'https://ai.allternit.com').replace(/\/$/, '');
 const EMAIL = process.env.CLERK_TEST_EMAIL || 'cartlidge.joseph@yahoo.com';
 const PASSWORD = process.env.CLERK_TEST_PASSWORD || '';
 const SECONDARY_EMAIL = process.env.CLERK_SECONDARY_EMAIL || '';
 const SECONDARY_PASSWORD = process.env.CLERK_SECONDARY_PASSWORD || PASSWORD;
 const HEADLESS = process.env.HEADLESS !== '0';
+
+function homePath(origin) {
+  return origin === AI_ORIGIN ? '/shell' : '/';
+}
+
+function homeUrl(origin) {
+  return `${origin}${homePath(origin)}`;
+}
 
 function fail(message) {
   console.error('❌', message);
@@ -59,7 +68,7 @@ async function waitForClerkForm(page) {
 }
 
 async function signIn(page, email, password) {
-  const signInUrl = `${ORIGIN}/sign-in?redirect_url=${encodeURIComponent(`${ORIGIN}/shell`)}`;
+  const signInUrl = `${ORIGIN}/sign-in?redirect_url=${encodeURIComponent(homeUrl(ORIGIN))}`;
   console.log('→ sign-in:', email, signInUrl);
   await page.goto(signInUrl, { waitUntil: 'networkidle', timeout: 30000 });
   await waitForClerkForm(page);
@@ -68,14 +77,14 @@ async function signIn(page, email, password) {
   await page.getByRole('textbox', { name: 'Password' }).fill(password);
   await page.getByRole('button', { name: 'Continue', exact: true }).click();
 
-  await page.waitForURL(`${ORIGIN}/shell`, { timeout: 30000 });
+  await page.waitForURL(homeUrl(ORIGIN), { timeout: 30000 });
   console.log('✅ signed in and redirected to', page.url());
 }
 
 async function checkSignUpForm(page) {
   logPageEvents(page);
 
-  const signUpUrl = `${ORIGIN}/sign-up?redirect_url=${encodeURIComponent(`${ORIGIN}/shell`)}`;
+  const signUpUrl = `${ORIGIN}/sign-up?redirect_url=${encodeURIComponent(homeUrl(ORIGIN))}`;
   console.log('→ sign-up:', signUpUrl);
   await page.goto(signUpUrl, { waitUntil: 'networkidle', timeout: 30000 });
   await waitForClerkForm(page);

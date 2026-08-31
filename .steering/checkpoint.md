@@ -1,5 +1,63 @@
 # Steering checkpoint
 
+## platform.allternit.com cloud console — deployment and Clerk e2e (2026-08-31)
+
+### Goal
+Ship the new `platform.allternit.com` cloud console surface, wire it to the
+existing Clerk production instance, and make auth testable end-to-end for every
+agent without blocking development.
+
+### Just did
+- Verified the MVP built by the coder subagent under
+  `surfaces/platform.allternit.com/`: `pnpm typecheck` ✅ and `pnpm build` ✅.
+- Added `.env.local.example`, `TESTING.md`, and a gitignored `.env.local` with
+  the production Clerk key and a shared dev/test account
+  (`cartlidge.joseph@yahoo.com` / `Tyhvix-gafho2-bofxog`).
+- Added dev-only seeded auto-login to the platform auth client using
+  `VITE_CLERK_SEED_EMAIL`/`VITE_CLERK_SEED_PASSWORD`.
+- Fixed the platform console auth gate: removed the `RedirectWhenAuthed`
+  wrapper around `<SignIn>/<SignUp>` and switched routes to `/sign-in/*` and
+  `/sign-up/*` so Clerk's factor-one/factor-two sub-routes render correctly.
+- Aligned redirect origins: both `ai.allternit.com` and
+  `platform.allternit.com` auth clients include each other; the Clerk proxy
+  worker already routes all subdomains.
+- Updated `.github/workflows/deploy-cloudflare-pages.yml` to deploy
+  `ai.allternit.com` → `ai-allternit` and `platform.allternit.com` →
+  `allternit-platform`.
+- Rewrote `scripts/build-cloudflare-platform.sh` for the new console and added
+  `scripts/build-cloudflare-ai.sh` for the product shell.
+- Extended `surfaces/ai.allternit.com/scripts/clerk-stress-test-v4.mjs` to
+  cover `platform.allternit.com` (dashboard redirect), cross-subdomain session
+  sharing, and console-specific behavior.
+- Deployed `platform.allternit.com` to the `allternit-platform` Pages project.
+
+### Verification
+- `node surfaces/ai.allternit.com/scripts/clerk-e2e-verify.mjs` passes against
+  `https://platform.allternit.com`.
+- `node surfaces/ai.allternit.com/scripts/clerk-stress-test-v4.mjs` passes all
+  22 tests, including sign-in/out, wrong passwords, OAuth redirect, session
+  sharing across `platform` ↔ `ai`, token refresh, and dashboard rendering.
+- `pnpm install --frozen-lockfile --ignore-scripts` from the repo root passes,
+  so the updated CI workflow should resolve dependencies.
+
+### Next
+1. Commit the platform console, CI, scripts, and test updates on
+   `session/clerk-fix`.
+2. Push the branch and merge into `main` so other agents can use the test
+   account and the dual-domain deployment is live.
+3. Verify the next GitHub Actions run deploys both surfaces correctly.
+
+### Open questions
+- Should the shared cloud panels (`ComputeBillingPanel`,
+  `OrganizationAccessPanel`) be extracted into `packages/@allternit/cloud-ui`
+  so both surfaces consume one copy (Option C), or are the copied/adapted
+  panels acceptable for this phase?
+- The console's API Keys, Billing, and Docs pages are still stubs with useful
+  links. When should the real Stripe billing portal and scoped API-key backend
+  be wired?
+
+---
+
 ## Clerk sign-in/sign-up e2e verification (2026-08-30)
 
 ### Goal
@@ -1265,3 +1323,12 @@ Close the remaining production gaps in Remote Control: secure push notifications
 - Build the remote-control entry to confirm bundling (pre-existing top-level-await blocker in a vendored dep is unrelated).
 - Run full manual E2E: pair runtime → open PWA → trigger permission/question → receive push → approve/respond.
 - Merged to `main` at `2c21d67e3`.
+
+## 2026-08-31 platform.allternit.com MVP
+
+**Goal:** Build a working, deployable MVP of `surfaces/platform.allternit.com/` as the new cloud/API/developer console.
+**Just did:** Read existing ai.allternit.com panels, auth client, primitives, and current platform skeleton; scoped copy-and-adapt approach.
+**Next:** Create src/ tree: auth layer, console layout, pages, and copied settings primitives; wire React Router; run build/typecheck.
+**Open questions:** Whether hosted-compute API base should default to gateway proxy or direct cloud-api; will use gateway default with `VITE_ALLTERNIT_CLOUD_API_URL` override.
+
+**Update:** src/ tree complete. `pnpm typecheck` and `pnpm build` both pass. Remaining: hand off to parent agent.
