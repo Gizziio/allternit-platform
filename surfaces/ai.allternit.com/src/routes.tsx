@@ -72,6 +72,7 @@ const LoopsListPage = lazy(() => import('./pages/LoopsListPage'))
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'))
 const TermsPage = lazy(() => import('./pages/TermsPage'))
 const StatusPage = lazy(() => import('./pages/StatusPage'))
+const BenchmarkLeaderboardPage = lazy(() => import('./pages/BenchmarkLeaderboardPage'))
 const ConnectPage = lazy(() => import('./pages/ConnectPage'))
 const ExtensionInstalledPage = lazy(() => import('./pages/ExtensionInstalledPage'))
 const DebugModePage = lazy(() => import('./pages/DebugModePage'))
@@ -134,6 +135,7 @@ export default function AppRoutes() {
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/status" element={<StatusPage />} />
+        <Route path="/leaderboard" element={<BenchmarkLeaderboardPage />} />
         <Route path="/connect" element={<ConnectPage />} />
         <Route path="/extension/installed" element={<ExtensionInstalledPage />} />
         <Route path="/debug-mode" element={<DebugModePage />} />
