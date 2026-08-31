@@ -5,6 +5,8 @@ import { fileURLToPath } from 'url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const dist = join(__dirname, '..', 'dist');
 
+// sign-in and sign-up are handled by _redirects so Clerk sub-routes
+// (e.g. /sign-in/factor-one) return 200 instead of 404.
 const routes = [
   'dashboard',
   'organizations',
@@ -14,8 +16,6 @@ const routes = [
   'docs',
   'settings',
   'pair',
-  'sign-in',
-  'sign-up',
 ];
 
 for (const route of routes) {
