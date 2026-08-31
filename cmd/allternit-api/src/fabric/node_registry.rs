@@ -621,16 +621,18 @@ impl FabricNodeRegistry {
         quantity: f64,
         unit: &str,
         measured_at: Option<chrono::DateTime<Utc>>,
+        placement_id: Option<&str>,
     ) -> Result<String, rusqlite::Error> {
         let id = uuid::Uuid::new_v4().to_string();
         let conn = self.db.connect()?;
         conn.execute(
             "INSERT INTO fabric_usage_events (
-                id, resource_id, event_type, quantity, unit, measured_at
-            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                id, resource_id, placement_id, event_type, quantity, unit, measured_at
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             params![
                 id,
                 resource_id,
+                placement_id,
                 event_type,
                 quantity,
                 unit,

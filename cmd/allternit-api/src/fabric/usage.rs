@@ -73,6 +73,7 @@ impl UsageIngestor {
         quantity: f64,
         unit: &str,
         measured_at: Option<DateTime<Utc>>,
+        placement_id: Option<&str>,
     ) -> Result<String, UsageError> {
         if quantity <= 0.0 {
             return Err(UsageError::InvalidUnit(format!(
@@ -84,11 +85,12 @@ impl UsageIngestor {
         let measured_at_str = measured_at.map(|d| d.to_rfc3339());
         conn.execute(
             "INSERT INTO fabric_usage_events (
-                id, resource_id, event_type, quantity, unit, measured_at
-            ) VALUES (?1, ?2, ?3, ?4, ?5, COALESCE(?6, CURRENT_TIMESTAMP))",
+                id, resource_id, placement_id, event_type, quantity, unit, measured_at
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, COALESCE(?7, CURRENT_TIMESTAMP))",
             rusqlite::params![
                 id,
                 resource_id,
+                placement_id,
                 event_type,
                 quantity,
                 unit,
@@ -478,7 +480,7 @@ mod tests {
         seed_resource(&db, "resource-1", "org-1", "s");
         let ingestor = UsageIngestor::new(db);
         let id = ingestor
-            .record_usage_event("resource-1", "compute_seconds", 60.0, "seconds", None)
+            .record_usage_event("resource-1", "compute_seconds", 60.0, "seconds", None, None)
             .unwrap();
         let unprocessed = ingestor.list_unprocessed(10).unwrap();
         assert_eq!(unprocessed.len(), 1);
@@ -496,7 +498,7 @@ mod tests {
         let ingestor = UsageIngestor::new(db.clone());
         let ledger = CreditsLedger::new(db.clone());
         let event_id = ingestor
-            .record_usage_event("resource-1", "compute_seconds", 3600.0, "seconds", None)
+            .record_usage_event("resource-1", "compute_seconds", 3600.0, "seconds", None, None)
             .unwrap();
 
         ingestor.process_event(&event_id, &ledger).unwrap();
@@ -527,7 +529,7 @@ mod tests {
         let ingestor = UsageIngestor::new(db.clone());
         let ledger = CreditsLedger::new(db.clone());
         let event_id = ingestor
-            .record_usage_event("resource-1", "compute_hours", 2.0, "hours", None)
+            .record_usage_event("resource-1", "compute_hours", 2.0, "hours", None, None)
             .unwrap();
 
         ingestor.process_event(&event_id, &ledger).unwrap();
@@ -545,7 +547,7 @@ mod tests {
         let ingestor = UsageIngestor::new(db.clone());
         let ledger = CreditsLedger::new(db.clone());
         let event_id = ingestor
-            .record_usage_event("resource-1", "tokens", 1000.0, "tokens", None)
+            .record_usage_event("resource-1", "tokens", 1000.0, "tokens", None, None)
             .unwrap();
 
         let err = ingestor.process_event(&event_id, &ledger).unwrap_err();
@@ -600,6 +602,7 @@ mod tests {
                 3.0,
                 "request",
                 Some(Utc::now()),
+                Some("plc-harness-1"),
             )
             .unwrap();
 
@@ -630,10 +633,10 @@ mod tests {
         let ingestor = UsageIngestor::new(db.clone());
         let ledger = CreditsLedger::new(db.clone());
         ingestor
-            .record_usage_event("resource-1", "compute_seconds", 60.0, "seconds", None)
+            .record_usage_event("resource-1", "compute_seconds", 60.0, "seconds", None, None)
             .unwrap();
         ingestor
-            .record_usage_event("resource-1", "compute_seconds", 120.0, "seconds", None)
+            .record_usage_event("resource-1", "compute_seconds", 120.0, "seconds", None, None)
             .unwrap();
 
         let processed = ingestor.run_batch(&ledger, 10).unwrap();
@@ -652,7 +655,7 @@ mod tests {
         let ingestor = UsageIngestor::new(db.clone());
         let ledger = CreditsLedger::new(db.clone());
         let event_id = ingestor
-            .record_usage_event("resource-1", "compute_hours", 1.0, "hours", None)
+            .record_usage_event("resource-1", "compute_hours", 1.0, "hours", None, None)
             .unwrap();
 
         ingestor.process_event(&event_id, &ledger).unwrap();

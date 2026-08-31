@@ -240,7 +240,6 @@ async fn create_response(
         // UsageEvent.
         let resource_id_for_event = resource_id.clone();
         let db = state.db.clone();
-        let db2 = state.db.clone();
         let total_tokens = inference_result.input_tokens + inference_result.output_tokens;
         tokio::task::spawn_blocking(move || {
             let ingestor = UsageIngestor::new(db);
@@ -250,17 +249,9 @@ async fn create_response(
                 total_tokens as f64,
                 "tokens",
                 Some(Utc::now()),
+                Some(&placement_id),
             ) {
                 warn!(resource_id = %resource_id_for_event, error = %e, "failed to record model usage event");
-                return;
-            }
-            if let Err(e) = db2.connect().map(|conn| {
-                conn.execute(
-                    "UPDATE fabric_usage_events SET placement_id = ?1 WHERE resource_id = ?2 AND placement_id IS NULL",
-                    rusqlite::params![placement_id, resource_id_for_event],
-                )
-            }) {
-                warn!(resource_id = %resource_id_for_event, placement_id = %placement_id, error = %e, "failed to attach placement to usage event");
             }
         })
         .await

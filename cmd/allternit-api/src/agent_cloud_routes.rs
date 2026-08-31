@@ -1412,6 +1412,80 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn provision_harness_reconciles_os_usage_event_to_credits() {
+        use crate::fabric::usage::UsageIngestor;
+
+        let (url, _child) = spawn_real_os_control_plane().await;
+        let os_client = crate::fabric::os_client::OsControlPlaneClient::new(url);
+
+        let temp = tempfile::tempdir().unwrap().keep();
+        let state = crate::test_helpers::app_state_with_driver_and_os(&temp, None, Some(os_client)).await;
+        fabric::sku::ResourceClassCatalog::seed_builtin(&state.db).unwrap();
+        let conn = state.db.connect().unwrap();
+        seed_org_user(&conn, "org-1", "owner-1", "owner");
+        drop(conn);
+
+        let ledger = fabric::credits::CreditsLedger::new(state.db.clone());
+        ledger
+            .credit("org-1", 10_000, fabric::credits::TransactionType::Purchase, None, None, None, None)
+            .unwrap();
+
+        let agent_id = seed_agent_with_harness(&state.db, "owner-1", "Test Agent", r#"{"mode":"cloud","harness":"gizzi"}"#);
+
+        let app = router().with_state(state.clone());
+        let resp = app
+            .oneshot(build_request(
+                "POST",
+                &format!("/agents/{}/harness/provision", agent_id),
+                auth_user(Some("org-1"), "owner-1"),
+                Some(json!({})),
+            ))
+            .await
+            .unwrap();
+
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        let resource_id = body["resource_id"].as_str().unwrap();
+
+        // Look up the canonical OS placement id recorded by Cloud.
+        let manager = ResourceManager::new(state.db.clone());
+        let placement = manager
+            .latest_placement(resource_id)
+            .unwrap()
+            .expect("placement exists");
+
+        // Simulate the OS node-agent pushing a harness usage event for the
+        // provisioned resource and placement.
+        let ingestor = UsageIngestor::new(state.db.clone());
+        let event_id = ingestor
+            .record_usage_event(
+                resource_id,
+                "harness.gizzi.session",
+                1.0,
+                "request",
+                Some(Utc::now()),
+                Some(&placement.id),
+            )
+            .unwrap();
+        ingestor.process_event(&event_id, &ledger).unwrap();
+
+        // Provisioning consumed an 8-cent hold; the harness request consumed 5 cents.
+        // 10_000 - 8 - 5 = 9_987.
+        assert_eq!(ledger.balance_cents("org-1").unwrap(), 9_987);
+
+        // The usage event should be marked processed and linked to a cost event.
+        let conn = state.db.connect().unwrap();
+        let cost_event_id: Option<String> = conn
+            .query_row(
+                "SELECT cost_event_id FROM fabric_usage_events WHERE id = ?1",
+                rusqlite::params![&event_id],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert!(cost_event_id.is_some());
+    }
+
+    #[tokio::test]
     async fn provision_harness_opencode_schedules_fabric_resource() {
         let temp = tempfile::tempdir().unwrap().keep();
         let state = app_state_with_fake_provider(&temp).await;

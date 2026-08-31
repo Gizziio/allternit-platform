@@ -108,6 +108,8 @@ struct SubmitUsageRequest {
     unit: String,
     #[serde(default)]
     measured_at: Option<String>,
+    #[serde(default)]
+    placement_id: Option<String>,
 }
 
 async fn submit_usage(
@@ -156,6 +158,7 @@ async fn submit_usage(
                 req.quantity,
                 &req.unit,
                 measured_at,
+                req.placement_id.as_deref(),
             )
             .map_err(usage_error)
     })
@@ -365,7 +368,7 @@ mod tests {
 
         let ingestor = UsageIngestor::new(state.db.clone());
         ingestor
-            .record_usage_event("resource-1", "compute_seconds", 60.0, "seconds", None)
+            .record_usage_event("resource-1", "compute_seconds", 60.0, "seconds", None, None)
             .unwrap();
 
         let app = router().with_state(state.clone());

@@ -292,6 +292,8 @@ struct UsageEventRequest {
     quantity: f64,
     unit: String,
     measured_at: Option<String>,
+    #[serde(default)]
+    placement_id: Option<String>,
 }
 
 async fn submit_usage(
@@ -321,6 +323,7 @@ async fn submit_usage(
             req.quantity,
             &req.unit,
             Some(measured_at),
+            req.placement_id.as_deref(),
         )
         .map_err(internal)?;
 
