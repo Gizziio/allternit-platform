@@ -508,6 +508,13 @@ async fn provision_harness(
     let harness_session_capability = match harness_type {
         "gizzi" => "harness.gizzi.session",
         "opencode" => "harness.opencode.session",
+        "aider" => "harness.aider.session",
+        "claude" => "harness.claude.session",
+        "codex" => "harness.codex.session",
+        "kimi" => "harness.kimi.session",
+        "antigravity" => "harness.antigravity.session",
+        "hermes" => "harness.hermes.session",
+        "oh_my_pi" => "harness.oh_my_pi.session",
         _ => {
             return Err(error(
                 StatusCode::BAD_REQUEST,
@@ -1520,5 +1527,53 @@ mod tests {
         assert_eq!(config["harness_status"], "active");
         assert_eq!(config["harness_class"], "harness.opencode");
         assert_eq!(config["harness_resource_id"], resource_id);
+    }
+
+    #[tokio::test]
+    async fn provision_harness_aider_schedules_fabric_resource() {
+        let temp = tempfile::tempdir().unwrap().keep();
+        let state = app_state_with_fake_provider(&temp).await;
+        let conn = state.db.connect().unwrap();
+        seed_org_user(&conn, "org-1", "owner-1", "owner");
+        drop(conn);
+
+        let ledger = fabric::credits::CreditsLedger::new(state.db.clone());
+        ledger
+            .credit("org-1", 10_000, fabric::credits::TransactionType::Purchase, None, None, None, None)
+            .unwrap();
+
+        let agent_id = seed_agent_with_harness(&state.db, "owner-1", "Test Agent", r#"{"mode":"cloud","harness":"aider"}"#);
+
+        let app = router().with_state(state.clone());
+        let resp = app
+            .oneshot(build_request(
+                "POST",
+                &format!("/agents/{}/harness/provision", agent_id),
+                auth_user(Some("org-1"), "owner-1"),
+                Some(json!({})),
+            ))
+            .await
+            .unwrap();
+
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["agent_id"], agent_id);
+        assert_eq!(body["status"], "active");
+        assert_eq!(body["harness_status"], "active");
+        assert_eq!(body["harness_type"], "aider");
+        assert!(!body["resource_id"].as_str().unwrap().is_empty());
+
+        let conn = state.db.connect().unwrap();
+        let config: String = conn
+            .query_row(
+                "SELECT config FROM agents WHERE id = ?1",
+                rusqlite::params![agent_id],
+                |row| row.get(0),
+            )
+            .unwrap();
+        let config: Value = serde_json::from_str(&config).unwrap();
+        assert_eq!(config["harness_status"], "active");
+        assert_eq!(config["harness_class"], "harness.aider");
+        assert!(!config["harness_resource_id"].as_str().unwrap().is_empty());
     }
 }
