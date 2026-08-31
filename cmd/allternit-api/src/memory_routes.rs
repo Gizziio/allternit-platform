@@ -43,6 +43,9 @@ pub fn memory_router() -> Router<Arc<AppState>> {
         .route("/memory/v2/retain", post(retain_turn_v2_handler))
         .route("/memory/v2/facts", get(list_facts_v2_handler))
         .route("/memory/v2/entities", get(list_entities_v2_handler))
+        .route("/memory/browser-history/visit", post(record_browser_visit_handler))
+        .route("/memory/browser-history", get(list_browser_history_handler))
+        .route("/memory/browser-history/search", get(search_browser_history_handler))
 }
 
 // ── Health ──────────────────────────────────────────────────────────────────
@@ -1139,6 +1142,107 @@ async fn list_entities_v2_handler(
         Ok(entities) => (StatusCode::OK, Json(json!({"entities": entities, "count": entities.len()}))),
         Err(e) => {
             tracing::warn!("List entities error: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()})))
+        }
+    }
+}
+
+// ── Browser history as memory ───────────────────────────────────────────────
+
+async fn record_browser_visit_handler(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Json(payload): Json<crate::browser_history_service::RecordVisitRequest>,
+) -> impl axum::response::IntoResponse {
+    let user = match get_user(&headers) {
+        Some(u) => u,
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            )
+        }
+    };
+
+    match crate::browser_history_service::record_visit(&state.db, &user.user_id, &payload) {
+        Ok(id) => (StatusCode::CREATED, Json(json!({"id": id, "status": "recorded"}))),
+        Err(crate::browser_history_service::BrowserHistoryError::InvalidUrl(msg)) => {
+            (StatusCode::BAD_REQUEST, Json(json!({"error": "invalid_url", "message": msg})))
+        }
+        Err(e) => {
+            tracing::warn!("Browser history record error: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()})))
+        }
+    }
+}
+
+#[derive(Deserialize)]
+struct BrowserHistoryQuery {
+    agent_id: Option<String>,
+    session_id: Option<String>,
+    domain: Option<String>,
+    since_hours: Option<i64>,
+    limit: Option<usize>,
+}
+
+async fn list_browser_history_handler(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Query(params): Query<BrowserHistoryQuery>,
+) -> impl axum::response::IntoResponse {
+    let user = match get_user(&headers) {
+        Some(u) => u,
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            )
+        }
+    };
+
+    let query = crate::browser_history_service::RecentHistoryQuery {
+        agent_id: params.agent_id,
+        session_id: params.session_id,
+        domain: params.domain,
+        since_hours: params.since_hours,
+        limit: params.limit,
+    };
+
+    match crate::browser_history_service::list_recent(&state.db, &user.user_id, &query) {
+        Ok(items) => (StatusCode::OK, Json(json!({"items": items, "count": items.len()}))),
+        Err(e) => {
+            tracing::warn!("Browser history list error: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()})))
+        }
+    }
+}
+
+#[derive(Deserialize)]
+struct BrowserHistorySearchQuery {
+    q: String,
+    limit: Option<usize>,
+}
+
+async fn search_browser_history_handler(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Query(params): Query<BrowserHistorySearchQuery>,
+) -> impl axum::response::IntoResponse {
+    let user = match get_user(&headers) {
+        Some(u) => u,
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            )
+        }
+    };
+
+    let limit = params.limit.unwrap_or(50);
+    match crate::browser_history_service::search_history(&state.db, &user.user_id, &params.q, limit) {
+        Ok(items) => (StatusCode::OK, Json(json!({"items": items, "count": items.len()}))),
+        Err(e) => {
+            tracing::warn!("Browser history search error: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()})))
         }
     }

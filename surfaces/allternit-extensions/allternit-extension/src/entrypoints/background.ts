@@ -32,6 +32,7 @@ import {
   fillCredential,
   recordCredentialUse,
 } from '@/lib/vault/api'
+import { recordBrowserVisit } from '@/lib/memory/history'
 
 export default defineBackground(() => {
   console.log('[Allternit Extension] Background Service Worker started')
@@ -39,6 +40,23 @@ export default defineBackground(() => {
   // ── Page-agent setup ──────────────────────────────────────────────────────
 
   setupTabChangeEvents()
+
+  // ── Browser history as memory ─────────────────────────────────────────────
+
+  if (chrome.history?.onVisited) {
+    chrome.history.onVisited.addListener((item) => {
+      recordBrowserVisit({
+        url: item.url ?? '',
+        title: item.title ?? undefined,
+        visitTime: item.lastVisitTime ? new Date(item.lastVisitTime).toISOString() : undefined,
+        transitionType: item.transition ?? undefined,
+      }).catch((error) => {
+        // Silent: history ingestion is best-effort and may fail when offline
+        // or not yet authenticated.
+        console.debug('[Allternit History] Failed to record visit:', error)
+      })
+    })
+  }
 
   chrome.storage.local.get('AllternitExtUserAuthToken').then((result) => {
     if (result.AllternitExtUserAuthToken) return
