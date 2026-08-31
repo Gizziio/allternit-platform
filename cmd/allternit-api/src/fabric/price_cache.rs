@@ -258,8 +258,9 @@ mod tests {
             conn.execute(
                 "INSERT OR IGNORE INTO fabric_resource_classes
                  (id, kind, class, display_name, vcpu_min, memory_mib_min, gpu_vram_mib_min,
-                  reliability_tier, retail_price_per_hour_cents)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+                  reliability_tier, retail_price_per_hour_cents,
+                  retail_price_per_request_cents, retail_price_per_token_cents)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
                 params![
                     class.id,
                     class.kind.to_string(),
@@ -270,6 +271,8 @@ mod tests {
                     class.gpu_vram_mib as i64,
                     class.reliability_tier.to_string(),
                     class.retail_price_per_hour_cents,
+                    class.retail_price_per_request_cents,
+                    class.retail_price_per_token_cents,
                 ],
             )
             .unwrap();

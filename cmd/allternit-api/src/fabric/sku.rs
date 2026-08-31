@@ -23,6 +23,10 @@ pub struct ResourceClass {
     pub reliability_tier: ReliabilityTier,
     /// Retail price in USD cents per hour before storage/network/add-ons.
     pub retail_price_per_hour_cents: i64,
+    /// Retail price in USD cents per discrete request/action.
+    pub retail_price_per_request_cents: i64,
+    /// Retail price in USD cents per token for inference metering.
+    pub retail_price_per_token_cents: i64,
 }
 
 impl ResourceClass {
@@ -50,6 +54,8 @@ pub fn builtin_classes() -> Vec<ResourceClass> {
             gpu_vram_mib: 0,
             reliability_tier: ReliabilityTier::Standard,
             retail_price_per_hour_cents: 5,
+            retail_price_per_request_cents: 0,
+            retail_price_per_token_cents: 0,
         },
         ResourceClass {
             id: "compute.m".to_string(),
@@ -61,6 +67,8 @@ pub fn builtin_classes() -> Vec<ResourceClass> {
             gpu_vram_mib: 0,
             reliability_tier: ReliabilityTier::Standard,
             retail_price_per_hour_cents: 10,
+            retail_price_per_request_cents: 0,
+            retail_price_per_token_cents: 0,
         },
         ResourceClass {
             id: "compute.l".to_string(),
@@ -72,6 +80,8 @@ pub fn builtin_classes() -> Vec<ResourceClass> {
             gpu_vram_mib: 0,
             reliability_tier: ReliabilityTier::Standard,
             retail_price_per_hour_cents: 20,
+            retail_price_per_request_cents: 0,
+            retail_price_per_token_cents: 0,
         },
         // GPU
         ResourceClass {
@@ -84,6 +94,8 @@ pub fn builtin_classes() -> Vec<ResourceClass> {
             gpu_vram_mib: 24576,
             reliability_tier: ReliabilityTier::Standard,
             retail_price_per_hour_cents: 79,
+            retail_price_per_request_cents: 0,
+            retail_price_per_token_cents: 0,
         },
         ResourceClass {
             id: "gpu.m".to_string(),
@@ -95,6 +107,8 @@ pub fn builtin_classes() -> Vec<ResourceClass> {
             gpu_vram_mib: 49152,
             reliability_tier: ReliabilityTier::Standard,
             retail_price_per_hour_cents: 129,
+            retail_price_per_request_cents: 0,
+            retail_price_per_token_cents: 0,
         },
         ResourceClass {
             id: "gpu.l".to_string(),
@@ -106,6 +120,8 @@ pub fn builtin_classes() -> Vec<ResourceClass> {
             gpu_vram_mib: 81920,
             reliability_tier: ReliabilityTier::Standard,
             retail_price_per_hour_cents: 249,
+            retail_price_per_request_cents: 0,
+            retail_price_per_token_cents: 0,
         },
         // Sandbox
         ResourceClass {
@@ -118,6 +134,8 @@ pub fn builtin_classes() -> Vec<ResourceClass> {
             gpu_vram_mib: 0,
             reliability_tier: ReliabilityTier::Standard,
             retail_price_per_hour_cents: 3,
+            retail_price_per_request_cents: 0,
+            retail_price_per_token_cents: 0,
         },
         // Managed harness runtime
         ResourceClass {
@@ -130,6 +148,8 @@ pub fn builtin_classes() -> Vec<ResourceClass> {
             gpu_vram_mib: 0,
             reliability_tier: ReliabilityTier::Standard,
             retail_price_per_hour_cents: 8,
+            retail_price_per_request_cents: 5,
+            retail_price_per_token_cents: 0,
         },
     ]
 }
@@ -166,7 +186,8 @@ impl ResourceClassCatalog {
         let conn = db.connect()?;
         let mut stmt = conn.prepare(
             "SELECT id, kind, class, display_name, vcpu_min, memory_mib_min,
-                    gpu_vram_mib_min, reliability_tier, retail_price_per_hour_cents
+                    gpu_vram_mib_min, reliability_tier, retail_price_per_hour_cents,
+                    retail_price_per_request_cents, retail_price_per_token_cents
              FROM fabric_resource_classes
              ORDER BY kind, class",
         )?;
@@ -197,6 +218,8 @@ impl ResourceClassCatalog {
                 gpu_vram_mib: row.get::<_, i64>("gpu_vram_mib_min")? as u64,
                 reliability_tier,
                 retail_price_per_hour_cents: row.get("retail_price_per_hour_cents")?,
+                retail_price_per_request_cents: row.get("retail_price_per_request_cents")?,
+                retail_price_per_token_cents: row.get("retail_price_per_token_cents")?,
             })
         })?;
         rows.collect()
@@ -223,8 +246,9 @@ impl ResourceClassCatalog {
             let rows = conn.execute(
                 "INSERT INTO fabric_resource_classes
                  (id, kind, class, display_name, vcpu_min, memory_mib_min,
-                  gpu_vram_mib_min, reliability_tier, retail_price_per_hour_cents)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+                  gpu_vram_mib_min, reliability_tier, retail_price_per_hour_cents,
+                  retail_price_per_request_cents, retail_price_per_token_cents)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
                  ON CONFLICT(id) DO NOTHING",
                 rusqlite::params![
                     class.id,
@@ -236,6 +260,8 @@ impl ResourceClassCatalog {
                     class.gpu_vram_mib as i64,
                     class.reliability_tier.to_string(),
                     class.retail_price_per_hour_cents,
+                    class.retail_price_per_request_cents,
+                    class.retail_price_per_token_cents,
                 ],
             )?;
             inserted += rows;
@@ -273,8 +299,9 @@ impl ResourceClassCatalog {
         conn.execute(
             "INSERT INTO fabric_resource_classes
              (id, kind, class, display_name, vcpu_min, memory_mib_min,
-              gpu_vram_mib_min, reliability_tier, retail_price_per_hour_cents)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+              gpu_vram_mib_min, reliability_tier, retail_price_per_hour_cents,
+              retail_price_per_request_cents, retail_price_per_token_cents)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
              ON CONFLICT(id) DO UPDATE SET
                  kind = excluded.kind,
                  class = excluded.class,
@@ -283,7 +310,9 @@ impl ResourceClassCatalog {
                  memory_mib_min = excluded.memory_mib_min,
                  gpu_vram_mib_min = excluded.gpu_vram_mib_min,
                  reliability_tier = excluded.reliability_tier,
-                 retail_price_per_hour_cents = excluded.retail_price_per_hour_cents",
+                 retail_price_per_hour_cents = excluded.retail_price_per_hour_cents,
+                 retail_price_per_request_cents = excluded.retail_price_per_request_cents,
+                 retail_price_per_token_cents = excluded.retail_price_per_token_cents",
             rusqlite::params![
                 class.id,
                 class.kind.to_string(),
@@ -294,6 +323,8 @@ impl ResourceClassCatalog {
                 class.gpu_vram_mib as i64,
                 class.reliability_tier.to_string(),
                 class.retail_price_per_hour_cents,
+                class.retail_price_per_request_cents,
+                class.retail_price_per_token_cents,
             ],
         )?;
 
@@ -383,8 +414,9 @@ mod tests {
         conn.execute(
             "INSERT INTO fabric_resource_classes
              (id, kind, class, display_name, vcpu_min, memory_mib_min,
-              gpu_vram_mib_min, reliability_tier, retail_price_per_hour_cents)
-             VALUES ('compute.s', 'compute', 's', 'Custom Compute S', 2, 4096, 0, 'standard', 99)",
+              gpu_vram_mib_min, reliability_tier, retail_price_per_hour_cents,
+              retail_price_per_request_cents, retail_price_per_token_cents)
+             VALUES ('compute.s', 'compute', 's', 'Custom Compute S', 2, 4096, 0, 'standard', 99, 0, 0)",
             [],
         )
         .expect("insert custom class");
@@ -411,6 +443,8 @@ mod tests {
             gpu_vram_mib: 0,
             reliability_tier: ReliabilityTier::Premium,
             retail_price_per_hour_cents: 99,
+            retail_price_per_request_cents: 0,
+            retail_price_per_token_cents: 0,
         };
 
         let persisted = catalog.upsert_class(&db, new_class.clone()).expect("upsert");

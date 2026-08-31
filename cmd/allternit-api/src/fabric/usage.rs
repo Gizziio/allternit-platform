@@ -147,36 +147,54 @@ impl UsageIngestor {
 
         // Resolve pricing. Prefer the requested/placement id, then the latest
         // open placement, then the resource class catalog.
-        let (placement_id, retail_price_per_hour_cents, provider_cost_per_hour_cents) =
-            if let Some(pid) = &event.placement_id {
-                tx.query_row(
-                    "SELECT id, retail_price_per_hour_cents, provider_cost_per_hour_cents
-                     FROM fabric_placements
-                     WHERE id = ?1",
-                    rusqlite::params![pid],
-                    |row| {
-                        Ok((
-                            row.get::<_, String>(0)?,
-                            row.get::<_, i64>(1)?,
-                            row.get::<_, i64>(2)?,
-                        ))
-                    },
-                )
-                .optional()?
-                .ok_or_else(|| UsageError::ResourceNotFound(pid.clone()))?
-            } else {
-                match Self::latest_placement_pricing_tx(&tx, &event.resource_id)? {
-                    Some(pricing) => pricing,
-                    None => {
-                        let retail = Self::resource_class_pricing_tx(&tx, &event.resource_id, &class)?;
-                        (String::new(), retail, retail)
-                    }
+        let (
+            placement_id,
+            retail_price_per_hour_cents,
+            provider_cost_per_hour_cents,
+            retail_price_per_request_cents,
+            provider_cost_per_request_cents,
+            retail_price_per_token_cents,
+            provider_cost_per_token_cents,
+        ) = if let Some(pid) = &event.placement_id {
+            tx.query_row(
+                "SELECT id,
+                        retail_price_per_hour_cents, provider_cost_per_hour_cents,
+                        retail_price_per_request_cents, provider_cost_per_request_cents,
+                        retail_price_per_token_cents, provider_cost_per_token_cents
+                 FROM fabric_placements
+                 WHERE id = ?1",
+                rusqlite::params![pid],
+                |row| {
+                    Ok((
+                        row.get::<_, String>(0)?,
+                        row.get::<_, i64>(1)?,
+                        row.get::<_, i64>(2)?,
+                        row.get::<_, i64>(3)?,
+                        row.get::<_, i64>(4)?,
+                        row.get::<_, i64>(5)?,
+                        row.get::<_, i64>(6)?,
+                    ))
+                },
+            )
+            .optional()?
+            .ok_or_else(|| UsageError::ResourceNotFound(pid.clone()))?
+        } else {
+            match Self::latest_placement_pricing_tx(&tx, &event.resource_id)? {
+                Some(pricing) => pricing,
+                None => {
+                    let retail = Self::resource_class_pricing_tx(&tx, &event.resource_id, &class)?;
+                    (String::new(), retail, retail, 0, 0, 0, 0)
                 }
-            };
+            }
+        };
 
         let (retail_cents, provider_cost_cents) = compute_costs(
             retail_price_per_hour_cents,
             provider_cost_per_hour_cents,
+            retail_price_per_request_cents,
+            provider_cost_per_request_cents,
+            retail_price_per_token_cents,
+            provider_cost_per_token_cents,
             event.quantity,
             &event.unit,
         )?;
@@ -272,10 +290,26 @@ impl UsageIngestor {
     fn latest_placement_pricing_tx(
         tx: &rusqlite::Transaction,
         resource_id: &str,
-    ) -> Result<Option<(String, i64, i64)>, UsageError> {
+    ) -> Result<
+        Option<
+            (
+                String,
+                i64,
+                i64,
+                i64,
+                i64,
+                i64,
+                i64,
+            ),
+        >,
+        UsageError,
+    > {
         let row = tx
             .query_row(
-                "SELECT id, retail_price_per_hour_cents, provider_cost_per_hour_cents
+                "SELECT id,
+                        retail_price_per_hour_cents, provider_cost_per_hour_cents,
+                        retail_price_per_request_cents, provider_cost_per_request_cents,
+                        retail_price_per_token_cents, provider_cost_per_token_cents
                  FROM fabric_placements
                  WHERE resource_id = ?1 AND ended_at IS NULL
                  ORDER BY started_at DESC, id DESC
@@ -286,6 +320,10 @@ impl UsageIngestor {
                         row.get::<_, String>(0)?,
                         row.get::<_, i64>(1)?,
                         row.get::<_, i64>(2)?,
+                        row.get::<_, i64>(3)?,
+                        row.get::<_, i64>(4)?,
+                        row.get::<_, i64>(5)?,
+                        row.get::<_, i64>(6)?,
                     ))
                 },
             )
@@ -317,16 +355,32 @@ impl UsageIngestor {
 fn compute_costs(
     retail_price_per_hour_cents: i64,
     provider_cost_per_hour_cents: i64,
+    retail_price_per_request_cents: i64,
+    provider_cost_per_request_cents: i64,
+    retail_price_per_token_cents: i64,
+    provider_cost_per_token_cents: i64,
     quantity: f64,
     unit: &str,
 ) -> Result<(i64, i64), UsageError> {
-    let multiplier = match unit {
-        "seconds" => quantity / 3600.0,
-        "hours" => quantity,
+    let (retail, provider) = match unit {
+        "seconds" => (
+            (retail_price_per_hour_cents as f64 * quantity / 3600.0).ceil() as i64,
+            (provider_cost_per_hour_cents as f64 * quantity / 3600.0).ceil() as i64,
+        ),
+        "hours" => (
+            (retail_price_per_hour_cents as f64 * quantity).ceil() as i64,
+            (provider_cost_per_hour_cents as f64 * quantity).ceil() as i64,
+        ),
+        "request" => (
+            (retail_price_per_request_cents as f64 * quantity).ceil() as i64,
+            (provider_cost_per_request_cents as f64 * quantity).ceil() as i64,
+        ),
+        "token" => (
+            (retail_price_per_token_cents as f64 * quantity).ceil() as i64,
+            (provider_cost_per_token_cents as f64 * quantity).ceil() as i64,
+        ),
         other => return Err(UsageError::InvalidUnit(other.to_string())),
     };
-    let retail = (retail_price_per_hour_cents as f64 * multiplier).ceil() as i64;
-    let provider = (provider_cost_per_hour_cents as f64 * multiplier).ceil() as i64;
     Ok((retail.max(0), provider.max(0)))
 }
 
@@ -377,8 +431,9 @@ mod tests {
         conn.execute(
             "INSERT OR REPLACE INTO fabric_resource_classes
              (id, kind, class, vcpu_min, memory_mib_min, gpu_vram_mib_min,
-              reliability_tier, retail_price_per_hour_cents)
-             VALUES (?1, 'compute', ?2, 1, 1024, 0, 'standard', ?3)",
+              reliability_tier, retail_price_per_hour_cents,
+              retail_price_per_request_cents, retail_price_per_token_cents)
+             VALUES (?1, 'compute', ?2, 1, 1024, 0, 'standard', ?3, 0, 0)",
             params![format!("compute.{class}"), class, retail_price_per_hour_cents],
         )
         .unwrap();
@@ -395,8 +450,10 @@ mod tests {
         conn.execute(
             "INSERT INTO fabric_placements
              (id, resource_id, provider_kind, provider_resource_id, offer_id, instance_type, region,
-              retail_price_per_hour_cents, provider_cost_per_hour_cents, started_at)
-             VALUES (?1, ?2, 'fake', 'fake-1', 'off_fake_test', 'fake-cpu-small', 'us-east', ?3, ?4, ?5)",
+              retail_price_per_hour_cents, provider_cost_per_hour_cents,
+              retail_price_per_request_cents, provider_cost_per_request_cents,
+              retail_price_per_token_cents, provider_cost_per_token_cents, started_at)
+             VALUES (?1, ?2, 'fake', 'fake-1', 'off_fake_test', 'fake-cpu-small', 'us-east', ?3, ?4, 0, 0, 0, 0, ?5)",
             params![
                 placement_id,
                 resource_id,
@@ -496,6 +553,70 @@ mod tests {
 
         let unprocessed = ingestor.list_unprocessed(10).unwrap();
         assert_eq!(unprocessed.len(), 1);
+    }
+
+    #[test]
+    fn process_harness_request_event_reconciles_credits() {
+        let db = test_db("org-1");
+        // Seed harness.gizzi class with a per-request retail price.
+        let conn = db.connect().unwrap();
+        conn.execute(
+            "INSERT INTO fabric_resource_classes
+             (id, kind, class, display_name, vcpu_min, memory_mib_min, gpu_vram_mib_min,
+              reliability_tier, retail_price_per_hour_cents,
+              retail_price_per_request_cents, retail_price_per_token_cents)
+             VALUES ('harness.gizzi', 'harness', 'gizzi', 'Gizzi Harness Runtime', 1, 2048, 0,
+                     'standard', 8, 5, 0)",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO fabric_resources (id, organization_id, kind, class, status)
+             VALUES ('res-harness-1', 'org-1', 'harness', 'gizzi', 'active')",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO fabric_placements
+             (id, resource_id, provider_kind, provider_resource_id, offer_id, instance_type, region,
+              retail_price_per_hour_cents, provider_cost_per_hour_cents,
+              retail_price_per_request_cents, provider_cost_per_request_cents,
+              retail_price_per_token_cents, provider_cost_per_token_cents, started_at)
+             VALUES ('plc-harness-1', 'res-harness-1', 'fake', 'fake-1', 'off_fake_test',
+                     'fake-cpu-small', 'us-east', 8, 4, 5, 5, 0, 0, ?1)",
+            params![Utc::now().to_rfc3339()],
+        )
+        .unwrap();
+        drop(conn);
+
+        seed_credits(&db, "org-1", 10_000);
+
+        let ingestor = UsageIngestor::new(db.clone());
+        let ledger = CreditsLedger::new(db.clone());
+        let event_id = ingestor
+            .record_usage_event(
+                "res-harness-1",
+                "harness.gizzi.session",
+                3.0,
+                "request",
+                Some(Utc::now()),
+            )
+            .unwrap();
+
+        ingestor.process_event(&event_id, &ledger).unwrap();
+
+        // 3 requests @ 5 cents retail = 15 cents; provider cost = 15 cents.
+        assert_eq!(ledger.balance_cents("org-1").unwrap(), 9985);
+
+        let conn = db.connect().unwrap();
+        let cost_cents: i64 = conn
+            .query_row(
+                "SELECT cost_cents FROM fabric_cost_events WHERE resource_id = ?1",
+                params!["res-harness-1"],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(cost_cents, 15);
     }
 
     #[test]

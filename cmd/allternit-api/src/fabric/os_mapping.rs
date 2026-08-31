@@ -149,6 +149,16 @@ pub fn resource_class_from_cloud(class: &CloudResourceClass) -> contracts::Resou
             currency: "USD".to_string(),
             minor_units: class.retail_price_per_hour_cents.max(0) as u64,
         }),
+        retail_price_per_request: Some(contracts::Money {
+            currency: "USD".to_string(),
+            minor_units: class.retail_price_per_request_cents.max(0) as u64,
+        })
+        .filter(|m| m.minor_units > 0),
+        retail_price_per_token: Some(contracts::Money {
+            currency: "USD".to_string(),
+            minor_units: class.retail_price_per_token_cents.max(0) as u64,
+        })
+        .filter(|m| m.minor_units > 0),
         capabilities: Vec::new(),
         created_at: Utc::now(),
         updated_at: None,
@@ -241,6 +251,26 @@ pub fn placement_from_fabric_placement(
             currency: "USD".to_string(),
             minor_units: placement.provider_cost_per_hour_cents.max(0) as u64,
         }),
+        retail_price_per_request: Some(contracts::Money {
+            currency: "USD".to_string(),
+            minor_units: placement.retail_price_per_request_cents.max(0) as u64,
+        })
+        .filter(|m| m.minor_units > 0),
+        provider_cost_per_request: Some(contracts::Money {
+            currency: "USD".to_string(),
+            minor_units: placement.provider_cost_per_request_cents.max(0) as u64,
+        })
+        .filter(|m| m.minor_units > 0),
+        retail_price_per_token: Some(contracts::Money {
+            currency: "USD".to_string(),
+            minor_units: placement.retail_price_per_token_cents.max(0) as u64,
+        })
+        .filter(|m| m.minor_units > 0),
+        provider_cost_per_token: Some(contracts::Money {
+            currency: "USD".to_string(),
+            minor_units: placement.provider_cost_per_token_cents.max(0) as u64,
+        })
+        .filter(|m| m.minor_units > 0),
         hold_id: None,
         status: status.to_string(),
         started_at: placement.started_at,
@@ -447,6 +477,8 @@ mod tests {
             gpu_vram_mib: 0,
             reliability_tier: allternit_computer_cloud::fabric::ReliabilityTier::Standard,
             retail_price_per_hour_cents: 5,
+            retail_price_per_request_cents: 0,
+            retail_price_per_token_cents: 0,
         };
         let mapped = resource_class_from_cloud(&class);
         assert_eq!(mapped.id, "res_compute.s");
@@ -492,6 +524,10 @@ mod tests {
             region: Some("us-east".to_string()),
             retail_price_per_hour_cents: 5,
             provider_cost_per_hour_cents: 3,
+            retail_price_per_request_cents: 0,
+            provider_cost_per_request_cents: 0,
+            retail_price_per_token_cents: 0,
+            provider_cost_per_token_cents: 0,
             started_at: Utc::now(),
             ended_at: None,
         };
@@ -528,6 +564,10 @@ mod tests {
             region: Some("us-east".to_string()),
             retail_price_per_hour_cents: 5,
             provider_cost_per_hour_cents: 3,
+            retail_price_per_request_cents: 0,
+            provider_cost_per_request_cents: 0,
+            retail_price_per_token_cents: 0,
+            provider_cost_per_token_cents: 0,
             started_at: Utc::now(),
             ended_at: None,
         };

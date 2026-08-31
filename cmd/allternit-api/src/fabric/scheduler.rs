@@ -17,6 +17,7 @@ use crate::fabric::credits::{CreditsError, CreditsLedger};
 use crate::fabric::price_cache::PriceCache;
 use crate::fabric::sku::ResourceClassCatalog;
 use allternitos_cloud_contracts::Placement;
+use rusqlite::OptionalExtension;
 use allternit_computer_cloud::fabric::{
     FabricProvider, FabricProviderRegistry, Offer, ProviderError, ProvisionedResource,
     ResourceRequest, ResourceState,
@@ -398,11 +399,50 @@ impl PlacementRecorder {
             .map(|m| m.minor_units as i64)
             .unwrap_or(0);
 
+        // For request/token-metered classes, the canonical placement may carry
+        // per-request/per-token prices. Fall back to Cloud's resource-class
+        // catalog when the canonical placement does not include them.
+        let (class_retail_request, class_retail_token): (i64, i64) = tx
+            .query_row(
+                "SELECT retail_price_per_request_cents, retail_price_per_token_cents
+                 FROM fabric_resource_classes
+                 WHERE kind = ?1 AND class = ?2",
+                rusqlite::params![kind, class],
+                |row| Ok((row.get::<_, i64>(0)?, row.get::<_, i64>(1)?)),
+            )
+            .optional()
+            .map_err(|e| SchedulerError::Provider(ProviderError::Request(format!("db: {e}"))))?
+            .unwrap_or((0, 0));
+
+        let retail_request_cents = placement
+            .retail_price_per_request
+            .as_ref()
+            .map(|m| m.minor_units as i64)
+            .unwrap_or(class_retail_request);
+        let cost_request_cents = placement
+            .provider_cost_per_request
+            .as_ref()
+            .map(|m| m.minor_units as i64)
+            .unwrap_or(class_retail_request);
+        let retail_token_cents = placement
+            .retail_price_per_token
+            .as_ref()
+            .map(|m| m.minor_units as i64)
+            .unwrap_or(class_retail_token);
+        let cost_token_cents = placement
+            .provider_cost_per_token
+            .as_ref()
+            .map(|m| m.minor_units as i64)
+            .unwrap_or(class_retail_token);
+
         tx.execute(
             "INSERT INTO fabric_placements (
                 id, resource_id, provider_kind, provider_resource_id, offer_id, instance_type, region,
-                retail_price_per_hour_cents, provider_cost_per_hour_cents, hold_id, started_at
-            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+                retail_price_per_hour_cents, provider_cost_per_hour_cents,
+                retail_price_per_request_cents, provider_cost_per_request_cents,
+                retail_price_per_token_cents, provider_cost_per_token_cents,
+                hold_id, started_at
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)",
             rusqlite::params![
                 Uuid::new_v4().to_string(),
                 resource_id,
@@ -413,6 +453,10 @@ impl PlacementRecorder {
                 placement.region,
                 retail_cents,
                 cost_cents,
+                retail_request_cents,
+                cost_request_cents,
+                retail_token_cents,
+                cost_token_cents,
                 hold_id,
                 placement.started_at.to_rfc3339(),
             ],
@@ -440,8 +484,11 @@ impl PlacementRecorder {
         conn.execute(
             "INSERT INTO fabric_placements (
                 id, resource_id, provider_kind, provider_resource_id, offer_id, instance_type, region,
-                retail_price_per_hour_cents, provider_cost_per_hour_cents, hold_id, started_at
-            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+                retail_price_per_hour_cents, provider_cost_per_hour_cents,
+                retail_price_per_request_cents, provider_cost_per_request_cents,
+                retail_price_per_token_cents, provider_cost_per_token_cents,
+                hold_id, started_at
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)",
             rusqlite::params![
                 Uuid::new_v4().to_string(),
                 scheduled.resource_id,
@@ -452,6 +499,10 @@ impl PlacementRecorder {
                 scheduled.region,
                 retail_price_per_hour_cents,
                 provider_cost_per_hour_cents,
+                0i64,
+                0i64,
+                0i64,
+                0i64,
                 hold_id,
                 Utc::now().to_rfc3339(),
             ],

@@ -132,6 +132,10 @@ struct CreateResourceClassRequest {
     gpu_vram_mib: u64,
     reliability_tier: String,
     retail_price_per_hour_cents: i64,
+    #[serde(default)]
+    retail_price_per_request_cents: i64,
+    #[serde(default)]
+    retail_price_per_token_cents: i64,
 }
 
 #[derive(Debug, Deserialize)]
@@ -144,6 +148,10 @@ struct UpdateResourceClassRequest {
     gpu_vram_mib: u64,
     reliability_tier: String,
     retail_price_per_hour_cents: i64,
+    #[serde(default)]
+    retail_price_per_request_cents: i64,
+    #[serde(default)]
+    retail_price_per_token_cents: i64,
 }
 
 fn parse_kind(kind: &str) -> Result<ResourceKind, ApiError> {
@@ -194,6 +202,8 @@ fn resource_class_json(class: &ResourceClass) -> Value {
         "gpu_vram_mib": class.gpu_vram_mib,
         "reliability_tier": class.reliability_tier.to_string(),
         "retail_price_per_hour_cents": class.retail_price_per_hour_cents,
+        "retail_price_per_request_cents": class.retail_price_per_request_cents,
+        "retail_price_per_token_cents": class.retail_price_per_token_cents,
     })
 }
 
@@ -237,6 +247,8 @@ async fn create_resource_class(
             gpu_vram_mib: req.gpu_vram_mib,
             reliability_tier,
             retail_price_per_hour_cents: req.retail_price_per_hour_cents,
+            retail_price_per_request_cents: req.retail_price_per_request_cents,
+            retail_price_per_token_cents: req.retail_price_per_token_cents,
         };
 
         catalog.upsert_class(&db, class).map_err(internal)
@@ -293,6 +305,8 @@ async fn update_resource_class(
             gpu_vram_mib: req.gpu_vram_mib,
             reliability_tier,
             retail_price_per_hour_cents: req.retail_price_per_hour_cents,
+            retail_price_per_request_cents: req.retail_price_per_request_cents,
+            retail_price_per_token_cents: req.retail_price_per_token_cents,
         };
 
         catalog.upsert_class(&db, class).map_err(internal)
@@ -406,6 +420,10 @@ fn placement_json(placement: &FabricPlacementSummary) -> Value {
         "region": placement.region,
         "retail_price_per_hour_cents": placement.retail_price_per_hour_cents,
         "provider_cost_per_hour_cents": placement.provider_cost_per_hour_cents,
+        "retail_price_per_request_cents": placement.retail_price_per_request_cents,
+        "provider_cost_per_request_cents": placement.provider_cost_per_request_cents,
+        "retail_price_per_token_cents": placement.retail_price_per_token_cents,
+        "provider_cost_per_token_cents": placement.provider_cost_per_token_cents,
         "started_at": placement.started_at.to_rfc3339(),
         "ended_at": placement.ended_at.map(|d| d.to_rfc3339()),
     })
@@ -485,8 +503,10 @@ mod tests {
         conn.execute(
             "INSERT INTO fabric_placements
              (id, resource_id, provider_kind, provider_resource_id, offer_id, instance_type, region,
-              retail_price_per_hour_cents, provider_cost_per_hour_cents, started_at)
-             VALUES (?1, ?2, 'fake', ?3, 'off_fake_test', 'fake-cpu-small', 'us-east', 5, 3, ?4)",
+              retail_price_per_hour_cents, provider_cost_per_hour_cents,
+              retail_price_per_request_cents, provider_cost_per_request_cents,
+              retail_price_per_token_cents, provider_cost_per_token_cents, started_at)
+             VALUES (?1, ?2, 'fake', ?3, 'off_fake_test', 'fake-cpu-small', 'us-east', 5, 3, 0, 0, 0, 0, ?4)",
             rusqlite::params![
                 uuid::Uuid::new_v4().to_string(),
                 resource_id,

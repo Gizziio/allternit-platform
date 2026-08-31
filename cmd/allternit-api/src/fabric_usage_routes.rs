@@ -250,8 +250,9 @@ mod tests {
         conn.execute(
             "INSERT INTO fabric_resource_classes
              (id, kind, class, vcpu_min, memory_mib_min, gpu_vram_mib_min,
-              reliability_tier, retail_price_per_hour_cents)
-             VALUES (?1, 'compute', 's', 1, 1024, 0, 'standard', 3600)",
+              reliability_tier, retail_price_per_hour_cents,
+              retail_price_per_request_cents, retail_price_per_token_cents)
+             VALUES (?1, 'compute', 's', 1, 1024, 0, 'standard', 3600, 0, 0)",
             params![format!("compute.s")],
         )
         .unwrap();

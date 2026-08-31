@@ -36,6 +36,10 @@ pub struct FabricPlacementSummary {
     pub region: Option<String>,
     pub retail_price_per_hour_cents: i64,
     pub provider_cost_per_hour_cents: i64,
+    pub retail_price_per_request_cents: i64,
+    pub provider_cost_per_request_cents: i64,
+    pub retail_price_per_token_cents: i64,
+    pub provider_cost_per_token_cents: i64,
     pub started_at: DateTime<Utc>,
     pub ended_at: Option<DateTime<Utc>>,
 }
@@ -101,6 +105,8 @@ impl ResourceManager {
         let mut stmt = conn.prepare(
             "SELECT id, provider_kind, provider_resource_id, offer_id, instance_type, region,
                     retail_price_per_hour_cents, provider_cost_per_hour_cents,
+                    retail_price_per_request_cents, provider_cost_per_request_cents,
+                    retail_price_per_token_cents, provider_cost_per_token_cents,
                     started_at, ended_at
              FROM fabric_placements
              WHERE resource_id = ?1
@@ -157,6 +163,8 @@ impl ResourceManager {
             (
                 "SELECT p.id, p.provider_kind, p.provider_resource_id, p.offer_id, p.instance_type, p.region,
                         p.retail_price_per_hour_cents, p.provider_cost_per_hour_cents,
+                        p.retail_price_per_request_cents, p.provider_cost_per_request_cents,
+                        p.retail_price_per_token_cents, p.provider_cost_per_token_cents,
                         p.started_at, p.ended_at
                  FROM fabric_placements p
                  JOIN fabric_resources r ON r.id = p.resource_id
@@ -169,6 +177,8 @@ impl ResourceManager {
             (
                 "SELECT p.id, p.provider_kind, p.provider_resource_id, p.offer_id, p.instance_type, p.region,
                         p.retail_price_per_hour_cents, p.provider_cost_per_hour_cents,
+                        p.retail_price_per_request_cents, p.provider_cost_per_request_cents,
+                        p.retail_price_per_token_cents, p.provider_cost_per_token_cents,
                         p.started_at, p.ended_at
                  FROM fabric_placements p
                  JOIN fabric_resources r ON r.id = p.resource_id
@@ -269,6 +279,10 @@ impl ResourceManager {
             region: row.get("region")?,
             retail_price_per_hour_cents: row.get("retail_price_per_hour_cents")?,
             provider_cost_per_hour_cents: row.get("provider_cost_per_hour_cents")?,
+            retail_price_per_request_cents: row.get("retail_price_per_request_cents")?,
+            provider_cost_per_request_cents: row.get("provider_cost_per_request_cents")?,
+            retail_price_per_token_cents: row.get("retail_price_per_token_cents")?,
+            provider_cost_per_token_cents: row.get("provider_cost_per_token_cents")?,
             started_at: Self::parse_dt(row, "started_at")?,
             ended_at: Self::parse_dt_optional(row, "ended_at")?,
         })
@@ -375,8 +389,10 @@ mod tests {
         conn.execute(
             "INSERT INTO fabric_placements
              (id, resource_id, provider_kind, provider_resource_id, offer_id, instance_type, region,
-              retail_price_per_hour_cents, provider_cost_per_hour_cents, started_at)
-             VALUES (?1, ?2, 'fake', ?3, 'off_fake_test', 'fake-cpu-small', 'us-east', 5, 3, ?4)",
+              retail_price_per_hour_cents, provider_cost_per_hour_cents,
+              retail_price_per_request_cents, provider_cost_per_request_cents,
+              retail_price_per_token_cents, provider_cost_per_token_cents, started_at)
+             VALUES (?1, ?2, 'fake', ?3, 'off_fake_test', 'fake-cpu-small', 'us-east', 5, 3, 0, 0, 0, 0, ?4)",
             rusqlite::params![
                 &id,
                 resource_id,
