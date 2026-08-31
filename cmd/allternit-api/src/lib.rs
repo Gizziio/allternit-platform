@@ -38,6 +38,7 @@ pub mod beta_work_routes;
 pub mod bot_desktop_routes;
 pub mod bot_desktop_stream;
 pub mod browser_history_service;
+pub mod procedural_memory_service;
 pub mod user_profile_routes;
 pub mod billing;
 pub mod board_routes;
