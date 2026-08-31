@@ -260,15 +260,16 @@ async fn run_job(
     )
     .map_err(internal)?;
 
-    // Phase 1 placeholder reconstruction: summarize the source metadata and
-    // produce a deterministic memory outline. Phase 2 will read actual session
-    // events / memory-store contents and call the agent runtime.
-    let result = match reconstruct_memory_scaffold(&job) {
-        Ok(memory_outline) => {
+    // Dreaming-style extraction: read session events and browser history, then
+    // produce memory facts and procedural memory.
+    let result = match run_dream_extraction(&state.db, &user.user_id, &job) {
+        Ok(extraction) => {
             let result = json!({
-                "memory_outline": memory_outline,
-                "chunks_generated": memory_outline.len(),
-                "note": "Phase 1 synchronous scaffold. Async worker execution is Phase 2.",
+                "memory_outline": extraction.outline,
+                "facts_recorded": extraction.fact_count,
+                "procedural_memory_id": extraction.procedural_memory_id,
+                "chunks_generated": extraction.outline.len(),
+                "note": "Synchronous dream extraction completed.",
             });
             let result_json = serde_json::to_string(&result).map_err(internal)?;
             let now = chrono::Utc::now().to_rfc3339();
@@ -302,16 +303,89 @@ async fn run_job(
     Ok::<Json<Value>, ApiError>(Json(json!({ "job": job, "result": result })))
 }
 
-fn reconstruct_memory_scaffold(job: &Value) -> Result<Vec<Value>, Box<dyn std::error::Error>> {
+struct DreamExtractionResult {
+    outline: Vec<Value>,
+    fact_count: usize,
+    procedural_memory_id: Option<String>,
+}
+
+fn run_dream_extraction(
+    db: &crate::db::DbHandle,
+    user_id: &str,
+    job: &Value,
+) -> Result<DreamExtractionResult, Box<dyn std::error::Error>> {
     let source_type = job["source_type"].as_str().unwrap_or("unknown");
     let source_id = job["source_id"].as_str().unwrap_or("unknown");
     let config = &job["config"];
 
     let mut outline = Vec::new();
+    let mut fact_count = 0;
+    let mut procedural_memory_id = None;
+
     outline.push(json!({
         "type": "summary",
-        "content": format!("Reconstructed memory from {source_type} {source_id}"),
+        "content": format!("Dream extraction from {source_type} {source_id}"),
     }));
+
+    if source_type == "session" {
+        // Extract facts from session events.
+        let conn = db.connect()?;
+        let mut stmt = conn.prepare(
+            "SELECT event_type, data FROM beta_session_events WHERE session_id = ?1 ORDER BY sequence"
+        )?;
+        let rows = stmt.query_map(params![source_id], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })?;
+
+        let mut event_texts = Vec::new();
+        for row in rows {
+            let (event_type, data) = row?;
+            event_texts.push(format!("{event_type}: {data}"));
+        }
+
+        let combined = event_texts.join("\n");
+        let facts = crate::memory_kernel_service::extract_facts_heuristic(&combined);
+        if !facts.is_empty() {
+            let observation_id = crate::memory_kernel_service::record_observation(
+                db,
+                user_id,
+                None,
+                Some(source_id),
+                "dream_extraction",
+                &format!("Dream extraction from session {source_id}"),
+                Some("memory_reconstruction"),
+            )?;
+            let persisted = crate::memory_kernel_service::persist_facts(
+                db,
+                user_id,
+                None,
+                &observation_id,
+                &facts,
+            )?;
+            fact_count = persisted.len();
+            for fact in &facts {
+                outline.push(json!({"type": "fact", "content": fact}));
+            }
+        }
+
+        // Extract procedural memory from session browser history.
+        if let Ok(Some(memory)) = crate::procedural_memory_service::extract_from_session_history(
+            db,
+            user_id,
+            None,
+            source_id,
+        ) {
+            procedural_memory_id = Some(memory.id.clone());
+            outline.push(json!({
+                "type": "procedural_memory",
+                "content": json!({
+                    "id": memory.id,
+                    "name": memory.name,
+                    "patterns": memory.trigger_patterns,
+                }),
+            }));
+        }
+    }
 
     if let Some(topics) = config["topics"].as_array() {
         for topic in topics {
@@ -331,7 +405,11 @@ fn reconstruct_memory_scaffold(job: &Value) -> Result<Vec<Value>, Box<dyn std::e
         }),
     }));
 
-    Ok(outline)
+    Ok(DreamExtractionResult {
+        outline,
+        fact_count,
+        procedural_memory_id,
+    })
 }
 
 #[cfg(test)]
