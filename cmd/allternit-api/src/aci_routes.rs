@@ -32,6 +32,9 @@ pub fn aci_router() -> Router<Arc<AppState>> {
         .route("/aci/stream/:id", get(aci_stream))
         .route("/aci/stop/:id", post(aci_stop))
         .route("/aci/approve/:id", post(aci_approve))
+        .route("/aci/handoff/:id", get(aci_handoff_status))
+        .route("/aci/handoff/:id/approve", post(aci_handoff_approve))
+        .route("/aci/handoff/:id/deny", post(aci_handoff_deny))
 }
 
 fn acu_base(state: &AppState) -> String {
@@ -202,6 +205,29 @@ async fn aci_run(
     let decision = crate::aci_safety::evaluate_request(&goal, &actor_key);
     if !decision.allowed {
         crate::aci_safety::record_aci_error(&actor_key);
+
+        if decision.handoff_required {
+            let approval_id = state.approval_store.create(
+                &user.user_id,
+                "aci.sensitive_action",
+                &json!({
+                    "goal": decision.sanitized_goal,
+                    "sensitive_actions": decision.sensitive_actions,
+                    "reason": decision.reason,
+                }),
+            );
+            return (
+                StatusCode::ACCEPTED,
+                Json(json!({
+                    "status": "handoff_required",
+                    "approval_id": approval_id,
+                    "message": decision.reason,
+                    "sensitive_actions": decision.sensitive_actions,
+                })),
+            )
+                .into_response();
+        }
+
         return (
             StatusCode::FORBIDDEN,
             Json(json!({
@@ -460,5 +486,48 @@ async fn aci_approve(
         },
         Ok(r) => forward_acu_error(r).await,
         Err(e) => acu_unavailable(e),
+    }
+}
+
+// ─── Handoff endpoints for sensitive actions ──────────────────────────────────
+
+async fn aci_handoff_status(State(state): State<Arc<AppState>>, Path(id): Path<String>) -> Response {
+    match state.approval_store.get(&id) {
+        Some(req) => Json(req).into_response(),
+        None => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "handoff_not_found", "message": "No such handoff request."})),
+        )
+            .into_response(),
+    }
+}
+
+async fn aci_handoff_approve(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+) -> Response {
+    if state.approval_store.approve(&id) {
+        Json(json!({"approval_id": id, "status": "approved"})).into_response()
+    } else {
+        (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "handoff_not_found", "message": "No such handoff request."})),
+        )
+            .into_response()
+    }
+}
+
+async fn aci_handoff_deny(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+) -> Response {
+    if state.approval_store.deny(&id) {
+        Json(json!({"approval_id": id, "status": "denied"})).into_response()
+    } else {
+        (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "handoff_not_found", "message": "No such handoff request."})),
+        )
+            .into_response()
     }
 }

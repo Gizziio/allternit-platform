@@ -6,6 +6,17 @@
  */
 
 const GATEWAY_URL = 'http://127.0.0.1:8013';
+const HISTORY_INGESTION_KEY = 'AllternitHistoryIngestionEnabled';
+
+export async function isHistoryIngestionEnabled(): Promise<boolean> {
+  const result = await chrome.storage.local.get(HISTORY_INGESTION_KEY);
+  // Default to enabled.
+  return result[HISTORY_INGESTION_KEY] !== false;
+}
+
+export async function setHistoryIngestionEnabled(enabled: boolean): Promise<void> {
+  await chrome.storage.local.set({ [HISTORY_INGESTION_KEY]: enabled });
+}
 
 interface HistoryVisit {
   url: string;

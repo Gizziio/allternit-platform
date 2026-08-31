@@ -92,6 +92,84 @@ function formatProceduralMemory(memory: ProceduralMemory): string {
   return `Reusable workflow "${memory.name}" (used ${memory.success_count} times):\n${steps}`;
 }
 
+export interface MemoryNote {
+  id: string;
+  user_id: string;
+  note_type: 'person' | 'website' | 'episodic' | 'general';
+  title: string;
+  content: string;
+  tags: string[];
+  entity_id?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateMemoryNoteRequest {
+  note_type: MemoryNote['note_type'];
+  title: string;
+  content: string;
+  tags?: string[];
+  entity_id?: string;
+}
+
+export async function listMemoryNotes(
+  noteType?: MemoryNote['note_type'],
+  search?: string,
+): Promise<MemoryNote[]> {
+  const url = new URL(`${GATEWAY_URL}/api/v1/memory/notes`);
+  if (noteType) url.searchParams.set('note_type', noteType);
+  if (search) url.searchParams.set('search', search);
+  const response = await fetch(url.toString(), {
+    method: 'GET',
+    headers: await getAuthHeaders(),
+  });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Memory notes list failed: ${response.status} ${text}`);
+  }
+  const data = (await response.json()) as { notes: MemoryNote[] };
+  return data.notes || [];
+}
+
+export async function createMemoryNote(note: CreateMemoryNoteRequest): Promise<{ id: string }> {
+  const response = await fetch(`${GATEWAY_URL}/api/v1/memory/notes`, {
+    method: 'POST',
+    headers: await getAuthHeaders(),
+    body: JSON.stringify(note),
+  });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Memory note create failed: ${response.status} ${text}`);
+  }
+  return (await response.json()) as { id: string };
+}
+
+export async function updateMemoryNote(
+  id: string,
+  note: Partial<Pick<MemoryNote, 'title' | 'content' | 'tags'>>,
+): Promise<void> {
+  const response = await fetch(`${GATEWAY_URL}/api/v1/memory/notes/${id}`, {
+    method: 'POST',
+    headers: await getAuthHeaders(),
+    body: JSON.stringify(note),
+  });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Memory note update failed: ${response.status} ${text}`);
+  }
+}
+
+export async function deleteMemoryNote(id: string): Promise<void> {
+  const response = await fetch(`${GATEWAY_URL}/api/v1/memory/notes/${id}`, {
+    method: 'DELETE',
+    headers: await getAuthHeaders(),
+  });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Memory note delete failed: ${response.status} ${text}`);
+  }
+}
+
 export async function recallMemoryContext(context: string, domain?: string): Promise<string> {
   try {
     const [memories, history] = await Promise.all([

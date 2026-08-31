@@ -32,7 +32,20 @@ import {
   fillCredential,
   recordCredentialUse,
 } from '@/lib/vault/api'
-import { recordBrowserVisit } from '@/lib/memory/history'
+import {
+  isHistoryIngestionEnabled,
+  recordBrowserVisit,
+} from '@/lib/memory/history'
+import { listLongRunningTasks, type LongRunningTask } from '@/lib/long-tasks/api'
+
+const POLL_INTERVAL_MS = 15000
+const LAST_TASKS_KEY = 'AllternitLongRunningTasksLastState'
+
+function tasksEqual(a: LongRunningTask[], b: LongRunningTask[]): boolean {
+  if (a.length !== b.length) return false
+  const map = new Map(b.map((t) => [t.id, t.updated_at]))
+  return a.every((t) => map.get(t.id) === t.updated_at)
+}
 
 export default defineBackground(() => {
   console.log('[Allternit Extension] Background Service Worker started')
@@ -45,18 +58,42 @@ export default defineBackground(() => {
 
   if (chrome.history?.onVisited) {
     chrome.history.onVisited.addListener((item) => {
-      recordBrowserVisit({
-        url: item.url ?? '',
-        title: item.title ?? undefined,
-        visitTime: item.lastVisitTime ? new Date(item.lastVisitTime).toISOString() : undefined,
-        transitionType: item.transition ?? undefined,
-      }).catch((error) => {
-        // Silent: history ingestion is best-effort and may fail when offline
-        // or not yet authenticated.
-        console.debug('[Allternit History] Failed to record visit:', error)
+      isHistoryIngestionEnabled().then((enabled) => {
+        if (!enabled) return
+        recordBrowserVisit({
+          url: item.url ?? '',
+          title: item.title ?? undefined,
+          visitTime: item.lastVisitTime ? new Date(item.lastVisitTime).toISOString() : undefined,
+          transitionType: item.transition ?? undefined,
+        }).catch((error) => {
+          // Silent: history ingestion is best-effort and may fail when offline
+          // or not yet authenticated.
+          console.debug('[Allternit History] Failed to record visit:', error)
+        })
       })
     })
   }
+
+  // ── Long-running task polling ─────────────────────────────────────────────
+
+  async function pollLongRunningTasks() {
+    try {
+      const tasks = await listLongRunningTasks('running')
+      const stored = await chrome.storage.local.get(LAST_TASKS_KEY)
+      const last: LongRunningTask[] = stored[LAST_TASKS_KEY] || []
+      if (!tasksEqual(tasks, last)) {
+        await chrome.storage.local.set({ [LAST_TASKS_KEY]: tasks })
+        chrome.runtime
+          .sendMessage({ type: 'LONG_RUNNING_TASKS_UPDATE', tasks })
+          .catch(() => {})
+      }
+    } catch (error) {
+      console.debug('[Allternit Long Tasks] Poll failed:', error)
+    }
+  }
+
+  setInterval(pollLongRunningTasks, POLL_INTERVAL_MS)
+  pollLongRunningTasks()
 
   chrome.storage.local.get('AllternitExtUserAuthToken').then((result) => {
     if (result.AllternitExtUserAuthToken) return

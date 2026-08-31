@@ -38,12 +38,63 @@ impl SafetyMode {
     }
 }
 
+/// Kinds of actions that require human handoff instead of autonomous execution.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SensitiveActionType {
+    FormSubmit,
+    Payment,
+    Captcha,
+    IdentityVerification,
+    Download,
+    FileUpload,
+}
+
+impl SensitiveActionType {
+    fn detect(goal: &str) -> Vec<Self> {
+        let lower = goal.to_lowercase();
+        let mut found = Vec::new();
+        if lower.contains("captcha") {
+            found.push(Self::Captcha);
+        }
+        if lower.contains("payment") || lower.contains("checkout") || lower.contains("credit card") || lower.contains("billing") {
+            found.push(Self::Payment);
+        }
+        if lower.contains("identity verification") || lower.contains("verify identity") || lower.contains("kyc") || lower.contains("ssn") {
+            found.push(Self::IdentityVerification);
+        }
+        if lower.contains("submit form") || lower.contains("click submit") || lower.contains("confirm order") {
+            found.push(Self::FormSubmit);
+        }
+        if lower.contains("download") && (lower.contains("file") || lower.contains("attachment")) {
+            found.push(Self::Download);
+        }
+        if lower.contains("upload") && (lower.contains("file") || lower.contains("attachment")) {
+            found.push(Self::FileUpload);
+        }
+        found
+    }
+
+    pub fn label(&self) -> &'static str {
+        match self {
+            Self::FormSubmit => "form submission",
+            Self::Payment => "payment",
+            Self::Captcha => "CAPTCHA",
+            Self::IdentityVerification => "identity verification",
+            Self::Download => "file download",
+            Self::FileUpload => "file upload",
+        }
+    }
+}
+
 /// Per-run safety decision returned to the caller.
 #[derive(Debug, Serialize)]
 pub struct SafetyDecision {
     pub allowed: bool,
     pub sanitized_goal: String,
     pub reason: Option<String>,
+    pub handoff_required: bool,
+    pub sensitive_actions: Vec<SensitiveActionType>,
 }
 
 /// Host allowlist/blocklist policy loaded from environment.
@@ -298,6 +349,33 @@ static BREAKER: Lazy<CircuitBreaker> = Lazy::new(CircuitBreaker::from_env);
 pub fn evaluate_request(goal: &str, actor_key: &str) -> SafetyDecision {
     let mode = HOST_POLICY.mode;
     let sanitized_goal = mask_sensitive_data(goal);
+    let sensitive_actions = SensitiveActionType::detect(goal);
+    let handoff_required = !sensitive_actions.is_empty();
+
+    if handoff_required && mode == SafetyMode::Enforce {
+        return SafetyDecision {
+            allowed: false,
+            sanitized_goal,
+            reason: Some(format!(
+                "human handoff required for: {}",
+                sensitive_actions
+                    .iter()
+                    .map(|a| a.label())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )),
+            handoff_required: true,
+            sensitive_actions,
+        };
+    }
+
+    if handoff_required && mode == SafetyMode::Audit {
+        tracing::warn!(
+            actor = %actor_key,
+            actions = ?sensitive_actions,
+            "aci safety: sensitive action detected in audit mode"
+        );
+    }
 
     // Rate limit check.
     if let Err(reason) = BREAKER.check(actor_key) {
@@ -306,6 +384,8 @@ pub fn evaluate_request(goal: &str, actor_key: &str) -> SafetyDecision {
                 allowed: false,
                 sanitized_goal,
                 reason: Some(reason),
+                handoff_required: false,
+                sensitive_actions: Vec::new(),
             };
         }
         tracing::warn!(actor = %actor_key, %reason, "aci safety: rate limit breached");
@@ -322,6 +402,8 @@ pub fn evaluate_request(goal: &str, actor_key: &str) -> SafetyDecision {
                         allowed: false,
                         sanitized_goal,
                         reason: Some(reason),
+                        handoff_required: false,
+                        sensitive_actions: Vec::new(),
                     };
                 }
                 tracing::warn!(actor = %actor_key, url = %url, "aci safety: blocked host in audit mode");
@@ -333,6 +415,8 @@ pub fn evaluate_request(goal: &str, actor_key: &str) -> SafetyDecision {
         allowed: true,
         sanitized_goal,
         reason: None,
+        handoff_required: false,
+        sensitive_actions: Vec::new(),
     }
 }
 
