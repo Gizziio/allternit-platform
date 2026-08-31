@@ -18,6 +18,8 @@ import { pluginsCommand } from './commands/plugins.js';
 import { computerUseCommand } from './commands/computer-use.js';
 import { agentCommand } from './commands/agent.js';
 import { adminCommand } from './commands/admin.js';
+import { cloudCommand } from './commands/cloud.js';
+import { fabricCommand } from './commands/fabric.js';
 import { version } from '../package.json' assert { type: 'json' };
 
 const program = new Command();
@@ -42,6 +44,8 @@ program.addCommand(pluginsCommand);
 program.addCommand(computerUseCommand);
 program.addCommand(agentCommand);
 program.addCommand(adminCommand);
+program.addCommand(cloudCommand);
+program.addCommand(fabricCommand);
 
 // Parse and execute
 program.parse();

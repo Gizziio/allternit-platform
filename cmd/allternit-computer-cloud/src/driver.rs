@@ -32,7 +32,7 @@ const PROXY_PORT_BASE: u32 = 30_000;
 /// Incus execution driver.
 #[derive(Debug)]
 pub struct IncusDriver {
-    pool: IncusHostPool,
+    pool: Arc<IncusHostPool>,
     /// Default VNC host for single-host pools or legacy handles.
     vnc_host: String,
     /// VNC password shared with the guest image.
@@ -54,7 +54,7 @@ impl IncusDriver {
     /// Build a driver from an explicit multi-host pool.
     pub fn from_pool(pool: IncusHostPool, vnc_host: impl Into<String>) -> Self {
         Self {
-            pool,
+            pool: Arc::new(pool),
             vnc_host: vnc_host.into(),
             vnc_password: std::env::var("BOT_DESKTOP_VNC_PASSWORD")
                 .unwrap_or_else(|_| "allternit".to_string()),
@@ -87,9 +87,41 @@ impl IncusDriver {
         let mut hosts = Vec::with_capacity(urls.len());
         for url in urls {
             let substrate = Arc::new(IncusSubstrate::new(url)?);
-            hosts.push(IncusHost::new(url, substrate));
+            hosts.push(Arc::new(IncusHost::new(url, substrate)));
         }
         Ok(Self::from_pool(IncusHostPool::new(hosts), fallback_vnc_host))
+    }
+
+    /// Access the underlying pool for dynamic host management.
+    pub fn pool(&self) -> &Arc<IncusHostPool> {
+        &self.pool
+    }
+
+    /// Add a new Incus host to the live pool.
+    pub fn add_host(&self, url: impl Into<String>, substrate: Arc<IncusSubstrate>) {
+        let url = url.into();
+        info!(url = %url, "adding Incus host to driver pool");
+        self.pool.add_host(Arc::new(IncusHost::new(url, substrate)));
+    }
+
+    /// Remove an Incus host from the live pool.
+    pub fn remove_host(&self, url: &str) -> bool {
+        self.pool.remove_host(url)
+    }
+
+    /// Update capacity metadata for a host.
+    pub fn set_host_capacity(&self, url: &str, total_mb: u64, used_mb: u64) {
+        self.pool.set_host_capacity(url, total_mb, used_mb);
+    }
+
+    /// Update the set of cached image aliases for a host.
+    pub fn set_host_images(&self, url: &str, images: Vec<String>) {
+        self.pool.set_host_images(url, images);
+    }
+
+    /// URLs of all configured hosts.
+    pub fn host_urls(&self) -> Vec<String> {
+        self.pool.hosts().iter().map(|h| h.url.clone()).collect()
     }
 
     /// Scan every configured Incus host for existing VNC proxy ports and seed
@@ -133,8 +165,8 @@ impl IncusDriver {
     }
 
     /// Access the underlying Incus substrate (used by examples/tests to pull files).
-    pub fn substrate(&self) -> &Arc<IncusSubstrate> {
-        &self.pool.hosts()[0].substrate
+    pub fn substrate(&self) -> Arc<IncusSubstrate> {
+        self.pool.hosts()[0].substrate.clone()
     }
 
     /// Allocate and configure a proxy device that forwards a host port to the
@@ -326,8 +358,13 @@ impl ExecutionDriver for IncusDriver {
         let bot_suffix = bot_id.chars().take(15).collect::<String>();
         let native_id = format!("allternit-bot-{}-{}", bot_suffix, uuid::Uuid::new_v4().simple());
         let computer_spec = self.map_spec(&spec, &native_id);
+        let memory_mib = computer_spec.memory_mb;
+        let image_alias = normalize_image_alias(&computer_spec.image);
 
-        let host = self.pool.select_for_spawn().map_err(map_error)?;
+        let host = self
+            .pool
+            .select_for_spawn(memory_mib, image_alias.as_deref())
+            .map_err(map_error)?;
         let substrate = host.substrate.clone();
         let host_url = host.url.clone();
         let vnc_host = host.vnc_host.clone();
@@ -661,6 +698,19 @@ fn parse_vnc_port_from_config(config: &serde_json::Value) -> Option<u16> {
         .and_then(|v| v.get("listen"))
         .and_then(|l| l.as_str())?;
     listen.rsplit(':').next()?.parse().ok()
+}
+
+/// Strip the `local:` / `images:` prefix so we can compare cached aliases.
+fn normalize_image_alias(image: &str) -> Option<String> {
+    let alias = image
+        .strip_prefix("local:")
+        .or_else(|| image.strip_prefix("images:"))
+        .unwrap_or(image);
+    if alias.is_empty() {
+        None
+    } else {
+        Some(alias.to_string())
+    }
 }
 
 #[cfg(test)]

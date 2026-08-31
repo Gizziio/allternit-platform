@@ -34,6 +34,7 @@ import {
   Brain,
   Play,
   Desktop,
+  Cloud,
 } from '@phosphor-icons/react';
 import { getPinnedMiniApps, unpinMiniApp, seedDefaultMiniApps } from '../views/aci/mini-app-registry';
 import type { InstalledMiniApp } from '../views/aci/mini-app.types';
@@ -284,7 +285,7 @@ export function ShellRail({
     useCallback((sessionId: string) => {
       // Open the bot session view so the rail entry is tied to a real session,
       // not a generic home chat.
-      onOpen?.('chat-agent-session', { sessionId, originView: activeViewType ?? 'chat' });
+      onOpen?.('cowork-agent-session', { sessionId, originView: activeViewType ?? 'chat' });
     }, [onOpen, activeViewType])
   );
 
@@ -968,6 +969,24 @@ export function ShellRail({
               label="Desktop Cloud"
               isActive={activeViewType === 'desktop-cloud'}
               onClick={() => onOpen?.('desktop-cloud')}
+            />
+            <RailItem
+              icon={Cloud}
+              label="Cloud Console"
+              isActive={activeViewType === 'cloud-console'}
+              onClick={() => onOpen?.('cloud-console')}
+            />
+            <RailItem
+              icon={Brain}
+              label="Model Gateway"
+              isActive={activeViewType === 'model-gateway'}
+              onClick={() => onOpen?.('model-gateway')}
+            />
+            <RailItem
+              icon={Robot}
+              label="Agent Cloud"
+              isActive={activeViewType === 'agent-cloud'}
+              onClick={() => onOpen?.('agent-cloud')}
             />
             <RailItem
               icon={Clock}

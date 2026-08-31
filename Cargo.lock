@@ -252,6 +252,7 @@ dependencies = [
  "allternit-gc-agents",
  "allternit-opensandbox-driver",
  "allternit-session-manager",
+ "allternitos-cloud-contracts",
  "anyhow",
  "async-stream",
  "async-trait",
@@ -586,6 +587,7 @@ dependencies = [
  "chrono",
  "http 1.4.2",
  "http-body-util",
+ "mockito",
  "reqwest",
  "serde",
  "serde_json",
@@ -2347,6 +2349,17 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "uuid",
+]
+
+[[package]]
+name = "allternitos-cloud-contracts"
+version = "0.1.0-dev"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
 ]
 
 [[package]]
@@ -10135,6 +10148,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b838eba278d213a8beaf485bd313fd580ca4505a00d5871caeb1457c55322cae"
 dependencies = [
  "bitflags 2.13.0",
+ "chrono",
  "fallible-iterator",
  "fallible-streaming-iterator",
  "hashlink 0.9.1",

@@ -285,9 +285,53 @@ impl IncusSubstrate {
         })
     }
 
+    /// Create a substrate using a per-host CA certificate while still reading
+    /// the client identity from `INCUS_CLIENT_CERT` / `INCUS_CLIENT_KEY`.
+    ///
+    /// This is used by the Desktop Cloud control plane to talk to many Incus
+    /// hosts that share the same client certificate but have distinct server CAs.
+    pub fn new_with_ca(
+        base_url: impl Into<String>,
+        ca_cert_pem: &[u8],
+    ) -> Result<Self, SubstrateError> {
+        let mut builder = reqwest::Client::builder().timeout(std::time::Duration::from_secs(180));
+
+        if let Ok(cert_path) = std::env::var("INCUS_CLIENT_CERT") {
+            if let Ok(key_path) = std::env::var("INCUS_CLIENT_KEY") {
+                let cert = std::fs::read(&cert_path)
+                    .map_err(|e| SubstrateError::Request(format!("cert read: {e}")))?;
+                let key = std::fs::read(&key_path)
+                    .map_err(|e| SubstrateError::Request(format!("key read: {e}")))?;
+                let mut pem = cert;
+                pem.extend_from_slice(&key);
+                let identity = reqwest::Identity::from_pem(&pem)
+                    .map_err(|e| SubstrateError::Request(format!("identity from_pem: {e}")))?;
+                builder = builder.identity(identity);
+            }
+        }
+
+        let cert = reqwest::Certificate::from_pem(ca_cert_pem)
+            .map_err(|e| SubstrateError::Request(format!("ca cert parse: {e}")))?;
+        builder = builder.add_root_certificate(cert);
+
+        if std::env::var("INCUS_CLIENT_CERT").is_ok() && std::env::var("INCUS_CLIENT_KEY").is_ok() {
+            builder = builder.use_rustls_tls();
+        }
+
+        let client = builder
+            .build()
+            .map_err(|e| SubstrateError::Request(format!("reqwest client build: {e}")))?;
+        Ok(Self {
+            client: Box::new(ReqwestClient {
+                inner: client,
+                base: base_url.into(),
+            }),
+        })
+    }
+
     /// Internal constructor for tests with a mock client.
     #[cfg(test)]
-    fn with_client(client: Box<dyn HttpClient>) -> Self {
+    pub fn with_client(client: Box<dyn HttpClient>) -> Self {
         Self { client }
     }
 }

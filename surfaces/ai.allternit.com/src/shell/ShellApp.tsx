@@ -116,7 +116,7 @@ function ShellAppInner(): React.ReactNode {
 
   const { startSession: startBotSession } = useStartBotSession(
     useCallback((sessionId: string) => {
-      dispatch({ type: 'OPEN_VIEW', viewType: 'chat-agent-session', context: { sessionId, originView: active.viewType } });
+      dispatch({ type: 'OPEN_VIEW', viewType: 'cowork-agent-session', context: { sessionId, originView: active.viewType } });
     }, [active.viewType])
   );
   useStackProviders();

@@ -14,6 +14,9 @@ Use this checklist before promoting the Desktop Cloud stack to production traffi
 
 - [ ] `ENCRYPTION_KEY`, `ALLTERNIT_INTERNAL_SERVICE_TOKEN`, and `ALLTERNIT_SELF_HOSTED_SETUP_TOKEN` are 64-char hex and unique per environment.
 - [ ] `TART_HOST_TOKEN` is unique per macOS host and rotated after initial setup.
+- [ ] Cloud provider credentials (`HETZNER_API_TOKEN`, `CONTABO_CLIENT_ID`, `CONTABO_CLIENT_SECRET`, `CONTABO_API_PASSWORD`) are scoped to a project/service account and rotated quarterly.
+- [ ] `HEADSCALE_PREAUTH_KEY` is a reusable or one-off pre-auth key with ACL tags restricted to desktop hosts only.
+- [ ] `DESKTOP_HOST_REGISTRATION_TOKEN` is unique per environment and rotated if leaked.
 - [ ] Environment files are `chmod 600` and owned by the service user.
 - [ ] Run `./rotate-secrets.sh` and verify the API + Tart hosts come back healthy.
 
@@ -50,12 +53,22 @@ Use this checklist before promoting the Desktop Cloud stack to production traffi
 
 ## Capacity & queueing
 
-- [ ] `desktop_capacity_threshold` is tuned (default 0.75) and documented.
+- [ ] `DESKTOP_AUTOSCALE_CPU_THRESHOLD` and `DESKTOP_AUTOSCALE_MEMORY_THRESHOLD` are tuned (defaults 0.75 and 0.80) and documented.
 - [ ] The provision queue worker drains pending entries when capacity becomes available.
 - [ ] Quotas (`bot_desktop_quotas`) reject provision requests that exceed per-user limits.
+- [ ] Autoscale triggers result in exactly one pending host per provider-region until the next monitor cycle; verify with a load test.
+
+## Desktop host pool operations
+
+- [ ] A fresh Incus host booted from `bootstrap-host.sh` successfully calls `POST /api/v1/desktop-hosts/register` and appears as `active` in `GET /desktop-hosts`.
+- [ ] The API's Incus client certificate is trusted by every host (either via bootstrap `incus config trust add` or a pre-shared CA).
+- [ ] Draining a host via `POST /desktop-hosts/:id/drain` prevents new placements and waits for running desktops to finish before marking `drained`.
+- [ ] Idle hosts are decommissioned automatically after the provisioner's idle timeout; manual decommission still works via the provider console.
+- [ ] `DESKTOP_HOST_REGISTRATION_URL` is reachable from the new host's public IP and uses HTTPS.
 
 ## Networking
 
-- [ ] Tailscale is installed on VPS, macOS Tart hosts, and Windows Incus hosts.
+- [ ] Tailscale is installed on VPS, macOS Tart hosts, and Linux Incus hosts.
 - [ ] `TART_HOST_URLS` and `INCUS_URL` use Tailscale IPs or hostnames, not public endpoints.
+- [ ] Cloud-provisioned Incus hosts join the Headscale tailnet at `HEADSCALE_CONTROL_PLANE_URL` before registering with the API.
 - [ ] VNC ports are not exposed publicly; access is proxied through the API.

@@ -51,13 +51,15 @@ pub struct CapacityStatus {
 pub struct CapacityMonitor {
     snapshots: Arc<RwLock<HashMap<String, CapacitySnapshot>>>,
     threshold: f64,
+    memory_threshold: f64,
 }
 
 impl CapacityMonitor {
-    pub fn new(threshold: f64) -> Self {
+    pub fn new(threshold: f64, memory_threshold: f64) -> Self {
         Self {
             snapshots: Arc::new(RwLock::new(HashMap::new())),
             threshold,
+            memory_threshold,
         }
     }
 
@@ -69,28 +71,41 @@ impl CapacityMonitor {
 
         let mut used_cpu = 0u64;
         let mut total_cpu = 0u64;
+        let mut used_mem = 0u64;
+        let mut total_mem = 0u64;
         for s in &snapshots {
-            let host_used = s.total_cpu_millis.saturating_sub(s.available_cpu_millis) as u64;
-            used_cpu += host_used;
+            let host_used_cpu = s.total_cpu_millis.saturating_sub(s.available_cpu_millis) as u64;
+            used_cpu += host_used_cpu;
             total_cpu += s.total_cpu_millis as u64;
+
+            let host_used_mem = s.total_memory_mib.saturating_sub(s.available_memory_mib) as u64;
+            used_mem += host_used_mem;
+            total_mem += s.total_memory_mib as u64;
         }
 
-        let (scale_up_recommended, scale_up_reason) = if total_cpu == 0 {
-            (false, None)
+        let cpu_ratio = if total_cpu == 0 { 0.0 } else { used_cpu as f64 / total_cpu as f64 };
+        let mem_ratio = if total_mem == 0 { 0.0 } else { used_mem as f64 / total_mem as f64 };
+
+        let (scale_up_recommended, scale_up_reason) = if cpu_ratio >= self.threshold {
+            (
+                true,
+                Some(format!(
+                    "cluster CPU utilization {:.0}% exceeds {:.0}% threshold",
+                    cpu_ratio * 100.0,
+                    self.threshold * 100.0
+                )),
+            )
+        } else if mem_ratio >= self.memory_threshold {
+            (
+                true,
+                Some(format!(
+                    "cluster memory utilization {:.0}% exceeds {:.0}% threshold",
+                    mem_ratio * 100.0,
+                    self.memory_threshold * 100.0
+                )),
+            )
         } else {
-            let ratio = used_cpu as f64 / total_cpu as f64;
-            if ratio >= self.threshold {
-                (
-                    true,
-                    Some(format!(
-                        "cluster CPU utilization {:.0}% exceeds {}% threshold",
-                        ratio * 100.0,
-                        self.threshold * 100.0
-                    )),
-                )
-            } else {
-                (false, None)
-            }
+            (false, None)
         };
 
         CapacityStatus {
@@ -159,9 +174,9 @@ async fn get_capacity(_state: State<Arc<AppState>>) -> impl IntoResponse {
 }
 
 /// Initialize the global monitor if it has not been set yet.
-pub fn init_capacity_monitor(threshold: f64) -> Arc<CapacityMonitor> {
+pub fn init_capacity_monitor(threshold: f64, memory_threshold: f64) -> Arc<CapacityMonitor> {
     CAPACITY_MONITOR
-        .get_or_init(|| Arc::new(CapacityMonitor::new(threshold)))
+        .get_or_init(|| Arc::new(CapacityMonitor::new(threshold, memory_threshold)))
         .clone()
 }
 
@@ -251,7 +266,7 @@ mod tests {
 
     #[tokio::test]
     async fn scale_up_triggered_when_threshold_exceeded() {
-        let monitor = CapacityMonitor::new(0.5);
+        let monitor = CapacityMonitor::new(0.5, 0.9);
         {
             let mut snaps = monitor.snapshots.write().await;
             snaps.insert(
@@ -276,7 +291,7 @@ mod tests {
 
     #[tokio::test]
     async fn scale_up_not_triggered_when_idle() {
-        let monitor = CapacityMonitor::new(0.9);
+        let monitor = CapacityMonitor::new(0.9, 0.9);
         {
             let mut snaps = monitor.snapshots.write().await;
             snaps.insert(
@@ -299,8 +314,39 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn scale_up_triggered_when_memory_threshold_exceeded() {
+        let monitor = CapacityMonitor::new(0.9, 0.5);
+        {
+            let mut snaps = monitor.snapshots.write().await;
+            snaps.insert(
+                "incus:host1".to_string(),
+                CapacitySnapshot {
+                    provider: "incus".to_string(),
+                    host: "host1".to_string(),
+                    healthy: true,
+                    active_executions: 1,
+                    total_cpu_millis: 8000,
+                    total_memory_mib: 32768,
+                    available_cpu_millis: 6000,
+                    available_memory_mib: 1024,
+                    scaled_at: chrono::Utc::now().to_rfc3339(),
+                },
+            );
+        }
+        let status = monitor.status().await;
+        assert!(status.scale_up_recommended);
+        assert!(
+            status
+                .scale_up_reason
+                .as_deref()
+                .unwrap()
+                .contains("memory")
+        );
+    }
+
+    #[tokio::test]
     async fn is_os_at_capacity_filters_by_provider() {
-        let monitor = CapacityMonitor::new(0.9);
+        let monitor = CapacityMonitor::new(0.9, 0.9);
         {
             let mut snaps = monitor.snapshots.write().await;
             snaps.insert(

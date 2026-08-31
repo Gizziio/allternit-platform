@@ -1,12 +1,12 @@
 //! Multi-host Incus pool for the heterogeneous desktop substrate.
 //!
-//! Keeps a small registry of Incus hosts behind one `IncusDriver`. Spawn
-//! requests are round-robined across healthy hosts; lifecycle operations use
-//! the host stored in the execution handle so a VM is always managed by the
-//! same Incus daemon that created it.
+//! Keeps a registry of Incus hosts behind one `IncusDriver`. Spawn requests use
+//! capacity-aware placement; lifecycle operations use the host stored in the
+//! execution handle so a VM is always managed by the same Incus daemon that
+//! created it.
 
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
+use std::sync::{Arc, RwLock};
 
 use tracing::{info, warn};
 
@@ -22,7 +22,13 @@ pub struct IncusHost {
     /// Substrate client for this host.
     pub substrate: Arc<IncusSubstrate>,
     /// Scheduling weight. Zero means "do not place new VMs here".
-    pub weight: u32,
+    pub weight: AtomicUsize,
+    /// Total memory on the host, in MiB.
+    pub total_memory_mb: AtomicU64,
+    /// Used memory on the host, in MiB (best-effort sample).
+    pub used_memory_mb: AtomicU64,
+    /// Image aliases known to be cached on this host.
+    pub cached_images: RwLock<Vec<String>>,
 }
 
 impl IncusHost {
@@ -33,74 +39,186 @@ impl IncusHost {
             url,
             vnc_host,
             substrate,
-            weight: 1,
+            weight: AtomicUsize::new(1),
+            total_memory_mb: AtomicU64::new(0),
+            used_memory_mb: AtomicU64::new(0),
+            cached_images: RwLock::new(Vec::new()),
         }
     }
 
-    pub fn with_weight(mut self, weight: u32) -> Self {
-        self.weight = weight;
+    pub fn with_weight(self, weight: u32) -> Self {
+        self.weight.store(weight as usize, Ordering::Relaxed);
         self
+    }
+
+    pub fn with_memory(self, total_mb: u64, used_mb: u64) -> Self {
+        self.total_memory_mb.store(total_mb, Ordering::Relaxed);
+        self.used_memory_mb.store(used_mb, Ordering::Relaxed);
+        self
+    }
+
+    pub fn weight(&self) -> usize {
+        self.weight.load(Ordering::Relaxed)
+    }
+
+    pub fn free_memory_mb(&self) -> u64 {
+        self.total_memory_mb
+            .load(Ordering::Relaxed)
+            .saturating_sub(self.used_memory_mb.load(Ordering::Relaxed))
+    }
+
+    pub fn has_image_cached(&self, alias: &str) -> bool {
+        self.cached_images
+            .read()
+            .ok()
+            .map(|v| v.iter().any(|a| a == alias))
+            .unwrap_or(false)
     }
 }
 
-/// A pool of Incus hosts with round-robin placement.
+/// A pool of Incus hosts with capacity-aware placement.
 #[derive(Debug)]
 pub struct IncusHostPool {
-    hosts: Vec<IncusHost>,
+    hosts: RwLock<Vec<Arc<IncusHost>>>,
     next: AtomicUsize,
 }
 
 impl IncusHostPool {
     /// Build a pool from an explicit list of hosts.
-    pub fn new(hosts: Vec<IncusHost>) -> Self {
+    pub fn new(hosts: Vec<Arc<IncusHost>>) -> Self {
         assert!(!hosts.is_empty(), "IncusHostPool requires at least one host");
         Self {
-            hosts,
+            hosts: RwLock::new(hosts),
             next: AtomicUsize::new(0),
         }
     }
 
     /// Convenience: single-host pool.
     pub fn single(url: impl Into<String>, substrate: Arc<IncusSubstrate>) -> Self {
-        Self::new(vec![IncusHost::new(url, substrate)])
+        Self::new(vec![Arc::new(IncusHost::new(url, substrate))])
     }
 
     /// Number of configured hosts.
     pub fn len(&self) -> usize {
-        self.hosts.len()
+        self.hosts.read().map(|h| h.len()).unwrap_or(0)
     }
 
     pub fn is_empty(&self) -> bool {
-        self.hosts.is_empty()
+        self.len() == 0
     }
 
     /// Iterate over configured hosts.
-    pub fn hosts(&self) -> &[IncusHost] {
-        &self.hosts
+    pub fn hosts(&self) -> Vec<Arc<IncusHost>> {
+        self.hosts.read().map(|h| h.clone()).unwrap_or_default()
     }
 
-    /// Pick a host for a new VM. Round-robins across hosts with weight > 0.
-    pub fn select_for_spawn(&self) -> Result<&IncusHost, SubstrateError> {
-        let len = self.hosts.len();
-        if len == 1 {
-            let h = &self.hosts[0];
-            return if h.weight > 0 {
-                Ok(h)
-            } else {
-                Err(SubstrateError::Request(
-                    "only Incus host has weight 0".to_string(),
-                ))
-            };
+    /// Add a host at runtime.
+    pub fn add_host(&self, host: Arc<IncusHost>) {
+        let mut hosts = self.hosts.write().expect("IncusHostPool lock poisoned");
+        hosts.push(host);
+        info!(host_count = hosts.len(), "added Incus host to pool");
+    }
+
+    /// Remove a host by URL.
+    pub fn remove_host(&self, url: &str) -> bool {
+        let mut hosts = self.hosts.write().expect("IncusHostPool lock poisoned");
+        let before = hosts.len();
+        hosts.retain(|h| h.url != url);
+        let removed = hosts.len() < before;
+        if removed {
+            info!(url, host_count = hosts.len(), "removed Incus host from pool");
+        }
+        removed
+    }
+
+    /// Update capacity metadata for a host.
+    pub fn set_host_capacity(&self, url: &str, total_mb: u64, used_mb: u64) {
+        let hosts = self.hosts.read().expect("IncusHostPool lock poisoned");
+        if let Some(host) = hosts.iter().find(|h| h.url == url) {
+            host.total_memory_mb.store(total_mb, Ordering::Relaxed);
+            host.used_memory_mb.store(used_mb, Ordering::Relaxed);
+        }
+    }
+
+    /// Update cached image aliases for a host.
+    pub fn set_host_images(&self, url: &str, images: Vec<String>) {
+        let hosts = self.hosts.read().expect("IncusHostPool lock poisoned");
+        if let Some(host) = hosts.iter().find(|h| h.url == url) {
+            if let Ok(mut cached) = host.cached_images.write() {
+                *cached = images;
+            }
+        }
+    }
+
+    /// Pick a host for a new VM.
+    ///
+    /// Prefer active hosts with the requested image cached, then the host with
+    /// the most free memory that can fit the request. Fall back to round-robin
+    /// when no memory data is available.
+    pub fn select_for_spawn(
+        &self,
+        memory_mib: u32,
+        image_alias: Option<&str>,
+    ) -> Result<Arc<IncusHost>, SubstrateError> {
+        let hosts = self.hosts.read().expect("IncusHostPool lock poisoned");
+        if hosts.is_empty() {
+            return Err(SubstrateError::Request(
+                "no Incus hosts available for spawn".to_string(),
+            ));
         }
 
+        let memory_mib = memory_mib as u64;
+        let mut candidates: Vec<&Arc<IncusHost>> = hosts
+            .iter()
+            .filter(|h| h.weight() > 0)
+            .collect();
+
+        if candidates.is_empty() {
+            return Err(SubstrateError::Request(
+                "no Incus hosts available for spawn".to_string(),
+            ));
+        }
+
+        // If we have memory data, only consider hosts that can fit the VM.
+        let has_capacity_data = candidates.iter().any(|h| h.total_memory_mb.load(Ordering::Relaxed) > 0);
+        if has_capacity_data {
+            candidates.retain(|h| h.free_memory_mb() >= memory_mib);
+            if candidates.is_empty() {
+                return Err(SubstrateError::Request(
+                    "no Incus host has enough free memory".to_string(),
+                ));
+            }
+        }
+
+        // Prefer hosts that already have the image cached.
+        if let Some(alias) = image_alias {
+            let with_image: Vec<&Arc<IncusHost>> = candidates
+                .iter()
+                .filter(|h| h.has_image_cached(alias))
+                .copied()
+                .collect();
+            if !with_image.is_empty() {
+                candidates = with_image;
+            }
+        }
+
+        if has_capacity_data {
+            candidates.sort_by_key(|h| h.free_memory_mb());
+            let chosen = candidates.last().cloned().cloned().ok_or_else(|| {
+                SubstrateError::Request("no Incus host available for spawn".to_string())
+            })?;
+            info!(host = %chosen.url, free_mb = chosen.free_memory_mb(), "selected Incus host by capacity");
+            return Ok(chosen);
+        }
+
+        // No capacity data yet: round-robin across weighted hosts.
+        let len = candidates.len();
         let start = self.next.fetch_add(1, Ordering::Relaxed) % len;
         for offset in 0..len {
             let idx = (start + offset) % len;
-            let h = &self.hosts[idx];
-            if h.weight > 0 {
-                info!(host = %h.url, "selected Incus host for spawn");
-                return Ok(h);
-            }
+            let h = candidates[idx].clone();
+            info!(host = %h.url, "selected Incus host round-robin");
+            return Ok(h);
         }
 
         Err(SubstrateError::Request(
@@ -110,14 +228,21 @@ impl IncusHostPool {
 
     /// Look up the host that originally owned a VM. Falls back to the first
     /// host if the stored URL is unknown (handles pre-pool handles).
-    pub fn host_for_handle(&self, handle: &allternit_driver_interface::ExecutionHandle) -> &IncusHost {
+    pub fn host_for_handle(
+        &self,
+        handle: &allternit_driver_interface::ExecutionHandle,
+    ) -> Arc<IncusHost> {
+        let hosts = self.hosts.read().expect("IncusHostPool lock poisoned");
         if let Some(url) = handle.driver_info.get("host_url") {
-            if let Some(h) = self.hosts.iter().find(|h| &h.url == url) {
-                return h;
+            if let Some(h) = hosts.iter().find(|h| &h.url == url) {
+                return h.clone();
             }
             warn!(url, "execution handle references unknown Incus host; using fallback");
         }
-        &self.hosts[0]
+        hosts
+            .first()
+            .cloned()
+            .expect("IncusHostPool requires at least one host")
     }
 }
 
@@ -144,33 +269,45 @@ mod tests {
         Arc::new(IncusSubstrate::new("http://dummy").unwrap())
     }
 
+    fn host(url: &str, total: u64, used: u64) -> Arc<IncusHost> {
+        Arc::new(
+            IncusHost::new(url, fake_substrate())
+                .with_memory(total, used),
+        )
+    }
+
     #[test]
-    fn round_robin_cycles_through_hosts() {
+    fn capacity_aware_selects_host_with_most_free_memory() {
         let pool = IncusHostPool::new(vec![
-            IncusHost::new("https://a:8443", fake_substrate()),
-            IncusHost::new("https://b:8443", fake_substrate()),
-            IncusHost::new("https://c:8443", fake_substrate()),
+            host("https://a:8443", 8192, 7000),
+            host("https://b:8443", 8192, 1000),
+            host("https://c:8443", 8192, 4000),
         ]);
 
-        let a = pool.select_for_spawn().unwrap().url.clone();
-        let b = pool.select_for_spawn().unwrap().url.clone();
-        let c = pool.select_for_spawn().unwrap().url.clone();
-        let a2 = pool.select_for_spawn().unwrap().url.clone();
+        let chosen = pool.select_for_spawn(2048, None).unwrap();
+        assert_eq!(chosen.url, "https://b:8443");
+    }
 
-        assert_ne!(a, b);
-        assert_ne!(b, c);
-        assert_eq!(a, a2);
+    #[test]
+    fn capacity_aware_prefers_image_cache() {
+        let h1 = host("https://a:8443", 8192, 1000);
+        h1.cached_images.write().unwrap().push("allternit-desktop".to_string());
+        let h2 = host("https://b:8443", 8192, 500);
+
+        let pool = IncusHostPool::new(vec![h1, h2]);
+        let chosen = pool.select_for_spawn(1024, Some("allternit-desktop")).unwrap();
+        assert_eq!(chosen.url, "https://a:8443");
     }
 
     #[test]
     fn zero_weight_hosts_are_skipped() {
         let pool = IncusHostPool::new(vec![
-            IncusHost::new("https://a:8443", fake_substrate()).with_weight(0),
-            IncusHost::new("https://b:8443", fake_substrate()),
+            Arc::new(IncusHost::new("https://a:8443", fake_substrate()).with_weight(0)),
+            host("https://b:8443", 8192, 100),
         ]);
 
         for _ in 0..10 {
-            assert_eq!(pool.select_for_spawn().unwrap().url, "https://b:8443");
+            assert_eq!(pool.select_for_spawn(512, None).unwrap().url, "https://b:8443");
         }
     }
 

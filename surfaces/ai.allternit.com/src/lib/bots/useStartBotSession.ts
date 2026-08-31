@@ -59,7 +59,7 @@ function buildVMSystemPrompt(vmConfig: NonNullable<Agent['vmOperator']>, sandbox
  * If the bot has a VM operator configured with autoStart, this creates a
  * sandbox before opening the session and injects VM instructions into the
  * system prompt. The resulting sessionId can be passed to
- * `open('chat-agent-session', { sessionId })` so the existing chat surface
+ * `open('cowork-agent-session', { sessionId })` so the existing chat surface
  * renders it.
  */
 export function useStartBotSession(

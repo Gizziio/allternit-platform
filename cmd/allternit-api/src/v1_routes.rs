@@ -1246,8 +1246,8 @@ mod tests {
 
     #[test]
     fn recommend_quality_prefers_flagship_for_reasoning() {
-        let flagship = json!({"id": "anthropic/claude-opus-4-6", "name": "Claude Opus 4.6", "provider": "anthropic", "description": "For your toughest challenges", "tier": "flagship", "supports_effort": true });
-        let fast = json!({"id": "anthropic/claude-haiku-4-5", "name": "Claude Haiku 4.5", "provider": "anthropic", "description": "Fastest for quick answers", "tier": "fast", "supports_effort": true });
+        let flagship = json!({"id": "anthropic/claude-3-opus-20240229", "name": "Claude 3 Opus", "provider": "anthropic", "description": "For your toughest challenges", "tier": "flagship", "supports_effort": true });
+        let fast = json!({"id": "anthropic/claude-3-haiku-20240307", "name": "Claude 3 Haiku", "provider": "anthropic", "description": "Fastest for quick answers", "tier": "fast", "supports_effort": true });
 
         let (flagship_score, _) = score_model_for_task(&flagship, "reasoning", "quality");
         let (fast_score, _) = score_model_for_task(&fast, "reasoning", "quality");
@@ -1256,8 +1256,8 @@ mod tests {
 
     #[test]
     fn recommend_latency_prefers_fast_for_code() {
-        let flagship = json!({"id": "openai/gpt-5-mini", "name": "GPT-5 Mini", "provider": "openai", "description": "Everyday reasoning and writing", "tier": "standard", "supports_effort": true });
-        let fast = json!({"id": "openai/gpt-5-nano", "name": "GPT-5 Nano", "provider": "openai", "description": "Fastest for quick answers", "tier": "fast", "supports_effort": false });
+        let flagship = json!({"id": "openai/gpt-4o", "name": "GPT-4o", "provider": "openai", "description": "Multimodal flagship", "tier": "flagship", "supports_effort": true });
+        let fast = json!({"id": "openai/gpt-4o-mini", "name": "GPT-4o Mini", "provider": "openai", "description": "Fast and affordable", "tier": "standard", "supports_effort": false });
 
         let (standard_score, _) = score_model_for_task(&flagship, "code", "latency");
         let (fast_score, _) = score_model_for_task(&fast, "code", "latency");
@@ -1266,8 +1266,8 @@ mod tests {
 
     #[test]
     fn recommend_code_boosts_coding_models() {
-        let code_model = json!({"id": "codex-cli/codex-mini-latest", "name": "Codex Mini", "provider": "codex-cli", "description": "Coding-focused brain", "tier": "standard", "supports_effort": false });
-        let chat_model = json!({"id": "anthropic/claude-haiku-4-5", "name": "Claude Haiku 4.5", "provider": "anthropic", "description": "Fastest for quick answers", "tier": "fast", "supports_effort": true });
+        let code_model = json!({"id": "codex-cli/gpt-5.6-sol", "name": "GPT-5.6 Sol", "provider": "codex-cli", "description": "Latest Codex reasoning", "tier": "flagship", "supports_effort": false });
+        let chat_model = json!({"id": "anthropic/claude-3-haiku-20240307", "name": "Claude 3 Haiku", "provider": "anthropic", "description": "Fastest for quick answers", "tier": "fast", "supports_effort": true });
 
         let (code_score, _) = score_model_for_task(&code_model, "code", "quality");
         let (chat_score, _) = score_model_for_task(&chat_model, "code", "quality");

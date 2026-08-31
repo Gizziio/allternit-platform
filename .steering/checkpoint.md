@@ -1,3 +1,715 @@
+# Steering checkpoint — AllternitOS Phase 4 Managed Inference execution loop (complete)
+
+## Goal
+Finish Phase 4: after Cloud `POST /v1/responses` schedules inference capacity
+through the canonical OS `POST /v1/leases/issue`, route the translated
+`ModelRequest` to the scheduled OS lease, execute real inference, and return
+generated tokens (not the MVP deterministic string). Keep UsageEvent + Credits
+charging accurate. Reuse existing AllternitOS runtime adapters and Cloud
+provider adapters; do not create competing scheduler/lease/node types.
+
+## Just did
+- Wired the Phase-4 execution loop:
+  - `fabric_model_routes::create_response` now schedules an OS lease, executes
+    inference on the returned `Placement`, charges actual token usage, and
+    records a `model.inference` usage event with the real token count.
+  - Added `fabric/inference_executor.rs`: dispatches `fake` placements to the
+    AllternitOS `mock-llama-server` test double; returns clear errors for
+    unsupported providers instead of faking success.
+  - Added `--sandbox` override to `allternitos-runtime` CLI for future local
+    execution use.
+- Real-OS e2e test `responses_routes_through_real_os_control_plane` now asserts
+  the mock backend's generated content ("Hello from AllternitOS mock backend")
+  and exact token counts (5 prompt, 7 completion, 12 total).
+
+## Verification
+- AllternitOS `cargo test --workspace`: 219 tests passed, 0 failed.
+- Cloud donor `cargo test -p allternit-api --lib`: 605 tests passed, 0 failed.
+- Cloud donor `cargo test -p allternit-api --lib fabric_model_routes`: 6 tests
+  passed, 0 failed.
+
+## Next
+- Joe review: decide whether to commit the clean AllternitOS `--sandbox` delta.
+- Future Phase-4+ work (not now): wire local runtime execution via
+  `allternitos-runtime`, and wire cloud-provider placements to the existing
+  Cloud OpenAI/Together/Fireworks adapters.
+
+## Open questions
+- Resolved for this slice: fake-provider e2e uses `mock-llama-server` test
+  double. Real adapters remain documented as a gap.
+- Model resource class remains `compute.s` for the MVP integration test;
+  `model.*`/`gpu.s` mapping is deferred.
+
+---
+
+# Steering checkpoint — Allternit Cloud build (L1.1 complete)
+
+## Goal
+Build the Allternit Cloud control plane, execution layer, and surfaces per the
+Cloud Strategy Gameplan v1.2, using `MASTER_TRACKING.md` as the single source of
+truth.
+
+## Just did
+- Completed L1.1: Admin Fabric resource-class CRUD.
+  - Made `ResourceClassCatalog` runtime-mutable by wrapping its internal
+    `Vec<ResourceClass>` in `Arc<RwLock<...>>` (`cmd/allternit-api/src/fabric/sku.rs`).
+  - Added `upsert_class` and `delete_class` methods that persist to
+    `fabric_resource_classes` and refresh the in-memory catalog atomically.
+  - Updated all callers (`fabric_resources_routes.rs`, `agent_cloud_routes.rs`,
+    `fabric/cost.rs`, `fabric/price_cache.rs`, `fabric/scheduler.rs`) to use the
+    new owned accessors.
+  - Added admin routes in `cmd/allternit-api/src/fabric_admin_routes.rs`:
+    - `POST /api/v1/admin/fabric/resource-classes` — create a class.
+    - `PUT /api/v1/admin/fabric/resource-classes/:id` — update a class.
+  - Both routes are gated by `require_org_admin`, validate `kind` and
+    `reliability_tier` enums, enforce non-empty `class`/`display_name`, and
+    detect duplicate `kind.class` collisions.
+  - Added 6 new integration tests covering: non-admin rejection, admin create,
+    invalid kind rejection, duplicate class conflict, admin update, and
+    not-found update.
+  - Added 3 unit tests in `fabric/sku.rs` covering upsert insert, upsert update,
+    and delete.
+  - Updated `MASTER_TRACKING.md` to mark L1.1 complete and refreshed the last
+    verification line.
+
+## Verification
+- `cargo check -p allternit-api` clean (pre-existing warnings only).
+- `cargo test -p allternit-api` 588 passed (lib) — up from 579.
+
+## Next
+- All Layer 1 — Control Plane items are now complete. The next unchecked work
+  depends on future prioritization; consult `MASTER_TRACKING.md`.
+
+---
+
+# Steering checkpoint — Allternit Cloud build (L3.4 complete, L1.1+ next)
+
+## Goal
+Build the Allternit Cloud control plane, execution layer, and surfaces per the
+Cloud Strategy Gameplan v1.2, using `MASTER_TRACKING.md` as the single source of
+truth.
+
+## Just did
+- Completed L3.4: Agent Cloud surface.
+  - Added `cmd/allternit-api/src/agent_cloud_routes.rs` with:
+    - `POST /api/v1/agents/:id/runtime/provision` — verifies the agent, schedules
+      a Fabric compute resource via the existing `AppState.fabric_scheduler`,
+      records the resulting `fabric_resource_id` in the agent's `config` JSON,
+      and returns the resource summary.
+    - `POST /api/v1/agents/:id/runtime/terminate` — reads the stored resource id
+      from config, calls `ResourceManager::terminate`, best-effort provider-side
+      termination, and updates config status to `terminated`.
+  - Wired the new router into `cmd/allternit-api/src/lib.rs` and `main.rs`.
+  - Added `surfaces/ai.allternit.com/src/lib/agent-cloud-api.ts` typed client for
+    the provision/terminate endpoints.
+  - Added `surfaces/ai.allternit.com/src/views/agent-cloud/AgentCloudView.tsx`
+    with two tabs:
+    - **Agents**: list existing agents, show runtime status, and provision or
+      terminate Fabric runtimes per agent.
+    - **Create Agent**: simple persistent agent creation form (name, description,
+      provider, model) using the existing agent store/service.
+  - Wired the new view into `src/nav/nav.types.ts`, `src/nav/nav.policy.ts`,
+    `src/shell/ViewRegistry.tsx`, `src/shell/ShellRail.tsx`, and
+    `src/lib/i18n/locales/en.json`.
+  - Added `surfaces/ai.allternit.com/src/lib/agent-cloud-api.test.ts` (3 tests)
+    covering the runtime API wrappers.
+  - Added 4 unit tests in `agent_cloud_routes.rs` covering provision success,
+    missing-org rejection, cross-user rejection, and terminate/update-config.
+
+## Verification
+- `cargo check --workspace` clean (pre-existing warnings only).
+- `cargo test -p allternit-api` 579 passed (lib) — up from 575.
+- `pnpm exec tsc --noEmit` in `surfaces/ai.allternit.com` has no errors in
+  changed files; remaining errors are pre-existing in unrelated office-engine
+  packages.
+- `pnpm exec vitest run src/lib/agent-cloud-api.test.ts src/lib/model-gateway-api.test.ts`
+  15 passed.
+
+## Next
+- L1.1 Admin API to create/update resource classes is the remaining unchecked
+  item.
+
+## Open questions
+- None from L3.4.
+
+---
+
+# Steering checkpoint — Allternit Cloud build (L3.3 complete, L3.4+ next)
+
+## Goal
+Build the Allternit Cloud control plane, execution layer, and surfaces per the
+Cloud Strategy Gameplan v1.2, using `MASTER_TRACKING.md` as the single source of
+truth.
+
+## Just did
+- Completed L3.3: Model Gateway surface.
+  - Exposed the OpenAI-compatible model gateway through the platform gateway by
+    adding `/v1` to the generic API proxy in
+    `platform/protocols/communication/allternit-gateway/allternit-gateway/src/index.ts`.
+    `GET /v1/models` and `POST /v1/responses` now reach the Rust control plane
+    via the gateway, carrying the caller's authorization header.
+  - Added `surfaces/ai.allternit.com/src/lib/model-gateway-api.ts` with typed
+    clients for `/v1/models` and `/v1/responses`, endpoint/token helpers, and a
+    persisted `Model=auto` policy implementation (strategy, allowed providers,
+    max price caps, and `resolveAutoModel`).
+  - Added `surfaces/ai.allternit.com/src/views/model-gateway/ModelGatewayView.tsx`
+    with four tabs:
+    - **Endpoint**: base URL, masked API token, and copyable curl example.
+    - **Models**: catalog table with provider, tier, context window, and pricing.
+    - **Model = Auto**: strategy selector, provider allowlist, price caps, and
+      live preview of which model `model: "auto"` resolves to.
+    - **Playground**: choose a model or `auto`, send a prompt to `/v1/responses`,
+      and view the response, token usage, and cost.
+  - Wired the new view into `src/nav/nav.types.ts`, `src/nav/nav.policy.ts`,
+    `src/shell/ViewRegistry.tsx`, `src/shell/ShellRail.tsx`, and
+    `src/lib/i18n/locales/en.json`.
+  - Added `surfaces/ai.allternit.com/src/lib/model-gateway-api.test.ts` (12 tests)
+    covering the API wrappers and the auto-policy resolver/storage.
+
+## Verification
+- `cargo check --workspace` clean (pre-existing warnings only).
+- `cargo test -p allternit-api` 575 passed (lib).
+- `pnpm exec tsc --noEmit` in `platform/protocols/communication/allternit-gateway/allternit-gateway` clean.
+- `pnpm exec tsc --noEmit` in `surfaces/ai.allternit.com` has no errors in changed files; remaining errors are pre-existing in unrelated office-engine packages.
+- `pnpm exec vitest run src/lib/model-gateway-api.test.ts` 12 passed.
+
+## Next
+- L3.4 Agent Cloud surface (persistent agent creation UI + Fabric scheduler
+  integration) is the remaining unchecked Layer 3 item.
+
+## Open questions
+- None from L3.3.
+
+---
+
+# Steering checkpoint — Allternit Cloud build (L3.1 complete, L3.2+ next)
+
+## Goal
+Build the Allternit Cloud control plane, execution layer, and surfaces per the
+Cloud Strategy Gameplan v1.2, using `MASTER_TRACKING.md` as the single source of
+truth.
+
+## Just did
+- Completed L3.1: Customer Cloud Console.
+  - Backend enrollment-token API for Private Fabric:
+    - Added `POST /api/v1/admin/fabric/nodes/enrollment-token` and
+      `GET /api/v1/admin/fabric/nodes/enrollment-tokens`.
+    - Updated `POST /v1/fabric/nodes/enroll` to validate pending admin-created
+      tokens, mark them used, and link them to the enrolled node while keeping
+      backward-compatible re-enrollment behavior.
+    - Added route tests for token create/list and enrollment linking.
+  - Added `GET /api/v1/fabric/resource-classes` returning the catalog from
+    `state.resource_class_catalog` plus a route test.
+  - Created `surfaces/ai.allternit.com/src/lib/cloud-console-api.ts` with typed
+    wrappers for resource classes, resources, credits, enrollment tokens, and
+    Fabric nodes.
+  - Created `surfaces/ai.allternit.com/src/views/cloud-console/CloudConsoleView.tsx`
+    with Resources / Credits / Private Fabric tabs supporting resource
+    create/terminate, credit balance/transactions, enrollment-token create/copy,
+    and node approve/reject.
+  - Wired the view into `nav.types.ts`, `nav.policy.ts`, `ViewRegistry.tsx`,
+    `ShellRail.tsx`, and `en.json`.
+  - Added `src/lib/cloud-console-api.test.ts` (11 tests passing).
+  - Fixed an escaped-quote syntax issue in `ViewRegistry.tsx` that blocked the
+    surface typecheck.
+
+## Verification
+- `cargo check --workspace` clean (pre-existing warnings only).
+- `cargo test -p allternit-computer-cloud` 95 passed (89 lib + 6 daemon).
+- `cargo test -p allternit-api` 575 passed (lib).
+- `pnpm exec vitest run src/lib/cloud-console-api.test.ts` 11 passed.
+- Surface files typecheck cleanly (no errors for changed files; remaining
+  `tsc --noEmit` errors are pre-existing in unrelated office-engine packages).
+
+## Next
+- L3.x surfaces — next unchecked items are L3.2 CLI commands, L3.3 Model Gateway
+  surface, or L3.4 Agent Cloud surface. Pick highest priority.
+
+## Open questions
+- None from L3.1.
+
+---
+
+# Steering checkpoint — Allternit Cloud build (L2.6 complete, L3.x next)
+
+## Goal
+Build the Allternit Cloud control plane, execution layer, and surfaces per the
+Cloud Strategy Gameplan v1.2, using `MASTER_TRACKING.md` as the single source of
+truth.
+
+## Just did
+- Completed L2.6: Model Gateway adapters.
+  - Added migration `cmd/allternit-api/migrations/V111__fabric_model_catalog.sql` with
+    `fabric_model_catalog` and `fabric_model_usage_events` tables.
+  - Added `cmd/allternit-api/src/fabric/model_catalog.rs`:
+    - `FabricModelRecord`, `ModelCatalog`, idempotent `seed_builtin` from
+      OpenAI/Together/Fireworks planning prices, `list`, `get`, and
+      `get_by_full_id`.
+  - Added `cmd/allternit-api/src/fabric/model_gateway.rs`:
+    - `ModelGateway::estimate_cost` and `charge_usage`, rounding token costs up
+      to the nearest cent and recording a `fabric_model_usage_events` row tied
+      to a `fabric_credits_ledger` charge.
+  - Added `cmd/allternit-api/src/fabric_model_routes.rs`:
+    - `GET /v1/models` — OpenAI-shaped catalog list.
+    - `GET /v1/models/*id` — single model lookup by `provider/model_id`.
+    - `POST /v1/responses` — unified response endpoint. Validates the model,
+      deterministically estimates input/output tokens, charges the ledger, and
+      returns an OpenAI-shaped completion.
+  - Wired `fabric_model_routes::router()` into `lib.rs` and `main.rs`, merged
+    onto the public `/v1` router with `auth_middleware` so it owns `/v1/models`
+    while the existing Gizzi LLM gateway continues to serve `/v1/chat/completions`.
+  - Seeded the Fabric model catalog at startup in `main.rs`.
+  - Added unit tests for `ModelGateway` and route tests for list/get/responses
+    including insufficient-credits and unknown-model paths.
+
+## Verification
+- `cargo check --workspace` clean (pre-existing warnings only).
+- `cargo test -p allternit-computer-cloud` 95 passed (89 lib + 6 daemon).
+- `cargo test -p allternit-api` 572 passed (lib).
+
+## Next
+- L3.x surfaces — begin with L3.1 Customer Cloud Console (resource/credits/node
+  UI) or whichever surface is highest priority.
+
+## Open questions
+- None from L2.6.
+
+---
+
+# Steering checkpoint — Allternit Cloud build (L1.8 complete, L2.6 next)
+
+## Goal
+Build the Allternit Cloud control plane, execution layer, and surfaces per the
+Cloud Strategy Gameplan v1.2, using `MASTER_TRACKING.md` as the single source of
+truth.
+
+## Just did
+- Completed L1.8: Admin dashboard APIs.
+  - Added `cmd/allternit-api/src/fabric_admin_routes.rs` with:
+    - `GET /api/v1/admin/fabric/resources` — list resources, optional status filter.
+    - `GET /api/v1/admin/fabric/placements` — list placements, optional resource_id filter.
+    - `GET /api/v1/admin/fabric/usage` — list usage events, optional resource_id filter.
+  - Added list helpers to `ResourceManager` in `fabric/resources.rs`.
+  - Added `FabricUsageEvent` to the resources module.
+  - Wired `fabric_admin_routes::router()` into `lib.rs` and `main.rs`.
+  - Added route tests for admin gating, org isolation, and filters.
+- Previously completed L1.2 + L1.3: Fabric resources API and scheduler wiring.
+  - Added `cmd/allternit-api/src/fabric/resources.rs` with `ResourceManager`,
+    `FabricResource`, `FabricPlacementSummary`, and `terminate()`.
+  - Added `cmd/allternit-api/src/fabric_resources_routes.rs` with:
+    - `POST /api/v1/fabric/resources` — creates and provisions a resource via
+      `Scheduler::schedule`.
+    - `GET /api/v1/fabric/resources/:id` — returns resource + latest placement.
+    - `POST /api/v1/fabric/resources/:id/terminate` — closes the DB placement
+      and best-effort provider termination.
+  - Wired `fabric_scheduler` and `fabric_price_cache` into `AppState` and
+    initialized them in `main.rs`.
+  - Updated `PlacementRecorder::record_resource` to persist `display_name`.
+  - Added route tests for create, get, terminate, unknown class, insufficient
+    credits, and cross-org isolation.
+  - Updated all direct `AppState` test constructions across 18 route files.
+
+## Verification
+- `cargo check --workspace` clean (pre-existing warnings only).
+- `cargo test -p allternit-computer-cloud` 95 passed (89 lib + 6 daemon).
+- `cargo test -p allternit-api` 564 passed (lib).
+
+## Next
+- L2.6: Model gateway adapters — OpenAI-compatible proxy, model catalog, token
+  cost ledger, and unified `/v1/responses` endpoint.
+
+## Open questions
+- None from L1.8.
+
+---
+
+# Steering checkpoint — Allternit Cloud build (L1.7 complete, L1.2/1.3 next)
+
+## Goal
+Build the Allternit Cloud control plane, execution layer, and surfaces per the
+Cloud Strategy Gameplan v1.2, using `MASTER_TRACKING.md` as the single source of
+truth.
+
+## Just did
+- Completed L1.7: Provider price cache.
+  - Added migration `V110__fabric_provider_prices_enhance.sql` with
+    `estimated_ready_secs` column and a unique index on
+    `(provider_kind, region, instance_type, gpu_model, interruptible)` for
+    idempotent upserts.
+  - Added `cmd/allternit-api/src/fabric/price_cache.rs`:
+    - `PriceCache` with `find_offers` and `upsert_offers`.
+    - `refresh_cache` async helper that discovers offers for every
+      `(resource class, reliability tier, provider)` triple and upserts them.
+    - `discovery_request` builder for canonical discovery queries.
+  - Updated `cmd/allternit-api/src/fabric/scheduler.rs`:
+    - `Scheduler` now optionally holds a `PriceCache`.
+    - `select_offer` queries the cache first and falls back to live provider
+      discovery when no cached offer is eligible.
+  - Spawned a background price-refresh worker in `main.rs`
+    (`FABRIC_PROVIDER_PRICE_INTERVAL_SECS`, default 300s).
+  - Added tests for cache upsert/find, TTL filtering, refresh, cache hit, and
+    cache-miss fallback.
+
+## Verification
+- `cargo check --workspace` clean (pre-existing warnings only).
+- `cargo test -p allternit-computer-cloud` 95 passed (89 lib + 6 daemon).
+- `cargo test -p allternit-api` 548 passed (lib).
+
+## Next
+- L1.2 + L1.3: Fabric resources API and scheduler wiring — expose customer
+  resource create/get/terminate endpoints and wire `Scheduler`/`PriceCache`
+  into `AppState`.
+
+## Open questions
+- None from L1.7.
+
+---
+
+# Steering checkpoint — Allternit Cloud build (L1.6 complete, L1.7 next)
+
+## Goal
+Build the Allternit Cloud control plane, execution layer, and surfaces per the
+Cloud Strategy Gameplan v1.2, using `MASTER_TRACKING.md` as the single source of
+truth.
+
+## Just did
+- Completed L1.6: Usage & cost ingestion.
+  - Added migration `V109__fabric_usage_processing.sql` with `cost_event_id`
+    and `processed_at` columns on `fabric_usage_events`.
+  - Added `cmd/allternit-api/src/fabric/usage.rs`:
+    - `UsageIngestor` with `record_usage_event`, `list_unprocessed`,
+      `process_event`, and `run_batch`.
+    - Cost/retail computation from latest placement price or resource-class
+      fallback; supports `seconds` and `hours` units.
+    - Inserts `fabric_cost_events` rows and charges `fabric_credits_ledger`.
+    - Records cost events even when the customer has insufficient credits,
+      marking the usage event processed so it does not retry forever.
+  - Added `cmd/allternit-api/src/fabric_usage_routes.rs`:
+    - `POST /api/v1/admin/fabric/usage` for admin-submitted usage events.
+    - `POST /api/v1/admin/fabric/usage/process` to trigger batch conversion.
+    - Admin/org-admin gating with resource-organization validation.
+  - Wired routes in `cmd/allternit-api/src/lib.rs` and
+    `cmd/allternit-api/src/main.rs`.
+  - Spawned a background usage-to-cost worker in `main.rs`
+    (`FABRIC_USAGE_PROCESS_INTERVAL_SECS`, default 60s).
+  - Added unit tests in `fabric/usage.rs` and route tests in
+    `fabric_usage_routes.rs`.
+
+## Verification
+- `cargo check --workspace` clean (pre-existing warnings only).
+- `cargo test -p allternit-computer-cloud` 95 passed (89 lib + 6 daemon).
+- `cargo test -p allternit-api` 542 passed (lib).
+
+## Next
+- L1.7: Provider price cache — background refresh of `fabric_provider_prices`
+  and scheduler fallback to cached offers.
+
+## Open questions
+- None from L1.6; resolved: fixed-interval background worker, latest-placement
+  pricing with resource-class fallback, cost events recorded regardless of
+  charge success.
+
+---
+
+# Steering checkpoint — Allternit Cloud build (L2.5 complete, L1.6 next)
+
+## Goal
+Build the Allternit Cloud control plane, execution layer, and surfaces per the
+Cloud Strategy Gameplan v1.2, using `MASTER_TRACKING.md` as the single source of
+truth.
+
+## Just did
+- Completed L2.5: Live provider adapters (Runpod/Vast).
+  - Added `providers::registry_from_env` in
+    `cmd/allternit-computer-cloud/src/providers/mod.rs` to register Runpod
+    (`RUNPOD_API_TOKEN`) and Vast.ai (`VAST_API_KEY`) when credentials are
+    present, silently skipping missing ones.
+  - Added `FabricProviderRegistry::health_check_all` in
+    `cmd/allternit-computer-cloud/src/fabric/mod.rs` to call `.health()` on
+    every registered provider and return snapshots keyed by provider kind.
+  - Added `fabric::build_provider_registry` in
+    `cmd/allternit-api/src/fabric/mod.rs` that combines live providers from
+    `registry_from_env` with the Private Fabric node provider.
+  - Added `AppState.fabric_provider_registry` and wired it in `main.rs` and
+    the test `AppState` factory.
+  - Added a background health-check loop in `main.rs`
+    (`FABRIC_PROVIDER_HEALTH_INTERVAL_SECS`, default 60s) that logs healthy /
+    unhealthy provider status.
+  - Added tests for `health_check_all` with fake, Runpod, and Vast providers,
+    and for `build_provider_registry` including the fabric node provider.
+  - Updated 18 route test files to include the new `fabric_provider_registry`
+    field in their direct `AppState` constructions.
+
+## Verification
+- `cargo check --workspace` clean (pre-existing warnings only).
+- `cargo test -p allternit-computer-cloud` 95 passed (89 lib + 6 daemon).
+- `cargo test -p allternit-api` 532 passed (lib).
+
+## Next
+- L1.6: Usage & cost ingestion — generic `POST /v1/fabric/usage` endpoint,
+  background job to convert usage events into cost events and ledger charges,
+  and per-resource/per-placement cost attribution.
+
+## Open questions
+- Should the usage-to-cost conversion job run on a fixed interval, or be
+  triggered by each usage event?
+- Do we need a separate `fabric_cost_events` reconciliation step, or can the
+  job write ledger charges directly from usage events?
+
+---
+
+# Steering checkpoint — Allternit Cloud build (L1.5 complete, L2.5 next)
+
+## Goal
+Build the Allternit Cloud control plane, execution layer, and surfaces per the
+Cloud Strategy Gameplan v1.2, using `MASTER_TRACKING.md` as the single source of
+truth.
+
+## Just did
+- Completed L1.5: Credit holds during provisioning.
+  - Added `V108__placement_credit_hold.sql` migration with `hold_id` on
+    `fabric_placements` referencing `fabric_credit_holds(id)`.
+  - Updated `cmd/allternit-api/src/fabric/scheduler.rs`:
+    - `Scheduler::schedule` now accepts `organization_id`, `CreditsLedger`, and
+      `PlacementRecorder`.
+    - Persist a `fabric_resources` row, place a hold for the estimated retail
+      hourly price, provision, then on success record the placement, mark the
+      resource active, and charge the hold.
+    - On provisioning failure, release the hold and mark the resource terminated.
+    - On record/activate failure after provision, release the hold and terminate
+      so the customer is not charged for an unrecorded placement.
+    - Added `SelectedOffer::retail_price_per_hour_cents` and
+      `all_in_cost_per_hour_cents` from the scored offer.
+    - Added `PlacementRecorder::record_resource` and updated
+      `record_provisioning` to include `hold_id`.
+  - Fixed `CreditsLedger::charge_hold` in
+    `cmd/allternit-api/src/fabric/credits.rs` to charge directly against the
+    organization's balance inside the hold transaction (the hold reserves the
+    funds, so the spendable-balance check in `charge` was incorrectly rejecting
+    full-hold charges).
+  - Added `FakeProvider::with_provision_failure` in
+    `cmd/allternit-computer-cloud/src/providers/fake.rs` for deterministic
+    failure-path tests.
+  - Added scheduler tests covering: successful provision + hold charge,
+    insufficient credits blocking scheduling, no eligible offers, and hold
+    release on provision failure.
+
+## Verification
+- `cargo check --workspace` clean (pre-existing warnings only).
+- `cargo test -p allternit-computer-cloud` 93 passed (87 lib + 6 daemon).
+- `cargo test -p allternit-api` 531 passed (lib).
+
+## Next
+- L2.5: Live provider adapters — wire Runpod and Vast offer discovery and
+  provisioning into the scheduler, plus health checks and reliability scoring.
+
+## Open questions
+- Should Runpod/Vast adapters be registered by default if env credentials are
+  absent, or should the registry only instantiate them when configured?
+- Do we keep the fake provider in the default registry for demo/development, or
+  gate it behind a feature flag?
+
+---
+
+# Steering checkpoint — Allternit Cloud build (L2.4 complete, L1.5 next)
+
+## Goal
+Build the Allternit Cloud control plane, execution layer, and surfaces per the
+Cloud Strategy Gameplan v1.2, using `MASTER_TRACKING.md` as the single source of
+truth.
+
+## Just did
+- Completed L2.4: mTLS / secure node identity (first slice: dedicated node API token).
+  - Added `V107__fabric_node_token.sql` migration with `fabric_nodes.node_token_hash`.
+  - Updated `cmd/allternit-api/src/fabric/node_registry.rs` with
+    `node_token_hash`, `get_by_node_token_hash`, and `rotate_node_token`.
+  - Updated `cmd/allternit-api/src/fabric_node_routes.rs` so enrollment returns
+    a `node_token`, and heartbeat/status/usage authenticate with the node token
+    instead of the enrollment token.
+  - Updated `cmd/allternit-computer-cloud/src/bin/fabric-node.rs` to receive the
+    node token on enrollment, use it as the Bearer token on subsequent requests,
+    and persist it to `FABRIC_NODE_TOKEN_FILE`.
+  - Added tests for token issuance, invalid token rejection, re-enrollment token
+    rotation, and daemon request authentication.
+
+## Verification
+- `cargo check --workspace` clean (pre-existing warnings only).
+- `cargo test -p allternit-computer-cloud` 93 passed (87 lib + 6 daemon).
+- `cargo test -p allternit-api` 527 passed (lib).
+
+## Next
+- L1.5: Credit holds during provisioning — wire `CreditsLedger::hold` into the
+  scheduler before placement, convert to charge on success, release on failure,
+  and block scheduling when the organization has insufficient available credits.
+
+## Open questions
+- Should the hold be placed in `select_offer` (optimistic) or in a separate
+  pre-provision step (pessimistic)?
+- Where should the `hold_id` live — on `fabric_resources`, `fabric_placements`,
+  or both?
+
+---
+
+# Steering checkpoint — Allternit Cloud build (L1.4 complete, L2.4 next)
+
+## Goal
+Build the Allternit Cloud control plane, execution layer, and surfaces per the
+Cloud Strategy Gameplan v1.2, using `MASTER_TRACKING.md` as the single source of
+truth.
+
+## Just did
+- Completed L1.4: Credits purchase / top-up (buy credits with Allternit).
+  - Added `V106__credit_purchase_idempotency.sql` migration.
+  - Added `CreditsLedger::credit_with_idempotency` in
+    `cmd/allternit-api/src/fabric/credits.rs` for atomic purchase/grant +
+    idempotency tracking.
+  - Created `cmd/allternit-api/src/fabric_credits_routes.rs` with:
+    - `GET /api/v1/credits/balance`
+    - `GET /api/v1/credits/transactions`
+    - `POST /api/v1/credits/purchase` (`stripe`/`crypto`, idempotency key)
+    - `POST /api/v1/admin/credits/grant` (org-admin gated, idempotency key)
+  - Wired the new router into `lib.rs` and `main.rs` under `/api/v1`.
+  - Added tests covering purchase increasing balance, duplicate idempotency key
+    reuse, admin grant requiring admin role, admin grant increasing balance,
+    and balance/transaction list endpoints.
+
+## Verification
+- `cargo check --workspace` clean (pre-existing warnings only).
+- `cargo test -p allternit-computer-cloud` 93 passed (87 lib + 6 daemon).
+- `cargo test -p allternit-api` 524 passed (lib).
+
+## Next
+- L2.4: mTLS / secure node identity — issue client certificates or token pairs
+  during enrollment, validate identity on daemon requests, and store the
+  identity in `fabric_nodes`.
+
+## Open questions
+- Should enrollment return a full x.509 client cert/key pair, or start with a
+  long-lived signed token + fingerprint?
+- Should the existing enrollment token be kept as a bootstrap credential or
+  replaced entirely by the new identity?
+
+---
+
+# Steering checkpoint — Allternit Cloud build (L2.3 complete, L1.4 next)
+
+## Goal
+Build the Allternit Cloud control plane, execution layer, and surfaces per the
+Cloud Strategy Gameplan v1.2, using `MASTER_TRACKING.md` as the single source of
+truth.
+
+## Just did
+- Completed L2.3: Daemon workload execution on accepted assignments.
+  - Added `AssignmentExecutor` trait and `ProcessExecutor` (payload overrides
+    default command) plus a mock executor for tests in
+    `cmd/allternit-computer-cloud/src/bin/fabric-node.rs`.
+  - Extended the daemon lifecycle to `accepted` → `running` → `completed/failed`,
+    then submit a usage event to the control plane via
+    `POST /v1/fabric/nodes/:id/usage`.
+  - Added `FabricNodeRegistry::record_usage_event` in
+    `cmd/allternit-api/src/fabric/node_registry.rs`.
+  - Added `POST /v1/fabric/nodes/:id/usage` route in
+    `cmd/allternit-api/src/fabric_node_routes.rs` and a test that proves usage
+    rows are recorded.
+  - Fixed a `measured_at` NOT NULL constraint bug by defaulting the optional
+    `measured_at` field to `Utc::now()` in the route handler.
+  - Refactored the daemon `run_loop` into `run_once` for testability.
+  - Added daemon tests covering completed execution, failed execution, and
+    payload-driven process execution.
+
+## Verification
+- `cargo check --workspace` clean (pre-existing warnings only).
+- `cargo test -p allternit-computer-cloud` 93 passed (87 lib + 6 daemon).
+- `cargo test -p allternit-api` 519 passed (lib).
+
+## Next
+- L1.4: Credits purchase / top-up (buy credits with Allternit) — public
+  `POST /api/v1/credits/purchase`, admin `POST /api/v1/admin/credits/grant`,
+  idempotency, balance and transaction history. This is the next foundational
+  commercial piece from the Gameplan's "Unified Credits" section.
+
+## Open questions
+- Should the Stripe purchase path be a synchronous charge in this slice, or
+  should it only record a pending invoice and let a background worker settle?
+- Do we need a separate `credit_transactions` reconciliation layer for legacy
+  `organization_credits`, or can cloud/fabric go straight to
+  `fabric_credits_ledger`?
+
+---
+
+# Steering checkpoint — Allternit Cloud build (L2.2 complete, L2.3 next)
+
+## Goal
+Build the Allternit Cloud control plane, execution layer, and surfaces per the
+Cloud Strategy Gameplan v1.2, using `MASTER_TRACKING.md` as the single source of
+truth.
+
+## Just did
+- Completed L2.2: Assignment dispatch for Private Fabric nodes.
+  - Added `FabricNodeAssignment` struct and `create_assignment`,
+    `list_pending_assignments_for_node`, `update_assignment_status` methods to
+    `cmd/allternit-api/src/fabric/node_registry.rs`.
+  - Updated `cmd/allternit-api/src/fabric_node_routes.rs` so the heartbeat route
+    returns pending assignments and added a status-update route for the daemon
+    to acknowledge/reject them.
+  - Updated `cmd/allternit-computer-cloud/src/bin/fabric-node.rs` daemon to
+    call the ack endpoint with `accepted` after receiving assignments.
+  - Added tests for assignment lifecycle, daemon ack, and heartbeat returns
+    pending assignment + status update requires valid token.
+  - Fixed route/unit tests to seed `fabric_resources` rows so the
+    `fabric_node_assignments.resource_id` foreign key is satisfied.
+
+## Verification
+- `cargo check --workspace` clean (pre-existing warnings only).
+- `cargo test -p allternit-computer-cloud` 90 passed (87 lib + 3 daemon).
+- `cargo test -p allternit-api` 538 passed (518 lib + 6 health + 14 viz).
+
+## Next
+- L2.3: Daemon workload execution on accepted assignments — map assignment
+  `kind` to a local executor (process or Incus substrate), run the work, report
+  state transitions, and submit usage events.
+
+## Open questions
+- Which local executor should the daemon use for the first slice? Read
+  `substrate.rs` and `incus_pool.rs` to decide between a simple process wrapper
+  and the Incus substrate.
+
+---
+
+# Steering checkpoint — Allternit Cloud build (L2.1 complete, L2.2 next)
+
+## Goal
+Build the Allternit Cloud control plane, execution layer, and surfaces per the
+Cloud Strategy Gameplan v1.2, using `MASTER_TRACKING.md` as the single source of
+truth.
+
+## Just did
+- Completed L1.1: loaded the Fabric SKU / capability-class catalog from
+  `fabric_resource_classes` at startup, with idempotent seeding of built-in
+  classes and fallback when the table is empty.
+- Completed L2.1: backed the `FabricNodeProvider` pool with the DB registry.
+  - Added `FabricNodePool::sync_nodes` and `FabricNodeProvider::sync_nodes`.
+  - Added `to_provider_node` and `FabricNodeRegistry::active_provider_nodes`.
+  - Wired the provider into `AppState` and added a background refresh task
+    (`FABRIC_NODE_REFRESH_INTERVAL_SECS`, default 30s).
+  - Updated all test `AppState` construction sites.
+  - Added tests for DB-to-provider mapping and pool sync.
+
+## Verification
+- `cargo check --workspace` clean (pre-existing warnings only).
+- `cargo test -p allternit-computer-cloud` 89 passed.
+- `cargo test -p allternit-api` 535 passed (515 lib + 6 health + 14 viz).
+
+## Next
+- L2.2: Assignment dispatch for Private Fabric nodes — persist assignments in
+  `fabric_node_assignments` during `provision`, return them in heartbeat, and
+  have the daemon acknowledge them.
+
+## Open questions
+- None blocking L2.2.
+
+---
+
 # Steering checkpoint — Unified Compute credits deployment
 
 ## Goal

@@ -2790,13 +2790,17 @@ mod tests {
         let rails = RailsState::new(temp.join("rails"))
             .await
             .expect("test rails");
+        let desktop_host_registry = crate::desktop_host_registry::DesktopHostRegistry::new(db.clone());
         Arc::new(AppState {
             config,
-            db,
+            db: db.clone(),
             data_dir: temp.to_path_buf(),
             jwks,
             auth_config,
             vm_driver: None,
+            incus_driver: None,
+            desktop_host_registry,
+            desktop_host_provisioner: None,
             bot_desktop_sessions: Arc::new(tokio::sync::RwLock::new(std::collections::HashMap::new())),
             rails,
             vm_sessions: crate::vm_session_routes::new_vm_session_store(),
@@ -2814,6 +2818,15 @@ mod tests {
             office_cli_watches: Arc::new(RwLock::new(HashMap::new())),
             office_cli_mcp_sessions: Arc::new(RwLock::new(HashMap::new())),
             approval_store: Arc::new(crate::permission_policy::ApprovalStore::new()),
+            resource_class_catalog: crate::fabric::sku::ResourceClassCatalog::builtin(),
+            fabric_node_provider: allternit_computer_cloud::providers::fabric_node::FabricNodeProvider::new(
+                std::sync::Arc::new(allternit_computer_cloud::providers::fabric_node::FabricNodePool::new()),
+                "__test__".to_string(),
+            ),
+            fabric_provider_registry: allternit_computer_cloud::fabric::FabricProviderRegistry::empty(),
+            fabric_scheduler: crate::fabric::Scheduler::new(crate::fabric::CostEngine::default_engine()),
+            fabric_price_cache: crate::fabric::PriceCache::new(db.clone()),
+            os_control_plane: None,
         })
     }
 

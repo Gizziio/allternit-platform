@@ -205,6 +205,7 @@ allternit-scheduler = { path = "infrastructure/scheduler" }
 allternit-cron-parser = { path = "infrastructure/scheduler/cron-parser" }
 allternit-cloud-api = { path = "cmd/allternit-cloud-api" }
 allternit-computer-cloud = { path = "cmd/allternit-computer-cloud" }
+allternitos-cloud-contracts = { path = "../../AllternitOS/fabric/os/cloud-contracts" }
 
 allternit-receipts-schema = { path = "domains/governance/evidence-management/receipts-schema" }
 allternit-evals = { path = "domains/governance/security-quality-assurance/evals" }

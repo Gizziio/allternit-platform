@@ -35,6 +35,7 @@ pub fn router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/agents/:id/runtime/provision", post(provision_runtime))
         .route("/agents/:id/runtime/terminate", post(terminate_runtime))
+        .route("/agents/:id/harness/provision", post(provision_harness))
 }
 
 #[derive(Debug)]
@@ -118,6 +119,19 @@ struct ProvisionRuntimeRequest {
 
 fn default_runtime_class() -> String {
     "s".to_string()
+}
+
+#[derive(Debug, Deserialize, Default)]
+#[serde(default)]
+struct ProvisionHarnessRequest {
+    #[serde(default = "default_harness_class")]
+    class: String,
+    #[serde(default)]
+    display_name: Option<String>,
+}
+
+fn default_harness_class() -> String {
+    "gizzi".to_string()
 }
 
 async fn provision_runtime(
@@ -411,6 +425,221 @@ async fn terminate_runtime(
     })))
 }
 
+/// Provision a managed harness runtime for an agent.
+///
+/// When the agent's `harness_config.mode` is `cloud`, this route schedules a
+/// canonical harness resource (e.g. `harness.gizzi`) through the OS Resource
+/// Scheduler if one is configured, or through the internal Cloud scheduler
+/// otherwise. The resulting resource id is stored in the agent's config so
+/// subsequent session/chat routes can target the leased harness worker.
+async fn provision_harness(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(agent_id): Path<String>,
+    Json(req): Json<ProvisionHarnessRequest>,
+) -> Result<Json<Value>, ApiError> {
+    let org = user.organization_id.clone().ok_or_else(|| {
+        error(
+            StatusCode::FORBIDDEN,
+            "organization_required",
+            "An active organization is required.",
+        )
+    })?;
+
+    // Verify agent exists and belongs to the calling user, and read its harness
+    // config to confirm cloud-managed harness mode.
+    let db = state.db.clone();
+    let agent_id_for_lookup = agent_id.clone();
+    let user_id = user.user_id.clone();
+    let agent = tokio::task::spawn_blocking(move || {
+        let conn = db.connect()?;
+        let mut stmt = conn.prepare(
+            "SELECT id, user_id, config, harness_config FROM agents WHERE id = ?1",
+        )?;
+        let row: Option<(String, String, Option<String>, Option<String>)> = stmt
+            .query_row(rusqlite::params![agent_id_for_lookup], |row| {
+                Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?))
+            })
+            .optional()?;
+        Ok::<_, rusqlite::Error>(row)
+    })
+    .await
+    .map_err(internal)?
+    .map_err(internal)?;
+
+    let (existing_config, harness_config_json): (Option<String>, Option<String>) = match agent {
+        Some((_id, owner_id, config, harness_config)) if owner_id == user_id => (config, harness_config),
+        Some(_) => {
+            return Err(error(
+                StatusCode::FORBIDDEN,
+                "agent_access_denied",
+                "Agent belongs to a different user.",
+            ));
+        }
+        None => {
+            return Err(error(
+                StatusCode::NOT_FOUND,
+                "agent_not_found",
+                "Agent not found.",
+            ));
+        }
+    };
+
+    let harness_config: Value = harness_config_json
+        .and_then(|s| serde_json::from_str(&s).ok())
+        .unwrap_or_else(|| json!({"mode": "cloud"}));
+    let harness_mode = harness_config.get("mode").and_then(|v| v.as_str()).unwrap_or("cloud");
+    if harness_mode != "cloud" {
+        return Err(error(
+            StatusCode::BAD_REQUEST,
+            "harness_mode_unsupported",
+            "Agent harness mode must be 'cloud' to provision a managed harness runtime.",
+        ));
+    }
+    let harness_type = harness_config
+        .get("harness")
+        .or_else(|| harness_config.get("type"))
+        .and_then(|v| v.as_str())
+        .unwrap_or("gizzi");
+    if harness_type != "gizzi" {
+        return Err(error(
+            StatusCode::BAD_REQUEST,
+            "harness_type_unsupported",
+            format!("Unsupported managed harness type: {harness_type}"),
+        ));
+    }
+
+    // Resolve the resource class. Default to harness.gizzi for managed harness.
+    let full_class = match state
+        .resource_class_catalog
+        .classes()
+        .iter()
+        .find(|c| c.class == req.class)
+    {
+        Some(class) => format!("{}.{}", class.kind, class.class),
+        None => format!("harness.{}", req.class),
+    };
+
+    let class = state
+        .resource_class_catalog
+        .get(&full_class)
+        .ok_or_else(|| {
+            error(
+                StatusCode::BAD_REQUEST,
+                "unknown_class",
+                format!("Unknown resource class: {full_class}"),
+            )
+        })?;
+
+    let resource_id = Uuid::new_v4().to_string();
+    let fabric_req = ResourceRequest {
+        id: resource_id.clone(),
+        kind: ResourceKind::Harness,
+        class: class.class.clone(),
+        display_name: req
+            .display_name
+            .clone()
+            .or_else(|| Some(format!("harness-{}-{}", harness_type, agent_id))),
+        vcpu_min: class.vcpu,
+        memory_mib_min: class.memory_mib,
+        gpu_vram_mib_min: class.gpu_vram_mib,
+        region_policy: RegionPolicy::Any,
+        latency_slo_ms: None,
+        deadline: None,
+        reliability_tier: class.reliability_tier,
+        image: None,
+        model: None,
+        runtime: Some(harness_type.to_string()),
+        storage_mib: 0,
+        egress_policy: None,
+        constraints: CustomerConstraints::default(),
+        labels: {
+            let mut labels = std::collections::HashMap::new();
+            labels.insert("agent_id".to_string(), agent_id.clone());
+            labels.insert("managed_by".to_string(), "agent_cloud".to_string());
+            labels.insert("harness_type".to_string(), harness_type.to_string());
+            labels
+        },
+        user_data: None,
+    };
+
+    info!(
+        agent_id = %agent_id,
+        resource_id = %resource_id,
+        organization_id = %org,
+        class = %full_class,
+        "scheduling managed harness runtime"
+    );
+
+    let scheduled = if let Some(os_client) = state.os_control_plane.as_ref() {
+        provision_resource_via_os(
+            Arc::clone(&state),
+            &org,
+            &user,
+            req.display_name.as_deref(),
+            &class,
+            &full_class,
+            &resource_id,
+            os_client,
+            &fabric_req,
+            "harness.session",
+            &["create".to_string()],
+            "agent cloud harness provisioning",
+            "harness runtime capacity",
+        )
+        .await?
+    } else {
+        state
+            .fabric_scheduler
+            .schedule(
+                &org,
+                &fabric_req,
+                &state.resource_class_catalog,
+                &state.fabric_provider_registry,
+                &CreditsLedger::new(state.db.clone()),
+                &PlacementRecorder::new(state.db.clone()),
+            )
+            .await
+            .map_err(scheduler_error)?
+    };
+
+    let mut config: Value = existing_config
+        .and_then(|s| serde_json::from_str(&s).ok())
+        .unwrap_or_else(|| json!({}));
+    config["harness_resource_id"] = json!(resource_id);
+    config["harness_status"] = json!("active");
+    config["harness_class"] = json!(full_class);
+
+    let db = state.db.clone();
+    let agent_id_for_update = agent_id.clone();
+    let config_string = config.to_string();
+    tokio::task::spawn_blocking(move || {
+        let conn = db.connect()?;
+        conn.execute(
+            "UPDATE agents SET config = ?1, updated_at = CURRENT_TIMESTAMP WHERE id = ?2",
+            rusqlite::params![config_string, agent_id_for_update],
+        )?;
+        Ok::<_, rusqlite::Error>(())
+    })
+    .await
+    .map_err(internal)?
+    .map_err(internal)?;
+
+    Ok(Json(json!({
+        "agent_id": agent_id,
+        "resource_id": resource_id,
+        "provider_kind": scheduled.provider_kind,
+        "provider_resource_id": scheduled.provider_resource_id,
+        "region": scheduled.region,
+        "instance_type": scheduled.instance_type,
+        "ipv4": scheduled.ipv4,
+        "endpoint": scheduled.endpoint,
+        "status": "active",
+        "harness_status": "active",
+        "harness_type": harness_type,
+    })))
+}
+
 async fn provision_runtime_via_os(
     state: Arc<AppState>,
     org: &str,
@@ -422,18 +651,54 @@ async fn provision_runtime_via_os(
     os_client: &OsControlPlaneClient,
     fabric_req: &ResourceRequest,
 ) -> Result<ScheduledResource, ApiError> {
+    provision_resource_via_os(
+        state,
+        org,
+        user,
+        req.display_name.as_deref(),
+        class,
+        full_class,
+        resource_id,
+        os_client,
+        fabric_req,
+        "agent.run",
+        &["run".to_string()],
+        "agent cloud runtime provisioning",
+        "agent runtime capacity",
+    )
+    .await
+}
+
+/// Issue a canonical OS lease for a resource, record the placement in the Cloud
+/// ledger, and place/charge a credit hold. This is the shared OS-scheduling
+/// path used by agent runtimes and managed harness runtimes.
+async fn provision_resource_via_os(
+    state: Arc<AppState>,
+    org: &str,
+    user: &AuthUser,
+    display_name: Option<&str>,
+    class: &crate::fabric::sku::ResourceClass,
+    full_class: &str,
+    resource_id: &str,
+    os_client: &OsControlPlaneClient,
+    fabric_req: &ResourceRequest,
+    capability: &str,
+    actions: &[String],
+    purpose: &str,
+    usage_description: &str,
+) -> Result<ScheduledResource, ApiError> {
     let ledger = CreditsLedger::new(state.db.clone());
     let recorder = PlacementRecorder::new(state.db.clone());
 
     // Record the provisioning intent before placing a credit hold.
     recorder.record_resource(org, fabric_req).map_err(|e| {
-        warn!(resource_id = %resource_id, error = %e, "failed to record agent runtime resource");
+        warn!(resource_id = %resource_id, error = %e, "failed to record resource intent");
         scheduler_error(e)
     })?;
 
     let estimated_cents = class.retail_price_per_hour_cents;
     let hold = ledger.hold(org, resource_id, estimated_cents).map_err(|e| {
-        warn!(resource_id = %resource_id, error = %e, "failed to place credit hold for agent runtime");
+        warn!(resource_id = %resource_id, error = %e, "failed to place credit hold for resource");
         scheduler_error(SchedulerError::Credits(e))
     })?;
 
@@ -441,19 +706,19 @@ async fn provision_runtime_via_os(
         requester_principal_id: format!("prn_{}", user.user_id),
         workload_id: resource_id.to_string(),
         step_id: None,
-        capability: "agent.run".to_string(),
+        capability: capability.to_string(),
         resource: None,
         resource_class_id: Some(full_class.to_string()),
         placement: None,
-        actions: vec!["run".to_string()],
-        purpose: "agent cloud runtime provisioning".to_string(),
+        actions: actions.to_vec(),
+        purpose: purpose.to_string(),
         not_after: (Utc::now() + chrono::Duration::hours(1)).to_rfc3339(),
     };
 
     let issue_response = match os_client.issue_lease(lease_request).await {
         Ok(resp) => resp,
         Err(e) => {
-            warn!(resource_id = %resource_id, error = %e, "os control plane agent runtime lease issue failed");
+            warn!(resource_id = %resource_id, error = %e, "os control plane lease issue failed");
             let _ = ledger.release_hold(&hold.id);
             let _ = recorder.mark_terminated(resource_id, "os_lease_failed");
             return Err(map_os_client_error(e));
@@ -463,7 +728,7 @@ async fn provision_runtime_via_os(
     let lease_record = match os_client.get_lease(&issue_response.lease_id).await {
         Ok(record) => record,
         Err(e) => {
-            warn!(resource_id = %resource_id, lease_id = %issue_response.lease_id, error = %e, "failed to fetch os agent runtime lease record");
+            warn!(resource_id = %resource_id, lease_id = %issue_response.lease_id, error = %e, "failed to fetch os lease record");
             let _ = ledger.release_hold(&hold.id);
             let _ = recorder.mark_terminated(resource_id, "os_lease_fetch_failed");
             return Err(map_os_client_error(e));
@@ -473,13 +738,13 @@ async fn provision_runtime_via_os(
     let placement = match lease_record.placement {
         Some(p) => p,
         None => {
-            warn!(resource_id = %resource_id, lease_id = %issue_response.lease_id, "os agent runtime lease returned without placement");
+            warn!(resource_id = %resource_id, lease_id = %issue_response.lease_id, "os lease returned without placement");
             let _ = ledger.release_hold(&hold.id);
             let _ = recorder.mark_terminated(resource_id, "os_lease_missing_placement");
             return Err(error(
                 StatusCode::SERVICE_UNAVAILABLE,
                 "os_scheduling_error",
-                "OS agent runtime lease did not include a placement",
+                "OS lease did not include a placement",
             ));
         }
     };
@@ -489,12 +754,12 @@ async fn provision_runtime_via_os(
         resource_id,
         &class.kind.to_string(),
         &class.class,
-        req.display_name.as_deref(),
+        display_name,
         Some(&issue_response.lease_id),
         &placement,
         &hold.id,
     ) {
-        warn!(resource_id = %resource_id, error = %e, "failed to record os agent runtime placement");
+        warn!(resource_id = %resource_id, error = %e, "failed to record os placement");
         let _ = ledger.release_hold(&hold.id);
         let _ = recorder.mark_terminated(resource_id, "record_os_placement_failed");
         return Err(scheduler_error(e));
@@ -506,8 +771,8 @@ async fn provision_runtime_via_os(
         .map(|m| m.minor_units as i64)
         .unwrap_or(estimated_cents)
         .min(estimated_cents);
-    if let Err(e) = ledger.charge_hold(&hold.id, charge_cents, "agent runtime capacity", Some("placement"), Some(resource_id)) {
-        warn!(resource_id = %resource_id, hold_id = %hold.id, error = %e, "failed to charge hold after os agent runtime placement");
+    if let Err(e) = ledger.charge_hold(&hold.id, charge_cents, usage_description, Some("placement"), Some(resource_id)) {
+        warn!(resource_id = %resource_id, hold_id = %hold.id, error = %e, "failed to charge hold after os placement");
     }
 
     Ok(ScheduledResource {
@@ -673,6 +938,10 @@ mod tests {
     }
 
     fn seed_agent(db: &DbHandle, user_id: &str, name: &str) -> String {
+        seed_agent_with_harness(db, user_id, name, r#"{"mode":"cloud"}"#)
+    }
+
+    fn seed_agent_with_harness(db: &DbHandle, user_id: &str, name: &str, harness_config: &str) -> String {
         let id = uuid::Uuid::new_v4().to_string();
         let conn = db.connect().unwrap();
         conn.execute(
@@ -696,7 +965,7 @@ mod tests {
                 "{}",
                 "idle",
                 "standard",
-                "{\"mode\":\"cloud\"}",
+                harness_config,
                 "[\"chat\"]",
                 "primary",
             ],
@@ -977,5 +1246,146 @@ mod tests {
         let config: Value = serde_json::from_str(&config).unwrap();
         assert_eq!(config["runtime_status"], "active");
         assert_eq!(config["fabric_resource_id"], resource_id);
+    }
+
+    #[tokio::test]
+    async fn provision_harness_schedules_fabric_resource() {
+        let temp = tempfile::tempdir().unwrap().keep();
+        let state = app_state_with_fake_provider(&temp).await;
+        let conn = state.db.connect().unwrap();
+        seed_org_user(&conn, "org-1", "owner-1", "owner");
+        drop(conn);
+
+        let ledger = fabric::credits::CreditsLedger::new(state.db.clone());
+        ledger
+            .credit("org-1", 10_000, fabric::credits::TransactionType::Purchase, None, None, None, None)
+            .unwrap();
+
+        let agent_id = seed_agent_with_harness(&state.db, "owner-1", "Test Agent", r#"{"mode":"cloud","harness":"gizzi"}"#);
+
+        let app = router().with_state(state.clone());
+        let resp = app
+            .oneshot(build_request(
+                "POST",
+                &format!("/agents/{}/harness/provision", agent_id),
+                auth_user(Some("org-1"), "owner-1"),
+                Some(json!({})),
+            ))
+            .await
+            .unwrap();
+
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["agent_id"], agent_id);
+        assert_eq!(body["status"], "active");
+        assert_eq!(body["harness_status"], "active");
+        assert_eq!(body["harness_type"], "gizzi");
+        assert!(!body["resource_id"].as_str().unwrap().is_empty());
+
+        let conn = state.db.connect().unwrap();
+        let config: String = conn
+            .query_row(
+                "SELECT config FROM agents WHERE id = ?1",
+                rusqlite::params![agent_id],
+                |row| row.get(0),
+            )
+            .unwrap();
+        let config: Value = serde_json::from_str(&config).unwrap();
+        assert_eq!(config["harness_status"], "active");
+        assert_eq!(config["harness_class"], "harness.gizzi");
+        assert!(!config["harness_resource_id"].as_str().unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn provision_harness_rejects_non_cloud_mode() {
+        let temp = tempfile::tempdir().unwrap().keep();
+        let state = app_state_with_fake_provider(&temp).await;
+        let conn = state.db.connect().unwrap();
+        seed_org_user(&conn, "org-1", "owner-1", "owner");
+        drop(conn);
+
+        let agent_id = seed_agent_with_harness(&state.db, "owner-1", "Test Agent", r#"{"mode":"local"}"#);
+
+        let app = router().with_state(state.clone());
+        let resp = app
+            .oneshot(build_request(
+                "POST",
+                &format!("/agents/{}/harness/provision", agent_id),
+                auth_user(Some("org-1"), "owner-1"),
+                Some(json!({})),
+            ))
+            .await
+            .unwrap();
+
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn provision_harness_routes_through_real_os_control_plane() {
+        let (url, _child) = spawn_real_os_control_plane().await;
+        let os_client = crate::fabric::os_client::OsControlPlaneClient::new(url);
+
+        let temp = tempfile::tempdir().unwrap().keep();
+        let state = crate::test_helpers::app_state_with_driver_and_os(&temp, None, Some(os_client)).await;
+        let conn = state.db.connect().unwrap();
+        seed_org_user(&conn, "org-1", "owner-1", "owner");
+        drop(conn);
+
+        fabric::credits::CreditsLedger::new(state.db.clone())
+            .credit("org-1", 10_000, fabric::credits::TransactionType::Purchase, None, None, None, None)
+            .unwrap();
+
+        let agent_id = seed_agent_with_harness(&state.db, "owner-1", "Test Agent", r#"{"mode":"cloud","harness":"gizzi"}"#);
+
+        let app = router().with_state(state.clone());
+        let resp = app
+            .oneshot(build_request(
+                "POST",
+                &format!("/agents/{}/harness/provision", agent_id),
+                auth_user(Some("org-1"), "owner-1"),
+                Some(json!({})),
+            ))
+            .await
+            .unwrap();
+
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["agent_id"], agent_id);
+        assert_eq!(body["status"], "active");
+        assert_eq!(body["harness_status"], "active");
+        assert!(!body["resource_id"].as_str().unwrap().is_empty());
+        assert!(
+            body["provider_kind"].as_str().map_or(false, |s| !s.is_empty()),
+            "expected provider_kind in response, got {:?}",
+            body["provider_kind"]
+        );
+
+        // Verify the Cloud DB records the canonical OS placement.
+        let resource_id = body["resource_id"].as_str().unwrap();
+        let manager = ResourceManager::new(state.db.clone());
+        let resource = manager.get(resource_id).unwrap().expect("resource exists");
+        assert_eq!(resource.provider_kind.as_deref(), Some("fake"));
+        let placement = manager
+            .latest_placement(resource_id)
+            .unwrap()
+            .expect("placement exists");
+        assert!(
+            placement.offer_id.as_deref().map_or(false, |id| id.starts_with("off_")),
+            "expected real offer_id, got {:?}",
+            placement.offer_id
+        );
+
+        let conn = state.db.connect().unwrap();
+        let config: String = conn
+            .query_row(
+                "SELECT config FROM agents WHERE id = ?1",
+                rusqlite::params![agent_id],
+                |row| row.get(0),
+            )
+            .unwrap();
+        let config: Value = serde_json::from_str(&config).unwrap();
+        assert_eq!(config["harness_status"], "active");
+        assert_eq!(config["harness_class"], "harness.gizzi");
+        assert_eq!(config["harness_resource_id"], resource_id);
     }
 }

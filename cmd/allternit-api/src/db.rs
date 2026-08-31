@@ -8,7 +8,7 @@ mod embedded {
     embed_migrations!("migrations");
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct DbHandle {
     path: PathBuf,
 }

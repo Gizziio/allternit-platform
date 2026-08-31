@@ -37,13 +37,14 @@ allternit-firecracker-driver = { path = "../../drivers/firecracker" }
 allternit-opensandbox-driver = { path = "../../drivers/opensandbox" }
 allternit-session-manager = { path = "../../services/session-manager" }
 allternit-computer-cloud = { path = "../../cmd/allternit-computer-cloud" }
+allternitos-cloud-contracts = { workspace = true }
 
 # WebSocket
 tokio-tungstenite = { workspace = true }
 futures = "0.3"
 
 # SQLite
-rusqlite = { version = "0.31", features = ["bundled"] }
+rusqlite = { version = "0.31", features = ["bundled", "chrono"] }
 refinery = { version = "0.9", features = ["rusqlite"] }
 
 # Utilities

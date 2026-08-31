@@ -27,3 +27,4 @@ tower = { workspace = true }
 http = { workspace = true }
 http-body-util = { workspace = true }
 base64 = { workspace = true }
+mockito = "1.7"
