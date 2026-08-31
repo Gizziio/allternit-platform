@@ -582,7 +582,7 @@ async fn provision_harness(
             &resource_id,
             os_client,
             &fabric_req,
-            "harness.session",
+            "harness.gizzi.session",
             &["create".to_string()],
             "agent cloud harness provisioning",
             "harness runtime capacity",
