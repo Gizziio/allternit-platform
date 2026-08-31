@@ -6,7 +6,7 @@
   "description": "Allternit Platform Cloud Console — orgs, billing, compute, API keys, docs",
   "scripts": {
     "dev": "vite --port 3016",
-    "build": "NODE_OPTIONS=--max-old-space-size=8192 vite build",
+    "build": "NODE_OPTIONS=--max-old-space-size=8192 vite build && node scripts/postbuild.mjs",
     "preview": "vite preview --port 3016",
     "typecheck": "tsc --noEmit"
   },
@@ -22,6 +22,10 @@
     "@types/react": "^18.3.28",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.1",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.19",
+    "tailwindcss-animate": "^1.0.7",
     "typescript": "^5.9.3",
     "vite": "^5.4.0"
   }

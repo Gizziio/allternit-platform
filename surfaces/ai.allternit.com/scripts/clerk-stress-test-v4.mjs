@@ -280,8 +280,13 @@ const browser = await chromium.launch({ headless: HEADLESS });
     await page.locator('input[name=password]').first().waitFor({ state: 'visible' });
     await page.reload({ waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(3000);
-    if (await page.locator('input[name=identifier]').count() > 0) {
-      await page.locator('input[name=identifier]').first().fill(EMAIL);
+    const identifierInput = page.locator('input[name=identifier]').first();
+    if (await identifierInput.count() > 0 && await identifierInput.isVisible().catch(() => false) && await identifierInput.isEnabled().catch(() => false)) {
+      await identifierInput.fill(EMAIL);
+      await page.getByRole('button', { name: 'Continue', exact: true }).first().click();
+      await page.locator('input[name=password]').first().waitFor({ state: 'visible' });
+    } else if (await identifierInput.count() > 0) {
+      // Clerk remembered the email and shows a read-only identifier; just continue.
       await page.getByRole('button', { name: 'Continue', exact: true }).first().click();
       await page.locator('input[name=password]').first().waitFor({ state: 'visible' });
     }

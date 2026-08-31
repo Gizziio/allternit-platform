@@ -50,7 +50,7 @@ export default function App() {
         }
       />
       <Route
-        path="/organizations"
+        path="/organizations/*"
         element={
           <ConsoleRoute>
             <OrganizationsPage />
@@ -58,7 +58,7 @@ export default function App() {
         }
       />
       <Route
-        path="/compute"
+        path="/compute/*"
         element={
           <ConsoleRoute>
             <ComputePage />
@@ -66,7 +66,7 @@ export default function App() {
         }
       />
       <Route
-        path="/billing"
+        path="/billing/*"
         element={
           <ConsoleRoute>
             <BillingPage />
@@ -74,7 +74,7 @@ export default function App() {
         }
       />
       <Route
-        path="/api-keys"
+        path="/api-keys/*"
         element={
           <ConsoleRoute>
             <ApiKeysPage />
@@ -82,7 +82,7 @@ export default function App() {
         }
       />
       <Route
-        path="/docs"
+        path="/docs/*"
         element={
           <ConsoleRoute>
             <DocsPage />
@@ -90,7 +90,7 @@ export default function App() {
         }
       />
       <Route
-        path="/settings"
+        path="/settings/*"
         element={
           <ConsoleRoute>
             <SettingsPage />
