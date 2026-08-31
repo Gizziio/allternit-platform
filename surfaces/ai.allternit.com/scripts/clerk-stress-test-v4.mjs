@@ -12,8 +12,15 @@
  * Run:
  *   CLERK_TEST_PASSWORD='...' node scripts/clerk-stress-test-v4.mjs
  */
+import { config } from 'dotenv';
+import { resolve } from 'path';
+import { fileURLToPath } from 'url';
 import { chromium } from 'playwright';
 import { randomBytes } from 'crypto';
+
+// Load gitignored .env.local so other agents can run the suite without passing
+// credentials on the command line.
+config({ path: resolve(fileURLToPath(new URL('.', import.meta.url)), '../.env.local') });
 
 const PLATFORM_ORIGIN = (process.env.CLERK_TARGET_ORIGIN || 'https://platform.allternit.com').replace(/\/$/, '');
 const AI_ORIGIN = (process.env.CLERK_SECONDARY_ORIGIN || 'https://ai.allternit.com').replace(/\/$/, '');

@@ -16,8 +16,15 @@
  * because a headless browser cannot access the mailbox; the real accounts are
  * the development/test targets.
  */
+import { config } from 'dotenv';
+import { resolve } from 'path';
+import { fileURLToPath } from 'url';
 import { chromium } from '@playwright/test';
 import { randomBytes } from 'crypto';
+
+// Load gitignored .env.local so other agents can run the suite without passing
+// credentials on the command line.
+config({ path: resolve(fileURLToPath(new URL('.', import.meta.url)), '../.env.local') });
 
 const ORIGIN = (process.env.CLERK_TARGET_ORIGIN || 'https://platform.allternit.com').replace(/\/$/, '');
 const EMAIL = process.env.CLERK_TEST_EMAIL || 'cartlidge.joseph@yahoo.com';
