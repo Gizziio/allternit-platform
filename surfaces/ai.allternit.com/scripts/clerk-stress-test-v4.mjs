@@ -429,6 +429,70 @@ const browser = await chromium.launch({ headless: HEADLESS });
   await ctx.close();
 }
 
+// Test 18: Session is shared across multiple tabs in the same context
+{
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const page = await ctx.newPage();
+  try {
+    await signIn(page, PLATFORM_ORIGIN, EMAIL, PASSWORD);
+    const page2 = await ctx.newPage();
+    await goto(page2, `${PLATFORM_ORIGIN}/shell`);
+    if (page2.url().includes('/sign-in')) throw new Error('New tab did not share session');
+    pass('Session shared across multiple tabs');
+  } catch (e) { fail('Session shared across multiple tabs', e); }
+  await ctx.close();
+}
+
+// Test 19: Sign-up with an already-registered email shows an error
+{
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const page = await ctx.newPage();
+  try {
+    await goto(page, signUpUrl(PLATFORM_ORIGIN));
+    await page.locator('input[name="firstName"]').waitFor({ timeout: 20000 });
+    await page.locator('input[name="firstName"]').fill('E2E');
+    await page.locator('input[name="lastName"]').fill('Bot');
+    await page.locator('input[name="emailAddress"]').fill(EMAIL);
+    await page.locator('input[name="password"]').fill('Tyhvix-gafho2-bofxog');
+    await page.locator('button.cl-formButtonPrimary').first().click();
+    await page.waitForTimeout(4000);
+    if (!(await hasClerkError(page))) throw new Error('Expected Clerk error for duplicate email');
+    pass('Sign-up with existing email shows error');
+  } catch (e) { fail('Sign-up with existing email shows error', e); }
+  await ctx.close();
+}
+
+// Test 20: Session survives localStorage clear (cookies carry auth)
+{
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const page = await ctx.newPage();
+  try {
+    await signIn(page, PLATFORM_ORIGIN, EMAIL, PASSWORD);
+    await page.evaluate(() => localStorage.clear());
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(3000);
+    if (page.url().includes('/sign-in')) throw new Error('Session lost after clearing localStorage');
+    pass('Session survives localStorage clear');
+  } catch (e) { fail('Session survives localStorage clear', e); }
+  await ctx.close();
+}
+
+// Test 21: Long-lived session stays authenticated after Clerk token refresh interval
+{
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const page = await ctx.newPage();
+  try {
+    await signIn(page, PLATFORM_ORIGIN, EMAIL, PASSWORD);
+    // The app refreshes Clerk JWT every 50s; wait 70s to force at least one refresh.
+    await page.waitForTimeout(70000);
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(3000);
+    if (page.url().includes('/sign-in')) throw new Error('Session lost after token refresh window');
+    pass('Long-lived session stays authenticated after token refresh window');
+  } catch (e) { fail('Long-lived session stays authenticated after token refresh window', e); }
+  await ctx.close();
+}
+
 await browser.close();
 
 console.log('\n=== RESULTS ===');
