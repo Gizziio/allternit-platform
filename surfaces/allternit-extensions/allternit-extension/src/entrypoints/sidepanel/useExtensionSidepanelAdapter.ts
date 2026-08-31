@@ -5,6 +5,7 @@ import type {
 } from '../../../../extension-shared/extension-sidepanel/ExtensionSidepanelShell.types'
 import { useEffect, useState } from 'react'
 import type { PlatformTaskState } from '../../agent/remote-task-handler'
+import { recallMemoryContext } from '@/lib/memory/api'
 
 function formatHost(url?: string): string {
 	if (!url) return 'Current tab'
@@ -68,12 +69,24 @@ export function useExtensionSidepanelAdapter() {
 			language: uiLanguage,
 			runtimeLabel: 'Allternit/Gizzi platform brain',
 		},
-		execute: (task) => {
+		execute: async (task) => {
 			setCurrentTask(task)
 			setPlatformState({ requestId: '', task, status: 'running', history: [], activity: { type: 'thinking' } })
+
+			// Recall cross-session memory for this task and current page.
+			let enhancedTask = task
+			try {
+				const memoryContext = await recallMemoryContext(task, hostLabel)
+				if (memoryContext) {
+					enhancedTask = `${memoryContext}${task}`
+				}
+			} catch {
+				// Best-effort memory recall.
+			}
+
 			void chrome.runtime.sendMessage({
 				type: 'PLATFORM_TASK_RUN',
-				task,
+				task: enhancedTask,
 				config: { language },
 			}).then((response) => {
 				if (response?.requestId) setRequestId(response.requestId)
