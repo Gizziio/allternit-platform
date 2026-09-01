@@ -1,0 +1,12 @@
+import { chromium } from 'playwright';
+const browser=await chromium.launch({headless:true});
+const ctx=await browser.newContext({viewport:{width:1440,height:900}});
+const page=await ctx.newPage();
+await page.goto('https://claude.com/login',{waitUntil:'domcontentloaded',timeout:30000});
+await page.waitForTimeout(3000);
+console.log('URL:',page.url());
+console.log('TITLE:',await page.title());
+console.log('BODY:',await page.evaluate(()=>document.body.innerText.slice(0,1500)));
+await page.screenshot({path:'surfaces/platform.allternit.com/screenshots/anthropic-login.png',fullPage:false});
+console.log('saved surfaces/platform.allternit.com/screenshots/anthropic-login.png');
+await browser.close();

@@ -1,26 +1,41 @@
 import React from "react";
 import { SignIn } from "@clerk/clerk-react";
+import { Link } from "react-router-dom";
 import { CLERK_SIGN_IN_PATH, CLERK_SIGN_UP_PATH } from "@/clerkConfig";
-import { AllternitWordmark } from "@/components/AllternitWordmark";
+import { AuthPageShell } from "@/components/AuthPageShell";
+
+const cleanCardAppearance = {
+  elements: {
+    headerTitle: { display: "none" },
+    headerSubtitle: { display: "none" },
+    logoBox: { display: "none" },
+    footer: { display: "none" },
+  },
+} as const;
 
 export function SignInPage() {
   return (
-    <div className="clerk-page">
-      <div className="w-full max-w-md">
-        <div className="flex flex-col items-center text-center mb-6">
-          <AllternitWordmark variant="light" height={32} />
-          <p className="mt-3 text-[14px] text-[var(--text-secondary)] max-w-xs">
-            Sign in to the cloud console to manage compute, billing, and API access.
-          </p>
-        </div>
-        <SignIn
-          routing="path"
-          path={CLERK_SIGN_IN_PATH}
-          forceRedirectUrl="/"
-          signUpUrl={CLERK_SIGN_UP_PATH}
-          signUpForceRedirectUrl="/"
-        />
+    <AuthPageShell
+      title="Build on the Allternit Platform"
+      subtitle="Create agents and applications with managed compute, billing, and API access."
+    >
+      <SignIn
+        routing="path"
+        path={CLERK_SIGN_IN_PATH}
+        forceRedirectUrl="/"
+        signUpUrl={CLERK_SIGN_UP_PATH}
+        signUpForceRedirectUrl="/"
+        appearance={cleanCardAppearance}
+      />
+      <div className="mt-6 border-t border-[#E8E6E1] pt-5 text-center text-[13px] text-[#5E5C56]">
+        Don&apos;t have an account?{" "}
+        <Link
+          to={CLERK_SIGN_UP_PATH}
+          className="font-medium text-[#9A7658] underline underline-offset-2 transition-colors hover:text-[#1A1916]"
+        >
+          Sign up
+        </Link>
       </div>
-    </div>
+    </AuthPageShell>
   );
 }

@@ -1,0 +1,14 @@
+import { chromium } from 'playwright';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
+const ORIGIN='https://platform.allternit.com';
+const SCREENSHOT_DIR=resolve(dirname(fileURLToPath(import.meta.url)), '../screenshots');
+const browser=await chromium.launch({headless:true});
+const ctx=await browser.newContext({viewport:{width:1440,height:900}});
+const page=await ctx.newPage();
+await page.goto(`${ORIGIN}/sign-up`,{waitUntil:'domcontentloaded',timeout:30000});
+await page.waitForTimeout(2500);
+const file=resolve(SCREENSHOT_DIR,'sign-up.png');
+await page.screenshot({path:file,fullPage:false});
+console.log(`✓ ${file}`);
+await browser.close();
