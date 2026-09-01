@@ -27,11 +27,11 @@ export function SignUpPage() {
         signInForceRedirectUrl="/"
         appearance={cleanCardAppearance}
       />
-      <div className="mt-6 border-t border-[#E8E6E1] pt-5 text-center text-[13px] text-[#5E5C56]">
+      <div className="mt-6 border-t border-[var(--border-subtle)] pt-5 text-center text-[13px] text-[var(--text-secondary)]">
         Already have an account?{" "}
         <Link
           to={CLERK_SIGN_IN_PATH}
-          className="font-medium text-[#9A7658] underline underline-offset-2 transition-colors hover:text-[#1A1916]"
+          className="font-medium text-[var(--accent-primary)] underline underline-offset-2 transition-colors hover:text-[var(--text-primary)]"
         >
           Sign in
         </Link>
