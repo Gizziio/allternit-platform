@@ -35,21 +35,48 @@ export function formatApiError(err: unknown, fallback: string): string {
 class AllternitApiClient {
   private token: string | null = null;
   private tokenProvider: (() => Promise<string | null>) | null = null;
+  private authPromise: Promise<string | null> | null = null;
+  private authResolve: ((token: string | null) => void) | null = null;
+
+  constructor() {
+    this.resetAuthPromise();
+  }
+
+  private resetAuthPromise(): void {
+    this.authPromise = new Promise((resolve) => {
+      this.authResolve = resolve;
+    });
+  }
+
+  private flushAuth(token: string | null): void {
+    if (this.authResolve) {
+      this.authResolve(token);
+      this.authResolve = null;
+    }
+  }
 
   setToken(token: string): void {
     this.token = token;
+    this.flushAuth(token);
   }
 
   clearToken(): void {
     this.token = null;
+    this.resetAuthPromise();
   }
 
   setTokenProvider(provider: () => Promise<string | null>): void {
     this.tokenProvider = provider;
+    void provider().then((token) => {
+      if (token) this.token = token;
+      this.flushAuth(token);
+    });
   }
 
   clearTokenProvider(): void {
     this.tokenProvider = null;
+    this.flushAuth(null);
+    this.resetAuthPromise();
   }
 
   isAuthenticated(): boolean {
@@ -62,12 +89,16 @@ class AllternitApiClient {
   }
 
   private async resolveToken(): Promise<string | null> {
-    console.log('[API] resolveToken token?', !!this.token, 'provider?', !!this.tokenProvider);
     if (this.token) return this.token;
-    if (this.tokenProvider) {
-      const t = await this.tokenProvider();
-      console.log('[API] provider returned token?', !!t);
-      return t;
+    if (this.tokenProvider) return this.tokenProvider();
+    // The auth provider may not have mounted yet. Wait briefly for a token
+    // or provider to be registered before sending an unauthenticated request.
+    if (this.authPromise) {
+      const timeoutMs = Number(import.meta.env.VITE_ALLTERNIT_AUTH_TIMEOUT_MS || 3000);
+      const timeout = new Promise<string | null>((resolve) =>
+        window.setTimeout(() => resolve(null), timeoutMs)
+      );
+      return Promise.race([this.authPromise, timeout]);
     }
     return null;
   }
