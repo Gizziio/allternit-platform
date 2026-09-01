@@ -116,10 +116,9 @@ export function PlatformUsageDashboard() {
             <span>— remaining</span>
           </div>
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 min-h-[220px]">
-          <ChartPlaceholder title="Cost by provider" />
-          <ChartPlaceholder title="Cost distribution" />
-        </div>
+        <p className="text-[12px] text-[var(--text-tertiary)]">
+          Usage charts will appear once the API is online.
+        </p>
       </UsagePanelShell>
     );
   }
@@ -314,28 +313,6 @@ function UsagePanelShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="rounded-2xl border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-5">
       {children}
-    </div>
-  );
-}
-
-function ChartPlaceholder({ title }: { title: string }) {
-  return (
-    <div className="rounded-xl border border-solid border-[var(--border-subtle)] bg-[var(--bg-primary)] p-4">
-      <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)] mb-2">
-        {title}
-      </h3>
-      <div className="h-44 flex flex-col items-center justify-center text-center">
-        <div className="flex items-end gap-1 h-16 mb-3">
-          {[24, 48, 32, 64, 40, 56, 28].map((h, i) => (
-            <div
-              key={i}
-              className="w-3 rounded-t-md bg-[var(--accent-highlight)]/20"
-              style={{ height: `${h}px` }}
-            />
-          ))}
-        </div>
-        <p className="text-[12px] text-[var(--text-tertiary)]">No cost data yet</p>
-      </div>
     </div>
   );
 }

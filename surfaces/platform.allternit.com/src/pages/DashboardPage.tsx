@@ -65,16 +65,6 @@ function StatCard({
           <HugeiconsIcon icon={icon} size={22} />
         </div>
       </div>
-      {/* Decorative micro chart bars */}
-      <div className="absolute bottom-4 right-4 hidden sm:flex items-end gap-[3px] opacity-40">
-        {[40, 64, 32, 80, 56, 72, 48].map((h, i) => (
-          <div
-            key={i}
-            className="w-1.5 rounded-full bg-[var(--accent-highlight)]"
-            style={{ height: `${h / 3}px` }}
-          />
-        ))}
-      </div>
     </div>
   );
 

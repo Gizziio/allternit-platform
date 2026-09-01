@@ -20,6 +20,9 @@ import {
   CircleIcon,
   ScrollIcon,
   ChevronRightIcon,
+  RocketIcon,
+  Calendar02Icon,
+  ShieldCheckIcon,
 } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 import {
@@ -52,6 +55,9 @@ const navGroups: NavGroup[] = [
       { to: "/organizations", label: "Organizations", icon: TeamWorkIcon },
       { to: "/compute", label: "Compute", icon: CpuIcon },
       { to: "/devices", label: "Devices", icon: DeviceAccessIcon },
+      { to: "/runs", label: "Runs", icon: RocketIcon },
+      { to: "/schedules", label: "Schedules", icon: Calendar02Icon },
+      { to: "/approvals", label: "Approvals", icon: ShieldCheckIcon },
       { to: "/billing", label: "Billing", icon: Wallet01Icon },
       { to: "/api-keys", label: "API Keys", icon: Key01Icon },
     ],

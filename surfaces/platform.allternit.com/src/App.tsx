@@ -11,6 +11,9 @@ import { DocsPage } from "@/pages/DocsPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 import { SignInPage } from "@/pages/SignInPage";
 import { SignUpPage } from "@/pages/SignUpPage";
+import { RunsPage } from "@/pages/RunsPage";
+import { SchedulesPage } from "@/pages/SchedulesPage";
+import { ApprovalsPage } from "@/pages/ApprovalsPage";
 import { usePlatformAuth } from "@/lib/platform-auth-client";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -71,6 +74,30 @@ export default function App() {
         element={
           <ConsoleRoute>
             <DevicesPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/runs/*"
+        element={
+          <ConsoleRoute>
+            <RunsPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/schedules/*"
+        element={
+          <ConsoleRoute>
+            <SchedulesPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/approvals/*"
+        element={
+          <ConsoleRoute>
+            <ApprovalsPage />
           </ConsoleRoute>
         }
       />
