@@ -38,40 +38,40 @@ function StatCard({
   const content = (
     <div
       className={cn(
-        "relative overflow-hidden rounded-2xl border border-solid p-5 transition-colors",
+        "relative overflow-hidden rounded-2xl border border-solid p-5 transition-all duration-200",
         accent
-          ? "border-[var(--accent-primary)]/30 bg-[var(--accent-primary)]/10"
-          : "border-[var(--border-subtle)] bg-[var(--bg-secondary)] hover:border-[var(--accent-primary)]/30 hover:bg-[var(--bg-secondary)]/80"
+          ? "border-[var(--accent-highlight)]/30 bg-gradient-to-br from-[var(--accent-highlight-subtle)] to-[var(--bg-secondary)]"
+          : "border-[var(--border-subtle)] bg-[var(--bg-secondary)] hover:border-[var(--accent-highlight)]/30 hover:bg-[var(--bg-secondary)]/80"
       )}
     >
       <div className="flex items-start justify-between">
-        <div>
+        <div className="relative z-10 min-w-0">
           <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">
             {label}
           </div>
-          <div className="mt-2 text-[22px] font-semibold tracking-tight text-[var(--text-primary)]">
+          <div className="mt-2 text-[26px] font-semibold tracking-tight text-[var(--text-primary)] truncate">
             {value}
           </div>
           <div className="mt-1 text-[12px] text-[var(--text-secondary)]">{subtitle}</div>
         </div>
         <div
           className={cn(
-            "flex size-10 shrink-0 items-center justify-center rounded-xl",
+            "flex size-11 shrink-0 items-center justify-center rounded-xl",
             accent
-              ? "bg-[var(--accent-primary)] text-[var(--ui-text-inverse)]"
-              : "bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]"
+              ? "bg-[var(--accent-highlight)] text-[var(--ui-text-inverse)]"
+              : "bg-[var(--accent-highlight-subtle)] text-[var(--accent-highlight)]"
           )}
         >
-          <HugeiconsIcon icon={icon} size={20} />
+          <HugeiconsIcon icon={icon} size={22} />
         </div>
       </div>
       {/* Decorative micro chart bars */}
-      <div className="absolute bottom-4 right-4 hidden sm:flex items-end gap-0.5 opacity-20">
+      <div className="absolute bottom-4 right-4 hidden sm:flex items-end gap-[3px] opacity-40">
         {[40, 64, 32, 80, 56, 72, 48].map((h, i) => (
           <div
             key={i}
-            className="w-1 rounded-sm bg-[var(--accent-primary)]"
-            style={{ height: `${h / 4}px` }}
+            className="w-1.5 rounded-full bg-[var(--accent-highlight)]"
+            style={{ height: `${h / 3}px` }}
           />
         ))}
       </div>

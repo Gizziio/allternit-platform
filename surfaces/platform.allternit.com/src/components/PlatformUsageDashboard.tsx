@@ -17,13 +17,14 @@ import {
   Clock01Icon,
   BarChartIcon,
   AlertCircleIcon,
+  AlertIcon,
 } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 import { getCostSummary, getCostBreakdown, type CostSummary, type CostBreakdownItem } from "@/lib/usage";
 import { formatApiError } from "@/lib/api-client";
 import { SkeletonRow } from "@/components/settings/SkeletonRow";
 
-const ACCENT = "#9A7658";
+const ACCENT = "#f59e0b";
 const MUTED = "#71717a";
 
 function formatCost(cost: number, currency = "USD"): string {
@@ -80,19 +81,46 @@ export function PlatformUsageDashboard() {
 
   if (error && !summary) {
     return (
-      <div className="rounded-2xl border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-5">
-        <div className="flex items-start gap-2 text-[13px] text-[var(--status-error)]">
-          <HugeiconsIcon icon={AlertCircleIcon} size={16} className="shrink-0 mt-0.5" />
-          {error}
+      <UsagePanelShell>
+        <div className="mb-5 rounded-xl border border-dashed border-[var(--accent-highlight)]/30 bg-[var(--accent-highlight-subtle)] p-4">
+          <div className="flex items-start gap-2 text-[13px] text-[var(--accent-highlight)]">
+            <HugeiconsIcon icon={AlertIcon} size={16} className="shrink-0 mt-0.5" />
+            <div>
+              <p className="font-medium">Cloud API offline</p>
+              <p className="text-[var(--text-secondary)]">{error}</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => void load()}
+            className="inline-flex items-center gap-1.5 mt-3 px-3 py-1.5 rounded-lg bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-[12px] font-medium hover:border-[var(--accent-highlight)]/30 transition-colors"
+          >
+            <HugeiconsIcon icon={Refresh01Icon} size={13} /> Retry
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={() => void load()}
-          className="inline-flex items-center gap-1.5 mt-3 px-3 py-1.5 rounded-lg bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-[12px] font-medium"
-        >
-          <HugeiconsIcon icon={Refresh01Icon} size={13} /> Retry
-        </button>
-      </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
+          <MetricCard label="Current cost" value="—" icon={DollarIcon} />
+          <MetricCard label="Runtime hours" value="—" icon={Clock01Icon} />
+          <MetricCard label="Runs" value="—" icon={BarChartIcon} />
+        </div>
+        <div className="mb-5">
+          <div className="flex items-center justify-between gap-3 text-[12px] mb-2">
+            <span className="text-[var(--text-secondary)]">Budget utilization</span>
+            <span className="font-medium text-[var(--text-primary)]">0%</span>
+          </div>
+          <div className="h-2 rounded-full bg-[var(--bg-primary)] overflow-hidden">
+            <div className="h-full rounded-full bg-[var(--accent-highlight)]" style={{ width: "0%" }} />
+          </div>
+          <div className="flex items-center justify-between gap-3 text-[11px] text-[var(--text-tertiary)] mt-1.5">
+            <span>Budget —</span>
+            <span>— remaining</span>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 min-h-[220px]">
+          <ChartPlaceholder title="Cost by provider" />
+          <ChartPlaceholder title="Cost distribution" />
+        </div>
+      </UsagePanelShell>
     );
   }
 
@@ -108,10 +136,10 @@ export function PlatformUsageDashboard() {
   const budgetPercent = Math.min(100, summary.budget_utilization_percent);
 
   return (
-    <div className="rounded-2xl border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-5">
+    <UsagePanelShell>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5">
         <div className="flex items-center gap-2.5">
-          <div className="size-10 rounded-xl bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] flex items-center justify-center">
+          <div className="size-10 rounded-xl bg-[var(--accent-highlight-subtle)] text-[var(--accent-highlight)] flex items-center justify-center">
             <HugeiconsIcon icon={BarChartIcon} size={20} />
           </div>
           <div>
@@ -130,7 +158,7 @@ export function PlatformUsageDashboard() {
                 className={cn(
                   "px-3 py-1 rounded-lg text-[11px] font-medium capitalize transition-colors",
                   period === p
-                    ? "bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]"
+                    ? "bg-[var(--accent-highlight-subtle)] text-[var(--accent-highlight)]"
                     : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                 )}
               >
@@ -276,11 +304,41 @@ export function PlatformUsageDashboard() {
           )}
         </div>
       </div>
-    </div>
+    </UsagePanelShell>
   );
 }
 
 const PIE_COLORS = [ACCENT, "#6366f1", "#22c55e", "#f59e0b", "#ef4444", "#a855f7"];
+
+function UsagePanelShell({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="rounded-2xl border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-5">
+      {children}
+    </div>
+  );
+}
+
+function ChartPlaceholder({ title }: { title: string }) {
+  return (
+    <div className="rounded-xl border border-solid border-[var(--border-subtle)] bg-[var(--bg-primary)] p-4">
+      <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)] mb-2">
+        {title}
+      </h3>
+      <div className="h-44 flex flex-col items-center justify-center text-center">
+        <div className="flex items-end gap-1 h-16 mb-3">
+          {[24, 48, 32, 64, 40, 56, 28].map((h, i) => (
+            <div
+              key={i}
+              className="w-3 rounded-t-md bg-[var(--accent-highlight)]/20"
+              style={{ height: `${h}px` }}
+            />
+          ))}
+        </div>
+        <p className="text-[12px] text-[var(--text-tertiary)]">No cost data yet</p>
+      </div>
+    </div>
+  );
+}
 
 function MetricCard({
   label,

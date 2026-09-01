@@ -20,6 +20,8 @@
   --border-default: rgba(255, 255, 255, 0.12);
 
   --accent-primary: #9A7658;
+  --accent-highlight: #f59e0b;
+  --accent-highlight-subtle: rgba(245, 158, 11, 0.12);
   --accent-secondary: #6366f1;
   --status-success: #22c55e;
   --status-warning: #f59e0b;

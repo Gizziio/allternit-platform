@@ -87,7 +87,7 @@ const pages = [
   {
     path: '/',
     name: 'dashboard.png',
-    expected: ['Usage & cost', 'Request timed out', 'Unable to load usage'],
+    expected: ['Cloud usage trend', 'Request timed out', 'Unable to load usage', 'Welcome back'],
   },
   {
     path: '/devices',

@@ -80,7 +80,7 @@ export function ConsoleLayout({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { organization } = usePlatformOrganization();
   const location = useLocation();
-  const pageLabel = currentPageLabel(location.pathname);
+  const pageLabel = location.pathname === "/" ? "Overview" : currentPageLabel(location.pathname);
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-[var(--bg-primary)] text-[var(--text-primary)]">
