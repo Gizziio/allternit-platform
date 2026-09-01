@@ -732,17 +732,63 @@ mod tests {
     }
 
     // Phase-4 real OS control-plane integration test.
+    use std::io::{Read, Write};
+    use std::net::TcpListener;
+    use std::thread;
+    use std::time::Duration;
     use tokio::io::AsyncBufReadExt;
     use tokio::process::Command;
 
+    /// Spin up a tiny OpenAI-compatible HTTP server for the remote-endpoint
+    /// journey test. Returns the bound port and a handle that joins when the
+    /// server has handled its chat request.
+    fn mock_openai_server(response_body: String) -> (u16, thread::JoinHandle<()>) {
+        let listener = TcpListener::bind("127.0.0.1:0").expect("bind");
+        let port = listener.local_addr().unwrap().port();
+        let handle = thread::spawn(move || {
+            let health_response = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 2\r\nConnection: close\r\n\r\n{}";
+            let chat_response = format!(
+                "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                response_body.len(),
+                response_body
+            );
+            let mut handled_chat = false;
+            while let Ok((mut stream, _)) = listener.accept() {
+                let mut buf = [0u8; 4096];
+                let n = stream.read(&mut buf).unwrap_or(0);
+                let request = String::from_utf8_lossy(&buf[..n]);
+                if request.starts_with("GET /health") {
+                    let _ = stream.write_all(health_response.as_bytes());
+                } else if request.starts_with("POST /v1/chat/completions") {
+                    let _ = stream.write_all(chat_response.as_bytes());
+                    handled_chat = true;
+                }
+                let _ = stream.flush();
+                let _ = stream.shutdown(std::net::Shutdown::Write);
+                let _ = stream.read(&mut buf);
+                if handled_chat {
+                    break;
+                }
+            }
+        });
+        thread::sleep(Duration::from_millis(50));
+        (port, handle)
+    }
+
     async fn spawn_real_os_control_plane() -> (String, tokio::process::Child) {
+        spawn_real_os_control_plane_with_endpoint(None).await
+    }
+
+    async fn spawn_real_os_control_plane_with_endpoint(
+        fake_endpoint: Option<String>,
+    ) -> (String, tokio::process::Child) {
         let temp = tempfile::tempdir().unwrap().keep();
         let bin = std::env::var("ALLTERNITOS_CONTROL_PLANE_BIN").unwrap_or_else(|_| {
             "/Users/joe/Desktop/AllternitOS/target/debug/allternitos_control_plane".to_string()
         });
         let db_path = temp.join("cp.db");
-        let mut child = Command::new(&bin)
-            .arg("--bind")
+        let mut cmd = Command::new(&bin);
+        cmd.arg("--bind")
             .arg("127.0.0.1:0")
             .arg("--reconciler-path")
             .arg(&db_path)
@@ -750,7 +796,11 @@ mod tests {
             .env("RUST_LOG", "info")
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::inherit())
-            .kill_on_drop(true)
+            .kill_on_drop(true);
+        if let Some(endpoint) = fake_endpoint {
+            cmd.env("ALLTERNITOS_FAKE_PROVIDER_ENDPOINT", endpoint);
+        }
+        let mut child = cmd
             .spawn()
             .expect("failed to spawn allternitos_control_plane");
 
@@ -767,6 +817,12 @@ mod tests {
         }
         let port = port.expect("allternitos_control_plane did not log its listening port");
         let url = format!("http://127.0.0.1:{}", port);
+
+        // Keep the child's stdout pipe open so its tracing subscriber does not
+        // panic with a broken pipe after we stop reading.
+        tokio::spawn(async move {
+            while let Ok(Some(_)) = lines.next_line().await {}
+        });
 
         let client = reqwest::Client::new();
         for _ in 0..50 {
@@ -864,5 +920,80 @@ mod tests {
             .find(|e| e.event_type == "model.inference" && e.unit == "tokens")
             .expect("model.inference usage event");
         assert_eq!(inference_event.quantity, 12.0);
+    }
+
+    #[tokio::test]
+    async fn responses_routes_through_real_os_control_plane_with_remote_endpoint() {
+        // Full Phase-4 end-to-end journey: the OS fake provider reports a remote
+        // endpoint, Cloud stores the canonical placement, and inference executes
+        // through the allternitos-runtime remote-openai adapter against that URL.
+        let body = r#"{"id":"chatcmpl-journey","object":"chat.completion","model":"remote-mock","choices":[{"index":0,"message":{"role":"assistant","content":"Cloud endpoint journey works"},"finish_reason":"stop"}],"usage":{"prompt_tokens":3,"completion_tokens":4,"total_tokens":7}}"#;
+        let (port, server_handle) = mock_openai_server(body.to_string());
+        let endpoint = format!("http://127.0.0.1:{port}");
+
+        let (url, _child) = spawn_real_os_control_plane_with_endpoint(Some(endpoint.clone())).await;
+        let os_client = crate::fabric::os_client::OsControlPlaneClient::new(url);
+
+        let temp = tempfile::tempdir().unwrap().keep();
+        let state = crate::test_helpers::app_state_with_driver_and_os(&temp, None, Some(os_client)).await;
+        let conn = state.db.connect().unwrap();
+        seed_org_user(&conn, "org-1", "owner-1", "owner");
+        drop(conn);
+
+        CreditsLedger::new(state.db.clone())
+            .credit("org-1", 10_000, TransactionType::Purchase, None, None, None, None)
+            .unwrap();
+
+        let app = router().with_state(state.clone());
+        let resp = app
+            .oneshot(build_request(
+                "POST",
+                "/v1/responses",
+                auth_user(Some("org-1"), "owner-1"),
+                Some(json!({
+                    "model": "openai/gpt-4o-mini",
+                    "messages": [{"role": "user", "content": "Hello"}],
+                    "max_tokens": 100,
+                })),
+            ))
+            .await
+            .unwrap();
+
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["model"], "openai/gpt-4o-mini");
+
+        // Response must come from the remote mock endpoint, not the local mock-llama-server.
+        let content = body["choices"][0]["message"]["content"].as_str().unwrap();
+        assert_eq!(content, "Cloud endpoint journey works");
+        assert_eq!(body["usage"]["prompt_tokens"], 3);
+        assert_eq!(body["usage"]["completion_tokens"], 4);
+        assert_eq!(body["usage"]["total_tokens"], 7);
+
+        // Cloud placement must carry the OS-populated endpoint.
+        let resource_id = body["resource_id"].as_str().unwrap();
+        let manager = ResourceManager::new(state.db.clone());
+        let placement = manager
+            .latest_placement(resource_id)
+            .unwrap()
+            .expect("placement exists");
+        assert_eq!(
+            placement.endpoint.as_deref(),
+            Some(endpoint.as_str()),
+            "expected placement endpoint to be populated from OS inspect"
+        );
+        assert_eq!(placement.status.as_str(), "running");
+
+        // Verify the usage event carries the remote backend's token count.
+        let events = manager
+            .list_usage_events("org-1", Some(resource_id), 10)
+            .unwrap();
+        let inference_event = events
+            .iter()
+            .find(|e| e.event_type == "model.inference" && e.unit == "tokens")
+            .expect("model.inference usage event");
+        assert_eq!(inference_event.quantity, 7.0);
+
+        let _ = server_handle.join();
     }
 }

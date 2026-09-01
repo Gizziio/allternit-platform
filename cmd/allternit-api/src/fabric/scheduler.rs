@@ -441,8 +441,8 @@ impl PlacementRecorder {
                 retail_price_per_hour_cents, provider_cost_per_hour_cents,
                 retail_price_per_request_cents, provider_cost_per_request_cents,
                 retail_price_per_token_cents, provider_cost_per_token_cents,
-                hold_id, started_at
-            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)",
+                hold_id, node_id, ipv4, endpoint, status, labels_json, started_at
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20)",
             rusqlite::params![
                 Uuid::new_v4().to_string(),
                 resource_id,
@@ -458,6 +458,11 @@ impl PlacementRecorder {
                 retail_token_cents,
                 cost_token_cents,
                 hold_id,
+                placement.node_id.as_deref(),
+                placement.ipv4.as_deref(),
+                placement.endpoint.as_deref(),
+                placement.status.clone(),
+                serde_json::to_string(&placement.labels).unwrap_or_else(|_| "{}".to_string()),
                 placement.started_at.to_rfc3339(),
             ],
         )

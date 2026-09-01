@@ -69,13 +69,16 @@ pub(crate) async fn execute_on_placement(
     placement: &Placement,
     req: &ResponsesRequest,
 ) -> Result<InferenceResult, InferenceExecutorError> {
-    match placement.provider_kind.as_str() {
-        "fake" => execute_with_mock_llama_server(req).await,
-        _ => {
-            let (host, port) = placement_host_port(placement)
-                .ok_or(InferenceExecutorError::NoEndpoint)?;
-            execute_with_runtime(req, &host, port).await
-        }
+    // If the placement already carries a reachable endpoint (including fake
+    // placements used in journey tests), route through the canonical runtime
+    // remote-openai adapter. Otherwise fall back to the local mock-llama-server
+    // for legacy fake placements.
+    if placement.endpoint.is_some() || placement.provider_kind.as_str() != "fake" {
+        let (host, port) = placement_host_port(placement)
+            .ok_or(InferenceExecutorError::NoEndpoint)?;
+        execute_with_runtime(req, &host, port).await
+    } else {
+        execute_with_mock_llama_server(req).await
     }
 }
 
@@ -123,8 +126,9 @@ fn placement_host_port(placement: &Placement) -> Option<(String, u16)> {
 async fn execute_with_mock_llama_server(req: &ResponsesRequest) -> Result<InferenceResult, InferenceExecutorError> {
     let mock_bin = mock_llama_server_bin()?;
     let work_dir = std::env::temp_dir().join(format!(
-        "allternit-cloud-mock-inference-{}",
-        std::process::id()
+        "allternit-cloud-mock-inference-{}-{}",
+        std::process::id(),
+        uuid::Uuid::new_v4().simple()
     ));
     tokio::fs::create_dir_all(&work_dir)
         .await
@@ -216,8 +220,9 @@ async fn execute_with_runtime(
     let runtime_bin = runtime_bin()?;
     let allternit_root = allternit_root_from_runtime_bin(&runtime_bin)?;
     let work_dir = std::env::temp_dir().join(format!(
-        "allternit-cloud-runtime-exec-{}",
-        std::process::id()
+        "allternit-cloud-runtime-exec-{}-{}",
+        std::process::id(),
+        uuid::Uuid::new_v4().simple()
     ));
     tokio::fs::create_dir_all(&work_dir)
         .await

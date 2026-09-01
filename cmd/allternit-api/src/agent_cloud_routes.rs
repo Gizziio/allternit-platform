@@ -1181,6 +1181,12 @@ mod tests {
         let port = port.expect("allternitos_control_plane did not log its listening port");
         let url = format!("http://127.0.0.1:{}", port);
 
+        // Keep the child's stdout pipe open so its tracing subscriber does not
+        // panic with a broken pipe after we stop reading.
+        tokio::spawn(async move {
+            while let Ok(Some(_)) = lines.next_line().await {}
+        });
+
         let client = reqwest::Client::new();
         for _ in 0..50 {
             if client.get(format!("{}/health", url)).send().await.is_ok() {

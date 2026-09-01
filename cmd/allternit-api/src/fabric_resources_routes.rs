@@ -1133,6 +1133,12 @@ mod tests {
         let port = port.expect("allternitos_control_plane did not log its listening port");
         let url = format!("http://127.0.0.1:{}", port);
 
+        // Keep the child's stdout pipe open so its tracing subscriber does not
+        // panic with a broken pipe after we stop reading.
+        tokio::spawn(async move {
+            while let Ok(Some(_)) = lines.next_line().await {}
+        });
+
         // Wait until /health is reachable; the log line is emitted just before
         // the accept loop starts, so a tiny poll prevents 503 race conditions.
         let client = reqwest::Client::new();
