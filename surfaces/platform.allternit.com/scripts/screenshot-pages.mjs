@@ -53,7 +53,7 @@ async function waitForLoad(page) {
         document.body.innerText.includes('Billing details unavailable');
       return skeletons.length === 0 || hasContent;
     },
-    { timeout: 15000 }
+    { timeout: 30000 }
   );
   await page.waitForTimeout(500);
 }

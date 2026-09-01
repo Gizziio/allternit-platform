@@ -8,7 +8,7 @@ export function SignInPage() {
     <div className="clerk-page">
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center text-center mb-6">
-          <AllternitWordmark variant="dark" height={32} />
+          <AllternitWordmark variant="light" height={32} />
           <p className="mt-3 text-[14px] text-[var(--text-secondary)] max-w-xs">
             Sign in to the cloud console to manage compute, billing, and API access.
           </p>
