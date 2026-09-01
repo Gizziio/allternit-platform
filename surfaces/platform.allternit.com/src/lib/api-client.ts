@@ -62,8 +62,13 @@ class AllternitApiClient {
   }
 
   private async resolveToken(): Promise<string | null> {
+    console.log('[API] resolveToken token?', !!this.token, 'provider?', !!this.tokenProvider);
     if (this.token) return this.token;
-    if (this.tokenProvider) return this.tokenProvider();
+    if (this.tokenProvider) {
+      const t = await this.tokenProvider();
+      console.log('[API] provider returned token?', !!t);
+      return t;
+    }
     return null;
   }
 

@@ -278,7 +278,8 @@ function ClerkPlatformAuthBridge({ children }: { children: ReactNode }) {
   }, [clerkAuth.isLoaded, clerkAuth.isSignedIn, signIn, setActive, clerk]);
 
   useEffect(() => {
-    if (!clerkAuth.isSignedIn || typeof clerkAuth.getToken !== "function") {
+    console.log('[AUTH] token effect', { isSignedIn: clerkAuth.isSignedIn, hasSession: !!clerk.session, hasGetToken: typeof clerkAuth.getToken });
+    if (!clerkAuth.isSignedIn || !clerk.session) {
       api.clearToken();
       api.clearTokenProvider();
       return;
@@ -289,9 +290,13 @@ function ClerkPlatformAuthBridge({ children }: { children: ReactNode }) {
     // fires before the first token sync completes. We read from the Clerk
     // instance's active session because it is always available once signed in.
     api.setTokenProvider(async () => {
+      console.log('[AUTH] provider called');
       try {
-        return (await clerk.session?.getToken()) ?? null;
-      } catch {
+        const t = (await clerk.session?.getToken()) ?? null;
+        console.log('[AUTH] provider got token?', !!t);
+        return t;
+      } catch (e) {
+        console.log('[AUTH] provider error', e);
         return null;
       }
     });
@@ -300,6 +305,7 @@ function ClerkPlatformAuthBridge({ children }: { children: ReactNode }) {
     const syncToken = async () => {
       try {
         const token = await clerk.session?.getToken();
+        console.log('[AUTH] syncToken got token?', !!token);
         if (!active) return;
         if (token) api.setToken(token);
         else api.clearToken();
@@ -315,7 +321,7 @@ function ClerkPlatformAuthBridge({ children }: { children: ReactNode }) {
       clearInterval(interval);
       api.clearTokenProvider();
     };
-  }, [clerkAuth.isSignedIn, clerkAuth.getToken]);
+  }, [clerkAuth.isSignedIn, clerkAuth.getToken, clerk.session]);
 
   const value = useMemo(
     () => ({
