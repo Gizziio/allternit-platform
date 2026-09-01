@@ -111,7 +111,7 @@ struct EnrollRequest {
     organization_id: String,
     display_name: String,
     region: String,
-    capacity: NodeCapacity,
+    capability: NodeCapacity,
 }
 
 #[derive(Debug, Serialize)]
@@ -185,7 +185,9 @@ async fn enroll(
     };
 
     registry.insert(&node).map_err(internal)?;
-    registry.record_heartbeat(&node_id, &req.capacity).map_err(internal)?;
+    let mut capability = req.capability;
+    capability.node_id = node_id.clone();
+    registry.record_heartbeat(&node_id, &capability).map_err(internal)?;
     let node_token = registry.rotate_node_token(&node_id).map_err(internal)?;
 
     // Mark the admin-created enrollment token as used and link it to the node.
@@ -204,7 +206,7 @@ async fn enroll(
 
 #[derive(Debug, Deserialize)]
 struct HeartbeatRequest {
-    capacity: NodeCapacity,
+    capability: NodeCapacity,
 }
 
 #[derive(Debug, Serialize)]
@@ -235,7 +237,9 @@ async fn heartbeat(
     let registry = FabricNodeRegistry::new(state.db.clone());
     let node = authenticate_node(&registry, &node_id, token)?;
 
-    registry.record_heartbeat(&node_id, &req.capacity).map_err(internal)?;
+    let mut capability = req.capability;
+    capability.node_id = node_id.clone();
+    registry.record_heartbeat(&node_id, &capability).map_err(internal)?;
 
     let pending = registry
         .list_pending_assignments_for_node(&node_id)
@@ -490,6 +494,82 @@ async fn list_enrollment_tokens(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn test_capability() -> NodeCapacity {
+        use chrono::Utc;
+        let mut cap = allternitos_cloud_contracts::NodeCapabilityRecord {
+            schema_version: "1.0.0".to_string(),
+            node_id: "node_test".to_string(),
+            recorded_at: Utc::now(),
+            hardware: allternitos_cloud_contracts::NodeHardware {
+                cpu: allternitos_cloud_contracts::CpuInfo {
+                    vendor: "unknown".to_string(),
+                    model: "unknown".to_string(),
+                    cores: 8,
+                    threads: 8,
+                    sockets: None,
+                    base_frequency_mhz: None,
+                    flags: Vec::new(),
+                    numa_nodes: None,
+                },
+                memory: allternitos_cloud_contracts::MemoryInfo {
+                    total_bytes: 16_384 * 1_048_576,
+                    memory_type: "unknown".to_string(),
+                    speed_mhz: None,
+                    channels: None,
+                    measured_bandwidth_gbps: None,
+                },
+                storage: Vec::new(),
+                network: Vec::new(),
+            },
+            accelerators: Vec::new(),
+            topology: allternitos_cloud_contracts::NodeTopology::default(),
+            software: allternitos_cloud_contracts::NodeSoftware {
+                fabric_os_version: "unknown".to_string(),
+                kernel_version: "unknown".to_string(),
+                libvirt_version: None,
+                containerd_version: None,
+                qemu_version: None,
+                wireguard_version: None,
+            },
+            fabric: allternitos_cloud_contracts::NodeFabric {
+                wireguard_public_key: "pending_enrollment".to_string(),
+                fabric_address: None,
+                region: Some("us-east".to_string()),
+                zone: None,
+                rack: None,
+                role: Some("cloud".to_string()),
+                join_token_hash: None,
+            },
+            measured_bandwidth: allternitos_cloud_contracts::MeasuredBandwidth::default(),
+            health: allternitos_cloud_contracts::NodeHealth {
+                status: "active".to_string(),
+                last_checked_at: None,
+                alerts: Vec::new(),
+            },
+            workers: allternitos_cloud_contracts::Workers::default(),
+        };
+        cap.node_id = "node_test".to_string();
+        cap
+    }
+
+    fn capability_json() -> Value {
+        serde_json::to_value(test_capability()).unwrap()
+    }
+
+    fn enroll_body(organization_id: &str, display_name: &str, region: &str) -> Value {
+        json!({
+            "organization_id": organization_id,
+            "display_name": display_name,
+            "region": region,
+            "capability": capability_json(),
+        })
+    }
+
+    fn heartbeat_body() -> Value {
+        json!({"capability": capability_json()})
+    }
+
     use axum::body::Body;
     use axum::http::Request;
     use http_body_util::BodyExt;
@@ -525,20 +605,7 @@ mod tests {
         };
         let registry = FabricNodeRegistry::new(state.db.clone());
         registry.insert(&record).unwrap();
-        registry
-            .record_heartbeat(
-                &node_id,
-                &NodeCapacity {
-                    total_vcpu: 8,
-                    total_memory_mib: 16384,
-                    total_gpu_vram_mib: 0,
-                    gpu_model: None,
-                    free_vcpu: 6,
-                    free_memory_mib: 12288,
-                    free_gpu_vram_mib: 0,
-                },
-            )
-            .unwrap();
+        registry.record_heartbeat(&node_id, &test_capability()).unwrap();
         drop(conn);
         node_id
     }
@@ -578,7 +645,7 @@ mod tests {
                     .uri(format!("/v1/fabric/nodes/{}/heartbeat", node_id))
                     .header("Authorization", format!("Bearer {}", token))
                     .header("content-type", "application/json")
-                    .body(Body::from(r#"{"capacity":{"total_vcpu":8,"total_memory_mib":16384,"total_gpu_vram_mib":0,"free_vcpu":6,"free_memory_mib":12288,"free_gpu_vram_mib":0}}"#))
+                    .body(Body::from(heartbeat_body().to_string()))
                     .unwrap(),
             )
             .await
@@ -687,7 +754,7 @@ mod tests {
                     .uri("/v1/fabric/nodes/enroll")
                     .header("Authorization", "Bearer enrollment-token")
                     .header("content-type", "application/json")
-                    .body(Body::from(r#"{"organization_id":"org-1","display_name":"test","region":"us-east","capacity":{"total_vcpu":8,"total_memory_mib":16384,"total_gpu_vram_mib":0,"free_vcpu":6,"free_memory_mib":12288,"free_gpu_vram_mib":0}}"#))
+                    .body(Body::from(enroll_body("org-1", "test", "us-east").to_string()))
                     .unwrap(),
             )
             .await
@@ -720,7 +787,7 @@ mod tests {
                     .uri(format!("/v1/fabric/nodes/{}/heartbeat", node_id))
                     .header("Authorization", "Bearer wrong-token")
                     .header("content-type", "application/json")
-                    .body(Body::from(r#"{"capacity":{"total_vcpu":8,"total_memory_mib":16384,"total_gpu_vram_mib":0,"free_vcpu":6,"free_memory_mib":12288,"free_gpu_vram_mib":0}}"#))
+                    .body(Body::from(heartbeat_body().to_string()))
                     .unwrap(),
             )
             .await
@@ -742,7 +809,7 @@ mod tests {
         drop(conn);
 
         let app = public_router().with_state(state.clone());
-        let body = r#"{"organization_id":"org-1","display_name":"test","region":"us-east","capacity":{"total_vcpu":8,"total_memory_mib":16384,"total_gpu_vram_mib":0,"free_vcpu":6,"free_memory_mib":12288,"free_gpu_vram_mib":0}}"#;
+        let body = enroll_body("org-1", "test", "us-east").to_string();
 
         let resp1 = app
             .clone()
@@ -752,7 +819,7 @@ mod tests {
                     .uri("/v1/fabric/nodes/enroll")
                     .header("Authorization", "Bearer enrollment-token")
                     .header("content-type", "application/json")
-                    .body(Body::from(body))
+                    .body(Body::from(body.clone()))
                     .unwrap(),
             )
             .await
@@ -885,9 +952,7 @@ mod tests {
         let plain_token = create_body["token"].as_str().unwrap();
 
         let public_app = public_router().with_state(state.clone());
-        let body = format!(
-            r#"{{"organization_id":"org-1","display_name":"test","region":"us-east","capacity":{{"total_vcpu":8,"total_memory_mib":16384,"total_gpu_vram_mib":0,"free_vcpu":6,"free_memory_mib":12288,"free_gpu_vram_mib":0}}}}"#
-        );
+        let body = enroll_body("org-1", "test", "us-east").to_string();
         let resp = public_app
             .oneshot(
                 Request::builder()

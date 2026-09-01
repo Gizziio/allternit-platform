@@ -29,7 +29,7 @@
 //! source of truth.
 
 use crate::fabric::model_catalog::FabricModelRecord;
-use crate::fabric::node_registry::{FabricNodeRecord, NodeCapacity};
+
 
 use crate::fabric::sku::ResourceClass as CloudResourceClass;
 use crate::fabric_model_routes::ResponsesRequest;
@@ -44,78 +44,6 @@ pub fn with_prefix(id: &str, prefix: &str) -> String {
         id.to_string()
     } else {
         format!("{prefix}{id}")
-    }
-}
-
-/// Convert a Cloud node enrollment record into a canonical `NodeCapabilityRecord`.
-///
-/// Required canonical fields that Cloud does not yet store are filled with safe
-/// defaults so the record validates against the canonical schema. The record
-/// should be treated as partial; once the node daemon reports full capability
-/// data, AllternitOS becomes the source of truth and Cloud should consume the
-/// OS record instead.
-pub fn node_capability_record_from_fabric_node(
-    node: &FabricNodeRecord,
-    capacity: &NodeCapacity,
-) -> contracts::NodeCapabilityRecord {
-    let node_id = with_prefix(&node.id, "node_");
-    let recorded_at = node.last_heartbeat_at.unwrap_or(node.created_at);
-    let wireguard_public_key = node
-        .identity_fingerprint
-        .clone()
-        .unwrap_or_else(|| "pending_enrollment".to_string());
-
-    contracts::NodeCapabilityRecord {
-        schema_version: "1.0.0".to_string(),
-        node_id,
-        recorded_at,
-        hardware: contracts::NodeHardware {
-            cpu: contracts::CpuInfo {
-                vendor: "unknown".to_string(),
-                model: "unknown".to_string(),
-                cores: capacity.total_vcpu.max(1) as u32,
-                threads: capacity.total_vcpu.max(1) as u32,
-                sockets: None,
-                base_frequency_mhz: None,
-                flags: Vec::new(),
-                numa_nodes: None,
-            },
-            memory: contracts::MemoryInfo {
-                total_bytes: (capacity.total_memory_mib.max(1) as u64) * 1_048_576,
-                memory_type: "unknown".to_string(),
-                speed_mhz: None,
-                channels: None,
-                measured_bandwidth_gbps: None,
-            },
-            storage: Vec::new(),
-            network: Vec::new(),
-        },
-        accelerators: Vec::new(),
-        topology: contracts::NodeTopology::default(),
-        software: contracts::NodeSoftware {
-            fabric_os_version: "unknown".to_string(),
-            kernel_version: "unknown".to_string(),
-            libvirt_version: None,
-            containerd_version: None,
-            qemu_version: None,
-            wireguard_version: None,
-        },
-        fabric: contracts::NodeFabric {
-            wireguard_public_key,
-            fabric_address: None,
-            region: node.region.clone(),
-            zone: None,
-            rack: None,
-            role: Some("cloud".to_string()),
-            join_token_hash: node.enrollment_token_hash.clone(),
-        },
-        measured_bandwidth: contracts::MeasuredBandwidth::default(),
-        health: contracts::NodeHealth {
-            status: node.status.as_str().to_string(),
-            last_checked_at: node.last_heartbeat_at,
-            alerts: Vec::new(),
-        },
-        workers: contracts::Workers::default(),
     }
 }
 
@@ -293,50 +221,9 @@ impl ModelRequest {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fabric::node_registry::{FabricNodeStatus};
     use crate::fabric::usage::UsageEvent as CloudUsageEvent;
     use chrono::Utc;
     use std::collections::HashMap;
-
-    fn sample_node() -> (FabricNodeRecord, NodeCapacity) {
-        let node = FabricNodeRecord {
-            id: "n1".to_string(),
-            organization_id: "org-1".to_string(),
-            display_name: Some("sample".to_string()),
-            status: FabricNodeStatus::Active,
-            region: Some("us-east".to_string()),
-            identity_fingerprint: Some("fp".to_string()),
-            enrollment_token_hash: None,
-            node_token_hash: None,
-            labels: HashMap::new(),
-            created_at: Utc::now(),
-            updated_at: Utc::now(),
-            approved_at: None,
-            last_heartbeat_at: Some(Utc::now()),
-        };
-        let capacity = NodeCapacity {
-            total_vcpu: 8,
-            total_memory_mib: 16384,
-            total_gpu_vram_mib: 0,
-            gpu_model: None,
-            free_vcpu: 6,
-            free_memory_mib: 12288,
-            free_gpu_vram_mib: 0,
-        };
-        (node, capacity)
-    }
-
-    #[test]
-    fn node_capability_record_gets_prefixed_id_and_required_defaults() {
-        let (node, capacity) = sample_node();
-        let record = node_capability_record_from_fabric_node(&node, &capacity);
-        assert_eq!(record.node_id, "node_n1");
-        assert_eq!(record.schema_version, "1.0.0");
-        assert_eq!(record.hardware.cpu.cores, 8);
-        assert_eq!(record.fabric.wireguard_public_key, "fp");
-        // Must serialize to valid JSON without panicking.
-        let _ = serde_json::to_value(&record).unwrap();
-    }
 
     #[test]
     fn resource_class_mapping_prefixes_id_and_serializes() {

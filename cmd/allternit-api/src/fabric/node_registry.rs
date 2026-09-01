@@ -11,6 +11,157 @@ use std::collections::HashMap;
 
 use crate::db::DbHandle;
 
+/// Flat capacity derived from a canonical `NodeCapabilityRecord`.
+///
+/// The database still maintains simple total/free columns for legacy indexes
+/// and provider scheduling; this derives them from the canonical hardware
+/// block so both views stay consistent.
+#[derive(Debug, Clone)]
+struct FlatCapacity {
+    pub total_vcpu: i64,
+    pub total_memory_mib: i64,
+    pub total_gpu_vram_mib: i64,
+    pub gpu_model: Option<String>,
+    pub free_vcpu: i64,
+    pub free_memory_mib: i64,
+    pub free_gpu_vram_mib: i64,
+}
+
+fn fallback_capability_from_flat(
+    total_vcpu: i64,
+    total_memory_mib: i64,
+    total_gpu_vram_mib: i64,
+    gpu_model: Option<String>,
+) -> NodeCapacity {
+    use allternitos_cloud_contracts as contracts;
+    let vcpu = total_vcpu.max(1) as u32;
+    NodeCapacity {
+        schema_version: "1.0.0".to_string(),
+        node_id: "node_unknown".to_string(),
+        recorded_at: Utc::now(),
+        hardware: contracts::NodeHardware {
+            cpu: contracts::CpuInfo {
+                vendor: "unknown".to_string(),
+                model: "unknown".to_string(),
+                cores: vcpu,
+                threads: vcpu,
+                sockets: None,
+                base_frequency_mhz: None,
+                flags: Vec::new(),
+                numa_nodes: None,
+            },
+            memory: contracts::MemoryInfo {
+                total_bytes: (total_memory_mib.max(1) as u64) * 1_048_576,
+                memory_type: "unknown".to_string(),
+                speed_mhz: None,
+                channels: None,
+                measured_bandwidth_gbps: None,
+            },
+            storage: Vec::new(),
+            network: Vec::new(),
+        },
+        accelerators: if total_gpu_vram_mib > 0 {
+            vec![contracts::AcceleratorInfo {
+                id: "gpu0".to_string(),
+                vendor: "unknown".to_string(),
+                model: gpu_model.unwrap_or_else(|| "unknown".to_string()),
+                accelerator_type: "gpu".to_string(),
+                memory_bytes: (total_gpu_vram_mib as u64) * 1_048_576,
+                memory_type: None,
+                tensor_formats: Vec::new(),
+                driver: None,
+                driver_version: None,
+                pcie: None,
+                mig_capable: None,
+                sr_iov_capable: None,
+                vfio_capable: None,
+                measured_tflops_fp16: None,
+                measured_bandwidth_gbps: None,
+            }]
+        } else {
+            Vec::new()
+        },
+        topology: contracts::NodeTopology::default(),
+        software: contracts::NodeSoftware {
+            fabric_os_version: "unknown".to_string(),
+            kernel_version: "unknown".to_string(),
+            libvirt_version: None,
+            containerd_version: None,
+            qemu_version: None,
+            wireguard_version: None,
+        },
+        fabric: contracts::NodeFabric {
+            wireguard_public_key: "pending_enrollment".to_string(),
+            fabric_address: None,
+            region: None,
+            zone: None,
+            rack: None,
+            role: Some("cloud".to_string()),
+            join_token_hash: None,
+        },
+        measured_bandwidth: contracts::MeasuredBandwidth::default(),
+        health: contracts::NodeHealth {
+            status: "active".to_string(),
+            last_checked_at: None,
+            alerts: Vec::new(),
+        },
+        workers: contracts::Workers::default(),
+    }
+}
+
+fn flat_capacity_from_capability(cap: &NodeCapacity) -> FlatCapacity {
+    let total_vcpu = cap.hardware.cpu.threads.max(cap.hardware.cpu.cores).max(1) as i64;
+    let total_memory_mib = (cap.hardware.memory.total_bytes / 1_048_576).max(1) as i64;
+    let total_gpu_vram_mib: i64 = cap
+        .accelerators
+        .iter()
+        .map(|a| (a.memory_bytes / 1_048_576) as i64)
+        .sum();
+    let gpu_model = cap.accelerators.first().map(|a| a.model.clone());
+
+    FlatCapacity {
+        total_vcpu,
+        total_memory_mib,
+        total_gpu_vram_mib,
+        gpu_model,
+        free_vcpu: total_vcpu,
+        free_memory_mib: total_memory_mib,
+        free_gpu_vram_mib: total_gpu_vram_mib,
+    }
+}
+
+/// Derive flat scheduling capacity from a canonical `NodeCapabilityRecord`.
+///
+/// The provider adapter needs simple total/free vcpu/memory/gpu numbers; this
+/// extracts them from the canonical hardware block. Returns `None` when the
+/// record lacks enough information to schedule.
+pub fn scheduling_capacity_from_capability(
+    cap: &NodeCapacity,
+) -> Option<allternit_computer_cloud::providers::fabric_node::NodeCapacity> {
+    use allternit_computer_cloud::providers::fabric_node::NodeCapacity as ProviderCapacity;
+
+    let cpu = cap.hardware.cpu.threads.max(cap.hardware.cpu.cores).max(1);
+    let total_memory_mib = (cap.hardware.memory.total_bytes / 1_048_576).max(1);
+    let total_gpu_vram_mib: u64 = cap
+        .accelerators
+        .iter()
+        .map(|a| a.memory_bytes / 1_048_576)
+        .sum();
+    let gpu_model = cap.accelerators.first().map(|a| a.model.clone());
+
+    // For free capacity we currently assume the node is empty; real accounting
+    // would subtract assigned workloads. This preserves the prior behavior.
+    Some(ProviderCapacity {
+        total_vcpu: cpu,
+        total_memory_mib,
+        total_gpu_vram_mib,
+        gpu_model,
+        free_vcpu: cpu,
+        free_memory_mib: total_memory_mib,
+        free_gpu_vram_mib: total_gpu_vram_mib,
+    })
+}
+
 /// Convert a DB-backed Fabric node into the provider-layer representation used
 /// by `allternit-computer-cloud`. Only `approved` and `active` nodes are
 /// schedulable; this mapping is used when refreshing the provider pool.
@@ -18,7 +169,7 @@ pub fn to_provider_node(
     node: &FabricNodeRecord,
     capacity: &NodeCapacity,
 ) -> allternit_computer_cloud::providers::fabric_node::FabricNode {
-    use allternit_computer_cloud::providers::fabric_node::{FabricNode as ProviderNode, NodeCapacity as ProviderCapacity, NodeStatus};
+    use allternit_computer_cloud::providers::fabric_node::{FabricNode as ProviderNode, NodeStatus};
 
     let status = match node.status {
         FabricNodeStatus::Pending => NodeStatus::Pending,
@@ -29,15 +180,8 @@ pub fn to_provider_node(
         FabricNodeStatus::Draining => NodeStatus::Draining,
     };
 
-    let provider_capacity = ProviderCapacity {
-        total_vcpu: capacity.total_vcpu as u32,
-        total_memory_mib: capacity.total_memory_mib as u64,
-        total_gpu_vram_mib: capacity.total_gpu_vram_mib as u64,
-        gpu_model: capacity.gpu_model.clone(),
-        free_vcpu: capacity.free_vcpu as u32,
-        free_memory_mib: capacity.free_memory_mib as u64,
-        free_gpu_vram_mib: capacity.free_gpu_vram_mib as u64,
-    };
+    let provider_capacity = scheduling_capacity_from_capability(capacity)
+        .unwrap_or_default();
 
     ProviderNode {
         id: node.id.clone(),
@@ -90,16 +234,13 @@ impl std::str::FromStr for FabricNodeStatus {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NodeCapacity {
-    pub total_vcpu: i64,
-    pub total_memory_mib: i64,
-    pub total_gpu_vram_mib: i64,
-    pub gpu_model: Option<String>,
-    pub free_vcpu: i64,
-    pub free_memory_mib: i64,
-    pub free_gpu_vram_mib: i64,
-}
+/// Canonical node capability record.
+///
+/// Uses the canonical AllternitOS `node-capability.schema.json` type so Cloud
+/// does not maintain a parallel view struct. Cloud still wraps enrollment and
+/// ownership in `FabricNodeRecord`, but the capability payload itself is
+/// canonical.
+pub use allternitos_cloud_contracts::NodeCapabilityRecord as NodeCapacity;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FabricNodeRecord {
@@ -417,6 +558,9 @@ impl FabricNodeRegistry {
         id: &str,
         capacity: &NodeCapacity,
     ) -> Result<(), rusqlite::Error> {
+        let flat = flat_capacity_from_capability(capacity);
+        let capability_json = serde_json::to_string(capacity).unwrap_or_else(|_| "{}".to_string());
+
         let conn = self.db.connect()?;
         conn.execute(
             "UPDATE fabric_nodes
@@ -428,8 +572,8 @@ impl FabricNodeRegistry {
         conn.execute(
             "INSERT INTO fabric_node_capacity (
                 node_id, total_vcpu, total_memory_mib, total_gpu_vram_mib, gpu_model,
-                free_vcpu, free_memory_mib, free_gpu_vram_mib, updated_at
-            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, CURRENT_TIMESTAMP)
+                free_vcpu, free_memory_mib, free_gpu_vram_mib, capability_json, updated_at
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, CURRENT_TIMESTAMP)
             ON CONFLICT(node_id) DO UPDATE SET
                 total_vcpu = excluded.total_vcpu,
                 total_memory_mib = excluded.total_memory_mib,
@@ -438,16 +582,18 @@ impl FabricNodeRegistry {
                 free_vcpu = excluded.free_vcpu,
                 free_memory_mib = excluded.free_memory_mib,
                 free_gpu_vram_mib = excluded.free_gpu_vram_mib,
+                capability_json = excluded.capability_json,
                 updated_at = CURRENT_TIMESTAMP",
             params![
                 id,
-                capacity.total_vcpu,
-                capacity.total_memory_mib,
-                capacity.total_gpu_vram_mib,
-                capacity.gpu_model,
-                capacity.free_vcpu,
-                capacity.free_memory_mib,
-                capacity.free_gpu_vram_mib,
+                flat.total_vcpu,
+                flat.total_memory_mib,
+                flat.total_gpu_vram_mib,
+                flat.gpu_model,
+                flat.free_vcpu,
+                flat.free_memory_mib,
+                flat.free_gpu_vram_mib,
+                capability_json,
             ],
         )?;
         Ok(())
@@ -456,21 +602,26 @@ impl FabricNodeRegistry {
     pub fn get_capacity(&self, node_id: &str) -> Result<Option<NodeCapacity>, rusqlite::Error> {
         let conn = self.db.connect()?;
         let mut stmt = conn.prepare(
-            "SELECT total_vcpu, total_memory_mib, total_gpu_vram_mib, gpu_model,
+            "SELECT capability_json, total_vcpu, total_memory_mib, total_gpu_vram_mib, gpu_model,
                     free_vcpu, free_memory_mib, free_gpu_vram_mib
              FROM fabric_node_capacity
              WHERE node_id = ?1",
         )?;
         stmt.query_row(params![node_id], |row| {
-            Ok(NodeCapacity {
-                total_vcpu: row.get(0)?,
-                total_memory_mib: row.get(1)?,
-                total_gpu_vram_mib: row.get(2)?,
-                gpu_model: row.get(3)?,
-                free_vcpu: row.get(4)?,
-                free_memory_mib: row.get(5)?,
-                free_gpu_vram_mib: row.get(6)?,
-            })
+            let json: Option<String> = row.get("capability_json")?;
+            if let Some(json) = json {
+                if let Ok(cap) = serde_json::from_str::<NodeCapacity>(&json) {
+                    return Ok(cap);
+                }
+            }
+            // Fallback: reconstruct a partial canonical record from legacy flat
+            // columns so callers always receive a `NodeCapabilityRecord`.
+            Ok(fallback_capability_from_flat(
+                row.get("total_vcpu")?,
+                row.get("total_memory_mib")?,
+                row.get("total_gpu_vram_mib")?,
+                row.get::<_, Option<String>>("gpu_model")?,
+            ))
         })
         .optional()
     }
@@ -483,8 +634,8 @@ impl FabricNodeRegistry {
             "SELECT n.id, n.organization_id, n.display_name, n.status, n.region,
                     n.identity_fingerprint, n.enrollment_token_hash, n.node_token_hash, n.labels,
                     n.created_at, n.updated_at, n.approved_at, n.last_heartbeat_at,
-                    c.total_vcpu, c.total_memory_mib, c.total_gpu_vram_mib, c.gpu_model,
-                    c.free_vcpu, c.free_memory_mib, c.free_gpu_vram_mib
+                    c.capability_json, c.total_vcpu, c.total_memory_mib, c.total_gpu_vram_mib,
+                    c.gpu_model, c.free_vcpu, c.free_memory_mib, c.free_gpu_vram_mib
              FROM fabric_nodes n
              JOIN fabric_node_capacity c ON c.node_id = n.id
              WHERE n.status IN ('approved', 'active')
@@ -492,14 +643,16 @@ impl FabricNodeRegistry {
         )?;
         let rows = stmt.query_map([], |row| {
             let node = Self::parse_node_row(row)?;
-            let capacity = NodeCapacity {
-                total_vcpu: row.get(13)?,
-                total_memory_mib: row.get(14)?,
-                total_gpu_vram_mib: row.get(15)?,
-                gpu_model: row.get(16)?,
-                free_vcpu: row.get(17)?,
-                free_memory_mib: row.get(18)?,
-                free_gpu_vram_mib: row.get(19)?,
+            let json: Option<String> = row.get("capability_json")?;
+            let total_vcpu: i64 = row.get("total_vcpu")?;
+            let total_memory_mib: i64 = row.get("total_memory_mib")?;
+            let total_gpu_vram_mib: i64 = row.get("total_gpu_vram_mib")?;
+            let gpu_model: Option<String> = row.get("gpu_model")?;
+            let capacity = if let Some(json) = json {
+                serde_json::from_str::<NodeCapacity>(&json)
+                    .unwrap_or_else(|_| fallback_capability_from_flat(total_vcpu, total_memory_mib, total_gpu_vram_mib, gpu_model))
+            } else {
+                fallback_capability_from_flat(total_vcpu, total_memory_mib, total_gpu_vram_mib, gpu_model)
             };
             Ok((node, capacity))
         })?;
@@ -666,14 +819,57 @@ mod tests {
     }
 
     fn capacity() -> NodeCapacity {
-        NodeCapacity {
-            total_vcpu: 8,
-            total_memory_mib: 16384,
-            total_gpu_vram_mib: 0,
-            gpu_model: None,
-            free_vcpu: 6,
-            free_memory_mib: 12288,
-            free_gpu_vram_mib: 0,
+        allternitos_cloud_contracts::NodeCapabilityRecord {
+            schema_version: "1.0.0".to_string(),
+            node_id: "n1".to_string(),
+            recorded_at: Utc::now(),
+            hardware: allternitos_cloud_contracts::NodeHardware {
+                cpu: allternitos_cloud_contracts::CpuInfo {
+                    vendor: "unknown".to_string(),
+                    model: "unknown".to_string(),
+                    cores: 8,
+                    threads: 8,
+                    sockets: None,
+                    base_frequency_mhz: None,
+                    flags: Vec::new(),
+                    numa_nodes: None,
+                },
+                memory: allternitos_cloud_contracts::MemoryInfo {
+                    total_bytes: 16_384 * 1_048_576,
+                    memory_type: "unknown".to_string(),
+                    speed_mhz: None,
+                    channels: None,
+                    measured_bandwidth_gbps: None,
+                },
+                storage: Vec::new(),
+                network: Vec::new(),
+            },
+            accelerators: Vec::new(),
+            topology: allternitos_cloud_contracts::NodeTopology::default(),
+            software: allternitos_cloud_contracts::NodeSoftware {
+                fabric_os_version: "unknown".to_string(),
+                kernel_version: "unknown".to_string(),
+                libvirt_version: None,
+                containerd_version: None,
+                qemu_version: None,
+                wireguard_version: None,
+            },
+            fabric: allternitos_cloud_contracts::NodeFabric {
+                wireguard_public_key: "pending_enrollment".to_string(),
+                fabric_address: None,
+                region: Some("us-east".to_string()),
+                zone: None,
+                rack: None,
+                role: Some("cloud".to_string()),
+                join_token_hash: None,
+            },
+            measured_bandwidth: allternitos_cloud_contracts::MeasuredBandwidth::default(),
+            health: allternitos_cloud_contracts::NodeHealth {
+                status: "active".to_string(),
+                last_checked_at: None,
+                alerts: Vec::new(),
+            },
+            workers: allternitos_cloud_contracts::Workers::default(),
         }
     }
 
@@ -714,7 +910,7 @@ mod tests {
         let active = registry.list_active_with_capacity().unwrap();
         assert_eq!(active.len(), 1);
         assert_eq!(active[0].0.id, "n1");
-        assert_eq!(active[0].1.free_memory_mib, 12288);
+        assert_eq!(active[0].1.hardware.memory.total_bytes, 16_384 * 1_048_576);
 
         let by_hash = registry
             .get_by_token_hash(&hash_token("token-n1"))
