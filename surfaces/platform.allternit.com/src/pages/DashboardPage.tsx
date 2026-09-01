@@ -1,15 +1,15 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  SquaresFour,
-  Buildings,
-  ComputerTower,
-  Desktop,
-  CreditCard,
-  Key,
-  ArrowRight,
-  ChartBar,
-} from "@phosphor-icons/react";
+  User03Icon,
+  TeamWorkIcon,
+  DeviceAccessIcon,
+  CpuIcon,
+  Calendar03Icon,
+  Download04Icon,
+  Clock01Icon,
+} from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 import {
   usePlatformOrganization,
@@ -17,33 +17,63 @@ import {
   usePlatformAuth,
 } from "@/lib/platform-auth-client";
 import { PlatformUsageDashboard } from "@/components/PlatformUsageDashboard";
-import { listRuntimeDevices } from "@/lib/devices";
+import { listRuntimeDevices, type RuntimeDevice } from "@/lib/devices";
 import { getHostedEntitlement, type HostedRuntimeEntitlement } from "@/lib/hosted-compute";
 
-function DashboardCard({
-  icon: Icon,
-  title,
+function StatCard({
+  icon,
+  label,
   value,
   subtitle,
   to,
+  accent = false,
 }: {
-  icon: React.ComponentType<any>;
-  title: string;
+  icon: typeof User03Icon;
+  label: string;
   value: React.ReactNode;
   subtitle: string;
   to?: string;
+  accent?: boolean;
 }) {
   const content = (
-    <div className="rounded-xl border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)]/40 p-4 hover:border-[var(--accent-primary)]/30 hover:bg-[var(--bg-secondary)] transition-colors">
-      <div className="flex items-start gap-3">
-        <div className="size-9 shrink-0 rounded-lg bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] flex items-center justify-center">
-          <Icon size={18} />
+    <div
+      className={cn(
+        "relative overflow-hidden rounded-2xl border border-solid p-5 transition-colors",
+        accent
+          ? "border-[var(--accent-primary)]/30 bg-[var(--accent-primary)]/10"
+          : "border-[var(--border-subtle)] bg-[var(--bg-secondary)] hover:border-[var(--accent-primary)]/30 hover:bg-[var(--bg-secondary)]/80"
+      )}
+    >
+      <div className="flex items-start justify-between">
+        <div>
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">
+            {label}
+          </div>
+          <div className="mt-2 text-[22px] font-semibold tracking-tight text-[var(--text-primary)]">
+            {value}
+          </div>
+          <div className="mt-1 text-[12px] text-[var(--text-secondary)]">{subtitle}</div>
         </div>
-        <div className="min-w-0 flex-1">
-          <div className="text-[10px] uppercase tracking-wide text-[var(--text-tertiary)]">{title}</div>
-          <div className="text-[14px] font-semibold text-[var(--text-primary)] mt-0.5 truncate">{value}</div>
-          <div className="text-[11px] text-[var(--text-secondary)] mt-1">{subtitle}</div>
+        <div
+          className={cn(
+            "flex size-10 shrink-0 items-center justify-center rounded-xl",
+            accent
+              ? "bg-[var(--accent-primary)] text-[var(--ui-text-inverse)]"
+              : "bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]"
+          )}
+        >
+          <HugeiconsIcon icon={icon} size={20} />
         </div>
+      </div>
+      {/* Decorative micro chart bars */}
+      <div className="absolute bottom-4 right-4 hidden sm:flex items-end gap-0.5 opacity-20">
+        {[40, 64, 32, 80, 56, 72, 48].map((h, i) => (
+          <div
+            key={i}
+            className="w-1 rounded-sm bg-[var(--accent-primary)]"
+            style={{ height: `${h / 4}px` }}
+          />
+        ))}
       </div>
     </div>
   );
@@ -54,23 +84,90 @@ function DashboardCard({
   return content;
 }
 
+function RecentActivity({ devices }: { devices: RuntimeDevice[] }) {
+  const rows = devices.slice(0, 5).map((d) => ({
+    id: d.id,
+    event: `Device "${d.name}" paired`,
+    resource: d.runtimeType,
+    time: d.lastSeenAt
+      ? new Date(d.lastSeenAt).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : "Never seen",
+  }));
+
+  return (
+    <div className="rounded-2xl border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-5">
+      <div className="flex items-center justify-between gap-4 mb-4">
+        <div>
+          <h2 className="text-[14px] font-semibold text-[var(--text-primary)]">Recent activity</h2>
+          <p className="text-[12px] text-[var(--text-tertiary)] mt-0.5">
+            Latest events across your cloud resources
+          </p>
+        </div>
+        <div className="flex size-9 items-center justify-center rounded-xl bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]">
+          <HugeiconsIcon icon={Clock01Icon} size={18} />
+        </div>
+      </div>
+
+      {rows.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-[var(--border-subtle)] bg-[var(--bg-primary)] py-10 text-center">
+          <div className="flex size-10 items-center justify-center rounded-full bg-[var(--surface-hover)] text-[var(--text-tertiary)]">
+            <HugeiconsIcon icon={Clock01Icon} size={20} />
+          </div>
+          <p className="mt-3 text-[13px] font-medium text-[var(--text-secondary)]">No recent activity</p>
+          <p className="mt-1 max-w-xs text-[12px] text-[var(--text-tertiary)]">
+            Activity will appear here once the cloud API is connected and devices or jobs start reporting.
+          </p>
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-[13px]">
+            <thead>
+              <tr className="border-b border-[var(--border-subtle)] text-[11px] uppercase tracking-wider text-[var(--text-tertiary)]">
+                <th className="pb-3 font-semibold">Event</th>
+                <th className="pb-3 font-semibold">Resource</th>
+                <th className="pb-3 font-semibold text-right">Time</th>
+              </tr>
+            </thead>
+            <tbody className="text-[var(--text-secondary)]">
+              {rows.map((row) => (
+                <tr key={row.id} className="border-b border-[var(--border-subtle)] last:border-0">
+                  <td className="py-3 text-[var(--text-primary)]">{row.event}</td>
+                  <td className="py-3 capitalize">{row.resource}</td>
+                  <td className="py-3 text-right">{row.time}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function DashboardPage() {
   const { user } = usePlatformUser();
   const { organization, membership } = usePlatformOrganization();
   const { getToken, isSignedIn } = usePlatformAuth();
 
   const [deviceCount, setDeviceCount] = useState<number | null>(null);
+  const [devices, setDevices] = useState<RuntimeDevice[]>([]);
   const [hostedCount, setHostedCount] = useState<number | null>(null);
   const [entitlement, setEntitlement] = useState<HostedRuntimeEntitlement | null>(null);
 
   const loadCounts = useCallback(async () => {
     if (!isSignedIn) return;
     try {
-      const [devices, token] = await Promise.all([
+      const [deviceList, token] = await Promise.all([
         listRuntimeDevices(),
         getToken(),
       ]);
-      setDeviceCount(devices.length);
+      setDevices(deviceList);
+      setDeviceCount(deviceList.length);
       if (token) {
         const entitlementData = await getHostedEntitlement(token);
         setEntitlement(entitlementData);
@@ -85,55 +182,73 @@ export function DashboardPage() {
     void loadCounts();
   }, [loadCounts]);
 
-  const email =
-    user?.primaryEmailAddress?.emailAddress ||
-    user?.userEmail ||
-    user?.emailAddresses?.[0]?.emailAddress ||
-    "—";
+  const firstName =
+    user?.firstName || user?.primaryEmailAddress?.emailAddress?.split("@")[0] || "there";
 
-  const quickLinks = [
-    { to: "/organizations", icon: Buildings, label: "Manage organization" },
-    { to: "/compute", icon: ComputerTower, label: "Configure compute" },
-    { to: "/devices", icon: Desktop, label: "Review devices" },
-    { to: "/billing", icon: CreditCard, label: "Billing overview" },
-    { to: "/api-keys", icon: Key, label: "API keys" },
-  ];
+  const today = new Date().toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-[22px] font-semibold tracking-tight text-[var(--text-primary)]">
-          Platform Console
-        </h1>
-        <p className="text-[13px] text-[var(--text-secondary)] mt-1">
-          Manage your organization, compute, billing, and API access.
-        </p>
+      {/* Welcome header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-[24px] font-semibold tracking-tight text-[var(--text-primary)]">
+            Welcome back, {firstName}
+          </h1>
+          <p className="text-[13px] text-[var(--text-secondary)] mt-1">
+            Here is what is happening across your Allternit cloud.
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-3 py-2 text-[12px] text-[var(--text-secondary)]">
+            <HugeiconsIcon icon={Calendar03Icon} size={14} />
+            {today}
+          </div>
+          <button
+            type="button"
+            disabled
+            className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--accent-primary)] px-3 py-2 text-[13px] font-medium text-[var(--ui-text-inverse)] opacity-60 cursor-not-allowed"
+            title="Export will be available once usage data loads"
+          >
+            <HugeiconsIcon icon={Download04Icon} size={14} /> Export CSV
+          </button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <DashboardCard
-          icon={SquaresFour}
-          title="Signed in as"
-          value={email}
+      {/* Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          icon={User03Icon}
+          label="Signed in as"
+          value={
+            user?.primaryEmailAddress?.emailAddress ||
+            user?.userEmail ||
+            user?.emailAddresses?.[0]?.emailAddress ||
+            "—"
+          }
           subtitle="Your Allternit account"
         />
-        <DashboardCard
-          icon={Buildings}
-          title="Current organization"
+        <StatCard
+          icon={TeamWorkIcon}
+          label="Organization"
           value={organization?.name || "Personal"}
           subtitle={membership?.role ? `Role: ${membership.role}` : "No organization selected"}
           to="/organizations"
         />
-        <DashboardCard
-          icon={Desktop}
-          title="Paired devices"
+        <StatCard
+          icon={DeviceAccessIcon}
+          label="Paired devices"
           value={deviceCount !== null ? deviceCount.toLocaleString() : "—"}
           subtitle={deviceCount === 0 ? "No devices paired yet" : "Active runtimes"}
           to="/devices"
         />
-        <DashboardCard
-          icon={ComputerTower}
-          title="Hosted runtimes"
+        <StatCard
+          icon={CpuIcon}
+          label="Hosted runtimes"
           value={
             hostedCount !== null && entitlement
               ? `${hostedCount} / ${entitlement.maxHostedRuntimes}`
@@ -141,30 +256,15 @@ export function DashboardPage() {
           }
           subtitle={entitlement?.planDisplayName || "Free plan"}
           to="/compute"
+          accent
         />
       </div>
 
+      {/* Usage + breakdown */}
       <PlatformUsageDashboard />
 
-      <div className="rounded-xl border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)]/40 p-5">
-        <h2 className="text-[14px] font-semibold text-[var(--text-primary)] mb-3">
-          Quick links
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
-          {quickLinks.map((link) => (
-            <Link
-              key={link.to}
-              to={link.to}
-              className="flex items-center justify-between gap-2 rounded-lg border border-solid border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3 py-2.5 text-[13px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-default)] transition-colors"
-            >
-              <span className="inline-flex items-center gap-2">
-                <link.icon size={16} /> {link.label}
-              </span>
-              <ArrowRight size={14} />
-            </Link>
-          ))}
-        </div>
-      </div>
+      {/* Recent activity */}
+      <RecentActivity devices={devices} />
     </div>
   );
 }

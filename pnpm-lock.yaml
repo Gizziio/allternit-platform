@@ -3261,7 +3261,7 @@ importers:
         version: 1.2.8(@types/react-dom@18.3.7(@types/react@18.3.28))(@types/react@18.3.28)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@tailwindcss/vite':
         specifier: ^4.0.0
-        version: 4.2.2(vite@8.0.12(@types/node@25.6.2)(esbuild@0.27.3)(jiti@2.6.1)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4))
+        version: 4.2.2(vite@8.0.12(@types/node@25.6.2)(esbuild@0.28.0)(jiti@2.6.1)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4))
       '@types/chrome':
         specifier: ^0.1.37
         version: 0.1.39
@@ -3273,7 +3273,7 @@ importers:
         version: 18.3.7(@types/react@18.3.28)
       '@wxt-dev/module-react':
         specifier: ^1.2.2
-        version: 1.2.2(vite@8.0.12(@types/node@25.6.2)(esbuild@0.27.3)(jiti@2.6.1)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4))(wxt@0.20.20(@types/node@25.6.2)(canvas@3.2.1)(eslint@9.39.4(jiti@2.6.1))(jiti@2.6.1)(rollup@4.55.1)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4))
+        version: 1.2.2(vite@8.0.12(@types/node@25.6.2)(esbuild@0.28.0)(jiti@2.6.1)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4))(wxt@0.20.20(@types/node@25.6.2)(canvas@3.2.1)(eslint@9.39.4(jiti@2.6.1))(jiti@2.6.1)(rollup@4.55.1)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4))
       ai-motion:
         specifier: ^0.4.8
         version: 0.4.8
@@ -3407,7 +3407,7 @@ importers:
         version: 18.3.7(@types/react@18.3.28)
       '@wxt-dev/module-react':
         specifier: ^1.2.2
-        version: 1.2.2(vite@8.0.12(@types/node@25.6.2)(esbuild@0.28.0)(jiti@2.6.1)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4))(wxt@0.20.20(@types/node@25.6.2)(canvas@3.2.1)(eslint@9.39.4(jiti@2.6.1))(jiti@2.6.1)(rollup@4.55.1)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4))
+        version: 1.2.2(vite@8.0.12(@types/node@25.6.2)(esbuild@0.27.3)(jiti@2.6.1)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4))(wxt@0.20.20(@types/node@25.6.2)(canvas@3.2.1)(eslint@9.39.4(jiti@2.6.1))(jiti@2.6.1)(rollup@4.55.1)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4))
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -3779,6 +3779,12 @@ importers:
       '@clerk/clerk-react':
         specifier: ^5.30.0
         version: 5.61.4(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@hugeicons/core-free-icons':
+        specifier: ^4.3.0
+        version: 4.3.0
+      '@hugeicons/react':
+        specifier: ^1.1.10
+        version: 1.1.10(react@18.3.1)
       '@phosphor-icons/react':
         specifier: ^2.1.7
         version: 2.1.10(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -7471,6 +7477,14 @@ packages:
     peerDependencies:
       hono: '>=3.9.0'
       zod: ^3.25.0 || ^4.0.0
+
+  '@hugeicons/core-free-icons@4.3.0':
+    resolution: {integrity: sha512-5DC5gq2psNDKBQThOjpuFCtMco8nl2FkrBzZgG15cFGM0kSwUoych/pw0DmjBygF9qRDITdBPtmzJqLsOeImMg==}
+
+  '@hugeicons/react@1.1.10':
+    resolution: {integrity: sha512-9tAsd92yMVVGP+E+d8cM+wc0VnXuYZHNbWQi7TOe8k2neawmhiaFmVFbzyruejhOMa197/LbgvSED32ayUo3ZA==}
+    peerDependencies:
+      react: '>=16.0.0'
 
   '@humanfs/core@0.19.2':
     resolution: {integrity: sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA==}
@@ -30411,6 +30425,12 @@ snapshots:
       hono: 4.11.4
       zod: 4.3.6
 
+  '@hugeicons/core-free-icons@4.3.0': {}
+
+  '@hugeicons/react@1.1.10(react@18.3.1)':
+    dependencies:
+      react: 18.3.1
+
   '@humanfs/core@0.19.2':
     dependencies:
       '@humanfs/types': 0.15.0
@@ -35952,12 +35972,12 @@ snapshots:
       tailwindcss: 4.2.2
       vite: 6.4.1(@types/node@25.6.2)(jiti@2.6.1)(lightningcss@1.32.0)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4)
 
-  '@tailwindcss/vite@4.2.2(vite@8.0.12(@types/node@25.6.2)(esbuild@0.27.3)(jiti@2.6.1)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4))':
+  '@tailwindcss/vite@4.2.2(vite@8.0.12(@types/node@25.6.2)(esbuild@0.28.0)(jiti@2.6.1)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4))':
     dependencies:
       '@tailwindcss/node': 4.2.2
       '@tailwindcss/oxide': 4.2.2
       tailwindcss: 4.2.2
-      vite: 8.0.12(@types/node@25.6.2)(esbuild@0.27.3)(jiti@2.6.1)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4)
+      vite: 8.0.12(@types/node@25.6.2)(esbuild@0.28.0)(jiti@2.6.1)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4)
 
   '@tanstack/query-core@5.99.2': {}
 
