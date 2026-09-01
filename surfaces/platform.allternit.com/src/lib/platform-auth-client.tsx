@@ -280,8 +280,14 @@ function ClerkPlatformAuthBridge({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!clerkAuth.isSignedIn || typeof clerkAuth.getToken !== "function") {
       api.clearToken();
+      api.clearTokenProvider();
       return;
     }
+
+    // Register the Clerk token provider so every API request gets a fresh
+    // JWT on demand. This avoids race conditions where a page's useEffect
+    // fires before the first token sync completes.
+    api.setTokenProvider(clerkAuth.getToken);
 
     let active = true;
     const syncToken = async () => {
@@ -300,6 +306,7 @@ function ClerkPlatformAuthBridge({ children }: { children: ReactNode }) {
     return () => {
       active = false;
       clearInterval(interval);
+      api.clearTokenProvider();
     };
   }, [clerkAuth.isSignedIn, clerkAuth.getToken]);
 

@@ -114,6 +114,21 @@ const pages = [
     name: 'organizations.png',
     expected: ['Members', 'Cloud accounts', 'Failed to create organization', 'Request timed out'],
   },
+  {
+    path: '/runs',
+    name: 'runs.png',
+    expected: ['No runs yet', 'Unable to load runs', 'Request timed out', 'Create a run'],
+  },
+  {
+    path: '/schedules',
+    name: 'schedules.png',
+    expected: ['No schedules', 'Unable to load schedules', 'Request timed out', 'recurring cron'],
+  },
+  {
+    path: '/approvals',
+    name: 'approvals.png',
+    expected: ['No approval requests', 'Unable to load approvals', 'Request timed out', 'human input'],
+  },
 ];
 
 for (const { path, name, expected } of pages) {

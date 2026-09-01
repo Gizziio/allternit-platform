@@ -34,6 +34,7 @@ export function formatApiError(err: unknown, fallback: string): string {
 
 class AllternitApiClient {
   private token: string | null = null;
+  private tokenProvider: (() => Promise<string | null>) | null = null;
 
   setToken(token: string): void {
     this.token = token;
@@ -41,6 +42,14 @@ class AllternitApiClient {
 
   clearToken(): void {
     this.token = null;
+  }
+
+  setTokenProvider(provider: () => Promise<string | null>): void {
+    this.tokenProvider = provider;
+  }
+
+  clearTokenProvider(): void {
+    this.tokenProvider = null;
   }
 
   isAuthenticated(): boolean {
@@ -52,6 +61,12 @@ class AllternitApiClient {
     return String(configured).replace(/\/+$/, '');
   }
 
+  private async resolveToken(): Promise<string | null> {
+    if (this.token) return this.token;
+    if (this.tokenProvider) return this.tokenProvider();
+    return null;
+  }
+
   private async request<T>(
     method: string,
     path: string,
@@ -59,10 +74,11 @@ class AllternitApiClient {
     options: RequestInit = {}
   ): Promise<T> {
     const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+    const token = await this.resolveToken();
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       Accept: 'application/json',
-      ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.headers as Record<string, string> || {}),
     };
 
