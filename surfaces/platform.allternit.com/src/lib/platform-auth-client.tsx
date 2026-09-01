@@ -9,6 +9,7 @@ import {
   useUser,
 } from "@clerk/clerk-react";
 import { api } from "@/lib/api-client";
+import { useTheme } from "@/lib/theme";
 import {
   CLERK_PUBLISHABLE_KEY,
   CLERK_PROXY_URL,
@@ -69,48 +70,66 @@ export function isPlatformAuthDisabled(): boolean {
   return !CLERK_PUBLISHABLE_KEY;
 }
 
-const clerkAppearance = {
-  variables: {
-    colorBackground: "#FFFEFC",
-    colorPrimary: "#1A1916",
-    colorText: "#0D0C0A",
-    colorTextSecondary: "#74716B",
-    colorInputBackground: "#FFFFFF",
-    colorInputText: "#0D0C0A",
-    colorNeutral: "#74716B",
-    colorDanger: "#f87171",
-    borderRadius: "16px",
-    fontFamily: "inherit",
-  },
-  elements: {
-    cardBox: { background: "transparent", border: "none", boxShadow: "none", width: "100%", maxWidth: "100%" },
-    rootBox: { width: "100%", maxWidth: "100%", boxSizing: "border-box" },
-    card: { background: "transparent", border: "none", boxShadow: "none", width: "100%", maxWidth: "100%", boxSizing: "border-box", padding: "0" },
-    headerTitle: { color: "#0D0C0A", fontSize: "28px", fontWeight: 700, letterSpacing: "-0.03em" },
-    headerSubtitle: { color: "#74716B" },
-    socialButtonsBlockButton: { background: "#FFFFFF", border: "1px solid #E1E0DC", color: "#1A1916", boxShadow: "none" },
-    socialButtonsBlockButtonText: { color: "#1A1916" },
-    dividerLine: { background: "#E1E0DC" },
-    dividerText: { color: "#989590" },
-    formFieldLabel: { color: "#403E39" },
-    formFieldInput: { background: "#FFFFFF", border: "1px solid #D7D5D0", color: "#0D0C0A", boxShadow: "none" },
-    formFieldInputShowPasswordButton: { color: "#74716B" },
-    formFieldInputShowPasswordButtonIcon: { color: "#74716B" },
-    footerActionText: { color: "#74716B" },
-    footerActionLink: { color: "#9A7658" },
-    footer: { background: "transparent", padding: "20px 0 0", margin: "0" },
-    form: { gap: "14px" },
-    main: { gap: "18px" },
-    formButtonPrimary: { background: "#1A1916", color: "#FAF9F7", boxShadow: "none", fontWeight: 700 },
-    identityPreviewText: { color: "#0D0C0A" },
-    formResendCodeLink: { color: "#9A7658" },
-    otpCodeFieldInput: { background: "#FFFFFF", border: "1px solid #D7D5D0", color: "#0D0C0A" },
-    alertText: { color: "#0D0C0A" },
-    alertClerkError: { background: "rgba(248,113,113,0.12)", border: "1px solid rgba(248,113,113,0.24)" },
-  },
-} as const;
+function getClerkAppearance(resolved: "light" | "dark") {
+  const isLight = resolved === "light";
+  const bg = isLight ? "#FFFEFC" : "#141416";
+  const bgInput = isLight ? "#FFFFFF" : "#1c1c1f";
+  const text = isLight ? "#0D0C0A" : "#e5e5e5";
+  const textSecondary = isLight ? "#74716B" : "#a1a1aa";
+  const textTertiary = isLight ? "#989590" : "#71717a";
+  const border = isLight ? "#E1E0DC" : "rgba(255,255,255,0.10)";
+  const borderInput = isLight ? "#D7D5D0" : "rgba(255,255,255,0.12)";
+  const label = isLight ? "#403E39" : "#d4d4d8";
+  const buttonBg = isLight ? "#1A1916" : "#e5e5e5";
+  const buttonText = isLight ? "#FAF9F7" : "#0b0b0c";
+  const socialBg = isLight ? "#FFFFFF" : "#1c1c1f";
+  const socialText = isLight ? "#1A1916" : "#e5e5e5";
+
+  return {
+    variables: {
+      colorBackground: bg,
+      colorPrimary: isLight ? "#1A1916" : "#9A7658",
+      colorText: text,
+      colorTextSecondary: textSecondary,
+      colorInputBackground: bgInput,
+      colorInputText: text,
+      colorNeutral: textSecondary,
+      colorDanger: "#f87171",
+      borderRadius: "16px",
+      fontFamily: "inherit",
+    },
+    elements: {
+      cardBox: { background: "transparent", border: "none", boxShadow: "none", width: "100%", maxWidth: "100%" },
+      rootBox: { width: "100%", maxWidth: "100%", boxSizing: "border-box" },
+      card: { background: "transparent", border: "none", boxShadow: "none", width: "100%", maxWidth: "100%", boxSizing: "border-box", padding: "0" },
+      headerTitle: { color: text, fontSize: "28px", fontWeight: 700, letterSpacing: "-0.03em" },
+      headerSubtitle: { color: textSecondary },
+      socialButtonsBlockButton: { background: socialBg, border: `1px solid ${border}`, color: socialText, boxShadow: "none" },
+      socialButtonsBlockButtonText: { color: socialText },
+      dividerLine: { background: border },
+      dividerText: { color: textTertiary },
+      formFieldLabel: { color: label },
+      formFieldInput: { background: bgInput, border: `1px solid ${borderInput}`, color: text, boxShadow: "none" },
+      formFieldInputShowPasswordButton: { color: textSecondary },
+      formFieldInputShowPasswordButtonIcon: { color: textSecondary },
+      footerActionText: { color: textSecondary },
+      footerActionLink: { color: "#9A7658" },
+      footer: { background: "transparent", padding: "20px 0 0", margin: "0" },
+      form: { gap: "14px" },
+      main: { gap: "18px" },
+      formButtonPrimary: { background: buttonBg, color: buttonText, boxShadow: "none", fontWeight: 700 },
+      identityPreviewText: { color: text },
+      formResendCodeLink: { color: "#9A7658" },
+      otpCodeFieldInput: { background: bgInput, border: `1px solid ${borderInput}`, color: text },
+      alertText: { color: text },
+      alertClerkError: { background: "rgba(248,113,113,0.12)", border: "1px solid rgba(248,113,113,0.24)" },
+    },
+  };
+}
 
 export function PlatformAuthProvider({ children }: { children: ReactNode }) {
+  const { resolved } = useTheme();
+
   if (!CLERK_PUBLISHABLE_KEY) {
     const value = buildDisabledAuthValue();
     return <PlatformAuthContext.Provider value={value}>{children}</PlatformAuthContext.Provider>;
@@ -119,7 +138,7 @@ export function PlatformAuthProvider({ children }: { children: ReactNode }) {
   return (
     <ClerkProvider
       publishableKey={CLERK_PUBLISHABLE_KEY}
-      appearance={clerkAppearance}
+      appearance={getClerkAppearance(resolved)}
       signInUrl={CLERK_SIGN_IN_PATH}
       signUpUrl={CLERK_SIGN_UP_PATH}
       proxyUrl={CLERK_PROXY_URL}
