@@ -18,6 +18,7 @@ import {
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { getCostSummary, getCostBreakdown, type CostSummary, type CostBreakdownItem } from "@/lib/usage";
+import { formatApiError } from "@/lib/api-client";
 import { SkeletonRow } from "@/components/settings/SkeletonRow";
 
 const ACCENT = "#9A7658";
@@ -54,7 +55,7 @@ export function PlatformUsageDashboard() {
       setSummary(s);
       setBreakdown(b);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to load usage");
+      setError(formatApiError(err, "Unable to load usage"));
     } finally {
       setLoading(false);
     }

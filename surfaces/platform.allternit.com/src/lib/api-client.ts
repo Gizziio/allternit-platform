@@ -21,6 +21,17 @@ export class AllternitApiError extends Error {
   }
 }
 
+export function formatApiError(err: unknown, fallback: string): string {
+  if (err instanceof AllternitApiError) return err.message;
+  if (err instanceof Error) {
+    if (err.name === 'AbortError' || /abort/i.test(err.message)) {
+      return 'Request timed out. The cloud API did not respond.';
+    }
+    return err.message;
+  }
+  return fallback;
+}
+
 class AllternitApiClient {
   private token: string | null = null;
 

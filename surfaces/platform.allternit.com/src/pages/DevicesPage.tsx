@@ -25,6 +25,7 @@ import { EmptyState } from "@/components/settings/EmptyState";
 import { SkeletonRow } from "@/components/settings/SkeletonRow";
 import { Badge } from "@/components/settings/Badge";
 import { QUIET_BUTTON_CLASS, DESTRUCTIVE_BUTTON_CLASS } from "@/components/settings/buttonStyles";
+import { formatApiError } from "@/lib/api-client";
 
 function formatLastSeen(iso?: string | null): string {
   if (!iso) return "Never";
@@ -62,7 +63,7 @@ export function DevicesPage() {
       const runtimes = await listRuntimeDevices();
       setDevices(runtimes);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to load devices");
+      setError(formatApiError(err, "Unable to load devices"));
     } finally {
       setLoading(false);
     }
@@ -80,7 +81,7 @@ export function DevicesPage() {
       setConfirmId(null);
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to revoke device");
+      setError(formatApiError(err, "Unable to revoke device"));
     } finally {
       setBusyId(null);
     }
@@ -99,7 +100,7 @@ export function DevicesPage() {
       const info = await getPairingInfo(code);
       setPairingInfo(info);
     } catch (err) {
-      setPairingError(err instanceof Error ? err.message : "Pairing request not found");
+      setPairingError(formatApiError(err, "Pairing request not found"));
     } finally {
       setPairingLoading(false);
     }
@@ -116,7 +117,7 @@ export function DevicesPage() {
       setPairingCode("");
       await load();
     } catch (err) {
-      setPairingError(err instanceof Error ? err.message : "Unable to approve pairing");
+      setPairingError(formatApiError(err, "Unable to approve pairing"));
     } finally {
       setPairingBusy(false);
     }
@@ -132,7 +133,7 @@ export function DevicesPage() {
       setPairingInfo(null);
       setPairingCode("");
     } catch (err) {
-      setPairingError(err instanceof Error ? err.message : "Unable to deny pairing");
+      setPairingError(formatApiError(err, "Unable to deny pairing"));
     } finally {
       setPairingBusy(false);
     }

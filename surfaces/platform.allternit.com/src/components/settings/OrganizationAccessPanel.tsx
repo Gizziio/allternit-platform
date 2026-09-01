@@ -20,6 +20,7 @@ import {
   getCurrentUserProfile,
   type CurrentUserProfile,
 } from "@/lib/design/current-user";
+import { formatApiError } from "@/lib/api-client";
 import { Badge } from "@/components/settings/Badge";
 import { EmptyState } from "@/components/settings/EmptyState";
 import { MonoChip } from "@/components/settings/MonoChip";
@@ -67,7 +68,7 @@ function useFallbackOrganization(enabled: boolean) {
       await createPersonalOrganization();
       await refresh();
     } catch (err) {
-      setCreateError(err instanceof Error ? err.message : "Failed to create organization");
+      setCreateError(formatApiError(err, "Failed to create organization"));
     } finally {
       setCreating(false);
     }

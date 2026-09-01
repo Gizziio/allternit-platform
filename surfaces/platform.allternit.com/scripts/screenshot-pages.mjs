@@ -49,7 +49,8 @@ async function waitForLoad(page) {
         document.body.innerText.includes('No paired devices') ||
         document.body.innerText.includes('Paired devices') ||
         document.body.innerText.includes('No API keys yet') ||
-        document.body.innerText.includes('Usage unavailable') ||
+        document.body.innerText.includes('Unable to load usage') ||
+        document.body.innerText.includes('Unable to load devices') ||
         document.body.innerText.includes('Billing details unavailable');
       return skeletons.length === 0 || hasContent;
     },

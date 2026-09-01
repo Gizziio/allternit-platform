@@ -25,6 +25,7 @@ import {
   type HostedRuntime,
   type HostedRuntimeEntitlement,
 } from "@/lib/hosted-compute";
+import { formatApiError } from "@/lib/api-client";
 import { SectionHeading } from "@/components/settings/SectionHeading";
 import { EmptyState } from "@/components/settings/EmptyState";
 import { SkeletonRow } from "@/components/settings/SkeletonRow";
@@ -144,7 +145,7 @@ export function ComputeBillingPanel() {
         allowedMemory.includes(current) ? current : (allowedMemory.at(-1) ?? nextEntitlement.maxMemoryMb),
       );
     } catch (failure) {
-      setError(failure instanceof Error ? failure.message : "Unable to load hosted compute");
+      setError(formatApiError(failure, "Unable to load hosted compute"));
     } finally {
       setLoading(false);
     }
@@ -171,7 +172,7 @@ export function ComputeBillingPanel() {
         setConfirmDestroyId(null);
         await load();
       } catch (failure) {
-        setError(failure instanceof Error ? failure.message : "Hosted runtime action failed");
+        setError(formatApiError(failure, "Hosted runtime action failed"));
       } finally {
         setBusyId(null);
       }
@@ -193,7 +194,7 @@ export function ComputeBillingPanel() {
       setShowCreate(false);
       await load();
     } catch (failure) {
-      setError(failure instanceof Error ? failure.message : "Unable to create hosted runtime");
+      setError(formatApiError(failure, "Unable to create hosted runtime"));
     } finally {
       setBusyId(null);
     }

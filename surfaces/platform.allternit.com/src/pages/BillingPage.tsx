@@ -13,6 +13,7 @@ import { getHostedEntitlement, type HostedRuntimeEntitlement } from "@/lib/hoste
 import { EmptyState } from "@/components/settings/EmptyState";
 import { SkeletonRow } from "@/components/settings/SkeletonRow";
 import { QUIET_BUTTON_CLASS } from "@/components/settings/buttonStyles";
+import { formatApiError } from "@/lib/api-client";
 
 function formatHours(seconds: number): string {
   if (seconds < 3600) return `${Math.max(0, Math.round(seconds / 60))} min`;
@@ -51,7 +52,7 @@ export function BillingPage() {
       const data = await getHostedEntitlement(token);
       setEntitlement(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to load billing details");
+      setError(formatApiError(err, "Unable to load billing details"));
     } finally {
       setLoading(false);
     }

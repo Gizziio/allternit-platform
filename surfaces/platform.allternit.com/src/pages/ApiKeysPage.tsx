@@ -18,6 +18,7 @@ import {
   createApiKey,
   revokeApiKey,
 } from "@/lib/api-keys";
+import { formatApiError } from "@/lib/api-client";
 import { EmptyState } from "@/components/settings/EmptyState";
 import { QUIET_BUTTON_CLASS, DESTRUCTIVE_BUTTON_CLASS } from "@/components/settings/buttonStyles";
 
@@ -58,7 +59,7 @@ export function ApiKeysPage() {
       const data = await listApiKeys();
       setKeys(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to load API keys");
+      setError(formatApiError(err, "Unable to load API keys"));
     } finally {
       setLoading(false);
     }
@@ -79,7 +80,7 @@ export function ApiKeysPage() {
       setNewScopes(["read"]);
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to create API key");
+      setError(formatApiError(err, "Unable to create API key"));
     } finally {
       setCreating(false);
     }
@@ -93,7 +94,7 @@ export function ApiKeysPage() {
         setConfirmRevokeId(null);
         await load();
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Unable to revoke key");
+        setError(formatApiError(err, "Unable to revoke key"));
       }
     },
     [load]
