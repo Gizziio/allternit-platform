@@ -55,12 +55,17 @@ class AllternitApiClient {
       ...(options.headers as Record<string, string> || {}),
     };
 
+    const controller = new AbortController();
+    const timeoutMs = Number(import.meta.env.VITE_ALLTERNIT_API_TIMEOUT_MS || 15000);
+    const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+
     const response = await fetch(`${this.gatewayBase()}${normalizedPath}`, {
       ...options,
       method,
       headers,
+      signal: controller.signal,
       ...(body && method !== 'GET' ? { body: JSON.stringify(body) } : {}),
-    });
+    }).finally(() => window.clearTimeout(timeoutId));
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));

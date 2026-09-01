@@ -54,10 +54,14 @@ async function request<T>(
   const headers = new Headers(init?.headers);
   headers.set("Authorization", `Bearer ${token}`);
   if (init?.body) headers.set("Content-Type", "application/json");
+  const controller = new AbortController();
+  const timeoutMs = Number(import.meta.env.VITE_ALLTERNIT_API_TIMEOUT_MS || 15000);
+  const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
   const response = await fetch(`${baseUrl()}${path}`, {
     ...init,
     headers,
-  });
+    signal: controller.signal,
+  }).finally(() => window.clearTimeout(timeoutId));
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
     throw new Error(
