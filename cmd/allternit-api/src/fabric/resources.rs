@@ -27,23 +27,10 @@ pub struct FabricResource {
 }
 
 /// Summary of a single placement for a Fabric resource.
-#[derive(Debug, Clone)]
-pub struct FabricPlacementSummary {
-    pub id: String,
-    pub provider_kind: String,
-    pub provider_resource_id: Option<String>,
-    pub offer_id: Option<String>,
-    pub instance_type: Option<String>,
-    pub region: Option<String>,
-    pub retail_price_per_hour_cents: i64,
-    pub provider_cost_per_hour_cents: i64,
-    pub retail_price_per_request_cents: i64,
-    pub provider_cost_per_request_cents: i64,
-    pub retail_price_per_token_cents: i64,
-    pub provider_cost_per_token_cents: i64,
-    pub started_at: DateTime<Utc>,
-    pub ended_at: Option<DateTime<Utc>>,
-}
+///
+/// Uses the canonical AllternitOS `placement.schema.json` type so Cloud does
+/// not maintain a parallel view struct.
+pub use allternitos_cloud_contracts::Placement as FabricPlacementSummary;
 
 /// A Fabric usage event as seen by admins.
 ///
@@ -96,11 +83,12 @@ impl ResourceManager {
     ) -> Result<Option<FabricPlacementSummary>, rusqlite::Error> {
         let conn = self.db.connect()?;
         let mut stmt = conn.prepare(
-            "SELECT id, provider_kind, provider_resource_id, offer_id, instance_type, region,
-                    retail_price_per_hour_cents, provider_cost_per_hour_cents,
+            "SELECT id, resource_id, provider_kind, provider_resource_id, offer_id, instance_type,
+                    region, retail_price_per_hour_cents, provider_cost_per_hour_cents,
                     retail_price_per_request_cents, provider_cost_per_request_cents,
                     retail_price_per_token_cents, provider_cost_per_token_cents,
-                    started_at, ended_at
+                    hold_id, node_id, ipv4, endpoint, status, termination_reason,
+                    labels_json, started_at, ended_at, created_at, updated_at
              FROM fabric_placements
              WHERE resource_id = ?1
              ORDER BY started_at DESC, id DESC
@@ -152,32 +140,34 @@ impl ResourceManager {
         limit: usize,
     ) -> Result<Vec<FabricPlacementSummary>, rusqlite::Error> {
         let conn = self.db.connect()?;
+        let columns = "p.id, p.resource_id, p.provider_kind, p.provider_resource_id, p.offer_id, p.instance_type,
+                       p.region, p.retail_price_per_hour_cents, p.provider_cost_per_hour_cents,
+                       p.retail_price_per_request_cents, p.provider_cost_per_request_cents,
+                       p.retail_price_per_token_cents, p.provider_cost_per_token_cents,
+                       p.hold_id, p.node_id, p.ipv4, p.endpoint, p.status, p.termination_reason,
+                       p.labels_json, p.started_at, p.ended_at, p.created_at, p.updated_at";
         let (sql, params): (&str, Vec<Box<dyn rusqlite::ToSql>>) = if let Some(resource_id) = resource_id {
             (
-                "SELECT p.id, p.provider_kind, p.provider_resource_id, p.offer_id, p.instance_type, p.region,
-                        p.retail_price_per_hour_cents, p.provider_cost_per_hour_cents,
-                        p.retail_price_per_request_cents, p.provider_cost_per_request_cents,
-                        p.retail_price_per_token_cents, p.provider_cost_per_token_cents,
-                        p.started_at, p.ended_at
-                 FROM fabric_placements p
-                 JOIN fabric_resources r ON r.id = p.resource_id
-                 WHERE r.organization_id = ?1 AND p.resource_id = ?2
-                 ORDER BY p.started_at DESC, p.id DESC
-                 LIMIT ?3",
+                &format!(
+                    "SELECT {columns}
+                     FROM fabric_placements p
+                     JOIN fabric_resources r ON r.id = p.resource_id
+                     WHERE r.organization_id = ?1 AND p.resource_id = ?2
+                     ORDER BY p.started_at DESC, p.id DESC
+                     LIMIT ?3"
+                ),
                 vec![Box::new(organization_id.to_string()), Box::new(resource_id.to_string()), Box::new(limit as i64)],
             )
         } else {
             (
-                "SELECT p.id, p.provider_kind, p.provider_resource_id, p.offer_id, p.instance_type, p.region,
-                        p.retail_price_per_hour_cents, p.provider_cost_per_hour_cents,
-                        p.retail_price_per_request_cents, p.provider_cost_per_request_cents,
-                        p.retail_price_per_token_cents, p.provider_cost_per_token_cents,
-                        p.started_at, p.ended_at
-                 FROM fabric_placements p
-                 JOIN fabric_resources r ON r.id = p.resource_id
-                 WHERE r.organization_id = ?1
-                 ORDER BY p.started_at DESC, p.id DESC
-                 LIMIT ?2",
+                &format!(
+                    "SELECT {columns}
+                     FROM fabric_placements p
+                     JOIN fabric_resources r ON r.id = p.resource_id
+                     WHERE r.organization_id = ?1
+                     ORDER BY p.started_at DESC, p.id DESC
+                     LIMIT ?2"
+                ),
                 vec![Box::new(organization_id.to_string()), Box::new(limit as i64)],
             )
         };
@@ -239,7 +229,8 @@ impl ResourceManager {
         )?;
         tx.execute(
             "UPDATE fabric_placements
-             SET ended_at = CURRENT_TIMESTAMP, termination_reason = ?1
+             SET ended_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP,
+                 status = 'ended', termination_reason = ?1
              WHERE resource_id = ?2 AND ended_at IS NULL",
             rusqlite::params![reason, resource_id],
         )?;
@@ -265,21 +256,43 @@ impl ResourceManager {
     }
 
     fn parse_placement(row: &rusqlite::Row) -> Result<FabricPlacementSummary, rusqlite::Error> {
+        fn money_cents(cents: i64) -> Option<allternitos_cloud_contracts::Money> {
+            if cents > 0 {
+                Some(allternitos_cloud_contracts::Money {
+                    currency: "USD".to_string(),
+                    minor_units: cents as u64,
+                })
+            } else {
+                None
+            }
+        }
+        let labels_json: String = row.get("labels_json")?;
+        let labels: HashMap<String, String> = serde_json::from_str(&labels_json).unwrap_or_default();
         Ok(FabricPlacementSummary {
             id: row.get("id")?,
+            resource_id: row.get("resource_id")?,
+            node_id: row.get("node_id")?,
+            offer_id: row.get::<_, Option<String>>("offer_id")?.unwrap_or_default(),
             provider_kind: row.get("provider_kind")?,
             provider_resource_id: row.get("provider_resource_id")?,
-            offer_id: row.get("offer_id")?,
-            instance_type: row.get("instance_type")?,
-            region: row.get("region")?,
-            retail_price_per_hour_cents: row.get("retail_price_per_hour_cents")?,
-            provider_cost_per_hour_cents: row.get("provider_cost_per_hour_cents")?,
-            retail_price_per_request_cents: row.get("retail_price_per_request_cents")?,
-            provider_cost_per_request_cents: row.get("provider_cost_per_request_cents")?,
-            retail_price_per_token_cents: row.get("retail_price_per_token_cents")?,
-            provider_cost_per_token_cents: row.get("provider_cost_per_token_cents")?,
+            region: row.get::<_, Option<String>>("region")?.unwrap_or_default(),
+            instance_type: row.get::<_, Option<String>>("instance_type")?.unwrap_or_default(),
+            ipv4: row.get("ipv4")?,
+            endpoint: row.get("endpoint")?,
+            retail_price_per_hour: money_cents(row.get("retail_price_per_hour_cents")?),
+            provider_cost_per_hour: money_cents(row.get("provider_cost_per_hour_cents")?),
+            retail_price_per_request: money_cents(row.get("retail_price_per_request_cents")?),
+            provider_cost_per_request: money_cents(row.get("provider_cost_per_request_cents")?),
+            retail_price_per_token: money_cents(row.get("retail_price_per_token_cents")?),
+            provider_cost_per_token: money_cents(row.get("provider_cost_per_token_cents")?),
+            hold_id: row.get("hold_id")?,
+            status: row.get("status")?,
             started_at: Self::parse_dt(row, "started_at")?,
             ended_at: Self::parse_dt_optional(row, "ended_at")?,
+            termination_reason: row.get("termination_reason")?,
+            created_at: Self::parse_dt_optional(row, "created_at")?,
+            updated_at: Self::parse_dt_optional(row, "updated_at")?,
+            labels,
         })
     }
 

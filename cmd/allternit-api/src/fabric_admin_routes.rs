@@ -413,19 +413,30 @@ fn resource_json(resource: &FabricResource) -> Value {
 }
 
 fn placement_json(placement: &FabricPlacementSummary) -> Value {
+    fn cents(maybe: &Option<allternitos_cloud_contracts::Money>) -> Option<i64> {
+        maybe.as_ref().map(|m| m.minor_units as i64)
+    }
     json!({
         "id": placement.id,
+        "resource_id": placement.resource_id,
         "provider_kind": placement.provider_kind,
         "provider_resource_id": placement.provider_resource_id,
+        "offer_id": placement.offer_id,
+        "instance_type": placement.instance_type,
         "region": placement.region,
-        "retail_price_per_hour_cents": placement.retail_price_per_hour_cents,
-        "provider_cost_per_hour_cents": placement.provider_cost_per_hour_cents,
-        "retail_price_per_request_cents": placement.retail_price_per_request_cents,
-        "provider_cost_per_request_cents": placement.provider_cost_per_request_cents,
-        "retail_price_per_token_cents": placement.retail_price_per_token_cents,
-        "provider_cost_per_token_cents": placement.provider_cost_per_token_cents,
+        "node_id": placement.node_id,
+        "ipv4": placement.ipv4,
+        "endpoint": placement.endpoint,
+        "retail_price_per_hour_cents": cents(&placement.retail_price_per_hour),
+        "provider_cost_per_hour_cents": cents(&placement.provider_cost_per_hour),
+        "retail_price_per_request_cents": cents(&placement.retail_price_per_request),
+        "provider_cost_per_request_cents": cents(&placement.provider_cost_per_request),
+        "retail_price_per_token_cents": cents(&placement.retail_price_per_token),
+        "provider_cost_per_token_cents": cents(&placement.provider_cost_per_token),
+        "status": placement.status,
         "started_at": placement.started_at.to_rfc3339(),
         "ended_at": placement.ended_at.map(|d| d.to_rfc3339()),
+        "termination_reason": placement.termination_reason,
     })
 }
 

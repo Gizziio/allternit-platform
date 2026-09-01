@@ -462,19 +462,30 @@ fn resource_json(resource: &FabricResource, placement: Option<&FabricPlacementSu
     });
 
     if let Some(p) = placement {
+        fn cents(maybe: &Option<allternitos_cloud_contracts::Money>) -> Option<i64> {
+            maybe.as_ref().map(|m| m.minor_units as i64)
+        }
         value["placement"] = json!({
             "id": p.id,
+            "resource_id": p.resource_id,
             "provider_kind": p.provider_kind,
             "provider_resource_id": p.provider_resource_id,
+            "offer_id": p.offer_id,
+            "instance_type": p.instance_type,
             "region": p.region,
-            "retail_price_per_hour_cents": p.retail_price_per_hour_cents,
-            "provider_cost_per_hour_cents": p.provider_cost_per_hour_cents,
-            "retail_price_per_request_cents": p.retail_price_per_request_cents,
-            "provider_cost_per_request_cents": p.provider_cost_per_request_cents,
-            "retail_price_per_token_cents": p.retail_price_per_token_cents,
-            "provider_cost_per_token_cents": p.provider_cost_per_token_cents,
+            "node_id": p.node_id,
+            "ipv4": p.ipv4,
+            "endpoint": p.endpoint,
+            "retail_price_per_hour_cents": cents(&p.retail_price_per_hour),
+            "provider_cost_per_hour_cents": cents(&p.provider_cost_per_hour),
+            "retail_price_per_request_cents": cents(&p.retail_price_per_request),
+            "provider_cost_per_request_cents": cents(&p.provider_cost_per_request),
+            "retail_price_per_token_cents": cents(&p.retail_price_per_token),
+            "provider_cost_per_token_cents": cents(&p.provider_cost_per_token),
+            "status": p.status,
             "started_at": p.started_at.to_rfc3339(),
             "ended_at": p.ended_at.map(|d| d.to_rfc3339()),
+            "termination_reason": p.termination_reason,
         });
     }
 
@@ -1083,8 +1094,8 @@ mod tests {
         let resource = manager.get(resource_id).unwrap().expect("resource exists");
         assert_eq!(resource.provider_kind.as_deref(), Some("os_fake"));
         let placement = manager.latest_placement(resource_id).unwrap().expect("placement exists");
-        assert_eq!(placement.offer_id.as_deref(), Some("off_os_abc"));
-        assert_eq!(placement.instance_type.as_deref(), Some("os-fake-small"));
+        assert_eq!(placement.offer_id, "off_os_abc");
+        assert_eq!(placement.instance_type, "os-fake-small");
     }
 
     /// Spawn the real AllternitOS control-plane binary with the fake provider
@@ -1189,12 +1200,12 @@ mod tests {
             .unwrap()
             .expect("placement exists");
         assert!(
-            placement.offer_id.as_deref().map_or(false, |id| id.starts_with("off_")),
+            !placement.offer_id.is_empty() && placement.offer_id.starts_with("off_"),
             "expected real offer_id, got {:?}",
             placement.offer_id
         );
         assert!(
-            placement.instance_type.as_deref().map_or(false, |t| !t.is_empty()),
+            !placement.instance_type.is_empty(),
             "expected real instance_type, got {:?}",
             placement.instance_type
         );

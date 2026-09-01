@@ -838,12 +838,12 @@ mod tests {
             .unwrap()
             .expect("placement exists");
         assert!(
-            placement.offer_id.as_deref().map_or(false, |id| id.starts_with("off_")),
+            !placement.offer_id.is_empty() && placement.offer_id.starts_with("off_"),
             "expected real offer_id, got {:?}",
             placement.offer_id
         );
         assert!(
-            placement.instance_type.as_deref().map_or(false, |t| !t.is_empty()),
+            !placement.instance_type.is_empty(),
             "expected real instance_type, got {:?}",
             placement.instance_type
         );

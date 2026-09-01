@@ -3,7 +3,7 @@
 //! This module imports the canonical AllternitOS Layer 1 contracts from
 //! `allternitos-cloud-contracts` and provides conversion functions from Cloud
 //! storage shapes into those canonical types. Cloud no longer defines parallel
-//! view structs for Node/Resource/Placement/UsageEvent.
+//! view structs for Assignment, Placement, and UsageEvent.
 //!
 //! Cloud-specific product types (e.g. `ModelRequest`) remain here when they are
 //! not part of the canonical OS contract surface.
@@ -15,7 +15,6 @@
 //! object kinds without parsing the payload:
 //!
 //! - `node_`  -> `NodeCapabilityRecord`
-//! - `res_`   -> `Resource` (derived from `FabricResource`)
 //! - `plc_`   -> `Placement`
 //! - `asg_`   -> `Assignment`
 //! - `uev_`   -> `UsageEvent`
@@ -31,7 +30,7 @@
 
 use crate::fabric::model_catalog::FabricModelRecord;
 use crate::fabric::node_registry::{FabricNodeRecord, NodeCapacity};
-use crate::fabric::resources::{FabricPlacementSummary, FabricResource};
+
 use crate::fabric::sku::ResourceClass as CloudResourceClass;
 use crate::fabric_model_routes::ResponsesRequest;
 use allternitos_cloud_contracts as contracts;
@@ -202,82 +201,6 @@ pub fn offer_from_cloud_offer(
         estimated_ready_secs: offer.estimated_ready_secs,
         available_until: Utc::now() + Duration::hours(1),
         raw_metadata: offer.raw_metadata.clone().and_then(|v| v.as_object().cloned()),
-        labels: HashMap::new(),
-    }
-}
-
-/// Convert a Cloud placement summary into a canonical `Placement`.
-pub fn placement_from_fabric_placement(
-    placement: &FabricPlacementSummary,
-    resource: Option<&FabricResource>,
-) -> contracts::Placement {
-    let resource_id = resource
-        .map(|r| with_prefix(&r.id, "res_"))
-        .unwrap_or_else(|| "res_unknown".to_string());
-    let status = if placement.ended_at.is_some() {
-        "ended"
-    } else {
-        "active"
-    };
-
-    let offer_id = placement
-        .offer_id
-        .as_deref()
-        .filter(|s| !s.is_empty())
-        .map(|id| with_prefix(id, "off_"))
-        .unwrap_or_else(|| "off_unknown".to_string());
-    let instance_type = placement
-        .instance_type
-        .clone()
-        .filter(|s| !s.is_empty())
-        .unwrap_or_else(|| "unknown".to_string());
-
-    contracts::Placement {
-        id: with_prefix(&placement.id, "plc_"),
-        resource_id,
-        node_id: None,
-        offer_id,
-        provider_kind: placement.provider_kind.clone(),
-        provider_resource_id: placement.provider_resource_id.clone(),
-        region: placement.region.clone().unwrap_or_else(|| "unknown".to_string()),
-        instance_type,
-        ipv4: None,
-        endpoint: None,
-        retail_price_per_hour: Some(contracts::Money {
-            currency: "USD".to_string(),
-            minor_units: placement.retail_price_per_hour_cents.max(0) as u64,
-        }),
-        provider_cost_per_hour: Some(contracts::Money {
-            currency: "USD".to_string(),
-            minor_units: placement.provider_cost_per_hour_cents.max(0) as u64,
-        }),
-        retail_price_per_request: Some(contracts::Money {
-            currency: "USD".to_string(),
-            minor_units: placement.retail_price_per_request_cents.max(0) as u64,
-        })
-        .filter(|m| m.minor_units > 0),
-        provider_cost_per_request: Some(contracts::Money {
-            currency: "USD".to_string(),
-            minor_units: placement.provider_cost_per_request_cents.max(0) as u64,
-        })
-        .filter(|m| m.minor_units > 0),
-        retail_price_per_token: Some(contracts::Money {
-            currency: "USD".to_string(),
-            minor_units: placement.retail_price_per_token_cents.max(0) as u64,
-        })
-        .filter(|m| m.minor_units > 0),
-        provider_cost_per_token: Some(contracts::Money {
-            currency: "USD".to_string(),
-            minor_units: placement.provider_cost_per_token_cents.max(0) as u64,
-        })
-        .filter(|m| m.minor_units > 0),
-        hold_id: None,
-        status: status.to_string(),
-        started_at: placement.started_at,
-        ended_at: placement.ended_at,
-        termination_reason: None,
-        created_at: Some(placement.started_at),
-        updated_at: placement.ended_at,
         labels: HashMap::new(),
     }
 }
@@ -461,69 +384,6 @@ mod tests {
         assert_eq!(mapped.resource_class_id, "res_compute.s");
         let json = serde_json::to_value(&mapped).unwrap();
         assert_eq!(json["provider_kind"], "fake");
-    }
-
-    #[test]
-    fn placement_mapping_prefixes_ids_and_uses_real_offer_id() {
-        let placement = FabricPlacementSummary {
-            id: "plc-uuid".to_string(),
-            provider_kind: "fake".to_string(),
-            provider_resource_id: Some("fake-1".to_string()),
-            offer_id: Some("off_fake_abc123".to_string()),
-            instance_type: Some("fake-cpu-small".to_string()),
-            region: Some("us-east".to_string()),
-            retail_price_per_hour_cents: 5,
-            provider_cost_per_hour_cents: 3,
-            retail_price_per_request_cents: 0,
-            provider_cost_per_request_cents: 0,
-            retail_price_per_token_cents: 0,
-            provider_cost_per_token_cents: 0,
-            started_at: Utc::now(),
-            ended_at: None,
-        };
-        let resource = FabricResource {
-            id: "res-uuid".to_string(),
-            organization_id: "org-1".to_string(),
-            kind: "compute".to_string(),
-            class: "s".to_string(),
-            display_name: None,
-            status: "active".to_string(),
-            provider_kind: Some("fake".to_string()),
-            provider_resource_id: Some("fake-1".to_string()),
-            region: Some("us-east".to_string()),
-            requested_at: Utc::now(),
-            provisioned_at: Some(Utc::now()),
-            terminated_at: None,
-        };
-        let mapped = placement_from_fabric_placement(&placement, Some(&resource));
-        assert!(mapped.id.starts_with("plc_"));
-        assert_eq!(mapped.resource_id, "res_res-uuid");
-        assert_eq!(mapped.offer_id, "off_fake_abc123");
-        assert_eq!(mapped.instance_type, "fake-cpu-small");
-        assert_eq!(mapped.status, "active");
-    }
-
-    #[test]
-    fn placement_mapping_falls_back_to_unknown_when_offer_id_missing() {
-        let placement = FabricPlacementSummary {
-            id: "plc-uuid".to_string(),
-            provider_kind: "fake".to_string(),
-            provider_resource_id: Some("fake-1".to_string()),
-            offer_id: None,
-            instance_type: None,
-            region: Some("us-east".to_string()),
-            retail_price_per_hour_cents: 5,
-            provider_cost_per_hour_cents: 3,
-            retail_price_per_request_cents: 0,
-            provider_cost_per_request_cents: 0,
-            retail_price_per_token_cents: 0,
-            provider_cost_per_token_cents: 0,
-            started_at: Utc::now(),
-            ended_at: None,
-        };
-        let mapped = placement_from_fabric_placement(&placement, None);
-        assert_eq!(mapped.offer_id, "off_unknown");
-        assert_eq!(mapped.instance_type, "unknown");
     }
 
     #[test]
