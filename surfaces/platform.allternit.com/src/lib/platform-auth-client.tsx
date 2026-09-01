@@ -286,8 +286,9 @@ function ClerkPlatformAuthBridge({ children }: { children: ReactNode }) {
 
     // Register the Clerk token provider so every API request gets a fresh
     // JWT on demand. This avoids race conditions where a page's useEffect
-    // fires before the first token sync completes.
-    api.setTokenProvider(clerkAuth.getToken);
+    // fires before the first token sync completes. The arrow function
+    // preserves the Clerk auth object's `this` binding.
+    api.setTokenProvider(() => clerkAuth.getToken());
 
     let active = true;
     const syncToken = async () => {
