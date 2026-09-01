@@ -1,0 +1,10 @@
+import { chromium } from 'playwright';
+const ORIGIN='https://ai.allternit.com';
+const browser=await chromium.launch({headless:true});
+const ctx=await browser.newContext({viewport:{width:1440,height:900}});
+const page=await ctx.newPage();
+await page.goto(`${ORIGIN}/shell`,{waitUntil:'domcontentloaded',timeout:30000});
+await page.waitForTimeout(3000);
+const imgs=await page.$$eval('img',imgs=>imgs.map(i=>({src:i.src,alt:i.alt,naturalWidth:i.naturalWidth,naturalHeight:i.naturalHeight,complete:i.complete})));
+console.log('imgs:',JSON.stringify(imgs,null,2));
+await browser.close();

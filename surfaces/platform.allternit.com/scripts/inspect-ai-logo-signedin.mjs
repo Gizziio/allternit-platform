@@ -1,0 +1,22 @@
+import { chromium } from 'playwright';
+const ORIGIN='https://ai.allternit.com';
+const EMAIL='cartlidge.joseph@yahoo.com';
+const PASS='Tyhvix-gafho2-bofxog';
+const browser=await chromium.launch({headless:true});
+const ctx=await browser.newContext({viewport:{width:1440,height:900}});
+const page=await ctx.newPage();
+await page.goto(`${ORIGIN}/sign-in?redirect_url=${encodeURIComponent(`${ORIGIN}/shell`)}`,{waitUntil:'domcontentloaded',timeout:30000});
+await page.waitForTimeout(1500);
+await page.getByRole('textbox',{name:'Email address'}).first().fill(EMAIL);
+await page.getByRole('button',{name:'Continue',exact:true}).first().click();
+await page.locator('input[name=password]').first().waitFor({state:'visible',timeout:20000});
+await page.getByRole('textbox',{name:'Password'}).first().fill(PASS);
+await page.getByRole('button',{name:'Continue',exact:true}).first().click();
+await page.waitForURL(`${ORIGIN}/shell`,{timeout:30000});
+await page.waitForTimeout(3000);
+const imgs=await page.$$eval('img',imgs=>imgs.map(i=>({src:i.src,alt:i.alt,naturalWidth:i.naturalWidth,naturalHeight:i.naturalHeight,complete:i.complete})));
+console.log('imgs:',JSON.stringify(imgs,null,2));
+// also get elements with background-image style containing brand/logo
+const bg=await page.$$eval('*',els=>els.filter(e=>{const s=getComputedStyle(e);return s.backgroundImage&&s.backgroundImage.includes('brand');}).map(e=>({tag:e.tagName,class:e.className,bg:getComputedStyle(e).backgroundImage})));
+console.log('bg:',JSON.stringify(bg,null,2));
+await browser.close();

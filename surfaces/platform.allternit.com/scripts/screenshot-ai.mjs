@@ -1,0 +1,16 @@
+import { chromium } from 'playwright';
+const browser=await chromium.launch({headless:true});
+const ctx=await browser.newContext({viewport:{width:1440,height:900}});
+const page=await ctx.newPage();
+const logs=[];
+page.on('console',msg=>logs.push(`${msg.type()}: ${msg.text()}`));
+page.on('pageerror',err=>logs.push(`pageerror: ${err.message}`));
+page.on('requestfailed',req=>logs.push(`requestfailed: ${req.url()} ${req.failure()?.errorText}`));
+await page.goto('https://ai.allternit.com/',{waitUntil:'domcontentloaded',timeout:30000});
+await page.waitForTimeout(5000);
+console.log('URL:',page.url());
+const text=await page.evaluate(()=>document.body.innerText.slice(0,1500));
+console.log('BODY:',text);
+await page.screenshot({path:'surfaces/platform.allternit.com/screenshots/ai-home.png',fullPage:false});
+console.log('LOGS:',logs.join('\n'));
+await browser.close();
