@@ -41,6 +41,7 @@ import {
   Terminal,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
+import { getLogosAppsUrl } from "@/lib/design/logos-apps";
 import type { ModelOption } from "@/components/prompt-kit/prompt-model-selector";
 import type {
   ProviderAuthStatus,
@@ -86,19 +87,23 @@ function resolveProfileId(
 
 function ProviderIcon({ providerId }: { providerId: string }) {
   const meta = getProviderMeta(providerId);
-  const [error, setError] = useState(false);
-  const src = meta.icon ? `/assets/runtime-logos/${meta.icon}` : "";
+  const [attempt, setAttempt] = useState(0);
 
-  if (!src || error) {
+  const sources = [
+    getLogosAppsUrl(meta.name),
+    meta.icon ? `/assets/runtime-logos/${meta.icon}` : null,
+  ].filter(Boolean) as string[];
+
+  if (attempt >= sources.length) {
     return <Terminal size={20} className="text-[var(--ui-text-muted)] shrink-0" />;
   }
 
   return (
     <img
-      src={src}
+      src={sources[attempt]}
       alt=""
       className="size-5 object-contain shrink-0"
-      onError={() => setError(true)}
+      onError={() => setAttempt((i) => i + 1)}
     />
   );
 }

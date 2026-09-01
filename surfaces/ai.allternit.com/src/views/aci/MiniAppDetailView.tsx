@@ -6,7 +6,6 @@ import {
   ArrowSquareOut,
   CircleNotch,
   CloudArrowUp,
-  Cpu,
   GithubLogo,
   Globe,
   PushPin,
@@ -22,6 +21,7 @@ import {
   updateMiniAppStatus,
 } from "./mini-app-registry";
 import { resolveMiniAppPresentation } from "./mini-app-presentation";
+import { MiniAppIcon } from "./MiniAppIcon";
 import { MiniAppConfigureModal } from "./MiniAppConfigureModal";
 import { MiniAppConnectionsPanel } from "./MiniAppConnectionsPanel";
 import { MiniAppPublishModal } from "./MiniAppPublishModal";
@@ -170,15 +170,7 @@ export function MiniAppDetailView({
         <div className="flex flex-col gap-6 border-b border-[var(--border-subtle)] pb-8 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-5">
             <div className="flex size-20 items-center justify-center overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-hover)]">
-              {app.repo ? (
-                <img
-                  src={`https://github.com/${app.repo.split("/")[0]}.png?size=96`}
-                  alt=""
-                  className="size-full object-cover"
-                />
-              ) : (
-                <Cpu size={36} weight="duotone" />
-              )}
+              <MiniAppIcon app={app} size={80} />
             </div>
             <div>
               <span className="rounded-full bg-[var(--surface-hover)] px-2.5 py-1 text-[10px] font-semibold uppercase text-[var(--text-tertiary)]">
