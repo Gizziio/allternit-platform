@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useTheme } from "@/lib/theme";
 
 export type PlanId = "free" | "plus" | "super" | "ultra";
 
@@ -94,6 +95,8 @@ export function PlanPicker({
   title?: string;
   onSubscribe?: (planId: PlanId) => void;
 }) {
+  const { resolved } = useTheme();
+  const isDark = resolved === "dark";
   const inferred = useMemo(() => planFromDisplayName(currentPlanName), [currentPlanName]);
   const [selected, setSelected] = useState<PlanId>(inferred);
 
@@ -122,8 +125,11 @@ export function PlanPicker({
         {PLANS.map((plan) => {
           const isCurrent = selected === plan.id;
           const hero = plan.hero;
-          const bg = hero ? CORAL : GRAPHITE;
-          const text = IVORY;
+          const bg = hero ? CORAL : isDark ? GRAPHITE : "var(--bg-secondary)";
+          const text = hero ? IVORY : isDark ? IVORY : "var(--text-primary)";
+          const mutedText = hero ? IVORY : isDark ? IVORY : "var(--text-secondary)";
+          const buttonBg = hero ? "#0A0A0A" : isDark ? IVORY : "var(--text-primary)";
+          const buttonText = hero ? IVORY : isDark ? "#0A0A0A" : "var(--bg-primary)";
 
           return (
             <article
@@ -163,7 +169,7 @@ export function PlanPicker({
                 />
               </div>
 
-              <ul className="mt-4 flex-1 space-y-1.5 text-[11px] font-medium tracking-[0.08em]">
+              <ul className="mt-4 flex-1 space-y-1.5 text-[11px] font-medium tracking-[0.08em]" style={{ color: mutedText }}>
                 {plan.features.map((feature) => (
                   <li key={feature} className="flex items-start gap-2">
                     <span className="mt-1 inline-block size-1.5 shrink-0 bg-current opacity-80" />
@@ -183,8 +189,8 @@ export function PlanPicker({
                 }}
                 className="mt-5 self-start rounded-md px-4 py-2 text-[11px] font-semibold tracking-[0.14em] transition-opacity hover:opacity-90"
                 style={{
-                  backgroundColor: hero ? "#0A0A0A" : IVORY,
-                  color: hero ? IVORY : "#0A0A0A",
+                  backgroundColor: buttonBg,
+                  color: buttonText,
                 }}
               >
                 {isCurrent && !onSubscribe ? "CURRENT" : "SUBSCRIBE"}

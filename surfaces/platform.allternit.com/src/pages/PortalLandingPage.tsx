@@ -9,7 +9,6 @@ import {
   Key,
   Lightning,
   LockKey,
-  Plus,
   PuzzlePiece,
   Rocket,
   ShieldCheck,
@@ -126,16 +125,16 @@ export function PortalLandingPage() {
   return (
     <PublicPageShell>
       {/* Hero */}
-      <section className="relative overflow-hidden border-b border-[var(--border-subtle)] bg-[#0A0A0A] px-6 pb-16 pt-12 md:pb-24 md:pt-20">
+      <section className="relative overflow-hidden border-b border-[var(--border-subtle)] bg-[var(--surface-canvas)] px-6 pb-16 pt-12 md:pb-24 md:pt-20">
         <div
           className="pointer-events-none absolute inset-0 -z-10"
           style={{
             backgroundImage:
-              "radial-gradient(circle at 70% 20%, rgba(217,119,87,0.18), transparent 35%), radial-gradient(circle at 30% 80%, rgba(217,119,87,0.08), transparent 30%)",
+              "radial-gradient(circle at 70% 20%, rgba(217,119,87,0.14), transparent 35%), radial-gradient(circle at 30% 80%, rgba(217,119,87,0.06), transparent 30%)",
           }}
         />
         <div
-          className="pointer-events-none absolute inset-0 -z-10 text-[#FDF8F3]"
+          className="pointer-events-none absolute inset-0 -z-10 text-[var(--text-primary)]"
           style={{
             backgroundImage: "radial-gradient(circle, currentColor 1px, transparent 1px)",
             backgroundSize: "32px 32px",
@@ -149,10 +148,10 @@ export function PortalLandingPage() {
             <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#D97757]/30 bg-[#D97757]/10 px-3 py-1 text-[11px] font-semibold tracking-[0.08em] text-[#D97757]">
               <Rocket size={12} weight="fill" /> Allternit Cloud is in beta
             </div>
-            <h1 className="text-[40px] font-bold leading-[1.05] tracking-tight text-[#FDF8F3] md:text-[56px] lg:text-[64px]">
+            <h1 className="text-[40px] font-bold leading-[1.05] tracking-tight text-[var(--text-primary)] md:text-[56px] lg:text-[64px]">
               Build with local and cloud models on one platform
             </h1>
-            <p className="mt-5 max-w-xl text-[16px] leading-relaxed text-[#A1A1AA] md:text-[18px]">
+            <p className="mt-5 max-w-xl text-[16px] leading-relaxed text-[var(--text-secondary)] md:text-[18px]">
               A single account, unified credits, and managed compute for AI apps. Run models locally,
               burst to the cloud, and add hosted tools without wiring providers together.
             </p>
@@ -177,26 +176,28 @@ export function PortalLandingPage() {
                       if (clerk?.openSignIn) clerk.openSignIn({ redirectUrl: "/" });
                       else window.location.href = `/sign-in?redirect_url=${encodeURIComponent("/")}`;
                     }}
-                    className="inline-flex items-center gap-2 rounded-lg border border-[#FDF8F3]/20 px-5 py-2.5 text-[14px] font-semibold text-[#FDF8F3] transition-colors hover:bg-[#FDF8F3]/5"
+                    className="inline-flex items-center gap-2 rounded-lg border border-[var(--border-default)] px-5 py-2.5 text-[14px] font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-hover)]"
                   >
                     Sign in
                   </button>
                 </>
               )}
             </div>
-            <p className="mt-4 text-[12px] text-[#71717A]">Free tier includes local models and standard rate limits.</p>
+            <p className="mt-4 text-[12px] text-[var(--text-tertiary)]">
+              Free tier includes local models and standard rate limits.
+            </p>
           </div>
 
           <div className="relative">
-            <div className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-[#D97757]/30 via-transparent to-[#D97757]/10 blur-xl" />
-            <div className="relative overflow-hidden rounded-2xl border border-[#FDF8F3]/10 bg-[#111111] shadow-2xl">
-              <div className="flex items-center gap-2 border-b border-[#FDF8F3]/10 px-4 py-3">
+            <div className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-[#D97757]/20 via-transparent to-[#D97757]/10 blur-xl" />
+            <div className="relative overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] shadow-2xl">
+              <div className="flex items-center gap-2 border-b border-[var(--border-subtle)] px-4 py-3">
                 <div className="size-2.5 rounded-full bg-[#D97757]" />
-                <div className="size-2.5 rounded-full bg-[#FDF8F3]/20" />
-                <div className="size-2.5 rounded-full bg-[#FDF8F3]/20" />
-                <span className="ml-2 text-[11px] text-[#71717A]">allternit-cloud.sh</span>
+                <div className="size-2.5 rounded-full bg-[var(--border-default)]" />
+                <div className="size-2.5 rounded-full bg-[var(--border-default)]" />
+                <span className="ml-2 text-[11px] text-[var(--text-tertiary)]">allternit-cloud.sh</span>
               </div>
-              <pre className="overflow-x-auto p-5 text-[12px] leading-relaxed text-[#E5E5E5] md:text-[13px]">
+              <pre className="overflow-x-auto p-5 text-[12px] leading-relaxed text-[var(--text-primary)] md:text-[13px]">
                 <code>{CODE_SNIPPET}</code>
               </pre>
             </div>
@@ -289,16 +290,16 @@ export function PortalLandingPage() {
       </section>
 
       {/* Plans */}
-      <section className="border-y border-[var(--border-subtle)] bg-[#0A0A0A] px-6 py-16 md:py-24">
+      <section className="border-y border-[var(--border-subtle)] bg-[var(--surface-canvas)] px-6 py-16 md:py-24">
         <div className="mx-auto max-w-6xl">
           <div className="max-w-2xl">
             <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#D97757]/30 bg-[#D97757]/10 px-3 py-1 text-[11px] font-semibold tracking-[0.08em] text-[#D97757]">
               <LockKey size={12} /> Beta pricing
             </div>
-            <h2 className="text-[28px] font-bold tracking-tight text-[#FDF8F3] md:text-[36px]">
+            <h2 className="text-[28px] font-bold tracking-tight text-[var(--text-primary)] md:text-[36px]">
               Simple, credit-based plans
             </h2>
-            <p className="mt-3 text-[15px] leading-relaxed text-[#A1A1AA] md:text-[16px]">
+            <p className="mt-3 text-[15px] leading-relaxed text-[var(--text-secondary)] md:text-[16px]">
               Start free. Upgrade when you need cloud models, hosted tools, or higher rate limits. No hidden provider fees.
             </p>
           </div>
