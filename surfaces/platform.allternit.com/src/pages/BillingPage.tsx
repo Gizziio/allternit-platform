@@ -1,10 +1,8 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  CreditCard,
   Receipt,
   ArrowSquareOut,
   Gauge,
-  Lightning,
   WarningCircle,
   ArrowsClockwise,
 } from "@phosphor-icons/react";
@@ -14,18 +12,20 @@ import { EmptyState } from "@/components/settings/EmptyState";
 import { SkeletonRow } from "@/components/settings/SkeletonRow";
 import { QUIET_BUTTON_CLASS } from "@/components/settings/buttonStyles";
 import { formatApiError } from "@/lib/api-client";
+import { PlanPicker } from "@/components/PlanPicker";
 
 function formatHours(seconds: number): string {
   if (seconds < 3600) return `${Math.max(0, Math.round(seconds / 60))} min`;
   return `${(seconds / 3600).toFixed(seconds < 36_000 ? 1 : 0)} hr`;
 }
 
-function safePlanUrl(value?: string) {
+function safePortalUrl(value?: string) {
+  if (!value) return null;
   try {
-    const url = new URL(value || "https://allternit.com/pricing");
-    return url.protocol === "https:" ? url.toString() : "https://allternit.com/pricing";
+    const url = new URL(value);
+    return url.protocol === "https:" ? url.toString() : null;
   } catch {
-    return "https://allternit.com/pricing";
+    return null;
   }
 }
 
@@ -67,10 +67,12 @@ export function BillingPage() {
     : 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
+      <PlanPicker currentPlanName={entitlement?.planDisplayName} />
+
       <div>
         <h1 className="text-[22px] font-semibold tracking-tight text-[var(--text-primary)]">
-          Billing
+          Usage & invoices
         </h1>
         <p className="text-[13px] text-[var(--text-secondary)] mt-1">
           Manage invoices, payment methods, and organization billing details.
@@ -150,29 +152,24 @@ export function BillingPage() {
             </div>
           ) : (
             <div className="text-[13px] text-[var(--text-secondary)]">
-              No hosted runtime quota on the current plan. Upgrade to enable managed compute.
+              No hosted runtime quota on the current plan. Pick a paid tier above to enable managed compute.
             </div>
           )}
 
           <div className="flex items-center gap-2 mt-5 pt-4 border-t border-[var(--border-subtle)]">
-            <a
-              href="https://allternit.com/pricing"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-[13px] font-semibold bg-[var(--accent-primary)] text-[var(--ui-text-inverse)] hover:brightness-110 transition-all"
-            >
-              <Lightning size={14} /> Upgrade plan
-            </a>
-            {entitlement?.billingPortalUrl && (
-              <a
-                href={safePlanUrl(entitlement.billingPortalUrl)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={QUIET_BUTTON_CLASS}
-              >
-                Billing portal <ArrowSquareOut size={13} />
-              </a>
-            )}
+            {(() => {
+              const portalUrl = safePortalUrl(entitlement?.billingPortalUrl);
+              return portalUrl ? (
+                <a
+                  href={portalUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={QUIET_BUTTON_CLASS}
+                >
+                  Billing portal <ArrowSquareOut size={13} />
+                </a>
+              ) : null;
+            })()}
             <button
               type="button"
               onClick={() => void load()}

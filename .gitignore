@@ -11,6 +11,7 @@ rails/reference/beads/
 *.log
 *.png
 !surfaces/ai.allternit.com/public/remote-control-*.png
+!surfaces/platform.allternit.com/public/billing/*.png
 *.mov
 *.zip
 *.tgz

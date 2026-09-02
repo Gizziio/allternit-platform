@@ -54,12 +54,13 @@ function titleCase(value: string) {
   return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-function safePlanUrl(value?: string) {
+function safePortalUrl(value?: string): string | null {
+  if (!value) return null;
   try {
-    const url = new URL(value || "https://allternit.com/pricing");
-    return url.protocol === "https:" ? url.toString() : "https://allternit.com/pricing";
+    const url = new URL(value);
+    return url.protocol === "https:" ? url.toString() : null;
   } catch {
-    return "https://allternit.com/pricing";
+    return null;
   }
 }
 
@@ -406,12 +407,21 @@ export function ComputeBillingPanel() {
                     <Plus size={13} /> Create runtime
                   </button>
                 ) : (
-                  <button type="button" className={QUIET_BUTTON_CLASS} onClick={() => window.open(safePlanUrl(entitlement?.upgradeUrl), "_blank", "noopener,noreferrer")}>
-                    View hosting plans
+                  <button type="button" className={QUIET_BUTTON_CLASS} onClick={() => navigate("/billing")}>
+                    View plans
                   </button>
                 )}
-                {entitlement?.billingPortalUrl && (
-                  <button type="button" className={QUIET_BUTTON_CLASS} onClick={() => window.open(safePlanUrl(entitlement.billingPortalUrl), "_blank", "noopener,noreferrer")}>Billing portal</button>
+                {safePortalUrl(entitlement?.billingPortalUrl) && (
+                  <button
+                    type="button"
+                    className={QUIET_BUTTON_CLASS}
+                    onClick={() => {
+                      const url = safePortalUrl(entitlement?.billingPortalUrl);
+                      if (url) window.open(url, "_blank", "noopener,noreferrer");
+                    }}
+                  >
+                    Billing portal
+                  </button>
                 )}
               </div>
             </>

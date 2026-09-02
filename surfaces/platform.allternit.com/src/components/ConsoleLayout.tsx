@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import { UserButton } from "@clerk/clerk-react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   LayoutDashboardIcon,
@@ -24,10 +23,13 @@ import {
   Calendar02Icon,
   ShieldCheckIcon,
 } from "@hugeicons/core-free-icons";
+import { UserButton } from "@clerk/clerk-react";
 import { cn } from "@/lib/utils";
 import {
   PlatformOrganizationSwitcher,
   usePlatformOrganization,
+  usePlatformUser,
+  useClerk,
 } from "@/lib/platform-auth-client";
 import { AllternitWordmark } from "@/components/AllternitWordmark";
 
@@ -80,6 +82,35 @@ function currentPageLabel(pathname: string): string {
     (item) => pathname === item.to || pathname.startsWith(`${item.to}/`)
   );
   return match?.label || "Console";
+}
+
+function ConsoleUserButton() {
+  const clerk = useClerk();
+  const { user } = usePlatformUser();
+
+  if (clerk) {
+    return (
+      <UserButton
+        afterSignOutUrl="/sign-in"
+        appearance={{
+          elements: {
+            userButtonAvatarBox: "size-9 rounded-full",
+          },
+        }}
+      />
+    );
+  }
+
+  const name =
+    [user?.firstName, user?.lastName].filter(Boolean).join(" ") ||
+    user?.primaryEmailAddress?.emailAddress ||
+    user?.userEmail ||
+    "?";
+  return (
+    <div className="size-9 rounded-full bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] flex items-center justify-center text-[13px] font-semibold">
+      {name.charAt(0).toUpperCase()}
+    </div>
+  );
 }
 
 export function ConsoleLayout({ children }: { children: React.ReactNode }) {
@@ -178,14 +209,7 @@ export function ConsoleLayout({ children }: { children: React.ReactNode }) {
             </a>
 
             <div className="shrink-0">
-              <UserButton
-                afterSignOutUrl="/sign-in"
-                appearance={{
-                  elements: {
-                    userButtonAvatarBox: "size-9 rounded-full",
-                  },
-                }}
-              />
+              <ConsoleUserButton />
             </div>
           </div>
         </header>
