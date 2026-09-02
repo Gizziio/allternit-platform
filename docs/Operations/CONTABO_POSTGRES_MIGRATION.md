@@ -80,7 +80,7 @@ The Allternit Cloud control plane has been migrated off Fly.io onto a Contabo VP
 
 - URL: `http://mail:9093`
 - Receives alerts from Prometheus
-- Notification channels need to be configured (email, Slack, etc.)
+- **Notification channel configured 2026-09-02**: email via local postfix → `allternitpbc@gmail.com` (sender `alerts@mail.news.allternit.com`, alias in `/etc/postfix/aliases`; critical alerts repeat hourly, warnings every 3h, resolved notifications enabled). Verified end-to-end with a test alert delivered to Gmail.
 
 ## CI/CD
 
