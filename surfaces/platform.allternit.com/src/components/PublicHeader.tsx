@@ -1,5 +1,6 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
+import { Moon, Sun } from "@phosphor-icons/react";
 import { AllternitWordmark } from "@/components/AllternitWordmark";
 import { SignInModalButton } from "@/components/SignInModalButton";
 import { usePlatformAuth } from "@/lib/platform-auth-client";
@@ -13,7 +14,7 @@ const NAV_LINKS = [
 export function PublicHeader() {
   const auth = usePlatformAuth();
   const location = useLocation();
-  const { resolved } = useTheme();
+  const { resolved, setTheme } = useTheme();
   const isDark = resolved === "dark";
 
   const redirectUrl = location.pathname + location.search;
@@ -37,7 +38,16 @@ export function PublicHeader() {
           ))}
         </nav>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setTheme(isDark ? "light" : "dark")}
+            className="inline-flex items-center justify-center rounded-lg p-2 text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
+            aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {isDark ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+
           {auth.isLoaded && auth.isSignedIn ? (
             <Link
               to="/"
