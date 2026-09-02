@@ -8,7 +8,7 @@ import { useTheme } from "@/lib/theme";
 
 const NAV_LINKS = [
   { to: "/models", label: "Models" },
-  { to: "/billing", label: "Plans" },
+  { to: "/plans", label: "Plans" },
 ];
 
 export function PublicHeader() {

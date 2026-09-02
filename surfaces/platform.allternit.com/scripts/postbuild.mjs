@@ -13,6 +13,8 @@ const routes = [
   'runs',
   'schedules',
   'approvals',
+  'models',
+  'plans',
   'billing',
   'api-keys',
   'docs',

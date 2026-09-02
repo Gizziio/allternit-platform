@@ -17,6 +17,7 @@ import { SchedulesPage } from "@/pages/SchedulesPage";
 import { ApprovalsPage } from "@/pages/ApprovalsPage";
 import { PortalLandingPage } from "@/pages/PortalLandingPage";
 import { ModelsPage } from "@/pages/ModelsPage";
+import { PlansPage } from "@/pages/PlansPage";
 import { usePlatformAuth } from "@/lib/platform-auth-client";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -100,6 +101,7 @@ export default function App() {
     <Routes>
       <Route path="/" element={<HomeRoute />} />
       <Route path="/models/*" element={<ModelsPage />} />
+      <Route path="/plans/*" element={<PlansPage />} />
       <Route path="/billing/*" element={<BillingRoute />} />
       <Route
         path="/organizations/*"
