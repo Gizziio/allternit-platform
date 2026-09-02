@@ -107,7 +107,7 @@ pub async fn mirror_session_ws(
 
 /// Validate session token
 async fn validate_session_token(
-    pool: &sqlx::SqlitePool,
+    pool: &sqlx::PgPool,
     session_id: &str,
     token: &str,
 ) -> Result<bool, sqlx::Error> {
@@ -115,7 +115,7 @@ async fn validate_session_token(
         r#"
         SELECT access_token
         FROM mirror_sessions
-        WHERE id = ? AND status IN ('active', 'paired') AND expires_at > datetime('now')
+        WHERE id = $1 AND status IN ('active', 'paired') AND expires_at > NOW()
         "#,
     )
     .bind(session_id)
@@ -301,14 +301,14 @@ async fn broadcast_to_session(state: &Arc<ApiState>, session_id: &str, msg: WsSe
 
 /// Increment client count for session
 async fn increment_client_count(
-    pool: &sqlx::SqlitePool,
+    pool: &sqlx::PgPool,
     session_id: &str,
 ) -> Result<(), sqlx::Error> {
     sqlx::query(
         r#"
         UPDATE mirror_sessions
-        SET client_count = client_count + 1, last_activity_at = datetime('now')
-        WHERE id = ?
+        SET client_count = client_count + 1, last_activity_at = NOW()
+        WHERE id = $1
         "#,
     )
     .bind(session_id)
@@ -319,14 +319,14 @@ async fn increment_client_count(
 
 /// Decrement client count for session
 async fn decrement_client_count(
-    pool: &sqlx::SqlitePool,
+    pool: &sqlx::PgPool,
     session_id: &str,
 ) -> Result<(), sqlx::Error> {
     sqlx::query(
         r#"
         UPDATE mirror_sessions
-        SET client_count = MAX(0, client_count - 1), last_activity_at = datetime('now')
-        WHERE id = ?
+        SET client_count = MAX(0, client_count - 1), last_activity_at = NOW()
+        WHERE id = $1
         "#,
     )
     .bind(session_id)

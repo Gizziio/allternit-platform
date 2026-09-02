@@ -8,10 +8,9 @@
 //! tailnet's `autogroup:self` policy isolates each customer to their own
 //! devices — see `infrastructure/mesh/headscale/policy.hujson`.
 //!
-//! The gRPC admin API is reached over the Fly private network in plaintext
-//! (the WireGuard underlay provides encryption), authenticated per-call with
-//! the Headscale API key as a bearer token in the `authorization` metadata
-//! header.
+//! The gRPC admin API is reached at `HEADSCALE_GRPC_ADDR`, authenticated
+//! per-call with the Headscale API key as a bearer token in the
+//! `authorization` metadata header.
 
 use axum::{
     extract::State,
@@ -34,11 +33,11 @@ pub mod proto {
 
 use proto::headscale_service_client::HeadscaleServiceClient;
 
-/// Default address of the Headscale gRPC admin API on the Fly 6PN network.
-const DEFAULT_GRPC_ADDR: &str = "http://allternit-headscale.internal:50443";
+/// Default address of the Headscale gRPC admin API.
+const DEFAULT_GRPC_ADDR: &str = "https://headscale.allternit.com:50443";
 
 /// Public control URL handed to clients for `tailscale up --login-server`.
-const DEFAULT_CONTROL_URL: &str = "https://allternit-headscale.fly.dev";
+const DEFAULT_CONTROL_URL: &str = "https://headscale.allternit.com";
 
 /// Minted keys are single-use and short-lived; the app is expected to
 /// enroll immediately.
@@ -204,9 +203,8 @@ impl MeshService {
     }
 }
 
-/// Headscale admin client over a plaintext channel on the Fly private
-/// network. The API key travels as a bearer token in the `authorization`
-/// metadata header on every call.
+/// Headscale admin client. The API key travels as a bearer token in the
+/// `authorization` metadata header on every call.
 pub struct GrpcHeadscaleAdmin {
     client: Mutex<HeadscaleServiceClient<Channel>>,
     api_key: Arc<str>,
@@ -214,7 +212,7 @@ pub struct GrpcHeadscaleAdmin {
 
 impl GrpcHeadscaleAdmin {
     pub fn new(grpc_addr: &str, api_key: String) -> Result<Self, MeshError> {
-        // Lazy: the endpoint is reachable only from within the Fly network,
+        // Lazy: the endpoint is reachable only from the control plane,
         // so a startup connect would fail anywhere else.
         let channel = Channel::from_shared(grpc_addr.to_string())
             .map_err(|error| MeshError::Rpc(format!("invalid HEADSCALE_GRPC_ADDR: {error}")))?
@@ -363,11 +361,11 @@ fn mesh_upstream_error_response(error: &MeshError) -> Response {
 /// user, `clerk-<id>`); anything else falls back to the Clerk session path.
 /// Mirrors `gizzi_instances::actor_from_headers` — same trust decision, and
 /// the call doubles as a lightweight device heartbeat.
-async fn enroll_user_id(db: &sqlx::SqlitePool, headers: &HeaderMap) -> Result<String, ApiError> {
+async fn enroll_user_id(db: &sqlx::PgPool, headers: &HeaderMap) -> Result<String, ApiError> {
     if let Some(token) = runtime_pairing::device_token_from_headers(headers) {
         let device = runtime_pairing::runtime_device_for_token(db, token, None).await?;
         sqlx::query(
-            "UPDATE runtime_devices SET status = 'online', last_seen_at = CURRENT_TIMESTAMP WHERE id = ?",
+            "UPDATE runtime_devices SET status = 'online', last_seen_at = CURRENT_TIMESTAMP WHERE id = $1",
         )
         .bind(&device.id)
         .execute(db)
@@ -479,7 +477,7 @@ mod tests {
             if let Some(error) = self.create_key_error.lock().await.take() {
                 return Err(error);
             }
-            assert!(user_id > 0, "key must be minted for a real user id");
+            assert!(user_id > 0, "key must be minted for a DOUBLE PRECISION user id");
             Ok(("hskey-auth-testkey".to_string(), expiration))
         }
     }
@@ -596,21 +594,40 @@ mod tests {
     /// Minimal runtime_devices shape for the device-token auth path (mirrors
     /// the gizzi_instances dual-auth tests, including the migration-022
     /// rotation-grace columns runtime_device_for_token falls back to).
-    async fn device_test_pool() -> sqlx::SqlitePool {
-        let pool = sqlx::SqlitePool::connect(":memory:").await.unwrap();
-        sqlx::query(
-            r#"
-            CREATE TABLE runtime_devices (
+    async fn device_test_pool() -> sqlx::PgPool {
+        let url = "postgres://allternit:allternit_pg_2026@localhost:5432/allternit_test";
+        let schema = format!("test_{}", uuid::Uuid::new_v4().simple());
+        let schema_for_hook = schema.clone();
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(1)
+            .after_connect(move |conn, _meta| {
+                let schema = schema_for_hook.clone();
+                Box::pin(async move {
+                    sqlx::query(&format!("CREATE SCHEMA IF NOT EXISTS {}", schema))
+                        .execute(&mut *conn)
+                        .await?;
+                    sqlx::query(&format!("SET search_path TO {}", schema))
+                        .execute(&mut *conn)
+                        .await?;
+                    Ok(())
+                })
+            })
+            .connect(url)
+            .await
+            .unwrap();
+        sqlx::query("DROP TABLE IF EXISTS runtime_devices CASCADE").execute(&pool).await.unwrap();
+        sqlx::query(r#"
+        CREATE TABLE runtime_devices (
                 id TEXT PRIMARY KEY,
                 user_id TEXT NOT NULL,
                 name TEXT NOT NULL,
                 credential_hash TEXT NOT NULL UNIQUE,
-                credential_expires_at TIMESTAMP NOT NULL,
+                credential_expires_at TIMESTAMPTZ NOT NULL,
                 previous_credential_hash TEXT,
-                previous_credential_expires_at TIMESTAMP,
+                previous_credential_expires_at TIMESTAMPTZ,
                 status TEXT NOT NULL DEFAULT 'offline',
-                last_seen_at TIMESTAMP,
-                revoked_at TIMESTAMP
+                last_seen_at TIMESTAMPTZ,
+                revoked_at TIMESTAMPTZ
             )
             "#,
         )
@@ -629,13 +646,13 @@ mod tests {
         headers
     }
 
-    async fn insert_device(pool: &sqlx::SqlitePool, token: &str, revoked: bool) {
+    async fn insert_device(pool: &sqlx::PgPool, token: &str, revoked: bool) {
         sqlx::query(
             r#"
             INSERT INTO runtime_devices (
                 id, user_id, name, credential_hash, credential_expires_at, status, revoked_at
             )
-            VALUES ('rd_1', 'user_9', 'byo-vps-1', ?, ?, 'offline', ?)
+            VALUES ('rd_1', 'user_9', 'byo-vps-1', $1, $2, 'offline', $3)
             "#,
         )
         .bind(runtime_pairing::sha256_hex(token.as_bytes()))

@@ -47,7 +47,7 @@ pub use guidance::{AgentGuidanceOverlay, SignupAutomationScript, GuidanceState};
 pub use affiliate::{AffiliateTracker, MonetizationTier};
 pub use checkpoint_store::{
     CheckpointStore, FsCheckpointStore, InMemoryCheckpointStore, IdempotencyKey,
-    SqliteCheckpointStore,
+    PgCheckpointStore,
 };
 pub use handlers::{
     AuthenticatedUser, InstanceRegistrar, MeshKeyMinter, PairingBootstrapMinter,

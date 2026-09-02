@@ -190,7 +190,7 @@ pub async fn get_run_cost(
     debug!("Fetching cost for run: {}", run_id);
 
     // Verify user has access to this run
-    let run: crate::db::cowork_models::Run = sqlx::query_as("SELECT * FROM runs WHERE id = ?")
+    let run: crate::db::cowork_models::Run = sqlx::query_as("SELECT * FROM runs WHERE id = $1")
         .bind(&run_id)
         .fetch_optional(&state.db)
         .await

@@ -7,6 +7,7 @@ pub mod auth;
 pub mod db;
 pub mod error;
 pub mod middleware;
+pub mod model_router;
 pub mod routes;
 pub mod runtime;
 pub mod services;
@@ -35,7 +36,7 @@ pub use websocket::DeploymentEvent;
 
 /// API application state
 pub struct ApiState {
-    pub db: sqlx::SqlitePool,
+    pub db: sqlx::PgPool,
     pub ssh_executor: allternit_cloud_ssh::SshExecutor,
     pub event_tx: broadcast::Sender<DeploymentEvent>,
     /// Shared event store for all operations
@@ -52,13 +53,18 @@ pub struct ApiState {
     pub cost_service: Arc<dyn services::CostService>,
     /// Quota service for free-tier guardrails
     pub quota_service: services::SharedQuotaService,
-    /// Fly runtime service for hosted runtimes
-    pub fly_runtime_service: Option<services::FlyRuntimeService>,
+    /// Contabo runtime service for hosted runtimes (provisions and manages
+    /// workload containers on the Contabo VPS)
+    pub contabo_runtime_service: Arc<services::ContaboRuntimeService>,
     /// Mesh enrollment service (Headscale), absent when HEADSCALE_API_KEY is unset
     pub mesh_service: Option<Arc<routes::mesh::MeshService>>,
     /// AES-256-GCM cipher for provider tokens and wizard checkpoints,
     /// absent (plaintext-at-rest, dev only) when ALLTERNIT_CREDENTIALS_KEY is unset
     pub credential_cipher: Option<Arc<allternit_cloud_core::CredentialCipher>>,
+    /// Shared metrics state for request tracking
+    pub metrics_state: Arc<crate::middleware::metrics::MetricsState>,
+    /// Model router for dispatching inference requests to upstream providers
+    pub model_router: crate::model_router::ModelRouter,
 }
 
 /// Create the API router
@@ -227,6 +233,11 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
             "/api/v1/providers/:id/validate",
             post(routes::providers::validate_credentials),
         )
+        // Model router chat completions (auth-protected)
+        .route(
+            "/v1/chat/completions",
+            post(routes::model_router::chat_completions),
+        )
         // Region endpoints
         .route("/api/v1/regions", get(routes::regions::list_regions))
         .route("/api/v1/regions/:id", get(routes::regions::get_region))
@@ -293,6 +304,7 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
         // These handlers verify Clerk or billing credentials themselves. They
         // must not pass through the legacy allternit_* API-token middleware.
         .merge(routes::hosted_runtimes::routes())
+        .merge(routes::contabo_hosted_runtimes::routes())
         .merge(routes::hosted_entitlements::routes())
         // The Stripe webhook verifies the Stripe-Signature HMAC itself and
         // answers 503 webhook_not_configured when STRIPE_WEBHOOK_SECRET is unset.
@@ -326,6 +338,11 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
         .route("/api/v1/health/ready", get(routes::health::readiness_check))
         .route("/api/v1/health/live", get(routes::health::liveness_check))
         .route("/api/v1/metrics", get(routes::health::metrics))
+        .with_state(state.clone());
+
+    let public_model_routes = Router::new()
+        // Public model catalog
+        .route("/v1/models", get(routes::model_router::list_models))
         .with_state(state.clone());
 
     // Create auth-protected routes (require auth but listed separately for clarity)
@@ -397,17 +414,26 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
     // Combine all routes
     Router::new()
         .merge(public_health_routes)
+        .merge(public_model_routes)
         .merge(public_runtime_routes)
         .merge(auth_routes)
         .merge(protected_routes)
         .layer(DefaultBodyLimit::max(max_body_size))
         .layer(cors)
+        .layer(axum::middleware::from_fn_with_state(
+            state.metrics_state.clone(),
+            crate::middleware::metrics::metrics_middleware,
+        ))
         .with_state(state)
 }
 
-/// Initialize the database with configured connection pooling
-pub async fn init_db(database_url: &str) -> Result<sqlx::SqlitePool, ApiError> {
-    use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+/// Initialize the database with configured connection pooling.
+///
+/// The API targets PostgreSQL in production. The schema is currently managed
+/// externally (pgloader + Postgres migrations); embedded SQLite migrations are
+/// intentionally not run here.
+pub async fn init_db(database_url: &str) -> Result<sqlx::PgPool, ApiError> {
+    use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
     use std::str::FromStr;
 
     // Get pool configuration from environment
@@ -441,9 +467,9 @@ pub async fn init_db(database_url: &str) -> Result<sqlx::SqlitePool, ApiError> {
         max_connections, min_connections, acquire_timeout_secs, max_lifetime_mins, idle_timeout_mins
     );
 
-    let connect_options = SqliteConnectOptions::from_str(database_url)?.create_if_missing(true);
+    let connect_options = PgConnectOptions::from_str(database_url)?;
 
-    let pool = SqlitePoolOptions::new()
+    let pool = PgPoolOptions::new()
         .max_connections(max_connections)
         .min_connections(min_connections)
         .acquire_timeout(std::time::Duration::from_secs(acquire_timeout_secs))
@@ -452,8 +478,8 @@ pub async fn init_db(database_url: &str) -> Result<sqlx::SqlitePool, ApiError> {
         .connect_with(connect_options)
         .await?;
 
-    // Run migrations
-    sqlx::migrate!("./migrations").run(&pool).await?;
+    // TODO: Add Postgres migrations directory and run sqlx::migrate! against it.
+    // The current production schema was created via pgloader from SQLite.
 
     tracing::info!(
         "Database pool initialized with {} max connections",

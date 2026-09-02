@@ -186,12 +186,12 @@ pub async fn validate_credentials(
 /// `provider_tokens.user_id` references `users(id)`; backfill a
 /// placeholder row for users who have never touched another flow (mirrors
 /// the gizzi_instances device-token pattern).
-async fn ensure_user_row(db: &sqlx::SqlitePool, user_id: &str) -> Result<(), ApiError> {
+async fn ensure_user_row(db: &sqlx::PgPool, user_id: &str) -> Result<(), ApiError> {
     let email = format!("{}@users.allternit.local", user_id.replace('@', "_"));
     sqlx::query(
         r#"
         INSERT INTO users (id, email, status, last_login_at)
-        VALUES (?, ?, 'active', CURRENT_TIMESTAMP)
+        VALUES ($1, $2, 'active', CURRENT_TIMESTAMP)
         ON CONFLICT(id) DO NOTHING
         "#,
     )
@@ -210,7 +210,7 @@ pub(crate) async fn load_provider_token(
     provider: &str,
 ) -> Result<Option<String>, ApiError> {
     let row: Option<(String,)> = sqlx::query_as(
-        "SELECT encrypted_token FROM provider_tokens WHERE user_id = ? AND provider = ?",
+        "SELECT encrypted_token FROM provider_tokens WHERE user_id = $1 AND provider = $2",
     )
     .bind(user_id)
     .bind(provider)
@@ -239,7 +239,7 @@ async fn list_provider_tokens(
 ) -> Result<Json<serde_json::Value>, ApiError> {
     let user = clerk::user_from_headers(&headers).await?;
     let rows: Vec<(String,)> = sqlx::query_as(
-        "SELECT provider FROM provider_tokens WHERE user_id = ? ORDER BY provider",
+        "SELECT provider FROM provider_tokens WHERE user_id = $1 ORDER BY provider",
     )
     .bind(&user.id)
     .fetch_all(&state.db)
@@ -301,7 +301,7 @@ async fn put_provider_token(
     sqlx::query(
         r#"
         INSERT INTO provider_tokens (user_id, provider, encrypted_token)
-        VALUES (?, ?, ?)
+        VALUES ($1, $2, $3)
         ON CONFLICT(user_id, provider) DO UPDATE SET
             encrypted_token = excluded.encrypted_token,
             updated_at = CURRENT_TIMESTAMP
@@ -329,7 +329,7 @@ async fn delete_provider_token(
     let provider = provider.to_lowercase();
 
     let affected = sqlx::query(
-        "DELETE FROM provider_tokens WHERE user_id = ? AND provider = ?",
+        "DELETE FROM provider_tokens WHERE user_id = $1 AND provider = $2",
     )
     .bind(&user.id)
     .bind(&provider)

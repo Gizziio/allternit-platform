@@ -1,15 +1,18 @@
 //! Core services for Cowork Runtime
 
+pub mod contabo_runtime_service;
 pub mod cost_service;
 pub mod event_store;
 pub mod executor_service;
-pub mod fly_runtime_service;
 pub mod hosted_runtime_lifecycle;
 pub mod quota_service;
 pub mod run_service;
 pub mod scheduler_service;
 pub mod task_service;
 
+pub use contabo_runtime_service::{
+    ContaboContainerState, ContaboRuntimeService, HostedInstanceRow, ProvisionedContaboRuntime,
+};
 pub use cost_service::{
     finalize_run_cost_tracking, init_run_cost_tracking, start_cost_tracking_task, AlertType,
     CostAlert, CostBreakdown, CostRate, CostService, CostServiceImpl, RunCost, RunCostSummary,
@@ -19,9 +22,6 @@ pub use event_store::{event_utils, EventStore, EventStoreImpl};
 pub use executor_service::{
     start_executor_service, AllowAllGate, ApprovalGate, ExecutorConfig, ExecutorDeps,
     ExecutorService,
-};
-pub use fly_runtime_service::{
-    FlyMachineState, FlyRuntimeService, HostedInstanceRow, HostedMachineConfig, ProvisionedMachine,
 };
 pub use hosted_runtime_lifecycle::{
     hosted_usage_summary, hosted_wake_decision, hosted_wake_target, mark_hosted_instance_starting,

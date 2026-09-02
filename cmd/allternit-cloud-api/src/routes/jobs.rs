@@ -43,7 +43,7 @@ pub async fn list_jobs(
     Query(query): Query<ListJobsQuery>,
 ) -> Result<Json<Vec<Job>>, ApiError> {
     // Verify run exists
-    let run = sqlx::query_as::<_, Run>("SELECT * FROM runs WHERE id = ?")
+    let run = sqlx::query_as::<_, Run>("SELECT * FROM runs WHERE id = $1")
         .bind(&run_id)
         .fetch_optional(&state.db)
         .await
@@ -58,7 +58,7 @@ pub async fn list_jobs(
 
     let jobs = if let Some(status_str) = query.status {
         sqlx::query_as::<_, Job>(
-            "SELECT * FROM jobs WHERE run_id = ? AND status = ? ORDER BY created_at DESC LIMIT ? OFFSET ?"
+            "SELECT * FROM jobs WHERE run_id = $1 AND status = $2 ORDER BY created_at DESC LIMIT $3 OFFSET $4"
         )
         .bind(&run_id)
         .bind(status_str)
@@ -69,7 +69,7 @@ pub async fn list_jobs(
         .map_err(|e| ApiError::DatabaseError(e))?
     } else {
         sqlx::query_as::<_, Job>(
-            "SELECT * FROM jobs WHERE run_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
+            "SELECT * FROM jobs WHERE run_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3",
         )
         .bind(&run_id)
         .bind(limit)
@@ -91,7 +91,7 @@ pub async fn create_job(
     tracing::info!("Creating job '{}' for run: {}", request.name, run_id);
 
     // Verify run exists
-    let run = sqlx::query_as::<_, Run>("SELECT * FROM runs WHERE id = ?")
+    let run = sqlx::query_as::<_, Run>("SELECT * FROM runs WHERE id = $1")
         .bind(&run_id)
         .fetch_optional(&state.db)
         .await
@@ -111,7 +111,7 @@ pub async fn create_job(
             id, run_id, name, description, status, priority, queue_position,
             config, scheduled_at, started_at, completed_at, exit_code, result,
             error_message, retry_count, max_retries, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
         RETURNING *
         "#,
     )
@@ -161,7 +161,7 @@ pub async fn get_job(
     State(state): State<Arc<ApiState>>,
     Path((run_id, job_id)): Path<(String, String)>,
 ) -> Result<Json<Job>, ApiError> {
-    let job = sqlx::query_as::<_, Job>("SELECT * FROM jobs WHERE id = ? AND run_id = ?")
+    let job = sqlx::query_as::<_, Job>("SELECT * FROM jobs WHERE id = $1 AND run_id = $2")
         .bind(&job_id)
         .bind(&run_id)
         .fetch_optional(&state.db)
@@ -179,7 +179,7 @@ pub async fn update_job(
     Json(request): Json<UpdateJobRequest>,
 ) -> Result<Json<Job>, ApiError> {
     // Get existing job
-    let job = sqlx::query_as::<_, Job>("SELECT * FROM jobs WHERE id = ? AND run_id = ?")
+    let job = sqlx::query_as::<_, Job>("SELECT * FROM jobs WHERE id = $1 AND run_id = $2")
         .bind(&job_id)
         .bind(&run_id)
         .fetch_optional(&state.db)
@@ -195,8 +195,8 @@ pub async fn update_job(
     let updated = sqlx::query_as::<_, Job>(
         r#"
         UPDATE jobs 
-        SET name = ?, description = ?, status = ?, updated_at = ?
-        WHERE id = ? AND run_id = ?
+        SET name = $1, description = $2, status = $3, updated_at = $4
+        WHERE id = $5 AND run_id = $6
         RETURNING *
         "#,
     )
@@ -218,7 +218,7 @@ pub async fn delete_job(
     State(state): State<Arc<ApiState>>,
     Path((run_id, job_id)): Path<(String, String)>,
 ) -> Result<(), ApiError> {
-    let result = sqlx::query("DELETE FROM jobs WHERE id = ? AND run_id = ?")
+    let result = sqlx::query("DELETE FROM jobs WHERE id = $1 AND run_id = $2")
         .bind(&job_id)
         .bind(&run_id)
         .execute(&state.db)
@@ -242,8 +242,8 @@ pub async fn start_job(
     let job = sqlx::query_as::<_, Job>(
         r#"
         UPDATE jobs 
-        SET status = ?, started_at = ?, updated_at = ?
-        WHERE id = ? AND run_id = ? AND status IN (?, ?)
+        SET status = $1, started_at = $2, updated_at = $3
+        WHERE id = $4 AND run_id = $5 AND status IN ($6, $7)
         RETURNING *
         "#,
     )
@@ -291,8 +291,8 @@ pub async fn complete_job(
     let job = sqlx::query_as::<_, Job>(
         r#"
         UPDATE jobs 
-        SET status = ?, completed_at = ?, exit_code = ?, result = ?, updated_at = ?
-        WHERE id = ? AND run_id = ? AND status = ?
+        SET status = $1, completed_at = $2, exit_code = $3, result = $4, updated_at = $5
+        WHERE id = $6 AND run_id = $7 AND status = $8
         RETURNING *
         "#,
     )
@@ -341,8 +341,8 @@ pub async fn fail_job(
     let job = sqlx::query_as::<_, Job>(
         r#"
         UPDATE jobs 
-        SET status = ?, completed_at = ?, exit_code = ?, error_message = ?, updated_at = ?
-        WHERE id = ? AND run_id = ? AND status = ?
+        SET status = $1, completed_at = $2, exit_code = $3, error_message = $4, updated_at = $5
+        WHERE id = $6 AND run_id = $7 AND status = $8
         RETURNING *
         "#,
     )
@@ -397,8 +397,8 @@ pub async fn cancel_job(
     let job = sqlx::query_as::<_, Job>(
         r#"
         UPDATE jobs 
-        SET status = ?, completed_at = ?, error_message = ?, updated_at = ?
-        WHERE id = ? AND run_id = ? AND status IN (?, ?, ?)
+        SET status = $1, completed_at = $2, error_message = $3, updated_at = $4
+        WHERE id = $5 AND run_id = $6 AND status IN ($7, $8, $9)
         RETURNING *
         "#,
     )

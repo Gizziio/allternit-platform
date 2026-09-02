@@ -109,7 +109,7 @@ pub async fn create_deployment(
         INSERT INTO deployments (
             id, provider_id, region_id, instance_type_id, storage_gb,
             instance_name, status, progress, message, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
         "#,
     )
     .bind(&deployment_id)
@@ -144,7 +144,7 @@ pub async fn create_deployment(
         if let Err(e) = run_deployment(state_for_spawn, &deployment_id_clone, request).await {
             tracing::error!("Deployment failed: {}", e);
             let _ = sqlx::query(
-                "UPDATE deployments SET status = ?, error_message = ?, updated_at = ? WHERE id = ?",
+                "UPDATE deployments SET status = $1, error_message = $2, updated_at = $3 WHERE id = $4",
             )
             .bind("failed")
             .bind(&e.to_string())
@@ -176,7 +176,7 @@ pub async fn get_deployment(
     State(state): State<Arc<ApiState>>,
     Path(id): Path<String>,
 ) -> Result<Json<DeploymentResponse>, ApiError> {
-    let deployment = sqlx::query_as::<_, Deployment>("SELECT * FROM deployments WHERE id = ?")
+    let deployment = sqlx::query_as::<_, Deployment>("SELECT * FROM deployments WHERE id = $1")
         .bind(&id)
         .fetch_optional(&state.db)
         .await?
@@ -191,7 +191,7 @@ pub async fn cancel_deployment(
     Path(id): Path<String>,
 ) -> Result<Json<DeploymentResponse>, ApiError> {
     let result = sqlx::query(
-        "UPDATE deployments SET status = ?, updated_at = ?, completed_at = ? WHERE id = ? AND status IN (?, ?)"
+        "UPDATE deployments SET status = $1, updated_at = $2, completed_at = $3 WHERE id = $4 AND status IN ($5, $6)"
     )
     .bind("cancelled")
     .bind(Utc::now())
@@ -217,7 +217,7 @@ pub async fn cancel_deployment(
     };
     let _ = state.event_tx.send(event);
 
-    let deployment = sqlx::query_as::<_, Deployment>("SELECT * FROM deployments WHERE id = ?")
+    let deployment = sqlx::query_as::<_, Deployment>("SELECT * FROM deployments WHERE id = $1")
         .bind(&id)
         .fetch_one(&state.db)
         .await?;
@@ -492,7 +492,7 @@ async fn update_deployment_status(
     message: &str,
 ) -> Result<(), ApiError> {
     sqlx::query(
-        "UPDATE deployments SET status = ?, progress = ?, message = ?, updated_at = ? WHERE id = ?",
+        "UPDATE deployments SET status = $1, progress = $2, message = $3, updated_at = $4 WHERE id = $5",
     )
     .bind(status)
     .bind(progress)

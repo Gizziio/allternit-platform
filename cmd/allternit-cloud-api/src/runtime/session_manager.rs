@@ -14,7 +14,7 @@ use tokio::sync::RwLock;
 /// Session manager - manages client attachments to runs
 pub struct SessionManager {
     /// Database pool
-    db: sqlx::SqlitePool,
+    db: sqlx::PgPool,
     /// Active sessions (run_id -> SessionState)
     sessions: Arc<RwLock<HashMap<String, SessionState>>>,
     /// Event store for persisting events
@@ -64,7 +64,7 @@ pub enum SessionEventType {
 
 impl SessionManager {
     /// Create a new session manager
-    pub fn new(db: sqlx::SqlitePool) -> Self {
+    pub fn new(db: sqlx::PgPool) -> Self {
         let event_store = EventStoreImpl::new(db.clone());
         Self {
             db,
@@ -88,7 +88,7 @@ impl SessionManager {
         sqlx::query(
             r#"
             INSERT INTO attachments (id, run_id, client_id, client_type, user_id, cursor_sequence, attached_at, last_seen_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             "#
         )
         .bind(&attachment_id)
@@ -158,7 +158,7 @@ impl SessionManager {
         let now = chrono::Utc::now();
 
         // Update database
-        sqlx::query("UPDATE attachments SET detached_at = ? WHERE run_id = ? AND client_id = ?")
+        sqlx::query("UPDATE attachments SET detached_at = $1 WHERE run_id = $2 AND client_id = $3")
             .bind(now)
             .bind(run_id)
             .bind(client_id)
@@ -294,7 +294,7 @@ impl SessionManager {
 
         // Update database
         sqlx::query(
-            "UPDATE attachments SET cursor_sequence = ?, last_seen_at = ? WHERE run_id = ? AND client_id = ?"
+            "UPDATE attachments SET cursor_sequence = $1, last_seen_at = $2 WHERE run_id = $3 AND client_id = $4"
         )
         .bind(sequence)
         .bind(now)
@@ -318,7 +318,7 @@ impl SessionManager {
     /// Get list of attached clients for a run
     pub async fn get_attachments(&self, run_id: &str) -> Result<Vec<Attachment>, ApiError> {
         let attachments = sqlx::query_as::<_, Attachment>(
-            "SELECT * FROM attachments WHERE run_id = ? AND detached_at IS NULL ORDER BY attached_at DESC"
+            "SELECT * FROM attachments WHERE run_id = $1 AND detached_at IS NULL ORDER BY attached_at DESC"
         )
         .bind(run_id)
         .fetch_all(&self.db)
@@ -334,7 +334,7 @@ impl SessionManager {
 
         // Update all attachments in database
         sqlx::query(
-            "UPDATE attachments SET detached_at = ? WHERE run_id = ? AND detached_at IS NULL",
+            "UPDATE attachments SET detached_at = $1 WHERE run_id = $2 AND detached_at IS NULL",
         )
         .bind(now)
         .bind(run_id)

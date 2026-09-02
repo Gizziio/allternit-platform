@@ -100,7 +100,7 @@ fn extract_token_from_protocol(headers: &axum::http::HeaderMap) -> Option<String
 }
 
 /// Validate WebSocket token against database
-async fn validate_ws_token(db: &sqlx::SqlitePool, token: &str) -> bool {
+async fn validate_ws_token(db: &sqlx::PgPool, token: &str) -> bool {
     use crate::auth::models::ApiToken;
 
     // Simple hash for lookup
@@ -110,7 +110,7 @@ async fn validate_ws_token(db: &sqlx::SqlitePool, token: &str) -> bool {
         r#"
         SELECT id, token_hash, name, user_id, permissions, created_at, expires_at, last_used_at, is_revoked
         FROM api_tokens
-        WHERE token_hash = ? AND is_revoked = FALSE
+        WHERE token_hash = $1 AND is_revoked = FALSE
         "#
     )
     .bind(&token_hash)
@@ -126,7 +126,7 @@ async fn validate_ws_token(db: &sqlx::SqlitePool, token: &str) -> bool {
         }
 
         // Update last_used_at
-        let _ = sqlx::query("UPDATE api_tokens SET last_used_at = CURRENT_TIMESTAMP WHERE id = ?")
+        let _ = sqlx::query("UPDATE api_tokens SET last_used_at = CURRENT_TIMESTAMP WHERE id = $1")
             .bind(&token_record.id)
             .execute(db)
             .await;

@@ -61,7 +61,7 @@ pub async fn list_approvals(
                 r#"
                 SELECT id, run_id, status, priority, title, action_type, created_at, responded_at
                 FROM approval_requests
-                WHERE run_id = ? AND status = ?
+                WHERE run_id = $1 AND status = $2
                 ORDER BY 
                     CASE priority
                         WHEN 'critical' THEN 1
@@ -70,7 +70,7 @@ pub async fn list_approvals(
                         WHEN 'low' THEN 4
                     END,
                     created_at DESC
-                LIMIT ?
+                LIMIT $3
                 "#,
             )
             .bind(&run_id)
@@ -84,7 +84,7 @@ pub async fn list_approvals(
                 r#"
                 SELECT id, run_id, status, priority, title, action_type, created_at, responded_at
                 FROM approval_requests
-                WHERE run_id = ?
+                WHERE run_id = $1
                 ORDER BY 
                     CASE priority
                         WHEN 'critical' THEN 1
@@ -93,7 +93,7 @@ pub async fn list_approvals(
                         WHEN 'low' THEN 4
                     END,
                     created_at DESC
-                LIMIT ?
+                LIMIT $2
                 "#,
             )
             .bind(&run_id)
@@ -107,7 +107,7 @@ pub async fn list_approvals(
             r#"
             SELECT id, run_id, status, priority, title, action_type, created_at, responded_at
             FROM approval_requests
-            WHERE status = ?
+            WHERE status = $1
             ORDER BY 
                 CASE priority
                     WHEN 'critical' THEN 1
@@ -116,7 +116,7 @@ pub async fn list_approvals(
                     WHEN 'low' THEN 4
                 END,
                 created_at DESC
-            LIMIT ?
+            LIMIT $2
             "#,
         )
         .bind(status)
@@ -137,7 +137,7 @@ pub async fn list_approvals(
                     WHEN 'low' THEN 4
                 END,
                 created_at DESC
-            LIMIT ?
+            LIMIT $1
             "#,
         )
         .bind(limit)
@@ -162,7 +162,7 @@ pub async fn get_approval(
             reasoning, requested_by, responded_by, response_message,
             timeout_seconds, created_at, responded_at
         FROM approval_requests
-        WHERE id = ?
+        WHERE id = $1
         "#,
     )
     .bind(&id)
@@ -186,7 +186,7 @@ pub async fn create_approval(
     let requested_by = auth_context.user.user_id;
 
     // Verify the run exists
-    let run_exists: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM runs WHERE id = ?)")
+    let run_exists: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM runs WHERE id = $1)")
         .bind(&request.run_id)
         .fetch_one(&state.db)
         .await
@@ -206,7 +206,7 @@ pub async fn create_approval(
             id, run_id, step_cursor, status, priority,
             title, description, action_type, action_params,
             reasoning, requested_by, timeout_seconds, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
         "#,
     )
     .bind(&id)
@@ -240,7 +240,7 @@ pub async fn create_approval(
             reasoning, requested_by, responded_by, response_message,
             timeout_seconds, created_at, responded_at
         FROM approval_requests
-        WHERE id = ?
+        WHERE id = $1
         "#,
     )
     .bind(&id)
@@ -302,7 +302,7 @@ pub async fn approve_request(
             reasoning, requested_by, responded_by, response_message,
             timeout_seconds, created_at, responded_at
         FROM approval_requests
-        WHERE id = ?
+        WHERE id = $1
         "#,
     )
     .bind(&id)
@@ -323,8 +323,8 @@ pub async fn approve_request(
     sqlx::query(
         r#"
         UPDATE approval_requests
-        SET status = ?, responded_by = ?, response_message = ?, responded_at = ?
-        WHERE id = ?
+        SET status = $1, responded_by = $2, response_message = $3, responded_at = $4
+        WHERE id = $5
         "#,
     )
     .bind(ApprovalStatus::Approved)
@@ -345,7 +345,7 @@ pub async fn approve_request(
             reasoning, requested_by, responded_by, response_message,
             timeout_seconds, created_at, responded_at
         FROM approval_requests
-        WHERE id = ?
+        WHERE id = $1
         "#,
     )
     .bind(&id)
@@ -401,7 +401,7 @@ pub async fn deny_request(
             reasoning, requested_by, responded_by, response_message,
             timeout_seconds, created_at, responded_at
         FROM approval_requests
-        WHERE id = ?
+        WHERE id = $1
         "#,
     )
     .bind(&id)
@@ -422,8 +422,8 @@ pub async fn deny_request(
     sqlx::query(
         r#"
         UPDATE approval_requests
-        SET status = ?, responded_by = ?, response_message = ?, responded_at = ?
-        WHERE id = ?
+        SET status = $1, responded_by = $2, response_message = $3, responded_at = $4
+        WHERE id = $5
         "#,
     )
     .bind(ApprovalStatus::Denied)
@@ -444,7 +444,7 @@ pub async fn deny_request(
             reasoning, requested_by, responded_by, response_message,
             timeout_seconds, created_at, responded_at
         FROM approval_requests
-        WHERE id = ?
+        WHERE id = $1
         "#,
     )
     .bind(&id)
@@ -496,7 +496,7 @@ pub async fn cancel_request(
             reasoning, requested_by, responded_by, response_message,
             timeout_seconds, created_at, responded_at
         FROM approval_requests
-        WHERE id = ?
+        WHERE id = $1
         "#,
     )
     .bind(&id)
@@ -517,8 +517,8 @@ pub async fn cancel_request(
     sqlx::query(
         r#"
         UPDATE approval_requests
-        SET status = ?, responded_at = ?
-        WHERE id = ?
+        SET status = $1, responded_at = $2
+        WHERE id = $3
         "#,
     )
     .bind(ApprovalStatus::Cancelled)
@@ -537,7 +537,7 @@ pub async fn cancel_request(
             reasoning, requested_by, responded_by, response_message,
             timeout_seconds, created_at, responded_at
         FROM approval_requests
-        WHERE id = ?
+        WHERE id = $1
         "#,
     )
     .bind(&id)

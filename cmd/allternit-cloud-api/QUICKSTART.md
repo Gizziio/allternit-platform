@@ -31,6 +31,9 @@ The server starts on `http://localhost:8080` by default.
 | `CLERK_JWKS_URL` | `https://allternit.com/__clerk/.well-known/jwks.json` | Clerk signing keys |
 | `ALLTERNIT_PLATFORM_URL` | `https://ai.allternit.com` | Browser pairing origin |
 | `CORS_ALLOWED_ORIGINS` | `https://ai.allternit.com` | Allowed browser origins |
+| `OPENROUTER_API_KEY` | `sk-or-v1-...` | OpenRouter API key (enables `/v1/chat/completions`) |
+| `OPENROUTER_HTTP_REFERER` | `https://platform.allternit.com` | Site URL sent to OpenRouter |
+| `OPENROUTER_APP_TITLE` | `Allternit Cloud` | App name sent to OpenRouter |
 
 ---
 
@@ -141,7 +144,61 @@ Once authenticated, the browser can proxy requests to this runtime.
 
 ---
 
-## 6. Proxy a Request from the Browser
+## 6. Model Router (OpenAI-compatible API)
+
+The cloud API can broker inference requests to upstream providers. The first adapter is **OpenRouter**.
+
+### 6.1 List available models
+
+```bash
+curl http://localhost:8080/v1/models
+```
+
+Response:
+
+```json
+{
+  "object": "list",
+  "data": [
+    { "id": "llama-3.1-8b", "object": "model", "provider": "openrouter", ... },
+    { "id": "gpt-4o", "object": "model", "provider": "openrouter", ... }
+  ]
+}
+```
+
+### 6.2 Run a chat completion
+
+Requires an Allternit API token with the `models:write` permission (create one at `/api/v1/auth/tokens`).
+
+```bash
+curl -X POST http://localhost:8080/v1/chat/completions \
+  -H "Authorization: Bearer allternit_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "llama-3.1-8b",
+    "messages": [{"role": "user", "content": "Hello"}],
+    "temperature": 0.7
+  }'
+```
+
+Response:
+
+```json
+{
+  "id": "gen-...",
+  "object": "chat.completion",
+  "created": 1234567890,
+  "model": "meta-llama/llama-3.1-8b-instruct",
+  "choices": [...],
+  "usage": { "prompt_tokens": 10, "completion_tokens": 20, "total_tokens": 30 }
+}
+```
+
+Streaming is supported by adding `"stream": true` to the request body.
+
+---
+
+## 7. Proxy a Request from the Browser
 
 With a Clerk token in `Authorization`:
 
@@ -162,7 +219,7 @@ The cloud API verifies the runtime belongs to the Clerk user, checks capabilitie
 
 ---
 
-## 7. List and Revoke Runtimes
+## 8. List and Revoke Runtimes
 
 ```bash
 # List runtimes
@@ -179,7 +236,7 @@ curl -X DELETE http://localhost:8080/api/v1/runtime-devices/rt_uuid \
 ## Production Notes
 
 - Use Postgres for `DATABASE_URL` so concurrent runtimes and web workers can share state.
-- Store Clerk secrets and runtime encryption keys in Railway/Fly/AWS secret management, never in the repo.
+- Store Clerk secrets and runtime encryption keys in your secret manager of choice (e.g. AWS Secrets Manager, Doppler), never in the repo.
 - Run at least two instances behind a load balancer for availability; the relay state is currently in-memory, so sticky sessions or a shared Redis backend would be needed for multi-instance deployments.
 
 ---

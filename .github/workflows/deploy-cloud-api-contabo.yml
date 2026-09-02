@@ -1,0 +1,53 @@
+name: Deploy Cloud API to Contabo
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'cmd/allternit-cloud-api/**'
+      - 'cmd/allternit-cloud-wizard/**'
+      - 'infrastructure/cloud/**'
+      - 'infrastructure/providers/hetzner/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.github/workflows/deploy-cloud-api-contabo.yml'
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-gnu
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-contabo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-contabo-
+
+      - name: Build release binary
+        run: cargo build --release --target x86_64-unknown-linux-gnu -p allternit-cloud-api
+
+      - name: Deploy to Contabo VPS
+        env:
+          CONTABO_DEPLOY_HOST: ${{ secrets.CONTABO_DEPLOY_HOST }}
+          CONTABO_DEPLOY_USER: ${{ secrets.CONTABO_DEPLOY_USER }}
+          CONTABO_SSH_KEY: ${{ secrets.CONTABO_SSH_KEY }}
+        run: |
+          echo "$CONTABO_SSH_KEY" > /tmp/deploy_key
+          chmod 600 /tmp/deploy_key
+          bash cmd/allternit-cloud-api/deploy-contabo.sh target/x86_64-unknown-linux-gnu/release/allternit-cloud-api
+          rm -f /tmp/deploy_key

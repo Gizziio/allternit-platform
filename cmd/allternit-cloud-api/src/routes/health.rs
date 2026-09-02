@@ -194,13 +194,27 @@ pub async fn metrics(State(state): State<Arc<ApiState>>) -> impl IntoResponse {
         None,
     );
 
-    // allternit_api_requests_total - API request counter (placeholder for future implementation)
-    // In a real implementation, this would be tracked via middleware
+    // API request metrics from middleware
+    let (requests_total, requests_errors, duration_micros_total) = state.metrics_state.snapshot();
     add_metric(
         "allternit_api_requests_total",
         "Total number of API requests",
         "counter",
-        "0",
+        &requests_total.to_string(),
+        None,
+    );
+    add_metric(
+        "allternit_api_request_errors_total",
+        "Total number of API request errors (4xx/5xx)",
+        "counter",
+        &requests_errors.to_string(),
+        None,
+    );
+    add_metric(
+        "allternit_api_request_duration_microseconds_total",
+        "Total API request duration in microseconds",
+        "counter",
+        &duration_micros_total.to_string(),
         None,
     );
 

@@ -219,9 +219,9 @@ impl SchedulerService {
             FROM schedules
             WHERE enabled = TRUE
               AND next_run_at IS NOT NULL
-              AND next_run_at <= ?
+              AND next_run_at <= $1
             ORDER BY next_run_at ASC
-            LIMIT ?
+            LIMIT $2
             "#,
         )
         .bind(now)
@@ -288,7 +288,7 @@ impl SchedulerService {
         // If schedule has explicit region preference, use it (if active)
         if let Some(ref region_id) = schedule.region_id {
             let is_active: bool = sqlx::query_scalar(
-                "SELECT EXISTS(SELECT 1 FROM regions WHERE id = ? AND active = TRUE)",
+                "SELECT EXISTS(SELECT 1 FROM regions WHERE id = $1 AND active = TRUE)",
             )
             .bind(region_id)
             .fetch_one(&state.db)
@@ -333,7 +333,7 @@ impl SchedulerService {
         let mut candidates = Vec::new();
         for region in &regions {
             let capacity_info: Option<(i32, i32)> = sqlx::query_as(
-                "SELECT COALESCE(current_runs, 0), COALESCE(queued_runs, 0) FROM region_capacity WHERE region_id = ?"
+                "SELECT COALESCE(current_runs, 0), COALESCE(queued_runs, 0) FROM region_capacity WHERE region_id = $1"
             )
             .bind(&region.id)
             .fetch_optional(&state.db)
@@ -438,7 +438,7 @@ impl SchedulerService {
                 id, name, description, mode, status, step_cursor, total_steps, completed_steps,
                 config, owner_id, tenant_id, runtime_id, runtime_type, schedule_id, region_id,
                 created_at, updated_at, started_at, completed_at, error_message, error_details
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
             "#,
         )
         .bind(&run_id)
@@ -509,8 +509,8 @@ impl SchedulerService {
         sqlx::query(
             r#"
             UPDATE schedules
-            SET last_run_at = ?, next_run_at = ?, run_count = run_count + 1, updated_at = ?
-            WHERE id = ?
+            SET last_run_at = $1, next_run_at = $2, run_count = run_count + 1, updated_at = $3
+            WHERE id = $4
             "#,
         )
         .bind(last_run)
@@ -530,7 +530,7 @@ impl SchedulerService {
         schedule: &Schedule,
         next_run: Option<chrono::DateTime<Utc>>,
     ) -> anyhow::Result<()> {
-        sqlx::query("UPDATE schedules SET next_run_at = ?, updated_at = ? WHERE id = ?")
+        sqlx::query("UPDATE schedules SET next_run_at = $1, updated_at = $2 WHERE id = $3")
             .bind(next_run)
             .bind(Utc::now())
             .bind(&schedule.id)
@@ -556,7 +556,7 @@ impl SchedulerService {
             FROM schedules
             WHERE enabled = TRUE
               AND next_run_at IS NOT NULL
-              AND next_run_at < ?
+              AND next_run_at < $1
               AND (last_run_at IS NULL OR last_run_at < next_run_at)
             "#,
         )
@@ -588,7 +588,7 @@ impl SchedulerService {
             }
 
             // Increment misfire count
-            sqlx::query("UPDATE schedules SET misfire_count = misfire_count + 1 WHERE id = ?")
+            sqlx::query("UPDATE schedules SET misfire_count = misfire_count + 1 WHERE id = $1")
                 .bind(&schedule.id)
                 .execute(&state.db)
                 .await?;

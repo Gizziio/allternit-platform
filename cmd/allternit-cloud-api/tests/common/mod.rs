@@ -1,14 +1,14 @@
 //! Test harness for integration tests
 //!
 //! Provides a TestApp struct for setting up test environment
-//! with in-memory database and HTTP client.
+//! with Postgres database and HTTP client.
 
 use allternit_cloud_api::{
-    create_rate_limiter, create_router, runtime, services, ApiState, RateLimitConfig,
+    create_rate_limiter, create_router, model_router, runtime, services, ApiState, RateLimitConfig,
     db::cowork_models::*,
 };
 use axum::{body::Body, http::Request, http::StatusCode, response::Response};
-use sqlx::SqlitePool;
+use sqlx::PgPool;
 use std::sync::Arc;
 use tempfile::TempDir;
 use tokio::sync::broadcast;
@@ -16,22 +16,20 @@ use tower::ServiceExt;
 
 /// Test application wrapper
 pub struct TestApp {
-    pub db: SqlitePool,
+    pub db: PgPool,
     pub router: axum::Router,
     pub temp_dir: TempDir,
     pub event_tx: broadcast::Sender<allternit_cloud_api::DeploymentEvent>,
 }
 
 impl TestApp {
-    /// Create a new test application with in-memory database
+    /// Create a new test application with Postgres database
     pub async fn new() -> Self {
-        // Create temp directory for database
+        // Create temp directory for any file-based test artifacts
         let temp_dir = TempDir::new().expect("Failed to create temp directory");
-        let db_path = temp_dir.path().join("test.db");
-        let database_url = format!("sqlite://{}", db_path.display());
 
         // Initialize database
-        let db = Self::init_test_db(&database_url).await;
+        let db = Self::init_test_db().await;
 
         // Create broadcast channel for events
         let (event_tx, _event_rx) = broadcast::channel::<allternit_cloud_api::DeploymentEvent>(100);
@@ -70,9 +68,15 @@ impl TestApp {
             public_rate_limiter,
             cost_service,
             quota_service,
-            fly_runtime_service: None,
+            contabo_runtime_service: Arc::new(services::ContaboRuntimeService::new(
+                db.clone(),
+                None,
+                "https://api.allternit.com".to_string(),
+            )),
             mesh_service: None,
             credential_cipher: None,
+            metrics_state: Arc::new(allternit_cloud_api::middleware::metrics::MetricsState::new()),
+            model_router: model_router::ModelRouter::disabled(model_router::catalog::starter_catalog()),
         });
 
         // Create router
@@ -87,15 +91,11 @@ impl TestApp {
     }
 
     /// Initialize test database with migrations
-    async fn init_test_db(database_url: &str) -> SqlitePool {
-        use sqlx::sqlite::SqliteConnectOptions;
-        use std::str::FromStr;
+    async fn init_test_db() -> PgPool {
+        let database_url = std::env::var("TEST_DATABASE_URL")
+            .unwrap_or_else(|_| "postgres://allternit:allternit_pg_2026@localhost:5432/allternit_test".to_string());
 
-        let options = SqliteConnectOptions::from_str(database_url)
-            .expect("Invalid test database URL")
-            .create_if_missing(true);
-
-        let pool = sqlx::SqlitePool::connect_with(options)
+        let pool = PgPool::connect(&database_url)
             .await
             .expect("Failed to connect to test database");
 
@@ -162,7 +162,7 @@ impl TestApp {
         let body = axum::body::to_bytes(response.into_body(), usize::MAX)
             .await
             .unwrap();
-        
+
         serde_json::from_slice(&body)
             .unwrap_or_else(|e| {
                 let body_str = String::from_utf8_lossy(&body);

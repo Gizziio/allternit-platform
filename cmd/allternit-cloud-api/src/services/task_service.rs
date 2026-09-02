@@ -6,12 +6,12 @@
 use crate::db::cowork_models::*;
 use crate::error::ApiError;
 use chrono::Utc;
-use sqlx::SqlitePool;
+use sqlx::PgPool;
 use uuid::Uuid;
 
 /// Create a new task
 pub async fn create_task(
-    pool: &SqlitePool,
+    pool: &PgPool,
     req: CreateTaskRequest,
     tenant_id: Option<String>,
     owner_id: Option<String>,
@@ -29,7 +29,7 @@ pub async fn create_task(
             priority, estimated_minutes, deadline, assignee_type, assignee_id,
             assignee_name, assignee_avatar, dependencies, optimize_rank, risk,
             created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
         RETURNING *
         "#,
     )
@@ -76,7 +76,7 @@ pub async fn create_task(
         sqlx::query(
             r#"
             INSERT INTO task_queue (id, task_id, status, max_retries, created_at)
-            VALUES (?, ?, 'pending', 3, ?)
+            VALUES ($1, $2, 'pending', 3, $3)
             "#,
         )
         .bind(&queue_id)
@@ -92,12 +92,12 @@ pub async fn create_task(
 
 /// List tasks for a workspace with tenant isolation and optional filters
 pub async fn list_tasks(
-    pool: &SqlitePool,
+    pool: &PgPool,
     filters: &TaskListFilter,
 ) -> Result<Vec<Task>, ApiError> {
     let tenant_id = filters.tenant_id.as_deref();
     let workspace_id = filters.workspace_id.as_deref().unwrap_or("");
-    let mut query = String::from("SELECT * FROM tasks WHERE tenant_id = ? AND workspace_id = ?");
+    let mut query = String::from("SELECT * FROM tasks WHERE tenant_id = $1 AND workspace_id = $2");
     let mut conditions: Vec<String> = Vec::new();
 
     if let Some(statuses) = &filters.status {
@@ -124,7 +124,7 @@ pub async fn list_tasks(
         query.push_str(&conditions.join(" AND "));
     }
 
-    query.push_str(" ORDER BY created_at DESC LIMIT ? OFFSET ?");
+    query.push_str(" ORDER BY created_at DESC LIMIT $1 OFFSET $2");
 
     let mut sql_query = sqlx::query_as::<_, Task>(&query);
 
@@ -163,11 +163,11 @@ pub async fn list_tasks(
 
 /// Get a single task by ID with tenant isolation
 pub async fn get_task(
-    pool: &SqlitePool,
+    pool: &PgPool,
     id: &str,
     tenant_id: Option<&str>,
 ) -> Result<Task, ApiError> {
-    let task = sqlx::query_as::<_, Task>("SELECT * FROM tasks WHERE id = ? AND tenant_id = ?")
+    let task = sqlx::query_as::<_, Task>("SELECT * FROM tasks WHERE id = $1 AND tenant_id = $2")
         .bind(id)
         .bind(tenant_id)
         .fetch_optional(pool)
@@ -179,7 +179,7 @@ pub async fn get_task(
 
 /// Update a task with tenant isolation
 pub async fn update_task(
-    pool: &SqlitePool,
+    pool: &PgPool,
     id: &str,
     req: UpdateTaskRequest,
     tenant_id: Option<&str>,
@@ -207,10 +207,10 @@ pub async fn update_task(
     let updated = sqlx::query_as::<_, Task>(
         r#"
         UPDATE tasks
-        SET title = ?, description = ?, status = ?, priority = ?,
-            estimated_minutes = ?, deadline = ?, assignee_type = ?, assignee_id = ?,
-            assignee_name = ?, assignee_avatar = ?, dependencies = ?, risk = ?, updated_at = ?
-        WHERE id = ? AND tenant_id = ?
+        SET title = $1, description = $2, status = $3, priority = $4,
+            estimated_minutes = $5, deadline = $6, assignee_type = $7, assignee_id = $8,
+            assignee_name = $9, assignee_avatar = $10, dependencies = $11, risk = $12, updated_at = $13
+        WHERE id = $14 AND tenant_id = $15
         RETURNING *
         "#,
     )
@@ -252,11 +252,11 @@ pub async fn update_task(
 
 /// Delete a task with tenant isolation
 pub async fn delete_task(
-    pool: &SqlitePool,
+    pool: &PgPool,
     id: &str,
     tenant_id: Option<&str>,
 ) -> Result<(), ApiError> {
-    let result = sqlx::query("DELETE FROM tasks WHERE id = ? AND tenant_id = ?")
+    let result = sqlx::query("DELETE FROM tasks WHERE id = $1 AND tenant_id = $2")
         .bind(id)
         .bind(tenant_id)
         .execute(pool)
@@ -272,7 +272,7 @@ pub async fn delete_task(
 
 /// Assign a task to a human or agent with tenant isolation
 pub async fn assign_task(
-    pool: &SqlitePool,
+    pool: &PgPool,
     task_id: &str,
     req: AssignTaskRequest,
     tenant_id: Option<&str>,
@@ -287,8 +287,8 @@ pub async fn assign_task(
     let updated = sqlx::query_as::<_, Task>(
         r#"
         UPDATE tasks
-        SET assignee_type = ?, assignee_id = ?, assignee_name = ?, assignee_avatar = ?, updated_at = ?
-        WHERE id = ? AND tenant_id = ?
+        SET assignee_type = $1, assignee_id = $2, assignee_name = $3, assignee_avatar = $4, updated_at = $5
+        WHERE id = $6 AND tenant_id = $7
         RETURNING *
         "#
     )
@@ -309,7 +309,7 @@ pub async fn assign_task(
         r#"
         INSERT INTO task_assignments (
             id, task_id, assignee_type, assignee_id, assignee_name, assigned_by, assigned_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
         "#,
     )
     .bind(&assignment_id)
@@ -343,7 +343,7 @@ pub async fn assign_task(
 
 /// List comments for a task with tenant isolation
 pub async fn list_comments(
-    pool: &SqlitePool,
+    pool: &PgPool,
     task_id: &str,
     tenant_id: Option<&str>,
 ) -> Result<Vec<TaskComment>, ApiError> {
@@ -351,7 +351,7 @@ pub async fn list_comments(
     let _ = get_task(pool, task_id, tenant_id).await?;
 
     let comments = sqlx::query_as::<_, TaskComment>(
-        "SELECT * FROM task_comments WHERE task_id = ? ORDER BY created_at ASC",
+        "SELECT * FROM task_comments WHERE task_id = $1 ORDER BY created_at ASC",
     )
     .bind(task_id)
     .fetch_all(pool)
@@ -363,7 +363,7 @@ pub async fn list_comments(
 
 /// Add a comment to a task with tenant isolation
 pub async fn add_comment(
-    pool: &SqlitePool,
+    pool: &PgPool,
     task_id: &str,
     req: CreateCommentRequest,
     tenant_id: Option<&str>,
@@ -377,7 +377,7 @@ pub async fn add_comment(
     let comment = sqlx::query_as::<_, TaskComment>(
         r#"
         INSERT INTO task_comments (id, task_id, author, author_avatar, body, created_at)
-        VALUES (?, ?, ?, ?, ?, ?)
+        VALUES ($1, $2, $3, $4, $5, $6)
         RETURNING *
         "#,
     )
@@ -411,7 +411,7 @@ pub async fn add_comment(
 /// Sorts by priority (desc), deadline (asc), created_at (asc)
 /// and updates optimize_rank on each task.
 pub async fn optimize_tasks(
-    pool: &SqlitePool,
+    pool: &PgPool,
     workspace_id: &str,
     tenant_id: Option<&str>,
 ) -> Result<Vec<Task>, ApiError> {
@@ -444,7 +444,7 @@ pub async fn optimize_tasks(
         let rank_i32 = rank as i32 + 1;
         if let Some(tid) = tenant_id {
             sqlx::query(
-                "UPDATE tasks SET optimize_rank = ?, updated_at = ? WHERE id = ? AND tenant_id = ?",
+                "UPDATE tasks SET optimize_rank = $1, updated_at = $2 WHERE id = $3 AND tenant_id = $4",
             )
             .bind(rank_i32)
             .bind(now)
@@ -455,7 +455,7 @@ pub async fn optimize_tasks(
             .map_err(ApiError::DatabaseError)?;
         } else {
             sqlx::query(
-                "UPDATE tasks SET optimize_rank = ?, updated_at = ? WHERE id = ? AND tenant_id IS NULL"
+                "UPDATE tasks SET optimize_rank = $1, updated_at = $2 WHERE id = $3 AND tenant_id IS NULL"
             )
             .bind(rank_i32)
             .bind(now)
@@ -477,7 +477,7 @@ pub async fn optimize_tasks(
 
 /// Record an append-only task event
 async fn record_task_event(
-    pool: &SqlitePool,
+    pool: &PgPool,
     task_id: &str,
     event_type: &str,
     payload: Option<serde_json::Value>,
@@ -486,7 +486,7 @@ async fn record_task_event(
     sqlx::query(
         r#"
         INSERT INTO task_events (task_id, event_type, payload, source_client, created_at)
-        VALUES (?, ?, ?, ?, ?)
+        VALUES ($1, $2, $3, $4, $5)
         "#,
     )
     .bind(task_id)
@@ -503,7 +503,7 @@ async fn record_task_event(
 
 /// Claim the next pending queue item for an agent (free function)
 pub async fn claim_queue_item(
-    pool: &SqlitePool,
+    pool: &PgPool,
     agent_id: &str,
     agent_role: Option<&str>,
     workspace_id: Option<&str>,
@@ -513,12 +513,12 @@ pub async fn claim_queue_item(
     let entry = sqlx::query_as::<_, TaskQueueEntry>(
         r#"
         UPDATE task_queue
-        SET status = 'claimed', agent_id = ?, agent_role = ?, claimed_at = ?
+        SET status = 'claimed', agent_id = $1, agent_role = $2, claimed_at = $3
         WHERE id = (
             SELECT q.id FROM task_queue q
             JOIN tasks t ON q.task_id = t.id
             WHERE q.status = 'pending'
-            AND (?1 IS NULL OR t.workspace_id = ?1)
+            AND ($41 IS NULL OR t.workspace_id = $51)
             ORDER BY q.created_at ASC
             LIMIT 1
         )
@@ -538,14 +538,14 @@ pub async fn claim_queue_item(
 
 /// Start a claimed queue item (transition claimed → running)
 pub async fn start_queue_item(
-    pool: &SqlitePool,
+    pool: &PgPool,
     queue_id: &str,
 ) -> Result<TaskQueueEntry, ApiError> {
     let entry = sqlx::query_as::<_, TaskQueueEntry>(
         r#"
         UPDATE task_queue
-        SET status = 'running', started_at = ?
-        WHERE id = ? AND status = 'claimed'
+        SET status = 'running', started_at = $1
+        WHERE id = $2 AND status = 'claimed'
         RETURNING *
         "#,
     )
@@ -560,7 +560,7 @@ pub async fn start_queue_item(
 
 /// List queue items for a workspace with optional status filter
 pub async fn list_queue_items(
-    pool: &SqlitePool,
+    pool: &PgPool,
     workspace_id: Option<&str>,
     status: Option<&str>,
 ) -> Result<Vec<TaskQueueEntry>, ApiError> {
@@ -570,7 +570,7 @@ pub async fn list_queue_items(
                 r#"
                 SELECT q.* FROM task_queue q
                 JOIN tasks t ON q.task_id = t.id
-                WHERE t.workspace_id = ? AND q.status = ?
+                WHERE t.workspace_id = $1 AND q.status = $2
                 ORDER BY q.created_at ASC
                 "#,
             )
@@ -583,7 +583,7 @@ pub async fn list_queue_items(
                 r#"
                 SELECT q.* FROM task_queue q
                 JOIN tasks t ON q.task_id = t.id
-                WHERE t.workspace_id = ?
+                WHERE t.workspace_id = $1
                 ORDER BY q.created_at ASC
                 "#,
             )
@@ -593,7 +593,7 @@ pub async fn list_queue_items(
         }
     } else if let Some(st) = status {
         sqlx::query_as::<_, TaskQueueEntry>(
-            "SELECT * FROM task_queue WHERE status = ? ORDER BY created_at ASC",
+            "SELECT * FROM task_queue WHERE status = $1 ORDER BY created_at ASC",
         )
         .bind(st)
         .fetch_all(pool)
@@ -611,7 +611,7 @@ pub async fn list_queue_items(
 /// Complete a queue item with result or error (free function)
 /// If error is provided, status becomes 'failed'; otherwise 'completed'.
 pub async fn complete_queue_item(
-    pool: &SqlitePool,
+    pool: &PgPool,
     queue_id: &str,
     result: Option<String>,
     error: Option<String>,
@@ -626,8 +626,8 @@ pub async fn complete_queue_item(
     let updated = sqlx::query_as::<_, TaskQueueEntry>(
         r#"
         UPDATE task_queue
-        SET status = ?, completed_at = ?, result = ?, error = ?
-        WHERE id = ?
+        SET status = $1, completed_at = $2, result = $3, error = $4
+        WHERE id = $5
         RETURNING *
         "#,
     )
@@ -652,12 +652,12 @@ pub async fn complete_queue_item(
 /// Provides CRUD operations for tasks, comments, assignments,
 /// and task optimization (IntelliSchedule).
 pub struct TaskService {
-    pub db: SqlitePool,
+    pub db: PgPool,
 }
 
 impl TaskService {
     /// Create a new task service
-    pub fn new(db: SqlitePool) -> Self {
+    pub fn new(db: PgPool) -> Self {
         Self { db }
     }
 
@@ -682,7 +682,7 @@ impl TaskService {
         id: &str,
         tenant_id: Option<String>,
     ) -> Result<Option<Task>, ApiError> {
-        let task = sqlx::query_as::<_, Task>("SELECT * FROM tasks WHERE id = ? AND tenant_id = ?")
+        let task = sqlx::query_as::<_, Task>("SELECT * FROM tasks WHERE id = $1 AND tenant_id = $2")
             .bind(id)
             .bind(tenant_id)
             .fetch_optional(&self.db)
@@ -798,7 +798,7 @@ impl TaskService {
         sqlx::query(
             r#"
             INSERT INTO task_events (task_id, event_type, payload, source_client, created_at)
-            VALUES (?, ?, ?, ?, ?)
+            VALUES ($1, $2, $3, $4, $5)
             "#,
         )
         .bind(task_id)

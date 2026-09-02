@@ -42,7 +42,7 @@ pub async fn create_run(
     // Validate region if specified
     if let Some(ref region_id) = request.region_id {
         let region_exists: bool = sqlx::query_scalar(
-            "SELECT EXISTS(SELECT 1 FROM regions WHERE id = ? AND active = TRUE)",
+            "SELECT EXISTS(SELECT 1 FROM regions WHERE id = $1 AND active = TRUE)",
         )
         .bind(region_id)
         .fetch_one(&state.db)

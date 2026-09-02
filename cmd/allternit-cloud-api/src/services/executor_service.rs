@@ -40,7 +40,7 @@ use crate::services::{EventStore, RunService};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
-use sqlx::SqlitePool;
+use sqlx::PgPool;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
@@ -175,7 +175,7 @@ pub struct OnlineInstance {
 /// so the worker can be exercised in tests without booting the whole server.
 #[derive(Clone)]
 pub struct ExecutorDeps {
-    pub db: SqlitePool,
+    pub db: PgPool,
     pub event_store: Arc<dyn EventStore>,
     pub run_service: Arc<dyn RunService>,
 }
@@ -190,10 +190,10 @@ pub struct ExecutorDeps {
 /// run cannot both win: SQLite serializes the UPDATE and only the first one
 /// still sees `status = 'queued'`. `started_at` is stamped here (mirroring
 /// `RunServiceImpl::transition`'s behavior for the running transition).
-pub async fn claim_run(db: &SqlitePool, run_id: &str) -> Result<bool, ApiError> {
+pub async fn claim_run(db: &PgPool, run_id: &str) -> Result<bool, ApiError> {
     let now = Utc::now();
     let result = sqlx::query(
-        "UPDATE runs SET status = ?, started_at = ?, updated_at = ? WHERE id = ? AND status = ?",
+        "UPDATE runs SET status = $1, started_at = $2, updated_at = $3 WHERE id = $4 AND status = $5",
     )
     .bind(RunStatus::Running)
     .bind(now)
@@ -208,10 +208,10 @@ pub async fn claim_run(db: &SqlitePool, run_id: &str) -> Result<bool, ApiError> 
 
 /// Release a claimed run back to the queue (running → queued). Used when
 /// dispatch to the instance fails before any remote work started.
-pub async fn release_run(db: &SqlitePool, run_id: &str) -> Result<bool, ApiError> {
+pub async fn release_run(db: &PgPool, run_id: &str) -> Result<bool, ApiError> {
     let now = Utc::now();
     let result = sqlx::query(
-        "UPDATE runs SET status = ?, started_at = NULL, updated_at = ? WHERE id = ? AND status = ?",
+        "UPDATE runs SET status = $1, started_at = NULL, updated_at = $2 WHERE id = $3 AND status = $4",
     )
     .bind(RunStatus::Queued)
     .bind(now)
@@ -224,9 +224,9 @@ pub async fn release_run(db: &SqlitePool, run_id: &str) -> Result<bool, ApiError
 }
 
 /// List queued runs, oldest first.
-pub async fn list_queued_runs(db: &SqlitePool, limit: i64) -> Result<Vec<Run>, ApiError> {
+pub async fn list_queued_runs(db: &PgPool, limit: i64) -> Result<Vec<Run>, ApiError> {
     sqlx::query_as::<_, Run>(
-        "SELECT * FROM runs WHERE status = ? ORDER BY created_at ASC LIMIT ?",
+        "SELECT * FROM runs WHERE status = $1 ORDER BY created_at ASC LIMIT $2",
     )
     .bind(RunStatus::Queued)
     .bind(limit)
@@ -242,15 +242,15 @@ pub async fn list_queued_runs(db: &SqlitePool, limit: i64) -> Result<Vec<Run>, A
 /// unauthenticated dev path) may use any online instance — acceptable for the
 /// single-operator deployments this serves today, and easy to tighten later.
 pub async fn find_online_instance(
-    db: &SqlitePool,
+    db: &PgPool,
     owner_id: Option<&str>,
 ) -> Result<Option<OnlineInstance>, ApiError> {
     sqlx::query_as::<_, OnlineInstance>(
         r#"
         SELECT id, name, url, user_id, updated_at
         FROM gizzi_instances
-        WHERE updated_at >= datetime('now', ?)
-          AND (? IS NULL OR user_id = ?)
+        WHERE updated_at >= NOW() + $1::INTERVAL
+          AND ($2 IS NULL OR user_id = $3)
         ORDER BY updated_at DESC
         LIMIT 1
         "#,
@@ -473,7 +473,7 @@ fn map_instance_event(event_type: &str, payload: serde_json::Value) -> Option<(E
 // Job bookkeeping (runs/:id/jobs answers with real data)
 // ============================================================================
 
-async fn job_started(db: &SqlitePool, run_id: &str, instance_name: &str) -> Result<String, ApiError> {
+async fn job_started(db: &PgPool, run_id: &str, instance_name: &str) -> Result<String, ApiError> {
     let job_id = Uuid::new_v4().to_string();
     let now = Utc::now();
     sqlx::query(
@@ -482,7 +482,7 @@ async fn job_started(db: &SqlitePool, run_id: &str, instance_name: &str) -> Resu
             id, run_id, name, description, status, priority, queue_position,
             config, scheduled_at, started_at, completed_at, exit_code, result,
             error_message, retry_count, max_retries, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
         "#,
     )
     .bind(&job_id)
@@ -510,14 +510,14 @@ async fn job_started(db: &SqlitePool, run_id: &str, instance_name: &str) -> Resu
 }
 
 async fn job_finished(
-    db: &SqlitePool,
+    db: &PgPool,
     job_id: &str,
     status: JobStatus,
     result: Option<serde_json::Value>,
     error_message: Option<&str>,
 ) -> Result<(), ApiError> {
     sqlx::query(
-        "UPDATE jobs SET status = ?, completed_at = ?, result = ?, error_message = ?, updated_at = ? WHERE id = ?",
+        "UPDATE jobs SET status = $1, completed_at = $2, result = $3, error_message = $4, updated_at = $5 WHERE id = $6",
     )
     .bind(status)
     .bind(Utc::now())
@@ -719,8 +719,8 @@ pub async fn execute_run(
 }
 
 /// Current local status of a run.
-async fn local_run_status(db: &SqlitePool, run_id: &str) -> Result<Option<RunStatus>, ApiError> {
-    sqlx::query_scalar::<_, RunStatus>("SELECT status FROM runs WHERE id = ?")
+async fn local_run_status(db: &PgPool, run_id: &str) -> Result<Option<RunStatus>, ApiError> {
+    sqlx::query_scalar::<_, RunStatus>("SELECT status FROM runs WHERE id = $1")
         .bind(run_id)
         .fetch_optional(db)
         .await
@@ -789,7 +789,7 @@ async fn monitor_run(
         }
 
         // Heartbeat: prove a live executor still owns this run.
-        let _ = sqlx::query("UPDATE runs SET updated_at = ? WHERE id = ?")
+        let _ = sqlx::query("UPDATE runs SET updated_at = $1 WHERE id = $2")
             .bind(Utc::now())
             .bind(run_id)
             .execute(&deps.db)
@@ -1029,7 +1029,7 @@ impl ExecutorService {
     /// command.
     async fn fail_orphaned_runs(&self) -> Result<(), ApiError> {
         let orphans = sqlx::query_as::<_, Run>(
-            "SELECT * FROM runs WHERE status = ? AND runtime_id LIKE 'gi\\_%' ESCAPE '\\'",
+            "SELECT * FROM runs WHERE status = $1 AND runtime_id LIKE 'gi\\_%' ESCAPE '\\'",
         )
         .bind(RunStatus::Running)
         .fetch_all(&self.deps.db)
@@ -1067,85 +1067,114 @@ pub fn start_executor_service(config: ExecutorConfig, deps: ExecutorDeps) {
 mod tests {
     use super::*;
     use crate::services::{EventStoreImpl, RunServiceImpl};
-    use sqlx::sqlite::SqlitePoolOptions;
+    use sqlx::postgres::PgPoolOptions;
 
     /// Minimal DDL for the tables the executor touches, matching migrations
     /// 002 (runs/jobs/events) and 018 (gizzi_instances).
     const TEST_DDL: &str = r#"
+        DROP TABLE IF EXISTS runs CASCADE;
+
         CREATE TABLE runs (
             id TEXT PRIMARY KEY,
             name TEXT NOT NULL,
             description TEXT,
-            mode TEXT NOT NULL CHECK (mode IN ('local', 'remote', 'cloud')),
-            status TEXT NOT NULL CHECK (status IN (
-                'pending','planning','queued','running','paused','completed','failed','cancelled'
-            )),
+            mode runmode NOT NULL,
+            status runstatus NOT NULL,
             step_cursor TEXT,
             total_steps INTEGER,
             completed_steps INTEGER DEFAULT 0,
-            config JSON NOT NULL,
+            config JSONB NOT NULL,
             owner_id TEXT,
             tenant_id TEXT,
             runtime_id TEXT,
             runtime_type TEXT CHECK (runtime_type IN ('local', 'remote', 'cloud')),
             schedule_id TEXT,
             region_id TEXT,
-            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            started_at TIMESTAMP,
-            completed_at TIMESTAMP,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            started_at TIMESTAMPTZ,
+            completed_at TIMESTAMPTZ,
             error_message TEXT,
-            error_details JSON
+            error_details JSONB
         );
+        DROP TABLE IF EXISTS jobs CASCADE;
+
         CREATE TABLE jobs (
             id TEXT PRIMARY KEY,
             run_id TEXT NOT NULL REFERENCES runs(id) ON DELETE CASCADE,
             name TEXT NOT NULL,
             description TEXT,
-            status TEXT NOT NULL CHECK (status IN (
-                'pending','queued','running','completed','failed','cancelled','retrying'
-            )),
+            status jobstatus NOT NULL,
             priority INTEGER NOT NULL DEFAULT 0,
             queue_position INTEGER,
-            config JSON NOT NULL,
-            scheduled_at TIMESTAMP,
-            started_at TIMESTAMP,
-            completed_at TIMESTAMP,
+            config JSONB NOT NULL,
+            scheduled_at TIMESTAMPTZ,
+            started_at TIMESTAMPTZ,
+            completed_at TIMESTAMPTZ,
             exit_code INTEGER,
-            result JSON,
+            result JSONB,
             error_message TEXT,
             retry_count INTEGER DEFAULT 0,
             max_retries INTEGER DEFAULT 0,
-            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         );
+        DROP TABLE IF EXISTS events CASCADE;
+
         CREATE TABLE events (
             id TEXT PRIMARY KEY,
             run_id TEXT NOT NULL REFERENCES runs(id) ON DELETE CASCADE,
-            sequence INTEGER NOT NULL,
-            event_type TEXT NOT NULL,
-            payload JSON,
+            sequence BIGINT NOT NULL,
+            event_type eventtype NOT NULL,
+            payload JSONB,
             source_client_id TEXT,
             source_client_type TEXT,
-            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         );
+        DROP TABLE IF EXISTS gizzi_instances CASCADE;
+
         CREATE TABLE gizzi_instances (
             id TEXT PRIMARY KEY,
             user_id TEXT NOT NULL,
             name TEXT NOT NULL,
             url TEXT NOT NULL,
-            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
             UNIQUE(user_id, name)
         );
     "#;
 
-    async fn test_pool() -> SqlitePool {
-        // max_connections(1): with plain ":memory:" every pooled connection is
-        // its own database; a single connection keeps one shared database.
-        let pool = SqlitePoolOptions::new()
+    async fn test_pool() -> PgPool {
+        let url = "postgres://allternit:allternit_pg_2026@localhost:5432/allternit_test";
+        let schema = format!("test_{}", uuid::Uuid::new_v4().simple());
+        let schema_for_hook = schema.clone();
+        let pool = PgPoolOptions::new()
             .max_connections(1)
-            .connect(":memory:")
+            .after_connect(move |conn, _meta| {
+                let schema = schema_for_hook.clone();
+                Box::pin(async move {
+                    sqlx::query(&format!("CREATE SCHEMA IF NOT EXISTS {}", schema))
+                        .execute(&mut *conn)
+                        .await?;
+                    sqlx::query(&format!("SET search_path TO {}", schema))
+                        .execute(&mut *conn)
+                        .await?;
+                    for stmt in [
+                        "CREATE TYPE runmode AS ENUM ('local', 'remote', 'cloud')",
+                        "CREATE TYPE runstatus AS ENUM ('pending', 'planning', 'queued', 'running', 'paused', 'completed', 'failed', 'cancelled')",
+                        "CREATE TYPE jobstatus AS ENUM ('pending', 'queued', 'running', 'completed', 'failed', 'cancelled', 'retrying')",
+                        "CREATE TYPE clienttype AS ENUM ('terminal', 'web', 'desktop', 'mobile', 'api')",
+                        "CREATE TYPE eventtype AS ENUM ('run_created', 'run_started', 'run_completed', 'run_failed', 'run_cancelled', 'run_paused', 'run_resumed', 'step_started', 'step_completed', 'step_failed', 'step_skipped', 'stdout', 'stderr', 'output', 'tool_call', 'tool_result', 'approval_needed', 'approval_given', 'approval_denied', 'approval_timeout', 'checkpoint_created', 'checkpoint_restored', 'job_queued', 'job_started', 'job_completed', 'job_failed', 'job_cancelled', 'heartbeat', 'warning', 'error')",
+                    ] {
+                        sqlx::query(stmt)
+                            .execute(&mut *conn)
+                            .await
+                            .ok();
+                    }
+                    Ok(())
+                })
+            })
+            .connect(url)
             .await
             .unwrap();
         for statement in TEST_DDL.split(';').map(str::trim).filter(|s| !s.is_empty()) {
@@ -1154,17 +1183,49 @@ mod tests {
         pool
     }
 
-    /// Shared-cache in-memory pool so several pools/tasks can race on one DB.
-    async fn shared_pool(name: &str) -> SqlitePool {
-        let url = format!("sqlite:file:{name}?mode=memory&cache=shared");
-        SqlitePoolOptions::new()
+    /// Shared pool for tests that need to race on one database.
+    /// Uses a unique schema per test name for isolation.
+    async fn shared_pool(name: &str) -> PgPool {
+        let url = "postgres://allternit:allternit_pg_2026@localhost:5432/allternit_test";
+        let schema = format!("test_{}", name.replace(|c: char| !c.is_alphanumeric(), "_"));
+        let schema_for_hook = schema.clone();
+        let pool = PgPoolOptions::new()
             .max_connections(4)
-            .connect(&url)
+            .after_connect(move |conn, _meta| {
+                let schema = schema_for_hook.clone();
+                Box::pin(async move {
+                    sqlx::query(&format!("CREATE SCHEMA IF NOT EXISTS {}", schema))
+                        .execute(&mut *conn)
+                        .await?;
+                    sqlx::query(&format!("SET search_path TO {}", schema))
+                        .execute(&mut *conn)
+                        .await?;
+                    // Create enum types in the test schema so DDL doesn't need public in search_path.
+                    for stmt in [
+                        "CREATE TYPE runmode AS ENUM ('local', 'remote', 'cloud')",
+                        "CREATE TYPE runstatus AS ENUM ('pending', 'planning', 'queued', 'running', 'paused', 'completed', 'failed', 'cancelled')",
+                        "CREATE TYPE jobstatus AS ENUM ('pending', 'queued', 'running', 'completed', 'failed', 'cancelled', 'retrying')",
+                        "CREATE TYPE clienttype AS ENUM ('terminal', 'web', 'desktop', 'mobile', 'api')",
+                        "CREATE TYPE eventtype AS ENUM ('run_created', 'run_started', 'run_completed', 'run_failed', 'run_cancelled', 'run_paused', 'run_resumed', 'step_started', 'step_completed', 'step_failed', 'step_skipped', 'stdout', 'stderr', 'output', 'tool_call', 'tool_result', 'approval_needed', 'approval_given', 'approval_denied', 'approval_timeout', 'checkpoint_created', 'checkpoint_restored', 'job_queued', 'job_started', 'job_completed', 'job_failed', 'job_cancelled', 'heartbeat', 'warning', 'error')",
+                    ] {
+                        sqlx::query(stmt)
+                            .execute(&mut *conn)
+                            .await
+                            .ok(); // ignore "already exists" errors
+                    }
+                    Ok(())
+                })
+            })
+            .connect(url)
             .await
-            .unwrap()
+            .unwrap();
+        for statement in TEST_DDL.split(';').map(str::trim).filter(|s| !s.is_empty()) {
+            sqlx::query(statement).execute(&pool).await.unwrap();
+        }
+        pool
     }
 
-    fn test_deps(db: SqlitePool) -> ExecutorDeps {
+    fn test_deps(db: PgPool) -> ExecutorDeps {
         let event_store: Arc<dyn EventStore> = Arc::new(EventStoreImpl::new(db.clone()));
         let run_service: Arc<dyn RunService> =
             Arc::new(RunServiceImpl::new(db.clone()).with_event_store(event_store.clone()));
@@ -1175,12 +1236,12 @@ mod tests {
         }
     }
 
-    async fn insert_run(pool: &SqlitePool, id: &str, status: RunStatus, config: serde_json::Value) {
+    async fn insert_run(pool: &PgPool, id: &str, status: RunStatus, config: serde_json::Value) {
         insert_run_with_owner(pool, id, status, config, None).await;
     }
 
     async fn insert_run_with_owner(
-        pool: &SqlitePool,
+        pool: &PgPool,
         id: &str,
         status: RunStatus,
         config: serde_json::Value,
@@ -1192,8 +1253,8 @@ mod tests {
                 id, name, description, mode, status, step_cursor, total_steps, completed_steps,
                 config, owner_id, tenant_id, runtime_id, runtime_type, schedule_id, region_id,
                 created_at, updated_at, started_at, completed_at, error_message, error_details
-            ) VALUES (?, ?, NULL, 'remote', ?, NULL, NULL, 0, ?, ?, NULL, NULL, NULL, NULL, NULL,
-                      CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, NULL, NULL, NULL, NULL)
+            ) VALUES ($1, $2, NULL, 'remote', $3, NULL, NULL, 0, $4, $5, NULL, NULL, NULL, NULL, NULL,
+                      NOW(), NOW(), NULL, NULL, NULL, NULL)
             "#,
         )
         .bind(id)
@@ -1206,8 +1267,8 @@ mod tests {
         .unwrap();
     }
 
-    async fn run_status(pool: &SqlitePool, id: &str) -> RunStatus {
-        sqlx::query_scalar("SELECT status FROM runs WHERE id = ?")
+    async fn run_status(pool: &PgPool, id: &str) -> RunStatus {
+        sqlx::query_scalar("SELECT status FROM runs WHERE id = $1")
             .bind(id)
             .fetch_one(pool)
             .await
@@ -1259,11 +1320,22 @@ mod tests {
         let workers = 8;
         let mut handles = Vec::new();
         for _ in 0..workers {
-            let url = format!("sqlite:file:{name}?mode=memory&cache=shared");
+            let url = "postgres://allternit:allternit_pg_2026@localhost:5432/allternit_test";
+            let schema = format!("test_{}", name.replace(|c: char| !c.is_alphanumeric(), "_"));
+            let schema_for_hook = schema.clone();
             handles.push(tokio::spawn(async move {
-                let pool = SqlitePoolOptions::new()
+                let pool = PgPoolOptions::new()
                     .max_connections(2)
-                    .connect(&url)
+                    .after_connect(move |conn, _meta| {
+                        let schema = schema_for_hook.clone();
+                        Box::pin(async move {
+                            sqlx::query(&format!("SET search_path TO {}, public", schema))
+                                .execute(&mut *conn)
+                                .await?;
+                            Ok(())
+                        })
+                    })
+                    .connect(url)
                     .await
                     .unwrap();
                 claim_run(&pool, "r1").await.unwrap()
@@ -1308,7 +1380,7 @@ mod tests {
 
         // Stale instance for user_1, fresh for user_2.
         sqlx::query(
-            "INSERT INTO gizzi_instances (id, user_id, name, url, updated_at) VALUES ('gi_old', 'user_1', 'old', 'https://old.example.com', datetime('now', '-1 hour'))",
+            "INSERT INTO gizzi_instances (id, user_id, name, url, updated_at) VALUES ('gi_old', 'user_1', 'old', 'https://old.example.com', NOW() - INTERVAL '1 hour')",
         )
         .execute(&pool)
         .await
@@ -1490,7 +1562,7 @@ mod tests {
 
         // Events: run_started (executor), mirrored run_started + stdout, run_completed.
         let event_types: Vec<String> = sqlx::query_scalar(
-            "SELECT event_type FROM events WHERE run_id = 'r1' ORDER BY sequence ASC",
+            "SELECT event_type::text FROM events WHERE run_id = 'r1' ORDER BY sequence ASC",
         )
         .fetch_all(&pool)
         .await
@@ -1499,7 +1571,7 @@ mod tests {
         assert_eq!(event_types.last().unwrap(), "run_completed");
 
         let stdout_payload: String = sqlx::query_scalar(
-            "SELECT payload FROM events WHERE run_id = 'r1' AND event_type = 'stdout'",
+            "SELECT payload::text FROM events WHERE run_id = 'r1' AND event_type = 'stdout'",
         )
         .fetch_one(&pool)
         .await
@@ -1508,7 +1580,7 @@ mod tests {
 
         // Job row tells the same truth.
         let (job_status, result): (String, Option<String>) =
-            sqlx::query_as("SELECT status, result FROM jobs WHERE run_id = 'r1'")
+            sqlx::query_as("SELECT status::text, result::text FROM jobs WHERE run_id = 'r1'")
                 .fetch_one(&pool)
                 .await
                 .unwrap();
@@ -1553,14 +1625,14 @@ mod tests {
                 .unwrap();
         assert!(
             error_message.unwrap().contains("command exited with code 1"),
-            "the instance's real error is surfaced"
+            "the instance's DOUBLE PRECISION error is surfaced"
         );
 
-        let job_status: String = sqlx::query_scalar("SELECT status FROM jobs WHERE run_id = 'r1'")
+        let job_status: JobStatus = sqlx::query_scalar("SELECT status FROM jobs WHERE run_id = 'r1'")
             .fetch_one(&pool)
             .await
             .unwrap();
-        assert_eq!(job_status, "failed");
+        assert_eq!(job_status, JobStatus::Failed);
     }
 
     #[tokio::test]

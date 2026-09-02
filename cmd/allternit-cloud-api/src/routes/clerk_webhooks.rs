@@ -144,7 +144,7 @@ async fn handle_user_deleted(state: &ApiState, event: &Value) -> Response {
         return ApiError::BadRequest("user.deleted event missing data.id".to_string()).into_response();
     };
 
-    match sqlx::query("UPDATE users SET status = 'inactive' WHERE id = ?")
+    match sqlx::query("UPDATE users SET status = 'inactive' WHERE id = $1")
         .bind(user_id)
         .execute(&state.db)
         .await

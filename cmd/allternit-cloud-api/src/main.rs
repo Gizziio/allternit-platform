@@ -2,7 +2,7 @@
 //!
 //! Main entry point for the cloud deployment API.
 
-use allternit_cloud_api::{init_db, routes, runtime, services, ApiState};
+use allternit_cloud_api::{init_db, model_router, routes, runtime, services, ApiState};
 use std::sync::Arc;
 use tokio::sync::broadcast;
 
@@ -122,20 +122,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let quota_service = Arc::new(services::QuotaService::new(db.clone()));
     tracing::info!("Quota service initialized");
 
-    // Create Fly runtime service if a token is available.
-    let fly_runtime_service =
-        std::env::var("FLY_API_TOKEN").ok().and_then(
-            |token| match services::FlyRuntimeService::new(token) {
-                Ok(service) => {
-                    tracing::info!("Fly runtime service initialized");
-                    Some(service)
-                }
-                Err(error) => {
-                    tracing::warn!("Failed to initialize Fly runtime service: {}", error);
-                    None
-                }
-            },
-        );
+    // Contabo runtime service for hosted runtimes: provisions and manages
+    // workload containers on the Contabo VPS.
+    let contabo_runtime_service = Arc::new(services::ContaboRuntimeService::new(
+        db.clone(),
+        std::env::var("HEADSCALE_API_KEY").ok(),
+        std::env::var("ALLTERNIT_CLOUD_API_URL")
+            .unwrap_or_else(|_| "https://api.allternit.com".to_string()),
+    ));
+    tracing::info!("Contabo runtime service initialized");
 
     // Create mesh enrollment service if a Headscale API key is available.
     let mesh_service = routes::mesh::MeshService::from_env();
@@ -160,6 +155,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         _ => tracing::info!("Credential cipher initialized"),
     }
 
+    // Build the model router.
+    let alias_map = model_router::catalog::starter_catalog();
+    let model_router = match model_router::openrouter::OpenRouterConfig::from_env() {
+        Some(config) => {
+            tracing::info!("OpenRouter model router enabled");
+            let provider = model_router::openrouter::OpenRouterProvider::new(config);
+            model_router::ModelRouter::new(vec![provider], alias_map)
+        }
+        None => {
+            if is_production {
+                tracing::warn!(
+                    "OPENROUTER_API_KEY not set - model router disabled in production"
+                );
+            } else {
+                tracing::info!(
+                    "OPENROUTER_API_KEY not set - model router disabled (set it to enable /v1/chat/completions)"
+                );
+            }
+            model_router::ModelRouter::disabled(alias_map)
+        }
+    };
+
     // Create API state with shared services
     let state = Arc::new(ApiState {
         db,
@@ -172,14 +189,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         public_rate_limiter,
         cost_service,
         quota_service,
-        fly_runtime_service,
+        contabo_runtime_service,
         mesh_service,
         credential_cipher,
+        metrics_state: Arc::new(allternit_cloud_api::middleware::metrics::MetricsState::new()),
+        model_router,
     });
 
-    if state.fly_runtime_service.is_some() {
-        services::start_hosted_runtime_lifecycle_task(state.clone());
-    }
+    services::start_hosted_runtime_lifecycle_task(state.clone());
 
     // Start scheduler service (background task)
     let scheduler_enabled = std::env::var("SCHEDULER_ENABLED")

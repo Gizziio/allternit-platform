@@ -258,19 +258,19 @@ fn map_stripe_event(event: &Value) -> Result<MappedStripeEvent, ApiError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use sqlx::SqlitePool;
+    use sqlx::PgPool;
 
     const TEST_SECRET: &str = "whsec_test_secret";
 
-    fn sign(secret: &str, timestamp: i64, body: &[u8]) -> String {
-        let mut signed_payload = timestamp.to_string().into_bytes();
+    fn sign(secret: &str, TIMESTAMPTZ: i64, body: &[u8]) -> String {
+        let mut signed_payload = TIMESTAMPTZ.to_string().into_bytes();
         signed_payload.push(b'.');
         signed_payload.extend_from_slice(body);
         let mut mac = <Hmac<Sha256> as Mac>::new_from_slice(secret.as_bytes()).unwrap();
         mac.update(&signed_payload);
         format!(
             "t={},v1={}",
-            timestamp,
+            TIMESTAMPTZ,
             hex::encode(mac.finalize().into_bytes())
         )
     }
@@ -297,35 +297,54 @@ mod tests {
 
     /// Minimal billing schema matching migrations 001/012/014/015 for the
     /// entitlement mutation path.
-    async fn test_pool() -> SqlitePool {
-        let pool = SqlitePool::connect(":memory:").await.unwrap();
-        sqlx::query(
-            r#"
-            CREATE TABLE users (
+    async fn test_pool() -> PgPool {
+        let url = "postgres://allternit:allternit_pg_2026@localhost:5432/allternit_test";
+        let schema = format!("test_{}", uuid::Uuid::new_v4().simple());
+        let schema_for_hook = schema.clone();
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(1)
+            .after_connect(move |conn, _meta| {
+                let schema = schema_for_hook.clone();
+                Box::pin(async move {
+                    sqlx::query(&format!("CREATE SCHEMA IF NOT EXISTS {}", schema))
+                        .execute(&mut *conn)
+                        .await?;
+                    sqlx::query(&format!("SET search_path TO {}", schema))
+                        .execute(&mut *conn)
+                        .await?;
+                    Ok(())
+                })
+            })
+            .connect(url)
+            .await
+            .unwrap();
+        sqlx::query("DROP TABLE IF EXISTS users CASCADE").execute(&pool).await.unwrap();
+        sqlx::query(r#"
+        CREATE TABLE users (
                 id TEXT PRIMARY KEY,
                 email TEXT NOT NULL,
                 status TEXT NOT NULL DEFAULT 'active',
-                last_login_at TIMESTAMP
+                last_login_at TIMESTAMPTZ
             )
             "#,
         )
         .execute(&pool)
         .await
         .unwrap();
-        sqlx::query(
-            r#"
-            CREATE TABLE plan_tiers (
+        sqlx::query("DROP TABLE IF EXISTS plan_tiers CASCADE").execute(&pool).await.unwrap();
+        sqlx::query(r#"
+        CREATE TABLE plan_tiers (
                 id TEXT PRIMARY KEY,
                 display_name TEXT NOT NULL,
-                max_active_devices INTEGER NOT NULL DEFAULT 1,
-                max_pairings_per_day INTEGER NOT NULL DEFAULT 5,
-                max_relay_sockets INTEGER NOT NULL DEFAULT 5,
-                max_relay_mb_per_day INTEGER NOT NULL DEFAULT 100,
-                max_hosted_runtime_hours_monthly INTEGER NOT NULL DEFAULT 0,
-                can_create_hosted_runtime INTEGER NOT NULL DEFAULT 0,
-                max_hosted_runtimes INTEGER NOT NULL DEFAULT 0,
-                max_hosted_runtime_memory_mb INTEGER NOT NULL DEFAULT 0,
-                hard_spend_cap_usd REAL
+                max_active_devices BIGINT NOT NULL DEFAULT 1,
+                max_pairings_per_day BIGINT NOT NULL DEFAULT 5,
+                max_relay_sockets BIGINT NOT NULL DEFAULT 5,
+                max_relay_mb_per_day BIGINT NOT NULL DEFAULT 100,
+                max_hosted_runtime_hours_monthly BIGINT NOT NULL DEFAULT 0,
+                can_create_hosted_runtime BOOLEAN NOT NULL DEFAULT FALSE,
+                max_hosted_runtimes BIGINT NOT NULL DEFAULT 0,
+                max_hosted_runtime_memory_mb BIGINT NOT NULL DEFAULT 0,
+                hard_spend_cap_usd DOUBLE PRECISION
             )
             "#,
         )
@@ -340,42 +359,42 @@ mod tests {
                 max_hosted_runtime_hours_monthly, can_create_hosted_runtime,
                 max_hosted_runtimes, max_hosted_runtime_memory_mb, hard_spend_cap_usd
             ) VALUES
-                ('free', 'Free', 1, 5, 5, 100, 0, 0, 0, 0, 5.0),
-                ('pro', 'Pro', 5, 50, 20, 5000, 100, 1, 1, 1024, 100.0)
+                ('free', 'Free', 1, 5, 5, 100, 0, FALSE, 0, 0, 5.0),
+                ('pro', 'Pro', 5, 50, 20, 5000, 100, TRUE, 1, 1024, 100.0)
             "#,
         )
         .execute(&pool)
         .await
         .unwrap();
-        sqlx::query(
-            r#"
-            CREATE TABLE user_runtime_quotas (
+        sqlx::query("DROP TABLE IF EXISTS user_runtime_quotas CASCADE").execute(&pool).await.unwrap();
+        sqlx::query(r#"
+        CREATE TABLE user_runtime_quotas (
                 user_id TEXT PRIMARY KEY,
                 plan_tier_id TEXT NOT NULL,
-                max_active_devices INTEGER NOT NULL,
-                max_pairings_per_day INTEGER NOT NULL,
-                max_relay_sockets INTEGER NOT NULL,
-                max_relay_mb_per_day INTEGER NOT NULL,
-                max_hosted_runtime_hours_monthly INTEGER NOT NULL,
-                can_create_hosted_runtime INTEGER NOT NULL,
-                max_hosted_runtimes INTEGER NOT NULL,
-                max_hosted_runtime_memory_mb INTEGER NOT NULL,
-                hard_spend_cap_usd REAL
+                max_active_devices BIGINT NOT NULL,
+                max_pairings_per_day BIGINT NOT NULL,
+                max_relay_sockets BIGINT NOT NULL,
+                max_relay_mb_per_day BIGINT NOT NULL,
+                max_hosted_runtime_hours_monthly BIGINT NOT NULL,
+                can_create_hosted_runtime BOOLEAN NOT NULL,
+                max_hosted_runtimes BIGINT NOT NULL,
+                max_hosted_runtime_memory_mb BIGINT NOT NULL,
+                hard_spend_cap_usd DOUBLE PRECISION
             )
             "#,
         )
         .execute(&pool)
         .await
         .unwrap();
-        sqlx::query(
-            r#"
-            CREATE TABLE billing_entitlement_events (
+        sqlx::query("DROP TABLE IF EXISTS billing_entitlement_events CASCADE").execute(&pool).await.unwrap();
+        sqlx::query(r#"
+        CREATE TABLE billing_entitlement_events (
                 id TEXT PRIMARY KEY,
                 user_id TEXT NOT NULL,
                 previous_plan_tier_id TEXT,
                 plan_tier_id TEXT NOT NULL,
                 source TEXT NOT NULL DEFAULT 'billing',
-                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             )
             "#,
         )
@@ -385,8 +404,8 @@ mod tests {
         pool
     }
 
-    async fn quota_tier(pool: &SqlitePool, user_id: &str) -> Option<String> {
-        sqlx::query_scalar("SELECT plan_tier_id FROM user_runtime_quotas WHERE user_id = ?")
+    async fn quota_tier(pool: &PgPool, user_id: &str) -> Option<String> {
+        sqlx::query_scalar("SELECT plan_tier_id FROM user_runtime_quotas WHERE user_id = $1")
             .bind(user_id)
             .fetch_optional(pool)
             .await
@@ -418,7 +437,7 @@ mod tests {
                 now + SIGNATURE_TOLERANCE_SECONDS + 1,
             )
             .is_err(),
-            "timestamp outside the 5 minute tolerance must fail"
+            "TIMESTAMPTZ outside the 5 minute tolerance must fail"
         );
         assert!(verify_stripe_signature(TEST_SECRET, "", body, now).is_err());
         assert!(verify_stripe_signature(TEST_SECRET, "t=notanumber,v1=aa", body, now).is_err());

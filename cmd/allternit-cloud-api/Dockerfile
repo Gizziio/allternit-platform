@@ -1,4 +1,4 @@
-# Allternit Cloud API — Railway/Fly/Docker deployment
+# Allternit Cloud API — Docker deployment
 # Build context: repository root
 
 FROM rust:1.97-slim AS builder

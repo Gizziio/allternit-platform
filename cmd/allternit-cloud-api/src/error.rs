@@ -94,7 +94,7 @@ impl IntoResponse for ApiError {
             .unwrap_or(true);
 
         // Log the real error detail server-side before any production sanitization
-        // so fly.io logs show the root cause instead of a generic message.
+        // so server logs show the root cause instead of a generic message.
         warn!(error = %self, "ApiError response");
 
         let (status, error_code, message) = match &self {

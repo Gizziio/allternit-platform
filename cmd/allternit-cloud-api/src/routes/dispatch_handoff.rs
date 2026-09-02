@@ -100,7 +100,7 @@ async fn mint_handoff(
     let runtime_id = match body.runtime_id {
         Some(id) => {
             let owned: Option<(String,)> = sqlx::query_as(
-                "SELECT id FROM runtime_devices WHERE id = ? AND user_id = ? AND revoked_at IS NULL",
+                "SELECT id FROM runtime_devices WHERE id = $1 AND user_id = $2 AND revoked_at IS NULL",
             )
             .bind(&id)
             .bind(&user.id)
@@ -113,7 +113,7 @@ async fn mint_handoff(
         }
         None => {
             let runtimes: Vec<(String,)> = sqlx::query_as(
-                "SELECT id FROM runtime_devices WHERE user_id = ? AND revoked_at IS NULL ORDER BY created_at DESC",
+                "SELECT id FROM runtime_devices WHERE user_id = $1 AND revoked_at IS NULL ORDER BY created_at DESC",
             )
             .bind(&user.id)
             .fetch_all(&state.db)
@@ -135,7 +135,7 @@ async fn mint_handoff(
     };
 
     // The FK targets users(id); a Clerk user may not have a row yet.
-    sqlx::query("INSERT OR IGNORE INTO users (id, email, name, avatar_url) VALUES (?, ?, ?, ?)")
+    sqlx::query("INSERT INTO users (id, email, name, avatar_url) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING")
         .bind(&user.id)
         .bind(&user.email)
         .bind(&user.name)
@@ -146,7 +146,7 @@ async fn mint_handoff(
     let token = random_token(24);
     let expires_at = Utc::now() + Duration::minutes(HANDOFF_TTL_MINUTES);
     sqlx::query(
-        "INSERT INTO dispatch_handoff_tokens (token, user_id, runtime_id, expires_at) VALUES (?, ?, ?, ?)",
+        "INSERT INTO dispatch_handoff_tokens (token, user_id, runtime_id, expires_at) VALUES ($1, $2, $3, $4)",
     )
     .bind(&token)
     .bind(&user.id)
@@ -183,7 +183,7 @@ async fn claim_handoff(
         ));
     }
     if row.claimed_at.is_none() {
-        sqlx::query("UPDATE dispatch_handoff_tokens SET claimed_at = CURRENT_TIMESTAMP WHERE token = ?")
+        sqlx::query("UPDATE dispatch_handoff_tokens SET claimed_at = CURRENT_TIMESTAMP WHERE token = $1")
             .bind(&row.token)
             .execute(&state.db)
             .await?;
@@ -220,7 +220,7 @@ async fn handoff_status(
 
 async fn fetch_token(state: &Arc<ApiState>, token: &str) -> Result<HandoffRow, ApiError> {
     sqlx::query_as::<_, HandoffRow>(
-        "SELECT token, user_id, runtime_id, expires_at, claimed_at FROM dispatch_handoff_tokens WHERE token = ?",
+        "SELECT token, user_id, runtime_id, expires_at, claimed_at FROM dispatch_handoff_tokens WHERE token = $1",
     )
     .bind(token)
     .fetch_optional(&state.db)

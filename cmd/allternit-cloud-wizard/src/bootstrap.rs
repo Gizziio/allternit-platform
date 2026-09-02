@@ -894,7 +894,7 @@ mod tests {
         assert!(env.contains("ALLTERNIT_BYO_BOOTSTRAP_TOKEN=byo-bootstrap-secret"));
         // agent-daemon relay: local gateway it proxies to + its identity path.
         assert!(env.contains(&format!("ALLTERNIT_GATEWAY_URL=http://127.0.0.1:{}", GIZZI_PORT)));
-        assert!(env.contains("ALLTERNIT_RUNTIME_IDENTITY_PATH=/etc/gizzi/runtime-identity.json"));
+        assert!(env.contains("ALLTERNIT_RUNTIME_IDENTITY_PATH=/etc/gizzi/runtime-identity.JSONB"));
 
         // Without pairing config the env file carries no pairing variables.
         let env = generate_env_file(&test_config(true));
@@ -922,7 +922,7 @@ mod tests {
         assert!(script.contains("/api/v1/runtime-pairings/exchange"));
         // The identity lands where gizzi-code's Pairing service loads it, and
         // the device token doubles as the registry credential.
-        assert!(script.contains("/root/.local/share/gizzi-code/runtime-device.json"));
+        assert!(script.contains("/root/.local/share/gizzi-code/runtime-device.JSONB"));
         assert!(script.contains("ALLTERNIT_API_TOKEN=$DEVICE_TOKEN"));
         // Heartbeat keeps the device online in the runtime selector.
         assert!(script.contains("gizzi-heartbeat.timer"));
@@ -932,7 +932,7 @@ mod tests {
         // same 0600 env file, restart-safe, started only when present.
         assert!(script.contains("privateKeyPem: .privateKey"));
         assert!(script.contains("expiresAt: .tokenExpiresAt"));
-        assert!(script.contains("/etc/gizzi/runtime-identity.json"));
+        assert!(script.contains("/etc/gizzi/runtime-identity.JSONB"));
         assert!(script.contains("gizzi-agent-daemon.service"));
         assert!(script.contains("ExecStart=/opt/gizzi/bin/agent-daemon"));
         assert!(script.contains("EnvironmentFile=/etc/gizzi/gizzi-code.env"));
@@ -957,7 +957,7 @@ mod tests {
         // binary install in the extract block and the PAIRED-guarded start
         // check stay, both harmless without the unit file).
         assert!(!script.contains("Installing gizzi-agent-daemon.service"));
-        assert!(!script.contains("/etc/gizzi/runtime-identity.json"));
+        assert!(!script.contains("/etc/gizzi/runtime-identity.JSONB"));
         assert!(script.contains("if [ -f /etc/systemd/system/gizzi-agent-daemon.service ]; then"));
         assert!(script.contains("Runtime-device pairing not configured - skipping"));
     }

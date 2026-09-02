@@ -15,7 +15,7 @@ use axum::{
 };
 use chrono::{DateTime, Duration, Utc};
 use serde::Deserialize;
-use sqlx::{FromRow, SqlitePool};
+use sqlx::{FromRow, PgPool};
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -92,7 +92,7 @@ fn validate_instance_url(url: &str) -> Result<String, ApiError> {
 /// knows the user id, the mesh IP, and the port, so no credentials are ever
 /// handed to the VPS for registration.
 pub(crate) async fn upsert_instance(
-    db: &SqlitePool,
+    db: &PgPool,
     user_id: &str,
     name: &str,
     url: &str,
@@ -101,7 +101,7 @@ pub(crate) async fn upsert_instance(
     sqlx::query(
         r#"
         INSERT INTO gizzi_instances (id, user_id, name, url)
-        VALUES (?, ?, ?, ?)
+        VALUES ($1, $2, $3, $4)
         ON CONFLICT(user_id, name)
         DO UPDATE SET url = excluded.url, updated_at = CURRENT_TIMESTAMP
         "#,
@@ -116,7 +116,7 @@ pub(crate) async fn upsert_instance(
     // trigger covers any other UPDATE path. Re-read so the response carries
     // the stored id and timestamps either way.
     let instance = sqlx::query_as::<_, GizziInstanceView>(
-        "SELECT id, name, url, updated_at FROM gizzi_instances WHERE user_id = ? AND name = ?",
+        "SELECT id, name, url, updated_at FROM gizzi_instances WHERE user_id = $1 AND name = $2",
     )
     .bind(user_id)
     .bind(name)
@@ -154,12 +154,12 @@ impl Actor {
 /// Resolves who is registering: a paired runtime device token registers
 /// under the device's owner; anything else falls back to the Clerk session
 /// path.
-async fn actor_from_headers(db: &SqlitePool, headers: &HeaderMap) -> Result<Actor, ApiError> {
+async fn actor_from_headers(db: &PgPool, headers: &HeaderMap) -> Result<Actor, ApiError> {
     if let Some(token) = runtime_pairing::device_token_from_headers(headers) {
         let device = runtime_pairing::runtime_device_for_token(db, token, None).await?;
         // The registry PUT doubles as a lightweight heartbeat.
         sqlx::query(
-            "UPDATE runtime_devices SET status = 'online', last_seen_at = CURRENT_TIMESTAMP WHERE id = ?",
+            "UPDATE runtime_devices SET status = 'online', last_seen_at = CURRENT_TIMESTAMP WHERE id = $1",
         )
         .bind(&device.id)
         .execute(db)
@@ -180,7 +180,7 @@ async fn actor_from_headers(db: &SqlitePool, headers: &HeaderMap) -> Result<Acto
 /// its profile claims; a device token only backfills a placeholder row if
 /// missing (its owner row was already created by the pairing approve flow
 /// and must not be clobbered).
-async fn ensure_user_row(db: &SqlitePool, actor: &Actor) -> Result<(), ApiError> {
+async fn ensure_user_row(db: &PgPool, actor: &Actor) -> Result<(), ApiError> {
     match actor {
         Actor::Clerk(user) => {
             let email = user
@@ -190,7 +190,7 @@ async fn ensure_user_row(db: &SqlitePool, actor: &Actor) -> Result<(), ApiError>
             sqlx::query(
                 r#"
                 INSERT INTO users (id, email, name, avatar_url, status, last_login_at)
-                VALUES (?, ?, ?, ?, 'active', CURRENT_TIMESTAMP)
+                VALUES ($1, $2, $3, $4, 'active', CURRENT_TIMESTAMP)
                 ON CONFLICT(id) DO UPDATE SET
                     email = excluded.email,
                     name = COALESCE(excluded.name, users.name),
@@ -211,7 +211,7 @@ async fn ensure_user_row(db: &SqlitePool, actor: &Actor) -> Result<(), ApiError>
             sqlx::query(
                 r#"
                 INSERT INTO users (id, email, status, last_login_at)
-                VALUES (?, ?, 'active', CURRENT_TIMESTAMP)
+                VALUES ($1, $2, 'active', CURRENT_TIMESTAMP)
                 ON CONFLICT(id) DO NOTHING
                 "#,
             )
@@ -251,7 +251,7 @@ async fn list_instances(
         r#"
         SELECT id, name, url, updated_at
         FROM gizzi_instances
-        WHERE user_id = ?
+        WHERE user_id = $1
         ORDER BY updated_at DESC
         "#,
     )
@@ -264,9 +264,9 @@ async fn list_instances(
 
 /// Deletes instance rows whose `updated_at` is older than
 /// [`STALE_RETENTION_DAYS`]. Returns the number of rows removed.
-pub async fn collect_stale_instances(db: &SqlitePool) -> Result<u64, ApiError> {
+pub async fn collect_stale_instances(db: &PgPool) -> Result<u64, ApiError> {
     let deleted = sqlx::query(
-        "DELETE FROM gizzi_instances WHERE updated_at < datetime('now', ?)",
+        "DELETE FROM gizzi_instances WHERE updated_at < NOW() + $1::INTERVAL",
     )
     .bind(format!("-{STALE_RETENTION_DAYS} days"))
     .execute(db)
@@ -277,7 +277,7 @@ pub async fn collect_stale_instances(db: &SqlitePool) -> Result<u64, ApiError> {
 
 /// Background GC for stale gizzi instances. Runs a sweep immediately at
 /// startup (the first interval tick fires without delay), then hourly.
-pub fn start_gizzi_instance_gc_task(db: SqlitePool) {
+pub fn start_gizzi_instance_gc_task(db: PgPool) {
     tokio::spawn(async move {
         let mut interval = tokio::time::interval(GC_INTERVAL);
         interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
@@ -301,7 +301,7 @@ async fn delete_instance(
     Path(id): Path<String>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
     let user = clerk::user_from_headers(&headers).await?;
-    let affected = sqlx::query("DELETE FROM gizzi_instances WHERE id = ? AND user_id = ?")
+    let affected = sqlx::query("DELETE FROM gizzi_instances WHERE id = $1 AND user_id = $2")
         .bind(&id)
         .bind(&user.id)
         .execute(&state.db)
@@ -319,35 +319,54 @@ mod tests {
 
     /// Table DDL only — the trigger is left out so tests can backdate
     /// updated_at to exercise stale derivation.
-    async fn test_pool() -> SqlitePool {
-        let pool = SqlitePool::connect(":memory:").await.unwrap();
+    async fn test_pool() -> PgPool {
+        let url = "postgres://allternit:allternit_pg_2026@localhost:5432/allternit_test";
+        let schema = format!("test_{}", uuid::Uuid::new_v4().simple());
+        let schema_for_hook = schema.clone();
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(1)
+            .after_connect(move |conn, _meta| {
+                let schema = schema_for_hook.clone();
+                Box::pin(async move {
+                    sqlx::query(&format!("CREATE SCHEMA IF NOT EXISTS {}", schema))
+                        .execute(&mut *conn)
+                        .await?;
+                    sqlx::query(&format!("SET search_path TO {}", schema))
+                        .execute(&mut *conn)
+                        .await?;
+                    Ok(())
+                })
+            })
+            .connect(url)
+            .await
+            .unwrap();
         // Minimal users shape; gizzi_instances.user_id references it, and
         // sqlx enables PRAGMA foreign_keys by default, so the FK is really
         // exercised here.
-        sqlx::query(
-            r#"
-            CREATE TABLE users (
+        sqlx::query("DROP TABLE IF EXISTS users CASCADE").execute(&pool).await.unwrap();
+        sqlx::query(r#"
+        CREATE TABLE users (
                 id TEXT PRIMARY KEY,
                 email TEXT NOT NULL UNIQUE,
                 name TEXT,
                 avatar_url TEXT,
                 status TEXT NOT NULL DEFAULT 'active',
-                last_login_at TIMESTAMP
+                last_login_at TIMESTAMPTZ
             )
             "#,
         )
         .execute(&pool)
         .await
         .unwrap();
-        sqlx::query(
-            r#"
-            CREATE TABLE gizzi_instances (
+        sqlx::query("DROP TABLE IF EXISTS gizzi_instances CASCADE").execute(&pool).await.unwrap();
+        sqlx::query(r#"
+        CREATE TABLE gizzi_instances (
                 id TEXT PRIMARY KEY,
                 user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
                 name TEXT NOT NULL,
                 url TEXT NOT NULL,
-                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                 UNIQUE(user_id, name)
             )
             "#,
@@ -358,19 +377,19 @@ mod tests {
         // Minimal runtime_devices shape for the device-token auth path
         // (including the migration-022 rotation-grace columns
         // runtime_device_for_token falls back to).
-        sqlx::query(
-            r#"
-            CREATE TABLE runtime_devices (
+        sqlx::query("DROP TABLE IF EXISTS runtime_devices CASCADE").execute(&pool).await.unwrap();
+        sqlx::query(r#"
+        CREATE TABLE runtime_devices (
                 id TEXT PRIMARY KEY,
                 user_id TEXT NOT NULL,
                 name TEXT NOT NULL,
                 credential_hash TEXT NOT NULL UNIQUE,
-                credential_expires_at TIMESTAMP NOT NULL,
+                credential_expires_at TIMESTAMPTZ NOT NULL,
                 previous_credential_hash TEXT,
-                previous_credential_expires_at TIMESTAMP,
+                previous_credential_expires_at TIMESTAMPTZ,
                 status TEXT NOT NULL DEFAULT 'offline',
-                last_seen_at TIMESTAMP,
-                revoked_at TIMESTAMP
+                last_seen_at TIMESTAMPTZ,
+                revoked_at TIMESTAMPTZ
             )
             "#,
         )
@@ -389,13 +408,13 @@ mod tests {
         headers
     }
 
-    async fn insert_device(pool: &SqlitePool, token: &str, status: &str, revoked: bool) {
+    async fn insert_device(pool: &PgPool, token: &str, status: &str, revoked: bool) {
         sqlx::query(
             r#"
             INSERT INTO runtime_devices (
                 id, user_id, name, credential_hash, credential_expires_at, status, revoked_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
             "#,
         )
         .bind("rd_1")
@@ -410,8 +429,8 @@ mod tests {
         .unwrap();
     }
 
-    async fn insert_user(pool: &SqlitePool, id: &str) {
-        sqlx::query("INSERT INTO users (id, email) VALUES (?, ?)")
+    async fn insert_user(pool: &PgPool, id: &str) {
+        sqlx::query("INSERT INTO users (id, email) VALUES ($1, $2)")
             .bind(id)
             .bind(format!("{id}@users.allternit.local"))
             .execute(pool)
@@ -458,7 +477,7 @@ mod tests {
         assert_eq!(first.url, "https://a.trycloudflare.com");
 
         // Backdate so a refresh must move updated_at forward.
-        sqlx::query("UPDATE gizzi_instances SET updated_at = datetime('now', '-1 hour')")
+        sqlx::query("UPDATE gizzi_instances SET updated_at = NOW() - INTERVAL '1 hour'")
             .execute(&pool)
             .await
             .unwrap();
@@ -495,14 +514,14 @@ mod tests {
             .await
             .unwrap();
         sqlx::query(
-            "UPDATE gizzi_instances SET updated_at = datetime('now', '-1 hour') WHERE name = 'stale-one'",
+            "UPDATE gizzi_instances SET updated_at = NOW() - INTERVAL '1 hour' WHERE name = 'stale-one'",
         )
         .execute(&pool)
         .await
         .unwrap();
 
         let rows = sqlx::query_as::<_, GizziInstanceView>(
-            "SELECT id, name, url, updated_at FROM gizzi_instances WHERE user_id = ? ORDER BY updated_at DESC",
+            "SELECT id, name, url, updated_at FROM gizzi_instances WHERE user_id = $1 ORDER BY updated_at DESC",
         )
         .bind("user_1")
         .fetch_all(&pool)
@@ -559,13 +578,13 @@ mod tests {
         insert_user(&pool, "user_1").await;
 
         // Insert the old row directly with a backdated updated_at; any UPDATE
-        // would refresh the timestamp (the production table has a trigger for
+        // would refresh the TIMESTAMPTZ (the production table has a trigger for
         // exactly that), so seed with INSERT only.
         sqlx::query(
             r#"
             INSERT INTO gizzi_instances (id, user_id, name, url, updated_at)
             VALUES ('gi_old', 'user_1', 'old-one', 'https://old.trycloudflare.com',
-                    datetime('now', '-40 days'))
+                    NOW() - INTERVAL '40 days')
             "#,
         )
         .execute(&pool)
@@ -686,7 +705,7 @@ mod tests {
             .unwrap();
         assert_eq!(email, "user_9@users.allternit.local");
 
-        // A real profile row (created by the pairing approve flow) must not
+        // A DOUBLE PRECISION profile row (created by the pairing approve flow) must not
         // be clobbered by the device-token path.
         sqlx::query("UPDATE users SET email = 'joe@example.com', name = 'Joe' WHERE id = 'user_9'")
             .execute(&pool)

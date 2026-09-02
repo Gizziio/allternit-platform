@@ -39,7 +39,7 @@ pub async fn validate_token(
         r#"
         SELECT id, token_hash, name, user_id, permissions, created_at, expires_at, last_used_at, is_revoked
         FROM api_tokens
-        WHERE token_hash = ? AND is_revoked = FALSE
+        WHERE token_hash = $1 AND is_revoked = FALSE
         "#
     )
     .bind(&token_hash)
@@ -127,7 +127,7 @@ pub async fn list_tokens(
         r#"
         SELECT id, token_hash, name, user_id, permissions, created_at, expires_at, last_used_at, is_revoked
         FROM api_tokens
-        WHERE user_id = ? AND is_revoked = FALSE
+        WHERE user_id = $1 AND is_revoked = FALSE
         ORDER BY created_at DESC
         "#
     )
@@ -202,7 +202,7 @@ pub async fn create_token(
     sqlx::query(
         r#"
         INSERT INTO api_tokens (id, token_hash, name, user_id, permissions, created_at, expires_at, is_revoked)
-        VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, FALSE)
+        VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, $6, FALSE)
         "#
     )
     .bind(&token_id)
@@ -234,7 +234,7 @@ pub async fn revoke_token(
 ) -> Result<Json<serde_json::Value>, ApiError> {
     // Check if user can delete this token (must be owner or have tokens:delete permission)
     let token: Option<ApiToken> =
-        sqlx::query_as::<_, ApiToken>("SELECT * FROM api_tokens WHERE id = ?")
+        sqlx::query_as::<_, ApiToken>("SELECT * FROM api_tokens WHERE id = $1")
             .bind(&token_id)
             .fetch_optional(&state.db)
             .await
@@ -251,7 +251,7 @@ pub async fn revoke_token(
         return Err(ApiError::Forbidden("Cannot revoke this token".to_string()));
     }
 
-    sqlx::query("UPDATE api_tokens SET is_revoked = TRUE WHERE id = ?")
+    sqlx::query("UPDATE api_tokens SET is_revoked = TRUE WHERE id = $1")
         .bind(&token_id)
         .execute(&state.db)
         .await

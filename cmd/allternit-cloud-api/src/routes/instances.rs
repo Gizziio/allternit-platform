@@ -144,7 +144,7 @@ pub async fn get_instance(
             status, public_ip, private_ip, ssh_key, run_id,
             created_at, updated_at
         FROM cloud_instances
-        WHERE id = ?
+        WHERE id = $1
         "#,
     )
     .bind(&id)
@@ -189,7 +189,7 @@ pub async fn restart_instance(
             status, public_ip, private_ip, ssh_key, run_id,
             created_at, updated_at
         FROM cloud_instances
-        WHERE id = ?
+        WHERE id = $1
         "#,
     )
     .bind(&id)
@@ -231,7 +231,7 @@ pub async fn restart_instance(
         r#"
         UPDATE cloud_instances 
         SET status = 'running', updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
+        WHERE id = $1
         "#,
     )
     .bind(&id)
@@ -255,7 +255,7 @@ pub async fn restart_instance(
             status, public_ip, private_ip, ssh_key, run_id,
             created_at, updated_at
         FROM cloud_instances
-        WHERE id = ?
+        WHERE id = $1
         "#,
     )
     .bind(&id)
@@ -288,7 +288,7 @@ pub async fn destroy_instance(
             status, public_ip, private_ip, ssh_key, run_id,
             created_at, updated_at
         FROM cloud_instances
-        WHERE id = ?
+        WHERE id = $1
         "#,
     )
     .bind(&id)
@@ -320,7 +320,7 @@ pub async fn destroy_instance(
         r#"
         UPDATE cloud_instances
         SET status = 'destroying', updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
+        WHERE id = $1
         "#,
     )
     .bind(&id)
@@ -341,7 +341,7 @@ pub async fn destroy_instance(
     match destroy_result {
         Ok(()) => {
             // Delete from database after successful API call
-            sqlx::query("DELETE FROM cloud_instances WHERE id = ?")
+            sqlx::query("DELETE FROM cloud_instances WHERE id = $1")
                 .bind(&id)
                 .execute(&state.db)
                 .await
@@ -359,7 +359,7 @@ pub async fn destroy_instance(
                 r#"
                 UPDATE cloud_instances
                 SET status = 'error', updated_at = CURRENT_TIMESTAMP
-                WHERE id = ?
+                WHERE id = $1
                 "#,
             )
             .bind(&id)

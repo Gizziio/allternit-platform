@@ -255,7 +255,7 @@ pub async fn auth_middleware(
 }
 
 async fn validate_token_against_db(
-    db: &sqlx::SqlitePool,
+    db: &sqlx::PgPool,
     token: &str,
 ) -> Result<Option<AuthenticatedUser>, sqlx::Error> {
     use crate::auth::models::ApiToken;
@@ -267,7 +267,7 @@ async fn validate_token_against_db(
         r#"
         SELECT id, token_hash, name, user_id, permissions, created_at, expires_at, last_used_at, is_revoked
         FROM api_tokens
-        WHERE token_hash = ? AND is_revoked = FALSE
+        WHERE token_hash = $1 AND is_revoked = FALSE
         "#
     )
     .bind(&token_hash)
@@ -281,7 +281,7 @@ async fn validate_token_against_db(
         }
 
         // Update last_used_at
-        let _ = sqlx::query("UPDATE api_tokens SET last_used_at = CURRENT_TIMESTAMP WHERE id = ?")
+        let _ = sqlx::query("UPDATE api_tokens SET last_used_at = CURRENT_TIMESTAMP WHERE id = $1")
             .bind(&token_record.id)
             .execute(db)
             .await;

@@ -295,7 +295,7 @@ futures-util = "0.3"
 async-stream = "0.3"
 
 # Database
-sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "sqlite"] }
+sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "sqlite", "postgres"] }
 redis = { version = "0.24", features = ["aio", "tokio-comp"] }
 
 lru = "0.12"

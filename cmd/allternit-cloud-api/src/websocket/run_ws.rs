@@ -20,7 +20,7 @@ pub async fn run_ws_handler(
     ws: WebSocketUpgrade,
 ) -> Result<Response, ApiError> {
     // Verify run exists
-    let run = sqlx::query_as::<_, Run>("SELECT * FROM runs WHERE id = ?")
+    let run = sqlx::query_as::<_, Run>("SELECT * FROM runs WHERE id = $1")
         .bind(&run_id)
         .fetch_optional(&state.db)
         .await
@@ -63,7 +63,7 @@ async fn handle_run_socket(
     let _ = sqlx::query(
         r#"
         INSERT INTO attachments (id, run_id, client_id, client_type, cursor_sequence, attached_at, last_seen_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
         "#
     )
     .bind(&attachment_id)
@@ -112,7 +112,7 @@ async fn handle_run_socket(
 
                 // Update cursor position
                 let _ = sqlx::query(
-                    "UPDATE attachments SET cursor_sequence = ?, last_seen_at = ? WHERE id = ?"
+                    "UPDATE attachments SET cursor_sequence = $1, last_seen_at = $2 WHERE id = $3"
                 )
                 .bind(event.sequence)
                 .bind(chrono::Utc::now())
@@ -169,7 +169,7 @@ async fn handle_run_socket(
     }
 
     // Clean up attachment
-    let _ = sqlx::query("UPDATE attachments SET detached_at = ? WHERE id = ?")
+    let _ = sqlx::query("UPDATE attachments SET detached_at = $1 WHERE id = $2")
         .bind(chrono::Utc::now())
         .bind(&attachment_id)
         .execute(&state.db)
@@ -265,8 +265,8 @@ async fn handle_client_message(
 
             // Update attachment cursor
             let _ = sqlx::query(
-                "UPDATE attachments SET cursor_sequence = ?, last_seen_at = ? 
-                 WHERE run_id = ? AND client_id = ?",
+                "UPDATE attachments SET cursor_sequence = $1, last_seen_at = $2 
+                 WHERE run_id = $3 AND client_id = $4",
             )
             .bind(sync.sequence)
             .bind(chrono::Utc::now())

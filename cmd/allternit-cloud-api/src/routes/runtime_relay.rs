@@ -5,10 +5,10 @@
 //! the operator API remain private on the runtime's loopback interface.
 //!
 //! Wake-on-demand: when a browser targets a device backed by a stopped hosted
-//! runtime, the relay starts its Fly machine and then polls the relay hub for
+//! runtime, the relay starts its container and then polls the relay hub for
 //! the daemon to reconnect (bounded by [`WAKE_WAIT_TIMEOUT`]). Polling was
 //! chosen over an immediate "warming" response because it needs no client
-//! protocol change on the common path — a stopped shared-cpu machine typically
+//! protocol change on the common path — a stopped container typically
 //! reconnects in a few seconds, so the request simply completes slower. If the
 //! wait times out, the proxy answers 503 `runtime_warming` so the client can
 //! retry, and socket-ticket creation answers 503 with a warming message.
@@ -212,7 +212,7 @@ async fn connect_or_wake_runtime(
     }
     let outcome = crate::services::wake_hosted_runtime_for_device(
         &state.db,
-        state.fly_runtime_service.as_ref(),
+        &state.contabo_runtime_service,
         runtime_id,
     )
     .await?;
@@ -376,7 +376,7 @@ async fn browser_socket(
     path: String,
     relay_socket_id: String,
     quota_service: crate::services::SharedQuotaService,
-    db: sqlx::SqlitePool,
+    db: sqlx::PgPool,
 ) {
     let connection = relay_hub().read().await.get(&runtime_id).cloned();
     let Some(connection) = connection else {
@@ -505,7 +505,7 @@ async fn runtime_socket(socket: WebSocket, state: Arc<ApiState>, expected_id: St
         return;
     }
     let hosted_instance_id: Option<String> = sqlx::query_scalar(
-        "SELECT id FROM hosted_runtime_instances WHERE runtime_device_id = ? AND status != 'destroyed'",
+        "SELECT id FROM hosted_runtime_instances WHERE runtime_device_id = $1 AND status != 'destroyed'",
     )
     .bind(&runtime_id)
     .fetch_optional(&state.db)
@@ -514,7 +514,7 @@ async fn runtime_socket(socket: WebSocket, state: Arc<ApiState>, expected_id: St
     .flatten();
     if let Some(instance_id) = hosted_instance_id {
         let _ = sqlx::query(
-            "UPDATE hosted_runtime_instances SET status = 'running', active_since = COALESCE(active_since, CURRENT_TIMESTAMP), last_activity_at = COALESCE(last_activity_at, CURRENT_TIMESTAMP), last_synced_at = CURRENT_TIMESTAMP WHERE id = ?",
+            "UPDATE hosted_runtime_instances SET status = 'running', active_since = COALESCE(active_since, CURRENT_TIMESTAMP), last_activity_at = COALESCE(last_activity_at, CURRENT_TIMESTAMP), last_synced_at = CURRENT_TIMESTAMP WHERE id = $1",
         )
         .bind(&instance_id)
         .execute(&state.db)
@@ -762,7 +762,7 @@ async fn runtime_capabilities(
     user_id: &str,
 ) -> Result<Vec<String>, ApiError> {
     let capabilities = sqlx::query_scalar::<_, String>(
-        "SELECT capabilities FROM runtime_devices WHERE id = ? AND user_id = ? AND revoked_at IS NULL AND credential_expires_at > CURRENT_TIMESTAMP",
+        "SELECT capabilities FROM runtime_devices WHERE id = $1 AND user_id = $2 AND revoked_at IS NULL AND credential_expires_at > CURRENT_TIMESTAMP",
     )
     .bind(runtime_id)
     .bind(user_id)
@@ -774,7 +774,7 @@ async fn runtime_capabilities(
 
 async fn runtime_user_id(state: &ApiState, runtime_id: &str) -> Result<String, ApiError> {
     sqlx::query_scalar::<_, String>(
-        "SELECT user_id FROM runtime_devices WHERE id = ? AND revoked_at IS NULL",
+        "SELECT user_id FROM runtime_devices WHERE id = $1 AND revoked_at IS NULL",
     )
     .bind(runtime_id)
     .fetch_optional(&state.db)

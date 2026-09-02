@@ -6,7 +6,7 @@
 
 use crate::error::ApiError;
 use chrono::{Datelike, Timelike, Utc};
-use sqlx::SqlitePool;
+use sqlx::PgPool;
 use std::sync::Arc;
 use tracing::debug;
 use uuid::Uuid;
@@ -30,12 +30,12 @@ pub struct UserQuota {
 /// Service that reads and enforces user-level runtime quotas.
 #[derive(Debug, Clone)]
 pub struct QuotaService {
-    db: SqlitePool,
+    db: PgPool,
     default_tier_id: String,
 }
 
 impl QuotaService {
-    pub fn new(db: SqlitePool) -> Self {
+    pub fn new(db: PgPool) -> Self {
         Self {
             db,
             default_tier_id: std::env::var("DEFAULT_PLAN_TIER")
@@ -70,7 +70,7 @@ impl QuotaService {
                 q.max_hosted_runtime_memory_mb,
                 q.hard_spend_cap_usd
             FROM user_runtime_quotas q
-            WHERE q.user_id = ?
+            WHERE q.user_id = $1
             "#,
         )
         .bind(user_id)
@@ -94,13 +94,13 @@ impl QuotaService {
                 can_create_hosted_runtime, max_hosted_runtimes,
                 max_hosted_runtime_memory_mb, hard_spend_cap_usd
             )
-            SELECT ?, id,
+            SELECT $1, id,
                 max_active_devices, max_pairings_per_day, max_relay_sockets,
                 max_relay_mb_per_day, max_hosted_runtime_hours_monthly,
                 can_create_hosted_runtime, max_hosted_runtimes,
                 max_hosted_runtime_memory_mb, hard_spend_cap_usd
             FROM plan_tiers
-            WHERE id = ?
+            WHERE id = $2
             ON CONFLICT(user_id) DO UPDATE SET
                 plan_tier_id = excluded.plan_tier_id,
                 max_active_devices = excluded.max_active_devices,
@@ -132,7 +132,7 @@ impl QuotaService {
         quota: &UserQuota,
     ) -> Result<(), ApiError> {
         let count: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM runtime_devices WHERE user_id = ? AND revoked_at IS NULL",
+            "SELECT COUNT(*) FROM runtime_devices WHERE user_id = $1 AND revoked_at IS NULL",
         )
         .bind(user_id)
         .fetch_one(&self.db)
@@ -159,9 +159,9 @@ impl QuotaService {
         sqlx::query(
             r#"
             INSERT INTO user_pairing_usage (id, user_id, usage_date, pairings_created)
-            VALUES (?, ?, ?, 1)
+            VALUES ($1, $2, $3, 1)
             ON CONFLICT(user_id, usage_date) DO UPDATE SET
-                pairings_created = pairings_created + 1,
+                pairings_created = user_pairing_usage.pairings_created + 1,
                 updated_at = CURRENT_TIMESTAMP
             "#,
         )
@@ -172,7 +172,7 @@ impl QuotaService {
         .await?;
 
         let created: i64 = sqlx::query_scalar(
-            "SELECT pairings_created FROM user_pairing_usage WHERE user_id = ? AND usage_date = ?",
+            "SELECT pairings_created FROM user_pairing_usage WHERE user_id = $1 AND usage_date = $2",
         )
         .bind(user_id)
         .bind(today)
@@ -195,9 +195,9 @@ impl QuotaService {
         sqlx::query(
             r#"
             INSERT INTO user_pairing_usage (id, user_id, usage_date, pairings_approved)
-            VALUES (?, ?, ?, 1)
+            VALUES ($1, $2, $3, 1)
             ON CONFLICT(user_id, usage_date) DO UPDATE SET
-                pairings_approved = pairings_approved + 1,
+                pairings_approved = user_pairing_usage.pairings_approved + 1,
                 updated_at = CURRENT_TIMESTAMP
             "#,
         )
@@ -216,7 +216,7 @@ impl QuotaService {
             SELECT COUNT(*)
             FROM runtime_devices d
             JOIN runtime_relay_sockets s ON s.runtime_id = d.id
-            WHERE d.user_id = ? AND s.closed_at IS NULL
+            WHERE d.user_id = $1 AND s.closed_at IS NULL
             "#,
         )
         .bind(user_id)
@@ -237,9 +237,9 @@ impl QuotaService {
         sqlx::query(
             r#"
             INSERT INTO user_relay_usage (id, user_id, usage_date, sockets_opened)
-            VALUES (?, ?, ?, 1)
+            VALUES ($1, $2, $3, 1)
             ON CONFLICT(user_id, usage_date) DO UPDATE SET
-                sockets_opened = sockets_opened + 1,
+                sockets_opened = user_relay_usage.sockets_opened + 1,
                 updated_at = CURRENT_TIMESTAMP
             "#,
         )
@@ -250,7 +250,7 @@ impl QuotaService {
         .await?;
 
         let opened: i64 = sqlx::query_scalar(
-            "SELECT sockets_opened FROM user_relay_usage WHERE user_id = ? AND usage_date = ?",
+            "SELECT sockets_opened FROM user_relay_usage WHERE user_id = $1 AND usage_date = $2",
         )
         .bind(user_id)
         .bind(today)
@@ -283,7 +283,7 @@ impl QuotaService {
     ) -> Result<String, ApiError> {
         let id = Uuid::new_v4().to_string();
         sqlx::query(
-            "INSERT INTO runtime_relay_sockets (id, runtime_id, socket_path) VALUES (?, ?, ?)",
+            "INSERT INTO runtime_relay_sockets (id, runtime_id, socket_path) VALUES ($1, $2, $3)",
         )
         .bind(&id)
         .bind(runtime_id)
@@ -300,7 +300,7 @@ impl QuotaService {
         egress_bytes: i64,
     ) -> Result<(), ApiError> {
         sqlx::query(
-            "UPDATE runtime_relay_sockets SET closed_at = CURRENT_TIMESTAMP, egress_bytes = ? WHERE id = ?",
+            "UPDATE runtime_relay_sockets SET closed_at = CURRENT_TIMESTAMP, egress_bytes = $1 WHERE id = $2",
         )
         .bind(egress_bytes)
         .bind(socket_id)
@@ -325,9 +325,9 @@ impl QuotaService {
         sqlx::query(
             r#"
             INSERT INTO user_relay_usage (id, user_id, usage_date, egress_bytes)
-            VALUES (?, ?, ?, ?)
+            VALUES ($1, $2, $3, $4)
             ON CONFLICT(user_id, usage_date) DO UPDATE SET
-                egress_bytes = egress_bytes + excluded.egress_bytes,
+                egress_bytes = user_relay_usage.egress_bytes + excluded.egress_bytes,
                 updated_at = CURRENT_TIMESTAMP
             "#,
         )
@@ -339,7 +339,7 @@ impl QuotaService {
         .await?;
 
         let total_bytes: i64 = sqlx::query_scalar(
-            "SELECT egress_bytes FROM user_relay_usage WHERE user_id = ? AND usage_date = ?",
+            "SELECT egress_bytes FROM user_relay_usage WHERE user_id = $1 AND usage_date = $2",
         )
         .bind(user_id)
         .bind(today)
@@ -380,7 +380,7 @@ impl QuotaService {
             SELECT COALESCE(SUM(rc.total_cost), 0)
             FROM run_costs rc
             JOIN runs r ON rc.run_id = r.id
-            WHERE r.owner_id = ? AND rc.started_at >= ?
+            WHERE r.owner_id = $1 AND rc.started_at >= $2
             "#,
         )
         .bind(user_id)
@@ -393,7 +393,7 @@ impl QuotaService {
             r#"
             SELECT COALESCE(SUM(u.egress_bytes), 0) / (1024 * 1024)
             FROM user_relay_usage u
-            WHERE u.user_id = ? AND u.usage_date >= ?
+            WHERE u.user_id = $1 AND u.usage_date >= $2
             "#,
         )
         .bind(user_id)
@@ -410,6 +410,31 @@ impl QuotaService {
             .map(|summary| summary.estimated_cost_usd)
             .unwrap_or(0.0);
         let current = run_cost + relay_cost + hosted_cost;
+
+        // Prepaid credits take precedence over the plan spend cap.
+        let credit_balance: Option<f64> = sqlx::query_scalar(
+            "SELECT balance_usd FROM user_credits WHERE user_id = $1"
+        )
+        .bind(user_id)
+        .fetch_optional(&self.db)
+        .await
+        .unwrap_or(None);
+
+        if let Some(credits) = credit_balance {
+            if current >= credits {
+                return Err(ApiError::Forbidden(format!(
+                    "Credit balance exhausted (${:.2} spent / ${:.2} available). Add credits to continue.",
+                    current, credits
+                )));
+            }
+            debug!(
+                user_id = %user_id,
+                current = %current,
+                credits = %credits,
+                "Credit balance check passed"
+            );
+            return Ok(());
+        }
 
         if current >= cap {
             return Err(ApiError::Forbidden(format!(
@@ -458,7 +483,7 @@ impl QuotaService {
         let active_count: i64 = sqlx::query_scalar(
             r#"
             SELECT COUNT(*) FROM hosted_runtime_instances
-            WHERE user_id = ? AND status NOT IN ('destroying', 'destroyed')
+            WHERE user_id = $1 AND status NOT IN ('destroying', 'destroyed')
             "#,
         )
         .bind(user_id)
@@ -508,7 +533,7 @@ struct UserQuotaRow {
     max_relay_sockets: i64,
     max_relay_mb_per_day: i64,
     max_hosted_runtime_hours_monthly: i64,
-    can_create_hosted_runtime: i64,
+    can_create_hosted_runtime: bool,
     max_hosted_runtimes: i64,
     max_hosted_runtime_memory_mb: i64,
     #[sqlx(default)]
@@ -525,7 +550,7 @@ impl From<UserQuotaRow> for UserQuota {
             max_relay_sockets: row.max_relay_sockets,
             max_relay_mb_per_day: row.max_relay_mb_per_day,
             max_hosted_runtime_hours_monthly: row.max_hosted_runtime_hours_monthly,
-            can_create_hosted_runtime: row.can_create_hosted_runtime != 0,
+            can_create_hosted_runtime: row.can_create_hosted_runtime,
             max_hosted_runtimes: row.max_hosted_runtimes,
             max_hosted_runtime_memory_mb: row.max_hosted_runtime_memory_mb,
             hard_spend_cap_usd: row.hard_spend_cap_usd,

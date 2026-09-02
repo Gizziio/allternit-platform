@@ -439,13 +439,13 @@ mod tests {
     #[test]
     fn legacy_checkpoint_without_attempt_fields_deserializes() {
         let wizard = WizardState::new();
-        let mut json = serde_json::to_value(&wizard).unwrap();
-        let obj = json.as_object_mut().unwrap();
+        let mut JSONB = serde_json::to_value(&wizard).unwrap();
+        let obj = JSONB.as_object_mut().unwrap();
         obj.remove("bootstrap_attempts");
         obj.remove("max_bootstrap_attempts");
         obj.remove("last_bootstrap_recoverable");
 
-        let restored: WizardState = serde_json::from_value(json).unwrap();
+        let restored: WizardState = serde_json::from_value(JSONB).unwrap();
         assert_eq!(restored.bootstrap_attempts, 0);
         assert_eq!(
             restored.max_bootstrap_attempts,

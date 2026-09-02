@@ -24,7 +24,7 @@ use std::sync::Arc;
 
 use allternit_cloud_wizard::{
     AuthenticatedUser, InstanceRegistrar, MeshKeyMinter, PairingBootstrap, PairingBootstrapMinter,
-    SqliteCheckpointStore, WizardAppState,
+    PgCheckpointStore, WizardAppState,
 };
 
 use crate::{auth::clerk, routes::mesh::MeshService, ApiError, ApiState};
@@ -36,7 +36,7 @@ pub struct WizardHost {
 
 /// Build the wizard router with its host services wired from [`ApiState`].
 pub fn routes(state: &Arc<ApiState>) -> Router<Arc<ApiState>> {
-    let checkpoint_store = Arc::new(SqliteCheckpointStore::new(
+    let checkpoint_store = Arc::new(PgCheckpointStore::new(
         state.db.clone(),
         state.credential_cipher.clone(),
     ));
@@ -85,7 +85,7 @@ async fn clerk_user_extension(
     let provisioned = sqlx::query(
         r#"
         INSERT INTO users (id, email, name, avatar_url, status, last_login_at)
-        VALUES (?, ?, ?, ?, 'active', CURRENT_TIMESTAMP)
+        VALUES ($1, $2, $3, $4, 'active', CURRENT_TIMESTAMP)
         ON CONFLICT(id) DO UPDATE SET
             email = excluded.email,
             name = COALESCE(excluded.name, users.name),
@@ -135,7 +135,7 @@ impl MeshKeyMinter for HeadscaleMinter {
 /// Writes the bootstrapped box into the gizzi instance registry as the
 /// provisioning user.
 struct GizziRegistrar {
-    db: sqlx::SqlitePool,
+    db: sqlx::PgPool,
 }
 
 #[async_trait::async_trait]
@@ -148,7 +148,7 @@ impl InstanceRegistrar for GizziRegistrar {
         sqlx::query(
             r#"
             INSERT INTO users (id, email, status, last_login_at)
-            VALUES (?, ?, 'active', CURRENT_TIMESTAMP)
+            VALUES ($1, $2, 'active', CURRENT_TIMESTAMP)
             ON CONFLICT(id) DO NOTHING
             "#,
         )
@@ -170,7 +170,7 @@ impl InstanceRegistrar for GizziRegistrar {
 /// into the 0600 env file on the box being bootstrapped, which exchanges it
 /// for an approved runtime-device pairing during bootstrap.
 struct ByoPairingMinter {
-    db: sqlx::SqlitePool,
+    db: sqlx::PgPool,
 }
 
 /// BYO bootstrap tokens are valid for one hour: the wizard mints immediately
@@ -185,7 +185,7 @@ impl PairingBootstrapMinter for ByoPairingMinter {
         sqlx::query(
             r#"
             INSERT INTO byo_bootstrap_tokens (id, user_id, instance_name, token_hash, expires_at)
-            VALUES (?, ?, ?, ?, ?)
+            VALUES ($1, $2, $3, $4, $5)
             "#,
         )
         .bind(&id)
@@ -198,9 +198,9 @@ impl PairingBootstrapMinter for ByoPairingMinter {
         .map_err(|e| e.to_string())?;
 
         // Same env convention as the hosted runtime service
-        // (services/fly_runtime_service.rs).
+        // (services/contabo_runtime_service.rs).
         let cloud_api_url = std::env::var("ALLTERNIT_CLOUD_API_URL")
-            .unwrap_or_else(|_| "https://allternit-cloud-api.fly.dev".to_string());
+            .unwrap_or_else(|_| "https://api.allternit.com".to_string());
         Ok(PairingBootstrap {
             cloud_api_url,
             bootstrap_token: token,
