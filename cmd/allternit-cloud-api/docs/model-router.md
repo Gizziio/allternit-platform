@@ -2,6 +2,12 @@
 
 Allternit Cloud is a **model broker**, not a thin wrapper around a single upstream provider. The router owns the decision of where every request runs and abstracts that decision behind one OpenAI-compatible API for users.
 
+## Current BETA operating model
+
+During BETA, Allternit Cloud does **not** sell bundled model credits or resell inference. Subscription tiers and credit balances shown in the console are UI-only unless explicitly marked live. Model access is provided through upstream adapters (currently OpenRouter) on an operator-paid or bring-your-own-key basis.
+
+A platform disclosure identifying upstream providers is required. See `docs/model-provider-disclosures.md` for the exact language and attribution table.
+
 ## Principle
 
 - Allternit exposes `/v1/chat/completions`, `/v1/models`, and related endpoints.
@@ -98,7 +104,11 @@ Internal adapters translate this to each upstream's native request format and tr
 
 ## Commercial guardrail
 
-Before Allternit sells bundled model credits to customers, obtain explicit **OEM / reseller / embedded-service terms** from important upstream suppliers. Ordinary developer API terms are usually not sufficient for token-resale businesses. The routing architecture can be built before all commercial agreements are signed, but exposing a route under Allternit billing requires the right contract.
+**BETA:** Disclosure of upstream providers is sufficient. See `docs/model-provider-disclosures.md`.
+
+**Before going live with paid bundled credits:** Obtain explicit **OEM / reseller / embedded-service terms** from important upstream suppliers. Ordinary developer API terms are usually not sufficient for token-resale businesses. The routing architecture can be built before all commercial agreements are signed, but exposing a route under Allternit billing requires the right contract.
+
+See `docs/upstream-reseller-terms-outreach-v2.md` for the future outreach kit.
 
 ## Implementation phases
 

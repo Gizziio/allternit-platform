@@ -321,7 +321,8 @@ export function PortalLandingPage() {
               Simple, credit-based plans
             </h2>
             <p className="mt-3 text-[15px] leading-relaxed text-[var(--text-secondary)] md:text-[16px]">
-              Start free. Upgrade when you need cloud models, hosted tools, or higher rate limits. No hidden provider fees.
+              Start free. Upgrade when you need cloud models, hosted tools, or higher rate limits.
+              BETA subscriptions are UI-only; cloud models are provided by upstream partners.
             </p>
           </div>
           <div className="mt-10">

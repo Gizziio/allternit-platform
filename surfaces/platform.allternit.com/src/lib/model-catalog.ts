@@ -3,9 +3,95 @@ export interface CatalogModel {
   name: string;
   family: string;
   provider: "local" | "cloud";
+  upstreamProvider?: string;
+  upstreamId?: string;
   inputPrice: string;
   outputPrice: string;
   context: string;
+}
+
+export interface LiveModelInfo {
+  id: string;
+  object: string;
+  created: number;
+  owned_by: string;
+  upstream_id?: string;
+  provider?: string;
+  aliases?: string[];
+  extra?: Record<string, unknown>;
+}
+
+export interface LiveModelListResponse {
+  object: string;
+  data: LiveModelInfo[];
+}
+
+function cloudApiBase(): string {
+  return String(
+    import.meta.env.VITE_ALLTERNIT_CLOUD_API_URL || "https://api.allternit.com",
+  ).replace(/\/$/, "");
+}
+
+function modelFamily(id: string): string {
+  const lower = id.toLowerCase();
+  if (lower.includes("llama")) return "Llama";
+  if (lower.includes("qwen")) return "Qwen";
+  if (lower.includes("mistral")) return "Mistral";
+  if (lower.includes("claude")) return "Claude";
+  if (lower.includes("gpt")) return "GPT";
+  if (lower.includes("gemini")) return "Gemini";
+  return "Other";
+}
+
+function formatPrice(value: unknown): string {
+  if (typeof value === "number") {
+    if (value === 0) return "$0";
+    return `$${value.toFixed(2)}`;
+  }
+  return "—";
+}
+
+function contextLength(model: LiveModelInfo): string {
+  const ctx = model.extra?.context_length;
+  if (typeof ctx === "number") {
+    if (ctx >= 1_000_000) return `${(ctx / 1_000_000).toFixed(1)}M`;
+    if (ctx >= 1000) return `${(ctx / 1000).toFixed(0)}K`;
+    return String(ctx);
+  }
+  return "—";
+}
+
+export function liveModelToCatalog(model: LiveModelInfo): CatalogModel {
+  const upstreamProvider = model.provider || model.owned_by || "cloud";
+  return {
+    id: model.id,
+    name: String(model.extra?.name || model.id),
+    family: modelFamily(model.id),
+    provider: upstreamProvider === "local" ? "local" : "cloud",
+    upstreamProvider,
+    upstreamId: model.upstream_id,
+    inputPrice: formatPrice(model.extra?.prompt_price),
+    outputPrice: formatPrice(model.extra?.completion_price),
+    context: contextLength(model),
+  };
+}
+
+export async function fetchLiveModelCatalog(
+  signal?: AbortSignal,
+): Promise<LiveModelListResponse> {
+  const response = await fetch(`${cloudApiBase()}/v1/models`, {
+    headers: { Accept: "application/json" },
+    signal,
+  });
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(
+      payload.message ||
+        payload.error ||
+        `Model catalog request failed (${response.status})`,
+    );
+  }
+  return response.json();
 }
 
 export const DRAFT_MODEL_CATALOG: CatalogModel[] = [

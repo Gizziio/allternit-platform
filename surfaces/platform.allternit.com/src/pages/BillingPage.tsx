@@ -5,6 +5,7 @@ import {
   Gauge,
   WarningCircle,
   ArrowsClockwise,
+  Info,
 } from "@phosphor-icons/react";
 import {
   usePlatformOrganization,
@@ -65,6 +66,17 @@ export function BillingPage() {
           </p>
         </div>
         <PlanPicker currentPlanName={null} title="Choose a plan" onSubscribe={handleSubscribe} />
+
+        <div className="mt-8 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/40 p-4">
+          <div className="flex items-start gap-3">
+            <Info size={18} className="mt-0.5 shrink-0 text-[var(--accent-primary)]" />
+            <p className="text-[13px] leading-relaxed text-[var(--text-secondary)]">
+              During BETA, subscription tiers and model credits are UI-only. Cloud-model access is
+              provided through upstream providers such as OpenRouter; paid bundled credits will not
+              be sold until appropriate provider terms are in place.
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
@@ -103,6 +115,17 @@ export function BillingPage() {
   return (
     <div className="space-y-8">
       <PlanPicker currentPlanName={entitlement?.planDisplayName} />
+
+      <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/40 p-4">
+        <div className="flex items-start gap-3">
+          <Info size={18} className="mt-0.5 shrink-0 text-[var(--accent-primary)]" />
+          <p className="text-[13px] leading-relaxed text-[var(--text-secondary)]">
+            During BETA, subscription tiers and model credits are UI-only. Cloud-model access is
+            provided through upstream providers such as OpenRouter; paid bundled credits will not
+            be sold until appropriate provider terms are in place.
+          </p>
+        </div>
+      </div>
 
       <div>
         <h1 className="text-[22px] font-semibold tracking-tight text-[var(--text-primary)]">
