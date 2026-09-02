@@ -8,9 +8,19 @@ const FAQS = [
       "The free tier includes local models and standard rate limits. You can generate an API key, pair a local runtime, and run open-weights models at no compute cost.",
   },
   {
+    question: "Which model providers does Allternit use?",
+    answer:
+      "Allternit is a model broker. Local models run on your hardware first. For cloud inference we prioritize direct relationships and high-performance wholesalers (Together, Fireworks, DeepInfra, Groq, Cerebras) and use OpenRouter as a long-tail fallback. Enterprise customers can also route through AWS Bedrock or attach their own provider keys.",
+  },
+  {
     question: "Do I need accounts with OpenAI, Anthropic, or other providers?",
     answer:
-      "For local models, no. For cloud models, Allternit Cloud handles provider routing so you do not manage keys per vendor; this is being wired during beta.",
+      "No. Allternit manages supplier relationships and routing. You send requests to one OpenAI-compatible endpoint and draw from one credit balance.",
+  },
+  {
+    question: "Can I use my own API keys?",
+    answer:
+      "Yes. Bring-your-own-key (BYOK) is a permanent part of the architecture. Enterprise users can attach their own provider accounts while still using Allternit's orchestration, scheduling, and team features.",
   },
   {
     question: "How do credits work?",

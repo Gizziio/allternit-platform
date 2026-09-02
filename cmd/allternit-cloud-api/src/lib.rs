@@ -7,6 +7,7 @@ pub mod auth;
 pub mod db;
 pub mod error;
 pub mod middleware;
+pub mod model_router;
 pub mod routes;
 pub mod runtime;
 pub mod services;
@@ -326,6 +327,8 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
         .route("/api/v1/health/ready", get(routes::health::readiness_check))
         .route("/api/v1/health/live", get(routes::health::liveness_check))
         .route("/api/v1/metrics", get(routes::health::metrics))
+        // Model-router public surface (starter catalog, no auth required yet)
+        .merge(routes::model_router::routes())
         .with_state(state.clone());
 
     // Create auth-protected routes (require auth but listed separately for clarity)

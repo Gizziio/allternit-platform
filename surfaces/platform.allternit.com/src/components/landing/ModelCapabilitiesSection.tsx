@@ -1,18 +1,24 @@
 import React from "react";
-import { Cloud, DesktopTower } from "@phosphor-icons/react";
+import { Cloud, DesktopTower, Key } from "@phosphor-icons/react";
 
 const CAPABILITIES = [
   {
     icon: <DesktopTower size={28} weight="duotone" />,
-    title: "Local models",
+    title: "Local-first compute",
     description:
       "Run Llama, Qwen, Mistral, and other open-weights models on your own hardware. No per-token cost, no separate provider account.",
   },
   {
     icon: <Cloud size={28} weight="duotone" />,
-    title: "Cloud routing",
+    title: "Intelligent cloud routing",
     description:
-      "Call frontier and open models through the Allternit API. We are wiring provider integrations so you do not manage keys per vendor.",
+      "Allternit selects the best supplier for each request — cost, speed, capacity, or compliance — while you keep one API key and one credit balance.",
+  },
+  {
+    icon: <Key size={28} weight="duotone" />,
+    title: "Bring your own keys",
+    description:
+      "Enterprise users can attach their own provider accounts. Allternit orchestrates the request, while you keep direct commercial and data relationships.",
   },
 ];
 
@@ -25,10 +31,10 @@ export function ModelCapabilitiesSection() {
             Run the models you choose
           </h2>
           <p className="mt-3 text-[15px] leading-relaxed text-[var(--text-secondary)] md:text-[16px]">
-            Allternit Cloud is model-agnostic. Use open-weights models locally, or route to cloud providers through a single API as we expand the catalog.
+            Allternit is a model broker, not a single supplier. Use local open-weights, let Allternit route to cloud providers, or plug in your own keys.
           </p>
         </div>
-        <div className="mt-10 grid grid-cols-1 gap-5 md:grid-cols-2">
+        <div className="mt-10 grid grid-cols-1 gap-5 md:grid-cols-3">
           {CAPABILITIES.map((card) => (
             <div
               key={card.title}

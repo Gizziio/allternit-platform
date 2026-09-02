@@ -29,7 +29,7 @@ const BUILD_CARDS = [
     icon: <Code size={24} weight="duotone" />,
     title: "Direct API",
     description:
-      "Call models and run jobs through a single HTTP API. One bearer token, one base URL, no provider-by-provider wiring.",
+      "One OpenAI-compatible endpoint. Allternit routes each request to the optimal supplier for cost, speed, or capacity — you never manage keys per vendor.",
   },
   {
     icon: <Cpu size={24} weight="duotone" />,
@@ -157,8 +157,9 @@ export function PortalLandingPage() {
               Build with local and cloud models on one platform
             </h1>
             <p className="mt-5 max-w-xl text-[16px] leading-relaxed text-[var(--text-secondary)] md:text-[18px]">
-              A single account, unified credits, and managed compute for AI apps. Run models locally,
-              burst to the cloud, and add hosted tools without wiring providers together.
+              A single account that routes every workload to the best place to run it — your local
+              hardware, Allternit-managed compute, or a cloud model supplier — all on one set of
+              credits with one OpenAI-compatible API.
             </p>
             <div className="mt-8 flex flex-col items-start gap-3 sm:flex-row">
               {isSignedIn ? (
