@@ -87,8 +87,12 @@ function planFromDisplayName(name?: string | null): PlanId {
 
 export function PlanPicker({
   currentPlanName,
+  title = "Manage Subscription",
+  onSubscribe,
 }: {
   currentPlanName?: string | null;
+  title?: string;
+  onSubscribe?: (planId: PlanId) => void;
 }) {
   const inferred = useMemo(() => planFromDisplayName(currentPlanName), [currentPlanName]);
   const [selected, setSelected] = useState<PlanId>(inferred);
@@ -105,7 +109,7 @@ export function PlanPicker({
             BETA
           </div>
           <h2 className="text-[28px] font-bold leading-none tracking-tight text-[var(--text-primary)]">
-            Manage Subscription
+            {title}
           </h2>
           <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-[var(--text-secondary)]">
             Paid tiers include monthly credits for Allternit Cloud, local + cloud models, and
@@ -170,14 +174,20 @@ export function PlanPicker({
 
               <button
                 type="button"
-                onClick={() => setSelected(plan.id)}
+                onClick={() => {
+                  if (onSubscribe) {
+                    onSubscribe(plan.id);
+                  } else {
+                    setSelected(plan.id);
+                  }
+                }}
                 className="mt-5 self-start rounded-md px-4 py-2 text-[11px] font-semibold tracking-[0.14em] transition-opacity hover:opacity-90"
                 style={{
                   backgroundColor: hero ? "#0A0A0A" : IVORY,
                   color: hero ? IVORY : "#0A0A0A",
                 }}
               >
-                {isCurrent ? "CURRENT" : "SUBSCRIBE"}
+                {isCurrent && !onSubscribe ? "CURRENT" : "SUBSCRIBE"}
               </button>
             </article>
           );

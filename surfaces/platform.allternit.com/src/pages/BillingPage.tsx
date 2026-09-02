@@ -6,7 +6,12 @@ import {
   WarningCircle,
   ArrowsClockwise,
 } from "@phosphor-icons/react";
-import { usePlatformOrganization, usePlatformUser, usePlatformAuth } from "@/lib/platform-auth-client";
+import {
+  usePlatformOrganization,
+  usePlatformUser,
+  usePlatformAuth,
+  useClerk,
+} from "@/lib/platform-auth-client";
 import { getHostedEntitlement, type HostedRuntimeEntitlement } from "@/lib/hosted-compute";
 import { EmptyState } from "@/components/settings/EmptyState";
 import { SkeletonRow } from "@/components/settings/SkeletonRow";
@@ -33,7 +38,36 @@ export function BillingPage() {
   const { organization } = usePlatformOrganization();
   const { user } = usePlatformUser();
   const { getToken, isSignedIn } = usePlatformAuth();
+  const clerk = useClerk();
   const email = user?.primaryEmailAddress?.emailAddress || user?.userEmail || "—";
+
+  const handleSubscribe = () => {
+    if (clerk?.openSignIn) {
+      clerk.openSignIn({ redirectUrl: "/billing" });
+    } else {
+      window.location.href = `/sign-in?redirect_url=${encodeURIComponent("/billing")}`;
+    }
+  };
+
+  if (!isSignedIn) {
+    return (
+      <div className="mx-auto max-w-6xl px-6 py-12">
+        <div className="mb-8">
+          <div className="mb-2 inline-flex items-center rounded-sm border border-[var(--text-primary)]/40 px-1.5 py-0.5 text-[9px] font-semibold tracking-[0.14em] text-[var(--text-primary)]">
+            BETA
+          </div>
+          <h1 className="text-[32px] font-bold leading-none tracking-tight text-[var(--text-primary)]">
+            Plans
+          </h1>
+          <p className="mt-2 max-w-2xl text-[15px] leading-relaxed text-[var(--text-secondary)]">
+            Paid tiers include monthly credits for Allternit Cloud, local + cloud models, and
+            built-in tool use. Beta.
+          </p>
+        </div>
+        <PlanPicker currentPlanName={null} title="Choose a plan" onSubscribe={handleSubscribe} />
+      </div>
+    );
+  }
 
   const [entitlement, setEntitlement] = useState<HostedRuntimeEntitlement | null>(null);
   const [loading, setLoading] = useState(true);
