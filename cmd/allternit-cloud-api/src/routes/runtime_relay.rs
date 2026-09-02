@@ -213,6 +213,7 @@ async fn connect_or_wake_runtime(
     let outcome = crate::services::wake_hosted_runtime_for_device(
         &state.db,
         &state.contabo_runtime_service,
+        &state.quota_service,
         runtime_id,
     )
     .await?;

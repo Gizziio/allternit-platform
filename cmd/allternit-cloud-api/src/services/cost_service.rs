@@ -234,6 +234,20 @@ pub trait CostService: Send + Sync {
     /// Deduct credits from a user's balance. Returns the new balance.
     /// Errors if the balance is insufficient.
     async fn deduct_credits(&self, user_id: &str, amount_usd: f64) -> Result<f64, ApiError>;
+
+    /// Deduct the finalized cost of one hosted runtime usage session.
+    ///
+    /// Atomic and idempotent: a single DB transaction writes a negative
+    /// `credit_transactions` ledger row keyed by `hosted-session-{session_id}`
+    /// (ON CONFLICT DO NOTHING — a replay is a no-op) and clamps the balance
+    /// at zero. Users without a `user_credits` row (plan-cap enforcement) are
+    /// a no-op success. Returns the resulting balance.
+    async fn deduct_credits_for_session(
+        &self,
+        user_id: &str,
+        session_id: &str,
+        amount_usd: f64,
+    ) -> Result<f64, ApiError>;
 }
 
 /// Implementation of CostService using SQLite
@@ -630,7 +644,7 @@ impl CostService for CostServiceImpl {
             SELECT 
                 COALESCE(SUM(rc.total_cost), 0) as total_cost,
                 COUNT(rc.id) as run_count,
-                COALESCE(SUM(rc.duration_seconds), 0) as total_duration
+                COALESCE(SUM(rc.duration_seconds), 0)::BIGINT as total_duration
             FROM run_costs rc
             JOIN runs r ON rc.run_id = r.id
             WHERE r.owner_id = $1 
@@ -688,7 +702,7 @@ impl CostService for CostServiceImpl {
                 COALESCE(rc.instance_type, 'unknown') as instance_type,
                 COALESCE(SUM(rc.total_cost), 0) as total_cost,
                 COUNT(rc.id) as run_count,
-                COALESCE(SUM(rc.duration_seconds), 0) / 3600.0 as total_duration_hours
+                COALESCE(SUM(rc.duration_seconds), 0)::DOUBLE PRECISION / 3600.0 as total_duration_hours
             FROM run_costs rc
             JOIN runs r ON rc.run_id = r.id
             WHERE r.owner_id = $1 
@@ -1022,6 +1036,62 @@ impl CostService for CostServiceImpl {
         info!("Deducted ${:.2} credits from user {}; new balance ${:.2}", amount_usd, user_id, new_balance);
         Ok(new_balance)
     }
+
+    async fn deduct_credits_for_session(
+        &self,
+        user_id: &str,
+        session_id: &str,
+        amount_usd: f64,
+    ) -> Result<f64, ApiError> {
+        if amount_usd <= 0.0 {
+            return self.get_credit_balance(user_id).await;
+        }
+
+        let mut tx = self.db.begin().await.map_err(ApiError::DatabaseError)?;
+
+        // Idempotency: the session id is the deduction key, so a replayed stop
+        // for an already-billed session conflicts and touches nothing.
+        let ledger = sqlx::query(
+            r#"
+            INSERT INTO credit_transactions (id, user_id, amount_usd, transaction_id, source, created_at)
+            VALUES ($1, $2, $3, $4, 'hosted_runtime_usage', $5)
+            ON CONFLICT (transaction_id) DO NOTHING
+            "#,
+        )
+        .bind(Uuid::new_v4().to_string())
+        .bind(user_id)
+        .bind(-amount_usd)
+        .bind(format!("hosted-session-{session_id}"))
+        .bind(Utc::now())
+        .execute(&mut *tx)
+        .await
+        .map_err(ApiError::DatabaseError)?;
+
+        if ledger.rows_affected() == 0 {
+            tx.commit().await.map_err(ApiError::DatabaseError)?;
+            return self.get_credit_balance(user_id).await;
+        }
+
+        // Atomic clamp at zero: a balance never goes negative, and users
+        // without a credits row (plan-cap enforcement) are a no-op success.
+        sqlx::query(
+            "UPDATE user_credits SET balance_usd = GREATEST(0, balance_usd - $1) WHERE user_id = $2",
+        )
+        .bind(amount_usd)
+        .bind(user_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(ApiError::DatabaseError)?;
+
+        tx.commit().await.map_err(ApiError::DatabaseError)?;
+
+        let new_balance = self.get_credit_balance(user_id).await?;
+        info!(
+            "Deducted ${:.4} credits from user {} for hosted session {}; new balance ${:.4}",
+            amount_usd, user_id, session_id, new_balance
+        );
+        Ok(new_balance)
+    }
 }
 
 /// Start the background cost tracking task
@@ -1162,5 +1232,141 @@ mod tests {
 
         // Test 0GB
         assert_eq!(service.calculate_transfer_cost(0.0, 0.09), 0.0);
+    }
+
+    /// Minimal credits schema (migrations 024) in a scratch schema, matching
+    /// the other PG-backed test modules in this crate.
+    async fn credits_test_pool() -> PgPool {
+        let url = "postgres://allternit:allternit_pg_2026@localhost:5432/allternit_test";
+        let schema = format!("test_{}", uuid::Uuid::new_v4().simple());
+        let schema_for_hook = schema.clone();
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(1)
+            .after_connect(move |conn, _meta| {
+                let schema = schema_for_hook.clone();
+                Box::pin(async move {
+                    sqlx::query(&format!("CREATE SCHEMA IF NOT EXISTS {}", schema))
+                        .execute(&mut *conn)
+                        .await?;
+                    sqlx::query(&format!("SET search_path TO {}", schema))
+                        .execute(&mut *conn)
+                        .await?;
+                    Ok(())
+                })
+            })
+            .connect(url)
+            .await
+            .unwrap();
+        sqlx::query("DROP TABLE IF EXISTS user_credits CASCADE").execute(&pool).await.unwrap();
+        sqlx::query(r#"
+        CREATE TABLE user_credits (
+                user_id TEXT PRIMARY KEY,
+                balance_usd DOUBLE PRECISION NOT NULL DEFAULT 0 CHECK (balance_usd >= 0),
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+            "#,
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        sqlx::query("DROP TABLE IF EXISTS credit_transactions CASCADE").execute(&pool).await.unwrap();
+        sqlx::query(r#"
+        CREATE TABLE credit_transactions (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                amount_usd DOUBLE PRECISION NOT NULL,
+                transaction_id TEXT NOT NULL UNIQUE,
+                source TEXT NOT NULL,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+            "#,
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        pool
+    }
+
+    #[tokio::test]
+    async fn session_deduction_is_ledgered_and_idempotent() {
+        let pool = credits_test_pool().await;
+        let service = CostServiceImpl::new(pool.clone());
+        service
+            .add_credits("user_1", 25.0, "seed-1", "stripe")
+            .await
+            .unwrap();
+
+        let balance = service
+            .deduct_credits_for_session("user_1", "sess_1", 7.5)
+            .await
+            .unwrap();
+        assert!((balance - 17.5).abs() < 1e-9);
+
+        let (amount, source, transaction_id): (f64, String, String) = sqlx::query_as(
+            "SELECT amount_usd, source, transaction_id FROM credit_transactions WHERE transaction_id = 'hosted-session-sess_1'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert!((amount + 7.5).abs() < 1e-9, "the debit is a negative ledger row");
+        assert_eq!(source, "hosted_runtime_usage");
+        assert_eq!(transaction_id, "hosted-session-sess_1");
+
+        // Replaying the same session deducts nothing and writes no new row.
+        let balance = service
+            .deduct_credits_for_session("user_1", "sess_1", 7.5)
+            .await
+            .unwrap();
+        assert!((balance - 17.5).abs() < 1e-9, "same session deducts once");
+        let ledger_rows: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM credit_transactions WHERE amount_usd < 0")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(ledger_rows, 1);
+    }
+
+    #[tokio::test]
+    async fn session_deduction_clamps_at_zero() {
+        let pool = credits_test_pool().await;
+        let service = CostServiceImpl::new(pool.clone());
+        service
+            .add_credits("user_1", 5.0, "seed-1", "stripe")
+            .await
+            .unwrap();
+
+        let balance = service
+            .deduct_credits_for_session("user_1", "sess_1", 12.0)
+            .await
+            .unwrap();
+        assert_eq!(balance, 0.0, "the balance never goes negative");
+
+        let stored: f64 =
+            sqlx::query_scalar("SELECT balance_usd FROM user_credits WHERE user_id = 'user_1'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(stored, 0.0);
+    }
+
+    #[tokio::test]
+    async fn session_deduction_without_credits_row_is_noop_success() {
+        let pool = credits_test_pool().await;
+        let service = CostServiceImpl::new(pool.clone());
+
+        // Plan-cap user: no user_credits row. The deduction must not error,
+        // and must not create a balance row.
+        let balance = service
+            .deduct_credits_for_session("user_plan", "sess_1", 3.0)
+            .await
+            .unwrap();
+        assert_eq!(balance, 0.0);
+        let rows: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM user_credits WHERE user_id = 'user_plan'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(rows, 0);
     }
 }

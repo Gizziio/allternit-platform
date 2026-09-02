@@ -25,9 +25,10 @@ pub use executor_service::{
 };
 pub use hosted_runtime_lifecycle::{
     hosted_usage_summary, hosted_wake_decision, hosted_wake_target, mark_hosted_instance_starting,
-    record_runtime_started, record_runtime_stopped, start_hosted_runtime_lifecycle_task,
-    touch_instance_activity, touch_runtime_activity, wake_hosted_runtime_for_device,
-    HostedUsageSummary, HostedWakeDecision, HostedWakeOutcome, HostedWakeTarget,
+    open_session_accrued_cost, record_runtime_started, record_runtime_stopped,
+    start_hosted_runtime_lifecycle_task, touch_instance_activity, touch_runtime_activity,
+    wake_hosted_runtime_for_device, HostedUsageSummary, HostedWakeDecision, HostedWakeOutcome,
+    HostedWakeTarget,
 };
 pub use quota_service::{QuotaService, SharedQuotaService, UserQuota};
 pub use run_service::{RunListFilter, RunService, RunServiceImpl};

@@ -57,13 +57,13 @@ pub async fn hosted_usage_summary(
         SELECT
             COALESCE(SUM(
                 CASE WHEN ended_at IS NULL
-                    THEN MAX(0, EXTRACT(EPOCH FROM NOW())::BIGINT - EXTRACT(EPOCH FROM started_at)::BIGINT)
+                    THEN GREATEST(0, EXTRACT(EPOCH FROM NOW())::BIGINT - EXTRACT(EPOCH FROM started_at)::BIGINT)
                     ELSE COALESCE(duration_seconds, 0)
                 END
-            ), 0),
+            ), 0)::BIGINT,
             COALESCE(SUM(
                 CASE WHEN ended_at IS NULL
-                    THEN (MAX(0, EXTRACT(EPOCH FROM NOW())::BIGINT - EXTRACT(EPOCH FROM started_at)::BIGINT) / 3600.0) * cost_per_hour
+                    THEN (GREATEST(0, EXTRACT(EPOCH FROM NOW())::BIGINT - EXTRACT(EPOCH FROM started_at)::BIGINT) / 3600.0) * cost_per_hour
                     ELSE COALESCE(estimated_cost_usd, 0)
                 END
             ), 0)
@@ -80,6 +80,25 @@ pub async fn hosted_usage_summary(
         total_seconds: row.0,
         estimated_cost_usd: row.1,
     })
+}
+
+/// Cost accrued so far by the user's currently-open usage sessions. Closed
+/// sessions are excluded because their cost was already deducted from the
+/// credit balance when they closed — counting them again would double-count.
+pub async fn open_session_accrued_cost(db: &PgPool, user_id: &str) -> Result<f64, ApiError> {
+    let accrued: f64 = sqlx::query_scalar(
+        r#"
+        SELECT COALESCE(SUM(
+            (GREATEST(0, EXTRACT(EPOCH FROM NOW())::BIGINT - EXTRACT(EPOCH FROM started_at)::BIGINT) / 3600.0) * cost_per_hour
+        ), 0)
+        FROM hosted_runtime_usage_sessions
+        WHERE user_id = $1 AND ended_at IS NULL
+        "#,
+    )
+    .bind(user_id)
+    .fetch_one(db)
+    .await?;
+    Ok(accrued)
 }
 
 /// Open one billable interval if this instance does not already have one.
@@ -121,48 +140,52 @@ pub async fn record_runtime_started(db: &PgPool, instance_id: &str) -> Result<()
 }
 
 /// Close the currently-open interval and freeze its duration and cost.
+///
+/// Only the call that actually closes an open session bills it: the close
+/// returns the finalized row, and the deduction itself is ledgered and
+/// idempotent per session id, so repeated stops for the same instance can
+/// never double-charge.
 pub async fn record_runtime_stopped(
     db: &PgPool,
     instance_id: &str,
     reason: &str,
 ) -> Result<(), ApiError> {
-    sqlx::query(
+    let closed: Option<(String, String, f64)> = sqlx::query_as(
         r#"
         UPDATE hosted_runtime_usage_sessions
         SET ended_at = CURRENT_TIMESTAMP,
-            duration_seconds = MAX(
+            duration_seconds = GREATEST(
                 0,
                 EXTRACT(EPOCH FROM NOW())::BIGINT - EXTRACT(EPOCH FROM started_at)::BIGINT
             ),
             estimated_cost_usd = (
-                MAX(0, EXTRACT(EPOCH FROM NOW())::BIGINT - EXTRACT(EPOCH FROM started_at)::BIGINT) / 3600.0
+                GREATEST(0, EXTRACT(EPOCH FROM NOW())::BIGINT - EXTRACT(EPOCH FROM started_at)::BIGINT) / 3600.0
             ) * cost_per_hour,
             stop_reason = $1
         WHERE hosted_instance_id = $2 AND ended_at IS NULL
+        RETURNING id, user_id, estimated_cost_usd
         "#,
     )
     .bind(reason)
     .bind(instance_id)
-    .execute(db)
-    .await?;
-
-    // Deduct the just-finalized cost from the user's prepaid credit balance.
-    let finalized: Option<(String, f64)> = sqlx::query_as(
-        "SELECT user_id, estimated_cost_usd FROM hosted_runtime_usage_sessions WHERE hosted_instance_id = $1 ORDER BY ended_at DESC LIMIT 1"
-    )
-    .bind(instance_id)
     .fetch_optional(db)
     .await?;
 
-    if let Some((user_id, cost)) = finalized {
-        if cost > 0.0 {
-            let cost_service = crate::services::CostServiceImpl::new(db.clone());
-            if let Err(e) = cost_service.deduct_credits(&user_id, cost).await {
-                warn!(
-                    "Failed to deduct ${:.4} credits from user {} for instance {}: {}",
-                    cost, user_id, instance_id, e
-                );
-            }
+    let Some((session_id, user_id, cost)) = closed else {
+        return Ok(());
+    };
+
+    // Deduct the just-finalized cost from the user's prepaid credit balance.
+    if cost > 0.0 {
+        let cost_service = crate::services::CostServiceImpl::new(db.clone());
+        if let Err(e) = cost_service
+            .deduct_credits_for_session(&user_id, &session_id, cost)
+            .await
+        {
+            error!(
+                "REVENUE-CRITICAL: failed to deduct ${:.4} credits from user {} for instance {} session {}: {}",
+                cost, user_id, instance_id, session_id, e
+            );
         }
     }
 
@@ -226,6 +249,7 @@ pub fn hosted_wake_decision(status: &str, is_contabo: bool) -> HostedWakeDecisio
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HostedWakeTarget {
     pub instance_id: String,
+    pub user_id: String,
     pub decision: HostedWakeDecision,
 }
 
@@ -235,9 +259,9 @@ pub async fn hosted_wake_target(
     db: &PgPool,
     runtime_id: &str,
 ) -> Result<Option<HostedWakeTarget>, ApiError> {
-    let row: Option<(String, String, Option<String>)> = sqlx::query_as(
+    let row: Option<(String, String, String, Option<String>)> = sqlx::query_as(
         r#"
-        SELECT id, status, provider
+        SELECT id, user_id, status, provider
         FROM hosted_runtime_instances
         WHERE runtime_device_id = $1 AND status != 'destroyed'
         "#,
@@ -245,10 +269,11 @@ pub async fn hosted_wake_target(
     .bind(runtime_id)
     .fetch_optional(db)
     .await?;
-    Ok(row.map(|(instance_id, status, provider)| {
+    Ok(row.map(|(instance_id, user_id, status, provider)| {
         let decision = hosted_wake_decision(&status, provider.as_deref() == Some("contabo"));
         HostedWakeTarget {
             instance_id,
+            user_id,
             decision,
         }
     }))
@@ -282,9 +307,15 @@ pub enum HostedWakeOutcome {
 
 /// Start the container behind a hosted runtime device when it is stopped, so a
 /// connecting client does not fail against an idle-stopped runtime.
+///
+/// Wake-on-demand runs the same spend-cap and monthly-hours checks as the
+/// user-driven start route before starting anything. A `Forbidden` propagates
+/// so the relay surfaces the reason to the connecting client instead of
+/// booting a machine the user can no longer pay for.
 pub async fn wake_hosted_runtime_for_device(
     db: &PgPool,
     contabo: &ContaboRuntimeService,
+    quota_service: &crate::services::QuotaService,
     runtime_id: &str,
 ) -> Result<HostedWakeOutcome, ApiError> {
     let Some(target) = hosted_wake_target(db, runtime_id).await? else {
@@ -294,6 +325,13 @@ pub async fn wake_hosted_runtime_for_device(
         HostedWakeDecision::AlreadyActive => Ok(HostedWakeOutcome::AlreadyActive),
         HostedWakeDecision::NotWakeable => Ok(HostedWakeOutcome::NotWakeable),
         HostedWakeDecision::StartRequired => {
+            let quota = quota_service.ensure_quota(&target.user_id).await?;
+            quota_service
+                .check_hosted_runtime_hours(&target.user_id, &quota)
+                .await?;
+            quota_service
+                .check_spend_cap(&target.user_id, &quota)
+                .await?;
             contabo.start(&target.instance_id).await?;
             mark_hosted_instance_starting(db, &target.instance_id).await?;
             info!(instance_id = %target.instance_id, %runtime_id, "Hosted runtime wake-on-demand start issued");
@@ -578,6 +616,35 @@ mod tests {
         .execute(&pool)
         .await
         .unwrap();
+        // Credits schema (migration 024) for the stop-time deduction path.
+        sqlx::query("DROP TABLE IF EXISTS user_credits CASCADE").execute(&pool).await.unwrap();
+        sqlx::query(r#"
+        CREATE TABLE user_credits (
+                user_id TEXT PRIMARY KEY,
+                balance_usd DOUBLE PRECISION NOT NULL DEFAULT 0 CHECK (balance_usd >= 0),
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+            "#,
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        sqlx::query("DROP TABLE IF EXISTS credit_transactions CASCADE").execute(&pool).await.unwrap();
+        sqlx::query(r#"
+        CREATE TABLE credit_transactions (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                amount_usd DOUBLE PRECISION NOT NULL,
+                transaction_id TEXT NOT NULL UNIQUE,
+                source TEXT NOT NULL,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+            "#,
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
         // record_runtime_started reads the rate as DOUBLE PRECISION; a matching cost_rates
         // row keeps COALESCE(cost_per_hour, 0) from degrading to BIGINT.
         sqlx::query(
@@ -701,5 +768,59 @@ mod tests {
         .await
         .unwrap();
         assert_eq!(open_sessions, 1, "wake opens exactly one billing session");
+    }
+
+    #[tokio::test]
+    async fn stopping_twice_deducts_the_session_cost_once() {
+        let pool = test_pool().await;
+        insert_instance(&pool, "hr_1", Some("rd_1"), "running", Some("contabo")).await;
+        let cost_service = crate::services::CostServiceImpl::new(pool.clone());
+        cost_service
+            .add_credits("user_1", 25.0, "seed-1", "stripe")
+            .await
+            .unwrap();
+
+        mark_hosted_instance_starting(&pool, "hr_1").await.unwrap();
+        // Backdate the open session so the finalized cost is deterministic:
+        // exactly one hour at the seeded 0.0079/hr rate.
+        sqlx::query(
+            "UPDATE hosted_runtime_usage_sessions SET started_at = NOW() - INTERVAL '1 hour' WHERE hosted_instance_id = 'hr_1' AND ended_at IS NULL",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        record_runtime_stopped(&pool, "hr_1", "user_stopped")
+            .await
+            .unwrap();
+        let balance = cost_service.get_credit_balance("user_1").await.unwrap();
+        let expected = 25.0 - 0.0079;
+        assert!(
+            (balance - expected).abs() < 1e-6,
+            "first stop deducts the session cost: balance {balance}"
+        );
+        let debits: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM credit_transactions WHERE user_id = 'user_1' AND amount_usd < 0",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(debits, 1, "the deduction is ledgered");
+
+        // A second stop for the same instance (destroy path after user stop,
+        // reconciler provider_stopped, etc.) must not deduct again.
+        record_runtime_stopped(&pool, "hr_1", "destroyed").await.unwrap();
+        let balance = cost_service.get_credit_balance("user_1").await.unwrap();
+        assert!(
+            (balance - expected).abs() < 1e-6,
+            "second stop deducts nothing: balance {balance}"
+        );
+        let debits: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM credit_transactions WHERE user_id = 'user_1' AND amount_usd < 0",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(debits, 1, "still exactly one debit row");
     }
 }

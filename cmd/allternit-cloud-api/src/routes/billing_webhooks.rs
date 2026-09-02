@@ -20,6 +20,19 @@
 //! deployment's default tier (`DEFAULT_PLAN_TIER`, default `free`); plan
 //! access is additive state in `user_runtime_quotas`, so revocation is the
 //! same idempotent mutation with the free tier as its target.
+//!
+//! One-off credit purchases use a separate metadata contract on the payment
+//! object itself (the Checkout Session for `checkout.session.completed` with
+//! `mode = "payment"`, the invoice for `invoice.paid`):
+//! - `clerk_user_id` — the Clerk user to credit.
+//! - `allternit_credits_usd` — the credit amount in USD (must parse as a
+//!   positive number).
+//! Events carrying both keys grant via `CostService::add_credits` with
+//! transaction id `stripe-{event_id}`, so Stripe retries cannot double-grant
+//! (the `credit_transactions.transaction_id` uniqueness dedupes). Events of
+//! these types without both keys are acknowledged and ignored, keeping the
+//! subscription flow (which also emits `invoice.paid` /
+//! `checkout.session.completed` in subscription mode) untouched.
 
 use axum::{
     body::Bytes,
@@ -35,13 +48,13 @@ use sha2::Sha256;
 use std::sync::Arc;
 
 use super::hosted_entitlements::apply_hosted_entitlement;
-use crate::{error::ApiError, ApiState};
+use crate::{error::ApiError, services::CostService, ApiState};
 
 const STRIPE_SIGNATURE_HEADER: &str = "stripe-signature";
 const SIGNATURE_TOLERANCE_SECONDS: i64 = 300;
 
 /// How one Stripe event maps onto an entitlement change.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 enum MappedStripeEvent {
     /// Active/trialing subscription: grant the metadata plan tier.
     Grant {
@@ -51,6 +64,12 @@ enum MappedStripeEvent {
     },
     /// Deleted subscription: fall back to the deployment's default tier.
     Revoke { event_id: String, user_id: String },
+    /// One-off credit purchase: grant prepaid credits to the user.
+    GrantCredits {
+        event_id: String,
+        user_id: String,
+        amount_usd: f64,
+    },
     /// Any other event type (or a non-billable subscription status).
     Ignored(String),
 }
@@ -115,6 +134,11 @@ async fn stripe_webhook(
                 std::env::var("DEFAULT_PLAN_TIER").unwrap_or_else(|_| "free".to_string());
             apply_and_respond(&state, &event_id, &user_id, &default_tier).await
         }
+        MappedStripeEvent::GrantCredits {
+            event_id,
+            user_id,
+            amount_usd,
+        } => grant_credits_and_respond(&state, &event_id, &user_id, amount_usd).await,
     }
 }
 
@@ -133,6 +157,39 @@ async fn apply_and_respond(
             "userId": user_id,
             "planTierId": plan_tier_id,
             "idempotentReplay": applied.idempotent_replay,
+        }))
+        .into_response(),
+        Err(error) => error.into_response(),
+    }
+}
+
+/// Grant a one-off credit purchase. Idempotent per Stripe event id: the
+/// `credit_transactions.transaction_id` uniqueness (`stripe-{event_id}`)
+/// makes retries a no-op, so the subscription-dedupe table
+/// (`billing_entitlement_events`, which is entitlement-specific) is not
+/// involved.
+async fn grant_credits_and_respond(
+    state: &ApiState,
+    event_id: &str,
+    user_id: &str,
+    amount_usd: f64,
+) -> Response {
+    let cost_service = crate::services::CostServiceImpl::new(state.db.clone());
+    match cost_service
+        .add_credits(
+            user_id,
+            amount_usd,
+            &format!("stripe-{event_id}"),
+            "stripe",
+        )
+        .await
+    {
+        Ok(balance_usd) => Json(json!({
+            "received": true,
+            "eventId": event_id,
+            "userId": user_id,
+            "creditsUsd": amount_usd,
+            "balanceUsd": balance_usd,
         }))
         .into_response(),
         Err(error) => error.into_response(),
@@ -250,6 +307,49 @@ fn map_stripe_event(event: &Value) -> Result<MappedStripeEvent, ApiError> {
                 )
             })?;
             Ok(MappedStripeEvent::Revoke { event_id, user_id })
+        }
+        "checkout.session.completed" | "invoice.paid" => {
+            // Only one-off credit purchases map; subscription-mode checkouts
+            // and subscription invoices are handled by the subscription events
+            // above, so anything without the full credit metadata contract is
+            // acknowledged and ignored.
+            let object = &event["data"]["object"];
+            if event_type == "checkout.session.completed"
+                && object["mode"].as_str().unwrap_or_default() != "payment"
+            {
+                return Ok(MappedStripeEvent::Ignored(event_type.to_string()));
+            }
+            let metadata = &object["metadata"];
+            let user_id = metadata["clerk_user_id"]
+                .as_str()
+                .map(str::trim)
+                .filter(|value| !value.is_empty());
+            let credits_raw = metadata["allternit_credits_usd"].as_str();
+            let (Some(user_id), Some(credits_raw)) = (user_id, credits_raw) else {
+                return Ok(MappedStripeEvent::Ignored(event_type.to_string()));
+            };
+            if event_id.is_empty() {
+                return Err(ApiError::BadRequest(
+                    "Stripe event is missing its id.".to_string(),
+                ));
+            }
+            // Both keys present but unusable is a permanent misconfiguration:
+            // 400 so Stripe surfaces it instead of silently dropping money.
+            let amount_usd: f64 = credits_raw.trim().parse().map_err(|_| {
+                ApiError::BadRequest(format!(
+                    "allternit_credits_usd metadata is not a number: {credits_raw:?}."
+                ))
+            })?;
+            if amount_usd <= 0.0 {
+                return Err(ApiError::BadRequest(
+                    "allternit_credits_usd metadata must be positive.".to_string(),
+                ));
+            }
+            Ok(MappedStripeEvent::GrantCredits {
+                event_id,
+                user_id: user_id.to_string(),
+                amount_usd,
+            })
         }
         other => Ok(MappedStripeEvent::Ignored(other.to_string())),
     }
@@ -394,6 +494,35 @@ mod tests {
                 previous_plan_tier_id TEXT,
                 plan_tier_id TEXT NOT NULL,
                 source TEXT NOT NULL DEFAULT 'billing',
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+            "#,
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        // Credits schema (migration 024) for the one-off credit purchase path.
+        sqlx::query("DROP TABLE IF EXISTS user_credits CASCADE").execute(&pool).await.unwrap();
+        sqlx::query(r#"
+        CREATE TABLE user_credits (
+                user_id TEXT PRIMARY KEY,
+                balance_usd DOUBLE PRECISION NOT NULL DEFAULT 0 CHECK (balance_usd >= 0),
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+            "#,
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        sqlx::query("DROP TABLE IF EXISTS credit_transactions CASCADE").execute(&pool).await.unwrap();
+        sqlx::query(r#"
+        CREATE TABLE credit_transactions (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                amount_usd DOUBLE PRECISION NOT NULL,
+                transaction_id TEXT NOT NULL UNIQUE,
+                source TEXT NOT NULL,
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             )
             "#,
@@ -605,5 +734,145 @@ mod tests {
         .unwrap();
         assert!(!can_create);
         assert_eq!(max_runtimes, 0, "revocation restores the free tier limits");
+    }
+
+    fn payment_event(event_id: &str, event_type: &str, mode: &str, metadata: Value) -> Value {
+        json!({
+            "id": event_id,
+            "type": event_type,
+            "data": {
+                "object": {
+                    "id": "cs_test_123",
+                    "mode": mode,
+                    "metadata": metadata,
+                }
+            }
+        })
+    }
+
+    #[test]
+    fn mapping_grants_credit_purchases_with_full_metadata() {
+        let checkout = payment_event(
+            "evt_c1",
+            "checkout.session.completed",
+            "payment",
+            json!({ "clerk_user_id": "user_1", "allternit_credits_usd": "25.00" }),
+        );
+        assert_eq!(
+            map_stripe_event(&checkout).unwrap(),
+            MappedStripeEvent::GrantCredits {
+                event_id: "evt_c1".to_string(),
+                user_id: "user_1".to_string(),
+                amount_usd: 25.0,
+            }
+        );
+
+        let invoice = payment_event(
+            "evt_c2",
+            "invoice.paid",
+            "",
+            json!({ "clerk_user_id": "user_2", "allternit_credits_usd": "10.5" }),
+        );
+        assert_eq!(
+            map_stripe_event(&invoice).unwrap(),
+            MappedStripeEvent::GrantCredits {
+                event_id: "evt_c2".to_string(),
+                user_id: "user_2".to_string(),
+                amount_usd: 10.5,
+            }
+        );
+    }
+
+    #[test]
+    fn mapping_ignores_credit_event_types_without_full_metadata() {
+        // Subscription-invoice traffic has no credit metadata: stays ignored
+        // so the subscription flow is untouched.
+        let no_metadata = payment_event("evt_c3", "invoice.paid", "", json!({}));
+        assert_eq!(
+            map_stripe_event(&no_metadata).unwrap(),
+            MappedStripeEvent::Ignored("invoice.paid".to_string())
+        );
+
+        let partial = payment_event(
+            "evt_c4",
+            "checkout.session.completed",
+            "payment",
+            json!({ "clerk_user_id": "user_1" }),
+        );
+        assert_eq!(
+            map_stripe_event(&partial).unwrap(),
+            MappedStripeEvent::Ignored("checkout.session.completed".to_string())
+        );
+
+        // Subscription-mode checkouts are handled by the subscription events
+        // even if they happen to carry credit-shaped metadata.
+        let subscription_mode = payment_event(
+            "evt_c5",
+            "checkout.session.completed",
+            "subscription",
+            json!({ "clerk_user_id": "user_1", "allternit_credits_usd": "25" }),
+        );
+        assert_eq!(
+            map_stripe_event(&subscription_mode).unwrap(),
+            MappedStripeEvent::Ignored("checkout.session.completed".to_string())
+        );
+    }
+
+    #[test]
+    fn mapping_rejects_unusable_credit_amounts() {
+        for bad in ["0", "-5", "not-a-number"] {
+            let event = payment_event(
+                "evt_c6",
+                "checkout.session.completed",
+                "payment",
+                json!({ "clerk_user_id": "user_1", "allternit_credits_usd": bad }),
+            );
+            assert!(
+                map_stripe_event(&event).is_err(),
+                "allternit_credits_usd {bad:?} must be rejected"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn credit_purchase_grants_once_and_replays_are_noops() {
+        let pool = test_pool().await;
+        let cost_service = crate::services::CostServiceImpl::new(pool.clone());
+
+        // The handler path: map the event, then grant with the event id as
+        // the idempotency key, exactly as grant_credits_and_respond does.
+        let event = payment_event(
+            "evt_c7",
+            "checkout.session.completed",
+            "payment",
+            json!({ "clerk_user_id": "user_1", "allternit_credits_usd": "25" }),
+        );
+        let MappedStripeEvent::GrantCredits {
+            event_id,
+            user_id,
+            amount_usd,
+        } = map_stripe_event(&event).unwrap()
+        else {
+            panic!("credit purchase must map to a grant");
+        };
+        let balance = cost_service
+            .add_credits(&user_id, amount_usd, &format!("stripe-{event_id}"), "stripe")
+            .await
+            .unwrap();
+        assert!((balance - 25.0).abs() < 1e-9);
+
+        // Stripe retries the same delivery: the transaction id dedupes.
+        let balance = cost_service
+            .add_credits(&user_id, amount_usd, &format!("stripe-{event_id}"), "stripe")
+            .await
+            .unwrap();
+        assert!((balance - 25.0).abs() < 1e-9, "replay must not double-grant");
+        let grants: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM credit_transactions WHERE user_id = 'user_1'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(grants, 1);
     }
 }

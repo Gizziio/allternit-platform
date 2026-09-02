@@ -357,8 +357,41 @@ impl QuotaService {
     }
 
     /// Check whether the user has hit their hard spend cap.
-    /// Computes the current month spend from run_costs plus relay egress.
+    ///
+    /// Prepaid credits take precedence over the plan spend cap: closed usage
+    /// sessions already deducted their cost from the balance, so the only
+    /// unbilled spend is what open sessions have accrued so far — block when
+    /// that would overrun the remaining balance. Users without a credits row
+    /// fall back to the plan's hard cap against month spend (run_costs plus
+    /// relay egress plus hosted usage).
     pub async fn check_spend_cap(&self, user_id: &str, quota: &UserQuota) -> Result<(), ApiError> {
+        let credit_balance: Option<f64> = sqlx::query_scalar(
+            "SELECT balance_usd FROM user_credits WHERE user_id = $1"
+        )
+        .bind(user_id)
+        .fetch_optional(&self.db)
+        .await
+        .unwrap_or(None);
+
+        if let Some(credits) = credit_balance {
+            let open_accrued = crate::services::open_session_accrued_cost(&self.db, user_id)
+                .await
+                .unwrap_or(0.0);
+            if credits - open_accrued <= 0.0 {
+                return Err(ApiError::Forbidden(format!(
+                    "Credit balance exhausted (${:.2} remaining, ${:.2} accrued by running sessions). Add credits to continue.",
+                    credits, open_accrued
+                )));
+            }
+            debug!(
+                user_id = %user_id,
+                credits = %credits,
+                open_accrued = %open_accrued,
+                "Credit balance check passed"
+            );
+            return Ok(());
+        }
+
         let cap = match quota.hard_spend_cap_usd {
             Some(cap) if cap > 0.0 => cap,
             _ => return Ok(()),
@@ -391,7 +424,7 @@ impl QuotaService {
 
         let relay_egress_mb: i64 = sqlx::query_scalar(
             r#"
-            SELECT COALESCE(SUM(u.egress_bytes), 0) / (1024 * 1024)
+            SELECT (COALESCE(SUM(u.egress_bytes), 0) / (1024 * 1024))::BIGINT
             FROM user_relay_usage u
             WHERE u.user_id = $1 AND u.usage_date >= $2
             "#,
@@ -410,31 +443,6 @@ impl QuotaService {
             .map(|summary| summary.estimated_cost_usd)
             .unwrap_or(0.0);
         let current = run_cost + relay_cost + hosted_cost;
-
-        // Prepaid credits take precedence over the plan spend cap.
-        let credit_balance: Option<f64> = sqlx::query_scalar(
-            "SELECT balance_usd FROM user_credits WHERE user_id = $1"
-        )
-        .bind(user_id)
-        .fetch_optional(&self.db)
-        .await
-        .unwrap_or(None);
-
-        if let Some(credits) = credit_balance {
-            if current >= credits {
-                return Err(ApiError::Forbidden(format!(
-                    "Credit balance exhausted (${:.2} spent / ${:.2} available). Add credits to continue.",
-                    current, credits
-                )));
-            }
-            debug!(
-                user_id = %user_id,
-                current = %current,
-                credits = %credits,
-                "Credit balance check passed"
-            );
-            return Ok(());
-        }
 
         if current >= cap {
             return Err(ApiError::Forbidden(format!(
@@ -560,3 +568,147 @@ impl From<UserQuotaRow> for UserQuota {
 
 /// Helper to share a quota service reference.
 pub type SharedQuotaService = Arc<QuotaService>;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Minimal schema for the credit-balance branch of check_spend_cap:
+    /// user_credits plus the open-session accrued-cost query's table.
+    async fn test_pool() -> PgPool {
+        let url = "postgres://allternit:allternit_pg_2026@localhost:5432/allternit_test";
+        let schema = format!("test_{}", uuid::Uuid::new_v4().simple());
+        let schema_for_hook = schema.clone();
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(1)
+            .after_connect(move |conn, _meta| {
+                let schema = schema_for_hook.clone();
+                Box::pin(async move {
+                    sqlx::query(&format!("CREATE SCHEMA IF NOT EXISTS {}", schema))
+                        .execute(&mut *conn)
+                        .await?;
+                    sqlx::query(&format!("SET search_path TO {}", schema))
+                        .execute(&mut *conn)
+                        .await?;
+                    Ok(())
+                })
+            })
+            .connect(url)
+            .await
+            .unwrap();
+        sqlx::query("DROP TABLE IF EXISTS user_credits CASCADE").execute(&pool).await.unwrap();
+        sqlx::query(r#"
+        CREATE TABLE user_credits (
+                user_id TEXT PRIMARY KEY,
+                balance_usd DOUBLE PRECISION NOT NULL DEFAULT 0 CHECK (balance_usd >= 0),
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+            "#,
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        sqlx::query("DROP TABLE IF EXISTS hosted_runtime_usage_sessions CASCADE").execute(&pool).await.unwrap();
+        sqlx::query(r#"
+        CREATE TABLE hosted_runtime_usage_sessions (
+                id TEXT PRIMARY KEY,
+                hosted_instance_id TEXT NOT NULL,
+                user_id TEXT NOT NULL,
+                started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                ended_at TIMESTAMPTZ,
+                duration_seconds BIGINT,
+                cost_per_hour DOUBLE PRECISION NOT NULL DEFAULT 0,
+                estimated_cost_usd DOUBLE PRECISION,
+                stop_reason TEXT
+            )
+            "#,
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        pool
+    }
+
+    fn quota_for(user_id: &str) -> UserQuota {
+        UserQuota {
+            user_id: user_id.to_string(),
+            plan_tier_id: "pro".to_string(),
+            max_active_devices: 5,
+            max_pairings_per_day: 50,
+            max_relay_sockets: 20,
+            max_relay_mb_per_day: 5000,
+            max_hosted_runtime_hours_monthly: 100,
+            can_create_hosted_runtime: true,
+            max_hosted_runtimes: 1,
+            max_hosted_runtime_memory_mb: 1024,
+            hard_spend_cap_usd: Some(100.0),
+        }
+    }
+
+    #[tokio::test]
+    async fn credit_user_is_blocked_when_open_sessions_overrun_the_balance() {
+        let pool = test_pool().await;
+        let quota_service = QuotaService::new(pool.clone());
+        sqlx::query("INSERT INTO user_credits (user_id, balance_usd) VALUES ('user_1', 10.0)")
+            .execute(&pool)
+            .await
+            .unwrap();
+        // Open session accruing $12 so far (2h at $6/h): more than the $10 balance.
+        sqlx::query(
+            "INSERT INTO hosted_runtime_usage_sessions (id, hosted_instance_id, user_id, started_at, cost_per_hour) VALUES ('s_1', 'hr_1', 'user_1', NOW() - INTERVAL '2 hours', 6.0)",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let result = quota_service
+            .check_spend_cap("user_1", &quota_for("user_1"))
+            .await;
+        assert!(
+            matches!(result, Err(ApiError::Forbidden(_))),
+            "open session accruing more than the balance must block: {result:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn credit_user_with_no_open_sessions_is_allowed() {
+        let pool = test_pool().await;
+        let quota_service = QuotaService::new(pool.clone());
+        sqlx::query("INSERT INTO user_credits (user_id, balance_usd) VALUES ('user_1', 10.0)")
+            .execute(&pool)
+            .await
+            .unwrap();
+        // A closed session must not count: its cost already came out of the
+        // balance when it closed.
+        sqlx::query(
+            "INSERT INTO hosted_runtime_usage_sessions (id, hosted_instance_id, user_id, started_at, ended_at, duration_seconds, cost_per_hour, estimated_cost_usd) VALUES ('s_1', 'hr_1', 'user_1', NOW() - INTERVAL '3 hours', NOW() - INTERVAL '1 hour', 7200, 6.0, 12.0)",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        quota_service
+            .check_spend_cap("user_1", &quota_for("user_1"))
+            .await
+            .expect("balance 10 with no open sessions must be allowed");
+    }
+
+    #[tokio::test]
+    async fn credit_user_at_exactly_zero_remaining_is_blocked() {
+        let pool = test_pool().await;
+        let quota_service = QuotaService::new(pool.clone());
+        sqlx::query("INSERT INTO user_credits (user_id, balance_usd) VALUES ('user_1', 0.0)")
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let result = quota_service
+            .check_spend_cap("user_1", &quota_for("user_1"))
+            .await;
+        assert!(
+            matches!(result, Err(ApiError::Forbidden(_))),
+            "a drained balance must block even with nothing running: {result:?}"
+        );
+    }
+}

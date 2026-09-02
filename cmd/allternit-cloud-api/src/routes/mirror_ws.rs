@@ -325,7 +325,7 @@ async fn decrement_client_count(
     sqlx::query(
         r#"
         UPDATE mirror_sessions
-        SET client_count = MAX(0, client_count - 1), last_activity_at = NOW()
+        SET client_count = GREATEST(0, client_count - 1), last_activity_at = NOW()
         WHERE id = $1
         "#,
     )
