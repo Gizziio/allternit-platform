@@ -1,39 +1,40 @@
 # Steering checkpoint
 
-## Allternit Cloud backend: Contabo migration, fly.io removal, Postgres fixes (2026-09-02)
+## Allternit Cloud: Phase 4 billing loop + Phase 5 capacity + Phase 6 convergence (2026-09-02)
 
 ### Goal
-Complete the Fly.io → Contabo migration of the Allternit Cloud control plane:
-remove the Fly provider entirely, make ContaboRuntimeService the single hosted-
-runtime path, fix all SQLite→Postgres migration bugs found by the new chained
-E2E test, and ship the fixed binary to production.
+Make the paid billing loop production-quality in cmd/allternit-cloud-api
+(Stripe → credits → provision → meter → deduct → auto-stop), then AllternitOS
+convergence coordination, then multi-tenant VPS capacity planning.
 
 ### Just did
-- Removed fly_runtime_service, deploy-fly.{sh,py}, deploy-cloud-api-fly.yml,
-  fly.tomls, FLY_ORGANIZATION_DEPLOYMENT.md; rewired hosted_runtimes routes +
-  hosted_runtime_lifecycle (metering/GC/wake) to ContaboRuntimeService
-  (docker start/stop/inspect); fixed dead fly.dev URL in
-  deploy-cloudflare-pages.yml.
-- executor_service: fixed `$1` bind placeholder leaked into an HTTP URL
-  (broke event mirroring); added missing eventtype/clienttype enums to test
-  schemas. All 10 executor tests pass.
-- Chained E2E (tests/e2e_contabo_provision_heartbeat.rs, gated on
-  ALLTERNIT_E2E_CONTABO=1) PASSES on mail: provision → data plane → Ed25519
-  pairing exchange → device token → heartbeat → online.
-- Fixed 9 real production bugs the E2E exposed: quota can_create_hosted_runtime
-  i64-vs-BOOLEAN, 4 ambiguous ON CONFLICT self-increments,
-  user_cost_budgets.alert_enabled INTEGER→BOOLEAN (live column converted),
-  raw-vs-hashed bootstrap token, pairing JSON casing, base64url, Ed25519
-  oneshot signing, RuntimeIdentity doc shape, provision() stomping the
-  exchange's 'running' transition.
-- 72/72 lib tests pass on mail; release binary deployed to production
-  (api.allternit.com healthy) and to the standby (identical md5, cold standby).
-- Standby (31.220.95.165) live on Tailscale with streaming Postgres replica;
-  failover tested end-to-end; cert sync automated via certbot deploy hook.
+- Billing loop fixes (all in cmd/allternit-cloud-api): atomic+idempotent+ledgered
+  credit deduction keyed by usage-session id (repeated stops can't double-charge);
+  spend-cap = balance minus open-session accrued cost (no double-count);
+  wake-on-demand now enforces spend-cap/hours; Stripe checkout.session.completed/
+  invoice.paid grant credits via metadata (clerk_user_id + allternit_credits_usd,
+  idempotent by stripe event id); new GET /api/v1/billing/credits endpoint;
+  mirror_ws MAX→GREATEST. 83/83 lib tests + e2e_billing_paid_loop PASS on mail.
+- Found + fixed prod schema drift (root-caused several live 60s-loop errors):
+  26 int→bigint + 27 real→float8 columns (migrations_pg/002_widen_int_to_bigint.sql,
+  applied to prod, replicates to standby via WAL); SUM(int8)→NUMERIC decode
+  failures fixed with ::BIGINT / ::DOUBLE PRECISION casts; SQLite 2-arg MAX()
+  → GREATEST (was silently zeroing hosted usage accounting on PG).
+- Prod deploy on mail: new binary live, FLY_* vars stripped from .env,
+  /api/v1/health healthy.
+- Phase 6: wrote AllternitOS/docs/coordination/cloud-backend-status-2026-09-02.md
+  (supersedes Hetzner-era handoff; flags two-ledger question, standby dual-use).
+- Phase 5: wrote docs/Operations/CAPACITY_PLAN.md (~6-13x gross margin per
+  Contabo VPS 8, scaling triggers, add-node SOP, node-selection gap).
 
 ### Next
-- Commit + push this work to main (user approved).
-- Fly.io org can be decommissioned in the Fly dashboard (account-level step).
+- Verify zero-error reconcile loop after final redeploy, then commit + push.
+- Phase 5.5 (future): node selection in ContaboRuntimeService so the third VPS
+  can carry workloads (today everything lands on mail).
 
 ### Open questions
-- None blocking.
+- Stripe live $1-scale test needs a price/checkout carrying the metadata
+  contract (clerk_user_id, allternit_credits_usd) — user action in Stripe
+  dashboard.
+- One-ledger decision: cloud-api user_credits vs allternit-api UsageEvent
+  reconciliation (raised in the AllternitOS coordination note).
