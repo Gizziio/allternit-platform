@@ -1,49 +1,113 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Cloud, Cpu, PuzzlePiece, Star, Wallet } from "@phosphor-icons/react";
+import {
+  ArrowRight,
+  Cloud,
+  Code,
+  Cpu,
+  CreditCard,
+  Key,
+  Lightning,
+  LockKey,
+  Plus,
+  PuzzlePiece,
+  Rocket,
+  ShieldCheck,
+  Terminal,
+  Users,
+} from "@phosphor-icons/react";
 import { PlanPicker } from "@/components/PlanPicker";
 import { PublicPageShell } from "@/components/PublicPageShell";
 import { usePlatformAuth, useClerk } from "@/lib/platform-auth-client";
 
-const WHY_CARDS = [
+const BUILD_CARDS = [
   {
-    icon: <Wallet size={22} />,
-    title: "One account",
-    description: "A single login and credit balance for every Allternit Cloud service.",
+    icon: <Code size={24} weight="duotone" />,
+    title: "Direct API",
+    description:
+      "Call models and run jobs through a single HTTP API. One bearer token, one base URL, no provider-by-provider wiring.",
   },
   {
-    icon: <Cpu size={22} />,
-    title: "Model catalog",
-    description: "Browse local and cloud models with transparent per-token pricing.",
+    icon: <Cpu size={24} weight="duotone" />,
+    title: "Managed compute",
+    description:
+      "Provision hosted runtimes, pair your own devices, or run models locally. Choose the compute that fits the job.",
   },
   {
-    icon: <PuzzlePiece size={22} />,
-    title: "Hosted tools",
-    description: "Use built-in tools on the same credits — no separate billing or API keys.",
-  },
-  {
-    icon: <Cloud size={22} />,
-    title: "Cloud + local",
-    description: "Run small models on your own hardware or scale out to managed cloud compute.",
+    icon: <PuzzlePiece size={24} weight="duotone" />,
+    title: "Built-in tools",
+    description:
+      "Give models access to search, code execution, and custom capabilities through the same API and credit balance.",
   },
 ];
 
-const TEASERS = [
+const JOURNEY_STEPS = [
   {
-    eyebrow: "Models",
-    title: "Local and cloud inference",
-    description:
-      "Pull from a growing catalog of open-weights models, or call frontier cloud providers through a unified interface.",
-    cta: { to: "/models", label: "Browse the catalog" },
+    step: "01",
+    icon: <Key size={18} />,
+    title: "Get an API key",
+    description: "Create an organization and generate a key from the console.",
   },
   {
-    eyebrow: "Tools",
-    title: "Built-in tool use",
-    description:
-      "Search, browse, execute code, and call custom capabilities from any model that supports tool use.",
-    cta: { to: "/billing", label: "See the plans" },
+    step: "02",
+    icon: <Terminal size={18} />,
+    title: "Pair a runtime",
+    description: "Connect a local device or provision a hosted runtime in one command.",
+  },
+  {
+    step: "03",
+    icon: <Lightning size={18} />,
+    title: "Run jobs",
+    description: "Schedule runs, route them to local or cloud compute, and monitor usage.",
+  },
+  {
+    step: "04",
+    icon: <Users size={18} />,
+    title: "Scale the team",
+    description: "Add members, set roles, and centralize billing as you grow.",
   },
 ];
+
+const FEATURES = [
+  {
+    icon: <Code size={22} weight="duotone" />,
+    title: "Unified API",
+    description: "One endpoint for local and cloud inference, tools, and job orchestration.",
+  },
+  {
+    icon: <Cpu size={22} weight="duotone" />,
+    title: "Hosted runtimes",
+    description: "Provision managed compute for long-running or cloud-only workloads.",
+  },
+  {
+    icon: <Cloud size={22} weight="duotone" />,
+    title: "Local-first option",
+    description: "Run open-weights models on your own hardware with no compute cost.",
+  },
+  {
+    icon: <CreditCard size={22} weight="duotone" />,
+    title: "Credits, not invoices",
+    description: "Pre-paid credits roll over monthly. Upgrade, downgrade, or cancel anytime.",
+  },
+  {
+    icon: <Users size={22} weight="duotone" />,
+    title: "Organizations",
+    description: "Shared billing, member roles, and resource access for teams.",
+  },
+  {
+    icon: <ShieldCheck size={22} weight="duotone" />,
+    title: "Clerk auth",
+    description: "Production-grade sign-in, session management, and organization switching.",
+  },
+];
+
+const CODE_SNIPPET = `curl https://api.allternit.com/v1/chat/completions \\
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "model": "local/llama-3.1-8b",
+    "messages": [{"role": "user", "content": "Hello"}]
+  }'`;
 
 export function PortalLandingPage() {
   const auth = usePlatformAuth();
@@ -64,104 +128,160 @@ export function PortalLandingPage() {
       {/* Hero */}
       <section className="relative overflow-hidden border-b border-[var(--border-subtle)] bg-[#0A0A0A] px-6 pb-16 pt-12 md:pb-24 md:pt-20">
         <div
+          className="pointer-events-none absolute inset-0 -z-10"
+          style={{
+            backgroundImage:
+              "radial-gradient(circle at 70% 20%, rgba(217,119,87,0.18), transparent 35%), radial-gradient(circle at 30% 80%, rgba(217,119,87,0.08), transparent 30%)",
+          }}
+        />
+        <div
           className="pointer-events-none absolute inset-0 -z-10 text-[#FDF8F3]"
           style={{
             backgroundImage: "radial-gradient(circle, currentColor 1px, transparent 1px)",
             backgroundSize: "32px 32px",
-            opacity: 0.06,
+            opacity: 0.04,
+            maskImage: "linear-gradient(to bottom, black 40%, transparent 100%)",
+            WebkitMaskImage: "linear-gradient(to bottom, black 40%, transparent 100%)",
           }}
         />
-        <div className="mx-auto max-w-4xl text-center">
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#D97757]/40 bg-[#D97757]/10 px-3 py-1 text-[11px] font-semibold tracking-[0.08em] text-[#D97757]">
-            <Star size={12} /> Allternit Cloud is in beta
+        <div className="mx-auto grid max-w-6xl items-center gap-10 lg:grid-cols-2 lg:gap-14">
+          <div>
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#D97757]/30 bg-[#D97757]/10 px-3 py-1 text-[11px] font-semibold tracking-[0.08em] text-[#D97757]">
+              <Rocket size={12} weight="fill" /> Allternit Cloud is in beta
+            </div>
+            <h1 className="text-[40px] font-bold leading-[1.05] tracking-tight text-[#FDF8F3] md:text-[56px] lg:text-[64px]">
+              Build with local and cloud models on one platform
+            </h1>
+            <p className="mt-5 max-w-xl text-[16px] leading-relaxed text-[#A1A1AA] md:text-[18px]">
+              A single account, unified credits, and managed compute for AI apps. Run models locally,
+              burst to the cloud, and add hosted tools without wiring providers together.
+            </p>
+            <div className="mt-8 flex flex-col items-start gap-3 sm:flex-row">
+              {isSignedIn ? (
+                <Link
+                  to="/"
+                  className="inline-flex items-center gap-2 rounded-lg bg-[#D97757] px-5 py-2.5 text-[14px] font-semibold text-[#FDF8F3] transition-all hover:brightness-110"
+                >
+                  Open console <ArrowRight size={16} />
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    to="/sign-up"
+                    className="inline-flex items-center gap-2 rounded-lg bg-[#D97757] px-5 py-2.5 text-[14px] font-semibold text-[#FDF8F3] transition-all hover:brightness-110"
+                  >
+                    Start building free <ArrowRight size={16} />
+                  </Link>
+                  <button
+                    onClick={() => {
+                      if (clerk?.openSignIn) clerk.openSignIn({ redirectUrl: "/" });
+                      else window.location.href = `/sign-in?redirect_url=${encodeURIComponent("/")}`;
+                    }}
+                    className="inline-flex items-center gap-2 rounded-lg border border-[#FDF8F3]/20 px-5 py-2.5 text-[14px] font-semibold text-[#FDF8F3] transition-colors hover:bg-[#FDF8F3]/5"
+                  >
+                    Sign in
+                  </button>
+                </>
+              )}
+            </div>
+            <p className="mt-4 text-[12px] text-[#71717A]">Free tier includes local models and standard rate limits.</p>
           </div>
-          <h1 className="text-[38px] font-bold leading-[1.05] tracking-tight text-[#FDF8F3] md:text-[56px]">
-            One account for Allternit Cloud
-          </h1>
-          <p className="mx-auto mt-5 max-w-2xl text-[16px] leading-relaxed text-[#A1A1AA] md:text-[18px]">
-            Local + cloud models, hosted tools, and managed compute — all on a single set of
-            credits.
-          </p>
-          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            {isSignedIn ? (
-              <Link
-                to="/"
-                className="inline-flex items-center gap-2 rounded-lg bg-[#D97757] px-5 py-2.5 text-[14px] font-semibold text-[#FDF8F3] transition-colors hover:brightness-110"
-              >
-                Open console <ArrowRight size={16} />
-              </Link>
-            ) : (
-              <>
-                <Link
-                  to="/sign-up"
-                  className="inline-flex items-center gap-2 rounded-lg bg-[#D97757] px-5 py-2.5 text-[14px] font-semibold text-[#FDF8F3] transition-colors hover:brightness-110"
-                >
-                  Sign up <ArrowRight size={16} />
-                </Link>
-                <Link
-                  to="/sign-in"
-                  className="inline-flex items-center gap-2 rounded-lg border border-[#FDF8F3]/20 px-5 py-2.5 text-[14px] font-semibold text-[#FDF8F3] transition-colors hover:bg-[#FDF8F3]/5"
-                >
-                  Sign in
-                </Link>
-              </>
-            )}
+
+          <div className="relative">
+            <div className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-[#D97757]/30 via-transparent to-[#D97757]/10 blur-xl" />
+            <div className="relative overflow-hidden rounded-2xl border border-[#FDF8F3]/10 bg-[#111111] shadow-2xl">
+              <div className="flex items-center gap-2 border-b border-[#FDF8F3]/10 px-4 py-3">
+                <div className="size-2.5 rounded-full bg-[#D97757]" />
+                <div className="size-2.5 rounded-full bg-[#FDF8F3]/20" />
+                <div className="size-2.5 rounded-full bg-[#FDF8F3]/20" />
+                <span className="ml-2 text-[11px] text-[#71717A]">allternit-cloud.sh</span>
+              </div>
+              <pre className="overflow-x-auto p-5 text-[12px] leading-relaxed text-[#E5E5E5] md:text-[13px]">
+                <code>{CODE_SNIPPET}</code>
+              </pre>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Why Allternit Cloud */}
-      <section className="px-6 py-14 md:py-20">
+      {/* Build your way */}
+      <section className="px-6 py-16 md:py-24">
         <div className="mx-auto max-w-6xl">
-          <h2 className="text-[24px] font-bold tracking-tight text-[var(--text-primary)] md:text-[30px]">
-            Why Allternit Cloud?
-          </h2>
-          <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {WHY_CARDS.map((card) => (
+          <div className="max-w-2xl">
+            <h2 className="text-[28px] font-bold tracking-tight text-[var(--text-primary)] md:text-[36px]">
+              Build your way
+            </h2>
+            <p className="mt-3 text-[15px] leading-relaxed text-[var(--text-secondary)] md:text-[16px]">
+              Pick the surface that matches your stack. Everything runs on the same account and credit balance.
+            </p>
+          </div>
+          <div className="mt-10 grid grid-cols-1 gap-5 md:grid-cols-3">
+            {BUILD_CARDS.map((card) => (
               <div
                 key={card.title}
-                className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-5 transition-colors hover:border-[var(--accent-primary)]/30"
+                className="group rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-6 transition-all hover:border-[#D97757]/30 hover:bg-[var(--bg-secondary)]"
               >
-                <div className="mb-3 inline-flex rounded-lg bg-[var(--accent-primary)]/10 p-2 text-[var(--accent-primary)]">
+                <div className="mb-4 inline-flex rounded-xl bg-[#D97757]/10 p-3 text-[#D97757] transition-transform group-hover:scale-105">
                   {card.icon}
                 </div>
-                <h3 className="text-[15px] font-semibold text-[var(--text-primary)]">{card.title}</h3>
-                <p className="mt-1 text-[13px] leading-relaxed text-[var(--text-secondary)]">
-                  {card.description}
-                </p>
+                <h3 className="text-[17px] font-semibold text-[var(--text-primary)]">{card.title}</h3>
+                <p className="mt-2 text-[14px] leading-relaxed text-[var(--text-secondary)]">{card.description}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* What's included */}
-      <section className="border-y border-[var(--border-subtle)] bg-[var(--bg-secondary)]/30 px-6 py-14 md:py-20">
+      {/* Developer journey */}
+      <section className="border-y border-[var(--border-subtle)] bg-[var(--bg-secondary)]/30 px-6 py-16 md:py-24">
         <div className="mx-auto max-w-6xl">
-          <h2 className="text-[24px] font-bold tracking-tight text-[var(--text-primary)] md:text-[30px]">
-            What's included
-          </h2>
-          <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2">
-            {TEASERS.map((teaser) => (
+          <div className="max-w-2xl">
+            <h2 className="text-[28px] font-bold tracking-tight text-[var(--text-primary)] md:text-[36px]">
+              From idea to production
+            </h2>
+            <p className="mt-3 text-[15px] leading-relaxed text-[var(--text-secondary)] md:text-[16px]">
+              A simple path from first API call to a team-managed deployment.
+            </p>
+          </div>
+          <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {JOURNEY_STEPS.map((item) => (
+              <div key={item.step} className="relative">
+                <span className="text-[40px] font-bold leading-none text-[var(--border-subtle)]">{item.step}</span>
+                <div className="mt-4 flex items-center gap-2 text-[13px] font-semibold uppercase tracking-[0.1em] text-[#D97757]">
+                  <span className="inline-flex rounded-md bg-[#D97757]/10 p-1">{item.icon}</span>
+                  {item.title}
+                </div>
+                <p className="mt-2 text-[14px] leading-relaxed text-[var(--text-secondary)]">{item.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* What you get */}
+      <section className="px-6 py-16 md:py-24">
+        <div className="mx-auto max-w-6xl">
+          <div className="max-w-2xl">
+            <h2 className="text-[28px] font-bold tracking-tight text-[var(--text-primary)] md:text-[36px]">
+              What you get
+            </h2>
+            <p className="mt-3 text-[15px] leading-relaxed text-[var(--text-secondary)] md:text-[16px]">
+              The console gives you control over models, compute, teams, and spend — not dashboards you cannot act on.
+            </p>
+          </div>
+          <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {FEATURES.map((feature) => (
               <div
-                key={teaser.eyebrow}
-                className="flex flex-col rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-6"
+                key={feature.title}
+                className="flex gap-4 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/50 p-5"
               >
-                <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--accent-primary)]">
-                  {teaser.eyebrow}
-                </span>
-                <h3 className="mt-2 text-[20px] font-semibold text-[var(--text-primary)]">
-                  {teaser.title}
-                </h3>
-                <p className="mt-2 flex-1 text-[14px] leading-relaxed text-[var(--text-secondary)]">
-                  {teaser.description}
-                </p>
-                <Link
-                  to={teaser.cta.to}
-                  className="mt-5 inline-flex items-center gap-1.5 text-[13px] font-semibold text-[var(--accent-primary)] hover:underline"
-                >
-                  {teaser.cta.label} <ArrowRight size={14} />
-                </Link>
+                <div className="shrink-0 text-[#D97757]">{feature.icon}</div>
+                <div>
+                  <h3 className="text-[15px] font-semibold text-[var(--text-primary)]">{feature.title}</h3>
+                  <p className="mt-1 text-[13px] leading-relaxed text-[var(--text-secondary)]">
+                    {feature.description}
+                  </p>
+                </div>
               </div>
             ))}
           </div>
@@ -169,31 +289,43 @@ export function PortalLandingPage() {
       </section>
 
       {/* Plans */}
-      <section className="px-6 py-14 md:py-20">
+      <section className="border-y border-[var(--border-subtle)] bg-[#0A0A0A] px-6 py-16 md:py-24">
         <div className="mx-auto max-w-6xl">
-          <PlanPicker
-            currentPlanName={null}
-            title="Choose a plan"
-            onSubscribe={isSignedIn ? undefined : handleSubscribe}
-          />
+          <div className="max-w-2xl">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#D97757]/30 bg-[#D97757]/10 px-3 py-1 text-[11px] font-semibold tracking-[0.08em] text-[#D97757]">
+              <LockKey size={12} /> Beta pricing
+            </div>
+            <h2 className="text-[28px] font-bold tracking-tight text-[#FDF8F3] md:text-[36px]">
+              Simple, credit-based plans
+            </h2>
+            <p className="mt-3 text-[15px] leading-relaxed text-[#A1A1AA] md:text-[16px]">
+              Start free. Upgrade when you need cloud models, hosted tools, or higher rate limits. No hidden provider fees.
+            </p>
+          </div>
+          <div className="mt-10">
+            <PlanPicker
+              currentPlanName={null}
+              title="Choose a plan"
+              onSubscribe={isSignedIn ? undefined : handleSubscribe}
+            />
+          </div>
         </div>
       </section>
 
       {/* Bottom CTA */}
-      <section className="border-t border-[var(--border-subtle)] bg-[#0A0A0A] px-6 py-14 md:py-20">
-        <div className="mx-auto max-w-3xl text-center">
-          <h2 className="text-[24px] font-bold tracking-tight text-[#FDF8F3] md:text-[32px]">
-            Get started with Allternit Cloud
+      <section className="px-6 py-16 md:py-24">
+        <div className="mx-auto max-w-4xl rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-8 text-center md:p-14">
+          <h2 className="text-[26px] font-bold tracking-tight text-[var(--text-primary)] md:text-[36px]">
+            Start building with Allternit Cloud
           </h2>
-          <p className="mt-3 text-[15px] text-[#A1A1AA]">
-            Create a free account, browse the model catalog, and upgrade when you need managed
-            compute.
+          <p className="mx-auto mt-3 max-w-xl text-[15px] leading-relaxed text-[var(--text-secondary)] md:text-[16px]">
+            Create a free account, generate an API key, and run your first local or cloud model in minutes.
           </p>
-          <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
+          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
             {isSignedIn ? (
               <Link
                 to="/"
-                className="inline-flex items-center gap-2 rounded-lg bg-[#D97757] px-5 py-2.5 text-[14px] font-semibold text-[#FDF8F3] transition-colors hover:brightness-110"
+                className="inline-flex items-center gap-2 rounded-lg bg-[#D97757] px-6 py-3 text-[14px] font-semibold text-[#FDF8F3] transition-all hover:brightness-110"
               >
                 Open console <ArrowRight size={16} />
               </Link>
@@ -201,16 +333,19 @@ export function PortalLandingPage() {
               <>
                 <Link
                   to="/sign-up"
-                  className="inline-flex items-center gap-2 rounded-lg bg-[#D97757] px-5 py-2.5 text-[14px] font-semibold text-[#FDF8F3] transition-colors hover:brightness-110"
+                  className="inline-flex items-center gap-2 rounded-lg bg-[#D97757] px-6 py-3 text-[14px] font-semibold text-[#FDF8F3] transition-all hover:brightness-110"
                 >
                   Create free account <ArrowRight size={16} />
                 </Link>
-                <Link
-                  to="/sign-in"
-                  className="inline-flex items-center gap-2 rounded-lg border border-[#FDF8F3]/20 px-5 py-2.5 text-[14px] font-semibold text-[#FDF8F3] transition-colors hover:bg-[#FDF8F3]/5"
+                <button
+                  onClick={() => {
+                    if (clerk?.openSignIn) clerk.openSignIn({ redirectUrl: "/" });
+                    else window.location.href = `/sign-in?redirect_url=${encodeURIComponent("/")}`;
+                  }}
+                  className="inline-flex items-center gap-2 rounded-lg border border-[var(--border-subtle)] px-6 py-3 text-[14px] font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-primary)]"
                 >
                   Sign in
-                </Link>
+                </button>
               </>
             )}
           </div>

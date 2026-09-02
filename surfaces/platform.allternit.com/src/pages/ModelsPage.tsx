@@ -29,8 +29,8 @@ export function ModelsPage() {
               Model catalog
             </h1>
             <p className="mt-2 max-w-xl text-[15px] leading-relaxed text-[var(--text-secondary)]">
-              Local and cloud models available through Allternit Cloud. DRAFT — more providers and
-              pricing will be added before public launch.
+              Example providers and families Allternit Cloud will support. DRAFT — the real catalog
+              will be sourced from the connected model providers and your own local runtimes.
             </p>
           </div>
           {auth.isLoaded && auth.isSignedIn && (
@@ -57,7 +57,7 @@ export function ModelsPage() {
         <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] overflow-hidden">
           <div className="flex items-center gap-2 border-b border-[var(--border-subtle)] bg-[var(--accent-primary)]/5 px-4 py-3 text-[12px] font-medium text-[var(--accent-primary)]">
             <Warning size={14} />
-            Draft catalog. Prices shown are representative cloud provider rates; local models run on
+            Draft catalog. These are representative examples, not live offerings. Local models run on
             your own hardware at no compute cost.
           </div>
           <div className="overflow-x-auto">
