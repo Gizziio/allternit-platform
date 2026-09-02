@@ -309,6 +309,8 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
         // Credit balance verifies the Clerk session per-request, like the
         // hosted runtime routes.
         .merge(routes::billing_credits::routes())
+        // API keys verify the Clerk session per-request and store only hashes.
+        .merge(routes::api_keys::routes())
         // The Stripe webhook verifies the Stripe-Signature HMAC itself and
         // answers 503 webhook_not_configured when STRIPE_WEBHOOK_SECRET is unset.
         .merge(routes::billing_webhooks::routes())

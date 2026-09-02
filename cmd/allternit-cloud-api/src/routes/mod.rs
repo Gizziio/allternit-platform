@@ -1,5 +1,6 @@
 //! Routes module
 
+pub mod api_keys;
 pub mod approvals;
 pub mod auth;
 pub mod billing_credits;

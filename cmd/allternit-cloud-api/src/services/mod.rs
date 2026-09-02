@@ -1,5 +1,6 @@
 //! Core services for Cowork Runtime
 
+pub mod api_keys;
 pub mod contabo_runtime_service;
 pub mod cost_service;
 pub mod event_store;
