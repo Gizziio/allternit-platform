@@ -19,6 +19,14 @@ pub struct ModelAliasEntry {
     pub aliases: Option<Vec<String>>,
     /// Unix timestamp for the `/v1/models` `created` field.
     pub created: u64,
+    /// Human-readable model name shown in the catalog.
+    pub name: String,
+    /// Input price per 1M tokens (USD). Used when live upstream pricing is unavailable.
+    pub prompt_price: f64,
+    /// Output price per 1M tokens (USD). Used when live upstream pricing is unavailable.
+    pub completion_price: f64,
+    /// Context length in tokens.
+    pub context_length: u64,
 }
 
 /// Immutable catalog of model aliases.
@@ -64,6 +72,10 @@ pub fn starter_catalog() -> ModelAliasMap {
             upstream_id: "meta-llama/llama-3.1-8b-instruct".to_string(),
             aliases: Some(vec!["llama3.1-8b".to_string()]),
             created: 1722470400, // 2024-08-01
+            name: "Llama 3.1 8B Instruct".to_string(),
+            prompt_price: 0.10,
+            completion_price: 0.20,
+            context_length: 128_000,
         },
         ModelAliasEntry {
             alias: "llama-3.1-70b".to_string(),
@@ -71,6 +83,10 @@ pub fn starter_catalog() -> ModelAliasMap {
             upstream_id: "meta-llama/llama-3.1-70b-instruct".to_string(),
             aliases: Some(vec!["llama3.1-70b".to_string()]),
             created: 1722470400,
+            name: "Llama 3.1 70B Instruct".to_string(),
+            prompt_price: 0.30,
+            completion_price: 0.40,
+            context_length: 128_000,
         },
         ModelAliasEntry {
             alias: "claude-sonnet-4".to_string(),
@@ -78,6 +94,10 @@ pub fn starter_catalog() -> ModelAliasMap {
             upstream_id: "anthropic/claude-sonnet-4-20250514".to_string(),
             aliases: Some(vec!["claude-sonnet".to_string()]),
             created: 1746057600, // 2025-05-01
+            name: "Claude Sonnet 4".to_string(),
+            prompt_price: 3.00,
+            completion_price: 15.00,
+            context_length: 200_000,
         },
         ModelAliasEntry {
             alias: "gpt-4o".to_string(),
@@ -85,6 +105,10 @@ pub fn starter_catalog() -> ModelAliasMap {
             upstream_id: "openai/gpt-4o".to_string(),
             aliases: Some(vec!["gpt4o".to_string()]),
             created: 1715731200, // 2024-05-15
+            name: "GPT-4o".to_string(),
+            prompt_price: 2.50,
+            completion_price: 10.00,
+            context_length: 128_000,
         },
         ModelAliasEntry {
             alias: "qwen-2.5-72b".to_string(),
@@ -92,6 +116,10 @@ pub fn starter_catalog() -> ModelAliasMap {
             upstream_id: "qwen/qwen-2.5-72b-instruct".to_string(),
             aliases: Some(vec!["qwen2.5-72b".to_string()]),
             created: 1727740800, // 2024-10-01
+            name: "Qwen 2.5 72B Instruct".to_string(),
+            prompt_price: 0.30,
+            completion_price: 0.40,
+            context_length: 128_000,
         },
         ModelAliasEntry {
             alias: "mistral-large".to_string(),
@@ -99,6 +127,10 @@ pub fn starter_catalog() -> ModelAliasMap {
             upstream_id: "mistralai/mistral-large".to_string(),
             aliases: Some(vec!["mistral".to_string()]),
             created: 1709251200, // 2024-03-01
+            name: "Mistral Large".to_string(),
+            prompt_price: 2.00,
+            completion_price: 6.00,
+            context_length: 128_000,
         },
     ])
 }

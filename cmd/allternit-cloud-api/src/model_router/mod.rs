@@ -218,7 +218,31 @@ impl ModelRouter {
                 extra: serde_json::Map::new(),
             };
 
+            // Start with static catalog metadata so the public model list is useful
+            // even when no upstream provider is configured or the upstream is slow.
+            info.extra.insert(
+                "name".to_string(),
+                serde_json::Value::String(entry.name.clone()),
+            );
+            info.extra.insert(
+                "prompt_price".to_string(),
+                serde_json::Value::Number(
+                    serde_json::Number::from_f64(entry.prompt_price).unwrap_or(0.into()),
+                ),
+            );
+            info.extra.insert(
+                "completion_price".to_string(),
+                serde_json::Value::Number(
+                    serde_json::Number::from_f64(entry.completion_price).unwrap_or(0.into()),
+                ),
+            );
+            info.extra.insert(
+                "context_length".to_string(),
+                serde_json::Value::Number(entry.context_length.into()),
+            );
+
             // If we have a live provider, enrich with upstream metadata.
+            // Upstream values take precedence over static catalog defaults.
             if let Some(provider) = self.providers.get(&entry.provider) {
                 match provider.list_models().await {
                     Ok(upstream_models) => {
@@ -226,9 +250,8 @@ impl ModelRouter {
                             .into_iter()
                             .find(|m| m.id == entry.upstream_id)
                         {
-                            // Merge any extra metadata from upstream.
                             for (k, v) in upstream.extra {
-                                info.extra.entry(k).or_insert(v);
+                                info.extra.insert(k, v);
                             }
                         }
                     }

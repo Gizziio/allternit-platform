@@ -36,6 +36,10 @@ fn model_alias_map_supports_multiple_aliases() {
         upstream_id: "upstream/primary".to_string(),
         aliases: Some(vec!["alt1".to_string(), "alt2".to_string()]),
         created: 12345,
+        name: "Primary Model".to_string(),
+        prompt_price: 0.01,
+        completion_price: 0.02,
+        context_length: 128_000,
     }]);
 
     let primary = catalog.resolve("primary").unwrap();
@@ -60,6 +64,12 @@ async fn disabled_router_list_models_returns_static_catalog() {
     let models = router.list_models().await;
     assert_eq!(models.len(), 6);
     assert!(models.iter().any(|m| m.id == "llama-3.1-8b"));
+
+    let llama = models.iter().find(|m| m.id == "llama-3.1-8b").unwrap();
+    assert_eq!(llama.extra.get("name").and_then(|v| v.as_str()), Some("Llama 3.1 8B Instruct"));
+    assert!(llama.extra.get("prompt_price").and_then(|v| v.as_f64()).is_some());
+    assert!(llama.extra.get("completion_price").and_then(|v| v.as_f64()).is_some());
+    assert_eq!(llama.extra.get("context_length").and_then(|v| v.as_u64()), Some(128_000));
 }
 
 #[tokio::test]
