@@ -14,6 +14,7 @@ import { SignUpPage } from "@/pages/SignUpPage";
 import { RunsPage } from "@/pages/RunsPage";
 import { SchedulesPage } from "@/pages/SchedulesPage";
 import { ApprovalsPage } from "@/pages/ApprovalsPage";
+import { FabricPage } from "@/pages/FabricPage";
 import { usePlatformAuth } from "@/lib/platform-auth-client";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -130,6 +131,14 @@ export default function App() {
         element={
           <ConsoleRoute>
             <SettingsPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/fabric/*"
+        element={
+          <ConsoleRoute>
+            <FabricPage />
           </ConsoleRoute>
         }
       />
