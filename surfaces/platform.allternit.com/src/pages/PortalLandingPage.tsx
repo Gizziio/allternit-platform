@@ -17,6 +17,11 @@ import {
 } from "@phosphor-icons/react";
 import { PlanPicker } from "@/components/PlanPicker";
 import { PublicPageShell } from "@/components/PublicPageShell";
+import { ModelCapabilitiesSection } from "@/components/landing/ModelCapabilitiesSection";
+import { ResourcesSection } from "@/components/landing/ResourcesSection";
+import { SecuritySection } from "@/components/landing/SecuritySection";
+import { UseCasesSection } from "@/components/landing/UseCasesSection";
+import { FaqSection } from "@/components/landing/FaqSection";
 import { usePlatformAuth, useClerk } from "@/lib/platform-auth-client";
 
 const BUILD_CARDS = [
@@ -258,6 +263,21 @@ export function PortalLandingPage() {
           </div>
         </div>
       </section>
+
+      {/* Model capabilities */}
+      <ModelCapabilitiesSection />
+
+      {/* Resources */}
+      <ResourcesSection />
+
+      {/* Security */}
+      <SecuritySection />
+
+      {/* Use cases */}
+      <UseCasesSection />
+
+      {/* FAQ */}
+      <FaqSection />
 
       {/* What you get */}
       <section className="px-6 py-16 md:py-24">
