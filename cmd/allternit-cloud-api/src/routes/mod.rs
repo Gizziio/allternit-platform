@@ -16,7 +16,6 @@ pub mod jobs;
 pub mod mesh;
 pub mod mirror;
 pub mod mirror_ws;
-pub mod model_router;
 pub mod providers;
 pub mod regions;
 pub mod runs;
