@@ -1,67 +1,209 @@
 import React from "react";
-import { BookOpen, ArrowSquareOut, Code, Cloud, Gear } from "@phosphor-icons/react";
+import { Link } from "react-router-dom";
+import {
+  BookOpen,
+  ArrowSquareOut,
+  Code,
+  Cloud,
+  Gear,
+  Key,
+  Terminal,
+  Lightning,
+} from "@phosphor-icons/react";
 
-const docLinks = [
+const QUICK_START_STEPS = [
   {
-    icon: Code,
-    title: "Platform API reference",
-    description: "Endpoints, authentication, and request/response schemas for the Allternit gateway.",
-    href: "https://docs.allternit.com/api",
+    title: "Create an API key",
+    body: "Go to API Keys and create a scoped key. Copy the token immediately — it is shown only once.",
+    to: "/api-keys",
   },
   {
-    icon: Cloud,
-    title: "Hosted compute",
-    description: "Provision managed Fly runtimes, regions, limits, and enterprise BYOC setup.",
-    href: "https://docs.allternit.com/compute",
+    title: "Pick a model",
+    body: "Browse the model catalog to see which models and upstream providers are available to your workspace.",
+    to: "/models",
   },
   {
-    icon: Gear,
-    title: "Organization & billing",
-    description: "Roles, organizations, metered billing, and invoice exports.",
-    href: "https://docs.allternit.com/billing",
+    title: "Send a request",
+    body: "Use the OpenAI-compatible chat completions endpoint with your Allternit API key.",
+  },
+];
+
+const ENDPOINTS = [
+  {
+    method: "GET",
+    path: "/v1/models",
+    description: "List available models, pricing, and context lengths.",
+  },
+  {
+    method: "POST",
+    path: "/v1/chat/completions",
+    description: "OpenAI-compatible chat completions with streaming support.",
+  },
+  {
+    method: "GET",
+    path: "/api/v1/billing/credits",
+    description: "Check prepaid credit balance and recent transactions.",
   },
 ];
 
 export function DocsPage() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
         <h1 className="text-[22px] font-semibold tracking-tight text-[var(--text-primary)]">
-          Docs
+          Documentation
         </h1>
         <p className="text-[13px] text-[var(--text-secondary)] mt-1">
-          Reference documentation for the Allternit platform and cloud API.
+          Quick reference for the Allternit Cloud API and platform console.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {docLinks.map((link) => (
-          <a
-            key={link.title}
-            href={link.href}
-            target="_blank"
-            rel="noopener noreferrer"
+      {/* Quick start */}
+      <section className="space-y-4">
+        <div className="flex items-center gap-2 text-[14px] font-semibold text-[var(--text-primary)]">
+          <Lightning size={18} className="text-[var(--accent-primary)]" /> Quick start
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {QUICK_START_STEPS.map((step, idx) => (
+            <div
+              key={step.title}
+              className="rounded-xl border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)]/40 p-4"
+            >
+              <div className="flex items-center gap-2 text-[13px] font-semibold text-[var(--text-primary)]">
+                <span className="flex size-5 items-center justify-center rounded-full bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] text-[11px]">
+                  {idx + 1}
+                </span>
+                {step.title}
+              </div>
+              <p className="mt-2 text-[12px] leading-relaxed text-[var(--text-secondary)]">
+                {step.body}
+              </p>
+              {step.to && (
+                <Link
+                  to={step.to}
+                  className="mt-3 inline-flex items-center gap-1 text-[12px] font-medium text-[var(--accent-primary)] hover:underline"
+                >
+                  Open <ArrowSquareOut size={12} />
+                </Link>
+              )}
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Example */}
+      <section className="space-y-4">
+        <div className="flex items-center gap-2 text-[14px] font-semibold text-[var(--text-primary)]">
+          <Terminal size={18} className="text-[var(--accent-primary)]" /> Example request
+        </div>
+        <div className="rounded-xl border border-solid border-[var(--border-subtle)] bg-[var(--bg-primary)] p-4 overflow-x-auto">
+          <pre className="text-[12px] font-mono leading-relaxed text-[var(--text-secondary)]">
+            <code>{`curl https://api.allternit.com/v1/chat/completions \\
+  -H "Authorization: Bearer \$ALLTERNIT_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "model": "llama-3.1-8b",
+    "messages": [{"role": "user", "content": "Hello, Allternit"}],
+    "stream": false
+  }'`}</code>
+          </pre>
+        </div>
+      </section>
+
+      {/* Endpoints */}
+      <section className="space-y-4">
+        <div className="flex items-center gap-2 text-[14px] font-semibold text-[var(--text-primary)]">
+          <Code size={18} className="text-[var(--accent-primary)]" /> Common endpoints
+        </div>
+        <div className="rounded-xl border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)]/40 overflow-hidden">
+          <table className="w-full text-left text-[13px]">
+            <thead className="bg-[var(--bg-primary)] text-[11px] uppercase tracking-wider text-[var(--text-tertiary)]">
+              <tr>
+                <th className="px-4 py-3 font-medium">Method</th>
+                <th className="px-4 py-3 font-medium">Path</th>
+                <th className="px-4 py-3 font-medium">Description</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[var(--border-subtle)]">
+              {ENDPOINTS.map((ep) => (
+                <tr key={ep.path}>
+                  <td className="px-4 py-3">
+                    <span className="rounded px-1.5 py-0.5 text-[11px] font-semibold bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]">
+                      {ep.method}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 font-mono text-[12px] text-[var(--text-primary)]">
+                    {ep.path}
+                  </td>
+                  <td className="px-4 py-3 text-[var(--text-secondary)]">{ep.description}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* Resource cards */}
+      <section className="space-y-4">
+        <div className="flex items-center gap-2 text-[14px] font-semibold text-[var(--text-primary)]">
+          <BookOpen size={18} className="text-[var(--accent-primary)]" /> Console guides
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <Link
+            to="/compute"
             className="group rounded-xl border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)]/40 p-4 hover:border-[var(--accent-primary)]/30 hover:bg-[var(--bg-secondary)] transition-colors"
           >
             <div className="flex items-start justify-between gap-3">
               <div className="size-9 shrink-0 rounded-lg bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] flex items-center justify-center">
-                <link.icon size={18} />
+                <Cloud size={18} />
               </div>
-              <ArrowSquareOut size={16} className="text-[var(--text-tertiary)] group-hover:text-[var(--accent-primary)] transition-colors" />
             </div>
-            <div className="text-[14px] font-semibold text-[var(--text-primary)] mt-3">{link.title}</div>
-            <p className="text-[12px] text-[var(--text-secondary)] mt-1 leading-relaxed">{link.description}</p>
-          </a>
-        ))}
-      </div>
+            <div className="text-[14px] font-semibold text-[var(--text-primary)] mt-3">Hosted compute</div>
+            <p className="text-[12px] text-[var(--text-secondary)] mt-1 leading-relaxed">
+              Provision managed runtimes, set limits, and monitor usage.
+            </p>
+          </Link>
 
-      <div className="rounded-xl border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)]/40 p-5">
+          <Link
+            to="/billing"
+            className="group rounded-xl border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)]/40 p-4 hover:border-[var(--accent-primary)]/30 hover:bg-[var(--bg-secondary)] transition-colors"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="size-9 shrink-0 rounded-lg bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] flex items-center justify-center">
+                <Gear size={18} />
+              </div>
+            </div>
+            <div className="text-[14px] font-semibold text-[var(--text-primary)] mt-3">Organization & billing</div>
+            <p className="text-[12px] text-[var(--text-secondary)] mt-1 leading-relaxed">
+              Manage members, plans, credits, and usage.
+            </p>
+          </Link>
+
+          <Link
+            to="/api-keys"
+            className="group rounded-xl border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)]/40 p-4 hover:border-[var(--accent-primary)]/30 hover:bg-[var(--bg-secondary)] transition-colors"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="size-9 shrink-0 rounded-lg bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] flex items-center justify-center">
+                <Key size={18} />
+              </div>
+            </div>
+            <div className="text-[14px] font-semibold text-[var(--text-primary)] mt-3">API keys</div>
+            <p className="text-[12px] text-[var(--text-secondary)] mt-1 leading-relaxed">
+              Create scoped keys and rotate credentials.
+            </p>
+          </Link>
+        </div>
+      </section>
+
+      <div className="rounded-xl border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)]/40 p-4">
         <div className="flex items-center gap-2 text-[14px] font-semibold text-[var(--text-primary)] mb-2">
-          <BookOpen size={18} className="text-[var(--accent-primary)]" /> Need help?
+          <BookOpen size={18} className="text-[var(--accent-primary)]" /> Full API reference
         </div>
         <p className="text-[13px] text-[var(--text-secondary)] leading-relaxed m-0">
-          Documentation links above are placeholders for the canonical docs site. Reach out to your
-          Allternit contact or open the in-app help from{" "}
+          A canonical OpenAPI reference site for docs.allternit.com is planned. For now, use the
+          endpoints above and the model catalog to integrate. Need help? Contact your Allternit
+          representative or open the in-app help from{" "}
           <a
             href="https://ai.allternit.com/shell"
             target="_blank"
