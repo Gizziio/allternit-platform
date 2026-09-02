@@ -13,6 +13,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 pub mod catalog;
+pub mod generic_openai;
 pub mod openrouter;
 
 #[cfg(test)]

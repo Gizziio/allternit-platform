@@ -157,24 +157,46 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Build the model router.
     let alias_map = model_router::catalog::starter_catalog();
-    let model_router = match model_router::openrouter::OpenRouterConfig::from_env() {
-        Some(config) => {
-            tracing::info!("OpenRouter model router enabled");
-            let provider = model_router::openrouter::OpenRouterProvider::new(config);
-            model_router::ModelRouter::new(vec![provider], alias_map)
+    let mut providers: Vec<Arc<dyn model_router::UpstreamProvider>> = Vec::new();
+
+    if let Some(config) = model_router::openrouter::OpenRouterConfig::from_env() {
+        tracing::info!("OpenRouter model router enabled");
+        providers.push(model_router::openrouter::OpenRouterProvider::new(config));
+    }
+
+    // Generic OpenAI-compatible providers. Each is enabled by setting
+    // <PREFIX>_API_KEY. Base URLs default to the provider's known endpoint.
+    let generic_providers: &[(&str, Option<&str>)] = &[
+        ("TOGETHER", Some("https://api.together.xyz/v1")),
+        ("FIREWORKS", Some("https://api.fireworks.ai/inference/v1")),
+        ("DEEPINFRA", Some("https://api.deepinfra.com/v1/inference")),
+        ("GROQ", Some("https://api.groq.com/openai/v1")),
+    ];
+
+    for (prefix, default_base) in generic_providers {
+        if let Some(config) =
+            model_router::generic_openai::GenericOpenAiConfig::from_env_with_default_base(
+                prefix, *default_base,
+            )
+        {
+            tracing::info!(provider = %config.provider_id, "OpenAI-compatible model provider enabled");
+            providers.push(model_router::generic_openai::GenericOpenAiProvider::new(config));
         }
-        None => {
-            if is_production {
-                tracing::warn!(
-                    "OPENROUTER_API_KEY not set - model router disabled in production"
-                );
-            } else {
-                tracing::info!(
-                    "OPENROUTER_API_KEY not set - model router disabled (set it to enable /v1/chat/completions)"
-                );
-            }
-            model_router::ModelRouter::disabled(alias_map)
+    }
+
+    let model_router = if providers.is_empty() {
+        if is_production {
+            tracing::warn!(
+                "No model provider API keys set - model router disabled in production"
+            );
+        } else {
+            tracing::info!(
+                "No model provider API keys set - model router disabled (set OPENROUTER_API_KEY, TOGETHER_API_KEY, etc. to enable /v1/chat/completions)"
+            );
         }
+        model_router::ModelRouter::disabled(alias_map)
+    } else {
+        model_router::ModelRouter::new(providers, alias_map)
     };
 
     // Create API state with shared services
