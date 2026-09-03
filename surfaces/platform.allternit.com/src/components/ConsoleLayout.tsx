@@ -22,6 +22,7 @@ import {
   RocketIcon,
   Calendar02Icon,
   ShieldCheckIcon,
+  CloudIcon,
 } from "@hugeicons/core-free-icons";
 import { UserButton } from "@clerk/clerk-react";
 import { cn } from "@/lib/utils";
@@ -61,6 +62,7 @@ const navGroups: NavGroup[] = [
       { to: "/schedules", label: "Schedules", icon: Calendar02Icon },
       { to: "/approvals", label: "Approvals", icon: ShieldCheckIcon },
       { to: "/billing", label: "Billing", icon: Wallet01Icon },
+      { to: "/cloud-accounts", label: "Cloud accounts", icon: CloudIcon },
       { to: "/api-keys", label: "API Keys", icon: Key01Icon },
     ],
   },

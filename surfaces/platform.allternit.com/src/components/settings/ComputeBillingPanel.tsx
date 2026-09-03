@@ -143,7 +143,7 @@ export function ComputeBillingPanel() {
       setCreateRegion((current) => (allowedRegions.includes(current) ? current : allowedRegions[0]));
       const allowedMemory = MEMORY_OPTIONS.filter((value) => value <= nextEntitlement.maxMemoryMb);
       setCreateMemoryMb((current) =>
-        allowedMemory.includes(current) ? current : (allowedMemory.at(-1) ?? nextEntitlement.maxMemoryMb),
+        allowedMemory.includes(current) ? current : (allowedMemory[allowedMemory.length - 1] ?? nextEntitlement.maxMemoryMb),
       );
     } catch (failure) {
       setError(formatApiError(failure, "Unable to load hosted compute"));

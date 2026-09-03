@@ -10,6 +10,7 @@ import { BillingPage } from "@/pages/BillingPage";
 import { ApiKeysPage } from "@/pages/ApiKeysPage";
 import { DocsPage } from "@/pages/DocsPage";
 import { SettingsPage } from "@/pages/SettingsPage";
+import { CloudAccountsPage } from "@/pages/CloudAccountsPage";
 import { SignInPage } from "@/pages/SignInPage";
 import { SignUpPage } from "@/pages/SignUpPage";
 import { RunsPage } from "@/pages/RunsPage";
@@ -148,6 +149,14 @@ export default function App() {
         element={
           <ConsoleRoute>
             <ApprovalsPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/cloud-accounts/*"
+        element={
+          <ConsoleRoute>
+            <CloudAccountsPage />
           </ConsoleRoute>
         }
       />
