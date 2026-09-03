@@ -33,3 +33,49 @@
 - Standby VPS `allternit-standby` (31.220.95.165) uses `~/.ssh/id_ed25519_gizziio` (Tailscale SSH disabled there); PG streaming replica — schema changes replicate automatically, apply migrations on `mail` only. Failover: `docs/Operations/FAILOVER_RUNBOOK.md`.
 - Billing smoke tests: webhook signature recipe + credit_transactions FK notes in the session handoff; smoke users must be inserted into `users` first (CASCADE cleanup).
 - Reconciliation timer: `reconcile-billing.timer` (daily, /usr/local/bin + /etc/systemd/system, files in `infrastructure/cloud/`).
+
+## CI/CD (GitHub Actions → Contabo control plane)
+
+Workflow: `.github/workflows/deploy-cloud-api-contabo.yml`. On every push to
+`main` touching the cloud API (plus `workflow_dispatch`):
+
+1. **test** job — Postgres 16 service container (the lib suite connects to
+   `allternit_test` on localhost), then `cargo test --release -p
+   allternit-cloud-api --lib` for the full target triple. Docker is available
+   on the runner, so the contabo provision test runs too.
+2. **deploy** job (needs: test) — cross-builds the x86_64 release binary,
+   joins the Tailscale network, and swaps it onto `mail`
+   (100.108.37.126) via `cmd/allternit-cloud-api/deploy-contabo.sh`, which
+   health-checks `/api/v1/health` post-swap and **rolls back automatically**
+   to the previous binary on failure.
+
+No public SSH exposure: the runner only reaches mail over the tailnet.
+
+### One-time setup (owner actions)
+
+1. **Tailscale auth key** — https://login.tailscale.com/admin/settings/keys →
+   *Generate auth key* → **reusable + pre-authorized**, tag `tag:ci`.
+2. **ACL policy** — the tag must exist and be allowed to reach (and, unless
+   using an SSH key, SSH into) mail:
+   ```json
+   "tagOwners": { "tag:ci": ["allternitpbc@"] },
+   "acls": [
+     { "action": "accept", "src": ["tag:ci"], "dst": ["tag:mail:*"] }
+   ],
+   "ssh": [
+     { "action": "check", "src": ["tag:ci"], "dst": ["tag:mail"], "users": ["root"] }
+   ]
+   ```
+   (adjust the mail host tag to whatever `mail` actually carries; `tailscale status`
+   shows tags with `tailscale status --json`). If you skip the `ssh` block,
+   also generate an SSH keypair for root@mail and set `CONTABO_SSH_KEY` below.
+3. **GitHub secrets** (repo `Gizziio/allternit-platform`):
+   ```bash
+   gh secret set TS_AUTHKEY          # tskey-auth-... from step 1
+   gh secret set CONTABO_SSH_KEY     # optional, only without the ssh ACL
+   ```
+4. Sanity-check once from any machine on the tailnet:
+   `ssh root@mail curl -s localhost:8082/api/v1/health`.
+
+After that, merging to `main` deploys itself. Watch runs with
+`gh run list --workflow=deploy-cloud-api-contabo.yml`.

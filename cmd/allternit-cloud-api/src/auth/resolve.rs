@@ -21,6 +21,7 @@ use crate::error::ApiError;
 /// carry no profile — the optional fields are `None` and the route must fall
 /// back to the synthetic `<id>@users.allternit.local` email (same contract as
 /// the device-actor path in `gizzi_instances`).
+#[derive(Clone)]
 pub struct ResolvedUser {
     pub id: String,
     pub email: Option<String>,
@@ -28,6 +29,41 @@ pub struct ResolvedUser {
     pub image_url: Option<String>,
     /// Clerk organization binding; `None` for API-token callers.
     pub organization_id: Option<String>,
+    /// `None` = Clerk session (full access — sessions are user-level).
+    /// `Some(perms)` = API token, enforced verbatim: `["*"]` (the
+    /// production default for legacy `api_tokens` rows) means full access;
+    /// any other list must contain the scope being checked.
+    pub token_permissions: Option<Vec<String>>,
+}
+
+impl ResolvedUser {
+    /// Whether the caller may exercise `scope` (`inference`, `compute`,
+    /// `billing`, `account`). Clerk sessions always pass; tokens pass when
+    /// their permission list contains the scope or the `"*"` wildcard.
+    pub fn has_scope(&self, scope: &str) -> bool {
+        match &self.token_permissions {
+            None => true,
+            Some(perms) => perms.iter().any(|p| p == "*" || p == scope),
+        }
+    }
+}
+
+/// Resolve the caller and require `scope` — the single entry point for
+/// management routes that should be reachable by scoped API tokens.
+/// Returns 403 (not 401) when the token is valid but under-scoped, so
+/// agents can tell "wrong key" apart from "needs a bigger key".
+pub async fn resolve_user_scoped(
+    db: &PgPool,
+    headers: &HeaderMap,
+    scope: &str,
+) -> Result<ResolvedUser, ApiError> {
+    let user = resolve_user(db, headers).await?;
+    if !user.has_scope(scope) {
+        return Err(ApiError::Forbidden(format!(
+            "API token lacks the '{scope}' scope"
+        )));
+    }
+    Ok(user)
 }
 
 /// Resolve the caller from a Clerk session JWT, falling back to an
@@ -42,6 +78,7 @@ pub async fn resolve_user(db: &PgPool, headers: &HeaderMap) -> Result<ResolvedUs
             name: user.name,
             image_url: user.image_url,
             organization_id: user.organization_id,
+            token_permissions: None,
         }),
         Err(clerk_error) => {
             let Some(token) = bearer_token(headers) else {
@@ -54,6 +91,7 @@ pub async fn resolve_user(db: &PgPool, headers: &HeaderMap) -> Result<ResolvedUs
                     name: None,
                     image_url: None,
                     organization_id: None,
+                    token_permissions: Some(user.permissions),
                 }),
                 Ok(None) => Err(clerk_error),
                 Err(error) => Err(ApiError::DatabaseError(error)),
@@ -204,5 +242,37 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(user_id, "dev-user", "dev fallback preserved");
+    }
+
+    #[test]
+    fn scope_semantics_clerk_wildcard_and_verbatim_lists() {
+        let clerk = ResolvedUser {
+            id: "u1".to_string(),
+            email: None,
+            name: None,
+            image_url: None,
+            organization_id: None,
+            token_permissions: None,
+        };
+        assert!(clerk.has_scope("compute"), "Clerk sessions pass every scope");
+
+        let wildcard = ResolvedUser {
+            token_permissions: Some(vec!["*".to_string()]),
+            ..clerk.clone()
+        };
+        assert!(wildcard.has_scope("billing"), "legacy ['*'] default is full access");
+
+        let scoped = ResolvedUser {
+            token_permissions: Some(vec!["inference".to_string()]),
+            ..clerk.clone()
+        };
+        assert!(scoped.has_scope("inference"));
+        assert!(!scoped.has_scope("compute"), "scoped tokens enforce verbatim");
+
+        let empty = ResolvedUser {
+            token_permissions: Some(vec![]),
+            ..clerk
+        };
+        assert!(!empty.has_scope("inference"), "empty list means no scopes");
     }
 }

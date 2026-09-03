@@ -121,8 +121,8 @@ async fn create_subscription(
     headers: HeaderMap,
     Json(request): Json<SubscribeRequest>,
 ) -> Response {
-    let user_id = match crate::auth::resolve_user_id(&state.db, &headers).await {
-        Ok(user_id) => user_id,
+    let user_id = match crate::auth::resolve_user_scoped(&state.db, &headers, "billing").await {
+        Ok(user) => user.id,
         Err(error) => return error.into_response(),
     };
     let Some(plan) = find_plan(&request.plan_id) else {
@@ -170,8 +170,8 @@ async fn create_portal_session(
     State(state): State<Arc<ApiState>>,
     headers: HeaderMap,
 ) -> Response {
-    let user_id = match crate::auth::resolve_user_id(&state.db, &headers).await {
-        Ok(user_id) => user_id,
+    let user_id = match crate::auth::resolve_user_scoped(&state.db, &headers, "billing").await {
+        Ok(user) => user.id,
         Err(error) => return error.into_response(),
     };
     let Ok(secret_key) = std::env::var("STRIPE_SECRET_KEY") else {

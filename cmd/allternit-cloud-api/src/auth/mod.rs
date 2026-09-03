@@ -12,4 +12,4 @@ pub mod resolve;
 pub use middleware::{AuthContext, AuthLayer, AuthMiddleware};
 pub use models::{ApiToken, AuthenticatedUser, TokenInfo};
 pub use permissions::{Permission, PermissionChecker};
-pub use resolve::{resolve_user, resolve_user_id};
+pub use resolve::{resolve_user, resolve_user_id, resolve_user_scoped};

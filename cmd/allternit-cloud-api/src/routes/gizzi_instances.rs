@@ -254,7 +254,7 @@ async fn list_instances(
     State(state): State<Arc<ApiState>>,
     headers: HeaderMap,
 ) -> Result<Json<serde_json::Value>, ApiError> {
-    let user_id = crate::auth::resolve_user_id(&state.db, &headers).await?;
+    let user_id = crate::auth::resolve_user_scoped(&state.db, &headers, "compute").await?.id;
     let instances = sqlx::query_as::<_, GizziInstanceView>(
         r#"
         SELECT id, name, url, updated_at
@@ -308,7 +308,7 @@ async fn delete_instance(
     headers: HeaderMap,
     Path(id): Path<String>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
-    let user_id = crate::auth::resolve_user_id(&state.db, &headers).await?;
+    let user_id = crate::auth::resolve_user_scoped(&state.db, &headers, "compute").await?.id;
     let affected = sqlx::query("DELETE FROM gizzi_instances WHERE id = $1 AND user_id = $2")
         .bind(&id)
         .bind(&user_id)

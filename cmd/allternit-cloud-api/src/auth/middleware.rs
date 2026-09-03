@@ -299,6 +299,17 @@ pub(crate) async fn validate_token_against_db(
         }));
     }
 
+    // Modern scoped keys (`alt_…`, sha256-hashed in `api_keys` with a real
+    // scopes list). This is the only production validation path for them —
+    // without it, keys minted on the platform simply do not work here.
+    if let Ok(Some(key)) = crate::services::api_keys::authenticate_api_key(db, token).await {
+        return Ok(Some(AuthenticatedUser {
+            user_id: key.user_id,
+            token_id: key.id,
+            permissions: key.scopes,
+        }));
+    }
+
     // Fallback: check for dev token
     if token == "dev-api-token" {
         return Ok(Some(AuthenticatedUser::development_user()));

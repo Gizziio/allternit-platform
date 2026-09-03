@@ -123,7 +123,7 @@ async fn list_hosted_runtimes(
     State(state): State<Arc<ApiState>>,
     headers: HeaderMap,
 ) -> Result<Json<Vec<HostedRuntimeResponse>>, ApiError> {
-    let user_id = crate::auth::resolve_user_id(&state.db, &headers).await?;
+    let user_id = crate::auth::resolve_user_scoped(&state.db, &headers, "compute").await?.id;
     ensure_cloud_user_id(&state, &user_id).await?;
     let rows = sqlx::query_as::<_, HostedRuntimeRow>(
         r#"
@@ -152,6 +152,11 @@ async fn create_hosted_runtime(
     Json(request): Json<CreateHostedRuntimeRequest>,
 ) -> Result<(StatusCode, Json<HostedRuntimeResponse>), ApiError> {
     let user = crate::auth::resolve_user(&state.db, &headers).await?;
+    if !user.has_scope("compute") {
+        return Err(ApiError::Forbidden(
+            "API token lacks the 'compute' scope".to_string(),
+        ));
+    }
     ensure_cloud_user_id(&state, &user.id).await?;
     let quota = state.quota_service.ensure_quota(&user.id).await?;
 
@@ -282,7 +287,7 @@ async fn start_hosted_runtime(
     headers: HeaderMap,
     Path(id): Path<String>,
 ) -> Result<Json<HostedRuntimeResponse>, ApiError> {
-    let user = crate::auth::resolve_user(&state.db, &headers).await?;
+    let user = crate::auth::resolve_user_scoped(&state.db, &headers, "compute").await?;
     ensure_cloud_user_id(&state, &user.id).await?;
     let quota = state.quota_service.ensure_quota(&user.id).await?;
     if !state.quota_service.can_create_hosted_runtime(&quota) {
@@ -344,7 +349,7 @@ async fn stop_hosted_runtime(
     headers: HeaderMap,
     Path(id): Path<String>,
 ) -> Result<Json<HostedRuntimeResponse>, ApiError> {
-    let user_id = crate::auth::resolve_user_id(&state.db, &headers).await?;
+    let user_id = crate::auth::resolve_user_scoped(&state.db, &headers, "compute").await?.id;
     let row = fetch_instance_for_user(&state, &id, &user_id).await?;
     if row.status == "stopped" {
         let response_row = fetch_instance(&state, &id).await?;
@@ -375,7 +380,7 @@ async fn destroy_hosted_runtime(
     headers: HeaderMap,
     Path(id): Path<String>,
 ) -> Result<StatusCode, ApiError> {
-    let user_id = crate::auth::resolve_user_id(&state.db, &headers).await?;
+    let user_id = crate::auth::resolve_user_scoped(&state.db, &headers, "compute").await?.id;
     let row = fetch_instance_for_user(&state, &id, &user_id).await?;
 
     if row.provider.as_deref() == Some("contabo") {
@@ -462,10 +467,12 @@ async fn hosted_runtime_entitlement(
     State(state): State<Arc<ApiState>>,
     headers: HeaderMap,
 ) -> Result<Json<HostedRuntimeEntitlementResponse>, ApiError> {
-    // Entitlement read accepts an API token too (`auth::resolve_user_id`) so
-    // CLI/agent users can check their plan; the management routes in this file
-    // stay Clerk-session only.
-    let user_id = crate::auth::resolve_user_id(&state.db, &headers).await?;
+    // Entitlement read accepts an API token too (scoped `compute`) so
+    // CLI/agent users can check their plan; management routes in this file
+    // accept Clerk sessions or API tokens with the `compute` scope.
+    let user_id = crate::auth::resolve_user_scoped(&state.db, &headers, "compute")
+        .await?
+        .id;
     ensure_cloud_user_id(&state, &user_id).await?;
     let quota = state.quota_service.ensure_quota(&user_id).await?;
     let usage = services::hosted_usage_summary(&state.db, &user_id).await?;

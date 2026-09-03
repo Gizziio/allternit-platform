@@ -682,7 +682,7 @@ async fn revoke_runtime_device(
     headers: HeaderMap,
     Path(id): Path<String>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
-    let user_id = crate::auth::resolve_user_id(&state.db, &headers).await?;
+    let user_id = crate::auth::resolve_user_scoped(&state.db, &headers, "compute").await?.id;
     let affected = sqlx::query(
         r#"
         UPDATE runtime_devices

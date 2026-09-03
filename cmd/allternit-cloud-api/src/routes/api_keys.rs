@@ -59,7 +59,9 @@ async fn list_api_keys(
     State(state): State<Arc<ApiState>>,
     headers: HeaderMap,
 ) -> Result<Json<Vec<ApiKeyResponse>>, ApiError> {
-    let user_id = crate::auth::resolve_user_id(&state.db, &headers).await?;
+    let user_id = crate::auth::resolve_user_scoped(&state.db, &headers, "account")
+        .await?
+        .id;
     let keys = services::api_keys::list_api_keys(&state.db, &user_id).await?;
     Ok(Json(keys.into_iter().map(into_response).collect()))
 }
@@ -93,7 +95,9 @@ async fn revoke_api_key(
     headers: HeaderMap,
     Path(id): Path<String>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
-    let user_id = crate::auth::resolve_user_id(&state.db, &headers).await?;
+    let user_id = crate::auth::resolve_user_scoped(&state.db, &headers, "account")
+        .await?
+        .id;
     services::api_keys::revoke_api_key(&state.db, &user_id, &id).await?;
     Ok(Json(serde_json::json!({ "ok": true })))
 }

@@ -95,8 +95,8 @@ async fn create_checkout(
     headers: HeaderMap,
     Json(request): Json<CheckoutRequest>,
 ) -> Response {
-    let user_id = match crate::auth::resolve_user_id(&state.db, &headers).await {
-        Ok(user_id) => user_id,
+    let user_id = match crate::auth::resolve_user_scoped(&state.db, &headers, "billing").await {
+        Ok(user) => user.id,
         Err(error) => return error.into_response(),
     };
     let Some(pack) = find_pack(&request.pack_id) else {

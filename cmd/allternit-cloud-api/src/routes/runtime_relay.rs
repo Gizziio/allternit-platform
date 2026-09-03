@@ -275,7 +275,7 @@ async fn create_socket_ticket(
     Path(runtime_id): Path<String>,
     Json(request): Json<CreateSocketTicketRequest>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
-    let user_id = crate::auth::resolve_user_id(&state.db, &headers).await?;
+    let user_id = crate::auth::resolve_user_scoped(&state.db, &headers, "compute").await?.id;
     let capabilities = runtime_capabilities(&state, &runtime_id, &user_id).await?;
     if !capabilities
         .iter()
@@ -652,7 +652,7 @@ async fn proxy_to_runtime(
     Path(runtime_id): Path<String>,
     Json(request): Json<BrowserProxyRequest>,
 ) -> Result<Response, ApiError> {
-    let user_id = crate::auth::resolve_user_id(&state.db, &headers).await?;
+    let user_id = crate::auth::resolve_user_scoped(&state.db, &headers, "compute").await?.id;
     let capabilities = runtime_capabilities(&state, &runtime_id, &user_id).await?;
     if !capabilities
         .iter()

@@ -58,7 +58,9 @@ async fn get_credit_balance(
     State(state): State<Arc<ApiState>>,
     headers: HeaderMap,
 ) -> Result<Json<CreditBalanceResponse>, ApiError> {
-    let user_id = auth::resolve_user_id(&state.db, &headers).await?;
+    let user_id = auth::resolve_user_scoped(&state.db, &headers, "billing")
+        .await?
+        .id;
 
     let balance_row: Option<f64> =
         sqlx::query_scalar("SELECT balance_usd FROM user_credits WHERE user_id = $1")

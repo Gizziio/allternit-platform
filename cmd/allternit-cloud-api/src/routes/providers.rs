@@ -237,7 +237,7 @@ async fn list_provider_tokens(
     State(state): State<Arc<ApiState>>,
     headers: HeaderMap,
 ) -> Result<Json<serde_json::Value>, ApiError> {
-    let user_id = crate::auth::resolve_user_id(&state.db, &headers).await?;
+    let user_id = crate::auth::resolve_user_scoped(&state.db, &headers, "compute").await?.id;
     let rows: Vec<(String,)> = sqlx::query_as(
         "SELECT provider FROM provider_tokens WHERE user_id = $1 ORDER BY provider",
     )
@@ -272,7 +272,7 @@ async fn put_provider_token(
     Path(provider): Path<String>,
     Json(body): Json<PutProviderTokenRequest>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
-    let user_id = crate::auth::resolve_user_id(&state.db, &headers).await?;
+    let user_id = crate::auth::resolve_user_scoped(&state.db, &headers, "compute").await?.id;
     let provider = provider.to_lowercase();
 
     if !STORABLE_PROVIDERS.contains(&provider.as_str()) {
@@ -325,7 +325,7 @@ async fn delete_provider_token(
     headers: HeaderMap,
     Path(provider): Path<String>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
-    let user_id = crate::auth::resolve_user_id(&state.db, &headers).await?;
+    let user_id = crate::auth::resolve_user_scoped(&state.db, &headers, "compute").await?.id;
     let provider = provider.to_lowercase();
 
     let affected = sqlx::query(

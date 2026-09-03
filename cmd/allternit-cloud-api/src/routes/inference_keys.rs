@@ -48,8 +48,8 @@ async fn list_keys(
     State(state): State<Arc<ApiState>>,
     headers: HeaderMap,
 ) -> Response {
-    let user_id = match crate::auth::resolve_user_id(&state.db, &headers).await {
-        Ok(user_id) => user_id,
+    let user_id = match crate::auth::resolve_user_scoped(&state.db, &headers, "inference").await {
+        Ok(user) => user.id,
         Err(error) => return error.into_response(),
     };
     let service = match key_service(&state) {
@@ -67,8 +67,8 @@ async fn put_key(
     headers: HeaderMap,
     Json(request): Json<PutKeyRequest>,
 ) -> Response {
-    let user_id = match crate::auth::resolve_user_id(&state.db, &headers).await {
-        Ok(user_id) => user_id,
+    let user_id = match crate::auth::resolve_user_scoped(&state.db, &headers, "inference").await {
+        Ok(user) => user.id,
         Err(error) => return error.into_response(),
     };
     if byok_base_url(&request.provider_id).is_none() {
@@ -96,8 +96,8 @@ async fn delete_key(
     headers: HeaderMap,
     Path(provider_id): Path<String>,
 ) -> Response {
-    let user_id = match crate::auth::resolve_user_id(&state.db, &headers).await {
-        Ok(user_id) => user_id,
+    let user_id = match crate::auth::resolve_user_scoped(&state.db, &headers, "inference").await {
+        Ok(user) => user.id,
         Err(error) => return error.into_response(),
     };
     let service = match key_service(&state) {

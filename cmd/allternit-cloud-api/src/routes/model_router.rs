@@ -58,9 +58,15 @@ pub async fn chat_completions(
     Extension(auth): Extension<AuthContext>,
     Json(request): Json<ChatCompletionRequest>,
 ) -> Result<Response, ApiError> {
-    if !auth.user.has_permission(REQUIRED_PERMISSION) && !auth.user.has_permission("admin") {
+    // Legacy tokens carry `models:write`; scoped keys minted for inference
+    // carry `inference`. `has_permission` honors the `"*"` wildcard, which is
+    // the production default for pre-scoping tokens.
+    if !auth.user.has_permission(REQUIRED_PERMISSION)
+        && !auth.user.has_permission("inference")
+        && !auth.user.has_permission("admin")
+    {
         return Err(ApiError::Forbidden(format!(
-            "Missing required permission: {}",
+            "Missing required permission: {} (or 'inference')",
             REQUIRED_PERMISSION
         )));
     }

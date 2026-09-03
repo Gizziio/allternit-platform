@@ -373,7 +373,9 @@ async fn enroll_user_id(db: &sqlx::PgPool, headers: &HeaderMap) -> Result<String
         .await?;
         return Ok(device.user_id);
     }
-    crate::auth::resolve_user_id(db, headers).await
+    crate::auth::resolve_user_scoped(db, headers, "compute")
+        .await
+        .map(|user| user.id)
 }
 
 async fn enroll(State(state): State<Arc<ApiState>>, headers: HeaderMap) -> Response {

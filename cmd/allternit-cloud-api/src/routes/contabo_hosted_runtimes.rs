@@ -74,7 +74,7 @@ async fn create_contabo_runtime(
     headers: HeaderMap,
     Json(req): Json<CreateContaboRuntimeRequest>,
 ) -> Result<Json<ContaboRuntimeResponse>, ApiError> {
-    let user_id = crate::auth::resolve_user_id(&state.db, &headers).await?;
+    let user_id = crate::auth::resolve_user_scoped(&state.db, &headers, "compute").await?.id;
 
     let runtime = state
         .contabo_runtime_service
@@ -89,7 +89,7 @@ async fn destroy_contabo_runtime(
     headers: HeaderMap,
     Path(id): Path<String>,
 ) -> Result<StatusCode, ApiError> {
-    let user_id = crate::auth::resolve_user_id(&state.db, &headers).await?;
+    let user_id = crate::auth::resolve_user_scoped(&state.db, &headers, "compute").await?.id;
     // Ownership check: the destroy below is not user-scoped in the service,
     // so the route must verify the instance belongs to the caller first.
     let owned: Option<(String,)> = sqlx::query_as(
