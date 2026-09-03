@@ -13,11 +13,11 @@ Reference node: 8 vCPU / 24 GB RAM / 300 GB SSD, €14/mo (incl. VAT, 24-mo rate
 
 | Container size | Concurrent per node | Metered rate* | Always-on revenue/node/mo | Node cost | Gross margin |
 |---|---|---|---|---|---|
-| 512 MB | ~34 | $0.0079/hr | ~$193 | ~$15 | ~13x |
-| 1 GB | ~17 | $0.0079/hr | ~$97 | ~$15 | ~6.5x |
-| 2 GB | ~8 | (2x rate) | ~$91 | ~$15 | ~6x |
+| 512 MB | ~34 | $0.0075/hr | ~$184 | ~$15 | ~12x |
+| 1 GB | ~17 (RAM) / ~8 (CPU at 1 vCPU each) | $0.0150/hr | ~$183 (RAM-bound) | ~$15 | ~12x |
+| 2 GB | ~8 | $0.0290/hr | ~$167 | ~$15 | ~11x |
 
-\* current `cost_rates.cost_per_hour` snapshot used in metering = $0.0079/hr. RAM-cost basis: €14 ÷ 720h ÷ 17GB ≈ €0.0011/GB-hr → metering at $0.0079/hr per 1GB container is a ~7x markup on raw RAM cost; CPU (8 vCPU, bursty dev workloads) is not the constraint at this density.
+\* retail rates shipped 2026-09-03 (`cost_rates`: contabo/hosted/hosted-{512,1024,2048}mb). Cost basis: VPS 8 ≈ $15/mo = $0.0208/hr whole node; a 1GB/1vCPU container is ~1/8 node = $0.0026/hr raw → $0.015/hr ≈ 5.8x cost, competitive with Fly retail ($0.0079/GB-hr) and well under Railway (~$0.028/GB-hr). CPU is the binding constraint at 1 vCPU per 1GB container — real-world packing lands between the CPU and RAM bounds depending on workload.
 
 **Idle auto-stop is the margin multiplier.** Real users are not always-on. With `HOSTED_RUNTIME_IDLE_TIMEOUT_MINUTES` stopping idle containers, capacity is governed by *concurrent active* containers, not total users. At 20% average activity, one VPS 8 carries ~85 pro-tier users (1 GB each) before RAM pressure.
 
