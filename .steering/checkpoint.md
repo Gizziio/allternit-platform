@@ -1,40 +1,43 @@
 # Steering checkpoint
 
-## Allternit Cloud: Phase 4 billing loop + Phase 5 capacity + Phase 6 convergence (2026-09-02)
+## Allternit Cloud: Stripe checkout live + console billing UI (2026-09-03)
 
 ### Goal
-Make the paid billing loop production-quality in cmd/allternit-cloud-api
-(Stripe → credits → provision → meter → deduct → auto-stop), then AllternitOS
-convergence coordination, then multi-tenant VPS capacity planning.
+Close the paid loop UI-side: credit buying in the platform.allternit.com
+cloud dashboard, Stripe fully hooked in, no real-money test required.
 
 ### Just did
-- Billing loop fixes (all in cmd/allternit-cloud-api): atomic+idempotent+ledgered
-  credit deduction keyed by usage-session id (repeated stops can't double-charge);
-  spend-cap = balance minus open-session accrued cost (no double-count);
-  wake-on-demand now enforces spend-cap/hours; Stripe checkout.session.completed/
-  invoice.paid grant credits via metadata (clerk_user_id + allternit_credits_usd,
-  idempotent by stripe event id); new GET /api/v1/billing/credits endpoint;
-  mirror_ws MAX→GREATEST. 83/83 lib tests + e2e_billing_paid_loop PASS on mail.
-- Found + fixed prod schema drift (root-caused several live 60s-loop errors):
-  26 int→bigint + 27 real→float8 columns (migrations_pg/002_widen_int_to_bigint.sql,
-  applied to prod, replicates to standby via WAL); SUM(int8)→NUMERIC decode
-  failures fixed with ::BIGINT / ::DOUBLE PRECISION casts; SQLite 2-arg MAX()
-  → GREATEST (was silently zeroing hosted usage accounting on PG).
-- Prod deploy on mail: new binary live, FLY_* vars stripped from .env,
-  /api/v1/health healthy.
-- Phase 6: wrote AllternitOS/docs/coordination/cloud-backend-status-2026-09-02.md
-  (supersedes Hetzner-era handoff; flags two-ledger question, standby dual-use).
-- Phase 5: wrote docs/Operations/CAPACITY_PLAN.md (~6-13x gross margin per
-  Contabo VPS 8, scaling triggers, add-node SOP, node-selection gap).
+- POST /api/v1/billing/checkout (Clerk-authed, creates Stripe Checkout
+  sessions server-side; static pack catalog credits_10/25/50/100 1:1 USD,
+  metadata clerk_user_id + allternit_credits_usd matching the webhook grant
+  contract) + GET /api/v1/billing/packs (public). Deployed to mail; packs
+  verified serving; 9 unit tests green.
+- platform.allternit.com BillingPage: balance card, pack grid with buy
+  buttons → Stripe Checkout redirect, success/cancel banners, graceful
+  billing-not-configured state. Deployed to Cloudflare Pages (verified in
+  live bundle).
+- Stripe wiring (all via the rk_live key from macOS Keychain service
+  "stripe-allternit", never printed): checkout-session create/expire perms
+  verified (200/200); key installed in prod .env as STRIPE_SECRET_KEY.
+- FOUND + FIXED: Stripe webhook was still pointed at the dead
+  allternit-cloud-api.fly.dev URL. Created new endpoint
+  https://api.allternit.com/api/v1/webhooks/stripe (5 billing events),
+  installed its fresh signing secret as STRIPE_WEBHOOK_SECRET, disabled the
+  old fly.dev endpoint.
+- Webhook path smoke-tested with the production secret: signed
+  checkout.session.completed → 200 + $10 grant + ledger row; replay → 200,
+  no double grant; bad signature → 401. Smoke rows cleaned up.
+- Cleaned stale instance hr_contabo_mail_001 (container lost in the 76GB
+  docker prune; open session closed, instance stopped) — auto-stop warnings
+  silenced. Zero prod errors.
 
 ### Next
-- Verify zero-error reconcile loop after final redeploy, then commit + push.
-- Phase 5.5 (future): node selection in ContaboRuntimeService so the third VPS
-  can carry workloads (today everything lands on mail).
+- User can do a real $10 top-up from platform.allternit.com/billing whenever
+  ready — the loop is live end-to-end. No code changes needed.
+- Enroll a third Contabo VPS as an active workload node when purchased
+  (procedure in docs/Operations/CAPACITY_PLAN.md).
 
 ### Open questions
-- Stripe live $1-scale test needs a price/checkout carrying the metadata
-  contract (clerk_user_id, allternit_credits_usd) — user action in Stripe
-  dashboard.
-- One-ledger decision: cloud-api user_credits vs allternit-api UsageEvent
-  reconciliation (raised in the AllternitOS coordination note).
+- plan_tiers ↔ subscription metadata flow (allternit_plan_tier) is wired
+  but no subscription product exists yet; credit packs are the live
+  revenue path for now.
