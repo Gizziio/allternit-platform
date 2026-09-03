@@ -84,3 +84,39 @@ Close the bankruptcy-risk gaps identified in the free-tier/billing review: free 
   sock-puppets appear, gate the $2 allowance on verified email or $1 card check.
 - Fireworks reasoning models return empty content (parallel session's note);
   DeepInfra/OpenRouter keys have no upstream balance (theirs to fund/remove).
+
+---
+
+# Steering checkpoint — auth unification + billing soak green (2026-09-03, session ba9de8f8)
+
+## Just did (deployed to mail, soak-verified)
+- AUTH GAP closed: billing routes were Clerk-session-only while chat accepted
+  Bearer api tokens — the soak's first live run failed 4 checks on exactly
+  this. `auth/resolve.rs` (`resolve_user_id`: Clerk first, Bearer
+  api-token fallback) now backs billing_checkout/credits/subscriptions,
+  hosted_runtimes, inference_keys. 167 lib tests green on mail.
+- GROQ PER-TOKEN PRICING bug found by the soak (undermetering, the inverse of
+  the earlier overmetering fix): Groq /models quotes per TOKEN
+  ("0.0000006" for $0.60/1M) but generic_openai ingest assumed per-1M and
+  divided again → ~1,000,000x under retail ($8.64e-11 recorded for a real
+  call). Fixed with `per_token_price` unit-threshold normalizer (<1e-4 →
+  per-token; ranges never overlap in practice) + 2 regression tests.
+- Billing soak `infrastructure/cloud/soak_billing.py`: 12/12 GREEN against
+  live localhost:8082 (paid retail deduction exact to the cent, free
+  allowance w/o ledger deduction, zero-balance 403 pre-dispatch, usage row,
+  BYOK list + invalid-key rejection).
+- deploy-cloud-api.sh fixed for macOS bash 3.2 (mapfile → for loop).
+- session/desktop-cloud-mvp merge (71 conflicts) resolved by its owner and
+  sealed as ea89a5fdb; auth + pricing fixes rode in via it. Tree compiles;
+  cloud-api lib tests 167/168 (known no-docker contabo baseline).
+
+## Next
+- Push main (45+ commits incl. this merge) — awaiting explicit user go.
+- /healthz now returns UNAUTHORIZED post-swap while service is active; check
+  the deploy script's step-6 verify path against the health route's auth.
+- Real $10 Stripe purchase (user), CI/CD Tailscale auth key (user),
+  cheap-provider pool (deferred), Clerk-only compute-route sweep (optional).
+
+## Open questions
+- Wholesale side for Groq models: input_cache_read pricing (cached reads at
+  half price) is ignored — fine at current volume, matters at scale.
