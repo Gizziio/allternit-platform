@@ -26,6 +26,8 @@ export const DEFAULT_POLICIES: Record<ViewType, SpawnPolicy> = {
   "bot-inbox": { singleton: false, maxInstances: 10, allowNew: true, surface: "view", ownsTabs: false },
 
   // Mode-specific Agent Session views
+  // "chat-agent-session" is a deprecated alias to the cowork workspace now that
+  // the old single-agent chat UI was removed.
   "chat-agent-session": { singleton: false, maxInstances: 10, allowNew: true, surface: "view", ownsTabs: false },
   "cowork-agent-session": { singleton: false, maxInstances: 10, allowNew: true, surface: "view", ownsTabs: false },
   "code-agent-session": { singleton: false, maxInstances: 10, allowNew: true, surface: "view", ownsTabs: false },

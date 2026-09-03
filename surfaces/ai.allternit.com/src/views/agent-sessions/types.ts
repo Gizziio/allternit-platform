@@ -22,17 +22,6 @@ export interface BaseAgentSessionProps {
   showWorkbench?: boolean;
 }
 
-// Chat Mode: Conversation-focused
-export interface ChatModeAgentSessionProps extends BaseAgentSessionProps {
-  mode: 'chat';
-  /** Enable streaming responses */
-  enableStreaming?: boolean;
-  /** Show suggested prompts */
-  showSuggestions?: boolean;
-  /** Conversation context */
-  context?: string;
-}
-
 // Cowork Mode: Task and scheduling-focused
 export interface CoworkModeAgentTasksProps extends BaseAgentSessionProps {
   mode: 'cowork';

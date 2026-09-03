@@ -279,7 +279,7 @@ export function ShellRail({
     useCallback((sessionId: string) => {
       // Open the bot session view so the rail entry is tied to a real session,
       // not a generic home chat.
-      onOpen?.('chat-agent-session', { sessionId, originView: activeViewType ?? 'chat' });
+      onOpen?.('cowork-agent-session', { sessionId, originView: activeViewType ?? 'chat' });
     }, [onOpen, activeViewType])
   );
 

@@ -30,7 +30,6 @@ const OpenClawView         = lazy(() => import('../views/openclaw/OpenClawView')
 const HermesView           = lazy(() => import('../views/hermes/HermesView').then(m => ({ default: m.HermesView })));
 const VaultViewerView      = lazy(() => import('../views/vault-viewer/VaultViewerView').then(m => ({ default: m.VaultViewerView })));
 const OhMyPiView           = lazy(() => import('../views/omp/OhMyPiView').then(m => ({ default: m.OhMyPiView })));
-const ChatModeAgentSession = lazy(() => import('../views/agent-sessions/ChatModeAgentSession').then(m => ({ default: m.ChatModeAgentSession })));
 const CodeModeAgentSession = lazy(() => import('../views/agent-sessions/CodeModeAgentSession').then(m => ({ default: m.CodeModeAgentSession })));
 const DesignModeAgentSession = lazy(() => import('../views/agent-sessions/DesignModeAgentSession').then(m => ({ default: m.DesignModeAgentSession })));
 const BotInboxView = lazy(() => import('../views/bots/BotInboxView').then(m => ({ default: m.BotInboxView })));
@@ -302,7 +301,7 @@ export function getShellViewRegistry(handlers: {
     ),
     'agent-hub': ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Agent | Bot Hub" />}>
-        <AgentHub onSessionStarted={(sessionId) => open('chat-agent-session', { sessionId })} />
+        <AgentHub onSessionStarted={(sessionId) => open('cowork-agent-session', { sessionId })} />
       </ErrorBoundary>
     ),
     'bot-inbox': ({ context }: { context?: ViewContext }) => {
@@ -799,17 +798,6 @@ export function getShellViewRegistry(handlers: {
         <CodeProjectView />
       </ErrorBoundary>
     ),
-    'chat-agent-session': ({ context }: { context?: ViewContext }) => {
-      const ctx = context?.context as { sessionId?: string; originView?: ViewType } | undefined;
-      return (
-        <ChatModeAgentSession
-          mode="chat"
-          sessionId={ctx?.sessionId ?? context!.viewId}
-          context={typeof window !== 'undefined' ? window.sessionStorage.getItem('allternit-pending-agent-message') || undefined : undefined}
-          onClose={() => open(ctx?.originView ?? 'chat')}
-        />
-      );
-    },
     'cowork-agent-session': ({ context }: { context?: ViewContext }) => {
       const ctx = context?.context as { sessionId?: string; originView?: ViewType } | undefined;
       React.useEffect(() => {
@@ -819,6 +807,21 @@ export function getShellViewRegistry(handlers: {
       }, [ctx?.sessionId]);
       return (
         <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Cowork Agent Workspace" />}>
+          <CoworkRoot />
+        </ErrorBoundary>
+      );
+    },
+    // Deprecated alias: the old single-agent chat UI was removed. Chat-mode
+    // sessions now open in the group/cowork workspace.
+    'chat-agent-session': ({ context }: { context?: ViewContext }) => {
+      const ctx = context?.context as { sessionId?: string; originView?: ViewType } | undefined;
+      React.useEffect(() => {
+        if (ctx?.sessionId) {
+          useCoworkSessionStore.getState().setActiveSession(ctx.sessionId);
+        }
+      }, [ctx?.sessionId]);
+      return (
+        <ErrorBoundary fallback={<ErrorFallbackWrapper viewName=\"Cowork Agent Workspace\" />}>
           <CoworkRoot />
         </ErrorBoundary>
       );
