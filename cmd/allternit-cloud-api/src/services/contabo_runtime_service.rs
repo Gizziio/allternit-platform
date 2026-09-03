@@ -84,6 +84,43 @@ pub fn hosted_instance_type(memory_mb: i64) -> &'static str {
     }
 }
 
+/// Writable-layer disk quota per container size, in GB. Enforced by the
+/// lifecycle sweep (stop_reason 'disk_quota_exceeded') — see
+/// DOCKER_STORAGE_OPT_SUPPORTED for why docker's own flag is not used.
+pub(crate) fn hosted_disk_quota_gb(memory_mb: i64) -> u64 {
+    if memory_mb <= 512 {
+        5
+    } else if memory_mb <= 1024 {
+        10
+    } else {
+        20
+    }
+}
+
+/// `--storage-opt size=` hard-errors on the hosted nodes: they run overlay2 on
+/// ext4 (checked on `mail` 2026-09: `df -T /var/lib/docker` → ext4,
+/// `docker info --format '{{.Driver}}'` → overlayfs), and the flag needs
+/// xfs+pquota. Disk is instead enforced by the lifecycle disk sweep. Flip to
+/// true if the nodes move to xfs+pquota.
+const DOCKER_STORAGE_OPT_SUPPORTED: bool = false;
+
+/// Parse docker's human size ("0B", "12.3MB", "1.5GB") into bytes (decimal
+/// units, as docker prints them). Unknown formats are None, never a panic.
+fn parse_docker_size(size: &str) -> Option<u64> {
+    let split = size.find(|c: char| !(c.is_ascii_digit() || c == '.'))?;
+    let (number, unit) = size.split_at(split);
+    let value: f64 = number.parse().ok()?;
+    let multiplier = match unit {
+        "B" => 1.0,
+        "kB" | "KB" => 1e3,
+        "MB" => 1e6,
+        "GB" => 1e9,
+        "TB" => 1e12,
+        _ => return None,
+    };
+    Some((value * multiplier) as u64)
+}
+
 /// Service that provisions user workloads on the Contabo VPS.
 pub struct ContaboRuntimeService {
     db: PgPool,
@@ -209,6 +246,40 @@ impl ContaboRuntimeService {
     pub fn container_name(instance_id: &str) -> String {
         let prefix_len = instance_id.len().min(16);
         format!("allternit-rt-{}", &instance_id[..prefix_len])
+    }
+
+    /// Writable-layer sizes of the containers on one docker host, as
+    /// (container name, bytes). One `docker ps -s` per host — the lifecycle
+    /// disk sweep calls this only for hosts that currently run hosted
+    /// containers.
+    pub(crate) async fn container_writable_bytes(
+        &self,
+        docker_host: &str,
+    ) -> Result<Vec<(String, u64)>, ApiError> {
+        let output = Self::docker_command(docker_host)
+            .args(["ps", "-s", "--format", "{{.Names}}\t{{.Size}}"])
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .output()
+            .await
+            .map_err(|e| ApiError::Internal(format!("docker ps failed: {}", e)))?;
+        if !output.status.success() {
+            return Err(ApiError::Internal(format!(
+                "docker ps failed: {}",
+                String::from_utf8_lossy(&output.stderr)
+            )));
+        }
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        Ok(stdout
+            .lines()
+            .filter_map(|line| {
+                let (name, size) = line.split_once('\t')?;
+                // `{{.Size}}` is "12.3MB (virtual 1.2GB)": the writable layer
+                // is the first token.
+                let writable = size.split_whitespace().next()?;
+                Some((name.to_string(), parse_docker_size(writable)?))
+            })
+            .collect())
     }
 
     /// Provision a new workload container for a user.
@@ -370,6 +441,13 @@ impl ContaboRuntimeService {
             "-e".to_string(),
             format!("ALLTERNIT_INSTANCE_NAME={}", instance_id),
         ];
+        // Disk quota via docker itself only where the storage driver supports
+        // it (xfs+pquota); today the nodes are overlay2-on-ext4, so the
+        // lifecycle disk sweep is the enforcement (see the const's comment).
+        if DOCKER_STORAGE_OPT_SUPPORTED {
+            args.push("--storage-opt".to_string());
+            args.push(format!("size={}g", hosted_disk_quota_gb(memory_mb)));
+        }
         for (key, value) in extra_env {
             args.push("-e".to_string());
             args.push(format!("{}={}", key, value));
@@ -697,6 +775,26 @@ mod tests {
         assert_eq!(hosted_instance_type(1024), "hosted-1024mb");
         assert_eq!(hosted_instance_type(2048), "hosted-2048mb");
         assert_eq!(hosted_instance_type(4096), "hosted-2048mb");
+    }
+
+    #[test]
+    fn hosted_disk_quota_maps_memory_to_gb() {
+        assert_eq!(hosted_disk_quota_gb(512), 5);
+        assert_eq!(hosted_disk_quota_gb(1024), 10);
+        assert_eq!(hosted_disk_quota_gb(2048), 20);
+        assert_eq!(hosted_disk_quota_gb(4096), 20);
+    }
+
+    #[test]
+    fn parse_docker_size_handles_docker_human_units() {
+        assert_eq!(parse_docker_size("0B"), Some(0));
+        assert_eq!(parse_docker_size("12.3MB"), Some(12_300_000));
+        assert_eq!(parse_docker_size("1.5GB"), Some(1_500_000_000));
+        assert_eq!(parse_docker_size("2kB"), Some(2_000));
+        assert_eq!(parse_docker_size("42B"), Some(42));
+        assert_eq!(parse_docker_size("garbage"), None);
+        assert_eq!(parse_docker_size("12XB"), None);
+        assert_eq!(parse_docker_size(""), None);
     }
 
     async fn test_db() -> PgPool {

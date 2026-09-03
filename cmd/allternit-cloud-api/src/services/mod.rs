@@ -33,8 +33,8 @@ pub use hosted_runtime_lifecycle::{
     HostedWakeTarget,
 };
 pub use inference_settlement::{
-    credit_balance_row, ensure_credits_allow_inference, meter_json_response,
-    meter_stream_response, settle_inference, StreamSettlement, UsageMeteringBody,
+    check_inference_allowed, credit_balance_row, meter_json_response, meter_stream_response,
+    settle_inference, StreamSettlement, UsageMeteringBody,
 };
 pub use quota_service::{QuotaService, SharedQuotaService, UserQuota};
 pub use run_service::{RunListFilter, RunService, RunServiceImpl};

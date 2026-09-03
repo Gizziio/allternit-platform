@@ -16,6 +16,7 @@
 //! metadata contract; keep them in sync.
 
 use axum::{
+    extract::State,
     http::{HeaderMap, StatusCode},
     response::{IntoResponse, Response},
     routing::{get, post},
@@ -90,6 +91,7 @@ async fn list_packs() -> Json<PacksResponse> {
 }
 
 async fn create_checkout(
+    State(state): State<Arc<ApiState>>,
     headers: HeaderMap,
     Json(request): Json<CheckoutRequest>,
 ) -> Response {
@@ -100,6 +102,19 @@ async fn create_checkout(
     let Some(pack) = find_pack(&request.pack_id) else {
         return ApiError::BadRequest(format!("Unknown credit pack: {:?}.", request.pack_id)).into_response();
     };
+    // Chargeback hold: untrusted buyers are limited to small packs while their
+    // first payment settles; larger packs unlock automatically afterwards.
+    let trusted = match crate::routes::billing_subscriptions::is_trusted_purchaser(&state.db, &user.id).await {
+        Ok(trusted) => trusted,
+        Err(error) => return error.into_response(),
+    };
+    if let Err(error) = crate::routes::billing_subscriptions::ensure_purchase_allowed(
+        trusted,
+        pack.credits_usd,
+        "The $50 and $100 packs",
+    ) {
+        return error.into_response();
+    }
     let Ok(secret_key) = std::env::var("STRIPE_SECRET_KEY") else {
         return billing_not_configured_response();
     };

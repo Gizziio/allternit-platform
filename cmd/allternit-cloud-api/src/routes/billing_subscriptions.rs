@@ -118,6 +118,7 @@ async fn list_plans() -> Json<PlansResponse> {
 }
 
 async fn create_subscription(
+    State(state): State<Arc<ApiState>>,
     headers: HeaderMap,
     Json(request): Json<SubscribeRequest>,
 ) -> Response {
@@ -129,6 +130,15 @@ async fn create_subscription(
         return ApiError::BadRequest(format!("Unknown subscription plan: {:?}.", request.plan_id))
             .into_response();
     };
+    // Chargeback hold: untrusted buyers start on the smallest plan; the larger
+    // ones unlock automatically once their first purchase settles.
+    let trusted = match is_trusted_purchaser(&state.db, &user.id).await {
+        Ok(trusted) => trusted,
+        Err(error) => return error.into_response(),
+    };
+    if let Err(error) = ensure_purchase_allowed(trusted, plan.price_usd, "The Super and Ultra plans") {
+        return error.into_response();
+    }
     let Ok(secret_key) = std::env::var("STRIPE_SECRET_KEY") else {
         return billing_not_configured_response();
     };
@@ -391,6 +401,80 @@ pub(crate) async fn billing_subscription_for(
     .map_err(ApiError::DatabaseError)
 }
 
+/// Chargeback-hold window in days (`CHARGEBACK_HOLD_DAYS`, default 14): how
+/// long a first purchase must settle before the buyer is trusted with larger
+/// packs/plans.
+fn chargeback_hold_days() -> i64 {
+    std::env::var("CHARGEBACK_HOLD_DAYS")
+        .ok()
+        .and_then(|value| value.trim().parse::<i64>().ok())
+        .filter(|value| *value >= 0)
+        .unwrap_or(14)
+}
+
+/// Maximum first-purchase size in USD for untrusted buyers
+/// (`FIRST_PURCHASE_MAX_USD`, default 25).
+fn first_purchase_max_usd() -> f64 {
+    std::env::var("FIRST_PURCHASE_MAX_USD")
+        .ok()
+        .and_then(|value| value.trim().parse::<f64>().ok())
+        .filter(|value| *value >= 0.0)
+        .unwrap_or(25.0)
+}
+
+/// Record one successful paid purchase for the chargeback-hold trust table.
+/// Called from the credit-grant webhook path only when the grant was fresh
+/// (Stripe retries replaying the same event do not inflate the count).
+pub(crate) async fn record_paid_purchase(db: &PgPool, user_id: &str) -> Result<(), ApiError> {
+    sqlx::query(
+        r#"
+        INSERT INTO billing_purchase_trust (user_id, first_paid_at, paid_purchase_count)
+        VALUES ($1, NOW(), 1)
+        ON CONFLICT (user_id) DO UPDATE SET
+            paid_purchase_count = billing_purchase_trust.paid_purchase_count + 1,
+            first_paid_at = COALESCE(billing_purchase_trust.first_paid_at, NOW())
+        "#,
+    )
+    .bind(user_id)
+    .execute(db)
+    .await
+    .map_err(ApiError::DatabaseError)?;
+    Ok(())
+}
+
+/// Trusted = at least one paid purchase whose first purchase is older than the
+/// chargeback-hold window. Users with no row are untrusted.
+pub(crate) async fn is_trusted_purchaser(db: &PgPool, user_id: &str) -> Result<bool, ApiError> {
+    let trusted: Option<bool> = sqlx::query_scalar(
+        r#"
+        SELECT paid_purchase_count >= 1 AND first_paid_at <= NOW() - $2 * INTERVAL '1 day'
+        FROM billing_purchase_trust
+        WHERE user_id = $1
+        "#,
+    )
+    .bind(user_id)
+    .bind(chargeback_hold_days())
+    .fetch_optional(db)
+    .await
+    .map_err(ApiError::DatabaseError)?;
+    Ok(trusted.unwrap_or(false))
+}
+
+/// Chargeback-hold gate shared by credit packs and subscriptions: untrusted
+/// buyers are limited to small first purchases while their payment history
+/// settles. `unlock_hint` names what the gate unlocks (packs or plans).
+pub(crate) fn ensure_purchase_allowed(trusted: bool, price_usd: f64, unlock_hint: &str) -> Result<(), ApiError> {
+    if !trusted && price_usd > first_purchase_max_usd() {
+        return Err(ApiError::Forbidden(format!(
+            "First purchases are limited to ${:.0} while your payment history settles ({} days). {} unlock automatically.",
+            first_purchase_max_usd(),
+            chargeback_hold_days(),
+            unlock_hint,
+        )));
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -431,6 +515,22 @@ mod tests {
                 stripe_customer_id TEXT NOT NULL,
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                 updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+            "#,
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        sqlx::query("DROP TABLE IF EXISTS billing_purchase_trust CASCADE")
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query(
+            r#"
+            CREATE TABLE billing_purchase_trust (
+                user_id TEXT PRIMARY KEY,
+                first_paid_at TIMESTAMPTZ,
+                paid_purchase_count INT NOT NULL DEFAULT 0
             )
             "#,
         )
@@ -596,5 +696,73 @@ mod tests {
         .await
         .unwrap();
         assert_eq!(customer, "cus_new");
+    }
+
+    #[tokio::test]
+    async fn paid_purchase_upsert_counts_and_keeps_the_first_timestamp() {
+        let pool = test_pool().await;
+        record_paid_purchase(&pool, "user_1").await.unwrap();
+        record_paid_purchase(&pool, "user_1").await.unwrap();
+
+        let (count, first_paid_at): (i32, Option<chrono::DateTime<chrono::Utc>>) =
+            sqlx::query_as(
+                "SELECT paid_purchase_count, first_paid_at FROM billing_purchase_trust WHERE user_id = 'user_1'",
+            )
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(count, 2);
+        assert!(first_paid_at.is_some());
+
+        // A later purchase must not move first_paid_at backwards/forwards.
+        let before = first_paid_at.unwrap();
+        record_paid_purchase(&pool, "user_1").await.unwrap();
+        let after: Option<chrono::DateTime<chrono::Utc>> = sqlx::query_scalar(
+            "SELECT first_paid_at FROM billing_purchase_trust WHERE user_id = 'user_1'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(after, Some(before));
+    }
+
+    #[tokio::test]
+    async fn trust_requires_a_settled_first_purchase() {
+        let pool = test_pool().await;
+        assert!(
+            !is_trusted_purchaser(&pool, "user_none").await.unwrap(),
+            "no row is untrusted"
+        );
+
+        record_paid_purchase(&pool, "user_fresh").await.unwrap();
+        assert!(
+            !is_trusted_purchaser(&pool, "user_fresh").await.unwrap(),
+            "a purchase inside the 14-day hold is untrusted"
+        );
+
+        sqlx::query(
+            "UPDATE billing_purchase_trust SET first_paid_at = NOW() - INTERVAL '20 days' WHERE user_id = 'user_fresh'",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        assert!(
+            is_trusted_purchaser(&pool, "user_fresh").await.unwrap(),
+            "a first purchase older than the hold window is trusted"
+        );
+    }
+
+    #[test]
+    fn purchase_gate_limits_untrusted_buyers_to_the_first_purchase_max() {
+        // Untrusted: $20 Plus and $25 pack pass, $50 pack / $100 Super blocked.
+        assert!(ensure_purchase_allowed(false, 20.0, "The Super and Ultra plans").is_ok());
+        assert!(ensure_purchase_allowed(false, 25.0, "The $50 and $100 packs").is_ok());
+        let error = ensure_purchase_allowed(false, 50.0, "The $50 and $100 packs").unwrap_err();
+        assert!(error.to_string().contains("First purchases are limited to $25"), "{error}");
+        assert!(error.to_string().contains("$50 and $100 packs unlock automatically"), "{error}");
+        assert!(ensure_purchase_allowed(false, 100.0, "The Super and Ultra plans").is_err());
+        // Trusted buyers are never gated.
+        assert!(ensure_purchase_allowed(true, 100.0, "The $50 and $100 packs").is_ok());
+        assert!(ensure_purchase_allowed(true, 200.0, "The Super and Ultra plans").is_ok());
     }
 }

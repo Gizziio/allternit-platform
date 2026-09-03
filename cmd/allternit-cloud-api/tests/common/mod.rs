@@ -54,7 +54,8 @@ impl TestApp {
             window: std::time::Duration::from_secs(60),
         };
         let rate_limiter = create_rate_limiter(rate_limit_config.clone());
-        let public_rate_limiter = create_rate_limiter(rate_limit_config);
+        let public_rate_limiter = create_rate_limiter(rate_limit_config.clone());
+        let free_inference_rate_limiter = create_rate_limiter(rate_limit_config);
 
         // Create API state
         let state = Arc::new(ApiState {
@@ -66,6 +67,7 @@ impl TestApp {
             session_manager,
             rate_limiter,
             public_rate_limiter,
+            free_inference_rate_limiter,
             cost_service,
             quota_service,
             contabo_runtime_service: Arc::new(services::ContaboRuntimeService::new(

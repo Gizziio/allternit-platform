@@ -7,7 +7,8 @@
 
 use axum::{
     extract::{Extension, State},
-    response::Response,
+    http::StatusCode,
+    response::{IntoResponse, Response},
     Json,
 };
 use serde::Serialize;
@@ -72,9 +73,31 @@ pub async fn chat_completions(
     let user_id = auth.user.user_id.clone();
 
     // Pre-check: a paying user with an exhausted balance is blocked before we
-    // spend upstream money; plan-cap users (no credits row) pass.
+    // spend upstream money; free users (no credits row) are bounded by the
+    // monthly free allowance and a tight per-user rate limit.
     let balance = inference_settlement::credit_balance_row(&state.db, &user_id).await?;
-    inference_settlement::ensure_credits_allow_inference(balance)?;
+    inference_settlement::check_inference_allowed(&state.db, &user_id, balance).await?;
+    if balance.is_none() {
+        if let Err(info) = state.free_inference_rate_limiter.check(&user_id).await {
+            tracing::warn!(user_id = %user_id, "free inference rate limit exceeded");
+            let body = serde_json::json!({
+                "error": "RATE_LIMIT_EXCEEDED",
+                "message": "Free inference rate limit reached — add credits for higher limits.",
+                "retry_after": info.reset_after.as_secs(),
+            });
+            let mut response = (
+                StatusCode::TOO_MANY_REQUESTS,
+                [(
+                    axum::http::header::RETRY_AFTER,
+                    info.reset_after.as_secs().to_string(),
+                )],
+                Json(body),
+            )
+                .into_response();
+            info.add_headers(&mut response);
+            return Ok(response);
+        }
+    }
 
     let alias = request.model.clone();
     let streaming = request.is_streaming();

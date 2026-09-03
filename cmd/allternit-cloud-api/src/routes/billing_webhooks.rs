@@ -328,30 +328,59 @@ async fn grant_subscription_credits_and_respond(
 /// makes retries a no-op, so the subscription-dedupe table
 /// (`billing_entitlement_events`, which is entitlement-specific) is not
 /// involved.
+///
+/// A fresh grant also records the purchase in `billing_purchase_trust` (the
+/// chargeback-hold table); replayed events skip it so retries cannot inflate
+/// the paid-purchase count.
 async fn grant_credits_and_respond(
     state: &ApiState,
     event_id: &str,
     user_id: &str,
     amount_usd: f64,
 ) -> Response {
+    let transaction_id = format!("stripe-{event_id}");
+    // The grant dedupes on the ledger row; check it first so the trust
+    // bookkeeping only counts purchases that actually granted credits.
+    let fresh_grant: bool = match sqlx::query_scalar::<_, bool>(
+        "SELECT EXISTS(SELECT 1 FROM credit_transactions WHERE transaction_id = $1)",
+    )
+    .bind(&transaction_id)
+    .fetch_one(&state.db)
+    .await
+    {
+        Ok(exists) => !exists,
+        Err(error) => return ApiError::DatabaseError(error).into_response(),
+    };
+
     let cost_service = crate::services::CostServiceImpl::new(state.db.clone());
     match cost_service
-        .add_credits(
-            user_id,
-            amount_usd,
-            &format!("stripe-{event_id}"),
-            "stripe",
-        )
+        .add_credits(user_id, amount_usd, &transaction_id, "stripe")
         .await
     {
-        Ok(balance_usd) => Json(json!({
-            "received": true,
-            "eventId": event_id,
-            "userId": user_id,
-            "creditsUsd": amount_usd,
-            "balanceUsd": balance_usd,
-        }))
-        .into_response(),
+        Ok(balance_usd) => {
+            if fresh_grant {
+                if let Err(error) =
+                    billing_subscriptions::record_paid_purchase(&state.db, user_id).await
+                {
+                    // Trust bookkeeping must never fail the webhook: the grant
+                    // already landed and Stripe would retry on a non-2xx.
+                    tracing::error!(
+                        "REVENUE-CRITICAL: failed to record paid purchase for user {} (event {}): {}",
+                        user_id,
+                        event_id,
+                        error
+                    );
+                }
+            }
+            Json(json!({
+                "received": true,
+                "eventId": event_id,
+                "userId": user_id,
+                "creditsUsd": amount_usd,
+                "balanceUsd": balance_usd,
+            }))
+            .into_response()
+        }
         Err(error) => error.into_response(),
     }
 }
@@ -745,6 +774,18 @@ mod tests {
                 stripe_customer_id TEXT NOT NULL,
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                 updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+            "#,
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        sqlx::query("DROP TABLE IF EXISTS billing_purchase_trust CASCADE").execute(&pool).await.unwrap();
+        sqlx::query(r#"
+        CREATE TABLE billing_purchase_trust (
+                user_id TEXT PRIMARY KEY,
+                first_paid_at TIMESTAMPTZ,
+                paid_purchase_count INT NOT NULL DEFAULT 0
             )
             "#,
         )
@@ -1362,5 +1403,66 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(grants, 0, "an unknown subscription grants nothing");
+    }
+
+    #[tokio::test]
+    async fn credit_purchase_records_trust_and_replay_does_not_inflate_it() {
+        let pool = test_pool().await;
+
+        // The handler path from grant_credits_and_respond: ledger-existence
+        // check, grant, then trust bookkeeping only for a fresh grant.
+        async fn grant_once(pool: &PgPool, event_id: &str) -> bool {
+            let transaction_id = format!("stripe-{event_id}");
+            let fresh: bool = !sqlx::query_scalar::<_, bool>(
+                "SELECT EXISTS(SELECT 1 FROM credit_transactions WHERE transaction_id = $1)",
+            )
+            .bind(&transaction_id)
+            .fetch_one(pool)
+            .await
+            .unwrap();
+            crate::services::CostServiceImpl::new(pool.clone())
+                .add_credits("user_1", 25.0, &transaction_id, "stripe")
+                .await
+                .unwrap();
+            if fresh {
+                billing_subscriptions::record_paid_purchase(pool, "user_1").await.unwrap();
+            }
+            fresh
+        }
+
+        assert!(grant_once(&pool, "evt_p1").await, "first delivery is a fresh grant");
+        let count: i32 = sqlx::query_scalar(
+            "SELECT paid_purchase_count FROM billing_purchase_trust WHERE user_id = 'user_1'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(count, 1);
+
+        // Stripe retries the same delivery: no second grant, no inflated count.
+        assert!(!grant_once(&pool, "evt_p1").await, "replay is not fresh");
+        let count: i32 = sqlx::query_scalar(
+            "SELECT paid_purchase_count FROM billing_purchase_trust WHERE user_id = 'user_1'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(count, 1, "replays must not inflate the paid purchase count");
+        let balance: f64 =
+            sqlx::query_scalar("SELECT balance_usd FROM user_credits WHERE user_id = 'user_1'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert!((balance - 25.0).abs() < 1e-9);
+
+        // A different purchase increments.
+        assert!(grant_once(&pool, "evt_p2").await);
+        let count: i32 = sqlx::query_scalar(
+            "SELECT paid_purchase_count FROM billing_purchase_trust WHERE user_id = 'user_1'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(count, 2);
     }
 }

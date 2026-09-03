@@ -217,3 +217,43 @@ pub fn create_rate_limiter(config: RateLimitConfig) -> Arc<RateLimiter> {
 
     limiter
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn free_inference_limiter_blocks_over_limit_per_user() {
+        // The free inference path config: FREE_INFERENCE_RATE_LIMIT_RPM default 30.
+        let limiter = RateLimiter::new(RateLimitConfig {
+            requests_per_minute: 30,
+            window: Duration::from_secs(60),
+        });
+
+        for _ in 0..30 {
+            assert!(limiter.check("user_free").await.is_ok());
+        }
+        let info = limiter.check("user_free").await.unwrap_err();
+        assert_eq!(info.limit, 30);
+        assert_eq!(info.remaining, 0);
+
+        // The limiter is keyed per user: another free user is unaffected, and
+        // paying users never reach this limiter at all (see
+        // routes::model_router::chat_completions — it only checks when the
+        // credit balance row is absent).
+        assert!(limiter.check("user_other").await.is_ok());
+
+        // The 429 response carries the rate limit headers.
+        let mut response = (StatusCode::TOO_MANY_REQUESTS, axum::Json(serde_json::json!({}))).into_response();
+        info.add_headers(&mut response);
+        assert_eq!(
+            response.headers()["X-RateLimit-Limit"].to_str().unwrap(),
+            "30"
+        );
+        assert_eq!(
+            response.headers()["X-RateLimit-Remaining"].to_str().unwrap(),
+            "0"
+        );
+        assert!(response.headers().contains_key("X-RateLimit-Reset"));
+    }
+}

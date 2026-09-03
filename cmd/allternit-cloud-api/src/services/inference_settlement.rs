@@ -4,9 +4,11 @@
 //! every chat completion is a real cost. This module is the accounting half of
 //! `routes::model_router`:
 //!
-//! - a pre-dispatch gate (`ensure_credits_allow_inference`): users with a
-//!   `user_credits` row and no balance are blocked; users WITHOUT a row are
-//!   plan-cap users and pass (same philosophy as hosted compute);
+//! - a pre-dispatch gate (`check_inference_allowed`): users with a
+//!   `user_credits` row and no balance are blocked; users WITHOUT a row get a
+//!   free monthly allowance (`FREE_INFERENCE_MONTHLY_USD`, default $2.00)
+//!   measured from this month's `inference_usage` rows — which
+//!   `settle_inference` writes for them even though no deduction happens;
 //! - `settle_inference`: always writes an `inference_usage` row (the audit
 //!   trail), then deducts the cost via `CostService::deduct_credits_for_usage`
 //!   when the user has a credits row. Settlement failures are logged
@@ -41,8 +43,9 @@ use crate::{
 const MAX_BUFFERED_JSON_BODY: usize = 32 * 1024 * 1024;
 
 /// The user's credit balance if they have a `user_credits` row. The Some/None
-/// distinction matters: None means plan-cap user (deduction no-ops, pre-check
-/// allows), Some(<= 0) means a paying user who ran out.
+/// distinction matters: None means free-allowance user (deduction no-ops,
+/// pre-check enforces the monthly allowance), Some(<= 0) means a paying user
+/// who ran out.
 pub async fn credit_balance_row(db: &PgPool, user_id: &str) -> Result<Option<f64>, ApiError> {
     sqlx::query_scalar("SELECT balance_usd FROM user_credits WHERE user_id = $1")
         .bind(user_id)
@@ -51,14 +54,51 @@ pub async fn credit_balance_row(db: &PgPool, user_id: &str) -> Result<Option<f64
         .map_err(ApiError::DatabaseError)
 }
 
-/// Pre-dispatch gate: a credits-row user at or below zero is blocked with a
-/// 403 (closest existing variant to 402); everyone else passes.
-pub fn ensure_credits_allow_inference(balance: Option<f64>) -> Result<(), ApiError> {
+/// Free monthly inference allowance in USD (`FREE_INFERENCE_MONTHLY_USD`,
+/// default 2.00). Applies only to users without a credits row.
+fn free_inference_monthly_usd() -> f64 {
+    std::env::var("FREE_INFERENCE_MONTHLY_USD")
+        .ok()
+        .and_then(|value| value.trim().parse::<f64>().ok())
+        .filter(|value| *value >= 0.0)
+        .unwrap_or(2.0)
+}
+
+/// Pre-dispatch gate. Paying users (`Some` balance) are blocked at or below
+/// zero with a 403 (closest existing variant to 402). Free users (`None` — no
+/// credits row) get `FREE_INFERENCE_MONTHLY_USD` per calendar month, measured
+/// from the `inference_usage` rows `settle_inference` writes for them; at or
+/// over the allowance they are 403'd with an upgrade nudge.
+pub async fn check_inference_allowed(
+    db: &PgPool,
+    user_id: &str,
+    balance: Option<f64>,
+) -> Result<(), ApiError> {
     match balance {
-        Some(balance) if balance <= 0.0 => Err(ApiError::Forbidden(
+        Some(balance) if balance > 0.0 => Ok(()),
+        Some(_) => Err(ApiError::Forbidden(
             "Inference credits exhausted — add credits to keep using hosted models.".to_string(),
         )),
-        _ => Ok(()),
+        None => {
+            let month_cost: f64 = sqlx::query_scalar(
+                r#"
+                SELECT COALESCE(SUM(cost_usd), 0)
+                FROM inference_usage
+                WHERE user_id = $1 AND created_at >= date_trunc('month', NOW())
+                "#,
+            )
+            .bind(user_id)
+            .fetch_one(db)
+            .await
+            .map_err(ApiError::DatabaseError)?;
+            let allowance = free_inference_monthly_usd();
+            if month_cost >= allowance {
+                return Err(ApiError::Forbidden(format!(
+                    "Free inference allowance of ${allowance:.2}/month is used up — buy credits or subscribe to keep going."
+                )));
+            }
+            Ok(())
+        }
     }
 }
 
@@ -554,14 +594,54 @@ mod tests {
         assert_eq!(debits, 0, "plan-cap users are recorded only");
     }
 
-    #[test]
-    fn pre_check_blocks_exhausted_balances_and_allows_everyone_else() {
-        assert!(ensure_credits_allow_inference(Some(0.0)).is_err());
-        assert!(ensure_credits_allow_inference(Some(-1.0)).is_err());
-        assert!(ensure_credits_allow_inference(Some(0.01)).is_ok());
+    #[tokio::test]
+    async fn pre_check_blocks_exhausted_balances_and_allows_paying_users() {
+        let pool = test_pool().await;
         assert!(
-            ensure_credits_allow_inference(None).is_ok(),
-            "plan-cap users (no credits row) pass the pre-check"
+            check_inference_allowed(&pool, "user_1", Some(0.0)).await.is_err()
+        );
+        assert!(
+            check_inference_allowed(&pool, "user_1", Some(-1.0)).await.is_err()
+        );
+        assert!(
+            check_inference_allowed(&pool, "user_1", Some(0.01)).await.is_ok()
+        );
+    }
+
+    #[tokio::test]
+    async fn free_allowance_boundary_under_at_over() {
+        let pool = test_pool().await;
+        // Under the default $2.00 allowance → allowed.
+        settle_inference(&pool, "user_free", "gpt-4o", &test_prices(), 6_000_000, 2_000_000, false).await; // $1.50
+        assert!(
+            check_inference_allowed(&pool, "user_free", None).await.is_ok(),
+            "$1.50 < $2.00 must pass"
+        );
+        // Exactly at the allowance → blocked (>=).
+        settle_inference(&pool, "user_free", "gpt-4o", &test_prices(), 2_000_000, 1_000_000, false).await; // +$0.60 → $2.10
+        let error = check_inference_allowed(&pool, "user_free", None).await.unwrap_err();
+        assert!(error.to_string().contains("Free inference allowance"), "{error}");
+        // Over → still blocked.
+        assert!(check_inference_allowed(&pool, "user_free", None).await.is_err());
+    }
+
+    #[tokio::test]
+    async fn free_allowance_counts_only_the_current_month() {
+        let pool = test_pool().await;
+        // A heavy usage row from last month must not count against this month.
+        sqlx::query(
+            r#"
+            INSERT INTO inference_usage (id, user_id, model, prompt_tokens, completion_tokens, cost_usd, estimated, created_at)
+            VALUES ($1, 'user_free', 'gpt-4o', 0, 0, 100.0, FALSE, date_trunc('month', NOW()) - INTERVAL '1 day')
+            "#,
+        )
+        .bind(uuid::Uuid::new_v4().to_string())
+        .execute(&pool)
+        .await
+        .unwrap();
+        assert!(
+            check_inference_allowed(&pool, "user_free", None).await.is_ok(),
+            "last month's spend does not count"
         );
     }
 

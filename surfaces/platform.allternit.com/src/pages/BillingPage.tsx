@@ -7,6 +7,7 @@ import {
   ArrowsClockwise,
   Info,
   Coins,
+  Lightning,
   X,
 } from "@phosphor-icons/react";
 import {
@@ -51,10 +52,17 @@ export interface CreditTransaction {
   amount_usd: number;
 }
 
+export interface FreeInferenceUsage {
+  monthly_allowance_usd: number;
+  used_usd: number;
+  remaining_usd: number;
+}
+
 export interface BillingCredits {
   balance_usd: number;
   month_to_date_usage_usd: number;
   recent_transactions: CreditTransaction[];
+  free_inference?: FreeInferenceUsage;
 }
 
 function billingApiBaseUrl() {
@@ -388,6 +396,64 @@ export function BillingPage() {
         </div>
       ) : (
         <div className="space-y-3">
+          {credits?.free_inference && (
+            <div className="rounded-xl border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)]/40 p-4">
+              <div className="flex items-start gap-3 mb-4">
+                <div className="size-9 shrink-0 rounded-lg bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] flex items-center justify-center">
+                  <Lightning size={18} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[14px] font-semibold text-[var(--text-primary)]">Free inference</div>
+                  <p className="text-[12px] text-[var(--text-secondary)] mt-1">
+                    Monthly hosted-model allowance for free accounts.
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-3 text-[12px]">
+                  <span className="text-[var(--text-secondary)]">
+                    ${credits.free_inference.used_usd.toFixed(2)} of $
+                    {credits.free_inference.monthly_allowance_usd.toFixed(2)} used this month — resets monthly
+                  </span>
+                  <span className="font-mono text-[var(--text-primary)]">
+                    {credits.free_inference.monthly_allowance_usd > 0
+                      ? Math.min(
+                          100,
+                          (credits.free_inference.used_usd /
+                            credits.free_inference.monthly_allowance_usd) *
+                            100,
+                        ).toFixed(0)
+                      : "0"}
+                    %
+                  </span>
+                </div>
+                <div className="h-2 rounded-full bg-[var(--bg-primary)] overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-[var(--accent-primary)] transition-[width]"
+                    style={{
+                      width: `${
+                        credits.free_inference.monthly_allowance_usd > 0
+                          ? Math.min(
+                              100,
+                              (credits.free_inference.used_usd /
+                                credits.free_inference.monthly_allowance_usd) *
+                                100,
+                            )
+                          : 0
+                      }%`,
+                    }}
+                  />
+                </div>
+                {credits.free_inference.remaining_usd <= 0 && (
+                  <p className="text-[12px] text-[var(--status-warning)]">
+                    Allowance used up — buy credits or subscribe to keep using hosted models.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="rounded-xl border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)]/40 p-4">
             <div className="flex items-start gap-3 mb-4">
               <div className="size-9 shrink-0 rounded-lg bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] flex items-center justify-center">

@@ -1,0 +1,9 @@
+[Unit]
+Description=Daily Allternit Cloud billing reconciliation
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+
+[Install]
+WantedBy=timers.target

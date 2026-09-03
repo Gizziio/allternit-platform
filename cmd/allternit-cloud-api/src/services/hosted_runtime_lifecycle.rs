@@ -7,7 +7,10 @@
 
 use crate::{
     error::ApiError,
-    services::{cost_service::CostService, ContaboContainerState, ContaboRuntimeService},
+    services::{
+        contabo_runtime_service::hosted_disk_quota_gb, cost_service::CostService,
+        ContaboContainerState, ContaboRuntimeService,
+    },
     ApiState,
 };
 use chrono::{DateTime, Datelike, Timelike, Utc};
@@ -536,6 +539,97 @@ async fn reconcile_hosted_runtimes(state: &ApiState) -> Result<(), ApiError> {
             }
             Err(error) => {
                 warn!(instance_id = %row.id, "Container status reconciliation failed: {}", error)
+            }
+        }
+    }
+
+    // Belt-and-suspenders disk quota: docker's --storage-opt is unavailable on
+    // the nodes (overlay2 on ext4), so the sweep stops runaway writable layers.
+    // Sweep failure must not fail the rest of reconciliation.
+    if let Err(error) = sweep_disk_quotas(state).await {
+        warn!("Hosted runtime disk quota sweep failed: {}", error);
+    }
+
+    Ok(())
+}
+
+/// Stop running hosted containers whose writable layer exceeds their disk
+/// quota (5g/10g/20g by container size, ×1.2 grace). One `docker ps -s` per
+/// docker host that actually runs hosted containers; hosts that fail are
+/// skipped with a warning so one unreachable node never shields the others.
+async fn sweep_disk_quotas(state: &ApiState) -> Result<(), ApiError> {
+    let running: Vec<(String, String, i64, Option<String>)> = sqlx::query_as(
+        r#"
+        SELECT i.id, i.user_id, i.memory_mb, n.docker_host
+        FROM hosted_runtime_instances i
+        LEFT JOIN hosted_runtime_nodes n ON n.id = i.node_id
+        WHERE i.status = 'running' AND i.provider = 'contabo'
+        "#,
+    )
+    .fetch_all(&state.db)
+    .await?;
+    if running.is_empty() {
+        return Ok(());
+    }
+
+    // Group by docker host; legacy rows (node_id NULL) live on the local daemon.
+    let mut by_host: std::collections::HashMap<String, Vec<(String, String, i64)>> =
+        std::collections::HashMap::new();
+    for (instance_id, user_id, memory_mb, docker_host) in running {
+        by_host
+            .entry(docker_host.unwrap_or_else(|| "local".to_string()))
+            .or_default()
+            .push((instance_id, user_id, memory_mb));
+    }
+
+    let contabo = &state.contabo_runtime_service;
+    for (docker_host, instances) in by_host {
+        let sizes = match contabo.container_writable_bytes(&docker_host).await {
+            Ok(sizes) => sizes,
+            Err(error) => {
+                warn!(%docker_host, "disk sweep: docker ps failed, skipping host: {}", error);
+                continue;
+            }
+        };
+        for (instance_id, user_id, memory_mb) in instances {
+            let container_name = ContaboRuntimeService::container_name(&instance_id);
+            let Some(writable_bytes) = sizes
+                .iter()
+                .find(|(name, _)| *name == container_name)
+                .map(|(_, bytes)| *bytes)
+            else {
+                continue;
+            };
+            let limit_bytes = hosted_disk_quota_gb(memory_mb) * 1_000_000_000 * 6 / 5;
+            if writable_bytes <= limit_bytes {
+                continue;
+            }
+            warn!(
+                instance_id = %instance_id,
+                user_id = %user_id,
+                writable_bytes,
+                limit_bytes,
+                "Hosted container exceeded its disk quota; stopping"
+            );
+            match contabo.stop(&instance_id).await {
+                Ok(()) => {
+                    sqlx::query(
+                        r#"
+                        UPDATE hosted_runtime_instances
+                        SET status = 'stopped', stopped_at = CURRENT_TIMESTAMP,
+                            active_since = NULL, stop_reason = 'disk_quota_exceeded'
+                        WHERE id = $1
+                        "#,
+                    )
+                    .bind(&instance_id)
+                    .execute(&state.db)
+                    .await?;
+                    record_runtime_stopped(&state.db, &instance_id, "disk_quota_exceeded").await?;
+                    info!(instance_id = %instance_id, "Hosted runtime stopped for disk_quota_exceeded");
+                }
+                Err(error) => {
+                    warn!(instance_id = %instance_id, "disk-quota stop failed: {}", error)
+                }
             }
         }
     }
