@@ -6,7 +6,21 @@
 Close the paid loop UI-side: credit buying in the platform.allternit.com
 cloud dashboard, Stripe fully hooked in, no real-money test required.
 
-### Just did (latest: subscriptions)
+### Just did (latest: inference metering — the last unmetered surface)
+- OpenRouter proxy was live with our key charging users $0. Now: every
+  /v1/chat/completions settles — usage captured (stream_options
+  include_usage injection + SSE body scanner for streaming; JSON usage
+  parse non-streaming; chars/4 fallback flagged estimated), inference_usage
+  row always written (migrations 028/pg 007), credits deducted atomically
+  via generalized deduct_credits_for_usage (source 'inference'). Retail =
+  live upstream wholesale x INFERENCE_MARKUP (1.5 default) w/ catalog
+  fallback. Zero-balance credit users blocked pre-dispatch. Settlement
+  failures log REVENUE-CRITICAL, never fail the response. 134/134 tests
+  on mail; zero prod errors.
+- Earlier: retail compute rates by size ($0.0075/$0.015/$0.029 per hr),
+  fixed provision() never stamping cost_rate_* (all containers metered $0),
+  subscription products Plus/Super/Ultra live w/ rollover credit grants,
+  credit packs, webhook repointed off fly.dev, STRIPE key from Keychain.
 - Stripe live products created: Allternit Cloud Plus $20/mo / Super $100/mo /
   Ultra $200/mo (price ids in prod .env as STRIPE_PRICE_PLUS/SUPER/ULTRA).
 - Backend: GET /billing/plans, POST /billing/subscribe (mode=subscription),
