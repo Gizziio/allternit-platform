@@ -120,3 +120,32 @@ Close the bankruptcy-risk gaps identified in the free-tier/billing review: free 
 ## Open questions
 - Wholesale side for Groq models: input_cache_read pricing (cached reads at
   half price) is ignored — fine at current volume, matters at scale.
+
+---
+
+# Steering checkpoint — compute-route auth sweep deployed (2026-09-03, session ba9de8f8)
+
+## Just did (deployed to mail, verified)
+- Clerk-only compute-route sweep: ~25 call sites across 11 route files now
+  use auth::resolve_user / resolve_user_id (Clerk session OR Bearer
+  api token). Agents with API tokens can now manage their own compute:
+  hosted runtimes (list/create/start/stop/destroy), contabo provisioning,
+  gizzi instances, provider tokens, runtime relay, pairing approve/revoke,
+  mesh enroll, wizard, dispatch handoff, api-key list/revoke.
+- SECURITY FIX en route: contabo hosted-runtime destroy had NO ownership
+  check (service destroy not user-scoped) — any authenticated user could
+  destroy anyone's runtime by id. Route now verifies ownership first.
+- Token minting (POST /api/v1/api-keys) deliberately stays Clerk-only:
+  no token-mints-token privilege escalation; org binding from Clerk claims.
+- Verify on mail: 168/168 release tests, billing soak 12/12 green,
+  new sweep_smoke.py 5/5 (Bearer token gets 200s on swept endpoints).
+
+## Next
+- Push main (now ~48 commits ahead of origin incl. this sweep).
+- User actions unchanged: $10 Stripe purchase, Tailscale reusable auth
+  key for CI/CD, cheap-provider keys (DeepSeek/Kimi).
+
+## Open questions
+- Should scoped api tokens carry permissions (they have a permissions
+  column already) so e.g. a read-only token cannot destroy runtimes?
+  Currently any valid token gets full user power on management routes.
