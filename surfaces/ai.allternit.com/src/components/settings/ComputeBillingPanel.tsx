@@ -6,6 +6,7 @@ import {
   CheckCircle,
   CircleNotch,
   Cloud,
+  Coins,
   ComputerTower,
   Gauge,
   HardDrives,
@@ -19,10 +20,12 @@ import { usePlatformAuth, usePlatformUser } from "@/lib/platform-auth-client";
 import {
   createHostedRuntime,
   destroyHostedRuntime,
+  getBillingCredits,
   getHostedEntitlement,
   listHostedRuntimes,
   startHostedRuntime,
   stopHostedRuntime,
+  type BillingCredits,
   type HostedRuntime,
   type HostedRuntimeEntitlement,
 } from "@/lib/hosted-compute";
@@ -58,6 +61,30 @@ function formatMemory(memoryMb: number) {
 
 function titleCase(value: string) {
   return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+const CREDIT_SOURCE_LABELS: Record<string, string> = {
+  hosted_runtime_usage: "Hosted runtime",
+  stripe: "Stripe top-up",
+};
+
+function formatCreditSource(source: string) {
+  return CREDIT_SOURCE_LABELS[source] ?? titleCase(source);
+}
+
+function formatCreditAmount(amountUsd: number) {
+  const sign = amountUsd < 0 ? "-" : "+";
+  const magnitude = Math.abs(amountUsd).toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 4,
+  });
+  return `${sign}$${magnitude}`;
+}
+
+function formatCreditDate(createdAt: string) {
+  const date = new Date(createdAt);
+  if (Number.isNaN(date.getTime())) return createdAt;
+  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
 function safePlanUrl(value?: string) {
@@ -119,6 +146,7 @@ export function ComputeBillingPanel() {
   const { isLoaded, isSignedIn } = usePlatformUser();
   const [entitlement, setEntitlement] = useState<HostedRuntimeEntitlement | null>(null);
   const [runtimes, setRuntimes] = useState<HostedRuntime[]>([]);
+  const [credits, setCredits] = useState<BillingCredits | null>(null);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [confirmDestroyId, setConfirmDestroyId] = useState<string | null>(null);
@@ -133,6 +161,7 @@ export function ComputeBillingPanel() {
     if (!isSignedIn) {
       setEntitlement(null);
       setRuntimes([]);
+      setCredits(null);
       setLoading(false);
       return;
     }
@@ -141,12 +170,14 @@ export function ComputeBillingPanel() {
     try {
       const token = await getToken();
       if (!token) throw new Error("A web account session is required to manage hosted compute.");
-      const [nextEntitlement, nextRuntimes] = await Promise.all([
+      const [nextEntitlement, nextRuntimes, nextCredits] = await Promise.all([
         getHostedEntitlement(token),
         listHostedRuntimes(token),
+        getBillingCredits(token).catch(() => null),
       ]);
       setEntitlement(nextEntitlement);
       setRuntimes(nextRuntimes);
+      setCredits(nextCredits);
       const allowedRegions = nextEntitlement.allowedRegions?.length
         ? nextEntitlement.allowedRegions
         : ["lax"];
@@ -293,6 +324,56 @@ export function ComputeBillingPanel() {
                   </span>
                 )}
               </div>
+
+              {credits && (
+                <div className="rounded-lg border border-solid border-[var(--border-subtle)] p-3 mb-3">
+                  <div className="flex items-center justify-between gap-3 mb-2">
+                    <span className="inline-flex items-center gap-1 text-[10px] text-[var(--text-secondary)]"><Coins size={12} /> Credit balance</span>
+                    <span className="text-[10px] text-[var(--text-tertiary)]">
+                      ${credits.month_to_date_usage_usd.toFixed(2)} this month
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[20px] font-semibold text-[var(--text-primary)]">
+                      ${credits.balance_usd.toFixed(2)}
+                    </span>
+                    {credits.balance_usd < 1 && (
+                      <Badge className="text-[var(--status-warning)] bg-[var(--status-warning)]/10">
+                        Balance exhausted — add credits to continue
+                      </Badge>
+                    )}
+                    <button
+                      type="button"
+                      className={cn(QUIET_BUTTON_CLASS, "ml-auto")}
+                      onClick={() => window.open(safePlanUrl(entitlement?.upgradeUrl), "_blank", "noopener,noreferrer")}
+                    >
+                      <Plus size={13} /> Add credits
+                    </button>
+                  </div>
+                  {credits.recent_transactions && credits.recent_transactions.length > 0 ? (
+                    <div className="mt-3 space-y-1">
+                      {credits.recent_transactions.slice(0, 8).map((transaction, index) => (
+                        <div key={`${transaction.created_at}-${index}`} className="flex items-center justify-between gap-3 text-[11px]">
+                          <span className="min-w-0 truncate text-[var(--text-secondary)]">
+                            {formatCreditSource(transaction.source)}
+                          </span>
+                          <span className="shrink-0 text-[10px] text-[var(--text-tertiary)]">
+                            {formatCreditDate(transaction.created_at)}
+                          </span>
+                          <span className={cn(
+                            "shrink-0 font-mono w-20 text-right",
+                            transaction.amount_usd < 0 ? "text-[var(--text-secondary)]" : "text-[var(--status-success)]",
+                          )}>
+                            {formatCreditAmount(transaction.amount_usd)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="mt-3 text-[10px] text-[var(--text-tertiary)]">No transactions yet</div>
+                  )}
+                </div>
+              )}
 
               {entitlement && entitlement.maxHoursMonthly > 0 && (
                 <div className="rounded-lg border border-solid border-[var(--border-subtle)] p-3 mb-3">
