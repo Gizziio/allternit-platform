@@ -61,7 +61,7 @@ hex = { workspace = true }
 ed25519-dalek = { workspace = true }
 jsonwebtoken = "10"
 aws-lc-rs = "1"
-reqwest = { workspace = true, features = ["json"] }
+reqwest = { workspace = true, default-features = false, features = ["json", "rustls-tls"] }
 cron = "0.12"
 tempfile = { workspace = true }
 regex = { workspace = true }
