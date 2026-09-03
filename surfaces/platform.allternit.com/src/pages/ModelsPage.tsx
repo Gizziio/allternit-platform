@@ -99,9 +99,8 @@ export function ModelsPage() {
               <p className="mt-1">
                 Allternit Cloud routes inference requests to third-party model providers.
                 Cloud models are currently sourced from OpenRouter, Together AI, Fireworks AI,
-                and DeepInfra, with Groq coming next. Pricing and availability are subject to
-                each provider's terms. Cloud-model subscriptions are UI-only until explicitly
-                marked live.
+                DeepInfra, and Groq. Pricing and availability are subject to each provider's
+                terms. Cloud-model subscriptions are UI-only until explicitly marked live.
               </p>
             </div>
           </div>

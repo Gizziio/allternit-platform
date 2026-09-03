@@ -1,77 +1,26 @@
-# Steering checkpoint
+# Steering checkpoint — platform follow-up pass
 
-## Allternit Cloud: Stripe checkout live + console billing UI (2026-09-03)
+## Goal
+Add Groq to the live Allternit Cloud model catalog, prove `/v1/chat/completions` works across all listed providers, and verify the deployed `platform.allternit.com` pages render correctly in a browser.
 
-### Goal
-Close the paid loop UI-side: credit buying in the platform.allternit.com
-cloud dashboard, Stripe fully hooked in, no real-money test required.
+## Just did
+- Created session worktree `allternit-session-platform-followup-20260903` on branch `session/platform-followup-20260903`.
+- Queried Groq `/v1/models`; confirmed Groq returns pricing as numeric strings.
+- Fixed `generic_openai.rs` `OpenAiPricing` to deserialize prices from either JSON numbers or numeric strings.
+- Added 4 curated Groq aliases to `catalog.rs`: `qwen3.6-27b-groq`, `qwen3.8-27b-groq`, `gpt-oss-20b-groq`, `gpt-oss-120b-groq`.
+- Updated router unit tests for the expanded 24-entry catalog; all 12 model_router tests pass.
+- Built and deployed the API binary to the VPS; verified `/v1/models` returns 24 models including the 4 Groq aliases.
+- Smoke-tested `/v1/chat/completions`: Together (works), Groq (works + streaming works), Fireworks (routes, model returns empty content), DeepInfra/OpenRouter blocked by upstream account balance.
+- Verified `platform.allternit.com` pages in headless browser; found and fixed:
+  - `model-catalog.ts` was reading prices/name/context only from `extra`, but the API flattens them to top-level fields.
+  - Updated `ModelsPage.tsx` and `PlansPage.tsx` provider copy to list Groq as live.
+- Ran `bun run typecheck` and `bun run build` for the platform surface; both pass.
 
-### Just did (latest: inference metering — the last unmetered surface)
-- OpenRouter proxy was live with our key charging users $0. Now: every
-  /v1/chat/completions settles — usage captured (stream_options
-  include_usage injection + SSE body scanner for streaming; JSON usage
-  parse non-streaming; chars/4 fallback flagged estimated), inference_usage
-  row always written (migrations 028/pg 007), credits deducted atomically
-  via generalized deduct_credits_for_usage (source 'inference'). Retail =
-  live upstream wholesale x INFERENCE_MARKUP (1.5 default) w/ catalog
-  fallback. Zero-balance credit users blocked pre-dispatch. Settlement
-  failures log REVENUE-CRITICAL, never fail the response. 134/134 tests
-  on mail; zero prod errors.
-- Earlier: retail compute rates by size ($0.0075/$0.015/$0.029 per hr),
-  fixed provision() never stamping cost_rate_* (all containers metered $0),
-  subscription products Plus/Super/Ultra live w/ rollover credit grants,
-  credit packs, webhook repointed off fly.dev, STRIPE key from Keychain.
-- Stripe live products created: Allternit Cloud Plus $20/mo / Super $100/mo /
-  Ultra $200/mo (price ids in prod .env as STRIPE_PRICE_PLUS/SUPER/ULTRA).
-- Backend: GET /billing/plans, POST /billing/subscribe (mode=subscription),
-  POST /billing/portal (real Stripe customer portal). New mirror tables
-  billing_subscriptions + user_billing_accounts (migrations 026/pg 005).
-  invoice.paid (subscription_create/cycle) grants monthly credits
-  $22/$110/$220 with rollover LEAST(balance, cap $10/$50/$100) + grant,
-  idempotent per invoice. Tiers: plus->pro, super/ultra->team.
-- Console BillingPage: plan cards subscribe via real checkout, Manage
-  subscription button -> Stripe portal, active-subscription badge.
-- Verified in prod with signed synthetic webhooks: subscription invoice
-  grant math ($8 balance -> $30 with cap), replay idempotency, smoke rows
-  cleaned. 115/115 lib tests on mail; zero prod errors.
-- Earlier this session: credit pack checkout ($10/25/50/100), packs/plans
-  endpoints, webhook repointed fly.dev -> api.allternit.com (new signing
-  secret, old endpoint disabled), STRIPE_SECRET_KEY from Keychain deployed.
-- POST /api/v1/billing/checkout (Clerk-authed, creates Stripe Checkout
-  sessions server-side; static pack catalog credits_10/25/50/100 1:1 USD,
-  metadata clerk_user_id + allternit_credits_usd matching the webhook grant
-  contract) + GET /api/v1/billing/packs (public). Deployed to mail; packs
-  verified serving; 9 unit tests green.
-- platform.allternit.com BillingPage: balance card, pack grid with buy
-  buttons → Stripe Checkout redirect, success/cancel banners, graceful
-  billing-not-configured state. Deployed to Cloudflare Pages (verified in
-  live bundle).
-- Stripe wiring (all via the rk_live key from macOS Keychain service
-  "stripe-allternit", never printed): checkout-session create/expire perms
-  verified (200/200); key installed in prod .env as STRIPE_SECRET_KEY.
-- FOUND + FIXED: Stripe webhook was still pointed at the dead
-  allternit-cloud-api.fly.dev URL. Created new endpoint
-  https://api.allternit.com/api/v1/webhooks/stripe (5 billing events),
-  installed its fresh signing secret as STRIPE_WEBHOOK_SECRET, disabled the
-  old fly.dev endpoint.
-- Webhook path smoke-tested with the production secret: signed
-  checkout.session.completed → 200 + $10 grant + ledger row; replay → 200,
-  no double grant; bad signature → 401. Smoke rows cleaned up.
-- Cleaned stale instance hr_contabo_mail_001 (container lost in the 76GB
-  docker prune; open session closed, instance stopped) — auto-stop warnings
-  silenced. Zero prod errors.
+## Next
+- Commit API and front-end changes, push `session/platform-followup-20260903`, merge into `main`, and deploy `platform.allternit.com`.
+- Re-verify production `/models` shows prices and Groq copy after deploy.
+- Clean up worktree/branch and update ledger.
 
-### Next
-- Free-tier tightening mapped (2026-09-03, awaiting go-ahead to implement):
-  hosted compute becomes paid-only (free tier = BYOC via pairing), plus a
-  small free monthly inference allowance for no-balance users.
-- User can do a real $10 top-up from platform.allternit.com/billing whenever
-  ready — the loop is live end-to-end. No code changes needed.
-
-### Open questions
-- DECIDED 2026-09-03: two-node Contabo fleet is final (no third VPS);
-  CAPACITY_PLAN.md updated, node-standby stays draining/HA + OS build loan.
-- DECIDED 2026-09-03: cloud-api user_credits is the commercial source of
-  truth; AllternitOS UsageEvent reconciliation reads from / reconciles into
-  the deployed api.allternit.com ledger (coordination doc updated).
-- Fly.io org deleted by user 2026-09-03 — migration fully closed.
+## Open questions
+- Fireworks aliases route successfully but the chosen reasoning models (DeepSeek V4 Pro, Qwen 3.8 Max) return empty `content`. Is this acceptable for now, or should we swap to non-reasoning Fireworks aliases?
+- DeepInfra and OpenRouter keys have no upstream balance; should we add credits or remove them from marketing until funded?
