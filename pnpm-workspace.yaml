@@ -78,6 +78,9 @@ overrides:
   # silently ignores them, so wxt's download plugin then runs on every module
   # and `wxt prepare` fails with "Failed to parse URL from <entrypoint>".
   'wxt>vite': ^8.0.0
+  # better-sqlite3 12.x does not compile on Node 26; 13.x ships compatible
+  # prebuilt binaries.
+  better-sqlite3: 13.0.3
 
 onlyBuiltDependencies:
   - '@whiskeysockets/baileys'

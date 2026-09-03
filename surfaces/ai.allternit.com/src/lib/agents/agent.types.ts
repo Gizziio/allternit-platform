@@ -20,7 +20,7 @@ const logger = createModuleLogger('Agent');
 export type { AvatarConfig } from './character.types';
 
 // Agent Types
-export type AgentType = 'orchestrator' | 'sub-agent' | 'worker' | 'specialist' | 'reviewer';
+export type AgentType = 'orchestrator' | 'sub-agent' | 'worker' | 'specialist' | 'reviewer' | 'assistant';
 
 export type AppMode = 'chat' | 'cowork' | 'code' | 'design' | 'browser';
 
@@ -418,7 +418,7 @@ export interface BotProfile {
   /** Deterministic bot avatar stored in bot metadata. */
   avatar?: BotAvatar;
 
-  /** External platform that owns this bot (e.g. 'hermes', 'openclaw', 'grok') */
+  /** External platform that owns this bot (e.g. 'hermes', 'openclaw') */
   providerId?: string;
   /** Stable identifier within the external platform's namespace */
   externalId?: string;
@@ -491,11 +491,24 @@ export type AgentWalletPaymentMethod = 'send' | 'receive' | 'swap' | 'stake' | '
  * dispatch to OpenSandbox, Docker, Kubernetes, or a local runner based on the
  * provider field.
  */
+export type AgentVMComputerKind =
+  | 'local'
+  | 'byo_vps'
+  | 'managed'
+  | 'byoc'
+  | 'cloud_desktop';
+
 export interface AgentVMOperatorConfig {
   /** Whether the bot may use a virtual computer to execute tasks */
   enabled: boolean;
   /** Runtime provider that provisions and manages the sandbox */
-  provider: 'opensandbox' | 'docker' | 'kubernetes' | 'local' | 'custom' | 'host';
+  provider: 'opensandbox' | 'docker' | 'kubernetes' | 'local' | 'custom' | 'host' | 'cloud-desktop';
+  /** Unified computer kind used by the control plane (defaults to cloud_desktop) */
+  computerKind?: AgentVMComputerKind;
+  /** Desktop Cloud template id to use when provisioning */
+  templateId?: string;
+  /** Cloud desktop control-plane URL (only used when provider is 'cloud-desktop') */
+  endpoint?: string;
   /** Sandbox image / environment (e.g. opensandbox/desktop:v1.0.0) */
   image?: string;
   /** Resource limits for the sandbox */
@@ -524,6 +537,7 @@ export interface AgentVMOperatorConfig {
 
 export type AgentVMAction = NonNullable<AgentVMOperatorConfig['allowedActions']>[number];
 export type AgentVMProvider = AgentVMOperatorConfig['provider'];
+export type AgentVMComputerKindType = NonNullable<AgentVMOperatorConfig['computerKind']>;
 export type AgentVMNetworkPolicy = NonNullable<AgentVMOperatorConfig['networkPolicy']>;
 export type AgentVMPersistence = NonNullable<AgentVMOperatorConfig['persistence']>;
 
@@ -585,7 +599,10 @@ export const agentIdentityChannelsSchema = z.object({
 
 export const agentVMOperatorConfigSchema = z.object({
   enabled: z.boolean(),
-  provider: z.enum(['opensandbox', 'docker', 'kubernetes', 'local', 'custom', 'host']),
+  provider: z.enum(['opensandbox', 'docker', 'kubernetes', 'local', 'custom', 'host']), 'cloud-desktop']),
+  computerKind: z.enum(['local', 'byo_vps', 'managed', 'byoc', 'cloud_desktop']).optional(),
+  templateId: z.string().optional(),
+  endpoint: z.string().optional(),
   image: z.string().optional(),
   resources: z.object({
     cpu: z.string().optional(),
@@ -607,7 +624,7 @@ export const agentSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1).max(100),
   description: z.string(),
-  type: z.enum(['orchestrator', 'sub-agent', 'worker', 'specialist', 'reviewer']),
+  type: z.enum(['orchestrator', 'sub-agent', 'worker', 'specialist', 'reviewer', 'assistant']),
   parentAgentId: z.string().optional(),
   model: z.string().min(1),
   provider: z.enum(['openai', 'anthropic', 'google', 'local', 'custom']),
@@ -627,7 +644,7 @@ export const agentSchema = z.object({
   source: z.enum(['personal', 'vendor', 'organization']).optional(),
   avatar: z.any().optional(),
   characterLayer: z.any().optional(),
-  trustTier: z.enum(['safe', 'low', 'standard', 'elevated', 'admin', 'critical']).optional(),
+  trustTier: z.enum(['safe', 'low', 'standard', 'elevated', 'admin', 'critical', 'medium']).optional(),
   harness: harnessConfigSchema.optional(),
   allowedSurfaces: z.array(z.enum(['chat', 'cowork', 'code', 'design', 'browser'])).optional(),
   allowedSkills: z.array(z.string()).optional(),
@@ -682,6 +699,7 @@ export const agentSchema = z.object({
   secretRefs: z.array(agentSecretRefSchema).optional(),
   messagingConfig: agentMessagingConfigSchema.optional(),
   identityChannels: agentIdentityChannelsSchema.optional(),
+  vmOperator: agentVMOperatorConfigSchema.optional(),
 });
 
 // Schema for validating array of agents (API response)
@@ -789,7 +807,7 @@ export interface CreateAgentInput {
 const createAgentInputSchema = z.object({
   name: z.string().min(1).max(100),
   description: z.string(),
-  type: z.enum(['orchestrator', 'sub-agent', 'worker', 'specialist', 'reviewer']).optional(),
+  type: z.enum(['orchestrator', 'sub-agent', 'worker', 'specialist', 'reviewer', 'assistant']).optional(),
   parentAgentId: z.string().optional(),
   model: z.string().min(1),
   provider: z.enum(['openai', 'anthropic', 'google', 'local', 'custom']),
@@ -805,7 +823,7 @@ const createAgentInputSchema = z.object({
   source: z.enum(['personal', 'vendor', 'organization']).optional(),
   avatar: z.any().optional(),
   characterLayer: z.any().optional(),
-  trustTier: z.enum(['safe', 'low', 'standard', 'elevated', 'admin', 'critical']).optional(),
+  trustTier: z.enum(['safe', 'low', 'standard', 'elevated', 'admin', 'critical', 'medium']).optional(),
   harness: harnessConfigSchema.optional(),
   allowedSurfaces: z.array(z.enum(['chat', 'cowork', 'code', 'design', 'browser'])).optional(),
   allowedSkills: z.array(z.string()).optional(),

@@ -126,11 +126,22 @@ export function RecentsView(): React.ReactNode {
     const list: RecentItem[] = [];
 
     chatSessions.forEach((s) => {
-      const isAgent = s.metadata?.sessionMode === 'agent';
+      // Bot/group/agent sessions belong to the Bots section of the shell and
+      // the Bot Hub sessions tab — never to Recents.
+      const md = s.metadata as Record<string, unknown> | undefined;
+      if (
+        md?.isBot === true ||
+        md?.isGroupChat === true ||
+        md?.sessionMode === 'agent' ||
+        md?.agentId != null ||
+        md?.agent_id != null
+      ) {
+        return;
+      }
       list.push({
         id: s.id,
         title: s.name || 'Untitled chat',
-        kind: isAgent ? 'agent' : 'chat',
+        kind: 'chat',
         status: 'active',
         updatedAt: new Date(s.updatedAt || 0).getTime(),
         mode: 'chat',

@@ -1428,7 +1428,7 @@ fn subscription_provider(id: &str) -> Option<(&'static str, SubscriptionProvider
             SubscriptionProvider {
                 id: "codex-cli",
                 label: "Codex",
-                model: "codex-mini-latest",
+                model: "gpt-5.6-sol",
                 login: &["login"],
                 page: "https://chatgpt.com/",
                 api_key_only: false,
@@ -1461,7 +1461,7 @@ fn subscription_provider(id: &str) -> Option<(&'static str, SubscriptionProvider
             SubscriptionProvider {
                 id: "antigravity",
                 label: "Antigravity",
-                model: "antigravity",
+                model: "gemini-3.7-flash-high",
                 login: &[],
                 page: "https://antigravity.google/",
                 api_key_only: false,

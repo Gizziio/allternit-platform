@@ -8,6 +8,7 @@ import {
   Cloud,
   Coins,
   ComputerTower,
+  Desktop,
   Gauge,
   HardDrives,
   MapPin,
@@ -29,6 +30,10 @@ import {
   type HostedRuntime,
   type HostedRuntimeEntitlement,
 } from "@/lib/hosted-compute";
+import {
+  getDesktopUsageSummary,
+  type DesktopUsageSummary,
+} from "@/lib/computers-api";
 import { SectionHeading } from "@/components/settings/SectionHeading";
 import { EmptyState } from "@/components/settings/EmptyState";
 import { SkeletonRow } from "@/components/settings/SkeletonRow";
@@ -147,6 +152,7 @@ export function ComputeBillingPanel() {
   const [entitlement, setEntitlement] = useState<HostedRuntimeEntitlement | null>(null);
   const [runtimes, setRuntimes] = useState<HostedRuntime[]>([]);
   const [credits, setCredits] = useState<BillingCredits | null>(null);
+  const [desktopSummary, setDesktopSummary] = useState<DesktopUsageSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [confirmDestroyId, setConfirmDestroyId] = useState<string | null>(null);
@@ -162,6 +168,7 @@ export function ComputeBillingPanel() {
       setEntitlement(null);
       setRuntimes([]);
       setCredits(null);
+      setDesktopSummary(null);
       setLoading(false);
       return;
     }
@@ -178,6 +185,14 @@ export function ComputeBillingPanel() {
       setEntitlement(nextEntitlement);
       setRuntimes(nextRuntimes);
       setCredits(nextCredits);
+      const [nextEntitlement, nextRuntimes, nextDesktopSummary] = await Promise.all([
+        getHostedEntitlement(token),
+        listHostedRuntimes(token),
+        getDesktopUsageSummary().catch(() => null),
+      ]);
+      setEntitlement(nextEntitlement);
+      setRuntimes(nextRuntimes);
+      setDesktopSummary(nextDesktopSummary);
       const allowedRegions = nextEntitlement.allowedRegions?.length
         ? nextEntitlement.allowedRegions
         : ["lax"];
@@ -521,6 +536,42 @@ export function ComputeBillingPanel() {
             <span className="text-[10px] text-[var(--text-tertiary)]">Organization admin access required</span>
             <button type="button" className={QUIET_BUTTON_CLASS} onClick={() => openSettings("cloud-credentials")}>Manage enterprise BYOC</button>
           </div>
+        </ProductCard>
+
+        <ProductCard
+          icon={<Desktop size={18} />}
+          eyebrow="Metered add-on"
+          title="Desktop Cloud"
+          description="On-demand cloud desktops for bots. Billed per minute from your organization credits."
+          active={Boolean(desktopSummary && desktopSummary.total_minutes > 0)}
+        >
+          {!isLoaded || loading ? (
+            <SkeletonRow lines={2} />
+          ) : !isSignedIn ? (
+            <div className="flex items-center justify-between gap-3 rounded-lg border border-solid border-[var(--border-subtle)] px-3 py-2.5">
+              <span className="text-[11px] text-[var(--text-secondary)]">Sign in to view desktop cloud usage.</span>
+              <button type="button" className={QUIET_BUTTON_CLASS} onClick={() => openSettings("signin")}>Sign in</button>
+            </div>
+          ) : desktopSummary ? (
+            <div className="rounded-lg border border-solid border-[var(--border-subtle)] p-3 mb-3">
+              <div className="flex items-center justify-between gap-3 text-[10px] mb-2">
+                <span className="inline-flex items-center gap-1 text-[var(--text-secondary)]"><Gauge size={12} /> Desktop usage</span>
+                <span className="font-mono text-[var(--text-primary)]">
+                  {formatHours(desktopSummary.total_minutes * 60)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-3 text-[10px] text-[var(--text-tertiary)]">
+                <span>{desktopSummary.rows} provider{desktopSummary.rows === 1 ? '' : 's'}/OS</span>
+                <span>${desktopSummary.total_cost.toFixed(2)} estimated</span>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-lg border border-dashed border-[var(--border-subtle)] px-3 py-4 text-center mb-3">
+              <Desktop size={22} weight="thin" className="mx-auto text-[var(--text-tertiary)] mb-1.5" />
+              <div className="text-[11px] font-medium text-[var(--text-primary)]">No desktop usage yet</div>
+              <div className="text-[10px] text-[var(--text-tertiary)] mt-1">Cloud desktop minutes appear here after a bot session ends.</div>
+            </div>
+          )}
         </ProductCard>
       </div>
 

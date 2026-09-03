@@ -96,6 +96,14 @@ export type ViewType =
   | "budget-dashboard"
   | "replay-manager"
   | "prewarm-manager"
+  // Desktop-as-a-Service admin view
+  | "desktop-cloud"
+  // Customer Cloud Console
+  | "cloud-console"
+  // Model Gateway
+  | "model-gateway"
+  // Agent Cloud
+  | "agent-cloud"
   // Chat History views
   | "history"
   | "archived"
@@ -138,6 +146,7 @@ export type ViewType =
   // Agent Session Views (full-screen agent experiences)
   // "chat-agent-session" is a deprecated alias to the cowork workspace.
   | "chat-agent-session"
+  | "chat-group-session"
   | "cowork-agent-session"
   | "code-agent-session"
   | "design-agent-session"

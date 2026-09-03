@@ -157,7 +157,8 @@ def main():
 
     # 6: BYOK management endpoints
     rc, keys = api("GET", "/api/v1/inference/keys", paid_token)
-    check("inference keys list", rc == 0 and keys.get("keys") == [])
+    key_list = keys if isinstance(keys, list) else keys.get("keys", [])
+    check("inference keys list", rc == 0 and key_list == [])
     rc, body = api("PUT", "/api/v1/inference/keys", paid_token,
                    {"provider_id": "groq", "api_key": "sk-invalid-soak"})
     check("invalid BYOK key rejected", rc == 0 and "error" in body, json.dumps(body)[:120])

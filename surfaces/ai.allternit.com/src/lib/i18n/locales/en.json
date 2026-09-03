@@ -409,5 +409,56 @@
     "loading": "Loading content",
     "complete": "Complete",
     "error": "Error occurred"
+  },
+
+  "cloudConsole": {
+    "title": "Cloud Console",
+    "subtitle": "Manage compute resources, credits, and Private Fabric nodes",
+    "tabs": {
+      "resources": "Resources",
+      "credits": "Credits",
+      "fabric": "Private Fabric"
+    },
+    "createResource": "Create Resource",
+    "class": "Class",
+    "displayName": "Display name",
+    "terminate": "Terminate",
+    "balance": "Available Balance",
+    "transactions": "Transactions",
+    "enrollmentTokens": "Enrollment Tokens",
+    "createToken": "Create Token",
+    "copyToken": "Copy",
+    "copied": "Copied",
+    "nodes": "Nodes",
+    "approve": "Approve",
+    "reject": "Reject"
+  },
+  "modelGateway": {
+    "title": "Model Gateway",
+    "subtitle": "OpenAI-compatible inference endpoints backed by Allternit Cloud",
+    "tabs": {
+      "endpoint": "Endpoint",
+      "models": "Models",
+      "policy": "Model = Auto",
+      "playground": "Playground"
+    }
+  },
+  "agentCloud": {
+    "title": "Agent Cloud",
+    "subtitle": "Persistent agents with Fabric-scheduled runtimes",
+    "tabs": {
+      "agents": "Agents",
+      "create": "Create Agent"
+    },
+    "provision": "Provision",
+    "terminate": "Terminate",
+    "createAgent": "Create Agent",
+    "name": "Name",
+    "description": "Description",
+    "provider": "Provider",
+    "model": "Model",
+    "runtime": "Runtime",
+    "status": "Status",
+    "noAgents": "No agents yet."
   }
 }

@@ -345,6 +345,8 @@ struct CreateAgentBody {
     messaging_config: Option<serde_json::Value>,
     #[serde(default)]
     identity_channels: Option<serde_json::Value>,
+    #[serde(default)]
+    vm_operator: Option<serde_json::Value>,
 }
 
 fn json_to_string(value: Option<serde_json::Value>) -> Option<String> {
@@ -354,12 +356,13 @@ fn json_to_string(value: Option<serde_json::Value>) -> Option<String> {
 /// Merge bot/autonomous primitive metadata into `config` so the agent record
 /// round-trips even when dedicated columns are not present.
 fn merge_autonomous_primitives_into_config(
-    mut config: Option<serde_json::Value>,
+    config: Option<serde_json::Value>,
     is_bot: Option<bool>,
     bot_profile: Option<serde_json::Value>,
     connector_bindings: Option<serde_json::Value>,
     messaging_config: Option<serde_json::Value>,
     identity_channels: Option<serde_json::Value>,
+    vm_operator: Option<serde_json::Value>,
 ) -> Option<serde_json::Value> {
     let mut map = config.unwrap_or_else(|| json!({})).as_object_mut()?.clone();
     if let Some(v) = is_bot {
@@ -376,6 +379,9 @@ fn merge_autonomous_primitives_into_config(
     }
     if let Some(v) = identity_channels {
         map.insert("identityChannels".to_string(), v);
+    }
+    if let Some(v) = vm_operator {
+        map.insert("vmOperator".to_string(), v);
     }
     Some(json!(map))
 }
@@ -626,6 +632,7 @@ async fn create_agent(
         body.connector_bindings.clone(),
         body.messaging_config.clone(),
         body.identity_channels.clone(),
+        body.vm_operator.clone(),
     );
     let secret_refs = body.secret_refs.clone();
     let identity_channels = body.identity_channels.clone();
@@ -1309,6 +1316,8 @@ struct UpdateAgentBody {
     messaging_config: Option<serde_json::Value>,
     #[serde(default)]
     identity_channels: Option<serde_json::Value>,
+    #[serde(default)]
+    vm_operator: Option<serde_json::Value>,
 }
 
 async fn update_agent(
@@ -1359,7 +1368,8 @@ async fn update_agent(
         || body.bot_profile.is_some()
         || body.connector_bindings.is_some()
         || body.messaging_config.is_some()
-        || body.identity_channels.is_some();
+        || body.identity_channels.is_some()
+        || body.vm_operator.is_some();
     let secret_refs = body.secret_refs.clone();
     let identity_channels = body.identity_channels.clone();
     let config_from_body = body.config.clone();
@@ -1367,6 +1377,7 @@ async fn update_agent(
     let bot_profile = body.bot_profile.clone();
     let connector_bindings = body.connector_bindings.clone();
     let messaging_config = body.messaging_config.clone();
+    let vm_operator = body.vm_operator.clone();
 
     let result = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
@@ -1393,6 +1404,7 @@ async fn update_agent(
                 connector_bindings,
                 messaging_config,
                 identity_channels.clone(),
+                vm_operator,
             )
         } else {
             None

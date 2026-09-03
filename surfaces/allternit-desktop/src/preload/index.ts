@@ -8,6 +8,17 @@
 
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
 
+// Force the platform UI to call the same-origin /api route so the main process
+// can intercept it and proxy to the local Rust API with injected desktop auth.
+try {
+  const platformUrl = ipcRenderer.sendSync('app:get-platform-url');
+  if (typeof platformUrl === 'string' && platformUrl) {
+    (window as any).__ALLTERNIT_GATEWAY_URL__ = platformUrl;
+  }
+} catch (e) {
+  console.warn('[preload] Could not set __ALLTERNIT_GATEWAY_URL__:', e);
+}
+
 // ─── SDK / Backend URL ────────────────────────────────────────────────────────
 
 const sdkAPI = {
@@ -381,6 +392,13 @@ const shellAPI = {
   }>> => ipcRenderer.invoke('shell:get-office-host-status'),
   showSave: (options: unknown): Promise<unknown> => ipcRenderer.invoke('dialog:show-save', options),
   showOpen: (options: unknown): Promise<unknown> => ipcRenderer.invoke('dialog:show-open', options),
+  moveHud: (delta: { dx: number; dy: number }): Promise<void> =>
+    ipcRenderer.invoke('shell:move-hud', delta),
+  resizeHud: (size: { width?: number; height: number }): Promise<void> =>
+    ipcRenderer.invoke('shell:resize-hud', size),
+  closeHud: (): Promise<void> => ipcRenderer.invoke('shell:close-hud'),
+  toggleHud: (): Promise<void> => ipcRenderer.invoke('shell:toggle-hud'),
+  showHud: (): Promise<void> => ipcRenderer.invoke('shell:show-hud'),
 };
 
 // ─── Office programs ─────────────────────────────────────────────────────────

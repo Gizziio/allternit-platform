@@ -93,6 +93,7 @@
     "@ai-sdk/xai": "^3.0.48",
     "@allternit/office-suite": "workspace:*",
     "@allternit/mcp-apps-adapter": "workspace:*",
+    "@allternit/allternit-office-suite": "workspace:*",
     "@allternit/office-docs-app": "workspace:*",
     "@allternit/office-docx-engine": "workspace:*",
     "@allternit/office-file-parse": "workspace:*",

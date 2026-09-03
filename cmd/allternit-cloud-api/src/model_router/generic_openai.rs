@@ -125,10 +125,11 @@ where
 #[derive(Debug, Deserialize)]
 #[allow(dead_code)]
 struct OpenAiPricing {
-    /// OpenAI-style price field (per 1M tokens on hosts that emit it).
+    /// OpenAI-style price field (unit varies by host: per 1M on Together /
+    /// DeepInfra, per token on Groq — `per_token_price` disambiguates).
     #[serde(default, deserialize_with = "deserialize_price_string")]
     prompt: Option<f64>,
-    /// OpenAI-style completion price field (per 1M tokens on hosts that emit it).
+    /// OpenAI-style completion price field (unit varies by host, see above).
     #[serde(default, deserialize_with = "deserialize_price_string")]
     completion: Option<f64>,
     /// Together AI uses `input`/`output` instead of `prompt`/`completion`
@@ -144,22 +145,38 @@ struct OpenAiPricing {
     other: serde_json::Map<String, serde_json::Value>,
 }
 
+/// Normalize an upstream price to the per-TOKEN convention of `extra`.
+///
+/// Hosts disagree on the unit: Together/DeepInfra quote USD **per 1M
+/// tokens**, while Groq quotes USD **per token** (`"0.0000006"` for a
+/// $0.60/1M model). The two ranges never overlap in practice — the cheapest
+/// per-1M quote is ~$0.01 and the most expensive per-token quote is ~1e-4
+/// ($100/1M) — so a threshold cleanly disambiguates. Storing a per-1M value
+/// as-is makes the router meter ~1,000,000x UNDER (REVENUE-CRITICAL: the
+/// 2026-09 soak recorded $8.64e-11 for a call that should have metered
+/// ~$0.0001); dividing a per-token value again is the same bug in reverse.
+fn per_token_price(usd: f64) -> f64 {
+    if usd < 1e-4 {
+        usd
+    } else {
+        usd / 1_000_000.0
+    }
+}
+
 /// Insert `pricing` into `extra` as `prompt_price`/`completion_price`.
 ///
-/// Generic OpenAI hosts (Together, Groq, Fireworks, DeepInfra) quote prices
-/// in USD **per 1M tokens**; the extras convention is per-TOKEN (OpenRouter,
-/// see `ModelRouter::retail_prices`). Normalize here — storing per-1M prices
-/// makes the router mark up and meter ~1,000,000x (REVENUE-CRITICAL: a
-/// 42-token call once metered $43.68).
+/// The extras convention is per-TOKEN (OpenRouter, see
+/// `ModelRouter::retail_prices`); `per_token_price` normalizes whichever
+/// unit the host quoted.
 fn insert_pricing_extras(
     extra: &mut serde_json::Map<String, serde_json::Value>,
     pricing: &OpenAiPricing,
 ) {
-    let prompt_price = pricing.prompt.or(pricing.input).map(|v| v / 1_000_000.0);
+    let prompt_price = pricing.prompt.or(pricing.input).map(per_token_price);
     let completion_price = pricing
         .completion
         .or(pricing.output)
-        .map(|v| v / 1_000_000.0);
+        .map(per_token_price);
     if let Some(prompt) = prompt_price {
         extra
             .entry("prompt_price".to_string())
@@ -439,9 +456,32 @@ mod tests {
         assert!((completion - 1.20e-6).abs() < 1e-15, "per-1M must become per-token, got {completion}");
     }
 
+    /// Regression: Groq quotes pricing per TOKEN (`"0.0000006"` for a
+    /// $0.60/1M model). Dividing it again made the router meter ~1,000,000x
+    /// under retail (2026-09 soak: $8.64e-11 recorded for a real call).
     #[test]
-    fn pricing_extras_leave_existing_values_untouched() {
+    fn pricing_extras_are_normalized_from_per_token_when_host_quotes_per_token() {
         let pricing = OpenAiPricing {
+            prompt: Some(0.0000006),
+            completion: Some(0.000003),
+            input: None,
+            output: None,
+            other: serde_json::Map::new(),
+        };
+        let mut extra = serde_json::Map::new();
+        insert_pricing_extras(&mut extra, &pricing);
+
+        let prompt = extra.get("prompt_price").and_then(|v| v.as_f64()).unwrap();
+        let completion = extra
+            .get("completion_price")
+            .and_then(|v| v.as_f64())
+            .unwrap();
+        assert!((prompt - 6.0e-7).abs() < 1e-18, "per-token must stay per-token, got {prompt}");
+        assert!((completion - 3.0e-6).abs() < 1e-18, "per-token must stay per-token, got {completion}");
+    }
+
+    #[test]
+    fn pricing_extras_leave_existing_values_untouched() {        let pricing = OpenAiPricing {
             prompt: Some(0.88),
             completion: None,
             input: None,

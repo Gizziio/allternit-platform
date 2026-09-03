@@ -414,6 +414,9 @@ export function ChatComposer({
   const [composerFocused, setComposerFocused] = useState(false);
   const lastAgentFetchPulseRef = useRef<number | null>(null);
   const openClawDiscoveryRequestRef = useRef(0);
+  // Ref for the latest submitMessage so the voice-mode effect (declared
+  // lexically earlier) can call it without hitting the temporal dead zone.
+  const submitMessageRef = useRef<(rawText: string) => void>(() => {});
   const showAgentRailGuide = Boolean(
     agentModeSurface && agentModeSurface !== 'code',
   );
@@ -1080,7 +1083,7 @@ export function ChatComposer({
       return;
     }
 
-    void submitMessage(spokenInput);
+    submitMessageRef.current(spokenInput);
 
     setVoiceModeActive(false);
     clearVoiceTranscript();
@@ -1089,7 +1092,6 @@ export function ChatComposer({
     requiresAgentSelection,
     selectedSurfaceAgent,
     setInteractionMode,
-    submitMessage,
     voiceModeActive,
     voiceTranscript,
   ]);
@@ -1188,6 +1190,57 @@ export function ChatComposer({
     loadCharacterLayer,
     setSelectedSurfaceAgent,
   ]);
+
+  // Core send path shared by text submit and voice submit. Resolves inline
+  // @mentions, hands them off, and routes the enriched prompt to the right
+  // consumer (browser agent, MiroFish, agent-mode send, or plain chat).
+  const submitMessage = useCallback(async (rawText: string) => {
+    let messageText = rawText;
+
+    // Inline @mention handoff: resolve, execute, and append replies before
+    // sending to the active agent.
+    const inlineMentions = parseMentions(messageText);
+    if (inlineMentions.length > 0) {
+      try {
+        const handoff = await runMentionHandoff(messageText, selectedSurfaceAgent ?? undefined);
+        messageText = `${handoff.cleanText}${handoff.handoffNote}`;
+      } catch (err) {
+        // If handoff fails, send the original text with a note so the user
+        // knows the mention could not be routed.
+        messageText = `${messageText}\n\n[@mention routing failed: ${err instanceof Error ? err.message : String(err)}]`;
+      }
+    }
+
+    const enrichedInput = buildEnrichedInput(messageText);
+
+    if (selectedModeId === 'computer-use') {
+      useBrowserAgentStore.getState().runAcuTask(enrichedInput);
+    }
+
+    if (selectedModeId === 'swarms' && selectedSwarmSubMode === 'population-simulation') {
+      // MiroFish's single entry point is this composer: the prompt goes to
+      // the results-only panel below, which interprets and runs it — never
+      // through the normal agent-mode send.
+      useMiroFishRunStore.getState().requestRun(enrichedInput);
+    } else if (onAgentSend && agentModeSurface && (agentModeEnabled || isCanonicalAgentMode(selectedModeId))) {
+      onAgentSend(enrichedInput, selectedModeId ? { modeId: selectedModeId as CanonicalAgentModeId, templateTitle: selectedTemplateTitle } : undefined);
+    } else {
+      onSend(enrichedInput);
+    }
+  }, [
+    agentModeEnabled,
+    agentModeSurface,
+    buildEnrichedInput,
+    isCanonicalAgentMode,
+    onAgentSend,
+    onSend,
+    runMentionHandoff,
+    selectedModeId,
+    selectedSurfaceAgent,
+    selectedSwarmSubMode,
+    selectedTemplateTitle,
+  ]);
+  submitMessageRef.current = submitMessage;
 
   const handleSubmit = async () => {
     if (!canSubmit) return;

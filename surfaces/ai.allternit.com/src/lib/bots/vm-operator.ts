@@ -15,6 +15,12 @@ import type { AgentVMOperatorConfig } from '@/lib/agents/agent.types';
 import { API_BASE_URL } from '@/lib/agents/api-config';
 import { useChatSessionStore } from '@/views/chat/ChatSessionStore';
 import { createModuleLogger } from '@/lib/logger';
+import {
+  createComputer,
+  listComputers,
+  type Computer,
+  type CreateComputerResponse,
+} from '@/lib/computers-api';
 
 const logger = createModuleLogger('VMOperator');
 
@@ -73,48 +79,110 @@ function notConfigured<T>(): VMOperatorResult<T> {
   };
 }
 
+function mapStatus(status: string): Sandbox['status'] {
+  switch (status) {
+    case 'creating':
+      return 'creating';
+    case 'running':
+      return 'running';
+    case 'stopped':
+      return 'stopped';
+    case 'error':
+    default:
+      return 'error';
+  }
+}
+
+function mapComputerToSandbox(computer: Computer, agentId: string): Sandbox {
+  return {
+    id: computer.id,
+    agentId: computer.bot_id ?? agentId,
+    status: mapStatus(computer.status),
+    provider: computer.provider,
+    persistence:
+      (computer as unknown as { persistence?: Sandbox['persistence'] }).persistence ?? undefined,
+    createdAt: computer.created_at,
+    lastActiveAt: computer.updated_at,
+  };
+}
+
+function mapCreateResponseToSandbox(
+  agentId: string,
+  config: AgentVMOperatorConfig,
+  response: CreateComputerResponse,
+): Sandbox {
+  return {
+    id: response.id || response.sandbox_id || '',
+    agentId,
+    status: mapStatus(response.status),
+    provider: response.provider ?? config.provider,
+    persistence: response.persistence ?? config.persistence,
+    createdAt: new Date().toISOString(),
+  };
+}
+
 /**
  * Create a sandbox for the given bot/agent.
  *
- * In a production deployment this calls POST /sandboxes on the configured
- * sandbox server. Until then it returns a deterministic "not configured"
- * result.
+ * Provisions through the unified `/api/v1/computers` control plane so cloud
+ * desktops are owned by the bot and tracked in the org credit ledger.
  */
+async function provisionCloudDesktop(
+  botId: string,
+  config: AgentVMOperatorConfig,
+): Promise<VMOperatorResult<Sandbox>> {
+  const provision = await provisionBotDesktop(botId);
+  if (!provision.ok || !provision.data) {
+    return {
+      ok: false,
+      error: provision.error ?? 'Cloud desktop provisioning failed',
+    };
+  }
+
+  const { sandbox_id, provider, status } = provision.data;
+  let vncUrl: string | undefined;
+  const statusRes = await getBotDesktopStatus(botId, sandbox_id);
+  if (statusRes.ok && statusRes.data?.ws_url) {
+    vncUrl = statusRes.data.ws_url;
+  }
+
+  return {
+    ok: true,
+    data: {
+      id: sandbox_id,
+      agentId: botId,
+      status: status === 'running' ? 'running' : 'creating',
+      provider: provider || 'cloud-desktop',
+      vncUrl,
+      persistence: config.persistence ?? 'session',
+      createdAt: new Date().toISOString(),
+    },
+  };
+}
+
 export async function createSandbox(
   agentId: string,
   config: AgentVMOperatorConfig,
 ): Promise<VMOperatorResult<Sandbox>> {
-  const baseURL = getSandboxBaseURL();
-  if (!baseURL) {
-    logger.debug({ agentId }, 'Sandbox runtime not configured; skipping createSandbox');
+  if (config.provider !== 'cloud-desktop') {
+    const baseURL = getSandboxBaseURL();
+    if (!baseURL) {
+      logger.debug({ agentId }, 'Sandbox runtime not configured; skipping createSandbox');
+      return notConfigured<Sandbox>();
+    }
+    // Non-cloud-desktop providers are not yet supported through the unified API.
     return notConfigured<Sandbox>();
   }
 
   try {
-    const res = await fetch(`${baseURL}/sandboxes`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        agent_id: agentId,
-        provider: config.provider,
-        image: config.image,
-        resources: config.resources,
-        network_policy: config.networkPolicy,
-        persistence: config.persistence,
-        timeout_minutes: config.timeoutMinutes,
-        vnc_enabled: config.vncEnabled,
-        env: config.env,
-        command: config.command,
-      }),
+    const response = await createComputer({
+      kind: config.computerKind ?? 'cloud_desktop',
+      bot_id: agentId,
+      template_id: config.templateId,
+      persistence: config.persistence,
     });
-
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`Sandbox server returned ${res.status}: ${text}`);
-    }
-
-    const data = (await res.json()) as Sandbox;
-    return { ok: true, data };
+    const sandbox = mapCreateResponseToSandbox(agentId, config, response);
+    return { ok: true, data: sandbox };
   } catch (err) {
     logger.error({ err, agentId }, 'Failed to create sandbox');
     return { ok: false, error: err instanceof Error ? err.message : 'Sandbox creation failed' };
@@ -130,37 +198,38 @@ export async function createSandbox(
  */
 export async function getSandboxForAgent(
   agentId: string,
+  config?: AgentVMOperatorConfig,
 ): Promise<VMOperatorResult<Sandbox>> {
-  const baseURL = getSandboxBaseURL();
-  if (!baseURL) {
-    logger.debug({ agentId }, 'Sandbox runtime not configured; skipping getSandboxForAgent');
+  if (config && config.provider !== 'cloud-desktop') {
+    const baseURL = getSandboxBaseURL();
+    if (!baseURL) {
+      logger.debug({ agentId }, 'Sandbox runtime not configured; skipping getSandboxForAgent');
+      return notConfigured<Sandbox>();
+    }
+    // Non-cloud-desktop providers are not yet supported through the unified API.
     return notConfigured<Sandbox>();
   }
 
   try {
-    const res = await fetch(
-      `${baseURL}/sandboxes?agent_id=${encodeURIComponent(agentId)}`,
-    );
-
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`Sandbox server returned ${res.status}: ${text}`);
-    }
-
-    const list = (await res.json()) as Sandbox[];
-    const active = list
-      .filter((s) => s.agentId === agentId && (s.status === 'running' || s.status === 'creating'))
+    const computers = await listComputers({ bot_id: agentId, kind: 'cloud_desktop' });
+    const active = computers
+      .filter(
+        (c) =>
+          c.bot_id === agentId &&
+          c.status !== 'deleted' &&
+          (c.status === 'running' || c.status === 'creating'),
+      )
       .sort(
         (a, b) =>
-          new Date(b.lastActiveAt || b.createdAt).getTime() -
-          new Date(a.lastActiveAt || a.createdAt).getTime(),
+          new Date(b.updated_at || b.created_at).getTime() -
+          new Date(a.updated_at || a.created_at).getTime(),
       )[0];
 
     if (!active) {
       return { ok: false, error: `No active sandbox found for agent ${agentId}` };
     }
 
-    return { ok: true, data: active };
+    return { ok: true, data: mapComputerToSandbox(active, agentId) };
   } catch (err) {
     logger.error({ err, agentId }, 'Failed to find sandbox for agent');
     return { ok: false, error: err instanceof Error ? err.message : 'Sandbox lookup failed' };
@@ -630,3 +699,6 @@ export async function getBotDesktopScreenshot(
     return { ok: false, error: err instanceof Error ? err.message : 'Screenshot failed' };
   }
 }
+// Re-export unified computer lifecycle helpers so callers can manage the
+// provisioned sandbox through the same control plane.
+export { deleteComputer } from '@/lib/computers-api';

@@ -9,7 +9,7 @@
  * resolved at session start and passed through session metadata.
  */
 
-import type { HarnessConfig, AgentVMOperatorConfig, CharacterLayerConfig } from '@/lib/agents/agent.types';
+import type { Agent, HarnessConfig, AgentVMOperatorConfig, CharacterLayerConfig } from '@/lib/agents/agent.types';
 import type { ResolvedSecret } from '@/lib/agents/agent-secrets-resolver';
 import type { ResolvedConnectorCredential } from '@/lib/agents/agent-connectors-resolver';
 
@@ -88,6 +88,11 @@ function vmOperatorToEnv(vmOperator?: AgentVMOperatorConfig): Record<string, str
   env.ALLTERNIT_VM_OPERATOR_ENABLED = vmOperator.enabled ? 'true' : 'false';
   if (vmOperator.enabled) {
     env.ALLTERNIT_VM_PROVIDER = vmOperator.provider;
+    if (vmOperator.computerKind) env.ALLTERNIT_VM_COMPUTER_KIND = vmOperator.computerKind;
+    if (vmOperator.templateId) env.ALLTERNIT_VM_TEMPLATE_ID = vmOperator.templateId;
+    if (vmOperator.provider === 'cloud-desktop') {
+      env.ALLTERNIT_VM_CLOUD_DESKTOP_ENDPOINT = vmOperator.endpoint ?? 'http://localhost:57110';
+    }
     if (vmOperator.image) env.ALLTERNIT_VM_IMAGE = vmOperator.image;
     if (vmOperator.allowedActions?.length) {
       env.ALLTERNIT_VM_ALLOWED_ACTIONS = vmOperator.allowedActions.join(',');
@@ -148,4 +153,73 @@ export function buildBotRuntimeEnv(input: BotRuntimeEnvInput): BotRuntimeEnv {
  */
 export function botRuntimeEnvToEnvMap(runtimeEnv?: BotRuntimeEnv): Record<string, string> {
   return runtimeEnv?.env ?? {};
+}
+
+async function resolveLocalBrainModel(): Promise<string | undefined> {
+  try {
+    const res = await fetch('/api/local-brain');
+    if (!res.ok) return undefined;
+    const data = (await res.json()) as {
+      ollamaRunning?: boolean;
+      modelId?: string;
+      pulledModels?: string[];
+    };
+    if (data.ollamaRunning && data.modelId) {
+      return `ollama/${data.modelId}`;
+    }
+    if (data.ollamaRunning && data.pulledModels?.length) {
+      return `ollama/${data.pulledModels[0]}`;
+    }
+  } catch {
+    // ignore
+  }
+  return undefined;
+}
+
+function resolveByokProviderId(byok: NonNullable<Agent['harness']>['byok']): string | undefined {
+  if (!byok) return undefined;
+  if (byok.anthropic?.apiKey) return 'anthropic';
+  if (byok.openai?.apiKey) return 'openai';
+  if (byok.google?.apiKey) return 'google';
+  return undefined;
+}
+
+/**
+ * Resolve the runtime model reference (`provider/model`) for an agent from its
+ * harness selection. The brain stays harness-selected; this just produces the
+ * matching provider/model ref that the Gizzi runtime expects.
+ *
+ * Falls back to a local Ollama brain only when the agent has no harness
+ * configured. This avoids the old Kimi-CLI brain hack where the provider was
+ * inferred from the subprocess command.
+ */
+export async function resolveModelRef(agent: Agent | undefined): Promise<string | undefined> {
+  const harness = agent?.harness;
+  if (!harness) {
+    return resolveLocalBrainModel();
+  }
+
+  switch (harness.mode) {
+    case 'local': {
+      return resolveLocalBrainModel();
+    }
+    case 'byok': {
+      const providerId = resolveByokProviderId(harness.byok);
+      if (!providerId) return undefined;
+      const modelId = agent.model && agent.model !== 'default' ? agent.model : 'default';
+      return `${providerId}/${modelId}`;
+    }
+    case 'subprocess': {
+      const providerId = agent.provider || 'subprocess';
+      const modelId = agent.model && agent.model !== 'default' ? agent.model : 'default';
+      return `${providerId}/${modelId}`;
+    }
+    case 'cloud':
+    default: {
+      if (agent.provider && agent.model && agent.model !== 'default') {
+        return `${agent.provider}/${agent.model}`;
+      }
+      return undefined;
+    }
+  }
 }

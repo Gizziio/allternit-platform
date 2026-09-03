@@ -11,7 +11,7 @@ use axum::{
     Router,
 };
 use serde::Deserialize;
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 use tracing::info;
 
 use crate::gizzi_chat_stream::stream_chat_through_gizzi;
@@ -32,6 +32,8 @@ pub struct ChatRequest {
     #[serde(rename = "agentName")]
     pub agent_name: Option<String>,
     pub harness: Option<serde_json::Value>,
+    #[serde(rename = "runtimeEnv")]
+    pub runtime_env: Option<HashMap<String, String>>,
     #[serde(flatten)]
     pub context: serde_json::Value,
 }
@@ -73,6 +75,7 @@ async fn handle_agent_chat(
         request.agent_model.as_deref(),
         request.agent_name.as_deref(),
         request.harness.as_ref(),
+        request.runtime_env.as_ref(),
     )
     .await
 }

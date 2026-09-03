@@ -1,0 +1,97 @@
+name: Deploy Desktop Cloud VPS
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'cmd/allternit-api/**'
+      - 'cmd/allternit-computer-cloud/**'
+      - 'cmd/allternit-mux/**'
+      - 'infrastructure/vps-desktop-cloud/**'
+      - 'surfaces/ai.allternit.com/src/views/desktop-cloud/**'
+      - 'surfaces/ai.allternit.com/src/lib/desktop-cloud-api.ts'
+      - 'surfaces/ai.allternit.com/tests/desktop-cloud.spec.ts'
+      - '.github/workflows/deploy-desktop-cloud-vps.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy-and-e2e:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-action@stable
+
+      - name: Build release binary
+        run: cargo build -p allternit-api --release
+
+      - name: Install SSH key
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/vps.key
+          chmod 600 ~/.ssh/vps.key
+          cat >> ~/.ssh/config <<EOF
+          Host vps
+            HostName $VPS_HOST
+            User root
+            IdentityFile ~/.ssh/vps.key
+            StrictHostKeyChecking no
+          EOF
+
+      - name: Deploy binary and service
+        run: |
+          ssh vps "mkdir -p /opt/allternit-src/target/release"
+          scp target/release/allternit-api vps:/opt/allternit-src/target/release/allternit-api
+          ssh vps "cd /opt/allternit-src/infrastructure/vps-desktop-cloud && ./deploy.sh"
+
+      - name: Extract self-hosted setup token
+        id: token
+        run: |
+          TOKEN=$(ssh vps "grep '^ALLTERNIT_SELF_HOSTED_SETUP_TOKEN=' /etc/allternit-api/api.env | cut -d= -f2")
+          echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
+
+      - name: Seed e2e bot and templates
+        env:
+          SETUP_TOKEN: ${{ steps.token.outputs.token }}
+        run: |
+          ssh vps "cd /opt/allternit-src/infrastructure/vps-desktop-cloud && SELF_HOSTED_TOKEN='$SETUP_TOKEN' ./seed-e2e.sh"
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install frontend dependencies
+        working-directory: surfaces/ai.allternit.com
+        run: pnpm install
+
+      - name: Install Playwright browsers
+        working-directory: surfaces/ai.allternit.com
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run remote Desktop Cloud e2e test
+        working-directory: surfaces/ai.allternit.com
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          SETUP_TOKEN: ${{ steps.token.outputs.token }}
+        run: |
+          VITE_ALLTERNIT_GATEWAY_URL="https://$VPS_HOST" \
+          VITE_ALLTERNIT_SELF_HOSTED_TOKEN="$SETUP_TOKEN" \
+          DESKTOP_CLOUD_TEMPLATE_LABEL="Ubuntu 24.04 Desktop (linux)" \
+          pnpm exec playwright test tests/desktop-cloud.spec.ts --project chromium --reporter=list
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: surfaces/ai.allternit.com/test-results/
+          retention-days: 3

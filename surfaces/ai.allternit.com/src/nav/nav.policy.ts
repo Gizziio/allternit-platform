@@ -33,6 +33,7 @@ export const DEFAULT_POLICIES: Record<ViewType, SpawnPolicy> = {
   // "chat-agent-session" is a deprecated alias to the cowork workspace now that
   // the old single-agent chat UI was removed.
   "chat-agent-session": { singleton: false, maxInstances: 10, allowNew: true, surface: "view", ownsTabs: false },
+  "chat-group-session": { singleton: false, maxInstances: 10, allowNew: true, surface: "view", ownsTabs: false },
   "cowork-agent-session": { singleton: false, maxInstances: 10, allowNew: true, surface: "view", ownsTabs: false },
   "code-agent-session": { singleton: false, maxInstances: 10, allowNew: true, surface: "view", ownsTabs: false },
   "design-agent-session": { singleton: false, maxInstances: 10, allowNew: true, surface: "view", ownsTabs: false },
@@ -128,6 +129,15 @@ export const DEFAULT_POLICIES: Record<ViewType, SpawnPolicy> = {
   'budget-dashboard': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   'replay-manager': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   'prewarm-manager': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
+
+  // Desktop-as-a-Service admin view
+  'desktop-cloud': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
+  // Customer Cloud Console
+  'cloud-console': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
+  // Model Gateway
+  'model-gateway': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
+  // Agent Cloud
+  'agent-cloud': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   // Chat History views
   history: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   archived: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },

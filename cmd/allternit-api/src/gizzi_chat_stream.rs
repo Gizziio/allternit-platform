@@ -16,7 +16,7 @@ use axum::{
 use futures::StreamExt;
 use reqwest::Client;
 use serde_json::json;
-use std::{convert::Infallible, time::Duration};
+use std::{collections::HashMap, convert::Infallible, time::Duration};
 use tracing::{info, warn};
 
 /// Parse a frontend model reference into a Gizzi `{ providerID, modelID }`
@@ -352,6 +352,7 @@ pub async fn stream_chat_through_gizzi(
     agent_model: Option<&str>,
     _agent_name: Option<&str>,
     harness: Option<&serde_json::Value>,
+    runtime_env: Option<&HashMap<String, String>>,
 ) -> Response {
     let base = gizzi_base.trim_end_matches('/');
     // Use the auth-aware Gizzi client so password-protected Gizzi daemons get
@@ -431,6 +432,19 @@ pub async fn stream_chat_through_gizzi(
         "parts": [{ "type": "text", "text": message }],
         "model": model,
     });
+    // Forward the agent harness and frontend runtime env so the Gizzi
+    // provider/session env includes variables such as ALLTERNIT_VM_*.
+    if let Some(harness) = harness {
+        message_payload["harness"] = harness.clone();
+    }
+    if let Some(runtime_env) = runtime_env {
+        message_payload["runtimeEnv"] = serde_json::Value::Object(
+            runtime_env
+                .iter()
+                .map(|(k, v)| (k.clone(), serde_json::Value::String(v.clone())))
+                .collect(),
+        );
+    }
     // "+" prefix: APPEND to gizzi's default assembled system prompt rather
     // than replace it.
     if let Some(system) = system.map(str::trim).filter(|s| !s.is_empty()) {

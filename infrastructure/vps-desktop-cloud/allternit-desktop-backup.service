@@ -1,0 +1,11 @@
+[Unit]
+Description=Allternit Desktop Cloud — backup running desktops to S3
+After=network-online.target incus.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/allternit-api/bin/backup-all-running.sh
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=allternit-desktop-backup

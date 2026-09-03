@@ -44,6 +44,7 @@ import { useGroupChatStore } from '@/lib/bots/group-chat.store';
 import { useUnifiedRoster } from '@/lib/bots/use-unified-roster';
 import type { GroupChatMember } from '@/lib/bots/group-chat.types';
 
+const GroupChatSessionView = lazy(() => import('../views/bots/GroupChatSessionView').then(m => ({ default: m.GroupChatSessionView })));
 const SwarmADE             = lazy(() => import('../views/swarm').then(m => ({ default: m.SwarmADE })));
 const AllternitCanvasView  = lazy(() => import('../views/AllternitCanvasView').then(m => ({ default: m.AllternitCanvasView })));
 const CoworkRoot           = lazy(() => import('../views/cowork/CoworkRoot').then(m => ({ default: m.CoworkRoot })));
@@ -102,6 +103,10 @@ const BudgetDashboardView    = lazy(() => import('../views/runtime/BudgetDashboa
 const ReplayManagerView      = lazy(() => import('../views/runtime/ReplayManagerView').then(m => ({ default: m.ReplayManagerView })));
 const PrewarmManagerView     = lazy(() => import('../views/runtime/PrewarmManagerView').then(m => ({ default: m.PrewarmManagerView })));
 const RuntimeOperationsView  = lazy(() => import('../views/runtime/RuntimeOperationsView').then(m => ({ default: m.RuntimeOperationsView })));
+const DesktopCloudAdminView  = lazy(() => import('../views/desktop-cloud/DesktopCloudAdminView').then(m => ({ default: m.DesktopCloudAdminView })));
+const CloudConsoleView       = lazy(() => import('../views/cloud-console/CloudConsoleView').then(m => ({ default: m.CloudConsoleView })));
+const ModelGatewayView       = lazy(() => import('../views/model-gateway/ModelGatewayView').then(m => ({ default: m.ModelGatewayView })));
+const AgentCloudView         = lazy(() => import('../views/agent-cloud/AgentCloudView').then(m => ({ default: m.AgentCloudView })));
 const HistoryView            = lazy(() => import('../views/HistoryView').then(m => ({ default: m.HistoryView })));
 const ArchivedView           = lazy(() => import('../views/ArchivedView').then(m => ({ default: m.ArchivedView })));
 const RecentsView            = lazy(() => import('../views/RecentsView').then(m => ({ default: m.RecentsView })));
@@ -411,7 +416,7 @@ export function getShellViewRegistry(handlers: {
     ),
     'agent-hub': ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Agent | Bot Hub" />}>
-        <AgentHub onSessionStarted={(sessionId, botId) => open('bot-chat-session', { sessionId, botId })} />
+        <AgentHub onSessionStarted={(sessionId) => open('cowork-agent-session', { sessionId })} />
       </ErrorBoundary>
     ),
     'bot-inbox': ({ context }: { context?: ViewContext }) => {
@@ -795,6 +800,26 @@ export function getShellViewRegistry(handlers: {
         <PrewarmManagerView />
       </ErrorBoundary>
     ),
+    "desktop-cloud": ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Desktop Cloud" />}>
+        <DesktopCloudAdminView />
+      </ErrorBoundary>
+    ),
+    "cloud-console": ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Cloud Console" />}>
+        <CloudConsoleView />
+      </ErrorBoundary>
+    ),
+    "model-gateway": ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Model Gateway" />}>
+        <ModelGatewayView />
+      </ErrorBoundary>
+    ),
+    "agent-cloud": ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Agent Cloud" />}>
+        <AgentCloudView />
+      </ErrorBoundary>
+    ),
     history: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="History" />}>
         <HistoryView />
@@ -953,6 +978,27 @@ export function getShellViewRegistry(handlers: {
       </ErrorBoundary>
     ),
     'cowork-agent-session': ({ context }: { context?: ViewContext }) => {
+    'chat-group-session': ({ context }: { context?: ViewContext }) => {
+      const ctx = context?.context as { sessionId?: string; originView?: ViewType } | undefined;
+      React.useEffect(() => {
+        if (ctx?.sessionId) {
+          useCoworkSessionStore.getState().setActiveSession(ctx.sessionId);
+        }
+      }, [ctx?.sessionId]);
+      return (
+        <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Cowork Agent Workspace" />}>
+          <CoworkRoot />
+        <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Group Chat" />}>
+          <GroupChatSessionView
+            sessionId={ctx?.sessionId ?? context!.viewId}
+            onClose={() => open(ctx?.originView ?? 'chat')}
+          />
+        </ErrorBoundary>
+      );
+    },
+    // Deprecated alias: the old single-agent chat UI was removed. Chat-mode
+    // sessions now open in the group/cowork workspace.
+    'chat-agent-session': ({ context }: { context?: ViewContext }) => {
       const ctx = context?.context as { sessionId?: string; originView?: ViewType } | undefined;
       React.useEffect(() => {
         if (ctx?.sessionId) {

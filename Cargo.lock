@@ -244,6 +244,7 @@ dependencies = [
  "aes-gcm 0.10.3",
  "allternit-agent-system-rails",
  "allternit-apple-vf-driver",
+ "allternit-computer-cloud",
  "allternit-cowork-runtime",
  "allternit-cowork-scheduler",
  "allternit-driver-interface",
@@ -251,6 +252,7 @@ dependencies = [
  "allternit-gc-agents",
  "allternit-opensandbox-driver",
  "allternit-session-manager",
+ "allternitos-cloud-contracts",
  "anyhow",
  "async-stream",
  "async-trait",
@@ -573,6 +575,31 @@ dependencies = [
  "tokio",
  "tokio-test",
  "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "allternit-computer-cloud"
+version = "0.1.0"
+dependencies = [
+ "allternit-driver-interface",
+ "async-trait",
+ "axum",
+ "base64 0.22.1",
+ "chrono",
+ "http 1.4.2",
+ "http-body-util",
+ "mockito",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tokio-test",
+ "tower 0.5.3",
+ "tracing",
+ "tracing-subscriber",
+ "urlencoding",
  "uuid",
 ]
 
@@ -2324,6 +2351,17 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "uuid",
+]
+
+[[package]]
+name = "allternitos-cloud-contracts"
+version = "0.1.0-dev"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
 ]
 
 [[package]]
@@ -10201,6 +10239,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b838eba278d213a8beaf485bd313fd580ca4505a00d5871caeb1457c55322cae"
 dependencies = [
  "bitflags 2.13.0",
+ "chrono",
  "fallible-iterator",
  "fallible-streaming-iterator",
  "hashlink 0.9.1",

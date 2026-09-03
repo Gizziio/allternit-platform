@@ -56,6 +56,7 @@ import {
   getGuideStatus,
   waitForGuideDismissed,
   runPermissionOnboarding,
+  invalidatePermissionCache,
 } from './permission-guide.js';
 import { featureFlagManager } from './feature-flags.js';
 import { persistedState } from './persisted-state.js';
@@ -211,6 +212,7 @@ let annotationWindow: BrowserWindow | null = null;
 let remoteControlWindow: BrowserWindow | null = null;
 /** Active session id reported by the HUD renderer for app-window handoff. */
 let hudSessionId: string | null = null;
+let remoteControlWindow: BrowserWindow | null = null;
 /** One office editor window per target (docs/sheets/slides/pdf/launcher). */
 const officeWindows = new Map<OfficeTarget, BrowserWindow>();
 let splashWindow: BrowserWindow | null = null;
@@ -227,6 +229,7 @@ let pushServiceState = () => {
   splashWindow?.webContents.send('services', serviceState);
 };
 let miniWindow: BrowserWindow | null = null;
+let hudWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let activePlatformUrl: string = isDev ? URLS.DEV_UI : 'https://platform.allternit.com';
 
@@ -236,6 +239,10 @@ const QUICK_CHAT_HOTKEY = 'CommandOrControl+Shift+A';
 // muscle memory expects it.
 const HUD_HOTKEY = 'CommandOrControl+Shift+H';
 const HUD_HOTKEY_FALLBACK = 'Alt+Shift+H';
+const HUD_HOTKEY_PRIMARY = 'CommandOrControl+Shift+H';
+const HUD_HOTKEY_ALT = 'Alt+Shift+H';
+const HUD_DEFAULT_WIDTH = 720;
+const HUD_DEFAULT_HEIGHT = 72;
 const MINI_WINDOW_WIDTH = 520;
 const MINI_WINDOW_HEIGHT = 600;
 /** Resolved backend URL — set once the app initializes. Used by sdk:get-backend-url IPC. */
@@ -417,6 +424,7 @@ async function getOfficeAddinManager(): Promise<OfficeAddinManager> {
 
 interface StoreSchema {
   windowBounds: { width: number; height: number; x?: number; y?: number };
+  hudBounds: { width: number; height: number; x?: number; y?: number };
   theme: 'light' | 'dark' | 'system';
   backend: {
     mode: 'bundled' | 'remote' | 'development';
@@ -441,9 +449,12 @@ interface StoreSchema {
 const store = new Store<StoreSchema>({
   defaults: {
     windowBounds: { width: 1400, height: 900 },
+    hudBounds: { width: HUD_DEFAULT_WIDTH, height: HUD_DEFAULT_HEIGHT },
     theme: 'system',
     backend: {
-      mode: 'bundled',
+      // Dev builds should default to development mode so a fresh profile opens
+      // the local platform without the bundled-mode onboarding wizard.
+      mode: isDev ? 'development' : 'bundled',
     },
     onboardingComplete: false,
     startupWizardCompleted: false,
@@ -494,14 +505,18 @@ function createMainWindow(): BrowserWindow {
     },
   });
 
-  // Redirect all /api/* requests from the platform URL to the allternit-api
-  // custom protocol. The protocol handler (registered globally) proxies to
-  // the local API URL and injects auth headers. This avoids mixed-content
-  // blocking without allowRunningInsecureContent.
+  // Redirect all /api/* requests from the platform URL (or the public gateway)
+  // to the allternit-api custom protocol. The protocol handler (registered
+  // globally) proxies to the local API URL and injects auth headers. This avoids
+  // mixed-content blocking without allowRunningInsecureContent.
   const platformOrigin = activePlatformUrl;
+  const publicApiOrigin = 'https://api.allternit.com';
   window.webContents.session.webRequest.onBeforeRequest((details, callback) => {
-    if (details.url.startsWith(`${platformOrigin}/api/`)) {
-      const redirectURL = details.url.replace(platformOrigin, `allternit-api://localhost:${PORTS.API}`);
+    const apiPrefixes = [`${platformOrigin}/api/`, `${publicApiOrigin}/api/`, `${publicApiOrigin}/api/v1/`];
+    const matchedPrefix = apiPrefixes.find((prefix) => details.url.startsWith(prefix));
+    if (matchedPrefix) {
+      const originToReplace = matchedPrefix.startsWith(publicApiOrigin) ? publicApiOrigin : platformOrigin;
+      const redirectURL = details.url.replace(originToReplace, `allternit-api://localhost:${PORTS.API}`);
       callback({ redirectURL });
       return;
     }
@@ -714,7 +729,7 @@ async function initializeApp(): Promise<void> {
   if (backendConfig.mode === 'development') {
     // Development mode - connect to the local Gizzi runtime
     await initializeDevelopmentMode();
-  } else if (backendConfig.mode === 'remote' && backendConfig.remoteUrl) {
+  } else if (effectiveMode === 'remote' && backendConfig?.remoteUrl) {
     // Remote mode - connect to user VPS
     await initializeRemoteMode(backendConfig.remoteUrl);
   } else {
@@ -877,8 +892,23 @@ async function initializeBundledMode(): Promise<void> {
     }
 
     if (!isDev) {
+      // If the operator explicitly set ALLTERNIT_PLATFORM_URL, honor it and
+      // skip the local static UI preference. Only fall back to the bundled
+      // static UI when no override is set, or when the override URL is
+      // unreachable.
+      const envPlatformUrl = process.env.ALLTERNIT_PLATFORM_URL;
       const localStaticPath = resolveLocalPlatformStaticPath();
-      if (localStaticPath) {
+      if (envPlatformUrl) {
+        const remoteReachable = await isUrlReachable(envPlatformUrl, 5000);
+        if (remoteReachable) {
+          log.info(`[Main] Using ALLTERNIT_PLATFORM_URL override: ${envPlatformUrl}`);
+          serviceState.platform = { status: 'up', detail: envPlatformUrl };
+        } else {
+          log.warn(`[Main] ALLTERNIT_PLATFORM_URL ${envPlatformUrl} is unreachable — falling back to local static UI`);
+          platformUrl = staticUiUrl();
+          serviceState.platform = { status: 'up', detail: 'Offline mode (local static)' };
+        }
+      } else if (localStaticPath) {
         log.info(`[Main] Using local platform static UI from ${localStaticPath}`);
         platformUrl = staticUiUrl();
         serviceState.platform = { status: 'up', detail: 'Local static UI' };
@@ -1154,6 +1184,12 @@ async function initializeDevelopmentMode(): Promise<void> {
   log.info('[Main] Development mode', { platformUrl });
   activeBackendUrl = URLS.DEV_UI;
 
+  // Show the platform window immediately so the UI is usable while optional
+  // runtime services start in the background.
+  mainWindow = createMainWindow();
+  mainWindow.loadURL(URLS.DEV_UI);
+  mainWindow.show();
+
   // Adopt or start the local Gizzi runtime so the sidecar can broker
   // credential-injected requests via the allternit-gizzi custom protocol.
   // In dev this is best-effort: if no runtime is available the rest of the
@@ -1390,6 +1426,109 @@ function toggleMiniWindow(): void {
   } else {
     miniWindow.show();
     miniWindow.focus();
+  }
+}
+
+// ============================================================================
+// Hermes Floating HUD
+// ============================================================================
+
+function createHudWindow(): BrowserWindow {
+  const saved = store.get('hudBounds');
+  const { workArea } = screen.getPrimaryDisplay();
+
+  let width = saved?.width ?? HUD_DEFAULT_WIDTH;
+  let height = saved?.height ?? HUD_DEFAULT_HEIGHT;
+  let x = saved?.x;
+  let y = saved?.y;
+
+  // Center on first launch
+  if (x === undefined || y === undefined) {
+    x = Math.round(workArea.x + (workArea.width - width) / 2);
+    y = Math.round(workArea.y + (workArea.height - height) / 3);
+  }
+
+  const win = new BrowserWindow({
+    width,
+    height,
+    x,
+    y,
+    minWidth: 360,
+    minHeight: HUD_DEFAULT_HEIGHT,
+    show: false,
+    frame: false,
+    resizable: false,
+    movable: true,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    fullscreenable: false,
+    maximizable: false,
+    transparent: true,
+    backgroundColor: '#00000000',
+    hasShadow: false,
+    ...(isMac ? { titleBarStyle: 'hidden', roundedCorners: false } : {}),
+    webPreferences: {
+      preload: join(__dirname, '../preload/index.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+
+  const hudUrl = isDev
+    ? devUiUrl('/hud')
+    : `${activePlatformUrl}/hud`;
+
+  void win.loadURL(hudUrl);
+
+  win.on('blur', () => {
+    if (!win.webContents.isDevToolsFocused()) {
+      win.hide();
+    }
+  });
+
+  win.on('close', (e) => {
+    e.preventDefault();
+    win.hide();
+  });
+
+  win.on('move', () => {
+    if (win && !win.isDestroyed()) {
+      store.set('hudBounds', { ...win.getBounds() });
+    }
+  });
+
+  return win;
+}
+
+function showHudWindow(): void {
+  if (!hudWindow || hudWindow.isDestroyed()) {
+    hudWindow = createHudWindow();
+    hudWindow.once('ready-to-show', () => {
+      hudWindow?.show();
+      hudWindow?.focus();
+    });
+    return;
+  }
+  hudWindow.show();
+  hudWindow.focus();
+}
+
+function hideHudWindow(): void {
+  if (hudWindow && !hudWindow.isDestroyed()) {
+    hudWindow.hide();
+  }
+}
+
+function toggleHudWindow(): void {
+  if (!hudWindow || hudWindow.isDestroyed()) {
+    showHudWindow();
+    return;
+  }
+  if (hudWindow.isVisible() && hudWindow.isFocused()) {
+    hideHudWindow();
+  } else {
+    showHudWindow();
   }
 }
 
@@ -1973,6 +2112,7 @@ ipcMain.handle('app:check-for-updates', async () => {
 ipcMain.handle('app:install-update', () => {
   autoUpdater.quitAndInstall();
 });
+ipcMain.handle('app:get-platform-url', () => activePlatformUrl);
 
   // Shell
 ipcMain.handle('shell:open-external', (_event, url: string) => {
@@ -2704,6 +2844,42 @@ ipcMain.on('mini-window:hide', () => { miniWindow?.hide(); });
 ipcMain.on('mini-window:toggle', () => toggleMiniWindow());
 
 // ============================================================================
+// IPC: Hermes HUD
+// ============================================================================
+
+ipcMain.handle('shell:move-hud', (_event, delta: { dx: number; dy: number }) => {
+  if (!hudWindow || hudWindow.isDestroyed()) return;
+  const bounds = hudWindow.getBounds();
+  hudWindow.setPosition(
+    Math.round(bounds.x + delta.dx),
+    Math.round(bounds.y + delta.dy),
+  );
+  store.set('hudBounds', { ...hudWindow.getBounds() });
+});
+
+ipcMain.handle('shell:resize-hud', (_event, size: { width?: number; height: number }) => {
+  if (!hudWindow || hudWindow.isDestroyed()) return;
+  const bounds = hudWindow.getBounds();
+  const width = size.width ?? bounds.width;
+  const height = size.height;
+  // Keep top-left fixed; Electron setBounds with x/y unchanged.
+  hudWindow.setBounds({ x: bounds.x, y: bounds.y, width, height });
+  store.set('hudBounds', { ...hudWindow.getBounds() });
+});
+
+ipcMain.handle('shell:close-hud', () => {
+  hideHudWindow();
+});
+
+ipcMain.handle('shell:toggle-hud', () => {
+  toggleHudWindow();
+});
+
+ipcMain.handle('shell:show-hud', () => {
+  showHudWindow();
+});
+
+// ============================================================================
 // IPC: Theme
 // ============================================================================
 
@@ -3032,6 +3208,7 @@ ipcMain.handle('permission-guide:dismiss', () => dismissGuide());
 ipcMain.handle('permission-guide:get-status', () => getGuideStatus());
 
 ipcMain.handle('permission-guide:request-check', async () => {
+  invalidatePermissionCache();
   const status = await checkPermissions();
   store.set('permissions.lastStatus', { ...status, checkedAt: new Date().toISOString() });
   mainWindow?.webContents.send('permission-guide:status', status);
@@ -3042,6 +3219,7 @@ ipcMain.handle('permission-guide:ready-for-check', async () => {
   // Called by the renderer's onboarding wizard when it reaches the permissions step.
   // This allows the platform UI to control exact timing instead of relying on a fixed delay.
   log.info('[Main] Renderer signaled ready for permission check');
+  invalidatePermissionCache();
   const status = await checkPermissions();
   store.set('permissions.lastStatus', { ...status, checkedAt: new Date().toISOString() });
   mainWindow?.webContents.send('permission-guide:status', status);

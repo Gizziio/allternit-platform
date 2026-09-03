@@ -248,9 +248,8 @@ export const SUBPROCESS_PROVIDERS: SubprocessSpec[] = [
     cmd: "gemini -p",
     probe: { args: ["--version"], expect: /\d+\.\d+/ },
     models: [
-      { id: "gemini-2.5-pro",         name: "Gemini 2.5 Pro",        context: 1000000, output: 65536 },
-      { id: "gemini-2.5-flash",       name: "Gemini 2.5 Flash",       context: 1000000, output: 65536 },
-      { id: "gemini-2.5-flash-lite",  name: "Gemini 2.5 Flash Lite",  context: 1000000, output: 65536 },
+      { id: "gemini-1.5-pro-latest",  name: "Gemini 1.5 Pro",  context: 2000000, output: 8192 },
+      { id: "gemini-1.5-flash-latest", name: "Gemini 1.5 Flash", context: 1000000, output: 8192 },
     ],
   },
 
@@ -263,7 +262,7 @@ export const SUBPROCESS_PROVIDERS: SubprocessSpec[] = [
     cmd: "agy -p",
     probe: { args: ["--version"], expect: /\d+\.\d+/ },
     models: [
-      { id: "antigravity", name: "Antigravity (default model)", context: 1000000, output: 65536 },
+      { id: "gemini-3.7-flash-high", name: "Gemini 3.7 Flash", context: 1000000, output: 65536 },
     ],
   },
 
