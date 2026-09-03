@@ -72,6 +72,9 @@ tonic = { workspace = true }
 prost = { workspace = true }
 prost-types = { workspace = true }
 
+# Streaming body adapter for inference metering (http_body::Body re-export)
+hyper = { workspace = true }
+
 [build-dependencies]
 tonic-build = { workspace = true }
 protoc-bin-vendored = { workspace = true }

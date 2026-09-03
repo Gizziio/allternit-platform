@@ -235,6 +235,18 @@ pub trait CostService: Send + Sync {
     /// Errors if the balance is insufficient.
     async fn deduct_credits(&self, user_id: &str, amount_usd: f64) -> Result<f64, ApiError>;
 
+    /// Deduct credits from a user's balance for an arbitrary billable usage
+    /// reference. `transaction_id` = `ref_id`, so a replayed reference is a
+    /// no-op; the balance clamps at zero. Users without a `user_credits` row
+    /// (plan-cap enforcement) are a no-op success. Returns the balance.
+    async fn deduct_credits_for_usage(
+        &self,
+        user_id: &str,
+        ref_id: &str,
+        amount_usd: f64,
+        source: &str,
+    ) -> Result<f64, ApiError>;
+
     /// Deduct the finalized cost of one hosted runtime usage session.
     ///
     /// Atomic and idempotent: a single DB transaction writes a negative
@@ -1054,11 +1066,12 @@ impl CostService for CostServiceImpl {
         Ok(new_balance)
     }
 
-    async fn deduct_credits_for_session(
+    async fn deduct_credits_for_usage(
         &self,
         user_id: &str,
-        session_id: &str,
+        ref_id: &str,
         amount_usd: f64,
+        source: &str,
     ) -> Result<f64, ApiError> {
         if amount_usd <= 0.0 {
             return self.get_credit_balance(user_id).await;
@@ -1066,19 +1079,21 @@ impl CostService for CostServiceImpl {
 
         let mut tx = self.db.begin().await.map_err(ApiError::DatabaseError)?;
 
-        // Idempotency: the session id is the deduction key, so a replayed stop
-        // for an already-billed session conflicts and touches nothing.
+        // Idempotency: the reference id is the deduction key, so a replayed
+        // usage (repeated stop, retried settlement, ...) conflicts and touches
+        // nothing.
         let ledger = sqlx::query(
             r#"
             INSERT INTO credit_transactions (id, user_id, amount_usd, transaction_id, source, created_at)
-            VALUES ($1, $2, $3, $4, 'hosted_runtime_usage', $5)
+            VALUES ($1, $2, $3, $4, $5, $6)
             ON CONFLICT (transaction_id) DO NOTHING
             "#,
         )
         .bind(Uuid::new_v4().to_string())
         .bind(user_id)
         .bind(-amount_usd)
-        .bind(format!("hosted-session-{session_id}"))
+        .bind(ref_id)
+        .bind(source)
         .bind(Utc::now())
         .execute(&mut *tx)
         .await
@@ -1104,10 +1119,25 @@ impl CostService for CostServiceImpl {
 
         let new_balance = self.get_credit_balance(user_id).await?;
         info!(
-            "Deducted ${:.4} credits from user {} for hosted session {}; new balance ${:.4}",
-            amount_usd, user_id, session_id, new_balance
+            "Deducted ${:.4} credits from user {} for {} ({}); new balance ${:.4}",
+            amount_usd, user_id, source, ref_id, new_balance
         );
         Ok(new_balance)
+    }
+
+    async fn deduct_credits_for_session(
+        &self,
+        user_id: &str,
+        session_id: &str,
+        amount_usd: f64,
+    ) -> Result<f64, ApiError> {
+        self.deduct_credits_for_usage(
+            user_id,
+            &format!("hosted-session-{session_id}"),
+            amount_usd,
+            "hosted_runtime_usage",
+        )
+        .await
     }
 
     async fn grant_subscription_credits(
@@ -1449,5 +1479,95 @@ mod tests {
                 .await
                 .unwrap();
         assert_eq!(rows, 0);
+    }
+
+    #[tokio::test]
+    async fn usage_deduction_is_ledgered_with_ref_id_and_source() {
+        let pool = credits_test_pool().await;
+        let service = CostServiceImpl::new(pool.clone());
+        service
+            .add_credits("user_1", 25.0, "seed-1", "stripe")
+            .await
+            .unwrap();
+
+        let balance = service
+            .deduct_credits_for_usage("user_1", "inference-abc123", 0.30, "inference")
+            .await
+            .unwrap();
+        assert!((balance - 24.70).abs() < 1e-9);
+
+        let (amount, source): (f64, String) = sqlx::query_as(
+            "SELECT amount_usd, source FROM credit_transactions WHERE transaction_id = 'inference-abc123'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert!((amount + 0.30).abs() < 1e-9);
+        assert_eq!(source, "inference");
+
+        // Replay with the same ref id is a no-op.
+        let balance = service
+            .deduct_credits_for_usage("user_1", "inference-abc123", 0.30, "inference")
+            .await
+            .unwrap();
+        assert!((balance - 24.70).abs() < 1e-9, "same ref id deducts once");
+        let debits: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM credit_transactions WHERE amount_usd < 0")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(debits, 1);
+    }
+
+    #[tokio::test]
+    async fn usage_deduction_clamps_and_no_row_noops() {
+        let pool = credits_test_pool().await;
+        let service = CostServiceImpl::new(pool.clone());
+        service
+            .add_credits("user_1", 0.10, "seed-1", "stripe")
+            .await
+            .unwrap();
+
+        let balance = service
+            .deduct_credits_for_usage("user_1", "inference-big", 5.0, "inference")
+            .await
+            .unwrap();
+        assert_eq!(balance, 0.0, "the balance clamps at zero");
+
+        // No credits row (plan-cap user): no-op success, no balance row created.
+        let balance = service
+            .deduct_credits_for_usage("user_plan", "inference-plan", 1.0, "inference")
+            .await
+            .unwrap();
+        assert_eq!(balance, 0.0);
+        let rows: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM user_credits WHERE user_id = 'user_plan'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(rows, 0);
+    }
+
+    #[tokio::test]
+    async fn session_deduction_delegates_to_usage_deduction() {
+        let pool = credits_test_pool().await;
+        let service = CostServiceImpl::new(pool.clone());
+        service
+            .add_credits("user_1", 10.0, "seed-1", "stripe")
+            .await
+            .unwrap();
+
+        service
+            .deduct_credits_for_session("user_1", "sess_9", 2.0)
+            .await
+            .unwrap();
+        let (transaction_id, source): (String, String) = sqlx::query_as(
+            "SELECT transaction_id, source FROM credit_transactions WHERE amount_usd < 0",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(transaction_id, "hosted-session-sess_9", "session ref id shape preserved");
+        assert_eq!(source, "hosted_runtime_usage", "session source preserved");
     }
 }

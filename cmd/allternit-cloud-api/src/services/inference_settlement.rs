@@ -1,0 +1,672 @@
+//! Inference usage settlement (Phase B metering).
+//!
+//! The model router proxies upstream providers (OpenRouter) with OUR key, so
+//! every chat completion is a real cost. This module is the accounting half of
+//! `routes::model_router`:
+//!
+//! - a pre-dispatch gate (`ensure_credits_allow_inference`): users with a
+//!   `user_credits` row and no balance are blocked; users WITHOUT a row are
+//!   plan-cap users and pass (same philosophy as hosted compute);
+//! - `settle_inference`: always writes an `inference_usage` row (the audit
+//!   trail), then deducts the cost via `CostService::deduct_credits_for_usage`
+//!   when the user has a credits row. Settlement failures are logged
+//!   REVENUE-CRITICAL and swallowed — a metering hiccup must never fail the
+//!   user's response;
+//! - `meter_json_response`: non-streaming settlement (buffer, parse `usage`,
+//!   settle, rebuild the response byte-for-byte);
+//! - `UsageMeteringBody`: streaming settlement — an `http_body::Body` adapter
+//!   that passes every chunk through untouched while scanning SSE `data:`
+//!   payloads for the final `usage` object (injected via `stream_options`
+//!   in `model_router::ModelRouter::chat_completions`), settling when the
+//!   stream ends or is dropped.
+
+use axum::{body::Bytes, response::Response};
+use hyper::body::{Body as HttpBody, Frame};
+use serde_json::Value;
+use sqlx::PgPool;
+use std::pin::Pin;
+use std::sync::Arc;
+use std::task::{Context, Poll};
+use tracing::{debug, error};
+use uuid::Uuid;
+
+use crate::{
+    error::ApiError,
+    model_router::RetailPrices,
+    services::cost_service::{CostService, CostServiceImpl},
+};
+
+/// Cap on buffered non-streaming upstream bodies (they are settled, then
+/// rebuilt and forwarded unchanged).
+const MAX_BUFFERED_JSON_BODY: usize = 32 * 1024 * 1024;
+
+/// The user's credit balance if they have a `user_credits` row. The Some/None
+/// distinction matters: None means plan-cap user (deduction no-ops, pre-check
+/// allows), Some(<= 0) means a paying user who ran out.
+pub async fn credit_balance_row(db: &PgPool, user_id: &str) -> Result<Option<f64>, ApiError> {
+    sqlx::query_scalar("SELECT balance_usd FROM user_credits WHERE user_id = $1")
+        .bind(user_id)
+        .fetch_optional(db)
+        .await
+        .map_err(ApiError::DatabaseError)
+}
+
+/// Pre-dispatch gate: a credits-row user at or below zero is blocked with a
+/// 403 (closest existing variant to 402); everyone else passes.
+pub fn ensure_credits_allow_inference(balance: Option<f64>) -> Result<(), ApiError> {
+    match balance {
+        Some(balance) if balance <= 0.0 => Err(ApiError::Forbidden(
+            "Inference credits exhausted — add credits to keep using hosted models.".to_string(),
+        )),
+        _ => Ok(()),
+    }
+}
+
+/// Cost of one completion in USD: `(prompt/1M) * prompt_price + (completion/1M) * completion_price`,
+/// plus the wholesale equivalent when live upstream pricing was available.
+fn inference_cost(
+    prices: &RetailPrices,
+    prompt_tokens: u64,
+    completion_tokens: u64,
+) -> (f64, Option<f64>) {
+    let cost = (prompt_tokens as f64 / 1_000_000.0) * prices.prompt_per_1m
+        + (completion_tokens as f64 / 1_000_000.0) * prices.completion_per_1m;
+    let wholesale = match (
+        prices.wholesale_prompt_per_1m,
+        prices.wholesale_completion_per_1m,
+    ) {
+        (Some(prompt), Some(completion)) => Some(
+            (prompt_tokens as f64 / 1_000_000.0) * prompt
+                + (completion_tokens as f64 / 1_000_000.0) * completion,
+        ),
+        _ => None,
+    };
+    (cost, wholesale)
+}
+
+/// Settle one completion: write the `inference_usage` row unconditionally,
+/// then deduct the retail cost when the user has a credits row. Every failure
+/// is logged REVENUE-CRITICAL and swallowed — metering must never fail the
+/// user's response; a missed deduction is recoverable from the usage table,
+/// a failed completion is not.
+#[allow(clippy::too_many_arguments)]
+pub async fn settle_inference(
+    db: &PgPool,
+    user_id: &str,
+    model: &str,
+    prices: &RetailPrices,
+    prompt_tokens: u64,
+    completion_tokens: u64,
+    estimated: bool,
+) {
+    let (cost_usd, wholesale_cost_usd) = inference_cost(prices, prompt_tokens, completion_tokens);
+    let usage_id = Uuid::new_v4().to_string();
+    let ref_id = format!("inference-{}", Uuid::new_v4().simple());
+
+    if let Err(error) = sqlx::query(
+        r#"
+        INSERT INTO inference_usage (
+            id, user_id, model, prompt_tokens, completion_tokens, cost_usd, wholesale_cost_usd, estimated
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        "#,
+    )
+    .bind(&usage_id)
+    .bind(user_id)
+    .bind(model)
+    .bind(prompt_tokens as i64)
+    .bind(completion_tokens as i64)
+    .bind(cost_usd)
+    .bind(wholesale_cost_usd)
+    .bind(estimated)
+    .execute(db)
+    .await
+    {
+        error!(
+            "REVENUE-CRITICAL: failed to record inference usage for user {} (model {}, ${:.6}, ref {}): {}",
+            user_id, model, cost_usd, ref_id, error
+        );
+        return;
+    }
+
+    match credit_balance_row(db, user_id).await {
+        Ok(Some(_)) => {
+            let cost_service = CostServiceImpl::new(db.clone());
+            if let Err(error) = cost_service
+                .deduct_credits_for_usage(user_id, &ref_id, cost_usd, "inference")
+                .await
+            {
+                error!(
+                    "REVENUE-CRITICAL: failed to deduct ${:.6} inference credits from user {} ({}): {}",
+                    cost_usd, user_id, ref_id, error
+                );
+            }
+        }
+        Ok(None) => {
+            debug!(
+                user_id,
+                "inference usage recorded without deduction (plan-cap user, no credits row)"
+            );
+        }
+        Err(error) => {
+            error!(
+                "REVENUE-CRITICAL: failed to check the credit balance before inference deduction for user {} ({}): {}",
+                user_id, ref_id, error
+            );
+        }
+    }
+}
+
+/// Settle a non-streaming upstream response: buffer the JSON body, read the
+/// `usage` object, settle, and rebuild the response with identical
+/// status/headers/body. Missing usage falls back to an honest prompt-only
+/// estimate (request chars/4, completion 0) marked `estimated` — the response
+/// text is not re-tokenized here.
+pub async fn meter_json_response(
+    db: &PgPool,
+    user_id: &str,
+    model: &str,
+    prices: &RetailPrices,
+    prompt_chars: usize,
+    response: Response,
+) -> Result<Response, ApiError> {
+    let (parts, body) = response.into_parts();
+    let bytes = axum::body::to_bytes(body, MAX_BUFFERED_JSON_BODY)
+        .await
+        .map_err(|error| ApiError::Internal(format!("Failed to buffer the upstream response: {error}")))?;
+
+    if parts.status.is_success() {
+        let usage = serde_json::from_slice::<Value>(&bytes).ok().and_then(|value| {
+            let usage = &value["usage"];
+            let prompt = usage["prompt_tokens"].as_u64();
+            let completion = usage["completion_tokens"].as_u64();
+            (prompt.is_some() || completion.is_some())
+                .then(|| (prompt.unwrap_or(0), completion.unwrap_or(0)))
+        });
+        let (prompt_tokens, completion_tokens, estimated) = match usage {
+            Some((prompt, completion)) => (prompt, completion, false),
+            None => ((prompt_chars / 4) as u64, 0, true),
+        };
+        settle_inference(
+            db,
+            user_id,
+            model,
+            prices,
+            prompt_tokens,
+            completion_tokens,
+            estimated,
+        )
+        .await;
+    }
+
+    Ok(Response::from_parts(parts, axum::body::Body::from(bytes)))
+}
+
+/// Everything end-of-stream settlement needs, owned so it can move into the
+/// spawned settlement task.
+pub struct StreamSettlement {
+    pub db: Arc<PgPool>,
+    pub user_id: String,
+    pub model: String,
+    pub prices: RetailPrices,
+    /// chars/4 estimate of the request prompt, used only when the upstream
+    /// never reports usage.
+    pub prompt_token_estimate: u64,
+}
+
+/// Wrap a streaming (SSE) response body in the metering adapter. Every chunk
+/// is forwarded untouched; settlement fires when the stream ends or the body
+/// is dropped.
+pub fn meter_stream_response(response: Response, settlement: StreamSettlement) -> Response {
+    let (parts, body) = response.into_parts();
+    Response::from_parts(
+        parts,
+        axum::body::Body::new(UsageMeteringBody::new(body, settlement)),
+    )
+}
+
+/// `http_body::Body` adapter: poll_frame passthrough plus SSE byte scanning.
+/// The scanner accumulates raw bytes, splits on newlines, and only fully
+/// JSON-parses `data:` payloads that contain `"usage"` (the final chunk per
+/// OpenAI `stream_options.include_usage`); completion text chars are counted
+/// with a tolerant string scan for the no-usage fallback estimate.
+pub struct UsageMeteringBody {
+    inner: Pin<Box<axum::body::Body>>,
+    scanner: SseUsageScanner,
+    settlement: Option<StreamSettlement>,
+}
+
+impl UsageMeteringBody {
+    pub fn new(inner: axum::body::Body, settlement: StreamSettlement) -> Self {
+        Self {
+            inner: Box::pin(inner),
+            scanner: SseUsageScanner::default(),
+            settlement: Some(settlement),
+        }
+    }
+
+    /// Fire exactly once — at end of stream or on drop (client disconnect,
+    /// upstream abort). Settlement spawns onto the runtime; the stream itself
+    /// is never blocked by accounting.
+    fn fire_settlement(&mut self) {
+        let Some(settlement) = self.settlement.take() else {
+            return;
+        };
+        let (prompt_tokens, completion_tokens, estimated) = match self.scanner.usage {
+            Some((prompt, completion)) => (prompt, completion, false),
+            None => (
+                settlement.prompt_token_estimate,
+                (self.scanner.completion_chars / 4) as u64,
+                true,
+            ),
+        };
+        tokio::spawn(async move {
+            settle_inference(
+                &settlement.db,
+                &settlement.user_id,
+                &settlement.model,
+                &settlement.prices,
+                prompt_tokens,
+                completion_tokens,
+                estimated,
+            )
+            .await;
+        });
+    }
+}
+
+impl HttpBody for UsageMeteringBody {
+    type Data = Bytes;
+    type Error = axum::Error;
+
+    fn poll_frame(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Option<Result<Frame<Self::Data>, Self::Error>>> {
+        let this = self.get_mut();
+        match this.inner.as_mut().poll_frame(cx) {
+            Poll::Pending => Poll::Pending,
+            Poll::Ready(Some(Ok(frame))) => {
+                if let Some(data) = frame.data_ref() {
+                    this.scanner.push(data);
+                }
+                Poll::Ready(Some(Ok(frame)))
+            }
+            Poll::Ready(Some(Err(error))) => Poll::Ready(Some(Err(error))),
+            Poll::Ready(None) => {
+                this.fire_settlement();
+                Poll::Ready(None)
+            }
+        }
+    }
+}
+
+impl Drop for UsageMeteringBody {
+    fn drop(&mut self) {
+        // A dropped body (client disconnect, upstream abort) still settles
+        // with whatever was captured — partial usage is real usage.
+        self.fire_settlement();
+    }
+}
+
+/// Incremental SSE scanner: byte buffer, last `usage` object seen, and a
+/// running count of completion text chars for the fallback estimate.
+#[derive(Default)]
+struct SseUsageScanner {
+    buf: Vec<u8>,
+    usage: Option<(u64, u64)>,
+    completion_chars: usize,
+}
+
+impl SseUsageScanner {
+    fn push(&mut self, bytes: &[u8]) {
+        self.buf.extend_from_slice(bytes);
+        while let Some(pos) = self.buf.iter().position(|&b| b == b'\n') {
+            let line: Vec<u8> = self.buf.drain(..=pos).collect();
+            self.scan_line(&line);
+        }
+    }
+
+    fn scan_line(&mut self, line: &[u8]) {
+        let Ok(line) = std::str::from_utf8(line) else {
+            return;
+        };
+        let Some(payload) = line.trim().strip_prefix("data:") else {
+            return;
+        };
+        let payload = payload.trim();
+        if payload.is_empty() || payload == "[DONE]" {
+            return;
+        }
+        if payload.contains("\"usage\"") {
+            // The usage chunk carries no content; parse it fully. Tolerate
+            // malformed payloads — a missed usage just means the estimate
+            // fallback fires.
+            if let Ok(value) = serde_json::from_str::<Value>(payload) {
+                let usage = &value["usage"];
+                if usage.is_object() {
+                    let prompt = usage["prompt_tokens"].as_u64();
+                    let completion = usage["completion_tokens"].as_u64();
+                    if prompt.is_some() || completion.is_some() {
+                        self.usage = Some((prompt.unwrap_or(0), completion.unwrap_or(0)));
+                    }
+                }
+            }
+            return;
+        }
+        self.completion_chars += content_chars(payload);
+    }
+}
+
+/// Sum the char counts of every `"content": "…"` string value in a delta
+/// payload. Deliberately a tolerant scan rather than a full JSON parse (per
+/// the lazy-parse contract): a missed escape only skews a fallback estimate,
+/// never a billed number.
+fn content_chars(payload: &str) -> usize {
+    let mut total = 0;
+    let mut rest = payload;
+    while let Some(idx) = rest.find("\"content\":") {
+        rest = &rest[idx + "\"content\":".len()..];
+        let trimmed = rest.trim_start();
+        if !trimmed.starts_with('"') {
+            rest = trimmed;
+            continue;
+        }
+        // Walk to the closing quote, honoring backslash escapes.
+        let bytes = trimmed.as_bytes();
+        let mut end = 1;
+        while end < bytes.len() {
+            match bytes[end] {
+                b'\\' => end += 2,
+                b'"' => break,
+                _ => end += 1,
+            }
+        }
+        if end >= bytes.len() {
+            break;
+        }
+        if let Ok(text) = serde_json::from_str::<String>(&trimmed[..=end]) {
+            total += text.chars().count();
+        }
+        rest = &trimmed[end + 1..];
+    }
+    total
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use sqlx::PgPool;
+
+    async fn test_pool() -> PgPool {
+        let url = "postgres://allternit:allternit_pg_2026@localhost:5432/allternit_test";
+        let schema = format!("test_{}", uuid::Uuid::new_v4().simple());
+        let schema_for_hook = schema.clone();
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(1)
+            .after_connect(move |conn, _meta| {
+                let schema = schema_for_hook.clone();
+                Box::pin(async move {
+                    sqlx::query(&format!("CREATE SCHEMA IF NOT EXISTS {}", schema))
+                        .execute(&mut *conn)
+                        .await?;
+                    sqlx::query(&format!("SET search_path TO {}", schema))
+                        .execute(&mut *conn)
+                        .await?;
+                    Ok(())
+                })
+            })
+            .connect(url)
+            .await
+            .unwrap();
+        // Inference usage schema (migrations_pg 007), minus the users FK.
+        sqlx::query("DROP TABLE IF EXISTS inference_usage CASCADE")
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query(
+            r#"
+            CREATE TABLE inference_usage (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                model TEXT NOT NULL,
+                prompt_tokens BIGINT NOT NULL,
+                completion_tokens BIGINT NOT NULL,
+                cost_usd DOUBLE PRECISION NOT NULL,
+                wholesale_cost_usd DOUBLE PRECISION,
+                estimated BOOLEAN NOT NULL DEFAULT FALSE,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+            "#,
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        sqlx::query("DROP TABLE IF EXISTS user_credits CASCADE")
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query(
+            r#"
+            CREATE TABLE user_credits (
+                user_id TEXT PRIMARY KEY,
+                balance_usd DOUBLE PRECISION NOT NULL DEFAULT 0 CHECK (balance_usd >= 0),
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+            "#,
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        sqlx::query("DROP TABLE IF EXISTS credit_transactions CASCADE")
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query(
+            r#"
+            CREATE TABLE credit_transactions (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                amount_usd DOUBLE PRECISION NOT NULL,
+                transaction_id TEXT NOT NULL UNIQUE,
+                source TEXT NOT NULL,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+            "#,
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        pool
+    }
+
+    fn test_prices() -> RetailPrices {
+        // Live-pricing shape: wholesale 0.10/0.20 per 1M with the 1.5x default markup.
+        RetailPrices {
+            prompt_per_1m: 0.15,
+            completion_per_1m: 0.30,
+            wholesale_prompt_per_1m: Some(0.10),
+            wholesale_completion_per_1m: Some(0.20),
+        }
+    }
+
+    #[tokio::test]
+    async fn settle_inference_records_usage_and_deducts_exact_cost() {
+        let pool = test_pool().await;
+        sqlx::query("INSERT INTO user_credits (user_id, balance_usd) VALUES ('user_1', 25.0)")
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        settle_inference(&pool, "user_1", "gpt-4o", &test_prices(), 1_000_000, 500_000, false).await;
+
+        // (1M/1M)*0.15 + (0.5M/1M)*0.30 = 0.30 retail; wholesale = 0.10 + 0.10 = 0.20.
+        let balance = credit_balance_row(&pool, "user_1").await.unwrap().unwrap();
+        assert!((balance - 24.70).abs() < 1e-9, "balance after deduction: {balance}");
+
+        let (model, prompt, completion, cost, wholesale, estimated): (
+            String,
+            i64,
+            i64,
+            f64,
+            Option<f64>,
+            bool,
+        ) = sqlx::query_as(
+            "SELECT model, prompt_tokens, completion_tokens, cost_usd, wholesale_cost_usd, estimated FROM inference_usage WHERE user_id = 'user_1'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(model, "gpt-4o");
+        assert_eq!(prompt, 1_000_000);
+        assert_eq!(completion, 500_000);
+        assert!((cost - 0.30).abs() < 1e-9);
+        assert!((wholesale.unwrap() - 0.20).abs() < 1e-9);
+        assert!(!estimated);
+
+        let (source, ref_like): (String, i64) = sqlx::query_as(
+            "SELECT source, COUNT(*)::BIGINT FROM credit_transactions WHERE user_id = 'user_1' AND transaction_id LIKE 'inference-%' GROUP BY source",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(source, "inference");
+        assert_eq!(ref_like, 1);
+    }
+
+    #[tokio::test]
+    async fn settle_inference_without_credits_row_records_only() {
+        let pool = test_pool().await;
+
+        settle_inference(&pool, "user_plan_cap", "gpt-4o", &test_prices(), 1000, 500, true).await;
+
+        let rows: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM inference_usage WHERE user_id = 'user_plan_cap'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(rows, 1, "the accounting trail is written even without a deduction");
+        let debits: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM credit_transactions")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(debits, 0, "plan-cap users are recorded only");
+    }
+
+    #[test]
+    fn pre_check_blocks_exhausted_balances_and_allows_everyone_else() {
+        assert!(ensure_credits_allow_inference(Some(0.0)).is_err());
+        assert!(ensure_credits_allow_inference(Some(-1.0)).is_err());
+        assert!(ensure_credits_allow_inference(Some(0.01)).is_ok());
+        assert!(
+            ensure_credits_allow_inference(None).is_ok(),
+            "plan-cap users (no credits row) pass the pre-check"
+        );
+    }
+
+    #[tokio::test]
+    async fn meter_json_response_settles_and_preserves_the_response() {
+        let pool = test_pool().await;
+        sqlx::query("INSERT INTO user_credits (user_id, balance_usd) VALUES ('user_1', 10.0)")
+            .execute(&pool)
+            .await
+            .unwrap();
+        let body = serde_json::json!({
+            "id": "chatcmpl-1",
+            "object": "chat.completion",
+            "created": 1,
+            "model": "openai/gpt-4o",
+            "choices": [{ "index": 0, "message": { "role": "assistant", "content": "hi" } }],
+            "usage": { "prompt_tokens": 1_000_000, "completion_tokens": 500_000, "total_tokens": 1_500_000 },
+        })
+        .to_string();
+        let response = Response::builder()
+            .status(200)
+            .header("content-type", "application/json")
+            .body(axum::body::Body::from(body.clone()))
+            .unwrap();
+
+        let response = meter_json_response(&pool, "user_1", "gpt-4o", &test_prices(), 400, response)
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), 200);
+        assert_eq!(
+            response.headers()["content-type"].to_str().unwrap(),
+            "application/json"
+        );
+        let bytes = axum::body::to_bytes(response.into_body(), MAX_BUFFERED_JSON_BODY)
+            .await
+            .unwrap();
+        assert_eq!(bytes.as_ref(), body.as_bytes(), "the body is forwarded unchanged");
+
+        let balance = credit_balance_row(&pool, "user_1").await.unwrap().unwrap();
+        assert!((balance - 9.70).abs() < 1e-9, "exact usage math deducted: {balance}");
+    }
+
+    #[test]
+    fn scanner_captures_usage_split_across_chunks() {
+        let mut scanner = SseUsageScanner::default();
+        // Split mid-JSON: the scanner must reassemble lines across chunk boundaries.
+        scanner.push(b"data: {\"choices\":[{\"delta\":{\"content\":\"Hello\"}}]}\n\nda");
+        scanner.push(b"ta: {\"choices\":[{\"delta\":{\"content\":\" world\"}}]}\n\ndata: {\"choices\":[],\"us");
+        scanner.push(b"age\":{\"prompt_tokens\":33,\"completion_tokens\":17,\"total_tokens\":50}}\n\ndata: [DONE]\n\n");
+        assert_eq!(scanner.usage, Some((33, 17)));
+    }
+
+    #[test]
+    fn scanner_accumulates_completion_chars_when_no_usage_arrives() {
+        let mut scanner = SseUsageScanner::default();
+        scanner.push(b"data: {\"choices\":[{\"delta\":{\"content\":\"Hello\"}}]}\n\n");
+        scanner.push(b"data: {\"choices\":[{\"delta\":{\"content\":\" wor\"}}]}\n\n");
+        scanner.push(b"data: {\"choices\":[{\"delta\":{\"content\":\"ld!\"}}]}\n\n");
+        scanner.push(b"data: [DONE]\n\n");
+        assert_eq!(scanner.usage, None);
+        assert_eq!(scanner.completion_chars, "Hello world!".len());
+    }
+
+    #[test]
+    fn content_chars_tolerates_escapes_and_non_string_values() {
+        assert_eq!(content_chars("{\"content\":\"a\\\"b\"}"), 3);
+        assert_eq!(content_chars("{\"content\":null}"), 0);
+        assert_eq!(content_chars("{\"content\": \"spaced\"}"), 6);
+        assert_eq!(content_chars("{\"role\":\"assistant\"}"), 0);
+    }
+
+    #[tokio::test]
+    async fn metering_body_settles_once_and_forwards_all_bytes() {
+        let pool = test_pool().await;
+        sqlx::query("INSERT INTO user_credits (user_id, balance_usd) VALUES ('user_1', 25.0)")
+            .execute(&pool)
+            .await
+            .unwrap();
+        let sse = b"data: {\"choices\":[{\"delta\":{\"content\":\"hi\"}}]}\n\ndata: {\"usage\":{\"prompt_tokens\":1000000,\"completion_tokens\":500000}}\n\ndata: [DONE]\n\n";
+        let inner = axum::body::Body::from(&sse[..]);
+        let settlement = StreamSettlement {
+            db: Arc::new(pool.clone()),
+            user_id: "user_1".to_string(),
+            model: "gpt-4o".to_string(),
+            prices: test_prices(),
+            prompt_token_estimate: 0,
+        };
+        let body = axum::body::Body::new(UsageMeteringBody::new(inner, settlement));
+
+        // Draining the wrapped body drives settlement at end of stream.
+        let forwarded = axum::body::to_bytes(body, MAX_BUFFERED_JSON_BODY)
+            .await
+            .unwrap();
+        assert_eq!(forwarded.as_ref(), &sse[..], "chunks pass through untouched");
+
+        // Settlement is spawned; give it a moment, then assert exactly one
+        // usage row and one deduction (the second fire — Drop — is a no-op).
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        let rows: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM inference_usage")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(rows, 1);
+        let balance = credit_balance_row(&pool, "user_1").await.unwrap().unwrap();
+        assert!((balance - 24.70).abs() < 1e-9, "stream settled exactly once: {balance}");
+    }
+}

@@ -292,9 +292,95 @@ impl ModelRouter {
                 provider: entry.provider.clone(),
             })?;
 
+        // Streaming responses only carry token usage when asked: inject
+        // stream_options so the usage-settlement body scanner sees a final
+        // usage chunk. OpenAI-spec; providers that ignore unknown fields are
+        // unaffected, and an explicit caller value always wins.
+        if request.is_streaming() {
+            request
+                .extra
+                .entry("stream_options".to_string())
+                .or_insert_with(|| serde_json::json!({ "include_usage": true }));
+        }
+
         // Rewrite the model field to the upstream id before dispatching.
         request.model = entry.upstream_id.clone();
 
         provider.chat_completions(request).await
     }
+
+    /// Resolve the retail prices (per 1M tokens, USD) for a model alias.
+    ///
+    /// Live upstream pricing (from the provider's cached model list — no extra
+    /// fetches) is treated as our wholesale cost and marked up by
+    /// `INFERENCE_MARKUP` (default 1.5, clamped 1.0..=5.0); the static catalog
+    /// entry is the fallback when the upstream exposes no pricing, in which
+    /// case the wholesale side is unknown (None).
+    pub async fn retail_prices(&self, alias: &str) -> Result<RetailPrices, ModelRouterError> {
+        let entry = self
+            .alias_map
+            .resolve(alias)
+            .ok_or_else(|| ModelRouterError::UnknownModel(alias.to_string()))?;
+
+        if let Some(provider) = self.providers.get(&entry.provider) {
+            // A failed/slow upstream list must never block a request: fall
+            // back to the static catalog prices.
+            if let Ok(models) = provider.list_models().await {
+                if let Some(upstream) = models.iter().find(|m| m.id == entry.upstream_id) {
+                    // Provider pricing extras are per-TOKEN USD (OpenRouter
+                    // convention, see openrouter::fetch_models); the catalog
+                    // and everything downstream are per-1M.
+                    let prompt = upstream
+                        .extra
+                        .get("prompt_price")
+                        .and_then(|v| v.as_f64())
+                        .map(|v| v * 1_000_000.0);
+                    let completion = upstream
+                        .extra
+                        .get("completion_price")
+                        .and_then(|v| v.as_f64())
+                        .map(|v| v * 1_000_000.0);
+                    if let (Some(wholesale_prompt), Some(wholesale_completion)) =
+                        (prompt, completion)
+                    {
+                        let markup = inference_markup();
+                        return Ok(RetailPrices {
+                            prompt_per_1m: wholesale_prompt * markup,
+                            completion_per_1m: wholesale_completion * markup,
+                            wholesale_prompt_per_1m: Some(wholesale_prompt),
+                            wholesale_completion_per_1m: Some(wholesale_completion),
+                        });
+                    }
+                }
+            }
+        }
+
+        Ok(RetailPrices {
+            prompt_per_1m: entry.prompt_price,
+            completion_per_1m: entry.completion_price,
+            wholesale_prompt_per_1m: None,
+            wholesale_completion_per_1m: None,
+        })
+    }
+}
+
+/// Retail prices for one model, per 1M tokens USD. The wholesale fields are
+/// our actual upstream cost when live pricing was available.
+#[derive(Debug, Clone, PartialEq)]
+pub struct RetailPrices {
+    pub prompt_per_1m: f64,
+    pub completion_per_1m: f64,
+    pub wholesale_prompt_per_1m: Option<f64>,
+    pub wholesale_completion_per_1m: Option<f64>,
+}
+
+/// The retail markup over live upstream pricing: `INFERENCE_MARKUP`, default
+/// 1.5, clamped to 1.0..=5.0 so a typo can never give inference away for free
+/// or price it absurdly.
+fn inference_markup() -> f64 {
+    std::env::var("INFERENCE_MARKUP")
+        .ok()
+        .and_then(|value| value.trim().parse::<f64>().ok())
+        .map(|value| value.clamp(1.0, 5.0))
+        .unwrap_or(1.5)
 }

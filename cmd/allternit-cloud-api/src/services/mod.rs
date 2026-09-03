@@ -6,6 +6,7 @@ pub mod cost_service;
 pub mod event_store;
 pub mod executor_service;
 pub mod hosted_runtime_lifecycle;
+pub mod inference_settlement;
 pub mod quota_service;
 pub mod run_service;
 pub mod scheduler_service;
@@ -30,6 +31,10 @@ pub use hosted_runtime_lifecycle::{
     start_hosted_runtime_lifecycle_task, touch_instance_activity, touch_runtime_activity,
     wake_hosted_runtime_for_device, HostedUsageSummary, HostedWakeDecision, HostedWakeOutcome,
     HostedWakeTarget,
+};
+pub use inference_settlement::{
+    credit_balance_row, ensure_credits_allow_inference, meter_json_response,
+    meter_stream_response, settle_inference, StreamSettlement, UsageMeteringBody,
 };
 pub use quota_service::{QuotaService, SharedQuotaService, UserQuota};
 pub use run_service::{RunListFilter, RunService, RunServiceImpl};
