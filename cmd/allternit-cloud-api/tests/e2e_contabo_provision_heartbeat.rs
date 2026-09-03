@@ -114,6 +114,18 @@ async fn create_chain_schema(db: &PgPool) {
         )
         "#,
         r#"
+        CREATE TABLE hosted_runtime_nodes (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            docker_host TEXT NOT NULL,
+            tailnet_ip TEXT,
+            total_memory_mb BIGINT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'active',
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+        "#,
+        r#"
         CREATE TABLE hosted_runtime_instances (
             id TEXT PRIMARY KEY,
             user_id TEXT NOT NULL,
@@ -127,6 +139,7 @@ async fn create_chain_schema(db: &PgPool) {
             status TEXT NOT NULL,
             runtime_device_id TEXT,
             bootstrap_token_hash TEXT,
+            node_id TEXT,
             active_since TIMESTAMPTZ,
             last_activity_at TIMESTAMPTZ,
             last_synced_at TIMESTAMPTZ,
