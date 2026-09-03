@@ -125,13 +125,14 @@ where
 #[derive(Debug, Deserialize)]
 #[allow(dead_code)]
 struct OpenAiPricing {
-    /// OpenAI-style per-token price field.
+    /// OpenAI-style price field (per 1M tokens on hosts that emit it).
     #[serde(default, deserialize_with = "deserialize_price_string")]
     prompt: Option<f64>,
-    /// OpenAI-style per-token completion price field.
+    /// OpenAI-style completion price field (per 1M tokens on hosts that emit it).
     #[serde(default, deserialize_with = "deserialize_price_string")]
     completion: Option<f64>,
-    /// Together AI uses `input`/`output` instead of `prompt`/`completion`.
+    /// Together AI uses `input`/`output` instead of `prompt`/`completion`
+    /// (quoted per 1M tokens).
     #[serde(default, alias = "input", deserialize_with = "deserialize_price_string")]
     input: Option<f64>,
     #[serde(default, alias = "output", deserialize_with = "deserialize_price_string")]
@@ -141,6 +142,38 @@ struct OpenAiPricing {
     /// break deserialization of text-model pricing.
     #[serde(flatten)]
     other: serde_json::Map<String, serde_json::Value>,
+}
+
+/// Insert `pricing` into `extra` as `prompt_price`/`completion_price`.
+///
+/// Generic OpenAI hosts (Together, Groq, Fireworks, DeepInfra) quote prices
+/// in USD **per 1M tokens**; the extras convention is per-TOKEN (OpenRouter,
+/// see `ModelRouter::retail_prices`). Normalize here — storing per-1M prices
+/// makes the router mark up and meter ~1,000,000x (REVENUE-CRITICAL: a
+/// 42-token call once metered $43.68).
+fn insert_pricing_extras(
+    extra: &mut serde_json::Map<String, serde_json::Value>,
+    pricing: &OpenAiPricing,
+) {
+    let prompt_price = pricing.prompt.or(pricing.input).map(|v| v / 1_000_000.0);
+    let completion_price = pricing
+        .completion
+        .or(pricing.output)
+        .map(|v| v / 1_000_000.0);
+    if let Some(prompt) = prompt_price {
+        extra
+            .entry("prompt_price".to_string())
+            .or_insert(serde_json::Value::Number(
+                serde_json::Number::from_f64(prompt).unwrap_or(0.into()),
+            ));
+    }
+    if let Some(completion) = completion_price {
+        extra
+            .entry("completion_price".to_string())
+            .or_insert(serde_json::Value::Number(
+                serde_json::Number::from_f64(completion).unwrap_or(0.into()),
+            ));
+    }
 }
 
 /// Generic OpenAI-compatible upstream provider.
@@ -231,24 +264,7 @@ impl GenericOpenAiProvider {
                     .or_insert(serde_json::Value::Number(ctx.into()));
                 }
                 if let Some(p) = m.pricing {
-                    let prompt_price = p.prompt.or(p.input);
-                    let completion_price = p.completion.or(p.output);
-                    if let Some(prompt) = prompt_price {
-                        extra.entry(
-                            "prompt_price".to_string(),
-                        )
-                        .or_insert(serde_json::Value::Number(
-                            serde_json::Number::from_f64(prompt).unwrap_or(0.into()),
-                        ));
-                    }
-                    if let Some(completion) = completion_price {
-                        extra.entry(
-                            "completion_price".to_string(),
-                        )
-                        .or_insert(serde_json::Value::Number(
-                            serde_json::Number::from_f64(completion).unwrap_or(0.into()),
-                        ));
-                    }
+                    insert_pricing_extras(&mut extra, &p);
                 }
 
                 ModelInfo {
@@ -393,4 +409,55 @@ fn _assert_bytes_stream<T>(_: T)
 where
     T: futures_util::Stream<Item = std::result::Result<Bytes, reqwest::Error>>,
 {
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Regression: generic OpenAI hosts quote pricing per 1M tokens; the
+    /// extras convention (and `ModelRouter::retail_prices`) is per token.
+    /// Storing per-1M values once metered a 42-token call at $43.68.
+    #[test]
+    fn pricing_extras_are_normalized_from_per_1m_to_per_token() {
+        let pricing = OpenAiPricing {
+            prompt: None,
+            completion: None,
+            input: Some(0.88),
+            output: Some(1.20),
+            other: serde_json::Map::new(),
+        };
+        let mut extra = serde_json::Map::new();
+        insert_pricing_extras(&mut extra, &pricing);
+
+        let prompt = extra.get("prompt_price").and_then(|v| v.as_f64()).unwrap();
+        let completion = extra
+            .get("completion_price")
+            .and_then(|v| v.as_f64())
+            .unwrap();
+        assert!((prompt - 0.88e-6).abs() < 1e-15, "per-1M must become per-token, got {prompt}");
+        assert!((completion - 1.20e-6).abs() < 1e-15, "per-1M must become per-token, got {completion}");
+    }
+
+    #[test]
+    fn pricing_extras_leave_existing_values_untouched() {
+        let pricing = OpenAiPricing {
+            prompt: Some(0.88),
+            completion: None,
+            input: None,
+            output: None,
+            other: serde_json::Map::new(),
+        };
+        let mut extra = serde_json::Map::new();
+        extra.insert(
+            "prompt_price".to_string(),
+            serde_json::json!(5.0e-7),
+        );
+        insert_pricing_extras(&mut extra, &pricing);
+        assert_eq!(
+            extra.get("prompt_price").and_then(|v| v.as_f64()),
+            Some(5.0e-7),
+            "or_insert must not overwrite an upstream-provided extra"
+        );
+    }
 }
