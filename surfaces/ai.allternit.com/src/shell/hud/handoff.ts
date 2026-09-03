@@ -22,7 +22,7 @@ function openSessionView(sessionId: string): void {
   window.dispatchEvent(
     new CustomEvent('allternit:open-view', {
       detail: {
-        viewType: 'chat-agent-session',
+        viewType: 'cowork-agent-session',
         context: { sessionId, originView: 'chat' },
       },
     }),

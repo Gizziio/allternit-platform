@@ -350,7 +350,7 @@ Etrid is proposed as the Allternit-native agent wallet:
   - Clicking a bot in `BotRosterSidebar` or `ShellRail` opens `bot-home` instead of starting a session immediately.
   - Tabs: Sessions (with date grouping + project labels), Artifacts, Runtime, Routines.
   - Header actions: Inbox, Cloud handoff, Settings (Agent Studio), New Project, New Session.
-- **Runtime context strip in bot sessions** (`src/views/agent-sessions/ChatModeAgentSession.tsx`):
+- **Runtime context strip in bot sessions**:
   - Renders `AgentContextStrip` above the chat for `isBot === true` sessions.
   - Runtime drawer populated with `runtimeEnvEntries`, `connectorBindings`, `secretRefs`, and `missingRuntimeKeys` derived from the bot record + session metadata.
 
