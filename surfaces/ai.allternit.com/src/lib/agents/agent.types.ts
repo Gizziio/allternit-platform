@@ -599,7 +599,7 @@ export const agentIdentityChannelsSchema = z.object({
 
 export const agentVMOperatorConfigSchema = z.object({
   enabled: z.boolean(),
-  provider: z.enum(['opensandbox', 'docker', 'kubernetes', 'local', 'custom', 'host']), 'cloud-desktop']),
+  provider: z.enum(['opensandbox', 'docker', 'kubernetes', 'local', 'custom', 'host', 'cloud-desktop']),
   computerKind: z.enum(['local', 'byo_vps', 'managed', 'byoc', 'cloud_desktop']).optional(),
   templateId: z.string().optional(),
   endpoint: z.string().optional(),

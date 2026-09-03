@@ -33,8 +33,6 @@ import {
   Check,
   Brain,
   Play,
-  Cloud,
-  Desktop,
   DesktopTower,
 } from '@phosphor-icons/react';
 import { getPinnedMiniApps, unpinMiniApp, seedDefaultMiniApps } from '../views/aci/mini-app-registry';
@@ -65,8 +63,6 @@ import type { AgentModeSurface } from '../stores/agent-surface-mode.store';
 import { cn } from '@/lib/utils';
 import { BOT_TEMPLATES } from '@/lib/bots/bots.manifest';
 import { useStartBotSession } from '@/lib/bots/useStartBotSession';
-import { startBotGroupChat } from '@/lib/bots/startBotGroupChat';
-import { useGroupChatStore } from '@/lib/bots/group-chat.store';
 import { useAgentStore } from '@/lib/agents/agent.store';
 import { useCommRailsUnreadCount } from '@/lib/bots/comrails-mail.store';
 import {
@@ -76,7 +72,6 @@ import {
 import type { Agent } from '@/lib/agents/agent.types';
 import { BotAvatar } from '@/views/bots/BotAvatar';
 import { BotRoster } from '@/views/bots/BotRoster';
-import { BotGroupChatModal } from '@/views/agent-hub/main/BotGroupChatModal';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
 
@@ -232,7 +227,6 @@ export function ShellRail({
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'completed' | 'archived'>('all');
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week' | 'month'>('all');
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string; kind: string } | null>(null);
-  const [groupChatModalOpen, setGroupChatModalOpen] = useState(false);
 
   // Code-mode recents filters (code-only, separate from global home/browser recents)
   const [codeRecentsExpanded, setCodeRecentsExpanded] = useState(true);
@@ -282,33 +276,15 @@ export function ShellRail({
   }, []);
 
   const { startSession: startBotSession } = useStartBotSession(
-    useCallback((sessionId: string) => {
-      // Open the bot session view so the rail entry is tied to a real session,
-      // not a generic home chat.
-      onOpen?.('cowork-agent-session', { sessionId, originView: activeViewType ?? 'chat' });
+    useCallback((sessionId: string, botId: string) => {
+      // Open the dedicated bot chat session view so the rail entry is tied to a
+      // real bot session, not a generic agent chat.
+      onOpen?.('bot-chat-session', { sessionId, botId, originView: activeViewType ?? 'chat' });
     }, [onOpen, activeViewType])
   );
 
   const agents = useAgentStore((s) => s.agents);
   const bots = useMemo(() => agents.filter(isBot), [agents]);
-  const groupChatSessions = useMemo(
-    () => {
-      const groups = chatSessions.filter((s) => Boolean(s.metadata?.isGroupChat));
-      // Deduplicate groups with the same name + same members, keeping the most recent.
-      const seen = new Map<string, ModeSession>();
-      for (const s of groups) {
-        const botIds = (s.metadata?.botIds as string[] | undefined) ?? [];
-        const memberKey = [...botIds].sort().join(',');
-        const key = `${s.name || 'Group Chat'}|${memberKey}`;
-        const existing = seen.get(key);
-        if (!existing || new Date(s.updatedAt || 0).getTime() > new Date(existing.updatedAt || 0).getTime()) {
-          seen.set(key, s);
-        }
-      }
-      return Array.from(seen.values()).sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime());
-    },
-    [chatSessions]
-  );
 
   const handleToggleBotsExpanded = useCallback(() => {
     setBotsExpanded((v) => {
@@ -345,17 +321,6 @@ export function ShellRail({
   const handleOpenBotHome = useCallback((bot: Agent) => {
     onOpen?.('bot-home', { botId: bot.id });
   }, [onOpen]);
-
-  const handleStartGroupChat = useCallback(async (selectedBots: Agent[], name: string) => {
-    const result = await startBotGroupChat({ bots: selectedBots, name });
-    if (result?.sessionId) {
-      onOpen?.('chat-group-session', { sessionId: result.sessionId, originView: activeViewType ?? 'chat' });
-    }
-  }, [onOpen, activeViewType]);
-
-  const handleOpenGroupChat = useCallback((sessionId: string) => {
-    onOpen?.('chat-group-session', { sessionId, originView: activeViewType ?? 'chat' });
-  }, [onOpen, activeViewType]);
 
   const recentItems = useMemo(() => {
     const list: {
@@ -961,30 +926,6 @@ export function ShellRail({
               onClick={() => onOpen?.('model-lab')}
             />
             <RailItem
-              icon={Desktop}
-              label="Desktop Cloud"
-              isActive={activeViewType === 'desktop-cloud'}
-              onClick={() => onOpen?.('desktop-cloud')}
-            />
-            <RailItem
-              icon={Cloud}
-              label="Cloud Console"
-              isActive={activeViewType === 'cloud-console'}
-              onClick={() => onOpen?.('cloud-console')}
-            />
-            <RailItem
-              icon={Brain}
-              label="Model Gateway"
-              isActive={activeViewType === 'model-gateway'}
-              onClick={() => onOpen?.('model-gateway')}
-            />
-            <RailItem
-              icon={Robot}
-              label="Agent Cloud"
-              isActive={activeViewType === 'agent-cloud'}
-              onClick={() => onOpen?.('agent-cloud')}
-            />
-            <RailItem
               icon={Clock}
               label="Automation Tasks"
               isActive={activeViewType === 'goals-list' || activeViewType === 'cron' || activeViewType === 'cowork-cron'}
@@ -1058,17 +999,6 @@ export function ShellRail({
             title="Recents"
             openAllTitle="Open all recents"
             onOpenAll={() => onOpen?.('recents')}
-            botsExpanded={botsExpanded}
-            onBotsToggle={handleSelectBots}
-            onToggleExpanded={handleToggleExpanded}
-            bots={bots}
-            groupChatSessions={groupChatSessions}
-            onOpenGroupChat={handleOpenGroupChat}
-            onStartGroupChat={() => setGroupChatModalOpen(true)}
-            startingBotId={startingBotId}
-            onStartBot={handleStartBot}
-            onOpenBotHome={handleOpenBotHome}
-            onCreateBot={handleCreateBot}
             filter={
               <Popover>
                 <PopoverTrigger asChild>
@@ -1492,13 +1422,6 @@ export function ShellRail({
           </button>
         </div>
       </div>
-
-      <BotGroupChatModal
-        isOpen={groupChatModalOpen}
-        bots={bots}
-        onClose={() => setGroupChatModalOpen(false)}
-        onStart={handleStartGroupChat}
-      />
     </div>
   );
 }
@@ -1735,97 +1658,6 @@ function BotRailItem({
   );
 }
 
-function GroupChatRailItem({
-  session,
-  onClick,
-}: {
-  session: ModeSession;
-  onClick: () => void;
-}): React.ReactNode {
-  const agents = useAgentStore((s) => s.agents);
-  const botIds = useMemo(
-    () => (session.metadata?.botIds as string[] | undefined) ?? [],
-    [session.metadata?.botIds]
-  );
-  const memberBots = useMemo(
-    () => botIds.map((id) => agents.find((a) => a.id === id)).filter(Boolean) as Agent[],
-    [botIds, agents]
-  );
-  const botProfiles = useMemo(
-    () => ((session.metadata?.botProfiles ?? []) as Array<{ id?: string; displayName?: string; accentColor?: string }>) || [],
-    [session.metadata?.botProfiles]
-  );
-  const isStreaming = useChatSessionStore(
-    useCallback((state) => state.streamingBySession[session.id]?.isStreaming ?? false, [session.id])
-  );
-
-  return (
-    <button
-      type="button"
-      data-rail-item={`group-${session.id}`}
-      onClick={onClick}
-      className="group w-full flex flex-col gap-1.5 rounded-xl px-2 py-2 text-left transition-all duration-200 bg-transparent text-[var(--shell-item-fg)] hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)]"
-    >
-      <div className="flex items-center gap-2 min-w-0">
-        <span className="flex-1 truncate text-[12px] font-medium">{session.name || 'Group Chat'}</span>
-        {isStreaming && (
-          <span className="relative flex size-1.5 shrink-0">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--accent-primary)] opacity-75" />
-            <span className="relative inline-flex rounded-full size-1.5 bg-[var(--accent-primary)]" />
-          </span>
-        )}
-      </div>
-      <div className="flex items-center gap-1.5 min-w-0">
-        <div className="flex shrink-0 -space-x-1.5">
-          {memberBots.length > 0 ? (
-            <>
-              {memberBots.slice(0, 3).map((bot) => (
-                <div
-                  key={bot.id}
-                  className="relative rounded-full border border-[var(--bg-primary)] bg-[var(--surface-hover)]"
-                >
-                  <BotAvatar bot={bot} size={18} className="rounded-full" />
-                </div>
-              ))}
-              {memberBots.length > 3 && (
-                <div className="inline-flex size-[18px] items-center justify-center rounded-full border border-[var(--bg-primary)] bg-[var(--surface-hover)] text-[9px] font-medium text-[var(--text-secondary)]">
-                  +{memberBots.length - 3}
-                </div>
-              )}
-            </>
-          ) : (
-            <>
-              {botProfiles.slice(0, 3).map((profile, idx) => (
-                <div
-                  key={profile.id ?? idx}
-                  className="relative inline-flex size-[18px] items-center justify-center rounded-full border border-[var(--bg-primary)] bg-[var(--surface-hover)] text-[9px] font-medium text-[var(--text-secondary)]"
-                  style={profile.accentColor ? { backgroundColor: profile.accentColor, color: '#fff' } : undefined}
-                >
-                  {(profile.displayName ?? '?').slice(0, 1).toUpperCase()}
-                </div>
-              ))}
-              {botProfiles.length > 3 && (
-                <div className="inline-flex size-[18px] items-center justify-center rounded-full border border-[var(--bg-primary)] bg-[var(--surface-hover)] text-[9px] font-medium text-[var(--text-secondary)]">
-                  +{botProfiles.length - 3}
-                </div>
-              )}
-            </>
-          )}
-        </div>
-        {memberBots.length > 0 ? (
-          <span className="truncate text-[10px] text-[var(--shell-item-muted)]">
-            {memberBots.length} member{memberBots.length === 1 ? '' : 's'}
-          </span>
-        ) : botProfiles.length > 0 ? (
-          <span className="truncate text-[10px] text-[var(--shell-item-muted)]">
-            {botProfiles.length} member{botProfiles.length === 1 ? '' : 's'}
-          </span>
-        ) : null}
-      </div>
-    </button>
-  );
-}
-
 function RecentsPanel({
   expanded,
   onToggle,
@@ -1834,17 +1666,6 @@ function RecentsPanel({
   openAllTitle,
   onOpenAll,
   filter,
-  botsExpanded,
-  onBotsToggle,
-  onToggleExpanded,
-  bots,
-  groupChatSessions,
-  onOpenGroupChat,
-  onStartGroupChat,
-  startingBotId,
-  onStartBot,
-  onOpenBotHome,
-  onCreateBot,
 }: {
   expanded: boolean;
   onToggle: () => void;
@@ -1853,17 +1674,6 @@ function RecentsPanel({
   openAllTitle?: string;
   onOpenAll?: () => void;
   filter?: React.ReactNode;
-  botsExpanded?: boolean;
-  onBotsToggle?: () => void;
-  onToggleExpanded?: () => void;
-  bots?: Agent[];
-  groupChatSessions?: import('@/lib/agents/mode-session-store').ModeSession[];
-  onOpenGroupChat?: (sessionId: string) => void;
-  onStartGroupChat?: () => void;
-  startingBotId?: string | null;
-  onStartBot?: (bot: Agent) => void;
-  onOpenBotHome?: (bot: Agent) => void;
-  onCreateBot?: () => void;
 }): React.ReactNode {
   return (
     <div className="flex-1 min-h-0 flex flex-col px-2">
@@ -1908,63 +1718,9 @@ function RecentsPanel({
           </button>
         </div>
       </div>
-      {listExpanded && (
-        <div className="flex-1 overflow-y-auto flex flex-col gap-0.5">
-          {combined && botsExpanded && (
-            <div className="flex flex-col gap-0.5 pb-2">
-              {bots.length === 0 && (
-                <div className="px-3 py-2 text-[12px] text-[var(--shell-item-muted)]">
-                  No bots yet.
-                </div>
-              )}
-              {bots.map((bot) => {
-                const displayName = getBotDisplayName(bot);
-                const accentColor = getBotAccentColor(bot) ?? 'var(--accent-primary)';
-                const isStarting = startingBotId === bot.id;
-                return (
-                  <BotRailItem
-                    key={bot.id}
-                    id={bot.id}
-                    bot={bot}
-                    name={displayName}
-                    accentColor={accentColor}
-                    isStarting={isStarting}
-                    badge={<BotMailBadge botId={bot.id} />}
-                    onClick={() => onOpenBotHome(bot)}
-                    onStart={(e) => {
-                      e.stopPropagation();
-                      onStartBot(bot);
-                    }}
-                  />
-                );
-              })}
-            </div>
-          )}
-          {combined && (groupChatSessions?.length ?? 0) > 0 && (
-            <div className="flex flex-col gap-0.5 border-t border-[var(--border-subtle)] pt-2 pb-2">
-              <div className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wider text-[var(--shell-item-muted)]">
-                Groups
-              </div>
-              {groupChatSessions?.map((groupSession) => (
-                <GroupChatRailItem
-                  key={groupSession.id}
-                  session={groupSession}
-                  onClick={() => onOpenGroupChat?.(groupSession.id)}
-                />
-              ))}
-            </div>
-          )}
-          {combined && botsExpanded && (
-            <button
-              type="button"
-              onClick={onStartGroupChat}
-              className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-[var(--border-default)] bg-transparent px-2 py-1.5 text-[11px] font-medium text-[var(--shell-item-muted)] transition-colors hover:border-[var(--accent-primary)] hover:text-[var(--accent-primary)]"
-            >
-              <UsersThree size={12} weight="bold" />
-              New group chat
-            </button>
-          )}
-          {expanded && <div className="flex flex-col gap-0.5">{children}</div>}
+      {expanded && (
+        <div className="flex-1 overflow-y-auto flex flex-col gap-0.5 min-h-0">
+          <div className="flex flex-col gap-0.5">{children}</div>
         </div>
       )}
     </div>

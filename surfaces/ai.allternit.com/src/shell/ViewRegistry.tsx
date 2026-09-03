@@ -978,7 +978,6 @@ export function getShellViewRegistry(handlers: {
       </ErrorBoundary>
     ),
     'cowork-agent-session': ({ context }: { context?: ViewContext }) => {
-    'chat-group-session': ({ context }: { context?: ViewContext }) => {
       const ctx = context?.context as { sessionId?: string; originView?: ViewType } | undefined;
       React.useEffect(() => {
         if (ctx?.sessionId) {
@@ -988,26 +987,17 @@ export function getShellViewRegistry(handlers: {
       return (
         <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Cowork Agent Workspace" />}>
           <CoworkRoot />
+        </ErrorBoundary>
+      );
+    },
+    'chat-group-session': ({ context }: { context?: ViewContext }) => {
+      const ctx = context?.context as { sessionId?: string; originView?: ViewType } | undefined;
+      return (
         <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Group Chat" />}>
           <GroupChatSessionView
             sessionId={ctx?.sessionId ?? context!.viewId}
             onClose={() => open(ctx?.originView ?? 'chat')}
           />
-        </ErrorBoundary>
-      );
-    },
-    // Deprecated alias: the old single-agent chat UI was removed. Chat-mode
-    // sessions now open in the group/cowork workspace.
-    'chat-agent-session': ({ context }: { context?: ViewContext }) => {
-      const ctx = context?.context as { sessionId?: string; originView?: ViewType } | undefined;
-      React.useEffect(() => {
-        if (ctx?.sessionId) {
-          useCoworkSessionStore.getState().setActiveSession(ctx.sessionId);
-        }
-      }, [ctx?.sessionId]);
-      return (
-        <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Cowork Agent Workspace" />}>
-          <CoworkRoot />
         </ErrorBoundary>
       );
     },

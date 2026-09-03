@@ -127,7 +127,7 @@ export function BotHubSessionsTab({ onSessionStarted }: BotHubSessionsTabProps) 
 
   const openSession = (session: ModeSession, botId: string) => {
     setActiveChatSession(session.id);
-    onSessionStarted?.(session.id);
+    onSessionStarted?.(session.id, botId);
     const isGroupChat = session.metadata?.isGroupChat === true;
     window.dispatchEvent(
       new CustomEvent("allternit:open-view", {

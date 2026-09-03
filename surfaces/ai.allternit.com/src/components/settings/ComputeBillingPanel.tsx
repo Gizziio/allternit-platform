@@ -177,21 +177,15 @@ export function ComputeBillingPanel() {
     try {
       const token = await getToken();
       if (!token) throw new Error("A web account session is required to manage hosted compute.");
-      const [nextEntitlement, nextRuntimes, nextCredits] = await Promise.all([
+      const [nextEntitlement, nextRuntimes, nextCredits, nextDesktopSummary] = await Promise.all([
         getHostedEntitlement(token),
         listHostedRuntimes(token),
         getBillingCredits(token).catch(() => null),
-      ]);
-      setEntitlement(nextEntitlement);
-      setRuntimes(nextRuntimes);
-      setCredits(nextCredits);
-      const [nextEntitlement, nextRuntimes, nextDesktopSummary] = await Promise.all([
-        getHostedEntitlement(token),
-        listHostedRuntimes(token),
         getDesktopUsageSummary().catch(() => null),
       ]);
       setEntitlement(nextEntitlement);
       setRuntimes(nextRuntimes);
+      setCredits(nextCredits);
       setDesktopSummary(nextDesktopSummary);
       const allowedRegions = nextEntitlement.allowedRegions?.length
         ? nextEntitlement.allowedRegions

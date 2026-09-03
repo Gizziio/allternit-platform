@@ -36,10 +36,18 @@ use crate::{BotDesktopControlState, BotDesktopSession};
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use allternit_agent_system_rails::core::types::{Actor, ActorType, AllternitEvent, EventScope};
 use allternit_driver_interface::{
-    DesktopEndpoint, DesktopProtocol, DriverError, EnvironmentSpec, ExecutionHandle, ExecutionId,
-    NetworkPolicy, PolicySpec, ResourceSpec, SpawnSpec, TenantId,
-    CommandSpec, DesktopEndpoint, DesktopProtocol, DriverError, EnvironmentSpec, ExecutionHandle,
-    ExecutionId, NetworkPolicy, PolicySpec, ResourceSpec, SpawnSpec, TenantId,
+    DesktopEndpoint,
+    DesktopProtocol,
+    DriverError,
+    EnvironmentSpec,
+    ExecutionHandle,
+    ExecutionId,
+    NetworkPolicy,
+    PolicySpec,
+    ResourceSpec,
+    SpawnSpec,
+    TenantId,
+    CommandSpec
 };
 
 /// Deprecated: prefer `crate::computer_routes::router()` for new code.
@@ -591,122 +599,6 @@ async fn provision_desktop(
     }
 }
 
-async fn start_desktop(
-    State(state): State<Arc<AppState>>,
-    Extension(user): Extension<AuthUser>,
-    Path(bot_id): Path<String>,
-) -> impl IntoResponse {
-    if !verify_bot_ownership(&state, &user.user_id, &bot_id).await {
-        return (
-            StatusCode::FORBIDDEN,
-            Json(json!({"error": "bot not found or access denied"})),
-        )
-            .into_response();
-    }
-
-    let record = match read_bot_sandbox(&state.db, &bot_id) {
-        Ok(Some(r)) => r,
-        Ok(None) => {
-            return (
-                StatusCode::NOT_FOUND,
-                Json(json!({"error": "no desktop sandbox found for this bot"})),
-            )
-                .into_response();
-        }
-        Err(e) => {
-            warn!(bot_id, error = %e, "Failed to read bot desktop sandbox");
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": "database error"})),
-            )
-                .into_response();
-        }
-    };
-
-    let driver = match require_driver(&state).await {
-        Ok(d) => d,
-        Err(resp) => return resp,
-    };
-
-    let handle = build_handle(&record.sandbox_id, Some(&record.os), Some(&record.provider));
-    match driver.resume_vm(&handle).await {
-        Ok(()) => {
-            let _ = update_bot_sandbox_status(&state.db, &bot_id, "running");
-            Json(LifecycleDesktopResponse {
-                sandbox_id: record.sandbox_id,
-                status: "running".to_string(),
-            })
-            .into_response()
-        }
-        Err(e) => {
-            warn!(bot_id, sandbox_id = %record.sandbox_id, error = %e, "Failed to start bot desktop");
-            (
-                StatusCode::SERVICE_UNAVAILABLE,
-                Json(json!({"error": format!("failed to start desktop sandbox: {}", e)})),
-            )
-                .into_response()
-        }
-    }
-}
-
-async fn stop_desktop(
-    State(state): State<Arc<AppState>>,
-    Extension(user): Extension<AuthUser>,
-    Path(bot_id): Path<String>,
-) -> impl IntoResponse {
-    if !verify_bot_ownership(&state, &user.user_id, &bot_id).await {
-        return (
-            StatusCode::FORBIDDEN,
-            Json(json!({"error": "bot not found or access denied"})),
-        )
-            .into_response();
-    }
-
-    let record = match read_bot_sandbox(&state.db, &bot_id) {
-        Ok(Some(r)) => r,
-        Ok(None) => {
-            return (
-                StatusCode::NOT_FOUND,
-                Json(json!({"error": "no desktop sandbox found for this bot"})),
-            )
-                .into_response();
-        }
-        Err(e) => {
-            warn!(bot_id, error = %e, "Failed to read bot desktop sandbox");
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": "database error"})),
-            )
-                .into_response();
-        }
-    };
-
-    let driver = match require_driver(&state).await {
-        Ok(d) => d,
-        Err(resp) => return resp,
-    };
-
-    let handle = build_handle(&record.sandbox_id, Some(&record.os), Some(&record.provider));
-    match driver.pause_vm(&handle).await {
-        Ok(()) => {
-            let _ = update_bot_sandbox_status(&state.db, &bot_id, "stopped");
-            Json(LifecycleDesktopResponse {
-                sandbox_id: record.sandbox_id,
-                status: "stopped".to_string(),
-            })
-            .into_response()
-        }
-        Err(e) => {
-            warn!(bot_id, sandbox_id = %record.sandbox_id, error = %e, "Failed to stop bot desktop");
-            (
-                StatusCode::SERVICE_UNAVAILABLE,
-                Json(json!({"error": format!("failed to stop desktop sandbox: {}", e)})),
-            )
-                .into_response()
-        }
-    }
-}
-
 async fn deprovision_desktop(
     State(state): State<Arc<AppState>>,
     Extension(user): Extension<AuthUser>,
@@ -925,6 +817,7 @@ async fn start_desktop(
         &record.provider,
         record.host.as_deref(),
         "running",
+        &record.os,
     ) {
         warn!(bot_id, sandbox_id = %query.sandbox_id, error = %e, "Failed to update desktop sandbox status");
     }
@@ -973,6 +866,7 @@ async fn stop_desktop(
         &record.provider,
         record.host.as_deref(),
         "stopped",
+        &record.os,
     ) {
         warn!(bot_id, sandbox_id = %query.sandbox_id, error = %e, "Failed to update desktop sandbox status");
     }
@@ -1351,15 +1245,6 @@ pub(crate) fn delete_bot_sandbox(
     db: &crate::db::DbHandle,
     bot_id: &str,
 ) -> Result<(), rusqlite::Error> {
-    let conn = db.connect()?;
-    conn.execute(
-        "DELETE FROM bot_desktop_sandboxes WHERE bot_id = ?1",
-        rusqlite::params![bot_id],
-    )?;
-    Ok(())
-}
-
-fn delete_bot_sandbox(db: &crate::db::DbHandle, bot_id: &str) -> Result<(), rusqlite::Error> {
     let conn = db.connect()?;
     conn.execute(
         "DELETE FROM bot_desktop_sandboxes WHERE bot_id = ?1",
