@@ -35,6 +35,8 @@ import {
   CodePermissionsDropdown,
   type CodePermissionOption,
 } from '@/components/dispatch/CodePermissionsDropdown';
+import { DispatchOptionsMenu } from '@/components/dispatch/DispatchOptionsMenu';
+import { TimestampSeparator } from '@/components/dispatch/TimestampSeparator';
 import { openRemoteControlWindow } from '@/lib/open-remote-control-window';
 import { RemoteSessionPanel } from '@/components/dispatch/RemoteSessionPanel';
 import { MachinesPanel } from '@/components/dispatch/MachinesPanel';
@@ -237,6 +239,7 @@ export function DispatchView(): React.ReactNode {
   const [composerValue, setComposerValue] = useState('');
   const [messages, setMessages] = useState<Array<{ id: string; role: 'user'; text: string }>>([]);
   const [sending, setSending] = useState(false);
+  const [codePermission, setCodePermission] = useSettingsState<CodePermissionOption>('dispatch.codePermission', 'manual');
 
   // ── remote hub tabs ─────────────────────────────────────────────────────────
   const [activeHubTab, setActiveHubTab] = useState<'handoff' | 'active-sessions' | 'remote-sessions'>('handoff');
