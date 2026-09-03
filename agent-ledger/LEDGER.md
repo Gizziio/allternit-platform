@@ -85,3 +85,12 @@ Append newest entries to the top of the `## Entries` section.
 - **Outstanding work:** Not merged to `main`; deprecated routes retained for backward compatibility; live VM end-to-end provisioning not fully verified; `computer_minute` pricing is a placeholder; old platform worktrees may still exist.
 - **Summary file:** [summaries/2026-08-26-1013-desktop-cloud-mvp-agent-unified-compute-desktop-cloud.md](./summaries/2026-08-26-1013-desktop-cloud-mvp-agent-unified-compute-desktop-cloud.md)
 
+
+### 2026-09-03 11:41 — kimi — Session worktree cleanup (4 worktrees)
+
+Worktree hygiene pass on `~/Desktop/allternit-workspace`. Four session worktrees removed after preserving all uncommitted state as pushed `wip/*` branches. Remaining merges to `main` (72ac1efa, cacb228c, model-picker, desktop-cloud-mvp, omb-integration-phase0) deliberately held — a live session is editing the main checkout.
+
+- **fabric-transport-convergence** — merged into `main`. Uncommitted bridge-removal/fabric-session refactor preserved on `wip/fabric-transport-bridge-removal` (`e310b5689`). [Summary](./summaries/2026-09-03-1141-fabric-transport-convergence-kimi-worktree-cleanup.md)
+- **d89ae6f0** — merged into `main`. Dev server stopped. One-line workflow tweak preserved on `wip/cloudflare-deploy-workflow` (`c55c15758`). [Summary](./summaries/2026-09-03-1141-d89ae6f0-3d9f-418e-8d5a-e2f91a39256b-kimi-worktree-cleanup.md)
+- **7d581442** (ios-local-models-marketplace) — not merged; tip pushed to origin session branch. WIP preserved on `wip/ios-local-models-marketplace` (`3dd921673`). [Summary](./summaries/2026-09-03-1141-7d581442-d796-4e0e-bdac-2fec641c3677-kimi-worktree-cleanup.md)
+- **ios-bot-parity** — not merged; tip pushed to origin session branch. WIP preserved on `wip/ios-bot-parity-wip` (`ec0b7b500`). [Summary](./summaries/2026-09-03-1141-ios-bot-parity-kimi-worktree-cleanup.md)
