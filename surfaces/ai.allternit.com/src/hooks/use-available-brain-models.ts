@@ -146,7 +146,7 @@ function writeProviderDiscoveryCache(models: ModelOption[]): void {
  * This is the single discovery source for brain/model selection.
  */
 export function useAvailableBrainModels() {
-  const { discoveryResult, fetchProviders, realModels } = useModelDiscovery();
+  const { discoveryResult, fetchProviders, realModels, providers } = useModelDiscovery();
 
   const cachedProviderModels = useMemo(() => readProviderDiscoveryCache(), []);
   const [terminalModels, setTerminalModels] = useState<ModelOption[]>(cachedProviderModels ?? []);
@@ -240,6 +240,26 @@ export function useAvailableBrainModels() {
   const availableModels = useMemo<ModelOption[]>(() => {
     const modelMap = new Map<string, ModelOption>();
 
+    // Build a set of providers that are actually reachable/credentialed so we
+    // do not present registry models for providers the user has not installed
+    // or authenticated.
+    const activeProviderIds = new Set<string>();
+    providers.forEach((p) => {
+      if (p.authenticated || p.status === "ok" || p.status === "not_required") {
+        activeProviderIds.add(p.provider_id);
+      }
+    });
+    (realModels || []).forEach((provider: any) => {
+      if (
+        provider.status === "active" ||
+        provider.status === "ready_no_models" ||
+        provider.status === "missing_key" ||
+        provider.api_key_set === true
+      ) {
+        activeProviderIds.add(provider.id);
+      }
+    });
+
     // 1) Runtime-discovered models (e.g. terminal server / gateway providers)
     terminalModels.forEach((model) => {
       if (!model?.id) return;
@@ -253,10 +273,13 @@ export function useAvailableBrainModels() {
     });
 
     // 3) Registry models from Allternit Brain / Gizzi provider catalog.
+    //    Only include models for providers that are installed, authenticated,
+    //    or have an API key set so the picker does not show fake availability.
     //    Model IDs are normalized to `{providerId}/{modelId}` so the same short
     //    model id from different providers (e.g. anthropic vs claude-cli) does
     //    not collide and end up under the wrong runtime row.
     (realModels || []).forEach((provider: any) => {
+      if (!activeProviderIds.has(provider.id)) return;
       const providerId = provider.id;
       if (!providerId) return;
       const modelsList = Array.isArray(provider.models)

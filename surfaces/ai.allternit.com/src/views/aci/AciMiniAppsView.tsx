@@ -10,9 +10,6 @@ import {
   Storefront,
   GearSix,
   ArrowSquareOut,
-  Cpu,
-  Lightning,
-  Globe,
   Download,
   GithubLogo,
   CheckCircle,
@@ -34,6 +31,7 @@ import { getInstalledMiniApps, pinMiniApp, removeMiniApp, saveMiniApp, unpinMini
 import type { InstalledMiniApp } from './mini-app.types';
 import { ensureMiniAppAgent } from './mini-app-harness';
 import { MiniAppDetailView } from './MiniAppDetailView';
+import { MiniAppIcon } from './MiniAppIcon';
 import { useMiniAppCatalog } from './use-mini-app-catalog';
 import { resolveMiniAppPresentation } from './mini-app-presentation';
 import { MiniAppAddModal } from './MiniAppAddModal';
@@ -41,15 +39,6 @@ import { MiniAppAddModal } from './MiniAppAddModal';
 function openView(viewType: string, context?: Record<string, unknown>): void {
   window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType, context } }));
 }
-
-const CATEGORY_ICONS: Record<string, React.ReactNode> = {
-  runtime: <Cpu size={18} />,
-  connector: <Globe size={18} />,
-  data: <Lightning size={18} />,
-  tool: <GearSix size={18} />,
-  communication: <Globe size={18} />,
-  custom: <Globe size={18} />,
-};
 
 const STATUS_COLOR: Record<InstalledMiniApp['status'], string> = {
   running: 'bg-green-500',
@@ -77,27 +66,6 @@ type InstallState =
   | { phase: 'starting'; lines: ProgressLine[] }
   | { phase: 'done'; lines: ProgressLine[] }
   | { phase: 'error'; lines: ProgressLine[]; error: string };
-
-function GitHubAvatar({ repo, size = 40 }: { repo?: string; size?: number }) {
-  const [error, setError] = useState(false);
-  if (!repo || error) {
-    return (
-      <div className="flex size-full items-center justify-center text-[var(--text-tertiary)]">
-        <GithubLogo size={size * 0.45} />
-      </div>
-    );
-  }
-  return (
-    <img
-      src={`https://github.com/${repo.split('/')[0]}.png?size=${size}`}
-      alt=""
-      width={size}
-      height={size}
-      className="size-full object-cover"
-      onError={() => setError(true)}
-    />
-  );
-}
 
 // ─── Install Progress Panel ───────────────────────────────────────────────────
 
@@ -304,7 +272,7 @@ function MiniAppCard({ app, onOpen, onPin, onUnpin, onReprobe, onDetails }: {
               : 'border-[var(--border-subtle)] bg-[var(--bg-primary)] text-[var(--text-secondary)]',
           )}
         >
-          {app.repo ? <GitHubAvatar repo={app.repo} size={40} /> : (CATEGORY_ICONS[app.category] ?? <Globe size={18} />)}
+          <MiniAppIcon app={app} size={40} />
         </div>
         <StatusPill status={app.status} />
       </div>
