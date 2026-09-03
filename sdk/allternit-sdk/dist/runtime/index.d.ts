@@ -105,6 +105,93 @@ export interface RuntimeClientOptions {
      */
     direct?: boolean;
 }
+export interface FabricLease {
+    id: string;
+    capabilityId: string;
+    grantee: string;
+    issuedAt: string;
+    expiresAt?: string;
+    status: "active" | "expired" | "revoked";
+    signature?: string;
+    policy?: Record<string, unknown>;
+}
+export interface FabricSessionClientOptions {
+    /** Base URL of the platform API or a direct gizzi-code runtime. */
+    baseUrl: string;
+    /** Runtime ID when talking through the platform relay. Omit for direct mode. */
+    runtimeId?: string;
+    /** Async Clerk/session token provider for authenticated platform requests. */
+    getToken?: () => Promise<string | null | undefined>;
+    /** Static auth token. */
+    token?: string;
+    /**
+     * When true, baseUrl is treated as a direct gizzi-code runtime. Paths are
+     * prefixed with /v1 instead of /api/v1 and no runtime relay proxy is used.
+     */
+    direct?: boolean;
+}
+export declare class FabricSessionClient {
+    private readonly baseUrl;
+    private readonly runtimeId?;
+    private readonly getToken?;
+    private readonly direct;
+    constructor(options: FabricSessionClientOptions);
+    private apiPath;
+    private authHeaders;
+    private request;
+    private json;
+    lease(capabilityId: string, ttlSeconds?: number): Promise<FabricLease>;
+    invoke(capability: string, inputs: Record<string, unknown>, lease?: FabricLease): Promise<unknown>;
+    listSessions(): Promise<RemoteSessionWithStatus[]>;
+    getSession(sessionID: string): Promise<RemoteSessionDetail>;
+    sendMessage(sessionID: string, input: {
+        text: string;
+        attachments?: Array<{
+            mime: string;
+            url: string;
+            filename?: string;
+        }>;
+    }): Promise<unknown>;
+    abortSession(sessionID: string): Promise<unknown>;
+    createSession(input?: {
+        title?: string;
+        agentID?: string;
+        surface?: string;
+        permission?: unknown;
+    }): Promise<RemoteSession>;
+    listPendingPermissions(): Promise<RemotePermissionRequest[]>;
+    replyPermission(requestID: string, reply: "once" | "always" | "reject", message?: string): Promise<boolean>;
+    listPendingQuestions(): Promise<RemoteQuestionRequest[]>;
+    replyQuestion(requestID: string, answers: string[][]): Promise<boolean>;
+    rejectQuestion(requestID: string): Promise<boolean>;
+    streamEvents(sessionID: string): AsyncIterable<FabricSessionEvent>;
+}
+export interface WebPushClientOptions {
+    /** Base URL of the push worker or platform API. */
+    baseUrl: string;
+    /** Runtime ID when talking through the platform relay. */
+    runtimeId?: string;
+    /** Async token provider for authenticated platform requests. */
+    getToken?: () => Promise<string | null | undefined>;
+    /** Static auth token. */
+    token?: string;
+}
+export declare class WebPushClient {
+    private readonly baseUrl;
+    private readonly pushBaseUrl;
+    private readonly runtimeId?;
+    private readonly getToken?;
+    constructor(options: WebPushClientOptions);
+    private authHeaders;
+    getVapidPublicKey(): Promise<string>;
+    subscribePush(subscription: PushSubscriptionJSON): Promise<{
+        ok: boolean;
+    }>;
+    unsubscribePush(endpoint: string): Promise<{
+        ok: boolean;
+    }>;
+    private assertRuntimeId;
+}
 export declare class RuntimeClient {
     private readonly baseUrl;
     private readonly getToken?;
@@ -196,6 +283,16 @@ export interface RemoteSessionDetail {
     status: RemoteSessionStatus;
     messages: RemoteMessage[];
 }
+/** Capability-native alias for {@link RemoteSession}. */
+export type FabricSession = RemoteSession;
+/** Capability-native alias for {@link RemoteSessionStatus}. */
+export type FabricSessionStatus = RemoteSessionStatus;
+/** Capability-native alias for {@link RemoteSessionWithStatus}. */
+export type FabricSessionWithStatus = RemoteSessionWithStatus;
+/** Capability-native alias for {@link RemoteMessage}. */
+export type FabricMessage = RemoteMessage;
+/** Capability-native alias for {@link RemoteSessionDetail}. */
+export type FabricSessionDetail = RemoteSessionDetail;
 export interface PushSubscriptionJSON {
     endpoint: string;
     expirationTime?: number | null;
@@ -297,6 +394,12 @@ export interface RemoteQuestionRequest {
         callID: string;
     };
 }
+/** Capability-native alias for {@link RemoteControlEvent}. */
+export type FabricSessionEvent = RemoteControlEvent;
+/** Capability-native alias for {@link RemotePermissionRequest}. */
+export type FabricPermissionRequest = RemotePermissionRequest;
+/** Capability-native alias for {@link RemoteQuestionRequest}. */
+export type FabricQuestionRequest = RemoteQuestionRequest;
 export declare class RemoteControlClient {
     private readonly baseUrl;
     private readonly pushBaseUrl?;
@@ -324,6 +427,12 @@ export declare class RemoteControlClient {
         sessionID: string;
     }>;
     abortSession(sessionID: string): Promise<boolean>;
+    createSession(input?: {
+        title?: string;
+        agentID?: string;
+        surface?: string;
+        permission?: unknown;
+    }): Promise<RemoteSession>;
     listPendingPermissions(): Promise<RemotePermissionRequest[]>;
     replyPermission(requestID: string, reply: "once" | "always" | "reject", message?: string): Promise<boolean>;
     listPendingQuestions(): Promise<RemoteQuestionRequest[]>;

@@ -179,7 +179,6 @@ import { migrateEnableAllProjectMcpServersToSettings } from './migrations/migrat
 import { migrateFennecToOpus } from './migrations/migrateFennecToOpus';
 import { migrateLegacyOpusToCurrent } from './migrations/migrateLegacyOpusToCurrent';
 import { migrateOpusToOpus1m } from './migrations/migrateOpusToOpus1m';
-import { migrateReplBridgeEnabledToRemoteControlAtStartup } from './migrations/migrateReplBridgeEnabledToRemoteControlAtStartup';
 import { migrateSonnet1mToSonnet45 } from './migrations/migrateSonnet1mToSonnet45';
 import { migrateSonnet45ToSonnet46 } from './migrations/migrateSonnet45ToSonnet46';
 import { resetAutoModeOptInForDefaultOffer } from './migrations/resetAutoModeOptInForDefaultOffer';
@@ -335,7 +334,6 @@ function runMigrations(): void {
     migrateLegacyOpusToCurrent();
     migrateSonnet45ToSonnet46();
     migrateOpusToOpus1m();
-    migrateReplBridgeEnabledToRemoteControlAtStartup();
     if (feature('TRANSCRIPT_CLASSIFIER')) {
       resetAutoModeOptInForDefaultOffer();
     }

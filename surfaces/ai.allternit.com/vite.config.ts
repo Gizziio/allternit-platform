@@ -27,20 +27,20 @@ const univerCore = path.dirname(path.dirname(path.dirname(univerCoreEntry)))
  * (e.g. /api/v1/dispatch/claim and /api/v1/dispatch/status backed by Redis/SQLite).
  */
 /**
- * Dev-only: Vite's MPA server matches `/remote-control` to `remote-control.html`
- * because of the rollup input key. The platform route `/remote-control` must
+ * Dev-only: Vite's MPA server matches `/fabric-session` to `fabric-session.html`
+ * because of the rollup input key. The platform route `/fabric-session` must
  * serve `index.html` (the SPA shell) so the hub page renders, while
- * `/remote-control.html` continues to serve the standalone dashboard entry.
+ * `/fabric-session.html` continues to serve the standalone dashboard entry.
  */
-function remoteControlRoutePlugin(): Plugin {
+function fabricSessionRoutePlugin(): Plugin {
   return {
-    name: 'allternit-remote-control-route',
+    name: 'allternit-fabric-session-route',
     configureServer(server) {
-      server.middlewares.use('/remote-control', (req, res, next) => {
+      server.middlewares.use('/fabric-session', (req, res, next) => {
         if (req.method !== 'GET') return next();
         const url = req.url ?? '/';
         // Only rewrite the exact hub path (with optional query string), not
-        // static assets under /remote-control/ or the standalone entrypoint.
+        // static assets under /fabric-session/ or the standalone entrypoint.
         if (url !== '/' && !url.startsWith('?')) return next();
         // Rewrite to the platform SPA shell so Vite injects the React refresh
         // preamble and processes the HTML transform pipeline.
@@ -124,7 +124,7 @@ function dispatchHandoffPlugin(): Plugin {
 export default defineConfig({
   plugins: [
     react(),
-    remoteControlRoutePlugin(),
+    fabricSessionRoutePlugin(),
     dispatchHandoffPlugin(),
     designSkillsPlugin(),
     process.env.ANALYZE === '1' && visualizer({
@@ -187,7 +187,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: path.resolve(__dirname, 'index.html'),
-        'remote-control': path.resolve(__dirname, 'remote-control.html'),
+        'fabric-session': path.resolve(__dirname, 'fabric-session.html'),
       },
       external: [
         /.*domains\/agent\/allternit-agent-workspace\/pkg.*/,

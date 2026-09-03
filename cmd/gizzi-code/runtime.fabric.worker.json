@@ -1,0 +1,446 @@
+{
+  "id": "wrk_gizzi_session_harness_v1",
+  "version": "0.2.0",
+  "name": "gizzi.session.harness",
+  "display_name": "Gizzi Session Harness",
+  "description": "Canonical first-party harness worker for AllternitOS. Exposes durable agent sessions, shell execution, file operations, browser navigation, and node capability introspection through the Fabric capability protocol. Replaces remote-control with structured capability invocations and event streaming.",
+  "owner": "prn_allternitos_system",
+  "state": "draft",
+  "runtime_class": "native_service",
+  "runtime_config": {
+    "command": "gizzi-code",
+    "args": ["run", "--harness"],
+    "env": {
+      "GIZZI_ENFORCE_LEASES": "true"
+    }
+  },
+  "functions": [
+    {
+      "name": "session.list",
+      "capability": "harness.session",
+      "actions": ["list"],
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "session": { "type": "object" },
+            "status": { "type": "object" }
+          }
+        }
+      },
+      "evidence_kind": "observation",
+      "description": "List non-archived durable sessions and their current status."
+    },
+    {
+      "name": "session.get",
+      "capability": "harness.session.get",
+      "actions": ["get"],
+      "input_schema": {
+        "type": "object",
+        "required": ["sessionID"],
+        "properties": {
+          "sessionID": { "type": "string" }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "session": { "type": "object" },
+          "status": { "type": "object" },
+          "messages": { "type": "array" }
+        }
+      },
+      "evidence_kind": "observation",
+      "description": "Return a single session's metadata, status, and full message history."
+    },
+    {
+      "name": "session.message",
+      "capability": "harness.session.message",
+      "actions": ["send"],
+      "input_schema": {
+        "type": "object",
+        "required": ["sessionID", "text"],
+        "properties": {
+          "sessionID": { "type": "string" },
+          "text": { "type": "string" },
+          "attachments": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "mime": { "type": "string" },
+                "url": { "type": "string" },
+                "filename": { "type": "string" }
+              }
+            }
+          },
+          "agent": { "type": "string" },
+          "model": {
+            "type": "object",
+            "properties": {
+              "providerID": { "type": "string" },
+              "modelID": { "type": "string" }
+            }
+          },
+          "system": { "type": "string" },
+          "effort": { "type": "string" },
+          "metadata": { "type": "object" }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "accepted": { "type": "boolean" },
+          "sessionID": { "type": "string" }
+        }
+      },
+      "evidence_kind": "action",
+      "description": "Send a user message into a session and start the agent loop."
+    },
+    {
+      "name": "session.abort",
+      "capability": "harness.session.abort",
+      "actions": ["abort"],
+      "input_schema": {
+        "type": "object",
+        "required": ["sessionID"],
+        "properties": {
+          "sessionID": { "type": "string" }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "aborted": { "type": "boolean" }
+        }
+      },
+      "evidence_kind": "action",
+      "description": "Cancel the running agent loop for a session."
+    },
+    {
+      "name": "session.events",
+      "capability": "harness.session.events",
+      "actions": ["stream"],
+      "input_schema": {
+        "type": "object",
+        "required": ["sessionID"],
+        "properties": {
+          "sessionID": { "type": "string" }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "description": "Server-sent event stream. Each line is a JSON object with `type` and `properties`."
+      },
+      "evidence_kind": "observation",
+      "description": "Stream session observations (message deltas, part updates, status changes, approvals, questions)."
+    },
+    {
+      "name": "session.create",
+      "capability": "harness.session.create",
+      "actions": ["create"],
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string" },
+          "agentID": { "type": "string" },
+          "surface": { "type": "string" },
+          "permission": { "type": "object" }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "description": "Newly created session record."
+      },
+      "evidence_kind": "action",
+      "description": "Create a new durable session."
+    },
+    {
+      "name": "session.permissions.list",
+      "capability": "harness.session.permissions.list",
+      "actions": ["list"],
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "array",
+        "items": { "type": "object" }
+      },
+      "evidence_kind": "observation",
+      "description": "List pending permission requests across all sessions."
+    },
+    {
+      "name": "session.permissions.reply",
+      "capability": "harness.session.permissions.reply",
+      "actions": ["reply"],
+      "input_schema": {
+        "type": "object",
+        "required": ["requestID", "reply"],
+        "properties": {
+          "requestID": { "type": "string" },
+          "reply": { "enum": ["once", "always", "reject"] },
+          "message": { "type": "string" }
+        }
+      },
+      "output_schema": {
+        "type": "boolean"
+      },
+      "evidence_kind": "action",
+      "description": "Reply to a permission request (once, always, or reject)."
+    },
+    {
+      "name": "session.questions.list",
+      "capability": "harness.session.questions.list",
+      "actions": ["list"],
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "array",
+        "items": { "type": "object" }
+      },
+      "evidence_kind": "observation",
+      "description": "List pending question requests across all sessions."
+    },
+    {
+      "name": "session.questions.reply",
+      "capability": "harness.session.questions.reply",
+      "actions": ["reply"],
+      "input_schema": {
+        "type": "object",
+        "required": ["requestID", "answers"],
+        "properties": {
+          "requestID": { "type": "string" },
+          "answers": {
+            "type": "array",
+            "items": { "type": "array", "items": { "type": "string" } }
+          }
+        }
+      },
+      "output_schema": {
+        "type": "boolean"
+      },
+      "evidence_kind": "action",
+      "description": "Reply to a question request with selected answers."
+    },
+    {
+      "name": "session.questions.reject",
+      "capability": "harness.session.questions.reject",
+      "actions": ["reject"],
+      "input_schema": {
+        "type": "object",
+        "required": ["requestID"],
+        "properties": {
+          "requestID": { "type": "string" }
+        }
+      },
+      "output_schema": {
+        "type": "boolean"
+      },
+      "evidence_kind": "action",
+      "description": "Reject/dismiss a question request."
+    },
+    {
+      "name": "node.capabilities",
+      "capability": "harness.node.capabilities",
+      "actions": ["describe"],
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object",
+        "description": "NodeIdentity record describing this node's capabilities and resources."
+      },
+      "evidence_kind": "observation",
+      "description": "Return the local node's advertised capabilities and resources."
+    },
+    {
+      "name": "shell.exec",
+      "capability": "harness.shell",
+      "actions": ["execute"],
+      "input_schema": {
+        "type": "object",
+        "required": ["command"],
+        "properties": {
+          "command": { "type": "string" },
+          "args": { "type": "array", "items": { "type": "string" } },
+          "cwd": { "type": "string" },
+          "env": { "type": "object", "additionalProperties": { "type": "string" } },
+          "timeoutMs": { "type": "integer", "minimum": 1 }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "stdout": { "type": "string" },
+          "stderr": { "type": "string" },
+          "exitCode": { "type": "integer" },
+          "cwd": { "type": "string" }
+        }
+      },
+      "evidence_kind": "action",
+      "description": "Execute a one-shot shell command and return structured output."
+    },
+    {
+      "name": "file.read",
+      "capability": "harness.file.read",
+      "actions": ["read"],
+      "input_schema": {
+        "type": "object",
+        "required": ["path"],
+        "properties": {
+          "path": { "type": "string" }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "content": { "type": "string" }
+        }
+      },
+      "evidence_kind": "observation",
+      "description": "Read a file within the project directory."
+    },
+    {
+      "name": "file.write",
+      "capability": "harness.file.write",
+      "actions": ["write"],
+      "input_schema": {
+        "type": "object",
+        "required": ["path", "content"],
+        "properties": {
+          "path": { "type": "string" },
+          "content": { "type": "string" }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "written": { "type": "boolean" },
+          "path": { "type": "string" }
+        }
+      },
+      "evidence_kind": "action",
+      "description": "Write a file within the project directory."
+    },
+    {
+      "name": "file.list",
+      "capability": "harness.file.list",
+      "actions": ["list"],
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "path": { "type": "string" }
+        }
+      },
+      "output_schema": {
+        "type": "array",
+        "items": { "type": "object" }
+      },
+      "evidence_kind": "observation",
+      "description": "List files and directories within the project directory."
+    },
+    {
+      "name": "file.search",
+      "capability": "harness.file.search",
+      "actions": ["search"],
+      "input_schema": {
+        "type": "object",
+        "required": ["query"],
+        "properties": {
+          "query": { "type": "string" },
+          "limit": { "type": "integer", "minimum": 1 }
+        }
+      },
+      "output_schema": {
+        "type": "array",
+        "items": { "type": "object" }
+      },
+      "evidence_kind": "observation",
+      "description": "Search for files by name within the project directory."
+    },
+    {
+      "name": "browser.navigate",
+      "capability": "harness.browser.navigate",
+      "actions": ["navigate"],
+      "input_schema": {
+        "type": "object",
+        "required": ["url"],
+        "properties": {
+          "url": { "type": "string" },
+          "includeContent": { "type": "boolean" },
+          "maxContentLength": { "type": "integer", "minimum": 1 }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "url": { "type": "string" },
+          "status": { "type": "integer" },
+          "contentType": { "type": "string" },
+          "title": { "type": "string" },
+          "content": { "type": "string" }
+        }
+      },
+      "evidence_kind": "observation",
+      "description": "Navigate to a URL and return structured page metadata."
+    }
+  ],
+  "triggers": [
+    {
+      "type": "api_request",
+      "target_function": "session.message",
+      "enabled": true
+    },
+    {
+      "type": "event",
+      "target_function": "session.events",
+      "enabled": true
+    }
+  ],
+  "required_capabilities": [
+    {
+      "capability": "file.read",
+      "actions": ["read"],
+      "optional": false
+    },
+    {
+      "capability": "file.write",
+      "actions": ["write"],
+      "optional": false
+    },
+    {
+      "capability": "shell.exec",
+      "actions": ["execute"],
+      "optional": false
+    },
+    {
+      "capability": "network.outbound",
+      "actions": ["connect"],
+      "optional": true
+    }
+  ],
+  "resources": {
+    "min_cpu_cores": 1,
+    "min_memory_bytes": 1073741824,
+    "network": true
+  },
+  "isolation": "process",
+  "content_digest": "sha256:e881ca9d52f0c635bed32777d5994cd101d8ffda1ac1231ed31216f2d1e36464",
+  "created_at": "2026-08-30T00:00:00Z",
+  "updated_at": "2026-08-30T09:30:00Z",
+  "labels": {
+    "surface": "gizzi",
+    "tier": "harness",
+    "transport": "capability-native",
+    "replaces": "remote-control"
+  }
+}

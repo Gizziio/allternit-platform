@@ -5,6 +5,170 @@
  * API by default; in local-dev mode it can talk directly to a gizzi-code
  * runtime over HTTP(S).
  */
+export class FabricSessionClient {
+    baseUrl;
+    runtimeId;
+    getToken;
+    direct;
+    constructor(options) {
+        this.baseUrl = options.baseUrl.replace(/\/$/, "");
+        this.runtimeId = options.runtimeId;
+        this.getToken = options.getToken;
+        this.direct = options.direct ?? false;
+    }
+    apiPath(path) {
+        return this.direct ? `${this.baseUrl}/v1${path}` : `${this.baseUrl}/api/v1${path}`;
+    }
+    async authHeaders() {
+        const headers = { "Content-Type": "application/json" };
+        const token = this.getToken ? await this.getToken() : undefined;
+        if (token)
+            headers["Authorization"] = `Bearer ${token}`;
+        return headers;
+    }
+    async request(path, init = {}) {
+        const url = this.apiPath(path);
+        const headers = await this.authHeaders();
+        return fetch(url, { ...init, headers: { ...headers, ...(init.headers ?? {}) } });
+    }
+    async json(path, init = {}) {
+        const res = await this.request(path, init);
+        const text = await res.text();
+        if (!res.ok)
+            throw new RuntimeApiError(`Fabric session request failed`, res.status, text);
+        return JSON.parse(text);
+    }
+    async lease(capabilityId, ttlSeconds = 300) {
+        return this.json("/fabric/leases", {
+            method: "POST",
+            body: JSON.stringify({ capabilityId, grantee: "web-client", ttlSeconds }),
+        });
+    }
+    async invoke(capability, inputs, lease) {
+        const headers = {};
+        if (lease)
+            headers["X-Allternit-Lease"] = lease.signature ?? encodeLease(lease);
+        return this.json("/session-worker/invoke", {
+            method: "POST",
+            headers,
+            body: JSON.stringify({ capability, inputs }),
+        });
+    }
+    async listSessions() {
+        const lease = await this.lease("harness.session");
+        const result = await this.invoke("harness.session", {}, lease);
+        return result?.result ?? result;
+    }
+    async getSession(sessionID) {
+        const lease = await this.lease("harness.session.get");
+        const result = await this.invoke("harness.session.get", { sessionID }, lease);
+        return result?.result ?? result;
+    }
+    async sendMessage(sessionID, input) {
+        const lease = await this.lease("harness.session.message");
+        return this.invoke("harness.session.message", { sessionID, text: input.text, attachments: input.attachments }, lease);
+    }
+    async abortSession(sessionID) {
+        const lease = await this.lease("harness.session.abort");
+        return this.invoke("harness.session.abort", { sessionID }, lease);
+    }
+    async createSession(input) {
+        const lease = await this.lease("harness.session.create");
+        const result = await this.invoke("harness.session.create", input ?? {}, lease);
+        return result?.result ?? result;
+    }
+    async listPendingPermissions() {
+        const lease = await this.lease("harness.session.permissions.list");
+        const result = await this.invoke("harness.session.permissions.list", {}, lease);
+        return result?.result ?? result;
+    }
+    async replyPermission(requestID, reply, message) {
+        const lease = await this.lease("harness.session.permissions.reply");
+        const result = await this.invoke("harness.session.permissions.reply", { requestID, reply, message }, lease);
+        return result?.result ?? result;
+    }
+    async listPendingQuestions() {
+        const lease = await this.lease("harness.session.questions.list");
+        const result = await this.invoke("harness.session.questions.list", {}, lease);
+        return result?.result ?? result;
+    }
+    async replyQuestion(requestID, answers) {
+        const lease = await this.lease("harness.session.questions.reply");
+        const result = await this.invoke("harness.session.questions.reply", { requestID, answers }, lease);
+        return result?.result ?? result;
+    }
+    async rejectQuestion(requestID) {
+        const lease = await this.lease("harness.session.questions.reject");
+        const result = await this.invoke("harness.session.questions.reject", { requestID }, lease);
+        return result?.result ?? result;
+    }
+    streamEvents(sessionID) {
+        const leasePromise = this.lease("harness.session.events");
+        const url = this.apiPath(`/session-worker/sessions/${encodeURIComponent(sessionID)}/events`);
+        const getToken = this.getToken;
+        return {
+            [Symbol.asyncIterator]() {
+                return createFabricEventStreamIterator(url, leasePromise, getToken);
+            },
+        };
+    }
+}
+export class WebPushClient {
+    baseUrl;
+    pushBaseUrl;
+    runtimeId;
+    getToken;
+    constructor(options) {
+        this.baseUrl = options.baseUrl.replace(/\/$/, "");
+        this.pushBaseUrl = this.baseUrl;
+        this.runtimeId = options.runtimeId;
+        this.getToken = options.getToken;
+    }
+    async authHeaders() {
+        const headers = { "Content-Type": "application/json" };
+        const token = this.getToken ? await this.getToken() : undefined;
+        if (token)
+            headers["Authorization"] = `Bearer ${token}`;
+        return headers;
+    }
+    async getVapidPublicKey() {
+        const url = `${this.pushBaseUrl}/vapid-public-key`;
+        const res = await fetch(url, { headers: await this.authHeaders() });
+        if (!res.ok)
+            throw new RuntimeApiError("Failed to fetch VAPID public key", res.status, await res.text());
+        return res.text();
+    }
+    async subscribePush(subscription) {
+        const runtimeId = this.assertRuntimeId();
+        const url = `${this.pushBaseUrl}/subscribe`;
+        const res = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", ...(await this.authHeaders()) },
+            body: JSON.stringify({ ...subscription, runtimeId }),
+        });
+        if (!res.ok)
+            throw new RuntimeApiError("Failed to subscribe push", res.status, await res.text());
+        return res.json();
+    }
+    async unsubscribePush(endpoint) {
+        const runtimeId = this.assertRuntimeId();
+        const url = `${this.pushBaseUrl}/unsubscribe`;
+        const res = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", ...(await this.authHeaders()) },
+            body: JSON.stringify({ runtimeId, endpoint }),
+        });
+        if (!res.ok)
+            throw new RuntimeApiError("Failed to unsubscribe push", res.status, await res.text());
+        return res.json();
+    }
+    assertRuntimeId() {
+        if (!this.runtimeId) {
+            throw new Error("WebPushClient requires runtimeId for push subscription");
+        }
+        return this.runtimeId;
+    }
+}
 export class RuntimeClient {
     baseUrl;
     getToken;
@@ -169,6 +333,12 @@ export class RemoteControlClient {
     async abortSession(sessionID) {
         return this.json(`/sessions/${encodeURIComponent(sessionID)}/abort`, { method: "POST" });
     }
+    async createSession(input) {
+        return this.v1Json("/v1/session", {
+            method: "POST",
+            body: JSON.stringify(input ?? {}),
+        });
+    }
     async listPendingPermissions() {
         return this.v1Json("/v1/permission");
     }
@@ -193,20 +363,22 @@ export class RemoteControlClient {
         });
     }
     async getVapidPublicKey() {
-        const url = `${this.pushBaseUrl ?? this.baseUrl}/push/vapid-public-key`;
+        const url = `${this.pushBaseUrl ?? this.baseUrl}/vapid-public-key`;
         const res = await fetch(url, { headers: await this.authHeaders() });
         if (!res.ok)
             throw new RuntimeApiError("Failed to fetch VAPID public key", res.status, await res.text());
-        const data = (await res.json());
-        return data.publicKey;
+        return res.text();
     }
     async subscribePush(subscription) {
         const runtimeId = this.assertRuntimeId();
-        const url = `${this.pushBaseUrl ?? this.baseUrl}/push/subscribe/${encodeURIComponent(runtimeId)}`;
+        const url = `${this.pushBaseUrl ?? this.baseUrl}/subscribe`;
         const res = await fetch(url, {
             method: "POST",
             headers: { "Content-Type": "application/json", ...(await this.authHeaders()) },
-            body: JSON.stringify(subscription),
+            body: JSON.stringify({
+                ...subscription,
+                runtimeId,
+            }),
         });
         if (!res.ok)
             throw new RuntimeApiError("Failed to subscribe push", res.status, await res.text());
@@ -214,11 +386,11 @@ export class RemoteControlClient {
     }
     async unsubscribePush(endpoint) {
         const runtimeId = this.assertRuntimeId();
-        const url = `${this.pushBaseUrl ?? this.baseUrl}/push/unsubscribe/${encodeURIComponent(runtimeId)}`;
+        const url = `${this.pushBaseUrl ?? this.baseUrl}/unsubscribe`;
         const res = await fetch(url, {
             method: "POST",
             headers: { "Content-Type": "application/json", ...(await this.authHeaders()) },
-            body: JSON.stringify({ endpoint }),
+            body: JSON.stringify({ runtimeId, endpoint }),
         });
         if (!res.ok)
             throw new RuntimeApiError("Failed to unsubscribe push", res.status, await res.text());
@@ -399,6 +571,84 @@ function createRelayEventStreamIterator(options) {
         },
         async return() {
             ws?.close();
+            done = true;
+            return { value: undefined, done: true };
+        },
+    };
+}
+function encodeLease(lease) {
+    const json = JSON.stringify(lease);
+    if (typeof Buffer !== "undefined") {
+        return Buffer.from(json, "utf8").toString("base64url");
+    }
+    return btoa(json).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+function createFabricEventStreamIterator(url, leasePromise, getToken) {
+    let es;
+    let done = false;
+    let error;
+    const buffer = [];
+    let notify = () => { };
+    const start = async () => {
+        try {
+            const lease = await leasePromise;
+            const token = getToken ? await getToken() : undefined;
+            const params = new URLSearchParams();
+            if (lease) {
+                params.set("x-allternit-lease", lease.signature ?? encodeLease(lease));
+            }
+            if (token) {
+                params.set("token", token);
+            }
+            const qs = params.toString();
+            const fullUrl = qs ? `${url}${url.includes("?") ? "&" : "?"}${qs}` : url;
+            es = new EventSource(fullUrl);
+            es.onmessage = (event) => {
+                try {
+                    const parsed = JSON.parse(event.data);
+                    if (parsed.type === "stream-end") {
+                        done = true;
+                    }
+                    else {
+                        buffer.push(parsed);
+                    }
+                }
+                catch {
+                    // Ignore malformed events.
+                }
+                notify();
+            };
+            es.onerror = () => {
+                if (!done) {
+                    done = true;
+                    error = error ?? new Error("EventSource error");
+                }
+                notify();
+            };
+        }
+        catch (err) {
+            done = true;
+            error = err instanceof Error ? err : new Error(String(err));
+            notify();
+        }
+    };
+    start();
+    return {
+        async next() {
+            while (!done || buffer.length > 0) {
+                if (buffer.length > 0) {
+                    return { value: buffer.shift(), done: false };
+                }
+                await new Promise((r) => {
+                    notify = r;
+                });
+            }
+            if (error)
+                throw error;
+            return { value: undefined, done: true };
+        },
+        async return() {
+            es?.close();
             done = true;
             return { value: undefined, done: true };
         },

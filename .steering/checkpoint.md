@@ -1240,3 +1240,26 @@ Close the remaining production gaps in Remote Control: secure push notifications
 - Build the remote-control entry to confirm bundling (pre-existing top-level-await blocker in a vendored dep is unrelated).
 - Run full manual E2E: pair runtime → open PWA → trigger permission/question → receive push → approve/respond.
 - Merged to `main` at `2c21d67e3`.
+
+
+## Fabric session convergence — remote-control integration cleanup (2026-08-30)
+
+### Goal
+Continue the Fabric-vs-remote-control convergence by removing/replacing deeper gizzi-code integration modules: `remote-control-push.ts` and leftover repl-bridge duplicates (`src/runtime/integrations/claude/`, migration files). Add cheap unit tests for the new permission/question capability executors.
+
+### Just did
+- Audited remaining `remote-control-*` / `replBridge` references across `cmd/gizzi-code`.
+- Confirmed `src/runtime/integrations/remote-control-push.ts` is only imported by `bootstrap.ts`.
+- Confirmed `src/runtime/integrations/claude/` is an unused duplicate of the active bridge code (no imports except an inventory text file).
+- Confirmed migration files `migrateReplBridgeEnabledToRemoteControlAtStartup.ts` (both `src/migrations/` and `src/cli/ui/ink-app/migrations/`) only migrate the old `replBridgeEnabled` config key to `remoteControlAtStartup`.
+
+### Next
+1. Rename `remote-control-push.ts` → `fabric-push.ts`, update env vars and `bootstrap.ts`.
+2. Delete unused `src/runtime/integrations/claude/` directory.
+3. Delete the two `migrateReplBridgeEnabledToRemoteControlAtStartup.ts` migration files and remove their imports from `main-gizzi.tsx` / `ink-app/main.tsx`.
+4. Add unit tests for `harness.session.permissions.*` and `harness.session.questions.*` capability executors.
+5. Run `bun run typecheck` in `cmd/gizzi-code` and `cargo check` to verify no new errors.
+6. Update `/Users/joe/FABRIC_SESSION_STATUS.md`.
+
+### Open questions
+- The active bridge code in `src/runtime/integrations/` and `src/cli/ui/ink-app/bridge/` still implements remote-control semantics. This pass intentionally leaves it untouched because it is a live product feature and its replacement by Fabric capabilities is a larger architectural effort. Should the next pass remove it entirely or migrate it to a capability-native Fabric adapter?

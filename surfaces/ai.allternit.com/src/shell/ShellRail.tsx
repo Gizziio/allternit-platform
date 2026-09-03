@@ -937,9 +937,9 @@ export function ShellRail({
             />
             <RailItem
               icon={DesktopTower}
-              label="Remote Control"
-              isActive={activeViewType === 'remote-control'}
-              onClick={() => onOpen?.('remote-control')}
+              label="Fabric Session"
+              isActive={activeViewType === 'fabric-session'}
+              onClick={() => onOpen?.('fabric-session')}
             />
             <RailItem
               icon={SlidersHorizontal}

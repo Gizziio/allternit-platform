@@ -72,6 +72,12 @@ pub struct CompanyConfig {
     #[serde(rename = "railsUrl")]
     pub rails_url: Option<String>,
 
+    /// URL of the canonical AllternitOS lease authority. When set, the gateway
+    /// proxies `/api/v1/fabric/leases` there instead of relying on a runtime-local
+    /// dev issuer. Unset means lease issuance returns 503 in production.
+    #[serde(rename = "allternitOSLeaseAuthorityUrl")]
+    pub allternitos_lease_authority_url: Option<String>,
+
     /// Rails workspace ID for this packaged deployment.
     #[serde(rename = "railsWorkspaceId")]
     pub rails_workspace_id: Option<String>,
@@ -433,6 +439,21 @@ impl AppConfig {
             .filter(|s| !s.is_empty())
             .or_else(|| self.company.rails_url.clone())
             .unwrap_or_else(|| "http://127.0.0.1:8080".to_string())
+    }
+
+    /// URL of the canonical AllternitOS lease authority.
+    /// `None` disables lease issuance through the gateway; callers must configure
+    /// an authority or use the gizzi runtime dev issuer directly (local dev only).
+    pub fn allternitos_lease_authority_url(&self) -> Option<String> {
+        std::env::var("ALLTERNITOS_LEASE_AUTHORITY_URL")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .or_else(|| {
+                self.company
+                    .allternitos_lease_authority_url
+                    .clone()
+                    .filter(|s| !s.is_empty())
+            })
     }
 
     /// URL of the Etrid native agent wallet service.

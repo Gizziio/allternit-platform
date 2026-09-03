@@ -10,7 +10,7 @@ export function MockRuntimesBanner(): React.ReactNode {
       <div className="flex-1 min-w-0">
         <div className="text-[13px] font-medium text-[var(--text-primary)]">Mock runtimes active</div>
         <div className="text-[12px] text-[var(--text-secondary)] leading-relaxed">
-          Local dev bypass is enabled. These machines are synthetic and cannot receive real remote-control commands.
+          Local dev bypass is enabled. These machines are synthetic and cannot receive real Fabric Session commands.
         </div>
       </div>
     </div>

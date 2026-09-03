@@ -2,6 +2,8 @@ export { AllternitHarness } from './harness/index.js';
 export { createRetryMiddleware, createRefusalFallbackMiddleware, } from './harness/middleware.js';
 export { AllternitEmbeddings } from './embeddings.js';
 export type { EmbeddingsCreateRequest, EmbeddingsResponse, Embedding } from './embeddings.js';
+export { AllternitClient, createAllternitClient } from './gen/allternit-client.js';
+export type { AllternitClientConfig } from './gen/allternit-client.js';
 export type { HarnessConfig, StreamRequest, Message, HarnessResponse, HarnessStreamChunk, HarnessMode, Citation, HarnessMiddleware, HarnessMiddlewareContext, } from './harness/types.js';
 export { AllternitAgent, AgentRun, } from './agents/index.js';
 export type { AgentProfile, AgentProfileCapability, ReplyRequest, ReplyOutcome, } from './agents/types.js';

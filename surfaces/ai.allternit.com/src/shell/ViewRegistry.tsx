@@ -889,12 +889,12 @@ export function getShellViewRegistry(handlers: {
       </ErrorBoundary>
     ),
     'dispatch': ({ context }: { context?: ViewContext }) => (
-      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Remote Control" />}>
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Fabric Session" />}>
         <DispatchView />
       </ErrorBoundary>
     ),
-    'remote-control': ({ context }: { context?: ViewContext }) => (
-      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Remote Control" />}>
+    'fabric-session': ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Fabric Session" />}>
         <DispatchView />
       </ErrorBoundary>
     ),

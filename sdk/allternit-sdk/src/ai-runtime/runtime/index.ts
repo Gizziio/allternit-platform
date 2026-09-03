@@ -93,6 +93,255 @@ export interface RuntimeClientOptions {
   direct?: boolean;
 }
 
+export interface FabricLease {
+  id: string;
+  capabilityId: string;
+  grantee: string;
+  issuedAt: string;
+  expiresAt?: string;
+  status: "active" | "expired" | "revoked";
+  signature?: string;
+  policy?: Record<string, unknown>;
+}
+
+export interface FabricSessionClientOptions {
+  /** Base URL of the platform API or a direct gizzi-code runtime. */
+  baseUrl: string;
+  /** Runtime ID when talking through the platform relay. Omit for direct mode. */
+  runtimeId?: string;
+  /** Async Clerk/session token provider for authenticated platform requests. */
+  getToken?: () => Promise<string | null | undefined>;
+  /** Static auth token. */
+  token?: string;
+  /**
+   * When true, baseUrl is treated as a direct gizzi-code runtime. Paths are
+   * prefixed with /v1 instead of /api/v1 and no runtime relay proxy is used.
+   */
+  direct?: boolean;
+}
+
+export class FabricSessionClient {
+  private readonly baseUrl: string;
+  private readonly runtimeId?: string;
+  private readonly getToken?: () => Promise<string | null | undefined>;
+  private readonly direct: boolean;
+
+  constructor(options: FabricSessionClientOptions) {
+    this.baseUrl = options.baseUrl.replace(/\/$/, "");
+    this.runtimeId = options.runtimeId;
+    this.getToken = options.getToken;
+    this.direct = options.direct ?? false;
+  }
+
+  private apiPath(path: string): string {
+    return this.direct ? `${this.baseUrl}/v1${path}` : `${this.baseUrl}/api/v1${path}`;
+  }
+
+  private async authHeaders(): Promise<Record<string, string>> {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    const token = this.getToken ? await this.getToken() : undefined;
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    return headers;
+  }
+
+  private async request(path: string, init: RequestInit = {}): Promise<Response> {
+    const url = this.apiPath(path);
+    const headers = await this.authHeaders();
+    return fetch(url, { ...init, headers: { ...headers, ...(init.headers ?? {}) } });
+  }
+
+  private async json<T>(path: string, init: RequestInit = {}): Promise<T> {
+    const res = await this.request(path, init);
+    const text = await res.text();
+    if (!res.ok) throw new RuntimeApiError(`Fabric session request failed`, res.status, text);
+    return JSON.parse(text) as T;
+  }
+
+  async lease(capabilityId: string, ttlSeconds = 300): Promise<FabricLease> {
+    return this.json<FabricLease>("/fabric/leases", {
+      method: "POST",
+      body: JSON.stringify({ capabilityId, grantee: "web-client", ttlSeconds }),
+    });
+  }
+
+  async invoke(
+    capability: string,
+    inputs: Record<string, unknown>,
+    lease?: FabricLease
+  ): Promise<unknown> {
+    const headers: Record<string, string> = {};
+    if (lease) headers["X-Allternit-Lease"] = lease.signature ?? encodeLease(lease);
+    return this.json<unknown>("/session-worker/invoke", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ capability, inputs }),
+    });
+  }
+
+  async listSessions(): Promise<RemoteSessionWithStatus[]> {
+    const lease = await this.lease("harness.session");
+    const result = await this.invoke("harness.session", {}, lease);
+    return (result as { result?: RemoteSessionWithStatus[] })?.result ?? (result as RemoteSessionWithStatus[]);
+  }
+
+  async getSession(sessionID: string): Promise<RemoteSessionDetail> {
+    const lease = await this.lease("harness.session.get");
+    const result = await this.invoke("harness.session.get", { sessionID }, lease);
+    return (result as { result?: RemoteSessionDetail })?.result ?? (result as RemoteSessionDetail);
+  }
+
+  async sendMessage(
+    sessionID: string,
+    input: { text: string; attachments?: Array<{ mime: string; url: string; filename?: string }> }
+  ): Promise<unknown> {
+    const lease = await this.lease("harness.session.message");
+    return this.invoke(
+      "harness.session.message",
+      { sessionID, text: input.text, attachments: input.attachments },
+      lease
+    );
+  }
+
+  async abortSession(sessionID: string): Promise<unknown> {
+    const lease = await this.lease("harness.session.abort");
+    return this.invoke("harness.session.abort", { sessionID }, lease);
+  }
+
+  async createSession(input?: {
+    title?: string;
+    agentID?: string;
+    surface?: string;
+    permission?: unknown;
+  }): Promise<RemoteSession> {
+    const lease = await this.lease("harness.session.create");
+    const result = await this.invoke("harness.session.create", input ?? {}, lease);
+    return (result as { result?: RemoteSession })?.result ?? (result as RemoteSession);
+  }
+
+  async listPendingPermissions(): Promise<RemotePermissionRequest[]> {
+    const lease = await this.lease("harness.session.permissions.list");
+    const result = await this.invoke("harness.session.permissions.list", {}, lease);
+    return (result as { result?: RemotePermissionRequest[] })?.result ?? (result as RemotePermissionRequest[]);
+  }
+
+  async replyPermission(
+    requestID: string,
+    reply: "once" | "always" | "reject",
+    message?: string
+  ): Promise<boolean> {
+    const lease = await this.lease("harness.session.permissions.reply");
+    const result = await this.invoke(
+      "harness.session.permissions.reply",
+      { requestID, reply, message },
+      lease
+    );
+    return (result as { result?: boolean })?.result ?? (result as boolean);
+  }
+
+  async listPendingQuestions(): Promise<RemoteQuestionRequest[]> {
+    const lease = await this.lease("harness.session.questions.list");
+    const result = await this.invoke("harness.session.questions.list", {}, lease);
+    return (result as { result?: RemoteQuestionRequest[] })?.result ?? (result as RemoteQuestionRequest[]);
+  }
+
+  async replyQuestion(requestID: string, answers: string[][]): Promise<boolean> {
+    const lease = await this.lease("harness.session.questions.reply");
+    const result = await this.invoke(
+      "harness.session.questions.reply",
+      { requestID, answers },
+      lease
+    );
+    return (result as { result?: boolean })?.result ?? (result as boolean);
+  }
+
+  async rejectQuestion(requestID: string): Promise<boolean> {
+    const lease = await this.lease("harness.session.questions.reject");
+    const result = await this.invoke("harness.session.questions.reject", { requestID }, lease);
+    return (result as { result?: boolean })?.result ?? (result as boolean);
+  }
+
+  streamEvents(sessionID: string): AsyncIterable<FabricSessionEvent> {
+    const leasePromise = this.lease("harness.session.events");
+    const url = this.apiPath(`/session-worker/sessions/${encodeURIComponent(sessionID)}/events`);
+    const getToken = this.getToken;
+    return {
+      [Symbol.asyncIterator](): AsyncIterator<FabricSessionEvent> {
+        return createFabricEventStreamIterator(url, leasePromise, getToken) as AsyncIterator<FabricSessionEvent>;
+      },
+    };
+  }
+}
+
+export interface WebPushClientOptions {
+  /** Base URL of the push worker or platform API. */
+  baseUrl: string;
+  /** Runtime ID when talking through the platform relay. */
+  runtimeId?: string;
+  /** Async token provider for authenticated platform requests. */
+  getToken?: () => Promise<string | null | undefined>;
+  /** Static auth token. */
+  token?: string;
+}
+
+export class WebPushClient {
+  private readonly baseUrl: string;
+  private readonly pushBaseUrl: string;
+  private readonly runtimeId?: string;
+  private readonly getToken?: () => Promise<string | null | undefined>;
+
+  constructor(options: WebPushClientOptions) {
+    this.baseUrl = options.baseUrl.replace(/\/$/, "");
+    this.pushBaseUrl = this.baseUrl;
+    this.runtimeId = options.runtimeId;
+    this.getToken = options.getToken;
+  }
+
+  private async authHeaders(): Promise<Record<string, string>> {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    const token = this.getToken ? await this.getToken() : undefined;
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    return headers;
+  }
+
+  async getVapidPublicKey(): Promise<string> {
+    const url = `${this.pushBaseUrl}/vapid-public-key`;
+    const res = await fetch(url, { headers: await this.authHeaders() });
+    if (!res.ok) throw new RuntimeApiError("Failed to fetch VAPID public key", res.status, await res.text());
+    return res.text();
+  }
+
+  async subscribePush(subscription: PushSubscriptionJSON): Promise<{ ok: boolean }> {
+    const runtimeId = this.assertRuntimeId();
+    const url = `${this.pushBaseUrl}/subscribe`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(await this.authHeaders()) },
+      body: JSON.stringify({ ...subscription, runtimeId }),
+    });
+    if (!res.ok) throw new RuntimeApiError("Failed to subscribe push", res.status, await res.text());
+    return res.json() as Promise<{ ok: boolean }>;
+  }
+
+  async unsubscribePush(endpoint: string): Promise<{ ok: boolean }> {
+    const runtimeId = this.assertRuntimeId();
+    const url = `${this.pushBaseUrl}/unsubscribe`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(await this.authHeaders()) },
+      body: JSON.stringify({ runtimeId, endpoint }),
+    });
+    if (!res.ok) throw new RuntimeApiError("Failed to unsubscribe push", res.status, await res.text());
+    return res.json() as Promise<{ ok: boolean }>;
+  }
+
+  private assertRuntimeId(): string {
+    if (!this.runtimeId) {
+      throw new Error("WebPushClient requires runtimeId for push subscription");
+    }
+    return this.runtimeId;
+  }
+}
+
 export class RuntimeClient {
   private readonly baseUrl: string;
   private readonly getToken?: () => Promise<string | null | undefined>;
@@ -252,6 +501,17 @@ export interface RemoteSessionDetail {
   messages: RemoteMessage[];
 }
 
+/** Capability-native alias for {@link RemoteSession}. */
+export type FabricSession = RemoteSession;
+/** Capability-native alias for {@link RemoteSessionStatus}. */
+export type FabricSessionStatus = RemoteSessionStatus;
+/** Capability-native alias for {@link RemoteSessionWithStatus}. */
+export type FabricSessionWithStatus = RemoteSessionWithStatus;
+/** Capability-native alias for {@link RemoteMessage}. */
+export type FabricMessage = RemoteMessage;
+/** Capability-native alias for {@link RemoteSessionDetail}. */
+export type FabricSessionDetail = RemoteSessionDetail;
+
 export interface PushSubscriptionJSON {
   endpoint: string;
   expirationTime?: number | null;
@@ -316,6 +576,13 @@ export interface RemoteQuestionRequest {
   }>;
   tool?: { messageID: string; callID: string };
 }
+
+/** Capability-native alias for {@link RemoteControlEvent}. */
+export type FabricSessionEvent = RemoteControlEvent;
+/** Capability-native alias for {@link RemotePermissionRequest}. */
+export type FabricPermissionRequest = RemotePermissionRequest;
+/** Capability-native alias for {@link RemoteQuestionRequest}. */
+export type FabricQuestionRequest = RemoteQuestionRequest;
 
 export class RemoteControlClient {
   private readonly baseUrl: string;
@@ -698,6 +965,90 @@ function createRelayEventStreamIterator(
     },
     async return(): Promise<IteratorResult<RemoteControlEvent>> {
       ws?.close();
+      done = true;
+      return { value: undefined, done: true };
+    },
+  };
+}
+
+function encodeLease(lease: FabricLease): string {
+  const json = JSON.stringify(lease);
+  if (typeof Buffer !== "undefined") {
+    return Buffer.from(json, "utf8").toString("base64url");
+  }
+  return btoa(json).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function createFabricEventStreamIterator(
+  url: string,
+  leasePromise: Promise<FabricLease>,
+  getToken?: () => Promise<string | null | undefined>
+): AsyncIterator<RemoteControlEvent> {
+  let es: EventSource | undefined;
+  let done = false;
+  let error: Error | undefined;
+  const buffer: RemoteControlEvent[] = [];
+  let notify = () => {};
+
+  const start = async () => {
+    try {
+      const lease = await leasePromise;
+      const token = getToken ? await getToken() : undefined;
+      const params = new URLSearchParams();
+      if (lease) {
+        params.set("x-allternit-lease", lease.signature ?? encodeLease(lease));
+      }
+      if (token) {
+        params.set("token", token);
+      }
+      const qs = params.toString();
+      const fullUrl = qs ? `${url}${url.includes("?") ? "&" : "?"}${qs}` : url;
+      es = new EventSource(fullUrl);
+
+      es.onmessage = (event) => {
+        try {
+          const parsed = JSON.parse(event.data);
+          if (parsed.type === "stream-end") {
+            done = true;
+          } else {
+            buffer.push(parsed as RemoteControlEvent);
+          }
+        } catch {
+          // Ignore malformed events.
+        }
+        notify();
+      };
+      es.onerror = () => {
+        if (!done) {
+          done = true;
+          error = error ?? new Error("EventSource error");
+        }
+        notify();
+      };
+    } catch (err) {
+      done = true;
+      error = err instanceof Error ? err : new Error(String(err));
+      notify();
+    }
+  };
+
+  start();
+
+  return {
+    async next(): Promise<IteratorResult<RemoteControlEvent>> {
+      while (!done || buffer.length > 0) {
+        if (buffer.length > 0) {
+          return { value: buffer.shift()!, done: false };
+        }
+        await new Promise<void>((r) => {
+          notify = r;
+        });
+      }
+      if (error) throw error;
+      return { value: undefined, done: true };
+    },
+    async return(): Promise<IteratorResult<RemoteControlEvent>> {
+      es?.close();
       done = true;
       return { value: undefined, done: true };
     },

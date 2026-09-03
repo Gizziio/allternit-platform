@@ -246,6 +246,9 @@ importers:
       '@allternit/orchestrator':
         specifier: workspace:*
         version: link:../../services/orchestration/control-plane/allternit-orchestrator
+      '@allternit/os-contracts':
+        specifier: workspace:*
+        version: link:../../packages/@allternit/os-contracts
       '@allternit/plugin':
         specifier: workspace:*
         version: link:packages/plugin

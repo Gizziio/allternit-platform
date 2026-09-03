@@ -1,0 +1,26 @@
+{
+  "id": "com.allternit.fabric-session",
+  "name": "Allternit Fabric Session",
+  "short_name": "Fabric Session",
+  "description": "Carry your Allternit agents with you across machines.",
+  "start_url": "/fabric-session.html?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0F0C0A",
+  "theme_color": "#0F0C0A",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/fabric-session-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/fabric-session-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

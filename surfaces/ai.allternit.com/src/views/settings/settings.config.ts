@@ -62,7 +62,7 @@ export const SETTINGS_NAV_ITEMS: SettingsNavItem[] = [
   { id: 'api-keys', label: 'API Keys', icon: React.createElement(Key, { size: 18 }), group: 'platform' },
   { id: 'shortcuts', label: 'Shortcuts', icon: React.createElement(Keyboard, { size: 18 }), group: 'platform' },
   { id: 'permissions', label: 'Permissions', icon: React.createElement(ShieldCheck, { size: 18 }), group: 'platform' },
-  { id: 'remote-control', label: 'Remote Control', icon: React.createElement(DeviceMobile, { size: 18 }), group: 'platform' },
+  { id: 'fabric-session', label: 'Fabric Session', icon: React.createElement(DeviceMobile, { size: 18 }), group: 'platform' },
   { id: 'devices', label: 'Devices', icon: React.createElement(Devices, { size: 18 }), group: 'platform' },
   { id: 'cloud-instances', label: 'Cloud instances', icon: React.createElement(CloudArrowUp, { size: 18 }), group: 'platform' },
   { id: 'diagnostics', label: 'Diagnostics', icon: React.createElement(Activity, { size: 18 }), group: 'platform' },

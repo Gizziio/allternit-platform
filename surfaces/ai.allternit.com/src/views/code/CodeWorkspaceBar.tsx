@@ -112,7 +112,7 @@ export function CodeWorkspaceBar({
 
       <CanvasTogglePill isOpen={terminalCanvasOpen} onToggle={onToggleTerminalCanvas} />
 
-      <RemoteControlPill />
+      <FabricSessionPill />
 
       <SyncPill onRefresh={onRefresh} />
     </div>
@@ -574,7 +574,7 @@ function WorktreePill({
   );
 }
 
-function RemoteControlPill() {
+function FabricSessionPill() {
   const [open, setOpen] = useState(false);
   const [showSetup, setShowSetup] = useState(false);
 
@@ -583,7 +583,7 @@ function RemoteControlPill() {
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <span>
-            <Pill ariaLabel="Remote control" testId="code-workspace-bar-remote-control" isOpen={open}>
+            <Pill ariaLabel="Fabric Session" testId="code-workspace-bar-fabric-session" isOpen={open}>
               <IconWrapper><RocketLaunch size={14} /></IconWrapper>
               <IconWrapper><CaretDown size={12} style={{ opacity: 0.7 }} /></IconWrapper>
             </Pill>
@@ -596,11 +596,11 @@ function RemoteControlPill() {
           className="w-64 p-2 rounded-xl border bg-popover shadow-xl"
           style={{ background: 'var(--surface-floating)', borderColor: BORDER }}
         >
-          <DropdownSection title="Remote Control">
+          <DropdownSection title="Fabric Session">
             <DropdownItem
               icon={<RocketLaunch size={14} />}
-              label="Set up Remote Control"
-              description="Run claude rc on your machine to code from here."
+              label="Set up Fabric Session"
+              description="Run the Allternit harness on your machine to code from here."
               onClick={() => {
                 setOpen(false);
                 setShowSetup(true);
@@ -611,12 +611,12 @@ function RemoteControlPill() {
         </PopoverContent>
       </Popover>
 
-      <RemoteControlSetupDialog open={showSetup} onClose={() => setShowSetup(false)} />
+      <FabricSessionSetupDialog open={showSetup} onClose={() => setShowSetup(false)} />
     </>
   );
 }
 
-function RemoteControlSetupDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+function FabricSessionSetupDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   if (!open) return null;
 
   return (
@@ -651,10 +651,10 @@ function RemoteControlSetupDialog({ open, onClose }: { open: boolean; onClose: (
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
           <div>
             <h2 style={{ margin: 0, fontSize: 17, fontWeight: 600, color: 'var(--text-primary)' }}>
-              Set up Remote Control
+              Set up Fabric Session
             </h2>
             <p style={{ margin: '6px 0 0', fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-              Connect to a machine running the Allternit remote agent.
+              Connect to a machine running the Allternit harness.
             </p>
           </div>
           <button

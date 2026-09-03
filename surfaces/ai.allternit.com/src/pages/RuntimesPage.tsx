@@ -1,7 +1,7 @@
 'use client';
 
-import { RemoteControlHub } from '@/components/dispatch/RemoteControlHub';
+import { FabricSessionHub } from '@/components/dispatch/FabricSessionHub';
 
 export default function RuntimesPage() {
-  return <RemoteControlHub />;
+  return <FabricSessionHub />;
 }

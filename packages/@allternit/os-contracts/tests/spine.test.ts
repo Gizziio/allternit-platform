@@ -5,8 +5,15 @@ import {
   approvalSchema,
   artifactSchema,
   capabilitySchema,
+  capabilityKindSchema,
   eventSchema,
+  fabricEventSchema,
+  fabricInvocationReceiptSchema,
+  fabricTransportSchema,
   leaseSchema,
+  nodeEndpointSchema,
+  nodeIdentitySchema,
+  nodeResourceSchema,
   programManifestSchema,
   receiptSchema,
   workloadSchema,
@@ -114,5 +121,55 @@ describe('contract spine (DRAFT)', () => {
     // shape (ratified is a legal enum) — the *marking* discipline is social,
     // enforced by review, not the schema.
     expect(() => programManifestSchema.parse({ ...manifest, status: 'banana' })).toThrow()
+  })
+
+  it('accepts Fabric node identity, capability kinds, and invocation receipts', () => {
+    expect(capabilityKindSchema.options).toContain('observe')
+    expect(capabilityKindSchema.options).toContain('stream')
+
+    const endpoint = {
+      transport: 'tailscale',
+      url: 'http://100.64.0.2:4096',
+      priority: 10,
+    }
+    expect(() => nodeEndpointSchema.parse(endpoint)).not.toThrow()
+    expect(() => nodeEndpointSchema.parse({ ...endpoint, transport: 'unknown' })).toThrow()
+
+    const node = {
+      nodeId: 'node-mac-studio',
+      name: 'Mac Studio',
+      runtimeType: 'desktop',
+      platform: 'darwin-arm64',
+      version: '0.1.0',
+      endpoints: [endpoint],
+      capabilities: [
+        { id: 'cap-shell', name: 'harness.shell', version: '0.1.0', kind: 'execute', resource: 'shell' },
+      ],
+      resources: [{ kind: 'compute.cpu', name: 'cores', value: 16, unit: 'cores' }],
+    }
+    expect(() => nodeIdentitySchema.parse(node)).not.toThrow()
+
+    const event = {
+      id: 'evt-1',
+      type: 'fabric.node.joined',
+      at: NOW,
+      source: 'fabric:tailscale',
+      subject: node.nodeId,
+    }
+    expect(() => fabricEventSchema.parse(event)).not.toThrow()
+
+    const receipt = {
+      id: 'rcpt-1',
+      at: NOW,
+      capability: 'harness.shell',
+      nodeId: node.nodeId,
+      requestId: 'req-1',
+      leaseId: 'lease-1',
+      ok: true,
+      inputKeys: ['command'],
+      resource: 'shell',
+    }
+    expect(() => fabricInvocationReceiptSchema.parse(receipt)).not.toThrow()
+    expect(() => fabricInvocationReceiptSchema.parse({ ...receipt, ok: 'yes' })).toThrow()
   })
 })

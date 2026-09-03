@@ -109,7 +109,7 @@ export type ViewType =
   | "loops-list"
   | "cron"
   | "dispatch"
-  | "remote-control"
+  | "fabric-session"
   // Code views
   | "new-file"
   | "code-project"

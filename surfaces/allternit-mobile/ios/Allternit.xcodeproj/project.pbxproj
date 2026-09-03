@@ -26,6 +26,7 @@
 		0C015744FC1DFDCC740E25A1 /* AgentSummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7033B3B07143C73EBE3EA4EC /* AgentSummary.swift */; };
 		0D37C59E18600EC7F741B2E3 /* PrewarmManagerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 914FE83348400D7577B8EB07 /* PrewarmManagerView.swift */; };
 		0FD3C1D2F8B1E026C5E7A287 /* BotHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91572463CAB3A25D69FEABED /* BotHomeView.swift */; };
+		0FDBE993D5E22BAEF826968E /* SessionWorkerClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4ED7FBA627C84176C6F9933C /* SessionWorkerClient.swift */; };
 		102EA6F5424E3A4F28FF44DA /* IntelliSchedulePanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6361288D57A9386278E93E08 /* IntelliSchedulePanel.swift */; };
 		10CCA605ED9789BACC10BB1A /* KeychainHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8FBB7B660CA1DE1AA71B93A /* KeychainHelper.swift */; };
 		1200E59A9D5615AD6F51BEE9 /* TerminalAccessoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8705E21259E33231B386A034 /* TerminalAccessoryView.swift */; };
@@ -39,6 +40,7 @@
 		1834CC829C4E4DF29D135C87 /* AgentActivityDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEEC6838A5C637D76EED594C /* AgentActivityDetailView.swift */; };
 		1835BCF4D303C85249F87AAB /* CronJob.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC9B4BA16EDF46885053622B /* CronJob.swift */; };
 		18C9EB8E0CDD8146822E1E05 /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 2EA4CD63CB38E3BE58D42166 /* libz.tbd */; };
+		191AC8C7EFABC895B86FA079 /* NodeDirectory.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFFE812B71668541B86320E1 /* NodeDirectory.swift */; };
 		19E0767DE23B690FFA6BE33A /* Mesh.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = C7B9F283E2DE6838A4FDF9C4 /* Mesh.xcframework */; };
 		1A2E039435D58C00CA648C59 /* SSHConnectionsClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50D82FD8AABF7FA6BC2E6191 /* SSHConnectionsClient.swift */; };
 		1A9000E7143437004E78866A /* WorkspaceClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1511FD767F14CCACE52B80D /* WorkspaceClient.swift */; };
@@ -197,6 +199,7 @@
 		B3C20297132A58130478F768 /* BenchmarkView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50EA6B31E1867A996AFBD6C4 /* BenchmarkView.swift */; };
 		B4453E297C37E2FE874CAAC7 /* MiniApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C293AF27384130A66F8AFE77 /* MiniApp.swift */; };
 		B48CDFCCAA087A5B24D4EA1F /* BackgroundRefreshManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC9F04D2211EB6420A5F5C1D /* BackgroundRefreshManager.swift */; };
+		B6E8EB631C325FB9F8BFC1A7 /* FabricModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69C51F13DDBA840F8AE5632C /* FabricModels.swift */; };
 		B7AA169C1521A363602A7F1D /* UsageStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECCF48884128341077961F98 /* UsageStore.swift */; };
 		B7B14D04A0FDE61A3A07DAD8 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EA82180F7A2046DAEA52E6F /* ChatView.swift */; };
 		B9F1DCD514FBAAEA04F88068 /* BrainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33BE9B2F87B3C05A37CF52AF /* BrainStore.swift */; };
@@ -378,6 +381,7 @@
 		4DAD8B5DD7F651B1862ADEE4 /* FileNodeRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileNodeRow.swift; sourceTree = "<group>"; };
 		4DD7A577716E6A6FEFD91C3A /* RoutineDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutineDetailView.swift; sourceTree = "<group>"; };
 		4E7FB6E04286889DF3D4A1A6 /* ModeTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModeTheme.swift; sourceTree = "<group>"; };
+		4ED7FBA627C84176C6F9933C /* SessionWorkerClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionWorkerClient.swift; sourceTree = "<group>"; };
 		4EF8244489CC0664EF5D30B3 /* BrainGitClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrainGitClient.swift; sourceTree = "<group>"; };
 		4FF5A433FAC2C691A9F790AD /* CodeWorkspace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodeWorkspace.swift; sourceTree = "<group>"; };
 		50C8CA810B01E6533AB8A789 /* AgentSelectionSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentSelectionSheet.swift; sourceTree = "<group>"; };
@@ -407,6 +411,7 @@
 		6878E4CDD256FFFAF91E6A26 /* LoopActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoopActivityAttributes.swift; sourceTree = "<group>"; };
 		68B1051892B0960972533D49 /* AllternitWidgets.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = AllternitWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		6965002D7B6A6BF6D13EA533 /* ModelsTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelsTabView.swift; sourceTree = "<group>"; };
+		69C51F13DDBA840F8AE5632C /* FabricModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FabricModels.swift; sourceTree = "<group>"; };
 		6B8C42EDBB746B6EC3B2D900 /* CreateCoworkTaskSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateCoworkTaskSheet.swift; sourceTree = "<group>"; };
 		6B8F10ADBC50ECB7FB85AF6A /* HistorySidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistorySidebarView.swift; sourceTree = "<group>"; };
 		6BF08861508C7252E3641B3A /* NewProjectSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewProjectSheet.swift; sourceTree = "<group>"; };
@@ -502,6 +507,7 @@
 		BDF51415431B0961379CB98A /* EnterpriseBYOCPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnterpriseBYOCPanelView.swift; sourceTree = "<group>"; };
 		BE3CC250492B1313864FA19D /* PermissionPrimingSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionPrimingSheet.swift; sourceTree = "<group>"; };
 		BE858D6AF3774303747A0D87 /* FileBrowserDirectoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileBrowserDirectoryView.swift; sourceTree = "<group>"; };
+		BFFE812B71668541B86320E1 /* NodeDirectory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NodeDirectory.swift; sourceTree = "<group>"; };
 		C06CD7152FFD4F0D52DD4BBA /* AgentDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentDetailView.swift; sourceTree = "<group>"; };
 		C13C828400B2FC0BFC3353F3 /* BYOCModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BYOCModels.swift; sourceTree = "<group>"; };
 		C1BED7C208DE4B4629E4D7CE /* MonitorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonitorView.swift; sourceTree = "<group>"; };
@@ -909,6 +915,7 @@
 				52E891D24571F713177AAA2A /* Auth */,
 				4660BFB964642DD765D2AAC9 /* Brain */,
 				5308CC2C0D21F6B5639F8617 /* DesignSystem */,
+				BAA2AAA848F410EB15E748F0 /* Fabric */,
 				1E73CD13D8CCBDBE6663A2F2 /* LiveActivity */,
 				1E8CB0B35BED2173B9A534FD /* Mesh */,
 				3FECEACFCACB589FB938BAF2 /* OnDevice */,
@@ -1091,6 +1098,16 @@
 				9A9C3ECB634E68AFEB34FD09 /* Views */,
 			);
 			path = Cowork;
+			sourceTree = "<group>";
+		};
+		BAA2AAA848F410EB15E748F0 /* Fabric */ = {
+			isa = PBXGroup;
+			children = (
+				69C51F13DDBA840F8AE5632C /* FabricModels.swift */,
+				BFFE812B71668541B86320E1 /* NodeDirectory.swift */,
+				4ED7FBA627C84176C6F9933C /* SessionWorkerClient.swift */,
+			);
+			path = Fabric;
 			sourceTree = "<group>";
 		};
 		C0B056C328EA330D52B056F0 /* ACI */ = {
@@ -1493,6 +1510,7 @@
 				69B50D1B3F4A7108263F2A70 /* DiffRenderer.swift in Sources */,
 				3FC836FF9A350F8F680A5B01 /* EnterpriseBYOCPanelView.swift in Sources */,
 				EB48BBB9F3A19ACBDB9E533D /* EnvironmentStore.swift in Sources */,
+				B6E8EB631C325FB9F8BFC1A7 /* FabricModels.swift in Sources */,
 				D250D773F3083F544D165089 /* FileBrowserDirectoryView.swift in Sources */,
 				4658EF75ED4ADFC214C4D3A4 /* FileBrowserView.swift in Sources */,
 				DA8E5E3F97BF180FF12F4236 /* FileClient.swift in Sources */,
@@ -1542,6 +1560,7 @@
 				6EDF9FC46D49C75150A17D0F /* MonitorStore.swift in Sources */,
 				DA7285E410C5FBB086D77BF7 /* MonitorView.swift in Sources */,
 				6CC103BAFF1EE2DFE5DCC427 /* NewProjectSheet.swift in Sources */,
+				191AC8C7EFABC895B86FA079 /* NodeDirectory.swift in Sources */,
 				2A9E86E6D57F54104F2A5385 /* NodesClient.swift in Sources */,
 				25EAC345E8461C615669CEEC /* NodesManagerView.swift in Sources */,
 				FF0D640B1FC2ED46EF885F3B /* NodesModels.swift in Sources */,
@@ -1597,6 +1616,7 @@
 				DE0B7B978D25095CDE0A806B /* SandboxedArtifactWebView.swift in Sources */,
 				A7CBE1CF548F349674847F10 /* SessionDiffClient.swift in Sources */,
 				F6BC3BAE7280B794444FFCF3 /* SessionDiffListView.swift in Sources */,
+				0FDBE993D5E22BAEF826968E /* SessionWorkerClient.swift in Sources */,
 				1526643C864CF4A2D20144E8 /* SettingsStore.swift in Sources */,
 				90479EDA461BD0B88CB8718E /* SettingsView.swift in Sources */,
 				BAE432B9785491969810F449 /* SiteAPIsView.swift in Sources */,

@@ -2,7 +2,7 @@
  * Allternit Platform Service Worker
  *
  * Enables installability as a PWA and handles background push notifications
- * for remote-control approvals and session events.
+ * for fabric-session approvals and session events.
  */
 
 const CACHE_NAME = 'allternit-platform-v1';

@@ -39,7 +39,7 @@ export type SpineEvent = z.infer<typeof eventSchema>
 
 // ── Capability ───────────────────────────────────────────────────────────────
 
-export const capabilityKindSchema = z.enum(['read', 'write', 'execute', 'compute'])
+export const capabilityKindSchema = z.enum(['read', 'write', 'execute', 'compute', 'observe', 'stream'])
 export const capabilitySchema = z.object({
   id,
   /** Dot-namespaced capability name, e.g. `office.docx.edit`. */
@@ -52,7 +52,73 @@ export const capabilitySchema = z.object({
 })
 export type Capability = z.infer<typeof capabilitySchema>
 
+// ── Fabric node identity ─────────────────────────────────────────────────────
+
+/** Transport families a Fabric endpoint may use. */
+export const fabricTransportSchema = z.enum(['tailscale', 'tunnel', 'mdns', 'local', 'relay'])
+export type FabricTransport = z.infer<typeof fabricTransportSchema>
+
+export const nodeEndpointSchema = z.object({
+  transport: fabricTransportSchema,
+  url: z.string().url(),
+  /** Lower is preferred. Direct local/mesh endpoints win over relay. */
+  priority: z.number().int().default(0),
+  /** Transport-specific metadata (e.g. tailnet IP, tunnel hostname). */
+  metadata: z.record(z.unknown()).optional(),
+})
+export type NodeEndpoint = z.infer<typeof nodeEndpointSchema>
+
+export const nodeResourceSchema = z.object({
+  kind: z.string().min(1),
+  name: z.string().min(1),
+  value: z.union([z.string(), z.number(), z.boolean()]).optional(),
+  unit: z.string().optional(),
+})
+export type NodeResource = z.infer<typeof nodeResourceSchema>
+
+export const nodeIdentitySchema = z.object({
+  nodeId: id,
+  name: z.string().min(1),
+  /** Runtime type: desktop, vps, worker, phone, etc. */
+  runtimeType: z.string().min(1),
+  /** Platform identifier, e.g. darwin-arm64. */
+  platform: z.string().min(1),
+  version: z.string().min(1),
+  endpoints: z.array(nodeEndpointSchema),
+  capabilities: z.array(capabilitySchema),
+  resources: z.array(nodeResourceSchema).optional(),
+})
+export type NodeIdentity = z.infer<typeof nodeIdentitySchema>
+
+export const capabilityQuerySchema = z.object({
+  name: z.string().optional(),
+  kind: capabilityKindSchema.optional(),
+  resource: z.string().optional(),
+  nodeId: z.string().optional(),
+})
+export type CapabilityQuery = z.infer<typeof capabilityQuerySchema>
+
+export const fabricEventSchema = z.object({
+  id,
+  /** Dot-namespaced event type, e.g. `fabric.node.joined`. */
+  type: z.string().min(1),
+  at: isoDateTime,
+  source: z.string().min(1),
+  subject: z.string().optional(),
+  data: z.record(z.unknown()).optional(),
+})
+export type FabricEvent = z.infer<typeof fabricEventSchema>
+
 // ── Lease ────────────────────────────────────────────────────────────────────
+
+export const leasePolicySchema = z.object({
+  workloadId: id.optional(),
+  principalId: z.string().optional(),
+  budgetId: z.string().optional(),
+  maxInvocations: z.number().int().min(1).optional(),
+  extra: z.record(z.unknown()).optional(),
+})
+export type LeasePolicy = z.infer<typeof leasePolicySchema>
 
 export const leaseSchema = z.object({
   id,
@@ -63,6 +129,9 @@ export const leaseSchema = z.object({
   expiresAt: isoDateTime.optional(),
   status: z.enum(['active', 'revoked', 'expired']),
   constraints: z.record(z.unknown()).optional(),
+  policy: leasePolicySchema.optional(),
+  /** Signature proving the lease was issued by the authority (format TBD). */
+  signature: z.string().optional(),
 })
 export type Lease = z.infer<typeof leaseSchema>
 
@@ -121,6 +190,25 @@ export const receiptSchema = z.object({
   issuedAt: isoDateTime,
 })
 export type Receipt = z.infer<typeof receiptSchema>
+
+// ── Fabric invocation receipt ────────────────────────────────────────────────
+
+export const fabricInvocationReceiptSchema = z.object({
+  id,
+  at: isoDateTime,
+  capability: z.string().min(1),
+  nodeId: z.string().min(1),
+  requestId: z.string().min(1),
+  leaseId: id.optional(),
+  ok: z.boolean(),
+  /** Structured result summary (size-bounded by the emitter). */
+  result: z.unknown().optional(),
+  error: z.string().optional(),
+  /** Input keys only — values are intentionally omitted for audit privacy. */
+  inputKeys: z.array(z.string()),
+  resource: z.string().optional(),
+})
+export type FabricInvocationReceipt = z.infer<typeof fabricInvocationReceiptSchema>
 
 // ── Approval ─────────────────────────────────────────────────────────────────
 

@@ -173,7 +173,7 @@ export namespace Session {
         })
         .optional(),
       agentID: z.string().optional(),
-      surface: z.enum(["chat", "cowork", "code", "browser", "design"]).optional(),
+      surface: z.enum(["chat", "cowork", "code", "browser", "design", "fabric-session"]).optional(),
       defaultModel: z
         .object({
           providerID: z.string(),

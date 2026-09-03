@@ -26,6 +26,8 @@ import { Log } from "@/shared/util/log"
 import { Flag } from "@/runtime/context/flag/flag"
 import { Auth } from "@/runtime/integrations/auth"
 import { Pairing } from "@/runtime/services/pairing/pairing"
+import { type NodeIdentity, nodeIdentitySchema } from "@/runtime/fabric/transport"
+import { buildNodeIdentity } from "@/runtime/fabric/capability-catalog"
 
 export namespace InstanceRegistration {
   const log = Log.create({ service: "instance-registration" })
@@ -36,6 +38,8 @@ export namespace InstanceRegistration {
   const REGISTER_INTERVAL_MS = Number(process.env.GIZZI_REGISTER_INTERVAL_MS) || 5 * 60 * 1000
 
   let refreshTimer: ReturnType<typeof setInterval> | undefined
+  /** Last capability record published; refreshed on the timer. */
+  let currentRecord: NodeIdentity | undefined
 
   // Decodes the JWT payload segment (base64url, no library) and returns true
   // only when the token carries an `exp` that is still in the future.
@@ -71,8 +75,16 @@ export namespace InstanceRegistration {
     return undefined
   }
 
-  async function putRegistration(token: string, name: string, url: string): Promise<boolean> {
+  /**
+   * PUT the node's capability record to the platform registry. The body keeps
+   * `url` and `name` at the top level for backward compatibility with the
+   * legacy registry shape, and includes the full NodeIdentity for platforms
+   * that understand the capability-native contract.
+   */
+  async function putCapabilityRecord(token: string, record: NodeIdentity): Promise<boolean> {
     const platform = Flag.GIZZI_PLATFORM_API_URL.replace(/\/+$/, "")
+    const primaryUrl = record.endpoints[0]?.url
+    const name = record.name
     try {
       const response = await fetch(`${platform}/api/v1/gizzi-instances/self`, {
         method: "PUT",
@@ -80,7 +92,11 @@ export namespace InstanceRegistration {
           "content-type": "application/json",
           authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ url, name }),
+        body: JSON.stringify({
+          url: primaryUrl,
+          name,
+          ...record,
+        }),
         signal: AbortSignal.timeout(REGISTER_TIMEOUT_MS),
       })
       if (!response.ok) {
@@ -91,7 +107,7 @@ export namespace InstanceRegistration {
         }
         return false
       }
-      log.info(`gizzi instance registered as ${name} (${url})`)
+      log.info(`gizzi instance registered as ${name} (${primaryUrl ?? "no endpoint"})`)
       return true
     } catch (err) {
       log.warn("instance registration failed", { error: err instanceof Error ? err.message : String(err) })
@@ -99,7 +115,19 @@ export namespace InstanceRegistration {
     }
   }
 
-  export async function register(opts: { url: string; name?: string }): Promise<void> {
+  /**
+   * Publish a full capability record to the platform registry. This is the
+   * convergence entrypoint: TailscaleFabricTransport calls this after joining
+   * the tailnet so the harness is discoverable by capability rather than by
+   * URL alone.
+   */
+  export async function registerCapabilityRecord(record: NodeIdentity): Promise<void> {
+    const parsed = nodeIdentitySchema.safeParse(record)
+    if (!parsed.success) {
+      log.warn("invalid capability record; registration skipped", { issues: parsed.error?.issues })
+      return
+    }
+
     // Rotate a soon-to-expire device token before resolving, so the very first
     // registration PUT already carries the fresh token. Best-effort: a failed
     // rotation leaves the old token in place and registration proceeds with it.
@@ -114,8 +142,8 @@ export namespace InstanceRegistration {
       return
     }
 
-    const name = credential.name ?? opts.name ?? os.hostname()
-    await putRegistration(credential.token, name, opts.url)
+    currentRecord = parsed.data
+    await putCapabilityRecord(credential.token, currentRecord)
 
     // Only the durable device token gets a refresh loop; Clerk JWTs and env
     // tokens are short-lived and stay one-shot.
@@ -131,10 +159,27 @@ export namespace InstanceRegistration {
           stop()
           return
         }
-        await putRegistration(current.token, current.name ?? name, opts.url)
+        if (!currentRecord) {
+          stop()
+          return
+        }
+        await putCapabilityRecord(current.token, currentRecord)
       }, REGISTER_INTERVAL_MS)
       refreshTimer.unref()
     }
+  }
+
+  /**
+   * Legacy registration entrypoint used by cloudflared tunnel startup. It now
+   * builds a capability record from the URL/name and delegates to
+   * registerCapabilityRecord, so the registry receives a consistent shape.
+   */
+  export async function register(opts: { url: string; name?: string }): Promise<void> {
+    const record = buildNodeIdentity({
+      name: opts.name,
+      endpoints: [{ transport: "tunnel" as const, url: opts.url, priority: 20 }],
+    })
+    await registerCapabilityRecord(record)
   }
 
   // Clears the refresh loop. Called from Server.stop alongside Tunnel.stop so a

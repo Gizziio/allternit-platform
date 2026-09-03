@@ -346,9 +346,9 @@ Fix surface code before shipping
 - Add `/v1/verification` (expose existing verification system)
 - Ensure all routes emit correct GlobalBus events
 
-### Phase 4 — Deprecate old routes
-- Return `Deprecation` header on old routes
-- Remove old routes in next major server version
+### Phase 4 — Remove/replace old routes
+- Migrate callers to canonical Fabric session-worker endpoints (`/v1/session-worker/*`, `/v1/fabric/*`).
+- Remove old routes in next major server version; do not emit `Deprecation` headers.
 
 ---
 

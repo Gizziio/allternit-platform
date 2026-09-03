@@ -143,7 +143,7 @@ declare global {
         toggleHud: () => Promise<void>;
         moveHudBy?: (delta: { x: number; y: number; width: number; height: number }) => Promise<void>;
         setHudBounds?: (bounds: { x?: number; y?: number; width?: number; height?: number }) => Promise<void>;
-        openRemoteControl: (runtimeId?: string) => Promise<void>;
+        openFabricSession: (runtimeId?: string) => Promise<void>;
         /** HUD mode: chrome-free floating composer bridge. */
         hud?: {
           open: () => Promise<void>;

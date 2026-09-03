@@ -38,7 +38,7 @@ export function MachinesPanel({
         <p className="text-[12px] text-[var(--text-tertiary)] m-0 mb-4">{emptyMessage}</p>
         <button
           type="button"
-          onClick={() => window.dispatchEvent(new CustomEvent('allternit:open-settings', { detail: { section: 'remote-control' } }))}
+          onClick={() => window.dispatchEvent(new CustomEvent('allternit:open-settings', { detail: { section: 'fabric-session' } }))}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium bg-[var(--text-primary)] text-[var(--bg-elevated)] border-none cursor-pointer hover:opacity-90 transition-opacity"
         >
           <ArrowSquareOut size={14} weight="bold" />

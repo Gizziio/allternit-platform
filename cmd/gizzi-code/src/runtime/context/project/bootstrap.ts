@@ -13,7 +13,7 @@ import { ShareNext } from "@/runtime/session/share/share-next"
 import { Snapshot } from "@/runtime/session/snapshot"
 import { Truncate } from "@/runtime/tools/builtins/truncation"
 import { Sidecar } from "@/runtime/sidecar"
-import { initRemoteControlPush } from "@/runtime/integrations/remote-control-push"
+import { initFabricPush } from "@/runtime/integrations/fabric-push"
 
 export async function InstanceBootstrap() {
   Log.Default.info("bootstrapping", { directory: Instance.directory })
@@ -46,5 +46,5 @@ export async function InstanceBootstrap() {
     }
   })
 
-  initRemoteControlPush()
+  initFabricPush()
 }
