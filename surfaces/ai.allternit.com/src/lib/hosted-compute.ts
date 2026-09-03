@@ -17,6 +17,16 @@ export interface HostedRuntimeEntitlement {
   billingPortalUrl: string;
 }
 
+export interface BillingCredits {
+  balance_usd: number;
+  month_to_date_usage_usd: number;
+  recent_transactions?: Array<{
+    amount_usd: number;
+    source: string;
+    created_at: string;
+  }>;
+}
+
 export interface HostedRuntime {
   id: string;
   name: string;
@@ -77,6 +87,10 @@ export function getHostedEntitlement(token: string) {
     token,
     "/api/v1/hosted-runtimes/entitlement",
   );
+}
+
+export function getBillingCredits(token: string) {
+  return request<BillingCredits>(token, "/api/v1/billing/credits");
 }
 
 export function listHostedRuntimes(token: string) {
