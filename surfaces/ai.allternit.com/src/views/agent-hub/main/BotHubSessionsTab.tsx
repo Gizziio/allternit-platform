@@ -130,7 +130,7 @@ export function BotHubSessionsTab({ onSessionStarted }: BotHubSessionsTabProps) 
     window.dispatchEvent(
       new CustomEvent("allternit:open-view", {
         detail: {
-          viewType: "chat-agent-session",
+          viewType: "cowork-agent-session",
           context: { sessionId: session.id, originView: "chat" },
         },
       })
