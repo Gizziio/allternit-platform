@@ -62,12 +62,16 @@ cloud dashboard, Stripe fully hooked in, no real-money test required.
   silenced. Zero prod errors.
 
 ### Next
+- Free-tier tightening mapped (2026-09-03, awaiting go-ahead to implement):
+  hosted compute becomes paid-only (free tier = BYOC via pairing), plus a
+  small free monthly inference allowance for no-balance users.
 - User can do a real $10 top-up from platform.allternit.com/billing whenever
   ready — the loop is live end-to-end. No code changes needed.
-- Enroll a third Contabo VPS as an active workload node when purchased
-  (procedure in docs/Operations/CAPACITY_PLAN.md).
 
 ### Open questions
-- plan_tiers ↔ subscription metadata flow (allternit_plan_tier) is wired
-  but no subscription product exists yet; credit packs are the live
-  revenue path for now.
+- DECIDED 2026-09-03: two-node Contabo fleet is final (no third VPS);
+  CAPACITY_PLAN.md updated, node-standby stays draining/HA + OS build loan.
+- DECIDED 2026-09-03: cloud-api user_credits is the commercial source of
+  truth; AllternitOS UsageEvent reconciliation reads from / reconciles into
+  the deployed api.allternit.com ledger (coordination doc updated).
+- Fly.io org deleted by user 2026-09-03 — migration fully closed.
