@@ -62,8 +62,9 @@ impl ModelAliasMap {
     }
 }
 
-/// The production starter catalog. These are all routed through OpenRouter for
-/// Phase A; later phases will add direct-provider and other upstream routes.
+/// The production starter catalog. Routes are split across upstream providers.
+/// OpenRouter provides broad coverage; Together AI provides curated open-weight
+/// models with direct pricing and context metadata.
 pub fn starter_catalog() -> ModelAliasMap {
     ModelAliasMap::new(vec![
         ModelAliasEntry {
@@ -131,6 +132,73 @@ pub fn starter_catalog() -> ModelAliasMap {
             prompt_price: 2.00,
             completion_price: 6.00,
             context_length: 128_000,
+        },
+        // Together AI — curated open-weight models (prices per 1M tokens, USD).
+        ModelAliasEntry {
+            alias: "llama-3.3-70b-turbo".to_string(),
+            provider: "together".to_string(),
+            upstream_id: "meta-llama/Llama-3.3-70B-Instruct-Turbo".to_string(),
+            aliases: Some(vec!["llama-3.3-70b".to_string()]),
+            created: 1733011200, // 2024-12-01
+            name: "Llama 3.3 70B Instruct Turbo".to_string(),
+            prompt_price: 1.04,
+            completion_price: 1.04,
+            context_length: 131_072,
+        },
+        ModelAliasEntry {
+            alias: "deepseek-v4-pro".to_string(),
+            provider: "together".to_string(),
+            upstream_id: "deepseek-ai/DeepSeek-V4-Pro-0813".to_string(),
+            aliases: Some(vec!["deepseek-v4".to_string()]),
+            created: 1753929600, // 2025-07-31
+            name: "DeepSeek V4 Pro".to_string(),
+            prompt_price: 1.32,
+            completion_price: 3.96,
+            context_length: 1_048_576,
+        },
+        ModelAliasEntry {
+            alias: "kimi-k3".to_string(),
+            provider: "together".to_string(),
+            upstream_id: "moonshotai/Kimi-K3".to_string(),
+            aliases: None,
+            created: 1753929600, // 2025-07-31
+            name: "Kimi K3".to_string(),
+            prompt_price: 3.00,
+            completion_price: 15.00,
+            context_length: 1_048_576,
+        },
+        ModelAliasEntry {
+            alias: "glm-5.3".to_string(),
+            provider: "together".to_string(),
+            upstream_id: "zai-org/GLM-5.3".to_string(),
+            aliases: None,
+            created: 1753929600, // 2025-07-31
+            name: "GLM 5.3".to_string(),
+            prompt_price: 1.40,
+            completion_price: 4.40,
+            context_length: 1_048_575,
+        },
+        ModelAliasEntry {
+            alias: "qwen3.8-2.4t-a95b".to_string(),
+            provider: "together".to_string(),
+            upstream_id: "Qwen/Qwen3.8-2.4T-A95B".to_string(),
+            aliases: Some(vec!["qwen3.8-2.4t".to_string()]),
+            created: 1753929600, // 2025-07-31
+            name: "Qwen3.8 2.4T A95B".to_string(),
+            prompt_price: 2.00,
+            completion_price: 6.00,
+            context_length: 1_010_000,
+        },
+        ModelAliasEntry {
+            alias: "qwen2.5-72b-together".to_string(),
+            provider: "together".to_string(),
+            upstream_id: "Qwen/Qwen2.5-72B-Instruct".to_string(),
+            aliases: Some(vec!["qwen2.5-72b-t".to_string()]),
+            created: 1727740800, // 2024-10-01
+            name: "Qwen 2.5 72B Instruct".to_string(),
+            prompt_price: 1.20,
+            completion_price: 1.20,
+            context_length: 32_768,
         },
     ])
 }

@@ -82,6 +82,9 @@ struct OpenAiModel {
     id: String,
     #[serde(default)]
     name: Option<String>,
+    /// Together AI and some other hosts use `display_name` instead of `name`.
+    #[serde(default, alias = "display_name")]
+    display_name: Option<String>,
     #[serde(default)]
     object: Option<String>,
     #[serde(default)]
@@ -99,10 +102,22 @@ struct OpenAiModel {
 #[derive(Debug, Deserialize)]
 #[allow(dead_code)]
 struct OpenAiPricing {
+    /// OpenAI-style per-token price field.
+    #[serde(default)]
     prompt: Option<f64>,
+    /// OpenAI-style per-token completion price field.
+    #[serde(default)]
     completion: Option<f64>,
-    image: Option<f64>,
-    request: Option<f64>,
+    /// Together AI uses `input`/`output` instead of `prompt`/`completion`.
+    #[serde(default, alias = "input")]
+    input: Option<f64>,
+    #[serde(default, alias = "output")]
+    output: Option<f64>,
+    /// Some hosts (Together AI) include image/video/transcribe pricing as
+    /// objects rather than scalars. Capture them as raw JSON so they do not
+    /// break deserialization of text-model pricing.
+    #[serde(flatten)]
+    other: serde_json::Map<String, serde_json::Value>,
 }
 
 /// Generic OpenAI-compatible upstream provider.
@@ -155,17 +170,34 @@ impl GenericOpenAiProvider {
             });
         }
 
-        let list: OpenAiModelList = response
-            .json()
+        // OpenAI returns {"data": [...]}; some hosts (e.g. Together AI) return a raw array.
+        let body = response
+            .text()
             .await
-            .map_err(|e| ModelRouterError::UpstreamRequestFailed(format!("invalid JSON: {}", e)))?;
+            .map_err(|e| ModelRouterError::UpstreamRequestFailed(format!("failed to read body: {}", e)))?;
+        let data: Vec<OpenAiModel> = match serde_json::from_str::<serde_json::Value>(&body) {
+            Ok(serde_json::Value::Array(arr)) => arr
+                .into_iter()
+                .map(|v| {
+                    serde_json::from_value(v)
+                        .map_err(|e| ModelRouterError::UpstreamRequestFailed(e.to_string()))
+                })
+                .collect::<Result<Vec<_>, _>>()?,
+            Ok(serde_json::Value::Object(mut obj)) => {
+                let data_value = obj.remove("data").unwrap_or(serde_json::Value::Array(vec![]));
+                serde_json::from_value(data_value).map_err(|e| {
+                    ModelRouterError::UpstreamRequestFailed(format!("invalid model list data: {}", e))
+                })?
+            }
+            Ok(_) => Vec::new(),
+            Err(e) => return Err(ModelRouterError::UpstreamRequestFailed(format!("invalid JSON: {}", e))),
+        };
 
-        let models = list
-            .data
+        let models = data
             .into_iter()
             .map(|m| {
                 let mut extra = m.extra;
-                if let Some(name) = m.name {
+                if let Some(name) = m.name.or(m.display_name) {
                     extra.entry("name".to_string()).or_insert(serde_json::Value::String(name));
                 }
 
@@ -176,7 +208,9 @@ impl GenericOpenAiProvider {
                     .or_insert(serde_json::Value::Number(ctx.into()));
                 }
                 if let Some(p) = m.pricing {
-                    if let Some(prompt) = p.prompt {
+                    let prompt_price = p.prompt.or(p.input);
+                    let completion_price = p.completion.or(p.output);
+                    if let Some(prompt) = prompt_price {
                         extra.entry(
                             "prompt_price".to_string(),
                         )
@@ -184,7 +218,7 @@ impl GenericOpenAiProvider {
                             serde_json::Number::from_f64(prompt).unwrap_or(0.into()),
                         ));
                     }
-                    if let Some(completion) = p.completion {
+                    if let Some(completion) = completion_price {
                         extra.entry(
                             "completion_price".to_string(),
                         )

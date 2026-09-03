@@ -36,8 +36,9 @@ struct OpenRouterModel {
     context_length: Option<u64>,
     #[serde(default)]
     pricing: Option<OpenRouterPricing>,
+    /// OpenRouter returns `top_provider` as an object with provider metadata.
     #[serde(default)]
-    top_provider: Option<String>,
+    top_provider: Option<serde_json::Map<String, serde_json::Value>>,
     #[serde(default)]
     architecture: Option<serde_json::Map<String, serde_json::Value>>,
     #[serde(flatten)]
@@ -47,10 +48,39 @@ struct OpenRouterModel {
 #[derive(Debug, Deserialize)]
 #[allow(dead_code)]
 struct OpenRouterPricing {
+    /// OpenRouter sends pricing values as strings (e.g. "0.00000005").
+    #[serde(default, deserialize_with = "deserialize_optional_price")]
     prompt: Option<f64>,
+    #[serde(default, deserialize_with = "deserialize_optional_price")]
     completion: Option<f64>,
+    #[serde(default, deserialize_with = "deserialize_optional_price")]
     image: Option<f64>,
+    #[serde(default, deserialize_with = "deserialize_optional_price")]
     request: Option<f64>,
+}
+
+/// Parse an optional price that may be a JSON number or a numeric string.
+fn deserialize_optional_price<'de, D>(deserializer: D) -> Result<Option<f64>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde::Deserialize;
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum Price {
+        Number(f64),
+        String(String),
+        Null,
+    }
+
+    match Price::deserialize(deserializer)? {
+        Price::Number(n) => Ok(Some(n)),
+        Price::String(s) => s
+            .parse::<f64>()
+            .map(Some)
+            .map_err(serde::de::Error::custom),
+        Price::Null => Ok(None),
+    }
 }
 
 /// Adapter configuration.
@@ -193,7 +223,7 @@ impl OpenRouterProvider {
                     id: m.id,
                     object: "model".to_string(),
                     created: 0,
-                    owned_by: m.top_provider.unwrap_or_else(|| "openrouter".to_string()),
+                    owned_by: "openrouter".to_string(),
                     upstream_id: None,
                     provider: Some("openrouter".to_string()),
                     aliases: None,
