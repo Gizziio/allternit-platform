@@ -3,6 +3,7 @@
 //! Shared state and route handlers for the Allternit API.
 
 pub mod aci_routes;
+pub mod aci_safety;
 pub mod admin_audit_routes;
 pub mod admin_mcp_tunnel_routes;
 pub mod admin_access_token_routes;
@@ -29,6 +30,7 @@ pub mod analytics_routes;
 pub mod artifact_routes;
 pub mod audit_log_routes;
 pub mod auth;
+pub mod benchmark_routes;
 pub mod automation_routes;
 pub mod backend_install_routes;
 pub mod bb;
@@ -38,6 +40,8 @@ pub mod beta_session_routes;
 pub mod beta_work_routes;
 pub mod bot_desktop_routes;
 pub mod bot_desktop_stream;
+pub mod browser_history_service;
+pub mod procedural_memory_service;
 pub mod user_profile_routes;
 pub mod billing;
 pub mod board_routes;
@@ -89,6 +93,7 @@ pub mod library_routes;
 pub mod llm_gateway;
 pub mod local_brain_routes;
 pub mod local_engine_routes;
+pub mod long_running_task_routes;
 pub mod local_studio_routes;
 pub mod mcp_dispatcher;
 pub mod mcp_routes;
@@ -97,11 +102,13 @@ pub mod mcp_tunnel_auth;
 pub mod marketplace_routes;
 pub mod me_routes;
 pub mod mailflare_client;
+pub mod memory_notes_routes;
 pub mod memory_reconstruction_routes;
 pub mod memory_routes;
 pub mod memory_kernel_service;
 pub mod metrics;
 pub mod oauth_routes;
+pub mod passkey_routes;
 pub mod office_cli_mcp;
 pub mod office_cli_routes;
 pub mod office_engine_routes;
@@ -120,6 +127,8 @@ pub mod rails;
 pub mod remote_control_routes;
 pub mod rate_limit;
 pub mod rails_client_impl;
+pub mod research_task_service;
+pub mod research_task_routes;
 pub mod rbac;
 pub mod rbac_routes;
 pub mod runtime_backend_routes;
@@ -127,6 +136,7 @@ pub mod runtime_discover_routes;
 pub mod sandbox_routes;
 pub mod sandbox_template_routes;
 pub mod scim_routes;
+pub mod skills_routes;
 pub mod server_tool_routes;
 pub mod session_memory_service;
 pub mod slack_webhook_routes;
@@ -208,6 +218,7 @@ pub mod test_helpers {
             terminal_sessions: TerminalSessionStore::new(),
             mcp_dispatcher: crate::mcp_dispatcher::McpDispatcher::new(),
             approval_store: Arc::new(permission_policy::ApprovalStore::new()),
+            passkey_state: None,
         })
     }
 }
@@ -301,6 +312,8 @@ pub struct AppState {
     pub mcp_dispatcher: crate::mcp_dispatcher::McpDispatcher,
     /// Pending/resolved tool-execution approval requests from `ask` policy decisions.
     pub approval_store: Arc<crate::permission_policy::ApprovalStore>,
+    /// Passkey / WebAuthn state for the vault.
+    pub passkey_state: Option<crate::passkey_routes::PasskeyState>,
 }
 
 /// Return the default LLM provider/model pair used when a request does not

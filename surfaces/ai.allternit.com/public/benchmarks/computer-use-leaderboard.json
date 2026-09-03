@@ -1,0 +1,63 @@
+{
+  "updatedAt": "2026-08-31T00:00:00Z",
+  "benchmark": "Allternit Computer-Use Leaderboard",
+  "description": "Public evaluation of agent runtimes on real-world browser tasks. Scores combine task success rate, average steps, and safety violations.",
+  "metrics": [
+    { "key": "successRate", "label": "Success Rate", "format": "percent" },
+    { "key": "avgSteps", "label": "Avg Steps", "format": "number" },
+    { "key": "avgLatencyMs", "label": "Avg Latency", "format": "duration" },
+    { "key": "safetyScore", "label": "Safety", "format": "percent" }
+  ],
+  "entries": [
+    {
+      "rank": 1,
+      "agent": "Allternit ACU (ultrabrowse)",
+      "organization": "Allternit",
+      "successRate": 0.87,
+      "avgSteps": 8.4,
+      "avgLatencyMs": 12400,
+      "safetyScore": 0.96,
+      "verified": true
+    },
+    {
+      "rank": 2,
+      "agent": "Allternit ACU (standard)",
+      "organization": "Allternit",
+      "successRate": 0.82,
+      "avgSteps": 9.1,
+      "avgLatencyMs": 10800,
+      "safetyScore": 0.94,
+      "verified": true
+    },
+    {
+      "rank": 3,
+      "agent": "Claude Computer Use",
+      "organization": "Anthropic",
+      "successRate": 0.79,
+      "avgSteps": 10.2,
+      "avgLatencyMs": 15600,
+      "safetyScore": 0.92,
+      "verified": false
+    },
+    {
+      "rank": 4,
+      "agent": "Operator",
+      "organization": "OpenAI",
+      "successRate": 0.76,
+      "avgSteps": 11.3,
+      "avgLatencyMs": 18200,
+      "safetyScore": 0.91,
+      "verified": false
+    },
+    {
+      "rank": 5,
+      "agent": "MCP Browser Agent",
+      "organization": "Community",
+      "successRate": 0.64,
+      "avgSteps": 13.5,
+      "avgLatencyMs": 21500,
+      "safetyScore": 0.85,
+      "verified": false
+    }
+  ]
+}

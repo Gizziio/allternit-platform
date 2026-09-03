@@ -73,6 +73,8 @@ sha2 = "0.10"
 md5 = "0.7"
 aes-gcm = "0.10"
 ed25519-dalek = { version = "2", features = ["rand_core"] }
+webauthn-rs = "0.5"
+url = "2"
 
 # SSH client
 russh = "0.60"

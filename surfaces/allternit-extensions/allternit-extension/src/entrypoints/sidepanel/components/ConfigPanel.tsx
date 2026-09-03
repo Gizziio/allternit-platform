@@ -4,8 +4,10 @@ import {
 	CornerUpLeft,
 	Eye,
 	EyeOff,
+	Key,
 	Loader2,
 	Palette,
+	HardDrive,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
@@ -14,6 +16,17 @@ import type { ExtConfig, LanguagePreference } from '@/agent/useAgent'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
+import {
+	isCloudSyncEnabled,
+	isLocalMemoryEnabled,
+	setCloudSyncEnabled,
+	setLocalMemoryEnabled,
+} from '@/lib/memory/local-store'
+import {
+	isHistoryIngestionEnabled,
+	setHistoryIngestionEnabled,
+} from '@/lib/memory/history'
+import { VaultPanel } from './VaultPanel'
 
 interface ConfigPanelProps {
 	config: ExtConfig | null
@@ -33,12 +46,42 @@ export function ConfigPanel({ config, onSave, onClose, onOpenHTMLToFigma }: Conf
 	const [userAuthToken, setUserAuthToken] = useState<string>('')
 	const [copied, setCopied] = useState(false)
 	const [showToken, setShowToken] = useState(false)
+	const [showVault, setShowVault] = useState(false)
+	const [localMemoryEnabled, setLocalMemoryEnabledState] = useState(false)
+	const [cloudSyncEnabled, setCloudSyncEnabledState] = useState(false)
+	const [historyIngestionEnabled, setHistoryIngestionEnabledState] = useState(true)
+
+	if (showVault) {
+		return <VaultPanel onBack={() => setShowVault(false)} />
+	}
 
 	useEffect(() => {
 		setLanguage(config?.language)
 		setMaxSteps(config?.maxSteps)
 		setExperimentalLlmsTxt(config?.experimentalLlmsTxt ?? false)
+		isLocalMemoryEnabled().then(setLocalMemoryEnabledState)
+		isCloudSyncEnabled().then(setCloudSyncEnabledState)
+		isHistoryIngestionEnabled().then(setHistoryIngestionEnabledState)
 	}, [config])
+
+	const toggleLocalMemory = async (checked: boolean) => {
+		await setLocalMemoryEnabled(checked)
+		setLocalMemoryEnabledState(checked)
+		if (!checked) {
+			await setCloudSyncEnabled(false)
+			setCloudSyncEnabledState(false)
+		}
+	}
+
+	const toggleCloudSync = async (checked: boolean) => {
+		await setCloudSyncEnabled(checked)
+		setCloudSyncEnabledState(checked)
+	}
+
+	const toggleHistoryIngestion = async (checked: boolean) => {
+		await setHistoryIngestionEnabled(checked)
+		setHistoryIngestionEnabledState(checked)
+	}
 
 	// Poll for user auth token every second until found
 	useEffect(() => {
@@ -141,6 +184,52 @@ export function ConfigPanel({ config, onSave, onClose, onOpenHTMLToFigma }: Conf
 					</Button>
 				</div>
 			)}
+
+			{/* Password Vault Section */}
+			<div className="flex flex-col gap-1.5 p-3 bg-gradient-to-r from-amber-500/10 to-orange-500/10 rounded-md border border-amber-500/20">
+				<div className="flex items-center gap-2">
+					<Key className="size-3.5 text-amber-600" />
+					<label className="text-xs font-medium text-foreground">Password Vault</label>
+				</div>
+				<p className="text-[10px] text-muted-foreground mb-1">
+					Store credentials for agent autofill. Import from 1Password, Bitwarden, or Chrome.
+				</p>
+				<Button
+					variant="outline"
+					size="sm"
+					onClick={() => setShowVault(true)}
+					className="w-full h-8 text-xs cursor-pointer border-amber-500/30 hover:bg-amber-500/10"
+				>
+					Open Vault
+				</Button>
+			</div>
+
+			{/* On-device Memory Section */}
+			<div className="flex flex-col gap-1.5 p-3 bg-gradient-to-r from-emerald-500/10 to-teal-500/10 rounded-md border border-emerald-500/20">
+				<div className="flex items-center gap-2">
+					<HardDrive className="size-3.5 text-emerald-600" />
+					<label className="text-xs font-medium text-foreground">On-device Memory</label>
+				</div>
+				<p className="text-[10px] text-muted-foreground mb-1">
+					Keep browsing history and memories locally in IndexedDB. Cloud sync pushes local memories to the Allternit gateway.
+				</p>
+				<label className="flex items-center justify-between cursor-pointer">
+					<span className="text-xs text-muted-foreground">Enable local memory</span>
+					<Switch checked={localMemoryEnabled} onCheckedChange={toggleLocalMemory} />
+				</label>
+				<label className="flex items-center justify-between cursor-pointer">
+					<span className="text-xs text-muted-foreground">Sync to cloud</span>
+					<Switch
+						checked={cloudSyncEnabled}
+						onCheckedChange={toggleCloudSync}
+						disabled={!localMemoryEnabled}
+					/>
+				</label>
+				<label className="flex items-center justify-between cursor-pointer pt-1 border-t border-border/30">
+					<span className="text-xs text-muted-foreground">Ingest browser history</span>
+					<Switch checked={historyIngestionEnabled} onCheckedChange={toggleHistoryIngestion} />
+				</label>
+			</div>
 
 			{/* User Auth Token Section */}
 			<div className="flex flex-col gap-1.5 p-3 bg-muted/50 rounded-md border">

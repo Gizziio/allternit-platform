@@ -552,6 +552,7 @@ mod tests {
             office_cli_mcp_sessions: Arc::new(RwLock::new(HashMap::new())),
             mcp_dispatcher: crate::mcp_dispatcher::McpDispatcher::new(),
             approval_store: Arc::new(crate::permission_policy::ApprovalStore::new()),
+            passkey_state: None,
         })
     }
 
