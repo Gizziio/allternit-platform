@@ -149,3 +149,33 @@ Close the bankruptcy-risk gaps identified in the free-tier/billing review: free 
 - Should scoped api tokens carry permissions (they have a permissions
   column already) so e.g. a read-only token cannot destroy runtimes?
   Currently any valid token gets full user power on management routes.
+
+---
+
+# Steering checkpoint — scoped tokens + CI/CD shipped (2026-09-03, session ba9de8f8)
+
+## Just did (deployed to mail, all regressions green, pushed)
+- Scoped API tokens: alt_ keys (api_keys table) now actually validate —
+  they were minted by the platform but wired to nothing. Scopes enforced
+  via resolve_user_scoped: inference / compute / billing / account.
+  Legacy ['*'] default keeps existing tokens full-access. Live scope_check
+  8/8 (inference token: chat 200, compute+billing+account 403; compute
+  token inverse; wildcard all 200).
+- CI/CD: deploy-cloud-api-contabo.yml rewritten — test job (release suite
+  on Postgres service container, docker available) gates a deploy job that
+  joins the tailnet (TS_AUTHKEY) and swaps the binary onto mail via
+  deploy-contabo.sh, now with health verification + automatic rollback.
+  Push to main on cloud-api paths self-deploys.
+- Regressions: soak 12/12, sweep smoke 5/5, scope check 8/8, 168/168
+  release tests on mail.
+
+## Next (user actions)
+- Tailscale admin: create reusable tag:ci auth key, allow tag in ACL
+  (snippet in docs/Operations/CLOUD_API_VPS_DEPLOY.md § CI/CD), then
+  `gh secret set TS_AUTHKEY`. Optional CONTABO_SSH_KEY if no SSH ACL.
+- Deferred: real $10 Stripe purchase, cheap-provider pool keys.
+
+## Open questions
+- Frontend should expose scope selection at key-mint time (platform
+  allternit.com API-keys panel currently posts scopes — verify it sends
+  meaningful defaults, not empty = full).
