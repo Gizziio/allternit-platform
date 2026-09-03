@@ -36,51 +36,45 @@ struct OpenRouterModel {
     context_length: Option<u64>,
     #[serde(default)]
     pricing: Option<OpenRouterPricing>,
-    /// OpenRouter returns `top_provider` as an object with provider metadata.
     #[serde(default)]
-    top_provider: Option<serde_json::Map<String, serde_json::Value>>,
+    top_provider: Option<serde_json::Value>,
     #[serde(default)]
     architecture: Option<serde_json::Map<String, serde_json::Value>>,
     #[serde(flatten)]
     extra: serde_json::Map<String, serde_json::Value>,
 }
 
-#[derive(Debug, Deserialize)]
-#[allow(dead_code)]
-struct OpenRouterPricing {
-    /// OpenRouter sends pricing values as strings (e.g. "0.00000005").
-    #[serde(default, deserialize_with = "deserialize_optional_price")]
-    prompt: Option<f64>,
-    #[serde(default, deserialize_with = "deserialize_optional_price")]
-    completion: Option<f64>,
-    #[serde(default, deserialize_with = "deserialize_optional_price")]
-    image: Option<f64>,
-    #[serde(default, deserialize_with = "deserialize_optional_price")]
-    request: Option<f64>,
-}
-
-/// Parse an optional price that may be a JSON number or a numeric string.
-fn deserialize_optional_price<'de, D>(deserializer: D) -> Result<Option<f64>, D::Error>
+fn optional_f64_from_string<'de, D>(deserializer: D) -> Result<Option<f64>, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
-    use serde::Deserialize;
-    #[derive(Deserialize)]
-    #[serde(untagged)]
-    enum Price {
-        Number(f64),
-        String(String),
-        Null,
+    use serde::de::Error;
+    let value: Option<serde_json::Value> = Option::deserialize(deserializer)?;
+    match value {
+        None => Ok(None),
+        Some(serde_json::Value::Number(n)) => Ok(n.as_f64()),
+        Some(serde_json::Value::String(s)) => {
+            if s.is_empty() {
+                Ok(None)
+            } else {
+                s.parse::<f64>().map(Some).map_err(D::Error::custom)
+            }
+        }
+        Some(_) => Err(D::Error::custom("expected number or string for price")),
     }
+}
 
-    match Price::deserialize(deserializer)? {
-        Price::Number(n) => Ok(Some(n)),
-        Price::String(s) => s
-            .parse::<f64>()
-            .map(Some)
-            .map_err(serde::de::Error::custom),
-        Price::Null => Ok(None),
-    }
+#[derive(Debug, Deserialize)]
+#[allow(dead_code)]
+struct OpenRouterPricing {
+    #[serde(default, deserialize_with = "optional_f64_from_string")]
+    prompt: Option<f64>,
+    #[serde(default, deserialize_with = "optional_f64_from_string")]
+    completion: Option<f64>,
+    #[serde(default, deserialize_with = "optional_f64_from_string")]
+    image: Option<f64>,
+    #[serde(default, deserialize_with = "optional_f64_from_string")]
+    request: Option<f64>,
 }
 
 /// Adapter configuration.
@@ -223,7 +217,7 @@ impl OpenRouterProvider {
                     id: m.id,
                     object: "model".to_string(),
                     created: 0,
-                    owned_by: "openrouter".to_string(),
+                    owned_by: m.top_provider.as_ref().and_then(|v| v.get("provider_name").and_then(|p| p.as_str()).map(String::from)).unwrap_or_else(|| "openrouter".to_string()),
                     upstream_id: None,
                     provider: Some("openrouter".to_string()),
                     aliases: None,
