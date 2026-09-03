@@ -7,6 +7,8 @@
 
 ## Deploy loop
 
+**Prefer the codified script: `scripts/deploy-cloud-api.sh`** (from the repo root; `--fast` skips tests, `--dry-run` prints steps). It runs the loop below and *verifies the swap* — the check that catches a stale binary. The manual steps remain for reference:
+
 1. `rsync -a --partial --timeout=60 cmd/allternit-cloud-api/{src,tests,migrations_pg,migrations}/ root@mail:/opt/allternit-build/cmd/allternit-cloud-api/...` (mirror each dir; touch any changed `.rs` files on mail — rsync `-a` preserves mtimes and cargo skips otherwise).
 2. Apply schema manually — there is no migration runner:
    `ssh root@mail "sudo -u postgres psql -d allternit -v ON_ERROR_STOP=1 -f /opt/allternit-build/cmd/allternit-cloud-api/migrations_pg/00X.sql"`.
