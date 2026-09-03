@@ -28,8 +28,9 @@ use std::sync::Arc;
 use crate::{auth::clerk, error::ApiError, ApiState};
 
 const STRIPE_CHECKOUT_SESSIONS_URL: &str = "https://api.stripe.com/v1/checkout/sessions";
-const DEFAULT_SUCCESS_URL: &str = "https://platform.allternit.com/billing?checkout=success";
-const DEFAULT_CANCEL_URL: &str = "https://platform.allternit.com/billing?checkout=cancelled";
+const STRIPE_PORTAL_SESSIONS_URL: &str = "https://api.stripe.com/v1/billing_portal/sessions";
+pub(crate) const DEFAULT_SUCCESS_URL: &str = "https://platform.allternit.com/billing?checkout=success";
+pub(crate) const DEFAULT_CANCEL_URL: &str = "https://platform.allternit.com/billing?checkout=cancelled";
 
 #[derive(Debug, Clone, Copy)]
 pub struct CreditPack {
@@ -114,7 +115,7 @@ async fn create_checkout(
     }
 }
 
-fn billing_not_configured_response() -> Response {
+pub(crate) fn billing_not_configured_response() -> Response {
     (
         StatusCode::SERVICE_UNAVAILABLE,
         Json(serde_json::json!({ "error": "billing_not_configured" })),
@@ -122,7 +123,7 @@ fn billing_not_configured_response() -> Response {
         .into_response()
 }
 
-fn billing_upstream_error_response(error: &ApiError) -> Response {
+pub(crate) fn billing_upstream_error_response(error: &ApiError) -> Response {
     (
         StatusCode::BAD_GATEWAY,
         Json(serde_json::json!({
@@ -146,6 +147,13 @@ fn find_pack(pack_id: &str) -> Option<&'static CreditPack> {
 pub trait StripeCheckout: Send + Sync {
     /// Create a Checkout Session from the pre-encoded form fields and return the hosted session URL.
     async fn create_checkout_session(
+        &self,
+        secret_key: &str,
+        form: &[(String, String)],
+    ) -> Result<String, ApiError>;
+
+    /// Create a Billing Portal Session from the pre-encoded form fields and return the portal URL.
+    async fn create_billing_portal_session(
         &self,
         secret_key: &str,
         form: &[(String, String)],
@@ -204,25 +212,18 @@ fn checkout_form_params(
 }
 
 /// The production StripeCheckout: POSTs the form to the Stripe REST API with the secret key as the
-/// basic-auth username (empty password, per Stripe's auth convention) and returns the hosted checkout
+/// basic-auth username (empty password, per Stripe's auth convention) and returns the hosted session
 /// URL. The secret key never appears in error text.
-struct ReqwestStripeCheckout;
+pub(crate) struct ReqwestStripeCheckout;
 
 impl ReqwestStripeCheckout {
-    fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self
     }
-}
 
-#[async_trait::async_trait]
-impl StripeCheckout for ReqwestStripeCheckout {
-    async fn create_checkout_session(
-        &self,
-        secret_key: &str,
-        form: &[(String, String)],
-    ) -> Result<String, ApiError> {
+    async fn post_form(&self, url: &str, secret_key: &str, form: &[(String, String)]) -> Result<String, ApiError> {
         let response = reqwest::Client::new()
-            .post(STRIPE_CHECKOUT_SESSIONS_URL)
+            .post(url)
             .basic_auth(secret_key, None::<&str>)
             .form(form)
             .send()
@@ -233,7 +234,7 @@ impl StripeCheckout for ReqwestStripeCheckout {
             let message = body
                 .and_then(|body| body["error"]["message"].as_str().map(str::to_string))
                 .unwrap_or_else(|| "Unknown Stripe error".to_string());
-            return Err(ApiError::Internal(format!("Stripe rejected the checkout session: {message}")));
+            return Err(ApiError::Internal(format!("Stripe rejected the session: {message}")));
         }
         let body = response
             .json::<Value>()
@@ -242,7 +243,26 @@ impl StripeCheckout for ReqwestStripeCheckout {
         body["url"]
             .as_str()
             .map(str::to_string)
-            .ok_or_else(|| ApiError::Internal("Stripe returned no checkout URL".to_string()))
+            .ok_or_else(|| ApiError::Internal("Stripe returned no session URL".to_string()))
+    }
+}
+
+#[async_trait::async_trait]
+impl StripeCheckout for ReqwestStripeCheckout {
+    async fn create_checkout_session(
+        &self,
+        secret_key: &str,
+        form: &[(String, String)],
+    ) -> Result<String, ApiError> {
+        self.post_form(STRIPE_CHECKOUT_SESSIONS_URL, secret_key, form).await
+    }
+
+    async fn create_billing_portal_session(
+        &self,
+        secret_key: &str,
+        form: &[(String, String)],
+    ) -> Result<String, ApiError> {
+        self.post_form(STRIPE_PORTAL_SESSIONS_URL, secret_key, form).await
     }
 }
 
@@ -343,6 +363,14 @@ mod tests {
             *self.last_secret.lock().unwrap() = Some(secret_key.to_string());
             Ok("https://checkout.stripe.com/c/pay/test_session".to_string())
         }
+
+        async fn create_billing_portal_session(
+            &self,
+            _secret_key: &str,
+            _form: &[(String, String)],
+        ) -> Result<String, ApiError> {
+            unimplemented!("portal sessions are stubbed in billing_subscriptions tests")
+        }
     }
 
     #[tokio::test]
@@ -375,6 +403,14 @@ mod tests {
             _form: &[(String, String)],
         ) -> Result<String, ApiError> {
             Err(ApiError::Internal("stripe declined".to_string()))
+        }
+
+        async fn create_billing_portal_session(
+            &self,
+            _secret_key: &str,
+            _form: &[(String, String)],
+        ) -> Result<String, ApiError> {
+            unimplemented!("portal sessions are stubbed in billing_subscriptions tests")
         }
     }
 

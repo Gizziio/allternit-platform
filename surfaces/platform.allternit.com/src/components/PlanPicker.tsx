@@ -3,6 +3,19 @@ import { useTheme } from "@/lib/theme";
 
 export type PlanId = "free" | "plus" | "super" | "ultra";
 
+export interface LiveBillingPlan {
+  id: string;
+  label: string;
+  price_usd: number;
+  monthly_credits_usd: number;
+  rollover_cap_usd: number;
+  plan_tier: string;
+}
+
+function formatLivePrice(value: number): string {
+  return `$${Number.isInteger(value) ? value.toFixed(0) : value.toFixed(2)}`;
+}
+
 interface Plan {
   id: PlanId;
   label: string;
@@ -90,10 +103,16 @@ export function PlanPicker({
   currentPlanName,
   title = "Manage Subscription",
   onSubscribe,
+  onSelect,
+  livePlans,
+  busyPlanId,
 }: {
   currentPlanName?: string | null;
   title?: string;
   onSubscribe?: (planId: PlanId) => void;
+  onSelect?: (planId: PlanId) => void;
+  livePlans?: LiveBillingPlan[];
+  busyPlanId?: PlanId | null;
 }) {
   const { resolved } = useTheme();
   const isDark = resolved === "dark";
@@ -130,6 +149,7 @@ export function PlanPicker({
           const mutedText = hero ? IVORY : isDark ? IVORY : "var(--text-secondary)";
           const buttonBg = hero ? "#0A0A0A" : isDark ? IVORY : "var(--text-primary)";
           const buttonText = hero ? IVORY : isDark ? "#0A0A0A" : "var(--bg-primary)";
+          const livePlan = livePlans?.find((live) => live.id === plan.id);
 
           return (
             <article
@@ -178,23 +198,52 @@ export function PlanPicker({
                 ))}
               </ul>
 
-              <button
-                type="button"
-                onClick={() => {
-                  if (onSubscribe) {
-                    onSubscribe(plan.id);
-                  } else {
-                    setSelected(plan.id);
-                  }
-                }}
-                className="mt-5 self-start rounded-md px-4 py-2 text-[11px] font-semibold tracking-[0.14em] transition-opacity hover:opacity-90"
-                style={{
-                  backgroundColor: buttonBg,
-                  color: buttonText,
-                }}
-              >
-                {isCurrent && !onSubscribe ? "CURRENT" : "SUBSCRIBE"}
-              </button>
+              {onSelect ? (
+                plan.id === "free" ? (
+                  <span
+                    className="mt-5 self-start rounded-md px-4 py-2 text-[11px] font-semibold tracking-[0.14em] opacity-50"
+                    style={{
+                      backgroundColor: buttonBg,
+                      color: buttonText,
+                    }}
+                  >
+                    FREE TIER
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => onSelect(plan.id)}
+                    disabled={busyPlanId != null}
+                    className="mt-5 self-start rounded-md px-4 py-2 text-[11px] font-semibold tracking-[0.14em] transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{
+                      backgroundColor: buttonBg,
+                      color: buttonText,
+                    }}
+                  >
+                    {busyPlanId === plan.id
+                      ? "REDIRECTING…"
+                      : `SUBSCRIBE — ${livePlan ? formatLivePrice(livePlan.price_usd) : plan.price}/MO`}
+                  </button>
+                )
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onSubscribe) {
+                      onSubscribe(plan.id);
+                    } else {
+                      setSelected(plan.id);
+                    }
+                  }}
+                  className="mt-5 self-start rounded-md px-4 py-2 text-[11px] font-semibold tracking-[0.14em] transition-opacity hover:opacity-90"
+                  style={{
+                    backgroundColor: buttonBg,
+                    color: buttonText,
+                  }}
+                >
+                  {isCurrent && !onSubscribe ? "CURRENT" : "SUBSCRIBE"}
+                </button>
+              )}
             </article>
           );
         })}

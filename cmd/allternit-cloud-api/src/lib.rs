@@ -313,6 +313,10 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
         // session per-request and answers 503 billing_not_configured when
         // STRIPE_SECRET_KEY is unset.
         .merge(routes::billing_checkout::routes())
+        // The plan catalog is public; subscribe/portal verify the Clerk session
+        // per-request and answer 503 billing_not_configured when STRIPE_SECRET_KEY
+        // or the plan's STRIPE_PRICE_* id is unset.
+        .merge(routes::billing_subscriptions::routes())
         // API keys verify the Clerk session per-request and store only hashes.
         .merge(routes::api_keys::routes())
         // The Stripe webhook verifies the Stripe-Signature HMAC itself and

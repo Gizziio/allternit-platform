@@ -20,7 +20,7 @@ import { EmptyState } from "@/components/settings/EmptyState";
 import { SkeletonRow } from "@/components/settings/SkeletonRow";
 import { QUIET_BUTTON_CLASS } from "@/components/settings/buttonStyles";
 import { formatApiError } from "@/lib/api-client";
-import { PlanPicker } from "@/components/PlanPicker";
+import { PlanPicker, type LiveBillingPlan, type PlanId } from "@/components/PlanPicker";
 
 function formatHours(seconds: number): string {
   if (seconds < 3600) return `${Math.max(0, Math.round(seconds / 60))} min`;
@@ -128,6 +128,12 @@ export function BillingPage() {
   const [packs, setPacks] = useState<CreditPack[]>([]);
   const [buyingPackId, setBuyingPackId] = useState<string | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [plans, setPlans] = useState<LiveBillingPlan[]>([]);
+  const [subscribingPlanId, setSubscribingPlanId] = useState<PlanId | null>(null);
+  const [subscribeError, setSubscribeError] = useState<string | null>(null);
+  const [portalBusy, setPortalBusy] = useState(false);
+  const [portalAvailable, setPortalAvailable] = useState(true);
+  const [portalError, setPortalError] = useState<string | null>(null);
   const [checkoutNotice, setCheckoutNotice] = useState<"success" | "cancelled" | null>(() => {
     if (typeof window === "undefined") return null;
     const params = new URLSearchParams(window.location.search);
@@ -193,6 +199,23 @@ export function BillingPage() {
         setCredits(null);
         setCreditsError(formatApiError(err, "Unable to load credit balance"));
       }
+
+      // Plans feed the PlanPicker subscribe buttons; a failure here falls back to the static
+      // prices in PlanPicker and must not break the page.
+      try {
+        const plansResponse = await fetch(`${billingApiBaseUrl()}/api/v1/billing/plans`);
+        if (plansResponse.status === 503) {
+          setBillingAvailable(false);
+          setPlans([]);
+        } else if (plansResponse.ok) {
+          const plansPayload = (await plansResponse.json().catch(() => ({}))) as {
+            plans?: LiveBillingPlan[];
+          };
+          setPlans(Array.isArray(plansPayload.plans) ? plansPayload.plans : []);
+        }
+      } catch {
+        setPlans([]);
+      }
     } catch (err) {
       setError(formatApiError(err, "Unable to load billing details"));
     } finally {
@@ -242,6 +265,75 @@ export function BillingPage() {
     }
   };
 
+  const handleSubscribePlan = async (planId: PlanId) => {
+    setSubscribingPlanId(planId);
+    setSubscribeError(null);
+    try {
+      const token = await getToken();
+      if (!token) throw new Error("A web account session is required to subscribe.");
+      const response = await fetch(`${billingApiBaseUrl()}/api/v1/billing/subscribe`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ plan_id: planId }),
+      });
+      if (response.status === 503) {
+        setBillingAvailable(false);
+        return;
+      }
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(
+          payload.message || payload.error || `Unable to start subscription checkout (${response.status})`,
+        );
+      }
+      const checkoutUrl = safePortalUrl(payload.checkout_url);
+      if (!checkoutUrl) throw new Error("Checkout did not return a valid payment link.");
+      window.location.href = checkoutUrl;
+    } catch (err) {
+      setSubscribeError(formatApiError(err, "Unable to start subscription checkout"));
+    } finally {
+      setSubscribingPlanId(null);
+    }
+  };
+
+  const handleOpenPortal = async () => {
+    setPortalBusy(true);
+    setPortalError(null);
+    try {
+      const token = await getToken();
+      if (!token) throw new Error("A web account session is required to manage billing.");
+      const response = await fetch(`${billingApiBaseUrl()}/api/v1/billing/portal`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: "{}",
+      });
+      if (response.status === 404) {
+        // No Stripe customer yet — there is nothing to manage, so hide the button.
+        setPortalAvailable(false);
+        return;
+      }
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(
+          payload.message || payload.error || `Unable to open billing portal (${response.status})`,
+        );
+      }
+      const portalUrl = safePortalUrl(payload.portal_url);
+      if (!portalUrl) throw new Error("Portal did not return a valid link.");
+      window.location.href = portalUrl;
+    } catch (err) {
+      setPortalError(formatApiError(err, "Unable to open billing portal"));
+    } finally {
+      setPortalBusy(false);
+    }
+  };
+
   return (
     <div className="space-y-8">
       {checkoutNotice && (
@@ -257,8 +349,8 @@ export function BillingPage() {
             />
             <p className="flex-1 text-[13px] leading-relaxed text-[var(--text-secondary)]">
               {checkoutNotice === "success"
-                ? "Payment received. Your credit balance will update once Stripe confirms the checkout."
-                : "Checkout cancelled. No charges were made — pick a credit pack below to try again."}
+                ? "Payment received. Your subscription or credit balance will update once Stripe confirms the checkout."
+                : "Checkout cancelled. No charges were made — pick a plan or credit pack below to try again."}
             </p>
             <button
               type="button"
@@ -407,7 +499,16 @@ export function BillingPage() {
         </div>
       )}
 
-      <PlanPicker currentPlanName={entitlement?.planDisplayName} />
+      <PlanPicker
+        currentPlanName={entitlement?.planDisplayName}
+        onSelect={billingAvailable ? (planId) => void handleSubscribePlan(planId) : undefined}
+        livePlans={billingAvailable && plans.length > 0 ? plans : undefined}
+        busyPlanId={subscribingPlanId}
+      />
+
+      {subscribeError && (
+        <p className="text-[13px] text-[var(--status-error)]">{subscribeError}</p>
+      )}
 
       <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/40 p-4">
         <div className="flex items-start gap-3">
@@ -506,7 +607,25 @@ export function BillingPage() {
             </div>
           )}
 
-          <div className="flex items-center gap-2 mt-5 pt-4 border-t border-[var(--border-subtle)]">
+          <div className="flex items-center flex-wrap gap-2 mt-5 pt-4 border-t border-[var(--border-subtle)]">
+            {(() => {
+              const tier = (entitlement?.planTierId || "").toLowerCase();
+              return tier === "pro" || tier === "team" ? (
+                <span className="inline-flex items-center rounded-sm border border-[var(--status-success)]/30 bg-[var(--status-success)]/10 px-1.5 py-0.5 text-[10px] font-semibold tracking-[0.08em] text-[var(--status-success)]">
+                  Subscription active: {entitlement?.planTierId}
+                </span>
+              ) : null;
+            })()}
+            {portalAvailable && (
+              <button
+                type="button"
+                onClick={() => void handleOpenPortal()}
+                disabled={portalBusy}
+                className={QUIET_BUTTON_CLASS}
+              >
+                {portalBusy ? "Opening…" : "Manage subscription"} <ArrowSquareOut size={13} />
+              </button>
+            )}
             {(() => {
               const portalUrl = safePortalUrl(entitlement?.billingPortalUrl);
               return portalUrl ? (
@@ -528,6 +647,9 @@ export function BillingPage() {
             >
               <ArrowsClockwise size={13} /> Refresh
             </button>
+            {portalError && (
+              <span className="text-[12px] text-[var(--status-error)]">{portalError}</span>
+            )}
           </div>
         </div>
       )}

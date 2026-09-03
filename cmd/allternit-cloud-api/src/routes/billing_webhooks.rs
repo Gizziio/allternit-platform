@@ -15,6 +15,17 @@
 //!   is consulted as a fallback.
 //! - `allternit_plan_tier` — the `plan_tiers.id` to grant while the
 //!   subscription is active or trialing (e.g. `pro`, `team`).
+//! - `allternit_plan_id` — the subscription plan id (`plus`/`super`/`ultra`),
+//!   used to resolve the monthly credit grant and rollover cap.
+//!
+//! Beyond the tier grant, `customer.subscription.created/updated` also upserts
+//! the local subscription mirror (`billing_subscriptions` + `user_billing_accounts`
+//! in `routes::billing_subscriptions`) so monthly credit grants and portal sessions
+//! can resolve Stripe ids without re-reading subscription metadata; deletion marks
+//! the mirror `canceled`. `invoice.paid` with `billing_reason` of
+//! `subscription_create`/`subscription_cycle` grants the plan's monthly credits
+//! (rollover-capped) — invoice metadata is NOT subscription metadata, which is
+//! exactly why the mirror table exists.
 //!
 //! `customer.subscription.deleted` revokes by moving the user back to the
 //! deployment's default tier (`DEFAULT_PLAN_TIER`, default `free`); plan
@@ -48,7 +59,9 @@ use sha2::Sha256;
 use std::sync::Arc;
 
 use super::hosted_entitlements::apply_hosted_entitlement;
+use super::{billing_subscriptions, hosted_entitlements::AppliedEntitlement};
 use crate::{error::ApiError, services::CostService, ApiState};
+use sqlx::PgPool;
 
 const STRIPE_SIGNATURE_HEADER: &str = "stripe-signature";
 const SIGNATURE_TOLERANCE_SECONDS: i64 = 300;
@@ -69,6 +82,14 @@ enum MappedStripeEvent {
         event_id: String,
         user_id: String,
         amount_usd: f64,
+    },
+    /// Paid subscription invoice (subscription_create / subscription_cycle): grant the
+    /// plan's monthly credits with the rollover cap, resolving user and plan through
+    /// the billing_subscriptions mirror.
+    GrantSubscriptionCredits {
+        event_id: String,
+        invoice_id: String,
+        subscription_id: String,
     },
     /// Any other event type (or a non-billable subscription status).
     Ignored(String),
@@ -128,27 +149,36 @@ async fn stripe_webhook(
             event_id,
             user_id,
             plan_tier_id,
-        } => apply_and_respond(&state, &event_id, &user_id, &plan_tier_id).await,
+        } => apply_and_respond(&state, &event["data"]["object"], &event_id, &user_id, &plan_tier_id).await,
         MappedStripeEvent::Revoke { event_id, user_id } => {
             let default_tier =
                 std::env::var("DEFAULT_PLAN_TIER").unwrap_or_else(|_| "free".to_string());
-            apply_and_respond(&state, &event_id, &user_id, &default_tier).await
+            revoke_and_respond(&state, &event["data"]["object"], &event_id, &user_id, &default_tier).await
         }
         MappedStripeEvent::GrantCredits {
             event_id,
             user_id,
             amount_usd,
         } => grant_credits_and_respond(&state, &event_id, &user_id, amount_usd).await,
+        MappedStripeEvent::GrantSubscriptionCredits {
+            event_id,
+            invoice_id,
+            subscription_id,
+        } => {
+            grant_subscription_credits_and_respond(&state, &event_id, &invoice_id, &subscription_id)
+                .await
+        }
     }
 }
 
 async fn apply_and_respond(
     state: &ApiState,
+    subscription: &Value,
     event_id: &str,
     user_id: &str,
     plan_tier_id: &str,
 ) -> Response {
-    match apply_hosted_entitlement(&state.db, event_id, user_id, plan_tier_id, None, "stripe")
+    match apply_entitlement_and_sync_subscription(&state.db, subscription, event_id, user_id, plan_tier_id)
         .await
     {
         Ok(applied) => Json(json!({
@@ -157,6 +187,136 @@ async fn apply_and_respond(
             "userId": user_id,
             "planTierId": plan_tier_id,
             "idempotentReplay": applied.idempotent_replay,
+        }))
+        .into_response(),
+        Err(error) => error.into_response(),
+    }
+}
+
+/// Grant the entitlement, then mirror the Stripe subscription into the local bookkeeping
+/// tables (`billing_subscriptions`, `user_billing_accounts`) so the invoice.paid grant
+/// path can resolve the subscription id back to a user and plan — invoice metadata is
+/// NOT subscription metadata, which is exactly why the mirror table exists. The event
+/// mapping already guaranteed clerk_user_id metadata, so these upserts only ever run for
+/// subscriptions from our own checkout flow.
+async fn apply_entitlement_and_sync_subscription(
+    db: &PgPool,
+    subscription: &Value,
+    event_id: &str,
+    user_id: &str,
+    plan_tier_id: &str,
+) -> Result<AppliedEntitlement, ApiError> {
+    let applied =
+        apply_hosted_entitlement(db, event_id, user_id, plan_tier_id, None, "stripe").await?;
+    let subscription_id = subscription["id"].as_str().unwrap_or_default();
+    if !subscription_id.is_empty() {
+        let plan_id = subscription["metadata"]["allternit_plan_id"]
+            .as_str()
+            .unwrap_or_default();
+        let status = subscription["status"].as_str().unwrap_or_default();
+        let customer_id = subscription_customer_id(subscription);
+        billing_subscriptions::upsert_billing_subscription(
+            db,
+            subscription_id,
+            user_id,
+            plan_id,
+            plan_tier_id,
+            status,
+            customer_id.as_deref(),
+        )
+        .await?;
+        if let Some(customer_id) = customer_id {
+            billing_subscriptions::upsert_user_billing_account(db, user_id, &customer_id).await?;
+        }
+    }
+    Ok(applied)
+}
+
+/// The Stripe customer id whether the event carries an id string or an expanded customer object.
+fn subscription_customer_id(subscription: &Value) -> Option<String> {
+    subscription["customer"]
+        .as_str()
+        .or_else(|| subscription["customer"]["id"].as_str())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
+}
+
+async fn revoke_and_respond(
+    state: &ApiState,
+    subscription: &Value,
+    event_id: &str,
+    user_id: &str,
+    plan_tier_id: &str,
+) -> Response {
+    match apply_hosted_entitlement(&state.db, event_id, user_id, plan_tier_id, None, "stripe")
+        .await
+    {
+        Ok(applied) => {
+            let subscription_id = subscription["id"].as_str().unwrap_or_default();
+            if !subscription_id.is_empty() {
+                // A missing local row (deletion delivered before creation) is fine.
+                if let Err(error) = billing_subscriptions::mark_billing_subscription_canceled(
+                    &state.db,
+                    subscription_id,
+                )
+                .await
+                {
+                    return error.into_response();
+                }
+            }
+            Json(json!({
+                "received": true,
+                "eventId": event_id,
+                "userId": user_id,
+                "planTierId": plan_tier_id,
+                "idempotentReplay": applied.idempotent_replay,
+            }))
+            .into_response()
+        }
+        Err(error) => error.into_response(),
+    }
+}
+
+/// Grant a subscription plan's monthly credits for a paid invoice. The invoice object carries
+/// no user/plan metadata (invoice metadata is NOT subscription metadata), so the grant resolves
+/// through the billing_subscriptions mirror written by the subscription lifecycle events.
+/// Unknown subscriptions are acknowledged and ignored: Stripe also delivers invoices for
+/// subscriptions created outside our checkout flow, and 200 stops the retries.
+async fn grant_subscription_credits_and_respond(
+    state: &ApiState,
+    event_id: &str,
+    invoice_id: &str,
+    subscription_id: &str,
+) -> Response {
+    let subscription =
+        match billing_subscriptions::billing_subscription_for(&state.db, subscription_id).await {
+            Ok(subscription) => subscription,
+            Err(error) => return error.into_response(),
+        };
+    let Some(subscription) = subscription else {
+        return ignored_response("invoice.paid");
+    };
+    let Some(plan) = billing_subscriptions::find_plan(&subscription.plan_id) else {
+        return ignored_response("invoice.paid");
+    };
+    let cost_service = crate::services::CostServiceImpl::new(state.db.clone());
+    match cost_service
+        .grant_subscription_credits(
+            &subscription.user_id,
+            invoice_id,
+            plan.monthly_credits_usd,
+            plan.rollover_cap_usd,
+        )
+        .await
+    {
+        Ok(balance_usd) => Json(json!({
+            "received": true,
+            "eventId": event_id,
+            "invoiceId": invoice_id,
+            "userId": subscription.user_id,
+            "creditsUsd": plan.monthly_credits_usd,
+            "balanceUsd": balance_usd,
         }))
         .into_response(),
         Err(error) => error.into_response(),
@@ -309,10 +469,9 @@ fn map_stripe_event(event: &Value) -> Result<MappedStripeEvent, ApiError> {
             Ok(MappedStripeEvent::Revoke { event_id, user_id })
         }
         "checkout.session.completed" | "invoice.paid" => {
-            // Only one-off credit purchases map; subscription-mode checkouts
-            // and subscription invoices are handled by the subscription events
-            // above, so anything without the full credit metadata contract is
-            // acknowledged and ignored.
+            // Only one-off credit purchases map via object metadata; subscription-mode
+            // checkouts are handled by the subscription events above, and subscription
+            // invoices are handled below.
             let object = &event["data"]["object"];
             if event_type == "checkout.session.completed"
                 && object["mode"].as_str().unwrap_or_default() != "payment"
@@ -326,6 +485,37 @@ fn map_stripe_event(event: &Value) -> Result<MappedStripeEvent, ApiError> {
                 .filter(|value| !value.is_empty());
             let credits_raw = metadata["allternit_credits_usd"].as_str();
             let (Some(user_id), Some(credits_raw)) = (user_id, credits_raw) else {
+                // Subscription invoices carry NO clerk/plan metadata — invoice metadata
+                // is NOT subscription metadata. Monthly credit grants instead key off
+                // billing_reason + the subscription id and resolve the user and plan
+                // through the billing_subscriptions mirror.
+                if event_type == "invoice.paid" {
+                    let billing_reason = object["billing_reason"].as_str().unwrap_or_default();
+                    let subscription_id = object["subscription"]
+                        .as_str()
+                        .map(str::trim)
+                        .filter(|value| !value.is_empty());
+                    if matches!(billing_reason, "subscription_create" | "subscription_cycle") {
+                        if let Some(subscription_id) = subscription_id {
+                            if event_id.is_empty() {
+                                return Err(ApiError::BadRequest(
+                                    "Stripe event is missing its id.".to_string(),
+                                ));
+                            }
+                            let invoice_id = object["id"].as_str().unwrap_or_default();
+                            if invoice_id.is_empty() {
+                                return Err(ApiError::BadRequest(
+                                    "Stripe invoice is missing its id.".to_string(),
+                                ));
+                            }
+                            return Ok(MappedStripeEvent::GrantSubscriptionCredits {
+                                event_id,
+                                invoice_id: invoice_id.to_string(),
+                                subscription_id: subscription_id.to_string(),
+                            });
+                        }
+                    }
+                }
                 return Ok(MappedStripeEvent::Ignored(event_type.to_string()));
             };
             if event_id.is_empty() {
@@ -524,6 +714,37 @@ mod tests {
                 transaction_id TEXT NOT NULL UNIQUE,
                 source TEXT NOT NULL,
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+            "#,
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        // Subscription mirror schema (migrations_pg 005) for the monthly grant path.
+        sqlx::query("DROP TABLE IF EXISTS billing_subscriptions CASCADE").execute(&pool).await.unwrap();
+        sqlx::query(r#"
+        CREATE TABLE billing_subscriptions (
+                stripe_subscription_id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                plan_id TEXT NOT NULL,
+                plan_tier TEXT NOT NULL,
+                status TEXT NOT NULL,
+                stripe_customer_id TEXT,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+            "#,
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        sqlx::query("DROP TABLE IF EXISTS user_billing_accounts CASCADE").execute(&pool).await.unwrap();
+        sqlx::query(r#"
+        CREATE TABLE user_billing_accounts (
+                user_id TEXT PRIMARY KEY,
+                stripe_customer_id TEXT NOT NULL,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             )
             "#,
         )
@@ -874,5 +1095,272 @@ mod tests {
         .await
         .unwrap();
         assert_eq!(grants, 1);
+    }
+
+    fn subscription_invoice_event(
+        event_id: &str,
+        invoice_id: &str,
+        subscription_id: &str,
+        billing_reason: &str,
+    ) -> Value {
+        json!({
+            "id": event_id,
+            "type": "invoice.paid",
+            "data": {
+                "object": {
+                    "id": invoice_id,
+                    "billing_reason": billing_reason,
+                    "subscription": subscription_id,
+                    "metadata": {},
+                }
+            }
+        })
+    }
+
+    #[test]
+    fn mapping_routes_subscription_invoices_to_monthly_grants() {
+        for reason in ["subscription_create", "subscription_cycle"] {
+            let event = subscription_invoice_event("evt_i1", "in_1", "sub_1", reason);
+            assert_eq!(
+                map_stripe_event(&event).unwrap(),
+                MappedStripeEvent::GrantSubscriptionCredits {
+                    event_id: "evt_i1".to_string(),
+                    invoice_id: "in_1".to_string(),
+                    subscription_id: "sub_1".to_string(),
+                },
+                "billing_reason {reason} must map to a monthly credit grant"
+            );
+        }
+    }
+
+    #[test]
+    fn mapping_ignores_non_subscription_invoices_and_missing_subscription_ids() {
+        let manual = subscription_invoice_event("evt_i2", "in_2", "sub_1", "manual");
+        assert_eq!(
+            map_stripe_event(&manual).unwrap(),
+            MappedStripeEvent::Ignored("invoice.paid".to_string())
+        );
+
+        let no_subscription = subscription_invoice_event("evt_i3", "in_3", "", "subscription_cycle");
+        assert_eq!(
+            map_stripe_event(&no_subscription).unwrap(),
+            MappedStripeEvent::Ignored("invoice.paid".to_string())
+        );
+    }
+
+    #[test]
+    fn one_off_credit_metadata_still_wins_over_the_invoice_path() {
+        // An invoice carrying the one-off credit contract stays on the GrantCredits
+        // path even if it happens to reference a subscription.
+        let mut event = payment_event(
+            "evt_i4",
+            "invoice.paid",
+            "",
+            json!({ "clerk_user_id": "user_1", "allternit_credits_usd": "25.00" }),
+        );
+        event["data"]["object"]["subscription"] = json!("sub_1");
+        event["data"]["object"]["billing_reason"] = json!("subscription_cycle");
+        assert_eq!(
+            map_stripe_event(&event).unwrap(),
+            MappedStripeEvent::GrantCredits {
+                event_id: "evt_i4".to_string(),
+                user_id: "user_1".to_string(),
+                amount_usd: 25.0,
+            }
+        );
+    }
+
+    #[tokio::test]
+    async fn subscription_created_grants_tier_and_syncs_mirror_tables() {
+        let pool = test_pool().await;
+        let event = subscription_event(
+            "evt_s1",
+            "customer.subscription.created",
+            "active",
+            json!({
+                "clerk_user_id": "user_1",
+                "allternit_plan_tier": "pro",
+                "allternit_plan_id": "plus",
+            }),
+        );
+        let MappedStripeEvent::Grant {
+            event_id,
+            user_id,
+            plan_tier_id,
+        } = map_stripe_event(&event).unwrap()
+        else {
+            panic!("subscription created must map to a grant");
+        };
+        apply_entitlement_and_sync_subscription(
+            &pool,
+            &event["data"]["object"],
+            &event_id,
+            &user_id,
+            &plan_tier_id,
+        )
+        .await
+        .unwrap();
+
+        // Existing behavior: the plan tier is granted.
+        assert_eq!(quota_tier(&pool, "user_1").await.as_deref(), Some("pro"));
+
+        // New behavior: the subscription mirror and customer link are written.
+        let mirror = billing_subscriptions::billing_subscription_for(&pool, "sub_123")
+            .await
+            .unwrap()
+            .expect("subscription created must write the mirror row");
+        assert_eq!(mirror.user_id, "user_1");
+        assert_eq!(mirror.plan_id, "plus");
+        assert_eq!(mirror.plan_tier, "pro");
+        assert_eq!(mirror.status, "active");
+        assert_eq!(mirror.stripe_customer_id.as_deref(), Some("cus_123"));
+        let customer: String = sqlx::query_scalar(
+            "SELECT stripe_customer_id FROM user_billing_accounts WHERE user_id = 'user_1'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(customer, "cus_123");
+
+        // Deletion flips the mirror to canceled (and revocation still works via the
+        // existing apply_hosted_entitlement path).
+        billing_subscriptions::mark_billing_subscription_canceled(&pool, "sub_123")
+            .await
+            .unwrap();
+        let mirror = billing_subscriptions::billing_subscription_for(&pool, "sub_123")
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(mirror.status, "canceled");
+    }
+
+    #[tokio::test]
+    async fn subscription_invoice_grants_monthly_credits_with_rollover() {
+        let pool = test_pool().await;
+        let cost_service = crate::services::CostServiceImpl::new(pool.clone());
+
+        // Mirror rows as customer.subscription.created would have written them.
+        for user in ["user_1", "user_2", "user_3"] {
+            billing_subscriptions::upsert_billing_subscription(
+                &pool,
+                &format!("sub_{user}"),
+                user,
+                "plus",
+                "pro",
+                "active",
+                Some("cus_x"),
+            )
+            .await
+            .unwrap();
+        }
+        // user_1 rolls 8 (under the $10 cap), user_2 rolls 15 (over the cap),
+        // user_3 has no credits row yet.
+        sqlx::query(
+            "INSERT INTO user_credits (user_id, balance_usd) VALUES ('user_1', 8.0), ('user_2', 15.0)",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        // Full handler path for user_1: map the invoice event, resolve the mirror
+        // row and plan, grant. 8 rolled (cap 10) + 22 grant = 30.
+        let event = subscription_invoice_event("evt_i1", "in_1", "sub_user_1", "subscription_cycle");
+        let MappedStripeEvent::GrantSubscriptionCredits {
+            invoice_id,
+            subscription_id,
+            ..
+        } = map_stripe_event(&event).unwrap()
+        else {
+            panic!("subscription invoice must map to a monthly grant");
+        };
+        let subscription = billing_subscriptions::billing_subscription_for(&pool, &subscription_id)
+            .await
+            .unwrap()
+            .unwrap();
+        let plan = billing_subscriptions::find_plan(&subscription.plan_id).unwrap();
+        let balance = cost_service
+            .grant_subscription_credits(
+                &subscription.user_id,
+                &invoice_id,
+                plan.monthly_credits_usd,
+                plan.rollover_cap_usd,
+            )
+            .await
+            .unwrap();
+        assert!((balance - 30.0).abs() < 1e-9, "8 rolled + 22 grant must be 30");
+
+        // user_2: 15 rolled clips to the 10 cap, then + 22 = 32.
+        let balance = cost_service
+            .grant_subscription_credits("user_2", "in_2", 22.0, 10.0)
+            .await
+            .unwrap();
+        assert!((balance - 32.0).abs() < 1e-9, "15 clipped to cap 10 + 22 must be 32");
+
+        // user_3: no credits row starts fresh with the grant itself.
+        let balance = cost_service
+            .grant_subscription_credits("user_3", "in_3", 22.0, 10.0)
+            .await
+            .unwrap();
+        assert!((balance - 22.0).abs() < 1e-9, "a fresh row is the grant itself");
+
+        let sources: Vec<String> = sqlx::query_scalar(
+            "SELECT DISTINCT source FROM credit_transactions WHERE transaction_id LIKE 'stripe-invoice-%'",
+        )
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+        assert_eq!(sources, vec!["stripe_subscription".to_string()]);
+    }
+
+    #[tokio::test]
+    async fn subscription_invoice_replay_does_not_double_grant() {
+        let pool = test_pool().await;
+        let cost_service = crate::services::CostServiceImpl::new(pool.clone());
+
+        let balance = cost_service
+            .grant_subscription_credits("user_1", "in_1", 22.0, 10.0)
+            .await
+            .unwrap();
+        assert!((balance - 22.0).abs() < 1e-9);
+
+        // Stripe retries the same delivery: the invoice-keyed ledger row dedupes.
+        let balance = cost_service
+            .grant_subscription_credits("user_1", "in_1", 22.0, 10.0)
+            .await
+            .unwrap();
+        assert!((balance - 22.0).abs() < 1e-9, "replay must not double-grant");
+        let grants: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM credit_transactions WHERE user_id = 'user_1'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(grants, 1);
+    }
+
+    #[tokio::test]
+    async fn subscription_invoice_with_unknown_subscription_is_ignored() {
+        let pool = test_pool().await;
+        // The event maps (billing_reason + subscription id are present), but the
+        // mirror lookup finds nothing — a subscription from outside our flow.
+        let event = subscription_invoice_event("evt_i9", "in_9", "sub_foreign", "subscription_create");
+        let MappedStripeEvent::GrantSubscriptionCredits {
+            subscription_id, ..
+        } = map_stripe_event(&event).unwrap()
+        else {
+            panic!("subscription invoice must map to a monthly grant");
+        };
+        assert!(
+            billing_subscriptions::billing_subscription_for(&pool, &subscription_id)
+                .await
+                .unwrap()
+                .is_none(),
+            "the handler acknowledges and ignores unknown subscriptions (200, nothing written)"
+        );
+        let grants: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM credit_transactions")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(grants, 0, "an unknown subscription grants nothing");
     }
 }
