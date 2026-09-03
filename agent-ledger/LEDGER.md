@@ -21,6 +21,14 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-03 06:04 — kimi — Groq Integration + Platform Model Catalog Fixes
+
+- **Session ID / Branch:** `session/platform-followup-20260903`
+- **Commit:** `90f97cdb0` — merged into `main`
+- **How it works:** Adds four curated Groq aliases to the cloud API, fixes the generic OpenAI adapter to parse string-priced model lists from Groq, deploys the API to the VPS, and fixes `platform.allternit.com` to read flattened model fields from `/v1/models` so prices and names render correctly. Updates marketing copy on `/models` and `/plans` to list Groq as a live provider.
+- **Outstanding work:** DeepInfra and OpenRouter completions are blocked by zero upstream balance; Fireworks reasoning aliases route but return empty assistant content; `ai.allternit.com` was not redeployed.
+- **Summary file:** [summaries/2026-09-03-0604-platform-followup-kimi-groq-console.md](./summaries/2026-09-03-0604-platform-followup-kimi-groq-console.md)
+
 ### 2026-08-30 09:20 — kimi — Workspace Package Install/Build Fixes
 
 - **Session ID / Branch:** `session/caade5dc-3e9c-4ee6-889f-cd1276faec7c`
