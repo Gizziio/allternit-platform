@@ -28,8 +28,8 @@ export function PlansPage() {
             <p className="text-[13px] leading-relaxed text-[var(--text-secondary)]">
               During BETA, subscription tiers and model credits are UI-only. Cloud-model access is
               provided through upstream providers including OpenRouter, Together AI, Fireworks AI,
-              and DeepInfra; paid bundled credits will not be sold until appropriate provider terms
-              are in place.
+              DeepInfra, and Groq; paid bundled credits will not be sold until appropriate provider
+              terms are in place.
             </p>
           </div>
         </div>

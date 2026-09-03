@@ -18,6 +18,10 @@ export interface LiveModelInfo {
   upstream_id?: string;
   provider?: string;
   aliases?: string[];
+  name?: string;
+  prompt_price?: number;
+  completion_price?: number;
+  context_length?: number;
   extra?: Record<string, unknown>;
 }
 
@@ -65,7 +69,7 @@ function formatPrice(value: unknown): string {
 }
 
 function contextLength(model: LiveModelInfo): string {
-  const ctx = model.extra?.context_length;
+  const ctx = model.context_length ?? model.extra?.context_length;
   if (typeof ctx === "number") {
     if (ctx >= 1_000_000) return `${(ctx / 1_000_000).toFixed(1)}M`;
     if (ctx >= 1000) return `${(ctx / 1000).toFixed(0)}K`;
@@ -78,13 +82,13 @@ export function liveModelToCatalog(model: LiveModelInfo): CatalogModel {
   const upstreamProvider = model.provider || model.owned_by || "cloud";
   return {
     id: model.id,
-    name: String(model.extra?.name || model.id),
+    name: String(model.name ?? model.extra?.name ?? model.id),
     family: modelFamily(model.id),
     provider: upstreamProvider === "local" ? "local" : "cloud",
     upstreamProvider,
     upstreamId: model.upstream_id,
-    inputPrice: formatPrice(model.extra?.prompt_price),
-    outputPrice: formatPrice(model.extra?.completion_price),
+    inputPrice: formatPrice(model.prompt_price ?? model.extra?.prompt_price),
+    outputPrice: formatPrice(model.completion_price ?? model.extra?.completion_price),
     context: contextLength(model),
   };
 }
