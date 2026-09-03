@@ -35,6 +35,7 @@ import {
   FolderOpen,
   PencilSimple,
   PushPin,
+  TerminalWindow,
 } from '@phosphor-icons/react';
 
 const CATEGORY_CONFIG: Record<
@@ -46,6 +47,7 @@ const CATEGORY_CONFIG: Record<
   cowork: { label: 'Cowork', icon: CheckSquare },
   code: { label: 'Code', icon: Code },
   design: { label: 'Design', icon: Palette },
+  bb: { label: 'bb', icon: TerminalWindow },
 };
 
 type SortMode = 'recent' | 'name' | 'created';
@@ -573,6 +575,7 @@ const MODE_ACCENT: Record<ProjectCategory, string> = {
   cowork: 'var(--accent-cowork)',
   code: 'var(--accent-code)',
   design: 'var(--accent-primary)',
+  bb: 'var(--accent-primary)',
 };
 
 const MODE_ICONS: Record<ProjectCategory, React.ElementType> = {
@@ -581,6 +584,7 @@ const MODE_ICONS: Record<ProjectCategory, React.ElementType> = {
   cowork: CheckSquare,
   code: Code,
   design: Palette,
+  bb: TerminalWindow,
 };
 
 function ProjectCard({
@@ -605,6 +609,8 @@ function ProjectCard({
       parts.push(`${project.threadCount} sessions`);
     } else if (project.mode === 'design') {
       parts.push(`${project.fileCount} canvases`);
+    } else if (project.mode === 'bb') {
+      parts.push('bb project');
     }
     return parts.join(' • ') || 'Active workspace';
   }, [project]);

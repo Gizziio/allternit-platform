@@ -6,6 +6,7 @@ import { ChatProjectDetail } from '@/views/project/chat/ChatProjectDetail';
 import { CoworkProjectView } from '@/views/cowork/CoworkProjectView';
 import { CodeProjectView } from '@/views/code/CodeProjectView';
 import { DesignProjectView } from '@/views/project/design/DesignProjectView';
+import { BBProjectView } from '@/views/bb/BBProjectView';
 
 interface ProjectDetailRouterProps {
   project: UnifiedProject;
@@ -22,6 +23,8 @@ export function ProjectDetailRouter({ project, onBack }: ProjectDetailRouterProp
       return <CodeProjectView workspaceId={project.nativeId} onBack={onBack} />;
     case 'design':
       return <DesignProjectView projectId={project.nativeId} onBack={onBack} />;
+    case 'bb':
+      return <BBProjectView bbProjectId={project.nativeId} />;
     default:
       return null;
   }

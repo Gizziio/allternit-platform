@@ -827,6 +827,21 @@ export function getShellViewRegistry(handlers: {
         </ErrorBoundary>
       );
     },
+    // Deprecated alias: the old single-agent chat UI was removed. Chat-mode
+    // sessions now open in the group/cowork workspace.
+    'chat-agent-session': ({ context }: { context?: ViewContext }) => {
+      const ctx = context?.context as { sessionId?: string; originView?: ViewType } | undefined;
+      React.useEffect(() => {
+        if (ctx?.sessionId) {
+          useCoworkSessionStore.getState().setActiveSession(ctx.sessionId);
+        }
+      }, [ctx?.sessionId]);
+      return (
+        <ErrorBoundary fallback={<ErrorFallbackWrapper viewName=\"Cowork Agent Workspace\" />}>
+          <CoworkRoot />
+        </ErrorBoundary>
+      );
+    },
     'code-agent-session': ({ context }: { context?: ViewContext }) => {
       const ctx = context?.context as { sessionId?: string; originView?: ViewType } | undefined;
       return (
