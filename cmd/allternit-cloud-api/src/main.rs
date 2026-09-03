@@ -217,6 +217,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create API state with shared services
     let inference_pool_service = Arc::new(services::InferencePoolService::new(db.clone()));
+    // BYOK key store rides the same credential cipher as provider tokens.
+    let inference_key_service = credential_cipher
+        .clone()
+        .map(|cipher| Arc::new(services::InferenceKeyService::new(db.clone(), cipher)));
+    if inference_key_service.is_some() {
+        tracing::info!("BYOK inference key store enabled");
+    }
     let state = Arc::new(ApiState {
         db,
         ssh_executor: allternit_cloud_ssh::SshExecutor::new(),
@@ -232,6 +239,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         contabo_runtime_service,
         mesh_service,
         credential_cipher,
+        inference_key_service,
         metrics_state: Arc::new(allternit_cloud_api::middleware::metrics::MetricsState::new()),
         model_router,
         inference_pool_service: inference_pool_service.clone(),

@@ -63,6 +63,8 @@ pub struct ApiState {
     /// AES-256-GCM cipher for provider tokens and wizard checkpoints,
     /// absent (plaintext-at-rest, dev only) when ALLTERNIT_CREDENTIALS_KEY is unset
     pub credential_cipher: Option<Arc<allternit_cloud_core::CredentialCipher>>,
+    /// BYOK inference key store, absent when the credential cipher is absent
+    pub inference_key_service: Option<Arc<services::InferenceKeyService>>,
     /// Shared metrics state for request tracking
     pub metrics_state: Arc<crate::middleware::metrics::MetricsState>,
     /// Model router for dispatching inference requests to upstream providers
@@ -321,6 +323,9 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
         // per-request and answer 503 billing_not_configured when STRIPE_SECRET_KEY
         // or the plan's STRIPE_PRICE_* id is unset.
         .merge(routes::billing_subscriptions::routes())
+        // BYOK inference keys verify the Clerk session per-request and answer
+        // 503 inference_keys_not_configured when ALLTERNIT_CREDENTIALS_KEY is unset.
+        .merge(routes::inference_keys::routes())
         // API keys verify the Clerk session per-request and store only hashes.
         .merge(routes::api_keys::routes())
         // The Stripe webhook verifies the Stripe-Signature HMAC itself and

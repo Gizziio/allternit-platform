@@ -125,16 +125,18 @@ fn inference_cost(
 }
 
 /// Settle one completion: write the `inference_usage` row unconditionally,
-/// then deduct the retail cost when the user has a credits row. Every failure
-/// is logged REVENUE-CRITICAL and swallowed — metering must never fail the
-/// user's response; a missed deduction is recoverable from the usage table,
-/// a failed completion is not.
+/// then deduct the retail cost when the user has a credits row and
+/// `charge_user` is set (BYOK calls pass false: their key pays upstream, so we
+/// only meter tokens). Every failure is logged REVENUE-CRITICAL and swallowed
+/// — metering must never fail the user's response; a missed deduction is
+/// recoverable from the usage table, a failed completion is not.
 #[allow(clippy::too_many_arguments)]
 pub async fn settle_inference(
     db: &PgPool,
     user_id: &str,
     model: &str,
     pool_id: Option<&str>,
+    charge_user: bool,
     prices: &RetailPrices,
     prompt_tokens: u64,
     completion_tokens: u64,
@@ -170,8 +172,8 @@ pub async fn settle_inference(
         return;
     }
 
-    match credit_balance_row(db, user_id).await {
-        Ok(Some(_)) => {
+    match (credit_balance_row(db, user_id).await, charge_user) {
+        (Ok(Some(_)), true) => {
             let cost_service = CostServiceImpl::new(db.clone());
             if let Err(error) = cost_service
                 .deduct_credits_for_usage(user_id, &ref_id, cost_usd, "inference")
@@ -183,13 +185,19 @@ pub async fn settle_inference(
                 );
             }
         }
-        Ok(None) => {
+        (Ok(Some(_)), false) => {
+            debug!(
+                user_id,
+                "BYOK inference usage recorded without deduction (user's own provider key pays upstream)"
+            );
+        }
+        (Ok(None), _) => {
             debug!(
                 user_id,
                 "inference usage recorded without deduction (plan-cap user, no credits row)"
             );
         }
-        Err(error) => {
+        (Err(error), _) => {
             error!(
                 "REVENUE-CRITICAL: failed to check the credit balance before inference deduction for user {} ({}): {}",
                 user_id, ref_id, error
@@ -208,6 +216,7 @@ pub async fn meter_json_response(
     user_id: &str,
     model: &str,
     pool_id: Option<&str>,
+    charge_user: bool,
     prices: &RetailPrices,
     prompt_chars: usize,
     response: Response,
@@ -234,6 +243,7 @@ pub async fn meter_json_response(
             user_id,
             model,
             pool_id,
+            charge_user,
             prices,
             prompt_tokens,
             completion_tokens,
@@ -251,9 +261,11 @@ pub struct StreamSettlement {
     pub db: Arc<PgPool>,
     pub user_id: String,
     pub model: String,
-    /// Pool the request routed to (None for unseeded providers); settled rows
-    /// carry it so pool budgets can be summed.
+    /// Pool the request routed to (None for unseeded providers and BYOK);
+    /// settled rows carry it so pool budgets can be summed.
     pub pool_id: Option<String>,
+    /// false for BYOK (user's own key pays upstream): meter, never deduct.
+    pub charge_user: bool,
     pub prices: RetailPrices,
     /// chars/4 estimate of the request prompt, used only when the upstream
     /// never reports usage.
@@ -312,6 +324,7 @@ impl UsageMeteringBody {
                 &settlement.user_id,
                 &settlement.model,
                 settlement.pool_id.as_deref(),
+                settlement.charge_user,
                 &settlement.prices,
                 prompt_tokens,
                 completion_tokens,
@@ -547,7 +560,7 @@ mod tests {
             .await
             .unwrap();
 
-        settle_inference(&pool, "user_1", "gpt-4o", Some("pool_test"), &test_prices(), 1_000_000, 500_000, false).await;
+        settle_inference(&pool, "user_1", "gpt-4o", Some("pool_test"), true, &test_prices(), 1_000_000, 500_000, false).await;
 
         // (1M/1M)*0.15 + (0.5M/1M)*0.30 = 0.30 retail; wholesale = 0.10 + 0.10 = 0.20.
         let balance = credit_balance_row(&pool, "user_1").await.unwrap().unwrap();
@@ -586,10 +599,52 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn byok_settlement_meters_tokens_but_deducts_nothing() {
+        let pool = test_pool().await;
+        sqlx::query("INSERT INTO user_credits (user_id, balance_usd) VALUES ('user_1', 25.0)")
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        // Zero-priced retail: BYOK charges nothing, so cost_usd records 0.00
+        // while the token counts stay exact (documented choice: the price is
+        // cosmetic, the user's own key paid upstream).
+        let zero_prices = RetailPrices {
+            prompt_per_1m: 0.0,
+            completion_per_1m: 0.0,
+            wholesale_prompt_per_1m: None,
+            wholesale_completion_per_1m: None,
+        };
+        settle_inference(&pool, "user_1", "gpt-4o", None, false, &zero_prices, 1_000_000, 500_000, false).await;
+
+        let (cost, prompt, completion): (f64, i64, i64) = sqlx::query_as(
+            "SELECT cost_usd, prompt_tokens, completion_tokens FROM inference_usage WHERE user_id = 'user_1'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(cost, 0.0);
+        assert_eq!(prompt, 1_000_000);
+        assert_eq!(completion, 500_000);
+
+        let debits: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM credit_transactions")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(debits, 0, "BYOK never writes a ledger deduction");
+        let balance: f64 =
+            sqlx::query_scalar("SELECT balance_usd FROM user_credits WHERE user_id = 'user_1'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert!((balance - 25.0).abs() < 1e-9, "balance untouched: {balance}");
+    }
+
+    #[tokio::test]
     async fn settle_inference_without_credits_row_records_only() {
         let pool = test_pool().await;
 
-        settle_inference(&pool, "user_plan_cap", "gpt-4o", None, &test_prices(), 1000, 500, true).await;
+        settle_inference(&pool, "user_plan_cap", "gpt-4o", None, true, &test_prices(), 1000, 500, true).await;
 
         let rows: i64 = sqlx::query_scalar(
             "SELECT COUNT(*) FROM inference_usage WHERE user_id = 'user_plan_cap'",
@@ -623,13 +678,13 @@ mod tests {
     async fn free_allowance_boundary_under_at_over() {
         let pool = test_pool().await;
         // Under the default $2.00 allowance → allowed.
-        settle_inference(&pool, "user_free", "gpt-4o", None, &test_prices(), 6_000_000, 2_000_000, false).await; // $1.50
+        settle_inference(&pool, "user_free", "gpt-4o", None, true, &test_prices(), 6_000_000, 2_000_000, false).await; // $1.50
         assert!(
             check_inference_allowed(&pool, "user_free", None).await.is_ok(),
             "$1.50 < $2.00 must pass"
         );
         // Exactly at the allowance → blocked (>=).
-        settle_inference(&pool, "user_free", "gpt-4o", None, &test_prices(), 2_000_000, 1_000_000, false).await; // +$0.60 → $2.10
+        settle_inference(&pool, "user_free", "gpt-4o", None, true, &test_prices(), 2_000_000, 1_000_000, false).await; // +$0.60 → $2.10
         let error = check_inference_allowed(&pool, "user_free", None).await.unwrap_err();
         assert!(error.to_string().contains("Free inference allowance"), "{error}");
         // Over → still blocked.
@@ -678,7 +733,7 @@ mod tests {
             .body(axum::body::Body::from(body.clone()))
             .unwrap();
 
-        let response = meter_json_response(&pool, "user_1", "gpt-4o", None, &test_prices(), 400, response)
+        let response = meter_json_response(&pool, "user_1", "gpt-4o", None, true, &test_prices(), 400, response)
             .await
             .unwrap();
 
@@ -739,6 +794,7 @@ mod tests {
             user_id: "user_1".to_string(),
             model: "gpt-4o".to_string(),
             pool_id: None,
+            charge_user: true,
             prices: test_prices(),
             prompt_token_estimate: 0,
         };

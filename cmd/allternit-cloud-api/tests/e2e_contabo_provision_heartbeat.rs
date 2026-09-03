@@ -325,6 +325,7 @@ fn build_state(db: PgPool, container_api_url: &str) -> Arc<ApiState> {
         )),
         mesh_service: None,
         credential_cipher: None,
+        inference_key_service: None,
         metrics_state: Arc::new(allternit_cloud_api::middleware::metrics::MetricsState::new()),
         model_router: model_router::ModelRouter::disabled(model_router::catalog::starter_catalog()),
         inference_pool_service: Arc::new(services::InferencePoolService::new(db)),

@@ -17,6 +17,7 @@ pub mod health;
 pub mod hosted_entitlements;
 pub mod hosted_runtimes;
 pub mod instances;
+pub mod inference_keys;
 pub mod jobs;
 pub mod mesh;
 pub mod mirror;

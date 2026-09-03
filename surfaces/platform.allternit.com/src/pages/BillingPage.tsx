@@ -8,6 +8,7 @@ import {
   Info,
   Coins,
   Lightning,
+  Key,
   X,
 } from "@phosphor-icons/react";
 import {
@@ -64,6 +65,23 @@ export interface BillingCredits {
   recent_transactions: CreditTransaction[];
   free_inference?: FreeInferenceUsage;
 }
+
+export interface InferenceProviderKey {
+  provider_id: string;
+  masked: string;
+  status: string;
+  last_validated_at?: string;
+}
+
+const INFERENCE_PROVIDERS: { id: string; label: string }[] = [
+  { id: "together", label: "Together AI" },
+  { id: "fireworks", label: "Fireworks" },
+  { id: "deepinfra", label: "DeepInfra" },
+  { id: "groq", label: "Groq" },
+  { id: "openai", label: "OpenAI" },
+  { id: "deepseek", label: "DeepSeek" },
+  { id: "kimi", label: "Kimi" },
+];
 
 function billingApiBaseUrl() {
   return String(
@@ -142,6 +160,14 @@ export function BillingPage() {
   const [portalBusy, setPortalBusy] = useState(false);
   const [portalAvailable, setPortalAvailable] = useState(true);
   const [portalError, setPortalError] = useState<string | null>(null);
+  const [keysAvailable, setKeysAvailable] = useState(true);
+  const [inferenceKeys, setInferenceKeys] = useState<InferenceProviderKey[]>([]);
+  const [keysError, setKeysError] = useState<string | null>(null);
+  const [addingProvider, setAddingProvider] = useState<string | null>(null);
+  const [newKeyValue, setNewKeyValue] = useState("");
+  const [keySubmitting, setKeySubmitting] = useState(false);
+  const [keySubmitError, setKeySubmitError] = useState<string | null>(null);
+  const [removingProvider, setRemovingProvider] = useState<string | null>(null);
   const [checkoutNotice, setCheckoutNotice] = useState<"success" | "cancelled" | null>(() => {
     if (typeof window === "undefined") return null;
     const params = new URLSearchParams(window.location.search);
@@ -223,6 +249,34 @@ export function BillingPage() {
         }
       } catch {
         setPlans([]);
+      }
+
+      // Inference provider keys: a 503 means the feature isn't configured in this
+      // environment — hide the card entirely.
+      try {
+        const keysResponse = await fetch(`${billingApiBaseUrl()}/api/v1/inference/keys`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (keysResponse.status === 503) {
+          setKeysAvailable(false);
+          setInferenceKeys([]);
+        } else if (keysResponse.ok) {
+          const keysPayload = (await keysResponse.json().catch(() => ({}))) as {
+            keys?: InferenceProviderKey[];
+          };
+          setKeysAvailable(true);
+          setInferenceKeys(Array.isArray(keysPayload.keys) ? keysPayload.keys : []);
+          setKeysError(null);
+        } else {
+          const payload = await keysResponse.json().catch(() => ({}));
+          throw new Error(
+            payload.error ||
+              payload.message ||
+              `Unable to load provider keys (${keysResponse.status})`,
+          );
+        }
+      } catch (err) {
+        setKeysError(formatApiError(err, "Unable to load provider keys"));
       }
     } catch (err) {
       setError(formatApiError(err, "Unable to load billing details"));
@@ -339,6 +393,71 @@ export function BillingPage() {
       setPortalError(formatApiError(err, "Unable to open billing portal"));
     } finally {
       setPortalBusy(false);
+    }
+  };
+
+  const handleAddKey = async () => {
+    const providerId = addingProvider;
+    const apiKey = newKeyValue.trim();
+    if (!providerId || !apiKey) return;
+    setKeySubmitting(true);
+    setKeySubmitError(null);
+    try {
+      const token = await getToken();
+      if (!token) throw new Error("A web account session is required to manage provider keys.");
+      const response = await fetch(`${billingApiBaseUrl()}/api/v1/inference/keys`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ provider_id: providerId, api_key: apiKey }),
+      });
+      if (response.status === 503) {
+        setKeysAvailable(false);
+        return;
+      }
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.error || payload.message || `Unable to save key (${response.status})`);
+      }
+      setAddingProvider(null);
+      setNewKeyValue("");
+      void load();
+    } catch (err) {
+      setKeySubmitError(formatApiError(err, "Unable to save provider key"));
+    } finally {
+      setKeySubmitting(false);
+    }
+  };
+
+  const handleRemoveKey = async (providerId: string) => {
+    setRemovingProvider(providerId);
+    try {
+      const token = await getToken();
+      if (!token) throw new Error("A web account session is required to manage provider keys.");
+      const response = await fetch(
+        `${billingApiBaseUrl()}/api/v1/inference/keys/${encodeURIComponent(providerId)}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      if (response.status === 503) {
+        setKeysAvailable(false);
+        return;
+      }
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(
+          payload.error || payload.message || `Unable to remove key (${response.status})`,
+        );
+      }
+      void load();
+    } catch (err) {
+      setKeysError(formatApiError(err, "Unable to remove provider key"));
+    } finally {
+      setRemovingProvider(null);
     }
   };
 
@@ -574,6 +693,135 @@ export function BillingPage() {
 
       {subscribeError && (
         <p className="text-[13px] text-[var(--status-error)]">{subscribeError}</p>
+      )}
+
+      {keysAvailable && (
+        <div className="rounded-xl border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)]/40 p-4">
+          <div className="flex items-start gap-3 mb-4">
+            <div className="size-9 shrink-0 rounded-lg bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] flex items-center justify-center">
+              <Key size={18} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-[14px] font-semibold text-[var(--text-primary)]">
+                Provider API keys (bring your own)
+              </div>
+              <p className="text-[12px] text-[var(--text-secondary)] mt-1">
+                Use your own provider keys for inference — usage bills directly to your provider
+                account; we meter tokens but charge no credits.
+              </p>
+            </div>
+          </div>
+
+          {loading && inferenceKeys.length === 0 && !keysError ? (
+            <SkeletonRow lines={3} />
+          ) : keysError ? (
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-[13px] text-[var(--status-error)]">{keysError}</span>
+              <button
+                type="button"
+                onClick={() => void load()}
+                disabled={loading}
+                className={QUIET_BUTTON_CLASS}
+              >
+                <ArrowsClockwise size={13} /> Retry
+              </button>
+            </div>
+          ) : (
+            <div className="divide-y divide-[var(--border-subtle)]">
+              {INFERENCE_PROVIDERS.map((provider) => {
+                const stored = inferenceKeys.find((k) => k.provider_id === provider.id);
+                const expanded = addingProvider === provider.id;
+                return (
+                  <div key={provider.id} className="py-2">
+                    <div className="flex items-center justify-between gap-3 text-[12px]">
+                      <div className="min-w-0">
+                        <div className="truncate font-medium text-[var(--text-primary)]">
+                          {provider.label}
+                        </div>
+                        {stored ? (
+                          <div className="text-[11px] text-[var(--text-tertiary)] font-mono">
+                            {stored.masked}
+                            {stored.last_validated_at
+                              ? ` · validated ${formatTransactionDate(stored.last_validated_at)}`
+                              : ""}
+                          </div>
+                        ) : (
+                          <div className="text-[11px] text-[var(--text-tertiary)]">
+                            No key on file
+                          </div>
+                        )}
+                      </div>
+                      {stored ? (
+                        <button
+                          type="button"
+                          onClick={() => void handleRemoveKey(provider.id)}
+                          disabled={removingProvider !== null}
+                          className={QUIET_BUTTON_CLASS}
+                        >
+                          {removingProvider === provider.id ? "Removing…" : "Remove"}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (expanded) {
+                              setAddingProvider(null);
+                            } else {
+                              setAddingProvider(provider.id);
+                            }
+                            setNewKeyValue("");
+                            setKeySubmitError(null);
+                          }}
+                          className={QUIET_BUTTON_CLASS}
+                        >
+                          {expanded ? "Close" : "Add key"}
+                        </button>
+                      )}
+                    </div>
+                    {expanded && (
+                      <div className="mt-2">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="password"
+                            autoComplete="off"
+                            value={newKeyValue}
+                            onChange={(e) => setNewKeyValue(e.target.value)}
+                            placeholder={`${provider.label} API key`}
+                            className="flex-1 rounded-lg border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-3 py-1.5 text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary)]"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => void handleAddKey()}
+                            disabled={keySubmitting || !newKeyValue.trim()}
+                            className={QUIET_BUTTON_CLASS}
+                          >
+                            {keySubmitting ? "Saving…" : "Save"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAddingProvider(null);
+                              setNewKeyValue("");
+                              setKeySubmitError(null);
+                            }}
+                            className={QUIET_BUTTON_CLASS}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                        {keySubmitError && (
+                          <p className="mt-2 text-[12px] text-[var(--status-error)]">
+                            {keySubmitError}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       )}
 
       <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/40 p-4">

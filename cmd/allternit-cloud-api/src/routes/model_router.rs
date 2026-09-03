@@ -16,8 +16,9 @@ use std::sync::Arc;
 
 use crate::{
     auth::AuthContext,
-    model_router::ChatCompletionRequest,
-    services::{inference_pool, inference_settlement},
+    model_router::generic_openai::{GenericOpenAiConfig, GenericOpenAiProvider},
+    model_router::{ChatCompletionRequest, RetailPrices, UpstreamProvider},
+    services::{inference_keys, inference_pool, inference_settlement},
     ApiError, ApiState,
 };
 
@@ -71,6 +72,24 @@ pub async fn chat_completions(
     }
 
     let user_id = auth.user.user_id.clone();
+    let alias = request.model.clone();
+
+    // BYOK first: when the user has their own key for the alias's provider,
+    // the call routes through it — their money, so our allowance, free rate
+    // limit, pool breaker, and pool policy do not apply. Early return keeps
+    // the shared path below readable.
+    if let Some(provider_id) = state.model_router.provider_for_alias(&alias) {
+        if inference_keys::should_route_byok(
+            inference_keys::byok_enabled(),
+            inference_keys::byok_base_url(provider_id).is_some(),
+            match &state.inference_key_service {
+                Some(service) => service.has_key(&user_id, provider_id).await?,
+                None => false,
+            },
+        ) {
+            return byok_chat_completions(&state, &user_id, provider_id, request).await;
+        }
+    }
 
     // Pre-check: a paying user with an exhausted balance is blocked before we
     // spend upstream money; free users (no credits row) are bounded by the
@@ -99,7 +118,6 @@ pub async fn chat_completions(
         }
     }
 
-    let alias = request.model.clone();
     let streaming = request.is_streaming();
     let prompt_chars: usize = request.messages.iter().map(|m| m.content.len()).sum();
     let prices = state.model_router.retail_prices(&alias).await?;
@@ -141,6 +159,7 @@ pub async fn chat_completions(
                 user_id,
                 model: alias,
                 pool_id,
+                charge_user: true,
                 prices,
                 prompt_token_estimate: (prompt_chars / 4) as u64,
             },
@@ -151,7 +170,100 @@ pub async fn chat_completions(
             &user_id,
             &alias,
             pool_id.as_deref(),
+            true,
             &prices,
+            prompt_chars,
+            response,
+        )
+        .await?
+    };
+
+    Ok(response)
+}
+
+/// BYOK path: dispatch the completion through the user's own provider key.
+/// Tokens are metered (charge_user = false → usage row, no ledger deduction)
+/// with pool_id NULL — reconciliation buckets NULL as `unattributed`, which
+/// is correct: BYOK spend is not ours. Prices are recorded as zero (they are
+/// cosmetic — nothing is charged; the token counts are the payload).
+async fn byok_chat_completions(
+    state: &Arc<ApiState>,
+    user_id: &str,
+    provider_id: &str,
+    mut request: ChatCompletionRequest,
+) -> Result<Response, ApiError> {
+    let key_service = state
+        .inference_key_service
+        .as_ref()
+        .expect("BYOK branch only runs with a key service");
+    let api_key = key_service
+        .get_decrypted(user_id, provider_id)
+        .await?
+        .ok_or_else(|| ApiError::Internal("BYOK key vanished between check and decrypt".to_string()))?;
+    let base_url = inference_keys::byok_base_url(provider_id)
+        .expect("BYOK branch only runs for registered providers");
+
+    let alias = request.model.clone();
+    let upstream_id = state
+        .model_router
+        .upstream_for_alias(&alias)
+        .ok_or_else(|| ApiError::BadRequest(format!("Unknown model alias: {alias}")))?
+        .to_string();
+
+    let streaming = request.is_streaming();
+    let prompt_chars: usize = request.messages.iter().map(|m| m.content.len()).sum();
+    // Same usage-chunk injection as the shared router path.
+    if streaming {
+        request
+            .extra
+            .entry("stream_options".to_string())
+            .or_insert_with(|| serde_json::json!({ "include_usage": true }));
+    }
+    request.model = upstream_id;
+
+    let provider = GenericOpenAiProvider::new(GenericOpenAiConfig {
+        provider_id: provider_id.to_string(),
+        base_url: base_url.to_string(),
+        api_key,
+        model_list_cache_ttl: std::time::Duration::from_secs(300),
+    });
+    let response = provider.chat_completions(request).await?;
+
+    tracing::info!(
+        user_id = %user_id,
+        provider_id = %provider_id,
+        status = %response.status(),
+        streaming = streaming,
+        "byok chat completion dispatched"
+    );
+
+    let zero_prices = RetailPrices {
+        prompt_per_1m: 0.0,
+        completion_per_1m: 0.0,
+        wholesale_prompt_per_1m: None,
+        wholesale_completion_per_1m: None,
+    };
+    let response = if streaming {
+        inference_settlement::meter_stream_response(
+            response,
+            inference_settlement::StreamSettlement {
+                db: Arc::new(state.db.clone()),
+                user_id: user_id.to_string(),
+                model: alias,
+                pool_id: None,
+                charge_user: false,
+                prices: zero_prices,
+                prompt_token_estimate: (prompt_chars / 4) as u64,
+            },
+        )
+    } else {
+        inference_settlement::meter_json_response(
+            &state.db,
+            user_id,
+            &alias,
+            None,
+            false,
+            &zero_prices,
             prompt_chars,
             response,
         )

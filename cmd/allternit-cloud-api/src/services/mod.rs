@@ -6,6 +6,7 @@ pub mod cost_service;
 pub mod event_store;
 pub mod executor_service;
 pub mod hosted_runtime_lifecycle;
+pub mod inference_keys;
 pub mod inference_pool;
 pub mod inference_settlement;
 pub mod quota_service;
@@ -39,6 +40,10 @@ pub use inference_settlement::{
 };
 pub use inference_pool::{
     check_free_tier_pool, free_tier_pool_policy, FreeTierPoolPolicy, InferencePoolService, PoolRow,
+};
+pub use inference_keys::{
+    byok_base_url, byok_enabled, mask_key, should_route_byok, InferenceKeyInfo,
+    InferenceKeyService, KeyValidator,
 };
 pub use quota_service::{QuotaService, SharedQuotaService, UserQuota};
 pub use run_service::{RunListFilter, RunService, RunServiceImpl};
