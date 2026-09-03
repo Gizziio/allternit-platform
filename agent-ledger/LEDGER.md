@@ -21,6 +21,14 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-03 08:16 — kimi — Typography Validation CI Fix
+
+- **Session ID / Branch:** `session/typography-fix-20260903`
+- **Commit:** `578792f36` — merged into `main`
+- **How it works:** Replaces hardcoded `fontFamily: 'monospace'` in the h5i diff and commit panels with `fontFamily: 'var(--font-mono)'` and broadens `scripts/validate-typography.py` exemptions to cover document-rendering packages, docs surfaces, tests, and the VS Code extension, where system font names are legitimate.
+- **Outstanding work:** None.
+- **Summary file:** [summaries/2026-09-03-0816-session-typography-fix-kimi.md](./summaries/2026-09-03-0816-session-typography-fix-kimi.md)
+
 ### 2026-09-03 06:04 — kimi — Groq Integration + Platform Model Catalog Fixes
 
 - **Session ID / Branch:** `session/platform-followup-20260903`
