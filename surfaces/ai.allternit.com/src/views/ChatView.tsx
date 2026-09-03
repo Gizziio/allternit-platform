@@ -454,7 +454,9 @@ export function ChatView({
         useChatSessionStore.getState().setActiveSession(sessionId);
         await sendNativeMessageStream(sessionId, {
           text: text.trim(),
-          modelId: brainRef ? `${brainRef.providerID}/${brainRef.modelID}` : undefined,
+          modelId: brainRef
+            ? (brainRef.modelID.includes('/') ? brainRef.modelID : `${brainRef.providerID}/${brainRef.modelID}`)
+            : undefined,
           ...(pluginMention
             ? { pluginMention: { kind: pluginMention.kind, id: pluginMention.id, name: pluginMention.name } }
             : {}),

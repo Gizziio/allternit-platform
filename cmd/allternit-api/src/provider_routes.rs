@@ -342,7 +342,7 @@ static CLI_PROVIDER_SPECS: &[(&str, &str, &str, &str)] = &[
     ("claude-cli", "Claude CLI", "claude", "claude-sonnet-4-6"),
     ("codex-cli", "Codex CLI", "codex", "codex-mini-latest"),
     ("qwen-cli", "Qwen CLI", "qwen", "qwen-plus"),
-    ("kimi-cli", "Kimi CLI", "kimi", "kimi-k2"),
+    ("kimi-cli", "Kimi CLI", "kimi", "default"),
     ("antigravity", "Antigravity", "agy", "antigravity"),
     ("cursor-agent", "Cursor Agent", "cursor-agent", "cursor-agent"),
     ("copilot", "GitHub Copilot CLI", "copilot", "copilot"),

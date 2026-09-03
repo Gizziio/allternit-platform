@@ -13,6 +13,7 @@ export interface AgentSessionDescriptor {
   originSurface?: AgentSessionSurface;
   sessionMode?: AgentSessionMode;
   agentId?: string;
+  agentIds?: string[];
   agentName?: string;
   projectId?: string;
   workspaceScope?: string;
@@ -28,6 +29,7 @@ const METADATA_KEYS = {
   originSurface: "allternit_origin_surface",
   sessionMode: "allternit_session_mode",
   agentId: "allternit_agent_id",
+  agentIds: "allternit_agent_ids",
   agentName: "allternit_agent_name",
   projectId: "allternit_project_id",
   workspaceScope: "allternit_workspace_scope",
@@ -39,6 +41,14 @@ function readString(value: unknown): string | undefined {
   return typeof value === "string" && value.trim().length > 0
     ? value.trim()
     : undefined;
+}
+
+function readStringArray(value: unknown): string[] | undefined {
+  if (Array.isArray(value)) {
+    const strings = value.filter((v): v is string => typeof v === "string" && v.trim().length > 0);
+    return strings.length > 0 ? strings : undefined;
+  }
+  return undefined;
 }
 
 function readSurface(value: unknown): AgentSessionSurface | undefined {
@@ -97,6 +107,7 @@ export function getAgentSessionDescriptor(
       metadata[METADATA_KEYS.sessionMode] ?? metadata.sessionMode ?? metadata.session_mode,
     ),
     agentId: readString(metadata[METADATA_KEYS.agentId] ?? metadata.agentId ?? metadata.agent_id),
+    agentIds: readStringArray(metadata[METADATA_KEYS.agentIds] ?? metadata.agentIds ?? metadata.agent_ids),
     agentName: readString(metadata[METADATA_KEYS.agentName] ?? metadata.agentName ?? metadata.agent_name),
     projectId: readString(metadata[METADATA_KEYS.projectId] ?? metadata.projectId ?? metadata.project_id),
     workspaceScope: readString(
@@ -129,6 +140,10 @@ function buildAgentSessionMetadata({
 
   if (descriptor.agentId) {
     next[METADATA_KEYS.agentId] = descriptor.agentId;
+  }
+
+  if (descriptor.agentIds && descriptor.agentIds.length > 0) {
+    next[METADATA_KEYS.agentIds] = descriptor.agentIds;
   }
 
   if (descriptor.agentName) {

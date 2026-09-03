@@ -18,6 +18,7 @@ import {
   useGroupChatStore,
   type GroupChatState,
 } from "@/lib/bots/group-chat.store";
+import type { GroupChatMessage } from "@/lib/bots/group-chat.types";
 import {
   runGroupChat,
   createMentionHandoffAdapter,
@@ -34,6 +35,8 @@ import {
   Folder,
   Robot,
   CircleNotch,
+  Warning,
+  X,
 } from "@phosphor-icons/react";
 import { BotAvatar } from "./BotAvatar";
 import { GroupChatAvatar } from "./GroupChatAvatar";
@@ -88,6 +91,7 @@ export function GroupChatView({ groupId, onBack }: GroupChatViewProps) {
   const [isRunning, setIsRunning] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [visibleMessageCount, setVisibleMessageCount] = useState(MESSAGE_PAGE_SIZE);
+  const [runError, setRunError] = useState<string | null>(null);
   const logEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -139,17 +143,29 @@ export function GroupChatView({ groupId, onBack }: GroupChatViewProps) {
     async (text: string) => {
       if (!group || isRunning) return;
 
-      addMessage(groupId, {
+      const userMessage: GroupChatMessage = {
+        id: `gcm-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        timestamp: new Date().toISOString(),
         from: "user",
         displayName: "You",
         text,
-      });
+      };
+
+      // Optimistically write the user message to the store so it renders
+      // immediately, and build an updated group snapshot for the engine so the
+      // prompt history includes the message just sent.
+      addMessage(groupId, userMessage);
+      const groupWithUserMessage = {
+        ...group,
+        log: [...group.log, userMessage],
+      };
 
       setIsRunning(true);
+      setRunError(null);
       try {
         const result = await runGroupChat(
           {
-            group: { ...group, log: [...group.log] },
+            group: groupWithUserMessage,
             userText: text,
           },
           adapter
@@ -158,13 +174,15 @@ export function GroupChatView({ groupId, onBack }: GroupChatViewProps) {
         if (replies.length > 0) {
           appendLog(groupId, replies);
         }
+        if (result.failedMemberIds && result.failedMemberIds.length > 0) {
+          const names = result.failedMemberIds
+            .map((id) => memberMap.get(id)?.displayName ?? id)
+            .join(", ");
+          setRunError(`${names} failed to respond.`);
+        }
       } catch (err) {
         console.error("[GroupChatView] run failed:", err);
-        addMessage(groupId, {
-          from: "bot",
-          displayName: "Group Chat",
-          text: "The group round failed to complete. Try again or @mention a specific bot.",
-        });
+        setRunError("The group round failed to complete. Try again or @mention a specific bot.");
       } finally {
         setIsRunning(false);
       }
@@ -199,9 +217,9 @@ export function GroupChatView({ groupId, onBack }: GroupChatViewProps) {
   }
 
   return (
-    <div className="flex h-full flex-col bg-[var(--bg-elevated)] text-[var(--text-primary)]">
+    <div className="flex h-full flex-col bg-[var(--bg-elevated)] text-[var(--text-primary)] pt-12">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-4 py-3">
+      <div className="flex items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--surface-panel)] px-4 py-3">
         <div className="flex items-center gap-3 min-w-0">
           {onBack && (
             <Button
@@ -218,13 +236,13 @@ export function GroupChatView({ groupId, onBack }: GroupChatViewProps) {
           <GroupChatAvatar
             name={group.name}
             members={group.members}
-            size={40}
+            size={44}
           />
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h2 className="truncate text-base font-semibold">{group.name}</h2>
-              <span className="flex items-center gap-1 text-xs text-[var(--text-tertiary)]">
-                <Users size={12} />
+              <span className="flex items-center gap-1 text-[11px] text-[var(--text-tertiary)] bg-[var(--surface-hover)] rounded-full px-1.5 py-0.5">
+                <Users size={11} />
                 {group.members.length}
               </span>
             </div>
@@ -243,7 +261,7 @@ export function GroupChatView({ groupId, onBack }: GroupChatViewProps) {
         <div className="flex items-center gap-2 shrink-0">
           {group.metadata?.workingFolder && (
             <div
-              className="hidden sm:flex items-center gap-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-2 py-1 text-xs text-[var(--text-secondary)]"
+              className="hidden sm:flex items-center gap-1.5 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-2 py-1 text-xs text-[var(--text-secondary)]"
               title={group.metadata.workingFolder}
             >
               <Folder size={12} />
@@ -265,22 +283,20 @@ export function GroupChatView({ groupId, onBack }: GroupChatViewProps) {
       </div>
 
       {/* Member rail */}
-      <div className="flex items-center gap-2 border-b border-[var(--border-subtle)] px-4 py-2 overflow-x-auto">
+      <div className="flex items-center gap-2 border-b border-[var(--border-subtle)] bg-[var(--surface-panel)] px-4 py-2 overflow-x-auto">
         {group.members.map((member) => {
           const agent = agents.find((a) => a.id === member.botId);
+          const isDefault = group.metadata?.defaultResponderId === member.botId;
           return (
             <div
               key={member.botId}
               className={cn(
-                "flex items-center gap-1.5 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-2 py-1 text-xs text-[var(--text-secondary)] shrink-0",
-                group.metadata?.defaultResponderId === member.botId &&
-                  "border-[var(--accent-primary)]/50 text-[var(--accent-primary)]"
+                "flex items-center gap-1.5 rounded-full border px-2 py-1 text-[11px] text-[var(--text-secondary)] shrink-0 transition-colors",
+                isDefault
+                  ? "border-[var(--accent-primary)]/40 bg-[var(--accent-primary)]/8 text-[var(--accent-primary)]"
+                  : "border-[var(--border-subtle)] bg-[var(--bg-primary)] hover:border-[var(--border-default)]"
               )}
-              title={
-                group.metadata?.defaultResponderId === member.botId
-                  ? "Default responder"
-                  : member.displayName
-              }
+              title={isDefault ? "Default responder" : member.displayName}
             >
               {agent ? (
                 <BotAvatar bot={agent} size={16} />
@@ -288,8 +304,8 @@ export function GroupChatView({ groupId, onBack }: GroupChatViewProps) {
                 <GroupChatAvatar name={member.displayName} size={16} />
               )}
               <span className="truncate max-w-[100px]">{member.displayName}</span>
-              {group.metadata?.defaultResponderId === member.botId && (
-                <span className="text-[10px] opacity-70">default</span>
+              {isDefault && (
+                <span className="text-[10px] opacity-80 font-medium">default</span>
               )}
             </div>
           );
@@ -299,19 +315,18 @@ export function GroupChatView({ groupId, onBack }: GroupChatViewProps) {
       {/* Message log */}
       <div className="flex-1 overflow-y-auto px-4 py-4">
         {group.log.length === 0 ? (
-          <GlassSurface
-            intensity="thin"
-            className="mx-auto max-w-md p-5 text-center"
-          >
-            <Users size={32} className="mx-auto mb-3 opacity-40" />
-            <p className="text-sm font-medium text-[var(--text-primary)]">
+          <div className="mx-auto max-w-md rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-panel)] p-6 text-center shadow-sm">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]">
+              <Users size={24} weight="duotone" />
+            </div>
+            <p className="text-sm font-semibold text-[var(--text-primary)]">
               Welcome to #{group.name}
             </p>
-            <p className="mt-1 text-xs text-[var(--text-secondary)]">
+            <p className="mt-1 text-xs leading-relaxed text-[var(--text-secondary)]">
               Send a message to start the group round. Bots pass by default unless
               @mentioned or pulled in by another member.
             </p>
-          </GlassSurface>
+          </div>
         ) : (
           <div className="flex flex-col gap-4">
             {hasMoreMessages && (
@@ -339,10 +354,10 @@ export function GroupChatView({ groupId, onBack }: GroupChatViewProps) {
                     isUser ? "flex-row-reverse" : "flex-row"
                   )}
                 >
-                  <div className="shrink-0">
+                  <div className="shrink-0 pt-0.5">
                     {isUser ? (
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--border-subtle)] text-xs font-semibold text-[var(--text-secondary)]">
-                        Y
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--accent-primary)] text-[11px] font-semibold text-[var(--ui-text-inverse)]">
+                        You
                       </div>
                     ) : agent ? (
                       <BotAvatar bot={agent} size={32} />
@@ -360,7 +375,7 @@ export function GroupChatView({ groupId, onBack }: GroupChatViewProps) {
                       isUser ? "items-end" : "items-start"
                     )}
                   >
-                    <div className="flex items-center gap-2 text-xs text-[var(--text-tertiary)]">
+                    <div className="flex items-center gap-2 text-[11px] text-[var(--text-tertiary)]">
                       <span className="font-medium text-[var(--text-secondary)]">
                         {isUser
                           ? "You"
@@ -370,10 +385,10 @@ export function GroupChatView({ groupId, onBack }: GroupChatViewProps) {
                     </div>
                     <div
                       className={cn(
-                        "mt-1 whitespace-pre-wrap rounded-2xl px-4 py-2 text-sm leading-relaxed",
+                        "mt-1 whitespace-pre-wrap rounded-2xl px-4 py-2 text-sm leading-relaxed shadow-sm",
                         isUser
-                          ? "rounded-tr-none bg-[var(--accent-primary)] text-[var(--ui-text-inverse)]"
-                          : "rounded-tl-none border border-[var(--border-subtle)] bg-[var(--bg-elevated)] text-[var(--text-primary)]"
+                          ? "rounded-tr-none bg-[var(--accent-chat)] text-[var(--ui-text-inverse)]"
+                          : "rounded-tl-none border border-[var(--border-subtle)] bg-[var(--surface-panel)] text-[var(--text-primary)]"
                       )}
                     >
                       {message.text}
@@ -383,7 +398,7 @@ export function GroupChatView({ groupId, onBack }: GroupChatViewProps) {
               );
             })}
             {isRunning && (
-              <div className="flex items-center gap-2 text-xs text-[var(--text-tertiary)]">
+              <div className="flex items-center justify-center gap-2 text-xs text-[var(--text-tertiary)] py-1">
                 <CircleNotch size={14} className="animate-spin" />
                 Bots are thinking…
               </div>
@@ -392,6 +407,24 @@ export function GroupChatView({ groupId, onBack }: GroupChatViewProps) {
           </div>
         )}
       </div>
+
+      {/* Error banner */}
+      {runError && (
+        <div className="flex items-center justify-between gap-3 border-t border-[var(--status-error)]/20 bg-[var(--status-error)]/8 px-4 py-2 text-xs text-[var(--status-error)]">
+          <div className="flex items-center gap-2">
+            <Warning size={14} weight="fill" />
+            <span>{runError}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setRunError(null)}
+            className="rounded p-1 hover:bg-[var(--status-error)]/10"
+            aria-label="Dismiss error"
+          >
+            <X size={12} weight="bold" />
+          </button>
+        </div>
+      )}
 
       {/* Composer */}
       <div className="border-t border-[var(--border-subtle)] p-3">

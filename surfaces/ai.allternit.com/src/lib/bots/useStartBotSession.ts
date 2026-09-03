@@ -60,11 +60,11 @@ function buildVMSystemPrompt(vmConfig: NonNullable<Agent['vmOperator']>, sandbox
  * If the bot has a VM operator configured with autoStart, this creates a
  * sandbox before opening the session and injects VM instructions into the
  * system prompt. The resulting sessionId can be passed to
- * `open('chat-agent-session', { sessionId })` so the existing chat surface
+ * `open('cowork-agent-session', { sessionId })` so the existing chat surface
  * renders it.
  */
 export function useStartBotSession(
-  onSessionStarted?: (sessionId: string) => void
+  onSessionStarted?: (sessionId: string, botId: string) => void
 ): UseStartBotSessionReturn {
   const [isStarting, setIsStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -200,7 +200,7 @@ function resolveRuntimeModelId(agent: Agent, modelOverride?: string): string | u
           setError(sandboxError);
         }
 
-        onSessionStarted?.(sessionId);
+        onSessionStarted?.(sessionId, agent.id);
         return sessionId;
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to start bot session';
@@ -231,7 +231,7 @@ function resolveRuntimeModelId(agent: Agent, modelOverride?: string): string | u
         // Open the chat surface immediately so the user sees the session and
         // streaming indicator instead of a frozen "Starting..." modal while the
         // local sidecar model loads on its first turn.
-        onSessionStarted?.(sessionId);
+        onSessionStarted?.(sessionId, agent.id);
 
         // Send the task as the first message so the bot starts working immediately.
         // A small delay ensures the session is active before streaming begins.

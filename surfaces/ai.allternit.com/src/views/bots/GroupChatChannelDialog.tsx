@@ -138,7 +138,10 @@ export function GroupChatChannelDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent
+        className="max-w-md border-[var(--border-subtle)] bg-[var(--bg-elevated)] text-[var(--text-primary)]"
+        style={{ background: 'var(--bg-elevated)', borderColor: 'var(--border-subtle)' }}
+      >
         <DialogHeader>
           <DialogTitle>
             {isEditing ? "Edit channel" : "New group channel"}
@@ -160,7 +163,7 @@ export function GroupChatChannelDialog({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Engineering standup"
-              className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary)]"
+              className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary)]"
             />
           </div>
 
@@ -168,7 +171,7 @@ export function GroupChatChannelDialog({
             <label className="text-xs font-medium text-[var(--text-secondary)]">
               Members ({selectedIds.size})
             </label>
-            <div className="max-h-40 overflow-auto rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-1">
+            <div className="max-h-40 overflow-auto rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel)] p-1">
               {roster.length === 0 ? (
                 <div className="px-3 py-2 text-xs text-[var(--text-tertiary)]">
                   No bots available. Create a bot first.
@@ -223,7 +226,7 @@ export function GroupChatChannelDialog({
             <select
               value={defaultResponderId}
               onChange={(e) => handleResponderChange(e.target.value)}
-              className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary)]"
+              className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary)]"
             >
               <option value="">First available</option>
               {selectedMembers.map((bot) => (
@@ -243,7 +246,7 @@ export function GroupChatChannelDialog({
               value={bulletin}
               onChange={(e) => setBulletin(e.target.value)}
               placeholder="What is this channel for?"
-              className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary)]"
+              className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary)]"
             />
           </div>
 
@@ -256,7 +259,7 @@ export function GroupChatChannelDialog({
               value={workingFolder}
               onChange={(e) => setWorkingFolder(e.target.value)}
               placeholder="/path/to/shared/folder"
-              className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary)]"
+              className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-panel)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary)]"
             />
           </div>
 

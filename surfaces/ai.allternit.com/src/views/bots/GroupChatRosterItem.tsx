@@ -35,12 +35,12 @@ function relativeTime(iso: string): string {
   return `${day}d`;
 }
 
-export function GroupChatRosterItem({
+export const GroupChatRosterItem = React.forwardRef<HTMLDivElement, GroupChatRosterItemProps>(function GroupChatRosterItem({
   group,
   unreadCount,
   isSelected = false,
   onSelect,
-}: GroupChatRosterItemProps) {
+}: GroupChatRosterItemProps, ref) {
   const handleClick = useCallback(() => {
     onSelect?.(group.id);
   }, [group.id, onSelect]);
@@ -57,6 +57,7 @@ export function GroupChatRosterItem({
 
   return (
     <motion.div
+      ref={ref}
       layout
       initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
@@ -102,6 +103,6 @@ export function GroupChatRosterItem({
       </div>
     </motion.div>
   );
-}
+});
 
 export default GroupChatRosterItem;

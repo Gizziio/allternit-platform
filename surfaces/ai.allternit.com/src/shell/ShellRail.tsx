@@ -12,6 +12,7 @@ import {
   Cpu,
   CheckSquare,
   UsersThree,
+  Users,
   AppWindow,
   Plugs,
   PuzzlePiece,
@@ -65,13 +66,12 @@ import { useStartBotSession } from '@/lib/bots/useStartBotSession';
 import { useAgentStore } from '@/lib/agents/agent.store';
 import { useCommRailsUnreadCount } from '@/lib/bots/comrails-mail.store';
 import {
-  getBotAccentColor,
-  getBotDisplayName,
   getBotTagline,
   isBot,
 } from '@/lib/bots/bot-profile';
 import type { Agent } from '@/lib/agents/agent.types';
 import { BotAvatar } from '@/views/bots/BotAvatar';
+import { BotRoster } from '@/views/bots/BotRoster';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
 
@@ -209,7 +209,7 @@ export function ShellRail({
   const [recentsExpanded, setRecentsExpanded] = useState(() => {
     if (typeof window === 'undefined') return true;
     try {
-      return window.localStorage.getItem('allternit:rail:bots-expanded') !== 'true';
+      return window.localStorage.getItem('allternit:rail:recents-expanded') !== 'false';
     } catch {
       return true;
     }
@@ -276,35 +276,31 @@ export function ShellRail({
   }, []);
 
   const { startSession: startBotSession } = useStartBotSession(
-    useCallback((sessionId: string) => {
-      // Open the bot session view so the rail entry is tied to a real session,
-      // not a generic home chat.
-      onOpen?.('chat-agent-session', { sessionId, originView: activeViewType ?? 'chat' });
+    useCallback((sessionId: string, botId: string) => {
+      // Open the dedicated bot chat session view so the rail entry is tied to a
+      // real bot session, not a generic agent chat.
+      onOpen?.('bot-chat-session', { sessionId, botId, originView: activeViewType ?? 'chat' });
     }, [onOpen, activeViewType])
   );
 
   const agents = useAgentStore((s) => s.agents);
   const bots = useMemo(() => agents.filter(isBot), [agents]);
 
-  const handleSelectBots = useCallback(() => {
-    setBotsExpanded(true);
-    setRecentsExpanded(false);
-    try { localStorage.setItem('allternit:rail:bots-expanded', 'true'); } catch {}
+  const handleToggleBotsExpanded = useCallback(() => {
+    setBotsExpanded((v) => {
+      const next = !v;
+      try { localStorage.setItem('allternit:rail:bots-expanded', String(next)); } catch {}
+      return next;
+    });
   }, []);
 
-  const handleSelectRecents = useCallback(() => {
-    setRecentsExpanded(true);
-    setBotsExpanded(false);
-    try { localStorage.setItem('allternit:rail:bots-expanded', 'false'); } catch {}
+  const handleToggleRecentsExpanded = useCallback(() => {
+    setRecentsExpanded((v) => {
+      const next = !v;
+      try { localStorage.setItem('allternit:rail:recents-expanded', String(next)); } catch {}
+      return next;
+    });
   }, []);
-
-  const handleToggleExpanded = useCallback(() => {
-    if (botsExpanded) {
-      setBotsExpanded((v) => !v);
-    } else {
-      setRecentsExpanded((v) => !v);
-    }
-  }, [botsExpanded]);
 
   const handleCreateBot = useCallback(() => {
     onOpen?.('agent-hub');
@@ -949,21 +945,60 @@ export function ShellRail({
             />
           </div>
 
-        {/* HOME RECENTS + BOTS */}
+        {/* AGENTS SECTION */}
+          <div className="flex flex-col min-h-0 px-2">
+            <div className="group px-1 py-2 flex items-center justify-between text-[var(--shell-item-muted)] select-none">
+              <button
+                type="button"
+                onClick={handleToggleBotsExpanded}
+                className="flex items-center gap-1.5 bg-transparent border-none text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] cursor-pointer"
+              >
+                {botsExpanded ? (
+                  <CaretDown size={12} className="transition-transform duration-200" />
+                ) : (
+                  <CaretRight size={12} className="transition-transform duration-200" />
+                )}
+                <span className="text-[12px] font-extrabold uppercase tracking-[0.08em]">Agents</span>
+              </button>
+            </div>
+            <div className="px-2 pb-1">
+              <RailItem
+                id="groups-list"
+                icon={Users}
+                label="Groups"
+                isActive={activeViewType === 'groups-list' || activeViewType === 'group-chat'}
+                onClick={() => onOpen?.('groups-list')}
+              />
+            </div>
+            {botsExpanded && (
+              <div className="flex-1 min-h-0 flex flex-col -mx-2 px-2">
+                <BotRoster
+                  nested
+                  onNewBot={handleCreateBot}
+                  onStartSession={(botId, sessionId) =>
+                    onOpen?.('bot-chat-session', { sessionId, botId, originView: activeViewType ?? 'chat' })
+                  }
+                  onEditProfile={() => onOpen?.('agent-hub')}
+                  onNavigate={(view, params) => {
+                    if (view === 'agent-hub') onOpen?.('agent-hub');
+                    if (view === 'group-picker' && params?.botId) {
+                      onOpen?.('bot-roster', { botId: params.botId });
+                    }
+                  }}
+                  onSelectGroup={(groupId) => onOpen?.('group-chat', { groupId })}
+                  onNewGroup={(groupId) => onOpen?.('group-chat', { groupId })}
+                />
+              </div>
+            )}
+          </div>
+
+        {/* HOME RECENTS */}
           <RecentsPanel
             expanded={recentsExpanded}
-            onToggle={handleSelectRecents}
+            onToggle={handleToggleRecentsExpanded}
             title="Recents"
             openAllTitle="Open all recents"
             onOpenAll={() => onOpen?.('recents')}
-            botsExpanded={botsExpanded}
-            onBotsToggle={handleSelectBots}
-            onToggleExpanded={handleToggleExpanded}
-            bots={bots}
-            startingBotId={startingBotId}
-            onStartBot={handleStartBot}
-            onOpenBotHome={handleOpenBotHome}
-            onCreateBot={handleCreateBot}
             filter={
               <Popover>
                 <PopoverTrigger asChild>
@@ -1631,14 +1666,6 @@ function RecentsPanel({
   openAllTitle,
   onOpenAll,
   filter,
-  botsExpanded,
-  onBotsToggle,
-  onToggleExpanded,
-  bots,
-  startingBotId,
-  onStartBot,
-  onOpenBotHome,
-  onCreateBot,
 }: {
   expanded: boolean;
   onToggle: () => void;
@@ -1647,71 +1674,25 @@ function RecentsPanel({
   openAllTitle?: string;
   onOpenAll?: () => void;
   filter?: React.ReactNode;
-  botsExpanded?: boolean;
-  onBotsToggle?: () => void;
-  onToggleExpanded?: () => void;
-  bots?: Agent[];
-  startingBotId?: string | null;
-  onStartBot?: (bot: Agent) => void;
-  onOpenBotHome?: (bot: Agent) => void;
-  onCreateBot?: () => void;
 }): React.ReactNode {
-  const combined = botsExpanded !== undefined && onBotsToggle && bots && onStartBot && onOpenBotHome && onCreateBot;
-  const listExpanded = expanded || (combined && botsExpanded);
   return (
     <div className="flex-1 min-h-0 flex flex-col px-2">
       <div className="group px-1 py-2 flex items-center justify-between text-[var(--shell-item-muted)] text-[12px] font-extrabold uppercase tracking-[0.08em] select-none">
-        {combined ? (
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onBotsToggle}
-              className={cn(
-                "bg-transparent border-none cursor-pointer transition-colors",
-                botsExpanded ? "text-[var(--shell-item-fg)]" : "text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)]"
-              )}
-            >
-              <span>Bots</span>
-            </button>
-            <span className="text-[var(--shell-item-muted)]" aria-hidden="true">|</span>
-            <button
-              type="button"
-              onClick={onToggle}
-              className={cn(
-                "bg-transparent border-none cursor-pointer transition-colors",
-                expanded ? "text-[var(--shell-item-fg)]" : "text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)]"
-              )}
-            >
-              <span>{title}</span>
-            </button>
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={onToggle}
-            className="flex items-center gap-1.5 bg-transparent border-none text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] cursor-pointer"
-          >
-            <CaretRight
-              size={12}
-              className={cn(
-                "transition-transform duration-200",
-                expanded && "rotate-90"
-              )}
-            />
-            <span>{title}</span>
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={onToggle}
+          className="flex items-center gap-1.5 bg-transparent border-none text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] cursor-pointer"
+        >
+          <CaretRight
+            size={12}
+            className={cn(
+              "transition-transform duration-200",
+              expanded && "rotate-90"
+            )}
+          />
+          <span>{title}</span>
+        </button>
         <div className="flex items-center gap-0.5 bg-[var(--shell-rail-bg)] pl-2 pr-1 -mr-1 rounded-md">
-          {combined && (
-            <button
-              type="button"
-              onClick={onCreateBot}
-              className="opacity-0 max-md:opacity-100 group-hover:opacity-100 size-6 max-md:size-11 rounded-md bg-transparent border-none text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)] cursor-pointer flex items-center justify-center transition-all"
-              title="Create Bot"
-            >
-              <Plus size={13} />
-            </button>
-          )}
           {onOpenAll && (
             <button
               type="button"
@@ -1725,11 +1706,11 @@ function RecentsPanel({
           {filter}
           <button
             type="button"
-            onClick={onToggleExpanded ?? onToggle}
+            onClick={onToggle}
             className="size-6 max-md:size-11 rounded-md bg-transparent border-none text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)] cursor-pointer flex items-center justify-center transition-colors"
-            title={listExpanded ? 'Hide sessions' : 'Show sessions'}
+            title={expanded ? 'Hide sessions' : 'Show sessions'}
           >
-            {listExpanded ? (
+            {expanded ? (
               <CaretDown size={12} className="transition-transform duration-200" />
             ) : (
               <CaretRight size={12} className="transition-transform duration-200" />
@@ -1737,39 +1718,9 @@ function RecentsPanel({
           </button>
         </div>
       </div>
-      {listExpanded && (
-        <div className="flex-1 overflow-y-auto flex flex-col gap-0.5">
-          {combined && botsExpanded && (
-            <div className="flex flex-col gap-0.5 pb-2">
-              {bots.length === 0 && (
-                <div className="px-3 py-2 text-[12px] text-[var(--shell-item-muted)]">
-                  No bots yet.
-                </div>
-              )}
-              {bots.map((bot) => {
-                const displayName = getBotDisplayName(bot);
-                const accentColor = getBotAccentColor(bot) ?? 'var(--accent-primary)';
-                const isStarting = startingBotId === bot.id;
-                return (
-                  <BotRailItem
-                    key={bot.id}
-                    id={bot.id}
-                    bot={bot}
-                    name={displayName}
-                    accentColor={accentColor}
-                    isStarting={isStarting}
-                    badge={<BotMailBadge botId={bot.id} />}
-                    onClick={() => onOpenBotHome(bot)}
-                    onStart={(e) => {
-                      e.stopPropagation();
-                      onStartBot(bot);
-                    }}
-                  />
-                );
-              })}
-            </div>
-          )}
-          {expanded && <div className="flex flex-col gap-0.5">{children}</div>}
+      {expanded && (
+        <div className="flex-1 overflow-y-auto flex flex-col gap-0.5 min-h-0">
+          <div className="flex flex-col gap-0.5">{children}</div>
         </div>
       )}
     </div>

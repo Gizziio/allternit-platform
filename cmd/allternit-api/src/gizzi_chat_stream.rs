@@ -6,9 +6,12 @@
 //! event bus, and translates Gizzi events into the SSE format the frontend
 //! expects.
 
-use axum::response::{
-    sse::{Event, KeepAlive, Sse},
-    IntoResponse, Response,
+use axum::{
+    http::HeaderMap,
+    response::{
+        sse::{Event, KeepAlive, Sse},
+        IntoResponse, Response,
+    },
 };
 use futures::StreamExt;
 use reqwest::Client;
@@ -340,6 +343,7 @@ async fn gizzi_health_ok(client: &Client, base: &str) -> Option<String> {
 /// Send a chat message to a Gizzi session and stream the response back.
 pub async fn stream_chat_through_gizzi(
     gizzi_base: &str,
+    headers: &HeaderMap,
     session_id: &str,
     message: &str,
     system: Option<&str>,
@@ -350,10 +354,9 @@ pub async fn stream_chat_through_gizzi(
     harness: Option<&serde_json::Value>,
 ) -> Response {
     let base = gizzi_base.trim_end_matches('/');
-    let client = Client::builder()
-        .timeout(Duration::from_secs(180))
-        .build()
-        .unwrap_or_else(|_| Client::new());
+    // Use the auth-aware Gizzi client so password-protected Gizzi daemons get
+    // the Basic auth credentials they expect (from env or a forwarded header).
+    let client = crate::agent_session_routes::gizzi_client(headers);
 
     if let Some(err) = gizzi_health_ok(&client, base).await {
         warn!(error = %err, "Gizzi health preflight failed");

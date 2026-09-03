@@ -11,7 +11,7 @@ import { CreateBotForm } from './agent-view/components/CreateBotForm';
 
 interface AgentHubProps {
   initialTab?: AgentTab;
-  onSessionStarted?: (sessionId: string) => void;
+  onSessionStarted?: (sessionId: string, botId: string) => void;
 }
 
 export function AgentHub({ initialTab = 'bots', onSessionStarted }: AgentHubProps) {

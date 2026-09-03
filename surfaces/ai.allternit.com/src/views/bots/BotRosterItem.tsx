@@ -85,7 +85,7 @@ function operationalStatusColor(status: BotOperationalStatus): string {
   }
 }
 
-export function BotRosterItem({
+export const BotRosterItem = React.forwardRef<HTMLDivElement, BotRosterItemProps>(function BotRosterItem({
   bot,
   isSelected = false,
   isCompact = false,
@@ -94,7 +94,7 @@ export function BotRosterItem({
   onContextMenu,
   onStartSession,
   onOpenSettings,
-}: BotRosterItemProps) {
+}: BotRosterItemProps, ref) {
   const { status: opStatus, isWorking, needsAttention, hasPendingApprovals, projection } =
     useBotStatus(bot.id);
   const unreadCount = projection?.unreadMessagesCount ?? 0;
@@ -195,6 +195,7 @@ export function BotRosterItem({
   if (isCompact) {
     return (
       <motion.div
+        ref={ref}
         layout
         initial={{ opacity: 0, y: 4 }}
         animate={{ opacity: 1, y: 0 }}
@@ -249,6 +250,7 @@ export function BotRosterItem({
 
   return (
     <motion.div
+      ref={ref}
       layout
       initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
@@ -413,6 +415,6 @@ export function BotRosterItem({
       `}</style>
     </motion.div>
   );
-}
+});
 
 export default BotRosterItem;

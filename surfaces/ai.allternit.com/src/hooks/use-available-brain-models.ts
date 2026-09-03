@@ -7,6 +7,20 @@ import type { ModelOption } from "@/components/prompt-kit/prompt-model-selector"
 // Terminal Server URL for fetching real models
 declare const __TERMINAL_SERVER_URL__: string | undefined;
 
+/// Normalize backend capability payloads (array of strings or object of booleans)
+/// into a string[] suitable for the model picker badges.
+function normalizeCapabilities(value: unknown): string[] | undefined {
+  if (Array.isArray(value)) {
+    return value.filter((v): v is string => typeof v === "string");
+  }
+  if (value && typeof value === "object") {
+    return Object.entries(value)
+      .filter(([, v]) => v === true)
+      .map(([k]) => k);
+  }
+  return undefined;
+}
+
 function getProviderDiscoveryUrl(): string {
   if (typeof window === "undefined") return "/api/v1/providers";
   try {
@@ -173,7 +187,7 @@ export function useAvailableBrainModels() {
                 providerId: provider.id,
                 providerName: provider.name || provider.id,
                 description: modelData?.description,
-                capabilities: modelData?.capabilities,
+                capabilities: normalizeCapabilities(modelData?.capabilities),
                 context_window: modelData?.context_window ?? modelData?.context,
               });
             });
@@ -230,18 +244,24 @@ export function useAvailableBrainModels() {
 
     // 3) Registry models from Allternit Brain / Gizzi provider catalog
     (realModels || []).forEach((provider: any) => {
-      const modelsList = Array.isArray(provider.models)
-        ? provider.models
-        : provider.models
-          ? Object.entries(provider.models as Record<string, any>).map(([id, data]) => ({ id, ...data }))
-          : [];
-      modelsList.forEach((model: any) => {
+      let modelsList: Array<{ id: string; name?: string; description?: string; capabilities?: string[]; context_window?: number }> = [];
+      if (Array.isArray(provider.models)) {
+        modelsList = provider.models.map((m: string | Record<string, any>) =>
+          typeof m === 'string' ? { id: m, name: m } : m
+        );
+      } else if (provider.models) {
+        modelsList = Object.entries(provider.models as Record<string, any>).map(([id, data]) =>
+          typeof data === 'string' ? { id, name: data } : { id, ...data }
+        );
+      }
+      modelsList.forEach((model) => {
         if (!model?.id) return;
         const existing = modelMap.get(model.id);
         const enriched = {
           ...model,
           providerId: provider.id,
           providerName: provider.name,
+          capabilities: normalizeCapabilities(model.capabilities ?? existing?.capabilities),
         };
         modelMap.set(model.id, existing ? { ...existing, ...enriched } : enriched);
       });
@@ -250,7 +270,10 @@ export function useAvailableBrainModels() {
     // 4) Provider-specific discovery result (lowest priority, fills gaps)
     (discoveryResult?.models || []).forEach((model: any) => {
       if (!model?.id || modelMap.has(model.id)) return;
-      modelMap.set(model.id, model);
+      modelMap.set(model.id, {
+        ...model,
+        capabilities: normalizeCapabilities(model.capabilities),
+      });
     });
 
     return Array.from(modelMap.values());

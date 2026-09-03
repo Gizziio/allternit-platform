@@ -27,6 +27,8 @@ import {
   SidebarSimple,
   PushPin,
   Users,
+  CaretDown,
+  CaretRight,
 } from '@phosphor-icons/react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -287,10 +289,91 @@ function SortDropdown({
 }
 
 // ============================================================================
+// Compact icon button (used in the nested shell-rail variant)
+// ============================================================================
+
+function IconButton({
+  icon: Icon,
+  title,
+  isActive,
+  onClick,
+  children,
+}: {
+  icon: React.ElementType;
+  title: string;
+  isActive?: boolean;
+  onClick?: () => void;
+  children?: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 18,
+        height: 18,
+        border: 'none',
+        borderRadius: RADIUS.xs,
+        background: isActive ? 'rgba(255,255,255,0.10)' : 'transparent',
+        color: isActive ? 'var(--shell-item-fg, #E8E3DD)' : 'var(--shell-item-muted, #9C958C)',
+        cursor: 'pointer',
+        transition: `all ${ANIMATION.fast}`,
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
+        e.currentTarget.style.color = 'var(--shell-item-fg, #E8E3DD)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = isActive ? 'rgba(255,255,255,0.10)' : 'transparent';
+        e.currentTarget.style.color = isActive ? 'var(--shell-item-fg, #E8E3DD)' : 'var(--shell-item-muted, #9C958C)';
+      }}
+    >
+      {children ?? <Icon size={11} />}
+    </button>
+  );
+}
+
+// ============================================================================
+// Nested icon toolbar (shell-rail variant)
+// ============================================================================
+
+function NestedToolbar({
+  onNewBot,
+  onNewChannel,
+}: {
+  onNewBot: () => void;
+  onNewChannel: () => void;
+}) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'flex-end',
+        gap: 1,
+      }}
+    >
+      <IconButton icon={Plus} title="New bot" onClick={onNewBot} />
+      <IconButton icon={Users} title="New channel" onClick={onNewChannel} />
+    </div>
+  );
+}
+
+// ============================================================================
 // Main Component
 // ============================================================================
 
 export interface BotRosterProps {
+  /** When true, renders as a nested panel inside the shell rail instead of a standalone sidebar. */
+  nested?: boolean;
+  /** When provided alongside `nested`, controls whether the nested roster section is expanded. */
+  expanded?: boolean;
+  /** Callback when the nested roster section expand/collapse header is toggled. */
+  onToggleExpanded?: () => void;
   /** Callback when user clicks "+ New Bot" */
   onNewBot?: () => void;
   /** Callback when user starts a session with a bot */
@@ -312,6 +395,9 @@ export interface BotRosterProps {
 }
 
 export function BotRoster({
+  nested = false,
+  expanded,
+  onToggleExpanded,
   onNewBot,
   onStartSession,
   onEditProfile,
@@ -673,166 +759,197 @@ export function BotRoster({
   return (
     <div
       style={{
-        width: isCompact ? COMPACT_PANEL_WIDTH : PANEL_WIDTH,
-        height: '100%',
+        width: nested ? undefined : (isCompact ? COMPACT_PANEL_WIDTH : PANEL_WIDTH),
+        height: nested ? undefined : '100%',
         display: 'flex',
         flexDirection: 'column',
-        background: 'var(--shell-rail-bg, #1A1612)',
-        borderRight: `1px solid ${BORDER.subtle}`,
+        background: nested ? 'transparent' : 'var(--shell-rail-bg, #1A1612)',
+        borderRight: nested ? 'none' : `1px solid ${BORDER.subtle}`,
         overflow: 'hidden',
         flexShrink: 0,
+        flex: nested ? 1 : undefined,
       }}
     >
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div
         style={{
-          padding: '14px 14px 10px',
-          borderBottom: `1px solid ${BORDER.subtle}`,
+          padding: nested ? '4px 8px' : '14px 14px 10px',
+          borderBottom: nested ? 'none' : `1px solid ${BORDER.subtle}`,
         }}
       >
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: 10,
-          }}
-        >
-          <span
-            style={{
-              fontSize: TYPOGRAPHY.size.sm,
-              fontWeight: TYPOGRAPHY.weight.semibold,
-              color: TEXT.primary,
-              letterSpacing: '0.01em',
+        {nested ? (
+          <NestedToolbar
+            onNewBot={() => {
+              logger.info('New Bot clicked');
+              setDraftAgent({
+                isBot: true,
+                botProfile: {
+                  displayName: '',
+                  tagline: '',
+                  welcomeMessage: '',
+                  starterPrompts: [],
+                  accentColor: '#6366f1',
+                  groupChatEnabled: true,
+                  botCategory: 'custom',
+                  lifecycle: 'draft',
+                },
+              });
+              setIsCreating(true);
+              onNewBot?.();
+              window.dispatchEvent(
+                new CustomEvent('allternit:open-view', { detail: { viewType: 'agent-hub' } }),
+              );
             }}
-          >
-            {isCompact ? 'Bots' : 'Bots'}
-          </span>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span
-              style={{
-                fontSize: 11,
-                fontWeight: 500,
-                color: TEXT.tertiary,
-                background: 'rgba(255,255,255,0.06)',
-                borderRadius: 8,
-                padding: '1px 7px',
-              }}
-            >
-              {sortedItems.length}
-            </span>
-
-            <SortDropdown value={sortBy} onChange={setSort} />
-
-            <button
-              onClick={toggleCompact}
-              title={isCompact ? 'Expand roster' : 'Collapse roster'}
+            onNewChannel={() => setShowGroupDialog(true)}
+          />
+        ) : (
+          <>
+            <div
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
-                width: 28,
-                height: 28,
-                border: 'none',
-                borderRadius: RADIUS.xs,
-                background: isCompact ? 'rgba(255,255,255,0.08)' : 'transparent',
-                color: isCompact ? TEXT.primary : TEXT.tertiary,
-                cursor: 'pointer',
-                transition: `all ${ANIMATION.fast}`,
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = TEXT.secondary;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = isCompact ? TEXT.primary : TEXT.tertiary;
+                justifyContent: 'space-between',
+                marginBottom: 10,
               }}
             >
-              <SidebarSimple size={15} />
-            </button>
-          </div>
-        </div>
+              <span
+                style={{
+                  fontSize: TYPOGRAPHY.size.sm,
+                  fontWeight: TYPOGRAPHY.weight.semibold,
+                  color: TEXT.primary,
+                  letterSpacing: '0.01em',
+                }}
+              >
+                Bots
+              </span>
 
-        {/* ── Search bar ─────────────────────────────────────────────────── */}
-        {!isCompact && (
-          <div
-            style={{
-              position: 'relative',
-              display: 'flex',
-              alignItems: 'center',
-            }}
-          >
-            <MagnifyingGlass
-              size={14}
-              style={{
-                position: 'absolute',
-                left: 10,
-                color: TEXT.tertiary,
-                pointerEvents: 'none',
-              }}
-            />
-
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search bots…"
-              style={{
-                width: '100%',
-                padding: '7px 30px 7px 30px',
-                border: `1px solid ${BORDER.subtle}`,
-                borderRadius: RADIUS.sm,
-                background: 'rgba(0,0,0,0.2)',
-                color: TEXT.primary,
-                fontSize: TYPOGRAPHY.size.xs,
-                fontFamily: TYPOGRAPHY.fontFamily.sans,
-                outline: 'none',
-                transition: `border-color ${ANIMATION.fast}`,
-              }}
-              onFocus={(e) => {
-                e.currentTarget.style.borderColor = BORDER.focus;
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.borderColor = BORDER.subtle;
-              }}
-            />
-
-            {/* Clear button */}
-            <AnimatePresence>
-              {searchQuery && (
-                <motion.button
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  transition={{ duration: 0.1 }}
-                  onClick={() => setSearch('')}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span
                   style={{
-                    position: 'absolute',
-                    right: 6,
+                    fontSize: 11,
+                    fontWeight: 500,
+                    color: TEXT.tertiary,
+                    background: 'rgba(255,255,255,0.06)',
+                    borderRadius: 8,
+                    padding: '1px 7px',
+                  }}
+                >
+                  {sortedItems.length}
+                </span>
+
+                <SortDropdown value={sortBy} onChange={setSort} />
+
+                <button
+                  onClick={toggleCompact}
+                  title={isCompact ? 'Expand roster' : 'Collapse roster'}
+                  style={{
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    width: 20,
-                    height: 20,
+                    width: 28,
+                    height: 28,
                     border: 'none',
                     borderRadius: RADIUS.xs,
-                    background: 'rgba(255,255,255,0.08)',
-                    color: TEXT.tertiary,
+                    background: isCompact ? 'rgba(255,255,255,0.08)' : 'transparent',
+                    color: isCompact ? TEXT.primary : TEXT.tertiary,
                     cursor: 'pointer',
+                    transition: `all ${ANIMATION.fast}`,
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.color = TEXT.primary;
+                    e.currentTarget.style.color = TEXT.secondary;
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.color = TEXT.tertiary;
+                    e.currentTarget.style.color = isCompact ? TEXT.primary : TEXT.tertiary;
                   }}
                 >
-                  <X size={11} weight="bold" />
-                </motion.button>
-              )}
-            </AnimatePresence>
-          </div>
+                  <SidebarSimple size={15} />
+                </button>
+              </div>
+            </div>
+
+            {/* ── Search bar ─────────────────────────────────────────────────── */}
+            {!isCompact && (
+              <div
+                style={{
+                  position: 'relative',
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                <MagnifyingGlass
+                  size={14}
+                  style={{
+                    position: 'absolute',
+                    left: 10,
+                    color: TEXT.tertiary,
+                    pointerEvents: 'none',
+                  }}
+                />
+
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search bots…"
+                  style={{
+                    width: '100%',
+                    padding: '7px 30px 7px 30px',
+                    border: `1px solid ${BORDER.subtle}`,
+                    borderRadius: RADIUS.sm,
+                    background: 'rgba(0,0,0,0.2)',
+                    color: TEXT.primary,
+                    fontSize: TYPOGRAPHY.size.xs,
+                    fontFamily: TYPOGRAPHY.fontFamily.sans,
+                    outline: 'none',
+                    transition: `border-color ${ANIMATION.fast}`,
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = BORDER.focus;
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = BORDER.subtle;
+                  }}
+                />
+
+                {/* Clear button */}
+                <AnimatePresence>
+                  {searchQuery && (
+                    <motion.button
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      transition={{ duration: 0.1 }}
+                      onClick={() => setSearch('')}
+                      style={{
+                        position: 'absolute',
+                        right: 6,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: 20,
+                        height: 20,
+                        border: 'none',
+                        borderRadius: RADIUS.xs,
+                        background: 'rgba(255,255,255,0.08)',
+                        color: TEXT.tertiary,
+                        cursor: 'pointer',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.color = TEXT.primary;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.color = TEXT.tertiary;
+                      }}
+                    >
+                      <X size={11} weight="bold" />
+                    </motion.button>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
+          </>
         )}
+
       </div>
 
       {/* ── Channels ────────────────────────────────────────────────────────── */}
@@ -843,53 +960,55 @@ export function BotRoster({
             borderBottom: `1px solid ${BORDER.subtle}`,
           }}
         >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '0 6px 6px',
-            }}
-          >
-            <span
-              style={{
-                fontSize: 11,
-                fontWeight: TYPOGRAPHY.weight.semibold,
-                color: TEXT.tertiary,
-                textTransform: 'uppercase',
-                letterSpacing: '0.04em',
-              }}
-            >
-              Channels
-            </span>
-            <button
-              type="button"
-              title="New channel"
-              onClick={() => setShowGroupDialog(true)}
+          {!nested && (
+            <div
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
-                width: 20,
-                height: 20,
-                border: 'none',
-                borderRadius: RADIUS.xs,
-                background: 'transparent',
-                color: TEXT.tertiary,
-                cursor: 'pointer',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = TEXT.secondary;
-                e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = TEXT.tertiary;
-                e.currentTarget.style.background = 'transparent';
+                justifyContent: 'space-between',
+                padding: '0 6px 6px',
               }}
             >
-              <Users size={14} />
-            </button>
-          </div>
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: TYPOGRAPHY.weight.semibold,
+                  color: TEXT.tertiary,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.04em',
+                }}
+              >
+                Channels
+              </span>
+              <button
+                type="button"
+                title="New channel"
+                onClick={() => setShowGroupDialog(true)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: 20,
+                  height: 20,
+                  border: 'none',
+                  borderRadius: RADIUS.xs,
+                  background: 'transparent',
+                  color: TEXT.tertiary,
+                  cursor: 'pointer',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = TEXT.secondary;
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = TEXT.tertiary;
+                  e.currentTarget.style.background = 'transparent';
+                }}
+              >
+                <Users size={14} />
+              </button>
+            </div>
+          )}
 
           <motion.div layout style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <AnimatePresence mode="popLayout">
@@ -905,7 +1024,7 @@ export function BotRoster({
             </AnimatePresence>
           </motion.div>
         </div>
-      ) : (
+      ) : !nested ? (
         <div
           style={{
             padding: '8px 12px 6px',
@@ -949,7 +1068,7 @@ export function BotRoster({
             {isCompact ? 'Group' : 'New group'}
           </button>
         </div>
-      )}
+      ) : null}
 
       {/* ── Bot List ───────────────────────────────────────────────────────── */}
       <div
@@ -990,102 +1109,104 @@ export function BotRoster({
         )}
       </div>
 
-      {/* ── Footer: New Bot + New Channel buttons ─────────────────────────── */}
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 6,
-          padding: '8px 12px 12px',
-          borderTop: `1px solid ${BORDER.subtle}`,
-        }}
-      >
-        <button
-          onClick={() => {
-            logger.info('New Bot clicked');
-            setDraftAgent({
-              isBot: true,
-              botProfile: {
-                displayName: '',
-                tagline: '',
-                welcomeMessage: '',
-                starterPrompts: [],
-                accentColor: '#6366f1',
-                groupChatEnabled: true,
-                botCategory: 'custom',
-                lifecycle: 'draft',
-              },
-            });
-            setIsCreating(true);
-            onNewBot?.();
-            window.dispatchEvent(
-              new CustomEvent('allternit:open-view', { detail: { viewType: 'agent-hub' } }),
-            );
-          }}
+      {/* ── Footer: New Bot + New Channel buttons (standalone only) ────────── */}
+      {!nested && (
+        <div
           style={{
             display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: isCompact ? 0 : 8,
-            width: '100%',
-            padding: '8px 12px',
-            border: `1px dashed ${BORDER.default}`,
-            borderRadius: RADIUS.sm,
-            background: 'transparent',
-            color: TEXT.secondary,
-            fontSize: TYPOGRAPHY.size.xs,
-            fontWeight: TYPOGRAPHY.weight.medium,
-            cursor: 'pointer',
-            transition: `all ${ANIMATION.base}`,
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = SAND[500];
-            e.currentTarget.style.color = SAND[500];
-            e.currentTarget.style.background = `${SAND[500]}08`;
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = BORDER.default;
-            e.currentTarget.style.color = TEXT.secondary;
-            e.currentTarget.style.background = 'transparent';
+            flexDirection: 'column',
+            gap: 6,
+            padding: '8px 12px 12px',
+            borderTop: `1px solid ${BORDER.subtle}`,
           }}
         >
-          <Plus size={14} />
-          {!isCompact && 'New Bot'}
-        </button>
+          <button
+            onClick={() => {
+              logger.info('New Bot clicked');
+              setDraftAgent({
+                isBot: true,
+                botProfile: {
+                  displayName: '',
+                  tagline: '',
+                  welcomeMessage: '',
+                  starterPrompts: [],
+                  accentColor: '#6366f1',
+                  groupChatEnabled: true,
+                  botCategory: 'custom',
+                  lifecycle: 'draft',
+                },
+              });
+              setIsCreating(true);
+              onNewBot?.();
+              window.dispatchEvent(
+                new CustomEvent('allternit:open-view', { detail: { viewType: 'agent-hub' } }),
+              );
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: isCompact ? 0 : 8,
+              width: '100%',
+              padding: '8px 12px',
+              border: `1px dashed ${BORDER.default}`,
+              borderRadius: RADIUS.sm,
+              background: 'transparent',
+              color: TEXT.secondary,
+              fontSize: TYPOGRAPHY.size.xs,
+              fontWeight: TYPOGRAPHY.weight.medium,
+              cursor: 'pointer',
+              transition: `all ${ANIMATION.base}`,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = SAND[500];
+              e.currentTarget.style.color = SAND[500];
+              e.currentTarget.style.background = `${SAND[500]}08`;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = BORDER.default;
+              e.currentTarget.style.color = TEXT.secondary;
+              e.currentTarget.style.background = 'transparent';
+            }}
+          >
+            <Plus size={14} />
+            {!isCompact && 'New Bot'}
+          </button>
 
-        <button
-          onClick={() => setShowGroupDialog(true)}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: isCompact ? 0 : 8,
-            width: '100%',
-            padding: '8px 12px',
-            border: `1px dashed ${BORDER.default}`,
-            borderRadius: RADIUS.sm,
-            background: 'transparent',
-            color: TEXT.secondary,
-            fontSize: TYPOGRAPHY.size.xs,
-            fontWeight: TYPOGRAPHY.weight.medium,
-            cursor: 'pointer',
-            transition: `all ${ANIMATION.base}`,
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = SAND[500];
-            e.currentTarget.style.color = SAND[500];
-            e.currentTarget.style.background = `${SAND[500]}08`;
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = BORDER.default;
-            e.currentTarget.style.color = TEXT.secondary;
-            e.currentTarget.style.background = 'transparent';
-          }}
-        >
-          <Users size={14} />
-          {!isCompact && 'New Channel'}
-        </button>
-      </div>
+          <button
+            onClick={() => setShowGroupDialog(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: isCompact ? 0 : 8,
+              width: '100%',
+              padding: '8px 12px',
+              border: `1px dashed ${BORDER.default}`,
+              borderRadius: RADIUS.sm,
+              background: 'transparent',
+              color: TEXT.secondary,
+              fontSize: TYPOGRAPHY.size.xs,
+              fontWeight: TYPOGRAPHY.weight.medium,
+              cursor: 'pointer',
+              transition: `all ${ANIMATION.base}`,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = SAND[500];
+              e.currentTarget.style.color = SAND[500];
+              e.currentTarget.style.background = `${SAND[500]}08`;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = BORDER.default;
+              e.currentTarget.style.color = TEXT.secondary;
+              e.currentTarget.style.background = 'transparent';
+            }}
+          >
+            <Users size={14} />
+            {!isCompact && 'New Channel'}
+          </button>
+        </div>
+      )}
 
       <GroupChatChannelDialog
         open={showGroupDialog}

@@ -20,6 +20,8 @@ export type ViewType =
   | "bot-inbox"
   | "bot-roster"
   | "group-chat"
+  | "groups-list"
+  | "bot-chat-session"
   | "native-agent"
   | "registry"
   | "memory"
@@ -133,6 +135,7 @@ export type ViewType =
   | "cowork-exports"
   | "cowork-new-task"
   // Agent Session Views (full-screen agent experiences)
+  // "chat-agent-session" is a deprecated alias to the cowork workspace.
   | "chat-agent-session"
   | "cowork-agent-session"
   | "code-agent-session"

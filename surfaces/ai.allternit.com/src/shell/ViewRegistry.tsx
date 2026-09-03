@@ -30,13 +30,19 @@ const OpenClawView         = lazy(() => import('../views/openclaw/OpenClawView')
 const HermesView           = lazy(() => import('../views/hermes/HermesView').then(m => ({ default: m.HermesView })));
 const VaultViewerView      = lazy(() => import('../views/vault-viewer/VaultViewerView').then(m => ({ default: m.VaultViewerView })));
 const OhMyPiView           = lazy(() => import('../views/omp/OhMyPiView').then(m => ({ default: m.OhMyPiView })));
-const ChatModeAgentSession = lazy(() => import('../views/agent-sessions/ChatModeAgentSession').then(m => ({ default: m.ChatModeAgentSession })));
 const CodeModeAgentSession = lazy(() => import('../views/agent-sessions/CodeModeAgentSession').then(m => ({ default: m.CodeModeAgentSession })));
 const DesignModeAgentSession = lazy(() => import('../views/agent-sessions/DesignModeAgentSession').then(m => ({ default: m.DesignModeAgentSession })));
 const BotInboxView = lazy(() => import('../views/bots/BotInboxView').then(m => ({ default: m.BotInboxView })));
 const BotHomeView = lazy(() => import('../views/bots/BotHomeView').then(m => ({ default: m.BotHomeView })));
+const BotChatSessionView = lazy(() => import('../views/bots/BotChatSessionView').then(m => ({ default: m.BotChatSessionView })));
 import { BotRoster } from '../views/bots/BotRoster';
 import { GroupChatView } from '../views/bots/GroupChatView';
+import { GroupsListView } from '../views/bots/GroupsListView';
+import { useChatSessionStore } from '../views/chat/ChatSessionStore';
+import { useGroupChatStore } from '@/lib/bots/group-chat.store';
+import { useUnifiedRoster } from '@/lib/bots/use-unified-roster';
+import type { GroupChatMember } from '@/lib/bots/group-chat.types';
+
 const SwarmADE             = lazy(() => import('../views/swarm').then(m => ({ default: m.SwarmADE })));
 const AllternitCanvasView  = lazy(() => import('../views/AllternitCanvasView').then(m => ({ default: m.AllternitCanvasView })));
 const CoworkRoot           = lazy(() => import('../views/cowork/CoworkRoot').then(m => ({ default: m.CoworkRoot })));
@@ -142,6 +148,106 @@ const PdfView                = lazy(() => import('../views/pdf/PdfView').then(m 
 const MarkdownPreviewView    = lazy(() => import('../views/office/MarkdownPreviewView').then(m => ({ default: m.MarkdownPreviewView })));
 const ApiCaptureView         = lazy(() => import('../views/api-capture/ApiCaptureView').then(m => ({ default: m.ApiCaptureView })));
 const NativeSigningView      = lazy(() => import('../views/office/NativeSigningView').then(m => ({ default: m.NativeSigningView })));
+
+interface ChatAgentSessionRouterProps {
+  sessionId?: string;
+  botId?: string;
+  originView?: ViewType;
+  onBack?: () => void;
+}
+
+function ChatAgentSessionRouter({ sessionId, botId, onBack }: ChatAgentSessionRouterProps) {
+  const sessions = useChatSessionStore((s) => s.sessions);
+  const session = React.useMemo(
+    () => sessions.find((s) => s.id === sessionId) ?? null,
+    [sessions, sessionId]
+  );
+
+  const agentIds = React.useMemo(() => {
+    const ids: string[] = [];
+    if (session?.metadata?.agentIds && Array.isArray(session.metadata.agentIds)) {
+      ids.push(...(session.metadata.agentIds as string[]));
+    } else if (session?.metadata?.agentId) {
+      ids.push(session.metadata.agentId as string);
+    }
+    if (botId && !ids.includes(botId)) {
+      ids.push(botId);
+    }
+    return ids;
+  }, [session, botId]);
+
+  if (agentIds.length > 1) {
+    return <MultiBotGroupChatSession agentIds={agentIds} onBack={onBack} />;
+  }
+
+  return (
+    <BotChatSessionView
+      sessionId={sessionId}
+      botId={botId ?? agentIds[0]}
+      onBack={onBack}
+    />
+  );
+}
+
+function MultiBotGroupChatSession({
+  agentIds,
+  onBack,
+}: {
+  agentIds: string[];
+  onBack?: () => void;
+}) {
+  const roster = useUnifiedRoster();
+  const groups = useGroupChatStore((s) => s.groups);
+  const createGroup = useGroupChatStore((s) => s.createGroup);
+  const [groupId, setGroupId] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    const idSet = new Set(agentIds);
+    const existing = Object.values(groups).find((g) => {
+      const memberIds = new Set(g.members.map((m) => m.botId));
+      if (memberIds.size !== idSet.size) return false;
+      for (const id of idSet) {
+        if (!memberIds.has(id)) return false;
+      }
+      return true;
+    });
+
+    if (existing) {
+      setGroupId(existing.id);
+      return;
+    }
+
+    const members = agentIds
+      .map((id) => {
+        const bot = roster.find((b) => b.id === id);
+        if (!bot) return null;
+        return {
+          botId: bot.id,
+          displayName: bot.displayName,
+          handle: bot.handle,
+          source: bot.source,
+          providerId: bot.providerId,
+        } as GroupChatMember;
+      })
+      .filter((m): m is GroupChatMember => Boolean(m));
+
+    if (members.length >= 2) {
+      const name = members.map((m) => m.displayName).join(', ');
+      const id = createGroup(name, members);
+      setGroupId(id);
+    }
+  }, [agentIds, groups, roster, createGroup]);
+
+  if (!groupId) {
+    return (
+      <div className="flex h-full items-center justify-center text-sm text-[var(--text-secondary)]">
+        Creating group chat…
+      </div>
+    );
+  }
+
+  return <GroupChatView groupId={groupId} onBack={onBack} />;
+}
 
 export function getShellViewRegistry(handlers: {
   handleOpenAgentSession: (text: string, surface: AppMode, execution?: { modeId: CanonicalAgentModeId; templateTitle?: string }) => void;
@@ -304,7 +410,7 @@ export function getShellViewRegistry(handlers: {
     ),
     'agent-hub': ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Agent | Bot Hub" />}>
-        <AgentHub onSessionStarted={(sessionId) => open('chat-agent-session', { sessionId })} />
+        <AgentHub onSessionStarted={(sessionId, botId) => open('bot-chat-session', { sessionId, botId })} />
       </ErrorBoundary>
     ),
     'bot-inbox': ({ context }: { context?: ViewContext }) => {
@@ -327,8 +433,8 @@ export function getShellViewRegistry(handlers: {
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Bot Roster" />}>
         <BotRoster
           onNewBot={() => open('agent-hub')}
-          onStartSession={(_botId, sessionId) =>
-            open(sessionId ? 'chat-agent-session' : 'chat', sessionId ? { sessionId } : undefined)
+          onStartSession={(botId, sessionId) =>
+            open('bot-chat-session', { sessionId, botId })
           }
           onEditProfile={(botId) => open('bot-home', { botId })}
           onNavigate={(view) => {
@@ -345,7 +451,24 @@ export function getShellViewRegistry(handlers: {
         <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Group Chat" />}>
           <GroupChatView
             groupId={ctx?.groupId ?? context?.viewId ?? ''}
-            onBack={() => open('bot-roster')}
+            onBack={() => open('groups-list')}
+          />
+        </ErrorBoundary>
+      );
+    },
+    'groups-list': () => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Groups" />}>
+        <GroupsListView onOpenGroup={(groupId) => open('group-chat', { groupId })} />
+      </ErrorBoundary>
+    ),
+    'bot-chat-session': ({ context }: { context?: ViewContext }) => {
+      const ctx = context?.context as { sessionId?: string; botId?: string; originView?: ViewType } | undefined;
+      return (
+        <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Bot Chat Session" />}>
+          <BotChatSessionView
+            sessionId={ctx?.sessionId}
+            botId={ctx?.botId ?? context?.viewId}
+            onBack={() => open(ctx?.originView ?? 'bot-roster')}
           />
         </ErrorBoundary>
       );
@@ -828,17 +951,6 @@ export function getShellViewRegistry(handlers: {
         <CodeProjectView />
       </ErrorBoundary>
     ),
-    'chat-agent-session': ({ context }: { context?: ViewContext }) => {
-      const ctx = context?.context as { sessionId?: string; originView?: ViewType } | undefined;
-      return (
-        <ChatModeAgentSession
-          mode="chat"
-          sessionId={ctx?.sessionId ?? context!.viewId}
-          context={typeof window !== 'undefined' ? window.sessionStorage.getItem('allternit-pending-agent-message') || undefined : undefined}
-          onClose={() => open(ctx?.originView ?? 'chat')}
-        />
-      );
-    },
     'cowork-agent-session': ({ context }: { context?: ViewContext }) => {
       const ctx = context?.context as { sessionId?: string; originView?: ViewType } | undefined;
       React.useEffect(() => {
@@ -849,6 +961,22 @@ export function getShellViewRegistry(handlers: {
       return (
         <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Cowork Agent Workspace" />}>
           <CoworkRoot />
+        </ErrorBoundary>
+      );
+    },
+    // Chat-mode agent sessions open in the polished 1-on-1 bot chat surface.
+    // When a session maps to multiple bots, it is automatically routed to the
+    // corresponding group-chat channel.
+    'chat-agent-session': ({ context }: { context?: ViewContext }) => {
+      const ctx = context?.context as { sessionId?: string; botId?: string; originView?: ViewType } | undefined;
+      return (
+        <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Bot Chat Session" />}>
+          <ChatAgentSessionRouter
+            sessionId={ctx?.sessionId}
+            botId={ctx?.botId ?? context?.viewId}
+            originView={ctx?.originView}
+            onBack={() => open(ctx?.originView ?? 'chat')}
+          />
         </ErrorBoundary>
       );
     },

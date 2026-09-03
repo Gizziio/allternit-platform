@@ -12,7 +12,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PaperPlaneTilt, ArrowUp } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
-import { GlassSurface } from "@/design/GlassSurface";
 import { Button } from "@/components/ui/button";
 import { useUnifiedRoster } from "@/lib/bots/use-unified-roster";
 import type { GroupChat } from "@/lib/bots/group-chat.types";
@@ -157,11 +156,7 @@ export function GroupChatComposer({
 
   return (
     <div className="relative">
-      <GlassSurface
-        intensity="base"
-        className="flex items-end gap-2 p-2"
-        style={{ background: "var(--chat-composer-bg)" }}
-      >
+      <div className="flex items-end gap-2">
         <textarea
           ref={textareaRef}
           value={input}
@@ -171,16 +166,19 @@ export function GroupChatComposer({
           rows={1}
           disabled={isLoading}
           className={cn(
-            "flex-1 resize-none bg-transparent px-3 py-2.5 text-[var(--ui-text-primary)] placeholder:text-[var(--ui-text-muted)] outline-none",
-            "min-h-[44px] max-h-[200px] text-sm"
+            "max-h-[120px] min-h-[48px] flex-1 resize-none rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-4 py-3 text-sm text-[var(--text-primary)] outline-none transition-colors focus:border-[var(--accent-primary)]",
+            "placeholder:text-[var(--text-tertiary)]"
           )}
         />
         <Button
           type="button"
-          size="icon"
           onClick={handleSend}
           disabled={!input.trim() || isLoading}
-          className="shrink-0"
+          className="h-11 w-11 shrink-0 rounded-xl p-0 transition-opacity disabled:opacity-50"
+          style={{
+            background: "var(--accent-primary)",
+            color: "#fff",
+          }}
           aria-label="Send message"
         >
           {isLoading ? (
@@ -189,7 +187,7 @@ export function GroupChatComposer({
             <PaperPlaneTilt size={18} weight="fill" />
           )}
         </Button>
-      </GlassSurface>
+      </div>
 
       {mentionOpen && mentionTargets.length > 0 && (
         <div

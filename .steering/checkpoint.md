@@ -1211,3 +1211,23 @@ Consolidate duplicate parser/memory modules and implement a native macOS dictati
 
 ### Open questions
 - None.
+
+
+## Bot chat kimi-cli 401 fix — continuation (2026-08-28)
+
+### Goal
+Finish fixing the bot group-chat 401 Unauthorized error so the `kimi-cli` provider routes through the local `kimi` subprocess instead of failing auth.
+
+### Just did
+- Diagnosed the 401: `/api/agent-chat` was proxying to Gizzi with a bare `reqwest::Client`, missing the Basic auth that password-protected Gizzi daemons require.
+- Updated `cmd/allternit-api/src/chat_routes.rs` to extract `HeaderMap` and pass it to the chat stream.
+- Updated `cmd/allternit-api/src/gizzi_chat_stream.rs` to use `crate::agent_session_routes::gizzi_client(headers)`, which adds `Authorization: Basic ...` from `GIZZI_PASSWORD` / `GIZZI_SERVER_PASSWORD` or forwards an existing Basic header.
+- `cargo check --bin allternit-api` passes.
+
+### Next
+1. Build and restart the relevant `allternit-api` instance that the desktop app is talking to.
+2. Open the desktop app, navigate to the bot group chat, choose Kimi CLI, and send a message.
+3. Screenrecord the successful exchange.
+
+### Open questions
+- Which running `allternit-api` process / worktree is the current desktop app pointing at? There are multiple API instances running from different worktrees and ports.

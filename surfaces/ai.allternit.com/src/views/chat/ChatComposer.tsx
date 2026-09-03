@@ -1049,7 +1049,7 @@ export function ChatComposer({
       // the results-only panel below, which interprets and runs it — never
       // through the normal agent-mode send.
       useMiroFishRunStore.getState().requestRun(enrichedInput);
-    } else if (onAgentSend && agentModeSurface && (agentModeEnabled || isCanonicalAgentMode(selectedModeId))) {
+    } else if (onAgentSend && agentModeSurface && agentModeEnabled && isCanonicalAgentMode(selectedModeId)) {
       onAgentSend(enrichedInput, selectedModeId ? { modeId: selectedModeId as CanonicalAgentModeId, templateTitle: selectedTemplateTitle } : undefined);
     } else {
       onSend(enrichedInput);
@@ -2257,6 +2257,11 @@ export function ChatComposer({
                             if (agentModeSurface) {
                               setSelectedMode(agentModeSurface, mode.id as AgentModeId);
                               setSelectedTemplateTitle(undefined);
+                              // Explicitly selecting a canonical agent mode enables agent-mode
+                              // send for the current composer surface.
+                              if (isCanonicalAgentMode(mode.id)) {
+                                setLocallyEnabled(true);
+                              }
                             }
                             setShowModeSelectorMenu(false);
                           }}

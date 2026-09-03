@@ -94,4 +94,6 @@ export interface GroupChatRunResult {
   settled: boolean;
   /** Reason if the run did not settle. */
   stopReason?: 'max_rounds' | 'max_messages' | 'timeout' | 'error';
+  /** Member ids whose turns failed during the run. */
+  failedMemberIds?: string[];
 }

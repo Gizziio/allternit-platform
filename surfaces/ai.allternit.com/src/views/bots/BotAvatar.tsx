@@ -309,11 +309,23 @@ function DirectBotAvatar({
   size = 40,
   className,
 }: BotAvatarDirectProps) {
-  const initials = useMemo(() => botInitials(name), [name]);
-
   if (!avatar) {
     return (
-      <InitialsAvatar name={name} size={size} className={className} />
+      <div
+        className={className}
+        style={{
+          width: size,
+          height: size,
+          borderRadius: "50%",
+          overflow: "hidden",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "var(--accent-primary)",
+        }}
+      >
+        <GizziMascot size={Math.round(size * 0.85)} emotion="pleased" />
+      </div>
     );
   }
 
@@ -495,19 +507,18 @@ function LegacyBotAvatar({
     );
   }
 
-  // Fallback initials
+  // Fallback: Gizzi-style mascot so every bot shares the same visual language.
   return (
     <div
-      className={`flex shrink-0 items-center justify-center rounded-2xl text-[20px] font-bold ${className}`}
+      className={`flex shrink-0 items-center justify-center rounded-2xl ${className}`}
       style={{
         width: size,
         height: size,
         background: `color-mix(in srgb, ${accentColor} 18%, transparent)`,
-        color: accentColor,
         border: `2px solid ${accentColor}35`,
       }}
     >
-      {botInitials(displayName)}
+      <GizziMascot size={Math.round(size * 0.85)} emotion="pleased" />
     </div>
   );
 }

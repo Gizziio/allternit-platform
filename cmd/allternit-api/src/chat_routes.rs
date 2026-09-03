@@ -5,7 +5,7 @@
 use axum::{
     body::Body,
     extract::{Json, State},
-    http::{header, StatusCode},
+    http::{header, HeaderMap, StatusCode},
     response::Response,
     routing::post,
     Router,
@@ -50,6 +50,7 @@ pub fn chat_router() -> Router<Arc<AppState>> {
 /// Gizzi session and stream the event bus back to the frontend.
 async fn handle_agent_chat(
     State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
     Json(request): Json<ChatRequest>,
 ) -> Response {
     info!(chat_id = %request.chat_id, "Received chat request, forwarding to Gizzi runtime");
@@ -63,6 +64,7 @@ async fn handle_agent_chat(
     let gizzi_base = state.config.terminal_server_url();
     stream_chat_through_gizzi(
         &gizzi_base,
+        &headers,
         &request.chat_id,
         &request.message,
         system_prompt,

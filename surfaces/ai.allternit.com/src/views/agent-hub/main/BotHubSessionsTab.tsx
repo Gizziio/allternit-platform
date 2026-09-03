@@ -10,7 +10,7 @@ import { BotAvatar, botInitials } from "@/views/bots/BotAvatar";
 import { cn } from "@/lib/utils";
 
 interface BotHubSessionsTabProps {
-  onSessionStarted?: (sessionId: string) => void;
+  onSessionStarted?: (sessionId: string, botId: string) => void;
 }
 
 interface BotSessionGroup {
@@ -124,17 +124,9 @@ export function BotHubSessionsTab({ onSessionStarted }: BotHubSessionsTabProps) 
     );
   };
 
-  const openSession = (session: ModeSession) => {
+  const openSession = (session: ModeSession, botId: string) => {
     setActiveChatSession(session.id);
-    onSessionStarted?.(session.id);
-    window.dispatchEvent(
-      new CustomEvent("allternit:open-view", {
-        detail: {
-          viewType: "chat-agent-session",
-          context: { sessionId: session.id, originView: "chat" },
-        },
-      })
-    );
+    onSessionStarted?.(session.id, botId);
   };
 
   return (
@@ -184,7 +176,7 @@ export function BotHubSessionsTab({ onSessionStarted }: BotHubSessionsTabProps) 
                     <button
                       key={session.id}
                       type="button"
-                      onClick={() => openSession(session)}
+                      onClick={() => openSession(session, group.botId)}
                       className="flex flex-col gap-1 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4 text-left transition-all hover:border-[var(--border-hover)] hover:shadow-sm"
                     >
                       <div className="flex items-center gap-2">

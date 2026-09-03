@@ -198,6 +198,7 @@ export function ModelPicker({
             variant="outline"
             size="sm"
             disabled={isSaving}
+            aria-label="Pick a brain"
             className={cn(
               "h-8 gap-1.5 rounded-full border-[var(--ui-border-default)] bg-[var(--surface-panel)]/60 px-3 text-xs font-medium text-[var(--ui-text-primary)] hover:bg-[var(--surface-hover)]",
               className
@@ -248,6 +249,7 @@ export function ModelPicker({
 
                 const pill = (
                   <button
+                    key={provider.id}
                     type="button"
                     onClick={() => {
                       if (provider.available && provider.models.length > 0) {
