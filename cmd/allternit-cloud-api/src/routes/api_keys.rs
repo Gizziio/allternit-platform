@@ -59,11 +59,14 @@ async fn list_api_keys(
     State(state): State<Arc<ApiState>>,
     headers: HeaderMap,
 ) -> Result<Json<Vec<ApiKeyResponse>>, ApiError> {
-    let user = clerk::user_from_headers(&headers).await?;
-    let keys = services::api_keys::list_api_keys(&state.db, &user.id).await?;
+    let user_id = crate::auth::resolve_user_id(&state.db, &headers).await?;
+    let keys = services::api_keys::list_api_keys(&state.db, &user_id).await?;
     Ok(Json(keys.into_iter().map(into_response).collect()))
 }
 
+/// Token minting stays Clerk-session-gated on purpose: an `allternit_*` API
+/// token must not be able to mint further tokens (no privilege escalation),
+/// and the organization binding comes from the Clerk claims.
 async fn create_api_key(
     State(state): State<Arc<ApiState>>,
     headers: HeaderMap,
@@ -90,8 +93,8 @@ async fn revoke_api_key(
     headers: HeaderMap,
     Path(id): Path<String>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
-    let user = clerk::user_from_headers(&headers).await?;
-    services::api_keys::revoke_api_key(&state.db, &user.id, &id).await?;
+    let user_id = crate::auth::resolve_user_id(&state.db, &headers).await?;
+    services::api_keys::revoke_api_key(&state.db, &user_id, &id).await?;
     Ok(Json(serde_json::json!({ "ok": true })))
 }
 

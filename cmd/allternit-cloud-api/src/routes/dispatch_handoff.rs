@@ -95,7 +95,7 @@ async fn mint_handoff(
     headers: HeaderMap,
     Json(body): Json<MintRequest>,
 ) -> Result<Json<MintResponse>, ApiError> {
-    let user = handoff_user(&headers).await?;
+    let user = handoff_user(&state, &headers).await?;
 
     let runtime_id = match body.runtime_id {
         Some(id) => {
@@ -169,7 +169,7 @@ async fn claim_handoff(
     headers: HeaderMap,
     Json(body): Json<ClaimRequest>,
 ) -> Result<Json<ClaimResponse>, ApiError> {
-    let user = handoff_user(&headers).await?;
+    let user = handoff_user(&state, &headers).await?;
     let row = fetch_token(&state, &body.token).await?;
 
     if row.user_id != user.id {
@@ -202,7 +202,7 @@ async fn handoff_status(
     headers: HeaderMap,
     Query(query): Query<StatusQuery>,
 ) -> Result<Json<StatusResponse>, ApiError> {
-    let user = handoff_user(&headers).await?;
+    let user = handoff_user(&state, &headers).await?;
     let row = fetch_token(&state, &query.token).await?;
 
     if row.user_id != user.id {
@@ -231,7 +231,7 @@ async fn fetch_token(state: &Arc<ApiState>, token: &str) -> Result<HandoffRow, A
 /// Clerk verification with the same development shortcut the legacy auth
 /// middleware honors (auth/middleware.rs) so the handoff loop can be
 /// exercised against a local stack without a real Clerk session.
-async fn handoff_user(headers: &HeaderMap) -> Result<ClerkUser, ApiError> {
+async fn handoff_user(state: &ApiState, headers: &HeaderMap) -> Result<ClerkUser, ApiError> {
     let development_mode = std::env::var("Allternit_API_DEVELOPMENT_MODE")
         .map(|v| v == "true" || v == "1")
         .unwrap_or(false);
@@ -252,7 +252,21 @@ async fn handoff_user(headers: &HeaderMap) -> Result<ClerkUser, ApiError> {
             });
         }
     }
-    clerk::user_from_headers(headers).await
+    match clerk::user_from_headers(headers).await {
+        Ok(user) => Ok(user),
+        Err(_) => {
+            // API-token callers carry no profile; the handoff insert binds
+            // the optional fields as NULL (same as the dev-user path).
+            let user_id = crate::auth::resolve_user_id(&state.db, headers).await?;
+            Ok(ClerkUser {
+                id: user_id,
+                email: None,
+                name: None,
+                image_url: None,
+                organization_id: None,
+            })
+        }
+    }
 }
 
 fn random_token(bytes: usize) -> String {

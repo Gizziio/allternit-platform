@@ -17,23 +17,56 @@ use sqlx::PgPool;
 use crate::auth::{clerk, middleware};
 use crate::error::ApiError;
 
-/// Resolve the caller's user id from a Clerk session JWT, falling back to an
-/// `allternit_*` Bearer API token. When neither authenticates, the Clerk error
-/// wins (it is the primary surface and carries the more useful message).
-pub async fn resolve_user_id(db: &PgPool, headers: &HeaderMap) -> Result<String, ApiError> {
+/// Caller profile for routes that need more than the id. API-token callers
+/// carry no profile — the optional fields are `None` and the route must fall
+/// back to the synthetic `<id>@users.allternit.local` email (same contract as
+/// the device-actor path in `gizzi_instances`).
+pub struct ResolvedUser {
+    pub id: String,
+    pub email: Option<String>,
+    pub name: Option<String>,
+    pub image_url: Option<String>,
+    /// Clerk organization binding; `None` for API-token callers.
+    pub organization_id: Option<String>,
+}
+
+/// Resolve the caller from a Clerk session JWT, falling back to an
+/// `allternit_*` Bearer API token. When neither authenticates, the Clerk
+/// error wins (it is the primary surface and carries the more useful
+/// message).
+pub async fn resolve_user(db: &PgPool, headers: &HeaderMap) -> Result<ResolvedUser, ApiError> {
     match clerk::user_from_headers(headers).await {
-        Ok(user) => Ok(user.id),
+        Ok(user) => Ok(ResolvedUser {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            image_url: user.image_url,
+            organization_id: user.organization_id,
+        }),
         Err(clerk_error) => {
             let Some(token) = bearer_token(headers) else {
                 return Err(clerk_error);
             };
             match middleware::validate_token_against_db(db, &token).await {
-                Ok(Some(user)) => Ok(user.user_id),
+                Ok(Some(user)) => Ok(ResolvedUser {
+                    id: user.user_id,
+                    email: None,
+                    name: None,
+                    image_url: None,
+                    organization_id: None,
+                }),
                 Ok(None) => Err(clerk_error),
                 Err(error) => Err(ApiError::DatabaseError(error)),
             }
         }
     }
+}
+
+/// Resolve the caller's user id from a Clerk session JWT, falling back to an
+/// `allternit_*` Bearer API token. When neither authenticates, the Clerk error
+/// wins (it is the primary surface and carries the more useful message).
+pub async fn resolve_user_id(db: &PgPool, headers: &HeaderMap) -> Result<String, ApiError> {
+    resolve_user(db, headers).await.map(|user| user.id)
 }
 
 fn bearer_token(headers: &HeaderMap) -> Option<String> {

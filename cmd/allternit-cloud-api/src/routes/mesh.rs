@@ -24,7 +24,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use tonic::transport::Channel;
 
-use crate::{auth::clerk, routes::runtime_pairing, ApiError, ApiState};
+use crate::{routes::runtime_pairing, ApiError, ApiState};
 
 /// Generated from the vendored Headscale v0.29.2 protos (`proto/`).
 pub mod proto {
@@ -358,7 +358,8 @@ fn mesh_upstream_error_response(error: &MeshError) -> Response {
 
 /// Resolves who is enrolling: a paired runtime device token enrolls under the
 /// device's owner (the owner's user id maps to the same per-customer Headscale
-/// user, `clerk-<id>`); anything else falls back to the Clerk session path.
+/// user, `clerk-<id>`); otherwise the Clerk session or an `allternit_*` API
+/// token resolves to the user id.
 /// Mirrors `gizzi_instances::actor_from_headers` — same trust decision, and
 /// the call doubles as a lightweight device heartbeat.
 async fn enroll_user_id(db: &sqlx::PgPool, headers: &HeaderMap) -> Result<String, ApiError> {
@@ -372,8 +373,7 @@ async fn enroll_user_id(db: &sqlx::PgPool, headers: &HeaderMap) -> Result<String
         .await?;
         return Ok(device.user_id);
     }
-    let user = clerk::user_from_headers(headers).await?;
-    Ok(user.id)
+    crate::auth::resolve_user_id(db, headers).await
 }
 
 async fn enroll(State(state): State<Arc<ApiState>>, headers: HeaderMap) -> Response {

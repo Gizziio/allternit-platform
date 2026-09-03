@@ -39,7 +39,7 @@ use tokio_stream::wrappers::ReceiverStream;
 use uuid::Uuid;
 
 use super::runtime_pairing::authenticate_runtime_token;
-use crate::{auth::clerk, ApiError, ApiState};
+use crate::{ApiError, ApiState};
 
 const RELAY_TIMEOUT: Duration = Duration::from_secs(90);
 const MAX_RELAY_BODY_BYTES: usize = 5 * 1024 * 1024;
@@ -275,8 +275,8 @@ async fn create_socket_ticket(
     Path(runtime_id): Path<String>,
     Json(request): Json<CreateSocketTicketRequest>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
-    let user = clerk::user_from_headers(&headers).await?;
-    let capabilities = runtime_capabilities(&state, &runtime_id, &user.id).await?;
+    let user_id = crate::auth::resolve_user_id(&state.db, &headers).await?;
+    let capabilities = runtime_capabilities(&state, &runtime_id, &user_id).await?;
     if !capabilities
         .iter()
         .any(|capability| capability == "runtime:connect")
@@ -652,8 +652,8 @@ async fn proxy_to_runtime(
     Path(runtime_id): Path<String>,
     Json(request): Json<BrowserProxyRequest>,
 ) -> Result<Response, ApiError> {
-    let user = clerk::user_from_headers(&headers).await?;
-    let capabilities = runtime_capabilities(&state, &runtime_id, &user.id).await?;
+    let user_id = crate::auth::resolve_user_id(&state.db, &headers).await?;
+    let capabilities = runtime_capabilities(&state, &runtime_id, &user_id).await?;
     if !capabilities
         .iter()
         .any(|capability| capability == "runtime:connect")

@@ -133,6 +133,9 @@ pub(crate) async fn upsert_instance(
 enum Actor {
     Device { user_id: String, device_name: String },
     Clerk(clerk::ClerkUser),
+    /// Authenticated by an `allternit_*` API token: the user id is known but
+    /// no profile claims are available (same backfill contract as Device).
+    ApiToken { user_id: String },
 }
 
 impl Actor {
@@ -140,20 +143,21 @@ impl Actor {
         match self {
             Actor::Device { user_id, .. } => user_id,
             Actor::Clerk(user) => &user.id,
+            Actor::ApiToken { user_id } => user_id,
         }
     }
 
     fn default_name(&self) -> &str {
         match self {
             Actor::Device { device_name, .. } => device_name,
-            Actor::Clerk(_) => DEFAULT_INSTANCE_NAME,
+            Actor::Clerk(_) | Actor::ApiToken { .. } => DEFAULT_INSTANCE_NAME,
         }
     }
 }
 
 /// Resolves who is registering: a paired runtime device token registers
-/// under the device's owner; anything else falls back to the Clerk session
-/// path.
+/// under the device's owner; a Clerk session or `allternit_*` API token
+/// falls through to the user identity.
 async fn actor_from_headers(db: &PgPool, headers: &HeaderMap) -> Result<Actor, ApiError> {
     if let Some(token) = runtime_pairing::device_token_from_headers(headers) {
         let device = runtime_pairing::runtime_device_for_token(db, token, None).await?;
@@ -169,8 +173,12 @@ async fn actor_from_headers(db: &PgPool, headers: &HeaderMap) -> Result<Actor, A
             device_name: device.name,
         });
     }
-    let user = clerk::user_from_headers(headers).await?;
-    Ok(Actor::Clerk(user))
+    match clerk::user_from_headers(headers).await {
+        Ok(user) => Ok(Actor::Clerk(user)),
+        Err(_) => Ok(Actor::ApiToken {
+            user_id: crate::auth::resolve_user_id(db, headers).await?,
+        }),
+    }
 }
 
 /// `gizzi_instances.user_id` references `users(id)`, so a `users` row must
@@ -206,7 +214,7 @@ async fn ensure_user_row(db: &PgPool, actor: &Actor) -> Result<(), ApiError> {
             .execute(db)
             .await?;
         }
-        Actor::Device { user_id, .. } => {
+        Actor::Device { user_id, .. } | Actor::ApiToken { user_id } => {
             let email = format!("{}@users.allternit.local", user_id.replace('@', "_"));
             sqlx::query(
                 r#"
@@ -246,7 +254,7 @@ async fn list_instances(
     State(state): State<Arc<ApiState>>,
     headers: HeaderMap,
 ) -> Result<Json<serde_json::Value>, ApiError> {
-    let user = clerk::user_from_headers(&headers).await?;
+    let user_id = crate::auth::resolve_user_id(&state.db, &headers).await?;
     let instances = sqlx::query_as::<_, GizziInstanceView>(
         r#"
         SELECT id, name, url, updated_at
@@ -255,7 +263,7 @@ async fn list_instances(
         ORDER BY updated_at DESC
         "#,
     )
-    .bind(&user.id)
+    .bind(&user_id)
     .fetch_all(&state.db)
     .await?;
     let instances = instances.iter().map(instance_json).collect::<Vec<_>>();
@@ -300,10 +308,10 @@ async fn delete_instance(
     headers: HeaderMap,
     Path(id): Path<String>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
-    let user = clerk::user_from_headers(&headers).await?;
+    let user_id = crate::auth::resolve_user_id(&state.db, &headers).await?;
     let affected = sqlx::query("DELETE FROM gizzi_instances WHERE id = $1 AND user_id = $2")
         .bind(&id)
-        .bind(&user.id)
+        .bind(&user_id)
         .execute(&state.db)
         .await?
         .rows_affected();

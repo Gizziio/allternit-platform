@@ -682,7 +682,7 @@ async fn revoke_runtime_device(
     headers: HeaderMap,
     Path(id): Path<String>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
-    let user = clerk::user_from_headers(&headers).await?;
+    let user_id = crate::auth::resolve_user_id(&state.db, &headers).await?;
     let affected = sqlx::query(
         r#"
         UPDATE runtime_devices
@@ -691,7 +691,7 @@ async fn revoke_runtime_device(
         "#,
     )
     .bind(&id)
-    .bind(&user.id)
+    .bind(&user_id)
     .execute(&state.db)
     .await?
     .rows_affected();
@@ -972,7 +972,21 @@ async fn approver_from_headers(state: &ApiState, headers: &HeaderMap) -> Result<
             organization_id: None,
         });
     }
-    clerk::user_from_headers(headers).await
+    match clerk::user_from_headers(headers).await {
+        Ok(user) => Ok(user),
+        Err(_) => {
+            // API-token approvers carry no profile — only the id is used
+            // downstream (ownership checks on pairing approval).
+            let user_id = crate::auth::resolve_user_id(&state.db, headers).await?;
+            Ok(ClerkUser {
+                id: user_id,
+                email: None,
+                name: None,
+                image_url: None,
+                organization_id: None,
+            })
+        }
+    }
 }
 
 async fn pairing_by_code(state: &ApiState, code: &str) -> Result<PairingRow, ApiError> {

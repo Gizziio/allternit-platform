@@ -17,7 +17,7 @@ use std::sync::Arc;
 use tracing::{debug, error, info};
 use uuid::Uuid;
 
-use crate::{auth::clerk, error::ApiError, services, ApiState};
+use crate::{error::ApiError, services, ApiState};
 
 const BOOTSTRAP_TOKEN_BYTES: usize = 32;
 
@@ -123,8 +123,8 @@ async fn list_hosted_runtimes(
     State(state): State<Arc<ApiState>>,
     headers: HeaderMap,
 ) -> Result<Json<Vec<HostedRuntimeResponse>>, ApiError> {
-    let user = clerk::user_from_headers(&headers).await?;
-    ensure_cloud_user(&state, &user).await?;
+    let user_id = crate::auth::resolve_user_id(&state.db, &headers).await?;
+    ensure_cloud_user_id(&state, &user_id).await?;
     let rows = sqlx::query_as::<_, HostedRuntimeRow>(
         r#"
         SELECT id, user_id, name, region, status, runtime_device_id, cpus, memory_mb,
@@ -135,10 +135,10 @@ async fn list_hosted_runtimes(
         ORDER BY created_at DESC
         "#,
     )
-    .bind(&user.id)
+    .bind(&user_id)
     .fetch_all(&state.db)
     .await?;
-    let usage = services::hosted_usage_summary(&state.db, &user.id).await?;
+    let usage = services::hosted_usage_summary(&state.db, &user_id).await?;
     Ok(Json(
         rows.into_iter()
             .map(|row| into_response(row, &usage))
@@ -151,8 +151,8 @@ async fn create_hosted_runtime(
     headers: HeaderMap,
     Json(request): Json<CreateHostedRuntimeRequest>,
 ) -> Result<(StatusCode, Json<HostedRuntimeResponse>), ApiError> {
-    let user = clerk::user_from_headers(&headers).await?;
-    ensure_cloud_user(&state, &user).await?;
+    let user = crate::auth::resolve_user(&state.db, &headers).await?;
+    ensure_cloud_user_id(&state, &user.id).await?;
     let quota = state.quota_service.ensure_quota(&user.id).await?;
 
     state
@@ -282,8 +282,8 @@ async fn start_hosted_runtime(
     headers: HeaderMap,
     Path(id): Path<String>,
 ) -> Result<Json<HostedRuntimeResponse>, ApiError> {
-    let user = clerk::user_from_headers(&headers).await?;
-    ensure_cloud_user(&state, &user).await?;
+    let user = crate::auth::resolve_user(&state.db, &headers).await?;
+    ensure_cloud_user_id(&state, &user.id).await?;
     let quota = state.quota_service.ensure_quota(&user.id).await?;
     if !state.quota_service.can_create_hosted_runtime(&quota) {
         return Err(ApiError::Forbidden(
@@ -344,11 +344,11 @@ async fn stop_hosted_runtime(
     headers: HeaderMap,
     Path(id): Path<String>,
 ) -> Result<Json<HostedRuntimeResponse>, ApiError> {
-    let user = clerk::user_from_headers(&headers).await?;
-    let row = fetch_instance_for_user(&state, &id, &user.id).await?;
+    let user_id = crate::auth::resolve_user_id(&state.db, &headers).await?;
+    let row = fetch_instance_for_user(&state, &id, &user_id).await?;
     if row.status == "stopped" {
         let response_row = fetch_instance(&state, &id).await?;
-        let usage = services::hosted_usage_summary(&state.db, &user.id).await?;
+        let usage = services::hosted_usage_summary(&state.db, &user_id).await?;
         return Ok(Json(into_response(response_row, &usage)));
     }
     if row.provider.as_deref() == Some("contabo") {
@@ -366,7 +366,7 @@ async fn stop_hosted_runtime(
     services::record_runtime_stopped(&state.db, &id, "user_stopped").await?;
 
     let row = fetch_instance(&state, &id).await?;
-    let usage = services::hosted_usage_summary(&state.db, &user.id).await?;
+    let usage = services::hosted_usage_summary(&state.db, &user_id).await?;
     Ok(Json(into_response(row, &usage)))
 }
 
@@ -375,8 +375,8 @@ async fn destroy_hosted_runtime(
     headers: HeaderMap,
     Path(id): Path<String>,
 ) -> Result<StatusCode, ApiError> {
-    let user = clerk::user_from_headers(&headers).await?;
-    let row = fetch_instance_for_user(&state, &id, &user.id).await?;
+    let user_id = crate::auth::resolve_user_id(&state.db, &headers).await?;
+    let row = fetch_instance_for_user(&state, &id, &user_id).await?;
 
     if row.provider.as_deref() == Some("contabo") {
         state.contabo_runtime_service.destroy(&row.id).await?;
@@ -503,15 +503,8 @@ async fn hosted_runtime_entitlement(
     }))
 }
 
-async fn ensure_cloud_user(state: &ApiState, user: &clerk::ClerkUser) -> Result<(), ApiError> {
-    let email = user
-        .email
-        .clone()
-        .unwrap_or_else(|| format!("{}@users.allternit.local", user.id));
-    upsert_cloud_user(state, &user.id, email, user.name.as_deref(), user.image_url.as_deref()).await
-}
-
-/// API-token callers carry no profile: the synthetic email fallback applies.
+/// Ensure the `users` row exists for any authenticated caller (Clerk
+/// profile or API token — token callers get the synthetic email fallback).
 async fn ensure_cloud_user_id(state: &ApiState, user_id: &str) -> Result<(), ApiError> {
     let email = format!("{}@users.allternit.local", user_id);
     upsert_cloud_user(state, user_id, email, None, None).await

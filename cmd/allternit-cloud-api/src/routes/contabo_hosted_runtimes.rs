@@ -12,7 +12,6 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 use crate::{
-    auth::clerk,
     error::ApiError,
     services::ProvisionedContaboRuntime,
     ApiState,
@@ -75,11 +74,11 @@ async fn create_contabo_runtime(
     headers: HeaderMap,
     Json(req): Json<CreateContaboRuntimeRequest>,
 ) -> Result<Json<ContaboRuntimeResponse>, ApiError> {
-    let user = clerk::user_from_headers(&headers).await?;
+    let user_id = crate::auth::resolve_user_id(&state.db, &headers).await?;
 
     let runtime = state
         .contabo_runtime_service
-        .provision(&user.id, &req.name, req.memory_mb)
+        .provision(&user_id, &req.name, req.memory_mb)
         .await?;
 
     Ok(Json(runtime.into()))
@@ -90,7 +89,19 @@ async fn destroy_contabo_runtime(
     headers: HeaderMap,
     Path(id): Path<String>,
 ) -> Result<StatusCode, ApiError> {
-    let _user = clerk::user_from_headers(&headers).await?;
+    let user_id = crate::auth::resolve_user_id(&state.db, &headers).await?;
+    // Ownership check: the destroy below is not user-scoped in the service,
+    // so the route must verify the instance belongs to the caller first.
+    let owned: Option<(String,)> = sqlx::query_as(
+        "SELECT id FROM hosted_runtime_instances WHERE id = $1 AND user_id = $2 AND status != 'destroyed'",
+    )
+    .bind(&id)
+    .bind(&user_id)
+    .fetch_optional(&state.db)
+    .await?;
+    if owned.is_none() {
+        return Err(ApiError::NotFound("Hosted runtime not found".to_string()));
+    }
 
     state.contabo_runtime_service.destroy(&id).await?;
     Ok(StatusCode::NO_CONTENT)

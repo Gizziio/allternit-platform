@@ -379,9 +379,10 @@ pub async fn destroy_instance(
     }
 }
 
-/// Resolve the API token for a provider: the Clerk user's stored token
-/// (encrypted in `provider_tokens`) wins; the platform-level env var is
-/// the fallback for legacy cowork flows that carry no Clerk session.
+/// Resolve the API token for a provider: the authenticated user's stored
+/// token (encrypted in `provider_tokens`) wins — via Clerk session or
+/// `allternit_*` API token; the platform-level env var is the fallback for
+/// legacy cowork flows that carry no user credentials.
 async fn resolve_provider_token(
     state: &ApiState,
     headers: &HeaderMap,
@@ -389,11 +390,17 @@ async fn resolve_provider_token(
 ) -> Result<String, ApiError> {
     let provider_key = provider.to_string();
 
-    if let Ok(user) = clerk::user_from_headers(headers).await {
+    let resolved_user = match clerk::user_from_headers(headers).await {
+        Ok(user) => Some(user.id),
+        Err(_) => crate::auth::resolve_user_id(&state.db, headers)
+            .await
+            .ok(),
+    };
+    if let Some(user_id) = resolved_user {
         if let Some(token) =
-            providers::load_provider_token(state, &user.id, &provider_key).await?
+            providers::load_provider_token(state, &user_id, &provider_key).await?
         {
-            debug!("Using stored {} token for user {}", provider_key, user.id);
+            debug!("Using stored {} token for user {}", provider_key, user_id);
             return Ok(token);
         }
     }
