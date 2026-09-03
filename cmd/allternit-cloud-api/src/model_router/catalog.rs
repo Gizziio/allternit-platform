@@ -200,5 +200,96 @@ pub fn starter_catalog() -> ModelAliasMap {
             completion_price: 1.20,
             context_length: 32_768,
         },
+        // Fireworks AI — curated serverless models (prices per 1M tokens, USD,
+        // Standard serving path; format is input / cached input / output).
+        ModelAliasEntry {
+            alias: "kimi-k3-fireworks".to_string(),
+            provider: "fireworks".to_string(),
+            upstream_id: "accounts/fireworks/models/kimi-k3".to_string(),
+            aliases: None,
+            created: 1753929600, // 2025-07-31
+            name: "Kimi K3 (Fireworks)".to_string(),
+            prompt_price: 3.00,
+            completion_price: 15.00,
+            context_length: 1_048_576,
+        },
+        ModelAliasEntry {
+            alias: "deepseek-v4-pro-fireworks".to_string(),
+            provider: "fireworks".to_string(),
+            upstream_id: "accounts/fireworks/models/deepseek-v4-pro-0813".to_string(),
+            aliases: None,
+            created: 1753929600, // 2025-07-31
+            name: "DeepSeek V4 Pro (Fireworks)".to_string(),
+            prompt_price: 1.32,
+            completion_price: 3.96,
+            context_length: 1_048_576,
+        },
+        ModelAliasEntry {
+            alias: "deepseek-v4-flash-fireworks".to_string(),
+            provider: "fireworks".to_string(),
+            upstream_id: "accounts/fireworks/models/deepseek-v4-flash-0731".to_string(),
+            aliases: None,
+            created: 1753929600, // 2025-07-31
+            name: "DeepSeek V4 Flash (Fireworks)".to_string(),
+            prompt_price: 0.22,
+            completion_price: 0.66,
+            context_length: 1_048_576,
+        },
+        ModelAliasEntry {
+            alias: "glm-5.3-fireworks".to_string(),
+            provider: "fireworks".to_string(),
+            upstream_id: "accounts/fireworks/models/glm-5p3".to_string(),
+            aliases: None,
+            created: 1753929600, // 2025-07-31
+            name: "GLM 5.3 (Fireworks)".to_string(),
+            prompt_price: 1.40,
+            completion_price: 4.40,
+            context_length: 1_048_576,
+        },
+        ModelAliasEntry {
+            alias: "qwen3.8-max-fireworks".to_string(),
+            provider: "fireworks".to_string(),
+            upstream_id: "accounts/fireworks/models/qwen3p8-max".to_string(),
+            aliases: None,
+            created: 1753929600, // 2025-07-31
+            name: "Qwen 3.8 Max (Fireworks)".to_string(),
+            prompt_price: 2.00,
+            completion_price: 6.00,
+            context_length: 1_000_000,
+        },
+        // DeepInfra — cost-optimized open-weight inference (prices per 1M tokens, USD).
+        ModelAliasEntry {
+            alias: "llama-3.3-70b-deepinfra".to_string(),
+            provider: "deepinfra".to_string(),
+            upstream_id: "meta-llama/Llama-3.3-70B-Instruct-Turbo".to_string(),
+            aliases: None,
+            created: 1733011200, // 2024-12-01
+            name: "Llama 3.3 70B Instruct Turbo (DeepInfra)".to_string(),
+            prompt_price: 0.49,
+            completion_price: 0.73,
+            context_length: 131_072,
+        },
+        ModelAliasEntry {
+            alias: "qwen2.5-72b-deepinfra".to_string(),
+            provider: "deepinfra".to_string(),
+            upstream_id: "Qwen/Qwen2.5-72B-Instruct".to_string(),
+            aliases: None,
+            created: 1727740800, // 2024-10-01
+            name: "Qwen 2.5 72B Instruct (DeepInfra)".to_string(),
+            prompt_price: 0.49,
+            completion_price: 0.49,
+            context_length: 131_072,
+        },
+        ModelAliasEntry {
+            alias: "deepseek-v3-deepinfra".to_string(),
+            provider: "deepinfra".to_string(),
+            upstream_id: "deepseek-ai/DeepSeek-V3".to_string(),
+            aliases: None,
+            created: 1735689600, // 2025-01-01
+            name: "DeepSeek V3 (DeepInfra)".to_string(),
+            prompt_price: 0.99,
+            completion_price: 0.99,
+            context_length: 64_000,
+        },
     ])
 }

@@ -169,7 +169,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let generic_providers: &[(&str, Option<&str>)] = &[
         ("TOGETHER", Some("https://api.together.xyz/v1")),
         ("FIREWORKS", Some("https://api.fireworks.ai/inference/v1")),
-        ("DEEPINFRA", Some("https://api.deepinfra.com/v1/inference")),
+        ("DEEPINFRA", Some("https://api.deepinfra.com/v1/openai")),
         ("GROQ", Some("https://api.groq.com/openai/v1")),
     ];
 
