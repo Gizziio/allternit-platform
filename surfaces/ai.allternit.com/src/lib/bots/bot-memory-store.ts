@@ -30,6 +30,9 @@ import {
 
 const logger = createModuleLogger('BotMemoryStore');
 
+// Bound the in-memory retrieval log so long-running sessions do not leak RAM.
+const MAX_RETRIEVAL_LOGS = 10_000;
+
 function generateId(prefix: string): string {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 }
@@ -59,9 +62,20 @@ const INJECTION_PATTERNS = [
   /DAN\s*["']?/gi,
 ];
 
+export type CreateBotMemoryInput = Omit<
+  BotMemoryRecord,
+  'id' | 'createdAt' | 'updatedAt' | 'confidence' | 'sensitivity' | 'status' | 'contradictedByMemoryIds' | 'auditNotes'
+> &
+  Partial<
+    Pick<
+      BotMemoryRecord,
+      'confidence' | 'sensitivity' | 'status' | 'contradictedByMemoryIds' | 'auditNotes'
+    >
+  >;
+
 export interface BotMemoryStore {
   /** Propose a memory candidate. Runs prompt-injection and secret checks. */
-  proposeMemory(record: Omit<BotMemoryRecord, 'id' | 'createdAt' | 'updatedAt'>): BotMemoryRecord;
+  proposeMemory(record: CreateBotMemoryInput): BotMemoryRecord;
 
   /** Explicitly promote a candidate memory. */
   promoteMemory(tenantId: string, botId: string, memoryId: string, actorId?: string): BotMemoryRecord;
@@ -227,6 +241,9 @@ export function createBotMemoryStore(storeOptions: CreateBotMemoryStoreOptions =
       occurredAt: nowIso(),
     });
     retrievalLogs.unshift(log);
+    if (retrievalLogs.length > MAX_RETRIEVAL_LOGS) {
+      retrievalLogs.length = MAX_RETRIEVAL_LOGS;
+    }
   }
 
   return {
@@ -512,3 +529,20 @@ export function createBotMemoryStore(storeOptions: CreateBotMemoryStoreOptions =
 }
 
 export { BOT_MEMORY_SCHEMA_VERSION };
+
+// Singleton default store for surface-wide memory reads. Callers that need
+// isolated namespaces or durable persistence hooks should create their own
+// store via createBotMemoryStore().
+let defaultStore: BotMemoryStore | undefined;
+
+export function getDefaultBotMemoryStore(): BotMemoryStore {
+  if (!defaultStore) {
+    defaultStore = createBotMemoryStore();
+  }
+  return defaultStore;
+}
+
+/** Reset the singleton default store. Intended for tests only. */
+export function resetDefaultBotMemoryStore(): void {
+  defaultStore = undefined;
+}

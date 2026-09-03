@@ -7,7 +7,9 @@ pub mod clerk;
 pub mod middleware;
 pub mod models;
 pub mod permissions;
+pub mod resolve;
 
 pub use middleware::{AuthContext, AuthLayer, AuthMiddleware};
 pub use models::{ApiToken, AuthenticatedUser, TokenInfo};
 pub use permissions::{Permission, PermissionChecker};
+pub use resolve::resolve_user_id;

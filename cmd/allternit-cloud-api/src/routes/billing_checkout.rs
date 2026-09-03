@@ -3,7 +3,7 @@
 //! `GET /api/v1/billing/packs` is public and returns the static credit pack catalog
 //! (credits_10 / credits_25 / credits_50 / credits_100 at a 1:1 USD-to-credit price).
 //!
-//! `POST /api/v1/billing/checkout` is Clerk-authenticated and creates a Stripe Checkout Session
+//! `POST /api/v1/billing/checkout` is authenticated (Clerk session or API token) and creates a Stripe Checkout Session
 //! for a single pack purchase (mode = payment) via the Stripe REST API. The secret key comes from
 //! STRIPE_SECRET_KEY; when it is unset the endpoint answers 503 billing_not_configured like the
 //! other operator-gated billing surfaces (mesh, webhooks), so a misconfigured deployment is visible
@@ -26,7 +26,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::sync::Arc;
 
-use crate::{auth::clerk, error::ApiError, ApiState};
+use crate::{error::ApiError, ApiState};
 
 const STRIPE_CHECKOUT_SESSIONS_URL: &str = "https://api.stripe.com/v1/checkout/sessions";
 const STRIPE_PORTAL_SESSIONS_URL: &str = "https://api.stripe.com/v1/billing_portal/sessions";
@@ -95,8 +95,8 @@ async fn create_checkout(
     headers: HeaderMap,
     Json(request): Json<CheckoutRequest>,
 ) -> Response {
-    let user = match clerk::user_from_headers(&headers).await {
-        Ok(user) => user,
+    let user_id = match crate::auth::resolve_user_id(&state.db, &headers).await {
+        Ok(user_id) => user_id,
         Err(error) => return error.into_response(),
     };
     let Some(pack) = find_pack(&request.pack_id) else {
@@ -104,7 +104,7 @@ async fn create_checkout(
     };
     // Chargeback hold: untrusted buyers are limited to small packs while their
     // first payment settles; larger packs unlock automatically afterwards.
-    let trusted = match crate::routes::billing_subscriptions::is_trusted_purchaser(&state.db, &user.id).await {
+    let trusted = match crate::routes::billing_subscriptions::is_trusted_purchaser(&state.db, &user_id).await {
         Ok(trusted) => trusted,
         Err(error) => return error.into_response(),
     };
@@ -124,7 +124,7 @@ async fn create_checkout(
         .unwrap_or_else(|_| DEFAULT_CANCEL_URL.to_string());
     let checkout = ReqwestStripeCheckout::new();
 
-    match create_checkout_url(&checkout, &secret_key, pack, &user.id, &success_url, &cancel_url).await {
+    match create_checkout_url(&checkout, &secret_key, pack, &user_id, &success_url, &cancel_url).await {
         Ok(url) => Json(CheckoutResponse { checkout_url: url }).into_response(),
         Err(error) => billing_upstream_error_response(&error),
     }

@@ -30,6 +30,7 @@ import { WorkspaceDrawer } from "./WorkspaceDrawer";
 import { ToolsDrawer } from "./ToolsDrawer";
 import { AutomationDrawer } from "./AutomationDrawer";
 import { RuntimeDrawer } from "./RuntimeDrawer";
+import { BotTaskPicker } from "@/views/chat/components/BotTaskPicker";
 
 export function AgentContextStrip({
   surface,
@@ -137,11 +138,20 @@ export function AgentContextStrip({
               </span>
             </div>
 
-            <div
-              className="text-[15px] font-semibold truncate"
-              style={{ color: TEXT.primary }}
-            >
-              {sessionName}
+            <div className="flex items-center gap-2">
+              {botId ? (
+                <BotTaskPicker
+                  botId={botId}
+                  accentColor={accentColorOverride || palette.accent}
+                />
+              ) : (
+                <div
+                  className="text-[15px] font-semibold truncate"
+                  style={{ color: TEXT.primary }}
+                >
+                  {sessionName}
+                </div>
+              )}
             </div>
             <div className="mt-0.5 text-[12px] leading-relaxed text-[var(--text-secondary)] max-w-[760px]">
               {sessionDescription?.trim() || fallbackDescription}

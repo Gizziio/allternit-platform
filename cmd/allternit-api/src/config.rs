@@ -102,6 +102,12 @@ pub struct CompanyConfig {
     /// Name of the company-level permission policy that is active by default.
     #[serde(rename = "activePermissionPolicy", default)]
     pub active_permission_policy: Option<String>,
+
+    /// When true, tools that can execute code or mutate the host filesystem
+    /// (shell.exec, file.write, system.env, etc.) are allowed. Defaults to
+    /// false so local-computer access is opt-in.
+    #[serde(rename = "hostControlEnabled", default)]
+    pub host_control_enabled: Option<bool>,
 }
 
 /// User-level configuration. Written by the onboarding wizard and the settings
@@ -176,6 +182,11 @@ pub struct UserConfig {
     /// Name of the active permission policy. Overrides the company-level default.
     #[serde(rename = "activePermissionPolicy", default)]
     pub active_permission_policy: Option<String>,
+
+    /// Per-user override for enabling host-control tools. The company default
+    /// still applies when this is unset.
+    #[serde(rename = "hostControlEnabled", default)]
+    pub host_control_enabled: Option<bool>,
 }
 
 /// Tracks when the first-start / env wizard last ran so the app can prompt
@@ -231,6 +242,14 @@ impl AppConfig {
             .ok()
             .and_then(|p| p.parse().ok())
             .unwrap_or(8013)
+    }
+
+    /// Port the dedicated inbound webhook receiver listens on.
+    pub fn webhook_receiver_port(&self) -> u16 {
+        std::env::var("ALLTERNIT_WEBHOOK_RECEIVER_PORT")
+            .ok()
+            .and_then(|p| p.parse().ok())
+            .unwrap_or(8080)
     }
 
     /// URL the API uses to reach the Gizzi runtime.
@@ -632,6 +651,19 @@ impl AppConfig {
             .unwrap_or_else(|| "http://127.0.0.1:8760".to_string())
     }
 
+    /// Whether tools that can execute arbitrary code or read sensitive host
+    /// state (shell.exec, file.write, system.env, local VM fallback, etc.) are
+    /// enabled. Local-computer / host-control access is opt-in and defaults to
+    /// false. Resolution order: env > user config > company config > false.
+    pub fn host_control_enabled(&self) -> bool {
+        std::env::var("ALLTERNIT_HOST_CONTROL_ENABLED")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .or(self.user.host_control_enabled)
+            .or(self.company.host_control_enabled)
+            .unwrap_or(false)
+    }
+
     /// Office engine (services/office-engine) base URL. The TypeScript Hono
     /// service exposes `POST /parse` and `POST /docx/roundtrip`; the
     /// `/api/office/*` gateway routes proxy to it.
@@ -726,6 +758,13 @@ impl AppConfig {
         if let Ok(v) = std::env::var("ALLTERNIT_PUSH_WORKER_URL") {
             if !v.is_empty() {
                 self.user.push_worker_url = Some(v);
+            }
+        }
+        if let Ok(v) = std::env::var("ALLTERNIT_HOST_CONTROL_ENABLED") {
+            if !v.is_empty() {
+                if let Ok(b) = v.parse::<bool>() {
+                    self.user.host_control_enabled = Some(b);
+                }
             }
         }
     }
@@ -849,6 +888,8 @@ pub struct SaveUserConfigPayload {
     pub cron_daemon_url: Option<String>,
     #[serde(rename = "etridUrl")]
     pub etrid_url: Option<String>,
+    #[serde(rename = "hostControlEnabled")]
+    pub host_control_enabled: Option<bool>,
     #[serde(rename = "wizard")]
     pub wizard: Option<WizardState>,
 }
@@ -871,6 +912,7 @@ impl From<SaveUserConfigPayload> for UserConfig {
             agent_workdir: payload.agent_workdir,
             cron_daemon_url: payload.cron_daemon_url,
             etrid_url: payload.etrid_url,
+            host_control_enabled: payload.host_control_enabled,
             push_worker_url: None,
             wizard: payload.wizard,
             permission_policies: None,

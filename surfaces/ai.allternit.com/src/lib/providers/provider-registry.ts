@@ -334,6 +334,16 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
     description: 'Alias for the Antigravity (agy) CLI.',
   },
   // Agent-runtime CLI tools (Multica-style: user brings their own installed CLI).
+  openrouter: {
+    id: 'openrouter',
+    name: 'OpenRouter',
+    color: '#1E1E1E',
+    icon: 'openrouter.svg',
+    textColor: '#FFFFFF',
+    kind: 'api',
+    homepage: 'https://openrouter.ai/',
+    description: 'Unified API for LLMs via OpenRouter (OPENROUTER_API_KEY).',
+  },
   'cursor-agent': {
     id: 'cursor-agent',
     name: 'Cursor Agent',

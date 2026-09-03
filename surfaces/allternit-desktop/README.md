@@ -171,9 +171,21 @@ npm install
 # Run in dev mode
 npm run dev
 
-# Build for production
-npm run build:prod
+# Build main/preload/renderer TypeScript
+npm run build
+
+# Stage the Rust API binary after `cargo build --release -p allternit-api`
+npm run stage:api-binary
+
+# Verify packaged resources before packaging
+npm run verify:packaged-resources
+
+# Build full release artifacts (requires signing certs for signed builds)
+npm run dist
 ```
+
+See [docs/SIGNING.md](./docs/SIGNING.md) for codesigning, notarization, and
+auto-update configuration.
 
 ## Data & Privacy
 

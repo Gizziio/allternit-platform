@@ -7,7 +7,7 @@
  * - Version-locked: Desktop 1.2.3 = Backend 1.2.3
  */
 
-import { app, BrowserWindow, ipcMain, nativeTheme, safeStorage, shell, Tray, Menu, dialog, globalShortcut, screen, protocol } from 'electron';
+import { app, autoUpdater, BrowserWindow, ipcMain, nativeTheme, safeStorage, shell, Tray, Menu, dialog, globalShortcut, screen, protocol } from 'electron';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve, basename } from 'node:path';
 import * as fs from 'node:fs';
@@ -145,7 +145,56 @@ log.initialize();
 log.transports.file.level = 'info';
 
 // Auto-updater
-updateElectronApp({ logger: log });
+// Defaults read package.json repository, but we make the feed explicit so
+// local/self-hosted builds never accidentally phone home to the wrong repo.
+updateElectronApp({
+  repo: 'allternit/desktop',
+  updateInterval: '1 hour',
+  logger: log,
+  notifyUser: false, // renderer will observe app:update-status and prompt
+});
+
+// Forward updater events to any renderer window so the platform UI can show
+// status and a restart prompt. These are Electron's built-in autoUpdater
+// events (the same channel used by update-electron-app); they carry less
+// detail than electron-updater's events, but they are sufficient for status
+// UI.
+autoUpdater.on('checking-for-update', () => {
+  broadcastUpdateStatus({ state: 'checking' });
+});
+autoUpdater.on('update-available', () => {
+  broadcastUpdateStatus({ state: 'available' });
+});
+autoUpdater.on('update-not-available', () => {
+  broadcastUpdateStatus({ state: 'up-to-date' });
+});
+autoUpdater.on('update-downloaded', (_event, releaseNotes, releaseName, _releaseDate, updateURL) => {
+  broadcastUpdateStatus({
+    state: 'downloaded',
+    version: releaseName,
+    releaseNotes: typeof releaseNotes === 'string' ? releaseNotes : undefined,
+    updateURL,
+  });
+});
+autoUpdater.on('error', (error) => {
+  log.error('[autoUpdater]', error);
+  broadcastUpdateStatus({ state: 'error', message: error?.message ?? String(error) });
+});
+
+function broadcastUpdateStatus(status: UpdateStatus) {
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (!win.isDestroyed()) {
+      win.webContents.send('app:update-status', status);
+    }
+  }
+}
+
+type UpdateStatus =
+  | { state: 'checking' }
+  | { state: 'available' }
+  | { state: 'up-to-date' }
+  | { state: 'downloaded'; version?: string; releaseNotes?: string; updateURL?: string }
+  | { state: 'error'; message: string };
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const isDev = process.env.NODE_ENV === 'development';
@@ -1849,6 +1898,9 @@ app.on('before-quit', async () => {
 // SDK — exposes the resolved backend URL so the renderer can init createAllternitClient()
 ipcMain.handle('sdk:get-backend-url', () => activeBackendUrl);
 
+// Voice call-mode native dictation bridge
+voiceManager.registerIpcHandlers();
+
 // Backend management
 ipcMain.handle('backend:get-status', () => backendManager.getStatus());
 ipcMain.handle('backend:restart', async () => {
@@ -1903,6 +1955,24 @@ ipcMain.handle('app:get-info', () => ({
   isPackaged: app.isPackaged,
   manifest: PLATFORM_MANIFEST,
 }));
+
+// Auto-update control plane (renderer observes status via app:update-status)
+ipcMain.handle('app:check-for-updates', async () => {
+  if (!app.isPackaged) {
+    log.info('[autoUpdater] Skipping update check in unpackaged dev build');
+    return { ok: false, reason: 'dev-build' } as const;
+  }
+  try {
+    autoUpdater.checkForUpdates();
+    return { ok: true } as const;
+  } catch (error) {
+    log.error('[autoUpdater] Manual check failed:', error);
+    return { ok: false, reason: 'check-failed', message: String(error) } as const;
+  }
+});
+ipcMain.handle('app:install-update', () => {
+  autoUpdater.quitAndInstall();
+});
 
   // Shell
 ipcMain.handle('shell:open-external', (_event, url: string) => {

@@ -70,6 +70,7 @@ use allternit_api::file_routes::file_router;
 use allternit_api::h5i_routes::h5i_router;
 use allternit_api::har_api_routes::har_api_router;
 use allternit_api::health::health_router;
+use allternit_api::inference_router_routes::inference_router_router;
 use allternit_api::hud_routes::hud_router;
 use allternit_api::idempotency::idempotency_middleware;
 use allternit_api::inbox_routes::inbox_router;
@@ -381,6 +382,7 @@ async fn main() {
         .merge(allternit_api::upload_routes::upload_router())
         .merge(allternit_api::llm_gateway::gateway_keys_router())
         .merge(allternit_api::llm_gateway::admin_routes::gateway_admin_router())
+        .merge(inference_router_router())
         .merge(allternit_api::enterprise_auth::router())
         .merge(allternit_api::eval_routes::router())
         .merge(allternit_api::eval_metric_routes::router())
@@ -594,10 +596,12 @@ async fn main() {
 
     // Start server — port from config (env override supported), default 8013
     let port = app_config.api_port();
+    let webhook_receiver_port = app_config.webhook_receiver_port();
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}"))
         .await
         .unwrap();
     info!("Server listening on {}", listener.local_addr().unwrap());
+    info!("Webhook receiver port configured to {}", webhook_receiver_port);
     info!("API Documentation:");
     info!("  - Health:         GET /health");
     info!("  - Status:         GET /status");

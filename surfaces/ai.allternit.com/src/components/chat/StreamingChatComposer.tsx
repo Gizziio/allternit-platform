@@ -2,10 +2,12 @@ import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from "
 import { UnifiedMessageRenderer } from "@/components/ai-elements/UnifiedMessageRenderer";
 import { parseStructuredContent } from "@/lib/ai/rust-stream-adapter-extended";
 import { Copy, RotateCcw, ThumbsUp, ThumbsDown, Check } from 'lucide-react';
+import { SpeakerHigh, Waveform } from '@phosphor-icons/react';
 import type { ChatMessage } from "@/lib/ai/rust-stream-adapter";
 import type { ExtendedUIPart } from "@/lib/ai/rust-stream-adapter-extended";
 import { useMessageTree } from "@/providers/message-tree-provider";
 import { useViewMode, ViewMode } from "@/hooks/useViewMode";
+import { useTTS } from "@/providers/voice-provider";
 import { conversationsApi } from "@/api/conversations";
 
 import { ForkButton } from "./ForkButton";
@@ -44,12 +46,20 @@ const MessageActions = memo(function MessageActions({
   onCopy,
   onRegenerate,
   onFeedback,
+  onSpeak,
   copied,
+  isSpeaking,
+  isSpeakingLoading,
+  voiceAvailable,
 }: {
   onCopy: () => void;
   onRegenerate?: () => void;
   onFeedback?: (type: 'up' | 'down') => void;
+  onSpeak?: () => void;
   copied: boolean;
+  isSpeaking?: boolean;
+  isSpeakingLoading?: boolean;
+  voiceAvailable?: boolean;
 }) {
   return (
     <div
@@ -76,6 +86,17 @@ const MessageActions = memo(function MessageActions({
             <ThumbsDown size={14} />
           </ActionButton>
         </>
+      )}
+      {onSpeak && voiceAvailable && (
+        <ActionButton onClick={onSpeak} aria-label={isSpeaking ? 'Stop speaking' : 'Speak aloud'}>
+          {isSpeakingLoading ? (
+            <Waveform size={14} className="animate-pulse" />
+          ) : isSpeaking ? (
+            <SpeakerHigh size={14} className="text-[var(--accent-chat)]" />
+          ) : (
+            <SpeakerHigh size={14} />
+          )}
+        </ActionButton>
       )}
     </div>
   );
@@ -230,7 +251,11 @@ export const StreamingChatComposer = memo(function StreamingChatComposer({
   viewMode: viewModeProp,
 }: StreamingChatComposerProps) {
   const [copied, setCopied] = useState(false);
+  const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null);
+  const [autoSpokenId, setAutoSpokenId] = useState<string | null>(null);
+  const { speak, stopAudio, isPlaying, serviceAvailable } = useTTS();
   const { getMessageSiblingInfo, navigateToSibling, forkMessage } = useMessageTree();
+
   const { viewMode: viewModeHook } = useViewMode();
   const viewMode = viewModeProp ?? viewModeHook;
 
@@ -305,6 +330,48 @@ export const StreamingChatComposer = memo(function StreamingChatComposer({
   const agent = useMemo(() =>
     agentId ? agents.find((a) => a.id === agentId) || null : null,
   [agentId, agents]);
+
+  const isThisMessageSpeaking = isPlaying && speakingMessageId === message.id;
+  const isSpeakLoading = isPlaying && speakingMessageId === message.id;
+
+  const handleSpeak = useCallback(async () => {
+    if (isThisMessageSpeaking) {
+      stopAudio();
+      setSpeakingMessageId(null);
+      return;
+    }
+    if (!serviceAvailable || !fullText) return;
+
+    setSpeakingMessageId(message.id);
+    const voiceId = agent?.voice?.enabled ? agent.voice.voiceId : undefined;
+    const result = await speak(fullText, voiceId && voiceId !== 'default' ? voiceId : undefined);
+    if (!result.success) {
+      setSpeakingMessageId(null);
+    }
+  }, [agent?.voice, fullText, isThisMessageSpeaking, message.id, serviceAvailable, speak, stopAudio]);
+
+  // Auto-speak finished assistant replies when the bot has autoSpeak enabled.
+  useEffect(() => {
+    if (!isAssistant || !isLast || isLoading || !fullText) return;
+    if (autoSpokenId === message.id) return;
+    if (!agent?.voice?.enabled || !agent.voice.autoSpeak) return;
+    if (!serviceAvailable) return;
+
+    setAutoSpokenId(message.id);
+    const voiceId = agent.voice.voiceId && agent.voice.voiceId !== 'default' ? agent.voice.voiceId : undefined;
+    speak(fullText, voiceId).then((result) => {
+      if (!result.success) {
+        setAutoSpokenId(null);
+      }
+    });
+  }, [agent?.voice, autoSpokenId, fullText, isAssistant, isLast, isLoading, message.id, serviceAvailable, speak]);
+
+  // Clear the speaking marker when global playback stops.
+  useEffect(() => {
+    if (!isPlaying && speakingMessageId === message.id) {
+      setSpeakingMessageId(null);
+    }
+  }, [isPlaying, speakingMessageId, message.id]);
   const avatarConfig = agent?.config?.avatar as Record<string, unknown> | undefined;
 
   const handleAgentHeaderClick = useCallback(() => {
@@ -432,7 +499,11 @@ export const StreamingChatComposer = memo(function StreamingChatComposer({
             onCopy={handleCopy}
             onRegenerate={onRegenerate}
             onFeedback={onFeedback}
+            onSpeak={handleSpeak}
             copied={copied}
+            isSpeaking={isThisMessageSpeaking}
+            isSpeakingLoading={isSpeakLoading}
+            voiceAvailable={serviceAvailable ?? false}
           />
         )}
       </div>

@@ -26,6 +26,12 @@ export interface BotRosterState {
   contextMenuTarget: BotRosterContextMenuTarget | null;
   /** Canonical chat session id per bot id. */
   canonicalChatIds: Record<string, string>;
+  /** Pinned bot ids (user-specific roster layout preference). */
+  pinnedBotIds: string[];
+  /** Hidden bot ids (user-specific roster layout preference). */
+  hiddenBotIds: string[];
+  /** Whether the roster is rendered as a compact avatar rail. */
+  isCompact: boolean;
 
   selectBot: (botId: string | null) => void;
   setSearch: (query: string) => void;
@@ -33,6 +39,18 @@ export interface BotRosterState {
   showContextMenu: (target: BotRosterContextMenuTarget) => void;
   hideContextMenu: () => void;
   setCanonicalChatId: (botId: string, sessionId: string | null) => void;
+  pinBot: (botId: string) => void;
+  unpinBot: (botId: string) => void;
+  togglePin: (botId: string) => void;
+  hideBot: (botId: string) => void;
+  unhideBot: (botId: string) => void;
+  toggleHide: (botId: string) => void;
+  setCompact: (isCompact: boolean) => void;
+  toggleCompact: () => void;
+}
+
+function toggleInList(list: string[], id: string): string[] {
+  return list.includes(id) ? list.filter((x) => x !== id) : [...list, id];
 }
 
 export const useBotRosterStore = create<BotRosterState>()(
@@ -43,6 +61,9 @@ export const useBotRosterStore = create<BotRosterState>()(
       sortBy: 'name',
       contextMenuTarget: null,
       canonicalChatIds: {},
+      pinnedBotIds: [],
+      hiddenBotIds: [],
+      isCompact: false,
 
       selectBot: (botId) => set({ selectedBotId: botId }),
       setSearch: (searchQuery) => set({ searchQuery }),
@@ -56,6 +77,40 @@ export const useBotRosterStore = create<BotRosterState>()(
             ...(sessionId ? { [botId]: sessionId } : {}),
           },
         })),
+      pinBot: (botId) =>
+        set((state) => ({
+          pinnedBotIds: state.pinnedBotIds.includes(botId)
+            ? state.pinnedBotIds
+            : [...state.pinnedBotIds, botId],
+          hiddenBotIds: state.hiddenBotIds.filter((id) => id !== botId),
+        })),
+      unpinBot: (botId) =>
+        set((state) => ({
+          pinnedBotIds: state.pinnedBotIds.filter((id) => id !== botId),
+        })),
+      togglePin: (botId) =>
+        set((state) => ({
+          pinnedBotIds: toggleInList(state.pinnedBotIds, botId),
+          hiddenBotIds: state.hiddenBotIds.filter((id) => id !== botId),
+        })),
+      hideBot: (botId) =>
+        set((state) => ({
+          hiddenBotIds: state.hiddenBotIds.includes(botId)
+            ? state.hiddenBotIds
+            : [...state.hiddenBotIds, botId],
+          pinnedBotIds: state.pinnedBotIds.filter((id) => id !== botId),
+        })),
+      unhideBot: (botId) =>
+        set((state) => ({
+          hiddenBotIds: state.hiddenBotIds.filter((id) => id !== botId),
+        })),
+      toggleHide: (botId) =>
+        set((state) => ({
+          hiddenBotIds: toggleInList(state.hiddenBotIds, botId),
+          pinnedBotIds: state.pinnedBotIds.filter((id) => id !== botId),
+        })),
+      setCompact: (isCompact) => set({ isCompact }),
+      toggleCompact: () => set((state) => ({ isCompact: !state.isCompact })),
     }),
     {
       name: 'allternit-bot-roster',
@@ -63,6 +118,9 @@ export const useBotRosterStore = create<BotRosterState>()(
       partialize: (state) => ({
         selectedBotId: state.selectedBotId,
         canonicalChatIds: state.canonicalChatIds,
+        pinnedBotIds: state.pinnedBotIds,
+        hiddenBotIds: state.hiddenBotIds,
+        isCompact: state.isCompact,
       }),
     },
   ),

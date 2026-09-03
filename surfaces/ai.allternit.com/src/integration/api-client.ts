@@ -165,6 +165,25 @@ export interface Agent {
   writeScope?: string;
 }
 
+export interface InferenceRouterProviderModel {
+  id: string;
+  name: string;
+  default?: boolean;
+}
+
+export interface InferenceRouterProvider {
+  id: string;
+  name: string;
+  installed: boolean;
+  available: boolean;
+  reason?: string;
+  models?: InferenceRouterProviderModel[];
+}
+
+export interface InferenceRouterCliStatusResponse {
+  providers: InferenceRouterProvider[];
+}
+
 export interface ApiErrorDetails {
   code: string;
   message: string;
@@ -524,6 +543,19 @@ class AllternitApiClient {
 
   delete<T>(path: string, options?: RequestInit): Promise<T> {
     return this.request<T>('DELETE', path, undefined, options);
+  }
+
+  // ==========================================================================
+  // INFERENCE ROUTER API
+  // ==========================================================================
+
+  async getInferenceRouterCliStatus(
+    options?: RequestInit
+  ): Promise<InferenceRouterCliStatusResponse> {
+    return this.get<InferenceRouterCliStatusResponse>(
+      '/api/v1/inference-router/cli-status',
+      options
+    );
   }
 
   // ==========================================================================

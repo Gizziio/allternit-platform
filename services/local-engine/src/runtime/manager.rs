@@ -248,7 +248,13 @@ impl ProcessManager {
         info!(%id, %port, program, "spawning runtime");
 
         let mut cmd = Command::new(&program);
-        cmd.args(&argv[1..])
+        // Do not inherit the full API process environment; model runtimes only
+        // need PATH to locate their own binaries. This prevents provider/API
+        // secrets (vault tokens, cloud keys, etc.) from leaking into spawned
+        // local-engine child processes.
+        cmd.env_clear()
+            .env("PATH", std::env::var_os("PATH").unwrap_or_default())
+            .args(&argv[1..])
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .kill_on_drop(false);

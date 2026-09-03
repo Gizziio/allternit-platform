@@ -82,6 +82,19 @@ Stage it for your current platform:
 npm run prepare:mesh-node
 ```
 
+# Step 3c: Stage allternit-api Rust binary
+
+The desktop shell embeds the Rust API backend at `resources/bin/allternit-api[.exe]`.
+If you have already built it (`cargo build --release -p allternit-api`), copy it in:
+
+```bash
+npm run prepare:api-binary
+```
+
+This is also called automatically by `npm run build:electron`, `npm run dist`,
+etc. If no local binary exists, the script downloads the platform-locked archive
+from the manifest in `src/main/manifest.ts`.
+
 The script (`scripts/prepare-mesh-node.cjs`) acquires the binary in this order:
 
 1. **Vendor copy** — copies from the repo vendor tree `cmd/gizzi-code/vendor/mesh-node/<platform>-<arch>/` (the same binary gizzi-code's `mesh.ts` uses) if present.
@@ -171,6 +184,42 @@ npm run build:electron:dmg
 
 echo "✅ Build complete! Check release/ directory"
 ```
+
+## Code Signing & Notarization
+
+The packaging config contains explicit placeholders for platform signing. Set the
+following environment variables before running `npm run dist` to produce signed
+release artifacts.
+
+### macOS
+
+| Variable | Purpose |
+|----------|---------|
+| `APPLE_ID` | Apple developer account email |
+| `APPLE_ID_PASSWORD` | App-specific password (not your Apple ID password) |
+| `APPLE_TEAM_ID` | 10-character Apple Developer Team ID |
+
+`electron-builder` will pick the first valid Developer ID identity automatically
+(`build.mac.identity: null`). The `scripts/notarize.cjs` afterSign hook runs only
+when all three env vars are present, so local unsigned builds continue to work.
+
+### Windows
+
+| Variable | Purpose |
+|----------|---------|
+| `CSC_LINK` | URL or path to the PKCS#12 certificate file |
+| `CSC_KEY_PASSWORD` | Password for the certificate |
+| `WIN_CSC_LINK` | Windows-only override for `CSC_LINK` |
+| `WIN_CSC_KEY_PASSWORD` | Windows-only override for `CSC_KEY_PASSWORD` |
+
+Set `build.win.certificateFile` / `certificatePassword` to a real value when using
+a checked-in certificate. Leaving them as `null` lets `electron-builder` fall back
+to the standard `CSC_*` environment variables.
+
+### Linux
+
+AppImage and `.deb` packages are not code-signed. Ensure the package metadata in
+`build.linux`, `build.appImage`, and `build.deb` is updated before publishing.
 
 ## Distribution
 

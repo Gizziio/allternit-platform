@@ -462,14 +462,17 @@ async fn hosted_runtime_entitlement(
     State(state): State<Arc<ApiState>>,
     headers: HeaderMap,
 ) -> Result<Json<HostedRuntimeEntitlementResponse>, ApiError> {
-    let user = clerk::user_from_headers(&headers).await?;
-    ensure_cloud_user(&state, &user).await?;
-    let quota = state.quota_service.ensure_quota(&user.id).await?;
-    let usage = services::hosted_usage_summary(&state.db, &user.id).await?;
+    // Entitlement read accepts an API token too (`auth::resolve_user_id`) so
+    // CLI/agent users can check their plan; the management routes in this file
+    // stay Clerk-session only.
+    let user_id = crate::auth::resolve_user_id(&state.db, &headers).await?;
+    ensure_cloud_user_id(&state, &user_id).await?;
+    let quota = state.quota_service.ensure_quota(&user_id).await?;
+    let usage = services::hosted_usage_summary(&state.db, &user_id).await?;
     let active_instances: i64 = sqlx::query_scalar(
         "SELECT COUNT(*) FROM hosted_runtime_instances WHERE user_id = $1 AND status NOT IN ('destroying', 'destroyed')",
     )
-    .bind(&user.id)
+    .bind(&user_id)
     .fetch_one(&state.db)
     .await?;
     let display_name: String =
@@ -505,6 +508,22 @@ async fn ensure_cloud_user(state: &ApiState, user: &clerk::ClerkUser) -> Result<
         .email
         .clone()
         .unwrap_or_else(|| format!("{}@users.allternit.local", user.id));
+    upsert_cloud_user(state, &user.id, email, user.name.as_deref(), user.image_url.as_deref()).await
+}
+
+/// API-token callers carry no profile: the synthetic email fallback applies.
+async fn ensure_cloud_user_id(state: &ApiState, user_id: &str) -> Result<(), ApiError> {
+    let email = format!("{}@users.allternit.local", user_id);
+    upsert_cloud_user(state, user_id, email, None, None).await
+}
+
+async fn upsert_cloud_user(
+    state: &ApiState,
+    user_id: &str,
+    email: String,
+    name: Option<&str>,
+    avatar_url: Option<&str>,
+) -> Result<(), ApiError> {
     sqlx::query(
         r#"
         INSERT INTO users (id, email, name, avatar_url, status, last_login_at)
@@ -517,10 +536,10 @@ async fn ensure_cloud_user(state: &ApiState, user: &clerk::ClerkUser) -> Result<
             last_login_at = CURRENT_TIMESTAMP
         "#,
     )
-    .bind(&user.id)
+    .bind(user_id)
     .bind(email)
-    .bind(user.name.as_deref())
-    .bind(user.image_url.as_deref())
+    .bind(name)
+    .bind(avatar_url)
     .execute(&state.db)
     .await?;
     Ok(())

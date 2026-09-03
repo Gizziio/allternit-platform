@@ -11,6 +11,8 @@ import { useChatSessionStore } from '@/views/chat/ChatSessionStore';
 import { coworkTransitionController } from '@/lib/agents/session-transition-controller';
 import type { ChatMessage } from '@/lib/ai/rust-stream-adapter';
 import type { AnyCoworkEvent } from './cowork.types';
+import { ChatThreadInlineGate } from '@/views/chat/components/ChatThreadInlineGate';
+import type { AgentModeSurface } from '@/stores/agent-surface-mode.store';
 
 interface CoworkTranscriptProps {
   /** Legacy: explicit messages array (CoworkRoot) */
@@ -29,6 +31,8 @@ interface CoworkTranscriptProps {
   hideEmptyState?: boolean;
   /** Compact HUD layout: minimal spacing and no empty-state padding. */
   hudMode?: boolean;
+  /** Surface context for inline approval/question gate polling. */
+  surface?: AgentModeSurface;
 }
 
 // Derive the currently-running tool from messages so we can show it inline
@@ -137,6 +141,7 @@ export const CoworkTranscript = memo(function CoworkTranscript({
   selectedArtifactTitle,
   hideEmptyState,
   hudMode = false,
+  surface = 'chat',
 }: CoworkTranscriptProps) {
   // When conversationId is provided, pull messages from the chat session store
   const storeSession = useChatSessionStore((state) =>
@@ -247,7 +252,17 @@ export const CoworkTranscript = memo(function CoworkTranscript({
   // Legacy cowork events are no longer stored in CoworkStore.
   // Events come from the active session in CoworkSessionStore or are empty.
   const events: AnyCoworkEvent[] = [];
-  const timeline = mergeTimeline(messages, events);
+
+  // Pagination: large transcripts render only the most recent messages to keep
+  // DOM weight and render time bounded. A "load more" button reveals earlier
+  // history in chunks.
+  const PAGE_SIZE = 100;
+  const [renderLimit, setRenderLimit] = useState(PAGE_SIZE);
+  const displayedMessages = useMemo(
+    () => messages.slice(-renderLimit),
+    [messages, renderLimit],
+  );
+  const timeline = mergeTimeline(displayedMessages, events);
 
   // Native streaming parts come from mode-session-store, not CoworkStore.
   const nativePartsByMessage: Record<string, Record<string, unknown>[]> = {};
@@ -259,14 +274,32 @@ export const CoworkTranscript = memo(function CoworkTranscript({
     return unsub;
   }, []);
 
+  // Reset pagination when the conversation changes.
+  useEffect(() => {
+    setRenderLimit(PAGE_SIZE);
+  }, [conversationId]);
+
   // Merge transition loading into isLoading
   const isTransitioning =
     (transitionState.transitionState === 'switching' || transitionState.transitionState === 'loading') &&
     transitionState.intendedSessionId === conversationId;
   const effectiveIsLoading = isLoading || isTransitioning;
 
+  const canLoadMore = messages.length > renderLimit;
+
   return (
     <div className={cn('relative', hudMode ? 'space-y-2' : 'space-y-4')}>
+      {canLoadMore && (
+        <div className="flex justify-center py-2">
+          <button
+            type="button"
+            onClick={() => setRenderLimit((limit) => limit + PAGE_SIZE)}
+            className="text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] underline"
+          >
+            Load earlier messages ({messages.length - renderLimit} remaining)
+          </button>
+        </div>
+      )}
       {isTransitioning && (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/60 backdrop-blur-sm rounded-lg">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -311,6 +344,17 @@ export const CoworkTranscript = memo(function CoworkTranscript({
         <div style={{ paddingLeft: 4 }}>
           <LiveToolBadge toolName={currentRunningTool} />
         </div>
+      )}
+
+      {/* Inline approval/question cards rendered inside the thread.
+          Only mounted for chat-session-backed transcripts (conversationId).
+          CoworkRoot already runs its own approval gate poller for cowork sessions. */}
+      {!effectiveIsLoading && conversationId && (
+        <ChatThreadInlineGate
+          sessionId={conversationId}
+          surface={surface}
+          className={hudMode ? 'px-1' : 'px-2 md:px-5'}
+        />
       )}
 
       {timeline.length === 0 && !effectiveIsLoading && !hideEmptyState && !hudMode && (

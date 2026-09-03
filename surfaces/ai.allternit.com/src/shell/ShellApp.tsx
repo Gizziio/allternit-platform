@@ -121,8 +121,8 @@ function ShellAppInner(): React.ReactNode {
   const active = selectActiveView(nav)!;
 
   const { startSession: startBotSession } = useStartBotSession(
-    useCallback((sessionId: string) => {
-      dispatch({ type: 'OPEN_VIEW', viewType: 'cowork-agent-session', context: { sessionId, originView: active.viewType } });
+    useCallback((sessionId: string, botId: string) => {
+      dispatch({ type: 'OPEN_VIEW', viewType: 'bot-chat-session', context: { sessionId, botId, originView: active.viewType } });
     }, [active.viewType])
   );
   useStackProviders();
@@ -333,6 +333,17 @@ function ShellAppInner(): React.ReactNode {
     if (viewType === 'design') {
       openDesignWindow();
       return;
+    }
+    // Starting a fresh view (e.g. New Chat) must clear any embedded session
+    // so the composer creates a new backend session instead of reusing the
+    // previous agent/thread session.
+    useChatSessionStore.getState().setActiveSession(null);
+    useChatStore.getState().setActiveThread(null);
+    useChatStore.getState().setActiveProject(null);
+    // Starting a fresh chat must also clear any persisted canonical agent mode
+    // (e.g. slides) so the composer routes the next send through regular chat.
+    if (viewType === 'chat') {
+      useAgentSurfaceModeStore.getState().setSelectedMode('chat', null);
     }
     dispatch({ type: 'OPEN_VIEW', viewType, allowNew: true });
   }, []);
@@ -780,6 +791,9 @@ function ShellAppInner(): React.ReactNode {
                     useChatSessionStore.getState().setActiveSession(null);
                     useChatStore.getState().setActiveThread(null);
                     useChatStore.getState().setActiveProject(null);
+                    // Start a fresh chat must also clear any persisted canonical agent mode
+                    // (e.g. slides) so the composer routes the next send through regular chat.
+                    useAgentSurfaceModeStore.getState().setSelectedMode('chat', null);
                     handleModeChange('chat');
                   }}
                   onNewAgentSession={async () => {

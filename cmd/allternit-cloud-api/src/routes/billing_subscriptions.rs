@@ -8,10 +8,10 @@
 //! `billing_not_configured` exactly like a missing `STRIPE_SECRET_KEY`.
 //!
 //! - `GET /api/v1/billing/plans` (public): the catalog WITHOUT Stripe price ids.
-//! - `POST /api/v1/billing/subscribe` (Clerk-authed): Checkout Session `mode=subscription` whose
+//! - `POST /api/v1/billing/subscribe` (Clerk session or API token): Checkout Session `mode=subscription` whose
 //!   `subscription_data[metadata]` carries `clerk_user_id` / `allternit_plan_tier` /
 //!   `allternit_plan_id` — the contract `routes::billing_webhooks` consumes.
-//! - `POST /api/v1/billing/portal` (Clerk-authed): billing-portal session for the user's Stripe
+//! - `POST /api/v1/billing/portal` (Clerk session or API token): billing-portal session for the user's Stripe
 //!   customer, resolved through `user_billing_accounts`.
 //!
 //! This module also owns the subscription bookkeeping tables (migrations/026,
@@ -30,7 +30,6 @@ use sqlx::PgPool;
 use std::sync::Arc;
 
 use crate::{
-    auth::clerk,
     error::ApiError,
     routes::billing_checkout::{
         billing_not_configured_response, billing_upstream_error_response, ReqwestStripeCheckout,
@@ -122,8 +121,8 @@ async fn create_subscription(
     headers: HeaderMap,
     Json(request): Json<SubscribeRequest>,
 ) -> Response {
-    let user = match clerk::user_from_headers(&headers).await {
-        Ok(user) => user,
+    let user_id = match crate::auth::resolve_user_id(&state.db, &headers).await {
+        Ok(user_id) => user_id,
         Err(error) => return error.into_response(),
     };
     let Some(plan) = find_plan(&request.plan_id) else {
@@ -132,7 +131,7 @@ async fn create_subscription(
     };
     // Chargeback hold: untrusted buyers start on the smallest plan; the larger
     // ones unlock automatically once their first purchase settles.
-    let trusted = match is_trusted_purchaser(&state.db, &user.id).await {
+    let trusted = match is_trusted_purchaser(&state.db, &user_id).await {
         Ok(trusted) => trusted,
         Err(error) => return error.into_response(),
     };
@@ -156,7 +155,7 @@ async fn create_subscription(
         &secret_key,
         plan,
         &price_id,
-        &user.id,
+        &user_id,
         &success_url,
         &cancel_url,
     )
@@ -171,8 +170,8 @@ async fn create_portal_session(
     State(state): State<Arc<ApiState>>,
     headers: HeaderMap,
 ) -> Response {
-    let user = match clerk::user_from_headers(&headers).await {
-        Ok(user) => user,
+    let user_id = match crate::auth::resolve_user_id(&state.db, &headers).await {
+        Ok(user_id) => user_id,
         Err(error) => return error.into_response(),
     };
     let Ok(secret_key) = std::env::var("STRIPE_SECRET_KEY") else {
@@ -182,7 +181,7 @@ async fn create_portal_session(
         .unwrap_or_else(|_| DEFAULT_PORTAL_RETURN_URL.to_string());
     let checkout = ReqwestStripeCheckout::new();
 
-    match portal_url_for(&checkout, &state.db, &user.id, &secret_key, &return_url).await {
+    match portal_url_for(&checkout, &state.db, &user_id, &secret_key, &return_url).await {
         Ok(url) => Json(PortalResponse { portal_url: url }).into_response(),
         Err(PortalError::NoCustomer) => (
             StatusCode::NOT_FOUND,

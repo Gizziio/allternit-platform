@@ -254,7 +254,12 @@ pub async fn auth_middleware(
     }
 }
 
-async fn validate_token_against_db(
+/// Validate an `allternit_*` API token against `api_tokens` (md5 hash lookup,
+/// revocation/expiration checks, `last_used_at` touch). Also answers the
+/// `dev-api-token` development fallback. Crate-public for
+/// `auth::resolve::resolve_user_id`, which offers the same token path to
+/// management routes.
+pub(crate) async fn validate_token_against_db(
     db: &sqlx::PgPool,
     token: &str,
 ) -> Result<Option<AuthenticatedUser>, sqlx::Error> {

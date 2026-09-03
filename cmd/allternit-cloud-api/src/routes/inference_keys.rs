@@ -1,6 +1,7 @@
 //! BYOK inference key management.
 //!
-//! Clerk session verified per request, like the billing routes. Keys are
+//! Caller verified per request — Clerk session or `allternit_*` API token
+//! (`auth::resolve_user_id`), like the billing routes. Keys are
 //! validated against the provider before storage, encrypted at rest with the
 //! platform credential cipher, and never returned — list responses carry
 //! masked fingerprints only. When `ALLTERNIT_CREDENTIALS_KEY` is unset (dev
@@ -18,11 +19,7 @@ use axum::{
 use serde::Deserialize;
 use std::sync::Arc;
 
-use crate::{
-    auth::clerk,
-    services::inference_keys::{byok_base_url, InferenceKeyInfo},
-    ApiState,
-};
+use crate::{services::inference_keys::byok_base_url, ApiState};
 
 #[derive(Debug, Deserialize)]
 pub struct PutKeyRequest {
@@ -51,15 +48,15 @@ async fn list_keys(
     State(state): State<Arc<ApiState>>,
     headers: HeaderMap,
 ) -> Response {
-    let user = match clerk::user_from_headers(&headers).await {
-        Ok(user) => user,
+    let user_id = match crate::auth::resolve_user_id(&state.db, &headers).await {
+        Ok(user_id) => user_id,
         Err(error) => return error.into_response(),
     };
     let service = match key_service(&state) {
         Ok(service) => service,
         Err(response) => return response,
     };
-    match service.list_for_user(&user.id).await {
+    match service.list_for_user(&user_id).await {
         Ok(keys) => Json(keys).into_response(),
         Err(error) => error.into_response(),
     }
@@ -70,8 +67,8 @@ async fn put_key(
     headers: HeaderMap,
     Json(request): Json<PutKeyRequest>,
 ) -> Response {
-    let user = match clerk::user_from_headers(&headers).await {
-        Ok(user) => user,
+    let user_id = match crate::auth::resolve_user_id(&state.db, &headers).await {
+        Ok(user_id) => user_id,
         Err(error) => return error.into_response(),
     };
     if byok_base_url(&request.provider_id).is_none() {
@@ -86,7 +83,7 @@ async fn put_key(
         Err(response) => return response,
     };
     match service
-        .upsert_and_validate(&user.id, &request.provider_id, &request.api_key)
+        .upsert_and_validate(&user_id, &request.provider_id, &request.api_key)
         .await
     {
         Ok(info) => Json(info).into_response(),
@@ -99,15 +96,15 @@ async fn delete_key(
     headers: HeaderMap,
     Path(provider_id): Path<String>,
 ) -> Response {
-    let user = match clerk::user_from_headers(&headers).await {
-        Ok(user) => user,
+    let user_id = match crate::auth::resolve_user_id(&state.db, &headers).await {
+        Ok(user_id) => user_id,
         Err(error) => return error.into_response(),
     };
     let service = match key_service(&state) {
         Ok(service) => service,
         Err(response) => return response,
     };
-    match service.delete(&user.id, &provider_id).await {
+    match service.delete(&user_id, &provider_id).await {
         Ok(true) => Json(serde_json::json!({ "deleted": true, "provider_id": provider_id }))
             .into_response(),
         Ok(false) => crate::error::ApiError::NotFound(format!(
@@ -121,6 +118,7 @@ async fn delete_key(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::services::inference_keys::InferenceKeyInfo;
 
     #[test]
     fn key_info_serializes_without_plaintext() {

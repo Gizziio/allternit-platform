@@ -51,11 +51,16 @@ done
 
 step "2/6 Touch changed files (rsync -a preserves mtimes; cargo skips otherwise)"
 if [[ "$DRY_RUN" -eq 0 ]]; then
-  mapfile -t CHANGED < <(git -C "$REPO_ROOT" status --porcelain "$PKG/src" "$PKG/tests" | awk '{print $2}' | grep '\.rs$' || true)
-  if [[ ${#CHANGED[@]} -gt 0 ]]; then
-    ssh "$SERVER" "cd ${BUILD_TREE}/${PKG} && touch ${CHANGED[*]#$PKG/}"
+  # No mapfile: macOS ships bash 3.2. Paths have no spaces, so a plain for works.
+  CHANGED=$(git -C "$REPO_ROOT" status --porcelain "$PKG/src" "$PKG/tests" | awk '{print $2}' | grep '\.rs$' || true)
+  if [[ -n "$CHANGED" ]]; then
+    TOUCH=""
+    for f in $CHANGED; do TOUCH="$TOUCH ${f#$PKG/}"; done
+    ssh "$SERVER" "cd ${BUILD_TREE}/${PKG} && touch ${TOUCH}"
+    echo "   touched:${TOUCH}"
+  else
+    echo "   nothing to touch"
   fi
-  echo "   touched ${#CHANGED[@]} file(s)"
 fi
 
 step "3/6 Build the release binary (NOT optional — cargo test does not refresh it)"

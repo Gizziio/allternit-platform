@@ -4,8 +4,9 @@
 //! user's remaining balance, month-to-date hosted usage, and their most
 //! recent credit ledger entries (grants and usage debits). Free-path users
 //! (no credits row, or a non-positive balance) additionally get their
-//! monthly free inference allowance consumption (`free_inference`). Like the
-//! hosted runtime routes, the Clerk session is verified per request.
+//! monthly free inference allowance consumption (`free_inference`). The
+//! caller is verified per request — Clerk session or `allternit_*` API token
+//! (`auth::resolve_user_id`).
 
 use axum::{extract::State, http::HeaderMap, routing::get, Json, Router};
 use chrono::{DateTime, Utc};
@@ -13,7 +14,7 @@ use serde::Serialize;
 use sqlx::FromRow;
 use std::sync::Arc;
 
-use crate::{auth::clerk, error::ApiError, services, ApiState};
+use crate::{auth, error::ApiError, services, ApiState};
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -57,11 +58,11 @@ async fn get_credit_balance(
     State(state): State<Arc<ApiState>>,
     headers: HeaderMap,
 ) -> Result<Json<CreditBalanceResponse>, ApiError> {
-    let user = clerk::user_from_headers(&headers).await?;
+    let user_id = auth::resolve_user_id(&state.db, &headers).await?;
 
     let balance_row: Option<f64> =
         sqlx::query_scalar("SELECT balance_usd FROM user_credits WHERE user_id = $1")
-            .bind(&user.id)
+            .bind(&user_id)
             .fetch_optional(&state.db)
             .await?;
     let balance_usd = balance_row.unwrap_or(0.0);
@@ -77,7 +78,7 @@ async fn get_credit_balance(
             WHERE user_id = $1 AND created_at >= date_trunc('month', NOW())
             "#,
         )
-        .bind(&user.id)
+        .bind(&user_id)
         .fetch_one(&state.db)
         .await?;
         Some(FreeInferenceResponse {
@@ -88,7 +89,7 @@ async fn get_credit_balance(
     } else {
         None
     };
-    let usage = services::hosted_usage_summary(&state.db, &user.id).await?;
+    let usage = services::hosted_usage_summary(&state.db, &user_id).await?;
     let recent = sqlx::query_as::<_, CreditTransactionRow>(
         r#"
         SELECT amount_usd, source, created_at
@@ -98,7 +99,7 @@ async fn get_credit_balance(
         LIMIT 20
         "#,
     )
-    .bind(&user.id)
+    .bind(&user_id)
     .fetch_all(&state.db)
     .await?;
 

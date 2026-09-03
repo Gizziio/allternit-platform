@@ -41,6 +41,52 @@ fn tool_result_cache_control(result: &Value, cache_enabled: bool) -> Option<Valu
     }
 }
 
+// ─── Host-control hardening helpers ─────────────────────────────────────────
+
+/// Tools that can execute code, mutate the host filesystem, or read sensitive
+/// host state. These require `config.host_control_enabled()` to be true.
+const HOST_CONTROL_TOOLS: &[&str] = &[
+    "shell.exec",
+    "shell.eval",
+    "bash",
+    "code_execution",
+    "file.write",
+    "file.remove",
+    "system.env",
+];
+
+/// Returns true when a key looks like it carries a secret or credential.
+pub(crate) fn is_secret_key(key: &str) -> bool {
+    let upper = key.to_uppercase();
+    [
+        "SECRET",
+        "TOKEN",
+        "API_KEY",
+        "PASSWORD",
+        "PRIVATE",
+        "CREDENTIAL",
+        "ENCRYPTION_KEY",
+        "AUTH",
+        "PASSPHRASE",
+    ]
+    .iter()
+    .any(|needle| upper.contains(needle))
+}
+
+/// Minimal, safe environment for subprocesses spawned by host-control tools.
+/// Clears the parent environment so provider/API secrets are never inherited.
+pub(crate) fn safe_subprocess_env() -> std::collections::HashMap<String, String> {
+    crate::env_allowlist::minimal_child_env(None)
+}
+
+/// Snapshot of the current process environment with known secret keys removed.
+fn scrubbed_env_snapshot() -> std::collections::HashMap<String, Option<String>> {
+    std::env::vars()
+        .filter(|(k, _)| !is_secret_key(k))
+        .map(|(k, v)| (k, Some(v)))
+        .collect()
+}
+
 // ─── Request/Response Types ─────────────────────────────────────────────────
 
 #[derive(Debug, Deserialize, Default)]
@@ -256,6 +302,15 @@ pub(crate) async fn execute_tool_internal(
     user_id: &str,
     tenant_id: Option<&str>,
 ) -> Result<Value, String> {
+    // Host-control tools are opt-in. Refuse them with a clear message so callers
+    // know the feature flag must be enabled.
+    if HOST_CONTROL_TOOLS.contains(&request.tool.as_str()) && !state.config.host_control_enabled() {
+        return Err(format!(
+            "Host-control tool '{}' is disabled. Set ALLTERNIT_HOST_CONTROL_ENABLED=true or hostControlEnabled in config to enable.",
+            request.tool
+        ));
+    }
+
     // Server-side tools take precedence over native tools when registered for
     // the caller's organization. They run inside the platform sandbox.
     if let Some(org_id) = tenant_id {
@@ -360,7 +415,10 @@ async fn run_shell(
         .ok_or("Missing 'command' argument")?;
 
     let mut cmd = tokio::process::Command::new("sh");
-    cmd.arg("-c").arg(command);
+    cmd.arg("-c")
+        .arg(command)
+        .env_clear()
+        .envs(safe_subprocess_env());
 
     if let Some(dir) = cwd {
         cmd.current_dir(std::path::PathBuf::from(dir));
@@ -411,7 +469,12 @@ async fn code_execution(request: &ExecuteToolRequest) -> Result<Value, String> {
 
     let output = tokio::time::timeout(
         std::time::Duration::from_secs(timeout_secs),
-        tokio::process::Command::new(program).arg(flag).arg(code).output(),
+        tokio::process::Command::new(program)
+            .arg(flag)
+            .arg(code)
+            .env_clear()
+            .envs(safe_subprocess_env())
+            .output(),
     )
     .await
     .map_err(|_| "Code execution timed out")?
@@ -532,10 +595,17 @@ async fn system_info(_request: &ExecuteToolRequest) -> Result<Value, String> {
 async fn system_env(request: &ExecuteToolRequest) -> Result<Value, String> {
     if let Some(key) = request.args.get("key").and_then(|v| v.as_str()) {
         let value = std::env::var(key).ok();
+        // Never return the real value of a secret-looking variable.
+        let value = value.map(|v| {
+            if is_secret_key(key) {
+                "***".to_string()
+            } else {
+                v
+            }
+        });
         Ok(json!({ "key": key, "value": value }))
     } else {
-        let envs: std::collections::HashMap<String, Option<String>> =
-            std::env::vars().map(|(k, v)| (k, Some(v))).collect();
+        let envs = scrubbed_env_snapshot();
         Ok(json!({ "env": envs }))
     }
 }
@@ -1237,6 +1307,9 @@ mod tests {
         };
         state.config.user.permission_policies = Some(vec![policy]);
         state.config.user.active_permission_policy = Some(active.to_string());
+        // Tests exercise host-control tools through the stateful router, so
+        // enable host control for the test fixture.
+        state.config.user.host_control_enabled = Some(true);
         Arc::new(state)
     }
 

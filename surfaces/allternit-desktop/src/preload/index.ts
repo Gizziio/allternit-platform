@@ -173,6 +173,13 @@ const storeAPI = {
 
 // ─── App info ─────────────────────────────────────────────────────────────────
 
+export type UpdateStatus =
+  | { state: 'checking' }
+  | { state: 'available' }
+  | { state: 'up-to-date' }
+  | { state: 'downloaded'; version?: string; releaseNotes?: string; updateURL?: string }
+  | { state: 'error'; message: string };
+
 const appAPI = {
   getInfo: (): Promise<{
     version: string;
@@ -182,6 +189,14 @@ const appAPI = {
   }> => ipcRenderer.invoke('app:get-info'),
   isFirstLaunch: (): Promise<boolean> => ipcRenderer.invoke('app:is-first-launch'),
   completeOnboarding: (): Promise<boolean> => ipcRenderer.invoke('app:complete-onboarding'),
+  checkForUpdates: (): Promise<{ ok: boolean; reason?: string; message?: string }> =>
+    ipcRenderer.invoke('app:check-for-updates'),
+  installUpdate: (): Promise<void> => ipcRenderer.invoke('app:install-update'),
+  onUpdateStatus: (handler: (status: UpdateStatus) => void): (() => void) => {
+    const listener = (_: IpcRendererEvent, status: UpdateStatus) => handler(status);
+    ipcRenderer.on('app:update-status', listener);
+    return () => ipcRenderer.removeListener('app:update-status', listener);
+  },
 };
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
@@ -650,6 +665,22 @@ const miniAppsAPI = {
   },
 };
 
+// ─── Voice call-mode dictation ────────────────────────────────────────────────
+// macOS-first native dictation bridge. When unavailable, the renderer falls
+// back to the browser's Web Speech API through the existing useSTT() hook.
+
+const voiceAPI = {
+  isAvailable: (): Promise<boolean> => ipcRenderer.invoke('voice:is-available'),
+  startDictation: (): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke('voice:start-dictation'),
+  stopDictation: (): Promise<void> => ipcRenderer.invoke('voice:stop-dictation'),
+  onTranscript: (callback: (event: { text: string; isFinal: boolean }) => void): (() => void) => {
+    const handler = (_: IpcRendererEvent, event: { text: string; isFinal: boolean }) => callback(event);
+    ipcRenderer.on('voice:transcript', handler);
+    return () => ipcRenderer.off('voice:transcript', handler);
+  },
+};
+
 // ─── Worker Bus (renderer → main → worker round-trip) ────────────────────────
 
 const workerAPI = {
@@ -720,6 +751,7 @@ const allternitDesktopAPI = {
   hyperframes: hyperframesAPI,
   miniApps: miniAppsAPI,
   browserCapture: browserCaptureAPI,
+  voice: voiceAPI,
 };
 
 contextBridge.exposeInMainWorld('allternit', allternitDesktopAPI);

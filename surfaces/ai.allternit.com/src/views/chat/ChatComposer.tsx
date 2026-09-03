@@ -34,6 +34,7 @@ import {
 } from '@phosphor-icons/react';
 import { AttachmentButton } from '@/components/agent-elements/input/attachment-button';
 import { useVoice } from '@/providers/voice-provider';
+import { speechToText } from '@/services/voice';
 import { FileAttachment } from '@/components/agent-elements/input/file-attachment';
 import { TextShimmer } from '@/components/agent-elements/text-shimmer';
 import { AgentMentionDropdown } from '@/components/chat/AgentMentionDropdown';
@@ -996,12 +997,21 @@ export function ChatComposer({
     clearVoiceTranscript();
     setInteractionMode('voice');
     setVoiceModeActive(true);
+
+    // Call mode: prefer the browser's native on-device dictation when this
+    // session belongs to a bot that has call mode enabled.
+    const sessionAgentId = activeSession?.metadata?.agentId as string | undefined;
+    const sessionAgent = sessionAgentId
+      ? agents.find((a) => a.id === sessionAgentId)
+      : undefined;
+    speechToText.setPreferNative(Boolean(sessionAgent?.config?.voiceCallMode));
+
     const started = await startVoiceRecording();
     if (!started) {
       setVoiceModeActive(false);
       setInteractionMode('text');
     }
-  }, [clearVoiceTranscript, setInteractionMode, startVoiceRecording]);
+  }, [activeSession, agents, clearVoiceTranscript, setInteractionMode, startVoiceRecording]);
 
   const leaveVoiceMode = useCallback(() => {
     if (isVoiceRecording) stopVoiceRecording();
@@ -1040,7 +1050,7 @@ export function ChatComposer({
       // the results-only panel below, which interprets and runs it — never
       // through the normal agent-mode send.
       useMiroFishRunStore.getState().requestRun(enrichedInput);
-    } else if (onAgentSend && agentModeSurface && (agentModeEnabled || isCanonicalAgentMode(selectedModeId))) {
+    } else if (onAgentSend && agentModeSurface && agentModeEnabled && isCanonicalAgentMode(selectedModeId)) {
       onAgentSend(enrichedInput, selectedModeId ? { modeId: selectedModeId as CanonicalAgentModeId, templateTitle: selectedTemplateTitle } : undefined);
     } else {
       onSend(enrichedInput);
@@ -2252,6 +2262,11 @@ export function ChatComposer({
                             if (agentModeSurface) {
                               setSelectedMode(agentModeSurface, mode.id as AgentModeId);
                               setSelectedTemplateTitle(undefined);
+                              // Explicitly selecting a canonical agent mode enables agent-mode
+                              // send for the current composer surface.
+                              if (isCanonicalAgentMode(mode.id)) {
+                                setLocallyEnabled(true);
+                              }
                             }
                             setShowModeSelectorMenu(false);
                           }}

@@ -40,6 +40,7 @@ interface SelectTriggerProps {
   onClick?: () => void;
   style?: React.CSSProperties;
   className?: string;
+  disabled?: boolean;
 }
 
 export const SelectTrigger: React.FC<SelectTriggerProps> = ({ 
@@ -47,11 +48,13 @@ export const SelectTrigger: React.FC<SelectTriggerProps> = ({
   value, 
   onClick,
   style,
-  className
+  className,
+  disabled
 }) => (
   <button
     type="button"
     onClick={onClick}
+    disabled={disabled}
     className={className}
     style={{
       width: '100%',

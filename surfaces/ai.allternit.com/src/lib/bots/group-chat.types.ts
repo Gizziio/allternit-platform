@@ -37,6 +37,15 @@ export interface GroupChatMessage {
   timestamp: string;
 }
 
+export interface GroupChatMetadata {
+  /** Optional channel bulletin / topic shown in the header. */
+  bulletin?: string;
+  /** Optional working folder path shared by the group. */
+  workingFolder?: string;
+  /** Optional bot id that acts as the default responder for the channel. */
+  defaultResponderId?: string;
+}
+
 export interface GroupChat {
   /** Unique group id (slug from name). */
   id: string;
@@ -48,6 +57,8 @@ export interface GroupChat {
   log: GroupChatMessage[];
   /** Optional image/avatar for the group. */
   image?: string;
+  /** Channel metadata: bulletin, working folder, default responder. */
+  metadata?: GroupChatMetadata;
   /** Created timestamp. */
   createdAt: string;
   /** Updated timestamp. */
@@ -83,4 +94,6 @@ export interface GroupChatRunResult {
   settled: boolean;
   /** Reason if the run did not settle. */
   stopReason?: 'max_rounds' | 'max_messages' | 'timeout' | 'error';
+  /** Member ids whose turns failed during the run. */
+  failedMemberIds?: string[];
 }

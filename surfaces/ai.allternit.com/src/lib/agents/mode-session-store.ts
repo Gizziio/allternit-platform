@@ -41,6 +41,7 @@ import { executeAgentMode } from './agent-mode-executor';
 import { gizziBaseUrl } from './api-config';
 import { buildBotRuntimeEnv } from '@/lib/bots/bot-runtime-env';
 import { memoryClient } from './memory-client';
+import { recallBotMemories } from '@/lib/bots/bot-memory-context';
 
 const logger = createModuleLogger('ModeSessionStore');
 import type {
@@ -76,6 +77,7 @@ export interface ModeSession {
     [key: string]: unknown;
     sessionMode?: 'regular' | 'agent';
     agentId?: string;
+    agentIds?: string[];
     agentName?: string;
     originSurface: 'chat' | 'cowork' | 'code' | 'browser' | 'design';
     projectId?: string;
@@ -127,6 +129,7 @@ export interface CreateModeSessionOptions {
   description?: string;
   sessionMode?: 'regular' | 'agent';
   agentId?: string;
+  agentIds?: string[];
   agentName?: string;
   model?: BrainRef;
   projectId?: string;
@@ -189,6 +192,7 @@ function mapBackendSession(backend: BackendSession): ModeSession {
       originSurface: metadata.originSurface || 'chat',
       sessionMode: metadata.sessionMode,
       agentId: metadata.agentId,
+      agentIds: metadata.agentIds,
       agentName: metadata.agentName,
       projectId: metadata.projectId,
       taskId: metadata.taskId,
@@ -579,10 +583,17 @@ async function streamMessageWithContext(
 ): Promise<void> {
   const { text, skipContext, callbacks } = options;
   // The kernel splits runtimeModelId into provider/model. Use an explicit
-  // option first, then fall back to the backend-configured default / local
+  // option first, then the session's persisted runtimeModelId (set by bot
+  // session start), then fall back to the backend-configured default / local
   // brain. If nothing is available, omit the field so the runtime can fall
   // back to its own default instead of sending an invalid hard-coded model.
   let modelId = options.modelId;
+  if (!modelId) {
+    const sessionRuntimeModelId = session.metadata?.runtimeModelId;
+    if (typeof sessionRuntimeModelId === 'string' && sessionRuntimeModelId) {
+      modelId = sessionRuntimeModelId;
+    }
+  }
   if (!modelId) {
     modelId = await resolveFallbackRuntimeModelId();
   }
@@ -596,7 +607,12 @@ async function streamMessageWithContext(
     return;
   }
 
-  if (!skipContext && session.metadata.agentModeId) {
+  // Only run the client-side agent-mode executor for sessions that are
+  // explicitly in local-only fallback mode AND the user did not pick a
+  // specific runtime model. Backend-managed sessions (and sessions where the
+  // composer explicitly selected a brain) should route through /api/agent-chat
+  // so the selected runtime (e.g. kimi-cli) and server-side auth are respected.
+  if (!skipContext && session.metadata.agentModeId && session.metadata.executionPersistence === 'local' && !options.modelId) {
     try {
       await executeAgentMode(session.metadata.agentModeId, text, session.metadata.templateTitle, {
         onChunk: (content) => callbacks?.onChunk?.(content),
@@ -699,6 +715,33 @@ async function streamMessageWithContext(
       }
     } catch {
       // Degrade silently if memory recall fails
+    }
+
+    // Also inject isolated bot-memory-store promoted/pinned memories when an
+    // agent session is active. The records stay local; only a summary block is
+    // added to the prompt context.
+    try {
+      if (session.metadata.sessionMode === 'agent' && session.metadata.agentId) {
+        const tenantId = (session.metadata.userId as string | undefined)
+          || (session.metadata.tenantId as string | undefined)
+          || 'default';
+        const { contextBlock } = recallBotMemories({
+          tenantId,
+          botId: session.metadata.agentId,
+          query: text,
+          limit: 5,
+        });
+        if (contextBlock) {
+          agentContext = {
+            ...(agentContext ?? {}),
+            systemPrompt: agentContext?.systemPrompt
+              ? `${agentContext.systemPrompt}\n\n${contextBlock}`
+              : contextBlock,
+          };
+        }
+      }
+    } catch {
+      // Degrade silently if bot memory recall fails
     }
 
     // Retain user turn observation in background
@@ -959,6 +1002,7 @@ export function createModeSessionStore(config: StoreConfig) {
                 originSurface: config.originSurface,
                 sessionMode: options.sessionMode || 'regular',
                 agentId: options.agentId,
+                agentIds: options.agentIds,
                 agentName: options.agentName,
                 projectId: options.projectId,
                 taskId: options.taskId,
@@ -1007,6 +1051,7 @@ export function createModeSessionStore(config: StoreConfig) {
                 project_id: options.projectId,
                 metadata: {
                   ...options.metadata,
+                  allternit_agent_ids: options.agentIds,
                   taskId: options.taskId,
                   workspaceId: options.workspaceId,
                   workspaceFiles: workspace?.files.map(f => f.path) || options.workspaceFiles,
