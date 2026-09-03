@@ -98,9 +98,10 @@ export function ModelsPage() {
               <p className="font-medium text-[var(--text-primary)]">Model providers</p>
               <p className="mt-1">
                 Allternit Cloud routes inference requests to third-party model providers.
-                During BETA, model access is provided through OpenRouter and other upstream
-                adapters. Pricing and availability are subject to each provider's terms.
-                Cloud-model subscriptions are UI-only until explicitly marked live.
+                Cloud models are currently sourced from OpenRouter, Together AI, Fireworks AI,
+                and DeepInfra, with Groq coming next. Pricing and availability are subject to
+                each provider's terms. Cloud-model subscriptions are UI-only until explicitly
+                marked live.
               </p>
             </div>
           </div>

@@ -36,17 +36,30 @@ function modelFamily(id: string): string {
   const lower = id.toLowerCase();
   if (lower.includes("llama")) return "Llama";
   if (lower.includes("qwen")) return "Qwen";
+  if (lower.includes("deepseek")) return "DeepSeek";
+  if (lower.includes("kimi")) return "Kimi";
+  if (lower.includes("glm")) return "GLM";
   if (lower.includes("mistral")) return "Mistral";
+  if (lower.includes("mixtral")) return "Mixtral";
   if (lower.includes("claude")) return "Claude";
   if (lower.includes("gpt")) return "GPT";
   if (lower.includes("gemini")) return "Gemini";
   return "Other";
 }
 
+/**
+ * Normalize upstream price to a per-1M-token display value.
+ *
+ * Some providers (e.g. OpenRouter) return per-token prices (very small
+ * floats), while others (Together, Fireworks, DeepInfra) return per-1M-token
+ * prices. We treat values below $0.001 as per-token and multiply by 1M.
+ */
 function formatPrice(value: unknown): string {
   if (typeof value === "number") {
     if (value === 0) return "$0";
-    return `$${value.toFixed(2)}`;
+    const perMillion = value < 0.001 ? value * 1_000_000 : value;
+    if (perMillion < 0.01) return `$${perMillion.toFixed(4)}`;
+    return `$${perMillion.toFixed(2)}`;
   }
   return "—";
 }
