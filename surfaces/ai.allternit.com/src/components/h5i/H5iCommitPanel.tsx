@@ -316,7 +316,7 @@ export function H5iCommitPanel({ workspacePath, sessionId, onClose }: H5iCommitP
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {diffPreview.files.map((f) => (
                   <div key={f.path}>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4, fontFamily: 'monospace' }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4, fontFamily: 'var(--font-mono)' }}>
                       {f.changeType} {f.path} (+{f.additions}/-{f.deletions})
                     </div>
                     <pre
@@ -326,7 +326,7 @@ export function H5iCommitPanel({ workspacePath, sessionId, onClose }: H5iCommitP
                         borderRadius: 6,
                         background: 'var(--surface-hover)',
                         fontSize: 11,
-                        fontFamily: 'monospace',
+                        fontFamily: 'var(--font-mono)',
                         color: 'var(--text-secondary)',
                         whiteSpace: 'pre-wrap',
                         wordBreak: 'break-all',
