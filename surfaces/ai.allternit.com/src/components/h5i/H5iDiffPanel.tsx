@@ -461,7 +461,7 @@ export function H5iDiffPanel({ workspacePath, sessions, onClose }: H5iDiffPanelP
                         fontSize: 12,
                         fontWeight: 600,
                         color: 'var(--text-secondary)',
-                        fontFamily: 'monospace',
+                        fontFamily: 'var(--font-mono)',
                       }}
                     >
                       {f.changeType} {f.path} (+{f.additions}/-{f.deletions})
@@ -472,7 +472,7 @@ export function H5iDiffPanel({ workspacePath, sessions, onClose }: H5iDiffPanelP
                         padding: 10,
                         background: 'rgba(0,0,0,0.2)',
                         fontSize: 11,
-                        fontFamily: 'monospace',
+                        fontFamily: 'var(--font-mono)',
                         color: 'var(--text-secondary)',
                         whiteSpace: 'pre-wrap',
                         wordBreak: 'break-all',
