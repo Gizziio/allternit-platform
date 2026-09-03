@@ -96,7 +96,7 @@ jobs:
         env:
           VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
           VITE_ALLTERNIT_GATEWAY_URL: 'https://api.allternit.com'
-          VITE_ALLTERNIT_CLOUD_API_URL: 'https://allternit-cloud-api.fly.dev'
+          VITE_ALLTERNIT_CLOUD_API_URL: 'https://api.allternit.com'
 
       - name: Deploy platform.allternit.com to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
