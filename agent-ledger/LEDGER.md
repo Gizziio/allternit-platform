@@ -101,3 +101,16 @@ Worktree hygiene pass on `~/Desktop/allternit-workspace`. Four session worktrees
 - **d89ae6f0** — merged into `main`. Dev server stopped. One-line workflow tweak preserved on `wip/cloudflare-deploy-workflow` (`c55c15758`). [Summary](./summaries/2026-09-03-1141-d89ae6f0-3d9f-418e-8d5a-e2f91a39256b-kimi-worktree-cleanup.md)
 - **7d581442** (ios-local-models-marketplace) — not merged; tip pushed to origin session branch. WIP preserved on `wip/ios-local-models-marketplace` (`3dd921673`). [Summary](./summaries/2026-09-03-1141-7d581442-d796-4e0e-bdac-2fec641c3677-kimi-worktree-cleanup.md)
 - **ios-bot-parity** — not merged; tip pushed to origin session branch. WIP preserved on `wip/ios-bot-parity-wip` (`ec0b7b500`). [Summary](./summaries/2026-09-03-1141-ios-bot-parity-kimi-worktree-cleanup.md)
+
+### 2026-09-03 14:00 — kimi — Session branch merges into main (5 branches)
+
+All five held session branches merged into `main` after preserving uncommitted
+state. `cargo check` (both Rust APIs) and `tsc` (ai.allternit.com,
+allternit-desktop) clean except pre-existing main breakage (env.ts:88,
+DispatchView). Follow-up fix commit `4a3fa8a23`.
+
+- **model-picker-20260829** → `d2ee21f64` [Summary](./summaries/2026-09-03-1400-model-picker-20260829-kimi-merge.md)
+- **cacb228c** (bb parity scaffold) → `9950e8f84` [Summary](./summaries/2026-09-03-1400-cacb228c-kimi-merge.md)
+- **72ac1efa** (extension/api) → `2af2d8739` [Summary](./summaries/2026-09-03-1400-72ac1efa-kimi-merge.md)
+- **omb-integration-phase0** (bots/group chat) → `a570a1c40` [Summary](./summaries/2026-09-03-1400-omb-integration-phase0-kimi-merge.md)
+- **desktop-cloud-mvp** (unified compute + fabric) → `ea89a5fdb` + `4a3fa8a23` [Summary](./summaries/2026-09-03-1400-desktop-cloud-mvp-kimi-merge.md)
