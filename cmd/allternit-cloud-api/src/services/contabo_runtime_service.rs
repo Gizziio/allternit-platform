@@ -77,6 +77,14 @@ pub struct ContaboRuntimeService {
     cloud_api_url: String,
 }
 
+/// Placement decision for a new container: which node row records it (none
+/// for legacy single-node deployments) and which docker host runs it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NodePlacement {
+    pub node_id: Option<String>,
+    pub docker_host: String,
+}
+
 impl ContaboRuntimeService {
     pub fn new(db: PgPool, headscale_api_key: Option<String>, cloud_api_url: String) -> Self {
         Self {
@@ -84,6 +92,101 @@ impl ContaboRuntimeService {
             headscale_api_key,
             cloud_api_url,
         }
+    }
+
+    /// Build a docker CLI invocation for the given host. "local" uses the
+    /// control-plane daemon directly; anything else is passed via `-H`
+    /// (e.g. `ssh://root@allternit-standby`), so steps like `docker cp` keep
+    /// streaming from the local filesystem through the CLI unchanged.
+    fn docker_command(docker_host: &str) -> Command {
+        let mut command = Command::new("docker");
+        if docker_host != "local" {
+            command.arg("-H").arg(docker_host);
+        }
+        command
+    }
+
+    /// Pick the active node with the lowest allocated-memory ratio that still
+    /// fits the request (allocated + requested <= 85% of total). Instances
+    /// with `node_id` NULL are legacy control-plane containers and count
+    /// against the node whose `docker_host` is 'local'. An empty nodes table
+    /// means a legacy single-node deployment: local, no node row.
+    async fn select_node(&self, memory_mb: i64) -> Result<NodePlacement, ApiError> {
+        // An empty nodes table means a legacy single-node deployment: local,
+        // no node row. Nodes that exist but are all draining/down are NOT
+        // legacy — that is a capacity error.
+        let node_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM hosted_runtime_nodes")
+            .fetch_one(&self.db)
+            .await
+            .map_err(ApiError::DatabaseError)?;
+        if node_count == 0 {
+            return Ok(NodePlacement {
+                node_id: None,
+                docker_host: "local".to_string(),
+            });
+        }
+
+        let nodes: Vec<(String, String, i64)> = sqlx::query_as(
+            "SELECT id, docker_host, total_memory_mb FROM hosted_runtime_nodes WHERE status = 'active'",
+        )
+        .fetch_all(&self.db)
+        .await
+        .map_err(ApiError::DatabaseError)?;
+
+        let mut best: Option<NodePlacement> = None;
+        let mut best_ratio = f64::MAX;
+        for (node_id, docker_host, total_memory_mb) in nodes {
+            let allocated: i64 = sqlx::query_scalar(
+                r#"
+                SELECT COALESCE(SUM(memory_mb), 0)::BIGINT
+                FROM hosted_runtime_instances
+                WHERE status NOT IN ('destroying', 'destroyed')
+                  AND (node_id = $1 OR ($2 AND node_id IS NULL))
+                "#,
+            )
+            .bind(&node_id)
+            .bind(docker_host == "local")
+            .fetch_one(&self.db)
+            .await
+            .map_err(ApiError::DatabaseError)?;
+
+            if (allocated + memory_mb) as f64 > total_memory_mb as f64 * 0.85 {
+                continue;
+            }
+            let ratio = allocated as f64 / total_memory_mb as f64;
+            if ratio < best_ratio {
+                best_ratio = ratio;
+                best = Some(NodePlacement {
+                    node_id: Some(node_id),
+                    docker_host,
+                });
+            }
+        }
+
+        best.ok_or_else(|| {
+            ApiError::ServiceUnavailable(format!(
+                "No hosted runtime node has capacity for {} MB. Try a smaller size or again later.",
+                memory_mb
+            ))
+        })
+    }
+
+    /// The docker host an instance's container lives on. Instances without a
+    /// node assignment (legacy) live on the control-plane daemon.
+    async fn docker_host_for_instance(&self, instance_id: &str) -> Result<String, ApiError> {
+        let host: Option<String> = sqlx::query_scalar(
+            r#"
+            SELECT n.docker_host
+            FROM hosted_runtime_instances i
+            JOIN hosted_runtime_nodes n ON n.id = i.node_id
+            WHERE i.id = $1
+            "#,
+        )
+        .bind(instance_id)
+        .fetch_optional(&self.db)
+        .await
+        .map_err(ApiError::DatabaseError)?;
+        Ok(host.unwrap_or_else(|| "local".to_string()))
     }
 
     /// Docker container name for a hosted runtime instance. The container is
@@ -109,6 +212,7 @@ impl ContaboRuntimeService {
         let instance_id = format!("hr_contabo_{}", Uuid::new_v4().simple());
         let runtime_device_id = format!("rt_{}", Uuid::new_v4().simple());
         let bootstrap_token = Uuid::new_v4().to_string();
+        let placement = self.select_node(memory_mb).await?;
 
         // 1. Insert hosted_runtime_instances row. The pairing endpoint
         // validates the presented token against the SHA-256 hash, so store
@@ -117,8 +221,8 @@ impl ContaboRuntimeService {
             r#"
             INSERT INTO hosted_runtime_instances (
                 id, user_id, name, provider, region, cpu_kind, cpus, memory_mb,
-                status, bootstrap_token_hash, created_at, updated_at
-            ) VALUES ($1, $2, $3, 'contabo', 'local', 'shared', 1, $4, 'creating', $5, NOW(), NOW())
+                status, bootstrap_token_hash, node_id, created_at, updated_at
+            ) VALUES ($1, $2, $3, 'contabo', 'local', 'shared', 1, $4, 'creating', $5, $6, NOW(), NOW())
             "#,
         )
         .bind(&instance_id)
@@ -126,6 +230,7 @@ impl ContaboRuntimeService {
         .bind(name)
         .bind(memory_mb)
         .bind(sha256_hex(bootstrap_token.as_bytes()))
+        .bind(&placement.node_id)
         .execute(&self.db)
         .await
         .map_err(ApiError::DatabaseError)?;
@@ -133,6 +238,7 @@ impl ContaboRuntimeService {
         // 2. Create and set up the Docker container
         let container_id = self
             .create_container(
+                &placement.docker_host,
                 &instance_id,
                 memory_mb,
                 &bootstrap_token,
@@ -183,8 +289,17 @@ impl ContaboRuntimeService {
         extra_env: &[(String, String)],
     ) -> Result<ProvisionedContaboRuntime, ApiError> {
         let runtime_device_id = format!("rt_{}", Uuid::new_v4().simple());
+        let placement = self.select_node(memory_mb).await?;
+        sqlx::query("UPDATE hosted_runtime_instances SET node_id = $1 WHERE id = $2")
+            .bind(&placement.node_id)
+            .bind(instance_id)
+            .execute(&self.db)
+            .await
+            .map_err(ApiError::DatabaseError)?;
+
         let container_id = self
             .create_container(
+                &placement.docker_host,
                 instance_id,
                 memory_mb,
                 bootstrap_token,
@@ -204,10 +319,11 @@ impl ContaboRuntimeService {
         })
     }
 
-    /// Create the workload container on the VPS and install the data plane.
-    /// Returns the docker container id.
+    /// Create the workload container on the selected docker host and install
+    /// the data plane. Returns the docker container id.
     async fn create_container(
         &self,
+        docker_host: &str,
         instance_id: &str,
         memory_mb: i64,
         bootstrap_token: &str,
@@ -244,7 +360,7 @@ impl ContaboRuntimeService {
             "infinity".to_string(),
         ]);
 
-        let output = Command::new("docker")
+        let output = Self::docker_command(docker_host)
             .args(&args)
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
@@ -261,10 +377,11 @@ impl ContaboRuntimeService {
 
         let container_id = String::from_utf8_lossy(&output.stdout).trim().to_string();
 
-        // Copy agent-daemon files into container
+        // Copy agent-daemon files into container. `docker cp` over -H ssh://
+        // still streams from this machine's filesystem through the CLI.
         let agent_daemon_src = std::path::Path::new("/opt/allternit-build/cmd/agent-daemon/dist");
         if agent_daemon_src.exists() {
-            let _ = Command::new("docker")
+            let _ = Self::docker_command(docker_host)
                 .args([
                     "cp",
                     agent_daemon_src.to_str().unwrap(),
@@ -276,7 +393,7 @@ impl ContaboRuntimeService {
 
         // Install data plane inside container
         let setup_script = self.generate_setup_script(bootstrap_token, runtime_device_id, instance_id);
-        let setup_output = Command::new("docker")
+        let setup_output = Self::docker_command(docker_host)
             .args([
                 "exec",
                 "-i",
@@ -444,8 +561,9 @@ echo "Data plane setup complete"
     /// Stop and remove a workload container.
     pub async fn destroy(&self, instance_id: &str) -> Result<(), ApiError> {
         let container_name = Self::container_name(instance_id);
+        let docker_host = self.docker_host_for_instance(instance_id).await?;
 
-        let _ = Command::new("docker")
+        let _ = Self::docker_command(&docker_host)
             .args(["rm", "-f", &container_name])
             .output()
             .await;
@@ -468,7 +586,8 @@ echo "Data plane setup complete"
     /// Start a stopped workload container. No-op when it is already running.
     pub async fn start(&self, instance_id: &str) -> Result<(), ApiError> {
         let container_name = Self::container_name(instance_id);
-        let output = Command::new("docker")
+        let docker_host = self.docker_host_for_instance(instance_id).await?;
+        let output = Self::docker_command(&docker_host)
             .args(["start", &container_name])
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
@@ -487,7 +606,8 @@ echo "Data plane setup complete"
     /// Stop a running workload container. No-op when it is already stopped.
     pub async fn stop(&self, instance_id: &str) -> Result<(), ApiError> {
         let container_name = Self::container_name(instance_id);
-        let output = Command::new("docker")
+        let docker_host = self.docker_host_for_instance(instance_id).await?;
+        let output = Self::docker_command(&docker_host)
             .args(["stop", &container_name])
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
@@ -507,7 +627,8 @@ echo "Data plane setup complete"
     /// reports [`ContaboContainerState::Removed`].
     pub async fn status(&self, instance_id: &str) -> Result<ContaboContainerState, ApiError> {
         let container_name = Self::container_name(instance_id);
-        let output = Command::new("docker")
+        let docker_host = self.docker_host_for_instance(instance_id).await?;
+        let output = Self::docker_command(&docker_host)
             .args([
                 "inspect",
                 "--format",
@@ -576,6 +697,23 @@ mod tests {
         let db = test_db().await;
         sqlx::query(
             r#"
+            CREATE TABLE hosted_runtime_nodes (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                docker_host TEXT NOT NULL,
+                tailnet_ip TEXT,
+                total_memory_mb BIGINT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'active',
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+            "#,
+        )
+        .execute(&db)
+        .await
+        .unwrap();
+        sqlx::query(
+            r#"
             CREATE TABLE hosted_runtime_instances (
                 id TEXT PRIMARY KEY,
                 user_id TEXT NOT NULL,
@@ -588,6 +726,7 @@ mod tests {
                 status TEXT NOT NULL,
                 runtime_device_id TEXT,
                 bootstrap_token_hash TEXT,
+                node_id TEXT,
                 last_synced_at TIMESTAMPTZ,
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                 updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -643,6 +782,161 @@ mod tests {
 
         // Cleanup
         service.destroy(&runtime.instance_id).await.unwrap();
+    }
+
+    /// Minimal placement schema: the nodes table plus the instance columns
+    /// select_node reads.
+    async fn placement_db() -> PgPool {
+        let db = test_db().await;
+        sqlx::query(
+            r#"
+            CREATE TABLE hosted_runtime_nodes (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                docker_host TEXT NOT NULL,
+                tailnet_ip TEXT,
+                total_memory_mb BIGINT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'active',
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+            "#,
+        )
+        .execute(&db)
+        .await
+        .unwrap();
+        sqlx::query(
+            r#"
+            CREATE TABLE hosted_runtime_instances (
+                id TEXT PRIMARY KEY,
+                memory_mb BIGINT NOT NULL,
+                status TEXT NOT NULL,
+                node_id TEXT
+            )
+            "#,
+        )
+        .execute(&db)
+        .await
+        .unwrap();
+        db
+    }
+
+    async fn insert_node(db: &PgPool, id: &str, docker_host: &str, total_memory_mb: i64, status: &str) {
+        sqlx::query(
+            "INSERT INTO hosted_runtime_nodes (id, name, docker_host, total_memory_mb, status) VALUES ($1, $1, $2, $3, $4)",
+        )
+        .bind(id)
+        .bind(docker_host)
+        .bind(total_memory_mb)
+        .bind(status)
+        .execute(db)
+        .await
+        .unwrap();
+    }
+
+    async fn insert_instance_on(
+        db: &PgPool,
+        id: &str,
+        memory_mb: i64,
+        status: &str,
+        node_id: Option<&str>,
+    ) {
+        sqlx::query(
+            "INSERT INTO hosted_runtime_instances (id, memory_mb, status, node_id) VALUES ($1, $2, $3, $4)",
+        )
+        .bind(id)
+        .bind(memory_mb)
+        .bind(status)
+        .bind(node_id)
+        .execute(db)
+        .await
+        .unwrap();
+    }
+
+    fn placement_service(db: &PgPool) -> ContaboRuntimeService {
+        ContaboRuntimeService::new(db.clone(), None, "https://api.allternit.com".to_string())
+    }
+
+    #[tokio::test]
+    async fn select_node_with_empty_nodes_table_is_legacy_local() {
+        let db = placement_db().await;
+        let placement = placement_service(&db).select_node(1024).await.unwrap();
+        assert_eq!(placement.node_id, None);
+        assert_eq!(placement.docker_host, "local");
+    }
+
+    #[tokio::test]
+    async fn select_node_picks_the_emptier_active_node() {
+        let db = placement_db().await;
+        insert_node(&db, "node-busy", "ssh://root@busy", 10240, "active").await;
+        insert_node(&db, "node-idle", "ssh://root@idle", 10240, "active").await;
+        // node-busy at 60% allocated; node-idle empty.
+        insert_instance_on(&db, "hr_1", 6144, "running", Some("node-busy")).await;
+
+        let placement = placement_service(&db).select_node(1024).await.unwrap();
+        assert_eq!(placement.node_id.as_deref(), Some("node-idle"));
+        assert_eq!(placement.docker_host, "ssh://root@idle");
+    }
+
+    #[tokio::test]
+    async fn select_node_skips_nodes_over_85_percent_and_errors_when_all_full() {
+        let db = placement_db().await;
+        insert_node(&db, "node-full", "local", 10240, "active").await;
+        insert_node(&db, "node-fits", "ssh://root@fits", 10240, "active").await;
+        // node-full at 86% (8800 MB) would exceed the 85% ceiling with 1024
+        // more; legacy NULL-node_id instances count against the local node.
+        insert_instance_on(&db, "hr_legacy", 8800, "running", None).await;
+        insert_instance_on(&db, "hr_2", 5120, "running", Some("node-fits")).await;
+
+        let placement = placement_service(&db).select_node(1024).await.unwrap();
+        assert_eq!(placement.node_id.as_deref(), Some("node-fits"));
+
+        // A request that fits nowhere is a clear capacity error. Destroyed
+        // instances must NOT count as allocated.
+        insert_instance_on(&db, "hr_3", 3000, "running", Some("node-fits")).await;
+        insert_instance_on(&db, "hr_gone", 9000, "destroyed", Some("node-full")).await;
+        let result = placement_service(&db).select_node(1024).await;
+        assert!(
+            matches!(result, Err(ApiError::ServiceUnavailable(_))),
+            "all nodes full must be a capacity error: {result:?}"
+        );
+
+        // Marking the legacy instance destroyed frees its allocation, so the
+        // local node fits again.
+        sqlx::query("UPDATE hosted_runtime_instances SET status = 'destroyed' WHERE id = 'hr_legacy'")
+            .execute(&db)
+            .await
+            .unwrap();
+        let placement = placement_service(&db).select_node(1024).await.unwrap();
+        assert_eq!(placement.node_id.as_deref(), Some("node-full"));
+        assert_eq!(placement.docker_host, "local");
+    }
+
+    #[tokio::test]
+    async fn select_node_never_picks_draining_or_down_nodes() {
+        let db = placement_db().await;
+        insert_node(&db, "node-draining", "ssh://root@draining", 10240, "draining").await;
+        insert_node(&db, "node-down", "ssh://root@down", 10240, "down").await;
+
+        let result = placement_service(&db).select_node(512).await;
+        assert!(
+            matches!(result, Err(ApiError::ServiceUnavailable(_))),
+            "draining/down nodes must never be selected: {result:?}"
+        );
+    }
+
+    #[test]
+    fn docker_command_shapes_args_for_local_and_ssh_hosts() {
+        let local = ContaboRuntimeService::docker_command("local");
+        let std = local.as_std();
+        assert_eq!(std.get_program(), "docker");
+        assert_eq!(std.get_args().count(), 0, "local adds no -H flag");
+
+        let remote = ContaboRuntimeService::docker_command("ssh://root@allternit-standby");
+        let std = remote.as_std();
+        assert_eq!(std.get_program(), "docker");
+        let args: Vec<_> = std.get_args().collect();
+        assert_eq!(args, ["-H", "ssh://root@allternit-standby"]);
     }
 }
 
