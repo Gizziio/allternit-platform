@@ -70,6 +70,20 @@ pub struct HostedInstanceRow {
     pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
+/// The retail rate instance type for a container size (cost_rates provider
+/// 'contabo', region 'hosted'; see migrations 027). Sizes above 2GB meter at
+/// the largest tier — quota caps keep containers at or under 2GB today, and
+/// over-sizing the rate beats silently metering $0.
+pub fn hosted_instance_type(memory_mb: i64) -> &'static str {
+    if memory_mb <= 512 {
+        "hosted-512mb"
+    } else if memory_mb <= 1024 {
+        "hosted-1024mb"
+    } else {
+        "hosted-2048mb"
+    }
+}
+
 /// Service that provisions user workloads on the Contabo VPS.
 pub struct ContaboRuntimeService {
     db: PgPool,
@@ -216,13 +230,18 @@ impl ContaboRuntimeService {
 
         // 1. Insert hosted_runtime_instances row. The pairing endpoint
         // validates the presented token against the SHA-256 hash, so store
-        // the hash — never the raw token.
+        // the hash — never the raw token. The cost_rate_* columns must point at
+        // a real retail rate (migrations 027): leaving them NULL made
+        // record_runtime_started's LEFT JOIN COALESCE to $0.00/hr, metering
+        // every container for free.
         sqlx::query(
             r#"
             INSERT INTO hosted_runtime_instances (
                 id, user_id, name, provider, region, cpu_kind, cpus, memory_mb,
-                status, bootstrap_token_hash, node_id, created_at, updated_at
-            ) VALUES ($1, $2, $3, 'contabo', 'local', 'shared', 1, $4, 'creating', $5, $6, NOW(), NOW())
+                status, bootstrap_token_hash, node_id,
+                cost_rate_provider, cost_rate_region, cost_rate_instance_type,
+                created_at, updated_at
+            ) VALUES ($1, $2, $3, 'contabo', 'local', 'shared', 1, $4, 'creating', $5, $6, 'contabo', 'hosted', $7, NOW(), NOW())
             "#,
         )
         .bind(&instance_id)
@@ -231,6 +250,7 @@ impl ContaboRuntimeService {
         .bind(memory_mb)
         .bind(sha256_hex(bootstrap_token.as_bytes()))
         .bind(&placement.node_id)
+        .bind(hosted_instance_type(memory_mb))
         .execute(&self.db)
         .await
         .map_err(ApiError::DatabaseError)?;
@@ -669,6 +689,16 @@ fn sha256_hex(value: &[u8]) -> String {
 mod tests {
     use super::*;
 
+    #[test]
+    fn hosted_instance_type_maps_memory_to_retail_tiers() {
+        assert_eq!(hosted_instance_type(256), "hosted-512mb");
+        assert_eq!(hosted_instance_type(512), "hosted-512mb");
+        assert_eq!(hosted_instance_type(768), "hosted-1024mb");
+        assert_eq!(hosted_instance_type(1024), "hosted-1024mb");
+        assert_eq!(hosted_instance_type(2048), "hosted-2048mb");
+        assert_eq!(hosted_instance_type(4096), "hosted-2048mb");
+    }
+
     async fn test_db() -> PgPool {
         let url = "postgres://allternit:allternit_pg_2026@localhost:5432/allternit_test";
         let schema = format!("test_{}", Uuid::new_v4().simple());
@@ -727,6 +757,9 @@ mod tests {
                 runtime_device_id TEXT,
                 bootstrap_token_hash TEXT,
                 node_id TEXT,
+                cost_rate_provider TEXT,
+                cost_rate_region TEXT,
+                cost_rate_instance_type TEXT,
                 last_synced_at TIMESTAMPTZ,
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                 updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

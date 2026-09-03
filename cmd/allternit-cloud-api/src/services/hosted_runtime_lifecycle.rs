@@ -102,10 +102,22 @@ pub async fn open_session_accrued_cost(db: &PgPool, user_id: &str) -> Result<f64
 }
 
 /// Open one billable interval if this instance does not already have one.
+///
+/// Never meter $0.00 silently: instances whose cost_rate_* columns are NULL
+/// (pre-027 rows, or any future insert path that forgets them) fall back to
+/// the default 1GB retail rate. If even the fallback is missing (rate table
+/// empty = deployment misconfiguration) the session still opens at $0 with a
+/// loud warn — blocking the start would break wake-on-demand, which is worse
+/// than one unmetered interval.
 pub async fn record_runtime_started(db: &PgPool, instance_id: &str) -> Result<(), ApiError> {
     let row: Option<(String, f64)> = sqlx::query_as(
         r#"
-        SELECT h.user_id, COALESCE(r.cost_per_hour, 0)
+        SELECT h.user_id, COALESCE(
+            r.cost_per_hour,
+            (SELECT cost_per_hour FROM cost_rates
+             WHERE provider = 'contabo' AND region = 'hosted' AND instance_type = 'hosted-1024mb'),
+            0
+        )
         FROM hosted_runtime_instances h
         LEFT JOIN cost_rates r
           ON r.provider = h.cost_rate_provider
@@ -121,6 +133,14 @@ pub async fn record_runtime_started(db: &PgPool, instance_id: &str) -> Result<()
     let Some((user_id, cost_per_hour)) = row else {
         return Err(ApiError::NotFound("Hosted runtime not found".to_string()));
     };
+    if cost_per_hour == 0.0 {
+        warn!(
+            instance_id,
+            "hosted runtime metering at $0.00/hr: no cost_rates row matches and the default \
+             contabo/hosted/hosted-1024mb retail rate is missing (migrations 027) — \
+             this interval is unmetered until the rate table is fixed"
+        );
+    }
 
     sqlx::query(
         r#"
@@ -822,5 +842,78 @@ mod tests {
         .await
         .unwrap();
         assert_eq!(debits, 1, "still exactly one debit row");
+    }
+
+    /// The three retail rates from migrations 027, inserted into the scratch
+    /// schema (which otherwise only carries the legacy Fly default row).
+    async fn insert_retail_rates(pool: &PgPool) {
+        sqlx::query(
+            r#"
+            INSERT INTO cost_rates (provider, region, instance_type, cost_per_hour) VALUES
+                ('contabo', 'hosted', 'hosted-512mb',  0.0075),
+                ('contabo', 'hosted', 'hosted-1024mb', 0.0150),
+                ('contabo', 'hosted', 'hosted-2048mb', 0.0290)
+            ON CONFLICT (provider, region, instance_type) DO NOTHING
+            "#,
+        )
+        .execute(pool)
+        .await
+        .unwrap();
+    }
+
+    #[tokio::test]
+    async fn legacy_instance_without_rate_columns_snapshots_the_default_retail_rate() {
+        let pool = test_pool().await;
+        insert_retail_rates(&pool).await;
+        // Pre-027 rows have NULL cost_rate_* — they must meter at the default
+        // 1GB retail rate, never $0.00/hr.
+        sqlx::query(
+            "INSERT INTO hosted_runtime_instances (id, user_id, status) VALUES ('hr_legacy', 'user_1', 'stopped')",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        record_runtime_started(&pool, "hr_legacy").await.unwrap();
+
+        let rate: f64 = sqlx::query_scalar(
+            "SELECT cost_per_hour FROM hosted_runtime_usage_sessions WHERE hosted_instance_id = 'hr_legacy'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert!(
+            (rate - 0.015).abs() < 1e-9,
+            "legacy instance must snapshot the default 1GB retail rate, got {rate}"
+        );
+    }
+
+    #[tokio::test]
+    async fn sized_instance_snapshots_its_own_retail_rate() {
+        let pool = test_pool().await;
+        insert_retail_rates(&pool).await;
+        sqlx::query(
+            r#"
+            INSERT INTO hosted_runtime_instances (
+                id, user_id, status, cost_rate_provider, cost_rate_region, cost_rate_instance_type
+            ) VALUES ('hr_2gb', 'user_1', 'stopped', 'contabo', 'hosted', 'hosted-2048mb')
+            "#,
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        record_runtime_started(&pool, "hr_2gb").await.unwrap();
+
+        let rate: f64 = sqlx::query_scalar(
+            "SELECT cost_per_hour FROM hosted_runtime_usage_sessions WHERE hosted_instance_id = 'hr_2gb'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert!(
+            (rate - 0.029).abs() < 1e-9,
+            "2048mb instance must snapshot the 2048mb retail rate, got {rate}"
+        );
     }
 }
