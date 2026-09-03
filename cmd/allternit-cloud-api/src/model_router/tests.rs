@@ -13,6 +13,8 @@ fn starter_catalog_resolves_known_aliases() {
     assert!(catalog.resolve("claude-sonnet-4").is_some());
     assert!(catalog.resolve("qwen-2.5-72b").is_some());
     assert!(catalog.resolve("mistral-large").is_some());
+    assert!(catalog.resolve("qwen3.6-27b-groq").is_some());
+    assert!(catalog.resolve("gpt-oss-120b-groq").is_some());
 }
 
 #[test]
@@ -24,8 +26,9 @@ fn unknown_model_returns_none() {
 #[test]
 fn catalog_entries_are_primary_aliases_only() {
     let catalog = starter_catalog();
-    // Primary models only (one per model, not per alias): 6 OpenRouter + 6 Together AI.
-    assert_eq!(catalog.entries().len(), 12);
+    // Primary models only (one per model, not per alias):
+    // 6 OpenRouter + 6 Together AI + 5 Fireworks + 3 DeepInfra + 4 Groq = 24.
+    assert_eq!(catalog.entries().len(), 24);
 }
 
 #[test]
@@ -62,7 +65,7 @@ fn disabled_router_reports_not_enabled() {
 async fn disabled_router_list_models_returns_static_catalog() {
     let router = ModelRouter::disabled(starter_catalog());
     let models = router.list_models().await;
-    assert_eq!(models.len(), 12);
+    assert_eq!(models.len(), 24);
     assert!(models.iter().any(|m| m.id == "llama-3.1-8b"));
 
     let llama = models.iter().find(|m| m.id == "llama-3.1-8b").unwrap();

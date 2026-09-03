@@ -99,19 +99,42 @@ struct OpenAiModel {
     extra: serde_json::Map<String, serde_json::Value>,
 }
 
+/// Deserialize a numeric price value that may be represented as a JSON
+/// number or a numeric string (e.g. Groq returns `"0.0000006"`).
+fn deserialize_price_string<'de, D>(deserializer: D) -> Result<Option<f64>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde::Deserialize;
+    match Option::<serde_json::Value>::deserialize(deserializer)? {
+        None => Ok(None),
+        Some(serde_json::Value::Number(n)) => Ok(n.as_f64()),
+        Some(serde_json::Value::String(s)) => s
+            .parse::<f64>()
+            .ok()
+            .filter(|v| v.is_finite())
+            .map(Some)
+            .ok_or_else(|| serde::de::Error::custom(format!("invalid numeric price string: {}", s))),
+        Some(other) => Err(serde::de::Error::custom(format!(
+            "expected number or numeric string for price, got {}",
+            other
+        ))),
+    }
+}
+
 #[derive(Debug, Deserialize)]
 #[allow(dead_code)]
 struct OpenAiPricing {
     /// OpenAI-style per-token price field.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_price_string")]
     prompt: Option<f64>,
     /// OpenAI-style per-token completion price field.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_price_string")]
     completion: Option<f64>,
     /// Together AI uses `input`/`output` instead of `prompt`/`completion`.
-    #[serde(default, alias = "input")]
+    #[serde(default, alias = "input", deserialize_with = "deserialize_price_string")]
     input: Option<f64>,
-    #[serde(default, alias = "output")]
+    #[serde(default, alias = "output", deserialize_with = "deserialize_price_string")]
     output: Option<f64>,
     /// Some hosts (Together AI) include image/video/transcribe pricing as
     /// objects rather than scalars. Capture them as raw JSON so they do not
