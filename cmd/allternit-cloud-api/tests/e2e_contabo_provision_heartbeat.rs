@@ -319,7 +319,7 @@ fn build_state(db: PgPool, container_api_url: &str) -> Arc<ApiState> {
         cost_service,
         quota_service,
         contabo_runtime_service: Arc::new(services::ContaboRuntimeService::new(
-            db,
+            db.clone(),
             None,
             container_api_url.to_string(),
         )),
@@ -327,6 +327,7 @@ fn build_state(db: PgPool, container_api_url: &str) -> Arc<ApiState> {
         credential_cipher: None,
         metrics_state: Arc::new(allternit_cloud_api::middleware::metrics::MetricsState::new()),
         model_router: model_router::ModelRouter::disabled(model_router::catalog::starter_catalog()),
+        inference_pool_service: Arc::new(services::InferencePoolService::new(db)),
     })
 }
 

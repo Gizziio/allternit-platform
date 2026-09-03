@@ -216,6 +216,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     // Create API state with shared services
+    let inference_pool_service = Arc::new(services::InferencePoolService::new(db.clone()));
     let state = Arc::new(ApiState {
         db,
         ssh_executor: allternit_cloud_ssh::SshExecutor::new(),
@@ -233,7 +234,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         credential_cipher,
         metrics_state: Arc::new(allternit_cloud_api::middleware::metrics::MetricsState::new()),
         model_router,
+        inference_pool_service: inference_pool_service.clone(),
     });
+
+    // Seed one inference pool per configured provider (idempotent; operator
+    // budgets in the DB are never overwritten). Missing table (migrations not
+    // applied yet) must not block startup — the breaker degrades to no-pool.
+    match inference_pool_service.ensure_seeded().await {
+        Ok(seeded) => tracing::info!("Inference pools seeded: {}", seeded.join(", ")),
+        Err(error) => tracing::warn!("Inference pool seeding skipped: {}", error),
+    }
 
     services::start_hosted_runtime_lifecycle_task(state.clone());
 

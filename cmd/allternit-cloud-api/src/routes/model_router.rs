@@ -17,7 +17,7 @@ use std::sync::Arc;
 use crate::{
     auth::AuthContext,
     model_router::ChatCompletionRequest,
-    services::inference_settlement,
+    services::{inference_pool, inference_settlement},
     ApiError, ApiState,
 };
 
@@ -104,6 +104,23 @@ pub async fn chat_completions(
     let prompt_chars: usize = request.messages.iter().map(|m| m.content.len()).sum();
     let prices = state.model_router.retail_prices(&alias).await?;
 
+    // Pool circuit breaker + free-tier pool policy. Unknown alias →
+    // provider_for_alias is None and chat_completions 400s below; an
+    // unseeded provider has no pool (unlimited) and fails cheap_only.
+    let pool = match state.model_router.provider_for_alias(&alias) {
+        Some(provider_id) => state.inference_pool_service.pool_for_provider(provider_id).await?,
+        None => None,
+    };
+    if let Some(pool) = pool.as_ref() {
+        state.inference_pool_service.check_pool_available(pool).await?;
+    }
+    inference_pool::check_free_tier_pool(
+        inference_pool::free_tier_pool_policy(),
+        balance.is_none(),
+        pool.as_ref(),
+    )?;
+    let pool_id = pool.map(|pool| pool.id);
+
     let response = state.model_router.chat_completions(request).await?;
 
     tracing::info!(
@@ -123,6 +140,7 @@ pub async fn chat_completions(
                 db: Arc::new(state.db.clone()),
                 user_id,
                 model: alias,
+                pool_id,
                 prices,
                 prompt_token_estimate: (prompt_chars / 4) as u64,
             },
@@ -132,6 +150,7 @@ pub async fn chat_completions(
             &state.db,
             &user_id,
             &alias,
+            pool_id.as_deref(),
             &prices,
             prompt_chars,
             response,

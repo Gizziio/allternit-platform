@@ -60,6 +60,17 @@ QUERIES = {
         FROM hosted_runtime_usage_sessions
         WHERE started_at >= NOW() - INTERVAL '24 hours'
     """,
+    # Info-only per-pool month-to-date wholesale spend (pool circuit-breaker
+    # audit). Rows with NULL pool_id (pre-pool or unseeded providers) group
+    # under 'unattributed'.
+    "pool_wholesale_month": """
+        SELECT COALESCE(p.provider_id, 'unattributed'), COALESCE(SUM(iu.wholesale_cost_usd), 0)
+        FROM inference_usage iu
+        LEFT JOIN inference_pools p ON p.id = iu.pool_id
+        WHERE iu.created_at >= date_trunc('month', NOW())
+        GROUP BY 1
+        ORDER BY 2 DESC
+    """,
 }
 
 
@@ -74,6 +85,12 @@ def psql_scalar(sql):
     if result.returncode != 0:
         raise RuntimeError(f"psql failed: {result.stderr.strip()}")
     return result.stdout.strip()
+
+
+def psql_rows(sql):
+    """Run a multi-row query, returning one 'col1|col2' string per row."""
+    out = psql_scalar(sql)
+    return [line for line in out.splitlines() if line.strip()]
 
 
 def alert(check, annotations):
@@ -154,6 +171,17 @@ def main():
         print(f"hosted_billed_hours_24h={hours:.2f}", flush=True)
     except Exception as error:  # noqa: BLE001
         print(f"ERROR hosted_billed_hours_24h: {error}", file=sys.stderr, flush=True)
+
+    # 4. Per-pool month-to-date wholesale spend (info only, pool audit).
+    try:
+        rows = psql_rows(QUERIES["pool_wholesale_month"])
+        breakdown = " ".join(
+            f"{provider}=${float(amount):.2f}"
+            for provider, amount in (row.split("|", 1) for row in rows)
+        )
+        print(f"pool_wholesale_month {breakdown or '(no usage)'}", flush=True)
+    except Exception as error:  # noqa: BLE001
+        print(f"ERROR pool_wholesale_month: {error}", file=sys.stderr, flush=True)
 
 
 if __name__ == "__main__":

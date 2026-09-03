@@ -6,6 +6,7 @@ pub mod cost_service;
 pub mod event_store;
 pub mod executor_service;
 pub mod hosted_runtime_lifecycle;
+pub mod inference_pool;
 pub mod inference_settlement;
 pub mod quota_service;
 pub mod run_service;
@@ -35,6 +36,9 @@ pub use hosted_runtime_lifecycle::{
 pub use inference_settlement::{
     check_inference_allowed, credit_balance_row, meter_json_response, meter_stream_response,
     settle_inference, StreamSettlement, UsageMeteringBody,
+};
+pub use inference_pool::{
+    check_free_tier_pool, free_tier_pool_policy, FreeTierPoolPolicy, InferencePoolService, PoolRow,
 };
 pub use quota_service::{QuotaService, SharedQuotaService, UserQuota};
 pub use run_service::{RunListFilter, RunService, RunServiceImpl};

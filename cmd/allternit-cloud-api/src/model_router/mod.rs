@@ -273,6 +273,11 @@ impl ModelRouter {
         models
     }
 
+    /// The provider id a model alias routes to, without dispatching.
+    pub fn provider_for_alias(&self, alias: &str) -> Option<&str> {
+        self.alias_map.resolve(alias).map(|entry| entry.provider.as_str())
+    }
+
     /// Dispatch a chat completion request to the provider responsible for the
     /// requested model alias.
     pub async fn chat_completions(

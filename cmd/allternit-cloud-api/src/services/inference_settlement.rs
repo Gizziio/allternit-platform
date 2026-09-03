@@ -134,6 +134,7 @@ pub async fn settle_inference(
     db: &PgPool,
     user_id: &str,
     model: &str,
+    pool_id: Option<&str>,
     prices: &RetailPrices,
     prompt_tokens: u64,
     completion_tokens: u64,
@@ -146,8 +147,8 @@ pub async fn settle_inference(
     if let Err(error) = sqlx::query(
         r#"
         INSERT INTO inference_usage (
-            id, user_id, model, prompt_tokens, completion_tokens, cost_usd, wholesale_cost_usd, estimated
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            id, user_id, model, prompt_tokens, completion_tokens, cost_usd, wholesale_cost_usd, estimated, pool_id
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         "#,
     )
     .bind(&usage_id)
@@ -158,6 +159,7 @@ pub async fn settle_inference(
     .bind(cost_usd)
     .bind(wholesale_cost_usd)
     .bind(estimated)
+    .bind(pool_id)
     .execute(db)
     .await
     {
@@ -205,6 +207,7 @@ pub async fn meter_json_response(
     db: &PgPool,
     user_id: &str,
     model: &str,
+    pool_id: Option<&str>,
     prices: &RetailPrices,
     prompt_chars: usize,
     response: Response,
@@ -230,6 +233,7 @@ pub async fn meter_json_response(
             db,
             user_id,
             model,
+            pool_id,
             prices,
             prompt_tokens,
             completion_tokens,
@@ -247,6 +251,9 @@ pub struct StreamSettlement {
     pub db: Arc<PgPool>,
     pub user_id: String,
     pub model: String,
+    /// Pool the request routed to (None for unseeded providers); settled rows
+    /// carry it so pool budgets can be summed.
+    pub pool_id: Option<String>,
     pub prices: RetailPrices,
     /// chars/4 estimate of the request prompt, used only when the upstream
     /// never reports usage.
@@ -304,6 +311,7 @@ impl UsageMeteringBody {
                 &settlement.db,
                 &settlement.user_id,
                 &settlement.model,
+                settlement.pool_id.as_deref(),
                 &settlement.prices,
                 prompt_tokens,
                 completion_tokens,
@@ -474,6 +482,7 @@ mod tests {
                 cost_usd DOUBLE PRECISION NOT NULL,
                 wholesale_cost_usd DOUBLE PRECISION,
                 estimated BOOLEAN NOT NULL DEFAULT FALSE,
+                pool_id TEXT,
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             )
             "#,
@@ -538,21 +547,22 @@ mod tests {
             .await
             .unwrap();
 
-        settle_inference(&pool, "user_1", "gpt-4o", &test_prices(), 1_000_000, 500_000, false).await;
+        settle_inference(&pool, "user_1", "gpt-4o", Some("pool_test"), &test_prices(), 1_000_000, 500_000, false).await;
 
         // (1M/1M)*0.15 + (0.5M/1M)*0.30 = 0.30 retail; wholesale = 0.10 + 0.10 = 0.20.
         let balance = credit_balance_row(&pool, "user_1").await.unwrap().unwrap();
         assert!((balance - 24.70).abs() < 1e-9, "balance after deduction: {balance}");
 
-        let (model, prompt, completion, cost, wholesale, estimated): (
+        let (model, prompt, completion, cost, wholesale, estimated, pool_id): (
             String,
             i64,
             i64,
             f64,
             Option<f64>,
             bool,
+            Option<String>,
         ) = sqlx::query_as(
-            "SELECT model, prompt_tokens, completion_tokens, cost_usd, wholesale_cost_usd, estimated FROM inference_usage WHERE user_id = 'user_1'",
+            "SELECT model, prompt_tokens, completion_tokens, cost_usd, wholesale_cost_usd, estimated, pool_id FROM inference_usage WHERE user_id = 'user_1'",
         )
         .fetch_one(&pool)
         .await
@@ -563,6 +573,7 @@ mod tests {
         assert!((cost - 0.30).abs() < 1e-9);
         assert!((wholesale.unwrap() - 0.20).abs() < 1e-9);
         assert!(!estimated);
+        assert_eq!(pool_id.as_deref(), Some("pool_test"), "the pool is recorded on the usage row");
 
         let (source, ref_like): (String, i64) = sqlx::query_as(
             "SELECT source, COUNT(*)::BIGINT FROM credit_transactions WHERE user_id = 'user_1' AND transaction_id LIKE 'inference-%' GROUP BY source",
@@ -578,7 +589,7 @@ mod tests {
     async fn settle_inference_without_credits_row_records_only() {
         let pool = test_pool().await;
 
-        settle_inference(&pool, "user_plan_cap", "gpt-4o", &test_prices(), 1000, 500, true).await;
+        settle_inference(&pool, "user_plan_cap", "gpt-4o", None, &test_prices(), 1000, 500, true).await;
 
         let rows: i64 = sqlx::query_scalar(
             "SELECT COUNT(*) FROM inference_usage WHERE user_id = 'user_plan_cap'",
@@ -612,13 +623,13 @@ mod tests {
     async fn free_allowance_boundary_under_at_over() {
         let pool = test_pool().await;
         // Under the default $2.00 allowance → allowed.
-        settle_inference(&pool, "user_free", "gpt-4o", &test_prices(), 6_000_000, 2_000_000, false).await; // $1.50
+        settle_inference(&pool, "user_free", "gpt-4o", None, &test_prices(), 6_000_000, 2_000_000, false).await; // $1.50
         assert!(
             check_inference_allowed(&pool, "user_free", None).await.is_ok(),
             "$1.50 < $2.00 must pass"
         );
         // Exactly at the allowance → blocked (>=).
-        settle_inference(&pool, "user_free", "gpt-4o", &test_prices(), 2_000_000, 1_000_000, false).await; // +$0.60 → $2.10
+        settle_inference(&pool, "user_free", "gpt-4o", None, &test_prices(), 2_000_000, 1_000_000, false).await; // +$0.60 → $2.10
         let error = check_inference_allowed(&pool, "user_free", None).await.unwrap_err();
         assert!(error.to_string().contains("Free inference allowance"), "{error}");
         // Over → still blocked.
@@ -667,7 +678,7 @@ mod tests {
             .body(axum::body::Body::from(body.clone()))
             .unwrap();
 
-        let response = meter_json_response(&pool, "user_1", "gpt-4o", &test_prices(), 400, response)
+        let response = meter_json_response(&pool, "user_1", "gpt-4o", None, &test_prices(), 400, response)
             .await
             .unwrap();
 
@@ -727,6 +738,7 @@ mod tests {
             db: Arc::new(pool.clone()),
             user_id: "user_1".to_string(),
             model: "gpt-4o".to_string(),
+            pool_id: None,
             prices: test_prices(),
             prompt_token_estimate: 0,
         };

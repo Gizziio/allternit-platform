@@ -67,6 +67,8 @@ pub struct ApiState {
     pub metrics_state: Arc<crate::middleware::metrics::MetricsState>,
     /// Model router for dispatching inference requests to upstream providers
     pub model_router: crate::model_router::ModelRouter,
+    /// Inference pool budgets/circuit breaker for upstream provider spend
+    pub inference_pool_service: Arc<services::InferencePoolService>,
 }
 
 /// Create the API router
