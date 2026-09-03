@@ -48,3 +48,39 @@ Close the bankruptcy-risk gaps identified in the free-tier/billing review: free 
 
 ## Open questions
 - Free allowance abuse guard beyond per-IP: Clerk JWT carries no email-verification flag; if sock-puppet abuse appears, gate the allowance on verified email (needs Clerk API lookup) or a $1 card check.
+
+---
+
+# Steering checkpoint — inference cost architecture (2026-09-03 cont., session ba9de8f8)
+
+## Just did (all deployed to mail + pushed)
+- PRICING BUG fixed: generic_openai stored per-1M prices where router expects
+  per-token → 1,000,000x overmetering (a 42-token call metered $43.68).
+  Normalized in insert_pricing_extras (+2 regression tests); prod row corrected.
+  Root-caused via the reconciliation alert — it earned its keep on day one.
+- STALE BINARY incident: cargo test --release --lib does NOT refresh
+  target/release binary; 3 deploys copied a 07:26 build. Rebuilt for real,
+  re-deployed, verified (pools seeded, guards live). Runbook written:
+  docs/Operations/CLOUD_API_VPS_DEPLOY.md — always cargo build --release,
+  verify the swap (mtime + startup log + DB object).
+- Pool broker + circuit breaker (067dc4a6c): inference_pools seeded per
+  provider ($100/mo default, per-provider POOL_BUDGET_USD_<P> override),
+  80% warn / 100% hard 403, pool_id on every usage row, per-pool wholesale
+  in reconciliation. FREE_TIER_POOL_POLICY=cheap_only ships inert.
+- BYOK (af922a44e): user_inference_keys (AES-GCM via existing credential
+  cipher), validate-on-save, GET/PUT/DELETE /api/v1/inference/keys, per-request
+  GenericOpenAiProvider dispatch, meter-tokens-charge-nothing, console
+  "Provider API keys (bring your own)" card live on platform.allternit.com.
+
+## Next
+- User: create DeepSeek and/or Kimi API accounts, prepay small balance, give
+  keys → we add provider env + FREE_POOL_PROVIDERS + flip cheap_only.
+- At ~$3-5k/mo paid frontier volume: negotiate committed-use discounts.
+- Fair-share weights within pools (per-user token buckets by plan tier) when
+  multi-tenant pool contention appears.
+
+## Open questions
+- Free-tier abuse guard: Clerk JWT has no email-verification flag; if
+  sock-puppets appear, gate the $2 allowance on verified email or $1 card check.
+- Fireworks reasoning models return empty content (parallel session's note);
+  DeepInfra/OpenRouter keys have no upstream balance (theirs to fund/remove).
