@@ -114,3 +114,9 @@ DispatchView). Follow-up fix commit `4a3fa8a23`.
 - **72ac1efa** (extension/api) → `2af2d8739` [Summary](./summaries/2026-09-03-1400-72ac1efa-kimi-merge.md)
 - **omb-integration-phase0** (bots/group chat) → `a570a1c40` [Summary](./summaries/2026-09-03-1400-omb-integration-phase0-kimi-merge.md)
 - **desktop-cloud-mvp** (unified compute + fabric) → `ea89a5fdb` + `4a3fa8a23` [Summary](./summaries/2026-09-03-1400-desktop-cloud-mvp-kimi-merge.md)
+
+### 2026-09-03 17:16 — kimi — Cloud backend hardening handoff (session ba9de8f8)
+
+Phase 2/3 hardening of allternit-cloud-api complete and deployed to the Contabo control plane (`mail`, Postgres prod DB). All commits pushed; `origin/main` = `97ecec0bb`. Auth unification across ~25 route call sites, scoped `alt_` API tokens (were minted but wired to nothing), Contabo destroy ownership fix, Groq per-token pricing normalizer (both over- and under-metering directions fixed), five billing guards (disk quotas, $2 free inference, free-path rate limit, chargeback hold, daily revenue reconciliation), pool broker + circuit breaker, BYOK inference keys, Tailscale CI/CD workflow with rollback (inert until owner sets `TS_AUTHKEY`). Live: 168/168 release tests, billing soak 12/12, sweep smoke 5/5, scope check 8/8. Deferred to owner: Tailscale `tag:ci` auth key, real $10 Stripe purchase, DeepSeek/Kimi pool keys. Goal milestones 5 (standby failover test) and 8 (CI/CD proof run) still need proof checks; `/goal` blocked and resumable.
+
+- **ba9de8f8** (cloud backend hardening) → `97ecec0bb` [Summary](./summaries/2026-09-03-1716-ba9de8f8-kimi-cloud-backend-hardening.md)

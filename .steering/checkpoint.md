@@ -179,3 +179,23 @@ Close the bankruptcy-risk gaps identified in the free-tier/billing review: free 
 - Frontend should expose scope selection at key-mint time (platform
   allternit.com API-keys panel currently posts scopes — verify it sends
   meaningful defaults, not empty = full).
+
+---
+
+# Steering checkpoint — session handoff (2026-09-03, session ba9de8f8, FINAL)
+
+## Goal
+Allternit Cloud Phase 2/3 migration + production hardening. Session closing; another agent picks up.
+
+## Just did
+- All work deployed to mail (Postgres prod) and pushed; origin/main = 97ecec0bb, checkout clean.
+- This session's full state written to agent-ledger attestation:
+  agent-ledger/summaries/2026-09-03-1716-ba9de8f8-kimi-cloud-backend-hardening.md (+ LEDGER.md entry).
+
+## Next (for the picking-up agent)
+- Goal milestones 5 (Hetzner standby failover test per FAILOVER_RUNBOOK.md) and 8 (CI/CD proof run via workflow_dispatch after TS_AUTHKEY) still need their proof checks; /goal resume.
+- Owner actions pending: Tailscale tag:ci auth key + gh secret set TS_AUTHKEY; real $10 Stripe purchase; DeepSeek/Kimi prepaid keys for the cheap free pool.
+- Follow-up: platform key-mint UI should default sensible scopes (empty = full access today, by design).
+
+## Open questions
+- Unchanged from previous checkpoint.
