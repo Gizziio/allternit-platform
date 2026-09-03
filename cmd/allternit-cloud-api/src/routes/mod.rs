@@ -4,6 +4,7 @@ pub mod api_keys;
 pub mod approvals;
 pub mod auth;
 pub mod billing_credits;
+pub mod billing_checkout;
 pub mod billing_webhooks;
 pub mod clerk_webhooks;
 pub mod contabo_hosted_runtimes;
