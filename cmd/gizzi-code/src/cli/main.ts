@@ -7,6 +7,7 @@ import yargs from "yargs"
 import { hideBin } from "yargs/helpers"
 import { ExecCommand, RunCommand } from "@/cli/commands/run"
 import { GenerateCommand } from "@/cli/commands/generate"
+import { ApiKeysCommand } from "@/cli/commands/api-keys"
 import { Log } from "@/shared/util/log"
 import { ConnectCommand } from "@/cli/commands/connect"
 import { SkillsCommand } from "@/cli/commands/skills"
@@ -208,6 +209,7 @@ const cli = yargs(hideBin(process.argv))
   .command(RunCommand)
   .command(ExecCommand)
   .command(GenerateCommand)
+  .command(ApiKeysCommand)
   .command(DebugCommand)
   .command(ConnectCommand)
   .command(SkillsCommand)
