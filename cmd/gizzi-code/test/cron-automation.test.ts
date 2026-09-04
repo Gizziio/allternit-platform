@@ -28,10 +28,9 @@ import {
   unregisterFunction,
 } from "../src/runtime/automation/cron/executors/function-registry"
 
-// NOTE: parseSchedule / CronParser.isValid have a latent infinite-recursion bug
-// for inputs that match no natural-language pattern and are not 5/6-part cron
-// strings (isValid -> parseSchedule -> isValid...), so these tests only exercise
-// valid inputs and never assert null returns.
+// NOTE: the parseSchedule / CronParser.isValid infinite-recursion bug for
+// non-matching inputs was fixed in session/gizzi-fix-cronparser-20260904;
+// the "regression" describe block below locks the null-return behavior in.
 
 describe("CronParser.parseSchedule (natural language)", () => {
   test("every N minutes", () => {
@@ -444,5 +443,46 @@ describe("function registry", () => {
     expect(unregisterFunction(name)).toBe(true)
     expect(getFunction(name)).toBeUndefined()
     expect(unregisterFunction(name)).toBe(false)
+  })
+})
+
+describe("regression: parseSchedule/isValid recursion fix", () => {
+  test("parseSchedule returns null for garbage input (previously stack overflow)", () => {
+    expect(parseSchedule("not a schedule at all !!!")).toBeNull()
+    expect(parseSchedule("")).toBeNull()
+    expect(parseSchedule("every")).toBeNull()
+    expect(parseSchedule("1 2 3")).toBeNull()
+    expect(parseSchedule("99 99 99 99 99 99 99")).toBeNull()
+  })
+
+  test("CronParser.isValid returns false for garbage input (previously stack overflow)", () => {
+    expect(CronParser.isValid("not a schedule at all !!!")).toBe(false)
+    expect(CronParser.isValid("")).toBe(false)
+    expect(CronParser.isValid("every")).toBe(false)
+  })
+
+  test("CronParser.isValid still true for cron and natural-language inputs", () => {
+    expect(CronParser.isValid("*/5 * * * *")).toBe(true)
+    expect(CronParser.isValid("0 9 * * 1-5")).toBe(true)
+    expect(CronParser.isValid("every 5 minutes")).toBe(true)
+    expect(CronParser.isValid("daily at 9am")).toBe(true)
+  })
+
+  test("parseScheduleToType returns null for garbage input", () => {
+    expect(parseScheduleToType("total garbage input here")).toBeNull()
+  })
+
+  test("getNextOccurrenceInTimezone honors DOW lists (1,3,5)", () => {
+    // 2026-09-04 is a Friday (dayOfWeek 5). From Friday 10:00 UTC, the next
+    // Mon/Wed/Fri 9am occurrence must be same-day if before 9am, else next listed day.
+    const fromFriday = new Date("2026-09-04T08:00:00Z") // Friday 8am UTC
+    const next = getNextOccurrenceInTimezone("0 9 * * 1,3,5", "UTC", fromFriday)
+    expect(next.toISOString()).toBe("2026-09-04T09:00:00.000Z") // Friday 9am
+    const fromFridayNoon = new Date("2026-09-04T12:00:00Z")
+    const next2 = getNextOccurrenceInTimezone("0 9 * * 1,3,5", "UTC", fromFridayNoon)
+    expect(next2.toISOString()).toBe("2026-09-07T09:00:00.000Z") // Monday 9am
+    const fromTuesday = new Date("2026-09-01T12:00:00Z") // Tuesday
+    const next3 = getNextOccurrenceInTimezone("0 9 * * 1,3,5", "UTC", fromTuesday)
+    expect(next3.toISOString()).toBe("2026-09-02T09:00:00.000Z") // Wednesday 9am
   })
 })
