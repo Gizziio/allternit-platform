@@ -73,6 +73,13 @@ jobs:
           corepack prepare pnpm@10.28.0 --activate
           pnpm install --frozen-lockfile
 
+      - name: Configure git identity
+        # Test fixtures create temp repos and run `git commit`; runners have
+        # no global identity, which fails those tests with exit 128.
+        run: |
+          git config --global user.email "ci@gizziio.com"
+          git config --global user.name "Gizzi CI"
+
       - name: CI smoke test
         working-directory: cmd/gizzi-code
         shell: bash

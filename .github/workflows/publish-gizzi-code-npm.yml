@@ -46,6 +46,14 @@ jobs:
           pnpm --filter "@allternit/gizzi-code^..." run build
           pnpm --filter "@allternit/gizzi-sdk" run build
 
+      - name: Configure git identity
+        # Test fixtures create temp repos and run `git commit`; runners have
+        # no global identity, which fails those tests with exit 128. Local
+        # dev machines pass because the developer's git config exists.
+        run: |
+          git config --global user.email "ci@gizziio.com"
+          git config --global user.name "Gizzi CI"
+
       - name: Typecheck
         working-directory: cmd/gizzi-code
         run: NODE_OPTIONS=--max-old-space-size=8192 bun run typecheck
@@ -85,6 +93,13 @@ jobs:
       - name: Install dependencies
         working-directory: cmd/gizzi-code
         run: bun install
+
+      - name: Configure git identity
+        # Same fixture requirement as the quality gate: temp-repo commits
+        # need a git identity on the runner.
+        run: |
+          git config --global user.email "ci@gizziio.com"
+          git config --global user.name "Gizzi CI"
 
       - name: Run test suite
         # Blocking gate: do not publish a version whose tests fail.
