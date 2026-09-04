@@ -9,6 +9,8 @@ export const CLOUD_URLS = {
   clerk: "https://clerk.allternit.com",
   headscale: "https://headscale.allternit.com",
   install: "https://install.gizziio.com",
+  docs: "https://docs.gizziio.com",
+  remoteControl: "https://remotecontrol.allternit.com",
 } as const
 
 /**

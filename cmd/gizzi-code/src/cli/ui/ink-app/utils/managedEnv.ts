@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { isRemoteManagedSettingsEligible } from '../services/remoteManagedSettings/syncCache.js'
+import { readGizziEnv } from '@/shared/utils/gizziEnv.js';
 import { clearCACertsCache } from './caCerts.js'
 import { getGlobalConfig } from './config.js'
 import { isEnvTruthy } from './envUtils.js'
@@ -126,7 +127,7 @@ export function applySafeConfigEnvironmentVariables(): void {
   // Capture CCD spawn-env keys before any settings.env is applied (once).
   if (ccdSpawnEnvKeys === undefined) {
     ccdSpawnEnvKeys =
-      process.env.CLAUDE_CODE_ENTRYPOINT === 'claude-desktop'
+      readGizziEnv('ENTRYPOINT') === 'claude-desktop'
         ? new Set(Object.keys(process.env))
         : null
   }

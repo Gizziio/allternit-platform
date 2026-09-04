@@ -9,6 +9,7 @@
  */
 
 import { CLAUDE_AI_INFERENCE_SCOPE } from '../../constants/oauth.js'
+import { readGizziEnv } from '@/shared/utils/gizziEnv.js';
 import {
   getAnthropicApiKeyWithSource,
   getClaudeAIOAuthTokens,
@@ -64,7 +65,7 @@ export function isRemoteManagedSettingsEligible(): boolean {
   // (designed for CLI/CCD) don't apply there, and per-surface settings don't
   // exist yet. MDM/file-based managed settings still apply via settings.ts —
   // those require physical deployment and a different IT intent.
-  if (process.env.CLAUDE_CODE_ENTRYPOINT === 'local-agent') {
+  if (readGizziEnv('ENTRYPOINT') === 'local-agent') {
     return (cached = setEligibility(false))
   }
 

@@ -4,6 +4,7 @@ import {
   logEvent,
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
 } from './../services/analytics/index.ts'
+import { readGizziEnv } from '@/shared/utils/gizziEnv.js';
 import {
   toolMatchesName,
   type Tools,
@@ -753,7 +754,7 @@ export async function getAttachments(
 ): Promise<Attachment[]> {
   if (
     isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_ATTACHMENTS) ||
-    isEnvTruthy(process.env.CLAUDE_CODE_SIMPLE)
+    isEnvTruthy(readGizziEnv('SIMPLE'))
   ) {
     // query.ts:removeFromQueue dequeues these unconditionally after
     // getAttachmentMessages runs — returning [] here silently drops them.

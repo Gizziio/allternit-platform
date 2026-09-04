@@ -5,6 +5,7 @@
  * in Claude Code's lifecycle.
  */
 import { basename } from 'path'
+import { readGizziEnv } from '@/shared/utils/gizziEnv.js';
 import { spawn, type ChildProcessWithoutNullStreams } from 'child_process'
 import { pathExists } from './file.js'
 import { wrapSpawn } from './ShellCommand.js'
@@ -1980,7 +1981,7 @@ async function* executeHooks({
     return
   }
 
-  if (isEnvTruthy(process.env.CLAUDE_CODE_SIMPLE)) {
+  if (isEnvTruthy(readGizziEnv('SIMPLE'))) {
     return
   }
 
@@ -3014,7 +3015,7 @@ async function executeHooksOutsideREPL({
   signal?: AbortSignal
   timeoutMs: number
 }): Promise<HookOutsideReplResult[]> {
-  if (isEnvTruthy(process.env.CLAUDE_CODE_SIMPLE)) {
+  if (isEnvTruthy(readGizziEnv('SIMPLE'))) {
     return []
   }
 

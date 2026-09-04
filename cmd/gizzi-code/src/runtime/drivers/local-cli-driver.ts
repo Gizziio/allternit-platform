@@ -1658,6 +1658,8 @@ function isFilteredChildEnvKey(key: string): boolean {
     case "CLAUDE_CODE_EXECPATH":
     case "CLAUDE_CODE_SESSION_ID":
     case "CLAUDE_CODE_SSE_PORT":
+    case "GIZZI_ENTRYPOINT":
+    case "GIZZI_SESSION_ID":
       return true
   }
   return up.startsWith("CLAUDECODE_")

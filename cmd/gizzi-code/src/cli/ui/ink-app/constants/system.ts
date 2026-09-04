@@ -2,6 +2,7 @@
 // Critical system constants extracted to break circular dependencies
 
 import { feature } from 'bun:bundle'
+import { readGizziEnv } from '@/shared/utils/gizziEnv.js';
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/analytics/growthbook.js'
 import { logForDebugging } from '../utils/debug.js'
 import { isEnvDefinedFalsy } from '../utils/envUtils.js'
@@ -77,7 +78,7 @@ export function getAttributionHeader(fingerprint: string): string {
   }
 
   const version = `${MACRO.VERSION}.${fingerprint}`
-  const entrypoint = process.env.CLAUDE_CODE_ENTRYPOINT ?? 'unknown'
+  const entrypoint = readGizziEnv('ENTRYPOINT') ?? 'unknown'
 
   // cch=00000 placeholder is overwritten by Bun's HTTP stack with attestation token
   const cch = feature('NATIVE_CLIENT_ATTESTATION') ? ' cch=00000;' : ''

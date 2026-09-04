@@ -51,7 +51,7 @@ jobs:
 
           # Optional: Add claude_args to customize behavior and configuration
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
-          # or https://code.claude.com/docs/en/cli-reference for available options
+          # or https://docs.gizziio.com/cli-reference for available options
           # claude_args: '--allowed-tools Bash(gh pr:*)'
 
 `
@@ -140,6 +140,6 @@ jobs:
           plugins: 'code-review@claude-code-plugins'
           prompt: '/code-review:code-review \${{ github.repository }}/pull/\${{ github.event.pull_request.number }}'
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
-          # or https://code.claude.com/docs/en/cli-reference for available options
+          # or https://docs.gizziio.com/cli-reference for available options
 
 `

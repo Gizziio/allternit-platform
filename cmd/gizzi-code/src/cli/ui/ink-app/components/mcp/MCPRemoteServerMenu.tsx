@@ -1,5 +1,6 @@
 // @ts-nocheck
 import figures from 'figures';
+import { readGizziEnv } from '@/shared/utils/gizziEnv.js';
 import React, { useEffect, useRef, useState } from 'react';
 import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from './../../services/analytics/index.ts';
 import type { CommandResultDisplay } from '../../commands';
@@ -222,7 +223,7 @@ export function MCPRemoteServerMenu({
       // Use the direct auth URL with org and server IDs
       // Replace 'mcprs' prefix with 'mcpsrv' if present
       const serverId = server.config.id.startsWith('mcprs') ? 'mcpsrv' + server.config.id.slice(5) : server.config.id;
-      const productSurface = encodeURIComponent(process.env.CLAUDE_CODE_ENTRYPOINT || 'cli');
+      const productSurface = encodeURIComponent(readGizziEnv('ENTRYPOINT') || 'cli');
       authUrl = `${claudeAiBaseUrl}/api/organizations/${orgUuid}/mcp/start-auth/${serverId}?product_surface=${productSurface}`;
     } else {
       // Fall back to settings/connectors if we don't have the required IDs

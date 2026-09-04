@@ -324,6 +324,7 @@ export async function exec(
         ...(process.env.USER_TYPE === 'ant'
           ? {
               CLAUDE_CODE_SESSION_ID: getSessionId(),
+              GIZZI_SESSION_ID: getSessionId(),
             }
           : {}),
       },

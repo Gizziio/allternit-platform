@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { isEnvDefinedFalsy, isEnvTruthy } from '../../utils/envUtils.js'
+import { readGizziEnv } from '@/shared/utils/gizziEnv.js';
 import { AGENT_TOOL_NAME } from '../AgentTool/constants.js'
 import { BASH_TOOL_NAME } from '../BashTool/toolName.js'
 import { FILE_EDIT_TOOL_NAME } from '../FileEditTool/constants.js'
@@ -26,7 +27,7 @@ export function isReplModeEnabled(): boolean {
   if (isEnvTruthy(process.env.CLAUDE_REPL_MODE)) return true
   return (
     process.env.USER_TYPE === 'ant' &&
-    process.env.CLAUDE_CODE_ENTRYPOINT === 'cli'
+    readGizziEnv('ENTRYPOINT') === 'cli'
   )
 }
 

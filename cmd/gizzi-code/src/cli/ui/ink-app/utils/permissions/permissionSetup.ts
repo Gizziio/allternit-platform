@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle'
+import { readGizziEnv } from '@/shared/utils/gizziEnv.js';
 import { relative } from 'path'
 import {
   getOriginalCwd,
@@ -954,7 +955,7 @@ export async function initializeToolPermissionContext({
   if (
     process.env.USER_TYPE === 'ant' &&
     !isEnvTruthy(process.env.CLAUDE_CODE_REMOTE) &&
-    process.env.CLAUDE_CODE_ENTRYPOINT !== 'local-agent'
+    readGizziEnv('ENTRYPOINT') !== 'local-agent'
   ) {
     overlyBroadBashPermissions = [
       ...findOverlyBroadBashPermissions(rulesFromDisk, parsedAllowedToolsCli),

@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle'
+import { readGizziEnv } from '@/shared/utils/gizziEnv.js';
 import { chmod, mkdir, readdir, readFile, unlink, writeFile } from 'fs/promises'
 import { join } from 'path'
 import {
@@ -83,7 +84,7 @@ export async function registerSession(): Promise<boolean> {
         cwd: getOriginalCwd(),
         startedAt: Date.now(),
         kind,
-        entrypoint: process.env.CLAUDE_CODE_ENTRYPOINT,
+        entrypoint: readGizziEnv('ENTRYPOINT'),
         ...(feature('UDS_INBOX')
           ? { messagingSocketPath: process.env.CLAUDE_CODE_MESSAGING_SOCKET }
           : {}),
@@ -91,7 +92,7 @@ export async function registerSession(): Promise<boolean> {
           ? {
               name: process.env.CLAUDE_CODE_SESSION_NAME,
               logPath: process.env.CLAUDE_CODE_SESSION_LOG,
-              agent: process.env.CLAUDE_CODE_AGENT,
+              agent: readGizziEnv('AGENT'),
             }
           : {}),
       }),

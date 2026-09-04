@@ -14,6 +14,7 @@
  */
 
 import { getIsNonInteractiveSession } from '../bootstrap/state.js'
+import { readGizziEnv } from '@/shared/utils/gizziEnv.js';
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
@@ -158,8 +159,8 @@ export function logHeadlessProfilerTurn(): void {
   metadata.checkpoint_count = marks.length
 
   // Add entrypoint for segmentation (sdk-ts, sdk-py, sdk-cli, or undefined)
-  if (process.env.CLAUDE_CODE_ENTRYPOINT) {
-    metadata.entrypoint = process.env.CLAUDE_CODE_ENTRYPOINT
+  if (readGizziEnv('ENTRYPOINT')) {
+    metadata.entrypoint = readGizziEnv('ENTRYPOINT')
   }
 
   // Log to Statsig if sampled

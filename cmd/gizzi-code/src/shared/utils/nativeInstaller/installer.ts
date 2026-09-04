@@ -1668,9 +1668,9 @@ export async function cleanupNpmInstallations(): Promise<{
   const warnings: string[] = []
   let removed = 0
 
-  // Always attempt to remove @anthropic-ai/gizzi
+  // Always attempt to remove the upstream package (leftover installs)
   const codePackageResult = await attemptNpmUninstall(
-    '@anthropic-ai/gizzi',
+    '@anthropic-ai/claude-code',
   )
   if (codePackageResult.success) {
     removed++
@@ -1683,7 +1683,7 @@ export async function cleanupNpmInstallations(): Promise<{
 
   // Also attempt to remove MACRO.PACKAGE_URL if it's defined and different
   // @ts-ignore Type mismatch
-  if (MACRO.PACKAGE_URL && MACRO.PACKAGE_URL !== '@anthropic-ai/gizzi') {
+  if (MACRO.PACKAGE_URL && MACRO.PACKAGE_URL !== '@anthropic-ai/claude-code') {
     // @ts-ignore Type mismatch
     const macroPackageResult = await attemptNpmUninstall(MACRO.PACKAGE_URL as string)
     if (macroPackageResult.success) {

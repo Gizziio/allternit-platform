@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { mkdir, readdir, readFile, unlink, writeFile } from 'fs/promises'
+import { readGizziEnv } from '@/shared/utils/gizziEnv.js';
 import { join } from 'path'
 import { z } from 'zod/v4'
 import { getIsNonInteractiveSession, getSessionId } from '../bootstrap/state.js'
@@ -198,8 +199,8 @@ export async function resetTaskList(taskListId: string): Promise<void> {
  * 5. Session ID - fallback for standalone sessions
  */
 export function getTaskListId(): string {
-  if (process.env.CLAUDE_CODE_TASK_LIST_ID) {
-    return process.env.CLAUDE_CODE_TASK_LIST_ID
+  if (readGizziEnv('TASK_LIST_ID')) {
+    return readGizziEnv('TASK_LIST_ID')
   }
   // In-process teammates use the leader's team name so they share the same
   // task list that tmux/iTerm2 teammates also resolve to.

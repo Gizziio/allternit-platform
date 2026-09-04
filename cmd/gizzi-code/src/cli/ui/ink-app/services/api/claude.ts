@@ -18,6 +18,7 @@ import type {
   BetaUsage,
   BetaMessageParam as MessageParam,
 } from '@allternit/sdk/providers/anthropic/resources/beta/messages/messages.mjs'
+import { readGizziEnv } from '@/shared/utils/gizziEnv.js';
 import type { TextBlockParam } from '@allternit/sdk/providers/anthropic/resources/index.mjs'
 import type { Stream } from '@allternit/sdk/providers/anthropic/streaming.mjs'
 import { randomUUID } from 'crypto'
@@ -302,7 +303,7 @@ export function getExtraBodyParams(betaHeaders?: string[]): JsonObject {
   // Anti-distillation: send fake_tools opt-in for 1P CLI only
   if (
     feature('ANTI_DISTILLATION_CC')
-      ? process.env.CLAUDE_CODE_ENTRYPOINT === 'cli' &&
+      ? readGizziEnv('ENTRYPOINT') === 'cli' &&
         shouldIncludeFirstPartyOnlyBetas() &&
         getFeatureValue_CACHED_MAY_BE_STALE(
           'tengu_anti_distill_fake_tool_injection',

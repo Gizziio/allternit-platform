@@ -55,3 +55,30 @@ describe("maskToken", () => {
     expect(maskToken("abc123")).toBe("******")
   })
 })
+
+describe("mintGizziSessionToken", () => {
+  test("mints gizzi_-prefixed tokens (never upstream sk-ant-cc-)", async () => {
+    const { mintGizziSessionToken } = await import(
+      "../src/shared/utils/allternitToken"
+    )
+    const token = mintGizziSessionToken()
+    expect(token.startsWith("gizzi_")).toBe(true)
+    expect(token.startsWith("sk-ant-cc-")).toBe(false)
+    // 24 random bytes -> 32 base64url chars after the prefix
+    expect(token.length).toBe("gizzi_".length + 32)
+    expect(mintGizziSessionToken()).not.toBe(token)
+  })
+
+  test("gizzi_-prefixed token classifies as sessionToken, not apiKey", async () => {
+    const { mintGizziSessionToken } = await import(
+      "../src/shared/utils/allternitToken"
+    )
+    expect(classifyAllternitToken(mintGizziSessionToken()).kind).toBe(
+      "sessionToken",
+    )
+    // and is never confused with a cloud alt_ API key
+    expect(classifyAllternitToken(mintGizziSessionToken()).kind).not.toBe(
+      "apiKey",
+    )
+  })
+})
