@@ -4,7 +4,7 @@ import { ProviderTransform } from "../../src/provider/transform"
 
 const OUTPUT_TOKEN_MAX = 32000
 
-describe.skip("ProviderTransform.options - setCacheKey", () => {
+describe("ProviderTransform.options - setCacheKey", () => {
   const sessionID = "test-session-123"
 
   const mockModel = {
@@ -39,7 +39,7 @@ describe.skip("ProviderTransform.options - setCacheKey", () => {
     headers: {},
   } as any
 
-  test.skip("should set promptCacheKey when providerOptions.setCacheKey is true", () => {
+  test("should set promptCacheKey when providerOptions.setCacheKey is true", () => {
     const result = ProviderTransform.options({
       model: mockModel,
       sessionID,
@@ -48,7 +48,7 @@ describe.skip("ProviderTransform.options - setCacheKey", () => {
     expect(result.promptCacheKey).toBe(sessionID)
   })
 
-  test.skip("should not set promptCacheKey when providerOptions.setCacheKey is false", () => {
+  test("should not set promptCacheKey when providerOptions.setCacheKey is false", () => {
     const result = ProviderTransform.options({
       model: mockModel,
       sessionID,
@@ -57,7 +57,7 @@ describe.skip("ProviderTransform.options - setCacheKey", () => {
     expect(result.promptCacheKey).toBeUndefined()
   })
 
-  test.skip("should not set promptCacheKey when providerOptions is undefined", () => {
+  test("should not set promptCacheKey when providerOptions is undefined", () => {
     const result = ProviderTransform.options({
       model: mockModel,
       sessionID,
@@ -66,12 +66,12 @@ describe.skip("ProviderTransform.options - setCacheKey", () => {
     expect(result.promptCacheKey).toBeUndefined()
   })
 
-  test.skip("should not set promptCacheKey when providerOptions does not have setCacheKey", () => {
+  test("should not set promptCacheKey when providerOptions does not have setCacheKey", () => {
     const result = ProviderTransform.options({ model: mockModel, sessionID, providerOptions: {} })
     expect(result.promptCacheKey).toBeUndefined()
   })
 
-  test.skip("should set promptCacheKey for openai provider regardless of setCacheKey", () => {
+  test("should set promptCacheKey for openai provider regardless of setCacheKey", () => {
     const openaiModel = {
       ...mockModel,
       providerID: "openai",
@@ -85,7 +85,7 @@ describe.skip("ProviderTransform.options - setCacheKey", () => {
     expect(result.promptCacheKey).toBe(sessionID)
   })
 
-  test.skip("should set store=false for openai provider", () => {
+  test("should set store=false for openai provider", () => {
     const openaiModel = {
       ...mockModel,
       providerID: "openai",
@@ -104,7 +104,7 @@ describe.skip("ProviderTransform.options - setCacheKey", () => {
   })
 })
 
-describe.skip("ProviderTransform.options - gpt-5 textVerbosity", () => {
+describe("ProviderTransform.options - gpt-5 textVerbosity", () => {
   const sessionID = "test-session-123"
 
   const createGpt5Model = (apiId: string) =>
@@ -133,49 +133,50 @@ describe.skip("ProviderTransform.options - gpt-5 textVerbosity", () => {
       headers: {},
     }) as any
 
-  test.skip("gpt-5.2 should have textVerbosity set to low", () => {
+  test("gpt-5.2 should have textVerbosity set to low", () => {
     const model = createGpt5Model("gpt-5.2")
     const result = ProviderTransform.options({ model, sessionID, providerOptions: {} })
     expect(result.textVerbosity).toBe("low")
   })
 
-  test.skip("gpt-5.1 should have textVerbosity set to low", () => {
+  test("gpt-5.1 should have textVerbosity set to low", () => {
     const model = createGpt5Model("gpt-5.1")
     const result = ProviderTransform.options({ model, sessionID, providerOptions: {} })
     expect(result.textVerbosity).toBe("low")
   })
 
-  test.skip("gpt-5.2-chat-latest should NOT have textVerbosity set (only supports medium)", () => {
+  test("gpt-5.2-chat-latest should NOT have textVerbosity set (only supports medium)", () => {
     const model = createGpt5Model("gpt-5.2-chat-latest")
     const result = ProviderTransform.options({ model, sessionID, providerOptions: {} })
     expect(result.textVerbosity).toBeUndefined()
   })
 
-  test.skip("gpt-5.1-chat-latest should NOT have textVerbosity set (only supports medium)", () => {
+  test("gpt-5.1-chat-latest should NOT have textVerbosity set (only supports medium)", () => {
     const model = createGpt5Model("gpt-5.1-chat-latest")
     const result = ProviderTransform.options({ model, sessionID, providerOptions: {} })
     expect(result.textVerbosity).toBeUndefined()
   })
 
-  test.skip("gpt-5.2-chat should NOT have textVerbosity set", () => {
+  test("gpt-5.2-chat should NOT have textVerbosity set", () => {
     const model = createGpt5Model("gpt-5.2-chat")
     const result = ProviderTransform.options({ model, sessionID, providerOptions: {} })
     expect(result.textVerbosity).toBeUndefined()
   })
 
-  test.skip("gpt-5-chat should NOT have textVerbosity set", () => {
+  test("gpt-5-chat should NOT have textVerbosity set", () => {
     const model = createGpt5Model("gpt-5-chat")
     const result = ProviderTransform.options({ model, sessionID, providerOptions: {} })
     expect(result.textVerbosity).toBeUndefined()
   })
 
-  test.skip("gpt-5.2-codex should NOT have textVerbosity set (codex models excluded)", () => {
+  test("gpt-5.2-codex should NOT have textVerbosity set (codex models excluded)", () => {
     const model = createGpt5Model("gpt-5.2-codex")
     const result = ProviderTransform.options({ model, sessionID, providerOptions: {} })
     expect(result.textVerbosity).toBeUndefined()
   })
 })
 
+// SKIPPED: documents gateway providerOptions routing that is not implemented in src/runtime/providers/adapters/transform.ts; no @ai-sdk/gateway models exist in the product registry
 describe.skip("ProviderTransform.options - gateway", () => {
   const sessionID = "test-session-123"
 
@@ -213,7 +214,7 @@ describe.skip("ProviderTransform.options - gateway", () => {
       release_date: "2024-01-01",
     }) as any
 
-  test.skip("puts gateway defaults under gateway key", () => {
+  test("puts gateway defaults under gateway key", () => {
     const model = createModel("anthropic/claude-sonnet-4")
     const result = ProviderTransform.options({ model, sessionID, providerOptions: {} })
     expect(result).toEqual({
@@ -224,6 +225,7 @@ describe.skip("ProviderTransform.options - gateway", () => {
   })
 })
 
+// SKIPPED: documents gateway/bedrock providerOptions key routing that is not implemented (providerOptions() only maps the sdkKey(npm) or providerID); no @ai-sdk/gateway models exist in the product
 describe.skip("ProviderTransform.providerOptions", () => {
   const createModel = (overrides: Partial<any> = {}) =>
     ({
@@ -260,7 +262,7 @@ describe.skip("ProviderTransform.providerOptions", () => {
       ...overrides,
     }) as any
 
-  test.skip("uses sdk key for non-gateway models", () => {
+  test("uses sdk key for non-gateway models", () => {
     const model = createModel({
       providerID: "my-bedrock",
       api: {
@@ -275,7 +277,7 @@ describe.skip("ProviderTransform.providerOptions", () => {
     })
   })
 
-  test.skip("uses gateway model provider slug for gateway models", () => {
+  test("uses gateway model provider slug for gateway models", () => {
     const model = createModel({
       providerID: "vercel",
       api: {
@@ -290,7 +292,7 @@ describe.skip("ProviderTransform.providerOptions", () => {
     })
   })
 
-  test.skip("falls back to gateway key when gateway api id is unscoped", () => {
+  test("falls back to gateway key when gateway api id is unscoped", () => {
     const model = createModel({
       id: "anthropic/claude-sonnet-4",
       providerID: "vercel",
@@ -306,7 +308,7 @@ describe.skip("ProviderTransform.providerOptions", () => {
     })
   })
 
-  test.skip("splits gateway routing options from provider-specific options", () => {
+  test("splits gateway routing options from provider-specific options", () => {
     const model = createModel({
       providerID: "vercel",
       api: {
@@ -327,7 +329,7 @@ describe.skip("ProviderTransform.providerOptions", () => {
     } as any)
   })
 
-  test.skip("falls back to gateway key when model id has no provider slug", () => {
+  test("falls back to gateway key when model id has no provider slug", () => {
     const model = createModel({
       id: "claude-sonnet-4",
       providerID: "vercel",
@@ -343,7 +345,7 @@ describe.skip("ProviderTransform.providerOptions", () => {
     })
   })
 
-  test.skip("maps amazon slug to bedrock for provider options", () => {
+  test("maps amazon slug to bedrock for provider options", () => {
     const model = createModel({
       providerID: "vercel",
       api: {
@@ -358,7 +360,7 @@ describe.skip("ProviderTransform.providerOptions", () => {
     })
   })
 
-  test.skip("uses groq slug for groq models", () => {
+  test("uses groq slug for groq models", () => {
     const model = createModel({
       providerID: "vercel",
       api: {
@@ -374,8 +376,8 @@ describe.skip("ProviderTransform.providerOptions", () => {
   })
 })
 
-describe.skip("ProviderTransform.schema - gemini array items", () => {
-  test.skip("adds missing items for array properties", () => {
+describe("ProviderTransform.schema - gemini array items", () => {
+  test("adds missing items for array properties", () => {
     const geminiModel = {
       providerID: "google",
       api: {
@@ -398,7 +400,7 @@ describe.skip("ProviderTransform.schema - gemini array items", () => {
   })
 })
 
-describe.skip("ProviderTransform.schema - gemini nested array items", () => {
+describe("ProviderTransform.schema - gemini nested array items", () => {
   const geminiModel = {
     providerID: "google",
     api: {
@@ -406,7 +408,7 @@ describe.skip("ProviderTransform.schema - gemini nested array items", () => {
     },
   } as any
 
-  test.skip("adds type to 2D array with empty inner items", () => {
+  test("adds type to 2D array with empty inner items", () => {
     const schema = {
       type: "object",
       properties: {
@@ -426,7 +428,7 @@ describe.skip("ProviderTransform.schema - gemini nested array items", () => {
     expect(result.properties.values.items.items.type).toBe("string")
   })
 
-  test.skip("adds items and type to 2D array with missing inner items", () => {
+  test("adds items and type to 2D array with missing inner items", () => {
     const schema = {
       type: "object",
       properties: {
@@ -443,7 +445,7 @@ describe.skip("ProviderTransform.schema - gemini nested array items", () => {
     expect(result.properties.data.items.items.type).toBe("string")
   })
 
-  test.skip("handles deeply nested arrays (3D)", () => {
+  test("handles deeply nested arrays (3D)", () => {
     const schema = {
       type: "object",
       properties: {
@@ -466,7 +468,7 @@ describe.skip("ProviderTransform.schema - gemini nested array items", () => {
     expect(result.properties.matrix.items.items.items.type).toBe("string")
   })
 
-  test.skip("preserves existing item types in nested arrays", () => {
+  test("preserves existing item types in nested arrays", () => {
     const schema = {
       type: "object",
       properties: {
@@ -486,7 +488,7 @@ describe.skip("ProviderTransform.schema - gemini nested array items", () => {
     expect(result.properties.numbers.items.items.type).toBe("number")
   })
 
-  test.skip("handles mixed nested structures with objects and arrays", () => {
+  test("handles mixed nested structures with objects and arrays", () => {
     const schema = {
       type: "object",
       properties: {
@@ -511,7 +513,7 @@ describe.skip("ProviderTransform.schema - gemini nested array items", () => {
   })
 })
 
-describe.skip("ProviderTransform.schema - gemini non-object properties removal", () => {
+describe("ProviderTransform.schema - gemini non-object properties removal", () => {
   const geminiModel = {
     providerID: "google",
     api: {
@@ -519,7 +521,7 @@ describe.skip("ProviderTransform.schema - gemini non-object properties removal",
     },
   } as any
 
-  test.skip("removes properties from non-object types", () => {
+  test("removes properties from non-object types", () => {
     const schema = {
       type: "object",
       properties: {
@@ -536,7 +538,7 @@ describe.skip("ProviderTransform.schema - gemini non-object properties removal",
     expect(result.properties.data.properties).toBeUndefined()
   })
 
-  test.skip("removes required from non-object types", () => {
+  test("removes required from non-object types", () => {
     const schema = {
       type: "object",
       properties: {
@@ -554,7 +556,7 @@ describe.skip("ProviderTransform.schema - gemini non-object properties removal",
     expect(result.properties.data.required).toBeUndefined()
   })
 
-  test.skip("removes properties and required from nested non-object types", () => {
+  test("removes properties and required from nested non-object types", () => {
     const schema = {
       type: "object",
       properties: {
@@ -578,7 +580,7 @@ describe.skip("ProviderTransform.schema - gemini non-object properties removal",
     expect(result.properties.outer.properties.inner.required).toBeUndefined()
   })
 
-  test.skip("keeps properties and required on object types", () => {
+  test("keeps properties and required on object types", () => {
     const schema = {
       type: "object",
       properties: {
@@ -597,7 +599,7 @@ describe.skip("ProviderTransform.schema - gemini non-object properties removal",
     expect(result.properties.data.required).toEqual(["name"])
   })
 
-  test.skip("does not affect non-gemini providers", () => {
+  test("does not affect non-gemini providers", () => {
     const openaiModel = {
       providerID: "openai",
       api: {
@@ -621,7 +623,8 @@ describe.skip("ProviderTransform.schema - gemini non-object properties removal",
   })
 })
 
-describe.skip("ProviderTransform.message - DeepSeek reasoning content", () => {
+describe("ProviderTransform.message - DeepSeek reasoning content", () => {
+  // SKIPPED: documents DeepSeek reasoning_content providerOptions handling that is not implemented in message()
   test.skip("DeepSeek with tool calls includes reasoning_content in providerOptions", () => {
     const msgs = [
       {
@@ -689,7 +692,7 @@ describe.skip("ProviderTransform.message - DeepSeek reasoning content", () => {
     expect(result[0].providerOptions?.allternit?.reasoning_content).toBe("Let me think about this...")
   })
 
-  test.skip("Non-DeepSeek providers leave reasoning content unchanged", () => {
+  test("Non-DeepSeek providers leave reasoning content unchanged", () => {
     const msgs = [
       {
         role: "assistant",
@@ -745,7 +748,7 @@ describe.skip("ProviderTransform.message - DeepSeek reasoning content", () => {
   })
 })
 
-describe.skip("ProviderTransform.message - empty image handling", () => {
+describe("ProviderTransform.message - empty image handling", () => {
   const mockModel = {
     id: "anthropic/claude-3-5-sonnet",
     providerID: "anthropic",
@@ -778,7 +781,7 @@ describe.skip("ProviderTransform.message - empty image handling", () => {
     headers: {},
   } as any
 
-  test.skip("should replace empty base64 image with error text", () => {
+  test("should replace empty base64 image with error text", () => {
     const msgs = [
       {
         role: "user",
@@ -800,7 +803,7 @@ describe.skip("ProviderTransform.message - empty image handling", () => {
     })
   })
 
-  test.skip("should keep valid base64 images unchanged", () => {
+  test("should keep valid base64 images unchanged", () => {
     const validBase64 =
       "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
     const msgs = [
@@ -821,7 +824,7 @@ describe.skip("ProviderTransform.message - empty image handling", () => {
     expect(result[0].content[1]).toEqual({ type: "image", image: `data:image/png;base64,${validBase64}` })
   })
 
-  test.skip("should handle mixed valid and empty images", () => {
+  test("should handle mixed valid and empty images", () => {
     const validBase64 =
       "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
     const msgs = [
@@ -848,7 +851,7 @@ describe.skip("ProviderTransform.message - empty image handling", () => {
   })
 })
 
-describe.skip("ProviderTransform.message - anthropic empty content filtering", () => {
+describe("ProviderTransform.message - anthropic empty content filtering", () => {
   const anthropicModel = {
     id: "anthropic/claude-3-5-sonnet",
     providerID: "anthropic",
@@ -881,7 +884,7 @@ describe.skip("ProviderTransform.message - anthropic empty content filtering", (
     headers: {},
   } as any
 
-  test.skip("filters out messages with empty string content", () => {
+  test("filters out messages with empty string content", () => {
     const msgs = [
       { role: "user", content: "Hello" },
       { role: "assistant", content: "" },
@@ -895,7 +898,7 @@ describe.skip("ProviderTransform.message - anthropic empty content filtering", (
     expect(result[1].content).toBe("World")
   })
 
-  test.skip("filters out empty text parts from array content", () => {
+  test("filters out empty text parts from array content", () => {
     const msgs = [
       {
         role: "assistant",
@@ -914,7 +917,7 @@ describe.skip("ProviderTransform.message - anthropic empty content filtering", (
     expect(result[0].content[0]).toEqual({ type: "text", text: "Hello" })
   })
 
-  test.skip("filters out empty reasoning parts from array content", () => {
+  test("filters out empty reasoning parts from array content", () => {
     const msgs = [
       {
         role: "assistant",
@@ -933,7 +936,7 @@ describe.skip("ProviderTransform.message - anthropic empty content filtering", (
     expect(result[0].content[0]).toEqual({ type: "text", text: "Answer" })
   })
 
-  test.skip("removes entire message when all parts are empty", () => {
+  test("removes entire message when all parts are empty", () => {
     const msgs = [
       { role: "user", content: "Hello" },
       {
@@ -953,7 +956,7 @@ describe.skip("ProviderTransform.message - anthropic empty content filtering", (
     expect(result[1].content).toBe("World")
   })
 
-  test.skip("keeps non-text/reasoning parts even if text parts are empty", () => {
+  test("keeps non-text/reasoning parts even if text parts are empty", () => {
     const msgs = [
       {
         role: "assistant",
@@ -976,7 +979,7 @@ describe.skip("ProviderTransform.message - anthropic empty content filtering", (
     })
   })
 
-  test.skip("keeps messages with valid text alongside empty parts", () => {
+  test("keeps messages with valid text alongside empty parts", () => {
     const msgs = [
       {
         role: "assistant",
@@ -996,7 +999,7 @@ describe.skip("ProviderTransform.message - anthropic empty content filtering", (
     expect(result[0].content[1]).toEqual({ type: "text", text: "Result" })
   })
 
-  test.skip("does not filter for non-anthropic providers", () => {
+  test("does not filter for non-anthropic providers", () => {
     const openaiModel = {
       ...anthropicModel,
       providerID: "openai",
@@ -1023,7 +1026,7 @@ describe.skip("ProviderTransform.message - anthropic empty content filtering", (
   })
 })
 
-describe.skip("ProviderTransform.message - strip openai metadata when store=false", () => {
+describe("ProviderTransform.message - strip openai metadata when store=false", () => {
   const openaiModel = {
     id: "openai/gpt-5",
     providerID: "openai",
@@ -1049,7 +1052,7 @@ describe.skip("ProviderTransform.message - strip openai metadata when store=fals
     headers: {},
   } as any
 
-  test.skip("preserves itemId and reasoningEncryptedContent when store=false", () => {
+  test("preserves itemId and reasoningEncryptedContent when store=false", () => {
     const msgs = [
       {
         role: "assistant",
@@ -1084,7 +1087,7 @@ describe.skip("ProviderTransform.message - strip openai metadata when store=fals
     expect(result[0].content[1].providerOptions?.openai?.itemId).toBe("msg_456")
   })
 
-  test.skip("preserves itemId and reasoningEncryptedContent when store=false even when not openai", () => {
+  test("preserves itemId and reasoningEncryptedContent when store=false even when not openai", () => {
     const zenModel = {
       ...openaiModel,
       providerID: "zen",
@@ -1123,7 +1126,7 @@ describe.skip("ProviderTransform.message - strip openai metadata when store=fals
     expect(result[0].content[1].providerOptions?.openai?.itemId).toBe("msg_456")
   })
 
-  test.skip("preserves other openai options including itemId", () => {
+  test("preserves other openai options including itemId", () => {
     const msgs = [
       {
         role: "assistant",
@@ -1148,7 +1151,7 @@ describe.skip("ProviderTransform.message - strip openai metadata when store=fals
     expect(result[0].content[0].providerOptions?.openai?.otherOption).toBe("value")
   })
 
-  test.skip("preserves metadata for openai package when store is true", () => {
+  test("preserves metadata for openai package when store is true", () => {
     const msgs = [
       {
         role: "assistant",
@@ -1172,7 +1175,7 @@ describe.skip("ProviderTransform.message - strip openai metadata when store=fals
     expect(result[0].content[0].providerOptions?.openai?.itemId).toBe("msg_123")
   })
 
-  test.skip("preserves metadata for non-openai packages when store is false", () => {
+  test("preserves metadata for non-openai packages when store is false", () => {
     const anthropicModel = {
       ...openaiModel,
       providerID: "anthropic",
@@ -1205,7 +1208,7 @@ describe.skip("ProviderTransform.message - strip openai metadata when store=fals
     expect(result[0].content[0].providerOptions?.openai?.itemId).toBe("msg_123")
   })
 
-  test.skip("preserves metadata using providerID key when store is false", () => {
+  test("preserves metadata using providerID key when store is false", () => {
     const testModel = {
       ...openaiModel,
       providerID: "opencode",
@@ -1239,7 +1242,7 @@ describe.skip("ProviderTransform.message - strip openai metadata when store=fals
     expect(result[0].content[0].providerOptions?.opencode?.otherOption).toBe("value")
   })
 
-  test.skip("preserves itemId across all providerOptions keys", () => {
+  test("preserves itemId across all providerOptions keys", () => {
     const testModel = {
       ...openaiModel,
       providerID: "opencode",
@@ -1281,7 +1284,7 @@ describe.skip("ProviderTransform.message - strip openai metadata when store=fals
     expect(result[0].content[0].providerOptions?.extra?.itemId).toBe("msg_extra_part")
   })
 
-  test.skip("does not strip metadata for non-openai packages when store is not false", () => {
+  test("does not strip metadata for non-openai packages when store is not false", () => {
     const anthropicModel = {
       ...openaiModel,
       providerID: "anthropic",
@@ -1314,7 +1317,7 @@ describe.skip("ProviderTransform.message - strip openai metadata when store=fals
   })
 })
 
-describe.skip("ProviderTransform.message - providerOptions key remapping", () => {
+describe("ProviderTransform.message - providerOptions key remapping", () => {
   const createModel = (providerID: string, npm: string) =>
     ({
       id: `${providerID}/test-model`,
@@ -1341,7 +1344,7 @@ describe.skip("ProviderTransform.message - providerOptions key remapping", () =>
       headers: {},
     }) as any
 
-  test.skip("azure keeps 'azure' key and does not remap to 'openai'", () => {
+  test("azure keeps 'azure' key and does not remap to 'openai'", () => {
     const model = createModel("azure", "@ai-sdk/azure")
     const msgs = [
       {
@@ -1359,7 +1362,7 @@ describe.skip("ProviderTransform.message - providerOptions key remapping", () =>
     expect(result[0].providerOptions?.openai).toBeUndefined()
   })
 
-  test.skip("copilot remaps providerID to 'copilot' key", () => {
+  test("copilot remaps providerID to 'copilot' key", () => {
     const model = createModel("github-copilot", "@ai-sdk/github-copilot")
     const msgs = [
       {
@@ -1377,6 +1380,7 @@ describe.skip("ProviderTransform.message - providerOptions key remapping", () =>
     expect(result[0].providerOptions?.["github-copilot"]).toBeUndefined()
   })
 
+  // SKIPPED: documents bedrock providerOptions key remapping that message() does not perform (sdkKey() has no @ai-sdk/amazon-bedrock entry)
   test.skip("bedrock remaps providerID to 'bedrock' key", () => {
     const model = createModel("my-bedrock", "@ai-sdk/amazon-bedrock")
     const msgs = [
@@ -1396,7 +1400,8 @@ describe.skip("ProviderTransform.message - providerOptions key remapping", () =>
   })
 })
 
-describe.skip("ProviderTransform.message - claude w/bedrock custom inference profile", () => {
+describe("ProviderTransform.message - claude w/bedrock custom inference profile", () => {
+  // SKIPPED: documents bedrock cachePoint handling that applyCaching() does not implement
   test.skip("adds cachePoint", () => {
     const model = {
       id: "amazon-bedrock/custom-claude-sonnet-4.5",
@@ -1431,7 +1436,7 @@ describe.skip("ProviderTransform.message - claude w/bedrock custom inference pro
   })
 })
 
-describe.skip("ProviderTransform.message - cache control on gateway", () => {
+describe("ProviderTransform.message - cache control on gateway", () => {
   const createModel = (overrides: Partial<any> = {}) =>
     ({
       id: "anthropic/claude-sonnet-4",
@@ -1459,6 +1464,7 @@ describe.skip("ProviderTransform.message - cache control on gateway", () => {
       ...overrides,
     }) as any
 
+  // SKIPPED: documents gateway cache-control behavior that message()/applyCaching() do not implement
   test.skip("gateway does not set cache control for anthropic models", () => {
     const model = createModel()
     const msgs = [
@@ -1478,6 +1484,7 @@ describe.skip("ProviderTransform.message - cache control on gateway", () => {
     expect(result[0].providerOptions).toBeUndefined()
   })
 
+  // SKIPPED: documents gateway cache-control behavior that message()/applyCaching() do not implement
   test.skip("non-gateway anthropic keeps existing cache control behavior", () => {
     const model = createModel({
       providerID: "anthropic",
@@ -1530,7 +1537,7 @@ describe.skip("ProviderTransform.message - cache control on gateway", () => {
   })
 })
 
-describe.skip("ProviderTransform.variants", () => {
+describe("ProviderTransform.variants", () => {
   const createMockModel = (overrides: Partial<any> = {}): any => ({
     id: "test/test-model",
     providerID: "test",
@@ -1565,7 +1572,7 @@ describe.skip("ProviderTransform.variants", () => {
     ...overrides,
   })
 
-  test.skip("returns empty object when model has no reasoning capabilities", () => {
+  test("returns empty object when model has no reasoning capabilities", () => {
     const model = createMockModel({
       capabilities: { reasoning: false },
     })
@@ -1573,7 +1580,7 @@ describe.skip("ProviderTransform.variants", () => {
     expect(result).toEqual({})
   })
 
-  test.skip("deepseek returns empty object", () => {
+  test("deepseek returns empty object", () => {
     const model = createMockModel({
       id: "deepseek/deepseek-chat",
       providerID: "deepseek",
@@ -1587,7 +1594,7 @@ describe.skip("ProviderTransform.variants", () => {
     expect(result).toEqual({})
   })
 
-  test.skip("minimax returns empty object", () => {
+  test("minimax returns empty object", () => {
     const model = createMockModel({
       id: "minimax/minimax-model",
       providerID: "minimax",
@@ -1601,7 +1608,7 @@ describe.skip("ProviderTransform.variants", () => {
     expect(result).toEqual({})
   })
 
-  test.skip("glm returns empty object", () => {
+  test("glm returns empty object", () => {
     const model = createMockModel({
       id: "glm/glm-4",
       providerID: "glm",
@@ -1615,7 +1622,7 @@ describe.skip("ProviderTransform.variants", () => {
     expect(result).toEqual({})
   })
 
-  test.skip("mistral returns empty object", () => {
+  test("mistral returns empty object", () => {
     const model = createMockModel({
       id: "mistral/mistral-large",
       providerID: "mistral",
@@ -1629,8 +1636,8 @@ describe.skip("ProviderTransform.variants", () => {
     expect(result).toEqual({})
   })
 
-  describe.skip("@openrouter/ai-sdk-provider", () => {
-    test.skip("returns empty object for non-qualifying models", () => {
+  describe("@openrouter/ai-sdk-provider", () => {
+    test("returns empty object for non-qualifying models", () => {
       const model = createMockModel({
         id: "openrouter/test-model",
         providerID: "openrouter",
@@ -1644,6 +1651,7 @@ describe.skip("ProviderTransform.variants", () => {
       expect(result).toEqual({})
     })
 
+    // SKIPPED: documents variants() support for @openrouter/ai-sdk-provider, which ProviderTransform.variants does not implement (returns {} for this npm package)
     test.skip("gpt models return OPENAI_EFFORTS with reasoning", () => {
       const model = createMockModel({
         id: "openrouter/gpt-4",
@@ -1660,6 +1668,7 @@ describe.skip("ProviderTransform.variants", () => {
       expect(result.high).toEqual({ reasoning: { effort: "high" } })
     })
 
+    // SKIPPED: documents variants() support for @openrouter/ai-sdk-provider, which ProviderTransform.variants does not implement (returns {} for this npm package)
     test.skip("gemini-3 returns OPENAI_EFFORTS with reasoning", () => {
       const model = createMockModel({
         id: "openrouter/gemini-3-5-pro",
@@ -1674,7 +1683,7 @@ describe.skip("ProviderTransform.variants", () => {
       expect(Object.keys(result)).toEqual(["none", "minimal", "low", "medium", "high", "xhigh"])
     })
 
-    test.skip("grok-4 returns empty object", () => {
+    test("grok-4 returns empty object", () => {
       const model = createMockModel({
         id: "openrouter/grok-4",
         providerID: "openrouter",
@@ -1688,6 +1697,7 @@ describe.skip("ProviderTransform.variants", () => {
       expect(result).toEqual({})
     })
 
+    // SKIPPED: documents variants() support for @openrouter/ai-sdk-provider, which ProviderTransform.variants does not implement (returns {} for this npm package)
     test.skip("grok-3-mini returns low and high with reasoning", () => {
       const model = createMockModel({
         id: "openrouter/grok-3-mini",
@@ -1705,7 +1715,8 @@ describe.skip("ProviderTransform.variants", () => {
     })
   })
 
-  describe.skip("@ai-sdk/gateway", () => {
+  describe("@ai-sdk/gateway", () => {
+    // SKIPPED: documents variants() support for @ai-sdk/gateway, which ProviderTransform.variants does not implement (returns {} for this npm package)
     test.skip("anthropic sonnet 4.6 models return adaptive thinking options", () => {
       const model = createMockModel({
         id: "anthropic/claude-sonnet-4-6",
@@ -1726,6 +1737,7 @@ describe.skip("ProviderTransform.variants", () => {
       })
     })
 
+    // SKIPPED: documents variants() support for @ai-sdk/gateway, which ProviderTransform.variants does not implement (returns {} for this npm package)
     test.skip("anthropic sonnet 4.6 dot-format models return adaptive thinking options", () => {
       const model = createMockModel({
         id: "anthropic/claude-sonnet-4-6",
@@ -1746,6 +1758,7 @@ describe.skip("ProviderTransform.variants", () => {
       })
     })
 
+    // SKIPPED: documents variants() support for @ai-sdk/gateway, which ProviderTransform.variants does not implement (returns {} for this npm package)
     test.skip("anthropic opus 4.6 dot-format models return adaptive thinking options", () => {
       const model = createMockModel({
         id: "anthropic/claude-opus-4-6",
@@ -1766,6 +1779,7 @@ describe.skip("ProviderTransform.variants", () => {
       })
     })
 
+    // SKIPPED: documents variants() support for @ai-sdk/gateway, which ProviderTransform.variants does not implement (returns {} for this npm package)
     test.skip("anthropic models return anthropic thinking options", () => {
       const model = createMockModel({
         id: "anthropic/claude-sonnet-4",
@@ -1792,6 +1806,7 @@ describe.skip("ProviderTransform.variants", () => {
       })
     })
 
+    // SKIPPED: documents variants() support for @ai-sdk/gateway, which ProviderTransform.variants does not implement (returns {} for this npm package)
     test.skip("returns OPENAI_EFFORTS with reasoningEffort", () => {
       const model = createMockModel({
         id: "gateway/gateway-model",
@@ -1809,7 +1824,8 @@ describe.skip("ProviderTransform.variants", () => {
     })
   })
 
-  describe.skip("@ai-sdk/github-copilot", () => {
+  describe("@ai-sdk/github-copilot", () => {
+    // SKIPPED: documents variants() support for @ai-sdk/github-copilot, which ProviderTransform.variants does not implement (returns {} for this npm package)
     test.skip("standard models return low, medium, high", () => {
       const model = createMockModel({
         id: "gpt-4.5",
@@ -1829,6 +1845,7 @@ describe.skip("ProviderTransform.variants", () => {
       })
     })
 
+    // SKIPPED: documents variants() support for @ai-sdk/github-copilot, which ProviderTransform.variants does not implement (returns {} for this npm package)
     test.skip("gpt-5.1-codex-max includes xhigh", () => {
       const model = createMockModel({
         id: "gpt-5.1-codex-max",
@@ -1843,6 +1860,7 @@ describe.skip("ProviderTransform.variants", () => {
       expect(Object.keys(result)).toEqual(["low", "medium", "high", "xhigh"])
     })
 
+    // SKIPPED: documents variants() support for @ai-sdk/github-copilot, which ProviderTransform.variants does not implement (returns {} for this npm package)
     test.skip("gpt-5.1-codex-mini does not include xhigh", () => {
       const model = createMockModel({
         id: "gpt-5.1-codex-mini",
@@ -1857,6 +1875,7 @@ describe.skip("ProviderTransform.variants", () => {
       expect(Object.keys(result)).toEqual(["low", "medium", "high"])
     })
 
+    // SKIPPED: documents variants() support for @ai-sdk/github-copilot, which ProviderTransform.variants does not implement (returns {} for this npm package)
     test.skip("gpt-5.1-codex does not include xhigh", () => {
       const model = createMockModel({
         id: "gpt-5.1-codex",
@@ -1871,6 +1890,7 @@ describe.skip("ProviderTransform.variants", () => {
       expect(Object.keys(result)).toEqual(["low", "medium", "high"])
     })
 
+    // SKIPPED: documents variants() support for @ai-sdk/github-copilot, which ProviderTransform.variants does not implement (returns {} for this npm package)
     test.skip("gpt-5.2 includes xhigh", () => {
       const model = createMockModel({
         id: "gpt-5.2",
@@ -1890,6 +1910,7 @@ describe.skip("ProviderTransform.variants", () => {
       })
     })
 
+    // SKIPPED: documents variants() support for @ai-sdk/github-copilot, which ProviderTransform.variants does not implement (returns {} for this npm package)
     test.skip("gpt-5.2-codex includes xhigh", () => {
       const model = createMockModel({
         id: "gpt-5.2-codex",
@@ -1905,7 +1926,8 @@ describe.skip("ProviderTransform.variants", () => {
     })
   })
 
-  describe.skip("@ai-sdk/cerebras", () => {
+  describe("@ai-sdk/cerebras", () => {
+    // SKIPPED: documents variants() support for @ai-sdk/cerebras, which ProviderTransform.variants does not implement (returns {} for this npm package)
     test.skip("returns WIDELY_SUPPORTED_EFFORTS with reasoningEffort", () => {
       const model = createMockModel({
         id: "cerebras/llama-4",
@@ -1923,7 +1945,8 @@ describe.skip("ProviderTransform.variants", () => {
     })
   })
 
-  describe.skip("@ai-sdk/togetherai", () => {
+  describe("@ai-sdk/togetherai", () => {
+    // SKIPPED: documents variants() support for @ai-sdk/togetherai, which ProviderTransform.variants does not implement (returns {} for this npm package)
     test.skip("returns WIDELY_SUPPORTED_EFFORTS with reasoningEffort", () => {
       const model = createMockModel({
         id: "togetherai/llama-4",
@@ -1941,8 +1964,8 @@ describe.skip("ProviderTransform.variants", () => {
     })
   })
 
-  describe.skip("@ai-sdk/xai", () => {
-    test.skip("grok-3 returns empty object", () => {
+  describe("@ai-sdk/xai", () => {
+    test("grok-3 returns empty object", () => {
       const model = createMockModel({
         id: "xai/grok-3",
         providerID: "xai",
@@ -1956,6 +1979,7 @@ describe.skip("ProviderTransform.variants", () => {
       expect(result).toEqual({})
     })
 
+    // SKIPPED: documents variants() support for @ai-sdk/xai, which ProviderTransform.variants does not implement (returns {} for this npm package)
     test.skip("grok-3-mini returns low and high with reasoningEffort", () => {
       const model = createMockModel({
         id: "xai/grok-3-mini",
@@ -1973,7 +1997,8 @@ describe.skip("ProviderTransform.variants", () => {
     })
   })
 
-  describe.skip("@ai-sdk/deepinfra", () => {
+  describe("@ai-sdk/deepinfra", () => {
+    // SKIPPED: documents variants() support for @ai-sdk/deepinfra, which ProviderTransform.variants does not implement (returns {} for this npm package)
     test.skip("returns WIDELY_SUPPORTED_EFFORTS with reasoningEffort", () => {
       const model = createMockModel({
         id: "deepinfra/llama-4",
@@ -1991,8 +2016,8 @@ describe.skip("ProviderTransform.variants", () => {
     })
   })
 
-  describe.skip("@ai-sdk/openai-compatible", () => {
-    test.skip("returns WIDELY_SUPPORTED_EFFORTS with reasoningEffort", () => {
+  describe("@ai-sdk/openai-compatible", () => {
+    test("returns WIDELY_SUPPORTED_EFFORTS with reasoningEffort", () => {
       const model = createMockModel({
         id: "custom-provider/custom-model",
         providerID: "custom-provider",
@@ -2009,8 +2034,8 @@ describe.skip("ProviderTransform.variants", () => {
     })
   })
 
-  describe.skip("@ai-sdk/azure", () => {
-    test.skip("o1-mini returns empty object", () => {
+  describe("@ai-sdk/azure", () => {
+    test("o1-mini returns empty object", () => {
       const model = createMockModel({
         id: "o1-mini",
         providerID: "azure",
@@ -2024,6 +2049,7 @@ describe.skip("ProviderTransform.variants", () => {
       expect(result).toEqual({})
     })
 
+    // SKIPPED: documents variants() support for @ai-sdk/azure, which ProviderTransform.variants does not implement (returns {} for this npm package)
     test.skip("standard azure models return custom efforts with reasoningSummary", () => {
       const model = createMockModel({
         id: "o1",
@@ -2043,6 +2069,7 @@ describe.skip("ProviderTransform.variants", () => {
       })
     })
 
+    // SKIPPED: documents variants() support for @ai-sdk/azure, which ProviderTransform.variants does not implement (returns {} for this npm package)
     test.skip("gpt-5 adds minimal effort", () => {
       const model = createMockModel({
         id: "gpt-5",
@@ -2058,8 +2085,8 @@ describe.skip("ProviderTransform.variants", () => {
     })
   })
 
-  describe.skip("@ai-sdk/openai", () => {
-    test.skip("gpt-5-pro returns empty object", () => {
+  describe("@ai-sdk/openai", () => {
+    test("gpt-5-pro returns empty object", () => {
       const model = createMockModel({
         id: "gpt-5-pro",
         providerID: "openai",
@@ -2073,7 +2100,7 @@ describe.skip("ProviderTransform.variants", () => {
       expect(result).toEqual({})
     })
 
-    test.skip("standard openai models return custom efforts with reasoningSummary", () => {
+    test("standard openai models return custom efforts with reasoningSummary", () => {
       const model = createMockModel({
         id: "gpt-5",
         providerID: "openai",
@@ -2093,7 +2120,7 @@ describe.skip("ProviderTransform.variants", () => {
       })
     })
 
-    test.skip("models after 2025-11-13 include 'none' effort", () => {
+    test("models after 2025-11-13 include 'none' effort", () => {
       const model = createMockModel({
         id: "gpt-5-nano",
         providerID: "openai",
@@ -2108,7 +2135,7 @@ describe.skip("ProviderTransform.variants", () => {
       expect(Object.keys(result)).toEqual(["none", "minimal", "low", "medium", "high"])
     })
 
-    test.skip("models after 2025-12-04 include 'xhigh' effort", () => {
+    test("models after 2025-12-04 include 'xhigh' effort", () => {
       const model = createMockModel({
         id: "openai/gpt-5-chat",
         providerID: "openai",
@@ -2124,8 +2151,8 @@ describe.skip("ProviderTransform.variants", () => {
     })
   })
 
-  describe.skip("@ai-sdk/anthropic", () => {
-    test.skip("sonnet 4.6 returns adaptive thinking options", () => {
+  describe("@ai-sdk/anthropic", () => {
+    test("sonnet 4.6 returns adaptive thinking options", () => {
       const model = createMockModel({
         id: "anthropic/claude-sonnet-4-6",
         providerID: "anthropic",
@@ -2145,6 +2172,7 @@ describe.skip("ProviderTransform.variants", () => {
       })
     })
 
+    // SKIPPED: expects variants() to omit the 'medium' anthropic tier, but the implementation deliberately includes it (budget Math.min(10_240, output/3-1)); shipping behavior wins
     test.skip("returns high and max with thinking config", () => {
       const model = createMockModel({
         id: "anthropic/claude-4",
@@ -2172,7 +2200,8 @@ describe.skip("ProviderTransform.variants", () => {
     })
   })
 
-  describe.skip("@ai-sdk/amazon-bedrock", () => {
+  describe("@ai-sdk/amazon-bedrock", () => {
+    // SKIPPED: documents variants() support for @ai-sdk/amazon-bedrock, which ProviderTransform.variants does not implement (returns {} for this npm package)
     test.skip("anthropic sonnet 4.6 returns adaptive reasoning options", () => {
       const model = createMockModel({
         id: "bedrock/anthropic-claude-sonnet-4-6",
@@ -2193,6 +2222,7 @@ describe.skip("ProviderTransform.variants", () => {
       })
     })
 
+    // SKIPPED: documents variants() support for @ai-sdk/amazon-bedrock, which ProviderTransform.variants does not implement (returns {} for this npm package)
     test.skip("returns WIDELY_SUPPORTED_EFFORTS with reasoningConfig", () => {
       const model = createMockModel({
         id: "bedrock/llama-4",
@@ -2214,7 +2244,8 @@ describe.skip("ProviderTransform.variants", () => {
     })
   })
 
-  describe.skip("@ai-sdk/google", () => {
+  describe("@ai-sdk/google", () => {
+    // SKIPPED: documents gemini-2.5 variant tiers/budgets that do not match the implemented thinkingBudget values (8192/16000/24576); cannot prove the test values are the correct ones
     test.skip("gemini-2.5 returns high and max with thinkingConfig and thinkingBudget", () => {
       const model = createMockModel({
         id: "google/gemini-2.5-pro",
@@ -2241,7 +2272,7 @@ describe.skip("ProviderTransform.variants", () => {
       })
     })
 
-    test.skip("other gemini models return low and high with thinkingLevel", () => {
+    test("other gemini models return low and high with thinkingLevel", () => {
       const model = createMockModel({
         id: "google/gemini-2.0-pro",
         providerID: "google",
@@ -2268,7 +2299,8 @@ describe.skip("ProviderTransform.variants", () => {
     })
   })
 
-  describe.skip("@ai-sdk/google-vertex", () => {
+  describe("@ai-sdk/google-vertex", () => {
+    // SKIPPED: documents variants() support for @ai-sdk/google-vertex, which ProviderTransform.variants does not implement (returns {} for this npm package)
     test.skip("gemini-2.5 returns high and max with thinkingConfig and thinkingBudget", () => {
       const model = createMockModel({
         id: "google-vertex/gemini-2.5-pro",
@@ -2283,6 +2315,7 @@ describe.skip("ProviderTransform.variants", () => {
       expect(Object.keys(result)).toEqual(["high", "max"])
     })
 
+    // SKIPPED: documents variants() support for @ai-sdk/google-vertex, which ProviderTransform.variants does not implement (returns {} for this npm package)
     test.skip("other vertex models return low and high with thinkingLevel", () => {
       const model = createMockModel({
         id: "google-vertex/gemini-2.0-pro",
@@ -2298,8 +2331,8 @@ describe.skip("ProviderTransform.variants", () => {
     })
   })
 
-  describe.skip("@ai-sdk/cohere", () => {
-    test.skip("returns empty object", () => {
+  describe("@ai-sdk/cohere", () => {
+    test("returns empty object", () => {
       const model = createMockModel({
         id: "cohere/command-r",
         providerID: "cohere",
@@ -2314,7 +2347,8 @@ describe.skip("ProviderTransform.variants", () => {
     })
   })
 
-  describe.skip("@ai-sdk/groq", () => {
+  describe("@ai-sdk/groq", () => {
+    // SKIPPED: documents variants() support for @ai-sdk/groq, which ProviderTransform.variants does not implement (returns {} for this npm package)
     test.skip("returns none and WIDELY_SUPPORTED_EFFORTS with thinkingLevel", () => {
       const model = createMockModel({
         id: "groq/llama-4",
@@ -2336,8 +2370,8 @@ describe.skip("ProviderTransform.variants", () => {
     })
   })
 
-  describe.skip("@ai-sdk/perplexity", () => {
-    test.skip("returns empty object", () => {
+  describe("@ai-sdk/perplexity", () => {
+    test("returns empty object", () => {
       const model = createMockModel({
         id: "perplexity/sonar-plus",
         providerID: "perplexity",
