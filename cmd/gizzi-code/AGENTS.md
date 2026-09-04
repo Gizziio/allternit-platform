@@ -2,7 +2,7 @@
 
 ## Agent creation checklist
 
-When spinning up a new agent or agent type in the Allternit platform, follow the canonical checklist at [`../AGENT_CREATION_CHECKLIST.md`](../AGENT_CREATION_CHECKLIST.md). It covers schema, registry contract, harness config, workspace artifacts, mode surface wiring, routines/loops/goals, and verification.
+When spinning up a new agent or agent type in the Allternit platform, follow the canonical checklist at [`../../AGENT_CREATION_CHECKLIST.md`](../../AGENT_CREATION_CHECKLIST.md). It covers schema, registry contract, harness config, workspace artifacts, mode surface wiring, routines/loops/goals, and verification.
 
 ## Database
 
@@ -216,22 +216,25 @@ Voice chat currently echoes transcriptions. Wire to AI runtime via `getResponse`
 
 ## VM Runtime
 
-vfkit-based VM management (replaces deleted Swift VM Manager).
+Lima-based VM management (replaced the deleted Swift VM Manager; the vfkit
+manager is gone — `src/runtime/vm/vfkit-manager.ts` no longer exists).
 
 | Path | Purpose |
 |------|---------|
-| `src/runtime/vm/vfkit-manager.ts` | `VFKitManager` — start/stop/status/exec via vfkit process |
-| `src/runtime/vm/guest-agent-client.ts` | `GuestAgentClient` — VSOCK length-prefixed JSON protocol |
+| `src/runtime/vm/lima-executor.ts` | `executeInVM`, `getVMStatus`, `VM_NAME` ("allternit") — run commands in the Lima VM via `limactl exec` |
+| `src/runtime/vm/lima-setup.ts` | `isLimaInstalled`, `installLima` (brew), `vmExists`, `startVM`, `stopVM`, `LIMA_YAML_PATH` |
+| `src/runtime/vm/allternit.yaml` | Lima instance definition |
 | `src/runtime/vm/index.ts` | Public exports |
 | `src/cli/commands/vm.ts` | CLI: `start`, `stop`, `restart`, `status`, `setup`, `exec` |
 
 ### Setup
 ```bash
-brew install vfkit
+brew install lima
 bun run vm:download   # CI-built images
 ```
 
-Architecture: Host vfkit process → Apple VZ VM → VSOCK Unix socket → Guest agent (`allternit-vm-executor`).
+Architecture: host `limactl` → Lima VM (`allternit` instance, defined in
+`allternit.yaml`) → `limactl exec` for guest command execution.
 
 ---
 
