@@ -52,6 +52,7 @@ async-trait = { workspace = true }
 tokio-stream = { workspace = true, features = ["sync"] }
 futures = { workspace = true }
 rand = { workspace = true }
+# Legacy api_tokens rows hold MD5 digests; needed for the sha256 upgrade path.
 md5 = "0.7"
 base64 = { workspace = true }
 bytes = { workspace = true }

@@ -16,6 +16,8 @@ const log = Log.create({ service: "platform-daemon" })
 export const PLATFORM_PORTS = {
   PUBLIC_API: 3000,
   KERNEL: 3004,
+  // Local gateway service port — must match the loopback fallback in
+  // src/shared/constants/allternitGateway.ts (ALLTERNIT_GATEWAY_BASE).
   GATEWAY_SERVICE: 8013,
 } as const
 

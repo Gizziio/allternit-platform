@@ -467,6 +467,10 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
 /// run against the already-migrated production database converges instead of
 /// failing. Set `ALLTERNIT_SKIP_MIGRATIONS=1` to opt out (escape hatch for
 /// deploys where migrations are applied manually).
+///
+/// Note: `db::migrations` (the earlier opt-in ordered runner) is superseded
+/// by this path — its `MIGRATIONS` list excludes 001 and predates the
+/// idempotent rewrite of the whole directory.
 pub async fn init_db(database_url: &str) -> Result<sqlx::PgPool, ApiError> {
     use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
     use std::str::FromStr;

@@ -32,8 +32,8 @@ fn jwt_header_kid(token: &str) -> Result<String, ApiError> {
         .ok_or_else(|| ApiError::Unauthorized("Clerk token has no key id".to_string()))
 }
 
-const DEFAULT_CLERK_ISSUER: &str = "https://allternit.com/__clerk";
-const DEFAULT_CLERK_JWKS_URL: &str = "https://allternit.com/__clerk/.well-known/jwks.json";
+const DEFAULT_CLERK_ISSUER: &str = "https://clerk.allternit.com";
+const DEFAULT_CLERK_JWKS_URL: &str = "https://clerk.allternit.com/.well-known/jwks.json";
 const JWKS_TTL: Duration = Duration::from_secs(60 * 60);
 
 #[derive(Clone, Debug)]

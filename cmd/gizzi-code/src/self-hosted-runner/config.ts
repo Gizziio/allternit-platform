@@ -8,9 +8,10 @@
 import { readFileSync } from 'node:fs'
 import { hostname as osHostname } from 'node:os'
 import type { RunnerConfig } from './types.js'
+import { ALLTERNIT_GATEWAY_BASE } from '@/shared/constants/allternitGateway'
 
 const DEFAULTS: RunnerConfig = {
-  apiUrl: 'http://127.0.0.1:8013',
+  apiUrl: ALLTERNIT_GATEWAY_BASE,
   runnerToken: '',
   runnerName: '',
   maxConcurrentJobs: 2,

@@ -185,9 +185,11 @@ async function heartbeatRailsPeer(name: string): Promise<void> {
         headers: {
           'Content-Type': 'application/json',
           'x-allternit-user-id': config.userId,
+          // Only send credentials when a real token exists — never fall
+          // back to a hardcoded dev token.
           ...(config.token
             ? { Authorization: `Bearer ${config.token}` }
-            : { 'x-allternit-desktop-access-token': 'gizzi-local-token' }),
+            : {}),
         },
       },
     )

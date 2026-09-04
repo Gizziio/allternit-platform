@@ -257,8 +257,9 @@ pub async fn auth_middleware(
 
 /// Validate an `allternit_*` API token against `api_tokens` (sha256 hash
 /// lookup with legacy-md5 fallback and transparent upgrade, revocation/
-/// expiration checks, `last_used_at` touch). Also answers the
-/// `dev-api-token` development fallback. Crate-public for
+/// expiration checks, `last_used_at` touch), then against the modern scoped
+/// `alt_…` keys. Also answers the two opt-in development overrides (see
+/// `is_dev_api_token` and `is_legacy_dev_api_token`). Crate-public for
 /// `auth::resolve::resolve_user_id`, which offers the same token path to
 /// management routes.
 pub(crate) async fn validate_token_against_db(
@@ -296,8 +297,9 @@ pub(crate) async fn validate_token_against_db(
         }));
     }
 
-    // Fallback: check for dev token (gated — rejected unless explicitly enabled)
-    if is_dev_api_token(token) {
+    // Development overrides (both opt-in — rejected by default, hard-refused
+    // in production environments; see the two gate functions below).
+    if is_dev_api_token(token) || is_legacy_dev_api_token(token) {
         return Ok(Some(AuthenticatedUser::development_user()));
     }
 
@@ -363,18 +365,110 @@ pub(crate) async fn lookup_api_token(
     Ok(Some(row))
 }
 
-/// Gate for the `dev-api-token` development fallback. The fallback grants a
-/// wildcard-permissions user, so it is **rejected by default** and only works
-/// when `ALLTERNIT_ALLOW_DEV_API_TOKEN` is explicitly set to `true`/`1`
-/// (local development only — never set this in a deployed environment).
-pub(crate) fn dev_api_token_allowed() -> bool {
+/// Environment-bearer development override for legacy `dev-…` Bearer callers
+/// (the shipped iOS app hardcodes such a token). There is **no hardcoded
+/// token anywhere in this crate**: this path authenticates only a
+/// caller-supplied token that equals the `ALLTERNIT_DEV_BEARER` environment
+/// variable, and only when ALL of the following hold:
+///
+/// 1. `ALLTERNIT_DEV_MODE` is explicitly `true`/`1` (defaults off),
+/// 2. `ALLTERNIT_DEV_BEARER` is set to a non-empty value (the local dev
+///    operator chooses it — e.g. export the legacy token while migrating
+///    the iOS app), and
+/// 3. neither `RUST_ENV` nor `ENVIRONMENT` is `production` — the override is
+///    hard-refused in production, regardless of the other two settings.
+///
+/// A process that grants an authentication through this path logs at WARN
+/// (once, plus the startup log in `dev_api_token_allowed`).
+pub(crate) fn is_dev_api_token(token: &str) -> bool {
+    if !dev_api_token_allowed() {
+        return false;
+    }
+    match env::var("ALLTERNIT_DEV_BEARER") {
+        Ok(expected) if !expected.is_empty() && token == expected => {
+            static LOGGED: std::sync::OnceLock<()> = std::sync::OnceLock::new();
+            LOGGED.get_or_init(|| {
+                tracing::warn!(
+                    "ALLTERNIT_DEV_BEARER override is ACTIVE: requests bearing the \
+                     configured development bearer authenticate as the wildcard \
+                     dev user. Local development only — this path is refused \
+                     when RUST_ENV/ENVIRONMENT=production."
+                );
+            });
+            true
+        }
+        _ => false,
+    }
+}
+
+/// Gate for the development bearer override (see `is_dev_api_token`):
+/// defaults off, and hard-refused when `RUST_ENV`/`ENVIRONMENT` is
+/// `production` even if the enabling variables are set.
+fn dev_api_token_allowed() -> bool {
+    let production = ["RUST_ENV", "ENVIRONMENT"].iter().any(|key| {
+        env::var(key)
+            .map(|value| value == "production")
+            .unwrap_or(false)
+    });
+    if production {
+        if env::var("ALLTERNIT_DEV_MODE")
+            .map(|value| value == "true" || value == "1")
+            .unwrap_or(false)
+        {
+            tracing::error!(
+                "ALLTERNIT_DEV_MODE is set but RUST_ENV/ENVIRONMENT=production — \
+                 the development bearer override stays DISABLED."
+            );
+        }
+        return false;
+    }
+
+    let enabled = env::var("ALLTERNIT_DEV_MODE")
+        .map(|value| value == "true" || value == "1")
+        .unwrap_or(false);
+    if enabled && env::var("ALLTERNIT_DEV_BEARER").is_ok() {
+        tracing::warn!(
+            "Development bearer override enabled (ALLTERNIT_DEV_MODE=true). \
+             Never set ALLTERNIT_DEV_MODE/ALLTERNIT_DEV_BEARER in a deployed \
+             environment."
+        );
+        true
+    } else {
+        false
+    }
+}
+
+/// Legacy literal `dev-api-token` development fallback, kept for parity with
+/// deployments that predate the environment-bearer override. Same contract:
+/// rejected by default, only works when `ALLTERNIT_ALLOW_DEV_API_TOKEN` is
+/// explicitly `true`/`1`, and hard-refused when `RUST_ENV`/`ENVIRONMENT` is
+/// `production` (local development only — never set this in a deployed
+/// environment).
+pub(crate) fn is_legacy_dev_api_token(token: &str) -> bool {
+    token == "dev-api-token" && legacy_dev_api_token_allowed()
+}
+
+pub(crate) fn legacy_dev_api_token_allowed() -> bool {
+    let production = ["RUST_ENV", "ENVIRONMENT"].iter().any(|key| {
+        env::var(key)
+            .map(|value| value == "production")
+            .unwrap_or(false)
+    });
+    if production {
+        if env::var("ALLTERNIT_ALLOW_DEV_API_TOKEN")
+            .map(|value| value == "true" || value == "1")
+            .unwrap_or(false)
+        {
+            tracing::error!(
+                "ALLTERNIT_ALLOW_DEV_API_TOKEN is set but RUST_ENV/ENVIRONMENT=production — \
+                 the legacy dev-token override stays DISABLED."
+            );
+        }
+        return false;
+    }
     env::var("ALLTERNIT_ALLOW_DEV_API_TOKEN")
         .map(|v| v == "true" || v == "1")
         .unwrap_or(false)
-}
-
-pub(crate) fn is_dev_api_token(token: &str) -> bool {
-    token == "dev-api-token" && dev_api_token_allowed()
 }
 
 fn unauthorized_response(message: &str) -> Response {
@@ -399,6 +493,11 @@ fn unauthorized_response_with_www_authenticate(message: &str) -> Response {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
+
+    /// The exact token the legacy iOS app ships. It must never authenticate
+    /// under default configuration.
+    const LEGACY_DEV_TOKEN: &str = "dev-api-token";
 
     async fn test_pool() -> sqlx::PgPool {
         let url = "postgres://allternit:allternit_pg_2026@localhost:5432/allternit_test";
@@ -523,5 +622,89 @@ mod tests {
                 .unwrap()
                 .is_none()
         );
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn legacy_dev_token_shape_is_rejected_by_default() {
+        std::env::remove_var("ALLTERNIT_DEV_MODE");
+        std::env::remove_var("ALLTERNIT_DEV_BEARER");
+        std::env::remove_var("ALLTERNIT_ALLOW_DEV_API_TOKEN");
+        std::env::remove_var("RUST_ENV");
+        std::env::remove_var("ENVIRONMENT");
+        let pool = test_pool().await;
+        let user = validate_token_against_db(&pool, LEGACY_DEV_TOKEN)
+            .await
+            .unwrap();
+        assert!(user.is_none(), "legacy dev-token shape must be rejected");
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn dev_override_requires_dev_mode_and_env_bearer() {
+        let pool = test_pool().await;
+
+        // ALLTERNIT_DEV_BEARER alone (no DEV_MODE) does not enable anything.
+        std::env::remove_var("ALLTERNIT_DEV_MODE");
+        std::env::set_var("ALLTERNIT_DEV_BEARER", LEGACY_DEV_TOKEN);
+        std::env::remove_var("ALLTERNIT_ALLOW_DEV_API_TOKEN");
+        assert!(
+            validate_token_against_db(&pool, LEGACY_DEV_TOKEN)
+                .await
+                .unwrap()
+                .is_none()
+        );
+
+        // DEV_MODE + matching env bearer authenticates as the dev user.
+        std::env::set_var("ALLTERNIT_DEV_MODE", "1");
+        let user = validate_token_against_db(&pool, LEGACY_DEV_TOKEN)
+            .await
+            .unwrap()
+            .expect("override authenticates when explicitly enabled");
+        assert_eq!(user.user_id, "dev-user");
+        assert!(
+            user.permissions.iter().any(|p| p == "*"),
+            "dev user keeps wildcard permissions"
+        );
+
+        // A different bearer than the configured one is still rejected.
+        assert!(
+            validate_token_against_db(&pool, "some-other-token")
+                .await
+                .unwrap()
+                .is_none()
+        );
+
+        std::env::remove_var("ALLTERNIT_DEV_MODE");
+        std::env::remove_var("ALLTERNIT_DEV_BEARER");
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn dev_override_is_refused_in_production() {
+        let pool = test_pool().await;
+        std::env::set_var("ALLTERNIT_DEV_MODE", "1");
+        std::env::set_var("ALLTERNIT_DEV_BEARER", LEGACY_DEV_TOKEN);
+        std::env::set_var("ENVIRONMENT", "production");
+
+        assert!(
+            validate_token_against_db(&pool, LEGACY_DEV_TOKEN)
+                .await
+                .unwrap()
+                .is_none(),
+            "override must stay disabled when ENVIRONMENT=production"
+        );
+        assert!(
+            !dev_api_token_allowed(),
+            "gate reports disabled in production"
+        );
+        assert!(
+            !legacy_dev_api_token_allowed(),
+            "legacy gate reports disabled in production"
+        );
+
+        std::env::remove_var("ALLTERNIT_DEV_MODE");
+        std::env::remove_var("ALLTERNIT_DEV_BEARER");
+        std::env::remove_var("ENVIRONMENT");
     }
 }

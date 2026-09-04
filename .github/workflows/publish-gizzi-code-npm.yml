@@ -11,18 +11,67 @@ on:
         required: true
         type: string
 
+permissions:
+  contents: read
+
 jobs:
-  publish:
+  quality:
+    # Same quality gate as release-gizzi-code.yml: typecheck + CI smoke suite
+    # must pass on the tagged commit before anything is published.
+    name: Quality gates
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Install dependencies
+        # Full workspace install: gizzi-code imports packages it doesn't
+        # declare (they resolve via the root node_modules, same as local
+        # builds). A filtered install misses them and typecheck fails.
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.28.0 --activate
+          pnpm install --frozen-lockfile
+
+      - name: Build workspace package dependencies
+        # Nested workspace packages ship gitignored dist/ output; build them
+        # before typechecking. gizzi-sdk is used by imports but never declared
+        # in package.json, so it needs an explicit build invocation.
+        run: |
+          pnpm --filter "@allternit/gizzi-code^..." run build
+          pnpm --filter "@allternit/gizzi-sdk" run build
+
+      - name: Typecheck
+        working-directory: cmd/gizzi-code
+        run: NODE_OPTIONS=--max-old-space-size=8192 bun run typecheck
+
+      - name: CI smoke test
+        working-directory: cmd/gizzi-code
+        shell: bash
+        run: |
+          if [ ! -f script/ci-smoke-test.sh ]; then
+            echo "::error::cmd/gizzi-code/script/ci-smoke-test.sh is missing."
+            echo "::error::Refusing to publish without the CI smoke suite. Restore the script or fix this workflow reference."
+            exit 1
+          fi
+          bash script/ci-smoke-test.sh
+
+  publish:
+    needs: quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.2.21
-      
+
       - name: Extract version
         id: version
         run: |
@@ -32,33 +81,83 @@ jobs:
             VERSION=${GITHUB_REF_NAME#gizzi-code/v}
             echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
           fi
-      
+
       - name: Install dependencies
         working-directory: cmd/gizzi-code
         run: bun install
-      
+
       - name: Run test suite
         # Blocking gate: do not publish a version whose tests fail.
         working-directory: cmd/gizzi-code
         run: bun run test
-      
+
       - name: Build
         working-directory: cmd/gizzi-code
         run: bun run build
-      
+
       - name: Setup Node for NPM
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
-      
+
       - name: Update version in package.json
         working-directory: cmd/gizzi-code
         run: |
           npm version ${{ steps.version.outputs.VERSION }} --no-git-tag-version
-      
+
       - name: Publish to NPM
         working-directory: cmd/gizzi-code
         run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Verify published package
+        # The currently published @allternit/gizzi-code package is broken: the
+        # tarball contains no dist/ and its bin entries dangle. This gate
+        # downloads the tarball we JUST published from the registry and fails
+        # the release if dist/ is missing, so a broken publish can never ship
+        # silently again.
+        shell: bash
+        run: |
+          set -euo pipefail
+          PKG="@allternit/gizzi-code"
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          TARBALL=""
+          # The registry can lag behind the publish; retry briefly.
+          for attempt in 1 2 3 4 5; do
+            TARBALL=$(npm view "$PKG@$VERSION" dist.tarball 2>/dev/null || true)
+            [ -n "$TARBALL" ] && break
+            echo "Tarball for $PKG@$VERSION not visible yet (attempt $attempt); sleeping 10s"
+            sleep 10
+          done
+          if [ -z "$TARBALL" ]; then
+            echo "::error::Could not resolve dist.tarball for $PKG@$VERSION from the registry."
+            exit 1
+          fi
+          echo "Verifying $TARBALL"
+          TMP=$(mktemp -d)
+          curl -fsSL "$TARBALL" -o "$TMP/package.tgz"
+          # List once: piping tar into `grep -q` can SIGPIPE-kill tar, and with
+          # pipefail that would false-negative the gate.
+          FILES=$(tar -tzf "$TMP/package.tgz")
+          if ! grep -q '/dist/' <<< "$FILES"; then
+            echo "::error::Published $PKG@$VERSION tarball contains no dist/ — the package is broken (dangling bin symlinks). Yank it and fix the publish."
+            exit 1
+          fi
+          # bin entries must resolve to real files inside the tarball — a bin
+          # pointing at a missing path installs a dangling shim.
+          BIN_PATHS=$(tar -xzf "$TMP/package.tgz" -O package/package.json \
+            | python3 -c 'import json,sys; b=json.load(sys.stdin).get("bin",{}); print("\n".join(b.values() if isinstance(b,dict) else [b]))')
+          if [ -z "$BIN_PATHS" ]; then
+            echo "::error::Published $PKG@$VERSION has no bin entries in package.json — nothing to execute after install."
+            exit 1
+          fi
+          while IFS= read -r p; do
+            p="${p#./}"
+            if ! grep -qF "package/$p" <<< "$FILES"; then
+              echo "::error::Published $PKG@$VERSION bin entry '$p' is missing from the tarball — bin symlinks would dangle. Yank it and fix the publish."
+              exit 1
+            fi
+          done <<< "$BIN_PATHS"
+          echo "Verified: published $PKG@$VERSION contains dist/ and all bin entries resolve."

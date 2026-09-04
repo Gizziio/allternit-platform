@@ -84,11 +84,20 @@ export namespace Config {
       if (value.type === "wellknown") {
         process.env[value.key] = value.token
         log.debug("fetching remote config", { url: `${key}/.well-known/gizzi` })
-        const response = await fetch(`${key}/.well-known/gizzi`)
-        if (!response.ok) {
-          throw new Error(`failed to fetch remote config from ${key}: ${response.status}`)
+        let wellknown: any
+        try {
+          const response = await fetch(`${key}/.well-known/gizzi`, {
+            signal: AbortSignal.timeout(5000),
+          })
+          if (!response.ok) {
+            log.warn("failed to fetch remote config, skipping", { url: `${key}/.well-known/gizzi`, status: response.status })
+            continue
+          }
+          wellknown = await response.json()
+        } catch (err) {
+          log.warn("failed to fetch remote config, skipping", { url: `${key}/.well-known/gizzi`, error: err })
+          continue
         }
-        const wellknown = (await response.json()) as any
         const remoteConfig = wellknown.config ?? {}
         // Add $schema to prevent load() from trying to write back to a non-existent file
         if (!remoteConfig.$schema) remoteConfig.$schema = "https://gizzi.io/config.json"
@@ -172,12 +181,17 @@ export namespace Config {
         }
       }
 
-      deps.push(
-        iife(async () => {
-          const shouldInstall = await needsInstall(dir)
-          if (shouldInstall) await installDependencies(dir)
-        }),
-      )
+      // Auto-installing plugin dependencies from Config.get() can run `bun install`
+      // on the startup path (and even write package.json into config dirs). That is
+      // an explicit opt-in only; by default the check is skipped entirely.
+      if (process.env.GIZZI_AUTO_INSTALL_DEPS === "1") {
+        deps.push(
+          iife(async () => {
+            const shouldInstall = await needsInstall(dir)
+            if (shouldInstall) await installDependencies(dir)
+          }),
+        )
+      }
 
       result.command = mergeDeep(result.command ?? {}, await loadCommand(dir))
       result.agent = mergeDeep(result.agent, await loadAgent(dir))
@@ -1157,7 +1171,7 @@ export namespace Config {
       mesh_control_url: z
         .string()
         .optional()
-        .describe("Headscale coordination server URL (default https://allternit-headscale.fly.dev)"),
+        .describe("Headscale coordination server URL (default https://headscale.allternit.com)"),
     })
     .strict()
     

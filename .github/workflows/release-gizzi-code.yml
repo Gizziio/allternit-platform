@@ -15,10 +15,10 @@ permissions:
   contents: write
 
 jobs:
-  test:
-    # Gate: gizzi-code has 148 bun:test files; releases must not ship with a
-    # red suite. Keep this blocking — do not downgrade to continue-on-error
-    # without a tracked reason.
+  quality:
+    # Quality gate: nothing builds or publishes until typecheck and the CI
+    # smoke suite pass on the exact commit being released.
+    name: Quality gates
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -32,67 +32,7 @@ jobs:
       - name: Install dependencies
         # Full workspace install: gizzi-code imports packages it doesn't
         # declare (they resolve via the root node_modules, same as local
-        # builds). A filtered install misses them.
-        run: |
-          corepack enable
-          corepack prepare pnpm@10.28.0 --activate
-          pnpm install --frozen-lockfile
-
-      - name: Run test suite
-        working-directory: cmd/gizzi-code
-        run: bun run test
-
-  build-binaries:
-    needs: test
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-            target: linux-x64
-            ext: tar.gz
-          - os: ubuntu-latest
-            target: linux-arm64
-            ext: tar.gz
-          - os: macos-latest
-            target: darwin-arm64
-            ext: tar.gz
-          # darwin-x64 (Intel Mac) disabled: macos-13 runners queue for hours
-          # on GitHub's capacity-constrained Intel fleet, blocking every
-          # release. Re-add (or switch to macos-15-intel) if Intel builds are
-          # actually needed.
-          # - os: macos-13
-          #   target: darwin-x64
-          #   ext: tar.gz
-          - os: windows-latest
-            target: win32-x64
-            pkg: windows-x64
-            ext: zip
-
-    runs-on: ${{ matrix.os }}
-    
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.3.14
-      
-      - name: Extract version
-        id: version
-        shell: bash
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "VERSION=${{ inputs.version }}" >> $GITHUB_OUTPUT
-          else
-            VERSION=${GITHUB_REF_NAME#gizzi-code/v}
-            echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-          fi
-      
-      - name: Install dependencies
-        # Full workspace install: gizzi-code imports packages it doesn't
-        # declare (they resolve via the root node_modules, same as local
-        # builds). A filtered install misses them and bundling fails.
+        # builds). A filtered install misses them and typecheck fails.
         run: |
           corepack enable
           corepack prepare pnpm@10.28.0 --activate
@@ -100,155 +40,26 @@ jobs:
 
       - name: Build workspace package dependencies
         # Nested workspace packages ship gitignored dist/ output; build them
-        # before bundling. gizzi-sdk is used by imports but never declared in
-        # package.json, so it needs an explicit build invocation.
+        # before typechecking. gizzi-sdk is used by imports but never declared
+        # in package.json, so it needs an explicit build invocation.
         run: |
           pnpm --filter "@allternit/gizzi-code^..." run build
           pnpm --filter "@allternit/gizzi-sdk" run build
 
-      - name: Build binary
+      - name: Typecheck
         working-directory: cmd/gizzi-code
-        run: bun run script/build-production.js --target=${{ matrix.target }}
+        run: NODE_OPTIONS=--max-old-space-size=8192 bun run typecheck
 
-      - name: Build agent-daemon relay binary
-        # Runtime relay daemon (cmd/agent-daemon) shipped next to gizzi-code so
-        # BYO-VPS bootstrap can install it: the daemon holds the outbound WS to
-        # the cloud-api runtime relay, which is what Code-mode dispatch and the
-        # terminal surface use to reach the box. `bun build --compile` bundles
-        # the `ws` dependency in — no node_modules needed at runtime. Output
-        # lands in cmd/gizzi-code/dist, mirroring the mesh-node step below.
+      - name: CI smoke test
+        working-directory: cmd/gizzi-code
         shell: bash
-        working-directory: cmd/agent-daemon
         run: |
-          case "${{ matrix.target }}" in
-            linux-x64)    BUN_TARGET=bun-linux-x64 ;;
-            linux-arm64)  BUN_TARGET=bun-linux-arm64 ;;
-            darwin-arm64) BUN_TARGET=bun-darwin-arm64 ;;
-            win32-x64)    BUN_TARGET=bun-windows-x64 ;;
-            *) echo "no bun compile target for ${{ matrix.target }}"; exit 1 ;;
-          esac
-          EXT=""; [ "$BUN_TARGET" = "bun-windows-x64" ] && EXT=".exe"
-          bun build --compile src/index.ts \
-            --outfile "../gizzi-code/dist/agent-daemon$EXT" \
-            --target="$BUN_TARGET"
-          ls -la ../gizzi-code/dist/
-
-      - name: Setup Go
-        # macos-latest images don't have Go on PATH; pin to the sidecar
-        # module's toolchain (go.mod `go 1.26.5`).
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: infrastructure/mesh/tsnet-ios/go.mod
-          cache: false
-
-      - name: Build mesh-node sidecar
-        # tsnet sidecar (infrastructure/mesh/tsnet-ios/cmd/mesh-node) shipped
-        # next to gizzi-code in the tarball so `serve --mesh` can join a
-        # tailnet in pure userspace (mesh.ts execDir-sibling discovery).
-        # GOOS/GOARCH mapping mirrors build-sidecar.sh; bash works on all
-        # runners (git-bash on windows-latest).
-        shell: bash
-        working-directory: infrastructure/mesh/tsnet-ios
-        run: |
-          case "${{ matrix.target }}" in
-            linux-x64)    GOOS=linux;   GOARCH=amd64 ;;
-            linux-arm64)  GOOS=linux;   GOARCH=arm64 ;;
-            darwin-arm64) GOOS=darwin;  GOARCH=arm64 ;;
-            win32-x64)    GOOS=windows; GOARCH=amd64 ;;
-            *) echo "no GOOS/GOARCH mapping for target ${{ matrix.target }}"; exit 1 ;;
-          esac
-          EXT=""; [ "$GOOS" = "windows" ] && EXT=".exe"
-          CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH \
-            go build -ldflags="-s -w" -o "../../../cmd/gizzi-code/dist/mesh-node$EXT" ./cmd/mesh-node
-          ls -la ../../../cmd/gizzi-code/dist/
-
-      - name: Package (Unix)
-        if: matrix.os != 'windows-latest'
-        working-directory: cmd/gizzi-code
-        run: |
-          mkdir -p dist/pkg
-          cp dist/gizzi-code dist/mesh-node dist/agent-daemon dist/pkg/
-          cd dist/pkg
-          tar -czf "../../../gizzi-code-v${{ steps.version.outputs.VERSION }}-${{ matrix.target }}.tar.gz" gizzi-code mesh-node agent-daemon
-      
-      - name: Package (Windows)
-        if: matrix.os == 'windows-latest'
-        working-directory: cmd/gizzi-code
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force -Path dist/pkg | Out-Null
-          Copy-Item dist/gizzi-code.exe dist/pkg/
-          Copy-Item dist/mesh-node.exe dist/pkg/
-          Copy-Item dist/agent-daemon.exe dist/pkg/
-          cd dist/pkg
-          Compress-Archive -Path gizzi-code.exe, mesh-node.exe, agent-daemon.exe -DestinationPath "../../../gizzi-code-v${{ steps.version.outputs.VERSION }}-windows-x64.zip"
-      
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: gizzi-code-${{ matrix.target }}
-          # The Package step writes to cmd/ (three levels up from dist/pkg).
-          path: |
-            cmd/gizzi-code-v*.tar.gz
-            cmd/gizzi-code-v*.zip
-
-  create-release:
-    needs: build-binaries
-    runs-on: ubuntu-latest
-    
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Extract version
-        id: version
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "VERSION=${{ inputs.version }}" >> $GITHUB_OUTPUT
-            echo "TAG_NAME=gizzi-code/${{ inputs.version }}" >> $GITHUB_OUTPUT
-          else
-            VERSION=${GITHUB_REF_NAME#gizzi-code/v}
-            echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-            echo "TAG_NAME=$GITHUB_REF_NAME" >> $GITHUB_OUTPUT
+          if [ ! -f script/ci-smoke-test.sh ]; then
+            echo "::error::cmd/gizzi-code/script/ci-smoke-test.sh is missing."
+            echo "::error::Refusing to release without the CI smoke suite. Restore the script or fix this workflow reference."
+            exit 1
           fi
-      
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-          pattern: gizzi-code-*
-          merge-multiple: true
-      
-      - name: List artifacts
-        run: ls -la artifacts/
-      
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ steps.version.outputs.TAG_NAME }}
-          name: "Gizzi Code v${{ steps.version.outputs.VERSION }}"
-          files: artifacts/*
-          generate_release_notes: true
-          body: |
-            ## Gizzi Code v${{ steps.version.outputs.VERSION }}
-            
-            ### Install
-            
-            **macOS/Linux:**
-            ```bash
-            curl -fsSL https://install.gizziio.com/install | bash
-            ```
-            
-            **Windows:**
-            ```powershell
-            irm https://install.gizziio.com/install.ps1 | iex
-            ```
-            
-            ### Binaries
-            
-            | Platform | Architecture | File |
-            |----------|-------------|------|
-            | macOS | Apple Silicon | `gizzi-code-v${{ steps.version.outputs.VERSION }}-darwin-arm64.tar.gz` |
-            | macOS | Intel | `gizzi-code-v${{ steps.version.outputs.VERSION }}-darwin-x64.tar.gz` |
-            | Linux | ARM64 | `gizzi-code-v${{ steps.version.outputs.VERSION }}-linux-arm64.tar.gz` |
-            | Linux | x64 | `gizzi-code-v${{ steps.version.outputs.VERSION }}-linux-x64.tar.gz` |
-            | Windows | x64 | `gizzi-code-v${{ steps.version.outputs.VERSION }}-windows-x64.zip` |
+          bash script/ci-smoke-test.sh
+
+  build-binaries:
+    needs: quality

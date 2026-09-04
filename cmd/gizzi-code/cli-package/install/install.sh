@@ -42,7 +42,7 @@ print_mascot() {
 # =============================================================================
 # CONFIGURATION
 # =============================================================================
-REPO="Gizziio/gizzi-code"
+REPO="Gizziio/allternit-platform"
 INSTALL_DIR="${INSTALL_DIR:-$HOME/.local/bin}"
 VERSION="${VERSION:-latest}"
 GITHUB_API="https://api.github.com/repos/${REPO}"
@@ -203,7 +203,7 @@ install_via_npm() {
         return 1
     fi
     
-    npm install -g @gizzi/gizzi-code >/dev/null 2>&1 &
+    npm install -g @allternit/gizzi-code >/dev/null 2>&1 &
     local pid=$!
     spinner $pid "Installing via npm..."
     
@@ -221,43 +221,25 @@ install_binary() {
     local platform="$1"
     local arch="$2"
     local version="$3"
-    
+
     print_step "Installing binary for ${BEIGE}${platform}-${arch}${RESET}..."
-    
-    local bin_name="gizzi-code-${version}-${platform}-${arch}"
-    if [ "$platform" = "windows" ]; then
-        bin_name="${bin_name}.exe"
+
+    # Delegate to the canonical installer (SOURCE OF TRUTH:
+    # cmd/gizzi-code/install in Gizziio/allternit-platform, served from
+    # https://install.gizziio.com/install). It resolves the version-named
+    # release assets (gizzi-code-v<version>-<target>.tar.gz|zip), verifies
+    # checksums.txt when present, and installs the `gizzi` alias.
+    local env_args=("INSTALL_DIR=$INSTALL_DIR")
+    if [ "$version" != "latest" ]; then
+        env_args+=("GIZZI_VERSION=$version")
     fi
-    
-    local download_url
-    if [ "$version" = "latest" ]; then
-        download_url="https://github.com/${REPO}/releases/latest/download/${bin_name}"
-    else
-        download_url="https://github.com/${REPO}/releases/download/${version}/${bin_name}"
-    fi
-    
-    print_info "Downloading from: ${DIM}${download_url}${RESET}"
-    
-    mkdir -p "$INSTALL_DIR"
-    
-    local temp_file
-    temp_file="$(mktemp)"
-    
-    if ! download_file "$download_url" "$temp_file"; then
-        print_error "Failed to download binary"
-        rm -f "$temp_file"
+
+    if ! curl -fsSL https://install.gizziio.com/install | env "${env_args[@]}" bash; then
+        print_error "Binary installation failed"
         return 1
     fi
-    
-    local target_path="${INSTALL_DIR}/gizzi-code"
-    if [ "$platform" = "windows" ]; then
-        target_path="${target_path}.exe"
-    fi
-    
-    mv "$temp_file" "$target_path"
-    chmod +x "$target_path"
-    
-    print_success "Binary installed to ${BEIGE}${target_path}${RESET}"
+
+    print_success "Binary installed to ${BEIGE}${INSTALL_DIR}${RESET}"
 }
 
 # =============================================================================
@@ -335,8 +317,8 @@ print_post_install() {
     printf "\n"
     
     printf "${BOLD}Documentation:${RESET}\n"
-    printf "  ${CYAN}https://docs.allternit.com${RESET}\n"
-    printf "  ${CYAN}https://github.com/Gizziio/gizzi-code${RESET}\n"
+    printf "  ${CYAN}https://docs.gizziio.com${RESET}\n"
+    printf "  ${CYAN}https://github.com/Gizziio/allternit-platform${RESET}\n"
     printf "\n"
     
     printf "${DIM}Need help? Run: gizzi-code --help${RESET}\n"

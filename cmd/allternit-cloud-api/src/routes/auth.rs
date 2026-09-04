@@ -52,8 +52,12 @@ pub async fn validate_token(
             }
         }
         None => {
-            // Check for dev token (gated — rejected unless explicitly enabled)
-            if crate::auth::middleware::is_dev_api_token(&request.token) {
+            // Check for dev token (opt-in overrides — rejected by default,
+            // hard-refused in production; see auth::middleware::is_dev_api_token
+            // and is_legacy_dev_api_token)
+            if crate::auth::middleware::is_dev_api_token(&request.token)
+                || crate::auth::middleware::is_legacy_dev_api_token(&request.token)
+            {
                 TokenInfo {
                     valid: true,
                     token_id: Some("dev-token".to_string()),
@@ -176,7 +180,7 @@ pub async fn create_token(
 
     // Generate token
     let token = format!("allternit_{}", generate_secure_random(48));
-    let token_hash = crate::auth::middleware::hash_api_token(&token);
+    let token_hash = crate::services::api_keys::hash_token(&token);
     let token_id = format!("token_{}", generate_secure_random(16));
 
     // Calculate expiration
