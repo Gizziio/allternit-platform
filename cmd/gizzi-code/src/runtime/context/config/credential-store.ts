@@ -301,7 +301,7 @@ export function notImplementedKeyringBackend(): KeyringBackend {
   }
 }
 
-function defaultCredentialDir(): string {
+export function defaultCredentialDir(): string {
   const home = process.env.GIZZI_TEST_HOME || require("os").homedir()
   return path.join(home, ".gizzi")
 }

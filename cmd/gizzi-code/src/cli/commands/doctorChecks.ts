@@ -1,0 +1,174 @@
+import fs from "fs"
+import path from "path"
+import { readAuthProfiles } from "@/runtime/context/config/auth-profiles"
+import { ALLTERNIT_GATEWAY_BASE } from "@/shared/constants/allternitGateway"
+import { apiFetch } from "@/runtime/services/api/allternitApi"
+import { isEssentialTrafficOnly } from "@/shared/utils/privacyLevel"
+import { ROOT_INSTRUCTION_FILENAMES } from "@/shared/utils/agentFileResolver"
+
+export type CheckStatus = "pass" | "warn" | "fail"
+export type CheckTone = CheckStatus | "info"
+
+export type DoctorCheck = {
+  id: string
+  section: string
+  status: CheckTone
+  message: string
+}
+
+/**
+ * Project-instructions check. GIZZI.md is the canonical project-instructions
+ * file (see ROOT_INSTRUCTION_FILENAMES in agentFileResolver); the legacy
+ * CLAUDE.md/AGENTS.md/CONTEXT.md names are accepted but reported so projects
+ * can migrate.
+ */
+export async function checkProjectInstructions(
+  cwd: string,
+  exists: (p: string) => boolean = fs.existsSync,
+): Promise<DoctorCheck> {
+  const canonical = path.join(cwd, "GIZZI.md")
+  if (exists(canonical)) {
+    return { id: "project-instructions", section: "Project", status: "pass", message: `GIZZI.md found: ${canonical}` }
+  }
+  const legacy = ROOT_INSTRUCTION_FILENAMES.slice(1).find((name) => exists(path.join(cwd, name)))
+  if (legacy) {
+    return {
+      id: "project-instructions",
+      section: "Project",
+      status: "warn",
+      message: `GIZZI.md not found; using legacy ${legacy}. Consider renaming it to GIZZI.md.`,
+    }
+  }
+  return {
+    id: "project-instructions",
+    section: "Project",
+    status: "warn",
+    message: "GIZZI.md not found in current directory — project instructions will not be loaded",
+  }
+}
+
+export type GatewayCheckDeps = {
+  baseUrl?: string
+  /** Injected for tests; defaults to essential-traffic detection. */
+  offline?: boolean
+  timeoutMs?: number
+}
+
+/**
+ * Cloud reachability: GET the gateway base URL with a short timeout. Any
+ * HTTP response (even an error status) proves reachability. When the user
+ * runs in essential-traffic (offline) mode the check is skipped with a
+ * explanatory pass.
+ */
+export async function checkGatewayReachability(deps: GatewayCheckDeps = {}): Promise<DoctorCheck> {
+  const baseUrl = (deps.baseUrl ?? ALLTERNIT_GATEWAY_BASE).replace(/\/+$/, "")
+  if (deps.offline ?? isEssentialTrafficOnly()) {
+    return {
+      id: "cloud-gateway",
+      section: "Cloud",
+      status: "pass",
+      message: "offline mode (essential-traffic only) — cloud reachability not checked",
+    }
+  }
+  const timeoutMs = deps.timeoutMs ?? 5_000
+  try {
+    const res = await apiFetch({ baseUrl, userId: "gizzi-doctor" }, "/", {
+      method: "GET",
+      signal: AbortSignal.timeout(timeoutMs),
+    })
+    return {
+      id: "cloud-gateway",
+      section: "Cloud",
+      status: "pass",
+      message: `gateway reachable: ${baseUrl} (HTTP ${res.status})`,
+    }
+  } catch (e) {
+    return {
+      id: "cloud-gateway",
+      section: "Cloud",
+      status: "fail",
+      message: `gateway unreachable: ${baseUrl} (${e instanceof Error ? e.message : String(e)})`,
+    }
+  }
+}
+
+export type CronCheckDeps = {
+  isRunning: () => Promise<boolean>
+  /** Supervision probe from cron supervision (slice 4); null = not wired. */
+  supervised?: () => Promise<{ launchdPlist: string | null; systemdUnit: string | null; supported: boolean } | null>
+}
+
+export async function checkCronDaemon(deps: CronCheckDeps): Promise<DoctorCheck[]> {
+  const checks: DoctorCheck[] = []
+  const running = await deps.isRunning()
+  checks.push(
+    running
+      ? { id: "cron-daemon", section: "Cron", status: "pass", message: "cron daemon is running" }
+      : { id: "cron-daemon", section: "Cron", status: "warn", message: "cron daemon is not running — scheduled jobs will not fire (`gizzi cron start`)" },
+  )
+  const sup = deps.supervised ? await deps.supervised() : null
+  if (sup === null) {
+    checks.push({ id: "cron-autostart", section: "Cron", status: "info", message: "autostart: not configured (`gizzi cron enable` to supervise the daemon)" })
+  } else if (sup.launchdPlist || sup.systemdUnit) {
+    checks.push({ id: "cron-autostart", section: "Cron", status: "pass", message: `autostart installed: ${sup.launchdPlist ?? sup.systemdUnit}` })
+  } else if (!sup.supported) {
+    checks.push({ id: "cron-autostart", section: "Cron", status: "info", message: "autostart not supported on this platform" })
+  } else {
+    checks.push({ id: "cron-autostart", section: "Cron", status: "info", message: "autostart: not installed (`gizzi cron enable`)" })
+  }
+  return checks
+}
+
+export type CredentialCheckDeps = {
+  /** Fallback credential file (~/.gizzi/credentials.json). */
+  credentialsPath: string
+  configTomlPath: string
+}
+
+const modeString = (mode: number): string => `0${(mode & 0o777).toString(8)}`
+
+/**
+ * Credential hygiene: the fallback credentials.json must be 0o600, and
+ * config.toml must not carry inline api_key values (they belong in the
+ * credential store — see auth-profiles.ts migrateInlineApiKeys).
+ */
+export async function checkCredentialSecurity(deps: CredentialCheckDeps): Promise<DoctorCheck[]> {
+  const checks: DoctorCheck[] = []
+
+  try {
+    const stat = fs.statSync(deps.credentialsPath)
+    if ((stat.mode & 0o777) === 0o600) {
+      checks.push({ id: "credentials-permissions", section: "Credentials", status: "pass", message: `credentials.json permissions are 0600: ${deps.credentialsPath}` })
+    } else {
+      checks.push({
+        id: "credentials-permissions",
+        section: "Credentials",
+        status: "fail",
+        message: `credentials.json has mode ${modeString(stat.mode)}, expected 0600 — run: chmod 600 ${deps.credentialsPath}`,
+      })
+    }
+  } catch {
+    checks.push({ id: "credentials-permissions", section: "Credentials", status: "pass", message: "no fallback credentials file (keys live in the OS keyring or are not configured)" })
+  }
+
+  try {
+    const auth = await readAuthProfiles(deps.configTomlPath)
+    const inline = Object.entries(auth.profiles)
+      .filter(([, profile]) => typeof profile.api_key === "string" && profile.api_key.length > 0)
+      .map(([name]) => name)
+    if (inline.length > 0) {
+      checks.push({
+        id: "config-inline-api-key",
+        section: "Credentials",
+        status: "fail",
+        message: `config.toml contains inline api_key for profile(s): ${inline.join(", ")} — run \`gizzi auth login\` to move the key into the credential store`,
+      })
+    } else {
+      checks.push({ id: "config-inline-api-key", section: "Credentials", status: "pass", message: "config.toml has no inline api keys" })
+    }
+  } catch (e) {
+    checks.push({ id: "config-inline-api-key", section: "Credentials", status: "warn", message: `could not inspect config.toml: ${e instanceof Error ? e.message : String(e)}` })
+  }
+
+  return checks
+}

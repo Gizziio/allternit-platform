@@ -277,6 +277,8 @@ export interface DaemonConfig {
   logLevel: "debug" | "info" | "warn" | "error";
   maxConcurrentJobs: number;
   jobTimeoutSeconds: number;
+  /** Pidfile path for supervision/staleness detection. Absent = no pidfile. */
+  pidfile?: string;
 }
 
 export interface DaemonStatus {

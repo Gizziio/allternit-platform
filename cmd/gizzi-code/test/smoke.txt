@@ -96,3 +96,7 @@ test/plugin/plugin-directories.test.ts
 test/server/clerk-auth-middleware.test.ts
 test/dead-code-guard.test.ts
 test/commands/completions.test.ts
+test/commands/onboarding.test.ts
+test/commands/doctor.test.ts
+test/commands/uninstall-plan.test.ts
+test/automation/cron-supervision.test.ts

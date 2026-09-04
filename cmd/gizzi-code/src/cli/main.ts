@@ -14,6 +14,13 @@ import { Filesystem } from "@/shared/util/filesystem"
 import { EOL } from "os"
 import { COMMANDS } from "@/cli/commands/registry"
 import { CompletionsCommand } from "@/cli/commands/completions"
+// RemoteCommand is part of the COMMANDS registry (src/cli/commands/registry.ts).
+import {
+  OnboardingCommand,
+  defaultOnboardingDeps,
+  runOnboardingWizard,
+  shouldOfferFirstRunOnboarding,
+} from "@/cli/commands/onboarding"
 import { CIMode } from "@/cli/ci"
 import path from "path"
 import { Global, init as initGlobal } from "@/runtime/context/global"
@@ -97,9 +104,6 @@ const cli = yargs(hideBin(process.argv))
   })
   .middleware(async (opts) => {
     await initGlobal()
-    if (opts.onboarding) {
-      process.env.GIZZI_TUI_FORCE_STARTUP_FLOW = "1"
-    }
     await Log.init({
       print: process.argv.includes("--print-logs"),
       dev: Installation.isLocal(),
@@ -139,6 +143,32 @@ const cli = yargs(hideBin(process.argv))
       CIMode.activate({
         format: opts.ciFormat as "ndjson" | "text" | "markdown" | undefined,
       })
+    }
+
+    // Onboarding wizard:
+    // - `--onboarding` forces it (runs to completion, then exits).
+    // - Otherwise it auto-triggers once on the first interactive launch when
+    //   no config.toml exists and no auth is configured. The wizard sets a
+    //   marker in the state dir so it never nags again; CI/non-interactive
+    //   launches skip it (the wizard itself prints a graceful skip note).
+    try {
+      const onboardingDeps = await defaultOnboardingDeps()
+      onboardingDeps.isCI = onboardingDeps.isCI || CIMode.isActive() || opts.ci === true
+      const noSubcommand =
+        hideBin(process.argv).filter((t) => !t.startsWith("-")).length === 0
+      const explicit = opts.onboarding === true
+      if (explicit || (noSubcommand && (await shouldOfferFirstRunOnboarding(onboardingDeps)))) {
+        await runOnboardingWizard(onboardingDeps)
+        if (explicit) {
+          // Never fall through to command dispatch/help after a forced run.
+          // Drain stdout/stderr briefly, then exit.
+          setTimeout(() => process.exit(process.exitCode ?? 0), 100)
+          await new Promise(() => {})
+        }
+      }
+    } catch (e) {
+      // Onboarding is best-effort; never block startup.
+      Log.Default.warn("onboarding failed", { error: e instanceof Error ? e.message : String(e) })
     }
 
     process.env.AGENT = "1"
@@ -194,6 +224,7 @@ const cli = yargs(hideBin(process.argv))
   // removed as a redundant second system).
   .command(COMMANDS)
   .command(CompletionsCommand)
+  .command(OnboardingCommand)
   .fail((msg, err) => {
     if (
       msg?.startsWith("Unknown argument") ||
@@ -248,6 +279,10 @@ function isLongLivedCommand(argv: { _: (string | number)[]; print?: boolean }): 
       // `cowork attach <run-id>` attaches to a live run; everything else
       // (list/start/stop/logs/show/schedule/approval/checkpoint) exits.
       return sub === "attach"
+    case "cron":
+      // `cron start` runs the daemon in the foreground and blocks (also the
+      // launchd/systemd supervised entrypoint); everything else exits.
+      return sub === "start"
     case "remote":
       // `remote connect` opens an interactive remote session and
       // `remote logs` streams; list/status/test/setup/config exit.
