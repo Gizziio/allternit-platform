@@ -1,30 +1,26 @@
 # Steering checkpoint — P0 gap-analysis execution (2026-09-03, session b6d6153b)
 
 ## Goal
-Work the P0 list from `reports/2026-09-03-production-readiness-gap-analysis.md` in order (Steps 0–9), one change at a time, verify-before/after each. Worktree: `allternit-session-b6d6153b`, branch `session/b6d6153b`.
+Work the P0 list from `reports/2026-09-03-production-readiness-gap-analysis.md` in order (Steps 0–9). Worktree: `allternit-session-b6d6153b`, branch `session/b6d6153b`.
 
-## Just did (Step 0 — baseline, all evidence fresh)
-- Worktree created at 88baa91ab. NOTE: `npx tsc` in a fresh env silently runs the npm tsc stub (typescript not installed) — the audit's verify command must use `./node_modules/.bin/tsc`. Copied desktop node_modules dereferenced + symlinked root node_modules to reproduce CI-typecheck env in the worktree.
-- B1 CONFIRMED LIVE: `curl -H "Authorization: Bearer dev-api-token" https://api.allternit.com/api/v1/auth/me` → 200 `{"is_development":false,"permissions":["*"],"token_id":"dev-token","user_id":"dev-user"}`.
-- B3 NUANCE: `/api/jobs` now returns **401** UNAUTHORIZED (cloud-api intercepts, no jobs route in source) — report said 404. Routing story STILL undecided (no route exists). Reconcile, don't fight.
-- C1 CONFIRMED: `/benchmarks/index.html` → 200 text/html 4202B SPA fallback.
-- B7 CONFIRMED: deploy-cloud-api-contabo 5 consecutive failures; deploy-cloudflare-pages last 2 fail; ci-desktop last 2 fail — ci-desktop dies at `pnpm install --frozen-lockfile` step (lockfile mismatch) before typecheck.
-- B4 CONFIRMED: tsc main tsconfig = 9 errors, preload = 2 (dup keys index.ts:399-400) — matches A1's 11.
-- B5 CONFIRMED: `gh repo view allternit/desktop` → 404.
-
-## Just did (Step 1 — COMPLETE, B4 merge repair)
-- unified-main.ts: removed duplicate `hudWindow`/`remoteControlWindow` state decls; restored `effectiveMode` declaration (from parent 2 of ea89a5fdb: `backendConfig?.mode ?? (isDev ? 'development' : 'bundled')`); deleted the duplicate block-A `createHudWindow`/`showHudWindow`/`hideHudWindow`/`toggleHudWindow` (kept block-B NSPanel version + openHudWindow/pushHudState); `toggleHudWindow` now HIDEs (tray/minimize contract) instead of close; deduped the 4 double-registered `shell:*-hud` IPC handlers — `move-hud` now accepts BOTH renderer shapes ({dx,dy} from HudApp and {x,y,width,height} from composer-drag); `close-hud` = hide + pushHudState; single `show-hud` registration added.
-- preload/index.ts: removed duplicate `closeHud`/`toggleHud` object keys (TS1117 ×2).
-- Verify AFTER: main tsc 0 errors (was 9), preload tsc 0 (was 2), no duplicate ipcMain.handle channels, no dangling refs, vitest 94/94, `npm run build` green.
+## Just did (Steps 1–5 COMPLETE; Step 7 nearly)
+- Step 1 B4 (02aebcecd): desktop merge repair — unified-main.ts dedup, tsc 0/0, vitest 94/94, build green.
+- Step 2 B7 lockfile (0b23db1c7): bogus `@allternit/allternit-office-suite` dep removed, pnpm-lock regenerated, frozen-lockfile green.
+- Step 3 B7 path dep: vendored allternit-cloud-contracts in-repo (platform/protocols/), Cargo metadata 0 escaping, cloud-api lib 168+1-docker-fail.
+- Step 4 secrets (e11b25550): Clerk/ProtonMail secrets scrubbed → env-required, private.pem deleted, .gitleaks.toml + secrets.yml workflow, gitleaks clean.
+- Step 5 B1 (057b29f21): dev-api-token fallback gated behind ALLTERNIT_ALLOW_DEV_API_TOKEN (default reject) in middleware + ws + auth routes; iOS literals moved to env. Test covers default-reject + enabled-accept. DEPLOY is the user's action.
+- Step 7: verified allternit-headscale.fly.dev/health = 200 LIVE (audit was wrong; headscale defaults stay) — only dead cloud-api fly host repointed to https://api.allternit.com across ai.allternit.com (9 files), platform (2), gizzi-code flag.ts, agent-daemon, cloud-wizard (code+test), scripts, mobile AppConfig.swift, docs. ai + platform builds green.
+- Wizard test triage: 5 failures on my branch → 2 were pre-existing test bugs asserting `.JSONB` paths while codegen + ALL consumers use `.json` (fixed, 50 pass now); 3 sqlite_store tests are pre-existing half-migrated (sqlite-flavored SQL/`":memory:"` against PgPool — Postgres has no :memory:) — NOT my scope, flagged as new finding for its own ticket.
 
 ## Next
-- Step 2: fix pnpm-lock.yaml overrides mismatch (`pnpm install --lockfile-only` at root; confirm `pnpm install --frozen-lockfile` passes).
+- Commit Step 7 (URL repoint + JSONB test fix), then Step 8 (_redirects static-asset pass-throughs), Step 9 (closeout: re-run baseline verifies, push branch, agent-ledger attestation, cleanup, deliver rotation list + Step 6 ask).
 
 ## Open questions
-- Step 6 (routing story) is a user decision — must ask once Steps 1–5,7–8 done (per stop conditions).
+- Step 6 (routing story) is a user decision — must ask once Steps 1–5,7–8 done.
 - Secrets rotations (B1/B2/backdoor deploy) are user-executed; I prepare changes only.
 
 ---
+
 
 # Steering checkpoint — platform follow-up pass
 

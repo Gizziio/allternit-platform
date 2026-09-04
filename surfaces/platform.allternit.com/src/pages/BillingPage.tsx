@@ -85,7 +85,7 @@ const INFERENCE_PROVIDERS: { id: string; label: string }[] = [
 
 function billingApiBaseUrl() {
   return String(
-    import.meta.env.VITE_ALLTERNIT_CLOUD_API_URL || "https://allternit-cloud-api.fly.dev",
+    import.meta.env.VITE_ALLTERNIT_CLOUD_API_URL || "https://api.allternit.com",
   ).replace(/\/$/, "");
 }
 

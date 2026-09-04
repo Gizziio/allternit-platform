@@ -20,7 +20,7 @@ export function FetchInterceptorProvider({ children }: { children: React.ReactNo
     const refresh = async () => {
       const token = await getToken();
       if (!token || controller.signal.aborted) return;
-      const base = env('NEXT_PUBLIC_ALLTERNIT_CLOUD_API_URL', 'https://allternit-cloud-api.fly.dev')!.replace(/\/$/, '');
+      const base = env('NEXT_PUBLIC_ALLTERNIT_CLOUD_API_URL', 'https://api.allternit.com')!.replace(/\/$/, '');
       const response = await fetch(`${base}/api/v1/runtime-devices`, {
         headers: { Authorization: `Bearer ${token}` },
         signal: controller.signal,

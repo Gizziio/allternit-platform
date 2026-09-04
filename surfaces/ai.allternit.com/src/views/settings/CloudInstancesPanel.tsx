@@ -153,7 +153,7 @@ const PROVIDER_DEFAULTS: Record<'hetzner' | 'digitalocean', { region: string; in
 /* -------------------------------------------------------------------------- */
 
 function cloudApiUrl(path: string): string {
-  const base = env('NEXT_PUBLIC_ALLTERNIT_CLOUD_API_URL', 'https://allternit-cloud-api.fly.dev')!;
+  const base = env('NEXT_PUBLIC_ALLTERNIT_CLOUD_API_URL', 'https://api.allternit.com')!;
   return `${base.replace(/\/$/, '')}${path}`;
 }
 

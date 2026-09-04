@@ -56,7 +56,7 @@ fi
 
 step "Building platform.allternit.com for Cloudflare Pages…"
 export VITE_ALLTERNIT_GATEWAY_URL="${VITE_ALLTERNIT_GATEWAY_URL:-https://api.allternit.com}"
-export VITE_ALLTERNIT_CLOUD_API_URL="${VITE_ALLTERNIT_CLOUD_API_URL:-https://allternit-cloud-api.fly.dev}"
+export VITE_ALLTERNIT_CLOUD_API_URL="${VITE_ALLTERNIT_CLOUD_API_URL:-https://api.allternit.com}"
 
 NODE_OPTIONS="--max-old-space-size=6144" \
   CLOUDFLARE_PAGES=1 \
