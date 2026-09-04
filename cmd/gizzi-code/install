@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SOURCE OF TRUTH: cmd/gizzi-code/install in the Gizziio/allternit-platform
+# repo — edit there and copy. The copy served from
+# https://install.gizziio.com/install must stay byte-identical to this file.
 set -euo pipefail
 APP=gizzi-code
 
@@ -26,7 +29,7 @@ Examples:
 EOF
 }
 
-requested_version=${VERSION:-}
+requested_version=${GIZZI_VERSION:-${VERSION:-}}
 no_modify_path=false
 binary_path=""
 
@@ -65,7 +68,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-INSTALL_DIR=$HOME/.gizzi/bin
+INSTALL_DIR=${INSTALL_DIR:-$HOME/.gizzi/bin}
 mkdir -p "$INSTALL_DIR"
 
 # If --binary is provided, skip all download/detection logic
@@ -110,7 +113,7 @@ else
     esac
 
     archive_ext=".zip"
-    if [ "$os" = "linux" ]; then
+    if [ "$os" = "linux" ] || [ "$os" = "darwin" ]; then
       archive_ext=".tar.gz"
     fi
 
@@ -168,40 +171,80 @@ else
     filename="$APP-$target$archive_ext"
 
 
-    if [ "$os" = "linux" ]; then
+    if [ "$os" = "linux" ] || [ "$os" = "darwin" ]; then
         if ! command -v tar >/dev/null 2>&1; then
              echo -e "${RED}Error: 'tar' is required but not installed.${NC}"
              exit 1
         fi
-    else
+    fi
+    if [ "$os" = "windows" ]; then
         if ! command -v unzip >/dev/null 2>&1; then
             echo -e "${RED}Error: 'unzip' is required but not installed.${NC}"
             exit 1
         fi
     fi
 
-    if [ -z "$requested_version" ]; then
-        url="https://github.com/Gizziio/allternit-platform/releases/latest/download/$filename"
-        specific_version=$(curl -s https://api.github.com/repos/Gizziio/allternit-platform/releases/latest | sed -n 's/.*"tag_name": *"v\([^"]*\)".*/\1/p')
+    url_ok() {
+        [ "$(curl -sI -o /dev/null -w "%{http_code}" -L "$1")" = "200" ]
+    }
 
-        if [[ $? -ne 0 || -z "$specific_version" ]]; then
+    release_exists() {
+        local v="$1"
+        url_ok "$base/tag/gizzi-code/${v}" || url_ok "$base/tag/gizzi-code/v${v}"
+    }
+
+    base="https://github.com/Gizziio/allternit-platform/releases"
+    if [ -z "$requested_version" ]; then
+        tag=$(curl -s https://api.github.com/repos/Gizziio/allternit-platform/releases/latest | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p')
+
+        if [[ -z "$tag" ]]; then
             echo -e "${RED}Failed to fetch version information${NC}"
             exit 1
         fi
+        # Real tags look like "gizzi-code/0.2.3" (older ones may be "v0.2.3") —
+        # accept both, and reduce to the bare version.
+        specific_version="${tag##*/}"
+        specific_version="${specific_version#v}"
     else
-        # Strip leading 'v' if present
+        # Accept "0.2.3", "v0.2.3", or "gizzi-code/0.2.3"
+        requested_version="${requested_version#gizzi-code/}"
         requested_version="${requested_version#v}"
-        url="https://github.com/Gizziio/allternit-platform/releases/download/gizzi-code/v${requested_version}/$filename"
         specific_version=$requested_version
 
-        # Verify the release exists before downloading
-        http_status=$(curl -sI -o /dev/null -w "%{http_code}" "https://github.com/Gizziio/allternit-platform/releases/tag/gizzi-code/v${requested_version}")
-        if [ "$http_status" = "404" ]; then
-            echo -e "${RED}Error: Release v${requested_version} not found${NC}"
+        # Verify the release exists before downloading. Release tags may be
+        # "gizzi-code/<version>" or "gizzi-code/v<version>".
+        if ! release_exists "$specific_version"; then
+            echo -e "${RED}Error: Release ${specific_version} not found${NC}"
             echo -e "${MUTED}Available releases: https://github.com/Gizziio/allternit-platform/releases${NC}"
             exit 1
         fi
     fi
+
+    # Assets are version-named: gizzi-code-v<version>-<target>.<ext>.
+    # The release workflow also publishes legacy names (gizzi-code-<target>.<ext>)
+    # for one transition release, so keep a fallback to those.
+    if [ -z "$requested_version" ]; then
+        asset="gizzi-code-v${specific_version}-$target$archive_ext"
+        url="$base/download/gizzi-code/${specific_version}/$asset"
+        if ! url_ok "$url"; then
+            asset="$APP-$target$archive_ext"
+            url="$base/download/gizzi-code/${specific_version}/$asset"
+        fi
+        if ! url_ok "$url"; then
+            # Legacy latest/download alias (only exists if the release
+            # workflow published legacy-named assets on the latest release).
+            asset="$APP-$target$archive_ext"
+            url="$base/latest/download/$asset"
+        fi
+    else
+        asset="gizzi-code-v${specific_version}-$target$archive_ext"
+        url="$base/download/gizzi-code/${specific_version}/$asset"
+        if ! url_ok "$url"; then
+            asset="$APP-$target$archive_ext"
+            url="$base/download/gizzi-code/${specific_version}/$asset"
+        fi
+    fi
+    filename="$asset"
 fi
 
 print_message() {
@@ -324,9 +367,48 @@ download_with_progress() {
     return $ret
 }
 
+verify_checksum() {
+    local file="$1"
+    local checksums_url=""
+    for tag in "gizzi-code/${specific_version}" "gizzi-code/v${specific_version}"; do
+        local candidate="https://github.com/Gizziio/allternit-platform/releases/download/${tag}/checksums.txt"
+        if url_ok "$candidate"; then
+            checksums_url="$candidate"
+            break
+        fi
+    done
+
+    if [ -z "$checksums_url" ]; then
+        echo -e "${ORANGE}Warning: checksums.txt not found for ${specific_version}; skipping sha256 verification${NC}" >&2
+        return 0
+    fi
+
+    local expected
+    expected=$(curl -fsSL "$checksums_url" | grep -E " ${asset}$|^${asset} " | awk '{print $1}' | head -n1 | tr -d '\r')
+    if [ -z "$expected" ]; then
+        echo -e "${ORANGE}Warning: ${asset} not listed in checksums.txt; skipping sha256 verification${NC}" >&2
+        return 0
+    fi
+
+    local actual
+    if command -v shasum >/dev/null 2>&1; then
+        actual=$(shasum -a 256 "$file" | awk '{print $1}')
+    else
+        actual=$(sha256sum "$file" | awk '{print $1}')
+    fi
+
+    if [ "$actual" != "$expected" ]; then
+        echo -e "${RED}Error: sha256 mismatch for ${asset}${NC}" >&2
+        echo -e "${RED}Expected: ${expected}${NC}" >&2
+        echo -e "${RED}Actual:   ${actual}${NC}" >&2
+        exit 1
+    fi
+    print_message info "${MUTED}Verified sha256: ${NC}$actual"
+}
+
 download_and_install() {
-    print_message info "\n${MUTED}Installing ${NC}allternit ${MUTED}version: ${NC}$specific_version"
-    local tmp_dir="${TMPDIR:-/tmp}/allternit_install_$$"
+    print_message info "\n${MUTED}Installing ${NC}gizzi-code ${MUTED}version: ${NC}$specific_version"
+    local tmp_dir="${TMPDIR:-/tmp}/gizzi_install_$$"
     mkdir -p "$tmp_dir"
 
     if [[ "$os" == "windows" ]] || ! [ -t 2 ] || ! download_with_progress "$url" "$tmp_dir/$filename"; then
@@ -334,21 +416,27 @@ download_and_install() {
         curl -# -L -o "$tmp_dir/$filename" "$url"
     fi
 
-    if [ "$os" = "linux" ]; then
+    verify_checksum "$tmp_dir/$filename"
+
+    if [ "$os" = "linux" ] || [ "$os" = "darwin" ]; then
         tar -xzf "$tmp_dir/$filename" -C "$tmp_dir"
     else
         unzip -q "$tmp_dir/$filename" -d "$tmp_dir"
     fi
 
-    mv "$tmp_dir/allternit" "$INSTALL_DIR"
-    chmod 755 "${INSTALL_DIR}/allternit"
+    # The archive contains a binary named "gizzi-code"; install it as
+    # "gizzi-code" with a "gizzi" alias/symlink.
+    mv "$tmp_dir/gizzi-code" "$INSTALL_DIR/gizzi-code"
+    chmod 755 "${INSTALL_DIR}/gizzi-code"
+    ln -sf "gizzi-code" "${INSTALL_DIR}/gizzi"
     rm -rf "$tmp_dir"
 }
 
 install_from_binary() {
-    print_message info "\n${MUTED}Installing ${NC}allternit ${MUTED}from: ${NC}$binary_path"
-    cp "$binary_path" "${INSTALL_DIR}/allternit"
-    chmod 755 "${INSTALL_DIR}/allternit"
+    print_message info "\n${MUTED}Installing ${NC}gizzi-code ${MUTED}from: ${NC}$binary_path"
+    cp "$binary_path" "${INSTALL_DIR}/gizzi-code"
+    chmod 755 "${INSTALL_DIR}/gizzi-code"
+    ln -sf "gizzi-code" "${INSTALL_DIR}/gizzi"
 }
 
 if [ -n "$binary_path" ]; then

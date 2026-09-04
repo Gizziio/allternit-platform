@@ -1,6 +1,6 @@
 {
   "name": "@allternit/gizzi-code-cli",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "Gizzi Code - AI-powered terminal interface and runtime for the Allternit ecosystem",
   "keywords": [
     "gizzi",
@@ -13,10 +13,11 @@
     "shell",
     "allternit"
   ],
-  "homepage": "https://gizzi.sh",
+  "homepage": "https://docs.gizziio.com",
   "repository": {
     "type": "git",
-    "url": "https://github.com/allternit/gizzi-code.git"
+    "url": "https://github.com/Gizziio/allternit-platform.git",
+    "directory": "cmd/gizzi-code/cli-package"
   },
   "license": "MIT",
   "author": "Allternit Technologies <team@allternit.io>",

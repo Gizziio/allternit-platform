@@ -157,5 +157,9 @@ export {
   type RuntimeClientOptions,
 } from './runtime/index.js';
 
+// Generated platform API client (js/script/build.ts emits it into dist/gen/, so
+// this resolves to dist/gen/index.js in the committed dist build)
+export { AllternitClient, createAllternitClient } from './gen/index.js';
+
 // Version
 export const VERSION = '1.0.0';

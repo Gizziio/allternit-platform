@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Tailscale/Headscale mesh integration for `gizzi serve --mesh`. Joins the
-// Allternit tailnet (coordination server: https://allternit-headscale.fly.dev)
+// Allternit tailnet (coordination server: https://headscale.allternit.com)
 // so clients on the tailnet (iOS app with embedded tsnet) can reach this
 // server over WireGuard instead of a public tunnel. Mirrors tunnel.ts: one
 // discovery chain, one spawn path, `stop()` lifecycle owned by this process.
@@ -51,7 +51,7 @@ import { Global } from "@/runtime/context/global"
 export namespace Mesh {
   const log = Log.create({ service: "mesh" })
 
-  export const DEFAULT_CONTROL_URL = "https://allternit-headscale.fly.dev"
+  export const DEFAULT_CONTROL_URL = "https://headscale.allternit.com"
 
   const INSTALL_HINT =
     "no system tailscaled is reachable, the mesh-node sidecar is not available, and the tailscale CLI is not installed. Install tailscale (`brew install tailscale`, or see https://tailscale.com/download), set GIZZI_MESH_NODE_BIN to a mesh-node binary, or set GIZZI_TAILSCALE_BIN to the CLI path."

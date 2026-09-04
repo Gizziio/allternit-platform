@@ -125,7 +125,9 @@ interface Comment {
 // API Client Helper
 // ============================================================================
 
-const API_BASE = process.env.Allternit_API_URL || "http://localhost:3001"
+// Local Allternit backend (allternit-api / desktop-cloud). No public URL exists
+// yet — see the Backend B productionization track before changing this default.
+const API_BASE = process.env.ALLTERNIT_API_URL || "http://localhost:3001"
 
 async function apiCall<T>(
   method: "GET" | "POST" | "PUT" | "DELETE",
@@ -133,13 +135,14 @@ async function apiCall<T>(
   body?: unknown
 ): Promise<T> {
   const url = `${API_BASE}${path}`
-  let token = process.env.Allternit_API_TOKEN
+  let token = process.env.ALLTERNIT_API_TOKEN ?? process.env.Allternit_API_TOKEN
   if (!token) {
     try {
       const fs = require("fs")
       const path = require("path")
       const os = require("os")
-      const sessionPath = path.join(os.homedir(), ".config", "gizzi", "session.json")
+      const configDir = process.env.GIZZI_CONFIG_DIR ?? path.join(os.homedir(), ".config", "gizzi-code")
+      const sessionPath = path.join(configDir, "session.json")
       if (fs.existsSync(sessionPath)) {
         const session = JSON.parse(fs.readFileSync(sessionPath, "utf8"))
         token = session?.accessToken || null
@@ -154,12 +157,9 @@ async function apiCall<T>(
     Accept: "application/json",
   }
 
-  if (process.env.Allternit_DEV_MODE === "true") {
-    headers["x-allternit-user-id"] = "gizzi-agent-1"
-    headers["x-allternit-desktop-access-token"] = "dev-bootstrap-token"
-    headers["x-allternit-user-email"] = "test@allternit.com"
-    headers["x-allternit-user-name"] = "Cowork Tester"
-  } else if (token) {
+  // Never fall back to a hardcoded dev token: send credentials only when a
+  // real token is configured.
+  if (token) {
     headers["Authorization"] = `Bearer ${token}`
   }
 
@@ -519,7 +519,7 @@ async function attachToRun(runId: string): Promise<void> {
 
   // Stream events via SSE
   const url = `${API_BASE}/api/v1/runs/${runId}/events/stream`
-  const token = process.env.Allternit_API_TOKEN
+  const token = process.env.ALLTERNIT_API_TOKEN ?? process.env.Allternit_API_TOKEN
 
   const headers: Record<string, string> = {
     Accept: "text/event-stream",
@@ -2375,7 +2375,7 @@ function generateSimpleQR(url: string): string {
  * Stream events to keep the mirror connection alive
  */
 async function streamMirrorEvents(runId: string, port: number): Promise<void> {
-  const token = process.env.Allternit_API_TOKEN
+  const token = process.env.ALLTERNIT_API_TOKEN ?? process.env.Allternit_API_TOKEN
   const url = `${API_BASE}/api/v1/runs/${runId}/events/stream`
 
   const headers: Record<string, string> = {

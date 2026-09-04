@@ -122,48 +122,35 @@ export namespace Installation {
   )
 
   async function getBrewFormula() {
-    const tapFormula = await $`brew list --formula anomalyco/tap/gizzi`.throws(false).quiet().text()
-    if (tapFormula.includes("gizzi")) return "anomalyco/tap/gizzi"
-    const coreFormula = await $`brew list --formula gizzi`.throws(false).quiet().text()
-    if (coreFormula.includes("gizzi")) return "gizzi"
-    
-    // Fallback to legacy
-    const legacyTap = await $`brew list --formula anomalyco/tap/gizzi`.throws(false).quiet().text()
-    if (legacyTap.includes("gizzi")) return "anomalyco/tap/gizzi"
-    
-    return "gizzi"
+    const formula = await $`brew list --formula gizzi-code`.throws(false).quiet().text()
+    if (formula.includes("gizzi-code")) return "gizzi-code"
+    // Legacy formula name
+    const legacy = await $`brew list --formula gizzi`.throws(false).quiet().text()
+    if (legacy.includes("gizzi")) return "gizzi"
+    return "gizzi-code"
   }
 
   export async function upgrade(method: Method, target: string) {
     let cmd
     switch (method) {
       case "curl":
-        cmd = $`curl -fsSL https://gizzi.io/install | bash`.env({
+        cmd = $`curl -fsSL https://install.gizziio.com/install | bash`.env({
           ...process.env,
+          GIZZI_VERSION: target,
           VERSION: target,
         })
         break
       case "npm":
-        cmd = $`npm install -g @gizzi/tui@${target}`
+        cmd = $`npm install -g @allternit/gizzi-code@${target}`
         break
       case "pnpm":
-        cmd = $`pnpm install -g @gizzi/tui@${target}`
+        cmd = $`pnpm install -g @allternit/gizzi-code@${target}`
         break
       case "bun":
-        cmd = $`bun install -g @gizzi/tui@${target}`
+        cmd = $`bun install -g @allternit/gizzi-code@${target}`
         break
       case "brew": {
         const formula = await getBrewFormula()
-        if (formula.includes("/")) {
-          cmd =
-            $`brew tap anomalyco/tap && cd "$(brew --repo anomalyco/tap)" && git pull --ff-only && brew upgrade ${formula}`.env(
-              {
-                HOMEBREW_NO_AUTO_UPDATE: "1",
-                ...process.env,
-              },
-            )
-          break
-        }
         cmd = $`brew upgrade ${formula}`.env({
           HOMEBREW_NO_AUTO_UPDATE: "1",
           ...process.env,
@@ -241,12 +228,7 @@ export namespace Installation {
         const reg = r || "https://registry.npmjs.org"
         return reg.endsWith("/") ? reg.slice(0, -1) : reg
       })
-      const channel = CHANNEL
-      return fetch(`${registry}/@gizzi/tui/${channel}`)
-        .then((res) => {
-          if (!res.ok) return fetch(`${registry}/gizzi-ai/${channel}`)
-          return res
-        })
+      return fetch(`${registry}/@allternit/gizzi-code/latest`)
         .then((res) => {
           if (!res.ok) throw new Error(res.statusText)
           return res.json()
@@ -281,11 +263,16 @@ export namespace Installation {
         .then((data: any) => data.version)
     }
 
-    return fetch("https://api.github.com/repos/gizzi/gizzi-code/releases/latest")
+    return fetch("https://api.github.com/repos/Gizziio/allternit-platform/releases/latest")
       .then((res) => {
-        if (!res.ok) return fetch("https://api.github.com/repos/anomalyco/gizzi/releases/latest")
-        return res
+        if (!res.ok) throw new Error(res.statusText)
+        return res.json()
       })
-      .then((data: any) => data.tag_name.replace(/^v/, ""))
+      .then((data: any) => {
+        // Tags look like "gizzi-code/0.2.3" (older ones may be "v0.2.3") —
+        // reduce to the bare version in either case.
+        const tag: string = data.tag_name || ""
+        return tag.split("/").pop()!.replace(/^v/, "")
+      })
   }
 }

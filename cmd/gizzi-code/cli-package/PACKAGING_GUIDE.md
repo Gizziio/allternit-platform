@@ -9,13 +9,13 @@ This directory contains the packaging infrastructure for distributing Gizzi Code
 ### 1. curl | bash (Recommended)
 
 ```bash
-curl -fsSL https://gizzi.sh/install.sh | bash
+curl -fsSL https://install.gizziio.com/install | bash
 ```
 
 ### 2. Homebrew (macOS)
 
 ```bash
-brew tap allternit/gizzi-code
+brew install gizziio/gizzi/gizzi-code
 brew install gizzi-code
 ```
 
@@ -32,23 +32,25 @@ npm install -g @allternit/gizzi-code
 winget install Allternit.GizziCode
 
 # Scoop
-scoop bucket add gizzi-code https://github.com/allternit/scoop-gizzi-code
-scoop install gizzi-code
+scoop install https://raw.githubusercontent.com/Gizziio/allternit-platform/main/cmd/gizzi-code/packaging/scoop/gizzi-code.json
 ```
 
 ### 5. GitHub Releases
 
-Download pre-built binaries:
-```bash
-# macOS
-curl -LO https://github.com/allternit/gizzi-code/releases/latest/download/gizzi-code-macos
-chmod +x gizzi-code-macos
-mv gizzi-code-macos /usr/local/bin/gizzi
+Download pre-built binaries (assets are version-named tarballs/zips, e.g.
+`gizzi-code-v1.0.2-darwin-arm64.tar.gz`; see the release page for the full
+list — https://github.com/Gizziio/allternit-platform/releases):
 
-# Linux
-curl -LO https://github.com/allternit/gizzi-code/releases/latest/download/gizzi-code-linux
-chmod +x gizzi-code-linux
-mv gizzi-code-linux /usr/local/bin/gizzi
+```bash
+# macOS (Apple Silicon)
+curl -LO https://github.com/Gizziio/allternit-platform/releases/download/gizzi-code/1.0.2/gizzi-code-v1.0.2-darwin-arm64.tar.gz
+tar -xzf gizzi-code-v1.0.2-darwin-arm64.tar.gz
+mv gizzi-code /usr/local/bin/gizzi-code
+
+# Linux (x64)
+curl -LO https://github.com/Gizziio/allternit-platform/releases/download/gizzi-code/1.0.2/gizzi-code-v1.0.2-linux-x64.tar.gz
+tar -xzf gizzi-code-v1.0.2-linux-x64.tar.gz
+mv gizzi-code /usr/local/bin/gizzi-code
 ```
 
 ## Commands
@@ -229,7 +231,7 @@ which gizzi
 export PATH="$HOME/.local/bin:$PATH"
 
 # Or reinstall with PATH setup
-curl -fsSL https://gizzi.sh/install.sh | bash
+curl -fsSL https://install.gizziio.com/install | bash
 ```
 
 ### Permission Denied
@@ -252,6 +254,6 @@ npm install -g @allternit/gizzi-code
 
 ## Support
 
-- Documentation: https://docs.gizzi.sh
-- Issues: https://github.com/allternit/gizzi-code/issues
-- Discussions: https://github.com/allternit/gizzi-code/discussions
+- Documentation: https://docs.gizziio.com
+- Issues: https://github.com/Gizziio/allternit-platform/issues
+- Discussions: https://github.com/Gizziio/allternit-platform/discussions

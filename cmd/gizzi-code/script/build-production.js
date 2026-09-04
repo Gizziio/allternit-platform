@@ -314,10 +314,14 @@ const define = {
     "process.env.NODE_ENV": '"production"',
 };
 // Global code to inject at the top of each bundle
+// PACKAGE_URL must be an npm package spec: the autoUpdater/localInstaller/doctor
+// consumers run "npm view/install <PACKAGE_URL>". The machine-readable install
+// manifest for the website lives at https://install.gizziio.com/version.json.
+const GIZZI_CHANNEL = process.env.GIZZI_CHANNEL || "production";
 let injectionCode = `
 var GIZZI_VERSION = "${VERSION}";
-var GIZZI_CHANNEL = "production";
-var MACRO = ${JSON.stringify({ VERSION, BUILD_TIME: new Date().toISOString() })};
+var GIZZI_CHANNEL = "${GIZZI_CHANNEL}";
+var MACRO = ${JSON.stringify({ VERSION, CHANNEL: GIZZI_CHANNEL, PACKAGE_URL: "@allternit/gizzi-code", BUILD_TIME: new Date().toISOString() })};
 `;
 if (migrations.length > 0) {
     injectionCode += `var GIZZI_MIGRATIONS = ${JSON.stringify(migrations)};\n`;

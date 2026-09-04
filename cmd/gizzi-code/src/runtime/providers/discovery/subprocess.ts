@@ -532,6 +532,25 @@ export const SUBPROCESS_PROVIDERS: SubprocessSpec[] = [
   },
 ]
 
+/**
+ * Max time a probe subprocess may run before we kill it and treat it as unavailable.
+ * Bun's Subprocess.kill() does not reliably close piped stdout (spawned children can
+ * inherit the fd), so we race the read against a timeout instead of relying on the
+ * kill alone to unblock it.
+ */
+const PROBE_TIMEOUT_MS = 5000
+
+async function readWithTimeout(stdout: ReadableStream, kill: () => void): Promise<string | null> {
+  let timer: ReturnType<typeof setTimeout>
+  const timeout = new Promise<null>((resolve) => {
+    timer = setTimeout(() => resolve(null), PROBE_TIMEOUT_MS)
+  })
+  const out = await Promise.race([new Response(stdout).text().catch(() => null), timeout])
+  clearTimeout(timer!)
+  if (out === null) kill()
+  return out
+}
+
 async function runProbe(bin: string, spec: SubprocessSpec): Promise<boolean> {
   if (!spec.probe) return true // presence in PATH is enough
   try {
@@ -539,7 +558,14 @@ async function runProbe(bin: string, spec: SubprocessSpec): Promise<boolean> {
       stdout: "pipe",
       stderr: "pipe",
     })
-    const out = await new Response(proc.stdout).text()
+    const out = await readWithTimeout(proc.stdout, () => {
+      try {
+        proc.kill(9)
+      } catch {
+        // already exited
+      }
+    })
+    if (out === null) return false // timed out — treat as not available
     const { expect } = spec.probe
     return typeof expect === "string" ? out.includes(expect) : expect.test(out)
   } catch {
@@ -550,7 +576,14 @@ async function runProbe(bin: string, spec: SubprocessSpec): Promise<boolean> {
 async function probeOllamaModels(binPath: string): Promise<DiscoveredModel[]> {
   try {
     const proc = Bun.spawn([binPath, "list"], { stdout: "pipe", stderr: "pipe" })
-    const out = await new Response(proc.stdout).text()
+    const out = await readWithTimeout(proc.stdout, () => {
+      try {
+        proc.kill(9)
+      } catch {
+        // already exited
+      }
+    })
+    if (out === null) return [] // timed out — treat as not available
     const lines = out.split("\n").slice(1).filter(Boolean)
     return lines.map((line) => {
       const [id] = line.trim().split(/\s+/)
