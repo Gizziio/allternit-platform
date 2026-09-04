@@ -8,7 +8,7 @@ import { getAPIProvider } from '../shared/utils/model/providers.js'
 import { getWorkload } from '../shared/utils/workloadContext.js'
 
 const DEFAULT_PREFIX = `You are Gizzi, an AI-powered coding assistant.`
-const AGENT_SDK_GIZZI_PRESET_PREFIX = `You are Gizzi, Anthropic's official CLI for Claude, running within the Claude Agent SDK.`
+const AGENT_SDK_GIZZI_PRESET_PREFIX = `You are Gizzi, the Allternit AI coding assistant, running on the Gizzi Agent SDK.`
 const AGENT_SDK_PREFIX = `You are a Gizzi agent, built on the Gizzi Agent SDK.`
 
 const CLI_SYSPROMPT_PREFIX_VALUES = [

@@ -3,7 +3,7 @@ import { isInBundledMode } from './../../utils/bundledMode.ts';
 import { getCurrentInstallationType } from './../../utils/doctorDiagnostic.ts';
 import { isEnvTruthy } from './../../utils/envUtils.ts';
 import { useStartupNotification } from './useStartupNotification';
-const NPM_DEPRECATION_MESSAGE = 'Claude Code has switched from npm to native installer. Run `claude install` or see https://docs.anthropic.com/en/docs/claude-code/getting-started for more options.';
+const NPM_DEPRECATION_MESSAGE = 'Gizzi Code has switched from npm to native installer. Run `gizzi install` or see https://docs.gizziio.com/getting-started for more options.';
 export function useNpmDeprecationNotification() {
   useStartupNotification(_temp);
 }

@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { existsSync } from 'fs'
 import memoize from 'lodash-es/memoize.js'
 import { readGizziEnv } from '@/shared/utils/gizziEnv.js';
 import { homedir } from 'os'
@@ -82,13 +83,22 @@ export function isExtractModeActive(): boolean {
  * Returns the base directory for persistent memory storage.
  * Resolution order:
  *   1. CLAUDE_CODE_REMOTE_MEMORY_DIR env var (explicit override, set in CCR)
- *   2. ~/.claude (default config home)
+ *   2. ~/.gizzi (default config home)
+ *   3. ~/.claude (read-only legacy fallback when it holds existing memories)
  */
 export function getMemoryBaseDir(): string {
   if (process.env.CLAUDE_CODE_REMOTE_MEMORY_DIR) {
     return process.env.CLAUDE_CODE_REMOTE_MEMORY_DIR
   }
-  return getClaudeConfigHomeDir()
+  const gizziDir = (process.env.GIZZI_CONFIG_DIR ?? join(homedir(), '.gizzi')).normalize('NFC')
+  const legacyDir = getClaudeConfigHomeDir()
+  try {
+    if (existsSync(join(gizziDir, 'projects'))) return gizziDir
+    if (existsSync(join(legacyDir, 'projects'))) return legacyDir
+  } catch {
+    // fall through
+  }
+  return gizziDir
 }
 
 const AUTO_MEM_DIRNAME = 'memory'

@@ -253,7 +253,7 @@ export function AUTO_REJECT_MESSAGE(toolName: string): string {
   return `Permission to use ${toolName} has been denied. ${DENIAL_WORKAROUND_GUIDANCE}`
 }
 export function DONT_ASK_REJECT_MESSAGE(toolName: string): string {
-  return `Permission to use ${toolName} has been denied because Claude Code is running in don't ask mode. ${DENIAL_WORKAROUND_GUIDANCE}`
+  return `Permission to use ${toolName} has been denied because Gizzi Code is running in don't ask mode. ${DENIAL_WORKAROUND_GUIDANCE}`
 }
 // Synthetic tool_result content inserted by ensureToolResultPairing when a
 // tool_use block has no matching tool_result. Exported so HFI submission can

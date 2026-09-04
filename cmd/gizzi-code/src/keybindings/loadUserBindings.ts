@@ -1,7 +1,8 @@
 /**
  * User keybinding configuration loader with hot-reload support.
  *
- * Loads keybindings from ~/.claude/keybindings.json and watches
+ * Loads keybindings from ~/.gizzi/keybindings.json (falling back to the
+ * legacy ~/.claude/keybindings.json) and watches
  * for changes to reload them automatically.
  *
  * NOTE: User keybinding customization is currently only available for
@@ -10,9 +11,10 @@
  */
 
 import chokidar, { type FSWatcher } from 'chokidar'
-import { readFileSync } from 'fs'
+import { existsSync, readFileSync } from 'fs'
 import { readFile, stat } from 'fs/promises'
 import { dirname, join } from 'path'
+import { homedir } from 'os'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '@/services/analytics/growthbook.js'
 import { logEvent } from '@/services/analytics/index.js'
 import { registerCleanup } from '../shared/utils/cleanupRegistry.js'
@@ -111,9 +113,22 @@ function isKeybindingBlockArray(arr: unknown): arr is KeybindingBlock[] {
 
 /**
  * Get the path to the user keybindings file.
+ * GIZZI-first: prefer ~/.gizzi/keybindings.json; fall back to the legacy
+ * ~/.claude/keybindings.json when that is where the user's bindings live.
  */
 export function getKeybindingsPath(): string {
-  return join(getClaudeConfigHomeDir(), 'keybindings.json')
+  const gizziPath = join(
+    process.env.GIZZI_CONFIG_DIR ?? join(homedir(), '.gizzi'),
+    'keybindings.json',
+  )
+  try {
+    if (existsSync(gizziPath)) return gizziPath
+    const legacyPath = join(getClaudeConfigHomeDir(), 'keybindings.json')
+    if (existsSync(legacyPath)) return legacyPath
+  } catch {
+    // fall through
+  }
+  return gizziPath
 }
 
 /**

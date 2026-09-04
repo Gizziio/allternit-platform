@@ -105,7 +105,7 @@ export function getFilePermissionOptions({
   // persisted permission rules.
   if ((inClaudeFolder || inGlobalClaudeFolder) && operationType !== 'read') {
     options.push({
-      label: 'Yes, and allow Claude to edit its own settings for this session',
+      label: 'Yes, and allow Gizzi to edit its own settings for this session',
       value: 'yes-claude-folder',
       option: {
         type: 'accept-session',

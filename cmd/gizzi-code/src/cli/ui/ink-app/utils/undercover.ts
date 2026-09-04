@@ -2,9 +2,9 @@
 /**
  * Undercover mode — safety utilities for contributing to public/open-source repos.
  *
- * When active, Claude Code adds safety instructions to commit/PR prompts and
+ * When active, Gizzi adds safety instructions to commit/PR prompts and
  * strips all attribution to avoid leaking internal model codenames, project
- * names, or other Anthropic-internal information. The model is not told what
+ * names, or other provider-internal information. The model is not told what
  * model it is.
  *
  * Activation:

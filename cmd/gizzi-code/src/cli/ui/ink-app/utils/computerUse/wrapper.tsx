@@ -55,7 +55,7 @@ function tuc(): ToolUseContext {
   return currentToolUseContext!;
 }
 function formatLockHeld(holder: string): string {
-  return `Computer use is in use by another Claude session (${holder.slice(0, 8)}…). Wait for that session to finish or run /exit there.`;
+  return `Computer use is in use by another Gizzi session (${holder.slice(0, 8)}…). Wait for that session to finish or run /exit there.`;
 }
 export function buildSessionContext(): ComputerUseSessionContext {
   return {
@@ -220,7 +220,7 @@ export function buildSessionContext(): ComputerUseSessionContext {
           tuc().abortController.abort();
         });
         tuc().sendOSNotification?.({
-          message: escRegistered ? 'Claude is using your computer · press Esc to stop' : 'Claude is using your computer · press Ctrl+C to stop',
+          message: escRegistered ? 'Gizzi is using your computer · press Esc to stop' : 'Gizzi is using your computer · press Ctrl+C to stop',
           notificationType: 'computer_use_enter'
         });
       }
