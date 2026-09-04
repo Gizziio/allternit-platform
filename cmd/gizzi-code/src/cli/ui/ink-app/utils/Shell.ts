@@ -73,7 +73,7 @@ function isExecutable(shellPath: string): boolean {
  */
 export async function findSuitableShell(): Promise<string> {
   // Check for explicit shell override first
-  const shellOverride = process.env.CLAUDE_CODE_SHELL
+  const shellOverride = process.env.GIZZI_CODE_SHELL
   if (shellOverride) {
     // Validate it's a supported shell type
     const isSupported =
@@ -84,7 +84,7 @@ export async function findSuitableShell(): Promise<string> {
     } else {
       // Note, if we ever want to add support for new shells here we'll need to update or Bash tool parsing to account for this
       logForDebugging(
-        `CLAUDE_CODE_SHELL="${shellOverride}" is not a valid bash/zsh path, falling back to detection`,
+        `GIZZI_CODE_SHELL="${shellOverride}" is not a valid bash/zsh path, falling back to detection`,
       )
     }
   }
@@ -203,7 +203,7 @@ export async function exec(
 
   // Sandbox temp directory - use per-user directory name to prevent multi-user permission conflicts
   const sandboxTmpDir = posixJoin(
-    process.env.CLAUDE_CODE_TMPDIR || '/tmp',
+    process.env.GIZZI_CODE_TMPDIR || '/tmp',
     getClaudeTempDirName(),
   )
 
@@ -319,11 +319,11 @@ export async function exec(
         ...subprocessEnv(),
         SHELL: shellType === 'bash' ? binShell : undefined,
         GIT_EDITOR: 'true',
-        CLAUDECODE: '1',
+        GIZZI_CODE: '1',
         ...envOverrides,
         ...(process.env.USER_TYPE === 'ant'
           ? {
-              CLAUDE_CODE_SESSION_ID: getSessionId(),
+              GIZZI_CODE_SESSION_ID: getSessionId(),
               GIZZI_SESSION_ID: getSessionId(),
             }
           : {}),

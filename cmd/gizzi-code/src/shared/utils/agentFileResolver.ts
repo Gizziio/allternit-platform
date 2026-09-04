@@ -3,8 +3,8 @@
  * "wins" at a given directory level, across both the interactive TUI
  * pipeline (claudemd.ts) and the headless/server session pipeline
  * (session/instruction.ts). GIZZI.md is canonical; CLAUDE.md and AGENTS.md
- * are read for compatibility with repos crossing over from Claude Code or
- * already using the cross-tool AGENTS.md convention.
+ * are read for compatibility with existing CLAUDE.md files and the
+ * cross-tool AGENTS.md convention.
  */
 
 export const ROOT_INSTRUCTION_FILENAMES = ["GIZZI.md", "CLAUDE.md", "AGENTS.md", "CONTEXT.md"] as const

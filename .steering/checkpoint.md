@@ -1,13 +1,13 @@
 # Steering checkpoint
 
-Goal: Fix stale @allternit npm registry — refresh the 5 core packages stale since 2026-04-14 and make archived card plugins honest.
+Goal: Purge Anthropic/Claude product naming from gizzi-code (hard rename to GIZZI_*/gizzi-code).
 
 Just did:
-- Drift check: all 5 core packages (api-client, plugin-sdk, workflow-engine, ix, viz) drifted since 2026-04-14; the 15 archived card plugins had exactly 1 commit (2bda61382, a CI script rename) — cosmetic, NOT real drift.
-- Decision: republish the 5 core with patch bumps; DEPRECATE the archived card plugins instead of fake-refreshing dead packages.
-- Wrote generic gated workflow .github/workflows/publish-package-npm.yml (workflow_dispatch, path+version inputs, path whitelist, standalone npm install to dodge the pnpm workspace name conflict, build, exports sanity, idempotent publish, tarball verify).
-- Bumped versions: api-client 1.0.2, plugin-sdk 1.0.2, workflow-engine 0.1.1, ix 0.1.1, viz 0.1.1.
+- Hard-purged `CLAUDE_CODE_*` env identifiers to `GIZZI_*` (zero fallback) via `gizziEnv.ts` + `script/purge-claude-naming.ts`.
+- Rewrote user-visible "Claude Code" copy to gizzi-code; product/docs/feedback URLs to gizzi.io / docs.gizziio.com / Gizziio issues.
+- Added `NOTICE`, scoped `LICENSE`, `docs/anthropic-allowlist.md`. Functional floor kept (API hosts, OAuth, model names, CLAUDE.md read-compat).
+- Typecheck exit 0; smoke 103/103 green; gizziEnv tests 6/6.
 
-Next: commit + push, dispatch 5 workflow runs, watch first to green, then npm deprecate the 15 archived card plugins, ledger entry.
+Next: commit on main; breaking env rename wants gizzi-code 2.0.0 republish after review. gizzi-sdk legal hold unchanged.
 
-Open questions: none — plugin-sdk naming consolidation stays deferred (ledger note).
+Open questions: counsel still owes the distribution basis for derived code (`docs/legal-attribution.md` §6).

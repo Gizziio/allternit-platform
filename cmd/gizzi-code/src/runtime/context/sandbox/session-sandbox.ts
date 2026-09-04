@@ -38,7 +38,7 @@ export const DEFAULT_SESSION_KEY = "__default__"
 function defaultPolicy(): SandboxPolicy {
   return {
     allowWritePaths: [Instance.directory],
-    // Deny by default — matches Claude Code. Agents that need npm/pip/cargo
+    // Deny by default — matches gizzi-code. Agents that need npm/pip/cargo
     // must opt in via GIZZI_SANDBOX_ALLOW_NETWORK or an explicit policy override.
     allowNetwork: false,
   }

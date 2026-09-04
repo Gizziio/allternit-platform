@@ -11,7 +11,7 @@
  * explicit `data-theme` override on `<html>` for viewers that stamp one.
  *
  * This is a from-scratch implementation written for gizzi-code, not a copy
- * of Claude Code's project-artifact template.html — informed by the same
+ * of gizzi-code's project-artifact template.html — informed by the same
  * general vocabulary (status pill, tabs, callouts, CSS-variable theming)
  * but its own CSS, its own tab-switch script, and its own tone system.
  *

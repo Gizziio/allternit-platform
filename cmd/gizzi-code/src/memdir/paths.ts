@@ -171,7 +171,7 @@ function validateMemoryPath(
  */
 function getAutoMemPathOverride(): string | undefined {
   return validateMemoryPath(
-    process.env.CLAUDE_COWORK_MEMORY_PATH_OVERRIDE,
+    process.env.GIZZI_COWORK_MEMORY_PATH_OVERRIDE,
     false,
   )
 }
@@ -197,7 +197,7 @@ function getAutoMemPathSetting(): string | undefined {
 }
 
 /**
- * Check if CLAUDE_COWORK_MEMORY_PATH_OVERRIDE is set to a valid override.
+ * Check if GIZZI_COWORK_MEMORY_PATH_OVERRIDE is set to a valid override.
  * Use this as a signal that the SDK caller has explicitly opted into
  * the auto-memory mechanics — e.g. to decide whether to inject the
  * memory prompt when a custom system prompt replaces the default.
@@ -219,7 +219,7 @@ function getAutoMemBase(): string {
  * Returns the auto-memory directory path.
  *
  * Resolution order:
- *   1. CLAUDE_COWORK_MEMORY_PATH_OVERRIDE env var (full-path override, used by Cowork)
+ *   1. GIZZI_COWORK_MEMORY_PATH_OVERRIDE env var (full-path override, used by Cowork)
  *   2. autoMemoryDirectory in settings.json (trusted sources only: policy/local/user)
  *   3. <memoryBase>/projects/<sanitized-git-root>/memory/
  *      where memoryBase is resolved by getMemoryBaseDir()
@@ -272,7 +272,7 @@ export function getAutoMemEntrypoint(): string {
 /**
  * Check if an absolute path is within the auto-memory directory.
  *
- * When CLAUDE_COWORK_MEMORY_PATH_OVERRIDE is set, this matches against the
+ * When GIZZI_COWORK_MEMORY_PATH_OVERRIDE is set, this matches against the
  * env-var override directory. Note that a true return here does NOT imply
  * write permission in that case — the filesystem.ts write carve-out is gated
  * on !hasAutoMemPathOverride() (it exists to bypass DANGEROUS_DIRECTORIES).

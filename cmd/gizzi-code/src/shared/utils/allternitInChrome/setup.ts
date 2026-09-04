@@ -101,7 +101,7 @@ export function setupAllternitInChrome(): {
 
   const env: Record<string, string> = {}
   if (getSessionBypassPermissionsMode()) {
-    env.CLAUDE_CHROME_PERMISSION_MODE = 'skip_all_permission_checks'
+    env.GIZZI_CHROME_PERMISSION_MODE = 'skip_all_permission_checks'
   }
   const hasEnv = Object.keys(env).length > 0
 

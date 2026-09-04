@@ -208,12 +208,12 @@ export function getOauthOrgNotAllowedErrorMessage(): string {
 }
 
 /**
- * Check if we're in CCR (Claude Code Remote) mode.
+ * Check if we're in CCR (gizzi-code Remote) mode.
  * In CCR mode, auth is handled via JWTs provided by the infrastructure,
  * not via /login. Transient auth errors should suggest retrying, not logging in.
  */
 function isCCRMode(): boolean {
-  return isEnvTruthy(process.env.CLAUDE_CODE_REMOTE)
+  return isEnvTruthy(process.env.GIZZI_CODE_REMOTE)
 }
 
 // Temp helper to log tool_use/tool_result mismatch errors
@@ -746,7 +746,7 @@ export async function getAssistantMessageFromError(
     })
   }
 
-  // Check for invalid model name error for Ant users. Claude Code may be
+  // Check for invalid model name error for Ant users. gizzi-code may be
   // defaulting to a custom internal-only model for Ants, and there might be
   // Ants using new or unknown org IDs that haven't been gated in.
   if (
@@ -884,7 +884,7 @@ export async function getAssistantMessageFromError(
   // Bedrock errors like "403 You don't have access to the model with the specified model ID."
   // don't contain the actual model ID
   if (
-    isEnvTruthy(process.env.CLAUDE_CODE_USE_BEDROCK) &&
+    isEnvTruthy(process.env.GIZZI_CODE_USE_BEDROCK) &&
     error instanceof Error &&
     error.message.toLowerCase().includes('model id')
   ) {
@@ -1133,7 +1133,7 @@ export function classifyAPIError(error: unknown): string {
 
   // Bedrock-specific errors
   if (
-    isEnvTruthy(process.env.CLAUDE_CODE_USE_BEDROCK) &&
+    isEnvTruthy(process.env.GIZZI_CODE_USE_BEDROCK) &&
     error instanceof Error &&
     error.message.toLowerCase().includes('model id')
   ) {

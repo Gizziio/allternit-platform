@@ -17,7 +17,7 @@ function getOauthConfigType(): OauthConfigType {
 }
 
 export function fileSuffixForOauthConfig(): string {
-  if (process.env.CLAUDE_CODE_CUSTOM_OAUTH_URL) {
+  if (process.env.GIZZI_CODE_CUSTOM_OAUTH_URL) {
     return '-custom-oauth'
   }
   switch (getOauthConfigType()) {
@@ -107,7 +107,7 @@ const PROD_OAUTH_CONFIG = {
 /**
  * Client ID Metadata Document URL for MCP OAuth (CIMD / SEP-991).
  * When an MCP auth server advertises client_id_metadata_document_supported: true,
- * Claude Code uses this URL as its client_id instead of Dynamic Client Registration.
+ * gizzi-code uses this URL as its client_id instead of Dynamic Client Registration.
  * The URL must point to a JSON document hosted by Anthropic.
  * See: https://datatracker.ietf.org/doc/html/draft-ietf-oauth-client-id-metadata-document-00
  */
@@ -148,13 +148,13 @@ const STAGING_OAUTH_CONFIG =
 // scripts/claude-localhost override if your layout differs.
 function getLocalOauthConfig(): OauthConfig {
   const api =
-    process.env.CLAUDE_LOCAL_OAUTH_API_BASE?.replace(/\/$/, '') ??
+    process.env.GIZZI_LOCAL_OAUTH_API_BASE?.replace(/\/$/, '') ??
     'http://localhost:8000'
   const apps =
-    process.env.CLAUDE_LOCAL_OAUTH_APPS_BASE?.replace(/\/$/, '') ??
+    process.env.GIZZI_LOCAL_OAUTH_APPS_BASE?.replace(/\/$/, '') ??
     'http://localhost:4000'
   const consoleBase =
-    process.env.CLAUDE_LOCAL_OAUTH_CONSOLE_BASE?.replace(/\/$/, '') ??
+    process.env.GIZZI_LOCAL_OAUTH_CONSOLE_BASE?.replace(/\/$/, '') ??
     'http://localhost:3000'
   return {
     BASE_API_URL: api,
@@ -174,7 +174,7 @@ function getLocalOauthConfig(): OauthConfig {
   }
 }
 
-// Allowed base URLs for CLAUDE_CODE_CUSTOM_OAUTH_URL override.
+// Allowed base URLs for GIZZI_CODE_CUSTOM_OAUTH_URL override.
 // Only FedStart/PubSec deployments are permitted to prevent OAuth tokens
 // from being sent to arbitrary endpoints.
 const ALLOWED_OAUTH_BASE_URLS = [
@@ -198,12 +198,12 @@ export function getOauthConfig(): OauthConfig {
 
   // Allow overriding all OAuth URLs to point to an approved FedStart deployment.
   // Only allowlisted base URLs are accepted to prevent credential leakage.
-  const oauthBaseUrl = process.env.CLAUDE_CODE_CUSTOM_OAUTH_URL
+  const oauthBaseUrl = process.env.GIZZI_CODE_CUSTOM_OAUTH_URL
   if (oauthBaseUrl) {
     const base = oauthBaseUrl.replace(/\/$/, '')
     if (!ALLOWED_OAUTH_BASE_URLS.includes(base)) {
       throw new Error(
-        'CLAUDE_CODE_CUSTOM_OAUTH_URL is not an approved endpoint.',
+        'GIZZI_CODE_CUSTOM_OAUTH_URL is not an approved endpoint.',
       )
     }
     config = {
@@ -223,7 +223,7 @@ export function getOauthConfig(): OauthConfig {
   }
 
   // Allow CLIENT_ID override via environment variable (e.g., for Xcode integration)
-  const clientIdOverride = process.env.CLAUDE_CODE_OAUTH_CLIENT_ID
+  const clientIdOverride = process.env.GIZZI_CODE_OAUTH_CLIENT_ID
   if (clientIdOverride) {
     config = {
       ...config,

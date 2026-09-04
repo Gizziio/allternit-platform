@@ -72,7 +72,7 @@ async function safeReadText(p: string): Promise<string | null> {
 
 function expandClaudePluginRoot(value: unknown, root: string): unknown {
   if (typeof value === "string") {
-    return value.replace(/\$\{CLAUDE_PLUGIN_ROOT\}/g, root)
+    return value.replace(/\$\{GIZZI_PLUGIN_ROOT\}/g, root)
   }
   if (Array.isArray(value)) {
     return value.map((v) => expandClaudePluginRoot(v, root))

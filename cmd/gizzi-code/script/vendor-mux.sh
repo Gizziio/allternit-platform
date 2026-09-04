@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Vendor allternit-mux into gizzi-code's distribution tree, Claude Code
+# Vendor allternit-mux into gizzi-code's distribution tree, gizzi-code
 # ripgrep style: vendor/allternit-mux/<platform>-<arch>/allternit-mux
 #
 # Usage:

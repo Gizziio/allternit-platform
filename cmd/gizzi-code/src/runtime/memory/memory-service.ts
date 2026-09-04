@@ -1,7 +1,7 @@
 /**
  * MemoryService — Structured memory CRUD for the Gizzi platform
  *
- * Mirrors Claude Code's memory system:
+ * Mirrors gizzi-code's memory system:
  * - Frontmatter format: name / description / type
  * - MEMORY.md always-loaded index (< 200 lines)
  * - Topic .md files discovered and injected into context

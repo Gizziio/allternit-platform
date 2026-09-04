@@ -943,8 +943,8 @@ export const connectToServer = memoize(
         logMCPDebug(name, `In-process Computer Use MCP server started`)
       } else if (serverRef.type === 'stdio' || !serverRef.type) {
         const finalCommand =
-          process.env.CLAUDE_CODE_SHELL_PREFIX || serverRef.command
-        const finalArgs = process.env.CLAUDE_CODE_SHELL_PREFIX
+          process.env.GIZZI_CODE_SHELL_PREFIX || serverRef.command
+        const finalArgs = process.env.GIZZI_CODE_SHELL_PREFIX
           ? [[serverRef.command, ...serverRef.args].join(' ')]
           : serverRef.args
         transport = new StdioClientTransport({
@@ -1760,7 +1760,7 @@ export const fetchToolsForClient = memoizeWithLRU(
       // Check if we should skip the mcp__ prefix for SDK MCP servers
       const skipPrefix =
         client.config.type === 'sdk' &&
-        isEnvTruthy(process.env.CLAUDE_AGENT_SDK_MCP_NO_PREFIX)
+        isEnvTruthy(process.env.GIZZI_AGENT_SDK_MCP_NO_PREFIX)
 
       // Convert MCP tools to our Tool format
       return (

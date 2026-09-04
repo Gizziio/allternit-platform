@@ -10,12 +10,12 @@ import { getAPIProvider } from '../utils/model/providers.js'
 import { getWorkload } from '../utils/workloadContext.js'
 
 const DEFAULT_PREFIX = `You are Gizzi Code, the Gizzi agentic CLI.`
-const AGENT_SDK_CLAUDE_CODE_PRESET_PREFIX = `You are Gizzi, the Allternit AI coding assistant, running within the Gizzi Agent SDK.`
+const AGENT_SDK_GIZZI_PRESET_PREFIX = `You are Gizzi, the Allternit AI coding assistant, running within the Gizzi Agent SDK.`
 const AGENT_SDK_PREFIX = `You are a Gizzi agent, built on the Gizzi Agent SDK.`
 
 const CLI_SYSPROMPT_PREFIX_VALUES = [
   DEFAULT_PREFIX,
-  AGENT_SDK_CLAUDE_CODE_PRESET_PREFIX,
+  AGENT_SDK_GIZZI_PRESET_PREFIX,
   AGENT_SDK_PREFIX,
 ] as const
 
@@ -40,7 +40,7 @@ export function getCLISyspromptPrefix(options?: {
 
   if (options?.isNonInteractive) {
     if (options.hasAppendSystemPrompt) {
-      return AGENT_SDK_CLAUDE_CODE_PRESET_PREFIX
+      return AGENT_SDK_GIZZI_PRESET_PREFIX
     }
     return AGENT_SDK_PREFIX
   }
@@ -52,7 +52,7 @@ export function getCLISyspromptPrefix(options?: {
  * Enabled by default, can be disabled via env var or GrowthBook killswitch.
  */
 function isAttributionHeaderEnabled(): boolean {
-  if (isEnvDefinedFalsy(process.env.CLAUDE_CODE_ATTRIBUTION_HEADER)) {
+  if (isEnvDefinedFalsy(process.env.GIZZI_CODE_ATTRIBUTION_HEADER)) {
     return false
   }
   return getFeatureValue_CACHED_MAY_BE_STALE('tengu_attribution_header', true)

@@ -3,7 +3,7 @@
  * Files API client for managing files
  *
  * This module provides functionality to download and upload files to Anthropic Public Files API.
- * Used by the Claude Code agent to download file attachments at session startup.
+ * Used by the gizzi-code agent to download file attachments at session startup.
  *
  * API Reference: https://docs.anthropic.com/en/api/files-content
  */
@@ -33,7 +33,7 @@ const ANTHROPIC_VERSION = '2023-06-01'
 function getDefaultApiBaseUrl(): string {
   return (
     process.env.ANTHROPIC_BASE_URL ||
-    process.env.CLAUDE_CODE_API_BASE_URL ||
+    process.env.GIZZI_CODE_API_BASE_URL ||
     'https://api.anthropic.com'
   )
 }

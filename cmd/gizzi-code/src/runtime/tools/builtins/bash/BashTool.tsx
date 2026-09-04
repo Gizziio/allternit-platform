@@ -775,7 +775,7 @@ export const BashTool = buildTool({
     }
     let strippedStdout = stripEmptyLines(stdout);
 
-    // Gizzi hints protocol: CLIs/SDKs gated on CLAUDECODE=1 emit a
+    // Gizzi hints protocol: CLIs/SDKs gated on GIZZI_CODE=1 emit a
     // `<gizzi-hint />` tag to stderr (merged into stdout here). Scan,
     // record for useClaudeCodeHintRecommendation to surface, then strip
     // so the model never sees the tag — a zero-token side channel.

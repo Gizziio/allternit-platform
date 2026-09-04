@@ -85,7 +85,7 @@ async function selectRelevantMemories(
 
   const manifest = formatMemoryManifest(memories)
 
-  // When Claude Code is actively using a tool (e.g. mcp__X__spawn),
+  // When gizzi-code is actively using a tool (e.g. mcp__X__spawn),
   // surfacing that tool's reference docs is noise — the conversation
   // already contains working usage.  The selector otherwise matches
   // on keyword overlap ("spawn" in query + "spawn" in a memory

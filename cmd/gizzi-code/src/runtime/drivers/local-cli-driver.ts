@@ -1242,7 +1242,7 @@ function modelFlag(modelEnv?: string): string[] {
 }
 
 const CLI_ADAPTERS: Record<string, CliAdapter> = {
-  // Anthropic Claude Code — stream-json.
+  // Anthropic gizzi-code — stream-json.
   "claude-cli": {
     mode: "stream-json",
     buildArgv: ([command], _message, _ctx) => {
@@ -1646,23 +1646,19 @@ function mergeEnv(base: NodeJS.ProcessEnv, extra?: Record<string, string>): Node
  *
  * Inherited MULTICA_* overrides are discovery-time configuration for the
  * parent process and must not leak into agent CLIs (they can confuse nested
- * sessions or expose internal path overrides). Claude Code internal runtime
- * markers are also stripped; user-facing CLAUDE_CODE_* config vars are kept.
+ * sessions or expose internal path overrides). Gizzi internal runtime
+ * markers are also stripped; user-facing GIZZI_* config vars are kept.
  */
 function isFilteredChildEnvKey(key: string): boolean {
   const up = key.toUpperCase()
   if (up.startsWith("MULTICA_")) return true
   switch (up) {
-    case "CLAUDECODE":
-    case "CLAUDE_CODE_ENTRYPOINT":
-    case "CLAUDE_CODE_EXECPATH":
-    case "CLAUDE_CODE_SESSION_ID":
-    case "CLAUDE_CODE_SSE_PORT":
+    case "GIZZI_CODE":
     case "GIZZI_ENTRYPOINT":
     case "GIZZI_SESSION_ID":
       return true
   }
-  return up.startsWith("CLAUDECODE_")
+  return up.startsWith("GIZZI_CODE_")
 }
 
 function writeToStdin(sink: Bun.FileSink | WritableStream<Uint8Array>, text: string): void {

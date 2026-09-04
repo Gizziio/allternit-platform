@@ -2,10 +2,10 @@
 /**
  * Files are loaded in the following order:
  *
- * 1. Managed memory (eg. /etc/gizzi/CLAUDE.md) - Global instructions for all users
- * 2. User memory (~/.claude/CLAUDE.md) - Private global instructions for all projects
- * 3. Project memory (CLAUDE.md, .claude/CLAUDE.md, and .claude/rules/*.md in project roots) - Instructions checked into the codebase
- * 4. Local memory (CLAUDE.local.md in project roots) - Private project-specific instructions
+ * 1. Managed memory (eg. /etc/gizzi/GIZZI.md) - Global instructions for all users
+ * 2. User memory (~/.gizzi/GIZZI.md) - Private global instructions for all projects
+ * 3. Project memory (GIZZI.md canonical; CLAUDE.md/AGENTS.md/CONTEXT.md also read for compat)
+ * 4. Local memory (GIZZI.local.md; CLAUDE.local.md also read for compat)
  *
  * Files are loaded in reverse order of priority, i.e. the latest files are highest priority
  * with the model paying more attention to them.
@@ -947,10 +947,10 @@ export const getMemoryFiles = memoize(
     }
 
     // Process CLAUDE.md from additional directories (--add-dir) if env var is enabled
-    // This is controlled by GIZZI_ADDITIONAL_DIRECTORIES_CLAUDE_MD and defaults to off
+    // This is controlled by GIZZI_ADDITIONAL_DIRECTORIES_GIZZI_MD and defaults to off
     // Note: we don't check isSettingSourceEnabled('projectSettings') here because --add-dir
     // is an explicit user action and the SDK defaults settingSources to [] when not specified
-    if (isEnvTruthy(process.env.GIZZI_ADDITIONAL_DIRECTORIES_CLAUDE_MD)) {
+    if (isEnvTruthy(process.env.GIZZI_ADDITIONAL_DIRECTORIES_GIZZI_MD)) {
       const additionalDirs = getAdditionalDirectoriesForClaudeMd()
       for (const dir of additionalDirs) {
         // Try reading CLAUDE.md from the additional directory

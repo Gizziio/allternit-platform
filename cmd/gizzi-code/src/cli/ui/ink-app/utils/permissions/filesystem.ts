@@ -7,9 +7,9 @@ import { join, normalize, posix, sep } from 'path'
 import { hasAutoMemPathOverride, isAutoMemPath } from './../../memdir/paths.ts'
 import { isAgentMemoryPath } from './../../tools/AgentTool/agentMemory.ts'
 import {
-  CLAUDE_FOLDER_PERMISSION_PATTERN,
+  GIZZI_FOLDER_PERMISSION_PATTERN,
   FILE_EDIT_TOOL_NAME,
-  GLOBAL_CLAUDE_FOLDER_PERMISSION_PATTERN,
+  GLOBAL_GIZZI_FOLDER_PERMISSION_PATTERN,
 } from './../../tools/FileEditTool/constants.ts'
 import type { z } from 'zod/v4'
 import { getOriginalCwd, getSessionId } from '../../bootstrap/state.js'
@@ -215,7 +215,7 @@ export function isClaudeSettingsPath(filePath: string): boolean {
   )
 }
 
-// Always ask when Claude Code tries to edit its own config files
+// Always ask when gizzi-code tries to edit its own config files
 function isClaudeConfigFilePath(filePath: string): boolean {
   if (isClaudeSettingsPath(filePath)) {
     return true
@@ -486,7 +486,7 @@ function hasSuspiciousWindowsPathPattern(path: string): boolean {
  * This function performs comprehensive safety checks including:
  * - Suspicious Windows path patterns (NTFS streams, 8.3 names, long path prefixes, etc.)
  * - Claude config files (.claude/settings.json, .claude/commands/, .claude/agents/)
- * - MCP CLI state files (managed internally by Claude Code)
+ * - MCP CLI state files (managed internally by gizzi-code)
  * - Dangerous files (.bashrc, .gitconfig, .git/, .vscode/, .idea/, etc.)
  *
  * IMPORTANT: This function checks BOTH the original path AND resolved symlink paths
@@ -1129,9 +1129,9 @@ export function checkWritePermissionForTool<Input extends AnyObject>(
     const ruleContent = claudeFolderAllowRule.ruleValue.ruleContent
     if (
       ruleContent &&
-      (ruleContent.startsWith(CLAUDE_FOLDER_PERMISSION_PATTERN.slice(0, -2)) ||
+      (ruleContent.startsWith(GIZZI_FOLDER_PERMISSION_PATTERN.slice(0, -2)) ||
         ruleContent.startsWith(
-          GLOBAL_CLAUDE_FOLDER_PERMISSION_PATTERN.slice(0, -2),
+          GLOBAL_GIZZI_FOLDER_PERMISSION_PATTERN.slice(0, -2),
         )) &&
       !ruleContent.includes('..') &&
       ruleContent.endsWith('/**')
@@ -1366,7 +1366,7 @@ export function checkEditableInternalPath(
   // sides handles the macOS /tmp → /private/tmp case where the config dir
   // lives under a symlinked root.
   if (feature('TEMPLATES')) {
-    const jobDir = process.env.CLAUDE_JOB_DIR
+    const jobDir = process.env.GIZZI_JOB_DIR
     if (jobDir) {
       const jobsRoot = join(getClaudeConfigHomeDir(), 'jobs')
       const jobDirForms = getPathsForPermissionCheck(jobDir).map(normalize)
@@ -1412,7 +1412,7 @@ export function checkEditableInternalPath(
 
   // Memdir directory (persistent memory for cross-session learning)
   // This pre-safety-check carve-out exists because the default path is under
-  // ~/.claude/, which is in DANGEROUS_DIRECTORIES. The CLAUDE_COWORK_MEMORY_PATH_OVERRIDE
+  // ~/.claude/, which is in DANGEROUS_DIRECTORIES. The GIZZI_COWORK_MEMORY_PATH_OVERRIDE
   // override is an arbitrary caller-designated directory with no such conflict,
   // so it gets NO special permission treatment here — writes go through normal
   // permission flow (step 5 → ask). SDK callers who want silent memory should

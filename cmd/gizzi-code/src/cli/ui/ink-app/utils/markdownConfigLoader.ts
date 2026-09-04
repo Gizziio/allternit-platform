@@ -27,7 +27,7 @@ import { getManagedFilePath } from './settings/managedPath.js'
 import { isRestrictedToPluginOnly } from './settings/pluginOnlyPolicy.js'
 
 // Claude configuration directory names
-export const CLAUDE_CONFIG_DIRECTORIES = [
+export const GIZZI_CONFIG_DIRECTORIES = [
   'commands',
   'agents',
   'output-styles',
@@ -36,7 +36,7 @@ export const CLAUDE_CONFIG_DIRECTORIES = [
   ...(feature('TEMPLATES') ? (['templates'] as const) : []),
 ] as const
 
-export type ClaudeConfigDirectory = (typeof CLAUDE_CONFIG_DIRECTORIES)[number]
+export type ClaudeConfigDirectory = (typeof GIZZI_CONFIG_DIRECTORIES)[number]
 
 export type MarkdownFile = {
   filePath: string
@@ -444,7 +444,7 @@ export const loadMarkdownFilesForSubdir = memoize(
  * This implementation exists alongside ripgrep for the following reasons:
  * 1. Ripgrep has poor startup performance in native builds (noticeable on app startup)
  * 2. Provides a fallback when ripgrep is unavailable
- * 3. Can be explicitly enabled via CLAUDE_CODE_USE_NATIVE_FILE_SEARCH env var
+ * 3. Can be explicitly enabled via GIZZI_CODE_USE_NATIVE_FILE_SEARCH env var
  *
  * Symlink handling:
  * - Follows symlinks (equivalent to ripgrep's --follow flag)
@@ -561,10 +561,10 @@ async function loadMarkdownFiles(dir: string): Promise<
 > {
   // File search strategy:
   // - Default: ripgrep (faster, battle-tested)
-  // - Fallback: native Node.js (when CLAUDE_CODE_USE_NATIVE_FILE_SEARCH is set)
+  // - Fallback: native Node.js (when GIZZI_CODE_USE_NATIVE_FILE_SEARCH is set)
   //
   // Why both? Ripgrep has poor startup performance in native builds.
-  const useNative = isEnvTruthy(process.env.CLAUDE_CODE_USE_NATIVE_FILE_SEARCH)
+  const useNative = isEnvTruthy(process.env.GIZZI_CODE_USE_NATIVE_FILE_SEARCH)
   const signal = AbortSignal.timeout(3000)
   let files: string[]
   try {

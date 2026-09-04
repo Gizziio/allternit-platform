@@ -58,7 +58,7 @@ export function logForDiagnosticsNoPII(
 }
 
 function getDiagnosticLogFile(): string | undefined {
-  return process.env.CLAUDE_CODE_DIAGNOSTICS_FILE
+  return process.env.GIZZI_CODE_DIAGNOSTICS_FILE
 }
 
 /**

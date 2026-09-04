@@ -262,13 +262,13 @@ export function pluginDataDirPath(pluginId: string): string {
 
 /**
  * Persistent per-plugin data directory, exposed to plugins as
- * ${CLAUDE_PLUGIN_DATA}. Unlike the version-scoped install cache
- * (${CLAUDE_PLUGIN_ROOT}, which is orphaned and GC'd on every update),
+ * ${GIZZI_PLUGIN_DATA}. Unlike the version-scoped install cache
+ * (${GIZZI_PLUGIN_ROOT}, which is orphaned and GC'd on every update),
  * this survives plugin updates — only removed on last-scope uninstall.
  *
  * Creates the directory on call (mkdir). The *lazy* behavior is at the
  * substitutePluginVariables call site — the DATA pattern uses function-form
- * .replace() so this isn't invoked unless ${CLAUDE_PLUGIN_DATA} is present
+ * .replace() so this isn't invoked unless ${GIZZI_PLUGIN_DATA} is present
  * (ROOT also uses function-form, but for $-pattern safety, not laziness).
  * Env-var export sites (MCP/LSP server env, hook env) call this eagerly
  * since subprocesses may expect the dir to exist before writing to it.

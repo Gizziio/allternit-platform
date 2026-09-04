@@ -440,7 +440,7 @@ export async function loadMemoryPrompt(): Promise<string | null> {
 
   // Cowork injects memory-policy text via env var; thread into all builders.
   const coworkExtraGuidelines =
-    process.env.CLAUDE_COWORK_MEMORY_EXTRA_GUIDELINES
+    process.env.GIZZI_COWORK_MEMORY_EXTRA_GUIDELINES
   const extraGuidelines =
     coworkExtraGuidelines && coworkExtraGuidelines.trim().length > 0
       ? [coworkExtraGuidelines]
@@ -492,10 +492,10 @@ export async function loadMemoryPrompt(): Promise<string | null> {
 
   logEvent('tengu_memdir_disabled', {
     disabled_by_env_var: isEnvTruthy(
-      process.env.CLAUDE_CODE_DISABLE_AUTO_MEMORY,
+      process.env.GIZZI_CODE_DISABLE_AUTO_MEMORY,
     ),
     disabled_by_setting:
-      !isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_AUTO_MEMORY) &&
+      !isEnvTruthy(process.env.GIZZI_CODE_DISABLE_AUTO_MEMORY) &&
       getInitialSettings().autoMemoryEnabled === false,
   })
   // Gate on the GB flag directly, not isTeamMemoryEnabled() — that function

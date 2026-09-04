@@ -451,7 +451,7 @@ export type Tool<
   /**
    * For MCP tools: the server and tool names as received from the MCP server (unnormalized).
    * Present on all MCP tools regardless of whether `name` is prefixed (mcp__server__tool)
-   * or unprefixed (CLAUDE_AGENT_SDK_MCP_NO_PREFIX mode).
+   * or unprefixed (GIZZI_AGENT_SDK_MCP_NO_PREFIX mode).
    */
   mcpInfo?: { serverName: string; toolName: string }
   readonly name: string

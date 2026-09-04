@@ -2,7 +2,7 @@
 /**
  * Teammate Initialization Module
  *
- * Handles initialization for Claude Code instances running as teammates in a swarm.
+ * Handles initialization for gizzi-code instances running as teammates in a swarm.
  * Registers a Stop hook to notify the team leader when the teammate becomes idle.
  */
 

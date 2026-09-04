@@ -666,8 +666,8 @@ export async function detectIDEs(
   const detectedIDEs: DetectedIDEInfo[] = []
 
   try {
-    // Get the CLAUDE_CODE_SSE_PORT if set
-    const ssePort = process.env.CLAUDE_CODE_SSE_PORT
+    // Get the GIZZI_CODE_SSE_PORT if set
+    const ssePort = process.env.GIZZI_CODE_SSE_PORT
     const envPort = ssePort ? parseInt(ssePort) : null
 
     // Get the current working directory, normalized to NFC for consistent
@@ -693,7 +693,7 @@ export async function detectIDEs(
       if (!lockfileInfo) continue
 
       let isValid = false
-      if (isEnvTruthy(process.env.CLAUDE_CODE_IDE_SKIP_VALID_CHECK)) {
+      if (isEnvTruthy(process.env.GIZZI_CODE_IDE_SKIP_VALID_CHECK)) {
         isValid = true
       } else if (lockfileInfo.port === envPort) {
         // If the port matches the environment variable, mark as valid regardless of directory
@@ -1296,7 +1296,7 @@ export async function initializeIdeIntegration(
 
   const shouldAutoInstall = getGlobalConfig().autoInstallIdeExtension ?? true
   if (
-    !isEnvTruthy(process.env.CLAUDE_CODE_IDE_SKIP_AUTO_INSTALL) &&
+    !isEnvTruthy(process.env.GIZZI_CODE_IDE_SKIP_AUTO_INSTALL) &&
     shouldAutoInstall
   ) {
     const ideType = ideToInstallExtension ?? getTerminalIdeType()
@@ -1350,8 +1350,8 @@ export async function initializeIdeIntegration(
  */
 const detectHostIP = memoize(
   async (isIdeRunningInWindows: boolean, port: number) => {
-    if (process.env.CLAUDE_CODE_IDE_HOST_OVERRIDE) {
-      return process.env.CLAUDE_CODE_IDE_HOST_OVERRIDE
+    if (process.env.GIZZI_CODE_IDE_HOST_OVERRIDE) {
+      return process.env.GIZZI_CODE_IDE_HOST_OVERRIDE
     }
 
     if (getPlatform() !== 'wsl' || !isIdeRunningInWindows) {

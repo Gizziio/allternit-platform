@@ -26,7 +26,7 @@ import { getManagedFilePath } from './settings/managedPath.js'
 import { isRestrictedToPluginOnly } from './settings/pluginOnlyPolicy.js'
 
 // Claude configuration directory names
-export const CLAUDE_CONFIG_DIRECTORIES = [
+export const GIZZI_CONFIG_DIRECTORIES = [
   'commands',
   'agents',
   'output-styles',
@@ -35,7 +35,7 @@ export const CLAUDE_CONFIG_DIRECTORIES = [
   ...(feature('TEMPLATES') ? (['templates'] as const) : []),
 ] as const
 
-export type ClaudeConfigDirectory = (typeof CLAUDE_CONFIG_DIRECTORIES)[number]
+export type ClaudeConfigDirectory = (typeof GIZZI_CONFIG_DIRECTORIES)[number]
 
 export type MarkdownFile = {
   filePath: string

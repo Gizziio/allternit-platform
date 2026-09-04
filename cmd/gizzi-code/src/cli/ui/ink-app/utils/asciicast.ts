@@ -18,7 +18,7 @@ const recordingState: { filePath: string | null; timestamp: number } = {
 
 /**
  * Get the asciicast recording file path.
- * For ants with CLAUDE_CODE_TERMINAL_RECORDING=1: returns a path.
+ * For ants with GIZZI_CODE_TERMINAL_RECORDING=1: returns a path.
  * Otherwise: returns null.
  * The path is computed once and cached in recordingState.
  */
@@ -29,7 +29,7 @@ export function getRecordFilePath(): string | null {
   if (process.env.USER_TYPE !== 'ant') {
     return null
   }
-  if (!isEnvTruthy(process.env.CLAUDE_CODE_TERMINAL_RECORDING)) {
+  if (!isEnvTruthy(process.env.GIZZI_CODE_TERMINAL_RECORDING)) {
     return null
   }
   // Record alongside the transcript.

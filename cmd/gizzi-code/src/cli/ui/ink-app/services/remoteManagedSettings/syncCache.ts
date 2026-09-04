@@ -38,7 +38,7 @@ export function resetSyncCache(): void {
  * - Console users (API key): All eligible (must have actual key, not just apiKeyHelper)
  * - OAuth users with known subscriptionType: Only Enterprise/C4E and Team
  * - OAuth users with subscriptionType === null (externally-injected tokens via
- *   CLAUDE_CODE_OAUTH_TOKEN / FD, or keychain tokens missing metadata): Eligible —
+ *   GIZZI_CODE_OAUTH_TOKEN / FD, or keychain tokens missing metadata): Eligible —
  *   the API returns empty settings for ineligible orgs, so the cost of a false
  *   positive is one round-trip
  *
@@ -75,8 +75,8 @@ export function isRemoteManagedSettingsEligible(): boolean {
   // that subprocess for the common case.
   const tokens = getClaudeAIOAuthTokens()
 
-  // Externally-injected tokens (CCD via CLAUDE_CODE_OAUTH_TOKEN, CCR via
-  // CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR, Agent SDK, CI) carry no
+  // Externally-injected tokens (CCD via GIZZI_CODE_OAUTH_TOKEN, CCR via
+  // GIZZI_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR, Agent SDK, CI) carry no
   // subscriptionType metadata — getClaudeAIOAuthTokens() constructs them with
   // subscriptionType: null. The token itself is valid; let the API decide.
   // fetchRemoteManagedSettings handles 204/404 gracefully (returns {}), and

@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-04
 **Scope:** `cmd/gizzi-code/` in the allternit monorepo
-**Status:** FOR INTERNAL REVIEW — contains launch-blocking findings (see §6)
+**Status:** FOR INTERNAL REVIEW — launch-blocking findings in §6 remain (distribution basis of derived code). User-visible `CLAUDE_CODE_*` / "Claude Code" product naming was hard-purged 2026-09-04; remaining Anthropic identifiers are the functional floor in `docs/anthropic-allowlist.md`.
 
 ---
 
@@ -69,10 +69,11 @@ Based on the current tree and `docs/UPSTREAM_COMPAT.md` /
   Allternit-owned OpenTelemetry exporter to `api.allternit.com`
   (`docs/telemetry.md`, `src/shared/constants/cloudUrls.ts`); kill switches
   `GIZZI_TELEMETRY=off` / `gizzi config telemetry off`.
-- **Branding (partial):** product renamed gizzi/gizzi-code; docs, privacy,
-  billing, and install URLs repointed to `allternit.com` / `gizziio.com`
-  hosts; `CLAUDE_CODE_*` env surface dual-named to `GIZZI_*` (this slice).
-  Remaining upstream identifiers are inventoried in `docs/UPSTREAM_COMPAT.md`.
+- **Branding (purged 2026-09-04):** product renamed gizzi/gizzi-code; docs,
+  privacy, billing, and install URLs repointed to `allternit.com` /
+  `gizziio.com` hosts; `CLAUDE_CODE_*` env vars hard-renamed to `GIZZI_*`
+  with **zero legacy fallback**. Remaining protocol/nominative identifiers
+  are inventoried in `docs/anthropic-allowlist.md`.
 - **Feature removals/gates:** upstream official marketplace auto-install
   disabled (`GIZZI_ENABLE_UPSTREAM_MARKETPLACE=1` opt-in); upstream
   marketplace source refused; `~/.claude/plugins` demoted to read-only
@@ -89,7 +90,8 @@ these exist** for the Anthropic-derived portions:
 
 - ❌ No upstream copyright notice retained.
 - ❌ No upstream license text present.
-- ❌ No NOTICE file.
+- ⚠️ NOTICE file added 2026-09-04 (`cmd/gizzi-code/NOTICE`) with a
+  counsel-TBD usage basis. It does not by itself legalize distribution.
 - ❌ README does not mention the fork lineage (README "License" section says
   only "MIT"; `cli-package/README.md` says "MIT License").
 - ❌ No per-file SPDX or attribution headers in vendored files.
@@ -107,8 +109,8 @@ is the forked CLI/SDK *source*.
 
 | Surface | Upstream name still visible | Risk |
 |---------|------------------------------|------|
-| Env vars | ~210 `CLAUDE_CODE_*` names remain readable (inventoried in `docs/UPSTREAM_COMPAT.md`); child processes receive `CLAUDE_CODE_*` markers | **High** — "CLAUDE" is an Anthropic trademark; widespread visible use in a competing product invites claims. Mitigation started (dual-name), completion needs a deprecation plan. |
-| Model/API references | "Claude", "Claude Code", claude.ai URLs retained for OAuth, remote agents, connectors, guide agent | **Medium** — nominative references to the model/API being called are defensible (trademark nominative fair use), but marketing copy must not imply endorsement. |
+| Env vars | `CLAUDE_CODE_*` product env surface purged to `GIZZI_*` (hard rename, no fallback). `CLAUDE_AI_*` OAuth URL constants and `CLAUDE_CONFIG_DIR` (legacy `~/.claude` locator) remain. | **Low now** for product env names. `CLAUDE_AI_*` is protocol. |
+| Model/API references | Model names ("Claude Sonnet/Opus/Haiku") and claude.ai OAuth URLs retained | **Medium** — nominative references to the model/API being called are defensible (trademark nominative fair use), but marketing copy must not imply endorsement. |
 | npm scope | `@anthropic-ai/gizzi` was removed this slice; `@anthropic-ai/claude-code` remains only in leftover-install cleanup UX | **Low now** — previous state (a "gizzi" package under the `@anthropic-ai` scope, had it been published) would have been a serious misrepresentation. |
 | Config paths | `~/.claude` legacy fallback (read-only) | **Medium** — invisible to most users, but the directory name persists on user machines. |
 | API constants | Beta header value `claude-code-20250219` sent to the Anthropic API | **Low** — protocol contract, required for the API to accept beta features. |
@@ -162,6 +164,6 @@ is the forked CLI/SDK *source*.
 - `cmd/gizzi-code/package.json` (`"license": "MIT"`, `@allternit/sdk` workspace dep)
 - `cmd/gizzi-code/src/vendor/anthropic-stubs/` (no license files)
 - `cmd/gizzi-code/src/cli/ui/ink-app/{components,hooks}/vendored/` (259 files, no headers)
-- `cmd/gizzi-code/docs/UPSTREAM_COMPAT.md` (env var + URL triage inventory)
+- `cmd/gizzi-code/docs/anthropic-allowlist.md` (remaining functional-floor identifiers)
 - `cmd/gizzi-code/docs/telemetry.md` (fork telemetry architecture)
 - `node_modules/@anthropic-ai/sdk/package.json` (`"license": "MIT"`)

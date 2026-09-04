@@ -454,7 +454,7 @@ export function buildTranscriptForClassifier(
  * Reads from bootstrap/state.ts cache (populated by context.ts) instead of
  * importing claudemd.ts directly — claudemd → permissions/filesystem →
  * permissions → yoloClassifier is a cycle. context.ts already gates on
- * GIZZI_DISABLE_CLAUDE_MDS and normalizes '' to null before caching.
+ * GIZZI_DISABLE_GIZZI_MDS and normalizes '' to null before caching.
  * If the cache is unpopulated (tests, or an entrypoint that never calls
  * getUserContext), the classifier proceeds without CLAUDE.md — same as
  * pre-PR behavior.
@@ -468,10 +468,10 @@ function buildClaudeMdMessage(): Anthropic.MessageParam | null {
       {
         type: 'text',
         text:
-          `The following is the user's CLAUDE.md configuration. These are ` +
+          `The following is the user's GIZZI.md configuration. These are ` +
           `instructions the user provided to the agent and should be treated ` +
           `as part of the user's intent when evaluating actions.\n\n` +
-          `<user_claude_md>\n${claudeMd}\n</user_claude_md>`,
+          `<user_gizzi_md>\n${claudeMd}\n</user_gizzi_md>`,
         cache_control: getCacheControl({ querySource: 'auto_mode' }),
       } as any,
     ],

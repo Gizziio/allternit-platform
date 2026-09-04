@@ -49,14 +49,14 @@ export namespace ToolParsers {
   }
 
   /**
-   * Parse a Claude Code session
-   * Claude Code uses JSONL files for conversation history
+   * Parse a gizzi-code session
+   * gizzi-code uses JSONL files for conversation history
    */
   export async function parseClaudeCode(
     sessionPath: string,
     id: string
   ): Promise<{ source: SessionSource; context?: Partial<SessionContext> }> {
-    log.debug("Parsing Claude Code session", { path: sessionPath, id })
+    log.debug("Parsing gizzi-code session", { path: sessionPath, id })
     
     const messagesPath = path.join(sessionPath, "messages.jsonl")
     const projectPath = path.join(sessionPath, "project.json")
@@ -86,7 +86,7 @@ export namespace ToolParsers {
         }
       }
     } catch (e) {
-      log.debug("Failed to read Claude Code project.json", { error: e })
+      log.debug("Failed to read gizzi-code project.json", { error: e })
     }
     
     // Count messages
@@ -111,7 +111,7 @@ export namespace ToolParsers {
         }
       }
     } catch (e) {
-      log.debug("Failed to count Claude Code messages", { error: e })
+      log.debug("Failed to count gizzi-code messages", { error: e })
     }
 
     return { source }
@@ -119,7 +119,7 @@ export namespace ToolParsers {
 
   /**
    * Parse a Codex session
-   * Codex uses similar JSONL format to Claude Code
+   * Codex uses similar JSONL format to gizzi-code
    */
   export async function parseCodex(
     sessionPath: string,

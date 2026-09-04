@@ -463,10 +463,10 @@ function InstallGitHubApp(props: {
       ...prev_23,
       apiKeyOrOAuthToken: token,
       useExistingKey: false,
-      secretName: 'CLAUDE_CODE_OAUTH_TOKEN',
+      secretName: 'GIZZI_CODE_OAUTH_TOKEN',
       authType: 'oauth_token'
     }));
-    void runSetupGitHubActions(token, 'CLAUDE_CODE_OAUTH_TOKEN');
+    void runSetupGitHubActions(token, 'GIZZI_CODE_OAUTH_TOKEN');
   }, [runSetupGitHubActions]);
   const handleOAuthCancel = useCallback(() => {
     setState(prev_24 => ({

@@ -25,10 +25,10 @@ export const BUNDLED_SKILLS: readonly BundledSkillDefinition[] = [
   },
   {
     name: "import-from-claude-codex",
-    description: "Preview and safely import selected Claude Code and Codex instructions, skills, and MCP declarations.",
+    description: "Preview and safely import selected gizzi-code and Codex instructions, skills, and MCP declarations.",
     builtin: true,
     metadata: { "disable-model-invocation": true },
-    content: `# Import from Claude Code and Codex
+    content: `# Import from gizzi-code and Codex
 
 Use the skill import planner and keep migration conservative.
 

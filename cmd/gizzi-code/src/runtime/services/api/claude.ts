@@ -1882,10 +1882,10 @@ async function* queryModel(
     // the session indefinitely since the SDK's request timeout only covers the
     // initial fetch(), not the streaming body.
     const streamWatchdogEnabled = isEnvTruthy(
-      process.env.CLAUDE_ENABLE_STREAM_WATCHDOG,
+      process.env.GIZZI_ENABLE_STREAM_WATCHDOG,
     )
     const STREAM_IDLE_TIMEOUT_MS =
-      parseInt(process.env.CLAUDE_STREAM_IDLE_TIMEOUT_MS || '', 10) || 90_000
+      parseInt(process.env.GIZZI_STREAM_IDLE_TIMEOUT_MS || '', 10) || 90_000
     const STREAM_IDLE_WARNING_MS = STREAM_IDLE_TIMEOUT_MS / 2
     let streamIdleAborted = false
     // performance.now() snapshot when watchdog fires, for measuring abort propagation delay

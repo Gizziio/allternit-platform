@@ -1,12 +1,12 @@
 import { CLOUD_URLS, envOr } from "@/shared/constants/cloudUrls"
 
 function truthy(key: string) {
-  const value = (process.env[key] ?? process.env["GIZZI_" + key.slice(4)])?.toLowerCase()
+  const value = process.env[key]?.toLowerCase()
   return value === "true" || value === "1"
 }
 
 function env(key: string) {
-  return process.env[key] ?? process.env["GIZZI_" + key.slice(4)]
+  return process.env[key]
 }
 
 export namespace Flag {
@@ -27,13 +27,13 @@ export namespace Flag {
   export const GIZZI_ENABLE_EXPERIMENTAL_MODELS = truthy("GIZZI_ENABLE_EXPERIMENTAL_MODELS")
   export const GIZZI_DISABLE_AUTOCOMPACT = truthy("GIZZI_DISABLE_AUTOCOMPACT")
   export const GIZZI_DISABLE_MODELS_FETCH = truthy("GIZZI_DISABLE_MODELS_FETCH")
-  export const GIZZI_DISABLE_CLAUDE_CODE = truthy("GIZZI_DISABLE_CLAUDE_CODE")
-  export const GIZZI_DISABLE_CLAUDE_CODE_PROMPT =
-    GIZZI_DISABLE_CLAUDE_CODE || truthy("GIZZI_DISABLE_CLAUDE_CODE_PROMPT")
-  export const GIZZI_DISABLE_CLAUDE_CODE_SKILLS =
-    GIZZI_DISABLE_CLAUDE_CODE || truthy("GIZZI_DISABLE_CLAUDE_CODE_SKILLS")
+  export const GIZZI_DISABLE_LEGACY_INSTRUCTIONS = truthy("GIZZI_DISABLE_LEGACY_INSTRUCTIONS")
+  export const GIZZI_DISABLE_LEGACY_PROMPT =
+    GIZZI_DISABLE_LEGACY_INSTRUCTIONS || truthy("GIZZI_DISABLE_LEGACY_PROMPT")
+  export const GIZZI_DISABLE_LEGACY_SKILLS =
+    GIZZI_DISABLE_LEGACY_INSTRUCTIONS || truthy("GIZZI_DISABLE_LEGACY_SKILLS")
   export const GIZZI_DISABLE_EXTERNAL_SKILLS =
-    GIZZI_DISABLE_CLAUDE_CODE_SKILLS || truthy("GIZZI_DISABLE_EXTERNAL_SKILLS")
+    GIZZI_DISABLE_LEGACY_SKILLS || truthy("GIZZI_DISABLE_EXTERNAL_SKILLS")
   export declare const GIZZI_DISABLE_PROJECT_CONFIG: boolean
   export const GIZZI_FAKE_VCS = env("GIZZI_FAKE_VCS")
   export declare const GIZZI_CLIENT: string
@@ -137,7 +137,7 @@ export namespace Flag {
   // Set this (or pass --dangerously-skip-sandbox) to run Bash fully unsandboxed.
   export let GIZZI_SANDBOX_DISABLE: boolean = truthy("GIZZI_SANDBOX_DISABLE")
   // When sandbox is on, allow outbound network. Default: denied — agents that
-  // need npm/pip/cargo must opt in explicitly (matches Claude Code's default-deny).
+  // need npm/pip/cargo must opt in explicitly (matches gizzi-code's default-deny).
   export let GIZZI_SANDBOX_ALLOW_NETWORK = truthy("GIZZI_SANDBOX_ALLOW_NETWORK")
   // Comma-separated hostname allowlist. When set (and network is allowed),
   // outbound traffic is restricted to these domains via a local proxy instead

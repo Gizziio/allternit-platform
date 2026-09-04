@@ -2,8 +2,8 @@
  * Shell Sandbox
  *
  * Wraps subprocess execution with platform-appropriate OS isolation:
- *   - Linux:  bubblewrap (bwrap) — same as Claude Code
- *   - macOS:  sandbox-exec with a Seatbelt profile — same as Claude Code
+ *   - Linux:  bubblewrap (bwrap) — same as gizzi-code
+ *   - macOS:  sandbox-exec with a Seatbelt profile — same as gizzi-code
  *   - Windows: no-op (not supported)
  *
  * The wrapper gives the spawned process:

@@ -5,7 +5,7 @@
  *
  * "Env-less" = no Environments API layer. Distinct from "CCR v2" (the
  * /worker/* transport protocol) — the env-based path (replBridge.ts) can also
- * use CCR v2 transport via CLAUDE_CODE_USE_CCR_V2. This file is about removing
+ * use CCR v2 transport via GIZZI_CODE_USE_CCR_V2. This file is about removing
  * the poll/dispatch layer, not about which transport protocol is underneath.
  *
  * Unlike initBridgeCore (env-based, ~2400 lines), this connects directly
@@ -927,7 +927,7 @@ import {
 } from './codeSessionApi'
 import { getBridgeBaseUrlOverride } from './bridgeConfig'
 
-// CLI-side wrapper that applies the CLAUDE_BRIDGE_BASE_URL dev override and
+// CLI-side wrapper that applies the GIZZI_BRIDGE_BASE_URL dev override and
 // injects the trusted-device token (both are env/GrowthBook reads that the
 // SDK-facing codeSessionApi.ts export must stay free of).
 export async function fetchRemoteCredentials(

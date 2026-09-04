@@ -150,7 +150,7 @@ export function CheckExistingSecretStep(t0) {
   }
   let t15;
   if ($[28] !== cursorOffset || $[29] !== onSecretNameChange || $[30] !== onSubmit || $[31] !== secretName || $[32] !== terminalSize || $[33] !== useExistingSecret) {
-    t15 = !useExistingSecret && <><Box marginBottom={1}><Text>Enter new secret name (alphanumeric with underscores):</Text></Box><TextInput value={secretName} onChange={onSecretNameChange} onSubmit={onSubmit} focus={true} placeholder="e.g., CLAUDE_API_KEY" columns={terminalSize.columns} cursorOffset={cursorOffset} onChangeCursorOffset={setCursorOffset} showCursor={true} /></>;
+    t15 = !useExistingSecret && <><Box marginBottom={1}><Text>Enter new secret name (alphanumeric with underscores):</Text></Box><TextInput value={secretName} onChange={onSecretNameChange} onSubmit={onSubmit} focus={true} placeholder="e.g., GIZZI_API_KEY" columns={terminalSize.columns} cursorOffset={cursorOffset} onChangeCursorOffset={setCursorOffset} showCursor={true} /></>;
     $[28] = cursorOffset;
     $[29] = onSecretNameChange;
     $[30] = onSubmit;

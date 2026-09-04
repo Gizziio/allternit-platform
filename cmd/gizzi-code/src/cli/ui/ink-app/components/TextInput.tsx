@@ -35,7 +35,7 @@ export default function TextInput(props: Props): React.ReactElement | null {
   const [theme] = useTheme();
   const isTerminalFocused = useTerminalFocus();
   // Hoisted to mount-time — this component re-renders on every keystroke.
-  const accessibilityEnabled = useMemo(() => isEnvTruthy(process.env.CLAUDE_CODE_ACCESSIBILITY), []);
+  const accessibilityEnabled = useMemo(() => isEnvTruthy(process.env.GIZZI_CODE_ACCESSIBILITY), []);
   const settings = useSettings();
   const reducedMotion = settings.prefersReducedMotion ?? false;
   const voiceState = feature('VOICE_MODE') ?

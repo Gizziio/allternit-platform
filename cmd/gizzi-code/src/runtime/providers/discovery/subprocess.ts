@@ -190,7 +190,7 @@ export const SUBPROCESS_PROVIDERS: SubprocessSpec[] = [
     name: "Claude (CLI — subscription or Pro)",
     icon: "claude",
     cmd: "claude -p",
-    probe: { args: ["--version"], expect: /Claude Code/ },
+    probe: { args: ["--version"], expect: /gizzi-code/ },
     models: [
       { id: "claude-sonnet-5", name: "Claude Sonnet 5", context: 200000, output: 64000 },
       { id: "claude-opus-5",   name: "Claude Opus 5",   context: 200000, output: 32000 },

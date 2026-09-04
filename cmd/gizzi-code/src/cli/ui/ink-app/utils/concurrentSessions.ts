@@ -32,7 +32,7 @@ function getSessionsDir(): string {
  */
 function envSessionKind(): SessionKind | undefined {
   if (feature('BG_SESSIONS')) {
-    const k = process.env.CLAUDE_CODE_SESSION_KIND
+    const k = process.env.GIZZI_CODE_SESSION_KIND
     if (k === 'bg' || k === 'daemon' || k === 'daemon-worker') return k
   }
   return undefined
@@ -86,12 +86,12 @@ export async function registerSession(): Promise<boolean> {
         kind,
         entrypoint: readGizziEnv('ENTRYPOINT'),
         ...(feature('UDS_INBOX')
-          ? { messagingSocketPath: process.env.CLAUDE_CODE_MESSAGING_SOCKET }
+          ? { messagingSocketPath: process.env.GIZZI_CODE_MESSAGING_SOCKET }
           : {}),
         ...(feature('BG_SESSIONS')
           ? {
-              name: process.env.CLAUDE_CODE_SESSION_NAME,
-              logPath: process.env.CLAUDE_CODE_SESSION_LOG,
+              name: process.env.GIZZI_CODE_SESSION_NAME,
+              logPath: process.env.GIZZI_CODE_SESSION_LOG,
               agent: readGizziEnv('AGENT'),
             }
           : {}),

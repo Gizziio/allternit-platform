@@ -259,7 +259,7 @@ export async function requestMicrophonePermission(): Promise<boolean> {
 
 export async function checkRecordingAvailability(): Promise<RecordingAvailability> {
   // Remote environments have no local microphone
-  if (isRunningOnHomespace() || isEnvTruthy(process.env.CLAUDE_CODE_REMOTE)) {
+  if (isRunningOnHomespace() || isEnvTruthy(process.env.GIZZI_CODE_REMOTE)) {
     return {
       available: false,
       reason:

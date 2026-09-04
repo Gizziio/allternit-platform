@@ -218,7 +218,7 @@ export function getToolSearchBetaHeader(): string {
 export function shouldIncludeFirstPartyOnlyBetas(): boolean {
   return (
     (getAPIProvider() === 'firstParty' || getAPIProvider() === 'foundry') &&
-    !isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS)
+    !isEnvTruthy(process.env.GIZZI_CODE_DISABLE_EXPERIMENTAL_BETAS)
   )
 }
 
@@ -230,7 +230,7 @@ export function shouldIncludeFirstPartyOnlyBetas(): boolean {
 export function shouldUseGlobalCacheScope(): boolean {
   return (
     getAPIProvider() === 'firstParty' &&
-    !isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS)
+    !isEnvTruthy(process.env.GIZZI_CODE_DISABLE_EXPERIMENTAL_BETAS)
   )
 }
 
@@ -314,7 +314,7 @@ export const getAllModelBetas = registerBetasCache(memoize((model: string): stri
     betaHeaders.push(CONTEXT_MANAGEMENT_BETA_HEADER)
   }
   // Add strict tool use beta if experiment is enabled.
-  // Gate on includeFirstPartyOnlyBetas: CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS
+  // Gate on includeFirstPartyOnlyBetas: GIZZI_CODE_DISABLE_EXPERIMENTAL_BETAS
   // already strips schema.strict from tool bodies at api.ts's choke point, but
   // this header was escaping that kill switch. Proxy gateways that look like
   // firstParty but forward to Vertex reject this header with 400.

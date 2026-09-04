@@ -523,7 +523,7 @@ describe.skip("DiscretionaryScreen VM disclosure", () => {
     expect(vmCleanupIdx).toBeGreaterThan(onCleanupIdx)
   })
 
-  test.skip("vm_session_routes.rs bootstrap matches Claude Code cloud session environment", async () => {
+  test.skip("vm_session_routes.rs bootstrap matches gizzi-code cloud session environment", async () => {
     const fs = await import("fs/promises")
     const path = await import("path")
     const content = await fs.readFile(

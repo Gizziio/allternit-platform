@@ -7,9 +7,9 @@ import { join, normalize, posix, sep } from 'path'
 import { hasAutoMemPathOverride, isAutoMemPath } from 'src/memdir/paths.js'
 import { isAgentMemoryPath } from 'src/tools/AgentTool/agentMemory.js'
 import {
-  CLAUDE_FOLDER_PERMISSION_PATTERN,
+  GIZZI_FOLDER_PERMISSION_PATTERN,
   FILE_EDIT_TOOL_NAME,
-  GLOBAL_CLAUDE_FOLDER_PERMISSION_PATTERN,
+  GLOBAL_GIZZI_FOLDER_PERMISSION_PATTERN,
 } from '../../../cli/ui/ink-app/tools/FileEditTool/constants.js'
 import type { z } from 'zod/v4'
 import { getOriginalCwd, getSessionId } from '@/bootstrap/state.js'
@@ -1128,9 +1128,9 @@ export function checkWritePermissionForTool<Input extends AnyObject>(
     const ruleContent = claudeFolderAllowRule.ruleValue.ruleContent
     if (
       ruleContent &&
-      (ruleContent.startsWith(CLAUDE_FOLDER_PERMISSION_PATTERN.slice(0, -2)) ||
+      (ruleContent.startsWith(GIZZI_FOLDER_PERMISSION_PATTERN.slice(0, -2)) ||
         ruleContent.startsWith(
-          GLOBAL_CLAUDE_FOLDER_PERMISSION_PATTERN.slice(0, -2),
+          GLOBAL_GIZZI_FOLDER_PERMISSION_PATTERN.slice(0, -2),
         )) &&
       !ruleContent.includes('..') &&
       ruleContent.endsWith('/**')
@@ -1366,7 +1366,7 @@ export function checkEditableInternalPath(
   // sides handles the macOS /tmp → /private/tmp case where the config dir
   // lives under a symlinked root.
   if (feature('TEMPLATES')) {
-    const jobDir = process.env.CLAUDE_JOB_DIR
+    const jobDir = process.env.GIZZI_JOB_DIR
     if (jobDir) {
       const jobsRoot = join(getClaudeConfigHomeDir(), 'jobs')
       const jobDirForms = getPathsForPermissionCheck(jobDir).map(normalize)
@@ -1412,7 +1412,7 @@ export function checkEditableInternalPath(
 
   // Memdir directory (persistent memory for cross-session learning)
   // This pre-safety-check carve-out exists because the default path is under
-  // ~/.claude/, which is in DANGEROUS_DIRECTORIES. The CLAUDE_COWORK_MEMORY_PATH_OVERRIDE
+  // ~/.claude/, which is in DANGEROUS_DIRECTORIES. The GIZZI_COWORK_MEMORY_PATH_OVERRIDE
   // override is an arbitrary caller-designated directory with no such conflict,
   // so it gets NO special permission treatment here — writes go through normal
   // permission flow (step 5 → ask). SDK callers who want silent memory should

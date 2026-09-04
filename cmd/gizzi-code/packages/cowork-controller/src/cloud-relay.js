@@ -2,7 +2,7 @@
  * Cloud Relay Client
  *
  * Connects outbound to cloud relay server for remote control from anywhere.
- * This enables Claude Code-style remote access without inbound ports.
+ * This enables gizzi-code-style remote access without inbound ports.
  *
  * Architecture:
  * Gizzi-Code TUI → WebSocket (outbound) → Cloud Relay → Mobile/Browser

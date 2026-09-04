@@ -324,7 +324,7 @@ const PluginManifestMetadataSchema = lazySchema(() =>
  * Schema for plugin hooks configuration (hooks.json)
  *
  * Defines the hooks that a plugin can provide to intercept and modify
- * Claude Code behavior at various lifecycle events.
+ * gizzi-code behavior at various lifecycle events.
  */
 export const PluginHooksSchema = lazySchema(() =>
   z.object({
@@ -638,7 +638,7 @@ const PluginManifestUserConfigSchema = lazySchema(() =>
           .string()
           .regex(
             /^[A-Za-z_]\w*$/,
-            'Option keys must be valid identifiers (letters, digits, underscore; no leading digit) — they become CLAUDE_PLUGIN_OPTION_<KEY> env vars in hooks',
+            'Option keys must be valid identifiers (letters, digits, underscore; no leading digit) — they become GIZZI_PLUGIN_OPTION_<KEY> env vars in hooks',
           ),
         PluginUserConfigOptionSchema(),
       )
@@ -1229,7 +1229,7 @@ export function isLocalPluginSource(source: PluginSource): source is string {
  * For local sources (`file`/`directory`), `installLocation` IS the user's path —
  * it lives outside the plugins cache dir and marketplace operations on it are
  * read-only. For remote sources (`github`/`git`/`url`/`npm`), `installLocation`
- * is a cache-dir entry managed by Claude Code and subject to rm/re-clone.
+ * is a cache-dir entry managed by gizzi-code and subject to rm/re-clone.
  *
  * Contrast with isLocalPluginSource, which operates on PluginSource (the
  * per-plugin source inside a marketplace entry) and checks for `./` prefix.
@@ -1466,10 +1466,10 @@ export const InstalledPluginSchema = lazySchema(() =>
  * Schema for the installed_plugins.json file (V1 format)
  *
  * Contains a version number and maps plugin IDs to their installation metadata.
- * Maintained automatically by Claude Code, not edited by users.
+ * Maintained automatically by gizzi-code, not edited by users.
  *
  * The version field tracks schema changes. When the version doesn't match
- * the current schema version, Claude Code will update the file on next startup.
+ * the current schema version, gizzi-code will update the file on next startup.
  *
  * Example file:
  * {

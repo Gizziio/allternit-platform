@@ -4,7 +4,7 @@
 // Only reachable in ant builds (gated by feature('VOICE_MODE') in useVoice.ts import).
 //
 // Connects to Anthropic's voice_stream WebSocket endpoint using the same
-// OAuth credentials as Claude Code.  The endpoint uses conversation_engine
+// OAuth credentials as gizzi-code.  The endpoint uses conversation_engine
 // backed models for speech-to-text.  Designed for hold-to-talk: hold the
 // keybinding to record, release to stop and submit.
 //
@@ -97,7 +97,7 @@ type VoiceStreamMessage =
 // ─── Availability ──────────────────────────────────────────────────────
 
 export function isVoiceStreamAvailable(): boolean {
-  // voice_stream uses the same OAuth as Claude Code — available when the
+  // voice_stream uses the same OAuth as gizzi-code — available when the
   // user is authenticated with Anthropic (Claude.ai subscriber or has
   // valid OAuth tokens).
   if (!isAnthropicAuthEnabled()) {

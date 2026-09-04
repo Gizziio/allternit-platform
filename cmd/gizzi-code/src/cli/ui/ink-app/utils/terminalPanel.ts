@@ -8,7 +8,7 @@
  * session but is destroyed when the instance exits.
  *
  * Meta+J is bound to detach-client inside tmux, so pressing it returns to
- * Claude Code while the shell keeps running. Next toggle re-attaches to the
+ * gizzi-code while the shell keeps running. Next toggle re-attaches to the
  * same session.
  *
  * When tmux is not available, falls back to a non-persistent shell via spawnSync.
@@ -27,7 +27,7 @@ const TMUX_SESSION = 'panel'
 
 /**
  * Get the tmux socket name for the terminal panel.
- * Uses a unique socket per Claude Code instance (based on session ID)
+ * Uses a unique socket per gizzi-code instance (based on session ID)
  * so that each instance has its own isolated terminal panel.
  */
 export function getTerminalPanelSocket(): string {
@@ -110,7 +110,7 @@ class TerminalPanel {
       return false
     }
 
-    // Bind Meta+J (toggles back to Claude Code from inside the terminal)
+    // Bind Meta+J (toggles back to gizzi-code from inside the terminal)
     // and configure the status bar hint. Chained with ';' to collapse
     // 5 spawnSync calls into 1.
     // biome-ignore format: one tmux command per line

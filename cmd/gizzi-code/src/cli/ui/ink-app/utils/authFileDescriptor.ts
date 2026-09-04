@@ -33,7 +33,7 @@ export function maybePersistTokenForSubprocesses(
   token: string,
   tokenName: string,
 ): void {
-  if (!isEnvTruthy(process.env.CLAUDE_CODE_REMOTE)) {
+  if (!isEnvTruthy(process.env.GIZZI_CODE_REMOTE)) {
     return
   }
   try {
@@ -168,12 +168,12 @@ function getCredentialFromFd({
 
 /**
  * Get the CCR-injected OAuth token. See getCredentialFromFd for FD-vs-disk
- * rationale. Env var: CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR.
+ * rationale. Env var: GIZZI_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR.
  * Well-known file: /home/claude/.claude/remote/.oauth_token.
  */
 export function getOAuthTokenFromFileDescriptor(): string | null {
   return getCredentialFromFd({
-    envVar: 'CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR',
+    envVar: 'GIZZI_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR',
     wellKnownPath: CCR_OAUTH_TOKEN_PATH,
     label: 'OAuth token',
     getCached: getOauthTokenFromFd,
@@ -183,12 +183,12 @@ export function getOAuthTokenFromFileDescriptor(): string | null {
 
 /**
  * Get the CCR-injected API key. See getCredentialFromFd for FD-vs-disk
- * rationale. Env var: CLAUDE_CODE_API_KEY_FILE_DESCRIPTOR.
+ * rationale. Env var: GIZZI_CODE_API_KEY_FILE_DESCRIPTOR.
  * Well-known file: /home/claude/.claude/remote/.api_key.
  */
 export function getApiKeyFromFileDescriptor(): string | null {
   return getCredentialFromFd({
-    envVar: 'CLAUDE_CODE_API_KEY_FILE_DESCRIPTOR',
+    envVar: 'GIZZI_CODE_API_KEY_FILE_DESCRIPTOR',
     wellKnownPath: CCR_API_KEY_PATH,
     label: 'API key',
     getCached: getApiKeyFromFd,

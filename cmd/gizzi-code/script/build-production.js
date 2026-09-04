@@ -467,7 +467,7 @@ if (successful.length === 1) {
     console.log(`  ${simpleName} --help`);
 }
 
-// Vendor allternit-mux and ripgrep next to the built binaries (Claude Code
+// Vendor allternit-mux and ripgrep next to the built binaries (gizzi-code
 // layout): dist/vendor/{allternit-mux,ripgrep}/... so the runtime resolves
 // them from the executable's directory.
 for (const r of successful) {

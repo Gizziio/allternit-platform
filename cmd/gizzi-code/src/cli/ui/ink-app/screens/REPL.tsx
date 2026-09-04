@@ -734,12 +734,12 @@ export function REPL({
 
   // Env-var gates hoisted to mount-time — isEnvTruthy does toLowerCase+trim+
   // includes, and these were on the render path (hot during PageUp spam).
-  const titleDisabled = useMemo(() => isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_TERMINAL_TITLE), []);
-  const moreRightEnabled = useMemo(() => "external" === 'ant' && isEnvTruthy(process.env.CLAUDE_MORERIGHT), []);
-  const disableVirtualScroll = useMemo(() => isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_VIRTUAL_SCROLL), []);
+  const titleDisabled = useMemo(() => isEnvTruthy(process.env.GIZZI_CODE_DISABLE_TERMINAL_TITLE), []);
+  const moreRightEnabled = useMemo(() => "external" === 'ant' && isEnvTruthy(process.env.GIZZI_MORERIGHT), []);
+  const disableVirtualScroll = useMemo(() => isEnvTruthy(process.env.GIZZI_CODE_DISABLE_VIRTUAL_SCROLL), []);
   const disableMessageActions = feature('MESSAGE_ACTIONS') ?
   // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
-  useMemo(() => isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_MESSAGE_ACTIONS), []) : false;
+  useMemo(() => isEnvTruthy(process.env.GIZZI_CODE_DISABLE_MESSAGE_ACTIONS), []) : false;
 
   // Log REPL mount/unmount lifecycle
   useEffect(() => {
@@ -858,7 +858,7 @@ export function REPL({
   const [screen, setScreen] = useState<Screen>('prompt');
   const [showAllInTranscript, setShowAllInTranscript] = useState(false);
   // [ forces the dump-to-scrollback path inside transcript mode. Separate
-  // from CLAUDE_CODE_NO_FLICKER=0 (which is process-lifetime) — this is
+  // from GIZZI_CODE_NO_FLICKER=0 (which is process-lifetime) — this is
   // ephemeral, reset on transcript exit. Diagnostic escape hatch so
   // terminal/tmux native cmd-F can search the full flat render.
   const [dumpMode, setDumpMode] = useState(false);
@@ -3645,8 +3645,8 @@ export function REPL({
     // controls treatment: "dialog" (blocking), "hint" (notification), "off".
     {
       const willowMode = getFeatureValue_CACHED_MAY_BE_STALE('tengu_willow_mode', 'off');
-      const idleThresholdMin = Number(process.env.CLAUDE_CODE_IDLE_THRESHOLD_MINUTES ?? 75);
-      const tokenThreshold = Number(process.env.CLAUDE_CODE_IDLE_TOKEN_THRESHOLD ?? 100_000);
+      const idleThresholdMin = Number(process.env.GIZZI_CODE_IDLE_THRESHOLD_MINUTES ?? 75);
+      const tokenThreshold = Number(process.env.GIZZI_CODE_IDLE_TOKEN_THRESHOLD ?? 100_000);
       if (willowMode !== 'off' && !getGlobalConfig().idleReturnDismissed && !skipIdleCheckRef.current && !speculationAccept && !input.trim().startsWith('/') && lastQueryCompletionTimeRef.current > 0 && getTotalInputTokens() >= tokenThreshold) {
         const idleMs = Date.now() - lastQueryCompletionTimeRef.current;
         const idleMinutes = idleMs / 60_000;
@@ -4304,9 +4304,9 @@ export function REPL({
     const willowMode: string = getFeatureValue_CACHED_MAY_BE_STALE('tengu_willow_mode', 'off');
     if (willowMode !== 'hint' && willowMode !== 'hint_v2') return;
     if (getGlobalConfig().idleReturnDismissed) return;
-    const tokenThreshold = Number(process.env.CLAUDE_CODE_IDLE_TOKEN_THRESHOLD ?? 100_000);
+    const tokenThreshold = Number(process.env.GIZZI_CODE_IDLE_TOKEN_THRESHOLD ?? 100_000);
     if (getTotalInputTokens() < tokenThreshold) return;
-    const idleThresholdMs = Number(process.env.CLAUDE_CODE_IDLE_THRESHOLD_MINUTES ?? 75) * 60_000;
+    const idleThresholdMs = Number(process.env.GIZZI_CODE_IDLE_THRESHOLD_MINUTES ?? 75) * 60_000;
     const elapsed = Date.now() - lastQueryCompletionTime;
     const remaining = idleThresholdMs - elapsed;
     const timer = setTimeout((lqct, addNotif, msgsRef, mode, hintRef) => {

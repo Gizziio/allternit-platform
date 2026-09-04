@@ -714,8 +714,8 @@ export async function getEventMetadata(
     ...(process.env.GIZZI_ENTRYPOINT && {
       entrypoint: process.env.GIZZI_ENTRYPOINT,
     }),
-    ...(process.env.CLAUDE_AGENT_SDK_VERSION && {
-      agentSdkVersion: process.env.CLAUDE_AGENT_SDK_VERSION,
+    ...(process.env.GIZZI_AGENT_SDK_VERSION && {
+      agentSdkVersion: process.env.GIZZI_AGENT_SDK_VERSION,
     }),
     isInteractive: String(getIsInteractive()),
     clientType: getClientType(),

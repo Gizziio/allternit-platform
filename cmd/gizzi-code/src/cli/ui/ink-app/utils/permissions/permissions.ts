@@ -246,7 +246,7 @@ function toolMatchesRule(
   }
 
   // MCP tools are matched by their fully qualified mcp__server__tool name. In
-  // skip-prefix mode (CLAUDE_AGENT_SDK_MCP_NO_PREFIX), MCP tools have unprefixed
+  // skip-prefix mode (GIZZI_AGENT_SDK_MCP_NO_PREFIX), MCP tools have unprefixed
   // display names (e.g., "Write") that collide with builtin names; rules targeting
   // builtins should not match their MCP replacements.
   const nameForRuleMatch = getToolNameForPermissionCheck(tool)

@@ -134,7 +134,7 @@ async function writeHighWaterMark(
 
 export function isTodoV2Enabled(): boolean {
   // Force-enable tasks in non-interactive mode (e.g. SDK users who want Task tools over TodoWrite)
-  if (isEnvTruthy(process.env.CLAUDE_CODE_ENABLE_TASKS)) {
+  if (isEnvTruthy(process.env.GIZZI_CODE_ENABLE_TASKS)) {
     return true
   }
   return !getIsNonInteractiveSession()
@@ -192,9 +192,9 @@ export async function resetTaskList(taskListId: string): Promise<void> {
 /**
  * Gets the task list ID based on the current context.
  * Priority:
- * 1. CLAUDE_CODE_TASK_LIST_ID - explicit task list ID
+ * 1. GIZZI_CODE_TASK_LIST_ID - explicit task list ID
  * 2. In-process teammate: leader's team name (so teammates share the leader's task list)
- * 3. CLAUDE_CODE_TEAM_NAME - set when running as a process-based teammate
+ * 3. GIZZI_CODE_TEAM_NAME - set when running as a process-based teammate
  * 4. Leader team name - set when the leader creates a team via TeamCreate
  * 5. Session ID - fallback for standalone sessions
  */

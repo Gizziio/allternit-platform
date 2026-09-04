@@ -264,7 +264,7 @@ function getUserSnapshotContent(configFile: string): string {
 }
 
 /**
- * Generates Claude Code specific snapshot content
+ * Generates gizzi-code specific snapshot content
  * This content is always included regardless of user configuration
  */
 async function getClaudeCodeSnapshotContent(): Promise<string> {
@@ -351,7 +351,7 @@ async function getSnapshotScript(
   const configFile = getConfigFile(shellPath)
   const isZsh = configFile.endsWith('.zshrc')
 
-  // Generate the user content and Claude Code content
+  // Generate the user content and gizzi-code content
   const userContent = configFileExists
     ? getUserSnapshotContent(configFile)
     : !isZsh
@@ -459,12 +459,12 @@ export const createAndSaveSnapshot = async (
         ['-c', '-l', snapshotScript],
         {
           env: {
-            ...((process.env.CLAUDE_CODE_DONT_INHERIT_ENV
+            ...((process.env.GIZZI_CODE_DONT_INHERIT_ENV
               ? {}
               : subprocessEnv()) as typeof process.env),
             SHELL: binShell,
             GIT_EDITOR: 'true',
-            CLAUDECODE: '1',
+            GIZZI_CODE: '1',
           },
           timeout: SNAPSHOT_CREATION_TIMEOUT,
           maxBuffer: 1024 * 1024, // 1MB buffer

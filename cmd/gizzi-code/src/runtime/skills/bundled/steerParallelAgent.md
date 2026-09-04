@@ -1,11 +1,11 @@
 ---
 name: steer-parallel-agent
-description: Steer an already-running parallel agent session (another Kimi Code, Claude Code, Codex, Agy, etc.) that is working on the same project. Use whenever the user mentions another agent, a parallel session, a different CLI agent, a second agent, a background agent, "the other agent", "agent working on", "steer that session", "don't mess up its work", "coordinate with", "parallel agent", "another session", "same project", "already running", "existing agent", "target session", "redirect the agent", "augment its work", "merge plans", or "cross-agent steering". Covers discovery, non-invasive steering, activation, and verification — even when the target agent is not in tmux, not registered in Rails, and cannot be injected into directly.
+description: Steer an already-running parallel agent session (another Kimi Code, gizzi-code, Codex, Agy, etc.) that is working on the same project. Use whenever the user mentions another agent, a parallel session, a different CLI agent, a second agent, a background agent, "the other agent", "agent working on", "steer that session", "don't mess up its work", "coordinate with", "parallel agent", "another session", "same project", "already running", "existing agent", "target session", "redirect the agent", "augment its work", "merge plans", or "cross-agent steering". Covers discovery, non-invasive steering, activation, and verification — even when the target agent is not in tmux, not registered in Rails, and cannot be injected into directly.
 ---
 
 # Steer a Parallel Agent Session
 
-You are the **steering agent**. The **target agent** is an already-running CLI agent session (Kimi Code, Claude Code, Codex, Agy, etc.) that is actively modifying the same project. Your job is to redirect or augment its work **without breaking its state**.
+You are the **steering agent**. The **target agent** is an already-running CLI agent session (Kimi Code, gizzi-code, Codex, Agy, etc.) that is actively modifying the same project. Your job is to redirect or augment its work **without breaking its state**.
 
 **Never do this:**
 - Edit the target agent's session files (`wire.jsonl`, `state.json`, `agents/*/context/`) directly.
@@ -62,7 +62,7 @@ Key files:
 | `agents/main/plans/` | Active plan files |
 | `agents/main/tasks/` | Background task outputs |
 
-### Claude Code sessions
+### gizzi-code sessions
 
 ```bash
 ls -lt ~/.claude/projects/ | head -20

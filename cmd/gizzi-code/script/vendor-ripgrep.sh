@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Vendor ripgrep into gizzi-code's distribution tree (Claude Code layout):
+# Vendor ripgrep into gizzi-code's distribution tree:
 # vendor/ripgrep/<arch>-<platform>/rg — downloaded from the official
 # BurntSushi/ripgrep releases.
 #

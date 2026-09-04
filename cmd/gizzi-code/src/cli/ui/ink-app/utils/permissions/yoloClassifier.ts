@@ -148,7 +148,7 @@ function getAutoModeDumpDir(): string {
 
 /**
  * Dump the auto mode classifier request and response bodies to the per-user
- * claude temp directory when CLAUDE_CODE_DUMP_AUTO_MODE is set. Files are
+ * claude temp directory when GIZZI_CODE_DUMP_AUTO_MODE is set. Files are
  * named by unix timestamp: {timestamp}[.{suffix}].req.json and .res.json
  */
 async function maybeDumpAutoMode(
@@ -158,7 +158,7 @@ async function maybeDumpAutoMode(
   suffix?: string,
 ): Promise<void> {
   if (process.env.USER_TYPE !== 'ant') return
-  if (!isEnvTruthy(process.env.CLAUDE_CODE_DUMP_AUTO_MODE)) return
+  if (!isEnvTruthy(process.env.GIZZI_CODE_DUMP_AUTO_MODE)) return
   const base = suffix ? `${timestamp}.${suffix}` : `${timestamp}`
   try {
     await mkdir(getAutoModeDumpDir(), { recursive: true })
@@ -453,7 +453,7 @@ export function buildTranscriptForClassifier(
  * Reads from bootstrap/state.ts cache (populated by context.ts) instead of
  * importing claudemd.ts directly — claudemd → permissions/filesystem →
  * permissions → yoloClassifier is a cycle. context.ts already gates on
- * CLAUDE_CODE_DISABLE_CLAUDE_MDS and normalizes '' to null before caching.
+ * GIZZI_DISABLE_GIZZI_MDS and normalizes '' to null before caching.
  * If the cache is unpopulated (tests, or an entrypoint that never calls
  * getUserContext), the classifier proceeds without CLAUDE.md — same as
  * pre-PR behavior.
@@ -467,10 +467,10 @@ function buildClaudeMdMessage(): AllternitAI.MessageParam | null {
       {
         type: 'text',
         text:
-          `The following is the user's CLAUDE.md configuration. These are ` +
+          `The following is the user's GIZZI.md configuration. These are ` +
           `instructions the user provided to the agent and should be treated ` +
           `as part of the user's intent when evaluating actions.\n\n` +
-          `<user_claude_md>\n${claudeMd}\n</user_claude_md>`,
+          `<user_gizzi_md>\n${claudeMd}\n</user_gizzi_md>`,
         cache_control: getCacheControl({ querySource: 'auto_mode' }),
       },
     ],
@@ -1334,7 +1334,7 @@ type AutoModeConfig = {
  */
 function getClassifierModel(): string {
   if (process.env.USER_TYPE === 'ant') {
-    const envModel = process.env.CLAUDE_CODE_AUTO_MODE_MODEL
+    const envModel = process.env.GIZZI_CODE_AUTO_MODE_MODEL
     if (envModel) return envModel
   }
   const config = getFeatureValue_CACHED_MAY_BE_STALE(
@@ -1357,7 +1357,7 @@ function resolveTwoStageClassifier():
   | 'thinking'
   | undefined {
   if (process.env.USER_TYPE === 'ant') {
-    const env = process.env.CLAUDE_CODE_TWO_STAGE_CLASSIFIER
+    const env = process.env.GIZZI_CODE_TWO_STAGE_CLASSIFIER
     if (env === 'fast' || env === 'thinking') return env
     if (isEnvTruthy(env)) return true
     if (isEnvDefinedFalsy(env)) return false
@@ -1379,7 +1379,7 @@ function isTwoStageClassifierEnabled(): boolean {
 
 function isJsonlTranscriptEnabled(): boolean {
   if (process.env.USER_TYPE === 'ant') {
-    const env = process.env.CLAUDE_CODE_JSONL_TRANSCRIPT
+    const env = process.env.GIZZI_CODE_JSONL_TRANSCRIPT
     if (isEnvTruthy(env)) return true
     if (isEnvDefinedFalsy(env)) return false
   }

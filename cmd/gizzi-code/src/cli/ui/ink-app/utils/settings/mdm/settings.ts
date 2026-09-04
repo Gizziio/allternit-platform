@@ -1,6 +1,6 @@
 // @ts-nocheck
 /**
- * MDM (Mobile Device Management) profile enforcement for Claude Code managed settings.
+ * MDM (Mobile Device Management) profile enforcement for gizzi-code managed settings.
  *
  * Reads enterprise settings from OS-level MDM configuration:
  * - macOS: `com.anthropic.claudecode` preference domain

@@ -74,7 +74,7 @@ export interface SlackContext {
 }
 
 /**
- * ClaudeCodeInternalEvent represents events logged from Claude Code via Statsig
+ * ClaudeCodeInternalEvent represents events logged from gizzi-code via Statsig
  * This schema matches the structure in claude-cli-internal/src/services/statsig.ts
  * Source table: proj-product-data-nhme.raw_statsig_internal_tools.events
  */

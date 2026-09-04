@@ -18,7 +18,7 @@ const EVENT_MAP: Record<string, string> = {
 }
 
 function expandVars(value: string, root: string): string {
-  return value.replace(/\$\{CLAUDE_PLUGIN_ROOT\}/g, root)
+  return value.replace(/\$\{GIZZI_PLUGIN_ROOT\}/g, root)
 }
 
 function matchesTool(matcher: string | undefined, tool: string): boolean {
@@ -36,7 +36,7 @@ async function runCommand(
   const command = expandVars(hook.command, root)
   const timeout = hook.timeout ?? 30
 
-  const env = { ...process.env, CLAUDE_PLUGIN_ROOT: root }
+  const env = { ...process.env, GIZZI_PLUGIN_ROOT: root }
   const shell = process.env.SHELL || "/bin/bash"
 
   const stdin = JSON.stringify({ input, output })

@@ -116,7 +116,7 @@ export function createPowerShellProvider(shellPath: string): ShellProvider {
       if (currentSandboxTmpDir) {
         // PowerShell on Linux/macOS honors TMPDIR for [System.IO.Path]::GetTempPath()
         env.TMPDIR = currentSandboxTmpDir
-        env.CLAUDE_CODE_TMPDIR = currentSandboxTmpDir
+        env.GIZZI_CODE_TMPDIR = currentSandboxTmpDir
       }
       return env
     },

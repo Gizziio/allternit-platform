@@ -31,7 +31,7 @@ export function useIDEIntegration(t0) {
           return;
         }
         const globalConfig = getGlobalConfig();
-        const autoConnectEnabled = (globalConfig.autoConnectIde || autoConnectIdeFlag || isSupportedTerminal() || process.env.CLAUDE_CODE_SSE_PORT || ideToInstallExtension || isEnvTruthy(process.env.CLAUDE_CODE_AUTO_CONNECT_IDE)) && !isEnvDefinedFalsy(process.env.CLAUDE_CODE_AUTO_CONNECT_IDE);
+        const autoConnectEnabled = (globalConfig.autoConnectIde || autoConnectIdeFlag || isSupportedTerminal() || process.env.GIZZI_CODE_SSE_PORT || ideToInstallExtension || isEnvTruthy(process.env.GIZZI_CODE_AUTO_CONNECT_IDE)) && !isEnvDefinedFalsy(process.env.GIZZI_CODE_AUTO_CONNECT_IDE);
         if (!autoConnectEnabled) {
           return;
         }

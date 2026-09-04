@@ -2,7 +2,7 @@
 /**
  * Teammate utilities for agent swarm coordination
  *
- * These helpers identify whether this Claude Code instance is running as a
+ * These helpers identify whether this gizzi-code instance is running as a
  * spawned teammate in a swarm. Teammates receive their identity via CLI
  * arguments (--agent-id, --team-name, etc.) which are stored in dynamicTeamContext.
  *
@@ -153,7 +153,7 @@ export function isPlanModeRequired(): boolean {
   if (dynamicTeamContext !== null) {
     return dynamicTeamContext.planModeRequired
   }
-  return isEnvTruthy(process.env.CLAUDE_CODE_PLAN_MODE_REQUIRED)
+  return isEnvTruthy(process.env.GIZZI_CODE_PLAN_MODE_REQUIRED)
 }
 
 /**
@@ -162,8 +162,8 @@ export function isPlanModeRequired(): boolean {
  * A session is considered a team lead if:
  * 1. A team context exists with a leadAgentId, AND
  * 2. Either:
- *    - Our CLAUDE_CODE_AGENT_ID matches the leadAgentId, OR
- *    - We have no CLAUDE_CODE_AGENT_ID set (backwards compat: the original
+ *    - Our GIZZI_CODE_AGENT_ID matches the leadAgentId, OR
+ *    - We have no GIZZI_CODE_AGENT_ID set (backwards compat: the original
  *      session that created the team before agent IDs were standardized)
  *
  * @param teamContext - The team context from AppState, if any

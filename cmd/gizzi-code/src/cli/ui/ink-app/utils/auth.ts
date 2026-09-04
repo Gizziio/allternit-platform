@@ -90,7 +90,7 @@ const DEFAULT_API_KEY_HELPER_TTL = 5 * 60 * 1000
  */
 function isManagedOAuthContext(): boolean {
   return (
-    isEnvTruthy(process.env.CLAUDE_CODE_REMOTE) ||
+    isEnvTruthy(process.env.GIZZI_CODE_REMOTE) ||
     readGizziEnv('ENTRYPOINT') === 'claude-desktop'
   )
 }
@@ -102,20 +102,20 @@ export function isAnthropicAuthEnabled(): boolean {
   if (isBareMode()) return false
 
   // `claude ssh` remote: ANTHROPIC_UNIX_SOCKET tunnels API calls through a
-  // local auth-injecting proxy. The launcher sets CLAUDE_CODE_OAUTH_TOKEN as a
+  // local auth-injecting proxy. The launcher sets GIZZI_CODE_OAUTH_TOKEN as a
   // placeholder iff the local side is a subscriber (so the remote includes the
   // oauth-2025 beta header to match what the proxy will inject). The remote's
   // ~/.claude settings (apiKeyHelper, settings.env.ANTHROPIC_API_KEY) MUST NOT
   // flip this — they'd cause a header mismatch with the proxy and a bogus
   // "invalid x-api-key" from the API. See src/ssh/sshAuthProxy.ts.
   if (process.env.ANTHROPIC_UNIX_SOCKET) {
-    return !!process.env.CLAUDE_CODE_OAUTH_TOKEN
+    return !!process.env.GIZZI_CODE_OAUTH_TOKEN
   }
 
   const is3P =
-    isEnvTruthy(process.env.CLAUDE_CODE_USE_BEDROCK) ||
-    isEnvTruthy(process.env.CLAUDE_CODE_USE_VERTEX) ||
-    isEnvTruthy(process.env.CLAUDE_CODE_USE_FOUNDRY)
+    isEnvTruthy(process.env.GIZZI_CODE_USE_BEDROCK) ||
+    isEnvTruthy(process.env.GIZZI_CODE_USE_VERTEX) ||
+    isEnvTruthy(process.env.GIZZI_CODE_USE_FOUNDRY)
 
   // Check if user has configured an external API key source
   // This allows externally-provided API keys to work (without requiring proxy configuration)
@@ -124,7 +124,7 @@ export function isAnthropicAuthEnabled(): boolean {
   const hasExternalAuthToken =
     process.env.ANTHROPIC_AUTH_TOKEN ||
     apiKeyHelper ||
-    process.env.CLAUDE_CODE_API_KEY_FILE_DESCRIPTOR
+    process.env.GIZZI_CODE_API_KEY_FILE_DESCRIPTOR
 
   // Check if API key is from an external source (not managed by /login)
   const { source: apiKeySource } = getAnthropicApiKeyWithSource({
@@ -165,8 +165,8 @@ export function getAuthTokenSource() {
     return { source: 'ANTHROPIC_AUTH_TOKEN' as const, hasToken: true }
   }
 
-  if (process.env.CLAUDE_CODE_OAUTH_TOKEN) {
-    return { source: 'CLAUDE_CODE_OAUTH_TOKEN' as const, hasToken: true }
+  if (process.env.GIZZI_CODE_OAUTH_TOKEN) {
+    return { source: 'GIZZI_CODE_OAUTH_TOKEN' as const, hasToken: true }
   }
 
   // Check for OAuth token from file descriptor (or its CCR disk fallback)
@@ -178,9 +178,9 @@ export function getAuthTokenSource() {
     // doesn't exist. Call sites fall through correctly — the new source is
     // !== 'none' (cli/handlers/auth.ts → oauth_token) and not in the
     // isEnvVarToken set (auth.ts:1844 → generic re-login message).
-    if (process.env.CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR) {
+    if (process.env.GIZZI_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR) {
       return {
-        source: 'CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR' as const,
+        source: 'GIZZI_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR' as const,
         hasToken: true,
       }
     }
@@ -274,11 +274,11 @@ export function getAnthropicApiKeyWithSource(
 
     if (
       !apiKeyEnv &&
-      !process.env.CLAUDE_CODE_OAUTH_TOKEN &&
-      !process.env.CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR
+      !process.env.GIZZI_CODE_OAUTH_TOKEN &&
+      !process.env.GIZZI_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR
     ) {
       throw new Error(
-        'ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN env var is required',
+        'ANTHROPIC_API_KEY or GIZZI_CODE_OAUTH_TOKEN env var is required',
       )
     }
 
@@ -429,11 +429,11 @@ export function isAwsCredentialExportFromProjectSettings(): boolean {
 
 /**
  * Calculate TTL in milliseconds for the API key helper cache
- * Uses CLAUDE_CODE_API_KEY_HELPER_TTL_MS env var if set and valid,
+ * Uses GIZZI_CODE_API_KEY_HELPER_TTL_MS env var if set and valid,
  * otherwise defaults to 5 minutes
  */
 export function calculateApiKeyHelperTTL(): number {
-  const envTtl = process.env.CLAUDE_CODE_API_KEY_HELPER_TTL_MS
+  const envTtl = process.env.GIZZI_CODE_API_KEY_HELPER_TTL_MS
 
   if (envTtl) {
     const parsed = parseInt(envTtl, 10)
@@ -441,7 +441,7 @@ export function calculateApiKeyHelperTTL(): number {
       return parsed
     }
     logForDebugging(
-      `Found CLAUDE_CODE_API_KEY_HELPER_TTL_MS env var, but it was not a valid number. Got ${envTtl}`,
+      `Found GIZZI_CODE_API_KEY_HELPER_TTL_MS env var, but it was not a valid number. Got ${envTtl}`,
       { level: 'error' },
     )
   }
@@ -1257,10 +1257,10 @@ export const getClaudeAIOAuthTokens = memoize((): OAuthTokens | null => {
   if (isBareMode()) return null
 
   // Check for force-set OAuth token from environment variable
-  if (process.env.CLAUDE_CODE_OAUTH_TOKEN) {
+  if (process.env.GIZZI_CODE_OAUTH_TOKEN) {
     // Return an inference-only token (unknown refresh and expiry)
     return {
-      accessToken: process.env.CLAUDE_CODE_OAUTH_TOKEN,
+      accessToken: process.env.GIZZI_CODE_OAUTH_TOKEN,
       refreshToken: null,
       expiresAt: null,
       scopes: ['user:inference'],
@@ -1401,7 +1401,7 @@ export async function getClaudeAIOAuthTokensAsync(): Promise<OAuthTokens | null>
 
   // Env var and FD tokens are sync and don't hit the keychain
   if (
-    process.env.CLAUDE_CODE_OAUTH_TOKEN ||
+    process.env.GIZZI_CODE_OAUTH_TOKEN ||
     getOAuthTokenFromFileDescriptor()
   ) {
     return getClaudeAIOAuthTokens()
@@ -1593,9 +1593,9 @@ export function is1PApiCustomer(): boolean {
 
   // Exclude Vertex, Bedrock, and Foundry customers
   if (
-    isEnvTruthy(process.env.CLAUDE_CODE_USE_BEDROCK) ||
-    isEnvTruthy(process.env.CLAUDE_CODE_USE_VERTEX) ||
-    isEnvTruthy(process.env.CLAUDE_CODE_USE_FOUNDRY)
+    isEnvTruthy(process.env.GIZZI_CODE_USE_BEDROCK) ||
+    isEnvTruthy(process.env.GIZZI_CODE_USE_VERTEX) ||
+    isEnvTruthy(process.env.GIZZI_CODE_USE_FOUNDRY)
   ) {
     return false
   }
@@ -1732,9 +1732,9 @@ export function getSubscriptionName(): string {
 /** Check if using third-party services (Bedrock or Vertex or Foundry) */
 export function isUsing3PServices(): boolean {
   return !!(
-    isEnvTruthy(process.env.CLAUDE_CODE_USE_BEDROCK) ||
-    isEnvTruthy(process.env.CLAUDE_CODE_USE_VERTEX) ||
-    isEnvTruthy(process.env.CLAUDE_CODE_USE_FOUNDRY)
+    isEnvTruthy(process.env.GIZZI_CODE_USE_BEDROCK) ||
+    isEnvTruthy(process.env.GIZZI_CODE_USE_VERTEX) ||
+    isEnvTruthy(process.env.GIZZI_CODE_USE_FOUNDRY)
   )
 }
 
@@ -1777,7 +1777,7 @@ export function getOtelHeadersFromHelper(): Record<string, string> {
 
   // Return cached headers if still valid (debounce)
   const debounceMs = parseInt(
-    process.env.CLAUDE_CODE_OTEL_HEADERS_HELPER_DEBOUNCE_MS ||
+    process.env.GIZZI_CODE_OTEL_HEADERS_HELPER_DEBOUNCE_MS ||
       DEFAULT_OTEL_HEADERS_DEBOUNCE_MS.toString(),
   )
   if (
@@ -1870,8 +1870,8 @@ export function getAccountInformation() {
   const { source: authTokenSource } = getAuthTokenSource()
   const accountInfo: UserAccountInfo = {}
   if (
-    authTokenSource === 'CLAUDE_CODE_OAUTH_TOKEN' ||
-    authTokenSource === 'CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR'
+    authTokenSource === 'GIZZI_CODE_OAUTH_TOKEN' ||
+    authTokenSource === 'GIZZI_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR'
   ) {
     accountInfo.tokenSource = authTokenSource
   } else if (isClaudeAISubscriber()) {
@@ -1953,8 +1953,8 @@ export async function validateForceLoginOrg(): Promise<OrgValidationResult> {
   // in ~/.claude.json is user-writable and cannot be trusted.
   const { source } = getAuthTokenSource()
   const isEnvVarToken =
-    source === 'CLAUDE_CODE_OAUTH_TOKEN' ||
-    source === 'CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR'
+    source === 'GIZZI_CODE_OAUTH_TOKEN' ||
+    source === 'GIZZI_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR'
 
   const { getOauthProfileFromOauthToken } = await import(
     '../services/oauth/getOauthProfile.js'
@@ -1980,9 +1980,9 @@ export async function validateForceLoginOrg(): Promise<OrgValidationResult> {
 
   if (isEnvVarToken) {
     const envVarName =
-      source === 'CLAUDE_CODE_OAUTH_TOKEN'
-        ? 'CLAUDE_CODE_OAUTH_TOKEN'
-        : 'CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR'
+      source === 'GIZZI_CODE_OAUTH_TOKEN'
+        ? 'GIZZI_CODE_OAUTH_TOKEN'
+        : 'GIZZI_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR'
     return {
       valid: false,
       message:

@@ -29,7 +29,7 @@ function isAutoToolSearchMode(value: string | undefined): boolean {
 }
 
 export function getToolSearchMode(): ToolSearchMode {
-  if (isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS)) {
+  if (isEnvTruthy(process.env.GIZZI_CODE_DISABLE_EXPERIMENTAL_BETAS)) {
     return 'standard'
   }
 

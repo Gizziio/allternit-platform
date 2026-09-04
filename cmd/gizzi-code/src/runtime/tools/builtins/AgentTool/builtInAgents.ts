@@ -23,7 +23,7 @@ export function getBuiltInAgents(): AgentDefinition[] {
   // Allow disabling all built-in agents via env var (useful for SDK users who want a blank slate)
   // Only applies in noninteractive mode (SDK/API usage)
   if (
-    isEnvTruthy(process.env.CLAUDE_AGENT_SDK_DISABLE_BUILTIN_AGENTS) &&
+    isEnvTruthy(process.env.GIZZI_AGENT_SDK_DISABLE_BUILTIN_AGENTS) &&
     getIsNonInteractiveSession()
   ) {
     return []

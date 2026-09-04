@@ -10,7 +10,7 @@
 import { isEnvDefinedFalsy, isEnvTruthy } from './envUtils'
 import { getInitialSettings } from './settings/settings'
 export function shouldIncludeGitInstructions(): boolean {
-  const envVal = process.env.CLAUDE_CODE_DISABLE_GIT_INSTRUCTIONS
+  const envVal = process.env.GIZZI_CODE_DISABLE_GIT_INSTRUCTIONS
   if (isEnvTruthy(envVal)) return false
   if (isEnvDefinedFalsy(envVal)) return true
   return getInitialSettings().includeGitInstructions ?? true

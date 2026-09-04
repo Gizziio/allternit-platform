@@ -45,7 +45,7 @@ const getRipgrepConfig = memoize((): RipgrepConfig => {
     }
   }
 
-  // Vendored ripgrep (Claude Code layout): resolved relative to the running
+  // Vendored ripgrep (gizzi-code layout): resolved relative to the running
   // executable when compiled, and relative to this module in dev.
   const vendored = vendoredRipgrepPath()
   if (vendored) {
@@ -54,7 +54,7 @@ const getRipgrepConfig = memoize((): RipgrepConfig => {
 
   // In bundled (native) mode, ripgrep is statically compiled into bun-internal
   // and dispatches based on argv[0]. We spawn ourselves with argv0='rg'.
-  // NOTE: only valid for builds that statically link ripgrep (Claude Code's
+  // NOTE: only valid for builds that statically link ripgrep (gizzi-code's
   // custom build); plain `bun build --compile` binaries must use the vendored
   // binary above, which is why the vendored check comes first.
   if (isInBundledMode()) {

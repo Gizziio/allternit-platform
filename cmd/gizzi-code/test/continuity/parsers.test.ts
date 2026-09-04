@@ -17,8 +17,8 @@ describe("Tool Parsers", () => {
     } catch {}
   })
 
-  describe("Claude Code Parser", () => {
-    it("should parse Claude Code session with project.json", async () => {
+  describe("gizzi-code Parser", () => {
+    it("should parse gizzi-code session with project.json", async () => {
       const sessionPath = path.join(testDir, "claude-session")
       await mkdir(sessionPath, { recursive: true })
       

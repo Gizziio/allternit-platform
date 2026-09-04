@@ -77,7 +77,7 @@ export function getAutoCompactThreshold(model: string): number {
     effectiveContextWindow - AUTOCOMPACT_BUFFER_TOKENS
 
   // Override for easier testing of autocompact
-  const envPercent = process.env.CLAUDE_AUTOCOMPACT_PCT_OVERRIDE
+  const envPercent = process.env.GIZZI_AUTOCOMPACT_PCT_OVERRIDE
   if (envPercent) {
     const parsed = parseFloat(envPercent)
     if (!isNaN(parsed) && parsed > 0 && parsed <= 100) {
@@ -210,7 +210,7 @@ export async function shouldAutoCompact(
   // sessionMemory + manual /compact working.
   //
   // Consult isContextCollapseEnabled (not the raw gate) so the
-  // CLAUDE_CONTEXT_COLLAPSE env override is honored here too. require()
+  // GIZZI_CONTEXT_COLLAPSE env override is honored here too. require()
   // inside the block breaks the init-time cycle (this file exports
   // getEffectiveContextWindowSize which collapse's index imports).
   if (feature('CONTEXT_COLLAPSE')) {

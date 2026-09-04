@@ -1,8 +1,8 @@
 // @ts-nocheck
 /**
- * Claude Code hints protocol.
+ * gizzi-code hints protocol.
  *
- * CLIs and SDKs running under Claude Code can emit a self-closing
+ * CLIs and SDKs running under gizzi-code can emit a self-closing
  * `<claude-code-hint />` tag to stderr (merged into stdout by the shell
  * tools). The harness scans tool output for these tags, strips them before
  * the output reaches the model, and surfaces an install prompt to the

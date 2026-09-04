@@ -56,7 +56,7 @@ export function UserPromptMessage({
   useAppState(s_0 => s_0.viewingAgentTaskId) : null;
   // Hoisted to mount-time — per-message component, re-renders on every scroll.
   const briefEnvEnabled = feature('KAIROS') || feature('KAIROS_BRIEF') ?
-  useMemo(() => isEnvTruthy(process.env.CLAUDE_CODE_BRIEF), []) : false;
+  useMemo(() => isEnvTruthy(process.env.GIZZI_CODE_BRIEF), []) : false;
   const useBriefLayout = feature('KAIROS') || feature('KAIROS_BRIEF') ? (getKairosActive() || getUserMsgOptIn() && (briefEnvEnabled || getFeatureValue_CACHED_MAY_BE_STALE('tengu_kairos_brief', false))) && isBriefOnly && !isTranscriptMode && !viewingAgentTaskId : false;
   // Truncate before the early return so the hook order is stable.
   const displayText = useMemo(() => {

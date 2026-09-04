@@ -259,7 +259,7 @@ function createPluginCommand(
         isSkill ? 'Plugin skill' : 'Plugin command',
       )
 
-    // Substitute ${CLAUDE_PLUGIN_ROOT} in allowed-tools before parsing
+    // Substitute ${GIZZI_PLUGIN_ROOT} in allowed-tools before parsing
     const rawAllowedTools = frontmatter['allowed-tools']
     const substitutedAllowedTools =
       typeof rawAllowedTools === 'string'
@@ -358,7 +358,7 @@ function createPluginCommand(
           argumentNames,
         )
 
-        // Replace ${CLAUDE_PLUGIN_ROOT} and ${CLAUDE_PLUGIN_DATA} with their paths
+        // Replace ${GIZZI_PLUGIN_ROOT} and ${GIZZI_PLUGIN_DATA} with their paths
         const {
           substitutePluginVariables,
           substituteUserConfigInContent,
@@ -380,10 +380,10 @@ function createPluginCommand(
           )
         }
 
-        // Replace ${CLAUDE_SKILL_DIR} with this specific skill's directory.
-        // Distinct from ${CLAUDE_PLUGIN_ROOT}: a plugin can contain multiple
-        // skills, so CLAUDE_PLUGIN_ROOT points to the plugin root while
-        // CLAUDE_SKILL_DIR points to the individual skill's subdirectory.
+        // Replace ${GIZZI_SKILL_DIR} with this specific skill's directory.
+        // Distinct from ${GIZZI_PLUGIN_ROOT}: a plugin can contain multiple
+        // skills, so GIZZI_PLUGIN_ROOT points to the plugin root while
+        // GIZZI_SKILL_DIR points to the individual skill's subdirectory.
         if (config.isSkillMode) {
           const rawSkillDir = dirname(file.filePath)
           const skillDir =
@@ -391,14 +391,14 @@ function createPluginCommand(
               ? rawSkillDir.replace(/\\/g, '/')
               : rawSkillDir
           finalContent = finalContent.replace(
-            /\$\{CLAUDE_SKILL_DIR\}/g,
+            /\$\{GIZZI_SKILL_DIR\}/g,
             skillDir,
           )
         }
 
-        // Replace ${CLAUDE_SESSION_ID} with the current session ID
+        // Replace ${GIZZI_SESSION_ID} with the current session ID
         finalContent = finalContent.replace(
-          /\$\{CLAUDE_SESSION_ID\}/g,
+          /\$\{GIZZI_SESSION_ID\}/g,
           getSessionId(),
         )
 

@@ -9,7 +9,7 @@ import { join } from 'path'
 import { isFsInaccessible } from './errors.js'
 import { getLocalClaudePath } from './localInstaller.js'
 
-export const CLAUDE_ALIAS_REGEX = /^\s*alias\s+claude\s*=/
+export const GIZZI_ALIAS_REGEX = /^\s*alias\s+claude\s*=/
 
 type EnvLike = Record<string, string | undefined>
 
@@ -49,7 +49,7 @@ export function filterClaudeAliases(lines: string[]): {
   let hadAlias = false
   const filtered = lines.filter(line => {
     // Check if this is a claude alias
-    if (CLAUDE_ALIAS_REGEX.test(line)) {
+    if (GIZZI_ALIAS_REGEX.test(line)) {
       // Extract the alias target - handle spaces, quotes, and various formats
       // First try with quotes
       let match = line.match(/alias\s+claude\s*=\s*["']([^"']+)["']/)
@@ -121,7 +121,7 @@ export async function findClaudeAlias(
     if (!lines) continue
 
     for (const line of lines) {
-      if (CLAUDE_ALIAS_REGEX.test(line)) {
+      if (GIZZI_ALIAS_REGEX.test(line)) {
         // Extract the alias target
         const match = line.match(/alias\s+claude=["']?([^"'\s]+)/)
         if (match && match[1]) {
