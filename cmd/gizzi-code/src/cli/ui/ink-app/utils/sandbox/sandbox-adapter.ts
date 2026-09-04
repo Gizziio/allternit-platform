@@ -237,7 +237,9 @@ export function getPlatform(): Platform {
       if (release.toLowerCase().includes('microsoft')) {
         return 'wsl';
       }
-    } catch {}
+    } catch {
+      // /proc unreadable (non-WSL or restricted) — treat as plain linux.
+    }
     return 'linux';
   }
   return 'linux';
@@ -255,7 +257,9 @@ export function getClaudeTempDir(): string {
   const tmpDir = join(getClaudeConfigHomeDir(), 'tmp');
   try {
     require('fs').mkdirSync(tmpDir, { recursive: true });
-  } catch {}
+  } catch {
+    // Best-effort; callers tolerate a missing tmp dir.
+  }
   return tmpDir;
 }
 
@@ -353,7 +357,9 @@ function ripgrepCommand(): { rgPath: string; rgArgs: string[]; argv0?: string } 
       if (require('fs').existsSync(path)) {
         return { rgPath: path, rgArgs: ['--json', '--context', '2'] };
       }
-    } catch {}
+    } catch {
+      // Unreadable candidate path — skip it.
+    }
   }
   
   // Fallback to rg in PATH

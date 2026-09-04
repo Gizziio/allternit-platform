@@ -19,6 +19,7 @@ const DEFAULTS: RunnerConfig = {
   labels: [],
   pollIntervalMs: 5_000,
   healthPort: 3090,
+  healthHost: '127.0.0.1',
 }
 
 /** Load a JSON config file and merge it with the defaults. */
@@ -67,6 +68,7 @@ export function resolveConfig(overrides: ConfigOverrides = {}): RunnerConfig {
     const parsed = parseInt(env.GIZZI_RUNNER_POLL_INTERVAL, 10)
     if (!Number.isNaN(parsed) && parsed >= 1_000) config.pollIntervalMs = parsed
   }
+  if (env.GIZZI_RUNNER_HEALTH_HOST) config.healthHost = env.GIZZI_RUNNER_HEALTH_HOST
   if (env.GIZZI_RUNNER_HEALTH_PORT) {
     const parsed = parseInt(env.GIZZI_RUNNER_HEALTH_PORT, 10)
     if (!Number.isNaN(parsed) && parsed > 0) config.healthPort = parsed

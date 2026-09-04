@@ -17,3 +17,13 @@ Also fixed two launch blockers found while landing the above:
 
 Final state: deploy-cloudflare-pages.yml green; platform.allternit.com and
 ai.allternit.com both deploy from main again.
+
+## Addendum 2 — auth-route identity rewrites 404'd (merge 281ff4732)
+The export's `public/_redirects` rewrote `/sign-in`, `/sign-up`, `/shell`, `/connect`
+to themselves with status 200 (an SPA-fallback workaround from when the build
+prerendered those routes). The current build no longer emits those HTML files, so
+each self-rewrite resolved to a missing file and returned a hard 404 — verified live
+on both ai.allternit.com and platform.allternit.com. Removed the four identity
+rewrites; the generic `/* /index.html 200` SPA fallback now serves them. Verified
+`/sign-in`, `/sign-up`, `/shell` → 200 on both domains post-deploy. Sync bot carried
+the export to allternit-websites main (commit 42105f78).

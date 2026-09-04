@@ -24,12 +24,16 @@ export function inlineText(value: unknown): string {
     try {
       const rendered = String(value)
       if (rendered !== "[object Object]" && rendered !== "[object Function]") return rendered
-    } catch {}
+    } catch {
+      // Exotic value threw during coercion — try JSON below.
+    }
 
     try {
       const json = JSON.stringify(value)
       if (json && json !== "{}") return json
-    } catch {}
+    } catch {
+      // Unserializable value — fall through to the empty default.
+    }
   }
 
   return ""

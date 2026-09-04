@@ -63,6 +63,8 @@ async function secureDirectory(directory: string) {
   await fs.mkdir(directory, { recursive: true, mode: 0o700 })
   const stat = await fs.lstat(directory)
   if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error("Scratchpad directory is not secure")
+  // mkdir mode is only applied to newly created dirs; chmod tightens
+  // pre-existing ones. Best-effort — the lstat check above is the real guard.
   await fs.chmod(directory, 0o700).catch(() => {})
 }
 
@@ -158,6 +160,7 @@ async function removeEmptyParents(directory: string, stop: string) {
   while (current !== stop && path.relative(stop, current) && !path.relative(stop, current).startsWith("..")) {
     const empty = await fs.readdir(current).then((entries) => entries.length === 0).catch(() => false)
     if (!empty) break
+    // Directory may have been repopulated between readdir and rmdir.
     await fs.rmdir(current).catch(() => {})
     current = path.dirname(current)
   }
@@ -232,8 +235,11 @@ export namespace Scratchpad {
         await fs.writeFile(temporary, input.content, { mode: 0o600 })
         await fs.rename(temporary, target.target)
       } finally {
+        // Leftover temp file only exists if rename failed; unlink is best-effort.
         await fs.unlink(temporary).catch(() => {})
       }
+      // Tighten pre-existing files to 0600; best-effort on filesystems that
+      // reject chmod (the write used a 0600 temp file already).
       await fs.chmod(target.target, 0o600).catch(() => {})
       if (input.options?.trace !== false) {
         SessionTrace.append({

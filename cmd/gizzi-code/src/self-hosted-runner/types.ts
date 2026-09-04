@@ -12,6 +12,8 @@ export interface RunnerConfig {
   labels: string[]
   pollIntervalMs: number
   healthPort: number
+  /** Interface for the health/cancel HTTP server. Defaults to 127.0.0.1. */
+  healthHost: string
 }
 
 /** A job dispatched from the Allternit API to this runner. */

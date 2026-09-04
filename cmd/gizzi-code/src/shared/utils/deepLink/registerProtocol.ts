@@ -330,6 +330,7 @@ export async function ensureDeepLinkProtocolRegistered(): Promise<void> {
     await registerProtocolHandler(claudePath)
     logEvent('tengu_deep_link_registered', { success: true })
     logForDebugging('Auto-registered claude-cli:// deep link protocol handler')
+    // Marker cleanup is best-effort; a stale marker only re-enables the retry prompt.
     await fs.rm(failureMarkerPath, { force: true }).catch(() => {})
   } catch (error) {
     const code = getErrnoCode(error)
@@ -343,6 +344,7 @@ export async function ensureDeepLinkProtocolRegistered(): Promise<void> {
       { level: 'warn' },
     )
     if (code === 'EACCES' || code === 'ENOSPC') {
+      // Best-effort: without the marker the user just sees the error output.
       await fs.writeFile(failureMarkerPath, '').catch(() => {})
     }
   }

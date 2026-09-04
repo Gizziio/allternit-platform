@@ -457,7 +457,11 @@ async function runRemove(providerId: string) {
       }
       delete providers[providerId]
       await Filesystem.writeJson(configPath, { ...existing, provider: providers })
-      await Auth.remove(providerId).catch(() => {})
+      await Auth.remove(providerId).catch((err) => {
+        // Stale credentials may remain on disk; surface it so the user can
+        // clean up rather than believing the removal was complete.
+        UI.error(`Failed to remove stored credentials for '${providerId}': ${err instanceof Error ? err.message : String(err)}`)
+      })
       UI.println(UI.Style.TEXT_SUCCESS + `✓ Provider '${providerId}' removed.` + UI.Style.TEXT_NORMAL)
     },
   })

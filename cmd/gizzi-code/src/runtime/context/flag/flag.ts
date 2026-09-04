@@ -46,6 +46,16 @@ export namespace Flag {
   export const GIZZI_CLERK_JWKS_URL = env("GIZZI_CLERK_JWKS_URL")
   export const GIZZI_CLERK_ISSUER = env("GIZZI_CLERK_ISSUER")
   export const GIZZI_REQUIRE_CLERK_AUTH = truthy("GIZZI_REQUIRE_CLERK_AUTH")
+  // Override for the allternit-cloud-api token-validation endpoint used to
+  // authenticate durable `alt_` gateway tokens (default
+  // https://api.allternit.com/api/v1/auth/validate).
+  export const GIZZI_TOKEN_VALIDATE_URL = env("GIZZI_TOKEN_VALIDATE_URL")
+  // Development-only: reflect any Origin in Access-Control-Allow-Origin.
+  // Never set in production — the server CORS policy is an allowlist
+  // (loopback, tauri, *.gizzi.dev, --cors/config entries) by default.
+  // Dynamic getter (defined after the namespace) — tests toggle this
+  // mid-process, so it can't be a frozen const evaluated once at import time.
+  export declare const GIZZI_DEV_CORS: boolean
   // Path override for the cloudflared binary used by `gizzi serve --tunnel`.
   export const GIZZI_CLOUDFLARED_BIN = env("GIZZI_CLOUDFLARED_BIN")
   // Named-tunnel token (`cloudflared tunnel token <name>` / Zero Trust
@@ -185,6 +195,15 @@ Object.defineProperty(Flag, "GIZZI_DISABLE_PROJECT_CONFIG", {
 Object.defineProperty(Flag, "GIZZI_CLIENT", {
   get() {
     return env("GIZZI_CLIENT") ?? "cli"
+  },
+  enumerable: true,
+  configurable: false,
+})
+
+// Dynamic getter for GIZZI_DEV_CORS
+Object.defineProperty(Flag, "GIZZI_DEV_CORS", {
+  get() {
+    return truthy("GIZZI_DEV_CORS")
   },
   enumerable: true,
   configurable: false,

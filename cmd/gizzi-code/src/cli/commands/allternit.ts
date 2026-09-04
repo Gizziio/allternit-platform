@@ -93,7 +93,7 @@ export const AllternitCommand = cmd({
     } catch (err: any) {
       spinner.stop("Download failed", 1)
       prompts.log.error(err.message || String(err))
-      try { rmSync(tempDir, { recursive: true, force: true }) } catch {}
+      try { rmSync(tempDir, { recursive: true, force: true }) } catch { /* best-effort temp cleanup */ }
       prompts.outro("Failed")
       return
     }
@@ -124,7 +124,7 @@ export const AllternitCommand = cmd({
     } catch (err: any) {
       spinner.stop("Mount failed", 1)
       prompts.log.error(err.message || String(err))
-      try { rmSync(tempDir, { recursive: true, force: true }) } catch {}
+      try { rmSync(tempDir, { recursive: true, force: true }) } catch { /* best-effort temp cleanup */ }
       prompts.outro("Failed")
       return
     }
@@ -166,7 +166,7 @@ export const AllternitCommand = cmd({
       prompts.log.error(err.message || String(err))
     }
 
-    try { rmSync(tempDir, { recursive: true, force: true }) } catch {}
+    try { rmSync(tempDir, { recursive: true, force: true }) } catch { /* best-effort temp cleanup */ }
 
     if (destApp && existsSync(destApp)) {
       spinner.start(`Launching ${destApp}...`)

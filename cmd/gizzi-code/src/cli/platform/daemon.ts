@@ -55,7 +55,7 @@ export async function checkPort(port: number): Promise<boolean> {
     child.stdout?.on("data", (data) => output += data.toString())
     child.on("close", () => resolve(output.length > 0))
     child.on("error", () => resolve(false))
-    setTimeout(() => { try { child.kill() } catch {} resolve(false) }, 2000)
+    setTimeout(() => { try { child.kill() } catch { /* already exited */ } resolve(false) }, 2000)
   })
 }
 

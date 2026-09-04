@@ -311,7 +311,7 @@ export class MediaCaptureManager {
     }
     
     for (const file of filesToDelete) {
-      try { await fs.unlink(file); } catch {}
+      try { await fs.unlink(file); } catch { /* best-effort temp-file cleanup */ }
     }
     
     capture.status = "cleaned";

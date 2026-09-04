@@ -59,19 +59,25 @@ export class BrowserAdapter {
       const browserUsePath = path.join(os.homedir(), "browser-use", "scripts", "browser_controller.py");
       await fs.access(browserUsePath);
       return "browser-use";
-    } catch {}
+    } catch {
+      // Not installed — try the next adapter.
+    }
 
     // Check for agent-browser
     try {
       execSync("which agent-browser", { stdio: "ignore" });
       return "agent-browser";
-    } catch {}
+    } catch {
+      // Not installed — try the next adapter.
+    }
 
     // Check for Playwright as fallback
     try {
       await import("playwright");
       return "playwright-fallback";
-    } catch {}
+    } catch {
+      // Not installed — no visual browser adapter available.
+    }
 
     return null;
   }
@@ -292,7 +298,9 @@ export class BrowserAdapter {
           logs.push({ type: "log", text: line });
         }
       }
-    } catch {}
+    } catch {
+      // Log tail may be unreadable; snapshot parsing below still surfaces errors.
+    }
 
     // Parse snapshot for errors
     try {
@@ -300,7 +308,9 @@ export class BrowserAdapter {
       if (snapshot.errors) {
         errors.push(...snapshot.errors);
       }
-    } catch {}
+    } catch {
+      // Snapshot output may not be JSON; nothing to extract then.
+    }
 
     return { logs, errors };
   }

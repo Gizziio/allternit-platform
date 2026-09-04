@@ -5,6 +5,7 @@ import { withNetworkOptions, resolveNetworkOptions } from "@/cli/network"
 import { Flag } from "@/runtime/context/flag/flag"
 import { Config } from "@/runtime/context/config/config"
 import { init as initGlobal } from "@/runtime/context/global"
+import { assertSafeServerExposure } from "@/cli/server-exposure"
 
 export const ServeCommand = cmd({
   command: "serve",
@@ -62,21 +63,16 @@ export const ServeCommand = cmd({
     // An auth key implies mesh mode even without --mesh (same rule as --tunnel-token).
     const mesh = meshFlag || !!meshAuthKey
 
-    const loopback = opts.hostname === "localhost" || opts.hostname === "127.0.0.1" || opts.hostname === "::1"
-    // Auth counts as configured when either the shared password is set or
-    // Clerk JWT validation is required (the JWKS URL has a working default).
-    const authConfigured = !!Flag.GIZZI_SERVER_PASSWORD || Flag.GIZZI_REQUIRE_CLERK_AUTH
     // A tunnel exposes even a loopback server to the public internet, so the
-    // same "never expose an unauthenticated server" rule applies.
-    const exposed = !loopback || tunnel
-    if (exposed && !authConfigured && !args.allowInsecureNetwork) {
-      throw new Error(
-        `Refusing to expose an unauthenticated Gizzi server${tunnel ? " via --tunnel" : ` on ${opts.hostname}`}. Set GIZZI_SERVER_PASSWORD, set GIZZI_REQUIRE_CLERK_AUTH=true to require Clerk JWTs, or pass --allow-insecure-network explicitly.`,
-      )
-    }
-    if (exposed && !authConfigured) {
-      process.stderr.write("Warning: serving an unauthenticated Gizzi API on a non-loopback interface.\n")
-    }
+    // same "never expose an unauthenticated server" rule applies. Shared with
+    // `gizzi web` via server-exposure.ts so both commands enforce identical
+    // auth policy.
+    assertSafeServerExposure({
+      command: "serve",
+      hostname: opts.hostname,
+      tunnel,
+      allowInsecureNetwork: args.allowInsecureNetwork,
+    })
     const server = Server.listen({ ...opts, tunnel, tunnelToken, tunnelHostname, mesh, meshAuthKey, meshControlUrl })
     process.stderr.write(`gizzi server listening on http://${server.hostname}:${server.port}\n`)
     // Graceful shutdown: server.stop() is the wrapped stop from Server.listen,
@@ -93,7 +89,9 @@ export const ServeCommand = cmd({
       process.stderr.write(`gizzi server received ${signal}; shutting down\n`)
       server
         .stop()
-        .catch(() => {})
+        .catch(() => {
+          // stop() rejects if the socket is already closed; exiting anyway.
+        })
         .finally(() => process.exit(0))
     }
     process.on("SIGINT", () => shutdown("SIGINT"))

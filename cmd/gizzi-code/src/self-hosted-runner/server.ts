@@ -15,6 +15,10 @@ import type { JobExecutor } from './job-executor.js'
 
 export interface HealthServerOptions {
   port: number
+  /** Interface to bind. Defaults to loopback — the job-cancel endpoint is
+   *  unauthenticated, so binding all interfaces by default would let anyone
+   *  on the network cancel jobs. */
+  host?: string
   runnerName: string
   labels: string[]
   maxConcurrentJobs: number
@@ -58,7 +62,7 @@ function matchRoute(
 }
 
 export function createHealthServer(options: HealthServerOptions): Server {
-  const { port, runnerName, labels, maxConcurrentJobs, startedAt, getStatus, executor } = options
+  const { port, host, runnerName, labels, maxConcurrentJobs, startedAt, getStatus, executor } = options
 
   const server = createServer((req, res) => {
     const url = new URL(req.url ?? '/', `http://localhost:${port}`)
@@ -106,8 +110,9 @@ export function createHealthServer(options: HealthServerOptions): Server {
     sendJson(res, 404, { error: 'not found' })
   })
 
-  server.listen(port, () => {
-    console.log(`[server] health server listening on http://0.0.0.0:${port}`)
+  const bindHost = host ?? '127.0.0.1'
+  server.listen(port, bindHost, () => {
+    console.log(`[server] health server listening on http://${bindHost}:${port}`)
   })
 
   server.on('error', (err) => {

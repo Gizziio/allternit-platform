@@ -1600,7 +1600,7 @@ export namespace Config {
           await Filesystem.writeJson(path.join(Global.Path.config, "config.json"), result)
           await fs.unlink(legacy)
         })
-        .catch(() => {})
+        .catch((err) => log.warn("legacy config migration failed", { error: err }))
     }
 
     return result
@@ -1705,7 +1705,9 @@ export namespace Config {
       if (!parsed.data.$schema && isFile) {
         parsed.data.$schema = "https://gizzi.io/config.json"
         const updated = original.replace(/^\s*\{/, '{\n  "$schema": "https://gizzi.io/config.json",')
-        await Bun.write(options.path, updated).catch(() => {})
+        await Bun.write(options.path, updated).catch((err) =>
+          log.warn("failed to persist $schema into config file", { path: options.path, error: err }),
+        )
       }
       const data = parsed.data
       if (data.plugin && isFile) {
