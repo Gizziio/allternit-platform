@@ -461,7 +461,6 @@ dependencies = [
  "hyper 1.10.1",
  "jsonwebtoken",
  "lazy_static",
- "md5",
  "prost",
  "prost-types",
  "protoc-bin-vendored",

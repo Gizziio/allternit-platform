@@ -58,7 +58,7 @@ pub struct CreateApiKeyInput {
     pub scopes: Vec<String>,
 }
 
-fn hash_token(token: &str) -> String {
+pub(crate) fn hash_token(token: &str) -> String {
     let mut hasher = Sha256::new();
     hasher.update(token.as_bytes());
     hex::encode(hasher.finalize())

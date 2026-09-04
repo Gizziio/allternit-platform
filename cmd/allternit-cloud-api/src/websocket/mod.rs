@@ -36,6 +36,12 @@ pub struct DeploymentEvent {
 /// 1. Query parameter: ?token=<token>
 /// 2. Authorization header: Bearer <token>
 /// 3. Sec-WebSocket-Protocol header: token.<token>
+/// 4. A Clerk session JWT in any of those carriers
+///
+/// Token validation goes through `auth::middleware::validate_token_against_db`
+/// (same as the HTTP middleware); this route additionally sits behind the
+/// `auth_middleware` layer, which already enforced a valid Bearer token for
+/// header-capable clients.
 pub async fn ws_handler(
     ws: WebSocketUpgrade,
     Path(id): Path<Uuid>,
@@ -52,6 +58,10 @@ pub async fn ws_handler(
     // Validate token if provided
     let token_valid = if let Some(token) = token {
         validate_ws_token(&state.db, &token).await
+            // Browsers cannot set Authorization headers on WebSocket
+            // connections; a Clerk session JWT may be passed as the token
+            // (query param or subprotocol) instead.
+            || crate::auth::clerk::user_from_headers(&headers).await.is_ok()
     } else {
         // In development mode, allow connections without token
         std::env::var("Allternit_API_DEVELOPMENT_MODE")
@@ -99,43 +109,14 @@ fn extract_token_from_protocol(headers: &axum::http::HeaderMap) -> Option<String
         })
 }
 
-/// Validate WebSocket token against database
+/// Validate a WebSocket token: legacy `allternit_*` tokens (sha256 lookup in
+/// `api_tokens`), modern scoped `alt_…` keys, and the opt-in development
+/// override — all through the same validation the HTTP middleware uses.
 async fn validate_ws_token(db: &sqlx::PgPool, token: &str) -> bool {
-    use crate::auth::models::ApiToken;
-
-    // Simple hash for lookup
-    let token_hash = format!("{:x}", md5::compute(token.as_bytes()));
-
-    let result: Option<ApiToken> = sqlx::query_as::<_, ApiToken>(
-        r#"
-        SELECT id, token_hash, name, user_id, permissions, created_at, expires_at, last_used_at, is_revoked
-        FROM api_tokens
-        WHERE token_hash = $1 AND is_revoked = FALSE
-        "#
+    matches!(
+        crate::auth::middleware::validate_token_against_db(db, token).await,
+        Ok(Some(_))
     )
-    .bind(&token_hash)
-    .fetch_optional(db)
-    .await
-    .ok()
-    .flatten();
-
-    if let Some(token_record) = result {
-        // Check expiration
-        if token_record.is_expired() {
-            return false;
-        }
-
-        // Update last_used_at
-        let _ = sqlx::query("UPDATE api_tokens SET last_used_at = CURRENT_TIMESTAMP WHERE id = $1")
-            .bind(&token_record.id)
-            .execute(db)
-            .await;
-
-        return true;
-    }
-
-    // Check for dev token (gated — rejected unless explicitly enabled)
-    crate::auth::middleware::is_dev_api_token(token)
 }
 
 /// Handle WebSocket connection
