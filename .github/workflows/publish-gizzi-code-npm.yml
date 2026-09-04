@@ -131,9 +131,16 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
 
       - name: Update version in package.json
+        # npm errors "Version not changed" when the version already matches
+        # (package.json is committed at release version) — skip in that case.
         working-directory: cmd/gizzi-code
         run: |
-          npm version ${{ steps.version.outputs.VERSION }} --no-git-tag-version
+          CURRENT=$(node -p "require('./package.json').version")
+          if [ "$CURRENT" != "${{ steps.version.outputs.VERSION }}" ]; then
+            npm version ${{ steps.version.outputs.VERSION }} --no-git-tag-version
+          else
+            echo "package.json already at $CURRENT; skipping bump"
+          fi
 
       - name: Publish to NPM
         working-directory: cmd/gizzi-code
