@@ -19,3 +19,24 @@ Strip `// @ts-nocheck` from the highest-risk auth/server paths in cmd/gizzi-code
 
 ## Open questions
 - Ratchet job currently planned as continue-on-error: true per task brief ("goes hard after count reaches a target") — target TBD by owner.
+
+---
+
+# Steering checkpoint — P1/P2 backlog execution CLOSEOUT (2026-09-04, session p1followup)
+
+## Goal
+Execute the full P1/P2 list from reports/2026-09-03-production-readiness-gap-analysis.md. DONE — all six tracks merged to main as c9e6ddcb2.
+
+## Just did (final)
+- Track 6 (desktop/gizzi) reviewed, verified (desktop tsc 0/0, vitest 101/101, gizzi tsc 7 pre-existing-only), committed acc913bdb.
+- Merged main into session branch (5d2be5ac1): resolved 9 conflicts from the parallel cloud-api track — kept md5-fallback token lookup + main's alt_ keys; both dev-token overrides kept, both now hard-refused in production; sqlx::migrate! is the single migration path (db::migrations unwired, documented); kept main's ci-smoke test gate.
+- Verified merged tree: cargo check clean, cloud-api 188 pass (+1 known docker-env fail), wizard 53/53, gizzi smoke 1156/0 fail.
+- Merged to main c9e6ddcb2, pushed. Ledger summary: agent-ledger/summaries/2026-09-04-0826-p1followup-kimi-code-p1p2-backlog-execution.md.
+- Incident: concurrent session ran `git reset` in the main checkout mid-merge (~08:09) — recovered by merging in the session worktree instead. Do not run conflicted merges in the shared checkout while other sessions are active.
+
+## Next
+- Worktree + branch cleanup (this session is finished).
+- OWNER: TS_AUTHKEY gh secret (CI deploy), secrets rotation (reports/2026-09-04-secrets-rotation-hygiene-handoff.md), Apple signing cert, launch-scope decision, session/routing dedupe when it lands.
+
+## Open questions
+- None from this session.
