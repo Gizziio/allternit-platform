@@ -53,6 +53,7 @@ import { getSubscriptionType, isClaudeAISubscriber, prefetchAwsCredentialsAndBed
 import { checkHasTrustDialogAccepted, getGlobalConfig, getRemoteControlAtStartup, isAutoUpdaterDisabled, saveGlobalConfig } from '../shared/utils/config.js';
 import { seedEarlyInput, stopCapturingEarlyInput } from './utils/earlyInput.js';
 import { getInitialEffortSetting, parseEffortValue } from '../shared/utils/effort.js';
+import { mintGizziSessionToken } from '../shared/utils/allternitToken.js';
 import { getInitialFastModeSetting, isFastModeEnabled, prefetchFastModeStatus, resolveFastModeStatusFromCache } from '../shared/utils/fastMode.js';
 import { applyConfigEnvironmentVariables } from './utils/managedEnv.js';
 import { createSystemMessage, createUserMessage } from '../shared/utils/messages.js';
@@ -4001,9 +4002,6 @@ async function run(): Promise<CommanderCommand> {
       maxSessions: string;
     }) => {
       const {
-        randomBytes
-      } = await import('crypto');
-      const {
         startServer
       // @ts-ignore - This module only exists in certain builds
       } = await import('./server/server.js');
@@ -4031,10 +4029,10 @@ async function run(): Promise<CommanderCommand> {
       } = await import('./server/lockfile.js');
       const existing = await probeRunningServer();
       if (existing) {
-        process.stderr.write(`A claude server is already running (pid ${existing.pid}) at ${existing.httpUrl}\n`);
+        process.stderr.write(`A gizzi server is already running (pid ${existing.pid}) at ${existing.httpUrl}\n`);
         process.exit(1);
       }
-      const authToken = opts.authToken ?? `sk-ant-cc-${randomBytes(16).toString('base64url')}`;
+      const authToken = opts.authToken ?? mintGizziSessionToken();
       const config = {
         port: parseInt(opts.port, 10),
         host: opts.host,

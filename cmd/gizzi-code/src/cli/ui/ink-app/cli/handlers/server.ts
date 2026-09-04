@@ -1,6 +1,6 @@
 // @ts-nocheck
-import { randomBytes } from 'crypto';
 import { startServer } from '../../../../../runtime/server/server.js';
+import { mintGizziSessionToken } from '../../../../../shared/utils/allternitToken.js';
 import { SessionManager } from '../../server/sessionManager.js';
 import { DangerousBackend } from '../../server/backends/dangerousBackend.js';
 import { printBanner } from '../../server/serverBanner.js';
@@ -23,13 +23,12 @@ export async function serverHandler(opts: {
   const existing = await probeRunningServer();
   if (existing) {
     process.stderr.write(
-      `A claude server is already running (pid ${existing.pid}) at ${existing.httpUrl}\n`,
+      `A gizzi server is already running (pid ${existing.pid}) at ${existing.httpUrl}\n`,
     );
     process.exit(1);
   }
 
-  const authToken =
-    opts.authToken ?? `sk-ant-cc-${randomBytes(16).toString('base64url')}`;
+  const authToken = opts.authToken ?? mintGizziSessionToken();
   const config = {
     port: parseInt(opts.port, 10),
     host: opts.host,
