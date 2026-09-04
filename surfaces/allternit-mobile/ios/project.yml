@@ -90,6 +90,11 @@ targets:
           # out-of-the-box; local dev can override via the `api-url` default.
           ALLTERNIT_API_BASE_URL: https://api.allternit.com/api/v1
           ALLTERNIT_GIZZI_CODE_URL: http://127.0.0.1:4096
+          # `-skip-auth` local-testing bearer for a locally running
+          # allternit-cloud-api (AppConfig.devSkipAuthToken). The server only
+          # honors it when started with ALLTERNIT_ALLOW_DEV_TOKEN=true
+          # (audit finding B1); Debug-only value, never ship in Release.
+          ALLTERNIT_DEV_API_TOKEN: dev-api-token
         release:
           # TODO: verify the public mobile gateway host before App Store submission.
           # The gizzi clients default to https://api.allternit.com; mobile may share
@@ -98,6 +103,8 @@ targets:
           # TODO: no hosted gizzi-code server exists yet — empty falls back to
           # AppConfig's dev default (127.0.0.1:4096) until one is deployed.
           ALLTERNIT_GIZZI_CODE_URL: ""
+          # No dev Bearer in Release: AppConfig.devSkipAuthToken resolves to nil.
+          ALLTERNIT_DEV_API_TOKEN: ""
     dependencies:
       # Embedded tsnet node (static xcframework — no embed phase, linked
       # into the binary). Vendored copy of infrastructure/mesh/tsnet-ios.

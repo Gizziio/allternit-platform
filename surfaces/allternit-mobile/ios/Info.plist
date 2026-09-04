@@ -70,6 +70,12 @@
 	     active; AppConfig falls back to this value when the key is absent. -->
 	<key>ALLTERNIT_CLOUD_API_URL</key>
 	<string>https://allternit-cloud-api.fly.dev</string>
+	<!-- DEBUG-only `-skip-auth` bearer for a local cloud-api (AppConfig.
+	     devSkipAuthToken). Injected per build config via project.yml: Debug
+	     carries the historical dev token, Release ships empty (AppConfig
+	     treats empty/unresolved as nil, so Release sends no dev Bearer). -->
+	<key>ALLTERNIT_DEV_API_TOKEN</key>
+	<string>$(ALLTERNIT_DEV_API_TOKEN)</string>
 	<!-- Headscale control plane for the embedded mesh (tsnet) node; AppConfig
 	     falls back to this URL when the key is absent. -->
 	<key>ALLTERNIT_MESH_CONTROL_URL</key>

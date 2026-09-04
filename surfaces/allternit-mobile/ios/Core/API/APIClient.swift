@@ -116,12 +116,15 @@ final class APIClient: @unchecked Sendable {
         // clients send only the Clerk Bearer. The dev Bearer additionally
         // satisfies allternit-cloud-api's dev shortcut
         // (auth/middleware.rs + dispatch handoff) when `-cloud-url` points
-        // at a locally running cloud-api.
+        // at a locally running cloud-api — which now requires that server to
+        // run with ALLTERNIT_ALLOW_DEV_TOKEN=true (audit finding B1). The
+        // token value comes from AppConfig (Info.plist), not a literal here.
         if CommandLine.arguments.contains("-skip-auth") {
             request.setValue("dev-ios-tester", forHTTPHeaderField: "x-allternit-user-id")
             request.setValue("dev", forHTTPHeaderField: "x-allternit-desktop-access-token")
-            if request.value(forHTTPHeaderField: "Authorization") == nil {
-                request.setValue("Bearer dev-api-token", forHTTPHeaderField: "Authorization")
+            if request.value(forHTTPHeaderField: "Authorization") == nil,
+               let devToken = AppConfig.devSkipAuthToken {
+                request.setValue("Bearer \(devToken)", forHTTPHeaderField: "Authorization")
             }
         }
         #endif

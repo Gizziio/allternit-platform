@@ -151,6 +151,21 @@ enum AppConfig {
         return cloudAPIBaseURL.appendingPathComponent("api/v1/runtime-devices/\(escaped)/proxy")
     }
 
+    /// Bearer token the DEBUG-only `-skip-auth` test mode sends to a local
+    /// cloud-api (see APIClient.authorizedRequest / PtyClient). Sourced from
+    /// Info.plist (`ALLTERNIT_DEV_API_TOKEN`, injected per build config in
+    /// project.yml) so the token is not a literal in source — audit finding
+    /// B1. Debug builds keep the historical value; Release builds leave the
+    /// setting empty, so this is nil there and the shim sends no
+    /// Authorization header at all.
+    static let devSkipAuthToken: String? = {
+        #if DEBUG
+        return infoPlistValue("ALLTERNIT_DEV_API_TOKEN")
+        #else
+        return nil
+        #endif
+    }()
+
     /// Returns nil for missing, empty, or unresolved-`$(VARIABLE)` values.
     private static func infoPlistValue(_ key: String) -> String? {
         guard let value = Bundle.main.object(forInfoDictionaryKey: key) as? String,
