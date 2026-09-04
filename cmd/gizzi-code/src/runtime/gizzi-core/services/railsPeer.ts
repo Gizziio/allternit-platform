@@ -31,6 +31,8 @@ let registeredPeer: ApiPeerRegisterResponse | null = null
 let pollIntervalId: ReturnType<typeof setInterval> | null = null
 let seenMessageIds = new Set<number>()
 
+const RAILS_HEARTBEAT_TIMEOUT_MS = 10_000
+
 export type RailsInboxMessageHandler = (command: QueuedCommand) => void
 
 function formatIncomingMessage(envelope: {
@@ -182,6 +184,9 @@ async function heartbeatRailsPeer(name: string): Promise<void> {
       `${config.baseUrl}/api/rails/peers/${encodeURIComponent(name)}/heartbeat`,
       {
         method: 'POST',
+        // Best-effort liveness ping: never let a hung gateway hold the
+        // heartbeat (and its interval slot) open indefinitely.
+        signal: AbortSignal.timeout(RAILS_HEARTBEAT_TIMEOUT_MS),
         headers: {
           'Content-Type': 'application/json',
           'x-allternit-user-id': config.userId,

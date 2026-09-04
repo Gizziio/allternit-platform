@@ -20,6 +20,9 @@ import { ALLTERNIT_GATEWAY_BASE } from '@/shared/constants/allternitGateway'
 
 const DEFAULT_API_URL = ALLTERNIT_GATEWAY_BASE
 
+/** Default request deadline for apiFetch when the caller passes no signal. */
+export const API_FETCH_DEFAULT_TIMEOUT_MS = 15_000
+
 /**
  * Resolve the Allternit API origin. Explicit configuration always wins.
  * Development keeps the loopback default; an explicit production build
@@ -147,6 +150,9 @@ export async function apiFetch(
   const url = `${config.baseUrl}${path}`
   return fetch(url, {
     ...init,
+    // Default deadline so a hung gateway can never stall a caller forever;
+    // an explicit caller-provided signal always wins.
+    signal: init.signal ?? AbortSignal.timeout(API_FETCH_DEFAULT_TIMEOUT_MS),
     headers: {
       ...getHeaders(config),
       ...(init.headers as Record<string, string>),
