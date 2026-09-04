@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Clerk JWT authentication for the standalone gizzi server (phase 1 of iOS
 // direct-connect support). Port of cmd/allternit-api/src/auth.rs: JWKS is
 // fetched from Clerk and cached (jose's remote JWK set handles TTL + refetch

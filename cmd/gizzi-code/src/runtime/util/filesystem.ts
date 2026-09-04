@@ -202,10 +202,14 @@ export namespace Filesystem {
     await fsWriteFile(path, content)
   }
 
-  /** Write object as formatted JSON */
-  export async function writeJson(path: string, data: unknown): Promise<void> {
+  /** Write object as formatted JSON. `mode` applies when the file is created (e.g. 0o600 for secrets). */
+  export async function writeJson(path: string, data: unknown, mode?: number): Promise<void> {
     await fsMkdir(dirname(path), { recursive: true })
-    await fsWriteFile(path, JSON.stringify(data, null, 2) + '\n', 'utf8')
+    await fsWriteFile(
+      path,
+      JSON.stringify(data, null, 2) + '\n',
+      mode === undefined ? 'utf8' : { encoding: 'utf8', mode },
+    )
   }
 
   /** Append content to a file */
