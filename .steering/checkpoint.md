@@ -1,23 +1,22 @@
-# Steering checkpoint — P0 gap-analysis execution (2026-09-03, session b6d6153b)
+# Steering checkpoint — P0 gap-analysis execution (2026-09-03, session b6d6153b) — CLOSEOUT
 
 ## Goal
 Work the P0 list from `reports/2026-09-03-production-readiness-gap-analysis.md` in order (Steps 0–9). Worktree: `allternit-session-b6d6153b`, branch `session/b6d6153b`.
 
-## Just did (Steps 1–5 COMPLETE; Step 7 nearly)
-- Step 1 B4 (02aebcecd): desktop merge repair — unified-main.ts dedup, tsc 0/0, vitest 94/94, build green.
-- Step 2 B7 lockfile (0b23db1c7): bogus `@allternit/allternit-office-suite` dep removed, pnpm-lock regenerated, frozen-lockfile green.
-- Step 3 B7 path dep: vendored allternit-cloud-contracts in-repo (platform/protocols/), Cargo metadata 0 escaping, cloud-api lib 168+1-docker-fail.
-- Step 4 secrets (e11b25550): Clerk/ProtonMail secrets scrubbed → env-required, private.pem deleted, .gitleaks.toml + secrets.yml workflow, gitleaks clean.
-- Step 5 B1 (057b29f21): dev-api-token fallback gated behind ALLTERNIT_ALLOW_DEV_API_TOKEN (default reject) in middleware + ws + auth routes; iOS literals moved to env. Test covers default-reject + enabled-accept. DEPLOY is the user's action.
-- Step 7: verified allternit-headscale.fly.dev/health = 200 LIVE (audit was wrong; headscale defaults stay) — only dead cloud-api fly host repointed to https://api.allternit.com across ai.allternit.com (9 files), platform (2), gizzi-code flag.ts, agent-daemon, cloud-wizard (code+test), scripts, mobile AppConfig.swift, docs. ai + platform builds green.
-- Wizard test triage: 5 failures on my branch → 2 were pre-existing test bugs asserting `.JSONB` paths while codegen + ALL consumers use `.json` (fixed, 50 pass now); 3 sqlite_store tests are pre-existing half-migrated (sqlite-flavored SQL/`":memory:"` against PgPool — Postgres has no :memory:) — NOT my scope, flagged as new finding for its own ticket.
+## Just did (FINAL — Steps 0–5, 7–9 complete; Step 6 = user decision, asked)
+- Steps 1–5, 7, 8 committed; see ledger attestation `agent-ledger/summaries/2026-09-03-2150-b6d6153b-kimi-code-p0-gap-analysis-execution.md` for the full table (SHAs changed in rebase: tip now `4476e933e`).
+- Mid-flight, main merged a165be187 (identical Step-2 lockfile fix) + 423a858e (auth-route rewrite removal, live-verified sign-in fix) → rebased onto origin/main; Step 2 commit dropped as redundant; _redirects deduped against the parallel C1 fix (main's version wins; kept my /favicon.ico rule); ChatComposer resolved to main's.
+- Post-rebase verify: both surface builds green, wizard 50 pass (+3 pre-existing PG-env failures), cloud-api lib 168+1-docker, gitleaks 0 leaks after allowlisting target/ (cargo rmeta fixtures), branch pushed to origin/session/b6d6153b.
+- Closeout verifies: backdoor curl still 200 (awaiting user deploy of cf8798f97), /api/jobs 401, benchmarks JSON serves real JSON live, history scan 219 findings aggregated into the rotation list (Stripe ×12, Sourcegraph ×22, private keys ×19 — see summary).
 
 ## Next
-- Commit Step 7 (URL repoint + JSONB test fix), then Step 8 (_redirects static-asset pass-throughs), Step 9 (closeout: re-run baseline verifies, push branch, agent-ledger attestation, cleanup, deliver rotation list + Step 6 ask).
+- USER: answer the Step 6 routing question (delivered in-session).
+- USER: rotate/revoke secrets per the delivered list; deploy cf8798f97.
+- Merge session/b6d6153b to main (user/orchestrator), then worktree cleanup per AGENTS.md (target symlink, .cache-desktop-node_modules-b6d6153b, /tmp scan files).
 
 ## Open questions
-- Step 6 (routing story) is a user decision — must ask once Steps 1–5,7–8 done.
-- Secrets rotations (B1/B2/backdoor deploy) are user-executed; I prepare changes only.
+- Step 6 decision (3 options delivered).
+- Wizard sqlite_tests half-migration: new ticket needed (out of P0 scope).
 
 ---
 
