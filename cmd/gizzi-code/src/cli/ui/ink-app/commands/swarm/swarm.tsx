@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react'
 import { Box, Text } from '../../ink.js'
 import { useKeybinding } from '../../keybindings/useKeybinding.js'
 import type { LocalJSXCommandOnDone } from '../../types/command.js'
+import { ALLTERNIT_GATEWAY_BASE } from '@/shared/constants/allternitGateway'
 
 interface SwarmVisualizerProps {
   onDone: LocalJSXCommandOnDone
@@ -33,7 +34,7 @@ export function SwarmVisualizer({ onDone }: SwarmVisualizerProps) {
 
   // Fetch real tasks from cowork database/API to display live progress
   useEffect(() => {
-    const API_BASE = process.env.Allternit_API_URL || "http://127.0.0.1:8013"
+    const API_BASE = process.env.Allternit_API_URL || ALLTERNIT_GATEWAY_BASE
     fetch(`${API_BASE}/api/v1/tasks?limit=5`)
       .then(res => {
         if (!res.ok) throw new Error()

@@ -1,8 +1,9 @@
 // @ts-nocheck
 import type { ContentBlockParam } from '@allternit/sdk/providers/anthropic/resources/messages.js'
 import type { Command } from '../../commands.js'
+import { ALLTERNIT_GATEWAY_BASE } from '@/shared/constants/allternitGateway'
 
-const API_BASE = process.env.Allternit_API_URL || 'http://127.0.0.1:8013'
+const API_BASE = process.env.Allternit_API_URL || ALLTERNIT_GATEWAY_BASE
 const RAILS_BASE = `${API_BASE}/api/rails`
 
 interface PlanNewResponse {

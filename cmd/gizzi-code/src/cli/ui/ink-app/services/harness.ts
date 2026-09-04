@@ -2,6 +2,7 @@ import { AllternitHarness } from '@allternit/sdk/harness'
 import type { HarnessConfig } from '@allternit/sdk'
 import { Config } from '@/runtime/context/config/config'
 import { Agent } from '@/runtime/loop/agent'
+import { ALLTERNIT_GATEWAY_BASE } from '@/shared/constants/allternitGateway'
 import {
   getHarnessConfig as getGlobalHarnessConfig,
   setHarnessConfig as setGlobalHarnessConfig,
@@ -131,7 +132,7 @@ function getAllternitApiBase(): string {
   return (
     process.env.ALLTERNIT_API_URL ||
     process.env.ALLTERNIT_BASE_URL ||
-    'http://127.0.0.1:8013'
+    ALLTERNIT_GATEWAY_BASE
   ).replace(/\/$/, '')
 }
 
