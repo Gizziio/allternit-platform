@@ -1,22 +1,22 @@
 {
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "AI-powered terminal interface for the Allternit ecosystem",
-  "homepage": "https://gizzi.sh",
+  "homepage": "https://docs.gizziio.com",
   "license": "MIT",
   "architecture": {
     "64bit": {
-      "url": "https://github.com/Gizziio/gizzi-code/releases/download/v1.0.0/gizzi-code-1.0.0-windows-x64.zip",
-      "hash": "PLACEHOLDER_SHA256"
+      "url": "https://github.com/Gizziio/allternit-platform/releases/download/gizzi-code/1.0.2/gizzi-code-v1.0.2-windows-x64.zip",
+      "hash": "__SHA256_WINDOWS_X64__"
     }
   },
   "bin": "gizzi-code.exe",
   "checkver": {
-    "github": "https://github.com/Gizziio/gizzi-code"
+    "github": "https://github.com/Gizziio/allternit-platform"
   },
   "autoupdate": {
     "architecture": {
       "64bit": {
-        "url": "https://github.com/Gizziio/gizzi-code/releases/download/v$version/gizzi-code-$version-windows-x64.zip"
+        "url": "https://github.com/Gizziio/allternit-platform/releases/download/gizzi-code/$version/gizzi-code-v$version-windows-x64.zip"
       }
     }
   }

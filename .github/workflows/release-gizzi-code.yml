@@ -15,7 +15,53 @@ permissions:
   contents: write
 
 jobs:
+  quality:
+    # Quality gate: nothing builds or publishes until typecheck and the CI
+    # smoke suite pass on the exact commit being released.
+    name: Quality gates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Install dependencies
+        # Full workspace install: gizzi-code imports packages it doesn't
+        # declare (they resolve via the root node_modules, same as local
+        # builds). A filtered install misses them and typecheck fails.
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.28.0 --activate
+          pnpm install --frozen-lockfile
+
+      - name: Build workspace package dependencies
+        # Nested workspace packages ship gitignored dist/ output; build them
+        # before typechecking. gizzi-sdk is used by imports but never declared
+        # in package.json, so it needs an explicit build invocation.
+        run: |
+          pnpm --filter "@allternit/gizzi-code^..." run build
+          pnpm --filter "@allternit/gizzi-sdk" run build
+
+      - name: Typecheck
+        working-directory: cmd/gizzi-code
+        run: NODE_OPTIONS=--max-old-space-size=8192 bun run typecheck
+
+      - name: CI smoke test
+        working-directory: cmd/gizzi-code
+        shell: bash
+        run: |
+          if [ ! -f script/ci-smoke-test.sh ]; then
+            echo "::error::cmd/gizzi-code/script/ci-smoke-test.sh is missing."
+            echo "::error::Refusing to release without the CI smoke suite. Restore the script or fix this workflow reference."
+            exit 1
+          fi
+          bash script/ci-smoke-test.sh
+
   build-binaries:
+    needs: quality
     strategy:
       matrix:
         include:
@@ -28,28 +74,29 @@ jobs:
           - os: macos-latest
             target: darwin-arm64
             ext: tar.gz
-          # darwin-x64 (Intel Mac) disabled: macos-13 runners queue for hours
-          # on GitHub's capacity-constrained Intel fleet, blocking every
-          # release. Re-add (or switch to macos-15-intel) if Intel builds are
-          # actually needed.
-          # - os: macos-13
-          #   target: darwin-x64
-          #   ext: tar.gz
+          # darwin-x64 (Intel Mac) RE-ENABLED 2026-09-03: production must ship
+          # Intel mac. macos-13 is the last Intel image GitHub offers; it
+          # queues longer than Apple Silicon runners, which is why it was
+          # disabled before — absorb that in the release schedule, not by
+          # dropping the platform.
+          - os: macos-13
+            target: darwin-x64
+            ext: tar.gz
           - os: windows-latest
             target: win32-x64
             pkg: windows-x64
             ext: zip
 
     runs-on: ${{ matrix.os }}
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.3.14
-      
+
       - name: Extract version
         id: version
         shell: bash
@@ -60,7 +107,7 @@ jobs:
             VERSION=${GITHUB_REF_NAME#gizzi-code/v}
             echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
           fi
-      
+
       - name: Install dependencies
         # Full workspace install: gizzi-code imports packages it doesn't
         # declare (they resolve via the root node_modules, same as local
@@ -96,6 +143,7 @@ jobs:
             linux-x64)    BUN_TARGET=bun-linux-x64 ;;
             linux-arm64)  BUN_TARGET=bun-linux-arm64 ;;
             darwin-arm64) BUN_TARGET=bun-darwin-arm64 ;;
+            darwin-x64)   BUN_TARGET=bun-darwin-x64 ;;
             win32-x64)    BUN_TARGET=bun-windows-x64 ;;
             *) echo "no bun compile target for ${{ matrix.target }}"; exit 1 ;;
           esac
@@ -126,6 +174,7 @@ jobs:
             linux-x64)    GOOS=linux;   GOARCH=amd64 ;;
             linux-arm64)  GOOS=linux;   GOARCH=arm64 ;;
             darwin-arm64) GOOS=darwin;  GOARCH=arm64 ;;
+            darwin-x64)   GOOS=darwin;  GOARCH=amd64 ;;
             win32-x64)    GOOS=windows; GOARCH=amd64 ;;
             *) echo "no GOOS/GOARCH mapping for target ${{ matrix.target }}"; exit 1 ;;
           esac
@@ -133,6 +182,41 @@ jobs:
           CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH \
             go build -ldflags="-s -w" -o "../../../cmd/gizzi-code/dist/mesh-node$EXT" ./cmd/mesh-node
           ls -la ../../../cmd/gizzi-code/dist/
+
+      - name: Smoke test binary (--version)
+        # Gate: the packaged binary must start and report a version. Catches
+        # broken bundles before they reach the release assets. `timeout 120`
+        # (plus the step-level timeout-minutes backstop, since macOS images
+        # lack GNU timeout) makes a hang fail the job instead of stalling the
+        # release.
+        timeout-minutes: 2
+        shell: bash
+        working-directory: cmd/gizzi-code
+        run: |
+          BIN=./dist/gizzi-code
+          if [ "${{ matrix.target }}" = "win32-x64" ]; then BIN=./dist/gizzi-code.exe; fi
+          chmod +x "$BIN" 2>/dev/null || true
+          if command -v timeout >/dev/null 2>&1; then
+            timeout 120 "$BIN" --version
+          else
+            "$BIN" --version
+          fi
+
+      - name: Smoke test exec (x64 unix only)
+        # Heavier smoke: run one trivial prompt end-to-end through the binary.
+        # Only on the x64 unix runners. `timeout 120` (plus the step-level
+        # timeout-minutes backstop, since macOS images lack GNU timeout) makes
+        # a hang fail the job instead of stalling the release.
+        if: matrix.target == 'linux-x64' || matrix.target == 'darwin-x64'
+        timeout-minutes: 2
+        shell: bash
+        working-directory: cmd/gizzi-code
+        run: |
+          if command -v timeout >/dev/null 2>&1; then
+            timeout 120 ./dist/gizzi-code exec "say hi"
+          else
+            ./dist/gizzi-code exec "say hi"
+          fi
 
       - name: Package (Unix)
         if: matrix.os != 'windows-latest'
@@ -142,7 +226,11 @@ jobs:
           cp dist/gizzi-code dist/mesh-node dist/agent-daemon dist/pkg/
           cd dist/pkg
           tar -czf "../../../gizzi-code-v${{ steps.version.outputs.VERSION }}-${{ matrix.target }}.tar.gz" gizzi-code mesh-node agent-daemon
-      
+          # Transition release: also publish the legacy bare asset name that
+          # installers already in the wild still reference.
+          cp "../../../gizzi-code-v${{ steps.version.outputs.VERSION }}-${{ matrix.target }}.tar.gz" \
+             "../../../gizzi-code-${{ matrix.target }}.zip"
+
       - name: Package (Windows)
         if: matrix.os == 'windows-latest'
         working-directory: cmd/gizzi-code
@@ -154,23 +242,31 @@ jobs:
           Copy-Item dist/agent-daemon.exe dist/pkg/
           cd dist/pkg
           Compress-Archive -Path gizzi-code.exe, mesh-node.exe, agent-daemon.exe -DestinationPath "../../../gizzi-code-v${{ steps.version.outputs.VERSION }}-windows-x64.zip"
-      
+          # Transition release: also publish the legacy bare asset name that
+          # installers already in the wild still reference.
+          Copy-Item "../../../gizzi-code-v${{ steps.version.outputs.VERSION }}-windows-x64.zip" "../../../gizzi-code-windows-x64.zip"
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: gizzi-code-${{ matrix.target }}
-          # The Package step writes to cmd/ (three levels up from dist/pkg).
+          # The Package step writes archives to the repo root (three levels up
+          # from dist/pkg); the cmd/ patterns are kept as a safety net.
           path: |
+            gizzi-code-v*.tar.gz
+            gizzi-code-v*.zip
+            gizzi-code-*.zip
             cmd/gizzi-code-v*.tar.gz
             cmd/gizzi-code-v*.zip
+            cmd/gizzi-code-*.zip
 
   create-release:
     needs: build-binaries
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Extract version
         id: version
         run: |
@@ -182,17 +278,27 @@ jobs:
             echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
             echo "TAG_NAME=$GITHUB_REF_NAME" >> $GITHUB_OUTPUT
           fi
-      
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
           pattern: gizzi-code-*
           merge-multiple: true
-      
+
       - name: List artifacts
         run: ls -la artifacts/
-      
+
+      - name: Generate checksums
+        # checksums.txt is written into artifacts/ so the release step below
+        # attaches it alongside every asset.
+        working-directory: artifacts
+        run: |
+          rm -f checksums.txt
+          sha256sum * > checksums.txt
+          echo "--- checksums.txt ---"
+          cat checksums.txt
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
@@ -202,21 +308,21 @@ jobs:
           generate_release_notes: true
           body: |
             ## Gizzi Code v${{ steps.version.outputs.VERSION }}
-            
+
             ### Install
-            
+
             **macOS/Linux:**
             ```bash
             curl -fsSL https://install.gizziio.com/install | bash
             ```
-            
+
             **Windows:**
             ```powershell
             irm https://install.gizziio.com/install.ps1 | iex
             ```
-            
+
             ### Binaries
-            
+
             | Platform | Architecture | File |
             |----------|-------------|------|
             | macOS | Apple Silicon | `gizzi-code-v${{ steps.version.outputs.VERSION }}-darwin-arm64.tar.gz` |
@@ -224,3 +330,7 @@ jobs:
             | Linux | ARM64 | `gizzi-code-v${{ steps.version.outputs.VERSION }}-linux-arm64.tar.gz` |
             | Linux | x64 | `gizzi-code-v${{ steps.version.outputs.VERSION }}-linux-x64.tar.gz` |
             | Windows | x64 | `gizzi-code-v${{ steps.version.outputs.VERSION }}-windows-x64.zip` |
+
+            `checksums.txt` contains SHA-256 digests for all assets. Legacy
+            bare-named assets (`gizzi-code-<target>.zip`) are included for one
+            transition release for existing installers.

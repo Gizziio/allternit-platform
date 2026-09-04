@@ -10,24 +10,18 @@ import type { Argv } from "yargs"
 import { cmd } from "@/cli/commands/cmd"
 import { UI } from "@/cli/ui"
 import { EOL } from "os"
+import { Flag } from "@/runtime/context/flag/flag"
 
-const API_BASE = process.env.Allternit_API_URL || "http://localhost:3001"
+const API_BASE = Flag.GIZZI_PLATFORM_API_URL.replace(/\/+$/, "")
 
-type UserProfile = {
-  id: string
-  clerk_id?: string | null
-  email: string
-  name?: string | null
-  avatar_url?: string | null
-  role: string
-  status: string
-  created_at: string
-  organization_id?: string | null
-  organization_role?: string | null
+// Real shape of GET /api/v1/auth/me (allternit-cloud-api
+// src/routes/auth.rs::get_current_user).
+type AuthMeResponse = {
+  user_id: string
+  token_id?: string | null
+  permissions?: string[]
+  is_development?: boolean
 }
-
-type ProfileResponse = { user: UserProfile }
-type CreateOrgResponse = { organization_id: string; created: boolean }
 
 async function apiCall<T>(
   method: "GET" | "POST" | "PUT" | "DELETE",
@@ -35,13 +29,14 @@ async function apiCall<T>(
   body?: unknown,
 ): Promise<T> {
   const url = `${API_BASE}${path}`
-  let token = process.env.Allternit_API_TOKEN
+  let token = process.env.ALLTERNIT_API_TOKEN
   if (!token) {
     try {
       const fs = require("fs")
       const path = require("path")
       const os = require("os")
-      const sessionPath = path.join(os.homedir(), ".config", "gizzi", "session.json")
+      const configDir = process.env.GIZZI_CONFIG_DIR ?? path.join(os.homedir(), ".config", "gizzi-code")
+      const sessionPath = path.join(configDir, "session.json")
       if (fs.existsSync(sessionPath)) {
         const session = JSON.parse(fs.readFileSync(sessionPath, "utf8"))
         token = session?.accessToken || null
@@ -56,12 +51,7 @@ async function apiCall<T>(
     Accept: "application/json",
   }
 
-  if (process.env.Allternit_DEV_MODE === "true") {
-    headers["x-allternit-user-id"] = "gizzi-agent-1"
-    headers["x-allternit-desktop-access-token"] = "dev-bootstrap-token"
-    headers["x-allternit-user-email"] = "test@allternit.com"
-    headers["x-allternit-user-name"] = "Org Tester"
-  } else if (token) {
+  if (token) {
     headers["Authorization"] = `Bearer ${token}`
   }
 
@@ -79,32 +69,21 @@ async function apiCall<T>(
   return (await response.json()) as T
 }
 
-function normalizeRole(role?: string | null): string {
-  return role?.replace(/^org:/, "") || "member"
-}
-
 const OrgShowCommand = cmd({
   command: "$0",
   describe: "show current user and organization profile",
   async handler() {
-    const { user } = await apiCall<ProfileResponse>("GET", "/api/v1/me")
+    const me = await apiCall<AuthMeResponse>("GET", "/api/v1/auth/me")
 
     UI.println(UI.Style.TEXT_BOLD + "User" + UI.Style.TEXT_NORMAL)
-    UI.println(`  ID:     ${user.id}`)
-    UI.println(`  Email:  ${user.email}`)
-    UI.println(`  Name:   ${user.name || "—"}`)
-    UI.println(`  Role:   ${user.role}`)
-    UI.println(`  Status: ${user.status}`)
+    UI.println(`  ID:          ${me.user_id}`)
+    UI.println(`  Token ID:    ${me.token_id ?? "—"}`)
+    UI.println(`  Permissions: ${me.permissions?.length ? me.permissions.join(", ") : "—"}`)
+    UI.println(`  Environment: ${me.is_development ? "development" : "production"}`)
 
     UI.println("")
     UI.println(UI.Style.TEXT_BOLD + "Organization" + UI.Style.TEXT_NORMAL)
-    if (user.organization_id) {
-      UI.println(`  ID:   ${user.organization_id}`)
-      UI.println(`  Role: ${normalizeRole(user.organization_role)}`)
-    } else {
-      UI.println(`  No organization resolved for this account.`)
-      UI.println(`  Run ${UI.Style.TEXT_DIM}gizzi org create${UI.Style.TEXT_NORMAL} to create a personal organization.`)
-    }
+    UI.println(`  Organization details are not yet available from the platform API.`)
   },
 })
 
@@ -112,12 +91,9 @@ const OrgCreateCommand = cmd({
   command: "create",
   describe: "create a personal organization (self-hosted / no-Clerk fallback)",
   async handler() {
-    const result = await apiCall<CreateOrgResponse>("POST", "/api/v1/me/organization", {})
-    if (result.created) {
-      UI.println(UI.Style.TEXT_SUCCESS + `Created organization ${result.organization_id}` + UI.Style.TEXT_NORMAL)
-    } else {
-      UI.println(UI.Style.TEXT_DIM + `Organization already exists: ${result.organization_id}` + UI.Style.TEXT_NORMAL)
-    }
+    throw new Error(
+      "`gizzi org create` is not yet available: the platform API does not expose an organization-creation route yet.",
+    )
   },
 })
 

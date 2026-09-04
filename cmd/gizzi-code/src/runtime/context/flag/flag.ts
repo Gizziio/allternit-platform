@@ -64,11 +64,11 @@ export namespace Flag {
   // this env var over storing it in a config file). Implies mesh mode.
   export const GIZZI_MESH_AUTH_KEY = env("GIZZI_MESH_AUTH_KEY")
   // Headscale coordination server URL for `gizzi serve --mesh`. The default
-  // (https://allternit-headscale.fly.dev) lives in Mesh.DEFAULT_CONTROL_URL.
+  // (https://headscale.allternit.com) lives in Mesh.DEFAULT_CONTROL_URL.
   export const GIZZI_MESH_CONTROL_URL = env("GIZZI_MESH_CONTROL_URL")
   // Platform instance registry base URL. `gizzi serve --tunnel` PUTs its public
   // tunnel URL here so signed-in clients (iOS app) can discover the instance.
-  export const GIZZI_PLATFORM_API_URL = env("GIZZI_PLATFORM_API_URL") ?? "https://allternit-cloud-api.fly.dev"
+  export const GIZZI_PLATFORM_API_URL = env("GIZZI_PLATFORM_API_URL") ?? "https://api.allternit.com"
   export const GIZZI_ENABLE_QUESTION_TOOL = truthy("GIZZI_ENABLE_QUESTION_TOOL")
   // Emergency rollback switches for the Kimi-parity runtime rollout. New
   // installations keep these capabilities enabled; flags only suppress the

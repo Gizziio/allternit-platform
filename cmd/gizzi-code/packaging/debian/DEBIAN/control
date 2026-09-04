@@ -1,5 +1,5 @@
 Package: gizzi-code
-Version: 1.0.0
+Version: 1.0.2
 Section: utils
 Priority: optional
 Architecture: amd64
@@ -9,4 +9,4 @@ Description: AI-powered terminal interface for the Allternit ecosystem
  Gizzi Code is an AI-powered terminal interface and runtime
  for the Allternit ecosystem, providing intelligent code assistance
  and terminal automation.
-Homepage: https://gizzi.sh
+Homepage: https://docs.gizziio.com

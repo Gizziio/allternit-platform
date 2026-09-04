@@ -2,23 +2,22 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
   <metadata>
     <id>gizzi-code</id>
-    <version>1.0.0</version>
+    <version>1.0.2</version>
     <title>Gizzi Code</title>
     <authors>Allternit Technologies</authors>
     <owners>Gizziio</owners>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
-    <licenseUrl>https://github.com/Gizziio/gizzi-code/blob/main/LICENSE</licenseUrl>
-    <projectUrl>https://gizzi.sh</projectUrl>
-    <iconUrl>https://gizzi.sh/icon.png</iconUrl>
+    <licenseUrl>https://github.com/Gizziio/allternit-platform/blob/main/cmd/gizzi-code/LICENSE</licenseUrl>
+    <projectUrl>https://docs.gizziio.com</projectUrl>
     <description>AI-powered terminal interface for the Allternit ecosystem</description>
     <summary>AI Terminal Interface</summary>
-    <releaseNotes>https://github.com/Gizziio/gizzi-code/releases</releaseNotes>
-    <copyright>Copyright 2025 Allternit Technologies</copyright>
+    <releaseNotes>https://github.com/Gizziio/allternit-platform/releases</releaseNotes>
+    <copyright>Copyright 2026 Allternit Technologies</copyright>
     <tags>ai terminal cli tui</tags>
-    <projectSourceUrl>https://github.com/Gizziio/gizzi-code</projectSourceUrl>
-    <packageSourceUrl>https://github.com/Gizziio/gizzi-code</packageSourceUrl>
-    <docsUrl>https://docs.gizzi.sh</docsUrl>
-    <bugTrackerUrl>https://github.com/Gizziio/gizzi-code/issues</bugTrackerUrl>
+    <projectSourceUrl>https://github.com/Gizziio/allternit-platform</projectSourceUrl>
+    <packageSourceUrl>https://github.com/Gizziio/allternit-platform</packageSourceUrl>
+    <docsUrl>https://docs.gizziio.com</docsUrl>
+    <bugTrackerUrl>https://github.com/Gizziio/allternit-platform/issues</bugTrackerUrl>
   </metadata>
   <files>
     <file src="tools\**" target="tools" />

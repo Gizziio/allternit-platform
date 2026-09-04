@@ -1,14 +1,16 @@
 # Maintainer: Allternit Technologies <team@allternit.io>
 pkgname=gizzi-code
-pkgver=1.0.0
+pkgver=1.0.2
 pkgrel=1
 pkgdesc="AI-powered terminal interface for the Allternit ecosystem"
 arch=('x86_64' 'aarch64')
-url="https://gizzi.sh"
+url="https://docs.gizziio.com"
 license=('MIT')
 depends=()
-source=("https://github.com/Gizziio/gizzi-code/releases/download/v${pkgver}/gizzi-code-${pkgver}-linux-${CARCH}.tar.gz")
-sha256sums=('PLACEHOLDER_SHA256')
+# Release assets are version-named tarballs (tag gizzi-code/v${pkgver})
+source=("https://github.com/Gizziio/allternit-platform/releases/download/gizzi-code/${pkgver}/gizzi-code-v${pkgver}-linux-${CARCH}.tar.gz")
+sha256sums_x86_64=('__SHA256_LINUX_X64__')
+sha256sums_aarch64=('__SHA256_LINUX_ARM64__')
 
 package() {
   install -Dm755 gizzi-code "$pkgdir/usr/bin/gizzi-code"
