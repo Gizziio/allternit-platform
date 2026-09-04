@@ -7,7 +7,7 @@
  * Not all bundled features should be built-in plugins — use this for
  * features that users should be able to explicitly enable/disable. For
  * features with complex setup or automatic-enabling logic (e.g.
- * allternit-in-chrome), use src/skills/bundled/ instead.
+ * allternit-in-chrome), use src/cli/ui/ink-app/skills/bundled/ instead.
  *
  * To add a new built-in plugin:
  * 1. Import registerBuiltinPlugin from '../builtinPlugins.js'

@@ -19,11 +19,19 @@ import { z } from 'zod/v4'
 import { lazySchema } from '../../../utils/lazySchema.js'
 import { parsePluginIdentifier } from '../../../shared/utils/plugins/pluginIdentifier.js'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../analytics/growthbook.js'
+import { Log } from '../../../shared/util/log.js'
+
+const log = Log.create({ service: 'channel-allowlist' })
 
 export type ChannelAllowlistEntry = {
   marketplace: string
   plugin: string
 }
+
+const ChannelAllowlistEntrySchema = z.object({
+  marketplace: z.string().min(1),
+  plugin: z.string().min(1),
+})
 
 const ChannelAllowlistSchema = lazySchema(() =>
   z.array(
@@ -34,13 +42,50 @@ const ChannelAllowlistSchema = lazySchema(() =>
   ),
 )
 
+/**
+ * Parse the raw GrowthBook ledger payload into allowlist entries.
+ *
+ * Validates loudly instead of silently coercing to []: malformed payloads
+ * and individual bad entries are logged at WARN with the offending data,
+ * so a broken ledger shows up in logs instead of silently blocking every
+ * channel plugin with a generic "not on the allowlist" skip.
+ */
 export function getChannelAllowlist(): ChannelAllowlistEntry[] {
   const raw = getFeatureValue_CACHED_MAY_BE_STALE<unknown>(
     'tengu_harbor_ledger',
     [],
   )
+  if (raw == null) return []
+
+  if (!Array.isArray(raw)) {
+    log.warn('channels allowlist: expected an array of {marketplace, plugin} entries, ignoring value', {
+      received: typeof raw,
+    })
+    return []
+  }
+
+  // Fast path: the whole payload validates as-is.
   const parsed = ChannelAllowlistSchema().safeParse(raw)
-  return parsed.success ? parsed.data : []
+  if (parsed.success) return parsed.data
+
+  // Slow path: keep the valid entries, log the ones dropped. An
+  // array-level safeParse would discard everything when a single entry
+  // is malformed — that is the silent-drop failure mode this guards.
+  const entries: ChannelAllowlistEntry[] = []
+  const dropped: Array<{ index: number; entry: unknown }> = []
+  raw.forEach((item, index) => {
+    const entry = ChannelAllowlistEntrySchema.safeParse(item)
+    if (entry.success) {
+      entries.push(entry.data)
+    } else {
+      dropped.push({ index, entry: item })
+    }
+  })
+  log.warn(
+    `channels allowlist: dropped ${dropped.length} invalid ledger entr${dropped.length === 1 ? 'y' : 'ies'} (plugin channels for valid entries still work)`,
+    { dropped },
+  )
+  return entries
 }
 
 /**
