@@ -118,10 +118,13 @@ jobs:
           PKG=$(node -p "require('./${{ inputs.path }}/package.json').name")
           VERSION="${{ inputs.version }}"
           TARBALL=""
-          for attempt in 1 2 3 4 5; do
+          # Registry metadata lags the publish by minutes under replication
+          # load; 5x10s false-failed on workflow-engine 2026-09-04 while the
+          # package was in fact live. Poll patiently before declaring failure.
+          for attempt in $(seq 1 12); do
             TARBALL=$(npm view "$PKG@$VERSION" dist.tarball 2>/dev/null || true)
             [ -n "$TARBALL" ] && break
-            sleep 10
+            echo "tarball metadata not visible (attempt $attempt); sleeping 15s"; sleep 15
           done
           [ -n "$TARBALL" ] || { echo "::error::could not resolve tarball for $PKG@$VERSION"; exit 1; }
           TMP=$(mktemp -d)
