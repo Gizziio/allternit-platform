@@ -21,6 +21,14 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-04 18:50 — grok — gizzi-code 2.0.0 internal rename + version bump
+
+- **Session ID / Branch:** resumed kimi `session_237dc49a` follow-up on `main`
+- **Commit:** `1d12e14fa` (merged to origin via `cd81ffc8d`)
+- **How it works:** Finished remaining open engineering from the naming purge: renamed internal identifiers/files (`getGizziMds`, `gizziGuideAgent`, `gizziHints`, `getLegacyClaudeHomeDir`, `GizziHint` component). Bumped `@allternit/gizzi-code` and cli-package to **2.0.0**. Counsel questions listed in `docs/legal-attribution.md` §7. **Not done:** npm tag/publish (next), `@allternit/gizzi-sdk` legal hold, counsel distribution basis.
+- **Outstanding work:** Tag `gizzi-code/v2.0.0` and watch `publish-gizzi-code-npm.yml`. Do not publish gizzi-sdk. Brew/scoop/choco hashes still on 1.0.2 until release assets exist.
+- **Summary file:** none
+
 ### 2026-09-04 18:30 — grok — gizzi-code Anthropic naming purge
 
 - **Session ID / Branch:** resumed kimi `session_237dc49a` (quota-killed mid-purge) on `main`
