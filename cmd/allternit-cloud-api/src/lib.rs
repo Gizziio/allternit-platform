@@ -451,8 +451,10 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
 
 /// Initialize the database with configured connection pooling.
 ///
-/// The API targets PostgreSQL in production. The schema is currently managed
-/// externally (pgloader + Postgres migrations); embedded SQLite migrations are
+/// The API targets PostgreSQL in production. The base schema originates from
+/// a pg_dump snapshot (`migrations_pg/001_initial.sql`, applied out-of-band);
+/// incremental migrations run through the ordered runner in `db::migrations`
+/// when `RUN_PG_MIGRATIONS=true`. Embedded SQLite migrations are
 /// intentionally not run here.
 pub async fn init_db(database_url: &str) -> Result<sqlx::PgPool, ApiError> {
     use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
@@ -500,8 +502,18 @@ pub async fn init_db(database_url: &str) -> Result<sqlx::PgPool, ApiError> {
         .connect_with(connect_options)
         .await?;
 
-    // TODO: Add Postgres migrations directory and run sqlx::migrate! against it.
-    // The current production schema was created via pgloader from SQLite.
+    // Ordered migration runner (see db::migrations). Opt-in: the production
+    // database predates the runner, so the operator seeds schema_migrations
+    // for already-applied versions before enabling RUN_PG_MIGRATIONS.
+    if db::migrations::migrations_enabled() {
+        let applied = db::migrations::run_migrations(&pool, db::migrations::MIGRATIONS).await?;
+        tracing::info!("Postgres migrations applied at startup: {}", applied);
+    } else {
+        tracing::info!(
+            "Postgres migrations not run (set RUN_PG_MIGRATIONS=true to enable the \
+             ordered migration runner)"
+        );
+    }
 
     tracing::info!(
         "Database pool initialized with {} max connections",

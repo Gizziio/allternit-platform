@@ -31,9 +31,8 @@ pub async fn validate_token(
     State(state): State<Arc<ApiState>>,
     Json(request): Json<ValidateTokenRequest>,
 ) -> Result<Json<TokenInfo>, ApiError> {
-    // Simple hash for lookup
-    let digest = md5::compute(request.token.as_bytes());
-    let token_hash = format!("{:x}", digest);
+    // sha256 hash lookup (same scheme as services::api_keys)
+    let token_hash = crate::services::api_keys::hash_token(&request.token);
 
     let db_token: Option<ApiToken> = sqlx::query_as::<_, ApiToken>(
         r#"
@@ -62,7 +61,8 @@ pub async fn validate_token(
             }
         }
         None => {
-            // Check for dev token (gated — rejected unless explicitly enabled)
+            // Check for dev token (opt-in override — rejected by default,
+            // hard-refused in production; see auth::middleware::is_dev_api_token)
             if crate::auth::middleware::is_dev_api_token(&request.token) {
                 TokenInfo {
                     valid: true,
@@ -186,8 +186,7 @@ pub async fn create_token(
 
     // Generate token
     let token = format!("allternit_{}", generate_secure_random(48));
-    let digest = md5::compute(token.as_bytes());
-    let token_hash = format!("{:x}", digest);
+    let token_hash = crate::services::api_keys::hash_token(&token);
     let token_id = format!("token_{}", generate_secure_random(16));
 
     // Calculate expiration
