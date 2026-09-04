@@ -54,7 +54,7 @@ export const MarketplaceCommand = cmd({
             process.exit(1)
           }
           UI.println(UI.Style.TEXT_INFO + `🔍 Searching for "${args.query}"...` + UI.Style.RESET)
-          UI.println(UI.Style.TEXT_WARNING + "Search requires marketplace sync. Run `gizzi plugin sync` first." + UI.Style.RESET)
+          UI.println(UI.Style.TEXT_WARNING + "The Gizzi plugin marketplace is coming soon — plugin search is not available yet. You can add your own marketplace with `gizzi plugin marketplace add <owner/repo|url|path>`." + UI.Style.RESET)
           break
         }
 
@@ -80,7 +80,7 @@ export const MarketplaceCommand = cmd({
             process.exit(1)
           }
           UI.println(UI.Style.TEXT_INFO_BOLD + `📋 ${args.plugin}` + UI.Style.RESET)
-          UI.println("Plugin info requires marketplace sync.")
+          UI.println("The Gizzi plugin marketplace is coming soon — plugin info is not available yet.")
           break
         }
       }
