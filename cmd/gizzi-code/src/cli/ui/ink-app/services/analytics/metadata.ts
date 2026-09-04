@@ -8,6 +8,7 @@
  */
 
 import { extname } from 'path'
+import { readGizziEnv } from '@/shared/utils/gizziEnv.js';
 import memoize from 'lodash-es/memoize.js'
 import { env, getHostPlatformForAnalytics } from '../../utils/env.js'
 import { envDynamic } from '../../utils/envDynamic.js'
@@ -104,7 +105,7 @@ export function isAnalyticsToolDetailsLoggingEnabled(
   mcpServerType: string | undefined,
   mcpServerBaseUrl: string | undefined,
 ): boolean {
-  if (process.env.CLAUDE_CODE_ENTRYPOINT === 'local-agent') {
+  if (readGizziEnv('ENTRYPOINT') === 'local-agent') {
     return true
   }
   if (mcpServerType === 'claudeai-proxy') {
@@ -595,7 +596,7 @@ const buildEnvContext = memoize(async (): Promise<EnvContext> => {
     isCi: isEnvTruthy(process.env.CI),
     isClaubbit: isEnvTruthy(process.env.CLAUBBIT),
     isClaudeCodeRemote: isEnvTruthy(process.env.CLAUDE_CODE_REMOTE),
-    isLocalAgentMode: process.env.CLAUDE_CODE_ENTRYPOINT === 'local-agent',
+    isLocalAgentMode: readGizziEnv('ENTRYPOINT') === 'local-agent',
     isConductor: env.isConductor(),
     ...(process.env.CLAUDE_CODE_REMOTE_ENVIRONMENT_TYPE && {
       remoteEnvironmentType: process.env.CLAUDE_CODE_REMOTE_ENVIRONMENT_TYPE,
@@ -711,8 +712,8 @@ export async function getEventMetadata(
     userType: process.env.USER_TYPE || '',
     ...(betas.length > 0 ? { betas: betas } : {}),
     envContext,
-    ...(process.env.CLAUDE_CODE_ENTRYPOINT && {
-      entrypoint: process.env.CLAUDE_CODE_ENTRYPOINT,
+    ...(readGizziEnv('ENTRYPOINT') && {
+      entrypoint: readGizziEnv('ENTRYPOINT'),
     }),
     ...(process.env.CLAUDE_AGENT_SDK_VERSION && {
       agentSdkVersion: process.env.CLAUDE_AGENT_SDK_VERSION,

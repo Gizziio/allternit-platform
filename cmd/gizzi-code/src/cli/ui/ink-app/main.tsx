@@ -8,6 +8,7 @@
 //    sequentially via sync spawn inside applySafeConfigEnvironmentVariables()
 //    (~65ms on every macOS startup)
 import { profileCheckpoint, profileReport } from './utils/startupProfiler';
+import { setGizziEnv, readGizziEnv } from '@/shared/utils/gizziEnv.js';
 
 // eslint-disable-next-line custom-rules/no-top-level-side-effects
 profileCheckpoint('main_tsx_entry');
@@ -518,7 +519,7 @@ function eagerLoadSettings(): void {
 }
 function initializeEntrypoint(isNonInteractive: boolean): void {
   // Skip if already set (e.g., by SDK or other entrypoints)
-  if (process.env.CLAUDE_CODE_ENTRYPOINT) {
+  if (readGizziEnv('ENTRYPOINT')) {
     return;
   }
   const cliArgs = process.argv.slice(2);
@@ -526,11 +527,11 @@ function initializeEntrypoint(isNonInteractive: boolean): void {
   // Check for MCP serve command (handle flags before mcp serve, e.g., --debug mcp serve)
   const mcpIndex = cliArgs.indexOf('mcp');
   if (mcpIndex !== -1 && cliArgs[mcpIndex + 1] === 'serve') {
-    process.env.CLAUDE_CODE_ENTRYPOINT = 'mcp';
+    setGizziEnv('ENTRYPOINT', 'mcp');
     return;
   }
   if (isEnvTruthy(process.env.CLAUDE_CODE_ACTION)) {
-    process.env.CLAUDE_CODE_ENTRYPOINT = 'claude-code-github-action';
+    setGizziEnv('ENTRYPOINT', 'claude-code-github-action');
     return;
   }
 
@@ -538,7 +539,7 @@ function initializeEntrypoint(isNonInteractive: boolean): void {
   // via CLAUDE_CODE_ENTRYPOINT env var (handled by early return above)
 
   // Set based on interactive status
-  process.env.CLAUDE_CODE_ENTRYPOINT = isNonInteractive ? 'sdk-cli' : 'cli';
+  setGizziEnv('ENTRYPOINT', isNonInteractive ? 'sdk-cli' : 'cli');
 }
 
 // Set by early argv processing when `claude open <url>` is detected (interactive mode only)
@@ -825,16 +826,16 @@ export async function main() {
   // Determine client type
   const clientType = (() => {
     if (isEnvTruthy(process.env.GITHUB_ACTIONS)) return 'github-action';
-    if (process.env.CLAUDE_CODE_ENTRYPOINT === 'sdk-ts') return 'sdk-typescript';
-    if (process.env.CLAUDE_CODE_ENTRYPOINT === 'sdk-py') return 'sdk-python';
-    if (process.env.CLAUDE_CODE_ENTRYPOINT === 'sdk-cli') return 'sdk-cli';
-    if (process.env.CLAUDE_CODE_ENTRYPOINT === 'claude-vscode') return 'claude-vscode';
-    if (process.env.CLAUDE_CODE_ENTRYPOINT === 'local-agent') return 'local-agent';
-    if (process.env.CLAUDE_CODE_ENTRYPOINT === 'claude-desktop') return 'claude-desktop';
+    if (readGizziEnv('ENTRYPOINT') === 'sdk-ts') return 'sdk-typescript';
+    if (readGizziEnv('ENTRYPOINT') === 'sdk-py') return 'sdk-python';
+    if (readGizziEnv('ENTRYPOINT') === 'sdk-cli') return 'sdk-cli';
+    if (readGizziEnv('ENTRYPOINT') === 'claude-vscode') return 'claude-vscode';
+    if (readGizziEnv('ENTRYPOINT') === 'local-agent') return 'local-agent';
+    if (readGizziEnv('ENTRYPOINT') === 'claude-desktop') return 'claude-desktop';
 
     // Check if session-ingress token is provided (indicates remote session)
-    const hasSessionIngressToken = process.env.CLAUDE_CODE_SESSION_ACCESS_TOKEN || process.env.CLAUDE_CODE_WEBSOCKET_AUTH_FILE_DESCRIPTOR;
-    if (process.env.CLAUDE_CODE_ENTRYPOINT === 'remote' || hasSessionIngressToken) {
+    const hasSessionIngressToken = readGizziEnv('SESSION_ACCESS_TOKEN') || process.env.CLAUDE_CODE_WEBSOCKET_AUTH_FILE_DESCRIPTOR;
+    if (readGizziEnv('ENTRYPOINT') === 'remote' || hasSessionIngressToken) {
       return 'remote';
     }
     return 'cli';
@@ -1025,7 +1026,7 @@ async function run(): Promise<CommanderCommand> {
     if ((options as {
       bare?: boolean;
     }).bare) {
-      process.env.CLAUDE_CODE_SIMPLE = '1';
+      setGizziEnv('SIMPLE', '1');
     }
 
     // Ignore "code" as a prompt - treat it the same as no prompt
@@ -1127,7 +1128,7 @@ async function run(): Promise<CommanderCommand> {
     const agentsJson = options.agents;
     const agentCli = options.agent;
     if (feature('BG_SESSIONS') && agentCli) {
-      process.env.CLAUDE_CODE_AGENT = agentCli;
+      setGizziEnv('AGENT', agentCli);
     }
 
     // NOTE: LSP manager initialization is intentionally deferred until after
@@ -1152,7 +1153,7 @@ async function run(): Promise<CommanderCommand> {
     }).tasks;
     const taskListId = tasksOption ? typeof tasksOption === 'string' ? tasksOption : DEFAULT_TASKS_MODE_TASK_LIST_ID : undefined;
     if ("external" === 'ant' && taskListId) {
-      process.env.CLAUDE_CODE_TASK_LIST_ID = taskListId;
+      setGizziEnv('TASK_LIST_ID', taskListId);
     }
 
     // Extract worktree option
@@ -1329,7 +1330,7 @@ async function run(): Promise<CommanderCommand> {
       // Get session ingress token (provided by EnvManager via CLAUDE_CODE_SESSION_ACCESS_TOKEN)
       const sessionToken = getSessionIngressAuthToken();
       if (!sessionToken) {
-        process.stderr.write(chalk.red('Error: Session token required for file downloads. CLAUDE_CODE_SESSION_ACCESS_TOKEN must be set.\n'));
+        process.stderr.write(chalk.red('Error: Session token required for file downloads. Set GIZZI_SESSION_ACCESS_TOKEN (or legacy CLAUDE_CODE_SESSION_ACCESS_TOKEN).\n'));
         process.exit(1);
       }
 
@@ -1889,7 +1890,7 @@ async function run(): Promise<CommanderCommand> {
 
     // Apply coordinator mode tool filtering for headless path
     // (mirrors useMergedTools.ts filtering for REPL/interactive path)
-    if (feature('COORDINATOR_MODE') && isEnvTruthy(process.env.CLAUDE_CODE_COORDINATOR_MODE)) {
+    if (feature('COORDINATOR_MODE') && isEnvTruthy(readGizziEnv('COORDINATOR_MODE'))) {
       const {
         applyCoordinatorToolFilter
       } = await import('./utils/toolPool.js');
@@ -1940,7 +1941,7 @@ async function run(): Promise<CommanderCommand> {
     // pure in-memory array pushes (<1ms, zero I/O) that getBundledSkills()
     // reads synchronously. Previously ran inside setup() after ~20ms of
     // await points, so the parallel getCommands() memoized an empty list.
-    if (process.env.CLAUDE_CODE_ENTRYPOINT !== 'local-agent') {
+    if (readGizziEnv('ENTRYPOINT') !== 'local-agent') {
       initBuiltinPlugins();
       initBundledSkills();
     }

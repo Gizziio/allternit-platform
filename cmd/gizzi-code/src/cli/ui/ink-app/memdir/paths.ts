@@ -1,5 +1,6 @@
 // @ts-nocheck
 import memoize from 'lodash-es/memoize.js'
+import { readGizziEnv } from '@/shared/utils/gizziEnv.js';
 import { homedir } from 'os'
 import { isAbsolute, join, normalize, sep } from 'path'
 import {
@@ -39,7 +40,7 @@ export function isAutoMemoryEnabled(): boolean {
   // --bare / SIMPLE: prompts.ts already drops the memory section from the
   // system prompt via its SIMPLE early-return; this gate stops the other half
   // (extractMemories turn-end fork, autoDream, /remember, /dream, team sync).
-  if (isEnvTruthy(process.env.CLAUDE_CODE_SIMPLE)) {
+  if (isEnvTruthy(readGizziEnv('SIMPLE'))) {
     return false
   }
   if (

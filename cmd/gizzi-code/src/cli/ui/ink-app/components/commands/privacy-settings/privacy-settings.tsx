@@ -4,7 +4,7 @@ import { type GroveDecision, GroveDialog, PrivacySettingsDialog } from '../../..
 import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from '../../index';
 import { getGroveNoticeConfig, getGroveSettings, isQualifiedForGrove } from '../../../../../../runtime/services/api/grove';
 import type { LocalJSXCommandOnDone } from '../../../types/command';
-const FALLBACK_MESSAGE = 'Review and manage your privacy settings at https://claude.ai/settings/data-privacy-controls';
+const FALLBACK_MESSAGE = 'Review and manage your privacy settings at https://allternit.io/legal/privacy';
 export async function call(onDone: LocalJSXCommandOnDone): Promise<React.ReactNode | null> {
   const qualified = await isQualifiedForGrove();
   if (!qualified) {

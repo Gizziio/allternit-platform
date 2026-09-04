@@ -4,6 +4,7 @@
  * This module has heavier dependencies and should be lazy-loaded when possible.
  */
 import { feature } from 'bun:bundle'
+import { readGizziEnv } from '@/shared/utils/gizziEnv.js';
 import { randomUUID, type UUID } from 'crypto'
 import {
   getLastMainRequestId,
@@ -204,8 +205,8 @@ export async function clearConversation({
   regenerateSessionId({ setCurrentAsParent: true })
 
   // Update the environment variable so subprocesses use the new session ID
-  if (process.env.USER_TYPE === 'ant' && process.env.CLAUDE_CODE_SESSION_ID) {
-    process.env.CLAUDE_CODE_SESSION_ID = getSessionId()
+  if (process.env.USER_TYPE === 'ant' && readGizziEnv('SESSION_ID')) {
+    setGizziEnv('SESSION_ID', getSessionId())
   }
 
   await resetSessionFilePointer()

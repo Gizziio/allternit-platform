@@ -2,6 +2,7 @@
 /* eslint-disable custom-rules/no-process-exit */
 
 import { feature } from 'bun:bundle'
+import { readGizziEnv } from '@/shared/utils/gizziEnv.js';
 import chalk from '@/shared/util/chalk'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
@@ -432,10 +433,10 @@ export async function setup(
       // Skip for Desktop's local agent mode — same trust model as CCR/BYOC
       // (trusted Anthropic-managed launcher intentionally pre-approving everything).
       // Precedent: permissionSetup.ts:861, applySettingsChange.ts:55 (PR #19116)
-      process.env.CLAUDE_CODE_ENTRYPOINT !== 'local-agent' &&
+      readGizziEnv('ENTRYPOINT') !== 'local-agent' &&
       // Same for CCD (Claude Code in Desktop) — apps#29127 passes the flag
       // unconditionally to unlock mid-session bypass switching
-      process.env.CLAUDE_CODE_ENTRYPOINT !== 'claude-desktop'
+      readGizziEnv('ENTRYPOINT') !== 'claude-desktop'
     ) {
       // Only await if permission mode is set to bypass
       const [isDocker, hasInternet] = await Promise.all([

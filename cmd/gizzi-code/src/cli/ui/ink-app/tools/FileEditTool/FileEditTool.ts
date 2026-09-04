@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { dirname, isAbsolute, sep } from 'path'
+import { readGizziEnv } from '@/shared/utils/gizziEnv.js';
 import { logEvent } from './../../services/analytics/index.ts'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js'
 import { diagnosticTracker } from '../../services/diagnosticTracking.js'
@@ -405,7 +406,7 @@ export const FileEditTool = buildTool({
     // Discover skills from this file's path (fire-and-forget, non-blocking)
     // Skip in simple mode - no skills available
     const cwd = getCwd()
-    if (!isEnvTruthy(process.env.CLAUDE_CODE_SIMPLE)) {
+    if (!isEnvTruthy(readGizziEnv('SIMPLE'))) {
       const newSkillDirs = await discoverSkillDirsForPaths(
         [absoluteFilePath],
         cwd,

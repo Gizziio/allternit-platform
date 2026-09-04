@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle'
+import { readGizziEnv } from '@/shared/utils/gizziEnv.js';
 import memoize from 'lodash-es/memoize.js'
 import { basename } from 'path'
 import type { SettingSource } from './../../utils/settings/constants.ts'
@@ -297,7 +298,7 @@ async function initializeAgentMemorySnapshots(
 export const getAgentDefinitionsWithOverrides = memoize(
   async (cwd: string): Promise<AgentDefinitionsResult> => {
     // Simple mode: skip custom agents, only return built-ins
-    if (isEnvTruthy(process.env.CLAUDE_CODE_SIMPLE)) {
+    if (isEnvTruthy(readGizziEnv('SIMPLE'))) {
       const builtInAgents = getBuiltInAgents()
       return {
         activeAgents: builtInAgents,

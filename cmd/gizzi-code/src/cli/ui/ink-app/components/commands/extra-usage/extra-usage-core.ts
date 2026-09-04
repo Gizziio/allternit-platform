@@ -88,8 +88,8 @@ export async function runExtraUsage(): Promise<ExtraUsageResult> {
 
   // Fall through to generic message below
   const url = isTeamOrEnterprise
-    ? 'https://claude.ai/admin-settings/usage'
-    : 'https://claude.ai/settings/usage'
+    ? 'https://console.allternit.com/usage'
+    : 'https://console.allternit.com/usage'
 
   try {
     const opened = await openBrowser(url)

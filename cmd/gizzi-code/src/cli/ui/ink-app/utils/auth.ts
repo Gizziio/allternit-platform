@@ -1,5 +1,6 @@
 // @ts-nocheck
 import chalk from '@/shared/util/chalk'
+import { readGizziEnv } from '@/shared/utils/gizziEnv.js';
 import { exec } from 'child_process'
 import { execa } from 'execa'
 import { mkdir, stat } from 'fs/promises'
@@ -90,7 +91,7 @@ const DEFAULT_API_KEY_HELPER_TTL = 5 * 60 * 1000
 function isManagedOAuthContext(): boolean {
   return (
     isEnvTruthy(process.env.CLAUDE_CODE_REMOTE) ||
-    process.env.CLAUDE_CODE_ENTRYPOINT === 'claude-desktop'
+    readGizziEnv('ENTRYPOINT') === 'claude-desktop'
   )
 }
 

@@ -312,6 +312,7 @@ export function createSessionSpawner(deps: SessionSpawnerDeps): SessionSpawner {
         CLAUDE_CODE_ENVIRONMENT_KIND: 'bridge',
         ...(deps.sandbox && { CLAUDE_CODE_FORCE_SANDBOX: '1' }),
         CLAUDE_CODE_SESSION_ACCESS_TOKEN: opts.accessToken,
+        GIZZI_SESSION_ACCESS_TOKEN: opts.accessToken,
         // v1: HybridTransport (WS reads + POST writes) to Session-Ingress.
         // Harmless in v2 mode — transportUtils checks CLAUDE_CODE_USE_CCR_V2 first.
         CLAUDE_CODE_POST_FOR_SESSION_INGRESS_V2: '1',
@@ -534,7 +535,10 @@ export function createSessionSpawner(deps: SessionSpawnerDeps): SessionSpawner {
           handle.writeStdin(
             jsonStringify({
               type: 'update_environment_variables',
-              variables: { CLAUDE_CODE_SESSION_ACCESS_TOKEN: token },
+              variables: {
+                CLAUDE_CODE_SESSION_ACCESS_TOKEN: token,
+                GIZZI_SESSION_ACCESS_TOKEN: token,
+              },
             }) + '\n',
           )
           deps.onDebug(

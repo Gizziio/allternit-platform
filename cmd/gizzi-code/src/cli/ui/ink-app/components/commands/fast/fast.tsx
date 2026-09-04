@@ -157,8 +157,8 @@ export function FastModePicker({ onDone, unavailableReason }: FastModePickerProp
       )}
       <Text dimColor={true}>
         Learn more:{" "}
-        <Link url="https://code.claude.com/docs/en/fast-mode">
-          https://code.claude.com/docs/en/fast-mode
+        <Link url="https://docs.gizziio.com/fast-mode">
+          https://docs.gizziio.com/fast-mode
         </Link>
       </Text>
     </Dialog>

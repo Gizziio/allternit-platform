@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle'
+import { readGizziEnv } from '@/shared/utils/gizziEnv.js';
 import { getIsNonInteractiveSession } from '../../../bootstrap/state'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../../../../../runtime/services/analytics/growthbook'
 import { isEnvTruthy } from '../../../utils/envUtils'
@@ -31,7 +32,7 @@ export function getBuiltInAgents(): AgentDefinition[] {
   // issues at module init time. The coordinatorMode module depends on tools
   // which depend on AgentTool which imports this file.
   if (feature('COORDINATOR_MODE')) {
-    if (isEnvTruthy(process.env.CLAUDE_CODE_COORDINATOR_MODE)) {
+    if (isEnvTruthy(readGizziEnv('COORDINATOR_MODE'))) {
       /* eslint-disable @typescript-eslint/no-require-imports */
       const { getCoordinatorAgents } =
         require('../../coordinator/workerAgent.js') as typeof import('../../coordinator/workerAgent.js')
@@ -46,9 +47,9 @@ export function getBuiltInAgents(): AgentDefinition[] {
     agents.push(EXPLORE_AGENT, PLAN_AGENT)
   // Include Code Guide agent for non-SDK entrypoints
   const isNonSdkEntrypoint =
-    process.env.CLAUDE_CODE_ENTRYPOINT !== 'sdk-ts' &&
-    process.env.CLAUDE_CODE_ENTRYPOINT !== 'sdk-py' &&
-    process.env.CLAUDE_CODE_ENTRYPOINT !== 'sdk-cli'
+    readGizziEnv('ENTRYPOINT') !== 'sdk-ts' &&
+    readGizziEnv('ENTRYPOINT') !== 'sdk-py' &&
+    readGizziEnv('ENTRYPOINT') !== 'sdk-cli'
   if (isNonSdkEntrypoint) {
     agents.push(CLAUDE_CODE_GUIDE_AGENT)
     feature('VERIFICATION_AGENT') &&

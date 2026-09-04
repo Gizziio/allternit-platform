@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle';
+import { setGizziEnv } from '@/shared/utils/gizziEnv.js';
 
 // Bugfix for corepack auto-pinning, which adds yarnpkg to peoples' package.jsons
 // eslint-disable-next-line custom-rules/no-top-level-side-effects
@@ -282,7 +283,7 @@ async function main(): Promise<void> {
   // --bare: set SIMPLE early so gates fire during module eval / commander
   // option building (not just inside the action handler).
   if (args.includes('--bare')) {
-    process.env.CLAUDE_CODE_SIMPLE = '1';
+    setGizziEnv('SIMPLE', '1');
   }
 
   // No special flags detected, load and run the full CLI

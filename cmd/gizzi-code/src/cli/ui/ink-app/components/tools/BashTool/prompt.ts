@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle'
+import { readGizziEnv } from '@/shared/utils/gizziEnv.js';
 import { prependBullets } from '../../../constants/prompts'
 import { getAttributionTexts } from '../../../../../../shared/utils/attribution'
 import { hasEmbeddedSearchTools } from '../../../../../../shared/utils/embeddedTools'
@@ -53,7 +54,7 @@ function getCommitAndPRInstructions(): string {
   if (!shouldIncludeGitInstructions()) return undercoverSection
   // For ant users, use the short version pointing to skills
   if (process.env.USER_TYPE === 'ant') {
-    const skillsSection = !isEnvTruthy(process.env.CLAUDE_CODE_SIMPLE)
+    const skillsSection = !isEnvTruthy(readGizziEnv('SIMPLE'))
       ? `For git commits and pull requests, use the \`/commit\` and \`/commit-push-pr\` skills:
 - \`/commit\` - Create a git commit with staged changes
 - \`/commit-push-pr\` - Commit, push, and create a pull request

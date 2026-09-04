@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle'
+import { readGizziEnv } from '@/shared/utils/gizziEnv.js';
 import type { UUID } from 'crypto'
 import type { Dirent } from 'fs'
 // Sync fs primitives for readFileTailSync — separate from fs/promises
@@ -421,7 +422,7 @@ export function getUserType(): string {
 }
 
 function getEntrypoint(): string | undefined {
-  return process.env.CLAUDE_CODE_ENTRYPOINT
+  return readGizziEnv('ENTRYPOINT')
 }
 
 export function isCustomTitleEnabled(): boolean {

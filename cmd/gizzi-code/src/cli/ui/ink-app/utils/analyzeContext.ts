@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle'
+import { readGizziEnv } from '@/shared/utils/gizziEnv.js';
 import type { AllternitAI } from '@allternit/sdk/providers/anthropic'
 import {
   getSystemPrompt,
@@ -255,7 +256,7 @@ async function countMemoryFileTokens(): Promise<{
   claudeMdTokens: number
 }> {
   // Simple mode disables CLAUDE.md loading, so don't report tokens for them
-  if (isEnvTruthy(process.env.CLAUDE_CODE_SIMPLE)) {
+  if (isEnvTruthy(readGizziEnv('SIMPLE'))) {
     return { memoryFileDetails: [], claudeMdTokens: 0 }
   }
 

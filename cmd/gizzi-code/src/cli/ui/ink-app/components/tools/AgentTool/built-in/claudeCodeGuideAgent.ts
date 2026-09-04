@@ -16,7 +16,7 @@ import type {
 } from '../../../../tools/AgentTool/loadAgentsDir.js'
 
 const GIZZI_DOCS_MAP_URL =
-  'https://code.claude.com/docs/en/claude_code_docs_map.md'
+  'https://docs.gizziio.com/claude_code_docs_map.md'
 const CDP_DOCS_MAP_URL = 'https://platform.claude.com/llms.txt'
 
 export const GIZZI_GUIDE_AGENT_TYPE = 'gizzi-guide'

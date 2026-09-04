@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle';
+import { readGizziEnv } from '@/shared/utils/gizziEnv.js';
 import * as React from 'react';
 import { buildTool, type ToolDef, toolMatchesName } from './../../Tool.ts';
 import type { Message as MessageType, NormalizedUserMessage } from './../../types/message.ts';
@@ -221,7 +222,7 @@ export const AgentTool = buildTool({
 
     // Use inline env check instead of coordinatorModule to avoid circular
     // dependency issues during test module loading.
-    const isCoordinator = feature('COORDINATOR_MODE') ? isEnvTruthy(process.env.CLAUDE_CODE_COORDINATOR_MODE) : false;
+    const isCoordinator = feature('COORDINATOR_MODE') ? isEnvTruthy(readGizziEnv('COORDINATOR_MODE')) : false;
     return await getPrompt(filteredAgents, isCoordinator, allowedAgentTypes);
   },
   name: AGENT_TOOL_NAME,
@@ -551,7 +552,7 @@ export const AgentTool = buildTool({
 
     // Use inline env check instead of coordinatorModule to avoid circular
     // dependency issues during test module loading.
-    const isCoordinator = feature('COORDINATOR_MODE') ? isEnvTruthy(process.env.CLAUDE_CODE_COORDINATOR_MODE) : false;
+    const isCoordinator = feature('COORDINATOR_MODE') ? isEnvTruthy(readGizziEnv('COORDINATOR_MODE')) : false;
 
     // Fork subagent experiment: force ALL spawns async for a unified
     // <task-notification> interaction model (not just fork spawns — all of them).

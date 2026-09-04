@@ -3,6 +3,7 @@ import {
   getSessionIngressToken,
   setSessionIngressToken,
 } from '../bootstrap/state.js'
+import { readGizziEnv, setGizziEnv } from '@/shared/utils/gizziEnv.js';
 import {
   CCR_SESSION_INGRESS_TOKEN_PATH,
   maybePersistTokenForSubprocesses,
@@ -101,7 +102,7 @@ function getTokenFromFileDescriptor(): string | null {
  */
 export function getSessionIngressAuthToken(): string | null {
   // 1. Check environment variable
-  const envToken = process.env.CLAUDE_CODE_SESSION_ACCESS_TOKEN
+  const envToken = readGizziEnv('SESSION_ACCESS_TOKEN')
   if (envToken) {
     return envToken
   }
@@ -137,5 +138,5 @@ export function getSessionIngressAuthHeaders(): Record<string, string> {
  * without restarting the process.
  */
 export function updateSessionIngressAuthToken(token: string): void {
-  process.env.CLAUDE_CODE_SESSION_ACCESS_TOKEN = token
+  setGizziEnv('SESSION_ACCESS_TOKEN', token)
 }

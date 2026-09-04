@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle'
 
-export const CLAUDE_CODE_20250219_BETA_HEADER = 'claude-code-20250219'
+export const GIZZI_BETA_HEADER_20250219 = 'claude-code-20250219'
 export const GIZZI_20250219_BETA_HEADER = 'gizzi-20250219'
 export const INTERLEAVED_THINKING_BETA_HEADER =
   'interleaved-thinking-2025-05-14'
@@ -48,7 +48,7 @@ export const BEDROCK_EXTRA_PARAMS_HEADERS = new Set([
  * Other betas will cause 400 errors.
  */
 export const VERTEX_COUNT_TOKENS_ALLOWED_BETAS = new Set([
-  CLAUDE_CODE_20250219_BETA_HEADER,
+  GIZZI_BETA_HEADER_20250219,
   INTERLEAVED_THINKING_BETA_HEADER,
   CONTEXT_MANAGEMENT_BETA_HEADER,
 ])

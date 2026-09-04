@@ -30,6 +30,7 @@
  */
 
 import { feature } from 'bun:bundle'
+import { readGizziEnv } from '@/shared/utils/gizziEnv.js';
 import axios from 'axios'
 import {
   createV2ReplTransport,
@@ -228,7 +229,7 @@ export async function initEnvLessBridgeCore(
       heartbeatIntervalMs: cfg.heartbeat_interval_ms,
       heartbeatJitterFraction: cfg.heartbeat_jitter_fraction,
       // Per-instance closure — keeps the worker JWT out of
-      // process.env.CLAUDE_CODE_SESSION_ACCESS_TOKEN, which mcp/client.ts
+      // readGizziEnv('SESSION_ACCESS_TOKEN'), which mcp/client.ts
       // reads ungatedly and would otherwise send to user-configured ws/http
       // MCP servers. Frozen-at-construction is correct: transport is fully
       // rebuilt on refresh (rebuildTransport below).

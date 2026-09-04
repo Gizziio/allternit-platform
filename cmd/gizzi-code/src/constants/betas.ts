@@ -28,4 +28,4 @@ export const ADVISOR_BETA_HEADER = 'advisor-tool-2026-03-01'
 export const CACHE_EDITING_BETA_HEADER = 'cache-editing-2026-01-01'
 
 // Merge-by-re-export: complete counterpart (local exports win on conflict)
-export { BEDROCK_EXTRA_PARAMS_HEADERS, CLAUDE_CODE_20250219_BETA_HEADER, TOOL_SEARCH_BETA_HEADER_3P, VERTEX_COUNT_TOKENS_ALLOWED_BETAS } from "../cli/ui/ink-app/constants/betas.js";
+export { BEDROCK_EXTRA_PARAMS_HEADERS, GIZZI_BETA_HEADER_20250219, TOOL_SEARCH_BETA_HEADER_3P, VERTEX_COUNT_TOKENS_ALLOWED_BETAS } from "../cli/ui/ink-app/constants/betas.js";
