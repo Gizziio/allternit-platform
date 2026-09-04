@@ -11,7 +11,7 @@ import figures from 'figures';
 import { type GlobalConfig, saveGlobalConfig, getCurrentProjectConfig, type OutputStyle } from '../../../utils/config.js';
 import { normalizeApiKeyForConfig } from '../../utils/authPortable.js';
 import { getGlobalConfig, getAutoUpdaterDisabledReason, formatAutoUpdaterDisabledReason, getRemoteControlAtStartup } from '../../../utils/config.js';
-import chalk from 'chalk';
+import chalk from '@/shared/util/chalk'
 import { permissionModeTitle, permissionModeFromString, toExternalPermissionMode, isExternalPermissionMode, EXTERNAL_PERMISSION_MODES, PERMISSION_MODES, type ExternalPermissionMode, type PermissionMode } from '../../utils/permissions/PermissionMode.js';
 import { getAutoModeEnabledState, hasAutoModeOptInAnySource, transitionPlanAutoMode } from '../../utils/permissions/permissionSetup.js';
 import { logError } from '../../../utils/log.js';

@@ -101,8 +101,9 @@ impl<S> AuthMiddleware<S> {
 
     /// Validate API token (placeholder - full implementation would check database)
     async fn validate_token(&self, token: &str) -> Option<AuthenticatedUser> {
-        // The dev-token override is rejected unless explicitly enabled (see
-        // `is_dev_api_token`); it is hard-refused in production environments.
+        // TODO: Implement actual token validation against database
+        // Dev-token fallback is rejected unless explicitly enabled (see
+        // `is_dev_api_token`); it must never work in production.
         if is_dev_api_token(token) {
             return Some(AuthenticatedUser::development_user());
         }
@@ -255,31 +256,17 @@ pub async fn auth_middleware(
 }
 
 /// Validate an `allternit_*` API token against `api_tokens` (sha256 hash
-/// lookup, revocation/expiration checks, `last_used_at` touch), then against
-/// the modern scoped `alt_…` keys. Also answers the opt-in development
-/// override (see `is_dev_api_token`). Crate-public for
+/// lookup with legacy-md5 fallback and transparent upgrade, revocation/
+/// expiration checks, `last_used_at` touch), then against the modern scoped
+/// `alt_…` keys. Also answers the two opt-in development overrides (see
+/// `is_dev_api_token` and `is_legacy_dev_api_token`). Crate-public for
 /// `auth::resolve::resolve_user_id`, which offers the same token path to
 /// management routes.
 pub(crate) async fn validate_token_against_db(
     db: &sqlx::PgPool,
     token: &str,
 ) -> Result<Option<AuthenticatedUser>, sqlx::Error> {
-    use crate::auth::models::ApiToken;
-
-    let token_hash = crate::services::api_keys::hash_token(token);
-
-    let db_token: Option<ApiToken> = sqlx::query_as::<_, ApiToken>(
-        r#"
-        SELECT id, token_hash, name, user_id, permissions, created_at, expires_at, last_used_at, is_revoked
-        FROM api_tokens
-        WHERE token_hash = $1 AND is_revoked = FALSE
-        "#
-    )
-    .bind(&token_hash)
-    .fetch_optional(db)
-    .await?;
-
-    if let Some(token_record) = db_token {
+    if let Some(token_record) = lookup_api_token(db, token).await? {
         // Check expiration
         if token_record.is_expired() {
             return Ok(None);
@@ -310,20 +297,79 @@ pub(crate) async fn validate_token_against_db(
         }));
     }
 
-    // Development override (opt-in — rejected by default, refused in
-    // production environments; see `is_dev_api_token`).
-    if is_dev_api_token(token) {
+    // Development overrides (both opt-in — rejected by default, hard-refused
+    // in production environments; see the two gate functions below).
+    if is_dev_api_token(token) || is_legacy_dev_api_token(token) {
         return Ok(Some(AuthenticatedUser::development_user()));
     }
 
     Ok(None)
 }
 
-/// Development-only override for legacy `dev-…` Bearer callers (the shipped
-/// iOS app hardcodes such a token). There is **no hardcoded token anywhere
-/// in this crate**: this path authenticates only a caller-supplied token
-/// that equals the `ALLTERNIT_DEV_BEARER` environment variable, and only
-/// when ALL of the following hold:
+
+/// SHA-256 hex digest for newly stored `api_tokens` hashes.
+pub(crate) fn hash_api_token(token: &str) -> String {
+    use sha2::{Digest, Sha256};
+    let mut hasher = Sha256::new();
+    hasher.update(token.as_bytes());
+    hex::encode(hasher.finalize())
+}
+
+/// Legacy MD5 hex digest. Only ever used to MATCH existing rows so they can
+/// be validated once more and transparently re-hashed to SHA-256.
+pub(crate) fn legacy_md5_token_hash(token: &str) -> String {
+    format!("{:x}", md5::compute(token.as_bytes()))
+}
+
+/// Look up an `api_tokens` row by token. New rows are stored as SHA-256;
+/// rows minted before the hashing upgrade hold MD5 digests (32 hex chars) and
+/// are accepted here exactly once more — a successful legacy match is
+/// transparently re-written to SHA-256 before returning.
+pub(crate) async fn lookup_api_token(
+    db: &sqlx::PgPool,
+    token: &str,
+) -> Result<Option<crate::auth::models::ApiToken>, sqlx::Error> {
+    use crate::auth::models::ApiToken;
+
+    const SELECT: &str = r#"
+        SELECT id, token_hash, name, user_id, permissions, created_at, expires_at, last_used_at, is_revoked
+        FROM api_tokens
+        WHERE token_hash = $1 AND is_revoked = FALSE
+        "#;
+
+    let sha256_hash = hash_api_token(token);
+    if let Some(row) = sqlx::query_as::<_, ApiToken>(SELECT)
+        .bind(&sha256_hash)
+        .fetch_optional(db)
+        .await?
+    {
+        return Ok(Some(row));
+    }
+
+    // Legacy MD5 row: validate once more, then upgrade the stored hash.
+    let md5_hash = legacy_md5_token_hash(token);
+    let Some(row) = sqlx::query_as::<_, ApiToken>(SELECT)
+        .bind(&md5_hash)
+        .fetch_optional(db)
+        .await?
+    else {
+        return Ok(None);
+    };
+
+    let _ = sqlx::query("UPDATE api_tokens SET token_hash = $2 WHERE id = $1")
+        .bind(&row.id)
+        .bind(&sha256_hash)
+        .execute(db)
+        .await;
+    tracing::info!(token_id = %row.id, "upgraded legacy md5 api_tokens hash to sha256");
+    Ok(Some(row))
+}
+
+/// Environment-bearer development override for legacy `dev-…` Bearer callers
+/// (the shipped iOS app hardcodes such a token). There is **no hardcoded
+/// token anywhere in this crate**: this path authenticates only a
+/// caller-supplied token that equals the `ALLTERNIT_DEV_BEARER` environment
+/// variable, and only when ALL of the following hold:
 ///
 /// 1. `ALLTERNIT_DEV_MODE` is explicitly `true`/`1` (defaults off),
 /// 2. `ALLTERNIT_DEV_BEARER` is set to a non-empty value (the local dev
@@ -392,6 +438,39 @@ fn dev_api_token_allowed() -> bool {
     }
 }
 
+/// Legacy literal `dev-api-token` development fallback, kept for parity with
+/// deployments that predate the environment-bearer override. Same contract:
+/// rejected by default, only works when `ALLTERNIT_ALLOW_DEV_API_TOKEN` is
+/// explicitly `true`/`1`, and hard-refused when `RUST_ENV`/`ENVIRONMENT` is
+/// `production` (local development only — never set this in a deployed
+/// environment).
+pub(crate) fn is_legacy_dev_api_token(token: &str) -> bool {
+    token == "dev-api-token" && legacy_dev_api_token_allowed()
+}
+
+pub(crate) fn legacy_dev_api_token_allowed() -> bool {
+    let production = ["RUST_ENV", "ENVIRONMENT"].iter().any(|key| {
+        env::var(key)
+            .map(|value| value == "production")
+            .unwrap_or(false)
+    });
+    if production {
+        if env::var("ALLTERNIT_ALLOW_DEV_API_TOKEN")
+            .map(|value| value == "true" || value == "1")
+            .unwrap_or(false)
+        {
+            tracing::error!(
+                "ALLTERNIT_ALLOW_DEV_API_TOKEN is set but RUST_ENV/ENVIRONMENT=production — \
+                 the legacy dev-token override stays DISABLED."
+            );
+        }
+        return false;
+    }
+    env::var("ALLTERNIT_ALLOW_DEV_API_TOKEN")
+        .map(|v| v == "true" || v == "1")
+        .unwrap_or(false)
+}
+
 fn unauthorized_response(message: &str) -> Response {
     let body = format!(r#"{{"error":"UNAUTHORIZED","message":"{}"}}"#, message);
     Response::builder()
@@ -415,13 +494,12 @@ fn unauthorized_response_with_www_authenticate(message: &str) -> Response {
 mod tests {
     use super::*;
     use serial_test::serial;
-    use sqlx::PgPool;
 
     /// The exact token the legacy iOS app ships. It must never authenticate
     /// under default configuration.
     const LEGACY_DEV_TOKEN: &str = "dev-api-token";
 
-    async fn test_pool() -> PgPool {
+    async fn test_pool() -> sqlx::PgPool {
         let url = "postgres://allternit:allternit_pg_2026@localhost:5432/allternit_test";
         let schema = format!("test_{}", uuid::Uuid::new_v4().simple());
         let schema_for_hook = schema.clone();
@@ -467,11 +545,91 @@ mod tests {
         pool
     }
 
+    async fn stored_hash(pool: &sqlx::PgPool, id: &str) -> String {
+        sqlx::query_scalar("SELECT token_hash FROM api_tokens WHERE id = $1")
+            .bind(id)
+            .fetch_one(pool)
+            .await
+            .unwrap()
+    }
+
+    #[test]
+    fn new_token_hashes_are_sha256_hex() {
+        let token = "allternit_mint_to_verify_roundtrip_0123456789";
+        let hash = hash_api_token(token);
+        assert_eq!(hash.len(), 64, "sha256 hex is 64 chars");
+        assert!(hash.chars().all(|c| c.is_ascii_hexdigit()));
+        assert_ne!(
+            hash,
+            legacy_md5_token_hash(token),
+            "new hashes must not be md5"
+        );
+        // Same input hashes deterministically (mint -> verify roundtrip).
+        assert_eq!(hash, hash_api_token(token));
+    }
+
+    #[tokio::test]
+    async fn sha256_minted_token_validates() {
+        let pool = test_pool().await;
+        let token = "allternit_sha256_roundtrip_token_0123456789";
+        sqlx::query(
+            "INSERT INTO api_tokens (id, token_hash, name, user_id, permissions) VALUES ('tok_sha', $1, 't', 'user_sha', '[\"runs:read\"]')",
+        )
+        .bind(hash_api_token(token))
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let user = validate_token_against_db(&pool, token).await.unwrap();
+        assert_eq!(user.map(|u| u.user_id), Some("user_sha".to_string()));
+        assert_eq!(stored_hash(&pool, "tok_sha").await.len(), 64);
+    }
+
+    #[tokio::test]
+    async fn legacy_md5_token_validates_and_is_upgraded() {
+        let pool = test_pool().await;
+        let token = "allternit_legacy_md5_token_0123456789";
+        let md5_hash = legacy_md5_token_hash(token);
+        assert_eq!(md5_hash.len(), 32, "pre-upgrade rows hold 32-char md5");
+        sqlx::query(
+            "INSERT INTO api_tokens (id, token_hash, name, user_id, permissions) VALUES ('tok_legacy', $1, 't', 'user_legacy', '[\"runs:read\"]')",
+        )
+        .bind(&md5_hash)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        // Legacy row still validates...
+        let user = validate_token_against_db(&pool, token).await.unwrap();
+        assert_eq!(user.map(|u| u.user_id), Some("user_legacy".to_string()));
+
+        // ...and the stored hash was transparently upgraded to sha256.
+        let upgraded = stored_hash(&pool, "tok_legacy").await;
+        assert_eq!(upgraded.len(), 64);
+        assert_eq!(upgraded, hash_api_token(token));
+
+        // The sha256 path now serves the row (no md5 fallback needed).
+        let again = validate_token_against_db(&pool, token).await.unwrap();
+        assert_eq!(again.map(|u| u.user_id), Some("user_legacy".to_string()));
+    }
+
+    #[tokio::test]
+    async fn unknown_token_does_not_validate() {
+        let pool = test_pool().await;
+        assert!(
+            validate_token_against_db(&pool, "allternit_no_such_token_0123456789")
+                .await
+                .unwrap()
+                .is_none()
+        );
+    }
+
     #[tokio::test]
     #[serial]
     async fn legacy_dev_token_shape_is_rejected_by_default() {
         std::env::remove_var("ALLTERNIT_DEV_MODE");
         std::env::remove_var("ALLTERNIT_DEV_BEARER");
+        std::env::remove_var("ALLTERNIT_ALLOW_DEV_API_TOKEN");
         std::env::remove_var("RUST_ENV");
         std::env::remove_var("ENVIRONMENT");
         let pool = test_pool().await;
@@ -489,6 +647,7 @@ mod tests {
         // ALLTERNIT_DEV_BEARER alone (no DEV_MODE) does not enable anything.
         std::env::remove_var("ALLTERNIT_DEV_MODE");
         std::env::set_var("ALLTERNIT_DEV_BEARER", LEGACY_DEV_TOKEN);
+        std::env::remove_var("ALLTERNIT_ALLOW_DEV_API_TOKEN");
         assert!(
             validate_token_against_db(&pool, LEGACY_DEV_TOKEN)
                 .await
@@ -538,6 +697,10 @@ mod tests {
         assert!(
             !dev_api_token_allowed(),
             "gate reports disabled in production"
+        );
+        assert!(
+            !legacy_dev_api_token_allowed(),
+            "legacy gate reports disabled in production"
         );
 
         std::env::remove_var("ALLTERNIT_DEV_MODE");

@@ -1,5 +1,5 @@
 // @ts-nocheck
-import chalk from 'chalk'
+import chalk from '@/shared/util/chalk'
 import { exec } from 'child_process'
 import { execa } from 'execa'
 import { mkdir, stat } from 'fs/promises'

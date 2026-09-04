@@ -1,3 +1,11 @@
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://unpkg.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data: blob: https:; font-src 'self' data: https:; connect-src 'self' https://api.allternit.com https://*.allternit.com wss://*.allternit.com https://*.workers.dev https://clerk.allternit.com https://clerk.com https://*.clerk.com https://*.clerk.dev https://clerk.accounts.dev https://*.accounts.dev https://challenges.cloudflare.com https://unpkg.com https://cdn.jsdelivr.net; worker-src 'self' blob:; frame-src 'self' https://challenges.cloudflare.com https://*.clerk.dev https://clerk.accounts.dev https://*.accounts.dev; media-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; manifest-src 'self'; upgrade-insecure-requests
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Content-Type-Options: nosniff
+  Permissions-Policy: camera=(), geolocation=(), microphone=(self), display-capture=(self), fullscreen=(self)
+
 /discovery-feed.json
   Access-Control-Allow-Origin: *
   Access-Control-Allow-Methods: GET, OPTIONS

@@ -37,7 +37,7 @@ Allternit Desktop is a **cloud-connected client** for self-hosted Allternit back
 │  • Docker container                                            │
 │                                                                  │
 │  Contains:                                                      │
-│  • Next.js Platform UI                                        │
+│  • Vite + React SPA platform UI (surfaces/ai.allternit.com)                                        │
 │  • Rust API Services (15+ services)                           │
 │  • SQLite/PostgreSQL database                                 │
 │  • All AI/ML infrastructure                                   │
@@ -46,15 +46,23 @@ Allternit Desktop is a **cloud-connected client** for self-hosted Allternit back
 
 ## Key Design Decisions
 
-### 1. No Bundled Services
-Unlike the initial design, Allternit Desktop does NOT bundle the backend services. Instead:
-- Desktop is a **dumb client** that connects to user's backend
-- User installs backend separately on VPS or locally
-- Desktop only stores connection configuration
+### 1. Hybrid: Bundled Sidecars + User-Hosted Backend
+
+The initial design made the desktop a pure "dumb client" with no bundled
+services. The shipped app sits between the two models:
+
+- The Electron shell **bundles sidecar binaries** under `resources/bin/`:
+  `allternit-api` (Rust API, port 8013 — proxies to Gizzi on 4096),
+  `gizzi-code`, `allternit-mux`, vendored `ripgrep`, the voice-service
+  PyInstaller binary, `mesh-node` (tsnet sidecar), and `lume` (macOS/Linux).
+  See `../BUILD.md` and `scripts/build-desktop.sh`.
+- The full self-hosted backend (VPS/local) is still installed and updated
+  separately by the user.
+- Desktop stores only connection configuration plus these bundled sidecars.
 
 ### 2. Connection Flexibility
 Users can connect to:
-- **Local**: `http://localhost:4096` (backend on same machine)
+- **Local**: `http://localhost:8013` (Rust `allternit-api` on the same machine; it proxies to Gizzi on 4096)
 - **VPS**: `https://allternit.theirdomain.com` (backend on their cloud)
 
 ### 3. Auto-Discovery
@@ -70,17 +78,27 @@ Desktop automatically scans common ports to find local Allternit instances.
 allternit-desktop/
 ├── src/
 │   ├── main/
-│   │   └── index.ts          # Main process with connection mgmt
+│   │   ├── unified-main.ts   # Main process with connection mgmt
+│   │   ├── backend-manager.ts, gizzi-manager.ts, mesh-manager.ts, lima.ts, …
+│   │   └── manifest.ts       # Platform-locked binary manifest + checksums
 │   └── preload/
 │       └── index.ts          # IPC bridge
 ├── static/
 │   └── connect.html          # Connection setup UI
-├── build/
-│   ├── entitlements.mac.plist
-│   └── installer.nsh
-├── package.json              # electron-builder config
+├── resources/
+│   ├── platform/             # Vite static export (offline fallback, from ai.allternit.com)
+│   └── bin/                  # Bundled sidecars: allternit-api, gizzi-code, mesh-node, …
+├── scripts/
+│   ├── prepare-platform-static.cjs
+│   ├── prepare-mesh-node.cjs
+│   ├── prepare-api-binary.cjs
+│   └── verify-packaged-resources.cjs
+├── package.json              # electron-builder config + build/pack scripts
 └── README.md
 ```
+
+Last verified: 2026-09-03 against a0f8230b5 (ports from `src/main/config.ts`;
+sidecar list from `scripts/build-desktop.sh` and `package.json`).
 
 ## Flow
 

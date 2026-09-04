@@ -19,7 +19,7 @@ Allternit gives engineering teams the agentic infrastructure that managed vendor
 | Vendor IAM + SCIM | Clerk + `/api/v1/scim/v2` provisioning | Use your own Clerk tenant or self-hosted mode |
 | Vendor audit logs | `/api/v1/admin/audit` + `audit_events` | Append-only, cursor-paginated |
 | Compliance exports | `/api/v1/admin/compliance` | Export/delete requests for chats, projects, artifacts |
-| Managed agent hosting | `allternit-cloud-api` on Fly.io | Your cloud account, your runtime lifecycle |
+| Managed agent hosting | `allternit-cloud-api` on a VPS (production: Contabo, `api.allternit.com`) | Your cloud account, your runtime lifecycle |
 | BYOK / CMEK | `/api/v1/admin/external-keys` | AWS KMS ARN validation, Azure/GCP scaffolded |
 
 ## Self-hosting and BYOC messaging
@@ -48,4 +48,4 @@ Allternit gives engineering teams the agentic infrastructure that managed vendor
 
 ## Call to action
 
-Start with `cargo run -p allternit-api`, create an organization, and register your first external KMS key. When you need centralized tenancy, promote the same codebase to `allternit-cloud-api` on Fly.io.
+Start with `cargo run -p allternit-api`, create an organization, and register your first external KMS key. When you need centralized tenancy, promote the same codebase to `allternit-cloud-api` on your own VPS (production runs on Contabo as `api.allternit.com`; see `docs/Operations/CLOUD_API_VPS_DEPLOY.md`).

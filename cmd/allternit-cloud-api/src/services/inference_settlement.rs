@@ -5,8 +5,10 @@
 //! `routes::model_router`:
 //!
 //! - a pre-dispatch gate (`check_inference_allowed`): users with a
-//!   `user_credits` row and no balance are blocked; users WITHOUT a row get a
-//!   free monthly allowance (`FREE_INFERENCE_MONTHLY_USD`, default $2.00)
+//!   `user_credits` row and no balance are blocked; users WITHOUT a row must
+//!   have a verified email address (checked against Clerk and cached in
+//!   `user_trust`, see `services::user_trust`) and then get a free monthly
+//!   allowance (`FREE_INFERENCE_MONTHLY_USD`, default $2.00)
 //!   measured from this month's `inference_usage` rows — which
 //!   `settle_inference` writes for them even though no deduction happens;
 //! - `settle_inference`: always writes an `inference_usage` row (the audit
@@ -80,6 +82,11 @@ pub async fn check_inference_allowed(
             "Inference credits exhausted — add credits to keep using hosted models.".to_string(),
         )),
         None => {
+            // Free-allowance users: the Clerk session JWT carries no
+            // email-verified flag, so consult Clerk (cached in user_trust)
+            // before spending our money on a possibly throwaway signup.
+            // Unverified or unconfirmable → 403 (services::user_trust).
+            crate::services::user_trust::email_verification_gate(db, user_id).await?;
             let month_cost: f64 = sqlx::query_scalar(
                 r#"
                 SELECT COALESCE(SUM(cost_usd), 0)
@@ -459,6 +466,10 @@ mod tests {
     use sqlx::PgPool;
 
     async fn test_pool() -> PgPool {
+        // The free-allowance path consults Clerk via services::user_trust;
+        // unit tests here exercise the accounting, not the trust gate, so
+        // bypass it (no test in this suite unsets the variable).
+        std::env::set_var("ALLTERNIT_SKIP_EMAIL_VERIFICATION", "1");
         let url = "postgres://allternit:allternit_pg_2026@localhost:5432/allternit_test";
         let schema = format!("test_{}", uuid::Uuid::new_v4().simple());
         let schema_for_hook = schema.clone();

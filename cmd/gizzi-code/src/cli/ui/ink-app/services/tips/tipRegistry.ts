@@ -1,5 +1,5 @@
 // @ts-nocheck
-import chalk from 'chalk'
+import chalk from '@/shared/util/chalk'
 import { logForDebugging } from './../../utils/debug.ts'
 import { fileHistoryEnabled } from './../../utils/fileHistory.ts'
 import {

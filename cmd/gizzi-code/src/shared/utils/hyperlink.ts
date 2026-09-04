@@ -1,4 +1,4 @@
-import chalk from 'chalk'
+import chalk from '@/shared/util/chalk'
 import { supportsHyperlinks } from '../../cli/ui/ink-renderer/supports-hyperlinks.js'
 
 // OSC 8 hyperlink escape sequences

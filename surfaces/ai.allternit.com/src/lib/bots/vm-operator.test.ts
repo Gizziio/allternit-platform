@@ -43,7 +43,7 @@ describe('vm-operator', () => {
 
     const config: AgentVMOperatorConfig = {
       enabled: true,
-      provider: 'opensandbox',
+      provider: 'cloud-desktop',
       computerKind: 'cloud_desktop',
       image: 'opensandbox/desktop:v1.0.0',
       networkPolicy: 'restricted',
@@ -71,7 +71,7 @@ describe('vm-operator', () => {
 
     const config: AgentVMOperatorConfig = {
       enabled: true,
-      provider: 'opensandbox',
+      provider: 'cloud-desktop',
       computerKind: 'cloud_desktop',
       templateId: 'win11-pro',
       persistence: 'ephemeral',

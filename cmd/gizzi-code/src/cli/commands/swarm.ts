@@ -10,7 +10,7 @@ import {
 import { getTeamsDir } from "@/shared/utils/envUtils"
 import { isAgentSwarmsEnabled } from "@/shared/utils/agentSwarmsEnabled"
 import { readdir } from "fs/promises"
-import chalk from "chalk"
+import chalk from '@/shared/util/chalk'
 
 const log = Log.create({ service: "swarm-cli" })
 

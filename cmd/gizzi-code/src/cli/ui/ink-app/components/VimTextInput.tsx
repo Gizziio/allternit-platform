@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
-import chalk from 'chalk';
+import chalk from '@/shared/util/chalk'
 import React from 'react';
 import { useClipboardImageHint } from '../hooks/useClipboardImageHint';
 import { useVimInput } from '../hooks/useVimInput';

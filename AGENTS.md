@@ -387,7 +387,7 @@ Phase 4 added public docs for the agent runtime surfaces. When working on tools,
 - **Canvas Instance:** Free For Teacher, `canvas.instructure.com`
 - **Node Version:** v25.6.1 with `tsx`
 - **Database:** SQLite (`better-sqlite3`) + PostgreSQL (Prisma)
-- **Platform:** Next.js in `surfaces/ai.allternit.com/`
+- **Platform:** Vite + React SPA in `surfaces/ai.allternit.com/` (was Next.js; migrated)
 - **Course IDs:** See catalog table above
 - **Generated modules:** Stored in `alabs-generated-courses/`
 - **Demo site:** `alabs-generated-courses/demos/index.html` — works offline
@@ -408,7 +408,7 @@ Demo HTML files must be copied to the platform's public directory to be served:
 cp alabs-generated-courses/demos/*.html surfaces/ai.allternit.com/public/demos/
 ```
 
-The `LabsView.tsx` "Try Demo" buttons link to `/demos/ALABS-ADV-{COURSE}-module1.html` which resolves to `public/demos/` in Next.js.
+The `LabsView.tsx` "Try Demo" buttons link to `/demos/ALABS-ADV-{COURSE}-module1.html` which resolves to `public/demos/` in the Vite app.
 
 ### Keeping Demos In Sync
 

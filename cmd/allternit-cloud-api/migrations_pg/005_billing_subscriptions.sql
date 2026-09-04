@@ -11,7 +11,7 @@
 -- customer id so the billing-portal endpoint can open a portal session
 -- without the client knowing Stripe identifiers.
 
-CREATE TABLE public.billing_subscriptions (
+CREATE TABLE IF NOT EXISTS public.billing_subscriptions (
     stripe_subscription_id text NOT NULL PRIMARY KEY,
     user_id text NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
     plan_id text NOT NULL,
@@ -22,16 +22,13 @@ CREATE TABLE public.billing_subscriptions (
     updated_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-ALTER TABLE public.billing_subscriptions OWNER TO postgres;
-
-CREATE INDEX idx_billing_subscriptions_user
+CREATE INDEX IF NOT EXISTS idx_billing_subscriptions_user
     ON public.billing_subscriptions(user_id);
 
-CREATE TABLE public.user_billing_accounts (
+CREATE TABLE IF NOT EXISTS public.user_billing_accounts (
     user_id text NOT NULL PRIMARY KEY REFERENCES public.users(id) ON DELETE CASCADE,
     stripe_customer_id text NOT NULL,
     created_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-ALTER TABLE public.user_billing_accounts OWNER TO postgres;

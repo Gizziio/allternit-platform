@@ -20,6 +20,29 @@ import { ALLTERNIT_GATEWAY_BASE } from '@/shared/constants/allternitGateway'
 
 const DEFAULT_API_URL = ALLTERNIT_GATEWAY_BASE
 
+/**
+ * Resolve the Allternit API origin. Explicit configuration always wins.
+ * Development keeps the loopback default; an explicit production build
+ * (NODE_ENV=production, as injected by script/build-production.js) must be
+ * configured deliberately — silently phoning home to a guessed URL is worse
+ * than failing fast. The desktop shell and hosted runtimes always pass
+ * ALLTERNIT_API_URL explicitly.
+ */
+function resolveApiUrl(): string {
+  const explicit = (process.env.ALLTERNIT_API_URL || process.env.ALLTERNIT_API_BASE_URL || '').trim()
+  if (explicit) {
+    return explicit.replace(/\/+$/, '')
+  }
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      'ALLTERNIT_API_URL is required in production mode. Set ALLTERNIT_API_URL (or ' +
+      'ALLTERNIT_API_BASE_URL) to the Allternit API origin, e.g. ' +
+      'https://api.allternit.com. Development mode falls back to ' + DEFAULT_API_URL + '.',
+    )
+  }
+  return DEFAULT_API_URL
+}
+
 export type AllternitApiConfig = {
   baseUrl: string
   token?: string
@@ -29,13 +52,7 @@ export type AllternitApiConfig = {
 }
 
 export function getAllternitApiConfig(): AllternitApiConfig {
-  const baseUrl = (
-    process.env.ALLTERNIT_API_URL ||
-    process.env.ALLTERNIT_API_BASE_URL ||
-    DEFAULT_API_URL
-  )
-    .trim()
-    .replace(/\/$/, '')
+  const baseUrl = resolveApiUrl()
 
   const token = process.env.ALLTERNIT_API_TOKEN?.trim()
   const userId = (

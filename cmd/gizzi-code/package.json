@@ -37,11 +37,13 @@
     "db": "bun drizzle-kit",
     "vm:download": "bun run src/runtime/vm/vm-image-download.ts",
     "release": "bash script/clean-bak.sh && bun run build --all",
-    "clean:bak": "bash script/clean-bak.sh"
+    "clean:bak": "bash script/clean-bak.sh",
+    "prepublishOnly": "node script/check-publish.js",
+    "prepack": "node script/check-publish.js"
   },
   "bin": {
-    "gizzi": "./dist/gizzi-code",
-    "gizzi-code": "./dist/gizzi-code"
+    "gizzi": "./bin/gizzi.js",
+    "gizzi-code": "./bin/gizzi.js"
   },
   "exports": {
     "./*": "./src/*.ts"

@@ -7,7 +7,7 @@
 -- target (e.g. ssh://root@allternit-standby). Instances with node_id NULL
 -- predate placement and count against the node whose docker_host is 'local'.
 
-CREATE TABLE public.hosted_runtime_nodes (
+CREATE TABLE IF NOT EXISTS public.hosted_runtime_nodes (
     id text NOT NULL PRIMARY KEY,
     name text NOT NULL,
     docker_host text NOT NULL,
@@ -18,10 +18,8 @@ CREATE TABLE public.hosted_runtime_nodes (
     updated_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-ALTER TABLE public.hosted_runtime_nodes OWNER TO postgres;
-
 ALTER TABLE public.hosted_runtime_instances
-    ADD COLUMN node_id text REFERENCES public.hosted_runtime_nodes(id);
+    ADD COLUMN IF NOT EXISTS node_id text REFERENCES public.hosted_runtime_nodes(id);
 
 -- The standby node is 'draining' on purpose: it is the HA reserve and is
 -- only flipped to 'active' manually during failover.

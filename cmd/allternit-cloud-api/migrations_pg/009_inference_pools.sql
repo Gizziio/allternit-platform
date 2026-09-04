@@ -25,8 +25,6 @@ CREATE TABLE IF NOT EXISTS public.inference_pools (
     created_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-ALTER TABLE public.inference_pools OWNER TO postgres;
-
 ALTER TABLE public.inference_usage
     ADD COLUMN IF NOT EXISTS pool_id text REFERENCES public.inference_pools(id);
 

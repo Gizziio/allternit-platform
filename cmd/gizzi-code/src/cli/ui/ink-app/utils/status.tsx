@@ -1,5 +1,5 @@
 // @ts-nocheck
-import chalk from 'chalk';
+import chalk from '@/shared/util/chalk'
 import figures from 'figures';
 import * as React from 'react';
 import { color, Text } from '../ink';

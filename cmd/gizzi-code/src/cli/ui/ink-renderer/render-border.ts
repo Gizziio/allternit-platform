@@ -1,4 +1,4 @@
-import chalk from 'chalk'
+import chalk from '@/shared/util/chalk'
 import cliBoxes, { type Boxes, type BoxStyle } from 'cli-boxes'
 import { applyColor } from './colorize.js'
 import type { DOMNode } from './dom.js'

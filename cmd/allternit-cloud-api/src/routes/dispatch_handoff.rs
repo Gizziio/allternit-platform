@@ -243,7 +243,10 @@ async fn handoff_user(state: &ApiState, headers: &HeaderMap) -> Result<ClerkUser
             .get(header::AUTHORIZATION)
             .and_then(|value| value.to_str().ok())
             .and_then(|value| value.strip_prefix("Bearer "))
-            .map(crate::auth::middleware::is_dev_api_token)
+            .map(|t| {
+                crate::auth::middleware::is_dev_api_token(t)
+                    || crate::auth::middleware::is_legacy_dev_api_token(t)
+            })
             .unwrap_or(false);
         if is_dev_token {
             return Ok(ClerkUser {

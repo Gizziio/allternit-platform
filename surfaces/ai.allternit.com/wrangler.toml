@@ -1,9 +1,12 @@
-name = "allternit-platform"
-pages_build_output_dir = "out"
+# Local-dev convenience config for the ai.allternit.com Pages project.
+# The authoritative deploy is .github/workflows/deploy-cloudflare-pages.yml,
+# which deploys `surfaces/ai.allternit.com/dist` to project `ai-allternit`.
+name = "ai-allternit"
+pages_build_output_dir = "dist"
 compatibility_date = "2025-01-01"
 
 [vars]
-NEXT_PUBLIC_APP_URL = "https://platform.allternit.com"
+NEXT_PUBLIC_APP_URL = "https://ai.allternit.com"
 
 # Secrets (set via `wrangler pages secret put` or Cloudflare dashboard):
 # NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY

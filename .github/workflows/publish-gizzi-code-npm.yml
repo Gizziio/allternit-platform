@@ -20,6 +20,7 @@ jobs:
     # must pass on the tagged commit before anything is published.
     name: Quality gates
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
@@ -84,6 +85,11 @@ jobs:
       - name: Install dependencies
         working-directory: cmd/gizzi-code
         run: bun install
+
+      - name: Run test suite
+        # Blocking gate: do not publish a version whose tests fail.
+        working-directory: cmd/gizzi-code
+        run: bun run test
 
       - name: Build
         working-directory: cmd/gizzi-code

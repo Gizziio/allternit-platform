@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle';
-import chalk from 'chalk';
+import chalk from '@/shared/util/chalk'
 import * as path from 'path';
 import * as React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
