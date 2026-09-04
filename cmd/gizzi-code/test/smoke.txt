@@ -2,6 +2,7 @@ test/agent-workspace/artifacts.test.ts
 test/agent-workspace/checkpoint.test.ts
 test/agent/adaptive-run-batch.test.ts
 test/agent/subagent-run-contract.test.ts
+test/allternitToken.test.ts
 test/bun.test.ts
 test/cli/thread-worktree.test.ts
 test/cli/tui/transcript.test.ts

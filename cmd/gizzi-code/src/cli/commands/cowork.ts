@@ -28,6 +28,7 @@ import { legacyEnv } from "@/shared/constants/cloudUrls"
 import open from "open"
 import { render } from "@/ink"
 import { IntelliTaskScreen } from "@/screens/IntelliTaskScreen"
+import { classifyAllternitToken } from "@/shared/utils/allternitToken"
 
 // ============================================================================
 // Types
@@ -147,6 +148,14 @@ async function apiCall<T>(
       if (fs.existsSync(sessionPath)) {
         const session = JSON.parse(fs.readFileSync(sessionPath, "utf8"))
         token = session?.accessToken || null
+        if (token) {
+          const info = classifyAllternitToken(token)
+          if (info.kind === "jwt" && info.expiresAt && info.expiresAt.getTime() - Date.now() < 60_000) {
+            process.stderr.write(
+              "warning: stored session token is expired (or expires within 60s); run a fresh `gizzi login` or store a durable alt_ token with `gizzi api-keys set`\n",
+            )
+          }
+        }
       }
     } catch {
       // Ignore reading error
