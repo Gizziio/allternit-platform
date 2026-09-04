@@ -25,3 +25,12 @@ Record the owner's Step 6 routing decision (option b — control-plane/data-plan
 - Enumerated the 4 unverified client paths: `/api/chat`, `/api/v1/sessions/:id/events`, `/api/v1/agents/:id/events`, `/api/v1/operator/events/*` exist on NEITHER backend — orphaned calls (A4).
 - Decisions recorded in the ADR: Step 6 = [2] destination + [1]-mechanism interim via [4]; A1 two-hop auth (Clerk JWT in, short-lived Ed25519 data-plane JWT out, tailnet ACL enforcement, replaces dev-token pattern); A2 chat is control-plane (model router), `/api/agent-chat` stays data-plane for local lane; A3 per-sub containers v1 + auto-stop; sizing = unprivileged Incus containers.
 - P0 item 4 added: feature-flag widgets calling proxied namespaces until P1 handlers land.
+
+## Update 3 (2026-09-04) — P0 fixes coded, 5 commits pushed
+- 4f77728c3 vendor cloud-contracts (CI deploy blocker B7) — cargo metadata clean, builds pass
+- 647912dcf CORS allowlist for allternit-api (mirror-any removed; 9 new tests) — also fixed pre-existing passkey_state test-compile break; 267 pre-existing --lib failures remain (refinery DB + stale control_plane tests, separate cleanup)
+- f6338888e dev-token gate ALLTERNIT_ALLOW_DEV_TOKEN default OFF, all 5 acceptance sites + warn log + 7 tests; iOS literal moved to build config — NEEDS real Xcode build before merge
+- f0b12c756 orphaned client calls (A4) — dead removed, live flagged, agents/:id/events verified real
+- 0b7b70f1d fail-closed flags for jobs/agent-sessions/office/beta/rails namespaces (P0 item 4)
+- Follow-up flagged: agent-chat, /api/v1/runtime, /api/v1/tools, /api/v1/permissions, /api/v1/questions, /api/model-lab/* are also Rust-only.
+- Deploy-prep TODO for user: VPS api.env.template still has ALLTERNIT_LOCAL_DEV_BYPASS=true (keeps permissive CORS + localhost auth bypass on mail) — flip false with the proxy deploy.
