@@ -34,6 +34,8 @@ describe("bundled MCP discovery", () => {
     }
   })
 
+  // SKIPPED: the superpowers MCP server (tools/mcp-servers/superpowers/superpowers-mcp.js) was
+  // removed from the repo, so resolveSuperpowersPath() finds nothing; bundled.ts still references it.
   test.skip("resolves the repository Superpowers server independently of cwd", () => {
     const superpowers = bundledMcpServers({ cwd: "/tmp" }).superpowers
     expect(superpowers?.type).toBe("local")
