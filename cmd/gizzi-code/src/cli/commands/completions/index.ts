@@ -1,10 +1,11 @@
-// @ts-nocheck
 /**
  * Shell Completions Command
  *
- * Generates shell completion scripts for bash, zsh, and fish.
- * Extends the built-in yargs .completion() with dedicated multi-shell
- * support and proper installation instructions.
+ * The single completion system for gizzi. The yargs `.completion()` built-in
+ * that used to live in main.ts (as the separate `completion` command) was
+ * removed in favor of this generator, which derives its output from the same
+ * command registry main.ts registers (`src/cli/commands/registry.ts`), so
+ * completions cannot drift from `gizzi --help`.
  *
  * Usage:
  *   gizzi completions bash    — print bash completion script
@@ -19,13 +20,91 @@ import path from "path"
 import os from "os"
 import fs from "fs/promises"
 import { existsSync } from "fs"
+import { COMMANDS, type RegisteredCommand } from "@/cli/commands/registry"
 
 const SCRIPT_NAME = "gizzi"
 
-function bashCompletions(): string {
+export interface CompletionEntry {
+  name: string
+  description: string
+}
+
+/**
+ * Derive top-level command names and descriptions from the yargs command
+ * tree. This is the "derives from the yargs command tree" guarantee: the
+ * input is the exact array main.ts spreads into the root yargs instance.
+ */
+export function commandEntries(modules: RegisteredCommand[] = COMMANDS): CompletionEntry[] {
+  const seen = new Set<string>()
+  const entries: CompletionEntry[] = []
+  for (const mod of modules) {
+    const raw = Array.isArray(mod.command) ? mod.command[0] : mod.command
+    if (typeof raw !== "string") continue
+    const name = raw.split(/\s+/)[0]
+    if (!name || name === "$0" || seen.has(name)) continue
+    seen.add(name)
+    entries.push({
+      name,
+      description: typeof mod.describe === "string" ? mod.describe : "",
+    })
+  }
+  return entries
+}
+
+/**
+ * Subcommands that the yargs tree models as `<action>` positionals or nested
+ * builders inside a single module cannot be enumerated from the module tree
+ * without running builders, so they are curated here and kept in sync with
+ * the handlers in src/cli/commands/<group>/.
+ */
+const SUBCOMMAND_HINTS: Record<string, string[]> = {
+  auth: ["login", "status", "logout", "diagnose", "profile"],
+  session: ["list", "delete", "export"],
+  config: ["list", "add", "remove", "set-active", "import", "export", "profile", "telemetry"],
+  db: ["path", "migrate"],
+  cron: ["list", "start", "stop", "status", "add", "remove", "run", "pause", "resume"],
+  profile: ["list", "save", "activate", "deactivate", "delete", "show"],
+  "permission-profile": ["list", "show", "activate", "deactivate", "save", "delete", "presets"],
+  completions: ["bash", "zsh", "fish", "install"],
+}
+
+// Global options mirrored from the root yargs setup in main.ts.
+const GLOBAL_OPTIONS: CompletionEntry[] = [
+  { name: "help", description: "show help" },
+  { name: "version", description: "show version number" },
+  { name: "print-logs", description: "print logs to stderr" },
+  { name: "log-level", description: "log level (DEBUG, INFO, WARN, ERROR)" },
+  { name: "onboarding", description: "force the setup onboarding wizard" },
+  { name: "ci", description: "run in CI/non-interactive mode" },
+]
+
+function bashQuoteWord(word: string): string {
+  return word.replace(/[^a-zA-Z0-9_-]/g, "_")
+}
+
+function zshQuote(value: string): string {
+  return value.replace(/'/g, `'\\''`).replace(/\n/g, " ")
+}
+
+function fishQuote(value: string): string {
+  return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\$/g, "\\$").replace(/`/g, "\\`")
+}
+
+export function bashCompletions(modules: RegisteredCommand[] = COMMANDS): string {
+  const entries = commandEntries(modules)
+  const commands = entries.map((e) => e.name).join(" ")
+  const cases = Object.entries(SUBCOMMAND_HINTS)
+    .map(([group, subs]) => {
+      const list = subs.map((s) => bashQuoteWord(s)).join(" ")
+      return `    ${bashQuoteWord(group)})\n      COMPREPLY=( $(compgen -W "${list}" -- "\${cur}") )\n      ;;`
+    })
+    .join("\n")
+
   return `###-begin-gizzi-completions-###
 #
 # Gizzi Code shell completions (bash)
+#
+# Generated from the gizzi command registry — do not edit by hand.
 #
 # Installation:
 #   gizzi completions bash >> ~/.bashrc
@@ -34,50 +113,20 @@ function bashCompletions(): string {
 #
 
 _gizzi_completions() {
-  local cur prev commands
+  local cur prev
   COMPREPLY=()
   cur="\${COMP_WORDS[COMP_CWORD]}"
-  prev="\${COMP_WORDS[COMP_CWORD-1]}"
 
-  commands="run exec generate serve connect skills upgrade models stats mcp acp session export import github pr debug doctor init plugin auth config profile permission-profile completions theme web brain vault status agent provider runtime labs"
+  commands="${commands}"
 
   if [[ \${COMP_CWORD} -eq 1 ]]; then
     COMPREPLY=( $(compgen -W "\${commands}" -- "\${cur}") )
     return 0
   fi
 
-  # Subcommand completions
   case "\${COMP_WORDS[1]}" in
-    profile)
-      local subcmds="list save activate deactivate delete show"
-      COMPREPLY=( $(compgen -W "\${subcmds}" -- "\${cur}") )
-      ;;
-    permission-profile)
-      local subcmds="list show activate deactivate save delete presets"
-      COMPREPLY=( $(compgen -W "\${subcmds}" -- "\${cur}") )
-      ;;
-    theme)
-      local subcmds="show set list custom palette delete dark light system"
-      COMPREPLY=( $(compgen -W "\${subcmds}" -- "\${cur}") )
-      ;;
-    session)
-      local subcmds="list delete resume export share"
-      COMPREPLY=( $(compgen -W "\${subcmds}" -- "\${cur}") )
-      ;;
-    completions)
-      local subcmds="bash zsh fish install"
-      COMPREPLY=( $(compgen -W "\${subcmds}" -- "\${cur}") )
-      ;;
-    auth)
-      local subcmds="login logout status"
-      COMPREPLY=( $(compgen -W "\${subcmds}" -- "\${cur}") )
-      ;;
-    config)
-      local subcmds="list set get"
-      COMPREPLY=( $(compgen -W "\${subcmds}" -- "\${cur}") )
-      ;;
+${cases}
     *)
-      # Fall back to file completion
       COMPREPLY=( $(compgen -f -- "\${cur}") )
       ;;
   esac
@@ -90,10 +139,23 @@ complete -F _gizzi_completions ${SCRIPT_NAME}
 `
 }
 
-function zshCompletions(): string {
+export function zshCompletions(modules: RegisteredCommand[] = COMMANDS): string {
+  const entries = commandEntries(modules)
+  const commandLines = entries
+    .map((e) => `    '${zshQuote(e.name)}:${zshQuote(e.description)}'`)
+    .join("\n")
+  const cases = Object.entries(SUBCOMMAND_HINTS)
+    .map(([group, subs]) => {
+      const lines = subs.map((s) => `          '${zshQuote(s)}'`).join("\n")
+      return `        ${bashQuoteWord(group)})\n          local -a subs\n          subs=(\n${lines}\n          )\n          _describe -t subcommands '${zshQuote(group)} subcommand' subs\n          ;;`
+    })
+    .join("\n")
+
   return `#compdef gizzi
 
 # Gizzi Code shell completions (zsh)
+#
+# Generated from the gizzi command registry — do not edit by hand.
 #
 # Installation:
 #   gizzi completions zsh > ~/.zsh/completions/_gizzi
@@ -105,74 +167,7 @@ function zshCompletions(): string {
 _gizzi() {
   local -a commands
   commands=(
-    'run:Start an interactive session'
-    'exec:Execute a single prompt non-interactively'
-    'generate:Generate code from a template'
-    'serve:Start the Gizzi API server'
-    'connect:Connect to a remote Allternit instance'
-    'skills:Manage skills'
-    'upgrade:Upgrade to the latest version'
-    'models:List available models'
-    'stats:Show usage statistics'
-    'mcp:Manage MCP server connections'
-    'acp:Agent Communication Protocol'
-    'session:Manage sessions'
-    'export:Export a session'
-    'import:Import a session'
-    'github:GitHub integration'
-    'pr:Pull request operations'
-    'debug:Debug tools'
-    'doctor:Diagnose issues'
-    'init:Initialize a new project'
-    'plugin:Manage plugins'
-    'auth:Authentication management'
-    'config:Configuration management'
-    'profile:Manage config profiles'
-    'permission-profile:Manage permission profiles'
-    'completions:Generate shell completions'
-    'theme:Manage UI themes'
-    'web:Open web interface'
-    'brain:Brain/memory management'
-    'vault:Secret management'
-    'status:Show system status'
-    'agent:Agent management'
-    'provider:Provider configuration'
-    'runtime:Runtime information'
-    'labs:A://Labs course pipeline'
-  )
-
-  local -a profile_actions
-  profile_actions=(
-    'list:List all profiles'
-    'save:Save current config as profile'
-    'activate:Activate a profile'
-    'deactivate:Deactivate current profile'
-    'delete:Delete a profile'
-    'show:Show profile details'
-  )
-
-  local -a perm_actions
-  perm_actions=(
-    'list:List available profiles'
-    'show:Show profile details'
-    'activate:Activate a profile'
-    'deactivate:Deactivate current profile'
-    'save:Save a custom profile'
-    'delete:Delete a profile'
-    'presets:Show built-in presets'
-  )
-
-  local -a theme_actions
-  theme_actions=(
-    'show:Show current theme'
-    'set:Set a theme'
-    'list:List available themes'
-    'custom:Create a custom theme'
-    'palette:Edit theme colors'
-    'delete:Delete a custom theme'
-    'dark:Switch to dark theme'
-    'light:Switch to light theme'
-    'system:Follow system theme'
+${commandLines}
   )
 
   _arguments -C \\
@@ -185,20 +180,7 @@ _gizzi() {
       ;;
     args)
       case $words[1] in
-        profile)
-          _describe -t actions 'profile action' profile_actions
-          ;;
-        permission-profile)
-          _describe -t actions 'permission-profile action' perm_actions
-          ;;
-        theme)
-          _describe -t actions 'theme action' theme_actions
-          ;;
-        completions)
-          local -a shells
-          shells=(bash zsh fish install)
-          _describe -t shells 'shell type' shells
-          ;;
+${cases}
       esac
       ;;
   esac
@@ -208,75 +190,35 @@ _gizzi "$@"
 `
 }
 
-function fishCompletions(): string {
-  return `# Gizzi Code shell completions (fish)
-#
-# Installation:
-#   gizzi completions fish > ~/.config/fish/completions/gizzi.fish
-#
-
-# Disable file completions by default
-complete -c gizzi -f
-
-# Top-level commands
-complete -c gizzi -n "__fish_use_subcommand" -a "run" -d "Start an interactive session"
-complete -c gizzi -n "__fish_use_subcommand" -a "exec" -d "Execute a single prompt"
-complete -c gizzi -n "__fish_use_subcommand" -a "generate" -d "Generate code from template"
-complete -c gizzi -n "__fish_use_subcommand" -a "serve" -d "Start the API server"
-complete -c gizzi -n "__fish_use_subcommand" -a "connect" -d "Connect to remote instance"
-complete -c gizzi -n "__fish_use_subcommand" -a "skills" -d "Manage skills"
-complete -c gizzi -n "__fish_use_subcommand" -a "upgrade" -d "Upgrade to latest version"
-complete -c gizzi -n "__fish_use_subcommand" -a "models" -d "List available models"
-complete -c gizzi -n "__fish_use_subcommand" -a "stats" -d "Show usage statistics"
-complete -c gizzi -n "__fish_use_subcommand" -a "mcp" -d "Manage MCP servers"
-complete -c gizzi -n "__fish_use_subcommand" -a "session" -d "Manage sessions"
-complete -c gizzi -n "__fish_use_subcommand" -a "export" -d "Export a session"
-complete -c gizzi -n "__fish_use_subcommand" -a "import" -d "Import a session"
-complete -c gizzi -n "__fish_use_subcommand" -a "github" -d "GitHub integration"
-complete -c gizzi -n "__fish_use_subcommand" -a "pr" -d "Pull request operations"
-complete -c gizzi -n "__fish_use_subcommand" -a "debug" -d "Debug tools"
-complete -c gizzi -n "__fish_use_subcommand" -a "doctor" -d "Diagnose issues"
-complete -c gizzi -n "__fish_use_subcommand" -a "init" -d "Initialize project"
-complete -c gizzi -n "__fish_use_subcommand" -a "plugin" -d "Manage plugins"
-complete -c gizzi -n "__fish_use_subcommand" -a "auth" -d "Authentication"
-complete -c gizzi -n "__fish_use_subcommand" -a "config" -d "Configuration"
-complete -c gizzi -n "__fish_use_subcommand" -a "profile" -d "Config profiles"
-complete -c gizzi -n "__fish_use_subcommand" -a "permission-profile" -d "Permission profiles"
-complete -c gizzi -n "__fish_use_subcommand" -a "completions" -d "Shell completions"
-complete -c gizzi -n "__fish_use_subcommand" -a "theme" -d "UI themes"
-complete -c gizzi -n "__fish_use_subcommand" -a "web" -d "Web interface"
-complete -c gizzi -n "__fish_use_subcommand" -a "brain" -d "Brain/memory"
-complete -c gizzi -n "__fish_use_subcommand" -a "vault" -d "Secrets"
-complete -c gizzi -n "__fish_use_subcommand" -a "status" -d "System status"
-complete -c gizzi -n "__fish_use_subcommand" -a "agent" -d "Agent management"
-complete -c gizzi -n "__fish_use_subcommand" -a "provider" -d "Provider config"
-complete -c gizzi -n "__fish_use_subcommand" -a "runtime" -d "Runtime info"
-complete -c gizzi -n "__fish_use_subcommand" -a "labs" -d "A://Labs courses"
-
-# Global options
-complete -c gizzi -l help -s h -d "Show help"
-complete -c gizzi -l version -s v -d "Show version"
-complete -c gizzi -l print-logs -d "Print logs to stderr"
-complete -c gizzi -l log-level -a "DEBUG INFO WARN ERROR" -d "Log level"
-
-# Profile subcommands
-complete -c gizzi -n "__fish_seen_subcommand_from profile" -a "list save activate deactivate delete show"
-
-# Permission profile subcommands
-complete -c gizzi -n "__fish_seen_subcommand_from permission-profile" -a "list show activate deactivate save delete presets"
-
-# Theme subcommands
-complete -c gizzi -n "__fish_seen_subcommand_from theme" -a "show set list custom palette delete dark light system"
-
-# Completions subcommands
-complete -c gizzi -n "__fish_seen_subcommand_from completions" -a "bash zsh fish install"
-
-# Session subcommands
-complete -c gizzi -n "__fish_seen_subcommand_from session" -a "list delete resume export share"
-
-# Auth subcommands
-complete -c gizzi -n "__fish_seen_subcommand_from auth" -a "login logout status"
-`
+export function fishCompletions(modules: RegisteredCommand[] = COMMANDS): string {
+  const entries = commandEntries(modules)
+  const lines: string[] = [
+    `# Gizzi Code shell completions (fish)`,
+    `#`,
+    `# Generated from the gizzi command registry — do not edit by hand.`,
+    `#`,
+    `# Installation:`,
+    `#   gizzi completions fish > ~/.config/fish/completions/gizzi.fish`,
+    ``,
+    `# Disable file completions by default`,
+    `complete -c gizzi -f`,
+    ``,
+    `# Top-level commands`,
+  ]
+  for (const e of entries) {
+    lines.push(`complete -c gizzi -n "__fish_use_subcommand" -a ${e.name} -d "${fishQuote(e.description)}"`)
+  }
+  lines.push(``, `# Global options`)
+  for (const o of GLOBAL_OPTIONS) {
+    lines.push(`complete -c gizzi -l ${o.name} -d "${fishQuote(o.description)}"`)
+  }
+  for (const [group, subs] of Object.entries(SUBCOMMAND_HINTS)) {
+    lines.push(``, `# ${group} subcommands`)
+    for (const s of subs) {
+      lines.push(`complete -c gizzi -n "__fish_seen_subcommand_from ${group}" -a ${s}`)
+    }
+  }
+  return lines.join("\n") + "\n"
 }
 
 async function installCompletions(shell: string): Promise<void> {

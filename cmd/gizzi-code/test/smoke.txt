@@ -95,3 +95,4 @@ test/api-fetch-timeout.test.ts
 test/plugin/plugin-directories.test.ts
 test/server/clerk-auth-middleware.test.ts
 test/dead-code-guard.test.ts
+test/commands/completions.test.ts
