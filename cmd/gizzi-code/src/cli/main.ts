@@ -272,8 +272,58 @@ const cli = yargs(hideBin(process.argv))
   })
   .strict()
 
+// Commands that legitimately keep the process alive (TUI, servers, protocol
+// stdio loops, attach/streaming forms). Everything NOT matched here is a
+// one-shot command: its handler prints and returns, and the process must
+// then exit. Bootstrap leaves live runtime handles (agent comms runtime,
+// db watchers, lazily re-created Instances) that would otherwise hold the
+// event loop open forever — the same disease print-mode `gizzi exec` had
+// before it grew its own drain-then-exit. After the yargs handler resolves,
+// one-shot commands get the same treatment centrally: drain stdout/stderr
+// for 100ms, then exit with whatever exitCode the handler set.
+function isLongLivedCommand(argv: { _: (string | number)[]; print?: boolean }): boolean {
+  const [top, sub] = argv._ as string[]
+  if (!top) return true // no subcommand → default TUI ($0 [project])
+  switch (top) {
+    case "run":
+      // `run --print/-p` is one-shot and self-exits (run.ts); interactive
+      // run starts the TUI and runs until the user quits.
+      return !argv.print
+    case "exec":
+      // Print-only alias of run; already self-exits in run.ts print mode.
+      return false
+    case "attach": // attach to a running gizzi server (interactive TUI)
+    case "serve": // headless gizzi server; runs until SIGINT/SIGTERM
+    case "server": // future alias of serve; never force-exit
+    case "web": // starts a local web server and blocks
+    case "acp": // Agent Client Protocol server over stdio
+    case "ssh": // future remote shell; interactive
+    case "assistant": // future interactive assistant REPL
+    case "remote-control": // future remote control session
+      return true
+    case "mcp":
+      // `mcp serve` runs an MCP server; add/remove/list/auth/logout/debug
+      // are one-shot.
+      return sub === "serve"
+    case "runtime":
+      // `runtime daemon` is a WebSocket daemon; list/register/status exit.
+      return sub === "daemon"
+    case "cowork":
+      // `cowork attach <run-id>` attaches to a live run; everything else
+      // (list/start/stop/logs/show/schedule/approval/checkpoint) exits.
+      return sub === "attach"
+    case "remote":
+      // `remote connect` opens an interactive remote session and
+      // `remote logs` streams; list/status/test/setup/config exit.
+      return sub === "connect" || sub === "logs"
+    default:
+      return false
+  }
+}
+
+let parsedArgv: { _: (string | number)[]; print?: boolean } | undefined
 try {
-  await cli.parse()
+  parsedArgv = await cli.parse()
 } catch (e) {
   let data: Record<string, any> = {}
   if (e instanceof NamedErrorBase) {
@@ -311,6 +361,14 @@ try {
     process.stderr.write((e instanceof Error ? (e.stack || e.message) : String(e)) + EOL)
   }
   process.exitCode = 1
+}
+
+// On parse failure we have no parsed argv — recover the command path from
+// raw tokens (first non-option arg) so long-lived commands that error early
+// still don't get a forced exit scheduled underneath them.
+const fallbackArgv = { _: hideBin(process.argv).filter((t) => !t.startsWith("-")) as (string | number)[] }
+if (!isLongLivedCommand(parsedArgv ?? fallbackArgv)) {
+  setTimeout(() => process.exit(process.exitCode ?? 0), 100)
 }
 // Sat Mar 14 17:36:51 CDT 2026
 // force recompile Sat Mar 14 17:51:09 CDT 2026
