@@ -84,6 +84,12 @@ See [SECURITY.md](./SECURITY.md). Server mode is opt-in and unauthenticated
 without `GIZZI_SERVER_PASSWORD`; the permission system is a UX feature, not a
 sandbox.
 
+## Telemetry
+
+Usage telemetry is on by default, anonymous, and never includes prompts,
+file contents, or credentials. Disable it with `gizzi config telemetry off`
+or `GIZZI_TELEMETRY=off`. Full field-level inventory: [docs/telemetry.md](./docs/telemetry.md).
+
 ## License
 
 MIT

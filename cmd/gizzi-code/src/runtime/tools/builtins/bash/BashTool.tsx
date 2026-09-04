@@ -753,7 +753,9 @@ export const BashTool = buildTool({
         // File may already be gone — stdout preview is sufficient
       }
     }
-    const commandType = input.command.split(' ')[0];
+    // Fork: log the basename only — the first token can be an absolute
+    // path (/Users/<name>/bin/tool), which would leak the home directory.
+    const commandType = (input.command.split(' ')[0] ?? '').split('/').pop();
     logEvent('tengu_bash_tool_command_executed', {
       command_type: commandType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       stdout_length: stdout.length,

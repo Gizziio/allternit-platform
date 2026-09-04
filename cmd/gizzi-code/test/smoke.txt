@@ -90,3 +90,4 @@ test/cron-automation.test.ts
 test/vault.test.ts
 test/util/redact.test.ts
 test/commands/uninstall.test.ts
+test/telemetry-governance.test.ts

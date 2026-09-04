@@ -22,6 +22,7 @@ import {
 import type { AccountInfo } from '../../../utils/config.js'
 import { getGlobalConfig, saveGlobalConfig } from '../../../utils/config.js'
 import { logForDebugging } from '../../../shared/utils/debug.js'
+import { redactTelemetryString } from '../../../shared/utils/telemetryRedact.js'
 import { getOauthProfileFromOauthToken } from './getOauthProfile.js'
 import type {
   BillingType,
@@ -256,11 +257,16 @@ export async function refreshOAuthToken(
         ? JSON.stringify(error.response.data)
         : undefined
     logEvent('tengu_oauth_token_refresh_failure', {
-      error: (error as Error)
-        .message as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      // Fork: redact at source — error messages and server response bodies
+      // can contain URLs, paths, or token fragments. The analytics sink
+      // sanitizes again as defense in depth.
+      error: redactTelemetryString(
+        (error as Error).message,
+      ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       ...(responseBody && {
-        responseBody:
-          responseBody as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        responseBody: redactTelemetryString(
+          responseBody,
+        ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       }),
     })
     throw error
