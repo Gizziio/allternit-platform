@@ -1,13 +1,12 @@
 # Steering checkpoint
 
-Goal: Fix stale @allternit npm registry — refresh the 5 core packages stale since 2026-04-14 and make archived card plugins honest.
+Goal: Unblock production blockers with the owner — item 1: Tailscale auth for the cloud-api CI deploy (fails "OAuth identity empty"); then items 2–3 on `mail` (migration 012 + DP JWT seed; retire live 8013 nginx proxy).
 
 Just did:
-- Drift check: all 5 core packages (api-client, plugin-sdk, workflow-engine, ix, viz) drifted since 2026-04-14; the 15 archived card plugins had exactly 1 commit (2bda61382, a CI script rename) — cosmetic, NOT real drift.
-- Decision: republish the 5 core with patch bumps; DEPRECATE the archived card plugins instead of fake-refreshing dead packages.
-- Wrote generic gated workflow .github/workflows/publish-package-npm.yml (workflow_dispatch, path+version inputs, path whitelist, standalone npm install to dodge the pnpm workspace name conflict, build, exports sanity, idempotent publish, tarball verify).
-- Bumped versions: api-client 1.0.2, plugin-sdk 1.0.2, workflow-engine 0.1.1, ix 0.1.1, viz 0.1.1.
+- Confirmed live: `secrets.TS_AUTHKEY` empty → deploy job dies at the Join Tailscale step (run 33919223298). `test` job passes.
+- Switched `.github/workflows/deploy-cloud-api-contabo.yml` from deprecated `authkey` input to OAuth client (`TS_OAUTH_CLIENT_ID` / `TS_OAUTH_CLIENT_SECRET` + `tags: tag:ci`); header comment updated. YAML validated.
+- Updated `docs/Operations/CLOUD_API_VPS_DEPLOY.md` one-time setup (OAuth client, Auth keys/Write scope, tag:ci) and `docs/Operations/OWNER_ACTIONS.md` item 1 to match.
 
-Next: commit + push, dispatch 5 workflow runs, watch first to green, then npm deprecate the 15 archived card plugins, ledger entry.
+Next: owner creates the OAuth client in the Tailscale admin console and pastes id+secret here → I `gh secret set` both, merge this branch (merge push triggers full test+deploy), watch run to green. Owner also needs the tailnet ACL `tag:ci → tag:mail:*` (+ ssh check rule, or CONTABO_SSH_KEY) for the deploy step's SSH.
 
-Open questions: none — plugin-sdk naming consolidation stays deferred (ledger note).
+Open questions: whether the existing tailnet ACL already allows tag:ci SSH into mail (owner to check at login.tailscale.com/admin/acl); if not, add the ssh check rule or provide CONTABO_SSH_KEY.

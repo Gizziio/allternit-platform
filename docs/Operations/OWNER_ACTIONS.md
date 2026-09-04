@@ -13,7 +13,7 @@
 |---|---|
 | **What** | Tailscale auth for the deploy workflow (currently fails with "OAuth identity empty") |
 | **Where** | Tailscale admin console → OAuth clients (or auth keys); GitHub repo `Gizziio/allternit-platform` → Settings → Secrets |
-| **How** | Create an OAuth client (or reusable pre-authorized auth key tagged `tag:ci` per `docs/Operations/CLOUD_API_VPS_DEPLOY.md`); set `TS_OAUTH_CLIENT_ID`/`TS_OAUTH_CLIENT_SECRET` (what the workflow reads) or `TS_AUTHKEY` per the workflow's inputs; ACL must allow `tag:ci` → `tag:mail:*` |
+| **How** | Create an OAuth client (scope **Auth keys / Write**, tag `tag:ci`) at `https://login.tailscale.com/admin/settings/oauth`; set `TS_OAUTH_CLIENT_ID` / `TS_OAUTH_CLIENT_SECRET` (workflow switched from authkey to OAuth in session/ci-oauth). ACL must allow `tag:ci` → `tag:mail:*` (+ Tailscale SSH `check` rule, or set `CONTABO_SSH_KEY`) |
 | **Verify** | Re-run the failed workflow run (`deploy-cloud-api-contabo.yml`); the `deploy` job joins Tailscale, swaps the binary on `mail`, health-checks, and goes green. The `test` job already passes |
 
 ## 2. Cloud-api production env (on `mail`, after CI deploy is unblocked)
