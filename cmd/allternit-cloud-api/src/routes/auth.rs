@@ -62,8 +62,8 @@ pub async fn validate_token(
             }
         }
         None => {
-            // Check for dev token
-            if request.token == "dev-api-token" {
+            // Check for dev token (gated — rejected unless explicitly enabled)
+            if crate::auth::middleware::is_dev_api_token(&request.token) {
                 TokenInfo {
                     valid: true,
                     token_id: Some("dev-token".to_string()),
