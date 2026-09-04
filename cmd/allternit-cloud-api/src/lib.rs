@@ -58,6 +58,11 @@ pub struct ApiState {
     /// Contabo runtime service for hosted runtimes (provisions and manages
     /// workload containers on the Contabo VPS)
     pub contabo_runtime_service: Arc<services::ContaboRuntimeService>,
+    /// Gateway used by the agent-sessions control-plane namespace
+    /// (routes::agent_sessions): resolves the caller's default data-plane
+    /// node and relays through the runtime relay machinery. Behind a trait
+    /// so handler tests can substitute a mock at the service boundary.
+    pub agent_sessions_gateway: Arc<dyn routes::agent_sessions::AgentSessionsGateway>,
     /// Mesh enrollment service (Headscale), absent when HEADSCALE_API_KEY is unset
     pub mesh_service: Option<Arc<routes::mesh::MeshService>>,
     /// AES-256-GCM cipher for provider tokens and wizard checkpoints,
@@ -339,6 +344,10 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
         // Gizzi instances are self-registered over a per-request Clerk
         // session, like the pairing routes — no allternit_* API token.
         .merge(routes::gizzi_instances::routes())
+        // Agent-sessions control-plane namespace (P1): Clerk session verified
+        // per-request inside each handler (resolve_user_scoped), then proxied
+        // to the caller's default data-plane node via the runtime relay.
+        .merge(routes::agent_sessions::routes())
         // Mesh enrollment verifies the Clerk session per-request and answers
         // 503 mesh_not_configured when HEADSCALE_API_KEY is unset.
         .merge(routes::mesh::routes())

@@ -204,19 +204,17 @@ enum RelayConnect {
 /// Look up the runtime's relay connection, starting its hosted machine first
 /// when the device maps to a stopped hosted runtime instance.
 async fn connect_or_wake_runtime(
-    state: &ApiState,
+    db: &sqlx::PgPool,
+    contabo_runtime_service: &std::sync::Arc<crate::services::ContaboRuntimeService>,
+    quota_service: &crate::services::SharedQuotaService,
     runtime_id: &str,
 ) -> Result<RelayConnect, ApiError> {
     if let Some(connection) = relay_hub().read().await.get(runtime_id).cloned() {
         return Ok(RelayConnect::Connected(connection));
     }
-    let outcome = crate::services::wake_hosted_runtime_for_device(
-        &state.db,
-        &state.contabo_runtime_service,
-        &state.quota_service,
-        runtime_id,
-    )
-    .await?;
+    let outcome =
+        crate::services::wake_hosted_runtime_for_device(db, contabo_runtime_service, quota_service, runtime_id)
+            .await?;
     if matches!(
         outcome,
         crate::services::HostedWakeOutcome::NotHosted
@@ -276,7 +274,7 @@ async fn create_socket_ticket(
     Json(request): Json<CreateSocketTicketRequest>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
     let user_id = crate::auth::resolve_user_scoped(&state.db, &headers, "compute").await?.id;
-    let capabilities = runtime_capabilities(&state, &runtime_id, &user_id).await?;
+    let capabilities = runtime_capabilities(&state.db, &runtime_id, &user_id).await?;
     if !capabilities
         .iter()
         .any(|capability| capability == "runtime:connect")
@@ -285,7 +283,7 @@ async fn create_socket_ticket(
             "Runtime is not allowed to accept relayed sockets".to_string(),
         ));
     }
-    let validation = BrowserProxyRequest {
+    let validation = RelayRequest {
         method: "GET".to_string(),
         path: request.path.clone(),
         headers: HashMap::new(),
@@ -299,7 +297,14 @@ async fn create_socket_ticket(
             "Runtime pairing does not grant {required}"
         )));
     }
-    match connect_or_wake_runtime(&state, &runtime_id).await? {
+    match connect_or_wake_runtime(
+        &state.db,
+        &state.contabo_runtime_service,
+        &state.quota_service,
+        &runtime_id,
+    )
+    .await?
+    {
         RelayConnect::Connected(_) => {}
         RelayConnect::Warming => {
             return Err(ApiError::ServiceUnavailable(
@@ -312,7 +317,7 @@ async fn create_socket_ticket(
             ));
         }
     }
-    services_touch_runtime(&state, &runtime_id).await;
+    services_touch_runtime(&state.db, &runtime_id).await;
 
     let ticket = Uuid::new_v4().to_string();
     let expires_at = Instant::now() + Duration::from_secs(30);
@@ -653,7 +658,49 @@ async fn proxy_to_runtime(
     Json(request): Json<BrowserProxyRequest>,
 ) -> Result<Response, ApiError> {
     let user_id = crate::auth::resolve_user_scoped(&state.db, &headers, "compute").await?.id;
-    let capabilities = runtime_capabilities(&state, &runtime_id, &user_id).await?;
+    relay_request_to_runtime(
+        &state.db,
+        &state.contabo_runtime_service,
+        &state.quota_service,
+        &user_id,
+        &runtime_id,
+        RelayRequest {
+            method: request.method,
+            path: request.path,
+            headers: request.headers,
+            body: request.body,
+            body_encoding: request.body_encoding,
+        },
+    )
+    .await
+}
+
+/// A single request to relay to a runtime over its outbound WebSocket.
+/// `headers` are the caller's raw headers; [`filtered_headers`] is applied
+/// inside the relay so every relay entry point enforces the same allow-list.
+pub struct RelayRequest {
+    pub method: String,
+    pub path: String,
+    pub headers: HashMap<String, String>,
+    pub body: String,
+    pub body_encoding: String,
+}
+
+/// Relay one allow-listed request to a user-owned runtime and stream the
+/// response back. This is the shared machinery behind both the explicit
+/// `POST /api/v1/runtime-devices/:id/proxy` browser proxy and the
+/// control-plane namespace handlers (routes::agent_sessions): ownership +
+/// capability checks, path validation, wake-on-demand, and the
+/// `Body::from_stream` chunked response all live here exactly once.
+pub(crate) async fn relay_request_to_runtime(
+    db: &sqlx::PgPool,
+    contabo_runtime_service: &std::sync::Arc<crate::services::ContaboRuntimeService>,
+    quota_service: &crate::services::SharedQuotaService,
+    user_id: &str,
+    runtime_id: &str,
+    request: RelayRequest,
+) -> Result<Response, ApiError> {
+    let capabilities = runtime_capabilities(db, runtime_id, user_id).await?;
     if !capabilities
         .iter()
         .any(|capability| capability == "runtime:connect")
@@ -672,9 +719,9 @@ async fn proxy_to_runtime(
             "Runtime pairing does not grant {required_capability}"
         )));
     }
-    services_touch_runtime(&state, &runtime_id).await;
+    services_touch_runtime(db, runtime_id).await;
 
-    let connection = match connect_or_wake_runtime(&state, &runtime_id).await? {
+    let connection = match connect_or_wake_runtime(db, contabo_runtime_service, quota_service, runtime_id).await? {
         RelayConnect::Connected(connection) => connection,
         RelayConnect::Warming => {
             return Ok((
@@ -751,14 +798,14 @@ async fn proxy_to_runtime(
     }
 }
 
-async fn services_touch_runtime(state: &ApiState, runtime_id: &str) {
-    if let Err(error) = crate::services::touch_runtime_activity(&state.db, runtime_id).await {
+async fn services_touch_runtime(db: &sqlx::PgPool, runtime_id: &str) {
+    if let Err(error) = crate::services::touch_runtime_activity(db, runtime_id).await {
         tracing::debug!(%runtime_id, "Unable to record hosted runtime activity: {}", error);
     }
 }
 
 async fn runtime_capabilities(
-    state: &ApiState,
+    db: &sqlx::PgPool,
     runtime_id: &str,
     user_id: &str,
 ) -> Result<Vec<String>, ApiError> {
@@ -767,7 +814,7 @@ async fn runtime_capabilities(
     )
     .bind(runtime_id)
     .bind(user_id)
-    .fetch_optional(&state.db)
+    .fetch_optional(db)
     .await?
     .ok_or_else(|| ApiError::NotFound("Runtime not found".to_string()))?;
     Ok(serde_json::from_str(&capabilities).unwrap_or_default())
@@ -808,7 +855,7 @@ fn filtered_response_headers(headers: HashMap<String, String>) -> HashMap<String
         .collect()
 }
 
-fn validate_proxy_request(request: &BrowserProxyRequest) -> Result<(), ApiError> {
+fn validate_proxy_request(request: &RelayRequest) -> Result<(), ApiError> {
     let method = request.method.to_ascii_uppercase();
     if !matches!(method.as_str(), "GET" | "POST" | "PUT" | "PATCH" | "DELETE") {
         return Err(ApiError::BadRequest("Unsupported relay method".to_string()));
@@ -924,4 +971,114 @@ fn filtered_headers(headers: HashMap<String, String>) -> HashMap<String, String>
             )
         })
         .collect()
+}
+
+/// Collect an inbound HTTP request's headers into the string map the relay
+/// protocol carries. Nothing is filtered here — the allow-list is applied by
+/// [`filtered_headers`] inside `relay_request_to_runtime`, so every relay
+/// entry point (browser proxy, namespace handlers) shares one enforcement
+/// point.
+pub(crate) fn relay_headers_from_http(headers: &HeaderMap) -> HashMap<String, String> {
+    headers
+        .iter()
+        .filter_map(|(name, value)| {
+            value
+                .to_str()
+                .ok()
+                .map(|value| (name.to_string(), value.to_string()))
+        })
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn agent_sessions_paths_pass_the_relay_allow_list() {
+        // The inventory doc (§3) notes /api is already allow-listed; these
+        // are the exact paths the control-plane agent-sessions handlers
+        // relay. If the allow-list ever tightens, this test fails first.
+        for path in [
+            "/api/v1/agent-sessions",
+            "/api/v1/agent-sessions?originSurface=chat",
+            "/api/v1/agent-sessions/sess_1",
+            "/api/v1/agent-sessions/sess_1/messages?limit=50&offset=0",
+            "/api/v1/agent-sessions/sess_1/abort",
+            "/api/v1/agent-sessions/sess_1/revert",
+            "/api/v1/agent-sessions/sess_1/unrevert",
+            "/api/v1/agent-sessions/sess_1/compact",
+            "/api/v1/agent-sessions/sync",
+            "/api/v1/agent-sessions/sync?since=123",
+        ] {
+            assert!(is_allowed_runtime_path(path), "{path} must relay");
+        }
+    }
+
+    #[test]
+    fn relay_allow_list_still_rejects_non_gateway_paths() {
+        for path in [
+            "/",
+            "/etc/passwd",
+            "https://evil.example/api/v1/agent-sessions",
+            "/apiwol",
+        ] {
+            assert!(!is_allowed_runtime_path(path), "{path} must not relay");
+        }
+        // Path-traversal and scheme-relative inputs match the /api prefix
+        // but are rejected by the path sanity check one layer up.
+        for sneaky_path in ["//api/v1/agent-sessions", "/api/../admin"] {
+            let sneaky = RelayRequest {
+                method: "GET".to_string(),
+                path: sneaky_path.to_string(),
+                headers: HashMap::new(),
+                body: String::new(),
+                body_encoding: "utf8".to_string(),
+            };
+            assert!(
+                validate_proxy_request(&sneaky).is_err(),
+                "{sneaky_path} must not relay"
+            );
+        }
+    }
+
+    #[test]
+    fn agent_sessions_relay_requires_the_execute_capability() {
+        assert_eq!(
+            required_capability("/api/v1/agent-sessions/sess_1", "GET"),
+            "runtime:execute"
+        );
+        assert_eq!(
+            required_capability("/api/v1/agent-sessions/sync", "GET"),
+            "runtime:execute"
+        );
+        assert_eq!(
+            required_capability("/api/v1/agent-sessions/sess_1/messages", "POST"),
+            "runtime:execute"
+        );
+    }
+
+    #[test]
+    fn relay_headers_keep_only_the_forward_allow_list() {
+        let mut headers = HeaderMap::new();
+        headers.insert("authorization", "Bearer abc".parse().unwrap());
+        headers.insert("accept", "text/event-stream".parse().unwrap());
+        headers.insert("content-type", "application/json".parse().unwrap());
+        headers.insert("cookie", "session=secret".parse().unwrap());
+        headers.insert("x-request-id", "req_1".parse().unwrap());
+
+        let forwarded = relay_headers_from_http(&headers);
+        // Raw collection carries everything; the allow-list is enforced by
+        // filtered_headers inside the relay before anything hits the wire.
+        assert_eq!(forwarded["authorization"], "Bearer abc");
+        assert_eq!(forwarded["accept"], "text/event-stream");
+        assert_eq!(forwarded["content-type"], "application/json");
+        assert_eq!(forwarded["x-request-id"], "req_1");
+        assert!(forwarded.contains_key("cookie"));
+
+        let filtered = filtered_headers(forwarded);
+        assert!(filtered.contains_key("authorization"));
+        assert!(filtered.contains_key("accept"));
+        assert!(!filtered.contains_key("cookie"));
+    }
 }

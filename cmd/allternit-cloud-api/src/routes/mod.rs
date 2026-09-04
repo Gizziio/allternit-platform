@@ -1,5 +1,6 @@
 //! Routes module
 
+pub mod agent_sessions;
 pub mod api_keys;
 pub mod approvals;
 pub mod auth;

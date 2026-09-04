@@ -9,6 +9,7 @@ pub mod hosted_runtime_lifecycle;
 pub mod inference_keys;
 pub mod inference_pool;
 pub mod inference_settlement;
+pub mod node_resolution;
 pub mod quota_service;
 pub mod run_service;
 pub mod scheduler_service;
@@ -44,6 +45,9 @@ pub use inference_pool::{
 pub use inference_keys::{
     byok_base_url, byok_enabled, mask_key, should_route_byok, InferenceKeyInfo,
     InferenceKeyService, KeyValidator,
+};
+pub use node_resolution::{
+    resolve_default_node, NodeCandidate, NodeKind, NodeStore, PgNodeStore, ResolvedNode,
 };
 pub use quota_service::{QuotaService, SharedQuotaService, UserQuota};
 pub use run_service::{RunListFilter, RunService, RunServiceImpl};

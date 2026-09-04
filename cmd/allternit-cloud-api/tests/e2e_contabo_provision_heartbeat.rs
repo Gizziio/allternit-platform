@@ -28,7 +28,7 @@
 //!      failure.
 
 use allternit_cloud_api::{
-    create_rate_limiter, create_router, model_router, runtime, services, ApiState, RateLimitConfig,
+    create_rate_limiter, create_router, model_router, runtime, routes, services, ApiState, RateLimitConfig,
 };
 use sqlx::PgPool;
 use std::sync::Arc;
@@ -317,11 +317,20 @@ fn build_state(db: PgPool, container_api_url: &str) -> Arc<ApiState> {
         public_rate_limiter,
         free_inference_rate_limiter,
         cost_service,
-        quota_service,
+        quota_service: quota_service.clone(),
         contabo_runtime_service: Arc::new(services::ContaboRuntimeService::new(
             db.clone(),
             None,
             container_api_url.to_string(),
+        )),
+        agent_sessions_gateway: Arc::new(routes::agent_sessions::DataPlaneGateway::new(
+            db.clone(),
+            Arc::new(services::ContaboRuntimeService::new(
+                db.clone(),
+                None,
+                container_api_url.to_string(),
+            )),
+            quota_service.clone(),
         )),
         mesh_service: None,
         credential_cipher: None,

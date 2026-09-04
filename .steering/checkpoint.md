@@ -34,3 +34,13 @@ Record the owner's Step 6 routing decision (option b — control-plane/data-plan
 - 0b7b70f1d fail-closed flags for jobs/agent-sessions/office/beta/rails namespaces (P0 item 4)
 - Follow-up flagged: agent-chat, /api/v1/runtime, /api/v1/tools, /api/v1/permissions, /api/v1/questions, /api/model-lab/* are also Rust-only.
 - Deploy-prep TODO for user: VPS api.env.template still has ALLTERNIT_LOCAL_DEV_BYPASS=true (keeps permissive CORS + localhost auth bypass on mail) — flip false with the proxy deploy.
+
+## Update 4 (2026-09-04) — P1 tranche 1 coded, uncommitted (parent agent reviews/commits)
+- migrations_pg/011_data_plane_nodes.sql: runtime_devices + kind ('local'|'paired'|'provisioned', default 'paired')/endpoint_url/tailnet_ip/relay_connected_at/capacity JSONB, partial online index, user_node_preferences table. Additive only.
+- services/node_resolution.rs: default node = healthy (online + last_seen within ALLTERNIT_NODE_STALE_AFTER_SECS, default 120s + unexpired credential) device with freshest last_seen; all kinds uniform; none → ApiError::PreconditionRequired (new 428 variant). NodeStore trait for mocks + PgNodeStore.
+- routes/runtime_relay.rs: extracted relay_request_to_runtime (was proxy_to_runtime body) — capability/allow-list/wake/stream logic lives once; agent-sessions handlers reuse it. Allow-list unchanged (/api prefix already covers the namespace; tests prove it).
+- routes/agent_sessions.rs: full /api/v1/agent-sessions namespace (list/create/get/patch/delete, messages, sync SSE, abort/revert/unrevert/compact) mounted in the public runtime router (self-auth via resolve_user_scoped, like pairing/relay — the protected router's middleware only accepts allternit_* tokens). AgentSessionsGateway trait on ApiState (DataPlaneGateway production impl) so handler tests mock at the service boundary.
+- SSE: relay streams head + chunks via Body::from_stream verbatim; content-type text/event-stream passes filtered_response_headers; RELAY_TIMEOUT bounds only the head wait.
+- Verify: cargo build -p allternit-cloud-api OK; cargo test -p allternit-cloud-api --lib → 191 passed, 1 failed (known docker-less contabo provision test, pre-existing). 17 new tests (7 node_resolution incl. live-PG + migration idempotency, 6 agent_sessions handlers, 4 runtime_relay allow-list/headers).
+- Docs: CLOUD_API_VPS_DEPLOY.md gained one ops bullet (apply 011 when deploying this).
+- Next: tranche 2 = client flip (web EventSource auth — cookie vs fetch-stream decision) + /api/agent-chat; gizzi_instances backfill into kind='local' rows; relay_connected_at stamping on attach/detach.
