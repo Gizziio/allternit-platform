@@ -2,12 +2,30 @@ import fs from "fs/promises"
 import path from "path"
 import { Auth } from "@/runtime/integrations/auth"
 import {
+  AutoCredentialWriter,
   createCredentialWriter,
   type CredentialStore,
   type CredentialWriter,
 } from "./credential-store"
 
 const AUTH_PROFILE_SERVICE = "gizzi-auth-profile"
+
+let inlinePlaintextWarned = false
+
+function warnInlinePlaintext(configPath: string): void {
+  if (inlinePlaintextWarned) return
+  inlinePlaintextWarned = true
+  const remediation =
+    process.platform === "linux"
+      ? "Install libsecret / gnome-keyring (e.g. `apt install libsecret-1-0 gnome-keyring`) and run `gizzi auth login` again to move the key into the OS keyring."
+      : "Run `gizzi auth login` again once an OS keyring backend is available to move the key out of config.toml."
+  console.error(
+    `WARNING: API keys are stored inline in ${configPath} because no OS secure store is available.\n` +
+      `  The file has been restricted to 0o600, but the keys remain unencrypted.\n` +
+      `  ${remediation}\n` +
+      "  Inline plaintext keys in config.toml are deprecated and will stop being read in a future release.",
+  )
+}
 
 export type AuthProfile = {
   provider: string
@@ -128,6 +146,11 @@ export async function logout(configPath: string, name?: string, writer?: Credent
       }
       await writeAuthProfiles(configPath, auth)
     }
+    // Best-effort removal of the stored key from the credential store.
+    const store = auth.credential_store ?? "auto"
+    await (writer ?? createCredentialWriter(store))
+      .remove(AUTH_PROFILE_SERVICE, targetProfile)
+      .catch(() => {})
   }
 
   return { method: status.method, profile: targetProfile }
@@ -141,11 +164,12 @@ export type LoginApiKeyResult = {
 /**
  * Store an API key for CLI authentication.
  *
- * The key is written to the active/default auth profile. The storage location
- * is controlled by `auth.credential_store` in config.toml (`"file"`,
- * `"keyring"`, or `"auto"`). When the store is `"file"` the key is written
- * inline in config.toml; for `"keyring"` it is delegated to the configured
- * {@link CredentialWriter}. `"auto"` prefers keyring and falls back to file.
+ * The key is NEVER written inline into config.toml. It is delegated to the
+ * configured {@link CredentialWriter}, controlled by `auth.credential_store`
+ * in config.toml (`"keyring"`, `"file"`, or `"auto"` — the default). `"auto"`
+ * prefers the OS keyring and falls back to the marked, 0o600 insecure-
+ * fallback file (`~/.gizzi/credentials.json`) with a one-time warning when no
+ * OS secure store is available.
  */
 export async function loginApiKey(
   configPath: string,
@@ -155,12 +179,16 @@ export async function loginApiKey(
     provider?: string
     credentialStore?: CredentialStore
     writer?: CredentialWriter
+    /** Directory for the insecure-fallback file (defaults to ~/.gizzi). */
+    fileDir?: string
   } = {},
 ): Promise<LoginApiKeyResult> {
   const auth = await readAuthProfiles(configPath)
   const profileName = options.profile ?? "default"
-  const store = options.credentialStore ?? auth.credential_store ?? "file"
-  const writer = options.writer ?? createCredentialWriter(store)
+  const store = options.credentialStore ?? auth.credential_store ?? "auto"
+  const writer =
+    options.writer ??
+    createCredentialWriter(store, options.fileDir ? { fileDir: options.fileDir } : undefined)
 
   const existing = auth.profiles[profileName]
   const profile: AuthProfile = {
@@ -169,21 +197,30 @@ export async function loginApiKey(
     base_url: existing?.base_url,
   }
 
-  let storedIn: "file" | "keyring" = "file"
+  let storedIn: "file" | "keyring"
 
-  if (store === "keyring") {
-    await writer.write(AUTH_PROFILE_SERVICE, profileName, apiKey)
-    storedIn = "keyring"
-  } else if (store === "auto") {
+  if (store === "auto") {
     try {
       await writer.write(AUTH_PROFILE_SERVICE, profileName, apiKey)
-      storedIn = "keyring"
+      storedIn =
+        writer instanceof AutoCredentialWriter
+          ? (writer.lastWriteTarget ?? "file")
+          : writer.name === "keyring"
+            ? "keyring"
+            : "file"
     } catch {
-      profile.api_key = apiKey
+      // Explicit writer failed (e.g. keyring unavailable): degrade to the
+      // marked insecure-fallback file rather than config.toml.
+      const fallback = createCredentialWriter(
+        "file",
+        options.fileDir ? { fileDir: options.fileDir } : undefined,
+      )
+      await fallback.write(AUTH_PROFILE_SERVICE, profileName, apiKey)
       storedIn = "file"
     }
   } else {
-    profile.api_key = apiKey
+    await writer.write(AUTH_PROFILE_SERVICE, profileName, apiKey)
+    storedIn = store === "keyring" || writer.name === "keyring" ? "keyring" : "file"
   }
 
   auth.profiles[profileName] = profile
@@ -193,16 +230,90 @@ export async function loginApiKey(
   return { profile: profileName, method: storedIn }
 }
 
+/**
+ * Store an API key for an existing (or about-to-be-created) named profile
+ * without changing the active profile. Used by `gizzi auth profile add
+ * --api-key`; the key goes to the credential store, never config.toml.
+ */
+export async function storeApiKeyForProfile(
+  configPath: string,
+  name: string,
+  apiKey: string,
+  writer?: CredentialWriter,
+): Promise<void> {
+  const auth = await readAuthProfiles(configPath)
+  const store = auth.credential_store ?? "auto"
+  const w = writer ?? createCredentialWriter(store)
+  await w.write(AUTH_PROFILE_SERVICE, name, apiKey)
+}
+
+export type InlineKeyMigrationResult = { migrated: string[]; failed: string[] }
+
+/**
+ * Migrate inline plaintext API keys out of config.toml and into the
+ * credential store. Called on read (via {@link resolveApiKey}) so legacy
+ * configs self-heal.
+ *
+ * - On success the key is moved into the store and stripped from config.toml.
+ * - On failure (no OS secure store and the key cannot be written anywhere but
+ *   config.toml) the file is tightened to 0o600 and a one-time deprecation
+ *   warning is printed; the inline key remains readable for continuity.
+ */
+export async function migrateInlineApiKeys(
+  configPath: string,
+  writer?: CredentialWriter,
+): Promise<InlineKeyMigrationResult> {
+  const auth = await readAuthProfiles(configPath)
+  const candidates = Object.entries(auth.profiles).filter(
+    ([, profile]) => typeof profile.api_key === "string" && profile.api_key.length > 0,
+  )
+  if (candidates.length === 0) return { migrated: [], failed: [] }
+
+  const store = auth.credential_store ?? "auto"
+  const w = writer ?? createCredentialWriter(store)
+  const migrated: string[] = []
+  const failed: string[] = []
+
+  for (const [name, profile] of candidates) {
+    try {
+      await w.write(AUTH_PROFILE_SERVICE, name, profile.api_key!)
+      migrated.push(name)
+    } catch {
+      failed.push(name)
+    }
+  }
+
+  if (migrated.length > 0) {
+    for (const name of migrated) {
+      delete auth.profiles[name]!.api_key
+    }
+    await writeAuthProfiles(configPath, auth)
+  }
+
+  if (failed.length > 0) {
+    await fs.chmod(configPath, 0o600).catch(() => {})
+    warnInlinePlaintext(configPath)
+  }
+
+  return { migrated, failed }
+}
+
 export type ApiKeySource = "config" | "keyring" | "env" | "none"
 
 /**
  * Resolve the API key for a profile, respecting the configured credential store.
+ *
+ * Before resolving, attempts to migrate any legacy inline `api_key` entries
+ * out of config.toml and into the credential store (see
+ * {@link migrateInlineApiKeys}).
  */
 export async function resolveApiKey(
   configPath: string,
   name?: string,
   writer?: CredentialWriter,
 ): Promise<{ source: ApiKeySource; key: string | null; profile?: AuthProfile; profileName?: string }> {
+  await migrateInlineApiKeys(configPath, writer)
+
   const auth = await readAuthProfiles(configPath)
   const profileName = name ?? auth.active_profile
   if (!profileName) return { source: "none", key: null }
@@ -214,11 +325,12 @@ export async function resolveApiKey(
   }
 
   if (profile.api_key) {
+    // Legacy inline key that could not be migrated (no writable store).
     return { source: "config", key: profile.api_key, profile, profileName }
   }
 
-  const store = auth.credential_store ?? "file"
-  if (store === "keyring" || store === "auto") {
+  const store = auth.credential_store ?? "auto"
+  if (store === "keyring" || store === "auto" || store === "file") {
     const key = await (writer ?? createCredentialWriter(store)).read(AUTH_PROFILE_SERVICE, profileName)
     if (key) return { source: "keyring", key, profile, profileName }
   }

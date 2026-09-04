@@ -4,6 +4,7 @@ import { createWriteStream } from "fs"
 import { Global } from "@/runtime/context/global"
 import z from "zod/v4"
 import { Glob } from "@/shared/util/glob"
+import { redactSecrets } from "@/shared/util/redact"
 
 export namespace Log {
   export const Level = z.enum(["DEBUG", "INFO", "WARN", "ERROR"])
@@ -126,7 +127,9 @@ export namespace Log {
       const next = new Date()
       const diff = next.getTime() - last
       last = next.getTime()
-      return [next.toISOString().split(".")[0], "+" + diff + "ms", prefix, message].filter(Boolean).join(" ") + "\n"
+      return redactSecrets(
+        [next.toISOString().split(".")[0], "+" + diff + "ms", prefix, message].filter(Boolean).join(" ") + "\n",
+      )
     }
     const result: Logger = {
       debug(message?: any, extra?: Record<string, any>) {
