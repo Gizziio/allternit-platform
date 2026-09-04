@@ -239,6 +239,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         contabo_runtime_service.clone(),
         quota_service.clone(),
     ));
+    // P2 per-subscription provisioning lane (Incus fleet): create/start/
+    // stop/status/delete over provisioned_hosts + provisioned_instances.
+    let provisioning_service = Arc::new(services::ProvisioningService::new(db.clone()));
     let state = Arc::new(ApiState {
         db,
         ssh_executor: allternit_cloud_ssh::SshExecutor::new(),
@@ -253,6 +256,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         quota_service,
         contabo_runtime_service,
         data_plane_gateway,
+        provisioning_service,
         mesh_service,
         credential_cipher,
         inference_key_service,
@@ -270,6 +274,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     services::start_hosted_runtime_lifecycle_task(state.clone());
+    // P2: keep provisioned instance statuses honest against the Incus hosts
+    // and converge their metering sessions.
+    services::start_provisioning_reconcile_task(state.clone());
 
     // Start scheduler service (background task)
     let scheduler_enabled = std::env::var("SCHEDULER_ENABLED")

@@ -29,6 +29,7 @@ pub mod model_router;
 pub mod mirror_ws;
 pub mod office;
 pub mod providers;
+pub mod provisioned_instances;
 pub mod regions;
 pub mod runs;
 pub mod runtime_pairing;

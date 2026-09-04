@@ -63,6 +63,16 @@ pub struct CreatePairingRequest {
     /// One-time bootstrap secret issued to a hosted runtime during provisioning.
     #[serde(default)]
     hosted_bootstrap_token: Option<String>,
+    /// Set only by provisioned per-subscription containers (P2 lane): the
+    /// provisioned_instances row the init script registers against.
+    #[serde(default)]
+    provisioned_instance_id: Option<String>,
+    /// One-time bootstrap code minted by the provisioning service and carried
+    /// to the instance via cloud-init user-data; lets the init script
+    /// self-approve its pairing (runtime_type "provisioned") without a
+    /// Clerk session, mirroring the hosted bootstrap token.
+    #[serde(default)]
+    provisioned_bootstrap_token: Option<String>,
     /// One-time bootstrap secret minted by the BYO-VPS wizard and injected
     /// into the box's env file; lets a wizard-bootstrapped VPS self-approve
     /// its pairing (runtime_type "vps") without a Clerk session.
@@ -161,6 +171,7 @@ struct PairingRow {
     organization_id: Option<String>,
     hosted_instance_id: Option<String>,
     byo_bootstrap_token_id: Option<String>,
+    provisioned_instance_id: Option<String>,
     expires_at: DateTime<Utc>,
 }
 
@@ -240,6 +251,17 @@ async fn create_pairing(
         "vps" if request.byo_bootstrap_token.is_some() => Some(
             validate_byo_bootstrap(&state.db, request.byo_bootstrap_token.as_deref()).await?,
         ),
+        // P2 provisioned lane: the init script self-approves with the one-time
+        // pairing code minted at provisioning time (validated against
+        // provisioned_instances.pairing_code_hash; services::provisioning).
+        "provisioned" => Some(
+            validate_provisioned_bootstrap(
+                &state.db,
+                request.provisioned_instance_id.as_deref(),
+                request.provisioned_bootstrap_token.as_deref(),
+            )
+            .await?,
+        ),
         _ => None,
     };
 
@@ -260,6 +282,9 @@ async fn create_pairing(
     let byo_bootstrap_token_id = bootstrap_approval
         .as_ref()
         .and_then(|approval| approval.byo_bootstrap_token_id.clone());
+    let provisioned_instance_id = bootstrap_approval
+        .as_ref()
+        .and_then(|approval| approval.provisioned_instance_id.clone());
 
     if let Some(ref user_id) = user_id {
         let quota = state.quota_service.ensure_quota(user_id).await?;
@@ -276,8 +301,9 @@ async fn create_pairing(
             id, device_code_hash, user_code, challenge, public_key,
             public_key_fingerprint, name, runtime_type, hostname, platform,
             version, capabilities, status, user_id, organization_id,
-            hosted_instance_id, byo_bootstrap_token_id, expires_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+            hosted_instance_id, byo_bootstrap_token_id, provisioned_instance_id,
+            expires_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
         "#,
     )
     .bind(&pairing_id)
@@ -297,6 +323,7 @@ async fn create_pairing(
     .bind(organization_id.as_deref())
     .bind(hosted_instance_id.as_deref())
     .bind(byo_bootstrap_token_id.as_deref())
+    .bind(provisioned_instance_id.as_deref())
     .bind(expires_at)
     .execute(&state.db)
     .await?;
@@ -455,7 +482,7 @@ async fn exchange_pairing(
         SELECT id, user_code, challenge, public_key, public_key_fingerprint,
                name, runtime_type, hostname, platform, version, capabilities,
                status, user_id, organization_id, hosted_instance_id,
-               byo_bootstrap_token_id, expires_at
+               byo_bootstrap_token_id, provisioned_instance_id, expires_at
         FROM runtime_pairings
         WHERE id = $1 AND device_code_hash = $2
         "#,
@@ -516,10 +543,14 @@ async fn exchange_pairing(
         .quota_service
         .check_active_device_cap(&user_id, &quota)
         .await?;
-    // Server-approved pairings (hosted bootstrap, BYO wizard bootstrap) already
-    // recorded the daily pairing count at create time, when the owning user
-    // became known; only browser-approved pairings record it at exchange.
-    if pairing.hosted_instance_id.is_none() && pairing.byo_bootstrap_token_id.is_none() {
+    // Server-approved pairings (hosted bootstrap, BYO wizard bootstrap,
+    // provisioned bootstrap) already recorded the daily pairing count at
+    // create time, when the owning user became known; only browser-approved
+    // pairings record it at exchange.
+    if pairing.hosted_instance_id.is_none()
+        && pairing.byo_bootstrap_token_id.is_none()
+        && pairing.provisioned_instance_id.is_none()
+    {
         state
             .quota_service
             .record_pairing_created(&user_id, &quota)
@@ -537,8 +568,8 @@ async fn exchange_pairing(
         INSERT INTO runtime_devices (
             id, user_id, organization_id, name, runtime_type, hostname, platform,
             version, capabilities, public_key, public_key_fingerprint,
-            credential_hash, credential_expires_at, status, last_seen_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'online', CURRENT_TIMESTAMP)
+            credential_hash, credential_expires_at, status, last_seen_at, kind
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'online', CURRENT_TIMESTAMP, $14)
         "#,
     )
     .bind(&runtime_id)
@@ -554,6 +585,12 @@ async fn exchange_pairing(
     .bind(&pairing.public_key_fingerprint)
     .bind(credential_hash)
     .bind(credential_expires_at)
+    .bind(
+        pairing
+            .provisioned_instance_id
+            .as_ref()
+            .map(|_| crate::services::NodeKind::PROVISIONED),
+    )
     .execute(&mut *transaction)
     .await?;
     let consumed = sqlx::query(
@@ -604,10 +641,22 @@ async fn exchange_pairing(
             ));
         }
     }
+    if let Some(provisioned_instance_id) = pairing.provisioned_instance_id.as_deref() {
+        // Claims the instance's device slot; a racing second exchange rolls
+        // the whole thing back (single-use pairing code semantics).
+        crate::services::bind_device_slot(&mut transaction, provisioned_instance_id, &runtime_id)
+            .await?;
+        tracing::info!(%provisioned_instance_id, %runtime_id, "provisioned instance link on pairing exchange");
+    }
     transaction.commit().await?;
 
     if let Some(hosted_instance_id) = pairing.hosted_instance_id.as_deref() {
         crate::services::record_runtime_started(&state.db, hosted_instance_id).await?;
+    }
+    if let Some(provisioned_instance_id) = pairing.provisioned_instance_id.as_deref() {
+        // Post-commit: consume the one-time code, flip to running, open the
+        // metering interval (services::provisioning).
+        crate::services::activate_registered_device(&state.db, provisioned_instance_id).await?;
     }
 
     let user_email = sqlx::query_scalar::<_, String>("SELECT email FROM users WHERE id = $1")
@@ -995,7 +1044,7 @@ async fn pairing_by_code(state: &ApiState, code: &str) -> Result<PairingRow, Api
         SELECT id, user_code, challenge, public_key, public_key_fingerprint,
                name, runtime_type, hostname, platform, version, capabilities,
                status, user_id, organization_id, hosted_instance_id,
-               byo_bootstrap_token_id, expires_at
+               byo_bootstrap_token_id, provisioned_instance_id, expires_at
         FROM runtime_pairings WHERE user_code = $1
         "#,
     )
@@ -1059,9 +1108,12 @@ fn validate_pairing_request(request: &CreatePairingRequest) -> Result<(), ApiErr
             "Runtime name must be 1-100 characters".to_string(),
         ));
     }
-    if !matches!(request.runtime_type.as_str(), "desktop" | "vps" | "hosted" | "ios") {
+    if !matches!(
+        request.runtime_type.as_str(),
+        "desktop" | "vps" | "hosted" | "provisioned" | "ios"
+    ) {
         return Err(ApiError::BadRequest(
-            "runtimeType must be desktop, vps, hosted, or ios".to_string(),
+            "runtimeType must be desktop, vps, hosted, provisioned, or ios".to_string(),
         ));
     }
     decode_public_key(&request.public_key)?;
@@ -1120,6 +1172,7 @@ fn pairing_signature_message(pairing_id: &str, challenge: &str) -> String {
 struct BootstrapApproval {
     hosted_instance_id: Option<String>,
     byo_bootstrap_token_id: Option<String>,
+    provisioned_instance_id: Option<String>,
     user_id: String,
     organization_id: Option<String>,
 }
@@ -1165,8 +1218,30 @@ async fn validate_hosted_bootstrap(
     Ok(BootstrapApproval {
         hosted_instance_id: Some(instance_id.to_string()),
         byo_bootstrap_token_id: None,
+        provisioned_instance_id: None,
         user_id: row.0,
         organization_id: row.1,
+    })
+}
+
+/// Validates the P2 provisioned lane's one-time bootstrap code against the
+/// instance row (hash, expiry, unbound) and returns the pre-approval for the
+/// owning user. The code itself is consumed later, at pairing exchange, when
+/// `bind_device_slot` claims the instance's device slot — same single-use
+/// shape as the hosted bootstrap token.
+async fn validate_provisioned_bootstrap(
+    db: &PgPool,
+    instance_id: Option<&str>,
+    token: Option<&str>,
+) -> Result<BootstrapApproval, ApiError> {
+    let user_id =
+        crate::services::validate_provisioned_bootstrap(db, instance_id, token).await?;
+    Ok(BootstrapApproval {
+        hosted_instance_id: None,
+        byo_bootstrap_token_id: None,
+        provisioned_instance_id: instance_id.map(str::to_string),
+        user_id,
+        organization_id: None,
     })
 }
 
@@ -1222,6 +1297,7 @@ async fn validate_byo_bootstrap(
     Ok(BootstrapApproval {
         hosted_instance_id: None,
         byo_bootstrap_token_id: Some(token_id),
+        provisioned_instance_id: None,
         user_id,
         organization_id: None,
     })
