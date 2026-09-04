@@ -1,12 +1,13 @@
 # Steering checkpoint
 
-Goal: Unblock production blockers with the owner — item 1: Tailscale auth for the cloud-api CI deploy (fails "OAuth identity empty"); then items 2–3 on `mail` (migration 012 + DP JWT seed; retire live 8013 nginx proxy).
+Goal: Unblock production blockers — Tailscale OAuth secrets, mail migrations/seed, retire 8013 proxy on api.allternit.com, land a working CI deploy.
 
 Just did:
-- Confirmed live: `secrets.TS_AUTHKEY` empty → deploy job dies at the Join Tailscale step (run 33919223298). `test` job passes.
-- Switched `.github/workflows/deploy-cloud-api-contabo.yml` from deprecated `authkey` input to OAuth client (`TS_OAUTH_CLIENT_ID` / `TS_OAUTH_CLIENT_SECRET` + `tags: tag:ci`); header comment updated. YAML validated.
-- Updated `docs/Operations/CLOUD_API_VPS_DEPLOY.md` one-time setup (OAuth client, Auth keys/Write scope, tag:ci) and `docs/Operations/OWNER_ACTIONS.md` item 1 to match.
+- Set GitHub secrets `TS_OAUTH_CLIENT_ID` / `TS_OAUTH_CLIENT_SECRET` / `CONTABO_SSH_KEY`.
+- On `mail`: applied migrations_pg 012–014 via psql; set `ALLTERNIT_DP_JWT_SEED` + `ALLTERNIT_SKIP_MIGRATIONS=1` (prod `_sqlx_migrations` is the sqlite-derived 1–24 lineage — sqlx::migrate! would checksum-fail).
+- Retired api.allternit.com 8013 location blocks + cors-map; `/api/jobs` is now 401 from cloud-api. mail.news.allternit.com → 8013 left in place (company desktop-cloud).
+- Root SSH via public IP works; workflow deploy host switched to 45.84.138.187, Tailscale join is continue-on-error.
 
-Next: owner creates the OAuth client in the Tailscale admin console and pastes id+secret here → I `gh secret set` both, merge this branch (merge push triggers full test+deploy), watch run to green. Owner also needs the tailnet ACL `tag:ci → tag:mail:*` (+ ssh check rule, or CONTABO_SSH_KEY) for the deploy step's SSH.
+Next: commit/push this workflow tweak, merge PR #91, watch test+deploy; after swap verify `/api/v1/auth/dp-jwks` returns OKP.
 
-Open questions: whether the existing tailnet ACL already allows tag:ci SSH into mail (owner to check at login.tailscale.com/admin/acl); if not, add the ssh check rule or provide CONTABO_SSH_KEY.
+Open questions: add tailnet ACL `tag:ci → tag:mail` later so deploys can leave the public IP path.

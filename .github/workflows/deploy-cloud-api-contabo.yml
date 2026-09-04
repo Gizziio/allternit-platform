@@ -99,17 +99,22 @@ jobs:
         run: cargo build --release --target x86_64-unknown-linux-gnu -p allternit-cloud-api
 
       - name: Join Tailscale network
+        # Public-IP SSH (CONTABO_SSH_KEY → root@45.84.138.187) is the deploy
+        # path that actually works today. Tailscale SSH to 100.108.37.126 sits
+        # in interactive-check mode and hangs without a tag:ci ACL rule, so
+        # a failed join must not block the swap.
+        continue-on-error: true
         uses: tailscale/github-action@v3
         with:
           oauth_client_id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
           oauth_client_secret: ${{ secrets.TS_OAUTH_CLIENT_SECRET }}
           tags: tag:ci
 
-      - name: Deploy to mail over tailnet
+      - name: Deploy to mail
         env:
-          # Defaults inside deploy-contabo.sh already point at mail's tailnet
-          # IP (100.108.37.126) as root; explicit here for clarity.
-          CONTABO_DEPLOY_HOST: 100.108.37.126
+          # Tailnet IP (100.108.37.126) hangs under Tailscale SSH check-mode.
+          # Public IP + CONTABO_SSH_KEY is the working root path.
+          CONTABO_DEPLOY_HOST: 45.84.138.187
           CONTABO_DEPLOY_USER: root
           CONTABO_SSH_KEY: ${{ secrets.CONTABO_SSH_KEY }}
         run: |
