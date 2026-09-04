@@ -1,2 +1,0 @@
-// @ts-nocheck
-export * from '../../tools/MCPTool/MCPTool.ts.js'

@@ -1,2 +1,0 @@
-// @ts-nocheck
-export * from '../../tools/LSPTool/formatters.ts.js'
