@@ -94,9 +94,16 @@ on composed main.
 
 - TS_AUTHKEY secret + cloud-api CI path dependency (deploy is owner-sequenced
   via scripts/deploy-contabo.sh).
-- **CRITICAL deploy sequencing:** do NOT deploy the cloud-api build until the
+- ~~CRITICAL deploy sequencing: do NOT deploy the cloud-api build until the
   iOS client ships Clerk/alt_ auth; existing md5-hashed api_tokens must be
-  re-minted (now sha256) in the same window.
+  re-minted (now sha256) in the same window.~~ **RESOLVED 2026-09-04
+  (evening): owner confirmed iOS is NOT shipping.** The blocker was
+  sequencing-only, and the p1followup merge already kept md5-fallback token
+  lookup in cloud-api, so existing md5-hashed tokens keep verifying after
+  deploy. Deploy is therefore **unblocked**; the remaining requirement is
+  administrative: run the sha256 re-mint migration for existing tokens and
+  remove the md5 fallback once re-mint completes (owner-sequenced via
+  scripts/deploy-contabo.sh).
 - Secrets rotation: Clerk sk_test revocation, ProtonMail TOTP, TESTING.md
   Clerk password.
 - Backend B hostname/DNS decision (memo: reports/2026-09-04-backend-b-deploy-decision.md,
