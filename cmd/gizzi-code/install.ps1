@@ -6,6 +6,20 @@
 
 $ErrorActionPreference = "Stop"
 
+# If invoked as a local file under a Restricted execution policy, fail with
+# guidance instead of PowerShell's raw "scripts are disabled" error.
+if ($MyInvocation.MyCommand.Path) {
+    $policy = Get-ExecutionPolicy
+    if ($policy -eq "Restricted") {
+        Write-Host "Execution policy is Restricted; scripts cannot run."
+        Write-Host "Either use the documented pipe-to-iex form:"
+        Write-Host "  irm https://install.gizziio.com/install.ps1 | iex"
+        Write-Host "or allow local scripts for your user:"
+        Write-Host "  Set-ExecutionPolicy -Scope CurrentUser RemoteSigned"
+        exit 1
+    }
+}
+
 # =============================================================================
 # GIZZI BRAND COLORS (from mascot)
 # =============================================================================
@@ -166,6 +180,11 @@ function Install-Binary($Platform, $Arch, $Version) {
     # Assets are version-named zips: gizzi-code-v<version>-windows-x64.zip.
     # The release workflow also publishes legacy names for one transition
     # release, so keep a fallback to those.
+    # Only x64 Windows builds are published; on ARM64 we fetch the x64
+    # build (runs under emulation).
+    if ($Arch -ne "x64") {
+        Write-Info "No $Arch Windows build published; using the x64 build (emulated on ARM64)"
+    }
     $Asset = "${AssetPrefix}-v${Version}-windows-x64.zip"
     $DownloadUrl = "https://github.com/$Repo/releases/download/gizzi-code/${Version}/${Asset}"
     if (!(Test-Url $DownloadUrl)) {
@@ -217,11 +236,18 @@ function Install-Binary($Platform, $Arch, $Version) {
 
         Write-Success "Binary installed to $Beige$TargetPath$Reset"
 
+        # Exact, semicolon-delimited PATH comparison — a naive substring
+        # check would both miss equivalent paths and false-positive on
+        # directories that merely contain the install dir as a substring.
         $UserPath = [Environment]::GetEnvironmentVariable("Path", "User")
-        if ($UserPath -notlike "*$InstallDir*") {
+        $pathEntries = @()
+        if ($UserPath) {
+            $pathEntries = $UserPath -split ";" | Where-Object { $_ -ne "" }
+        }
+        if ($InstallDir -notin $pathEntries) {
             [Environment]::SetEnvironmentVariable(
                 "Path",
-                "$UserPath;$InstallDir",
+                ($pathEntries + $InstallDir) -join ";",
                 "User"
             )
             Write-Success "Added $Beige$InstallDir$Reset to PATH"
