@@ -22,6 +22,7 @@ paths = [
   '''(?i)node_modules''',
   '''(?i)/dist/''',
   '''(?i)\.svelte-kit/''',
+  '''(?i)^target/''',
 
   # vendored third-party trees (docs + tests ship example tokens by design)
   '''^infrastructure/providers/vendor-integration/vendor/''',
