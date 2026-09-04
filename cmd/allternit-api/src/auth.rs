@@ -787,6 +787,40 @@ pub async fn auth_middleware(
         return next.run(request).await;
     }
 
+    // 2c. Cloud-issued data-plane JWT (decision A1): the second hop of the
+    // control-plane → data-plane model. cloud-api mints a short-lived EdDSA
+    // JWT (`sub` = Clerk user id, `aud` = this node's device id) and relays
+    // user calls with it; `state.dp_jwks` verifies it against cloud-api's
+    // published JWKS. Anything that is not a valid DP token (Clerk session
+    // JWTs, access tokens, garbage) returns `None` and falls through to the
+    // bearer paths below, which are unchanged. The `at-` / `allternit_*`
+    // prefixes are skipped up front so those lookups never touch the DP
+    // JWKS cache.
+    if let Some(token) = extract_bearer_token(request.headers()) {
+        if !token.starts_with("at-") && !token.starts_with("allternit_") {
+            if let Some(claims) = state.dp_jwks.authenticate(&token).await {
+                let mut user = AuthUser {
+                    user_id: claims.sub,
+                    email: None,
+                    name: None,
+                    avatar_url: None,
+                    tenant_id: None,
+                    organization_id: None,
+                    organization_role: None,
+                    organization_slug: None,
+                };
+                match ensure_user_in_db(&state.db, &user) {
+                    Ok(organization_id) => user.organization_id = organization_id,
+                    Err(e) => return e.into_response(),
+                }
+                let headers = request.headers_mut();
+                insert_user_headers(headers, &user);
+                request.extensions_mut().insert(user);
+                return next.run(request).await;
+            }
+        }
+    }
+
     // 4. Cloud-issued runtime-device token (`Authorization: Bearer
     // allternit_runtime_…`), the same mechanism already proven for
     // `mcp_proxy_internal`/`/internal/*`. Introspected against

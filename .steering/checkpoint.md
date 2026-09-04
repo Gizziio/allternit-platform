@@ -56,3 +56,9 @@ Record the owner's Step 6 routing decision (option b — control-plane/data-plan
 - Verify: cargo build -p allternit-cloud-api OK; cargo test -p allternit-cloud-api --lib → 212 passed, 1 failed (known pre-existing docker-less contabo provision test). 21 net new tests vs tranche 1 (12 JWT + 3 office + 4 beta + 2 relay). No SSE test added — none of the new endpoints streams.
 - Ops TODO for deploy: set ALLTERNIT_DP_JWT_SEED on cloud-api (no built-in dev default, by design).
 - Next: attach the minted JWT to relay requests (replace the dev-token hop) once node-side verify lands (P2); office/beta env flags default ON after nginx prefix blocks retire; tranche 3 = rails decision + jobs-if-needed.
+
+## Update 6 (2026-09-04) — P1 completion + merge prep
+- Tranche 3 complete: WS relay for beta events (socket tickets), rails client dialect fix (48 methods mapped; thread_id->thread bug fixed), web flipped to control-plane handlers (CloudApiEventSource fetch-streaming SSE; flags still false-default).
+- Node-side: DP JWT verification + POST /beta/sessions/:id/run written and registered; awaiting final cargo verification before commit.
+- Remaining coverage gaps documented: 21 rails data-plane routes, canvas get/update/delete control-plane routes.
+- Post-merge deploy TODOs: apply migrations_pg/011 on mail; set ALLTERNIT_DP_JWT_SEED; flip ALLTERNIT_LOCAL_DEV_BYPASS=false with nginx proxy; enable web flags per-namespace in .env.production.

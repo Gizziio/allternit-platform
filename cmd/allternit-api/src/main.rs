@@ -351,6 +351,10 @@ async fn main() {
         .clamp(0.0, 1.0);
     let _capacity_monitor = bot_desktop_capacity::init_capacity_monitor(capacity_threshold, memory_threshold);
 
+    // Data-plane JWT verifier (cloud-api → node, decision A1): fetches and
+    // caches cloud-api's JWKS; authenticates relayed calls as the JWT's sub.
+    let dp_jwks = allternit_api::auth_dp_jwt::DataPlaneJwks::from_env();
+
     // Create application state
     let state = Arc::new(AppState {
         config: app_config.clone(),
@@ -358,6 +362,7 @@ async fn main() {
         data_dir: data_dir.clone(),
         jwks,
         auth_config,
+        dp_jwks,
         vm_driver,
         incus_driver,
         desktop_host_registry,

@@ -957,6 +957,7 @@ mod tests {
             fabric_scheduler,
             fabric_price_cache,
             os_control_plane: None,
+            dp_jwks: crate::auth_dp_jwt::DataPlaneJwks::disabled(),
         })
     }
 

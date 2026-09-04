@@ -94,7 +94,7 @@ struct StopBody {
 }
 
 #[derive(Debug, Serialize)]
-struct TaskRow {
+pub(crate) struct TaskRow {
     id: String,
     session_id: Option<String>,
     deployment_id: Option<String>,
@@ -110,11 +110,11 @@ struct TaskRow {
     updated_at: String,
 }
 
-const TASK_SELECT: &str = "SELECT id, session_id, deployment_id, status, payload, sandbox_image,
+pub(crate) const TASK_SELECT: &str = "SELECT id, session_id, deployment_id, status, payload, sandbox_image,
     env, lease_worker_id, lease_expires_at, result, error, created_at, updated_at
     FROM beta_work_tasks";
 
-fn read_task(row: &rusqlite::Row<'_>) -> rusqlite::Result<TaskRow> {
+pub(crate) fn read_task(row: &rusqlite::Row<'_>) -> rusqlite::Result<TaskRow> {
     let payload: String = row.get(4)?;
     let env: String = row.get(6)?;
     let result: Option<String> = row.get(9)?;
@@ -463,6 +463,7 @@ mod tests {
             fabric_scheduler: crate::fabric::Scheduler::new(crate::fabric::CostEngine::default_engine()),
             fabric_price_cache: crate::fabric::PriceCache::new(db.clone()),
             os_control_plane: None,
+            dp_jwks: crate::auth_dp_jwt::DataPlaneJwks::disabled(),
         })
     }
 
