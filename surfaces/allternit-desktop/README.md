@@ -21,8 +21,8 @@ Self-hosted AI platform desktop client. Connect to your own Allternit instance r
 ┌─────────────────────────────────────────────────────────────────┐
 │              Your Allternit Backend (Self-Hosted)                      │
 │  ┌─────────────────────────────────────────────────────────┐   │
-│  │  • Allternit Platform (Next.js UI)                            │   │
-│  │  • API Server (Rust)                                    │   │
+│  │  • Allternit Platform (Vite + React SPA)                │   │
+│  │  • API Server (Rust, allternit-api)                     │   │
 │  │  • Kernel Service                                       │   │
 │  │  • All other services                                   │   │
 │  │  • SQLite/PostgreSQL database                           │   │
@@ -67,7 +67,7 @@ winget install Allternit.Desktop
 2. **Open Allternit Desktop**
 
 3. **Configure Connection**:
-   - **Local Mode**: Connect to `localhost:4096` (backend running on same machine)
+   - **Local Mode**: Connect to `localhost:8013` (the Rust `allternit-api` binary; it proxies to Gizzi on 4096)
    - **VPS Mode**: Connect to your VPS URL (e.g., `https://allternit.yourdomain.com`)
 
 4. **Click "Connect"**
@@ -85,7 +85,7 @@ Run the full Allternit stack on your local machine:
 allternit start
 ```
 
-Then in Allternit Desktop, select **Local** mode with port `4096`.
+Then in Allternit Desktop, select **Local** mode with port `8013`.
 
 ### VPS Mode
 Host Allternit on your own VPS:
@@ -113,7 +113,9 @@ ssh user@your-vps
 
 # Update Allternit backend
 cd ~/allternit
-./scripts/update.sh
+git pull
+# Rebuild and restart — cloud API deploy loop: docs/Operations/CLOUD_API_VPS_DEPLOY.md
+# (scripts/deploy-cloud-api.sh, or systemd restart for self-hosted allternit-api)
 
 # Or with Docker
 docker pull allternit/backend:latest
@@ -139,7 +141,7 @@ Settings stored in:
 
 1. Check if backend is running:
    ```bash
-   curl http://localhost:4096/health
+   curl http://localhost:8013/health
    ```
 
 2. Check firewall/VPS security groups
@@ -183,6 +185,16 @@ npm run verify:packaged-resources
 # Build full release artifacts (requires signing certs for signed builds)
 npm run dist
 ```
+
+Full pipeline (platform static export, gizzi-code, allternit-mux, ripgrep,
+voice service, Rust API, Lume, Electron package, checksum patch) in one shot:
+
+```bash
+./scripts/build-desktop.sh          # from the repo root; --skip-platform / --skip-api / --skip-electron
+```
+
+Last verified: 2026-09-03 against a0f8230b5 (scripts/build-desktop.sh and
+package.json scripts confirmed present).
 
 See [docs/SIGNING.md](./docs/SIGNING.md) for codesigning, notarization, and
 auto-update configuration.
