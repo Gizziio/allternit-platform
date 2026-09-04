@@ -42,8 +42,8 @@ export const MarketplaceCommand = cmd({
       switch (action) {
         case "list": {
           UI.println(UI.Style.TEXT_INFO + "Available marketplaces:" + UI.Style.RESET)
-          UI.println("  • official (Gizzi official plugins)")
-          UI.println("  • community (Community-contributed plugins)")
+          UI.println("  • Gizzi plugin marketplace — coming soon")
+          UI.println(UI.Style.TEXT_DIM + "  (no upstream marketplace is fetched; add your own with `gizzi plugin marketplace add <owner/repo|url|path>`)" + UI.Style.RESET)
           UI.println("\nRun `gizzi plugin list` to see installed plugins")
           break
         }

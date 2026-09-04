@@ -650,22 +650,13 @@ describe("discovery: ~/.claude/plugins/marketplaces/", () => {
 })
 
 // ── discovery: versioned cache scan (3-level deep) ───────────────────────────
+// Canonical cache lives under ~/.gizzi/plugins/cache; the upstream-inherited
+// ~/.claude/plugins/cache remains as a read-only legacy fallback.
 
-describe("discovery: ~/.claude/plugins/cache/ (versioned dirs)", () => {
+describe("discovery: ~/.gizzi/plugins/cache/ (versioned dirs)", () => {
   test("discoverPluginRoots() finds plugin in <marketplace>/<name>/<version>/ structure", async () => {
-    // Synthesize a versioned cache entry in the tmp dir's .claude cache path
-    const fakeCacheDir = path.join(tmp, ".claude", "plugins", "cache", "test-marketplace", "test-pkg", "2.0.0")
-    const fakeMeta = path.join(fakeCacheDir, ".claude-plugin")
-    await fs.mkdir(fakeMeta, { recursive: true })
-    await fs.writeFile(path.join(fakeMeta, "plugin.json"), JSON.stringify({ name: "test-versioned-pkg" }))
-
-    // Override home to point to our tmp so the loader scans it
-    // The loader already uses GIZZI_TEST_HOME (set in beforeEach)
-    const altCacheDir = path.join(tmp, ".claude", "plugins", "cache")
-    await fs.mkdir(altCacheDir, { recursive: true })
-
-    // Write directly to the GIZZI_TEST_HOME-based cache path the loader uses
-    const loaderCacheDir = path.join(tmp, ".claude", "plugins", "cache", "test-mktplace2", "my-pkg", "1.5.0")
+    // Write directly to the GIZZI_TEST_HOME-based canonical cache path the loader uses
+    const loaderCacheDir = path.join(tmp, ".gizzi", "plugins", "cache", "test-mktplace2", "my-pkg", "1.5.0")
     await fs.mkdir(path.join(loaderCacheDir, ".claude-plugin"), { recursive: true })
     await fs.writeFile(
       path.join(loaderCacheDir, ".claude-plugin", "plugin.json"),
@@ -675,6 +666,21 @@ describe("discovery: ~/.claude/plugins/cache/ (versioned dirs)", () => {
     const { discoverPluginRoots } = await import("../../src/runtime/integrations/plugin/claude/loader")
     const roots = await discoverPluginRoots()
     expect(roots).toContain(loaderCacheDir)
+  })
+})
+
+describe("discovery: ~/.claude/plugins/cache/ (legacy read-only fallback)", () => {
+  test("discoverPluginRoots() still finds plugins in the legacy cache location", async () => {
+    const legacyCacheDir = path.join(tmp, ".claude", "plugins", "cache", "legacy-mkt", "legacy-pkg", "2.0.0")
+    await fs.mkdir(path.join(legacyCacheDir, ".claude-plugin"), { recursive: true })
+    await fs.writeFile(
+      path.join(legacyCacheDir, ".claude-plugin", "plugin.json"),
+      JSON.stringify({ name: "legacy-versioned-pkg" }),
+    )
+
+    const { discoverPluginRoots } = await import("../../src/runtime/integrations/plugin/claude/loader")
+    const roots = await discoverPluginRoots()
+    expect(roots).toContain(legacyCacheDir)
   })
 })
 

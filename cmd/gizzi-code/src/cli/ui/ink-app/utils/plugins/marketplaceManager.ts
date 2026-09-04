@@ -73,6 +73,7 @@ import {
   deletePluginDataDir,
   getPluginSeedDirs,
   getPluginsDirectory,
+  resolvePluginsStateFile,
 } from './pluginDirectories.js'
 import { parsePluginIdentifier } from './pluginIdentifier.js'
 import { deletePluginOptions } from './pluginOptionsStorage.js'
@@ -264,7 +265,10 @@ export function saveMarketplaceToSettings(
  */
 export async function loadKnownMarketplacesConfig(): Promise<KnownMarketplacesConfig> {
   const fs = getFsImplementation()
-  const configFile = getKnownMarketplacesFile()
+  // READ path: fall back to the legacy ~/.claude/plugins location when the
+  // canonical ~/.gizzi/plugins copy is absent. Writes (saveKnownMarketplacesConfig)
+  // always target the canonical location via getKnownMarketplacesFile().
+  const configFile = resolvePluginsStateFile('known_marketplaces.json')
 
   try {
     const content = await fs.readFile(configFile, {

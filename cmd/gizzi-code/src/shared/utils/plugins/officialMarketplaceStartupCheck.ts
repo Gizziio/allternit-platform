@@ -39,6 +39,11 @@ export type OfficialMarketplaceSkipReason =
   | 'policy_blocked'
   | 'git_unavailable'
   | 'gcs_unavailable'
+  // No gizzi-owned marketplace endpoint exists yet (see
+  // src/shared/constants/cloudUrls.ts) and the inherited source points at
+  // upstream-owned GitHub/GCS. Refuse to fetch upstream instead of
+  // pretending — removed when a gizzi marketplace ships.
+  | 'marketplace_coming_soon'
   | 'unknown'
 
 /**
@@ -145,6 +150,18 @@ export type OfficialMarketplaceCheckResult = {
  * @returns Result indicating whether installation succeeded or was skipped
  */
 export async function checkAndInstallOfficialMarketplace(): Promise<OfficialMarketplaceCheckResult> {
+  // The official marketplace source is upstream-owned (github.com/
+  // anthropics + a claude.ai GCS mirror) and no gizzi-owned endpoint exists
+  // yet — refuse to fetch upstream. Skip WITHOUT recording an attempt so a
+  // future release with a real endpoint auto-installs then. This check runs
+  // before any network I/O (known-marketplaces lookup is disk-only).
+  if (process.env.GIZZI_ENABLE_UPSTREAM_MARKETPLACE !== '1') {
+    logForDebugging(
+      'Official marketplace auto-install skipped: no gizzi-owned marketplace endpoint exists yet (marketplace coming soon)',
+    )
+    return { installed: false, skipped: true, reason: 'marketplace_coming_soon' }
+  }
+
   const config = getGlobalConfig()
 
   // Check if we should retry installation
