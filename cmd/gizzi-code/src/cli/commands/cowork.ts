@@ -24,6 +24,7 @@ import { bootstrap } from "@/cli/bootstrap"
 import { UI } from "@/cli/ui"
 import * as prompts from "@clack/prompts"
 import { Global } from "@/runtime/context/global"
+import { legacyEnv } from "@/shared/constants/cloudUrls"
 import open from "open"
 import { render } from "@/ink"
 import { IntelliTaskScreen } from "@/screens/IntelliTaskScreen"
@@ -135,7 +136,7 @@ async function apiCall<T>(
   body?: unknown
 ): Promise<T> {
   const url = `${API_BASE}${path}`
-  let token = process.env.ALLTERNIT_API_TOKEN ?? process.env.Allternit_API_TOKEN
+  let token = legacyEnv("ALLTERNIT_API_TOKEN", "Allternit_API_TOKEN")
   if (!token) {
     try {
       const fs = require("fs")
@@ -519,7 +520,7 @@ async function attachToRun(runId: string): Promise<void> {
 
   // Stream events via SSE
   const url = `${API_BASE}/api/v1/runs/${runId}/events/stream`
-  const token = process.env.ALLTERNIT_API_TOKEN ?? process.env.Allternit_API_TOKEN
+  const token = legacyEnv("ALLTERNIT_API_TOKEN", "Allternit_API_TOKEN")
 
   const headers: Record<string, string> = {
     Accept: "text/event-stream",
@@ -2375,7 +2376,7 @@ function generateSimpleQR(url: string): string {
  * Stream events to keep the mirror connection alive
  */
 async function streamMirrorEvents(runId: string, port: number): Promise<void> {
-  const token = process.env.ALLTERNIT_API_TOKEN ?? process.env.Allternit_API_TOKEN
+  const token = legacyEnv("ALLTERNIT_API_TOKEN", "Allternit_API_TOKEN")
   const url = `${API_BASE}/api/v1/runs/${runId}/events/stream`
 
   const headers: Record<string, string> = {

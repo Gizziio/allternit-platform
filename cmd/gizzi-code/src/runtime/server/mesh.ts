@@ -47,11 +47,12 @@ import { dirname, join } from "node:path"
 import { Log } from "@/shared/util/log"
 import { Flag } from "@/runtime/context/flag/flag"
 import { Global } from "@/runtime/context/global"
+import { CLOUD_URLS } from "@/shared/constants/cloudUrls"
 
 export namespace Mesh {
   const log = Log.create({ service: "mesh" })
 
-  export const DEFAULT_CONTROL_URL = "https://headscale.allternit.com"
+  export const DEFAULT_CONTROL_URL: string = CLOUD_URLS.headscale
 
   const INSTALL_HINT =
     "no system tailscaled is reachable, the mesh-node sidecar is not available, and the tailscale CLI is not installed. Install tailscale (`brew install tailscale`, or see https://tailscale.com/download), set GIZZI_MESH_NODE_BIN to a mesh-node binary, or set GIZZI_TAILSCALE_BIN to the CLI path."
