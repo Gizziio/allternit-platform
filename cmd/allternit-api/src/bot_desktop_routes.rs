@@ -113,8 +113,6 @@ pub fn bot_desktop_router() -> Router<Arc<AppState>> {
         .route("/bots/:bot_id/desktop/observe", post(observe_desktop))
         .route("/bots/:bot_id/desktop/take-over", post(take_over_desktop))
         .route("/bots/:bot_id/desktop/hand-back", post(hand_back_desktop))
-        .route("/bots/:bot_id/desktop/start", post(start_desktop))
-        .route("/bots/:bot_id/desktop/stop", post(stop_desktop))
         .route("/bots/:bot_id/desktop/pause", post(pause_desktop))
         .route("/bots/:bot_id/desktop/resume", post(resume_desktop))
         .route("/bots/:bot_id/desktop/screenshot", post(screenshot_desktop))
@@ -1492,7 +1490,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method("POST")
-                    .uri("/bots/bot-1/desktop/stop")
+                    .uri("/bots/bot-1/desktop/stop?sandbox_id=sandbox-abc")
                     .extension(test_user("user-1"))
                     .body(Body::empty())
                     .unwrap(),
@@ -1521,7 +1519,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method("POST")
-                    .uri("/bots/bot-1/desktop/start")
+                    .uri("/bots/bot-1/desktop/start?sandbox_id=sandbox-abc")
                     .extension(test_user("user-1"))
                     .body(Body::empty())
                     .unwrap(),
@@ -1585,8 +1583,8 @@ mod tests {
         let app = bot_desktop_router().with_state(state);
 
         for uri in [
-            "/bots/bot-1/desktop/start",
-            "/bots/bot-1/desktop/stop",
+            "/bots/bot-1/desktop/start?sandbox_id=sandbox-abc",
+            "/bots/bot-1/desktop/stop?sandbox_id=sandbox-abc",
             "/bots/bot-1/desktop/deprovision",
         ] {
             let resp = app
@@ -1622,8 +1620,8 @@ mod tests {
         let app = bot_desktop_router().with_state(state);
 
         for uri in [
-            "/bots/bot-empty/desktop/start",
-            "/bots/bot-empty/desktop/stop",
+            "/bots/bot-empty/desktop/start?sandbox_id=sandbox-abc",
+            "/bots/bot-empty/desktop/stop?sandbox_id=sandbox-abc",
         ] {
             let resp = app
                 .clone()
