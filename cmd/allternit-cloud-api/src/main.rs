@@ -231,9 +231,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     if inference_key_service.is_some() {
         tracing::info!("BYOK inference key store enabled");
     }
-    // P1 agent-sessions namespace: resolves the caller's default data-plane
-    // node and relays through the runtime relay machinery (routes::agent_sessions).
-    let agent_sessions_gateway = Arc::new(routes::agent_sessions::DataPlaneGateway::new(
+    // P1 control-plane namespaces (agent-sessions/office/beta): resolves the
+    // caller's default data-plane node and relays through the runtime relay
+    // machinery (routes::data_plane).
+    let data_plane_gateway = Arc::new(routes::data_plane::PgDataPlaneGateway::new(
         db.clone(),
         contabo_runtime_service.clone(),
         quota_service.clone(),
@@ -251,7 +252,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         cost_service,
         quota_service,
         contabo_runtime_service,
-        agent_sessions_gateway,
+        data_plane_gateway,
         mesh_service,
         credential_cipher,
         inference_key_service,

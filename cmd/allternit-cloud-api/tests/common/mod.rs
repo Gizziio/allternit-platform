@@ -75,7 +75,7 @@ impl TestApp {
                 None,
                 "https://api.allternit.com".to_string(),
             )),
-            agent_sessions_gateway: Arc::new(routes::agent_sessions::DataPlaneGateway::new(
+            data_plane_gateway: Arc::new(routes::data_plane::PgDataPlaneGateway::new(
                 db.clone(),
                 Arc::new(services::ContaboRuntimeService::new(
                     db.clone(),

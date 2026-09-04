@@ -323,7 +323,7 @@ fn build_state(db: PgPool, container_api_url: &str) -> Arc<ApiState> {
             None,
             container_api_url.to_string(),
         )),
-        agent_sessions_gateway: Arc::new(routes::agent_sessions::DataPlaneGateway::new(
+        data_plane_gateway: Arc::new(routes::data_plane::PgDataPlaneGateway::new(
             db.clone(),
             Arc::new(services::ContaboRuntimeService::new(
                 db.clone(),

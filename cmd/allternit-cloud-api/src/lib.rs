@@ -58,11 +58,12 @@ pub struct ApiState {
     /// Contabo runtime service for hosted runtimes (provisions and manages
     /// workload containers on the Contabo VPS)
     pub contabo_runtime_service: Arc<services::ContaboRuntimeService>,
-    /// Gateway used by the agent-sessions control-plane namespace
-    /// (routes::agent_sessions): resolves the caller's default data-plane
-    /// node and relays through the runtime relay machinery. Behind a trait
-    /// so handler tests can substitute a mock at the service boundary.
-    pub agent_sessions_gateway: Arc<dyn routes::agent_sessions::AgentSessionsGateway>,
+    /// Gateway used by the P1 control-plane namespaces (agent-sessions,
+    /// office, beta; routes::data_plane): resolves the caller's default
+    /// data-plane node and relays through the runtime relay machinery.
+    /// Behind a trait so handler tests can substitute a mock at the service
+    /// boundary.
+    pub data_plane_gateway: Arc<dyn routes::data_plane::DataPlaneGateway>,
     /// Mesh enrollment service (Headscale), absent when HEADSCALE_API_KEY is unset
     pub mesh_service: Option<Arc<routes::mesh::MeshService>>,
     /// AES-256-GCM cipher for provider tokens and wizard checkpoints,
@@ -348,6 +349,22 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
         // per-request inside each handler (resolve_user_scoped), then proxied
         // to the caller's default data-plane node via the runtime relay.
         .merge(routes::agent_sessions::routes())
+        // Office namespace (P1): bindings/bootstrap/runtime-state, relayed to
+        // the caller's default node. Office state is in-memory per :8013
+        // process, so these handlers are node-affine by design (§3.3).
+        .merge(routes::office::routes())
+        // Beta namespace (P1): research tasks + playground sessions, relayed
+        // to the caller's default node. The WS event stream
+        // (/beta/sessions/:id/events/ws) is intentionally not exposed — it
+        // needs the socket-ticket WS relay, not the request relay.
+        .merge(routes::beta::routes())
+        // Data-plane JWT public key (decision A1): nodes fetch cloud-api's
+        // Ed25519 verifying key at startup. Public, fail-closed 503 when
+        // ALLTERNIT_DP_JWT_SEED is unset.
+        .route(
+            "/api/v1/auth/dp-jwks",
+            get(auth::dataplane_jwt::dp_jwks),
+        )
         // Mesh enrollment verifies the Clerk session per-request and answers
         // 503 mesh_not_configured when HEADSCALE_API_KEY is unset.
         .merge(routes::mesh::routes())

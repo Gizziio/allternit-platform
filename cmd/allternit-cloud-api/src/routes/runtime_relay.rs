@@ -1059,6 +1059,57 @@ mod tests {
     }
 
     #[test]
+    fn office_and_beta_paths_pass_the_relay_allow_list() {
+        // Exact paths the P1 office/beta control-plane handlers relay. If the
+        // allow-list ever tightens, this test fails first. Both namespaces
+        // sit under the /api prefix already allow-listed for the agent-
+        // sessions tranche.
+        for path in [
+            "/api/v1/office/bindings",
+            "/api/v1/office/bindings?surface=word",
+            "/api/v1/office/bindings/bind_1",
+            "/api/v1/office/bootstrap",
+            "/api/v1/office/runtime/state",
+            "/api/v1/beta/research",
+            "/api/v1/beta/research/rt_1",
+            "/api/v1/beta/sessions",
+            "/api/v1/beta/sessions/sess_1",
+            "/api/v1/beta/sessions/sess_1/events/list?limit=10",
+            "/api/v1/beta/sessions/sess_1/memory/search?q=hi",
+            "/api/v1/beta/sessions/sess_1/run",
+        ] {
+            assert!(is_allowed_runtime_path(path), "{path} must relay");
+        }
+    }
+
+    #[test]
+    fn office_and_beta_relay_require_the_execute_capability() {
+        // The capability table (required_capability) maps both namespaces to
+        // the runtime:execute default: no health/status/provider/terminal/
+        // files/remote-control pattern matches their paths. Pin that here so
+        // a future table change that narrows office/beta fails loudly.
+        for (path, method) in [
+            ("/api/v1/office/bindings", "GET"),
+            ("/api/v1/office/bindings/bind_1", "GET"),
+            ("/api/v1/office/bootstrap", "POST"),
+            ("/api/v1/office/runtime/state", "POST"),
+            ("/api/v1/beta/research", "POST"),
+            ("/api/v1/beta/research/rt_1", "GET"),
+            ("/api/v1/beta/sessions", "POST"),
+            ("/api/v1/beta/sessions/sess_1", "PATCH"),
+            ("/api/v1/beta/sessions/sess_1/events/list", "GET"),
+            ("/api/v1/beta/sessions/sess_1/memory/search", "GET"),
+            ("/api/v1/beta/sessions/sess_1/run", "POST"),
+        ] {
+            assert_eq!(
+                required_capability(path, method),
+                "runtime:execute",
+                "{method} {path} must require runtime:execute"
+            );
+        }
+    }
+
+    #[test]
     fn relay_headers_keep_only_the_forward_allow_list() {
         let mut headers = HeaderMap::new();
         headers.insert("authorization", "Bearer abc".parse().unwrap());

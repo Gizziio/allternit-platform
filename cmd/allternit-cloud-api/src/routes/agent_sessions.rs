@@ -8,7 +8,7 @@
 //! 1. **Auth** — `auth::resolve_user_scoped(.., "compute")`, the same
 //!    Clerk-first resolver the runtime relay uses.
 //! 2. **Node resolution** — the caller's default data-plane node via
-//!    [`AgentSessionsGateway::resolve_default_node`] (services::node_resolution);
+//!    [`DataPlaneGateway::resolve_default_node`] (routes::data_plane seam);
 //!    428 "pair a device" when the account has no healthy node.
 //! 3. **Relay** — the request is forwarded through the EXISTING outbound-WS
 //!    relay (`runtime_relay::relay_request_to_runtime`): same allow-list,
@@ -23,7 +23,6 @@
 //! on the protected router only accepts `allternit_*` API tokens, not Clerk
 //! sessions.
 
-use async_trait::async_trait;
 use axum::{
     extract::{Path, RawQuery, State},
     http::HeaderMap,
@@ -31,78 +30,11 @@ use axum::{
     routing::{get, post},
     Router,
 };
-use base64::{engine::general_purpose::STANDARD, Engine as _};
 use bytes::Bytes;
 use std::sync::Arc;
 
-use super::runtime_relay::{relay_headers_from_http, RelayRequest};
-use crate::{
-    services::{resolve_default_node, ContaboRuntimeService, PgNodeStore, ResolvedNode, SharedQuotaService},
-    ApiError, ApiState,
-};
-
-/// The service boundary the namespace handlers depend on: node resolution +
-/// one relay invocation. Production impl is [`DataPlaneGateway`]; tests
-/// substitute a mock here so handler behavior (auth gating, path/method
-/// wiring, SSE pass-through) is verified without a runtime on the other end.
-#[async_trait]
-pub trait AgentSessionsGateway: Send + Sync {
-    async fn resolve_default_node(&self, user_id: &str) -> Result<ResolvedNode, ApiError>;
-    async fn relay(
-        &self,
-        user_id: &str,
-        device_id: &str,
-        request: RelayRequest,
-    ) -> Result<Response, ApiError>;
-}
-
-/// Production gateway: resolves nodes from `runtime_devices` and relays
-/// through the existing `runtime_relay` machinery. Holds the same clones
-/// `ApiState` holds so it can be constructed before the state and stored in
-/// it without circular references.
-pub struct DataPlaneGateway {
-    db: sqlx::PgPool,
-    contabo_runtime_service: Arc<ContaboRuntimeService>,
-    quota_service: SharedQuotaService,
-}
-
-impl DataPlaneGateway {
-    pub fn new(
-        db: sqlx::PgPool,
-        contabo_runtime_service: Arc<ContaboRuntimeService>,
-        quota_service: SharedQuotaService,
-    ) -> Self {
-        Self {
-            db,
-            contabo_runtime_service,
-            quota_service,
-        }
-    }
-}
-
-#[async_trait]
-impl AgentSessionsGateway for DataPlaneGateway {
-    async fn resolve_default_node(&self, user_id: &str) -> Result<ResolvedNode, ApiError> {
-        resolve_default_node(&PgNodeStore::new(&self.db), user_id).await
-    }
-
-    async fn relay(
-        &self,
-        user_id: &str,
-        device_id: &str,
-        request: RelayRequest,
-    ) -> Result<Response, ApiError> {
-        super::runtime_relay::relay_request_to_runtime(
-            &self.db,
-            &self.contabo_runtime_service,
-            &self.quota_service,
-            user_id,
-            device_id,
-            request,
-        )
-        .await
-    }
-}
+use super::data_plane::{relay_data_plane_request, with_query};
+use crate::{ApiError, ApiState};
 
 pub fn routes() -> Router<Arc<ApiState>> {
     Router::new()
@@ -132,9 +64,9 @@ pub fn routes() -> Router<Arc<ApiState>> {
         )
 }
 
-/// Universal P1 handler core: Clerk auth → default-node resolution → relay.
-/// `path` is the exact :8013 path to proxy (e.g. `/api/v1/agent-sessions/:id`),
-/// including any query string.
+/// Universal P1 handler core (shared seam in routes::data_plane): Clerk auth
+/// → default-node resolution → relay. `path` is the exact :8013 path to
+/// proxy (e.g. `/api/v1/agent-sessions/:id`), including any query string.
 async fn relay_agent_sessions_request(
     state: &ApiState,
     headers: &HeaderMap,
@@ -142,29 +74,7 @@ async fn relay_agent_sessions_request(
     path: String,
     body: &[u8],
 ) -> Result<Response, ApiError> {
-    let user = crate::auth::resolve_user_scoped(&state.db, headers, "compute").await?;
-    let node = state
-        .agent_sessions_gateway
-        .resolve_default_node(&user.id)
-        .await?;
-    let request = RelayRequest {
-        method: method.to_string(),
-        path,
-        headers: relay_headers_from_http(headers),
-        body: STANDARD.encode(body),
-        body_encoding: "base64".to_string(),
-    };
-    state
-        .agent_sessions_gateway
-        .relay(&user.id, &node.device_id, request)
-        .await
-}
-
-fn with_query(base: &str, query: &RawQuery) -> String {
-    match &query.0 {
-        Some(query) if !query.is_empty() => format!("{base}?{query}"),
-        _ => base.to_string(),
-    }
+    relay_data_plane_request(state, headers, method, path, body).await
 }
 
 async fn list_sessions(
@@ -297,208 +207,12 @@ async fn compact_session(
 mod tests {
     use super::*;
     use crate::auth::dev_token::{ALLOW_DEV_TOKEN_ENV, DEV_TOKEN_ENV_LOCK};
+    use crate::routes::test_support::{authed_request, test_state, MockGateway, DEV_USER};
     use axum::body::Body;
-    use axum::http::{HeaderValue, Request, StatusCode};
-    use axum::response::IntoResponse;
+    use axum::http::{Request, StatusCode};
+    use base64::{engine::general_purpose::STANDARD, Engine as _};
     use http_body_util::BodyExt;
-    use std::collections::VecDeque;
-    use std::sync::Mutex;
     use tower::ServiceExt;
-
-    const DEV_USER: &str = "dev-user";
-
-    #[derive(Debug, Clone)]
-    struct RecordedRelay {
-        user_id: String,
-        device_id: String,
-        method: String,
-        path: String,
-        body: String, // base64 as forwarded
-    }
-
-    struct MockGateway {
-        node: Option<ResolvedNode>,
-        /// When set, resolution fails with this PreconditionRequired message
-        /// (ApiError is not Clone, so the mock stores the message).
-        resolve_error: Option<String>,
-        responses: Mutex<VecDeque<Response>>,
-        recorded: Mutex<Vec<RecordedRelay>>,
-    }
-
-    impl MockGateway {
-        fn json(status: StatusCode, body: &str) -> Response {
-            (
-                status,
-                [(
-                    axum::http::header::CONTENT_TYPE,
-                    HeaderValue::from_static("application/json"),
-                )],
-                body.to_string(),
-            )
-                .into_response()
-        }
-
-        fn healthy_node() -> ResolvedNode {
-            ResolvedNode {
-                device_id: "rt_default".to_string(),
-                name: "default node".to_string(),
-                kind: crate::services::NodeKind("local".to_string()),
-                last_seen_at: Some(chrono::Utc::now()),
-            }
-        }
-
-        fn new(node: Option<ResolvedNode>, responses: Vec<Response>) -> Self {
-            Self {
-                node,
-                resolve_error: None,
-                responses: Mutex::new(responses.into()),
-                recorded: Mutex::new(Vec::new()),
-            }
-        }
-
-        fn failing(message: &str) -> Self {
-            Self {
-                node: None,
-                resolve_error: Some(message.to_string()),
-                responses: Mutex::new(VecDeque::new()),
-                recorded: Mutex::new(Vec::new()),
-            }
-        }
-
-        fn recorded(&self) -> Vec<RecordedRelay> {
-            self.recorded.lock().unwrap().clone()
-        }
-    }
-
-    #[async_trait]
-    impl AgentSessionsGateway for MockGateway {
-        async fn resolve_default_node(&self, _user_id: &str) -> Result<ResolvedNode, ApiError> {
-            match (&self.node, &self.resolve_error) {
-                (Some(node), _) => Ok(node.clone()),
-                (None, Some(message)) => Err(ApiError::PreconditionRequired(message.clone())),
-                (None, None) => Err(ApiError::PreconditionRequired("no node".to_string())),
-            }
-        }
-
-        async fn relay(
-            &self,
-            user_id: &str,
-            device_id: &str,
-            request: RelayRequest,
-        ) -> Result<Response, ApiError> {
-            self.recorded.lock().unwrap().push(RecordedRelay {
-                user_id: user_id.to_string(),
-                device_id: device_id.to_string(),
-                method: request.method,
-                path: request.path,
-                body: request.body,
-            });
-            Ok(self
-                .responses
-                .lock()
-                .unwrap()
-                .pop_front()
-                .unwrap_or_else(|| Self::json(StatusCode::OK, "{}")))
-        }
-    }
-
-    /// Schema-per-test pool; `api_tokens` must exist because the auth
-    /// fallback queries it before the dev-token gate (same pattern as
-    /// auth::resolve::tests).
-    async fn test_pool() -> sqlx::PgPool {
-        let url = "postgres://allternit:allternit_pg_2026@localhost:5432/allternit_test";
-        let schema = format!("test_{}", uuid::Uuid::new_v4().simple());
-        let schema_for_hook = schema.clone();
-        let pool = sqlx::postgres::PgPoolOptions::new()
-            .max_connections(1)
-            .after_connect(move |conn, _meta| {
-                let schema = schema_for_hook.clone();
-                Box::pin(async move {
-                    sqlx::query(&format!("CREATE SCHEMA IF NOT EXISTS {}", schema))
-                        .execute(&mut *conn)
-                        .await?;
-                    sqlx::query(&format!("SET search_path TO {}", schema))
-                        .execute(&mut *conn)
-                        .await?;
-                    Ok(())
-                })
-            })
-            .connect(url)
-            .await
-            .unwrap();
-        sqlx::query(
-            r#"
-            CREATE TABLE api_tokens (
-                id TEXT PRIMARY KEY,
-                token_hash TEXT NOT NULL,
-                name TEXT NOT NULL,
-                user_id TEXT NOT NULL,
-                permissions TEXT NOT NULL DEFAULT '[]',
-                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                expires_at TIMESTAMPTZ,
-                last_used_at TIMESTAMPTZ,
-                is_revoked BOOLEAN NOT NULL DEFAULT FALSE
-            )
-            "#,
-        )
-        .execute(&pool)
-        .await
-        .unwrap();
-        pool
-    }
-
-    /// Minimal ApiState with the gateway mocked; mirrors the wiring in
-    /// tests/common/mod.rs.
-    async fn test_state(gateway: Arc<dyn AgentSessionsGateway>) -> Arc<ApiState> {
-        let db = test_pool().await;
-        let event_store: Arc<dyn crate::services::EventStore> =
-            Arc::new(crate::services::EventStoreImpl::new(db.clone()));
-        let session_manager = Arc::new(crate::runtime::session_manager::SessionManager::new(db.clone()));
-        let run_service: Arc<dyn crate::services::RunService> =
-            Arc::new(crate::services::RunServiceImpl::new(db.clone()).with_event_store(event_store.clone()));
-        let rate_limit_config = crate::RateLimitConfig {
-            requests_per_minute: 100_000,
-            window: std::time::Duration::from_secs(60),
-        };
-        let quota_service = Arc::new(crate::services::QuotaService::new(db.clone()));
-        Arc::new(ApiState {
-            db: db.clone(),
-            ssh_executor: allternit_cloud_ssh::SshExecutor::new(),
-            event_tx: tokio::sync::broadcast::channel(16).0,
-            event_store,
-            run_service,
-            session_manager,
-            rate_limiter: crate::create_rate_limiter(rate_limit_config.clone()),
-            public_rate_limiter: crate::create_rate_limiter(rate_limit_config.clone()),
-            free_inference_rate_limiter: crate::create_rate_limiter(rate_limit_config),
-            cost_service: Arc::new(crate::services::CostServiceImpl::new(db.clone())),
-            quota_service: quota_service.clone(),
-            contabo_runtime_service: Arc::new(crate::services::ContaboRuntimeService::new(
-                db.clone(),
-                None,
-                "https://api.allternit.com".to_string(),
-            )),
-            agent_sessions_gateway: gateway,
-            mesh_service: None,
-            credential_cipher: None,
-            inference_key_service: None,
-            metrics_state: Arc::new(crate::middleware::metrics::MetricsState::new()),
-            model_router: crate::model_router::ModelRouter::disabled(
-                crate::model_router::catalog::starter_catalog(),
-            ),
-            inference_pool_service: Arc::new(crate::services::InferencePoolService::new(db.clone())),
-        })
-    }
-
-    fn authed_request(method: &str, path: &str, body: &str) -> Request<Body> {
-        Request::builder()
-            .method(method)
-            .uri(path)
-            .header("content-type", "application/json")
-            .header("authorization", "Bearer dev-api-token")
-            .body(Body::from(body.to_string()))
-            .unwrap()
-    }
 
     #[tokio::test]
     async fn every_endpoint_requires_authentication() {
