@@ -60,6 +60,7 @@ test/shared/agentHardBans.test.ts
 test/skill/discovery.test.ts
 test/snapshot/snapshot.test.ts
 test/storage/json-migration.test.ts
+test/storage/migration-chain.test.ts
 test/telemetry/privacy.test.ts
 test/tool/apply_patch.test.ts
 test/tool/edit.test.ts

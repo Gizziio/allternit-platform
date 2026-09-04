@@ -78,6 +78,23 @@ export namespace Database {
     return sql.sort((a, b) => a.timestamp - b.timestamp)
   }
 
+  /** Load the migration journal from a drizzle per-folder migration dir. Exported for migration-chain tests. */
+  export function loadMigrations(dir: string): Journal {
+    return migrations(dir)
+  }
+
+  /** Apply a migration journal to an open database. Exported for migration-chain tests. */
+  export function applyMigrations(db: Client, entries: Journal) {
+    if (entries.length === 0) return
+    const migrationMeta: MigrationMeta[] = entries.map((entry) => ({
+      sql: entry.sql.split("--> statement-breakpoint"),
+      folderMillis: entry.timestamp,
+      hash: entry.hash ?? hashSql(entry.sql),
+      bps: true,
+    }))
+    ;(db as any).dialect.migrate(migrationMeta, (db as any).session, {})
+  }
+
   export const Client = lazy(() => {
     log.info("opening database", { path: path.join(Global.Path.data, "gizzi.db") })
 
@@ -102,14 +119,8 @@ export namespace Database {
         count: entries.length,
         mode: typeof GIZZI_MIGRATIONS !== "undefined" ? "bundled" : "dev",
       })
-      const migrationMeta: MigrationMeta[] = entries.map((entry) => ({
-        sql: entry.sql.split("--> statement-breakpoint"),
-        folderMillis: entry.timestamp,
-        hash: entry.hash ?? hashSql(entry.sql),
-        bps: true,
-      }))
-      ;(db as any).dialect.migrate(migrationMeta, (db as any).session, {})
     }
+    applyMigrations(db, entries)
 
     return db
   })

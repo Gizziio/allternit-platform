@@ -7,10 +7,17 @@
 # Known-flaky files are listed in test/quarantine.txt for visibility only —
 # they are NOT run here.
 #
+# Preflight: packages/sdk/dist is gitignored (only dist/gen is tracked), so a
+# fresh clone/worktree has a partial dist and any src edit can leave it stale.
+# script/ensure-sdk-dist.sh rebuilds dist if it is missing or older than
+# packages/sdk/src, so smoke never silently runs against a stale SDK build.
+#
 # Usage: bash script/ci-smoke-test.sh   (from anywhere; resolves its own root)
 
 set -u
 cd "$(dirname "$0")/.."
+
+bash script/ensure-sdk-dist.sh || exit 1
 
 SMOKE_LIST="test/smoke.txt"
 QUAR_LIST="test/quarantine.txt"

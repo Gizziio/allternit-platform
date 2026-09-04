@@ -160,6 +160,7 @@ gizzi daemon status     # Show status
 |-------|---------|--------|
 | Vault E2E | `bun test/vault/e2e.ts` | 46/46 passing |
 | Build | `bun run build` | ✅ darwin-arm64 binary |
+| Migration chain | `test/storage/migration-chain.test.ts` (in smoke) | applies all 16 migrations to fresh + old temp DBs, asserts final schema and folder-name ordering |
 
 ---
 
@@ -293,6 +294,13 @@ bun run build
 # Type check (note: tsc --noEmit is heavy and may OOM on full project)
 bun run typecheck
 ```
+
+**SDK dist preflight:** `bun run typecheck` / `bun run lint` and
+`bash script/ci-smoke-test.sh` first run `script/ensure-sdk-dist.sh`, which
+rebuilds `packages/sdk/dist` when it is missing (fresh clone/worktree — only
+`dist/gen` is tracked) or older than `packages/sdk/src` (stale build). Without
+this, typecheck fails with TS2307 in `packages/sdk/scripts/verify-sdk.ts` and
+tests silently run against a stale SDK. Set `GIZZI_SKIP_SDK_DIST=1` to skip.
 
 ---
 
