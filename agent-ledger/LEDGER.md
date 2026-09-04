@@ -21,6 +21,14 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-03 21:50 — kimi — P0 Production-Readiness Gap Analysis Execution
+
+- **Session ID / Branch:** `session/b6d6153b` (pushed; merge to main pending user/orchestrator)
+- **Commit:** `868192815..4476e933e` (7 commits; tip `4476e933e`)
+- **How it works:** Executed Steps 0–5, 7–9 of `reports/2026-09-03-production-readiness-gap-analysis.md`: desktop merge repair (B4), in-repo vendoring of cloud contracts (B7), secrets sweep + gitleaks CI gate (B2/A1/A4), dev-api-token backdoor gated behind `ALLTERNIT_ALLOW_DEV_API_TOKEN` (B1), dead fly.dev repoint to api.allternit.com + wizard `.JSONB` test repair, `_redirects` static-asset pass-throughs (C1, reconciled with a parallel fix that landed on main mid-session). Rebased onto origin/main; Step 2 lockfile commit dropped as redundant with a165be187.
+- **Outstanding work:** Step 6 (web↔backend routing) was DECIDED by the owner and recorded by a parallel session as ADR `docs/architecture/2026-09-03-control-plane-data-plane-decision.md` on `session/routing` (8cb6e8ef1): single public API (cloud-api), allternit-api becomes a data-plane runtime in 3 modes, per-customer SQLite, interim nginx prefix proxy on mail (owner-gated deploy). Deploy of `cf8798f97` (kills the live backdoor) is a user action — backdoor still returns 200 until then; the ADR's two-hop Ed25519 data-plane JWT (A1) is the intended replacement, mint/verify first, then remove the backdoor. Secrets rotation list (Clerk, ProtonMail, Stripe ×12, Sourcegraph ×22, link-card key) delivered to user. P1/P2 untouched. Wizard `sqlite_tests` half-migration needs its own ticket.
+- **Summary file:** [./summaries/2026-09-03-2150-b6d6153b-kimi-code-p0-gap-analysis-execution.md](./summaries/2026-09-03-2150-b6d6153b-kimi-code-p0-gap-analysis-execution.md)
+
 ### 2026-09-03 08:16 — kimi — Typography Validation CI Fix
 
 - **Session ID / Branch:** `session/typography-fix-20260903`

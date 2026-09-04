@@ -204,7 +204,7 @@ function ClerkAuthPanel() {
       const localSession = await window.allternit?.auth?.getSession?.().catch(() => null);
       const clerkToken = await getToken().catch(() => null);
       if (clerkToken) {
-        const cloudBase = env('NEXT_PUBLIC_ALLTERNIT_CLOUD_API_URL', 'https://allternit-cloud-api.fly.dev')!.replace(/\/$/, '');
+        const cloudBase = env('NEXT_PUBLIC_ALLTERNIT_CLOUD_API_URL', 'https://api.allternit.com')!.replace(/\/$/, '');
         const response = await fetch(`${cloudBase}/api/v1/runtime-devices`, {
           headers: { Authorization: `Bearer ${clerkToken}` },
         });
@@ -251,7 +251,7 @@ function ClerkAuthPanel() {
       await window.allternit?.shell?.openExternal?.('https://platform.allternit.com');
       return;
     }
-    const cloudBase = env('NEXT_PUBLIC_ALLTERNIT_CLOUD_API_URL', 'https://allternit-cloud-api.fly.dev')!.replace(/\/$/, '');
+    const cloudBase = env('NEXT_PUBLIC_ALLTERNIT_CLOUD_API_URL', 'https://api.allternit.com')!.replace(/\/$/, '');
     const response = await fetch(`${cloudBase}/api/v1/runtime-devices/${encodeURIComponent(runtimeId)}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${clerkToken}` },

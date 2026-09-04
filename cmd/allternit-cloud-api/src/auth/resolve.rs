@@ -236,12 +236,22 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn dev_token_fallback_resolves_like_the_middleware() {
+    async fn dev_token_fallback_is_gated_by_explicit_env() {
         let pool = test_pool().await;
+
+        // Default: the dev-token fallback must be REJECTED (B1 — it grants a
+        // wildcard-permissions user and was previously reachable in production).
+        std::env::remove_var("ALLTERNIT_ALLOW_DEV_API_TOKEN");
+        let rejected = resolve_user_id(&pool, &headers_with_bearer("dev-api-token")).await;
+        assert!(rejected.is_err(), "dev-api-token must be rejected by default");
+
+        // Explicitly enabled (local development only).
+        std::env::set_var("ALLTERNIT_ALLOW_DEV_API_TOKEN", "1");
         let user_id = resolve_user_id(&pool, &headers_with_bearer("dev-api-token"))
             .await
             .unwrap();
-        assert_eq!(user_id, "dev-user", "dev fallback preserved");
+        assert_eq!(user_id, "dev-user", "dev fallback preserved when enabled");
+        std::env::remove_var("ALLTERNIT_ALLOW_DEV_API_TOKEN");
     }
 
     #[test]

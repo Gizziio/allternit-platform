@@ -123,7 +123,7 @@ function bytesToBase64(bytes: Uint8Array): string {
 }
 
 function cloudApiBaseUrl(): string {
-  return ((import.meta as any).env?.NEXT_PUBLIC_ALLTERNIT_CLOUD_API_URL || 'https://allternit-cloud-api.fly.dev').replace(/\/$/, '');
+  return ((import.meta as any).env?.NEXT_PUBLIC_ALLTERNIT_CLOUD_API_URL || 'https://api.allternit.com').replace(/\/$/, '');
 }
 
 async function requestBody(input: RequestInfo | URL, init?: RequestInit): Promise<{ body: string; bodyEncoding: string }> {

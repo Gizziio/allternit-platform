@@ -1,8 +1,16 @@
 import { chromium } from '@playwright/test';
 
-const email = 'cartlidge.joseph@proton.me';
-const password = 'ceccor-nycnih-jiVgu0';
-const otp = '845294';
+// Credentials come from the environment — never commit them. The values that
+// used to live here were rotated on 2026-09-03 after being found in git
+// history.
+const email = process.env.ALLTERNIT_TEST_EMAIL;
+const password = process.env.ALLTERNIT_TEST_PASSWORD;
+const otp = process.env.ALLTERNIT_TEST_OTP;
+
+if (!email || !password || !otp) {
+  console.error('Set ALLTERNIT_TEST_EMAIL, ALLTERNIT_TEST_PASSWORD, and ALLTERNIT_TEST_OTP.');
+  process.exit(1);
+}
 
 async function signIn(page, label) {
   page.on('console', msg => console.log(`${label}:`, msg.type(), msg.text()));

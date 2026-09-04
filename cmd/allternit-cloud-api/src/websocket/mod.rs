@@ -134,8 +134,8 @@ async fn validate_ws_token(db: &sqlx::PgPool, token: &str) -> bool {
         return true;
     }
 
-    // Check for dev token
-    token == "dev-api-token"
+    // Check for dev token (gated — rejected unless explicitly enabled)
+    crate::auth::middleware::is_dev_api_token(token)
 }
 
 /// Handle WebSocket connection

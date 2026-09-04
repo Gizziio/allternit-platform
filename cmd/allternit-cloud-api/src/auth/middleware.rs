@@ -102,8 +102,9 @@ impl<S> AuthMiddleware<S> {
     /// Validate API token (placeholder - full implementation would check database)
     async fn validate_token(&self, token: &str) -> Option<AuthenticatedUser> {
         // TODO: Implement actual token validation against database
-        // For now, support a simple dev token
-        if token == "dev-api-token" {
+        // Dev-token fallback is rejected unless explicitly enabled (see
+        // `is_dev_api_token`); it must never work in production.
+        if is_dev_api_token(token) {
             return Some(AuthenticatedUser::development_user());
         }
 
@@ -310,12 +311,26 @@ pub(crate) async fn validate_token_against_db(
         }));
     }
 
-    // Fallback: check for dev token
-    if token == "dev-api-token" {
+    // Fallback: check for dev token (gated — rejected unless explicitly enabled)
+    if is_dev_api_token(token) {
         return Ok(Some(AuthenticatedUser::development_user()));
     }
 
     Ok(None)
+}
+
+/// Gate for the `dev-api-token` development fallback. The fallback grants a
+/// wildcard-permissions user, so it is **rejected by default** and only works
+/// when `ALLTERNIT_ALLOW_DEV_API_TOKEN` is explicitly set to `true`/`1`
+/// (local development only — never set this in a deployed environment).
+pub(crate) fn dev_api_token_allowed() -> bool {
+    env::var("ALLTERNIT_ALLOW_DEV_API_TOKEN")
+        .map(|v| v == "true" || v == "1")
+        .unwrap_or(false)
+}
+
+pub(crate) fn is_dev_api_token(token: &str) -> bool {
+    token == "dev-api-token" && dev_api_token_allowed()
 }
 
 fn unauthorized_response(message: &str) -> Response {

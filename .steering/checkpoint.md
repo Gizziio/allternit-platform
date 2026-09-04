@@ -1,3 +1,27 @@
+# Steering checkpoint — P0 gap-analysis execution (2026-09-03, session b6d6153b) — CLOSEOUT
+
+## Goal
+Work the P0 list from `reports/2026-09-03-production-readiness-gap-analysis.md` in order (Steps 0–9). Worktree: `allternit-session-b6d6153b`, branch `session/b6d6153b`.
+
+## Just did (FINAL — ALL P0 steps complete; Step 6 decided by owner via parallel session)
+- Steps 1–5, 7, 8 committed; see ledger attestation `agent-ledger/summaries/2026-09-03-2150-b6d6153b-kimi-code-p0-gap-analysis-execution.md` for the full table (SHAs changed in rebase: tip now `4476e933e`).
+- Mid-flight, main merged a165be187 (identical Step-2 lockfile fix) + 423a858e (auth-route rewrite removal, live-verified sign-in fix) → rebased onto origin/main; Step 2 commit dropped as redundant; _redirects deduped against the parallel C1 fix (main's version wins; kept my /favicon.ico rule); ChatComposer resolved to main's.
+- Post-rebase verify: both surface builds green, wizard 50 pass (+3 pre-existing PG-env failures), cloud-api lib 168+1-docker, gitleaks 0 leaks after allowlisting target/ (cargo rmeta fixtures), branch pushed to origin/session/b6d6153b.
+- Closeout verifies: backdoor curl still 200 (awaiting user deploy of cf8798f97), /api/jobs 401, benchmarks JSON serves real JSON live, history scan 219 findings aggregated into the rotation list (Stripe ×12, Sourcegraph ×22, private keys ×19 — see summary).
+- STEP 6 RESOLVED EXTERNALLY: owner decided with a parallel session; ADR `docs/architecture/2026-09-03-control-plane-data-plane-decision.md` on `session/routing` (8cb6e8ef1). Decision: single public API (cloud-api), allternit-api = data-plane runtime (local / user-paired / Allternit-provisioned), per-customer SQLite, interim nginx prefix proxy on mail (owner-gated). My session's ask is moot.
+
+## Next
+- USER: merge `session/b6d6153b` to main (or tell me to), then worktree cleanup per AGENTS.md.
+- USER: deploy cf8798f97 (kills backdoor) + the ADR's nginx interim proxy on mail; rotate secrets per the delivered list.
+- Parallel session/routing owns: control-plane handlers, two-hop Ed25519 data-plane JWT (A1, replaces dev-api-token pattern), P1 item 4 route inventory.
+
+## Open questions
+- Wizard sqlite_tests half-migration: new ticket needed (out of P0 scope).
+- None from this session otherwise — all P0 steps closed.
+
+---
+
+
 # Steering checkpoint — platform follow-up pass
 
 ## Goal

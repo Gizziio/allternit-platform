@@ -212,7 +212,6 @@ let annotationWindow: BrowserWindow | null = null;
 let remoteControlWindow: BrowserWindow | null = null;
 /** Active session id reported by the HUD renderer for app-window handoff. */
 let hudSessionId: string | null = null;
-let remoteControlWindow: BrowserWindow | null = null;
 /** One office editor window per target (docs/sheets/slides/pdf/launcher). */
 const officeWindows = new Map<OfficeTarget, BrowserWindow>();
 let splashWindow: BrowserWindow | null = null;
@@ -229,7 +228,6 @@ let pushServiceState = () => {
   splashWindow?.webContents.send('services', serviceState);
 };
 let miniWindow: BrowserWindow | null = null;
-let hudWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let activePlatformUrl: string = isDev ? URLS.DEV_UI : 'https://platform.allternit.com';
 
@@ -726,7 +724,8 @@ async function initializeApp(): Promise<void> {
   }
 
   // Determine which mode to use
-  if (backendConfig.mode === 'development') {
+  const effectiveMode = backendConfig?.mode ?? (isDev ? 'development' : 'bundled');
+  if (effectiveMode === 'development') {
     // Development mode - connect to the local Gizzi runtime
     await initializeDevelopmentMode();
   } else if (effectiveMode === 'remote' && backendConfig?.remoteUrl) {
@@ -1426,109 +1425,6 @@ function toggleMiniWindow(): void {
   } else {
     miniWindow.show();
     miniWindow.focus();
-  }
-}
-
-// ============================================================================
-// Hermes Floating HUD
-// ============================================================================
-
-function createHudWindow(): BrowserWindow {
-  const saved = store.get('hudBounds');
-  const { workArea } = screen.getPrimaryDisplay();
-
-  let width = saved?.width ?? HUD_DEFAULT_WIDTH;
-  let height = saved?.height ?? HUD_DEFAULT_HEIGHT;
-  let x = saved?.x;
-  let y = saved?.y;
-
-  // Center on first launch
-  if (x === undefined || y === undefined) {
-    x = Math.round(workArea.x + (workArea.width - width) / 2);
-    y = Math.round(workArea.y + (workArea.height - height) / 3);
-  }
-
-  const win = new BrowserWindow({
-    width,
-    height,
-    x,
-    y,
-    minWidth: 360,
-    minHeight: HUD_DEFAULT_HEIGHT,
-    show: false,
-    frame: false,
-    resizable: false,
-    movable: true,
-    alwaysOnTop: true,
-    skipTaskbar: true,
-    fullscreenable: false,
-    maximizable: false,
-    transparent: true,
-    backgroundColor: '#00000000',
-    hasShadow: false,
-    ...(isMac ? { titleBarStyle: 'hidden', roundedCorners: false } : {}),
-    webPreferences: {
-      preload: join(__dirname, '../preload/index.js'),
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true,
-    },
-  });
-
-  const hudUrl = isDev
-    ? devUiUrl('/hud')
-    : `${activePlatformUrl}/hud`;
-
-  void win.loadURL(hudUrl);
-
-  win.on('blur', () => {
-    if (!win.webContents.isDevToolsFocused()) {
-      win.hide();
-    }
-  });
-
-  win.on('close', (e) => {
-    e.preventDefault();
-    win.hide();
-  });
-
-  win.on('move', () => {
-    if (win && !win.isDestroyed()) {
-      store.set('hudBounds', { ...win.getBounds() });
-    }
-  });
-
-  return win;
-}
-
-function showHudWindow(): void {
-  if (!hudWindow || hudWindow.isDestroyed()) {
-    hudWindow = createHudWindow();
-    hudWindow.once('ready-to-show', () => {
-      hudWindow?.show();
-      hudWindow?.focus();
-    });
-    return;
-  }
-  hudWindow.show();
-  hudWindow.focus();
-}
-
-function hideHudWindow(): void {
-  if (hudWindow && !hudWindow.isDestroyed()) {
-    hudWindow.hide();
-  }
-}
-
-function toggleHudWindow(): void {
-  if (!hudWindow || hudWindow.isDestroyed()) {
-    showHudWindow();
-    return;
-  }
-  if (hudWindow.isVisible() && hudWindow.isFocused()) {
-    hideHudWindow();
-  } else {
-    showHudWindow();
   }
 }
 
@@ -2288,8 +2184,9 @@ function toggleHudWindow(): void {
   log.info('[HUD] toggleHudWindow called');
   if (hudWindow && !hudWindow.isDestroyed()) {
     if (hudWindow.isVisible() && hudWindow.isFocused()) {
-      log.info('[HUD] HUD is visible and focused — closing');
-      hudWindow.close();
+      log.info('[HUD] HUD is visible and focused — hiding');
+      hudWindow.hide();
+      pushHudState();
       return;
     }
     log.info('[HUD] HUD exists — showing and focusing');
@@ -2304,17 +2201,34 @@ function toggleHudWindow(): void {
 
 ipcMain.handle('shell:open-hud', openHudWindow);
 ipcMain.handle('shell:close-hud', () => {
+  // Hide, not close: the HUD is a persistent panel and closing it would tear
+  // down its webContents and lose composer state.
   if (hudWindow && !hudWindow.isDestroyed()) {
-    hudWindow.close();
+    hudWindow.hide();
+    pushHudState();
   }
 });
 ipcMain.handle('shell:toggle-hud', toggleHudWindow);
-ipcMain.handle('shell:move-hud', (_event, delta: { x: number; y: number; width: number; height: number }) => {
+ipcMain.handle('shell:show-hud', () => {
+  if (hudWindow && !hudWindow.isDestroyed()) {
+    hudWindow.show();
+    hudWindow.focus();
+    hudWindow.moveTop();
+    pushHudState();
+  } else {
+    openHudWindow();
+  }
+});
+ipcMain.handle('shell:move-hud', (_event, delta: { dx?: number; dy?: number; x?: number; y?: number; width?: number; height?: number }) => {
+  // Two renderer call sites send different shapes: HudApp's drag handler
+  // sends {dx, dy}; composer-drag sends {x, y, width, height} deltas. Accept
+  // both, and only apply a size change when width/height are provided.
   if (!hudWindow || hudWindow.isDestroyed()) return;
-  const dx = Number(delta?.x ?? 0);
-  const dy = Number(delta?.y ?? 0);
-  const width = Number(delta?.width ?? HUD_WIDTH);
-  const height = Number(delta?.height ?? HUD_HEIGHT);
+  const dx = Number(delta?.dx ?? delta?.x ?? 0);
+  const dy = Number(delta?.dy ?? delta?.y ?? 0);
+  const [currentWidth, currentHeight] = hudWindow.getSize();
+  const width = delta?.width !== undefined ? Number(delta.width) : currentWidth;
+  const height = delta?.height !== undefined ? Number(delta.height) : currentHeight;
   if (![dx, dy, width, height].every(Number.isFinite)) return;
   const [x, y] = hudWindow.getPosition();
   // setBounds (not setPosition) keeps a transparent frameless window from
@@ -2842,42 +2756,6 @@ ipcMain.handle('window:show', () => { mainWindow?.show(); });
 ipcMain.handle('window:minimize-to-tray', () => { mainWindow?.hide(); });
 ipcMain.on('mini-window:hide', () => { miniWindow?.hide(); });
 ipcMain.on('mini-window:toggle', () => toggleMiniWindow());
-
-// ============================================================================
-// IPC: Hermes HUD
-// ============================================================================
-
-ipcMain.handle('shell:move-hud', (_event, delta: { dx: number; dy: number }) => {
-  if (!hudWindow || hudWindow.isDestroyed()) return;
-  const bounds = hudWindow.getBounds();
-  hudWindow.setPosition(
-    Math.round(bounds.x + delta.dx),
-    Math.round(bounds.y + delta.dy),
-  );
-  store.set('hudBounds', { ...hudWindow.getBounds() });
-});
-
-ipcMain.handle('shell:resize-hud', (_event, size: { width?: number; height: number }) => {
-  if (!hudWindow || hudWindow.isDestroyed()) return;
-  const bounds = hudWindow.getBounds();
-  const width = size.width ?? bounds.width;
-  const height = size.height;
-  // Keep top-left fixed; Electron setBounds with x/y unchanged.
-  hudWindow.setBounds({ x: bounds.x, y: bounds.y, width, height });
-  store.set('hudBounds', { ...hudWindow.getBounds() });
-});
-
-ipcMain.handle('shell:close-hud', () => {
-  hideHudWindow();
-});
-
-ipcMain.handle('shell:toggle-hud', () => {
-  toggleHudWindow();
-});
-
-ipcMain.handle('shell:show-hud', () => {
-  showHudWindow();
-});
 
 // ============================================================================
 // IPC: Theme

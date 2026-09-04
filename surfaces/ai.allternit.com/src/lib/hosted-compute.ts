@@ -55,7 +55,7 @@ export interface HostedRuntime {
 function baseUrl() {
   return env(
     "NEXT_PUBLIC_ALLTERNIT_CLOUD_API_URL",
-    "https://allternit-cloud-api.fly.dev",
+    "https://api.allternit.com",
   )!.replace(/\/$/, "");
 }
 
