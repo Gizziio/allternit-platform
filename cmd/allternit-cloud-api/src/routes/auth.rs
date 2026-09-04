@@ -62,8 +62,11 @@ pub async fn validate_token(
             }
         }
         None => {
-            // Check for dev token
-            if request.token == "dev-api-token" {
+            // Dev-token backdoor, gated by ALLTERNIT_ALLOW_DEV_TOKEN (default OFF).
+            if crate::auth::dev_token::is_allowed_dev_token(
+                &request.token,
+                crate::auth::dev_token::dev_token_allowed(),
+            ) {
                 TokenInfo {
                     valid: true,
                     token_id: Some("dev-token".to_string()),

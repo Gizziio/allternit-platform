@@ -34,6 +34,30 @@
 - Billing smoke tests: webhook signature recipe + credit_transactions FK notes in the session handoff; smoke users must be inserted into `users` first (CASCADE cleanup).
 - Reconciliation timer: `reconcile-billing.timer` (daily, /usr/local/bin + /etc/systemd/system, files in `infrastructure/cloud/`).
 
+## Dev-token backdoor gate — `ALLTERNIT_ALLOW_DEV_TOKEN`
+
+Audit finding B1 (2026-09-03): the cloud API historically honored a hardcoded
+`dev-api-token` bearer token at every auth surface (legacy auth layer, DB
+token validator, WebSocket validator, token-info route, dispatch handoff) —
+a production backdoor. The token is now **gated**:
+
+- Honored **only** when `ALLTERNIT_ALLOW_DEV_TOKEN=true` (or `=1`) is present
+  in `/opt/allternit-cloud-api/.env`. **Default OFF** — production rejects the
+  token. Template: `cmd/allternit-cloud-api/.env.example`.
+- The service logs a **warn-level startup line** whenever the gate is open, so
+  it can never be enabled silently. After any deploy, verify absence with:
+  `journalctl -u allternit-cloud-api --since "2 min ago" | grep -i ALLOW_DEV_TOKEN`
+  (no output = gate off = good).
+- The token literal still exists in the binary (gating only, not removal) —
+  the iOS app in the field still presents it. **Coordinated-removal sequence:**
+  1. Ship an iOS build that no longer sends the dev token (the
+     `-skip-auth` DEBUG shim now sources it from
+     `ALLTERNIT_DEV_API_TOKEN` in Info.plist, empty in Release).
+  2. Wait until no production traffic relies on the token.
+  3. Only then remove the literal from `auth/dev_token.rs` (separate change).
+
+Until step 3, never set `ALLTERNIT_ALLOW_DEV_TOKEN=true` on `mail`.
+
 ## CI/CD (GitHub Actions → Contabo control plane)
 
 Workflow: `.github/workflows/deploy-cloud-api-contabo.yml`. On every push to

@@ -4,6 +4,7 @@
 //! and development mode bypass capabilities.
 
 pub mod clerk;
+pub mod dev_token;
 pub mod middleware;
 pub mod models;
 pub mod permissions;

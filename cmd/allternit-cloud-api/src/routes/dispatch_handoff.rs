@@ -230,17 +230,19 @@ async fn fetch_token(state: &Arc<ApiState>, token: &str) -> Result<HandoffRow, A
 
 /// Clerk verification with the same development shortcut the legacy auth
 /// middleware honors (auth/middleware.rs) so the handoff loop can be
-/// exercised against a local stack without a real Clerk session.
+/// exercised against a local stack without a real Clerk session. The dev
+/// token additionally requires the `ALLTERNIT_ALLOW_DEV_TOKEN` gate
+/// (default OFF) like every other acceptance site.
 async fn handoff_user(state: &ApiState, headers: &HeaderMap) -> Result<ClerkUser, ApiError> {
     let development_mode = std::env::var("Allternit_API_DEVELOPMENT_MODE")
         .map(|v| v == "true" || v == "1")
         .unwrap_or(false);
-    if development_mode {
+    if development_mode && crate::auth::dev_token::dev_token_allowed() {
         let is_dev_token = headers
             .get(header::AUTHORIZATION)
             .and_then(|value| value.to_str().ok())
             .and_then(|value| value.strip_prefix("Bearer "))
-            .map(|token| token == "dev-api-token")
+            .map(|token| crate::auth::dev_token::is_allowed_dev_token(token, true))
             .unwrap_or(false);
         if is_dev_token {
             return Ok(ClerkUser {

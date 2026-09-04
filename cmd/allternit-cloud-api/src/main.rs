@@ -62,6 +62,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing::info!("Database: {}", database_url);
     tracing::info!("Bind address: {}", bind_addr);
 
+    if allternit_cloud_api::auth::dev_token::dev_token_allowed() {
+        tracing::warn!(
+            "ALLTERNIT_ALLOW_DEV_TOKEN is enabled - the hardcoded 'dev-api-token' bearer \
+             backdoor is ACTIVE (audit finding B1). Never enable this in production."
+        );
+    }
+
     // Initialize database
     tracing::info!("Initializing database...");
     let db = init_db(&database_url).await?;

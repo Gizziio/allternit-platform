@@ -6,7 +6,8 @@
 //! spend credits but not check its balance or manage keys. `resolve_user_id`
 //! tries the Clerk session first, then falls back to the same API-token
 //! validation the middleware uses (md5 hash lookup against `api_tokens`,
-//! including the `dev-api-token` development fallback).
+//! including the `dev-api-token` development fallback, gated by
+//! `ALLTERNIT_ALLOW_DEV_TOKEN` — default OFF).
 //!
 //! Both paths resolve to the same id space: `api_tokens.user_id` is the Clerk
 //! user id (tokens are minted via the Clerk-authenticated api_keys route).
@@ -118,6 +119,7 @@ fn bearer_token(headers: &HeaderMap) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::auth::dev_token::{ALLOW_DEV_TOKEN_ENV, DEV_TOKEN_ENV_LOCK};
 
     async fn test_pool() -> PgPool {
         let url = "postgres://allternit:allternit_pg_2026@localhost:5432/allternit_test";
@@ -237,11 +239,33 @@ mod tests {
 
     #[tokio::test]
     async fn dev_token_fallback_resolves_like_the_middleware() {
+        // The dev-token backdoor is gated by ALLTERNIT_ALLOW_DEV_TOKEN
+        // (default OFF) — open the gate for this test like a dev box would.
+        let _guard = DEV_TOKEN_ENV_LOCK.lock().unwrap();
+        std::env::set_var(ALLOW_DEV_TOKEN_ENV, "true");
+
         let pool = test_pool().await;
         let user_id = resolve_user_id(&pool, &headers_with_bearer("dev-api-token"))
             .await
             .unwrap();
         assert_eq!(user_id, "dev-user", "dev fallback preserved");
+
+        std::env::remove_var(ALLOW_DEV_TOKEN_ENV);
+    }
+
+    #[tokio::test]
+    async fn dev_token_rejected_when_gate_env_unset() {
+        let _guard = DEV_TOKEN_ENV_LOCK.lock().unwrap();
+        std::env::remove_var(ALLOW_DEV_TOKEN_ENV);
+
+        let pool = test_pool().await;
+        let error = resolve_user_id(&pool, &headers_with_bearer("dev-api-token"))
+            .await
+            .unwrap_err();
+        assert!(
+            matches!(error, ApiError::Unauthorized(_)),
+            "dev token must be rejected by default, got: {error}"
+        );
     }
 
     #[test]
