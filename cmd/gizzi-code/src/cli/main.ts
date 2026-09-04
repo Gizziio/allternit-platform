@@ -5,67 +5,15 @@ import "drizzle-orm/sqlite-core/session.js"
 import "drizzle-orm/bun-sqlite/session.js"
 import yargs from "yargs"
 import { hideBin } from "yargs/helpers"
-import { ExecCommand, RunCommand } from "@/cli/commands/run"
-import { GenerateCommand } from "@/cli/commands/generate"
-import { ApiKeysCommand } from "@/cli/commands/api-keys"
 import { Log } from "@/shared/util/log"
-import { ConnectCommand } from "@/cli/commands/connect"
-import { SkillsCommand } from "@/cli/commands/skills"
-import { UpgradeCommand } from "@/cli/commands/upgrade"
-import { UninstallCommand } from "@/cli/commands/uninstall"
-import { ModelsCommand } from "@/cli/commands/models"
-import { HardwareCommand } from "@/cli/commands/hardware"
 import { UI } from "@/cli/ui"
 import { Installation } from "@/shared/installation"
 import { NamedErrorBase } from "@allternit/gizzi-util/error.js"
 import { FormatError } from "@/shared/error/format"
-import { ServeCommand } from "@/cli/commands/serve"
-import { PairCommand, LoginCommand } from "@/cli/commands/pair"
 import { Filesystem } from "@/shared/util/filesystem"
-import { DebugCommand } from "@/cli/commands/debug"
-import { StatsCommand } from "@/cli/commands/stats"
-import { McpCommand } from "@/cli/commands/mcp"
-import { GithubCommand } from "@/cli/commands/github"
-import { ExportCommand } from "@/cli/commands/export"
-import { ImportCommand } from "@/cli/commands/import"
-import { AttachCommand } from "@/cli/ui/ink-app/attach"
-import { TuiThreadCommand } from "@/cli/ui/ink-app/thread"
-import { AcpCommand } from "@/cli/commands/acp"
 import { EOL } from "os"
-import { WebCommand } from "@/cli/commands/web"
-import { PrCommand } from "@/cli/commands/pr"
-import { SessionCommand } from "@/cli/commands/session"
-import { DbCommand } from "@/cli/commands/db"
-import { CronCommand } from "@/cli/commands/cron"
-import { PluginCommand } from "@/cli/commands/plugin"
-import { InitCommand } from "@/cli/commands/init"
-import { DoctorCommand } from "@/cli/commands/doctor"
-import { VerificationCommand } from "@/cli/commands/verification"
-import { AgentHubCommand } from "@/cli/commands/agent-hub"
-import { AcCommand } from "@/cli/commands/ac"
-import { MailCommand } from "@/cli/commands/mail"
-import { CoworkCommand } from "@/cli/commands/cowork"
-import { CoworkTeamCommand } from "@/cli/commands/cowork-team"
-import { AgentCommand } from "@/cli/commands/agent"
-import { ProviderCommand } from "@/cli/commands/provider"
-import { RuntimeCommand } from "@/cli/commands/runtime"
-import { AllternitCommand } from "@/cli/commands/allternit"
-import { StatusCommand } from "@/cli/commands/status"
-import { BrainCommand } from "@/cli/commands/brain"
-import { ProductsCommand } from "@/cli/commands/products"
-import { HtmlArtifactCommand } from "@/cli/commands/html-artifact"
-import { ProgramsCommand } from "@/cli/commands/programs"
-import { OrgCommand } from "@/cli/commands/org"
-import { LabsCommand } from "@/cli/commands/labs"
-import { UdemyCommand } from "@/cli/commands/udemy"
-import { VaultCommand } from "@/cli/commands/vault"
-import { CodemapCommand } from "@/cli/commands/codemap"
-import { AuthCommand } from "@/cli/commands/auth"
-import { ConfigCommand } from "@/cli/commands/config"
-import { ProfileCommand } from "@/cli/commands/profile"
-import { PermissionProfileCommand } from "@/cli/commands/permission-profile"
+import { COMMANDS } from "@/cli/commands/registry"
 import { CompletionsCommand } from "@/cli/commands/completions"
-import { RemoteCommand } from "@/cli/commands/remote"
 import { CIMode } from "@/cli/ci"
 import path from "path"
 import { Global, init as initGlobal } from "@/runtime/context/global"
@@ -241,63 +189,11 @@ const cli = yargs(hideBin(process.argv))
     */
   })
   .usage("\n" + UI.logo())
-  .completion("completion", "generate shell completion script")
-  .command(AcpCommand)
-  .command(McpCommand)
-  .command(TuiThreadCommand)
-  .command(AttachCommand)
-  .command(RunCommand)
-  .command(ExecCommand)
-  .command(GenerateCommand)
-  .command(ApiKeysCommand)
-  .command(DebugCommand)
-  .command(ConnectCommand)
-  .command(SkillsCommand)
-  .command(UpgradeCommand)
-  .command(UninstallCommand)
-  .command(ServeCommand)
-  .command(PairCommand)
-  .command(LoginCommand)
-  .command(WebCommand)
-  .command(ModelsCommand)
-  .command(HardwareCommand)
-  .command(StatsCommand)
-  .command(StatusCommand)
-  .command(ExportCommand)
-  .command(ImportCommand)
-  .command(GithubCommand)
-  .command(PrCommand)
-  .command(SessionCommand)
-  .command(DbCommand)
-  .command(CronCommand)
-  .command(PluginCommand)
-  .command(InitCommand)
-  .command(DoctorCommand)
-  .command(VerificationCommand)
-  .command(AgentHubCommand)
-  .command(AcCommand)
-  .command(MailCommand)
-  .command(CoworkCommand)
-  .command(CoworkTeamCommand)
-  .command(AgentCommand)
-  .command(ProviderCommand)
-  .command(RuntimeCommand)
-  .command(AllternitCommand)
-  .command(BrainCommand)
-  .command(HtmlArtifactCommand)
-  .command(ProgramsCommand)
-  .command(OrgCommand)
-  .command(ProductsCommand)
-  .command(LabsCommand)
-  .command(UdemyCommand)
-  .command(VaultCommand)
-  .command(CodemapCommand)
-  .command(AuthCommand)
-  .command(ConfigCommand)
-  .command(ProfileCommand)
-  .command(PermissionProfileCommand)
+  // Shell completions come from the single registry-derived generator in
+  // src/cli/commands/completions (the yargs `.completion()` built-in was
+  // removed as a redundant second system).
+  .command(COMMANDS)
   .command(CompletionsCommand)
-  .command(RemoteCommand)
   .fail((msg, err) => {
     if (
       msg?.startsWith("Unknown argument") ||
