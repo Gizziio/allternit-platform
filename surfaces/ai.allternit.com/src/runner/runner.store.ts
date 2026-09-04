@@ -9,7 +9,7 @@ import { create } from "zustand";
 import type { RunnerRun, RunnerTraceEntry } from "./runner.types";
 import { api } from "../integration/api-client";
 import { getDefaultAgentModel } from "@/lib/agents/agent-models";
-import { isRunnerAiChatEnabled, isRunnerOperatorModeEnabled } from "@/lib/env";
+import { isRunnerAiChatEnabled, isRunnerOperatorModeEnabled, isToolsApiEnabled } from "@/lib/env";
 
 import { createModuleLogger } from '@/lib/logger';
 
@@ -576,6 +576,14 @@ export const useRunnerStore = create<{
     } else {
       // Shell execution
       try {
+        // `POST /api/v1/tools/:id/execute` is served only by the Rust
+        // allternit-api — fail closed with a visible trace error instead of
+        // firing into a deployment that does not serve it.
+        if (!isToolsApiEnabled()) {
+          throw new Error(
+            "Tool execution API is disabled in this deployment (set NEXT_PUBLIC_ALLTERNIT_TOOLS_API=1 where the gateway is reachable).",
+          );
+        }
         const response = await api.executeTool("shell", { command: draft }) as { 
           success: boolean; 
           output?: string; 

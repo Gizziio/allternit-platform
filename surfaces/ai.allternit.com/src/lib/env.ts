@@ -184,3 +184,60 @@ export function isBetaApiEnabled(): boolean {
 export function isRailsApiEnabled(): boolean {
   return envFlag('NEXT_PUBLIC_ALLTERNIT_RAILS_API');
 }
+
+/**
+ * Runtime API — `/api/v1/runtime/*` (backend registration, execution mode).
+ * Served only by the Rust allternit-api (:8013), not by the deployed web
+ * surface, so this defaults OFF: the execution-mode hook skips its mount-time
+ * probe and fails closed with a deliberate error instead of firing requests
+ * that 404.
+ * Set NEXT_PUBLIC_ALLTERNIT_RUNTIME_API=1 where the gateway is reachable.
+ */
+export function isRuntimeApiEnabled(): boolean {
+  return envFlag('NEXT_PUBLIC_ALLTERNIT_RUNTIME_API');
+}
+
+/**
+ * Tool registry API — `/api/v1/tools[/execute|/register|/unregister]` (kernel
+ * tool list, tool execution, GIF recording). Served only by the Rust
+ * allternit-api (:8013), not by the deployed web surface, so this defaults
+ * OFF: tool stores skip their backend fetches and fail closed with a visible
+ * error, and the composer's GIF recording control is hidden.
+ * Set NEXT_PUBLIC_ALLTERNIT_TOOLS_API=1 where the gateway is reachable.
+ */
+export function isToolsApiEnabled(): boolean {
+  return envFlag('NEXT_PUBLIC_ALLTERNIT_TOOLS_API');
+}
+
+/**
+ * Permissions reply API — `POST /api/v1/permissions/:id/reply`. Served only
+ * by the Rust allternit-api (:8013), not by the deployed web surface, so this
+ * defaults OFF: permission decisions are still recorded locally but the reply
+ * is never forwarded to a backend that isn't there.
+ * Set NEXT_PUBLIC_ALLTERNIT_PERMISSIONS_API=1 where the gateway is reachable.
+ */
+export function isPermissionsApiEnabled(): boolean {
+  return envFlag('NEXT_PUBLIC_ALLTERNIT_PERMISSIONS_API');
+}
+
+/**
+ * Questions reply API — `POST /api/v1/questions/:id/reply|reject`. Served
+ * only by the Rust allternit-api (:8013), not by the deployed web surface,
+ * so this defaults OFF: question prompts are dismissed locally but the reply
+ * is never forwarded to a backend that isn't there.
+ * Set NEXT_PUBLIC_ALLTERNIT_QUESTIONS_API=1 where the gateway is reachable.
+ */
+export function isQuestionsApiEnabled(): boolean {
+  return envFlag('NEXT_PUBLIC_ALLTERNIT_QUESTIONS_API');
+}
+
+/**
+ * Model Lab API — `/api/model-lab/*` (Unsloth training/export jobs). Served
+ * only by the Rust allternit-api (:8013), not by the deployed web surface, so
+ * this defaults OFF: the jobs monitor shows a deliberate "disabled in this
+ * deployment" state instead of polling a missing endpoint every 5s.
+ * Set NEXT_PUBLIC_ALLTERNIT_MODEL_LAB_API=1 where the gateway is reachable.
+ */
+export function isModelLabApiEnabled(): boolean {
+  return envFlag('NEXT_PUBLIC_ALLTERNIT_MODEL_LAB_API');
+}

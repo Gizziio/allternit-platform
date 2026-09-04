@@ -83,6 +83,7 @@ import { useChatStore } from './ChatStore';
 import { AgentModeGizzi } from './AgentModeGizzi';
 import { getAgentModeSurfaceTheme } from './agentModeSurfaceTheme';
 import { useRecordingStore } from '@/stores/recording.store';
+import { isToolsApiEnabled } from '@/lib/env';
 import { useBrowserAgentStore } from '@/capsules/browser/browserAgent.store';
 import { useUnifiedStore } from '@/lib/agents/unified.store';
 import { TaskBar } from './components/TaskBar';
@@ -2315,7 +2316,7 @@ export function ChatComposer({
                 onFilesClick={() => { fileInputRef.current?.click(); }}
                 onCameraClick={() => { fileInputRef.current?.click(); }}
                 onScreenshotClick={handleCaptureScreenshot}
-                onGifClick={handleToggleGifRecording}
+                onGifClick={isToolsApiEnabled() ? handleToggleGifRecording : undefined}
                 isGifRecording={isGifRecording}
                 gifDuration={gifDuration}
                 githubUrl={githubUrl}

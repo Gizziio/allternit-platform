@@ -1,6 +1,7 @@
 "use client";
 
 import type { RuntimeBackendResponse } from "@/api/infrastructure/runtime-backend";
+import { isRuntimeApiEnabled } from "@/lib/env";
 
 const DEFAULT_GATEWAY_BASE_URL = normalizeBaseUrl(
   process.env.NEXT_PUBLIC_ALLTERNIT_GATEWAY_URL ||
@@ -154,6 +155,13 @@ export async function loadRuntimeBackendSnapshot(
   }
 
   if (!isBrowser()) {
+    return cached;
+  }
+
+  // `GET /api/v1/runtime/backend` is served only by the Rust allternit-api —
+  // when the runtime API flag is off, keep the cached/default snapshot
+  // instead of firing a request nothing serves.
+  if (!isRuntimeApiEnabled()) {
     return cached;
   }
 
