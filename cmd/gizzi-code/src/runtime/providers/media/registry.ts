@@ -14,14 +14,6 @@ import * as pollinations from "./drivers/pollinations"
 import * as bonsai from "./drivers/bonsai"
 import * as openaiImage from "./drivers/openai-image"
 import * as minimax from "./drivers/minimax"
-import * as seedDance from "./drivers/seed-dance"
-import * as nanoBanana from "./drivers/nano-banana"
-import * as runway from "./drivers/runway"
-import * as pika from "./drivers/pika"
-import * as kling from "./drivers/kling"
-import * as remotion from "./drivers/remotion"
-import * as hyperframes from "./drivers/hyperframes"
-import * as blenderMcp from "./drivers/blender-mcp"
 
 const log = Log.create({ service: "media-providers" })
 
@@ -63,24 +55,6 @@ export const MEDIA_PROVIDERS: MediaProvider[] = [
     tier: "standard",
   },
   {
-    id: "seed-dance",
-    name: "Seed.Dance",
-    modes: ["image", "video"],
-    authType: "api_key",
-    authProviderID: "seed-dance",
-    description: "Seed.Dance image and video generation",
-    tier: "cheap",
-  },
-  {
-    id: "nano-banana",
-    name: "NanoBanana",
-    modes: ["image"],
-    authType: "api_key",
-    authProviderID: "nano-banana",
-    description: "NanoBanana image generation",
-    tier: "cheap",
-  },
-  {
     id: "minimax",
     name: "MiniMax",
     modes: ["video"],
@@ -88,60 +62,6 @@ export const MEDIA_PROVIDERS: MediaProvider[] = [
     authProviderID: "minimax",
     description: "MiniMax Hailuo video generation",
     tier: "standard",
-  },
-  {
-    id: "runway",
-    name: "Runway",
-    modes: ["video", "image"],
-    authType: "api_key",
-    authProviderID: "runway",
-    description: "Runway Gen-3 video generation",
-    tier: "premium",
-  },
-  {
-    id: "pika",
-    name: "Pika",
-    modes: ["video", "image"],
-    authType: "api_key",
-    authProviderID: "pika",
-    description: "Pika video generation",
-    tier: "premium",
-  },
-  {
-    id: "kling",
-    name: "Kling",
-    modes: ["video", "image"],
-    authType: "api_key",
-    authProviderID: "kling",
-    description: "Kling video generation",
-    tier: "premium",
-  },
-  {
-    id: "remotion",
-    name: "Remotion",
-    modes: ["video"],
-    authType: "subprocess",
-    binary: "npx",
-    description: "Programmatic video via Remotion CLI (local Node.js pipeline)",
-    tier: "free",
-  },
-  {
-    id: "hyperframes",
-    name: "HyperFrames",
-    modes: ["video"],
-    authType: "api_key",
-    authProviderID: "hyperframes",
-    description: "HyperFrames video generation",
-    tier: "premium",
-  },
-  {
-    id: "blender-mcp",
-    name: "Blender MCP",
-    modes: ["video", "image"],
-    authType: "mcp",
-    mcpServer: "blender",
-    description: "Blender 3D renders and animations via MCP",
-    tier: "free",
   },
 ]
 
@@ -157,22 +77,6 @@ function driverFor(providerID: string): MediaDriver | undefined {
       return openaiImage.driver()
     case "minimax":
       return minimax.driver()
-    case "seed-dance":
-      return seedDance.driver()
-    case "nano-banana":
-      return nanoBanana.driver()
-    case "runway":
-      return runway.driver()
-    case "pika":
-      return pika.driver()
-    case "kling":
-      return kling.driver()
-    case "remotion":
-      return remotion.driver()
-    case "hyperframes":
-      return hyperframes.driver()
-    case "blender-mcp":
-      return blenderMcp.driver()
   }
 }
 

@@ -273,11 +273,26 @@ Plugin discovery (thin CLI over existing 4K+ line system).
 
 | Path | Purpose |
 |------|---------|
-| `src/cli/commands/marketplace.ts` | CLI: `list`, `search`, `install`, `update`, `info` (redirects to `gizzi plugin`) |
+| `src/cli/commands/marketplace.ts` | Legacy thin CLI: `list`, `search`, `install`, `update`, `info` |
+| `src/cli/handlers/plugins.ts` | Real `gizzi plugin *` / `gizzi plugin marketplace *` handlers |
 | `src/shared/utils/plugins/` | Manifest caching, GitHub cloning, install/rollback |
 | `src/runtime/services/plugins/` | Plugin operations |
 
-Use `gizzi plugin <cmd>` for full plugin management.
+Plugin state is canonical under `~/.gizzi/plugins` (gizzi-owned;
+`GIZZI_PLUGIN_CACHE_DIR` / `GIZZI_CONFIG_DIR` overrides). The
+upstream-inherited `~/.claude/plugins` is a READ-ONLY legacy fallback:
+state-file reads fall back to it (see `resolvePluginsStateFile` in
+`pluginDirectories.ts`), and `gizzi plugin migrate` copies (never moves)
+legacy state into the canonical location. `gizzi doctor` reports both
+dirs' state.
+
+No gizzi-owned marketplace endpoint exists yet: the upstream official
+marketplace auto-install is disabled (`marketplace_coming_soon` skip in
+`officialMarketplaceStartupCheck.ts`; opt back in with
+`GIZZI_ENABLE_UPSTREAM_MARKETPLACE=1`), and `gizzi plugin marketplace
+add` refuses the upstream-owned `anthropics/claude-plugins-official`
+source. User/org-owned marketplace sources (own repos, URLs, local
+paths) still work.
 
 ---
 

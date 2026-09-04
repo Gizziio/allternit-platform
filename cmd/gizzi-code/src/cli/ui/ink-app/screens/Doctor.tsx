@@ -13,6 +13,7 @@ import type { CommandResultDisplay } from '../commands';
 import { Pane } from '../components/design-system/Pane';
 import { PressEnterToContinue } from '../components/PressEnterToContinue';
 import { SandboxDoctorSection } from '../components/sandbox/SandboxDoctorSection';
+import { PluginDirsDoctorSection } from '../components/PluginDirsDoctorSection';
 import { ValidationErrorsList } from '../components/ValidationErrorsList';
 import { useSettingsErrors } from '../hooks/notifs/useSettingsErrors';
 import { useExitOnCtrlCDWithKeybindings } from '../hooks/useExitOnCtrlCDWithKeybindings';
@@ -424,7 +425,7 @@ export function Doctor(t0) {
   let t33;
   let t34;
   if ($[61] === Symbol.for("react.memo_cache_sentinel")) {
-    t31 = <SandboxDoctorSection />;
+    t31 = <><SandboxDoctorSection /><PluginDirsDoctorSection /></>;
     t32 = <McpParsingWarnings />;
     t33 = <KeybindingWarnings />;
     t34 = envValidationErrors.length > 0 && <Box flexDirection="column"><Text bold={true}>Environment Variables</Text>{envValidationErrors.map(_temp11)}</Box>;

@@ -5,7 +5,7 @@
  * Manages built-in plugins that ship with the CLI and can be enabled/disabled
  * by users via the /plugin UI.
  *
- * Built-in plugins differ from bundled skills (src/skills/bundled/) in that:
+ * Built-in plugins differ from bundled skills (src/cli/ui/ink-app/skills/bundled/) in that:
  * - They appear in the /plugin UI under a "Built-in" section
  * - Users can enable/disable them (persisted to user settings)
  * - They can provide multiple components (skills, hooks, MCP servers)

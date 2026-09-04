@@ -163,6 +163,10 @@ export async function pluginListHandler(options: {
   if (options.cowork) setUseCoworkPlugins(true)
   logEvent('tengu_plugin_list_command', {})
 
+  // One-time deprecation notice when upstream-inherited plugin state still
+  // lives in ~/.claude/plugins and hasn't been migrated to ~/.gizzi/plugins.
+  await maybeWarnLegacyPluginDir()
+
   const installedData = loadInstalledPluginsV2()
   const { getPluginEditableScopes } = await import(
     '../../utils/plugins/pluginStartupCheck.js'
@@ -461,6 +465,20 @@ export async function marketplaceAddHandler(
 
     if ('error' in parsed) {
       cliError(`${figures.cross} ${parsed.error}`)
+    }
+
+    // The upstream-owned official marketplace (anthropics/claude-plugins-official)
+    // has no gizzi-owned endpoint yet — don't clone it from upstream. User- and
+    // org-owned sources (own repos, URLs, local paths) still work.
+    if (
+      (parsed.source === 'github' &&
+        parsed.repo?.toLowerCase().includes('claude-plugins-official')) ||
+      source.toLowerCase().includes('claude-plugins-official')
+    ) {
+      cliError(
+        `${figures.cross} The Gizzi plugin marketplace is coming soon and does not fetch from upstream sources yet. ` +
+          'You can still add your own marketplace: gizzi plugin marketplace add <owner/repo|url|path>',
+      )
     }
 
     // Validate scope
@@ -876,4 +894,73 @@ export async function pluginUpdateHandler(
   }
 
   await updatePluginCli(plugin, scope)
+}
+
+/**
+ * One-time migration of upstream-inherited plugin state.
+ *
+ * Copies (never moves) state from the legacy ~/.claude/plugins directory to
+ * the canonical ~/.gizzi/plugins directory. Existing canonical entries are
+ * never overwritten; the legacy directory is left in place as a read-only
+ * fallback.
+ */
+export async function pluginMigrateHandler(options: {
+  cowork?: boolean
+}): Promise<void> {
+  if (options.cowork) setUseCoworkPlugins(true)
+  try {
+    const { getPluginDirsState, migrateLegacyPluginsDir } = await import(
+      '../../utils/plugins/pluginDirectories'
+    )
+    const state = getPluginDirsState()
+    if (!state.legacyExists) {
+      cliOk(
+        `${figures.tick} Nothing to migrate — no legacy plugin directory at ${state.legacyDir}`,
+      )
+    }
+    if (!state.legacyHasState) {
+      cliOk(
+        `${figures.tick} Nothing to migrate — ${state.legacyDir} holds no plugin state`,
+      )
+    }
+    // biome-ignore lint/suspicious/noConsole:: intentional console output
+    console.log(`Copying plugin state from\n  ${state.legacyDir}\nto\n  ${state.canonicalDir} ...`)
+    const { copied, skipped } = await migrateLegacyPluginsDir()
+    for (const entry of copied) {
+      // biome-ignore lint/suspicious/noConsole:: intentional console output
+      console.log(`${figures.tick} copied ${entry}`)
+    }
+    for (const entry of skipped) {
+      // biome-ignore lint/suspicious/noConsole:: intentional console output
+      console.log(`${figures.warning ?? '-'} skipped ${entry} (already present in canonical location)`)
+    }
+    cliOk(
+      copied.length > 0
+        ? `Migration complete — copied ${copied.length} item(s). The legacy directory was left untouched.`
+        : 'Migration complete — nothing needed copying.',
+    )
+  } catch (error) {
+    handleMarketplaceError(error, 'migrate plugin directories')
+  }
+}
+
+/**
+ * Print a one-time-per-invocation deprecation notice when legacy plugin
+ * state exists and has not been migrated yet. Called from plugin list so
+ * users discover the migration path.
+ */
+export async function maybeWarnLegacyPluginDir(): Promise<void> {
+  try {
+    const { getPluginDirsState } = await import('../../utils/plugins/pluginDirectories')
+    const state = getPluginDirsState()
+    if (state.legacyHasState && !state.canonicalHasState) {
+      // biome-ignore lint/suspicious/noConsole:: intentional console output
+      console.log(
+        `${figures.warning ?? '!'} DEPRECATED: plugin state found in ${state.legacyDir}. ` +
+          `Run \`gizzi plugin migrate\` to copy it to ${state.canonicalDir}.`,
+      )
+    }
+  } catch {
+    // Best-effort notice only — never break the command.
+  }
 }

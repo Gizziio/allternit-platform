@@ -3,10 +3,16 @@
  * Loader for the native .claude-plugin/ format.
  *
  * Discovers and loads plugins from:
- *   - ~/.gizzi/plugins/                      (user-installed plugins)
- *   - ~/.claude/plugins/marketplaces/* / *   (marketplace clones)
- *   - ~/.claude/plugins/cache/* / * / *      (versioned cache)
- *   - src/runtime/plugins/builtin/           (built-in plugins shipped with gizzi)
+ *   - ~/.gizzi/plugins/                              (user-installed plugins, canonical)
+ *   - ~/.gizzi/plugins/marketplaces/* / *            (marketplace clones, canonical)
+ *   - ~/.gizzi/plugins/cache/* / * / *               (versioned cache, canonical)
+ *   - ~/.claude/plugins/marketplaces/* / *           (legacy read-only fallback)
+ *   - ~/.claude/plugins/cache/* / * / *              (legacy read-only fallback)
+ *   - src/runtime/plugins/builtin/                   (built-in plugins shipped with gizzi)
+ *
+ * The ~/.claude locations are upstream-inherited and read-only: they keep
+ * existing installs discoverable but nothing writes there. Run
+ * `gizzi plugin migrate` to copy legacy content into ~/.gizzi/plugins.
  */
 import fs from "fs/promises"
 import path from "path"
@@ -93,30 +99,43 @@ async function discoverGizziPluginRoots(): Promise<string[]> {
 }
 
 async function discoverMarketplacePluginRoots(): Promise<string[]> {
-  const base = path.join(homeDir(), ".claude", "plugins", "marketplaces")
+  // Canonical gizzi location first, upstream-inherited ~/.claude location as
+  // read-only legacy fallback so pre-migration installs stay discoverable.
+  const bases = [
+    path.join(homeDir(), ".gizzi", "plugins", "marketplaces"),
+    path.join(homeDir(), ".claude", "plugins", "marketplaces"),
+  ]
   const roots: string[] = []
-  for (const marketplace of await listDir(base)) {
-    const pluginsDir = path.join(base, marketplace, "plugins")
-    for (const name of await listDir(pluginsDir)) {
-      const root = path.join(pluginsDir, name)
-      const meta = path.join(root, PLUGIN_META_DIR, MANIFEST_FILE)
-      if (await exists(meta)) roots.push(root)
+  for (const base of bases) {
+    for (const marketplace of await listDir(base)) {
+      const pluginsDir = path.join(base, marketplace, "plugins")
+      for (const name of await listDir(pluginsDir)) {
+        const root = path.join(pluginsDir, name)
+        const meta = path.join(root, PLUGIN_META_DIR, MANIFEST_FILE)
+        if (await exists(meta)) roots.push(root)
+      }
     }
   }
   return roots
 }
 
 async function discoverCachePluginRoots(): Promise<string[]> {
-  const base = path.join(homeDir(), ".claude", "plugins", "cache")
+  // Canonical gizzi location first, ~/.claude as read-only legacy fallback.
+  const bases = [
+    path.join(homeDir(), ".gizzi", "plugins", "cache"),
+    path.join(homeDir(), ".claude", "plugins", "cache"),
+  ]
   const roots: string[] = []
-  for (const marketplace of await listDir(base)) {
-    const marketplaceDir = path.join(base, marketplace)
-    for (const name of await listDir(marketplaceDir)) {
-      const pluginDir = path.join(marketplaceDir, name)
-      for (const version of await listDir(pluginDir)) {
-        const root = path.join(pluginDir, version)
-        const meta = path.join(root, PLUGIN_META_DIR, MANIFEST_FILE)
-        if (await exists(meta)) roots.push(root)
+  for (const base of bases) {
+    for (const marketplace of await listDir(base)) {
+      const marketplaceDir = path.join(base, marketplace)
+      for (const name of await listDir(marketplaceDir)) {
+        const pluginDir = path.join(marketplaceDir, name)
+        for (const version of await listDir(pluginDir)) {
+          const root = path.join(pluginDir, version)
+          const meta = path.join(root, PLUGIN_META_DIR, MANIFEST_FILE)
+          if (await exists(meta)) roots.push(root)
+        }
       }
     }
   }

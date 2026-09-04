@@ -4117,7 +4117,7 @@ async function run(): Promise<CommanderCommand> {
   });
 
   // Marketplace subcommands
-  const marketplaceCmd = pluginCmd.command('marketplace').description('Manage Claude Code marketplaces').configureHelp(createSortedHelpConfig());
+  const marketplaceCmd = pluginCmd.command('marketplace').description('Manage plugin marketplaces').configureHelp(createSortedHelpConfig());
   marketplaceCmd.command('add <source>').description('Add a marketplace from a URL, path, or GitHub repo').addOption(coworkOption()).option('--sparse <paths...>', 'Limit checkout to specific directories via git sparse-checkout (for monorepos). Example: --sparse .claude-plugin plugins').option('--scope <scope>', 'Where to declare the marketplace: user (default), project, or local').action(async (source: string, options: {
     cowork?: boolean;
     sparse?: string[];
@@ -4165,8 +4165,19 @@ async function run(): Promise<CommanderCommand> {
     await pluginInstallHandler(plugin, options);
   });
 
+  // Plugin migrate command — copy upstream-inherited ~/.claude/plugins state
+  // into the canonical ~/.gizzi/plugins directory (copy, never move).
+  pluginCmd.command('migrate').description('Copy legacy ~/.claude/plugins state into the canonical ~/.gizzi/plugins directory').addOption(coworkOption()).action(async (options: {
+    cowork?: boolean;
+  }) => {
+    const {
+      pluginMigrateHandler
+    } = await import('./cli/handlers/plugins.js');
+    await pluginMigrateHandler(options);
+  });
+
   // Plugin uninstall command
-  pluginCmd.command('uninstall <plugin>').alias('remove').alias('rm').description('Uninstall an installed plugin').option('-s, --scope <scope>', 'Uninstall from scope: user, project, or local', 'user').option('--keep-data', "Preserve the plugin's persistent data directory (~/.claude/plugins/data/{id}/)").addOption(coworkOption()).action(async (plugin: string, options: {
+  pluginCmd.command('uninstall <plugin>').alias('remove').alias('rm').description('Uninstall an installed plugin').option('-s, --scope <scope>', 'Uninstall from scope: user, project, or local', 'user').option('--keep-data', "Preserve the plugin's persistent data directory (~/.gizzi/plugins/data/{id}/)").addOption(coworkOption()).action(async (plugin: string, options: {
     scope?: string;
     cowork?: boolean;
     keepData?: boolean;
