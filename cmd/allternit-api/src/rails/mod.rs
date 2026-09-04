@@ -35,11 +35,12 @@ use allternit_agent_system_rails::tickets::{
 };
 use allternit_agent_system_rails::wait_gates::WaitGateStore;
 use allternit_agent_system_rails::{
-    project_dag, resolve_thread_id, ActorType, ContextPackSeal, ContextPackStore,
-    ContextPackStoreOptions, DagMutation, Gate, GateOptions, Index, IndexOptions, Leases,
-    LeasesOptions, Ledger, LedgerOptions, LedgerQuery, Mail, MailImportance, MailIndex,
-    MailIndexOptions, MailOptions, PeerEnvelope, PeerRegistry, ReceiptRecord, ReceiptStore,
-    ReceiptStoreOptions, Steer, TypedMessage, Vault, VaultOptions, WorkOps, send_envelope,
+    Actor, ActorType, AllternitEvent, ContextPackSeal, ContextPackStore, ContextPackStoreOptions,
+    DagMutation, Gate, GateOptions, Index, IndexOptions, LeaseRecord, Leases, LeasesOptions,
+    Ledger, LedgerOptions, LedgerQuery, Mail, MailImportance, MailIndex, MailIndexOptions,
+    MailOptions, PeerEnvelope, PeerRegistry, ReceiptRecord, ReceiptStore, ReceiptStoreOptions,
+    Steer, TypedMessage, Vault, VaultOptions, WorkOps, project_dag, resolve_thread_id,
+    send_envelope,
 };
 
 // ============================================================================
@@ -260,17 +261,40 @@ pub fn rails_router() -> Router<Arc<AppState>> {
             "/workspace/:workspace_id/dags/:dag_id/start",
             post(start_dag),
         )
+        // Plan (unscoped planning data plane; mirrors the standalone /v1/plan* surface)
+        .route("/plans", get(list_plans))
+        .route("/plan", post(plan_new))
+        .route("/plan/refine", post(plan_refine))
+        .route("/plan/:dag_id", get(plan_show))
+        .route("/dags/:dag_id/render", get(dag_render))
+        .route("/dags/:dag_id/execute", post(dag_execute))
+        .route("/runs/:run_id/cancel", post(run_cancel))
         // Leases
-        .route("/leases", post(request_lease))
-        .route("/leases/:lease_id", get(get_lease))
+        .route("/leases", get(list_leases).post(request_lease))
+        .route("/leases/:lease_id", get(get_lease).delete(release_lease))
+        .route("/leases/:lease_id/renew", post(renew_lease))
         // Context Packs (Checkpoints)
         .route("/workspace/:workspace_id/packs", post(create_context_pack))
         .route(
             "/workspace/:workspace_id/packs/:pack_id",
             get(get_context_pack),
         )
-        // Gate / Policy
+        // Context Packs (unscoped data plane; mirrors the standalone /v1/context-pack* surface)
+        .route("/context-packs", post(list_context_packs))
+        .route("/context-packs/seal", post(seal_context_pack))
+        // Mail review/archive data plane
+        .route("/mail/review", post(mail_request_review))
+        .route("/mail/archive", post(mail_archive_thread))
+        // Index
+        .route("/index/rebuild", post(index_rebuild))
+        // Gate data plane (status/check/rules/verify/decision/mutate)
         .route("/gate/evaluate", post(evaluate_policy))
+        .route("/gate/status", get(gate_status))
+        .route("/gate/check", post(gate_check))
+        .route("/gate/rules", get(gate_rules))
+        .route("/gate/verify", post(gate_verify))
+        .route("/gate/decision", post(gate_decision))
+        .route("/gate/mutate", post(gate_mutate))
         // Vault
         .route("/vault/status", get(vault_status))
         .route("/vault/archive", post(vault_archive))
@@ -2124,6 +2148,1065 @@ async fn vault_archive(
 }
 
 // ============================================================================
+// Plan data plane
+//
+// Unscoped planning/execution routes mirroring the standalone rails service's
+// /v1/plan* and /v1/dags* surface. The web rails client (surfaces/
+// ai.allternit.com/src/lib/agents/rails.service.ts) calls these; DAG state is
+// projected from the ledger exactly like the workspace-scoped routes above.
+// ============================================================================
+
+#[derive(Debug, Deserialize)]
+struct PlanNewRequest {
+    text: String,
+    /// Accepted for standalone-dialect compatibility. The gateway has no
+    /// project scope, so the gate mints a fresh dag_id and it is returned in
+    /// the response (same behavior as the standalone service).
+    #[allow(dead_code)]
+    dag_id: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct PlanRefineRequest {
+    dag_id: String,
+    delta: String,
+    /// Accepted for contract compatibility; the gate records author + delta
+    /// text, so this is informational only.
+    #[allow(dead_code)]
+    reason: Option<String>,
+    mutations: Option<Vec<UiDagMutation>>,
+}
+
+#[derive(Debug, Deserialize)]
+struct UiDagMutation {
+    action: String,
+    node_id: Option<String>,
+    parent_id: Option<String>,
+    /// Accepted for contract compatibility. Ordering hints have no dedicated
+    /// ledger event in the gate projection, so this is not applied.
+    #[allow(dead_code)]
+    after_node_id: Option<String>,
+    title: Option<String>,
+    description: Option<String>,
+    status: Option<String>,
+}
+
+/// Map the client's mutation dialect (`rails.service.ts` DagMutation) onto
+/// the crate's `DagMutation` events. `remove` has no ledger representation in
+/// the gate projection and is rejected rather than silently dropped. A
+/// `set_status` without an explicit `node_id` falls back to `default_node_id`
+/// (the DAG's root node) — the pause/resume call sites transition the run
+/// root and do not know its node id.
+fn ui_dag_mutation_to_core(
+    m: UiDagMutation,
+    default_node_id: Option<&str>,
+) -> std::result::Result<DagMutation, String> {
+    match m.action.as_str() {
+        "add" => {
+            let node_id = m
+                .node_id
+                .ok_or_else(|| "add mutation requires node_id".to_string())?;
+            Ok(DagMutation::CreateNode {
+                node_id: node_id.clone(),
+                node_kind: "task".to_string(),
+                title: m.title.unwrap_or(node_id),
+                parent_node_id: m.parent_id,
+                execution_mode: "shared".to_string(),
+            })
+        }
+        "modify" => {
+            let node_id = m
+                .node_id
+                .ok_or_else(|| "modify mutation requires node_id".to_string())?;
+            let mut patch = serde_json::json!({});
+            if let Some(title) = m.title {
+                patch["title"] = serde_json::json!(title);
+            }
+            if let Some(description) = m.description {
+                patch["description"] = serde_json::json!(description);
+            }
+            Ok(DagMutation::UpdateNode { node_id, patch })
+        }
+        "set_status" => {
+            let node_id = match m.node_id.or_else(|| default_node_id.map(|s| s.to_string())) {
+                Some(node_id) => node_id,
+                None => {
+                    return Err(
+                        "set_status mutation requires node_id (no root node to default to)"
+                            .to_string(),
+                    );
+                }
+            };
+            let value = m
+                .status
+                .ok_or_else(|| "set_status mutation requires status".to_string())?;
+            Ok(DagMutation::SetState {
+                node_id,
+                dimension: "status".to_string(),
+                value,
+                reason: None,
+            })
+        }
+        "remove" => Err(
+            "remove mutations have no ledger representation in the gate projection"
+                .to_string(),
+        ),
+        other => Err(format!("unsupported mutation action: {other}")),
+    }
+}
+
+/// Project a DAG from the ledger and return its root node's id, if any.
+async fn project_root_node_id(ledger: &Ledger, dag_id: &str) -> Option<String> {
+    let events = ledger.query(LedgerQuery::default()).await.ok()?;
+    let dag_events: Vec<_> = events
+        .into_iter()
+        .filter(|e| e.payload.get("dag_id").and_then(|v| v.as_str()) == Some(dag_id))
+        .collect();
+    let dag = project_dag(&dag_events, dag_id);
+    dag.nodes
+        .values()
+        .find(|n| n.parent_node_id.is_none())
+        .map(|n| n.node_id.clone())
+}
+
+fn collect_dag_ids(events: &[AllternitEvent]) -> Vec<String> {
+    let mut dag_ids: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+    for evt in events {
+        if let Some(dag_id) = evt.payload.get("dag_id").and_then(|v| v.as_str()) {
+            dag_ids.insert(dag_id.to_string());
+        }
+        if evt.r#type == "DagCreated" {
+            if let Some(dag_id) = evt.payload.get("dag_id").and_then(|v| v.as_str()) {
+                dag_ids.insert(dag_id.to_string());
+            }
+        }
+    }
+    dag_ids.into_iter().collect()
+}
+
+async fn list_plans(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    match state.rails.ledger.query(LedgerQuery::default()).await {
+        Ok(events) => {
+            let mut dags = Vec::new();
+            for dag_id in collect_dag_ids(&events) {
+                let dag_events: Vec<_> = events
+                    .iter()
+                    .filter(|e| {
+                        e.payload.get("dag_id").and_then(|v| v.as_str()) == Some(dag_id.as_str())
+                    })
+                    .cloned()
+                    .collect();
+                let dag = project_dag(&dag_events, &dag_id);
+                // Version = number of dag-scoped events; every mutation bumps it.
+                let version = dag_events.len().to_string();
+                let created_at = dag
+                    .nodes
+                    .values()
+                    .filter_map(|n| n.created_at.clone())
+                    .min()
+                    .unwrap_or_default();
+                let root = dag
+                    .nodes
+                    .values()
+                    .find(|n| n.parent_node_id.is_none())
+                    .or_else(|| dag.nodes.values().next());
+                let mut entry = json!({
+                    "dag_id": dag_id,
+                    "version": version,
+                    "created_at": created_at,
+                });
+                if let Some(root) = root {
+                    let mut metadata = json!({ "title": root.title });
+                    if let Some(description) = &root.description {
+                        metadata["description"] = json!(description);
+                    }
+                    entry["metadata"] = metadata;
+                }
+                dags.push(entry);
+            }
+            (StatusCode::OK, Json(json!({ "dags": dags }))).into_response()
+        }
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": e.to_string() })),
+        )
+            .into_response(),
+    }
+}
+
+async fn plan_new(
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<PlanNewRequest>,
+) -> impl IntoResponse {
+    match state.rails.gate.plan_new(&request.text, None).await {
+        Ok((prompt_id, dag_id, node_id)) => (
+            StatusCode::CREATED,
+            Json(json!({
+                "prompt_id": prompt_id,
+                "dag_id": dag_id,
+                "node_id": node_id,
+            })),
+        )
+            .into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": e.to_string() })),
+        )
+            .into_response(),
+    }
+}
+
+async fn plan_refine(
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<PlanRefineRequest>,
+) -> impl IntoResponse {
+    let ui_mutations = request.mutations.unwrap_or_default();
+    let default_node_id = if ui_mutations
+        .iter()
+        .any(|m| m.action == "set_status" && m.node_id.is_none())
+    {
+        project_root_node_id(&state.rails.ledger, &request.dag_id).await
+    } else {
+        None
+    };
+    let mut mutations = Vec::new();
+    for mutation in ui_mutations {
+        match ui_dag_mutation_to_core(mutation, default_node_id.as_deref()) {
+            Ok(mutation) => mutations.push(mutation),
+            Err(message) => {
+                return (StatusCode::BAD_REQUEST, Json(json!({ "error": message })))
+                    .into_response();
+            }
+        }
+    }
+    match state
+        .rails
+        .gate
+        .plan_refine(&request.dag_id, &request.delta, "api", mutations)
+        .await
+    {
+        Ok(delta_id) => (StatusCode::OK, Json(json!({ "delta_id": delta_id }))).into_response(),
+        Err(e) => {
+            // A refine against a DAG with no linked prompt is a client error;
+            // anything else is a storage/backend failure.
+            let status = if e.to_string().contains("prompt") {
+                StatusCode::BAD_REQUEST
+            } else {
+                StatusCode::INTERNAL_SERVER_ERROR
+            };
+            (status, Json(json!({ "error": e.to_string() }))).into_response()
+        }
+    }
+}
+
+async fn plan_show(
+    State(state): State<Arc<AppState>>,
+    Path(dag_id): Path<String>,
+) -> impl IntoResponse {
+    match state.rails.ledger.query(LedgerQuery::default()).await {
+        Ok(events) => {
+            let dag_events: Vec<_> = events
+                .into_iter()
+                .filter(|e| e.payload.get("dag_id").and_then(|v| v.as_str()) == Some(dag_id.as_str()))
+                .collect();
+            let dag = project_dag(&dag_events, &dag_id);
+            let dag_json = match serde_json::to_value(&dag) {
+                Ok(value) => value,
+                Err(e) => {
+                    return (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        Json(json!({ "error": e.to_string() })),
+                    )
+                        .into_response();
+                }
+            };
+            (StatusCode::OK, Json(json!({ "dag_id": dag_id, "dag": dag_json }))).into_response()
+        }
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": e.to_string() })),
+        )
+            .into_response(),
+    }
+}
+
+async fn dag_render(
+    State(state): State<Arc<AppState>>,
+    Path(dag_id): Path<String>,
+    Query(params): Query<std::collections::HashMap<String, String>>,
+) -> impl IntoResponse {
+    let format = params
+        .get("format")
+        .cloned()
+        .unwrap_or_else(|| "json".to_string());
+
+    match state.rails.ledger.query(LedgerQuery::default()).await {
+        Ok(events) => {
+            let dag_events: Vec<_> = events
+                .into_iter()
+                .filter(|e| e.payload.get("dag_id").and_then(|v| v.as_str()) == Some(dag_id.as_str()))
+                .collect();
+            let dag = project_dag(&dag_events, &dag_id);
+            let content = if format == "markdown" || format == "md" {
+                render_dag_markdown(&dag)
+            } else {
+                serde_json::to_string_pretty(&dag).unwrap_or_default()
+            };
+            (
+                StatusCode::OK,
+                Json(json!({
+                    "dag_id": dag_id,
+                    "format": format,
+                    "content": content,
+                })),
+            )
+                .into_response()
+        }
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": e.to_string() })),
+        )
+            .into_response(),
+    }
+}
+
+fn render_dag_markdown(dag: &allternit_agent_system_rails::work::types::DagState) -> String {
+    let mut out = String::new();
+    out.push_str(&format!("# DAG {}\n", dag.dag_id));
+    out.push_str("Nodes:\n");
+    let mut nodes: Vec<_> = dag.nodes.values().collect();
+    nodes.sort_by(|a, b| a.node_id.cmp(&b.node_id));
+    for node in nodes {
+        out.push_str(&format!(
+            "- {} [{}] {}\n",
+            node.node_id, node.status, node.title
+        ));
+    }
+    out.push_str("Edges (blocked_by):\n");
+    for edge in dag.edges.iter().filter(|e| e.edge_type == "blocked_by") {
+        out.push_str(&format!("- {} -> {}\n", edge.from_node_id, edge.to_node_id));
+    }
+    if !dag.relations.is_empty() {
+        out.push_str("Relations:\n");
+        for rel in &dag.relations {
+            if let Some(note) = &rel.note {
+                out.push_str(&format!("- {} ~ {} ({})\n", rel.a, rel.b, note));
+            } else {
+                out.push_str(&format!("- {} ~ {}\n", rel.a, rel.b));
+            }
+        }
+    }
+    out
+}
+
+#[derive(Debug, Deserialize)]
+struct DagExecuteRequest {
+    run_id: Option<String>,
+}
+
+async fn dag_execute(
+    State(state): State<Arc<AppState>>,
+    Path(dag_id): Path<String>,
+    Json(request): Json<DagExecuteRequest>,
+) -> impl IntoResponse {
+    let run_id = request
+        .run_id
+        .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+
+    // Project the DAG so the RUNNING transition lands on the real root node;
+    // refuse to "start" a DAG the ledger has never seen.
+    let root_node_id = match state.rails.ledger.query(LedgerQuery::default()).await {
+        Ok(events) => {
+            let dag_events: Vec<_> = events
+                .into_iter()
+                .filter(|e| e.payload.get("dag_id").and_then(|v| v.as_str()) == Some(dag_id.as_str()))
+                .collect();
+            let dag = project_dag(&dag_events, &dag_id);
+            match dag.nodes.values().find(|n| n.parent_node_id.is_none()) {
+                Some(root) => root.node_id.clone(),
+                None => {
+                    return (
+                        StatusCode::NOT_FOUND,
+                        Json(json!({ "error": format!("dag {dag_id} not found") })),
+                    )
+                        .into_response();
+                }
+            }
+        }
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response();
+        }
+    };
+
+    let mutation = DagMutation::SetState {
+        node_id: root_node_id,
+        dimension: "status".to_string(),
+        value: "RUNNING".to_string(),
+        reason: Some(format!("execute run {run_id}")),
+    };
+    match state
+        .rails
+        .gate
+        .mutate_with_decision(&dag_id, "Execute DAG", None, vec![mutation])
+        .await
+    {
+        Ok(_) => (
+            StatusCode::OK,
+            Json(json!({ "run_id": run_id, "status": "started" })),
+        )
+            .into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": e.to_string() })),
+        )
+            .into_response(),
+    }
+}
+
+async fn run_cancel(
+    State(state): State<Arc<AppState>>,
+    Path(run_id): Path<String>,
+) -> impl IntoResponse {
+    let event = AllternitEvent {
+        event_id: allternit_agent_system_rails::core::ids::create_event_id(),
+        ts: chrono::Utc::now().to_rfc3339(),
+        actor: Actor {
+            r#type: ActorType::Gate,
+            id: "api".to_string(),
+        },
+        scope: None,
+        r#type: "RunCancelled".to_string(),
+        payload: json!({ "run_id": run_id }),
+        provenance: None,
+    };
+    match state.rails.ledger.append(event).await {
+        Ok(_) => (StatusCode::OK, Json(json!({ "cancelled": true }))).into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": e.to_string() })),
+        )
+            .into_response(),
+    }
+}
+
+// ============================================================================
+// Leases data plane (list/renew/release; mirrors the standalone /v1/leases surface)
+// ============================================================================
+
+/// Gateway WIH ids follow the `"{dag_id}:{node_id}"` convention (see
+/// `pickup_wih`); split them back apart for the UI lease view.
+fn split_wih_id(wih_id: &str) -> (String, String) {
+    match wih_id.split_once(':') {
+        Some((dag_id, node_id)) => (dag_id.to_string(), node_id.to_string()),
+        None => (String::new(), wih_id.to_string()),
+    }
+}
+
+fn parse_epoch_millis(iso: &str) -> i64 {
+    chrono::DateTime::parse_from_rfc3339(iso)
+        .map(|d| d.timestamp_millis())
+        .unwrap_or(0)
+}
+
+fn lease_record_to_ui(lease: &LeaseRecord) -> serde_json::Value {
+    let acquired_at = parse_epoch_millis(&lease.requested_at);
+    let expires_at = lease
+        .granted_until
+        .as_deref()
+        .map(parse_epoch_millis)
+        .unwrap_or(0);
+    let now = chrono::Utc::now().timestamp_millis();
+    // The lease store does not track renewal counts; a granted lease that has
+    // been renewed still reports 0.
+    let status = match lease.status.as_str() {
+        "released" => "released",
+        "granted" | "requested" if expires_at > 0 && expires_at <= now => "expired",
+        "granted" | "requested" if expires_at > 0 && expires_at - now <= 300_000 => "expiring",
+        "granted" | "requested" => "active",
+        // Denied/superseded leases are no longer live; the UI lease enum has
+        // no "denied" state, so they fold into "released".
+        _ => "released",
+    };
+    let (dag_id, node_id) = split_wih_id(&lease.wih_id);
+    json!({
+        "lease_id": lease.lease_id,
+        "wih_id": lease.wih_id,
+        "dag_id": dag_id,
+        "node_id": node_id,
+        "agent_id": lease.agent_id,
+        "acquired_at": acquired_at,
+        "expires_at": expires_at,
+        "keys": lease.paths,
+        "tools": [],
+        "renewal_count": 0,
+        "status": status,
+    })
+}
+
+async fn list_leases(
+    State(state): State<Arc<AppState>>,
+    Query(params): Query<std::collections::HashMap<String, String>>,
+) -> impl IntoResponse {
+    let holder = params.get("holder").cloned();
+    match state.rails.leases.list(holder.as_deref()).await {
+        Ok(leases) => {
+            let leases: Vec<serde_json::Value> =
+                leases.iter().map(lease_record_to_ui).collect();
+            (StatusCode::OK, Json(json!({ "leases": leases }))).into_response()
+        }
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": e.to_string() })),
+        )
+            .into_response(),
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct LeaseRenewRequest {
+    ttl_seconds: Option<i64>,
+}
+
+async fn renew_lease(
+    State(state): State<Arc<AppState>>,
+    Path(lease_id): Path<String>,
+    Json(request): Json<LeaseRenewRequest>,
+) -> impl IntoResponse {
+    match state.rails.leases.get(&lease_id).await {
+        Ok(Some(_)) => {}
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(json!({ "error": format!("lease {lease_id} not found") })),
+            )
+                .into_response();
+        }
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response();
+        }
+    }
+    let ttl = request.ttl_seconds.unwrap_or(300).max(1);
+    let until = chrono::Utc::now() + chrono::Duration::seconds(ttl);
+    match state.rails.leases.renew(&lease_id, &until.to_rfc3339()).await {
+        Ok(_) => match state.rails.leases.get(&lease_id).await {
+            Ok(Some(lease)) => {
+                let expires_at = lease
+                    .granted_until
+                    .as_deref()
+                    .map(parse_epoch_millis)
+                    .unwrap_or(0);
+                (
+                    StatusCode::OK,
+                    Json(json!({ "renewed": true, "expires_at": expires_at })),
+                )
+                    .into_response()
+            }
+            _ => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": "lease disappeared after renew" })),
+            )
+                .into_response(),
+        },
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": e.to_string() })),
+        )
+            .into_response(),
+    }
+}
+
+async fn release_lease(
+    State(state): State<Arc<AppState>>,
+    Path(lease_id): Path<String>,
+) -> impl IntoResponse {
+    match state.rails.leases.get(&lease_id).await {
+        Ok(Some(_)) => match state.rails.leases.release(&lease_id).await {
+            Ok(_) => (StatusCode::OK, Json(json!({ "released": true }))).into_response(),
+            Err(e) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response(),
+        },
+        Ok(None) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({ "error": format!("lease {lease_id} not found") })),
+        )
+            .into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": e.to_string() })),
+        )
+            .into_response(),
+    }
+}
+
+// ============================================================================
+// Context packs data plane (unscoped; mirrors the standalone /v1/context-pack* surface)
+//
+// Gateway-sealed packs persist the client-supplied inputs verbatim as a
+// `pack.json` doc under `.allternit/context-packs/<pack_id>/` (the crate seal
+// layout uses the same per-pack directories with a `seal.json`, so the two
+// never collide). A `ContextPackSealed` ledger event is emitted for each seal.
+// ============================================================================
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct GatewayContextPack {
+    context_pack_id: String,
+    version: String,
+    created_at: String,
+    inputs: serde_json::Value,
+    correlation_id: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct SealContextPackGatewayRequest {
+    dag_id: String,
+    node_id: String,
+    wih_id: String,
+    inputs: serde_json::Value,
+}
+
+fn gateway_packs_base(state: &AppState) -> PathBuf {
+    state.rails.root_dir.join(".allternit").join("context-packs")
+}
+
+async fn seal_context_pack(
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<SealContextPackGatewayRequest>,
+) -> impl IntoResponse {
+    let stored_at = chrono::Utc::now().to_rfc3339();
+    let pack = GatewayContextPack {
+        context_pack_id: format!("cp_{}", uuid::Uuid::new_v4()),
+        version: "1.0.0".to_string(),
+        created_at: stored_at.clone(),
+        inputs: request.inputs,
+        correlation_id: uuid::Uuid::new_v4().to_string(),
+    };
+
+    let pack_dir = gateway_packs_base(&state).join(&pack.context_pack_id);
+    if let Err(e) = std::fs::create_dir_all(&pack_dir) {
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": e.to_string() })),
+        )
+            .into_response();
+    }
+    let body = match serde_json::to_vec_pretty(&pack) {
+        Ok(body) => body,
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response();
+        }
+    };
+    if let Err(e) = std::fs::write(pack_dir.join("pack.json"), body) {
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": e.to_string() })),
+        )
+            .into_response();
+    }
+
+    let event = AllternitEvent {
+        event_id: allternit_agent_system_rails::core::ids::create_event_id(),
+        ts: stored_at.clone(),
+        actor: Actor {
+            r#type: ActorType::Gate,
+            id: "api".to_string(),
+        },
+        scope: None,
+        r#type: "ContextPackSealed".to_string(),
+        payload: json!({
+            "context_pack_id": pack.context_pack_id,
+            "dag_id": request.dag_id,
+            "node_id": request.node_id,
+            "wih_id": request.wih_id,
+        }),
+        provenance: None,
+    };
+    if let Err(e) = state.rails.ledger.append(event).await {
+        error!(error = %e, "context pack seal: ledger append failed");
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": e.to_string() })),
+        )
+            .into_response();
+    }
+
+    (
+        StatusCode::OK,
+        Json(json!({
+            "sealed": true,
+            "context_pack_id": pack.context_pack_id,
+            "stored_at": stored_at,
+        })),
+    )
+        .into_response()
+}
+
+#[derive(Debug, Deserialize)]
+struct ContextPackListRequest {
+    dag_id: Option<String>,
+    node_id: Option<String>,
+    wih_id: Option<String>,
+    limit: Option<usize>,
+}
+
+async fn list_context_packs(
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<ContextPackListRequest>,
+) -> impl IntoResponse {
+    let base = gateway_packs_base(&state);
+    let mut packs: Vec<GatewayContextPack> = Vec::new();
+    if let Ok(entries) = std::fs::read_dir(&base) {
+        for entry in entries.flatten() {
+            let pack_dir = entry.path();
+            if !pack_dir.is_dir() {
+                continue;
+            }
+            let Ok(content) = std::fs::read_to_string(pack_dir.join("pack.json")) else {
+                continue;
+            };
+            let Ok(pack) = serde_json::from_str::<GatewayContextPack>(&content) else {
+                continue;
+            };
+            let matches = request
+                .dag_id
+                .as_deref()
+                .map(|d| pack.inputs.get("dag_id").and_then(|v| v.as_str()) == Some(d))
+                .unwrap_or(true)
+                && request
+                    .node_id
+                    .as_deref()
+                    .map(|d| pack.inputs.get("node_id").and_then(|v| v.as_str()) == Some(d))
+                    .unwrap_or(true)
+                && request
+                    .wih_id
+                    .as_deref()
+                    .map(|d| pack.inputs.get("wih_id").and_then(|v| v.as_str()) == Some(d))
+                    .unwrap_or(true);
+            if matches {
+                packs.push(pack);
+            }
+        }
+    }
+    packs.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+    packs.truncate(request.limit.unwrap_or(50));
+    (StatusCode::OK, Json(json!({ "packs": packs }))).into_response()
+}
+
+// ============================================================================
+// Mail review/archive data plane
+// ============================================================================
+
+#[derive(Debug, Deserialize)]
+struct MailReviewRequest {
+    /// UI convention is `thread_id`; `thread` is the legacy backend name.
+    #[serde(rename = "thread_id", alias = "thread")]
+    thread: Option<String>,
+    wih_id: String,
+    diff_ref: String,
+}
+
+async fn mail_request_review(
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<MailReviewRequest>,
+) -> impl IntoResponse {
+    let thread_id = match resolve_mail_thread(&state, request.thread).await {
+        Ok(id) => id,
+        Err(response) => return response,
+    };
+    match state
+        .rails
+        .mail
+        .request_review(&thread_id, &request.wih_id, &request.diff_ref)
+        .await
+    {
+        Ok(_) => (StatusCode::OK, Json(json!({ "requested": true }))).into_response(),
+        Err(e) => {
+            error!(error = %e, "mail: request_review failed");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response()
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct MailArchiveRequest {
+    /// UI convention is `thread_id`; `thread` is the legacy backend name.
+    #[serde(rename = "thread_id", alias = "thread")]
+    thread: Option<String>,
+    path: String,
+    reason: Option<String>,
+}
+
+async fn mail_archive_thread(
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<MailArchiveRequest>,
+) -> impl IntoResponse {
+    let thread_id = match resolve_mail_thread(&state, request.thread).await {
+        Ok(id) => id,
+        Err(response) => return response,
+    };
+    match state
+        .rails
+        .mail
+        .archive_thread(&thread_id, &request.path, request.reason.as_deref())
+        .await
+    {
+        Ok(archive_id) => (StatusCode::OK, Json(json!({ "archive_id": archive_id }))).into_response(),
+        Err(e) => {
+            error!(error = %e, "mail: archive_thread failed");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response()
+        }
+    }
+}
+
+// ============================================================================
+// Index data plane
+// ============================================================================
+
+async fn index_rebuild(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    match state.rails.index.rebuild_from_ledger(&state.rails.ledger).await {
+        Ok(count) => (
+            StatusCode::OK,
+            Json(json!({ "indexed_count": count })),
+        )
+            .into_response(),
+        Err(e) => {
+            error!(error = %e, "index: rebuild failed");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response()
+        }
+    }
+}
+
+// ============================================================================
+// Gate data plane (status/check/rules/verify/decision/mutate)
+// ============================================================================
+
+#[derive(Debug, Serialize)]
+struct GateRulesResponse {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    rules: Option<String>,
+}
+
+async fn gate_status() -> impl IntoResponse {
+    Json(json!({ "status": "ok" }))
+}
+
+#[derive(Debug, Deserialize)]
+struct GateCheckRequest {
+    wih_id: String,
+    tool: String,
+    paths: Option<Vec<String>>,
+}
+
+async fn gate_check(
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<GateCheckRequest>,
+) -> impl IntoResponse {
+    let paths = request.paths.unwrap_or_default();
+    match state
+        .rails
+        .gate
+        .pre_tool(&request.wih_id, &request.tool, &paths)
+        .await
+    {
+        Ok(result) => (
+            StatusCode::OK,
+            Json(json!({
+                "allowed": result.allowed,
+                "reason": result.reason,
+            })),
+        )
+            .into_response(),
+        Err(e) => {
+            let status = if e.to_string().contains("not found") {
+                StatusCode::NOT_FOUND
+            } else {
+                StatusCode::INTERNAL_SERVER_ERROR
+            };
+            (status, Json(json!({ "error": e.to_string() }))).into_response()
+        }
+    }
+}
+
+async fn gate_rules() -> impl IntoResponse {
+    // The rules file ships with the rails crate's spec directory; in a dev
+    // checkout that is two levels up from this crate's manifest dir.
+    let crate_spec = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join("..")
+        .join("rails")
+        .join("spec")
+        .join("GATE_RULES.md");
+    let rules = std::fs::read_to_string(crate_spec).ok();
+    (StatusCode::OK, Json(GateRulesResponse { rules })).into_response()
+}
+
+#[derive(Debug, Deserialize)]
+struct GateVerifyRequest {
+    json: Option<bool>,
+}
+
+async fn gate_verify(
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<GateVerifyRequest>,
+) -> impl IntoResponse {
+    let _json_output = request.json.unwrap_or(true);
+
+    match state.rails.ledger.query(LedgerQuery::default()).await {
+        Ok(events) => {
+            let (chain_ok, chain_issues) = state
+                .rails
+                .ledger
+                .verify_chain()
+                .await
+                .unwrap_or((false, vec!["verify failed".to_string()]));
+
+            let mut cycle_dags = Vec::new();
+            for dag_id in collect_dag_ids(&events) {
+                let dag_events: Vec<_> = events
+                    .iter()
+                    .filter(|e| {
+                        e.payload.get("dag_id").and_then(|v| v.as_str()) == Some(dag_id.as_str())
+                    })
+                    .cloned()
+                    .collect();
+                let dag = project_dag(&dag_events, &dag_id);
+                if allternit_agent_system_rails::work::graph::has_cycle_edges(&dag.edges) {
+                    cycle_dags.push(dag_id);
+                }
+            }
+
+            let ok = chain_ok && cycle_dags.is_empty();
+            let mut body = json!({
+                "ok": ok,
+                "ledger_chain_ok": chain_ok,
+                "cycle_dags": cycle_dags,
+            });
+            if !chain_issues.is_empty() {
+                body["ledger_chain_issues"] = json!(chain_issues);
+            }
+            (StatusCode::OK, Json(body)).into_response()
+        }
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": e.to_string() })),
+        )
+            .into_response(),
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct GateDecisionRequest {
+    note: String,
+    reason: Option<String>,
+    links: Option<Vec<String>>,
+}
+
+async fn gate_decision(
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<GateDecisionRequest>,
+) -> impl IntoResponse {
+    match state
+        .rails
+        .gate
+        .record_agent_decision(&request.note, request.reason, request.links.unwrap_or_default())
+        .await
+    {
+        Ok(decision_id) => (
+            StatusCode::OK,
+            Json(json!({ "decision_id": decision_id })),
+        )
+            .into_response(),
+        Err(e) => {
+            // Strict-provenance rejections (e.g. a decision with no linked
+            // events) are client errors, not backend failures.
+            (StatusCode::BAD_REQUEST, Json(json!({ "error": e.to_string() }))).into_response()
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct GateMutateRequest {
+    dag_id: String,
+    note: String,
+    reason: Option<String>,
+    mutations: Option<Vec<UiDagMutation>>,
+}
+
+async fn gate_mutate(
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<GateMutateRequest>,
+) -> impl IntoResponse {
+    let ui_mutations = request.mutations.unwrap_or_default();
+    let default_node_id = if ui_mutations
+        .iter()
+        .any(|m| m.action == "set_status" && m.node_id.is_none())
+    {
+        project_root_node_id(&state.rails.ledger, &request.dag_id).await
+    } else {
+        None
+    };
+    let mut mutations = Vec::new();
+    for mutation in ui_mutations {
+        match ui_dag_mutation_to_core(mutation, default_node_id.as_deref()) {
+            Ok(mutation) => mutations.push(mutation),
+            Err(message) => {
+                return (StatusCode::BAD_REQUEST, Json(json!({ "error": message })))
+                    .into_response();
+            }
+        }
+    }
+    match state
+        .rails
+        .gate
+        .mutate_with_decision(&request.dag_id, &request.note, request.reason, mutations)
+        .await
+    {
+        Ok((decision_id, mutation_ids)) => (
+            StatusCode::OK,
+            Json(json!({
+                "decision_id": decision_id,
+                "mutation_ids": mutation_ids,
+            })),
+        )
+            .into_response(),
+        Err(e) => {
+            let status = if e.to_string().contains("required") {
+                StatusCode::BAD_REQUEST
+            } else {
+                StatusCode::INTERNAL_SERVER_ERROR
+            };
+            (status, Json(json!({ "error": e.to_string() }))).into_response()
+        }
+    }
+}
+
+// ============================================================================
 // Response Structs
 // ============================================================================
 
@@ -2881,6 +3964,19 @@ mod tests {
             .unwrap()
     }
 
+    async fn delete_req(app: &Router, uri: &str) -> axum::response::Response {
+        app.clone()
+            .oneshot(
+                Request::builder()
+                    .method("DELETE")
+                    .uri(uri)
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap()
+    }
+
     /// E1 mail round-trip: thread default fix (R4), agent registry (R1),
     /// typed envelope send (R2), per-agent inbox/outbox (R3), and the
     /// untouched share path whose events the inbox must skip.
@@ -3230,6 +4326,478 @@ mod tests {
         // Malformed ticket id → 400.
         let resp = get(&app, "/graph/impact/bogus").await;
         assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+
+        let _ = std::fs::remove_dir_all(&temp);
+    }
+
+    /// Plan data plane round-trip: plan.new → list/show/render → refine →
+    /// execute → cancel, plus the not-found/bad-mutation error paths.
+    #[tokio::test]
+    async fn plan_data_plane_round_trip() {
+        let temp = std::env::temp_dir().join(format!(
+            "allternit-rails-plan-test-{}",
+            uuid::Uuid::new_v4()
+        ));
+        std::fs::create_dir_all(&temp).unwrap();
+        let state = test_app_state(&temp).await;
+        let app = rails_router().with_state(state.clone());
+
+        // Create a plan.
+        let resp = post_json(
+            &app,
+            "/plan",
+            json!({ "text": "Build the provisioning surface" }),
+        )
+        .await;
+        assert_eq!(resp.status(), StatusCode::CREATED);
+        let body = body_json(resp.into_body()).await;
+        let dag_id = body["dag_id"].as_str().unwrap().to_string();
+        assert!(body["prompt_id"].as_str().unwrap().starts_with("p_"));
+        assert!(body["node_id"].as_str().unwrap().starts_with("n_"));
+
+        // List plans: the new DAG shows up with metadata + version.
+        let resp = get(&app, "/plans").await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        let dags = body["dags"].as_array().unwrap();
+        let plan = dags
+            .iter()
+            .find(|d| d["dag_id"] == json!(dag_id))
+            .expect("plan listed");
+        assert!(plan["version"].as_str().unwrap().parse::<usize>().unwrap() > 0);
+        assert!(plan["created_at"].as_str().unwrap().len() > 0);
+        assert_eq!(
+            plan["metadata"]["title"],
+            json!("Build the provisioning surface")
+        );
+
+        // Show projects the DAG with its root node.
+        let resp = get(&app, &format!("/plan/{dag_id}")).await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["dag_id"], json!(dag_id));
+        assert_eq!(body["dag"]["nodes"].as_object().unwrap().len(), 1);
+
+        // Render: JSON and markdown formats.
+        let resp = get(&app, &format!("/dags/{dag_id}/render?format=json")).await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["format"], json!("json"));
+        assert!(body["content"].as_str().unwrap().contains(&dag_id));
+
+        let resp = get(&app, &format!("/dags/{dag_id}/render?format=markdown")).await;
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["format"], json!("markdown"));
+        assert!(body["content"].as_str().unwrap().starts_with("# DAG "));
+
+        // Refine with an add mutation appends a second node.
+        let resp = post_json(
+            &app,
+            "/plan/refine",
+            json!({
+                "dag_id": dag_id,
+                "delta": "add a review step",
+                "mutations": [
+                    { "action": "add", "node_id": "n_review", "title": "Review" }
+                ]
+            }),
+        )
+        .await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert!(body["delta_id"].as_str().unwrap().starts_with("d_"));
+
+        // Refining an unknown DAG is a client error (no linked prompt).
+        let resp = post_json(
+            &app,
+            "/plan/refine",
+            json!({ "dag_id": "dag_missing", "delta": "x" }),
+        )
+        .await;
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+
+        // Unsupported mutation actions are rejected, not dropped.
+        let resp = post_json(
+            &app,
+            "/plan/refine",
+            json!({
+                "dag_id": dag_id,
+                "delta": "drop it",
+                "mutations": [{ "action": "remove", "node_id": "n_review" }]
+            }),
+        )
+        .await;
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+
+        // Execute flips the root node to RUNNING and returns a run id.
+        let resp = post_json(&app, &format!("/dags/{dag_id}/execute"), json!({})).await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["status"], json!("started"));
+        let run_id = body["run_id"].as_str().unwrap().to_string();
+
+        // Executing an unknown DAG 404s.
+        let resp = post_json(&app, "/dags/dag_missing/execute", json!({})).await;
+        assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+
+        // Cancel records a RunCancelled ledger event.
+        let resp = post_json(&app, &format!("/runs/{run_id}/cancel"), json!({})).await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["cancelled"], json!(true));
+        let events = state.rails.ledger.tail(10).await.unwrap();
+        assert!(events.iter().any(|e| e.r#type == "RunCancelled"));
+
+        let _ = std::fs::remove_dir_all(&temp);
+    }
+
+    /// Leases data plane round-trip: request → list → renew → release, with
+    /// 404s for unknown lease ids.
+    #[tokio::test]
+    async fn leases_data_plane_round_trip() {
+        let temp = std::env::temp_dir().join(format!(
+            "allternit-rails-leases-test-{}",
+            uuid::Uuid::new_v4()
+        ));
+        std::fs::create_dir_all(&temp).unwrap();
+        let state = test_app_state(&temp).await;
+        let app = rails_router().with_state(state.clone());
+
+        // Request a lease (wih_id follows the dag:node convention).
+        let resp = post_json(
+            &app,
+            "/leases",
+            json!({
+                "wih_id": "dag_p2:n_root",
+                "agent_id": "agent-a",
+                "paths": ["src/main.rs"],
+                "ttl_seconds": 300
+            }),
+        )
+        .await;
+        assert_eq!(resp.status(), StatusCode::CREATED);
+
+        // List surfaces it as an active lease with derived dag/node ids.
+        let resp = get(&app, "/leases").await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        let leases = body["leases"].as_array().unwrap();
+        assert_eq!(leases.len(), 1);
+        let lease = &leases[0];
+        let lease_id = lease["lease_id"].as_str().unwrap().to_string();
+        assert_eq!(lease["dag_id"], json!("dag_p2"));
+        assert_eq!(lease["node_id"], json!("n_root"));
+        assert_eq!(lease["agent_id"], json!("agent-a"));
+        assert_eq!(lease["keys"], json!(["src/main.rs"]));
+        assert_eq!(lease["status"], json!("active"));
+        assert!(lease["acquired_at"].as_i64().unwrap() > 0);
+
+        // Renew extends the expiry.
+        let resp = post_json(
+            &app,
+            &format!("/leases/{lease_id}/renew"),
+            json!({ "ttl_seconds": 600 }),
+        )
+        .await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["renewed"], json!(true));
+        let expires_at = body["expires_at"].as_i64().unwrap();
+        assert!(expires_at > chrono::Utc::now().timestamp_millis());
+
+        // Renew/release of an unknown lease 404s.
+        let resp = post_json(
+            &app,
+            "/leases/lease_missing/renew",
+            json!({ "ttl_seconds": 60 }),
+        )
+        .await;
+        assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+        let resp = delete_req(&app, "/leases/lease_missing").await;
+        assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+
+        // Release transitions the lease out of the active list.
+        let resp = delete_req(&app, &format!("/leases/{lease_id}")).await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["released"], json!(true));
+        let resp = get(&app, "/leases").await;
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["leases"].as_array().unwrap().len(), 0);
+
+        let _ = std::fs::remove_dir_all(&temp);
+    }
+
+    /// Context packs data plane: seal persists the client inputs verbatim and
+    /// list filters by dag/node/wih.
+    #[tokio::test]
+    async fn context_packs_data_plane_round_trip() {
+        let temp = std::env::temp_dir().join(format!(
+            "allternit-rails-packs-test-{}",
+            uuid::Uuid::new_v4()
+        ));
+        std::fs::create_dir_all(&temp).unwrap();
+        let state = test_app_state(&temp).await;
+        let app = rails_router().with_state(state.clone());
+
+        let inputs = json!({
+            "wih_id": "wih_1",
+            "dag_id": "dag_p2",
+            "node_id": "n_root",
+            "receipt_refs": ["receipts/a.json"]
+        });
+        let resp = post_json(
+            &app,
+            "/context-packs/seal",
+            json!({
+                "dag_id": "dag_p2",
+                "node_id": "n_root",
+                "wih_id": "wih_1",
+                "inputs": inputs
+            }),
+        )
+        .await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["sealed"], json!(true));
+        let pack_id = body["context_pack_id"].as_str().unwrap().to_string();
+        assert!(body["stored_at"].as_str().unwrap().len() > 0);
+
+        // The seal is durably on disk and announced in the ledger.
+        let pack_file = state
+            .rails
+            .root_dir
+            .join(".allternit/context-packs")
+            .join(&pack_id)
+            .join("pack.json");
+        let on_disk: Value = serde_json::from_slice(&std::fs::read(&pack_file).unwrap()).unwrap();
+        assert_eq!(on_disk["inputs"], inputs);
+        let events = state.rails.ledger.tail(10).await.unwrap();
+        assert!(events.iter().any(|e| e.r#type == "ContextPackSealed"));
+
+        // List without filters returns the pack; filters narrow correctly.
+        let resp = post_json(&app, "/context-packs", json!({})).await;
+        let body = body_json(resp.into_body()).await;
+        let packs = body["packs"].as_array().unwrap();
+        assert_eq!(packs.len(), 1);
+        assert_eq!(packs[0]["inputs"], inputs);
+        assert_eq!(packs[0]["version"], json!("1.0.0"));
+
+        let resp = post_json(&app, "/context-packs", json!({ "dag_id": "dag_p2" })).await;
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["packs"].as_array().unwrap().len(), 1);
+
+        let resp = post_json(&app, "/context-packs", json!({ "wih_id": "wih_other" })).await;
+        let body = body_json(resp.into_body()).await;
+        assert!(body["packs"].as_array().unwrap().is_empty());
+
+        let _ = std::fs::remove_dir_all(&temp);
+    }
+
+    /// Mail review/archive data plane: both routes log their event types to
+    /// the ledger on the resolved thread.
+    #[tokio::test]
+    async fn mail_review_archive_round_trip() {
+        let temp = std::env::temp_dir().join(format!(
+            "allternit-rails-mail-review-test-{}",
+            uuid::Uuid::new_v4()
+        ));
+        std::fs::create_dir_all(&temp).unwrap();
+        let state = test_app_state(&temp).await;
+        let app = rails_router().with_state(state.clone());
+
+        let resp = post_json(
+            &app,
+            "/mail/review",
+            json!({
+                "thread_id": "wih:pipeline-x",
+                "wih_id": "wih_1",
+                "diff_ref": "diffs/1.patch"
+            }),
+        )
+        .await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["requested"], json!(true));
+
+        let resp = post_json(
+            &app,
+            "/mail/archive",
+            json!({
+                "thread_id": "wih:pipeline-x",
+                "path": "archives/pipeline-x.json",
+                "reason": "done"
+            }),
+        )
+        .await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert!(body["archive_id"].as_str().unwrap().len() > 0);
+
+        let events = state.rails.ledger.tail(20).await.unwrap();
+        assert!(events.iter().any(|e| e.r#type == "ReviewRequested"));
+        assert!(events.iter().any(|e| e.r#type == "MailThreadArchived"));
+
+        let _ = std::fs::remove_dir_all(&temp);
+    }
+
+    /// Gate data plane round-trip: status/rules/verify, check against a real
+    /// signed WIH, decision strict-provenance enforcement, and mutate with
+    /// the client's mutation dialect.
+    #[tokio::test]
+    async fn gate_data_plane_round_trip() {
+        let temp = std::env::temp_dir().join(format!(
+            "allternit-rails-gate-test-{}",
+            uuid::Uuid::new_v4()
+        ));
+        std::fs::create_dir_all(&temp).unwrap();
+        let state = test_app_state(&temp).await;
+        let app = rails_router().with_state(state.clone());
+
+        // Status + rules (dev checkout ships GATE_RULES.md next to the crate).
+        let resp = get(&app, "/gate/status").await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["status"], json!("ok"));
+
+        let resp = get(&app, "/gate/rules").await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert!(body["rules"].as_str().unwrap().contains("Gate Rules"));
+
+        // Create + pick up + sign a WIH so gate.check has real evidence.
+        let resp = post_json(&app, "/plan", json!({ "text": "Gate me" })).await;
+        let body = body_json(resp.into_body()).await;
+        let dag_id = body["dag_id"].as_str().unwrap().to_string();
+        let node_id = body["node_id"].as_str().unwrap().to_string();
+        let wih_id = state
+            .rails
+            .gate
+            .wih_pickup(&dag_id, &node_id, "agent-a")
+            .await
+            .unwrap();
+        state.rails.gate.wih_sign_open(&wih_id, "sig").await.unwrap();
+
+        let resp = post_json(
+            &app,
+            "/gate/check",
+            json!({ "wih_id": wih_id, "tool": "bash", "paths": [] }),
+        )
+        .await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["allowed"], json!(true));
+
+        // Unknown WIH -> 404.
+        let resp = post_json(
+            &app,
+            "/gate/check",
+            json!({ "wih_id": "wih_missing", "tool": "bash", "paths": [] }),
+        )
+        .await;
+        assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+
+        // Verify: chain intact, no cycle DAGs.
+        let resp = post_json(&app, "/gate/verify", json!({ "json": true })).await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["ok"], json!(true));
+        assert_eq!(body["ledger_chain_ok"], json!(true));
+        assert!(body["cycle_dags"].as_array().unwrap().is_empty());
+
+        // Decision: strict provenance rejects an unlinked decision, accepts a
+        // linked one.
+        let resp = post_json(
+            &app,
+            "/gate/decision",
+            json!({ "note": "unlinked" }),
+        )
+        .await;
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+
+        let resp = post_json(
+            &app,
+            "/gate/decision",
+            json!({ "note": "linked", "links": ["evt_1"] }),
+        )
+        .await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert!(body["decision_id"].as_str().unwrap().starts_with("dec_"));
+
+        // Mutate with the client dialect: add + set_status mutations apply.
+        let resp = post_json(
+            &app,
+            "/gate/mutate",
+            json!({
+                "dag_id": dag_id,
+                "note": "add reviewer node",
+                "mutations": [
+                    { "action": "add", "node_id": "n_review", "parent_id": node_id },
+                    { "action": "set_status", "node_id": "n_review", "status": "READY" }
+                ]
+            }),
+        )
+        .await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert!(body["decision_id"].as_str().unwrap().starts_with("dec_"));
+        assert_eq!(body["mutation_ids"].as_array().unwrap().len(), 2);
+
+        // Unsupported action rejected.
+        let resp = post_json(
+            &app,
+            "/gate/mutate",
+            json!({
+                "dag_id": dag_id,
+                "note": "drop node",
+                "mutations": [{ "action": "remove", "node_id": "n_review" }]
+            }),
+        )
+        .await;
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+
+        // set_status without a node_id defaults to the DAG root (pause/resume
+        // call-site shape).
+        let resp = post_json(
+            &app,
+            "/gate/mutate",
+            json!({
+                "dag_id": dag_id,
+                "note": "Pause execution",
+                "mutations": [{ "action": "set_status", "status": "paused" }]
+            }),
+        )
+        .await;
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        let _ = std::fs::remove_dir_all(&temp);
+    }
+
+    /// Index rebuild re-indexes the ledger and reports the count.
+    #[tokio::test]
+    async fn index_rebuild_round_trip() {
+        let temp = std::env::temp_dir().join(format!(
+            "allternit-rails-index-test-{}",
+            uuid::Uuid::new_v4()
+        ));
+        std::fs::create_dir_all(&temp).unwrap();
+        let state = test_app_state(&temp).await;
+        let app = rails_router().with_state(state.clone());
+
+        // Seed a few ledger events.
+        post_json(&app, "/plan", json!({ "text": "Index me" })).await;
+        post_json(&app, "/mail/send", json!({ "body": "hello" })).await;
+
+        let resp = post_json(&app, "/index/rebuild", json!({})).await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert!(body["indexed_count"].as_u64().unwrap() >= 3);
+
+        // Rebuild is idempotent-count stable (clear + re-index).
+        let resp = post_json(&app, "/index/rebuild", json!({})).await;
+        let body = body_json(resp.into_body()).await;
+        assert!(body["indexed_count"].as_u64().unwrap() >= 3);
 
         let _ = std::fs::remove_dir_all(&temp);
     }

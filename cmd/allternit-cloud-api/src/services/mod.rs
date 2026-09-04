@@ -10,6 +10,7 @@ pub mod inference_keys;
 pub mod inference_pool;
 pub mod inference_settlement;
 pub mod node_resolution;
+pub mod provisioning;
 pub mod quota_service;
 pub mod run_service;
 pub mod scheduler_service;
@@ -49,6 +50,13 @@ pub use inference_keys::{
 };
 pub use node_resolution::{
     resolve_default_node, NodeCandidate, NodeKind, NodeStore, PgNodeStore, ResolvedNode,
+};
+pub use provisioning::{
+    activate_registered_device, bind_device_slot, build_user_data, can_transition,
+    record_instance_started, record_instance_stopped, select_host, start_provisioning_reconcile_task,
+    usage_summary, validate_provisioned_bootstrap, BackendRegistry, BackendStatus, HostCapacity,
+    IncusBackendRegistry, IncusHttpBackend, InstanceRow, InstanceView, ProvisionBackend,
+    ProvisionDefaults, ProvisionError, ProvisionSpec, ProvisioningService, INIT_SCRIPT,
 };
 pub use quota_service::{QuotaService, SharedQuotaService, UserQuota};
 pub use run_service::{RunListFilter, RunService, RunServiceImpl};

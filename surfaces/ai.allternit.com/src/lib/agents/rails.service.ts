@@ -5,10 +5,9 @@
  * on the allternit-api gateway (port 8013) at `/api/rails/*`
  * (cmd/allternit-api/src/rails/mod.rs). It is NOT the standalone
  * rails service dialect (port 3011, /api/v1/*) this client was originally
- * written against — only routes that exist on the gateway are called live
- * here. Methods whose standalone data-plane route has no gateway equivalent
- * are marked TODO(rails-gateway) and fail fast instead of firing requests
- * that 404.
+ * written against — every method below calls a route that exists on the
+ * gateway, including the plan/leases/context-pack/gate data plane that was
+ * backfilled onto the gateway router.
  *
  * UI Concepts → Rails Concepts:
  * - Agent Run → DAG (plan) + WIHs
@@ -392,27 +391,6 @@ export interface VaultArchiveResponse {
 // Using Gateway is preferred as it handles auth, rate limiting, etc.
 const RAILS_BASE = `${GATEWAY_BASE_URL}/api/rails`;
 
-/**
- * Fail fast for client methods whose standalone rails-service (port 3011)
- * data-plane route has NO equivalent on the allternit-api `/api/rails`
- * gateway (cmd/allternit-api/src/rails/mod.rs). Throwing preserves the
- * rejection semantics every existing call site already handles (these calls
- * previously 404'd through apiRequestWithError).
- */
-// TODO(rails-gateway): the following standalone data-plane routes have no
-// equivalent on the 8013 rails router — add them there or retire these call
-// sites: /init, /plans, /plan, /plan/refine, /plan/:id, /dags/:id/render,
-// /dags/:id/execute, /runs/:id/cancel, GET /leases, /leases/:id/renew,
-// DELETE /leases/:id, POST /context-packs, /context-packs/seal,
-// /gate/status, /gate/check, /gate/rules, /gate/verify, /gate/decision,
-// /gate/mutate, /index/rebuild, /mail/review, /mail/archive.
-function unavailableOnGateway(feature: string, standaloneRoute: string): never {
-  throw new Error(
-    `[Rails API] '${feature}' targets standalone rails route '${standaloneRoute}', ` +
-      "which has no equivalent on the allternit-api /api/rails gateway."
-  );
-}
-
 export const railsApi = {
   // Health check with better error handling
   health: async () => {
@@ -434,41 +412,51 @@ export const railsApi = {
   // ============================================================================
   // PLAN - DAG Planning (Agent Runs)
   //
-  // TODO(rails-gateway): the planning data plane (/plans, /plan, /plan/refine,
-  // /plan/:id, /dags/:id/render, /dags/:id/execute, /runs/:id/cancel) does not
-  // exist on the 8013 rails router. The only DAG routes there are workspace
-  // scoped (/workspace/:workspace_id/dags[...]) and require a workspace id the
-  // call sites do not have, so these fail fast instead of inventing paths.
+  // All seven routes exist on the gateway (GET /plans, POST /plan,
+  // POST /plan/refine, GET /plan/:dag_id, GET /dags/:dag_id/render,
+  // POST /dags/:dag_id/execute, POST /runs/:run_id/cancel). DAG state is
+  // projected from the ledger by the gateway.
   // ============================================================================
 
   plan: {
     /** List all DAG plans */
-    list: (): Promise<{ dags: Array<{ dag_id: string; version: string; created_at: string; metadata?: { title?: string; description?: string } }> }> =>
-      unavailableOnGateway("plan.list", "GET /v1/plans"),
+    list: () => apiRequestWithError<{ dags: Array<{ dag_id: string; version: string; created_at: string; metadata?: { title?: string; description?: string } }> }>(
+      `${RAILS_BASE}/plans`
+    ),
 
     /** Create new execution plan (like starting an agent run) */
-    new: (_req: PlanNewRequest): Promise<PlanNewResponse> =>
-      unavailableOnGateway("plan.new", "POST /v1/plan"),
+    new: (req: PlanNewRequest) => apiRequestWithError<PlanNewResponse>(
+      `${RAILS_BASE}/plan`,
+      { method: "POST", body: JSON.stringify(req) }
+    ),
 
     /** Refine existing plan */
-    refine: (_req: PlanRefineRequest): Promise<PlanRefineResponse> =>
-      unavailableOnGateway("plan.refine", "POST /v1/plan/refine"),
+    refine: (req: PlanRefineRequest) => apiRequestWithError<PlanRefineResponse>(
+      `${RAILS_BASE}/plan/refine`,
+      { method: "POST", body: JSON.stringify(req) }
+    ),
 
     /** Get plan details */
-    show: (_dagId: string): Promise<{ dag_id: string; dag: unknown }> =>
-      unavailableOnGateway("plan.show", "GET /v1/plan/:dag_id"),
+    show: (dagId: string) => apiRequestWithError<{ dag_id: string; dag: unknown }>(
+      `${RAILS_BASE}/plan/${encodeURIComponent(dagId)}`
+    ),
 
     /** Render plan as JSON or Markdown */
-    render: (_dagId: string, _format: "json" | "markdown" = "json"): Promise<DagRenderResponse> =>
-      unavailableOnGateway("plan.render", "GET /v1/dags/:dag_id/render"),
+    render: (dagId: string, format: "json" | "markdown" = "json") => apiRequestWithError<DagRenderResponse>(
+      `${RAILS_BASE}/dags/${encodeURIComponent(dagId)}/render?format=${format}`
+    ),
 
     /** Execute a DAG */
-    execute: (_dagId: string, _runId?: string): Promise<{ run_id: string; status: string }> =>
-      unavailableOnGateway("plan.execute", "POST /v1/dags/:dag_id/execute"),
+    execute: (dagId: string, runId?: string) => apiRequestWithError<{ run_id: string; status: string }>(
+      `${RAILS_BASE}/dags/${encodeURIComponent(dagId)}/execute`,
+      { method: "POST", body: JSON.stringify(runId ? { run_id: runId } : {}) }
+    ),
 
     /** Cancel a running DAG execution */
-    cancel: (_runId: string): Promise<{ cancelled: boolean }> =>
-      unavailableOnGateway("plan.cancel", "POST /v1/runs/:run_id/cancel"),
+    cancel: (runId: string) => apiRequestWithError<{ cancelled: boolean }>(
+      `${RAILS_BASE}/runs/${encodeURIComponent(runId)}/cancel`,
+      { method: "POST" }
+    ),
   },
 
   // ============================================================================
@@ -524,14 +512,19 @@ export const railsApi = {
   // ============================================================================
   // LEASES - Resource Reservations
   //
-  // 8013 only mounts POST /leases and GET /leases/:lease_id. The standalone
-  // list/renew/release data-plane routes are missing — see TODO(rails-gateway).
+  // The gateway mounts the full lease data plane: POST /leases,
+  // GET /leases, GET /leases/:lease_id, POST /leases/:lease_id/renew, and
+  // DELETE /leases/:lease_id.
   // ============================================================================
 
   leases: {
-    /** List active leases — NOT available on the gateway. */
-    list: (_dagId?: string): Promise<LeaseListResponse> =>
-      unavailableOnGateway("leases.list", "GET /v1/leases"),
+    /** List active leases — GET /leases on the gateway. */
+    list: (dagId?: string) =>
+      apiRequestWithError<LeaseListResponse>(`${RAILS_BASE}/leases`).then((res) =>
+        dagId
+          ? { leases: res.leases.filter((l) => l.dag_id === dagId) }
+          : res
+      ),
 
     /** Request lease on files/resources */
     request: async (req: LeaseRequest): Promise<LeaseResponse> => {
@@ -546,31 +539,39 @@ export const railsApi = {
       return { lease_id: raw.lease_id, granted: raw.status === "requested" };
     },
 
-    /** Renew lease — NOT available on the gateway. */
-    renew: (_leaseId: string, _ttlSeconds: number = 300): Promise<LeaseRenewResponse> =>
-      unavailableOnGateway("leases.renew", "POST /v1/leases/:lease_id/renew"),
+    /** Renew lease — POST /leases/:lease_id/renew on the gateway. */
+    renew: (leaseId: string, ttlSeconds: number = 300) => apiRequestWithError<LeaseRenewResponse>(
+      `${RAILS_BASE}/leases/${encodeURIComponent(leaseId)}/renew`,
+      { method: "POST", body: JSON.stringify({ ttl_seconds: ttlSeconds } satisfies LeaseRenewRequest) }
+    ),
 
-    /** Release lease — NOT available on the gateway. */
-    release: (_leaseId: string): Promise<{ released: boolean }> =>
-      unavailableOnGateway("leases.release", "DELETE /v1/leases/:lease_id"),
+    /** Release lease — DELETE /leases/:lease_id on the gateway. */
+    release: (leaseId: string) => apiRequestWithError<{ released: boolean }>(
+      `${RAILS_BASE}/leases/${encodeURIComponent(leaseId)}`,
+      { method: "DELETE" }
+    ),
   },
 
   // ============================================================================
   // CONTEXT PACKS - Sealed Execution Context
   //
-  // TODO(rails-gateway): the gateway mounts context packs under
-  // /workspace/:workspace_id/packs, which requires a workspace id these call
-  // sites do not have. The unscoped /context-packs data plane is missing.
+  // The unscoped data plane exists on the gateway: POST /context-packs (list)
+  // and POST /context-packs/seal. Packs sealed here persist their inputs
+  // verbatim under .allternit/context-packs/<pack_id>/pack.json.
   // ============================================================================
 
   contextPacks: {
-    /** List context packs — NOT available on the gateway. */
-    list: (_req?: ContextPackListRequest): Promise<ContextPackListResponse> =>
-      unavailableOnGateway("contextPacks.list", "POST /v1/context-packs"),
+    /** List context packs — POST /context-packs on the gateway. */
+    list: (req: ContextPackListRequest = {}) => apiRequestWithError<ContextPackListResponse>(
+      `${RAILS_BASE}/context-packs`,
+      { method: "POST", body: JSON.stringify(req) }
+    ),
 
-    /** Seal a new context pack — NOT available on the gateway. */
-    seal: (_req: ContextPackSealRequest): Promise<ContextPackSealResponse> =>
-      unavailableOnGateway("contextPacks.seal", "POST /v1/context-packs/seal"),
+    /** Seal a new context pack — POST /context-packs/seal on the gateway. */
+    seal: (req: ContextPackSealRequest) => apiRequestWithError<ContextPackSealResponse>(
+      `${RAILS_BASE}/context-packs/seal`,
+      { method: "POST", body: JSON.stringify(req) }
+    ),
   },
 
   // ============================================================================
@@ -608,11 +609,11 @@ export const railsApi = {
     /**
      * Trace events by node/wih/prompt. The standalone POST /ledger/trace
      * route does not exist on the gateway; the equivalent is
-     * GET /ledger/events (query params: since, dag_id, wih_id, limit) — see
-     * TODO(rails-gateway). `node_id`/`prompt_id` filters have no gateway
-     * equivalent and are not forwarded. Response fields are mapped from the
-     * gateway's LedgerEventResponse (ts -> timestamp; scope.run_id -> node_id,
-     * matching the receipts surface's run_id-as-node convention).
+     * GET /ledger/events (query params: since, dag_id, wih_id, limit).
+     * `node_id`/`prompt_id` filters have no gateway equivalent and are not
+     * forwarded. Response fields are mapped from the gateway's
+     * LedgerEventResponse (ts -> timestamp; scope.run_id -> node_id, matching
+     * the receipts surface's run_id-as-node convention).
      */
     trace: async (req: LedgerTraceRequest): Promise<LedgerEvent[]> => {
       const params = new URLSearchParams();
@@ -713,11 +714,11 @@ export const railsApi = {
       { method: "POST", body: JSON.stringify({ thread: threadId, approve, notes_ref: notesRef }) }
     ),
 
-    // TODO(rails-gateway): POST /mail/review has no equivalent on the 8013
-    // rails router; review requests would 404 on the gateway.
-    /** Request review — NOT available on the gateway. */
-    requestReview: (_threadId: string, _wihId: string, _diffRef: string): Promise<void> =>
-      unavailableOnGateway("mail.requestReview", "POST /v1/mail/review"),
+    /** Request review — POST /mail/review on the gateway. */
+    requestReview: (threadId: string, wihId: string, diffRef: string) => apiRequestWithError<void>(
+      `${RAILS_BASE}/mail/review`,
+      { method: "POST", body: JSON.stringify({ thread_id: threadId, wih_id: wihId, diff_ref: diffRef }) }
+    ),
 
     /**
      * Share asset. The gateway request struct is { thread, asset_ref?, path?,
@@ -730,52 +731,61 @@ export const railsApi = {
       { method: "POST", body: JSON.stringify({ thread: threadId, asset_ref: assetRef, note }) }
     ),
 
-    // TODO(rails-gateway): POST /mail/archive has no equivalent on the 8013
-    // rails router. Callers degrade gracefully — archived state is tracked
-    // locally and the failed call never blocked the UI.
-    /** Archive thread — NOT available on the gateway. */
-    archive: (_threadId: string, _path: string, _reason?: string): Promise<void> =>
-      unavailableOnGateway("mail.archive", "POST /v1/mail/archive"),
+    /** Archive thread — POST /mail/archive on the gateway. */
+    archive: (threadId: string, path: string, reason?: string) => apiRequestWithError<void>(
+      `${RAILS_BASE}/mail/archive`,
+      { method: "POST", body: JSON.stringify({ thread_id: threadId, path, reason }) }
+    ),
   },
 
   // ============================================================================
   // GATE - Policy Enforcement
   //
-  // TODO(rails-gateway): the 8013 router mounts only POST /gate/evaluate with
-  // an incompatible contract ({ action, resource, tenant_id, context }), so
-  // none of the standalone gate data plane below has a usable equivalent.
+  // The full gate data plane exists on the gateway alongside POST
+  // /gate/evaluate: GET /gate/status, POST /gate/check, GET /gate/rules,
+  // POST /gate/verify, POST /gate/decision, POST /gate/mutate. Decisions and
+  // mutations run in strict-provenance mode (a decision needs linked event
+  // ids; a delta needs at least one mutation).
   // ============================================================================
 
   gate: {
-    /** Get gate status — NOT available on the gateway. */
-    status: (): Promise<{ status: string }> =>
-      unavailableOnGateway("gate.status", "GET /v1/gate/status"),
+    /** Get gate status */
+    status: () => apiRequestWithError<{ status: string }>(`${RAILS_BASE}/gate/status`),
 
-    /** Check if action allowed — NOT available on the gateway. */
-    check: (_req: GateCheckRequest): Promise<GateCheckResponse> =>
-      unavailableOnGateway("gate.check", "POST /v1/gate/check"),
+    /** Check if action allowed */
+    check: (req: GateCheckRequest) => apiRequestWithError<GateCheckResponse>(
+      `${RAILS_BASE}/gate/check`,
+      { method: "POST", body: JSON.stringify(req) }
+    ),
 
-    /** Get GATE_RULES.md — NOT available on the gateway. */
-    rules: (): Promise<{ rules?: string }> =>
-      unavailableOnGateway("gate.rules", "GET /v1/gate/rules"),
+    /** Get GATE_RULES.md */
+    rules: () => apiRequestWithError<{ rules?: string }>(`${RAILS_BASE}/gate/rules`),
 
-    /** Verify ledger/DAGs — NOT available on the gateway. */
-    verify: (_json: boolean = true): Promise<{
+    /** Verify ledger/DAGs */
+    verify: (json: boolean = true) => apiRequestWithError<{
       ok: boolean;
       ledger_chain_ok: boolean;
       ledger_chain_issues?: string[];
       cycle_dags: string[];
-    }> => unavailableOnGateway("gate.verify", "POST /v1/gate/verify"),
+    }>(
+      `${RAILS_BASE}/gate/verify`,
+      { method: "POST", body: JSON.stringify({ json }) }
+    ),
 
-    /** Record decision — NOT available on the gateway. */
-    decision: (_note: string, _reason?: string, _links: string[] = []): Promise<{ decision_id: string }> =>
-      unavailableOnGateway("gate.decision", "POST /v1/gate/decision"),
+    /** Record decision */
+    decision: (note: string, reason?: string, links: string[] = []) => apiRequestWithError<{ decision_id: string }>(
+      `${RAILS_BASE}/gate/decision`,
+      { method: "POST", body: JSON.stringify({ note, reason, links }) }
+    ),
 
-    /** Mutate DAG with decision — NOT available on the gateway. */
-    mutate: (_dagId: string, _note: string, _reason?: string, _mutations?: DagMutation[]): Promise<{
+    /** Mutate DAG with decision */
+    mutate: (dagId: string, note: string, reason?: string, mutations?: DagMutation[]) => apiRequestWithError<{
       decision_id: string;
       mutation_ids: string[];
-    }> => unavailableOnGateway("gate.mutate", "POST /v1/gate/mutate"),
+    }>(
+      `${RAILS_BASE}/gate/mutate`,
+      { method: "POST", body: JSON.stringify({ dag_id: dagId, note, reason, mutations }) }
+    ),
   },
 
   // ============================================================================
@@ -804,15 +814,14 @@ export const railsApi = {
 
   // ============================================================================
   // INDEX - Search/Rebuild
-  //
-  // TODO(rails-gateway): POST /index/rebuild has no equivalent on the 8013
-  // rails router.
   // ============================================================================
 
   index: {
-    /** Rebuild index from ledger — NOT available on the gateway. */
-    rebuild: (): Promise<{ indexed_count: number }> =>
-      unavailableOnGateway("index.rebuild", "POST /v1/index/rebuild"),
+    /** Rebuild index from ledger — POST /index/rebuild on the gateway. */
+    rebuild: () => apiRequestWithError<{ indexed_count: number }>(
+      `${RAILS_BASE}/index/rebuild`,
+      { method: "POST" }
+    ),
   },
 };
 

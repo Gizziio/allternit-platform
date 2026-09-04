@@ -122,6 +122,21 @@ pub(crate) async fn upsert_instance(
     .bind(name)
     .fetch_one(db)
     .await?;
+    // Keep the migrations_pg/013 backfill row (id 'gi_' || instance id,
+    // kind 'local') alive: re-registration refreshes its liveness so node
+    // resolution keeps considering it. No-op when the row does not exist
+    // (e.g. 013 not applied); the UPDATE targets at most one row.
+    sqlx::query(
+        r#"
+        UPDATE runtime_devices
+        SET status = 'online', last_seen_at = CURRENT_TIMESTAMP, endpoint_url = $1
+        WHERE id = 'gi_' || $2
+        "#,
+    )
+    .bind(&instance.url)
+    .bind(&instance.id)
+    .execute(db)
+    .await?;
     Ok(instance)
 }
 
@@ -384,7 +399,8 @@ mod tests {
         .unwrap();
         // Minimal runtime_devices shape for the device-token auth path
         // (including the migration-022 rotation-grace columns
-        // runtime_device_for_token falls back to).
+        // runtime_device_for_token falls back to, and the migration-012
+        // endpoint_url upsert_instance stamps the backfill row with).
         sqlx::query("DROP TABLE IF EXISTS runtime_devices CASCADE").execute(&pool).await.unwrap();
         sqlx::query(r#"
         CREATE TABLE runtime_devices (
@@ -395,6 +411,7 @@ mod tests {
                 credential_expires_at TIMESTAMPTZ NOT NULL,
                 previous_credential_hash TEXT,
                 previous_credential_expires_at TIMESTAMPTZ,
+                endpoint_url TEXT,
                 status TEXT NOT NULL DEFAULT 'offline',
                 last_seen_at TIMESTAMPTZ,
                 revoked_at TIMESTAMPTZ

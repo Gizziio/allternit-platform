@@ -64,6 +64,10 @@ pub struct ApiState {
     /// Behind a trait so handler tests can substitute a mock at the service
     /// boundary.
     pub data_plane_gateway: Arc<dyn routes::data_plane::DataPlaneGateway>,
+    /// P2 per-subscription provisioning lane (Incus fleet): fleet
+    /// scheduling, per-instance lifecycle (create/start/stop/status/delete),
+    /// pairing bind, and run-interval metering.
+    pub provisioning_service: Arc<services::ProvisioningService>,
     /// Mesh enrollment service (Headscale), absent when HEADSCALE_API_KEY is unset
     pub mesh_service: Option<Arc<routes::mesh::MeshService>>,
     /// AES-256-GCM cipher for provider tokens and wizard checkpoints,
@@ -356,6 +360,16 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
         // (/beta/sessions/:id/events/ws) is intentionally not exposed — it
         // needs the socket-ticket WS relay, not the request relay.
         .merge(routes::beta::routes())
+        // Canvas namespace (P1, tranche 2): user-wide list plus per-canvas
+        // get/patch/delete, relayed to the caller's default node. The data
+        // plane owns no streaming canvas variant — plain JSON CRUD only.
+        .merge(routes::canvases::routes())
+        // P2 per-subscription provisioning lane: owner-scoped instance
+        // lifecycle (subscription-gated create, start/stop/status/delete,
+        // usage) plus admin-only fleet host management. Control plane only —
+        // the provisioned container is reached via the runtime relay like
+        // any registered node.
+        .merge(routes::provisioned_instances::routes())
         // Data-plane JWT public key (decision A1): nodes fetch cloud-api's
         // Ed25519 verifying key at startup. Public, fail-closed 503 when
         // ALLTERNIT_DP_JWT_SEED is unset.

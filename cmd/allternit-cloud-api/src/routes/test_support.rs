@@ -240,6 +240,17 @@ pub async fn seed_runtime_device(db: &sqlx::PgPool, device_id: &str, user_id: &s
 /// Minimal ApiState with the gateway mocked; mirrors the wiring in
 /// tests/common/mod.rs.
 pub async fn test_state(gateway: Arc<dyn DataPlaneGateway>) -> Arc<ApiState> {
+    test_state_with_provisioning(gateway, None).await
+}
+
+/// Like [`test_state`], but lets the caller substitute the provisioning
+/// service (routes::provisioned_instances tests inject a mock backend
+/// registry; everyone else gets the default Incus registry, which these
+/// tests never invoke).
+pub async fn test_state_with_provisioning(
+    gateway: Arc<dyn DataPlaneGateway>,
+    provisioning_service: Option<Arc<crate::services::ProvisioningService>>,
+) -> Arc<ApiState> {
     let db = test_pool().await;
     let event_store: Arc<dyn crate::services::EventStore> =
         Arc::new(crate::services::EventStoreImpl::new(db.clone()));
@@ -272,6 +283,8 @@ pub async fn test_state(gateway: Arc<dyn DataPlaneGateway>) -> Arc<ApiState> {
             "https://api.allternit.com".to_string(),
         )),
         data_plane_gateway: gateway,
+        provisioning_service: provisioning_service
+            .unwrap_or_else(|| Arc::new(crate::services::ProvisioningService::new(db.clone()))),
         mesh_service: None,
         credential_cipher: None,
         inference_key_service: None,

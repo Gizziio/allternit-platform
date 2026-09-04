@@ -435,16 +435,16 @@ mod tests {
     }
 
     const MIGRATION_012: &str = include_str!("../../migrations_pg/012_data_plane_nodes.sql");
+    const MIGRATION_013: &str = include_str!("../../migrations_pg/013_gizzi_instances_backfill.sql");
 
-    /// Applies migrations_pg/012 to a scratch schema (public. rewritten to
-    /// the schema) — twice, proving the IF NOT EXISTS up statements are
-    /// idempotent. sqlx migrations are up-only in this repo; there is no
-    /// down-migration pattern to follow (tests/migrations.rs applies the
-    /// SQLite lineage to a fresh DB only).
-    async fn apply_migration_012(pool: &sqlx::PgPool, schema: &str) {
-        // Strip line comments before splitting: the migration header prose
+    /// Applies a migrations_pg file to a scratch schema (public. rewritten to
+    /// the schema), statement by statement. sqlx migrations are up-only in
+    /// this repo; there is no down-migration pattern to follow
+    /// (tests/migrations.rs applies the SQLite lineage to a fresh DB only).
+    async fn apply_migration_sql(pool: &sqlx::PgPool, schema: &str, sql: &str) {
+        // Strip line comments before splitting: migration header prose
         // contains semicolons that would otherwise parse as statement ends.
-        let without_comments = MIGRATION_012
+        let without_comments = sql
             .lines()
             .map(|line| line.split_once("--").map(|(code, _)| code).unwrap_or(line))
             .collect::<Vec<_>>()
@@ -459,6 +459,12 @@ mod tests {
             }
             sqlx::query(statement).execute(pool).await.unwrap();
         }
+    }
+
+    /// Applies migrations_pg/012 to a scratch schema — twice, proving the
+    /// IF NOT EXISTS up statements are idempotent.
+    async fn apply_migration_012(pool: &sqlx::PgPool, schema: &str) {
+        apply_migration_sql(pool, schema, MIGRATION_012).await;
     }
 
     #[tokio::test]
@@ -546,5 +552,141 @@ mod tests {
         .await
         .unwrap();
         assert_eq!(preferred, "rt_local");
+    }
+
+    /// Post-migration-013 backfill coverage: every gizzi_instances row
+    /// becomes a kind='local' runtime_devices row (derived id 'gi_' ||
+    /// instance id), the INSERT...SELECT is idempotent under re-application,
+    /// and the resolver treats backfilled rows like any other registry row.
+    #[tokio::test]
+    async fn migration_013_backfills_gizzi_instances_and_resolves() {
+        let pool = test_pool().await;
+        // Same pre-012 stubs as migration_012_applies_idempotently (users FK
+        // target + pre-012 runtime_devices), plus the PG-shape
+        // gizzi_instances from migrations_pg/001 (pgloader: all columns
+        // nullable except the id PK).
+        sqlx::query("CREATE TABLE users (id TEXT PRIMARY KEY)")
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query(
+            r#"
+            CREATE TABLE runtime_devices (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL REFERENCES users(id),
+                name TEXT NOT NULL,
+                runtime_type TEXT,
+                capabilities TEXT NOT NULL DEFAULT '[]',
+                credential_hash TEXT,
+                credential_expires_at TIMESTAMPTZ,
+                status TEXT NOT NULL DEFAULT 'offline',
+                last_seen_at TIMESTAMPTZ,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                revoked_at TIMESTAMPTZ
+            )
+            "#,
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        sqlx::query("CREATE TABLE gizzi_instances (id TEXT PRIMARY KEY, user_id TEXT, name TEXT, url TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)")
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let schema: String =
+            sqlx::query_scalar("SELECT current_schema()").fetch_one(&pool).await.unwrap();
+        apply_migration_012(&pool, &schema).await;
+
+        sqlx::query(
+            "INSERT INTO users (id) VALUES ('user_1'), ('user_2')",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        sqlx::query(
+            r#"
+            INSERT INTO gizzi_instances (id, user_id, name, url, created_at, updated_at)
+            VALUES ('inst_fresh', 'user_1', 'default', 'https://fresh.trycloudflare.com',
+                    CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+                   ('inst_stale', 'user_1', 'old-box', 'https://old.trycloudflare.com',
+                    CURRENT_TIMESTAMP - interval '2 days',
+                    CURRENT_TIMESTAMP - interval '2 days'),
+                   ('inst_nourl', 'user_2', 'broken', NULL,
+                    CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            "#,
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        // Twice: ON CONFLICT (id) DO NOTHING makes the backfill idempotent.
+        apply_migration_sql(&pool, &schema, MIGRATION_013).await;
+        apply_migration_sql(&pool, &schema, MIGRATION_013).await;
+
+        let backfilled: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM runtime_devices WHERE id LIKE 'gi\\_inst%' ESCAPE '\\'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(backfilled, 2, "NULL-url instances must not backfill");
+
+        let row: (String, String, String, String, String) = sqlx::query_as(
+            r#"
+            SELECT kind, endpoint_url, runtime_type, status, capabilities
+            FROM runtime_devices WHERE id = 'gi_inst_fresh'
+            "#,
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(row.0, NodeKind::LOCAL);
+        assert_eq!(row.1, "https://fresh.trycloudflare.com");
+        assert_eq!(row.2, "desktop");
+        assert_eq!(row.3, "online");
+        assert_eq!(row.4, "[]");
+
+        // Credential-less rows must not expire out of the health check.
+        let expires: DateTime<Utc> = sqlx::query_scalar(
+            "SELECT credential_expires_at FROM runtime_devices WHERE id = 'gi_inst_fresh'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert!(expires > Utc::now() + Duration::days(365 * 50));
+
+        // Re-application after rows gained state must not clobber them.
+        sqlx::query("UPDATE runtime_devices SET status = 'offline' WHERE id = 'gi_inst_stale'")
+            .execute(&pool)
+            .await
+            .unwrap();
+        apply_migration_sql(&pool, &schema, MIGRATION_013).await;
+        let stale_status: String = sqlx::query_scalar(
+            "SELECT status FROM runtime_devices WHERE id = 'gi_inst_stale'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(stale_status, "offline", "DO NOTHING keeps later state");
+
+        // Resolver: backfilled rows are ordinary runtime_devices rows — the
+        // fresh instance resolves as the default node, the stale one alone
+        // does not.
+        let store = PgNodeStore::new(&pool);
+        let node = resolve_default_node(&store, "user_1").await.unwrap();
+        assert_eq!(node.device_id, "gi_inst_fresh");
+        assert_eq!(node.kind, NodeKind(NodeKind::LOCAL.to_string()));
+
+        sqlx::query("DELETE FROM runtime_devices WHERE id = 'gi_inst_fresh'")
+            .execute(&pool)
+            .await
+            .unwrap();
+        let error = resolve_default_node(&store, "user_1").await.unwrap_err();
+        assert!(
+            matches!(error, ApiError::PreconditionRequired(_)),
+            "a stale backfilled node alone must not resolve: {error}"
+        );
     }
 }
