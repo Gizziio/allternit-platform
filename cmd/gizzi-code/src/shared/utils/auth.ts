@@ -1,6 +1,5 @@
-// @ts-nocheck
 import chalk from 'chalk'
-import { execa } from 'execa'
+import execa from 'execa'
 import { mkdir, stat } from 'fs/promises'
 import memoize from 'lodash-es/memoize.js'
 import { join } from 'path'
@@ -473,8 +472,18 @@ export function prefetchApiKeyFromApiKeyHelperIfSafe(
   void getApiKeyFromApiKeyHelper(isNonInteractiveSession)
 }
 
+/**
+ * lodash's memoize attaches a `.cache` property, but the `lodash-es/memoize.js`
+ * deep-import types drop it — re-declare the shape we rely on (cache clearing).
+ */
+type MemoizedWithCache<T extends (...args: never[]) => unknown> = T & {
+  cache?: { clear?: () => void }
+}
+
 /** @private Use {@link getAnthropicApiKey} or {@link getAnthropicApiKeyWithSource} */
-export const getApiKeyFromConfigOrMacOSKeychain = memoize(
+export const getApiKeyFromConfigOrMacOSKeychain: MemoizedWithCache<
+  () => { key: string; source: ApiKeySource } | null
+> = memoize(
   (): { key: string; source: ApiKeySource } | null => {
     if (isBareMode()) return null
     if (process.platform === 'darwin') {
@@ -653,7 +662,7 @@ export function saveOAuthTokensIfNeeded(tokens: OAuthTokens): {
   }
 }
 
-export const getClaudeAIOAuthTokens = memoize((): OAuthTokens | null => {
+export const getClaudeAIOAuthTokens: MemoizedWithCache<() => OAuthTokens | null> = memoize((): OAuthTokens | null => {
   if (isBareMode()) return null
 
   if (process.env.GIZZI_OAUTH_TOKEN) {

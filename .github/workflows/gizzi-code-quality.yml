@@ -119,6 +119,26 @@ jobs:
           path: cmd/gizzi-code/bun-audit-report.json
           if-no-files-found: warn
 
+  ts-nocheck-ratchet:
+    name: "@ts-nocheck ratchet"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Ratchet on `// @ts-nocheck` usage under cmd/gizzi-code/src: the count
+      # may shrink but never grow (script/ts-nocheck-baseline.txt). Script only
+      # needs bash+grep, so no toolchain setup here.
+      #
+      # continue-on-error is ON while the baseline is still huge (~3.7k files,
+      # legacy mass-suppression). TODO(ratchet-hardening): remove
+      # continue-on-error once the count is driven down to the agreed target
+      # and make any increase a hard gate.
+      - name: Check @ts-nocheck count
+        continue-on-error: true
+        working-directory: cmd/gizzi-code
+        shell: bash
+        run: bash script/check-ts-nocheck.sh
+
   gitleaks:
     name: Secret scan
     runs-on: ubuntu-latest
