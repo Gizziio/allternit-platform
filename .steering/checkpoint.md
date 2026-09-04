@@ -13,9 +13,9 @@ Three production-readiness hardening slices in cmd/gizzi-code, on branch `sessio
 - typecheck: PASS (exit 0). Standalone new-test run: 17 pass / 0 fail.
 
 ## Next
-- Awaiting full ci-smoke-test.sh rerun (task bash-4btu53sh) after converting middleware auth-flag reads to live env reads.
-- Update cmd/gizzi-code/AGENTS.md if any documented behavior changed (web exposure guard now throws like serve).
-- Commit on branch (may split: auth parity / CORS / empty-catch + execa fix). No push.
+- DONE: full ci-smoke-test.sh PASS (949 pass / 0 fail / 1173 tests / 91 files), typecheck exit 0.
+- Committed on branch session/gizzi-p3-webauth-20260904 as 59f770458 (43 files, +606/-97). No push, no merge.
+- Remaining for the orchestrator: merge/push decision, then worktree cleanup + agent-ledger attestation per repo AGENTS.md.
 
 ## Open questions
 - none — execa blocker root-caused and fixed in-repo.
