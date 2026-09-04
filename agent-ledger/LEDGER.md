@@ -121,3 +121,9 @@ Phase 2/3 hardening of allternit-cloud-api complete and deployed to the Contabo 
 
 - **ba9de8f8** (cloud backend hardening) → `97ecec0bb` [Summary](./summaries/2026-09-03-1716-ba9de8f8-kimi-cloud-backend-hardening.md)
 - [2026-09-03 session/423a858e](summaries/20260903-2010-423a858e-kimi-ai-redirects-fix.md) — ai.allternit.com _redirects: stop catch-all from swallowing static assets; add robots.txt + 404.html. Merged dc91223b6.
+
+### 2026-09-04 — kimi — API consolidation: control-plane/data-plane split (session/routing)
+
+Audit Step 6 decided by owner (option b + interim proxy). P0: vendored cloud-contracts (CI blocker), CORS allowlist, dev-token gate (default OFF), fail-closed flags for all 8013-only namespaces. P1: node registry (migration 011) + control-plane handlers for agent-sessions/office/beta via existing WS relay, data-plane JWT (A1) both sides, WS relay for beta events, rails dialect fix, web flipped to control-plane (flags off). 13 commits `4f77728c3..f3b4ed071`. Deferred: iOS Xcode build (owner), ~270 pre-existing allternit-api --lib failures (refinery/stale-binary debt), 21 rails + canvas control-plane routes, post-merge ops (migration 011 + DP_JWT_SEED + nginx proxy + bypass flip — sequence in summary).
+
+- **session/routing** (API consolidation) → summary [2026-09-04](./summaries/2026-09-04-session-routing-kimi-api-consolidation.md)
