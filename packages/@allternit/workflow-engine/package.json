@@ -41,5 +41,9 @@
     "orchestration",
     "automation"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "files": [
+    "dist",
+    "README.md"
+  ]
 }

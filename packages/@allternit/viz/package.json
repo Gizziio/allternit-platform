@@ -29,5 +29,9 @@
     "dashboards",
     "data"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "files": [
+    "dist",
+    "README.md"
+  ]
 }
