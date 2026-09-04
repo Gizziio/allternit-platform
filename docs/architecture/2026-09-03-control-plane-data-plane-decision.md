@@ -22,7 +22,7 @@ The offering is BYOC + BYOK with a growing hosted lane. The owner's direction: c
 
 **D3 — Per-customer instance = per-customer SQLite.** Each data-plane instance keeps its own SQLite file. No shared data-plane Postgres. Rationale: blast radius is one tenant, migrations move one small file, and a sub can be relocated to a bigger host by moving a container + file. This is a deliberate decision, not a default to revisit.
 
-**D4 — Interim availability fix (now): nginx prefix routes.** Until D2's route migration lands, nginx on `mail` proxies the known 8013-owned prefixes (`/api/jobs`, `/api/v1/agent-sessions`, `/api/v1/office/`, `/api/v1/beta/`, `/api/rails/`) to `127.0.0.1:8013`; everything else stays on 8082. Verified: cloud-api defines **no** routes under those prefixes (its jobs live at `/api/v1/runs/:run_id/jobs`), so there is no shadowing. Snippet: `infrastructure/vps-desktop-cloud/nginx-api-allternit-interim-proxy.conf`. Deploy is owner-gated; see verification list there.
+**D4 — ~~Interim availability fix: nginx prefix routes~~ RETIRED 2026-09-04 (superseded, never fully relied on).** The original plan: nginx on `mail` proxies the 8013-owned prefixes to `127.0.0.1:8013` until route migration lands. It became unnecessary the moment P1 landed — the web surface now targets the cloud-api control-plane handlers directly (`getCloudApiBaseUrl()`), so 8013 never needs public exposure. The config (`infrastructure/vps-desktop-cloud/nginx-api-allternit-interim-proxy.conf` + its CORS map) is **deleted from the repo** to avoid technical debt. ⚠️ A previous hardening session deployed the CORS map (and possibly the location blocks) live on `mail` at `/etc/nginx/conf.d/` — removing that live config is on the owner-actions list (`docs/Operations/OWNER_ACTIONS.md`, item: retire the live 8013 proxy). **D4 replacement:** no public path to 8013, ever; availability comes from P1 control-plane handlers.
 
 **D5 — Web env strategy.** `VITE_ALLTERNIT_GATEWAY_URL` stays `https://api.allternit.com` in production. No second origin, no CORS split-brain. The localhost default in `api-client.ts:33` remains the desktop/tunnel fallback.
 
@@ -43,11 +43,11 @@ The offering is BYOC + BYOK with a growing hosted lane. The owner's direction: c
 
 ## Work list (updated, in order)
 
-**P0 — interim availability (this week, owner-gated deploy)**
-1. Deploy `infrastructure/vps-desktop-cloud/nginx-api-allternit-interim-proxy.conf` on `mail`; verify with the curl set in that file (the five prefixes should reach 8013 — they will answer 401 until P1 auth lands, which is expected; confirm `/api/v1/runs/*` and `/api/v1/auth/me` still hit cloud-api).
+**P0 — interim availability (2026-09-04: all items resolved or retired)**
+1. ~~Deploy nginx interim proxy~~ **Retired (D4):** P1 control-plane handlers superseded it; config deleted from repo; live-config removal is an owner action.
 2. ~~Enumeration pass~~ **Done 2026-09-03 (A4):** `/api/chat`, `/api/v1/sessions/:id/events`, `/api/v1/agents/:id/events`, `/api/v1/operator/events/*` exist on **neither** backend — orphaned client calls. Do not proxy; fix the client instead.
-3. Harden 8013 before it is publicly reachable: replace the CORS mirror-any-origin with an allowlist (`platform.allternit.com`, `ai.allternit.com` origins calling `api.allternit.com`) and add rate limiting at nginx.
-4. Feature-flag the console widgets that call the five proxied namespaces until their P1 control-plane handler lands, so users see a deliberate state instead of a 401.
+3. ~~Harden 8013 CORS~~ **Done in the binary 2026-09-04:** CORS allowlist (`ALLTERNIT_CORS_ORIGINS`) + 403 origin gate in allternit-api; rate limiting was prepared at nginx but retired along with D4 — add `limit_req` at the edge later only if 8013 ever becomes publicly reachable (it should not).
+4. ~~Feature-flag console widgets~~ **Done 2026-09-04:** all 8013-only namespaces fail closed behind false-default flags.
 
 **P1 — route migration (the real fix)**
 4. Inventory the 8013 routes the console actually uses; add control-plane handlers in cloud-api for each. Handler contract: authenticate (Clerk session), resolve the caller's registered data-plane node, then proxy/queue — never assume localhost.

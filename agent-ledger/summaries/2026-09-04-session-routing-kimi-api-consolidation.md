@@ -63,6 +63,6 @@ backend). DevPod/E2B/OpenCode/Codespaces prior art researched.
 1. Apply `cmd/allternit-cloud-api/migrations_pg/011_data_plane_nodes.sql` on
    `mail` (CI does not apply migrations; new handlers degrade until applied)
 2. Set `ALLTERNIT_DP_JWT_SEED` (`openssl rand -base64 32`) in cloud-api env on `mail`
-3. Deploy nginx interim proxy (infrastructure/vps-desktop-cloud/nginx-api-allternit-interim-proxy.conf) and flip `ALLTERNIT_LOCAL_DEV_BYPASS=false`
+3. ~~Deploy nginx interim proxy~~ RETIRED 2026-09-04 (superseded by P1 control-plane handlers; live-config removal on mail is item 3 of docs/Operations/OWNER_ACTIONS.md). `ALLTERNIT_LOCAL_DEV_BYPASS` flip on the VPS is no longer security-urgent since 8013 has no public path
 4. Verify backdoor closed: `curl -H "Authorization: Bearer dev-api-token" https://api.allternit.com/api/v1/auth/me` → 401
 5. Enable web flags per-namespace in `.env.production`, redeploy Pages
