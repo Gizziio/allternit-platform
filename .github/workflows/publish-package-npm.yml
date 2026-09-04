@@ -1,0 +1,137 @@
+name: Publish an @allternit package to NPM
+
+on:
+  workflow_dispatch:
+    inputs:
+      path:
+        description: 'Package directory relative to repo root (e.g. packages/@allternit/api-client)'
+        required: true
+        type: string
+      version:
+        description: 'Version to publish (e.g. 1.0.2)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node for NPM
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Validate package path
+        # Only known package roots may be published; refuse anything else so a
+        # typo or misuse can never point the workflow at an arbitrary directory.
+        run: |
+          case "${{ inputs.path }}" in
+            packages/@allternit/*|sdk/*) ;;
+            *) echo "::error::refusing to publish from unexpected path: ${{ inputs.path }}"; exit 1 ;;
+          esac
+          test -f "${{ inputs.path }}/package.json" || { echo "::error::no package.json at ${{ inputs.path }}"; exit 1; }
+          NAME=$(node -p "require('./${{ inputs.path }}/package.json').name")
+          case "$NAME" in
+            @allternit/*) ;;
+            *) echo "::error::refusing to publish non-@allternit package: $NAME"; exit 1 ;;
+          esac
+          echo "Publishing $NAME@${{ inputs.version }} from ${{ inputs.path }}"
+
+      - name: Install package dependencies
+        # Standalone npm install inside the package dir on purpose: these
+        # packages have no workspace:* deps, and a full pnpm workspace install
+        # trips the known @allternit/visual-state name conflict (see AGENTS.md).
+        working-directory: ${{ inputs.path }}
+        run: npm install --no-audit --no-fund
+
+      - name: Set version in package.json
+        working-directory: ${{ inputs.path }}
+        run: |
+          CURRENT=$(node -p "require('./package.json').version")
+          if [ "$CURRENT" != "${{ inputs.version }}" ]; then
+            npm version "${{ inputs.version }}" --no-git-tag-version
+          else
+            echo "package.json already at $CURRENT; skipping bump"
+          fi
+
+      - name: Build
+        working-directory: ${{ inputs.path }}
+        run: |
+          if node -e "process.exit(require('./package.json').scripts && require('./package.json').scripts.build ? 0 : 1)"; then
+            npm run build
+          else
+            echo "no build script; skipping"
+          fi
+
+      - name: Verify dist matches every export subpath
+        # Fail if any export entry points at a missing file, so a dangling
+        # export can never reach the registry.
+        working-directory: ${{ inputs.path }}
+        run: |
+          node -e '
+            const fs = require("fs");
+            const path = require("path");
+            const pkg = require("./package.json");
+            const failures = [];
+            for (const [sub, target] of Object.entries(pkg.exports || {})) {
+              const mapped = target && typeof target === "object" ? (target.import || target.require || target.default) : target;
+              if (!mapped) continue;
+              const rel = mapped.replace(/^\.\//, "");
+              if (!fs.existsSync(path.join(process.cwd(), rel))) {
+                failures.push(`${sub} -> ${mapped}`);
+              }
+            }
+            const main = pkg.main && pkg.main.replace(/^\.\//, "");
+            if (main && !fs.existsSync(path.join(process.cwd(), main))) {
+              failures.push(`main -> ${pkg.main}`);
+            }
+            if (failures.length) {
+              console.error("Dangling exports:\n  " + failures.join("\n  "));
+              process.exit(1);
+            }
+            console.log("exports ok:", Object.keys(pkg.exports || {}).length, "entries");
+          '
+
+      - name: Publish to NPM
+        working-directory: ${{ inputs.path }}
+        run: |
+          NAME=$(node -p "require('./package.json').name")
+          if npm view "$NAME@${{ inputs.version }}" version >/dev/null 2>&1; then
+            echo "$NAME@${{ inputs.version }} already published; skipping"
+          else
+            npm publish --access public
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Verify published package
+        # Download the just-published tarball and confirm dist/ + main land.
+        shell: bash
+        run: |
+          set -euo pipefail
+          PKG=$(node -p "require('./${{ inputs.path }}/package.json').name")
+          VERSION="${{ inputs.version }}"
+          TARBALL=""
+          for attempt in 1 2 3 4 5; do
+            TARBALL=$(npm view "$PKG@$VERSION" dist.tarball 2>/dev/null || true)
+            [ -n "$TARBALL" ] && break
+            sleep 10
+          done
+          [ -n "$TARBALL" ] || { echo "::error::could not resolve tarball for $PKG@$VERSION"; exit 1; }
+          TMP=$(mktemp -d)
+          for attempt in 1 2 3 4 5 6 7 8 9 10; do
+            if curl -fsSL "$TARBALL" -o "$TMP/package.tgz" 2>/dev/null; then break; fi
+            echo "tarball download failed (attempt $attempt); sleeping 30s"; sleep 30
+          done
+          test -s "$TMP/package.tgz" || { echo "::error::could not download $TARBALL"; exit 1; }
+          FILES=$(tar -tzf "$TMP/package.tgz")
+          MAIN=$(node -p "require('./${{ inputs.path }}/package.json').main || 'dist/index.js'")
+          MAIN_DIR=$(dirname "$MAIN" | sed 's|^\./||')
+          grep -q "package/$MAIN_DIR/" <<< "$FILES" || { echo "::error::published $PKG@$VERSION has no $MAIN_DIR/"; exit 1; }
+          echo "Verified: $PKG@$VERSION published with $MAIN_DIR/."

@@ -1,6 +1,6 @@
 {
   "name": "@allternit/workflow-engine",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Allternit Workflow Engine - Visual workflow orchestration with DAG support",
   "type": "module",
   "main": "./dist/index.js",
