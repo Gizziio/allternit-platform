@@ -35,19 +35,15 @@
 # Without this pass-through the Discovery feed returns SPA HTML (text/html).
 /discovery-feed.json /discovery-feed.json 200
 
-# Clerk auth sub-path routing (exact match + sub-paths)
-/sign-in /sign-in 200
-/sign-in/* /sign-in 200
-/sign-up /sign-up 200
-/sign-up/* /sign-up 200
-
-# Shell sub-routes
-/shell /shell 200
-/shell/* /shell 200
-
-# Other app routes that must not fall through to root (would trigger AuthGate loop)
-/connect /connect 200
-/connect/* /connect 200
+# NOTE: auth/app routes (/sign-in, /sign-up, /shell, /connect, ...) are NOT
+# listed here on purpose. There are no prerendered HTML files for them in the
+# current build — an identity rewrite to a missing file returns CF's 404
+# (verified live 2026-09-04) and locks users out of sign-in entirely.
+# The SPA fallback below rewrites to / while preserving the browser URL, so
+# the client router renders the right page and AuthGate's /sign-in guard
+# (which checks window.location.pathname, not the rewrite target) does not
+# loop. If prerendering is ever restored, re-add self-rewrites for the
+# prerendered routes here.
 
 # SPA fallback (rewrite to root path, not /index.html, to avoid CF loop detection)
 /* / 200
