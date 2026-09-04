@@ -65,15 +65,6 @@ src/cli/commands/ctx_viz/index.js
 src/cli/commands/ctx_viz/index.ts
 src/cli/commands/debug-tool-call/index.js
 src/cli/commands/debug-tool-call/index.ts
-src/cli/commands/debug/agent.ts
-src/cli/commands/debug/config.ts
-src/cli/commands/debug/debug.ts
-src/cli/commands/debug/file.ts
-src/cli/commands/debug/lsp.ts
-src/cli/commands/debug/ripgrep.ts
-src/cli/commands/debug/scrap.ts
-src/cli/commands/debug/skill.ts
-src/cli/commands/debug/snapshot.ts
 src/cli/commands/desktop/desktop.tsx
 src/cli/commands/desktop/index.ts
 src/cli/commands/diff/diff.tsx
@@ -1622,11 +1613,6 @@ src/runtime/entrypoints/agentSdkTypes.ts
 src/runtime/entrypoints/sdk/controlTypes.ts
 src/runtime/entrypoints/sdk/sdkUtilityTypes.ts
 src/runtime/error/format.ts
-src/runtime/file/file.ts
-src/runtime/file/ignore.ts
-src/runtime/file/ripgrep.ts
-src/runtime/file/time.ts
-src/runtime/file/watcher.ts
 src/runtime/format/format.ts
 src/runtime/format/formatter.ts
 src/runtime/gizzi-core/QueryEngine.ts
@@ -1968,8 +1954,6 @@ src/runtime/util/defer.ts
 src/runtime/util/eventloop.ts
 src/runtime/util/fn.ts
 src/runtime/util/git.ts
-src/runtime/util/glob.ts
-src/runtime/util/iife.ts
 src/runtime/util/keybind.ts
 src/runtime/util/locale.ts
 src/runtime/util/lock.ts

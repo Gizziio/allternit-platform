@@ -191,6 +191,33 @@ const PluginDisableCommand = cmd({
   },
 })
 
+const PluginMigrateCommand = cmd({
+  command: "migrate",
+  describe: "copy legacy ~/.claude/plugins state into the canonical ~/.gizzi/plugins",
+  handler: async () => {
+    const {
+      migrateLegacyPluginsDir,
+      getPluginDirsState,
+    } = await import("@/shared/utils/plugins/pluginDirectories")
+    const result = await migrateLegacyPluginsDir()
+    if (result.copied.length === 0 && result.skipped.length === 0) {
+      UI.println("No legacy ~/.claude/plugins state found; nothing to migrate.")
+      return
+    }
+    const state = getPluginDirsState()
+    if (result.copied.length > 0) {
+      UI.println(
+        `Migrated legacy plugin state to ${state.canonicalDir} (copied: ${result.copied.join(", ")}). The legacy directory was left untouched.`,
+      )
+    } else {
+      UI.println("Legacy plugin state found, but everything already exists in the canonical location; nothing copied. The legacy directory was left untouched.")
+    }
+    if (result.skipped.length > 0) {
+      UI.println(`Skipped (already present): ${result.skipped.join(", ")}`)
+    }
+  },
+})
+
 export const PluginCommand = cmd({
   command: "plugin",
   describe: "manage plugins",
@@ -202,6 +229,7 @@ export const PluginCommand = cmd({
       .command(PluginSearchCommand)
       .command(PluginEnableCommand)
       .command(PluginDisableCommand)
-      .demandCommand(1, "specify a subcommand: install, remove, list, search, enable, disable"),
+      .command(PluginMigrateCommand)
+      .demandCommand(1, "specify a subcommand: install, remove, list, search, enable, disable, migrate"),
   handler: () => {},
 })
