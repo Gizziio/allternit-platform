@@ -139,23 +139,59 @@ export function isRunnerAiChatEnabled(): boolean {
 }
 
 /**
- * Agent Sessions API — `/api/v1/agent-sessions` (CRUD, `/sync` SSE, canvases,
- * lifecycle). These handlers live only on the Rust allternit-api (:8013),
- * which is not publicly reachable from the deployed web surface, so this
+ * Cloud control-plane API base URL — the Clerk-authed cloud-api origin that
+ * serves the user-level control-plane namespaces (`/api/v1/agent-sessions`,
+ * `/api/v1/office/*`, `/api/v1/beta/*`) by relaying to the user's registered
+ * data-plane node. Resolution order:
+ *
+ *   1. `VITE_CLOUD_API_URL` (build-time, preferred).
+ *   2. `NEXT_PUBLIC_ALLTERNIT_CLOUD_API_URL` (legacy convention used by the
+ *      fetch interceptor and the runtime-devices relay).
+ *   3. When the surface itself is served from loopback (Vite dev server),
+ *      `http://localhost:3001` — cloud-api's default BIND_ADDR.
+ *   4. `https://api.allternit.com`.
+ *
+ * This is NOT the 8013 gateway: only the three control-plane namespaces above
+ * target this origin, and only when their feature flag is on.
+ */
+export function getCloudApiBaseUrl(): string {
+  const configured =
+    env('VITE_CLOUD_API_URL') ?? env('NEXT_PUBLIC_ALLTERNIT_CLOUD_API_URL');
+  if (configured) {
+    return configured.replace(/\/+$/, '');
+  }
+  if (
+    typeof window !== 'undefined' &&
+    (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost')
+  ) {
+    return 'http://localhost:3001';
+  }
+  return 'https://api.allternit.com';
+}
+
+/**
+ * Agent Sessions API — `/api/v1/agent-sessions` (CRUD, `/sync` SSE,
+ * abort/revert/unrevert/compact). These handlers are served by the cloud-api
+ * control plane (Clerk auth → user's data-plane node → relay), so this
  * defaults OFF: session stores skip the backend probe/sync and fail closed
- * with a deliberate message instead of retrying 404s forever.
- * Set NEXT_PUBLIC_ALLTERNIT_AGENT_SESSIONS_API=1 where the gateway is reachable.
+ * with a deliberate message instead of firing unauthenticated requests.
+ * When ON, callers target `getCloudApiBaseUrl()` — not the 8013 gateway —
+ * with the Clerk session bearer; the `/sync` SSE stream uses authenticated
+ * fetch streaming because cloud-api accepts no session cookie.
+ * Set NEXT_PUBLIC_ALLTERNIT_AGENT_SESSIONS_API=1 in deployments that turn on
+ * the control-plane handlers.
  */
 export function isAgentSessionsApiEnabled(): boolean {
   return envFlag('NEXT_PUBLIC_ALLTERNIT_AGENT_SESSIONS_API');
 }
 
 /**
- * Office bindings API — `/api/v1/office/bindings`. Served only by the Rust
- * allternit-api (:8013), not by the deployed web surface, so this defaults
- * OFF and office-binding probes fail closed (binding treated as absent)
- * instead of polling an unreachable endpoint every 10s.
- * Set NEXT_PUBLIC_ALLTERNIT_OFFICE_API=1 where the gateway is reachable.
+ * Office bindings API — `/api/v1/office/bindings` (+ bootstrap, runtime
+ * state). Served by the cloud-api control plane, so this defaults OFF and
+ * office-binding probes fail closed (binding treated as absent). When ON,
+ * callers target `getCloudApiBaseUrl()` with the Clerk session bearer.
+ * Set NEXT_PUBLIC_ALLTERNIT_OFFICE_API=1 in deployments that turn on the
+ * control-plane handlers.
  */
 export function isOfficeApiEnabled(): boolean {
   return envFlag('NEXT_PUBLIC_ALLTERNIT_OFFICE_API');
@@ -163,11 +199,12 @@ export function isOfficeApiEnabled(): boolean {
 
 /**
  * Beta API — `/api/v1/beta/*` (deep-research tasks, playground session
- * memory/events/run). Served only by the Rust allternit-api (:8013), not by
- * the deployed web surface, so this defaults OFF and the research/playground
- * widgets render a deliberate offline/disabled state instead of firing
- * requests that 404.
- * Set NEXT_PUBLIC_ALLTERNIT_BETA_API=1 where the gateway is reachable.
+ * memory/events/run). Served by the cloud-api control plane, so this defaults
+ * OFF and the research/playground widgets render a deliberate
+ * offline/disabled state. When ON, callers target `getCloudApiBaseUrl()` with
+ * the Clerk session bearer.
+ * Set NEXT_PUBLIC_ALLTERNIT_BETA_API=1 in deployments that turn on the
+ * control-plane handlers.
  */
 export function isBetaApiEnabled(): boolean {
   return envFlag('NEXT_PUBLIC_ALLTERNIT_BETA_API');

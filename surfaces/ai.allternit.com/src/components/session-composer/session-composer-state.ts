@@ -134,10 +134,9 @@ export function useSessionComposerState(
     if (destroyedRef.current) return;
 
     if (!isAgentSessionsApiEnabled()) {
-      // The /api/v1/agent-sessions/sync SSE channel is served only by the
-      // Rust allternit-api (:8013), which is not publicly reachable from this
-      // deployment. Fail closed instead of opening an EventSource that 404s
-      // and retries — permission/question prompts simply stay inactive.
+      // Fail closed instead of opening the /api/v1/agent-sessions/sync SSE
+      // channel — with the flag off, nothing serves it in this deployment.
+      // Permission/question prompts simply stay inactive.
       return;
     }
 
@@ -146,9 +145,10 @@ export function useSessionComposerState(
       esRef.current = null;
     }
 
-    // Browser EventSource cannot attach Gizzi's Basic Authorization header.
-    // Stream through the authenticated platform gateway, which owns the Gizzi
-    // credential, instead of connecting cross-origin to port 4096.
+    // sessionApi.createSyncSource() picks the transport: authenticated fetch
+    // streaming against the cloud-api control plane when the agent-sessions
+    // flag is on (cloud-api accepts Bearer only — a plain EventSource cannot
+    // authenticate), or the platform EventSource otherwise.
     const es = sessionApi.createSyncSource();
     esRef.current = es;
 

@@ -2,12 +2,14 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { isBetaApiEnabled } from '@/lib/env';
+import { cloudApiFetch } from '@/lib/cloud-api';
 
-// Shown in the UI when the beta research backend is disabled by flag. The
-// /api/v1/beta/research handlers live only on the Rust allternit-api (:8013),
-// which is not publicly reachable from the deployed web surface.
+// When the beta control-plane flag is on, /api/v1/beta/research is served by
+// the cloud-api control plane (Clerk auth → user's data-plane node → relay),
+// reached with the Clerk session bearer via cloudApiFetch. When off, the
+// callers below never fire: every entry point fails closed on the flag first.
 const BETA_RESEARCH_DISABLED_MESSAGE =
-  'Deep research is disabled in this deployment (the beta research API is not publicly reachable).';
+  'Deep research is disabled in this deployment (the beta research API is not enabled).';
 
 interface ResearchMessage {
   role: 'user' | 'assistant';
@@ -37,6 +39,18 @@ const API_BASE = '/api/v1/beta/research';
 const POLL_INTERVAL_MS = 2000;
 const POLL_TIMEOUT_MS = 120_000;
 
+/**
+ * Fetch a beta research path. Flag on → cloud-api control plane with the
+ * Clerk bearer; flag off → relative path (callers never reach this when off —
+ * every entry point is guarded by isBetaApiEnabled).
+ */
+async function researchFetch(path: string, init?: RequestInit): Promise<Response> {
+  if (isBetaApiEnabled()) {
+    return cloudApiFetch(path, init);
+  }
+  return fetch(path, init);
+}
+
 export function useResearchThread() {
   const [state, setState] = useState<ResearchThreadState>({
     threadId: null,
@@ -65,7 +79,7 @@ export function useResearchThread() {
       return;
     }
     try {
-      const res = await fetch(`${API_BASE}?limit=1`);
+      const res = await researchFetch(`${API_BASE}?limit=1`);
       setState((s) => ({ ...s, isHealthy: res.ok }));
     } catch {
       setState((s) => ({ ...s, isHealthy: false }));
@@ -74,7 +88,7 @@ export function useResearchThread() {
 
   const pollTask = useCallback(async (taskId: string, startedAt: number) => {
     try {
-      const res = await fetch(`${API_BASE}/${taskId}`);
+      const res = await researchFetch(`${API_BASE}/${taskId}`);
       if (!res.ok) throw new Error(`Task poll failed (${res.status})`);
       const data = (await res.json()) as { task?: ResearchTask };
       const task = data.task;
@@ -137,7 +151,7 @@ export function useResearchThread() {
 
     if (!isBetaApiEnabled()) {
       // Fail closed with a deliberate message instead of POSTing to
-      // /api/v1/beta/research, which nothing serves in this deployment.
+      // /api/v1/beta/research — when the flag is off, nothing serves it here.
       setState((s) => ({
         ...s,
         isStreaming: false,
@@ -161,7 +175,7 @@ export function useResearchThread() {
     }));
 
     try {
-      const res = await fetch(API_BASE, {
+      const res = await researchFetch(API_BASE, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: message, mode: 'ultrabrowse' }),

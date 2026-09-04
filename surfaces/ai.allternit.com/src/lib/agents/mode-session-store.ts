@@ -32,7 +32,8 @@ import {
 } from './native-agent-api';
 import { useAgentStore } from './agent.store';
 import type { Agent, HarnessConfig } from './agent.types';
-import { subscribeSSE } from '../sse/global-sse-manager';
+import { subscribeSSE, type SSESubscriptionOptions } from '../sse/global-sse-manager';
+import { createCloudApiEventSource } from '@/lib/cloud-api';
 import { createModuleLogger } from '@/lib/logger';
 import { emitArtifact } from '@/lib/canvas/canvas-artifact-events';
 import type { ArtifactUIPart } from '@/lib/ai/ui-parts.types';
@@ -2219,7 +2220,7 @@ export function createModeSessionStore(config: StoreConfig) {
 	              void sessionApi.listSessions()
 	                .then(() => {
 	                  if (cancelled) return;
-	                  unsubscribe = subscribeSSE(syncUrl, {
+	                  const syncOptions: SSESubscriptionOptions = {
 	                onOpen: () => {
 	                  set({ isSyncConnected: true, syncError: null });
 	                  retryDelay = 1000; // Reset retry delay on successful connection
@@ -2306,7 +2307,23 @@ export function createModeSessionStore(config: StoreConfig) {
 	                        }, retryDelay);
 	                      }
 	                    },
-	                  });
+	                  };
+	                  if (isAgentSessionsApiEnabled()) {
+	                    // Cloud control plane: authenticated fetch streaming —
+	                    // cloud-api accepts Bearer only, no session cookie, so a
+	                    // plain EventSource cannot authenticate.
+	                    const source = createCloudApiEventSource(syncUrl);
+	                    source.onopen = () => syncOptions.onOpen?.();
+	                    source.onmessage = (event) => {
+	                      let data: unknown;
+	                      try { data = JSON.parse(event.data); } catch { data = event.data; }
+	                      syncOptions.onMessage?.(data, event);
+	                    };
+	                    source.onerror = (event) => syncOptions.onError?.(event);
+	                    unsubscribe = () => source.close();
+	                  } else {
+	                    unsubscribe = subscribeSSE(syncUrl, syncOptions);
+	                  }
 	                })
 	                .catch((error) => {
 	                  unsubscribe?.();

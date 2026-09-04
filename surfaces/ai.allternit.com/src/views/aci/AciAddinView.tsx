@@ -27,7 +27,7 @@ import { recordDocumentWorkflowIntent } from '@/views/documents/document-workflo
 import { getOfficeWebInstallation, verifyOfficeWebInstallation } from './office-web-installation';
 
 import { createModuleLogger } from '@/lib/logger';
-import { isOfficeApiEnabled } from '@/lib/env';
+import { getCloudApiBaseUrl, isOfficeApiEnabled } from '@/lib/env';
 
 const logger = createModuleLogger('AciAddinView');
 
@@ -166,7 +166,13 @@ async function probeTaskpane(): Promise<string | null> {
 }
 
 async function probeGatewayBinding(host: OfficeHost, token: string | null): Promise<OfficeBindingSnapshot | null> {
-  const response = await fetch('http://127.0.0.1:8013/api/v1/office/bindings', {
+  // Flag on: /api/v1/office/bindings is served by the cloud-api control plane
+  // (Clerk bearer auth, same origin the surface uses for other Clerk-authed
+  // cloud-api calls). Flag off: the legacy local gateway probe on :8013.
+  const url = isOfficeApiEnabled()
+    ? `${getCloudApiBaseUrl()}/api/v1/office/bindings`
+    : 'http://127.0.0.1:8013/api/v1/office/bindings';
+  const response = await fetch(url, {
     headers: token ? { Authorization: `Bearer ${token}` } : undefined,
     signal: AbortSignal.timeout(1500),
   });
@@ -294,9 +300,9 @@ export function AciAddinView({ host, context }: { host: OfficeHost; context?: Vi
 
   const refreshGateway = useCallback(async () => {
     if (!isOfficeApiEnabled()) {
-      // The gateway binding probe targets /api/v1/office/bindings on the Rust
-      // allternit-api (:8013), which is not publicly reachable from this
-      // deployment. Fail closed with a deliberate status instead of probing.
+      // Fail closed with a deliberate status instead of probing: the binding
+      // probe targets the office API, which is only reachable when the
+      // control-plane flag routes it to cloud-api.
       setGatewayBinding(null);
       setGatewayStatus('disabled');
       return;
