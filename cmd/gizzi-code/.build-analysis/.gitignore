@@ -1,2 +1,2 @@
-.build-analysis/*.json
-.build-analysis/pathcheck.out
+*.json
+pathcheck.out
