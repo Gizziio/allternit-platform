@@ -130,6 +130,12 @@ Phase 2/3 hardening of allternit-cloud-api complete and deployed to the Contabo 
 - **ba9de8f8** (cloud backend hardening) → `97ecec0bb` [Summary](./summaries/2026-09-03-1716-ba9de8f8-kimi-cloud-backend-hardening.md)
 - [2026-09-03 session/423a858e](summaries/20260903-2010-423a858e-kimi-ai-redirects-fix.md) — ai.allternit.com _redirects: stop catch-all from swallowing static assets; add robots.txt + 404.html. Merged dc91223b6.
 
+### 2026-09-04 — kimi — API consolidation: control-plane/data-plane split (session/routing)
+
+Audit Step 6 decided by owner (option b + interim proxy). P0: vendored cloud-contracts (CI blocker), CORS allowlist, dev-token gate (default OFF), fail-closed flags for all 8013-only namespaces. P1: node registry (migration 011) + control-plane handlers for agent-sessions/office/beta via existing WS relay, data-plane JWT (A1) both sides, WS relay for beta events, rails dialect fix, web flipped to control-plane (flags off). 13 commits `4f77728c3..f3b4ed071`. Deferred: iOS Xcode build (owner), ~270 pre-existing allternit-api --lib failures (refinery/stale-binary debt), 21 rails + canvas control-plane routes, post-merge ops (migration 011 + DP_JWT_SEED + nginx proxy + bypass flip — sequence in summary).
+
+- **session/routing** (API consolidation) → summary [2026-09-04](./summaries/2026-09-04-session-routing-kimi-api-consolidation.md)
+
 ### 2026-09-03 23:17 — kimi — gizzi-code production-readiness P0/P1 (session 237dc49a)
 
 Production-readiness pass on `cmd/gizzi-code` ahead of the 2026-09-04 release: hang fixes (startup probes + the exec-never-exits regression), build-breaking syntax/import fixes, security (Clerk test key removed, SSRF closed, dev-token backdoors removed), cloud defaults repointed to api.allternit.com, CI quality gates on release/npm workflows, and full distribution packaging (5 release targets incl. darwin-x64, fixed installers proven against the live v0.2.3 release, install.gizziio.com manifest, brew/scoop/choco/rpm/arch/winget, Dockerfile/nix). Verified: tsc exit 0, smoke suite 1065/0 fail, production binary 1.0.2 builds and `exec` exits in 4s (was infinite). Full gap register and deferred P2–P6 work in the summary. Cloudflare deploy of install.gizziio.com and git push left to owner.

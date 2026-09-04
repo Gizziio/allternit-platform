@@ -1,15 +1,18 @@
 /**
  * Rails Service - Allternit Agent System Rails API Client
- * 
- * This service connects to the ACTUAL Allternit Agent System Rails backend.
- * Rails provides: DAG planning, WIH tracking, Ledger events, Mail, Gates, Vault
- * 
- * Service: allternit-agent-system-rails (port 3011)
- * Gateway: /api/v1/rails/*
- * 
+ *
+ * This service connects to the Allternit Agent System Rails surface mounted
+ * on the allternit-api gateway (port 8013) at `/api/rails/*`
+ * (cmd/allternit-api/src/rails/mod.rs). It is NOT the standalone
+ * rails service dialect (port 3011, /api/v1/*) this client was originally
+ * written against — only routes that exist on the gateway are called live
+ * here. Methods whose standalone data-plane route has no gateway equivalent
+ * are marked TODO(rails-gateway) and fail fast instead of firing requests
+ * that 404.
+ *
  * UI Concepts → Rails Concepts:
  * - Agent Run → DAG (plan) + WIHs
- * - Task → WIH (Work In Hand)  
+ * - Task → WIH (Work In Hand)
  * - Execution History → Ledger
  * - Agent Messaging → Mail
  * - Checkpoint → Vault archive
@@ -115,6 +118,7 @@ export interface LeaseRequest {
   wih_id: string;
   agent_id: string;
   paths: string[];
+  /** Standalone-dialect field; ignored by the gateway's POST /leases. */
   tools?: string[];
   ttl_seconds?: number;
 }
@@ -202,9 +206,9 @@ export interface ContextPackListResponse {
 }
 
 // Receipts
-type ReceiptKind = 
-  | 'tool_call_post' 
-  | 'validator_report' 
+export type ReceiptKind =
+  | 'tool_call_post'
+  | 'validator_report'
   | 'build_report'
   | 'gate_decision'
   | 'session_start'
@@ -236,6 +240,16 @@ export interface ReceiptQueryRequest {
 
 export interface ReceiptQueryResponse {
   receipts: Receipt[];
+}
+
+/** Request body for POST /receipts/write (allternit-api `ReceiptWriteRequest`). */
+export interface ReceiptWriteRequest {
+  tool?: string;
+  run_id?: string;
+  inputs_ref?: string;
+  outputs_ref?: string;
+  exit_code?: number;
+  summary?: string;
 }
 
 // Ledger - Event history
@@ -374,20 +388,42 @@ export interface VaultArchiveResponse {
 // Rails service can be accessed:
 // - Through Gateway (recommended): http://127.0.0.1:8013/api/rails
 // - Direct to Rails: http://127.0.0.1:3011/api/v1
-// 
+//
 // Using Gateway is preferred as it handles auth, rate limiting, etc.
 const RAILS_BASE = `${GATEWAY_BASE_URL}/api/rails`;
 
-// console.debug('[Rails Service] Using Rails base URL:', RAILS_BASE);
+/**
+ * Fail fast for client methods whose standalone rails-service (port 3011)
+ * data-plane route has NO equivalent on the allternit-api `/api/rails`
+ * gateway (cmd/allternit-api/src/rails/mod.rs). Throwing preserves the
+ * rejection semantics every existing call site already handles (these calls
+ * previously 404'd through apiRequestWithError).
+ */
+// TODO(rails-gateway): the following standalone data-plane routes have no
+// equivalent on the 8013 rails router — add them there or retire these call
+// sites: /init, /plans, /plan, /plan/refine, /plan/:id, /dags/:id/render,
+// /dags/:id/execute, /runs/:id/cancel, GET /leases, /leases/:id/renew,
+// DELETE /leases/:id, POST /context-packs, /context-packs/seal,
+// /gate/status, /gate/check, /gate/rules, /gate/verify, /gate/decision,
+// /gate/mutate, /index/rebuild, /mail/review, /mail/archive.
+function unavailableOnGateway(feature: string, standaloneRoute: string): never {
+  throw new Error(
+    `[Rails API] '${feature}' targets standalone rails route '${standaloneRoute}', ` +
+      "which has no equivalent on the allternit-api /api/rails gateway."
+  );
+}
 
 export const railsApi = {
   // Health check with better error handling
   health: async () => {
     try {
+      // 8013 GET /health returns { status: "healthy", rails: { ledger, gate, leases } }.
+      // The standalone service also returned `service`/`version`; those stay optional.
       return await apiRequestWithError<{
         status: string;
-        service: string;
-        version: string;
+        rails?: { ledger: boolean; gate: boolean; leases: boolean };
+        service?: string;
+        version?: string;
       }>(`${RAILS_BASE}/health`);
     } catch (error: any) {
       console.error(`[Rails API] Health check failed at ${RAILS_BASE}/health:`, error.message);
@@ -395,62 +431,52 @@ export const railsApi = {
     }
   },
 
-  // Initialize
-  init: () => apiRequestWithError<{ initialized: boolean; stores: string[] }>(
-    `${RAILS_BASE}/init`,
-    { method: "POST" }
-  ),
-
   // ============================================================================
   // PLAN - DAG Planning (Agent Runs)
+  //
+  // TODO(rails-gateway): the planning data plane (/plans, /plan, /plan/refine,
+  // /plan/:id, /dags/:id/render, /dags/:id/execute, /runs/:id/cancel) does not
+  // exist on the 8013 rails router. The only DAG routes there are workspace
+  // scoped (/workspace/:workspace_id/dags[...]) and require a workspace id the
+  // call sites do not have, so these fail fast instead of inventing paths.
   // ============================================================================
-  
+
   plan: {
     /** List all DAG plans */
-    list: () => apiRequestWithError<{ dags: Array<{ dag_id: string; version: string; created_at: string; metadata?: { title?: string; description?: string } }> }>(
-      `${RAILS_BASE}/plans`
-    ),
+    list: (): Promise<{ dags: Array<{ dag_id: string; version: string; created_at: string; metadata?: { title?: string; description?: string } }> }> =>
+      unavailableOnGateway("plan.list", "GET /v1/plans"),
 
     /** Create new execution plan (like starting an agent run) */
-    new: (req: PlanNewRequest) => apiRequestWithError<PlanNewResponse>(
-      `${RAILS_BASE}/plan`,
-      { method: "POST", body: JSON.stringify(req) }
-    ),
+    new: (_req: PlanNewRequest): Promise<PlanNewResponse> =>
+      unavailableOnGateway("plan.new", "POST /v1/plan"),
 
     /** Refine existing plan */
-    refine: (req: PlanRefineRequest) => apiRequestWithError<PlanRefineResponse>(
-      `${RAILS_BASE}/plan/refine`,
-      { method: "POST", body: JSON.stringify(req) }
-    ),
+    refine: (_req: PlanRefineRequest): Promise<PlanRefineResponse> =>
+      unavailableOnGateway("plan.refine", "POST /v1/plan/refine"),
 
     /** Get plan details */
-    show: (dagId: string) => apiRequestWithError<{ dag_id: string; dag: unknown }>(
-      `${RAILS_BASE}/plan/${dagId}`
-    ),
+    show: (_dagId: string): Promise<{ dag_id: string; dag: unknown }> =>
+      unavailableOnGateway("plan.show", "GET /v1/plan/:dag_id"),
 
     /** Render plan as JSON or Markdown */
-    render: (dagId: string, format: "json" | "markdown" = "json") => 
-      apiRequestWithError<DagRenderResponse>(
-        `${RAILS_BASE}/dags/${dagId}/render?format=${format}`
-      ),
+    render: (_dagId: string, _format: "json" | "markdown" = "json"): Promise<DagRenderResponse> =>
+      unavailableOnGateway("plan.render", "GET /v1/dags/:dag_id/render"),
 
     /** Execute a DAG */
-    execute: (dagId: string, runId?: string) => apiRequestWithError<{ run_id: string; status: string }>(
-      `${RAILS_BASE}/dags/${dagId}/execute`,
-      { method: "POST", body: JSON.stringify({ run_id: runId }) }
-    ),
+    execute: (_dagId: string, _runId?: string): Promise<{ run_id: string; status: string }> =>
+      unavailableOnGateway("plan.execute", "POST /v1/dags/:dag_id/execute"),
 
     /** Cancel a running DAG execution */
-    cancel: (runId: string) => apiRequestWithError<{ cancelled: boolean }>(
-      `${RAILS_BASE}/runs/${runId}/cancel`,
-      { method: "POST" }
-    ),
+    cancel: (_runId: string): Promise<{ cancelled: boolean }> =>
+      unavailableOnGateway("plan.cancel", "POST /v1/runs/:run_id/cancel"),
   },
 
   // ============================================================================
   // WIH - Work In Hand (Tasks/Runs)
+  //
+  // All five routes match the gateway verbatim (request + response shapes).
   // ============================================================================
-  
+
   wihs: {
     /** List work items (like listing agent runs/tasks) */
     list: async (req: WihListRequest = {}) => {
@@ -497,61 +523,63 @@ export const railsApi = {
 
   // ============================================================================
   // LEASES - Resource Reservations
+  //
+  // 8013 only mounts POST /leases and GET /leases/:lease_id. The standalone
+  // list/renew/release data-plane routes are missing — see TODO(rails-gateway).
   // ============================================================================
-  
+
   leases: {
-    /** List active leases */
-    list: (dagId?: string) => apiRequestWithError<LeaseListResponse>(
-      `${RAILS_BASE}/leases`,
-      { method: "GET" }
-    ),
+    /** List active leases — NOT available on the gateway. */
+    list: (_dagId?: string): Promise<LeaseListResponse> =>
+      unavailableOnGateway("leases.list", "GET /v1/leases"),
 
     /** Request lease on files/resources */
-    request: (req: LeaseRequest) => apiRequestWithError<LeaseResponse>(
-      `${RAILS_BASE}/leases`,
-      { method: "POST", body: JSON.stringify(req) }
-    ),
+    request: async (req: LeaseRequest): Promise<LeaseResponse> => {
+      // 8013 POST /leases takes { wih_id, agent_id, paths, ttl_seconds } and
+      // responds { lease_id, status: "requested" }. The standalone dialect's
+      // `tools` field and `granted`/`expires_at` response fields do not exist
+      // on the gateway; `tools` is dropped and `granted` derives from status.
+      const raw = await apiRequestWithError<{ lease_id: string; status: string }>(
+        `${RAILS_BASE}/leases`,
+        { method: "POST", body: JSON.stringify(req) }
+      );
+      return { lease_id: raw.lease_id, granted: raw.status === "requested" };
+    },
 
-    /** Renew lease */
-    renew: (leaseId: string, ttlSeconds: number = 300) => apiRequestWithError<LeaseRenewResponse>(
-      `${RAILS_BASE}/leases/${leaseId}/renew`,
-      { method: "POST", body: JSON.stringify({ ttl_seconds: ttlSeconds }) }
-    ),
+    /** Renew lease — NOT available on the gateway. */
+    renew: (_leaseId: string, _ttlSeconds: number = 300): Promise<LeaseRenewResponse> =>
+      unavailableOnGateway("leases.renew", "POST /v1/leases/:lease_id/renew"),
 
-    /** Release lease */
-    release: (leaseId: string) => apiRequestWithError<{ released: boolean }>(
-      `${RAILS_BASE}/leases/${leaseId}`,
-      { method: "DELETE" }
-    ),
+    /** Release lease — NOT available on the gateway. */
+    release: (_leaseId: string): Promise<{ released: boolean }> =>
+      unavailableOnGateway("leases.release", "DELETE /v1/leases/:lease_id"),
   },
 
   // ============================================================================
   // CONTEXT PACKS - Sealed Execution Context
+  //
+  // TODO(rails-gateway): the gateway mounts context packs under
+  // /workspace/:workspace_id/packs, which requires a workspace id these call
+  // sites do not have. The unscoped /context-packs data plane is missing.
   // ============================================================================
-  
+
   contextPacks: {
-    /** List context packs */
-    list: (req?: ContextPackListRequest) => apiRequestWithError<ContextPackListResponse>(
-      `${RAILS_BASE}/context-packs`,
-      { method: "POST", body: JSON.stringify(req || {}) }
-    ),
+    /** List context packs — NOT available on the gateway. */
+    list: (_req?: ContextPackListRequest): Promise<ContextPackListResponse> =>
+      unavailableOnGateway("contextPacks.list", "POST /v1/context-packs"),
 
-    /** Get context pack by ID */
-    get: (packId: string) => apiRequestWithError<ContextPack>(
-      `${RAILS_BASE}/context-packs/${packId}`
-    ),
-
-    /** Seal a new context pack */
-    seal: (req: ContextPackSealRequest) => apiRequestWithError<ContextPackSealResponse>(
-      `${RAILS_BASE}/context-packs/seal`,
-      { method: "POST", body: JSON.stringify(req) }
-    ),
+    /** Seal a new context pack — NOT available on the gateway. */
+    seal: (_req: ContextPackSealRequest): Promise<ContextPackSealResponse> =>
+      unavailableOnGateway("contextPacks.seal", "POST /v1/context-packs/seal"),
   },
 
   // ============================================================================
   // RECEIPTS - Audit Evidence
+  //
+  // POST /receipts and POST /receipts/write exist on the gateway; the
+  // standalone GET /receipts/:id route does not (removed — no callers).
   // ============================================================================
-  
+
   receipts: {
     /** Query receipts with filters */
     query: (req: ReceiptQueryRequest) => apiRequestWithError<ReceiptQueryResponse>(
@@ -559,22 +587,17 @@ export const railsApi = {
       { method: "POST", body: JSON.stringify(req) }
     ),
 
-    /** Write a new receipt */
-    write: (receipt: Omit<Receipt, 'receipt_id'>) => apiRequestWithError<{ receipt_id: string }>(
+    /** Write a new receipt (gateway ReceiptWriteRequest shape). */
+    write: (receipt: ReceiptWriteRequest) => apiRequestWithError<{ receipt_id: string }>(
       `${RAILS_BASE}/receipts/write`,
       { method: "POST", body: JSON.stringify(receipt) }
-    ),
-
-    /** Get receipt by ID */
-    get: (receiptId: string) => apiRequestWithError<Receipt>(
-      `${RAILS_BASE}/receipts/${receiptId}`
     ),
   },
 
   // ============================================================================
   // LEDGER - Event History
   // ============================================================================
-  
+
   ledger: {
     /** Get recent events (like run logs) */
     tail: (count: number = 50) => apiRequestWithError<LedgerEvent[]>(
@@ -582,17 +605,53 @@ export const railsApi = {
       { method: "POST", body: JSON.stringify({ count }) }
     ),
 
-    /** Trace events by node/wih/prompt */
-    trace: (req: LedgerTraceRequest) => apiRequestWithError<LedgerEvent[]>(
-      `${RAILS_BASE}/ledger/trace`,
-      { method: "POST", body: JSON.stringify(req) }
-    ),
+    /**
+     * Trace events by node/wih/prompt. The standalone POST /ledger/trace
+     * route does not exist on the gateway; the equivalent is
+     * GET /ledger/events (query params: since, dag_id, wih_id, limit) — see
+     * TODO(rails-gateway). `node_id`/`prompt_id` filters have no gateway
+     * equivalent and are not forwarded. Response fields are mapped from the
+     * gateway's LedgerEventResponse (ts -> timestamp; scope.run_id -> node_id,
+     * matching the receipts surface's run_id-as-node convention).
+     */
+    trace: async (req: LedgerTraceRequest): Promise<LedgerEvent[]> => {
+      const params = new URLSearchParams();
+      if (req.wih_id) params.set("wih_id", req.wih_id);
+      params.set("limit", "100");
+      const query = params.toString();
+      const raw = await apiRequestWithError<Array<{
+        event_id: string;
+        ts: string;
+        actor_type: string;
+        actor_id: string;
+        event_type: string;
+        payload: unknown;
+        scope?: { dag_id?: string; wih_id?: string; run_id?: string };
+      }>>(`${RAILS_BASE}/ledger/events${query ? `?${query}` : ""}`);
+      return raw.map((e) => ({
+        event_id: e.event_id,
+        event_type: e.event_type,
+        timestamp: e.ts,
+        scope: e.scope
+          ? {
+              dag_id: e.scope.dag_id,
+              wih_id: e.scope.wih_id,
+              node_id: e.scope.run_id,
+            }
+          : undefined,
+        payload: e.payload,
+      }));
+    },
   },
 
   // ============================================================================
   // MAIL - Agent Messaging
+  //
+  // All live routes below exist on the gateway. Note the thread key: the
+  // gateway's MailDecideRequest/MailShareRequest use `thread` (no `thread_id`
+  // serde alias), while MailWriteRequest/MailAckRequest accept `thread_id`.
   // ============================================================================
-  
+
   mail: {
     /** Ensure/create thread */
     ensureThread: (topic: string, _participants?: string[]) => {
@@ -609,17 +668,17 @@ export const railsApi = {
       { method: "POST", body: JSON.stringify(req) }
     ),
 
-    /** List threads — real endpoint is GET /mail/threads (issue #16). */
+    /** List threads — GET /mail/threads on the gateway. */
     threads: () => apiRequestWithError<{ threads: MailThreadSummary[] }>(
       `${RAILS_BASE}/mail/threads`
     ),
 
-    /** Read a single thread — real endpoint is GET /mail/thread/:id (issue #16). */
+    /** Read a single thread — GET /mail/thread/:thread_id on the gateway. */
     thread: (threadId: string) => apiRequestWithError<{ messages: MailMessage[] }>(
       `${RAILS_BASE}/mail/thread/${encodeURIComponent(threadId)}`
     ),
 
-    /** Get inbox for a specific agent — real endpoint is GET /mail/inbox/:agent_id (issue #16). */
+    /** Get inbox for a specific agent — GET /mail/inbox/:agent_id on the gateway. */
     inbox: (req: MailInboxRequest) => {
       const params = new URLSearchParams()
       if (req.limit !== undefined) params.set("limit", String(req.limit))
@@ -641,98 +700,90 @@ export const railsApi = {
       { method: "POST", body: JSON.stringify(req) }
     ),
 
-    /** Request review */
-    requestReview: (threadId: string, wihId: string, diffRef: string) => apiRequestWithError<void>(
-      `${RAILS_BASE}/mail/review`,
-      { method: "POST", body: JSON.stringify({ thread_id: threadId, wih_id: wihId, diff_ref: diffRef }) }
-    ),
-
-    /** Decide on review. For `mail:email-out-*` threads the response carries an
-     * `email` object with the provider-side outcome (rails/mod.rs mail_decide). */
+    /**
+     * Decide on review. For `mail:email-out-*` threads the response carries an
+     * `email` object with the provider-side outcome (rails/mod.rs mail_decide).
+     * The gateway request struct is { thread, decision?, approve?, notes_ref? } —
+     * the thread key is `thread`, NOT `thread_id` (MailDecideRequest has no
+     * serde alias), so sending `thread_id` would post the decision to the
+     * default `mail:general` thread.
+     */
     decide: (threadId: string, approve: boolean, notesRef?: string) => apiRequestWithError<MailDecideResponse>(
       `${RAILS_BASE}/mail/decide`,
-      { method: "POST", body: JSON.stringify({ thread_id: threadId, approve, notes_ref: notesRef }) }
+      { method: "POST", body: JSON.stringify({ thread: threadId, approve, notes_ref: notesRef }) }
     ),
 
-    /** Reserve via mail */
-    reserve: (wihId: string, agentId: string, paths: string[], ttl?: number) => apiRequestWithError<void>(
-      `${RAILS_BASE}/mail/reserve`,
-      { method: "POST", body: JSON.stringify({ wih_id: wihId, agent_id: agentId, paths, ttl }) }
-    ),
+    // TODO(rails-gateway): POST /mail/review has no equivalent on the 8013
+    // rails router; review requests would 404 on the gateway.
+    /** Request review — NOT available on the gateway. */
+    requestReview: (_threadId: string, _wihId: string, _diffRef: string): Promise<void> =>
+      unavailableOnGateway("mail.requestReview", "POST /v1/mail/review"),
 
-    /** Share asset */
+    /**
+     * Share asset. The gateway request struct is { thread, asset_ref?, path?,
+     * note? } — the thread key is `thread`, NOT `thread_id` (MailShareRequest
+     * has no serde alias), so sending `thread_id` would silently share into
+     * the default `mail:general` thread.
+     */
     share: (threadId: string, assetRef: string, note?: string) => apiRequestWithError<MailShareResponse>(
       `${RAILS_BASE}/mail/share`,
-      { method: "POST", body: JSON.stringify({ thread_id: threadId, asset_ref: assetRef, note }) }
+      { method: "POST", body: JSON.stringify({ thread: threadId, asset_ref: assetRef, note }) }
     ),
 
-    /** Archive thread */
-    archive: (threadId: string, path: string, reason?: string) => apiRequestWithError<void>(
-      `${RAILS_BASE}/mail/archive`,
-      { method: "POST", body: JSON.stringify({ thread_id: threadId, path, reason }) }
-    ),
-
-    /** Guard action */
-    guard: (action: string, detail?: string) => apiRequestWithError<void>(
-      `${RAILS_BASE}/mail/guard`,
-      { method: "POST", body: JSON.stringify({ action, detail }) }
-    ),
+    // TODO(rails-gateway): POST /mail/archive has no equivalent on the 8013
+    // rails router. Callers degrade gracefully — archived state is tracked
+    // locally and the failed call never blocked the UI.
+    /** Archive thread — NOT available on the gateway. */
+    archive: (_threadId: string, _path: string, _reason?: string): Promise<void> =>
+      unavailableOnGateway("mail.archive", "POST /v1/mail/archive"),
   },
 
   // ============================================================================
   // GATE - Policy Enforcement
+  //
+  // TODO(rails-gateway): the 8013 router mounts only POST /gate/evaluate with
+  // an incompatible contract ({ action, resource, tenant_id, context }), so
+  // none of the standalone gate data plane below has a usable equivalent.
   // ============================================================================
-  
+
   gate: {
-    /** Get gate status */
-    status: () => apiRequestWithError<{ status: string }>(
-      `${RAILS_BASE}/gate/status`
-    ),
+    /** Get gate status — NOT available on the gateway. */
+    status: (): Promise<{ status: string }> =>
+      unavailableOnGateway("gate.status", "GET /v1/gate/status"),
 
-    /** Check if action allowed */
-    check: (req: GateCheckRequest) => apiRequestWithError<GateCheckResponse>(
-      `${RAILS_BASE}/gate/check`,
-      { method: "POST", body: JSON.stringify(req) }
-    ),
+    /** Check if action allowed — NOT available on the gateway. */
+    check: (_req: GateCheckRequest): Promise<GateCheckResponse> =>
+      unavailableOnGateway("gate.check", "POST /v1/gate/check"),
 
-    /** Get GATE_RULES.md */
-    rules: () => apiRequestWithError<{ rules?: string }>(
-      `${RAILS_BASE}/gate/rules`
-    ),
+    /** Get GATE_RULES.md — NOT available on the gateway. */
+    rules: (): Promise<{ rules?: string }> =>
+      unavailableOnGateway("gate.rules", "GET /v1/gate/rules"),
 
-    /** Verify ledger/DAGs */
-    verify: (json: boolean = true) => apiRequestWithError<{
+    /** Verify ledger/DAGs — NOT available on the gateway. */
+    verify: (_json: boolean = true): Promise<{
       ok: boolean;
       ledger_chain_ok: boolean;
       ledger_chain_issues?: string[];
       cycle_dags: string[];
-    }>(
-      `${RAILS_BASE}/gate/verify`,
-      { method: "POST", body: JSON.stringify({ json }) }
-    ),
+    }> => unavailableOnGateway("gate.verify", "POST /v1/gate/verify"),
 
-    /** Record decision */
-    decision: (note: string, reason?: string, links: string[] = []) => apiRequestWithError<{
-      decision_id: string;
-    }>(
-      `${RAILS_BASE}/gate/decision`,
-      { method: "POST", body: JSON.stringify({ note, reason, links }) }
-    ),
+    /** Record decision — NOT available on the gateway. */
+    decision: (_note: string, _reason?: string, _links: string[] = []): Promise<{ decision_id: string }> =>
+      unavailableOnGateway("gate.decision", "POST /v1/gate/decision"),
 
-    /** Mutate DAG with decision */
-    mutate: (dagId: string, note: string, reason?: string, mutations?: DagMutation[]) => apiRequestWithError<{
+    /** Mutate DAG with decision — NOT available on the gateway. */
+    mutate: (_dagId: string, _note: string, _reason?: string, _mutations?: DagMutation[]): Promise<{
       decision_id: string;
       mutation_ids: string[];
-    }>(
-      `${RAILS_BASE}/gate/mutate`,
-      { method: "POST", body: JSON.stringify({ dag_id: dagId, note, reason, mutations }) }
-    ),
+    }> => unavailableOnGateway("gate.mutate", "POST /v1/gate/mutate"),
   },
 
   // ============================================================================
   // VAULT - Checkpoint/Archive
+  //
+  // Both routes match the gateway verbatim (request + response shapes).
   // ============================================================================
-  
+
   vault: {
     /** Archive WIH (like checkpoint) */
     archive: (req: VaultArchiveRequest) => apiRequestWithError<VaultArchiveResponse>(
@@ -753,14 +804,15 @@ export const railsApi = {
 
   // ============================================================================
   // INDEX - Search/Rebuild
+  //
+  // TODO(rails-gateway): POST /index/rebuild has no equivalent on the 8013
+  // rails router.
   // ============================================================================
-  
+
   index: {
-    /** Rebuild index from ledger */
-    rebuild: () => apiRequestWithError<{ indexed_count: number }>(
-      `${RAILS_BASE}/index/rebuild`,
-      { method: "POST" }
-    ),
+    /** Rebuild index from ledger — NOT available on the gateway. */
+    rebuild: (): Promise<{ indexed_count: number }> =>
+      unavailableOnGateway("index.rebuild", "POST /v1/index/rebuild"),
   },
 };
 

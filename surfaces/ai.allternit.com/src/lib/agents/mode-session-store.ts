@@ -19,6 +19,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { devtools } from 'zustand/middleware';
 import { createBrowserJSONStorage } from '@/lib/zustand-browser-storage';
+import { isAgentSessionsApiEnabled } from '@/lib/env';
 import {
   sessionApi,
   chatApi,
@@ -31,7 +32,8 @@ import {
 } from './native-agent-api';
 import { useAgentStore } from './agent.store';
 import type { Agent, HarnessConfig } from './agent.types';
-import { subscribeSSE } from '../sse/global-sse-manager';
+import { subscribeSSE, type SSESubscriptionOptions } from '../sse/global-sse-manager';
+import { createCloudApiEventSource } from '@/lib/cloud-api';
 import { createModuleLogger } from '@/lib/logger';
 import { emitArtifact } from '@/lib/canvas/canvas-artifact-events';
 import type { ArtifactUIPart } from '@/lib/ai/ui-parts.types';
@@ -45,6 +47,15 @@ import { memoryClient } from './memory-client';
 import { recallBotMemories } from '@/lib/bots/bot-memory-context';
 
 const logger = createModuleLogger('ModeSessionStore');
+
+// The /api/v1/agent-sessions handlers live only on the Rust allternit-api
+// (:8013), which is not publicly reachable from the deployed web surface.
+// When NEXT_PUBLIC_ALLTERNIT_AGENT_SESSIONS_API is unset (default), every
+// backend call in this store must fail closed with this deliberate message
+// instead of firing requests that 404.
+const AGENT_SESSIONS_DISABLED_MESSAGE =
+  'Agent session sync is disabled in this deployment (set NEXT_PUBLIC_ALLTERNIT_AGENT_SESSIONS_API=1 where the gateway is reachable).';
+
 import type {
   ContextPackOptions,
 } from './agent-context-pack';
@@ -1068,6 +1079,14 @@ export function createModeSessionStore(config: StoreConfig) {
               }
 
               // Create backend session
+              if (!isAgentSessionsApiEnabled()) {
+                // /api/v1/agent-sessions handlers live only on the Rust
+                // allternit-api (:8013), which is not publicly reachable from
+                // this deployment. Fail closed so the catch below keeps the
+                // session local (agent/code modes) or surfaces a deliberate
+                // message — never fire the request.
+                throw new Error(AGENT_SESSIONS_DISABLED_MESSAGE);
+              }
               const backendSession = await sessionApiClient.createSession({
                 name: options.name || 'New Session',
                 description: options.description,
@@ -2004,6 +2023,14 @@ export function createModeSessionStore(config: StoreConfig) {
           loadSessions: async () => {
             set({ isLoading: true, error: null });
 
+            if (!isAgentSessionsApiEnabled()) {
+              // Backend agent-sessions handlers are disabled by flag in this
+              // deployment; keep the persisted in-memory sessions without
+              // probing an endpoint nothing serves.
+              set({ isLoading: false, error: null });
+              return;
+            }
+
             try {
               const backendSessions = await sessionApi.listSessions();
               const currentSessions = get().sessions;
@@ -2170,6 +2197,17 @@ export function createModeSessionStore(config: StoreConfig) {
 	            // Disconnect any existing connection first
 	            get().disconnectSessionSync();
 
+            if (!isAgentSessionsApiEnabled()) {
+              // Never open the /api/v1/agent-sessions/sync SSE channel (or the
+              // listSessions probe that precedes it) when the backend is
+              // disabled by flag — without this guard the reconnect loop
+              // retries a 404 forever.
+              set({ isSyncConnected: false, syncError: AGENT_SESSIONS_DISABLED_MESSAGE });
+              return () => {
+                set({ isSyncConnected: false });
+              };
+            }
+
             let retryDelay = 1000;
             const MAX_RETRY_DELAY = 30000;
             let cancelled = false;
@@ -2182,7 +2220,7 @@ export function createModeSessionStore(config: StoreConfig) {
 	              void sessionApi.listSessions()
 	                .then(() => {
 	                  if (cancelled) return;
-	                  unsubscribe = subscribeSSE(syncUrl, {
+	                  const syncOptions: SSESubscriptionOptions = {
 	                onOpen: () => {
 	                  set({ isSyncConnected: true, syncError: null });
 	                  retryDelay = 1000; // Reset retry delay on successful connection
@@ -2269,7 +2307,23 @@ export function createModeSessionStore(config: StoreConfig) {
 	                        }, retryDelay);
 	                      }
 	                    },
-	                  });
+	                  };
+	                  if (isAgentSessionsApiEnabled()) {
+	                    // Cloud control plane: authenticated fetch streaming —
+	                    // cloud-api accepts Bearer only, no session cookie, so a
+	                    // plain EventSource cannot authenticate.
+	                    const source = createCloudApiEventSource(syncUrl);
+	                    source.onopen = () => syncOptions.onOpen?.();
+	                    source.onmessage = (event) => {
+	                      let data: unknown;
+	                      try { data = JSON.parse(event.data); } catch { data = event.data; }
+	                      syncOptions.onMessage?.(data, event);
+	                    };
+	                    source.onerror = (event) => syncOptions.onError?.(event);
+	                    unsubscribe = () => source.close();
+	                  } else {
+	                    unsubscribe = subscribeSSE(syncUrl, syncOptions);
+	                  }
 	                })
 	                .catch((error) => {
 	                  unsubscribe?.();

@@ -1,7 +1,9 @@
 //! Authentication middleware for Axum
 //!
 //! Extracts Bearer tokens from Authorization headers and validates them.
-//! Supports development mode bypass via environment variable.
+//! Supports development mode bypass via environment variable, and the
+//! `dev-api-token` backdoor gated by `ALLTERNIT_ALLOW_DEV_TOKEN` (default
+//! OFF — see `auth::dev_token`).
 
 use axum::{
     body::Body,
@@ -102,9 +104,17 @@ impl<S> AuthMiddleware<S> {
     /// Validate API token (placeholder - full implementation would check database)
     async fn validate_token(&self, token: &str) -> Option<AuthenticatedUser> {
         // TODO: Implement actual token validation against database
-        // Dev-token fallback is rejected unless explicitly enabled (see
-        // `is_dev_api_token`); it must never work in production.
-        if is_dev_api_token(token) {
+        // Development fallbacks — all opt-in and default-OFF. The hardcoded
+        // `dev-api-token` is gated by `ALLTERNIT_ALLOW_DEV_TOKEN`
+        // (audit finding B1, see `auth::dev_token`); the environment-bearer
+        // and legacy-literal overrides are gated by the two functions below
+        // and must never work in production.
+        if crate::auth::dev_token::is_allowed_dev_token(
+            token,
+            crate::auth::dev_token::dev_token_allowed(),
+        ) || is_dev_api_token(token)
+            || is_legacy_dev_api_token(token)
+        {
             return Some(AuthenticatedUser::development_user());
         }
 
@@ -258,8 +268,12 @@ pub async fn auth_middleware(
 /// Validate an `allternit_*` API token against `api_tokens` (sha256 hash
 /// lookup with legacy-md5 fallback and transparent upgrade, revocation/
 /// expiration checks, `last_used_at` touch), then against the modern scoped
-/// `alt_…` keys. Also answers the two opt-in development overrides (see
-/// `is_dev_api_token` and `is_legacy_dev_api_token`). Crate-public for
+/// `alt_…` keys. Also answers the opt-in development overrides: the
+/// hardcoded `dev-api-token` gated by `ALLTERNIT_ALLOW_DEV_TOKEN`
+/// (default OFF — audit finding B1, see `auth::dev_token`), plus the
+/// environment-bearer and legacy-literal overrides (see `is_dev_api_token`
+/// and `is_legacy_dev_api_token`), both rejected by default and
+/// hard-refused in production environments. Crate-public for
 /// `auth::resolve::resolve_user_id`, which offers the same token path to
 /// management routes.
 pub(crate) async fn validate_token_against_db(
@@ -297,9 +311,16 @@ pub(crate) async fn validate_token_against_db(
         }));
     }
 
-    // Development overrides (both opt-in — rejected by default, hard-refused
-    // in production environments; see the two gate functions below).
-    if is_dev_api_token(token) || is_legacy_dev_api_token(token) {
+    // Development overrides — all opt-in and default-OFF. The hardcoded
+    // `dev-api-token` requires `ALLTERNIT_ALLOW_DEV_TOKEN` (audit finding
+    // B1; see `auth::dev_token`); the other two are gated by the functions
+    // below and hard-refused in production environments.
+    if crate::auth::dev_token::is_allowed_dev_token(
+        token,
+        crate::auth::dev_token::dev_token_allowed(),
+    ) || is_dev_api_token(token)
+        || is_legacy_dev_api_token(token)
+    {
         return Ok(Some(AuthenticatedUser::development_user()));
     }
 
@@ -493,11 +514,62 @@ fn unauthorized_response_with_www_authenticate(message: &str) -> Response {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::auth::dev_token::{ALLOW_DEV_TOKEN_ENV, DEV_TOKEN_ENV_LOCK};
     use serial_test::serial;
 
     /// The exact token the legacy iOS app ships. It must never authenticate
     /// under default configuration.
     const LEGACY_DEV_TOKEN: &str = "dev-api-token";
+
+    /// The legacy Tower middleware's token check, without needing an inner
+    /// service or a database.
+    fn legacy_validator() -> AuthMiddleware<()> {
+        AuthMiddleware {
+            inner: (),
+            development_mode: false,
+        }
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn legacy_middleware_rejects_dev_token_by_default() {
+        let _guard = DEV_TOKEN_ENV_LOCK.lock().unwrap();
+        std::env::remove_var(ALLOW_DEV_TOKEN_ENV);
+        std::env::remove_var("ALLTERNIT_DEV_MODE");
+        std::env::remove_var("ALLTERNIT_DEV_BEARER");
+        std::env::remove_var("ALLTERNIT_ALLOW_DEV_API_TOKEN");
+
+        let user = legacy_validator()
+            .validate_token(LEGACY_DEV_TOKEN)
+            .await;
+        assert!(
+            user.is_none(),
+            "hardcoded dev token must be REJECTED when {ALLOW_DEV_TOKEN_ENV} is unset (default)"
+        );
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn legacy_middleware_accepts_dev_token_only_when_gate_env_set() {
+        let _guard = DEV_TOKEN_ENV_LOCK.lock().unwrap();
+        std::env::set_var(ALLOW_DEV_TOKEN_ENV, "true");
+
+        let user = legacy_validator()
+            .validate_token(LEGACY_DEV_TOKEN)
+            .await;
+        assert!(
+            user.is_some(),
+            "dev token accepted only when {ALLOW_DEV_TOKEN_ENV}=true"
+        );
+        assert_eq!(user.unwrap().user_id, "dev-user");
+
+        std::env::remove_var(ALLOW_DEV_TOKEN_ENV);
+        let user = legacy_validator().validate_token(LEGACY_DEV_TOKEN).await;
+        assert!(
+            user.is_none(),
+            "removing the gate env turns the backdoor back off"
+        );
+    }
 
     async fn test_pool() -> sqlx::PgPool {
         let url = "postgres://allternit:allternit_pg_2026@localhost:5432/allternit_test";
@@ -627,9 +699,11 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn legacy_dev_token_shape_is_rejected_by_default() {
+        let _guard = DEV_TOKEN_ENV_LOCK.lock().unwrap();
         std::env::remove_var("ALLTERNIT_DEV_MODE");
         std::env::remove_var("ALLTERNIT_DEV_BEARER");
         std::env::remove_var("ALLTERNIT_ALLOW_DEV_API_TOKEN");
+        std::env::remove_var(ALLOW_DEV_TOKEN_ENV);
         std::env::remove_var("RUST_ENV");
         std::env::remove_var("ENVIRONMENT");
         let pool = test_pool().await;
@@ -642,12 +716,14 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn dev_override_requires_dev_mode_and_env_bearer() {
+        let _guard = DEV_TOKEN_ENV_LOCK.lock().unwrap();
         let pool = test_pool().await;
 
         // ALLTERNIT_DEV_BEARER alone (no DEV_MODE) does not enable anything.
         std::env::remove_var("ALLTERNIT_DEV_MODE");
         std::env::set_var("ALLTERNIT_DEV_BEARER", LEGACY_DEV_TOKEN);
         std::env::remove_var("ALLTERNIT_ALLOW_DEV_API_TOKEN");
+        std::env::remove_var(ALLOW_DEV_TOKEN_ENV);
         assert!(
             validate_token_against_db(&pool, LEGACY_DEV_TOKEN)
                 .await
@@ -682,10 +758,12 @@ mod tests {
     #[tokio::test]
     #[serial]
     async fn dev_override_is_refused_in_production() {
+        let _guard = DEV_TOKEN_ENV_LOCK.lock().unwrap();
         let pool = test_pool().await;
         std::env::set_var("ALLTERNIT_DEV_MODE", "1");
         std::env::set_var("ALLTERNIT_DEV_BEARER", LEGACY_DEV_TOKEN);
         std::env::set_var("ENVIRONMENT", "production");
+        std::env::remove_var(ALLOW_DEV_TOKEN_ENV);
 
         assert!(
             validate_token_against_db(&pool, LEGACY_DEV_TOKEN)

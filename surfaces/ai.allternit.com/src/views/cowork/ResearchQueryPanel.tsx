@@ -148,7 +148,7 @@ export function ResearchQueryPanel(): React.ReactNode {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') handleSubmit(); }}
-          placeholder={isHealthy === false ? 'Research service offline (start docker sidecar)' : 'Ask a deep research question…'}
+          placeholder={isHealthy === false ? 'Research is unavailable in this deployment' : 'Ask a deep research question…'}
           disabled={isStreaming || isHealthy === false}
           style={{
             flex: 1,

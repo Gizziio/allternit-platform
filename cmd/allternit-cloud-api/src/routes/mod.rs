@@ -1,5 +1,6 @@
 //! Routes module
 
+pub mod agent_sessions;
 pub mod api_keys;
 pub mod approvals;
 pub mod auth;
@@ -7,9 +8,11 @@ pub mod billing_credits;
 pub mod billing_checkout;
 pub mod billing_subscriptions;
 pub mod billing_webhooks;
+pub mod beta;
 pub mod clerk_webhooks;
 pub mod contabo_hosted_runtimes;
 pub mod costs;
+pub mod data_plane;
 pub mod deployments;
 pub mod dispatch_handoff;
 pub mod gizzi_instances;
@@ -23,6 +26,7 @@ pub mod mesh;
 pub mod mirror;
 pub mod model_router;
 pub mod mirror_ws;
+pub mod office;
 pub mod providers;
 pub mod regions;
 pub mod runs;
@@ -30,4 +34,6 @@ pub mod runtime_pairing;
 pub mod runtime_relay;
 pub mod schedules;
 pub mod tasks;
+#[cfg(test)]
+pub mod test_support;
 pub mod wizard;

@@ -16,8 +16,17 @@ import {
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { createModuleLogger } from "@/lib/logger";
+import { isBetaApiEnabled } from "@/lib/env";
+import { cloudApiFetch } from "@/lib/cloud-api";
 
 const logger = createModuleLogger("AllternitPlaygroundView");
+
+// The playground targets /api/v1/beta/sessions/*. When the beta control-plane
+// flag is on, those handlers are served by the cloud-api control plane
+// (Clerk bearer via cloudApiFetch); when off, the handlers below never fire —
+// every entry point fails closed on the flag first.
+const BETA_PLAYGROUND_DISABLED_TOAST =
+  "Playground is disabled in this deployment (the beta sessions API is not enabled).";
 
 type PlaygroundTab = "prompt" | "memory" | "tools" | "events";
 
@@ -41,19 +50,26 @@ interface Toast {
   type: "error" | "success" | "info";
 }
 
+async function betaFetch(path: string, init?: RequestInit): Promise<Response> {
+  if (isBetaApiEnabled()) {
+    return cloudApiFetch(path, init);
+  }
+  return fetch(path, init);
+}
+
 const api = {
   async searchSessionMemory(sessionId: string, query: string): Promise<{ results: MemoryResult[] }> {
-    const res = await fetch(`/api/v1/beta/sessions/${encodeURIComponent(sessionId)}/memory/search?q=${encodeURIComponent(query)}`);
+    const res = await betaFetch(`/api/v1/beta/sessions/${encodeURIComponent(sessionId)}/memory/search?q=${encodeURIComponent(query)}`);
     if (!res.ok) throw new Error("Failed to search session memory");
     return res.json();
   },
   async listSessionEvents(sessionId: string): Promise<{ events: SessionEvent[] }> {
-    const res = await fetch(`/api/v1/beta/sessions/${encodeURIComponent(sessionId)}/events/list`);
+    const res = await betaFetch(`/api/v1/beta/sessions/${encodeURIComponent(sessionId)}/events/list`);
     if (!res.ok) throw new Error("Failed to fetch session events");
     return res.json();
   },
   async runPrompt(sessionId: string, body: { messages: unknown[]; tools?: string[] }) {
-    const res = await fetch(`/api/v1/beta/sessions/${encodeURIComponent(sessionId)}/run`, {
+    const res = await betaFetch(`/api/v1/beta/sessions/${encodeURIComponent(sessionId)}/run`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
@@ -149,6 +165,11 @@ export function AllternitPlaygroundView() {
 
   const handleSearchMemory = useCallback(async () => {
     if (!sessionId.trim() || !query.trim()) return;
+    if (!isBetaApiEnabled()) {
+      addToast(BETA_PLAYGROUND_DISABLED_TOAST, "error");
+      setMemoryResults([]);
+      return;
+    }
     try {
       const data = await api.searchSessionMemory(sessionId, query);
       setMemoryResults(data.results || []);
@@ -161,6 +182,12 @@ export function AllternitPlaygroundView() {
 
   const handleLoadEvents = useCallback(async () => {
     if (!sessionId.trim()) return;
+    if (!isBetaApiEnabled()) {
+      // Deliberate empty state — the auto-load effect on the events tab hits
+      // this too, so never fire /api/v1/beta/sessions/:id/events/list.
+      setEvents([]);
+      return;
+    }
     try {
       const data = await api.listSessionEvents(sessionId);
       setEvents(data.events || []);
@@ -174,6 +201,10 @@ export function AllternitPlaygroundView() {
   const handleRun = useCallback(async () => {
     if (!sessionId.trim() || !userPrompt.trim()) {
       addToast("Session ID and user prompt are required", "error");
+      return;
+    }
+    if (!isBetaApiEnabled()) {
+      addToast(BETA_PLAYGROUND_DISABLED_TOAST, "error");
       return;
     }
     setIsRunning(true);

@@ -4,7 +4,7 @@
 //! with Postgres database and HTTP client.
 
 use allternit_cloud_api::{
-    create_rate_limiter, create_router, model_router, runtime, services, ApiState, RateLimitConfig,
+    create_rate_limiter, create_router, model_router, runtime, routes, services, ApiState, RateLimitConfig,
     db::cowork_models::*,
 };
 use axum::{body::Body, http::Request, http::StatusCode, response::Response};
@@ -69,11 +69,20 @@ impl TestApp {
             public_rate_limiter,
             free_inference_rate_limiter,
             cost_service,
-            quota_service,
+            quota_service: quota_service.clone(),
             contabo_runtime_service: Arc::new(services::ContaboRuntimeService::new(
                 db.clone(),
                 None,
                 "https://api.allternit.com".to_string(),
+            )),
+            data_plane_gateway: Arc::new(routes::data_plane::PgDataPlaneGateway::new(
+                db.clone(),
+                Arc::new(services::ContaboRuntimeService::new(
+                    db.clone(),
+                    None,
+                    "https://api.allternit.com".to_string(),
+                )),
+                quota_service.clone(),
             )),
             mesh_service: None,
             credential_cipher: None,

@@ -111,7 +111,10 @@ fn extract_token_from_protocol(headers: &axum::http::HeaderMap) -> Option<String
 
 /// Validate a WebSocket token: legacy `allternit_*` tokens (sha256 lookup in
 /// `api_tokens`), modern scoped `alt_…` keys, and the opt-in development
-/// override — all through the same validation the HTTP middleware uses.
+/// overrides (the hardcoded `dev-api-token` gated by
+/// `ALLTERNIT_ALLOW_DEV_TOKEN`, default OFF — audit finding B1; see
+/// `auth::dev_token`) — all through the same validation the HTTP middleware
+/// uses.
 async fn validate_ws_token(db: &sqlx::PgPool, token: &str) -> bool {
     matches!(
         crate::auth::middleware::validate_token_against_db(db, token).await,

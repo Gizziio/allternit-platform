@@ -32,6 +32,7 @@ pub mod analytics_routes;
 pub mod artifact_routes;
 pub mod audit_log_routes;
 pub mod auth;
+pub mod auth_dp_jwt;
 pub mod benchmark_routes;
 pub mod automation_routes;
 pub mod backend_install_routes;
@@ -74,6 +75,7 @@ pub mod device_attestation_routes;
 pub mod config;
 pub mod connector_routes;
 pub mod conversation_routes;
+pub mod cors;
 pub mod credits;
 pub mod cowork;
 pub mod cowork_preferences_routes;
@@ -287,6 +289,7 @@ pub mod test_helpers {
             fabric_scheduler,
             fabric_price_cache,
             os_control_plane,
+            dp_jwks: crate::auth_dp_jwt::DataPlaneJwks::disabled(),
         })
     }
 }
@@ -347,6 +350,9 @@ pub struct AppState {
     pub jwks: JwksManager,
     /// Unified auth configuration
     pub auth_config: AuthConfig,
+    /// Data-plane (cloud-api → node) JWT verifier: JWKS cache + EdDSA
+    /// verification of tokens minted by allternit-cloud-api.
+    pub dp_jwks: crate::auth_dp_jwt::DataPlaneJwks,
     /// VM execution driver (Firecracker on Linux, Apple VF on macOS, OpenSandbox)
     pub vm_driver: Option<Arc<dyn allternit_driver_interface::ExecutionDriver>>,
     /// Concrete Incus driver when one is configured; used to add/remove cloud

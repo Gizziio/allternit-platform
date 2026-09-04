@@ -7,6 +7,15 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatRelativeTime } from "@/lib/time";
 import { railsApi, useUnifiedStore } from "@/lib/agents";
+import { isRailsApiEnabled } from "@/lib/env";
+
+// Rails mail actions (/api/rails/mail/*) are served only by the Rust
+// allternit-api (:8013) — not publicly reachable from the deployed web
+// surface. When NEXT_PUBLIC_ALLTERNIT_RAILS_API is unset (default), the
+// handlers below fail closed with this deliberate message.
+const RAILS_API_DISABLED_MESSAGE =
+  "Mail actions are disabled in this deployment (the Rails API is not publicly reachable; set NEXT_PUBLIC_ALLTERNIT_RAILS_API=1 where the gateway is reachable).";
+
 import type { LedgerEvent, MailMessage } from "@/lib/agents";
 import {
   useMonitorData,
@@ -90,6 +99,7 @@ export function AgentActivityDetailView({ threadId }: AgentActivityDetailViewPro
     setActionError(null);
     setEmailDelivery(null);
     try {
+      if (!isRailsApiEnabled()) throw new Error(RAILS_API_DISABLED_MESSAGE);
       const result = await railsApi.mail.decide(threadId, approve, undefined);
       // Outbound agent-email threads report the provider-side outcome on the
       // decide response (rails/mod.rs mail_decide) — surface it inline.
@@ -112,6 +122,7 @@ export function AgentActivityDetailView({ threadId }: AgentActivityDetailViewPro
     const next = !archived;
     setActionError(null);
     try {
+      if (!isRailsApiEnabled()) throw new Error(RAILS_API_DISABLED_MESSAGE);
       // archive() takes (threadId, path, reason) — there's no thread-level
       // "hide from inbox" concept server-side, so we pass the thread id as
       // the path and track the archived/unarchived state locally (see
@@ -128,6 +139,7 @@ export function AgentActivityDetailView({ threadId }: AgentActivityDetailViewPro
     setSharing(true);
     setActionError(null);
     try {
+      if (!isRailsApiEnabled()) throw new Error(RAILS_API_DISABLED_MESSAGE);
       const assetRef = `agent-activity:${threadId}:${Date.now()}`;
       const response = await railsApi.mail.share(threadId, assetRef, "Shared from Agent Activity");
       setShareLink(buildMonitorLink(threadId, response.share_id));
@@ -144,6 +156,7 @@ export function AgentActivityDetailView({ threadId }: AgentActivityDetailViewPro
     setSending(true);
     setActionError(null);
     try {
+      if (!isRailsApiEnabled()) throw new Error(RAILS_API_DISABLED_MESSAGE);
       await railsApi.mail.send({ thread_id: threadId, body_ref: body });
       setReplyText("");
       await refresh();

@@ -6,7 +6,22 @@
  */
 
 import { api, GATEWAY_BASE_URL } from '@/integration/api-client';
+import { isModelLabApiEnabled } from '@/lib/env';
 import { setupApi } from '@/services/setup-api';
+
+// `/api/model-lab/*` is served only by the Rust allternit-api (:8013), which
+// is not publicly reachable from the deployed web surface — every entry point
+// below fails closed when the flag is off instead of firing requests that
+// 404. Set NEXT_PUBLIC_ALLTERNIT_MODEL_LAB_API=1 where the gateway is
+// reachable.
+const MODEL_LAB_DISABLED_MESSAGE =
+  'Model Lab API is disabled in this deployment (set NEXT_PUBLIC_ALLTERNIT_MODEL_LAB_API=1 where the gateway is reachable).';
+
+function assertModelLabApiEnabled(): void {
+  if (!isModelLabApiEnabled()) {
+    throw new Error(MODEL_LAB_DISABLED_MESSAGE);
+  }
+}
 
 // ============================================================================
 // Model Lab job types
@@ -223,11 +238,13 @@ export interface ChatCompletionChunk {
 // ============================================================================
 
 export async function listModelLabJobs(): Promise<ModelJob[]> {
+  assertModelLabApiEnabled();
   const response = await api.get<ModelJobListResponse>('/api/model-lab/jobs');
   return response.jobs ?? [];
 }
 
 export async function getModelLabJob(jobId: string): Promise<ModelJob> {
+  assertModelLabApiEnabled();
   return api.get<ModelJob>(`/api/model-lab/jobs/${encodeURIComponent(jobId)}`);
 }
 
@@ -238,6 +255,7 @@ export interface CreateModelLabJobRequest {
 }
 
 export async function createModelLabJob(request: CreateModelLabJobRequest): Promise<ModelJob> {
+  assertModelLabApiEnabled();
   return api.post<ModelJob>('/api/model-lab/jobs', request);
 }
 

@@ -10,13 +10,11 @@
 //! - Event streaming (WebSocket)
 //! - SSH, Swarm, Workflows, Boards
 
-use axum::http::{header, HeaderName, Method};
 use axum::Router;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
-use tower_http::cors::{AllowOrigin, CorsLayer};
 use tracing::info;
 
 #[cfg(any(target_os = "linux", target_os = "macos"))]
@@ -353,6 +351,10 @@ async fn main() {
         .clamp(0.0, 1.0);
     let _capacity_monitor = bot_desktop_capacity::init_capacity_monitor(capacity_threshold, memory_threshold);
 
+    // Data-plane JWT verifier (cloud-api → node, decision A1): fetches and
+    // caches cloud-api's JWKS; authenticates relayed calls as the JWT's sub.
+    let dp_jwks = allternit_api::auth_dp_jwt::DataPlaneJwks::from_env();
+
     // Create application state
     let state = Arc::new(AppState {
         config: app_config.clone(),
@@ -360,6 +362,7 @@ async fn main() {
         data_dir: data_dir.clone(),
         jwks,
         auth_config,
+        dp_jwks,
         vm_driver,
         incus_driver,
         desktop_host_registry,
@@ -837,42 +840,24 @@ async fn main() {
         app = app.merge(background_router(Arc::new(bstate)));
     }
 
-    // Apply CORS for local dev. Mirror the request origin and allow
-    // credentials: a wildcard origin is rejected by browsers whenever the
-    // client uses `credentials: 'include'`, which the local UIs do.
-    let app = app.layer(
-        CorsLayer::new()
-            .allow_origin(AllowOrigin::mirror_request())
-            .allow_credentials(true)
-            .allow_methods([
-                Method::GET,
-                Method::POST,
-                Method::PUT,
-                Method::PATCH,
-                Method::DELETE,
-                Method::OPTIONS,
-            ])
-            .allow_headers([
-                header::ACCEPT,
-                header::AUTHORIZATION,
-                header::CONTENT_TYPE,
-                header::ORIGIN,
-                HeaderName::from_static("x-client-version"),
-                HeaderName::from_static("x-allternit-desktop-access-token"),
-                HeaderName::from_static("x-allternit-self-hosted-token"),
-                HeaderName::from_static("x-allternit-user-id"),
-                HeaderName::from_static("x-allternit-user-email"),
-                HeaderName::from_static("x-allternit-user-name"),
-                HeaderName::from_static("x-allternit-tenant-id"),
-                // OfficeCLI document upload headers (browser taskpane)
-                HeaderName::from_static("x-office-filename"),
-                HeaderName::from_static("x-office-host"),
-                HeaderName::from_static("x-office-binding-id"),
-                // LLM gateway (OpenAI-compatible /v1 surface)
-                HeaderName::from_static("idempotency-key"),
-                HeaderName::from_static("x-allternit-session-id"),
-            ]),
-    );
+    // Apply the CORS policy (see allternit_api::cors for the matrix). The
+    // gate rejects cross-origin requests from origins outside the allowlist
+    // with 403 and runs OUTSIDE the CORS layer — the layer would otherwise
+    // answer OPTIONS preflights itself before the gate sees them. Allowed
+    // requests pass through to the layer, which decorates responses with the
+    // correct preflight and Vary headers. Credentials stay enabled because
+    // the local UIs use `credentials: 'include'`.
+    let app = if app_config.local_dev_bypass() {
+        // Dev-bypass mode keeps the legacy permissive mirror-any-origin
+        // behavior; no gate is installed.
+        app.layer(allternit_api::cors::cors_layer_from_config(&app_config))
+    } else {
+        app.layer(allternit_api::cors::cors_layer_from_config(&app_config))
+            .layer(axum::middleware::from_fn_with_state(
+                allternit_api::cors::CorsGateState::new(app_config.cors_origins()),
+                allternit_api::cors::origin_gate,
+            ))
+    };
 
     // Record request metrics for all non-preflight requests
     let app = app.layer(axum::middleware::from_fn(

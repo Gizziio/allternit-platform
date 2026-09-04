@@ -1,4 +1,10 @@
 import { applyRuntimeBackendSnapshot } from '@/lib/runtime-backend-client';
+import { isRuntimeApiEnabled } from '@/lib/env';
+
+// `/api/v1/runtime/*` is served only by the Rust allternit-api — fail closed
+// when the runtime API flag is off instead of firing requests that 404.
+const RUNTIME_API_DISABLED_MESSAGE =
+  'Runtime API is disabled in this deployment (set NEXT_PUBLIC_ALLTERNIT_RUNTIME_API=1 where the gateway is reachable).';
 
 export type RuntimeBackendMode = 'local' | 'byoc-vps' | 'cloud' | 'hybrid';
 
@@ -34,6 +40,9 @@ class RuntimeBackendAPI {
   private baseUrl = `${API_BASE_URL}/api/v1/runtime/backend`;
 
   async get(): Promise<RuntimeBackendResponse> {
+    if (!isRuntimeApiEnabled()) {
+      throw new Error(RUNTIME_API_DISABLED_MESSAGE);
+    }
     const response = await fetch(this.baseUrl, {
       method: 'GET',
       headers: {
@@ -57,6 +66,9 @@ class RuntimeBackendAPI {
     sshConnectionId?: string;
     backendTargetId?: string;
   }): Promise<RuntimeBackendResponse> {
+    if (!isRuntimeApiEnabled()) {
+      throw new Error(RUNTIME_API_DISABLED_MESSAGE);
+    }
     const response = await fetch(this.baseUrl, {
       method: 'POST',
       headers: {
@@ -97,6 +109,9 @@ class RuntimeBackendAPI {
     gatewayWsUrl?: string;
     gatewayToken?: string;
   }): Promise<{ success: boolean; message: string; backend_target?: RuntimeBackendTargetResponse }> {
+    if (!isRuntimeApiEnabled()) {
+      throw new Error(RUNTIME_API_DISABLED_MESSAGE);
+    }
     const response = await fetch(`${this.baseUrl}/manual`, {
       method: 'POST',
       headers: {

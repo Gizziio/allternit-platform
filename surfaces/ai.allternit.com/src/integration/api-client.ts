@@ -66,8 +66,6 @@ function gatewayUrl(): string {
   return normalized || DEFAULT_GATEWAY_URL;
 }
 
-const API_BASE = `${gatewayUrl()}/api`;
-
 // Export for debugging
 export const GATEWAY_BASE_URL = gatewayUrl();
 export const GATEWAY_URL = GATEWAY_BASE_URL; // Consistent export
@@ -774,17 +772,6 @@ class AllternitApiClient {
     }
   }
 
-  connectEventStream(sessionId: string): EventSource {
-    const url = `${this.baseUrl}/api/v1/sessions/${sessionId}/events`;
-    const eventSource = new EventSource(url);
-    
-    eventSource.onerror = (error) => {
-      logger.error({ err: error }, 'EventSource error');
-    };
-
-    return eventSource;
-  }
-
   // ==========================================================================
   // SKILLS API
   // ==========================================================================
@@ -1115,13 +1102,6 @@ class AllternitApiClient {
     return eventSource;
   }
 
-  /**
-   * Get operator health status
-   */
-  async operatorHealth(): Promise<{ status: string; type: string }> {
-    return this.get('/api/v1/operator/health');
-  }
-
   // ==========================================================================
   // USAGE API
   // ==========================================================================
@@ -1161,7 +1141,7 @@ export const api = new AllternitApiClient();
 // React Hooks
 // =============================================================================
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 
 import { createModuleLogger } from '@/lib/logger';
 
@@ -1219,7 +1199,6 @@ export function useSession(sessionId: string | null) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<AllternitApiError | null>(null);
-  const eventSourceRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -1237,61 +1216,6 @@ export function useSession(sessionId: string | null) {
     };
 
     fetchSession();
-  }, [sessionId]);
-
-  useEffect(() => {
-    if (!sessionId) return;
-
-    // Connect to event stream
-    const eventSource = api.connectEventStream(sessionId);
-    eventSourceRef.current = eventSource;
-
-    eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        
-        switch (data.type) {
-          case 'message.delta':
-            // Handle streaming message
-            setMessages(prev => {
-              const last = prev[prev.length - 1];
-              if (last && last.role === 'assistant') {
-                return [
-                  ...prev.slice(0, -1),
-                  { ...last, content: last.content + data.data.content }
-                ];
-              }
-              return [...prev, {
-                id: data.data.id,
-                role: 'assistant',
-                content: data.data.content,
-                timestamp: new Date().toISOString()
-              }];
-            });
-            break;
-          
-          case 'message.completed':
-            // Message complete
-            break;
-          
-          case 'tool.call':
-            // Tool was called
-            console.debug('[useSession] Tool call:', data.data);
-            break;
-          
-          case 'error':
-            setError(new AllternitApiError(data.data.message, 500));
-            break;
-        }
-      } catch (err) {
-        logger.error({ err: err }, 'Failed to parse event');
-      }
-    };
-
-    return () => {
-      eventSource.close();
-      eventSourceRef.current = null;
-    };
   }, [sessionId]);
 
   const sendMessage = useCallback(async (message: string) => {
@@ -1571,127 +1495,6 @@ export function useModelDiscovery() {
     realModels,
   };
 }
-
-// =============================================================================
-// Node Jobs API
-// =============================================================================
-
-export interface CreateJobRequest {
-  name: string;
-  wih: {
-    handler: string;
-    version?: string;
-    task: {
-      type: string;
-      command?: string;
-      working_dir?: string | null;
-      [key: string]: any;
-    };
-    tools?: Array<{ name: string; enabled: boolean; config?: any }>;
-  };
-  resources?: {
-    cpu_cores?: number;
-    memory_gb?: number;
-    disk_gb?: number;
-    gpu?: boolean;
-  };
-  env?: Record<string, string>;
-  priority?: number;
-  timeout_secs?: number;
-  node_id?: string | null;
-}
-
-export interface JobRecord {
-  id: number;
-  job_id: string;
-  node_id: string | null;
-  status: string;
-  priority: number;
-  job_spec: string;
-  result: string | null;
-  created_at: string;
-  started_at: string | null;
-  completed_at: string | null;
-}
-
-export interface JobQueueStats {
-  pending: number;
-  running: number;
-  completed: number;
-  failed: number;
-  cancelled: number;
-}
-
-export const jobsApi = {
-  /**
-   * Create a new job
-   */
-  async createJob(job: CreateJobRequest): Promise<{ job_id: string; status: string }> {
-    const response = await fetch(`${API_BASE}/jobs`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(job),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to create job: ${response.statusText}`);
-    }
-
-    return response.json();
-  },
-
-  /**
-   * Get job by ID
-   */
-  async getJob(jobId: string): Promise<{ job: JobRecord }> {
-    const response = await fetch(`${API_BASE}/jobs/${jobId}`);
-
-    if (!response.ok) {
-      throw new Error(`Failed to get job: ${response.statusText}`);
-    }
-
-    return response.json();
-  },
-
-  /**
-   * List jobs (with stats)
-   */
-  async listJobs(): Promise<{ stats: JobQueueStats }> {
-    const response = await fetch(`${API_BASE}/jobs`);
-
-    if (!response.ok) {
-      throw new Error(`Failed to list jobs: ${response.statusText}`);
-    }
-
-    return response.json();
-  },
-
-  /**
-   * Cancel a job
-   */
-  async cancelJob(jobId: string): Promise<void> {
-    const response = await fetch(`${API_BASE}/jobs/${jobId}/cancel`, {
-      method: 'POST',
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to cancel job: ${response.statusText}`);
-    }
-  },
-
-  /**
-   * Get job queue statistics
-   */
-  async getStats(): Promise<JobQueueStats> {
-    const response = await fetch(`${API_BASE}/jobs/stats`);
-
-    if (!response.ok) {
-      throw new Error(`Failed to get job stats: ${response.statusText}`);
-    }
-
-    return response.json();
-  },
-};
 
 // =============================================================================
 // Default Export

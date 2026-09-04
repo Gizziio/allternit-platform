@@ -52,10 +52,15 @@ pub async fn validate_token(
             }
         }
         None => {
-            // Check for dev token (opt-in overrides — rejected by default,
-            // hard-refused in production; see auth::middleware::is_dev_api_token
-            // and is_legacy_dev_api_token)
-            if crate::auth::middleware::is_dev_api_token(&request.token)
+            // Development overrides — all opt-in and default-OFF. The
+            // hardcoded `dev-api-token` requires `ALLTERNIT_ALLOW_DEV_TOKEN`
+            // (audit finding B1, see `auth::dev_token`); the other two are
+            // rejected by default and hard-refused in production (see
+            // auth::middleware::is_dev_api_token and is_legacy_dev_api_token).
+            if crate::auth::dev_token::is_allowed_dev_token(
+                &request.token,
+                crate::auth::dev_token::dev_token_allowed(),
+            ) || crate::auth::middleware::is_dev_api_token(&request.token)
                 || crate::auth::middleware::is_legacy_dev_api_token(&request.token)
             {
                 TokenInfo {
