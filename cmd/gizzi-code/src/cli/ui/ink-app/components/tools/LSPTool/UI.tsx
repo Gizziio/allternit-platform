@@ -1,2 +1,0 @@
-// @ts-nocheck
-export * from '../../tools/LSPTool/UI.tsx.js'
