@@ -13,6 +13,8 @@
 /remote-control.webmanifest /remote-control.webmanifest 200
 /manifest.json /manifest.json 200
 /sw.js /sw.js 200
+/robots.txt /robots.txt 200
+/404.html /404.html 200
 /bonsai-webgpu-worker.js /bonsai-webgpu-worker.js 200
 /benchmarks/* /benchmarks/:splat 200
 /desktop-cloud-admin.html /desktop-cloud-admin.html 200
