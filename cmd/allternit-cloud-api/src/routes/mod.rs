@@ -9,6 +9,7 @@ pub mod billing_checkout;
 pub mod billing_subscriptions;
 pub mod billing_webhooks;
 pub mod beta;
+pub mod canvases;
 pub mod clerk_webhooks;
 pub mod contabo_hosted_runtimes;
 pub mod costs;

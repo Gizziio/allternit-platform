@@ -356,6 +356,10 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
         // (/beta/sessions/:id/events/ws) is intentionally not exposed — it
         // needs the socket-ticket WS relay, not the request relay.
         .merge(routes::beta::routes())
+        // Canvas namespace (P1, tranche 2): user-wide list plus per-canvas
+        // get/patch/delete, relayed to the caller's default node. The data
+        // plane owns no streaming canvas variant — plain JSON CRUD only.
+        .merge(routes::canvases::routes())
         // Data-plane JWT public key (decision A1): nodes fetch cloud-api's
         // Ed25519 verifying key at startup. Public, fail-closed 503 when
         // ALLTERNIT_DP_JWT_SEED is unset.
