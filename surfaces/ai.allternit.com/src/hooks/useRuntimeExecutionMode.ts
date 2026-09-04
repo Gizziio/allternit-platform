@@ -6,6 +6,10 @@ import {
   type BackendRuntimeExecutionMode,
   type RuntimeExecutionMode,
 } from "@/lib/agents/native-agent-api";
+import { isRuntimeApiEnabled } from "@/lib/env";
+
+const RUNTIME_API_DISABLED_MESSAGE =
+  "Runtime API is disabled in this deployment (set NEXT_PUBLIC_ALLTERNIT_RUNTIME_API=1 where the gateway is reachable).";
 
 export interface RuntimeExecutionModeStatus {
   mode: RuntimeExecutionMode;
@@ -18,6 +22,8 @@ export interface UseRuntimeExecutionModeResult {
   isLoading: boolean;
   isSaving: boolean;
   error: Error | null;
+  /** True when the runtime API is disabled by flag — no backend to call. */
+  disabled: boolean;
   refetch: () => Promise<void>;
   setMode: (mode: RuntimeExecutionMode) => Promise<RuntimeExecutionModeStatus>;
 }
@@ -33,6 +39,7 @@ function normalizeExecutionMode(
 }
 
 export function useRuntimeExecutionMode(): UseRuntimeExecutionModeResult {
+  const disabled = !isRuntimeApiEnabled();
   const [executionMode, setExecutionMode] =
     useState<RuntimeExecutionModeStatus | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -44,6 +51,16 @@ export function useRuntimeExecutionMode(): UseRuntimeExecutionModeResult {
     if (isLoading) return;
 
     hasAttemptedRef.current = true;
+
+    // `/api/v1/runtime/*` is served only by the Rust allternit-api, which is
+    // not publicly reachable from this deployment — fail closed with a
+    // deliberate error instead of probing an endpoint that 404s.
+    if (disabled) {
+      setExecutionMode(null);
+      setError(new Error(RUNTIME_API_DISABLED_MESSAGE));
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
@@ -57,7 +74,7 @@ export function useRuntimeExecutionMode(): UseRuntimeExecutionModeResult {
     } finally {
       setIsLoading(false);
     }
-  }, [isLoading]);
+  }, [isLoading, disabled]);
 
   useEffect(() => {
     if (!hasAttemptedRef.current) {
@@ -67,6 +84,9 @@ export function useRuntimeExecutionMode(): UseRuntimeExecutionModeResult {
 
   const setMode = useCallback(
     async (mode: RuntimeExecutionMode): Promise<RuntimeExecutionModeStatus> => {
+      if (disabled) {
+        throw new Error(RUNTIME_API_DISABLED_MESSAGE);
+      }
       setIsSaving(true);
       setError(null);
 
@@ -86,7 +106,7 @@ export function useRuntimeExecutionMode(): UseRuntimeExecutionModeResult {
         setIsSaving(false);
       }
     },
-    [],
+    [disabled],
   );
 
   return {
@@ -94,6 +114,7 @@ export function useRuntimeExecutionMode(): UseRuntimeExecutionModeResult {
     isLoading,
     isSaving,
     error,
+    disabled,
     refetch,
     setMode,
   };

@@ -9,6 +9,7 @@
 
 import { create } from 'zustand';
 import type { AgentModeSurface } from '@/stores/agent-surface-mode.store';
+import { isPermissionsApiEnabled, isQuestionsApiEnabled } from '@/lib/env';
 import { nativeAgentApi, questionsApi } from './native-agent-api';
 
 export interface PendingPermissionRequest {
@@ -107,7 +108,10 @@ export const usePermissionStore = create<PermissionState>((set, get) => ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ actionId: requestId, decision }),
       }).catch(() => {});
-    } else {
+    } else if (isPermissionsApiEnabled()) {
+      // `POST /api/v1/permissions/:id/reply` is served only by the Rust
+      // allternit-api — when the flag is off, keep the local decision without
+      // forwarding it to a backend this deployment does not serve.
       void nativeAgentApi.permissions.replyPermission(requestId, reply).catch(() => {
         // The request remains recorded in history; the runtime will also clear
         // it when the originating session is stopped or disconnected.
@@ -234,7 +238,12 @@ export const useQuestionStore = create<QuestionState>((set, get) => ({
       };
     });
 
-    questionsApi.replyQuestion(requestId, answers).catch(() => {});
+    // `POST /api/v1/questions/:id/reply` is served only by the Rust
+    // allternit-api — when the flag is off, dismiss locally without
+    // forwarding to a backend this deployment does not serve.
+    if (isQuestionsApiEnabled()) {
+      questionsApi.replyQuestion(requestId, answers).catch(() => {});
+    }
   },
 
   rejectQuestion: (requestId) => {
@@ -243,7 +252,9 @@ export const useQuestionStore = create<QuestionState>((set, get) => ({
       delete newPending[requestId];
       return { pendingQuestions: newPending };
     });
-    questionsApi.rejectQuestion(requestId).catch(() => {});
+    if (isQuestionsApiEnabled()) {
+      questionsApi.rejectQuestion(requestId).catch(() => {});
+    }
   },
 
   clearQuestionRequest: (requestId) => {

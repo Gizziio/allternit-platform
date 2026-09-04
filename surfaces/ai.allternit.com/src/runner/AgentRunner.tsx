@@ -24,6 +24,13 @@ import { GizziMascot } from "@/components/ai-elements/GizziMascot";
 import { ContextWindowCard } from "@/components/ai-elements/ContextWindowCard";
 import { cn } from "@/lib/utils";
 import { getDefaultAgentModel, getLatestAgentModel } from "@/lib/agents/agent-models";
+import { isRunnerOperatorModeEnabled } from "@/lib/env";
+
+// Agent (operator planning) mode requires an operator backend that is not
+// deployed; the toggle stays hidden unless explicitly re-enabled. The store
+// guards in runner.store.ts fail closed even if agentEnabled is restored from
+// a persisted session.
+const OPERATOR_MODE_ENABLED = isRunnerOperatorModeEnabled();
 
 // Compact model picker: the zen-tier free default plus the platform's
 // current default and Anthropic models — derived from the registry so ids
@@ -384,7 +391,8 @@ export function AgentRunner() {
             agentEnabled ? "border-[var(--status-success)]/40 shadow-[0_0_0_1px_var(--status-success-bg)]" : "border-[var(--ui-border-default)]"
           )}>
             {/* Gizzi Mascot */}
-            <button type="button" 
+            {OPERATOR_MODE_ENABLED && (
+            <button type="button"
               onClick={() => setAgentEnabled(!agentEnabled)}
               className={cn(
                 "size-[38px] rounded-full flex items-center justify-center cursor-pointer shrink-0 transition-all duration-200 border border-solid",
@@ -399,6 +407,7 @@ export function AgentRunner() {
                 <Robot size={20} className="text-[var(--ui-text-muted)]" />
               )}
             </button>
+            )}
             
             {/* Plus / Attachment Button */}
             <button type="button"
@@ -502,6 +511,7 @@ export function AgentRunner() {
           {/* Bottom toolbar - Matching ChatComposer exactly */}
           <div className="flex items-center justify-between mt-2.5 px-1">
             {/* Agent Toggle Button - EXACTLY like ChatComposer */}
+            {OPERATOR_MODE_ENABLED && (
             <button type="button"
               onClick={() => setAgentEnabled(!agentEnabled)}
               className={cn(
@@ -512,6 +522,7 @@ export function AgentRunner() {
               <Robot size={14} />
               {agentEnabled ? 'Agent On' : 'Agent Off'}
             </button>
+            )}
             
             <div className={cn(
               "text-[12px] transition-colors",
@@ -634,7 +645,8 @@ export function AgentRunner() {
           agentEnabled ? "border-[var(--status-success)]/40 shadow-[0_0_0_1px_var(--status-success-bg)]" : "border-[var(--ui-border-default)]"
         )}>
           {/* Gizzi Mascot */}
-          <button type="button" 
+          {OPERATOR_MODE_ENABLED && (
+          <button type="button"
             onClick={() => setAgentEnabled(!agentEnabled)}
             className={cn(
               "size-[38px] rounded-full flex items-center justify-center cursor-pointer shrink-0 transition-all duration-200 border border-solid",
@@ -649,6 +661,7 @@ export function AgentRunner() {
               <Robot size={20} className="text-[var(--ui-text-muted)]" />
             )}
           </button>
+          )}
           
           {/* Plus / Attachment Button */}
           <button type="button"

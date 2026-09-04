@@ -500,6 +500,7 @@ mod tests {
             fabric_scheduler: crate::fabric::Scheduler::new(crate::fabric::CostEngine::default_engine()),
             fabric_price_cache: crate::fabric::PriceCache::new(db.clone()),
             os_control_plane: None,
+            dp_jwks: crate::auth_dp_jwt::DataPlaneJwks::disabled(),
         })
     }
 

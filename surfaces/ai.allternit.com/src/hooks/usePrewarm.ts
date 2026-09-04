@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { isRuntimeApiEnabled } from '@/lib/env';
 import {
   PoolStatus,
   PoolActivity,
@@ -9,6 +10,11 @@ import {
   PoolCreateForm,
   ActivityType,
 } from '@/types/runtime';
+
+// `/api/v1/runtime/*` is served only by the Rust allternit-api — fail closed
+// with a deliberate error when the runtime API flag is off.
+const RUNTIME_API_DISABLED_MESSAGE =
+  'Runtime API is disabled in this deployment (set NEXT_PUBLIC_ALLTERNIT_RUNTIME_API=1 where the gateway is reachable).';
 
 export type { PoolStatus, PoolActivity, PoolStats, PoolCreateForm };
 
@@ -115,6 +121,15 @@ export function usePrewarm(): UsePrewarmReturn {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
+
+    if (!isRuntimeApiEnabled()) {
+      setRuntimeStatus(null);
+      setPools([]);
+      setError(new Error(RUNTIME_API_DISABLED_MESSAGE));
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const res = await fetch('/api/v1/runtime/prewarm/status');
       if (!res.ok) {
@@ -143,6 +158,9 @@ export function usePrewarm(): UsePrewarmReturn {
   }, [fetchData]);
 
   const setPoolSize = useCallback(async (poolSize: number) => {
+    if (!isRuntimeApiEnabled()) {
+      throw new Error(RUNTIME_API_DISABLED_MESSAGE);
+    }
     const res = await fetch('/api/v1/runtime/prewarm/pool', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -164,6 +182,9 @@ export function usePrewarm(): UsePrewarmReturn {
   }, [appendActivity, fetchData, selectedPoolName]);
 
   const warmupPool = useCallback(async (name?: string) => {
+    if (!isRuntimeApiEnabled()) {
+      throw new Error(RUNTIME_API_DISABLED_MESSAGE);
+    }
     const res = await fetch('/api/v1/runtime/prewarm/warmup', {
       method: 'POST',
     });

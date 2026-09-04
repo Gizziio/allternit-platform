@@ -62,6 +62,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing::info!("Database: {}", database_url);
     tracing::info!("Bind address: {}", bind_addr);
 
+    if allternit_cloud_api::auth::dev_token::dev_token_allowed() {
+        tracing::warn!(
+            "ALLTERNIT_ALLOW_DEV_TOKEN is enabled - the hardcoded 'dev-api-token' bearer \
+             backdoor is ACTIVE (audit finding B1). Never enable this in production."
+        );
+    }
+
     // Initialize database
     tracing::info!("Initializing database...");
     let db = init_db(&database_url).await?;
@@ -224,6 +231,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     if inference_key_service.is_some() {
         tracing::info!("BYOK inference key store enabled");
     }
+    // P1 control-plane namespaces (agent-sessions/office/beta): resolves the
+    // caller's default data-plane node and relays through the runtime relay
+    // machinery (routes::data_plane).
+    let data_plane_gateway = Arc::new(routes::data_plane::PgDataPlaneGateway::new(
+        db.clone(),
+        contabo_runtime_service.clone(),
+        quota_service.clone(),
+    ));
     let state = Arc::new(ApiState {
         db,
         ssh_executor: allternit_cloud_ssh::SshExecutor::new(),
@@ -237,6 +252,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         cost_service,
         quota_service,
         contabo_runtime_service,
+        data_plane_gateway,
         mesh_service,
         credential_cipher,
         inference_key_service,

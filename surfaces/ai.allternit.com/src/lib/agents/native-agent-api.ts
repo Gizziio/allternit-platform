@@ -21,6 +21,8 @@
 import type { ArtifactUIPart } from "@/lib/ai/ui-parts.types";
 import { buildAuthHeaders } from "@/lib/agents/api-config";
 import { getActiveRuntimeId, getRuntimeExecutionTarget } from "@/lib/runtime-target";
+import { getCloudApiBaseUrl, isAgentSessionsApiEnabled } from "@/lib/env";
+import { createCloudApiEventSource } from "@/lib/cloud-api";
 
 /**
  * Wrapper around fetch that injects the user's bearer token / desktop session
@@ -69,7 +71,15 @@ function getGatewayOrigin(): string {
 }
 
 const getApiV1Base = () => `${getGatewayOrigin()}/api/v1`;
-const getAgentSessionBase = () => `${getApiV1Base()}/agent-sessions`;
+// When the agent-sessions control-plane flag is on, the agent-sessions
+// namespace is served by the cloud-api control plane (Clerk auth → user's
+// data-plane node → relay), not the 8013 gateway. The `/api/v1/canvases/:id`
+// routes used by canvasApi.getCanvas/updateCanvas/deleteCanvas are NOT part
+// of that namespace and stay on the gateway base.
+const getAgentSessionBase = () =>
+  isAgentSessionsApiEnabled()
+    ? `${getCloudApiBaseUrl()}/api/v1/agent-sessions`
+    : `${getApiV1Base()}/agent-sessions`;
 
 // Cache the backend agent-sessions availability so we stop probing an
 // unimplemented endpoint after the first failure.
@@ -477,7 +487,9 @@ export const sessionApi = {
     }
     listSessionsPromise = (async () => {
       try {
-        const response = await fetch(getAgentSessionBase());
+        // Authenticated fetch is required: against the cloud-api control
+        // plane (flag on) an unauthenticated list would 401.
+        const response = await authFetch(getAgentSessionBase());
         const data = await handleResponse<BackendSessionListResponse>(response);
         return data.sessions.map(normalizeSessionPayload);
       } catch (error) {
@@ -633,8 +645,15 @@ export const sessionApi = {
   /**
    * Open the session sync SSE channel.
    * GET /api/v1/agent-sessions/sync
+   *
+   * When the control-plane flag is on this streams from cloud-api with
+   * authenticated fetch (cloud-api accepts Bearer only, no session cookie, so
+   * a plain EventSource cannot authenticate).
    */
   createSyncSource(): EventSource {
+    if (isAgentSessionsApiEnabled()) {
+      return createCloudApiEventSource("/api/v1/agent-sessions/sync");
+    }
     return new EventSource(`${getAgentSessionBase()}/sync`);
   },
 };

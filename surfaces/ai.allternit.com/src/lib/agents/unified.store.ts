@@ -11,6 +11,16 @@
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
 import { railsApi } from "./rails.service";
+import { isRailsApiEnabled } from "@/lib/env";
+
+// The /api/rails/* handlers live only on the Rust allternit-api (:8013),
+// which is not publicly reachable from the deployed web surface. When
+// NEXT_PUBLIC_ALLTERNIT_RAILS_API is unset (default), every store action
+// below fails closed with this deliberate message instead of firing
+// requests that 404.
+const RAILS_API_DISABLED_MESSAGE =
+  "Rails API is disabled in this deployment (set NEXT_PUBLIC_ALLTERNIT_RAILS_API=1 where the gateway is reachable).";
+
 import type {
   WihInfo,
   ManagedLease,
@@ -731,6 +741,7 @@ export const useUnifiedStore = create<UnifiedStore>()(
     // Actions - Connection
     checkHealth: async () => {
       try {
+        if (!isRailsApiEnabled()) throw new Error(RAILS_API_DISABLED_MESSAGE);
         const health = await railsApi.health();
         set({
           health: {
@@ -818,6 +829,7 @@ export const useUnifiedStore = create<UnifiedStore>()(
     fetchDags: async () => {
       set({ isLoading: true, error: null });
       try {
+        if (!isRailsApiEnabled()) throw new Error(RAILS_API_DISABLED_MESSAGE);
         const response = await railsApi.plan.list();
         const dags: DagDefinition[] = response.dags.map((d: any) => ({
           dagId: d.dag_id,
@@ -836,6 +848,7 @@ export const useUnifiedStore = create<UnifiedStore>()(
     createDag: async (text, dagId) => {
       set({ isLoading: true, error: null });
       try {
+        if (!isRailsApiEnabled()) throw new Error(RAILS_API_DISABLED_MESSAGE);
         const response = await railsApi.plan.new({ text, dag_id: dagId });
         const dagDetails = await railsApi.plan.show(response.dag_id);
         const newDag: DagDefinition = {
@@ -869,6 +882,7 @@ export const useUnifiedStore = create<UnifiedStore>()(
     refineDag: async (dagId, delta, reason, mutations) => {
       set({ isLoading: true, error: null });
       try {
+        if (!isRailsApiEnabled()) throw new Error(RAILS_API_DISABLED_MESSAGE);
         await railsApi.plan.refine({ dag_id: dagId, delta, reason, mutations });
         await get().fetchDagDetails(dagId);
         set({ isLoading: false });
@@ -887,6 +901,7 @@ export const useUnifiedStore = create<UnifiedStore>()(
     executeDag: async (dagId) => {
       set({ isLoading: true, error: null });
       try {
+        if (!isRailsApiEnabled()) throw new Error(RAILS_API_DISABLED_MESSAGE);
         const runId = `run_${Date.now()}`;
         await railsApi.plan.execute(dagId, runId);
         const newExecution: DagExecution = {
@@ -922,6 +937,7 @@ export const useUnifiedStore = create<UnifiedStore>()(
     
     cancelExecution: async (runId) => {
       try {
+        if (!isRailsApiEnabled()) throw new Error(RAILS_API_DISABLED_MESSAGE);
         await railsApi.plan.cancel(runId);
         set((state) => ({
           executions: state.executions.map((e) =>
@@ -942,6 +958,7 @@ export const useUnifiedStore = create<UnifiedStore>()(
     
     fetchDagDetails: async (dagId) => {
       try {
+        if (!isRailsApiEnabled()) throw new Error(RAILS_API_DISABLED_MESSAGE);
         const response = await railsApi.plan.show(dagId);
         const dag: DagDefinition = {
           dagId: response.dag_id,
@@ -978,6 +995,7 @@ export const useUnifiedStore = create<UnifiedStore>()(
       
       set({ isLoading: true, error: null });
       try {
+        if (!isRailsApiEnabled()) throw new Error(RAILS_API_DISABLED_MESSAGE);
         const response = await railsApi.wihs.list({ dag_id: dagId });
         set({
           wihs: response.wihs ?? [],
@@ -993,6 +1011,7 @@ export const useUnifiedStore = create<UnifiedStore>()(
     pickupWih: async (dagId, nodeId, agentId, role) => {
       set({ isLoading: true, error: null });
       try {
+        if (!isRailsApiEnabled()) throw new Error(RAILS_API_DISABLED_MESSAGE);
         const response = await railsApi.wihs.pickup({
           dag_id: dagId,
           node_id: nodeId,
@@ -1019,6 +1038,7 @@ export const useUnifiedStore = create<UnifiedStore>()(
     closeWih: async (wihId, status, evidence) => {
       set({ isLoading: true, error: null });
       try {
+        if (!isRailsApiEnabled()) throw new Error(RAILS_API_DISABLED_MESSAGE);
         await railsApi.wihs.close(wihId, { status, evidence });
         set((state) => ({
           wihs: state.wihs.map((w) => (w.wih_id === wihId ? { ...w, status: "closed" } : w)),
@@ -1043,6 +1063,7 @@ export const useUnifiedStore = create<UnifiedStore>()(
     fetchLeases: async () => {
       set({ isLoading: true, error: null });
       try {
+        if (!isRailsApiEnabled()) throw new Error(RAILS_API_DISABLED_MESSAGE);
         const response = await railsApi.leases.list();
         set({ leases: response.leases, isLoading: false });
       } catch (err: any) {
@@ -1053,6 +1074,7 @@ export const useUnifiedStore = create<UnifiedStore>()(
     requestLease: async (wihId, agentId, paths, ttlSeconds = 900) => {
       set({ isLoading: true, error: null });
       try {
+        if (!isRailsApiEnabled()) throw new Error(RAILS_API_DISABLED_MESSAGE);
         const response = await railsApi.leases.request({
           wih_id: wihId,
           agent_id: agentId,
@@ -1081,6 +1103,7 @@ export const useUnifiedStore = create<UnifiedStore>()(
     
     renewLease: async (leaseId) => {
       try {
+        if (!isRailsApiEnabled()) throw new Error(RAILS_API_DISABLED_MESSAGE);
         await railsApi.leases.renew(leaseId, 300);
         await get().fetchLeases();
         get().addLog({
@@ -1096,6 +1119,7 @@ export const useUnifiedStore = create<UnifiedStore>()(
     
     releaseLease: async (leaseId) => {
       try {
+        if (!isRailsApiEnabled()) throw new Error(RAILS_API_DISABLED_MESSAGE);
         await railsApi.leases.release(leaseId);
         set((state) => ({
           leases: state.leases.filter((l) => l.lease_id !== leaseId),
@@ -1115,6 +1139,7 @@ export const useUnifiedStore = create<UnifiedStore>()(
     fetchContextPacks: async (dagId, nodeId, wihId) => {
       set({ isLoading: true, error: null });
       try {
+        if (!isRailsApiEnabled()) throw new Error(RAILS_API_DISABLED_MESSAGE);
         const response = await railsApi.contextPacks.list({ dag_id: dagId, node_id: nodeId, wih_id: wihId });
         set({ contextPacks: response.packs, isLoading: false });
       } catch (err: any) {
@@ -1125,6 +1150,7 @@ export const useUnifiedStore = create<UnifiedStore>()(
     sealContextPack: async (dagId, nodeId, wihId) => {
       set({ isLoading: true, error: null });
       try {
+        if (!isRailsApiEnabled()) throw new Error(RAILS_API_DISABLED_MESSAGE);
         const receiptsResponse = await railsApi.receipts.query({ dag_id: dagId, node_id: nodeId });
         const response = await railsApi.contextPacks.seal({
           dag_id: dagId,
@@ -1150,6 +1176,7 @@ export const useUnifiedStore = create<UnifiedStore>()(
     fetchReceipts: async (query) => {
       set({ isLoading: true, error: null });
       try {
+        if (!isRailsApiEnabled()) throw new Error(RAILS_API_DISABLED_MESSAGE);
         const response = await railsApi.receipts.query(query || {});
         set({ receipts: response.receipts, isLoading: false });
       } catch (err: any) {
@@ -1160,6 +1187,7 @@ export const useUnifiedStore = create<UnifiedStore>()(
     // Actions - Ledger
     fetchLedgerEvents: async (count = 50) => {
       try {
+        if (!isRailsApiEnabled()) throw new Error(RAILS_API_DISABLED_MESSAGE);
         const events = await railsApi.ledger.tail(count);
         set({ ledgerEvents: events });
         // Also add to logs
@@ -1180,6 +1208,7 @@ export const useUnifiedStore = create<UnifiedStore>()(
     
     traceEvents: async (nodeId, wihId) => {
       try {
+        if (!isRailsApiEnabled()) throw new Error(RAILS_API_DISABLED_MESSAGE);
         const events = await railsApi.ledger.trace({ node_id: nodeId, wih_id: wihId });
         set({ ledgerEvents: events });
       } catch (err: any) {
@@ -1190,6 +1219,7 @@ export const useUnifiedStore = create<UnifiedStore>()(
     // Actions - Mail
     fetchMailThreads: async () => {
       try {
+        if (!isRailsApiEnabled()) throw new Error(RAILS_API_DISABLED_MESSAGE);
         // Real endpoint: GET /mail/threads (issue #16). The old POST /mail/inbox
         // route does not exist on the backend.
         const response = await railsApi.mail.threads();
@@ -1206,6 +1236,7 @@ export const useUnifiedStore = create<UnifiedStore>()(
     
     fetchMailMessages: async (threadId) => {
       try {
+        if (!isRailsApiEnabled()) throw new Error(RAILS_API_DISABLED_MESSAGE);
         // Real endpoint: GET /mail/thread/:id (issue #16). The old
         // POST /mail/inbox?thread_id route does not exist on the backend.
         if (!threadId) throw new Error("threadId is required to fetch mail messages")
@@ -1220,6 +1251,7 @@ export const useUnifiedStore = create<UnifiedStore>()(
     
     sendMail: async (threadId, body) => {
       try {
+        if (!isRailsApiEnabled()) throw new Error(RAILS_API_DISABLED_MESSAGE);
         await railsApi.mail.send({ thread_id: threadId, body_ref: body });
         await get().fetchMailMessages(threadId);
         get().addLog({
@@ -1235,6 +1267,7 @@ export const useUnifiedStore = create<UnifiedStore>()(
     
     requestReview: async (threadId, wihId, diffRef) => {
       try {
+        if (!isRailsApiEnabled()) throw new Error(RAILS_API_DISABLED_MESSAGE);
         await railsApi.mail.requestReview(threadId, wihId, diffRef);
         await get().fetchMailMessages(threadId);
         set({ contextMode: "reviewing" });
@@ -1252,6 +1285,7 @@ export const useUnifiedStore = create<UnifiedStore>()(
     
     decideReview: async (threadId, approve, notes) => {
       try {
+        if (!isRailsApiEnabled()) throw new Error(RAILS_API_DISABLED_MESSAGE);
         await railsApi.mail.decide(threadId, approve, notes);
         await get().fetchMailMessages(threadId);
         set({ contextMode: approve ? "executing" : "idle" });
@@ -1268,6 +1302,7 @@ export const useUnifiedStore = create<UnifiedStore>()(
     
     ackMessage: async (threadId, messageId, note) => {
       try {
+        if (!isRailsApiEnabled()) throw new Error(RAILS_API_DISABLED_MESSAGE);
         await railsApi.mail.ack(threadId, messageId, note);
         await get().fetchMailMessages(threadId);
       } catch (err: any) {
@@ -1384,7 +1419,13 @@ let syncInterval: NodeJS.Timeout | null = null;
 export function startAutoSync(intervalMs = 30000) {
   if (healthInterval) clearInterval(healthInterval);
   if (syncInterval) clearInterval(syncInterval);
-  
+
+  if (!isRailsApiEnabled()) {
+    // Never start the health/sync poll loops against a backend that is
+    // disabled by flag — every tick would fail closed via the action guards.
+    return;
+  }
+
   const store = useUnifiedStore.getState();
   
   // Health check every 10 seconds

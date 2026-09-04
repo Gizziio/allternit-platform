@@ -18,6 +18,7 @@ import { useChatSessionStore } from '@/views/chat/ChatSessionStore';
 import { useGroupChatStore } from './group-chat.store';
 import { useAgentStore } from '@/lib/agents/agent.store';
 import { sessionApi, chatApi } from '@/lib/agents/native-agent-api';
+import { isAgentSessionsApiEnabled } from '@/lib/env';
 import { buildBotRuntimeEnv, resolveModelRef } from './bot-runtime-env';
 import { getBotDisplayName } from './bot-profile';
 import { createModuleLogger } from '@/lib/logger';
@@ -133,6 +134,13 @@ async function runMemberTurn(
   const modelId = await resolveModelRef(bot);
 
   let ephemeralSessionId: string | null = null;
+  if (!isAgentSessionsApiEnabled()) {
+    // Member turns create ephemeral POST /api/v1/agent-sessions, served only
+    // by the Rust allternit-api (:8013). Fail closed — the member passes —
+    // instead of firing a request that 404s.
+    logger.warn({ member: member.botId }, 'Agent sessions backend disabled; skipping member turn');
+    return null;
+  }
   try {
     const backendSession = await sessionApi.createSession({
       name: displayName,

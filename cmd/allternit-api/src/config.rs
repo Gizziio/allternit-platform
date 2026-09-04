@@ -445,6 +445,15 @@ impl AppConfig {
             .unwrap_or(false)
     }
 
+    /// Origins allowed to make cross-origin browser calls, from
+    /// `ALLTERNIT_CORS_ORIGINS` (comma-separated). When unset or empty, the
+    /// [`crate::cors::DEFAULT_ALLOWED_ORIGINS`] list is used. Requests without
+    /// an `Origin` header (non-browser clients) are never CORS-gated.
+    pub fn cors_origins(&self) -> Vec<axum::http::HeaderValue> {
+        let raw = std::env::var("ALLTERNIT_CORS_ORIGINS").ok();
+        crate::cors::parse_allowed_origins(raw.as_deref())
+    }
+
     /// When true, the app is running in self-hosted mode. Clerk is not required
     /// and the desktop bootstrap headers are trusted. Packaged apps can set this
     /// in company.json to avoid distributing Clerk keys.

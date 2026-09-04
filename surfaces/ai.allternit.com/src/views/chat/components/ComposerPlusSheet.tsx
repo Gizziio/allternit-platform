@@ -275,6 +275,10 @@ export function ComposerPlusSheet({
                     label={isGifRecording ? `Stop (${gifDuration ?? 0}s)` : "GIF"}
                     onClick={handleGifClick}
                     danger={isGifRecording}
+                    // Hidden entirely when the tools API is disabled — GIF
+                    // recording drives `/api/v1/tools/execute`, which this
+                    // deployment does not serve.
+                    className={onGifClick ? undefined : 'hidden'}
                   />
                   <GridButton
                     icon={<ImageIcon size={20} weight="duotone" />}
@@ -541,6 +545,7 @@ function GridButton({
   active,
   check,
   danger,
+  className,
 }: {
   icon: React.ReactNode;
   label: string;
@@ -548,6 +553,7 @@ function GridButton({
   active?: boolean;
   check?: boolean;
   danger?: boolean;
+  className?: string;
 }) {
   return (
     <button
@@ -559,7 +565,8 @@ function GridButton({
           ? "border-[var(--accent-chat)]/40 bg-[color-mix(in_srgb,var(--accent-chat)_12%,var(--surface-floating))] text-[var(--accent-chat)]"
           : danger
           ? "border-transparent bg-[color-mix(in_srgb,var(--status-error)_10%,var(--surface-floating))] text-[var(--status-error)] hover:bg-[color-mix(in_srgb,var(--status-error)_16%,var(--surface-floating))]"
-          : "border-transparent bg-[var(--bg-tertiary)]/30 text-[var(--text-primary)] hover:bg-[var(--surface-hover)]"
+          : "border-transparent bg-[var(--bg-tertiary)]/30 text-[var(--text-primary)] hover:bg-[var(--surface-hover)]",
+        className
       )}
     >
       <span

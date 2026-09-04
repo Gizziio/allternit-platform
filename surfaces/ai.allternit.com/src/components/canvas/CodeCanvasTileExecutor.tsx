@@ -29,6 +29,7 @@ import {
   type ReviewResult,
 } from '@/views/code/orchestrator.service';
 import { railsApi } from '@/lib/agents/rails.service';
+import { isRailsApiEnabled } from '@/lib/env';
 import { artifactFromReference, type CodeArtifact } from '@/views/code/artifacts';
 
 const STATE_COLOR: Record<ExecutorState, string> = {
@@ -113,7 +114,11 @@ export function CodeCanvasTileExecutor({
         getExecutorStatus(slug),
         tailExecutor(slug, 120).catch(() => ({ output: '' })),
         // The orchestrator bridge tags executor receipts with node_id = slug.
-        railsApi.receipts.query({ node_id: slug, limit: 50 }).catch(() => null),
+        // Receipts live on /api/rails (Rust allternit-api :8013) — resolve to
+        // null when the Rails API is disabled by flag instead of polling it.
+        isRailsApiEnabled()
+          ? railsApi.receipts.query({ node_id: slug, limit: 50 }).catch(() => null)
+          : Promise.resolve(null),
       ]);
       setSession(status.session);
       setTail(typeof output === 'string' ? output : output.output);

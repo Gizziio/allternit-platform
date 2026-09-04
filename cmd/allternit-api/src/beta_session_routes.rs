@@ -3,6 +3,14 @@
 //! This is intentionally separate from `agent_session_routes`: those routes
 //! proxy interactive Gizzi sessions, while this module owns the durable API
 //! contract for managed runs, child threads, events, and execution budgets.
+//!
+//! `POST /beta/sessions/:id/run` accepts the playground's prompt payload
+//! (`{messages, tools?}`) and enqueues it on the node's `/beta/work` queue
+//! (see `beta_work_routes`) as a task tied to the session — execution is
+//! performed by a polling worker, not inline. The node itself does not run
+//! an LLM loop here; when no worker is connected the task stays `queued`
+//! and the response says so. A `run_requested` event is appended to the
+//! session so the SSE/WebSocket event streams and `events/list` reflect it.
 
 use axum::{
     extract::{
@@ -72,6 +80,7 @@ pub fn beta_session_router() -> Router<Arc<AppState>> {
             "/beta/sessions/:id/tool-context",
             get(get_tool_context).put(set_tool_context),
         )
+        .route("/beta/sessions/:id/run", post(run_session))
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -586,6 +595,121 @@ async fn interrupt_session(
         }
     })?;
     Ok(Json(json!({"event": event})))
+}
+
+/// Roles accepted in a `POST /beta/sessions/:id/run` message list.
+const RUN_MESSAGE_ROLES: &[&str] = &["system", "user", "assistant", "tool"];
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct RunMessage {
+    role: String,
+    content: Value,
+}
+
+#[derive(Debug, Deserialize)]
+struct RunSessionBody {
+    messages: Vec<RunMessage>,
+    #[serde(default)]
+    tools: Option<Vec<String>>,
+}
+
+/// Validate a run payload: at least one message, known roles, non-empty
+/// string content, and non-empty tool names. Pure so it is testable without
+/// a database (the DB-backed tests are gated on the migration stack).
+fn validate_run_body(body: &RunSessionBody) -> Result<(), ApiError> {
+    if body.messages.is_empty() {
+        return Err(ApiError::BadRequest(
+            "messages must be a non-empty array".into(),
+        ));
+    }
+    for message in &body.messages {
+        if !RUN_MESSAGE_ROLES.contains(&message.role.as_str()) {
+            return Err(ApiError::BadRequest(format!(
+                "unsupported message role: {}",
+                message.role
+            )));
+        }
+        match &message.content {
+            Value::String(text) if !text.trim().is_empty() => {}
+            _ => {
+                return Err(ApiError::BadRequest(
+                    "message content must be a non-empty string".into(),
+                ))
+            }
+        }
+    }
+    if let Some(tools) = &body.tools {
+        if tools.iter().any(|tool| tool.trim().is_empty()) {
+            return Err(ApiError::BadRequest(
+                "tools must be non-empty strings".into(),
+            ));
+        }
+    }
+    Ok(())
+}
+
+/// `POST /beta/sessions/:id/run` — enqueue the prompt payload on the node's
+/// `/beta/work` queue as a session-tied task (see the module doc for the
+/// execution model and its limits). The response carries the queued task as
+/// `run`, matching the `{"run": …}` shape of `beta_deployment_routes`.
+async fn run_session(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(id): Path<String>,
+    Json(body): Json<RunSessionBody>,
+) -> Result<Json<Value>, ApiError> {
+    validate_run_body(&body)?;
+    let session = load_session(state.clone(), user.user_id.clone(), id.clone()).await?;
+    if session.status == "archived" {
+        return Err(ApiError::BadRequest(
+            "archived sessions cannot be run".into(),
+        ));
+    }
+    let db = state.db.clone();
+    let organization_id = user.organization_id.clone();
+    let user_id = user.user_id;
+    let message_count = body.messages.len();
+    let payload = json!({
+        "messages": serde_json::to_value(&body.messages).unwrap_or_else(|_| json!([])),
+        "tools": body.tools,
+    });
+    let task_id = uuid::Uuid::new_v4().to_string();
+    let run_event_id = task_id.clone();
+    let result_id = task_id.clone();
+    let session_id = id.clone();
+    let (task, event) = tokio::task::spawn_blocking(move || {
+        let mut conn = db.connect()?;
+        let tx = conn.transaction()?;
+        tx.execute(
+            "INSERT INTO beta_work_tasks (id, user_id, session_id, payload)
+             VALUES (?1, ?2, ?3, ?4)",
+            params![task_id, user_id, session_id, payload.to_string()],
+        )?;
+        let event = insert_event(
+            &tx,
+            &session_id,
+            "run_requested",
+            &json!({"task_id": run_event_id, "message_count": message_count}),
+        )?;
+        let task = tx.query_row(
+            &format!("{} WHERE id = ?1", crate::beta_work_routes::TASK_SELECT),
+            params![result_id],
+            crate::beta_work_routes::read_task,
+        )?;
+        tx.commit()?;
+        Ok::<(crate::beta_work_routes::TaskRow, Value), rusqlite::Error>((task, event))
+    })
+    .await
+    .map_err(|e| ApiError::Internal(e.to_string()))?
+    .map_err(|e| ApiError::DbError(e.to_string()))?;
+    webhook_subscription_routes::deliver_session_event(
+        state.clone(),
+        organization_id.as_deref(),
+        &id,
+        &event,
+    )
+    .await;
+    Ok(Json(json!({"run": task, "session_id": id})))
 }
 
 #[derive(Debug, Deserialize)]
@@ -1567,6 +1691,7 @@ mod tests {
             fabric_scheduler: crate::fabric::Scheduler::new(crate::fabric::CostEngine::default_engine()),
             fabric_price_cache: crate::fabric::PriceCache::new(db.clone()),
             os_control_plane: None,
+            dp_jwks: crate::auth_dp_jwt::DataPlaneJwks::disabled(),
         })
     }
 
@@ -2461,5 +2586,245 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+    }
+
+    #[test]
+    fn run_body_validation_accepts_playground_shaped_payloads() {
+        let body: RunSessionBody = serde_json::from_value(json!({
+            "messages": [
+                {"role": "system", "content": "You are helpful."},
+                {"role": "user", "content": "Hello"}
+            ],
+            "tools": ["web_search", "bash"]
+        }))
+        .unwrap();
+        assert!(validate_run_body(&body).is_ok());
+
+        let body: RunSessionBody = serde_json::from_value(json!({
+            "messages": [{"role": "user", "content": "Hello"}]
+        }))
+        .unwrap();
+        assert!(validate_run_body(&body).is_ok(), "tools are optional");
+    }
+
+    #[test]
+    fn run_body_validation_rejects_bad_payloads() {
+        for payload in [
+            json!({"messages": []}),
+            json!({"messages": [{"role": "wizard", "content": "hi"}]}),
+            json!({"messages": [{"role": "user", "content": "  "}]}),
+            json!({"messages": [{"role": "user", "content": 42}]}),
+            json!({"messages": [{"role": "user", "content": "hi"}], "tools": [""]}),
+        ] {
+            let body: RunSessionBody = serde_json::from_value(payload.clone())
+                .expect("payload shape parses; validation rejects it");
+            assert!(
+                validate_run_body(&body).is_err(),
+                "payload must be rejected: {payload}"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn run_session_enqueues_a_queued_work_task_and_records_event() {
+        let temp = temp_dir("run");
+        let state = test_app_state(&temp).await;
+        let state_for_db = state.clone();
+        let app = beta_session_router().with_state(state);
+
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/beta/sessions")
+                    .header("content-type", "application/json")
+                    .extension(test_user("user-a"))
+                    .body(json_body(&json!({})))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::CREATED);
+        let body = body_json(resp.into_body()).await;
+        let session_id = body["session"]["id"].as_str().unwrap().to_string();
+
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/beta/sessions/{}/run", session_id))
+                    .header("content-type", "application/json")
+                    .extension(test_user("user-a"))
+                    .body(json_body(&json!({
+                        "messages": [
+                            {"role": "system", "content": "You are helpful."},
+                            {"role": "user", "content": "Hello"}
+                        ],
+                        "tools": ["web_search"]
+                    })))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["session_id"], session_id);
+        let run = &body["run"];
+        assert_eq!(run["status"], "queued");
+        assert_eq!(run["session_id"], session_id);
+        assert_eq!(run["payload"]["messages"].as_array().unwrap().len(), 2);
+        assert_eq!(run["payload"]["tools"], json!(["web_search"]));
+
+        // The task is a real beta_work task the session owner can lease and
+        // ack through the /beta/work queue protocol.
+        let conn = state_for_db.db.connect().expect("test db connection");
+        let task_exists = conn
+            .query_row(
+                "SELECT EXISTS(SELECT 1 FROM beta_work_tasks
+                 WHERE id = ?1 AND user_id = ?2 AND session_id = ?3 AND status = 'queued')",
+                params![run["id"].as_str().unwrap(), "user-a", session_id],
+                |row| row.get::<_, bool>(0),
+            )
+            .unwrap();
+        assert!(task_exists);
+
+        // A run_requested event landed on the session's event stream.
+        let types = session_event_types(state_for_db.db.clone(), &session_id);
+        assert!(types.contains(&"run_requested".to_string()));
+    }
+
+    #[tokio::test]
+    async fn run_session_rejects_invalid_payloads() {
+        let temp = temp_dir("run-validation");
+        let state = test_app_state(&temp).await;
+        let app = beta_session_router().with_state(state);
+
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/beta/sessions")
+                    .header("content-type", "application/json")
+                    .extension(test_user("user-a"))
+                    .body(json_body(&json!({})))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::CREATED);
+        let body = body_json(resp.into_body()).await;
+        let session_id = body["session"]["id"].as_str().unwrap().to_string();
+        let uri = format!("/beta/sessions/{}/run", session_id);
+
+        for payload in [
+            json!({"messages": []}),
+            json!({"messages": [{"role": "wizard", "content": "hi"}]}),
+            json!({"messages": [{"role": "user", "content": "  "}]}),
+            json!({"messages": [{"role": "user", "content": 42}]}),
+            json!({"messages": [{"role": "user", "content": "hi"}], "tools": [""]}),
+        ] {
+            let resp = app
+                .clone()
+                .oneshot(
+                    Request::builder()
+                        .method("POST")
+                        .uri(&uri)
+                        .header("content-type", "application/json")
+                        .extension(test_user("user-a"))
+                        .body(json_body(&payload))
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            assert_eq!(resp.status(), StatusCode::BAD_REQUEST, "payload: {payload}");
+        }
+    }
+
+    #[tokio::test]
+    async fn run_session_requires_an_owned_active_session() {
+        let temp = temp_dir("run-guards");
+        let state = test_app_state(&temp).await;
+        let app = beta_session_router().with_state(state);
+
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/beta/sessions")
+                    .header("content-type", "application/json")
+                    .extension(test_user("user-a"))
+                    .body(json_body(&json!({})))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::CREATED);
+        let body = body_json(resp.into_body()).await;
+        let session_id = body["session"]["id"].as_str().unwrap().to_string();
+
+        // Unknown session: 404.
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/beta/sessions/sess_missing/run")
+                    .header("content-type", "application/json")
+                    .extension(test_user("user-a"))
+                    .body(json_body(&json!({"messages": [{"role": "user", "content": "hi"}]})))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+
+        // Another user's session: 404 (isolation, same as every sibling route).
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/beta/sessions/{}/run", session_id))
+                    .header("content-type", "application/json")
+                    .extension(test_user("user-b"))
+                    .body(json_body(&json!({"messages": [{"role": "user", "content": "hi"}]})))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+
+        // Archived session: 400 (same guard as interrupt).
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("DELETE")
+                    .uri(format!("/beta/sessions/{}", session_id))
+                    .extension(test_user("user-a"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/beta/sessions/{}/run", session_id))
+                    .header("content-type", "application/json")
+                    .extension(test_user("user-a"))
+                    .body(json_body(&json!({"messages": [{"role": "user", "content": "hi"}]})))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
     }
 }

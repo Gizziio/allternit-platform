@@ -54,7 +54,9 @@ thiserror = "1"
 rand = "0.8"
 anyhow = "1"
 dirs = "5"
-jsonwebtoken = "10"
+# v10 requires an explicit crypto-provider feature; aws_lc_rs matches the
+# provider `auth`'s RS256 path already uses process-wide.
+jsonwebtoken = { version = "10", features = ["aws_lc_rs"] }
 aws-lc-rs = "1"
 async-trait = "0.1"
 hostname = "0.4"

@@ -5,9 +5,13 @@
 //! accepted only Clerk session JWTs — so an agent with an API token could
 //! spend credits but not check its balance or manage keys. `resolve_user_id`
 //! tries the Clerk session first, then falls back to the same API-token
-//! validation the middleware uses (sha256 hash lookup against `api_tokens`,
-//! plus the opt-in development bearer override — rejected by default and
-//! hard-refused when RUST_ENV/ENVIRONMENT=production).
+//! `resolve_user_id` tries the Clerk session first, then falls back to the
+//! same API-token validation the middleware uses (sha256 hash lookup against
+//! `api_tokens` with legacy-md5 fallback, plus the opt-in development
+//! overrides — the hardcoded `dev-api-token` gated by
+//! `ALLTERNIT_ALLOW_DEV_TOKEN`, default OFF, see `auth::dev_token`; the
+//! environment-bearer override rejected by default and hard-refused when
+//! RUST_ENV/ENVIRONMENT=production).
 //!
 //! Both paths resolve to the same id space: `api_tokens.user_id` is the Clerk
 //! user id (tokens are minted via the Clerk-authenticated api_keys route).
@@ -119,6 +123,7 @@ fn bearer_token(headers: &HeaderMap) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::auth::dev_token::{ALLOW_DEV_TOKEN_ENV, DEV_TOKEN_ENV_LOCK};
 
     async fn test_pool() -> PgPool {
         let url = "postgres://allternit:allternit_pg_2026@localhost:5432/allternit_test";
@@ -239,6 +244,10 @@ mod tests {
     #[tokio::test]
     #[serial_test::serial]
     async fn dev_token_fallback_is_gated_by_explicit_env() {
+        // The dev-token backdoor is also gated by ALLTERNIT_ALLOW_DEV_TOKEN
+        // (default OFF) — open the gate for this test like a dev box would.
+        let _guard = DEV_TOKEN_ENV_LOCK.lock().unwrap();
+
         let pool = test_pool().await;
 
         // Default: the legacy dev-token shape shipped by the old iOS app must
@@ -246,8 +255,10 @@ mod tests {
         // previously reachable in production).
         std::env::remove_var("ALLTERNIT_DEV_MODE");
         std::env::remove_var("ALLTERNIT_DEV_BEARER");
+        std::env::remove_var("ALLTERNIT_ALLOW_DEV_API_TOKEN");
         std::env::remove_var("RUST_ENV");
         std::env::remove_var("ENVIRONMENT");
+        std::env::remove_var(ALLOW_DEV_TOKEN_ENV);
         let rejected = resolve_user_id(&pool, &headers_with_bearer("dev-api-token")).await;
         assert!(rejected.is_err(), "dev-api-token must be rejected by default");
 
@@ -271,6 +282,23 @@ mod tests {
         std::env::remove_var("ALLTERNIT_DEV_MODE");
         std::env::remove_var("ALLTERNIT_DEV_BEARER");
         std::env::remove_var("ENVIRONMENT");
+
+        // The ALLTERNIT_ALLOW_DEV_TOKEN gate (audit finding B1) accepts the
+        // hardcoded literal on its own, and turns back off when unset.
+        std::env::set_var(ALLOW_DEV_TOKEN_ENV, "true");
+        let user_id = resolve_user_id(&pool, &headers_with_bearer("dev-api-token"))
+            .await
+            .unwrap();
+        assert_eq!(user_id, "dev-user", "dev fallback preserved");
+
+        std::env::remove_var(ALLOW_DEV_TOKEN_ENV);
+        let error = resolve_user_id(&pool, &headers_with_bearer("dev-api-token"))
+            .await
+            .unwrap_err();
+        assert!(
+            matches!(error, ApiError::Unauthorized(_)),
+            "dev token must be rejected by default, got: {error}"
+        );
     }
 
     #[test]
