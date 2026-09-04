@@ -10,18 +10,6 @@
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     },
-    "./engine": {
-      "import": "./dist/engine/index.js",
-      "types": "./dist/engine/index.d.ts"
-    },
-    "./nodes": {
-      "import": "./dist/nodes/index.js",
-      "types": "./dist/nodes/index.d.ts"
-    },
-    "./executor": {
-      "import": "./dist/executor/index.js",
-      "types": "./dist/executor/index.d.ts"
-    },
     "./scheduler": {
       "import": "./dist/scheduler/index.js",
       "types": "./dist/scheduler/index.d.ts"
