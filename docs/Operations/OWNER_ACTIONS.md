@@ -5,45 +5,48 @@
 > each item says what, where, how, and how to verify. Agents must NOT execute
 > these — credentials, production hosts, and spending decisions are owner-only.
 >
-> **Last updated:** 2026-09-04 (session/routing + session/testdebt)
+> **Last updated:** 2026-09-04 (secrets set; mail 012–014 + 8013 proxy retired; CI still needs a green deploy)
 
 ## 1. CI/CD credentials — unblocks cloud-api deploys
 
 | | |
 |---|---|
-| **What** | Tailscale auth for the deploy workflow (currently fails with "OAuth identity empty") |
-| **Where** | Tailscale admin console → OAuth clients (or auth keys); GitHub repo `Gizziio/allternit-platform` → Settings → Secrets |
-| **How** | Create an OAuth client (or reusable pre-authorized auth key tagged `tag:ci` per `docs/Operations/CLOUD_API_VPS_DEPLOY.md`); set `TS_OAUTH_CLIENT_ID`/`TS_OAUTH_CLIENT_SECRET` (what the workflow reads) or `TS_AUTHKEY` per the workflow's inputs; ACL must allow `tag:ci` → `tag:mail:*` |
-| **Verify** | Re-run the failed workflow run (`deploy-cloud-api-contabo.yml`); the `deploy` job joins Tailscale, swaps the binary on `mail`, health-checks, and goes green. The `test` job already passes |
+| **Status** | Secrets set 2026-09-04. Remaining: merge `session/ci-oauth` and watch the first green deploy. |
+| **What** | Tailscale OAuth + root SSH key for the deploy workflow |
+| **Where** | GitHub repo `Gizziio/allternit-platform` → Settings → Secrets |
+| **How** | Done: `TS_OAUTH_CLIENT_ID` / `TS_OAUTH_CLIENT_SECRET` / `CONTABO_SSH_KEY`. Workflow deploys to `root@45.84.138.187` (tailnet SSH is check-mode and hangs). Optional later: ACL `tag:ci` → `tag:mail` so deploys can leave the public IP. |
+| **Verify** | Merge PR #91; `deploy-cloud-api-contabo.yml` test + deploy go green |
 
-## 2. Cloud-api production env (on `mail`, after CI deploy is unblocked)
+## 2. Cloud-api production env (on `mail`)
 
 | | |
 |---|---|
-| **What** | Apply migration `012_data_plane_nodes.sql` + set the data-plane JWT seed |
-| **Where** | `ssh root@mail`; DB `allternit` (prod Postgres), env `/opt/allternit-cloud-api/.env` |
-| **How** | `sudo -u postgres psql -d allternit -v ON_ERROR_STOP=1 -f …/migrations_pg/012_data_plane_nodes.sql` (idempotent — `IF NOT EXISTS`); then `openssl rand -base64 32` → add `ALLTERNIT_DP_JWT_SEED=<value>` to the env file; `systemctl restart allternit-cloud-api` |
-| **Verify** | `curl -s localhost:8082/api/v1/health` → `{"status":"healthy"}`; `curl -s https://api.allternit.com/api/v1/auth/dp-jwks` → JSON with `keys[0].kty = "OKP"` (503 before the seed is set is expected/fail-closed) |
-| **Note** | Until 012 is applied, the new agent-sessions/office/beta handlers return errors — they degrade gracefully, nothing else is affected |
+| **Status** | Done 2026-09-04 except JWKS verify (needs the new binary). |
+| **What** | Apply migrations_pg 012–014 + set the data-plane JWT seed |
+| **Where** | `mail`; DB `allternit` (prod Postgres), env `/opt/allternit-cloud-api/.env` |
+| **How** | Applied via psql (idempotent). Also set `ALLTERNIT_SKIP_MIGRATIONS=1` — prod `_sqlx_migrations` is the sqlite-derived 1–24 lineage; `sqlx::migrate!("./migrations_pg")` would checksum-fail on boot. |
+| **Verify** | health is `{"status":"healthy"}`. After the first new-binary deploy: `curl -s https://api.allternit.com/api/v1/auth/dp-jwks` → `keys[0].kty = "OKP"` (old binary still 401s this route). |
 
 ## 3. Retire the live 8013 nginx proxy on `mail`
 
 | | |
 |---|---|
+| **Status** | Done 2026-09-04. Backups in `/root/owner-actions-2026-09-04/`. |
 | **What** | Remove the interim proxy config deployed by the earlier hardening session |
-| **Where** | `mail` at `/etc/nginx/conf.d/` — `allternit-cors-map.conf` (confirmed live 2026-09-03) and any `location` blocks proxying `/api/jobs`, `/api/v1/agent-sessions`, `/api/v1/office/`, `/api/v1/beta/`, `/api/rails/` to `127.0.0.1:8013` |
-| **Why** | The repo config is deleted (ADR D4 retired) — P1 control-plane handlers replaced it. Leaving it live keeps 8013 publicly exposed for no purpose |
-| **How** | Remove the proxy `location` blocks + the cors-map include; `nginx -t && systemctl reload nginx` |
-| **Verify** | `curl -s -o /dev/null -w '%{http_code}\n' https://api.allternit.com/api/jobs` → 401 from **cloud-api** (check the `www-authenticate`/body shape), NOT a proxied 8013 response; `curl -s https://api.allternit.com/api/v1/health` still healthy |
+| **Where** | `mail` `/etc/nginx/sites-enabled/api-allternit` (a copy, not a symlink) + `/etc/nginx/conf.d/allternit-cors-map.conf` |
+| **Why** | P1 control-plane handlers replaced it. Leaving it live kept 8013 on the public API hostname |
+| **How** | Stripped `/api/jobs`, `/api/v1/agent-sessions`, `/api/v1/office/`, `/api/v1/beta/`, `/api/rails/` 8013 locations; removed cors-map; `nginx -t && reload`. Left `mail.news.allternit.com` → 8013 (company desktop-cloud, not user-facing). |
+| **Verify** | `https://api.allternit.com/api/jobs` → 401 `Authorization header with Bearer token required` from cloud-api; health still healthy |
 
 ## 4. Verify the dev-token backdoor is closed
 
 | | |
 |---|---|
+| **Status** | Confirmed 2026-09-04: 401 `Invalid or expired token`. |
 | **What** | Confirm the `dev-api-token` bearer no longer authenticates in production |
 | **Where** | any shell |
 | **How** | `curl -s -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer dev-api-token" https://api.allternit.com/api/v1/auth/me` |
-| **Expect** | **401** (was 200). Gate is `ALLTERNIT_ALLOW_DEV_TOKEN`, default OFF; never set it on `mail`. Coordinated-removal sequence is documented in `docs/Operations/CLOUD_API_VPS_DEPLOY.md` |
+| **Expect** | **401**. Gate is `ALLTERNIT_ALLOW_DEV_TOKEN`, default OFF; never set it on `mail`. |
 
 ## 5. allternit-api repair migrations (VPS 8013 instance)
 

@@ -4,11 +4,11 @@ name: Deploy Cloud API to Contabo (Tailscale)
 # qualifying push, then deploy the Linux binary to the Contabo control plane
 # ("mail", 100.108.37.126) over the Tailscale network. No public SSH exposure.
 #
-# Required GitHub secret:
-#   TS_AUTHKEY        reusable, pre-authorized Tailscale auth key (tag:ci).
-#                     Create at https://login.tailscale.com/admin/settings/keys
-#                     and allow the tag in your ACL policy (see
-#                     docs/Operations/CLOUD_API_VPS_DEPLOY.md § CI/CD).
+# Required GitHub secrets (Tailscale OAuth client — create at
+# https://login.tailscale.com/admin/settings/oauth with the "auth_keys" write
+# scope, tagged tag:ci):
+#   TS_OAUTH_CLIENT_ID      OAuth client ID
+#   TS_OAUTH_CLIENT_SECRET  OAuth client secret
 # Optional:
 #   CONTABO_SSH_KEY   SSH private key for root@mail. Omit when your tailnet
 #                     ACL grants the ci tag Tailscale SSH access to mail.
@@ -99,16 +99,22 @@ jobs:
         run: cargo build --release --target x86_64-unknown-linux-gnu -p allternit-cloud-api
 
       - name: Join Tailscale network
+        # Public-IP SSH (CONTABO_SSH_KEY → root@45.84.138.187) is the deploy
+        # path that actually works today. Tailscale SSH to 100.108.37.126 sits
+        # in interactive-check mode and hangs without a tag:ci ACL rule, so
+        # a failed join must not block the swap.
+        continue-on-error: true
         uses: tailscale/github-action@v3
         with:
-          authkey: ${{ secrets.TS_AUTHKEY }}
+          oauth_client_id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth_client_secret: ${{ secrets.TS_OAUTH_CLIENT_SECRET }}
           tags: tag:ci
 
-      - name: Deploy to mail over tailnet
+      - name: Deploy to mail
         env:
-          # Defaults inside deploy-contabo.sh already point at mail's tailnet
-          # IP (100.108.37.126) as root; explicit here for clarity.
-          CONTABO_DEPLOY_HOST: 100.108.37.126
+          # Tailnet IP (100.108.37.126) hangs under Tailscale SSH check-mode.
+          # Public IP + CONTABO_SSH_KEY is the working root path.
+          CONTABO_DEPLOY_HOST: 45.84.138.187
           CONTABO_DEPLOY_USER: root
           CONTABO_SSH_KEY: ${{ secrets.CONTABO_SSH_KEY }}
         run: |

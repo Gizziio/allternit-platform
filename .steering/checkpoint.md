@@ -1,13 +1,13 @@
 # Steering checkpoint
 
-Goal: Fix stale @allternit npm registry — refresh the 5 core packages stale since 2026-04-14 and make archived card plugins honest.
+Goal: Unblock production blockers — Tailscale OAuth secrets, mail migrations/seed, retire 8013 proxy on api.allternit.com, land a working CI deploy.
 
 Just did:
-- Drift check: all 5 core packages (api-client, plugin-sdk, workflow-engine, ix, viz) drifted since 2026-04-14; the 15 archived card plugins had exactly 1 commit (2bda61382, a CI script rename) — cosmetic, NOT real drift.
-- Decision: republish the 5 core with patch bumps; DEPRECATE the archived card plugins instead of fake-refreshing dead packages.
-- Wrote generic gated workflow .github/workflows/publish-package-npm.yml (workflow_dispatch, path+version inputs, path whitelist, standalone npm install to dodge the pnpm workspace name conflict, build, exports sanity, idempotent publish, tarball verify).
-- Bumped versions: api-client 1.0.2, plugin-sdk 1.0.2, workflow-engine 0.1.1, ix 0.1.1, viz 0.1.1.
+- Set GitHub secrets `TS_OAUTH_CLIENT_ID` / `TS_OAUTH_CLIENT_SECRET` / `CONTABO_SSH_KEY`.
+- On `mail`: applied migrations_pg 012–014 via psql; set `ALLTERNIT_DP_JWT_SEED` + `ALLTERNIT_SKIP_MIGRATIONS=1` (prod `_sqlx_migrations` is the sqlite-derived 1–24 lineage — sqlx::migrate! would checksum-fail).
+- Retired api.allternit.com 8013 location blocks + cors-map; `/api/jobs` is now 401 from cloud-api. mail.news.allternit.com → 8013 left in place (company desktop-cloud).
+- Root SSH via public IP works; workflow deploy host switched to 45.84.138.187, Tailscale join is continue-on-error.
 
-Next: commit + push, dispatch 5 workflow runs, watch first to green, then npm deprecate the 15 archived card plugins, ledger entry.
+Next: commit/push this workflow tweak, merge PR #91, watch test+deploy; after swap verify `/api/v1/auth/dp-jwks` returns OKP.
 
-Open questions: none — plugin-sdk naming consolidation stays deferred (ledger note).
+Open questions: add tailnet ACL `tag:ci → tag:mail` later so deploys can leave the public IP path.
