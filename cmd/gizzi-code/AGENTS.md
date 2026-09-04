@@ -77,7 +77,10 @@ The daemon (`gizzi daemon`) runs a background cron scheduler on port **3031** wi
 ### Architecture
 
 ```
-Daemon (src/daemon/main.ts)
+Daemon (in-process via `gizzi runtime daemon`,
+        src/runtime/daemon/runtime-daemon.ts — the standalone
+        src/daemon/main.ts entrypoint was removed in the
+        2026-09 dead-code cleanup)
   └── CronDaemon (src/runtime/automation/cron/daemon.ts)
         └── CronService (src/runtime/automation/cron/service.ts)
               ├── SQLite persistence (cron.db)
@@ -203,8 +206,7 @@ Local-first voice interface using open-source tools.
 
 | Path | Purpose |
 |------|---------|
-| `src/runtime/voice/voice.ts` | `listen()`, `speak()`, `transcribe()`, `voiceChat()` |
-| `src/cli/commands/voice.ts` | CLI: `listen`, `speak`, `transcribe`, `chat` |
+(voice runtime + CLI command were removed in the 2026-09 dead-code cleanup — they had no live importers)
 
 ### Dependencies
 - **STT**: `openai-whisper` (brew install whisper)
@@ -226,7 +228,7 @@ manager is gone — `src/runtime/vm/vfkit-manager.ts` no longer exists).
 | `src/runtime/vm/lima-setup.ts` | `isLimaInstalled`, `installLima` (brew), `vmExists`, `startVM`, `stopVM`, `LIMA_YAML_PATH` |
 | `src/runtime/vm/allternit.yaml` | Lima instance definition |
 | `src/runtime/vm/index.ts` | Public exports |
-| `src/cli/commands/vm.ts` | CLI: `start`, `stop`, `restart`, `status`, `setup`, `exec` |
+(vm CLI command removed in the 2026-09 dead-code cleanup; Lima runtime modules below are retained)
 
 ### Setup
 ```bash
@@ -260,7 +262,7 @@ Multi-agent team orchestration (thin CLI over existing 9K+ line system).
 
 | Path | Purpose |
 |------|---------|
-| `src/cli/commands/swarm.ts` | CLI: `list`, `create` (stub → `/team-create`), `delete`, `status` |
+(swarm CLI stub removed in the 2026-09 dead-code cleanup; `src/shared/utils/swarm/` below is retained)
 | `src/shared/utils/swarm/` | iTerm/Tmux/InProcess backends, team memory sync, permission bridge |
 
 Full team spawn requires AI tool invocation (`/team-create`).
@@ -273,7 +275,7 @@ Plugin discovery (thin CLI over existing 4K+ line system).
 
 | Path | Purpose |
 |------|---------|
-| `src/cli/commands/marketplace.ts` | CLI: `list`, `search`, `install`, `update`, `info` (redirects to `gizzi plugin`) |
+(marketplace CLI stub removed in the 2026-09 dead-code cleanup; use `gizzi plugin <cmd>`)
 | `src/shared/utils/plugins/` | Manifest caching, GitHub cloning, install/rollback |
 | `src/runtime/services/plugins/` | Plugin operations |
 
@@ -322,11 +324,11 @@ gizzi-code integrates with the Allternit Agent System Rails so any local agent s
 
 | Path | Purpose |
 |------|---------|
-| `src/runtime/tools/ListPeersTool/ListPeersTool.ts` | `ListPeers` runtime tool |
-| `src/runtime/tools/SendMessageTool/SendMessageTool.ts` | `SendMessage` runtime tool |
+(removed in the 2026-09 dead-code cleanup)
+(removed in the 2026-09 dead-code cleanup)
 | `src/runtime/gizzi-core/services/railsPeer.ts` | Peer registration + HTTP inbox poller |
 | `src/cli/ui/ink-app/components/RailsInboxBridge.tsx` | Bridges polled Rails envelopes into the TUI mailbox |
-| `src/shared/utils/udsClient.ts` | Node UDS client for direct socket sends |
+(removed in the 2026-09 dead-code cleanup)
 | `src/runtime/services/api/allternitApi.ts` | `listApiPeers`, `registerApiPeer`, `sendApiPeerMessage`, `pollApiPeerInbox` |
 
 ### Enabling
@@ -399,8 +401,9 @@ The runtime learns the active agent's policy via env (same path as
   `surfaces/ai.allternit.com/src/lib/agents/character.service.ts`.
 
 The guard runs in `ToolDispatcher.executeInitialized`
-(`src/runtime/tools/dispatch.ts`) and in both legacy `runToolUse` copies
-(`src/{runtime,cli/ui/ink-app}/services/tools/toolExecution.ts`). Categories
+(`src/runtime/tools/dispatch.ts`) and in the legacy `runToolUse` copy
+(`src/cli/ui/ink-app/services/tools/toolExecution.ts`; the src/runtime copy
+was removed in the 2026-09 dead-code cleanup). Categories
 `email_send` / `external_communication` block: native `send_agent_email`, MCP
 `allternit_mail.send` / direct `*_send_email`/`*_reply_email` tools, and
 connectors-MCP `execute_action` calls whose `actionId` matches
