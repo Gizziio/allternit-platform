@@ -14,7 +14,7 @@ import { logEventTo1P, shouldSampleEvent } from './firstPartyEventLogger.js'
 import { checkStatsigFeatureGate_CACHED_MAY_BE_STALE } from './growthbook.js'
 import { attachAnalyticsSink, stripProtoFields } from './index.js'
 import { isSinkKilled } from './sinkKillswitch.js'
-import { sanitizeTelemetryMetadata } from '../../../../shared/utils/telemetryRedact.js'
+import { sanitizeTelemetryMetadata } from '../../../../../shared/utils/telemetryRedact.js'
 
 // Local type matching the logEvent metadata signature
 type LogEventMetadata = { [key: string]: boolean | number | undefined }
