@@ -145,9 +145,13 @@ export function startRailsInboxListener(
   }
 
   // Poll immediately, then every 2 seconds.
-  pollOnce().catch(() => {})
+  pollOnce().catch(() => {
+    // Next interval retries; inbox polling must never crash the host process.
+  })
   pollIntervalId = setInterval(() => {
-    pollOnce().catch(() => {})
+    pollOnce().catch(() => {
+    // Next interval retries; inbox polling must never crash the host process.
+  })
   }, 2_000)
 
   // Best-effort heartbeat while the session runs.
@@ -156,7 +160,9 @@ export function startRailsInboxListener(
       clearInterval(heartbeatInterval)
       return
     }
-    heartbeatRailsPeer(registeredPeer.name).catch(() => {})
+    heartbeatRailsPeer(registeredPeer.name).catch(() => {
+      // Best-effort liveness signal; the next interval retries.
+    })
   }, 30_000)
 
   // Stop polling and heartbeat when the process exits.

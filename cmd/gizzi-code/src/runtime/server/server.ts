@@ -188,6 +188,11 @@ export namespace Server {
             origin(input) {
               if (!input) return
 
+              // Development escape hatch: reflect any origin. Gated behind an
+              // explicit env flag (with a startup warning in listen()) so it
+              // can never be on by default in production.
+              if (Flag.GIZZI_DEV_CORS) return input
+
               if (input.startsWith("http://localhost:")) return input
               if (input.startsWith("http://127.0.0.1:")) return input
               if (
@@ -628,6 +633,12 @@ export namespace Server {
     _corsWhitelist = opts.cors ?? []
     _hostname = opts.hostname
     _tunnel = opts.tunnel ?? false
+
+    if (Flag.GIZZI_DEV_CORS) {
+      process.stderr.write(
+        "WARNING: GIZZI_DEV_CORS is set — Access-Control-Allow-Origin reflects ANY origin. Development only; never enable in production.\n",
+      )
+    }
 
     if (opts.tunnel && !Tunnel.available()) {
       throw new Error(

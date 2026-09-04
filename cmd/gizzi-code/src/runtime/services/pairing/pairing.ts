@@ -129,6 +129,7 @@ export namespace Pairing {
   }
 
   export async function clear() {
+    // Best-effort unpair; a leftover file only reuses a stale token.
     await Filesystem.remove(filepath()).catch(() => {})
   }
 

@@ -82,7 +82,9 @@ export namespace Sidecar {
           const out = await new Response(proc.stdout).text()
           return out.trim() || candidate
         }
-      } catch {}
+      } catch {
+        // which/spawn failed — try the next candidate.
+      }
 
       // Direct existence check for absolute paths
       if (candidate.startsWith("/")) {
@@ -170,7 +172,9 @@ export namespace Sidecar {
       setTimeout(() => {
         try {
           child.kill()
-        } catch {}
+        } catch {
+          // child may have already exited.
+        }
         log.error("pull timed out", { tag })
         resolve(false)
       }, 600_000)
@@ -250,7 +254,9 @@ export namespace Sidecar {
         process.kill(pid, "SIGTERM")
         log.info("sidecar stopped", { pid })
       }
-    } catch {}
+    } catch {
+      // No pid file or process already gone — forced cleanup below.
+    }
 
     await fs.rm(paths.pid, { force: true }).catch(() => {})
     await fs.rm(paths.ready, { force: true }).catch(() => {})

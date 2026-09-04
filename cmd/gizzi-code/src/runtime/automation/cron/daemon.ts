@@ -23,6 +23,11 @@ interface ServerContext {
   startTime: Date;
 }
 
+function devCorsEnabled(): boolean {
+  const value = process.env.GIZZI_DEV_CORS?.toLowerCase();
+  return value === "true" || value === "1";
+}
+
 export class CronDaemon {
   private server: ReturnType<typeof Bun.serve> | null = null;
   private context: ServerContext;
@@ -74,6 +79,11 @@ export class CronDaemon {
 
     console.log(`[CronDaemon] Started on http://${this.context.config.host}:${this.context.config.port}`);
     console.log(`[CronDaemon] Database: ${this.context.config.dbPath}`);
+    if (devCorsEnabled()) {
+      console.warn(
+        "[CronDaemon] WARNING: GIZZI_DEV_CORS is set — Access-Control-Allow-Origin: * on all responses. Development only; never enable in production.",
+      );
+    }
   }
 
   /**
@@ -123,12 +133,16 @@ export class CronDaemon {
     const url = new URL(request.url);
     const method = request.method;
 
-    // CORS headers
-    const corsHeaders = {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-    };
+    // CORS headers: none by default (same-origin / no cross-origin reads of
+    // this unauthenticated loopback API). Permissive CORS is development-only
+    // and requires the explicit GIZZI_DEV_CORS flag, warned about at startup.
+    const corsHeaders: Record<string, string> = devCorsEnabled()
+      ? {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type",
+        }
+      : {}
 
     if (method === "OPTIONS") {
       return new Response(null, { headers: corsHeaders });

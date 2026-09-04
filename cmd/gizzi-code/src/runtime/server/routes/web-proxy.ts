@@ -105,13 +105,15 @@ export const WebProxyRoutes = lazy(() =>
         const lower = key.toLowerCase()
         if (lower === "x-frame-options") continue
         if (lower === "content-security-policy") continue
+        // Never forward the upstream site's own CORS policy — the global
+        // cors middleware governs access to this authenticated route.
+        if (lower.startsWith("access-control-")) continue
         if (lower === "content-encoding") continue
         if (lower === "transfer-encoding") continue
         if (lower === "connection") continue
         if (lower === "server") continue
         responseHeaders.set(key, value)
       }
-      responseHeaders.set("Access-Control-Allow-Origin", "*")
       return new Response(upstream.body, {
         status: upstream.status,
         statusText: upstream.statusText,
@@ -266,12 +268,16 @@ export const WebProxyRoutes = lazy(() =>
       if (lower === "connection") continue
       if (lower === "server") continue
       if (lower === "set-cookie") continue        // Don't pass cookies
+      // Never forward the upstream site's own CORS policy — the global
+      // cors middleware governs access to this authenticated route.
+      if (lower.startsWith("access-control-")) continue
       responseHeaders.set(key, value)
     }
 
-    // Set proper headers for iframe compatibility
+    // Set proper headers for iframe compatibility. No explicit
+    // Access-Control-Allow-Origin here: the global cors middleware applies
+    // the same origin allowlist as every other (authenticated) route.
     responseHeaders.set("Content-Type", "text/html; charset=utf-8")
-    responseHeaders.set("Access-Control-Allow-Origin", "*")
     responseHeaders.set("X-Frame-Options", "ALLOWALL")
 
     return new Response(bodyText, {

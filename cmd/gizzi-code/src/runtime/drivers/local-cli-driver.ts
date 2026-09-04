@@ -235,7 +235,9 @@ export class LocalCliDriver implements RuntimeDriver {
         for await (const chunk of readStreamChunks(proc.stderr)) {
           stderrTail.append(Buffer.from(chunk))
         }
-      } catch {}
+      } catch {
+        // Stderr stream closed early; the tail is best-effort diagnostics.
+      }
     })()
 
     try {
@@ -308,7 +310,9 @@ export class LocalCliDriver implements RuntimeDriver {
         for await (const chunk of readStreamChunks(proc.stderr)) {
           stderrTail.append(Buffer.from(chunk))
         }
-      } catch {}
+      } catch {
+        // Stderr stream closed early; the tail is best-effort diagnostics.
+      }
     })()
 
     try {
@@ -395,7 +399,9 @@ export class LocalCliDriver implements RuntimeDriver {
         for await (const chunk of readStreamChunks(proc.stderr)) {
           stderrTail.append(Buffer.from(chunk))
         }
-      } catch {}
+      } catch {
+        // Stderr stream closed early; the tail is best-effort diagnostics.
+      }
     })()
 
     const stdin = proc.stdin
@@ -529,7 +535,9 @@ export class LocalCliDriver implements RuntimeDriver {
     } finally {
       try {
         await stdin.end()
-      } catch {}
+      } catch {
+        // stdin may already be closed when the process died.
+      }
       terminateProcessTree(proc)
       this.resetCurrentTask()
     }
@@ -564,7 +572,9 @@ export class LocalCliDriver implements RuntimeDriver {
         for await (const chunk of readStreamChunks(proc.stderr)) {
           stderrTail.append(Buffer.from(chunk))
         }
-      } catch {}
+      } catch {
+        // Stderr stream closed early; the tail is best-effort diagnostics.
+      }
     })()
 
     const stdin = proc.stdin
@@ -988,7 +998,9 @@ export class LocalCliDriver implements RuntimeDriver {
             log.warn("codex_app_server_stderr", { taskId: handle.taskId, data: line.slice(0, 500) })
           }
         }
-      } catch {}
+      } catch {
+        // Stderr stream closed early; the tail is best-effort diagnostics.
+      }
     })()
 
     // Reader task
@@ -1177,7 +1189,9 @@ export class LocalCliDriver implements RuntimeDriver {
     } finally {
       try {
         await stdin.end()
-      } catch {}
+      } catch {
+        // stdin may already be closed when the process died.
+      }
       await readerPromise.catch(() => {})
       terminateProcessTree(proc)
       this.resetCurrentTask()
@@ -1746,7 +1760,9 @@ function terminateProcessTree(proc: KillableProcess, graceMs = 5000): void {
       const timer = setTimeout(() => {
         try {
           process.kill(-proc.pid, "SIGKILL")
-        } catch {}
+        } catch {
+          // Process group already gone.
+        }
       }, graceMs)
       timer.unref?.()
       return
@@ -1761,7 +1777,9 @@ function terminateProcessTree(proc: KillableProcess, graceMs = 5000): void {
 function safeKill(proc: KillableProcess): void {
   try {
     proc.kill()
-  } catch {}
+  } catch {
+    // Already exited.
+  }
 }
 
 interface StreamJsonEvent {

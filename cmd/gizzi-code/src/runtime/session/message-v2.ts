@@ -863,7 +863,10 @@ export namespace MessageV2 {
               },
             ).toObject()
           }
-        } catch {}
+        } catch {
+          // Best-effort provider-error coercion; the raw error shape is
+          // re-examined below, so a failed probe is safe to drop.
+        }
         if (typeof e === "object" && e !== null) {
           const parsed = ProviderError.parseUnknownProviderError({
             providerID: ctx.providerID,

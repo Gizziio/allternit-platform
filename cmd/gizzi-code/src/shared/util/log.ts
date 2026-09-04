@@ -67,6 +67,7 @@ export namespace Log {
       Global.Path.log,
       options.dev ? "dev.log" : new Date().toISOString().split(".")[0].replace(/:/g, "") + ".log",
     )
+    // Log rotation must never crash the logger itself.
     await fs.truncate(logpath).catch(() => {})
     const stream = createWriteStream(logpath, { flags: "a" })
     write = async (msg: any) => {
@@ -88,6 +89,7 @@ export namespace Log {
     if (files.length <= 5) return
 
     const filesToDelete = files.slice(0, -10)
+    // Retention cleanup is best-effort; a full disk is surfaced elsewhere.
     await Promise.all(filesToDelete.map((file) => fs.unlink(file).catch(() => {})))
   }
 

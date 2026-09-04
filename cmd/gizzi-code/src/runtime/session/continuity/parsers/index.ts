@@ -105,7 +105,9 @@ export namespace ToolParsers {
               source.title = msg.content.slice(0, 100)
               break
             }
-          } catch {}
+          } catch {
+            // Individual transcript lines may not be JSON — skip them.
+          }
         }
       }
     } catch (e) {

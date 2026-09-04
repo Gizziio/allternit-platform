@@ -20,6 +20,7 @@ async function copyLegacyFile(input: { from: string; to: string; mode?: number }
   await fs.mkdir(path.dirname(input.to), { recursive: true })
   await fs.copyFile(input.from, input.to)
   if (input.mode !== undefined) {
+    // chmod hardening is best-effort; copyFile above already succeeded.
     await fs.chmod(input.to, input.mode).catch(() => {})
   }
 }

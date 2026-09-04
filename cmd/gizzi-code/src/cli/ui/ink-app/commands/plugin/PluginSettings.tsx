@@ -386,7 +386,9 @@ function ErrorsTabContent(t0) {
             failures
           } = await loadMarketplacesWithGracefulDegradation(config);
           setMarketplaceLoadFailures(failures);
-        } catch {}
+        } catch {
+          // Failure banner is best-effort; settings stay usable without it.
+        }
       })();
     };
     t3 = [];

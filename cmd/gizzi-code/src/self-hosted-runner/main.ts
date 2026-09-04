@@ -149,6 +149,7 @@ class Runner {
     // Start health HTTP server.
     this.server = createHealthServer({
       port: this.config.healthPort,
+      host: this.config.healthHost,
       runnerName: this.config.runnerName,
       labels: this.config.labels,
       maxConcurrentJobs: this.config.maxConcurrentJobs,

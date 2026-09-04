@@ -483,7 +483,9 @@ function _temp2(url) {
   if (url.startsWith("file:")) {
     try {
       openPath(fileURLToPath(url));
-    } catch {}
+    } catch {
+      // Unopenable file: URL — ignore the click.
+    }
   } else {
     openBrowser(url);
   }

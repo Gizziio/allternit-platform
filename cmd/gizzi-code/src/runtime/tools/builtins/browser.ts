@@ -69,7 +69,9 @@ async function waitForGateway(timeoutMs = 8000): Promise<boolean> {
         signal: AbortSignal.timeout(1000),
       })
       if (r.ok) return true
-    } catch {}
+    } catch {
+      // Operator down while polling — the retry loop handles refusal/timeouts.
+    }
     await new Promise((r) => setTimeout(r, 500))
   }
   return false
@@ -82,7 +84,9 @@ async function autoStartOperator(): Promise<boolean> {
       signal: AbortSignal.timeout(1500),
     })
     if (r.ok) return true
-  } catch {}
+  } catch {
+    // Not running yet (or unreachable) — fall through and start it.
+  }
 
   const operatorDir = findOperatorDir()
   if (!operatorDir) {
