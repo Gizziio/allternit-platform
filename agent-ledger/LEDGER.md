@@ -179,3 +179,19 @@ Published **@allternit/gizzi-code@1.0.2** — the first verified publish (1.0.1 
 Cross-compiled gizzi-code-win32-x64 from macOS (`bun build --target=win32-x64` — valid PE32+, Windows-native vendored assets embedded) and hand-published `@allternit/gizzi-code-win32-x64@1.0.2`; full platform matrix now live (darwin-arm64, darwin-x64, linux-arm64, linux-x64, win32-x64). Caveat logged: PE validity confirmed; embedded native modules (better-sqlite3, bun-pty) need a real-Windows smoke run. Published **@allternit/sdk@1.3.0** via new gated workflow (.github/workflows/publish-sdk-npm.yml, tag sdk/v*) — dangling-export gate (21 entries), idempotent publish, tarball verify; first-try success. Remaining npm-account items: token rotation, plugin-sdk naming consolidation, gizzi-sdk first publish held for legal counsel.
 
 - **gizzi-deploy-20260904** (npm win32 + sdk 1.3.0) → main 054d1858a
+
+## 2026-09-04 — npm stale-registry refresh (gizzi-code session)
+
+- New gated workflow `.github/workflows/publish-package-npm.yml`: workflow_dispatch(path+version), path/name whitelist, standalone per-package `npm install` (dodges the pnpm `@allternit/visual-state` workspace conflict), build, exports sanity gate, idempotent publish, tarball download verify. Modeled on the SDK publish workflow that passed first-try.
+- Refreshed 5 core packages stale since 2026-04-14 (all verified live, tarballs spot-checked):
+  - @allternit/api-client 1.0.1 → 1.0.2
+  - @allternit/plugin-sdk 1.0.1 → 1.0.2
+  - @allternit/workflow-engine 0.1.0 → 0.1.1
+  - @allternit/ix 0.1.0 → 0.1.1
+  - @allternit/viz 0.1.0 → 0.1.1
+- Exports gate caught REAL dangling subpaths on first dispatch: workflow-engine advertised ./engine, ./nodes, ./executor with no built barrels (trimmed to `.`, `./scheduler`, `./visualizer` — everything still reachable from root, no in-repo consumer used removed subpaths); viz advertised ./charts, ./components (trimmed to `.`). Fixed, re-dispatched, both green.
+- Cleanup: api-client tarball shipped a tracked stale nested scaffold `allternit-api-client/` (named `@allternit/api-client-dist`, src identical) because it lacked a `files` field — deleted the scaffold, added `files: [dist, README.md]` to api-client/workflow-engine/viz.
+- Verify-step metadata poll extended 5x10s → 12x15s after a false failure on replication lag (workflow-engine@0.1.1 was live ~30s after the workflow gave up; confirmed via `npm view`).
+- Deprecated 12 archived card plugins on npm with pointer to @allternit/gizzi-code (apispec, chatbot, codereview, datatable, documentanalyzer, emailcomposer, imagegen, marketresearch, prdescription, socialmedia, testgenerator, translation). iosappbuild/remotion/verceldeploy plugins were never published — nothing to deprecate. The only commit touching archive/plugins since April was a CI script rename (2bda61382), so republishing dead packages was deliberately NOT done.
+- Combined with earlier today: @allternit/gizzi-code@1.0.2 + all 5 platform packages (incl. hand-cross-compiled win32-x64, PE32+ valid, native modules unverified on real Windows) and @allternit/sdk@1.3.0 via workflow.
+- HOLDS (unchanged): rotate the npm token (pasted in chat twice, currently also a repo secret); `gizzi-sdk` name under legal hold — publish decision pending; plugin-sdk naming consolidation deferred.
