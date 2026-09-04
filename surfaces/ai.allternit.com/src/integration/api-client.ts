@@ -774,17 +774,6 @@ class AllternitApiClient {
     }
   }
 
-  connectEventStream(sessionId: string): EventSource {
-    const url = `${this.baseUrl}/api/v1/sessions/${sessionId}/events`;
-    const eventSource = new EventSource(url);
-    
-    eventSource.onerror = (error) => {
-      logger.error({ err: error }, 'EventSource error');
-    };
-
-    return eventSource;
-  }
-
   // ==========================================================================
   // SKILLS API
   // ==========================================================================
@@ -1115,13 +1104,6 @@ class AllternitApiClient {
     return eventSource;
   }
 
-  /**
-   * Get operator health status
-   */
-  async operatorHealth(): Promise<{ status: string; type: string }> {
-    return this.get('/api/v1/operator/health');
-  }
-
   // ==========================================================================
   // USAGE API
   // ==========================================================================
@@ -1161,7 +1143,7 @@ export const api = new AllternitApiClient();
 // React Hooks
 // =============================================================================
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 
 import { createModuleLogger } from '@/lib/logger';
 
@@ -1219,7 +1201,6 @@ export function useSession(sessionId: string | null) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<AllternitApiError | null>(null);
-  const eventSourceRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -1237,61 +1218,6 @@ export function useSession(sessionId: string | null) {
     };
 
     fetchSession();
-  }, [sessionId]);
-
-  useEffect(() => {
-    if (!sessionId) return;
-
-    // Connect to event stream
-    const eventSource = api.connectEventStream(sessionId);
-    eventSourceRef.current = eventSource;
-
-    eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        
-        switch (data.type) {
-          case 'message.delta':
-            // Handle streaming message
-            setMessages(prev => {
-              const last = prev[prev.length - 1];
-              if (last && last.role === 'assistant') {
-                return [
-                  ...prev.slice(0, -1),
-                  { ...last, content: last.content + data.data.content }
-                ];
-              }
-              return [...prev, {
-                id: data.data.id,
-                role: 'assistant',
-                content: data.data.content,
-                timestamp: new Date().toISOString()
-              }];
-            });
-            break;
-          
-          case 'message.completed':
-            // Message complete
-            break;
-          
-          case 'tool.call':
-            // Tool was called
-            console.debug('[useSession] Tool call:', data.data);
-            break;
-          
-          case 'error':
-            setError(new AllternitApiError(data.data.message, 500));
-            break;
-        }
-      } catch (err) {
-        logger.error({ err: err }, 'Failed to parse event');
-      }
-    };
-
-    return () => {
-      eventSource.close();
-      eventSourceRef.current = null;
-    };
   }, [sessionId]);
 
   const sendMessage = useCallback(async (message: string) => {

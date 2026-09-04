@@ -115,3 +115,25 @@ export function isDesktopAuthEnabled(): boolean {
     : undefined;
   return String(value).toLowerCase() === '1' || String(value).toLowerCase() === 'true';
 }
+
+/**
+ * Agent Runner — operator planning mode. The operator backend
+ * (`POST /api/v1/operator/execute`, `GET /api/v1/operator/events/:id`) does not
+ * exist in either Rust backend yet, so this defaults OFF and the runner fails
+ * closed with a visible trace error instead of firing 401s into the console.
+ * Set NEXT_PUBLIC_ALLTERNIT_RUNNER_OPERATOR=1 once a real operator backend ships.
+ */
+export function isRunnerOperatorModeEnabled(): boolean {
+  return envFlag('NEXT_PUBLIC_ALLTERNIT_RUNNER_OPERATOR');
+}
+
+/**
+ * Agent Runner — direct AI chat path. The runner's chat client targets
+ * `POST /api/chat`, which no backend serves (the real chat bridge is
+ * `POST /api/agent-chat`, but it speaks a different SSE protocol), so this
+ * defaults OFF and the runner fails closed with a visible trace error.
+ * Set NEXT_PUBLIC_ALLTERNIT_RUNNER_CHAT=1 once a compatible endpoint exists.
+ */
+export function isRunnerAiChatEnabled(): boolean {
+  return envFlag('NEXT_PUBLIC_ALLTERNIT_RUNNER_CHAT');
+}

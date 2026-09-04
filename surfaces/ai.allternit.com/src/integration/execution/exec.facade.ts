@@ -11,7 +11,8 @@
  *   import { api } from '@allternit/platform';
  *   const session = await api.createSession(modelId);
  *   await api.sendMessage(session.id, input);
- *   const events = api.connectEventStream(session.id);
+ *   // Live event streaming: sessions have no SSE endpoint on any backend yet;
+ *   // poll api.getMessages(session.id) or use the chat views' stream adapter.
  * 
  * See: MIGRATION_PLAN.md for complete migration guide.
  * @deprecated Use api-client.ts instead
