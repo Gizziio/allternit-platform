@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 import { createAllternitClient } from "@/lib/sdk";
 import { sessionApi } from "@/lib/agents/native-agent-api";
+import { isAgentSessionsApiEnabled } from "@/lib/env";
 
 export interface PermissionRequest {
   id: string;
@@ -131,6 +132,15 @@ export function useSessionComposerState(
 
   const connect = useCallback(() => {
     if (destroyedRef.current) return;
+
+    if (!isAgentSessionsApiEnabled()) {
+      // The /api/v1/agent-sessions/sync SSE channel is served only by the
+      // Rust allternit-api (:8013), which is not publicly reachable from this
+      // deployment. Fail closed instead of opening an EventSource that 404s
+      // and retries — permission/question prompts simply stay inactive.
+      return;
+    }
+
     if (esRef.current) {
       esRef.current.close();
       esRef.current = null;

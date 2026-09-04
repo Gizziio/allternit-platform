@@ -233,7 +233,6 @@ export {
   api,
   GATEWAY_BASE_URL,
   ALLTERNIT_BASE_URL,
-  jobsApi,
   useApi,
   useSessions,
   useSession,
@@ -256,9 +255,6 @@ export {
   type DiscoveredModel,
   type ModelDiscoveryResult,
   type ModelValidationResult,
-  type CreateJobRequest,
-  type JobRecord,
-  type JobQueueStats,
 } from "./integration/api-client";
 
 // DEPRECATED EXPORTS - These will be removed in v2.0

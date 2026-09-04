@@ -16,8 +16,14 @@ import {
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { createModuleLogger } from "@/lib/logger";
+import { isBetaApiEnabled } from "@/lib/env";
 
 const logger = createModuleLogger("AllternitPlaygroundView");
+
+// The playground targets /api/v1/beta/sessions/*, served only by the Rust
+// allternit-api (:8013) — disabled by default on the deployed web surface.
+const BETA_PLAYGROUND_DISABLED_TOAST =
+  "Playground is disabled in this deployment (the beta sessions API is not publicly reachable).";
 
 type PlaygroundTab = "prompt" | "memory" | "tools" | "events";
 
@@ -149,6 +155,11 @@ export function AllternitPlaygroundView() {
 
   const handleSearchMemory = useCallback(async () => {
     if (!sessionId.trim() || !query.trim()) return;
+    if (!isBetaApiEnabled()) {
+      addToast(BETA_PLAYGROUND_DISABLED_TOAST, "error");
+      setMemoryResults([]);
+      return;
+    }
     try {
       const data = await api.searchSessionMemory(sessionId, query);
       setMemoryResults(data.results || []);
@@ -161,6 +172,12 @@ export function AllternitPlaygroundView() {
 
   const handleLoadEvents = useCallback(async () => {
     if (!sessionId.trim()) return;
+    if (!isBetaApiEnabled()) {
+      // Deliberate empty state — the auto-load effect on the events tab hits
+      // this too, so never fire /api/v1/beta/sessions/:id/events/list.
+      setEvents([]);
+      return;
+    }
     try {
       const data = await api.listSessionEvents(sessionId);
       setEvents(data.events || []);
@@ -174,6 +191,10 @@ export function AllternitPlaygroundView() {
   const handleRun = useCallback(async () => {
     if (!sessionId.trim() || !userPrompt.trim()) {
       addToast("Session ID and user prompt are required", "error");
+      return;
+    }
+    if (!isBetaApiEnabled()) {
+      addToast(BETA_PLAYGROUND_DISABLED_TOAST, "error");
       return;
     }
     setIsRunning(true);

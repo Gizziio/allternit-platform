@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { railsApi } from "@/lib/agents";
+import { isRailsApiEnabled } from "@/lib/env";
 import { useMonitorThreads } from "@/views/mail-monitor/monitor.helpers";
 import { AgentActivityListView, type AgentActivityTab } from "./AgentActivityListView";
 
@@ -86,17 +87,23 @@ export function AgentActivityPanel({ open, onClose }: AgentActivityPanelProps) {
         const focusedThread = visible.find((t) => t.threadId === focusedId);
         if (focusedThread?.review) {
           event.preventDefault();
-          railsApi.mail.decide(focusedThread.threadId, event.key === "1").then(refresh);
+          // Rails mail is served only by the Rust allternit-api (:8013) —
+          // skip when disabled by flag instead of firing a request that 404s.
+          if (isRailsApiEnabled()) {
+            railsApi.mail.decide(focusedThread.threadId, event.key === "1").then(refresh);
+          }
         }
       } else if (event.key === "a") {
         const focusedThread = visible.find((t) => t.threadId === focusedId);
         if (focusedThread) {
           event.preventDefault();
           const next = !focusedThread.archived;
-          railsApi.mail
-            .archive(focusedThread.threadId, focusedThread.threadId, next ? "Archived from Agent Activity" : "Unarchived")
-            .catch(() => {})
-            .finally(() => setThreadArchived(focusedThread.threadId, next));
+          if (isRailsApiEnabled()) {
+            railsApi.mail
+              .archive(focusedThread.threadId, focusedThread.threadId, next ? "Archived from Agent Activity" : "Unarchived")
+              .catch(() => {})
+              .finally(() => setThreadArchived(focusedThread.threadId, next));
+          }
         }
       }
     };

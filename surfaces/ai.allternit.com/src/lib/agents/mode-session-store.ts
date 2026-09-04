@@ -19,6 +19,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { devtools } from 'zustand/middleware';
 import { createBrowserJSONStorage } from '@/lib/zustand-browser-storage';
+import { isAgentSessionsApiEnabled } from '@/lib/env';
 import {
   sessionApi,
   chatApi,
@@ -45,6 +46,15 @@ import { memoryClient } from './memory-client';
 import { recallBotMemories } from '@/lib/bots/bot-memory-context';
 
 const logger = createModuleLogger('ModeSessionStore');
+
+// The /api/v1/agent-sessions handlers live only on the Rust allternit-api
+// (:8013), which is not publicly reachable from the deployed web surface.
+// When NEXT_PUBLIC_ALLTERNIT_AGENT_SESSIONS_API is unset (default), every
+// backend call in this store must fail closed with this deliberate message
+// instead of firing requests that 404.
+const AGENT_SESSIONS_DISABLED_MESSAGE =
+  'Agent session sync is disabled in this deployment (set NEXT_PUBLIC_ALLTERNIT_AGENT_SESSIONS_API=1 where the gateway is reachable).';
+
 import type {
   ContextPackOptions,
 } from './agent-context-pack';
@@ -1068,6 +1078,14 @@ export function createModeSessionStore(config: StoreConfig) {
               }
 
               // Create backend session
+              if (!isAgentSessionsApiEnabled()) {
+                // /api/v1/agent-sessions handlers live only on the Rust
+                // allternit-api (:8013), which is not publicly reachable from
+                // this deployment. Fail closed so the catch below keeps the
+                // session local (agent/code modes) or surfaces a deliberate
+                // message — never fire the request.
+                throw new Error(AGENT_SESSIONS_DISABLED_MESSAGE);
+              }
               const backendSession = await sessionApiClient.createSession({
                 name: options.name || 'New Session',
                 description: options.description,
@@ -2004,6 +2022,14 @@ export function createModeSessionStore(config: StoreConfig) {
           loadSessions: async () => {
             set({ isLoading: true, error: null });
 
+            if (!isAgentSessionsApiEnabled()) {
+              // Backend agent-sessions handlers are disabled by flag in this
+              // deployment; keep the persisted in-memory sessions without
+              // probing an endpoint nothing serves.
+              set({ isLoading: false, error: null });
+              return;
+            }
+
             try {
               const backendSessions = await sessionApi.listSessions();
               const currentSessions = get().sessions;
@@ -2169,6 +2195,17 @@ export function createModeSessionStore(config: StoreConfig) {
 	          connectSessionSync: () => {
 	            // Disconnect any existing connection first
 	            get().disconnectSessionSync();
+
+            if (!isAgentSessionsApiEnabled()) {
+              // Never open the /api/v1/agent-sessions/sync SSE channel (or the
+              // listSessions probe that precedes it) when the backend is
+              // disabled by flag — without this guard the reconnect loop
+              // retries a 404 forever.
+              set({ isSyncConnected: false, syncError: AGENT_SESSIONS_DISABLED_MESSAGE });
+              return () => {
+                set({ isSyncConnected: false });
+              };
+            }
 
             let retryDelay = 1000;
             const MAX_RETRY_DELAY = 30000;

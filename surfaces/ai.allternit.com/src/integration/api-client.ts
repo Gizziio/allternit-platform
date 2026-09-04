@@ -66,8 +66,6 @@ function gatewayUrl(): string {
   return normalized || DEFAULT_GATEWAY_URL;
 }
 
-const API_BASE = `${gatewayUrl()}/api`;
-
 // Export for debugging
 export const GATEWAY_BASE_URL = gatewayUrl();
 export const GATEWAY_URL = GATEWAY_BASE_URL; // Consistent export
@@ -1497,127 +1495,6 @@ export function useModelDiscovery() {
     realModels,
   };
 }
-
-// =============================================================================
-// Node Jobs API
-// =============================================================================
-
-export interface CreateJobRequest {
-  name: string;
-  wih: {
-    handler: string;
-    version?: string;
-    task: {
-      type: string;
-      command?: string;
-      working_dir?: string | null;
-      [key: string]: any;
-    };
-    tools?: Array<{ name: string; enabled: boolean; config?: any }>;
-  };
-  resources?: {
-    cpu_cores?: number;
-    memory_gb?: number;
-    disk_gb?: number;
-    gpu?: boolean;
-  };
-  env?: Record<string, string>;
-  priority?: number;
-  timeout_secs?: number;
-  node_id?: string | null;
-}
-
-export interface JobRecord {
-  id: number;
-  job_id: string;
-  node_id: string | null;
-  status: string;
-  priority: number;
-  job_spec: string;
-  result: string | null;
-  created_at: string;
-  started_at: string | null;
-  completed_at: string | null;
-}
-
-export interface JobQueueStats {
-  pending: number;
-  running: number;
-  completed: number;
-  failed: number;
-  cancelled: number;
-}
-
-export const jobsApi = {
-  /**
-   * Create a new job
-   */
-  async createJob(job: CreateJobRequest): Promise<{ job_id: string; status: string }> {
-    const response = await fetch(`${API_BASE}/jobs`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(job),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to create job: ${response.statusText}`);
-    }
-
-    return response.json();
-  },
-
-  /**
-   * Get job by ID
-   */
-  async getJob(jobId: string): Promise<{ job: JobRecord }> {
-    const response = await fetch(`${API_BASE}/jobs/${jobId}`);
-
-    if (!response.ok) {
-      throw new Error(`Failed to get job: ${response.statusText}`);
-    }
-
-    return response.json();
-  },
-
-  /**
-   * List jobs (with stats)
-   */
-  async listJobs(): Promise<{ stats: JobQueueStats }> {
-    const response = await fetch(`${API_BASE}/jobs`);
-
-    if (!response.ok) {
-      throw new Error(`Failed to list jobs: ${response.statusText}`);
-    }
-
-    return response.json();
-  },
-
-  /**
-   * Cancel a job
-   */
-  async cancelJob(jobId: string): Promise<void> {
-    const response = await fetch(`${API_BASE}/jobs/${jobId}/cancel`, {
-      method: 'POST',
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to cancel job: ${response.statusText}`);
-    }
-  },
-
-  /**
-   * Get job queue statistics
-   */
-  async getStats(): Promise<JobQueueStats> {
-    const response = await fetch(`${API_BASE}/jobs/stats`);
-
-    if (!response.ok) {
-      throw new Error(`Failed to get job stats: ${response.statusText}`);
-    }
-
-    return response.json();
-  },
-};
 
 // =============================================================================
 // Default Export

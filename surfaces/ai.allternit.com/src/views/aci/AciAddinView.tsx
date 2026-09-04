@@ -27,6 +27,7 @@ import { recordDocumentWorkflowIntent } from '@/views/documents/document-workflo
 import { getOfficeWebInstallation, verifyOfficeWebInstallation } from './office-web-installation';
 
 import { createModuleLogger } from '@/lib/logger';
+import { isOfficeApiEnabled } from '@/lib/env';
 
 const logger = createModuleLogger('AciAddinView');
 
@@ -91,7 +92,7 @@ const TASKPANE_PROBE_PATH = '/src/taskpane/index.html';
 const ADDIN_DIR = 'surfaces/allternit-extensions/allternit-office-addin';
 
 type ProbeStatus = 'idle' | 'checking' | 'running' | 'offline';
-type GatewayBindingStatus = 'idle' | 'checking' | 'connected' | 'empty' | 'error';
+type GatewayBindingStatus = 'idle' | 'checking' | 'connected' | 'empty' | 'error' | 'disabled';
 type BootstrapAckState = 'idle' | 'pending' | 'acknowledged' | 'timed-out';
 type OfficeAddinHealth = 'not-installed' | 'installed' | 'update-available' | 'needs-repair' | 'unsupported';
 
@@ -292,6 +293,14 @@ export function AciAddinView({ host, context }: { host: OfficeHost; context?: Vi
   }, []);
 
   const refreshGateway = useCallback(async () => {
+    if (!isOfficeApiEnabled()) {
+      // The gateway binding probe targets /api/v1/office/bindings on the Rust
+      // allternit-api (:8013), which is not publicly reachable from this
+      // deployment. Fail closed with a deliberate status instead of probing.
+      setGatewayBinding(null);
+      setGatewayStatus('disabled');
+      return;
+    }
     setGatewayStatus('checking');
     try {
       const binding = await probeGatewayBinding(host, authToken);
@@ -669,6 +678,7 @@ export function AciAddinView({ host, context }: { host: OfficeHost; context?: Vi
             <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-3 text-xs text-[var(--text-secondary)]">
               {gatewayStatus === 'checking' && 'Checking gateway binding…'}
               {gatewayStatus === 'error' && 'Gateway not reachable. Start the platform gateway on :8013.'}
+              {gatewayStatus === 'disabled' && 'Live bindings are disabled in this deployment (the office bindings API is not publicly reachable).'}
               {runtimeState?.runtimeMode === 'companion-only' && (
                 <div className="space-y-2">
                   <div>This taskpane is loaded in the Allternit companion iframe, not inside a real {label} host yet.</div>

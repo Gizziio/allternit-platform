@@ -40,6 +40,7 @@ import {
 import { AllternitLogo } from '@/components/AllternitLogo';
 import { MatrixLogo } from '@/components/ai-elements/MatrixLogo';
 import { isElectronShell, getWebProxyUrl } from '@/lib/platform';
+import { isOfficeApiEnabled } from '@/lib/env';
 import { cn } from '@/lib/utils';
 
 import {
@@ -1214,6 +1215,10 @@ export function BrowserCapsuleEnhanced({
   useEffect(() => { setFindBarOpen(false); }, [activeTabId]);
 
   useEffect(() => {
+    // Binding refresh polls GET /api/v1/office/bindings, served only by the
+    // Rust allternit-api (:8013) — when disabled by flag, leave the tab
+    // unbound instead of polling an endpoint nothing serves every 10s.
+    if (!isOfficeApiEnabled()) return;
     if (!activeOfficeHost || !activeTabId || !officeTabAttached) return;
     let cancelled = false;
     const refreshBinding = async () => {

@@ -1,6 +1,13 @@
 'use client';
 
 import { useState, useCallback, useRef } from 'react';
+import { isBetaApiEnabled } from '@/lib/env';
+
+// Shown in the UI when the beta research backend is disabled by flag. The
+// /api/v1/beta/research handlers live only on the Rust allternit-api (:8013),
+// which is not publicly reachable from the deployed web surface.
+const BETA_RESEARCH_DISABLED_MESSAGE =
+  'Deep research is disabled in this deployment (the beta research API is not publicly reachable).';
 
 interface ResearchMessage {
   role: 'user' | 'assistant';
@@ -51,6 +58,12 @@ export function useResearchThread() {
   }, []);
 
   const checkHealth = useCallback(async () => {
+    if (!isBetaApiEnabled()) {
+      // Never probe /api/v1/beta/research when disabled; the panel renders
+      // its offline state (disabled input + "Offline" badge) off isHealthy.
+      setState((s) => ({ ...s, isHealthy: false }));
+      return;
+    }
     try {
       const res = await fetch(`${API_BASE}?limit=1`);
       setState((s) => ({ ...s, isHealthy: res.ok }));
@@ -121,6 +134,18 @@ export function useResearchThread() {
 
   const query = useCallback(async (message: string) => {
     if (state.isStreaming) return;
+
+    if (!isBetaApiEnabled()) {
+      // Fail closed with a deliberate message instead of POSTing to
+      // /api/v1/beta/research, which nothing serves in this deployment.
+      setState((s) => ({
+        ...s,
+        isStreaming: false,
+        streamBuffer: '',
+        error: BETA_RESEARCH_DISABLED_MESSAGE,
+      }));
+      return;
+    }
 
     abortRef.current?.abort();
     const ctrl = new AbortController();

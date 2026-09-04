@@ -137,3 +137,50 @@ export function isRunnerOperatorModeEnabled(): boolean {
 export function isRunnerAiChatEnabled(): boolean {
   return envFlag('NEXT_PUBLIC_ALLTERNIT_RUNNER_CHAT');
 }
+
+/**
+ * Agent Sessions API — `/api/v1/agent-sessions` (CRUD, `/sync` SSE, canvases,
+ * lifecycle). These handlers live only on the Rust allternit-api (:8013),
+ * which is not publicly reachable from the deployed web surface, so this
+ * defaults OFF: session stores skip the backend probe/sync and fail closed
+ * with a deliberate message instead of retrying 404s forever.
+ * Set NEXT_PUBLIC_ALLTERNIT_AGENT_SESSIONS_API=1 where the gateway is reachable.
+ */
+export function isAgentSessionsApiEnabled(): boolean {
+  return envFlag('NEXT_PUBLIC_ALLTERNIT_AGENT_SESSIONS_API');
+}
+
+/**
+ * Office bindings API — `/api/v1/office/bindings`. Served only by the Rust
+ * allternit-api (:8013), not by the deployed web surface, so this defaults
+ * OFF and office-binding probes fail closed (binding treated as absent)
+ * instead of polling an unreachable endpoint every 10s.
+ * Set NEXT_PUBLIC_ALLTERNIT_OFFICE_API=1 where the gateway is reachable.
+ */
+export function isOfficeApiEnabled(): boolean {
+  return envFlag('NEXT_PUBLIC_ALLTERNIT_OFFICE_API');
+}
+
+/**
+ * Beta API — `/api/v1/beta/*` (deep-research tasks, playground session
+ * memory/events/run). Served only by the Rust allternit-api (:8013), not by
+ * the deployed web surface, so this defaults OFF and the research/playground
+ * widgets render a deliberate offline/disabled state instead of firing
+ * requests that 404.
+ * Set NEXT_PUBLIC_ALLTERNIT_BETA_API=1 where the gateway is reachable.
+ */
+export function isBetaApiEnabled(): boolean {
+  return envFlag('NEXT_PUBLIC_ALLTERNIT_BETA_API');
+}
+
+/**
+ * Rails API — `/api/rails/*` (DAG plans, WIHs, leases, ledger, vault, mail).
+ * Served only by the Rust allternit-api (:8013), which is not publicly
+ * reachable from the deployed web surface, so this defaults OFF: DAG runtime
+ * / orchestration views skip their mount-time fetches and health polls and
+ * show a deliberate "disabled in this deployment" state.
+ * Set NEXT_PUBLIC_ALLTERNIT_RAILS_API=1 where the gateway is reachable.
+ */
+export function isRailsApiEnabled(): boolean {
+  return envFlag('NEXT_PUBLIC_ALLTERNIT_RAILS_API');
+}
