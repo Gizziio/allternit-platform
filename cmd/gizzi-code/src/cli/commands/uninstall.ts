@@ -8,6 +8,12 @@ import fs from "fs/promises"
 import path from "path"
 import os from "os"
 import { Filesystem } from "@/shared/util/filesystem"
+import {
+  cleanShellConfigContent,
+  removeMarkedBlock,
+  POWERSHELL_BLOCK_BEGIN,
+  POWERSHELL_BLOCK_END,
+} from "@/cli/commands/uninstallShellConfig"
 
 interface UninstallArgs {
   keepConfig: boolean
@@ -139,6 +145,12 @@ async function showRemovalSummary(targets: RemovalTargets, method: Installation.
     }
     prompts.log.info(`  ✓ Package: ${cmds[method] || method}`)
   }
+
+  if (process.platform === "win32" && (method === "curl" || method === "unknown")) {
+    prompts.log.warn(
+      "If you installed via install.ps1, remove the gizzi install directory from your User PATH (System Properties → Environment Variables). It is not removed automatically.",
+    )
+  }
 }
 
 async function executeUninstall(method: Installation.Method, targets: RemovalTargets) {
@@ -269,7 +281,11 @@ async function getShellConfigFile(): Promise<string | null> {
     if (!exists) continue
 
     const content = await Filesystem.readText(file).catch(() => "")
-    if (content.includes("# gizzi") || content.includes(".gizzi/bin")) {
+    if (
+      content.includes("# gizzi") ||
+      content.includes("# gizzi-code begin") ||
+      content.includes(".gizzi/bin")
+    ) {
       return file
     }
   }
@@ -279,41 +295,41 @@ async function getShellConfigFile(): Promise<string | null> {
 
 async function cleanShellConfig(file: string) {
   const content = await Filesystem.readText(file)
-  const lines = content.split("\n")
 
-  const filtered: string[] = []
-  let skip = false
-
-  for (const line of lines) {
-    const trimmed = line.trim()
-
-    if (trimmed === "# gizzi" || trimmed === "# gizzi") {
-      skip = true
-      continue
-    }
-
-    if (skip) {
-      skip = false
-      if (trimmed.includes(".gizzi/bin") || trimmed.includes("fish_add_path")) {
-        continue
+  // PowerShell $PROFILE: no gizzi installer writes it today, but if one
+  // ever did, remove ONLY the marked block. Markers absent → warn and
+  // leave the file untouched rather than rewriting user content.
+  if (file.endsWith(".ps1")) {
+    const { output, result } = removeMarkedBlock(content, POWERSHELL_BLOCK_BEGIN, POWERSHELL_BLOCK_END)
+    if (output === null) {
+      if (result.status === "unbalanced-begin") {
+        prompts.log.warn(
+          `${shortenPath(file)} has a '${POWERSHELL_BLOCK_BEGIN}' marker without a matching end marker; leaving it untouched.`,
+        )
+      } else if (result.status === "no-markers" && result.gizziReferences) {
+        prompts.log.warn(
+          `${shortenPath(file)} contains gizzi references but no gizzi marker block; leaving it untouched. Remove them manually if desired.`,
+        )
       }
+      return
     }
-
-    if (
-      (trimmed.startsWith("export PATH=") && trimmed.includes(".gizzi/bin")) ||
-      (trimmed.startsWith("fish_add_path") && trimmed.includes(".gizzi"))
-    ) {
-      continue
-    }
-
-    filtered.push(line)
+    await Filesystem.write(file, output)
+    return
   }
 
-  while (filtered.length > 0 && filtered[filtered.length - 1].trim() === "") {
-    filtered.pop()
+  const { output, result } = cleanShellConfigContent(content)
+  if (output === null) {
+    if (result.status === "unbalanced-begin") {
+      prompts.log.warn(
+        `${shortenPath(file)} has a '# gizzi-code begin' marker without a matching end marker; leaving it untouched.`,
+      )
+    } else if (result.status === "no-markers" && result.gizziReferences) {
+      prompts.log.warn(
+        `${shortenPath(file)} contains .gizzi references but no gizzi marker block; leaving it untouched. Remove them manually if desired.`,
+      )
+    }
+    return
   }
-
-  const output = filtered.join("\n") + "\n"
   await Filesystem.write(file, output)
 }
 

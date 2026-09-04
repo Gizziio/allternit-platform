@@ -12,10 +12,13 @@ ecosystem) when you connect it.
 curl -fsSL https://install.gizziio.com/install | bash
 ```
 
-**Windows (PowerShell):**
+**Windows (PowerShell) — experimental, unsupported:**
 ```powershell
 irm https://install.gizziio.com/install.ps1 | iex
 ```
+Windows is not a launch target. It runs, but there is no secure
+credential store (credentials fall back to a local file), and support is
+community-only. See [Platform support](#platform-support).
 
 **npm:**
 ```bash
@@ -26,6 +29,14 @@ Or grab a prebuilt binary for your platform from the
 [releases page](https://github.com/Gizziio/allternit-platform/releases)
 (assets are named `gizzi-code-v<version>-<target>.tar.gz` / `.zip`; tags look
 like `gizzi-code/1.0.2`).
+
+## Platform support
+
+| Platform | Status |
+|---|---|
+| macOS | Primary target; signed & notarized builds planned |
+| Linux | Supported |
+| Windows | Experimental — no secure credential store (local-file fallback); community support only |
 
 ## Quick start
 

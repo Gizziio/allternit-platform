@@ -451,11 +451,12 @@ add_to_path() {
     local config_file=$1
     local command=$2
 
-    if grep -Fxq "$command" "$config_file"; then
+    if grep -Fqx "$command" "$config_file" || grep -Fqx "# gizzi-code begin" "$config_file"; then
         print_message info "Command already exists in $config_file, skipping write."
     elif [[ -w $config_file ]]; then
-        echo -e "\n# gizzi-code" >> "$config_file"
-        echo "$command" >> "$config_file"
+        # Write between begin/end markers so the uninstaller can remove
+        # EXACTLY this block and nothing else. Do not write unmarked lines.
+        printf '\n# gizzi-code begin\n%s\n# gizzi-code end\n' "$command" >> "$config_file"
         print_message info "${MUTED}Successfully added ${NC}gizzi-code ${MUTED}to \$PATH in ${NC}$config_file"
     else
         print_message warning "Manually add the directory to $config_file (or similar):"

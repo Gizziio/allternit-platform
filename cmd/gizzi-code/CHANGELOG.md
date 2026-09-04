@@ -1,5 +1,24 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+- Windows is now explicitly labeled experimental/unsupported (macOS primary,
+  Linux supported). The CLI prints a one-line stderr warning on boot on
+  win32: no secure credential store — credentials fall back to a
+  permission-hardened local file.
+- Shell profile edits are marker-disciplined: the installer writes PATH
+  lines between `# gizzi-code begin` / `# gizzi-code end`, and the
+  uninstaller removes only that block. Profiles without markers are left
+  untouched (with a warning) instead of being rewritten line-by-line.
+- install.ps1: exact semicolon-delimited User PATH comparison, an explicit
+  note when using the x64 build on ARM64, and a clear error under a
+  Restricted execution policy.
+
+### Docs
+- README "Platform support" section; mirrored one-liner in
+  docs/TROUBLESHOOTING.md.
+
 ## 1.0.2 — 2026-09-04
 
 Production-readiness release.

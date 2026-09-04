@@ -1,5 +1,10 @@
 # Gizzi Code - Troubleshooting Guide
 
+> **Platform support:** macOS is the primary target (signed/notarized builds
+> planned), Linux is supported, and Windows is experimental (no secure
+> credential store — credentials fall back to a local file; community
+> support only). See `README.md` for details.
+
 ## Issue: Gizzi Code Hangs/Freezes on Startup
 
 ### Problem
