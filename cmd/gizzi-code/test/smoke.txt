@@ -85,3 +85,5 @@ test/util/provider-error.test.ts
 test/util/timeout.test.ts
 test/util/wildcard.test.ts
 test/workspace/registry.test.ts
+test/cron-automation.test.ts
+test/vault.test.ts
