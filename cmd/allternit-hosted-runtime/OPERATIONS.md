@@ -35,7 +35,7 @@ The billing system calls the internal endpoint with its own stable event ID.
 Retries with the same event ID are idempotent.
 
 ```sh
-curl -X POST https://allternit-cloud-api.fly.dev/api/v1/internal/billing/hosted-entitlement \
+curl -X POST https://api.allternit.com/api/v1/internal/billing/hosted-entitlement \
   -H "Content-Type: application/json" \
   -H "X-Allternit-Billing-Secret: $ALLTERNIT_BILLING_SYNC_SECRET" \
   -d '{
