@@ -8,6 +8,7 @@
 /editions/* /editions/:splat 200
 /.well-known/* /.well-known/:splat 200
 /favicon.svg /favicon.svg 200
+/boot.js /boot.js 200
 /remote-control.html /remote-control.html 200
 /remote-control-service-worker.js /remote-control-service-worker.js 200
 /remote-control.webmanifest /remote-control.webmanifest 200

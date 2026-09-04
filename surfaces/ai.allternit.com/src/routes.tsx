@@ -92,6 +92,11 @@ const OfficeLauncherPage = lazy(() => import('./pages/OfficeLauncherPage'))
 const SignDocumentPage = lazy(() => import('./pages/SignDocumentPage'))
 const HudPage = lazy(() => import('./pages/HudPage'))
 
+// Debug/test-only pages. Registered only in dev builds — in production these
+// routes are absent, so the wildcard below renders the redirect-to-home 404
+// behavior instead of exposing internal tooling.
+const isDevRouteBuild = Boolean(import.meta.env.DEV)
+
 export default function AppRoutes() {
   const navigate = useNavigate();
 
@@ -141,10 +146,15 @@ export default function AppRoutes() {
         <Route path="/leaderboard" element={<BenchmarkLeaderboardPage />} />
         <Route path="/connect" element={<ConnectPage />} />
         <Route path="/extension/installed" element={<ExtensionInstalledPage />} />
-        <Route path="/debug-mode" element={<DebugModePage />} />
-        <Route path="/gallery-test" element={<GalleryTestPage />} />
-        <Route path="/swarm-preview" element={<SwarmPreviewPage />} />
-        <Route path="/terminal-test" element={<TerminalTestPage />} />
+        {/* Debug/test-only routes — never registered in production builds. */}
+        {isDevRouteBuild && (
+          <>
+            <Route path="/debug-mode" element={<DebugModePage />} />
+            <Route path="/gallery-test" element={<GalleryTestPage />} />
+            <Route path="/swarm-preview" element={<SwarmPreviewPage />} />
+            <Route path="/terminal-test" element={<TerminalTestPage />} />
+          </>
+        )}
         <Route path="/terminal/clerk" element={<TerminalClerkPage />} />
         <Route path="/office-auth-bridge" element={<OfficeAuthBridgePage />} />
         <Route path="/dispatch/join" element={<DispatchJoinPage />} />
