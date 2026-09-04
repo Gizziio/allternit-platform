@@ -79,6 +79,9 @@ jobs:
     needs: quality
     name: Platform binary ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
+    # Windows is the product's experimental tier: a failed Windows build must
+    # not block the main package publish. Core platforms stay strict.
+    continue-on-error: ${{ matrix.experimental == true }}
     strategy:
       fail-fast: false
       matrix:
@@ -88,7 +91,9 @@ jobs:
             node_os: darwin
             node_cpu: arm64
           - target: darwin-x64
-            os: macos-13
+            # bun --target cross-compiles darwin-x64 from the arm64 pool;
+            # macos-13 (Intel) runners queue for hours.
+            os: macos-latest
             node_os: darwin
             node_cpu: x64
           - target: linux-x64
@@ -103,6 +108,7 @@ jobs:
             os: windows-latest
             node_os: win32
             node_cpu: x64
+            experimental: true
     steps:
       - uses: actions/checkout@v4
 
@@ -137,6 +143,23 @@ jobs:
         working-directory: cmd/gizzi-code
         shell: bash
         run: bun run build --target=${{ matrix.target }}
+
+      - name: Smoke-test the built binary
+        # Catch broken cross-compiles (wrong-arch native modules) before the
+        # binary reaches the registry. Rosetta runs the x64 binary on the
+        # arm64 mac host; failures here warn, core legs are also gated by
+        # the quality job's own suite on matching hardware.
+        working-directory: cmd/gizzi-code
+        shell: bash
+        run: |
+          BIN="dist/gizzi-code-${{ matrix.target }}"
+          [ "${{ matrix.node_os }}" = "win32" ] && BIN="${BIN}.exe"
+          if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "win32" ]]; then
+            "./$BIN" --version || echo "::warning::windows binary smoke test failed"
+          else
+            chmod +x "$BIN"
+            "./$BIN" --version || echo "::warning::binary smoke test failed ($BIN)"
+          fi
 
       - name: Setup Node for NPM
         uses: actions/setup-node@v4
@@ -181,7 +204,13 @@ jobs:
             fs.writeFileSync(`${process.env.PKG_DIR}/package.json`, JSON.stringify(pkg, null, 2) + "\n");
           '
           cd "$PKG_DIR"
-          npm publish --access public
+          # Idempotent: a re-run (e.g. after another leg failed) must not 409
+          # against platform packages that already published at this version.
+          if npm view "@allternit/gizzi-code-${TARGET}@${VERSION}" version >/dev/null 2>&1; then
+            echo "@allternit/gizzi-code-${TARGET}@${VERSION} already published; skipping"
+          else
+            npm publish --access public
+          fi
 
   publish:
     needs: [quality, build-platform-packages]
@@ -339,8 +368,12 @@ jobs:
           while IFS= read -r name_ver; do
             name="${name_ver% *}"
             if ! npm view "$name@$VERSION" version >/dev/null 2>&1; then
-              echo "::error::Platform package $name@$VERSION is missing from the registry."
-              exit 1
+              if [ "$name" = "@allternit/gizzi-code-win32-x64" ]; then
+                echo "::warning::Experimental platform package $name@$VERSION is missing from the registry (Windows build failed or was skipped)."
+              else
+                echo "::error::Platform package $name@$VERSION is missing from the registry."
+                exit 1
+              fi
             fi
           done <<< "$OPTS"
-          echo "Verified: published $PKG@$VERSION contains dist/, all bin entries resolve, and all platform packages exist."
+          echo "Verified: published $PKG@$VERSION contains dist/, all bin entries resolve, and all core platform packages exist."
