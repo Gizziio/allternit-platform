@@ -407,3 +407,36 @@ connectors-MCP `execute_action` calls whose `actionId` matches
 `gmail.send_email` / `*.send_email` / `*.reply_email`. Denials are structured
 tool results beginning `blocked by agent policy: <category>`. Other categories
 and tools are untouched. Tests: `test/shared/agentHardBans.test.ts`.
+
+---
+
+## Credential storage
+
+Sensitive tokens (API keys, OAuth tokens) must never be written to disk as
+unmarked plaintext. The single write path is the credential store:
+
+| Path | Purpose |
+|------|---------|
+| `src/runtime/context/config/credential-store.ts` | `CredentialWriter` factories. `"auto"` (default) prefers the OS keyring; `"file"` is the marked insecure fallback. |
+| `src/runtime/context/config/keychain-backend.ts` | macOS Keychain `KeyringBackend` (service suffix `-profiles`, hex-encoded JSON blobs per service). |
+| `src/runtime/context/config/auth-profiles.ts` | `config.toml` `[auth]` profiles. `api_key` is NEVER written inline; `migrateInlineApiKeys` moves legacy inline keys into the store on read (chmod 0o600 + warn when impossible). |
+| `src/shared/utils/secureStorage/` | MCP OAuth / plugin secrets. macOS → Keychain; Linux/Windows → hardened plaintext fallback. |
+
+Fallback rules (no OS secure store): single `~/.gizzi/credentials.json` with an
+`"insecureFallback": true` marker, 0o600 file inside a 0o700 directory,
+one-time stderr warning with platform remediation (Linux: install
+libsecret/gnome-keyring), and a deprecation WARN in the session log. Legacy
+per-service `~/.gizzi/credentials/<service>.json` files are migrated on read
+and renamed to `*.migrated`.
+
+Log redaction: `src/shared/util/redact.ts` masks JWTs, `sk-`/`sk-ant-` keys,
+Bearer tokens, and `token=`/`secret=`/`password=`-style pairs in every line
+written by `Log` (`src/shared/util/log.ts`) and `logForDebugging`
+(`src/shared/utils/debug.ts`, plus the ink-app copy).
+
+Tests: `test/config/credential-store.test.ts`, `test/config/auth-profiles.test.ts`,
+`test/util/redact.test.ts`.
+
+Known follow-ups: Linux libsecret and Windows Credential Manager backends; the
+legacy upstream `saveApiKey`/`primaryApiKey` path in `src/shared/utils/auth.ts`
+still persists a 0o600 JSON config key.
