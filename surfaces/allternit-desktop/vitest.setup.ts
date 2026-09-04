@@ -38,6 +38,7 @@ vi.mock('electron', () => ({
   },
   BrowserWindow: class {},
   ipcMain: { handle: () => {}, on: () => {} },
+  shell: { openExternal: vi.fn() },
 }));
 
 vi.mock('electron-log', () => ({

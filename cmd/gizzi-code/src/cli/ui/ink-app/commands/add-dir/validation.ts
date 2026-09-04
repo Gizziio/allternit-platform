@@ -1,5 +1,5 @@
 // @ts-nocheck
-import chalk from 'chalk'
+import chalk from '@/shared/util/chalk'
 import { stat } from 'fs/promises'
 import { dirname, resolve } from 'path'
 import type { ToolPermissionContext } from '../../Tool'

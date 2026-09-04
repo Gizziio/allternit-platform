@@ -1,4 +1,4 @@
-import chalk from 'chalk'
+import chalk from '@/shared/util/chalk'
 import type { DailyActivity } from './stats.js'
 import { toDateString } from './statsCache.js'
 

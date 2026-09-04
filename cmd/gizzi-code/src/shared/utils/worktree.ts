@@ -1,5 +1,5 @@
 import { feature } from 'bun:bundle'
-import chalk from 'chalk'
+import chalk from '@/shared/util/chalk'
 import { spawnSync } from 'child_process'
 import {
   copyFile,

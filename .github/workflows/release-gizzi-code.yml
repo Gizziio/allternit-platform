@@ -15,7 +15,35 @@ permissions:
   contents: write
 
 jobs:
+  test:
+    # Gate: gizzi-code has 148 bun:test files; releases must not ship with a
+    # red suite. Keep this blocking — do not downgrade to continue-on-error
+    # without a tracked reason.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Install dependencies
+        # Full workspace install: gizzi-code imports packages it doesn't
+        # declare (they resolve via the root node_modules, same as local
+        # builds). A filtered install misses them.
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.28.0 --activate
+          pnpm install --frozen-lockfile
+
+      - name: Run test suite
+        working-directory: cmd/gizzi-code
+        run: bun run test
+
   build-binaries:
+    needs: test
     strategy:
       matrix:
         include:

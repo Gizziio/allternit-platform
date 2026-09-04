@@ -1,4 +1,4 @@
-import chalk from 'chalk'
+import chalk from '@/shared/util/chalk'
 import { env } from './env.js'
 
 export type Theme = {

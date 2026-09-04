@@ -45,6 +45,18 @@ export class BackendManager {
   private apiKey: string | null = null;
   private lastConfig: BackendLaunchConfig | null = null;
   private resolvedBinaryPath: string | null | undefined;
+  /**
+   * Crash-respawn state. Respawns use capped exponential backoff with jitter
+   * so a binary that fails instantly on startup cannot hot-loop the machine.
+   * A run that stays up longer than STABLE_RUN_MS resets the attempt count.
+   */
+  private static readonly BACKOFF_STEPS_MS = [1000, 2000, 5000, 10000, 30000];
+  private static readonly STABLE_RUN_MS = 60_000;
+  private respawnAttempts = 0;
+  private spawnTimestamp = 0;
+  private respawnTimer: ReturnType<typeof setTimeout> | null = null;
+  /** True while a shutdown was requested — exit events from that kill must not respawn. */
+  private intentionalStop = false;
 
   static getInstance(): BackendManager {
     if (!BackendManager.instance) {
@@ -65,6 +77,12 @@ export class BackendManager {
     };
     config = this.lastConfig;
     if (this.kernelProc) {
+      return this.getUrl();
+    }
+    if (this.respawnTimer) {
+      // A crash respawn is already scheduled; the health-check reuse path
+      // below would otherwise race it with a second spawn.
+      log.info('[BackendManager] Respawn already scheduled; skipping duplicate ensureBackend');
       return this.getUrl();
     }
 
@@ -140,33 +158,51 @@ export class BackendManager {
     };
 
     log.info(`[BackendManager] Starting allternit-api on port ${API_PORT} from ${binaryPath}`);
-    this.kernelProc = spawn(binaryPath, developmentCargoProject ? ['run', '--manifest-path', path.join(developmentCargoProject, 'Cargo.toml')] : [], {
+    const spawned = spawn(binaryPath, developmentCargoProject ? ['run', '--manifest-path', path.join(developmentCargoProject, 'Cargo.toml')] : [], {
       cwd: developmentCargoProject ?? undefined,
       env,
       stdio: ['ignore', 'pipe', 'pipe'],
       windowsHide: true,
     });
+    this.kernelProc = spawned;
+    this.intentionalStop = false;
+    this.spawnTimestamp = Date.now();
 
-    this.kernelProc.stdout?.on('data', (d: Buffer) =>
+    spawned.stdout?.on('data', (d: Buffer) =>
       log.info('[Kernel]', d.toString().trim())
     );
-    this.kernelProc.stderr?.on('data', (d: Buffer) =>
+    spawned.stderr?.on('data', (d: Buffer) =>
       log.warn('[Kernel]', d.toString().trim())
     );
-    this.kernelProc.on('exit', (code) => {
+    spawned.on('exit', (code) => {
       log.warn(`[BackendManager] allternit-api exited (code ${code})`);
+      // A newer spawn (e.g. a manual restart) may already own kernelProc; do
+      // not clobber its state from this stale exit event.
+      if (this.kernelProc !== spawned) return;
       this.kernelProc = null;
       this.apiKey = null;
 
+      if (this.intentionalStop) return;
+
       if (app.isPackaged || process.env.NODE_ENV === 'production') {
-        log.info('[BackendManager] allternit-api crashed unexpectedly, respawning in 1s...');
-        setTimeout(() => {
+        const stableRun = Date.now() - this.spawnTimestamp > BackendManager.STABLE_RUN_MS;
+        if (stableRun) this.respawnAttempts = 0;
+        const step = Math.min(this.respawnAttempts, BackendManager.BACKOFF_STEPS_MS.length - 1);
+        const baseDelay = BackendManager.BACKOFF_STEPS_MS[step];
+        // ±20% jitter avoids thundering-herd restarts when many desktops
+        // restart a backend at once.
+        const delay = Math.round(baseDelay * (0.8 + Math.random() * 0.4));
+        this.respawnAttempts += 1;
+        log.info(`[BackendManager] allternit-api crashed unexpectedly, respawning in ${delay}ms (attempt ${this.respawnAttempts})...`);
+        this.respawnTimer = setTimeout(() => {
+          this.respawnTimer = null;
           if (this.lastConfig) {
             this.ensureBackend(this.lastConfig).catch(e =>
               log.error('[BackendManager] Failed to auto-restart allternit-api:', e)
             );
           }
-        }, 1000);
+        }, delay);
+        this.respawnTimer.unref?.();
       }
     });
 
@@ -177,6 +213,12 @@ export class BackendManager {
   }
 
   async stopBackend(): Promise<void> {
+    if (this.respawnTimer) {
+      clearTimeout(this.respawnTimer);
+      this.respawnTimer = null;
+    }
+    this.intentionalStop = true;
+    this.respawnAttempts = 0;
     if (this.kernelProc) {
       log.info('[BackendManager] Stopping allternit-api…');
       this.kernelProc.kill('SIGTERM');

@@ -1,5 +1,5 @@
 // @ts-nocheck
-import chalk from 'chalk'
+import chalk from '@/shared/util/chalk'
 import { execa } from 'execa'
 import { mkdir, stat } from 'fs/promises'
 import memoize from 'lodash-es/memoize.js'

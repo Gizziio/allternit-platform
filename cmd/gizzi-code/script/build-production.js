@@ -317,7 +317,7 @@ const define = {
 let injectionCode = `
 var GIZZI_VERSION = "${VERSION}";
 var GIZZI_CHANNEL = "production";
-var MACRO = ${JSON.stringify({ VERSION, BUILD_TIME: new Date().toISOString() })};
+var MACRO = ${JSON.stringify({ VERSION, BUILD_TIME: new Date().toISOString(), PACKAGE_URL: packageJson.name || "@allternit/gizzi-code" })};
 `;
 if (migrations.length > 0) {
     injectionCode += `var GIZZI_MIGRATIONS = ${JSON.stringify(migrations)};\n`;

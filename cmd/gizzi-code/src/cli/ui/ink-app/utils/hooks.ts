@@ -112,7 +112,7 @@ import type { StatusLineCommandInput } from '../types/statusLine.js'
 import type { ElicitResult } from '@modelcontextprotocol/sdk/types.js'
 import type { FileSuggestionCommandInput } from '../types/fileSuggestion.js'
 import type { HookResultMessage } from './../types/message.ts'
-import chalk from 'chalk'
+import chalk from '@/shared/util/chalk'
 import type {
   HookMatcher,
   HookCommand,

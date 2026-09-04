@@ -1,5 +1,5 @@
 // @ts-nocheck
-import chalk from 'chalk'
+import chalk from '@/shared/util/chalk'
 import { logEvent } from 'src/services/analytics/index.js'
 import {
   getLatestVersion,

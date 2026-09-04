@@ -24,7 +24,7 @@
   ],
   "scripts": {
     "typecheck": "NODE_OPTIONS=--max-old-space-size=8192 tsc --noEmit",
-    "test": "echo 'gizzi-code tests skipped pending stabilization' && exit 0",
+    "test": "bun test test/",
     "build": "bun run script/build.ts",
     "dev": "bun --conditions=browser ./src/cli/main.ts",
     "start": "bun --conditions=browser ./src/cli/main.ts",
@@ -41,11 +41,13 @@
     "db": "bun drizzle-kit",
     "vm:download": "bun run src/runtime/vm/vm-image-download.ts",
     "release": "bash script/clean-bak.sh && bun run build --all",
-    "clean:bak": "bash script/clean-bak.sh"
+    "clean:bak": "bash script/clean-bak.sh",
+    "prepublishOnly": "node script/check-publish.js",
+    "prepack": "node script/check-publish.js"
   },
   "bin": {
-    "gizzi": "./dist/gizzi-code",
-    "gizzi-code": "./dist/gizzi-code"
+    "gizzi": "./bin/gizzi.js",
+    "gizzi-code": "./bin/gizzi.js"
   },
   "exports": {
     "./*": "./src/*.ts"

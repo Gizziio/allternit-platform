@@ -1,5 +1,5 @@
 // @ts-nocheck
-import chalk from 'chalk'
+import chalk from '@/shared/util/chalk'
 import { toString as qrToString } from 'qrcode'
 import {
   BRIDGE_FAILED_INDICATOR,
