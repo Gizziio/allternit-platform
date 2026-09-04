@@ -17,8 +17,13 @@ const ORIGIN = `http://localhost:${PORT}`;
 const TOKEN_ENV = "ALLTERNIT_TOKEN";
 const CLERK_PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
     ?? "pk_test_ZWFzeS1oYXdrLTUzLmNsZXJrLmFjY291bnRzLmRldiQ";
-const CLERK_SECRET_KEY = process.env.CLERK_SECRET_KEY
-    ?? "sk_test_37qh7k8rZwwWu3QKPi2doqk10SabkYgIMCXEqkcQzi";
+// Secret key must come from the environment — never commit a Clerk secret key.
+// (A sk_test default used to live here; it was revoked/rotated on 2026-09-03.)
+const CLERK_SECRET_KEY = process.env.CLERK_SECRET_KEY;
+if (!CLERK_SECRET_KEY) {
+    console.error("CLERK_SECRET_KEY is required (set it in your environment).");
+    process.exit(1);
+}
 // Derive frontend API host from publishable key
 // pk_test_<base64(frontendApiHost)> → decode to get the host
 function clerkFrontendApi() {

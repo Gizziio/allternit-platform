@@ -8,7 +8,11 @@ Clerk e2e stress tests. The account exists in the production Clerk instance
 `ai.allternit.com` because they share the `.allternit.com` cookie domain.
 
 - **Email:** `cartlidge.joseph@yahoo.com`
-- **Password:** `Tyhvix-gafho2-bofxog`
+- **Password:** kept in the team password manager — ask the account owner.
+
+> ⚠️ **2026-09-03 security note:** the password for this account was previously
+> committed in this file and has been scrubbed. It must be **rotated** — git
+> history still contains it. Do not re-commit it here.
 
 > Keep this account for development/testing only. Do not use it for production
 > data or billing actions.
@@ -41,7 +45,7 @@ If you want the dev server to sign in automatically, add to `.env.local`:
 
 ```bash
 VITE_CLERK_SEED_EMAIL=cartlidge.joseph@yahoo.com
-VITE_CLERK_SEED_PASSWORD=Tyhvix-gafho2-bofxog
+VITE_CLERK_SEED_PASSWORD=<password from team password manager>
 ```
 
 The platform auth client will attempt to sign in on startup and, if needed,
@@ -51,7 +55,7 @@ create/select a seed organization so the session is active.
 
 ```bash
 # From the repo root
-CLERK_TEST_PASSWORD=Tyhvix-gafho2-bofxog \
+CLERK_TEST_PASSWORD=<password from team password manager> \
   node surfaces/ai.allternit.com/scripts/clerk-e2e-verify.mjs
 ```
 
@@ -61,7 +65,7 @@ sign-up form reaches Clerk.
 ## Full Clerk stress test
 
 ```bash
-CLERK_TEST_PASSWORD=Tyhvix-gafho2-bofxog \
+CLERK_TEST_PASSWORD=<password from team password manager> \
   HEADLESS=0 \
   node surfaces/ai.allternit.com/scripts/clerk-stress-test-v4.mjs
 ```

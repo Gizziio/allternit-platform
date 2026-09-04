@@ -1,0 +1,87 @@
+# Gitleaks baseline for the allternit monorepo.
+#
+# History note (2026-09-03): git history before this date contains secrets that
+# were scrubbed from HEAD (Clerk test-account password, Clerk sk_test keys,
+# ProtonMail password, archived link-card-service private key). They are
+# REVOKED/ROTATED via the user's rotation list — see
+# reports/2026-09-03-production-readiness-gap-analysis.md §Step 4. The CI gate
+# (.github/workflows/secrets.yml) scans PR/push diffs, so dirty history does
+# not block merges; rewriting history with BFG/git-filter-repo is optional.
+#
+# Everything allowlisted below was manually triaged on 2026-09-03 as a false
+# positive (vendored third-party code, generated artifacts, documentation
+# examples, test fixtures, publishable-by-design keys, or placeholder values).
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Triage 2026-09-03: fixtures, vendored code, docs, generated output"
+paths = [
+  # generated build output (not tracked; scanned only in local --no-git runs)
+  '''(?i)node_modules''',
+  '''(?i)/dist/''',
+  '''(?i)\.svelte-kit/''',
+
+  # vendored third-party trees (docs + tests ship example tokens by design)
+  '''^infrastructure/providers/vendor-integration/vendor/''',
+  '''^infrastructure/allternit-cloud-providers/vendor-integration/vendor/''',
+
+  # documentation and agent-skill reference material (examples, not credentials)
+  '''^docs/''',
+  '''^\.agents/skills/''',
+
+  # archived dead code (the one real key in archive/ was deleted, not allowlisted)
+  '''^archive/rust-orphans/''',
+  '''^archive/computer-use-operator/''',
+
+  # placeholder-only template (all values are REPLACE_WITH_*)
+  '''^infrastructure/vps-desktop-cloud/api\.env\.template$''',
+
+  # DLP/ACI pattern files intentionally contain secret-shaped strings
+  '''^cmd/allternit-api/src/aci_safety\.rs$''',
+  '''^cmd/allternit-api/src/llm_gateway/dlp_patterns\.rs$''',
+
+  # CI ephemeral postgres service password (test-only, lives for the job run)
+  '''^\.github/workflows/deploy-cloud-api-contabo\.yml$''',
+
+  # runtime-generated key material (the match is a PEM header string literal)
+  '''^infrastructure/vps-node/allternit-infrastructure/src/services/SSHKeyService\.ts$''',
+
+  # test fixtures with deliberately fake key material
+  '''^cmd/gizzi-code/test/''',
+  '''^services/open-connector/src/providers/provider-proxy-loader\.test-helpers\.ts$''',
+
+  # docs surface (mintlify content with example keys)
+  '''^surfaces/docs/''',
+
+  # tokenizer tables false-positive on generic-api-key entropy
+  '''^surfaces/ai\.allternit\.com/src/lib/local-models/bonsai-runtime/qwen-tokenizer\.ts$''',
+
+  # example curl commands in connector quickstart
+  '''^services/open-connector/docs/quickstart\.md$''',
+
+  # Ethereum token addresses false-positive on generic-api-key
+  '''^services/open-connector/src/providers/uniswap_api/runtime\.ts$''',
+  '''^services/open-connector/src/providers/la_growth_machine/actions\.ts$''',
+
+  # quickstart examples (localhost dev only)
+  '''^cmd/allternit-cloud-api/QUICKSTART\.md$''',
+
+  # 'rateLimitTier' string false-positive
+  '''^cmd/gizzi-code/src/cli/ui/ink-app/commands/upgrade/upgrade\.tsx$''',
+
+  # publishable-by-design keys (safe to expose: Clerk pk_ test keys, Datadog
+  # RUM client tokens, localhost-build publishable key fallback)
+  '''^resources/company\.json$''',
+  '''^surfaces/ai\.allternit\.com/\.env\.production$''',
+  '''^surfaces/ai\.allternit\.com/scripts/build-desktop-server\.cjs$''',
+  '''^surfaces/allternit-mobile/ios/''',
+  '''^cmd/gizzi-code/src/runtime/services/analytics/datadog\.ts$''',
+  '''^cmd/gizzi-code/src/cli/ui/ink-app/services/analytics/datadog\.ts$''',
+
+  # steering checkpoint quotes the live dev-api-token as evidence; the token is
+  # removed from source in this branch and revoked in production on deploy.
+  # TODO: drop this entry after the backdoor deploy lands and history is BFG'd.
+  '''^\.steering/checkpoint\.md$''',
+]

@@ -1,7 +1,7 @@
 import { chromium } from '@playwright/test';
 import fs from 'fs';
 
-const email = 'cartlidge.joseph@proton.me';
+const email = process.env.ALLTERNIT_TEST_EMAIL ?? 'cartlidge.joseph@proton.me';
 const url = 'https://platform.allternit.com/sign-in';
 
 const browser = await chromium.launch({ headless: true });
