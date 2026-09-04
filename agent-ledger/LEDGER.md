@@ -21,6 +21,14 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-04 18:30 — grok — gizzi-code Anthropic naming purge
+
+- **Session ID / Branch:** resumed kimi `session_237dc49a` (quota-killed mid-purge) on `main`
+- **Commit:** `d5d3add9d`
+- **How it works:** Hard-purged user-visible Anthropic product naming from `cmd/gizzi-code`. `CLAUDE_CODE_*` env vars are `GIZZI_*` only (no fallback) via `gizziEnv.ts` + codemod. "Claude Code" copy and product/docs/feedback URLs now gizzi/allternit. Added `NOTICE`, scoped `LICENSE`, and `docs/anthropic-allowlist.md` for the functional floor (API hosts, OAuth, model names, `CLAUDE.md` read-compat). Typecheck 0; smoke 103/103.
+- **Outstanding work:** Breaking env rename wants **gizzi-code 2.0.0** republish (not done). `gizzi-sdk` remains on legal hold (distribution rights of derived code, not naming). Counsel still owes the distribution basis (`docs/legal-attribution.md` §6). Rehost of docs-map / native-installer bucket is a separate infra follow-up. Internal identifiers like `getClaudeMds` / `claudeCodeGuideAgent.ts` filename not renamed.
+- **Summary file:** none
+
 ### 2026-09-03 21:50 — kimi — P0 Production-Readiness Gap Analysis Execution
 
 - **Session ID / Branch:** `session/b6d6153b` (pushed; merge to main pending user/orchestrator)
