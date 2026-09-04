@@ -31,6 +31,7 @@ import {
   normalizeApiKeyForConfig,
 } from './authPortable.js'
 import { clearBetasCaches } from './betasCache.js'
+import { redactTelemetryString } from './telemetryRedact.js'
 import {
   type AccountInfo,
   checkHasTrustDialogAccepted,
@@ -546,8 +547,11 @@ export async function saveApiKey(apiKey: string): Promise<void> {
     } catch (e) {
       logError(e)
       logEvent('tengu_api_key_keychain_error', {
-        error: errorMessage(
-          e,
+        // Fork: redact at source — OS keychain error strings can contain
+        // absolute paths and usernames. The analytics sink sanitizes again
+        // as defense in depth.
+        error: redactTelemetryString(
+          errorMessage(e),
         ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       })
       logEvent('tengu_api_key_saved_to_config', {})

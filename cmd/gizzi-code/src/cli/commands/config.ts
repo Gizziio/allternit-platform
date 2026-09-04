@@ -14,6 +14,11 @@ import {
   setActivePermissionProfile,
   type PermissionAction,
 } from "@/runtime/context/config/permission-profiles"
+import {
+  getTelemetrySettings,
+  getTelemetrySettingsPath,
+  setTelemetryEnabled,
+} from "@/shared/utils/telemetrySettings"
 
 const configPath = () => path.join(Global.Path.config, "config.toml")
 
@@ -148,9 +153,41 @@ const ProfileCommand = cmd({
   async handler() {},
 })
 
+const TelemetryCommand = cmd({
+  command: "telemetry <state>",
+  describe: "turn usage telemetry on or off (persists in telemetry.json)",
+  builder: (yargs) =>
+    yargs.positional("state", {
+      type: "string",
+      choices: ["on", "off", "status"] as const,
+      demandOption: true,
+    }),
+  async handler(args) {
+    const state = args.state as "on" | "off" | "status"
+    if (state === "status") {
+      const settings = getTelemetrySettings()
+      const envOff =
+        process.env.GIZZI_TELEMETRY === "off" ||
+        process.env.GIZZI_DISABLE_TELEMETRY === "1" ||
+        process.env.DISABLE_TELEMETRY === "1"
+      UI.println(`telemetry settings: ${settings.enabled ? "on" : "off"}`)
+      UI.println(`env override:       ${envOff ? "disabled" : "none"}`)
+      UI.println(`config file:        ${getTelemetrySettingsPath()}`)
+      UI.println(`notice shown:       ${settings.noticeShownAt ?? "never"}`)
+      return
+    }
+    setTelemetryEnabled(state === "on")
+    UI.println(`Telemetry ${state === "on" ? "enabled" : "disabled"} (${getTelemetrySettingsPath()})`)
+    if (state === "off") {
+      UI.println("Takes effect immediately for new processes; environment kill switch: GIZZI_TELEMETRY=off")
+    }
+  },
+})
+
 export const ConfigCommand = cmd({
   command: "config",
   describe: "manage gizzi configuration",
-  builder: (yargs: Argv) => yargs.command(ProfileCommand).demandCommand(),
+  builder: (yargs: Argv) =>
+    yargs.command(ProfileCommand).command(TelemetryCommand).demandCommand(),
   async handler() {},
 })

@@ -88,3 +88,4 @@ test/util/wildcard.test.ts
 test/workspace/registry.test.ts
 test/cron-automation.test.ts
 test/vault.test.ts
+test/telemetry-governance.test.ts

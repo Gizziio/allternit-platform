@@ -72,6 +72,11 @@ import { Global, init as initGlobal } from "@/runtime/context/global"
 import { JsonMigration } from "@/runtime/session/storage/json-migration"
 import { Database } from "@/runtime/session/storage/db"
 import { RuntimeTelemetry } from "@/runtime/telemetry"
+import { telemetryDisabled } from "@/runtime/telemetry/privacy"
+import {
+  hasTelemetryNoticeBeenShown,
+  markTelemetryNoticeShown,
+} from "@/shared/utils/telemetrySettings"
 import { getActiveSubsystems, getHarnessMode, shouldUseHarness } from "@/cli/ui/ink-app/utils/feature-flags"
 import { Workspace } from "@/runtime/workspace/workspace"
 import { getIsInteractive } from "@/cli/ui/ink-app/utils/feature-flags"
@@ -145,6 +150,27 @@ const cli = yargs(hideBin(process.argv))
     RuntimeTelemetry.attach((record) => {
       Log.Default.info("runtime.telemetry", record)
     })
+
+    // First-run telemetry disclosure: one line on the first interactive
+    // launch when telemetry is enabled. Never prints when telemetry is
+    // disabled via env/settings, in CI, or once already acknowledged.
+    try {
+      if (
+        getIsInteractive() &&
+        !CIMode.isCIEnvironment() &&
+        !telemetryDisabled() &&
+        !hasTelemetryNoticeBeenShown()
+      ) {
+        process.stderr.write(
+          "gizzi telemetry: anonymous usage stats are enabled (never prompts, file contents, or credentials). " +
+            "Disable with `gizzi config telemetry off` or GIZZI_TELEMETRY=off. " +
+            "Details: cmd/gizzi-code/docs/telemetry.md\n"
+        )
+        markTelemetryNoticeShown()
+      }
+    } catch {
+      // Disclosure is best-effort; never block startup.
+    }
 
     // Activate CI mode if --ci flag or CI environment detected
     if (opts.ci || CIMode.isCIEnvironment()) {

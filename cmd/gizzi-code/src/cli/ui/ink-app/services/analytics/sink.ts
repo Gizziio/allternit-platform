@@ -14,6 +14,7 @@ import { logEventTo1P, shouldSampleEvent } from './firstPartyEventLogger.js'
 import { checkStatsigFeatureGate_CACHED_MAY_BE_STALE } from './growthbook.js'
 import { attachAnalyticsSink, stripProtoFields } from './index.js'
 import { isSinkKilled } from './sinkKillswitch.js'
+import { sanitizeTelemetryMetadata } from '../../../../shared/utils/telemetryRedact.js'
 
 // Local type matching the logEvent metadata signature
 type LogEventMetadata = { [key: string]: boolean | number | undefined }
@@ -47,6 +48,12 @@ function shouldTrackDatadog(): boolean {
  * Log an event (synchronous implementation)
  */
 function logEventImpl(eventName: string, metadata: LogEventMetadata): void {
+  // Fork: defense-in-depth redaction. Event metadata is typed to
+  // boolean | number | undefined, but marker-cast call sites (error strings)
+  // can slip strings through. Sanitize before any sink sees the payload so
+  // paths/emails/tokens can never reach a network sink.
+  const sanitizedMetadata = sanitizeTelemetryMetadata(metadata) as LogEventMetadata
+
   // Check if this event should be sampled
   const sampleResult = shouldSampleEvent(eventName)
 
@@ -58,8 +65,8 @@ function logEventImpl(eventName: string, metadata: LogEventMetadata): void {
   // If sample result is a positive number, add it to metadata
   const metadataWithSampleRate =
     sampleResult !== null
-      ? { ...metadata, sample_rate: sampleResult }
-      : metadata
+      ? { ...sanitizedMetadata, sample_rate: sampleResult }
+      : sanitizedMetadata
 
   if (shouldTrackDatadog()) {
     // Datadog is a general-access backend — strip _PROTO_* keys

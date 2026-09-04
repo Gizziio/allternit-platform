@@ -12,16 +12,33 @@
  *
  * The resolved level is the most restrictive signal from:
  *   GIZZI_DISABLE_NONESSENTIAL_TRAFFIC  →  essential-traffic
- *   DISABLE_TELEMETRY                         →  no-telemetry
+ *   GIZZI_TELEMETRY=off|0|false|no      →  no-telemetry (canonical kill switch)
+ *   GIZZI_DISABLE_TELEMETRY             →  no-telemetry
+ *   DISABLE_TELEMETRY                   →  no-telemetry
+ *   telemetry.json "enabled": false     →  no-telemetry (persistent settings flag)
  */
 
+import { isTelemetryDisabledInSettings } from './telemetrySettings.js'
+
 type PrivacyLevel = 'default' | 'no-telemetry' | 'essential-traffic'
+
+const TELEMETRY_OFF_VALUES = new Set(['off', '0', 'false', 'no', 'disabled'])
+
+export function isGizziTelemetryEnvOff(): boolean {
+  const raw = process.env.GIZZI_TELEMETRY?.trim().toLowerCase()
+  return raw !== undefined && raw !== '' && TELEMETRY_OFF_VALUES.has(raw)
+}
 
 export function getPrivacyLevel(): PrivacyLevel {
   if (process.env.GIZZI_DISABLE_NONESSENTIAL_TRAFFIC) {
     return 'essential-traffic'
   }
-  if (process.env.DISABLE_TELEMETRY) {
+  if (
+    isGizziTelemetryEnvOff() ||
+    process.env.GIZZI_DISABLE_TELEMETRY ||
+    process.env.DISABLE_TELEMETRY ||
+    isTelemetryDisabledInSettings()
+  ) {
     return 'no-telemetry'
   }
   return 'default'
