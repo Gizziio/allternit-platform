@@ -15,6 +15,7 @@ import {
   type DoctorCheck,
 } from "@/cli/commands/doctorChecks"
 import { isDaemonRunning } from "@/runtime/automation/cron/daemon"
+import { supervisionState } from "@/runtime/automation/cron/supervision"
 import { defaultCredentialDir } from "@/runtime/context/config/credential-store"
 
 function pass(msg: string) {
@@ -176,7 +177,12 @@ export const DoctorCommand = cmd({
       )
 
       // ── Cron daemon ──
-      checks.push(...(await checkCronDaemon({ isRunning: () => isDaemonRunning(3031) })))
+      checks.push(
+        ...(await checkCronDaemon({
+          isRunning: () => isDaemonRunning(3031),
+          supervised: () => supervisionState(),
+        })),
+      )
 
       // ── Cloud gateway reachability ──
       checks.push(await checkGatewayReachability())

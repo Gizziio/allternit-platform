@@ -382,6 +382,10 @@ function isLongLivedCommand(argv: { _: (string | number)[]; print?: boolean }): 
       // `cowork attach <run-id>` attaches to a live run; everything else
       // (list/start/stop/logs/show/schedule/approval/checkpoint) exits.
       return sub === "attach"
+    case "cron":
+      // `cron start` runs the daemon in the foreground and blocks (also the
+      // launchd/systemd supervised entrypoint); everything else exits.
+      return sub === "start"
     case "remote":
       // `remote connect` opens an interactive remote session and
       // `remote logs` streams; list/status/test/setup/config exit.

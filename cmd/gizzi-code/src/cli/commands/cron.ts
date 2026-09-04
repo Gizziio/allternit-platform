@@ -13,7 +13,15 @@
  * - allternit cron stop              Stop the cron daemon
  */
 
-import { startDaemon, getRemoteStatus, stopRemoteDaemon } from "@/runtime/automation/cron";
+import { startDaemon, getRemoteStatus, stopRemoteDaemon, installCronCrashHandlers } from "@/runtime/automation/cron";
+import {
+  disableSupervision,
+  enableSupervision,
+  pidfilePath,
+  readLastCrash,
+  supervisionState,
+  validatePidfile,
+} from "@/runtime/automation/cron/supervision";
 import { Global } from "@/runtime/context/global";
 import { colors } from "../utils/colors";
 import { cmd } from "./cmd";
@@ -96,7 +104,12 @@ export const CronCommand = cmd({
             await startDaemon({
               port: argv.port as number,
               dbPath: CRON_DB_PATH,
+              pidfile: pidfilePath(),
             });
+            // From here on a crash must be recorded and exit non-zero
+            // (never leaving a stale pidfile), so launchd/systemd can
+            // restart the daemon.
+            installCronCrashHandlers(pidfilePath());
           } catch (e: any) {
             if (e.message?.includes("already in use")) {
               process.stdout.write(colors.yellow(`Daemon is already running on port ${argv.port}\n`));
@@ -104,6 +117,28 @@ export const CronCommand = cmd({
               process.stderr.write(colors.red(`Failed to start daemon: ${e.message}\n`));
             }
           }
+        }
+      )
+      .command(
+        "enable",
+        "Start the cron daemon on boot/login (launchd/systemd)",
+        () => {},
+        async () => {
+          const result = await enableSupervision(process.execPath);
+          if (result.ok) {
+            process.stdout.write(colors.green(`${result.message}\n`));
+          } else {
+            process.stderr.write(colors.yellow(`${result.message}\n`));
+          }
+        }
+      )
+      .command(
+        "disable",
+        "Remove cron daemon boot/login autostart",
+        () => {},
+        async () => {
+          const result = await disableSupervision();
+          process.stdout.write(`${result.message}\n`);
         }
       )
       .command(
@@ -134,14 +169,40 @@ export const CronCommand = cmd({
             const status = await getRemoteStatus(DEFAULT_CRON_PORT);
             if (!status) {
               process.stdout.write(`Status:  ${colors.red("Offline")}\n`);
-              return;
+            } else {
+              process.stdout.write(colors.bold("\nCron Daemon Status:\n"));
+              process.stdout.write("=".repeat(40) + "\n");
+              process.stdout.write(`Status:  ${colors.green("Online")}\n`);
+              process.stdout.write(`Port:    ${(status as any).config?.port ?? DEFAULT_CRON_PORT}\n`);
+              process.stdout.write(`Uptime:  ${formatDuration(Date.now() - new Date((status as any).startTime ?? Date.now()).getTime())}\n`);
+              process.stdout.write(`Jobs:    ${(status as any).jobs?.total ?? 0} total, ${colors.green(String((status as any).jobs?.active ?? 0))} active, ${colors.yellow(String((status as any).jobs?.paused ?? 0))} paused\n`);
             }
-            process.stdout.write(colors.bold("\nCron Daemon Status:\n"));
+
+            // Supervision state: autostart unit + pidfile validity + last crash.
+            process.stdout.write(colors.bold("\nSupervision:\n"));
             process.stdout.write("=".repeat(40) + "\n");
-            process.stdout.write(`Status:  ${colors.green("Online")}\n`);
-            process.stdout.write(`Port:    ${(status as any).config?.port ?? DEFAULT_CRON_PORT}\n`);
-            process.stdout.write(`Uptime:  ${formatDuration(Date.now() - new Date((status as any).startTime ?? Date.now()).getTime())}\n`);
-            process.stdout.write(`Jobs:    ${(status as any).jobs?.total ?? 0} total, ${colors.green(String((status as any).jobs?.active ?? 0))} active, ${colors.yellow(String((status as any).jobs?.paused ?? 0))} paused\n`);
+            const sup = await supervisionState();
+            if (!sup.supported) {
+              process.stdout.write(`Autostart: ${colors.yellow("unsupported on " + process.platform)}\n`);
+            } else {
+              const unit = sup.launchdPlist ?? sup.systemdUnit;
+              process.stdout.write(`Autostart: ${unit ? colors.green(`installed (${unit})`) : colors.dim("not installed — `gizzi cron enable`")}\n`);
+            }
+
+            const pidfile = pidfilePath();
+            const pidState = await validatePidfile(pidfile);
+            if (pidState.status === "running") {
+              process.stdout.write(`Pidfile:   ${colors.green(`alive (pid ${pidState.pid})`)}\n`);
+            } else if (pidState.status === "stale") {
+              process.stdout.write(`Pidfile:   ${colors.yellow(`stale (pid ${pidState.pid}) — removed`)}\n`);
+            } else {
+              process.stdout.write(`Pidfile:   ${colors.dim("none")}\n`);
+            }
+
+            const crash = await readLastCrash();
+            if (crash) {
+              process.stdout.write(`Last crash: ${colors.red(`${crash.at} — ${crash.message}`)}\n`);
+            }
           } catch {
             process.stdout.write(`Status:  ${colors.red("Offline")}\n`);
           }
