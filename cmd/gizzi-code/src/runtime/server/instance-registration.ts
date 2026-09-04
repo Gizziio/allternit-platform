@@ -32,8 +32,12 @@ export namespace InstanceRegistration {
 
   const REGISTER_TIMEOUT_MS = 10_000
   // Re-PUT cadence when a durable device token is in use; env override exists
-  // for tests (GIZZI_REGISTER_INTERVAL_MS).
-  const REGISTER_INTERVAL_MS = Number(process.env.GIZZI_REGISTER_INTERVAL_MS) || 5 * 60 * 1000
+  // for tests (GIZZI_REGISTER_INTERVAL_MS). Read lazily at schedule time:
+  // freezing this at module load makes the override ineffective whenever
+  // another test file imports this module first.
+  function registerIntervalMs(): number {
+    return Number(process.env.GIZZI_REGISTER_INTERVAL_MS) || 5 * 60 * 1000
+  }
 
   let refreshTimer: ReturnType<typeof setInterval> | undefined
 
@@ -132,7 +136,7 @@ export namespace InstanceRegistration {
           return
         }
         await putRegistration(current.token, current.name ?? name, opts.url)
-      }, REGISTER_INTERVAL_MS)
+      }, registerIntervalMs())
       refreshTimer.unref()
     }
   }
