@@ -1205,11 +1205,11 @@ export function getLastClassifierRequests(): unknown[] | null {
   return STATE.lastClassifierRequests
 }
 
-export function setCachedClaudeMdContent(content: string | null): void {
+export function setCachedGizziMdContent(content: string | null): void {
   STATE.cachedClaudeMdContent = content
 }
 
-export function getCachedClaudeMdContent(): string | null {
+export function getCachedGizziMdContent(): string | null {
   return STATE.cachedClaudeMdContent
 }
 
@@ -1664,7 +1664,7 @@ export function setLastEmittedDate(date: string | null): void {
   STATE.lastEmittedDate = date
 }
 
-export function getAdditionalDirectoriesForClaudeMd(): string[] {
+export function getAdditionalDirectoriesForGizziMd(): string[] {
   return STATE.additionalDirectoriesForClaudeMd
 }
 

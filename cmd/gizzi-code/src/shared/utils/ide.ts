@@ -15,7 +15,7 @@ import type {
 } from '../../runtime/services/mcp/types.js'
 import { getGlobalConfig, saveGlobalConfig } from './config.js'
 import { env } from './env.js'
-import { getClaudeConfigHomeDir, isEnvTruthy } from './envUtils.js'
+import { getLegacyClaudeHomeDir, isEnvTruthy } from './envUtils.js'
 import {
   execFileNoThrow,
   execFileNoThrowWithCwd,
@@ -459,7 +459,7 @@ const getWindowsUserProfile = memoize(async (): Promise<string | undefined> => {
  * stat loop compounded startup latency.
  */
 export async function getIdeLockfilesPaths(): Promise<string[]> {
-  const paths: string[] = [join(getClaudeConfigHomeDir(), 'ide')]
+  const paths: string[] = [join(getLegacyClaudeHomeDir(), 'ide')]
 
   if (getPlatform() !== 'wsl') {
     return paths

@@ -1,7 +1,8 @@
+// @ts-nocheck
 /**
- * Gizzi hints protocol.
+ * gizzi-code hints protocol.
  *
- * CLIs and SDKs running under Gizzi can emit a self-closing
+ * CLIs and SDKs running under gizzi-code can emit a self-closing
  * `<gizzi-hint />` tag to stderr (merged into stdout by the shell
  * tools). The harness scans tool output for these tags, strips them before
  * the output reaches the model, and surfaces an install prompt to the
@@ -12,19 +13,20 @@
  * at most one prompt per session, so there's no reason to accumulate.
  * React subscribes via useSyncExternalStore.
  *
- * See docs/gizzi-hints.md for the vendor-facing spec.
+ * See docs/gizzi-hints.md for the vendor-facing spec. The legacy
+ * `<claude-code-hint />` tag is still recognized as read-compat.
  */
 
 import { logForDebugging } from './debug.js'
 import { createSignal } from './signal.js'
 
-export type ClaudeCodeHintType = 'plugin'
+export type GizziHintType = 'plugin'
 
-export type ClaudeCodeHint = {
+export type GizziHint = {
   /** Spec version declared by the emitter. Unknown versions are dropped. */
   v: number
   /** Hint discriminator. v1 defines only `plugin`. */
-  type: ClaudeCodeHintType
+  type: GizziHintType
   /**
    * Hint payload. For `type: 'plugin'`: a `name@marketplace` slug
    * matching the form accepted by `parsePluginIdentifier`.
@@ -50,7 +52,7 @@ const SUPPORTED_TYPES = new Set<string>(['plugin'])
  * tag — is ignored. Leading and trailing whitespace on the line is
  * tolerated since some SDKs pad stderr.
  */
-const HINT_TAG_RE = /^[ \t]*<gizzi-hint\s+([^>]*?)\s*\/>[ \t]*$/gm
+const HINT_TAG_RE = /^[ \t]*<(?:gizzi-hint|claude-code-hint)\s+([^>]*?)\s*\/>[ \t]*$/gm
 
 /**
  * Attribute matcher. Accepts `key="value"` and `key=value` (terminated by
@@ -69,17 +71,17 @@ const ATTR_RE = /(\w+)=(?:"([^"]*)"|([^\s/>]+))/g
  * @param command - The command that produced the output; its first
  *   whitespace-separated token is recorded as `sourceCommand`.
  */
-export function extractClaudeCodeHints(
+export function extractGizziHints(
   output: string,
   command: string,
-): { hints: ClaudeCodeHint[]; stripped: string } {
+): { hints: GizziHint[]; stripped: string } {
   // Fast path: no tag open sequence → no work, no allocation.
-  if (!output.includes('<gizzi-hint')) {
+  if (!output.includes('<gizzi-hint') && !output.includes('<claude-code-hint')) {
     return { hints: [], stripped: output }
   }
 
   const sourceCommand = firstCommandToken(command)
-  const hints: ClaudeCodeHint[] = []
+  const hints: GizziHint[] = []
 
   const stripped = output.replace(HINT_TAG_RE, rawLine => {
     const attrs = parseAttrs(rawLine)
@@ -89,22 +91,22 @@ export function extractClaudeCodeHints(
 
     if (!SUPPORTED_VERSIONS.has(v)) {
       logForDebugging(
-        `[claudeCodeHints] dropped hint with unsupported v=${attrs.v}`,
+        `[gizziHints] dropped hint with unsupported v=${attrs.v}`,
       )
       return ''
     }
     if (!type || !SUPPORTED_TYPES.has(type)) {
       logForDebugging(
-        `[claudeCodeHints] dropped hint with unsupported type=${type}`,
+        `[gizziHints] dropped hint with unsupported type=${type}`,
       )
       return ''
     }
     if (!value) {
-      logForDebugging('[claudeCodeHints] dropped hint with empty value')
+      logForDebugging('[gizziHints] dropped hint with empty value')
       return ''
     }
 
-    hints.push({ v, type: type as ClaudeCodeHintType, value, sourceCommand })
+    hints.push({ v, type: type as GizziHintType, value, sourceCommand })
     return ''
   })
 
@@ -146,13 +148,13 @@ function firstCommandToken(command: string): string {
 // the same store.
 // ============================================================================
 
-let pendingHint: ClaudeCodeHint | null = null
+let pendingHint: GizziHint | null = null
 let shownThisSession = false
 const pendingHintChanged = createSignal()
 const notify = pendingHintChanged.emit
 
 /** Raw store write. Callers should gate first (see module comment). */
-export function setPendingHint(hint: ClaudeCodeHint): void {
+export function setPendingHint(hint: GizziHint): void {
   if (shownThisSession) return
   pendingHint = hint
   notify()
@@ -173,7 +175,7 @@ export function markShownThisSession(): void {
 
 export const subscribeToPendingHint = pendingHintChanged.subscribe
 
-export function getPendingHintSnapshot(): ClaudeCodeHint | null {
+export function getPendingHintSnapshot(): GizziHint | null {
   return pendingHint
 }
 
@@ -182,7 +184,7 @@ export function hasShownHintThisSession(): boolean {
 }
 
 /** Test-only reset. */
-export function _resetClaudeCodeHintStore(): void {
+export function _resetGizziHintStore(): void {
   pendingHint = null
   shownThisSession = false
 }

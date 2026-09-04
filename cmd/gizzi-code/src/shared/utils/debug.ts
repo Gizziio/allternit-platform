@@ -11,7 +11,7 @@ import {
   parseDebugFilter,
   shouldShowDebugMessage,
 } from './debugFilter.js'
-import { getClaudeConfigHomeDir, isEnvTruthy } from './envUtils.js'
+import { getLegacyClaudeHomeDir, isEnvTruthy } from './envUtils.js'
 import { getFsImplementation } from './fsOperations.js'
 import { writeToStderr } from './process.js'
 import { redactSecrets } from '../util/redact.js'
@@ -233,7 +233,7 @@ export function getDebugLogPath(): string {
   return (
     getDebugFilePath() ??
     process.env.GIZZI_DEBUG_LOGS_DIR ??
-    join(getClaudeConfigHomeDir(), 'debug', `${getSessionId()}.txt`)
+    join(getLegacyClaudeHomeDir(), 'debug', `${getSessionId()}.txt`)
   )
 }
 

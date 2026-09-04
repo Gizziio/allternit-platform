@@ -49,7 +49,7 @@ import {
 } from './config.js'
 import { logAntError, logForDebugging } from './debug.js'
 import {
-  getClaudeConfigHomeDir,
+  getGizziConfigHomeDir,
   isBareMode,
   isEnvTruthy,
   isRunningOnHomespace,
@@ -1320,7 +1320,7 @@ let lastCredentialsMtimeMs = 0
 async function invalidateOAuthCacheIfDiskChanged(): Promise<void> {
   try {
     const { mtimeMs } = await stat(
-      join(getClaudeConfigHomeDir(), '.credentials.json'),
+      join(getGizziConfigHomeDir(), '.credentials.json'),
     )
     if (mtimeMs !== lastCredentialsMtimeMs) {
       lastCredentialsMtimeMs = mtimeMs
@@ -1482,7 +1482,7 @@ async function checkAndRefreshOAuthTokenIfNeededImpl(
   }
 
   // Tokens are still expired, try to acquire lock and refresh
-  const claudeDir = getClaudeConfigHomeDir()
+  const claudeDir = getGizziConfigHomeDir()
   await mkdir(claudeDir, { recursive: true })
 
   let release

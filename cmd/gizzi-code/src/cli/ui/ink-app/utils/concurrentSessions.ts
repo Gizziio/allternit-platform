@@ -10,7 +10,7 @@ import {
 } from '../bootstrap/state.js'
 import { registerCleanup } from './cleanupRegistry.js'
 import { logForDebugging } from './debug.js'
-import { getClaudeConfigHomeDir } from './envUtils.js'
+import { getGizziConfigHomeDir } from './envUtils.js'
 import { errorMessage, isFsInaccessible } from './errors.js'
 import { isProcessRunning } from './genericProcessUtils.js'
 import { getPlatform } from './platform.js'
@@ -21,7 +21,7 @@ export type SessionKind = 'interactive' | 'bg' | 'daemon' | 'daemon-worker'
 export type SessionStatus = 'busy' | 'idle' | 'waiting'
 
 function getSessionsDir(): string {
-  return join(getClaudeConfigHomeDir(), 'sessions')
+  return join(getGizziConfigHomeDir(), 'sessions')
 }
 
 /**

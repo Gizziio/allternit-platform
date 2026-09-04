@@ -9,7 +9,7 @@ import { OAUTH_BETA_HEADER } from '../../constants/oauth.js'
 import { getAnthropicClient } from '../../services/api/client.js'
 import { isClaudeAISubscriber } from '../auth.js'
 import { logForDebugging } from '../debug.js'
-import { getClaudeConfigHomeDir } from '../envUtils.js'
+import { getGizziConfigHomeDir } from '../envUtils.js'
 import { safeParseJSON } from '../json.js'
 import { lazySchema } from '../lazySchema.js'
 import { isEssentialTrafficOnly } from '../privacyLevel.js'
@@ -37,7 +37,7 @@ const CacheFileSchema = lazySchema(() =>
 export type ModelCapability = z.infer<ReturnType<typeof ModelCapabilitySchema>>
 
 function getCacheDir(): string {
-  return join(getClaudeConfigHomeDir(), 'cache')
+  return join(getGizziConfigHomeDir(), 'cache')
 }
 
 function getCachePath(): string {

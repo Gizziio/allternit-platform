@@ -1,8 +1,8 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 /**
- * Surfaces plugin-install prompts driven by `<claude-code-hint />` tags
- * that CLIs/SDKs emit to stderr. See docs/claude-code-hints.md.
+ * Surfaces plugin-install prompts driven by `<gizzi-hint />` tags
+ * that CLIs/SDKs emit to stderr. See docs/gizzi-hints.md.
  *
  * Show-once semantics: each plugin is prompted for at most once ever,
  * recorded in config regardless of yes/no. The pre-store gate in
@@ -13,16 +13,16 @@ import { c as _c } from "react/compiler-runtime";
 import * as React from 'react';
 import { useNotifications } from '../../../../context/notifications';
 import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, type AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED, logEvent } from '../services/analytics/index';
-import { clearPendingHint, getPendingHintSnapshot, markShownThisSession, subscribeToPendingHint } from '../utils/claudeCodeHints';
+import { clearPendingHint, getPendingHintSnapshot, markShownThisSession, subscribeToPendingHint } from '../utils/gizziHints';
 import { logForDebugging } from '../utils/debug';
 import { disableHintRecommendations, markHintPluginShown, type PluginHintRecommendation, resolvePluginHint } from '../utils/plugins/hintRecommendation';
 import { installPluginFromMarketplace } from '../utils/plugins/pluginInstallationHelpers';
 import { installPluginAndNotify, usePluginRecommendationBase } from './usePluginRecommendationBase';
-type UseClaudeCodeHintRecommendationResult = {
+type UseGizziHintRecommendationResult = {
   recommendation: PluginHintRecommendation | null;
   handleResponse: (response: 'yes' | 'no' | 'disable') => void;
 };
-export function useClaudeCodeHintRecommendation() {
+export function useGizziHintRecommendation() {
   const $ = _c(11);
   const pendingHint = React.useSyncExternalStore(subscribeToPendingHint, getPendingHintSnapshot);
   const {
@@ -43,7 +43,7 @@ export function useClaudeCodeHintRecommendation() {
       tryResolve(async () => {
         const resolved = await resolvePluginHint(pendingHint);
         if (resolved) {
-          logForDebugging(`[useClaudeCodeHintRecommendation] surfacing ${resolved.pluginId} from ${resolved.sourceCommand}`);
+          logForDebugging(`[useGizziHintRecommendation] surfacing ${resolved.pluginId} from ${resolved.sourceCommand}`);
           markShownThisSession();
         }
         if (getPendingHintSnapshot() === pendingHint) {

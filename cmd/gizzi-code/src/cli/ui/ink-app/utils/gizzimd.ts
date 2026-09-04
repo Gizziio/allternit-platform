@@ -43,7 +43,7 @@ import {
 import picomatch from 'picomatch'
 import { logEvent } from './../services/analytics/index.ts'
 import {
-  getAdditionalDirectoriesForClaudeMd,
+  getAdditionalDirectoriesForGizziMd,
   getOriginalCwd,
 } from '../bootstrap/state.js'
 import { truncateEntrypointContent } from '../memdir/memdir.js'
@@ -51,16 +51,16 @@ import { getAutoMemEntrypoint, isAutoMemoryEnabled } from '../memdir/paths.js'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/analytics/growthbook.js'
 import {
   getCurrentProjectConfig,
-  getManagedClaudeRulesDir,
+  getManagedGizziRulesDir,
   getMemoryPath,
-  getUserClaudeRulesDir,
+  getUserGizziRulesDir,
   pickMemoryFile,
   pickMemoryFileFrom,
 } from './config.js'
 import { ANTI_PATTERNS_FILENAME, ROOT_INSTRUCTION_FILENAMES } from '../../../../shared/utils/agentFileResolver.js'
 import { logForDebugging } from './debug.js'
 import { logForDiagnosticsNoPII } from './diagLogs.js'
-import { getClaudeConfigHomeDir, isEnvTruthy } from './envUtils.js'
+import { getGizziConfigHomeDir, isEnvTruthy } from './envUtils.js'
 import { getErrnoCode } from './errors.js'
 import { normalizePathForComparison } from './file.js'
 import { cacheKeys, type FileStateCache } from './fileStateCache.js'
@@ -412,7 +412,7 @@ function handleMemoryFileReadError(error: unknown, filePath: string): void {
     // Don't log the full file path to avoid PII/security issues
     logEvent('tengu_claude_md_permission_error', {
       is_access_error: 1,
-      has_home_dir: filePath.includes(getClaudeConfigHomeDir()) ? 1 : 0,
+      has_home_dir: filePath.includes(getGizziConfigHomeDir()) ? 1 : 0,
     })
   }
 }
@@ -782,7 +782,7 @@ export async function processMdRules({
     if (error instanceof Error && error.message.includes('EACCES')) {
       logEvent('tengu_claude_rules_md_permission_error', {
         is_access_error: 1,
-        has_home_dir: rulesDir.includes(getClaudeConfigHomeDir()) ? 1 : 0,
+        has_home_dir: rulesDir.includes(getGizziConfigHomeDir()) ? 1 : 0,
       })
     }
     return []
@@ -813,7 +813,7 @@ export const getMemoryFiles = memoize(
       )),
     )
     // Process Managed .claude/rules/*.md files
-    const managedClaudeRulesDir = getManagedClaudeRulesDir()
+    const managedClaudeRulesDir = getManagedGizziRulesDir()
     result.push(
       ...(await processMdRules({
         rulesDir: managedClaudeRulesDir,
@@ -836,7 +836,7 @@ export const getMemoryFiles = memoize(
         )),
       )
       // Process User ~/.claude/rules/*.md files
-      const userClaudeRulesDir = getUserClaudeRulesDir()
+      const userClaudeRulesDir = getUserGizziRulesDir()
       result.push(
         ...(await processMdRules({
           rulesDir: userClaudeRulesDir,
@@ -951,7 +951,7 @@ export const getMemoryFiles = memoize(
     // Note: we don't check isSettingSourceEnabled('projectSettings') here because --add-dir
     // is an explicit user action and the SDK defaults settingSources to [] when not specified
     if (isEnvTruthy(process.env.GIZZI_ADDITIONAL_DIRECTORIES_GIZZI_MD)) {
-      const additionalDirs = getAdditionalDirectoriesForClaudeMd()
+      const additionalDirs = getAdditionalDirectoriesForGizziMd()
       for (const dir of additionalDirs) {
         // Try reading CLAUDE.md from the additional directory
         const projectPath = pickMemoryFileFrom(ROOT_INSTRUCTION_FILENAMES.map((name) => join(dir, name)))
@@ -1168,7 +1168,7 @@ export function filterInjectedMemoryFiles(
   return files.filter(f => f.type !== 'AutoMem' && f.type !== 'TeamMem')
 }
 
-export const getClaudeMds = (
+export const getGizziMds = (
   memoryFiles: MemoryFileInfo[],
   filter?: (type: MemoryType) => boolean,
 ): string => {
@@ -1227,7 +1227,7 @@ export async function getManagedAndUserConditionalRules(
   const result: MemoryFileInfo[] = []
 
   // Process Managed conditional .claude/rules/*.md files
-  const managedClaudeRulesDir = getManagedClaudeRulesDir()
+  const managedClaudeRulesDir = getManagedGizziRulesDir()
   result.push(
     ...(await processConditionedMdRules(
       targetPath,
@@ -1240,7 +1240,7 @@ export async function getManagedAndUserConditionalRules(
 
   if (isSettingSourceEnabled('userSettings')) {
     // Process User conditional .claude/rules/*.md files
-    const userClaudeRulesDir = getUserClaudeRulesDir()
+    const userClaudeRulesDir = getUserGizziRulesDir()
     result.push(
       ...(await processConditionedMdRules(
         targetPath,

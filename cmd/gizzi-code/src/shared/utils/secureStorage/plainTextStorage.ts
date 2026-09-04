@@ -1,6 +1,6 @@
 import { chmodSync } from 'fs'
 import { join } from 'path'
-import { getClaudeConfigHomeDir } from '../envUtils.js'
+import { getLegacyClaudeHomeDir } from '../envUtils.js'
 import { getErrnoCode } from '../errors.js'
 import { getFsImplementation } from '../fsOperations.js'
 import { logForDebugging } from '../debug.js'
@@ -43,7 +43,7 @@ function warnPlaintextOnce(storagePath: string): void {
 }
 
 function getStoragePath(): { storageDir: string; storagePath: string } {
-  const storageDir = getClaudeConfigHomeDir()
+  const storageDir = getLegacyClaudeHomeDir()
   const storageFileName = '.credentials.json'
   return { storageDir, storagePath: join(storageDir, storageFileName) }
 }

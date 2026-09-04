@@ -9,7 +9,7 @@ import {
 } from '@/bootstrap/state.js'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '@/services/analytics/growthbook.js'
 import {
-  getClaudeConfigHomeDir,
+  getLegacyClaudeHomeDir,
   isEnvDefinedFalsy,
   isEnvTruthy,
 } from '../shared/utils/envUtils.js'
@@ -90,7 +90,7 @@ export function getMemoryBaseDir(): string {
     return process.env.GIZZI_REMOTE_MEMORY_DIR
   }
   const gizziDir = (process.env.GIZZI_CONFIG_DIR ?? join(homedir(), '.gizzi')).normalize('NFC')
-  const legacyDir = getClaudeConfigHomeDir()
+  const legacyDir = getLegacyClaudeHomeDir()
   try {
     if (existsSync(join(gizziDir, 'projects'))) return gizziDir
     if (existsSync(join(legacyDir, 'projects'))) return legacyDir

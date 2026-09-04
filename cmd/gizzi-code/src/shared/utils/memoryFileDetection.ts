@@ -8,7 +8,7 @@ import {
   isAutoMemPath,
 } from '../memdir/paths.js'
 import { isAgentMemoryPath } from '../../cli/ui/ink-app/tools/AgentTool/agentMemory.js'
-import { getClaudeConfigHomeDir } from './envUtils.js'
+import { getLegacyClaudeHomeDir } from './envUtils.js'
 import {
   posixPathToWindowsPath,
   windowsPathToPosixPath,
@@ -41,7 +41,7 @@ function toComparable(p: string): string {
 export function detectSessionFileType(
   filePath: string,
 ): 'session_memory' | 'session_transcript' | null {
-  const configDir = getClaudeConfigHomeDir()
+  const configDir = getLegacyClaudeHomeDir()
   // Compare in forward-slash form; on Windows also case-fold. The caller
   // (isShellCommandTargetingMemory) converts MinGW /c/... → native before
   // reaching here, so we only need separator + case normalization.
@@ -187,7 +187,7 @@ export function isMemoryDirectory(dirPath: string): boolean {
     }
   }
 
-  const configDirCmp = toComparable(getClaudeConfigHomeDir())
+  const configDirCmp = toComparable(getLegacyClaudeHomeDir())
   const memoryBaseCmp = toComparable(getMemoryBaseDir())
   const underConfig = normalizedCmp.startsWith(configDirCmp)
   const underMemoryBase = normalizedCmp.startsWith(memoryBaseCmp)
@@ -214,7 +214,7 @@ export function isMemoryDirectory(dirPath: string): boolean {
  * collapse logic.
  */
 export function isShellCommandTargetingMemory(command: string): boolean {
-  const configDir = getClaudeConfigHomeDir()
+  const configDir = getLegacyClaudeHomeDir()
   const memoryBase = getMemoryBaseDir()
   const autoMemDir = isAutoMemoryEnabled()
     ? getAutoMemPath().replace(/[/\\]+$/, '')

@@ -6,7 +6,7 @@ import React, { Suspense, use, useCallback, useEffect, useMemo, useState } from 
 import { KeybindingWarnings } from './../components/KeybindingWarnings.tsx';
 import { McpParsingWarnings } from './../components/mcp/McpParsingWarnings.tsx';
 import { getModelMaxOutputTokens } from './../utils/context.ts';
-import { getClaudeConfigHomeDir } from './../utils/envUtils.ts';
+import { getGizziConfigHomeDir } from './../utils/envUtils.ts';
 import type { SettingSource } from './../utils/settings/constants.ts';
 import { getOriginalCwd } from '../bootstrap/state';
 import type { CommandResultDisplay } from '../commands';
@@ -167,7 +167,7 @@ export function Doctor(t0) {
     t5 = () => {
       getDoctorDiagnostic().then(setDiagnostic);
       (async () => {
-        const userAgentsDir = join(getClaudeConfigHomeDir(), "agents");
+        const userAgentsDir = join(getGizziConfigHomeDir(), "agents");
         const projectAgentsDir = join(getOriginalCwd(), ".claude", "agents");
         const {
           activeAgents,

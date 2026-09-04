@@ -9,7 +9,7 @@
 type UUID = string
 import { open as fsOpen, readdir, realpath, stat } from 'fs/promises'
 import { join } from 'path'
-import { getClaudeConfigHomeDir } from './envUtils.js'
+import { getLegacyClaudeHomeDir } from './envUtils.js'
 import { getWorktreePathsPortable } from './getWorktreePathsPortable.js'
 import { djb2Hash } from './hash.js'
 
@@ -323,7 +323,7 @@ export function sanitizePath(name: string): string {
 // ---------------------------------------------------------------------------
 
 export function getProjectsDir(): string {
-  return join(getClaudeConfigHomeDir(), 'projects')
+  return join(getLegacyClaudeHomeDir(), 'projects')
 }
 
 export function getProjectDir(projectDir: string): string {

@@ -29,7 +29,7 @@ import {
 import type { ToolUseContext } from '@/Tool.js'
 import { buildTool, type ToolDef } from '@/Tool.js'
 import { getCwd } from '../../../../shared/utils/cwd.js'
-import { getClaudeConfigHomeDir, isEnvTruthy } from '../../../../shared/utils/envUtils.js'
+import { getLegacyClaudeHomeDir, isEnvTruthy } from '../../../../shared/utils/envUtils.js'
 import { getErrnoCode, isENOENT } from '../../../utils/errors.js'
 import {
   addLineNumbers,
@@ -196,7 +196,7 @@ const IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp'])
 function detectSessionFileType(
   filePath: string,
 ): 'session_memory' | 'session_transcript' | null {
-  const configDir = getClaudeConfigHomeDir()
+  const configDir = getLegacyClaudeHomeDir()
 
   // Only match files within the Claude config directory
   if (!filePath.startsWith(configDir)) {

@@ -8,7 +8,7 @@ import { getRelativeMemoryPath } from '../../components/memory/MemoryUpdateNotif
 import { Box, Link, Text } from '../../ink';
 import type { LocalJSXCommandCall } from '../../types/command';
 import { clearMemoryFileCaches, getMemoryFiles } from '../../utils/gizzimd';
-import { getClaudeConfigHomeDir } from '../../utils/envUtils';
+import { getGizziConfigHomeDir } from '../../utils/envUtils';
 import { getErrnoCode } from '../../utils/errors';
 import { logError } from '../../utils/log';
 import { editFileInEditor } from '../../utils/promptEditor';
@@ -22,8 +22,8 @@ function MemoryCommand({
   const handleSelectMemoryFile = async (memoryPath: string) => {
     try {
       // Create claude directory if it doesn't exist (idempotent with recursive)
-      if (memoryPath.includes(getClaudeConfigHomeDir())) {
-        await mkdir(getClaudeConfigHomeDir(), {
+      if (memoryPath.includes(getGizziConfigHomeDir())) {
+        await mkdir(getGizziConfigHomeDir(), {
           recursive: true
         });
       }

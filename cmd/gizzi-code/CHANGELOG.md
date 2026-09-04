@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+## 2.0.0 — 2026-09-04
+
+Breaking naming purge. `CLAUDE_CODE_*` environment variables are no longer
+read. Use `GIZZI_*` (same suffix). There is no fallback window.
+
+### Breaking
+- Env vars: `CLAUDE_CODE_X` → `GIZZI_X` with zero legacy fallback.
+  `readGizziEnv` / `setGizziEnv` touch only the `GIZZI_` form.
+- Product copy, docs, and feedback URLs no longer say "Claude Code".
+- Hint protocol tag is `<gizzi-hint />` (`<claude-code-hint />` still parsed).
+
 ### Changed
 - npm distribution is now cross-platform: the launcher shim
   (bin/gizzi.js) resolves the binary from a bundled dist/ or from the
@@ -10,11 +21,11 @@
   built per-platform in CI and published alongside the main package.
   `npm install -g @allternit/gizzi-code` now yields a working CLI on every
   supported platform.
-- User-visible Claude/Anthropic fork traces removed (~205 strings across
-  117 files): system-prompt presets, built-in agent prompts, TUI strings,
-  and config-dir defaults are now Gizzi-branded (`~/.gizzi` first,
-  `~/.claude` retained as read-only legacy fallback). Model names and
-  provider-genuine text (Anthropic API auth, wire protocol) are unchanged.
+- User-visible Claude/Anthropic fork traces removed: system-prompt presets,
+  built-in agent prompts, TUI strings, and config-dir defaults are
+  Gizzi-branded (`~/.gizzi` first, `~/.claude` retained as read-only
+  legacy fallback). Model names and provider-genuine text (Anthropic API
+  auth, wire protocol) are unchanged. See `docs/anthropic-allowlist.md`.
 - Windows is now explicitly labeled experimental/unsupported (macOS primary,
   Linux supported). The CLI prints a one-line stderr warning on boot on
   win32: no secure credential store — credentials fall back to a

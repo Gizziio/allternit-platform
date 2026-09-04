@@ -14,9 +14,6 @@ export const getGizziConfigHomeDir = memoize(
   () => process.env.GIZZI_CONFIG_DIR,
 )
 
-// Alias for backward compatibility
-export const getClaudeConfigHomeDir = getGizziConfigHomeDir
-
 export function getTeamsDir(): string {
   return join(getGizziConfigHomeDir(), 'teams')
 }

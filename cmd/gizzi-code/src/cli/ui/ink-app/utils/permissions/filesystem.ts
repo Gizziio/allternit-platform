@@ -16,7 +16,7 @@ import { getOriginalCwd, getSessionId } from '../../bootstrap/state.js'
 import type { AnyObject, Tool, ToolPermissionContext } from '../../Tool.js'
 import { FILE_READ_TOOL_NAME } from '../../tools/FileReadTool/prompt.js'
 import { getCwd } from '../cwd.js'
-import { getClaudeConfigHomeDir } from '../envUtils.js'
+import { getGizziConfigHomeDir } from '../envUtils.js'
 import {
   getFsImplementation,
   getPathsForPermissionCheck,
@@ -1368,7 +1368,7 @@ export function checkEditableInternalPath(
   if (feature('TEMPLATES')) {
     const jobDir = process.env.GIZZI_JOB_DIR
     if (jobDir) {
-      const jobsRoot = join(getClaudeConfigHomeDir(), 'jobs')
+      const jobsRoot = join(getGizziConfigHomeDir(), 'jobs')
       const jobDirForms = getPathsForPermissionCheck(jobDir).map(normalize)
       const jobsRootForms = getPathsForPermissionCheck(jobsRoot).map(normalize)
       // Hijack guard: every resolved form of the job dir must sit under
@@ -1573,7 +1573,7 @@ export function checkReadableInternalPath(
   }
 
   // Tasks directory (~/.claude/tasks/) for swarm task coordination
-  const tasksDir = join(getClaudeConfigHomeDir(), 'tasks') + sep
+  const tasksDir = join(getGizziConfigHomeDir(), 'tasks') + sep
   if (
     normalizedPath === tasksDir.slice(0, -1) ||
     normalizedPath.startsWith(tasksDir)
@@ -1589,7 +1589,7 @@ export function checkReadableInternalPath(
   }
 
   // Teams directory (~/.claude/teams/) for swarm coordination
-  const teamsReadDir = join(getClaudeConfigHomeDir(), 'teams') + sep
+  const teamsReadDir = join(getGizziConfigHomeDir(), 'teams') + sep
   if (
     normalizedPath === teamsReadDir.slice(0, -1) ||
     normalizedPath.startsWith(teamsReadDir)

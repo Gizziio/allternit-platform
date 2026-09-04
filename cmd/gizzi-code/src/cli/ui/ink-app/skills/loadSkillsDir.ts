@@ -11,7 +11,7 @@ import {
   relative,
 } from 'path'
 import {
-  getAdditionalDirectoriesForClaudeMd,
+  getAdditionalDirectoriesForGizziMd,
   getSessionId,
 } from '../bootstrap/state.js'
 import {
@@ -31,7 +31,7 @@ import {
   parseEffortValue,
 } from '../utils/effort.js'
 import {
-  getClaudeConfigHomeDir,
+  getGizziConfigHomeDir,
   isBareMode,
   isEnvTruthy,
 } from '../utils/envUtils.js'
@@ -84,7 +84,7 @@ export function getSkillsPath(
     case 'policySettings':
       return join(getManagedFilePath(), '.claude', dir)
     case 'userSettings':
-      return join(getClaudeConfigHomeDir(), dir)
+      return join(getGizziConfigHomeDir(), dir)
     case 'projectSettings':
       return `.claude/${dir}`
     case 'plugin':
@@ -638,7 +638,7 @@ async function loadSkillsFromCommandsDir(
  */
 export const getSkillDirCommands = memoize(
   async (cwd: string): Promise<Command[]> => {
-    const userSkillsDir = join(getClaudeConfigHomeDir(), 'skills')
+    const userSkillsDir = join(getGizziConfigHomeDir(), 'skills')
     const managedSkillsDir = join(getManagedFilePath(), '.claude', 'skills')
     const projectSkillsDirs = getProjectDirsUpToHome('skills', cwd)
 
@@ -647,7 +647,7 @@ export const getSkillDirCommands = memoize(
     )
 
     // Load from additional directories (--add-dir)
-    const additionalDirs = getAdditionalDirectoriesForClaudeMd()
+    const additionalDirs = getAdditionalDirectoriesForGizziMd()
     const skillsLocked = isRestrictedToPluginOnly('skills')
     const projectSettingsEnabled =
       isSettingSourceEnabled('projectSettings') && !skillsLocked

@@ -11,7 +11,7 @@ import {
 } from './../services/analytics/index.ts'
 import { getProjectRoot } from '../bootstrap/state.js'
 import { logForDebugging } from './debug.js'
-import { getClaudeConfigHomeDir, isEnvTruthy } from './envUtils.js'
+import { getGizziConfigHomeDir, isEnvTruthy } from './envUtils.js'
 import { isFsInaccessible } from './errors.js'
 import { normalizePathForComparison } from './file.js'
 import type { FrontmatterData } from './frontmatterParser.js'
@@ -309,7 +309,7 @@ export const loadMarkdownFilesForSubdir = memoize(
     cwd: string,
   ): Promise<MarkdownFile[]> {
     const searchStartTime = Date.now()
-    const userDir = join(getClaudeConfigHomeDir(), subdir)
+    const userDir = join(getGizziConfigHomeDir(), subdir)
     const managedDir = join(getManagedFilePath(), '.claude', subdir)
     const projectDirs = getProjectDirsUpToHome(subdir, cwd)
 

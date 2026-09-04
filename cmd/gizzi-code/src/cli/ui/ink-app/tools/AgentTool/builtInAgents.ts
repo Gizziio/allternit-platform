@@ -4,7 +4,7 @@ import { readGizziEnv } from '@/shared/utils/gizziEnv.js';
 import { getIsNonInteractiveSession } from '../../bootstrap/state.js'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js'
 import { isEnvTruthy } from '../../utils/envUtils.js'
-import { GIZZI_CODE_GUIDE_AGENT } from './built-in/claudeCodeGuideAgent.js'
+import { GIZZI_CODE_GUIDE_AGENT } from './built-in/gizziGuideAgent.js'
 import { EXPLORE_AGENT } from './built-in/exploreAgent.js'
 import { GENERAL_PURPOSE_AGENT } from './built-in/generalPurposeAgent.js'
 import { PLAN_AGENT } from './built-in/planAgent.js'

@@ -197,7 +197,7 @@ import {
   isThinkingMessage,
 } from './messages.js'
 import { isHumanTurn } from './messagePredicates.js'
-import { isEnvTruthy, getClaudeConfigHomeDir } from './envUtils.js'
+import { isEnvTruthy, getGizziConfigHomeDir } from './envUtils.js'
 import { feature } from 'bun:bundle'
 /* eslint-disable @typescript-eslint/no-require-imports */
 const BRIEF_TOOL_NAME: string | null =
@@ -3797,7 +3797,7 @@ function getTeamContextAttachment(messages: Message[]): Attachment[] {
     return []
   }
 
-  const configDir = getClaudeConfigHomeDir()
+  const configDir = getGizziConfigHomeDir()
   const teamConfigPath = `${configDir}/teams/${teamName}/config.json`
   const taskListPath = `${configDir}/tasks/${teamName}/`
 

@@ -3,7 +3,7 @@ import { c as _c } from "react/compiler-runtime";
 import chalk from '@/shared/util/chalk'
 import figures from 'figures';
 import React, { useEffect } from 'react';
-import { getAdditionalDirectoriesForClaudeMd, setAdditionalDirectoriesForClaudeMd } from '../../bootstrap/state';
+import { getAdditionalDirectoriesForGizziMd, setAdditionalDirectoriesForClaudeMd } from '../../bootstrap/state';
 import type { LocalJSXCommandContext } from '../../commands';
 import { MessageResponse } from '../../components/MessageResponse';
 import { AddWorkspaceDirectory } from '../../components/permissions/rules/AddWorkspaceDirectory';
@@ -88,7 +88,7 @@ export async function call(onDone: LocalJSXCommandOnDone, context: LocalJSXComma
     // Bootstrap state is the source of truth for session-only dirs; persisted
     // dirs are picked up via the settings subscription, but we refresh
     // eagerly here to avoid a race when the user acts immediately.
-    const currentDirs = getAdditionalDirectoriesForClaudeMd();
+    const currentDirs = getAdditionalDirectoriesForGizziMd();
     if (!currentDirs.includes(path)) {
       setAdditionalDirectoriesForClaudeMd([...currentDirs, path]);
     }

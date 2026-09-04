@@ -154,7 +154,7 @@ export function getSettingsForSource(source: SettingSource): SettingsJson | unde
 function loadSettings(): void {
   try {
     // Try to load from config file
-    const configPath = join(getClaudeConfigHomeDir(), 'settings.json');
+    const configPath = join(getLegacyClaudeHomeDir(), 'settings.json');
     const content = readFileSyncSafe(configPath);
     if (content) {
       cachedSettings = JSON.parse(content);
@@ -200,9 +200,9 @@ export function updateSettingsForSource(
 
 function saveSettings(): void {
   try {
-    const configPath = join(getClaudeConfigHomeDir(), 'settings.json');
+    const configPath = join(getLegacyClaudeHomeDir(), 'settings.json');
     const { mkdirSync, writeFileSync } = require('fs');
-    mkdirSync(getClaudeConfigHomeDir(), { recursive: true });
+    mkdirSync(getLegacyClaudeHomeDir(), { recursive: true });
     writeFileSync(configPath, JSON.stringify(cachedSettings, null, 2));
   } catch (error) {
     logForDebugging(`Failed to save settings: ${error}`);
@@ -249,12 +249,12 @@ export function getPlatform(): Platform {
 // Path Utilities
 // ============================================================================
 
-export function getClaudeConfigHomeDir(): string {
+export function getLegacyClaudeHomeDir(): string {
   return join(homedir(), '.claude');
 }
 
 export function getClaudeTempDir(): string {
-  const tmpDir = join(getClaudeConfigHomeDir(), 'tmp');
+  const tmpDir = join(getLegacyClaudeHomeDir(), 'tmp');
   try {
     require('fs').mkdirSync(tmpDir, { recursive: true });
   } catch {
@@ -277,7 +277,7 @@ export function getSettingsFilePathForSource(source: SettingSource): string | un
 }
 
 export function getManagedSettingsDropInDir(): string {
-  return join(getClaudeConfigHomeDir(), 'settings.d');
+  return join(getLegacyClaudeHomeDir(), 'settings.d');
 }
 
 export function expandPath(pattern: string, baseDir: string): string {
@@ -458,7 +458,7 @@ export function convertToSandboxRuntimeConfig(settings: SettingsJson): SandboxRu
   // Additional directories
   const additionalDirs = new Set([
     ...(settings.permissions?.additionalDirectories || []),
-    ...getAdditionalDirectoriesForClaudeMd(),
+    ...getAdditionalDirectoriesForGizziMd(),
   ]);
   allowWrite.push(...additionalDirs);
   
@@ -535,7 +535,7 @@ function getOriginalCwd(): string {
   return process.env.ORIGINAL_CWD || process.cwd();
 }
 
-function getAdditionalDirectoriesForClaudeMd(): string[] {
+function getAdditionalDirectoriesForGizziMd(): string[] {
   // In production, this would come from bootstrap state
   return [];
 }

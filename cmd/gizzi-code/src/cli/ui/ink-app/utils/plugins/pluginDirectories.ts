@@ -23,7 +23,7 @@ import memoize from 'lodash-es/memoize.js'
 import { homedir } from 'os'
 import { getUseCoworkPlugins } from '../../bootstrap/state.js'
 import { logForDebugging } from '../debug.js'
-import { getClaudeConfigHomeDir, isEnvTruthy } from '../envUtils.js'
+import { getGizziConfigHomeDir, isEnvTruthy } from '../envUtils.js'
 import { errorMessage, isFsInaccessible } from '../errors.js'
 import { formatFileSize } from '../format.js'
 import { expandTilde } from '../permissions/expandTilde.js'
@@ -34,7 +34,7 @@ const COWORK_PLUGINS_DIR = 'cowork_plugins'
 /**
  * Gizzi-owned config home. Plugin state lives under here so the CLI no
  * longer writes into the upstream ~/.claude directory. Override with
- * GIZZI_CONFIG_DIR (tests use this; memoized like getClaudeConfigHomeDir).
+ * GIZZI_CONFIG_DIR (tests use this; memoized like getGizziConfigHomeDir).
  */
 export const getGizziConfigHomeDir = memoize(
   (): string => {
@@ -91,7 +91,7 @@ export function getPluginsDirectory(): string {
  * new is written here.
  */
 export function getLegacyPluginsDirectory(): string {
-  return join(getClaudeConfigHomeDir(), getPluginsDirectoryName())
+  return join(getGizziConfigHomeDir(), getPluginsDirectoryName())
 }
 
 let legacyDeprecationWarned = false

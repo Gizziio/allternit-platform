@@ -5,7 +5,7 @@ import { getProjectRoot, getSessionId } from '../bootstrap/state.js'
 import { registerCleanup } from '../../../../shared/utils/cleanupRegistry.js'
 import type { HistoryEntry, PastedContent } from '../utils/config.js'
 import { logForDebugging } from '../utils/debug.js'
-import { getClaudeConfigHomeDir, isEnvTruthy } from '../utils/envUtils.js'
+import { getGizziConfigHomeDir, isEnvTruthy } from '../utils/envUtils.js'
 import { getErrnoCode } from '../utils/errors.js'
 import { readLinesReverse } from '../../../../shared/utils/fsOperations.js'
 import { lock } from '../../../../shared/utils/lockfile.js'
@@ -113,7 +113,7 @@ async function* makeLogEntryReader(): AsyncGenerator<LogEntry> {
   }
 
   // Read from global history file (shared across all projects)
-  const historyPath = join(getClaudeConfigHomeDir(), 'history.jsonl')
+  const historyPath = join(getGizziConfigHomeDir(), 'history.jsonl')
 
   try {
     for await (const line of readLinesReverse(historyPath)) {
@@ -297,7 +297,7 @@ async function immediateFlushHistory(): Promise<void> {
 
   let release
   try {
-    const historyPath = join(getClaudeConfigHomeDir(), 'history.jsonl')
+    const historyPath = join(getGizziConfigHomeDir(), 'history.jsonl')
 
     // Ensure the file exists before acquiring lock (append mode creates if missing)
     await writeFile(historyPath, '', {

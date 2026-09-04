@@ -21,7 +21,7 @@ import {
   LEGACY_AGENT_TOOL_NAME,
 } from '../tools/AgentTool/constants'
 import type { LogOption } from '../types/logs'
-import { getClaudeConfigHomeDir } from '../utils/envUtils'
+import { getGizziConfigHomeDir } from '../utils/envUtils'
 import { toError } from '../utils/errors'
 import { execFileNoThrow } from '../utils/execFileNoThrow'
 import { logError } from '../utils/log'
@@ -415,11 +415,11 @@ const LABEL_MAP: Record<string, string> = {
   essential: 'Essential',
 }
 
-// Lazy getters: getClaudeConfigHomeDir() is memoized and reads process.env.
+// Lazy getters: getGizziConfigHomeDir() is memoized and reads process.env.
 // Calling it at module scope would populate the memoize cache before
 // entrypoints can set CLAUDE_CONFIG_DIR, breaking all 150+ other callers.
 function getDataDir(): string {
-  return join(getClaudeConfigHomeDir(), 'usage-data')
+  return join(getGizziConfigHomeDir(), 'usage-data')
 }
 function getFacetsDir(): string {
   return join(getDataDir(), 'facets')
@@ -2807,7 +2807,7 @@ export async function generateUsageReport(options?: {
 
   // Optionally collect data from remote hosts first (ant-only)
   if (process.env.USER_TYPE === 'ant' && options?.collectRemote) {
-    const destDir = join(getClaudeConfigHomeDir(), 'projects')
+    const destDir = join(getGizziConfigHomeDir(), 'projects')
     const { hosts, totalCopied } = await collectAllRemoteHostData(destDir)
     remoteStats = { hosts, totalCopied }
   }

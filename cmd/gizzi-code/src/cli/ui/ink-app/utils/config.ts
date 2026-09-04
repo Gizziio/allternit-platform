@@ -19,7 +19,7 @@ import { registerCleanup } from './cleanupRegistry.js'
 import { logForDebugging } from './debug.js'
 import { logForDiagnosticsNoPII } from './diagLogs.js'
 import { getGlobalClaudeFile } from './env.js'
-import { getClaudeConfigHomeDir, isEnvTruthy } from './envUtils.js'
+import { getGizziConfigHomeDir, isEnvTruthy } from './envUtils.js'
 import { ConfigParseError, getErrnoCode } from './errors.js'
 import { writeFileSyncAndFlush_DEPRECATED } from './file.js'
 import { getFsImplementation } from './fsOperations.js'
@@ -512,7 +512,7 @@ export type GlobalConfig = {
   // gizzi-code hint protocol state (<claude-code-hint /> tags from CLIs/SDKs).
   // Nested by hint type so future types (docs, mcp, ...) slot in without new
   // top-level keys.
-  claudeCodeHints?: {
+  gizziHints?: {
     // Plugin IDs the user has already been prompted for. Show-once semantics:
     // recorded regardless of yes/no response, never re-prompted. Capped at
     // 100 entries to bound config growth — past that, hints stop entirely.
@@ -1362,7 +1362,7 @@ export function enableConfigs(): void {
  * Uses ~/.claude/backups/ to keep the home directory clean.
  */
 function getConfigBackupDir(): string {
-  return join(getClaudeConfigHomeDir(), 'backups')
+  return join(getGizziConfigHomeDir(), 'backups')
 }
 
 /**
@@ -1821,7 +1821,7 @@ export function getMemoryPath(memoryType: MemoryType): string {
 
   switch (memoryType) {
     case 'User':
-      return pickMemoryFile(join(getClaudeConfigHomeDir(), 'GIZZI.md'), join(getClaudeConfigHomeDir(), 'CLAUDE.md'))
+      return pickMemoryFile(join(getGizziConfigHomeDir(), 'GIZZI.md'), join(getGizziConfigHomeDir(), 'CLAUDE.md'))
     case 'Local':
       return pickMemoryFile(join(cwd, 'GIZZI.local.md'), join(cwd, 'CLAUDE.local.md'))
     case 'Project':
@@ -1840,12 +1840,12 @@ export function getMemoryPath(memoryType: MemoryType): string {
   return '' // unreachable in external builds where TeamMem is not in MemoryType
 }
 
-export function getManagedClaudeRulesDir(): string {
+export function getManagedGizziRulesDir(): string {
   return join(getManagedFilePath(), '.claude', 'rules')
 }
 
-export function getUserClaudeRulesDir(): string {
-  return join(getClaudeConfigHomeDir(), 'rules')
+export function getUserGizziRulesDir(): string {
+  return join(getGizziConfigHomeDir(), 'rules')
 }
 
 // Exported for testing only

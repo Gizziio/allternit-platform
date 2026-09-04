@@ -7,7 +7,7 @@ import { mkdir, writeFile } from 'fs/promises'
 import { dirname, join } from 'path'
 import { z } from 'zod/v4'
 import {
-  getCachedClaudeMdContent,
+  getCachedGizziMdContent,
   getLastClassifierRequests,
   getSessionId,
   setLastClassifierRequests,
@@ -459,8 +459,8 @@ export function buildTranscriptForClassifier(
  * getUserContext), the classifier proceeds without CLAUDE.md — same as
  * pre-PR behavior.
  */
-function buildClaudeMdMessage(): Anthropic.MessageParam | null {
-  const claudeMd = getCachedClaudeMdContent()
+function buildGizziMdMessage(): Anthropic.MessageParam | null {
+  const claudeMd = getCachedGizziMdContent()
   if (claudeMd === null) return null
   return {
     role: 'user',
@@ -1035,7 +1035,7 @@ export async function classifyYoloAction(
 
   const systemPrompt = await buildYoloSystemPrompt(context)
   const transcriptEntries = buildTranscriptEntries(messages)
-  const claudeMdMessage = buildClaudeMdMessage()
+  const claudeMdMessage = buildGizziMdMessage()
   const prefixMessages: Anthropic.MessageParam[] = claudeMdMessage
     ? [claudeMdMessage]
     : []

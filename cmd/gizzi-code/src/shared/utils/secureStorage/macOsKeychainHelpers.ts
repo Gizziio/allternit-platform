@@ -17,7 +17,7 @@
 import { createHash } from 'crypto'
 import { userInfo } from 'os'
 import { getOauthConfig } from 'src/constants/oauth.js'
-import { getClaudeConfigHomeDir } from '../envUtils.js'
+import { getLegacyClaudeHomeDir } from '../envUtils.js'
 import type { SecureStorageData } from './types.js'
 
 // Suffix distinguishing the OAuth credentials keychain entry from the legacy
@@ -29,7 +29,7 @@ export const CREDENTIALS_SERVICE_SUFFIX = '-credentials'
 export function getMacOsKeychainStorageServiceName(
   serviceSuffix: string = '',
 ): string {
-  const configDir = getClaudeConfigHomeDir()
+  const configDir = getLegacyClaudeHomeDir()
   const isDefaultDir = !process.env.CLAUDE_CONFIG_DIR
 
   // Use a hash of the config dir path to create a unique but stable suffix

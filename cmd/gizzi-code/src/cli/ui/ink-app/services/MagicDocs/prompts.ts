@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { join } from 'path'
-import { getClaudeConfigHomeDir } from '../../utils/envUtils.js'
+import { getGizziConfigHomeDir } from '../../utils/envUtils.js'
 import { getFsImplementation } from '../../utils/fsOperations.js'
 
 /**
@@ -66,7 +66,7 @@ REMEMBER: Only update if there is substantial new information. The Magic Doc hea
  */
 async function loadMagicDocsPrompt(): Promise<string> {
   const fs = getFsImplementation()
-  const promptPath = join(getClaudeConfigHomeDir(), 'magic-docs', 'prompt.md')
+  const promptPath = join(getGizziConfigHomeDir(), 'magic-docs', 'prompt.md')
 
   try {
     return await fs.readFile(promptPath, { encoding: 'utf-8' })

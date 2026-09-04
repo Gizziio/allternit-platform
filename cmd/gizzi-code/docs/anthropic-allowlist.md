@@ -44,6 +44,7 @@ is no `CLAUDE_CODE_*` fallback.
 | `anthropics/claude-plugins-official` | Marketplace source we **refuse** |
 | `github.com/anthropics/claude-code-action` | Nominative link to the upstream GitHub Action |
 | Comments citing `github.com/anthropics/claude-code/issues/N` | Engineering citations of upstream bug reports |
+| `<claude-code-hint />` tag (read-only parse) | Legacy hint protocol; canonical emit/parse is `<gizzi-hint />` |
 
 ## Explicitly not allowlisted (must stay gone)
 

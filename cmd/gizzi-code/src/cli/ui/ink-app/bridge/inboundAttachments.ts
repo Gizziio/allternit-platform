@@ -19,7 +19,7 @@ import { basename, join } from 'path'
 import { z } from 'zod/v4'
 import { getSessionId } from '../bootstrap/state'
 import { logForDebugging } from '../utils/debug'
-import { getClaudeConfigHomeDir } from '../utils/envUtils'
+import { getGizziConfigHomeDir } from '../utils/envUtils'
 import { lazySchema } from '../utils/lazySchema'
 import { getBridgeAccessToken, getBridgeBaseUrl } from './bridgeConfig'
 
@@ -59,7 +59,7 @@ function sanitizeFileName(name: string): string {
 }
 
 function uploadsDir(): string {
-  return join(getClaudeConfigHomeDir(), 'uploads', getSessionId())
+  return join(getGizziConfigHomeDir(), 'uploads', getSessionId())
 }
 
 /**

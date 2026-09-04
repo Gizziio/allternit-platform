@@ -34,7 +34,7 @@ import { parse } from 'url'
 import xss from 'xss'
 import { MCP_CLIENT_METADATA_URL } from '@/constants/oauth.js'
 import { openBrowser } from '../../../shared/utils/browser.js'
-import { getClaudeConfigHomeDir } from '../../../shared/utils/envUtils.js'
+import { getLegacyClaudeHomeDir } from '../../../shared/utils/envUtils.js'
 import { errorMessage, getErrnoCode } from '../../../shared/utils/errors.js'
 import * as lockfile from '../../../shared/utils/lockfile.js'
 import { logMCPDebug } from '../../../shared/utils/log.js'
@@ -2127,7 +2127,7 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
     refreshToken: string,
   ): Promise<OAuthTokens | undefined> {
     const serverKey = getServerKey(this.serverName, this.serverConfig)
-    const claudeDir = getClaudeConfigHomeDir()
+    const claudeDir = getLegacyClaudeHomeDir()
     await mkdir(claudeDir, { recursive: true })
     const sanitizedKey = serverKey.replace(/[^a-zA-Z0-9]/g, '_')
     const lockfilePath = join(claudeDir, `mcp-refresh-${sanitizedKey}.lock`)

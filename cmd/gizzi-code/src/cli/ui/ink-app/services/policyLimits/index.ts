@@ -30,7 +30,7 @@ import {
 } from '../../utils/auth.js'
 import { registerCleanup } from '../../utils/cleanupRegistry.js'
 import { logForDebugging } from '../../utils/debug.js'
-import { getClaudeConfigHomeDir } from '../../utils/envUtils.js'
+import { getGizziConfigHomeDir } from '../../utils/envUtils.js'
 import { classifyAxiosError } from '../../utils/errors.js'
 import { safeParseJSON } from '../../utils/json.js'
 import {
@@ -118,7 +118,7 @@ export function initializePolicyLimitsLoadingPromise(): void {
  * Get the path to the policy limits cache file
  */
 function getCachePath(): string {
-  return join(getClaudeConfigHomeDir(), CACHE_FILENAME)
+  return join(getGizziConfigHomeDir(), CACHE_FILENAME)
 }
 
 /**

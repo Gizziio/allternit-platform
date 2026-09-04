@@ -23,7 +23,7 @@ import type { LogOption } from './../types/logs.ts'
 import { inspect } from 'util'
 import { getGlobalConfig } from './config.js'
 import { logForDebugging } from './debug.js'
-import { getClaudeConfigHomeDir, isEnvTruthy } from './envUtils.js'
+import { getGizziConfigHomeDir, isEnvTruthy } from './envUtils.js'
 import { getErrnoCode, isENOENT } from './errors.js'
 import { pathExists } from './file.js'
 import { logError } from './log.js'
@@ -745,7 +745,7 @@ function getBackupFileName(filePath: string, version: number): string {
 }
 
 function resolveBackupPath(backupFileName: string, sessionId?: string): string {
-  const configDir = getClaudeConfigHomeDir()
+  const configDir = getGizziConfigHomeDir()
   return join(
     configDir,
     'file-history',
@@ -965,7 +965,7 @@ export async function copyFileHistoryForResume(log: LogOption): Promise<void> {
     // All backups share the same directory: {configDir}/file-history/{sessionId}/
     // Create it once upfront instead of once per backup file
     const newBackupDir = join(
-      getClaudeConfigHomeDir(),
+      getGizziConfigHomeDir(),
       'file-history',
       sessionId,
     )

@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { chmodSync } from 'fs'
 import { join } from 'path'
-import { getClaudeConfigHomeDir } from '../envUtils'
+import { getGizziConfigHomeDir } from '../envUtils'
 import { getErrnoCode } from '../errors'
 import { getFsImplementation } from '../fsOperations'
 import { logForDebugging } from '../debug'
@@ -44,7 +44,7 @@ function warnPlaintextOnce(storagePath: string): void {
 }
 
 function getStoragePath(): { storageDir: string; storagePath: string } {
-  const storageDir = getClaudeConfigHomeDir()
+  const storageDir = getGizziConfigHomeDir()
   const storageFileName = '.credentials.json'
   return { storageDir, storagePath: join(storageDir, storageFileName) }
 }

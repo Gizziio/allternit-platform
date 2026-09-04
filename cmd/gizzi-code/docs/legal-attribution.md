@@ -140,10 +140,9 @@ is the forked CLI/SDK *source*.
    derived from Anthropic's Claude Code; © Anthropic PBC. All rights
    reserved; used under [basis TBD by counsel]." plus attribution for
    `@anthropic-ai/sdk` (MIT) and any other vendored OSS (color-diff-napi).
-4. **Complete the env-var rename with a deprecation window.** Owner:
-   engineering. `CLAUDE_CODE_*` reads should warn once and honor `GIZZI_*`
-   first (mechanism added this slice via `src/shared/utils/gizziEnv.ts`);
-   target removal of visible `CLAUDE_` names in a major release.
+4. **~~Complete the env-var rename.~~ Done 2026-09-04.** Owner: engineering.
+   Hard rename to `GIZZI_*` with **zero** `CLAUDE_CODE_*` fallback, shipped
+   as breaking **2.0.0**. Functional-floor leftovers: `docs/anthropic-allowlist.md`.
 5. **Audit remaining `Claude`/`claude.ai` user-visible strings before
    marketing.** Owner: engineering + marketing. Keep only nominative,
    factually-accurate references (the model being called, the OAuth host the
@@ -157,6 +156,29 @@ is the forked CLI/SDK *source*.
 7. **Header/SPDX sweep of `vendored/` trees.** Owner: engineering. Whatever
    notice counsel settles on (recommendation 1/2), the 259 vendored files
    currently carry none.
+
+## 7. Questions for counsel (not answered here)
+
+These are the remaining blocked items. Engineering cannot close them.
+
+1. Under what right may Allternit copy, modify, and redistribute Anthropic
+   Claude Code source (the TUI, runtime, and Agent SDK fork)? Name the
+   instrument (license, written permission, assignment, other) or state
+   that none exists.
+2. May `@allternit/gizzi-code` continue to be published to the public npm
+   registry and GitHub under that answer? If not, what distribution
+   posture is allowed (private registry, source-available, internal-only)?
+3. May `@allternit/gizzi-sdk` (the Agent SDK fork, currently on legal hold)
+   be published at all? The hold is about **distribution rights of derived
+   code**, not remaining product naming.
+4. What NOTICE / LICENSE wording should replace the current
+   "basis TBD by counsel" line in `cmd/gizzi-code/NOTICE`?
+5. Should vendored trees (`ink-app/components/vendored`,
+   `ink-app/hooks/vendored`, 259 files) carry SPDX / copyright headers,
+   and if so with what text?
+
+Until (1) and (2) are answered, public 2.0.0 npm publish of the CLI is an
+**owner risk decision**, not a legal clearance.
 
 ## Appendix — evidence index
 

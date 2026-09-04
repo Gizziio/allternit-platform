@@ -23,7 +23,7 @@
  */
 
 import { join } from 'path'
-import { getClaudeConfigHomeDir } from '../../../shared/utils/envUtils.js'
+import { getLegacyClaudeHomeDir } from '../../../shared/utils/envUtils.js'
 import { readFileSync } from '../../../shared/utils/fileRead.js'
 import { stripBOM } from '../../../shared/utils/jsonRead.js'
 import { resetSettingsCache } from '../../../shared/utils/settings/settingsCache.js'
@@ -50,7 +50,7 @@ export function setEligibility(v: boolean): boolean {
 }
 
 export function getSettingsPath(): string {
-  return join(getClaudeConfigHomeDir(), SETTINGS_FILENAME)
+  return join(getLegacyClaudeHomeDir(), SETTINGS_FILENAME)
 }
 
 // sync IO — settings pipeline is sync. fileRead and jsonRead are leaves;

@@ -355,8 +355,8 @@ import { AUTO_MODE_DESCRIPTION } from './../components/AutoModeOptInDialog.tsx';
 import { useLspInitializationNotification } from './../hooks/notifs/useLspInitializationNotification.tsx';
 import { useLspPluginRecommendation } from './../hooks/useLspPluginRecommendation.tsx';
 import { LspRecommendationMenu } from './../components/LspRecommendation/LspRecommendationMenu.tsx';
-import { useClaudeCodeHintRecommendation } from './../hooks/useClaudeCodeHintRecommendation.tsx';
-import { PluginHintMenu } from './../components/ClaudeCodeHint/PluginHintMenu.tsx';
+import { useGizziHintRecommendation } from './../hooks/useGizziHintRecommendation.tsx';
+import { PluginHintMenu } from './../components/GizziHint/PluginHintMenu.tsx';
 import { DesktopUpsellStartup, shouldShowDesktopUpsellStartup } from './../components/DesktopUpsell/DesktopUpsellStartup.tsx';
 import { usePluginInstallationStatus } from './../hooks/notifs/usePluginInstallationStatus.tsx';
 import { usePluginAutoupdateNotification } from './../hooks/notifs/usePluginAutoupdateNotification.tsx';
@@ -928,7 +928,7 @@ export function REPL({
   const {
     recommendation: hintRecommendation,
     handleResponse: handleHintResponse
-  } = useClaudeCodeHintRecommendation();
+  } = useGizziHintRecommendation();
 
   // Memoize the combined initial tools array to prevent reference changes
   const combinedInitialTools = useMemo(() => {

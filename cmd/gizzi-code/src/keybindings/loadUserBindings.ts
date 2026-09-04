@@ -19,7 +19,7 @@ import { getFeatureValue_CACHED_MAY_BE_STALE } from '@/services/analytics/growth
 import { logEvent } from '@/services/analytics/index.js'
 import { registerCleanup } from '../shared/utils/cleanupRegistry.js'
 import { logForDebugging } from '../shared/utils/debug.js'
-import { getClaudeConfigHomeDir } from '../shared/utils/envUtils.js'
+import { getLegacyClaudeHomeDir } from '../shared/utils/envUtils.js'
 import { errorMessage, isENOENT } from '../shared/utils/errors.js'
 import { createSignal } from '../shared/utils/signal.js'
 import { jsonParse } from '../shared/utils/slowOperations.js'
@@ -123,7 +123,7 @@ export function getKeybindingsPath(): string {
   )
   try {
     if (existsSync(gizziPath)) return gizziPath
-    const legacyPath = join(getClaudeConfigHomeDir(), 'keybindings.json')
+    const legacyPath = join(getLegacyClaudeHomeDir(), 'keybindings.json')
     if (existsSync(legacyPath)) return legacyPath
   } catch {
     // fall through

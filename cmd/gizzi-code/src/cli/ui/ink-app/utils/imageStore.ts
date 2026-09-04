@@ -4,7 +4,7 @@ import { join } from 'path'
 import { getSessionId } from '../bootstrap/state.js'
 import type { PastedContent } from './config.js'
 import { logForDebugging } from './debug.js'
-import { getClaudeConfigHomeDir } from './envUtils.js'
+import { getGizziConfigHomeDir } from './envUtils.js'
 import { getFsImplementation } from './fsOperations.js'
 
 const IMAGE_STORE_DIR = 'image-cache'
@@ -17,7 +17,7 @@ const storedImagePaths = new Map<number, string>()
  * Get the image store directory for the current session.
  */
 function getImageStoreDir(): string {
-  return join(getClaudeConfigHomeDir(), IMAGE_STORE_DIR, getSessionId())
+  return join(getGizziConfigHomeDir(), IMAGE_STORE_DIR, getSessionId())
 }
 
 /**
@@ -129,7 +129,7 @@ function evictOldestIfAtCap(): void {
  */
 export async function cleanupOldImageCaches(): Promise<void> {
   const fsImpl = getFsImplementation()
-  const baseDir = join(getClaudeConfigHomeDir(), IMAGE_STORE_DIR)
+  const baseDir = join(getGizziConfigHomeDir(), IMAGE_STORE_DIR)
   const currentSessionId = getSessionId()
 
   try {

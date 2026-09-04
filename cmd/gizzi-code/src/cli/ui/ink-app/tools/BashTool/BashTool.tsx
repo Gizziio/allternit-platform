@@ -17,7 +17,7 @@ import type { AgentId } from '../../types/ids';
 import type { AssistantMessage } from '../../types/message';
 import { parseForSecurity } from '../../utils/bash/ast';
 import { splitCommand_DEPRECATED, splitCommandWithOperators } from '../../utils/bash/commands';
-import { extractClaudeCodeHints } from '../../utils/claudeCodeHints';
+import { extractGizziHints } from '../../utils/gizziHints';
 import { detectCodeIndexingFromCommand } from '../../utils/codeIndexing';
 import { isEnvTruthy } from '../../utils/envUtils';
 import { isENOENT, ShellError } from '../../utils/errors';
@@ -776,11 +776,11 @@ export const BashTool = buildTool({
 
     // gizzi-code hints protocol: CLIs/SDKs gated on GIZZI_CODE=1 emit a
     // `<claude-code-hint />` tag to stderr (merged into stdout here). Scan,
-    // record for useClaudeCodeHintRecommendation to surface, then strip
+    // record for useGizziHintRecommendation to surface, then strip
     // so the model never sees the tag — a zero-token side channel.
     // Stripping runs unconditionally (subagent output must stay clean too);
     // only the dialog recording is main-thread-only.
-    const extracted = extractClaudeCodeHints(strippedStdout, input.command);
+    const extracted = extractGizziHints(strippedStdout, input.command);
     strippedStdout = extracted.stripped;
     if (isMainThread && extracted.hints.length > 0) {
       for (const hint of extracted.hints) maybeRecordPluginHint(hint);

@@ -31,7 +31,7 @@ import { getSessionId } from '../../bootstrap/state.js'
 import { registerCleanup } from '../cleanupRegistry.js'
 import { logForDebugging } from '../debug.js'
 import {
-  getClaudeConfigHomeDir,
+  getGizziConfigHomeDir,
   isEnvDefinedFalsy,
   isEnvTruthy,
 } from '../envUtils.js'
@@ -271,7 +271,7 @@ export function initializePerfettoTracing(): void {
 
     // Determine trace file path
     if (isEnvTruthy(envValue)) {
-      const tracesDir = join(getClaudeConfigHomeDir(), 'traces')
+      const tracesDir = join(getGizziConfigHomeDir(), 'traces')
       tracePath = join(tracesDir, `trace-${getSessionId()}.json`)
     } else {
       // Use the provided path
