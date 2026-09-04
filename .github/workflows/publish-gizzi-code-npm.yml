@@ -306,8 +306,15 @@ jobs:
           VERSION: ${{ steps.version.outputs.VERSION }}
 
       - name: Publish to NPM
+        # Idempotent: a re-run after a late verify failure must not 409
+        # against the already-published version.
         working-directory: cmd/gizzi-code
-        run: npm publish --access public
+        run: |
+          if npm view "@allternit/gizzi-code@${{ steps.version.outputs.VERSION }}" version >/dev/null 2>&1; then
+            echo "@allternit/gizzi-code@${{ steps.version.outputs.VERSION }} already published; skipping"
+          else
+            npm publish --access public
+          fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -335,7 +342,16 @@ jobs:
           fi
           echo "Verifying $TARBALL"
           TMP=$(mktemp -d)
-          curl -fsSL "$TARBALL" -o "$TMP/package.tgz"
+          # Registry metadata can precede tarball blob replication by minutes;
+          # retry the download, not just the URL lookup.
+          for attempt in 1 2 3 4 5 6 7 8 9 10; do
+            if curl -fsSL "$TARBALL" -o "$TMP/package.tgz" 2>/dev/null; then
+              break
+            fi
+            echo "Tarball download failed (attempt $attempt); sleeping 30s"
+            sleep 30
+          done
+          test -s "$TMP/package.tgz" || { echo "::error::Could not download $TARBALL after retries."; exit 1; }
           # List once: piping tar into `grep -q` can SIGPIPE-kill tar, and with
           # pipefail that would false-negative the gate.
           FILES=$(tar -tzf "$TMP/package.tgz")
