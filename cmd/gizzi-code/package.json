@@ -48,6 +48,19 @@
   "exports": {
     "./*": "./src/*.ts"
   },
+  "files": [
+    "bin/",
+    "dist/",
+    "src/",
+    "docs/",
+    "assets/",
+    "README.md",
+    "CHANGELOG.md",
+    "CONTRIBUTING.md",
+    "LICENSE",
+    "SECURITY.md",
+    "AGENTS.md"
+  ],
   "devDependencies": {
     "@babel/core": "7.29.7",
     "@hey-api/openapi-ts": "^0.99.0",
