@@ -256,17 +256,21 @@ jobs:
             echo "package.json already at $CURRENT; skipping bump"
           fi
 
-      - name: Pin optionalDependencies to release version
-        # Platform binary packages publish at exactly this version; pin the
-        # optionalDependencies so they resolve to the same release.
+      - name: Add optionalDependencies for platform packages
+        # Injected only into the published tarball, not committed: the
+        # platform packages may not exist in the registry yet when CI runs
+        # `pnpm install --frozen-lockfile`, and a committed reference would
+        # break the monorepo lockfile. npm install -g resolves them for the
+        # end user's platform at install time.
         working-directory: cmd/gizzi-code
         run: |
           node -e '
             const fs = require("fs");
             const p = JSON.parse(fs.readFileSync("package.json", "utf8"));
-            for (const name of Object.keys(p.optionalDependencies || {})) {
-              p.optionalDependencies[name] = process.env.VERSION;
-            }
+            const platforms = ["darwin-arm64", "darwin-x64", "linux-arm64", "linux-x64", "win32-x64"];
+            p.optionalDependencies = Object.fromEntries(
+              platforms.map((t) => [`@allternit/gizzi-code-${t}`, process.env.VERSION]),
+            );
             fs.writeFileSync("package.json", JSON.stringify(p, null, 2) + "\n");
           '
         env:
