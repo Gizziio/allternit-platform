@@ -3,7 +3,7 @@
  *
  * Task and cron state lives in the Allternit platform (allternit-api). There is
  * no local-file fallback in the runtime tools; the API is always the source of
- * truth. Local dev uses http://127.0.0.1:8013 by default.
+ * truth. Local dev uses the loopback gateway default (ALLTERNIT_GATEWAY_BASE).
  *
  * Auth:
  * 1. ALLTERNIT_API_TOKEN as a Bearer token (Clerk JWT in production)
@@ -16,8 +16,9 @@
  */
 
 import { Pairing } from '@/runtime/services/pairing/pairing'
+import { ALLTERNIT_GATEWAY_BASE } from '@/shared/constants/allternitGateway'
 
-const DEFAULT_API_URL = 'http://127.0.0.1:8013'
+const DEFAULT_API_URL = ALLTERNIT_GATEWAY_BASE
 
 export type AllternitApiConfig = {
   baseUrl: string

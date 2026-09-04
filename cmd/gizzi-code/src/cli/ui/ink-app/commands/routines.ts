@@ -1,6 +1,7 @@
 // @ts-nocheck
 import type { ContentBlockParam } from '@allternit/sdk/providers/anthropic/resources/messages.js'
 import type { Command } from '../commands.js'
+import { ALLTERNIT_GATEWAY_BASE } from '@/shared/constants/allternitGateway'
 
 const ROUTINES_PROMPT = (id: string, args: string) => `
 You are in Routine Mode (Routine ID: ${id}). Your instruction is:
@@ -30,7 +31,7 @@ const routines: Command = {
   async getPromptForCommand(args): Promise<ContentBlockParam[]> {
     const id = `routine-${Date.now()}`
     try {
-      await fetch('http://127.0.0.1:8013/api/v1/tasks', {
+      await fetch(`${ALLTERNIT_GATEWAY_BASE}/api/v1/tasks`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
