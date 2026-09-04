@@ -91,8 +91,20 @@ jobs:
           fi
 
       - name: Install dependencies
-        working-directory: cmd/gizzi-code
-        run: bun install
+        # Root-level pnpm install (same as the quality gate): bun install in
+        # cmd/gizzi-code cannot resolve workspace:* deps — bun's workspace
+        # discovery does not match this repo's pnpm workspace layout.
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.28.0 --activate
+          pnpm install --frozen-lockfile
+
+      - name: Build workspace package dependencies
+        # Nested workspace packages ship gitignored dist/ output; the build
+        # and typecheck below need them (gizzi-sdk is imported but undeclared).
+        run: |
+          pnpm --filter "@allternit/gizzi-code^..." run build
+          pnpm --filter "@allternit/gizzi-sdk" run build
 
       - name: Configure git identity
         # Same fixture requirement as the quality gate: temp-repo commits
