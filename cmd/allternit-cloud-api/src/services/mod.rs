@@ -13,6 +13,7 @@ pub mod quota_service;
 pub mod run_service;
 pub mod scheduler_service;
 pub mod task_service;
+pub mod user_trust;
 
 pub use contabo_runtime_service::{
     ContaboContainerState, ContaboRuntimeService, HostedInstanceRow, ProvisionedContaboRuntime,

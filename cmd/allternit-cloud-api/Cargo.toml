@@ -42,8 +42,8 @@ chrono-tz = "0.9"
 # UUID
 uuid = { workspace = true }
 
-# Database (SQLite for now)
-sqlx = { workspace = true, features = ['chrono', 'uuid', 'postgres'] }
+# Database (PostgreSQL control plane; `macros`+`migrate` power sqlx::migrate!)
+sqlx = { workspace = true, features = ['chrono', 'uuid', 'postgres', 'macros', 'migrate'] }
 
 # WebSocket
 tokio-tungstenite = { workspace = true }

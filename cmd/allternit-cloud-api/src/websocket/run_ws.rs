@@ -4,7 +4,7 @@
 //! and interactive approvals.
 
 use axum::{
-    extract::{Path, State, WebSocketUpgrade},
+    extract::{Path, Query, State, WebSocketUpgrade},
     response::Response,
 };
 use std::sync::Arc;
@@ -13,12 +13,120 @@ use crate::db::cowork_models::*;
 use crate::services::{EventStore, EventStoreImpl, RunService};
 use crate::{ApiError, ApiState};
 
+/// Token carrier for the WebSocket upgrade. Browsers cannot set arbitrary
+/// headers on a WebSocket handshake, so the credential may ride the query
+/// string or the Sec-WebSocket-Protocol header instead.
+#[derive(Debug, serde::Deserialize)]
+pub struct RunWsQuery {
+    pub token: Option<String>,
+}
+
+/// Which authentication mode a presented credential belongs to. Decided
+/// purely from the token's shape (`token_mode`) so the dispatch is unit
+/// testable without a Clerk JWKS round-trip.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum WsAuthMode {
+    /// `allternit_*` legacy/scoped tokens and `alt_*` platform keys — looked
+    /// up in the database.
+    ApiToken,
+    /// Three-segment JWT — a Clerk session token, verified against JWKS.
+    ClerkJwt,
+}
+
+/// Classify a token for auth dispatch. `allternit_`/`alt_` prefixed secrets
+/// are unambiguous; anything else shaped like a JWT (header.payload.signature)
+/// is tried as a Clerk session; a match on neither falls back to the
+/// database lookup so exotic tokens still get a chance to validate.
+fn token_mode(token: &str) -> WsAuthMode {
+    if token.starts_with("allternit_") || token.starts_with("alt_") {
+        WsAuthMode::ApiToken
+    } else {
+        WsAuthMode::ClerkJwt
+    }
+}
+
+/// Extract the bearer credential from the supported carriers.
+fn extract_ws_token(
+    headers: &axum::http::HeaderMap,
+    query: &RunWsQuery,
+) -> Option<String> {
+    query.token.clone().or_else(|| {
+        headers
+            .get(axum::http::header::AUTHORIZATION)
+            .and_then(|v| v.to_str().ok())
+            .and_then(|s| s.strip_prefix("Bearer "))
+            .map(str::to_string)
+    }).or_else(|| {
+        headers
+            .get("sec-websocket-protocol")
+            .and_then(|v| v.to_str().ok())
+            .and_then(|s| s.strip_prefix("token."))
+            .map(str::to_string)
+    })
+}
+
+/// Authenticate the upgrade request. Accepts either an `allternit_*`/`alt_*`
+/// API token (database lookup, same path as the REST middleware) or a Clerk
+/// session JWT (JWKS-verified, the browser path). Mirrors the deployment
+/// WebSocket's development-mode bypass.
+async fn authenticate_run_ws(
+    state: &ApiState,
+    headers: &axum::http::HeaderMap,
+    query: &RunWsQuery,
+) -> Result<(), ApiError> {
+    let development_mode = std::env::var("Allternit_API_DEVELOPMENT_MODE")
+        .map(|v| v == "true" || v == "1")
+        .unwrap_or(false);
+    if development_mode {
+        return Ok(());
+    }
+
+    let Some(token) = extract_ws_token(headers, query) else {
+        return Err(ApiError::Unauthorized(
+            "WebSocket authentication required. Pass a Clerk session or API token via ?token= query param, Authorization header, or Sec-WebSocket-Protocol header".to_string(),
+        ));
+    };
+
+    match token_mode(&token) {
+        WsAuthMode::ApiToken => {
+            match crate::auth::middleware::validate_token_against_db(&state.db, &token).await {
+                Ok(Some(_)) => Ok(()),
+                Ok(None) => Err(ApiError::Unauthorized(
+                    "Invalid or expired token".to_string(),
+                )),
+                Err(_) => Err(ApiError::Unauthorized(
+                    "Token validation failed".to_string(),
+                )),
+            }
+        }
+        WsAuthMode::ClerkJwt => {
+            match crate::auth::clerk::user_from_token(&token).await {
+                Ok(_) => Ok(()),
+                Err(e) => {
+                    // A Clerk-shaped token that fails verification might be an
+                    // exotic API token — give the database path one chance.
+                    match crate::auth::middleware::validate_token_against_db(&state.db, &token)
+                        .await
+                    {
+                        Ok(Some(_)) => Ok(()),
+                        _ => Err(e),
+                    }
+                }
+            }
+        }
+    }
+}
+
 /// WebSocket handler for run events
 pub async fn run_ws_handler(
     State(state): State<Arc<ApiState>>,
     Path(run_id): Path<String>,
+    Query(query): Query<RunWsQuery>,
+    headers: axum::http::HeaderMap,
     ws: WebSocketUpgrade,
 ) -> Result<Response, ApiError> {
+    authenticate_run_ws(&state, &headers, &query).await?;
+
     // Verify run exists
     let run = sqlx::query_as::<_, Run>("SELECT * FROM runs WHERE id = $1")
         .bind(&run_id)
@@ -317,4 +425,62 @@ async fn handle_client_message(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn token_mode_dispatch_prefixed_tokens_use_db_lookup() {
+        assert_eq!(
+            token_mode("allternit_abcdef0123456789abcdef0123456789"),
+            WsAuthMode::ApiToken
+        );
+        assert_eq!(token_mode("alt_0123456789abcdef"), WsAuthMode::ApiToken);
+    }
+
+    #[test]
+    fn token_mode_dispatch_jwt_shaped_tokens_use_clerk() {
+        // Clerk session JWTs are header.payload.signature.
+        assert_eq!(
+            token_mode("eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ1c2VyXzEifQ.fakesig"),
+            WsAuthMode::ClerkJwt
+        );
+        assert_eq!(token_mode("not-a-prefixed-token"), WsAuthMode::ClerkJwt);
+    }
+
+    #[test]
+    fn ws_token_extraction_priority_query_header_protocol() {
+        let mut headers = axum::http::HeaderMap::new();
+        headers.insert(
+            axum::http::header::AUTHORIZATION,
+            axum::http::HeaderValue::from_static("Bearer header-token"),
+        );
+        headers.insert(
+            "sec-websocket-protocol",
+            axum::http::HeaderValue::from_static("token.protocol-token"),
+        );
+
+        // Query param wins.
+        let query = RunWsQuery {
+            token: Some("query-token".to_string()),
+        };
+        assert_eq!(extract_ws_token(&headers, &query).as_deref(), Some("query-token"));
+
+        // Then the Authorization header.
+        let query = RunWsQuery { token: None };
+        assert_eq!(extract_ws_token(&headers, &query).as_deref(), Some("header-token"));
+
+        // Then Sec-WebSocket-Protocol (token.<jwt> form).
+        headers.remove(axum::http::header::AUTHORIZATION);
+        assert_eq!(
+            extract_ws_token(&headers, &query).as_deref(),
+            Some("protocol-token")
+        );
+
+        // Nothing presented.
+        headers.remove("sec-websocket-protocol");
+        assert_eq!(extract_ws_token(&headers, &query), None);
+    }
 }

@@ -26,4 +26,3 @@ CREATE TABLE IF NOT EXISTS public.user_inference_keys (
     PRIMARY KEY (user_id, provider_id)
 );
 
-ALTER TABLE public.user_inference_keys OWNER TO postgres;

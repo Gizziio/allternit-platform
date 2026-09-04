@@ -103,21 +103,12 @@ fn extract_token_from_protocol(headers: &axum::http::HeaderMap) -> Option<String
 async fn validate_ws_token(db: &sqlx::PgPool, token: &str) -> bool {
     use crate::auth::models::ApiToken;
 
-    // Simple hash for lookup
-    let token_hash = format!("{:x}", md5::compute(token.as_bytes()));
-
-    let result: Option<ApiToken> = sqlx::query_as::<_, ApiToken>(
-        r#"
-        SELECT id, token_hash, name, user_id, permissions, created_at, expires_at, last_used_at, is_revoked
-        FROM api_tokens
-        WHERE token_hash = $1 AND is_revoked = FALSE
-        "#
-    )
-    .bind(&token_hash)
-    .fetch_optional(db)
-    .await
-    .ok()
-    .flatten();
+    // sha256 lookup with legacy-md5 fallback + transparent upgrade.
+    let result: Option<ApiToken> =
+        crate::auth::middleware::lookup_api_token(db, token)
+            .await
+            .ok()
+            .flatten();
 
     if let Some(token_record) = result {
         // Check expiration

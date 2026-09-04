@@ -13,7 +13,7 @@
 -- cost when live pricing was available, NULL when the static catalog priced
 -- the request.
 
-CREATE TABLE public.inference_usage (
+CREATE TABLE IF NOT EXISTS public.inference_usage (
     id text NOT NULL PRIMARY KEY,
     user_id text NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
     model text NOT NULL,
@@ -25,7 +25,5 @@ CREATE TABLE public.inference_usage (
     created_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-ALTER TABLE public.inference_usage OWNER TO postgres;
-
-CREATE INDEX idx_inference_usage_user
+CREATE INDEX IF NOT EXISTS idx_inference_usage_user
     ON public.inference_usage(user_id, created_at);

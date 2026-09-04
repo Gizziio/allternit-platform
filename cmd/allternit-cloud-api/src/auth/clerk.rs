@@ -222,3 +222,10 @@ pub async fn user_from_headers(headers: &HeaderMap) -> Result<ClerkUser, ApiErro
         .ok_or_else(|| ApiError::Unauthorized("A Clerk session is required".to_string()))?;
     verifier().verify(token).await
 }
+
+/// Verify a raw Clerk session JWT (no header extraction). Used by the run
+/// WebSocket, where the token may arrive via a query param or the
+/// Sec-WebSocket-Protocol header rather than Authorization.
+pub async fn user_from_token(token: &str) -> Result<ClerkUser, ApiError> {
+    verifier().verify(token).await
+}

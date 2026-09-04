@@ -212,8 +212,6 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
         .merge(routes::tasks::task_routes())
         // Mirror session endpoints (merged from api/cloud/allternit-cloud-api)
         .merge(routes::mirror::create_mirror_routes())
-        // WebSocket endpoint for run events
-        .route("/ws/runs/:id", get(websocket::run_ws_handler))
         // Deployment endpoints (existing)
         .route(
             "/api/v1/deployments",
@@ -367,6 +365,17 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
         .route("/v1/models", get(routes::model_router::list_models))
         .with_state(state.clone());
 
+    // Run-event WebSocket: authenticates inside the handler — the legacy
+    // auth_middleware only understands API tokens and would reject browser
+    // clients holding a Clerk session JWT before the upgrade is decided.
+    let run_ws_routes = Router::new()
+        .route("/ws/runs/:id", get(websocket::run_ws_handler))
+        .layer(axum_middleware::from_fn_with_state(
+            state.public_rate_limiter.clone(),
+            crate::middleware::rate_limit::rate_limit_middleware,
+        ))
+        .with_state(state.clone());
+
     // Create auth-protected routes (require auth but listed separately for clarity)
     let auth_routes = Router::new()
         .route("/api/v1/auth/me", get(routes::auth::get_current_user))
@@ -436,6 +445,7 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
     // Combine all routes
     Router::new()
         .merge(public_health_routes)
+        .merge(run_ws_routes)
         .merge(public_model_routes)
         .merge(public_runtime_routes)
         .merge(auth_routes)
@@ -451,9 +461,12 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
 
 /// Initialize the database with configured connection pooling.
 ///
-/// The API targets PostgreSQL in production. The schema is currently managed
-/// externally (pgloader + Postgres migrations); embedded SQLite migrations are
-/// intentionally not run here.
+/// The API targets PostgreSQL in production. After connecting, the embedded
+/// `migrations_pg` directory is applied with `sqlx::migrate!` — every file is
+/// written to be idempotent (IF NOT EXISTS / guarded DO blocks) so the first
+/// run against the already-migrated production database converges instead of
+/// failing. Set `ALLTERNIT_SKIP_MIGRATIONS=1` to opt out (escape hatch for
+/// deploys where migrations are applied manually).
 pub async fn init_db(database_url: &str) -> Result<sqlx::PgPool, ApiError> {
     use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
     use std::str::FromStr;
@@ -500,8 +513,19 @@ pub async fn init_db(database_url: &str) -> Result<sqlx::PgPool, ApiError> {
         .connect_with(connect_options)
         .await?;
 
-    // TODO: Add Postgres migrations directory and run sqlx::migrate! against it.
-    // The current production schema was created via pgloader from SQLite.
+    if std::env::var("ALLTERNIT_SKIP_MIGRATIONS")
+        .map(|v| v == "1" || v == "true")
+        .unwrap_or(false)
+    {
+        tracing::warn!("ALLTERNIT_SKIP_MIGRATIONS set — skipping embedded Postgres migrations");
+    } else {
+        // Path is relative to the crate root (CARGO_MANIFEST_DIR).
+        sqlx::migrate!("./migrations_pg")
+            .run(&pool)
+            .await
+            .map_err(|e| ApiError::Internal(format!("Postgres migration failed: {e}")))?;
+        tracing::info!("Postgres migrations applied (migrations_pg)");
+    }
 
     tracing::info!(
         "Database pool initialized with {} max connections",
@@ -544,4 +568,25 @@ pub async fn start_server(state: Arc<ApiState>, addr: &str) -> Result<(), ApiErr
 
     tracing::info!("Server shutdown complete");
     Ok(())
+}
+
+#[cfg(test)]
+mod migration_tests {
+    /// Applies the embedded `migrations_pg` directory (the same
+    /// `sqlx::migrate!("./migrations_pg")` call `init_db` makes) against the
+    /// local PG test database. The migrations are idempotent, so this passes
+    /// on an empty database, on a fully-migrated one, and on re-runs — and it
+    /// proves the macro resolves the directory relative to the crate root.
+    #[tokio::test]
+    async fn migrations_pg_applies_cleanly() {
+        let pool = sqlx::PgPool::connect(
+            "postgres://allternit:allternit_pg_2026@localhost:5432/allternit_test",
+        )
+        .await
+        .expect("connect to the local PG test database (allternit_test)");
+        sqlx::migrate!("./migrations_pg")
+            .run(&pool)
+            .await
+            .expect("embedded migrations_pg must apply cleanly and idempotently");
+    }
 }

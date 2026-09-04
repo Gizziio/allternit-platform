@@ -31,21 +31,11 @@ pub async fn validate_token(
     State(state): State<Arc<ApiState>>,
     Json(request): Json<ValidateTokenRequest>,
 ) -> Result<Json<TokenInfo>, ApiError> {
-    // Simple hash for lookup
-    let digest = md5::compute(request.token.as_bytes());
-    let token_hash = format!("{:x}", digest);
-
-    let db_token: Option<ApiToken> = sqlx::query_as::<_, ApiToken>(
-        r#"
-        SELECT id, token_hash, name, user_id, permissions, created_at, expires_at, last_used_at, is_revoked
-        FROM api_tokens
-        WHERE token_hash = $1 AND is_revoked = FALSE
-        "#
-    )
-    .bind(&token_hash)
-    .fetch_optional(&state.db)
-    .await
-    .map_err(|e| ApiError::DatabaseError(e))?;
+    // Tokens minted after the hashing upgrade are stored as SHA-256; legacy
+    // MD5 rows still validate via `lookup_api_token` (which upgrades them).
+    let db_token: Option<ApiToken> =
+        crate::auth::middleware::lookup_api_token(&state.db, &request.token).await
+            .map_err(|e| ApiError::DatabaseError(e))?;
 
     let token_info = match db_token {
         Some(token) => {
@@ -186,8 +176,7 @@ pub async fn create_token(
 
     // Generate token
     let token = format!("allternit_{}", generate_secure_random(48));
-    let digest = md5::compute(token.as_bytes());
-    let token_hash = format!("{:x}", digest);
+    let token_hash = crate::auth::middleware::hash_api_token(&token);
     let token_id = format!("token_{}", generate_secure_random(16));
 
     // Calculate expiration
