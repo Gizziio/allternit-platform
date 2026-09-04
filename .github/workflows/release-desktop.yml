@@ -23,7 +23,7 @@ jobs:
     name: Build macOS
     runs-on: macos-latest
     permissions:
-      contents: write
+      contents: read
     env:
       APPLE_ID: ${{ secrets.APPLE_ID }}
       APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
@@ -165,10 +165,10 @@ jobs:
         working-directory: surfaces/allternit-desktop
 
       - name: Package with electron-builder
-        run: npm run build:electron
+        # --publish never: publishing happens ONLY in the release job, which
+        # collects artifacts from all build jobs. Never publish here.
+        run: npm run build:electron -- --publish never
         working-directory: surfaces/allternit-desktop
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
@@ -186,7 +186,7 @@ jobs:
     name: Build Windows
     runs-on: windows-latest
     permissions:
-      contents: write
+      contents: read
 
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -281,10 +281,10 @@ jobs:
         working-directory: surfaces/allternit-desktop
 
       - name: Package with electron-builder
-        run: npm run dist
+        # --publish never: publishing happens ONLY in the release job, which
+        # collects artifacts from all build jobs. Never publish here.
+        run: npm run dist -- --publish never
         working-directory: surfaces/allternit-desktop
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
@@ -296,10 +296,122 @@ jobs:
             surfaces/allternit-desktop/release/latest.yml
           retention-days: 14
 
+  # Build Linux unpacked dir (smoke-test the linux electron-builder target;
+  # artifacts are NOT attached to the GitHub release)
+  build-linux:
+    name: Build Linux
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install pnpm
+        run: npm install -g pnpm@10.28.0
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@1.91.0
+        with:
+          targets: x86_64-unknown-linux-gnu
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: allternit-api-linux
+
+      # ── Step 2: Build gizzi-code for Linux ─────────────────────────────────
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install gizzi-code dependencies
+        run: bun install
+        working-directory: cmd/gizzi-code
+
+      - name: Build gizzi-code (Linux x64)
+        run: bun run script/build-production.js --target=linux-x64
+        working-directory: cmd/gizzi-code
+
+      - name: Copy gizzi-code binary
+        run: |
+          mkdir -p surfaces/allternit-desktop/resources/bin
+          cp cmd/gizzi-code/dist/gizzi-code-linux-x64 surfaces/allternit-desktop/resources/bin/gizzi-code
+          chmod +x surfaces/allternit-desktop/resources/bin/gizzi-code
+
+      - name: Install platform dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: surfaces/ai.allternit.com
+
+      - name: Build platform static export for desktop
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build:cloudflare
+        working-directory: surfaces/ai.allternit.com
+
+      - name: Copy static export to desktop resources
+        run: |
+          DEST=surfaces/allternit-desktop/resources/platform
+          rm -rf "$DEST"
+          mkdir -p "$DEST"
+          cp -r surfaces/ai.allternit.com/dist/. "$DEST/"
+
+      - name: Build allternit-api (Linux)
+        run: cargo build --release --target x86_64-unknown-linux-gnu --manifest-path cmd/allternit-api/Cargo.toml
+
+      - name: Copy allternit-api binary
+        run: |
+          mkdir -p surfaces/allternit-desktop/resources/bin
+          cp target/x86_64-unknown-linux-gnu/release/allternit-api \
+             surfaces/allternit-desktop/resources/bin/allternit-api
+          chmod +x surfaces/allternit-desktop/resources/bin/allternit-api
+
+      - name: Setup Go
+        # Needed to build the mesh-node sidecar from source (the vendor tree
+        # is gitignored, so prepare-mesh-node.cjs runs an equivalent go build
+        # for linux-x64, mirroring release-gizzi-code.yml).
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: infrastructure/mesh/tsnet-ios/go.mod
+          cache: false
+
+      - name: Stage mesh-node sidecar
+        # Stages resources/bin/mesh-node ahead of electron-builder's
+        # extraResources packing (src/main/mesh-manager.ts resolves it).
+        run: node scripts/prepare-mesh-node.cjs
+        working-directory: surfaces/allternit-desktop
+
+      - name: Install desktop dependencies
+        run: npm install
+        working-directory: surfaces/allternit-desktop
+
+      - name: Build TypeScript
+        run: npm run build
+        working-directory: surfaces/allternit-desktop
+
+      - name: Package with electron-builder
+        # --dir: unpacked build only (no AppImage/deb), --publish never:
+        # publishing happens ONLY in the release job.
+        run: npx electron-builder --linux --dir --publish never
+        working-directory: surfaces/allternit-desktop
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+        with:
+          name: allternit-desktop-linux
+          path: |
+            surfaces/allternit-desktop/release/linux-unpacked
+          retention-days: 14
+
   # Publish GitHub Release
   release:
     name: Create GitHub Release
-    needs: [build-macos, build-windows]
+    needs: [build-macos, build-windows, build-linux]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -348,7 +460,13 @@ jobs:
             | Windows | `Allternit Setup *.exe` |
 
             Auto-updates are enabled — the app will notify you when a new version is available.
-          files: artifacts/*
+          files: |
+            artifacts/*.dmg
+            artifacts/*.zip
+            artifacts/*.exe
+            artifacts/*.blockmap
+            artifacts/latest-mac.yml
+            artifacts/latest.yml
           draft: ${{ github.event.inputs.draft == 'true' }}
           prerelease: ${{ contains(github.ref, '-alpha') || contains(github.ref, '-beta') || contains(github.ref, '-rc') }}
         env:
