@@ -94,3 +94,4 @@ test/telemetry-governance.test.ts
 test/api-fetch-timeout.test.ts
 test/commands/onboarding.test.ts
 test/commands/doctor.test.ts
+test/commands/uninstall-plan.test.ts
