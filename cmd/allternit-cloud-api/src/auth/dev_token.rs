@@ -43,6 +43,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[serial_test::serial]
     fn dev_token_rejected_when_gate_disabled() {
         let _guard = DEV_TOKEN_ENV_LOCK.lock().unwrap();
         std::env::remove_var(ALLOW_DEV_TOKEN_ENV);
@@ -62,6 +63,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::serial]
     fn dev_token_accepted_only_when_gate_env_set() {
         let _guard = DEV_TOKEN_ENV_LOCK.lock().unwrap();
         std::env::set_var(ALLOW_DEV_TOKEN_ENV, "true");
@@ -82,6 +84,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::serial]
     fn non_dev_tokens_never_match_even_with_gate_open() {
         assert!(!is_allowed_dev_token("allternit_not_the_dev_token_0123", true));
         assert!(!is_allowed_dev_token("", true));

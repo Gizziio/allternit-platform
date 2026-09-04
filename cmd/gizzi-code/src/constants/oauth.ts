@@ -1,4 +1,5 @@
 import { isEnvTruthy } from '../shared/utils/envUtils.js'
+import { CLOUD_URLS } from '../shared/constants/cloudUrls.js'
 
 // Default to prod config, override with test/staging if enabled
 type OauthConfigType = 'prod' | 'staging' | 'local'
@@ -82,15 +83,15 @@ type OauthConfig = {
 
 // Production OAuth configuration - Used in normal operation
 const PROD_OAUTH_CONFIG = {
-  BASE_API_URL: 'https://api.allternit.com',
+  BASE_API_URL: CLOUD_URLS.api,
   CONSOLE_AUTHORIZE_URL: 'https://console.allternit.com/oauth/authorize',
   // Bounces through claude.com/cai/* so CLI sign-ins connect to claude.com
   // visits for attribution. 307s to claude.ai/oauth/authorize in two hops.
   CLAUDE_AI_AUTHORIZE_URL: 'https://allternit.com/oauth/authorize',
   CLAUDE_AI_ORIGIN: 'https://allternit.com',
-  TOKEN_URL: 'https://api.allternit.com/v1/oauth/token',
-  API_KEY_URL: 'https://api.allternit.com/api/oauth/gizzi/create_api_key',
-  ROLES_URL: 'https://api.allternit.com/api/oauth/gizzi/roles',
+  TOKEN_URL: `${CLOUD_URLS.api}/v1/oauth/token`,
+  API_KEY_URL: `${CLOUD_URLS.api}/api/oauth/gizzi/create_api_key`,
+  ROLES_URL: `${CLOUD_URLS.api}/api/oauth/gizzi/roles`,
   CONSOLE_SUCCESS_URL:
     'https://console.allternit.com/buy_credits?returnUrl=/oauth/code/success%3Fapp%3Dgizzi',
   CLAUDEAI_SUCCESS_URL:

@@ -81,14 +81,13 @@ final class PtyClient: @unchecked Sendable {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
         #if DEBUG
-        // Same `-skip-auth` shim as APIClient.authorizedRequest — the dev
-        // Bearer value comes from AppConfig (Info.plist), not a literal here,
-        // and the local cloud-api must run with ALLTERNIT_ALLOW_DEV_TOKEN=true.
         if CommandLine.arguments.contains("-skip-auth") {
             request.setValue("dev-ios-tester", forHTTPHeaderField: "x-allternit-user-id")
             request.setValue("dev", forHTTPHeaderField: "x-allternit-desktop-access-token")
+            // Dev bearer comes from the environment (see APIClient.swift) —
+            // it is no longer hardcoded (B1).
             if request.value(forHTTPHeaderField: "Authorization") == nil,
-               let devToken = AppConfig.devSkipAuthToken {
+               let devToken = ProcessInfo.processInfo.environment["ALLTERNIT_DEV_API_TOKEN"] {
                 request.setValue("Bearer \(devToken)", forHTTPHeaderField: "Authorization")
             }
         }

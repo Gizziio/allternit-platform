@@ -1,0 +1,31 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: "allternit-control-plane"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["localhost:9093"]
+
+rule_files:
+  - "/etc/prometheus/rules/*.yml"
+
+scrape_configs:
+  - job_name: "prometheus"
+    scrape_interval: 5s
+    scrape_timeout: 5s
+    static_configs:
+      - targets: ["localhost:9091"]
+
+  - job_name: "node"
+    static_configs:
+      - targets: ["localhost:9100"]
+
+  - job_name: "allternit-cloud-api"
+    metrics_path: "/api/v1/metrics"
+    static_configs:
+      - targets: ["localhost:8082"]
+        labels:
+          service: "allternit-cloud-api"

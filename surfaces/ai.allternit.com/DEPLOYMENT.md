@@ -1,103 +1,61 @@
 # Allternit Platform Deployment Guide
 
-> **Reconciled 2026-07-22:** Paths updated from the old `surfaces/platform` directory to the current `surfaces/ai.allternit.com` directory. The Vercel dashboard still needs to be updated by hand.
+> **STATUS: Rewritten 2026-09-03.** The previous version of this document
+> described a Vercel + Next.js deployment. The platform is now a **Vite +
+> React SPA** deployed as a static export to **Cloudflare Pages** by GitHub
+> Actions. The Vercel project (`prj_veXmWY1vWUn6N9aBWA4gTRyeSmrx`) and the
+> `deploy-platform.yml` workflow referenced below are retired.
+>
+> Last verified: 2026-09-03 against a0f8230b5.
 
-## Current Status
+## How deployment actually works
 
-✅ **Build**: Working - Next.js compiles successfully  
-⚠️ **Deploy**: Blocked by Vercel rate limit (100 deployments/day) - will reset in ~12 hours  
-🔧 **Configuration**: Needs manual fix in Vercel dashboard
+### Web surfaces → Cloudflare Pages
 
-## The Problem
+Workflow: [`.github/workflows/deploy-cloudflare-pages.yml`](../../.github/workflows/deploy-cloudflare-pages.yml)
 
-The Vercel project has **incorrect settings** that cause path duplication errors:
+On every push to `main` touching the surfaces (plus `workflow_dispatch`):
 
-```
-Error: ENOENT: no such file or directory, 
-  lstat '/.../surfaces/ai.allternit.com/surfaces/ai.allternit.com/.next/routes-manifest.json'
-                                                     ^^^^^^^^^^^^^^^^^
-                                                     Path is duplicated!
-```
+1. `pnpm install --frozen-lockfile --ignore-scripts`
+2. `pnpm prisma generate` (ai.allternit.com)
+3. `pnpm --filter "@allternit/ai..." build` — Vite build, output `dist/`
+4. `wrangler pages deploy <dir>/dist --project-name=<project> --branch=main`
 
-## Required Fix (Action Needed)
+| Surface | Pages project | Domain | Build output |
+|---------|---------------|--------|--------------|
+| `surfaces/ai.allternit.com` | `ai-allternit` | ai.allternit.com | `dist/` |
+| `surfaces/platform.allternit.com` | `allternit-platform` | platform.allternit.com | `dist/` |
 
-You need to update the Vercel project settings in the dashboard:
+Other surfaces have their own workflows: `deploy-docs-cloudflare.yml`
+(`allternit-docs` → docs.allternit.com) and `deploy-office-cloudflare.yml`
+(`allternit-office` → office.allternit.com). The full domain ↔ project map
+lives in [`docs/Operations/CLOUDFLARE_MAPPING.md`](../../docs/Operations/CLOUDFLARE_MAPPING.md).
 
-### Step 1: Go to Vercel Dashboard
-
-Open: https://vercel.com/gizzi-io-6138s-projects/platform/settings
-
-### Step 2: Update Build & Output Settings
-
-Navigate to **Settings → Build & Output Settings**
-
-Change these values:
-
-| Setting | Current (Wrong) | Change To (Correct) |
-|---------|-----------------|---------------------|
-| **Root Directory** | `.` | `surfaces/ai.allternit.com` |
-| **Build Command** | `cd surfaces/ai.allternit.com && next build` | `next build` |
-| **Output Directory** | `surfaces/ai.allternit.com/out` | `.next` |
-| **Install Command** | `pnpm install --no-frozen-lockfile` | `pnpm install --no-frozen-lockfile --ignore-scripts` |
-
-### Step 3: Verify Environment Variables
-
-Navigate to **Settings → Environment Variables**
-
-Ensure these are set for Production:
+Build-time env (set in the workflow / GitHub secrets):
 
 ```
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
-CLERK_SECRET_KEY=sk_test_...
-ENCRYPTION_KEY=your-encryption-key
-DATABASE_URL=your-database-url
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY   # Clerk publishable key (ai.allternit.com)
+NEXT_PUBLIC_ALLTERNIT_DESKTOP_AUTH=true
+NEXT_PUBLIC_ALLTERNIT_CLOUD_API_URL=https://api.allternit.com
+VITE_REMOTE_CONTROL_PUSH_URL
+ENCRYPTION_KEY
 ```
 
-### Step 4: Save and Deploy
+The canonical cloud API is **`https://api.allternit.com`** — do not point
+anything at the retired `allternit-cloud-api.fly.dev` host.
 
-1. Click **Save** at the bottom of the page
-2. Go to the **Deployments** tab
-3. Click **Redeploy** on the latest deployment
+### Cloud API → Contabo VPS (systemd + nginx)
 
-## Alternative: Use Git Integration (Recommended)
+The Rust cloud API (`cmd/allternit-cloud-api`, axum + Postgres) runs on the
+Contabo control-plane VPS (`mail`, Tailscale-only SSH):
 
-If the CLI deployment keeps having issues, you can use Vercel's native Git integration:
-
-1. In Vercel dashboard, go to **Settings → Git**
-2. Ensure GitHub repository is connected
-3. After fixing the settings above, the project will auto-deploy on every push to main
-
-## What We've Fixed Already
-
-1. ✅ Import fixes (`@allternit` → `@allternit`)
-2. ✅ SDK dist committed to git for CI builds
-3. ✅ Added missing exports for agent hooks and components
-4. ✅ Created `.vercelignore` to exclude conflicting Rust files
-5. ✅ Created GitHub Actions workflow with rate limit handling
-6. ✅ Added `vercel.json` in `surfaces/ai.allternit.com/` with correct settings
-7. ✅ Workflow now runs all commands from `surfaces/ai.allternit.com/` directory
-
-## Workflow Details
-
-The GitHub Actions workflow (`.github/workflows/deploy-platform.yml`) will:
-
-1. **On every PR**: Build the app and verify output (no deployment)
-2. **On main branch push**: 
-   - Build the app
-   - Deploy to Vercel (if not rate limited)
-   - If rate limited, build succeeds but shows warning
-
-## If You Hit Rate Limits
-
-Free tier allows 100 deployments per day. If you see:
-```
-Error: Resource is limited - try again in 24 hours
-```
-
-Options:
-1. Wait 24 hours for the limit to reset
-2. Upgrade to Vercel Pro ($20/month) for unlimited deployments
-3. Use the Git integration instead (counts toward the same limit but more reliable)
+- Binary: `/opt/allternit-cloud-api/bin/allternit-cloud-api`, systemd unit
+  `allternit-cloud-api`, port **8082** behind nginx (443 → 8082).
+- Deploy loop: `scripts/deploy-cloud-api.sh` (repo root; `--fast`, `--dry-run`).
+- Full runbook: [`docs/Operations/CLOUD_API_VPS_DEPLOY.md`](../../docs/Operations/CLOUD_API_VPS_DEPLOY.md).
+- CI/CD: [`.github/workflows/deploy-cloud-api-contabo.yml`](../../.github/workflows/deploy-cloud-api-contabo.yml)
+  (test → cross-build → Tailscale deploy with auto-rollback). A Railway
+  variant (`deploy-cloud-api-railway.yml`) also exists.
 
 ## Testing Locally
 
@@ -110,18 +68,14 @@ pnpm install --ignore-scripts
 # Generate Prisma client
 pnpm prisma generate
 
-# Build
-pnpm next build
+# Dev server (Vite, port 3013)
+pnpm dev
 
-# Verify output
-ls -la .next/
+# Production build (output: dist/)
+pnpm build
 ```
 
 ## Troubleshooting
-
-### Build succeeds but deploy fails with path error
-
-The Vercel dashboard settings are wrong. Follow "Required Fix" above.
 
 ### "Module not found" errors
 
@@ -131,26 +85,10 @@ git add sdk/allternit-sdk/dist/
 git commit -m "Update SDK dist"
 ```
 
-### "Conflicting star exports" warning
+### Deploy didn't run
 
-This is a non-fatal warning in `src/lib/agents/index.ts`. Can be ignored for now.
-
-### Rate limit errors
-
-Wait 24 hours or upgrade to Vercel Pro.
-
-## Project Information
-
-- **Project ID**: `prj_veXmWY1vWUn6N9aBWA4gTRyeSmrx`
-- **Org ID**: `team_95y07fz0Hfm77hZMHdsQj4mQ`
-- **Framework**: Next.js 15.5.14
-- **Node Version**: 20 (CI) / 24 (Vercel default)
-- **Package Manager**: pnpm 8
-- **Repository**: https://github.com/Gizziio/allternit-platform
-
-## Support
-
-If issues persist:
-1. Check GitHub Actions logs: https://github.com/Gizziio/allternit-platform/actions
-2. Check Vercel deployment logs: https://vercel.com/gizzi-io-6138s-projects/platform
-3. Verify dashboard settings match this guide
+The Pages workflow only triggers on pushes to `main` that touch
+`surfaces/ai.allternit.com/**`, `surfaces/platform.allternit.com/**`,
+`packages/@allternit/**`, `services/runtime/**`, the workflow itself, or the
+pnpm workspace files. Use `workflow_dispatch` for a manual run. Check runs at
+the repo's Actions tab.

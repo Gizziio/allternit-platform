@@ -2,7 +2,7 @@
 import { c as _c } from "react/compiler-runtime";
 import { feature } from 'bun:bundle';
 import { plot as asciichart } from 'asciichart';
-import chalk from 'chalk';
+import chalk from '@/shared/util/chalk'
 import figures from 'figures';
 import React, { Suspense, use, useCallback, useEffect, useMemo, useState } from 'react';
 import stripAnsi from 'strip-ansi';

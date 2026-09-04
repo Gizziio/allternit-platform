@@ -6,9 +6,14 @@
  * the loading step.
  */
 
-import { BrowserWindow, shell } from 'electron';
+import { BrowserWindow } from 'electron';
 import log from 'electron-log';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 import { PLATFORM_MANIFEST } from './manifest.js';
+import { openExternalAllowlisted } from './security.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export type StartupInitialStep = 'welcome' | 'loading';
 
@@ -243,17 +248,13 @@ function buildStartupHtml(initialStep: StartupInitialStep): string {
   <div class="version">v${PLATFORM_MANIFEST.version}</div>
 
   <script>
-    const { ipcRenderer } = require('electron');
+    const startup = window.startup;
 
     document.getElementById('btn-get-started').addEventListener('click', () => {
-      ipcRenderer.send('auth:start-login');
+      startup.startLogin();
     });
 
-    ipcRenderer.on('auth:login-started', (_, message) => {
-      // When auth starts, the main process will load the Clerk renderer.
-    });
-
-    ipcRenderer.on('services', (_, services) => {
+    startup.onServices((services) => {
       const entries = [['api', 'svc-api'], ['gateway', 'svc-gateway'], ['gizzi', 'svc-gizzi'], ['platform', 'svc-platform']];
       for (const [key, nodeId] of entries) {
         const node = document.getElementById(nodeId);
@@ -264,23 +265,23 @@ function buildStartupHtml(initialStep: StartupInitialStep): string {
       }
     });
 
-    ipcRenderer.on('status', (_, message) => {
+    startup.onStatus((message) => {
       const node = document.getElementById('status');
       if (node) node.textContent = message;
     });
 
-    ipcRenderer.on('progress', (_, percent) => {
+    startup.onProgress((percent) => {
       document.getElementById('progress-bar').style.width = percent + '%';
       document.getElementById('progress-text').textContent = percent > 0 ? percent + '%' : '';
     });
 
-    ipcRenderer.on('complete', () => {
+    startup.onComplete(() => {
       document.getElementById('loading').innerHTML =
         '<div style="font-size: 24px; margin-bottom: 8px; color: var(--accent); text-align: center;">✓</div>' +
         '<div style="color: var(--text); text-align: center;">Local backend connected</div>';
     });
 
-    ipcRenderer.on('error', (_, message) => {
+    startup.onError((message) => {
       const node = document.getElementById('status');
       if (node) {
         node.textContent = 'Error: ' + message;
@@ -302,8 +303,10 @@ export function createStartupWindow(options: StartupWindowOptions): BrowserWindo
     backgroundColor: '#faf9f7',
     show: false,
     webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false,
+      preload: join(__dirname, '../preload/startup.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
     },
   });
 
@@ -316,7 +319,7 @@ export function createStartupWindow(options: StartupWindowOptions): BrowserWindo
   });
 
   window.webContents.setWindowOpenHandler(({ url }) => {
-    void shell.openExternal(url);
+    void openExternalAllowlisted(url);
     return { action: 'deny' };
   });
 

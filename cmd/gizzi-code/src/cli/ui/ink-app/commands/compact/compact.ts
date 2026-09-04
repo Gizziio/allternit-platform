@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle'
-import chalk from 'chalk'
+import chalk from '@/shared/util/chalk'
 import { markPostCompaction } from './../../bootstrap/state.ts'
 import { getSystemPrompt } from '../../constants/prompts'
 import { getSystemContext, getUserContext } from '../../context'

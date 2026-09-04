@@ -1724,7 +1724,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALLTERNIT_API_BASE_URL = "https://api.allternit.com/api/v1";
-				ALLTERNIT_DEV_API_TOKEN = "";
 				ALLTERNIT_GIZZI_CODE_URL = "";
 				ALLTERNIT_MESH_CONTROL_URL = "https://allternit-headscale.fly.dev";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -1780,7 +1779,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALLTERNIT_API_BASE_URL = "https://api.allternit.com/api/v1";
-				ALLTERNIT_DEV_API_TOKEN = "dev-api-token";
 				ALLTERNIT_GIZZI_CODE_URL = "http://127.0.0.1:4096";
 				ALLTERNIT_MESH_CONTROL_URL = "https://allternit-headscale.fly.dev";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;

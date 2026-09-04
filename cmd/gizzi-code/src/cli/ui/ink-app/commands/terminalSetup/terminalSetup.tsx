@@ -1,5 +1,5 @@
 // @ts-nocheck
-import chalk from 'chalk';
+import chalk from '@/shared/util/chalk'
 import { randomBytes } from 'crypto';
 import { copyFile, mkdir, readFile, writeFile } from 'fs/promises';
 import { homedir, platform } from 'os';

@@ -1,5 +1,5 @@
 import { c as _c } from "react/compiler-runtime";
-import chalk from 'chalk';
+import chalk from '@/shared/util/chalk'
 import * as React from 'react';
 import { LIGHTNING_BOLT } from '@/constants/figures.js';
 import { Text } from '@/ink.js';

@@ -1,5 +1,5 @@
 // @ts-nocheck
-import chalk from 'chalk';
+import chalk from '@/shared/util/chalk'
 import figures from 'figures';
 import React, { useEffect } from 'react';
 import { getAdditionalDirectoriesForClaudeMd, setAdditionalDirectoriesForClaudeMd } from '../../../bootstrap/state';

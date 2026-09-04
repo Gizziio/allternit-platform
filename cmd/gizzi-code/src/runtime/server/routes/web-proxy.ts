@@ -1,5 +1,6 @@
 import { Hono } from "hono"
 import { lazy } from "@/shared/util/lazy"
+import dns from "node:dns/promises"
 
 /**
  * SSRF-safe web proxy that fetches a URL server-side and strips
@@ -38,27 +39,57 @@ export const WebProxyRoutes = lazy(() =>
     }
 
     // ── SSRF protection: block private / loopback IPs ───────────────
-    const hostname = parsed.hostname
-    if (isPrivateHost(hostname)) {
+    // Validates the literal hostname AND every DNS-resolved address
+    // before fetching; redirects are followed manually so each hop is
+    // re-validated the same way (see fetch loop below).
+    if (!(await isPublicHostname(parsed.hostname))) {
       return c.json({ error: "Requests to private/loopback addresses are blocked" }, 403)
     }
 
-    // ── Fetch with timeout ──────────────────────────────────────────
-    let upstream: Response
+    // ── Fetch with timeout, following redirects manually ────────────
+    // redirect: "manual" so we can re-validate every hop's hostname and
+    // resolved IPs — a public hostname that redirects to (or resolves
+    // to) 169.254.169.254 etc. must not slip through.
+    const MAX_REDIRECTS = 5
+    const REDIRECT_STATUSES = [301, 302, 303, 307, 308]
+    let upstream: Response | null = null
     try {
-      upstream = await fetch(targetUrl, {
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-          Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-          "Accept-Language": "en-US,en;q=0.9",
-        },
-        redirect: "follow",
-        signal: AbortSignal.timeout(15_000),
-      })
+      let currentUrl = targetUrl
+      for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+        const hopUrl = new URL(currentUrl)
+        if (hopUrl.protocol !== "http:" && hopUrl.protocol !== "https:") {
+          return c.json({ error: "Only http/https URLs are allowed" }, 403)
+        }
+        if (!(await isPublicHostname(hopUrl.hostname))) {
+          return c.json({ error: "Requests to private/loopback addresses are blocked" }, 403)
+        }
+        const res = await fetch(currentUrl, {
+          headers: {
+            "User-Agent":
+              "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9",
+          },
+          redirect: "manual",
+          signal: AbortSignal.timeout(15_000),
+        })
+        if (REDIRECT_STATUSES.includes(res.status)) {
+          const location = res.headers.get("location")
+          if (!location || hop === MAX_REDIRECTS) {
+            return c.json({ error: "Too many redirects" }, 502)
+          }
+          currentUrl = new URL(location, currentUrl).toString()
+          continue
+        }
+        upstream = res
+        break
+      }
     } catch (err: any) {
       const message = err?.name === "TimeoutError" ? "Upstream request timed out" : "Failed to fetch upstream URL"
       return c.json({ error: message }, 502)
+    }
+    if (!upstream) {
+      return c.json({ error: "Too many redirects" }, 502)
     }
 
     // ── Decide content type ─────────────────────────────────────────
@@ -253,26 +284,61 @@ export const WebProxyRoutes = lazy(() =>
 
 // ── Helpers ───────────────────────────────────────────────────────────
 
-function isPrivateHost(hostname: string): boolean {
-  // IPv6 loopback
-  if (hostname === "::1" || hostname === "[::1]") return true
+/**
+ * True if `ip` (IPv4 dotted-quad or IPv6, incl. ::ffff: mapped IPv4) is in a
+ * private/loopback/link-local/CGNAT range that must never be fetched:
+ *   10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 127.0.0.0/8,
+ *   169.254.0.0/16, 100.64.0.0/10, 0.0.0.0, ::1, fc00::/7, fe80::/10,
+ *   and ::ffff: mapped private IPv4.
+ */
+function isPrivateIp(ip: string): boolean {
+  // IPv4-mapped IPv6 (::ffff:x.x.x.x) — evaluate the embedded IPv4.
+  const mapped = ip.match(/^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/i)
+  if (mapped) return isPrivateIp(mapped[1])
 
-  // IPv4 loopback & private ranges
-  const ipv4 = hostname.replace(/^\[|\]$/g, "")
-  const parts = ipv4.split(".")
-  if (parts.length === 4 && parts.every((p) => /^\d{1,3}$/.test(p))) {
-    const a = Number(parts[0])
-    const b = Number(parts[1])
-    if (a === 127) return true // 127.0.0.0/8
-    if (a === 10) return true // 10.0.0.0/8
-    if (a === 192 && b === 168) return true // 192.168.0.0/16
-    if (a === 172 && b >= 16 && b <= 31) return true // 172.16.0.0/12
-    if (a === 0) return true // 0.0.0.0
-    if (a === 169 && b === 254) return true // link-local
+  if (ip.includes(":")) {
+    const lower = ip.toLowerCase()
+    if (lower === "::1") return true
+    const first = parseInt(lower.split(":")[0] || "0", 16)
+    if (!Number.isNaN(first)) {
+      if ((first >>> 9) === 0x7e) return true // fc00::/7 unique-local
+      if ((first >>> 6) === 0x3fa) return true // fe80::/10 link-local
+    }
+    return false
   }
 
-  // Common loopback hostnames
-  if (hostname === "localhost" || hostname.endsWith(".localhost")) return true
-
+  const parts = ip.split(".")
+  if (parts.length !== 4 || !parts.every((p) => /^\d{1,3}$/.test(p))) return false
+  const a = Number(parts[0])
+  const b = Number(parts[1])
+  if (a === 0) return true // 0.0.0.0
+  if (a === 10) return true // 10.0.0.0/8
+  if (a === 127) return true // 127.0.0.0/8
+  if (a === 169 && b === 254) return true // 169.254.0.0/16 link-local
+  if (a === 172 && b >= 16 && b <= 31) return true // 172.16.0.0/12
+  if (a === 192 && b === 168) return true // 192.168.0.0/16
+  if (a === 100 && b >= 64 && b <= 127) return true // 100.64.0.0/10 CGNAT
   return false
+}
+
+function isPrivateHost(hostname: string): boolean {
+  if (isPrivateIp(hostname.replace(/^\[|\]$/g, ""))) return true
+  if (hostname === "localhost" || hostname.endsWith(".localhost")) return true
+  return false
+}
+
+/**
+ * True only if the hostname is not private by literal check AND every
+ * address its DNS A/AAAA records resolve to is public. Fails closed:
+ * any resolution error or empty result is treated as non-public.
+ */
+async function isPublicHostname(hostname: string): Promise<boolean> {
+  if (isPrivateHost(hostname)) return false
+  try {
+    const records = await dns.lookup(hostname, { all: true })
+    if (records.length === 0) return false
+    return records.every((r) => !isPrivateIp(r.address))
+  } catch {
+    return false
+  }
 }

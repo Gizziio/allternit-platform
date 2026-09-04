@@ -14,9 +14,45 @@ on:
   workflow_dispatch:
 
 jobs:
+  verify-ai:
+    name: Typecheck + unit tests (ai.allternit.com)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.0
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Generate Prisma client
+        working-directory: surfaces/ai.allternit.com
+        run: pnpm prisma generate
+
+      - name: Typecheck ai.allternit.com
+        working-directory: surfaces/ai.allternit.com
+        run: pnpm typecheck
+
+      - name: Unit tests (ai.allternit.com)
+        working-directory: surfaces/ai.allternit.com
+        run: pnpm test
+
   deploy-ai:
     name: Deploy ai.allternit.com
     runs-on: ubuntu-latest
+    needs: verify-ai
     permissions:
       contents: read
       deployments: write

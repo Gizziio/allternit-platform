@@ -104,11 +104,34 @@ impl TestApp {
     }
 
     /// Initialize test database with migrations
+    ///
+    /// Migrations run in a fresh, uniquely-named schema on the shared test
+    /// database (search_path-scoped per connection). The `public` schema's
+    /// `_sqlx_migrations` bookkeeping reflects the operator-managed
+    /// `migrations_pg` history and must not be mixed with the sqlite-derived
+    /// `migrations/` tree the harness applies — sharing one bookkeeping table
+    /// fails with `VersionMismatch(1)`.
     async fn init_test_db() -> PgPool {
         let database_url = std::env::var("TEST_DATABASE_URL")
             .unwrap_or_else(|_| "postgres://allternit:allternit_pg_2026@localhost:5432/allternit_test".to_string());
 
-        let pool = PgPool::connect(&database_url)
+        let schema = format!("it_{}", uuid::Uuid::new_v4().simple());
+        let schema_for_hook = schema.clone();
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(5)
+            .after_connect(move |conn, _meta| {
+                let schema = schema_for_hook.clone();
+                Box::pin(async move {
+                    sqlx::query(&format!("CREATE SCHEMA IF NOT EXISTS {}", schema))
+                        .execute(&mut *conn)
+                        .await?;
+                    sqlx::query(&format!("SET search_path TO {}", schema))
+                        .execute(&mut *conn)
+                        .await?;
+                    Ok(())
+                })
+            })
+            .connect(&database_url)
             .await
             .expect("Failed to connect to test database");
 

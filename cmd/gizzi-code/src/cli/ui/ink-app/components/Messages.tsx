@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import { feature } from 'bun:bundle';
-import chalk from 'chalk';
+import chalk from '@/shared/util/chalk'
 import type { UUID } from 'crypto';
 import type { RefObject } from 'react';
 import * as React from 'react';

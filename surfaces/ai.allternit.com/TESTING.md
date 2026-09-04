@@ -3,7 +3,11 @@
 ## Shared development test account
 
 - **Email:** `cartlidge.joseph@yahoo.com`
-- **Password:** `Tyhvix-gafho2-bofxog`
+- **Password:** kept in the team password manager — ask the account owner.
+
+> ⚠️ **2026-09-03 security note:** the password for this account was previously
+> committed in this file and has been scrubbed. It must be **rotated** — git
+> history still contains it. Do not re-commit it here.
 
 This account is verified in the production Clerk instance and works across
 `ai.allternit.com`, `platform.allternit.com`, and any other `.allternit.com`
@@ -35,7 +39,7 @@ Add to `.env.local`:
 
 ```bash
 VITE_CLERK_SEED_EMAIL=cartlidge.joseph@yahoo.com
-VITE_CLERK_SEED_PASSWORD=Tyhvix-gafho2-bofxog
+VITE_CLERK_SEED_PASSWORD=<password from team password manager>
 ```
 
 The platform auth client automatically signs in and activates an organization
@@ -44,14 +48,14 @@ on startup.
 ## Running the Clerk smoke test
 
 ```bash
-CLERK_TEST_PASSWORD=Tyhvix-gafho2-bofxog \
+CLERK_TEST_PASSWORD=<password from team password manager> \
   node surfaces/ai.allternit.com/scripts/clerk-e2e-verify.mjs
 ```
 
 ## Running the full Clerk stress test
 
 ```bash
-CLERK_TEST_PASSWORD=Tyhvix-gafho2-bofxog \
+CLERK_TEST_PASSWORD=<password from team password manager> \
   HEADLESS=0 \
   node surfaces/ai.allternit.com/scripts/clerk-stress-test-v4.mjs
 ```

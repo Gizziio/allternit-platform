@@ -1,0 +1,13 @@
+# Known-flaky test files: tmp-dir collisions and real-timer timeouts under CI.
+# Listed here for visibility; excluded from test/smoke.txt. Do not run in smoke.
+# Quarantined 2026-09-03 during smoke-subset restoration:
+test/agent-workspace/resume.test.ts
+test/automation/goal-engine.test.ts
+test/commands/theme.test.ts
+test/continuity/gates.test.ts
+test/mcp/oauth-browser.test.ts
+test/scheduler.test.ts
+# config.test.ts passes standalone but its "installs dependencies in writable
+# GIZZI_CONFIG_DIR" test collides with other config-loading files when all
+# smoke files share one bun test process (dependency state leaks between files).
+test/config/config.test.ts

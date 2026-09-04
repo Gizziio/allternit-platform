@@ -18,7 +18,5 @@ CREATE TABLE IF NOT EXISTS public.billing_purchase_trust (
     paid_purchase_count integer NOT NULL DEFAULT 0
 );
 
-ALTER TABLE public.billing_purchase_trust OWNER TO postgres;
-
 CREATE INDEX IF NOT EXISTS idx_inference_usage_user_month
     ON public.inference_usage(user_id, created_at DESC);

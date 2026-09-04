@@ -32,8 +32,8 @@ fn jwt_header_kid(token: &str) -> Result<String, ApiError> {
         .ok_or_else(|| ApiError::Unauthorized("Clerk token has no key id".to_string()))
 }
 
-const DEFAULT_CLERK_ISSUER: &str = "https://allternit.com/__clerk";
-const DEFAULT_CLERK_JWKS_URL: &str = "https://allternit.com/__clerk/.well-known/jwks.json";
+const DEFAULT_CLERK_ISSUER: &str = "https://clerk.allternit.com";
+const DEFAULT_CLERK_JWKS_URL: &str = "https://clerk.allternit.com/.well-known/jwks.json";
 const JWKS_TTL: Duration = Duration::from_secs(60 * 60);
 
 #[derive(Clone, Debug)]
@@ -220,5 +220,12 @@ pub async fn user_from_headers(headers: &HeaderMap) -> Result<ClerkUser, ApiErro
         .and_then(|value| value.to_str().ok())
         .and_then(|value| value.strip_prefix("Bearer "))
         .ok_or_else(|| ApiError::Unauthorized("A Clerk session is required".to_string()))?;
+    verifier().verify(token).await
+}
+
+/// Verify a raw Clerk session JWT (no header extraction). Used by the run
+/// WebSocket, where the token may arrive via a query param or the
+/// Sec-WebSocket-Protocol header rather than Authorization.
+pub async fn user_from_token(token: &str) -> Result<ClerkUser, ApiError> {
     verifier().verify(token).await
 }

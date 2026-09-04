@@ -33,7 +33,7 @@
 - Standby VPS `allternit-standby` (31.220.95.165) uses `~/.ssh/id_ed25519_gizziio` (Tailscale SSH disabled there); PG streaming replica — schema changes replicate automatically, apply migrations on `mail` only. Failover: `docs/Operations/FAILOVER_RUNBOOK.md`.
 - Billing smoke tests: webhook signature recipe + credit_transactions FK notes in the session handoff; smoke users must be inserted into `users` first (CASCADE cleanup).
 - Reconciliation timer: `reconcile-billing.timer` (daily, /usr/local/bin + /etc/systemd/system, files in `infrastructure/cloud/`).
-- P1 agent-sessions namespace (2026-09-04): deploys that include `routes/agent_sessions.rs` must apply `migrations_pg/011_data_plane_nodes.sql` (step 2 above) — it extends `runtime_devices` with `kind`/capacity metadata the node resolver reads. The migration is additive with defaults; existing devices keep working as `kind='paired'` if it is not applied yet (the new handlers answer 428 "pair a device" only when no healthy online device exists).
+- P1 agent-sessions namespace (2026-09-04): deploys that include `routes/agent_sessions.rs` must apply `migrations_pg/012_data_plane_nodes.sql` (step 2 above) — it extends `runtime_devices` with `kind`/capacity metadata the node resolver reads. The migration is additive with defaults; existing devices keep working as `kind='paired'` if it is not applied yet (the new handlers answer 428 "pair a device" only when no healthy online device exists).
 
 ## Dev-token backdoor gate — `ALLTERNIT_ALLOW_DEV_TOKEN`
 

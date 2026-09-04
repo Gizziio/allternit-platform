@@ -7,15 +7,16 @@ AI-powered terminal interface and runtime for the Allternit ecosystem.
 ### Quick Install (macOS/Linux)
 
 ```bash
-curl -fsSL https://gizzi.sh/install.sh | bash
+curl -fsSL https://install.gizziio.com/install | bash
 ```
 
 ### Homebrew (macOS)
 
 ```bash
-brew tap allternit/gizzi-code
-brew install gizzi-code
+brew install gizziio/gizzi/gizzi-code
 ```
+
+(Formula: https://github.com/Gizziio/allternit-platform/blob/main/cmd/gizzi-code/packaging/homebrew/gizzi-code.rb)
 
 ### npm
 
@@ -30,8 +31,7 @@ npm install -g @allternit/gizzi-code
 winget install Allternit.GizziCode
 
 # Using scoop
-scoop bucket add gizzi-code https://github.com/allternit/scoop-gizzi-code
-scoop install gizzi-code
+scoop install https://raw.githubusercontent.com/Gizziio/allternit-platform/main/cmd/gizzi-code/packaging/scoop/gizzi-code.json
 ```
 
 ## Usage
@@ -79,9 +79,9 @@ Configuration is stored at:
 
 ## Documentation
 
-- [Full Documentation](https://docs.gizzi.sh)
-- [API Reference](https://docs.gizzi.sh/api)
-- [Troubleshooting](https://docs.gizzi.sh/troubleshooting)
+- [Full Documentation](https://docs.gizziio.com)
+- [API Reference](https://docs.gizziio.com/api)
+- [Troubleshooting](https://docs.gizziio.com/troubleshooting)
 
 ## License
 

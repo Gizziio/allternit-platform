@@ -3,19 +3,45 @@
  *
  * Task and cron state lives in the Allternit platform (allternit-api). There is
  * no local-file fallback in the runtime tools; the API is always the source of
- * truth. Local dev uses http://127.0.0.1:8013 by default.
+ * truth. Local dev uses the loopback gateway default (ALLTERNIT_GATEWAY_BASE).
  *
- * Auth precedence:
+ * Auth:
  * 1. ALLTERNIT_API_TOKEN as a Bearer token (Clerk JWT in production)
- * 2. Local dev: x-allternit-user-id + x-allternit-desktop-access-token
+ * 2. Local dev: x-allternit-user-id only, against a loopback API. No token is
+ *    ever sent to a non-loopback target without ALLTERNIT_API_TOKEN — a
+ *    one-time stderr warning is emitted instead.
  *
  * The canvas functions below (HTML artifact publish) use a wider precedence —
  * see `getAllternitApiConfigWithDeviceToken`.
  */
 
 import { Pairing } from '@/runtime/services/pairing/pairing'
+import { ALLTERNIT_GATEWAY_BASE } from '@/shared/constants/allternitGateway'
 
-const DEFAULT_API_URL = 'http://127.0.0.1:8013'
+const DEFAULT_API_URL = ALLTERNIT_GATEWAY_BASE
+
+/**
+ * Resolve the Allternit API origin. Explicit configuration always wins.
+ * Development keeps the loopback default; an explicit production build
+ * (NODE_ENV=production, as injected by script/build-production.js) must be
+ * configured deliberately — silently phoning home to a guessed URL is worse
+ * than failing fast. The desktop shell and hosted runtimes always pass
+ * ALLTERNIT_API_URL explicitly.
+ */
+function resolveApiUrl(): string {
+  const explicit = (process.env.ALLTERNIT_API_URL || process.env.ALLTERNIT_API_BASE_URL || '').trim()
+  if (explicit) {
+    return explicit.replace(/\/+$/, '')
+  }
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      'ALLTERNIT_API_URL is required in production mode. Set ALLTERNIT_API_URL (or ' +
+      'ALLTERNIT_API_BASE_URL) to the Allternit API origin, e.g. ' +
+      'https://api.allternit.com. Development mode falls back to ' + DEFAULT_API_URL + '.',
+    )
+  }
+  return DEFAULT_API_URL
+}
 
 export type AllternitApiConfig = {
   baseUrl: string
@@ -26,13 +52,7 @@ export type AllternitApiConfig = {
 }
 
 export function getAllternitApiConfig(): AllternitApiConfig {
-  const baseUrl = (
-    process.env.ALLTERNIT_API_URL ||
-    process.env.ALLTERNIT_API_BASE_URL ||
-    DEFAULT_API_URL
-  )
-    .trim()
-    .replace(/\/$/, '')
+  const baseUrl = resolveApiUrl()
 
   const token = process.env.ALLTERNIT_API_TOKEN?.trim()
   const userId = (
@@ -81,9 +101,7 @@ function getHeaders(config: AllternitApiConfig): Record<string, string> {
   if (config.token) {
     headers['Authorization'] = `Bearer ${config.token}`
   } else {
-    // Local dev fallback accepted by allternit-api auth_middleware when Clerk
-    // verification is not configured.
-    headers['x-allternit-desktop-access-token'] = 'gizzi-local-token'
+    warnMissingTokenOnce(config)
   }
 
   if (config.userEmail) {
@@ -94,6 +112,31 @@ function getHeaders(config: AllternitApiConfig): Record<string, string> {
   }
 
   return headers
+}
+
+let warnedMissingToken = false
+
+/** Warn once (to stderr) when requests go out without any Bearer token to a
+ *  non-loopback target — the API will reject them, and silently sending
+ *  unauthenticated requests at an arbitrary server is a security smell. */
+function warnMissingTokenOnce(config: AllternitApiConfig): void {
+  if (warnedMissingToken) return
+  warnedMissingToken = true
+  try {
+    const host = new URL(config.baseUrl).hostname.replace(/^\[|\]$/g, '')
+    const loopback =
+      host === 'localhost' ||
+      host.endsWith('.localhost') ||
+      host === '127.0.0.1' ||
+      host === '::1'
+    if (!loopback) {
+      process.stderr.write(
+        `[allternitApi] warning: no ALLTERNIT_API_TOKEN configured; sending unauthenticated requests to ${config.baseUrl}\n`,
+      )
+    }
+  } catch {
+    // Unparseable baseUrl — stay silent; the fetch itself will fail.
+  }
 }
 
 export async function apiFetch(

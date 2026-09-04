@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ComputeBillingPanel } from "./ComputeBillingPanel";
 import {
   createHostedRuntime,
+  getBillingCredits,
   getHostedEntitlement,
   listHostedRuntimes,
 } from "@/lib/hosted-compute";
@@ -18,10 +19,15 @@ vi.mock("@/lib/platform-auth-client", () => ({
 vi.mock("@/lib/hosted-compute", () => ({
   createHostedRuntime: vi.fn(),
   destroyHostedRuntime: vi.fn(),
+  getBillingCredits: vi.fn(),
   getHostedEntitlement: vi.fn(),
   listHostedRuntimes: vi.fn(),
   startHostedRuntime: vi.fn(),
   stopHostedRuntime: vi.fn(),
+}));
+
+vi.mock("@/lib/computers-api", () => ({
+  getDesktopUsageSummary: vi.fn(async () => null),
 }));
 
 const entitlement = {
@@ -46,6 +52,7 @@ describe("ComputeBillingPanel", () => {
     vi.clearAllMocks();
     vi.mocked(getHostedEntitlement).mockResolvedValue(entitlement);
     vi.mocked(listHostedRuntimes).mockResolvedValue([]);
+    vi.mocked(getBillingCredits).mockResolvedValue(null as never);
     vi.mocked(createHostedRuntime).mockResolvedValue({} as never);
   });
 

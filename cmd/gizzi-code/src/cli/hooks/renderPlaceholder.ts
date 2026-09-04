@@ -1,4 +1,4 @@
-import chalk from 'chalk'
+import chalk from '@/shared/util/chalk'
 
 type PlaceholderRendererProps = {
   placeholder?: string

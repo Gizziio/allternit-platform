@@ -1,6 +1,6 @@
 // @ts-nocheck
 import type { BetaUsage as Usage } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
-import chalk from 'chalk'
+import chalk from '@/shared/util/chalk'
 import {
   addToTotalCostState,
   addToTotalLinesChanged,

@@ -396,8 +396,6 @@ const shellAPI = {
     ipcRenderer.invoke('shell:move-hud', delta),
   resizeHud: (size: { width?: number; height: number }): Promise<void> =>
     ipcRenderer.invoke('shell:resize-hud', size),
-  closeHud: (): Promise<void> => ipcRenderer.invoke('shell:close-hud'),
-  toggleHud: (): Promise<void> => ipcRenderer.invoke('shell:toggle-hud'),
   showHud: (): Promise<void> => ipcRenderer.invoke('shell:show-hud'),
 };
 

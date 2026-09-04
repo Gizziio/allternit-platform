@@ -21,6 +21,14 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-03 21:50 — kimi — P0 Production-Readiness Gap Analysis Execution
+
+- **Session ID / Branch:** `session/b6d6153b` (pushed; merge to main pending user/orchestrator)
+- **Commit:** `868192815..4476e933e` (7 commits; tip `4476e933e`)
+- **How it works:** Executed Steps 0–5, 7–9 of `reports/2026-09-03-production-readiness-gap-analysis.md`: desktop merge repair (B4), in-repo vendoring of cloud contracts (B7), secrets sweep + gitleaks CI gate (B2/A1/A4), dev-api-token backdoor gated behind `ALLTERNIT_ALLOW_DEV_API_TOKEN` (B1), dead fly.dev repoint to api.allternit.com + wizard `.JSONB` test repair, `_redirects` static-asset pass-throughs (C1, reconciled with a parallel fix that landed on main mid-session). Rebased onto origin/main; Step 2 lockfile commit dropped as redundant with a165be187.
+- **Outstanding work:** Step 6 (web↔backend routing) was DECIDED by the owner and recorded by a parallel session as ADR `docs/architecture/2026-09-03-control-plane-data-plane-decision.md` on `session/routing` (8cb6e8ef1): single public API (cloud-api), allternit-api becomes a data-plane runtime in 3 modes, per-customer SQLite, interim nginx prefix proxy on mail (owner-gated deploy). Deploy of `cf8798f97` (kills the live backdoor) is a user action — backdoor still returns 200 until then; the ADR's two-hop Ed25519 data-plane JWT (A1) is the intended replacement, mint/verify first, then remove the backdoor. Secrets rotation list (Clerk, ProtonMail, Stripe ×12, Sourcegraph ×22, link-card key) delivered to user. P1/P2 untouched. Wizard `sqlite_tests` half-migration needs its own ticket.
+- **Summary file:** [./summaries/2026-09-03-2150-b6d6153b-kimi-code-p0-gap-analysis-execution.md](./summaries/2026-09-03-2150-b6d6153b-kimi-code-p0-gap-analysis-execution.md)
+
 ### 2026-09-03 08:16 — kimi — Typography Validation CI Fix
 
 - **Session ID / Branch:** `session/typography-fix-20260903`
@@ -127,3 +135,15 @@ Phase 2/3 hardening of allternit-cloud-api complete and deployed to the Contabo 
 Audit Step 6 decided by owner (option b + interim proxy). P0: vendored cloud-contracts (CI blocker), CORS allowlist, dev-token gate (default OFF), fail-closed flags for all 8013-only namespaces. P1: node registry (migration 011) + control-plane handlers for agent-sessions/office/beta via existing WS relay, data-plane JWT (A1) both sides, WS relay for beta events, rails dialect fix, web flipped to control-plane (flags off). 13 commits `4f77728c3..f3b4ed071`. Deferred: iOS Xcode build (owner), ~270 pre-existing allternit-api --lib failures (refinery/stale-binary debt), 21 rails + canvas control-plane routes, post-merge ops (migration 011 + DP_JWT_SEED + nginx proxy + bypass flip — sequence in summary).
 
 - **session/routing** (API consolidation) → summary [2026-09-04](./summaries/2026-09-04-session-routing-kimi-api-consolidation.md)
+
+### 2026-09-03 23:17 — kimi — gizzi-code production-readiness P0/P1 (session 237dc49a)
+
+Production-readiness pass on `cmd/gizzi-code` ahead of the 2026-09-04 release: hang fixes (startup probes + the exec-never-exits regression), build-breaking syntax/import fixes, security (Clerk test key removed, SSRF closed, dev-token backdoors removed), cloud defaults repointed to api.allternit.com, CI quality gates on release/npm workflows, and full distribution packaging (5 release targets incl. darwin-x64, fixed installers proven against the live v0.2.3 release, install.gizziio.com manifest, brew/scoop/choco/rpm/arch/winget, Dockerfile/nix). Verified: tsc exit 0, smoke suite 1065/0 fail, production binary 1.0.2 builds and `exec` exits in 4s (was infinite). Full gap register and deferred P2–P6 work in the summary. Cloudflare deploy of install.gizziio.com and git push left to owner.
+
+- **237dc49a** (gizzi-code production-readiness) → see merge commit on main [Summary](./summaries/2026-09-03-2317-237dc49a-kimi-gizzi-deploy-p0p1.md)
+
+### 2026-09-04 08:26 — kimi-code — P1/P2 backlog execution from 2026-09-03 gap analysis (session p1followup)
+
+Executed the full P1/P2 list from `reports/2026-09-03-production-readiness-gap-analysis.md` in six tracks: web P1 hardening (25ba93e9f), docs correction pass (4acd3403b), ops/infra (live nginx interim proxy + CORS allowlist + rate limits on mail, off-host backup timer verified, backdoor dead — 89c00b1c4), desktop CI/release (b8d19b98a), rust/cloud-api (sqlx::migrate! runner, sha256+md5-upgrade token path, Clerk run-WS, email-verify gate — 10c1c9091), desktop/gizzi hardening (acc913bdb). Merged to main as **c9e6ddcb2** after resolving 9 conflicts against a parallel session's cloud-api track (kept md5-fallback token lookup; both dev-token overrides now prod-refused; sqlx::migrate! is the single migration path, db::migrations unwired). Verified on merged tree: cloud-api 188 pass (+1 known docker-env fail), wizard 53/53, gizzi smoke 1156/0 fail. Incidents: mid-merge `git reset` by a concurrent session in the shared checkout (recovered by merging in the session worktree). Owner-gated leftovers restated in the summary.
+
+- **p1followup** (P1/P2 backlog execution) → merged to main as c9e6ddcb2 [Summary](./summaries/2026-09-04-0826-p1followup-kimi-code-p1p2-backlog-execution.md)

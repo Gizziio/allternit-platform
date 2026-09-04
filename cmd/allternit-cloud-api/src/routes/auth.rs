@@ -31,21 +31,11 @@ pub async fn validate_token(
     State(state): State<Arc<ApiState>>,
     Json(request): Json<ValidateTokenRequest>,
 ) -> Result<Json<TokenInfo>, ApiError> {
-    // Simple hash for lookup
-    let digest = md5::compute(request.token.as_bytes());
-    let token_hash = format!("{:x}", digest);
-
-    let db_token: Option<ApiToken> = sqlx::query_as::<_, ApiToken>(
-        r#"
-        SELECT id, token_hash, name, user_id, permissions, created_at, expires_at, last_used_at, is_revoked
-        FROM api_tokens
-        WHERE token_hash = $1 AND is_revoked = FALSE
-        "#
-    )
-    .bind(&token_hash)
-    .fetch_optional(&state.db)
-    .await
-    .map_err(|e| ApiError::DatabaseError(e))?;
+    // Tokens minted after the hashing upgrade are stored as SHA-256; legacy
+    // MD5 rows still validate via `lookup_api_token` (which upgrades them).
+    let db_token: Option<ApiToken> =
+        crate::auth::middleware::lookup_api_token(&state.db, &request.token).await
+            .map_err(|e| ApiError::DatabaseError(e))?;
 
     let token_info = match db_token {
         Some(token) => {
@@ -62,11 +52,17 @@ pub async fn validate_token(
             }
         }
         None => {
-            // Dev-token backdoor, gated by ALLTERNIT_ALLOW_DEV_TOKEN (default OFF).
+            // Development overrides — all opt-in and default-OFF. The
+            // hardcoded `dev-api-token` requires `ALLTERNIT_ALLOW_DEV_TOKEN`
+            // (audit finding B1, see `auth::dev_token`); the other two are
+            // rejected by default and hard-refused in production (see
+            // auth::middleware::is_dev_api_token and is_legacy_dev_api_token).
             if crate::auth::dev_token::is_allowed_dev_token(
                 &request.token,
                 crate::auth::dev_token::dev_token_allowed(),
-            ) {
+            ) || crate::auth::middleware::is_dev_api_token(&request.token)
+                || crate::auth::middleware::is_legacy_dev_api_token(&request.token)
+            {
                 TokenInfo {
                     valid: true,
                     token_id: Some("dev-token".to_string()),
@@ -189,8 +185,7 @@ pub async fn create_token(
 
     // Generate token
     let token = format!("allternit_{}", generate_secure_random(48));
-    let digest = md5::compute(token.as_bytes());
-    let token_hash = format!("{:x}", digest);
+    let token_hash = crate::services::api_keys::hash_token(&token);
     let token_id = format!("token_{}", generate_secure_random(16));
 
     // Calculate expiration

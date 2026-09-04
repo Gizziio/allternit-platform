@@ -1,38 +1,41 @@
 class GizziCode < Formula
   desc "AI-powered terminal interface for the Allternit ecosystem"
   homepage "https://docs.gizziio.com"
-  url "https://github.com/Gizziio/allternit-platform/releases/download/gizzi-code/v1.0.0/gizzi-code-v1.0.0-darwin-arm64.tar.gz"
-  sha256 "PLACEHOLDER_SHA256"
+  version "1.0.2"
   license "MIT"
-  version "1.0.0"
+
+  # Release tags look like "gizzi-code/v1.0.2"; assets are version-named:
+  # gizzi-code-v1.0.2-<target>.tar.gz
+  base_url = "https://github.com/Gizziio/allternit-platform/releases/download/gizzi-code/#{version}"
 
   # macOS ARM64 (Apple Silicon)
   if OS.mac? && Hardware::CPU.arm?
-    url "https://github.com/Gizziio/allternit-platform/releases/download/gizzi-code/v#{version}/gizzi-code-v#{version}-darwin-arm64.tar.gz"
-    sha256 "PLACEHOLDER_SHA256_ARM64"
+    url "#{base_url}/gizzi-code-v#{version}-darwin-arm64.tar.gz"
+    sha256 "__SHA256_DARWIN_ARM64__"
   end
 
   # macOS Intel
   if OS.mac? && Hardware::CPU.intel?
-    url "https://github.com/Gizziio/allternit-platform/releases/download/gizzi-code/v#{version}/gizzi-code-v#{version}-darwin-x64.tar.gz"
-    sha256 "PLACEHOLDER_SHA256_X64"
+    url "#{base_url}/gizzi-code-v#{version}-darwin-x64.tar.gz"
+    sha256 "__SHA256_DARWIN_X64__"
   end
 
   # Linux ARM64
   if OS.linux? && Hardware::CPU.arm?
-    url "https://github.com/Gizziio/allternit-platform/releases/download/gizzi-code/v#{version}/gizzi-code-v#{version}-linux-arm64.tar.gz"
-    sha256 "PLACEHOLDER_SHA256_LINUX_ARM64"
+    url "#{base_url}/gizzi-code-v#{version}-linux-arm64.tar.gz"
+    sha256 "__SHA256_LINUX_ARM64__"
   end
 
   # Linux x64
   if OS.linux? && Hardware::CPU.intel?
-    url "https://github.com/Gizziio/allternit-platform/releases/download/gizzi-code/v#{version}/gizzi-code-v#{version}-linux-x64.tar.gz"
-    sha256 "PLACEHOLDER_SHA256_LINUX_X64"
+    url "#{base_url}/gizzi-code-v#{version}-linux-x64.tar.gz"
+    sha256 "__SHA256_LINUX_X64__"
   end
 
   def install
     bin.install "gizzi-code"
-    
+    bin.install_symlink "gizzi-code" => "gizzi"
+
     # Install shell completions
     bash_completion.install "completions/gizzi-code.bash" if File.exist?("completions/gizzi-code.bash")
     zsh_completion.install "completions/_gizzi-code" if File.exist?("completions/_gizzi-code")

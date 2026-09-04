@@ -39,7 +39,7 @@ fn staleness_window() -> Duration {
 }
 
 /// How a node is reached. Mirrors the `kind` CHECK on runtime_devices
-/// (migrations_pg/011); stored as data, not enum-mapped, so a future kind
+/// (migrations_pg/012); stored as data, not enum-mapped, so a future kind
 /// never breaks reads.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NodeKind(pub String);
@@ -131,7 +131,7 @@ impl NodeCandidateRow {
         NodeCandidate {
             device_id: self.id,
             name: self.name,
-            // Rows that predate migrations_pg/011 read as 'paired'.
+            // Rows that predate migrations_pg/012 read as 'paired'.
             kind: self.kind.unwrap_or_else(|| NodeKind::PAIRED.to_string()),
             status: self.status,
             last_seen_at: self.last_seen_at,
@@ -339,7 +339,7 @@ mod tests {
         assert!(resolve_default_node(&store, "user_1").await.is_err());
     }
 
-    // ---- Live-PG coverage: PgNodeStore + the migrations_pg/011 shape ----
+    // ---- Live-PG coverage: PgNodeStore + the migrations_pg/012 shape ----
     // Follows the schema-per-test pattern from auth::resolve::tests.
 
     async fn test_pool() -> sqlx::PgPool {
@@ -366,7 +366,7 @@ mod tests {
         pool
     }
 
-    /// Post-migrations_pg/011 runtime_devices shape (plus the pre-existing
+    /// Post-migrations_pg/012 runtime_devices shape (plus the pre-existing
     /// columns the resolver reads).
     async fn create_runtime_devices(pool: &sqlx::PgPool) {
         sqlx::query(
@@ -434,17 +434,17 @@ mod tests {
         assert!(matches!(error, ApiError::PreconditionRequired(_)));
     }
 
-    const MIGRATION_011: &str = include_str!("../../migrations_pg/011_data_plane_nodes.sql");
+    const MIGRATION_012: &str = include_str!("../../migrations_pg/012_data_plane_nodes.sql");
 
-    /// Applies migrations_pg/011 to a scratch schema (public. rewritten to
+    /// Applies migrations_pg/012 to a scratch schema (public. rewritten to
     /// the schema) — twice, proving the IF NOT EXISTS up statements are
     /// idempotent. sqlx migrations are up-only in this repo; there is no
     /// down-migration pattern to follow (tests/migrations.rs applies the
     /// SQLite lineage to a fresh DB only).
-    async fn apply_migration_011(pool: &sqlx::PgPool, schema: &str) {
+    async fn apply_migration_012(pool: &sqlx::PgPool, schema: &str) {
         // Strip line comments before splitting: the migration header prose
         // contains semicolons that would otherwise parse as statement ends.
-        let without_comments = MIGRATION_011
+        let without_comments = MIGRATION_012
             .lines()
             .map(|line| line.split_once("--").map(|(code, _)| code).unwrap_or(line))
             .collect::<Vec<_>>()
@@ -462,9 +462,9 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn migration_011_applies_idempotently() {
+    async fn migration_012_applies_idempotently() {
         let pool = test_pool().await;
-        // Stub only what the migration touches: the pre-011 runtime_devices
+        // Stub only what the migration touches: the pre-012 runtime_devices
         // (as created by migrations/011 via pgloader) and users (FK target).
         sqlx::query("CREATE TABLE users (id TEXT PRIMARY KEY)")
             .execute(&pool)
@@ -489,8 +489,8 @@ mod tests {
 
         let schema: String =
             sqlx::query_scalar("SELECT current_schema()").fetch_one(&pool).await.unwrap();
-        apply_migration_011(&pool, &schema).await;
-        apply_migration_011(&pool, &schema).await;
+        apply_migration_012(&pool, &schema).await;
+        apply_migration_012(&pool, &schema).await;
 
         // Existing rows backfill to kind 'paired'; new kinds are accepted.
         sqlx::query(

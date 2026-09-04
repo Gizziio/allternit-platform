@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Clerk JWT authentication for the standalone gizzi server (phase 1 of iOS
 // direct-connect support). Port of cmd/allternit-api/src/auth.rs: JWKS is
 // fetched from Clerk and cached (jose's remote JWK set handles TTL + refetch
@@ -15,12 +14,13 @@ import { basicAuth } from "hono/basic-auth"
 import type { MiddlewareHandler } from "hono"
 import { Flag } from "@/runtime/context/flag/flag"
 import { Log } from "@/shared/util/log"
+import { CLOUD_URLS } from "@/shared/constants/cloudUrls"
 
 export namespace ClerkAuth {
   const log = Log.create({ service: "clerk-auth" })
 
-  export const DEFAULT_JWKS_URL = "https://clerk.allternit.com/.well-known/jwks.json"
-  export const DEFAULT_ISSUER = "https://clerk.allternit.com"
+  export const DEFAULT_JWKS_URL = `${CLOUD_URLS.clerk}/.well-known/jwks.json`
+  export const DEFAULT_ISSUER = CLOUD_URLS.clerk
 
   export function jwksUrl(): string {
     return Flag.GIZZI_CLERK_JWKS_URL ?? DEFAULT_JWKS_URL

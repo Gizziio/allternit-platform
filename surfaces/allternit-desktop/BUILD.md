@@ -9,70 +9,33 @@
 
 ## Build Steps
 
-### Step 1: Build Platform Server (Next.js)
+### Step 1: Build Platform Static Export (Vite)
 
-The desktop app needs the Next.js standalone server bundled.
-
-```bash
-cd ../allternit-platform
-
-# Install dependencies
-npm install
-
-# Build for desktop (outputs to .next/standalone/)
-ALLTERNIT_BUILD_MODE=desktop npm run build
-
-# Verify output
-ls -la .next/standalone/server.js
-```
-
-### Step 2: Setup Desktop Resources
-
-Copy the platform-server to desktop resources:
+The desktop app loads the hosted platform UI by default; the Vite static
+export of `surfaces/ai.allternit.com` is bundled as the offline fallback and
+served by the Rust API (`cmd/allternit-api/src/platform_static.rs`). The
+platform is a **Vite + React SPA** — the legacy Next.js standalone-server
+build no longer exists and is not consumed.
 
 ```bash
-cd ../allternit-desktop
+cd surfaces/allternit-desktop
 
-# Create resources directory
-mkdir -p resources/platform-server
-mkdir -p resources/bin
-
-# Copy platform server
-cp -r ../allternit-platform/.next/standalone/* resources/platform-server/
-
-# Copy static assets
-cp -r ../allternit-platform/.next/static resources/platform-server/
-cp -r ../allternit-platform/public resources/platform-server/ 2>/dev/null || true
+# Builds surfaces/ai.allternit.com (Vite) and copies dist → resources/platform/
+npm run prepare:platform-static
 ```
 
-### Step 3: Download cloudflared
+> Note: the old `../allternit-platform` directory (Next.js, `.next/standalone`)
+> no longer exists. All platform-static staging goes through
+> `scripts/prepare-platform-static.cjs`.
 
-Download Cloudflare Tunnel binary for each platform:
+### Step 2: (obsolete — removed)
 
-**macOS (ARM64):**
-```bash
-curl -L --output resources/bin/cloudflared https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-darwin-arm64
-chmod +x resources/bin/cloudflared
-```
+Steps that copied `.next/standalone` into `resources/platform-server/` and
+downloaded a `cloudflared` binary were removed 2026-09: the platform is a
+Vite app and `cloudflared` is no longer referenced by the desktop main
+process or packaging scripts.
 
-**macOS (x64):**
-```bash
-curl -L --output resources/bin/cloudflared https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-darwin-amd64
-chmod +x resources/bin/cloudflared
-```
-
-**Linux:**
-```bash
-curl -L --output resources/bin/cloudflared https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
-chmod +x resources/bin/cloudflared
-```
-
-**Windows:**
-```bash
-curl -L --output resources/bin/cloudflared.exe https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe
-```
-
-### Step 3b: Stage mesh-node sidecar
+### Step 2b: Stage mesh-node sidecar
 
 mesh-node is the tsnet userspace sidecar (`infrastructure/mesh/tsnet-ios/cmd/mesh-node`) that joins the Allternit tailnet without a system VPN — it's what lets the desktop app reach gizzi instances at `100.64.0.0/10` addresses. The packaged app resolves it from `resources/bin/mesh-node[.exe]` (see `src/main/mesh-manager.ts`).
 
@@ -82,7 +45,15 @@ Stage it for your current platform:
 npm run prepare:mesh-node
 ```
 
-# Step 3c: Stage allternit-api Rust binary
+The script (`scripts/prepare-mesh-node.cjs`) acquires the binary in this order:
+
+1. **Vendor copy** — copies from the repo vendor tree `cmd/gizzi-code/vendor/mesh-node/<platform>-<arch>/` (the same binary gizzi-code's `mesh.ts` uses) if present.
+2. **Build from source** — runs `infrastructure/mesh/tsnet-ios/build-sidecar.sh` (darwin-arm64, linux-x64), or an equivalent `go build` for win32-x64, when Go is on PATH.
+3. **Release download** — downloads the latest `gizzi-code/*` GitHub release asset (v0.2.2+ archives ship `mesh-node` next to `gizzi-code`) and extracts just the sidecar.
+
+The script is idempotent (skips when `resources/bin/mesh-node` already exists) and is already wired into `build:electron`, `build:electron:dmg`, `pack`, and `dist`. The staged binary is gitignored like the rest of `resources/bin/`.
+
+# Step 2c: Stage allternit-api Rust binary
 
 The desktop shell embeds the Rust API backend at `resources/bin/allternit-api[.exe]`.
 If you have already built it (`cargo build --release -p allternit-api`), copy it in:
@@ -95,15 +66,7 @@ This is also called automatically by `npm run build:electron`, `npm run dist`,
 etc. If no local binary exists, the script downloads the platform-locked archive
 from the manifest in `src/main/manifest.ts`.
 
-The script (`scripts/prepare-mesh-node.cjs`) acquires the binary in this order:
-
-1. **Vendor copy** — copies from the repo vendor tree `cmd/gizzi-code/vendor/mesh-node/<platform>-<arch>/` (the same binary gizzi-code's `mesh.ts` uses) if present.
-2. **Build from source** — runs `infrastructure/mesh/tsnet-ios/build-sidecar.sh` (darwin-arm64, linux-x64), or an equivalent `go build` for win32-x64, when Go is on PATH.
-3. **Release download** — downloads the latest `gizzi-code/*` GitHub release asset (v0.2.2+ archives ship `mesh-node` next to `gizzi-code`) and extracts just the sidecar.
-
-The script is idempotent (skips when `resources/bin/mesh-node` already exists) and is already wired into `build:electron`, `build:electron:dmg`, `pack`, and `dist`. The staged binary is gitignored like the rest of `resources/bin/`.
-
-### Step 4: Build Desktop App
+### Step 3: Build Desktop App
 
 ```bash
 # Install desktop dependencies
@@ -119,7 +82,7 @@ npm run build:electron:dmg
 npm run dist
 ```
 
-### Step 5: Verify Build
+### Step 4: Verify Build
 
 Check the output:
 
@@ -133,57 +96,17 @@ ls -la release/
 
 ## Automated Build Script
 
-Use this script to build everything:
+Use the codified pipeline at the repo root — it runs every step above plus the
+gizzi-code binary, allternit-mux, vendored ripgrep, the voice-service sidecar,
+and Lume, then patches SHA256 checksums into `src/main/manifest.ts`:
 
 ```bash
-#!/bin/bash
-set -e
-
-echo "Building Allternit Desktop..."
-
-# Step 1: Build platform
-echo "→ Building platform server..."
-cd ../allternit-platform
-npm install
-ALLTERNIT_BUILD_MODE=desktop npm run build
-
-# Step 2: Setup resources
-echo "→ Setting up resources..."
-cd ../allternit-desktop
-mkdir -p resources/platform-server
-mkdir -p resources/bin
-rm -rf resources/platform-server/*
-cp -r ../allternit-platform/.next/standalone/* resources/platform-server/
-cp -r ../allternit-platform/.next/static resources/platform-server/
-
-# Step 3: Download cloudflared (detect platform)
-echo "→ Downloading cloudflared..."
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    # macOS - detect architecture
-    ARCH=$(uname -m)
-    if [[ "$ARCH" == "arm64" ]]; then
-        curl -L -o resources/bin/cloudflared https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-darwin-arm64
-    else
-        curl -L -o resources/bin/cloudflared https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-darwin-amd64
-    fi
-    chmod +x resources/bin/cloudflared
-elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
-    curl -L -o resources/bin/cloudflared https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
-    chmod +x resources/bin/cloudflared
-fi
-
-# Step 3b: Stage mesh-node sidecar (vendor copy → go build → release download)
-echo "→ Staging mesh-node..."
-npm run prepare:mesh-node
-
-# Step 4: Build desktop
-echo "→ Building desktop app..."
-npm install
-npm run build
-npm run build:electron:dmg
-
-echo "✅ Build complete! Check release/ directory"
+./scripts/build-desktop.sh [--skip-platform] [--skip-api] [--skip-electron]
 ```
+
+Last verified: 2026-09-03 against a0f8230b5 (`scripts/build-desktop.sh`,
+`scripts/prepare-platform-static.cjs`, and all `prepare:*` package.json
+scripts confirmed present; `surfaces/allternit-platform` confirmed absent).
 
 ## Code Signing & Notarization
 
