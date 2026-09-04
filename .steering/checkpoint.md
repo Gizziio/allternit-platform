@@ -103,3 +103,26 @@ Execute the full P1/P2 list from reports/2026-09-03-production-readiness-gap-ana
 
 ## Open questions
 - None from this session.
+
+## Update 7 (2026-09-04, session p2) — canvas control-plane namespace + gizzi_instances backfill (uncommitted)
+- Goal: P2 provisioning branch — canvas control-plane routes + migration 013 gizzi_instances backfill into runtime_devices kind='local'.
+- Just did:
+  - Task 1: routes/canvases.rs — GET /api/v1/canvases (user-wide list, query passthrough) + GET/PATCH/DELETE /api/v1/canvases/:canvas_id, all via the shared 4-step data_plane seam. Data plane (cmd/allternit-api canvas_routes.rs, READ ONLY) owns exactly 3 paths; no SSE/streaming canvas variant exists, so none exposed. Session-scoped list/create stays on the agent-sessions namespace per client. Merged in lib.rs public runtime router; 5 tests (auth gating, 428, method/path wiring, query passthrough).
+  - Task 2: migrations_pg/013_gizzi_instances_backfill.sql — INSERT...SELECT from gizzi_instances into runtime_devices (derived id 'gi_'||instance id, kind 'local', runtime_type 'desktop', endpoint_url=url, status 'online', last_seen_at=updated_at, NULL credential_hash, far-future credential_expires_at so the resolver expiry check passes); skips NULL-user/NULL-url rows; idempotent ON CONFLICT (id) DO NOTHING. Deviations from doc §4 sketch documented in the migration header.
+  - Resolver: NO change needed in services/node_resolution.rs — backfilled rows are ordinary runtime_devices rows and the resolver is kind-agnostic (verified by reading + live-PG test).
+  - Minimal supporting change: gizzi_instances::upsert_instance now stamps the backfilled row (status online, last_seen_at, endpoint_url) so re-registrations keep it resolvable — otherwise backfilled rows go stale within the 120s window and never resolve again.
+  - Tests: node_resolution.rs gained migration_013_backfills_gizzi_instances_and_resolves (live PG: 012+013 applied repeatedly, backfill shape, idempotency incl. no-clobber, resolver picks fresh gi_ node / rejects stale-only); apply helper refactored to generic apply_migration_sql shared with the 012 test.
+- Verify: cargo build -p allternit-cloud-api OK; cargo test -p allternit-cloud-api --lib — see counts in session report (expect only known docker-less contabo failure).
+- Next (P2): provisioned-node backfill (hosted_runtime_nodes → kind='provisioned'), relay_connected_at stamping on attach/detach, node-side DP JWT verify is the parallel agent's track (cmd/allternit-api).
+- Open questions: none.
+
+## Update 8 (2026-09-04, session p2) — rails gateway data-plane backfill (uncommitted)
+- Goal: implement the 21 standalone rails data-plane routes flagged TODO(rails-gateway) in surfaces/ai.allternit.com/src/lib/agents/rails.service.ts onto the allternit-api /api/rails router (cmd/allternit-api/src/rails/mod.rs), then switch the web client off `unavailableOnGateway`. Scope: cmd/allternit-api only; no commits (worktree session/p2-provisioning).
+- Just did:
+  - All 21 routes: plan.* (7 — GET /plans, POST /plan, POST /plan/refine, GET /plan/:dag_id, GET /dags/:dag_id/render, POST /dags/:dag_id/execute, POST /runs/:run_id/cancel), leases list/renew/release (added to the /leases mounts), context-packs list/seal (POST /context-packs[/seal], pack.json docs under .allternit/context-packs/<pack_id>/ + ContextPackSealed ledger event), mail review/archive, gate status/check/rules/verify/decision/mutate, index rebuild.
+  - Client DagMutation dialect (add/modify/set_status) maps onto crate DagMutation events; `remove` rejected 400 (no ledger representation); set_status without node_id defaults to the projected DAG root (pause/resume call sites).
+  - 6 new router tests (plan, leases, context packs, mail review/archive, gate, index — happy path + error cases each). cargo test -p allternit-api --lib: 654/654 green (648 baseline + 6).
+  - rails.service.ts: `unavailableOnGateway` and every TODO(rails-gateway) block removed; all 21 methods call the gateway. tsc --noEmit green (verified with symlinked node_modules from the main checkout, removed afterward).
+- Verify: cargo build -p allternit-api OK; cargo test -p allternit-api --lib 654/654; npx tsc --noEmit in surfaces/ai.allternit.com OK.
+- Next (P2): orchestrator merges; run the gateway + web surface against each other end-to-end if a live check is wanted.
+- Open questions: plan.new's optional dag_id is accepted but the gate mints a fresh dag_id (gateway has no project scope) — same behavior as the standalone service; documented in the handler.
