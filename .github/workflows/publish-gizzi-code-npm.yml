@@ -69,8 +69,122 @@ jobs:
           fi
           bash script/ci-smoke-test.sh
 
-  publish:
+  build-platform-packages:
+    # Cross-platform binaries. Bun cannot cross-compile native modules
+    # reliably, so each platform binary is built ON that platform and shipped
+    # as its own npm package (@allternit/gizzi-code-<platform>-<arch>, with
+    # os/cpu constraints so npm only installs the matching one). The main
+    # package references these via optionalDependencies and its launcher shim
+    # resolves them at runtime.
     needs: quality
+    name: Platform binary ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: darwin-arm64
+            os: macos-latest
+            node_os: darwin
+            node_cpu: arm64
+          - target: darwin-x64
+            os: macos-13
+            node_os: darwin
+            node_cpu: x64
+          - target: linux-x64
+            os: ubuntu-latest
+            node_os: linux
+            node_cpu: x64
+          - target: linux-arm64
+            os: ubuntu-24.04-arm
+            node_os: linux
+            node_cpu: arm64
+          - target: win32-x64
+            os: windows-latest
+            node_os: win32
+            node_cpu: x64
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Extract version
+        id: version
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "VERSION=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            VERSION=${GITHUB_REF_NAME#gizzi-code/v}
+            echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install dependencies
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.28.0 --activate
+          pnpm install --frozen-lockfile
+
+      - name: Build workspace package dependencies
+        run: |
+          pnpm --filter "@allternit/gizzi-code^..." run build
+          pnpm --filter "@allternit/gizzi-sdk" run build
+
+      - name: Build ${{ matrix.target }} binary
+        working-directory: cmd/gizzi-code
+        shell: bash
+        run: bun run build --target=${{ matrix.target }}
+
+      - name: Setup Node for NPM
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Publish platform package
+        shell: bash
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          VERSION: ${{ steps.version.outputs.VERSION }}
+          TARGET: ${{ matrix.target }}
+          NODE_OS: ${{ matrix.node_os }}
+          NODE_CPU: ${{ matrix.node_cpu }}
+        run: |
+          set -euo pipefail
+          cd cmd/gizzi-code
+          BIN="dist/gizzi-code-${TARGET}"
+          [ "$NODE_OS" = "win32" ] && BIN="${BIN}.exe"
+          test -f "$BIN"
+          export PKG_DIR="${RUNNER_TEMP}/platform-pkg"
+          mkdir -p "$PKG_DIR"
+          cp "$BIN" "$PKG_DIR/"
+          export BIN_BASENAME=$(basename "$BIN")
+          node -e '
+            const fs = require("fs");
+            const pkg = {
+              name: `@allternit/gizzi-code-${process.env.TARGET}`,
+              version: process.env.VERSION,
+              description: `gizzi-code prebuilt binary for ${process.env.TARGET}`,
+              license: "MIT",
+              os: [process.env.NODE_OS],
+              cpu: [process.env.NODE_CPU],
+              files: [process.env.BIN_BASENAME],
+              repository: {
+                type: "git",
+                url: "https://github.com/Gizziio/allternit-platform.git",
+                directory: "cmd/gizzi-code",
+              },
+            };
+            fs.writeFileSync(`${process.env.PKG_DIR}/package.json`, JSON.stringify(pkg, null, 2) + "\n");
+          '
+          cd "$PKG_DIR"
+          npm publish --access public
+
+  publish:
+    needs: [quality, build-platform-packages]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -142,6 +256,22 @@ jobs:
             echo "package.json already at $CURRENT; skipping bump"
           fi
 
+      - name: Pin optionalDependencies to release version
+        # Platform binary packages publish at exactly this version; pin the
+        # optionalDependencies so they resolve to the same release.
+        working-directory: cmd/gizzi-code
+        run: |
+          node -e '
+            const fs = require("fs");
+            const p = JSON.parse(fs.readFileSync("package.json", "utf8"));
+            for (const name of Object.keys(p.optionalDependencies || {})) {
+              p.optionalDependencies[name] = process.env.VERSION;
+            }
+            fs.writeFileSync("package.json", JSON.stringify(p, null, 2) + "\n");
+          '
+        env:
+          VERSION: ${{ steps.version.outputs.VERSION }}
+
       - name: Publish to NPM
         working-directory: cmd/gizzi-code
         run: npm publish --access public
@@ -149,11 +279,10 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Verify published package
-        # The currently published @allternit/gizzi-code package is broken: the
-        # tarball contains no dist/ and its bin entries dangle. This gate
-        # downloads the tarball we JUST published from the registry and fails
-        # the release if dist/ is missing, so a broken publish can never ship
-        # silently again.
+        # Download the tarball we JUST published from the registry and fail
+        # the release if it cannot install a working CLI: bin entries must
+        # resolve, and the binary must come from either a bundled dist/ or
+        # the optional platform packages (cross-platform distribution).
         shell: bash
         run: |
           set -euo pipefail
@@ -196,4 +325,18 @@ jobs:
               exit 1
             fi
           done <<< "$BIN_PATHS"
-          echo "Verified: published $PKG@$VERSION contains dist/ and all bin entries resolve."
+          # Optional platform packages must exist at the pinned version.
+          OPTS=$(tar -xzf "$TMP/package.tgz" -O package/package.json \
+            | python3 -c 'import json,sys; d=json.load(sys.stdin).get("optionalDependencies",{}); print("\n".join(f"{k} {v}" for k,v in d.items()))')
+          if [ -z "$OPTS" ]; then
+            echo "::error::Published $PKG@$VERSION has no optionalDependencies — cross-platform installs would have no binaries."
+            exit 1
+          fi
+          while IFS= read -r name_ver; do
+            name="${name_ver% *}"
+            if ! npm view "$name@$VERSION" version >/dev/null 2>&1; then
+              echo "::error::Platform package $name@$VERSION is missing from the registry."
+              exit 1
+            fi
+          done <<< "$OPTS"
+          echo "Verified: published $PKG@$VERSION contains dist/, all bin entries resolve, and all platform packages exist."

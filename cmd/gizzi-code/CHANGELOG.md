@@ -3,6 +3,18 @@
 ## Unreleased
 
 ### Changed
+- npm distribution is now cross-platform: the launcher shim
+  (bin/gizzi.js) resolves the binary from a bundled dist/ or from the
+  optional platform packages `@allternit/gizzi-code-<platform>-<arch>`
+  (darwin-arm64, darwin-x64, linux-arm64, linux-x64, win32-x64), which are
+  built per-platform in CI and published alongside the main package.
+  `npm install -g @allternit/gizzi-code` now yields a working CLI on every
+  supported platform.
+- User-visible Claude/Anthropic fork traces removed (~205 strings across
+  117 files): system-prompt presets, built-in agent prompts, TUI strings,
+  and config-dir defaults are now Gizzi-branded (`~/.gizzi` first,
+  `~/.claude` retained as read-only legacy fallback). Model names and
+  provider-genuine text (Anthropic API auth, wire protocol) are unchanged.
 - Windows is now explicitly labeled experimental/unsupported (macOS primary,
   Linux supported). The CLI prints a one-line stderr warning on boot on
   win32: no secure credential store — credentials fall back to a
