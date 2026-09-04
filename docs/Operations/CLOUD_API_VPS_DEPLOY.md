@@ -78,8 +78,10 @@ No public SSH exposure: the runner only reaches mail over the tailnet.
 
 ### One-time setup (owner actions)
 
-1. **Tailscale auth key** — https://login.tailscale.com/admin/settings/keys →
-   *Generate auth key* → **reusable + pre-authorized**, tag `tag:ci`.
+1. **Tailscale OAuth client** — https://login.tailscale.com/admin/settings/oauth →
+   *Generate OAuth client* → scope **Auth keys / Write**, tag `tag:ci`.
+   (The action mints a short-lived auth key per run from this client; the
+   client secret is shown once — copy both values.)
 2. **ACL policy** — the tag must exist and be allowed to reach (and, unless
    using an SSH key, SSH into) mail:
    ```json
@@ -96,8 +98,9 @@ No public SSH exposure: the runner only reaches mail over the tailnet.
    also generate an SSH keypair for root@mail and set `CONTABO_SSH_KEY` below.
 3. **GitHub secrets** (repo `Gizziio/allternit-platform`):
    ```bash
-   gh secret set TS_AUTHKEY          # tskey-auth-... from step 1
-   gh secret set CONTABO_SSH_KEY     # optional, only without the ssh ACL
+   gh secret set TS_OAUTH_CLIENT_ID      # from step 1
+   gh secret set TS_OAUTH_CLIENT_SECRET  # from step 1, shown once
+   gh secret set CONTABO_SSH_KEY         # optional, only without the ssh ACL
    ```
 4. Sanity-check once from any machine on the tailnet:
    `ssh root@mail curl -s localhost:8082/api/v1/health`.
