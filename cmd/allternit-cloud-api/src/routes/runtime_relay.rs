@@ -12,6 +12,39 @@
 //! reconnects in a few seconds, so the request simply completes slower. If the
 //! wait times out, the proxy answers 503 `runtime_warming` so the client can
 //! retry, and socket-ticket creation answers 503 with a warming message.
+//!
+//! ## Socket tunnel protocol (node-side contract)
+//!
+//! `SocketOpen` / `SocketReady` / `SocketData` / `SocketClose` tunnel a
+//! browser WebSocket through the runtime's outbound relay connection to a
+//! WebSocket endpoint on the runtime's loopback API (:8013). This is how
+//! WS-only data-plane endpoints (e.g. `GET /api/v1/beta/sessions/:id/events/ws`)
+//! are exposed on the control plane. All envelopes are JSON text frames tagged
+//! with `{ "type": <snake_case> }`:
+//!
+//! cloud → runtime (on the relay WebSocket):
+//! - `{"type":"socket_open","socket_id":"…","path":"/api/v1/…","headers":{}}`
+//! - `{"type":"socket_data","socket_id":"…","body":"…","body_encoding":"utf8"|"base64"}`
+//! - `{"type":"socket_close","socket_id":"…","code":1000,"reason":"…"}`
+//!
+//! runtime → cloud:
+//! - `{"type":"socket_ready","socket_id":"…"}` — the local WS dial succeeded
+//! - `{"type":"socket_data","socket_id":"…","body":"…","body_encoding":"utf8"|"base64"}`
+//! - `{"type":"socket_close","socket_id":"…","code":1000,"reason":"…"}`
+//!
+//! Semantics: after `socket_open` the node dials `ws://127.0.0.1:8013{path}`
+//! (path includes any query string), answers `socket_ready` once the local
+//! dial completes, then forwards frames in both directions until either side
+//! closes (`socket_close` carries the code/reason). Reference node
+//! implementation: `cmd/agent-daemon/src/index.ts` (`handleRelaySocketOpen`).
+//!
+//! Browser-facing WS endpoints cannot set an `Authorization` header, so a
+//! browser first mints a short-lived socket ticket via a Clerk-authed POST
+//! ([`issue_socket_ticket`] — either the explicit
+//! `POST /api/v1/runtime-devices/:id/socket-ticket` or a namespace ticket
+//! route such as `POST /api/v1/beta/sessions/:id/events/ws-ticket`) and then
+//! connects with `?ticket=…`; the upgrade is redeemed by
+//! [`upgrade_with_socket_ticket`].
 
 use axum::{
     body::Body,
@@ -101,7 +134,7 @@ enum RuntimeMessage {
 
 #[derive(Debug, Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
-enum CloudMessage {
+pub(crate) enum CloudMessage {
     Authenticated {
         runtime_id: String,
     },
@@ -154,13 +187,18 @@ struct PendingRelay {
     chunks: mpsc::Sender<Result<Bytes, Infallible>>,
 }
 
-struct RuntimeConnection {
+pub(crate) struct RuntimeConnection {
     sender: mpsc::UnboundedSender<CloudMessage>,
     pending: Mutex<HashMap<String, PendingRelay>>,
-    sockets: Mutex<HashMap<String, mpsc::UnboundedSender<RuntimeSocketFrame>>>,
+    /// Per-tunneled-socket frame channels, keyed by the `socket_id` the cloud
+    /// assigned in `socket_open`. The pump task for each browser socket
+    /// registers here; inbound `socket_data`/`socket_close` envelopes are
+    /// routed through it.
+    pub(crate) sockets: Mutex<HashMap<String, mpsc::UnboundedSender<RuntimeSocketFrame>>>,
 }
 
-enum RuntimeSocketFrame {
+#[derive(Debug)]
+pub(crate) enum RuntimeSocketFrame {
     Ready,
     Data(Bytes, bool),
     Close(u16, String),
@@ -177,9 +215,10 @@ struct SocketTicketQuery {
     ticket: String,
 }
 
-struct SocketTicket {
-    runtime_id: String,
-    path: String,
+/// A minted, single-use browser socket ticket (see [`issue_socket_ticket`]).
+pub(crate) struct SocketTicket {
+    pub(crate) runtime_id: String,
+    pub(crate) path: String,
     expires_at: Instant,
 }
 
@@ -212,9 +251,13 @@ async fn connect_or_wake_runtime(
     if let Some(connection) = relay_hub().read().await.get(runtime_id).cloned() {
         return Ok(RelayConnect::Connected(connection));
     }
-    let outcome =
-        crate::services::wake_hosted_runtime_for_device(db, contabo_runtime_service, quota_service, runtime_id)
-            .await?;
+    let outcome = crate::services::wake_hosted_runtime_for_device(
+        db,
+        contabo_runtime_service,
+        quota_service,
+        runtime_id,
+    )
+    .await?;
     if matches!(
         outcome,
         crate::services::HostedWakeOutcome::NotHosted
@@ -267,14 +310,19 @@ async fn connect_runtime(
     ws.on_upgrade(move |socket| runtime_socket(socket, state, runtime_id))
 }
 
-async fn create_socket_ticket(
-    State(state): State<Arc<ApiState>>,
-    headers: HeaderMap,
-    Path(runtime_id): Path<String>,
-    Json(request): Json<CreateSocketTicketRequest>,
-) -> Result<Json<serde_json::Value>, ApiError> {
-    let user_id = crate::auth::resolve_user_scoped(&state.db, &headers, "compute").await?.id;
-    let capabilities = runtime_capabilities(&state.db, &runtime_id, &user_id).await?;
+/// Mint a short-lived relay socket ticket for `path` on the runtime owned by
+/// `user_id`. Shared by the explicit runtime-devices socket-ticket endpoint
+/// and the control-plane namespace WS handlers (beta session events): both
+/// get capability checks, path validation, and wake-on-demand exactly once,
+/// here. The caller must already have resolved/authorized the user and the
+/// runtime.
+pub(crate) async fn issue_socket_ticket(
+    state: &ApiState,
+    user_id: &str,
+    runtime_id: &str,
+    path: String,
+) -> Result<serde_json::Value, ApiError> {
+    let capabilities = runtime_capabilities(&state.db, runtime_id, user_id).await?;
     if !capabilities
         .iter()
         .any(|capability| capability == "runtime:connect")
@@ -285,13 +333,13 @@ async fn create_socket_ticket(
     }
     let validation = RelayRequest {
         method: "GET".to_string(),
-        path: request.path.clone(),
+        path: path.clone(),
         headers: HashMap::new(),
         body: String::new(),
         body_encoding: "utf8".to_string(),
     };
     validate_proxy_request(&validation)?;
-    let required = required_capability(&request.path, "GET");
+    let required = required_capability(&validation.path, "GET");
     if !capabilities.iter().any(|capability| capability == required) {
         return Err(ApiError::Forbidden(format!(
             "Runtime pairing does not grant {required}"
@@ -301,7 +349,7 @@ async fn create_socket_ticket(
         &state.db,
         &state.contabo_runtime_service,
         &state.quota_service,
-        &runtime_id,
+        runtime_id,
     )
     .await?
     {
@@ -317,7 +365,7 @@ async fn create_socket_ticket(
             ));
         }
     }
-    services_touch_runtime(&state.db, &runtime_id).await;
+    services_touch_runtime(&state.db, runtime_id).await;
 
     let ticket = Uuid::new_v4().to_string();
     let expires_at = Instant::now() + Duration::from_secs(30);
@@ -326,15 +374,99 @@ async fn create_socket_ticket(
     tickets.insert(
         ticket.clone(),
         SocketTicket {
-            runtime_id,
-            path: request.path,
+            runtime_id: runtime_id.to_string(),
+            path,
             expires_at,
         },
     );
-    Ok(Json(serde_json::json!({
+    Ok(serde_json::json!({
         "ticket": ticket,
         "expiresInSeconds": 30,
-    })))
+    }))
+}
+
+/// Consume a socket ticket, discarding expired ones. Returns `None` for
+/// unknown or expired tickets.
+pub(crate) async fn take_socket_ticket(ticket: &str) -> Option<SocketTicket> {
+    socket_tickets()
+        .lock()
+        .await
+        .remove(ticket)
+        .filter(|value| value.expires_at > Instant::now())
+}
+
+/// Redeem a validated socket ticket: resolve the runtime owner, enforce relay
+/// socket quotas, and answer the WebSocket upgrade. The upgraded pump task
+/// ([`browser_socket`]) tunnels frames to the runtime over its outbound relay
+/// connection (`socket_open`/`socket_data`/`socket_close`, see the module
+/// protocol contract).
+pub(crate) async fn upgrade_with_socket_ticket(
+    ws: WebSocketUpgrade,
+    state: &ApiState,
+    ticket: SocketTicket,
+) -> Result<Response, ApiError> {
+    // Resolve the runtime owner and enforce relay socket/bandwidth quotas.
+    let user_id = runtime_user_id(state, &ticket.runtime_id).await?;
+    let quota = state.quota_service.ensure_quota(&user_id).await?;
+    state
+        .quota_service
+        .check_relay_socket_allowed(&user_id, &quota)
+        .await?;
+    let relay_socket_id = state
+        .quota_service
+        .open_relay_socket(&ticket.runtime_id, &ticket.path)
+        .await?;
+    let quota_service = state.quota_service.clone();
+    let db = state.db.clone();
+
+    Ok(ws.on_upgrade(move |socket| {
+        browser_socket(
+            socket,
+            ticket.runtime_id,
+            ticket.path,
+            relay_socket_id,
+            quota_service,
+            db,
+        )
+    }))
+}
+
+/// Register a fake runtime connection in the relay hub and hand back its
+/// outbound envelope stream, so tests can drive the socket tunnel without a
+/// real daemon on the other end. Returns the connection (its `sockets` map
+/// carries the per-tunnel frame channels the pump registers) and the receiver
+/// for every cloud → node envelope.
+#[cfg(test)]
+pub(crate) async fn register_test_connection(
+    runtime_id: &str,
+) -> (
+    Arc<RuntimeConnection>,
+    mpsc::UnboundedReceiver<CloudMessage>,
+) {
+    let (sender, outgoing) = mpsc::unbounded_channel();
+    let connection = Arc::new(RuntimeConnection {
+        sender,
+        pending: Mutex::new(HashMap::new()),
+        sockets: Mutex::new(HashMap::new()),
+    });
+    relay_hub()
+        .write()
+        .await
+        .insert(runtime_id.to_string(), connection.clone());
+    (connection, outgoing)
+}
+
+async fn create_socket_ticket(
+    State(state): State<Arc<ApiState>>,
+    headers: HeaderMap,
+    Path(runtime_id): Path<String>,
+    Json(request): Json<CreateSocketTicketRequest>,
+) -> Result<Json<serde_json::Value>, ApiError> {
+    let user_id = crate::auth::resolve_user_scoped(&state.db, &headers, "compute")
+        .await?
+        .id;
+    let ticket = issue_socket_ticket(&state, &user_id, &runtime_id, request.path).await?;
+    Ok(Json(ticket))
 }
 
 async fn connect_browser_socket(
@@ -343,37 +475,50 @@ async fn connect_browser_socket(
     Path(runtime_id): Path<String>,
     Query(query): Query<SocketTicketQuery>,
 ) -> Result<Response, ApiError> {
-    let ticket = socket_tickets().lock().await.remove(&query.ticket);
-    let ticket = ticket
-        .filter(|value| value.runtime_id == runtime_id && value.expires_at > Instant::now())
+    let ticket = take_socket_ticket(&query.ticket)
+        .await
+        .filter(|value| value.runtime_id == runtime_id)
         .ok_or_else(|| {
             ApiError::Unauthorized("Invalid or expired runtime socket ticket".to_string())
         })?;
+    upgrade_with_socket_ticket(ws, &state, ticket).await
+}
 
-    // Resolve the runtime owner and enforce relay socket/bandwidth quotas.
-    let user_id = runtime_user_id(&state, &runtime_id).await?;
-    let quota = state.quota_service.ensure_quota(&user_id).await?;
-    state
-        .quota_service
-        .check_relay_socket_allowed(&user_id, &quota)
-        .await?;
-    let relay_socket_id = state
-        .quota_service
-        .open_relay_socket(&runtime_id, &ticket.path)
-        .await?;
-    let quota_service = state.quota_service.clone();
-    let db = state.db.clone();
+/// Map one inbound browser WebSocket message to its relay envelope. Text and
+/// binary payloads become `socket_data` frames (binary base64-encoded — the
+/// protocol's only wire encoding for non-UTF8 payloads); protocol control
+/// frames (ping/pong/close) are answered or terminated by the pump loop
+/// itself and map to `None`.
+fn browser_frame_to_cloud(socket_id: &str, message: &Message) -> Option<CloudMessage> {
+    match message {
+        Message::Text(body) => Some(CloudMessage::SocketData {
+            socket_id: socket_id.to_string(),
+            body: body.clone(),
+            body_encoding: "utf8".to_string(),
+        }),
+        Message::Binary(body) => Some(CloudMessage::SocketData {
+            socket_id: socket_id.to_string(),
+            body: STANDARD.encode(body),
+            body_encoding: "base64".to_string(),
+        }),
+        _ => None,
+    }
+}
 
-    Ok(ws.on_upgrade(move |socket| {
-        browser_socket(
-            socket,
-            runtime_id,
-            ticket.path,
-            relay_socket_id,
-            quota_service,
-            db,
-        )
-    }))
+/// Map one runtime socket frame to the browser WebSocket message that carries
+/// it. `Ready` is the tunnel handshake sentinel (`allternit_socket_ready`);
+/// `Close` closes the browser socket.
+fn runtime_frame_to_browser_message(frame: &RuntimeSocketFrame) -> Message {
+    match frame {
+        RuntimeSocketFrame::Ready => {
+            Message::Text("{\"type\":\"allternit_socket_ready\"}".to_string())
+        }
+        RuntimeSocketFrame::Data(body, true) => Message::Binary(body.to_vec()),
+        RuntimeSocketFrame::Data(body, false) => {
+            Message::Text(String::from_utf8_lossy(body).into_owned())
+        }
+        RuntimeSocketFrame::Close(..) => Message::Close(None),
+    }
 }
 
 async fn browser_socket(
@@ -418,57 +563,40 @@ async fn browser_socket(
         tokio::select! {
             browser = stream.next() => {
                 match browser {
-                    Some(Ok(Message::Text(body))) => {
-                        if last_activity_write.elapsed() >= Duration::from_secs(60) {
-                            let _ = crate::services::touch_runtime_activity(&db, &runtime_id).await;
-                            last_activity_write = Instant::now();
+                    Some(Ok(message)) => match message {
+                        Message::Text(_) | Message::Binary(_) => {
+                            if last_activity_write.elapsed() >= Duration::from_secs(60) {
+                                let _ = crate::services::touch_runtime_activity(&db, &runtime_id).await;
+                                last_activity_write = Instant::now();
+                            }
+                            if let Some(outbound) = browser_frame_to_cloud(&socket_id, &message) {
+                                let _ = connection.sender.send(outbound);
+                            }
                         }
-                        let _ = connection.sender.send(CloudMessage::SocketData {
-                            socket_id: socket_id.clone(), body, body_encoding: "utf8".to_string(),
-                        });
-                    }
-                    Some(Ok(Message::Binary(body))) => {
-                        if last_activity_write.elapsed() >= Duration::from_secs(60) {
-                            let _ = crate::services::touch_runtime_activity(&db, &runtime_id).await;
-                            last_activity_write = Instant::now();
+                        Message::Ping(body) => {
+                            if sink.send(Message::Pong(body)).await.is_err() { break; }
                         }
-                        let _ = connection.sender.send(CloudMessage::SocketData {
-                            socket_id: socket_id.clone(), body: STANDARD.encode(body), body_encoding: "base64".to_string(),
-                        });
-                    }
-                    Some(Ok(Message::Ping(body))) => {
-                        if sink.send(Message::Pong(body)).await.is_err() { break; }
-                    }
-                    Some(Ok(Message::Close(_))) | Some(Err(_)) | None => break,
-                    _ => {}
+                        Message::Close(_) => break,
+                        _ => {}
+                    },
+                    Some(Err(_)) | None => break,
                 }
             }
             runtime = runtime_events.recv() => {
-                match runtime {
-                    Some(RuntimeSocketFrame::Ready) => {
-                        if sink.send(Message::Text("{\"type\":\"allternit_socket_ready\"}".to_string())).await.is_err() { break; }
+                let Some(frame) = runtime else {
+                    let _ = sink.send(Message::Close(None)).await;
+                    break;
+                };
+                if let RuntimeSocketFrame::Data(body, _) = &frame {
+                    if last_activity_write.elapsed() >= Duration::from_secs(60) {
+                        let _ = crate::services::touch_runtime_activity(&db, &runtime_id).await;
+                        last_activity_write = Instant::now();
                     }
-                    Some(RuntimeSocketFrame::Data(body, true)) => {
-                        if last_activity_write.elapsed() >= Duration::from_secs(60) {
-                            let _ = crate::services::touch_runtime_activity(&db, &runtime_id).await;
-                            last_activity_write = Instant::now();
-                        }
-                        egress_bytes += body.len() as i64;
-                        if sink.send(Message::Binary(body.to_vec())).await.is_err() { break; }
-                    }
-                    Some(RuntimeSocketFrame::Data(body, false)) => {
-                        if last_activity_write.elapsed() >= Duration::from_secs(60) {
-                            let _ = crate::services::touch_runtime_activity(&db, &runtime_id).await;
-                            last_activity_write = Instant::now();
-                        }
-                        egress_bytes += body.len() as i64;
-                        let text = String::from_utf8_lossy(&body).into_owned();
-                        if sink.send(Message::Text(text)).await.is_err() { break; }
-                    }
-                    Some(RuntimeSocketFrame::Close(_, _)) | None => {
-                        let _ = sink.send(Message::Close(None)).await;
-                        break;
-                    }
+                    egress_bytes += body.len() as i64;
+                }
+                let is_close = matches!(frame, RuntimeSocketFrame::Close(..));
+                if sink.send(runtime_frame_to_browser_message(&frame)).await.is_err() || is_close {
+                    break;
                 }
             }
         }
@@ -538,6 +666,16 @@ async fn runtime_socket(socket: WebSocket, state: Arc<ApiState>, expected_id: St
         .write()
         .await
         .insert(runtime_id.clone(), connection.clone());
+    // Stamp the relay attach so DB-side liveness signals reflect it:
+    // migration 011 added runtime_devices.relay_connected_at for exactly this
+    // ("last outbound WS relay attach") but nothing wrote it until now. It is
+    // cleared on detach below.
+    let _ = sqlx::query(
+        "UPDATE runtime_devices SET relay_connected_at = CURRENT_TIMESTAMP WHERE id = $1",
+    )
+    .bind(&runtime_id)
+    .execute(&state.db)
+    .await;
     let authenticated = CloudMessage::Authenticated {
         runtime_id: runtime_id.clone(),
     };
@@ -641,6 +779,12 @@ async fn runtime_socket(socket: WebSocket, state: Arc<ApiState>, expected_id: St
         hub.remove(&runtime_id);
     }
     drop(hub);
+    // Relay detached: clear the liveness stamp (best-effort; the timestamp is
+    // advisory, the in-memory hub remains the authoritative lookup).
+    let _ = sqlx::query("UPDATE runtime_devices SET relay_connected_at = NULL WHERE id = $1")
+        .bind(&runtime_id)
+        .execute(&state.db)
+        .await;
     connection.pending.lock().await.clear();
     let sockets = std::mem::take(&mut *connection.sockets.lock().await);
     for (_, sender) in sockets {
@@ -657,7 +801,9 @@ async fn proxy_to_runtime(
     Path(runtime_id): Path<String>,
     Json(request): Json<BrowserProxyRequest>,
 ) -> Result<Response, ApiError> {
-    let user_id = crate::auth::resolve_user_scoped(&state.db, &headers, "compute").await?.id;
+    let user_id = crate::auth::resolve_user_scoped(&state.db, &headers, "compute")
+        .await?
+        .id;
     relay_request_to_runtime(
         &state.db,
         &state.contabo_runtime_service,
@@ -721,7 +867,14 @@ pub(crate) async fn relay_request_to_runtime(
     }
     services_touch_runtime(db, runtime_id).await;
 
-    let connection = match connect_or_wake_runtime(db, contabo_runtime_service, quota_service, runtime_id).await? {
+    let connection = match connect_or_wake_runtime(
+        db,
+        contabo_runtime_service,
+        quota_service,
+        runtime_id,
+    )
+    .await?
+    {
         RelayConnect::Connected(connection) => connection,
         RelayConnect::Warming => {
             return Ok((
@@ -993,6 +1146,166 @@ pub(crate) fn relay_headers_from_http(headers: &HeaderMap) -> HashMap<String, St
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn browser_text_frames_encode_as_utf8_socket_data() {
+        let message = Message::Text("{\"seq\":1}".to_string());
+        let outbound = browser_frame_to_cloud("sock_1", &message).expect("text must relay");
+        let json = serde_json::to_value(&outbound).unwrap();
+        assert_eq!(json["type"], "socket_data");
+        assert_eq!(json["socket_id"], "sock_1");
+        assert_eq!(json["body"], "{\"seq\":1}");
+        assert_eq!(json["body_encoding"], "utf8");
+    }
+
+    #[test]
+    fn browser_binary_frames_encode_as_base64_socket_data() {
+        let message = Message::Binary(vec![0x01, 0x02, 0x03]);
+        let outbound = browser_frame_to_cloud("sock_1", &message).expect("binary must relay");
+        let json = serde_json::to_value(&outbound).unwrap();
+        assert_eq!(json["type"], "socket_data");
+        assert_eq!(json["body"], STANDARD.encode([0x01, 0x02, 0x03]));
+        assert_eq!(json["body_encoding"], "base64");
+    }
+
+    #[test]
+    fn browser_control_frames_have_no_relay_envelope() {
+        assert!(browser_frame_to_cloud("sock_1", &Message::Ping(Vec::new())).is_none());
+        assert!(browser_frame_to_cloud("sock_1", &Message::Pong(Vec::new())).is_none());
+        assert!(browser_frame_to_cloud("sock_1", &Message::Close(None)).is_none());
+    }
+
+    #[test]
+    fn runtime_frames_decode_to_browser_messages() {
+        assert_eq!(
+            runtime_frame_to_browser_message(&RuntimeSocketFrame::Ready),
+            Message::Text("{\"type\":\"allternit_socket_ready\"}".to_string())
+        );
+        assert_eq!(
+            runtime_frame_to_browser_message(&RuntimeSocketFrame::Data(
+                Bytes::from_static(b"hi"),
+                false
+            )),
+            Message::Text("hi".to_string())
+        );
+        assert_eq!(
+            runtime_frame_to_browser_message(&RuntimeSocketFrame::Data(
+                Bytes::from_static(&[0xff]),
+                true
+            )),
+            Message::Binary(vec![0xff])
+        );
+        assert_eq!(
+            runtime_frame_to_browser_message(&RuntimeSocketFrame::Close(1000, "bye".to_string())),
+            Message::Close(None)
+        );
+    }
+
+    #[test]
+    fn socket_tunnel_envelopes_match_the_node_contract() {
+        // Exact wire shapes consumed by the node-side relay client
+        // (cmd/agent-daemon/src/index.ts) — pinned here so a serde rename or
+        // field drift cannot silently break the tunnel.
+        let open = serde_json::to_value(CloudMessage::SocketOpen {
+            socket_id: "s".to_string(),
+            path: "/api/v1/beta/sessions/x/events/ws".to_string(),
+            headers: HashMap::new(),
+        })
+        .unwrap();
+        assert_eq!(
+            open,
+            serde_json::json!({
+                "type": "socket_open",
+                "socket_id": "s",
+                "path": "/api/v1/beta/sessions/x/events/ws",
+                "headers": {},
+            })
+        );
+
+        let ready: RuntimeMessage =
+            serde_json::from_str(r#"{"type":"socket_ready","socket_id":"s"}"#).unwrap();
+        assert!(matches!(ready, RuntimeMessage::SocketReady { .. }));
+
+        let node_data: RuntimeMessage = serde_json::from_str(
+            r#"{"type":"socket_data","socket_id":"s","body":"AQID","body_encoding":"base64"}"#,
+        )
+        .unwrap();
+        match node_data {
+            RuntimeMessage::SocketData {
+                socket_id,
+                body,
+                body_encoding,
+            } => {
+                assert_eq!(socket_id, "s");
+                assert_eq!(body, "AQID");
+                assert_eq!(body_encoding, "base64");
+            }
+            other => panic!("expected socket_data, got {other:?}"),
+        }
+
+        let node_close: RuntimeMessage = serde_json::from_str(
+            r#"{"type":"socket_close","socket_id":"s","code":1000,"reason":"done"}"#,
+        )
+        .unwrap();
+        match node_close {
+            RuntimeMessage::SocketClose {
+                socket_id,
+                code,
+                reason,
+            } => {
+                assert_eq!(socket_id, "s");
+                assert_eq!(code, 1000);
+                assert_eq!(reason, "done");
+            }
+            other => panic!("expected socket_close, got {other:?}"),
+        }
+
+        let cloud_close = serde_json::to_value(CloudMessage::SocketClose {
+            socket_id: "s".to_string(),
+            code: 1000,
+            reason: "Browser disconnected".to_string(),
+        })
+        .unwrap();
+        assert_eq!(
+            cloud_close,
+            serde_json::json!({
+                "type": "socket_close",
+                "socket_id": "s",
+                "code": 1000,
+                "reason": "Browser disconnected",
+            })
+        );
+    }
+
+    #[test]
+    fn beta_events_ws_path_passes_the_relay_allow_list() {
+        // The events WS tunnels as a socket_open with this exact path; both
+        // the bare path and the `after`-cursor query form must validate.
+        for path in [
+            "/api/v1/beta/sessions/sess_1/events/ws",
+            "/api/v1/beta/sessions/sess_1/events/ws?after=42",
+        ] {
+            let request = RelayRequest {
+                method: "GET".to_string(),
+                path: path.to_string(),
+                headers: HashMap::new(),
+                body: String::new(),
+                body_encoding: "utf8".to_string(),
+            };
+            assert!(
+                validate_proxy_request(&request).is_ok(),
+                "{path} must relay"
+            );
+        }
+    }
+
+    #[test]
+    fn beta_events_ws_requires_the_execute_capability() {
+        assert_eq!(
+            required_capability("/api/v1/beta/sessions/sess_1/events/ws", "GET"),
+            "runtime:execute"
+        );
+    }
 
     #[test]
     fn agent_sessions_paths_pass_the_relay_allow_list() {

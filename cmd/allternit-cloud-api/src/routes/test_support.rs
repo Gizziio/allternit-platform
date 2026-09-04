@@ -121,6 +121,10 @@ impl DataPlaneGateway for MockGateway {
 
 /// Schema-per-test pool; `api_tokens` must exist because the auth fallback
 /// queries it before the dev-token gate (same pattern as auth::resolve::tests).
+/// The remaining tables back the socket-ticket/WS-upgrade path the beta
+/// events tests exercise: runtime ownership/capabilities (runtime_devices)
+/// and relay-socket quotas (user_runtime_quotas / user_relay_usage /
+/// runtime_relay_sockets), all minimal column subsets of migrations_pg/001.
 pub async fn test_pool() -> sqlx::PgPool {
     let url = "postgres://allternit:allternit_pg_2026@localhost:5432/allternit_test";
     let schema = format!("test_{}", uuid::Uuid::new_v4().simple());
@@ -142,7 +146,7 @@ pub async fn test_pool() -> sqlx::PgPool {
         .connect(url)
         .await
         .unwrap();
-    sqlx::query(
+    for statement in [
         r#"
         CREATE TABLE api_tokens (
             id TEXT PRIMARY KEY,
@@ -156,11 +160,81 @@ pub async fn test_pool() -> sqlx::PgPool {
             is_revoked BOOLEAN NOT NULL DEFAULT FALSE
         )
         "#,
+        r#"
+        CREATE TABLE runtime_devices (
+            id TEXT PRIMARY KEY,
+            user_id TEXT,
+            name TEXT,
+            capabilities TEXT NOT NULL DEFAULT '[]',
+            status TEXT NOT NULL DEFAULT 'offline',
+            credential_expires_at TIMESTAMPTZ,
+            revoked_at TIMESTAMPTZ,
+            last_seen_at TIMESTAMPTZ,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+        "#,
+        r#"
+        CREATE TABLE user_runtime_quotas (
+            user_id TEXT PRIMARY KEY,
+            plan_tier_id TEXT,
+            max_active_devices BIGINT,
+            max_pairings_per_day BIGINT,
+            max_relay_sockets BIGINT,
+            max_relay_mb_per_day BIGINT,
+            max_hosted_runtime_hours_monthly BIGINT,
+            can_create_hosted_runtime BOOLEAN,
+            max_hosted_runtimes BIGINT DEFAULT 0,
+            max_hosted_runtime_memory_mb BIGINT DEFAULT 0,
+            hard_spend_cap_usd REAL,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+        "#,
+        r#"
+        CREATE TABLE user_relay_usage (
+            id TEXT PRIMARY KEY,
+            user_id TEXT,
+            usage_date DATE,
+            sockets_opened BIGINT DEFAULT 0,
+            peak_concurrent_sockets BIGINT DEFAULT 0,
+            egress_bytes BIGINT DEFAULT 0,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            UNIQUE(user_id, usage_date)
+        )
+        "#,
+        r#"
+        CREATE TABLE runtime_relay_sockets (
+            id TEXT PRIMARY KEY,
+            runtime_id TEXT,
+            socket_path TEXT,
+            opened_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            closed_at TIMESTAMPTZ,
+            egress_bytes BIGINT DEFAULT 0,
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+        "#,
+    ] {
+        sqlx::query(statement).execute(&pool).await.unwrap();
+    }
+    pool
+}
+
+/// Insert a runtime_devices row owned by `user_id` with the capabilities the
+/// relay requires (`runtime:connect` plus `runtime:execute` for beta paths).
+pub async fn seed_runtime_device(db: &sqlx::PgPool, device_id: &str, user_id: &str) {
+    sqlx::query(
+        r#"
+        INSERT INTO runtime_devices (id, user_id, name, capabilities, status, credential_expires_at)
+        VALUES ($1, $2, 'test node', $3, 'online', '2999-01-01')
+        "#,
     )
-    .execute(&pool)
+    .bind(device_id)
+    .bind(user_id)
+    .bind(r#"["runtime:connect","runtime:execute"]"#)
+    .execute(db)
     .await
     .unwrap();
-    pool
 }
 
 /// Minimal ApiState with the gateway mocked; mirrors the wiring in
@@ -169,9 +243,12 @@ pub async fn test_state(gateway: Arc<dyn DataPlaneGateway>) -> Arc<ApiState> {
     let db = test_pool().await;
     let event_store: Arc<dyn crate::services::EventStore> =
         Arc::new(crate::services::EventStoreImpl::new(db.clone()));
-    let session_manager = Arc::new(crate::runtime::session_manager::SessionManager::new(db.clone()));
-    let run_service: Arc<dyn crate::services::RunService> =
-        Arc::new(crate::services::RunServiceImpl::new(db.clone()).with_event_store(event_store.clone()));
+    let session_manager = Arc::new(crate::runtime::session_manager::SessionManager::new(
+        db.clone(),
+    ));
+    let run_service: Arc<dyn crate::services::RunService> = Arc::new(
+        crate::services::RunServiceImpl::new(db.clone()).with_event_store(event_store.clone()),
+    );
     let rate_limit_config = crate::RateLimitConfig {
         requests_per_minute: 100_000,
         window: std::time::Duration::from_secs(60),
