@@ -19,3 +19,9 @@ Record the owner's Step 6 routing decision (option b — control-plane/data-plan
 - Auth model for data-plane calls (which token does the control plane mint for 8013?) — overlaps audit B1 backdoor work.
 - Is /api/chat control-plane (model router) or data-plane compute?
 - Per-sub vs per-org container granularity for the provisioned lane.
+
+## Update 2 (2026-09-03) — all open questions resolved
+- Probed production: every path 401s (auth precedes routing) — gap invisible to anonymous probes; auth is on the critical path.
+- Enumerated the 4 unverified client paths: `/api/chat`, `/api/v1/sessions/:id/events`, `/api/v1/agents/:id/events`, `/api/v1/operator/events/*` exist on NEITHER backend — orphaned calls (A4).
+- Decisions recorded in the ADR: Step 6 = [2] destination + [1]-mechanism interim via [4]; A1 two-hop auth (Clerk JWT in, short-lived Ed25519 data-plane JWT out, tailnet ACL enforcement, replaces dev-token pattern); A2 chat is control-plane (model router), `/api/agent-chat` stays data-plane for local lane; A3 per-sub containers v1 + auto-stop; sizing = unprivileged Incus containers.
+- P0 item 4 added: feature-flag widgets calling proxied namespaces until P1 handlers land.
