@@ -1968,6 +1968,15 @@ app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', async () => {
+  // Electron does not await this handler. Reap gizzi before any await or it
+  // survives quit (spawned detached, ppid 1).
+  gizziManager.stop({ reapExternal: true });
+  try {
+    gizziDaemonManager.stopSync();
+  } catch (err) {
+    log.warn('[Main] gizzi daemon stop on quit failed', err);
+  }
+
   if (app.isReady()) {
     globalShortcut.unregisterAll();
   }
@@ -1977,13 +1986,6 @@ app.on('before-quit', async () => {
   await workerBus.shutdown();
   tunnelManager.stop();
   await backendManager.stopBackend();
-
-  gizziManager.stop({ reapExternal: true });
-  try {
-    gizziDaemonManager.stopSync();
-  } catch (err) {
-    log.warn('[Main] gizzi daemon stop on quit failed', err);
-  }
   connectorSidecarManager.stop();
   officeEngineManager.stop();
   meshManager.stop().catch(() => {}); // best-effort mesh sidecar shutdown
