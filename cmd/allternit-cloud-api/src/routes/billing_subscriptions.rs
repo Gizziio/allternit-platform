@@ -127,6 +127,14 @@ async fn get_current_subscription(
     let user_id = crate::auth::resolve_user_scoped(&state.db, &headers, "billing")
         .await?
         .id;
+    if crate::auth::is_admin_user(&user_id) {
+        return Ok(Json(CurrentSubscriptionResponse {
+            plan_id: "ultra".to_string(),
+            label: "Ultra".to_string(),
+            plan_tier: "team".to_string(),
+            status: "active".to_string(),
+        }));
+    }
     let row: Option<BillingSubscription> = sqlx::query_as(
         r#"
         SELECT user_id, plan_id, plan_tier, status, stripe_customer_id
