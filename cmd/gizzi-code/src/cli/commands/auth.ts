@@ -24,7 +24,7 @@ const LoginCommand = cmd({
   builder: (yargs) =>
     yargs
       .option("api-key", { type: "string", describe: "API key" })
-      .option("provider", { type: "string", describe: "provider id", default: "anthropic" })
+      .option("provider", { type: "string", describe: "provider id", default: "allternit" })
       .option("profile", { type: "string", describe: "profile name", default: "default" }),
   async handler(args) {
     let apiKey = args.apiKey
@@ -142,7 +142,7 @@ const ProfileAddCommand = cmd({
     if (interactive) {
       const envAnswer = await prompts.text({
         message: "API key environment variable (optional)",
-        placeholder: "ANTHROPIC_API_KEY",
+        placeholder: "ALLTERNIT_API_KEY",
       })
       if (prompts.isCancel(envAnswer)) throw new UI.CancelledError()
       apiKeyEnv = envAnswer.trim() || undefined

@@ -3,7 +3,7 @@ import type {
   Base64ImageSource,
   ContentBlockParam,
   ToolResultBlockParam,
-} from '@anthropic-ai/sdk/resources/index.mjs'
+} from '@allternit/sdk/providers/allternit/resources/index.mjs'
 import { readFile, stat } from 'fs/promises'
 import { getOriginalCwd } from '@/bootstrap/state.js'
 import { logEvent } from '@/runtime/services/analytics/index.js'

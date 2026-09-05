@@ -1,4 +1,4 @@
-import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
+import type { ContentBlockParam } from '@allternit/sdk/providers/allternit/resources/index.mjs'
 type UUID = string
 import type { CanUseToolFn } from '@/hooks/useCanUseTool.js'
 import type { CompactionResult } from '@/services/compact/compact.js'

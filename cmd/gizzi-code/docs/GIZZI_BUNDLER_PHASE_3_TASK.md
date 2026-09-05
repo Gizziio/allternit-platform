@@ -28,7 +28,7 @@ In **both** the `src/cli/ui/ink-app/...` tree and the `src/shared/...` tree:
    - `hasProfileScope`
    - `isClaudeAISubscriber`
    - `saveApiKey`
-3. `services/oauth/getOauthProfile.ts` statically imports `getAnthropicApiKey` from `utils/auth.ts`.
+3. `services/oauth/getOauthProfile.ts` statically imports `getAllternitApiKey` from `utils/auth.ts`.
 4. `services/oauth/client.ts` statically imports `getOauthProfileFromOauthToken` from `services/oauth/getOauthProfile.ts`.
 
 This creates `utils/auth.ts` <-> `services/oauth/client.ts` and a larger ring through `getOauthProfile.ts`.
@@ -89,10 +89,10 @@ In both `utils/auth.ts` files:
 ### 4. Break `services/oauth/getOauthProfile.ts` -> `utils/auth.ts`
 
 In both `getOauthProfile.ts` files:
-- Remove the static import of `getAnthropicApiKey` from `utils/auth.ts`/`../../utils/auth.ts`.
+- Remove the static import of `getAllternitApiKey` from `utils/auth.ts`/`../../utils/auth.ts`.
 - Inside the async function `getOauthProfileFromApiKey`, dynamically import it:
   ```ts
-  const { getAnthropicApiKey } = await import('../../utils/auth.js')
+  const { getAllternitApiKey } = await import('../../utils/auth.js')
   ```
   (use the correct relative path for each copy).
 

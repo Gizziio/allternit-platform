@@ -231,14 +231,14 @@ export async function authStatus(opts: {
   text?: boolean
 }): Promise<void> {
   const {
-    getAnthropicApiKeyWithSource,
+    getAllternitApiKeyWithSource,
     getAuthTokenSource,
     getOauthAccountInfo,
     getSubscriptionType,
     isUsing3PServices,
   } = await import('../../utils/auth')
   const { source: authTokenSource, hasToken } = getAuthTokenSource()
-  const { source: apiKeySource } = getAnthropicApiKeyWithSource()
+  const { source: apiKeySource } = getAllternitApiKeyWithSource()
   const hasApiKeyEnvVar =
     !!process.env.ANTHROPIC_API_KEY && !isRunningOnHomespace()
   const oauthAccount = getOauthAccountInfo()

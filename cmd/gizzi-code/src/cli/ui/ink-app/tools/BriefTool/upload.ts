@@ -64,7 +64,7 @@ function debug(msg: string): void {
  * Subprocess hosts (cowork) pass ALLTERNIT_BASE_URL alongside
  * GIZZI_CODE_OAUTH_TOKEN — prefer that since getOauthConfig() only
  * returns staging when USE_STAGING_OAUTH is set, which such hosts don't
- * set. Without this a staging token hits api.anthropic.com → 401 → silent
+ * set. Without this a staging token hits api.allternit.com → 401 → silent
  * skip → web viewer sees inert cards with no file_uuid.
  */
 function getBridgeBaseUrl(): string {

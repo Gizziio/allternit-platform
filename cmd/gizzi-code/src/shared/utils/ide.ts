@@ -1032,7 +1032,7 @@ async function getVSCodeIDECommand(ideType: IdeType): Promise<string | null> {
   // then resolves to Code.exe via PATHEXT which opens a new editor window
   // instead of running the CLI. Asking for 'code.cmd' forces cross-spawn/which
   // to skip Code.exe. See microsoft/vscode#299416 (fixed in Insiders) and
-  // anthropics/gizzi#30975.
+  // Gizziio/allternit-platform#30975.
   const ext = getPlatform() === 'windows' ? '.cmd' : ''
   switch (ideType) {
     case 'vscode':

@@ -1,6 +1,6 @@
 import type { ProviderLoader } from "../../types"
 
-export const anthropicLoader: ProviderLoader = async () => {
+export const allternitLoader: ProviderLoader = async () => {
   return {
     autoload: false,
     options: {

@@ -74,7 +74,7 @@ export function PackageManagerAutoUpdater(t0) {
   if (!updateAvailable) {
     return null;
   }
-  const updateCommand = packageManager === "homebrew" ? "brew upgrade claude-code" : packageManager === "winget" ? "winget upgrade Anthropic.ClaudeCode" : packageManager === "apk" ? "apk upgrade claude-code" : "your package manager update command";
+  const updateCommand = packageManager === "homebrew" ? "brew upgrade gizzi-code" : packageManager === "winget" ? "winget upgrade Allternit.GizziCode" : packageManager === "apk" ? "apk upgrade gizzi-code" : "your package manager update command";
   let t4;
   if ($[3] !== verbose) {
     t4 = verbose && <Text dimColor={true} wrap="truncate">currentVersion: {MACRO.VERSION}</Text>;

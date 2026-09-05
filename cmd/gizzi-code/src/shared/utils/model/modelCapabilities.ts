@@ -6,7 +6,7 @@ import memoize from 'lodash-es/memoize.js'
 import { join } from 'path'
 import { z } from 'zod/v4'
 import { OAUTH_BETA_HEADER } from '@/constants/oauth.js'
-import { getAnthropicClient } from '@/services/api/client.js'
+import { getAllternitClient } from '@/services/api/client.js'
 import { isClaudeAISubscriber } from '../auth.js'
 import { logForDebugging } from '../debug.js'
 import { getLegacyClaudeHomeDir } from '../envUtils.js'
@@ -14,7 +14,7 @@ import { safeParseJSON } from '../json.js'
 import { lazySchema } from '../lazySchema.js'
 import { isEssentialTrafficOnly } from '../privacyLevel.js'
 import { jsonStringify } from '../slowOperations.js'
-import { getAPIProvider, isFirstPartyAnthropicBaseUrl } from './providers.js'
+import { getAPIProvider, isFirstPartyAllternitBaseUrl } from './providers.js'
 
 // .strip() — don't persist internal-only fields (mycro_deployments etc.) to disk
 const ModelCapabilitySchema = lazySchema(() =>
@@ -85,7 +85,7 @@ export async function refreshModelCapabilities(): Promise<void> {
   if (isEssentialTrafficOnly()) return
 
   try {
-    const anthropic = await getAnthropicClient({ maxRetries: 1 })
+    const anthropic = await getAllternitClient({ maxRetries: 1 })
     const betas = isClaudeAISubscriber() ? [OAUTH_BETA_HEADER] : undefined
     const parsed: ModelCapability[] = []
     for await (const entry of anthropic.models.list({ betas })) {

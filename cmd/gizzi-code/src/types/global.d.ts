@@ -3,10 +3,10 @@
  * TEMPORARY SHIM
  */
 
-// Anthropic SDK namespace declarations at top level
+// Allternit SDK namespace declarations at top level
 // These mirror the SDK's actual structure to fix TS2702 errors
-// when using namespace-style type references like Anthropic.Beta.Messages.X
-declare namespace Anthropic {
+// when using namespace-style type references like Allternit.Beta.Messages.X
+declare namespace Allternit {
     // Main content block types
     export interface ContentBlock {
       type: 'text' | 'image' | 'tool_use' | 'tool_result' | 'thinking' | 'redacted_thinking' | 'document'

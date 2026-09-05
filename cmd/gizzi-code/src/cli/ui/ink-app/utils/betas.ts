@@ -372,11 +372,7 @@ export const getAllModelBetas = registerBetasCache(memoize((model: string): stri
 }))
 
 export const getModelBetas = registerBetasCache(memoize((model: string): string[] => {
-  const modelBetas = getAllModelBetas(model)
-  if (getAPIProvider() === 'bedrock') {
-    return modelBetas.filter(b => !BEDROCK_EXTRA_PARAMS_HEADERS.has(b))
-  }
-  return modelBetas
+  return getAllModelBetas(model)
 }))
 
 export const getBedrockExtraBodyParamsBetas = registerBetasCache(memoize(

@@ -429,12 +429,12 @@ function isGrowthBookEnabled(): boolean {
  * Hostname of ALLTERNIT_BASE_URL when it points at a non-Anthropic proxy.
  *
  * Enterprise-proxy deployments (Epic, Marble, etc.) typically use
- * apiKeyHelper auth, which means isAnthropicAuthEnabled() returns false and
+ * apiKeyHelper auth, which means isAllternitAuthEnabled() returns false and
  * organizationUUID/accountUUID/email are all absent from GrowthBook
  * attributes. Without this, there's no stable attribute to target them on
- * — only per-device IDs. See src/utils/auth.ts isAnthropicAuthEnabled().
+ * — only per-device IDs. See src/utils/auth.ts isAllternitAuthEnabled().
  *
- * Returns undefined for unset/default (api.anthropic.com) so the attribute
+ * Returns undefined for unset/default (api.allternit.com) so the attribute
  * is absent for direct-API users. Hostname only — no path/query/creds.
  */
 export function getApiBaseUrlHost(): string | undefined {
@@ -442,7 +442,7 @@ export function getApiBaseUrlHost(): string | undefined {
   if (!baseUrl) return undefined
   try {
     const host = new URL(baseUrl).host
-    if (host === 'api.anthropic.com') return undefined
+    if (host === 'api.allternit.com') return undefined
     return host
   } catch {
     return undefined
@@ -503,8 +503,8 @@ const getGrowthBookClient = memoize(
     }
     const baseUrl =
       process.env.USER_TYPE === 'ant'
-        ? process.env.GIZZI_CODE_GB_BASE_URL || 'https://api.anthropic.com/'
-        : 'https://api.anthropic.com/'
+        ? process.env.GIZZI_CODE_GB_BASE_URL || 'https://api.allternit.com/'
+        : 'https://api.allternit.com/'
 
     // Skip auth if trust hasn't been established yet
     // This prevents executing apiKeyHelper commands before the trust dialog

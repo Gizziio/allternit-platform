@@ -426,10 +426,10 @@ function isGrowthBookEnabled(): boolean {
  * Hostname of ALLTERNIT_BASE_URL when it points at a non-Anthropic proxy.
  *
  * Enterprise-proxy deployments (Epic, Marble, etc.) typically use
- * apiKeyHelper auth, which means isAnthropicAuthEnabled() returns false and
+ * apiKeyHelper auth, which means isAllternitAuthEnabled() returns false and
  * organizationUUID/accountUUID/email are all absent from GrowthBook
  * attributes. Without this, there's no stable attribute to target them on
- * — only per-device IDs. See src/utils/auth.ts isAnthropicAuthEnabled().
+ * — only per-device IDs. See src/utils/auth.ts isAllternitAuthEnabled().
  *
  * Returns undefined for unset/default (api.allternit.com) so the attribute
  * is absent for direct-API users. Hostname only — no path/query/creds.

@@ -3,7 +3,7 @@ import type {
   ImageBlockParam,
   TextBlockParam,
   ToolResultBlockParam,
-} from '@anthropic-ai/sdk/resources/index.mjs'
+} from '@allternit/sdk/providers/allternit/resources/index.mjs'
 import { BASH_TOOL_NAME } from '../../cli/ui/ink-app/tools/BashTool/toolName.js'
 import { formatOutput } from '../../runtime/tools/BashTool/utils.js'
 import type {

@@ -70,10 +70,6 @@ export interface BedrockChatResponse {
 }
 
 export const BEDROCK_MODELS = {
-  GIZZI_3_OPUS: 'anthropic.claude-3-opus-20240229-v1:0',
-  GIZZI_3_SONNET: 'anthropic.claude-3-sonnet-20240229-v1:0',
-  GIZZI_3_HAIKU: 'anthropic.claude-3-haiku-20240307-v1:0',
-  GIZZI_3_5_SONNET: 'anthropic.claude-3-5-sonnet-20240620-v1:0',
   LLAMA2_13B: 'meta.llama2-13b-chat-v1',
   LLAMA2_70B: 'meta.llama2-70b-chat-v1',
   LLAMA3_8B: 'meta.llama3-8b-instruct-v1:0',

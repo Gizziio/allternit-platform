@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle'
-import type { BetaUsage as Usage } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
+import type { BetaUsage as Usage } from '@allternit/sdk/providers/allternit/resources/beta/messages/messages.mjs'
 import type {
   ContentBlock,
   ContentBlockParam,
@@ -12,7 +12,7 @@ import type {
   ToolResultBlockParam,
   ToolUseBlock,
   ToolUseBlockParam,
-} from '@anthropic-ai/sdk/resources/index.mjs'
+} from '@allternit/sdk/providers/allternit/resources/index.mjs'
 import { randomUUID, type UUID } from 'crypto'
 import isObject from 'lodash-es/isObject.js'
 import last from 'lodash-es/last.js'
@@ -127,14 +127,14 @@ type HookAttachmentWithName = Exclude<
   HookPermissionDecisionAttachment
 >
 
-import type { APIError } from '@anthropic-ai/sdk'
+import type { APIError } from '@allternit/sdk/providers/allternit'
 import type {
   BetaContentBlock,
   BetaMessage,
   BetaRedactedThinkingBlock,
   BetaThinkingBlock,
   BetaToolUseBlock,
-} from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
+} from '@allternit/sdk/providers/allternit/resources/beta/messages/messages.mjs'
 import type {
   HookEvent,
   SDKAssistantMessageError,

@@ -1,6 +1,6 @@
 // @ts-nocheck
 import {
-  getAnthropicApiKey,
+  getAllternitApiKey,
   getAuthTokenSource,
   getSubscriptionType,
   isClaudeAISubscriber,
@@ -23,7 +23,7 @@ export function hasConsoleBillingAccess(): boolean {
 
   // Check if user has any form of authentication
   const authSource = getAuthTokenSource()
-  const hasApiKey = getAnthropicApiKey() !== null
+  const hasApiKey = getAllternitApiKey() !== null
 
   // If user has no authentication at all (logged out), don't show costs
   if (!authSource.hasToken && !hasApiKey) {

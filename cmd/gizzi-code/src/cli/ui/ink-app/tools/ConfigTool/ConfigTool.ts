@@ -239,11 +239,11 @@ export const ConfigTool = buildTool({
         '../../voice/voiceModeEnabled.js'
       )
       if (!isVoiceModeEnabled()) {
-        const { isAnthropicAuthEnabled } = await import('../../utils/auth.js')
+        const { isAllternitAuthEnabled } = await import('../../utils/auth.js')
         return {
           data: {
             success: false,
-            error: !isAnthropicAuthEnabled()
+            error: !isAllternitAuthEnabled()
               ? 'Voice mode requires a Claude.ai account. Please run /login to sign in.'
               : 'Voice mode is not available.',
           },

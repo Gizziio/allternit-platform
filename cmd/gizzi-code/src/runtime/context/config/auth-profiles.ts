@@ -192,7 +192,7 @@ export async function loginApiKey(
 
   const existing = auth.profiles[profileName]
   const profile: AuthProfile = {
-    provider: options.provider ?? existing?.provider ?? "anthropic",
+    provider: options.provider ?? existing?.provider ?? "allternit",
     api_key_env: existing?.api_key_env,
     base_url: existing?.base_url,
   }
@@ -392,7 +392,7 @@ export async function diagnoseAuth(configPath: string, writer?: CredentialWriter
     method: status.method,
     runtime_auth_keys: Object.keys(runtimeAuth),
     env_vars: {
-      ANTHROPIC_API_KEY: Boolean(process.env.ANTHROPIC_API_KEY),
+      ALLTERNIT_API_KEY: Boolean(process.env.ALLTERNIT_API_KEY),
       OPENAI_API_KEY: Boolean(process.env.OPENAI_API_KEY),
       GIZZI_API_KEY: Boolean(process.env.GIZZI_API_KEY),
       DISABLE_TELEMETRY: Boolean(process.env.DISABLE_TELEMETRY),

@@ -178,7 +178,7 @@ import { getAgentHarnessConfig } from '../services/harness';
 
 // Harness streaming types
 interface StreamRequest {
-  provider: 'anthropic' | 'openai' | 'google';
+  provider: 'allternit' | 'openai' | 'google';
   model: string;
   messages: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>;
   systemPrompt?: string;
@@ -208,10 +208,10 @@ function getAvailableProvidersForMode(mode: HarnessMode): Array<{ id: string; na
     case 'byok':
       // BYOK mode: Show providers with configured API keys
       const providers = [];
-      if (process.env.ANTHROPIC_API_KEY) {
+      if (process.env.ALLTERNIT_API_KEY) {
         providers.push({
-          id: 'anthropic',
-          name: 'Anthropic',
+          id: 'allternit',
+          name: 'Allternit',
           models: ['claude-sonnet-4-5-20251101', 'claude-opus-4-5-20251101', 'claude-sonnet-4-20250514', 'claude-opus-4-20250514']
         });
       }
@@ -235,8 +235,8 @@ function getAvailableProvidersForMode(mode: HarnessMode): Array<{ id: string; na
       // Cloud mode: Show all providers from /v1/ai/models
       return [
         {
-          id: 'anthropic',
-          name: 'Anthropic (Cloud)',
+          id: 'allternit',
+          name: 'Allternit (Cloud)',
           models: ['claude-sonnet-4-5', 'claude-opus-4-5', 'claude-sonnet-4', 'claude-opus-4']
         },
         {

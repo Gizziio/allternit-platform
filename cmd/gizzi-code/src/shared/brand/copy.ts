@@ -270,7 +270,7 @@ export const GIZZICopy = {
     providerDescriptionMistral: "(Mistral AI API key)",
     providerDescriptions: {
       gizzi: "(GIZZIIO ZEN - Recommended)",
-      anthropic: "(Claude Max or API key)",
+      allternit: "(Allternit API key)",
       openai: "(ChatGPT Plus/Pro or API key)",
       gemini: "(Google AI Studio or Vertex AI key)",
       bedrock: "(AWS Bedrock - requires AWS credentials)",

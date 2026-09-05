@@ -3,11 +3,11 @@ import {
   APIConnectionError,
   APIConnectionTimeoutError,
   APIError,
-} from '@anthropic-ai/sdk'
+} from '@allternit/sdk/providers/allternit'
 import type {
   BetaMessage,
   BetaStopReason,
-} from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
+} from '@allternit/sdk/providers/allternit/resources/beta/messages/messages.mjs'
 import { AFK_MODE_BETA_HEADER } from '@/constants/betas.js'
 import type { SDKAssistantMessageError } from '../../../entrypoints/agentSdkTypes.js'
 import type {
@@ -16,7 +16,7 @@ import type {
   UserMessage,
 } from '@/types/message.js'
 import {
-  getAnthropicApiKeyWithSource,
+  getAllternitApiKeyWithSource,
   getClaudeAIOAuthTokens,
   getOauthAccountInfo,
   isClaudeAISubscriber,
@@ -728,7 +728,7 @@ export function getAssistantMessageFromError(
     error.status === 400 &&
     error.message.toLowerCase().includes('organization has been disabled')
   ) {
-    const { source } = getAnthropicApiKeyWithSource()
+    const { source } = getAllternitApiKeyWithSource()
     if (
       source === 'ANTHROPIC_API_KEY' &&
       process.env.ANTHROPIC_API_KEY &&
@@ -755,7 +755,7 @@ export function getAssistantMessageFromError(
       })
     }
 
-    const { source } = getAnthropicApiKeyWithSource()
+    const { source } = getAllternitApiKeyWithSource()
     const isExternalSource =
       source === 'ANTHROPIC_API_KEY' || source === 'apiKeyHelper'
 

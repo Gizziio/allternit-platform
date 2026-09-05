@@ -5,7 +5,7 @@
  * This module provides functionality to download and upload files to the Allternit Files API.
  * Used by the gizzi-code agent to download file attachments at session startup.
  *
- * API Reference: https://docs.anthropic.com/en/api/files-content
+ * API Reference: https://docs.gizziio.com/en/api/files-content
  */
 
 import axios from 'axios'

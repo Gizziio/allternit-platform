@@ -5,5 +5,5 @@ The dual-name `CLAUDE_CODE_*` compatibility surface documented here was
 
 See:
 
-- `docs/anthropic-allowlist.md` — remaining functional-floor identifiers
+- `docs/anthropic-allowlist.md` — remaining third-party Anthropic identifiers
 - `src/shared/utils/gizziEnv.ts` — `GIZZI_*` only

@@ -1,5 +1,5 @@
 // @ts-nocheck
-import type { BetaUsage } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
+import type { BetaUsage } from '@allternit/sdk/providers/allternit/resources/beta/messages/messages.mjs'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../runtime/services/analytics/growthbook.js'
 import { shouldIncludeFirstPartyOnlyBetas } from './betas.js'
 import { isEnvTruthy } from './envUtils.js'

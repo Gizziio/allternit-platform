@@ -8,10 +8,10 @@ export async function getOauthProfileFromApiKey(): Promise<
   OAuthProfileResponse | undefined
 > {
   // Assumes interactive session
-  const { getAnthropicApiKey } = await import('../../utils/auth.js')
+  const { getAllternitApiKey } = await import('../../utils/auth.js')
   const config = getGlobalConfig()
   const accountUuid = config.oauthAccount?.accountUuid
-  const apiKey = getAnthropicApiKey()
+  const apiKey = getAllternitApiKey()
 
   // Need both account UUID and API key to check
   if (!accountUuid || !apiKey) {

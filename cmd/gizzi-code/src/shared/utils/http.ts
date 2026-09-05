@@ -6,7 +6,7 @@
 import axios from 'axios'
 import { OAUTH_BETA_HEADER } from '@/constants/oauth.js'
 import {
-  getAnthropicApiKey,
+  getAllternitApiKey,
   getClaudeAIOAuthTokens,
   handleOAuth401Error,
   isClaudeAISubscriber,
@@ -28,7 +28,7 @@ export function getUserAgent(): string {
   // Turn-/process-scoped workload tag for cron-initiated requests. 1P-only
   // observability — proxies strip HTTP headers; QoS routing uses cc_workload
   // in the billing-header attribution block instead (see constants/system.ts).
-  // getAnthropicClient (client.ts:98) calls this per-request inside withRetry,
+  // getAllternitClient (client.ts:98) calls this per-request inside withRetry,
   // so the read picks up the same setWorkload() value as getAttributionHeader.
   const workload = getWorkload()
   const workloadSuffix = workload ? `, workload/${workload}` : ''
@@ -85,7 +85,7 @@ export function getAuthHeaders(): AuthHeaders {
   }
   // TODO: this will fail if the API key is being set to an LLM Gateway key
   // should we try to query keychain / credentials for a valid Anthropic key?
-  const apiKey = getAnthropicApiKey()
+  const apiKey = getAllternitApiKey()
   if (!apiKey) {
     return {
       headers: {},

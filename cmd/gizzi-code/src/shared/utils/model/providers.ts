@@ -11,22 +11,22 @@ export function getAPIProviderForStatsig(): AnalyticsMetadata_I_VERIFIED_THIS_IS
 }
 
 /**
- * Check if ALLTERNIT_BASE_URL is a first-party Anthropic API URL.
+ * Check if ALLTERNIT_BASE_URL is a first-party Allternit API URL.
  * Returns true if not set (default API) or points to api.allternit.com
- * (or api-staging.allternit.com for ant users).
+ * (or api-staging.allternit.com for internal users).
  */
-export function isFirstPartyAnthropicBaseUrl(): boolean {
+export function isFirstPartyAllternitBaseUrl(): boolean {
   const baseUrl = process.env.ALLTERNIT_BASE_URL
   if (!baseUrl) {
     return true
   }
   try {
     const host = new URL(baseUrl).host
-    const allowedHosts = ['api.allternit.com', 'api.anthropic.com', 'api-staging.anthropic.com', 'localhost', '127.0.0.1']
+    const allowedHosts = ['api.allternit.com', 'localhost', '127.0.0.1']
     if (process.env.USER_TYPE === 'ant') {
       allowedHosts.push('api-staging.allternit.com')
     }
-    return allowedHosts.includes(host) || host.endsWith('.allternit.com') || host.endsWith('.anthropic.com')
+    return allowedHosts.includes(host) || host.endsWith('.allternit.com')
   } catch {
     return false
   }

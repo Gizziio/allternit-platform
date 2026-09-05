@@ -302,7 +302,7 @@ export const AuthLoginCommand = cmd({
 
         const priority: Record<string, number> = {
           gizzi: 0,
-          anthropic: 1,
+          allternit: 1,
           openai: 2,
           google: 3,
           openrouter: 4,
@@ -334,7 +334,7 @@ export const AuthLoginCommand = cmd({
                 value: x.id,
                 hint: {
                   gizzi: "recommended",
-                  anthropic: "Claude Max or API key",
+                  allternit: "Allternit API key",
                   openai: "ChatGPT Plus/Pro or API key",
                   alibaba: "Qwen models",
                   moonshotai: "Kimi models",

@@ -17,13 +17,13 @@ import type {
   BetaToolUnion,
   BetaUsage,
   BetaMessageParam as MessageParam,
-} from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
-import type { TextBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
-import type { Stream } from '@anthropic-ai/sdk/streaming.mjs'
+} from '@allternit/sdk/providers/allternit/resources/beta/messages/messages.mjs'
+import type { TextBlockParam } from '@allternit/sdk/providers/allternit/resources/index.mjs'
+import type { Stream } from '@allternit/sdk/providers/allternit/streaming.mjs'
 import { randomUUID } from 'crypto'
 import {
   getAPIProvider,
-  isFirstPartyAnthropicBaseUrl,
+  isFirstPartyAllternitBaseUrl,
 } from '../../../utils/model/providers.js'
 import {
   getAttributionHeader,
@@ -52,7 +52,6 @@ import {
 } from '../../../utils/api.js'
 import { getOauthAccountInfo } from '../../../utils/auth.js'
 import {
-  getBedrockExtraBodyParamsBetas,
   getMergedBetas,
   getModelBetas,
 } from '../../../shared/utils/betas.js'
@@ -102,12 +101,12 @@ const autoModeStateModule = feature('TRANSCRIPT_CLASSIFIER')
   : null
 
 import { feature } from 'bun:bundle'
-import type { ClientOptions } from '@anthropic-ai/sdk'
+import type { ClientOptions } from '@allternit/sdk/providers/allternit'
 import {
   APIConnectionTimeoutError,
   APIError,
   APIUserAbortError,
-} from '@anthropic-ai/sdk/error'
+} from '@allternit/sdk/providers/allternit/error'
 import {
   getAfkModeHeaderLatched,
   getCacheEditingHeaderLatched,
@@ -223,7 +222,7 @@ import {
 import { getInitializationStatus } from '../lsp/manager.js'
 import { isToolFromMcpServer } from '../mcp/utils.js'
 import { withStreamingVCR, withVCR } from '../vcr.js'
-import { CLIENT_REQUEST_ID_HEADER, getAnthropicClient } from './client.js'
+import { CLIENT_REQUEST_ID_HEADER, getAllternitClient } from './client.js'
 import {
   API_ERROR_MESSAGE_PREFIX,
   CUSTOM_OFF_SWITCH_MESSAGE,
@@ -386,15 +385,6 @@ export function getCacheControl({
  * TTLs when GrowthBook's disk cache updates mid-request.
  */
 function should1hCacheTTL(querySource?: QuerySource): boolean {
-  // 3P Bedrock users get 1h TTL when opted in via env var — they manage their own billing
-  // No GrowthBook gating needed since 3P users don't have GrowthBook configured
-  if (
-    getAPIProvider() === 'bedrock' &&
-    isEnvTruthy(process.env.ENABLE_PROMPT_CACHING_1H_BEDROCK)
-  ) {
-    return true
-  }
-
   // Latch eligibility in bootstrap state for session stability — prevents
   // mid-session overage flips from changing the cache_control TTL, which
   // would bust the server-side prompt cache (~20K tokens per flip).
@@ -538,7 +528,7 @@ export async function verifyApiKey(
     return await returnValue(
       withRetry(
         () =>
-          getAnthropicClient({
+          getAllternitClient({
             apiKey,
             maxRetries: 3,
             model,
@@ -852,7 +842,7 @@ export async function* executeNonStreamingRequest(
   const fallbackTimeoutMs = getNonstreamingFallbackTimeoutMs()
   const generator = withRetry(
     () =>
-      getAnthropicClient({
+      getAllternitClient({
         maxRetries: 0,
         model: clientOptions.model,
         fetchOverride: clientOptions.fetchOverride,
@@ -1064,12 +1054,7 @@ async function* queryModel(
   // Also naturally handles rollback/undo since removed messages won't be in the array.
   const previousRequestId = getPreviousRequestIdFromMessages(messages)
 
-  const resolvedModel =
-    getAPIProvider() === 'bedrock' &&
-    options.model.includes('application-inference-profile')
-      ? ((await getInferenceProfileBackingModel(options.model)) ??
-        options.model)
-      : options.model
+  const resolvedModel = options.model
 
   queryCheckpoint('query_tool_schema_build_start')
   const isAgenticQuery =
@@ -1182,13 +1167,9 @@ async function* queryModel(
   }
 
   // Add tool search beta header if enabled - required for defer_loading to be accepted
-  // Header differs by provider: 1P/Foundry use advanced-tool-use, Vertex/Bedrock use tool-search-tool
-  // For Bedrock, this header must go in extraBodyParams, not the betas array
   const toolSearchHeader = useToolSearch ? getToolSearchBetaHeader() : null
-  if (toolSearchHeader && getAPIProvider() !== 'bedrock') {
-    if (!betas.includes(toolSearchHeader)) {
-      betas.push(toolSearchHeader)
-    }
+  if (toolSearchHeader && !betas.includes(toolSearchHeader)) {
+    betas.push(toolSearchHeader)
   }
 
   // Determine if cached microcompact is enabled for this model.
@@ -1556,15 +1537,7 @@ async function* queryModel(
       betasParams.push(CONTEXT_1M_BETA_HEADER)
     }
 
-    // For Bedrock, include both model-based betas and dynamically-added tool search header
-    const bedrockBetas =
-      getAPIProvider() === 'bedrock'
-        ? [
-            ...getBedrockExtraBodyParamsBetas(retryContext.model),
-            ...(toolSearchHeader ? [toolSearchHeader] : []),
-          ]
-        : []
-    const extraBodyParams = getExtraBodyParams(bedrockBetas)
+    const extraBodyParams = getExtraBodyParams([])
 
     const outputConfig: BetaOutputConfig = {
       ...(((extraBodyParams.output_config as unknown) ?? {}) as BetaOutputConfig),
@@ -1787,7 +1760,7 @@ async function* queryModel(
     queryCheckpoint('query_client_creation_start')
     const generator = withRetry(
       () =>
-        getAnthropicClient({
+        getAllternitClient({
           maxRetries: 0, // Disabled auto-retry in favor of manual implementation
           model: options.model,
           fetchOverride: options.fetchOverride,
@@ -1821,7 +1794,7 @@ async function* queryModel(
         // server request ID) can still be correlated with server logs.
         // First-party only — 3P providers don't log it (inc-4029 class).
         clientRequestId =
-          getAPIProvider() === 'firstParty' && isFirstPartyAnthropicBaseUrl()
+          getAPIProvider() === 'firstParty' && isFirstPartyAllternitBaseUrl()
             ? randomUUID()
             : undefined
 
@@ -2545,7 +2518,7 @@ async function* queryModel(
       // If the streaming failure was itself a 529, count it toward the
       // consecutive-529 budget so total 529s-before-model-fallback is the
       // same whether the overload was hit in streaming or non-streaming mode.
-      // This is a speculative fix for https://github.com/anthropics/gizzi/issues/1513
+      // This is a speculative fix for https://github.com/Gizziio/allternit-platform/issues/1513
       // Instrumentation: proves executeNonStreamingRequest was entered (vs. the
       // fallback event firing but the call itself hanging at dispatch).
       logForDiagnosticsNoPII('info', 'cli_nonstreaming_fallback_started')

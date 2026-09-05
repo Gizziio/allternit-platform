@@ -2,7 +2,7 @@
 import type {
   Base64ImageSource,
   ImageBlockParam,
-} from '@anthropic-ai/sdk/resources/messages.mjs'
+} from '@allternit/sdk/providers/allternit/resources/messages.mjs'
 import {
   API_IMAGE_MAX_BASE64_SIZE,
   IMAGE_MAX_HEIGHT,

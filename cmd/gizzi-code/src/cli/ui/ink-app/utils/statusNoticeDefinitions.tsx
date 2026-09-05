@@ -8,7 +8,7 @@ import { getCwd } from './cwd';
 import { relative } from 'path';
 import { formatNumber } from './format';
 import type { getGlobalConfig } from './config';
-import { getAnthropicApiKeyWithSource, getApiKeyFromConfigOrMacOSKeychain, getAuthTokenSource, isClaudeAISubscriber } from './auth';
+import { getAllternitApiKeyWithSource, getApiKeyFromConfigOrMacOSKeychain, getAuthTokenSource, isClaudeAISubscriber } from './auth';
 import type { AgentDefinitionsResult } from '../tools/AgentTool/loadAgentsDir';
 import { getAgentDescriptionsTotalTokens, AGENT_DESCRIPTIONS_THRESHOLD } from './statusNoticeHelpers';
 import { isSupportedJetBrainsTerminal, toIDEDisplayName, getTerminalIdeType } from './ide';
@@ -76,7 +76,7 @@ const apiKeyConflictNotice: StatusNoticeDefinition = {
   isActive: () => {
     const {
       source: apiKeySource
-    } = getAnthropicApiKeyWithSource({
+    } = getAllternitApiKeyWithSource({
       skipRetrievingKeyFromApiKeyHelper: true
     });
     return !!getApiKeyFromConfigOrMacOSKeychain() && (apiKeySource === 'ANTHROPIC_API_KEY' || apiKeySource === 'apiKeyHelper');
@@ -84,7 +84,7 @@ const apiKeyConflictNotice: StatusNoticeDefinition = {
   render: () => {
     const {
       source: apiKeySource
-    } = getAnthropicApiKeyWithSource({
+    } = getAllternitApiKeyWithSource({
       skipRetrievingKeyFromApiKeyHelper: true
     });
     return <Box flexDirection="row" marginTop={1}>
@@ -102,7 +102,7 @@ const bothAuthMethodsNotice: StatusNoticeDefinition = {
   isActive: () => {
     const {
       source: apiKeySource
-    } = getAnthropicApiKeyWithSource({
+    } = getAllternitApiKeyWithSource({
       skipRetrievingKeyFromApiKeyHelper: true
     });
     const authTokenInfo = getAuthTokenSource();
@@ -111,7 +111,7 @@ const bothAuthMethodsNotice: StatusNoticeDefinition = {
   render: () => {
     const {
       source: apiKeySource
-    } = getAnthropicApiKeyWithSource({
+    } = getAllternitApiKeyWithSource({
       skipRetrievingKeyFromApiKeyHelper: true
     });
     const authTokenInfo = getAuthTokenSource();

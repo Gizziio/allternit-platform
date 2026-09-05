@@ -244,8 +244,8 @@ export function getDefaultMainLoopModel(): ModelName {
 // @[MODEL LAUNCH]: Add a canonical name mapping for the new model below.
 /**
  * Pure string-match that strips date/provider suffixes from a first-party model
- * name. Input must already be a 1P-format ID (e.g. 'claude-3-7-sonnet-20250219',
- * 'us.anthropic.claude-opus-4-6-v1:0'). Does not touch settings, so safe at
+ * name. Input must already be a 1P-format ID (e.g. 'claude-3-7-sonnet-20250219').
+ * Does not touch settings, so safe at
  * module top-level (see MODEL_COSTS in modelCost.ts).
  */
 export function firstPartyNameToCanonical(name: ModelName): ModelShortName {
@@ -308,13 +308,12 @@ export function firstPartyNameToCanonical(name: ModelName): ModelShortName {
 
 /**
  * Maps a full model string to a shorter canonical version that's unified across 1P and 3P providers.
- * For example, 'claude-3-5-haiku-20241022' and 'us.anthropic.claude-3-5-haiku-20241022-v1:0'
- * would both be mapped to 'claude-3-5-haiku'.
+ * For example, 'claude-3-5-haiku-20241022' maps to 'claude-3-5-haiku'.
  * @param fullModelName The full model name (e.g., 'claude-3-5-haiku-20241022')
  * @returns The short name (e.g., 'claude-3-5-haiku') if found, or the original name if no mapping exists
  */
 export function getCanonicalName(fullModelName: ModelName): ModelShortName {
-  // Resolve overridden model IDs (e.g. Bedrock ARNs) back to canonical names.
+  // Resolve overridden model IDs back to canonical names.
   // resolved is always a 1P-format ID, so firstPartyNameToCanonical can handle it.
   return firstPartyNameToCanonical(resolveOverriddenModel(fullModelName))
 }

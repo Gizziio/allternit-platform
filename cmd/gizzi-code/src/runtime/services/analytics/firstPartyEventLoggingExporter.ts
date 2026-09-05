@@ -313,7 +313,7 @@ export class FirstPartyEventLoggingExporter implements LogRecordExporter {
       const eventLogs = logs.filter(
         // @ts-ignore Property may not exist
         log =>
-          (log as any).instrumentationScope?.name === 'com.anthropic.claude_code.events',
+          (log as any).instrumentationScope?.name === 'com.allternit.gizzi.events',
       )
 
       if (eventLogs.length === 0) {

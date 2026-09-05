@@ -152,7 +152,7 @@ export async function runOnboardingWizard(
     }
     try {
       const result = await loginApiKey(configTomlPath(), key.trim(), {
-        provider: "anthropic",
+        provider: "allternit",
         profile: "default",
       })
       authSummary = `signed in via API key (${result.method})`

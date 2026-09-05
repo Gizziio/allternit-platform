@@ -374,7 +374,7 @@ function publicPanelist(r: PanelistOut) {
 }
 
 const NO_BRAIN_MSG =
-  "No brain configured. Set up a provider in Settings (Ollama, OpenAI, Anthropic, or a CLI brain) and retry."
+  "No brain configured. Set up a provider in Settings (Ollama, OpenAI, Allternit, or a CLI brain) and retry."
 
 // ── Route ─────────────────────────────────────────────────────────────────────
 
@@ -387,7 +387,7 @@ export const CritiqueRoutes = () =>
         description:
           "Runs a multi-panelist critique of a design artifact through the configured brain. " +
           "Each panelist is a reviewer persona; the model generates all scores, findings, and suggestions. " +
-          "Provider-agnostic: works with Ollama, OpenAI, Anthropic, and CLI subprocess brains.",
+          "Provider-agnostic: works with Ollama, OpenAI, Allternit, and CLI subprocess brains.",
         operationId: "critique.run",
         responses: {
           200: {

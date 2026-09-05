@@ -1,10 +1,10 @@
 // @ts-nocheck
-import Anthropic, { type ClientOptions } from '@anthropic-ai/sdk'
+import AllternitAI, { type ClientOptions } from '@allternit/sdk/providers/allternit'
 import { randomUUID } from 'crypto'
 import type { GoogleAuth } from 'google-auth-library'
 import {
   checkAndRefreshOAuthTokenIfNeeded,
-  getAnthropicApiKey,
+  getAllternitApiKey,
   getApiKeyFromApiKeyHelper,
   getClaudeAIOAuthTokens,
   isClaudeAISubscriber,
@@ -15,7 +15,7 @@ import { getUserAgent } from '../../../shared/utils/http.js'
 import { getSmallFastModel } from '../../../utils/model/model.js'
 import {
   getAPIProvider,
-  isFirstPartyAnthropicBaseUrl,
+  isFirstPartyAllternitBaseUrl,
 } from '../../../utils/model/providers.js'
 import { getProxyFetchOptions } from '../../../shared/utils/proxy.js'
 import {
@@ -34,7 +34,7 @@ import {
  * Environment variables for different client types:
  *
  * Direct API:
- * - ANTHROPIC_API_KEY: Required for direct API access
+ * - ALLTERNIT_API_KEY: Required for direct API access
  *
  * AWS Bedrock:
  * - AWS credentials configured via aws-sdk defaults
@@ -75,18 +75,18 @@ function createStderrLogger(): ClientOptions['logger'] {
   return {
     error: (msg, ...args) =>
       // biome-ignore lint/suspicious/noConsole:: intentional console output -- SDK logger must use console
-      console.error('[Anthropic SDK ERROR]', msg, ...args),
+      console.error('[Allternit SDK ERROR]', msg, ...args),
     // biome-ignore lint/suspicious/noConsole:: intentional console output -- SDK logger must use console
-    warn: (msg, ...args) => console.error('[Anthropic SDK WARN]', msg, ...args),
+    warn: (msg, ...args) => console.error('[Allternit SDK WARN]', msg, ...args),
     // biome-ignore lint/suspicious/noConsole:: intentional console output -- SDK logger must use console
-    info: (msg, ...args) => console.error('[Anthropic SDK INFO]', msg, ...args),
+    info: (msg, ...args) => console.error('[Allternit SDK INFO]', msg, ...args),
     debug: (msg, ...args) =>
       // biome-ignore lint/suspicious/noConsole:: intentional console output -- SDK logger must use console
-      console.error('[Anthropic SDK DEBUG]', msg, ...args),
+      console.error('[Allternit SDK DEBUG]', msg, ...args),
   }
 }
 
-export async function getAnthropicClient({
+export async function getAllternitClient({
   apiKey,
   maxRetries,
   model,
@@ -98,7 +98,7 @@ export async function getAnthropicClient({
   model?: string
   fetchOverride?: ClientOptions['fetch']
   source?: string
-}): Promise<Anthropic> {
+}): Promise<AllternitAI> {
   const containerId = process.env.GIZZI_CONTAINER_ID
   const remoteSessionId = process.env.GIZZI_REMOTE_SESSION_ID
   const clientApp = process.env.GIZZI_AGENT_SDK_CLIENT_APP
@@ -106,9 +106,9 @@ export async function getAnthropicClient({
   const defaultHeaders: { [key: string]: string } = {
     'x-app': 'cli',
     'User-Agent': getUserAgent(),
-    'X-Claude-Code-Session-Id': getSessionId(),
+    'X-Allternit-Session-Id': getSessionId(),
     ...customHeaders,
-    ...(containerId ? { 'x-claude-remote-container-id': containerId } : {}),
+    ...(containerId ? { 'x-allternit-remote-container-id': containerId } : {}),
     ...(remoteSessionId
       ? { 'x-allternit-remote-session-id': remoteSessionId }
       : {}),
@@ -188,7 +188,7 @@ export async function getAnthropicClient({
       }
     }
     // we have always been lying about the return type - this doesn't support batching or models
-    return new AnthropicBedrock(bedrockArgs) as unknown as Anthropic
+    return new AnthropicBedrock(bedrockArgs) as unknown as AllternitAI
   }
   if (isEnvTruthy(process.env.GIZZI_USE_FOUNDRY)) {
     const { AnthropicFoundry } = await import('@anthropic-ai/foundry-sdk')
@@ -218,7 +218,7 @@ export async function getAnthropicClient({
       ...(isDebugToStdErr() && { logger: createStderrLogger() }),
     }
     // we have always been lying about the return type - this doesn't support batching or models
-    return new AnthropicFoundry(foundryArgs) as unknown as Anthropic
+    return new AnthropicFoundry(foundryArgs) as unknown as AllternitAI
   }
   if (isEnvTruthy(process.env.GIZZI_USE_VERTEX)) {
     // Refresh GCP credentials if gcpAuthRefresh is configured and credentials are expired
@@ -232,7 +232,7 @@ export async function getAnthropicClient({
       import('google-auth-library'),
     ])
     // TODO: Cache either GoogleAuth instance or AuthClient to improve performance
-    // Currently we create a new GoogleAuth instance for every getAnthropicClient() call
+    // Currently we create a new GoogleAuth instance for every getAllternitClient() call
     // This could cause repeated authentication flows and metadata server checks
     // However, caching needs careful handling of:
     // - Credential refresh/expiration
@@ -296,12 +296,12 @@ export async function getAnthropicClient({
       ...(isDebugToStdErr() && { logger: createStderrLogger() }),
     }
     // we have always been lying about the return type - this doesn't support batching or models
-    return new AnthropicVertex(vertexArgs) as unknown as Anthropic
+    return new AnthropicVertex(vertexArgs) as unknown as AllternitAI
   }
 
   // Determine authentication method based on available tokens
-  const clientConfig: ConstructorParameters<typeof Anthropic>[0] = {
-    apiKey: isClaudeAISubscriber() ? null : apiKey || getAnthropicApiKey(),
+  const clientConfig: ConstructorParameters<typeof AllternitAI>[0] = {
+    apiKey: isClaudeAISubscriber() ? null : apiKey || getAllternitApiKey(),
     authToken: isClaudeAISubscriber()
       ? getClaudeAIOAuthTokens()?.accessToken
       : undefined,
@@ -314,7 +314,7 @@ export async function getAnthropicClient({
     ...(isDebugToStdErr() && { logger: createStderrLogger() }),
   }
 
-  return new Anthropic(clientConfig)
+  return new AllternitAI(clientConfig)
 }
 
 async function configureApiKeyHeaders(
@@ -366,7 +366,7 @@ function buildFetch(
   // Only send to the first-party API — Bedrock/Vertex/Foundry don't log it
   // and unknown headers risk rejection by strict proxies (inc-4029 class).
   const injectClientRequestId =
-    getAPIProvider() === 'firstParty' && isFirstPartyAnthropicBaseUrl()
+    getAPIProvider() === 'firstParty' && isFirstPartyAllternitBaseUrl()
   return (input, init) => {
     // eslint-disable-next-line eslint-plugin-n/no-unsupported-features/node-builtins
     const headers = new Headers(init?.headers)

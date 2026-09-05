@@ -12,7 +12,7 @@ describe("ProviderTransform.options - setCacheKey", () => {
     providerID: "anthropic",
     api: {
       id: "claude-3-5-sonnet-20241022",
-      url: "https://api.anthropic.com",
+      url: "https://api.allternit.com",
       npm: "@ai-sdk/anthropic",
     },
     name: "Claude 3.5 Sonnet",
@@ -266,7 +266,7 @@ describe.skip("ProviderTransform.providerOptions", () => {
     const model = createModel({
       providerID: "my-bedrock",
       api: {
-        id: "anthropic.claude-sonnet-4",
+        id: "meta.llama3-70b-instruct-v1:0",
         url: "https://bedrock.aws",
         npm: "@ai-sdk/amazon-bedrock",
       },
@@ -754,7 +754,7 @@ describe("ProviderTransform.message - empty image handling", () => {
     providerID: "anthropic",
     api: {
       id: "claude-3-5-sonnet-20241022",
-      url: "https://api.anthropic.com",
+      url: "https://api.allternit.com",
       npm: "@ai-sdk/anthropic",
     },
     name: "Claude 3.5 Sonnet",
@@ -857,7 +857,7 @@ describe("ProviderTransform.message - anthropic empty content filtering", () => 
     providerID: "anthropic",
     api: {
       id: "claude-3-5-sonnet-20241022",
-      url: "https://api.anthropic.com",
+      url: "https://api.allternit.com",
       npm: "@ai-sdk/anthropic",
     },
     name: "Claude 3.5 Sonnet",
@@ -1181,7 +1181,7 @@ describe("ProviderTransform.message - strip openai metadata when store=false", (
       providerID: "anthropic",
       api: {
         id: "claude-3",
-        url: "https://api.anthropic.com",
+        url: "https://api.allternit.com",
         npm: "@ai-sdk/anthropic",
       },
     }
@@ -1290,7 +1290,7 @@ describe("ProviderTransform.message - strip openai metadata when store=false", (
       providerID: "anthropic",
       api: {
         id: "claude-3",
-        url: "https://api.anthropic.com",
+        url: "https://api.allternit.com",
         npm: "@ai-sdk/anthropic",
       },
     }
@@ -1490,7 +1490,7 @@ describe("ProviderTransform.message - cache control on gateway", () => {
       providerID: "anthropic",
       api: {
         id: "claude-sonnet-4",
-        url: "https://api.anthropic.com",
+        url: "https://api.allternit.com",
         npm: "@ai-sdk/anthropic",
       },
     })
@@ -2158,7 +2158,7 @@ describe("ProviderTransform.variants", () => {
         providerID: "anthropic",
         api: {
           id: "claude-sonnet-4-6",
-          url: "https://api.anthropic.com",
+          url: "https://api.allternit.com",
           npm: "@ai-sdk/anthropic",
         },
       })
@@ -2179,7 +2179,7 @@ describe("ProviderTransform.variants", () => {
         providerID: "anthropic",
         api: {
           id: "claude-4",
-          url: "https://api.anthropic.com",
+          url: "https://api.allternit.com",
           npm: "@ai-sdk/anthropic",
         },
       })
@@ -2204,10 +2204,10 @@ describe("ProviderTransform.variants", () => {
     // SKIPPED: documents variants() support for @ai-sdk/amazon-bedrock, which ProviderTransform.variants does not implement (returns {} for this npm package)
     test.skip("anthropic sonnet 4.6 returns adaptive reasoning options", () => {
       const model = createMockModel({
-        id: "bedrock/anthropic-claude-sonnet-4-6",
+        id: "bedrock/meta-llama3-70b",
         providerID: "bedrock",
         api: {
-          id: "anthropic.claude-sonnet-4-6",
+          id: "meta.llama3-70b-instruct-v1:0",
           url: "https://bedrock.amazonaws.com",
           npm: "@ai-sdk/amazon-bedrock",
         },

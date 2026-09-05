@@ -97,7 +97,7 @@ function isManagedOAuthContext(): boolean {
 
 /** Whether we are supporting direct 1P auth. */
 // this code is closely related to getAuthTokenSource
-export function isAnthropicAuthEnabled(): boolean {
+export function isAllternitAuthEnabled(): boolean {
   // --bare: API-key-only, never OAuth.
   if (isBareMode()) return false
 
@@ -127,7 +127,7 @@ export function isAnthropicAuthEnabled(): boolean {
     process.env.GIZZI_CODE_API_KEY_FILE_DESCRIPTOR
 
   // Check if API key is from an external source (not managed by /login)
-  const { source: apiKeySource } = getAnthropicApiKeyWithSource({
+  const { source: apiKeySource } = getAllternitApiKeyWithSource({
     skipRetrievingKeyFromApiKeyHelper: true,
   })
   const hasExternalApiKey =
@@ -149,7 +149,7 @@ export function isAnthropicAuthEnabled(): boolean {
 }
 
 /** Where the auth token is being sourced from, if any. */
-// this code is closely related to isAnthropicAuthEnabled
+// this code is closely related to isAllternitAuthEnabled
 export function getAuthTokenSource() {
   // --bare: API-key-only. apiKeyHelper (from --settings) is the only
   // bearer-token-shaped source allowed. OAuth env vars, FD tokens, and
@@ -211,19 +211,19 @@ export type ApiKeySource =
   | '/login managed key'
   | 'none'
 
-export function getAnthropicApiKey(): null | string {
-  const { key } = getAnthropicApiKeyWithSource()
+export function getAllternitApiKey(): null | string {
+  const { key } = getAllternitApiKeyWithSource()
   return key
 }
 
-export function hasAnthropicApiKeyAuth(): boolean {
-  const { key, source } = getAnthropicApiKeyWithSource({
+export function hasAllternitApiKeyAuth(): boolean {
+  const { key, source } = getAllternitApiKeyWithSource({
     skipRetrievingKeyFromApiKeyHelper: true,
   })
   return key !== null && source !== 'none'
 }
 
-export function getAnthropicApiKeyWithSource(
+export function getAllternitApiKeyWithSource(
   opts: { skipRetrievingKeyFromApiKeyHelper?: boolean } = {},
 ): {
   key: null | string
@@ -1047,7 +1047,7 @@ export function prefetchAwsCredentialsAndBedRockInfoIfSafe(): void {
   getModelStrings()
 }
 
-/** @private Use {@link getAnthropicApiKey} or {@link getAnthropicApiKeyWithSource} */
+/** @private Use {@link getAllternitApiKey} or {@link getAllternitApiKeyWithSource} */
 export const getApiKeyFromConfigOrMacOSKeychain = memoize(
   (): { key: string; source: ApiKeySource } | null => {
     if (isBareMode()) return null
@@ -1563,7 +1563,7 @@ async function checkAndRefreshOAuthTokenIfNeededImpl(
 }
 
 export function isClaudeAISubscriber(): boolean {
-  if (!isAnthropicAuthEnabled()) {
+  if (!isAllternitAuthEnabled()) {
     return false
   }
 
@@ -1614,7 +1614,7 @@ export function is1PApiCustomer(): boolean {
  * Returns undefined when using external API keys or third-party services.
  */
 export function getOauthAccountInfo(): AccountInfo | undefined {
-  return isAnthropicAuthEnabled() ? getGlobalConfig().oauthAccount : undefined
+  return isAllternitAuthEnabled() ? getGlobalConfig().oauthAccount : undefined
 }
 
 /**
@@ -1666,7 +1666,7 @@ export function getSubscriptionType(): SubscriptionType | null {
     return getMockSubscriptionType()
   }
 
-  if (!isAnthropicAuthEnabled()) {
+  if (!isAllternitAuthEnabled()) {
     return null
   }
   const oauthTokens = getClaudeAIOAuthTokens()
@@ -1701,7 +1701,7 @@ export function isProSubscriber(): boolean {
 }
 
 export function getRateLimitTier(): string | null {
-  if (!isAnthropicAuthEnabled()) {
+  if (!isAllternitAuthEnabled()) {
     return null
   }
   const oauthTokens = getClaudeAIOAuthTokens()
@@ -1879,7 +1879,7 @@ export function getAccountInformation() {
   } else {
     accountInfo.tokenSource = authTokenSource
   }
-  const { key: apiKey, source: apiKeySource } = getAnthropicApiKeyWithSource()
+  const { key: apiKey, source: apiKeySource } = getAllternitApiKeyWithSource()
   if (apiKey) {
     accountInfo.apiKeySource = apiKeySource
   }
@@ -1929,7 +1929,7 @@ export async function validateForceLoginOrg(): Promise<OrgValidationResult> {
     return { valid: true }
   }
 
-  if (!isAnthropicAuthEnabled()) {
+  if (!isAllternitAuthEnabled()) {
     return { valid: true }
   }
 

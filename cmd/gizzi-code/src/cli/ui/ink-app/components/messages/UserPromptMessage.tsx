@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle';
-import type { TextBlockParam } from '@anthropic-ai/sdk/resources/index.mjs';
+import type { TextBlockParam } from '@allternit/sdk/providers/allternit/resources/index.mjs';
 import React, { useContext, useMemo } from 'react';
 import { getKairosActive, getUserMsgOptIn } from '../../bootstrap/state';
 import { Box } from '../../ink';

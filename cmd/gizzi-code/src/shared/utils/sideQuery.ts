@@ -1,5 +1,5 @@
 // @ts-nocheck
-import type { BetaToolUnion } from '@anthropic-ai/sdk/resources/beta/messages.js'
+import type { BetaToolUnion } from '@allternit/sdk/providers/allternit/resources/beta/messages.js'
 import {
   getLastApiCompletionTimestamp,
   setLastApiCompletionTimestamp,
@@ -13,18 +13,18 @@ import {
 import { logEvent } from '../../runtime/services/analytics/index.js'
 import type { AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS } from '../../runtime/services/analytics/metadata.js'
 import { getAPIMetadata } from '../../runtime/services/api/claude.js'
-import { getAnthropicClient } from '../../runtime/services/api/client.js'
+import { getAllternitClient } from '../../runtime/services/api/client.js'
 import { getModelBetas, modelSupportsStructuredOutputs } from './betas.js'
 import { computeFingerprint } from './fingerprint.js'
 import { normalizeModelStringForAPI } from './model/model.js'
 
-type MessageParam = Anthropic.MessageParam
-type TextBlockParam = Anthropic.TextBlockParam
-type Tool = Anthropic.Tool
-type ToolChoice = Anthropic.ToolChoice
-type BetaMessage = Anthropic.Beta.Messages.BetaMessage
-type BetaJSONOutputFormat = Anthropic.Beta.Messages.BetaJSONOutputFormat
-type BetaThinkingConfigParam = Anthropic.Beta.Messages.BetaThinkingConfigParam
+type MessageParam = Allternit.MessageParam
+type TextBlockParam = Allternit.TextBlockParam
+type Tool = Allternit.Tool
+type ToolChoice = Allternit.ToolChoice
+type BetaMessage = Allternit.Beta.Messages.BetaMessage
+type BetaJSONOutputFormat = Allternit.Beta.Messages.BetaJSONOutputFormat
+type BetaThinkingConfigParam = Allternit.Beta.Messages.BetaThinkingConfigParam
 
 export type SideQueryOptions = {
   /** Model to use for the query */
@@ -121,7 +121,7 @@ export async function sideQuery(opts: SideQueryOptions): Promise<BetaMessage> {
     stop_sequences,
   } = opts
 
-  const client = await getAnthropicClient({
+  const client = await getAllternitClient({
     maxRetries,
     model,
     source: 'side_query',

@@ -30,7 +30,7 @@ const AUTH_TYPES = [
   {
     id: "api_key",
     label: "API Key",
-    description: "Standard secret key (Anthropic, OpenAI, Kimi, Groq, Together, …)",
+    description: "Standard secret key (Allternit, OpenAI, Kimi, Groq, Together, …)",
     hint: "You'll be asked for the key. It's stored locally and never sent anywhere except the provider.",
   },
   {
@@ -68,7 +68,7 @@ const KNOWN_PROVIDERS: Array<{
   models_hint?: string // example model IDs
 }> = [
   // ── API key providers ────────────────────────────────────────────────────
-  { id: "anthropic",   name: "Anthropic",    auth_type: "api_key", base_url: "https://api.anthropic.com/v1",        env: "ANTHROPIC_API_KEY",   key_url: "https://console.anthropic.com/keys",     models_hint: "claude-sonnet-5, claude-opus-5" },
+  { id: "allternit",   name: "Allternit",    auth_type: "api_key", base_url: "https://api.allternit.com/v1",        env: "ALLTERNIT_API_KEY",   key_url: "https://console.allternit.com/keys",     models_hint: "claude-sonnet-5, claude-opus-5" },
   { id: "openai",      name: "OpenAI",       auth_type: "api_key", base_url: "https://api.openai.com/v1",           env: "OPENAI_API_KEY",      key_url: "https://platform.openai.com/api-keys",   models_hint: "gpt-5, gpt-5-mini, gpt-4o" },
   { id: "google",      name: "Google AI",    auth_type: "api_key", base_url: "https://generativelanguage.googleapis.com/v1beta", env: "GEMINI_API_KEY", key_url: "https://aistudio.google.com/app/apikey", models_hint: "gemini-2.5-pro" },
   { id: "moonshot",    name: "Kimi (Moonshot)", auth_type: "api_key", base_url: "https://api.moonshot.ai/v1",      env: "MOONSHOT_API_KEY",    key_url: "https://platform.moonshot.cn/console",   models_hint: "kimi-k2, moonshot-v1-128k" },
@@ -405,7 +405,7 @@ async function runList() {
 
       UI.println("")
       UI.println(UI.Style.TEXT_DIM + "To add a provider:  gizzi provider add" + UI.Style.TEXT_NORMAL)
-      UI.println(UI.Style.TEXT_DIM + "To add a known one: gizzi provider add anthropic" + UI.Style.TEXT_NORMAL)
+      UI.println(UI.Style.TEXT_DIM + "To add a known one: gizzi provider add allternit" + UI.Style.TEXT_NORMAL)
       UI.println(UI.Style.TEXT_DIM + "To test:            gizzi provider test <id>" + UI.Style.TEXT_NORMAL)
     },
   })

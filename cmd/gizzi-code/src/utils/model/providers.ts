@@ -2,7 +2,7 @@
  * Model Providers
  */
 
-export type ModelProvider = 'anthropic' | 'openai' | 'google' | 'ollama'
+export type ModelProvider = 'allternit' | 'openai' | 'google' | 'ollama'
 
 export type APIProvider = 'firstParty'
 
@@ -12,17 +12,17 @@ export function getAPIProvider(): APIProvider {
 
 export function getModelProvider(model: string): ModelProvider {
   if (model.startsWith('ollama/') || model.includes('llama') || model.includes('mistral') || model.includes('bonsai')) return 'ollama'
-  if (model.includes('claude')) return 'anthropic'
+  if (model.includes('claude')) return 'allternit'
   if (model.includes('gpt')) return 'openai'
-  return 'anthropic'
+  return 'allternit'
 }
 
-export function isFirstPartyAnthropicBaseUrl(): boolean {
+export function isFirstPartyAllternitBaseUrl(): boolean {
   const url = process.env.ALLTERNIT_BASE_URL || ''
   if (!url) return true
   try {
     const host = new URL(url).host
-    return host.includes('anthropic.com') || host.includes('allternit.com') || host === 'localhost' || host === '127.0.0.1'
+    return host.includes('allternit.com') || host === 'localhost' || host === '127.0.0.1'
   } catch {
     return false
   }

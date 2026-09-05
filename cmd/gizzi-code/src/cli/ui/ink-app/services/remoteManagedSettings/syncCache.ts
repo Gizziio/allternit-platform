@@ -11,12 +11,12 @@
 import { CLAUDE_AI_INFERENCE_SCOPE } from '../../constants/oauth.js'
 import { readGizziEnv } from '@/shared/utils/gizziEnv.js';
 import {
-  getAnthropicApiKeyWithSource,
+  getAllternitApiKeyWithSource,
   getClaudeAIOAuthTokens,
 } from '../../utils/auth.js'
 import {
   getAPIProvider,
-  isFirstPartyAnthropicBaseUrl,
+  isFirstPartyAllternitBaseUrl,
 } from '../../utils/model/providers.js'
 
 import {
@@ -57,7 +57,7 @@ export function isRemoteManagedSettingsEligible(): boolean {
   }
 
   // Custom base URL users should not hit the settings endpoint
-  if (!isFirstPartyAnthropicBaseUrl()) {
+  if (!isFirstPartyAllternitBaseUrl()) {
     return (cached = setEligibility(false))
   }
 
@@ -97,10 +97,10 @@ export function isRemoteManagedSettingsEligible(): boolean {
 
   // Console users (API key) are eligible if we can get the actual key
   // Skip apiKeyHelper to avoid circular dependency with getSettings()
-  // Wrap in try-catch because getAnthropicApiKeyWithSource throws in CI/test environments
+  // Wrap in try-catch because getAllternitApiKeyWithSource throws in CI/test environments
   // when no API key is available
   try {
-    const { key: apiKey } = getAnthropicApiKeyWithSource({
+    const { key: apiKey } = getAllternitApiKeyWithSource({
       skipRetrievingKeyFromApiKeyHelper: true,
     })
     if (apiKey) {

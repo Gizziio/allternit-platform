@@ -9,7 +9,7 @@ import { homedir, userInfo } from 'os'
 import { join } from 'path'
 
 /** macOS preference domain for Gizzi MDM profiles. */
-export const MACOS_PREFERENCE_DOMAIN = 'com.anthropic.claudecode'
+export const MACOS_PREFERENCE_DOMAIN = 'com.allternit.gizzi'
 
 /**
  * Windows registry key paths for Gizzi MDM policies.

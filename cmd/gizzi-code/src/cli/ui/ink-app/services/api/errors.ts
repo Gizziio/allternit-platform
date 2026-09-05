@@ -16,7 +16,7 @@ import type {
   UserMessage,
 } from './../../types/message.ts'
 import {
-  getAnthropicApiKeyWithSource,
+  getAllternitApiKeyWithSource,
   getClaudeAIOAuthTokens,
   getOauthAccountInfo,
   isClaudeAISubscriber,
@@ -551,7 +551,7 @@ export async function getAssistantMessageFromError(
     const innerMessage = stripped.match(/"message"\s*:\s*"([^"]*)"/)?.[1]
     const detail = innerMessage || stripped
     return createAssistantAPIErrorMessage({
-      content: `${API_ERROR_MESSAGE_PREFIX}: Request rejected (429) · ${detail || 'this may be a temporary capacity issue — check status.anthropic.com'}`,
+      content: `${API_ERROR_MESSAGE_PREFIX}: Request rejected (429) · ${detail || 'this may be a temporary capacity issue — check status.allternit.com'}`,
       error: 'rate_limit',
     })
   }
@@ -786,8 +786,8 @@ export async function getAssistantMessageFromError(
     error.status === 400 &&
     error.message.toLowerCase().includes('organization has been disabled')
   ) {
-    const { source } = getAnthropicApiKeyWithSource()
-    // getAnthropicApiKeyWithSource conflates the env var with FD-passed keys
+    const { source } = getAllternitApiKeyWithSource()
+    // getAllternitApiKeyWithSource conflates the env var with FD-passed keys
     // under the same source value, and in CCR mode OAuth stays active despite
     // the env var. The three guards ensure we only blame the env var when it's
     // actually set and actually on the wire.
@@ -822,7 +822,7 @@ export async function getAssistantMessageFromError(
     }
 
     // Check if the API key is from an external source
-    const { source } = getAnthropicApiKeyWithSource()
+    const { source } = getAllternitApiKeyWithSource()
     const isExternalSource =
       source === 'ANTHROPIC_API_KEY' || source === 'apiKeyHelper'
 

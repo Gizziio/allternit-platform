@@ -4,8 +4,8 @@ import path from "path"
 import { Instance } from "@/runtime/context/project/instance"
 import { Filesystem } from "@/shared/util/filesystem"
 
-import PROMPT_ANTHROPIC from "@/runtime/session/prompt/anthropic.txt"
-import PROMPT_ANTHROPIC_WITHOUT_TODO from "@/runtime/session/prompt/qwen.txt"
+import PROMPT_DEFAULT from "@/runtime/session/prompt/default.txt"
+import PROMPT_DEFAULT_WITHOUT_TODO from "@/runtime/session/prompt/qwen.txt"
 import PROMPT_BEAST from "@/runtime/session/prompt/beast.txt"
 import PROMPT_GEMINI from "@/runtime/session/prompt/gemini.txt"
 
@@ -36,10 +36,10 @@ export namespace SystemPrompt {
     if (model.api.id.includes("gpt-") || model.api.id.includes("o1") || model.api.id.includes("o3"))
       basePrompts.push(PROMPT_BEAST)
     if (model.api.id.includes("gemini-")) basePrompts.push(PROMPT_GEMINI)
-    if (model.api.id.includes("claude")) basePrompts.push(PROMPT_ANTHROPIC)
+    if (model.api.id.includes("claude")) basePrompts.push(PROMPT_DEFAULT)
     if (model.api.id.toLowerCase().includes("trinity")) basePrompts.push(PROMPT_TRINITY)
-    if (basePrompts.length === 0 || !basePrompts.includes(PROMPT_ANTHROPIC)) {
-      basePrompts.push(PROMPT_ANTHROPIC_WITHOUT_TODO)
+    if (basePrompts.length === 0 || !basePrompts.includes(PROMPT_DEFAULT)) {
+      basePrompts.push(PROMPT_DEFAULT_WITHOUT_TODO)
     }
     
     return basePrompts

@@ -1,6 +1,6 @@
 // @ts-nocheck
-import type { BetaToolUnion } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
-import type { TextBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
+import type { BetaToolUnion } from '@allternit/sdk/providers/allternit/resources/beta/messages/messages.mjs'
+import type { TextBlockParam } from '@allternit/sdk/providers/allternit/resources/index.mjs'
 import { createPatch } from 'diff'
 import { mkdir, writeFile } from 'fs/promises'
 import { join } from 'path'

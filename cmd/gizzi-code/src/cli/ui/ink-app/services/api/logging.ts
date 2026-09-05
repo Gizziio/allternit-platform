@@ -139,7 +139,7 @@ function detectGateway({
   return undefined
 }
 
-function getAnthropicEnvMetadata() {
+function getAllternitEnvMetadata() {
   return {
     ...(process.env.ALLTERNIT_BASE_URL
       ? {
@@ -229,7 +229,7 @@ export function logAPIQuery({
             previousRequestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         }
       : {}),
-    ...getAnthropicEnvMetadata(),
+    ...getAllternitEnvMetadata(),
   })
 }
 
@@ -362,7 +362,7 @@ export function logAPIError({
             previousRequestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         }
       : {}),
-    ...getAnthropicEnvMetadata(),
+    ...getAllternitEnvMetadata(),
   })
 
   // Log API error event for OTLP
@@ -572,7 +572,7 @@ function logAPISuccess({
         }
       : {}),
     ...(isPostCompaction ? { isPostCompaction } : {}),
-    ...getAnthropicEnvMetadata(),
+    ...getAllternitEnvMetadata(),
     timeSinceLastApiCallMs,
   })
 

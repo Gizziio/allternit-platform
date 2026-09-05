@@ -78,7 +78,7 @@ export function getAttributionTexts(): AttributionTexts {
       ? getPublicModelName(model)
       : 'Claude Opus 4.6'
   const defaultAttribution = `🤖 Generated with [Gizzi Code](${PRODUCT_URL})`
-  const defaultCommit = `Co-Authored-By: ${modelName} <noreply@anthropic.com>`
+  const defaultCommit = `Co-Authored-By: ${modelName} <noreply@allternit.com>`
 
   const settings = getInitialSettings()
 

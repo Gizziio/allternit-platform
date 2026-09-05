@@ -36,7 +36,7 @@ import { isEnvTruthy } from './envUtils.js'
 import { createUserMessage } from './createUserMessage.js'
 import {
   getAPIProvider,
-  isFirstPartyAnthropicBaseUrl,
+  isFirstPartyAllternitBaseUrl,
 } from './model/providers.js'
 import {
   getFileReadIgnorePatterns,
@@ -177,11 +177,11 @@ export async function toolToAPISchema(
     // Enable fine-grained tool streaming via per-tool API field.
     // Without FGTS, the API buffers entire tool input parameters before sending
     // input_json_delta events, causing multi-minute hangs on large tool inputs.
-    // Gated to direct api.anthropic.com: proxies (LiteLLM etc.) and Bedrock/Vertex
+    // Gated to direct api.allternit.com: proxies (LiteLLM etc.) and Bedrock/Vertex
     // with Claude 4.5 reject this field with 400. See GH#32742, PR #21729.
     if (
       getAPIProvider() === 'firstParty' &&
-      isFirstPartyAnthropicBaseUrl() &&
+      isFirstPartyAllternitBaseUrl() &&
       (getFeatureValue_CACHED_MAY_BE_STALE('tengu_fgts', false) ||
         isEnvTruthy(process.env.GIZZI_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING))
     ) {

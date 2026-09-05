@@ -109,6 +109,9 @@
       "@allternit/sdk/providers/allternit/error": [
         "./packages/sdk/src/providers/allternit/error.ts"
       ],
+      "@allternit/sdk/providers/allternit/streaming.mjs": [
+        "./packages/sdk/src/providers/allternit/streaming.ts"
+      ],
       "@allternit/sdk/providers/allternit/resources/index.mjs": [
         "./packages/sdk/src/providers/allternit/resources/index.ts"
       ],

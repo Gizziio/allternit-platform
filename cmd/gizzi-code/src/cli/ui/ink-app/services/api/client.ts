@@ -3,7 +3,7 @@ import AllternitAI, { type ClientOptions } from '@allternit/sdk/providers/allter
 import { randomUUID } from 'crypto'
 import {
   checkAndRefreshOAuthTokenIfNeeded,
-  getAnthropicApiKey,
+  getAllternitApiKey,
   getApiKeyFromApiKeyHelper,
   getClaudeAIOAuthTokens,
   isClaudeAISubscriber,
@@ -11,7 +11,7 @@ import {
 import { getUserAgent } from './../../utils/http.ts'
 import {
   getAPIProvider,
-  isFirstPartyAnthropicBaseUrl,
+  isFirstPartyAllternitBaseUrl,
 } from './../../utils/model/providers.ts'
 import { getProxyFetchOptions } from './../../utils/proxy.ts'
 import {
@@ -26,25 +26,25 @@ import {
 
 /**
  * Environment variables for direct API access:
- * - ANTHROPIC_API_KEY: Required for direct API access
+ * - ALLTERNIT_API_KEY: Required for direct API access
  */
 
 function createStderrLogger(): ClientOptions['logger'] {
   return {
     error: (msg, ...args) =>
       // biome-ignore lint/suspicious/noConsole:: intentional console output -- SDK logger must use console
-      console.error('[Anthropic SDK ERROR]', msg, ...args),
+      console.error('[Allternit SDK ERROR]', msg, ...args),
     // biome-ignore lint/suspicious/noConsole:: intentional console output -- SDK logger must use console
-    warn: (msg, ...args) => console.error('[Anthropic SDK WARN]', msg, ...args),
+    warn: (msg, ...args) => console.error('[Allternit SDK WARN]', msg, ...args),
     // biome-ignore lint/suspicious/noConsole:: intentional console output -- SDK logger must use console
-    info: (msg, ...args) => console.error('[Anthropic SDK INFO]', msg, ...args),
+    info: (msg, ...args) => console.error('[Allternit SDK INFO]', msg, ...args),
     debug: (msg, ...args) =>
       // biome-ignore lint/suspicious/noConsole:: intentional console output -- SDK logger must use console
-      console.error('[Anthropic SDK DEBUG]', msg, ...args),
+      console.error('[Allternit SDK DEBUG]', msg, ...args),
   }
 }
 
-export async function getAnthropicClient({
+export async function getAllternitClient({
   apiKey,
   maxRetries,
   fetchOverride,
@@ -63,9 +63,9 @@ export async function getAnthropicClient({
   const defaultHeaders: { [key: string]: string } = {
     'x-app': 'cli',
     'User-Agent': getUserAgent(),
-    'X-Claude-Code-Session-Id': getSessionId(),
+    'X-Allternit-Session-Id': getSessionId(),
     ...customHeaders,
-    ...(containerId ? { 'x-claude-remote-container-id': containerId } : {}),
+    ...(containerId ? { 'x-allternit-remote-container-id': containerId } : {}),
     ...(remoteSessionId
       ? { 'x-allternit-remote-session-id': remoteSessionId }
       : {}),
@@ -111,7 +111,7 @@ export async function getAnthropicClient({
 
   // Determine authentication method based on available tokens
   const clientConfig: ConstructorParameters<typeof AllternitAI>[0] = {
-    apiKey: isClaudeAISubscriber() ? null : apiKey || getAnthropicApiKey(),
+    apiKey: isClaudeAISubscriber() ? null : apiKey || getAllternitApiKey(),
     authToken: isClaudeAISubscriber()
       ? getClaudeAIOAuthTokens()?.accessToken
       : undefined,
@@ -175,7 +175,7 @@ function buildFetch(
   const inner = fetchOverride ?? globalThis.fetch
   // Only send to the first-party API
   const injectClientRequestId =
-    getAPIProvider() === 'firstParty' && isFirstPartyAnthropicBaseUrl()
+    getAPIProvider() === 'firstParty' && isFirstPartyAllternitBaseUrl()
   return (input, init) => {
     // eslint-disable-next-line eslint-plugin-n/no-unsupported-features/node-builtins
     const headers = new Headers(init?.headers)

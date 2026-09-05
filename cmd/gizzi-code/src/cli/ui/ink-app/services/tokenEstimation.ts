@@ -11,7 +11,7 @@ import {
   normalizeModelStringForAPI,
 } from '../utils/model/model.js'
 import { isToolReferenceBlock } from '../utils/toolSearch.js'
-import { getAnthropicClient } from './api/client.js'
+import { getAllternitClient } from './api/client.js'
 import { withTokenCountVCR } from './vcr.js'
 
 export {
@@ -143,7 +143,7 @@ export async function countMessagesTokensWithAPI(
       const betas = getModelBetas(model)
       const containsThinking = hasThinkingBlocks(messages)
 
-      const anthropic = await getAnthropicClient({
+      const anthropic = await getAllternitClient({
         maxRetries: 1,
         model,
         source: 'count_tokens',
@@ -197,7 +197,7 @@ export async function countTokensViaHaikuFallback(
   const containsThinking = hasThinkingBlocks(messages)
 
   const model = getSmallFastModel()
-  const anthropic = await getAnthropicClient({
+  const anthropic = await getAllternitClient({
     maxRetries: 1,
     model,
     source: 'count_tokens',

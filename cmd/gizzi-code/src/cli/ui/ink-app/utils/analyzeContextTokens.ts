@@ -37,8 +37,8 @@ async function loadToolToAPISchema() {
 export const TOOL_TOKEN_COUNT_OVERHEAD = 500
 
 export async function countTokensWithFallback(
-  messages: Anthropic.Beta.Messages.BetaMessageParam[],
-  tools: Anthropic.Beta.Messages.BetaToolUnion[],
+  messages: Allternit.Beta.Messages.BetaMessageParam[],
+  tools: Allternit.Beta.Messages.BetaToolUnion[],
 ): Promise<number | null> {
   const { countMessagesTokensWithAPI, countTokensViaHaikuFallback } =
     await loadTokenEstimation()

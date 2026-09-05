@@ -1,4 +1,4 @@
-import type { ToolResultBlockParam } from '@anthropic-ai/sdk/resources/index.mjs';
+import type { ToolResultBlockParam } from '@allternit/sdk/providers/allternit/resources/index.mjs';
 import * as React from 'react';
 import type { Message, ProgressMessage } from '@/types/message.js';
 import { extractTag } from '../../../../shared/utils/messages.js';

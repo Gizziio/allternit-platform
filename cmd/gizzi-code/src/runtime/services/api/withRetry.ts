@@ -1,11 +1,11 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle'
-import type Anthropic from '@anthropic-ai/sdk'
+import type AllternitAI from '@allternit/sdk/providers/allternit'
 import {
   APIConnectionError,
   APIError,
   APIUserAbortError,
-} from '@anthropic-ai/sdk'
+} from '@allternit/sdk/providers/allternit'
 import type { QuerySource } from '@/constants/querySource.js'
 import type { SystemAPIErrorMessage } from '@/types/message.js'
 import { logForDebugging } from '../../../shared/utils/debug.js'
@@ -144,9 +144,9 @@ export class FallbackTriggeredError extends Error {
 }
 
 export async function* withRetry<T>(
-  getClient: () => Promise<Anthropic>,
+  getClient: () => Promise<AllternitAI>,
   operation: (
-    client: Anthropic,
+    client: AllternitAI,
     attempt: number,
     context: RetryContext,
   ) => Promise<T>,
@@ -158,7 +158,7 @@ export async function* withRetry<T>(
     thinkingConfig: options.thinkingConfig,
     ...(isFastModeEnabled() && { fastMode: options.fastMode }),
   }
-  let client: Anthropic | null = null
+  let client: AllternitAI | null = null
   let consecutive529Errors = options.initialConsecutive529Errors ?? 0
   let lastError: unknown
   let persistentAttempt = 0

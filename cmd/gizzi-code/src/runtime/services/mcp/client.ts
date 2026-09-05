@@ -4,7 +4,7 @@ import type {
   Base64ImageSource,
   ContentBlockParam,
   MessageParam,
-} from '@anthropic-ai/sdk/resources/index.mjs'
+} from '@allternit/sdk/providers/allternit/resources/index.mjs'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import {
   SSEClientTransport,
@@ -709,7 +709,7 @@ export const connectToServer = memoize(
         const wsHeaders = {
           'User-Agent': getMCPUserAgent(),
           ...(serverRef.authToken && {
-            'X-Claude-Code-Ide-Authorization': serverRef.authToken,
+            'X-Allternit-Ide-Authorization': serverRef.authToken,
           }),
         }
 

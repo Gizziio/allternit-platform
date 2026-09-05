@@ -262,8 +262,6 @@ export const PROVIDER_REGISTRY: ProviderMetadata[] = [
       functionCalling: true,
     },
     defaultModels: [
-      'anthropic.claude-3-sonnet',
-      'anthropic.claude-3-haiku',
       'meta.llama3-70b',
       'mistral.mistral-large',
     ],
