@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+## 2.0.5 — 2026-09-05
+
+`/model` lists Allternit Cloud first, then installed CLIs, then local.
+npm publish verify downloads with `npm pack` so registry blob lag cannot
+fail a release that already published.
+
+### Changed
+- `/model` and `gizzi models` group brains: Allternit Cloud, CLI, local.
+
+### Fixed
+- Publish verify used anonymous curl of the npm tarball; metadata could
+  appear minutes before the blob (2.0.2 and 2.0.4). Verify now uses
+  `npm pack` with exponential backoff.
+
 ## 2.0.4 — 2026-09-05
 
 Non-interactive first-run setup. `gizzi onboarding --defaults` picks an
