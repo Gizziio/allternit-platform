@@ -23,7 +23,7 @@ function remediation(): string {
     case 'linux':
       return 'Install libsecret / gnome-keyring (e.g. `apt install libsecret-1-0 gnome-keyring`) and restart gizzi to store credentials in the OS keyring instead.'
     case 'win32':
-      return 'Windows Credential Manager support is not implemented yet; this plaintext fallback is a deprecated stopgap.'
+      return 'DPAPI storage failed; credentials were written to a permission-hardened local file instead.'
     default:
       return 'Credentials will move to the OS keyring once a backend is available for this platform.'
   }

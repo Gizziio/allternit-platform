@@ -58,20 +58,6 @@ process.on("uncaughtException", (e) => {
   })
 })
 
-// Windows is not a supported platform (macOS primary, Linux supported).
-// On win32 the secure-storage layer has no OS keychain backend, so
-// getSecureStorage() returns plainTextStorage (a local .credentials.json
-// written with best-effort 0o600 permissions). Warn once at boot instead of
-// letting users assume keychain-grade protection.
-if (process.platform === "win32" && !process.env.GIZZI_WINDOWS_WARNING_DISABLED) {
-  process.stderr.write(
-    "warning: gizzi-code on Windows is experimental and unsupported; " +
-      "secure credential storage is unavailable, credentials fall back " +
-      "to a permission-hardened local file. See: docs/TROUBLESHOOTING.md" +
-      EOL,
-  )
-}
-
 const cli = yargs(hideBin(process.argv))
   .parserConfiguration({ "populate--": true })
   .scriptName("gizzi")

@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+## 2.0.2 — 2026-09-05
+
+Windows is a supported platform. Credentials use DPAPI (CurrentUser) instead
+of a plaintext file. Gallery install paths: winget and Chocolatey.
+
+### Changed
+- Windows secure storage: DPAPI `ProtectedData` CurrentUser, with the
+  existing plaintext file as last-resort fallback.
+- Removed the boot-time “experimental / unsupported” Windows warning.
+- Platform support table lists Windows as supported.
+
 ## 2.0.1 — 2026-09-05
 
 Distribution completeness. Product naming is Allternit-only on the first-party

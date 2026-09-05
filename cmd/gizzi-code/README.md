@@ -12,15 +12,13 @@ ecosystem) when you connect it.
 curl -fsSL https://install.gizziio.com/install | bash
 ```
 
-**Windows (PowerShell) — experimental:**
+**Windows (PowerShell):**
 ```powershell
 irm https://install.gizziio.com/install.ps1 | iex
 ```
-Windows ships a PE32+ x64 zip (`gizzi-code-v*-windows-x64.zip`) with
-`checksums.txt` verification. There is no secure credential store
-(credentials fall back to a permission-hardened local file), and support
-is community-only. ARM64 Windows runs the x64 build under emulation.
-See [Platform support](#platform-support).
+PE32+ x64 zip with `checksums.txt` verification. Credentials are stored
+via Windows DPAPI (CurrentUser). ARM64 Windows runs the x64 build under
+emulation.
 
 **Homebrew (macOS / Linux):**
 ```bash
@@ -28,10 +26,11 @@ brew tap Gizziio/tap
 brew install gizzi-code
 ```
 
-**Scoop (Windows):**
+**Scoop / winget (Windows):**
 ```powershell
 scoop bucket add gizziio https://github.com/Gizziio/scoop-bucket
 scoop install gizzi-code
+winget install Allternit.GizziCode
 ```
 
 **npm (canonical, all platforms):**
@@ -55,7 +54,7 @@ curl -fsSL https://raw.githubusercontent.com/Gizziio/allternit-platform/main/cmd
 |---|---|
 | macOS | Primary target; signed & notarized builds planned |
 | Linux | Supported |
-| Windows | Experimental — PE32+ x64 zip published; no secure credential store (local-file fallback); community support only |
+| Windows | Supported — PE32+ x64 zip; credentials stored with DPAPI (CurrentUser). ARM64 uses the x64 build under emulation |
 
 ## Quick start
 

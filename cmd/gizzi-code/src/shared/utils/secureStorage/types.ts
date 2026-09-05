@@ -91,4 +91,4 @@ export interface KeychainCredentials {
   service?: string
 }
 
-export type StorageBackend = 'keychain' | 'file' | 'plaintext'
+export type StorageBackend = 'keychain' | 'dpapi' | 'file' | 'plaintext'
