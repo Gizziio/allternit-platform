@@ -275,8 +275,9 @@ export async function onEditTableStyle(
     // Element ids change after reparse: re-select so the "Table Design" tab doesn't jump away
     if (result.sourceId) {
       ctx.setSelectedIds([result.sourceId])
-      if (ctx.editingCell?.sourceId === oldId)
-        ctx.setEditingCell({ ...ctx.editingCell, sourceId: result.sourceId })
+      const cell = ctx.editingCell
+      if (cell && cell.sourceId === oldId)
+        ctx.setEditingCell({ ...cell, sourceId: result.sourceId })
     }
   }
 }
