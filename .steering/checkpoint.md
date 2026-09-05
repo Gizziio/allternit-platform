@@ -1,12 +1,11 @@
 # Steering checkpoint
 
-Goal: Unblock Cloudflare Pages CI for ai.allternit.com — typecheck was failing because office packages exported `dist/` that CI never builds (`pnpm install --ignore-scripts`).
+Goal: Enable office+beta production flags; accept Clerk proxy issuer; keep rolling remaining owner work (P2 fleet, 8013 migrations, secrets).
 
 Just did:
-- Pointed office-pptx-render/engine, office-docx-engine, office-file-parse, office-xlsx-engine package.json exports at `src/` so tsc/vite resolve without a prebuild.
-- Fixed EditingCellState spread in slides-app style-actions.
-- ES2022 lib + bidi-js reference so pptx-render typechecks under the ai project.
+- NEXT_PUBLIC_ALLTERNIT_OFFICE_API=1 and BETA_API=1 in .env.production and Pages build env.
+- cloud-api Clerk verifier accepts comma-separated issuers and always includes https://allternit.com/__clerk (browser proxy JWTs).
 
-Next: local `pnpm typecheck` is green; commit/push/merge and watch Pages deploy.
+Next: commit/push/merge; register provisioned_hosts on mail; 8013 V124–V130 need a newer allternit-api binary (current max is v102).
 
-Open questions: none.
+Open questions: Incus client certs for P2 create() from cloud-api.

@@ -71,11 +71,11 @@
 
 | | |
 |---|---|
-| **Status** | Agent-sessions ON as of session/agent-sessions. Office/beta/rest still fail-closed. |
+| **Status** | Agent-sessions + office + beta ON. Rails/runtime/rest still fail-closed. |
 | **What** | Turn on the namespaces now served by the control plane |
 | **Where** | `surfaces/ai.allternit.com/.env.production` + Pages build env |
-| **How** | `NEXT_PUBLIC_ALLTERNIT_AGENT_SESSIONS_API=1` is live. Remaining, one at a time: `OFFICE_API` → `BETA_API` → then `RAILS_API`, `RUNTIME_API`, `TOOLS_API`, `PERMISSIONS_API`, `QUESTIONS_API`, `MODEL_LAB_API`. |
-| **Verify** | Signed-in user on the paired account (`user_3IBvYk8…`, mail node `contabo-byo-1`) can list/create agent sessions. Other accounts get 428 "pair a device". |
+| **How** | `AGENT_SESSIONS_API`, `OFFICE_API`, `BETA_API` are `1`. Remaining: `RAILS_API`, `RUNTIME_API`, `TOOLS_API`, `PERMISSIONS_API`, `QUESTIONS_API`, `MODEL_LAB_API`. |
+| **Verify** | Signed-in user on the paired account (`user_3IBvYk8…`, mail node `contabo-byo-1`) can use agent-sessions / office / beta. Other accounts get 428 "pair a device". |
 
 ## 8. Deferred (no action needed now)
 
