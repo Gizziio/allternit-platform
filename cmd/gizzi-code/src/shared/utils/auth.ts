@@ -1025,8 +1025,14 @@ export function getRateLimitTier(): string | null {
 }
 
 export function getSubscriptionName(): string {
-  // Cloud plans live on platform.allternit.com (Free / Plus / Super / Ultra).
-  // This CLI does not read those entitlements yet, so do not invent a tier.
+  try {
+    const { getCachedAllternitPlan, Discovery } = require('../../runtime/providers/discovery/index.js') as typeof import('../../runtime/providers/discovery/index.js')
+    Discovery.prefetch()
+    const plan = getCachedAllternitPlan()
+    if (plan?.label) return `Allternit ${plan.label}`
+  } catch {
+    // Discovery is optional on this path.
+  }
   return 'Allternit'
 }
 

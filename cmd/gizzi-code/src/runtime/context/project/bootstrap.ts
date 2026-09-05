@@ -40,6 +40,13 @@ export async function InstanceBootstrap() {
     Log.Default.warn("sidecar setup failed", { error: e instanceof Error ? e.message : String(e) })
   })
 
+  // Cloud catalog + installed CLI brains — default picker sources.
+  void import("@/runtime/providers/discovery")
+    .then(({ Discovery }) => Discovery.run())
+    .catch((e) => {
+      Log.Default.warn("provider discovery failed", { error: e instanceof Error ? e.message : String(e) })
+    })
+
   Bus.subscribe(Command.Event.Executed, async (payload) => {
     if (payload.properties.name === Command.Default.INIT) {
       await Project.setInitialized(Instance.project.id)

@@ -460,8 +460,34 @@ function getKnownModelOption(model: string): ModelOption | null {
   }
 }
 
+function getDiscoveredBrainOptions(): ModelOption[] {
+  try {
+    const { Discovery } = require('../../../runtime/providers/discovery/index.js') as typeof import('../../../runtime/providers/discovery/index.js')
+    Discovery.prefetch()
+    const options: ModelOption[] = []
+    for (const dp of Discovery.last()) {
+      const source =
+        dp.source === 'platform'
+          ? 'Allternit Cloud'
+          : dp.source === 'subprocess'
+            ? 'installed CLI'
+            : dp.source
+      for (const m of dp.models) {
+        options.push({
+          value: `${dp.id}/${m.id}`,
+          label: m.name,
+          description: `${dp.name} · ${source}`,
+        })
+      }
+    }
+    return options
+  } catch {
+    return []
+  }
+}
+
 export function getModelOptions(fastMode = false): ModelOption[] {
-  const options = getModelOptionsBase(fastMode)
+  const options = [...getDiscoveredBrainOptions(), ...getModelOptionsBase(fastMode)]
 
   // Add the custom model from the ANTHROPIC_CUSTOM_MODEL_OPTION env var
   const envCustomModel = process.env.ANTHROPIC_CUSTOM_MODEL_OPTION

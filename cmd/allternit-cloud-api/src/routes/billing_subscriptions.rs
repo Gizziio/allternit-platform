@@ -8,6 +8,8 @@
 //! `billing_not_configured` exactly like a missing `STRIPE_SECRET_KEY`.
 //!
 //! - `GET /api/v1/billing/plans` (public): the catalog WITHOUT Stripe price ids.
+//! - `GET /api/v1/billing/subscription` (Clerk session or API token): the caller's
+//!   current Free / Plus / Super / Ultra plan (active Stripe row, else Free).
 //! - `POST /api/v1/billing/subscribe` (Clerk session or API token): Checkout Session `mode=subscription` whose
 //!   `subscription_data[metadata]` carries `clerk_user_id` / `allternit_plan_tier` /
 //!   `allternit_plan_id` — the contract `routes::billing_webhooks` consumes.
@@ -93,11 +95,64 @@ pub struct PortalResponse {
     portal_url: String,
 }
 
+#[derive(Debug, Serialize)]
+pub struct CurrentSubscriptionResponse {
+    plan_id: String,
+    label: String,
+    plan_tier: String,
+    status: String,
+}
+
 pub fn routes() -> Router<Arc<ApiState>> {
     Router::new()
         .route("/api/v1/billing/plans", get(list_plans))
+        .route("/api/v1/billing/subscription", get(get_current_subscription))
         .route("/api/v1/billing/subscribe", post(create_subscription))
         .route("/api/v1/billing/portal", post(create_portal_session))
+}
+
+fn product_label(plan_id: &str) -> &'static str {
+    match plan_id {
+        "plus" => "Plus",
+        "super" => "Super",
+        "ultra" => "Ultra",
+        _ => "Free",
+    }
+}
+
+async fn get_current_subscription(
+    State(state): State<Arc<ApiState>>,
+    headers: HeaderMap,
+) -> Result<Json<CurrentSubscriptionResponse>, ApiError> {
+    let user_id = crate::auth::resolve_user_scoped(&state.db, &headers, "billing")
+        .await?
+        .id;
+    let row: Option<BillingSubscription> = sqlx::query_as(
+        r#"
+        SELECT user_id, plan_id, plan_tier, status, stripe_customer_id
+        FROM billing_subscriptions
+        WHERE user_id = $1 AND status IN ('active', 'trialing')
+        ORDER BY updated_at DESC
+        LIMIT 1
+        "#,
+    )
+    .bind(&user_id)
+    .fetch_optional(&state.db)
+    .await?;
+    Ok(Json(match row {
+        Some(sub) => CurrentSubscriptionResponse {
+            label: product_label(&sub.plan_id).to_string(),
+            plan_id: sub.plan_id,
+            plan_tier: sub.plan_tier,
+            status: sub.status,
+        },
+        None => CurrentSubscriptionResponse {
+            plan_id: "free".to_string(),
+            label: "Free".to_string(),
+            plan_tier: "free".to_string(),
+            status: "none".to_string(),
+        },
+    }))
 }
 
 async fn list_plans() -> Json<PlansResponse> {

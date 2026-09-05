@@ -32,6 +32,7 @@ import {
   type ModelSetting,
 } from './model.js'
 import { has1mContext } from '../context.js'
+import { getGlobalConfig } from '../config.js'
 import { readFileSync } from 'fs'
 import { homedir } from 'os'
 import { join } from 'path'
@@ -495,12 +496,36 @@ function getKnownModelOption(model: string): ModelOption | null {
   }
 }
 
+function getDiscoveredBrainOptions(): ModelOption[] {
+  try {
+    const { Discovery } = require('../../../../runtime/providers/discovery/index.js') as typeof import('../../../../runtime/providers/discovery/index.js')
+    Discovery.prefetch()
+    const options: ModelOption[] = []
+    for (const dp of Discovery.last()) {
+      const source =
+        dp.source === 'platform'
+          ? 'Allternit Cloud'
+          : dp.source === 'subprocess'
+            ? 'installed CLI'
+            : dp.source
+      for (const m of dp.models) {
+        options.push({
+          value: `${dp.id}/${m.id}`,
+          label: m.name,
+          description: `${dp.name} · ${source}`,
+        })
+      }
+    }
+    return options
+  } catch {
+    return []
+  }
+}
+
 export function getModelOptions(fastMode = false): ModelOption[] {
-  // Local-first: gizzi-code's /model picker lists locally-hosted models
-  // (from gizzi.json's provider config) instead of the Anthropic cloud
-  // catalog getModelOptionsBase() used to return. Anthropic models are no
-  // longer offered here — Eoj's call, 2026-08-11.
-  const options = getLocalModelOptions()
+  // Default brains: live Allternit Cloud catalog + installed CLI subprocesses,
+  // then locally configured servers. Hardcoded Claude picker is not the default.
+  const options = [...getDiscoveredBrainOptions(), ...getLocalModelOptions()]
 
   // Add the custom model from the ANTHROPIC_CUSTOM_MODEL_OPTION env var
   const envCustomModel = process.env.ANTHROPIC_CUSTOM_MODEL_OPTION
@@ -517,8 +542,11 @@ export function getModelOptions(fastMode = false): ModelOption[] {
     })
   }
 
-  // additionalModelOptionsCache (Anthropic cloud catalog, fetched during
-  // bootstrap) intentionally NOT merged in here — local-only picker.
+  for (const opt of getGlobalConfig().additionalModelOptionsCache ?? []) {
+    if (!options.some(existing => existing.value === opt.value)) {
+      options.push(opt)
+    }
+  }
 
   // Add custom model from either the current model value or the initial one
   // if it is not already in the options.
