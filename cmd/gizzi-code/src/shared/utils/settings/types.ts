@@ -640,7 +640,7 @@ export const SettingsSchema = lazySchema(() =>
         .enum(['claudeai', 'console'])
         .optional()
         .describe(
-          'Force a specific login method: "claudeai" for Allternit account login, "console" for Allternit Console billing',
+          'Force a specific login method: Allternit API key (platform.allternit.com/api-keys) or 3rd-party platform',
         ),
       // Organization UUID to use for OAuth login (will be added as URL param to authorization URL)
       forceLoginOrgUUID: z

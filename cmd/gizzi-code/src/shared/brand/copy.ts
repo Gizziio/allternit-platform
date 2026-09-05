@@ -288,7 +288,7 @@ export const GIZZICopy = {
     providerGIZZIDescription:
       "Allternit gives you access to coding models with a single API key.",
     providerGIZZIGetKeyPrefix: "Go to",
-    providerGIZZIGetKeyUrl: "https://platform.allternit.com",
+    providerGIZZIGetKeyUrl: "https://platform.allternit.com/api-keys",
     providerGIZZIGetKeySuffix: "to get a key",
   },
   session: {

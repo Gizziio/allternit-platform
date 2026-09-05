@@ -84,23 +84,18 @@ type OauthConfig = {
 // Production OAuth configuration - Used in normal operation
 const PROD_OAUTH_CONFIG = {
   BASE_API_URL: CLOUD_URLS.api,
-  CONSOLE_AUTHORIZE_URL: 'https://console.allternit.com/oauth/authorize',
-  // Bounces through claude.com/cai/* so CLI sign-ins connect to claude.com
-  // visits for attribution. 307s to claude.ai/oauth/authorize in two hops.
-  CLAUDE_AI_AUTHORIZE_URL: 'https://allternit.com/oauth/authorize',
-  CLAUDE_AI_ORIGIN: 'https://allternit.com',
+  CONSOLE_AUTHORIZE_URL: `${CLOUD_URLS.platform}/sign-in`,
+  CLAUDE_AI_AUTHORIZE_URL: `${CLOUD_URLS.platform}/sign-in`,
+  CLAUDE_AI_ORIGIN: CLOUD_URLS.platform,
   TOKEN_URL: `${CLOUD_URLS.api}/v1/oauth/token`,
-  API_KEY_URL: `${CLOUD_URLS.api}/api/oauth/gizzi/create_api_key`,
+  API_KEY_URL: `${CLOUD_URLS.platform}/api-keys`,
   ROLES_URL: `${CLOUD_URLS.api}/api/oauth/gizzi/roles`,
-  CONSOLE_SUCCESS_URL:
-    'https://console.allternit.com/buy_credits?returnUrl=/oauth/code/success%3Fapp%3Dgizzi',
-  CLAUDEAI_SUCCESS_URL:
-    'https://console.allternit.com/oauth/code/success?app=gizzi',
-  MANUAL_REDIRECT_URL: 'https://console.allternit.com/oauth/code/callback',
+  CONSOLE_SUCCESS_URL: `${CLOUD_URLS.platform}/billing`,
+  CLAUDEAI_SUCCESS_URL: `${CLOUD_URLS.platform}/billing`,
+  MANUAL_REDIRECT_URL: `${CLOUD_URLS.platform}/sign-in`,
   CLIENT_ID: '9d1c250a-e61b-44d9-88ed-5944d1962f5e',
-  // No suffix for production config
   OAUTH_FILE_SUFFIX: '',
-  MCP_PROXY_URL: 'https://mcp-proxy.allternit.com',
+  MCP_PROXY_URL: `${CLOUD_URLS.api}/mcp-proxy`,
   MCP_PROXY_PATH: '/v1/mcp/{server_id}',
 } as const
 
@@ -112,7 +107,7 @@ const PROD_OAUTH_CONFIG = {
  * See: https://datatracker.ietf.org/doc/html/draft-ietf-oauth-client-id-metadata-document-00
  */
 export const MCP_CLIENT_METADATA_URL =
-  'https://allternit.com/oauth/gizzi-client-metadata'
+  'https://platform.allternit.com'
 
 // Staging OAuth configuration - only included in ant builds with staging flag
 // Uses literal check for dead code elimination
@@ -120,25 +115,18 @@ const STAGING_OAUTH_CONFIG =
   process.env.USER_TYPE === 'ant'
     ? ({
         BASE_API_URL: 'https://api-staging.allternit.com',
-        CONSOLE_AUTHORIZE_URL:
-          'https://console-staging.allternit.com/oauth/authorize',
-        CLAUDE_AI_AUTHORIZE_URL:
-          'https://staging.allternit.com/oauth/authorize',
-        CLAUDE_AI_ORIGIN: 'https://staging.allternit.com',
+        CONSOLE_AUTHORIZE_URL: 'https://platform.allternit.com/sign-in',
+        CLAUDE_AI_AUTHORIZE_URL: 'https://platform.allternit.com/sign-in',
+        CLAUDE_AI_ORIGIN: 'https://platform.allternit.com',
         TOKEN_URL: 'https://api-staging.allternit.com/v1/oauth/token',
-        API_KEY_URL:
-          'https://api-staging.allternit.com/api/oauth/gizzi/create_api_key',
-        ROLES_URL:
-          'https://api-staging.allternit.com/api/oauth/gizzi/roles',
-        CONSOLE_SUCCESS_URL:
-          'https://console-staging.allternit.com/buy_credits?returnUrl=/oauth/code/success%3Fapp%3Dgizzi',
-        CLAUDEAI_SUCCESS_URL:
-          'https://console-staging.allternit.com/oauth/code/success?app=gizzi',
-        MANUAL_REDIRECT_URL:
-          'https://console-staging.allternit.com/oauth/code/callback',
+        API_KEY_URL: 'https://platform.allternit.com/api-keys',
+        ROLES_URL: 'https://api-staging.allternit.com/api/oauth/gizzi/roles',
+        CONSOLE_SUCCESS_URL: 'https://platform.allternit.com/billing',
+        CLAUDEAI_SUCCESS_URL: 'https://platform.allternit.com/billing',
+        MANUAL_REDIRECT_URL: 'https://platform.allternit.com/sign-in',
         CLIENT_ID: '22422756-60c9-4084-8eb7-27705fd5cf9a',
         OAUTH_FILE_SUFFIX: '-staging-oauth',
-        MCP_PROXY_URL: 'https://mcp-proxy-staging.allternit.com',
+        MCP_PROXY_URL: 'https://api-staging.allternit.com/mcp-proxy',
         MCP_PROXY_PATH: '/v1/mcp/{server_id}',
       } as const)
     : undefined

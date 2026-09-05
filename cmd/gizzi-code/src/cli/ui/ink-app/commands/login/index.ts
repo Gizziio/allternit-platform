@@ -8,8 +8,8 @@ export default () =>
     type: 'local-jsx',
     name: 'login',
     description: hasAllternitApiKeyAuth()
-      ? 'Switch Allternit accounts'
-      : 'Sign in with your Allternit account',
+      ? 'Switch Allternit API keys'
+      : 'Sign in with an Allternit API key',
     isEnabled: () => !isEnvTruthy(process.env.DISABLE_LOGIN_COMMAND),
     load: () => import('./login.js'),
   }) satisfies Command

@@ -1025,20 +1025,9 @@ export function getRateLimitTier(): string | null {
 }
 
 export function getSubscriptionName(): string {
-  const subscriptionType = getSubscriptionType()
-
-  switch (subscriptionType) {
-    case 'enterprise':
-      return 'Allternit Enterprise'
-    case 'team':
-      return 'Allternit Team'
-    case 'max':
-      return 'Allternit Max'
-    case 'pro':
-      return 'Allternit Pro'
-    default:
-      return 'Allternit API'
-  }
+  // Cloud plans live on platform.allternit.com (Free / Plus / Super / Ultra).
+  // This CLI does not read those entitlements yet, so do not invent a tier.
+  return 'Allternit'
 }
 
 /** Check if using third-party services */

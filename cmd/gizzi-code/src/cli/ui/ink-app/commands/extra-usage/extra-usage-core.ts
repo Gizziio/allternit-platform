@@ -102,9 +102,7 @@ export async function runExtraUsage(): Promise<ExtraUsageResult> {
     }
   }
 
-  const url = isTeamOrEnterprise
-    ? 'https://console.allternit.com/usage'
-    : 'https://console.allternit.com/usage'
+  const url = 'https://platform.allternit.com/billing'
 
   try {
     const opened = await openBrowser(url)

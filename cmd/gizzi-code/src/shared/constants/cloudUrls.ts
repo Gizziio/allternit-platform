@@ -6,10 +6,12 @@
  */
 export const CLOUD_URLS = {
   api: "https://api.allternit.com",
+  platform: "https://platform.allternit.com",
   clerk: "https://clerk.allternit.com",
   headscale: "https://headscale.allternit.com",
   install: "https://install.gizziio.com",
   docs: "https://docs.gizziio.com",
+  ai: "https://ai.allternit.com",
   remoteControl: "https://remotecontrol.allternit.com",
 } as const
 

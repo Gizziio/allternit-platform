@@ -61,12 +61,10 @@ IDENTIFIER_RENAMES: list[tuple[str, str]] = [
 # First-party product hosts we control. OAuth files are skipped above.
 HOST_RENAMES: list[tuple[str, str]] = [
     ("api-staging.anthropic.com", "api-staging.allternit.com"),
-    ("mcp-proxy-staging.anthropic.com", "mcp-proxy-staging.allternit.com"),
-    ("mcp-proxy.anthropic.com", "mcp-proxy.allternit.com"),
-    ("status.anthropic.com", "status.allternit.com"),
+    ("mcp-proxy-staging.anthropic.com", "api-staging.allternit.com/mcp-proxy"),
+    ("mcp-proxy.anthropic.com", "api.allternit.com/mcp-proxy"),
     ("docs.anthropic.com", "docs.gizziio.com"),
-    ("support.anthropic.com", "support.allternit.com"),
-    ("console.anthropic.com", "console.allternit.com"),
+    ("console.anthropic.com", "platform.allternit.com"),
     ("www.anthropic.com", "www.allternit.com"),
     ("api.anthropic.com", "api.allternit.com"),
     ("noreply@anthropic.com", "noreply@allternit.com"),

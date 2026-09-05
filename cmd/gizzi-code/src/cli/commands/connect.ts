@@ -394,7 +394,7 @@ export const AuthLoginCommand = cmd({
         }
 
         if (provider === "gizzi" || provider === "gizziio") {
-          prompts.log.info("Create an API key at https://platform.allternit.com")
+          prompts.log.info("Create an API key at https://platform.allternit.com/api-keys")
         }
 
         if (provider === "alibaba") {

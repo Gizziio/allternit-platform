@@ -31,6 +31,9 @@ type OAuthStatus = {
   state: 'platform_setup';
 } // Show platform setup info (Bedrock/Vertex/Foundry)
 | {
+  state: 'allternit_key';
+} // Point at platform.allternit.com API keys; cloud subs are not wired yet
+| {
   state: 'ready_to_start';
 } // Flow started, waiting for browser to open
 | {
@@ -61,7 +64,7 @@ export function ConsoleOAuthFlow({
   const settings = getSettings_DEPRECATED() || {};
   const forceLoginMethod = forceLoginMethodProp ?? settings.forceLoginMethod;
   const orgUUID = settings.forceLoginOrgUUID;
-  const forcedMethodMessage = forceLoginMethod === 'claudeai' ? 'Login method pre-selected: Allternit account' : forceLoginMethod === 'console' ? 'Login method pre-selected: API usage billing (Allternit Console)' : null;
+  const forcedMethodMessage = forceLoginMethod === 'claudeai' || forceLoginMethod === 'console' ? 'Create an Allternit API key at https://platform.allternit.com/api-keys' : null;
   const terminal = useTerminalNotification();
   const [oauthStatus, setOAuthStatus] = useState<OAuthStatus>(() => {
     if (mode === 'setup-token') {
@@ -71,7 +74,7 @@ export function ConsoleOAuthFlow({
     }
     if (forceLoginMethod === 'claudeai' || forceLoginMethod === 'console') {
       return {
-        state: 'ready_to_start'
+        state: 'allternit_key'
       };
     }
     return {
@@ -127,7 +130,7 @@ export function ConsoleOAuthFlow({
     });
   }, {
     context: 'Confirmation',
-    isActive: oauthStatus.state === 'platform_setup'
+    isActive: oauthStatus.state === 'platform_setup' || oauthStatus.state === 'allternit_key'
   });
 
   // Handle Enter to retry on error state
@@ -365,7 +368,7 @@ function OAuthStatusMessage(t0) {
   switch (oauthStatus.state) {
     case "idle":
       {
-        const t1 = startingMessage ? startingMessage : "Gizzi Code can be used with your Allternit account or billed based on API usage through Allternit Console.";
+        const t1 = startingMessage ? startingMessage : "Sign in with an Allternit API key. Create one at platform.allternit.com/api-keys. Cloud plans (Free, Plus, Super, Ultra) are managed at platform.allternit.com/billing — they are not wired into this CLI yet.";
         let t2;
         if ($[0] !== t1) {
           t2 = <Text bold={true}>{t1}</Text>;
@@ -384,7 +387,7 @@ function OAuthStatusMessage(t0) {
         let t4;
         if ($[3] === Symbol.for("react.memo_cache_sentinel")) {
           t4 = {
-            label: <Text>Allternit account ·{" "}<Text dimColor={true}>subscription or platform login</Text>{false && <Text>{"\n"}<Text color="warning">[ANT-ONLY]</Text>{" "}<Text dimColor={true}>Please use this option unless you need to login to a special org for accessing sensitive data (e.g. customer data, HIPI data) with the Console option</Text></Text>}{"\n"}</Text>,
+            label: <Text>Allternit API key ·{" "}<Text dimColor={true}>platform.allternit.com/api-keys</Text>{"\n"}</Text>,
             value: "claudeai"
           };
           $[3] = t4;
@@ -394,8 +397,8 @@ function OAuthStatusMessage(t0) {
         let t5;
         if ($[4] === Symbol.for("react.memo_cache_sentinel")) {
           t5 = {
-            label: <Text>Allternit Console ·{" "}<Text dimColor={true}>API usage billing</Text>{"\n"}</Text>,
-            value: "console"
+            label: <Text>3rd-party platform ·{" "}<Text dimColor={true}>Amazon Bedrock, Microsoft Foundry, or Vertex AI</Text>{"\n"}</Text>,
+            value: "platform"
           };
           $[4] = t5;
         } else {
@@ -403,10 +406,7 @@ function OAuthStatusMessage(t0) {
         }
         let t6;
         if ($[5] === Symbol.for("react.memo_cache_sentinel")) {
-          t6 = [t4, t5, {
-            label: <Text>3rd-party platform ·{" "}<Text dimColor={true}>Amazon Bedrock, Microsoft Foundry, or Vertex AI</Text>{"\n"}</Text>,
-            value: "platform"
-          }];
+          t6 = [t4, t5];
           $[5] = t6;
         } else {
           t6 = $[5];
@@ -420,16 +420,10 @@ function OAuthStatusMessage(t0) {
                   state: "platform_setup"
                 });
               } else {
+                logEvent("tengu_oauth_claudeai_selected", {});
                 setOAuthStatus({
-                  state: "ready_to_start"
+                  state: "allternit_key"
                 });
-                if (value_0 === "claudeai") {
-                  logEvent("tengu_oauth_claudeai_selected", {});
-                  setLoginWithClaudeAi(true);
-                } else {
-                  logEvent("tengu_oauth_console_selected", {});
-                  setLoginWithClaudeAi(false);
-                }
               }
             }} /></Box>;
           $[6] = setLoginWithClaudeAi;
@@ -448,6 +442,17 @@ function OAuthStatusMessage(t0) {
           t8 = $[11];
         }
         return t8;
+      }
+    case "allternit_key":
+      {
+        return <Box flexDirection="column" gap={1} marginTop={1}>
+          <Text bold={true}>Allternit API key</Text>
+          <Text>Cloud auth for Gizzi Code is an API key, not a Claude-style OAuth login.</Text>
+          <Text>1. Create a key at{" "}<Link url="https://platform.allternit.com/api-keys">https://platform.allternit.com/api-keys</Link></Text>
+          <Text>2. Run <Text bold={true}>gizzi auth login --api-key &lt;key&gt;</Text> or set <Text bold={true}>ALLTERNIT_API_KEY</Text></Text>
+          <Text>Plans (Free, Plus, Super, Ultra) and model offerings are on{" "}<Link url="https://platform.allternit.com/billing">https://platform.allternit.com/billing</Link>{" "}and{" "}<Link url="https://platform.allternit.com/models">https://platform.allternit.com/models</Link>. This CLI does not read those entitlements yet.</Text>
+          <Box marginTop={1}><Text dimColor={true}>Press <Text bold={true}>Enter</Text> to go back to login options.</Text></Box>
+        </Box>;
       }
     case "platform_setup":
       {

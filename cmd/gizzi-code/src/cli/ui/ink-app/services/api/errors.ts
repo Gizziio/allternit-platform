@@ -538,7 +538,7 @@ export async function getAssistantMessageFromError(
     // (e.g. 1M context without Extra Usage) and infra capacity 429s land here.
     if (error.message.includes('Extra usage is required for long context')) {
       const hint = getIsNonInteractiveSession()
-        ? 'enable extra usage at console.allternit.com/usage, or use --model to switch to standard context'
+        ? 'manage usage at https://platform.allternit.com/billing, or use --model to switch to standard context'
         : 'run /extra-usage to enable, or /model to switch to standard context'
       return createAssistantAPIErrorMessage({
         content: `${API_ERROR_MESSAGE_PREFIX}: Extra usage is required for 1M context · ${hint}`,
@@ -741,7 +741,7 @@ export async function getAssistantMessageFromError(
   ) {
     return createAssistantAPIErrorMessage({
       content:
-        'Claude Opus is not available on your current Allternit plan. If you have updated your subscription recently, run /logout and /login for the plan to take effect.',
+        'This model is not available on your current plan. Manage Free, Plus, Super, or Ultra at https://platform.allternit.com/billing.',
       error: 'invalid_request',
     })
   }
