@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle'
 
-export const GIZZI_BETA_HEADER_20250219 = 'claude-code-20250219'
+export const GIZZI_BETA_HEADER_20250219 = 'gizzi-20250219'
 export const GIZZI_20250219_BETA_HEADER = 'gizzi-20250219'
 export const INTERLEAVED_THINKING_BETA_HEADER =
   'interleaved-thinking-2025-05-14'

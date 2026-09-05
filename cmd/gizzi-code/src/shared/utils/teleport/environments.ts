@@ -110,7 +110,7 @@ export async function createDefaultCloudEnvironment(
     {
       headers: {
         ...getOAuthHeaders(accessToken),
-        'anthropic-beta': 'ccr-byoc-2025-07-29',
+        'allternit-beta': 'ccr-byoc-2025-07-29',
         'x-organization-uuid': orgUUID,
       },
       timeout: 15000,

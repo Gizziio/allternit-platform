@@ -48,7 +48,7 @@ export class Batches extends APIResource {
       body,
       ...options,
       headers: buildHeaders([
-        { 'anthropic-beta': [...(betas ?? []), 'message-batches-2024-09-24'].toString() },
+        { 'allternit-beta': [...(betas ?? []), 'message-batches-2024-09-24'].toString() },
         options?.headers,
       ]),
     });
@@ -79,7 +79,7 @@ export class Batches extends APIResource {
     return this._client.get(path`/v1/messages/batches/${messageBatchID}?beta=true`, {
       ...options,
       headers: buildHeaders([
-        { 'anthropic-beta': [...(betas ?? []), 'message-batches-2024-09-24'].toString() },
+        { 'allternit-beta': [...(betas ?? []), 'message-batches-2024-09-24'].toString() },
         options?.headers,
       ]),
     });
@@ -109,7 +109,7 @@ export class Batches extends APIResource {
       query,
       ...options,
       headers: buildHeaders([
-        { 'anthropic-beta': [...(betas ?? []), 'message-batches-2024-09-24'].toString() },
+        { 'allternit-beta': [...(betas ?? []), 'message-batches-2024-09-24'].toString() },
         options?.headers,
       ]),
     });
@@ -141,7 +141,7 @@ export class Batches extends APIResource {
     return this._client.delete(path`/v1/messages/batches/${messageBatchID}?beta=true`, {
       ...options,
       headers: buildHeaders([
-        { 'anthropic-beta': [...(betas ?? []), 'message-batches-2024-09-24'].toString() },
+        { 'allternit-beta': [...(betas ?? []), 'message-batches-2024-09-24'].toString() },
         options?.headers,
       ]),
     });
@@ -178,7 +178,7 @@ export class Batches extends APIResource {
     return this._client.post(path`/v1/messages/batches/${messageBatchID}/cancel?beta=true`, {
       ...options,
       headers: buildHeaders([
-        { 'anthropic-beta': [...(betas ?? []), 'message-batches-2024-09-24'].toString() },
+        { 'allternit-beta': [...(betas ?? []), 'message-batches-2024-09-24'].toString() },
         options?.headers,
       ]),
     });
@@ -220,7 +220,7 @@ export class Batches extends APIResource {
         ...options,
         headers: buildHeaders([
           {
-            'anthropic-beta': [...(betas ?? []), 'message-batches-2024-09-24'].toString(),
+            'allternit-beta': [...(betas ?? []), 'message-batches-2024-09-24'].toString(),
             Accept: 'application/binary',
           },
           options?.headers,

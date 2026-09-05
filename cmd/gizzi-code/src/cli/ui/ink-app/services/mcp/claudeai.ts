@@ -84,8 +84,8 @@ export const fetchClaudeAIMcpConfigsIfEligible = memoize(
         headers: {
           Authorization: `Bearer ${tokens.accessToken}`,
           'Content-Type': 'application/json',
-          'anthropic-beta': MCP_SERVERS_BETA_HEADER,
-          'anthropic-version': '2023-06-01',
+          'allternit-beta': MCP_SERVERS_BETA_HEADER,
+          'allternit-version': '2023-06-01',
         },
         timeout: FETCH_TIMEOUT_MS,
       })

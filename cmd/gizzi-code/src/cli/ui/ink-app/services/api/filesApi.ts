@@ -2,7 +2,7 @@
 /**
  * Files API client for managing files
  *
- * This module provides functionality to download and upload files to Anthropic Public Files API.
+ * This module provides functionality to download and upload files to the Allternit Files API.
  * Used by the gizzi-code agent to download file attachments at session startup.
  *
  * API Reference: https://docs.anthropic.com/en/api/files-content
@@ -26,15 +26,15 @@ import {
 // Files API is currently in beta. oauth-2025-04-20 enables Bearer OAuth
 // on public-api routes (auth.py: "oauth_auth" not in beta_versions → 404).
 const FILES_API_BETA_HEADER = 'files-api-2025-04-14,oauth-2025-04-20'
-const ANTHROPIC_VERSION = '2023-06-01'
+const ALLTERNIT_API_VERSION = '2023-06-01'
 
-// API base URL - uses ANTHROPIC_BASE_URL set by env-manager for the appropriate environment
+// API base URL - uses ALLTERNIT_BASE_URL set by env-manager for the appropriate environment
 // Falls back to public API for standalone usage
 function getDefaultApiBaseUrl(): string {
   return (
-    process.env.ANTHROPIC_BASE_URL ||
+    process.env.ALLTERNIT_BASE_URL ||
     process.env.GIZZI_CODE_API_BASE_URL ||
-    'https://api.anthropic.com'
+    'https://api.allternit.com'
   )
 }
 
@@ -61,7 +61,7 @@ export type File = {
 export type FilesApiConfig = {
   /** OAuth token for authentication (from session JWT) */
   oauthToken: string
-  /** Base URL for the API (default: https://api.anthropic.com) */
+  /** Base URL for the API (default: https://api.allternit.com) */
   baseUrl?: string
   /** Session ID for creating session-specific directories */
   sessionId: string
@@ -139,8 +139,8 @@ export async function downloadFile(
 
   const headers = {
     Authorization: `Bearer ${config.oauthToken}`,
-    'anthropic-version': ANTHROPIC_VERSION,
-    'anthropic-beta': FILES_API_BETA_HEADER,
+    'allternit-version': ALLTERNIT_API_VERSION,
+    'allternit-beta': FILES_API_BETA_HEADER,
   }
 
   logDebug(`Downloading file ${fileId} from ${url}`)
@@ -387,8 +387,8 @@ export async function uploadFile(
 
   const headers = {
     Authorization: `Bearer ${config.oauthToken}`,
-    'anthropic-version': ANTHROPIC_VERSION,
-    'anthropic-beta': FILES_API_BETA_HEADER,
+    'allternit-version': ALLTERNIT_API_VERSION,
+    'allternit-beta': FILES_API_BETA_HEADER,
   }
 
   logDebug(`Uploading file ${filePath} as ${relativePath}`)
@@ -622,8 +622,8 @@ export async function listFilesCreatedAfter(
   const baseUrl = config.baseUrl || getDefaultApiBaseUrl()
   const headers = {
     Authorization: `Bearer ${config.oauthToken}`,
-    'anthropic-version': ANTHROPIC_VERSION,
-    'anthropic-beta': FILES_API_BETA_HEADER,
+    'allternit-version': ALLTERNIT_API_VERSION,
+    'allternit-beta': FILES_API_BETA_HEADER,
   }
 
   logDebug(`Listing files created after ${afterCreatedAt}`)

@@ -29,7 +29,7 @@ test.skip("provider loaded from env variable", async () => {
       // Provider should retain its connection source even if custom loaders
       // merge additional options.
       expect(providers["anthropic"].source).toBe("env")
-      expect(providers["anthropic"].options.headers["anthropic-beta"]).toBeDefined()
+      expect(providers["anthropic"].options.headers["allternit-beta"]).toBeDefined()
     },
   })
 })
@@ -1749,7 +1749,7 @@ test.skip("provider options are deeply merged", async () => {
       expect(providers["anthropic"].options.timeout).toBe(30000)
       expect(providers["anthropic"].options.headers["X-Custom"]).toBe("custom-value")
       // anthropic custom loader adds its own headers, they should coexist
-      expect(providers["anthropic"].options.headers["anthropic-beta"]).toBeDefined()
+      expect(providers["anthropic"].options.headers["allternit-beta"]).toBeDefined()
     },
   })
 })

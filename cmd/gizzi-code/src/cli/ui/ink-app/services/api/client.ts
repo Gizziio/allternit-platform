@@ -67,7 +67,7 @@ export async function getAnthropicClient({
     ...customHeaders,
     ...(containerId ? { 'x-claude-remote-container-id': containerId } : {}),
     ...(remoteSessionId
-      ? { 'x-claude-remote-session-id': remoteSessionId }
+      ? { 'x-allternit-remote-session-id': remoteSessionId }
       : {}),
     // SDK consumers can identify their app/library for backend analytics
     ...(clientApp ? { 'x-client-app': clientApp } : {}),
@@ -75,7 +75,7 @@ export async function getAnthropicClient({
 
   // Log API client configuration for HFI debugging
   logForDebugging(
-    `[API:request] Creating client, ANTHROPIC_CUSTOM_HEADERS present: ${!!process.env.ANTHROPIC_CUSTOM_HEADERS}, has Authorization header: ${!!customHeaders['Authorization']}`,
+    `[API:request] Creating client, ALLTERNIT_CUSTOM_HEADERS present: ${!!process.env.ALLTERNIT_CUSTOM_HEADERS}, has Authorization header: ${!!customHeaders['Authorization']}`,
   )
 
   // Add additional protection header if enabled via env var
@@ -83,7 +83,7 @@ export async function getAnthropicClient({
     process.env.GIZZI_CODE_ADDITIONAL_PROTECTION,
   )
   if (additionalProtectionEnabled) {
-    defaultHeaders['x-anthropic-additional-protection'] = 'true'
+    defaultHeaders['x-allternit-additional-protection'] = 'true'
   }
 
   logForDebugging('[API:auth] OAuth token check starting')
@@ -141,7 +141,7 @@ async function configureApiKeyHeaders(
 
 function getCustomHeaders(): Record<string, string> {
   const customHeaders: Record<string, string> = {}
-  const customHeadersEnv = process.env.ANTHROPIC_CUSTOM_HEADERS
+  const customHeadersEnv = process.env.ALLTERNIT_CUSTOM_HEADERS
 
   if (!customHeadersEnv) return customHeaders
 

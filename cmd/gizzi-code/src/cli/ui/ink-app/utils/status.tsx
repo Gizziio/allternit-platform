@@ -253,7 +253,7 @@ export function buildAPIProviderProperties(): Property[] {
     });
   }
   if (apiProvider === 'firstParty') {
-    const anthropicBaseUrl = process.env.ANTHROPIC_BASE_URL;
+    const anthropicBaseUrl = process.env.ALLTERNIT_BASE_URL;
     if (anthropicBaseUrl) {
       properties.push({
         label: 'Anthropic base URL',

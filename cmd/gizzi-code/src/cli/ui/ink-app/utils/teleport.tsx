@@ -644,7 +644,7 @@ export async function pollRemoteSessionEvents(sessionId: string, afterId: string
   }
   const headers = {
     ...getOAuthHeaders(accessToken),
-    'anthropic-beta': 'ccr-byoc-2025-07-29',
+    'allternit-beta': 'ccr-byoc-2025-07-29',
     'x-organization-uuid': orgUUID
   };
   const eventsUrl = `${getOauthConfig().BASE_API_URL}/v1/sessions/${sessionId}/events`;
@@ -823,7 +823,7 @@ export async function teleportToRemote(options: {
       const url = `${getOauthConfig().BASE_API_URL}/v1/sessions`;
       const headers = {
         ...getOAuthHeaders(accessToken),
-        'anthropic-beta': 'ccr-byoc-2025-07-29',
+        'allternit-beta': 'ccr-byoc-2025-07-29',
         'x-organization-uuid': orgUUID
       };
       const envVars = {
@@ -1097,7 +1097,7 @@ export async function teleportToRemote(options: {
     const url = `${getOauthConfig().BASE_API_URL}/v1/sessions`;
     const headers = {
       ...getOAuthHeaders(accessToken),
-      'anthropic-beta': 'ccr-byoc-2025-07-29',
+      'allternit-beta': 'ccr-byoc-2025-07-29',
       'x-organization-uuid': orgUUID
     };
     const sessionContext = {
@@ -1205,7 +1205,7 @@ export async function archiveRemoteSession(sessionId: string): Promise<void> {
   if (!orgUUID) return;
   const headers = {
     ...getOAuthHeaders(accessToken),
-    'anthropic-beta': 'ccr-byoc-2025-07-29',
+    'allternit-beta': 'ccr-byoc-2025-07-29',
     'x-organization-uuid': orgUUID
   };
   const url = `${getOauthConfig().BASE_API_URL}/v1/sessions/${sessionId}/archive`;

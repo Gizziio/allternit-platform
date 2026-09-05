@@ -14,13 +14,13 @@ import { errorMessage } from '../utils/errors'
 import { jsonStringify } from '../utils/slowOperations'
 import { extractErrorDetail } from './debugUtils'
 
-const ANTHROPIC_VERSION = '2023-06-01'
+const ALLTERNIT_API_VERSION = '2023-06-01'
 
 function oauthHeaders(accessToken: string): Record<string, string> {
   return {
     Authorization: `Bearer ${accessToken}`,
     'Content-Type': 'application/json',
-    'anthropic-version': ANTHROPIC_VERSION,
+    'allternit-version': ALLTERNIT_API_VERSION,
   }
 }
 

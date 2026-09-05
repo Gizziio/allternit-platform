@@ -5,8 +5,8 @@ export const anthropicLoader: ProviderLoader = async () => {
     autoload: false,
     options: {
       headers: {
-        "anthropic-beta":
-          "claude-code-20250219,interleaved-thinking-2025-05-14,fine-grained-tool-streaming-2025-05-14",
+        "allternit-beta":
+          "gizzi-20250219,interleaved-thinking-2025-05-14,fine-grained-tool-streaming-2025-05-14",
       },
     },
   }

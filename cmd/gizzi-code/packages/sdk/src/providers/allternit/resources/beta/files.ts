@@ -32,7 +32,7 @@ export class Files extends APIResource {
       query,
       ...options,
       headers: buildHeaders([
-        { 'anthropic-beta': [...(betas ?? []), 'files-api-2025-04-14'].toString() },
+        { 'allternit-beta': [...(betas ?? []), 'files-api-2025-04-14'].toString() },
         options?.headers,
       ]),
     });
@@ -57,7 +57,7 @@ export class Files extends APIResource {
     return this._client.delete(path`/v1/files/${fileID}`, {
       ...options,
       headers: buildHeaders([
-        { 'anthropic-beta': [...(betas ?? []), 'files-api-2025-04-14'].toString() },
+        { 'allternit-beta': [...(betas ?? []), 'files-api-2025-04-14'].toString() },
         options?.headers,
       ]),
     });
@@ -86,7 +86,7 @@ export class Files extends APIResource {
       ...options,
       headers: buildHeaders([
         {
-          'anthropic-beta': [...(betas ?? []), 'files-api-2025-04-14'].toString(),
+          'allternit-beta': [...(betas ?? []), 'files-api-2025-04-14'].toString(),
           Accept: 'application/binary',
         },
         options?.headers,
@@ -113,7 +113,7 @@ export class Files extends APIResource {
     return this._client.get(path`/v1/files/${fileID}`, {
       ...options,
       headers: buildHeaders([
-        { 'anthropic-beta': [...(betas ?? []), 'files-api-2025-04-14'].toString() },
+        { 'allternit-beta': [...(betas ?? []), 'files-api-2025-04-14'].toString() },
         options?.headers,
       ]),
     });
@@ -139,7 +139,7 @@ export class Files extends APIResource {
           body,
           ...options,
           headers: buildHeaders([
-            { 'anthropic-beta': [...(betas ?? []), 'files-api-2025-04-14'].toString() },
+            { 'allternit-beta': [...(betas ?? []), 'files-api-2025-04-14'].toString() },
             stainlessHelperHeaderFromFile(body.file),
             options?.headers,
           ]),

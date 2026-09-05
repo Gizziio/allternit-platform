@@ -136,7 +136,7 @@ export class Messages extends APIResource {
       timeout: timeout ?? 600000,
       ...options,
       headers: buildHeaders([
-        { ...(betas?.toString() != null ? { 'anthropic-beta': betas?.toString() } : undefined) },
+        { ...(betas?.toString() != null ? { 'allternit-beta': betas?.toString() } : undefined) },
         helperHeader,
         options?.headers,
       ]),
@@ -167,7 +167,7 @@ export class Messages extends APIResource {
     options = {
       ...options,
       headers: buildHeaders([
-        { 'anthropic-beta': [...(params.betas ?? []), 'structured-outputs-2025-12-15'].toString() },
+        { 'allternit-beta': [...(params.betas ?? []), 'structured-outputs-2025-12-15'].toString() },
         options?.headers,
       ]),
     };
@@ -217,7 +217,7 @@ export class Messages extends APIResource {
       body,
       ...options,
       headers: buildHeaders([
-        { 'anthropic-beta': [...(betas ?? []), 'token-counting-2024-11-01'].toString() },
+        { 'allternit-beta': [...(betas ?? []), 'token-counting-2024-11-01'].toString() },
         options?.headers,
       ]),
     });

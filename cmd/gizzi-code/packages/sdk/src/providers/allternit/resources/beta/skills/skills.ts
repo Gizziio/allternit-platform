@@ -46,7 +46,7 @@ export class Skills extends APIResource {
           body,
           ...options,
           headers: buildHeaders([
-            { 'anthropic-beta': [...(betas ?? []), 'skills-2025-10-02'].toString() },
+            { 'allternit-beta': [...(betas ?? []), 'skills-2025-10-02'].toString() },
             options?.headers,
           ]),
         },
@@ -73,7 +73,7 @@ export class Skills extends APIResource {
     return this._client.get(path`/v1/skills/${skillID}?beta=true`, {
       ...options,
       headers: buildHeaders([
-        { 'anthropic-beta': [...(betas ?? []), 'skills-2025-10-02'].toString() },
+        { 'allternit-beta': [...(betas ?? []), 'skills-2025-10-02'].toString() },
         options?.headers,
       ]),
     });
@@ -99,7 +99,7 @@ export class Skills extends APIResource {
       query,
       ...options,
       headers: buildHeaders([
-        { 'anthropic-beta': [...(betas ?? []), 'skills-2025-10-02'].toString() },
+        { 'allternit-beta': [...(betas ?? []), 'skills-2025-10-02'].toString() },
         options?.headers,
       ]),
     });
@@ -122,7 +122,7 @@ export class Skills extends APIResource {
     return this._client.delete(path`/v1/skills/${skillID}?beta=true`, {
       ...options,
       headers: buildHeaders([
-        { 'anthropic-beta': [...(betas ?? []), 'skills-2025-10-02'].toString() },
+        { 'allternit-beta': [...(betas ?? []), 'skills-2025-10-02'].toString() },
         options?.headers,
       ]),
     });

@@ -79,7 +79,7 @@ export function getAuthHeaders(): AuthHeaders {
     return {
       headers: {
         Authorization: `Bearer ${oauthTokens.accessToken}`,
-        'anthropic-beta': OAUTH_BETA_HEADER,
+        'allternit-beta': OAUTH_BETA_HEADER,
       },
     }
   }

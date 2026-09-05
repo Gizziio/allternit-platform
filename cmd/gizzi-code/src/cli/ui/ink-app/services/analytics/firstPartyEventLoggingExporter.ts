@@ -110,13 +110,13 @@ export class FirstPartyEventLoggingExporter implements LogRecordExporter {
       schedule?: (fn: () => Promise<void>, delayMs: number) => () => void
     } = {},
   ) {
-    // Default: prod, except when ANTHROPIC_BASE_URL is explicitly staging.
+    // Default: prod, except when ALLTERNIT_BASE_URL is explicitly staging.
     // Overridable via tengu_1p_event_batch_config.baseUrl.
     const baseUrl =
       options.baseUrl ||
-      (process.env.ANTHROPIC_BASE_URL === 'https://api-staging.anthropic.com'
-        ? 'https://api-staging.anthropic.com'
-        : 'https://api.anthropic.com')
+      (process.env.ALLTERNIT_BASE_URL === 'https://api-staging.allternit.com'
+        ? 'https://api-staging.allternit.com'
+        : 'https://api.allternit.com')
 
     this.endpoint = `${baseUrl}${options.path || '/api/event_logging/batch'}`
 

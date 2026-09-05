@@ -18,7 +18,7 @@ export function getModelProvider(model: string): ModelProvider {
 }
 
 export function isFirstPartyAnthropicBaseUrl(): boolean {
-  const url = process.env.ANTHROPIC_BASE_URL || ''
+  const url = process.env.ALLTERNIT_BASE_URL || ''
   if (!url) return true
   try {
     const host = new URL(url).host
