@@ -2,15 +2,24 @@
 
 ## Unreleased
 
-- Windows API-key credential store uses DPAPI (CurrentUser), matching MCP
-  OAuth secure storage. Plaintext `credentials.json` remains last-resort.
-- Chocolatey is not an install channel. Windows: PowerShell installer, Scoop, winget.
-- TUI theme keys renamed off Claude-era names (`gizzi`, `gizziShimmer`,
-  `briefLabelGizzi`). Accent is Gizzi coral `#D97757`. Help banner says
-  GIZZI CODE. Welcome mascot uses dark eyes and the A:// face.
-- Product URLs point at docs.gizziio.com / platform.allternit.com (not
-  gizzi.io). GitHub Action workflows mention `@gizzi`. Provider copy is
-  Allternit, not GIZZIIO ZEN.
+## 2.0.3 — 2026-09-05
+
+Session children no longer survive close. Installed CLI brains (including
+Grok) work without an Allternit API key. A Plus/Super/Ultra subscription
+auto-defaults the brain to Allternit Cloud.
+
+### Fixed
+- Sidecar, CLI, shell, mux, and computer-use children are tracked and
+  reaped on SIGINT/SIGTERM/SIGHUP/exit instead of detaching+unrefing.
+- Desktop quit kills the gizzi process tree and stops the always-on daemon.
+- `gizzi exec -m grok/default` crashed with `Auth.profilesForProvider is
+  not a function`. Subprocess CLIs are treated as already-authed.
+- Grok ACP spawn uses `--no-leader` so it does not attach to a parent TUI.
+
+### Added
+- First-run onboarding can pick an installed CLI as the default brain.
+- Paid Plus/Super/Ultra (from `/api/v1/billing/subscription`) auto-sets
+  `allternit/<cloud-model>` unless `/model` is pinned (`model_auto: false`).
 
 ## 2.0.2 — 2026-09-05
 
