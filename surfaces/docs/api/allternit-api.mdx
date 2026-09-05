@@ -1,0 +1,104 @@
+---
+title: Allternit API
+description: Private data-plane runtime (cmd/allternit-api). SQLite per instance. Never a public hostname.
+---
+
+## What it is
+
+**Allternit API** is the data-plane runtime built from `cmd/allternit-api`. It owns per-tenant workspace state: agent sessions, Office bindings, beta research sessions, local files, and the rest of the node-affine `/api/v1` surface.
+
+It is **not** the public API.
+
+| | Cloud API | Allternit API |
+|---|---|---|
+| Public hostname | `https://api.allternit.com` | none |
+| Binary | `allternit-cloud-api` | `allternit-api` |
+| Default bind | `:8082` (behind nginx) | `:8013` on loopback / tailnet |
+| Database | Postgres | Per-instance SQLite |
+| Role | Auth, billing, pairing, relay, fleet | Node state and execution |
+
+Production browsers never open port 8013. They call the [Cloud API](/api/cloud-api), which relays to a paired or provisioned node. See [API Overview](/api/overview).
+
+<Warning>
+A company-operated Allternit API process may run on Allternit's own hosts for Desktop Cloud. That process is not a user-facing public gateway. Do not publish 8013 on the internet.
+</Warning>
+
+## Deployment modes
+
+The same binary runs in three modes ([architecture decision](/architecture)):
+
+1. **Local** — inside Allternit Desktop on the user's machine. Default developer loop: `cargo run -p allternit-api` or `pnpm dev:platform-stack` (API `:8013`, UI `:3013`, Gizzi `:4096`).
+2. **User-paired** — on a VPS or homelab box the user controls. The node creates an Ed25519 pairing, the human approves it in the console, then `agent-daemon` keeps an outbound WebSocket to the Cloud API.
+3. **Allternit-provisioned** — Cloud API creates an isolated instance per subscription. The init script installs Allternit API, SQLite under a per-instance data dir, and auto-pairs with a one-time bootstrap token. No inbound ports on the fleet host.
+
+Each instance has its own SQLite file. Tenants are not packed into a shared data-plane Postgres.
+
+## Local development
+
+```bash
+# From the monorepo root
+cargo run -p allternit-api
+```
+
+```
+http://127.0.0.1:8013
+```
+
+Health (data plane, local):
+
+```bash
+curl http://127.0.0.1:8013/health
+```
+
+The public Cloud API health path is different: `https://api.allternit.com/api/v1/health`.
+
+Override the bind with `ALLTERNIT_API_PORT`. Point the desktop/web fallback at this origin only when you are on the same machine (or a tunnel you control). Production `VITE_ALLTERNIT_GATEWAY_URL` stays `https://api.allternit.com`.
+
+## What production clients actually call
+
+Node-affine namespaces are mounted on the Cloud API and **relayed** to this binary:
+
+| Namespace | Cloud API path | Lives on the node |
+|-----------|----------------|-------------------|
+| Agent sessions | `/api/v1/agent-sessions` | yes |
+| Office | `/api/v1/office/*` | yes |
+| Beta research / sessions | `/api/v1/beta/research`, `/api/v1/beta/sessions` | yes |
+
+Relay rules:
+
+- Clerk session required on the Cloud API.
+- The Cloud API forwards the original `Authorization` header.
+- HTTP **428** if the account has no healthy node (pair or start an instance).
+- SSE and WebSocket streams are not buffered in the control plane.
+
+Details: [Agent Sessions](/api/agent-sessions), [Office](/api/office), [Cloud API](/api/cloud-api).
+
+## Pairing a node
+
+A user-paired or provisioned node does not expose 8013. It phones home:
+
+1. `POST https://api.allternit.com/api/v1/runtime-pairings` with the node's Ed25519 public key.
+2. Human approves the user code at `https://platform.allternit.com/pair`.
+3. Node exchanges the pairing for a device token (`allternit_runtime_…`).
+4. `agent-daemon` connects `wss://api.allternit.com/api/v1/runtime-relay/connect/:id`.
+5. Heartbeats keep the node in the default-node set (recent `last_seen`).
+
+Provisioning (mode 3) skips the human approval step and uses a one-time bootstrap token issued by the Cloud API.
+
+## Release binary
+
+Linux x86_64 tarball used by provisioned instances:
+
+```
+https://api.allternit.com/releases/allternit-api/latest/linux-x86_64.tar.gz
+```
+
+Prefer that channel over ad-hoc copies of the binary. The Cloud API pins a SHA-256 for fleet init.
+
+## Related pages
+
+- [API Overview](/api/overview)
+- [Cloud API](/api/cloud-api)
+- [BYOC Overview](/byoc/overview)
+- [Agent Daemon](/cli/agent-daemon)
+- [Authentication](/api/authentication)

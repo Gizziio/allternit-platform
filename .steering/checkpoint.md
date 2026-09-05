@@ -1,11 +1,9 @@
 # Steering checkpoint
 
-Goal: Merge office+beta flags (PR #94), then P2 fleet, then chores.
+Goal: Public content pass so docs.allternit.com, the platform console Docs page, and allternit.com/docs describe Cloud API vs Allternit API as they are deployed.
 
-Just did:
-- Dogfood agent-sessions end-to-end on the paired mail node (list 200, create 201 ses_f906ca6a1ffeuNrD4WSjpYnTE6, get 200). Root cause was gizzi JWKS defaulting to clerk.platform.allternit.com; set GIZZI_CLERK_JWKS_URL to clerk.allternit.com.
-- Typography CI: drop font-family from 404.html and desktop-cloud-admin.html so validate-typography passes.
+Just did: Dual-API content pass in this worktree. New `api/overview.mdx` + `api/allternit-api.mdx`. Rewrote `byoc/overview.mdx` (no Vercel / :8080). Updated architecture, introduction, cloud-api (Postgres, P1 relay, provisioned-instances), authentication, agent-sessions (`/api/v1`, 428), office, beta, docs.json nav, release-notes, DEPLOYMENT_GUIDE, README ports, platform DocsPage. Marketing `DeveloperDocs.tsx` in the Websites repo (fly.dev → api.allternit.com).
 
-Next: push/merge PR #94; watch Pages + cloud-api deploys; P2 NODE_RELEASE_URL tarball + create instance; 8013 newer binary; Tailscale tag:ci ACL; secret rotation.
+Next: rebase onto origin/main (1 commit ahead), commit, PR, merge, watch deploy-docs-cloudflare.yml. Then deploy www if Eoj wants the marketing change live.
 
-Open questions: none for flags. P2 still needs a published linux-x86_64 allternit-api tarball and the allternit-node Incus image.
+Open questions: Marketing is a separate repo; docs CI deploys on merge to main. Stale websites copy of docs.allternit.com is not synced (canonical is surfaces/docs).

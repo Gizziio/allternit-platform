@@ -44,6 +44,21 @@ const ENDPOINTS = [
     path: "/api/v1/billing/credits",
     description: "Check prepaid credit balance and recent transactions.",
   },
+  {
+    method: "GET",
+    path: "/api/v1/runtime-devices",
+    description: "List paired data-plane nodes (desktop, VPS, provisioned).",
+  },
+  {
+    method: "GET",
+    path: "/api/v1/agent-sessions",
+    description: "List agent sessions (relayed to your paired node; 428 if none).",
+  },
+  {
+    method: "GET",
+    path: "/api/v1/provisioned-instances",
+    description: "List Allternit-provisioned data-plane instances.",
+  },
 ];
 
 export function DocsPage() {
@@ -54,7 +69,10 @@ export function DocsPage() {
           Documentation
         </h1>
         <p className="text-[13px] text-[var(--text-secondary)] mt-1">
-          Quick reference for the Allternit Cloud API and platform console.
+          Quick reference for the Allternit Cloud API. The only public origin is{" "}
+          <code className="font-mono text-[12px]">https://api.allternit.com</code>.
+          Allternit API on port 8013 is the private data plane — browsers never call it
+          directly.
         </p>
       </div>
 
@@ -201,9 +219,17 @@ export function DocsPage() {
           <BookOpen size={18} className="text-[var(--accent-primary)]" /> Full API reference
         </div>
         <p className="text-[13px] text-[var(--text-secondary)] leading-relaxed m-0">
-          A canonical OpenAPI reference site for docs.allternit.com is planned. For now, use the
-          endpoints above and the model catalog to integrate. Need help? Contact your Allternit
-          representative or open the in-app help from{" "}
+          Canonical docs live at{" "}
+          <a
+            href="https://docs.allternit.com/api/overview"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[var(--accent-primary)] hover:underline"
+          >
+            docs.allternit.com/api/overview
+          </a>
+          . Cloud API (control plane) vs Allternit API (data plane), pairing, and
+          relay are documented there. Need help? Open the in-app help from{" "}
           <a
             href="https://ai.allternit.com/shell"
             target="_blank"

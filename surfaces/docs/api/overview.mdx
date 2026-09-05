@@ -1,0 +1,104 @@
+---
+title: API Overview
+description: Cloud API is the only public API. Allternit API is the private data-plane runtime.
+---
+
+## One public API
+
+Allternit exposes **one public origin**:
+
+```
+https://api.allternit.com
+```
+
+That origin is the **Cloud API** (`cmd/allternit-cloud-api`). Browsers, SDKs, and CI talk only to it.
+
+The **Allternit API** (`cmd/allternit-api`, port 8013) is the **data-plane runtime**. It holds per-instance SQLite state (sessions, office bindings, local workspaces). It is never a public hostname. The Cloud API authenticates the caller, picks a healthy node, and relays the request.
+
+<Note>
+Do not point production clients at `http://localhost:8013` or at any second public gateway. Local 8013 is for desktop and development only.
+</Note>
+
+## Which API do I call?
+
+| You want to… | Call | Binary | Storage |
+|--------------|------|--------|---------|
+| Pair a desktop or VPS, proxy to it, provision hosted/provisioned compute, bill, list models | [Cloud API](/api/cloud-api) | `allternit-cloud-api` | Postgres |
+| Run chat completions / embeddings with a virtual key | Cloud API `/v1/*` | `allternit-cloud-api` | Postgres + model router |
+| Create an agent session, Office binding, or beta research session | Cloud API `/api/v1/agent-sessions`, `/api/v1/office`, `/api/v1/beta/*` | Cloud API **relays** to Allternit API on your node | Node SQLite |
+| Run the runtime yourself (desktop, your VPS, or an Allternit-provisioned box) | [Allternit API](/api/allternit-api) on loopback / tailnet | `allternit-api` | Per-instance SQLite |
+
+## Topology
+
+```
+Browser / SDK / CLI
+        │  HTTPS + Clerk JWT, virtual key, or device token
+        ▼
+┌──────────────────────────────────────────┐
+│  Cloud API — control plane               │
+│  https://api.allternit.com               │
+│  pairing · relay · billing · models      │
+│  hosted runtimes · provisioned fleet     │
+└──────────────────┬───────────────────────┘
+                   │ outbound WebSocket relay
+                   ▼
+┌──────────────────────────────────────────┐
+│  Allternit API — data plane              │
+│  :8013, not public                       │
+│  Mode 1  local desktop                   │
+│  Mode 2  user-paired VPS                 │
+│  Mode 3  Allternit-provisioned instance  │
+└──────────────────┬───────────────────────┘
+                   │
+                   ▼
+            Gizzi runtime (local)
+```
+
+## Authentication at a glance
+
+| Credential | Prefix / shape | Used for |
+|------------|----------------|----------|
+| Clerk session JWT | Clerk `sess` JWT | Browser → Cloud API (pairing approval, relay, P1 namespaces, billing) |
+| Virtual key | `ak-` | LLM gateway `/v1/chat/completions` and related |
+| Runtime device token | `allternit_runtime_…` | Node → Cloud API (heartbeat, relay connect, rotate) |
+
+See [Authentication](/api/authentication).
+
+## Data-plane relay
+
+Namespaces that store state on the node (agent sessions, Office, beta research) are **Cloud API handlers**. They do not keep a second copy of that state in Postgres.
+
+1. Authenticate the Clerk session.
+2. Resolve the caller's default healthy node (desktop, paired box, or provisioned instance). Online means a recent heartbeat.
+3. Forward the original request — including the caller's `Authorization` header — over the node's outbound relay WebSocket.
+4. Stream the node's response back. Nothing is cached or rewritten.
+
+If the account has no healthy node, the Cloud API returns **HTTP 428** (`pair a device`). Pair a runtime or start a provisioned instance, then retry.
+
+## Three ways to run the data plane
+
+<CardGroup cols={3}>
+  <Card title="Local desktop" icon="desktop" href="/byoc/overview">
+    Allternit Desktop runs Allternit API and Gizzi on the machine. Pair it to your account.
+  </Card>
+  <Card title="User-paired (BYOC)" icon="server" href="/byoc/overview">
+    Install the runtime on your VPS, approve the pairing code, keep the node private.
+  </Card>
+  <Card title="Allternit-provisioned" icon="cloud" href="/api/cloud-api">
+    Paid path: Cloud API creates an isolated instance that auto-pairs and phones home.
+  </Card>
+</CardGroup>
+
+## Next
+
+<CardGroup cols={3}>
+  <Card title="Cloud API" icon="cloud" href="/api/cloud-api">
+    Pairing, relay, hosted and provisioned compute, Cowork, health.
+  </Card>
+  <Card title="Allternit API" icon="database" href="/api/allternit-api">
+    Data-plane binary, local port 8013, SQLite, what is never public.
+  </Card>
+  <Card title="Authentication" icon="key" href="/api/authentication">
+    Clerk JWTs, virtual keys, device tokens.
+  </Card>
+</CardGroup>
