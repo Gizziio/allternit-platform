@@ -591,11 +591,11 @@ const externalTips: Tip[] = [
   {
     id: 'guest-passes',
     content: async ctx => {
-      const claude = color('claude', ctx.theme)
+      const accent = color('gizzi', ctx.theme)
       const reward = getCachedReferrerReward()
       return reward
-        ? `Share Gizzi Code and earn ${claude(formatCreditAmount(reward))} of extra usage · ${claude('/passes')}`
-        : `You have free guest passes to share · ${claude('/passes')}`
+        ? `Share Gizzi Code and earn ${accent(formatCreditAmount(reward))} of extra usage · ${accent('/passes')}`
+        : `You have free guest passes to share · ${accent('/passes')}`
     },
     cooldownSessions: 3,
     isRelevant: async () => {
@@ -610,12 +610,12 @@ const externalTips: Tip[] = [
   {
     id: 'overage-credit',
     content: async ctx => {
-      const claude = color('claude', ctx.theme)
+      const accent = color('gizzi', ctx.theme)
       const info = getCachedOverageCreditGrant()
       const amount = info ? formatGrantAmount(info) : null
       if (!amount) return ''
       // Copy from "OC & Bulk Overages copy" doc (#5 — CLI Rotating tip)
-      return `${claude(`${amount} in extra usage, on us`)} · third-party apps · ${claude('/extra-usage')}`
+      return `${accent(`${amount} in extra usage, on us`)} · third-party apps · ${accent('/extra-usage')}`
     },
     cooldownSessions: 3,
     isRelevant: async () => shouldShowOverageCreditUpsell(),

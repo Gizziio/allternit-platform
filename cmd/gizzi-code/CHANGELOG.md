@@ -5,6 +5,9 @@
 - Windows API-key credential store uses DPAPI (CurrentUser), matching MCP
   OAuth secure storage. Plaintext `credentials.json` remains last-resort.
 - Chocolatey is not an install channel. Windows: PowerShell installer, Scoop, winget.
+- TUI theme keys renamed off Claude-era names (`gizzi`, `gizziShimmer`,
+  `briefLabelGizzi`). Accent is Gizzi coral `#D97757`. Help banner says
+  GIZZI CODE. Welcome mascot uses dark eyes and the A:// face.
 
 ## 2.0.2 — 2026-09-05
 

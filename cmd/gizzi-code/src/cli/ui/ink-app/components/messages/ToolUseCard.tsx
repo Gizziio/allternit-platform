@@ -43,14 +43,14 @@ export function ToolUseCard({
     stateColor = 'yellow'
   } else {
     stateLabel = 'running'
-    stateColor = 'claude'
+    stateColor = 'gizzi'
   }
 
   return (
     <Box
       flexDirection="column"
       borderStyle="single"
-      borderColor={isError ? 'red' : isResolved ? 'inactive' : 'claude'}
+      borderColor={isError ? 'red' : isResolved ? 'inactive' : 'gizzi'}
       paddingX={1}
       paddingY={0}
       width="100%"

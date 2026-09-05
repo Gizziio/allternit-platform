@@ -155,10 +155,10 @@ export function generateHeatmap(
   lines.push(
     '    Less ' +
       [
-        claudeOrange('░'),
-        claudeOrange('▒'),
-        claudeOrange('▓'),
-        claudeOrange('█'),
+        gizziCoral('░'),
+        gizziCoral('▒'),
+        gizziCoral('▓'),
+        gizziCoral('█'),
       ].join(' ') +
       ' More',
   )
@@ -178,21 +178,20 @@ function getIntensity(
   return 1
 }
 
-// Claude orange color (hex #da7756)
-const claudeOrange = chalk.hex('#da7756')
+const gizziCoral = chalk.hex('#D97757')
 
 function getHeatmapChar(intensity: number): string {
   switch (intensity) {
     case 0:
       return chalk.gray('·')
     case 1:
-      return claudeOrange('░')
+      return gizziCoral('░')
     case 2:
-      return claudeOrange('▒')
+      return gizziCoral('▒')
     case 3:
-      return claudeOrange('▓')
+      return gizziCoral('▓')
     case 4:
-      return claudeOrange('█')
+      return gizziCoral('█')
     default:
       return chalk.gray('·')
   }

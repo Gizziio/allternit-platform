@@ -283,7 +283,7 @@ function StatsContent(t0) {
   }
   let t9;
   if ($[26] !== t7 || $[27] !== t8) {
-    t9 = <Box flexDirection="row" gap={1} marginBottom={1}><Tabs title="" color="claude" defaultTab="Overview">{t7}{t8}</Tabs></Box>;
+    t9 = <Box flexDirection="row" gap={1} marginBottom={1}><Tabs title="" color="gizzi" defaultTab="Overview">{t7}{t8}</Tabs></Box>;
     $[26] = t7;
     $[27] = t8;
     $[28] = t9;
@@ -301,7 +301,7 @@ function StatsContent(t0) {
   }
   let t12;
   if ($[31] !== t11 || $[32] !== t9) {
-    t12 = <Pane color="claude">{t9}{t11}</Pane>;
+    t12 = <Pane color="gizzi">{t9}{t11}</Pane>;
     $[31] = t11;
     $[32] = t9;
     $[33] = t12;
@@ -321,7 +321,7 @@ function DateRangeSelector(t0) {
   } = t0;
   let t1;
   if ($[0] !== dateRange) {
-    t1 = DATE_RANGE_ORDER.map((range, i) => <Text key={range}>{i > 0 && <Text dimColor={true}> · </Text>}{range === dateRange ? <Text bold={true} color="claude">{DATE_RANGE_LABELS[range]}</Text> : <Text dimColor={true}>{DATE_RANGE_LABELS[range]}</Text>}</Text>);
+    t1 = DATE_RANGE_ORDER.map((range, i) => <Text key={range}>{i > 0 && <Text dimColor={true}> · </Text>}{range === dateRange ? <Text bold={true} color="gizzi">{DATE_RANGE_LABELS[range]}</Text> : <Text dimColor={true}>{DATE_RANGE_LABELS[range]}</Text>}</Text>);
     $[0] = dateRange;
     $[1] = t1;
   } else {
@@ -443,7 +443,7 @@ function OverviewTab({
         <Box flexDirection="column" width={28}>
           {favoriteModel && <Text wrap="truncate">
               Favorite model:{' '}
-              <Text color="claude" bold>
+              <Text color="gizzi" bold>
                 {renderModelName(favoriteModel[0])}
               </Text>
             </Text>}
@@ -451,7 +451,7 @@ function OverviewTab({
         <Box flexDirection="column" width={28}>
           <Text wrap="truncate">
             Total tokens:{' '}
-            <Text color="claude">{formatNumber(totalTokens)}</Text>
+            <Text color="gizzi">{formatNumber(totalTokens)}</Text>
           </Text>
         </Box>
       </Box>
@@ -461,13 +461,13 @@ function OverviewTab({
         <Box flexDirection="column" width={28}>
           <Text wrap="truncate">
             Sessions:{' '}
-            <Text color="claude">{formatNumber(stats.totalSessions)}</Text>
+            <Text color="gizzi">{formatNumber(stats.totalSessions)}</Text>
           </Text>
         </Box>
         <Box flexDirection="column" width={28}>
           {stats.longestSession && <Text wrap="truncate">
               Longest session:{' '}
-              <Text color="claude">
+              <Text color="gizzi">
                 {formatDuration(stats.longestSession.duration)}
               </Text>
             </Text>}
@@ -478,14 +478,14 @@ function OverviewTab({
       <Box flexDirection="row" gap={4}>
         <Box flexDirection="column" width={28}>
           <Text wrap="truncate">
-            Active days: <Text color="claude">{stats.activeDays}</Text>
+            Active days: <Text color="gizzi">{stats.activeDays}</Text>
             <Text color="subtle">/{rangeDays}</Text>
           </Text>
         </Box>
         <Box flexDirection="column" width={28}>
           <Text wrap="truncate">
             Longest streak:{' '}
-            <Text color="claude" bold>
+            <Text color="gizzi" bold>
               {stats.streaks.longestStreak}
             </Text>{' '}
             {stats.streaks.longestStreak === 1 ? 'day' : 'days'}
@@ -498,13 +498,13 @@ function OverviewTab({
         <Box flexDirection="column" width={28}>
           {stats.peakActivityDay && <Text wrap="truncate">
               Most active day:{' '}
-              <Text color="claude">{formatPeakDay(stats.peakActivityDay)}</Text>
+              <Text color="gizzi">{formatPeakDay(stats.peakActivityDay)}</Text>
             </Text>}
         </Box>
         <Box flexDirection="column" width={28}>
           <Text wrap="truncate">
             Current streak:{' '}
-            <Text color="claude" bold>
+            <Text color="gizzi" bold>
               {allTimeStats.streaks.currentStreak}
             </Text>{' '}
             {allTimeStats.streaks.currentStreak === 1 ? 'day' : 'days'}
@@ -517,7 +517,7 @@ function OverviewTab({
             <Box flexDirection="column" width={28}>
               <Text wrap="truncate">
                 Speculation saved:{' '}
-                <Text color="claude">
+                <Text color="gizzi">
                   {formatDuration(stats.totalSpeculationTimeSavedMs)}
                 </Text>
               </Text>
@@ -533,14 +533,14 @@ function OverviewTab({
             <Box flexDirection="column" width={28}>
               <Text wrap="truncate">
                 {shotStatsData.buckets[0]!.label}:{' '}
-                <Text color="claude">{shotStatsData.buckets[0]!.count}</Text>
+                <Text color="gizzi">{shotStatsData.buckets[0]!.count}</Text>
                 <Text color="subtle"> ({shotStatsData.buckets[0]!.pct}%)</Text>
               </Text>
             </Box>
             <Box flexDirection="column" width={28}>
               <Text wrap="truncate">
                 {shotStatsData.buckets[1]!.label}:{' '}
-                <Text color="claude">{shotStatsData.buckets[1]!.count}</Text>
+                <Text color="gizzi">{shotStatsData.buckets[1]!.count}</Text>
                 <Text color="subtle"> ({shotStatsData.buckets[1]!.pct}%)</Text>
               </Text>
             </Box>
@@ -549,14 +549,14 @@ function OverviewTab({
             <Box flexDirection="column" width={28}>
               <Text wrap="truncate">
                 {shotStatsData.buckets[2]!.label}:{' '}
-                <Text color="claude">{shotStatsData.buckets[2]!.count}</Text>
+                <Text color="gizzi">{shotStatsData.buckets[2]!.count}</Text>
                 <Text color="subtle"> ({shotStatsData.buckets[2]!.pct}%)</Text>
               </Text>
             </Box>
             <Box flexDirection="column" width={28}>
               <Text wrap="truncate">
                 {shotStatsData.buckets[3]!.label}:{' '}
-                <Text color="claude">{shotStatsData.buckets[3]!.count}</Text>
+                <Text color="gizzi">{shotStatsData.buckets[3]!.count}</Text>
                 <Text color="subtle"> ({shotStatsData.buckets[3]!.pct}%)</Text>
               </Text>
             </Box>
@@ -565,7 +565,7 @@ function OverviewTab({
             <Box flexDirection="column" width={28}>
               <Text wrap="truncate">
                 Avg/session:{' '}
-                <Text color="claude">{shotStatsData.avgShots}</Text>
+                <Text color="gizzi">{shotStatsData.avgShots}</Text>
               </Text>
             </Box>
           </Box>
@@ -1096,7 +1096,7 @@ function renderStatsToAnsi(stats: ClaudeCodeStats, activeTab: 'Overview' | 'Mode
 function renderOverviewToAnsi(stats: ClaudeCodeStats): string[] {
   const lines: string[] = [];
   const theme = getTheme(resolveThemeSetting(getGlobalConfig().theme));
-  const h = (text: string) => applyColor(text, theme.claude as Color);
+  const h = (text: string) => applyColor(text, theme.gizzi as Color);
 
   // Two-column helper with fixed spacing
   // Column 1: label (18 chars) + value + padding to reach col 2

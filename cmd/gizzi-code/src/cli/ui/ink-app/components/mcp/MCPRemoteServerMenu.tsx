@@ -346,7 +346,7 @@ export function MCPRemoteServerMenu({
     // the URL fallback block below still renders.
     const authCopy = server.config.type !== 'claudeai-proxy' && server.config.oauth?.xaa ? ' Authenticating via your identity provider' : ' A browser window will open for authentication';
     return <Box flexDirection="column" gap={1} padding={1}>
-        <Text color="claude">Authenticating with {server.name}…</Text>
+        <Text color="gizzi">Authenticating with {server.name}…</Text>
         <Box>
           <Spinner />
           <Text>{authCopy}</Text>
@@ -386,7 +386,7 @@ export function MCPRemoteServerMenu({
   }
   if (isClaudeAIAuthenticating) {
     return <Box flexDirection="column" gap={1} padding={1}>
-        <Text color="claude">Authenticating with {server.name}…</Text>
+        <Text color="gizzi">Authenticating with {server.name}…</Text>
         <Box>
           <Spinner />
           <Text> A browser window will open for authentication</Text>
@@ -415,7 +415,7 @@ export function MCPRemoteServerMenu({
   }
   if (isClaudeAIClearingAuth) {
     return <Box flexDirection="column" gap={1} padding={1}>
-        <Text color="claude">Clear authentication for {server.name}</Text>
+        <Text color="gizzi">Clear authentication for {server.name}</Text>
         {claudeAIClearAuthBrowserOpened ? <>
             <Text>
               Find the MCP server in the browser and click

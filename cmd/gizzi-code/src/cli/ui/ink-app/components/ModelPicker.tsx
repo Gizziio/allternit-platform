@@ -408,7 +408,7 @@ function EffortLevelIndicator(t0) {
   const {
     effort
   } = t0;
-  const t1 = effort ? "claude" : "subtle";
+  const t1 = effort ? "gizzi" : "subtle";
   const t2 = effort ?? "low";
   let t3;
   if ($[0] !== t2) {

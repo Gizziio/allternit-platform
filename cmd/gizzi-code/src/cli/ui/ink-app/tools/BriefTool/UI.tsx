@@ -43,7 +43,7 @@ export function renderToolResultMessage(output: Output, _progressMessages: Progr
     const ts = output.sentAt ? formatBriefTimestamp(output.sentAt) : '';
     return <Box flexDirection="column" marginTop={1} paddingLeft={2}>
         <Box flexDirection="row">
-          <Text color="briefLabelClaude">Gizzi</Text>
+          <Text color="briefLabelGizzi">Gizzi</Text>
           {ts ? <Text dimColor> {ts}</Text> : null}
         </Box>
         <Box flexDirection="column">

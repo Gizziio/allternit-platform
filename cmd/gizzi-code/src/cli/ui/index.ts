@@ -97,7 +97,7 @@ export namespace UI {
       result.push(EOL)
     })
     const combined = result.join("").trimEnd()
-    const coffee = `\n\n  ${reset}GIZZIIO ${left.fg}&${reset} COFFEE\n`
+    const coffee = `\n\n  ${reset}GIZZI ${left.fg}CODE${reset}\n`
     return combined + coffee
   }
 
