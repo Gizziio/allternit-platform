@@ -12,23 +12,30 @@ ecosystem) when you connect it.
 curl -fsSL https://install.gizziio.com/install | bash
 ```
 
-**Windows (PowerShell) — experimental, unsupported:**
+**Windows (PowerShell) — experimental:**
 ```powershell
 irm https://install.gizziio.com/install.ps1 | iex
 ```
-Windows is not a launch target. It runs, but there is no secure
-credential store (credentials fall back to a local file), and support is
-community-only. See [Platform support](#platform-support).
+Windows ships a PE32+ x64 zip (`gizzi-code-v*-windows-x64.zip`) with
+`checksums.txt` verification. There is no secure credential store
+(credentials fall back to a permission-hardened local file), and support
+is community-only. ARM64 Windows runs the x64 build under emulation.
+See [Platform support](#platform-support).
 
-**npm:**
+**npm (canonical, all platforms):**
 ```bash
 npm install -g @allternit/gizzi-code
 ```
 
-Or grab a prebuilt binary for your platform from the
+Or grab a prebuilt binary from the
 [releases page](https://github.com/Gizziio/allternit-platform/releases)
-(assets are named `gizzi-code-v<version>-<target>.tar.gz` / `.zip`; tags look
-like `gizzi-code/1.0.2`).
+(assets `gizzi-code-v<version>-<target>.tar.gz` / `.zip`; tags
+`gizzi-code/v<version>`). The repo installer also works without waiting
+for install.gizziio.com:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Gizziio/allternit-platform/main/cmd/gizzi-code/install | bash
+```
 
 ## Platform support
 
@@ -36,7 +43,7 @@ like `gizzi-code/1.0.2`).
 |---|---|
 | macOS | Primary target; signed & notarized builds planned |
 | Linux | Supported |
-| Windows | Experimental — no secure credential store (local-file fallback); community support only |
+| Windows | Experimental — PE32+ x64 zip published; no secure credential store (local-file fallback); community support only |
 
 ## Quick start
 
@@ -51,8 +58,9 @@ gizzi --help             # everything else
 
 ## Configuration
 
-- Provider keys: standard provider env vars (`ANTHROPIC_API_KEY`,
-  `OPENAI_API_KEY`, …) or an auth profile in `~/.config/gizzi-code/config.toml`.
+- Provider keys: `ALLTERNIT_API_KEY` for first-party Allternit, plus
+  standard provider env vars (`OPENAI_API_KEY`, …) or an auth profile in
+  `~/.config/gizzi-code/config.toml`.
 - Platform token: `gizzi api-keys set allternit alt_...` (durable scoped keys)
   or run the login flow (`gizzi org status` will point you at it when missing).
 - Env overrides: `ALLTERNIT_API_URL`, `GIZZI_PLATFORM_API_URL`,

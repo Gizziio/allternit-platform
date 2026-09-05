@@ -9,14 +9,14 @@
 #   bash script/update-packaging-hashes.sh 1.0.2        # explicit version
 #   TAG_PREFIX=gizzi-code bash script/update-packaging-hashes.sh 1.0.2
 #
-# The release workflow (.github/workflows/release-gizzi-code.yml) tags releases
-# "gizzi-code/<version>" (no leading v) and names assets
-# gizzi-code-v<version>-<target>.<ext>. Override with TAG_V=v if that changes.
+# The npm/GitHub Release workflow tags releases "gizzi-code/v<version>"
+# and names assets gizzi-code-v<version>-<target>.<ext>. Older releases
+# used "gizzi-code/<version>" (no v); set TAG_V= to match those.
 set -euo pipefail
 
 REPO="Gizziio/allternit-platform"
 TAG_PREFIX="${TAG_PREFIX:-gizzi-code}"
-TAG_V="${TAG_V-}"
+TAG_V="${TAG_V-v}"
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"

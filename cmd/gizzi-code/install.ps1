@@ -186,10 +186,27 @@ function Install-Binary($Platform, $Arch, $Version) {
         Write-Info "No $Arch Windows build published; using the x64 build (emulated on ARM64)"
     }
     $Asset = "${AssetPrefix}-v${Version}-windows-x64.zip"
-    $DownloadUrl = "https://github.com/$Repo/releases/download/gizzi-code/${Version}/${Asset}"
-    if (!(Test-Url $DownloadUrl)) {
+    $DownloadUrl = $null
+    foreach ($tag in @("gizzi-code/v$Version", "gizzi-code/$Version")) {
+        $candidate = "https://github.com/$Repo/releases/download/${tag}/${Asset}"
+        if (Test-Url $candidate) {
+            $DownloadUrl = $candidate
+            break
+        }
+    }
+    if (-not $DownloadUrl) {
         $Asset = "${AssetPrefix}-windows-x64.zip"
-        $DownloadUrl = "https://github.com/$Repo/releases/download/gizzi-code/${Version}/${Asset}"
+        foreach ($tag in @("gizzi-code/v$Version", "gizzi-code/$Version")) {
+            $candidate = "https://github.com/$Repo/releases/download/${tag}/${Asset}"
+            if (Test-Url $candidate) {
+                $DownloadUrl = $candidate
+                break
+            }
+        }
+    }
+    if (-not $DownloadUrl) {
+        Write-Error "Could not find a Windows x64 zip for $Version"
+        return $false
     }
 
     Write-Info "Downloading from: $Dim$DownloadUrl$Reset"
@@ -205,8 +222,15 @@ function Install-Binary($Platform, $Arch, $Version) {
         Invoke-WebRequest -Uri $DownloadUrl -OutFile $TempFile -UseBasicParsing
 
         # Verify sha256 against checksums.txt when the release provides it
-        $ChecksumsUrl = "https://github.com/$Repo/releases/download/gizzi-code/${Version}/checksums.txt"
-        if (Test-Url $ChecksumsUrl) {
+        $ChecksumsUrl = $null
+        foreach ($tag in @("gizzi-code/v$Version", "gizzi-code/$Version")) {
+            $candidate = "https://github.com/$Repo/releases/download/${tag}/checksums.txt"
+            if (Test-Url $candidate) {
+                $ChecksumsUrl = $candidate
+                break
+            }
+        }
+        if ($ChecksumsUrl) {
             $Checksums = (Invoke-WebRequest -Uri $ChecksumsUrl -UseBasicParsing).Content
             $Expected = ($Checksums -split "`n" | Where-Object { $_ -match [regex]::Escape($Asset) } | Select-Object -First 1)
             if ($Expected) {

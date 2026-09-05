@@ -12,7 +12,7 @@ on:
         type: string
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   quality:
@@ -167,6 +167,13 @@ jobs:
             chmod +x "$BIN"
             "./$BIN" --version || echo "::warning::binary smoke test failed ($BIN)"
           fi
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ matrix.target }}
+          path: cmd/gizzi-code/dist/gizzi-code-${{ matrix.target }}*
+          if-no-files-found: error
 
       - name: Setup Node for NPM
         uses: actions/setup-node@v4
@@ -400,3 +407,106 @@ jobs:
             fi
           done <<< "$OPTS"
           echo "Verified: published $PKG@$VERSION contains dist/, all bin entries resolve, and all core platform packages exist."
+
+  github-release:
+    # GitHub Release with version-named tar.gz/zip assets + checksums.txt.
+    # This is what curl/install.ps1, Homebrew, Scoop, Chocolatey, and Arch
+    # consume. npm publish above is a separate channel.
+    name: GitHub Release
+    needs: [quality, build-platform-packages]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "VERSION=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "VERSION=${GITHUB_REF_NAME#gizzi-code/v}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download platform binaries
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+          pattern: binary-*
+
+      - name: Pack release assets
+        env:
+          VERSION: ${{ steps.version.outputs.VERSION }}
+        run: |
+          set -euo pipefail
+          mkdir -p release-assets
+          missing=0
+          pack_unix() {
+            local target="$1"
+            local bin="artifacts/gizzi-code-${target}"
+            if [ ! -f "$bin" ]; then
+              echo "::error::missing core binary $bin"
+              missing=1
+              return
+            fi
+            chmod +x "$bin"
+            local stage
+            stage="$(mktemp -d)"
+            cp "$bin" "${stage}/gizzi-code"
+            tar -C "$stage" -czf "release-assets/gizzi-code-v${VERSION}-${target}.tar.gz" gizzi-code
+            rm -rf "$stage"
+          }
+          pack_unix darwin-arm64
+          pack_unix darwin-x64
+          pack_unix linux-x64
+          pack_unix linux-arm64
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+          WIN_BIN="artifacts/gizzi-code-win32-x64.exe"
+          if [ -f "$WIN_BIN" ]; then
+            file "$WIN_BIN" | grep -F 'PE32+ executable' \
+              || echo "::warning::win32 binary is not a PE32+ x86-64 image"
+            stage="$(mktemp -d)"
+            cp "$WIN_BIN" "${stage}/gizzi-code.exe"
+            (cd "$stage" && zip -q "$GITHUB_WORKSPACE/release-assets/gizzi-code-v${VERSION}-windows-x64.zip" gizzi-code.exe)
+            rm -rf "$stage"
+          else
+            echo "::warning::Windows binary missing; GitHub Release will ship unix assets only"
+          fi
+          (cd release-assets && sha256sum * | tee checksums.txt)
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@c95fe1489396fe8a9eb87c0abf8aa5b2ef267fda # v2.2.1
+        with:
+          tag_name: gizzi-code/v${{ steps.version.outputs.VERSION }}
+          name: Gizzi Code v${{ steps.version.outputs.VERSION }}
+          target_commitish: ${{ github.sha }}
+          make_latest: true
+          fail_on_unmatched_files: true
+          body: |
+            ## Gizzi Code v${{ steps.version.outputs.VERSION }}
+
+            AI-powered terminal coding agent for the Allternit ecosystem.
+
+            ### Install
+            ```bash
+            npm install -g @allternit/gizzi-code
+            # or
+            curl -fsSL https://install.gizziio.com/install | bash
+            ```
+
+            ### Assets
+            | Platform | File |
+            |----------|------|
+            | macOS arm64 | `gizzi-code-v${{ steps.version.outputs.VERSION }}-darwin-arm64.tar.gz` |
+            | macOS x64 | `gizzi-code-v${{ steps.version.outputs.VERSION }}-darwin-x64.tar.gz` |
+            | Linux x64 | `gizzi-code-v${{ steps.version.outputs.VERSION }}-linux-x64.tar.gz` |
+            | Linux arm64 | `gizzi-code-v${{ steps.version.outputs.VERSION }}-linux-arm64.tar.gz` |
+            | Windows x64 (experimental) | `gizzi-code-v${{ steps.version.outputs.VERSION }}-windows-x64.zip` |
+
+            Verify downloads against `checksums.txt`.
+          files: |
+            release-assets/*

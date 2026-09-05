@@ -190,7 +190,21 @@ else
 
     release_exists() {
         local v="$1"
-        url_ok "$base/tag/gizzi-code/${v}" || url_ok "$base/tag/gizzi-code/v${v}"
+        url_ok "$base/tag/gizzi-code/v${v}" || url_ok "$base/tag/gizzi-code/${v}"
+    }
+
+    resolve_download_url() {
+        local asset_name="$1"
+        local ver="$2"
+        local u
+        for tag in "gizzi-code/v${ver}" "gizzi-code/${ver}"; do
+            u="$base/download/${tag}/${asset_name}"
+            if url_ok "$u"; then
+                echo "$u"
+                return 0
+            fi
+        done
+        return 1
     }
 
     base="https://github.com/Gizziio/allternit-platform/releases"
@@ -221,27 +235,21 @@ else
     fi
 
     # Assets are version-named: gizzi-code-v<version>-<target>.<ext>.
-    # The release workflow also publishes legacy names (gizzi-code-<target>.<ext>)
-    # for one transition release, so keep a fallback to those.
-    if [ -z "$requested_version" ]; then
-        asset="gizzi-code-v${specific_version}-$target$archive_ext"
-        url="$base/download/gizzi-code/${specific_version}/$asset"
-        if ! url_ok "$url"; then
-            asset="$APP-$target$archive_ext"
-            url="$base/download/gizzi-code/${specific_version}/$asset"
-        fi
-        if ! url_ok "$url"; then
-            # Legacy latest/download alias (only exists if the release
-            # workflow published legacy-named assets on the latest release).
-            asset="$APP-$target$archive_ext"
-            url="$base/latest/download/$asset"
-        fi
+    # Tags are `gizzi-code/v<version>` (npm/GitHub Release); older releases
+    # used `gizzi-code/<version>` without the v. Try both, then legacy names.
+    asset="gizzi-code-v${specific_version}-$target$archive_ext"
+    if url="$(resolve_download_url "$asset" "$specific_version")"; then
+        :
     else
-        asset="gizzi-code-v${specific_version}-$target$archive_ext"
-        url="$base/download/gizzi-code/${specific_version}/$asset"
-        if ! url_ok "$url"; then
-            asset="$APP-$target$archive_ext"
-            url="$base/download/gizzi-code/${specific_version}/$asset"
+        asset="$APP-$target$archive_ext"
+        if url="$(resolve_download_url "$asset" "$specific_version")"; then
+            :
+        elif [ -z "$requested_version" ]; then
+            url="$base/latest/download/$asset"
+        else
+            echo -e "${RED}Error: asset ${asset} not found for ${specific_version}${NC}"
+            echo -e "${MUTED}Available releases: https://github.com/Gizziio/allternit-platform/releases${NC}"
+            exit 1
         fi
     fi
     filename="$asset"
@@ -370,7 +378,7 @@ download_with_progress() {
 verify_checksum() {
     local file="$1"
     local checksums_url=""
-    for tag in "gizzi-code/${specific_version}" "gizzi-code/v${specific_version}"; do
+    for tag in "gizzi-code/v${specific_version}" "gizzi-code/${specific_version}"; do
         local candidate="https://github.com/Gizziio/allternit-platform/releases/download/${tag}/checksums.txt"
         if url_ok "$candidate"; then
             checksums_url="$candidate"

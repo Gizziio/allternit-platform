@@ -7,12 +7,12 @@
 class GizziCode < Formula
   desc "AI-powered terminal interface and runtime for the Allternit ecosystem"
   homepage "https://docs.gizziio.com"
-  version "1.0.2"
+  version "2.0.1"
   license "MIT"
 
   # Release tags look like "gizzi-code/v1.0.2"; assets are version-named:
   # gizzi-code-v1.0.2-<target>.tar.gz
-  base_url = "https://github.com/Gizziio/allternit-platform/releases/download/gizzi-code/#{version}"
+  base_url = "https://github.com/Gizziio/allternit-platform/releases/download/gizzi-code/v#{version}"
 
   if OS.mac? && Hardware::CPU.arm?
     url "#{base_url}/gizzi-code-v#{version}-darwin-arm64.tar.gz"

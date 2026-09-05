@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+## 2.0.1 — 2026-09-05
+
+Distribution completeness. Product naming is Allternit-only on the first-party
+path. GitHub Release assets ship alongside npm so curl/Homebrew/Scoop can
+install the same version.
+
+### Changed
+- Drop shipped Bedrock `anthropic.claude-*` model IDs.
+- Product-owned Anthropic identifiers, first-party hosts, and remaining
+  `x-claude-*` headers renamed to Allternit. Third-party npm names, models.dev
+  provider id `"anthropic"`, Claude model IDs, and leftover-detect of upstream
+  installs remain.
+- npm publish also cuts a GitHub Release (`gizzi-code/v*`) with version-named
+  tar.gz/zip assets and `checksums.txt`.
+- Installer, Homebrew, Scoop, Chocolatey, Arch, RPM, and winget manifests
+  point at `gizzi-code/v<version>` and try the unprefixed tag as fallback.
+
 ## 2.0.0 — 2026-09-04
 
 Breaking naming purge. `CLAUDE_CODE_*` environment variables are no longer

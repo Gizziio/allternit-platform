@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://aka.ms/winget-manifest.singleton.1.5.0.schema.json
 
 PackageIdentifier: Allternit.GizziCode
-PackageVersion: 1.0.2
+PackageVersion: 2.0.1
 PackageLocale: en-US
 Publisher: Allternit Technologies
 PublisherUrl: https://allternit.io
@@ -31,14 +31,14 @@ Commands:
 Installers:
   - Architecture: x64
     InstallerType: zip
-    InstallerUrl: https://github.com/Gizziio/allternit-platform/releases/download/gizzi-code/1.0.2/gizzi-code-v1.0.2-windows-x64.zip
+    InstallerUrl: https://github.com/Gizziio/allternit-platform/releases/download/gizzi-code/v2.0.1/gizzi-code-v2.0.1-windows-x64.zip
     InstallerSha256: __SHA256_WINDOWS_X64__
     NestedInstallerType: portable
     NestedInstallerFiles:
       - RelativeFilePath: gizzi-code.exe
         PortableCommandAlias: gizzi-code
 ReleaseNotes: |
-  Gizzi Code CLI 1.0.2
-ReleaseNotesUrl: https://github.com/Gizziio/allternit-platform/releases/tag/gizzi-code/1.0.2
+  Gizzi Code CLI 2.0.1
+ReleaseNotesUrl: https://github.com/Gizziio/allternit-platform/releases/tag/gizzi-code/v2.0.1
 ManifestType: singleton
 ManifestVersion: 1.5.0
