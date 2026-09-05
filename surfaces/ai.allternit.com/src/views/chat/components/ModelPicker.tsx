@@ -122,6 +122,14 @@ export function ModelPicker({
   );
 
   const entries = useMemo<ProviderEntry[]>(() => {
+    const rank = (id: string) => {
+      const key = id.toLowerCase();
+      if (key === "allternit") return 0;
+      const kind = getProviderMeta(id).kind;
+      if (kind === "cli") return 1;
+      if (kind === "local") return 2;
+      return 3;
+    };
     const list = providers.map((p) => ({
       ...p,
       models: p.models ?? [],
@@ -143,6 +151,10 @@ export function ModelPicker({
       });
     }
 
+    list.sort((a, b) => {
+      const d = rank(a.id) - rank(b.id);
+      return d !== 0 ? d : a.name.localeCompare(b.name);
+    });
     return list;
   }, [providers, currentProviderId, currentModelId]);
 

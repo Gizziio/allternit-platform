@@ -6,6 +6,16 @@ import type { ModelSelection } from "@/components/model-picker";
 import type { ModelOption } from "@/components/prompt-kit/prompt-model-selector";
 import { usePendingChatModelStore } from "@/stores/pending-chat-model.store";
 import { useAvailableBrainModels } from "@/hooks/use-available-brain-models";
+import { useModelDiscovery } from "@/integration/api-client";
+import {
+  isMistakenAutoDefault,
+  persistModelSelection,
+  pickDefaultBrain,
+  readPersistedModelSelection,
+  shouldKeepPersistedSelection,
+  type AllternitPlan,
+} from "@/lib/default-brain";
+import { getBillingSubscription } from "@/lib/cloud-console-api";
 
 interface ModelSelectionContextType {
   // Current selection
@@ -36,18 +46,70 @@ export function ModelSelectionProvider({
   children,
   defaultSelection = null
 }: ModelSelectionProviderProps) {
-  const [selection, setSelection] = useState<ModelSelection | null>(defaultSelection);
+  const [selection, setSelection] = useState<ModelSelection | null>(
+    () => defaultSelection ?? readPersistedModelSelection(),
+  );
   const [isSelecting, setIsSelecting] = useState(false);
-  const hasAppliedDefault = useRef(false);
+  const hasAppliedDefault = useRef(Boolean(defaultSelection));
   const { models: availableModels, isLoading } = useAvailableBrainModels();
+  const { authenticatedProviders, fetchProviders } = useModelDiscovery();
+  const [authStatusKnown, setAuthStatusKnown] = useState(false);
+  const [plan, setPlan] = useState<AllternitPlan | null>(null);
+  const authedIds = useMemo(
+    () => authenticatedProviders.map((p) => p.provider_id),
+    [authenticatedProviders],
+  );
 
-  // Sync with defaultSelection when it becomes available (e.g. after onboarding completes)
   useEffect(() => {
-    if (defaultSelection && !hasAppliedDefault.current) {
-      hasAppliedDefault.current = true;
-      setSelection(defaultSelection);
+    let cancelled = false;
+    void fetchProviders().then((result) => {
+      // Failed/timed-out auth must not look like "nobody is signed in".
+      if (!cancelled && result) setAuthStatusKnown(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchProviders]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void getBillingSubscription().then((sub) => {
+      if (cancelled || !sub) return;
+      setPlan({
+        id: sub.plan_id,
+        label: sub.label,
+        plan_tier: sub.plan_tier,
+        status: sub.status,
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const keepPersisted = shouldKeepPersistedSelection(selection, authedIds, authStatusKnown, plan);
+
+  // Restore a signed-in CLI after discovery. Wait until models are loaded
+  // so an empty first paint cannot replace the persisted pick.
+  useEffect(() => {
+    if (!authStatusKnown) return;
+    if (isLoading) return;
+    if (keepPersisted) return;
+    if (availableModels.length === 0) return;
+    const picked =
+      pickDefaultBrain(availableModels, authedIds, plan) ??
+      (defaultSelection && !isMistakenAutoDefault(defaultSelection) ? defaultSelection : null);
+    if (!picked) {
+      if (selection && !keepPersisted) {
+        setSelection(null);
+        persistModelSelection(null);
+      }
+      return;
     }
-  }, [defaultSelection]);
+    hasAppliedDefault.current = true;
+    setSelection(picked);
+    persistModelSelection(picked);
+  }, [authStatusKnown, availableModels, authedIds, defaultSelection, isLoading, keepPersisted, plan, selection]);
 
   // Apply a model selection requested from outside the chat surface (e.g. Model Lab).
   // This runs on mount and whenever a new pending request arrives.
@@ -69,12 +131,15 @@ export function ModelSelectionProvider({
   }, []);
 
   const selectModel = useCallback((newSelection: ModelSelection) => {
-    setSelection(newSelection);
+    const pinned = { ...newSelection, modelAuto: false };
+    setSelection(pinned);
+    persistModelSelection(pinned);
     setIsSelecting(false);
   }, []);
 
   const clearSelection = useCallback(() => {
     setSelection(null);
+    persistModelSelection(null);
   }, []);
 
   const startSelection = useCallback(() => {

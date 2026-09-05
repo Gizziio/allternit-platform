@@ -5,8 +5,11 @@ import { Command } from "cmdk";
 import { useModelDiscovery, useUsageSummary } from "@/integration/api-client";
 import { useModelSelection } from "@/providers/model-selection-provider";
 import {
+  canonicalProviderId,
+  dedupeByCanonicalProvider,
   getProviderMeta,
   getProviderName,
+  listCanonicalProviders,
   PROVIDER_REGISTRY,
   type ProviderKind,
 } from "@/lib/providers/provider-registry";
@@ -42,6 +45,7 @@ import {
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { getLogosAppsUrl } from "@/lib/design/logos-apps";
+import { isAllternitCloudProviderId } from "@/lib/default-brain";
 import type { ModelOption } from "@/components/prompt-kit/prompt-model-selector";
 import type {
   ProviderAuthStatus,
@@ -55,6 +59,8 @@ export interface ModelSelection {
   profileId: string;
   modelId: string;
   modelName?: string;
+  /** false = user pinned via the picker; auto defaults may switch to Cloud after a paid sub. */
+  modelAuto?: boolean;
 }
 
 interface ModelPickerProps {
@@ -90,8 +96,9 @@ function ProviderIcon({ providerId }: { providerId: string }) {
   const [attempt, setAttempt] = useState(0);
 
   const sources = [
-    getLogosAppsUrl(meta.name),
     meta.icon ? `/assets/runtime-logos/${meta.icon}` : null,
+    getLogosAppsUrl(meta.id),
+    getLogosAppsUrl(meta.name),
   ].filter(Boolean) as string[];
 
   if (attempt >= sources.length) {
@@ -483,8 +490,9 @@ export function ModelPickerUI({
   const modelsByProviderId = useMemo(() => {
     const map = new Map<string, ModelOption[]>();
     availableModels.forEach((model) => {
-      const key = model.providerId || model.provider;
-      if (!key) return;
+      const raw = model.providerId || model.provider;
+      if (!raw) return;
+      const key = canonicalProviderId(raw);
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(model);
     });
@@ -511,7 +519,7 @@ export function ModelPickerUI({
   const runtimeStatusMap = useMemo(() => {
     const map = new Map<string, ProviderInfo["status"]>();
     realModels.forEach((r) => {
-      if (r.id) map.set(r.id, r.status);
+      if (r.id) map.set(canonicalProviderId(r.id), r.status);
     });
     return map;
   }, [realModels]);
@@ -529,12 +537,17 @@ export function ModelPickerUI({
     [runtimeStatus]
   );
 
-  const allProviders = providers;
+  const allProviders = useMemo(
+    () => dedupeByCanonicalProvider(providers),
+    [providers],
+  );
 
   const providersWithModels = useMemo(() => {
     const ids = new Set<string>();
     availableModels.forEach((m) => {
-      ids.add(m.providerId || m.provider || m.providerName || "");
+      const raw = m.providerId || m.provider || "";
+      if (raw) ids.add(canonicalProviderId(raw));
+      ids.add(m.providerName || "");
     });
     return ids;
   }, [availableModels]);
@@ -564,31 +577,99 @@ export function ModelPickerUI({
     [cliProviders, effectiveStatus]
   );
 
-  // API/cloud providers that have discovered models.
+  const allternitCloudProviders = useMemo(() => {
+    const fromAuth = allProviders.filter((p) =>
+      isAllternitCloudProviderId(canonicalProviderId(p.provider_id)),
+    );
+    if (fromAuth.length > 0) return fromAuth;
+    const hasCatalog = availableModels.some((model) =>
+      isAllternitCloudProviderId(canonicalProviderId(model.providerId || model.provider)),
+    );
+    if (!hasCatalog) return [];
+    return [
+      {
+        provider_id: "allternit",
+        status: "ok" as const,
+        authenticated: true,
+        auth_profile_id: null,
+        chat_profile_ids: [],
+      },
+    ];
+  }, [allProviders, availableModels]);
+
+  // BYOK API providers (Anthropic, OpenAI, …), not the Allternit Cloud catalog.
   const apiProviders = useMemo(() => {
     return allProviders.filter((p) => {
       const meta = getProviderMeta(p.provider_id);
-      return meta.kind === "api" && providersWithModels.has(p.provider_id);
+      if (meta.kind !== "api") return false;
+      if (isAllternitCloudProviderId(canonicalProviderId(p.provider_id))) return false;
+      if (p.provider_id === "omlx" || p.details?.provider_type === "local") return false;
+      return providersWithModels.has(p.provider_id);
     });
   }, [allProviders, providersWithModels]);
 
-  // Local runtimes (Ollama / sidecar).
+  // Local runtimes (Ollama / sidecar / oMLX), including models discovered
+  // live even when /providers/auth/status failed or omitted them.
   const localProviders = useMemo(() => {
-    return allProviders.filter((p) => {
+    const fromAuth = allProviders.filter((p) => {
       const meta = getProviderMeta(p.provider_id);
-      return meta.kind === "local";
+      const type = p.details?.provider_type;
+      return (
+        meta.kind === "local" ||
+        type === "local" ||
+        p.provider_id === "omlx" ||
+        p.provider_id === "ollama" ||
+        p.provider_id === "allternit-sidecar"
+      );
     });
-  }, [allProviders]);
+    const known = new Set(fromAuth.map((p) => p.provider_id));
+    const discovered: ProviderAuthStatus[] = [];
+    availableModels.forEach((model) => {
+      const id = model.providerId || model.provider;
+      if (!id || known.has(id)) return;
+      const meta = getProviderMeta(id);
+      const looksLocal =
+        meta.kind === "local" ||
+        id === "ollama" ||
+        id === "omlx" ||
+        id === "allternit-sidecar" ||
+        id === "local-brain";
+      if (isAllternitCloudProviderId(canonicalProviderId(id))) return;
+      if (!looksLocal) return;
+      known.add(id);
+      discovered.push({
+        provider_id: id,
+        status: "ok",
+        authenticated: true,
+        auth_profile_id: null,
+        chat_profile_ids: [],
+      });
+    });
+    return [...fromAuth, ...discovered];
+  }, [allProviders, availableModels]);
+
+  useEffect(() => {
+    if (!open) return;
+    setExpandedProviders((prev) => {
+      const next = new Set(prev);
+      allternitCloudProviders.forEach((p) => next.add(getProviderMeta(p.provider_id).name));
+      installedCli.forEach((p) => next.add(getProviderMeta(p.provider_id).name));
+      localProviders.forEach((p) => next.add(getProviderMeta(p.provider_id).name));
+      return next;
+    });
+  }, [open, allternitCloudProviders, installedCli, localProviders]);
 
   const emptyProviders = useMemo(
     () =>
-      allProviders.filter(
-        (p) =>
-          p.provider_id &&
-          !providersWithModels.has(p.provider_id) &&
-          p.provider_id !== "echo" &&
-          getProviderMeta(p.provider_id).kind !== "cli"
-      ),
+      allProviders.filter((p) => {
+        if (!p.provider_id || p.provider_id === "echo") return false;
+        if (providersWithModels.has(p.provider_id)) return false;
+        const meta = getProviderMeta(p.provider_id);
+        if (meta.kind === "cli" || meta.kind === "local") return false;
+        // Drop the raw Gizzi catalog (tokengo, subconscious, …). Only show
+        // brands the operator can actually connect from our registry.
+        return Boolean(PROVIDER_REGISTRY[p.provider_id]);
+      }),
     [allProviders, providersWithModels]
   );
 
@@ -596,16 +677,17 @@ export function ModelPickerUI({
   // These are shown in a collapsed "Available providers" section so the user
   // can install or authenticate them without pretending they are connected.
   const knownProviderIds = useMemo(
-    () => new Set(allProviders.map((p) => p.provider_id)),
+    () => new Set(allProviders.map((p) => canonicalProviderId(p.provider_id))),
     [allProviders]
   );
   const installableProviders = useMemo(() => {
-    return Object.values(PROVIDER_REGISTRY).filter(
+    return listCanonicalProviders().filter(
       (meta) =>
         !knownProviderIds.has(meta.id) &&
         meta.id !== "echo" &&
         meta.id !== "allternit" &&
-        meta.id !== "allternit-local-engine"
+        meta.id !== "allternit-local-engine" &&
+        meta.id !== "allternit-sidecar"
     );
   }, [knownProviderIds]);
 
@@ -736,6 +818,21 @@ export function ModelPickerUI({
 
   const usageLine = useMemo(() => {
     if (!usageSummary) return null;
+    const planName = usageSummary.planLabel
+      || (usageSummary.plan ? usageSummary.plan.charAt(0).toUpperCase() + usageSummary.plan.slice(1) : null);
+    if (planName && usageSummary.creditsRemaining != null) {
+      const remaining = new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: usageSummary.currency || "USD",
+      }).format(usageSummary.creditsRemaining);
+      const limit = usageSummary.monthlyLimit
+        ? ` of ${new Intl.NumberFormat("en-US", {
+            style: "currency",
+            currency: usageSummary.currency || "USD",
+          }).format(usageSummary.monthlyLimit)}`
+        : "";
+      return `Allternit ${planName} · ${remaining} remaining${limit}`;
+    }
     return [
       `${usageSummary.requests.toLocaleString()} requests`,
       `${formatTokenCount(usageSummary.tokens.total)} tokens`,
@@ -951,14 +1048,15 @@ export function ModelPickerUI({
               </div>
             ) : (
               <>
-                {renderProviderSection("Installed runtimes", installedCli)}
+                {renderProviderSection("Allternit Cloud", allternitCloudProviders)}
+                {renderProviderSection("Installed CLI", installedCli)}
                 {renderProviderSection(
-                  "Available runtimes",
+                  "Available CLI",
                   availableCli,
                   true
                 )}
-                {renderProviderSection("Cloud providers", apiProviders)}
-                {renderProviderSection("Local models", localProviders)}
+                {renderProviderSection("Local", localProviders)}
+                {renderProviderSection("Cloud accounts", apiProviders)}
 
                 {/* Backends with no discovered models */}
                 {filteredEmptyProviders.map((provider) => {

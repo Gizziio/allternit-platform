@@ -7,6 +7,9 @@
  */
 
 import { api, type AllternitApiError } from '@/integration/api-client';
+import { allternitCloudOrigin, cloudApiFetch } from '@/lib/cloud-api';
+import { buildAuthHeaders } from '@/lib/agents/api-config';
+import { getProviderMeta } from '@/lib/providers/provider-registry';
 
 // ============================================================================
 // Types
@@ -74,6 +77,9 @@ export interface CreditBalance {
   organization_id: string;
   balance_cents: number;
   currency: string;
+  plan?: string;
+  planLabel?: string;
+  monthToDateUsageUsd?: number;
 }
 
 export interface CreditTransaction {
@@ -156,13 +162,73 @@ export async function terminateResource(id: string): Promise<{ id: string; statu
 // Credits
 // ============================================================================
 
+interface MeUsagePayload {
+  plan?: string;
+  label?: string;
+  credits?: number | null;
+  monthToDateUsageUsd?: number | null;
+  recentTransactions?: Array<{
+    amount_usd?: number;
+    amountUsd?: number;
+    source?: string;
+    created_at?: string;
+    createdAt?: string;
+  }>;
+}
+
+export type BillingSubscription = {
+  plan_id: string;
+  label: string;
+  plan_tier: string;
+  status: string;
+};
+
+export async function getBillingSubscription(): Promise<BillingSubscription | null> {
+  try {
+    const headers = (await buildAuthHeaders()) ?? {};
+    const res = await fetch(`${allternitCloudOrigin()}/api/v1/billing/subscription`, { headers });
+    if (!res.ok) return null;
+    const json = (await res.json()) as Partial<BillingSubscription>;
+    if (!json.plan_id) return null;
+    return {
+      plan_id: json.plan_id,
+      label: json.label || json.plan_id,
+      plan_tier: json.plan_tier || 'free',
+      status: json.status || 'none',
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function getCreditBalance(): Promise<CreditBalance> {
-  return api.get<CreditBalance>('/api/v1/credits/balance');
+  const usage = await api.get<MeUsagePayload>('/api/v1/me/usage');
+  const credits = typeof usage.credits === 'number' ? usage.credits : 0;
+  return {
+    organization_id: usage.plan || 'allternit',
+    balance_cents: Math.round(credits * 100),
+    currency: 'USD',
+    plan: usage.plan,
+    planLabel: usage.label,
+    monthToDateUsageUsd: typeof usage.monthToDateUsageUsd === 'number' ? usage.monthToDateUsageUsd : undefined,
+  };
 }
 
 export async function listCreditTransactions(): Promise<CreditTransaction[]> {
-  const result = await api.get<CreditTransactionsResponse>('/api/v1/credits/transactions');
-  return result.transactions ?? [];
+  const usage = await api.get<MeUsagePayload>('/api/v1/me/usage');
+  return (usage.recentTransactions ?? []).map((row, index) => {
+    const amount = row.amountUsd ?? row.amount_usd ?? 0;
+    return {
+      id: `${row.source || 'txn'}-${index}`,
+      organization_id: usage.plan || 'allternit',
+      transaction_type: row.source || 'usage',
+      amount_cents: Math.round(amount * 100),
+      currency: 'USD',
+      reference_id: row.source || null,
+      idempotency_key: null,
+      created_at: row.createdAt || row.created_at || new Date().toISOString(),
+    };
+  });
 }
 
 // ============================================================================
@@ -178,10 +244,16 @@ export async function createEnrollmentToken(
 }
 
 export async function listEnrollmentTokens(): Promise<EnrollmentToken[]> {
-  const result = await api.get<EnrollmentTokenListResponse>(
-    '/api/v1/admin/fabric/nodes/enrollment-tokens',
-  );
-  return result.tokens ?? [];
+  try {
+    const result = await api.get<EnrollmentTokenListResponse>(
+      '/api/v1/admin/fabric/nodes/enrollment-tokens',
+    );
+    return result.tokens ?? [];
+  } catch (err) {
+    const status = (err as AllternitApiError)?.statusCode;
+    if (status === 401 || status === 403 || status === 404) return [];
+    throw err;
+  }
 }
 
 // ============================================================================
@@ -189,8 +261,14 @@ export async function listEnrollmentTokens(): Promise<EnrollmentToken[]> {
 // ============================================================================
 
 export async function listFabricNodes(): Promise<FabricNode[]> {
-  const result = await api.get<FabricNodeListResponse>('/api/v1/admin/fabric/nodes');
-  return result.nodes ?? [];
+  try {
+    const result = await api.get<FabricNodeListResponse>('/api/v1/admin/fabric/nodes');
+    return result.nodes ?? [];
+  } catch (err) {
+    const status = (err as AllternitApiError)?.statusCode;
+    if (status === 401 || status === 403 || status === 404) return [];
+    throw err;
+  }
 }
 
 export async function approveFabricNode(id: string): Promise<{ id: string; status: string }> {
@@ -203,4 +281,123 @@ export async function rejectFabricNode(id: string): Promise<{ id: string; status
   return api.post<{ id: string; status: string }>(
     `/api/v1/admin/fabric/nodes/${encodeURIComponent(id)}/reject`,
   );
+}
+
+// ============================================================================
+// Cloud / local provider accounts
+// ============================================================================
+//
+// Local kernel `/api/v1/providers/auth/status` is device-token-safe (operator
+// data plane). Cloud BYOK keys live on api.allternit.com and require a Clerk
+// session or scoped API token — a desktop device token 401s, which we surface
+// as `cloud_auth_required` instead of hanging the shell. Pasting a key copies
+// it onto this desktop via `/api/v1/onboarding/provider`.
+
+export type CloudAccountSource = 'local' | 'cloud';
+
+export interface CloudAccount {
+  provider_id: string;
+  name: string;
+  source: CloudAccountSource;
+  authenticated: boolean;
+  status: string;
+  masked?: string | null;
+  model_count?: number;
+  provider_type?: string;
+}
+
+export interface CloudInferenceKeysResult {
+  keys: CloudAccount[];
+  status: number;
+  error: string | null;
+}
+
+interface ProviderAuthStatusPayload {
+  providers?: Array<{
+    provider_id: string;
+    status: string;
+    authenticated: boolean;
+    details?: {
+      provider_type?: string;
+      api_key_set?: boolean;
+      model_count?: number;
+    };
+  }>;
+}
+
+export async function listLocalCloudAccounts(): Promise<CloudAccount[]> {
+  const result = await api.get<ProviderAuthStatusPayload>('/api/v1/providers/auth/status');
+  return (result.providers ?? [])
+    .filter((provider) => getProviderMeta(provider.provider_id).kind === 'api')
+    .filter((provider) => provider.authenticated || Boolean(provider.details?.api_key_set))
+    .map((provider) => ({
+      provider_id: provider.provider_id,
+      name: provider.provider_id,
+      source: 'local',
+      authenticated: Boolean(provider.authenticated),
+      status: provider.status,
+      model_count: provider.details?.model_count,
+      provider_type: provider.details?.provider_type,
+    }));
+}
+
+export async function listCloudInferenceKeys(): Promise<CloudInferenceKeysResult> {
+  try {
+    const response = await cloudApiFetch('/api/v1/inference/keys', { cache: 'no-store' });
+    if (response.status === 401 || response.status === 403) {
+      return { keys: [], status: response.status, error: 'cloud_auth_required' };
+    }
+    if (response.status === 503) {
+      return { keys: [], status: 503, error: 'inference_keys_not_configured' };
+    }
+    if (!response.ok) {
+      return { keys: [], status: response.status, error: `cloud_keys_unavailable_${response.status}` };
+    }
+    const payload = (await response.json().catch(() => [])) as
+      | Array<{ provider_id: string; masked?: string; status?: string }>
+      | { keys?: Array<{ provider_id: string; masked?: string; status?: string }> };
+    const rows = Array.isArray(payload) ? payload : payload.keys ?? [];
+    return {
+      keys: rows.map((row) => ({
+        provider_id: row.provider_id,
+        name: row.provider_id,
+        source: 'cloud',
+        authenticated: (row.status ?? 'active') === 'active',
+        status: row.status ?? 'active',
+        masked: row.masked ?? null,
+      })),
+      status: 200,
+      error: null,
+    };
+  } catch {
+    return { keys: [], status: 0, error: 'cloud_keys_unreachable' };
+  }
+}
+
+export async function saveLocalCloudAccount(
+  providerId: string,
+  apiKey: string,
+): Promise<{ success: boolean; provider: string }> {
+  return api.post<{ success: boolean; provider: string }>('/api/v1/onboarding/provider', {
+    provider: providerId,
+    name: providerId,
+    apiKey,
+    authType: 'api_key',
+    setDefault: false,
+  });
+}
+
+export async function saveCloudInferenceKey(providerId: string, apiKey: string): Promise<void> {
+  const response = await cloudApiFetch('/api/v1/inference/keys', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ provider_id: providerId, api_key: apiKey }),
+  });
+  if (response.status === 401 || response.status === 403) {
+    throw new Error('cloud_auth_required');
+  }
+  if (!response.ok) {
+    const data = (await response.json().catch(() => ({}))) as { message?: string; error?: string };
+    throw new Error(data.message || data.error || `Failed to save cloud key (${response.status})`);
+  }
 }

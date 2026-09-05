@@ -24,6 +24,18 @@ export function cloudApiUrl(path: string): string {
 }
 
 /**
+ * Public Allternit Cloud origin for the model catalog and billing reads.
+ * Loopback `getCloudApiBaseUrl()` is the local control plane, not api.allternit.com.
+ */
+export function allternitCloudOrigin(): string {
+  const base = getCloudApiBaseUrl().replace(/\/+$/, '');
+  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:|$)/i.test(base)) {
+    return 'https://api.allternit.com';
+  }
+  return base;
+}
+
+/**
  * fetch() against the cloud-api origin with the Clerk bearer attached.
  * Absolute cloud-api URLs are not touched by the runtime fetch interceptor
  * (which only rewrites relative, loopback, and same-origin API paths), so the

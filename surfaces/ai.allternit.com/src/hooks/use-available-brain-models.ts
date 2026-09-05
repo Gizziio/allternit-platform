@@ -3,6 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useModelDiscovery } from "@/integration/api-client";
 import type { ModelOption } from "@/components/prompt-kit/prompt-model-selector";
+import { operatorProviderDiscoveryUrl } from "@/lib/operator-gateway";
+import { allternitCloudOrigin } from "@/lib/cloud-api";
+import { buildAuthHeaders } from "@/lib/agents/api-config";
 
 // Terminal Server URL for fetching real models
 declare const __TERMINAL_SERVER_URL__: string | undefined;
@@ -37,8 +40,7 @@ function getProviderDiscoveryUrl(): string {
     const stored = window.localStorage.getItem("allternit.runtime-backend.snapshot");
     if (stored) {
       const snap = JSON.parse(stored) as { resolved_gateway_url?: string };
-      const gw = snap?.resolved_gateway_url ?? "";
-      if (gw && !/^https?:\/\/(?:127\.0\.0\.1|localhost)/.test(gw)) return `${gw}/api/v1/providers`;
+      return operatorProviderDiscoveryUrl(snap?.resolved_gateway_url);
     }
   } catch {
     // storage unavailable
@@ -49,11 +51,29 @@ function getProviderDiscoveryUrl(): string {
 async function fetchRegisteredProviders(signal: AbortSignal): Promise<Response> {
   const sidecar = typeof window !== "undefined" ? window.allternitSidecar : undefined;
   if (sidecar && typeof sidecar.getApiUrl === "function") {
-    const apiUrl = await sidecar.getApiUrl();
-    if (apiUrl) {
-      return fetch(`${apiUrl.replace(/\/$/, "")}/provider`, {
-        signal,
-      });
+    try {
+      const apiUrl = await Promise.race([
+        sidecar.getApiUrl(),
+        new Promise<undefined>((_, reject) => {
+          const ms = 1500;
+          const timer = setTimeout(() => reject(new Error("sidecar getApiUrl timeout")), ms);
+          signal.addEventListener(
+            "abort",
+            () => {
+              clearTimeout(timer);
+              reject(signal.reason ?? new Error("aborted"));
+            },
+            { once: true },
+          );
+        }),
+      ]);
+      if (apiUrl) {
+        return fetch(`${apiUrl.replace(/\/$/, "")}/provider`, {
+          signal,
+        });
+      }
+    } catch {
+      // Sidecar URL probe hung or failed — fall through to the operator gateway.
     }
   }
   return fetch(getProviderDiscoveryUrl(), { signal });
@@ -111,6 +131,32 @@ async function fetchLocalModels(signal: AbortSignal): Promise<ModelOption[]> {
   return models;
 }
 
+async function fetchAllternitCloudModels(signal: AbortSignal): Promise<ModelOption[]> {
+  try {
+    const headers = await buildAuthHeaders();
+    const res = await fetch(`${allternitCloudOrigin()}/v1/models`, { signal, headers });
+    if (!res.ok) return [];
+    const json = (await res.json()) as {
+      data?: Array<{ id?: string; name?: string; extra?: { name?: string } }>;
+    };
+    const models: ModelOption[] = [];
+    for (const item of json.data ?? []) {
+      const id = item.id?.trim();
+      if (!id) continue;
+      models.push({
+        id: `allternit/${id}`,
+        name: item.name || item.extra?.name || id,
+        providerId: "allternit",
+        providerName: "Allternit Cloud",
+        description: "Allternit Cloud",
+      });
+    }
+    return models;
+  } catch {
+    return [];
+  }
+}
+
 function readProviderDiscoveryCache(): ModelOption[] | null {
   if (providerDiscoveryMemoryCache) return providerDiscoveryMemoryCache;
   if (typeof window === "undefined") return null;
@@ -153,6 +199,7 @@ export function useAvailableBrainModels() {
   const [terminalModelsLoading, setTerminalModelsLoading] = useState(cachedProviderModels === null);
   const [localModels, setLocalModels] = useState<ModelOption[]>([]);
   const [localModelsLoading, setLocalModelsLoading] = useState(true);
+  const [cloudModels, setCloudModels] = useState<ModelOption[]>([]);
 
   useEffect(() => {
     fetchProviders();
@@ -221,6 +268,22 @@ export function useAvailableBrainModels() {
 
   useEffect(() => {
     let cancelled = false;
+    async function loadCloudModels() {
+      try {
+        const models = await fetchAllternitCloudModels(AbortSignal.timeout(8000));
+        if (!cancelled) setCloudModels(models);
+      } catch {
+        // catalog is best-effort; picker still shows CLI/local
+      }
+    }
+    void loadCloudModels();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
     async function loadLocalModels() {
       try {
         const models = await fetchLocalModels(AbortSignal.timeout(3000));
@@ -254,7 +317,8 @@ export function useAvailableBrainModels() {
         provider.status === "active" ||
         provider.status === "ready_no_models" ||
         provider.status === "missing_key" ||
-        provider.api_key_set === true
+        provider.api_key_set === true ||
+        provider.provider_type === "subprocess"
       ) {
         activeProviderIds.add(provider.id);
       }
@@ -319,6 +383,11 @@ export function useAvailableBrainModels() {
     // 4) Provider-specific discovery result (lowest priority, fills gaps).
     //    These come back as short ids; skip them if the registry already
     //    supplied the same provider/model pair.
+    cloudModels.forEach((model) => {
+      if (!model?.id) return;
+      if (!modelMap.has(model.id)) modelMap.set(model.id, model);
+    });
+
     (discoveryResult?.models || []).forEach((model: any) => {
       if (!model?.id) return;
       const shortId = model.id.includes("/")
@@ -335,7 +404,7 @@ export function useAvailableBrainModels() {
     });
 
     return Array.from(modelMap.values());
-  }, [discoveryResult, localModels, realModels, terminalModels]);
+  }, [cloudModels, discoveryResult, localModels, providers, realModels, terminalModels]);
 
   return {
     models: availableModels,

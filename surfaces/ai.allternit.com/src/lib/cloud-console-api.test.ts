@@ -5,6 +5,7 @@ import {
   createResource,
   getResource,
   terminateResource,
+  getBillingSubscription,
   getCreditBalance,
   listCreditTransactions,
   createEnrollmentToken,
@@ -12,7 +13,11 @@ import {
   listFabricNodes,
   approveFabricNode,
   rejectFabricNode,
+  listLocalCloudAccounts,
+  listCloudInferenceKeys,
+  saveLocalCloudAccount,
 } from './cloud-console-api';
+import { cloudApiFetch } from '@/lib/cloud-api';
 
 vi.mock('@/integration/api-client', () => ({
   api: {
@@ -25,6 +30,15 @@ vi.mock('@/integration/api-client', () => ({
       this.name = 'AllternitApiError';
     }
   },
+}));
+
+vi.mock('@/lib/cloud-api', () => ({
+  cloudApiFetch: vi.fn(),
+  allternitCloudOrigin: () => 'https://api.allternit.com',
+}));
+
+vi.mock('@/lib/agents/api-config', () => ({
+  buildAuthHeaders: vi.fn(async () => ({})),
 }));
 
 const mockApi = vi.mocked(api);
@@ -65,18 +79,42 @@ describe('cloud-console-api', () => {
     expect(result.status).toBe('terminated');
   });
 
-  it('getCreditBalance calls /api/v1/credits/balance', async () => {
-    mockApi.get.mockResolvedValue({ organization_id: 'org-1', balance_cents: 5000, currency: 'USD' });
-    const result = await getCreditBalance();
-    expect(mockApi.get).toHaveBeenCalledWith('/api/v1/credits/balance');
-    expect(result.balance_cents).toBe(5000);
+  it('getBillingSubscription reads the live Free/Plus/Super/Ultra plan', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ plan_id: 'ultra', label: 'Ultra', plan_tier: 'team', status: 'active' }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const result = await getBillingSubscription();
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      'https://api.allternit.com/api/v1/billing/subscription',
+    );
+    expect(result).toEqual({
+      plan_id: 'ultra',
+      label: 'Ultra',
+      plan_tier: 'team',
+      status: 'active',
+    });
+    vi.unstubAllGlobals();
   });
 
-  it('listCreditTransactions calls /api/v1/credits/transactions', async () => {
-    mockApi.get.mockResolvedValue({ transactions: [{ id: 't-1', organization_id: 'org-1', transaction_type: 'purchase', amount_cents: 5000, currency: 'USD', reference_id: null, idempotency_key: null, created_at: '2026-01-01T00:00:00Z' }] });
+  it('getCreditBalance maps Allternit subscription usage to credit balance', async () => {
+    mockApi.get.mockResolvedValue({ plan: 'plus', label: 'Plus', credits: 10.5, monthToDateUsageUsd: 1.25 });
+    const result = await getCreditBalance();
+    expect(mockApi.get).toHaveBeenCalledWith('/api/v1/me/usage');
+    expect(result.balance_cents).toBe(1050);
+    expect(result.planLabel).toBe('Plus');
+  });
+
+  it('listCreditTransactions maps Allternit subscription ledger entries', async () => {
+    mockApi.get.mockResolvedValue({
+      plan: 'plus',
+      recentTransactions: [{ source: 'grant', amountUsd: 22, createdAt: '2026-01-01T00:00:00Z' }],
+    });
     const result = await listCreditTransactions();
-    expect(mockApi.get).toHaveBeenCalledWith('/api/v1/credits/transactions');
-    expect(result[0].transaction_type).toBe('purchase');
+    expect(mockApi.get).toHaveBeenCalledWith('/api/v1/me/usage');
+    expect(result[0].transaction_type).toBe('grant');
+    expect(result[0].amount_cents).toBe(2200);
   });
 
   it('createEnrollmentToken posts admin endpoint', async () => {
@@ -112,5 +150,41 @@ describe('cloud-console-api', () => {
     const result = await rejectFabricNode('n-1');
     expect(mockApi.post).toHaveBeenCalledWith('/api/v1/admin/fabric/nodes/n-1/reject');
     expect(result.status).toBe('rejected');
+  });
+
+  it('listLocalCloudAccounts returns API-key providers from the local kernel', async () => {
+    mockApi.get.mockResolvedValue({
+      providers: [
+        { provider_id: 'openai', status: 'ok', authenticated: true, details: { provider_type: 'api', model_count: 12, api_key_set: true } },
+        { provider_id: 'groq', status: 'missing', authenticated: false, details: { provider_type: 'api', api_key_set: false } },
+        { provider_id: 'claude-cli', status: 'missing', authenticated: false, details: { provider_type: 'subprocess' } },
+        { provider_id: 'ollama', status: 'ok', authenticated: true, details: { provider_type: 'local' } },
+      ],
+    });
+    const accounts = await listLocalCloudAccounts();
+    expect(mockApi.get).toHaveBeenCalledWith('/api/v1/providers/auth/status');
+    expect(accounts).toHaveLength(1);
+    expect(accounts[0].provider_id).toBe('openai');
+    expect(accounts[0].source).toBe('local');
+  });
+
+  it('listCloudInferenceKeys fail-softs device-token 401 instead of throwing', async () => {
+    vi.mocked(cloudApiFetch).mockResolvedValue(new Response('{}', { status: 401 }));
+    const result = await listCloudInferenceKeys();
+    expect(result.error).toBe('cloud_auth_required');
+    expect(result.keys).toEqual([]);
+  });
+
+  it('saveLocalCloudAccount posts the key to the local onboarding route', async () => {
+    mockApi.post.mockResolvedValue({ success: true, provider: 'openai' });
+    const result = await saveLocalCloudAccount('openai', 'sk-test');
+    expect(mockApi.post).toHaveBeenCalledWith('/api/v1/onboarding/provider', {
+      provider: 'openai',
+      name: 'openai',
+      apiKey: 'sk-test',
+      authType: 'api_key',
+      setDefault: false,
+    });
+    expect(result.success).toBe(true);
   });
 });
