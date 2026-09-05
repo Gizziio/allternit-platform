@@ -12,6 +12,8 @@ export default defineConfig({
       NEXT_PUBLIC_ALLTERNIT_RAILS_API: '1',
       NEXT_PUBLIC_ALLTERNIT_RUNTIME_API: '1',
       NEXT_PUBLIC_ALLTERNIT_AGENT_SESSIONS_API: '1',
+      NEXT_PUBLIC_ALLTERNIT_OFFICE_API: '1',
+      NEXT_PUBLIC_ALLTERNIT_BETA_API: '1',
     },
     exclude: [
       '**/node_modules/**',
@@ -40,5 +42,7 @@ export default defineConfig({
     'import.meta.env.NEXT_PUBLIC_ALLTERNIT_RAILS_API': JSON.stringify('1'),
     'import.meta.env.NEXT_PUBLIC_ALLTERNIT_RUNTIME_API': JSON.stringify('1'),
     'import.meta.env.NEXT_PUBLIC_ALLTERNIT_AGENT_SESSIONS_API': JSON.stringify('1'),
+    'import.meta.env.NEXT_PUBLIC_ALLTERNIT_OFFICE_API': JSON.stringify('1'),
+    'import.meta.env.NEXT_PUBLIC_ALLTERNIT_BETA_API': JSON.stringify('1'),
   },
 });

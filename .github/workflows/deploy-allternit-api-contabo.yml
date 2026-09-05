@@ -1,0 +1,70 @@
+name: Deploy allternit-api to Contabo
+
+# Builds the data-plane binary and swaps it on mail (:8013). That restart is
+# what applies refinery migrations V124–V130 on the live sqlite.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'cmd/allternit-api/**'
+      - '.github/workflows/deploy-allternit-api-contabo.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install protobuf compiler
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-gnu
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-api-contabo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-api-contabo-
+
+      - name: Build release binary
+        run: cargo build --release --target x86_64-unknown-linux-gnu -p allternit-api
+
+      - name: Join Tailscale network
+        continue-on-error: true
+        uses: tailscale/github-action@v3
+        with:
+          oauth_client_id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth_client_secret: ${{ secrets.TS_OAUTH_CLIENT_SECRET }}
+          tags: tag:ci
+
+      - name: Deploy to mail
+        env:
+          CONTABO_DEPLOY_HOST: 45.84.138.187
+          CONTABO_DEPLOY_USER: root
+          CONTABO_SSH_KEY: ${{ secrets.CONTABO_SSH_KEY }}
+        run: |
+          if [ -n "$CONTABO_SSH_KEY" ]; then
+            echo "$CONTABO_SSH_KEY" > /tmp/deploy_key
+            chmod 600 /tmp/deploy_key
+            export CONTABO_SSH_KEY=/tmp/deploy_key
+          else
+            echo "No CONTABO_SSH_KEY secret — relying on Tailscale SSH."
+            unset CONTABO_SSH_KEY
+          fi
+          bash cmd/allternit-api/deploy-contabo.sh \
+            target/x86_64-unknown-linux-gnu/release/allternit-api
+          rm -f /tmp/deploy_key
