@@ -269,12 +269,55 @@ export async function runOnboardingWizard(
   return "completed"
 }
 
+/**
+ * Non-interactive setup used by `gizzi onboarding --defaults` and CI:
+ * telemetry on, auth skipped, brain auto-picked (CLI now, Cloud after a sub).
+ */
+export async function runOnboardingDefaults(
+  deps?: Partial<OnboardingDeps>,
+): Promise<OnboardingResult> {
+  const d = { ...(await defaultOnboardingDeps()), ...deps }
+  setTelemetryEnabled(true)
+  markTelemetryNoticeShown()
+
+  let brainSummary = "none yet"
+  try {
+    const catalog = await d.listBrains()
+    const clis = catalog.providers.filter((p) => p.source === "subprocess" && p.models[0])
+    const cloud = catalog.providers.find((p) => p.id === "allternit" && p.source === "platform")
+    if (isPaidAllternitPlan(catalog.plan) && cloud?.models[0]) {
+      const model = `${cloud.id}/${cloud.models[0].id}`
+      await d.setBrain(model)
+      brainSummary = `Allternit Cloud (${catalog.plan?.label ?? "paid"} → ${model})`
+    } else if (clis[0]) {
+      const model = `${clis[0].id}/${clis[0].models[0]!.id}`
+      await d.setBrain(model)
+      brainSummary = model
+    }
+  } catch {
+    // Discovery is best-effort.
+  }
+
+  await markOnboardingComplete(d)
+  UI.println(
+    `gizzi onboarding defaults: telemetry on, auth skipped, brain ${brainSummary}. ` +
+      "Change anytime with /model · docs: https://docs.gizziio.com",
+  )
+  return "completed"
+}
+
 export const OnboardingCommand = cmd({
   command: "onboarding",
   describe: "run the interactive first-run setup wizard",
-  builder: (yargs) => yargs,
-  async handler() {
-    const result = await runOnboardingWizard()
+  builder: (yargs) =>
+    yargs.option("defaults", {
+      type: "boolean",
+      default: false,
+      describe: "non-interactive: telemetry on, skip auth, auto-pick brain",
+    }),
+  async handler(args) {
+    const result =
+      args.defaults === true ? await runOnboardingDefaults() : await runOnboardingWizard()
     if (result === "cancelled") throw new UI.CancelledError()
   },
 })

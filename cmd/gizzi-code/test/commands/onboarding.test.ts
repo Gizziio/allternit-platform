@@ -5,6 +5,7 @@ import {
   ONBOARDING_MARKER_FILE,
   markOnboardingComplete,
   onboardingMarkerPath,
+  runOnboardingDefaults,
   runOnboardingWizard,
   shouldOfferFirstRunOnboarding,
   type OnboardingDeps,
@@ -107,5 +108,67 @@ describe("runOnboardingWizard non-interactive path", () => {
         exists: deps.exists,
       }),
     ).toBe(false)
+  })
+})
+
+describe("runOnboardingDefaults", () => {
+  test("auto-picks the first installed CLI and writes the marker", async () => {
+    await using tmp = await tmpdir()
+    const brains: string[] = []
+    const result = await runOnboardingDefaults(
+      wizardDeps(tmp.path, {
+        listBrains: async () => ({
+          plan: null,
+          providers: [
+            {
+              id: "grok",
+              name: "Grok",
+              auth_type: "subprocess",
+              source: "subprocess",
+              models: [{ id: "default", name: "Grok default" }],
+            },
+          ],
+        }),
+        setBrain: async (model) => {
+          brains.push(model)
+        },
+      }),
+    )
+    expect(result).toBe("completed")
+    expect(brains).toEqual(["grok/default"])
+    expect(await Bun.file(path.join(tmp.path, ONBOARDING_MARKER_FILE)).exists()).toBe(true)
+  })
+
+  test("paid Plus/Super/Ultra defaults to Allternit Cloud", async () => {
+    await using tmp = await tmpdir()
+    const brains: string[] = []
+    const result = await runOnboardingDefaults(
+      wizardDeps(tmp.path, {
+        listBrains: async () => ({
+          plan: { id: "plus", label: "Plus", plan_tier: "pro", status: "active" },
+          providers: [
+            {
+              id: "allternit",
+              name: "Allternit Cloud",
+              auth_type: "api_key",
+              source: "platform",
+              models: [{ id: "llama-3.1-8b", name: "Llama 3.1 8B" }],
+            },
+            {
+              id: "grok",
+              name: "Grok",
+              auth_type: "subprocess",
+              source: "subprocess",
+              models: [{ id: "default", name: "Grok default" }],
+            },
+          ],
+        }),
+        setBrain: async (model) => {
+          brains.push(model)
+        },
+      }),
+    )
+    expect(result).toBe("completed")
+    expect(brains).toEqual(["allternit/llama-3.1-8b"])
   })
 })
