@@ -4,11 +4,12 @@
 
 - Windows API-key credential store uses DPAPI (CurrentUser), matching MCP
   OAuth secure storage. Plaintext `credentials.json` remains last-resort.
+- Chocolatey is not an install channel. Windows: PowerShell installer, Scoop, winget.
 
 ## 2.0.2 — 2026-09-05
 
 Windows is a supported platform. Credentials use DPAPI (CurrentUser) instead
-of a plaintext file. Gallery install paths: winget and Chocolatey.
+of a plaintext file. Windows install paths: PowerShell installer, Scoop, winget.
 
 ### Changed
 - Windows secure storage: DPAPI `ProtectedData` CurrentUser, with the

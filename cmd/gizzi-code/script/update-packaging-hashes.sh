@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # update-packaging-hashes.sh — download the current gizzi-code release assets
 # and rewrite the sha256 placeholder fields in packaging/{homebrew,scoop,
-# chocolatey,arch}. Run this at release time, after the GitHub release assets
+# arch}. Run this at release time, after the GitHub release assets
 # for the version in packaging (and cmd/gizzi-code/package.json) are published.
 #
 # Usage:
@@ -105,10 +105,6 @@ scoop = root / "packaging/scoop/gizzi-code.json"
 if scoop.exists() and "windows-x64" in hashes:
     scoop.write_text(re.sub(r'("hash"\s*:\s*")[0-9a-fA-F]{64}(")', rf'\g<1>{hashes["windows-x64"]}\2', scoop.read_text(), count=1))
 
-choco = root / "packaging/chocolatey/tools/chocolateyinstall.ps1"
-if choco.exists() and "windows-x64" in hashes:
-    choco.write_text(re.sub(r"(\$checksum64\s*=\s*')[0-9a-fA-F]{64}(')", rf'\g<1>{hashes["windows-x64"]}\2', choco.read_text(), count=1))
-
 winget = root / "cli-package/install/winget/Allternit.GizziCode.yaml"
 if winget.exists() and "windows-x64" in hashes:
     winget.write_text(re.sub(r'(InstallerSha256:\s*)[0-9a-fA-F]{64}', rf'\g<1>{hashes["windows-x64"].upper()}', winget.read_text(), count=1))
@@ -128,7 +124,6 @@ replace packaging/homebrew/gizzi-code.rb DARWIN_X64 darwin-x64
 replace packaging/homebrew/gizzi-code.rb LINUX_ARM64 linux-arm64
 replace packaging/homebrew/gizzi-code.rb LINUX_X64 linux-x64
 replace packaging/scoop/gizzi-code.json WINDOWS_X64 windows-x64
-replace packaging/chocolatey/tools/chocolateyinstall.ps1 WINDOWS_X64 windows-x64
 replace packaging/arch/PKGBUILD LINUX_X64 linux-x64
 replace packaging/arch/PKGBUILD LINUX_ARM64 linux-arm64
 replace cli-package/install/winget/Allternit.GizziCode.yaml WINDOWS_X64 windows-x64
