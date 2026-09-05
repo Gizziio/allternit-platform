@@ -13,7 +13,7 @@ test.skip("provider loaded from env variable", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
         }),
       )
     },
@@ -40,7 +40,7 @@ test.skip("provider loaded from config with apiKey option", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             anthropic: {
               options: {
@@ -67,7 +67,7 @@ test.skip("disabled_providers excludes provider", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           disabled_providers: ["anthropic"],
         }),
       )
@@ -91,7 +91,7 @@ test.skip("enabled_providers restricts to only listed providers", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           enabled_providers: ["anthropic"],
         }),
       )
@@ -117,7 +117,7 @@ test.skip("model whitelist filters models for provider", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             anthropic: {
               whitelist: ["claude-sonnet-5"],
@@ -148,7 +148,7 @@ test.skip("model blacklist excludes specific models", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             anthropic: {
               blacklist: ["claude-sonnet-5"],
@@ -178,7 +178,7 @@ test.skip("custom model alias via config", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             anthropic: {
               models: {
@@ -213,7 +213,7 @@ test.skip("custom provider with npm package", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             "custom-provider": {
               name: "Custom Provider",
@@ -256,7 +256,7 @@ test.skip("env variable takes precedence, config merges options", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             anthropic: {
               options: {
@@ -288,7 +288,7 @@ test.skip("getModel returns model for valid provider/model", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
         }),
       )
     },
@@ -315,7 +315,7 @@ test.skip("getModel throws ModelNotFoundError for invalid model", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
         }),
       )
     },
@@ -337,7 +337,7 @@ test.skip("getModel throws ModelNotFoundError for invalid provider", async () =>
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
         }),
       )
     },
@@ -368,7 +368,7 @@ test.skip("defaultModel returns first available model when no config set", async
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
         }),
       )
     },
@@ -392,7 +392,7 @@ test.skip("defaultModel respects config model setting", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           model: "anthropic/claude-sonnet-5",
         }),
       )
@@ -417,7 +417,7 @@ test.skip("defaultModel rejects an invalid pinned model instead of silently auto
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           model: "anthropic/claude-does-not-exist",
         }),
       )
@@ -440,7 +440,7 @@ test.skip("provider with baseURL from config", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             "custom-openai": {
               name: "Custom OpenAI",
@@ -479,7 +479,7 @@ test.skip("model cost defaults to zero when not specified", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             "test-provider": {
               name: "Test Provider",
@@ -520,7 +520,7 @@ test.skip("model options are merged from existing model", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             anthropic: {
               models: {
@@ -555,7 +555,7 @@ test.skip("provider removed when all models filtered out", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             anthropic: {
               whitelist: ["nonexistent-model"],
@@ -583,7 +583,7 @@ test.skip("closest finds model by partial match", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
         }),
       )
     },
@@ -608,7 +608,7 @@ test.skip("closest returns undefined for nonexistent provider", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
         }),
       )
     },
@@ -628,7 +628,7 @@ test.skip("getModel uses realIdByKey for aliased models", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             anthropic: {
               models: {
@@ -666,7 +666,7 @@ test.skip("provider api field sets model api.url", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             "custom-api": {
               name: "Custom API",
@@ -705,7 +705,7 @@ test.skip("explicit baseURL overrides api field", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             "custom-api": {
               name: "Custom API",
@@ -744,7 +744,7 @@ test.skip("model inherits properties from existing database model", async () => 
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             anthropic: {
               models: {
@@ -780,7 +780,7 @@ test.skip("disabled_providers prevents loading even with env var", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           disabled_providers: ["openai"],
         }),
       )
@@ -804,7 +804,7 @@ test.skip("enabled_providers with empty array allows no providers", async () => 
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           enabled_providers: [],
         }),
       )
@@ -829,7 +829,7 @@ test.skip("whitelist and blacklist can be combined", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             anthropic: {
               whitelist: ["claude-sonnet-5", "claude-opus-5"],
@@ -862,7 +862,7 @@ test.skip("model modalities default correctly", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             "test-provider": {
               name: "Test",
@@ -899,7 +899,7 @@ test.skip("model with custom cost values", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             "test-provider": {
               name: "Test",
@@ -944,7 +944,7 @@ test.skip("getSmallModel returns appropriate small model", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
         }),
       )
     },
@@ -968,7 +968,7 @@ test.skip("getSmallModel respects config small_model override", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           small_model: "anthropic/claude-sonnet-5",
         }),
       )
@@ -1009,7 +1009,7 @@ test.skip("multiple providers can be configured simultaneously", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             anthropic: {
               options: { timeout: 30000 },
@@ -1044,7 +1044,7 @@ test.skip("provider with custom npm package", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             "local-llm": {
               name: "Local LLM",
@@ -1086,7 +1086,7 @@ test.skip("model alias name defaults to alias key when id differs", async () => 
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             anthropic: {
               models: {
@@ -1119,7 +1119,7 @@ test.skip("provider with multiple env var options only includes apiKey when sing
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             "multi-env": {
               name: "Multi Env Provider",
@@ -1161,7 +1161,7 @@ test.skip("provider with single env var includes apiKey automatically", async ()
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             "single-env": {
               name: "Single Env Provider",
@@ -1203,7 +1203,7 @@ test.skip("model cost overrides existing cost values", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             anthropic: {
               models: {
@@ -1240,7 +1240,7 @@ test.skip("completely new provider not in database can be configured", async () 
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             "brand-new-provider": {
               name: "Brand New",
@@ -1290,7 +1290,7 @@ test.skip("disabled_providers and enabled_providers interaction", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           // enabled_providers takes precedence - only these are considered
           enabled_providers: ["anthropic", "openai"],
           // Then disabled_providers filters from the enabled set
@@ -1324,7 +1324,7 @@ test.skip("model with tool_call false", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             "no-tools": {
               name: "No Tools Provider",
@@ -1359,7 +1359,7 @@ test.skip("model defaults tool_call to true when not specified", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             "default-tools": {
               name: "Default Tools Provider",
@@ -1394,7 +1394,7 @@ test.skip("model headers are preserved", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             "headers-provider": {
               name: "Headers Provider",
@@ -1437,7 +1437,7 @@ test.skip("provider env fallback - second env var used if first missing", async 
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             "fallback-env": {
               name: "Fallback Env Provider",
@@ -1477,7 +1477,7 @@ test.skip("getModel returns consistent results", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
         }),
       )
     },
@@ -1503,7 +1503,7 @@ test.skip("provider name defaults to id when not in database", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             "my-custom-id": {
               // no name specified
@@ -1538,7 +1538,7 @@ test.skip("ModelNotFoundError includes suggestions for typos", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
         }),
       )
     },
@@ -1566,7 +1566,7 @@ test.skip("ModelNotFoundError for provider includes suggestions", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
         }),
       )
     },
@@ -1594,7 +1594,7 @@ test.skip("getProvider returns undefined for nonexistent provider", async () => 
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
         }),
       )
     },
@@ -1614,7 +1614,7 @@ test.skip("getProvider returns provider info", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
         }),
       )
     },
@@ -1638,7 +1638,7 @@ test.skip("closest returns undefined when no partial match found", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
         }),
       )
     },
@@ -1661,7 +1661,7 @@ test.skip("closest checks multiple query terms in order", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
         }),
       )
     },
@@ -1686,7 +1686,7 @@ test.skip("model limit defaults to zero when not specified", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             "no-limit": {
               name: "No Limit Provider",
@@ -1723,7 +1723,7 @@ test.skip("provider options are deeply merged", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             anthropic: {
               options: {
@@ -1760,7 +1760,7 @@ test.skip("custom model inherits npm package from models.dev provider config", a
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             openai: {
               models: {
@@ -1796,7 +1796,7 @@ test.skip("custom model inherits api.url from models.dev provider", async () => 
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             openrouter: {
               models: {
@@ -1840,7 +1840,7 @@ test.skip("model variants are generated for reasoning models", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
         }),
       )
     },
@@ -1867,7 +1867,7 @@ test.skip("model variants can be disabled via config", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             anthropic: {
               models: {
@@ -1905,7 +1905,7 @@ test.skip("model variants can be customized via config", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             anthropic: {
               models: {
@@ -1946,7 +1946,7 @@ test.skip("disabled key is stripped from variant config", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             anthropic: {
               models: {
@@ -1986,7 +1986,7 @@ test.skip("all variants can be disabled via config", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             anthropic: {
               models: {
@@ -2023,7 +2023,7 @@ test.skip("variant config merges with generated variants", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             anthropic: {
               models: {
@@ -2063,7 +2063,7 @@ test.skip("variants filtered in second pass for database models", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             openai: {
               models: {
@@ -2101,7 +2101,7 @@ test.skip("custom model with variants enabled and disabled", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             "custom-reasoning": {
               name: "Custom Reasoning Provider",
@@ -2158,7 +2158,7 @@ test.skip("Google Vertex: retains baseURL for custom proxy", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             "vertex-proxy": {
               name: "Vertex Proxy",
@@ -2202,7 +2202,7 @@ test.skip("Google Vertex: supports OpenAI compatible models", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             "vertex-openai": {
               name: "Vertex OpenAI",

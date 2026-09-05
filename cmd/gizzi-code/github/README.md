@@ -1,6 +1,6 @@
 # gizzi-code GitHub Action
 
-A GitHub Action that integrates [gizzi-code](https://gizzi.io) directly into your GitHub workflow.
+A GitHub Action that integrates [gizzi-code](https://docs.gizziio.com) directly into your GitHub workflow.
 
 Mention `/gizzi` in your comment, and gizzi-code will execute tasks within your GitHub Actions runner.
 

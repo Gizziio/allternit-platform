@@ -224,7 +224,7 @@ export async function setupGitHubActions(
 
       if (selectedWorkflows.includes('claude')) {
         workflows.push({
-          path: '.github/workflows/claude.yml',
+          path: '.github/workflows/gizzi.yml',
           content: WORKFLOW_CONTENT,
           message: 'Gizzi PR Assistant workflow',
         })
@@ -232,7 +232,7 @@ export async function setupGitHubActions(
 
       if (selectedWorkflows.includes('claude-review')) {
         workflows.push({
-          path: '.github/workflows/claude-code-review.yml',
+          path: '.github/workflows/gizzi-code-review.yml',
           content: CODE_REVIEW_PLUGIN_WORKFLOW_CONTENT,
           message: 'Gizzi Code Review workflow',
         })

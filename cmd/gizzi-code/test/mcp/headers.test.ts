@@ -54,7 +54,7 @@ test("headers are passed to transports when oauth is enabled (default)", async (
       await Bun.write(
         `${dir}/gizzi.json`,
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           mcp: {
             "test-server": {
               type: "remote",

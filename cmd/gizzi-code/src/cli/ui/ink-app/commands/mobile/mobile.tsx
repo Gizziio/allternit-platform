@@ -16,10 +16,10 @@ const PLATFORMS: Record<Platform, {
   url: string;
 }> = {
   ios: {
-    url: 'https://gizzi.io'
+    url: 'https://install.gizziio.com'
   },
   android: {
-    url: 'https://gizzi.io'
+    url: 'https://install.gizziio.com'
   }
 };
 function MobileQRCode(t0) {

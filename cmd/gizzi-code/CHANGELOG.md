@@ -8,6 +8,9 @@
 - TUI theme keys renamed off Claude-era names (`gizzi`, `gizziShimmer`,
   `briefLabelGizzi`). Accent is Gizzi coral `#D97757`. Help banner says
   GIZZI CODE. Welcome mascot uses dark eyes and the A:// face.
+- Product URLs point at docs.gizziio.com / platform.allternit.com (not
+  gizzi.io). GitHub Action workflows mention `@gizzi`. Provider copy is
+  Allternit, not GIZZIIO ZEN.
 
 ## 2.0.2 — 2026-09-05
 

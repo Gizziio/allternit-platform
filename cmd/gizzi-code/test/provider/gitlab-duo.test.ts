@@ -14,7 +14,7 @@ test.skip("GitLab Duo: loads provider with API key from environment", async () =
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
         }),
       )
     },
@@ -38,7 +38,7 @@ test.skip("GitLab Duo: config instanceUrl option sets baseURL", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             gitlab: {
               options: {
@@ -70,7 +70,7 @@ test.skip("GitLab Duo: loads with OAuth token from auth.json", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
         }),
       )
     },
@@ -107,7 +107,7 @@ test.skip("GitLab Duo: loads with Personal Access Token from auth.json", async (
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
         }),
       )
     },
@@ -143,7 +143,7 @@ test.skip("GitLab Duo: supports self-hosted instance configuration", async () =>
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             gitlab: {
               options: {
@@ -175,7 +175,7 @@ test.skip("GitLab Duo: config apiKey takes precedence over environment variable"
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             gitlab: {
               options: {
@@ -205,7 +205,7 @@ test.skip("GitLab Duo: supports feature flags configuration", async () => {
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             gitlab: {
               options: {
@@ -240,7 +240,7 @@ test.skip("GitLab Duo: has multiple agentic chat models available", async () => 
       await Bun.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
         }),
       )
     },

@@ -71,7 +71,7 @@ export namespace Config {
   export const state = Instance.state(async () => {
     const auth = await Auth.all()
 
-    // Config loading order (low -> high precedence): https://gizzi.io/docs/config#precedence-order
+    // Config loading order (low -> high precedence): https://docs.gizziio.com
     // 1) Remote .well-known/gizzi (org defaults)
     // 2) Global config (~/.config/gizzi/gizzi.json{,c})
     // 3) Custom config (GIZZI_CONFIG)
@@ -100,7 +100,7 @@ export namespace Config {
         }
         const remoteConfig = wellknown.config ?? {}
         // Add $schema to prevent load() from trying to write back to a non-existent file
-        if (!remoteConfig.$schema) remoteConfig.$schema = "https://gizzi.io/config.json"
+        if (!remoteConfig.$schema) remoteConfig.$schema = "https://docs.gizziio.com/config.json"
         result = merge(
           result,
           await load(JSON.stringify(remoteConfig), {
@@ -1703,8 +1703,8 @@ export namespace Config {
     const parsed = Info.safeParse(data)
     if (parsed.success) {
       if (!parsed.data.$schema && isFile) {
-        parsed.data.$schema = "https://gizzi.io/config.json"
-        const updated = original.replace(/^\s*\{/, '{\n  "$schema": "https://gizzi.io/config.json",')
+        parsed.data.$schema = "https://docs.gizziio.com/config.json"
+        const updated = original.replace(/^\s*\{/, '{\n  "$schema": "https://docs.gizziio.com/config.json",')
         await Bun.write(options.path, updated).catch((err) =>
           log.warn("failed to persist $schema into config file", { path: options.path, error: err }),
         )

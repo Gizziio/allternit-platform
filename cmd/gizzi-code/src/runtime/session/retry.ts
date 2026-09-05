@@ -67,7 +67,7 @@ export namespace SessionRetry {
     if (MessageV2.APIError.isInstance(error)) {
       if (!error.data?.isRetryable) return undefined
       if ((error.data?.responseBody as string | undefined)?.includes("FreeUsageLimitError"))
-        return `Free usage exceeded, add credits https://gizzi.io/zen`
+        return `Free usage exceeded, add credits https://platform.allternit.com`
       const info = describeProviderError({ raw: error.data?.message || "" })
       if (nonRetryableCodes.has(info.code)) return undefined
       if (info.code === "rate_limit" || info.code === "overloaded") return info.title

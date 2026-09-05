@@ -259,7 +259,7 @@ export const GIZZICopy = {
     providerPopularCategory: "Popular",
     providerOtherCategory: "Other",
     providerApiKeyLabel: "API key",
-    providerDescriptionGIZZI: "(GIZZIIO ZEN - Recommended)",
+    providerDescriptionGIZZI: "(Allternit — recommended)",
     providerDescriptionAnthropic: "(Claude Max or API key)",
     providerDescriptionOpenAI: "(ChatGPT Plus/Pro or API key)",
     providerDescriptionGemini: "(Google AI Studio or Vertex AI key)",
@@ -269,7 +269,7 @@ export const GIZZICopy = {
     providerDescriptionOllama: "(Local Ollama instance)",
     providerDescriptionMistral: "(Mistral AI API key)",
     providerDescriptions: {
-      gizzi: "(GIZZIIO ZEN - Recommended)",
+      gizzi: "(Allternit — recommended)",
       allternit: "(Allternit API key)",
       openai: "(ChatGPT Plus/Pro or API key)",
       gemini: "(Google AI Studio or Vertex AI key)",
@@ -286,9 +286,9 @@ export const GIZZICopy = {
     providerApiKeyPlaceholder: "API key",
     providerInvalidCode: "Invalid code",
     providerGIZZIDescription:
-      "GIZZIIO ZEN gives you access to all the best coding models at the cheapest prices with a single API key.",
+      "Allternit gives you access to coding models with a single API key.",
     providerGIZZIGetKeyPrefix: "Go to",
-    providerGIZZIGetKeyUrl: "https://gizzi.io/zen",
+    providerGIZZIGetKeyUrl: "https://platform.allternit.com",
     providerGIZZIGetKeySuffix: "to get a key",
   },
   session: {
@@ -362,7 +362,7 @@ export const GIZZICopy = {
       (t: string) => `Run sealed in ${t}`,
       (t: string) => `Committed in ${t} · Allternit`,
       (t: string) => `Kernel returned in ${t}`,
-      (t: string) => `Loop closed in ${t} · GIZZIIO`,
+      (t: string) => `Loop closed in ${t} · Gizzi`,
       (t: string) => `Dispatched in ${t} · Layer 1`,
       (t: string) => `Receipt captured in ${t}`,
     ] as Array<(t: string) => string>,

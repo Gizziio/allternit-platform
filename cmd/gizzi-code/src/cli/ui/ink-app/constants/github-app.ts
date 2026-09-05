@@ -2,7 +2,7 @@
 export const PR_TITLE = 'Add Gizzi Code GitHub Workflow'
 
 export const GITHUB_ACTION_SETUP_DOCS_URL =
-  'https://github.com/anthropics/claude-code-action/blob/main/docs/setup.md'
+  'https://docs.gizziio.com'
 
 export const WORKFLOW_CONTENT = `name: Gizzi Code
 
@@ -17,12 +17,12 @@ on:
     types: [submitted]
 
 jobs:
-  claude:
+  gizzi:
     if: |
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
-      (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@gizzi')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@gizzi')) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@gizzi')) ||
+      (github.event_name == 'issues' && (contains(github.event.issue.body, '@gizzi') || contains(github.event.issue.title, '@gizzi')))
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -37,7 +37,7 @@ jobs:
           fetch-depth: 1
 
       - name: Run Gizzi Code
-        id: claude
+        id: gizzi
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: \${{ secrets.ANTHROPIC_API_KEY }}
@@ -72,14 +72,14 @@ This PR adds a GitHub Actions workflow that enables Gizzi Code integration in ou
 
 ### How it works
 
-Once this PR is merged, we'll be able to interact with Gizzi by mentioning @claude in a pull request or issue comment.
+Once this PR is merged, we'll be able to interact with Gizzi by mentioning @gizzi in a pull request or issue comment.
 Once the workflow is triggered, Gizzi will analyze the comment and surrounding context, and execute on the request in a GitHub action.
 
 ### Important Notes
 
 - **This workflow won't take effect until this PR is merged**
-- **@claude mentions won't work until after the merge is complete**
-- The workflow runs automatically whenever @claude is mentioned in PR or issue comments
+- **@gizzi mentions won't work until after the merge is complete**
+- The workflow runs automatically whenever @gizzi is mentioned in PR or issue comments
 - Gizzi gets access to the entire PR or issue context including files, diffs, and previous comments
 
 ### Security
@@ -96,7 +96,7 @@ allowed_tools: Bash(npm install),Bash(npm run build),Bash(npm run lint),Bash(npm
 
 There's more information in the [upstream GitHub Action](https://github.com/anthropics/claude-code-action).
 
-After merging this PR, let's try mentioning @claude in a comment on any PR to get started!`
+After merging this PR, let's try mentioning @gizzi in a comment on any PR to get started!`
 
 export const CODE_REVIEW_PLUGIN_WORKFLOW_CONTENT = `name: Gizzi Code Review
 
@@ -111,7 +111,7 @@ on:
     #   - "src/**/*.jsx"
 
 jobs:
-  claude-review:
+  gizzi-review:
     # Optional: Filter by PR author
     # if: |
     #   github.event.pull_request.user.login == 'external-contributor' ||
@@ -132,7 +132,7 @@ jobs:
           fetch-depth: 1
 
       - name: Run Gizzi Code Review
-        id: claude-review
+        id: gizzi-review
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: \${{ secrets.ANTHROPIC_API_KEY }}

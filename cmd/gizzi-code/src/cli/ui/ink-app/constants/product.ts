@@ -1,5 +1,5 @@
 // @ts-nocheck
-export const PRODUCT_URL = 'https://gizzi.io'
+export const PRODUCT_URL = 'https://docs.gizziio.com'
 
 // gizzi-code Remote session URLs
 export const CLAUDE_AI_BASE_URL = 'https://claude.ai'

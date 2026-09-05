@@ -16,7 +16,7 @@ test.skip("Bedrock: config region takes precedence over AWS_REGION env var", asy
       await Filesystem.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             "amazon-bedrock": {
               options: {
@@ -48,7 +48,7 @@ test.skip("Bedrock: falls back to AWS_REGION env var when no config region", asy
       await Filesystem.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
         }),
       )
     },
@@ -73,7 +73,7 @@ test.skip("Bedrock: loads when bearer token from auth.json is present", async ()
       await Filesystem.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             "amazon-bedrock": {
               options: {
@@ -141,7 +141,7 @@ test.skip("Bedrock: config profile takes precedence over AWS_PROFILE env var", a
       await Filesystem.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             "amazon-bedrock": {
               options: {
@@ -174,7 +174,7 @@ test.skip("Bedrock: includes custom endpoint in options when specified", async (
       await Filesystem.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             "amazon-bedrock": {
               options: {
@@ -207,7 +207,7 @@ test.skip("Bedrock: autoloads when AWS_WEB_IDENTITY_TOKEN_FILE is present", asyn
       await Filesystem.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             "amazon-bedrock": {
               options: {
@@ -245,7 +245,7 @@ test.skip("Bedrock: model with us. prefix should not be double-prefixed", async 
       await Filesystem.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             "amazon-bedrock": {
               options: {
@@ -282,7 +282,7 @@ test.skip("Bedrock: model with global. prefix should not be prefixed", async () 
       await Filesystem.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             "amazon-bedrock": {
               options: {
@@ -318,7 +318,7 @@ test.skip("Bedrock: model with eu. prefix should not be double-prefixed", async 
       await Filesystem.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             "amazon-bedrock": {
               options: {
@@ -354,7 +354,7 @@ test.skip("Bedrock: model without prefix in US region should get us. prefix adde
       await Filesystem.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             "amazon-bedrock": {
               options: {

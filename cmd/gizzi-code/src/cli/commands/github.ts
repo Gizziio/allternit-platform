@@ -235,9 +235,9 @@ export const GithubInstallCommand = cmd({
                 `    1. Commit the \`${WORKFLOW_FILE}\` file and push`,
                 step2,
                 "",
-                "    3. Go to a GitHub issue and comment `/oc summarize` to see the agent in action",
+                "    3. Go to a GitHub issue and comment `/gizzi summarize` to see the agent in action",
                 "",
-                "   Learn more about the GitHub agent - https://gizzi.io/docs/github/#usage-examples",
+                "   Learn more about the GitHub agent - https://docs.gizziio.com",
               ].join("\n"),
             )
           }

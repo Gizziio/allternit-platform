@@ -247,7 +247,7 @@ describe.skip("session.llm.stream", () => {
         await Bun.write(
           path.join(dir, "gizzi.json"),
           JSON.stringify({
-            $schema: "https://gizzi.io/config.json",
+            $schema: "https://docs.gizziio.com/config.json",
             enabled_providers: [providerID],
             provider: {
               [providerID]: {
@@ -370,7 +370,7 @@ describe.skip("session.llm.stream", () => {
         await Bun.write(
           path.join(dir, "gizzi.json"),
           JSON.stringify({
-            $schema: "https://gizzi.io/config.json",
+            $schema: "https://docs.gizziio.com/config.json",
             enabled_providers: ["openai"],
             provider: {
               openai: {
@@ -499,7 +499,7 @@ describe.skip("session.llm.stream", () => {
         await Bun.write(
           path.join(dir, "gizzi.json"),
           JSON.stringify({
-            $schema: "https://gizzi.io/config.json",
+            $schema: "https://docs.gizziio.com/config.json",
             enabled_providers: [providerID],
             provider: {
               [providerID]: {
@@ -600,7 +600,7 @@ describe.skip("session.llm.stream", () => {
         await Bun.write(
           path.join(dir, "gizzi.json"),
           JSON.stringify({
-            $schema: "https://gizzi.io/config.json",
+            $schema: "https://docs.gizziio.com/config.json",
             enabled_providers: [providerID],
             provider: {
               [providerID]: {
