@@ -32,7 +32,7 @@ Installers:
   - Architecture: x64
     InstallerType: zip
     InstallerUrl: https://github.com/Gizziio/allternit-platform/releases/download/gizzi-code/v2.0.1/gizzi-code-v2.0.1-windows-x64.zip
-    InstallerSha256: __SHA256_WINDOWS_X64__
+    InstallerSha256: f4e0184f3a2ac046732b479874f6b35d8a24b368900680c2a781e30f276412be
     NestedInstallerType: portable
     NestedInstallerFiles:
       - RelativeFilePath: gizzi-code.exe
