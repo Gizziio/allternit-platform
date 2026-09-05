@@ -5,9 +5,13 @@ description: 'Bootstrap, sync, and list Office add-in bindings and sessions for 
 
 ## Overview
 
-The Office Runtime API tracks Office add-in bindings and active sessions on the local gateway. It is used by the Allternit Office add-in to bootstrap a document binding, sync runtime state, and query active bindings. State is persisted to `~/.allternit/gateway-office-runtime.json` and cleaned up automatically based on TTL rules.
+The Office Runtime API tracks Office add-in bindings and active sessions on **the caller's data-plane node**. Public clients call the [Cloud API](/api/cloud-api) at `https://api.allternit.com`; the control plane relays to [Allternit API](/api/allternit-api) on the default healthy node. Bindings are node-local (in-memory with TTL in the `:8013` process) — a request that lands on the wrong node looks like "no binding".
 
 A binding represents a unique Office document; a session represents one active add-in instance attached to a binding.
+
+<Note>
+HTTP **428** means this account has no healthy paired or provisioned node. Office has no `?node=` override; it always follows the account default.
+</Note>
 
 ## Base URL
 
@@ -15,7 +19,7 @@ A binding represents a unique Office document; a session represents one active a
 https://api.allternit.com/api/v1/office
 ```
 
-For local development:
+Local data plane (same machine only):
 
 ```
 http://127.0.0.1:8013/api/v1/office
@@ -23,7 +27,7 @@ http://127.0.0.1:8013/api/v1/office
 
 ## Authentication
 
-Office runtime routes are currently local-gateway routes. When accessed through the platform API they inherit the standard bearer-token auth middleware. See [Authentication](/api/authentication).
+Production requests use a Clerk session JWT on the Cloud API. See [Authentication](/api/authentication) and [API Overview](/api/overview).
 
 ## Data models
 

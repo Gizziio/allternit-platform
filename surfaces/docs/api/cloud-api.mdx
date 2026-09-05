@@ -5,9 +5,9 @@ description: 'Allternit Cloud API control plane for runtime pairing, relay, host
 
 ## Overview
 
-The Allternit Cloud API is the hosted control plane that binds user accounts to self-hosted and managed runtimes. It provides the runtime pairing protocol, the browser-to-runtime relay, hosted runtime lifecycle, the BYO-VPS deploy wizard, and the Cowork Runtime execution API.
+The Allternit Cloud API is the **only public API**. It is the hosted control plane that binds user accounts to self-hosted and managed data-plane nodes. It provides the runtime pairing protocol, the browser-to-runtime relay, hosted runtime lifecycle, Allternit-provisioned instances, the BYO-VPS deploy wizard, the Cowork Runtime execution API, and the OpenAI-compatible model gateway.
 
-The API is built from `cmd/allternit-cloud-api` and runs at `https://api.allternit.com` in production.
+The API is built from `cmd/allternit-cloud-api` and runs at `https://api.allternit.com` in production (Postgres). The [Allternit API](/api/allternit-api) (`:8013`, SQLite) is the private data plane — never a public hostname. See [API Overview](/api/overview).
 
 ## Base URL
 
@@ -188,6 +188,41 @@ The runtime proxy only accepts paths under the following prefixes:
 /platform, /metrics, /alabs, /cowork, /webhooks, /ws, /panes, /status,
 /health, /v1
 ```
+
+## Relayed data-plane namespaces
+
+These Cloud API routes authenticate with a Clerk session, resolve the caller's default healthy node, and **relay** the request to Allternit API on that node. They do not store a second copy of the resource in Cloud API Postgres.
+
+| Namespace | Paths | Docs |
+|-----------|-------|------|
+| Agent sessions | `/api/v1/agent-sessions` | [Agent Sessions](/api/agent-sessions) |
+| Office | `/api/v1/office/bindings`, `/bootstrap`, `/runtime/state` | [Office](/api/office) |
+| Beta research | `/api/v1/beta/research`, `/api/v1/beta/sessions` | [Beta](/api/beta) |
+
+HTTP **428** means the account has no healthy node (pair a desktop/VPS or start a provisioned instance). The original `Authorization` header is forwarded. SSE is not buffered.
+
+## Provisioned instances
+
+Paid subscriptions can get an Allternit-provisioned data-plane instance (isolated container, per-instance SQLite, auto-pair). These routes are control-plane only: they create/start/stop the instance. Traffic to Allternit API inside the instance still goes through the runtime relay.
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/api/v1/provisioned-instances` | Clerk | List your instances. |
+| POST | `/api/v1/provisioned-instances` | Clerk + subscription | Create an instance. |
+| GET | `/api/v1/provisioned-instances/:id` | Clerk | Instance status. |
+| POST | `/api/v1/provisioned-instances/:id/start` | Clerk | Start a stopped instance. |
+| POST | `/api/v1/provisioned-instances/:id/stop` | Clerk | Stop an instance. |
+| GET | `/api/v1/provisioned-instances/:id/usage` | Clerk | Metering sessions. |
+| DELETE | `/api/v1/provisioned-instances/:id` | Clerk | Destroy an instance. |
+
+Host registration (`/api/v1/provisioned-hosts`) is operator-only.
+
+```bash
+curl https://api.allternit.com/api/v1/provisioned-instances \
+  -H "Authorization: Bearer <clerk-session-token>"
+```
+
+This is mode 3 in [BYOC Overview](/byoc/overview). It is separate from Fly [hosted runtimes](/byoc/hosted-runtime).
 
 ## Hosted runtimes
 
@@ -505,7 +540,7 @@ X-RateLimit-Reset: 1723575600
 | Variable | Purpose |
 |----------|---------|
 | `PORT` / `BIND_ADDR` | HTTP server bind address. |
-| `DATABASE_URL` | SQLite path or Postgres URL. |
+| `DATABASE_URL` | Postgres URL in production. SQLite is local/dev only. |
 | `CLERK_ISSUER` / `CLERK_JWKS_URL` | Clerk JWT verification. |
 | `ALLTERNIT_PLATFORM_URL` | Browser pairing origin. |
 | `CORS_ALLOWED_ORIGINS` | Allowed browser origins. |
@@ -516,7 +551,10 @@ X-RateLimit-Reset: 1723575600
 
 ## Related pages
 
+- [API Overview](/api/overview)
+- [Allternit API](/api/allternit-api)
 - [Authentication](/api/authentication)
+- [Agent Sessions](/api/agent-sessions)
 - [BYOC Runtime](/byoc/overview)
 - [BYOC Deploy Wizard](/byoc/deploy-wizard)
 - [Hosted Runtime](/byoc/hosted-runtime)

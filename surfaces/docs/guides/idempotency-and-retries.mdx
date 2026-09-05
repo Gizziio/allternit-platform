@@ -8,7 +8,7 @@ description: Build reliable integrations with idempotent requests and retry stra
 Allternit supports idempotency keys on `POST` endpoints. Include an `Idempotency-Key` header to ensure that retries return the same result:
 
 ```bash
-curl -X POST http://localhost:8013/api/v1/agents \
+curl -X POST https://api.allternit.com/api/v1/agents \
   -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
   -H "Idempotency-Key: req_abc123" \
   -H "Content-Type: application/json" \

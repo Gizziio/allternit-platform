@@ -1,123 +1,102 @@
 ---
 title: BYOC Overview
-description: Bring Your Own Cloud - Deploy Allternit to your infrastructure
+description: Run the Allternit data plane on your machine, your VPS, or an Allternit-provisioned instance.
 ---
 
 ## What is BYOC?
 
-BYOC (Bring Your Own Cloud) lets you deploy the Allternit runtime agent to your own infrastructure. This gives you:
+BYOC (Bring Your Own Compute) means **your data plane stays on infrastructure you control** — or on an isolated instance Allternit provisions for your subscription. The public [Cloud API](/api/cloud-api) at `https://api.allternit.com` is the control plane for every mode. The [Allternit API](/api/allternit-api) binary is the data plane. It is never a second public hostname.
 
-- **Data privacy** - Your data never leaves your servers
-- **Compliance** - Meet SOC2, HIPAA, GDPR requirements
-- **Cost control** - No per-request pricing
-- **Customization** - Full control over the runtime environment
+You get:
+
+- **Data stays on the node** — sessions, files, and Office bindings live in per-instance SQLite
+- **No inbound ports** — the node opens an outbound WebSocket to the Cloud API
+- **One public origin** — browsers talk only to `api.allternit.com`
+- **Same binary everywhere** — local desktop, your VPS, or a provisioned instance
 
 ## Architecture
 
-<Frame>
-  ```
-  ┌─────────────────┐         ┌─────────────────────┐
-  │  Control Plane  │         │     Data Plane      │
-  │  (Vercel)       │◄───────►│  (Your VPS/Server)  │
-  │                 │  HTTPS  │                     │
-  │  • Platform UI  │         │  • Runtime Agent    │
-  │  • API Gateway  │         │  • SQLite DB        │
-  │  • Agent Reg.   │         │  • Worker Engine    │
-  └─────────────────┘         └─────────────────────┘
-         ▲                               ▲
-         │                               │
-         │    WebSocket (Direct)         │
-         └───────────────────────────────┘
-              Browser → Runtime Agent
-  ```
-</Frame>
-
-## One-Line Installer
-
-Install the runtime agent on any Linux/macOS server:
-
-```bash
-curl -fsSL https://install.allternit.com | bash
+```
+┌─────────────────────────────┐         ┌──────────────────────────────┐
+│  Control plane              │         │  Data plane                  │
+│  Cloud API                  │◄───────►│  Allternit API               │
+│  api.allternit.com          │  WSS    │  :8013, not public           │
+│                             │  relay  │                              │
+│  • Auth (Clerk)             │         │  • allternit-api             │
+│  • Pairing & device tokens  │         │  • Per-instance SQLite       │
+│  • Billing & model router   │         │  • Gizzi runtime             │
+│  • Fleet / hosted runtimes  │         │  • agent-daemon (outbound)   │
+└─────────────────────────────┘         └──────────────────────────────┘
+         ▲                                          ▲
+         │ HTTPS + Clerk JWT                        │
+         └──────────── Browser / SDK ───────────────┘
+                   (never hits :8013 directly)
 ```
 
-This will:
-1. Download the latest runtime binary
-2. Install to `/usr/local/bin/allternit-runtime`
-3. Create systemd service (Linux)
-4. Generate default configuration
+## Three modes
 
-## System Requirements
+<CardGroup cols={3}>
+  <Card title="1. Local desktop" icon="desktop">
+    Allternit Desktop runs Allternit API and Gizzi on the user's machine and pairs the node to the account.
+  </Card>
+  <Card title="2. User-paired VPS" icon="server">
+    You install the runtime on a box you own. Approve a pairing code. The node stays private.
+  </Card>
+  <Card title="3. Allternit-provisioned" icon="cloud">
+    Cloud API creates an isolated instance per subscription. Init installs Allternit API and auto-pairs. No inbound ports on the fleet host.
+  </Card>
+</CardGroup>
+
+Mode 3 is the hosted data-plane lane (provisioned instances), distinct from [Fly hosted runtimes](/byoc/hosted-runtime) which bundle a Gizzi gateway and agent-daemon as a managed machine.
+
+## Pair a node (mode 2)
+
+1. Start Allternit API and `agent-daemon` on the box (loopback only).
+2. The daemon creates a pairing: `POST https://api.allternit.com/api/v1/runtime-pairings`.
+3. Approve the user code at `https://platform.allternit.com/pair`.
+4. The node exchanges the pairing for a device token and connects:
+
+```
+wss://api.allternit.com/api/v1/runtime-relay/connect/:runtimeId
+```
+
+5. From then on, agent-sessions / office / beta calls to `https://api.allternit.com` relay to this node.
+
+If nothing is paired and online, those routes return **HTTP 428**.
+
+Full protocol: [Cloud API — runtime pairing](/api/cloud-api#runtime-pairing).
+
+## System requirements
 
 | Resource | Minimum | Recommended |
 |----------|---------|-------------|
 | CPU | 2 cores | 4+ cores |
 | RAM | 2 GB | 4+ GB |
 | Disk | 10 GB | 50+ GB SSD |
-| OS | Ubuntu 20.04 | Ubuntu 22.04 LTS |
+| OS | Ubuntu 22.04 LTS | Ubuntu 24.04 LTS |
 
-## Supported Platforms
+Supported: Linux (x86_64, ARM64), macOS 12+ (desktop). Provisioned fleet images are Linux x86_64.
 
-- **Linux**: Ubuntu 20.04+, Debian 11+, CentOS 8+, RHEL 8+
-- **macOS**: 12+ (Monterey and later)
-- **Architecture**: x86_64, ARM64
+## Release channel
 
-## Configuration
+Provisioned instances and operators pull:
 
-The runtime is configured via `runtime.yaml`:
-
-```yaml
-server:
-  host: 0.0.0.0
-  port: 8080
-  
-auth:
-  api_key: ${ALLTERNIT_API_KEY}
-  
-control_plane:
-  endpoint: https://api.allternit.com
-  
-storage:
-  path: /var/lib/allternit/data.sqlite
-  
-logging:
-  level: info
-  format: json
+```
+https://api.allternit.com/releases/allternit-api/latest/linux-x86_64.tar.gz
 ```
 
-## Deployment Options
+Desktop ships its own bundled Allternit API. Do not publish port 8013.
 
-<CardGroup cols={2}>
-  <Card title="VPS/Dedicated Server" icon="server">
-    Run on DigitalOcean, Linode, Hetzner, or any VPS provider
-  </Card>
-  <Card title="On-Premises" icon="building">
-    Deploy to your own data center or private cloud
-  </Card>
-  <Card title="Edge Devices" icon="cpu">
-    Run on edge hardware with limited resources
-  </Card>
-  <Card title="Homelab" icon="home">
-    Perfect for personal projects and experimentation
-  </Card>
-</CardGroup>
-
-## Security
-
-- API key authentication required
-- TLS encryption for all connections
-- Local SQLite database (no external DB needed)
-- Optional mTLS for enhanced security
-
-## Next Steps
+## Next steps
 
 <CardGroup cols={3}>
-  <Card title="Installation" icon="download" href="/byoc/installation">
-    Detailed installation guide
+  <Card title="Allternit API" icon="database" href="/api/allternit-api">
+    Data-plane binary, local :8013, SQLite
   </Card>
-  <Card title="Configuration" icon="settings" href="/byoc/configuration">
-    Configure the runtime
+  <Card title="Cloud API" icon="cloud" href="/api/cloud-api">
+    Pairing, relay, provisioned instances
   </Card>
-  <Card title="Deployment" icon="rocket" href="/byoc/deployment">
-    Production deployment tips
+  <Card title="Hosted runtime" icon="box" href="/byoc/hosted-runtime">
+    Managed Gizzi machine (Fly)
   </Card>
 </CardGroup>

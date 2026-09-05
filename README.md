@@ -306,7 +306,8 @@ The project has undergone significant restructuring. See [MIGRATION_PLAN.md](./M
 
 | Service | Port | Language / Runtime | Description |
 |---------|------|--------------------|-------------|
-| allternit-api | 8013 | Rust | Public REST API (Clerk-protected `/api/v1` and OpenAI-compatible `/v1`) |
+| allternit-cloud-api | 8082 | Rust | Public control plane (`https://api.allternit.com`) — pairing, relay, billing, models |
+| allternit-api | 8013 | Rust | Private data-plane runtime (SQLite). Not a public hostname; Cloud API relays to it |
 | ai.allternit.com (platform UI) | 3013 | Vite / React | Web platform surface |
 | gizzi-code runtime | 4096 | Bun / TypeScript | Local agent runtime and LLM session bus |
 | computer-use gateway | 8760 | (external) | Desktop control / screenshot gateway |

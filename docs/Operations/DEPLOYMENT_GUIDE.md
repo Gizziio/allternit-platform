@@ -15,7 +15,37 @@ Complete deployment guide for Allternit web properties and desktop distribution.
 
 ## Architecture
 
-Allternit uses a **Desktop-First BYOC (Bring Your Own Compute)** architecture:
+### Production APIs (control plane / data plane)
+
+One public origin. Browsers never call `:8013`.
+
+```
+Browser / SDK / CLI
+        │ HTTPS + Clerk JWT or virtual key
+        ▼
+┌──────────────────────────────────────────┐
+│  Cloud API — control plane               │
+│  https://api.allternit.com               │
+│  cmd/allternit-cloud-api (:8082)         │
+│  Postgres                                │
+│  pairing, relay, billing, models,        │
+│  hosted runtimes, provisioned fleet      │
+└──────────────────┬───────────────────────┘
+                   │ outbound WebSocket relay
+                   ▼
+┌──────────────────────────────────────────┐
+│  Allternit API — data plane              │
+│  cmd/allternit-api (:8013, not public)   │
+│  per-instance SQLite                     │
+│  Mode 1  local desktop                   │
+│  Mode 2  user-paired VPS                 │
+│  Mode 3  Allternit-provisioned instance  │
+└──────────────────────────────────────────┘
+```
+
+Public docs: https://docs.allternit.com/api/overview
+
+Desktop still bundles a local Allternit API + Gizzi for mode 1:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -25,26 +55,24 @@ Allternit uses a **Desktop-First BYOC (Bring Your Own Compute)** architecture:
 │  ┌─────────────────────────────────────────────────────────┐   │
 │  │  Allternit Desktop (Electron)                           │   │
 │  │                                                         │   │
-│  │  • Platform Server (Next.js)      - Port 3100-3200     │   │
-│  │  • allternit-api (Rust)           - Port 8013          │   │
-│  │  • gizzi-code (Go)                - Port 4096          │   │
+│  │  • Platform UI                      - Port 3100-3200    │   │
+│  │  • allternit-api (data plane)       - Port 8013         │   │
+│  │  • gizzi-code                       - Port 4096         │   │
 │  │  • SQLite database                                      │   │
-│  │                                                         │   │
-│  │  Optional: Cloudflare Tunnel (on-demand web access)     │   │
+│  │  • agent-daemon → api.allternit.com (outbound relay)    │   │
 │  └─────────────────────────────────────────────────────────┘   │
 └──────────────────────────────────┬──────────────────────────────┘
                                    │
-                                   │ HTTPS via Cloudflare Tunnel
-                                   │ (when enabled)
+                                   │ HTTPS (Cloud API) always
+                                   │ optional tunnel for LAN UI
                                    ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│              SECONDARY: Web Platform                            │
-│           platform.allternit.com                                │
-│           (Cloudflare Pages - Static)                           │
+│              Web surfaces                                       │
+│           platform.allternit.com / ai.allternit.com             │
+│           (Cloudflare Pages)                                    │
 │                                                                 │
-│  • Loads in browser                                             │
-│  • Connects to desktop via tunnel URL                           │
-│  • Shows "Desktop Offline" when tunnel inactive                 │
+│  • Call https://api.allternit.com only                          │
+│  • Data-plane routes 428 until a node is paired/online          │
 └─────────────────────────────────────────────────────────────────┘
 ```
 

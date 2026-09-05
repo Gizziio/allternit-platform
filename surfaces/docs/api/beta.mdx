@@ -5,20 +5,27 @@ description: 'Schedule agents with cron expressions, trigger runs, and inspect r
 
 ## Overview
 
-The Beta Deployments API lets you turn an agent into a scheduled service. A deployment binds an agent to a cron expression and tracks every execution in a separate run history. The scheduler recomputes `next_run_at` whenever a deployment is created, updated, or triggered.
+Two different `/api/v1/beta` surfaces exist. Do not mix them.
 
-All deployment routes are mounted under `/api/v1/beta/deployments` and require a valid bearer token via the platform auth middleware.
+| Surface | Public path | Where it runs |
+|---------|-------------|---------------|
+| **Beta research / sessions** | `https://api.allternit.com/api/v1/beta/research`, `/api/v1/beta/sessions` | [Cloud API](/api/cloud-api) relays to your data-plane node. HTTP 428 if no healthy node. |
+| **Beta deployments** (this page) | `/api/v1/beta/deployments` | Scheduled agent runs stored on the [Allternit API](/api/allternit-api) node |
+
+The Beta Deployments API lets you turn an agent into a scheduled service. A deployment binds an agent to a cron expression and tracks every execution in a separate run history. The scheduler recomputes `next_run_at` whenever a deployment is created, updated, or triggered.
 
 ## Base URL
 
-```
-https://api.allternit.com/v1/beta/deployments
-```
-
-For local development the API server is typically available at:
+Public Cloud API origin (relayed namespaces use this host):
 
 ```
-http://127.0.0.1:8013/v1/beta/deployments
+https://api.allternit.com/api/v1/beta
+```
+
+Local data plane (deployments live on the node):
+
+```
+http://127.0.0.1:8013/api/v1/beta/deployments
 ```
 
 ## Authentication

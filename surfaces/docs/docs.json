@@ -1,7 +1,7 @@
 {
   "name": "Allternit Docs",
   "theme": "mint",
-  "description": "Allternit documentation for Gizzi Code, the ACI platform, BYOC runtime, SDKs, and APIs.",
+  "description": "Allternit documentation for Gizzi Code, the Cloud API, the Allternit API data plane, BYOC runtime, SDKs, and surfaces.",
   "logo": {
     "light": "/logo/light.svg",
     "dark": "/logo/dark.svg"
@@ -35,7 +35,8 @@
             "pages": [
               "introduction",
               "quickstart",
-              "architecture"
+              "architecture",
+              "api/overview"
             ]
           },
           {
@@ -254,6 +255,9 @@
           {
             "group": "Overview",
             "pages": [
+              "api/overview",
+              "api/cloud-api",
+              "api/allternit-api",
               "api/authentication",
               "api/endpoints",
               "api/rate-limits",
