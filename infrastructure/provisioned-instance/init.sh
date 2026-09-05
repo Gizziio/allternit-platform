@@ -148,7 +148,12 @@ PY
         || die "pairing create returned an unusable response"
 
     message="allternit-runtime-pairing:${pairing_id}:${challenge}"
-    signature="$(printf '%s' "$message" | openssl pkeyutl -sign -inkey "$KEY_FILE" -rawin | b64url)"
+    # OpenSSL 3 pkeyutl -rawin needs a seekable file; piping stdin fails with
+    # "unable to determine file size for oneshot operation".
+    msg_file="$(mktemp)"
+    printf '%s' "$message" > "$msg_file"
+    signature="$(openssl pkeyutl -sign -inkey "$KEY_FILE" -rawin -in "$msg_file" | b64url)"
+    rm -f "$msg_file"
 
     # The exchange 428s with authorization_pending until the (here: server-
     # pre-approved) pairing is consumable; poll a few times to absorb races.

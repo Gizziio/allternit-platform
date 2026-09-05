@@ -364,10 +364,12 @@ impl IncusHttpBackend {
 
     async fn state_action(&self, name: &str, action: &str) -> Result<(), ProvisionError> {
         let path = format!("/1.0/instances/{name}/state");
+        // Incus 6.0 implements instance state changes as PUT (LXD-compatible).
+        // POST /1.0/instances/{name}/state returns 501 not implemented.
         let (status, json) = self
             .transport
             .request(
-                reqwest::Method::POST,
+                reqwest::Method::PUT,
                 &path,
                 Some(serde_json::json!({ "action": action })),
             )
@@ -408,6 +410,9 @@ impl ProvisionBackend for IncusHttpBackend {
             "limits.memory": format!("{}MiB", spec.memory_mb),
             // ADR A3/v1: unprivileged containers, explicit rather than host default.
             "security.privileged": "false",
+            // Incus 6 consumes cloud-init.user-data (config-drive). user.user-data
+            // is kept for older LXD-compatible daemons and is otherwise inert.
+            "cloud-init.user-data": spec.user_data,
             "user.user-data": spec.user_data,
         });
         if let Some(sha256) = spec
@@ -683,10 +688,19 @@ pub fn build_user_data(params: &HashMap<String, String>) -> String {
         "    permissions: '0755'".to_string(),
         "    content: |".to_string(),
     ];
+    // Sha256 pin must sit *after* the shebang so the written file stays
+    // executable as bash (`env ... /usr/local/sbin/allternit-node-init`).
+    let mut script_lines: Vec<String> = INIT_SCRIPT.lines().map(str::to_string).collect();
     if let Some(sha256) = params.get("ALLTERNIT_BINARY_SHA256") {
-        lines.push(format!("      # allternit sha256: {sha256}"));
+        let pin = format!("# allternit sha256: {sha256}");
+        let insert_at = if script_lines.first().is_some_and(|line| line.starts_with("#!")) {
+            1
+        } else {
+            0
+        };
+        script_lines.insert(insert_at, pin);
     }
-    for script_line in INIT_SCRIPT.lines() {
+    for script_line in script_lines {
         lines.push(format!("      {script_line}"));
     }
     let env_args = params
@@ -695,7 +709,9 @@ pub fn build_user_data(params: &HashMap<String, String>) -> String {
         .collect::<Vec<_>>()
         .join(" ");
     lines.push("runcmd:".to_string());
-    lines.push(format!("  - env {env_args} /usr/local/sbin/allternit-node-init"));
+    lines.push(format!(
+        "  - env {env_args} bash /usr/local/sbin/allternit-node-init"
+    ));
     lines.join("\n")
 }
 
@@ -1701,6 +1717,7 @@ mod tests {
         assert_eq!(body["config"]["limits.cpu"], "2");
         assert_eq!(body["config"]["limits.memory"], "2048MiB");
         assert_eq!(body["config"]["user.user-data"], "#cloud-config\nruncmd: [init]\n");
+        assert_eq!(body["config"]["cloud-init.user-data"], "#cloud-config\nruncmd: [init]\n");
         assert_eq!(body["devices"]["root"]["pool"], "default");
         assert_eq!(body["devices"]["root"]["size"], "20GiB");
         assert_eq!(requests[1].1, "/1.0/operations/op-1/wait?timeout=60");
@@ -1743,7 +1760,7 @@ mod tests {
         backend.delete("n1").await.unwrap();
 
         let requests = mock.requests.lock().unwrap();
-        assert_eq!(requests[0].0, "POST");
+        assert_eq!(requests[0].0, "PUT");
         assert_eq!(requests[0].1, "/1.0/instances/n1/state");
         assert_eq!(requests[0].2.as_ref().unwrap()["action"], "start");
         assert_eq!(requests[2].2.as_ref().unwrap()["action"], "stop");
