@@ -635,12 +635,12 @@ export const SettingsSchema = lazySchema(() =>
             'these exact sources are blocked from being added as marketplaces. The check happens BEFORE ' +
             'downloading, so blocked sources never touch the filesystem.',
         ),
-      // Force a specific login method: 'claudeai' for Claude Pro/Max, 'console' for Console billing
+      // Force a specific login method: 'claudeai' for Allternit account, 'console' for Console billing
       forceLoginMethod: z
         .enum(['claudeai', 'console'])
         .optional()
         .describe(
-          'Force a specific login method: "claudeai" for Claude Pro/Max, "console" for Console billing',
+          'Force a specific login method: "claudeai" for Allternit account login, "console" for Allternit Console billing',
         ),
       // Organization UUID to use for OAuth login (will be added as URL param to authorization URL)
       forceLoginOrgUUID: z
@@ -896,7 +896,7 @@ export const SettingsSchema = lazySchema(() =>
               .string()
               .optional()
               .describe(
-                'Display name for the assistant, shown in the claude.ai session list',
+                'Display name for the assistant, shown in the remote session list',
               ),
           }
         : {}),

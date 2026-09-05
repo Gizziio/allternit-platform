@@ -29,7 +29,7 @@ class DomainBlockedError extends Error {
 class DomainCheckFailedError extends Error {
   constructor(domain: string) {
     super(
-      `Unable to verify if domain ${domain} is safe to fetch. This may be due to network restrictions or enterprise security policies blocking claude.ai.`,
+      `Unable to verify if domain ${domain} is safe to fetch. This may be due to network restrictions or enterprise security policies blocking outbound requests.`,
     )
     this.name = 'DomainCheckFailedError'
   }

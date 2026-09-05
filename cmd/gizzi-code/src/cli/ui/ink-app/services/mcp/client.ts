@@ -350,7 +350,7 @@ function handleRemoteAuthFailure(
   const label: Record<typeof transportType, string> = {
     sse: 'SSE',
     http: 'HTTP',
-    'claudeai-proxy': 'claude.ai proxy',
+    'claudeai-proxy': 'hosted connector proxy',
   }
   logMCPDebug(
     name,
@@ -375,7 +375,7 @@ export function createClaudeAiProxyFetch(innerFetch: FetchLike): FetchLike {
       await checkAndRefreshOAuthTokenIfNeeded()
       const currentTokens = getClaudeAIOAuthTokens()
       if (!currentTokens) {
-        throw new Error('No claude.ai OAuth token available')
+        throw new Error('No Allternit OAuth token available')
       }
       // eslint-disable-next-line eslint-plugin-n/no-unsupported-features/node-builtins
       const headers = new Headers(init?.headers)
@@ -873,7 +873,7 @@ export const connectToServer = memoize(
 
         const tokens = getClaudeAIOAuthTokens()
         if (!tokens) {
-          throw new Error('No claude.ai OAuth token found')
+          throw new Error('No Allternit OAuth token found')
         }
 
         const oauthConfig = getOauthConfig()

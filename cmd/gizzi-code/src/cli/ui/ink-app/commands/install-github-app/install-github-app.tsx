@@ -182,7 +182,7 @@ function InstallGitHubApp(props: {
     }
   }, [state.selectedRepoName, state.workflowAction, state.selectedWorkflows, state.useCurrentRepo, state.workflowExists, state.secretExists, state.authType]);
   async function openGitHubAppInstallation() {
-    const installUrl = 'https://github.com/apps/claude';
+    const installUrl = 'https://docs.gizziio.com';
     await openBrowser(installUrl);
   }
   async function checkRepositoryPermissions(repoName: string): Promise<{

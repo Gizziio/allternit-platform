@@ -1029,15 +1029,15 @@ export function getSubscriptionName(): string {
 
   switch (subscriptionType) {
     case 'enterprise':
-      return 'Claude Enterprise'
+      return 'Allternit Enterprise'
     case 'team':
-      return 'Claude Team'
+      return 'Allternit Team'
     case 'max':
-      return 'Claude Max'
+      return 'Allternit Max'
     case 'pro':
-      return 'Claude Pro'
+      return 'Allternit Pro'
     default:
-      return 'Claude API'
+      return 'Allternit API'
   }
 }
 

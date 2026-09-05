@@ -19,7 +19,7 @@ import { Dialog } from './design-system/Dialog';
 import { KeyboardShortcutHint } from './design-system/KeyboardShortcutHint';
 import { LoadingState } from './design-system/LoadingState';
 const DIALOG_TITLE = 'Select Remote Environment';
-const SETUP_HINT = `Configure environments at: https://claude.ai/code`;
+const SETUP_HINT = `Configure environments at: https://ai.allternit.com`;
 type Props = {
   onDone: (message?: string) => void;
 };

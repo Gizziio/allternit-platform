@@ -1011,7 +1011,7 @@ export async function teleportToRemote(options: {
       if (!bundle.success) {
         logError(new Error(`Bundle upload failed: ${bundle.error}`));
         // Only steer users to GitHub setup when there's a remote to clone from.
-        const setup = repoInfo ? '. Please setup GitHub on https://claude.ai/code' : '';
+        const setup = repoInfo ? '. Please setup GitHub on https://ai.allternit.com' : '';
         let msg: string;
         switch (bundle.failReason) {
           case 'empty_repo':

@@ -443,7 +443,7 @@ export function MCPRemoteServerMenu({
             </Box>
           </> : <>
             <Text>
-              This will open claude.ai in the browser. Find the MCP server in
+              This will open Allternit in the browser. Find the MCP server in
               the list and click &quot;Disconnect&quot;.
             </Text>
             <Box marginLeft={3} flexDirection="column">
