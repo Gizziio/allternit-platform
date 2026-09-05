@@ -1420,7 +1420,7 @@ const CLI_ADAPTERS: Record<string, CliAdapter> = {
   grok: {
     mode: "acp",
     supportsAttachments: true,
-    buildArgv: ([command]) => [command, "agent", "--always-approve", "stdio"],
+    buildArgv: ([command]) => [command, "agent", "--no-leader", "--always-approve", "stdio"],
   },
 
   // Kiro CLI — ACP stdio.

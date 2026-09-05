@@ -852,7 +852,18 @@ export namespace Provider {
       }
     }
 
-    // 3. Environment variables
+    // 3. Installed CLI brains need no gizzi API key — the CLI is already authed.
+    if (!plan.source) {
+      if (provider?.auth_type === "subprocess" || provider?.subprocess_cmd) {
+        plan.source = "subprocess"
+        plan.authType = "subprocess"
+      } else if (provider?.auth_type === "none") {
+        plan.source = "none"
+        plan.authType = "none"
+      }
+    }
+
+    // 4. Environment variables
     if (!plan.source && provider?.env?.length) {
       const env = Env.all()
       const apiKey = provider.env.map((item) => env[item]).find(Boolean)
@@ -862,7 +873,7 @@ export namespace Provider {
       }
     }
 
-    // 4. Auth-store profiles, in configured order
+    // 5. Auth-store profiles, in configured order
     if (!plan.source) {
       const profiles = await Auth.profilesForProvider(ref.providerID)
       const profile = profiles[0]
@@ -872,7 +883,7 @@ export namespace Provider {
       }
     }
 
-    // 5. Plugin OAuth loaders
+    // 6. Plugin OAuth loaders
     if (!plan.source && provider) {
       for (const plugin of await Plugin.list()) {
         if (!plugin.auth || plugin.auth.provider !== ref.providerID) continue
@@ -890,17 +901,6 @@ export namespace Provider {
           if (loaded.authType) plan.authType = loaded.authType
           break
         }
-      }
-    }
-
-    // 6. subprocess / none auth types
-    if (!plan.source) {
-      if (provider?.auth_type === "subprocess" || provider?.subprocess_cmd) {
-        plan.source = "subprocess"
-        plan.authType = "subprocess"
-      } else if (provider?.auth_type === "none") {
-        plan.source = "none"
-        plan.authType = "none"
       }
     }
 
