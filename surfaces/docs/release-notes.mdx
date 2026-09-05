@@ -8,7 +8,7 @@ description: 'Changelog for the Allternit platform, SDKs, and Gizzi Code CLI'
 ## 2026.09
 
 - **APIs**: Documented the production split. [Cloud API](/api/cloud-api) at `https://api.allternit.com` is the only public API. [Allternit API](/api/allternit-api) (`:8013`, SQLite) is the private data plane. Agent sessions, Office, and beta research are Cloud API routes that relay to a paired or provisioned node (HTTP 428 if none is healthy).
-- **BYOC**: Three data-plane modes — local desktop, user-paired VPS, Allternit-provisioned instance. Control plane is Cloud API, not Vercel.
+- **BYOC**: Three data-plane modes — local desktop, user-paired VPS, Allternit-provisioned instance. Control plane is Cloud API.
 - **Provisioning**: `/api/v1/provisioned-instances` lifecycle on the Cloud API; node traffic still uses the runtime relay.
 
 ## 2026.08

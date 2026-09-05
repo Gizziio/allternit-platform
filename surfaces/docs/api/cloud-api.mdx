@@ -5,9 +5,9 @@ description: 'Allternit Cloud API control plane for runtime pairing, relay, host
 
 ## Overview
 
-The Allternit Cloud API is the **only public API**. It is the hosted control plane that binds user accounts to self-hosted and managed data-plane nodes. It provides the runtime pairing protocol, the browser-to-runtime relay, hosted runtime lifecycle, Allternit-provisioned instances, the BYO-VPS deploy wizard, the Cowork Runtime execution API, and the OpenAI-compatible model gateway.
+The Allternit Cloud API is the **only public API**. It is the hosted control plane that binds user accounts to self-hosted and managed data-plane nodes. It provides the runtime pairing protocol, the browser-to-runtime relay, hosted runtime lifecycle, Allternit-provisioned instances, the BYO-VPS deploy wizard, the Cowork Runtime execution API, and the `/v1` model gateway.
 
-The API is built from `cmd/allternit-cloud-api` and runs at `https://api.allternit.com` in production (Postgres). The [Allternit API](/api/allternit-api) (`:8013`, SQLite) is the private data plane — never a public hostname. See [API Overview](/api/overview).
+The API is built from `cmd/allternit-cloud-api` and runs at `https://api.allternit.com` in production (Postgres). The [Allternit API](/api/allternit-api) (`:8013`, SQLite) is the private data plane — never a public hostname. See [API Overview](/api/overview). The `/v1/chat/completions` model gateway is on this origin.
 
 ## Base URL
 
