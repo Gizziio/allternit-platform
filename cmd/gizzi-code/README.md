@@ -22,6 +22,18 @@ Windows ships a PE32+ x64 zip (`gizzi-code-v*-windows-x64.zip`) with
 is community-only. ARM64 Windows runs the x64 build under emulation.
 See [Platform support](#platform-support).
 
+**Homebrew (macOS / Linux):**
+```bash
+brew tap Gizziio/tap
+brew install gizzi-code
+```
+
+**Scoop (Windows):**
+```powershell
+scoop bucket add gizziio https://github.com/Gizziio/scoop-bucket
+scoop install gizzi-code
+```
+
 **npm (canonical, all platforms):**
 ```bash
 npm install -g @allternit/gizzi-code

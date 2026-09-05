@@ -23,7 +23,7 @@ irm https://install.gizziio.com/install.ps1 | iex
 ### Homebrew (macOS)
 
 ```bash
-brew install gizziio/gizzi/gizzi-code
+brew tap Gizziio/tap
 brew install gizzi-code
 ```
 
@@ -42,7 +42,8 @@ winget install Allternit.GizziCode
 ### Scoop (Windows)
 
 ```powershell
-scoop install https://raw.githubusercontent.com/Gizziio/allternit-platform/main/cmd/gizzi-code/packaging/scoop/gizzi-code.json
+scoop bucket add gizziio https://github.com/Gizziio/scoop-bucket
+scoop install gizzi-code
 ```
 
 ---
