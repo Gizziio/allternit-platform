@@ -1,6 +1,6 @@
 // @ts-nocheck
-import type AllternitAI from '@allternit/sdk/providers/allternit'
-import type { BetaToolUnion } from '@allternit/sdk/providers/allternit/resources/beta/messages.js'
+import type AllternitAI from '@allternit/gizzi-sdk/providers/allternit'
+import type { BetaToolUnion } from '@allternit/gizzi-sdk/providers/allternit/resources/beta/messages.js'
 import {
   getLastApiCompletionTimestamp,
   setLastApiCompletionTimestamp,

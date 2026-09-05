@@ -1,6 +1,6 @@
 // @ts-nocheck
-import { APIError } from '@allternit/sdk/providers/allternit'
-import type { MessageParam } from '@allternit/sdk/providers/allternit/resources/index.mjs'
+import { APIError } from '@allternit/gizzi-sdk/providers/allternit'
+import type { MessageParam } from '@allternit/gizzi-sdk/providers/allternit/resources/index.mjs'
 import isEqual from 'lodash-es/isEqual.js'
 import { getIsNonInteractiveSession } from '../bootstrap/state.js'
 import { isClaudeAISubscriber } from '../utils/auth.js'

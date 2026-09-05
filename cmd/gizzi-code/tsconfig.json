@@ -100,26 +100,32 @@
       "@allternit/remote-control/*": [
         "./packages/remote-control/src/*"
       ],
+      "@allternit/gizzi-sdk": [
+        "./packages/sdk/src"
+      ],
+      "@allternit/gizzi-sdk/*": [
+        "./packages/sdk/src/*"
+      ],
+      "@allternit/gizzi-sdk/providers/allternit/error": [
+        "./packages/sdk/src/providers/allternit/error.ts"
+      ],
+      "@allternit/gizzi-sdk/providers/allternit/streaming.mjs": [
+        "./packages/sdk/src/providers/allternit/streaming.ts"
+      ],
+      "@allternit/gizzi-sdk/providers/allternit/resources/index.mjs": [
+        "./packages/sdk/src/providers/allternit/resources/index.ts"
+      ],
+      "@allternit/gizzi-sdk/providers/allternit/resources/messages.mjs": [
+        "./packages/sdk/src/providers/allternit/resources/messages/index.ts"
+      ],
+      "@allternit/gizzi-sdk/providers/allternit/resources/beta/messages/messages.mjs": [
+        "./packages/sdk/src/providers/allternit/resources/beta/messages/index.ts"
+      ],
       "@allternit/sdk": [
         "./packages/sdk/src"
       ],
       "@allternit/sdk/*": [
         "./packages/sdk/src/*"
-      ],
-      "@allternit/sdk/providers/allternit/error": [
-        "./packages/sdk/src/providers/allternit/error.ts"
-      ],
-      "@allternit/sdk/providers/allternit/streaming.mjs": [
-        "./packages/sdk/src/providers/allternit/streaming.ts"
-      ],
-      "@allternit/sdk/providers/allternit/resources/index.mjs": [
-        "./packages/sdk/src/providers/allternit/resources/index.ts"
-      ],
-      "@allternit/sdk/providers/allternit/resources/messages.mjs": [
-        "./packages/sdk/src/providers/allternit/resources/messages/index.ts"
-      ],
-      "@allternit/sdk/providers/allternit/resources/beta/messages/messages.mjs": [
-        "./packages/sdk/src/providers/allternit/resources/beta/messages/index.ts"
       ],
       "@anthropic-ai/sandbox-runtime": [
         "./src/vendor/anthropic-stubs/sandbox-runtime.ts"

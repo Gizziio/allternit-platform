@@ -2,7 +2,7 @@
 import type {
   BetaContentBlock,
   BetaWebSearchTool20250305,
-} from '@allternit/sdk/providers/allternit/resources/beta/messages/messages.mjs'
+} from '@allternit/gizzi-sdk/providers/allternit/resources/beta/messages/messages.mjs'
 import { getAPIProvider } from './../../utils/model/providers.ts'
 import type { PermissionResult } from './../../utils/permissions/PermissionResult.ts'
 import { z } from 'zod/v4'

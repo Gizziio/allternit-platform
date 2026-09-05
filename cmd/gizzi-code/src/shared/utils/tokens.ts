@@ -1,5 +1,5 @@
 // @ts-nocheck
-import type { BetaUsage as Usage } from '@allternit/sdk/providers/allternit/resources/beta/messages/messages.mjs'
+import type { BetaUsage as Usage } from '@allternit/gizzi-sdk/providers/allternit/resources/beta/messages/messages.mjs'
 import { roughTokenCountEstimationForMessages } from '../../runtime/services/tokenEstimation.js'
 import type { AssistantMessage, ContentBlock, Message, MessageContent } from '@/types/message.js'
 import {

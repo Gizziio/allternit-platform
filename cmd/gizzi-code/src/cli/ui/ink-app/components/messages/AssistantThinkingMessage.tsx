@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
-import type { ThinkingBlock, ThinkingBlockParam } from '@allternit/sdk/providers/allternit/resources/index.mjs';
+import type { ThinkingBlock, ThinkingBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/index.mjs';
 import React from 'react';
 import { Box, Text } from '../../ink';
 import { CtrlOToExpand } from '../CtrlOToExpand';

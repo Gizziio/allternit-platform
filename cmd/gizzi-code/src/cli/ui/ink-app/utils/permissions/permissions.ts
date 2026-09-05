@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle'
-import { APIUserAbortError } from '@allternit/sdk/providers/allternit'
+import { APIUserAbortError } from '@allternit/gizzi-sdk/providers/allternit'
 import type { CanUseToolFn } from '../../hooks/useCanUseTool.js'
 import {
   getToolNameForPermissionCheck,

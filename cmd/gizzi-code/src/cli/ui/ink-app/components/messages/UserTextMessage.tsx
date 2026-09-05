@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import { feature } from 'bun:bundle';
-import type { TextBlockParam } from '@allternit/sdk/providers/allternit/resources/index.mjs';
+import type { TextBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/index.mjs';
 import * as React from 'react';
 import { NO_CONTENT_MESSAGE } from '../../constants/messages';
 import { COMMAND_MESSAGE_TAG, LOCAL_COMMAND_CAVEAT_TAG, TASK_NOTIFICATION_TAG, TEAMMATE_MESSAGE_TAG, TICK_TAG } from '../../constants/xml';

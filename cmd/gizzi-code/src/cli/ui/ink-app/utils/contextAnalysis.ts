@@ -1,9 +1,9 @@
 // @ts-nocheck
-import type { BetaContentBlock } from '@allternit/sdk/providers/allternit/resources/beta/messages/messages.mjs'
+import type { BetaContentBlock } from '@allternit/gizzi-sdk/providers/allternit/resources/beta/messages/messages.mjs'
 import type {
   ContentBlock,
   ContentBlockParam,
-} from '@allternit/sdk/providers/allternit/resources/index.mjs'
+} from '@allternit/gizzi-sdk/providers/allternit/resources/index.mjs'
 import { roughTokenCountEstimation as countTokens } from '../services/roughTokenEstimation.js'
 import type {
   AssistantMessage,

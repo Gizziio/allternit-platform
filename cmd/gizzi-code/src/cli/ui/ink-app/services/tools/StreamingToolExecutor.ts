@@ -1,5 +1,5 @@
 // @ts-nocheck
-import type { ToolUseBlock } from '@allternit/sdk/providers/allternit/resources/index.mjs'
+import type { ToolUseBlock } from '@allternit/gizzi-sdk/providers/allternit/resources/index.mjs'
 import {
   createUserMessage,
   REJECT_MESSAGE,

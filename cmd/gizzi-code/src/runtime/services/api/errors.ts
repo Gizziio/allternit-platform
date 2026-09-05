@@ -3,11 +3,11 @@ import {
   APIConnectionError,
   APIConnectionTimeoutError,
   APIError,
-} from '@allternit/sdk/providers/allternit'
+} from '@allternit/gizzi-sdk/providers/allternit'
 import type {
   BetaMessage,
   BetaStopReason,
-} from '@allternit/sdk/providers/allternit/resources/beta/messages/messages.mjs'
+} from '@allternit/gizzi-sdk/providers/allternit/resources/beta/messages/messages.mjs'
 import { AFK_MODE_BETA_HEADER } from '@/constants/betas.js'
 import type { SDKAssistantMessageError } from '../../../entrypoints/agentSdkTypes.js'
 import type {

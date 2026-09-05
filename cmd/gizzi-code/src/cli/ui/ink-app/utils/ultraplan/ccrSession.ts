@@ -8,7 +8,7 @@
 import type {
   ToolResultBlockParam,
   ToolUseBlock,
-} from '@allternit/sdk/providers/allternit/resources'
+} from '@allternit/gizzi-sdk/providers/allternit/resources'
 import type { SDKMessage } from '../../entrypoints/agentSdkTypes.js'
 import { EXIT_PLAN_MODE_V2_TOOL_NAME } from '../../tools/ExitPlanModeTool/constants.js'
 import { logForDebugging } from '../debug.js'

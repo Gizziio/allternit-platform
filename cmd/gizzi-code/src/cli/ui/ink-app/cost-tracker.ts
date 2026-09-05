@@ -1,5 +1,5 @@
 // @ts-nocheck
-import type { BetaUsage as Usage } from '@allternit/sdk/providers/allternit/resources/beta/messages/messages.mjs'
+import type { BetaUsage as Usage } from '@allternit/gizzi-sdk/providers/allternit/resources/beta/messages/messages.mjs'
 import chalk from '@/shared/util/chalk'
 import {
   addToTotalCostState,

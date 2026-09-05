@@ -4,7 +4,7 @@ import type {
   Base64ImageSource,
   ContentBlockParam,
   MessageParam,
-} from '@allternit/sdk/providers/allternit/resources/index.mjs'
+} from '@allternit/gizzi-sdk/providers/allternit/resources/index.mjs'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import {
   SSEClientTransport,

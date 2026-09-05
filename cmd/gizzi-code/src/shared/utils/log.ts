@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle'
-import type { BetaMessageStreamParams } from '@allternit/sdk/providers/allternit/resources/beta/messages/messages.mjs'
+import type { BetaMessageStreamParams } from '@allternit/gizzi-sdk/providers/allternit/resources/beta/messages/messages.mjs'
 import { readdir, readFile, stat } from 'fs/promises'
 import memoize from 'lodash-es/memoize.js'
 import { join } from 'path'

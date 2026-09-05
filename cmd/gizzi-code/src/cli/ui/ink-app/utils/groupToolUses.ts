@@ -1,6 +1,6 @@
 // @ts-nocheck
-import type { BetaToolUseBlock } from '@allternit/sdk/providers/allternit/resources/beta/messages/messages.mjs'
-import type { ToolResultBlockParam } from '@allternit/sdk/providers/allternit/resources/messages/messages.mjs'
+import type { BetaToolUseBlock } from '@allternit/gizzi-sdk/providers/allternit/resources/beta/messages/messages.mjs'
+import type { ToolResultBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/messages/messages.mjs'
 import type { Tools } from '../Tool.js'
 import type {
   GroupedToolUseMessage,

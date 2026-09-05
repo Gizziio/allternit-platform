@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { APIError } from '@allternit/sdk/providers/allternit'
+import { APIError } from '@allternit/gizzi-sdk/providers/allternit'
 import { randomUUID } from 'crypto'
 import type { SystemAPIErrorMessage } from '@/types/message.js'
 

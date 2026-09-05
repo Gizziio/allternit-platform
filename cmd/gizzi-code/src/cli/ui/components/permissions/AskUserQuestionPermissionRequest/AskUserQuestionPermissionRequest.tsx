@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
-import type { Base64ImageSource, ImageBlockParam } from '@allternit/sdk/providers/allternit/resources/messages.mjs';
+import type { Base64ImageSource, ImageBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/messages.mjs';
 import React, { Suspense, use, useCallback, useMemo, useRef, useState } from 'react';
 import { useSettings } from '@/hooks/useSettings.js';
 import { useTerminalSize } from '@/hooks/useTerminalSize.js';

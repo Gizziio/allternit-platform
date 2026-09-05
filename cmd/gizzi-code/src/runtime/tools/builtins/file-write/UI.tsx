@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
-import type { ToolResultBlockParam } from '@allternit/sdk/providers/allternit/resources/index.mjs';
+import type { ToolResultBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/index.mjs';
 import type { StructuredPatchHunk } from 'diff';
 import { isAbsolute, relative, resolve } from 'path';
 import * as React from 'react';

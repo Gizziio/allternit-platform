@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { APIUserAbortError } from '@allternit/sdk/providers/allternit'
+import { APIUserAbortError } from '@allternit/gizzi-sdk/providers/allternit'
 
 export class ClaudeError extends Error {
   constructor(message: string) {

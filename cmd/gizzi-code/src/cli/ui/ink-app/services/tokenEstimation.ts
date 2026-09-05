@@ -1,6 +1,6 @@
 // @ts-nocheck
-import type { AllternitAI } from '@allternit/sdk/providers/allternit'
-import type { BetaMessageParam as MessageParam } from '@allternit/sdk/providers/allternit/resources/beta/messages/messages.mjs'
+import type { AllternitAI } from '@allternit/gizzi-sdk/providers/allternit'
+import type { BetaMessageParam as MessageParam } from '@allternit/gizzi-sdk/providers/allternit/resources/beta/messages/messages.mjs'
 import { getAPIProvider } from './../utils/model/providers.ts'
 import { getModelBetas } from '../utils/betas.js'
 import { logError } from '../utils/log.js'

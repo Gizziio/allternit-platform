@@ -1,11 +1,11 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle'
-import type AllternitAI from '@allternit/sdk/providers/allternit'
+import type AllternitAI from '@allternit/gizzi-sdk/providers/allternit'
 import {
   APIConnectionError,
   APIError,
   APIUserAbortError,
-} from '@allternit/sdk/providers/allternit'
+} from '@allternit/gizzi-sdk/providers/allternit'
 import type { QuerySource } from '@/constants/querySource.js'
 import type { SystemAPIErrorMessage } from '@/types/message.js'
 import { logForDebugging } from '../../../shared/utils/debug.js'

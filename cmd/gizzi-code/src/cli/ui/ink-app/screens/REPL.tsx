@@ -170,7 +170,7 @@ import { resolveAgentTools } from '../tools/AgentTool/agentToolUtils';
 import { resumeAgentBackground } from '../tools/AgentTool/resumeAgent';
 import { useMainLoopModel } from '../hooks/useMainLoopModel';
 import { useAppState, useSetAppState, useAppStateStore } from '../state/AppState';
-import type { ContentBlockParam, ImageBlockParam } from '@allternit/sdk/providers/allternit/resources/messages.mjs';
+import type { ContentBlockParam, ImageBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/messages.mjs';
 import { AllternitHarness } from '@allternit/sdk/harness';
 import { shouldUseHarness, FEATURE_FLAGS } from '../utils/feature-flags';
 import { getHarnessConfig } from '../utils/migration';

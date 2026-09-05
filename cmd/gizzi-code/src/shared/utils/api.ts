@@ -2,7 +2,7 @@
 import type {
   BetaTool,
   BetaToolUnion,
-} from '@allternit/sdk/providers/allternit/resources/beta/messages/messages.mjs'
+} from '@allternit/gizzi-sdk/providers/allternit/resources/beta/messages/messages.mjs'
 import { createHash } from 'crypto'
 import { SYSTEM_PROMPT_DYNAMIC_BOUNDARY } from '@/constants/prompts.js'
 import { getSystemContext, getUserContext } from '../../context.js'

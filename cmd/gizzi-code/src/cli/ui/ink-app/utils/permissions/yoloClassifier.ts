@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle'
-import type AllternitAI from '@allternit/sdk/providers/allternit'
-import type { BetaToolUnion } from '@allternit/sdk/providers/allternit/resources/beta/messages.js'
+import type AllternitAI from '@allternit/gizzi-sdk/providers/allternit'
+import type { BetaToolUnion } from '@allternit/gizzi-sdk/providers/allternit/resources/beta/messages.js'
 import { mkdir, writeFile } from 'fs/promises'
 import { dirname, join } from 'path'
 import { z } from 'zod/v4'

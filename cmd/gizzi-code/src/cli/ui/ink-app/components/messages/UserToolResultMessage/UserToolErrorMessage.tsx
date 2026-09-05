@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import { feature } from 'bun:bundle';
-import type { ToolResultBlockParam } from '@allternit/sdk/providers/allternit/resources/index.mjs';
+import type { ToolResultBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/index.mjs';
 import * as React from 'react';
 import { BULLET_OPERATOR } from '../../../constants/figures';
 import { Text } from '../../../ink';

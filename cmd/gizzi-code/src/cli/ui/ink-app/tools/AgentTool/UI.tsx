@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
-import type { ToolResultBlockParam, ToolUseBlockParam } from '@allternit/sdk/providers/allternit/resources/index.mjs';
+import type { ToolResultBlockParam, ToolUseBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/index.mjs';
 import * as React from 'react';
 import { ConfigurableShortcutHint } from './../../components/ConfigurableShortcutHint.tsx';
 import { CtrlOToExpand, SubAgentProvider } from './../../components/CtrlOToExpand.tsx';

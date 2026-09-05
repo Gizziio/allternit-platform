@@ -1,5 +1,5 @@
 // @ts-nocheck
-import type { BetaContentBlock } from '@allternit/sdk/providers/allternit/resources/beta/messages/messages.mjs'
+import type { BetaContentBlock } from '@allternit/gizzi-sdk/providers/allternit/resources/beta/messages/messages.mjs'
 import { randomUUID, type UUID } from 'crypto'
 import { getSessionId } from './../../bootstrap/state.ts'
 import {

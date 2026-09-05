@@ -1,5 +1,5 @@
 // @ts-nocheck
-import type { ContentBlockParam } from '@allternit/sdk/providers/allternit/resources/messages.js'
+import type { ContentBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/messages.js'
 import type { Command } from '../commands.js'
 import { getDirectConnectServerUrl } from '../bootstrap/state.js'
 

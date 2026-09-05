@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle'
-import type { ToolResultBlockParam } from '@allternit/sdk/providers/allternit/resources/index.mjs'
+import type { ToolResultBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/index.mjs'
 import type { QuerySource } from '@/constants/querySource.js'
 import type { ToolUseContext } from '../../../runtime/tools/Tool.js'
 import { FILE_EDIT_TOOL_NAME } from '../../../cli/ui/ink-app/tools/FileEditTool/constants.js'

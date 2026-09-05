@@ -1,5 +1,5 @@
 // @ts-nocheck
-import type { ContentBlockParam } from '@allternit/sdk/providers/allternit/resources';
+import type { ContentBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources';
 import { randomUUID } from 'crypto';
 import * as React from 'react';
 import { BashModeProgress } from './../../components/BashModeProgress.tsx';

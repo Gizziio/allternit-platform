@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
-import type { TextBlockParam } from '@allternit/sdk/providers/allternit/resources/index.mjs';
+import type { TextBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/index.mjs';
 import React, { useContext } from 'react';
 import { ERROR_MESSAGE_USER_ABORT } from './../../services/compact/compact.ts';
 import { isRateLimitErrorMessage } from './../../services/rateLimitMessages.ts';

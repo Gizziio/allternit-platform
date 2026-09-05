@@ -7,8 +7,8 @@
  * pulling in the heavy messages.ts graph and its circular tool imports.
  */
 
-import type { BetaContentBlock } from '@allternit/sdk/providers/allternit/resources/beta/messages/messages.mjs'
-import type { BetaUsage as Usage } from '@allternit/sdk/providers/allternit/resources/beta/messages/messages.mjs'
+import type { BetaContentBlock } from '@allternit/gizzi-sdk/providers/allternit/resources/beta/messages/messages.mjs'
+import type { BetaUsage as Usage } from '@allternit/gizzi-sdk/providers/allternit/resources/beta/messages/messages.mjs'
 import { randomUUID } from 'crypto'
 import { NO_CONTENT_MESSAGE } from '../constants/messages.js'
 import type { AssistantMessage, ContentBlock } from '../types/message.js'

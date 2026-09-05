@@ -1,5 +1,5 @@
 // @ts-nocheck
-import AllternitAI, { type ClientOptions } from '@allternit/sdk/providers/allternit'
+import AllternitAI, { type ClientOptions } from '@allternit/gizzi-sdk/providers/allternit'
 import { randomUUID } from 'crypto'
 import {
   checkAndRefreshOAuthTokenIfNeeded,

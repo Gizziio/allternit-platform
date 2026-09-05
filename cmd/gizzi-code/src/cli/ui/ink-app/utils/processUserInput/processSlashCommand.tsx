@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle';
 import { readGizziEnv } from '@/shared/utils/gizziEnv.js';
-import type { ContentBlockParam, TextBlockParam } from '@allternit/sdk/providers/allternit/resources';
+import type { ContentBlockParam, TextBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources';
 import { randomUUID } from 'crypto';
 import { setPromptId } from './../../bootstrap/state.ts';
 import { builtInCommandNames, type Command, type CommandBase, findCommand, getCommand, getCommandName, hasCommand, type PromptCommand } from './../../commands.ts';

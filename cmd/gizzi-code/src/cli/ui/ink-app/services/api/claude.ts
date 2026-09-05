@@ -17,10 +17,10 @@ import type {
   BetaToolUnion,
   BetaUsage,
   BetaMessageParam as MessageParam,
-} from '@allternit/sdk/providers/allternit/resources/beta/messages/messages.mjs'
+} from '@allternit/gizzi-sdk/providers/allternit/resources/beta/messages/messages.mjs'
 import { readGizziEnv } from '@/shared/utils/gizziEnv.js';
-import type { TextBlockParam } from '@allternit/sdk/providers/allternit/resources/index.mjs'
-import type { Stream } from '@allternit/sdk/providers/allternit/streaming.mjs'
+import type { TextBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/index.mjs'
+import type { Stream } from '@allternit/gizzi-sdk/providers/allternit/streaming.mjs'
 import { randomUUID } from 'crypto'
 import {
   getAPIProvider,
@@ -108,12 +108,12 @@ const autoModeStateModule = feature('TRANSCRIPT_CLASSIFIER')
   : null
 
 import { feature } from 'bun:bundle'
-import type { ClientOptions } from '@allternit/sdk/providers/allternit'
+import type { ClientOptions } from '@allternit/gizzi-sdk/providers/allternit'
 import {
   APIConnectionTimeoutError,
   APIError,
   APIUserAbortError,
-} from '@allternit/sdk/providers/allternit/error'
+} from '@allternit/gizzi-sdk/providers/allternit/error'
 import {
   getAfkModeHeaderLatched,
   getCacheEditingHeaderLatched,

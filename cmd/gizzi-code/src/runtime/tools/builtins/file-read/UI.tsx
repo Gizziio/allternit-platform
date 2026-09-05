@@ -1,5 +1,5 @@
 // @ts-nocheck
-import type { ToolResultBlockParam } from '@allternit/sdk/providers/allternit/resources/index.mjs';
+import type { ToolResultBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/index.mjs';
 import * as React from 'react';
 import { extractTag } from '../../../../shared/utils/messages.js';
 import { FallbackToolUseErrorMessage } from '../../../../cli/ui/ink-app/components/FallbackToolUseErrorMessage.js';

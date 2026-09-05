@@ -8,7 +8,7 @@ const sessionTranscriptModule = feature('KAIROS')
   ? (require('../sessionTranscript/sessionTranscript.js') as typeof import('../sessionTranscript/sessionTranscript.js'))
   : null
 
-import { APIUserAbortError } from '@allternit/sdk/providers/allternit'
+import { APIUserAbortError } from '@allternit/gizzi-sdk/providers/allternit'
 import { markPostCompaction } from './../../bootstrap/state.ts'
 import { getInvokedSkillsForAgent } from '../../bootstrap/state.js'
 import type { QuerySource } from '../../constants/querySource.js'

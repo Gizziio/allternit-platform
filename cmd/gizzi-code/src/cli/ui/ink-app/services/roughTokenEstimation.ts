@@ -6,7 +6,7 @@
  * module initialization.
  */
 
-import type { AllternitAI } from '@allternit/sdk/providers/allternit'
+import type { AllternitAI } from '@allternit/gizzi-sdk/providers/allternit'
 import { jsonStringify } from '../utils/slowOperations.js'
 
 export function roughTokenCountEstimation(

@@ -28,22 +28,14 @@ import { errorMessage, isFsInaccessible } from '../errors.js'
 import { formatFileSize } from '../format.js'
 import { expandTilde } from '../permissions/expandTilde.js'
 
+function getLegacyClaudeHomeDir(): string {
+  return (process.env.CLAUDE_CONFIG_DIR ?? join(homedir(), '.claude')).normalize(
+    'NFC',
+  )
+}
+
 const PLUGINS_DIR = 'plugins'
 const COWORK_PLUGINS_DIR = 'cowork_plugins'
-
-/**
- * Gizzi-owned config home. Plugin state lives under here so the CLI no
- * longer writes into the upstream ~/.claude directory. Override with
- * GIZZI_CONFIG_DIR (tests use this; memoized like getGizziConfigHomeDir).
- */
-export const getGizziConfigHomeDir = memoize(
-  (): string => {
-    return (process.env.GIZZI_CONFIG_DIR ?? join(homedir(), '.gizzi')).normalize(
-      'NFC',
-    )
-  },
-  () => process.env.GIZZI_CONFIG_DIR,
-)
 
 /**
  * Get the plugins directory name based on current mode.
@@ -91,7 +83,7 @@ export function getPluginsDirectory(): string {
  * new is written here.
  */
 export function getLegacyPluginsDirectory(): string {
-  return join(getGizziConfigHomeDir(), getPluginsDirectoryName())
+  return join(getLegacyClaudeHomeDir(), getPluginsDirectoryName())
 }
 
 let legacyDeprecationWarned = false

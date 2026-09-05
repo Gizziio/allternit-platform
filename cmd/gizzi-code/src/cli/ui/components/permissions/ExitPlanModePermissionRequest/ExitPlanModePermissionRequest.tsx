@@ -42,7 +42,7 @@ import { PermissionRuleExplanation } from '../PermissionRuleExplanation.js';
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 const autoModeStateModule = feature('TRANSCRIPT_CLASSIFIER') ? require('../../../../../utils/permissions/autoModeState.js') as typeof import('../../../../../utils/permissions/autoModeState.js') : null;
-import type { Base64ImageSource, ImageBlockParam } from '@allternit/sdk/providers/allternit/resources/messages.mjs';
+import type { Base64ImageSource, ImageBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/messages.mjs';
 /* eslint-enable @typescript-eslint/no-require-imports */
 import type { PastedContent } from '../../../../../shared/utils/config.js';
 import type { ImageDimensions } from '../../../../../shared/utils/imageResizer.js';

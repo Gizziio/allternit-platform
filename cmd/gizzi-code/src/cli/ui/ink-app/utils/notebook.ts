@@ -3,7 +3,7 @@ import type {
   ImageBlockParam,
   TextBlockParam,
   ToolResultBlockParam,
-} from '@allternit/sdk/providers/allternit/resources/index.mjs'
+} from '@allternit/gizzi-sdk/providers/allternit/resources/index.mjs'
 import { BASH_TOOL_NAME } from '../tools/BashTool/toolName.js'
 import { formatOutput } from '../tools/BashTool/utils.js'
 import type {

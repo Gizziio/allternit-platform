@@ -9,7 +9,7 @@ import {
   APIError,
   APIConnectionError,
   AuthenticationError,
-} from '@allternit/sdk/providers/allternit'
+} from '@allternit/gizzi-sdk/providers/allternit'
 import { getModelStrings } from './modelStrings.js'
 
 // Cache valid models to avoid repeated API calls

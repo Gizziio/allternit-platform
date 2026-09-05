@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
-import type { ToolResultBlockParam } from '@allternit/sdk/providers/allternit/resources/messages/messages.mjs';
+import type { ToolResultBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/messages/messages.mjs';
 import * as React from 'react';
 import { stripUnderlineAnsi } from './shell/OutputLine.tsx';
 import { extractTag } from './../utils/extractTag.js';

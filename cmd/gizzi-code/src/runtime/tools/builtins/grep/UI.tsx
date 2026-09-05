@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
-import type { ToolResultBlockParam } from '@allternit/sdk/providers/allternit/resources/index.mjs';
+import type { ToolResultBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/index.mjs';
 import React from 'react';
 import { CtrlOToExpand } from '../../../../cli/ui/ink-app/components/CtrlOToExpand.js';
 import { FallbackToolUseErrorMessage } from '../../../../cli/ui/ink-app/components/FallbackToolUseErrorMessage.js';

@@ -33,6 +33,26 @@
       "import": "./dist/providers/allternit/index.js",
       "types": "./dist/providers/allternit/index.d.ts"
     },
+    "./providers/allternit/error": {
+      "import": "./dist/providers/allternit/error.js",
+      "types": "./dist/providers/allternit/error.d.ts"
+    },
+    "./providers/allternit/streaming.mjs": {
+      "import": "./dist/providers/allternit/streaming.js",
+      "types": "./dist/providers/allternit/streaming.d.ts"
+    },
+    "./providers/allternit/resources/index.mjs": {
+      "import": "./dist/providers/allternit/resources/index.js",
+      "types": "./dist/providers/allternit/resources/index.d.ts"
+    },
+    "./providers/allternit/resources/messages.mjs": {
+      "import": "./dist/providers/allternit/resources/messages/index.js",
+      "types": "./dist/providers/allternit/resources/messages/index.d.ts"
+    },
+    "./providers/allternit/resources/beta/messages/messages.mjs": {
+      "import": "./dist/providers/allternit/resources/beta/messages/index.js",
+      "types": "./dist/providers/allternit/resources/beta/messages/index.d.ts"
+    },
     "./providers/openai": {
       "import": "./dist/providers/openai/index.js",
       "types": "./dist/providers/openai/index.d.ts"

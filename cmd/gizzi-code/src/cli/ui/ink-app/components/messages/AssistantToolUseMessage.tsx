@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
-import type { ToolUseBlockParam } from '@allternit/sdk/providers/allternit/resources/index.mjs';
+import type { ToolUseBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/index.mjs';
 import React, { useMemo } from 'react';
 import { useTerminalSize } from './../../hooks/useTerminalSize.ts';
 import type { ThemeName } from './../../utils/theme.ts';

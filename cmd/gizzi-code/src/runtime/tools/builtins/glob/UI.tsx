@@ -1,5 +1,5 @@
 // @ts-nocheck
-import type { ToolResultBlockParam } from '@allternit/sdk/providers/allternit/resources/index.mjs';
+import type { ToolResultBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/index.mjs';
 import React from 'react';
 import { MessageResponse } from 'src/components/MessageResponse.js';
 import { extractTag } from '../../../../shared/utils/messages.js';

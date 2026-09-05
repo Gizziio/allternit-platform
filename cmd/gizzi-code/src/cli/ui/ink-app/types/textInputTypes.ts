@@ -1,5 +1,5 @@
 // @ts-nocheck
-import type { ContentBlockParam } from '@allternit/sdk/providers/allternit/resources/messages.mjs'
+import type { ContentBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/messages.mjs'
 import type { UUID } from 'crypto'
 import type React from 'react'
 import type { PermissionResult } from '../entrypoints/agentSdkTypes.js'

@@ -3,7 +3,7 @@ import type {
   ContentBlockParam,
   ImageBlockParam,
   TextBlockParam,
-} from '@allternit/sdk/providers/allternit/resources/index.mjs'
+} from '@allternit/gizzi-sdk/providers/allternit/resources/index.mjs'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../runtime/services/analytics/growthbook.js'
 import {
   countMessagesTokensWithAPI,

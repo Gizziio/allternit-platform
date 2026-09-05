@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
-import type { TextBlockParam } from '@allternit/sdk/providers/allternit/resources/index.mjs';
+import type { TextBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/index.mjs';
 import * as React from 'react';
 import { BLACK_CIRCLE } from '../../constants/figures';
 import { Box, Text, type TextProps } from '../../ink';

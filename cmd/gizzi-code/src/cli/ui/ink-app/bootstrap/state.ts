@@ -1,5 +1,5 @@
 // @ts-nocheck
-import type { BetaMessageStreamParams } from '@allternit/sdk/providers/allternit/resources/beta/messages/messages.mjs'
+import type { BetaMessageStreamParams } from '@allternit/gizzi-sdk/providers/allternit/resources/beta/messages/messages.mjs'
 import type { Attributes, Meter, MetricOptions } from '@opentelemetry/api'
 import type { logs } from '@opentelemetry/api-logs'
 import type { LoggerProvider } from '@opentelemetry/sdk-logs'

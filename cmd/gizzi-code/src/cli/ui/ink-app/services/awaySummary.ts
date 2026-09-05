@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { APIUserAbortError } from '@allternit/sdk/providers/allternit'
+import { APIUserAbortError } from '@allternit/gizzi-sdk/providers/allternit'
 import { getEmptyToolPermissionContext } from '../Tool.js'
 import type { Message } from '../types/message.js'
 import { logForDebugging } from '../utils/debug.js'

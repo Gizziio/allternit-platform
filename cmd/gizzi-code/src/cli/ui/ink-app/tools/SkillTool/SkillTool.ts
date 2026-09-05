@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle'
-import type { ToolResultBlockParam } from '@allternit/sdk/providers/allternit/resources/index.mjs'
+import type { ToolResultBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/index.mjs'
 import uniqBy from 'lodash-es/uniqBy.js'
 import { dirname } from 'path'
 import { getProjectRoot } from './../../bootstrap/state.ts'
