@@ -10,8 +10,8 @@
       "types": "./dist/index.d.ts"
     },
     "./client": {
-      "import": "./dist/gen/client.js",
-      "types": "./dist/gen/client.d.ts"
+      "import": "./dist/gen/allternit-client.js",
+      "types": "./dist/gen/allternit-client.d.ts"
     },
     "./server": {
       "import": "./dist/index.js",
