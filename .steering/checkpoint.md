@@ -1,12 +1,12 @@
 # Steering checkpoint
 
-Goal: Dogfood agent-sessions in production — pair mail node, turn on the web flag, verify the console can talk to the data plane.
+Goal: Unblock Cloudflare Pages CI for ai.allternit.com — typecheck was failing because office packages exported `dist/` that CI never builds (`pnpm install --ignore-scripts`).
 
 Just did:
-- Mail agent-daemon now points at api.allternit.com (was dead fly.dev); nginx WS upgrade fixed; relay connected.
-- Reassigned live BYO node `contabo-byo-1` to Clerk user `user_3IBvYk8…` (most recent real login).
-- Enabling `NEXT_PUBLIC_ALLTERNIT_AGENT_SESSIONS_API=1` in `.env.production` + Pages build env.
+- Pointed office-pptx-render/engine, office-docx-engine, office-file-parse, office-xlsx-engine package.json exports at `src/` so tsc/vite resolve without a prebuild.
+- Fixed EditingCellState spread in slides-app style-actions.
+- ES2022 lib + bidi-js reference so pptx-render typechecks under the ai project.
 
-Next: commit/push/merge, watch Cloudflare Pages, verify the baked flag and a signed-in session list.
+Next: local `pnpm typecheck` is green; commit/push/merge and watch Pages deploy.
 
-Open questions: if you sign in as a different Clerk user than `user_3IBvYk8…`, you'll still see "pair a device".
+Open questions: none.

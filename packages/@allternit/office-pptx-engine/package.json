@@ -5,25 +5,29 @@
   "private": true,
   "type": "module",
   "description": "pptx parsing (Slide element tree with byte anchors + inheritance resolution), OOXML fragment generation, element-patch save",
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./src/index.ts",
+  "module": "./src/index.ts",
+  "types": "./src/index.ts",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "types": "./src/index.ts",
+      "import": "./src/index.ts",
+      "default": "./src/index.ts"
     },
     "./table-grid": {
-      "import": "./dist/table-grid.js",
-      "types": "./dist/table-grid.d.ts"
+      "types": "./src/table-grid.ts",
+      "import": "./src/table-grid.ts",
+      "default": "./src/table-grid.ts"
     },
     "./background-promote": {
-      "import": "./dist/background-promote.js",
-      "types": "./dist/background-promote.d.ts"
+      "types": "./src/background-promote.ts",
+      "import": "./src/background-promote.ts",
+      "default": "./src/background-promote.ts"
     },
     "./smartart-layout": {
-      "import": "./dist/smartart-layout.js",
-      "types": "./dist/smartart-layout.d.ts"
+      "types": "./src/smartart-layout.ts",
+      "import": "./src/smartart-layout.ts",
+      "default": "./src/smartart-layout.ts"
     }
   },
   "files": [
