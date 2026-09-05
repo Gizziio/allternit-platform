@@ -21,12 +21,20 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-04 19:25 — grok — gizzi-code 2.0.0 npm publish (all 5 platforms)
+
+- **Session ID / Branch:** `main`
+- **Commit:** tag `gizzi-code/v2.0.0`; win32 CI fix `2de4bb281`
+- **How it works:** `@allternit/gizzi-code@2.0.0` is `latest` on npm with platform packages darwin-arm64/x64, linux-arm64/x64, and win32-x64. First tag run published core-4; windows-latest failed on better-sqlite3/VS. Moved the win32 matrix leg to macOS cross-compile (`bun --target=win32-x64`) and workflow_dispatch republished; win32-x64@2.0.0 is live. `@allternit/gizzi-sdk` was not published (legal hold; registry 404).
+- **Outstanding work:** gizzi-sdk legal hold and counsel distribution basis (`docs/legal-attribution.md` §6/§7). Brew/scoop/choco still pin 1.0.2 (no GitHub release workflow). Cross-compiled win32 native modules unverified on a real Windows box.
+- **Summary file:** none
+
 ### 2026-09-04 18:50 — grok — gizzi-code 2.0.0 internal rename + version bump
 
 - **Session ID / Branch:** resumed kimi `session_237dc49a` follow-up on `main`
 - **Commit:** `1d12e14fa` (merged to origin via `cd81ffc8d`)
 - **How it works:** Finished remaining open engineering from the naming purge: renamed internal identifiers/files (`getGizziMds`, `gizziGuideAgent`, `gizziHints`, `getLegacyClaudeHomeDir`, `GizziHint` component). Bumped `@allternit/gizzi-code` and cli-package to **2.0.0**. Counsel questions listed in `docs/legal-attribution.md` §7. **Not done:** npm tag/publish (next), `@allternit/gizzi-sdk` legal hold, counsel distribution basis.
-- **Outstanding work:** Tag `gizzi-code/v2.0.0` and watch `publish-gizzi-code-npm.yml`. Do not publish gizzi-sdk. Brew/scoop/choco hashes still on 1.0.2 until release assets exist.
+- **Outstanding work:** Closed by 2.0.0 npm publish (see entry above). gizzi-sdk hold and counsel basis remain.
 - **Summary file:** none
 
 ### 2026-09-04 18:30 — grok — gizzi-code Anthropic naming purge
@@ -34,7 +42,7 @@ Append newest entries to the top of the `## Entries` section.
 - **Session ID / Branch:** resumed kimi `session_237dc49a` (quota-killed mid-purge) on `main`
 - **Commit:** `d5d3add9d`
 - **How it works:** Hard-purged user-visible Anthropic product naming from `cmd/gizzi-code`. `CLAUDE_CODE_*` env vars are `GIZZI_*` only (no fallback) via `gizziEnv.ts` + codemod. "Claude Code" copy and product/docs/feedback URLs now gizzi/allternit. Added `NOTICE`, scoped `LICENSE`, and `docs/anthropic-allowlist.md` for the functional floor (API hosts, OAuth, model names, `CLAUDE.md` read-compat). Typecheck 0; smoke 103/103.
-- **Outstanding work:** Breaking env rename wants **gizzi-code 2.0.0** republish (not done). `gizzi-sdk` remains on legal hold (distribution rights of derived code, not naming). Counsel still owes the distribution basis (`docs/legal-attribution.md` §6). Rehost of docs-map / native-installer bucket is a separate infra follow-up. Internal identifiers like `getClaudeMds` / `claudeCodeGuideAgent.ts` filename not renamed.
+- **Outstanding work:** 2.0.0 publish and internal rename landed (see later entries). Remaining: gizzi-sdk legal hold, counsel distribution basis, brew/scoop/choco 1.0.2 pins.
 - **Summary file:** none
 
 ### 2026-09-03 21:50 — kimi — P0 Production-Readiness Gap Analysis Execution
