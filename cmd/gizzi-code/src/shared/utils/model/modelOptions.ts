@@ -465,18 +465,28 @@ function getDiscoveredBrainOptions(): ModelOption[] {
     const { Discovery } = require('../../../runtime/providers/discovery/index.js') as typeof import('../../../runtime/providers/discovery/index.js')
     Discovery.prefetch()
     const options: ModelOption[] = []
-    for (const dp of Discovery.last()) {
-      const source =
+    const providers = [...Discovery.last()].sort((a, b) => {
+      const rank = (s: string) =>
+        s === 'platform' ? 0 : s === 'subprocess' ? 1 : s === 'local' ? 2 : 3
+      const d = rank(a.source) - rank(b.source)
+      return d !== 0 ? d : a.name.localeCompare(b.name)
+    })
+    for (const dp of providers) {
+      const group =
         dp.source === 'platform'
           ? 'Allternit Cloud'
           : dp.source === 'subprocess'
             ? 'installed CLI'
-            : dp.source
+            : dp.source === 'local'
+              ? 'local'
+              : dp.source
+      const tag =
+        dp.source === 'platform' ? 'Cloud' : dp.source === 'subprocess' ? 'CLI' : group
       for (const m of dp.models) {
         options.push({
           value: `${dp.id}/${m.id}`,
-          label: m.name,
-          description: `${dp.name} · ${source}`,
+          label: `${tag} · ${m.name}`,
+          description: `${dp.name} · ${group} · ${dp.id}/${m.id}`,
         })
       }
     }

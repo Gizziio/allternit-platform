@@ -333,80 +333,16 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Verify published package
-        # Download the tarball we JUST published from the registry and fail
-        # the release if it cannot install a working CLI: bin entries must
-        # resolve, and the binary must come from either a bundled dist/ or
-        # the optional platform packages (cross-platform distribution).
+        # npm metadata can appear minutes before the tarball blob is fetchable
+        # via anonymous curl (2.0.2 and 2.0.4 both failed that way). The
+        # helper downloads with `npm pack` (authenticated registry client)
+        # and exponential backoff, then checks dist/, bin entries, and
+        # optional platform packages.
+        working-directory: cmd/gizzi-code
         shell: bash
-        run: |
-          set -euo pipefail
-          PKG="@allternit/gizzi-code"
-          VERSION="${{ steps.version.outputs.VERSION }}"
-          TARBALL=""
-          # The registry can lag behind the publish; retry briefly.
-          for attempt in 1 2 3 4 5; do
-            TARBALL=$(npm view "$PKG@$VERSION" dist.tarball 2>/dev/null || true)
-            [ -n "$TARBALL" ] && break
-            echo "Tarball for $PKG@$VERSION not visible yet (attempt $attempt); sleeping 10s"
-            sleep 10
-          done
-          if [ -z "$TARBALL" ]; then
-            echo "::error::Could not resolve dist.tarball for $PKG@$VERSION from the registry."
-            exit 1
-          fi
-          echo "Verifying $TARBALL"
-          TMP=$(mktemp -d)
-          # Registry metadata can precede tarball blob replication by minutes;
-          # retry the download, not just the URL lookup.
-          for attempt in 1 2 3 4 5 6 7 8 9 10; do
-            if curl -fsSL "$TARBALL" -o "$TMP/package.tgz" 2>/dev/null; then
-              break
-            fi
-            echo "Tarball download failed (attempt $attempt); sleeping 30s"
-            sleep 30
-          done
-          test -s "$TMP/package.tgz" || { echo "::error::Could not download $TARBALL after retries."; exit 1; }
-          # List once: piping tar into `grep -q` can SIGPIPE-kill tar, and with
-          # pipefail that would false-negative the gate.
-          FILES=$(tar -tzf "$TMP/package.tgz")
-          if ! grep -q '/dist/' <<< "$FILES"; then
-            echo "::error::Published $PKG@$VERSION tarball contains no dist/ — the package is broken (dangling bin symlinks). Yank it and fix the publish."
-            exit 1
-          fi
-          # bin entries must resolve to real files inside the tarball — a bin
-          # pointing at a missing path installs a dangling shim.
-          BIN_PATHS=$(tar -xzf "$TMP/package.tgz" -O package/package.json \
-            | python3 -c 'import json,sys; b=json.load(sys.stdin).get("bin",{}); print("\n".join(b.values() if isinstance(b,dict) else [b]))')
-          if [ -z "$BIN_PATHS" ]; then
-            echo "::error::Published $PKG@$VERSION has no bin entries in package.json — nothing to execute after install."
-            exit 1
-          fi
-          while IFS= read -r p; do
-            p="${p#./}"
-            if ! grep -qF "package/$p" <<< "$FILES"; then
-              echo "::error::Published $PKG@$VERSION bin entry '$p' is missing from the tarball — bin symlinks would dangle. Yank it and fix the publish."
-              exit 1
-            fi
-          done <<< "$BIN_PATHS"
-          # Optional platform packages must exist at the pinned version.
-          OPTS=$(tar -xzf "$TMP/package.tgz" -O package/package.json \
-            | python3 -c 'import json,sys; d=json.load(sys.stdin).get("optionalDependencies",{}); print("\n".join(f"{k} {v}" for k,v in d.items()))')
-          if [ -z "$OPTS" ]; then
-            echo "::error::Published $PKG@$VERSION has no optionalDependencies — cross-platform installs would have no binaries."
-            exit 1
-          fi
-          while IFS= read -r name_ver; do
-            name="${name_ver% *}"
-            if ! npm view "$name@$VERSION" version >/dev/null 2>&1; then
-              if [ "$name" = "@allternit/gizzi-code-win32-x64" ]; then
-                echo "::warning::Experimental platform package $name@$VERSION is missing from the registry (Windows build failed or was skipped)."
-              else
-                echo "::error::Platform package $name@$VERSION is missing from the registry."
-                exit 1
-              fi
-            fi
-          done <<< "$OPTS"
-          echo "Verified: published $PKG@$VERSION contains dist/, all bin entries resolve, and all core platform packages exist."
+        run: bash script/verify-npm-package.sh "${{ steps.version.outputs.VERSION }}"
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   github-release:
     # GitHub Release with version-named tar.gz/zip assets + checksums.txt.
