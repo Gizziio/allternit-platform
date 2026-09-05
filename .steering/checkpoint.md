@@ -1,12 +1,11 @@
 # Steering checkpoint
 
-Goal: Unblock Cloudflare Pages CI for ai.allternit.com — typecheck was failing because office packages exported `dist/` that CI never builds (`pnpm install --ignore-scripts`).
+Goal: Merge office+beta flags (PR #94), then P2 fleet, then chores.
 
 Just did:
-- Pointed office-pptx-render/engine, office-docx-engine, office-file-parse, office-xlsx-engine package.json exports at `src/` so tsc/vite resolve without a prebuild.
-- Fixed EditingCellState spread in slides-app style-actions.
-- ES2022 lib + bidi-js reference so pptx-render typechecks under the ai project.
+- Dogfood agent-sessions end-to-end on the paired mail node (list 200, create 201 ses_f906ca6a1ffeuNrD4WSjpYnTE6, get 200). Root cause was gizzi JWKS defaulting to clerk.platform.allternit.com; set GIZZI_CLERK_JWKS_URL to clerk.allternit.com.
+- Typography CI: drop font-family from 404.html and desktop-cloud-admin.html so validate-typography passes.
 
-Next: local `pnpm typecheck` is green; commit/push/merge and watch Pages deploy.
+Next: push/merge PR #94; watch Pages + cloud-api deploys; P2 NODE_RELEASE_URL tarball + create instance; 8013 newer binary; Tailscale tag:ci ACL; secret rotation.
 
-Open questions: none.
+Open questions: none for flags. P2 still needs a published linux-x86_64 allternit-api tarball and the allternit-node Incus image.
