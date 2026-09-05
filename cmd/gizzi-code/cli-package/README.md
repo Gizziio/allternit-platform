@@ -13,7 +13,8 @@ curl -fsSL https://install.gizziio.com/install | bash
 ### Homebrew (macOS)
 
 ```bash
-brew install gizziio/gizzi/gizzi-code
+brew tap Gizziio/tap
+brew install gizzi-code
 ```
 
 (Formula: https://github.com/Gizziio/allternit-platform/blob/main/cmd/gizzi-code/packaging/homebrew/gizzi-code.rb)
@@ -31,7 +32,8 @@ npm install -g @allternit/gizzi-code
 winget install Allternit.GizziCode
 
 # Using scoop
-scoop install https://raw.githubusercontent.com/Gizziio/allternit-platform/main/cmd/gizzi-code/packaging/scoop/gizzi-code.json
+scoop bucket add gizziio https://github.com/Gizziio/scoop-bucket
+scoop install gizzi-code
 ```
 
 ## Usage

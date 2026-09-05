@@ -8,6 +8,7 @@ test/cli/thread-worktree.test.ts
 test/cli/tui/transcript.test.ts
 test/config/auth-profiles.test.ts
 test/config/credential-store.test.ts
+test/config/windows-dpapi-backend.test.ts
 test/config/markdown.test.ts
 test/config/permission-profiles.test.ts
 test/continuity/dag-tasks.test.ts

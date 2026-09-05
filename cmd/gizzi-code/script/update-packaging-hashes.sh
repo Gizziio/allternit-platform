@@ -69,6 +69,60 @@ replace() {
   fi
 }
 
+# Placeholders are only present on a fresh template. After the first fill,
+# rewrite the live hash fields so a version bump cannot ship stale  SHA256s.
+python3 - "$hash_file" "$ROOT" <<'PY'
+import pathlib, re, sys
+hashes = {}
+for line in pathlib.Path(sys.argv[1]).read_text().splitlines():
+    if not line.strip():
+        continue
+    target, digest = line.split()
+    hashes[target] = digest
+root = pathlib.Path(sys.argv[2])
+
+def sub_sha256_after_url(path: pathlib.Path, needle: str, digest: str) -> None:
+    if not path.exists():
+        return
+    text = path.read_text()
+    # Replace the sha256 on the line immediately after a url containing needle.
+    pattern = re.compile(
+        rf'(url\s+[^\n]*{re.escape(needle)}[^\n]*\n\s*sha256\s+")[0-9a-fA-F]{{64}}(")',
+        re.M,
+    )
+    path.write_text(pattern.sub(rf'\g<1>{digest}\2', text, count=1))
+
+for path in (
+    root / "packaging/homebrew/gizzi-code.rb",
+    root / "cli-package/install/gizzi.rb",
+):
+    for target, digest in hashes.items():
+        if target.startswith("windows"):
+            continue
+        sub_sha256_after_url(path, target, digest)
+
+scoop = root / "packaging/scoop/gizzi-code.json"
+if scoop.exists() and "windows-x64" in hashes:
+    scoop.write_text(re.sub(r'("hash"\s*:\s*")[0-9a-fA-F]{64}(")', rf'\g<1>{hashes["windows-x64"]}\2', scoop.read_text(), count=1))
+
+choco = root / "packaging/chocolatey/tools/chocolateyinstall.ps1"
+if choco.exists() and "windows-x64" in hashes:
+    choco.write_text(re.sub(r"(\$checksum64\s*=\s*')[0-9a-fA-F]{64}(')", rf'\g<1>{hashes["windows-x64"]}\2', choco.read_text(), count=1))
+
+winget = root / "cli-package/install/winget/Allternit.GizziCode.yaml"
+if winget.exists() and "windows-x64" in hashes:
+    winget.write_text(re.sub(r'(InstallerSha256:\s*)[0-9a-fA-F]{64}', rf'\g<1>{hashes["windows-x64"].upper()}', winget.read_text(), count=1))
+
+arch = root / "packaging/arch/PKGBUILD"
+if arch.exists():
+    text = arch.read_text()
+    if "linux-x64" in hashes:
+        text = re.sub(r"(sha256sums_x86_64=\(')[0-9a-fA-F]{64}('\))", rf'\g<1>{hashes["linux-x64"]}\2', text, count=1)
+    if "linux-arm64" in hashes:
+        text = re.sub(r"(sha256sums_aarch64=\(')[0-9a-fA-F]{64}('\))", rf'\g<1>{hashes["linux-arm64"]}\2', text, count=1)
+    arch.write_text(text)
+PY
+
 replace packaging/homebrew/gizzi-code.rb DARWIN_ARM64 darwin-arm64
 replace packaging/homebrew/gizzi-code.rb DARWIN_X64 darwin-x64
 replace packaging/homebrew/gizzi-code.rb LINUX_ARM64 linux-arm64

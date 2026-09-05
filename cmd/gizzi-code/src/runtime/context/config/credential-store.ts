@@ -2,13 +2,14 @@ import fs from "fs/promises"
 import path from "path"
 import { Log } from "@/shared/util/log"
 import { createMacOSKeychainBackend } from "./keychain-backend"
+import { createWindowsDpapiBackend } from "./windows-dpapi-backend"
 
 /**
  * Where CLI credentials (API keys, tokens) should be persisted.
  *
  * - `"keyring"` — write secrets to the OS keyring (macOS Keychain via the
- *   `security` CLI; Linux libsecret and Windows Credential Manager backends
- *   are not implemented yet, so those platforms throw in `"keyring"` mode).
+ *   `security` CLI; Windows DPAPI CurrentUser). Linux libsecret is not
+ *   implemented yet, so Linux throws in `"keyring"` mode.
  * - `"file"`    — write secrets to a marked, 0o600 "insecure fallback" file
  *   (see {@link FileCredentialWriter}). Used ONLY when no OS secure store is
  *   available. Never writes secrets inline into config.toml.
@@ -44,7 +45,7 @@ function fallbackRemediation(): string {
     case "linux":
       return "Install libsecret / gnome-keyring (e.g. `apt install libsecret-1-0 gnome-keyring`) and restart gizzi to store credentials in the OS keyring instead."
     case "win32":
-      return "Windows Credential Manager support is not implemented yet; this plaintext fallback is a deprecated stopgap."
+      return "Windows DPAPI (CurrentUser) is the default store; this plaintext fallback is used only when DPAPI is unavailable."
     default:
       return "Credentials will move to the OS keyring once a backend is available for this platform."
   }
@@ -341,14 +342,16 @@ export function createCredentialWriter(
 }
 
 /**
- * Platform-default keyring backend: macOS Keychain on darwin, throwing
- * scaffold elsewhere (so `"auto"` degrades to the marked plaintext fallback
- * with a warning on Linux/Windows until libsecret / Credential Manager
- * backends land).
+ * Platform-default keyring backend: macOS Keychain on darwin, Windows DPAPI
+ * on win32, throwing scaffold elsewhere (so `"auto"` degrades to the marked
+ * plaintext fallback with a warning on Linux until a libsecret backend lands).
  */
 export function defaultKeyringBackend(): KeyringBackend {
   if (process.platform === "darwin") {
     return createMacOSKeychainBackend()
+  }
+  if (process.platform === "win32") {
+    return createWindowsDpapiBackend()
   }
   return notImplementedKeyringBackend()
 }

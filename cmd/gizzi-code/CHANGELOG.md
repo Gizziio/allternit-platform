@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Windows API-key credential store uses DPAPI (CurrentUser), matching MCP
+  OAuth secure storage. Plaintext `credentials.json` remains last-resort.
+
 ## 2.0.2 — 2026-09-05
 
 Windows is a supported platform. Credentials use DPAPI (CurrentUser) instead

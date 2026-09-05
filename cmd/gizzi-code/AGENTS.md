@@ -437,7 +437,7 @@ unmarked plaintext. The single write path is the credential store:
 | `src/runtime/context/config/credential-store.ts` | `CredentialWriter` factories. `"auto"` (default) prefers the OS keyring; `"file"` is the marked insecure fallback. |
 | `src/runtime/context/config/keychain-backend.ts` | macOS Keychain `KeyringBackend` (service suffix `-profiles`, hex-encoded JSON blobs per service). |
 | `src/runtime/context/config/auth-profiles.ts` | `config.toml` `[auth]` profiles. `api_key` is NEVER written inline; `migrateInlineApiKeys` moves legacy inline keys into the store on read (chmod 0o600 + warn when impossible). |
-| `src/shared/utils/secureStorage/` | MCP OAuth / plugin secrets. macOS → Keychain; Linux/Windows → hardened plaintext fallback. |
+| `src/shared/utils/secureStorage/` | MCP OAuth / plugin secrets. macOS → Keychain; Windows → DPAPI CurrentUser; Linux → hardened plaintext fallback. |
 
 Fallback rules (no OS secure store): single `~/.gizzi/credentials.json` with an
 `"insecureFallback": true` marker, 0o600 file inside a 0o700 directory,
@@ -454,6 +454,7 @@ written by `Log` (`src/shared/util/log.ts`) and `logForDebugging`
 Tests: `test/config/credential-store.test.ts`, `test/config/auth-profiles.test.ts`,
 `test/util/redact.test.ts`.
 
-Known follow-ups: Linux libsecret and Windows Credential Manager backends; the
-legacy upstream `saveApiKey`/`primaryApiKey` path in `src/shared/utils/auth.ts`
-still persists a 0o600 JSON config key.
+Known follow-ups: Linux libsecret backend; the legacy upstream
+`saveApiKey`/`primaryApiKey` path in `src/shared/utils/auth.ts` still persists
+a 0o600 JSON config key. Windows API keys use DPAPI via
+`src/runtime/context/config/windows-dpapi-backend.ts`.
