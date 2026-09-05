@@ -8,8 +8,8 @@ export default () =>
     type: 'local-jsx',
     name: 'login',
     description: hasAllternitApiKeyAuth()
-      ? 'Switch Anthropic accounts'
-      : 'Sign in with your Anthropic account',
+      ? 'Switch Allternit accounts'
+      : 'Sign in with your Allternit account',
     isEnabled: () => !isEnvTruthy(process.env.DISABLE_LOGIN_COMMAND),
     load: () => import('./login.js'),
   }) satisfies Command

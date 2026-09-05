@@ -174,6 +174,13 @@ function ThinkbackInstaller({
         // Check if plugin is already installed first
         const pluginAlreadyInstalled = isPluginInstalled(pluginId);
         if (!marketplaceInstalled) {
+          // Upstream Anthropic marketplace is not Gizzi chrome. Only fetch it
+          // when an operator explicitly opts in.
+          if (process.env.GIZZI_ENABLE_UPSTREAM_MARKETPLACE !== '1') {
+            throw new Error(
+              'Thinkback is not available yet. A Gizzi-owned plugin marketplace is coming soon.',
+            )
+          }
           // Install the marketplace
           setState({
             phase: 'installing-marketplace'

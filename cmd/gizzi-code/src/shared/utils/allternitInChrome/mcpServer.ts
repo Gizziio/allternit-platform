@@ -110,11 +110,11 @@ export function createChromeContext(
     clientTypeId: 'gizzi',
     onAuthenticationError: () => {
       logger.warn(
-        'Authentication error occurred. Please ensure you are logged into the Allternit browser extension with the same claude.ai account as Gizzi.',
+        'Authentication error occurred. Please ensure you are logged into the Allternit browser extension with the same Allternit account as Gizzi.',
       )
     },
     onToolCallDisconnected: () => {
-      return `Browser extension is not connected. Please ensure the Allternit browser extension is installed and running (${EXTENSION_DOWNLOAD_URL}), and that you are logged into claude.ai with the same account as Gizzi. If this is your first time connecting to Chrome, you may need to restart Chrome for the installation to take effect. If you continue to experience issues, please report a bug: ${BUG_REPORT_URL}`
+      return `Browser extension is not connected. Please ensure the Allternit browser extension is installed and running (${EXTENSION_DOWNLOAD_URL}), and that you are logged into Allternit with the same account as Gizzi. If this is your first time connecting to Chrome, you may need to restart Chrome for the installation to take effect. If you continue to experience issues, please report a bug: ${BUG_REPORT_URL}`
     },
     onExtensionPaired: (deviceId: string, name: string) => {
       saveGlobalConfig(config => {

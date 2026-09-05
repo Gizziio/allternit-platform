@@ -3,8 +3,18 @@ import memoize from 'lodash-es/memoize.js'
 import { homedir } from 'os'
 import { join } from 'path'
 
-// Memoized: 150+ callers, many on hot paths. Keyed off CLAUDE_CONFIG_DIR so
+// Memoized: 150+ callers, many on hot paths. Keyed off GIZZI_CONFIG_DIR so
 // tests that change the env var get a fresh value without explicit cache.clear.
+export const getGizziConfigHomeDir = memoize(
+  (): string => {
+    return (
+      process.env.GIZZI_CONFIG_DIR ?? join(homedir(), '.gizzi')
+    ).normalize('NFC')
+  },
+  () => process.env.GIZZI_CONFIG_DIR,
+)
+
+// Read-only legacy home used only as a migration source from Claude Code.
 export const getLegacyClaudeHomeDir = memoize(
   (): string => {
     return (
@@ -181,6 +191,7 @@ export function getVertexRegionForModel(
 
 // Rebuilt default export (merge-rot repair): real named exports only.
 export default {
+  getGizziConfigHomeDir,
   getLegacyClaudeHomeDir,
   getTeamsDir,
   hasNodeOption,

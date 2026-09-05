@@ -202,8 +202,11 @@ export namespace Server {
               )
                 return input
 
-              // *.gizzi.io (https only, adjust if needed)
-              if (/^https:\/\/([a-z0-9-]+\.)*gizzi\.dev$/.test(input)) {
+              // First-party HTTPS origins only
+              if (/^https:\/\/([a-z0-9-]+\.)*allternit\.com$/.test(input)) {
+                return input
+              }
+              if (/^https:\/\/([a-z0-9-]+\.)*gizziio\.com$/.test(input)) {
                 return input
               }
               if (_corsWhitelist.includes(input)) {
@@ -518,23 +521,23 @@ export namespace Server {
 
           if (!cloudProxyEnabled) {
             log.warn(
-              `No local route for ${c.req.method} ${c.req.path}; cloud proxy is disabled. Set GIZZI_ENABLE_CLOUD_PROXY=true to forward unknown routes to app.gizzi.io.`
+              `No local route for ${c.req.method} ${c.req.path}; cloud proxy is disabled. Set GIZZI_ENABLE_CLOUD_PROXY=true to forward unknown routes to api.allternit.com.`
             )
             return c.json(
               {
                 error: "not_found",
-                message: `No local handler for ${c.req.method} ${c.req.path}. Set GIZZI_ENABLE_CLOUD_PROXY=true to forward unknown routes to app.gizzi.io.`,
+                message: `No local handler for ${c.req.method} ${c.req.path}. Set GIZZI_ENABLE_CLOUD_PROXY=true to forward unknown routes to api.allternit.com.`,
               },
               404
             )
           }
 
           const path = c.req.path
-          const response = await proxy(`https://app.gizzi.io${path}`, {
+          const response = await proxy(`https://api.allternit.com${path}`, {
             ...c.req,
             headers: {
               ...c.req.raw.headers,
-              host: "app.gizzi.io",
+              host: "api.allternit.com",
             },
           })
           response.headers.set(

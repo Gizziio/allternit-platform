@@ -36,23 +36,18 @@ jobs:
         with:
           fetch-depth: 1
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
       - name: Run Gizzi Code
         id: gizzi
-        uses: anthropics/claude-code-action@v1
-        with:
-          anthropic_api_key: \${{ secrets.ANTHROPIC_API_KEY }}
-
-          # This is an optional setting that allows Gizzi to read CI results on PRs
-          additional_permissions: |
-            actions: read
-
-          # Optional: Give a custom prompt to Gizzi. If this is not specified, Gizzi will perform the instructions specified in the comment that tagged it.
-          # prompt: 'Update the pull request description to include a summary of changes.'
-
-          # Optional: Add claude_args to customize behavior and configuration
-          # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
-          # or https://docs.gizziio.com/cli-reference for available options
-          # claude_args: '--allowed-tools Bash(gh pr:*)'
+        env:
+          ALLTERNIT_API_KEY: \${{ secrets.ALLTERNIT_API_KEY }}
+          GH_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+        run: |
+          npm install -g @allternit/gizzi-code
+          BODY="\${{ github.event.comment.body || github.event.review.body || github.event.issue.body }}"
+          gizzi exec "$BODY"
 
 `
 
@@ -94,9 +89,9 @@ Once the workflow is triggered, Gizzi will analyze the comment and surrounding c
 allowed_tools: Bash(npm install),Bash(npm run build),Bash(npm run lint),Bash(npm run test)
 \`\`\`
 
-There's more information in the [upstream GitHub Action](https://github.com/anthropics/claude-code-action).
+Store your Allternit API key as the \`ALLTERNIT_API_KEY\` repository secret.
 
-After merging this PR, let's try mentioning @gizzi in a comment on any PR to get started!`
+After merging this PR, mention @gizzi in a comment on any PR to get started!`
 
 export const CODE_REVIEW_PLUGIN_WORKFLOW_CONTENT = `name: Gizzi Code Review
 
@@ -131,15 +126,16 @@ jobs:
         with:
           fetch-depth: 1
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
       - name: Run Gizzi Code Review
         id: gizzi-review
-        uses: anthropics/claude-code-action@v1
-        with:
-          anthropic_api_key: \${{ secrets.ANTHROPIC_API_KEY }}
-          plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
-          plugins: 'code-review@claude-code-plugins'
-          prompt: '/code-review:code-review \${{ github.repository }}/pull/\${{ github.event.pull_request.number }}'
-          # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
-          # or https://docs.gizziio.com/cli-reference for available options
+        env:
+          ALLTERNIT_API_KEY: \${{ secrets.ALLTERNIT_API_KEY }}
+          GH_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+        run: |
+          npm install -g @allternit/gizzi-code
+          gh pr diff \${{ github.event.pull_request.number }} | gizzi exec "Review this pull request for bugs, security issues, and style violations. Post a concise review."
 
 `

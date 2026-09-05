@@ -2425,7 +2425,7 @@ export async function refreshMarketplace(
             `(${installLocation}) — expected a path inside ${cacheDir}. ` +
             `This can happen after cross-platform path writes or manual edits ` +
             `to known_marketplaces.json. ` +
-            `Run: claude plugin marketplace remove "${name}" and re-add it.`,
+            `Run: gizzi plugin marketplace remove "${name}" and re-add it.`,
         )
       }
     }
@@ -2538,14 +2538,12 @@ export async function refreshMarketplace(
             ? source.repo
             : redactUrlCredentials(source.url)
         const reason =
-          name === 'claude-code-plugins'
-            ? `We've deprecated "claude-code-plugins" in favor of "claude-plugins-official".`
-            : `This marketplace may have been deprecated or moved to a new location.`
+          `This marketplace may have been deprecated or moved to a new location.`
         throw new Error(
           `The marketplace.json file is no longer present in this repository.\n\n` +
             `${reason}\n` +
             `Source: ${sourceDisplay}\n\n` +
-            `You can remove this marketplace with: claude plugin marketplace remove "${name}"`,
+            `You can remove this marketplace with: gizzi plugin marketplace remove "${name}"`,
         )
       }
     } else if (source.source === 'url') {
