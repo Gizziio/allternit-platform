@@ -105,7 +105,9 @@ jobs:
             node_os: linux
             node_cpu: arm64
           - target: win32-x64
-            os: windows-latest
+            # bun --target=win32-x64 from macOS: windows-latest cannot
+            # node-gyp rebuild better-sqlite3 (no VS C++ workload).
+            os: macos-latest
             node_os: win32
             node_cpu: x64
             experimental: true
@@ -154,7 +156,12 @@ jobs:
         run: |
           BIN="dist/gizzi-code-${{ matrix.target }}"
           [ "${{ matrix.node_os }}" = "win32" ] && BIN="${BIN}.exe"
-          if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "win32" ]]; then
+          if [ "${{ matrix.node_os }}" = "win32" ] && [[ "$OSTYPE" != "msys" && "$OSTYPE" != "win32" ]]; then
+            # Cross-compiled on macOS: cannot exec a PE here. Confirm it is a
+            # Windows x64 image, then skip --version.
+            file "$BIN" | grep -F 'PE32+ executable' \
+              || echo "::warning::win32 binary is not a PE32+ x86-64 image"
+          elif [[ "$OSTYPE" == "msys" || "$OSTYPE" == "win32" ]]; then
             "./$BIN" --version || echo "::warning::windows binary smoke test failed"
           else
             chmod +x "$BIN"
