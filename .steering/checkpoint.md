@@ -1,13 +1,12 @@
 # Steering checkpoint
 
-Goal: gizzi-code 2.0.0 — finish Anthropic naming purge and publish the CLI (not gizzi-sdk).
+Goal: Dogfood agent-sessions in production — pair mail node, turn on the web flag, verify the console can talk to the data plane.
 
 Just did:
-- Hard-purged `CLAUDE_CODE_*` → `GIZZI_*` (zero fallback) and user-visible "Claude Code" copy.
-- Renamed remaining internal identifiers/files (`getGizziMds`, `gizziGuideAgent`, `gizziHints`, `getLegacyClaudeHomeDir`).
-- Bumped `@allternit/gizzi-code` to 2.0.0. NOTICE + scoped LICENSE + anthropic-allowlist + counsel questions (§7).
-- Typecheck 0; smoke 103/103.
+- Mail agent-daemon now points at api.allternit.com (was dead fly.dev); nginx WS upgrade fixed; relay connected.
+- Reassigned live BYO node `contabo-byo-1` to Clerk user `user_3IBvYk8…` (most recent real login).
+- Enabling `NEXT_PUBLIC_ALLTERNIT_AGENT_SESSIONS_API=1` in `.env.production` + Pages build env.
 
-Next: merge origin/main, push, tag `gizzi-code/v2.0.0`, watch publish-gizzi-code-npm.yml. Do **not** publish gizzi-sdk (legal hold).
+Next: commit/push/merge, watch Cloudflare Pages, verify the baked flag and a signed-in session list.
 
-Open questions: counsel still owes distribution basis (`docs/legal-attribution.md` §6/§7). Parallel infra on origin/main (Tailscale/mail/8013) is separate.
+Open questions: if you sign in as a different Clerk user than `user_3IBvYk8…`, you'll still see "pair a device".

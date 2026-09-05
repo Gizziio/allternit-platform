@@ -71,11 +71,11 @@
 
 | | |
 |---|---|
+| **Status** | Agent-sessions ON as of session/agent-sessions. Office/beta/rest still fail-closed. |
 | **What** | Turn on the namespaces now served by the control plane |
-| **Where** | `surfaces/ai.allternit.com/.env.production` |
-| **How** | Set to `1`, one namespace at a time, in this order: `NEXT_PUBLIC_ALLTERNIT_AGENT_SESSIONS_API` → `NEXT_PUBLIC_ALLTERNIT_OFFICE_API` → `NEXT_PUBLIC_ALLTERNIT_BETA_API` → then the rest (`RAILS_API`, `RUNTIME_API`, `TOOLS_API`, `PERMISSIONS_API`, `QUESTIONS_API`, `MODEL_LAB_API`). Push → Pages deploys |
-| **Verify** | Each flag: the widget works for a Clerk-signed-in user (428 "pair a device" message when the user has no registered node is the expected state, not a bug) |
-| **Note** | Users without a paired/provisioned node get the deliberate "pair a device" state — that is the designed behavior until the P2 per-sub provisioning lane exists |
+| **Where** | `surfaces/ai.allternit.com/.env.production` + Pages build env |
+| **How** | `NEXT_PUBLIC_ALLTERNIT_AGENT_SESSIONS_API=1` is live. Remaining, one at a time: `OFFICE_API` → `BETA_API` → then `RAILS_API`, `RUNTIME_API`, `TOOLS_API`, `PERMISSIONS_API`, `QUESTIONS_API`, `MODEL_LAB_API`. |
+| **Verify** | Signed-in user on the paired account (`user_3IBvYk8…`, mail node `contabo-byo-1`) can list/create agent sessions. Other accounts get 428 "pair a device". |
 
 ## 8. Deferred (no action needed now)
 
