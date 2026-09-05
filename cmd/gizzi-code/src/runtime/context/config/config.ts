@@ -1282,6 +1282,12 @@ export namespace Config {
         .optional()
         .describe("When set, ONLY these providers will be enabled. All other providers will be ignored"),
       model: ModelId.describe("Model to use in the format of provider/model, eg anthropic/claude-2").optional(),
+      model_auto: z
+        .boolean()
+        .optional()
+        .describe(
+          "When true (default), gizzi picks the brain from a paid Allternit Cloud subscription or an installed CLI. Set false to pin a /model choice.",
+        ),
       auth: z
         .object({
           active_profile: z.string().optional(),
@@ -1834,7 +1840,7 @@ export namespace Config {
     })
   }
 
-  export async function updateGlobal(config: Info) {
+  export async function updateGlobal(config: Info, opts?: { reload?: boolean }) {
     const filepath = globalConfigFile()
     const before = await Filesystem.readText(filepath).catch((err: any) => {
       if (err.code === "ENOENT") return "{}"
@@ -1856,6 +1862,8 @@ export namespace Config {
     })()
 
     global.reset()
+
+    if (opts?.reload === false) return next
 
     void Instance.disposeAll()
       .catch(() => undefined)

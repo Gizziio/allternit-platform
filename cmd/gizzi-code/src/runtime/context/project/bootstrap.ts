@@ -14,9 +14,16 @@ import { Snapshot } from "@/runtime/session/snapshot"
 import { Truncate } from "@/runtime/tools/builtins/truncation"
 import { Sidecar } from "@/runtime/sidecar"
 import { initRemoteControlPush } from "@/runtime/integrations/remote-control-push"
+import { ProcessRegistry } from "@/runtime/process-registry"
+import { registerCleanup } from "@/shared/utils/cleanupRegistry"
 
 export async function InstanceBootstrap() {
   Log.Default.info("bootstrapping", { directory: Instance.directory })
+  ProcessRegistry.install()
+  registerCleanup(async () => {
+    ProcessRegistry.killAll()
+    await Sidecar.stop()
+  })
   await Plugin.init()
   ShareNext.init()
   Format.init()
@@ -41,8 +48,14 @@ export async function InstanceBootstrap() {
   })
 
   // Cloud catalog + installed CLI brains — default picker sources.
+  // Paid Plus/Super/Ultra auto-provisions Allternit Cloud as the default brain;
+  // unpaid falls through to the first installed CLI.
   void import("@/runtime/providers/discovery")
-    .then(({ Discovery }) => Discovery.run())
+    .then(async ({ Discovery }) => {
+      const providers = await Discovery.run()
+      const { applyDefaultBrain } = await import("@/runtime/providers/default-brain")
+      await applyDefaultBrain(providers)
+    })
     .catch((e) => {
       Log.Default.warn("provider discovery failed", { error: e instanceof Error ? e.message : String(e) })
     })

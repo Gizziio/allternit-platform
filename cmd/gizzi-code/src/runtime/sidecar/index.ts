@@ -14,6 +14,7 @@ import os from "os"
 import { Log } from "@/shared/util/log"
 import { GlobalPaths } from "@/runtime/context/global/paths"
 import { Filesystem } from "@/shared/util/filesystem"
+import { killProcessTree, ProcessRegistry } from "@/runtime/process-registry"
 
 const log = Log.create({ service: "sidecar" })
 
@@ -212,7 +213,7 @@ export namespace Sidecar {
 
     const child = spawn(ollamaBin, ["serve"], {
       env,
-      detached: true,
+      detached: process.platform !== "win32",
       stdio: ["ignore", "pipe", "pipe"],
     })
 
@@ -227,7 +228,8 @@ export namespace Sidecar {
     // Pipe output to log file
     child.stdout?.on("data", (d) => logFd.write(d))
     child.stderr?.on("data", (d) => logFd.write(d))
-    child.unref()
+    // Stay attached to the session so close/SIGINT reaps the sidecar. Do not unref.
+    ProcessRegistry.track(child, { label: "sidecar-ollama", group: process.platform !== "win32" })
 
     // Wait for server to be ready (up to 15 seconds)
     for (let i = 0; i < 30; i++) {
@@ -251,7 +253,7 @@ export namespace Sidecar {
       const pidStr = await Filesystem.readText(paths.pid)
       const pid = parseInt(pidStr, 10)
       if (!isNaN(pid)) {
-        process.kill(pid, "SIGTERM")
+        killProcessTree(pid, process.platform !== "win32")
         log.info("sidecar stopped", { pid })
       }
     } catch {

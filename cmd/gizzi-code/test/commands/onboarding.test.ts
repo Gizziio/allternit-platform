@@ -37,6 +37,8 @@ function wizardDeps(tmp: string, overrides: Partial<OnboardingDeps> = {}): Onboa
       files.add(p)
       await Bun.write(p, contents)
     },
+    listBrains: async () => ({ plan: null, providers: [] }),
+    setBrain: async () => {},
     ...overrides,
   }
 }

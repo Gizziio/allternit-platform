@@ -38,6 +38,7 @@ import {
 } from '../services/analytics/index.js'
 import type { AppState } from '../state/AppState.js'
 import { runCleanupFunctions } from './cleanupRegistry.js'
+import { ProcessRegistry } from '@/runtime/process-registry'
 import { logForDebugging } from './debug.js'
 import { logForDiagnosticsNoPII } from './diagLogs.js'
 import { isEnvTruthy } from './envUtils.js'
@@ -445,6 +446,7 @@ export async function gracefulShutdown(
   try {
     const cleanupPromise = (async () => {
       try {
+        ProcessRegistry.killAll()
         await runCleanupFunctions()
       } catch {
         // Silently ignore cleanup errors

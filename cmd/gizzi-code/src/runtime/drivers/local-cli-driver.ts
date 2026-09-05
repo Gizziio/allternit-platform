@@ -35,6 +35,7 @@ import {
 } from "@agentclientprotocol/sdk"
 import { spawn as nodeSpawn } from "node:child_process"
 import { Readable, Writable } from "node:stream"
+import { ProcessRegistry } from "@/runtime/process-registry"
 
 const log = Log.create({ service: "local-cli-driver" })
 
@@ -228,6 +229,7 @@ export class LocalCliDriver implements RuntimeDriver {
     })
     this.currentProc = proc
     this.currentTaskId = handle.taskId
+    ProcessRegistry.track(proc, { label: `cli:${this.cliName}:json` })
 
     // Capture a bounded stderr tail for diagnostics without blocking exit handling.
     ;(async () => {
@@ -304,6 +306,7 @@ export class LocalCliDriver implements RuntimeDriver {
     })
     this.currentProc = proc
     this.currentTaskId = handle.taskId
+    ProcessRegistry.track(proc, { label: `cli:${this.cliName}:text` })
 
     ;(async () => {
       try {
@@ -392,6 +395,7 @@ export class LocalCliDriver implements RuntimeDriver {
     })
     this.currentProc = proc
     this.currentTaskId = handle.taskId
+    ProcessRegistry.track(proc, { label: `cli:${this.cliName}:stream-json` })
 
     // Capture a bounded stderr tail for diagnostics.
     ;(async () => {
@@ -566,6 +570,7 @@ export class LocalCliDriver implements RuntimeDriver {
     })
     this.currentProc = proc
     this.currentTaskId = handle.taskId
+    ProcessRegistry.track(proc, { label: `cli:${this.cliName}:openclaw` })
 
     ;(async () => {
       try {
@@ -712,6 +717,7 @@ export class LocalCliDriver implements RuntimeDriver {
     })
     this.currentProc = proc
     this.currentTaskId = handle.taskId
+    ProcessRegistry.track(proc, { label: `cli:${this.cliName}:acp`, group: process.platform !== "win32" })
 
     proc.stderr?.on("data", (data: Buffer) => {
       stderrTail.append(data)
@@ -934,6 +940,7 @@ export class LocalCliDriver implements RuntimeDriver {
     })
     this.currentProc = proc
     this.currentTaskId = handle.taskId
+    ProcessRegistry.track(proc, { label: `cli:${this.cliName}:codex` })
 
     const stdin = proc.stdin
     const send = (msg: Record<string, unknown>) => {

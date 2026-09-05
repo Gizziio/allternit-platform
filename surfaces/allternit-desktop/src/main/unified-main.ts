@@ -1978,7 +1978,12 @@ app.on('before-quit', async () => {
   tunnelManager.stop();
   await backendManager.stopBackend();
 
-  gizziManager.stop();
+  gizziManager.stop({ reapExternal: true });
+  try {
+    gizziDaemonManager.stopSync();
+  } catch (err) {
+    log.warn('[Main] gizzi daemon stop on quit failed', err);
+  }
   connectorSidecarManager.stop();
   officeEngineManager.stop();
   meshManager.stop().catch(() => {}); // best-effort mesh sidecar shutdown

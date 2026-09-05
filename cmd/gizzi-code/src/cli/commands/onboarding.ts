@@ -12,6 +12,8 @@ import {
   setTelemetryEnabled,
 } from "@/shared/utils/telemetrySettings"
 import { loadPreferences, savePreferences } from "../../utils/sessionStorage.js"
+import type { DiscoveredProvider } from "@/runtime/providers/discovery"
+import { isPaidAllternitPlan, type AllternitPlan } from "@/runtime/providers/discovery/allternit-cloud"
 
 export const ONBOARDING_MARKER_FILE = "onboarding-complete"
 
@@ -21,6 +23,11 @@ export function onboardingMarkerPath(stateDir: string = Global.Path.state): stri
 
 export function configTomlPath(): string {
   return path.join(Global.Path.config, "config.toml")
+}
+
+export type BrainCatalog = {
+  plan: AllternitPlan | null
+  providers: DiscoveredProvider[]
 }
 
 export type OnboardingDeps = {
@@ -36,6 +43,10 @@ export type OnboardingDeps = {
   authConfigured: () => Promise<boolean>
   exists: (p: string) => Promise<boolean>
   writeFile: (p: string, contents: string) => Promise<void>
+  /** Installed CLI brains + live Allternit Cloud catalog. */
+  listBrains: () => Promise<BrainCatalog>
+  /** Persist a first-run default; stays auto so a later sub can take over. */
+  setBrain: (model: string) => Promise<void>
 }
 
 export async function defaultOnboardingDeps(): Promise<OnboardingDeps> {
@@ -64,6 +75,19 @@ export async function defaultOnboardingDeps(): Promise<OnboardingDeps> {
     writeFile: async (p, contents) => {
       await fs.mkdir(path.dirname(p), { recursive: true })
       await fs.writeFile(p, contents)
+    },
+    listBrains: async () => {
+      const { Discovery } = await import("@/runtime/providers/discovery")
+      const { refreshAllternitPlan, getCachedAllternitPlan } = await import(
+        "@/runtime/providers/discovery/allternit-cloud"
+      )
+      await refreshAllternitPlan()
+      const providers = await Discovery.run()
+      return { plan: getCachedAllternitPlan(), providers }
+    },
+    setBrain: async (model: string) => {
+      const { Config } = await import("@/runtime/context/config/config")
+      await Config.updateGlobal({ model, model_auto: true })
     },
   }
 }
@@ -161,6 +185,54 @@ export async function runOnboardingWizard(
     }
   }
 
+  // ── Default brain ──
+  // Unpaid: first installed CLI (or a pick). Paid Plus/Super/Ultra: Allternit Cloud.
+  // Kept auto so buying a sub later provisions Cloud without another wizard.
+  let brainSummary = "auto"
+  try {
+    const catalog = await d.listBrains()
+    const clis = catalog.providers.filter((p) => p.source === "subprocess" && p.models[0])
+    const cloud = catalog.providers.find((p) => p.id === "allternit" && p.source === "platform")
+    if (isPaidAllternitPlan(catalog.plan) && cloud?.models[0]) {
+      const model = `${cloud.id}/${cloud.models[0].id}`
+      await d.setBrain(model)
+      brainSummary = `Allternit Cloud (${catalog.plan?.label ?? "paid"} → ${model})`
+      prompts.log.info(
+        `Allternit ${catalog.plan?.label} is active — default brain is Allternit Cloud. Change anytime with /model.`,
+      )
+    } else if (clis.length > 0) {
+      const options = [
+        {
+          value: "auto",
+          label: "Auto (first installed CLI)",
+          hint: "switches to Allternit Cloud after you subscribe",
+        },
+        ...clis.map((c) => ({
+          value: `${c.id}/${c.models[0]!.id}`,
+          label: c.name,
+          hint: c.models[0]!.name,
+        })),
+      ]
+      const choice = await prompts.select({
+        message: "Default brain — installed CLI, or Cloud after a Plus/Super/Ultra subscription",
+        initialValue: "auto",
+        options,
+      })
+      if (prompts.isCancel(choice)) {
+        prompts.outro("Onboarding cancelled — run `gizzi --onboarding` anytime to finish setup")
+        return "cancelled"
+      }
+      const selected =
+        choice === "auto" ? `${clis[0]!.id}/${clis[0]!.models[0]!.id}` : String(choice)
+      await d.setBrain(selected)
+      brainSummary = selected
+    } else {
+      brainSummary = "none yet — install a CLI or subscribe at platform.allternit.com/plans"
+    }
+  } catch {
+    // Discovery is best-effort; a missing catalog must not block onboarding.
+  }
+
   // ── Theme basics ──
   let themeSummary = "unchanged"
   try {
@@ -190,6 +262,7 @@ export async function runOnboardingWizard(
   // ── Summary ──
   prompts.log.info(`Telemetry: ${telemetry === true ? "on" : "off"} — change anytime with \`gizzi config telemetry on|off\``)
   prompts.log.info(`Auth: ${authSummary}`)
+  prompts.log.info(`Brain: ${brainSummary}`)
   prompts.log.info(`Theme: ${themeSummary}`)
   prompts.outro("All set — docs: https://docs.gizziio.com · get started by just typing `gizzi`")
 

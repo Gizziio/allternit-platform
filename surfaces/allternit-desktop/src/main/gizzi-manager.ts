@@ -13,7 +13,7 @@
  */
 
 import { app } from 'electron';
-import { spawn, ChildProcess } from 'child_process';
+import { spawn, spawnSync, ChildProcess } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'node:url';
@@ -126,6 +126,9 @@ export class GizziManager {
       env,
       stdio: ['ignore', 'pipe', 'pipe'],
       windowsHide: true,
+      // Own process group so stop() can reap gizzi and its session children
+      // without signalling Electron.
+      detached: process.platform !== 'win32',
     });
     this.proc = proc;
 
@@ -163,20 +166,34 @@ export class GizziManager {
     return this.getUrl();
   }
 
-  stop(): void {
+  /**
+   * Stop the managed gizzi-code process tree.
+   * `reapExternal` also kills whatever is still listening on the Gizzi port
+   * (adopted daemon or a leftover from a previous session).
+   */
+  stop(opts: { reapExternal?: boolean } = {}): void {
     this.lastConfig = null;
-    if (this.usingExternalRuntime) {
+    const proc = this.proc;
+    const pid = proc?.pid;
+    if (this.usingExternalRuntime && !opts.reapExternal) {
       log.info('[GizziManager] Detaching from always-on Gizzi runtime');
       this.usingExternalRuntime = false;
       this.password = null;
       return;
     }
-    if (this.proc) {
+    if (proc || opts.reapExternal) {
       log.info('[GizziManager] Stopping…');
       this.stopping = true;
-      this.proc.kill('SIGTERM');
+      if (pid) killProcessTree(pid);
+      else if (proc) {
+        try { proc.kill('SIGTERM'); } catch { /* already gone */ }
+      }
+      if (opts.reapExternal) {
+        killListenerOnPort(GIZZI_PORT);
+      }
       this.proc = null;
       this.password = null;
+      this.usingExternalRuntime = false;
     }
   }
 
@@ -294,3 +311,70 @@ export class GizziManager {
 }
 
 export const gizziManager = GizziManager.getInstance();
+
+function descendantPids(pid: number): number[] {
+  const result = spawnSync('pgrep', ['-P', String(pid)], { encoding: 'utf8' });
+  if (result.status !== 0) return [];
+  const children = (result.stdout || '')
+    .split(/\s+/)
+    .map((s) => Number(s.trim()))
+    .filter((n) => Number.isFinite(n) && n > 0);
+  return children.flatMap((child) => [...descendantPids(child), child]);
+}
+
+function killProcessTree(pid: number): void {
+  if (!pid) return;
+  if (process.platform === 'win32') {
+    spawnSync('taskkill', ['/pid', String(pid), '/T', '/F'], {
+      stdio: 'ignore',
+      windowsHide: true,
+    });
+    return;
+  }
+  try {
+    process.kill(-pid, 'SIGTERM');
+  } catch {
+    const descendants = descendantPids(pid);
+    for (const child of descendants.reverse()) {
+      try { process.kill(child, 'SIGTERM'); } catch { /* gone */ }
+    }
+    try { process.kill(pid, 'SIGTERM'); } catch { /* gone */ }
+  }
+  setTimeout(() => {
+    try { process.kill(-pid, 'SIGKILL'); } catch { /* gone */ }
+    try { process.kill(pid, 'SIGKILL'); } catch { /* gone */ }
+  }, 2500);
+}
+
+function killListenerOnPort(port: number): void {
+  if (process.platform === 'win32') {
+    const out = spawnSync(
+      'powershell.exe',
+      [
+        '-NoProfile',
+        '-Command',
+        `(Get-NetTCPConnection -LocalPort ${port} -State Listen -ErrorAction SilentlyContinue).OwningProcess`,
+      ],
+      { encoding: 'utf8', windowsHide: true, timeout: 4000 },
+    );
+    const pids = new Set(
+      (out.stdout || '')
+        .split(/\s+/)
+        .map((s) => Number(s.trim()))
+        .filter((n) => Number.isFinite(n) && n > 0),
+    );
+    for (const pid of pids) killProcessTree(pid);
+    return;
+  }
+  const out = spawnSync('lsof', ['-ti', `tcp:${port}`, '-sTCP:LISTEN'], {
+    encoding: 'utf8',
+    timeout: 4000,
+  });
+  const pids = new Set(
+    (out.stdout || '')
+      .split(/\s+/)
+      .map((s) => Number(s.trim()))
+      .filter((n) => Number.isFinite(n) && n > 0),
+  );
+  for (const pid of pids) killProcessTree(pid);
+}

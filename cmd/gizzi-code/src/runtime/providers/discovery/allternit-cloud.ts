@@ -22,6 +22,18 @@ export function getCachedAllternitPlan(): AllternitPlan | null {
   return cachedPlan
 }
 
+const PAID_PLAN_IDS = new Set(["plus", "super", "ultra"])
+const PAID_STATUSES = new Set(["active", "trialing"])
+
+export function isPaidAllternitPlan(plan: AllternitPlan | null | undefined): boolean {
+  if (!plan) return false
+  const id = (plan.id || "").toLowerCase()
+  if (!PAID_PLAN_IDS.has(id)) return false
+  const status = (plan.status || "").toLowerCase()
+  if (status && !PAID_STATUSES.has(status)) return false
+  return true
+}
+
 function cloudOrigin(): string {
   const explicit = (process.env.ALLTERNIT_API_URL || process.env.ALLTERNIT_API_BASE_URL || "").trim()
   if (explicit) return explicit.replace(/\/+$/, "")
@@ -89,13 +101,16 @@ type CloudModel = {
 }
 
 export async function discoverAllternitCloud(): Promise<DiscoveredProvider[]> {
-  void refreshAllternitPlan()
+  const planTask = refreshAllternitPlan()
   try {
     const res = await fetch(`${cloudOrigin()}/v1/models`, {
       headers: authHeaders(),
       signal: AbortSignal.timeout(8000),
     })
-    if (!res.ok) return []
+    if (!res.ok) {
+      await planTask
+      return []
+    }
     const json = (await res.json()) as { data?: CloudModel[] }
     const models: DiscoveredModel[] = []
     for (const item of json.data ?? []) {
@@ -110,7 +125,11 @@ export async function discoverAllternitCloud(): Promise<DiscoveredProvider[]> {
         output: 8192,
       })
     }
-    if (models.length === 0) return []
+    if (models.length === 0) {
+      await planTask
+      return []
+    }
+    await planTask
     return [
       {
         id: "allternit",
@@ -122,6 +141,7 @@ export async function discoverAllternitCloud(): Promise<DiscoveredProvider[]> {
       },
     ]
   } catch {
+    await planTask.catch(() => null)
     return []
   }
 }

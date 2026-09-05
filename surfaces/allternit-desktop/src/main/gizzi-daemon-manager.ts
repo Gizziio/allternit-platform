@@ -7,7 +7,7 @@
  * instead of starting a competing per-session server.
  */
 
-import { spawn, execFile, ChildProcess } from 'child_process';
+import { spawn, spawnSync, execFile, ChildProcess } from 'child_process';
 import * as fs from 'fs';
 import * as http from 'http';
 import * as https from 'https';
@@ -286,6 +286,26 @@ export class GizziDaemonManager {
       await execFilePromise('systemctl', ['stop', 'allternit-gizzi']);
     } else {
       throw new Error(`Stop not implemented for ${platform}`);
+    }
+  }
+
+  /** Sync stop for app-quit — Electron will not wait on async before-quit. */
+  stopSync(): void {
+    const platform = getPlatform();
+    try {
+      if (platform === 'macos') {
+        spawnSync('launchctl', ['stop', 'com.allternit.gizzi'], { timeout: 5000, stdio: 'ignore' });
+      } else if (platform === 'linux') {
+        spawnSync('systemctl', ['stop', 'allternit-gizzi'], { timeout: 5000, stdio: 'ignore' });
+      } else if (platform === 'windows') {
+        spawnSync('schtasks', ['/End', '/TN', 'AllternitGizzi'], {
+          timeout: 5000,
+          stdio: 'ignore',
+          windowsHide: true,
+        });
+      }
+    } catch (err) {
+      log.warn('[GizziDaemonManager] stopSync failed', err);
     }
   }
 

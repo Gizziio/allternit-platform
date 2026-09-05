@@ -6,6 +6,8 @@ import { Flag } from "@/runtime/context/flag/flag"
 import { Config } from "@/runtime/context/config/config"
 import { init as initGlobal } from "@/runtime/context/global"
 import { assertSafeServerExposure } from "@/cli/server-exposure"
+import { ProcessRegistry } from "@/runtime/process-registry"
+import { Sidecar } from "@/runtime/sidecar"
 
 export const ServeCommand = cmd({
   command: "serve",
@@ -87,6 +89,8 @@ export const ServeCommand = cmd({
       }
       shuttingDown = true
       process.stderr.write(`gizzi server received ${signal}; shutting down\n`)
+      ProcessRegistry.killAll()
+      void Sidecar.stop().catch(() => {})
       server
         .stop()
         .catch(() => {
@@ -94,8 +98,12 @@ export const ServeCommand = cmd({
         })
         .finally(() => process.exit(0))
     }
+    ProcessRegistry.install()
     process.on("SIGINT", () => shutdown("SIGINT"))
     process.on("SIGTERM", () => shutdown("SIGTERM"))
+    if (process.platform !== "win32") {
+      process.on("SIGHUP", () => shutdown("SIGHUP"))
+    }
     await new Promise(() => {})
   },
 })

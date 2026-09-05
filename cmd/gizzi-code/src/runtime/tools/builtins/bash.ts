@@ -14,6 +14,7 @@ import { Filesystem } from "@/shared/util/filesystem"
 import { fileURLToPath } from "url"
 import { Flag } from "@/runtime/context/flag/flag.ts"
 import { Shell } from "@/runtime/integrations/shell/shell"
+import { ProcessRegistry } from "@/runtime/process-registry"
 
 import { BashArity } from "@/runtime/tools/guard/permission/arity"
 import { Truncate } from "@/runtime/tools/builtins/truncation"
@@ -312,6 +313,7 @@ export const BashTool = Tool.define("bash", async () => {
           // Don't use detached with bwrap/sandbox-exec — --die-with-parent handles cleanup
           detached: false,
         })
+        ProcessRegistry.track(proc, { label: "bash-sandbox" })
       } else {
         proc = spawn(params.command, {
           shell,
@@ -320,6 +322,7 @@ export const BashTool = Tool.define("bash", async () => {
           stdio: ["ignore", "pipe", "pipe"],
           detached: process.platform !== "win32",
         })
+        ProcessRegistry.track(proc, { label: "bash", group: process.platform !== "win32" })
       }
       // ── End sandbox wrapping ───────────────────────────────────────────────
 

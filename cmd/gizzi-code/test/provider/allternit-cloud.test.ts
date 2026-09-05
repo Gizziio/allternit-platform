@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test"
 import {
   discoverAllternitCloud,
   getCachedAllternitPlan,
+  isPaidAllternitPlan,
   refreshAllternitPlan,
 } from "../../src/runtime/providers/discovery/allternit-cloud"
 
@@ -63,5 +64,13 @@ describe("refreshAllternitPlan", () => {
   test("returns null without an Allternit key", async () => {
     const plan = await refreshAllternitPlan()
     expect(plan).toBeNull()
+  })
+})
+
+describe("isPaidAllternitPlan", () => {
+  test("Plus/Super/Ultra active are paid; Free and canceled are not", () => {
+    expect(isPaidAllternitPlan({ id: "plus", label: "Plus", plan_tier: "pro", status: "active" })).toBe(true)
+    expect(isPaidAllternitPlan({ id: "free", label: "Free", plan_tier: "free", status: "none" })).toBe(false)
+    expect(isPaidAllternitPlan({ id: "plus", label: "Plus", plan_tier: "pro", status: "canceled" })).toBe(false)
   })
 })

@@ -109,7 +109,7 @@ export namespace Pty {
               ALLTERNIT_MUX_STATE_DIR: muxStateDir(),
               ALLTERNIT_MUX_SOCKET: muxSocketPath(),
             },
-            detached: true,
+            detached: process.platform !== "win32",
             stdio: "ignore",
           })
           // Bun reports a failed exec on the child's error event, not sync.
@@ -118,7 +118,8 @@ export namespace Pty {
             setTimeout(() => resolve(false), 300)
           })
           if (failed) continue
-          child.unref()
+          const { ProcessRegistry } = await import("@/runtime/process-registry")
+          ProcessRegistry.track(child, { label: "allternit-mux", group: process.platform !== "win32" })
           spawned = true
           log.info("auto-spawned allternit-mux", { bin })
           break

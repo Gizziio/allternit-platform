@@ -36,6 +36,7 @@ import { Flag } from "@/runtime/context/flag/flag"
 import { Config } from "@/runtime/context/config/config"
 import { ulid } from "ulid"
 import { spawn } from "child_process"
+import { ProcessRegistry } from "@/runtime/process-registry"
 import { Command } from "@/runtime/loop/command"
 import { $, fileURLToPath, pathToFileURL } from "bun"
 import { ConfigMarkdown } from "@/runtime/context/config/markdown"
@@ -2022,6 +2023,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         TERM: "dumb",
       },
     })
+    ProcessRegistry.track(proc, { label: "prompt-shell", group: process.platform !== "win32" })
 
     let output = ""
 

@@ -29,6 +29,7 @@ import { Provider } from "@/runtime/providers/provider"
 import { spawn } from "child_process"
 import { existsSync } from "fs"
 import path from "path"
+import { ProcessRegistry } from "@/runtime/process-registry"
 
 const log = Log.create({ service: "browser-tool" })
 
@@ -103,10 +104,10 @@ async function autoStartOperator(): Promise<boolean> {
       cwd: operatorDir,
       env: { ...process.env },
       stdio: "ignore",
-      detached: true,
+      detached: process.platform !== "win32",
     },
   )
-  _operatorProc.unref()
+  ProcessRegistry.track(_operatorProc, { label: "computer-use-gateway", group: process.platform !== "win32" })
 
   const ready = await waitForGateway(10000)
   if (ready) {
