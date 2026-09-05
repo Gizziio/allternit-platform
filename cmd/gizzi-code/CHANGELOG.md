@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 2.0.4 — 2026-09-05
+
+Non-interactive first-run setup. `gizzi onboarding --defaults` picks an
+installed CLI brain (or Allternit Cloud on a paid sub) without a TTY.
+
+### Added
+- `gizzi onboarding --defaults` — telemetry on, auth skipped, auto brain.
+
 ## 2.0.3 — 2026-09-05
 
 Session children no longer survive close. Installed CLI brains (including
