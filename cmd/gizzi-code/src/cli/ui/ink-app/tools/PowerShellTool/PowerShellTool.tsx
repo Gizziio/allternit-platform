@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle';
-import type { ToolResultBlockParam } from '@allternit/sdk/providers/anthropic/resources/index.mjs';
+import type { ToolResultBlockParam } from '@allternit/sdk/providers/allternit/resources/index.mjs';
 import { copyFile, stat as fsStat, truncate as fsTruncate, link } from 'fs/promises';
 import * as React from 'react';
 import type { CanUseToolFn } from './../../hooks/useCanUseTool.tsx';

@@ -165,7 +165,7 @@ export interface SkillCreateResponse {
    * This may be one of the following values:
    *
    * - `"custom"`: the skill was created by a user
-   * - `"anthropic"`: the skill was created by Anthropic
+   * - `"allternit"`: the skill was created by Allternit
    */
   source: string;
 
@@ -216,7 +216,7 @@ export interface SkillRetrieveResponse {
    * This may be one of the following values:
    *
    * - `"custom"`: the skill was created by a user
-   * - `"anthropic"`: the skill was created by Anthropic
+   * - `"allternit"`: the skill was created by Allternit
    */
   source: string;
 
@@ -267,7 +267,7 @@ export interface SkillListResponse {
    * This may be one of the following values:
    *
    * - `"custom"`: the skill was created by a user
-   * - `"anthropic"`: the skill was created by Anthropic
+   * - `"allternit"`: the skill was created by Allternit
    */
   source: string;
 
@@ -337,7 +337,7 @@ export interface SkillListParams extends PageCursorParams {
    * If provided, only skills from the specified source will be returned:
    *
    * - `"custom"`: only return user-created skills
-   * - `"anthropic"`: only return Anthropic-created skills
+   * - `"allternit"`: only return Allternit-created skills
    */
   source?: string | null;
 

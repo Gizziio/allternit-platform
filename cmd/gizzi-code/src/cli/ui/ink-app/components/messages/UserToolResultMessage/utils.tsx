@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
-import type { ToolUseBlockParam } from '@allternit/sdk/providers/anthropic/resources/index.mjs';
+import type { ToolUseBlockParam } from '@allternit/sdk/providers/allternit/resources/index.mjs';
 import { useMemo } from 'react';
 import { findToolByName, type Tool, type Tools } from '../../../Tool';
 import type { buildMessageLookups } from '../../../utils/messages';

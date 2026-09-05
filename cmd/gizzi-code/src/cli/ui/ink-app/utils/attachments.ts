@@ -72,7 +72,7 @@ import type {
   ContentBlockParam,
   ImageBlockParam,
   Base64ImageSource,
-} from '@allternit/sdk/providers/anthropic/resources/messages.mjs'
+} from '@allternit/sdk/providers/allternit/resources/messages.mjs'
 import { maybeResizeAndDownsampleImageBlock } from './imageResizer.js'
 import type { PastedContent } from './config.js'
 import { getGlobalConfig } from './config.js'

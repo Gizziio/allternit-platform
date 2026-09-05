@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { APIUserAbortError } from '@allternit/sdk/providers/anthropic';
+import { APIUserAbortError } from '@allternit/sdk/providers/allternit';
 import React, { type ReactNode, useCallback, useRef, useState } from 'react';
 import { useMainLoopModel } from '../../../../hooks/useMainLoopModel';
 import { Box, Text } from '../../../../ink';

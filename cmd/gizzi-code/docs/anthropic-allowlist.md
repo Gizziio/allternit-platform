@@ -60,5 +60,4 @@ rg -n 'Claude Code' src test packages --glob '!**/vendored/**'
 rg -n 'CLAUDE_CODE' src test packages --glob '!**/vendored/**'
 ```
 
-Both should be empty outside this file, `docs/legal-attribution.md`,
-`NOTICE`, `LICENSE`, and the purge scripts.
+Both should be empty outside this file, `NOTICE`, `LICENSE`, and the purge scripts.

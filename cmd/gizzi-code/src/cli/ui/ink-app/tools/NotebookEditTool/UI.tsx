@@ -1,5 +1,5 @@
 // @ts-nocheck
-import type { ToolResultBlockParam } from '@allternit/sdk/providers/anthropic/resources/index.mjs';
+import type { ToolResultBlockParam } from '@allternit/sdk/providers/allternit/resources/index.mjs';
 import * as React from 'react';
 import type { Message, ProgressMessage } from './../../types/message.ts';
 import { extractTag } from './../../utils/extractTag.js';

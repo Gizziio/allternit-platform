@@ -4,7 +4,7 @@
  * This isolates mock logic from production code
  */
 
-import { APIError } from '@allternit/sdk/providers/anthropic'
+import { APIError } from '@allternit/sdk/providers/allternit'
 import {
   applyMockHeaders,
   checkMockFastModeRateLimit,

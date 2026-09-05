@@ -1,5 +1,5 @@
 // @ts-nocheck
-import type { ToolResultBlockParam } from '@allternit/sdk/providers/anthropic/resources/index.mjs';
+import type { ToolResultBlockParam } from '@allternit/sdk/providers/allternit/resources/index.mjs';
 import * as React from 'react';
 import { KeyboardShortcutHint } from '../../components/design-system/KeyboardShortcutHint';
 import { FallbackToolUseErrorMessage } from '../../components/FallbackToolUseErrorMessage';

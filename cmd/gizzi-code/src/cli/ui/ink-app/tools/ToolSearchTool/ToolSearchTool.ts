@@ -1,5 +1,5 @@
 // @ts-nocheck
-import type { ToolResultBlockParam } from '@allternit/sdk/providers/anthropic/resources/index.mjs'
+import type { ToolResultBlockParam } from '@allternit/sdk/providers/allternit/resources/index.mjs'
 import memoize from 'lodash-es/memoize.js'
 import { z } from 'zod/v4'
 import {

@@ -52,7 +52,7 @@ export { ComputerCapability } from './capabilities/computer.js';
 export { FilesystemCapability } from './capabilities/filesystem.js';
 
 // Providers
-export { AllternitAI } from './providers/anthropic/index.js';
+export { AllternitAI } from './providers/allternit/index.js';
 export { AllternitOpenAI } from './providers/openai/index.js';
 export { AllternitGoogleAI } from './providers/google/index.js';
 export { AllternitOllama } from './providers/ollama/index.js';

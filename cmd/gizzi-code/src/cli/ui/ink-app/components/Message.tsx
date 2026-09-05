@@ -1,8 +1,8 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import { feature } from 'bun:bundle';
-import type { BetaContentBlock } from '@allternit/sdk/providers/anthropic/resources/beta/messages/messages.mjs';
-import type { ImageBlockParam, TextBlockParam, ThinkingBlockParam, ToolResultBlockParam, ToolUseBlockParam } from '@allternit/sdk/providers/anthropic/resources/index.mjs';
+import type { BetaContentBlock } from '@allternit/sdk/providers/allternit/resources/beta/messages/messages.mjs';
+import type { ImageBlockParam, TextBlockParam, ThinkingBlockParam, ToolResultBlockParam, ToolUseBlockParam } from '@allternit/sdk/providers/allternit/resources/index.mjs';
 import * as React from 'react';
 import type { Command } from '../commands';
 import { useTerminalSize } from '../hooks/useTerminalSize';

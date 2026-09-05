@@ -72,7 +72,7 @@ export class Messages extends APIResource {
       console.warn(
         `The model '${body.model}' is deprecated and will reach end-of-life on ${
           DEPRECATED_MODELS[body.model]
-        }\nPlease migrate to a newer model. Visit https://docs.anthropic.com/en/docs/resources/model-deprecations for more information.`,
+        }\nPlease migrate to a newer model. Visit https://docs.gizziio.com/en/docs/resources/model-deprecations for more information.`,
       );
     }
     if (
@@ -81,7 +81,7 @@ export class Messages extends APIResource {
       body.thinking.type === 'enabled'
     ) {
       console.warn(
-        `Using Claude with ${body.model} and 'thinking.type=enabled' is deprecated. Use 'thinking.type=adaptive' instead which results in better model performance in our testing: https://platform.claude.com/docs/en/build-with-claude/adaptive-thinking`,
+        `Using Allternit with ${body.model} and 'thinking.type=enabled' is deprecated. Use 'thinking.type=adaptive' instead which results in better model performance in our testing: https://docs.gizziio.com/docs/en/build-with-claude/adaptive-thinking`,
       );
     }
 
@@ -895,7 +895,7 @@ export interface Message {
    * Example:
    *
    * ```json
-   * [{ "type": "text", "text": "Hi, I'm Claude." }]
+   * [{ "type": "text", "text": "Hi, I'm Allternit." }]
    * ```
    *
    * If the request input `messages` ended with an `assistant` turn, then the
@@ -924,7 +924,7 @@ export interface Message {
 
   /**
    * The model that will complete your prompt.\n\nSee
-   * [models](https://docs.anthropic.com/en/docs/models-overview) for additional
+   * [models](https://docs.gizziio.com/en/docs/models-overview) for additional
    * details and options.
    */
   model: Model;
@@ -978,7 +978,7 @@ export interface Message {
   /**
    * Billing and rate-limit usage.
    *
-   * Anthropic's API bills and rate-limits by token counts, as tokens represent the
+   * Allternit's API bills and rate-limits by token counts, as tokens represent the
    * underlying cost to our systems.
    *
    * Under the hood, the API transforms requests into a format suitable for the
@@ -987,7 +987,7 @@ export interface Message {
    * with the exact visible content of an API request or response.
    *
    * For example, `output_tokens` will be non-zero, even for an empty string response
-   * from Claude.
+   * from Allternit.
    *
    * Total input tokens in a request is the summation of `input_tokens`,
    * `cache_creation_input_tokens`, and `cache_read_input_tokens`.
@@ -1062,7 +1062,7 @@ export interface Metadata {
   /**
    * An external identifier for the user who is associated with the request.
    *
-   * This should be a uuid, hash value, or other opaque identifier. Anthropic may use
+   * This should be a uuid, hash value, or other opaque identifier. Allternit may use
    * this id to help detect abuse. Do not include any identifying information such as
    * name, email address, or phone number.
    */
@@ -1071,7 +1071,7 @@ export interface Metadata {
 
 /**
  * The model that will complete your prompt.\n\nSee
- * [models](https://docs.anthropic.com/en/docs/models-overview) for additional
+ * [models](https://docs.gizziio.com/en/docs/models-overview) for additional
  * details and options.
  */
 export type Model =
@@ -1099,8 +1099,8 @@ export interface OutputConfig {
   effort?: 'low' | 'medium' | 'high' | 'max' | null;
 
   /**
-   * A schema to specify Claude's output format in responses. See
-   * [structured outputs](https://platform.claude.com/docs/en/build-with-claude/structured-outputs)
+   * A schema to specify Allternit's output format in responses. See
+   * [structured outputs](https://docs.gizziio.com/docs/en/build-with-claude/structured-outputs)
    */
   format?: JSONOutputFormat | null;
 }
@@ -1185,7 +1185,7 @@ export interface RawMessageDeltaEvent {
   /**
    * Billing and rate-limit usage.
    *
-   * Anthropic's API bills and rate-limits by token counts, as tokens represent the
+   * Allternit's API bills and rate-limits by token counts, as tokens represent the
    * underlying cost to our systems.
    *
    * Under the hood, the API transforms requests into a format suitable for the
@@ -1194,7 +1194,7 @@ export interface RawMessageDeltaEvent {
    * with the exact visible content of an API request or response.
    *
    * For example, `output_tokens` will be non-zero, even for an empty string response
-   * from Claude.
+   * from Allternit.
    *
    * Total input tokens in a request is the summation of `input_tokens`,
    * `cache_creation_input_tokens`, and `cache_read_input_tokens`.
@@ -1576,7 +1576,7 @@ export interface ThinkingConfigDisabled {
 
 export interface ThinkingConfigEnabled {
   /**
-   * Determines how many tokens Claude can use for its internal reasoning process.
+   * Determines how many tokens Allternit can use for its internal reasoning process.
    * Larger budgets can enable more thorough analysis for complex problems, improving
    * response quality.
    *
@@ -1600,9 +1600,9 @@ export interface ThinkingConfigEnabled {
 }
 
 /**
- * Configuration for enabling Claude's extended thinking.
+ * Configuration for enabling Allternit's extended thinking.
  *
- * When enabled, responses include `thinking` content blocks showing Claude's
+ * When enabled, responses include `thinking` content blocks showing Allternit's
  * thinking process before the final answer. Requires a minimum budget of 1,024
  * tokens and counts towards your `max_tokens` limit.
  *
@@ -2520,7 +2520,7 @@ export interface WebSearchTool20250305 {
 // backward compat
 export namespace WebSearchTool20250305 {
   /**
-   * @deprecated Import `UserLocation` from `anthropic` directly instead of using
+   * @deprecated Import `UserLocation` from `allternit` directly instead of using
    *   `WebSearchTool20250305.UserLocation`.
    */
   export type UserLocation = Messages.UserLocation;
@@ -2581,7 +2581,7 @@ export interface WebSearchTool20260209 {
 // backward compat
 export namespace WebSearchTool20260209 {
   /**
-   * @deprecated Import `UserLocation` from `anthropic` directly instead of using
+   * @deprecated Import `UserLocation` from `allternit` directly instead of using
    *   `WebSearchTool20260209.UserLocation`.
    */
   export type UserLocation = Messages.UserLocation;
@@ -2692,7 +2692,7 @@ export interface MessageCreateParamsBase {
    * Example with a single `user` message:
    *
    * ```json
-   * [{ "role": "user", "content": "Hello, Claude" }]
+   * [{ "role": "user", "content": "Hello, Allternit" }]
    * ```
    *
    * Example with multiple conversational turns:
@@ -2700,12 +2700,12 @@ export interface MessageCreateParamsBase {
    * ```json
    * [
    *   { "role": "user", "content": "Hello there." },
-   *   { "role": "assistant", "content": "Hi, I'm Claude. How can I help you?" },
+   *   { "role": "assistant", "content": "Hi, I'm Allternit. How can I help you?" },
    *   { "role": "user", "content": "Can you explain LLMs in plain English?" }
    * ]
    * ```
    *
-   * Example with a partially-filled response from Claude:
+   * Example with a partially-filled response from Allternit:
    *
    * ```json
    * [
@@ -2723,11 +2723,11 @@ export interface MessageCreateParamsBase {
    * following input messages are equivalent:
    *
    * ```json
-   * { "role": "user", "content": "Hello, Claude" }
+   * { "role": "user", "content": "Hello, Allternit" }
    * ```
    *
    * ```json
-   * { "role": "user", "content": [{ "type": "text", "text": "Hello, Claude" }] }
+   * { "role": "user", "content": [{ "type": "text", "text": "Hello, Allternit" }] }
    * ```
    *
    * See [input examples](https://docs.claude.com/en/api/messages-examples).
@@ -2743,7 +2743,7 @@ export interface MessageCreateParamsBase {
 
   /**
    * The model that will complete your prompt.\n\nSee
-   * [models](https://docs.anthropic.com/en/docs/models-overview) for additional
+   * [models](https://docs.gizziio.com/en/docs/models-overview) for additional
    * details and options.
    */
   model: Model;
@@ -2779,7 +2779,7 @@ export interface MessageCreateParamsBase {
    * Determines whether to use priority capacity (if available) or standard capacity
    * for this request.
    *
-   * Anthropic offers different levels of service for your API requests. See
+   * Allternit offers different levels of service for your API requests. See
    * [service-tiers](https://docs.claude.com/en/api/service-tiers) for details.
    */
   service_tier?: 'auto' | 'standard_only';
@@ -2807,7 +2807,7 @@ export interface MessageCreateParamsBase {
   /**
    * System prompt.
    *
-   * A system prompt is a way of providing context and instructions to Claude, such
+   * A system prompt is a way of providing context and instructions to Allternit, such
    * as specifying a particular goal or role. See our
    * [guide to system prompts](https://docs.claude.com/en/docs/system-prompts).
    */
@@ -2826,9 +2826,9 @@ export interface MessageCreateParamsBase {
   temperature?: number;
 
   /**
-   * Configuration for enabling Claude's extended thinking.
+   * Configuration for enabling Allternit's extended thinking.
    *
-   * When enabled, responses include `thinking` content blocks showing Claude's
+   * When enabled, responses include `thinking` content blocks showing Allternit's
    * thinking process before the final answer. Requires a minimum budget of 1,024
    * tokens and counts towards your `max_tokens` limit.
    *
@@ -2994,7 +2994,7 @@ export interface MessageCountTokensParams {
    * Example with a single `user` message:
    *
    * ```json
-   * [{ "role": "user", "content": "Hello, Claude" }]
+   * [{ "role": "user", "content": "Hello, Allternit" }]
    * ```
    *
    * Example with multiple conversational turns:
@@ -3002,12 +3002,12 @@ export interface MessageCountTokensParams {
    * ```json
    * [
    *   { "role": "user", "content": "Hello there." },
-   *   { "role": "assistant", "content": "Hi, I'm Claude. How can I help you?" },
+   *   { "role": "assistant", "content": "Hi, I'm Allternit. How can I help you?" },
    *   { "role": "user", "content": "Can you explain LLMs in plain English?" }
    * ]
    * ```
    *
-   * Example with a partially-filled response from Claude:
+   * Example with a partially-filled response from Allternit:
    *
    * ```json
    * [
@@ -3025,11 +3025,11 @@ export interface MessageCountTokensParams {
    * following input messages are equivalent:
    *
    * ```json
-   * { "role": "user", "content": "Hello, Claude" }
+   * { "role": "user", "content": "Hello, Allternit" }
    * ```
    *
    * ```json
-   * { "role": "user", "content": [{ "type": "text", "text": "Hello, Claude" }] }
+   * { "role": "user", "content": [{ "type": "text", "text": "Hello, Allternit" }] }
    * ```
    *
    * See [input examples](https://docs.claude.com/en/api/messages-examples).
@@ -3045,7 +3045,7 @@ export interface MessageCountTokensParams {
 
   /**
    * The model that will complete your prompt.\n\nSee
-   * [models](https://docs.anthropic.com/en/docs/models-overview) for additional
+   * [models](https://docs.gizziio.com/en/docs/models-overview) for additional
    * details and options.
    */
   model: Model;
@@ -3064,16 +3064,16 @@ export interface MessageCountTokensParams {
   /**
    * System prompt.
    *
-   * A system prompt is a way of providing context and instructions to Claude, such
+   * A system prompt is a way of providing context and instructions to Allternit, such
    * as specifying a particular goal or role. See our
    * [guide to system prompts](https://docs.claude.com/en/docs/system-prompts).
    */
   system?: string | Array<TextBlockParam>;
 
   /**
-   * Configuration for enabling Claude's extended thinking.
+   * Configuration for enabling Allternit's extended thinking.
    *
-   * When enabled, responses include `thinking` content blocks showing Claude's
+   * When enabled, responses include `thinking` content blocks showing Allternit's
    * thinking process before the final answer. Requires a minimum budget of 1,024
    * tokens and counts towards your `max_tokens` limit.
    *

@@ -1,10 +1,10 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle'
-import { APIError } from '@allternit/sdk/providers/anthropic'
+import { APIError } from '@allternit/sdk/providers/allternit'
 import type {
   BetaStopReason,
   BetaUsage as Usage,
-} from '@allternit/sdk/providers/anthropic/resources/beta/messages/messages.mjs'
+} from '@allternit/sdk/providers/allternit/resources/beta/messages/messages.mjs'
 import {
   addToTotalDurationState,
   consumePostCompaction,

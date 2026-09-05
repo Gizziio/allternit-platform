@@ -1,5 +1,5 @@
 // @ts-nocheck
-import type { ContentBlockParam } from '@allternit/sdk/providers/anthropic/resources/messages.js'
+import type { ContentBlockParam } from '@allternit/sdk/providers/allternit/resources/messages.js'
 import type { Command } from '../commands.js'
 import { isUltrareviewEnabled } from './review/ultrareviewEnabled.js'
 

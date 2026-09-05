@@ -4,7 +4,7 @@ import type {
   Base64ImageSource,
   ContentBlockParam,
   MessageParam,
-} from '@allternit/sdk/providers/anthropic/resources/index.mjs'
+} from '@allternit/sdk/providers/allternit/resources/index.mjs'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import {
   SSEClientTransport,

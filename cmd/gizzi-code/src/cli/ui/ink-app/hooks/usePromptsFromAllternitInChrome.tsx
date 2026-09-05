@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
-import type { ContentBlockParam } from '@allternit/sdk/providers/anthropic/resources/messages.mjs';
+import type { ContentBlockParam } from '@allternit/sdk/providers/allternit/resources/messages.mjs';
 import { useEffect, useRef } from 'react';
 import { logError } from './../utils/log.ts';
 import { z } from 'zod/v4';

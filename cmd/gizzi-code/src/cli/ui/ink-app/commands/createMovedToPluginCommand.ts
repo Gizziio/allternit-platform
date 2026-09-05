@@ -1,5 +1,5 @@
 // @ts-nocheck
-import type { ContentBlockParam } from '@allternit/sdk/providers/anthropic/resources/messages'
+import type { ContentBlockParam } from '@allternit/sdk/providers/allternit/resources/messages'
 import type { Command } from '../commands'
 import type { ToolUseContext } from '../Tool'
 

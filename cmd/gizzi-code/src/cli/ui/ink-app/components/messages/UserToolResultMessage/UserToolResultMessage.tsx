@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
-import type { ToolResultBlockParam } from '@allternit/sdk/providers/anthropic/resources/index.mjs';
+import type { ToolResultBlockParam } from '@allternit/sdk/providers/allternit/resources/index.mjs';
 import * as React from 'react';
 import type { Tools } from '../../../Tool';
 import type { NormalizedUserMessage, ProgressMessage } from '../../../types/message';

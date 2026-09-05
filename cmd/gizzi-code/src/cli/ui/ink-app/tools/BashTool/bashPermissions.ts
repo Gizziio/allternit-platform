@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle'
-import { APIUserAbortError } from '@allternit/sdk/providers/anthropic'
+import { APIUserAbortError } from '@allternit/sdk/providers/allternit'
 import type { z } from 'zod/v4'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js'
 import {

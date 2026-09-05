@@ -106,17 +106,17 @@
       "@allternit/sdk/*": [
         "./packages/sdk/src/*"
       ],
-      "@allternit/sdk/providers/anthropic/error": [
-        "./packages/sdk/src/providers/anthropic/error.ts"
+      "@allternit/sdk/providers/allternit/error": [
+        "./packages/sdk/src/providers/allternit/error.ts"
       ],
-      "@allternit/sdk/providers/anthropic/resources/index.mjs": [
-        "./packages/sdk/src/providers/anthropic/resources/index.ts"
+      "@allternit/sdk/providers/allternit/resources/index.mjs": [
+        "./packages/sdk/src/providers/allternit/resources/index.ts"
       ],
-      "@allternit/sdk/providers/anthropic/resources/messages.mjs": [
-        "./packages/sdk/src/providers/anthropic/resources/messages/index.ts"
+      "@allternit/sdk/providers/allternit/resources/messages.mjs": [
+        "./packages/sdk/src/providers/allternit/resources/messages/index.ts"
       ],
-      "@allternit/sdk/providers/anthropic/resources/beta/messages/messages.mjs": [
-        "./packages/sdk/src/providers/anthropic/resources/beta/messages/index.ts"
+      "@allternit/sdk/providers/allternit/resources/beta/messages/messages.mjs": [
+        "./packages/sdk/src/providers/allternit/resources/beta/messages/index.ts"
       ],
       "@anthropic-ai/sandbox-runtime": [
         "./src/vendor/anthropic-stubs/sandbox-runtime.ts"

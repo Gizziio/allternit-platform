@@ -2,7 +2,7 @@
 import type {
   ToolResultBlockParam,
   ToolUseBlockParam,
-} from '@allternit/sdk/providers/anthropic/resources/index.mjs'
+} from '@allternit/sdk/providers/allternit/resources/index.mjs'
 import type {
   ElicitRequestURLParams,
   ElicitResult,

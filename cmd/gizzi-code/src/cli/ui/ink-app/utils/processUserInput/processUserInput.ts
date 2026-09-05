@@ -4,7 +4,7 @@ import type {
   Base64ImageSource,
   ContentBlockParam,
   ImageBlockParam,
-} from '@allternit/sdk/providers/anthropic/resources/messages.mjs'
+} from '@allternit/sdk/providers/allternit/resources/messages.mjs'
 import { randomUUID } from 'crypto'
 import type { QuerySource } from './../../constants/querySource.ts'
 import { logEvent } from './../../services/analytics/index.ts'

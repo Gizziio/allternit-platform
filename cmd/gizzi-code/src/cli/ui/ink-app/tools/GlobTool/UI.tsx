@@ -1,5 +1,5 @@
 // @ts-nocheck
-import type { ToolResultBlockParam } from '@allternit/sdk/providers/anthropic/resources/index.mjs';
+import type { ToolResultBlockParam } from '@allternit/sdk/providers/allternit/resources/index.mjs';
 import React from 'react';
 import { MessageResponse } from './../../components/MessageResponse.tsx';
 import { extractTag } from './../../utils/extractTag.js';

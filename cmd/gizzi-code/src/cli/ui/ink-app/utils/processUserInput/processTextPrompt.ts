@@ -1,5 +1,5 @@
 // @ts-nocheck
-import type { ContentBlockParam } from '@allternit/sdk/providers/anthropic/resources'
+import type { ContentBlockParam } from '@allternit/sdk/providers/allternit/resources'
 import { randomUUID } from 'crypto'
 import { setPromptId } from './../../bootstrap/state.ts'
 import type {

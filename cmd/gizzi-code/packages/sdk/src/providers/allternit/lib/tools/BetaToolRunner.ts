@@ -1,9 +1,13 @@
 import { BetaRunnableTool } from './BetaRunnableTool';
 import { ToolError } from './ToolError';
-import { AllternitAI as Anthropic } from '../..';
+import { AllternitAI as Allternit } from '../..';
 import { AllternitError } from '../../core/error';
 import { BetaMessage, BetaMessageParam, BetaToolUnion, MessageCreateParams } from '../../resources/beta';
 import { BetaMessageStream } from '../BetaMessageStream';
+import { RequestOptions } from '../../internal/request-options';
+import { buildHeaders } from '../../internal/headers';
+import { CompactionControl, DEFAULT_SUMMARY_PROMPT, DEFAULT_TOKEN_THRESHOLD } from './CompactionControl';
+import { collectStainlessHelpers } from '../stainless-helper-header';
 
 /**
  * Just Promise.withResolvers(), which is not available in all environments.
@@ -35,6 +39,7 @@ export class BetaToolRunner<Stream extends boolean> {
   #mutated = false;
   /** Current state containing the request parameters */
   #state: { params: BetaToolRunnerParams };
+  #options: BetaToolRunnerRequestOptions;
   /** Promise for the last message received from the assistant */
   #message?: Promise<BetaMessage> | undefined;
   /** Cached tool response to avoid redundant executions */
@@ -49,8 +54,9 @@ export class BetaToolRunner<Stream extends boolean> {
   #iterationCount = 0;
 
   constructor(
-    private client: Anthropic,
+    private client: Allternit,
     params: BetaToolRunnerParams,
+    options?: BetaToolRunnerRequestOptions,
   ) {
     this.#state = {
       params: {
@@ -62,7 +68,96 @@ export class BetaToolRunner<Stream extends boolean> {
       },
     };
 
+    const helpers = collectStainlessHelpers(params.tools, params.messages);
+    const helperValue = ['BetaToolRunner', ...helpers].join(', ');
+
+    this.#options = {
+      ...options,
+      headers: buildHeaders([{ 'x-stainless-helper': helperValue }, options?.headers]),
+    };
     this.#completion = promiseWithResolvers();
+  }
+
+  async #checkAndCompact(): Promise<boolean> {
+    const compactionControl = this.#state.params.compactionControl;
+    if (!compactionControl || !compactionControl.enabled) {
+      return false;
+    }
+
+    let tokensUsed = 0;
+    if (this.#message !== undefined) {
+      try {
+        const message = await this.#message;
+        const totalInputTokens =
+          message.usage.input_tokens +
+          (message.usage.cache_creation_input_tokens ?? 0) +
+          (message.usage.cache_read_input_tokens ?? 0);
+        tokensUsed = totalInputTokens + message.usage.output_tokens;
+      } catch {
+        // If we can't get the message, skip compaction
+        return false;
+      }
+    }
+
+    const threshold = compactionControl.contextTokenThreshold ?? DEFAULT_TOKEN_THRESHOLD;
+
+    if (tokensUsed < threshold) {
+      return false;
+    }
+
+    const model = compactionControl.model ?? this.#state.params.model;
+    const summaryPrompt = compactionControl.summaryPrompt ?? DEFAULT_SUMMARY_PROMPT;
+
+    const messages = this.#state.params.messages;
+
+    if (messages[messages.length - 1]!.role === 'assistant') {
+      // Remove tool_use blocks from the last message to avoid 400 error
+      // (tool_use requires tool_result, which we don't have yet)
+      const lastMessage = messages[messages.length - 1]!;
+      if (Array.isArray(lastMessage.content)) {
+        const nonToolBlocks = lastMessage.content.filter((block) => block.type !== 'tool_use');
+
+        if (nonToolBlocks.length === 0) {
+          // If all blocks were tool_use, just remove the message entirely
+          messages.pop();
+        } else {
+          lastMessage.content = nonToolBlocks;
+        }
+      }
+    }
+
+    const response = await this.client.beta.messages.create(
+      {
+        model,
+        messages: [
+          ...messages,
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: summaryPrompt,
+              },
+            ],
+          },
+        ],
+        max_tokens: this.#state.params.max_tokens,
+      },
+      {
+        headers: { 'x-stainless-helper': 'compaction' },
+      },
+    );
+
+    if (response.content[0]?.type !== 'text') {
+      throw new AllternitError('Expected text response for compaction');
+    }
+    this.#state.params.messages = [
+      {
+        role: 'user',
+        content: response.content,
+      },
+    ];
+    return true;
   }
 
   async *[Symbol.asyncIterator](): AsyncIterator<
@@ -90,35 +185,37 @@ export class BetaToolRunner<Stream extends boolean> {
           }
 
           this.#mutated = false;
-          this.#message = undefined;
           this.#toolResponse = undefined;
           this.#iterationCount++;
+          this.#message = undefined;
 
-          const { max_iterations, ...params } = this.#state.params;
+          const { max_iterations, compactionControl, ...params } = this.#state.params;
+
           if (params.stream) {
-            stream = this.client.beta.messages.stream({ ...params });
+            stream = this.client.beta.messages.stream({ ...params }, this.#options);
             this.#message = stream.finalMessage();
             // Make sure that this promise doesn't throw before we get the option to do something about it.
             // Error will be caught when we call await this.#message ultimately
             this.#message!.catch(() => {});
             yield stream as any;
           } else {
-            this.#message = this.client.beta.messages.create({ ...params, stream: false });
+            this.#message = this.client.beta.messages.create({ ...params, stream: false }, this.#options);
             yield this.#message as any;
           }
 
-          if (!this.#mutated) {
-            const { role, content } = await this.#message!;
-            this.#state.params.messages.push({ role, content });
-          }
+          const isCompacted = await this.#checkAndCompact();
+          if (!isCompacted) {
+            if (!this.#mutated) {
+              const { role, content } = await this.#message!;
+              this.#state.params.messages.push({ role, content });
+            }
 
-          const toolMessage = await this.#generateToolResponse(this.#state.params.messages.at(-1)!);
-          if (toolMessage) {
-            this.#state.params.messages.push(toolMessage);
-          }
-
-          if (!toolMessage && !this.#mutated) {
-            break;
+            const toolMessage = await this.#generateToolResponse(this.#state.params.messages.at(-1)!);
+            if (toolMessage) {
+              this.#state.params.messages.push(toolMessage);
+            } else if (!this.#mutated) {
+              break;
+            }
           }
         } finally {
           if (stream) {
@@ -377,5 +474,8 @@ export type BetaToolRunnerParams = Simplify<
      * When exceeded, the loop will terminate even if tools are still being requested.
      */
     max_iterations?: number;
+    compactionControl?: CompactionControl;
   }
 >;
+
+export type BetaToolRunnerRequestOptions = Pick<RequestOptions, 'headers'>;

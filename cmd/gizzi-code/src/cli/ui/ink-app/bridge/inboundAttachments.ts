@@ -11,7 +11,7 @@
  * skips that attachment. The message still reaches Claude, just without @path.
  */
 
-import type { ContentBlockParam } from '@allternit/sdk/providers/anthropic/resources/messages.mjs'
+import type { ContentBlockParam } from '@allternit/sdk/providers/allternit/resources/messages.mjs'
 import axios from 'axios'
 import { randomUUID } from 'crypto'
 import { mkdir, writeFile } from 'fs/promises'

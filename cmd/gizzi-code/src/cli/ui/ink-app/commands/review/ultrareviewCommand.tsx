@@ -1,5 +1,5 @@
 // @ts-nocheck
-import type { ContentBlockParam } from '@allternit/sdk/providers/anthropic/resources/messages';
+import type { ContentBlockParam } from '@allternit/sdk/providers/allternit/resources/messages';
 import React from 'react';
 import type { LocalJSXCommandCall, LocalJSXCommandOnDone } from '../../types/command';
 import { checkOverageGate, confirmOverage, launchRemoteReview } from './reviewRemote';

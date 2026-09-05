@@ -1,9 +1,9 @@
 // @ts-nocheck
-import type AllternitAI from '@allternit/sdk/providers/anthropic'
+import type AllternitAI from '@allternit/sdk/providers/allternit'
 import type {
   BetaTool,
   BetaToolUnion,
-} from '@allternit/sdk/providers/anthropic/resources/beta/messages/messages.mjs'
+} from '@allternit/sdk/providers/allternit/resources/beta/messages/messages.mjs'
 import { createHash } from 'crypto'
 import { SYSTEM_PROMPT_DYNAMIC_BOUNDARY } from './../constants/prompts.ts'
 import { getSystemContext, getUserContext } from './../context.ts'

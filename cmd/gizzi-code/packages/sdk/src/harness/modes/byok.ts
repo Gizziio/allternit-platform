@@ -9,16 +9,16 @@ import {
   APIConnectionError,
   APIConnectionTimeoutError,
   APIUserAbortError,
-} from '../../providers/anthropic';
-import type { Stream } from '../../providers/anthropic/core/streaming';
-import type { MessageStreamEvent, MessageParam } from '../../providers/anthropic/resources/messages';
+} from '../../providers/allternit';
+import type { Stream } from '../../providers/allternit/core/streaming';
+import type { MessageStreamEvent, MessageParam } from '../../providers/allternit/resources/messages';
 import type {
   BYOKConfig,
   StreamRequest,
   HarnessStreamChunk,
   Message,
 } from '../types';
-import { AllternitError } from '../../providers/anthropic/core/error';
+import { AllternitError } from '../../providers/allternit/core/error';
 
 /**
  * Stream from BYOK mode - routes to appropriate provider based on request.provider
@@ -31,8 +31,8 @@ export async function* streamFromBYOK(
 
   try {
     switch (request.provider) {
-      case 'anthropic':
-        yield* streamFromAnthropic(config, request);
+      case 'allternit':
+        yield* streamFromAllternit(config, request);
         break;
       case 'openai':
         yield* streamFromOpenAI(config, request);
@@ -42,7 +42,7 @@ export async function* streamFromBYOK(
         break;
       default:
         throw new AllternitError(
-          `Unsupported provider for BYOK mode: ${request.provider}. Supported: anthropic, openai, google`
+          `Unsupported provider for BYOK mode: ${request.provider}. Supported: allternit, openai, google`
         );
     }
   } catch (error) {
@@ -67,46 +67,46 @@ export async function* streamFromBYOK(
 }
 
 /**
- * Stream from Anthropic API using AllternitAI client
+ * Stream from Allternit API using AllternitAI client
  */
-async function* streamFromAnthropic(
+async function* streamFromAllternit(
   config: BYOKConfig,
   request: StreamRequest
 ): AsyncGenerator<HarnessStreamChunk> {
-  const apiKey = config.keys.anthropic;
+  const apiKey = config.keys.allternit;
   if (!apiKey) {
     throw new AllternitError(
-      'Anthropic API key not configured. Run: gizzi auth add anthropic --key <key>'
+      'Allternit API key not configured. Run: gizzi auth add allternit --key <key>'
     );
   }
 
   const client = new AllternitAI({
     apiKey,
-    baseURL: config.baseURLs?.anthropic,
+    baseURL: config.baseURLs?.allternit,
   });
 
   if (!request.model) {
-    throw new AllternitError('model is required for Anthropic BYOK requests');
+    throw new AllternitError('model is required for Allternit BYOK requests');
   }
 
-  // Convert messages to Anthropic format
-  const anthropicMessages = convertToAnthropicMessages(request.messages);
+  // Convert messages to Allternit format
+  const allternitMessages = convertToAllternitMessages(request.messages);
 
   // Create stream
   const stream = await client.messages.create(
     {
       model: request.model,
       max_tokens: request.maxTokens ?? 4096,
-      messages: anthropicMessages,
+      messages: allternitMessages,
       temperature: request.temperature,
-      tools: request.tools?.map(convertToAnthropicTool),
+      tools: request.tools?.map(convertToAllternitTool),
       stream: true,
     },
     { signal: request.signal }
   );
 
   // Process stream events
-  yield* processAnthropicStream(stream);
+  yield* processAllternitStream(stream);
 }
 
 /**
@@ -210,9 +210,9 @@ async function* streamFromGoogle(
 // ============================================================================
 
 /**
- * Process Anthropic SSE stream
+ * Process Allternit SSE stream
  */
-async function* processAnthropicStream(
+async function* processAllternitStream(
   stream: Stream<MessageStreamEvent>
 ): AsyncGenerator<HarnessStreamChunk> {
   let currentToolUse: { id: string; name: string; input: string } | null = null;
@@ -430,13 +430,13 @@ async function* processGoogleStream(
 // ============================================================================
 
 /**
- * Convert harness messages to Anthropic format
+ * Convert harness messages to Allternit format
  */
-function convertToAnthropicMessages(messages: Message[]): MessageParam[] {
+function convertToAllternitMessages(messages: Message[]): MessageParam[] {
   const result: MessageParam[] = [];
 
   for (const msg of messages) {
-    // Skip system messages - they are handled separately by Anthropic
+    // Skip system messages - they are handled separately by Allternit
     if (msg.role === 'system') continue;
 
     const role = msg.role === 'user' ? 'user' : 'assistant';
@@ -471,9 +471,9 @@ function convertToAnthropicMessages(messages: Message[]): MessageParam[] {
 }
 
 /**
- * Convert harness tool to Anthropic format
+ * Convert harness tool to Allternit format
  */
-function convertToAnthropicTool(tool: { name: string; description: string; input_schema: { type: 'object'; properties: Record<string, unknown>; required?: string[] } }) {
+function convertToAllternitTool(tool: { name: string; description: string; input_schema: { type: 'object'; properties: Record<string, unknown>; required?: string[] } }) {
   return {
     name: tool.name,
     description: tool.description,

@@ -20,7 +20,7 @@ export interface TierMap {
 // Cost-ranked model ladders per provider, cheapest first.
 // These are updated here as new models release — one place, everything benefits.
 const PROVIDER_LADDERS: Record<string, { simple: string; standard: string; complex: string; reasoning: string }> = {
-  anthropic: {
+  allternit: {
     simple:    'claude-haiku-4-5-20251001',
     standard:  'claude-haiku-4-5-20251001',
     complex:   'claude-sonnet-4-6',
@@ -46,21 +46,21 @@ const CROSS_PROVIDER_PREFERENCE: Record<Tier, Array<{ provider: string; model: s
   simple: [
     { provider: 'openai',    model: 'gpt-4o-mini' },
     { provider: 'google',    model: 'gemini-2.0-flash-lite' },
-    { provider: 'anthropic', model: 'claude-haiku-4-5-20251001' },
+    { provider: 'allternit', model: 'claude-haiku-4-5-20251001' },
   ],
   standard: [
-    { provider: 'anthropic', model: 'claude-haiku-4-5-20251001' },
+    { provider: 'allternit', model: 'claude-haiku-4-5-20251001' },
     { provider: 'google',    model: 'gemini-2.5-flash' },
     { provider: 'openai',    model: 'gpt-4o-mini' },
   ],
   complex: [
-    { provider: 'anthropic', model: 'claude-sonnet-4-6' },
+    { provider: 'allternit', model: 'claude-sonnet-4-6' },
     { provider: 'openai',    model: 'gpt-4.1' },
     { provider: 'google',    model: 'gemini-2.5-pro' },
   ],
   reasoning: [
     { provider: 'openai',    model: 'o4-mini' },
-    { provider: 'anthropic', model: 'claude-opus-4-7' },
+    { provider: 'allternit', model: 'claude-opus-4-7' },
     { provider: 'google',    model: 'gemini-2.5-pro' },
   ],
 };

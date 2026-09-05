@@ -1,58 +1,61 @@
 // @ts-nocheck
-import { isAbortError } from '../internal/errors';
+import { partialParse } from '../_vendor/partial-json-parser/parser';
+import type { Logger } from '../client';
 import { AllternitError, APIUserAbortError } from '../error';
+import { isAbortError } from '../internal/errors';
+import { type RequestOptions } from '../internal/request-options';
 import {
-  type ContentBlock,
-  Messages,
-  type Message,
-  type MessageStreamEvent,
-  type MessageParam,
+  type BetaContentBlock,
+  type BetaMCPToolUseBlock,
+  type BetaMessage,
+  type BetaMessageParam,
+  Messages as BetaMessages,
+  type BetaRawMessageStreamEvent as BetaMessageStreamEvent,
+  type BetaServerToolUseBlock,
+  type BetaTextBlock,
+  type BetaTextCitation,
+  type BetaToolUseBlock,
   type MessageCreateParams,
   type MessageCreateParamsBase,
-  type TextBlock,
-  type TextCitation,
-  type ToolUseBlock,
-  type ServerToolUseBlock,
-} from '../resources/messages';
+  MessageCreateParamsStreaming,
+} from '../resources/beta/messages/messages';
 import { Stream } from '../streaming';
-import { partialParse } from '../_vendor/partial-json-parser/parser';
-import { RequestOptions } from '../internal/request-options';
-import type { Logger } from '../client';
-import { maybeParseMessage, type ParsedMessage } from './parser';
+import { maybeParseBetaMessage, type ParsedBetaMessage } from './beta-parser';
 
-export interface MessageStreamEvents<ParsedT = null> {
+export interface MessageStreamEvents {
   connect: () => void;
-  streamEvent: (event: MessageStreamEvent, snapshot: Message) => void;
+  streamEvent: (event: BetaMessageStreamEvent, snapshot: BetaMessage) => void;
   text: (textDelta: string, textSnapshot: string) => void;
-  citation: (citation: TextCitation, citationsSnapshot: TextCitation[]) => void;
+  citation: (citation: BetaTextCitation, citationsSnapshot: BetaTextCitation[]) => void;
   inputJson: (partialJson: string, jsonSnapshot: unknown) => void;
   thinking: (thinkingDelta: string, thinkingSnapshot: string) => void;
   signature: (signature: string) => void;
-  message: (message: ParsedMessage<ParsedT>) => void;
-  contentBlock: (content: ContentBlock) => void;
-  finalMessage: (message: ParsedMessage<ParsedT>) => void;
+  compaction: (compactedContent: string) => void;
+  message: (message: BetaMessage) => void;
+  contentBlock: (content: BetaContentBlock) => void;
+  finalMessage: (message: BetaMessage) => void;
   error: (error: AllternitError) => void;
   abort: (error: APIUserAbortError) => void;
   end: () => void;
 }
 
-type MessageStreamEventListeners<ParsedT, Event extends keyof MessageStreamEvents<ParsedT>> = {
-  listener: MessageStreamEvents<ParsedT>[Event];
+type MessageStreamEventListeners<Event extends keyof MessageStreamEvents> = {
+  listener: MessageStreamEvents[Event];
   once?: boolean;
 }[];
 
 const JSON_BUF_PROPERTY = '__json_buf';
 
-export type TracksToolInput = ToolUseBlock | ServerToolUseBlock;
+export type TracksToolInput = BetaToolUseBlock | BetaServerToolUseBlock | BetaMCPToolUseBlock;
 
-function tracksToolInput(content: ContentBlock): content is TracksToolInput {
-  return content.type === 'tool_use' || content.type === 'server_tool_use';
+function tracksToolInput(content: BetaContentBlock): content is TracksToolInput {
+  return content.type === 'tool_use' || content.type === 'server_tool_use' || content.type === 'mcp_tool_use';
 }
 
-export class MessageStream<ParsedT = null> implements AsyncIterable<MessageStreamEvent> {
-  messages: MessageParam[] = [];
-  receivedMessages: ParsedMessage<ParsedT>[] = [];
-  #currentMessageSnapshot: Message | undefined;
+export class BetaMessageStream<ParsedT = null> implements AsyncIterable<BetaMessageStreamEvent> {
+  messages: BetaMessageParam[] = [];
+  receivedMessages: ParsedBetaMessage<ParsedT>[] = [];
+  #currentMessageSnapshot: BetaMessage | undefined;
   #params: MessageCreateParams | null = null;
 
   controller: AbortController = new AbortController();
@@ -65,9 +68,7 @@ export class MessageStream<ParsedT = null> implements AsyncIterable<MessageStrea
   #resolveEndPromise: () => void = () => {};
   #rejectEndPromise: (error: AllternitError) => void = () => {};
 
-  #listeners: {
-    [Event in keyof MessageStreamEvents<ParsedT>]?: MessageStreamEventListeners<ParsedT, Event>;
-  } = {};
+  #listeners: { [Event in keyof MessageStreamEvents]?: MessageStreamEventListeners<Event> } = {};
 
   #ended = false;
   #errored = false;
@@ -118,7 +119,7 @@ export class MessageStream<ParsedT = null> implements AsyncIterable<MessageStrea
    * as no `Response` is available.
    */
   async withResponse(): Promise<{
-    data: MessageStream<ParsedT>;
+    data: BetaMessageStream<ParsedT>;
     response: Response;
     request_id: string | null | undefined;
   }> {
@@ -143,19 +144,19 @@ export class MessageStream<ParsedT = null> implements AsyncIterable<MessageStrea
    * Note that messages sent to the model do not appear in `.on('message')`
    * in this context.
    */
-  static fromReadableStream(stream: ReadableStream): MessageStream {
-    const runner = new MessageStream(null);
+  static fromReadableStream(stream: ReadableStream): BetaMessageStream {
+    const runner = new BetaMessageStream(null);
     runner._run(() => runner._fromReadableStream(stream));
     return runner;
   }
 
   static createMessage<ParsedT>(
-    messages: Messages,
+    messages: BetaMessages,
     params: MessageCreateParamsBase,
     options?: RequestOptions,
     { logger }: { logger?: Logger | undefined } = {},
-  ): MessageStream<ParsedT> {
-    const runner = new MessageStream<ParsedT>(params, { logger });
+  ): BetaMessageStream<ParsedT> {
+    const runner = new BetaMessageStream<ParsedT>(params as MessageCreateParamsStreaming, { logger });
     for (const message of params.messages) {
       runner._addMessageParam(message);
     }
@@ -177,11 +178,11 @@ export class MessageStream<ParsedT = null> implements AsyncIterable<MessageStrea
     }, this.#handleError);
   }
 
-  protected _addMessageParam(message: MessageParam) {
+  protected _addMessageParam(message: BetaMessageParam) {
     this.messages.push(message);
   }
 
-  protected _addMessage(message: ParsedMessage<ParsedT>, emit = true) {
+  protected _addMessage(message: ParsedBetaMessage<ParsedT>, emit = true) {
     this.receivedMessages.push(message);
     if (emit) {
       this._emit('message', message);
@@ -189,7 +190,7 @@ export class MessageStream<ParsedT = null> implements AsyncIterable<MessageStrea
   }
 
   protected async _createMessage(
-    messages: Messages,
+    messages: BetaMessages,
     params: MessageCreateParams,
     options?: RequestOptions,
   ): Promise<void> {
@@ -251,11 +252,8 @@ export class MessageStream<ParsedT = null> implements AsyncIterable<MessageStrea
    * called, multiple times.
    * @returns this MessageStream, so that calls can be chained
    */
-  on<Event extends keyof MessageStreamEvents<ParsedT>>(
-    event: Event,
-    listener: MessageStreamEvents<ParsedT>[Event],
-  ): this {
-    const listeners: MessageStreamEventListeners<ParsedT, Event> =
+  on<Event extends keyof MessageStreamEvents>(event: Event, listener: MessageStreamEvents[Event]): this {
+    const listeners: MessageStreamEventListeners<Event> =
       this.#listeners[event] || (this.#listeners[event] = []);
     listeners.push({ listener });
     return this;
@@ -268,10 +266,7 @@ export class MessageStream<ParsedT = null> implements AsyncIterable<MessageStrea
    * off() must be called multiple times to remove each instance.
    * @returns this MessageStream, so that calls can be chained
    */
-  off<Event extends keyof MessageStreamEvents<ParsedT>>(
-    event: Event,
-    listener: MessageStreamEvents<ParsedT>[Event],
-  ): this {
+  off<Event extends keyof MessageStreamEvents>(event: Event, listener: MessageStreamEvents[Event]): this {
     const listeners = this.#listeners[event];
     if (!listeners) return this;
     const index = listeners.findIndex((l) => l.listener === listener);
@@ -284,11 +279,8 @@ export class MessageStream<ParsedT = null> implements AsyncIterable<MessageStrea
    * this listener is removed and then invoked.
    * @returns this MessageStream, so that calls can be chained
    */
-  once<Event extends keyof MessageStreamEvents<ParsedT>>(
-    event: Event,
-    listener: MessageStreamEvents<ParsedT>[Event],
-  ): this {
-    const listeners: MessageStreamEventListeners<ParsedT, Event> =
+  once<Event extends keyof MessageStreamEvents>(event: Event, listener: MessageStreamEvents[Event]): this {
+    const listeners: MessageStreamEventListeners<Event> =
       this.#listeners[event] || (this.#listeners[event] = []);
     listeners.push({ listener, once: true });
     return this;
@@ -305,12 +297,12 @@ export class MessageStream<ParsedT = null> implements AsyncIterable<MessageStrea
    *
    *   const message = await stream.emitted('message') // rejects if the stream errors
    */
-  emitted<Event extends keyof MessageStreamEvents<ParsedT>>(
+  emitted<Event extends keyof MessageStreamEvents>(
     event: Event,
   ): Promise<
-    Parameters<MessageStreamEvents<ParsedT>[Event]> extends [infer Param] ? Param
-    : Parameters<MessageStreamEvents<ParsedT>[Event]> extends [] ? void
-    : Parameters<MessageStreamEvents<ParsedT>[Event]>
+    Parameters<MessageStreamEvents[Event]> extends [infer Param] ? Param
+    : Parameters<MessageStreamEvents[Event]> extends [] ? void
+    : Parameters<MessageStreamEvents[Event]>
   > {
     return new Promise((resolve, reject) => {
       this.#catchingPromiseCreated = true;
@@ -324,11 +316,11 @@ export class MessageStream<ParsedT = null> implements AsyncIterable<MessageStrea
     await this.#endPromise;
   }
 
-  get currentMessage(): Message | undefined {
+  get currentMessage(): BetaMessage | undefined {
     return this.#currentMessageSnapshot;
   }
 
-  #getFinalMessage(): ParsedMessage<ParsedT> {
+  #getFinalMessage(): ParsedBetaMessage<ParsedT> {
     if (this.receivedMessages.length === 0) {
       throw new AllternitError('stream ended without producing a Message with role=assistant');
     }
@@ -338,9 +330,9 @@ export class MessageStream<ParsedT = null> implements AsyncIterable<MessageStrea
   /**
    * @returns a promise that resolves with the the final assistant Message response,
    * or rejects if an error occurred or the stream ended prematurely without producing a Message.
-   * If structured outputs were used, this will be a ParsedMessage with a `parsed_output` field.
+   * If structured outputs were used, this will be a ParsedMessage with a `parsed` field.
    */
-  async finalMessage(): Promise<ParsedMessage<ParsedT>> {
+  async finalMessage(): Promise<ParsedBetaMessage<ParsedT>> {
     await this.done();
     return this.#getFinalMessage();
   }
@@ -351,7 +343,7 @@ export class MessageStream<ParsedT = null> implements AsyncIterable<MessageStrea
     }
     const textBlocks = this.receivedMessages
       .at(-1)!
-      .content.filter((block): block is TextBlock => block.type === 'text')
+      .content.filter((block): block is BetaTextBlock => block.type === 'text')
       .map((block) => block.text);
     if (textBlocks.length === 0) {
       throw new AllternitError('stream ended without producing a content block with type=text');
@@ -382,17 +374,17 @@ export class MessageStream<ParsedT = null> implements AsyncIterable<MessageStrea
       return this._emit('error', error);
     }
     if (error instanceof Error) {
-      const anthropicError: AllternitError = new AllternitError(error.message);
+      const allternitError: AllternitError = new AllternitError(error.message);
       // @ts-ignore
-      anthropicError.cause = error;
-      return this._emit('error', anthropicError);
+      allternitError.cause = error;
+      return this._emit('error', allternitError);
     }
     return this._emit('error', new AllternitError(String(error)));
   };
 
-  protected _emit<Event extends keyof MessageStreamEvents<ParsedT>>(
+  protected _emit<Event extends keyof MessageStreamEvents>(
     event: Event,
-    ...args: Parameters<MessageStreamEvents<ParsedT>[Event]>
+    ...args: Parameters<MessageStreamEvents[Event]>
   ) {
     // make sure we don't emit any MessageStreamEvents after end
     if (this.#ended) return;
@@ -402,9 +394,9 @@ export class MessageStream<ParsedT = null> implements AsyncIterable<MessageStrea
       this.#resolveEndPromise();
     }
 
-    const listeners: MessageStreamEventListeners<ParsedT, Event> | undefined = this.#listeners[event];
+    const listeners: MessageStreamEventListeners<Event> | undefined = this.#listeners[event];
     if (listeners) {
-      this.#listeners[event] = listeners.filter((l: { once?: boolean }) => !l.once) as any;
+      this.#listeners[event] = listeners.filter((l) => !l.once) as any;
       listeners.forEach(({ listener }: any) => listener(...args));
     }
 
@@ -449,7 +441,7 @@ export class MessageStream<ParsedT = null> implements AsyncIterable<MessageStrea
     if (this.ended) return;
     this.#currentMessageSnapshot = undefined;
   }
-  #addStreamEvent(event: MessageStreamEvent) {
+  #addStreamEvent(event: BetaMessageStreamEvent) {
     if (this.ended) return;
     const messageSnapshot = this.#accumulateMessage(event);
     this._emit('streamEvent', event, messageSnapshot);
@@ -488,6 +480,12 @@ export class MessageStream<ParsedT = null> implements AsyncIterable<MessageStrea
             }
             break;
           }
+          case 'compaction_delta': {
+            if (content.type === 'compaction' && content.content) {
+              this._emit('compaction', content.content);
+            }
+            break;
+          }
           default:
             checkNever(event.delta);
         }
@@ -495,7 +493,10 @@ export class MessageStream<ParsedT = null> implements AsyncIterable<MessageStrea
       }
       case 'message_stop': {
         this._addMessageParam(messageSnapshot);
-        this._addMessage(maybeParseMessage(messageSnapshot, this.#params, { logger: this.#logger }), true);
+        this._addMessage(
+          maybeParseBetaMessage(messageSnapshot, this.#params, { logger: this.#logger }),
+          true,
+        );
         break;
       }
       case 'content_block_stop': {
@@ -511,7 +512,7 @@ export class MessageStream<ParsedT = null> implements AsyncIterable<MessageStrea
         break;
     }
   }
-  #endRequest(): ParsedMessage<ParsedT> {
+  #endRequest(): ParsedBetaMessage<ParsedT> {
     if (this.ended) {
       throw new AllternitError(`stream has ended, this shouldn't happen`);
     }
@@ -520,7 +521,7 @@ export class MessageStream<ParsedT = null> implements AsyncIterable<MessageStrea
       throw new AllternitError(`request ended without sending any chunks`);
     }
     this.#currentMessageSnapshot = undefined;
-    return maybeParseMessage(snapshot, this.#params, { logger: this.#logger });
+    return maybeParseBetaMessage(snapshot, this.#params, { logger: this.#logger });
   }
 
   protected async _fromReadableStream(
@@ -537,7 +538,7 @@ export class MessageStream<ParsedT = null> implements AsyncIterable<MessageStrea
     try {
       this.#beginRequest();
       this._connected(null);
-      const stream = Stream.fromReadableStream<MessageStreamEvent>(readableStream, this.controller);
+      const stream = Stream.fromReadableStream<BetaMessageStreamEvent>(readableStream, this.controller);
       for await (const event of stream) {
         this.#addStreamEvent(event);
       }
@@ -557,7 +558,7 @@ export class MessageStream<ParsedT = null> implements AsyncIterable<MessageStrea
    * will be needed to be handled by the caller, this method will throw if you try to accumulate for multiple
    * messages.
    */
-  #accumulateMessage(event: MessageStreamEvent): Message {
+  #accumulateMessage(event: BetaMessageStreamEvent): BetaMessage {
     let snapshot = this.#currentMessageSnapshot;
 
     if (event.type === 'message_start') {
@@ -575,11 +576,12 @@ export class MessageStream<ParsedT = null> implements AsyncIterable<MessageStrea
       case 'message_stop':
         return snapshot;
       case 'message_delta':
+        snapshot.container = event.delta.container;
         snapshot.stop_reason = event.delta.stop_reason;
         snapshot.stop_sequence = event.delta.stop_sequence;
         snapshot.usage.output_tokens = event.usage.output_tokens;
+        snapshot.context_management = event.context_management;
 
-        // Update other usage fields if they exist in the event
         if (event.usage.input_tokens != null) {
           snapshot.usage.input_tokens = event.usage.input_tokens;
         }
@@ -596,9 +598,13 @@ export class MessageStream<ParsedT = null> implements AsyncIterable<MessageStrea
           snapshot.usage.server_tool_use = event.usage.server_tool_use;
         }
 
+        if (event.usage.iterations != null) {
+          snapshot.usage.iterations = event.usage.iterations;
+        }
+
         return snapshot;
       case 'content_block_start':
-        snapshot.content.push({ ...event.content_block });
+        snapshot.content.push(event.content_block);
         return snapshot;
       case 'content_block_delta': {
         const snapshotContent = snapshot.content.at(event.index);
@@ -638,7 +644,14 @@ export class MessageStream<ParsedT = null> implements AsyncIterable<MessageStrea
               });
 
               if (jsonBuf) {
-                newContent.input = partialParse(jsonBuf);
+                try {
+                  newContent.input = partialParse(jsonBuf);
+                } catch (err) {
+                  const error = new AllternitError(
+                    `Unable to parse tool parameter JSON from model. Please retry your request or adjust your prompt. Error: ${err}. JSON: ${jsonBuf}`,
+                  );
+                  this.#handleError(error);
+                }
               }
               snapshot.content[event.index] = newContent;
             }
@@ -662,10 +675,18 @@ export class MessageStream<ParsedT = null> implements AsyncIterable<MessageStrea
             }
             break;
           }
+          case 'compaction_delta': {
+            if (snapshotContent?.type === 'compaction') {
+              snapshot.content[event.index] = {
+                ...snapshotContent,
+                content: (snapshotContent.content || '') + event.delta.content,
+              };
+            }
+            break;
+          }
           default:
             checkNever(event.delta);
         }
-
         return snapshot;
       }
       case 'content_block_stop':
@@ -673,10 +694,10 @@ export class MessageStream<ParsedT = null> implements AsyncIterable<MessageStrea
     }
   }
 
-  [Symbol.asyncIterator](): AsyncIterator<MessageStreamEvent> {
-    const pushQueue: MessageStreamEvent[] = [];
+  [Symbol.asyncIterator](): AsyncIterator<BetaMessageStreamEvent> {
+    const pushQueue: BetaMessageStreamEvent[] = [];
     const readQueue: {
-      resolve: (chunk: MessageStreamEvent | undefined) => void;
+      resolve: (chunk: BetaMessageStreamEvent | undefined) => void;
       reject: (error: unknown) => void;
     }[] = [];
     let done = false;
@@ -715,12 +736,12 @@ export class MessageStream<ParsedT = null> implements AsyncIterable<MessageStrea
     });
 
     return {
-      next: async (): Promise<IteratorResult<MessageStreamEvent>> => {
+      next: async (): Promise<IteratorResult<BetaMessageStreamEvent>> => {
         if (!pushQueue.length) {
           if (done) {
             return { value: undefined, done: true };
           }
-          return new Promise<MessageStreamEvent | undefined>((resolve, reject) =>
+          return new Promise<BetaMessageStreamEvent | undefined>((resolve, reject) =>
             readQueue.push({ resolve, reject }),
           ).then((chunk) => (chunk ? { value: chunk, done: false } : { value: undefined, done: true }));
         }

@@ -68,7 +68,7 @@ export interface Completion {
 
   /**
    * The model that will complete your prompt.\n\nSee
-   * [models](https://docs.anthropic.com/en/docs/models-overview) for additional
+   * [models](https://docs.gizziio.com/en/docs/models-overview) for additional
    * details and options.
    */
   model: MessagesAPI.Model;
@@ -105,13 +105,13 @@ export interface CompletionCreateParamsBase {
 
   /**
    * Body param: The model that will complete your prompt.\n\nSee
-   * [models](https://docs.anthropic.com/en/docs/models-overview) for additional
+   * [models](https://docs.gizziio.com/en/docs/models-overview) for additional
    * details and options.
    */
   model: MessagesAPI.Model;
 
   /**
-   * Body param: The prompt that you want Claude to complete.
+   * Body param: The prompt that you want Allternit to complete.
    *
    * For proper response generation you will need to format your prompt using
    * alternating `\n\nHuman:` and `\n\nAssistant:` conversational turns. For example:
@@ -192,7 +192,7 @@ export interface CompletionCreateParamsBase {
 
 export namespace CompletionCreateParams {
   /**
-   * @deprecated use `Anthropic.Messages.Metadata` instead
+   * @deprecated use `Allternit.Messages.Metadata` instead
    */
   export type Metadata = MessagesAPI.Metadata;
 

@@ -3,7 +3,7 @@ import type {
   Base64ImageSource,
   ContentBlockParam,
   ImageBlockParam,
-} from '@allternit/sdk/providers/anthropic/resources/messages.mjs'
+} from '@allternit/sdk/providers/allternit/resources/messages.mjs'
 import type { UUID } from 'crypto'
 import type { SDKMessage } from '../entrypoints/agentSdkTypes'
 import { detectImageFormatFromBase64 } from '../utils/imageResizer'

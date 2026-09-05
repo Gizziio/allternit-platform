@@ -546,7 +546,7 @@ export class BaseAllternitAI {
     if (expectedTimeout > defaultTimeout) {
       throw new Errors.AllternitError(
         'Streaming is required for operations that may take longer than 10 minutes. ' +
-          'See https://github.com/anthropics/allternit-sdk#streaming-responses for more details',
+          'See https://docs.gizziio.com for more details',
       );
     }
     return defaultTimeout * 1000;
@@ -918,7 +918,7 @@ export class BaseAllternitAI {
     const expectedTime = (maxTime * maxTokens) / 128000;
     if (expectedTime > defaultTime || (maxNonstreamingTokens != null && maxTokens > maxNonstreamingTokens)) {
       throw new Errors.AllternitError(
-        'Streaming is required for operations that may take longer than 10 minutes. See https://github.com/anthropics/allternit-sdk#long-requests for more details',
+        'Streaming is required for operations that may take longer than 10 minutes. See https://docs.gizziio.com for more details',
       );
     }
 

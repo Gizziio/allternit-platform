@@ -1,5 +1,5 @@
 // @ts-nocheck
-import type { Base64ImageSource } from '@allternit/sdk/providers/anthropic/resources/index.mjs'
+import type { Base64ImageSource } from '@allternit/sdk/providers/allternit/resources/index.mjs'
 import { readGizziEnv } from '@/shared/utils/gizziEnv.js';
 import { readdir, readFile as readFileAsync } from 'fs/promises'
 import * as path from 'path'

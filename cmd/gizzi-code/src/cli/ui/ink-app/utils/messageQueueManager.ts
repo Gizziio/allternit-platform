@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle'
-import type { ContentBlockParam } from '@allternit/sdk/providers/anthropic/resources/messages.mjs'
+import type { ContentBlockParam } from '@allternit/sdk/providers/allternit/resources/messages.mjs'
 import type { Permutations } from './../types/utils.ts'
 import { getSessionId } from '../bootstrap/state.js'
 import type { AppState } from '../state/AppState.js'

@@ -7,4 +7,3 @@ See:
 
 - `docs/anthropic-allowlist.md` — remaining functional-floor identifiers
 - `src/shared/utils/gizziEnv.ts` — `GIZZI_*` only
-- `docs/legal-attribution.md` — lineage and distribution-basis findings

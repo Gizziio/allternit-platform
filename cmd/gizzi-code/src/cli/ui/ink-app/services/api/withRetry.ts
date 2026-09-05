@@ -1,11 +1,11 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle'
-import type AllternitAI from '@allternit/sdk/providers/anthropic'
+import type AllternitAI from '@allternit/sdk/providers/allternit'
 import {
   APIConnectionError,
   APIError,
   APIUserAbortError,
-} from '@allternit/sdk/providers/anthropic'
+} from '@allternit/sdk/providers/allternit'
 import type { QuerySource } from './../../constants/querySource.ts'
 import type { SystemAPIErrorMessage } from './../../types/message.ts'
 import { isAwsCredentialsProviderError } from './../../utils/aws.ts'

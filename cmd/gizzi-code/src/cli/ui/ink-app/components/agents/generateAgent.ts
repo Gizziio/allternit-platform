@@ -1,5 +1,5 @@
 // @ts-nocheck
-import type { ContentBlock } from '@allternit/sdk/providers/anthropic/resources/index.mjs'
+import type { ContentBlock } from '@allternit/sdk/providers/allternit/resources/index.mjs'
 import { getUserContext } from './../../context.ts'
 import { queryModelWithoutStreaming } from './../../services/api/claude.ts'
 import { getEmptyToolPermissionContext } from './../../Tool.ts'

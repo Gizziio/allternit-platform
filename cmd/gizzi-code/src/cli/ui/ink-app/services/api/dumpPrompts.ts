@@ -1,5 +1,5 @@
 // @ts-nocheck
-import type { ClientOptions } from '@allternit/sdk/providers/anthropic'
+import type { ClientOptions } from '@allternit/sdk/providers/allternit'
 import { createHash } from 'crypto'
 import { promises as fs } from 'fs'
 import { dirname, join } from 'path'

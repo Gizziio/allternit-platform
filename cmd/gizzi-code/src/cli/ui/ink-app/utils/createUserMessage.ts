@@ -1,5 +1,5 @@
 // @ts-nocheck
-import type { ContentBlockParam } from '@allternit/sdk/providers/anthropic/resources/index.mjs'
+import type { ContentBlockParam } from '@allternit/sdk/providers/allternit/resources/index.mjs'
 import { randomUUID, type UUID } from 'crypto'
 import { NO_CONTENT_MESSAGE } from '../constants/messages.ts'
 import type {

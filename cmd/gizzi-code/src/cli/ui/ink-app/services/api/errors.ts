@@ -3,11 +3,11 @@ import {
   APIConnectionError,
   APIConnectionTimeoutError,
   APIError,
-} from '@allternit/sdk/providers/anthropic'
+} from '@allternit/sdk/providers/allternit'
 import type {
   BetaMessage,
   BetaStopReason,
-} from '@allternit/sdk/providers/anthropic/resources/beta/messages/messages.mjs'
+} from '@allternit/sdk/providers/allternit/resources/beta/messages/messages.mjs'
 import { AFK_MODE_BETA_HEADER } from './../../constants/betas.ts'
 import type { SDKAssistantMessageError } from './../../entrypoints/agentSdkTypes.ts'
 import type {

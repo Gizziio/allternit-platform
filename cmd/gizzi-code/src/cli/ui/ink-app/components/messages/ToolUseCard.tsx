@@ -2,7 +2,7 @@
 import * as React from 'react'
 import { Box, Text } from '../../ink'
 import { useAppStateMaybeOutsideOfProvider } from '../../state/AppState'
-import type { ToolUseBlockParam } from '@allternit/sdk/providers/anthropic/resources/index.mjs'
+import type { ToolUseBlockParam } from '@allternit/sdk/providers/allternit/resources/index.mjs'
 
 type Props = {
   param: ToolUseBlockParam

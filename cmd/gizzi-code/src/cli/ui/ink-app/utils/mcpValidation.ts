@@ -3,7 +3,7 @@ import type {
   ContentBlockParam,
   ImageBlockParam,
   TextBlockParam,
-} from '@allternit/sdk/providers/anthropic/resources/index.mjs'
+} from '@allternit/sdk/providers/allternit/resources/index.mjs'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/analytics/growthbook.js'
 import { roughTokenCountEstimation } from '../services/roughTokenEstimation.js'
 import { compressImageBlock } from './imageResizer.js'

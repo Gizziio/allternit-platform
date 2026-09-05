@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
-import type { ToolResultBlockParam } from '@allternit/sdk/providers/anthropic/resources/index.mjs';
+import type { ToolResultBlockParam } from '@allternit/sdk/providers/allternit/resources/index.mjs';
 import React from 'react';
 import { CtrlOToExpand } from '../../components/CtrlOToExpand';
 import { FallbackToolUseErrorMessage } from '../../components/FallbackToolUseErrorMessage';

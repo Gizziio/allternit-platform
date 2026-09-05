@@ -8,7 +8,7 @@
  */
 
 import { feature } from 'bun:bundle'
-import type { ContentBlockParam } from '@allternit/sdk/providers/anthropic/resources/messages.mjs'
+import type { ContentBlockParam } from '@allternit/sdk/providers/allternit/resources/messages.mjs'
 
 // ============================================================================
 // Permission Modes

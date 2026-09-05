@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import { feature } from 'bun:bundle';
-import { APIUserAbortError } from '@allternit/sdk/providers/anthropic';
+import { APIUserAbortError } from '@allternit/sdk/providers/allternit';
 import * as React from 'react';
 import { useCallback } from 'react';
 import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from './../services/analytics/index.ts';

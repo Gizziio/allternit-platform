@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle'
 import { readGizziEnv } from '@/shared/utils/gizziEnv.js';
-import type { AllternitAI } from '@allternit/sdk/providers/anthropic'
+import type { AllternitAI } from '@allternit/sdk/providers/allternit'
 import {
   getSystemPrompt,
   SYSTEM_PROMPT_DYNAMIC_BOUNDARY,

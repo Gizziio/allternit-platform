@@ -1,6 +1,6 @@
 /**
  * Helper functions for integrating MCP (Model Context Protocol) SDK types
- * with the Anthropic SDK.
+ * with the Allternit SDK.
  *
  * These helpers reduce boilerplate when converting between MCP types and
  * Allternit AI API types. The interfaces defined here use TypeScript's structural
@@ -173,7 +173,7 @@ function isSupportedResourceMimeType(mimeType: string | undefined): boolean {
 // -----------------------------------------------------------------------------
 
 /**
- * Error thrown when an MCP value cannot be converted to a format supported by the Claude API.
+ * Error thrown when an MCP value cannot be converted to a format supported by the Allternit API.
  */
 export class UnsupportedMCPValueError extends Error {
   constructor(message: string) {
@@ -187,13 +187,13 @@ export class UnsupportedMCPValueError extends Error {
 // -----------------------------------------------------------------------------
 
 /**
- * Converts an MCP tool to a BetaRunnableTool for use with the Anthropic SDK's
+ * Converts an MCP tool to a BetaRunnableTool for use with the Allternit SDK's
  * `toolRunner()` method.
  *
  * @param tool The MCP tool definition from `mcpClient.listTools()`
  * @param mcpClient The MCP client instance used to call the tool
- * @param extraProps Additional Claude API properties to include in the tool definition
- * @returns A runnable tool for use with `anthropic.beta.messages.toolRunner()`
+ * @param extraProps Additional Allternit API properties to include in the tool definition
+ * @returns A runnable tool for use with `client.beta.messages.toolRunner()`
  * @throws {UnsupportedMCPValueError} When the tool returns unsupported content types
  * @throws {UnsupportedMCPValueError} When the tool returns unsupported resource links
  * @throws {UnsupportedMCPValueError} When the tool returns resources with unsupported MIME types
@@ -201,14 +201,14 @@ export class UnsupportedMCPValueError extends Error {
  * @example
  * ```ts
  * import { Client } from "@modelcontextprotocol/sdk/client/index.js";
- * import Anthropic from "@anthropic-ai/sdk";
- * import { mcpTool } from "@anthropic-ai/sdk/helpers/beta/mcp";
+ * import Allternit from "@allternit/gizzi-sdk";
+ * import { mcpTool } from "@allternit/gizzi-sdk/helpers/beta/mcp";
  *
  * const mcpClient = new Client({ name: "example", version: "1.0.0" });
- * const anthropic = new AllternitAI();
+ * const allternit = new AllternitAI();
  *
  * const tools = await mcpClient.listTools();
- * const runner = await anthropic.beta.messages.toolRunner({
+ * const runner = await client.beta.messages.toolRunner({
  *   model: "claude-sonnet-4-20250514",
  *   max_tokens: 1024,
  *   tools: tools.tools.map(tool => mcpTool(tool, mcpClient)),
@@ -275,13 +275,13 @@ export function mcpTool(
  *
  * @param tools Array of MCP tool definitions from `mcpClient.listTools()`
  * @param mcpClient The MCP client instance used to call the tools
- * @param extraProps Additional Claude API properties to include in each tool definition
- * @returns An array of runnable tools for use with `anthropic.beta.messages.toolRunner()`
+ * @param extraProps Additional Allternit API properties to include in each tool definition
+ * @returns An array of runnable tools for use with `client.beta.messages.toolRunner()`
  *
  * @example
  * ```ts
  * const { tools } = await mcpClient.listTools();
- * const runner = await anthropic.beta.messages.toolRunner({
+ * const runner = await client.beta.messages.toolRunner({
  *   model: "claude-sonnet-4-20250514",
  *   max_tokens: 1024,
  *   tools: mcpTools(tools, mcpClient),
@@ -298,11 +298,11 @@ export function mcpTools(
 }
 
 /**
- * Converts an MCP prompt message to an Anthropic BetaMessageParam.
+ * Converts an MCP prompt message to an Allternit BetaMessageParam.
  *
  * @param mcpMessage The MCP prompt message from `mcpClient.getPrompt()`
- * @param extraProps Additional Claude API properties to include in content blocks (e.g., `cache_control`)
- * @returns A message parameter for use with `anthropic.beta.messages.create()`
+ * @param extraProps Additional Allternit API properties to include in content blocks (e.g., `cache_control`)
+ * @returns A message parameter for use with `client.beta.messages.create()`
  * @throws {UnsupportedMCPValueError} When the message contains unsupported content types
  * @throws {UnsupportedMCPValueError} When the message contains unsupported resource links
  * @throws {UnsupportedMCPValueError} When the message contains resources with unsupported MIME types
@@ -310,18 +310,18 @@ export function mcpTools(
  * @example
  * ```ts
  * import { Client } from "@modelcontextprotocol/sdk/client/index.js";
- * import Anthropic from "@anthropic-ai/sdk";
- * import { mcpMessage } from "@anthropic-ai/sdk/helpers/beta/mcp";
+ * import Allternit from "@allternit/gizzi-sdk";
+ * import { mcpMessage } from "@allternit/gizzi-sdk/helpers/beta/mcp";
  *
  * const mcpClient = new Client({ name: "example", version: "1.0.0" });
- * const anthropic = new AllternitAI();
+ * const allternit = new AllternitAI();
  *
  * const prompt = await mcpClient.getPrompt({
  *   name: "example-prompt",
  *   arguments: { arg1: "value" },
  * });
  *
- * await anthropic.beta.messages.create({
+ * await client.beta.messages.create({
  *   model: "claude-sonnet-4-20250514",
  *   max_tokens: 1024,
  *   messages: prompt.messages.map(msg => mcpMessage(msg)),
@@ -348,8 +348,8 @@ export function mcpMessage(
  * Converts an array of MCP prompt messages to Allternit BetaMessageParams.
  *
  * @param messages Array of MCP prompt messages from `mcpClient.getPrompt()`
- * @param extraProps Additional Claude API properties to include in content blocks (e.g., `cache_control`)
- * @returns An array of message parameters for use with `anthropic.beta.messages.create()`
+ * @param extraProps Additional Allternit API properties to include in content blocks (e.g., `cache_control`)
+ * @returns An array of message parameters for use with `client.beta.messages.create()`
  * @throws {UnsupportedMCPValueError} When any message contains unsupported content types
  * @throws {UnsupportedMCPValueError} When any message contains unsupported resource links
  * @throws {UnsupportedMCPValueError} When any message contains resources with unsupported MIME types
@@ -357,7 +357,7 @@ export function mcpMessage(
  * @example
  * ```ts
  * const { messages } = await mcpClient.getPrompt({ name: "example-prompt" });
- * await anthropic.beta.messages.create({
+ * await client.beta.messages.create({
  *   model: "claude-sonnet-4-20250514",
  *   max_tokens: 1024,
  *   messages: mcpMessages(messages),
@@ -376,11 +376,11 @@ export function mcpMessages(
 }
 
 /**
- * Converts a single MCP prompt content item to an Anthropic content block.
+ * Converts a single MCP prompt content item to an Allternit content block.
  *
  * @param content The MCP content item (text, image, or embedded resource)
- * @param extraProps Additional Claude API properties to include in the content block (e.g., `cache_control`)
- * @returns A Claude content block for use in a message's content array
+ * @param extraProps Additional Allternit API properties to include in the content block (e.g., `cache_control`)
+ * @returns A Allternit content block for use in a message's content array
  * @throws {UnsupportedMCPValueError} When the content type is not supported (e.g., 'audio')
  * @throws {UnsupportedMCPValueError} When resource links use non-http/https protocols
  * @throws {UnsupportedMCPValueError} When resources have unsupported MIME types
@@ -389,7 +389,7 @@ export function mcpMessages(
  * ```ts
  * const { messages } = await mcpClient.getPrompt({ name: "my-prompt" });
  * // If you need to mix MCP content with other content:
- * await anthropic.beta.messages.create({
+ * await client.beta.messages.create({
  *   model: "claude-sonnet-4-20250514",
  *   max_tokens: 1024,
  *   messages: [{
@@ -455,7 +455,7 @@ export function mcpContent(
 }
 
 /**
- * Converts a single MCP resource contents item to an Anthropic content block.
+ * Converts a single MCP resource contents item to an Allternit content block.
  */
 function mcpResourceContentToContentBlock(
   resourceContent: MCPResourceContentsLike,
@@ -521,28 +521,28 @@ function mcpResourceContentToContentBlock(
 }
 
 /**
- * Converts MCP resource contents to an Anthropic content block.
+ * Converts MCP resource contents to an Allternit content block.
  *
  * This helper is useful when you have resource contents from `mcpClient.readResource()`
  * and want to include them in a message or as a document source. It automatically
  * finds the first resource with a supported MIME type.
  *
  * @param result The result from `mcpClient.readResource()`
- * @param extraProps Additional Claude API properties to include in the content block (e.g., `cache_control`)
- * @returns A Claude content block
+ * @param extraProps Additional Allternit API properties to include in the content block (e.g., `cache_control`)
+ * @returns A Allternit content block
  * @throws {UnsupportedMCPValueError} When contents array is empty or none have a supported MIME type
  *
  * @example
  * ```ts
  * import { Client } from "@modelcontextprotocol/sdk/client/index.js";
- * import Anthropic from "@anthropic-ai/sdk";
- * import { mcpResourceToContent } from "@anthropic-ai/sdk/helpers/beta/mcp";
+ * import Allternit from "@allternit/gizzi-sdk";
+ * import { mcpResourceToContent } from "@allternit/gizzi-sdk/helpers/beta/mcp";
  *
  * const mcpClient = new Client({ name: "example", version: "1.0.0" });
- * const anthropic = new AllternitAI();
+ * const allternit = new AllternitAI();
  *
  * const resource = await mcpClient.readResource({ uri: "file:///example.txt" });
- * await anthropic.beta.messages.create({
+ * await client.beta.messages.create({
  *   model: "claude-sonnet-4-20250514",
  *   max_tokens: 1024,
  *   messages: [{
@@ -588,24 +588,24 @@ function textSourceFromResource(resource: MCPResourceContentsLike): BetaPlainTex
 }
 
 /**
- * Converts an MCP resource to a File object suitable for uploading via `anthropic.beta.files.upload()`.
+ * Converts an MCP resource to a File object suitable for uploading via `client.beta.files.upload()`.
  *
  * @param result The result from `mcpClient.readResource()`
- * @returns A File object for use with `anthropic.beta.files.upload()`
+ * @returns A File object for use with `client.beta.files.upload()`
  * @throws {UnsupportedMCPValueError} When contents array is empty
  *
  * @example
  * ```ts
  * import { Client } from "@modelcontextprotocol/sdk/client/index.js";
- * import Anthropic from "@anthropic-ai/sdk";
- * import { mcpResourceToFile } from "@anthropic-ai/sdk/helpers/beta/mcp";
+ * import Allternit from "@allternit/gizzi-sdk";
+ * import { mcpResourceToFile } from "@allternit/gizzi-sdk/helpers/beta/mcp";
  *
  * const mcpClient = new Client({ name: "example", version: "1.0.0" });
- * const anthropic = new AllternitAI();
+ * const allternit = new AllternitAI();
  *
  * const resource = await mcpClient.readResource({ uri: "file:///document.pdf" });
  *
- * const uploaded = await anthropic.beta.files.upload({
+ * const uploaded = await client.beta.files.upload({
  *   file: mcpResourceToFile(resource),
  * });
  * ```

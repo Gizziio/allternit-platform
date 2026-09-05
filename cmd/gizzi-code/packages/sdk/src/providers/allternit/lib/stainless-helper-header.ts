@@ -8,7 +8,7 @@ import type { BetaMessageParam, BetaToolUnion } from '../resources/beta';
  * Symbol used to mark objects created by SDK helpers for tracking.
  * The value is the helper name (e.g., 'mcpTool', 'betaZodTool').
  */
-export const SDK_HELPER_SYMBOL = Symbol('anthropic.sdk.stainlessHelper');
+export const SDK_HELPER_SYMBOL = Symbol('allternit.sdk.stainlessHelper');
 
 type StainlessHelperObject = { [SDK_HELPER_SYMBOL]: string };
 

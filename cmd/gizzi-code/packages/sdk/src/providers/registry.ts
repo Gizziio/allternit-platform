@@ -4,7 +4,7 @@
  * Central registry for AI providers with metadata and factory functions.
  */
 
-import { AllternitAI } from './anthropic/index.js';
+import { AllternitAI } from './allternit/index.js';
 import { AllternitOpenAI } from './openai/index.js';
 import { AllternitGoogleAI } from './google/index.js';
 import { AllternitOllama } from './ollama/index.js';
@@ -54,10 +54,10 @@ export interface ProviderConfig {
 // Provider metadata registry - 15 providers total
 export const PROVIDER_REGISTRY: ProviderMetadata[] = [
   {
-    id: 'anthropic',
-    name: 'Anthropic',
-    description: 'Claude AI models by Anthropic',
-    website: 'https://anthropic.com',
+    id: 'allternit',
+    name: 'Allternit',
+    description: 'Allternit AI models',
+    website: 'https://allternit.com',
     authType: 'api_key',
     features: {
       streaming: true,
@@ -405,7 +405,7 @@ export const PROVIDER_REGISTRY: ProviderMetadata[] = [
 // Provider factory
 export function createProvider(id: string, config: ProviderConfig) {
   switch (id) {
-    case 'anthropic':
+    case 'allternit':
       return new AllternitAI({ apiKey: config.apiKey!, baseURL: config.baseURL });
     case 'openai':
       return new AllternitOpenAI({ apiKey: config.apiKey!, baseURL: config.baseURL });
