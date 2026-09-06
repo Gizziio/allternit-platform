@@ -34,7 +34,6 @@ allternit-gc-agents = { workspace = true }
 # Internal crates - Execution
 allternit-driver-interface = { path = "../../platform/contracts/driver-interface" }
 allternit-firecracker-driver = { path = "../../drivers/firecracker" }
-allternit-opensandbox-driver = { path = "../../drivers/opensandbox" }
 allternit-session-manager = { path = "../../services/session-manager" }
 allternit-computer-cloud = { path = "../../cmd/allternit-computer-cloud" }
 allternitos-cloud-contracts = { workspace = true }

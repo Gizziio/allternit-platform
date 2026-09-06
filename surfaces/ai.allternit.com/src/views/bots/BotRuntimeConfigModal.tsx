@@ -2,7 +2,21 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { X, Plugs, Key, Plus, Trash, Lightning, Robot, Envelope, Phone, Wallet, ComputerTower, Desktop, Globe, FileCode, Terminal, SquaresFour, Cloud } from "@phosphor-icons/react";
-import type { Agent, AgentConnectorBinding, AgentSecretRef, AgentWalletPaymentMethod, AgentEmailChannel, AgentPhoneChannel, AgentWalletChannel, AgentMessagingConfig, AgentVMAction, AgentVMProvider, AgentVMNetworkPolicy, AgentVMPersistence } from "@/lib/agents/agent.types";
+import {
+  coerceVmProviderName,
+  type Agent,
+  type AgentConnectorBinding,
+  type AgentSecretRef,
+  type AgentWalletPaymentMethod,
+  type AgentEmailChannel,
+  type AgentPhoneChannel,
+  type AgentWalletChannel,
+  type AgentMessagingConfig,
+  type AgentVMAction,
+  type AgentVMProvider,
+  type AgentVMNetworkPolicy,
+  type AgentVMPersistence,
+} from "@/lib/agents/agent.types";
 import { updateAgent } from "@/lib/agents/agent.service";
 import { sealAgentSecret } from "@/lib/agents/agent-secrets.service";
 import { createAgentWallet } from "@/lib/bots/agent-wallet-factory";
@@ -76,7 +90,7 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
   );
 
   const [vmEnabled, setVMEnabled] = useState(bot.vmOperator?.enabled ?? false);
-  const [vmProvider, setVMProvider] = useState<AgentVMProvider>(bot.vmOperator?.provider || "opensandbox");
+  const [vmProvider, setVMProvider] = useState<AgentVMProvider>(coerceVmProviderName(bot.vmOperator?.provider));
   const [vmImage, setVMImage] = useState(bot.vmOperator?.image || "");
   const [vmCpu, setVMCpu] = useState(bot.vmOperator?.resources?.cpu || "");
   const [vmMemory, setVMMemory] = useState(bot.vmOperator?.resources?.memory || "");
@@ -202,7 +216,7 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
       setMessagingCrossSurface(bot.messagingConfig?.crossSurfaceEnabled ?? false);
       setMessagingSurfaces(bot.messagingConfig?.allowedSurfaces ?? ["chat", "cowork", "code"]);
       setVMEnabled(bot.vmOperator?.enabled ?? false);
-      setVMProvider(bot.vmOperator?.provider || "opensandbox");
+      setVMProvider(bot.vmOperator?.provider || "cloud-desktop");
       setVMImage(bot.vmOperator?.image || "");
       setVMCpu(bot.vmOperator?.resources?.cpu || "");
       setVMMemory(bot.vmOperator?.resources?.memory || "");
@@ -609,6 +623,13 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
         ? {
             enabled: true,
             provider: vmProvider,
+            computerKind:
+              vmProvider === "cloud-desktop" ||
+              vmProvider === "incus" ||
+              vmProvider === "tart" ||
+              vmProvider === "lume"
+                ? ("cloud_desktop" as const)
+                : undefined,
             ...(vmImage.trim() ? { image: vmImage.trim() } : {}),
             resources: {
               ...(vmCpu.trim() ? { cpu: vmCpu.trim() } : {}),
@@ -1585,11 +1606,12 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
                         onChange={(e) => setVMProvider(e.target.value as AgentVMProvider)}
                         className="w-full h-9 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-elevated)] text-[var(--text-primary)] text-[13px] px-2"
                       >
-                        <option value="opensandbox">OpenSandbox</option>
+                        <option value="cloud-desktop">Computer Cloud (Incus / Tart)</option>
+                        <option value="incus">Incus (Linux / Windows)</option>
+                        <option value="tart">Tart (macOS VM)</option>
+                        <option value="lume">Lume (local macOS VM)</option>
+                        <option value="host">This computer</option>
                         <option value="docker">Docker</option>
-                        <option value="kubernetes">Kubernetes</option>
-                        <option value="local">Local Runner</option>
-                        <option value="custom">Custom Provider</option>
                       </select>
                     </div>
                     <div className="space-y-1.5">
@@ -1597,7 +1619,7 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
                       <Input
                         value={vmImage}
                         onChange={(e) => setVMImage(e.target.value)}
-                        placeholder="opensandbox/desktop:v1.0.0"
+                        placeholder="ubuntu/desktop or tart://macos"
                         className="h-9 bg-[var(--bg-elevated)] border-[var(--border-subtle)] text-[var(--text-primary)]"
                       />
                     </div>

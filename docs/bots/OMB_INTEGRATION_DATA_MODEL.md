@@ -63,7 +63,7 @@ Key files:
 | `computer: "cloud" | "vm" | "local" | "off"` | `Agent.vmOperator.enabled` + provider enum |
 | Live screenshot preview | `BotDesktopView.tsx` noVNC stream / ACU gateway screenshot frames |
 | "Open desktop" VNC | `vm-operator.ts` `vncUrl` |
-| Cloud Box | `vmOperator.provider: 'opensandbox'` or cloud bridge |
+| Cloud Box | `vmOperator.provider: 'cloud-desktop'` (Incus / Tart) |
 | Local CUA host control | `cmd/allternit-desktop-provider/` + explicit opt-in |
 
 Key files:

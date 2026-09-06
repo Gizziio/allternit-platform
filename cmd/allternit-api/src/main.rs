@@ -666,6 +666,7 @@ async fn main() {
         .merge(allternit_api::fabric_usage_routes::router())
         .merge(agent_cloud_router())
         .merge(allternit_api::computer_routes::router())
+        .merge(allternit_api::bot_group_routes::router())
         .merge(allternit_api::allternit_vault::router())
         .merge(passkey_router(&state))
         .merge(allternit_api::admin_workspace_routes::router())
@@ -1230,26 +1231,6 @@ async fn initialize_vm_driver(
                 dynamic: Some(Arc::new(router)),
                 incus: incus_driver,
             };
-        }
-    }
-
-    // If OpenSandbox is explicitly configured, prefer it over the local
-    // platform driver so bots can use a persistent cloud sandbox.
-    if let Ok(open_sandbox_url) = std::env::var("OPEN_SANDBOX_URL") {
-        use allternit_driver_interface::ExecutionDriver;
-        use allternit_opensandbox_driver::{OpenSandboxConfig, OpenSandboxDriver};
-        let config = OpenSandboxConfig::new(open_sandbox_url);
-        let driver = OpenSandboxDriver::new(config);
-        match driver.health_check().await {
-            Ok(health) if health.healthy => {
-                info!("OpenSandbox driver initialized from OPEN_SANDBOX_URL");
-                return VmDriverSet {
-                    dynamic: Some(Arc::new(driver)),
-                    incus: None,
-                };
-            }
-            Ok(health) => warn!("OpenSandbox health check returned unhealthy: {:?}", health),
-            Err(e) => warn!("OpenSandbox health check failed: {}", e),
         }
     }
 

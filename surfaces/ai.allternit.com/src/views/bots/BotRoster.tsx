@@ -17,7 +17,7 @@
  * @module BotRoster
  */
 
-import React, { useMemo, useCallback, useState } from 'react';
+import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import {
   MagnifyingGlass,
   Plus,
@@ -432,7 +432,17 @@ export function BotRoster({
   const togglePin = useBotRosterStore((s) => s.togglePin);
   const toggleHide = useBotRosterStore((s) => s.toggleHide);
   const toggleCompact = useBotRosterStore((s) => s.toggleCompact);
+  const hydrateLayout = useBotRosterStore((s) => s.hydrateLayout);
   const markBotRead = useBotOperationalStateStore((s) => s.markRead);
+  const agents = useAgentStore((s) => s.agents);
+
+  useEffect(() => {
+    const pinned = agents.filter((a) => a.botProfile?.pinned).map((a) => a.id);
+    const hidden = agents.filter((a) => a.botProfile?.hidden).map((a) => a.id);
+    if (pinned.length > 0 || hidden.length > 0) {
+      hydrateLayout(pinned, hidden);
+    }
+  }, [agents, hydrateLayout]);
 
   // ── Group chat channels ───────────────────────────────────────────────────
   const groupChats = useGroupChatStore((s) => s.groups);
@@ -675,23 +685,42 @@ export function BotRoster({
     [selectBot, onStartSession],
   );
 
+  const persistLayout = useCallback(
+    (botId: string) => {
+      const bot = roster.find((b) => b.id === botId);
+      if (!bot || bot.source !== 'native' || !bot.agent.botProfile) return;
+      const pinned = useBotRosterStore.getState().pinnedBotIds.includes(botId);
+      const hidden = useBotRosterStore.getState().hiddenBotIds.includes(botId);
+      void updateAgent(botId, {
+        botProfile: {
+          ...bot.agent.botProfile,
+          pinned,
+          hidden,
+        },
+      });
+    },
+    [roster, updateAgent],
+  );
+
   const handleTogglePin = useCallback(
     (botId: string) => {
       togglePin(botId);
+      persistLayout(botId);
       logger.info(`Toggled pin for bot: ${botId}`);
     },
-    [togglePin],
+    [togglePin, persistLayout],
   );
 
   const handleToggleHide = useCallback(
     (botId: string) => {
       toggleHide(botId);
+      persistLayout(botId);
       logger.info(`Toggled hide for bot: ${botId}`);
       if (selectedBotId === botId) {
         selectBot(null);
       }
     },
-    [toggleHide, selectedBotId, selectBot],
+    [toggleHide, selectedBotId, selectBot, persistLayout],
   );
 
   const handleMarkRead = useCallback(

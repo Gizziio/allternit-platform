@@ -63,12 +63,12 @@ export function BotHubHomeTab({ onCreate }: BotHubHomeTabProps) {
 
   const handleStartGroupChat = async (selectedBots: Agent[], name: string) => {
     const result = await startBotGroupChat({ bots: selectedBots, name });
-    if (result?.sessionId) {
+    if (result?.groupId) {
       window.dispatchEvent(
         new CustomEvent("allternit:open-view", {
           detail: {
-            viewType: "chat-group-session",
-            context: { sessionId: result.sessionId },
+            viewType: "group-chat",
+            context: { groupId: result.groupId },
           },
         })
       );

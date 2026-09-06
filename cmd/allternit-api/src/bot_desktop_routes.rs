@@ -4,9 +4,8 @@
 //! a bot's running sandbox. Control state is persisted in memory so the bot
 //! runtime can pause autonomous actions while the human is driving.
 //!
-//! Each bot may own one persistent desktop sandbox. The mapping is stored in
-//! `bot_desktop_sandboxes` so the computer survives API restarts and chat
-//! session boundaries.
+//! The account owns one Incus/Tart computer; each bot is assigned a screen.
+//! `bot_desktop_sandboxes` still maps bot_id → sandbox for session restart.
 //!
 //! DEPRECATION NOTICE: These `/bots/:bot_id/desktop/*` routes are kept for
 //! backward compatibility. New code should prefer the unified
@@ -56,7 +55,7 @@ pub fn bot_desktop_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/bots/:bot_id/desktop", get(get_desktop_status))
         .route("/bots/:bot_id/desktop", delete(destroy_desktop))
-        .route("/bots/:bot_id/desktop/screenshot", get(get_desktop_screenshot))
+        .route("/bots/:bot_id/desktop/screenshot", get(get_desktop_screenshot).post(get_desktop_screenshot))
         .route(
             "/bots/:bot_id/desktop/mouse",
             post(crate::bot_desktop_input::send_desktop_mouse),
@@ -115,7 +114,6 @@ pub fn bot_desktop_router() -> Router<Arc<AppState>> {
         .route("/bots/:bot_id/desktop/hand-back", post(hand_back_desktop))
         .route("/bots/:bot_id/desktop/pause", post(pause_desktop))
         .route("/bots/:bot_id/desktop/resume", post(resume_desktop))
-        .route("/bots/:bot_id/desktop/screenshot", post(screenshot_desktop))
         .layer(axum::middleware::from_fn(
             crate::rate_limit::bot_desktop_rate_limit_middleware,
         ))
@@ -123,7 +121,7 @@ pub fn bot_desktop_router() -> Router<Arc<AppState>> {
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct DesktopQuery {
-    /// OpenSandbox sandbox id for the bot's persistent virtual computer.
+    /// Computer Cloud sandbox / native id for the bot's persistent virtual computer.
     pub(crate) sandbox_id: String,
 }
 
@@ -148,6 +146,8 @@ pub struct ProvisionDesktopResponse {
     pub status: String,
     pub provider: String,
     pub host: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub display_index: Option<i64>,
 }
 
 #[derive(Debug, Serialize)]
@@ -209,8 +209,8 @@ async fn get_desktop_status(
     let (ws_url, protocol, viewer_url) = match endpoint {
         Some(ep) => {
             // Only the raw VNC protocol is proxied through the WebSocket handler.
-            // noVNC HTTP endpoints are served directly by OpenSandbox and should
-            // not be tunnelled through the platform API in v1.
+            // HTTP noVNC viewers are opened directly at the guest URL and should
+            // not be tunnelled through the platform API.
             let ws_url = if matches!(ep.protocol, DesktopProtocol::Vnc) {
                 Some(build_ws_url(&state, &bot_id, &query.sandbox_id, &user.user_id))
             } else {
@@ -394,12 +394,42 @@ pub(crate) async fn provision_desktop_internal(
         }
     };
 
+    // Grok parity: reuse the account computer and assign this bot a screen.
+    if let Ok(Some((computer, screen))) =
+        crate::computer_screens::attach_bot_to_user_computer(state, user, bot_id).await
+    {
+        if let Err(e) = upsert_bot_sandbox(
+            &state.db,
+            bot_id,
+            &computer.native_id,
+            &computer.provider,
+            computer.host.as_deref(),
+            &computer.status,
+            "linux",
+        ) {
+            warn!(bot_id, error = %e, "Failed to persist shared bot desktop mapping");
+        }
+        info!(
+            bot_id,
+            sandbox_id = %computer.native_id,
+            display_index = screen.display_index,
+            "Attached bot to shared account computer"
+        );
+        return Ok(ProvisionDesktopResponse {
+            sandbox_id: computer.native_id,
+            status: computer.status,
+            provider: computer.provider,
+            host: computer.host,
+            display_index: Some(screen.display_index),
+        });
+    }
+
     if !driver.supports_desktop() {
         return Err((
             StatusCode::SERVICE_UNAVAILABLE,
             Json(json!({
                 "error": "The configured VM driver does not expose a remote desktop stream. \
-                          Set OPEN_SANDBOX_URL to use OpenSandbox for bot desktops."
+                          Configure INCUS_URL or TART_HOST_URL for Computer Cloud."
             })),
         )
             .into_response());
@@ -432,7 +462,11 @@ pub(crate) async fn provision_desktop_internal(
         Err(resp) => return Err(resp.into_response()),
     };
 
-    let tenant_id = match TenantId::new(format!("bot-{}", bot_id)) {
+    let tenant_key: String = format!(
+        "user-{}",
+        user.user_id.chars().take(50).collect::<String>()
+    );
+    let tenant_id = match TenantId::new(tenant_key) {
         Ok(t) => t,
         Err(e) => {
             return Err((
@@ -532,11 +566,30 @@ pub(crate) async fn provision_desktop_internal(
 
     info!(bot_id, sandbox_id, provider, "Bot desktop sandbox provisioned");
 
+    let display_index = match crate::computer_screens::upsert_user_computer(
+        &state.db,
+        &user.user_id,
+        &sandbox_id,
+        &provider,
+        host.as_deref(),
+        "running",
+        Some(&spec.os),
+    ) {
+        Ok(computer_id) => crate::computer_screens::assign_screen(&state.db, &computer_id, bot_id)
+            .ok()
+            .map(|s| s.display_index),
+        Err(e) => {
+            warn!(bot_id, error = %e, "Failed to record user-owned computer");
+            None
+        }
+    };
+
     Ok(ProvisionDesktopResponse {
         sandbox_id,
         status: "running".to_string(),
         provider,
         host,
+        display_index,
     })
 }
 
@@ -562,6 +615,7 @@ async fn provision_desktop(
                 status: record.status,
                 provider: record.provider,
                 host: record.host,
+                display_index: None,
             })
             .into_response();
         }
@@ -627,6 +681,25 @@ async fn deprovision_desktop(
         Ok(d) => d,
         Err(resp) => return resp,
     };
+
+    // Release this bot's screen. Only destroy the shared VM when no screens remain.
+    if let Ok(Some(computer)) = crate::computer_screens::find_user_computer(&state.db, &user.user_id)
+    {
+        let _ = crate::computer_screens::delete_screen(&state.db, &computer.id, &bot_id);
+        if let Ok(remaining) = crate::computer_screens::screen_count(&state.db, &computer.id) {
+            if remaining > 0 {
+                if let Err(e) = delete_bot_sandbox(&state.db, &bot_id) {
+                    warn!(bot_id, error = %e, "Failed to delete bot desktop sandbox record");
+                }
+                {
+                    let mut sessions = state.bot_desktop_sessions.write().await;
+                    sessions.remove(&bot_id);
+                }
+                info!(bot_id, remaining, "Released bot screen; shared computer still running");
+                return StatusCode::NO_CONTENT.into_response();
+            }
+        }
+    }
 
     // Remove the database record immediately so the UI reflects the action.
     // VM destruction can take tens of seconds on some substrates, so we run it
@@ -935,68 +1008,6 @@ async fn destroy_desktop(
     publish_desktop_event(&state, &bot_id, "bot.desktop.destroyed", &user.user_id).await;
 
     StatusCode::NO_CONTENT.into_response()
-}
-
-async fn screenshot_desktop(
-    State(state): State<Arc<AppState>>,
-    Extension(user): Extension<AuthUser>,
-    Path(bot_id): Path<String>,
-    Query(query): Query<DesktopQuery>,
-) -> impl IntoResponse {
-    if !verify_bot_ownership(&state, &user.user_id, &bot_id).await {
-        return (
-            StatusCode::FORBIDDEN,
-            Json(json!({"error": "bot not found or access denied"})),
-        )
-            .into_response();
-    }
-
-    // Only OpenSandbox-backed sandboxes currently expose a screenshot endpoint.
-    // In other configurations we return 204 so the UI can show a placeholder.
-    match read_bot_sandbox(&state.db, &bot_id) {
-        Ok(Some(r)) if r.sandbox_id == query.sandbox_id && r.provider == "opensandbox" => {}
-        _ => {
-            return StatusCode::NO_CONTENT.into_response();
-        }
-    }
-
-    let Some(base_url) = std::env::var("OPEN_SANDBOX_URL")
-        .ok()
-        .filter(|s| !s.is_empty())
-    else {
-        return StatusCode::NO_CONTENT.into_response();
-    };
-
-    let url = format!(
-        "{}/sandboxes/{}/screenshot",
-        base_url.trim_end_matches('/'),
-        urlencoding::encode(&query.sandbox_id)
-    );
-
-    let client = reqwest::Client::new();
-    match client.get(&url).timeout(std::time::Duration::from_secs(10)).send().await {
-        Ok(resp) if resp.status().is_success() => {
-            match resp.bytes().await {
-                Ok(bytes) => {
-                    let png = STANDARD.encode(&bytes);
-                    let mime = "image/png";
-                    Json(json!({ "png": png, "mime": mime })).into_response()
-                }
-                Err(e) => {
-                    warn!(bot_id, error = %e, "Failed to read screenshot bytes");
-                    StatusCode::NO_CONTENT.into_response()
-                }
-            }
-        }
-        Ok(resp) => {
-            debug!(bot_id, status = %resp.status(), "OpenSandbox screenshot endpoint returned non-success");
-            StatusCode::NO_CONTENT.into_response()
-        }
-        Err(e) => {
-            warn!(bot_id, error = %e, "Failed to request screenshot from OpenSandbox");
-            StatusCode::NO_CONTENT.into_response()
-        }
-    }
 }
 
 fn build_handle_from_record(record: &BotDesktopSandboxRecord, bot_id: &str) -> ExecutionHandle {

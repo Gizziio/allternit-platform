@@ -95,6 +95,8 @@ pub struct CreateComputerRequest {
     pub template_id: Option<String>,
     pub session_id: Option<String>,
     pub persistence: Option<Persistence>,
+    /// Substrate hint for Computer Cloud: "incus" (Linux/Windows) or "tart" (macOS).
+    pub provider: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -439,7 +441,7 @@ async fn create_cloud_desktop(
     let query = crate::bot_desktop_routes::ProvisionDesktopQuery {
         os: req.os,
         template_id: req.template_id,
-        provider: None,
+        provider: req.provider,
     };
 
     match crate::bot_desktop_routes::provision_desktop_internal(&state, &user, &bot_id, &query).await {

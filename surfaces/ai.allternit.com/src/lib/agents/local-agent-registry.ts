@@ -1,4 +1,4 @@
-import type { Agent, CreateAgentInput } from "./agent.types";
+import { coerceVmOperatorConfig, type Agent, type CreateAgentInput } from "./agent.types";
 
 const STORAGE_KEY = "allternit.local-agent-registry.v1";
 
@@ -152,6 +152,9 @@ function coerceAgent(value: unknown): Agent | null {
     identityChannels: isRecord(value.identityChannels)
       ? (value.identityChannels as unknown as Agent["identityChannels"])
       : undefined,
+    vmOperator: isRecord(value.vmOperator)
+      ? coerceVmOperatorConfig(value.vmOperator as unknown as Agent["vmOperator"])
+      : undefined,
   };
 }
 
@@ -241,7 +244,7 @@ function toAgent(input: CreateAgentInput): Agent {
     secretRefs: input.secretRefs,
     messagingConfig: input.messagingConfig,
     identityChannels: input.identityChannels,
-    vmOperator: input.vmOperator,
+    vmOperator: coerceVmOperatorConfig(input.vmOperator),
     config: {
       ...(isRecord(input.config) ? input.config : {}),
       localRegistry: {
@@ -364,7 +367,7 @@ export function updateLocalAgent(
         : current.identityChannels,
     vmOperator:
       updates.vmOperator !== undefined
-        ? updates.vmOperator
+        ? coerceVmOperatorConfig(updates.vmOperator)
         : current.vmOperator,
     updatedAt: new Date().toISOString(),
   };
