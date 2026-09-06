@@ -35,6 +35,7 @@ import {
   Play,
   DesktopTower,
   Sparkle,
+  Record,
 } from '@phosphor-icons/react';
 import { getPinnedMiniApps, unpinMiniApp, seedDefaultMiniApps } from '../views/aci/mini-app-registry';
 import type { InstalledMiniApp } from '../views/aci/mini-app.types';
@@ -743,8 +744,8 @@ export function ShellRail({
             )}
             {browserRailTabs['site-apis'] && (
               <RailItem
-                icon={Plugs}
-                label="Site APIs"
+                icon={Record}
+                label="Teach"
                 isActive={activeViewType === 'site-apis'}
                 onClick={() => onOpen?.('site-apis')}
               />
@@ -753,7 +754,7 @@ export function ShellRail({
               tabs={[
                 { id: 'mini-apps-store', label: 'Mini-apps Store', icon: AppWindow, visible: browserRailTabs['mini-apps-store'] },
                 { id: 'browser-extensions', label: 'Office & Extensions', icon: PuzzlePiece, visible: browserRailTabs['browser-extensions'] },
-                { id: 'site-apis', label: 'Site APIs', icon: Plugs, visible: browserRailTabs['site-apis'] },
+                { id: 'site-apis', label: 'Teach', icon: Record, visible: browserRailTabs['site-apis'] },
               ]}
               onToggle={toggleBrowserRailTab}
               onCustomize={() => onOpenCustomize?.()}

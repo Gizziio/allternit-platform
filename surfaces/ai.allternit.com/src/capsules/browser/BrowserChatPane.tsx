@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Plugs } from "@phosphor-icons/react";
+import { Record } from "@phosphor-icons/react";
 import { MatrixLogo } from "@/components/ai-elements/MatrixLogo";
 import { ApiCaptureView } from "@/views/api-capture/ApiCaptureView";
 import { useApiCaptureStore } from "@/lib/api-capture/store";
@@ -105,11 +105,11 @@ export function BrowserChatPane(): React.ReactNode {
             {activeTab === "agent" ? (
               <MatrixLogo state="idle" size={14} className="opacity-90" />
             ) : (
-              <Plugs size={16} weight="duotone" />
+              <Record size={16} weight="fill" />
             )}
           </div>
           <span className="text-[14px] font-semibold text-[var(--text-primary)]">
-            {activeTab === "agent" ? "Allternit Computer Agent" : "Site APIs"}
+            {activeTab === "agent" ? "Allternit Computer Agent" : "Teach"}
           </span>
         </div>
         <div className="flex items-center p-1 rounded-lg border border-solid border-[var(--border-subtle)] bg-[var(--bg-elevated)] backdrop-blur-sm">
@@ -136,8 +136,8 @@ export function BrowserChatPane(): React.ReactNode {
                 : "bg-transparent text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
             )}
           >
-            <Plugs size={14} weight={activeTab === "site-apis" ? "duotone" : "regular"} />
-            APIs
+            <Record size={14} weight={activeTab === "site-apis" ? "fill" : "regular"} />
+            Teach
           </button>
         </div>
       </div>

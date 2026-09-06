@@ -1048,7 +1048,7 @@ export function getShellViewRegistry(handlers: {
       </ErrorBoundary>
     ),
     'site-apis': ({ context }: { context?: ViewContext }) => (
-      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Site APIs" />}>
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Teach" />}>
         <ApiCaptureView />
       </ErrorBoundary>
     ),

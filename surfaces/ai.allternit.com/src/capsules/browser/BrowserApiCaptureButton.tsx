@@ -261,7 +261,7 @@ export function BrowserApiCaptureButton({ domain, disabled, onOpenSiteApis }: Br
         className="flex items-center gap-2 w-full px-3 py-2 border-none bg-transparent cursor-pointer text-[var(--text-secondary)] text-[13px] text-left hover:bg-[var(--bg-hover)] transition-colors"
       >
         <ArrowSquareOut size={16} />
-        Open Site APIs
+        Open Teach
       </button>
 
       {error && (
