@@ -30,6 +30,10 @@ import { ConformanceDashboard } from './ConformanceDashboard';
 import { ACIEngineBar } from './ACIEngineBar';
 import { ContextWindowCard } from '@/components/ai-elements/ContextWindowCard';
 import { cn } from '@/lib/utils';
+import { useAgentStore } from '@/lib/agents/agent.store';
+import { getBotAccentColor } from '@/lib/bots/bot-profile';
+import { BotComputerViewport } from '@/views/bots/BotComputerViewport';
+import { useBotActiveVm } from '@/views/bots/useBotActiveVm';
 
 // ─────────────────────────────────────────────────────────────
 // Constants
@@ -259,6 +263,13 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
 
   const expanded         = useBrowserAgentStore((s) => s.aciSidecarExpanded);
   const toggleAciSidecar = useBrowserAgentStore((s) => s.toggleAciSidecar);
+  const connectedBotId   = useBrowserAgentStore((s) => s.connectedBotId);
+  const setAciSidecarExpanded = useBrowserAgentStore((s) => s.setAciSidecarExpanded);
+  const connectedBot = useAgentStore((s) =>
+    connectedBotId ? s.agents.find((agent) => agent.id === connectedBotId) ?? null : null,
+  );
+  const botVm = useBotActiveVm(connectedBotId ?? undefined);
+  const botComputerActive = Boolean(connectedBot);
 
   // Screenshot fed via SSE → store; no local polling
   const screenshotB64  = useBrowserAgentStore((s) => s.screenshot);
@@ -401,7 +412,7 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
     setClickFlash({ x: relX, y: relY, id: Date.now() });
   }, [directControlMode, coordinateContract]);
 
-  const isActive = status !== 'Idle';
+  const isActive = status !== 'Idle' || botComputerActive;
   const isBusy = status === 'Running' || status === 'WaitingApproval';
 
   // Hide conditions
@@ -459,7 +470,7 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
 
           <ContextWindowCard>
             <button type="button" className="bg-transparent border-none p-0 cursor-pointer text-[12px] font-bold text-[var(--ui-text-muted)] uppercase tracking-[0.12em] font-mono shrink-0">
-              COMPUTER USE
+              {botComputerActive ? 'BOT COMPUTER' : 'COMPUTER USE'}
             </button>
           </ContextWindowCard>
 
@@ -509,6 +520,8 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
             )}
           </button>
 
+          {!botComputerActive && (
+            <>
           {/* AX Tree toggle */}
           <button type="button" onClick={() => setShowAxTree((v) => !v)} title="Accessibility Tree"
             className={cn(
@@ -567,6 +580,8 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
             )}>
             ◇ Trust
           </button>
+            </>
+          )}
 
           {/* Collapse → minimizes to ACIComputerUseBar above chat input */}
           <button type="button"
@@ -583,7 +598,17 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
         <ACIEngineBar />
 
         {/* ── Screen area ── */}
-        {(
+        {botComputerActive && connectedBot ? (
+          <div className="flex-1 relative overflow-hidden min-h-0">
+            <BotComputerViewport
+              bot={connectedBot}
+              accentColor={getBotAccentColor(connectedBot) ?? 'var(--accent-primary)'}
+              activeVM={botVm}
+              layout="aci"
+              onReturnToChat={() => setAciSidecarExpanded(false)}
+            />
+          </div>
+        ) : (
           <>
             <div
               ref={containerRef}
@@ -913,8 +938,9 @@ export function ACIComputerUseBar({ suppressInBrowserMode = true, className }: A
   const expanded             = useBrowserAgentStore((s) => s.aciSidecarExpanded);
   const toggleAciSidecar     = useBrowserAgentStore((s) => s.toggleAciSidecar);
   const isBrowserCapsuleActive = useBrowserAgentStore((s) => s.isBrowserCapsuleMounted ?? false);
+  const connectedBotId       = useBrowserAgentStore((s) => s.connectedBotId);
 
-  const isActive = status !== 'Idle';
+  const isActive = status !== 'Idle' || Boolean(connectedBotId);
 
   // Only show when agent is active, not in browser mode, and sidecar is collapsed
   if (!isActive) return null;
