@@ -22,10 +22,12 @@ const footerColumns = [
     links: [
       { label: 'Platform',               href: `${SITE}/platform` },
       { label: 'Gizzi Code',             href: `${SITE}/gizzi-code` },
-      { label: 'Gizzi Code Enterprise',  href: `${SITE}/gizzi-code-enterprise` },
       { label: 'Chat',                   href: `${SITE}/chat` },
-      { label: 'Cowork',                 href: `${SITE}/cowork` },
-      { label: 'A:// Web',              href: `${SITE}/web` },
+      { label: 'Bots',                   href: `${SITE}/bots` },
+      { label: 'Series',                 href: 'https://series.allternit.com' },
+      { label: 'Facility',               href: 'https://3dfacility.allternit.com' },
+      { label: 'Fabric Transport',       href: 'https://fabrictransport.allternit.com' },
+      { label: 'Office',                 href: 'https://office.allternit.com' },
     ],
   },
   {

@@ -15,6 +15,7 @@ import {
   DownloadSimple,
   Gift,
   Info,
+  Sparkle,
   CaretRight,
   ArrowCounterClockwise,
   Check,
@@ -241,6 +242,16 @@ export function SettingsDrilldown({ children }: { children?: React.ReactNode }):
       label: 'Upgrade plan', 
       icon: <ArrowUpRight size={18} weight="regular" />,
       onClick: () => handleOpenSettings('billing')
+    },
+    { 
+      id: 'products', 
+      label: 'Products', 
+      icon: <Sparkle size={18} weight="fill" />,
+      onClick: () => {
+        setOpen(false);
+        setActiveSubmenuId(null);
+        window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType: 'products' } }));
+      }
     },
     { 
       id: 'downloads', 

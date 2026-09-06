@@ -9,11 +9,15 @@ import {
   PuzzlePiece as Puzzle,
   Laptop, ShoppingBag, GraduationCap,
   Brain, Robot, Palette, Note, GitBranch, UsersThree,
-  Monitor, Code, Factory,
+  Monitor, Code, Factory, FilmSlate, Buildings, Broadcast,
+  Flask, House, Cube, Briefcase, WebhooksLogo,
 } from '@phosphor-icons/react';
-import { useNav } from '@/nav/useNav';
 import { openInBrowser } from '@/lib/openInBrowser';
 import { cn } from '@/lib/utils';
+
+function openView(viewType: string): void {
+  window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType } }));
+}
 
 // ─── Browser SVG icons ────────────────────────────────────────────────────────
 
@@ -157,9 +161,38 @@ interface MiniProduct {
   accent: string;
   gradient: string;
   viewType?: string;
+  href?: string;
   status: ProductStatus;
   category: string;
 }
+
+/** Canonical public product URLs. In-app views stay in-app; these are the official sites. */
+const OFFICIAL = {
+  site: 'https://allternit.com',
+  platform: 'https://allternit.com/platform',
+  chat: 'https://allternit.com/chat',
+  bots: 'https://allternit.com/bots',
+  gizziCode: 'https://allternit.com/gizzi-code',
+  series: 'https://series.allternit.com',
+  facility: 'https://3dfacility.allternit.com',
+  fabric: 'https://fabrictransport.allternit.com',
+  install: 'https://install.allternit.com',
+  labs: 'https://labs.allternit.com',
+  docs: 'https://docs.allternit.com',
+  docsApi: 'https://docs.allternit.com/api',
+  releaseNotes: 'https://docs.allternit.com/release-notes',
+  github: 'https://github.com/Gizziio',
+  x: 'https://x.com/allternit',
+  compute: 'https://compute.allternit.com',
+  husks: 'https://robotics.allternit.com',
+  spaces: 'https://spaces.allternit.com',
+  manufacturing: 'https://manufacturing.allternit.com',
+  office: 'https://office.allternit.com',
+  try: 'https://try.allternit.com',
+  services: 'https://services.allternit.com',
+  ai: 'https://ai.allternit.com',
+  signUp: 'https://ai.allternit.com/sign-up',
+} as const;
 
 // ─── Abstract Art Panels ──────────────────────────────────────────────────────
 
@@ -539,16 +572,61 @@ const ART_MAP: Record<ArtType, React.ComponentType> = {
 // ─── Spotlight data ───────────────────────────────────────────────────────────
 
 function makeSpotlight(): SpotlightItem[] {
-  const d = (vt: string) => () => useNav.getState().dispatch({ type: 'OPEN_VIEW', viewType: vt as any });
+  const d = (vt: string) => () => openView(vt);
+  const site = (url: string) => () => openInBrowser(url);
   return [
     {
+      id: 'series', title: 'ALLTERNIT — The Series', tagline: 'Intelligence is becoming infrastructure',
+      description: 'Prestige drama about intelligence becoming infrastructure. Season One is The Assistants. The public object is the cinematic page — not a stream.',
+      gradient: 'linear-gradient(135deg,#1a1a1a,#D97757)', accent: '#D97757',
+      icon: <FilmSlate size={26} weight="fill" className="text-[var(--ui-text-primary)]" />,
+      badges: ['Live', 'Season One'], art: 'canvas-doc',
+      ctaPrimary: { label: 'Watch the page', action: site(OFFICIAL.series) },
+      ctaSecondary: { label: 'Walk the Facility', action: site(OFFICIAL.facility) },
+    },
+    {
+      id: 'facility', title: 'Allternit Facility', tagline: 'Walk the campus',
+      description: 'A living 3D campus for Allternit — office, lab, data center, library, yard. Create a bot avatar here, then walk it into the facility.',
+      gradient: 'linear-gradient(135deg,#D97757,#8B5E3C)', accent: '#D97757',
+      icon: <Buildings size={26} weight="fill" className="text-[var(--ui-text-primary)]" />,
+      badges: ['Live', '3D campus'], art: 'computer-use',
+      ctaPrimary: { label: 'Enter the Facility', action: site(OFFICIAL.facility) },
+      ctaSecondary: { label: 'Create a bot', action: site(`${OFFICIAL.facility}/#create`) },
+    },
+    {
+      id: 'bots', title: 'A:// Bots', tagline: 'Message bots like teammates',
+      description: 'Give a bot a job, tools, and memory. They run in parallel, keep context, fire on webhooks, and come back when your approval is needed — including 24/7 hosted runtimes and a desktop of their own.',
+      gradient: 'linear-gradient(135deg,#a78bfa,#7c3aed)', accent: '#a78bfa',
+      icon: <Robot size={26} weight="fill" className="text-[var(--ui-text-primary)]" />,
+      badges: ['Live', 'Hub', 'Group chat', 'Webhooks'], art: 'swarm',
+      ctaPrimary: { label: 'Open Bot Hub', action: d('agent-hub') },
+      ctaSecondary: { label: 'Bots site', action: site(OFFICIAL.bots) },
+    },
+    {
+      id: 'fabric-transport', title: 'Fabric Transport', tagline: 'Your desktop, from anywhere',
+      description: 'Pair a phone or browser to this machine. Scan a QR, install the Fabric Session PWA, and drive the desktop over the fabric — peers, capabilities, and sessions on fabrictransport.allternit.com.',
+      gradient: 'linear-gradient(135deg,#0ea5e9,#0369a1)', accent: '#0ea5e9',
+      icon: <Broadcast size={26} weight="fill" className="text-[var(--ui-text-primary)]" />,
+      badges: ['Live', 'PWA'], art: 'browser-capsule',
+      ctaPrimary: { label: 'Open Fabric Transport', action: d('fabric-session') },
+      ctaSecondary: { label: 'fabrictransport.allternit.com', action: site(OFFICIAL.fabric) },
+    },
+    {
+      id: 'model-lab', title: 'Model Lab', tagline: 'Train, deploy, chat',
+      description: 'Catalog, train, and run open-weights models locally or in the cloud. Engine, catalog, train, studio, cloud, and playground — one lab for the models you actually use.',
+      gradient: 'linear-gradient(135deg,#8b5cf6,#4c1d95)', accent: '#8b5cf6',
+      icon: <Flask size={26} weight="fill" className="text-[var(--ui-text-primary)]" />,
+      badges: ['Live', 'Local + cloud'], art: 'local-brain',
+      ctaPrimary: { label: 'Open Model Lab', action: d('model-lab') },
+    },
+    {
       id: 'cowork', title: 'Cowork', tagline: 'AI for Your Whole Team',
-      description: 'Put Claude to work on tasks while you step away. Collaborate in real-time with AI as a full team member — assign tasks, review outputs, and ship faster together. Available now on Allternit Desktop.',
+      description: 'Put Allternit to work on tasks while you step away. Collaborate in real-time with AI as a full team member — assign tasks, review outputs, and ship faster together. Available now on Allternit Desktop.',
       gradient: 'linear-gradient(135deg,#06b6d4,#0284c7)', accent: '#06b6d4',
       icon: <UsersThree size={26} weight="fill" className="text-[var(--ui-text-primary)]" />,
       badges: ['Live', 'macOS'], art: 'chat', videoSrc: '/videos/cowork-demo.mp4',
       ctaPrimary: { label: 'Try Cowork', action: d('chat') },
-      ctaSecondary: { label: 'Download Desktop', action: () => openInBrowser('https://allternit.com/download') },
+      ctaSecondary: { label: 'Download Desktop', action: site(OFFICIAL.install) },
     },
     {
       id: 'chat', title: 'Allternit Chat', tagline: 'Conversational AI',
@@ -588,7 +666,8 @@ function makeSpotlight(): SpotlightItem[] {
       gradient: 'linear-gradient(135deg,#4285F4,#34A853)', accent: '#4285F4',
       icon: <Puzzle size={26} weight="fill" className="text-[var(--ui-text-primary)]" />,
       badges: ['Chrome', 'Firefox'], art: 'browser-capsule',
-      ctaPrimary: { label: 'Add to Chrome', action: () => openInBrowser('https://chrome.google.com/webstore') },
+      ctaPrimary: { label: 'Open Extensions', action: d('browser-extensions') },
+      ctaSecondary: { label: 'Platform site', action: site(OFFICIAL.platform) },
     },
     {
       id: 'local-brain', title: 'Local Brain', tagline: 'Private · Offline · Yours',
@@ -611,8 +690,9 @@ function makeSpotlight(): SpotlightItem[] {
       description: 'Design, prototype, and produce AI hardware, robotics parts, and B2B components. From a single printer to a software-driven factory network.',
       gradient: 'linear-gradient(135deg,#d97706,#b45309)', accent: '#d97706',
       icon: <Factory size={26} weight="fill" className="text-[var(--ui-text-primary)]" />,
-      badges: ['Coming Soon', 'Hardware'], art: 'computer-use',
-      ctaPrimary: { label: 'Explore Manufacturing', action: d('manufacturing') },
+      badges: ['Live', 'Hardware'], art: 'computer-use',
+      ctaPrimary: { label: 'manufacturing.allternit.com', action: site(OFFICIAL.manufacturing) },
+      ctaSecondary: { label: 'Open in app', action: d('manufacturing') },
     },
   ];
 }
@@ -826,23 +906,38 @@ const ALL_PRODUCTS: MiniProduct[] = [
   { id:'chat',         name:'Chat',            description:'Conversational AI for everything',      icon:<Chat size={17} weight="fill"/>,         accent:'#D97757', gradient:'linear-gradient(135deg,#D97757,#B08D6E)', viewType:'chat',          status:'live',  category:'Core' },
   { id:'code',         name:'Allternit Code',  description:'AI pair programmer in your IDE',        icon:<Code size={17} weight="fill"/>,         accent:'var(--status-warning)', gradient:'linear-gradient(135deg,#f59e0b,#d97706)', viewType:'code',          status:'live',  category:'Core' },
   { id:'cowork',       name:'Cowork',          description:'Collaborative AI for teams',            icon:<UsersThree size={17} weight="fill"/>,   accent:'#06b6d4', gradient:'linear-gradient(135deg,#06b6d4,#0284c7)', viewType:'chat',          status:'live',  category:'Core' },
+  { id:'platform',     name:'A:// Platform',   description:'The control plane for agentic work',    icon:<Stack size={17} weight="fill"/>,        accent:'#D97757', gradient:'linear-gradient(135deg,#D97757,#B08D6E)', href:OFFICIAL.platform,   status:'live',  category:'Core' },
+  { id:'gizzi-code',   name:'Gizzi Code',      description:'Agent-native coding with repo context', icon:<Code size={17} weight="fill"/>,         accent:'#f59e0b', gradient:'linear-gradient(135deg,#f59e0b,#d97706)', href:OFFICIAL.gizziCode,  status:'live',  category:'Core' },
   { id:'computer-use', name:'Computer Use',    description:'AI that sees and controls browsers',    icon:<Monitor size={17} weight="fill"/>,      accent:'#5B8DEF', gradient:'linear-gradient(135deg,#5B8DEF,#3b5bdb)', viewType:'operator',      status:'live',  category:'AI Agents' },
   { id:'swarm',        name:'Swarm ADE',       description:'Orchestrate hundreds of AI agents',     icon:<Robot size={17} weight="fill"/>,        accent:'var(--status-success)', gradient:'linear-gradient(135deg,#10b981,#059669)', viewType:'swarm',         status:'live',  category:'AI Agents' },
-  { id:'agent-hub',    name:'Agent | Bot Hub',       description:'Build, deploy, and manage agents & bots',      icon:<Cpu size={17} weight="fill"/>,          accent:'#a78bfa', gradient:'linear-gradient(135deg,#a78bfa,#7c3aed)', viewType:'agent-hub',     status:'live',  category:'AI Agents' },
+  { id:'agent-hub',    name:'Bot Hub',         description:'Build, deploy, and manage bots',        icon:<Cpu size={17} weight="fill"/>,          accent:'#a78bfa', gradient:'linear-gradient(135deg,#a78bfa,#7c3aed)', viewType:'agent-hub',     status:'live',  category:'Bots' },
+  { id:'bots-site',    name:'A:// Bots',       description:'Message bots like teammates',           icon:<Robot size={17} weight="fill"/>,        accent:'#a78bfa', gradient:'linear-gradient(135deg,#a78bfa,#7c3aed)', href:OFFICIAL.bots,        status:'live',  category:'Bots' },
+  { id:'group-chat',   name:'Group Chat',      description:'Several bots in one thread',            icon:<UsersThree size={17} weight="fill"/>,   accent:'#c084fc', gradient:'linear-gradient(135deg,#c084fc,#7c3aed)', viewType:'groups-list',    status:'live',  category:'Bots' },
+  { id:'bot-webhooks', name:'Bot Webhooks',    description:'Fire bots from events and URLs',        icon:<WebhooksLogo size={17} weight="fill"/>, accent:'#818cf8', gradient:'linear-gradient(135deg,#818cf8,#4f46e5)', viewType:'agent-hub',     status:'live',  category:'Bots' },
+  { id:'bot-create',   name:'Create a Bot',    description:'Husk, Unitree, Asimov, or human avatar',icon:<Cube size={17} weight="fill"/>,         accent:'#D97757', gradient:'linear-gradient(135deg,#D97757,#8B5E3C)', href:`${OFFICIAL.facility}/#create`, status:'live', category:'Bots' },
   { id:'canvas',       name:'Canvas',          description:'Documents built with AI',               icon:<Note size={17} weight="fill"/>,         accent:'#6366f1', gradient:'linear-gradient(135deg,#6366f1,#4f46e5)', viewType:'allternit-canvas', status:'beta', category:'Create' },
   { id:'design',       name:'Allternit Design', description:'Visual design and creative tools',     icon:<Palette size={17} weight="fill"/>,      accent:'#ec4899', gradient:'linear-gradient(135deg,#ec4899,#be185d)', viewType:'design',        status:'beta',  category:'Create' },
   { id:'workflow',     name:'Workflows',       description:'Visual automation and task pipelines',  icon:<GitBranch size={17} weight="fill"/>,    accent:'#14b8a6', gradient:'linear-gradient(135deg,#14b8a6,#0d9488)', viewType:'cowork-runs',   status:'beta',  category:'Create' },
+  { id:'office',       name:'Allternit Office', description:'Docs, Sheets, Slides, PDF, and Sign', icon:<Briefcase size={17} weight="fill"/>,    accent:'#0ea5e9', gradient:'linear-gradient(135deg,#0ea5e9,#0369a1)', href:OFFICIAL.office,      status:'live',  category:'Create' },
   { id:'local-brain',  name:'Local Brain',     description:'Private offline AI on your machine',   icon:<Brain size={17} weight="fill"/>,        accent:'#8b5cf6', gradient:'linear-gradient(135deg,#8b5cf6,#6d28d9)', viewType:'models-manage', status:'live',  category:'Infrastructure' },
+  { id:'model-lab',    name:'Model Lab',       description:'Train, deploy, and chat with open weights', icon:<Flask size={17} weight="fill"/>,   accent:'#8b5cf6', gradient:'linear-gradient(135deg,#8b5cf6,#4c1d95)', viewType:'model-lab',     status:'live',  category:'Infrastructure' },
+  { id:'fabric',       name:'Fabric Transport', description:'Remote desktop over the fabric',      icon:<Broadcast size={17} weight="fill"/>,    accent:'#0ea5e9', gradient:'linear-gradient(135deg,#0ea5e9,#0369a1)', viewType:'fabric-session', status:'live', category:'Infrastructure' },
   { id:'cloud-deploy', name:'Cloud Deploy',    description:'Deploy Allternit nodes to any cloud',  icon:<RocketLaunch size={17} weight="fill"/>, accent:'var(--status-success)', gradient:'linear-gradient(135deg,#22c55e,#16a34a)', viewType:'deploy',        status:'live',  category:'Infrastructure' },
-  { id:'browser',      name:'Browser Capsule', description:'AI assistant in every browser tab',    icon:<Puzzle size={17} weight="fill"/>,       accent:'#4285F4', gradient:'linear-gradient(135deg,#4285F4,#34A853)', viewType:'browser-ext',   status:'live',  category:'Surfaces' },
-  { id:'desktop',      name:'Desktop App',     description:'Native app for macOS, Windows, Linux', icon:<Laptop size={17} weight="fill"/>,       accent:'var(--accent-primary)', gradient:'linear-gradient(135deg,#D4B08C,#B08D6E)', viewType:'desktop-dl',    status:'live',  category:'Surfaces' },
-  { id:'labs',         name:'A://Labs',        description:'AI courses — 7 live in Canvas LMS',   icon:<GraduationCap size={17} weight="fill"/>, accent:'var(--status-warning)', gradient:'linear-gradient(135deg,#f59e0b,#b45309)', viewType:'labs',          status:'live',  category:'Learn' },
+  { id:'browser',      name:'Browser Capsule', description:'AI assistant in every browser tab',    icon:<Puzzle size={17} weight="fill"/>,       accent:'#4285F4', gradient:'linear-gradient(135deg,#4285F4,#34A853)', viewType:'browser-extensions', status:'live', category:'Surfaces' },
+  { id:'desktop',      name:'Desktop App',     description:'Native app for macOS, Windows, Linux', icon:<Laptop size={17} weight="fill"/>,       accent:'var(--accent-primary)', gradient:'linear-gradient(135deg,#D4B08C,#B08D6E)', href:OFFICIAL.install,     status:'live',  category:'Surfaces' },
+  { id:'labs',         name:'A://Labs',        description:'Courses and credentials',              icon:<GraduationCap size={17} weight="fill"/>, accent:'var(--status-warning)', gradient:'linear-gradient(135deg,#f59e0b,#b45309)', href:OFFICIAL.labs, status:'live',  category:'Learn' },
   { id:'marketplace',  name:'Marketplace',     description:'Discover plugins and extensions',      icon:<ShoppingBag size={17} weight="fill"/>,  accent:'var(--status-success)', gradient:'linear-gradient(135deg,#10b981,#059669)', viewType:'marketplace',   status:'beta',  category:'Ecosystem' },
-  { id:'dev-portal',   name:'Dev Portal',      description:'APIs, SDKs, and documentation',        icon:<ArrowSquareOut size={17}/>,             accent:'#6366f1', gradient:'linear-gradient(135deg,#6366f1,#4338ca)', viewType:'dev-portal',    status:'live',  category:'Ecosystem' },
-  { id:'manufacturing',name:'Allternit Manufacturing', description:'Digital microfactory for AI hardware & B2B', icon:<Factory size={17} weight="fill"/>, accent:'#d97706', gradient:'linear-gradient(135deg,#d97706,#b45309)', viewType:'manufacturing', status:'soon', category:'Manufacturing' },
+  { id:'dev-portal',   name:'Docs',            description:'APIs, SDKs, and documentation',        icon:<ArrowSquareOut size={17}/>,             accent:'#6366f1', gradient:'linear-gradient(135deg,#6366f1,#4338ca)', href:OFFICIAL.docs,         status:'live',  category:'Ecosystem' },
+  { id:'series',       name:'ALLTERNIT — The Series', description:'Season One: The Assistants',    icon:<FilmSlate size={17} weight="fill"/>,    accent:'#D97757', gradient:'linear-gradient(135deg,#1a1a1a,#D97757)', href:OFFICIAL.series,      status:'live',  category:'Worlds' },
+  { id:'facility',     name:'Allternit Facility', description:'Walk the Allternit campus in 3D',  icon:<Buildings size={17} weight="fill"/>,    accent:'#D97757', gradient:'linear-gradient(135deg,#D97757,#8B5E3C)', href:OFFICIAL.facility,    status:'live',  category:'Worlds' },
+  { id:'try',          name:'Try Allternit',   description:'Playable experiments and arcade',      icon:<Cube size={17} weight="fill"/>,         accent:'#f59e0b', gradient:'linear-gradient(135deg,#f59e0b,#b45309)', href:OFFICIAL.try,          status:'live',  category:'Worlds' },
+  { id:'compute',      name:'Compute',         description:'Datacenters and local compute',        icon:<HardDrives size={17} weight="fill"/>,   accent:'#22c55e', gradient:'linear-gradient(135deg,#22c55e,#16a34a)', href:OFFICIAL.compute,      status:'live',  category:'Divisions' },
+  { id:'husks',        name:'Husks',           description:'Open hardware bodies for physical AI', icon:<Robot size={17} weight="fill"/>,        accent:'#D97757', gradient:'linear-gradient(135deg,#D97757,#b45309)', href:OFFICIAL.husks,        status:'live',  category:'Divisions' },
+  { id:'spaces',       name:'Spaces',          description:'Sovereign workspaces, delivered',      icon:<House size={17} weight="fill"/>,        accent:'#06b6d4', gradient:'linear-gradient(135deg,#06b6d4,#0284c7)', href:OFFICIAL.spaces,       status:'live',  category:'Divisions' },
+  { id:'manufacturing',name:'Manufacturing',   description:'Built in-house, sold as a service',    icon:<Factory size={17} weight="fill"/>,      accent:'#d97706', gradient:'linear-gradient(135deg,#d97706,#b45309)', href:OFFICIAL.manufacturing, status:'live', category:'Divisions' },
 ];
 
-const CATEGORIES = ['Core','AI Agents','Create','Infrastructure','Surfaces','Learn','Ecosystem','Manufacturing'] as const;
+const CATEGORIES = ['Core','Bots','AI Agents','Create','Infrastructure','Surfaces','Worlds','Divisions','Learn','Ecosystem'] as const;
 
 const STATUS_STYLE: Record<ProductStatus, { label:string; color:string; bg:string; border:string }> = {
   'live': { label:'Live',        color:'var(--status-success)', bg:'rgba(34,197,94,.1)',   border:'rgba(34,197,94,.2)' },
@@ -852,16 +947,11 @@ const STATUS_STYLE: Record<ProductStatus, { label:string; color:string; bg:strin
 
 function ProductMiniCard({ p }: { p: MiniProduct }) {
   const ss = STATUS_STYLE[p.status];
-  const BROWSER_OPEN: Record<string, string> = {
-    'browser-ext': 'https://chrome.google.com/webstore',
-    'desktop-dl':  'https://allternit.com/download',
-    'dev-portal':  'https://docs.allternit.com',
-  };
-  const onClick = p.viewType
-    ? BROWSER_OPEN[p.viewType]
-      ? () => openInBrowser(BROWSER_OPEN[p.viewType!])
-      : () => useNav.getState().dispatch({ type:'OPEN_VIEW', viewType: p.viewType as any })
-    : undefined;
+  const onClick = p.href
+    ? () => openInBrowser(p.href!)
+    : p.viewType
+      ? () => openView(p.viewType!)
+      : undefined;
 
   return (
     <div role="button" tabIndex={0}
@@ -922,7 +1012,7 @@ function ProductMiniCard({ p }: { p: MiniProduct }) {
 
 function InfraSection() {
   const opts = [
-    { icon:<RocketLaunch size={19} color="var(--status-success)"/>, ibg:'rgba(34,197,94,.1)', accent:'var(--status-success)', badge:'New', title:'Cloud Deploy', desc:'Deploy Allternit nodes to Hetzner, AWS, or DigitalOcean in minutes.', cta:'Get Started', onClick:()=>useNav.getState().dispatch({type:'OPEN_VIEW',viewType:'deploy' as any}) },
+    { icon:<RocketLaunch size={19} color="var(--status-success)"/>, ibg:'rgba(34,197,94,.1)', accent:'var(--status-success)', badge:'New', title:'Cloud Deploy', desc:'Deploy Allternit nodes to Hetzner, AWS, or DigitalOcean in minutes.', cta:'Get Started', onClick:()=>openView('deploy') },
     { icon:<Cpu size={19} color="var(--accent-primary)"/>, ibg:'rgba(212,176,140,.1)', accent:'var(--accent-primary)', badge:undefined, title:'Connect VPS', desc:'Bring your own server. Connect any VPS with SSH in seconds.', cta:'Connect', onClick:()=>window.dispatchEvent(new CustomEvent('allternit:open-settings',{detail:{section:'infrastructure',tab:'connections'}})) },
     { icon:<Stack size={19} color="#7b68ee"/>, ibg:'rgba(123,104,238,.1)', accent:'#7b68ee', badge:undefined, title:'Environments', desc:'Railway-style setup. Devcontainers, Nix, sandboxes.', cta:'Browse', onClick:()=>window.dispatchEvent(new CustomEvent('allternit:open-settings',{detail:{section:'infrastructure',tab:'environments'}})) },
   ];
@@ -984,9 +1074,9 @@ function ExtensionDetail({ onClose }: { onClose:()=>void }) {
     {i:<Lightning size={20} color="#34A853"/>,t:'Quick Access',d:'Access agents from any tab, instantly.',sc:'Ctrl+Shift+G'},
   ];
   const cmds = [
-    {l:'Clone repository',c:'git clone https://github.com/allternit/chrome-extension.git'},
-    {l:'Install dependencies',c:'cd chrome-extension && npm install'},
-    {l:'Build extension',c:'npm run build:prod'},
+    {l:'Clone repository',c:'git clone https://github.com/Gizziio/allternit-platform.git'},
+    {l:'Install dependencies',c:'cd surfaces/allternit-extensions/allternit-extension && npm install'},
+    {l:'Build extension',c:'npm run build'},
     {l:'Load in Chrome',c:'chrome://extensions → Developer mode → Load unpacked → dist/'},
   ];
 
@@ -1031,8 +1121,8 @@ function ExtensionDetail({ onClose }: { onClose:()=>void }) {
           <div>
             <div className="grid grid-cols-2 gap-3 mb-3.5">
               {(tab==='chrome'
-                ? [{href:'https://chrome.google.com/webstore',icon:<ChromeIcon size={26}/>,label:'Chrome Web Store',sub:'Official · Auto-updates',accent:'#4285F4'},{href:'https://github.com/allternit/chrome-extension/releases',icon:<ArrowSquareOut size={26} className="text-[var(--accent-primary)]"/>,label:'Download .crx',sub:'Manual · Latest build',accent:'var(--accent-primary)'}]
-                : [{href:'https://addons.mozilla.org',icon:<FirefoxIcon size={26}/>,label:'Firefox Add-ons',sub:'Official · Auto-updates',accent:'#FF7139'},{href:'https://github.com/allternit/firefox-extension/releases',icon:<ArrowSquareOut size={26} className="text-[var(--accent-primary)]"/>,label:'Download .xpi',sub:'Manual · Latest build',accent:'var(--accent-primary)'}]
+                ? [{href:OFFICIAL.github,icon:<ChromeIcon size={26}/>,label:'Source on GitHub',sub:'Gizziio / allternit-platform',accent:'#4285F4'},{href:OFFICIAL.platform,icon:<ArrowSquareOut size={26} className="text-[var(--accent-primary)]"/>,label:'A:// Platform',sub:'Install from inside the app',accent:'var(--accent-primary)'}]
+                : [{href:OFFICIAL.github,icon:<FirefoxIcon size={26}/>,label:'Source on GitHub',sub:'Gizziio / allternit-platform',accent:'#FF7139'},{href:OFFICIAL.platform,icon:<ArrowSquareOut size={26} className="text-[var(--accent-primary)]"/>,label:'A:// Platform',sub:'Install from inside the app',accent:'var(--accent-primary)'}]
               ).map(l=>(
                 <button type="button" key={l.href} onClick={() => openInBrowser(l.href)} className="p-[16px_18px] rounded-xl border border-solid border-white/5 flex items-center gap-3 transition-all duration-200 cursor-pointer hover:-translate-y-0.5"
                   style={{ background: `${l.accent}0e`, borderColor: `${l.accent}25` }}>
@@ -1131,7 +1221,7 @@ function DesktopBanner() {
       </div>
       <div className="flex gap-2.5 relative">
         {platforms.map(pl=>(
-          <button type="button" key={pl.label} onClick={() => openInBrowser('https://allternit.com/download')} className="p-[9px_16px] rounded-[10px] border border-solid border-[var(--ui-border-muted)] bg-white/4 text-[var(--ui-text-secondary)] text-[12px] font-medium cursor-pointer flex items-center gap-1.5 transition-all duration-200 hover:bg-white/8 hover:text-[var(--ui-text-primary)] hover:border-[var(--ui-border-default)]">
+          <button type="button" key={pl.label} onClick={() => openInBrowser(OFFICIAL.install)} className="p-[9px_16px] rounded-[10px] border border-solid border-[var(--ui-border-muted)] bg-white/4 text-[var(--ui-text-secondary)] text-[12px] font-medium cursor-pointer flex items-center gap-1.5 transition-all duration-200 hover:bg-white/8 hover:text-[var(--ui-text-primary)] hover:border-[var(--ui-border-default)]">
             {pl.icon} {pl.label}
           </button>
         ))}
@@ -1154,10 +1244,55 @@ interface VideoCard {
 }
 
 function VideoShowcaseSection() {
-  const d = (vt: string) => () => useNav.getState().dispatch({ type: 'OPEN_VIEW', viewType: vt as any });
+  const d = (vt: string) => () => openView(vt);
   const headRef = useScrollReveal();
 
   const cards: VideoCard[] = [
+    {
+      badge: 'Live',
+      badgeColor: '#D97757',
+      title: 'ALLTERNIT — The Series',
+      description: 'Season One: The Assistants. Intelligence is becoming infrastructure. The cinematic page is the public object.',
+      artType: 'canvas-doc',
+      cta: 'series.allternit.com',
+      onCta: () => openInBrowser(OFFICIAL.series),
+    },
+    {
+      badge: 'Live',
+      badgeColor: '#D97757',
+      title: 'Allternit Facility',
+      description: 'Walk the campus in 3D. Create a bot avatar — Husk, Unitree, Asimov, or human — then take it into the facility.',
+      artType: 'computer-use',
+      cta: '3dfacility.allternit.com',
+      onCta: () => openInBrowser(OFFICIAL.facility),
+    },
+    {
+      badge: 'Live',
+      badgeColor: '#a78bfa',
+      title: 'A:// Bots',
+      description: 'Teammates with jobs, tools, memory, group chat, webhooks, and a desktop. They keep working when you step away.',
+      artType: 'swarm',
+      cta: 'Open Bot Hub',
+      onCta: d('agent-hub'),
+    },
+    {
+      badge: 'Live',
+      badgeColor: '#0ea5e9',
+      title: 'Fabric Transport',
+      description: 'Pair a phone to this machine. Fabric Session PWA on fabrictransport.allternit.com drives the desktop over the fabric.',
+      artType: 'browser-capsule',
+      cta: 'Open Fabric Transport',
+      onCta: d('fabric-session'),
+    },
+    {
+      badge: 'Live',
+      badgeColor: '#8b5cf6',
+      title: 'Model Lab',
+      description: 'Train, deploy, and chat with open-weights models — locally or in the cloud. Engine, catalog, train, studio, playground.',
+      artType: 'local-brain',
+      cta: 'Open Model Lab',
+      onCta: d('model-lab'),
+    },
     {
       badge: 'Live',
       badgeColor: 'var(--status-success)',
@@ -1168,25 +1303,6 @@ function VideoShowcaseSection() {
       cta: 'Try Cowork',
       onCta: d('chat'),
     },
-    {
-      badge: 'Beta',
-      badgeColor: 'var(--status-warning)',
-      title: 'Allternit Canvas',
-      description: 'A new kind of document. Prompt to draft, AI refines inline. The blank page — replaced forever.',
-      videoSrc: '/videos/canvas-demo.mp4',
-      artType: 'canvas-doc',
-      cta: 'Open Canvas',
-      onCta: d('allternit-canvas'),
-    },
-    {
-      badge: 'Live',
-      badgeColor: '#5B8DEF',
-      title: 'Computer Use',
-      description: 'AI that sees your screen and takes real actions. Navigate, click, fill forms, extract data — fully automated.',
-      artType: 'computer-use',
-      cta: 'Open Operator',
-      onCta: d('operator'),
-    },
   ];
 
   return (
@@ -1195,7 +1311,7 @@ function VideoShowcaseSection() {
         <h2 className="pdv-display text-[22px] font-extrabold text-[var(--ui-text-primary)] m-0 tracking-tight">Product Highlights</h2>
         <span className="text-[12px] text-[var(--ui-text-muted)] tracking-wider uppercase font-semibold">New releases</span>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {cards.map(card => {
           const Art = ART_MAP[card.artType];
           return (
@@ -1391,13 +1507,26 @@ function SocialProofSection() {
 function WebsiteLinksSection() {
   const ref = useScrollReveal();
 
+  const productLinks = [
+    { label: 'Series', href: OFFICIAL.series },
+    { label: 'Facility', href: OFFICIAL.facility },
+    { label: 'Bots', href: OFFICIAL.bots },
+    { label: 'Fabric Transport', href: OFFICIAL.fabric },
+    { label: 'Office', href: OFFICIAL.office },
+    { label: 'Labs', href: OFFICIAL.labs },
+    { label: 'Compute', href: OFFICIAL.compute },
+    { label: 'Husks', href: OFFICIAL.husks },
+    { label: 'Spaces', href: OFFICIAL.spaces },
+    { label: 'Manufacturing', href: OFFICIAL.manufacturing },
+  ];
+
   const secondaryLinks = [
-    { label: 'Docs', href: 'https://docs.allternit.com' },
-    { label: 'GitHub', href: 'https://github.com/allternit' },
-    { label: 'Discord', href: 'https://discord.gg/allternit' },
-    { label: 'X / Twitter', href: 'https://x.com/allternit' },
-    { label: 'Changelog', href: 'https://allternit.com/changelog' },
-    { label: 'API Reference', href: 'https://docs.allternit.com/api' },
+    { label: 'Docs', href: OFFICIAL.docs },
+    { label: 'GitHub', href: OFFICIAL.github },
+    { label: 'X', href: OFFICIAL.x },
+    { label: 'Release notes', href: OFFICIAL.releaseNotes },
+    { label: 'API', href: OFFICIAL.docsApi },
+    { label: 'Install', href: OFFICIAL.install },
   ];
 
   return (
@@ -1413,7 +1542,7 @@ function WebsiteLinksSection() {
             Official website
           </span>
           <button type="button"
-            onClick={() => openInBrowser('https://allternit.com')}
+            onClick={() => openInBrowser(OFFICIAL.site)}
             className="pdv-link-ul bg-transparent border-none p-0 cursor-pointer flex items-center gap-2.5"
           >
             <span className="pdv-serif text-[38px] font-900 italic text-[var(--accent-primary)] tracking-[-0.03em] leading-none">
@@ -1426,25 +1555,43 @@ function WebsiteLinksSection() {
         {/* Divider */}
         <div className="hidden md:block w-px h-16 bg-[var(--ui-border-muted)] shrink-0" />
 
-        {/* Right: Link strip */}
-        <div className="flex-1">
-          <span className="pdv-display block text-[12.5px] font-bold tracking-[0.16em] uppercase text-[var(--ui-text-muted)] mb-3.5">
-            Resources & community
-          </span>
-          <div className="flex flex-wrap gap-2.5 md:gap-0">
-            {secondaryLinks.map((lk, i) => (
-              <React.Fragment key={lk.label}>
+        {/* Right: Link strips */}
+        <div className="flex-1 flex flex-col gap-6">
+          <div>
+            <span className="pdv-display block text-[12.5px] font-bold tracking-[0.16em] uppercase text-[var(--ui-text-muted)] mb-3.5">
+              Official products
+            </span>
+            <div className="flex flex-wrap gap-x-1 gap-y-2">
+              {productLinks.map((lk) => (
                 <button type="button"
+                  key={lk.label}
                   onClick={() => openInBrowser(lk.href)}
-                  className="pdv-link-ul bg-transparent border-none text-[14px] font-medium text-[var(--ui-text-secondary)] px-4 transition-colors duration-[180ms] cursor-pointer hover:text-[var(--ui-text-primary)]"
+                  className="pdv-link-ul bg-transparent border-none text-[14px] font-medium text-[var(--ui-text-secondary)] px-3 transition-colors duration-[180ms] cursor-pointer hover:text-[var(--ui-text-primary)]"
                 >
                   {lk.label}
                 </button>
-                {i < secondaryLinks.length - 1 && (
-                  <div className="hidden md:block w-px h-4 bg-[var(--ui-border-muted)] self-center" />
-                )}
-              </React.Fragment>
-            ))}
+              ))}
+            </div>
+          </div>
+          <div>
+            <span className="pdv-display block text-[12.5px] font-bold tracking-[0.16em] uppercase text-[var(--ui-text-muted)] mb-3.5">
+              Resources
+            </span>
+            <div className="flex flex-wrap gap-2.5 md:gap-0">
+              {secondaryLinks.map((lk, i) => (
+                <React.Fragment key={lk.label}>
+                  <button type="button"
+                    onClick={() => openInBrowser(lk.href)}
+                    className="pdv-link-ul bg-transparent border-none text-[14px] font-medium text-[var(--ui-text-secondary)] px-4 transition-colors duration-[180ms] cursor-pointer hover:text-[var(--ui-text-primary)]"
+                  >
+                    {lk.label}
+                  </button>
+                  {i < secondaryLinks.length - 1 && (
+                    <div className="hidden md:block w-px h-4 bg-[var(--ui-border-muted)] self-center" />
+                  )}
+                </React.Fragment>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -1458,12 +1605,12 @@ export const ProductsDiscoveryView: React.FC = () => {
   const [showExt, setShowExt] = useState(false);
 
   return (
-    <div className="pdv-root h-screen overflow-y-auto bg-[var(--surface-canvas)] p-[60px_80px] text-[var(--ui-text-primary)]">
+    <div className="pdv-root h-full overflow-y-auto bg-[var(--surface-canvas)] p-[60px_80px] text-[var(--ui-text-primary)]">
       <style>{PDV_CSS}</style>
 
       {/* Close */}
       <button type="button"
-        onClick={() => useNav.getState().dispatch({ type: 'OPEN_VIEW', viewType: 'chat' })}
+        onClick={() => openView('chat')}
         className="fixed top-[18px] right-[18px] size-[38px] rounded-[10px] bg-[var(--surface-hover)] border border-solid border-[var(--ui-border-muted)] flex items-center justify-center cursor-pointer text-[var(--ui-text-secondary)] transition-all duration-200 z-[100] hover:bg-[var(--ui-border-default)] hover:text-[var(--ui-text-primary)]"
       ><X size={16}/></button>
 
@@ -1561,8 +1708,8 @@ export const ProductsDiscoveryView: React.FC = () => {
               </div>
             </div>
             <div className="flex gap-2.5 relative">
-              <button type="button" onClick={() => openInBrowser('https://chrome.google.com/webstore')} className="p-[9px_16px] rounded-[10px] border border-solid border-[#4285F4] bg-blue-500/10 text-[var(--status-info)] text-[13px] font-medium cursor-pointer flex items-center gap-1.5 transition-all duration-200 hover:bg-[var(--status-info-bg)] hover:-translate-y-0.5">
-                <ChromeIcon size={14}/> Add to Chrome
+              <button type="button" onClick={() => openView('browser-extensions')} className="p-[9px_16px] rounded-[10px] border border-solid border-[#4285F4] bg-blue-500/10 text-[var(--status-info)] text-[13px] font-medium cursor-pointer flex items-center gap-1.5 transition-all duration-200 hover:bg-[var(--status-info-bg)] hover:-translate-y-0.5">
+                <ChromeIcon size={14}/> Open Extensions
               </button>
               <button type="button" onClick={() => setShowExt(v=>!v)} className="p-[9px_16px] rounded-[10px] border border-solid border-[var(--ui-border-muted)] bg-white/4 text-[var(--ui-text-secondary)] text-[13px] font-medium cursor-pointer transition-all duration-200 hover:bg-white/8 hover:text-[var(--ui-text-primary)]">
                 {showExt ? 'Hide details' : 'More browsers'}
@@ -1590,9 +1737,10 @@ export const ProductsDiscoveryView: React.FC = () => {
               Join the beta program for exclusive access to new features and products.
             </p>
             <button type="button"
+              onClick={() => openInBrowser(OFFICIAL.signUp)}
               className="p-[13px_30px] rounded-xl border-none bg-gradient-to-br from-[var(--accent-primary)] to-[#B08D6E] text-[var(--ui-text-inverse)] text-[14px] font-bold cursor-pointer transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] tracking-[0.01em] hover:-translate-y-0.5 hover:shadow-[0_12px_32px_rgba(212,176,140,0.3)]"
             >
-              Join the Beta Program
+              Create an account
             </button>
           </div>
         </div>
