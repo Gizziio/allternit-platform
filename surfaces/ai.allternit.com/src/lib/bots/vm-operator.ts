@@ -1,14 +1,10 @@
 /**
- * VM Operator — OpenSandbox integration point
+ * VM Operator — Allternit Computer Cloud (Incus / Tart / Lume)
  *
- * Thin client for dispatching bot tasks to a sandbox runtime. The runtime can
- * be OpenSandbox, Docker, Kubernetes, or a local runner. This module is the
- * schema-level bridge: it exposes the operations a bot needs to run code,
- * operate a browser, read/write files, and stream a desktop.
- *
- * Actual HTTP calls are environment-gated. When no sandbox server is
- * configured, the module returns a clear "not configured" result so the bot
- * runtime can fall back to chat/local execution.
+ * Thin client for bot virtual computers. Cloud desktops provision through
+ * `/api/v1/computers`, which spawns Incus (Linux/Windows) or Tart (macOS)
+ * guests. This is the Firecracker replacement already built in
+ * `cmd/allternit-computer-cloud`.
  */
 
 import type { AgentVMOperatorConfig } from '@/lib/agents/agent.types';
@@ -17,6 +13,7 @@ import { useChatSessionStore } from '@/views/chat/ChatSessionStore';
 import { createModuleLogger } from '@/lib/logger';
 import {
   createComputer,
+  deleteComputer,
   listComputers,
   type Computer,
   type CreateComputerResponse,
@@ -62,20 +59,33 @@ export interface VMOperatorResult<T> {
   error?: string;
 }
 
-function getSandboxBaseURL(): string | undefined {
-  if (typeof window === 'undefined') return undefined;
-  return (
-    (window as any).ALLTERNIT_SANDBOX_URL ||
-    process.env.NEXT_PUBLIC_SANDBOX_URL ||
-    undefined
-  );
+/** Providers that provision through Allternit Computer Cloud (Incus/Tart/Lume), not Firecracker. */
+const UNIFIED_COMPUTER_PROVIDERS = new Set([
+  'cloud-desktop',
+  'incus',
+  'tart',
+  'lume',
+]);
+
+export function usesUnifiedComputer(
+  provider?: AgentVMOperatorConfig['provider'] | string | null,
+): boolean {
+  if (!provider) return true;
+  return UNIFIED_COMPUTER_PROVIDERS.has(provider);
+}
+
+function substrateProvider(
+  provider?: AgentVMOperatorConfig['provider'] | string | null,
+): 'incus' | 'tart' | 'lume' | undefined {
+  if (provider === 'incus' || provider === 'tart' || provider === 'lume') return provider;
+  return undefined;
 }
 
 function notConfigured<T>(): VMOperatorResult<T> {
   return {
     ok: false,
     error:
-      'Sandbox runtime is not configured. Set ALLTERNIT_SANDBOX_URL or process.env.NEXT_PUBLIC_SANDBOX_URL to connect to OpenSandbox.',
+      'Computer Cloud is not configured. Incus/Tart/Lume provision through /api/v1/computers on allternit-api.',
   };
 }
 
@@ -164,13 +174,7 @@ export async function createSandbox(
   agentId: string,
   config: AgentVMOperatorConfig,
 ): Promise<VMOperatorResult<Sandbox>> {
-  if (config.provider !== 'cloud-desktop') {
-    const baseURL = getSandboxBaseURL();
-    if (!baseURL) {
-      logger.debug({ agentId }, 'Sandbox runtime not configured; skipping createSandbox');
-      return notConfigured<Sandbox>();
-    }
-    // Non-cloud-desktop providers are not yet supported through the unified API.
+  if (!usesUnifiedComputer(config.provider)) {
     return notConfigured<Sandbox>();
   }
 
@@ -180,6 +184,7 @@ export async function createSandbox(
       bot_id: agentId,
       template_id: config.templateId,
       persistence: config.persistence,
+      provider: substrateProvider(config.provider),
     });
     const sandbox = mapCreateResponseToSandbox(agentId, config, response);
     return { ok: true, data: sandbox };
@@ -200,13 +205,7 @@ export async function getSandboxForAgent(
   agentId: string,
   config?: AgentVMOperatorConfig,
 ): Promise<VMOperatorResult<Sandbox>> {
-  if (config && config.provider !== 'cloud-desktop') {
-    const baseURL = getSandboxBaseURL();
-    if (!baseURL) {
-      logger.debug({ agentId }, 'Sandbox runtime not configured; skipping getSandboxForAgent');
-      return notConfigured<Sandbox>();
-    }
-    // Non-cloud-desktop providers are not yet supported through the unified API.
+  if (config && !usesUnifiedComputer(config.provider)) {
     return notConfigured<Sandbox>();
   }
 
@@ -238,30 +237,43 @@ export async function getSandboxForAgent(
 
 /**
  * Create a snapshot of a sandbox for rollback / reproducibility.
+ * Snapshots are taken through the bot-desktop driver, which requires the
+ * owning bot id — pass it as `agentId`.
  */
 export async function snapshotSandbox(
   sandboxId: string,
   label?: string,
+  agentId?: string,
 ): Promise<VMOperatorResult<SandboxSnapshot>> {
-  const baseURL = getSandboxBaseURL();
-  if (!baseURL) return notConfigured<SandboxSnapshot>();
+  if (!agentId) return notConfigured<SandboxSnapshot>();
 
   try {
-    const res = await fetch(`${baseURL}/sandboxes/${encodeURIComponent(sandboxId)}/snapshots`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ label: label || `snapshot-${Date.now()}` }),
-    });
+    const res = await fetch(
+      `${API_BASE_URL}/bots/${encodeURIComponent(agentId)}/desktop/snapshots`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stateful: false, label: label || `snapshot-${Date.now()}` }),
+      },
+    );
 
     if (!res.ok) {
       const text = await res.text();
-      throw new Error(`Sandbox server returned ${res.status}: ${text}`);
+      throw new Error(`Platform returned ${res.status}: ${text}`);
     }
 
-    const data = (await res.json()) as SandboxSnapshot;
-    return { ok: true, data };
+    const data = (await res.json()) as { snapshot_id?: string; id?: string };
+    return {
+      ok: true,
+      data: {
+        id: data.snapshot_id || data.id || '',
+        sandboxId,
+        label,
+        createdAt: new Date().toISOString(),
+      },
+    };
   } catch (err) {
-    logger.error({ err, sandboxId }, 'Failed to snapshot sandbox');
+    logger.error({ err, sandboxId, agentId }, 'Failed to snapshot sandbox');
     return { ok: false, error: err instanceof Error ? err.message : 'Snapshot failed' };
   }
 }
@@ -272,25 +284,33 @@ export async function snapshotSandbox(
 export async function restoreSandbox(
   sandboxId: string,
   snapshotId: string,
+  agentId?: string,
 ): Promise<VMOperatorResult<Sandbox>> {
-  const baseURL = getSandboxBaseURL();
-  if (!baseURL) return notConfigured<Sandbox>();
+  if (!agentId) return notConfigured<Sandbox>();
 
   try {
     const res = await fetch(
-      `${baseURL}/sandboxes/${encodeURIComponent(sandboxId)}/snapshots/${encodeURIComponent(snapshotId)}/restore`,
+      `${API_BASE_URL}/bots/${encodeURIComponent(agentId)}/desktop/snapshots/${encodeURIComponent(snapshotId)}/restore`,
       { method: 'POST' },
     );
 
     if (!res.ok) {
       const text = await res.text();
-      throw new Error(`Sandbox server returned ${res.status}: ${text}`);
+      throw new Error(`Platform returned ${res.status}: ${text}`);
     }
 
-    const data = (await res.json()) as Sandbox;
-    return { ok: true, data };
+    return {
+      ok: true,
+      data: {
+        id: sandboxId,
+        agentId,
+        status: 'running',
+        provider: 'cloud-desktop',
+        createdAt: new Date().toISOString(),
+      },
+    };
   } catch (err) {
-    logger.error({ err, sandboxId, snapshotId }, 'Failed to restore sandbox');
+    logger.error({ err, sandboxId, snapshotId, agentId }, 'Failed to restore sandbox');
     return { ok: false, error: err instanceof Error ? err.message : 'Restore failed' };
   }
 }
@@ -307,23 +327,35 @@ export async function runCommand(
     return pausedResult<CommandResult>();
   }
 
-  const baseURL = getSandboxBaseURL();
-  if (!baseURL) return notConfigured<CommandResult>();
-
   try {
-    const res = await fetch(`${baseURL}/sandboxes/${encodeURIComponent(sandboxId)}/commands`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ command }),
-    });
+    const res = await fetch(
+      `${API_BASE_URL}/computers/${encodeURIComponent(sandboxId)}/shell`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ command: ['sh', '-c', command] }),
+      },
+    );
 
     if (!res.ok) {
       const text = await res.text();
-      throw new Error(`Sandbox server returned ${res.status}: ${text}`);
+      throw new Error(`Platform returned ${res.status}: ${text}`);
     }
 
-    const data = (await res.json()) as CommandResult;
-    return { ok: true, data };
+    const data = (await res.json()) as {
+      exitCode?: number;
+      exit_code?: number;
+      stdout?: string;
+      stderr?: string;
+    };
+    return {
+      ok: true,
+      data: {
+        exitCode: data.exitCode ?? data.exit_code ?? 0,
+        stdout: data.stdout ?? '',
+        stderr: data.stderr ?? '',
+      },
+    };
   } catch (err) {
     logger.error({ err, sandboxId }, 'Failed to run command in sandbox');
     return { ok: false, error: err instanceof Error ? err.message : 'Command failed' };
@@ -332,57 +364,27 @@ export async function runCommand(
 
 /**
  * Run a browser task inside a sandbox.
+ * Computer Cloud has no dedicated browser-task endpoint; use desktop/mouse
+ * and desktop/keyboard from the computer pane instead.
  */
 export async function runBrowserTask(
-  sandboxId: string,
-  url: string,
-  instructions: string,
+  _sandboxId: string,
+  _url: string,
+  _instructions: string,
   agentId?: string,
 ): Promise<VMOperatorResult<BrowserTaskResult>> {
   if (agentId && isBotDesktopPaused(agentId)) {
     return pausedResult<BrowserTaskResult>();
   }
-
-  const baseURL = getSandboxBaseURL();
-  if (!baseURL) return notConfigured<BrowserTaskResult>();
-
-  try {
-    const res = await fetch(`${baseURL}/sandboxes/${encodeURIComponent(sandboxId)}/browser`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url, instructions }),
-    });
-
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`Sandbox server returned ${res.status}: ${text}`);
-    }
-
-    const data = (await res.json()) as BrowserTaskResult;
-    return { ok: true, data };
-  } catch (err) {
-    logger.error({ err, sandboxId }, 'Failed to run browser task in sandbox');
-    return { ok: false, error: err instanceof Error ? err.message : 'Browser task failed' };
-  }
+  return notConfigured<BrowserTaskResult>();
 }
 
 /**
  * Destroy a sandbox and free its resources.
  */
 export async function destroySandbox(sandboxId: string): Promise<VMOperatorResult<void>> {
-  const baseURL = getSandboxBaseURL();
-  if (!baseURL) return notConfigured<void>();
-
   try {
-    const res = await fetch(`${baseURL}/sandboxes/${encodeURIComponent(sandboxId)}`, {
-      method: 'DELETE',
-    });
-
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`Sandbox server returned ${res.status}: ${text}`);
-    }
-
+    await deleteComputer(sandboxId);
     return { ok: true };
   } catch (err) {
     logger.error({ err, sandboxId }, 'Failed to destroy sandbox');
@@ -391,18 +393,15 @@ export async function destroySandbox(sandboxId: string): Promise<VMOperatorResul
 }
 
 /**
- * Check whether a sandbox runtime is reachable.
+ * Check whether the Computer Cloud control plane is reachable.
  */
 export async function healthCheck(): Promise<VMOperatorResult<{ status: string }>> {
-  const baseURL = getSandboxBaseURL();
-  if (!baseURL) return notConfigured<{ status: string }>();
-
   try {
-    const res = await fetch(`${baseURL}/health`);
+    const res = await fetch(`${API_BASE_URL}/health`);
     if (!res.ok) throw new Error(`Health check failed: ${res.status}`);
-    return { ok: true, data: await res.json() as { status: string } };
+    return { ok: true, data: (await res.json()) as { status: string } };
   } catch (err) {
-    logger.error({ err }, 'Sandbox health check failed');
+    logger.error({ err }, 'Computer Cloud health check failed');
     return { ok: false, error: err instanceof Error ? err.message : 'Health check failed' };
   }
 }
@@ -673,10 +672,7 @@ export async function destroyBotDesktop(
 }
 
 /**
- * Capture a screenshot of the bot's desktop.
- *
- * Returns a base64 PNG when the sandbox runtime supports it; otherwise the
- * platform returns a clear 204/empty response and the UI shows a placeholder.
+ * Capture a screenshot of the bot's desktop via guest exec (scrot / PowerShell).
  */
 export async function getBotDesktopScreenshot(
   botId: string,
@@ -684,7 +680,11 @@ export async function getBotDesktopScreenshot(
   signal?: AbortSignal,
 ): Promise<VMOperatorResult<BotDesktopScreenshot>> {
   try {
-    const res = await fetch(botDesktopUrl(botId, sandboxId) + '/screenshot', { method: 'POST', signal });
+    const res = await fetch(botDesktopUrl(botId, sandboxId) + '/screenshot', {
+      method: 'GET',
+      headers: { Accept: 'image/png, application/json' },
+      signal,
+    });
     if (res.status === 204 || res.status === 404) {
       return { ok: false, error: 'Screenshots are not available for this desktop provider' };
     }
@@ -692,13 +692,19 @@ export async function getBotDesktopScreenshot(
       const text = await res.text();
       throw new Error(`Platform returned ${res.status}: ${text}`);
     }
-    const data = (await res.json()) as BotDesktopScreenshot;
-    return { ok: true, data };
+    const contentType = res.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      const data = (await res.json()) as BotDesktopScreenshot;
+      return { ok: true, data };
+    }
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    return { ok: true, data: { png: btoa(binary), mime: 'image/png' } };
   } catch (err) {
     logger.error({ err, botId, sandboxId }, 'Failed to capture bot desktop screenshot');
     return { ok: false, error: err instanceof Error ? err.message : 'Screenshot failed' };
   }
 }
-// Re-export unified computer lifecycle helpers so callers can manage the
-// provisioned sandbox through the same control plane.
-export { deleteComputer } from '@/lib/computers-api';
+
+export { deleteComputer };

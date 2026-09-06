@@ -81,7 +81,7 @@ function makeValidBotJson(): Record<string, unknown> {
     secretRefs: [{ name: 'Search API Key', key: 'SEARCH_API_KEY', required: true }],
     vmOperator: {
       enabled: true,
-      provider: 'opensandbox' as const,
+      provider: 'opensandbox',
       allowedActions: ['command', 'browser'] as const,
       persistence: 'persistent' as const,
     },
@@ -181,7 +181,7 @@ describe('bot-import', () => {
       expect(createInput.isBot).toBe(true);
       expect(createInput.botProfile).toMatchObject({ displayName: 'Deep Researcher' });
       expect(createInput.systemPrompt).toContain('Adapt this bot for Allternit.');
-      expect(createInput.vmOperator).toMatchObject({ enabled: true, provider: 'opensandbox' });
+      expect(createInput.vmOperator).toMatchObject({ enabled: true, provider: 'cloud-desktop' });
 
       expect(mockWorkspaceCreate).toHaveBeenCalledOnce();
       expect(mockWorkspaceWriteFile).toHaveBeenCalledTimes(4);

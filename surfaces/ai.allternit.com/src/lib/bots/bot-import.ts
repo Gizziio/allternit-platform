@@ -11,7 +11,7 @@
 
 import JSZip from 'jszip';
 import { v4 as uuidv4 } from 'uuid';
-import type { Agent, CreateAgentInput } from '@/lib/agents/agent.types';
+import { coerceVmOperatorConfig, type Agent, type CreateAgentInput } from '@/lib/agents/agent.types';
 import { createAgent } from '@/lib/agents/agent.service';
 import { agentWorkspaceService } from '@/lib/agents/agent-workspace.service';
 import { validateBot, type BotPackage } from './bot-contract';
@@ -217,7 +217,7 @@ function buildCreateInput(bot: BotPackage, options: BotImportOptions): CreateAge
     secretRefs: bot.secretRefs,
     messagingConfig: bot.messagingConfig,
     identityChannels: bot.identityChannels,
-    vmOperator: bot.vmOperator,
+    vmOperator: coerceVmOperatorConfig(bot.vmOperator),
     allowedSurfaces: ['chat', 'cowork', 'code', 'design', 'browser'],
     trustTier: 'standard',
     source: 'organization',

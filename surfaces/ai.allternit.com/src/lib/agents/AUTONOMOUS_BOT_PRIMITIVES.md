@@ -70,8 +70,8 @@ Bots must be able to work autonomously across surfaces and outside the platform.
 
 - `AgentVMOperatorConfig` is part of `Agent` / `CreateAgentInput`.
 - Lets a bot run tasks inside a sandboxed virtual computer:
-  - `provider` — `opensandbox`, `docker`, `kubernetes`, `local`, or `custom`.
-  - `image` — sandbox environment image (e.g. `opensandbox/desktop:v1.0.0`).
+  - `provider` — `cloud-desktop`, `incus`, `tart`, `lume`, `docker`, `kubernetes`, `local`, `custom`, or `host`.
+  - `image` — guest image (e.g. `ubuntu/desktop` or `tart://macos`).
   - `allowedActions` — `command`, `browser`, `file`, `desktop`, `code`.
   - `networkPolicy` — `isolated`, `restricted`, `open`.
   - `persistence` — `ephemeral`, `session`, `persistent`.
@@ -88,8 +88,8 @@ Bots must be able to work autonomously across surfaces and outside the platform.
   - `ALLTERNIT_VM_CPU`, `ALLTERNIT_VM_MEMORY`, `ALLTERNIT_VM_DISK`
 - Integration point in `src/lib/bots/vm-operator.ts`:
   - Thin wrapper around sandbox lifecycle API (`createSandbox`, `runCommand`, `runBrowserTask`, `destroySandbox`, `healthCheck`).
-  - Returns a clear "not configured" result when `ALLTERNIT_SANDBOX_URL` is not set.
-  - Designed for OpenSandbox but provider-agnostic.
+  - Returns a clear "not configured" result when Computer Cloud is not available.
+  - Provisions through `/api/v1/computers` onto Incus, Tart, or Lume.
 
 ### 2.5 Payments & wallets
 
@@ -287,7 +287,7 @@ Etrid is proposed as the Allternit-native agent wallet:
 - VM Operator step in bot creation/edit wizard.
 - Bot Home Runtime tab and modal expose VM config.
 - `bot-runtime-env.ts` injects `ALLTERNIT_VM_*` env vars.
-- `src/lib/bots/vm-operator.ts` provides OpenSandbox-compatible lifecycle wrapper.
+- `src/lib/bots/vm-operator.ts` wraps Computer Cloud lifecycle (`/api/v1/computers`).
 
 ### Phase 6 — Payments
 - Replace marketplace `NoopCharger`.

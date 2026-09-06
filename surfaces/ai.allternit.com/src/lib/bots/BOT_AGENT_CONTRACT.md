@@ -20,7 +20,7 @@ In the Allternit platform we use **Agent** as the execution primitive and **Bot*
 | **Connectors & secrets** | Declared via `connectorBindings` and `secretRefs`; resolved at runtime. | Same — a bot carries its own scoped connectors and vault references. |
 | **Messaging** | `messagingConfig` (Photon, cross-surface). | Same — bots are addressable on the Photon bus and across surfaces. |
 | **Owned channels** | `identityChannels`: email, phone, wallet. | Same — a bot may have its own email, phone number, and Etrid wallet. |
-| **Virtual computer** | `vmOperator`: sandboxed VM / computer-use primitive. | Same — a bot can run tasks inside a sandbox (OpenSandbox, Docker, K8s, local). |
+| **Virtual computer** | `vmOperator`: sandboxed VM / computer-use primitive. | Same — a bot can run tasks inside Computer Cloud (Incus / Tart / Lume) or a local VM. |
 
 **One-line rule:**  
 > Every Bot is an Agent; not every Agent is a Bot.
@@ -204,7 +204,7 @@ type Bot = Agent & {
   - `secretRefs` — declared secret keys; values are resolved at session start via `agent-secrets-resolver.ts`.
   - `messagingConfig` — Photon orchestration and cross-surface bridging flags.
   - `identityChannels` — owned email, phone, and wallet channels.
-  - `vmOperator` — virtual computer / sandbox configuration; injected into `runtimeEnv` as `ALLTERNIT_VM_*` vars and dispatched to OpenSandbox or another provider.
+  - `vmOperator` — virtual computer / sandbox configuration; injected into `runtimeEnv` as `ALLTERNIT_VM_*` vars and dispatched through `/api/v1/computers` onto Incus, Tart, or Lume.
   - `runtimeEnv` — merged env map from harness, VM config, resolved secrets, and resolved connectors, passed in `AgentContext` on every message.
 - The bot identity is for presentation, routing, and discovery; execution entitlement comes from the underlying agent plus the scoped primitives above.
 

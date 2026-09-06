@@ -12,19 +12,18 @@ interface VMOperatorStepProps {
 }
 
 const PROVIDERS: { id: AgentVMProvider; label: string; description: string }[] = [
-  { id: "opensandbox", label: "OpenSandbox", description: "General-purpose sandbox runtime for AI agents (Docker/Kubernetes)." },
-  { id: "docker", label: "Docker", description: "Run tasks in local Docker containers." },
-  { id: "kubernetes", label: "Kubernetes", description: "Schedule sandbox workloads on a Kubernetes cluster." },
-  { id: "local", label: "Local Runner", description: "Execute tasks on the local machine with process isolation." },
-  { id: "custom", label: "Custom Provider", description: "Connect to your own VM operator endpoint." },
+  { id: "cloud-desktop", label: "Computer Cloud", description: "Shared Incus/Tart desktop — one computer, a screen per bot." },
+  { id: "incus", label: "Incus", description: "Linux/Windows guests on an Incus host." },
+  { id: "tart", label: "Tart", description: "macOS VM on a Tart host." },
+  { id: "lume", label: "Lume", description: "Local macOS VM on this machine." },
+  { id: "host", label: "This computer", description: "Drive the machine in front of you." },
 ];
 
 const IMAGES: { id: string; label: string; description: string; provider: AgentVMProvider }[] = [
-  { id: "opensandbox/code-interpreter:v1.1.0", label: "Code Interpreter", description: "Python/Node sandbox for code execution.", provider: "opensandbox" },
-  { id: "opensandbox/desktop:v1.0.0", label: "Desktop", description: "Full desktop environment with VNC access.", provider: "opensandbox" },
-  { id: "opensandbox/chrome:v1.0.0", label: "Browser", description: "Chromium sandbox for web automation.", provider: "opensandbox" },
-  { id: "opensandbox/playwright:v1.0.0", label: "Playwright", description: "Headless browser automation with Playwright.", provider: "opensandbox" },
-  { id: "custom", label: "Custom Image", description: "Provide your own sandbox image.", provider: "opensandbox" },
+  { id: "ubuntu-24.04-desktop", label: "Ubuntu Desktop", description: "Incus Linux desktop with VNC.", provider: "cloud-desktop" },
+  { id: "ubuntu-24.04-desktop", label: "Ubuntu Desktop (Incus)", description: "Linux guest on Incus.", provider: "incus" },
+  { id: "macos", label: "macOS (Tart)", description: "macOS guest on Tart.", provider: "tart" },
+  { id: "custom", label: "Custom Image", description: "Provide your own guest image.", provider: "cloud-desktop" },
 ];
 
 const ACTIONS: { id: AgentVMAction; label: string; icon: React.ElementType }[] = [
@@ -56,7 +55,7 @@ export function VMOperatorStep({ formData, setFormData }: VMOperatorStepProps) {
       ...prev,
       vmOperator: {
         enabled: prev.vmOperator?.enabled ?? false,
-        provider: prev.vmOperator?.provider ?? "opensandbox",
+        provider: prev.vmOperator?.provider ?? "cloud-desktop",
         ...(prev.vmOperator || {}),
         ...updates,
       },
@@ -145,7 +144,7 @@ export function VMOperatorStep({ formData, setFormData }: VMOperatorStepProps) {
             <div>
               <h3 className="text-[16px] font-semibold text-[var(--text-primary)] m-0 mb-4">Environment Image</h3>
               <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-3 mb-3">
-                {IMAGES.filter((i) => i.provider === "opensandbox").map((image) => (
+                {IMAGES.filter((i) => i.provider === (vm?.provider ?? "cloud-desktop")).map((image) => (
                   <button
                     key={image.id}
                     type="button"
@@ -171,7 +170,7 @@ export function VMOperatorStep({ formData, setFormData }: VMOperatorStepProps) {
                   <Input
                     value={vm?.image || ""}
                     onChange={(e) => updateVM({ image: e.target.value })}
-                    placeholder="e.g. opensandbox/desktop:v1.0.0"
+                    placeholder="e.g. ubuntu-24.04-desktop"
                     className="bg-[var(--bg-primary)] border-[var(--border-subtle)] text-[var(--text-primary)]"
                   />
                 </div>

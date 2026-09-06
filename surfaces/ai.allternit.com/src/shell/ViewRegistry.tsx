@@ -415,8 +415,8 @@ export function getShellViewRegistry(handlers: {
       </ErrorBoundary>
     ),
     'agent-hub': ({ context }: { context?: ViewContext }) => (
-      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Agent | Bot Hub" />}>
-        <AgentHub onSessionStarted={(sessionId) => open('cowork-agent-session', { sessionId })} />
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Bot Hub" />}>
+        <AgentHub onSessionStarted={(sessionId, botId) => open('bot-chat-session', { sessionId, botId })} />
       </ErrorBoundary>
     ),
     'bot-inbox': ({ context }: { context?: ViewContext }) => {

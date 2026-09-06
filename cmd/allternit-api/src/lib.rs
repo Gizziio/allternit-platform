@@ -70,6 +70,8 @@ pub mod cloud_credentials_routes;
 pub mod compliance_routes;
 pub mod computer_control;
 pub mod computer_routes;
+pub mod computer_screens;
+pub mod bot_group_routes;
 pub mod data_residency_routes;
 pub mod device_attestation_routes;
 pub mod config;
@@ -353,7 +355,7 @@ pub struct AppState {
     /// Data-plane (cloud-api → node) JWT verifier: JWKS cache + EdDSA
     /// verification of tokens minted by allternit-cloud-api.
     pub dp_jwks: crate::auth_dp_jwt::DataPlaneJwks,
-    /// VM execution driver (Firecracker on Linux, Apple VF on macOS, OpenSandbox)
+    /// VM execution driver (Incus/Tart Computer Cloud; Firecracker on Linux hosts)
     pub vm_driver: Option<Arc<dyn allternit_driver_interface::ExecutionDriver>>,
     /// Concrete Incus driver when one is configured; used to add/remove cloud
     /// provisioned hosts at runtime.

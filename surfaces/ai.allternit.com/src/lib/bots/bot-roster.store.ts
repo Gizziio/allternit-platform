@@ -47,6 +47,7 @@ export interface BotRosterState {
   toggleHide: (botId: string) => void;
   setCompact: (isCompact: boolean) => void;
   toggleCompact: () => void;
+  hydrateLayout: (pinnedBotIds: string[], hiddenBotIds: string[]) => void;
 }
 
 function toggleInList(list: string[], id: string): string[] {
@@ -111,6 +112,7 @@ export const useBotRosterStore = create<BotRosterState>()(
         })),
       setCompact: (isCompact) => set({ isCompact }),
       toggleCompact: () => set((state) => ({ isCompact: !state.isCompact })),
+      hydrateLayout: (pinnedBotIds, hiddenBotIds) => set({ pinnedBotIds, hiddenBotIds }),
     }),
     {
       name: 'allternit-bot-roster',
