@@ -20,6 +20,22 @@
 
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function () {
+      var onFabricSession = location.pathname.indexOf('fabric-session') !== -1;
+      var isLocalDesktop = location.hostname === '127.0.0.1' || location.hostname === 'localhost';
+      navigator.serviceWorker.getRegistrations().then(function (regs) {
+        regs.forEach(function (reg) {
+          var script = (reg.active && reg.active.scriptURL) ||
+            (reg.waiting && reg.waiting.scriptURL) ||
+            (reg.installing && reg.installing.scriptURL) ||
+            '';
+          if (isLocalDesktop || (!onFabricSession && script.indexOf('fabric-session-service-worker') !== -1)) {
+            reg.unregister();
+          }
+        });
+      }).catch(function () {});
+
+      if (onFabricSession || isLocalDesktop) return;
+
       navigator.serviceWorker
         .register('/sw.js')
         .then(function (registration) {
