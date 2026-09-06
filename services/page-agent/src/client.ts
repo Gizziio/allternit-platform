@@ -64,6 +64,16 @@ export function getPageAgentStatusEndpoint(sessionId: string): string {
 const FALLBACK_GIZZI_BASE = "http://127.0.0.1:4096";
 const MAX_OUTPUT_LENGTH = 500;
 
+function parseGizziModel(model?: string): { providerID: string; modelID: string } | null {
+  if (!model) return null;
+  const separator = model.indexOf("/");
+  if (separator <= 0 || separator === model.length - 1) return null;
+  return {
+    providerID: model.slice(0, separator),
+    modelID: model.slice(separator + 1),
+  };
+}
+
 interface GizziConnection {
   base: string;
   headers: Record<string, string>;
@@ -166,7 +176,9 @@ export async function runPageAgentTask(options: {
 
   const { base, headers } = connection;
 
-  // 1. Create the session (browser tool pre-approved)
+  const gizziModel = parseGizziModel(config?.model);
+
+  // 1. Create the session (browser tool pre-approved) on the selected Gizzi brain
   try {
     const res = await fetch(`${base}/v1/session`, {
       method: "POST",
@@ -175,6 +187,7 @@ export async function runPageAgentTask(options: {
         title: goal.slice(0, 80),
         surface: "browser",
         permission: [{ permission: "browser", action: "allow", pattern: "*" }],
+        ...(gizziModel ? { defaultModel: gizziModel } : {}),
       }),
     });
     if (!res.ok) {
@@ -307,6 +320,9 @@ export async function runPageAgentTask(options: {
     const body: Record<string, unknown> = {
       parts: [{ type: "text", text: goal }],
     };
+    if (gizziModel) {
+      body.model = gizziModel;
+    }
     if (config?.systemInstruction) {
       body.system = config.systemInstruction;
     }

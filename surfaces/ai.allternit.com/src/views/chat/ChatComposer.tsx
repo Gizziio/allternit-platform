@@ -1046,7 +1046,7 @@ export function ChatComposer({
     const enrichedInput = buildEnrichedInput(messageText);
 
     if (selectedModeId === 'computer-use') {
-      useBrowserAgentStore.getState().runAcuTask(enrichedInput);
+      useBrowserAgentStore.getState().startAciSession(enrichedInput);
     }
 
     if (selectedModeId === 'swarms' && selectedSwarmSubMode === 'population-simulation') {

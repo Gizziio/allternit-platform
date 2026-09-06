@@ -21,7 +21,7 @@ interface MiniAppIconProps {
   className?: string;
 }
 
-export function MiniAppIcon({ app, size = 40, className }: MiniAppIconProps) {
+export function MiniAppIcon({ app, size = 28, className }: MiniAppIconProps) {
   const [attempt, setAttempt] = useState(0);
 
   const repoOwner = app.repo ? app.repo.split("/")[0] : undefined;
@@ -51,7 +51,7 @@ export function MiniAppIcon({ app, size = 40, className }: MiniAppIconProps) {
       alt=""
       width={size}
       height={size}
-      className={cn("size-full object-cover", className)}
+      className={cn("size-full object-contain p-0.5", className)}
       onError={() => setAttempt((i) => i + 1)}
     />
   );

@@ -266,13 +266,13 @@ function MiniAppCard({ app, onOpen, onPin, onUnpin, onReprobe, onDetails }: {
       <div className="flex items-start justify-between gap-3">
         <div
           className={cn(
-            'flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border',
+            'flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border',
             isRunning
               ? 'border-green-800/40 bg-green-950/30 text-green-400'
               : 'border-[var(--border-subtle)] bg-[var(--bg-primary)] text-[var(--text-secondary)]',
           )}
         >
-          <MiniAppIcon app={app} size={40} />
+          <MiniAppIcon app={app} size={28} />
         </div>
         <StatusPill status={app.status} />
       </div>

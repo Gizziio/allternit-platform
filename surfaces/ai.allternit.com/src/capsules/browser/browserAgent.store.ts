@@ -38,6 +38,11 @@ import {
   runGizziBrainTask,
   stopGizziBrainTask,
 } from './gizzi-brain-client';
+import {
+  type AciEngine,
+  resolveAciModel,
+  resolveGizziBrain,
+} from '@/lib/aci-runtime';
 import type {
   PageAgentActivity,
   PageAgentHistoricalEvent,
@@ -261,10 +266,14 @@ export interface BrowserAgentState {
   pageAgentTargetTabId: string | null;
   setPageAgentTargetTabId: (id: string | null) => void;
 
-  // AI SDK model string used for computer-use runs — any vision-capable model
-  // e.g. 'anthropic/claude-sonnet-4.6', 'openai/gpt-5.4', 'google/gemini-2.5-pro'
+  // AI SDK model string used for computer-use runs — always the Gizzi picker.
   aciModel: string;
   setAciModel: (model: string) => void;
+  aciEngine: AciEngine;
+  setAciEngine: (engine: AciEngine) => void;
+  connectedBotId: string | null;
+  setConnectedBotId: (botId: string | null) => void;
+  startAciSession: (goal: string) => void;
 
   // BrowserCapsule mount tracking — used by ACIComputerUseSidecar to suppress
   // the global portal panel when the capsule is already showing its own viewport
@@ -488,8 +497,32 @@ export const useBrowserAgentStore = create<BrowserAgentState>()(
     pageAgentHistory: [],
     pageAgentSessions: [],
     pageAgentTargetTabId: null,
-    aciModel: 'anthropic/claude-sonnet-4.6',
+    aciModel: resolveAciModel('anthropic/claude-sonnet-4.6'),
     setAciModel: (model) => set({ aciModel: model }),
+    aciEngine: 'allternit',
+    setAciEngine: (engine) => set({ aciEngine: engine }),
+    connectedBotId: null,
+    setConnectedBotId: (botId) => set({ connectedBotId: botId }),
+    startAciSession: (goal) => {
+      const brain = resolveGizziBrain();
+      if (brain) set({ aciModel: brain.aciModel });
+      const engine = get().aciEngine;
+      if (engine === 'page-agent') {
+        get().runPageAgentGoal(goal, {
+          model: brain?.aciModel ?? get().aciModel,
+        });
+        return;
+      }
+      if (engine === 'sub-agent') {
+        get().runAcuTask(goal, { targetScope: 'hybrid' });
+        return;
+      }
+      if (get().engineHealthy) {
+        get().runAcuTask(goal, { targetScope: 'browser' });
+        return;
+      }
+      get().runGoal(goal);
+    },
     isBrowserCapsuleMounted: false,
     setIsBrowserCapsuleMounted: (mounted) => set({ isBrowserCapsuleMounted: mounted }),
     aciSidecarExpanded: true,
@@ -532,7 +565,9 @@ export const useBrowserAgentStore = create<BrowserAgentState>()(
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           goal,
-          model: get().aciModel,
+          model: resolveAciModel(get().aciModel),
+          engine: get().aciEngine,
+          botId: get().connectedBotId,
           allowedSites: get().allowedSites,
           openLinksInBrowser: get().openLinksInBrowser,
           autoVerify: get().autoVerify,
@@ -631,6 +666,9 @@ export const useBrowserAgentStore = create<BrowserAgentState>()(
     
     // Run goal via the gizzi brain (page-agent path)
     runPageAgentGoal: (goal, config) => {
+      const brain = resolveGizziBrain();
+      const resolvedModel = brain?.aciModel ?? config?.model ?? get().aciModel;
+      if (brain) set({ aciModel: brain.aciModel });
       set({
         goal,
         status: 'Idle',
@@ -654,7 +692,12 @@ export const useBrowserAgentStore = create<BrowserAgentState>()(
 
       void runGizziBrainTask({
         goal,
-        config,
+        config: {
+          ...config,
+          model: resolvedModel,
+          apiKey: undefined,
+          baseURL: undefined,
+        },
         callbacks: {
           onSession: (sessionId) => {
             currentSessionId = sessionId;
@@ -705,13 +748,24 @@ export const useBrowserAgentStore = create<BrowserAgentState>()(
         aciSessionId: sessionId,
       });
 
+      const brain = resolveGizziBrain();
+      if (brain) set({ aciModel: brain.aciModel });
       const request = {
         task,
         run_id: runId,
         session_id: sessionId,
-        target_scope: (options.targetScope ?? 'browser') as 'browser' | 'desktop' | 'hybrid' | 'auto',
+        target_scope: (options.targetScope ?? (get().aciEngine === 'sub-agent' ? 'hybrid' : 'browser')) as 'browser' | 'desktop' | 'hybrid' | 'auto',
         mode: 'intent' as const,
-        options: { max_steps: options.maxSteps ?? 20 },
+        options: {
+          max_steps: options.maxSteps ?? 20,
+          model: brain?.aciModel ?? get().aciModel,
+          engine: get().aciEngine,
+          spawn_subagent: get().aciEngine === 'sub-agent',
+        },
+        metadata: {
+          gizzi: brain?.gizziModel ?? null,
+          botId: get().connectedBotId,
+        },
       };
 
       // Use streaming path so we get live events without polling
@@ -1081,6 +1135,8 @@ export const useBrowserAgentStore = create<BrowserAgentState>()(
     partialize: (state) => ({
       pageAgentSessions: state.pageAgentSessions,
       aciModel: state.aciModel,
+      aciEngine: state.aciEngine,
+      connectedBotId: state.connectedBotId,
     }),
   })
 );

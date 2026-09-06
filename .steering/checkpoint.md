@@ -1,9 +1,9 @@
 # Steering checkpoint
 
-Goal: Public content pass so docs.allternit.com, the platform console Docs page, and allternit.com/docs describe Cloud API vs Allternit API as they are deployed.
+Goal: Unify ACI with Gizzi runtime selection, shrink ACI logos, replace HAR setup with teach-the-agent skill/workflow recording, and wire the Allternit computer-use engine + bot connection into the ACI panel.
 
-Just did: Dual-API content pass in this worktree. New `api/overview.mdx` + `api/allternit-api.mdx`. Rewrote `byoc/overview.mdx` (no Vercel / :8080). Updated architecture, introduction, cloud-api (Postgres, P1 relay, provisioned-instances), authentication, agent-sessions (`/api/v1`, 428), office, beta, docs.json nav, release-notes, DEPLOYMENT_GUIDE, README ports, platform DocsPage. Marketing `DeveloperDocs.tsx` in the Websites repo (fly.dev → api.allternit.com).
+Just did: Implemented in `session/aci-unify` worktree. ACI/page-agent/computer-use now resolve the persisted Gizzi picker (`claude-cli/…`) instead of a separate API-key brain. Chrome extension DEMO_CONFIG no longer points at the Shanghai test proxy. Logos on mini-apps, extensions, and the ACI sidepanel wordmark are smaller (`object-contain`). Site APIs is Teach-first (record walkthrough → distill skill → replay; HAR import is advanced). ACI sidecar has an engine bar: Allternit CUA (local) / sub-agent / page-agent, plus bot connection. 11 targeted tests passing.
 
-Next: rebase onto origin/main (1 commit ahead), commit, PR, merge, watch deploy-docs-cloudflare.yml. Then deploy www if Eoj wants the marketing change live.
+Next: Owner review in the desktop app. Then PR from `session/aci-unify`. Remaining: Office add-in still has its own API key pane; lifting ModelSelectionProvider to the shell so ACI can open the same picker in-place.
 
-Open questions: Marketing is a separate repo; docs CI deploys on merge to main. Stale websites copy of docs.allternit.com is not synced (canonical is surfaces/docs).
+Open questions: None blocking.

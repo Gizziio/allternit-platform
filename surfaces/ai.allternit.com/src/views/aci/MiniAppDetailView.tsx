@@ -169,8 +169,8 @@ export function MiniAppDetailView({
         </button>
         <div className="flex flex-col gap-6 border-b border-[var(--border-subtle)] pb-8 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-5">
-            <div className="flex size-20 items-center justify-center overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-hover)]">
-              <MiniAppIcon app={app} size={80} />
+            <div className="flex size-12 items-center justify-center overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-hover)]">
+              <MiniAppIcon app={app} size={40} />
             </div>
             <div>
               <span className="rounded-full bg-[var(--surface-hover)] px-2.5 py-1 text-[10px] font-semibold uppercase text-[var(--text-tertiary)]">

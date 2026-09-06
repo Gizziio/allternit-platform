@@ -426,7 +426,7 @@ function timeAgo(ts: number): string {
 function Logo({ className }: { className?: string }) {
   return (
     <div className={className}>
-      <AllternitLogo size="lg" variant="icon-only" showText={false} />
+      <AllternitLogo size="sm" variant="icon-only" showText={false} />
     </div>
   );
 }

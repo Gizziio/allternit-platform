@@ -23,6 +23,7 @@ import {
   deleteSession as deleteSessionFromDB,
   clearSessions as clearSessionsFromDB,
 } from "./sessionStorage";
+import { ACI_ENGINE_LABEL, subscribeGizziBrain } from "@/lib/aci-runtime";
 
 function mapStatus(status: PageAgentStatus): ExtensionSidepanelStatus {
   if (status === "running") return "running";
@@ -77,6 +78,7 @@ export function useBrowserExtensionPaneAdapter(): {
   const goal = useBrowserAgentStore((s) => s.goal);
   const pageAgentSessions = useBrowserAgentStore((s) => s.pageAgentSessions);
   const runPageAgentGoal = useBrowserAgentStore((s) => s.runPageAgentGoal);
+  const startAciSession = useBrowserAgentStore((s) => s.startAciSession);
   const stopPageAgent = useBrowserAgentStore((s) => s.stopPageAgent);
   const deletePageAgentSession = useBrowserAgentStore((s) => s.deletePageAgentSession);
   const clearPageAgentSessions = useBrowserAgentStore((s) => s.clearPageAgentSessions);
@@ -84,6 +86,20 @@ export function useBrowserExtensionPaneAdapter(): {
   const [config, setConfig] = useState<ExtensionSidepanelConfig>(DEFAULT_CONFIG);
   const [dbSessions, setDbSessions] = useState<PageAgentSessionRecord[]>([]);
   const [dbLoaded, setDbLoaded] = useState(false);
+  const aciEngine = useBrowserAgentStore((s) => s.aciEngine);
+
+  useEffect(() => {
+    return subscribeGizziBrain((brain) => {
+      setConfig((prev) => ({
+        ...prev,
+        brainLabel: brain?.label ?? "Allternit/Gizzi platform brain",
+        runtimeLabel: brain ? `Gizzi · ${brain.label}` : prev.runtimeLabel,
+        model: brain?.aciModel,
+        harnessLabel: ACI_ENGINE_LABEL[aciEngine],
+        connectionLabel: brain ? "Same as Gizzi runtime" : "Pick a Gizzi runtime",
+      }));
+    });
+  }, [aciEngine]);
 
   // Load sessions from IndexedDB on mount
   useEffect(() => {
@@ -151,21 +167,28 @@ export function useBrowserExtensionPaneAdapter(): {
       if (activeTabId) {
         setPageAgentTargetTabId(activeTabId);
       }
-      runPageAgentGoal(task, {
-        language: config.language as "en-US" | "zh-CN" | null,
-        maxSteps: config.maxSteps,
-        experimentalLlmsTxt: config.experimentalLlmsTxt,
-        systemInstruction: activeTab?.extensionIds?.some((id) => id.startsWith('allternit-office-'))
+      const officeInstruction = activeTab?.extensionIds?.some((id) => id.startsWith('allternit-office-'))
           ? `This tab is an attached Microsoft Office surface${activeTab.officeDocumentTitle ? ` for ${activeTab.officeDocumentTitle}` : ''}. Operate the visible Office document through the Allternit browser/computer-use harness. Preserve user content, request approval before destructive document changes, and use the enabled ${activeTab.extensionIds.join(', ')} capability context.${activeTab.officeBindingId ? ` The live Office document bridge binding is ${activeTab.officeBindingId}.` : ''}`
-          : null,
-      });
+          : null;
+      if (officeInstruction) {
+        runPageAgentGoal(task, {
+          language: config.language as "en-US" | "zh-CN" | null,
+          maxSteps: config.maxSteps,
+          experimentalLlmsTxt: config.experimentalLlmsTxt,
+          systemInstruction: officeInstruction,
+        });
+        return;
+      }
+      startAciSession(task);
     },
-    [runPageAgentGoal, config, activeTab, activeTabId, setPageAgentTargetTabId]
+    [runPageAgentGoal, startAciSession, config, activeTab, activeTabId, setPageAgentTargetTabId]
   );
 
   const stop = useCallback(() => {
     setPageAgentTargetTabId(null);
     stopPageAgent();
+    useBrowserAgentStore.getState().stopExecution();
+    useBrowserAgentStore.getState().stopAcuTask();
   }, [stopPageAgent, setPageAgentTargetTabId]);
 
   const configure = useCallback(

@@ -233,9 +233,10 @@ export function persistModelSelection(selection: ModelSelection | null): void {
   try {
     if (!selection || isMistakenAutoDefault(selection)) {
       window.localStorage.removeItem(MODEL_SELECTION_STORAGE_KEY);
-      return;
+    } else {
+      window.localStorage.setItem(MODEL_SELECTION_STORAGE_KEY, JSON.stringify(selection));
     }
-    window.localStorage.setItem(MODEL_SELECTION_STORAGE_KEY, JSON.stringify(selection));
+    window.dispatchEvent(new CustomEvent("allternit:gizzi-brain-changed"));
   } catch {
     // storage unavailable
   }

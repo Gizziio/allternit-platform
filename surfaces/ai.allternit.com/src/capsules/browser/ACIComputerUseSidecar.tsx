@@ -27,6 +27,7 @@ import { useBrowserAgentStore, type AXTreeNode, type NotificationEntry } from '.
 import { CursorOverlay } from './CursorOverlay';
 import { executeGatewayAction } from '../../integration/computer-use-engine';
 import { ConformanceDashboard } from './ConformanceDashboard';
+import { ACIEngineBar } from './ACIEngineBar';
 import { ContextWindowCard } from '@/components/ai-elements/ContextWindowCard';
 import { cn } from '@/lib/utils';
 
@@ -578,6 +579,8 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
             </svg>
           </button>
         </div>
+
+        <ACIEngineBar />
 
         {/* ── Screen area ── */}
         {(

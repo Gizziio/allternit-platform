@@ -62,7 +62,7 @@ function MonogramTile({ extension, dimension, glyph }: { extension: Extension; d
 }
 
 export function ExtensionLogo({ extension, size = "card" }: { extension: Extension; size?: "card" | "detail" }) {
-  const dimension = size === "detail" ? 80 : 48;
+  const dimension = size === "detail" ? 40 : 28;
 
   if (extension.officeHost) {
     return (
@@ -75,9 +75,9 @@ export function ExtensionLogo({ extension, size = "card" }: { extension: Extensi
   }
 
   if (extension.id === "allternit-agent") {
-    const displaySize = size === "detail" ? 64 : 36;
+    const displaySize = size === "detail" ? 32 : 22;
     return (
-      <div className={cn("flex shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-hover)] shadow-sm", size === "detail" ? "size-20 rounded-2xl" : "size-12")}>
+      <div className={cn("flex shrink-0 items-center justify-center overflow-hidden rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-hover)]", size === "detail" ? "size-10 rounded-xl" : "size-7")}>
         <ScaledMatrixLogo state={extension.isEnabled ? "listening" : "idle"} displaySize={displaySize} />
       </div>
     );
@@ -88,7 +88,7 @@ export function ExtensionLogo({ extension, size = "card" }: { extension: Extensi
       <img
         src={extension.icon}
         alt=""
-        className={cn("shrink-0 rounded-xl object-cover shadow-sm", size === "detail" ? "size-20 rounded-2xl" : "size-12")}
+        className={cn("shrink-0 rounded-lg object-contain", size === "detail" ? "size-10 rounded-xl" : "size-7")}
       />
     );
   }

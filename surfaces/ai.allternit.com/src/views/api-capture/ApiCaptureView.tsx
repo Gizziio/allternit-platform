@@ -22,9 +22,12 @@ import {
   ArrowSquareOut,
   Faders,
   PaperPlaneRight,
+  Record,
+  Square,
 } from "@phosphor-icons/react";
 import { useApiCaptureStore } from "@/lib/api-capture/store";
-import type { Endpoint, Param, ReplayInput, ReplayResult, SiteApiContract } from "@/lib/api-capture/api";
+import type { Endpoint, Param, ReplayInput, ReplayResult, SiteApiContract, ApiSkill } from "@/lib/api-capture/api";
+import { getCaptureAdapter } from "@/lib/api-capture/adapter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -129,6 +132,7 @@ export function ApiCaptureView() {
     generatedClient,
     isPublishingSkill,
     publishSkillSuccess,
+    apiSkills,
     error,
     fetchSessions,
     fetchContracts,
@@ -145,6 +149,10 @@ export function ApiCaptureView() {
   } = useApiCaptureStore();
 
   const [uploadDragging, setUploadDragging] = useState(false);
+  const [teachPhase, setTeachPhase] = useState<"idle" | "recording" | "saving">("idle");
+  const [teachSessionId, setTeachSessionId] = useState<string | null>(null);
+  const [teachError, setTeachError] = useState<string | null>(null);
+  const [showHarImport, setShowHarImport] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const openBrowserView = useCallback(() => {
@@ -211,20 +219,57 @@ export function ApiCaptureView() {
     setUploadDragging(false);
   }, []);
 
+  const startTeach = useCallback(async () => {
+    setTeachError(null);
+    openBrowserView();
+    const adapter = getCaptureAdapter();
+    if (adapter.name === "upload") {
+      setShowHarImport(true);
+      fileInputRef.current?.click();
+      return;
+    }
+    try {
+      setTeachPhase("recording");
+      const result = await adapter.start();
+      setTeachSessionId(result.sessionId);
+    } catch (error) {
+      setTeachPhase("idle");
+      setTeachError(error instanceof Error ? error.message : "Could not start recording");
+    }
+  }, [openBrowserView]);
+
+  const stopTeach = useCallback(async () => {
+    if (!teachSessionId) {
+      setTeachPhase("idle");
+      return;
+    }
+    setTeachPhase("saving");
+    try {
+      const adapter = getCaptureAdapter();
+      const result = await adapter.stop(teachSessionId);
+      await ingestHarFile(result.har, adapter.name === "desktop" ? "aci" : "browser");
+      setTeachSessionId(null);
+      setTeachPhase("idle");
+    } catch (error) {
+      setTeachPhase("recording");
+      setTeachError(error instanceof Error ? error.message : "Could not save the recording");
+    }
+  }, [ingestHarFile, teachSessionId]);
+
   return (
     <div className="flex flex-col h-full w-full bg-[var(--shell-view-bg)] overflow-hidden">
       {/* Header */}
       <header className="px-6 py-5 shrink-0 border-b border-solid border-[var(--border-subtle)] flex items-center justify-between gap-4">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="size-10 rounded-xl bg-gradient-to-br from-[var(--accent-primary)]/20 to-[var(--accent-primary)]/5 flex items-center justify-center border border-solid border-[var(--accent-primary)]/20">
-            <Plugs size={22} weight="duotone" className="text-[var(--accent-primary)]" />
+          <div className="size-8 rounded-lg bg-gradient-to-br from-[var(--accent-primary)]/20 to-[var(--accent-primary)]/5 flex items-center justify-center border border-solid border-[var(--accent-primary)]/20">
+            <Robot size={16} weight="duotone" className="text-[var(--accent-primary)]" />
           </div>
           <div className="min-w-0">
-            <h1 className="text-[20px] font-bold m-0 tracking-tight text-[var(--text-primary)]">
-              Site APIs
+            <h1 className="text-[18px] font-bold m-0 tracking-tight text-[var(--text-primary)]">
+              Teach a skill
             </h1>
             <p className="text-[13px] text-[var(--text-secondary)] m-0 truncate">
-              HAR-derived API contracts, replay playground, and agent client generation
+              Record a browser walkthrough. Distill it into a reusable skill the agent can replay.
             </p>
           </div>
         </div>
@@ -240,22 +285,20 @@ export function ApiCaptureView() {
               e.currentTarget.value = "";
             }}
           />
-          <Button
-            size="sm"
-            onClick={openBrowserView}
-            className="gap-2"
-          >
-            <ArrowSquareOut size={16} />
-            Open browser to capture
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => fileInputRef.current?.click()}
-            className="gap-2"
-          >
-            <UploadSimple size={16} />
-            Upload HAR
+          {teachPhase === "recording" ? (
+            <Button size="sm" onClick={() => void stopTeach()} className="gap-2 bg-[var(--status-error)] text-white">
+              <Square size={14} weight="fill" />
+              Stop teaching
+            </Button>
+          ) : (
+            <Button size="sm" onClick={() => void startTeach()} disabled={teachPhase === "saving"} className="gap-2">
+              {teachPhase === "saving" ? <Spinner size={14} className="animate-spin" /> : <Record size={14} weight="fill" />}
+              {teachPhase === "saving" ? "Saving…" : "Teach in browser"}
+            </Button>
+          )}
+          <Button variant="outline" size="sm" onClick={() => setShowHarImport((v) => !v)} className="gap-2">
+            <UploadSimple size={14} />
+            Import HAR
           </Button>
           <Button
             variant="outline"
@@ -273,46 +316,50 @@ export function ApiCaptureView() {
             />
             Refresh
           </Button>
-          <Button
-            size="sm"
-            onClick={openApiCreator}
-            className="gap-2"
-          >
-            <Lightning size={16} />
-            Open API Creator
-          </Button>
         </div>
       </header>
 
       {/* Workflow strip */}
       <div className="shrink-0 px-6 py-4">
+        {(teachError || teachPhase === "recording") && (
+          <div className={cn(
+            "mb-3 rounded-lg border px-3 py-2 text-[12px]",
+            teachPhase === "recording"
+              ? "border-[var(--status-error)]/30 bg-[var(--status-error)]/8 text-[var(--status-error)]"
+              : "border-[var(--status-error)]/20 bg-[var(--status-error-bg)] text-[var(--status-error)]"
+          )}>
+            {teachPhase === "recording"
+              ? "Recording. Click through the site the way the agent should. Stop teaching when you are done — we distill the traffic into a skill."
+              : teachError}
+          </div>
+        )}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
           <WorkflowStep
             step={1}
-            icon={UploadSimple}
-            label="Upload HAR"
-            description="Drop a browser DevTools export"
+            icon={Record}
+            label="Teach"
+            description="Walk the browser once. We record the path."
             accent="var(--accent-primary)"
           />
           <WorkflowStep
             step={2}
-            icon={Plugs}
-            label="Extract contract"
-            description="Turn traffic into typed endpoints"
+            icon={Robot}
+            label="Distill skill"
+            description="Turn the recording into a SKILL.md workflow"
             accent="var(--accent-secondary)"
           />
           <WorkflowStep
             step={3}
             icon={Play}
             label="Replay"
-            description="Test endpoints live with params"
+            description="The agent follows the same clicks and APIs"
             accent="var(--status-success)"
           />
           <WorkflowStep
             step={4}
             icon={Code}
-            label="Generate client"
-            description="Python / TypeScript / cURL"
+            label="Optional client"
+            description="Typed API client if you still want one"
             accent="var(--accent-code)"
             isLast
           />
@@ -340,29 +387,72 @@ export function ApiCaptureView() {
       <div className="flex-1 overflow-hidden flex min-h-0">
         {/* Left sidebar */}
         <div className="w-[340px] shrink-0 border-r border-solid border-[var(--border-subtle)] overflow-y-auto p-4 space-y-6">
-          {/* Upload dropzone */}
+          <button
+            type="button"
+            onClick={() => void startTeach()}
+            disabled={teachPhase !== "idle"}
+            className="w-full rounded-xl border border-solid border-[var(--accent-primary)]/30 bg-[var(--accent-primary)]/8 p-4 text-left transition-colors hover:bg-[var(--accent-primary)]/12 disabled:opacity-60"
+          >
+            <div className="flex items-center gap-2 text-[13px] font-semibold text-[var(--text-primary)]">
+              <Record size={14} weight="fill" className="text-[var(--accent-primary)]" />
+              Teach from this browser
+            </div>
+            <p className="text-[12px] text-[var(--text-tertiary)] m-0 mt-1">
+              Hermes /learn style: walk the site once, save a skill the agent can replay.
+            </p>
+          </button>
+
+          {showHarImport && (
           <div
             onDrop={onDrop}
             onDragOver={onDragOver}
             onDragLeave={onDragLeave}
             onClick={() => fileInputRef.current?.click()}
             className={cn(
-              "p-5 rounded-xl border border-dashed text-center cursor-pointer transition-colors",
+              "p-4 rounded-xl border border-dashed text-center cursor-pointer transition-colors",
               uploadDragging
                 ? "border-[var(--accent-primary)] bg-[var(--accent-primary)]/5"
                 : "border-[var(--border-subtle)] bg-[var(--bg-elevated)] hover:border-[var(--border-hover)] hover:bg-[var(--surface-hover)]"
             )}
           >
-            <div className="size-12 rounded-xl bg-gradient-to-br from-[var(--accent-primary)]/20 to-[var(--accent-primary)]/5 flex items-center justify-center mx-auto mb-3 border border-solid border-[var(--accent-primary)]/10">
-              <FileJson size={24} className="text-[var(--accent-primary)]" />
+            <div className="size-8 rounded-lg bg-gradient-to-br from-[var(--accent-primary)]/20 to-[var(--accent-primary)]/5 flex items-center justify-center mx-auto mb-2 border border-solid border-[var(--accent-primary)]/10">
+              <FileJson size={16} className="text-[var(--accent-primary)]" />
             </div>
-            <p className="text-[14px] font-semibold text-[var(--text-primary)] m-0">
-              Drop a HAR file here
+            <p className="text-[13px] font-semibold text-[var(--text-primary)] m-0">
+              Drop a HAR file
             </p>
-            <p className="text-[12px] text-[var(--text-tertiary)] m-0 mt-1">
-              or click to browse — JSON exported from browser DevTools
+            <p className="text-[11px] text-[var(--text-tertiary)] m-0 mt-1">
+              Advanced import from DevTools
             </p>
           </div>
+          )}
+
+          <section>
+            <h2 className="text-[12px] font-extrabold uppercase tracking-[0.08em] text-[var(--text-tertiary)] mb-3">
+              Skills
+            </h2>
+            {apiSkills.length === 0 ? (
+              <EmptyState
+                icon={Robot}
+                title="No taught skills yet"
+                description="Record a walkthrough, then publish it as a skill the agent can invoke later."
+              />
+            ) : (
+              <div className="flex flex-col gap-2">
+                {apiSkills.map((skill: ApiSkill) => (
+                  <button
+                    key={skill.id}
+                    type="button"
+                    onClick={() => selectContract(skill.contractId)}
+                    className="text-left px-3 py-2.5 rounded-xl bg-[var(--bg-elevated)] border border-solid border-[var(--border-subtle)] text-[13px] hover:border-[var(--border-hover)]"
+                  >
+                    <div className="font-semibold text-[var(--text-primary)] truncate">{skill.name}</div>
+                    <div className="text-[11px] text-[var(--text-tertiary)] mt-1 truncate">{skill.domain} · {skill.endpoints.length} steps</div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </section>
 
           <section>
             <h2 className="text-[12px] font-extrabold uppercase tracking-[0.08em] text-[var(--text-tertiary)] mb-3">
