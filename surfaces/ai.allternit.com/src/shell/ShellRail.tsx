@@ -34,6 +34,7 @@ import {
   Brain,
   Play,
   DesktopTower,
+  Sparkle,
 } from '@phosphor-icons/react';
 import { getPinnedMiniApps, unpinMiniApp, seedDefaultMiniApps } from '../views/aci/mini-app-registry';
 import type { InstalledMiniApp } from '../views/aci/mini-app.types';
@@ -344,7 +345,7 @@ export function ShellRail({
       md?.agent_id != null ||
       (md?.agentName && botNames.has(String(md.agentName).toLowerCase()));
 
-    // Chat sessions (agent/bot sessions live under the Bots panel or Agent | Bot Hub, not Recents)
+    // Chat sessions (bot sessions live under the Bots panel or Bot Hub, not Recents)
     (chatSessions || []).forEach(s => {
       const md = s.metadata as Record<string, unknown> | undefined;
       if (isAgentSession(md)) return;
@@ -362,7 +363,7 @@ export function ShellRail({
       });
     });
 
-    // Code sessions (agent/bot sessions live under the Bots panel or Agent | Bot Hub, not Recents)
+    // Code sessions (bot sessions live under the Bots panel or Bot Hub, not Recents)
     (codeSessions || []).forEach(s => {
       const md = s.metadata as Record<string, unknown> | undefined;
       if (isAgentSession(md)) return;
@@ -758,6 +759,7 @@ export function ShellRail({
               onCustomize={() => onOpenCustomize?.()}
               onOpenDesign={() => onModeChange?.('design')}
               onOpenAppsExtensions={() => onOpen?.('apps-extensions')}
+              onOpenProducts={() => onOpen?.('products')}
             />
           </div>
 
@@ -898,8 +900,14 @@ export function ShellRail({
           {/* HOME TABS */}
           <div className="px-2 pb-2 shrink-0 flex flex-col gap-0.5">
             <RailItem
+              icon={Sparkle}
+              label="Products"
+              isActive={activeViewType === 'products'}
+              onClick={() => onOpen?.('products')}
+            />
+            <RailItem
               icon={Robot}
-              label="Agent | Bot Hub"
+              label="Bot Hub"
               isActive={activeViewType === 'agent-hub'}
               onClick={() => onOpen?.('agent-hub')}
             />
@@ -933,9 +941,9 @@ export function ShellRail({
             />
             <RailItem
               icon={DesktopTower}
-              label="Remote Control"
-              isActive={activeViewType === 'remote-control'}
-              onClick={() => onOpen?.('remote-control')}
+              label="Fabric Transport"
+              isActive={activeViewType === 'fabric-session' || activeViewType === 'remote-control'}
+              onClick={() => onOpen?.('fabric-session')}
             />
             <RailItem
               icon={SlidersHorizontal}
@@ -945,7 +953,7 @@ export function ShellRail({
             />
           </div>
 
-        {/* AGENTS SECTION */}
+        {/* BOTS SECTION */}
           <div className="flex flex-col min-h-0 px-2">
             <div className="group px-1 py-2 flex items-center justify-between text-[var(--shell-item-muted)] select-none">
               <button
@@ -958,7 +966,7 @@ export function ShellRail({
                 ) : (
                   <CaretRight size={12} className="transition-transform duration-200" />
                 )}
-                <span className="text-[12px] font-extrabold uppercase tracking-[0.08em]">Agents</span>
+                <span className="text-[12px] font-extrabold uppercase tracking-[0.08em]">Bots</span>
               </button>
             </div>
             <div className="px-2 pb-1">
@@ -1122,7 +1130,7 @@ export function ShellRail({
             {codeRailTabs['agent-hub'] && (
               <RailItem
                 icon={Robot}
-                label="Agent | Bot Hub"
+                label="Bot Hub"
                 isActive={activeViewType === 'agent-hub'}
                 onClick={() => onOpen?.('agent-hub')}
               />
@@ -1157,7 +1165,7 @@ export function ShellRail({
             )}
             <MoreDropdown
               tabs={[
-                { id: 'agent-hub', label: 'Agent | Bot Hub', icon: Robot, visible: codeRailTabs['agent-hub'] },
+                { id: 'agent-hub', label: 'Bot Hub', icon: Robot, visible: codeRailTabs['agent-hub'] },
                 { id: 'projects', label: 'Projects', icon: FolderOpen, visible: codeRailTabs['projects'] },
                 { id: 'artifacts-library', label: 'Artifacts Library', icon: FileText, visible: codeRailTabs['artifacts-library'] },
                 { id: 'code-automations', label: 'Automation Tasks', icon: Clock, visible: codeRailTabs['code-automations'] },
@@ -1166,6 +1174,7 @@ export function ShellRail({
               onCustomize={() => onOpenCustomize?.()}
               onOpenDesign={() => onModeChange?.('design')}
               onOpenAppsExtensions={() => onOpen?.('apps-extensions')}
+              onOpenProducts={() => onOpen?.('products')}
             />
           </div>
 
@@ -1384,6 +1393,22 @@ export function ShellRail({
 
       {/* FOOTER */}
       <div className="flex flex-col border-t border-solid border-[var(--shell-divider)] bg-[var(--shell-rail-bg)] shrink-0">
+        <button
+          type="button"
+          onClick={() => onOpen?.('products')}
+          className={cn(
+            "w-full flex items-center gap-2.5 p-[10px_16px] cursor-pointer hover:bg-[var(--shell-item-hover)] border-none bg-transparent font-semibold text-[13px] text-left transition-colors",
+            activeViewType === 'products'
+              ? "text-[var(--shell-item-active-fg)]"
+              : "text-[var(--shell-item-fg)]"
+          )}
+        >
+          <Sparkle size={18} weight={activeViewType === 'products' ? 'fill' : 'bold'} className="text-[var(--shell-item-muted)]" />
+          <span>Products</span>
+        </button>
+
+        <div className="h-px bg-[var(--shell-divider)] w-full" />
+
         <button
           type="button"
           onClick={() => {
@@ -1859,12 +1884,14 @@ function MoreDropdown({
   onCustomize,
   onOpenDesign,
   onOpenAppsExtensions,
+  onOpenProducts,
 }: {
   tabs: MoreDropdownTab[];
   onToggle: (id: string) => void;
   onCustomize: () => void;
   onOpenDesign: () => void;
   onOpenAppsExtensions: () => void;
+  onOpenProducts?: () => void;
 }): React.ReactNode {
   const [open, setOpen] = useState(false);
   const anyHidden = tabs.some((t) => !t.visible);
@@ -1959,6 +1986,16 @@ function MoreDropdown({
             <DownloadSimple size={14} />
             <span>Apps & Extensions</span>
           </button>
+          {onOpenProducts && (
+            <button
+              type="button"
+              onClick={() => { setOpen(false); onOpenProducts(); }}
+              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg border-none bg-transparent cursor-pointer text-left text-[12px] text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)] transition-colors"
+            >
+              <Sparkle size={14} />
+              <span>Products</span>
+            </button>
+          )}
         </div>
       </PopoverContent>
     </Popover>
