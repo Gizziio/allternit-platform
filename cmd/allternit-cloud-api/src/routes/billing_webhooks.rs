@@ -181,14 +181,32 @@ async fn apply_and_respond(
     match apply_entitlement_and_sync_subscription(&state.db, subscription, event_id, user_id, plan_tier_id)
         .await
     {
-        Ok(applied) => Json(json!({
-            "received": true,
-            "eventId": event_id,
-            "userId": user_id,
-            "planTierId": plan_tier_id,
-            "idempotentReplay": applied.idempotent_replay,
-        }))
-        .into_response(),
+        Ok(applied) => {
+            crate::services::audit::write_audit_log(
+                &state.db,
+                crate::services::audit::AuditEvent {
+                    action: "billing.subscription.granted".to_string(),
+                    resource_type: "billing_entitlement".to_string(),
+                    resource_id: Some(event_id.to_string()),
+                    user_id: Some(user_id.to_string()),
+                    user_email: None,
+                    details: Some(json!({
+                        "planTierId": plan_tier_id,
+                        "idempotentReplay": applied.idempotent_replay,
+                    })),
+                    success: true,
+                },
+            )
+            .await;
+            Json(json!({
+                "received": true,
+                "eventId": event_id,
+                "userId": user_id,
+                "planTierId": plan_tier_id,
+                "idempotentReplay": applied.idempotent_replay,
+            }))
+            .into_response()
+        }
         Err(error) => error.into_response(),
     }
 }
@@ -253,6 +271,22 @@ async fn revoke_and_respond(
         .await
     {
         Ok(applied) => {
+            crate::services::audit::write_audit_log(
+                &state.db,
+                crate::services::audit::AuditEvent {
+                    action: "billing.subscription.revoked".to_string(),
+                    resource_type: "billing_entitlement".to_string(),
+                    resource_id: Some(event_id.to_string()),
+                    user_id: Some(user_id.to_string()),
+                    user_email: None,
+                    details: Some(json!({
+                        "planTierId": plan_tier_id,
+                        "idempotentReplay": applied.idempotent_replay,
+                    })),
+                    success: true,
+                },
+            )
+            .await;
             let subscription_id = subscription["id"].as_str().unwrap_or_default();
             if !subscription_id.is_empty() {
                 // A missing local row (deletion delivered before creation) is fine.
@@ -359,6 +393,22 @@ async fn grant_credits_and_respond(
     {
         Ok(balance_usd) => {
             if fresh_grant {
+                crate::services::audit::write_audit_log(
+                    &state.db,
+                    crate::services::audit::AuditEvent {
+                        action: "billing.credits.granted".to_string(),
+                        resource_type: "credit_transaction".to_string(),
+                        resource_id: Some(event_id.to_string()),
+                        user_id: Some(user_id.to_string()),
+                        user_email: None,
+                        details: Some(json!({
+                            "creditsUsd": amount_usd,
+                            "balanceUsd": balance_usd,
+                        })),
+                        success: true,
+                    },
+                )
+                .await;
                 if let Err(error) =
                     billing_subscriptions::record_paid_purchase(&state.db, user_id).await
                 {

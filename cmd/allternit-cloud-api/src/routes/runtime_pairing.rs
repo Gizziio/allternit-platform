@@ -650,6 +650,25 @@ async fn exchange_pairing(
     }
     transaction.commit().await?;
 
+    crate::services::audit::write_audit_log(
+        &state.db,
+        crate::services::audit::AuditEvent {
+            action: "device_pairing.token_issued".to_string(),
+            resource_type: "runtime_device".to_string(),
+            resource_id: Some(runtime_id.clone()),
+            user_id: Some(user_id.clone()),
+            user_email: None,
+            details: Some(serde_json::json!({
+                "pairingId": pairing.id,
+                "runtimeName": pairing.name,
+                "runtimeType": pairing.runtime_type,
+                "hostname": pairing.hostname,
+            })),
+            success: true,
+        },
+    )
+    .await;
+
     if let Some(hosted_instance_id) = pairing.hosted_instance_id.as_deref() {
         crate::services::record_runtime_started(&state.db, hosted_instance_id).await?;
     }

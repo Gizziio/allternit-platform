@@ -125,7 +125,25 @@ async fn create_checkout(
     let checkout = ReqwestStripeCheckout::new();
 
     match create_checkout_url(&checkout, &secret_key, pack, &user_id, &success_url, &cancel_url).await {
-        Ok(url) => Json(CheckoutResponse { checkout_url: url }).into_response(),
+        Ok(url) => {
+            crate::services::audit::write_audit_log(
+                &state.db,
+                crate::services::audit::AuditEvent {
+                    action: "billing.checkout.created".to_string(),
+                    resource_type: "billing_checkout".to_string(),
+                    resource_id: Some(request.pack_id.clone()),
+                    user_id: Some(user_id.clone()),
+                    user_email: None,
+                    details: Some(serde_json::json!({
+                        "pack_id": request.pack_id,
+                        "credits_usd": pack.credits_usd,
+                    })),
+                    success: true,
+                },
+            )
+            .await;
+            Json(CheckoutResponse { checkout_url: url }).into_response()
+        }
         Err(error) => billing_upstream_error_response(&error),
     }
 }

@@ -1,9 +1,9 @@
 # Steering checkpoint
 
-Goal: Unify ACI with Gizzi runtime selection, shrink ACI logos, replace HAR setup with teach-the-agent skill/workflow recording, and wire the Allternit computer-use engine + bot connection into the ACI panel.
+Goal: Backend robustness fix package on `session/backend-robust` (audit follow-up): (1) graceful shutdown for cmd/allternit-api main.rs, (2) audit_log writers in cmd/allternit-cloud-api, (3) health.rs returns real 503 on failure.
 
-Just did: Implemented in `session/aci-unify` worktree. ACI/page-agent/computer-use now resolve the persisted Gizzi picker (`claude-cli/…`) instead of a separate API-key brain. Chrome extension DEMO_CONFIG no longer points at the Shanghai test proxy. Logos on mini-apps, extensions, and the ACI sidepanel wordmark are smaller (`object-contain`). Site APIs is Teach-first (record walkthrough → distill skill → replay; HAR import is advanced). ACI sidecar has an engine bar: Allternit CUA (local) / sub-agent / page-agent, plus bot connection. 11 targeted tests passing.
+Just did: All three fixes implemented and verified. cargo check + cargo build pass on both crates; clippy --no-deps on both crates exits 0 with no warnings in touched code (one pre-existing clippy error in untouched allternit-computer-cloud/src/incus_pool.rs:217 never_loop); cargo test -p allternit-cloud-api --lib: 273 passed, 1 failed — contabo_runtime_service test shells out to `docker`, which is not installed (environmental, pre-existing, unrelated).
 
-Next: Owner review in the desktop app. Then PR from `session/aci-unify`. Remaining: Office add-in still has its own API key pane; lifting ModelSelectionProvider to the shell so ACI can open the same picker in-place.
+Next: Commit on session/backend-robust (awaiting commit gate). No push/merge — package scope only.
 
-Open questions: None blocking.
+Open questions: None blocking. Library-spawned loops in allternit-api (batch worker, capacity monitor, provisioner, queue worker, cowork background) have no shutdown handle; they are aborted at runtime exit after the drain window — a follow-up could thread a CancellationToken through them.
