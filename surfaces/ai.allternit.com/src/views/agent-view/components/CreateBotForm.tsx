@@ -28,6 +28,13 @@ import {
   Plugs,
   Tag,
   ChatText,
+  CaretDown,
+  CaretRight,
+  MagnifyingGlass,
+  Code,
+  PenNib,
+  ChartBar,
+  Wrench,
 } from "@phosphor-icons/react";
 import { useAgentStore } from "@/lib/agents/agent.store";
 import { getDefaultAgentModel, AGENT_MODELS } from "@/lib/agents/agent-models";
@@ -37,6 +44,7 @@ import type {
   AvatarConfig,
   BotCategory,
   MascotTemplate,
+  CharacterLayerConfig,
 } from "@/lib/agents/agent.types";
 import { fetchBrains, type BrainSummary } from "@/services/brain-api";
 import {
@@ -73,7 +81,7 @@ interface CreateBotFormProps {
   onClose: () => void;
 }
 
-type StepId = "identity" | "avatar" | "runtime" | "review";
+type StepId = "start" | "identity" | "avatar" | "runtime" | "review";
 
 interface StepInfo {
   id: StepId;
@@ -82,10 +90,120 @@ interface StepInfo {
 }
 
 const STEPS: StepInfo[] = [
-  { id: "identity", label: "Identity", description: "Name, tagline, and purpose" },
+  { id: "start", label: "Start", description: "Pick a template — or start blank" },
+  { id: "identity", label: "Identity", description: "Name your bot" },
   { id: "avatar", label: "Avatar", description: "Visual identity and mascot" },
-  { id: "runtime", label: "Runtime", description: "Brain, model, and voice" },
+  { id: "runtime", label: "Runtime (optional)", description: "Pre-selected for you" },
   { id: "review", label: "Review", description: "Preview and launch" },
+];
+
+/* -------------------------------------------------------------------------- */
+/* Starter templates                                                          */
+/*                                                                                                     */
+/* Lightweight onboarding presets (Hermes-style): pick a lane, get a        */
+/* sensible tagline, welcome message, starter prompts, accent color, and     */
+/* category. Everything stays editable after applying.                       */
+/* -------------------------------------------------------------------------- */
+
+interface BotStartTemplate {
+  id: string;
+  label: string;
+  description: string;
+  icon: React.ElementType;
+  botCategory: BotCategory;
+  accentColor: string;
+  tagline: string;
+  welcomeMessage: string;
+  starterPrompts: string[];
+}
+
+const START_TEMPLATES: BotStartTemplate[] = [
+  {
+    id: "research",
+    label: "Research",
+    description: "Digs into topics and summarizes findings with sources.",
+    icon: MagnifyingGlass,
+    botCategory: "research",
+    accentColor: "#6366f1",
+    tagline: "Researches any topic and summarizes the findings with sources.",
+    welcomeMessage: "Hi! Tell me what you're researching and I'll dig in.",
+    starterPrompts: [
+      "Research the latest developments in…",
+      "Compare these sources and summarize",
+      "Give me a briefing on…",
+    ],
+  },
+  {
+    id: "coding",
+    label: "Coding",
+    description: "Writes, reviews, and debugs code across your stack.",
+    icon: Code,
+    botCategory: "code",
+    accentColor: "#10b981",
+    tagline: "Writes, reviews, and debugs code across your stack.",
+    welcomeMessage: "Hey! Paste some code or describe a bug and I'll jump in.",
+    starterPrompts: [
+      "Review this code for issues",
+      "Write a function that…",
+      "Help me debug this error",
+    ],
+  },
+  {
+    id: "writing",
+    label: "Writing",
+    description: "Drafts and edits clear, on-brand content.",
+    icon: PenNib,
+    botCategory: "writing",
+    accentColor: "#ec4899",
+    tagline: "Drafts and edits clear, on-brand content.",
+    welcomeMessage: "Hi! Tell me what you're writing and I'll draft it.",
+    starterPrompts: [
+      "Draft a post about…",
+      "Rewrite this to be clearer",
+      "Brainstorm headlines for…",
+    ],
+  },
+  {
+    id: "data",
+    label: "Data",
+    description: "Analyzes datasets and turns numbers into insight.",
+    icon: ChartBar,
+    botCategory: "data",
+    accentColor: "#0ea5e9",
+    tagline: "Analyzes datasets and turns numbers into insight.",
+    welcomeMessage: "Hello! Share some data or a question and I'll analyze it.",
+    starterPrompts: [
+      "Analyze this dataset",
+      "Chart these numbers over time",
+      "What trends do you see here?",
+    ],
+  },
+  {
+    id: "ops",
+    label: "Ops",
+    description: "Automates routines and keeps operations on track.",
+    icon: Wrench,
+    botCategory: "ops",
+    accentColor: "#f59e0b",
+    tagline: "Automates routines and keeps operations on track.",
+    welcomeMessage: "Hi! Tell me what to automate or check on.",
+    starterPrompts: [
+      "Check on my automations",
+      "Summarize today's activity",
+      "Set up a routine for…",
+    ],
+  },
+  {
+    id: "blank",
+    label: "Blank / Custom",
+    description: "Start from scratch with zero-config defaults.",
+    icon: Sparkle,
+    botCategory: "custom",
+    accentColor: "#64748b",
+    tagline: "",
+    welcomeMessage: "",
+    starterPrompts: [],
+  },
 ];
 
 const CATEGORY_OPTIONS: BotCategory[] = [
@@ -167,10 +285,58 @@ function shortId(id: string): string {
   return `${id.slice(0, 8)}…${id.slice(-8)}`;
 }
 
+/**
+ * Default character layer for quick-created bots. Mirrors the server-side
+ * fallback in normalizeCreateAgentInput, but built client-side because the
+ * store's creation checklist validates the raw payload before normalization.
+ */
+function buildDefaultCharacterLayer(
+  name: string,
+  domain: string,
+  displayName: string
+): CharacterLayerConfig {
+  return {
+    identity: {
+      setup: "generalist",
+      className: displayName,
+      specialtySkills: [],
+      temperament: "balanced",
+      personalityTraits: [],
+      backstory: "",
+    },
+    roleCard: {
+      domain: domain || name || "general",
+      inputs: [],
+      outputs: [],
+      definitionOfDone: [],
+      hardBans: [],
+      escalation: [],
+      metrics: [],
+    },
+    voice: {
+      style: "",
+      rules: [],
+      microBans: [],
+      tone: { formality: 0.5, enthusiasm: 0.5, empathy: 0.5, directness: 0.5 },
+    },
+    progression: {
+      class: "Generalist",
+      relevantStats: [],
+      level: { maxLevel: 99, xpFormula: "linear" },
+    },
+    avatar: {
+      type: "mascot",
+      mascot: { template: "bot" },
+      style: { primaryColor: "#6366f1", accentColor: "#1e1c1a" },
+    },
+  };
+}
+
 export function CreateBotForm({ isOpen, onClose }: CreateBotFormProps) {
   const { createAgent, isCreating } = useAgentStore();
   const [step, setStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<Partial<CreateAgentInput>>(() => ({
     name: "",
@@ -197,7 +363,7 @@ export function CreateBotForm({ isOpen, onClose }: CreateBotFormProps) {
       tagline: "",
       welcomeMessage: "",
       starterPrompts: [],
-      accentColor: STUDIO_THEME.accent,
+      accentColor: "#D4956A",
       groupChatEnabled: true,
       botCategory: "custom",
     },
@@ -230,6 +396,7 @@ export function CreateBotForm({ isOpen, onClose }: CreateBotFormProps) {
     if (!isOpen) return;
     setStep(0);
     setError(null);
+    setSelectedTemplateId(null);
     setFormData({
       name: "",
       description: "",
@@ -255,7 +422,7 @@ export function CreateBotForm({ isOpen, onClose }: CreateBotFormProps) {
         tagline: "",
         welcomeMessage: "",
         starterPrompts: [],
-        accentColor: STUDIO_THEME.accent,
+        accentColor: "#D4956A",
         groupChatEnabled: true,
         botCategory: "custom",
       },
@@ -296,6 +463,24 @@ export function CreateBotForm({ isOpen, onClose }: CreateBotFormProps) {
       .catch(() => setVoices([]))
       .finally(() => setVoicesLoading(false));
   }, [isOpen]);
+
+  // Pre-select runtime defaults (zero-config): as soon as brains and models
+  // load, pick the first available option so the Runtime step never has to
+  // be touched. The user can still override anything there.
+  useEffect(() => {
+    if (brains.length === 0) return;
+    setFormData((prev) => (prev.brainId ? prev : { ...prev, brainId: brains[0].brain_id }));
+  }, [brains]);
+
+  useEffect(() => {
+    const models = apiModels.length > 0 ? apiModels : AGENT_MODELS;
+    if (models.length === 0) return;
+    setFormData((prev) =>
+      models.some((m) => m.id === prev.model)
+        ? prev
+        : { ...prev, model: models[0].id, provider: models[0].provider }
+    );
+  }, [apiModels]);
 
   const updateBotProfile = useCallback(
     (patch: Partial<NonNullable<CreateAgentInput["botProfile"]>>) => {
@@ -381,35 +566,33 @@ export function CreateBotForm({ isOpen, onClose }: CreateBotFormProps) {
     }
   }, [avatarMode, avatarPicker, formData.botProfile?.accentColor, gizziColor, gizziEmotion, imageDataUrl, mascotTemplate, petUrl]);
 
-  const canAdvance = useMemo(() => {
-    switch (stepId) {
-      case "identity":
-        return (
-          (formData.name?.length || 0) >= 2 &&
-          (formData.botProfile?.displayName?.length || 0) >= 2 &&
-          (formData.description?.length || 0) >= 3
-        );
-      case "avatar":
-        return true;
-      case "runtime":
-        return true;
-      case "review":
-        return true;
-    }
-  }, [stepId, formData]);
-
-  const stepValidation = useMemo(
-    () => ({
-      identity: canAdvance,
-      avatar: true,
-      runtime: true,
-      review: canAdvance,
-    }),
-    [canAdvance]
+  const applyTemplate = useCallback(
+    (template: BotStartTemplate) => {
+      setSelectedTemplateId(template.id);
+      updateBotProfile({
+        botCategory: template.botCategory,
+        accentColor: template.accentColor,
+        tagline: template.tagline,
+        welcomeMessage: template.welcomeMessage,
+        starterPrompts: template.starterPrompts,
+      });
+      if (avatarMode === "gizzi") setGizziColor(template.accentColor);
+      // Seed the purpose/description from the tagline when the user hasn't
+      // written one yet; handleCreate also synthesizes a fallback at submit.
+      setFormData((prev) => ({
+        ...prev,
+        description: prev.description || template.tagline,
+      }));
+    },
+    [avatarMode, updateBotProfile]
   );
 
+  // The only hard requirement: a display name. Everything else is optional
+  // customization — the stepper is a way to refine, not a gate.
+  const canCreate = (formData.botProfile?.displayName?.length || 0) >= 2;
+
   const handleNext = () => {
-    if (step < STEPS.length - 1 && canAdvance) setStep((s) => s + 1);
+    if (step < STEPS.length - 1) setStep((s) => s + 1);
   };
 
   const handleBack = () => {
@@ -417,22 +600,33 @@ export function CreateBotForm({ isOpen, onClose }: CreateBotFormProps) {
   };
 
   const handleCreate = async () => {
-    if (!canAdvance || isCreating) return;
+    if (!canCreate || isCreating) return;
     setError(null);
 
     const botProfile = formData.botProfile!;
-    const name = formData.name || deriveHandle(botProfile.displayName || "my-bot");
+    const displayName = botProfile.displayName?.trim() || "My Bot";
+    const derivedName = formData.name || deriveHandle(displayName);
+    // The creation checklist requires name.length >= 3.
+    const name = derivedName.length >= 3 ? derivedName : `${derivedName}-bot`;
+    // The creation checklist requires description.length >= 10.
+    const description =
+      botProfile.tagline?.trim() ||
+      formData.description?.trim() ||
+      `${displayName} is a custom Allternit bot.`;
     const accentColor = botProfile.accentColor || STUDIO_THEME.accent;
     const avatar = buildAvatarConfig();
 
     const payload = {
       ...formData,
       name,
-      description: botProfile.tagline || formData.description || "",
+      description,
       avatar,
+      characterLayer:
+        formData.characterLayer ||
+        buildDefaultCharacterLayer(name, botProfile.botCategory || "custom", displayName),
       botProfile: {
         ...botProfile,
-        displayName: botProfile.displayName || name,
+        displayName,
         accentColor,
       } as CreateAgentInput["botProfile"],
       brainId: formData.brainId || undefined,
@@ -473,12 +667,14 @@ export function CreateBotForm({ isOpen, onClose }: CreateBotFormProps) {
   };
 
   const checklist = useMemo(() => {
+    const hasText = (v?: string) => (v?.trim().length || 0) >= 3;
     const items = [
-      { id: "name", label: "Bot handle", satisfied: (formData.name?.length || 0) >= 2 },
-      { id: "displayName", label: "Display name", satisfied: (formData.botProfile?.displayName?.length || 0) >= 2 },
-      { id: "description", label: "Purpose / tagline", satisfied: (formData.description?.length || 0) >= 3 },
+      { id: "displayName", label: "Display name", satisfied: canCreate },
+      { id: "name", label: "Bot handle (auto-derived)", satisfied: hasText(formData.name) },
+      { id: "description", label: "Purpose / tagline", satisfied: hasText(formData.description) || hasText(formData.botProfile?.tagline) },
       { id: "avatar", label: "Avatar", satisfied: true },
       { id: "model", label: "Model configured", satisfied: Boolean(formData.model) },
+      { id: "brain", label: "Brain / runtime (pre-selected)", satisfied: true },
     ];
     return {
       items,
@@ -486,13 +682,13 @@ export function CreateBotForm({ isOpen, onClose }: CreateBotFormProps) {
       requiredSatisfied: items.filter((i) => i.satisfied).length,
       isValid: items.every((i) => i.satisfied),
     };
-  }, [formData]);
+  }, [formData, canCreate, brains.length]);
 
   if (!isOpen) return null;
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[var(--shell-overlay-backdrop)] backdrop-blur-sm"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[var(--shell-overlay-backdrop,rgba(0,0,0,0.4))] backdrop-blur-sm"
       onClick={(e) => {
         if (e.target === e.currentTarget && !isCreating) onClose();
       }}
@@ -501,7 +697,7 @@ export function CreateBotForm({ isOpen, onClose }: CreateBotFormProps) {
         initial={{ opacity: 0, scale: 0.96, y: 12 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.96, y: 12 }}
-        className="relative flex h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] shadow-2xl"
+        className="relative flex h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated,#fff)] shadow-2xl"
       >
         {/* Header */}
         <div className="flex shrink-0 items-center justify-between border-b border-[var(--border-subtle)] px-6 py-4">
@@ -545,17 +741,15 @@ export function CreateBotForm({ isOpen, onClose }: CreateBotFormProps) {
             {/* Step grid */}
             <div className="px-6 pt-5 pb-2">
               <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-4">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                   {STEPS.map((s, idx) => {
                     const selected = idx === step;
                     const completed = idx < step;
-                    const unlocked = idx <= step;
                     return (
                       <button
                         key={s.id}
                         type="button"
-                        disabled={!unlocked}
-                        onClick={() => unlocked && setStep(idx)}
+                        onClick={() => setStep(idx)}
                         className={cn(
                           "text-left transition-all duration-200 p-3 rounded-lg border",
                           selected
@@ -602,6 +796,12 @@ export function CreateBotForm({ isOpen, onClose }: CreateBotFormProps) {
                   transition={{ duration: 0.2 }}
                   className="pb-24"
                 >
+                  {stepId === "start" && (
+                    <StartStep
+                      selectedTemplateId={selectedTemplateId}
+                      onSelect={applyTemplate}
+                    />
+                  )}
                   {stepId === "identity" && (
                     <IdentityStep
                       formData={formData}
@@ -667,19 +867,17 @@ export function CreateBotForm({ isOpen, onClose }: CreateBotFormProps) {
                 {step === 0 ? "Cancel" : "Previous"}
               </Button>
 
-              {step < STEPS.length - 1 ? (
-                <Button
-                  onClick={handleNext}
-                  disabled={!canAdvance}
-                  className="gap-1.5 bg-gradient-to-r from-[var(--accent-primary)] to-[#B08D6E] text-[var(--ui-text-inverse)] border-none"
-                >
-                  Next
-                  <ArrowRight size={14} />
-                </Button>
-              ) : (
+              <div className="flex items-center gap-2">
+                {step < STEPS.length - 1 && (
+                  <Button variant="outline" onClick={handleNext} disabled={isCreating} className="gap-1.5">
+                    {step === 0 ? "Customize" : "Next"}
+                    <ArrowRight size={14} />
+                  </Button>
+                )}
                 <Button
                   onClick={handleCreate}
-                  disabled={!canAdvance || isCreating}
+                  disabled={!canCreate || isCreating}
+                  title={canCreate ? undefined : "Add a display name first"}
                   className="gap-1.5 bg-gradient-to-r from-[var(--accent-primary)] to-[#B08D6E] text-[var(--ui-text-inverse)] border-none"
                 >
                   {isCreating ? (
@@ -694,7 +892,7 @@ export function CreateBotForm({ isOpen, onClose }: CreateBotFormProps) {
                     </>
                   )}
                 </Button>
-              )}
+              </div>
             </div>
           </div>
 
@@ -772,6 +970,77 @@ export function CreateBotForm({ isOpen, onClose }: CreateBotFormProps) {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Start step — template gallery                                              */
+/* -------------------------------------------------------------------------- */
+
+function StartStep({
+  selectedTemplateId,
+  onSelect,
+}: {
+  selectedTemplateId: string | null;
+  onSelect: (template: BotStartTemplate) => void;
+}) {
+  return (
+    <section className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-6">
+      <div className="mb-6">
+        <h2 className="text-[18px] font-semibold text-[var(--text-primary)] flex items-center gap-2">
+          <Lightning size={20} className="text-[var(--accent-primary)]" />
+          Start with a template
+        </h2>
+        <p className="text-[14px] text-[var(--text-secondary)] mt-1">
+          Pick a lane and we pre-fill the details. Templates are starting points — everything stays
+          editable, and you only need a name to create.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+        {START_TEMPLATES.map((template) => {
+          const selected = selectedTemplateId === template.id;
+          const Icon = template.icon;
+          return (
+            <button
+              key={template.id}
+              type="button"
+              onClick={() => onSelect(template)}
+              className={cn(
+                "flex flex-col items-start rounded-xl border p-4 text-left transition-all duration-200",
+                selected
+                  ? "border-[var(--accent-primary)] bg-[var(--accent-primary)]/10"
+                  : "border-[var(--border-subtle)] bg-[var(--bg-elevated)] hover:border-[var(--border-hover)]"
+              )}
+            >
+              <div className="flex w-full items-center justify-between">
+                <span
+                  className="flex size-9 items-center justify-center rounded-lg"
+                  style={{
+                    background: `color-mix(in srgb, ${template.accentColor} 18%, transparent)`,
+                    color: template.accentColor,
+                  }}
+                >
+                  <Icon size={18} />
+                </span>
+                {selected && <CheckCircle size={16} className="text-[var(--accent-primary)]" />}
+              </div>
+              <span className="mt-3 text-[14px] font-semibold text-[var(--text-primary)]">
+                {template.label}
+              </span>
+              <span className="mt-1 text-[12px] leading-relaxed text-[var(--text-muted)]">
+                {template.description}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      <p className="mt-4 text-[12px] text-[var(--text-muted)]">
+        No template needed — type a name on the next step (or the preview) and hit{" "}
+        <span className="font-medium text-[var(--text-secondary)]">Create bot</span>.
+      </p>
+    </section>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
 /* Identity step                                                              */
 /* -------------------------------------------------------------------------- */
 
@@ -788,6 +1057,7 @@ function IdentityStep({
 }) {
   const botProfile = formData.botProfile!;
   const accentColor = botProfile.accentColor || STUDIO_THEME.accent;
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const ACCENT_COLORS = [
     "#D4956A",
@@ -809,27 +1079,46 @@ function IdentityStep({
       <div className="mb-6">
         <h2 className="text-[18px] font-semibold text-[var(--text-primary)] flex items-center gap-2">
           <Sparkle size={20} className="text-[var(--accent-primary)]" />
-          Bot Identity
+          Name your bot
         </h2>
         <p className="text-[14px] text-[var(--text-secondary)] mt-1">
-          Define the handle, display name, and tagline for this bot. The handle is what users type after @.
+          Only a name is required — you can create right now and customize later.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
-        <div>
-          <Label className="text-[14px] font-medium text-[var(--text-primary)] mb-2 block">Display name</Label>
-          <Input
-            value={botProfile.displayName || ""}
-            onChange={(e) => {
-              const value = e.target.value;
-              updateBotProfile({ displayName: value });
-              setFormData((prev) => ({ ...prev, name: prev.name || deriveHandle(value) }));
-            }}
-            placeholder="e.g. Research Assistant"
-            className="bg-[var(--bg-primary)] border-[var(--border-subtle)] text-[var(--text-primary)]"
-          />
-        </div>
+      <div className="mb-5">
+        <Label className="text-[14px] font-medium text-[var(--text-primary)] mb-2 block">Display name</Label>
+        <Input
+          value={botProfile.displayName || ""}
+          onChange={(e) => {
+            const value = e.target.value;
+            updateBotProfile({ displayName: value });
+            setFormData((prev) => ({ ...prev, name: prev.name || deriveHandle(value) }));
+          }}
+          placeholder="e.g. Research Assistant"
+          className="bg-[var(--bg-primary)] border-[var(--border-subtle)] text-[var(--text-primary)] text-[16px] py-3"
+        />
+        <p className="text-[11px] text-[var(--text-muted)] mt-1.5">
+          Handle: @{formData.name || "bot"} (auto-derived from the name)
+        </p>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setShowAdvanced((v) => !v)}
+        className="mb-4 flex w-full items-center gap-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-4 py-2.5 text-left text-[13px] font-medium text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] hover:border-[var(--border-hover)]"
+      >
+        {showAdvanced ? <CaretDown size={14} /> : <CaretRight size={14} />}
+        Advanced details
+        <span className="ml-auto hidden sm:inline text-[11px] font-normal text-[var(--text-muted)]">
+          tagline, purpose, welcome, prompts, color
+        </span>
+      </button>
+
+      {showAdvanced && (
+      <div className="space-y-5">
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <Label className="text-[14px] font-medium text-[var(--text-primary)] mb-2 block">Handle</Label>
           <div className="relative">
@@ -842,9 +1131,6 @@ function IdentityStep({
             />
           </div>
         </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
         <div>
           <Label className="text-[14px] font-medium text-[var(--text-primary)] mb-2 block">Tagline</Label>
           <Input
@@ -854,24 +1140,25 @@ function IdentityStep({
             className="bg-[var(--bg-primary)] border-[var(--border-subtle)] text-[var(--text-primary)]"
           />
         </div>
-        <div>
-          <Label className="text-[14px] font-medium text-[var(--text-primary)] mb-2 block">Category</Label>
-          <Select
-            value={botProfile.botCategory || "custom"}
-            onValueChange={(value) => updateBotProfile({ botCategory: value as BotCategory })}
-          >
-            <SelectTrigger className="bg-[var(--bg-primary)] border-[var(--border-subtle)] text-[var(--text-primary)]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="bg-[var(--bg-card)] border-[var(--border-subtle)]">
-              {CATEGORY_OPTIONS.map((cat) => (
-                <SelectItem key={cat} value={cat}>
-                  {BOT_CATEGORIES[cat].label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+      </div>
+
+      <div>
+        <Label className="text-[14px] font-medium text-[var(--text-primary)] mb-2 block">Category</Label>
+        <Select
+          value={botProfile.botCategory || "custom"}
+          onValueChange={(value) => updateBotProfile({ botCategory: value as BotCategory })}
+        >
+          <SelectTrigger className="bg-[var(--bg-primary)] border-[var(--border-subtle)] text-[var(--text-primary)]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="bg-[var(--bg-card)] border-[var(--border-subtle)]">
+            {CATEGORY_OPTIONS.map((cat) => (
+              <SelectItem key={cat} value={cat}>
+                {BOT_CATEGORIES[cat].label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="mb-5">
@@ -926,6 +1213,9 @@ function IdentityStep({
         />
         <p className="text-[11px] text-[var(--text-muted)] mt-1">Max 5 starter prompts.</p>
       </div>
+
+      </div>
+      )}
     </section>
   );
 }
@@ -1220,7 +1510,7 @@ function RuntimeStep({
             Intelligence
           </h2>
           <p className="text-[14px] text-[var(--text-secondary)] mt-1">
-            Route this bot through a gizzi brain or select a model directly.
+            Pre-selected with sensible defaults — change anything here, or skip this step entirely.
           </p>
         </div>
 

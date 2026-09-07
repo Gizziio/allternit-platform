@@ -3,8 +3,8 @@
 /**
  * Group Chat Roster Item
  *
- * Single channel card rendered inside BotRoster. Shows the channel avatar,
- * name, last message preview, and unread count.
+ * Single channel card rendered inside the groups list. Shows the channel
+ * avatar, name, last message preview, and unread count.
  *
  * @module GroupChatRosterItem
  */

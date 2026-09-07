@@ -32,7 +32,6 @@ import {
   DotsThreeVertical,
   Check,
   Brain,
-  Play,
   DesktopTower,
   Record,
 } from '@phosphor-icons/react';
@@ -62,17 +61,10 @@ import { SettingsDrilldown } from './SettingsDrilldown';
 import { getAgentModeSurfaceTheme } from '../views/chat/agentModeSurfaceTheme';
 import type { AgentModeSurface } from '../stores/agent-surface-mode.store';
 import { cn } from '@/lib/utils';
-import { BOT_TEMPLATES } from '@/lib/bots/bots.manifest';
-import { useStartBotSession } from '@/lib/bots/useStartBotSession';
 import { useAgentStore } from '@/lib/agents/agent.store';
-import { useCommRailsUnreadCount } from '@/lib/bots/comrails-mail.store';
 import {
-  getBotTagline,
   isBot,
 } from '@/lib/bots/bot-profile';
-import type { Agent } from '@/lib/agents/agent.types';
-import { BotAvatar } from '@/views/bots/BotAvatar';
-import { BotRoster } from '@/views/bots/BotRoster';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
 import { openNativeSessionPicker } from '@/components/native-sessions/NativeSessionPicker';
@@ -224,15 +216,6 @@ export function ShellRail({
       return true;
     }
   });
-  const [botsExpanded, setBotsExpanded] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    try {
-      return window.localStorage.getItem('allternit:rail:bots-expanded') === 'true';
-    } catch {
-      return false;
-    }
-  });
-  const [startingBotId, setStartingBotId] = useState<string | null>(null);
   const [typeFilter, setTypeFilter] = useState<'all' | 'chat' | 'cowork' | 'task' | 'agent' | 'browser' | 'code' | 'bb'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'completed' | 'archived'>('all');
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week' | 'month'>('all');
@@ -285,24 +268,8 @@ export function ShellRail({
     });
   }, []);
 
-  const { startSession: startBotSession } = useStartBotSession(
-    useCallback((sessionId: string, botId: string) => {
-      // Open the dedicated bot chat session view so the rail entry is tied to a
-      // real bot session, not a generic agent chat.
-      onOpen?.('bot-chat-session', { sessionId, botId, originView: activeViewType ?? 'chat' });
-    }, [onOpen, activeViewType])
-  );
-
   const agents = useAgentStore((s) => s.agents);
   const bots = useMemo(() => agents.filter(isBot), [agents]);
-
-  const handleToggleBotsExpanded = useCallback(() => {
-    setBotsExpanded((v) => {
-      const next = !v;
-      try { localStorage.setItem('allternit:rail:bots-expanded', String(next)); } catch {}
-      return next;
-    });
-  }, []);
 
   const handleToggleRecentsExpanded = useCallback(() => {
     setRecentsExpanded((v) => {
@@ -311,26 +278,6 @@ export function ShellRail({
       return next;
     });
   }, []);
-
-  const handleCreateBot = useCallback(() => {
-    onOpen?.('agent-hub');
-  }, [onOpen]);
-
-  const handleStartBot = useCallback(async (bot: Agent) => {
-    setStartingBotId(bot.id);
-    try {
-      await startBotSession(bot);
-      // Bind this bot as the chat surface's selected agent so the composer
-      // shows the bot pill and the mode dock for switching execution modes.
-      useAgentSurfaceModeStore.getState().setSelectedAgent('chat', bot.id);
-    } finally {
-      setStartingBotId(null);
-    }
-  }, [startBotSession]);
-
-  const handleOpenBotHome = useCallback((bot: Agent) => {
-    onOpen?.('bot-home', { botId: bot.id });
-  }, [onOpen]);
 
   const recentItems = useMemo(() => {
     const list: {
@@ -923,6 +870,13 @@ export function ShellRail({
               onClick={() => onOpen?.('agent-hub')}
             />
             <RailItem
+              id="groups-list"
+              icon={Users}
+              label="Groups"
+              isActive={activeViewType === 'groups-list' || activeViewType === 'group-chat'}
+              onClick={() => onOpen?.('groups-list')}
+            />
+            <RailItem
               icon={FolderOpen}
               label="Projects"
               isActive={activeViewType === 'project' && !chatStore.activeProjectId}
@@ -962,53 +916,6 @@ export function ShellRail({
               isActive={false}
               onClick={() => onOpenCustomize?.()}
             />
-          </div>
-
-        {/* BOTS SECTION */}
-          <div className="flex flex-col min-h-0 px-2">
-            <div className="group px-1 py-2 flex items-center justify-between text-[var(--shell-item-muted)] select-none">
-              <button
-                type="button"
-                onClick={handleToggleBotsExpanded}
-                className="flex items-center gap-1.5 bg-transparent border-none text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] cursor-pointer"
-              >
-                {botsExpanded ? (
-                  <CaretDown size={12} className="transition-transform duration-200" />
-                ) : (
-                  <CaretRight size={12} className="transition-transform duration-200" />
-                )}
-                <span className="text-[12px] font-extrabold uppercase tracking-[0.08em]">Bots</span>
-              </button>
-            </div>
-            <div className="px-2 pb-1">
-              <RailItem
-                id="groups-list"
-                icon={Users}
-                label="Groups"
-                isActive={activeViewType === 'groups-list' || activeViewType === 'group-chat'}
-                onClick={() => onOpen?.('groups-list')}
-              />
-            </div>
-            {botsExpanded && (
-              <div className="flex-1 min-h-0 flex flex-col -mx-2 px-2">
-                <BotRoster
-                  nested
-                  onNewBot={handleCreateBot}
-                  onStartSession={(botId, sessionId) =>
-                    onOpen?.('bot-chat-session', { sessionId, botId, originView: activeViewType ?? 'chat' })
-                  }
-                  onEditProfile={() => onOpen?.('agent-hub')}
-                  onNavigate={(view, params) => {
-                    if (view === 'agent-hub') onOpen?.('agent-hub');
-                    if (view === 'group-picker' && params?.botId) {
-                      onOpen?.('bot-roster', { botId: params.botId });
-                    }
-                  }}
-                  onSelectGroup={(groupId) => onOpen?.('group-chat', { groupId })}
-                  onNewGroup={(groupId) => onOpen?.('group-chat', { groupId })}
-                />
-              </div>
-            )}
           </div>
 
         {/* HOME RECENTS */}
@@ -1581,102 +1488,6 @@ function RecentRailItem({
         </div>
       </button>
       <RecentItemMenu onDelete={onDelete} />
-    </div>
-  );
-}
-
-function BotMailBadge({ botId }: { botId: string }): React.ReactNode | null {
-  const unread = useCommRailsUnreadCount(botId);
-  if (unread <= 0) return null;
-  return (
-    <span className="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 rounded-full text-[10px] font-bold bg-[var(--accent-primary)] text-[var(--accent-primary-contrast)]">
-      {unread > 99 ? '99+' : unread}
-    </span>
-  );
-}
-
-function BotRailItem({
-  id,
-  bot,
-  name,
-  accentColor,
-  isStarting,
-  badge,
-  onClick,
-  onStart,
-}: {
-  id: string;
-  bot: Agent;
-  name: string;
-  accentColor: string;
-  isStarting: boolean;
-  badge?: React.ReactNode;
-  onClick: () => void;
-  onStart: (e: React.MouseEvent) => void;
-}): React.ReactNode {
-  const sessionId = useStoreWithEqualityFn(
-    useChatSessionStore,
-    useCallback(
-      (state) => {
-        const session = state.sessions
-          .filter((s) => s.metadata?.agentId === id)
-          .sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime())[0];
-        return session?.id ?? null;
-      },
-      [id]
-    ),
-    shallow
-  );
-  const sessionSummary = useSessionSummary(sessionId);
-
-  const { lastMessage, lastMessageAt, isStreaming } = sessionSummary;
-  const statusText = isStarting
-    ? 'Starting…'
-    : isStreaming
-    ? 'Working…'
-    : lastMessage || '';
-  const timeText = !isStarting && !isStreaming && lastMessageAt ? formatRelativeTime(lastMessageAt) : '';
-
-  return (
-    <div
-      data-rail-item={id}
-      className="group w-full flex items-center gap-0.5 py-1.5 px-2 max-md:min-h-11 rounded-xl transition-all duration-200 font-medium bg-transparent text-[var(--shell-item-fg)] hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)]"
-    >
-      <button
-        type="button"
-        disabled={isStarting}
-        onClick={onClick}
-        className="flex flex-1 min-w-0 items-center gap-2.5 border-none bg-transparent p-0 text-left cursor-pointer font-medium text-[var(--shell-item-fg)] hover:text-[var(--accent-primary)] disabled:opacity-50"
-      >
-        <div className="flex shrink-0 items-center justify-center">
-          <BotAvatar bot={bot} size={24} className="rounded-lg" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center text-[12px] overflow-hidden text-ellipsis whitespace-nowrap">
-            <span className="truncate">{name}</span>
-            {badge}
-          </div>
-          <div className="flex items-center gap-1.5 text-[11px] text-[var(--shell-item-muted)] overflow-hidden">
-            {isStreaming && (
-              <span className="relative flex size-1.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--accent-primary)] opacity-75" />
-                <span className="relative inline-flex rounded-full size-1.5 bg-[var(--accent-primary)]" />
-              </span>
-            )}
-            <span className="truncate flex-1">{statusText}</span>
-            {timeText && <span className="shrink-0 text-[10px] opacity-60">{timeText}</span>}
-          </div>
-        </div>
-      </button>
-      <button
-        type="button"
-        onClick={onStart}
-        disabled={isStarting}
-        className="opacity-0 group-hover:opacity-100 shrink-0 rounded-md p-1 text-[var(--shell-item-muted)] hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)] disabled:opacity-50 transition-opacity border-none bg-transparent cursor-pointer"
-        title="Start session"
-      >
-        <Play size={12} weight="fill" />
-      </button>
     </div>
   );
 }

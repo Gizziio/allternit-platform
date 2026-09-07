@@ -1,8 +1,10 @@
 /**
  * Bot Roster Store
  *
- * Minimal UI state for the BotRoster sidebar: selection, search, sort, and
- * context-menu targeting. Persists only the selected bot id.
+ * Minimal UI state for the bot roster: selection, search, sort, and
+ * context-menu targeting, plus the canonical bot↔chat id map used by
+ * bot session startup. The BotRoster view that consumed the UI state was
+ * removed; the store is retained for the canonical-chat mapping.
  *
  * @module bot-roster.store
  */
