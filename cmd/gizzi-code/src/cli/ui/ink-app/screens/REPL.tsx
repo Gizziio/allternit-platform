@@ -30,7 +30,7 @@ import { startPreventSleep, stopPreventSleep } from '../services/preventSleep';
 import { useTerminalNotification } from '../ink/useTerminalNotification';
 import { hasCursorUpViewportYankBug } from '../ink/terminal';
 import { createFileStateCacheWithSizeLimit, mergeFileStateCaches, READ_FILE_STATE_CACHE_SIZE } from '../utils/fileStateCache';
-import { updateLastInteractionTime, getLastInteractionTime, getOriginalCwd, getProjectRoot, getSessionId, switchSession, setCostStateForRestore, getTurnHookDurationMs, getTurnHookCount, resetTurnHookDuration, getTurnToolDurationMs, getTurnToolCount, resetTurnToolDuration, getTurnClassifierDurationMs, getTurnClassifierCount, resetTurnClassifierDuration } from '../bootstrap/state';
+import { updateLastInteractionTime, getLastInteractionTime, getOriginalCwd, getProjectRoot, getSessionId, switchSession, setCostStateForRestore, getTurnHookDurationMs, getTurnHookCount, resetTurnHookDuration, getTurnToolDurationMs, getTurnToolCount, resetTurnToolDuration, getTurnClassifierDurationMs, getTurnClassifierCount, resetTurnClassifierDuration, getCwdState } from '../bootstrap/state';
 import { asSessionId, asAgentId } from '../types/ids';
 import { logForDebugging } from '../utils/debug';
 import { QueryGuard } from '../utils/QueryGuard';
@@ -389,6 +389,7 @@ import { FullscreenLayout, useUnseenDivider, computeUnseenDivider } from '../com
 import { isFullscreenEnvEnabled, maybeGetTmuxMouseHint, isMouseTrackingEnabled } from '../utils/fullscreen';
 import { AlternateScreen } from '../ink/components/AlternateScreen';
 import { DashboardScreen } from './DashboardScreen';
+import { InProcessDashboardSource } from '../dashboard/InProcessSource';
 import { ScrollKeybindingHandler } from '../components/ScrollKeybindingHandler';
 import { useMessageActions, MessageActionsKeybindings, MessageActionsBar, type MessageActionsState, type MessageActionsNav, type MessageActionCaps } from '../components/messageActions';
 import { setClipboard } from '../ink/termio/osc';
@@ -2736,6 +2737,48 @@ export function REPL({
       });
     })();
   }, [abortController, mainLoopModel, toolPermissionContext, mainThreadAgentDefinition, getToolUseContext, customSystemPrompt, appendSystemPrompt, canUseTool, setAppState]);
+
+  // Agent dashboard source: in-process top-level sessions dispatched from
+  // /dashboard. Query params mirror handleBackgroundQuery so dashboard
+  // sessions behave like backgrounded main-session queries (full tool pool,
+  // same system prompt), with the addition of follow-up turns.
+  const buildDashboardQueryParams = useCallback(async () => {
+    const toolUseContext = getToolUseContext(messagesRef.current, [], new AbortController(), mainLoopModel);
+    const [defaultSystemPrompt, userContext, systemContext] = await Promise.all([getSystemPrompt(toolUseContext.options.tools, mainLoopModel, Array.from(toolPermissionContext.additionalWorkingDirectories.keys()), toolUseContext.options.mcpClients), getUserContext(), getSystemContext()]);
+    const systemPrompt = buildEffectiveSystemPrompt({
+      mainThreadAgentDefinition,
+      toolUseContext,
+      customSystemPrompt,
+      defaultSystemPrompt,
+      appendSystemPrompt
+    });
+    toolUseContext.renderedSystemPrompt = systemPrompt;
+    return {
+      systemPrompt,
+      userContext,
+      systemContext,
+      canUseTool,
+      toolUseContext,
+      querySource: getQuerySourceForREPL()
+    };
+  }, [mainLoopModel, toolPermissionContext, mainThreadAgentDefinition, getToolUseContext, customSystemPrompt, appendSystemPrompt, canUseTool]);
+  const dashboardSource = useMemo(() => new InProcessDashboardSource({
+    getAppState: store.getState,
+    setAppState,
+    buildQueryParams: buildDashboardQueryParams,
+    // Synthetic leader row for the main session (Phase 5 wires live state).
+    getMainRow: () => ({
+      id: 'main',
+      source: 'in-process',
+      title: getCurrentSessionTitle(getSessionId()) ?? 'Main session',
+      state: 'idle',
+      activityLine: '',
+      directory: getCwdState(),
+      pinned: true,
+      createdAt: 0,
+      updatedAt: Date.now()
+    })
+  }), [store, setAppState, buildDashboardQueryParams]);
   const {
     handleBackgroundSession
   } = useSessionBackgrounding({
@@ -4860,7 +4903,7 @@ export function REPL({
     const dashboardReturn = <KeybindingSetup>
         <AnimatedTerminalTitle isAnimating={titleIsAnimating} title={terminalTitle} disabled={titleDisabled} noPrefix={showStatusInTerminalTab} />
         <GlobalKeybindingHandlers {...globalKeybindingProps} />
-        <DashboardScreen />
+        <DashboardScreen source={dashboardSource} />
       </KeybindingSetup>;
     return <AlternateScreen mouseTracking={isMouseTrackingEnabled()}>
         {dashboardReturn}
