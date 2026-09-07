@@ -56,7 +56,7 @@ export function OfficeLauncherView({ openView, children }: OfficeLauncherViewPro
         <section className="mt-8 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-6 transition-all duration-200 hover:border-[var(--border-hover)]">
           <h2 className="m-0 text-[15px] font-semibold text-[var(--text-primary)]">Engine-backed, artifact-native</h2>
           <p className="m-0 mt-1.5 text-[13px] leading-relaxed text-[var(--text-secondary)]">
-            Every editor runs on the forked GenOffice engines through the Allternit office-engine service, and work is saved as Allternit artifacts — open the same document on the web surface, the desktop app, or hand it to an agent.
+            Every editor runs on the Allternit office engines through the Allternit office-engine service, and work is saved as Allternit artifacts — open the same document on the web surface, the desktop app, or hand it to an agent.
           </p>
         </section>
         {children}

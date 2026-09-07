@@ -86,13 +86,17 @@ passes on the new version.
 
 ## Methodology notes (transient workspace fixes)
 
-The worktree's pnpm resolution was already broken at HEAD, independent of this
-change: `surfaces/ai.allternit.com/package.json` depends on
-`@allternit/allternit-office-suite@workspace:*`, a package name that exists
-nowhere in the monorepo (the directory `packages/@allternit/allternit-office-suite`
-is named `@allternit/office-suite`), and the committed `pnpm-lock.yaml`
-predates the `better-sqlite3` override in `pnpm-workspace.yaml`. Both block any
-lockfile-touching pnpm operation.
+> **RESOLVED 2026-09-07:** `surfaces/ai.allternit.com/package.json` now depends on
+> the correct workspace name `@allternit/office-suite` and `pnpm-lock.yaml` was
+> regenerated; pnpm resolution is clean. The note below is kept for history.
+>
+> ~~The worktree's pnpm resolution was already broken at HEAD, independent of this
+> change: `surfaces/ai.allternit.com/package.json` depends on
+> `@allternit/allternit-office-suite@workspace:*`, a package name that exists
+> nowhere in the monorepo (the directory `packages/@allternit/allternit-office-suite`
+> is named `@allternit/office-suite`), and the committed `pnpm-lock.yaml`
+> predates the `better-sqlite3` override in `pnpm-workspace.yaml`. Both block any
+> lockfile-touching pnpm operation.~~
 
 To apply the upgrades, both files were **temporarily** adjusted (dead dep line
 removed; `better-sqlite3` override line removed; targeted security overrides

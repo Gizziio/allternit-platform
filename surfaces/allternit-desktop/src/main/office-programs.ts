@@ -1,7 +1,7 @@
 /**
  * Office program registry for the desktop shell.
  *
- * One BrowserWindow per editor type, each loading the GenOffice-backed
+ * One BrowserWindow per editor type, each loading the Allternit Office-backed
  * editor on the platform surface (same pattern as the /design window).
  * Kept as a pure module so the routing logic is unit-testable.
  */

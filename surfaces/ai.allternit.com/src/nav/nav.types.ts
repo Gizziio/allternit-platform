@@ -173,13 +173,13 @@ export type ViewType =
   | "design-view-market"
   | "design-view-compare"
   | "design-marketplace"
-  // Docs editor (GenOffice)
+  // Docs editor (Allternit Office)
   | "docs"
-  // Slides editor (GenOffice)
+  // Slides editor (Allternit Office)
   | "slides"
-  // Sheets editor (GenOffice)
+  // Sheets editor (Allternit Office)
   | "sheets"
-  // PDF viewer (GenOffice)
+  // PDF viewer (Allternit Office)
   | "pdf"
   // Markdown preview (anydoc conversion)
   | "markdown-preview"
