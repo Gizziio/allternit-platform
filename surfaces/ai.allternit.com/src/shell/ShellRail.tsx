@@ -2,6 +2,7 @@ import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import type { Icon } from '@phosphor-icons/react';
 import { useStoreWithEqualityFn } from 'zustand/traditional';
 import { shallow } from 'zustand/shallow';
+import { useSettingsValue } from '@/hooks/useSettingsState';
 import type { AppMode } from './ShellHeader';
 import {
   CaretDown,
@@ -186,6 +187,10 @@ export function ShellRail({
   
   const isAgentActive = useSurfaceAgentModeEnabled(currentSurface);
   const surfaceTheme = isAgentActive ? getAgentModeSurfaceTheme(currentSurface) : null;
+
+  // Settings → Appearance → Show sidebar labels (default on). Reacts live to
+  // the toggle via the settings-changed event dispatched by useSettingsState.
+  const [showSidebarLabels] = useSettingsValue('appearance.showSidebarLabels', true);
 
   // The account footer used to show a hardcoded "Joe · Pro" placeholder that
   // never reflected a real signed-in identity. /api/v1/me is backend-resolved
@@ -862,7 +867,7 @@ export function ShellRail({
             )}
           >
             <House size={13} weight={mode === 'chat' ? "fill" : "bold"} />
-            Home
+            {showSidebarLabels ? 'Home' : null}
           </button>
           <button
             type="button"
@@ -878,7 +883,7 @@ export function ShellRail({
             )}
           >
             <TerminalWindow size={13} weight={mode === 'code' ? "fill" : "bold"} />
-            Code
+            {showSidebarLabels ? 'Code' : null}
           </button>
           <button
             type="button"
@@ -894,7 +899,7 @@ export function ShellRail({
             )}
           >
             <Globe size={13} weight={mode === 'browser' ? "fill" : "bold"} />
-            ACI
+            {showSidebarLabels ? 'ACI' : null}
           </button>
         </div>
       </div>
@@ -2255,6 +2260,7 @@ function RailItem({ id, icon: Icon, label, isActive, onClick }: {
   isActive?: boolean;
   onClick?: () => void;
 }): React.ReactNode {
+  const [showSidebarLabels] = useSettingsValue('appearance.showSidebarLabels', true);
   return (
     <button type="button"
       onClick={onClick}
@@ -2267,7 +2273,7 @@ function RailItem({ id, icon: Icon, label, isActive, onClick }: {
       )}
     >
       {Icon && <Icon size={15} weight={isActive ? 'fill' : 'bold'} />}
-      <span className="text-[12px] overflow-hidden text-ellipsis whitespace-nowrap min-w-0 flex-1">{label}</span>
+      {showSidebarLabels && <span className="text-[12px] overflow-hidden text-ellipsis whitespace-nowrap min-w-0 flex-1">{label}</span>}
     </button>
   );
 }

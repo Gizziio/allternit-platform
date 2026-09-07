@@ -102,6 +102,49 @@ async function* readNdjson<T>(response: Response): AsyncGenerator<T> {
   }
 }
 
+// Settings → Models → "Streaming (local models)" toggle. Mirrors
+// useSettingsState('models.streaming', true); read straight from localStorage
+// because this provider runs outside React render scope.
+function isResponseStreamingEnabled(): boolean {
+  if (typeof window === "undefined") return true;
+  try {
+    const raw = window.localStorage.getItem("allternit.settings.v1.models.streaming");
+    return raw === null ? true : (JSON.parse(raw) as boolean);
+  } catch {
+    return true;
+  }
+}
+
+// Convert one Ollama /api/chat chunk (streamed or the whole non-streamed
+// reply, which arrives in the same shape) into provider events.
+async function* emitChatChunk(
+  chunk: OllamaChatChunk,
+  requestId: string,
+): AsyncGenerator<LocalGenerationEvent> {
+  if (chunk.message?.content) {
+    yield { type: "text-delta", text: chunk.message.content };
+  }
+  for (const [index, toolCall] of (chunk.message?.tool_calls ?? []).entries()) {
+    const fn = toolCall.function;
+    if (fn?.name) {
+      yield {
+        type: "tool-call",
+        id: `${requestId}:${index}`,
+        name: fn.name,
+        arguments: fn.arguments ?? {},
+      };
+    }
+  }
+  if (chunk.prompt_eval_count != null || chunk.eval_count != null) {
+    yield {
+      type: "usage",
+      promptTokens: chunk.prompt_eval_count,
+      completionTokens: chunk.eval_count,
+    };
+  }
+  if (chunk.done) yield { type: "done", finishReason: chunk.done_reason };
+}
+
 export interface OllamaProviderOptions {
   baseUrl?: string;
   fetch?: FetchLike;
@@ -241,6 +284,7 @@ export class OllamaLocalProvider implements LocalModelProvider {
     request.signal?.addEventListener("abort", abort, { once: true });
 
     try {
+      const streaming = isResponseStreamingEnabled();
       const response = await this.fetcher(`${this.baseUrl}/api/chat`, {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -249,7 +293,7 @@ export class OllamaLocalProvider implements LocalModelProvider {
           messages: request.messages ?? [{ role: "user", content: request.prompt ?? "" }],
           tools: request.tools,
           format: request.format,
-          stream: true,
+          stream: streaming,
           options: {
             temperature: request.temperature,
             seed: request.seed,
@@ -258,29 +302,15 @@ export class OllamaLocalProvider implements LocalModelProvider {
         signal: controller.signal,
       });
 
-      for await (const chunk of readNdjson<OllamaChatChunk>(response)) {
-        if (chunk.message?.content) {
-          yield { type: "text-delta", text: chunk.message.content };
+      if (streaming) {
+        for await (const chunk of readNdjson<OllamaChatChunk>(response)) {
+          yield* emitChatChunk(chunk, request.requestId);
         }
-        for (const [index, toolCall] of (chunk.message?.tool_calls ?? []).entries()) {
-          const fn = toolCall.function;
-          if (fn?.name) {
-            yield {
-              type: "tool-call",
-              id: `${request.requestId}:${index}`,
-              name: fn.name,
-              arguments: fn.arguments ?? {},
-            };
-          }
-        }
-        if (chunk.prompt_eval_count != null || chunk.eval_count != null) {
-          yield {
-            type: "usage",
-            promptTokens: chunk.prompt_eval_count,
-            completionTokens: chunk.eval_count,
-          };
-        }
-        if (chunk.done) yield { type: "done", finishReason: chunk.done_reason };
+      } else {
+        // Non-streaming mode returns the full reply as one JSON body in the
+        // same shape as a final streamed chunk.
+        const chunk = await readJson<OllamaChatChunk>(response);
+        yield* emitChatChunk({ ...chunk, done: chunk.done ?? true }, request.requestId);
       }
     } finally {
       request.signal?.removeEventListener("abort", abort);
