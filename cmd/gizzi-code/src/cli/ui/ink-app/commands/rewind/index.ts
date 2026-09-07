@@ -4,7 +4,7 @@ import type { Command } from '../../commands'
 const rewind = {
   description: `Restore the code and/or conversation to a previous point`,
   name: 'rewind',
-  aliases: ['checkpoint'],
+  aliases: ['checkpoint', 'undo'],
   argumentHint: '',
   type: 'local',
   supportsNonInteractive: false,
