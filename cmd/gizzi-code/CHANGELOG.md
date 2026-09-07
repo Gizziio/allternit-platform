@@ -2,6 +2,32 @@
 
 ## Unreleased
 
+## 2.0.6 — 2026-09-06
+
+Fixes a hard TUI crash on any surface that renders a syntax-highlighted
+diff — reported via `/theme`, but file-edit permission previews share the
+same component:
+
+    TypeError: new ColorDiff(...).render is not a function
+
+The vendored TypeScript port of color-diff-napi had only implemented the
+color-math API, so the fast render path was a guaranteed crash. The port
+now renders for real.
+
+### Fixed
+- `/theme` and diff previews no longer crash: the color-diff TS shim
+  accepts the diff-render constructor and `ColorFile` construction used by
+  `HighlightedCode` (file-write permission previews), and both `render()`
+  calls are guarded so any future shim drift degrades to the fallback
+  renderer instead of killing the TUI.
+
+### Added
+- Real syntax highlighting in the compiled binary: a pure-TS tokenizer
+  (ts/js/py/go/rust/java/c/ruby/php/shell/json/css/html/markdown/config/
+  sql), theme-aware diff backgrounds (incl. daltonized + ansi themes),
+  line-number gutters, and width wrapping. The theme picker footer now
+  names the active syntax theme.
+
 ## 2.0.5 — 2026-09-05
 
 `/model` lists Allternit Cloud first, then installed CLIs, then local.
