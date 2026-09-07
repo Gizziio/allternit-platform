@@ -347,7 +347,7 @@ Etrid is proposed as the Allternit-native agent wallet:
 - **Bot roster sidebar**, **Bot pill in composer**, **persistent bot inbox**, and **bot-scoped routines panel** implemented in previous passes.
 - **Bot Home view** (`src/views/bots/BotHomeView.tsx`):
   - Registered in `src/shell/ViewRegistry.tsx` as `bot-home` and added to the `ViewType` union in `src/nav/nav.types.ts`.
-  - Clicking a bot in `BotRosterSidebar` or `ShellRail` opens `bot-home` instead of starting a session immediately.
+  - Clicking a bot in `ShellRail` opens `bot-home` instead of starting a session immediately. (The old Bot Roster view/sidebar was removed 2026-09; group chats are reachable via the rail's Groups item.)
   - Tabs: Sessions (with date grouping + project labels), Artifacts, Runtime, Routines.
   - Header actions: Inbox, Cloud handoff, Settings (Agent Studio), New Project, New Session.
 - **Runtime context strip in bot sessions**:

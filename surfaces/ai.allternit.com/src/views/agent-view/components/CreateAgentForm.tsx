@@ -651,7 +651,7 @@ export function CreateAgentForm({ onClose, onSuccess }: CreateAgentFormProps) {
   const isBusy = isCreating || isForgeQueued;
 
   return (
-    <div className="flex h-full max-h-screen p-6 overflow-auto bg-transparent gap-6">
+    <div className="flex h-full max-h-screen p-6 overflow-auto bg-[var(--bg-elevated,#fff)] gap-6">
       <div className="flex flex-col flex-1 min-h-0 max-w-[900px]">
       {/* Submit Status Overlay */}
       {submitStatus && (
@@ -820,7 +820,7 @@ export function CreateAgentForm({ onClose, onSuccess }: CreateAgentFormProps) {
         </AnimatePresence>
 
         {/* Navigation Footer */}
-        <div className="sticky bottom-0 z-10 flex items-center justify-between p-4 px-5 bg-[var(--bg-card)] rounded-xl border border-solid border-[var(--border-subtle)] mt-6 gap-3 shadow-lg">
+        <div className="sticky bottom-0 z-10 flex items-center justify-between p-4 px-5 bg-[var(--bg-card,#fff)] rounded-xl border border-solid border-[var(--border-subtle)] mt-6 gap-3 shadow-lg">
           <button
             type="button"
             onClick={safeActiveStepIndex === 0 ? onClose : () => setActiveStep(flowSteps[safeActiveStepIndex - 1].id)}
@@ -863,7 +863,7 @@ export function CreateAgentForm({ onClose, onSuccess }: CreateAgentFormProps) {
       </form>
       </div>
       <aside className="w-[280px] shrink-0 hidden xl:block">
-        <div className="sticky top-6 rounded-xl border border-solid border-[var(--border-subtle)] bg-[var(--bg-card)] p-5">
+        <div className="sticky top-6 rounded-xl border border-solid border-[var(--border-subtle)] bg-[var(--bg-card,#fff)] p-5">
           <h3 className="text-[14px] font-semibold text-[var(--text-primary)] mb-3 flex items-center gap-2">
             <CheckCircle size={16} className="text-[var(--accent-primary)]" />
             Creation Checklist
