@@ -142,6 +142,21 @@ if [ "$SKIP_API" = false ]; then
   cp "$API_BIN" "$RESOURCES_DIR/bin/allternit-api"
   chmod +x "$RESOURCES_DIR/bin/allternit-api"
   ok "allternit-api → $RESOURCES_DIR/bin/allternit-api"
+
+  # 3a. Local model engine (services/local-engine) backing Model Lab telemetry.
+  step "Building local-engine (Rust)…"
+  LOCAL_ENGINE_DIR="$WORKSPACE_ROOT/services/local-engine"
+  (cd "$LOCAL_ENGINE_DIR" && cargo build --release)
+
+  # Cargo names the bin `local-engine` (see [[bin]] in its Cargo.toml); stage
+  # it as allternit-local-engine so resources/bin keeps one naming convention.
+  LOCAL_ENGINE_BIN="$WORKSPACE_ROOT/target/release/local-engine"
+  [ -f "$LOCAL_ENGINE_BIN" ] || LOCAL_ENGINE_BIN="$LOCAL_ENGINE_DIR/target/release/local-engine"
+  [ -f "$LOCAL_ENGINE_BIN" ] || die "local-engine build failed — binary not found at $LOCAL_ENGINE_BIN"
+
+  cp "$LOCAL_ENGINE_BIN" "$RESOURCES_DIR/bin/allternit-local-engine"
+  chmod +x "$RESOURCES_DIR/bin/allternit-local-engine"
+  ok "local-engine → $RESOURCES_DIR/bin/allternit-local-engine"
 fi
 
 # ── 4. Download Lume Virtualization (macOS) ──────────────────────────────────

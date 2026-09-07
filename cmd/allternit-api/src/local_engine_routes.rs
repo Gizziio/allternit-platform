@@ -41,6 +41,7 @@ pub fn local_engine_router() -> Router<Arc<AppState>> {
         .route("/local-engine/catalog", get(proxy_catalog))
         .route("/local-engine/catalog/refresh", post(proxy_catalog_refresh))
         .route("/local-engine/assess", post(proxy_assess))
+        .route("/local-engine/assess/batch", post(proxy_assess_batch))
         .route("/local-engine/recommend", post(proxy_recommend))
         .route("/local-engine/models", get(proxy_list_models))
         .route("/local-engine/models/import", post(proxy_import_model))
@@ -93,6 +94,13 @@ async fn proxy_assess(headers: HeaderMap, body: Bytes) -> Response {
         return unauthorized();
     }
     proxy_post("/assess", body).await
+}
+
+async fn proxy_assess_batch(headers: HeaderMap, body: Bytes) -> Response {
+    if get_user(&headers).is_none() {
+        return unauthorized();
+    }
+    proxy_post("/assess/batch", body).await
 }
 
 async fn proxy_recommend(headers: HeaderMap, body: Bytes) -> Response {
@@ -158,10 +166,7 @@ async fn proxy_launch_runtime(
     proxy_post("/runtimes/launch", body).await
 }
 
-async fn proxy_stop_runtime(
-    Path(id): Path<String>,
-    headers: HeaderMap,
-) -> Response {
+async fn proxy_stop_runtime(Path(id): Path<String>, headers: HeaderMap) -> Response {
     if get_user(&headers).is_none() {
         return unauthorized();
     }
