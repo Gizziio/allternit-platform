@@ -5,6 +5,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { MagnifyingGlass, Plus, PushPin, PushPinSlash, Users, X, CaretRight } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { useAgentStore } from "@/lib/agents/agent.store";
+import { useAgentSurfaceModeStore } from "@/stores/agent-surface-mode.store";
 import type { Agent, Bot } from "@/lib/agents/agent.types";
 import { getBots, getBotDisplayName, getBotTagline } from "@/lib/bots/bot-profile";
 import { useBotRosterStore } from "@/lib/bots/bot-roster.store";
@@ -37,20 +38,8 @@ export function BotPickerSheet({ open, onClose }: BotPickerSheetProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [groupChatOpen, setGroupChatOpen] = useState(false);
-  // External open request (e.g. the bot launchpad composer submitted with no
-  // bot selected). The sheet is always mounted in bot mode; this event opens
-  // it even when the composer's own plus-menu state is closed.
-  const [eventOpen, setEventOpen] = useState(false);
 
-  React.useEffect(() => {
-    const handleOpenRequest = () => setEventOpen(true);
-    window.addEventListener("allternit:open-bot-picker", handleOpenRequest);
-    return () => window.removeEventListener("allternit:open-bot-picker", handleOpenRequest);
-  }, []);
-
-  const effectiveOpen = open || eventOpen;
   const handleClose = React.useCallback(() => {
-    setEventOpen(false);
     setSearchQuery("");
     onClose();
   }, [onClose]);
@@ -80,6 +69,9 @@ export function BotPickerSheet({ open, onClose }: BotPickerSheetProps) {
 
   const handleSelectBot = async (bot: Agent) => {
     handleClose();
+    // Target this bot from the bot-surface composer so the next send routes
+    // to it even if the user navigates back to the launchpad.
+    useAgentSurfaceModeStore.getState().setSelectedAgent("bot", bot.id);
     const sessionId = await startSession(bot);
     if (sessionId) {
       openBotChatView(sessionId, bot.id, "bot-launchpad");
@@ -104,7 +96,7 @@ export function BotPickerSheet({ open, onClose }: BotPickerSheetProps) {
 
   return (
     <>
-      <DialogPrimitive.Root open={effectiveOpen} onOpenChange={(isOpen) => !isOpen && handleClose()}>
+      <DialogPrimitive.Root open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
         <DialogPrimitive.Portal>
           <DialogPrimitive.Overlay
             className="fixed inset-0 z-[180] bg-[var(--shell-overlay-backdrop)] backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"

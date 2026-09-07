@@ -113,16 +113,19 @@ export function ShellHeader({
         </div>
       </div>
 
-      {/* Left-aligned Mode Switcher */}
-      <div className="absolute left-[90px] top-1/2 -translate-y-1/2 z-10 [WebkitAppRegion:no-drag]">
-        <ModeSwitcher 
-          activeMode={activeMode} 
-          onModeChange={onModeChange}
-          size="small"
-          variant="segmented"
-          showLabels={true}
-        />
-      </div>
+      {/* Left-aligned Mode Switcher — hidden in Bots mode (Grok-style bot
+          home has no top tab strip; the BotTopDeck bar replaces it). */}
+      {activeMode !== 'bot' && (
+        <div className="absolute left-[90px] top-1/2 -translate-y-1/2 z-10 [WebkitAppRegion:no-drag]">
+          <ModeSwitcher
+            activeMode={activeMode}
+            onModeChange={onModeChange}
+            size="small"
+            variant="segmented"
+            showLabels={true}
+          />
+        </div>
+      )}
 
       <div className="flex items-center gap-3 [WebkitAppRegion:no-drag]">
         {/* Automation Hub — visible from every mode */}

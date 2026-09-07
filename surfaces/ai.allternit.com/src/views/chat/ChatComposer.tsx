@@ -91,7 +91,6 @@ import { ModeDock } from './components/ModeDock';
 import { TemplateGallery } from './components/TemplateGallery';
 import { SwarmSubModeTabs } from './components/SwarmSubModeTabs';
 import { ComposerPlusSheet, type ToolAccessLevel, type ResponseStyle } from './components/ComposerPlusSheet';
-import { BotPickerSheet } from '@/views/bots/BotPickerSheet';
 import { ConnectorMarketplaceDialog } from './components/ConnectorMarketplaceDialog';
 import { MiroFishPanel } from './panels/MiroFishPanel';
 import { useMiroFishRunStore } from '@/stores/mirofish-run.store';
@@ -2197,7 +2196,15 @@ export function ChatComposer({
           {!compact && (<div className={cn('flex items-center justify-between', isMobile ? 'p-2' : 'p-3')}>
             <div className="flex items-center gap-1 relative">
               <AttachmentButton
-                onClick={() => { setShowPlusMenu(!showPlusMenu); }}
+                onClick={() => {
+                  if (agentModeSurface === 'bot') {
+                    // Bot surface: the picker drawer is owned by BotPickerHost
+                    // in the shell; ask it to open instead of the plus menu.
+                    window.dispatchEvent(new CustomEvent('allternit:open-bot-picker'));
+                  } else {
+                    setShowPlusMenu(!showPlusMenu);
+                  }
+                }}
                 className={cn(
                   'rounded-full border border-[var(--border-subtle)] bg-[var(--surface-panel)]/40 backdrop-blur-md text-[var(--text-primary)] transition-all hover:scale-105 hover:brightness-110 hover:bg-[var(--surface-panel)]/70',
                   isMobile ? 'size-11' : 'size-8',
@@ -2228,12 +2235,6 @@ export function ChatComposer({
                 showModeToggle={showModeToggle}
               />
 
-              {agentModeSurface === 'bot' ? (
-                <BotPickerSheet
-                  open={showPlusMenu}
-                  onClose={() => { setShowPlusMenu(false); }}
-                />
-              ) : (
               <ComposerPlusSheet
                 open={showPlusMenu}
                 onClose={() => { setShowPlusMenu(false); }}
@@ -2267,7 +2268,6 @@ export function ChatComposer({
                 onOpenAgentActivity={() => window.dispatchEvent(new CustomEvent('allternit:open-agent-activity'))}
                 onOpenPermissions={() => window.dispatchEvent(new CustomEvent('allternit:open-settings', { detail: { section: 'permissions' } }))}
               />
-              )}
 
               <ConnectorMarketplaceDialog
                 open={showConnectorMarketplace}
