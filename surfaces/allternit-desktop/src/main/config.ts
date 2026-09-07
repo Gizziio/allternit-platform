@@ -30,6 +30,8 @@ export const PORTS = {
   CONNECTOR_SIDECAR: 8014,
   /** Office engine sidecar (services/office-engine) backing /api/office/* */
   OFFICE_ENGINE: 8099,
+  /** Local model engine (services/local-engine) serving Model Lab telemetry */
+  LOCAL_ENGINE: 3015,
 } as const;
 
 export const HOSTS = {
@@ -50,6 +52,7 @@ export const URLS = {
   WEBHOOK_RECEIVER: `http://${HOSTS.LOOPBACK}:${PORTS.WEBHOOK_RECEIVER}`,
   CONNECTOR_SIDECAR: `http://${HOSTS.LOOPBACK}:${PORTS.CONNECTOR_SIDECAR}`,
   OFFICE_ENGINE: `http://${HOSTS.LOOPBACK}:${PORTS.OFFICE_ENGINE}`,
+  LOCAL_ENGINE: `http://${HOSTS.LOOPBACK}:${PORTS.LOCAL_ENGINE}`,
   /** Canonical Allternit control plane. Human Clerk sessions approve runtime pairing here. */
   CLOUD_API: 'https://api.allternit.com',
   /** Canonical browser experience. Pairing must never follow a local static UI URL. */
