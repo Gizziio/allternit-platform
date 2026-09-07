@@ -88,7 +88,7 @@ export type FooterItem =
   | 'bridge'
   | 'companion'
 
-export type Screen = 'prompt' | 'transcript' | 'dashboard'
+export type Screen = 'prompt' | 'transcript' | 'dashboard' | 'bots'
 
 export type AppState = DeepImmutable<{
   settings: SettingsJson

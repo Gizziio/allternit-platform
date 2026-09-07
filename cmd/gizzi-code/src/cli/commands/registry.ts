@@ -38,6 +38,7 @@ import { ProviderCommand } from "@/cli/commands/provider"
 import { RuntimeCommand } from "@/cli/commands/runtime"
 import { AllternitCommand } from "@/cli/commands/allternit"
 import { BrainCommand } from "@/cli/commands/brain"
+import { BotCommand } from "@/cli/commands/bot"
 import { ProductsCommand } from "@/cli/commands/products"
 import { HtmlArtifactCommand } from "@/cli/commands/html-artifact"
 import { ProgramsCommand } from "@/cli/commands/programs"
@@ -116,6 +117,7 @@ export const COMMANDS: RegisteredCommand[] = [
   RuntimeCommand,
   AllternitCommand,
   BrainCommand,
+  BotCommand,
   HtmlArtifactCommand,
   ProgramsCommand,
   OrgCommand,

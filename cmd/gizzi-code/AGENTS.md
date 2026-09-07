@@ -201,6 +201,108 @@ With `GIZZI_EMBEDDING_PROVIDER` set (openai/ollama), semantic cosine-similarity 
 
 ---
 
+## Bot Mode (Phase B1)
+
+`gizzi bot` command group (`src/cli/commands/bot.ts`) — a Bot is a **profile**, not a
+new runtime primitive (spec: `docs/GIZZI_BOT_MODE_SPEC.md`). Bot homes live at
+`~/.gizzi/bots/<name>/` (override with `GIZZI_CONFIG_DIR`): `bot.json` (zod-validated
+identity: name, title, description, model pin, avatar, `canonicalSession`
+{projectPath, sessionId}, capabilityEpoch, timestamps), `SOUL.md` (persona/standing
+instructions), `memory/` (bot-scoped notes). Core logic in
+`src/runtime/bots/bot-store.ts` (no UI/settings imports; covered by
+`test/runtime/bots/bot-store.test.ts` + CLI spawns in `test/cli/bot.test.ts`).
+Config-home resolution follows the pluginDirectories/memdir pattern:
+`GIZZI_CONFIG_DIR ?? ~/.gizzi` (`gizziConfigHome()` in bot-store.ts).
+
+- Phase B1 (done): `create|list|show|edit|clone|delete` + a `chat` stub that only
+  resolves the bot. `cloneBot` never copies `canonicalSession`.
+- Phase B2 (done): canonical bot chat — `src/runtime/bots/canonical-chat.ts`
+  (pointer resolution against the sqlite `Session` store, pin-on-open, lazy
+  re-point, persona injection, `isCanonicalBotSession`) +
+  `src/runtime/bots/capability-epoch.ts` (FNV-1a epoch over identity + SOUL +
+  memory list + roster; drift re-stamps and rebuilds the injection once).
+  `gizzi bot chat <name> [message]` — no message launches the TUI on the
+  pinned session (`-s/--session` path, now honored by `ink-app/app.tsx`);
+  with a message it is a headless print-mode turn (`run -s <id>` semantics)
+  preserving continuity. The persona block is injected per turn in
+  `SessionPrompt` (`src/runtime/session/prompt.ts`), so both TUI and headless
+  paths carry it. Composer guard (D2): `/new|/reset|/clear` inside a canonical
+  bot chat reroutes to `/compact` (`commands/clear/clear.ts`) — runtime
+  compaction never forks the session id, so the pin stays valid. Store
+  primitives: `pinCanonicalSession` / `setCapabilityEpoch` (bot-store.ts).
+  Tests: `test/runtime/bots/canonical-chat.test.ts` + `test/cli/bot.test.ts`.
+- Phase B3 (done): routines — `src/runtime/bots/bot-routines.ts` owns the
+  `[bot:<name>]` job namespace (`botRoutineJobName`/`parseBotRoutineJobName`),
+  routine CRUD over CronService (`addBotRoutine`/`listBotRoutines`/
+  `removeBotRoutine`, prefix-scoped remove; `cronServiceDeps()` is the seam,
+  `GIZZI_CRON_DB_PATH` overrides the db for tests), and the executor delivery
+  path (`deliverBotRoutine` + `BotRoutineDeliveryDeps`): an agent cron job
+  with `config.bot` set resumes (or creates + pins) the bot's canonical
+  session and runs one turn prefixed `[routine: <label>] ` — never
+  `Session.createNext`, and the canonical session is never deleted after the
+  run. Unknown bot → failed run with a structured error (typed D4 reasons
+  land in B4). `AgentExecutorConfig.botRoutineDeps` injects fakes in tests.
+  CLI: `gizzi bot routine add <name> [--label] --schedule <cron-or-interval>
+  --prompt <text>` / `list <name>` / `remove <name> <jobId>`. Routines set
+  `catchUpMissed: true`, so a fire missed while the daemon was off runs on
+  daemon start with the same marker. Tests: `test/runtime/bots/bot-routines.test.ts`
+  + `test/cli/bot.test.ts`.
+- Phase B4 (done): failure taxonomy + message_agent —
+  `src/runtime/bots/failure-reasons.ts` is the faithful port of the platform's
+  13-code closed vocabulary (ordered-rule classifier; auth outranks quota;
+  `classifyRetry` → once/after_compact/never; `ATTENTION_CLASSES` + hints;
+  `annotateFailureReason`/`failureReasonOf` let the typed code ride on the
+  thrown error). `deliverBotRoutine` retries per policy: transient classes
+  once, `context_overflow` via in-place `compactSession` (the pin survives —
+  compaction never forks the session id) then once, never for
+  auth/quota/config/model/blocked; the agent executor records
+  `run.reason` (typed column, with a pragma-guarded `ALTER TABLE` migration
+  in CronDatabase for pre-existing cron.db files) alongside `run.error`.
+  Headless `gizzi bot chat
+  <name> <message>` prints `[reason: <code>]` ahead of error text (bus
+  subscription fires before run.ts renders the same session.error event).
+  `src/runtime/tools/builtins/message-agent.ts` (`message_agent`) is a
+  fire-and-forget DM: validated against the live roster
+  (`matchMessageTarget`, case-insensitive, ambiguity lists exact handles),
+  appended durably to `~/.gizzi/bots/<target>/inbox.jsonl` (0o600, O_APPEND)
+  via `src/runtime/bots/bot-inbox.ts`, acked without waiting. Gating: the
+  registry lists it unconditionally (no session context there) and
+  `SessionPrompt.resolveTools` deletes it from the per-session tool record
+  unless `isCanonicalBotSession` — same gate-and-delete precedent as
+  `applyMobileToolGating`. Turn-start pickup in `SessionPrompt.prompt` drains
+  the inbox and injects each envelope as a synthetic user-role part with the
+  exact platform attribution `Message from 🤖 <sender> (@<sender>): <message>`.
+  The canonical-chat system prompt now carries a `## Teammates` roster (name —
+  title (description), self excluded) plus a `## Messaging protocol` section;
+  the capability epoch already hashed roster names, so roster changes still
+  trigger the one-time drift rebuild. Tests: `test/runtime/bots/failure-reasons.test.ts`,
+  `test/runtime/bots/message-agent.test.ts`, retry cases in
+  `test/runtime/bots/bot-routines.test.ts`.
+- Phase B5 (done): TUI bots pane — `/bots` opens a full-screen roster
+  (`src/cli/ui/ink-app/screens/bots-pane/`, screen wired through
+  `AppStateStore`'s `'bots'` union member + REPL mount, mirroring
+  `/dashboard`). Rows come from `src/runtime/bots/bot-roster.ts`
+  (`getBotRosterRows` / `markBotRead`): name — title, description, model,
+  presence dot, `[n]` unread badge (pending inbox envelopes + canonical-chat
+  watermark deltas; the count is a direct COUNT query via
+  `src/runtime/bots/session-db.ts` — works with or without a bootstrap
+  Instance context, ensuring the data dir itself).
+  Presence: `src/runtime/bots/bot-presence.ts` — `.last-activity` stamp (0o600)
+  hooked at turn start in `SessionPrompt.prompt` via
+  `recordCanonicalChatActivity` (90s half-open window). Keys: ↑/↓/j/k move,
+  Enter opens the canonical chat (`openBotCanonicalChat` = open + markBotRead +
+  REPL's published resume pipeline — `setResumeHandler` in bootstrap/state.ts,
+  registered by REPL.tsx — so the transcript reloads with /resume fidelity;
+  falls back to `switchSession` when no handler is published or the chat was
+  just created), `n` create, `d` delete (double-confirm when pinned), `r`
+  refresh, q/Esc exit. Tests:
+  `test/runtime/bots/bot-presence.test.ts`, `bot-roster.test.ts`,
+  `test/cli/bots-pane.test.ts`.
+- Name rules: lowercase slug `[a-z0-9-]`; reserved subcommand names refused;
+  case-insensitive lookup errors on ambiguity (exact match wins).
+
+---
+
 ## Voice
 
 Local-first voice interface using open-source tools.

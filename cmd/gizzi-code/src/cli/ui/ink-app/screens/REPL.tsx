@@ -30,7 +30,7 @@ import { startPreventSleep, stopPreventSleep } from '../services/preventSleep';
 import { useTerminalNotification } from '../ink/useTerminalNotification';
 import { hasCursorUpViewportYankBug } from '../ink/terminal';
 import { createFileStateCacheWithSizeLimit, mergeFileStateCaches, READ_FILE_STATE_CACHE_SIZE } from '../utils/fileStateCache';
-import { updateLastInteractionTime, getLastInteractionTime, getOriginalCwd, getProjectRoot, getSessionId, switchSession, setCostStateForRestore, getTurnHookDurationMs, getTurnHookCount, resetTurnHookDuration, getTurnToolDurationMs, getTurnToolCount, resetTurnToolDuration, getTurnClassifierDurationMs, getTurnClassifierCount, resetTurnClassifierDuration, getCwdState } from '../bootstrap/state';
+import { updateLastInteractionTime, getLastInteractionTime, getOriginalCwd, getProjectRoot, getSessionId, switchSession, setResumeHandler, setCostStateForRestore, getTurnHookDurationMs, getTurnHookCount, resetTurnHookDuration, getTurnToolDurationMs, getTurnToolCount, resetTurnToolDuration, getTurnClassifierDurationMs, getTurnClassifierCount, resetTurnClassifierDuration, getCwdState } from '../bootstrap/state';
 import { asSessionId, asAgentId } from '../types/ids';
 import { logForDebugging } from '../utils/debug';
 import { QueryGuard } from '../utils/QueryGuard';
@@ -389,6 +389,7 @@ import { FullscreenLayout, useUnseenDivider, computeUnseenDivider } from '../com
 import { isFullscreenEnvEnabled, maybeGetTmuxMouseHint, isMouseTrackingEnabled } from '../utils/fullscreen';
 import { AlternateScreen } from '../ink/components/AlternateScreen';
 import { DashboardScreen } from './DashboardScreen';
+import { BotsPaneScreen } from './bots-pane/BotsPaneScreen';
 import { InProcessDashboardSource } from '../dashboard/InProcessSource';
 import { ScrollKeybindingHandler } from '../components/ScrollKeybindingHandler';
 import { useMessageActions, MessageActionsKeybindings, MessageActionsBar, type MessageActionsState, type MessageActionsNav, type MessageActionCaps } from '../components/messageActions';
@@ -2111,6 +2112,15 @@ export function REPL({
       throw error;
     }
   }, [resetLoadingState, setAppState]);
+
+  // Publish the full resume pipeline so non-command surfaces (the /bots
+  // pane's "open canonical chat") can resume with the same fidelity —
+  // transcript reload, hooks, plan/file-history handoff — instead of a bare
+  // switchSession that leaves the mounted message list stale.
+  useEffect(() => {
+    setResumeHandler(resume)
+    return () => setResumeHandler(null)
+  }, [resume])
 
   // Lazy init: useRef(createX()) would call createX on every render and
   // discard the result. LRUCache construction inside FileStateCache is
@@ -4928,6 +4938,20 @@ export function REPL({
       </KeybindingSetup>;
     return <AlternateScreen mouseTracking={isMouseTrackingEnabled()}>
         {dashboardReturn}
+      </AlternateScreen>;
+  }
+
+  if (screen === 'bots') {
+    // Full-screen bots roster (Bot Mode B5). Same AlternateScreen +
+    // KeybindingSetup shape as the dashboard branch; the pane exits back
+    // to 'prompt' itself (q/Esc or after opening a canonical chat).
+    const botsReturn = <KeybindingSetup>
+        <AnimatedTerminalTitle isAnimating={titleIsAnimating} title={terminalTitle} disabled={titleDisabled} noPrefix={showStatusInTerminalTab} />
+        <GlobalKeybindingHandlers {...globalKeybindingProps} />
+        <BotsPaneScreen />
+      </KeybindingSetup>;
+    return <AlternateScreen mouseTracking={isMouseTrackingEnabled()}>
+        {botsReturn}
       </AlternateScreen>;
   }
 

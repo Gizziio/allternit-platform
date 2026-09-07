@@ -112,6 +112,7 @@ describe('Grok muscle-memory aliases', () => {
     // The full-screen agent dashboard owns 'dashboard'/'sessions'; the
     // session-stats screen keeps only its own name (/dash) — regression
     // guard for the alias collision that hijacked /dashboard resolution.
+    expect(dash.name).toBe('dash')
     expect(dashboard.name).toBe('dashboard')
     expect(dashboard.aliases).toContain('sessions')
     expect(dashboard.aliases).toContain('agents-dashboard')

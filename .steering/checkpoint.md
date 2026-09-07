@@ -1,6 +1,58 @@
-# Steering checkpoint — session/bots-p03 (BOT_TEAMMATES_SPEC Phase 3: Cross-machine fabric)
+# Steering checkpoint — merged state
 
-## Goal
+> Merged from two parallel session checkpoints: `session/befe7aa3` (CLI Bot Mode
+> parity B1–B5, this worktree) and `session/bots-p03` (BOT_TEAMMATES_SPEC
+> Phase 3 cross-machine fabric). Both sections are final — neither session has
+> open work in this file.
+
+## session/befe7aa3 — CLI Bot Mode parity (Phases B1–B5 of docs/GIZZI_BOT_MODE_SPEC.md)
+
+### Goal
+Implement CLI Bot Mode parity in the gizzi-code CLI, coordinated with — but not
+overlapping — the parallel platform-track sessions. CLI track only.
+
+### Just did (2026-09-07) — ALL 5 PHASES CODE-COMPLETE + all 3 known limitations closed
+- Spec: `docs/GIZZI_BOT_MODE_SPEC.md` (D1–D7 decisions; benchmarked on Hermes
+  Bot Mode docs + platform BOT_TEAMMATES_SPEC; same failure codes, same
+  attribution string).
+- B1: `src/runtime/bots/bot-store.ts` + `gizzi bot` command group.
+- B2: `src/runtime/bots/canonical-chat.ts` + `capability-epoch.ts`; persona
+  injection in `src/runtime/session/prompt.ts` (TUI + headless); `/new`→compact
+  composer guard; `gizzi bot chat <name> [message]`. app.tsx now honors
+  `--session` id (pre-existing bug).
+- B3: `src/runtime/bots/bot-routines.ts` — `[bot:<name>]` namespace, cron
+  agent-executor `config.bot` delivery into canonical session (never
+  Session.createNext), catch-up fires, daemon stays non-blocking.
+- B4: `failure-reasons.ts` (13-code port, once/after_compact/never), typed
+  retry on routine delivery, `message_agent` tool (canonical chats only, gated
+  in resolveTools), durable `inbox.jsonl` per bot, turn-start pickup with exact
+  platform attribution, `## Teammates` + `## Messaging protocol` prompt sections.
+- B5: `bot-presence.ts` (90s window), `bot-roster.ts` (unread = inbox +
+  watermark deltas), `/bots` TUI pane (presence dot, unread badge,
+  open/create/delete/refresh).
+- F1: cron `runs.reason` real column + pragma-guarded `ALTER TABLE` migration,
+  threaded through saveRun/rowToRun; agent-executor sets reason on both failure
+  paths.
+- F2: chat-unread without Instance — `src/runtime/bots/session-db.ts`, direct
+  drizzle COUNT on the session store.
+- F3: REPL transcript reload on pane open — `setResumeHandler`/`getResumeHandler`
+  registry in bootstrap/state.ts, `openBotCanonicalChat` hands off with
+  entrypoint `'bots_pane'`, falls back to switchSession.
+
+### Verification
+- `bun run typecheck`: zero errors.
+- Final combined sweep: 162 pass / 0 fail across bots + cli + commands tests.
+- Real `~/.local/share/gizzi-code/gizzi.db` verified clean of test rows.
+
+### Next
+- Merged to main; ledger attestation; worktree cleanup.
+
+### Future (not this session)
+- Group deliberation rooms + cross-machine peer fabric (platform phases first).
+
+## session/bots-p03 — BOT_TEAMMATES_SPEC Phase 3: Cross-machine fabric (merged verbatim)
+
+### Goal
 Implement Phase 3 (AD-1 direct peer model) in worktree allternit-session-bots-p03:
 remote peer registry (url + keyRef, keys in <data_dir>/.allternit/peers.env), dm/run/status/stop
 over HTTP inbox with idempotency keys + 900s TTL, fail-fast runtime_offline, run
@@ -8,7 +60,7 @@ bookkeeping persisted to peer-runs.json, union roster with ghost retention, and 
 minimal surface panel (src/lib/peers/* + small ShellRail integration point).
 NO git commit/push (orchestrator instruction overrides AGENTS.md session lifecycle).
 
-## Just did
+### Just did
 - Rust: NEW cmd/allternit-api/src/remote_peers.rs (~2400 lines incl. tests):
   - Registry: POST/GET/DELETE /api/peers/remote; keys only via keyRef → env/peers.env
     (chmod 600); inline `key` accepted at registration and written to peers.env,
@@ -48,16 +100,16 @@ NO git commit/push (orchestrator instruction overrides AGENTS.md session lifecyc
 - Hook exposes reachabilityByPeer + unreachableSources (ghost-row capability for
   TEAMMATES rows — rendering left for integration, per plan).
 
-## Next
+### Next
 - Done. Awaiting steering review; orchestrator merges (no commit/push per instruction).
 
-## Open questions
+### Open questions
 - Reply contract for the receiving agent is a documented protocol footer in the
   delivered envelope (reply via SendMessage to peer 'fabric-replies' with body
   `@run <id> <reply>`); gizzi-code auto-reply wiring is deliberately left to
   integration (same bucket as Hermes desktop-relay adoption).
 
-## Deviations
+### Deviations
 - surfaces/node_modules symlink skipped: shared checkout has no surfaces/node_modules
   (only per-surface dirs); created root + surfaces/ai.allternit.com symlinks.
 - dm is held on the REMOTE (receiving) node, not the caller — matches "hold the
@@ -66,7 +118,7 @@ NO git commit/push (orchestrator instruction overrides AGENTS.md session lifecyc
 - tsc shows 19 pre-existing errors in unrelated files (xterm/univerjs/TerminalWorkspace/
   office views); zero errors in touched files.
 
-## Verification results (final)
+### Verification results (final)
 - `cargo check -p allternit-api` ✅ clean, zero warnings in remote_peers.rs.
 - `cargo test -p allternit-api remote_peers` ✅ 9/9 (idempotency replay+expiry,
   TTL expiry, restart reconciliation, redaction, 401, CRUD+missing_config,
