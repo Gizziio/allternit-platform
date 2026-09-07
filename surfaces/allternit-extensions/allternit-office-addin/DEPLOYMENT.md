@@ -33,6 +33,18 @@ export VITE_ALLTERNIT_OFFICE_BASE_PATH=/office-addins/
 
 Publish `deployment/office-addins/` at `ALLTERNIT_OFFICE_APP_BASE_URL`. Do not publish a development build whose manifests point at localhost.
 
+## How /office-addins/ is hosted
+
+`platform.allternit.com` is a Cloudflare Pages site (`allternit-platform`) deployed from `surfaces/platform.allternit.com/dist` by `.github/workflows/deploy-cloudflare-pages.yml`. Pages serves static files from that directory as-is, so the add-in runtime is embedded into the platform build:
+
+1. The deploy workflow builds `@allternit/office` with the production env vars (base path `/office-addins/`, gateway `https://api.allternit.com`, platform `https://platform.allternit.com`). The add-in's `prebuild` regenerates the manifests with the matching `SourceLocation` URLs.
+2. `surfaces/platform.allternit.com/scripts/postbuild.mjs` copies the add-in build into `dist/office-addins/` — preferring `allternit-office-addin/deployment/office-addins` (the `deploy.sh` output) when present, otherwise the add-in's `dist/` plus `manifests/`.
+3. Wrangler publishes `dist/`, making `https://platform.allternit.com/office-addins/src/taskpane/index.html?product={word,excel,powerpoint}` real, served by Pages directly — never the platform SPA fallback.
+
+Merging any change under `surfaces/allternit-extensions/allternit-office-addin/` triggers the platform deploy workflow (path-filtered), so add-in releases ride the normal platform deploy.
+
+Manual/external hosting: run `./deploy.sh` with the env vars above and publish the resulting `deployment/office-addins/` directory at `ALLTERNIT_OFFICE_APP_BASE_URL` on any static HTTPS host. No server-side routing is required — asset URLs are absolute under `/office-addins/` and the task pane is a plain static file.
+
 ## Stable product manifests
 
 The manifest generator writes:

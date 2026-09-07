@@ -1,23 +1,25 @@
 # Steering checkpoint
 
 ## Goal
-Allternit Office extensions overhaul (worktree `allternit-session-office-ext-20260907`, branch `session/office-ext-20260907`). Phase 0 DONE (committed 761c5ff20, pushed). Phase 1 DONE (uncommitted, about to commit). Remaining: Phase 2 (MS Office add-in full AI agent + hosting), Phase 3 (polish + final verification).
+Allternit Office extensions overhaul (worktree `allternit-session-office-ext-20260907`, branch `session/office-ext-20260907`). Phase 0 (761c5ff20) + Phase 1 (40732354d) committed & pushed. Phase 2 done uncommitted → committing next. Remaining: Phase 3 polish + final verification, then merge per AGENTS.md ritual.
 
 Plan file: ~/.kimi-code/sessions/wd_joe_db5f68cf8615/session_2391eb48-ed41-4c53-8a90-5c115bedb60d/agents/main/plans/sandman-atom-smasher-sentry.md
 
-## Just did (Phase 1, uncommitted → committing next)
-- OfficeHost extension slot: `OfficeExtensionDescriptor`/`OfficeExtensionContext` + `host.extensions` in suite bridge types; `OfficeAiSlot` + `useOfficeExtensions` + `createAllternitAssistantExtension` in suite src/extensions/ (exported via root and ./bridge subpaths)
-- OfficeAiSlot occupies each vendored app's existing chat section (fallback = built-in AiPanel/AiChatPanel when no extensions registered); wrapped docs/sheets(ExcelShell)/slides/pdf mount sites
-- Allternit Assistant panel: useOfficeAi() contract, model picker per appKey, AgentLoop streaming chat, active-document awareness via module registry populated by suite app adapters
-- Wired: office.allternit.com App.tsx (incl. Sign tab side slot, 360px + AI rail) and ai.allternit.com views/{docs,sheets,slides,pdf} via shared getOfficeExtensions()
-- Gates green: suite + 4 vendored apps + office-surface typecheck/build; ai.allternit.com typecheck/build; xlsx-engine tests
+## Just did (Phase 2, uncommitted)
+- MS Office add-in taskpane mode switch: full in-pane AI (useOfficeSidepanelAdapter + ExtensionSidepanelShell via new OfficeSidepanelApp.tsx) when Office.js ready + bootstrap/auth context; companion shell preserved otherwise; live upgrade on auth/bootstrap events (runtime-mode.ts, 6 new tests)
+- Document context: buildLiveDocumentContext() layers bridge summary → markdown export → officecli snapshot note, allSettled best-effort, 16k/24k caps (5 new tests)
+- Real model default: agent-defaults.ts DEFAULT_OFFICE_MODEL='claude-3-5-sonnet' (matches gateway config/allternit.json agent.default_model; bootstrap payload verified to carry no model info)
+- Pre-existing shell bug fixed: ToolExecutionCard officeCliArtifacts TDZ crash in ExtensionSidepanelShell.tsx
+- Hosting: platform.allternit.com = Cloudflare Pages project allternit-platform from surfaces/platform.allternit.com/dist; deploy-cloudflare-pages.yml now builds the add-in with prod env; postbuild.mjs embeds dist/office-addins/ (prefers deployment/office-addins)
+- Manifests regenerated: Version 1.1.0.0, SourceLocation platform.allternit.com/office-addins/...; deployment/ gitignored
+- Gates: 143/143 tests, typecheck, prod-base build (assets under /office-addins/ confirmed), manifest verify, desktop prepare:office-addins interface unchanged
 
-## Known decisions / flags
-- Sign tab uses appKey="pdf" (OfficeAppKey has no 'sign'; widening breaks createStandaloneAiClient strict indexing). Cosmetic: Sign-tab Assistant may echo PDF-tab document name.
-- Desktop window size left at 1280×900 (slot lives in existing collapsed dock).
-- Vendored page-agent dist bundles had to be built in-worktree (gitignored) before extension wxt build would pass — fresh-worktree bootstrap step, not a code issue.
+## Flags for later
+- ARCHITECTURE.md still philosophically conflicts with the advanced settings panel (model/API-key UI) — needs a product decision, not done
+- Local `pnpm build` in add-in without env rewrites tracked manifests to localhost (pre-existing footgun)
+- pnpm test:hosted / test:binding need live endpoints — sideload smoke remains manual
 
 ## Next
-- Commit Phase 1, push
-- Phase 2: rewire allternit-office-addin taskpane App.tsx → useOfficeSidepanelAdapter + ExtensionSidepanelShell (companion fallback preserved); document context into agent; serving /office-addins under platform.allternit.com; manifest regen + version bump; README/DEPLOYMENT fixes
-- Phase 3: GenOffice rename, extensions README refresh, audit-doc note, final sweep
+- Commit Phase 2, push
+- Phase 3: GenOffice rename in desktop, extensions README refresh, DEPENDENCY_AUDIT note, final sweep (typecheck affected, wxt build, office-surface build, add-in tests)
+- Then: session attestation in agent-ledger/summaries/, LEDGER.md entry, merge to main, cleanup worktree per AGENTS.md

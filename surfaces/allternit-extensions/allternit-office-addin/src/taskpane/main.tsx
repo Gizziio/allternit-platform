@@ -2,6 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { markOfficeRuntimeReady } from './runtime-mode'
 import './styles.css'
 
 const OFFICE_READY_TIMEOUT_MS = 1500
@@ -35,6 +36,7 @@ if (typeof Office !== 'undefined' && typeof Office.onReady === 'function') {
 
   Office.onReady(() => {
     window.clearTimeout(fallback)
+    markOfficeRuntimeReady()
     renderOnce()
   })
 } else {

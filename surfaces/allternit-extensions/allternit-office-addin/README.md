@@ -46,15 +46,16 @@ These commands use `office-addin-debugging` — equivalent to Chrome's "Load unp
 
 ## Configuration
 
-Open the add-in task pane and click the ⚙ config icon:
+The task pane's primary path is platform authentication — **no API-key or model-provider setup is required** (see `DEPLOYMENT.md`). Sign in with Allternit; the in-pane agent then calls the platform gateway's OpenAI-compatible endpoint using the bootstrap token, and the model defaults to the gateway-configured default (`agent.default_model`, currently `claude-3-5-sonnet`). Gateway operators can change that default server-side (`ALLTERNIT_DEFAULT_MODEL` / per-user `default_model`).
 
-| Setting | Description |
+The ⚙ settings panel exposes advanced overrides for power users and local dev:
+
+| Setting | Role |
 |---|---|
-| **API Key** | Your Allternit or Anthropic API key |
-| **Base URL** | API endpoint (default: `https://api.anthropic.com`) |
-| **Model** | Claude model ID (default: `claude-sonnet-4-6`) |
+| **Sign in with Allternit** | Platform auth + workspace/project document binding (primary path) |
 | **Language** | UI language (`en` or `zh`) |
-| Advanced: **System Instruction** | Custom system prompt override |
+| Advanced: **Base URL / API Key / Model** | Override the gateway endpoint — local dev or bring-your-own-key |
+| Advanced: **Max Steps / System Instruction** | Agent loop bounds and custom instructions |
 
 Config is persisted via `OfficeRuntime.storage` (equivalent to `chrome.storage.local`).
 
@@ -84,18 +85,31 @@ The plugin loader (`src/lib/plugin-loader.ts`) automatically selects the correct
 
 ## Architecture Summary
 
+The task pane renders one of two runtime modes (`src/taskpane/runtime-mode.ts`, pure + unit-tested):
+
+- **Full in-pane AI** — when Office.js initialized *and* a gateway bootstrap/auth context is available (platform token or workspace/project). The shared `ExtensionSidepanelShell` drives `useOfficeAgent` through the Office sidepanel adapter; document content is fed to the agent as live context at conversation start; destructive tool calls require in-pane approval.
+- **Companion mode** — when Office.js failed to initialize (or hasn't yet) or no bootstrap/auth context exists. Shows the document binding card, gateway heartbeat, and suggested-action buttons that steer the platform agent via `postMessage` (`steer-agent`). Never reports a live document connection it doesn't have.
+
 ```
 main.tsx
-  └── Office.onReady()
-        └── App.tsx
-              ├── useOfficeSidepanelAdapter (adapter pattern)
-              │     ├── useOfficeAgent (AI + streaming)
-              │     └── getBridge() (ExcelBridge | WordBridge | PowerPointBridge)
-              └── ExtensionSidepanelShell (shared component)
-                    └── OfficeConfigPanel (settings)
+  └── Office.onReady() (1.5s fallback renders companion-only)
+        └── App.tsx (explicit mode switch, re-resolved on bootstrap/auth events)
+              ├── OfficeSidepanelApp.tsx                    ← full in-pane AI
+              │     ├── useOfficeSidepanelAdapter (adapter pattern)
+              │     │     ├── useOfficeAgent (SSE streaming, tool-use loop)
+              │     │     ├── platform-gateway (bootstrap binding + heartbeat)
+              │     │     └── document-context (live document feed)
+              │     ├── ExtensionSidepanelShell (shared with Chrome extension)
+              │     ├── OfficeConfigPanel (settings)
+              │     └── ToolApprovalOverlay (destructive-tool approval)
+              └── CompanionApp                              ← companion mode
+                    └── document binding + steer-agent actions
 ```
 
 Key files:
+- `src/taskpane/runtime-mode.ts` — full-AI vs companion mode rule
+- `src/lib/document-context.ts` — layers bridge summary + markdown export + officecli snapshot into the agent's context
+- `src/lib/platform-gateway.ts` — gateway bootstrap/auth transport (`/office/bootstrap` binding, runtime sync, workspace/project APIs)
 - `src/lib/bridge-factory.ts` — routes `getContext()` and `insertText()` to the right Office.js API
 - `src/lib/plugin-loader.ts` — loads per-host plugin config and system prompt
 - `src/lib/code-executor.ts` — extracts and executes Office.js code from AI responses with retry

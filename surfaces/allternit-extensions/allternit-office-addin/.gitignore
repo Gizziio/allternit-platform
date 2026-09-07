@@ -3,3 +3,4 @@ src/**/*.js
 src/**/*.jsx
 public/plugins/
 manifest.xml
+deployment/
