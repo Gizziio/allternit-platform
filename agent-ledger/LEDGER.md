@@ -21,6 +21,15 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-06 22:18 — kimi — Grok-parity slash commands + menu polish (gizzi-code)
+
+- **Session ID / Branch:** `session/grok-slash` (worktree `allternit-session-grok-slash`, base `441ed7495`)
+- **Commit:** feature `df9ed4c3c`; supporting `a63aecd1c` (native-sessions import fix), `a18be47d3` (pnpm-lock sync)
+- **How it works:** Completes the Grok CLI slash-command port started by a748ccb78. New built-ins in `cmd/gizzi-code/src/cli/ui/ink-app/commands/`: `/session-info` (panel + copy-id), `/recap`, `/queue` (immediate, mid-turn), `/transcript` ($PAGER via shared `runInPager`), `/multiline` (+`/ml`, Enter-swap toggle), `/cd` (session cwd switch), `/fork [--worktree|--no-worktree] [directive]` (FORK_SUBAGENT-gated background peer agent seeded with the forked conversation, optional worktree, Rails-registered, reports back via queue notification), `/rename --auto`. Menu: MRU now records all user-invocable command types; gated commands get an explanatory message via `findDisabledCommand` instead of "Unknown skill". Also fixes a748ccb's `/auto` `feature()` call that broke `bun:bundle` registry builds.
+- **Verification:** `bun run typecheck` EXIT=0; `bun test --preload ./test/preload.ts test/commands/` 12 pass / 0 fail. Not live-verified: `/fork` spawn (flag off in dev builds), `/transcript` pager (needs TTY).
+- **Outstanding work:** deferred per plan — permission-mode toggle design, `/minimal`/`/fullscreen` render modes; `/status` vs `/session-info` alias duplication cleanup; branch awaits rebase + merge (another session is actively committing to `feat/desktop-apps-extensions`).
+- **Summary file:** [2026-09-06-2218-88f19eb6-kimi-grok-slash-commands.md](./summaries/2026-09-06-2218-88f19eb6-kimi-grok-slash-commands.md)
+
 ### 2026-09-04 19:25 — grok — gizzi-code 2.0.0 npm publish (all 5 platforms)
 
 - **Session ID / Branch:** `main`
