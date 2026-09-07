@@ -232,6 +232,7 @@ export type GlobalConfig = {
   iterm2KeyBindingInstalled?: boolean // Legacy - keeping for backward compatibility
   editorMode?: EditorMode
   showMessageTimestamps?: boolean
+  multilineEnter?: boolean // When true, plain Enter inserts a newline and Shift/Cmd+Enter submits
   bypassPermissionsModeAccepted?: boolean
   hasUsedBackslashReturn?: boolean
   autoCompactEnabled: boolean // Controls whether auto-compact is enabled
@@ -595,6 +596,7 @@ function createDefaultGlobalConfig(): GlobalConfig {
     verbose: false,
     editorMode: 'normal',
     showMessageTimestamps: false,
+    multilineEnter: false,
     autoCompactEnabled: true,
     showTurnDuration: true,
     hasSeenTasksHint: false,
@@ -639,6 +641,7 @@ export const GLOBAL_CONFIG_KEYS = [
   'shiftEnterKeyBindingInstalled',
   'editorMode',
   'showMessageTimestamps',
+  'multilineEnter',
   'hasUsedBackslashReturn',
   'autoCompactEnabled',
   'showTurnDuration',

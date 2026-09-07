@@ -1,13 +1,19 @@
 import { describe, expect, test } from 'bun:test'
 import alwaysApprove from '../../src/cli/ui/ink-app/commands/always-approve/index.ts'
 import agents from '../../src/cli/ui/ink-app/commands/agents/index.ts'
+import cd from '../../src/cli/ui/ink-app/commands/cd/index.ts'
 import config from '../../src/cli/ui/ink-app/commands/config/index.ts'
 import dash from '../../src/cli/ui/ink-app/commands/dash/index.ts'
 import help from '../../src/cli/ui/ink-app/commands/help/index.ts'
 import model from '../../src/cli/ui/ink-app/commands/model/index.ts'
+import multiline from '../../src/cli/ui/ink-app/commands/multiline/index.ts'
+import queue from '../../src/cli/ui/ink-app/commands/queue/index.ts'
+import recap from '../../src/cli/ui/ink-app/commands/recap/index.ts'
 import rewind from '../../src/cli/ui/ink-app/commands/rewind/index.ts'
+import sessionInfo from '../../src/cli/ui/ink-app/commands/session-info/index.ts'
 import status from '../../src/cli/ui/ink-app/commands/status/index.ts'
 import theme from '../../src/cli/ui/ink-app/commands/theme/index.ts'
+import transcript from '../../src/cli/ui/ink-app/commands/transcript/index.ts'
 import viewPlan from '../../src/cli/ui/ink-app/commands/view-plan/index.ts'
 import {
   compareCommandsForSlashMenu,
@@ -121,5 +127,20 @@ describe('Grok muscle-memory aliases', () => {
   test('new Grok-parity commands are registered by name', () => {
     expect(alwaysApprove.name).toBe('always-approve')
     expect(viewPlan.name).toBe('view-plan')
+  })
+
+  test('Grok session utility commands are registered with expected types', () => {
+    expect(sessionInfo.name).toBe('session-info')
+    expect(sessionInfo.type).toBe('local-jsx')
+    expect(sessionInfo.immediate).toBe(true)
+    expect(recap.name).toBe('recap')
+    expect(recap.type).toBe('prompt')
+    expect(queue.name).toBe('queue')
+    expect(queue.type).toBe('local')
+    expect(queue.immediate).toBe(true)
+    expect(transcript.name).toBe('transcript')
+    expect(multiline.name).toBe('multiline')
+    expect(multiline.aliases).toContain('ml')
+    expect(cd.name).toBe('cd')
   })
 })

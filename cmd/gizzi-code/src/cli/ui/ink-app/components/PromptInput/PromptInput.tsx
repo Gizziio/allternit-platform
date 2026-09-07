@@ -121,7 +121,7 @@ import { useMaybeTruncateInput } from './useMaybeTruncateInput';
 import { usePromptInputPlaceholder } from './usePromptInputPlaceholder';
 import { useShowFastIconHint } from './useShowFastIconHint';
 import { useSwarmBanner } from './useSwarmBanner';
-import { isNonSpacePrintable, isVimModeEnabled } from './utils';
+import { isNonSpacePrintable, isVimModeEnabled, isMultilineEnterEnabled } from './utils';
 type Props = {
   debug: boolean;
   ideSelection: IDESelection | undefined;
@@ -2157,6 +2157,7 @@ function PromptInput({
   }
   const baseProps: BaseTextInputProps = {
     multiline: true,
+    multilineEnter: isMultilineEnterEnabled(),
     onSubmit,
     onChange,
     value: historyMatch ? getValueFromInput(typeof historyMatch === 'string' ? historyMatch : historyMatch.display) : input,

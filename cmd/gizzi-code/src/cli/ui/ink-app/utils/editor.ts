@@ -162,6 +162,41 @@ export function openFileInExternalEditor(
   }
 }
 
+/**
+ * Run a file through the user's pager ($PAGER, falling back to `less -R`,
+ * then `more`) using the alt-screen + spawnSync(stdio:'inherit') handoff,
+ * the same dance as the terminal-editor branch of openFileInExternalEditor().
+ * Blocks until the pager exits.
+ *
+ * Returns true if the pager was launched, false otherwise (no TTY ink
+ * instance, or the pager binary failed to spawn).
+ */
+export function runInPager(filePath: string): boolean {
+  const envPager = process.env.PAGER?.trim()
+  const pager = envPager ?? (isCommandAvailable('less') ? 'less -R' : 'more')
+
+  const inkInstance = instances.get(process.stdout)
+  if (!inkInstance) return false
+
+  const parts = pager.split(' ')
+  const base = parts[0] ?? pager
+  const pagerArgs = [...parts.slice(1), filePath]
+
+  inkInstance.enterAlternateScreen()
+  try {
+    const result = spawnSync(base, pagerArgs, { stdio: 'inherit' })
+    if (result.error) {
+      logForDebugging(`pager spawn failed: ${result.error}`, {
+        level: 'error',
+      })
+      return false
+    }
+    return true
+  } finally {
+    inkInstance.exitAlternateScreen()
+  }
+}
+
 export const getExternalEditor = memoize((): string | undefined => {
   // Prioritize environment variables
   if (process.env.VISUAL?.trim()) {
