@@ -49,3 +49,14 @@ Owner asked to port three Grok CLI presentation features into gizzi-code: (1) th
 
 ## Cleanup confirmation
 Worktree `allternit-session-7631feda` removed; local + remote branch `session/7631feda-bbb5-492f-97cf-55f243eda42d` deleted; scratch files `/tmp/gizzi-pr-body.md`, `/tmp/gizzidash.log`, `/tmp/dash-debug.log` removed; tmux session `gizzidash` killed. Final state verified: main checkout clean at `51f731553`, `git worktree list` shows only the remaining sessions of other agents, no `7631feda` branches local or remote.
+
+## Follow-up 2026-09-06 (23:55) — details view now renders the full transcript
+Owner asked to close known-delta #1 immediately. New worktree `allternit-session-7631feda-d2`, branch `session/7631feda-dash-details`, merged as `37057ec17` on main (fast-forward).
+
+- `DashboardSource.messages()` (lossy `{role,text}` excerpt) replaced by `transcript()` returning the full `Message[]`; `InProcessSource` shallow-copies per call because the runner mutates its array in place and Messages' React.memo compares by identity.
+- Details view mounts the real `<Messages>` component (screen='transcript', hideLogo, verbose) inside a stickyScroll `ScrollBox` — full markdown, thinking blocks, tool chrome, grouping/collapse. Keys: ↑/↓/j/k, Ctrl+U/D page, g/G top/bottom.
+- REPL passes its `tools`/`commands` into DashboardScreen for tool rendering.
+- **Latent collision fixed:** `/dash` (session-stats screen from the earlier grok-slash pass `a748ccb78`) declared aliases `['dashboard','sessions','agents-dashboard']` and, after MRU reordering, hijacked `/dashboard` resolution — the dashboard was unreachable by name post-merge. Aliases removed; stats screen stays reachable as `/dash`.
+- Known deltas remaining: needs-input 1–9 buttons (answers land in main-session prompt), static working glyph, static main-row state, stale-cell ghosts (pre-existing ink emit issue at `ink/log-update.ts:106`).
+- Verification: typecheck green; smoke suite 1315 pass / 0 fail; tmux TUI pass — /dashboard opens, dispatch works, details view renders the transcript through Messages, scroll keys + Esc ladder work, no render errors.
+- Cleanup: worktree + branch (local/remote) removed, tmux session killed.

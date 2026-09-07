@@ -21,6 +21,14 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-06 23:55 — kimi — dashboard details view = full Messages renderer + /dashboard alias un-squatted
+
+- **Session ID / Branch:** `session/7631feda-dash-details` (worktree `allternit-session-7631feda-d2`), follow-up to `session/7631feda`
+- **Commit:** `37057ec17` on `main` (fast-forward)
+- **How it works:** `DashboardSource.transcript()` returns the session's full `Message[]`; the details view mounts the real `<Messages>` component (same renderer as the REPL) in a stickyScroll ScrollBox with ↑/↓/PgUp/PgDn/g/G scroll keys. Also fixed a latent collision where `/dash` (session-stats screen) squatted the `dashboard`/`sessions`/`agents-dashboard` aliases and hijacked `/dashboard` resolution after MRU reordering.
+- **Verification:** typecheck green; smoke 1315 pass / 0 fail; tmux TUI pass (details renders transcript, scroll works, Esc ladder clean).
+- **Summary file:** [./summaries/2026-09-06-2337-7631feda-kimi-grok-dashboard.md](./summaries/2026-09-06-2337-7631feda-kimi-grok-dashboard.md)
+
 ### 2026-09-06 23:37 — kimi — Grok-parity /session-info, /dashboard agent dashboard, /settings effort row (gizzi-code)
 
 - **Session ID / Branch:** `session/7631feda-bbb5-492f-97cf-55f243eda42d` (worktree `allternit-session-7631feda`)
