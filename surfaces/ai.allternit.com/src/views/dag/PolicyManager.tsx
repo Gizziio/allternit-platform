@@ -828,7 +828,7 @@ function PolicyModal({
       <div style={{
         width: 600,
         maxHeight: '90vh',
-        background: 'var(--surface-panel)',
+        background: 'var(--bg-elevated)',
         borderRadius: 12,
         border: '1px solid var(--ui-border-muted)',
         overflow: 'auto',

@@ -44,6 +44,14 @@ export const Z = {
   permissionBanner: 220,
   dragOverlay: 230,
 
+  // Console drawer (910-919)
+  // DrawerRoot pins the console drawer at a hard-coded z-index of 900, which
+  // creates a stacking context; overlays and modals launched from inside the
+  // drawer must live in this band to layer above drawer content.
+  drawerOverlay: 910,
+  drawerModalBackdrop: 911,
+  drawerModal: 912,
+
   // Dev / debug (900+)
   devOverlay: 900,
 } as const;

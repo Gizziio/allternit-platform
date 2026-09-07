@@ -12,34 +12,28 @@ import React from 'react';
 import {
   User,
   CreditCard,
-  GearSix,
   Palette,
   Cpu,
   Key,
-  Keyboard,
   ShieldCheck,
   Pulse as Activity,
   Code,
   Briefcase,
   PuzzlePiece,
   Cloud,
-  HardDrives,
   Shield,
   Robot,
   Info,
-  SlidersHorizontal,
   Lock,
   Sparkle,
   PlugsConnected,
   Package,
   DeviceMobile,
   Devices,
-  CloudArrowUp,
   Buildings,
   ChatCircleText,
   Database,
   WebhooksLogo,
-  Desktop,
 } from '@phosphor-icons/react';
 
 export type SettingsGroup = 'account' | 'platform' | 'products' | 'infrastructure' | 'customize' | 'about';
@@ -57,11 +51,9 @@ export const SETTINGS_NAV_ITEMS: SettingsNavItem[] = [
   { id: 'usage', label: 'Usage', icon: React.createElement(CreditCard, { size: 18 }), group: 'account' },
   { id: 'billing', label: 'Plans & compute', icon: React.createElement(CreditCard, { size: 18 }), group: 'account' },
   { id: 'privacy', label: 'Privacy', icon: React.createElement(Lock, { size: 18 }), group: 'account' },
-  { id: 'general', label: 'General', icon: React.createElement(GearSix, { size: 18 }), group: 'platform' },
   { id: 'appearance', label: 'Appearance', icon: React.createElement(Palette, { size: 18 }), group: 'platform' },
   { id: 'models', label: 'Models', icon: React.createElement(Cpu, { size: 18 }), group: 'platform' },
   { id: 'api-keys', label: 'API Keys', icon: React.createElement(Key, { size: 18 }), group: 'platform' },
-  { id: 'shortcuts', label: 'Shortcuts', icon: React.createElement(Keyboard, { size: 18 }), group: 'platform' },
   { id: 'permissions', label: 'Permissions', icon: React.createElement(ShieldCheck, { size: 18 }), group: 'platform' },
   { id: 'remote-control', label: 'Fabric Transport', icon: React.createElement(DeviceMobile, { size: 18 }), group: 'platform' },
   { id: 'devices', label: 'Devices', icon: React.createElement(Devices, { size: 18 }), group: 'platform' },
@@ -70,8 +62,6 @@ export const SETTINGS_NAV_ITEMS: SettingsNavItem[] = [
   { id: 'cowork', label: 'Cowork', icon: React.createElement(Briefcase, { size: 18 }), group: 'products' },
   { id: 'extensions', label: 'Extensions', icon: React.createElement(PuzzlePiece, { size: 18 }), group: 'products' },
   { id: 'infrastructure', label: 'Infrastructure', icon: React.createElement(Cloud, { size: 18 }), group: 'infrastructure' },
-  { id: 'compute', label: 'Compute & Cloud Desktops', icon: React.createElement(Desktop, { size: 18 }), group: 'infrastructure' },
-  { id: 'environment', label: 'Environment', icon: React.createElement(SlidersHorizontal, { size: 18 }), group: 'infrastructure' },
   { id: 'security', label: 'Security', icon: React.createElement(Shield, { size: 18 }), group: 'infrastructure' },
   { id: 'agents', label: 'Agents', icon: React.createElement(Robot, { size: 18 }), group: 'infrastructure' },
   { id: 'webhooks', label: 'Webhooks', icon: React.createElement(WebhooksLogo, { size: 18 }), group: 'infrastructure' },
@@ -123,13 +113,16 @@ export const SETTINGS_SECTION_MAP: Record<string, SettingsSection> =
   Object.fromEntries(SETTINGS_NAV_ITEMS.map((i) => [i.id, i.id]));
 
 /**
- * Backward-compatible redirects for compute-related settings sections that
- * were consolidated into the single "Compute & Cloud Desktops" section.
+ * Backward-compatible redirects for settings sections that were consolidated:
+ * legacy compute/* ids now live under "infrastructure" (Billing & Credits,
+ * Cloud Desktops, and BYOC tabs), and "shortcuts" content moved into "about".
  */
 export const SETTINGS_LEGACY_REDIRECTS: Record<string, SettingsSection> = {
-  vps: 'compute',
-  'cloud-instances': 'compute',
-  'cloud-credentials': 'compute',
+  vps: 'infrastructure',
+  'cloud-instances': 'infrastructure',
+  'cloud-credentials': 'infrastructure',
+  compute: 'infrastructure',
+  shortcuts: 'about',
 };
 
 /**

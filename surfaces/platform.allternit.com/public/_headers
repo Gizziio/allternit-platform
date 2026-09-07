@@ -1,3 +1,9 @@
+/office-addins/*
+  # Microsoft Office hosts these task panes in an iframe from Office on the web
+  # origins; frame-blocking headers here break Allternit for Word/Excel/PowerPoint.
+  X-Frame-Options: ALLOWALL
+  Content-Security-Policy: frame-ancestors https://*.cloud.microsoft https://*.office.com https://*.officeapps.live.com https://*.microsoft.com https://*.sharepoint.com https://*.onedrive.live.com https://*.live.com
+
 /*
   Cache-Control: public, max-age=0, must-revalidate
 

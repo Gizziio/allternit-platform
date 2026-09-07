@@ -8,7 +8,7 @@ import type { DependencyConflict } from '../plugins/dependencies';
 const THEME = {
   bg: 'var(--surface-canvas)',
   bgElevated: 'var(--surface-panel)',
-  bgGlass: 'rgba(28, 25, 23, 0.95)',
+  bgGlass: 'var(--glass-bg-thick)',
   accent: 'var(--accent-primary)',
   accentMuted: 'rgba(212, 176, 140, 0.15)',
   textPrimary: 'var(--ui-text-primary)',
