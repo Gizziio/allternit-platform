@@ -1,18 +1,29 @@
-# Steering checkpoint
+# Steering checkpoint — session/term-xterm55
 
 ## Goal
-Allternit Office extensions overhaul (worktree `allternit-session-office-ext-20260907`, branch `session/office-ext-20260907`).
+Land the desktop code-mode terminal fixes from the interactive session on 2026-09-07:
+typing dead in terminal tiles, garbled characters on fast input, text too spaced out,
+Terminals tab removal from the chat composer (Console is the single entry), plus the
+desktop main-process fixes (ESM `__dirname` shim, configurable API health timeout).
 
-## Status — COMPLETE, merge to main in progress
-- Phase 0 `761c5ff20` — audit hygiene (typecheck red, CI paths, plugin-registry, stale artifacts/externals, pdfjs 6 + destroy() migration, docs drift, hosting origin decision)
-- Phase 1 `40732354d` — native extension slot in `@allternit/office-suite`; Allternit Assistant occupies each app's AI chat section; wired into office.allternit.com + ai.allternit.com platform views (covers desktop Office windows)
-- Phase 2 `2964082b9` — MS Office add-in full in-pane AI (mode switch, live document context, real model default), platform.allternit.com/office-addins hosting via Pages postbuild, manifests 1.1.0.0, 143 tests green
-- Phase 3 `7a16924d6` — GenOffice copy rename, extensions README refresh, DEPENDENCY_AUDIT note resolved, session attestation + ledger entry
-- Final sweep green: desktop typecheck, @allternit/ai typecheck+build, extension wxt build, office-surface typecheck+build, suite typecheck, add-in 143/143 tests + typecheck
-- Merged origin/main (153291895) into session branch; conflicts resolved in .steering/checkpoint.md (kept this session's) and agent-ledger/LEDGER.md (union of both sessions' entries)
+## Just did
+- Attributed the shared checkout's 67 dirty files: 20 are ours, the rest are other
+  sessions' in-flight work (bots views, agent API, nav, office suite). The shared
+  checkout is live — another session committed the `'bot'` tile-source change while
+  we were reading; our snapshot patch excludes it.
+- Created worktree `allternit-session-term-xterm55` on `session/term-xterm55` from
+  origin/main (792f20d4f), applied the 20-file patch cleanly.
+- Re-applied the xterm dependency swap on top of upstream's pdfjs-dist bump
+  (added @xterm/* 5.5.0 scoped addons, removed old xterm/* 5.3.0 packages).
+- `pnpm install` running to reconcile pnpm-lock.yaml.
 
-## Remaining
-- Push the merge commit; merge session/office-ext-20260907 into local main (shared checkout currently has another session's staged/unstaged work — merge must be done carefully or deferred to orchestrator); then worktree cleanup per AGENTS.md.
+## Next
+1. Build the platform in the worktree + run CodeSessionSidePane tests.
+2. Three logical commits: (1) xterm 5.5 upgrade + ordered input queue + WebGL renderer,
+   (2) terminal workspace in console drawer + composer tab removal + resize/font controls,
+   (3) desktop main-process fixes.
+3. Push, PR, merge --merge. Then ledger attestation on main + worktree cleanup.
 
-## Flags (unchanged, see attestation)
-- Sideload smoke in real Office apps is manual; ARCHITECTURE.md vs settings-panel conflict needs product decision; sdk/allternit-sdk still on pdfjs 5.x (separate owner).
+## Open questions
+- None. Work was already verified live in the desktop app (CDP: typing, ordered
+  writes, WebGL letterSpacing normal).
