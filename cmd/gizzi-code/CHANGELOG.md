@@ -9,7 +9,10 @@ Grok-style agent dashboard and session-info polish.
   full-screen agent dashboard. Dispatch top-level sessions from the input
   box, watch state dots (working / awaiting input / done / failed), peek the
   last response inline and reply (replies queue to running sessions), open a
-  transcript details view (`v`), search (`/`, prefixes `a:` activity,
+  transcript details view (`v`) — full transcript rendered by the real
+  Messages component (markdown, thinking blocks, tool chrome), scrollable
+  (↑/↓, Ctrl+U/D, g/G) with live sticky tail, not a text excerpt — search
+  (`/`, prefixes `a:` activity,
   `s:` state, `#` id), group by state or directory (Ctrl+G), rename (`r`),
   pin (`p`), reorder (Shift+↑/↓), stop/remove (`x`). Pin and order persist
   under the `dashboard` config key.

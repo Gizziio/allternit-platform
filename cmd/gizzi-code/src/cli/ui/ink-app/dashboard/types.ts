@@ -41,7 +41,7 @@ export type DashboardPeek = {
  *
  * Future ServerDashboardSource mapping (endpoints already exist on
  * `gizzi serve`): list/state  → GET /session/list + GET /session/status
- *                peek          → GET /session/:id/replay
+ *                peek/transcript→ GET /session/:id/replay
  *                reply/dispatch→ POST /session/:id/message, POST /session/
  *                stop          → POST /session/:id/abort (+ DELETE /:id)
  *                rename        → PATCH /session/:id
@@ -63,6 +63,10 @@ export interface DashboardSource {
   setPinned(id: string, pinned: boolean): void
   /** Move a row up/down in the persisted dashboard order (Shift+↑/↓). */
   move?(id: string, direction: -1 | 1): void
-  /** Transcript excerpt for the details view. */
-  messages?(id: string): { role: string; text: string }[]
+  /**
+   * Full session transcript for the details view — the same Message[]
+   * shape the REPL renders (text/thinking/tool_use/tool_result blocks
+   * intact). Details view mounts the real Messages renderer on this.
+   */
+  transcript?(id: string): unknown[]
 }

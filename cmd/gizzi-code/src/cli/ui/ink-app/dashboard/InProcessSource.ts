@@ -204,34 +204,11 @@ export class InProcessDashboardSource implements DashboardSource {
     moveTopLevelSession(id, direction)
   }
 
-  messages(id: string): { role: string; text: string }[] {
+  transcript(id: string): unknown[] {
+    // Shallow copy: the runner mutates its messages array in place, and the
+    // details view's Messages component memo-compares by array identity —
+    // a fresh ref per call is what lets live transcripts re-render.
     const messages = getTopLevelSessionMessages(id, this.opts.getAppState)
-    if (!messages) return []
-    const result: { role: string; text: string }[] = []
-    for (const message of messages) {
-      const role =
-        message.type === 'user'
-          ? 'user'
-          : message.type === 'assistant'
-            ? 'assistant'
-            : 'system'
-      const parts: string[] = []
-      for (const block of message.message?.content ?? []) {
-        if (block.type === 'text' && block.text) parts.push(block.text)
-        else if (block.type === 'tool_use')
-          parts.push(`[${block.name}] ${JSON.stringify(block.input ?? {}).slice(0, 120)}`)
-        else if (block.type === 'tool_result') {
-          const content = block.content
-          parts.push(
-            typeof content === 'string'
-              ? content.slice(0, 200)
-              : JSON.stringify(content).slice(0, 200),
-          )
-        }
-      }
-      const text = parts.join('\n').trim()
-      if (text) result.push({ role, text })
-    }
-    return result
+    return messages ? [...messages] : []
   }
 }

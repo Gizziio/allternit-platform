@@ -4903,7 +4903,7 @@ export function REPL({
     const dashboardReturn = <KeybindingSetup>
         <AnimatedTerminalTitle isAnimating={titleIsAnimating} title={terminalTitle} disabled={titleDisabled} noPrefix={showStatusInTerminalTab} />
         <GlobalKeybindingHandlers {...globalKeybindingProps} />
-        <DashboardScreen source={dashboardSource} />
+        <DashboardScreen source={dashboardSource} tools={tools} commands={commands} />
       </KeybindingSetup>;
     return <AlternateScreen mouseTracking={isMouseTrackingEnabled()}>
         {dashboardReturn}

@@ -6,7 +6,7 @@
  * roster of top-level sessions from the DashboardSource plus:
  * - dispatch input (spawn new top-level sessions)
  * - inline peek panel for the selected row (last response, reply box)
- * - details view (transcript excerpt per session)
+ * - details view (full session transcript via the real Messages renderer)
  * - search (Ctrl+/), grouping (Ctrl+G), rename (Ctrl+R), pin (Ctrl+T),
  *   reorder (Shift+↑/↓), stop/remove (x), cheatsheet (?)
  *
@@ -21,7 +21,15 @@ import { useTerminalSize } from '../hooks/useTerminalSize';
 import { Box, Text, useInput, useTheme } from '../ink';
 import { useKeybinding } from '../keybindings/useKeybinding';
 import { useAppState, useSetAppState } from '../state/AppState';
+import { Messages } from '../components/Messages';
+import ScrollBox, { type ScrollBoxHandle } from '../ink/components/ScrollBox';
 import type { DashboardRow, DashboardSource } from '../dashboard/types';
+
+// Stable empty props for the read-only transcript renderer. Fresh
+// arrays/Sets every render would defeat Messages' React.memo and
+// re-render the whole transcript on each dashboard tick.
+const TRANSCRIPT_EMPTY_ARR: unknown[] = [];
+const TRANSCRIPT_NO_TOOL_USES: Set<string> = new Set();
 
 const STATE_ORDER: Record<string, number> = {
   working: 0,
@@ -148,7 +156,15 @@ function buildItems(
   return items;
 }
 
-export function DashboardScreen({ source }: { source: DashboardSource }): React.ReactNode {
+export function DashboardScreen({
+  source,
+  tools,
+  commands,
+}: {
+  source: DashboardSource;
+  tools?: unknown[];
+  commands?: unknown[];
+}): React.ReactNode {
   const { rows: termRows, columns } = useTerminalSize();
   const [theme] = useTheme();
   const setAppState = useSetAppState();
@@ -165,7 +181,7 @@ export function DashboardScreen({ source }: { source: DashboardSource }): React.
   const [searchOpen, setSearchOpen] = React.useState(false);
   const [peekFor, setPeekFor] = React.useState<string | null>(null);
   const [detailsFor, setDetailsFor] = React.useState<string | null>(null);
-  const [detailsIndex, setDetailsIndex] = React.useState(0);
+  const detailsScrollRef = React.useRef<ScrollBoxHandle | null>(null);
   const [showCheatsheet, setShowCheatsheet] = React.useState(false);
   const [showAllIdle, setShowAllIdle] = React.useState(false);
   const [groupBy, setGroupBy] = React.useState<GroupBy>('none');
@@ -284,9 +300,8 @@ export function DashboardScreen({ source }: { source: DashboardSource }): React.
     [],
   );
 
-  const detailsMessages =
-    detailsFor && source.messages ? source.messages(detailsFor) : [];
-  const detailsMsg = detailsMessages[Math.min(detailsIndex, Math.max(0, detailsMessages.length - 1))];
+  const detailsTranscript =
+    detailsFor && source.transcript ? source.transcript(detailsFor) : [];
 
   // ---------------------------------------------------------------------
   // Keys
@@ -301,12 +316,22 @@ export function DashboardScreen({ source }: { source: DashboardSource }): React.
 
     // ---- details view ----
     if (detailsFor) {
+      const scroller = detailsScrollRef.current;
+      const page = Math.max(5, termRows - 10);
       if (key.escape) {
         setDetailsFor(null);
-      } else if (key.leftArrow || input === '[') {
-        setDetailsIndex(i => Math.max(0, i - 1));
-      } else if (key.rightArrow || input === ']') {
-        setDetailsIndex(i => Math.min(Math.max(0, detailsMessages.length - 1), i + 1));
+      } else if (key.upArrow || input === 'k') {
+        scroller?.scrollBy(-3);
+      } else if (key.downArrow || input === 'j') {
+        scroller?.scrollBy(3);
+      } else if ((key.ctrl && input === 'u') || key.pageUp) {
+        scroller?.scrollBy(-page);
+      } else if ((key.ctrl && input === 'd') || key.pageDown) {
+        scroller?.scrollBy(page);
+      } else if (input === 'g' && !key.ctrl && !key.meta) {
+        scroller?.scrollTo(0);
+      } else if (input === 'G' || key.end) {
+        scroller?.scrollToBottom();
       }
       return;
     }
@@ -403,7 +428,6 @@ export function DashboardScreen({ source }: { source: DashboardSource }): React.
     }
     if (input === 'v' && !key.ctrl && !key.meta && selectedRow) {
       setDetailsFor(selectedRow.id);
-      setDetailsIndex(Math.max(0, source.messages?.(selectedRow.id).length ?? 1) - 1);
       return;
     }
     if (key.return) {
@@ -567,29 +591,52 @@ export function DashboardScreen({ source }: { source: DashboardSource }): React.
 
   const renderDetails = () => {
     const row = allRows.find(r => r.id === detailsFor);
-    const total = detailsMessages.length;
-    const idx = Math.min(detailsIndex, Math.max(0, total - 1));
+    const transcript = detailsTranscript;
+    // Screen header (1) + this title row (1) + footer (dispatch row + hint +
+    // margin ≈ 3) + 1 spare row of slack.
+    const detailsHeight = Math.max(5, termRows - 6);
     return (
       <Box flexDirection="column" paddingLeft={1} marginTop={1} opaque>
         <Box flexDirection="row" justifyContent="space-between">
           <Text bold color={theme.gizzi} wrap="truncate-end">
             {truncate(row?.title ?? detailsFor ?? '', titleWidth)}
           </Text>
-          <Text dimColor>
-            {total === 0 ? '0/0' : `${idx + 1}/${total}`}
-          </Text>
+          <Text dimColor>{'↑/↓ scroll · Ctrl+U/D page · g/G top/bottom · Esc back'}</Text>
         </Box>
-        {total === 0 ? (
+        {transcript.length === 0 ? (
           <Text dimColor>No transcript for this session.</Text>
         ) : (
-          <Box flexDirection="column" marginTop={0}>
-            <Text dimColor>{detailsMsg.role}</Text>
-            {detailsMsg.text.split('\n').slice(0, Math.max(3, termRows - 12)).map((line, i) => (
-              <Text key={i} wrap="truncate-end">{truncate(line, columns - 6)}</Text>
-            ))}
-          </Box>
+          <ScrollBox
+            ref={detailsScrollRef}
+            height={detailsHeight}
+            flexDirection="column"
+            stickyScroll={true}
+          >
+            {/* The REAL Messages renderer (same component the REPL main
+                screen and transcript view use) — full markdown, thinking
+                blocks, tool chrome, grouping/collapse — not a text excerpt.
+                screen='transcript' = unfiltered; the 200-message safety cap
+                inside Messages bounds memory. stickyScroll keeps live
+                sessions pinned to the newest message until scrolled. */}
+            <Messages
+              messages={transcript}
+              tools={tools ?? []}
+              commands={commands ?? []}
+              verbose={true}
+              toolJSX={null}
+              toolUseConfirmQueue={TRANSCRIPT_EMPTY_ARR}
+              inProgressToolUseIDs={TRANSCRIPT_NO_TOOL_USES}
+              isMessageSelectorVisible={false}
+              conversationId={detailsFor ?? 'dashboard-details'}
+              screen="transcript"
+              streamingToolUses={TRANSCRIPT_EMPTY_ARR}
+              showAllInTranscript={true}
+              isLoading={false}
+              hideLogo={true}
+              hidePastThinking={true}
+            />
+          </ScrollBox>
         )}
-        <Text dimColor>{'[‹]/[›] or ←/→ cycle · Esc back'}</Text>
       </Box>
     );
   };
