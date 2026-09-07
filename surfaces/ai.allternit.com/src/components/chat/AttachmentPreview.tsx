@@ -383,7 +383,7 @@ export function AttachmentPreviewModal({ item, isOpen, onClose }: AttachmentPrev
         role="dialog"
         aria-modal="true"
         aria-labelledby="attachment-preview-title"
-        className="w-full max-w-[90vw] max-h-[90vh] bg-[var(--surface-panel)] rounded-2xl overflow-hidden flex flex-col shadow-2xl"
+        className="w-full max-w-[90vw] max-h-[90vh] bg-[var(--bg-elevated)] rounded-2xl overflow-hidden flex flex-col shadow-2xl"
         style={{ boxShadow: `0 25px 50px -12px ${color}40` }}
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.stopPropagation()}

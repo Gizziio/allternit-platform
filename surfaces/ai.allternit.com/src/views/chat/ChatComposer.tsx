@@ -60,6 +60,7 @@ import { getProviderMeta } from '@/lib/providers/provider-registry';
 import { useModelSelection } from '@/providers/model-selection-provider';
 import { useRuntimeExecutionMode } from '@/hooks/useRuntimeExecutionMode';
 import { useIsMobile } from '@/hooks/useMediaQuery';
+import { useSettingsValue } from '@/hooks/useSettingsState';
 import type { RuntimeExecutionMode } from '@/lib/agents/native-agent-api';
 
 import {
@@ -1163,11 +1164,57 @@ export function ChatComposer({
     setSelectedSurfaceAgent,
   ]);
 
+  // Settings → Composer → Auto-save chat drafts (default on). When enabled,
+  // the in-progress message is persisted per session so it survives view
+  // switches and app restarts, and restored when the session is reopened.
+  const [autoSaveDrafts] = useSettingsValue('general.autoSave', true);
+  const draftKey = activeSession?.id ? `allternit.drafts.${activeSession.id}` : null;
+
+  // Restore the draft when switching into a session. An injected prompt
+  // (inputValue prop) wins over a stored draft.
+  useEffect(() => {
+    if (!draftKey) return;
+    try {
+      const raw = window.localStorage.getItem(draftKey);
+      if (raw) setInput((prev) => (prev ? prev : raw));
+    } catch {
+      // storage unavailable — drafts simply don't restore
+    }
+    // Only re-read when the session changes, not on every keystroke.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftKey]);
+
+  // Debounce-save the draft as the user types; clear it when emptied.
+  useEffect(() => {
+    if (!autoSaveDrafts || !draftKey) return;
+    const timer = window.setTimeout(() => {
+      try {
+        if (input.trim()) {
+          window.localStorage.setItem(draftKey, input);
+        } else {
+          window.localStorage.removeItem(draftKey);
+        }
+      } catch {
+        // storage full or unavailable — keep the in-memory value
+      }
+    }, 400);
+    return () => window.clearTimeout(timer);
+  }, [input, autoSaveDrafts, draftKey]);
+
   const handleSubmit = async () => {
     if (!canSubmit) return;
     await submitMessage(input);
 
     setInput('');
+    // Sending consumes the draft — clear it immediately rather than waiting
+    // for the debounced empty-input pass.
+    if (draftKey) {
+      try {
+        window.localStorage.removeItem(draftKey);
+      } catch {
+        // storage unavailable — nothing to clear
+      }
+    }
     setActiveCategory(null);
     setSlashMenuVisible(false);
     setSlashFilter('');

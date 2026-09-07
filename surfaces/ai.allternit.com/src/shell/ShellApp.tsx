@@ -29,7 +29,7 @@ import { ConsoleDrawer } from '../drawers/ConsoleDrawer';
 import { useRunnerStore } from '../runner/runner.store';
 import { useSidecarStore } from '../stores/sidecar-store';
 import { usePendingChatModelStore } from '../stores/pending-chat-model.store';
-import { useAgentStore } from '../lib/agents';
+import { useAgentStore, useAgentsWithSwarms } from '../lib/agents';
 import type { Agent } from '../lib/agents/agent.types';
 import { useAgentBootstrap } from '../lib/agents/useAgentBootstrap';
 import { isBot } from '@/lib/bots/bot-profile';
@@ -56,6 +56,7 @@ import { useIsMobile } from '../hooks/useMediaQuery';
 import { usePermissionGuide } from '../lib/usePermissionGuide';
 
 import { TooltipProvider } from '../components/ui/tooltip';
+import { ToastProvider } from '@/components/ui/toast-provider';
 import { VoiceProvider } from '../providers/voice-provider';
 import { VoicePresence } from '../components/ai-elements/voice-presence';
 import { AgentActivityPanel } from '../views/agent-activity/AgentActivityPanel';
@@ -1005,8 +1006,10 @@ export function ShellApp(): React.ReactNode {
     <AuthGate>
       <ModeProvider>
         <GlobalDropzoneProvider>
-          <OnboardingGate />
-          <ShellAppInner />
+          <ToastProvider>
+            <OnboardingGate />
+            <ShellAppInner />
+          </ToastProvider>
         </GlobalDropzoneProvider>
       </ModeProvider>
     </AuthGate>

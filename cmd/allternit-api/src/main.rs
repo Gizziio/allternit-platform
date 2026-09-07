@@ -771,6 +771,7 @@ async fn main() {
         .nest("/api", allternit_api::bot_assets::bot_assets_router())
         .nest("/api", page_agent_router())
         .nest("/api", analytics_router())
+        .nest("/api", allternit_api::group_rooms::router())
         .nest("/api", playground_router())
         .nest("/api", checkpoints_router())
         .nest("/api", design_connector_router())

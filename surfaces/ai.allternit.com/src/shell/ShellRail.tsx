@@ -2,6 +2,7 @@ import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import type { Icon } from '@phosphor-icons/react';
 import { useStoreWithEqualityFn } from 'zustand/traditional';
 import { shallow } from 'zustand/shallow';
+import { useSettingsValue } from '@/hooks/useSettingsState';
 import type { AppMode } from './ShellHeader';
 import {
   CaretDown,
@@ -94,6 +95,12 @@ import { useCommRailsMailStore } from '@/lib/bots/comrails-mail.store';
 import { openBotCanonicalChat, openBotChatView } from '@/lib/bots/bot-canonical-chat.service';
 import { useGroupChatStore } from '@/lib/bots/group-chat.store';
 import type { GroupChat } from '@/lib/bots/group-chat.types';
+import {
+  refreshGroupEscalations,
+  resolveGroupRoomHold,
+  startGroupRoomsSync,
+  useGroupRoomsSyncStore,
+} from '@/lib/bots/group-rooms-sync';
 import { useStartBotSession } from '@/lib/bots/useStartBotSession';
 import { BotAvatar } from '@/views/bots/BotAvatar';
 import { GroupChatAvatar } from '@/views/bots/GroupChatAvatar';
@@ -200,6 +207,10 @@ export function ShellRail({
   
   const isAgentActive = useSurfaceAgentModeEnabled(currentSurface);
   const surfaceTheme = isAgentActive ? getAgentModeSurfaceTheme(currentSurface) : null;
+
+  // Settings → Appearance → Show sidebar labels (default on). Reacts live to
+  // the toggle via the settings-changed event dispatched by useSettingsState.
+  const [showSidebarLabels] = useSettingsValue('appearance.showSidebarLabels', true);
 
   // The account footer used to show a hardcoded "Joe · Pro" placeholder that
   // never reflected a real signed-in identity. /api/v1/me is backend-resolved
@@ -876,7 +887,7 @@ export function ShellRail({
             )}
           >
             <House size={13} weight={mode === 'chat' ? "fill" : "bold"} />
-            Home
+            {showSidebarLabels ? 'Home' : null}
           </button>
           <button
             type="button"
@@ -892,7 +903,7 @@ export function ShellRail({
             )}
           >
             <TerminalWindow size={13} weight={mode === 'code' ? "fill" : "bold"} />
-            Code
+            {showSidebarLabels ? 'Code' : null}
           </button>
           <button
             type="button"
@@ -908,7 +919,7 @@ export function ShellRail({
             )}
           >
             <Globe size={13} weight={mode === 'browser' ? "fill" : "bold"} />
-            ACI
+            {showSidebarLabels ? 'ACI' : null}
           </button>
         </div>
       </div>
@@ -2204,6 +2215,11 @@ function InboxRailItem({
   const watermarks = useBotActivityWatermarkStore((state) => state.watermarks);
   const focusedSessionId = useBotActivityWatermarkStore((state) => state.focusedSessionId);
   const markAllSeen = useBotActivityWatermarkStore((state) => state.markAllSeen);
+  const groupHolds = useGroupRoomsSyncStore((state) => state.holds);
+  const groupsById = useGroupChatStore((state) => state.groups);
+
+  // Server-side group-room sync (pull on focus/reconnect, disband tombstones).
+  useEffect(() => startGroupRoomsSync(), []);
 
   const [open, setOpen] = useState(false);
   const [pinned, setPinned] = useState(() => {
@@ -2291,6 +2307,7 @@ function InboxRailItem({
       setOpen(true);
       // Threads are global; enrich from the first bot's perspective.
       if (bots.length > 0) void loadThreads(bots[0].id);
+      void refreshGroupEscalations();
     } else if (!pinned) {
       setOpen(false);
     }
@@ -2341,6 +2358,14 @@ function InboxRailItem({
   const showMail = threadsNewestFirst.length > 0;
   const showAttention = attentionItems.length > 0;
   const showActive = activeBots.length > 0;
+  const unresolvedGroupHolds = groupHolds.filter((h) => !h.resolved);
+  const showGroupHolds = unresolvedGroupHolds.length > 0;
+
+  const handleOpenGroupHold = (hold: (typeof unresolvedGroupHolds)[number]) => {
+    onOpen?.('group-chat', { groupId: hold.room_id });
+    // Room view opened — resolve fire-and-forget.
+    void resolveGroupRoomHold(hold.room_id, hold.hold_id);
+  };
 
   return (
     <Popover
@@ -2454,6 +2479,44 @@ function InboxRailItem({
             </div>
           )}
 
+          {showGroupHolds && (
+            <div className="py-1 border-t border-[var(--border-subtle)]">
+              <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--shell-item-muted)]">
+                Group escalations
+              </div>
+              {unresolvedGroupHolds.map((hold) => {
+                const roomName = groupsById[hold.room_id]?.name ?? hold.room_id;
+                const memberBot = botById[hold.member_id];
+                const memberName =
+                  memberBot?.botProfile?.displayName ?? memberBot?.name ?? hold.member_id;
+                return (
+                  <button
+                    key={hold.hold_id}
+                    type="button"
+                    onClick={() => handleOpenGroupHold(hold)}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 bg-transparent border-none cursor-pointer text-left hover:bg-[var(--shell-item-hover)]"
+                  >
+                    <span className="size-5 rounded-full bg-[var(--shell-item-hover)] shrink-0 flex items-center justify-center text-[var(--accent-primary)]">
+                      <UsersThree size={12} weight="bold" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[12px] text-[var(--shell-item-fg)] truncate">
+                        {roomName}
+                      </span>
+                      <span className="block text-[10px] text-[var(--shell-item-muted)] truncate">
+                        {memberName}
+                        {hold.message_excerpt ? ` · ${hold.message_excerpt}` : ' needs you'}
+                      </span>
+                    </span>
+                    <span className="text-[10px] text-[var(--shell-item-muted)] shrink-0">
+                      {formatRelativeTime(new Date(hold.created_at).getTime())}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
           {showAttention && (
             <div className="py-1 border-t border-[var(--border-subtle)]">
               <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--shell-item-muted)]">
@@ -2518,7 +2581,7 @@ function InboxRailItem({
             </div>
           )}
 
-          {!showMail && !showAttention && !showActive && (
+          {!showMail && !showAttention && !showActive && !showGroupHolds && (
             <div className="px-3 py-6 text-[12px] text-[var(--shell-item-muted)] text-center">
               No mail, attention, or active bots right now.
             </div>
@@ -2633,6 +2696,7 @@ function RailItem({ id, icon: Icon, label, isActive, onClick, badge }: {
   /** Optional count pill (e.g. unified Inbox badge). Hidden when 0. */
   badge?: number;
 }): React.ReactNode {
+  const [showSidebarLabels] = useSettingsValue('appearance.showSidebarLabels', true);
   return (
     <button type="button"
       onClick={onClick}
@@ -2645,7 +2709,7 @@ function RailItem({ id, icon: Icon, label, isActive, onClick, badge }: {
       )}
     >
       {Icon && <Icon size={15} weight={isActive ? 'fill' : 'bold'} />}
-      <span className="text-[12px] overflow-hidden text-ellipsis whitespace-nowrap min-w-0 flex-1">{label}</span>
+      {showSidebarLabels && <span className="text-[12px] overflow-hidden text-ellipsis whitespace-nowrap min-w-0 flex-1">{label}</span>}
       {badge !== undefined && badge > 0 && (
         <span className="shrink-0 rounded-full bg-[var(--accent-primary)] text-[var(--shell-rail-bg)] text-[9px] font-bold px-1.5 py-px">
           {badge > 99 ? '99+' : badge}

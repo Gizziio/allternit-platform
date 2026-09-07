@@ -12,7 +12,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, CircleNotch, Desktop, Robot, Sparkle } from "@phosphor-icons/react";
+import { ArrowLeft, CircleNotch, Desktop, Robot, Sparkle, X } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { useChatSessionStore } from "@/views/chat/ChatSessionStore";
 import { useAgentStore } from "@/lib/agents/agent.store";
@@ -179,6 +179,7 @@ function BotChatSessionContent({
   const setAciSidecarExpanded = useBrowserAgentStore((s) => s.setAciSidecarExpanded);
   const aciSidecarExpanded = useBrowserAgentStore((s) => s.aciSidecarExpanded);
   const [computerOpen, setComputerOpen] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
   const computerLive = isBotComputerLive(activeVM, computerState);
   const hasVm = Boolean(bot?.vmOperator?.enabled || activeVM);
 
@@ -202,6 +203,8 @@ function BotChatSessionContent({
     async (text: string) => {
       if (!text.trim() || isStreaming) return;
 
+      setSendError(null);
+
       const modelId = modelSelection
         ? `${modelSelection.providerId}/${modelSelection.modelId}`
         : undefined;
@@ -224,7 +227,18 @@ function BotChatSessionContent({
       }
       if (!sid) return;
 
-      await sendMessageStream(sid, { text, modelId });
+      try {
+        await sendMessageStream(sid, { text, modelId });
+      } catch (err) {
+        // Never leave this as an unhandled rejection — the message silently
+        // never sends and the user has no idea why.
+        const detail = err instanceof Error ? err.message : String(err);
+        setSendError(
+          sid.startsWith("temp-")
+            ? `This bot session is local-only (backend unavailable). Message not sent. ${detail}`
+            : `Message not sent. ${detail}`
+        );
+      }
     },
     [isStreaming, sessionId, botId, bot, modelSelection, createSession, setActiveSession, sendMessageStream]
   );
@@ -411,6 +425,19 @@ function BotChatSessionContent({
         data-bot-composer
         className="border-t border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-3"
       >
+        {sendError && (
+          <div className="mb-2 flex items-start justify-between gap-2 rounded-xl border border-[var(--status-error)]/30 bg-[var(--status-error)]/8 px-3 py-2 text-xs text-[var(--status-error)]">
+            <span className="min-w-0 whitespace-pre-wrap">{sendError}</span>
+            <button
+              type="button"
+              onClick={() => setSendError(null)}
+              className="shrink-0 rounded p-0.5 opacity-70 transition-opacity hover:opacity-100"
+              aria-label="Dismiss send error"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        )}
         <ChatComposer
           onSend={handleSend}
           isLoading={isStreaming}
