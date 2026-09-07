@@ -23,7 +23,8 @@ import {
 } from '@phosphor-icons/react';
 import { useModelLabStore, useModelLabCatalogStore } from '@/lib/model-lab/store';
 import type { CachedModel, RuntimeRecipe, RuntimeRecipeType, HuggingFaceModel, ModelAssessment, Recommendation } from '@/lib/model-lab/api';
-import { installHuggingFaceModel, assessModel, recommendModels } from '@/lib/model-lab/api';
+import { installHuggingFaceModel, assessModelsBatch, recommendModels, getCatalog, refreshCatalog } from '@/lib/model-lab/api';
+import { AuthorAvatar } from './components/AuthorAvatar';
 import { usePendingChatModelStore } from '@/stores/pending-chat-model.store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -134,7 +135,7 @@ function estimateModelSizeBytes(repoId: string, sizeBytes?: number): number | un
   return est !== undefined ? est * 1_000_000_000 : undefined;
 }
 
-type Fit = 'fits' | 'tight' | 'no';
+type Fit = 'fits' | 'tight' | 'no' | 'unknown';
 
 function computeHardwareFit(
   repoId: string,
@@ -142,7 +143,7 @@ function computeHardwareFit(
   totalMemoryBytes?: number
 ): { fit: Fit; reason: string } {
   if (!totalMemoryBytes || totalMemoryBytes <= 0) {
-    return { fit: 'no', reason: 'Hardware memory not detected' };
+    return { fit: 'unknown', reason: 'Hardware memory not detected' };
   }
   const modelBytes = estimateModelSizeBytes(repoId, sizeBytes);
   if (!modelBytes) {
@@ -163,7 +164,25 @@ function fitBadgeClass(fit: Fit): string {
       return 'bg-amber-500/10 text-amber-500 border-amber-500/20';
     case 'no':
       return 'bg-red-500/10 text-red-500 border-red-500/20';
+    case 'unknown':
+      return 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20';
   }
+}
+
+const FIT_LABELS: Record<Fit, string> = {
+  fits: 'Fits',
+  tight: 'Tight',
+  no: 'Too big',
+  unknown: 'Fit unknown',
+};
+
+function formatAge(fetchedAt?: number): string | null {
+  if (!fetchedAt) return null;
+  const seconds = Math.max(0, Math.floor(Date.now() / 1000 - fetchedAt));
+  if (seconds < 60) return 'just now';
+  if (seconds < 3600) return `${Math.floor(seconds / 60)} min ago`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)} h ago`;
+  return `${Math.floor(seconds / 86400)} d ago`;
 }
 
 const OFFICIAL_HF_ORGS = new Set([
@@ -215,7 +234,6 @@ function ModelCardItem({
   const author = parts[0] ?? '';
   const name = parts.slice(1).join('/') || model.repoId;
   const isOfficial = OFFICIAL_HF_ORGS.has(author);
-  const avatarUrl = author ? `https://huggingface.co/${encodeURIComponent(author)}/avatar` : null;
 
   return (
     <ModelCard className="flex flex-col overflow-hidden h-full cursor-pointer" hover onClick={() => onSelect(model)}>
@@ -223,18 +241,7 @@ function ModelCardItem({
       <div className="relative h-32 sm:h-36 overflow-hidden border-b border-[var(--border-subtle)] bg-[var(--bg-secondary)]/50">
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="size-16 sm:size-20 rounded-2xl border-2 border-[var(--border-subtle)] bg-[var(--bg-elevated)] overflow-hidden shadow-sm">
-            {avatarUrl ? (
-              <img
-                src={avatarUrl}
-                alt={author}
-                className="size-full object-cover"
-                onError={(e) => { e.currentTarget.style.display = 'none'; }}
-              />
-            ) : (
-              <div className="size-full flex items-center justify-center text-[var(--accent-primary)]">
-                <Cube size={28} weight="duotone" />
-              </div>
-            )}
+            <AuthorAvatar author={author} iconSize={28} />
           </div>
         </div>
 
@@ -286,7 +293,7 @@ function ModelCardItem({
             className={cn('text-[10px] capitalize border', fitBadgeClass(fit.fit))}
             title={fit.reason}
           >
-            {fit.fit === 'fits' ? 'Fits' : fit.fit === 'tight' ? 'Tight' : 'Too big'}
+            {FIT_LABELS[fit.fit]}
           </Badge>
           <Badge
             variant="outline"
@@ -393,6 +400,54 @@ export function CatalogPanel(): React.ReactNode {
   const [recommendedAssessments, setRecommendedAssessments] = useState<Record<string, ModelAssessment>>({});
   const [recommendedLoading, setRecommendedLoading] = useState(false);
 
+  // Default browse view: engine catalog shown when the search box is empty.
+  const browseMode = sort !== 'recommended' && query.trim() === '';
+  const [catalogModels, setCatalogModels] = useState<HuggingFaceModel[]>([]);
+  const [catalogMeta, setCatalogMeta] = useState<{ fetched_at?: number; stale?: boolean }>({});
+  const [catalogLoading, setCatalogLoading] = useState(false);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
+  const [catalogRefreshing, setCatalogRefreshing] = useState(false);
+
+  const loadCatalog = useCallback(async () => {
+    setCatalogLoading(true);
+    setCatalogError(null);
+    try {
+      const res = await getCatalog('all', 50);
+      setCatalogMeta({ fetched_at: res.fetched_at, stale: res.stale });
+      setCatalogModels(
+        res.models.map((m) => ({
+          repoId: m.repo_id,
+          downloads: m.downloads,
+          likes: m.likes,
+          tags: m.tags,
+          pipeline_tag: m.pipeline_tag,
+          lastModified: m.last_modified,
+        }))
+      );
+    } catch (e) {
+      setCatalogError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setCatalogLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!browseMode) return;
+    void loadCatalog();
+  }, [browseMode, loadCatalog]);
+
+  const handleCatalogRefresh = useCallback(async () => {
+    setCatalogRefreshing(true);
+    try {
+      await refreshCatalog();
+      await loadCatalog();
+    } catch {
+      // Keep the current catalog on refresh failure.
+    } finally {
+      setCatalogRefreshing(false);
+    }
+  }, [loadCatalog]);
+
   // Prefer Apple Silicon unified memory for fit scoring; otherwise use system RAM.
   const gpu = engineStatus?.gpu?.[0];
   const isAppleUnified = gpu?.name?.toLowerCase().includes('apple');
@@ -404,31 +459,40 @@ export function CatalogPanel(): React.ReactNode {
     void refreshEngineState();
   }, [refreshEngineState]);
 
-  // Fetch dynamic assessments for the current search result set.
+  // Fetch dynamic assessments for the current visible result set in one batch
+  // call. Only runs when the engine status is available; on failure the cards
+  // fall back to client-side computeHardwareFit.
   useEffect(() => {
     if (sort === 'recommended') return;
-    if (results.length === 0) {
+    const targets = browseMode ? catalogModels : results;
+    if (targets.length === 0 || !engineStatus) {
       setAssessments({});
       return;
     }
 
     let cancelled = false;
     async function load() {
-      const next: Record<string, ModelAssessment> = {};
-      for (const model of results) {
+      try {
+        const batch = await assessModelsBatch(
+          targets.map((model) => ({ repo_id: model.repoId }))
+        );
         if (cancelled) return;
-        try {
-          const assessment = await assessModel(model.repoId);
-          next[model.repoId] = assessment;
-        } catch {
-          // Ignore per-model assessment failures.
+        const next: Record<string, ModelAssessment> = {};
+        for (const assessment of batch) {
+          next[assessment.repo_id] = assessment;
         }
+        setAssessments(next);
+      } catch {
+        // Batch failed (engine offline, etc.) — cards fall back to the
+        // client-side computeHardwareFit estimate.
+        if (!cancelled) setAssessments({});
       }
-      if (!cancelled) setAssessments(next);
     }
     void load();
-    return () => { cancelled = true; };
-  }, [results, sort]);
+    return () => {
+      cancelled = true;
+    };
+  }, [results, catalogModels, browseMode, sort, engineStatus]);
 
   // When the user chooses "Recommended", fetch server-side recommendations.
   useEffect(() => {
@@ -491,7 +555,8 @@ export function CatalogPanel(): React.ReactNode {
     return () => { cancelled = true; };
   }, [sort, query]);
 
-  const activeResults = sort === 'recommended' ? recommendedResults : results;
+  const activeResults =
+    sort === 'recommended' ? recommendedResults : browseMode ? catalogModels : results;
   const activeAssessments = sort === 'recommended' ? recommendedAssessments : assessments;
 
   const scoredModels = useMemo(
@@ -723,7 +788,50 @@ export function CatalogPanel(): React.ReactNode {
           </div>
         )}
 
-        {!searched && !searchLoading && sort !== 'recommended' && (
+        {browseMode && (
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
+              {catalogMeta.stale ? (
+                <Badge
+                  variant="secondary"
+                  className="text-[10px] uppercase tracking-wide bg-amber-500/10 text-amber-500 border border-amber-500/20"
+                  title="The engine is serving its last cached catalog; a background refresh kicks in automatically."
+                >
+                  Cached (offline)
+                </Badge>
+              ) : (
+                <Badge
+                  variant="secondary"
+                  className="text-[10px] uppercase tracking-wide bg-green-500/10 text-green-500 border border-green-500/20"
+                >
+                  Live from Hugging Face
+                </Badge>
+              )}
+              {formatAge(catalogMeta.fetched_at) && (
+                <span className="text-[11px] text-[var(--text-tertiary)]">
+                  updated {formatAge(catalogMeta.fetched_at)}
+                </span>
+              )}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void handleCatalogRefresh()}
+              disabled={catalogRefreshing || catalogLoading}
+            >
+              <ArrowsClockwise size={14} className={cn('mr-1.5', (catalogRefreshing || catalogLoading) && 'animate-spin')} />
+              Refresh catalog
+            </Button>
+          </div>
+        )}
+
+        {browseMode && catalogError && (
+          <div className="p-3 rounded-lg border border-red-500/30 bg-red-500/5 text-sm text-red-500">
+            Engine catalog unavailable: {catalogError}
+          </div>
+        )}
+
+        {!searched && !searchLoading && sort !== 'recommended' && !browseMode && (
           <div className="flex flex-col items-center justify-center py-12 gap-3 rounded-xl border border-dashed border-[var(--border-subtle)] bg-[var(--bg-secondary)]/30">
             <Cube size={40} className="text-[var(--text-secondary)] opacity-40" />
             <p className="text-sm text-[var(--text-secondary)]">Enter a search term to find models on Hugging Face.</p>
@@ -735,11 +843,15 @@ export function CatalogPanel(): React.ReactNode {
           </div>
         )}
 
-        {(searchLoading || recommendedLoading) && (
+        {(searchLoading || recommendedLoading || (browseMode && catalogLoading)) && (
           <div className="flex items-center justify-center py-12 gap-3">
             <ArrowsClockwise size={18} className="animate-spin text-[var(--accent-primary)]" />
             <span className="text-sm text-[var(--text-secondary)]">
-              {sort === 'recommended' ? 'Finding the best models for this machine…' : 'Searching Hugging Face…'}
+              {sort === 'recommended'
+                ? 'Finding the best models for this machine…'
+                : browseMode
+                  ? 'Loading catalog…'
+                  : 'Searching Hugging Face…'}
             </span>
           </div>
         )}
@@ -749,6 +861,16 @@ export function CatalogPanel(): React.ReactNode {
             <MagnifyingGlass size={40} className="text-[var(--text-secondary)] opacity-40" />
             <p className="text-sm text-[var(--text-secondary)]">No models found for &ldquo;{query}&rdquo;.</p>
             <p className="text-xs text-[var(--text-secondary)] opacity-70">Try a broader term or check your spelling.</p>
+          </div>
+        )}
+
+        {browseMode && !catalogLoading && !catalogError && sorted.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-12 gap-3 rounded-xl border border-dashed border-[var(--border-subtle)] bg-[var(--bg-secondary)]/30">
+            <Cube size={40} className="text-[var(--text-secondary)] opacity-40" />
+            <p className="text-sm text-[var(--text-secondary)]">The engine catalog is empty.</p>
+            <p className="text-xs text-[var(--text-secondary)] opacity-70">
+              Use the refresh button above once the engine can reach Hugging Face.
+            </p>
           </div>
         )}
 

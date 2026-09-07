@@ -31,6 +31,9 @@ import {
   X,
   PaperPlaneTilt,
   WebhooksLogo,
+  Pause,
+  Pulse,
+  Trash,
 } from "@phosphor-icons/react";
 import { useAgentStore } from "@/lib/agents/agent.store";
 import { useChatSessionStore } from "@/views/chat/ChatSessionStore";
@@ -43,6 +46,15 @@ import {
   isBot,
 } from "@/lib/bots/bot-profile";
 import { useStartBotSession } from "@/lib/bots/useStartBotSession";
+import {
+  createBotRoutine,
+  deleteBotRoutine,
+  disableBotRoutine,
+  enableBotRoutine,
+  useBotRoutineStore,
+  type BotRoutine,
+  type BotRoutineFrequency,
+} from "@/lib/bots/bot-routine.service";
 import { openBotChatView } from "@/lib/bots/bot-canonical-chat.service";
 import { getConnectorLogoUrl } from "@/lib/design/connector-logo";
 import { listWebhookTriggers, type WebhookTrigger } from "@/lib/webhook-api";
@@ -1681,6 +1693,233 @@ function IdentityChannelCard({
   );
 }
 
+type SimpleSchedule =
+  | "once"
+  | "hourly"
+  | "daily"
+  | "weekdays"
+  | "weekly"
+  | "monthly"
+  | "interval"
+  | "advanced";
+
+const SIMPLE_SCHEDULE_OPTIONS: { value: SimpleSchedule; label: string }[] = [
+  { value: "once", label: "Once" },
+  { value: "hourly", label: "Hourly" },
+  { value: "daily", label: "Daily" },
+  { value: "weekdays", label: "Weekdays" },
+  { value: "weekly", label: "Weekly" },
+  { value: "monthly", label: "Monthly" },
+  { value: "interval", label: "Every N hours" },
+  { value: "advanced", label: "Advanced (custom schedule text)" },
+];
+
+function routineScheduleLabel(routine: BotRoutine): string {
+  if (routine.scheduleText) return routine.scheduleText;
+  switch (routine.frequency) {
+    case "interval":
+      return `every ${routine.intervalHours ?? 24}h`;
+    case "startup":
+      return "on app launch";
+    default:
+      return routine.frequency;
+  }
+}
+
+function formatNextRun(nextRunAt: number): string {
+  if (nextRunAt >= Number.MAX_SAFE_INTEGER) return "runs once";
+  const diff = nextRunAt - Date.now();
+  if (diff <= 0) return "due now";
+  const min = Math.floor(diff / 60000);
+  if (min < 60) return `in ${Math.max(1, min)}m`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `in ${hr}h`;
+  return `in ${Math.floor(hr / 24)}d`;
+}
+
+function SimpleRoutineComposer({ bot, accentColor }: { bot: Agent; accentColor: string }) {
+  const routines = useBotRoutineStore((s) => s.routines);
+  const [title, setTitle] = useState("");
+  const [instruction, setInstruction] = useState("");
+  const [schedule, setSchedule] = useState<SimpleSchedule>("daily");
+  const [intervalHours, setIntervalHours] = useState(24);
+  const [scheduleText, setScheduleText] = useState("");
+  const [monitor, setMonitor] = useState(false);
+  const [command, setCommand] = useState("");
+
+  const simpleRoutines = useMemo(
+    () =>
+      Object.values(routines)
+        .filter((r) => r.botId === bot.id && r.simple === true)
+        .sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
+    [routines, bot.id],
+  );
+
+  const canCreate = instruction.trim().length > 0 && (!monitor || command.trim().length > 0);
+
+  const handleCreate = () => {
+    const trimmed = instruction.trim();
+    const derivedTitle = title.trim() || trimmed.split("\n")[0].slice(0, 40);
+    createBotRoutine({
+      botId: bot.id,
+      botName: getBotDisplayName(bot),
+      title: derivedTitle,
+      instruction: trimmed,
+      // The advanced option stores the raw schedule text; 'daily' is the
+      // documented fallback frequency since real cron parsing stays in the
+      // advanced automation layer below.
+      frequency: (schedule === "advanced" ? "daily" : schedule) as BotRoutineFrequency,
+      intervalHours: schedule === "interval" ? Math.max(1, intervalHours) : undefined,
+      scheduleText: schedule === "advanced" ? scheduleText.trim() : undefined,
+      monitor: monitor ? { command: command.trim() } : undefined,
+      simple: true,
+    });
+    setTitle("");
+    setInstruction("");
+    setSchedule("daily");
+    setIntervalHours(24);
+    setScheduleText("");
+    setMonitor(false);
+    setCommand("");
+  };
+
+  return (
+    <GlassSurface className="p-5 rounded-xl space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="text-[14px] font-semibold text-[var(--text-primary)]">Simple routines</div>
+          <div className="text-[12px] text-[var(--text-tertiary)]">
+            Natural-language scheduled work for {getBotDisplayName(bot)} — no cron needed.
+          </div>
+        </div>
+        <ClockCounterClockwise size={18} style={{ color: accentColor }} />
+      </div>
+
+      <div className="space-y-2">
+        <textarea
+          value={instruction}
+          onChange={(e) => setInstruction(e.target.value)}
+          rows={3}
+          placeholder="Tell the bot what to do on each run…"
+          className="w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-2 text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:border-[var(--border-accent)] resize-none"
+        />
+        <input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Title (optional — defaults to first line)"
+          className="w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-2 text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:border-[var(--border-accent)]"
+        />
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={schedule}
+            onChange={(e) => setSchedule(e.target.value as SimpleSchedule)}
+            className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] px-2 py-2 text-[12px] text-[var(--text-primary)] focus:outline-none"
+          >
+            {SIMPLE_SCHEDULE_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+          {schedule === "interval" && (
+            <input
+              type="number"
+              min={1}
+              value={intervalHours}
+              onChange={(e) => setIntervalHours(Number(e.target.value) || 1)}
+              className="w-20 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] px-2 py-2 text-[12px] text-[var(--text-primary)] focus:outline-none"
+            />
+          )}
+          {schedule === "advanced" && (
+            <input
+              value={scheduleText}
+              onChange={(e) => setScheduleText(e.target.value)}
+              placeholder="e.g. weekdays at 9am, before standup"
+              className="flex-1 min-w-40 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] px-2 py-2 text-[12px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none"
+            />
+          )}
+          <label className="flex items-center gap-1.5 text-[12px] text-[var(--text-secondary)] cursor-pointer">
+            <input
+              type="checkbox"
+              checked={monitor}
+              onChange={(e) => setMonitor(e.target.checked)}
+              className="accent-[var(--accent)]"
+            />
+            <Pulse size={13} />
+            Monitor (run a command, report on change)
+          </label>
+          <Button
+            size="sm"
+            onClick={handleCreate}
+            disabled={!canCreate}
+            className="gap-1.5 ml-auto"
+          >
+            <Play size={13} weight="fill" />
+            Create routine
+          </Button>
+        </div>
+        {monitor && (
+          <input
+            value={command}
+            onChange={(e) => setCommand(e.target.value)}
+            placeholder="Shell command to run each cycle (local API only)"
+            className="w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-2 text-[13px] font-mono text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:border-[var(--border-accent)]"
+          />
+        )}
+      </div>
+
+      {simpleRoutines.length > 0 && (
+        <div className="space-y-1.5 pt-1 border-t border-[var(--border-subtle)]">
+          {simpleRoutines.map((routine) => (
+            <div
+              key={routine.id}
+              className="group flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-[var(--bg-hover)]"
+            >
+              <div className="min-w-0 flex-1">
+                <div className="text-[13px] text-[var(--text-primary)] truncate">
+                  {routine.title}
+                  {routine.monitor && (
+                    <span className="ml-2 text-[10px] text-[var(--text-tertiary)]">monitor</span>
+                  )}
+                </div>
+                <div className="text-[11px] text-[var(--text-tertiary)] truncate">
+                  {routineScheduleLabel(routine)}
+                  {" · "}
+                  {routine.enabled ? `next ${formatNextRun(routine.nextRunAt)}` : "paused"}
+                  {routine.lastRunAt &&
+                    ` · ran ${relativeTime(new Date(routine.lastRunAt).toISOString())}${
+                      routine.lastResult?.success === false ? " (failed)" : ""
+                    }`}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() =>
+                  routine.enabled
+                    ? disableBotRoutine(routine.botId, routine.title)
+                    : enableBotRoutine(routine.botId, routine.title)
+                }
+                className="opacity-0 group-hover:opacity-100 p-1 rounded text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
+                title={routine.enabled ? "Pause" : "Resume"}
+              >
+                {routine.enabled ? <Pause size={14} /> : <Play size={14} />}
+              </button>
+              <button
+                type="button"
+                onClick={() => deleteBotRoutine(routine.botId, routine.title)}
+                className="opacity-0 group-hover:opacity-100 p-1 rounded text-[var(--text-tertiary)] hover:text-[var(--status-danger)]"
+                title="Delete"
+              >
+                <Trash size={14} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </GlassSurface>
+  );
+}
+
 function AutomationTasksTab({
   bot,
   accentColor,
@@ -1700,14 +1939,17 @@ function AutomationTasksTab({
         onBack={onBack}
       />
       <div className="-mx-2 px-2">
-        <AutomationTasksView
-          agentId={bot.id}
-          title={`${getBotDisplayName(bot)} Automation Tasks`}
-          hideAgentSelector
-          initialTab="routine"
-          hideTitle
-          embedded
-        />
+        <SimpleRoutineComposer bot={bot} accentColor={accentColor} />
+        <div className="mt-6">
+          <AutomationTasksView
+            agentId={bot.id}
+            title={`${getBotDisplayName(bot)} Automation Tasks`}
+            hideAgentSelector
+            initialTab="routine"
+            hideTitle
+            embedded
+          />
+        </div>
       </div>
     </div>
   );

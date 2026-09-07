@@ -106,6 +106,21 @@ function checkRequiredBinaries() {
   } else {
     log(`allternit-api present at ${apiBin}`);
   }
+
+  const localEngineBin = path.join(resourcesBin, process.platform === 'win32' ? 'allternit-local-engine.exe' : 'allternit-local-engine');
+  if (!fs.existsSync(localEngineBin)) {
+    if (process.env.ALLTERNIT_ALLOW_MISSING_LOCAL_ENGINE === '1') {
+      log('WARNING: resources/bin/allternit-local-engine is missing; continuing because ALLTERNIT_ALLOW_MISSING_LOCAL_ENGINE=1.');
+      log('Model Lab telemetry will show "Unavailable" until a native CI/OS build stages this binary.');
+    } else {
+      log('ERROR: resources/bin/allternit-local-engine is missing — the packaged app would ship without the local model engine.');
+      log('Build it first via the canonical pipeline: ../../scripts/build-desktop.sh');
+      log('Cross-packs from macOS cannot produce Windows/Linux allternit-local-engine; set ALLTERNIT_ALLOW_MISSING_LOCAL_ENGINE=1 to pack anyway.');
+      process.exit(1);
+    }
+  } else {
+    log(`allternit-local-engine present at ${localEngineBin}`);
+  }
 }
 
 function loadCompanyClerkKey() {

@@ -1,7 +1,7 @@
 //! Background download task.
 
-use crate::cache::store::ModelStore;
 use crate::cache::model::CachedModel;
+use crate::cache::store::ModelStore;
 use crate::download::huggingface::{self, entry_size, file_url};
 use std::path::PathBuf;
 use tokio::fs;
@@ -73,9 +73,10 @@ async fn run_download(
             fs::create_dir_all(parent).await?;
         }
 
-        let part_path = target.with_extension(
-            format!("{}.part", target.extension().unwrap_or_default().to_string_lossy())
-        );
+        let part_path = target.with_extension(format!(
+            "{}.part",
+            target.extension().unwrap_or_default().to_string_lossy()
+        ));
 
         let existing = match fs::metadata(&part_path).await {
             Ok(meta) => meta.len(),
@@ -87,7 +88,9 @@ async fn run_download(
             debug!(%filename, "part file already complete");
             fs::rename(&part_path, &target).await?;
             downloaded_bytes += file_total;
-            store.update_progress(model_id, downloaded_bytes, total_bytes).await;
+            store
+                .update_progress(model_id, downloaded_bytes, total_bytes)
+                .await;
             continue;
         }
 
@@ -123,7 +126,9 @@ async fn run_download(
 
             // Throttle store updates to every ~1 MiB or on the last chunk.
             if chunk_count >= 1024 * 1024 || downloaded_bytes >= total_bytes {
-                store.update_progress(model_id, downloaded_bytes.min(total_bytes), total_bytes).await;
+                store
+                    .update_progress(model_id, downloaded_bytes.min(total_bytes), total_bytes)
+                    .await;
                 chunk_count = 0;
             }
         }
@@ -137,7 +142,9 @@ async fn run_download(
     }
 
     // Final accounting: clamp to total and mark ready.
-    store.update_progress(model_id, total_bytes, total_bytes).await;
+    store
+        .update_progress(model_id, total_bytes, total_bytes)
+        .await;
     store.set_ready(model_id).await;
     info!(%model_id, "model download ready");
 

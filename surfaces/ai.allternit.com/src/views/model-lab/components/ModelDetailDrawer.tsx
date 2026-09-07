@@ -10,7 +10,6 @@ import {
   DownloadSimple,
   Globe,
   CheckCircle,
-  Cube,
   ArrowsClockwise,
   Warning,
   Plugs,
@@ -22,6 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import type { HuggingFaceModel, HuggingFaceModelDetails, RuntimeRecipe, ModelAssessment, EngineStatus } from '@/lib/model-lab/api';
 import { fetchHuggingFaceModelDetails, assessModel } from '@/lib/model-lab/api';
+import { AuthorAvatar } from './AuthorAvatar';
 import { useBrowserStore } from '@/capsules/browser';
 import { useModelLabStore } from '@/lib/model-lab/store';
 import { usePendingChatModelStore } from '@/stores/pending-chat-model.store';
@@ -217,18 +217,7 @@ export function ModelDetailDrawer({
 
           <div className="p-6 flex flex-col items-center text-center gap-4">
             <div className="size-20 rounded-2xl border-2 border-[var(--border-subtle)] bg-[var(--bg-secondary)] flex items-center justify-center overflow-hidden shadow-sm">
-              {details?.avatarUrl ? (
-                <img
-                  src={details.avatarUrl}
-                  alt={author}
-                  className="size-full object-cover"
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none';
-                  }}
-                />
-              ) : (
-                <Cube size={36} weight="duotone" className="text-[var(--accent-primary)]" />
-              )}
+              <AuthorAvatar author={author} src={details?.avatarUrl} iconSize={36} />
             </div>
             <div>
               <div className="flex items-center justify-center gap-2">
