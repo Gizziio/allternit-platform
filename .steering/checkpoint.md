@@ -5,6 +5,55 @@
 > Phase 3 cross-machine fabric). Both sections are final — neither session has
 > open work in this file.
 
+## session/settings-fix — settings event-storm stack overflow crash fix
+
+### Goal
+Fix the renderer-killing `RangeError: Maximum call stack size exceeded` in the
+Electron desktop app, rooted in `useSettingsState.ts`: any runtime write of a
+settings key that a mounted component reads via `useSettingsValue` looped
+writer → `allternit:setting-changed` → reread → writer synchronously.
+Worktree: `allternit-session-settingsfix`, branch `session/settings-fix` from
+`origin/main`. NO git commit/push (orchestrator instruction).
+
+### Just did (2026-09-07)
+- `surfaces/ai.allternit.com/src/hooks/useSettingsState.ts`:
+  - `setPersistedValue` updater: `Object.is(resolved, prev)` no-op guard —
+    unchanged values skip `setItem` + `dispatchEvent` (the recursion root).
+  - `useSettingsValue.reread()`: `lastAppliedRef` guard — skip the writer call
+    when the freshly parsed value is `Object.is`-equal to the last applied one
+    (defense in depth).
+- NEW `src/hooks/useSettingsState.test.tsx` (3 tests): same-value write from
+  outside React batching dispatches ZERO events (unfixed code stormed ~2063);
+  real changes propagate (≤2 events, correct value + storage); manual
+  localStorage write + event is picked up. Test installs a working in-memory
+  localStorage because `vitest.setup.ts` globally stubs it to a no-op.
+
+### Verification
+- Targeted: 3/3 pass with fix; 2 fail against unfixed source (2063-event
+  storm) — regression signal confirmed.
+- `npx tsc --noEmit`: clean, zero errors.
+- Full `npx vitest run`: 1393 passed / 4 failed / 14 skipped. Failures = the
+  known fabric-session-kind (1) + bot-allternit-bus (3, pre-existing
+  environmental: immer 11.1.4 from a cross-worktree pnpm resolution needs
+  `enableMapSet()`; confirmed failing with my changes stashed). No worse than
+  baseline, and none in touched files.
+
+### Next
+- Report results to orchestrator; no commit/push per instruction. Orchestrator
+  handles merge + ledger attestation.
+
+### Open questions / notes
+- All current `useSettingsValue`/`useSettingsState` callers use primitive
+  values (booleans/strings/enums), fully covered by the `Object.is` guards.
+  Object-valued keys would still re-dispatch per write (fresh `JSON.parse`
+  references never satisfy `Object.is`); if object settings are ever added,
+  consider a `JSON.stringify` content comparison in the no-op guard.
+- The synchronous overflow only manifests outside React's `act` batching
+  (React's eager updater evaluation); inside `act` the same write stormed
+  ~2000 events without overflowing, which is why the test asserts event
+  counts rather than expecting a RangeError.
+
+
 ## session/befe7aa3 — CLI Bot Mode parity (Phases B1–B5 of docs/GIZZI_BOT_MODE_SPEC.md)
 
 ### Goal
