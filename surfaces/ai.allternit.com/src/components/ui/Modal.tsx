@@ -85,7 +85,7 @@ export function Modal({
         style={{
           position: 'absolute',
           inset: 0,
-          background: 'var(--shell-overlay-backdrop, rgba(42,31,22,0.18))',
+          background: 'var(--shell-overlay-backdrop, rgba(0,0,0,0.18))',
           backdropFilter: 'blur(4px)',
         }}
       />

@@ -191,7 +191,7 @@ export function AddCloudCredentialForm({ isOpen, onClose, onSubmit }: AddCloudCr
         role="dialog"
         aria-modal="true"
         aria-labelledby="connect-cloud-account-title"
-        className="w-full max-w-[520px] max-h-[90vh] bg-[var(--surface-canvas)] border border-solid border-[var(--border-subtle)] rounded-2xl overflow-hidden shadow-[0_24px_80px_var(--shell-overlay-backdrop)] flex flex-col outline-none"
+        className="w-full max-w-[520px] max-h-[90vh] bg-[var(--bg-elevated)] border border-solid border-[var(--border-subtle)] rounded-2xl overflow-hidden shadow-[0_24px_80px_var(--shell-overlay-backdrop)] flex flex-col outline-none"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Escape') handleClose(); }}
       >

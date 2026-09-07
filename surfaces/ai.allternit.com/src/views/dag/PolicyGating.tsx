@@ -463,7 +463,7 @@ function ApprovalDetailModal({
     >
       <div 
         role="button" tabIndex={0}
-        className="w-full max-w-[600px] max-h-[90vh] bg-[var(--surface-panel)] rounded-xl border border-solid border-[var(--ui-border-muted)] overflow-hidden flex flex-col shadow-2xl"
+        className="w-full max-w-[600px] max-h-[90vh] bg-[var(--bg-elevated)] rounded-xl border border-solid border-[var(--ui-border-muted)] overflow-hidden flex flex-col shadow-2xl"
         onClick={e => e.stopPropagation()}
         onKeyDown={e => e.stopPropagation()}
       >

@@ -119,7 +119,7 @@ export const ArtifactViewer: React.FC<ArtifactViewerProps> = ({
   };
 
   const containerStyle: React.CSSProperties = {
-    background: 'var(--surface-panel)',
+    background: 'var(--bg-elevated)',
     borderRadius: '16px',
     width: '100%',
     maxWidth: '1200px',
