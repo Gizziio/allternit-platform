@@ -13,12 +13,6 @@ declare module '*.module.scss' {
   export default classes;
 }
 
-// xterm CSS imports
-declare module '@xterm/xterm/css/xterm.css' {
-  const content: string;
-  export default content;
-}
-
 // styled-jsx support for <style jsx> elements
 declare module 'react' {
   interface StyleHTMLAttributes<T> extends HTMLAttributes<T> {
