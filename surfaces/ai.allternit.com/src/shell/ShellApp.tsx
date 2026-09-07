@@ -56,6 +56,7 @@ import { useIsMobile } from '../hooks/useMediaQuery';
 import { usePermissionGuide } from '../lib/usePermissionGuide';
 
 import { TooltipProvider } from '../components/ui/tooltip';
+import { ToastProvider } from '@/components/ui/toast-provider';
 import { VoiceProvider } from '../providers/voice-provider';
 import { VoicePresence } from '../components/ai-elements/voice-presence';
 import { AgentActivityPanel } from '../views/agent-activity/AgentActivityPanel';
@@ -1005,8 +1006,10 @@ export function ShellApp(): React.ReactNode {
     <AuthGate>
       <ModeProvider>
         <GlobalDropzoneProvider>
-          <OnboardingGate />
-          <ShellAppInner />
+          <ToastProvider>
+            <OnboardingGate />
+            <ShellAppInner />
+          </ToastProvider>
         </GlobalDropzoneProvider>
       </ModeProvider>
     </AuthGate>
