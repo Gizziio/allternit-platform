@@ -37,6 +37,7 @@ export const MODE_TABS = [
 export const SURFACE_MODES: Record<AgentModeSurface, string[]> = {
   chat: ['swarms', 'research', 'website', 'docs', 'data', 'slides', 'image', 'video'],
   cowork: ['swarms', 'research', 'website', 'docs', 'data', 'slides', 'image', 'video'],
+  bot: ['swarms', 'research', 'website', 'docs', 'data', 'slides', 'image', 'video'],
   code: ['swarms', 'website', 'docs'],
   browser: ['research', 'website', 'docs', 'data'],
   design: ['website', 'slides', 'image', 'video'],

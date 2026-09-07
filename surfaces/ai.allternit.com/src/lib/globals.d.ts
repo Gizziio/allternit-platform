@@ -275,7 +275,8 @@ declare global {
     'allternit:close-settings': CustomEvent;
     'allternit:open-labs': CustomEvent;
     'allternit:open-view': CustomEvent<{ viewType: string; allowNew?: boolean; context?: unknown }>;
-    'allternit:switch-mode': CustomEvent<{ mode: 'chat' | 'cowork' | 'code' | 'design' | 'browser' }>;
+    'allternit:switch-mode': CustomEvent<{ mode: 'chat' | 'cowork' | 'bot' | 'code' | 'design' | 'browser' }>;
+    'allternit:open-bot-picker': CustomEvent;
   }
 }
 

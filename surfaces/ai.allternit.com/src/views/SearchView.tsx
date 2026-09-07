@@ -10,6 +10,7 @@ import {
   X,
   ChatTeardropText,
   UsersThree,
+  Robot,
   TerminalWindow,
 } from '@phosphor-icons/react';
 import { GlassSurface } from '@/design/GlassSurface';
@@ -26,7 +27,7 @@ interface SearchResult {
   subtitle: string;
   category: 'History' | 'Files' | 'Code' | 'Documents';
   timestamp: string;
-  surface: 'chat' | 'cowork' | 'code';
+  surface: 'chat' | 'cowork' | 'bot' | 'code';
 }
 
 function relativeLabel(dateStr: string): string {
@@ -42,18 +43,21 @@ function relativeLabel(dateStr: string): string {
 const SURFACE_ICON: Record<string, React.ElementType> = {
   chat:   ChatTeardropText,
   cowork: UsersThree,
+  bot:    Robot,
   code:   TerminalWindow,
 };
 
 const SURFACE_COLOR: Record<string, string> = {
   chat:   '#D97757',
   cowork: '#A78BFA',
+  bot:    '#2DD4BF',
   code:   '#79C47C',
 };
 
 const SURFACE_TO_VIEW: Record<string, string> = {
   chat:   'chat',
   cowork: 'workspace',
+  bot:    'bot-launchpad',
   code:   'code',
 };
 
@@ -65,9 +69,10 @@ const CATEGORY_ICONS: Record<FilterType, React.ElementType> = {
   Documents: BookOpen,
 };
 
-function isAgentSession(sessionId: string, surface: 'chat' | 'cowork' | 'code'): boolean {
+function isAgentSession(sessionId: string, surface: 'chat' | 'cowork' | 'bot' | 'code'): boolean {
   let session;
-  if (surface === 'chat') {
+  if (surface === 'chat' || surface === 'bot') {
+    // Bot canonical chats live in the chat session store.
     session = useChatSessionStore.getState().sessions.find((s) => s.id === sessionId);
   } else if (surface === 'code') {
     session = useCodeSessionStore.getState().sessions.find((s) => s.id === sessionId);
@@ -77,9 +82,9 @@ function isAgentSession(sessionId: string, surface: 'chat' | 'cowork' | 'code'):
   return session?.metadata?.sessionMode === 'agent';
 }
 
-function navigateToSession(sessionId: string, surface: 'chat' | 'cowork' | 'code') {
+function navigateToSession(sessionId: string, surface: 'chat' | 'cowork' | 'bot' | 'code') {
   // Set the session as active in the right store
-  if (surface === 'chat') {
+  if (surface === 'chat' || surface === 'bot') {
     useChatSessionStore.getState().setActiveSession(sessionId);
   } else if (surface === 'code') {
     useCodeSessionStore.getState().setActiveSession(sessionId);
@@ -90,12 +95,14 @@ function navigateToSession(sessionId: string, surface: 'chat' | 'cowork' | 'code
   // Navigate via the global event bus (picked up by ShellApp)
   const defaultView = SURFACE_TO_VIEW[surface] ?? 'chat';
   const isAgent = isAgentSession(sessionId, surface);
-  const viewType = isAgent ? `${surface}-agent-session` : defaultView;
+  const viewType = surface === 'bot'
+    ? 'bot-chat-session'
+    : isAgent ? `${surface}-agent-session` : defaultView;
   window.dispatchEvent(
     new CustomEvent('allternit:open-view', {
       detail: {
         viewType,
-        context: isAgent ? { sessionId, originView: defaultView } : undefined,
+        context: isAgent ? { sessionId, originView: defaultView } : surface === 'bot' ? { sessionId } : undefined,
       },
     }),
   );
