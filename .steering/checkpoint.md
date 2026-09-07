@@ -1,6 +1,6 @@
 # Steering checkpoint
 
-## STATUS: IN PROGRESS — dashboard known-deltas fix (all 4), branch session/7631feda-deltas, worktree allternit-session-7631feda-d3, base main@ad1ca8058.
+## STATUS: DELTAS 1-3 COMMITTED (977f8b1bd) + CHANGELOG Unreleased updated. DELTA 4 FIRST FIX FAILED LIVE VERIFICATION: agent-5's log-update.ts sweep never fires in the real repro (0 CSI K in /tmp/gizzidash3.log). Root cause: agent-5's minimal repros missed the Tab-focus trap — the dashboard dispatch input needs `tmux send-keys Tab` before keystrokes land. With focus, type 70 chars + 70 BSpaces → settled frame shows stale fragments interleaved with ▌ every ~4-5 cells; ghost is re-materialized every frame → the APP frame buffer is corrupted (suspect render-node-to-output.ts retained-mode blit fast-paths restoring stale prevScreen content / wrong blit offset; input sits in full-width bordered Box). Fresh subagent agent-6 (task agent-sahqmxuw) root-causing with this evidence. Correct gate is `cmd/gizzi-code` `bash script/ci-smoke-test.sh` (root `bun run test` = vitest workspace, unrelated). typecheck green; slash-menu 9/9; shrink-tail test 4/4. Worktree allternit-session-7631feda-d3, base main@ad1ca8058.
 
 ## Goal
 Fix the 4 known deltas Joe asked for:
