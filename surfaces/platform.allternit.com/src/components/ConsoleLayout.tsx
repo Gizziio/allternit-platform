@@ -58,6 +58,7 @@ const navGroups: NavGroup[] = [
       { to: "/organizations", label: "Organizations", icon: TeamWorkIcon },
       { to: "/compute", label: "Compute", icon: CpuIcon },
       { to: "/devices", label: "Devices", icon: DeviceAccessIcon },
+      { to: "/fabric", label: "Fabric", icon: CpuIcon },
       { to: "/runs", label: "Runs", icon: RocketIcon },
       { to: "/schedules", label: "Schedules", icon: Calendar02Icon },
       { to: "/approvals", label: "Approvals", icon: ShieldCheckIcon },
