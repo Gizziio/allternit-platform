@@ -812,10 +812,10 @@ export function PlatformSignIn(props: {
         appearance={clerkAppearance}
         forceRedirectUrl={redirectUrl}
         fallbackRedirectUrl={redirectUrl}
-        routing={routing}
-        {...(routing === "path" ? { path: SIGN_IN_PATH } : {})}
+        {...(routing === "path"
+          ? { routing, path: SIGN_IN_PATH, signUpUrl: props.signUpUrl || SIGN_UP_PATH }
+          : { routing })}
         signUpForceRedirectUrl={props.signUpForceRedirectUrl || redirectUrl}
-        signUpUrl={routing === "path" ? (props.signUpUrl || SIGN_UP_PATH) : undefined}
       />
     </>
   )

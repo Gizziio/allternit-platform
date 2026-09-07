@@ -123,7 +123,7 @@ function NativeSessionPicker({
         surface,
         cwd: item.cwd,
       });
-      const backend = await nativeAgentApi.getSession(result.session.id);
+      const backend = await nativeAgentApi.sessions.getSession(result.session.id);
       const store = storeFor(surface);
       store.getState().adoptSession(backend);
       await store.getState().fetchMessages(result.session.id);

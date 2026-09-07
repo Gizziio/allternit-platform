@@ -249,12 +249,14 @@ export function FabricBotDrive({
     );
   }
 
-  const derived = bots.length > 0
+  const derived: FabricBot[] = bots.length > 0
     ? bots
-    : Array.from(new Set(sessions.map((entry) => entry.session.agentID).filter(Boolean) as string[])).map((id) => ({
-        id,
-        name: id,
-      }));
+    : Array.from(new Set(sessions.map((entry) => entry.session.agentID).filter(Boolean) as string[])).map(
+        (id): FabricBot => ({
+          id,
+          name: id,
+        })
+      );
 
   return (
     <div className="flex flex-col gap-1">
