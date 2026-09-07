@@ -131,11 +131,11 @@
   --border: 30 30% 75%;
   --background: 30 50% 97%;
 
-  --glass-bg: rgba(253, 248, 243, 0.75);
-  --glass-bg-base: rgba(253, 248, 243, 0.75);
-  --glass-bg-thick: rgba(253, 248, 243, 0.95);
-  --glass-bg-elevated: rgba(253, 248, 243, 0.85);
-  --glass-bg-hover: rgba(245, 237, 227, 0.9);
+  --glass-bg: rgba(255, 255, 255, 0.75);
+  --glass-bg-base: rgba(255, 255, 255, 0.75);
+  --glass-bg-thick: rgba(255, 255, 255, 0.95);
+  --glass-bg-elevated: rgba(255, 255, 255, 0.85);
+  --glass-bg-hover: rgba(255, 255, 255, 0.9);
   --glass-border: rgba(154, 118, 88, 0.15);
 
   --accent-chat: #B08D6E;
@@ -152,7 +152,7 @@
   --surface-panel-muted: var(--bg-tertiary);
   --surface-floating: var(--glass-bg-thick);
   --surface-floating-muted: var(--glass-bg-elevated);
-  --surface-overlay: rgba(253, 248, 243, 0.88);
+  --surface-overlay: rgba(255, 255, 255, 0.88);
   --surface-hover: var(--bg-hover);
   --surface-active: var(--bg-active);
 
@@ -186,7 +186,7 @@
   --shell-control-muted-fg: var(--ui-text-secondary);
   --shell-control-active-fg: var(--ui-text-inverse);
   --shell-overlay-backdrop: color-mix(in srgb, var(--accent-primary) 18%, rgba(18, 20, 24, 0.12));
-  --shell-dialog-bg: linear-gradient(180deg, color-mix(in srgb, var(--surface-floating) 96%, var(--surface-panel)) 0%, color-mix(in srgb, var(--surface-panel) 94%, var(--surface-canvas)) 100%);
+  --shell-dialog-bg: var(--bg-elevated);
   --shell-dialog-border: color-mix(in srgb, var(--accent-primary) 22%, var(--ui-border-default));
   --shell-dialog-title: var(--shell-item-active-fg);
   --shell-dialog-text: var(--ui-text-secondary);
@@ -278,6 +278,24 @@
   --view-settings-bg:     var(--shell-view-bg);
   --view-cowork-bg:       var(--shell-view-bg);
   --view-bot-bg:          var(--shell-view-bg);
+}
+
+/* Compact density — set by Settings → Appearance → Compact density via
+   <html data-density="compact">. Tightens the spacing scale one notch; the
+   legacy aliases inside :root pick this up automatically. */
+[data-density='compact'] {
+  --space-1: 2px;
+  --space-2: 6px;
+  --space-3: 8px;
+  --space-4: 12px;
+  --space-5: 14px;
+  --space-6: 16px;
+  --space-8: 24px;
+  --space-10: 32px;
+  --space-12: 40px;
+  --space-16: 48px;
+  --space-20: 64px;
+  --space-24: 72px;
 }
 
 /* ==========================================================================

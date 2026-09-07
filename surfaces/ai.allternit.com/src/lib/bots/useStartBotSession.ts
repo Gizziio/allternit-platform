@@ -16,9 +16,11 @@ import { isBot } from './bot-profile';
 import {
   computeCapabilityEpoch,
   capabilityEpochLine,
+  hasEpochDrifted,
   type CapabilityRosterEntry,
 } from './bot-capability-epoch';
-import type { Agent } from '../agents/agent.types';
+import { createAgent, getAgent } from '../agents/agent.service';
+import type { Agent, CreateAgentInput } from '../agents/agent.types';
 
 export interface UseStartBotSessionReturn {
   startSession: (agent: Agent, options?: { modeId?: string; modelOverride?: string }) => Promise<string | null>;
@@ -129,7 +131,7 @@ function resolveRuntimeModelId(agent: Agent, modelOverride?: string): string | u
       // to the bot's persona/skills reach the reused session. The rest of
       // the session content (messages, metadata) is left untouched.
       const storedEpoch = existingSession.metadata?.capabilityEpoch;
-      if (storedEpoch !== capabilityEpoch) {
+      if (hasEpochDrifted(storedEpoch, capabilityEpoch)) {
         const basePrompt = agent.systemPrompt ?? '';
         const identityPrompt = buildIdentityPrompt(displayName, capabilityEpoch);
         const notice =
@@ -197,6 +199,41 @@ function resolveRuntimeModelId(agent: Agent, modelOverride?: string): string | u
     const basePrompt = agent.systemPrompt ?? '';
     const identityPrompt = buildIdentityPrompt(displayName, capabilityEpoch);
     const systemPrompt = [identityPrompt, basePrompt, vmPrompt, notice].filter(Boolean).join('\n\n');
+
+    // Best-effort: make sure the API's agents table knows about this bot
+    // before createSession runs the surface gate. Bots created while the API
+    // was down live only in the localStorage fallback registry, and the gate
+    // (403 agent_not_allowed_on_surface) rejects sessions for agents the API
+    // has never seen. getAgent swallows 404s and returns an "Unknown Agent"
+    // placeholder, which is our not-registered signal. This must never block
+    // the offline path — any failure falls through to the local temp-session
+    // fallback in createSession.
+    try {
+      const registered = await getAgent(agent.id);
+      const isPlaceholder =
+        registered.name === 'Unknown Agent' && !registered.systemPrompt;
+      if (isPlaceholder) {
+        const input: CreateAgentInput = {
+          name: agent.name,
+          description: agent.description ?? '',
+          type: agent.type,
+          model: agent.model,
+          provider: agent.provider,
+          systemPrompt: agent.systemPrompt,
+          avatar: agent.avatar,
+          isBot: true,
+          botProfile: agent.botProfile,
+          allowedSurfaces: ['chat'],
+          tags: agent.tags,
+          category: agent.category,
+          trustTier: agent.trustTier,
+        };
+        await createAgent(input);
+      }
+    } catch {
+      // Offline or otherwise unavailable — proceed; createSession applies its
+      // own local fallback.
+    }
 
     const sessionId = await store.createSession({
       name: displayName,
