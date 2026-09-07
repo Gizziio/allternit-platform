@@ -208,6 +208,14 @@ export interface UsageSummary {
   /** Optional reporting window bounds (ISO timestamps). */
   periodStart?: string;
   periodEnd?: string;
+  /** Subscription plan identifier (e.g. "plus"), when the backend reports it. */
+  plan?: string;
+  /** Human-readable plan name (e.g. "Plus"), when the backend reports it. */
+  planLabel?: string;
+  /** Remaining plan credits for the current period; null when unlimited/unknown. */
+  creditsRemaining?: number | null;
+  /** Monthly credit limit; null or absent when unlimited/unknown. */
+  monthlyLimit?: number | null;
 }
 
 /**
@@ -232,6 +240,14 @@ function normalizeUsageSummary(raw: unknown): UsageSummary {
   const cents = toNumber(record.total_cents);
   const cost = toNumber(record.cost ?? record.cost_usd ?? record.total_cost) || cents / 100;
 
+  const toOptionalNumber = (value: unknown): number | null | undefined => {
+    if (value == null) return value === null ? null : undefined;
+    const n = typeof value === 'string' ? Number(value) : value;
+    return typeof n === 'number' && Number.isFinite(n) ? n : undefined;
+  };
+  const toOptionalString = (value: unknown): string | undefined =>
+    typeof value === 'string' && value ? value : undefined;
+
   return {
     requests: toNumber(record.requests ?? record.total_requests ?? record.request_count),
     tokens: { input, output, total },
@@ -239,6 +255,10 @@ function normalizeUsageSummary(raw: unknown): UsageSummary {
     currency: typeof record.currency === 'string' && record.currency ? record.currency : 'USD',
     periodStart: typeof record.period_start === 'string' ? record.period_start : undefined,
     periodEnd: typeof record.period_end === 'string' ? record.period_end : undefined,
+    plan: toOptionalString(record.plan ?? record.plan_id ?? record.plan_tier),
+    planLabel: toOptionalString(record.planLabel ?? record.plan_label ?? record.label),
+    creditsRemaining: toOptionalNumber(record.creditsRemaining ?? record.credits_remaining ?? record.credits),
+    monthlyLimit: toOptionalNumber(record.monthlyLimit ?? record.monthly_limit ?? record.monthlyLimitUsd),
   };
 }
 
