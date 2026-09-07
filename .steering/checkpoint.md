@@ -1,44 +1,34 @@
 # Steering checkpoint
 
+## STATUS: IN PROGRESS — dashboard known-deltas fix (all 4), branch session/7631feda-deltas, worktree allternit-session-7631feda-d3, base main@ad1ca8058.
+
 ## Goal
-Port three Grok CLI features into gizzi-code (worktree `allternit-session-7631feda`, branch `session/7631feda-bbb5-492f-97cf-55f243eda42d`):
-1. `/session-info` presentation — DONE (b8675f9ce)
-2. Agent dashboard `/dashboard` — full Grok parity, in-process first — CODE COMPLETE, functionally verified in tmux TUI (b8675f9ce, 07865f0d0, c2f807680, 9b307db69)
-3. `/settings` polish — DONE (b8675f9ce)
+Fix the 4 known deltas Joe asked for:
+1. Needs-input 1–9 option buttons in the dashboard (was: answers only via main-session prompt)
+2. Static working glyph → animated spinner
+3. Main leader row static 'idle' → live state
+4. Stale-cell ghosts on shrinking lines (vendored ink, pre-existing)
 
-Plan file: ~/.kimi-code/sessions/wd_joe_db5f68cf8615/session_7631feda-bbb5-492f-97cf-55f243eda42d/agents/main/plans/icon-kate-bishop-nightning-wing.md (name approximate — search plans/ dir if needed)
+## Delta 1 — needs-input buttons (IMPLEMENTING, not yet edited)
+Root causes found:
+- `topLevelSession.ts` canUseTool wrap: `try { return originalCanUseTool(...) } finally { awaitingInput.delete(taskId) }` — the finally runs when the PROMISE IS RETURNED, not settled, so `awaitingInput` (needs-input detection) is broken/latent too. Make promise-aware: wrap with `Promise.resolve(result).finally(() => awaitingInput.delete(taskId))`.
+- Confirm queue items carry no task attribution. Plan: in the SAME wrap, stamp `ctx.options.dashboardTaskId = taskId` (3rd arg of canUseTool is toolUseContext; the same object reference flows to confirm creation). Then in `hooks/toolPermission/PermissionContext.ts` `pushToQueue(item)`: stamp `item.dashboardTaskId = toolUseContext?.options?.dashboardTaskId` before `queueOps?.push(item)` (spread if needed). Add `dashboardTaskId?: string` to `ToolUseConfirm` type (components/permissions/PermissionRequest.tsx ~line 104) and to `ToolUseContext.options` (Tool.ts ~line 159 — type-checked file, optional field OK).
+- DashboardScreen: new props `permissionQueue` + `onPermissionDone(toolUseID)` (REPL passes toolUseConfirmQueue + a filter-removal callback). In renderRow's peek section, when row.state === 'needs-input', find `permissionQueue.find(i => (i.dashboardTaskId ?? 'main') === row.id)` and render `<PermissionRequest toolUseConfirm={item} toolUseContext={item.toolUseContext} onDone={() => onPermissionDone(item.toolUseID)} onReject={() => {}} verbose={true} workerBadge={item.workerBadge} />` replacing the old "awaiting input — answer the prompt in the main session" Text. Digits 1-9 then work via the real per-tool option components. REPL's own PermissionRequest does NOT render while screen==='dashboard' (dashboard branch returns early — verified REPL.tsx ~4899).
 
-## Branch state (all pushed to origin)
-- b8675f9ce Phases 1–3: /session-info (aliases info/session-info, auth+turns rows, copy c/y), /settings effort row, dashboard shell + /dashboard command + ctrl+\ binding
-- 07865f0d0 Phase 4: dashboard/{types,topLevelSession,InProcessSource}.ts, functional DashboardScreen (dispatch/stop/pin), REPL wiring (buildDashboardQueryParams + dashboardSource)
-- c2f807680 Phase 5: full UI — peek/reply, needs-input via canUseTool wrapper, search a:/s:/#, Ctrl+G grouping, idle folding + N-more, v details, ? cheatsheet, rename/pin/reorder (dashboard.pinned + dashboard.reorder in GlobalConfig), Esc ladder
-- 9b307db69 CRITICAL FIX: sessionStorage.ts re-exported getProjectDir from projectDir.js without local binding → every call site was a latent ReferenceError when getSessionProjectDir() nullish; dashboard dispatch hit it seconds after TUI start. Added `import { getProjectDir } from './projectDir.js'`. Also: DashboardScreen padLine + opaque boxes (cosmetic, see known delta). CHANGELOG.md Unreleased section written.
+## Delta 2 — spinner (NOT yet edited)
+In DashboardScreen.tsx: module const `SPIN_FRAMES = ['⠋','⠙','⠹','⠸','⠼','⠴','⠦','⠧','⠇','⠏']`; `const [spinFrame, setSpinFrame] = React.useState(0)`; effect: `const hasLive = allRows.some(r => r.state === 'working'); useEffect(() => { if (!hasLive) return; const t = setInterval(() => setSpinFrame(f => (f+1) % SPIN_FRAMES.length), 120); return () => clearInterval(t); }, [hasLive]);` In renderRow: working glyph = SPIN_FRAMES[spinFrame] (needs-input/failed keep ●, idle/inactive keep ○).
 
-## Verification status
-- `bun run typecheck` green after P4 and P5 (before the 9b307db69 fix; that fix is one import in @ts-nocheck file + JSX props — rerun typecheck to be safe)
-- `bun run test` (ci-smoke-test.sh): 1270 pass / 0 fail / 42 skip
-- tmux TUI smoke (bun run dev in tmux session gizzidash): /dashboard opens; header+leader row render; dispatch spawns session row; query runs (23 tok progress shown); finalize → 'Done'; Enter opens peek (model · permission · state, last response, reply box); reply accepted; p pins (⌖); / search filters; Esc ladder works; exit to prompt works. Debug instrumentation removed after use.
-- Dev-env caveat: TUI runs "Not logged in" with kimi-cli brain — model returns getModelBetas error text but the full pipeline works; pre-existing env issue, not our code.
+## Delta 3 — main row live state (NOT yet edited)
+REPL.tsx getMainRow (~line 2770, inside useMemo deps [store, setAppState, buildDashboardQueryParams]): closure would capture STALE isLoading/toolUseConfirmQueue. Fix with refs: add `const toolUseConfirmQueueRef = React.useRef(toolUseConfirmQueue); toolUseConfirmQueueRef.current = toolUseConfirmQueue;` and same for isLoading (`isLoadingRef`). isLoading = isQueryActive || isExternalLoading (REPL.tsx:1081). Then getMainRow reads refs: `state: permissionPending ? 'needs-input' : loading ? 'working' : 'idle'`, `activityLine` matching, add `model: mainLoopModel?.alias ?? mainLoopModel?.fullName`, `permissionMode: store.getState().toolPermissionContext?.mode`. NOTE: permissionPending for main row = any queue item WITHOUT dashboardTaskId.
 
-## Known cosmetic delta (document in ledger)
-- Stale-cell ghosts: when a rendered line shrinks between frames, old cells beyond the new line end linger in the terminal grid. Root cause: ink emit layer `log-update.ts:106` trimEnd()s every line, so trailing-space clearing (padLine) and Box `opaque` fill (plain spaces) never reach the grid; backgroundColor fill also didn't cover (width/emit). NOT dashboard-specific — any shrinking line in this ink. Options later: renderer-level erase-to-EOL for shrunk rows, or accept. Do NOT keep chasing this in this session.
-- tmux capture-pane shows mid-frame/stale states; trust the tee'd stdout log (/tmp/gizzidash.log) over capture-pane for "what did the app render".
+## Delta 4 — ink ghosts (DELEGATED to background coder subagent agent-5, task agent-lhsk7dl5)
+Findings handed to it: diff loop log-update.ts ~309 (removed-cell branch writes space correctly; line ~340 skips empty-next/absent-prev), back buffer cleared by resetScreen (screen.ts ~502) but render-node-to-output.ts uses retained-mode blit fast-paths (output.blit ~471, nodeCache, opaque boxes, damage rects) painting into reused buffer — unpainted regions keep stale cells so diff sees "no change". Instruct: fix at correct layer, smallest change, NO blanket per-frame clear (perf regressions documented), run ink-layer tests + typecheck, don't touch dashboard/screens/commands. Result pending — check TaskList/notification; if lost, resume agent-5.
 
-## Gotchas (cumulative)
-- Vendored ink Event has NO preventDefault — use event.stopImmediatePropagation().
-- useAppState REQUIRES a selector: useAppState(s => s.tasks) — bare useAppState() crashes (TUI Render Error, process exits).
-- useTerminalSize destructure is `{ rows: termRows, columns }` — root Box must use termRows (a bare `rows` ReferenceError also kills the TUI).
-- Single-char Dashboard chords (q/x/p/r) fire on any keypress — gate dashboard:exit with isActive while inner inputs focused (browsing = focus==='list' && no peek/search/details/cheatsheet).
-- ctrl+letter arrives as key.ctrl && input==='<letter>'; plain '/' is more reliable than Ctrl+/ in terminals.
-- Vendored useInput uses useEventCallback (fresh closures, no stale-closure bugs).
-- TUI crashes (render errors) print "TUI Render Error" to stdout and EXIT — check the tee log, not the pane.
-- Synchronous throws inside dispatch paths get swallowed silently by the input pipeline (no log, no crash) — instrument with appendFileSync to /tmp when debugging handler issues.
+## Verification plan (after all deltas)
+- `bun run typecheck` in cmd/gizzi-code (green baseline before edits: SDK dist rebuilt by ensure-sdk-dist).
+- `bun run test` (ci-smoke) — was 1315 pass/0 fail on d2; expect same+.
+- tmux TUI: tmux new-session -d -s gizzid3 -x 220 -y 55 -c <d3>/cmd/gizzi-code 'bun run dev 2>&1 | tee /tmp/gizzidash3.log'; /dashboard (type slowly, menu MRU may highlight /dash — press Up first or use exact); Tab → dispatch 'Reply with exactly: hello'; verify spinner animates (two captures differ); verify main row state changes while dispatch running; force a permission prompt if possible to see inline PermissionRequest (dev env is "Not logged in" — may not prompt; if not, verify via unit path or accept code-review-level verification); line-shrink ghost check (type long text in input, delete, look for ghosts).
+- pnpm install was already run at d3 root (workspace link ok).
 
-## Next (post-compaction resume)
-1. Rerun `bun run typecheck` in cmd/gizzi-code for 9b307db69 (expected green).
-2. Optional quick tmux re-verify of the opaque/padLine render (session gizzidash workflow: tmux new-session -d -s gizzidash -x 220 -y 55 -c <worktree>/cmd/gizzi-code 'bun run dev 2>&1 | tee /tmp/gizzidash.log'; send-keys /dashboard etc.).
-3. Repo ritual wrap-up: agent-ledger/summaries/2026-09-06-HHMM-7631feda-grok-dashboard.md + LEDGER.md entry — only AFTER merge to main per AGENTS.md; merge first, then worktree cleanup (git worktree remove, branch -d), restore original branch.
-4. Joe reviews the branch; merge via GitHub PR or local merge in main checkout with STEER_GUARD_OFF=1.
-
-## Open questions for Joe
-- Merge now or keep the branch for review? Ledger attestation happens post-merge per ritual.
+## Merge/cleanup ritual after green
+Commit on session/7631feda-deltas → push → STEER_GUARD_OFF=1 git pull --ff-only + merge in main checkout (shared; guard escape) → push main → ledger append (follow-up section in summaries/2026-09-06-2337-7631feda-kimi-grok-dashboard.md + LEDGER.md entry) → worktree remove + branch -D local/remote → rm /tmp/gizzidash3.log → verify clean.
