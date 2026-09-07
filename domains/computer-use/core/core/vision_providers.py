@@ -46,7 +46,7 @@ class VisionConfigError(VisionProviderError):
 class ProviderType(Enum):
     """Supported vision provider types."""
     UITARS = "uitars"       # UI-TARS skill via Allternit skills HTTP API (best for GUI grounding)
-    ALLTERNIT = "allternit" # Allternit gateway (OpenAI-compat) — primary path for all OAuth users
+    ALLTERNIT = "allternit" # Platform Gizzi brain (`providerID/modelID` session), same as Home/Code
     SUBPROCESS = "subprocess" # CLI brain subprocess: claude, codex, gemini CLI, or custom command
     OPENAI = "openai"       # Direct OpenAI API key (dev mode)
     ANTHROPIC = "anthropic" # Direct Anthropic API key (dev mode)
@@ -860,6 +860,87 @@ Respond with valid JSON only:
 }}"""
 
 
+ACTION_PLAN_JSON_SCHEMA: Dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "reasoning": {"type": "string"},
+        "plan_steps": {"type": "array", "items": {"type": "string"}},
+        "immediate_action": {
+            "type": "object",
+            "properties": {
+                "type": {"type": "string"},
+                "target": {"type": "string"},
+                "reason": {"type": "string"},
+                "coordinates": {"type": "array", "items": {"type": "number"}},
+                "text": {"type": "string"},
+            },
+            "required": ["type", "target"],
+        },
+        "confidence": {"type": "number"},
+        "requires_approval": {"type": "boolean"},
+        "risk_level": {"type": "string"},
+        "done": {"type": "boolean"},
+    },
+    "required": ["immediate_action", "done"],
+}
+
+
+def gizzi_runtime_base(url: str) -> str:
+    """Normalize a Gizzi origin. Session routes live at `{origin}/v1/session`."""
+    raw = (url or "").strip().rstrip("/")
+    if raw.endswith("/v1"):
+        raw = raw[:-3]
+    return raw or "http://127.0.0.1:4096"
+
+
+def parse_platform_model(value: str) -> Tuple[str, str]:
+    """Split the picker id `providerID/modelID` used by every Allternit surface."""
+    text = (value or "").strip()
+    if "/" not in text:
+        raise VisionConfigError(
+            f"Platform brain must be provider/model (got {value!r}). "
+            "Pick a runtime in the same brain picker Home and Code use."
+        )
+    provider_id, model_id = text.split("/", 1)
+    if not provider_id or not model_id:
+        raise VisionConfigError(f"Invalid platform brain {value!r}")
+    return provider_id, model_id
+
+
+def plan_from_gizzi_message(result: Any) -> ActionPlan:
+    """Read a Gizzi `/v1/session/:id/message` response into an ActionPlan."""
+    if not isinstance(result, dict):
+        raise VisionAPIError("Gizzi brain returned a non-object plan", provider="allternit")
+    info = result.get("info") if isinstance(result.get("info"), dict) else {}
+    structured = info.get("structured")
+    if isinstance(structured, dict):
+        return _parse_action_plan(json.dumps(structured))
+    if isinstance(structured, str) and structured.strip():
+        return _parse_action_plan(structured)
+    parts = result.get("parts") or []
+    texts: List[str] = []
+    for part in parts:
+        if not isinstance(part, dict):
+            continue
+        if part.get("type") == "text" and part.get("text"):
+            texts.append(str(part["text"]))
+        if part.get("type") == "tool":
+            state = part.get("state") if isinstance(part.get("state"), dict) else {}
+            payload = state.get("output") or state.get("input")
+            if isinstance(payload, dict) and (
+                "immediate_action" in payload or part.get("tool") == "StructuredOutput"
+            ):
+                return _parse_action_plan(json.dumps(payload))
+            if isinstance(payload, str) and payload.strip():
+                try:
+                    return _parse_action_plan(payload)
+                except Exception:
+                    texts.append(payload)
+    if texts:
+        return _parse_action_plan("\n".join(texts))
+    raise VisionAPIError("Gizzi brain returned no plan", provider="allternit")
+
+
 def _parse_action_plan(raw: str) -> ActionPlan:
     """Parse LLM JSON response into ActionPlan."""
     try:
@@ -991,28 +1072,40 @@ class UITARSVisionProvider(VisionProvider):
 
 class AllternitGatewayProvider(VisionProvider):
     """
-    Primary provider for all Allternit users.
+    Primary provider for all Allternit surfaces.
 
-    Routes vision calls through the Allternit API gateway (OpenAI-compatible endpoint).
-    Users never touch raw API keys — they OAuth to Anthropic/OpenAI/Gemini via Allternit,
-    and the gateway holds their tokens. This provider just sends requests to the gateway
-    as if it were an OpenAI endpoint.
-
-    Env vars (set automatically by Allternit platform after OAuth):
-        Allternit_VISION_INFERENCE_BASE  — gateway base URL (e.g. https://api.allternit.com/v1)
-        Allternit_VISION_INFERENCE_KEY   — session token issued by Allternit
-        Allternit_VISION_MODEL_NAME      — model to use (e.g. claude-3-5-sonnet, gpt-4o)
+    Computer-use planning uses the same Gizzi brain runtime as Home and Code:
+    POST `/v1/session` + `/v1/session/:id/message` with `providerID/modelID`.
+    It does not call the OpenAI-compat `ak-` LLM gateway and does not invent
+    a second cloud VL key.
     """
 
-    def __init__(self, base_url: Optional[str] = None):
-        self._base = (
+    def __init__(self, base_url: Optional[str] = None, model: Optional[str] = None, **kwargs):
+        raw = (
             base_url
-            or os.environ.get("Allternit_VISION_INFERENCE_BASE")
+            or os.environ.get("ALLTERNIT_GIZZI_URL")
+            or os.environ.get("TERMINAL_SERVER_URL")
             or os.environ.get("ALLTERNIT_LOCAL_BRAIN_URL")
+            or "http://127.0.0.1:4096"
+        )
+        self._base = gizzi_runtime_base(str(raw))
+        self._model = (
+            model
+            or os.environ.get("Allternit_VISION_MODEL_NAME")
+            or os.environ.get("ALLTERNIT_BRAIN_MODEL")
             or ""
-        ).rstrip("/")
-        self._key = os.environ.get("Allternit_VISION_INFERENCE_KEY", "")
-        self._model = os.environ.get("Allternit_VISION_MODEL_NAME", "gpt-4o")
+        )
+        self._provider_id: Optional[str] = None
+        self._model_id: Optional[str] = None
+        if self._model:
+            try:
+                self._provider_id, self._model_id = parse_platform_model(self._model)
+            except VisionConfigError:
+                self._provider_id, self._model_id = None, None
+
+    def set_model(self, model: str) -> None:
+        self._model = model
+        self._provider_id, self._model_id = parse_platform_model(model)
 
     def is_available(self) -> bool:
         return bool(self._base)
@@ -1028,30 +1121,73 @@ class AllternitGatewayProvider(VisionProvider):
         plan = await self.ground_and_reason(screenshot_b64, task, **kwargs)
         return VisionResponse(elements=[], action=plan.immediate_action, confidence=plan.confidence)
 
+    def _brain_ref(self) -> Tuple[str, str]:
+        if self._provider_id and self._model_id:
+            return self._provider_id, self._model_id
+        if self._model:
+            return parse_platform_model(self._model)
+        raise VisionConfigError(
+            "No platform brain selected. Pick a runtime in the same picker Home and Code use "
+            "and pass it as provider/model on /api/aci/run."
+        )
+
     async def ground_and_reason(self, screenshot_b64: str, task: str, history: Optional[List] = None, **kwargs) -> ActionPlan:
         try:
             import httpx
+            provider_id, model_id = self._brain_ref()
+            brain = {"providerID": provider_id, "modelID": model_id}
             history_text = "\n".join(str(h) for h in (history or []))
-            messages = [
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": _build_planning_prompt(task, history_text, (1280, 720))},
-                        {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{screenshot_b64}"}},
-                    ],
-                }
-            ]
-            payload = {"model": self._model, "messages": messages, "max_tokens": 1024}
-            headers: dict = {"Content-Type": "application/json"}
-            if self._key:
-                headers["Authorization"] = f"Bearer {self._key}"
-            async with httpx.AsyncClient(timeout=60) as client:
-                resp = await client.post(f"{self._base}/chat/completions", json=payload, headers=headers)
-                resp.raise_for_status()
-            content = resp.json()["choices"][0]["message"]["content"]
-            return _parse_action_plan(content)
+            prompt = _build_planning_prompt(task, history_text, (1280, 720))
+            headers = {"Content-Type": "application/json"}
+            async with httpx.AsyncClient(timeout=120) as client:
+                session_resp = await client.post(
+                    f"{self._base}/v1/session",
+                    json={"title": f"ACI {task[:72]}", "defaultModel": brain},
+                    headers=headers,
+                )
+                if session_resp.status_code >= 400:
+                    raise VisionAPIError(
+                        f"Gizzi session create failed ({session_resp.status_code}): {session_resp.text[:300]}",
+                        provider="allternit",
+                        status_code=session_resp.status_code,
+                    )
+                session = session_resp.json()
+                session_id = session.get("id") or (session.get("info") or {}).get("id")
+                if not session_id:
+                    raise VisionAPIError("Gizzi session create returned no id", provider="allternit")
+                message_resp = await client.post(
+                    f"{self._base}/v1/session/{session_id}/message",
+                    json={
+                        "model": brain,
+                        "system": (
+                            "You are the Allternit computer-use planner. "
+                            "Use the selected platform brain only. Return the next action as StructuredOutput JSON. "
+                            "Do not call shell, browser, or other tools."
+                        ),
+                        "format": {"type": "json_schema", "schema": ACTION_PLAN_JSON_SCHEMA},
+                        "parts": [
+                            {"type": "text", "text": prompt},
+                            {
+                                "type": "file",
+                                "mime": "image/png",
+                                "filename": "screen.png",
+                                "url": f"data:image/png;base64,{screenshot_b64}",
+                            },
+                        ],
+                    },
+                    headers=headers,
+                )
+                if message_resp.status_code >= 400:
+                    raise VisionAPIError(
+                        f"Gizzi brain {provider_id}/{model_id} failed ({message_resp.status_code}): {message_resp.text[:300]}",
+                        provider="allternit",
+                        status_code=message_resp.status_code,
+                    )
+                return plan_from_gizzi_message(message_resp.json())
+        except (VisionAPIError, VisionConfigError):
+            raise
         except Exception as e:
-            raise VisionAPIError(f"Allternit gateway error: {e}", provider="allternit")
+            raise VisionAPIError(f"Gizzi brain error: {e}", provider="allternit")
 
 
 class SubprocessVisionProvider(VisionProvider):
@@ -1118,29 +1254,17 @@ class SubprocessVisionProvider(VisionProvider):
             )
 
 
-# Auto-detection priority order when ALLTERNIT_VISION_PROVIDER not set.
-# Every provider here can do computer use — quality varies, not capability.
+# Production computer-use always uses the Gizzi platform brain. Direct API
+# keys, ak- virtual keys, and CLI subprocesses are not auto-selected.
 PROVIDER_AUTO_DETECT_ORDER = [
-    # 1. Allternit gateway (OAuth) — primary path for all users who OAuth'd via Allternit
-    ("Allternit_VISION_INFERENCE_BASE", ProviderType.ALLTERNIT),
-    # 2. Explicit local brain URL — any backend wired in (no API key needed)
+    ("ALLTERNIT_GIZZI_URL", ProviderType.ALLTERNIT),
+    ("TERMINAL_SERVER_URL", ProviderType.ALLTERNIT),
     ("ALLTERNIT_LOCAL_BRAIN_URL", ProviderType.ALLTERNIT),
-    # 3. CLI subprocess brain — user has claude/codex/gemini CLI installed and authed
-    ("ALLTERNIT_BRAIN_CMD", ProviderType.SUBPROCESS),
-    # 4. Direct API keys — developer / power-user mode only
-    ("ANTHROPIC_API_KEY", ProviderType.ANTHROPIC),
-    ("OPENAI_API_KEY", ProviderType.OPENAI),
-    ("GOOGLE_API_KEY", ProviderType.GEMINI),
-    ("QWEN_BASE_URL", ProviderType.QWEN),
 ]
 
-# Local brain ports to probe when no env var is set.
-# Mapped to (port, base_url_for_chat_completions).
+# Gizzi session origin (not OpenAI /v1/chat/completions).
 _LOCAL_BRAIN_PROBE_TARGETS = [
-    (3210, "http://127.0.0.1:3210/v1"),   # Allternit kernel HTTP gateway (ALLTERNIT_HTTP_PORT)
-    (11434, "http://127.0.0.1:11434/v1"),  # Ollama OpenAI-compat
-    (1234, "http://127.0.0.1:1234/v1"),    # LM Studio
-    (8080, "http://127.0.0.1:8080/v1"),    # llama.cpp server
+    (4096, "http://127.0.0.1:4096"),
 ]
 
 
@@ -1150,18 +1274,26 @@ class VisionProviderFactory:
     @classmethod
     def _probe_local_brain(cls) -> Optional[str]:
         """
-        Probe well-known local ports for a running brain backend.
-        Returns the OpenAI-compat base URL of the first responsive port, or None.
-
-        This enables zero-config operation: start the Allternit kernel (port 3210),
-        Ollama (11434), LM Studio (1234), or llama.cpp (8080) and ACU finds it
-        automatically — no API key or env var needed.
+        Probe the Gizzi runtime (`GET /v1/global/health`). That is the
+        platform brain used by every surface — not the ak- LLM gateway.
         """
-        import socket
-        for port, base_url in _LOCAL_BRAIN_PROBE_TARGETS:
+        import urllib.error
+        import urllib.request
+
+        for _port, base_url in _LOCAL_BRAIN_PROBE_TARGETS:
+            origin = gizzi_runtime_base(base_url)
             try:
-                with socket.create_connection(("127.0.0.1", port), timeout=0.5):
-                    return base_url
+                req = urllib.request.Request(
+                    f"{origin}/v1/global/health",
+                    method="GET",
+                    headers={"Accept": "application/json"},
+                )
+                with urllib.request.urlopen(req, timeout=0.8) as resp:
+                    if 200 <= getattr(resp, "status", 200) < 300:
+                        return origin
+            except urllib.error.HTTPError as err:
+                if err.code < 500:
+                    return origin
             except OSError:
                 continue
         return None
@@ -1239,32 +1371,9 @@ class VisionProviderFactory:
             or os.environ.get("Allternit_VISION_PROVIDER", "auto")
         )
 
-        if provider_type_str.lower() in ("auto", ""):
-            # Walk priority order — first env var that is set wins
-            for env_var, pt in PROVIDER_AUTO_DETECT_ORDER:
-                if os.environ.get(env_var):
-                    provider_type_str = pt.value
-                    break
-            else:
-                # Auto-detect subprocess CLI brain (claude/codex in PATH, no env var needed)
-                _sub_vp = SubprocessVisionProvider()
-                if _sub_vp.is_available():
-                    return _sub_vp
-                # Probe well-known local ports for a running brain.
-                probed = cls._probe_local_brain()
-                if probed:
-                    return AllternitGatewayProvider(base_url=probed)
-                raise VisionConfigError(
-                    "No vision provider configured. Set one of:\n"
-                    "  Allternit_VISION_INFERENCE_BASE  — Allternit gateway (OAuth users)\n"
-                    "  ALLTERNIT_LOCAL_BRAIN_URL        — any local brain (no key needed)\n"
-                    "  ALLTERNIT_BRAIN_CMD              — CLI brain (claude/codex/gemini)\n"
-                    "  ANTHROPIC_API_KEY                — direct Anthropic key (dev mode)\n"
-                    "  OPENAI_API_KEY                   — direct OpenAI key (dev mode)\n"
-                    "  GOOGLE_API_KEY                   — direct Gemini key (dev mode)\n"
-                    "  ALLTERNIT_VISION_PROVIDER=mock   — mock (test-only)\n"
-                    "Or start the Allternit gateway (port 8013) for zero-config operation."
-                )
+        if provider_type_str.lower() in ("auto", "", "allternit"):
+            probed = cls._probe_local_brain()
+            return AllternitGatewayProvider(base_url=probed, **kwargs)
 
         try:
             provider_type = ProviderType(provider_type_str.lower())

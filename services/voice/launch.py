@@ -27,6 +27,9 @@ def setup_venv(venv_path: Path):
     else:
         pip_path = venv_path / "bin" / "pip"
         python_path = venv_path / "bin" / "python"
+
+    if not pip_path.exists():
+        subprocess.run([str(python_path), "-m", "ensurepip", "--upgrade"], check=False)
     
     return python_path, pip_path
 
@@ -35,7 +38,8 @@ def install_deps(pip_path: Path, api_dir: Path):
     req_file = api_dir / "requirements.txt"
     if req_file.exists():
         print("Installing dependencies...")
-        subprocess.run([str(pip_path), "install", "-r", str(req_file)], check=True)
+        python_path = pip_path.parent / ("python.exe" if sys.platform == "win32" else "python")
+        subprocess.run([str(python_path), "-m", "pip", "install", "-r", str(req_file)], check=True)
 
 def install_local_voice(pip_path: Path, service_dir: Path):
     """Install the bundled Chatterbox source used by TTS."""
@@ -76,16 +80,12 @@ def main():
         print(f"Activating virtual environment...")
         os.execv(str(python_path), [str(python_path), __file__] + sys.argv[1:])
     
-    # Install deps if needed
+    # Do not pip-install torch/whisper at desktop startup. Use --setup for that.
     try:
         import fastapi
     except ImportError:
-        install_deps(pip_path, api_dir)
-
-    try:
-        import chatterbox
-    except ImportError:
-        install_local_voice(pip_path, service_dir)
+        print("fastapi is not installed in the voice venv. Run: python3 launch.py --setup")
+        sys.exit(1)
     
     # Set environment
     os.environ["PORT"] = args.port

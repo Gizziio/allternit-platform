@@ -379,6 +379,28 @@ const message = await createUserMessage(input)
       }
 
       if (!lastUser) throw new Error("No user message found in stream. This should never happen.")
+
+      if (step === 1 && session.sourceRef) {
+        try {
+          const { NativeSource } = await import("@/runtime/session/native-source")
+          const originText = await NativeSource.originPromptBlock(sessionID)
+          if (originText) {
+            const target = msgs.find((m) => m.info.id === lastUser.id)
+            if (target) {
+              target.parts.push({
+                id: Identifier.ascending("part"),
+                sessionID,
+                messageID: lastUser.id,
+                type: "text",
+                text: originText,
+                synthetic: true,
+              })
+            }
+          }
+        } catch (error) {
+          log.warn("native origin fetch skipped", { sessionID, error })
+        }
+      }
       if (
         lastAssistant?.finish &&
         !["tool-calls", "unknown"].includes(lastAssistant.finish) &&

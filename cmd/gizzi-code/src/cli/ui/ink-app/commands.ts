@@ -41,6 +41,7 @@ import pr_comments from './commands/pr_comments/index.js'
 import releaseNotes from './commands/release-notes/index.js'
 import rename from './commands/rename/index.js'
 import resume from './commands/resume/index.js'
+import native from './commands/native/index.js'
 import review, { ultrareview } from './commands/review.js'
 import session from './commands/session/index.js'
 import share from './commands/share/index.js'
@@ -166,6 +167,13 @@ import {
 import antTrace from './commands/ant-trace/index.js'
 import perfIssue from './commands/perf-issue/index.js'
 import sandboxToggle from './commands/sandbox-toggle/index.js'
+import alwaysApprove from './commands/always-approve/index.js'
+import autoCommand from './commands/auto/index.js'
+import history from './commands/history/index.js'
+import editPrompt from './commands/edit-prompt/index.js'
+import remember from './commands/remember/index.js'
+import viewPlan from './commands/view-plan/index.js'
+import timestamps from './commands/timestamps/index.js'
 import chrome from './commands/chrome/index.js'
 import stickers from './commands/stickers/index.js'
 import advisor from './commands/advisor.js'
@@ -221,7 +229,10 @@ const usageReport: Command = {
 }
 import oauthRefresh from './commands/oauth-refresh/index.js'
 import debugToolCall from './commands/debug-tool-call/index.js'
-import { getSettingSourceName } from './utils/settings/constants.js'
+import {
+  getCommandArgumentHint,
+  getCommandSourceTag,
+} from './utils/suggestions/commandSource.js'
 import {
   type Command,
   getCommandName,
@@ -276,9 +287,11 @@ export const INTERNAL_ONLY_COMMANDS = [
 // since underlying functions read from config, which can't be read at module initialization time
 const COMMANDS = memoize((): Command[] => [
   addDir,
+  alwaysApprove,
   artifact,
   advisor,
   agents,
+  autoCommand,
   branch,
   btw,
   chrome,
@@ -304,6 +317,7 @@ const COMMANDS = memoize((): Command[] => [
   dash,
   diff,
   doctor,
+  editPrompt,
   effort,
   exit,
   fast,
@@ -313,6 +327,7 @@ const COMMANDS = memoize((): Command[] => [
   grep,
   heapDump,
   help,
+  history,
   h5i,
   ide,
   init,
@@ -325,6 +340,7 @@ const COMMANDS = memoize((): Command[] => [
   mcp,
   memory,
   memorySearch,
+  remember,
   mobile,
   model,
   outputStyle,
@@ -335,6 +351,7 @@ const COMMANDS = memoize((): Command[] => [
   reloadPlugins,
   rename,
   resume,
+  native,
   session,
   skills,
   stats,
@@ -343,6 +360,7 @@ const COMMANDS = memoize((): Command[] => [
   stickers,
   tag,
   theme,
+  timestamps,
   feedback,
   review,
   ultrareview,
@@ -370,6 +388,7 @@ const COMMANDS = memoize((): Command[] => [
   thinkbackPlay,
   permissions,
   plan,
+  viewPlan,
   privacySettings,
   hooks,
   exportCommand,
@@ -694,6 +713,8 @@ export const BRIDGE_SAFE_COMMANDS: Set<Command> = new Set(
     summary, // Summarize conversation
     releaseNotes, // Show changelog
     files, // List tracked files
+    remember, // Append a memory note
+    timestamps, // Toggle message timestamps
   ].filter((c): c is Command => c !== null),
 )
 
@@ -764,29 +785,10 @@ export function getCommand(commandName: string, commands: Command[]): Command {
  * For model-facing prompts (like SkillTool), use cmd.description directly.
  */
 export function formatDescriptionWithSource(cmd: Command): string {
-  if (cmd.type !== 'prompt') {
-    return cmd.description
-  }
-
-  if (cmd.kind === 'workflow') {
-    return `${cmd.description} (workflow)`
-  }
-
-  if (cmd.source === 'plugin') {
-    const pluginName = cmd.pluginInfo?.pluginManifest.name
-    if (pluginName) {
-      return `(${pluginName}) ${cmd.description}`
-    }
-    return `${cmd.description} (plugin)`
-  }
-
-  if (cmd.source === 'builtin' || cmd.source === 'mcp') {
-    return cmd.description
-  }
-
-  if (cmd.source === 'bundled') {
-    return `${cmd.description} (bundled)`
-  }
-
-  return `${cmd.description} (${getSettingSourceName(cmd.source)})`
+  const tag = getCommandSourceTag(cmd)
+  const hint = getCommandArgumentHint(cmd)
+  const parts = [tag]
+  if (hint) parts.push(hint)
+  parts.push(cmd.description)
+  return parts.join('  ')
 }

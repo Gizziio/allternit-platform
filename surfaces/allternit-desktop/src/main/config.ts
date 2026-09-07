@@ -18,6 +18,8 @@ export const PORTS = {
   EXTENSION_BRIDGE: 3011,
   /** ACU (Python assistant) extension relay */
   ACU_RELAY: 3012,
+  /** ACU computer-use FastAPI gateway (`/v1/computer-use`, `/health`) */
+  ACU: 8760,
   /** Open Notebook research backend */
   NOTEBOOK: 5055,
   /** Local speech-to-text and text-to-speech service */
@@ -42,6 +44,7 @@ export const URLS = {
   RAILS: `http://${HOSTS.LOOPBACK}:${PORTS.RAILS}`,
   EXTENSION_BRIDGE: `http://${HOSTS.LOOPBACK}:${PORTS.EXTENSION_BRIDGE}`,
   ACU_RELAY: `http://${HOSTS.LOOPBACK}:${PORTS.ACU_RELAY}`,
+  ACU: `http://${HOSTS.LOOPBACK}:${PORTS.ACU}`,
   NOTEBOOK: `http://${HOSTS.LOOPBACK}:${PORTS.NOTEBOOK}`,
   VOICE: `http://${HOSTS.LOOPBACK}:${PORTS.VOICE}`,
   WEBHOOK_RECEIVER: `http://${HOSTS.LOOPBACK}:${PORTS.WEBHOOK_RECEIVER}`,

@@ -10,7 +10,7 @@ use axum::{
 };
 use rusqlite::params;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
+use serde_json::{json, Value};
 use std::sync::Arc;
 use tracing::warn;
 use uuid::Uuid;
@@ -29,7 +29,7 @@ pub fn me_router() -> Router<Arc<AppState>> {
 struct UserProfile {
     id: String,
     clerk_id: Option<String>,
-    email: String,
+    email: Option<String>,
     name: Option<String>,
     avatar_url: Option<String>,
     role: String,
@@ -52,6 +52,7 @@ async fn get_current_user(
     let db = state.db.clone();
     let user_id = user.user_id.clone();
     let user_email = user.email.clone();
+    let user_email_for_row = user_email.clone();
     let user_name = user.name.clone();
     let user_id2 = user_id.clone();
     // A live Clerk claim always wins (it reflects the org the caller has
@@ -76,7 +77,7 @@ async fn get_current_user(
                 UserProfile {
                     id: row.get(0)?,
                     clerk_id: row.get(1)?,
-                    email: row.get(2)?,
+                    email: row.get::<_, Option<String>>(2)?.or(user_email_for_row.clone()),
                     name: row.get(3)?,
                     avatar_url: row.get(4)?,
                     role: row.get(5)?,
@@ -152,6 +153,11 @@ struct CloudUsageResponse {
     weekly_limit: f64,
     resets_at: Option<String>,
     credits: Option<f64>,
+    label: Option<String>,
+    status: Option<String>,
+    plan_tier: Option<String>,
+    month_to_date_usage_usd: Option<f64>,
+    recent_transactions: Option<Vec<serde_json::Value>>,
 }
 
 impl Default for CloudUsageResponse {
@@ -162,8 +168,100 @@ impl Default for CloudUsageResponse {
             weekly_limit: 0.0,
             resets_at: None,
             credits: None,
+            label: None,
+            status: None,
+            plan_tier: None,
+            month_to_date_usage_usd: None,
+            recent_transactions: None,
         }
     }
+}
+
+fn usage_json(usage: &CloudUsageResponse) -> serde_json::Value {
+    json!({
+        "plan": usage.plan,
+        "label": usage.label,
+        "status": usage.status,
+        "planTier": usage.plan_tier,
+        "weeklyUsed": usage.weekly_used,
+        "weeklyLimit": usage.weekly_limit,
+        "resetsAt": usage.resets_at,
+        "credits": usage.credits,
+        "monthToDateUsageUsd": usage.month_to_date_usage_usd,
+        "recentTransactions": usage.recent_transactions,
+    })
+}
+
+/// Production may not yet expose `/api/v1/me/usage`. Billing subscription +
+/// credits are the live Clerk/API-token meter on api.allternit.com.
+async fn fetch_cloud_billing_usage(
+    base_url: &str,
+    authorization: Option<&str>,
+) -> Option<CloudUsageResponse> {
+    let client = reqwest::Client::new();
+    let origin = base_url.trim_end_matches('/');
+    let mut sub_req = client.get(format!("{origin}/api/v1/billing/subscription"));
+    let mut cred_req = client.get(format!("{origin}/api/v1/billing/credits"));
+    if let Some(authorization) = authorization {
+        sub_req = sub_req.header(axum::http::header::AUTHORIZATION, authorization);
+        cred_req = cred_req.header(axum::http::header::AUTHORIZATION, authorization);
+    }
+    let (sub_res, cred_res) = tokio::join!(sub_req.send(), cred_req.send());
+    let sub = match sub_res {
+        Ok(response) if response.status().is_success() => response.json::<Value>().await.ok(),
+        _ => None,
+    };
+    let cred = match cred_res {
+        Ok(response) if response.status().is_success() => response.json::<Value>().await.ok(),
+        _ => None,
+    };
+    if sub.is_none() && cred.is_none() {
+        return None;
+    }
+    let sub = sub.unwrap_or_else(|| json!({}));
+    let cred = cred.unwrap_or_else(|| json!({}));
+    let plan = sub
+        .get("plan_id")
+        .and_then(|v| v.as_str())
+        .unwrap_or("free")
+        .to_string();
+    let label = sub
+        .get("label")
+        .and_then(|v| v.as_str())
+        .map(str::to_string)
+        .or_else(|| {
+            plan.get(..1).map(|first| format!("{}{}", first.to_uppercase(), plan.get(1..).unwrap_or("")))
+        });
+    let free = cred.get("free_inference");
+    let balance = cred.get("balance_usd").and_then(|v| v.as_f64());
+    let free_remaining = free.and_then(|v| v.get("remaining_usd")).and_then(|v| v.as_f64());
+    let credits = match (balance, free_remaining) {
+        (Some(value), _) if value > 0.0 => Some(value),
+        (_, Some(value)) => Some(value),
+        (Some(value), _) => Some(value),
+        _ => None,
+    };
+    Some(CloudUsageResponse {
+        plan,
+        label,
+        status: sub.get("status").and_then(|v| v.as_str()).map(str::to_string),
+        plan_tier: sub
+            .get("plan_tier")
+            .and_then(|v| v.as_str())
+            .map(str::to_string),
+        weekly_used: free
+            .and_then(|v| v.get("used_usd"))
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.0),
+        weekly_limit: free
+            .and_then(|v| v.get("monthly_allowance_usd"))
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.0),
+        resets_at: None,
+        credits,
+        month_to_date_usage_usd: cred.get("month_to_date_usage_usd").and_then(|v| v.as_f64()),
+        recent_transactions: cred.get("recent_transactions").and_then(|v| v.as_array()).cloned(),
+    })
 }
 
 /// GET /me/usage — weekly usage metering for the calling user
@@ -220,6 +318,17 @@ async fn get_my_usage(
     if !response.status().is_success() {
         let status = response.status();
         warn!("Usage metering upstream returned {}", status);
+        // `/api/v1/me/usage` may be undeployed (404) or Clerk-only (401). Try
+        // the live billing routes before fail-softing to empty Free.
+        if status.as_u16() == 401 || status.as_u16() == 403 || status.as_u16() == 404 {
+            let authorization = headers
+                .get(axum::http::header::AUTHORIZATION)
+                .and_then(|value| value.to_str().ok());
+            if let Some(usage) = fetch_cloud_billing_usage(&base_url, authorization).await {
+                return Json(usage_json(&usage)).into_response();
+            }
+            return Json(usage_json(&CloudUsageResponse::default())).into_response();
+        }
         return (
             StatusCode::SERVICE_UNAVAILABLE,
             Json(json!({
@@ -231,14 +340,7 @@ async fn get_my_usage(
     }
 
     match response.json::<CloudUsageResponse>().await {
-        Ok(usage) => Json(json!({
-            "plan": usage.plan,
-            "weeklyUsed": usage.weekly_used,
-            "weeklyLimit": usage.weekly_limit,
-            "resetsAt": usage.resets_at,
-            "credits": usage.credits,
-        }))
-        .into_response(),
+        Ok(usage) => Json(usage_json(&usage)).into_response(),
         Err(e) => {
             warn!("Usage metering upstream undecodable: {}", e);
             (

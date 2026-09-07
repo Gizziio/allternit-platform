@@ -133,6 +133,13 @@ pub fn agent_session_router() -> Router<Arc<AppState>> {
         .route("/agent-sessions/:id/unrevert", post(unrevert_session))
         .route("/agent-sessions/:id/compact", post(compact_session))
         .route("/agent-sessions/sync", get(sync_sessions))
+        .route("/native-sessions/harnesses", get(list_native_harnesses))
+        .route("/native-sessions", get(list_native_sessions))
+        .route("/native-sessions/pickup", post(pickup_native_session))
+        .route("/native-sessions/:harness/:id", get(show_native_session))
+        .route("/agent-sessions/:id/fetch-origin", post(fetch_native_origin))
+        .route("/agent-sessions/:id/origin", get(get_native_origin))
+        .route("/agent-sessions/:id/export-native", post(export_native_session))
 }
 
 #[derive(Debug, Deserialize)]
@@ -195,6 +202,10 @@ struct GizziSessionInfo {
     permission: Option<serde_json::Value>,
     #[serde(default)]
     time: Option<GizziTimeInfo>,
+    #[serde(rename = "sourceRef", default)]
+    source_ref: Option<serde_json::Value>,
+    #[serde(rename = "sourceExport", default)]
+    source_export: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -309,6 +320,8 @@ fn transform_session(info: GizziSessionInfo, db: &DbHandle) -> serde_json::Value
             // defensively even against list responses that predate the
             // server-side exclusion.
             "ephemeral": db.is_session_ephemeral(&info.id).unwrap_or(false),
+            "sourceRef": info.source_ref,
+            "sourceExport": info.source_export,
         }
     })
 }
@@ -1208,4 +1221,136 @@ async fn sync_sessions(
     };
 
     Ok(Sse::new(stream).keep_alive(axum::response::sse::KeepAlive::default()))
+}
+
+async fn proxy_gizzi(
+    client: &Client,
+    method: reqwest::Method,
+    path: &str,
+    body: Option<serde_json::Value>,
+) -> Response {
+    let url = format!("{}{}", gizzi_base(), path);
+    let mut req = client.request(method, url);
+    if let Some(body) = body {
+        req = req.json(&body);
+    }
+    match req.send().await {
+        Ok(res) => {
+            let status = StatusCode::from_u16(res.status().as_u16()).unwrap_or(StatusCode::BAD_GATEWAY);
+            let bytes = res.bytes().await.unwrap_or_default();
+            (status, bytes).into_response()
+        }
+        Err(err) => (
+            StatusCode::BAD_GATEWAY,
+            Json(json!({ "error": err.to_string() })),
+        )
+            .into_response(),
+    }
+}
+
+async fn list_native_harnesses(headers: HeaderMap) -> Response {
+    let client = gizzi_client(&headers);
+    proxy_gizzi(&client, reqwest::Method::GET, "/v1/native-session/harnesses", None).await
+}
+
+#[derive(Debug, Deserialize)]
+struct NativeListQuery {
+    cwd: Option<String>,
+    harness: Option<String>,
+}
+
+async fn list_native_sessions(headers: HeaderMap, Query(query): Query<NativeListQuery>) -> Response {
+    let client = gizzi_client(&headers);
+    let mut path = "/v1/native-session/list".to_string();
+    let mut params = Vec::new();
+    if let Some(cwd) = query.cwd {
+        params.push(format!("cwd={}", urlencoding::encode(&cwd)));
+    }
+    if let Some(harness) = query.harness {
+        params.push(format!("harness={}", urlencoding::encode(&harness)));
+    }
+    if !params.is_empty() {
+        path.push('?');
+        path.push_str(&params.join("&"));
+    }
+    proxy_gizzi(&client, reqwest::Method::GET, &path, None).await
+}
+
+async fn show_native_session(
+    headers: HeaderMap,
+    Path((harness, id)): Path<(String, String)>,
+    Query(query): Query<NativeListQuery>,
+) -> Response {
+    let client = gizzi_client(&headers);
+    let mut path = format!(
+        "/v1/native-session/show/{}/{}",
+        urlencoding::encode(&harness),
+        urlencoding::encode(&id)
+    );
+    if let Some(cwd) = query.cwd {
+        path.push_str(&format!("?cwd={}", urlencoding::encode(&cwd)));
+    }
+    proxy_gizzi(&client, reqwest::Method::GET, &path, None).await
+}
+
+#[derive(Debug, Deserialize)]
+struct PickupBody {
+    harness: String,
+    #[serde(rename = "sessionId")]
+    session_id: String,
+    surface: Option<String>,
+    cwd: Option<String>,
+}
+
+async fn pickup_native_session(headers: HeaderMap, Json(body): Json<PickupBody>) -> Response {
+    let client = gizzi_client(&headers);
+    proxy_gizzi(
+        &client,
+        reqwest::Method::POST,
+        "/v1/native-session/pickup",
+        Some(json!({
+            "harness": body.harness,
+            "sessionId": body.session_id,
+            "surface": body.surface,
+            "cwd": body.cwd,
+        })),
+    )
+    .await
+}
+
+async fn export_native_session(
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    Json(body): Json<serde_json::Value>,
+) -> Response {
+    let client = gizzi_client(&headers);
+    proxy_gizzi(
+        &client,
+        reqwest::Method::POST,
+        &format!("/v1/native-session/{}/export", urlencoding::encode(&id)),
+        Some(body),
+    )
+    .await
+}
+
+async fn fetch_native_origin(headers: HeaderMap, Path(id): Path<String>) -> Response {
+    let client = gizzi_client(&headers);
+    proxy_gizzi(
+        &client,
+        reqwest::Method::POST,
+        &format!("/v1/native-session/{}/fetch", urlencoding::encode(&id)),
+        None,
+    )
+    .await
+}
+
+async fn get_native_origin(headers: HeaderMap, Path(id): Path<String>) -> Response {
+    let client = gizzi_client(&headers);
+    proxy_gizzi(
+        &client,
+        reqwest::Method::GET,
+        &format!("/v1/native-session/{}/origin", urlencoding::encode(&id)),
+        None,
+    )
+    .await
 }

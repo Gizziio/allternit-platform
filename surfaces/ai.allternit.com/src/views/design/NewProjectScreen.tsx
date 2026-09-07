@@ -208,7 +208,7 @@ export function NewProjectScreen({
             </div>
 
             {selectedSkill && <span className="ad-composer__skill"><Robot size={12} />{selectedSkill.name}</span>}
-            <span className="ad-composer__agent">Allternit Agent</span>
+            <span className="ad-composer__agent">Allternit</span>
             <button type="button" className="ad-submit" disabled={!prompt.trim()} onClick={submit} aria-label="Create project"><ArrowUp size={17} weight="bold" /></button>
           </div>
         </section>

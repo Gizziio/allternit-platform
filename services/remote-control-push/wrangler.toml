@@ -5,7 +5,7 @@ compatibility_flags = ["nodejs_compat"]
 
 # Custom domain for the push worker.
 [[routes]]
-pattern = "push.remotecontrol.allternit.com"
+pattern = "push.fabrictransport.allternit.com"
 custom_domain = true
 
 # Remove the Durable Object class introduced by the previous edge-relay

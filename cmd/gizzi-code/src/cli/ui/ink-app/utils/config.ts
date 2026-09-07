@@ -231,6 +231,7 @@ export type GlobalConfig = {
   oauthAccount?: AccountInfo
   iterm2KeyBindingInstalled?: boolean // Legacy - keeping for backward compatibility
   editorMode?: EditorMode
+  showMessageTimestamps?: boolean
   bypassPermissionsModeAccepted?: boolean
   hasUsedBackslashReturn?: boolean
   autoCompactEnabled: boolean // Controls whether auto-compact is enabled
@@ -593,6 +594,7 @@ function createDefaultGlobalConfig(): GlobalConfig {
     preferredNotifChannel: 'auto',
     verbose: false,
     editorMode: 'normal',
+    showMessageTimestamps: false,
     autoCompactEnabled: true,
     showTurnDuration: true,
     hasSeenTasksHint: false,
@@ -636,6 +638,7 @@ export const GLOBAL_CONFIG_KEYS = [
   'preferredNotifChannel',
   'shiftEnterKeyBindingInstalled',
   'editorMode',
+  'showMessageTimestamps',
   'hasUsedBackslashReturn',
   'autoCompactEnabled',
   'showTurnDuration',

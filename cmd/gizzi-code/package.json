@@ -101,6 +101,7 @@
     "@ai-sdk/provider": "2.0.1",
     "@ai-sdk/provider-utils": "3.0.21",
     "@allternit/gizzi-util": "workspace:*",
+    "@allternit/native-sessions": "workspace:*",
     "@allternit/orchestrator": "workspace:*",
     "@allternit/plugin": "workspace:*",
     "@allternit/request-scorer": "workspace:*",

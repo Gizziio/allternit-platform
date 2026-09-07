@@ -19,11 +19,17 @@ function hudTargetSessionId(): string | null {
 }
 
 function openSessionView(sessionId: string): void {
+  const session = useChatSessionStore.getState().sessions.find((s) => s.id === sessionId);
+  const isBot = session?.metadata?.isBot === true || session?.metadata?.botCanonicalFor;
+  const botId = (session?.metadata?.agentId as string | undefined)
+    ?? (session?.metadata?.botCanonicalFor as string | undefined);
   window.dispatchEvent(
     new CustomEvent('allternit:open-view', {
       detail: {
-        viewType: 'cowork-agent-session',
-        context: { sessionId, originView: 'chat' },
+        viewType: isBot ? 'bot-chat-session' : 'cowork-agent-session',
+        context: isBot
+          ? { sessionId, botId, originView: 'chat' }
+          : { sessionId, originView: 'chat' },
       },
     }),
   );

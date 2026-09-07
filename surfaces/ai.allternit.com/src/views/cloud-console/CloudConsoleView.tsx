@@ -14,6 +14,7 @@ import {
   CheckCircle,
   XCircle,
   Clock,
+  Key,
 } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,6 +44,9 @@ import {
   listFabricNodes,
   approveFabricNode,
   rejectFabricNode,
+  listLocalCloudAccounts,
+  listCloudInferenceKeys,
+  saveLocalCloudAccount,
   type ResourceClass,
   type FabricResource,
   type CreditBalance,
@@ -50,7 +54,20 @@ import {
   type EnrollmentToken,
   type FabricNode,
   type CreateResourceResponse,
+  type CloudAccount,
 } from "@/lib/cloud-console-api";
+
+const LOCAL_ACCOUNT_PROVIDERS = [
+  "openai",
+  "anthropic",
+  "google",
+  "groq",
+  "together",
+  "fireworks",
+  "deepinfra",
+  "deepseek",
+  "kimi",
+];
 
 interface Loadable<T> {
   data: T;
@@ -132,6 +149,13 @@ export function CloudConsoleView(): React.ReactNode {
   const [creatingToken, setCreatingToken] = useState(false);
   const [copiedTokenId, setCopiedTokenId] = useState<string | null>(null);
 
+  const [localAccounts, setLocalAccounts] = useState<Loadable<CloudAccount[]>>(initialLoadable([]));
+  const [cloudKeys, setCloudKeys] = useState<Loadable<CloudAccount[]>>(initialLoadable([]));
+  const [cloudKeysCode, setCloudKeysCode] = useState<string | null>(null);
+  const [accountForm, setAccountForm] = useState({ providerId: "openai", apiKey: "" });
+  const [savingAccount, setSavingAccount] = useState(false);
+  const [accountSaveMessage, setAccountSaveMessage] = useState<string | null>(null);
+
   const anyError = useMemo(
     () =>
       resourceClasses.error ||
@@ -201,6 +225,30 @@ export function CloudConsoleView(): React.ReactNode {
     }
   }, []);
 
+  const loadLocalAccounts = useCallback(async () => {
+    setLoading(setLocalAccounts, true);
+    setError(setLocalAccounts, null);
+    try {
+      const data = await listLocalCloudAccounts();
+      setLocalAccounts({ data, loading: false, error: null });
+    } catch (err) {
+      setLocalAccounts((prev) => ({
+        ...prev,
+        loading: false,
+        error: handleApiError(err, "Failed to load desktop accounts"),
+      }));
+    }
+  }, []);
+
+  const loadCloudKeys = useCallback(async () => {
+    setLoading(setCloudKeys, true);
+    setError(setCloudKeys, null);
+    setCloudKeysCode(null);
+    const result = await listCloudInferenceKeys();
+    setCloudKeys({ data: result.keys, loading: false, error: null });
+    setCloudKeysCode(result.error);
+  }, []);
+
   const refreshAll = useCallback(async () => {
     await Promise.all([
       loadResourceClasses(),
@@ -208,8 +256,10 @@ export function CloudConsoleView(): React.ReactNode {
       loadCredits(),
       loadTokens(),
       loadNodes(),
+      loadLocalAccounts(),
+      loadCloudKeys(),
     ]);
-  }, [loadResourceClasses, loadResources, loadCredits, loadTokens, loadNodes]);
+  }, [loadResourceClasses, loadResources, loadCredits, loadTokens, loadNodes, loadLocalAccounts, loadCloudKeys]);
 
   useEffect(() => {
     void refreshAll();
@@ -288,6 +338,24 @@ export function CloudConsoleView(): React.ReactNode {
     }
   };
 
+  const handleSaveAccount = async () => {
+    const providerId = accountForm.providerId.trim();
+    const apiKey = accountForm.apiKey.trim();
+    if (!providerId || !apiKey) return;
+    setSavingAccount(true);
+    setAccountSaveMessage(null);
+    try {
+      await saveLocalCloudAccount(providerId, apiKey);
+      setAccountForm((prev) => ({ ...prev, apiKey: "" }));
+      setAccountSaveMessage(`Copied ${providerId} onto this desktop. It will show as a Cloud runtime in Connect.`);
+      await loadLocalAccounts();
+    } catch (err) {
+      setAccountSaveMessage(handleApiError(err, "Could not store the key on this desktop"));
+    } finally {
+      setSavingAccount(false);
+    }
+  };
+
   const activeCount = resources.data.filter((r) => r.status === "active" || r.status === "running").length;
   const anyLoading =
     resourceClasses.loading ||
@@ -310,7 +378,7 @@ export function CloudConsoleView(): React.ReactNode {
             <div>
               <h1 className="text-xl font-bold">Cloud Console</h1>
               <p className="text-sm text-[var(--ui-text-muted)]">
-                Manage compute resources, credits, and Private Fabric nodes
+                Manage compute resources, credits, provider accounts, and Private Fabric nodes
               </p>
             </div>
           </div>
@@ -338,8 +406,11 @@ export function CloudConsoleView(): React.ReactNode {
             <div className="text-2xl font-bold">{resourceClasses.data.length}</div>
           </GlassSurface>
           <GlassSurface intensity="thin" className="space-y-1">
-            <div className="text-xs font-semibold uppercase tracking-wider text-[var(--ui-text-muted)]">Credit Balance</div>
+            <div className="text-xs font-semibold uppercase tracking-wider text-[var(--ui-text-muted)]">Allternit credits</div>
             <div className="text-2xl font-bold">{formatCurrency(balance.data.balance_cents)}</div>
+            {balance.data.planLabel && (
+              <div className="text-xs text-[var(--ui-text-muted)]">{balance.data.planLabel}</div>
+            )}
           </GlassSurface>
           <GlassSurface intensity="thin" className="space-y-1">
             <div className="text-xs font-semibold uppercase tracking-wider text-[var(--ui-text-muted)]">Fabric Nodes</div>
@@ -357,6 +428,10 @@ export function CloudConsoleView(): React.ReactNode {
             <TabsTrigger value="credits">
               <Coins size={16} className="mr-2" />
               Credits
+            </TabsTrigger>
+            <TabsTrigger value="accounts">
+              <Key size={16} className="mr-2" />
+              Accounts
             </TabsTrigger>
             <TabsTrigger value="fabric">
               <HardDrives size={16} className="mr-2" />
@@ -461,12 +536,17 @@ export function CloudConsoleView(): React.ReactNode {
             <GlassSurface intensity="base" className="flex items-center justify-between">
               <div>
                 <div className="text-xs font-semibold uppercase tracking-wider text-[var(--ui-text-muted)]">
-                  Available Balance
+                  Allternit subscription
                 </div>
                 <div className="text-3xl font-bold">{formatCurrency(balance.data.balance_cents)}</div>
+                <div className="text-sm text-[var(--ui-text-muted)]">
+                  {balance.data.planLabel || "Free"} remaining this period
+                </div>
               </div>
               <div className="text-right text-sm text-[var(--ui-text-muted)]">
-                Currency: {balance.data.currency}
+                {typeof balance.data.monthToDateUsageUsd === "number"
+                  ? `Used ${new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(balance.data.monthToDateUsageUsd)} this month`
+                  : `Currency: ${balance.data.currency}`}
               </div>
             </GlassSurface>
 
@@ -604,6 +684,133 @@ export function CloudConsoleView(): React.ReactNode {
                               </Button>
                             </>
                           )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </GlassSurface>
+          </div>
+        )}
+
+        {activeTab === "accounts" && (
+          <div className="space-y-6">
+            <GlassSurface intensity="base" className="space-y-4">
+              <h2 className="text-sm font-bold uppercase tracking-wider text-[var(--ui-text-muted)]">
+                Copy a cloud account onto this desktop
+              </h2>
+              <p className="text-sm text-[var(--ui-text-muted)]">
+                API keys stored on Allternit Cloud stay on the control plane. Paste a key here to
+                copy it into the local kernel so Connect lists it as a Cloud runtime. Device-token
+                sessions cannot read cloud secrets.
+              </p>
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+                <div className="space-y-2 sm:w-48">
+                  <label className="text-xs text-[var(--ui-text-muted)]">Provider</label>
+                  <select
+                    className="w-full rounded-lg border border-[var(--ui-border-default)] bg-[var(--surface-hover)] px-3 py-2 text-sm text-[var(--text-primary)]"
+                    value={accountForm.providerId}
+                    onChange={(e) => setAccountForm((prev) => ({ ...prev, providerId: e.target.value }))}
+                  >
+                    {LOCAL_ACCOUNT_PROVIDERS.map((id) => (
+                      <option key={id} value={id}>
+                        {id}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex-1 space-y-2">
+                  <label className="text-xs text-[var(--ui-text-muted)]">API key</label>
+                  <Input
+                    type="password"
+                    autoComplete="off"
+                    placeholder="sk-…"
+                    value={accountForm.apiKey}
+                    onChange={(e) => setAccountForm((prev) => ({ ...prev, apiKey: e.target.value }))}
+                  />
+                </div>
+                <Button onClick={() => void handleSaveAccount()} disabled={savingAccount || !accountForm.apiKey.trim()}>
+                  {savingAccount ? <Spinner size={16} className="animate-spin" /> : <Key size={16} />}
+                  Use on this desktop
+                </Button>
+              </div>
+              {accountSaveMessage && (
+                <p className="text-sm text-[var(--text-secondary)]">{accountSaveMessage}</p>
+              )}
+            </GlassSurface>
+
+            <GlassSurface intensity="base" className="space-y-4">
+              <h2 className="text-sm font-bold uppercase tracking-wider text-[var(--ui-text-muted)]">
+                Desktop Cloud runtimes
+              </h2>
+              {localAccounts.error && (
+                <p className="text-sm text-red-300">{localAccounts.error}</p>
+              )}
+              {localAccounts.data.length === 0 ? (
+                <p className="text-sm text-[var(--ui-text-muted)]">
+                  No API-key providers on this desktop yet. Connect one above or in Settings → Brains.
+                </p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Provider</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Models</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {localAccounts.data.map((account) => (
+                      <TableRow key={`local-${account.provider_id}`}>
+                        <TableCell className="font-medium">{account.name}</TableCell>
+                        <TableCell>
+                          <StatusChip
+                            status={account.authenticated ? "active" : "pending"}
+                            text={account.authenticated ? "Ready" : account.status}
+                          />
+                        </TableCell>
+                        <TableCell>{account.model_count ?? "—"}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </GlassSurface>
+
+            <GlassSurface intensity="base" className="space-y-4">
+              <h2 className="text-sm font-bold uppercase tracking-wider text-[var(--ui-text-muted)]">
+                Allternit Cloud keys
+              </h2>
+              {cloudKeysCode === "cloud_auth_required" ? (
+                <p className="text-sm text-[var(--ui-text-muted)]">
+                  This desktop session is paired with a device token. Cloud Console keys stay on
+                  the account until you paste them above — they are not copied down automatically.
+                </p>
+              ) : cloudKeysCode ? (
+                <p className="text-sm text-[var(--ui-text-muted)]">
+                  Cloud key store unavailable ({cloudKeysCode}). Local accounts above still work.
+                </p>
+              ) : cloudKeys.data.length === 0 ? (
+                <p className="text-sm text-[var(--ui-text-muted)]">
+                  No BYOK keys stored on Allternit Cloud for this account.
+                </p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Provider</TableHead>
+                      <TableHead>Fingerprint</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {cloudKeys.data.map((account) => (
+                      <TableRow key={`cloud-${account.provider_id}`}>
+                        <TableCell className="font-medium">{account.name}</TableCell>
+                        <TableCell className="font-mono text-xs">{account.masked || "—"}</TableCell>
+                        <TableCell>
+                          <StatusChip status={account.status} text={account.status} />
                         </TableCell>
                       </TableRow>
                     ))}

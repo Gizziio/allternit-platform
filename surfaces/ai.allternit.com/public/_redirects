@@ -12,6 +12,19 @@
 /remote-control.html /remote-control.html 200
 /remote-control-service-worker.js /remote-control-service-worker.js 200
 /remote-control.webmanifest /remote-control.webmanifest 200
+# Pretty URLs 308 *.html → extensionless. Rewriting /fabric-session to
+# /fabric-session.html therefore loops. Serve the PWA from the directory
+# index instead (dist/fabric-session/index.html). Identity pass-through
+# keeps the SPA catch-all from swallowing the folder.
+/fabric-session.html /fabric-session/ 308
+/fabric-session /fabric-session/ 308
+/fabric-session/index.html /fabric-session/ 308
+/fabric-session/ /fabric-session/ 200
+/fabric-session-service-worker.js /fabric-session-service-worker.js 200
+/fabric-session.webmanifest /fabric-session.webmanifest 200
+/fabric-session-icon-192.png /fabric-session-icon-192.png 200
+/fabric-session-icon-512.png /fabric-session-icon-512.png 200
+/fabric-session-splash-1170x2532.png /fabric-session-splash-1170x2532.png 200
 /manifest.json /manifest.json 200
 /sw.js /sw.js 200
 /robots.txt /robots.txt 200

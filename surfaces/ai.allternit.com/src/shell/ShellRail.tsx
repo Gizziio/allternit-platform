@@ -75,6 +75,9 @@ import { BotAvatar } from '@/views/bots/BotAvatar';
 import { BotRoster } from '@/views/bots/BotRoster';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
+import { openNativeSessionPicker } from '@/components/native-sessions/NativeSessionPicker';
+import { NativeSourceBadge } from '@/components/native-sessions/NativeOriginBanner';
+import { sourceRefFromMetadata } from '@/lib/agents/native-sessions-api';
 
 const MINI_APP_CATEGORY_ICONS: Record<string, Icon> = {
   runtime:       Cpu,
@@ -724,6 +727,15 @@ export function ShellRail({
           <Plus size={16} weight="bold" className={isNewActive ? "text-[var(--accent-primary)]" : "text-[var(--shell-item-muted)] group-hover:text-[var(--accent-primary)] transition-colors"} />
           <span className="text-[12px]">{mode === 'browser' ? 'New Session' : isCodeMode ? 'New Thread' : 'New'}</span>
         </button>
+        {mode !== 'browser' ? (
+          <button
+            type="button"
+            onClick={() => openNativeSessionPicker(isCodeMode ? 'code' : mode === 'cowork' ? 'cowork' : 'chat')}
+            className="mt-1 w-full py-1 px-3 rounded-lg border-none bg-transparent text-[11px] text-[var(--shell-item-muted)] cursor-pointer text-left hover:text-[var(--shell-item-fg)] hover:bg-[var(--surface-hover)]"
+          >
+            Continue CLI session
+          </button>
+        ) : null}
       </div>
 
       {/* SIDEBAR MAIN BODY (Browser tabs + sessions, Home tabs + recents, or Code tabs + threads) */}
@@ -1363,6 +1375,7 @@ export function ShellRail({
                           >
                             <Cpu size={15} weight={isActive ? 'fill' : 'bold'} />
                             <span className="text-[12px] overflow-hidden text-ellipsis whitespace-nowrap min-w-0 flex-1">{s.name || 'Untitled Session'}</span>
+                            <NativeSourceBadge source={sourceRefFromMetadata(s.metadata as Record<string, unknown>)} />
                           </button>
                           <RecentItemMenu
                             onDelete={() => setDeleteTarget({ id: s.id, title: s.name || 'Untitled Session', kind: 'code' })}

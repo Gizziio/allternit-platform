@@ -102,6 +102,7 @@ pub mod eval_metric_routes;
 pub mod eval_metrics;
 pub mod eval_routes;
 pub mod external_keys_routes;
+pub mod fabric_routes;
 pub mod fallback_credit_routes;
 pub mod fallback_retry_policy_routes;
 pub mod fallback_routes;

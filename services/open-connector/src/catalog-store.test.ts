@@ -33,3 +33,12 @@ describe("catalog store", () => {
     expect(catalog.providers.find((provider) => provider.service === "plain")).not.toHaveProperty("description");
   });
 });
+
+describe("loadCatalog", () => {
+  it("returns an empty catalog when catalog/apps is missing instead of crashing", async () => {
+    const { loadCatalog } = await import("./catalog-store.ts");
+    const catalog = await loadCatalog("/tmp/allternit-missing-connector-catalog");
+    expect(catalog.providers).toEqual([]);
+    expect(catalog.actions).toEqual([]);
+  });
+});

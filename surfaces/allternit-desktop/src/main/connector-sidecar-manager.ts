@@ -24,6 +24,7 @@
 
 import { app } from 'electron';
 import { spawn, ChildProcess } from 'child_process';
+import * as fs from 'fs';
 import * as path from 'path';
 import log from 'electron-log';
 import { PORTS, URLS } from './config.js';
@@ -47,6 +48,9 @@ export class ConnectorSidecarManager {
   private stopping = false;
   private lastConfig: ConnectorSidecarStartConfig | null = null;
   private resolvedEntryPath: string | null | undefined;
+  private becameReady = false;
+  private restartAttempts = 0;
+  private static readonly MAX_RESTARTS = 1;
 
   static getInstance(): ConnectorSidecarManager {
     if (!ConnectorSidecarManager.instance) {
@@ -73,6 +77,8 @@ export class ConnectorSidecarManager {
     }
 
     const dataDir = path.join(app.getPath('userData'), 'connector-sidecar-data');
+    const catalogDir = path.join(path.dirname(entryPath).replace(/\/src\/server$/, ''), 'catalog', 'apps');
+    fs.mkdirSync(catalogDir, { recursive: true });
 
     const env: Record<string, string> = {
       ...Object.fromEntries(
@@ -106,7 +112,14 @@ export class ConnectorSidecarManager {
       this.stopping = false;
       if (this.proc === proc) this.proc = null;
 
-      if (!intentionalStop && this.lastConfig && (app.isPackaged || process.env.NODE_ENV === 'production')) {
+      if (
+        !intentionalStop &&
+        this.becameReady &&
+        this.lastConfig &&
+        this.restartAttempts < ConnectorSidecarManager.MAX_RESTARTS &&
+        (app.isPackaged || process.env.NODE_ENV === 'production')
+      ) {
+        this.restartAttempts += 1;
         log.info('[ConnectorSidecarManager] Connector sidecar crashed unexpectedly, respawning in 1s...');
         setTimeout(() => {
           if (this.lastConfig) {
@@ -119,6 +132,7 @@ export class ConnectorSidecarManager {
     });
 
     await this.waitUntilReady();
+    this.becameReady = true;
     log.info(`[ConnectorSidecarManager] Ready at ${this.getUrl()}`);
     return this.getUrl();
   }
@@ -171,13 +185,9 @@ export class ConnectorSidecarManager {
         ];
 
     for (const candidate of candidates) {
-      try {
-        if (require('fs').existsSync(candidate)) {
-          this.resolvedEntryPath = candidate;
-          return candidate;
-        }
-      } catch {
-        // keep checking
+      if (fs.existsSync(candidate)) {
+        this.resolvedEntryPath = candidate;
+        return candidate;
       }
     }
     this.resolvedEntryPath = null;

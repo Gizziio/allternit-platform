@@ -4,6 +4,7 @@ import type { Command } from '../../commands'
 export default {
   type: 'local',
   name: 'usage',
+  aliases: ['tokens'],
   description: 'Show token usage, context window, and session cost inline',
   supportsNonInteractive: true,
   load: () => import('./usage.js'),

@@ -23,6 +23,7 @@ const loops: Command = {
   type: 'prompt',
   name: 'loops',
   aliases: ['loop'],
+  argumentHint: '[interval] <prompt>',
   description: 'Execute a command or action in a loop until a condition is met',
   progressMessage: 'executing loop',
   contentLength: 0,

@@ -43,6 +43,21 @@ export const SessionTable = sqliteTable(
     }>(),
     pinned: integer(),
     default_model: text({ mode: "json" }).$type<{ providerID: string; modelID: string; authProfileId?: string; source?: "user" | "auto" }>(),
+    source_harness: text(),
+    source_session_id: text(),
+    source_path: text(),
+    source_snapshot_hash: text(),
+    source_snapshot_at: integer(),
+    source_event_id: text(),
+    source_native_hash: text(),
+    source_fetched_hash: text(),
+    source_export: text({ mode: "json" }).$type<{
+      harness: string
+      sessionId: string
+      path: string
+      resumeHint: string
+      at: number
+    }>(),
     ...Timestamps,
     time_compacting: integer(),
     time_archived: integer(),
@@ -53,6 +68,7 @@ export const SessionTable = sqliteTable(
     index("session_agent_idx").on(table.agent_id),
     index("session_surface_idx").on(table.surface),
     index("session_pinned_idx").on(table.pinned),
+    index("session_source_idx").on(table.source_harness, table.source_session_id),
   ],
 )
 
@@ -222,4 +238,25 @@ export const GoalTable = sqliteTable(
     index("goal_agent_idx").on(table.agent_id),
     index("goal_state_queue_idx").on(table.state, table.queue_position),
   ]
+)
+
+/** Inbound native origin timeline. Fetched when the canonical CLI file moves; never written back. */
+export const SessionSourceEventTable = sqliteTable(
+  "session_source_event",
+  {
+    session_id: text()
+      .notNull()
+      .references(() => SessionTable.id, { onDelete: "cascade" }),
+    sequence: integer().notNull(),
+    event_id: text(),
+    kind: text().notNull(),
+    role: text(),
+    text: text(),
+    tool_name: text(),
+    fetched_at: integer().notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.session_id, table.sequence] }),
+    index("session_source_event_session_idx").on(table.session_id),
+  ],
 )

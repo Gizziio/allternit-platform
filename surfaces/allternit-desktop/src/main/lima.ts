@@ -15,6 +15,7 @@ export type VMStatus = 'running' | 'stopped' | 'error' | 'not-installed';
  * In development, falls back to limactl on PATH (brew install lima).
  */
 function getLimactlPath(): string {
+  if (process.platform === 'win32') return 'limactl';
   if (process.resourcesPath) {
     const bundled = join(process.resourcesPath, 'lima', 'limactl');
     if (existsSync(bundled)) return bundled;
@@ -36,6 +37,7 @@ function getLimaYamlPath(): string {
 }
 
 export async function isLimaInstalled(): Promise<boolean> {
+  if (process.platform === 'win32') return false;
   return new Promise((resolve) => {
     execFile(getLimactlPath(), ['--version'], { timeout: 3000 }, (err) => resolve(!err));
   });
@@ -76,6 +78,9 @@ export async function getVMStatus(): Promise<VMStatus> {
 export async function startVM(
   onProgress?: (stage: string, message: string, progress: number) => void
 ): Promise<void> {
+  if (process.platform === 'win32') {
+    throw new Error('Lima VMs are not supported on Windows.');
+  }
   const limactl = getLimactlPath();
   const limaYaml = getLimaYamlPath();
 

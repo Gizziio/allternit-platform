@@ -84,6 +84,19 @@ export namespace Session {
           }
         : undefined,
       defaultModelSource: row.default_model?.source ?? (row.default_model ? "user" : undefined),
+      sourceRef: row.source_harness && row.source_session_id && row.source_path && row.source_snapshot_hash
+        ? {
+            harness: row.source_harness,
+            sessionId: row.source_session_id,
+            path: row.source_path,
+            snapshotHash: row.source_snapshot_hash,
+            snapshotAt: row.source_snapshot_at ?? 0,
+            eventId: row.source_event_id ?? undefined,
+            nativeHash: row.source_native_hash ?? undefined,
+            fetchedHash: row.source_fetched_hash ?? undefined,
+          }
+        : undefined,
+      sourceExport: row.source_export ?? undefined,
       time: {
         created: row.time_created,
         updated: row.time_updated,
@@ -118,6 +131,15 @@ export namespace Session {
             source: info.defaultModelSource ?? "user",
           }
         : null,
+      source_harness: info.sourceRef?.harness ?? null,
+      source_session_id: info.sourceRef?.sessionId ?? null,
+      source_path: info.sourceRef?.path ?? null,
+      source_snapshot_hash: info.sourceRef?.snapshotHash ?? null,
+      source_snapshot_at: info.sourceRef?.snapshotAt ?? null,
+      source_event_id: info.sourceRef?.eventId ?? null,
+      source_native_hash: info.sourceRef?.nativeHash ?? null,
+      source_fetched_hash: info.sourceRef?.fetchedHash ?? null,
+      source_export: info.sourceExport ?? null,
       time_created: info.time.created,
       time_updated: info.time.updated,
       time_compacting: info.time.compacting,
@@ -213,6 +235,27 @@ export namespace Session {
               env: z.record(z.string(), z.string()).optional(),
             })
             .optional(),
+        })
+        .optional(),
+      sourceRef: z
+        .object({
+          harness: z.string(),
+          sessionId: z.string(),
+          path: z.string(),
+          snapshotHash: z.string(),
+          snapshotAt: z.number(),
+          eventId: z.string().optional(),
+          nativeHash: z.string().optional(),
+          fetchedHash: z.string().optional(),
+        })
+        .optional(),
+      sourceExport: z
+        .object({
+          harness: z.string(),
+          sessionId: z.string(),
+          path: z.string(),
+          resumeHint: z.string(),
+          at: z.number(),
         })
         .optional(),
     })
@@ -385,6 +428,7 @@ export namespace Session {
     harness?: Info["harness"]
     defaultModel?: Info["defaultModel"]
     defaultModelSource?: Info["defaultModelSource"]
+    sourceRef?: Info["sourceRef"]
   }) {
     const result: Info = {
       id: Identifier.descending("session", input.id),
@@ -400,6 +444,7 @@ export namespace Session {
       harness: input.harness,
       defaultModel: input.defaultModel,
       defaultModelSource: input.defaultModelSource,
+      sourceRef: input.sourceRef,
       time: {
         created: Date.now(),
         updated: Date.now(),
