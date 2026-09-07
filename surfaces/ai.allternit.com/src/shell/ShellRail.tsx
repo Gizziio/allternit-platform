@@ -379,7 +379,11 @@ export function ShellRail({
   // for ordering, and group chats with unread counts.
   const pinnedBotIds = useBotRosterStore((s) => s.pinnedBotIds);
   const canonicalChatIds = useBotRosterStore((s) => s.canonicalChatIds);
+  const pinBot = useBotRosterStore((s) => s.pinBot);
   const unpinBot = useBotRosterStore((s) => s.unpinBot);
+  // Drag-to-pin state (raw HTML5 DnD, same pattern as BrowserPane shortcuts).
+  const [draggingBotId, setDraggingBotId] = useState<string | null>(null);
+  const [pinDropActive, setPinDropActive] = useState(false);
   const groupChats = useGroupChatStore((s) => s.groups);
   const activeGroupId = useGroupChatStore((s) => s.activeGroupId);
   const getGroupUnreadCount = useGroupChatStore((s) => s.getUnreadCount);
@@ -1123,28 +1127,61 @@ export function ShellRail({
             />
           </div>
 
-          {/* BOT PINNED — unpin affordance mirrors the recents pinned panel */}
-          <RecentsPanel shrink expanded onToggle={() => {}} title="Pinned Bots">
-            {pinnedBots.length === 0 ? (
-              <div className="px-3 py-3 text-[12px] text-[var(--shell-item-muted)]">
-                Pin bots from the bot picker
-              </div>
-            ) : (
-              pinnedBots.map((bot) => (
-                <BotRailRow
-                  key={bot.id}
-                  bot={bot}
-                  isActive={
-                    activeViewType === 'bot-chat-session' &&
-                    activeChatSessionId === canonicalChatIds[bot.id]
-                  }
-                  disabled={isBotSessionStarting}
-                  onOpen={() => handleOpenBot(bot)}
-                  onUnpin={() => unpinBot(bot.id)}
-                />
-              ))
-            )}
-          </RecentsPanel>
+          {/* BOT PINNED — self-prunes when empty; drop zone appears while a bot
+              row is being dragged so users can discover pinning */}
+          {(pinnedBots.length > 0 || draggingBotId !== null) && (
+            <RecentsPanel shrink expanded onToggle={() => {}} title="Pinned Bots">
+              {draggingBotId !== null && (
+                <div
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.dataTransfer.dropEffect = 'move';
+                    setPinDropActive(true);
+                  }}
+                  onDragLeave={() => setPinDropActive(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const droppedId = e.dataTransfer.getData('text/plain') || draggingBotId;
+                    if (droppedId) pinBot(droppedId);
+                    setPinDropActive(false);
+                    setDraggingBotId(null);
+                  }}
+                  className={cn(
+                    "mx-2 mb-1 flex items-center justify-center gap-1.5 rounded-xl border border-dashed px-3 py-2 text-[12px] transition-colors",
+                    pinDropActive
+                      ? "border-[var(--accent-primary)] text-[var(--accent-primary)] bg-[var(--shell-item-hover)]"
+                      : "border-[var(--border-subtle)] text-[var(--shell-item-muted)]"
+                  )}
+                >
+                  <PushPin size={13} />
+                  <span>{pinDropActive ? 'Drop to pin' : 'Drag a bot here to pin'}</span>
+                </div>
+              )}
+              {pinnedBots.length === 0 ? (
+                draggingBotId === null ? (
+                  <div className="px-3 py-3 text-[12px] text-[var(--shell-item-muted)]">
+                    Pin bots from the bot picker
+                  </div>
+                ) : null
+              ) : (
+                pinnedBots.map((bot) => (
+                  <BotRailRow
+                    key={bot.id}
+                    bot={bot}
+                    isActive={
+                      activeViewType === 'bot-chat-session' &&
+                      activeChatSessionId === canonicalChatIds[bot.id]
+                    }
+                    disabled={isBotSessionStarting}
+                    onOpen={() => handleOpenBot(bot)}
+                    onUnpin={() => unpinBot(bot.id)}
+                  />
+                ))
+              )}
+            </RecentsPanel>
+          )}
 
           {/* BOT LIST — all bots, pinned first, then by canonical chat activity */}
           <RecentsPanel expanded onToggle={() => {}} title="Bots">
@@ -1163,14 +1200,29 @@ export function ShellRail({
                 }
                 disabled={isBotSessionStarting}
                 onOpen={() => handleOpenBot(bot)}
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.setData('text/plain', bot.id);
+                  e.dataTransfer.effectAllowed = 'move';
+                  setDraggingBotId(bot.id);
+                }}
+                onDragEnd={() => {
+                  setDraggingBotId(null);
+                  setPinDropActive(false);
+                }}
               />
             ))}
           </RecentsPanel>
 
-          {/* GROUP CHATS — unread badge convention matches GroupsListView */}
-          {sortedGroupChats.length > 0 && (
-            <RecentsPanel shrink expanded onToggle={() => {}} title="Group Chats">
-              {sortedGroupChats.map((group) => (
+          {/* GROUP CHATS — unread badge convention matches GroupsListView.
+              Always rendered so the empty state and creation affordance stay discoverable */}
+          <RecentsPanel shrink expanded onToggle={() => {}} title="Group Chats">
+            {sortedGroupChats.length === 0 ? (
+              <div className="px-3 py-3 text-[12px] text-[var(--shell-item-muted)]">
+                No group chats yet
+              </div>
+            ) : (
+              sortedGroupChats.map((group) => (
                 <BotGroupRailRow
                   key={group.id}
                   group={group}
@@ -1181,9 +1233,17 @@ export function ShellRail({
                     onOpen?.('group-chat', { groupId: group.id });
                   }}
                 />
-              ))}
-            </RecentsPanel>
-          )}
+              ))
+            )}
+            <button
+              type="button"
+              onClick={() => onOpen?.('groups-list')}
+              className="w-full flex items-center gap-2.5 py-1.5 px-3 max-md:min-h-11 rounded-xl bg-transparent border-none cursor-pointer text-left text-[12px] text-[var(--shell-item-muted)] hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)] transition-all"
+            >
+              <Plus size={13} />
+              <span>New group chat</span>
+            </button>
+          </RecentsPanel>
         </>
       ) : !isCodeMode ? (
         <>
@@ -2897,15 +2957,21 @@ function PinnedMiniAppItem({ app, isActive, onOpen, onUnpin }: {
   );
 }
 
-function BotRailRow({ bot, isActive, disabled, onOpen, onUnpin }: {
+function BotRailRow({ bot, isActive, disabled, onOpen, onUnpin, draggable, onDragStart, onDragEnd }: {
   bot: Agent;
   isActive?: boolean;
   disabled?: boolean;
   onOpen: () => void;
   onUnpin?: () => void;
+  draggable?: boolean;
+  onDragStart?: (e: React.DragEvent) => void;
+  onDragEnd?: (e: React.DragEvent) => void;
 }): React.ReactNode {
   return (
     <div
+      draggable={draggable}
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
       className={cn(
         "group relative w-full flex items-center gap-2.5 py-1.5 px-3 max-md:min-h-11 rounded-xl cursor-pointer transition-all duration-200 font-medium",
         isActive

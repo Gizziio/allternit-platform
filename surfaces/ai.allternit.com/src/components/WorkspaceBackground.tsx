@@ -136,15 +136,17 @@ export function WorkspaceBackground(): React.ReactNode {
       )}
 
       {/* Bot mode: sparse dot field with faint orbit orbs in the bot accent —
-          a sibling of cowork's grid, distinct but equally subtle. */}
+          a sibling of cowork's grid, distinct but equally subtle. Kept
+          perceptible in both themes: the light accent is mid-tone, so the
+          dot alpha and orb washes sit higher than they do in dark. */}
       {mode === 'bot' && (
         <>
           <div
             style={{
               position: 'absolute',
               inset: 0,
-              opacity: 0.35,
-              backgroundImage: `radial-gradient(color-mix(in srgb, var(--accent-bot) 22%, transparent) 1px, transparent 1px)`,
+              opacity: 0.5,
+              backgroundImage: `radial-gradient(color-mix(in srgb, var(--accent-bot) 45%, transparent) 1px, transparent 1.4px)`,
               backgroundSize: '48px 48px',
               backgroundPosition: 'center',
               maskImage: 'radial-gradient(circle at 50% 38%, rgba(0,0,0,0.9) 0%, transparent 72%)',
@@ -155,8 +157,8 @@ export function WorkspaceBackground(): React.ReactNode {
               position: 'absolute',
               inset: 0,
               background: `
-                radial-gradient(560px 420px at 18% 12%, color-mix(in srgb, var(--accent-bot) 9%, transparent) 0%, transparent 70%),
-                radial-gradient(640px 480px at 84% 78%, color-mix(in srgb, var(--accent-bot) 7%, transparent) 0%, transparent 70%)
+                radial-gradient(560px 420px at 18% 12%, color-mix(in srgb, var(--accent-bot) 16%, transparent) 0%, transparent 70%),
+                radial-gradient(640px 480px at 84% 78%, color-mix(in srgb, var(--accent-bot) 12%, transparent) 0%, transparent 70%)
               `,
             }}
           />
