@@ -551,7 +551,13 @@ mod tests {
         }
     }
 
+    // Ignored in CI: requires the external AllternitOS workspace binary
+    // (ALLTERNITOS_RUNTIME_BIN or ~/Desktop/AllternitOS/target/debug), which
+    // this repo's CI does not build — and it currently fails on macOS hosts
+    // anyway (EINVAL reading the mock endpoint's response). Run locally with:
+    //   cargo test -p allternit-api --lib -- --ignored
     #[tokio::test]
+    #[ignore = "requires AllternitOS workspace binaries not available in CI"]
     async fn execute_on_placement_routes_through_remote_openai_endpoint() {
         let port = mock_openai_server();
         let placement = Placement {
