@@ -1,5 +1,5 @@
 Name:           gizzi-code
-Version:        2.0.5
+Version:        2.0.6
 Release:        1%{?dist}
 Summary:        AI-powered terminal interface for the Allternit ecosystem
 
@@ -27,6 +27,9 @@ install -m 755 gizzi-code %{buildroot}/usr/local/bin/gizzi-code
 /usr/local/bin/gizzi-code
 
 %changelog
+* Sat Sep 06 2026 Allternit Technologies <team@allternit.io> - 2.0.6-1
+- Update to 2.0.6; fix /theme TUI crash; real TS syntax highlighting
+
 * Fri Sep 05 2026 Allternit Technologies <team@allternit.io> - 2.0.5-1
 - Update to 2.0.5; Cloud-first /model list; npm verify via npm pack
 

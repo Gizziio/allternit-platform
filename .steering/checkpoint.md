@@ -1,9 +1,9 @@
 # Steering checkpoint
 
-Goal: Unify ACI with Gizzi runtime selection, shrink ACI logos, replace HAR setup with teach-the-agent skill/workflow recording, and wire the Allternit computer-use engine + bot connection into the ACI panel.
+Goal: Hotfix gizzi-code 2.0.5 TUI crash (`TypeError: new ColorDiff(...).render is not a function`) triggered by any surface rendering `<StructuredDiff>` with highlighting enabled — confirmed on `/theme`; file-edit permission diffs share the same component.
 
-Just did: Implemented in `session/aci-unify` worktree. ACI/page-agent/computer-use now resolve the persisted Gizzi picker (`claude-cli/…`) instead of a separate API-key brain. Chrome extension DEMO_CONFIG no longer points at the Shanghai test proxy. Logos on mini-apps, extensions, and the ACI sidepanel wordmark are smaller (`object-contain`). Site APIs is Teach-first (record walkthrough → distill skill → replay; HAR import is advanced). ACI sidecar has an engine bar: Allternit CUA (local) / sub-agent / page-agent, plus bot connection. 11 targeted tests passing.
+Just did: Follow-up on the same branch — the vendored color-diff TS port now implements real rendering instead of falling back: new `syntax.ts` (regex tokenizer for ts/js/py/go/rust/java/c/shell/json/css/html/markdown/config/sql/ruby/php, language detection by extension + shebang, theme palettes mirroring theme.ts diff backgrounds, width-wrapping ANSI emitter). `ColorDiff.render()` emits guttered diff lines (marker + line numbers + tinted added/removed backgrounds + syntax-colored tokens, wrapped); `ColorFile.render()` fixes the same class of latent crash in HighlightedCode (file-write permission previews) and returns guttered highlighted file lines; `getSyntaxTheme()` maps TUI theme names (dark/light/daltonized/ansi) to built-in palettes. 17/17 tests, tsc clean, rebuilt binary verified via pty: /theme picker shows real syntax colors (dark-plus token palette) and stays alive.
 
-Next: Owner review in the desktop app. Then PR from `session/aci-unify`. Remaining: Office add-in still has its own API key pane; lifting ModelSelectionProvider to the shell so ACI can open the same picker in-place.
+Next: Owner review; merge to main and cut gizzi-code v2.0.6 (release flow + homebrew tap bump). Known gap: word-level intra-line highlights are not emitted by the TS render (the React fallback does word diffs); consider porting that later if users miss it.
 
-Open questions: None blocking.
+Open questions: Ship the fallback-only highlight as 2.0.6 now, or bundle a real TS highlighter first? (Recommend: ship now — crash is P0; highlighting parity is cosmetic.)

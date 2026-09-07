@@ -63,7 +63,19 @@ function renderColorDiff(patch: StructuredPatchHunk, firstLine: string | null, f
   let perHunk = RENDER_CACHE.get(patch);
   const hit = perHunk?.get(key);
   if (hit) return hit;
-  const lines = new ColorDiff(patch, firstLine, filePath, fileContent).render(theme, width, dim);
+  // The vendored TS port of color-diff may not implement .render (or may
+  // throw on unexpected input); degrade to the fallback renderer instead of
+  // crashing the TUI.
+  let lines: string[] | null = null;
+  try {
+    const instance = new ColorDiff(patch, firstLine, filePath, fileContent);
+    if (typeof (instance as { render?: unknown }).render === 'function') {
+      const rendered = (instance as { render: (t: string, w: number, d: boolean) => unknown }).render(theme, width, dim);
+      lines = Array.isArray(rendered) ? (rendered as string[]) : null;
+    }
+  } catch {
+    lines = null;
+  }
   if (lines === null) return null;
 
   // Pre-split the gutter column once (cold-cache). sliceAnsi preserves
