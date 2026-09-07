@@ -748,7 +748,7 @@ function BindAgentModal({
     }}>
       <div style={{
         width: 500,
-        background: 'var(--surface-panel)',
+        background: 'var(--bg-elevated)',
         borderRadius: 12,
         border: '1px solid var(--ui-border-muted)',
         overflow: 'hidden',
