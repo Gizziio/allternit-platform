@@ -203,9 +203,38 @@ export function ciede2000(lab1: LabColor, lab2: LabColor): number {
 
 export class ColorDiff {
   private threshold: number;
+  // Diff-render construction (patch, firstLine, filePath, fileContent), used
+  // by StructuredDiff's fast path. Shape mirrors the original NAPI binding.
+  private renderPatch: unknown;
+  private renderFirstLine: string | null;
+  private renderFilePath: string;
+  private renderFileContent: string | null;
 
-  constructor(threshold: number = 2.3) {
-    this.threshold = threshold;
+  constructor(threshold?: number);
+  constructor(patch: unknown, firstLine?: string | null, filePath?: string, fileContent?: string | null);
+  constructor(arg1: number | unknown = 2.3, firstLine: string | null = null, filePath: string = '', fileContent: string | null = null) {
+    if (typeof arg1 === 'number') {
+      this.threshold = arg1;
+      this.renderPatch = null;
+    } else {
+      // Diff-render mode: threshold is irrelevant, render() does the work.
+      this.threshold = 2.3;
+      this.renderPatch = arg1;
+    }
+    this.renderFirstLine = firstLine;
+    this.renderFilePath = filePath ?? '';
+    this.renderFileContent = fileContent ?? null;
+  }
+
+  /**
+   * Render a structured diff hunk as ANSI-highlighted lines, wrapped to
+   * `width`. Part of the original NAPI binding's API surface; the TS port
+   * has no syntax tokenizer, so it returns null and callers fall back to
+   * their React fallback renderer.
+   */
+  render(_theme: string, _width: number, _dim: boolean): string[] | null {
+    if (this.renderPatch === null) return null;
+    return null;
   }
 
   /**
