@@ -89,6 +89,15 @@ const sessionRegistry = new Map<
   }
 >()
 
+// taskIds currently sitting inside a canUseTool permission prompt. Flipped by
+// the wrapper installed per-runner in runSessionTurns; read by the dashboard
+// source to render the needs-input state.
+const awaitingInput = new Set<string>()
+
+export function isTopLevelSessionAwaitingInput(taskId: string): boolean {
+  return awaitingInput.has(taskId)
+}
+
 // ---------------------------------------------------------------------------
 // Pin persistence (global config, additive field — GlobalConfig is ts-nocheck)
 // ---------------------------------------------------------------------------
@@ -116,6 +125,55 @@ function persistPinnedIds(pinned: Set<string>): void {
   } catch {
     // Best-effort persistence; pinning still works in-memory.
   }
+}
+
+function loadReorderIds(): string[] {
+  try {
+    const reorder = getGlobalConfig()?.[PIN_CONFIG_KEY]?.reorder
+    return Array.isArray(reorder) ? reorder : []
+  } catch {
+    return []
+  }
+}
+
+function persistReorderIds(order: string[]): void {
+  try {
+    saveGlobalConfig(current => ({
+      ...current,
+      [PIN_CONFIG_KEY]: {
+        ...current?.[PIN_CONFIG_KEY],
+        reorder: order,
+      },
+    }))
+  } catch {
+    // Best-effort persistence.
+  }
+}
+
+/**
+ * Move a dashboard session up/down in the persisted order. The effective
+ * order is: persisted reorder entries first (array order), then registry
+ * ids not in the array (insertion order). Swaps positions in that effective
+ * order and persists the result.
+ */
+export function moveTopLevelSession(taskId: string, direction: -1 | 1): void {
+  const order = loadReorderIds()
+  const registryIds = [...sessionRegistry.keys()]
+  const effective = [
+    ...order.filter(id => sessionRegistry.has(id)),
+    ...registryIds.filter(id => !order.includes(id)),
+  ]
+  const idx = effective.indexOf(taskId)
+  const swap = idx + direction
+  if (idx < 0 || swap < 0 || swap >= effective.length) return
+  ;[effective[idx], effective[swap]] = [effective[swap], effective[idx]]
+  persistReorderIds(effective)
+}
+
+/** Effective display order rank: lower sorts first. Missing = after explicit. */
+export function getTopLevelSessionOrderRank(taskId: string): number {
+  const idx = loadReorderIds().indexOf(taskId)
+  return idx === -1 ? Number.MAX_SAFE_INTEGER : idx
 }
 
 // ---------------------------------------------------------------------------
@@ -242,6 +300,7 @@ export function removeTopLevelSession(taskId: string): void {
   }
   sessionRunners.delete(taskId)
   sessionRegistry.delete(taskId)
+  awaitingInput.delete(taskId)
   const pinned = loadPinnedIds()
   if (pinned.delete(taskId)) {
     persistPinnedIds(pinned)
@@ -345,6 +404,19 @@ async function runSessionTurns(runner: SessionRunner): Promise<void> {
     let success = true
     try {
       const queryParams = await runner.queryParams
+      // Per-runner canUseTool wrap: flags needs-input while a permission
+      // prompt for this session is pending so the dashboard can surface it.
+      // Mutating this copy is safe — buildQueryParams is awaited once per
+      // runner and each dispatch builds fresh params.
+      const originalCanUseTool = queryParams.canUseTool
+      queryParams.canUseTool = (...args: unknown[]) => {
+        awaitingInput.add(taskId)
+        try {
+          return originalCanUseTool(...args)
+        } finally {
+          awaitingInput.delete(taskId)
+        }
+      }
       const recentActivities: ToolActivity[] = []
       let toolCount = 0
       let tokenCount = 0
@@ -476,6 +548,7 @@ function finalizeTopLevelSession(
 ): void {
   const { taskId, setAppState } = runner
   const cancelled = runner.cancelRequested
+  awaitingInput.delete(taskId)
   let completedNaturally = false
 
   updateTaskState(taskId, setAppState, task => {

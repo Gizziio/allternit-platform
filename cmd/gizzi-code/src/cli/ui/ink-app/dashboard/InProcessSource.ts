@@ -15,7 +15,10 @@ import type { SetAppState } from '../Task.js'
 import {
   getTopLevelSessionEntry,
   getTopLevelSessionMessages,
+  getTopLevelSessionOrderRank,
   getTopLevelSessionRegistry,
+  isTopLevelSessionAwaitingInput,
+  moveTopLevelSession,
   removeTopLevelSession,
   renameTopLevelSession,
   replyToTopLevelSession,
@@ -72,7 +75,9 @@ export class InProcessDashboardSource implements DashboardSource {
       if (task) {
         switch (task.status) {
           case 'running':
-            state = 'working'
+            state = isTopLevelSessionAwaitingInput(taskId)
+              ? 'needs-input'
+              : 'working'
             activityLine = [
               lastActivity?.toolName,
               progress?.toolUseCount
@@ -116,6 +121,14 @@ export class InProcessDashboardSource implements DashboardSource {
       })
     }
 
+    // Pinned first, then persisted explicit order, then freshness.
+    rows.sort((a, b) => {
+      if (a.pinned !== b.pinned) return a.pinned ? -1 : 1
+      const byOrder =
+        getTopLevelSessionOrderRank(a.id) - getTopLevelSessionOrderRank(b.id)
+      if (byOrder !== 0) return byOrder
+      return b.updatedAt - a.updatedAt
+    })
     return rows
   }
 
@@ -185,5 +198,40 @@ export class InProcessDashboardSource implements DashboardSource {
 
   setPinned(id: string, pinned: boolean): void {
     setTopLevelSessionPinned(id, pinned)
+  }
+
+  move(id: string, direction: -1 | 1): void {
+    moveTopLevelSession(id, direction)
+  }
+
+  messages(id: string): { role: string; text: string }[] {
+    const messages = getTopLevelSessionMessages(id, this.opts.getAppState)
+    if (!messages) return []
+    const result: { role: string; text: string }[] = []
+    for (const message of messages) {
+      const role =
+        message.type === 'user'
+          ? 'user'
+          : message.type === 'assistant'
+            ? 'assistant'
+            : 'system'
+      const parts: string[] = []
+      for (const block of message.message?.content ?? []) {
+        if (block.type === 'text' && block.text) parts.push(block.text)
+        else if (block.type === 'tool_use')
+          parts.push(`[${block.name}] ${JSON.stringify(block.input ?? {}).slice(0, 120)}`)
+        else if (block.type === 'tool_result') {
+          const content = block.content
+          parts.push(
+            typeof content === 'string'
+              ? content.slice(0, 200)
+              : JSON.stringify(content).slice(0, 200),
+          )
+        }
+      }
+      const text = parts.join('\n').trim()
+      if (text) result.push({ role, text })
+    }
+    return result
   }
 }

@@ -61,4 +61,8 @@ export interface DashboardSource {
   remove(id: string): void
   rename(id: string, title: string): void
   setPinned(id: string, pinned: boolean): void
+  /** Move a row up/down in the persisted dashboard order (Shift+↑/↓). */
+  move?(id: string, direction: -1 | 1): void
+  /** Transcript excerpt for the details view. */
+  messages?(id: string): { role: string; text: string }[]
 }
