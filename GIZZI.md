@@ -64,9 +64,11 @@ and capability set aren't.
   time); a paired iOS device reaches a real instance (local or tunneled)
   the same way. It is **not** a centrally-hosted multi-tenant service — it
   is not even a deployed Fly/Railway app. Local-first, per-device SQLite.
-- `cmd/allternit-cloud-api` — the actual centrally-hosted service (Fly.io,
-  app `allternit-cloud-api`). This is where cross-device tenancy really
-  lives (`users.tenant_id`/`role`/`status`, `api_tokens`, `user_sessions`,
+- `cmd/allternit-cloud-api` — the actual centrally-hosted service, deployed
+  in production on the Contabo VPS (`mail`, `api.allternit.com`) per
+  `docs/Operations/CLOUD_API_VPS_DEPLOY.md` (the old Fly.io deployment is
+  stale). This is where cross-device tenancy really lives
+  (`users.tenant_id`/`role`/`status`, `api_tokens`, `user_sessions`,
   `audit_log` — see `migrations/003_auth.sql`), device-token verification,
   hosted-runtime management, and Clerk webhook sync
   (`src/routes/clerk_webhooks.rs`, added 2026-08-01).
@@ -119,7 +121,7 @@ and capability set aren't.
 
 ## Steering / pipeline
 
-This repo runs its own autonomous `.pipeline`/`.steering` automation
+This repo runs its own autonomous `.steering` automation
 (spec-checker loop, discovery/build queue) and has a documented history of
 **multiple concurrent Eoj/agent sessions editing the same checkout at
 once**. Before editing any file, check `git status`/`git diff main` against

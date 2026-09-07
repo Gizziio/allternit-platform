@@ -63,8 +63,17 @@ npm run prepare:api-binary
 ```
 
 This is also called automatically by `npm run build:electron`, `npm run dist`,
-etc. If no local binary exists, the script downloads the platform-locked archive
-from the manifest in `src/main/manifest.ts`.
+etc. In practice the binary **must be built locally and staged** — the script
+(`scripts/prepare-api-binary.cjs`) only copies from a local cargo build
+(`target/release` or `target/debug` at the repo root). Its manifest-download
+fallback (`src/main/manifest.ts`) points at `github.com/allternit/platform`
+release assets that do not exist yet (and most manifest checksums are empty
+placeholders), so the download path will fail:
+
+```bash
+cargo build --release -p allternit-api   # must exist first
+npm run prepare:api-binary               # copies it into resources/bin/
+```
 
 ### Step 3: Build Desktop App
 
@@ -123,8 +132,9 @@ release artifacts.
 | `APPLE_TEAM_ID` | 10-character Apple Developer Team ID |
 
 `electron-builder` will pick the first valid Developer ID identity automatically
-(`build.mac.identity: null`). The `scripts/notarize.cjs` afterSign hook runs only
-when all three env vars are present, so local unsigned builds continue to work.
+(`build.mac.identity: null`). The `scripts/notarize.cjs` afterSign hook skips
+with a warning when the env vars are absent on local builds, and hard-fails on
+CI when they are missing, so unsigned release builds cannot pass silently.
 
 ### Windows
 
