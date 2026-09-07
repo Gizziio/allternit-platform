@@ -82,3 +82,13 @@ export function computeCapabilityEpoch(
 export function capabilityEpochLine(epoch: string): string {
   return `Capability epoch: ${epoch}`;
 }
+
+/**
+ * Rebuild gate (rebuild-once-per-drift): true when the stored epoch is
+ * absent or differs from the freshly computed one. A session whose stored
+ * epoch matches is left untouched, so drift triggers exactly one rebuild —
+ * the updated metadata carries the new epoch and the next compare is a no-op.
+ */
+export function hasEpochDrifted(storedEpoch: unknown, computedEpoch: string): boolean {
+  return storedEpoch !== computedEpoch;
+}

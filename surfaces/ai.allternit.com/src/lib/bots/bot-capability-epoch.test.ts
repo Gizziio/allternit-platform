@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { computeCapabilityEpoch, capabilityEpochLine } from './bot-capability-epoch';
+import { computeCapabilityEpoch, capabilityEpochLine, hasEpochDrifted } from './bot-capability-epoch';
 import type { Agent } from '../agents/agent.types';
 
 let counter = 0;
@@ -142,5 +142,45 @@ describe('computeCapabilityEpoch', () => {
 describe('capabilityEpochLine', () => {
   it('formats the epoch stamp', () => {
     expect(capabilityEpochLine('abc123def456')).toBe('Capability epoch: abc123def456');
+  });
+});
+
+describe('hasEpochDrifted (rebuild-once-per-drift gate)', () => {
+  it('drifts when the stored epoch is missing (pre-epoch sessions get stamped once)', () => {
+    expect(hasEpochDrifted(undefined, 'abc123def456')).toBe(true);
+  });
+
+  it('drifts when the stored epoch has a different value or shape', () => {
+    expect(hasEpochDrifted('000000000000', 'abc123def456')).toBe(true);
+    expect(hasEpochDrifted(123, 'abc123def456')).toBe(true);
+    expect(hasEpochDrifted(null, 'abc123def456')).toBe(true);
+  });
+
+  it('does not drift when the stored epoch matches the computed one', () => {
+    expect(hasEpochDrifted('abc123def456', 'abc123def456')).toBe(false);
+  });
+
+  it('triggers exactly one rebuild across consecutive starts', () => {
+    const bot = makeBot();
+    const initialEpoch = computeCapabilityEpoch(bot, ROSTER);
+
+    // First start of a legacy session: no stored epoch → one rebuild.
+    let storedEpoch: unknown = undefined;
+    expect(hasEpochDrifted(storedEpoch, initialEpoch)).toBe(true);
+    // The rebuild stamps the session metadata with the current epoch…
+    storedEpoch = initialEpoch;
+    // …so the next start sees no drift and leaves the session untouched.
+    expect(hasEpochDrifted(storedEpoch, initialEpoch)).toBe(false);
+
+    // A capability edit drifts the epoch once; the stamp then re-syncs.
+    const edited = makeBot({
+      ...bot,
+      botProfile: { ...bot.botProfile!, tagline: 'Edited tagline' },
+    });
+    const driftedEpoch = computeCapabilityEpoch(edited, ROSTER);
+    expect(driftedEpoch).not.toBe(initialEpoch);
+    expect(hasEpochDrifted(storedEpoch, driftedEpoch)).toBe(true);
+    storedEpoch = driftedEpoch;
+    expect(hasEpochDrifted(storedEpoch, driftedEpoch)).toBe(false);
   });
 });

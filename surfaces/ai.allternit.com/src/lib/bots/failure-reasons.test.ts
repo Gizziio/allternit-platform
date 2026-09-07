@@ -46,6 +46,23 @@ describe('classifyFailure', () => {
     );
   });
 
+  it('auth wins on a realistic fund-mentioning 401 error body', () => {
+    // Anthropic-style body: 401 status + a quota-triggering phrase. The
+    // quota rule also matches the message text, so classifier precedence
+    // (auth first) is what keeps this out of the quota class.
+    const err = {
+      name: 'NativeAgentApiError',
+      statusCode: 401,
+      body: '{"type":"error","error":{"type":"authentication_error","message":"invalid x-api-key: insufficient funds"}}',
+      message: 'HTTP 401',
+    };
+    expect(classifyFailure(err)).toBe('provider_auth_or_access');
+    // Stringified shape a fetch wrapper would produce.
+    expect(
+      classifyFailure('status: 401 invalid x-api-key — insufficient funds'),
+    ).toBe('provider_auth_or_access');
+  });
+
   it('maps 402 / out-of-funds bodies to provider_quota_limit', () => {
     expect(classifyFailure(new FakeApiError('HTTP 402', 402))).toBe('provider_quota_limit');
     expect(classifyFailure(new Error('account is out of funds'))).toBe('provider_quota_limit');

@@ -16,6 +16,7 @@ import { isBot } from './bot-profile';
 import {
   computeCapabilityEpoch,
   capabilityEpochLine,
+  hasEpochDrifted,
   type CapabilityRosterEntry,
 } from './bot-capability-epoch';
 import type { Agent } from '../agents/agent.types';
@@ -129,7 +130,7 @@ function resolveRuntimeModelId(agent: Agent, modelOverride?: string): string | u
       // to the bot's persona/skills reach the reused session. The rest of
       // the session content (messages, metadata) is left untouched.
       const storedEpoch = existingSession.metadata?.capabilityEpoch;
-      if (storedEpoch !== capabilityEpoch) {
+      if (hasEpochDrifted(storedEpoch, capabilityEpoch)) {
         const basePrompt = agent.systemPrompt ?? '';
         const identityPrompt = buildIdentityPrompt(displayName, capabilityEpoch);
         const notice =
