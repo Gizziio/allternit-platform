@@ -136,7 +136,13 @@ function restoreBootstrapState(): void {
 
   if (!bootstrapState.platformOrigin && document.referrer) {
     try {
-      bootstrapState.platformOrigin = new URL(document.referrer).origin
+      const origin = new URL(document.referrer).origin
+      // Same guard as getPlatformOrigin(): inside an Office task pane the
+      // referrer is the host app (e.g. word-edit.officeapps.live.com), which
+      // must never become the platform/auth origin.
+      if (/^https:\/\/([a-z0-9-]+\.)*allternit\.com$/.test(origin) || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+        bootstrapState.platformOrigin = origin
+      }
     } catch {
       // ignore malformed referrer
     }
