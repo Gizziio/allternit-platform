@@ -27,6 +27,9 @@ export function useSettingsState<T>(key: string, initial: T): [T, React.Dispatch
   const setPersistedValue: React.Dispatch<React.SetStateAction<T>> = (next) => {
     setValue((prev) => {
       const resolved = typeof next === 'function' ? (next as (prev: T) => T)(prev) : next;
+      // No-op guard: unchanged values skip setItem + event; prevents the
+      // reader→writer→event→reader loop from overflowing the stack.
+      if (Object.is(resolved, prev)) return prev;
       try {
         window.localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(resolved));
         window.dispatchEvent(new CustomEvent(SETTINGS_CHANGED_EVENT, { detail: { key } }));
@@ -48,12 +51,20 @@ export function useSettingsValue<T>(key: string, initial: T): [T, React.Dispatch
   const [value, setValue] = useSettingsState(key, initial);
   const setValueRef = useRef(setValue);
   setValueRef.current = setValue;
+  // Last value applied via reread — skip writer calls that would only
+  // re-apply the identical value (defense in depth against the event loop).
+  const lastAppliedRef = useRef(value);
 
   useEffect(() => {
     const reread = () => {
       try {
         const raw = window.localStorage.getItem(STORAGE_PREFIX + key);
-        setValueRef.current(raw === null ? initial : (JSON.parse(raw) as T));
+        const parsed = raw === null ? initial : (JSON.parse(raw) as T);
+        // Recursion guard: an unchanged parsed value means the writer that
+        // fired the event already holds this state — do not call the writer.
+        if (Object.is(parsed, lastAppliedRef.current)) return;
+        lastAppliedRef.current = parsed;
+        setValueRef.current(parsed);
       } catch {
         // keep the current in-memory value
       }
