@@ -82,7 +82,11 @@ pub fn is_inside_base(base: &Path, child: &Path) -> bool {
 }
 
 /// Ensure a resolved file path stays under the models directory.
-pub fn safe_model_file(base: &Path, repo_id: &str, filename: &str) -> Result<PathBuf, HuggingFaceError> {
+pub fn safe_model_file(
+    base: &Path,
+    repo_id: &str,
+    filename: &str,
+) -> Result<PathBuf, HuggingFaceError> {
     let normalized = repo_id.replace('/', "--");
     let target = base.join(normalized).join(filename);
 
@@ -127,9 +131,7 @@ pub fn should_download(path: &str) -> bool {
     }
 
     // Weight file extensions.
-    let weight_exts = [
-        ".safetensors", ".bin", ".gguf", ".mlx", ".pt", ".pth",
-    ];
+    let weight_exts = [".safetensors", ".bin", ".gguf", ".mlx", ".pt", ".pth"];
     if weight_exts.iter().any(|ext| lower.ends_with(ext)) {
         return true;
     }
@@ -200,10 +202,7 @@ pub async fn list_target_files(
 ) -> Result<Vec<TreeEntry>, HuggingFaceError> {
     validate_repo_id(repo_id)?;
 
-    let url = format!(
-        "{}/{}/tree/{}",
-        HUGGINGFACE_API, repo_id, revision
-    );
+    let url = format!("{}/{}/tree/{}", HUGGINGFACE_API, repo_id, revision);
     debug!(%url, "listing Hugging Face repo tree");
 
     let client = reqwest::Client::new();

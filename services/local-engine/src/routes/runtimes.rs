@@ -112,7 +112,8 @@ async fn launch_runtime(
             }))
         }
         Err(err) => Err((
-            StatusCode::from_u16(map_runtime_error_status(&err)).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR),
+            StatusCode::from_u16(map_runtime_error_status(&err))
+                .unwrap_or(StatusCode::INTERNAL_SERVER_ERROR),
             Json(ErrorResponse {
                 error: err.to_string(),
             }),

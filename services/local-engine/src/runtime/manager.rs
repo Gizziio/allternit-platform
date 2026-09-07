@@ -224,9 +224,7 @@ impl ProcessManager {
                 flash_attn,
             } => {
                 if which::which("llama-server").is_none() {
-                    return Err(RuntimeManagerError::BinaryNotFound(
-                        "llama-server".into(),
-                    ));
+                    return Err(RuntimeManagerError::BinaryNotFound("llama-server".into()));
                 }
                 let cfg = LlamaCppConfig {
                     model_path,
@@ -270,12 +268,14 @@ impl ProcessManager {
         let pid = child.id();
 
         // Pump stdout/stderr into a size-rotating log file.
-        let stdout = child.stdout.take().ok_or_else(|| {
-            RuntimeManagerError::SpawnFailed("failed to capture stdout".into())
-        })?;
-        let stderr = child.stderr.take().ok_or_else(|| {
-            RuntimeManagerError::SpawnFailed("failed to capture stderr".into())
-        })?;
+        let stdout = child
+            .stdout
+            .take()
+            .ok_or_else(|| RuntimeManagerError::SpawnFailed("failed to capture stdout".into()))?;
+        let stderr = child
+            .stderr
+            .take()
+            .ok_or_else(|| RuntimeManagerError::SpawnFailed("failed to capture stderr".into()))?;
 
         let stdout_log = logs_path.clone();
         let stderr_log = logs_path.clone();
@@ -352,11 +352,7 @@ impl ProcessManager {
     }
 
     /// Poll the backend health endpoint until it succeeds or the timeout elapses.
-    async fn wait_for_health(
-        &self,
-        id: &str,
-        port: u16,
-    ) -> Result<bool, RuntimeManagerError> {
+    async fn wait_for_health(&self, id: &str, port: u16) -> Result<bool, RuntimeManagerError> {
         let url = llamacpp::health_url(port);
         let client = reqwest::Client::builder()
             .timeout(Duration::from_secs(2))

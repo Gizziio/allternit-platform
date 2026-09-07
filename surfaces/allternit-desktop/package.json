@@ -35,7 +35,8 @@
     "pack": "npm run prepare:platform-static && npm run prepare:office-addins && npm run prepare:cua-driver && npm run prepare:acu-gateway && npm run download:lima && npm run prepare:mesh-node && npm run prepare:office-engine && npm run prepare:api-binary && npm run prepare:connector-catalog && npm run verify:packaged-resources && electron-builder --dir",
     "dist": "npm run prepare:platform-static && npm run prepare:office-addins && npm run prepare:cua-driver && npm run prepare:acu-gateway && npm run download:lima && npm run prepare:mesh-node && npm run prepare:office-engine && npm run prepare:api-binary && npm run prepare:connector-catalog && npm run build && npm run verify:packaged-resources && electron-builder",
     "verify:packaged-resources": "node scripts/verify-packaged-resources.cjs",
-    "stage:api-binary": "node scripts/stage-api-binary.cjs"
+    "stage:api-binary": "node scripts/stage-api-binary.cjs",
+    "stage:local-engine": "node scripts/stage-local-engine-binary.cjs"
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.30.0",
