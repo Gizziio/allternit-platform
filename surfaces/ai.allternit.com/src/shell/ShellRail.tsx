@@ -74,6 +74,7 @@ import {
   isBot,
   getBotDisplayName,
 } from '@/lib/bots/bot-profile';
+import { RemotePeersRailSection } from '@/lib/peers/RemotePeersPanel';
 import { useAgentsWithSwarms } from '@/lib/agents';
 import { deriveBotPresence, type BotPresenceState } from '@/lib/bots/bot-presence';
 import {
@@ -1240,6 +1241,11 @@ export function ShellRail({
             onToggle={handleToggleTeammatesExpanded}
             onOpen={onOpen}
           />
+
+          {/* REMOTE PEERS (BOT_TEAMMATES_SPEC Phase 3, cross-machine fabric) —
+              self-contained section: list/add/remove remote peer connections
+              with reachability dots + ghost-row counts. */}
+          <RemotePeersRailSection />
 
           {/* HOME PINNED — self-prunes when nothing pinned remains live */}
           {pinnedVisible.length > 0 && (

@@ -197,6 +197,7 @@ pub mod webhook_subscription_routes;
 pub mod webhook_trigger_routes;
 pub mod workflow_routes;
 pub mod workspace_routes;
+pub mod remote_peers;
 
 use allternit_cowork_runtime::RunManager;
 use allternit_cowork_scheduler::Scheduler;
