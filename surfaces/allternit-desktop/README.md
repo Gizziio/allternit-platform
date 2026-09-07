@@ -41,9 +41,9 @@ Self-hosted AI platform desktop client. Connect to your own Allternit instance r
 
 | Platform | Download |
 |----------|----------|
-| macOS | [Allternit-Desktop.dmg](https://github.com/allternit/desktop/releases/latest) |
-| Windows | [Allternit-Desktop-Setup.exe](https://github.com/allternit/desktop/releases/latest) |
-| Linux | [Allternit-Desktop.AppImage](https://github.com/allternit/desktop/releases/latest) |
+| macOS (signed/notarized when Apple certs are present) | [Allternit-Desktop.dmg](https://github.com/allternit/desktop/releases/latest) |
+| Windows | CI can emit an unsigned `.exe`. That is **not** a production release — no EV cert, SmartScreen will warn, do not announce it as shipping. |
+| Linux | CI can emit an unsigned AppImage/deb as a smoke artifact. That is **not** a production release. |
 
 ```bash
 # macOS (Homebrew)
@@ -197,7 +197,9 @@ Last verified: 2026-09-03 against a0f8230b5 (scripts/build-desktop.sh and
 package.json scripts confirmed present).
 
 See [docs/SIGNING.md](./docs/SIGNING.md) for codesigning, notarization, and
-auto-update configuration.
+auto-update configuration. The three-platform shipping list (including work
+that can happen before Apple approval) is
+[docs/DISTRIBUTION-CHECKLIST.md](./docs/DISTRIBUTION-CHECKLIST.md).
 
 ## Data & Privacy
 

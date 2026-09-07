@@ -183,6 +183,17 @@ class MeshManager {
     log.info('[Mesh] Stopped all mesh-node sidecars');
   }
 
+  resolveSidecarPath(): string | null {
+    return this.resolveBinaryPath();
+  }
+
+  async enrollForGizzi(): Promise<{ authKey: string; controlUrl: string } | null> {
+    const session = await authManager.getSession();
+    if (!session) return null;
+    const enrollment = await this.enroll();
+    return { authKey: enrollment.authKey, controlUrl: enrollment.controlUrl };
+  }
+
   /** Binary discovery mirrors gizzi-manager: packaged resources/bin first, then the repo vendor tree, then an env override. */
   private resolveBinaryPath(): string | null {
     if (process.env.ALLTERNIT_MESH_NODE_BIN && fs.existsSync(process.env.ALLTERNIT_MESH_NODE_BIN)) {

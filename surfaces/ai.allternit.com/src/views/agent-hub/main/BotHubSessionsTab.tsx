@@ -132,8 +132,8 @@ export function BotHubSessionsTab({ onSessionStarted }: BotHubSessionsTabProps) 
     window.dispatchEvent(
       new CustomEvent("allternit:open-view", {
         detail: {
-          viewType: isGroupChat ? "chat-group-session" : "cowork-agent-session",
-          context: { sessionId: session.id, originView: "chat" },
+          viewType: isGroupChat ? "chat-group-session" : "bot-chat-session",
+          context: { sessionId: session.id, botId, originView: "chat" },
         },
       })
     );

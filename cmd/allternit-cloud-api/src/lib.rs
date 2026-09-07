@@ -323,6 +323,9 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
         // Credit balance verifies the Clerk session per-request, like the
         // hosted runtime routes.
         .merge(routes::billing_credits::routes())
+        // Desktop device tokens and Clerk sessions both read Allternit
+        // subscription remaining compute here (plan + credits).
+        .merge(routes::me_usage::routes())
         // The pack catalog is public; checkout creation verifies the Clerk
         // session per-request and answers 503 billing_not_configured when
         // STRIPE_SECRET_KEY is unset.
@@ -444,13 +447,24 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
         CorsLayer::permissive()
     } else {
         // Production: Restrictive CORS
-        let allowed_origins: Vec<_> = std::env::var("CORS_ALLOWED_ORIGINS")
-            .unwrap_or_else(|_| {
-                "http://localhost:3013,https://platform.allternit.com,https://ai.allternit.com,https://remotecontrol.allternit.com"
-                    .to_string()
-            })
-            .split(',')
-            .filter_map(|s| s.trim().parse::<axum::http::HeaderValue>().ok())
+        let mut origin_list = vec![
+            "http://localhost:3013".to_string(),
+            "https://platform.allternit.com".to_string(),
+            "https://ai.allternit.com".to_string(),
+            "https://fabrictransport.allternit.com".to_string(),
+            "https://fabric-session.allternit.com".to_string(),
+        ];
+        if let Ok(extra) = std::env::var("CORS_ALLOWED_ORIGINS") {
+            for origin in extra.split(',') {
+                let origin = origin.trim();
+                if !origin.is_empty() && !origin_list.iter().any(|existing| existing == origin) {
+                    origin_list.push(origin.to_string());
+                }
+            }
+        }
+        let allowed_origins: Vec<_> = origin_list
+            .iter()
+            .filter_map(|s| s.parse::<axum::http::HeaderValue>().ok())
             .collect();
 
         CorsLayer::new()

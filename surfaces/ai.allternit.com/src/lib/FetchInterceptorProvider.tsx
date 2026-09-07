@@ -3,13 +3,18 @@
 import React, { useEffect } from 'react';
 import { installFetchInterceptor } from "./fetch-interceptor"
 import { usePlatformAuth } from '@/lib/platform-auth-client';
-import { env } from '@/lib/env';
-import { ACTIVE_RUNTIME_ID_KEY, getRuntimeExecutionTarget } from '@/lib/runtime-target';
+import { allternitCloudOrigin } from '@/lib/cloud-api';
+import {
+  ACTIVE_RUNTIME_ID_KEY,
+  applyRuntimeIdFromSearch,
+  getRuntimeExecutionTarget,
+} from '@/lib/runtime-target';
 
 export function FetchInterceptorProvider({ children }: { children: React.ReactNode }) {
   const { getToken, isLoaded, isSignedIn } = usePlatformAuth();
 
   useEffect(() => {
+    applyRuntimeIdFromSearch();
     installFetchInterceptor(getToken)
   }, [getToken])
 
@@ -20,7 +25,7 @@ export function FetchInterceptorProvider({ children }: { children: React.ReactNo
     const refresh = async () => {
       const token = await getToken();
       if (!token || controller.signal.aborted) return;
-      const base = env('NEXT_PUBLIC_ALLTERNIT_CLOUD_API_URL', 'https://api.allternit.com')!.replace(/\/$/, '');
+      const base = allternitCloudOrigin();
       const response = await fetch(`${base}/api/v1/runtime-devices`, {
         headers: { Authorization: `Bearer ${token}` },
         signal: controller.signal,

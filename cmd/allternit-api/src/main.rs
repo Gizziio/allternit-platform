@@ -95,6 +95,7 @@ use allternit_api::playground_routes::playground_router;
 use allternit_api::provider_routes::provider_router;
 use allternit_api::rate_limit::rate_limit_middleware;
 use allternit_api::rails::{rails_router, RailsState};
+use allternit_api::fabric_routes::fabric_router;
 use allternit_api::remote_control_routes::remote_control_router;
 use allternit_api::research_task_routes::research_task_router;
 use allternit_api::rails_client_impl::create_local_rails_client;
@@ -268,7 +269,8 @@ async fn main() {
     // Initialize unified auth configuration and JWKS manager for Clerk JWT verification
     let auth_config = allternit_api::auth::AuthConfig::from_app_config(app_config);
     let jwks = allternit_api::auth::JwksManager::new(&auth_config);
-    info!("JWKS manager initialized");
+    jwks.warmup().await;
+    info!(jwks_ready = jwks.is_ready().await, "JWKS manager initialized");
 
     // Webhook secret for Clerk webhook verification
     let webhook_secret = app_config.clerk_webhook_secret();
@@ -626,6 +628,7 @@ async fn main() {
         .merge(board_stream_router())
         .merge(runtime_backend_router())
         .merge(remote_control_router())
+        .merge(fabric_router())
         .merge(agents_v1_router())
         .merge(
             bot_desktop_router().layer(axum::middleware::from_fn_with_state(
@@ -666,6 +669,7 @@ async fn main() {
         .merge(allternit_api::fabric_usage_routes::router())
         .merge(agent_cloud_router())
         .merge(allternit_api::computer_routes::router())
+        .merge(allternit_api::bot_group_routes::router())
         .merge(allternit_api::allternit_vault::router())
         .merge(passkey_router(&state))
         .merge(allternit_api::admin_workspace_routes::router())
@@ -1230,26 +1234,6 @@ async fn initialize_vm_driver(
                 dynamic: Some(Arc::new(router)),
                 incus: incus_driver,
             };
-        }
-    }
-
-    // If OpenSandbox is explicitly configured, prefer it over the local
-    // platform driver so bots can use a persistent cloud sandbox.
-    if let Ok(open_sandbox_url) = std::env::var("OPEN_SANDBOX_URL") {
-        use allternit_driver_interface::ExecutionDriver;
-        use allternit_opensandbox_driver::{OpenSandboxConfig, OpenSandboxDriver};
-        let config = OpenSandboxConfig::new(open_sandbox_url);
-        let driver = OpenSandboxDriver::new(config);
-        match driver.health_check().await {
-            Ok(health) if health.healthy => {
-                info!("OpenSandbox driver initialized from OPEN_SANDBOX_URL");
-                return VmDriverSet {
-                    dynamic: Some(Arc::new(driver)),
-                    incus: None,
-                };
-            }
-            Ok(health) => warn!("OpenSandbox health check returned unhealthy: {:?}", health),
-            Err(e) => warn!("OpenSandbox health check failed: {}", e),
         }
     }
 

@@ -11,7 +11,7 @@ vi.mock('electron-log', () => ({
   default: { info: () => {}, warn: () => {}, error: () => {} },
 }));
 
-import { OfficeEngineManager, resolveOfficeEngineSpawn } from './office-engine-manager.js';
+import { OfficeEngineManager, resolveOfficeEngineSpawn, resolveXlsxSidecarBinary } from './office-engine-manager.js';
 
 function devCheckout(): string {
   const repoRoot = mkdtempSync(join(tmpdir(), 'allternit-office-engine-'));
@@ -57,6 +57,7 @@ describe('resolveOfficeEngineSpawn', () => {
     });
     expect(spec).not.toBeNull();
     expect(spec!.command).toBe('/Applications/Allternit.app/Contents/MacOS/Allternit');
+    expect(spec!.args).toEqual([join(resourcesPath, 'office-engine', 'dist', 'index.js')]);
     expect(spec!.extraEnv).toEqual({ ELECTRON_RUN_AS_NODE: '1' });
   });
 
@@ -65,6 +66,26 @@ describe('resolveOfficeEngineSpawn', () => {
     expect(
       resolveOfficeEngineSpawn({ packaged: true, resourcesPath, repoRoot: '/nonexistent' }),
     ).toBeNull();
+  });
+
+  it('points ALLTERNIT_XLSX_SIDECAR_BINARY at a staged xlsx sidecar', () => {
+    const resourcesPath = mkdtempSync(join(tmpdir(), 'allternit-office-engine-xlsx-'));
+    mkdirSync(join(resourcesPath, 'office-engine', 'dist'), { recursive: true });
+    mkdirSync(join(resourcesPath, 'office-engine', 'bin'), { recursive: true });
+    writeFileSync(join(resourcesPath, 'office-engine', 'dist', 'index.js'), '// bundle');
+    const xlsx = join(resourcesPath, 'office-engine', 'bin', 'allternit-xlsx-sidecar');
+    writeFileSync(xlsx, '// sidecar');
+    const spec = resolveOfficeEngineSpawn({
+      packaged: true,
+      resourcesPath,
+      repoRoot: '/nonexistent',
+      execPath: '/Applications/Allternit.app/Contents/MacOS/Allternit',
+    });
+    expect(resolveXlsxSidecarBinary({ packaged: true, resourcesPath, repoRoot: '/nonexistent' })).toBe(xlsx);
+    expect(spec!.extraEnv).toMatchObject({
+      ELECTRON_RUN_AS_NODE: '1',
+      ALLTERNIT_XLSX_SIDECAR_BINARY: xlsx,
+    });
   });
 });
 

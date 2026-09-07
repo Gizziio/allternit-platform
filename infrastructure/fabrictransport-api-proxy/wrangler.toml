@@ -1,0 +1,7 @@
+name = "allternit-fabrictransport-api"
+main = "index.js"
+compatibility_date = "2025-01-01"
+
+[[routes]]
+pattern = "fabrictransport.allternit.com/api/*"
+zone_id = "5ebf34ee08d574ea107bbeb83395723a"

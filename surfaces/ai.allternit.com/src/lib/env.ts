@@ -154,6 +154,13 @@ export function isRunnerAiChatEnabled(): boolean {
  * This is NOT the 8013 gateway: only the three control-plane namespaces above
  * target this origin, and only when their feature flag is on.
  */
+/** Packaged/dev Electron shell talking to the local operator kernel. */
+export function isDesktopOperatorShell(): boolean {
+  if (typeof window === 'undefined') return false;
+  const win = window as unknown as { allternit?: unknown; allternitSidecar?: unknown };
+  return Boolean(win.allternit || win.allternitSidecar);
+}
+
 export function getCloudApiBaseUrl(): string {
   const configured =
     env('VITE_CLOUD_API_URL') ?? env('NEXT_PUBLIC_ALLTERNIT_CLOUD_API_URL');
@@ -182,6 +189,10 @@ export function getCloudApiBaseUrl(): string {
  * the control-plane handlers.
  */
 export function isAgentSessionsApiEnabled(): boolean {
+  // Desktop owns a local allternit-api that serves /api/v1/agent-sessions.
+  // The cloud-api flag stays for Clerk-authed web; do not send desktop
+  // device-token sessions to api.allternit.com.
+  if (isDesktopOperatorShell()) return true;
   return envFlag('NEXT_PUBLIC_ALLTERNIT_AGENT_SESSIONS_API');
 }
 

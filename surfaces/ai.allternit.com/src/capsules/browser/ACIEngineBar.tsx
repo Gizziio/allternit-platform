@@ -59,13 +59,6 @@ export function ACIEngineBar() {
         onChange={(event) => {
           const next = event.target.value;
           setConnectedBotId(next || null);
-          if (next) {
-            window.dispatchEvent(
-              new CustomEvent("allternit:open-view", {
-                detail: { viewType: "bot-home", context: { botId: next } },
-              }),
-            );
-          }
         }}
         className="h-6 min-w-0 max-w-[140px] rounded border border-solid border-[var(--ui-border-muted)] bg-[var(--surface-hover)] px-1.5 text-[11px] text-[var(--ui-text-secondary)] outline-none"
       >

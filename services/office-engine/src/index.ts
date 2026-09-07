@@ -7,6 +7,7 @@
  * proxies these routes under /api/office/*.
  */
 
+import { pathToFileURL } from 'node:url'
 import { Hono } from 'hono'
 import { parseDocx, saveDocx, type ParsedDocFull, type SaveBlock } from '@allternit/office-docx-engine'
 import {
@@ -619,9 +620,23 @@ export default {
   fetch: app.fetch,
 }
 
-// Direct Node startup when run as a script
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Direct Node startup when run as a script. Packaged Electron
+// `ELECTRON_RUN_AS_NODE=1` + esbuild bundle makes import.meta.url a
+// file:// URL that does not equal argv[1], so the old exact match never
+// listened and the sidecar exited 0.
+function isDirectOfficeEngineRun(): boolean {
+  const entry = process.argv[1]
+  if (!entry) return false
+  if (process.env.OFFICE_ENGINE_PORT) return true
+  try {
+    return import.meta.url === pathToFileURL(entry).href
+  } catch {
+    return entry.includes('office-engine')
+  }
+}
+
+if (isDirectOfficeEngineRun()) {
   const { serve } = await import('@hono/node-server')
-  serve({ fetch: app.fetch, port })
+  serve({ fetch: app.fetch, hostname: process.env.OFFICE_ENGINE_HOST || '127.0.0.1', port })
   console.log(`Office engine prototype listening on http://127.0.0.1:${port}`)
 }

@@ -39,13 +39,19 @@ const SUBSCRIPTION_TTL_SECONDS = 90 * 24 * 60 * 60; // 90 days
 const RATE_LIMIT_WINDOW_SECONDS = 60;
 const RATE_LIMIT_MAX_PER_RUNTIME = 30;
 
+const DASHBOARD_ORIGINS = [
+  "https://fabrictransport.allternit.com",
+  "https://ai.allternit.com",
+  "https://platform.allternit.com",
+];
+
 function getDashboardOrigin(c: Context<{ Bindings: WorkerEnv }>): string {
-  return c.env.REMOTE_CONTROL_DASHBOARD_ORIGIN ?? "https://remotecontrol.allternit.com";
+  return c.env.REMOTE_CONTROL_DASHBOARD_ORIGIN ?? "https://fabrictransport.allternit.com";
 }
 
 function allowedOrigins(origin: string, dashboardOrigin: string): boolean {
   if (origin === dashboardOrigin) return true;
-  if (origin === "https://platform.allternit.com") return true;
+  if (DASHBOARD_ORIGINS.includes(origin)) return true;
   if (origin.startsWith("http://localhost:")) return true;
   if (origin.startsWith("http://127.0.0.1:")) return true;
   return false;

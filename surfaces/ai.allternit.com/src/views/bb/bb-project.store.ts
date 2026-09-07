@@ -56,12 +56,16 @@ export const useBBProjectStore = create<BBProjectState>()((set, get) => ({
   error: null,
 
   fetchProjects: async () => {
+    if (get().isLoading) return;
     set({ isLoading: true, error: null });
     try {
       const res = await listBBProjects();
-      set({ projects: res.items.map(mapApiProject), isLoading: false });
+      set({ projects: res.items.map(mapApiProject), isLoading: false, error: null });
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : String(err), isLoading: false });
+      const message = err instanceof Error ? err.message : String(err);
+      // 401/403: device-token desktop sessions are not a bb cloud user.
+      // Keep an empty list and do not retry from the hub effect.
+      set({ error: message, isLoading: false });
     }
   },
 

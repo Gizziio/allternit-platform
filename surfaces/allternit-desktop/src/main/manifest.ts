@@ -7,43 +7,43 @@
 
 export const PLATFORM_MANIFEST = {
   /** Desktop version */
-  version: '1.0.0',
+  version: '1.1.0',
 
   /** Release timestamp */
-  releasedAt: '2026-04-08T00:00:00Z',
+  releasedAt: '2026-09-04T00:00:00Z',
 
   /** Backend is locked to this exact version */
   backend: {
-    version: '1.0.0',
+    version: '1.1.0',
 
     /** Minimum compatible backend version (grace period for rolling updates) */
     minimumCompatible: '1.0.0',
 
-    /** Download URLs for bundled backend binaries (GitHub Releases) */
+    /**
+     * Sidecar download URLs are intentionally empty. github.com/allternit/platform
+     * does not exist; Windows/Linux allternit-api is built on native CI runners
+     * and staged into resources/bin/ before electron-builder runs.
+     */
     downloads: {
-      'x86_64-linux':   'https://github.com/allternit/platform/releases/download/v1.0.0/allternit-api-1.0.0-x86_64-unknown-linux-gnu.tar.gz',
-      'aarch64-linux':  'https://github.com/allternit/platform/releases/download/v1.0.0/allternit-api-1.0.0-aarch64-unknown-linux-gnu.tar.gz',
-      'x86_64-macos':   'https://github.com/allternit/platform/releases/download/v1.0.0/allternit-api-1.0.0-x86_64-apple-darwin.tar.gz',
-      'aarch64-macos':  'https://github.com/allternit/platform/releases/download/v1.0.0/allternit-api-1.0.0-aarch64-apple-darwin.tar.gz',
-      'x86_64-windows': 'https://github.com/allternit/platform/releases/download/v1.0.0/allternit-api-1.0.0-x86_64-pc-windows-msvc.zip',
+      'x86_64-linux':   '',
+      'aarch64-linux':  '',
+      'x86_64-macos':   '',
+      'aarch64-macos':  '',
+      'x86_64-windows': '',
     } as Record<string, string>,
 
-    /** SHA256 checksums — populate per release before shipping */
     checksums: {
       'x86_64-linux':   '',
       'aarch64-linux':  '',
       'x86_64-macos':   '',
-      'aarch64-macos':   '426d91ad17db7dec27185816e4bfc7fb538a79ee3a1ff526bb85ac6f50ece272',
+      'aarch64-macos':  '426d91ad17db7dec27185816e4bfc7fb538a79ee3a1ff526bb85ac6f50ece272',
       'x86_64-windows': '',
     } as Record<string, string>,
   },
 
   /** Update endpoints */
   update: {
-    /** Desktop auto-updates via electron-updater (GitHub Releases) */
     desktopFeedUrl: 'https://github.com/allternit/desktop/releases/latest',
-
-    /** Backend version check */
     backendVersionUrl: 'https://api.allternit.com/versions/latest',
   },
 } as const;
@@ -52,7 +52,12 @@ export const PLATFORM_MANIFEST = {
 export function getBackendDownloadUrl(): string {
   const platform = getPlatformId();
   const url = PLATFORM_MANIFEST.backend.downloads[platform];
-  if (!url) throw new Error(`No backend download URL for platform: ${platform}`);
+  if (!url) {
+    throw new Error(
+      `No backend download URL for platform: ${platform}. ` +
+      'Stage allternit-api with cargo build --release -p allternit-api on the target OS, or use a CI artifact.'
+    );
+  }
   return url;
 }
 

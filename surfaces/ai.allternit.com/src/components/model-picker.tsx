@@ -817,7 +817,7 @@ export function ModelPickerUI({
     filteredInstallable.length > 0;
 
   const usageLine = useMemo(() => {
-    if (!usageSummary) return null;
+    if (!usageSummary || usageSummary.meteringAvailable === false) return null;
     const planName = usageSummary.planLabel
       || (usageSummary.plan ? usageSummary.plan.charAt(0).toUpperCase() + usageSummary.plan.slice(1) : null);
     if (planName && usageSummary.creditsRemaining != null) {

@@ -181,6 +181,8 @@ export interface AuthAPI {
   forgetAccount(userId: string): Promise<void>;
   signOut(): Promise<void>;
   hardSignOut(): Promise<void>;
+  getClerkToken(): Promise<string | null>;
+  onSessionUpdated?(handler: (session: { userId: string; userEmail: string }) => void): () => void;
 }
 
 export interface PairingInfo {
@@ -237,6 +239,8 @@ export interface MeshAPI {
 
 export interface ShellAPI {
   openExternal(url: string): Promise<void>;
+  openRemoteControl(): Promise<void>;
+  openFabricSession(): Promise<void>;
   getOfficeHostStatus(): Promise<Record<'word' | 'excel' | 'powerpoint', {
     installed: boolean;
     running: boolean;

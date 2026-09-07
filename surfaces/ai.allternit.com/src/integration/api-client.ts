@@ -1,6 +1,7 @@
 "use client";
 
 import { getDefaultAgentModel } from "@/lib/agents/agent-models";
+import { resolveOperatorGatewayUrl } from "@/lib/operator-gateway";
 
 /**
  * Allternit API Client - Canonical Enterprise Implementation
@@ -34,28 +35,22 @@ const DEFAULT_GATEWAY_URL = 'http://127.0.0.1:8013';
 
 const SELF_HOSTED_TOKEN = (import.meta as any).env?.VITE_ALLTERNIT_SELF_HOSTED_TOKEN;
 
-function stripTrailingSlash(value: string): string {
-  return value.replace(/\/+$/g, '');
-}
-
-function stripApiV1Suffix(value: string): string {
-  return value.replace(/\/api\/v1\/?$/i, '');
-}
-
-function normalizeGatewayCandidate(value: string): string {
-  return stripTrailingSlash(stripApiV1Suffix(value));
-}
-
 function configuredGatewayUrl(): string {
-  // SSR-safe: check for window existence before accessing
   const windowUrl = typeof window !== 'undefined' ? (window as any).__ALLTERNIT_GATEWAY_URL__ : undefined;
-  const configured = windowUrl
-    || (import.meta as any).env?.VITE_ALLTERNIT_GATEWAY_URL
-    || DEFAULT_GATEWAY_URL;
+  const runtimeGatewayUrl = typeof window !== 'undefined'
+    ? (window as any).__ALLTERNIT_RUNTIME_BACKEND__?.resolved_gateway_url
+    : undefined;
+  const isDesktop = typeof window !== 'undefined'
+    && Boolean((window as any).allternit || (window as any).allternitSidecar);
 
-  const normalized = normalizeGatewayCandidate(String(configured).trim());
-
-  return normalized || DEFAULT_GATEWAY_URL;
+  return resolveOperatorGatewayUrl({
+    windowUrl,
+    viteUrl: (import.meta as any).env?.VITE_ALLTERNIT_GATEWAY_URL,
+    runtimeGatewayUrl,
+    locationOrigin: typeof window !== 'undefined' ? window.location.origin : undefined,
+    isDesktop,
+    fallback: DEFAULT_GATEWAY_URL,
+  }) || DEFAULT_GATEWAY_URL;
 }
 
 function gatewayUrl(): string {
@@ -208,6 +203,14 @@ export interface UsageSummary {
   /** Optional reporting window bounds (ISO timestamps). */
   periodStart?: string;
   periodEnd?: string;
+  /** Allternit subscription plan id (free / plus / super / ultra). */
+  plan?: string;
+  planLabel?: string;
+  /** Remaining prepaid credits or free-inference allowance, in USD. */
+  creditsRemaining?: number;
+  monthlyLimit?: number;
+  /** False when the meter could not be loaded (do not render fake $0 Free). */
+  meteringAvailable?: boolean;
 }
 
 /**
@@ -228,18 +231,40 @@ function normalizeUsageSummary(raw: unknown): UsageSummary {
 
   const input = toNumber(tokensRecord.input ?? record.input_tokens ?? record.tokens_input);
   const output = toNumber(tokensRecord.output ?? record.output_tokens ?? record.tokens_output);
-  const total = toNumber(tokensRecord.total ?? record.total_tokens) || input + output;
+  const total = toNumber(tokensRecord.total ?? record.total_tokens ?? record.weeklyUsed) || input + output;
   const cents = toNumber(record.total_cents);
-  const cost = toNumber(record.cost ?? record.cost_usd ?? record.total_cost) || cents / 100;
+  const creditsRemaining = record.credits == null ? undefined : toNumber(record.credits);
+  const cost = toNumber(record.cost ?? record.cost_usd ?? record.total_cost ?? record.monthToDateUsageUsd) || cents / 100;
+  const plan = typeof record.plan === 'string' ? record.plan : undefined;
+  const planLabel = typeof record.label === 'string'
+    ? record.label
+    : typeof record.planLabel === 'string'
+      ? record.planLabel
+      : undefined;
 
   return {
-    requests: toNumber(record.requests ?? record.total_requests ?? record.request_count),
+    requests: toNumber(record.requests ?? record.total_requests ?? record.request_count ?? record.weeklyUsed),
     tokens: { input, output, total },
     cost,
     currency: typeof record.currency === 'string' && record.currency ? record.currency : 'USD',
     periodStart: typeof record.period_start === 'string' ? record.period_start : undefined,
-    periodEnd: typeof record.period_end === 'string' ? record.period_end : undefined,
+    periodEnd: typeof record.period_end === 'string'
+      ? record.period_end
+      : (typeof record.resetsAt === 'string' ? record.resetsAt : undefined),
+    plan,
+    planLabel,
+    creditsRemaining,
+    monthlyLimit: record.weeklyLimit == null ? undefined : toNumber(record.weeklyLimit),
+    meteringAvailable: record.meteringAvailable === false ? false : true,
   };
+}
+
+function isEmptyUsageMeter(summary: UsageSummary): boolean {
+  const noCredits = summary.creditsRemaining == null;
+  const noLimit = !summary.monthlyLimit;
+  const noTraffic = summary.requests === 0 && summary.tokens.total === 0 && summary.cost === 0;
+  const freeOrMissing = !summary.plan || summary.plan === 'free';
+  return freeOrMissing && noCredits && noLimit && noTraffic;
 }
 
 // ============================================================================
@@ -315,13 +340,11 @@ class AllternitApiClient {
   private candidateBaseUrls(): string[] {
     const normalizedPrimary = String(this.baseUrl || '').trim().replace(/\/+$/, '');
     const normalizedConfigured = configuredGatewayUrl();
-    const candidates = [normalizedPrimary];
+    // Prefer the live operator gateway (desktop loopback) over the value
+    // captured at module load, which may still be the baked cloud URL.
+    const candidates = [normalizedConfigured, normalizedPrimary].filter(Boolean);
     const isShellDevBrowser =
       typeof window !== 'undefined' && window.location.port === '5177';
-
-    if (normalizedConfigured && normalizedConfigured !== normalizedPrimary) {
-      candidates.push(normalizedConfigured);
-    }
 
     // If shell-ui proxy is unavailable, fall back to direct API host.
     if (/^https?:\/\/(127\.0\.0\.1|localhost):5177$/i.test(normalizedPrimary)) {
@@ -1110,8 +1133,46 @@ class AllternitApiClient {
    * Get real usage stats (requests, tokens, cost) for the current user.
    */
   async getUsageSummary(): Promise<UsageSummary> {
-    const raw = await this.get<unknown>('/api/v1/usage/summary');
-    return normalizeUsageSummary(raw);
+    // Desktop device-token sessions hit Clerk-only cloud metering as 401.
+    // `/api/v1/me/usage` fail-softs that to empty; `/usage/summary` requires
+    // org+period query params the picker never sends (400). Never throw here
+    // — a missing meter must not blank Connect or 503-loop Home.
+    try {
+      const raw = await this.get<unknown>('/api/v1/me/usage');
+      const summary = normalizeUsageSummary(raw);
+      if (!isEmptyUsageMeter(summary)) return summary;
+      const billed = await this.loadCloudBillingUsage();
+      return billed ?? { ...summary, meteringAvailable: false };
+    } catch (err) {
+      const status = err instanceof AllternitApiError ? err.statusCode : 0;
+      if (status === 401 || status === 403 || status === 404 || status === 422 || status === 503) {
+        const billed = await this.loadCloudBillingUsage();
+        return billed ?? { ...normalizeUsageSummary(null), meteringAvailable: false };
+      }
+      logger.warn({ err }, 'Usage summary unavailable; rendering empty meter');
+      const billed = await this.loadCloudBillingUsage();
+      return billed ?? { ...normalizeUsageSummary(null), meteringAvailable: false };
+    }
+  }
+
+  private async loadCloudBillingUsage(): Promise<UsageSummary | null> {
+    try {
+      const { fetchCloudBillingUsage } = await import('@/lib/cloud-api');
+      const billed = await fetchCloudBillingUsage();
+      if (!billed) return null;
+      return normalizeUsageSummary({
+        plan: billed.plan,
+        label: billed.label,
+        credits: billed.credits,
+        monthToDateUsageUsd: billed.monthToDateUsageUsd,
+        weeklyLimit: billed.weeklyLimit,
+        weeklyUsed: billed.weeklyUsed,
+        recentTransactions: billed.recentTransactions,
+      });
+    } catch (err) {
+      logger.warn({ err }, 'Cloud billing usage fallback unavailable');
+      return null;
+    }
   }
 
   // ==========================================================================
@@ -1386,8 +1447,9 @@ export function useModelDiscovery() {
       setProvidersError(null);
       
       // Fetch both auth status and real models registry. Cap the wait so a
-      // missing backend never leaves the UI stuck on a spinner.
-      const signal = AbortSignal.timeout(3000);
+      // missing backend never leaves the UI stuck on a spinner. Auth/status
+      // can exceed 3s when hundreds of providers are installed.
+      const signal = AbortSignal.timeout(10000);
       const [authResponse, registryResponse] = await Promise.all([
         api.listProviderAuthStatus({ signal }),
         api.listProviders({ signal }).catch(() => ({ all: [], default: {}, connected: [] }))
@@ -1399,7 +1461,7 @@ export function useModelDiscovery() {
       return authResponse.providers;
     } catch (err) {
       setProvidersError(err as AllternitApiError);
-      return [];
+      return null;
     } finally {
       setProvidersLoading(false);
     }

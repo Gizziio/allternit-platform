@@ -16,6 +16,7 @@
 
 import { getCloudApiBaseUrl } from '@/lib/env';
 import { buildAuthHeaders } from '@/lib/agents/api-config';
+import { isFabricSessionPwaHost } from '@/lib/fabric-session-pwa';
 
 /** Build an absolute cloud-api URL for a path such as `/api/v1/agent-sessions`. */
 export function cloudApiUrl(path: string): string {
@@ -28,6 +29,9 @@ export function cloudApiUrl(path: string): string {
  * Loopback `getCloudApiBaseUrl()` is the local control plane, not api.allternit.com.
  */
 export function allternitCloudOrigin(): string {
+  if (typeof window !== 'undefined' && isFabricSessionPwaHost(window.location.hostname)) {
+    return window.location.origin;
+  }
   const base = getCloudApiBaseUrl().replace(/\/+$/, '');
   if (/^https?:\/\/(localhost|127\.0\.0\.1)(:|$)/i.test(base)) {
     return 'https://api.allternit.com';
@@ -37,10 +41,79 @@ export function allternitCloudOrigin(): string {
 
 /**
  * fetch() against the cloud-api origin with the Clerk bearer attached.
- * Absolute cloud-api URLs are not touched by the runtime fetch interceptor
- * (which only rewrites relative, loopback, and same-origin API paths), so the
- * Authorization header is set here explicitly.
+ * Absolute `api.allternit.com` URLs skip the runtime fetch interceptor.
+ * On the Fabric Session PWA, `allternitCloudOrigin()` is this page's origin
+ * and those `/api/v1/runtime-devices` calls must also skip the interceptor
+ * (they are control-plane, forwarded by the fabrictransport API worker).
  */
+export type CloudBillingUsage = {
+  plan: string;
+  label: string;
+  credits: number | null;
+  monthToDateUsageUsd: number | null;
+  weeklyLimit?: number;
+  weeklyUsed?: number;
+  recentTransactions?: Array<{
+    amount_usd?: number;
+    amountUsd?: number;
+    source?: string;
+    created_at?: string;
+    createdAt?: string;
+  }>;
+};
+
+/**
+ * Live Allternit subscription meter from production billing routes.
+ * Used when `/api/v1/me/usage` is not deployed yet or returns empty Free.
+ */
+export async function fetchCloudBillingUsage(): Promise<CloudBillingUsage | null> {
+  try {
+    const headers = await buildAuthHeaders();
+    if (!headers.Authorization) return null;
+    const origin = allternitCloudOrigin();
+    const [subRes, credRes] = await Promise.all([
+      fetch(`${origin}/api/v1/billing/subscription`, { headers }),
+      fetch(`${origin}/api/v1/billing/credits`, { headers }),
+    ]);
+    if (!subRes.ok && !credRes.ok) return null;
+    const sub = subRes.ok
+      ? await subRes.json() as { plan_id?: string; label?: string }
+      : {};
+    const cred = credRes.ok
+      ? await credRes.json() as {
+          balance_usd?: number;
+          month_to_date_usage_usd?: number;
+          recent_transactions?: CloudBillingUsage['recentTransactions'];
+          free_inference?: {
+            remaining_usd?: number;
+            monthly_allowance_usd?: number;
+            used_usd?: number;
+          };
+        }
+      : {};
+    const balance = typeof cred.balance_usd === 'number' ? cred.balance_usd : null;
+    const freeRemaining = cred.free_inference?.remaining_usd;
+    const credits = balance != null && balance > 0
+      ? balance
+      : (typeof freeRemaining === 'number' ? freeRemaining : balance);
+    const plan = sub.plan_id || 'free';
+    const label = sub.label || `${plan.charAt(0).toUpperCase()}${plan.slice(1)}`;
+    return {
+      plan,
+      label,
+      credits,
+      monthToDateUsageUsd: typeof cred.month_to_date_usage_usd === 'number'
+        ? cred.month_to_date_usage_usd
+        : null,
+      weeklyLimit: cred.free_inference?.monthly_allowance_usd,
+      weeklyUsed: cred.free_inference?.used_usd,
+      recentTransactions: cred.recent_transactions,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function cloudApiFetch(
   path: string,
   init: RequestInit = {},

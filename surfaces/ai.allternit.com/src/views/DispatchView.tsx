@@ -37,7 +37,7 @@ import {
 } from '@/components/dispatch/CodePermissionsDropdown';
 import { DispatchOptionsMenu } from '@/components/dispatch/DispatchOptionsMenu';
 import { TimestampSeparator } from '@/components/dispatch/TimestampSeparator';
-import { openRemoteControlWindow } from '@/lib/open-remote-control-window';
+import { openFabricSessionWindow } from '@/lib/open-fabric-session-window';
 import { RemoteSessionPanel } from '@/components/dispatch/RemoteSessionPanel';
 import { MachinesPanel } from '@/components/dispatch/MachinesPanel';
 import { useRuntimes } from '@/components/dispatch/useRuntimes';
@@ -348,7 +348,7 @@ export function DispatchView(): React.ReactNode {
     }
     setSending(true);
     try {
-      const session = await remoteClient.createSession({ title: 'Remote Control', surface: 'remote-control' });
+      const session = await remoteClient.createSession({ title: 'Fabric Transport', surface: 'fabric-session' });
       await remoteClient.sendMessage(session.id, { text });
       setMessages((prev) => [...prev, { id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, role: 'user', text }]);
       setComposerValue('');
@@ -418,7 +418,7 @@ export function DispatchView(): React.ReactNode {
             <SetupRow
               icon={<Coffee size={20} />}
               title="Keep this computer awake"
-              description="Prevents sleep while Remote Control is running."
+              description="Prevents sleep while Fabric Transport is running."
               variant="toggle"
               checked={keepAwake}
               onToggle={setKeepAwake}
@@ -461,7 +461,7 @@ export function DispatchView(): React.ReactNode {
             <SetupRow
               icon={<Globe size={20} />}
               title="Browser automation"
-              description="Lets Remote Control navigate, click, and fill forms in your browser."
+              description="Lets Fabric Transport navigate, click, and fill forms in your browser."
               variant="check"
             />
             <SetupRow
@@ -486,7 +486,7 @@ export function DispatchView(): React.ReactNode {
             <SetupRow
               icon={<SquaresFour size={20} />}
               title="All connectors are on"
-              description="Remote Control can use every connector you've authenticated."
+              description="Fabric Transport can use every connector you've authenticated."
               variant="check"
             />
           </div>
@@ -514,9 +514,9 @@ export function DispatchView(): React.ReactNode {
               className="text-3xl font-medium tracking-tight m-0"
               style={{ fontFamily: 'var(--font-serif)' }}
             >
-              Dispatch & Remote Control
+              Fabric Transport
             </h1>
-            <p className="m-0 mt-1 text-sm text-[var(--text-secondary)]">Monitor, hand off, and control your agents across machines.</p>
+            <p className="m-0 mt-1 text-sm text-[var(--text-secondary)]">This desktop joins the Allternit fabric. Peers, leases, and session-worker calls go through the local gateway.</p>
           </div>
 
           <div className="flex items-center gap-2 flex-shrink-0">
@@ -677,7 +677,7 @@ export function DispatchView(): React.ReactNode {
                   </button>
                   <button
                     type="button"
-                    onClick={() => openRemoteControlWindow()}
+                    onClick={() => openFabricSessionWindow()}
                     className={cn(
                       'px-4 py-2 rounded-xl text-[13px] font-medium transition-colors',
                       'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
@@ -804,7 +804,7 @@ export function DispatchView(): React.ReactNode {
                 </div>
                 <button
                   type="button"
-                  onClick={() => openRemoteControlWindow()}
+                  onClick={() => openFabricSessionWindow()}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border-none text-[12px] font-semibold cursor-pointer transition-colors"
                   style={{ background: 'var(--surface-hover)', color: 'var(--text-primary)' }}
                 >
@@ -825,7 +825,7 @@ export function DispatchView(): React.ReactNode {
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        openRemoteControlWindow(rt.id);
+                        openFabricSessionWindow(rt.id);
                       }}
                       className="inline-flex items-center justify-center size-7 rounded-lg bg-[var(--surface-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] border-none cursor-pointer"
                       aria-label="Open remote session"

@@ -45,6 +45,7 @@ export function CodeAciPane({ onClose }: { onClose: () => void }): React.ReactNo
       const store = useBrowserAgentStore.getState();
       await store.refreshEngineHealth();
       if (cancelled || !useBrowserAgentStore.getState().engineHealthy) return;
+      if (useBrowserAgentStore.getState().connectedBotId) return;
       // Bring up the engine browser session so the pane shows a live view
       // instead of waiting for an agent run to produce screenshots.
       await useBrowserAgentStore.getState().startBrowserSession();
@@ -53,6 +54,7 @@ export function CodeAciPane({ onClose }: { onClose: () => void }): React.ReactNo
       refreshTimer = setInterval(() => {
         const current = useBrowserAgentStore.getState();
         if (!current.engineHealthy) return;
+        if (current.connectedBotId) return;
         // An active run streams its own screenshots over SSE — don't compete.
         if (current.status === 'Running' || current.status === 'WaitingApproval') return;
         void current.startBrowserSession();

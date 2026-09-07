@@ -13,6 +13,20 @@ interface MachineCardProps {
   action?: React.ReactNode;
   children?: React.ReactNode;
   className?: string;
+  pendingPermissions?: number;
+  pendingQuestions?: number;
+}
+
+function relativeHeartbeat(ts?: number): string | null {
+  if (!ts) return null;
+  const delta = Date.now() - ts;
+  if (delta < 0) return new Date(ts).toLocaleString();
+  const mins = Math.floor(delta / 60_000);
+  if (mins < 1) return 'Heartbeat just now';
+  if (mins < 60) return `Heartbeat ${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `Heartbeat ${hours}h ago`;
+  return `Heartbeat ${Math.floor(hours / 24)}d ago`;
 }
 
 const STATUS_COLORS: Record<RuntimeViewModel['status'], string> = {
@@ -21,7 +35,18 @@ const STATUS_COLORS: Record<RuntimeViewModel['status'], string> = {
   offline: 'var(--ui-text-muted)',
 };
 
-export function MachineCard({ runtime, selected, onClick, action, children, className }: MachineCardProps): React.ReactNode {
+export function MachineCard({
+  runtime,
+  selected,
+  onClick,
+  action,
+  children,
+  className,
+  pendingPermissions = 0,
+  pendingQuestions = 0,
+}: MachineCardProps): React.ReactNode {
+  const heartbeat = relativeHeartbeat(runtime.lastHeartbeatAt);
+  const needsYou = pendingPermissions + pendingQuestions;
   return (
     <GlassSurface
       onClick={onClick}
@@ -57,10 +82,8 @@ export function MachineCard({ runtime, selected, onClick, action, children, clas
 
       <div className="text-[13px] text-[var(--text-secondary)]">{runtime.host}</div>
 
-      {runtime.lastHeartbeatAt && (
-        <div className="text-[12px] text-[var(--text-tertiary)]">
-          Last heartbeat {new Date(runtime.lastHeartbeatAt).toLocaleString()}
-        </div>
+      {heartbeat && (
+        <div className="text-[12px] text-[var(--text-tertiary)]">{heartbeat}</div>
       )}
 
       {runtime.capabilities.length > 0 && (
@@ -76,7 +99,19 @@ export function MachineCard({ runtime, selected, onClick, action, children, clas
         </div>
       )}
 
+      {needsYou > 0 && (
+        <div className="flex flex-wrap gap-2 text-[12px] font-medium text-[var(--status-warning)]">
+          {pendingPermissions > 0 && <span>{pendingPermissions} permission{pendingPermissions === 1 ? '' : 's'}</span>}
+          {pendingQuestions > 0 && <span>{pendingQuestions} question{pendingQuestions === 1 ? '' : 's'}</span>}
+        </div>
+      )}
+
       {children}
+      {onClick && (
+        <div className="text-[12px] font-semibold text-[var(--accent-primary)] mt-1">
+          {runtime.status === 'offline' ? 'Open sessions' : 'Open session'}
+        </div>
+      )}
     </GlassSurface>
   );
 }

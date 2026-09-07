@@ -24,6 +24,7 @@ import { getBotDisplayName, getBotTagline } from '@/lib/bots/bot-profile';
 import { useGroupChatStore } from '@/lib/bots/group-chat.store';
 import { runGroupChatTurn } from '@/lib/bots/group-chat-turn-runner';
 import { BotAvatar } from '@/views/bots/BotAvatar';
+import { GroupChatView } from '@/views/bots/GroupChatView';
 import { cn } from '@/lib/utils';
 import type { ModeSessionMessage } from '@/lib/agents/mode-session-store';
 import { AgentSessionLayout, CanvasPanel } from '@/views/agent-sessions/AgentSessionLayout';
@@ -60,6 +61,24 @@ function buildMessageClusters(messages: ModeSessionMessage[]) {
 }
 
 export function GroupChatSessionView({ sessionId, onClose }: GroupChatSessionViewProps) {
+  const sessions = useChatSessionStore((s) => s.sessions);
+  const session = useMemo(
+    () => sessions.find((s) => s.id === sessionId) ?? null,
+    [sessions, sessionId]
+  );
+  const groupId = session?.metadata?.groupId as string | undefined;
+  if (groupId) {
+    return <GroupChatView groupId={groupId} onBack={onClose} />;
+  }
+  return (
+    <LegacyGroupChatSessionView
+      sessionId={sessionId}
+      onClose={onClose}
+    />
+  );
+}
+
+function LegacyGroupChatSessionView({ sessionId, onClose }: GroupChatSessionViewProps) {
   const mode = 'chat';
   const modeColors = MODE_COLORS[mode];
 

@@ -72,6 +72,11 @@ pub struct CompanyConfig {
     #[serde(rename = "railsUrl")]
     pub rails_url: Option<String>,
 
+    /// Canonical AllternitOS lease authority. Unset means fabric lease
+    /// issuance returns 503 until production configures it.
+    #[serde(rename = "allternitOSLeaseAuthorityUrl")]
+    pub allternitos_lease_authority_url: Option<String>,
+
     /// Rails workspace ID for this packaged deployment.
     #[serde(rename = "railsWorkspaceId")]
     pub rails_workspace_id: Option<String>,
@@ -418,6 +423,19 @@ impl AppConfig {
             .tenant_id
             .clone()
             .unwrap_or_else(|| "default".to_string())
+    }
+
+    /// URL of the canonical AllternitOS lease authority.
+    pub fn allternitos_lease_authority_url(&self) -> Option<String> {
+        std::env::var("ALLTERNITOS_LEASE_AUTHORITY_URL")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .or_else(|| {
+                self.company
+                    .allternitos_lease_authority_url
+                    .clone()
+                    .filter(|s| !s.is_empty())
+            })
     }
 
     /// URL the frontend should use to reach the API.

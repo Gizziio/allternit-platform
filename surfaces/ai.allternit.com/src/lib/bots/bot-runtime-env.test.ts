@@ -74,8 +74,8 @@ describe('buildBotRuntimeEnv', () => {
     const result = buildBotRuntimeEnv({
       vmOperator: {
         enabled: true,
-        provider: 'opensandbox',
-        image: 'opensandbox/desktop:v1.0.0',
+        provider: 'cloud-desktop',
+        image: 'ubuntu/desktop',
         allowedActions: ['command', 'browser', 'desktop'],
         networkPolicy: 'restricted',
         persistence: 'session',
@@ -87,8 +87,8 @@ describe('buildBotRuntimeEnv', () => {
     });
 
     expect(result.env.ALLTERNIT_VM_OPERATOR_ENABLED).toBe('true');
-    expect(result.env.ALLTERNIT_VM_PROVIDER).toBe('opensandbox');
-    expect(result.env.ALLTERNIT_VM_IMAGE).toBe('opensandbox/desktop:v1.0.0');
+    expect(result.env.ALLTERNIT_VM_PROVIDER).toBe('cloud-desktop');
+    expect(result.env.ALLTERNIT_VM_IMAGE).toBe('ubuntu/desktop');
     expect(result.env.ALLTERNIT_VM_ALLOWED_ACTIONS).toBe('command,browser,desktop');
     expect(result.env.ALLTERNIT_VM_NETWORK_POLICY).toBe('restricted');
     expect(result.env.ALLTERNIT_VM_PERSISTENCE).toBe('session');
@@ -103,7 +103,7 @@ describe('buildBotRuntimeEnv', () => {
 
   it('only marks VM operator disabled when not enabled', () => {
     const result = buildBotRuntimeEnv({
-      vmOperator: { enabled: false, provider: 'opensandbox' },
+      vmOperator: { enabled: false, provider: 'cloud-desktop' },
     });
     expect(result.env.ALLTERNIT_VM_OPERATOR_ENABLED).toBe('false');
     expect(result.env.ALLTERNIT_VM_PROVIDER).toBeUndefined();

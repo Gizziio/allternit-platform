@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useModelDiscovery } from "@/integration/api-client";
-import { getProviderMeta, PROVIDER_REGISTRY, type ProviderKind, type ProviderMeta } from "@/lib/providers/provider-registry";
+import { canonicalProviderId, getProviderMeta, listCanonicalProviders, type ProviderKind, type ProviderMeta } from "@/lib/providers/provider-registry";
 import {
   Check,
   Shield,
@@ -155,12 +155,19 @@ export const ProviderGallery: React.FC<ProviderGalleryProps> = ({
   // If the backend is unreachable, still show the registry so the user can
   // see which CLI/API providers are supported and connect them.
   const displayProviders = useMemo(() => {
-    if (providers.length > 0) return providers;
-    return Object.values(PROVIDER_REGISTRY).map((meta) => ({
-      provider_id: meta.id,
-      authenticated: false,
-      status: meta.kind === "cli" ? "offline" : "unconfigured",
-    }));
+    const byId = new Map(
+      providers.map((p) => [canonicalProviderId(p.provider_id), p] as const),
+    );
+    return listCanonicalProviders()
+      .filter((meta) => meta.id !== "allternit" && meta.id !== "allternit-local-engine")
+      .map((meta) => {
+        const row = byId.get(meta.id);
+        return {
+          provider_id: meta.id,
+          authenticated: Boolean(row?.authenticated),
+          status: row?.status ?? (meta.kind === "cli" ? "offline" : "unconfigured"),
+        };
+      });
   }, [providers]);
 
   useEffect(() => {

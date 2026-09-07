@@ -14,9 +14,10 @@ Inspired by Agent S (72.6% OSWorld), ScreenAgent (IJCAI 2024).
 from __future__ import annotations
 
 import asyncio
+import logging
+import sys
 import time
 import uuid
-import logging
 from dataclasses import dataclass, field
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple, AsyncIterator
 from datetime import datetime, timezone
@@ -309,13 +310,21 @@ class PlanningLoop:
                     # Fallback: use analyze_screenshot (async) to avoid event-loop conflict
                     logger.warning(f"ground_and_reason failed: {e}, falling back to analyze_screenshot")
                     from .vision_providers import ActionPlan, VisionAction
-                    resp = await self.vision_provider.analyze_screenshot(b64_screenshot, augmented_task)
-                    plan = ActionPlan(
-                        reasoning=getattr(resp, "raw_response", "") or "",
-                        plan_steps=[task],
-                        immediate_action=resp.action or VisionAction(type="screenshot", target="screen", reason=""),
-                        confidence=resp.confidence,
-                    )
+                    try:
+                        resp = await self.vision_provider.analyze_screenshot(b64_screenshot, augmented_task)
+                        plan = ActionPlan(
+                            reasoning=getattr(resp, "raw_response", "") or "",
+                            plan_steps=[task],
+                            immediate_action=resp.action or VisionAction(type="screenshot", target="screen", reason=""),
+                            confidence=resp.confidence,
+                            done=False,
+                        )
+                    except Exception as fallback_err:
+                        logger.error("vision fallback failed: %s", fallback_err)
+                        stop_reason = StopReason.ERROR
+                        error_msg = str(fallback_err)
+                        steps.append(step)
+                        break
 
                 step.reasoning = plan.reasoning
                 step.plan_steps = plan.plan_steps
@@ -557,6 +566,49 @@ class PlanningLoop:
         return hasattr(self.adapter, "registered_adapters")
 
     async def _capture_screenshot(self, session_id: str) -> bytes:
+        """Capture screenshot via adapter or executor, then the host display."""
+        png = await self._capture_screenshot_adapter(session_id)
+        if png:
+            return png
+        host = self._capture_screenshot_host()
+        if host:
+            logger.info("Screenshot capture fell back to host display (%s bytes)", len(host))
+        return host
+
+    def _capture_screenshot_host(self) -> bytes:
+        """Last-resort capture of the actual computer screen.
+
+        Adapter health often fails (no browser extension, no pyautogui). On
+        macOS, `screencapture` still shows the paired Desktop.
+        """
+        import os
+        import subprocess
+        import tempfile
+
+        if sys.platform != "darwin":
+            return b""
+        fd, path = tempfile.mkstemp(suffix=".png")
+        os.close(fd)
+        try:
+            subprocess.run(
+                ["screencapture", "-x", path],
+                check=True,
+                timeout=8,
+                capture_output=True,
+            )
+            with open(path, "rb") as handle:
+                data = handle.read()
+            return data if len(data) > 32 else b""
+        except Exception as exc:
+            logger.warning("Host screenshot capture failed: %s", exc)
+            return b""
+        finally:
+            try:
+                os.unlink(path)
+            except OSError:
+                pass
+
+    async def _capture_screenshot_adapter(self, session_id: str) -> bytes:
         """Capture screenshot via adapter or executor."""
         import base64 as _b64
         try:

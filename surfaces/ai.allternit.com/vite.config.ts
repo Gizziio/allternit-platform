@@ -2,6 +2,7 @@ import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 import os from 'os'
+import fs from 'node:fs'
 import { createRequire } from 'node:module'
 import { visualizer } from 'rollup-plugin-visualizer'
 import pkg from './package.json'
@@ -47,6 +48,35 @@ function remoteControlRoutePlugin(): Plugin {
         req.url = '/index.html' + (url.startsWith('?') ? url : '');
         next();
       });
+    },
+  };
+}
+
+/**
+ * Dev: `/fabric-session` loads the platform SPA so the in-shell Fabric
+ * Transport view works. Build: copy the PWA to `dist/fabric-session/index.html`
+ * so Cloudflare Pages pretty-URLs can serve `/fabric-session/` without a
+ * `.html` rewrite loop.
+ */
+function fabricSessionRoutePlugin(): Plugin {
+  return {
+    name: 'allternit-fabric-session-route',
+    configureServer(server) {
+      server.middlewares.use('/fabric-session', (req, res, next) => {
+        if (req.method !== 'GET') return next();
+        const url = req.url ?? '/';
+        if (url !== '/' && !url.startsWith('?')) return next();
+        req.url = '/index.html' + (url.startsWith('?') ? url : '');
+        next();
+      });
+    },
+    closeBundle() {
+      const outDir = path.resolve(__dirname, 'dist');
+      const src = path.join(outDir, 'fabric-session.html');
+      const destDir = path.join(outDir, 'fabric-session');
+      if (!fs.existsSync(src)) return;
+      fs.mkdirSync(destDir, { recursive: true });
+      fs.copyFileSync(src, path.join(destDir, 'index.html'));
     },
   };
 }
@@ -125,6 +155,7 @@ export default defineConfig({
   plugins: [
     react(),
     remoteControlRoutePlugin(),
+    fabricSessionRoutePlugin(),
     dispatchHandoffPlugin(),
     designSkillsPlugin(),
     process.env.ANALYZE === '1' && visualizer({
@@ -188,6 +219,7 @@ export default defineConfig({
       input: {
         main: path.resolve(__dirname, 'index.html'),
         'remote-control': path.resolve(__dirname, 'remote-control.html'),
+        'fabric-session': path.resolve(__dirname, 'fabric-session.html'),
       },
       external: [
         /.*domains\/agent\/allternit-agent-workspace\/pkg.*/,

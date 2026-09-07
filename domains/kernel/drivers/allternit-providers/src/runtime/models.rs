@@ -538,7 +538,7 @@ impl ProviderModelAdapter for CodexModelAdapter {
             models: None,
             default_model_id: None,
             allow_freeform: true,
-            freeform_hint: Some("Enter Codex model ID (e.g., codex-mini)".to_string()),
+            freeform_hint: Some("Enter Codex model ID (e.g., gpt-6-astra, gpt-5.6-sol)".to_string()),
             error: None,
         })
     }

@@ -33,7 +33,7 @@ export interface OpenCanonicalChatOptions {
 export async function openBotCanonicalChat(
   options: OpenCanonicalChatOptions,
 ): Promise<string> {
-  const { botId, botName, kickoff = "Hey, tell me about yourself!", setActive = true } = options;
+  const { botId, botName, kickoff, setActive = true } = options;
 
   const rosterState = useBotRosterStore.getState();
   const existingId = rosterState.canonicalChatIds[botId];
@@ -63,7 +63,9 @@ export async function openBotCanonicalChat(
     agentId: botId,
     agentName: botName,
     metadata: {
+      isBot: true,
       botCanonicalFor: botId,
+      agentId: botId,
       botName,
     },
   });
@@ -75,15 +77,30 @@ export async function openBotCanonicalChat(
     sessionStore.setActiveSession(sessionId);
   }
 
-  // Send kickoff message so the bot introduces itself.
-  try {
-    await sessionStore.sendMessage(sessionId, { text: kickoff });
-  } catch (err) {
-    logger.warn({ err, botId, sessionId }, 'Failed to send canonical chat kickoff');
+  const intro = kickoff ?? 'Hey, tell me about yourself!';
+  if (intro.trim()) {
+    try {
+      await sessionStore.sendMessage(sessionId, { text: intro });
+    } catch (err) {
+      logger.warn({ err, botId, sessionId }, 'Failed to send canonical chat kickoff');
+    }
   }
 
   logger.info({ botId, sessionId }, 'Created canonical bot chat');
   return sessionId;
+}
+
+/** Open the canonical 1:1 bot chat view (not Cowork). */
+export function openBotChatView(sessionId: string, botId: string, originView = 'chat'): void {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(
+    new CustomEvent('allternit:open-view', {
+      detail: {
+        viewType: 'bot-chat-session',
+        context: { sessionId, botId, originView },
+      },
+    }),
+  );
 }
 
 /**

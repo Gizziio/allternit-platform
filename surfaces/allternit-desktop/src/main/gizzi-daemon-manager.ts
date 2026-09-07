@@ -8,6 +8,7 @@
  */
 
 import { spawn, spawnSync, execFile, ChildProcess } from 'child_process';
+import { app } from 'electron';
 import * as fs from 'fs';
 import * as http from 'http';
 import * as https from 'https';
@@ -15,6 +16,8 @@ import * as path from 'path';
 import * as os from 'os';
 import log from 'electron-log';
 import { PORTS, URLS } from './config.js';
+
+export const WINDOWS_TASK_NAME = 'AllternitGizzi';
 
 export type DaemonPlatform = 'macos' | 'linux' | 'windows' | 'unknown';
 
@@ -70,14 +73,13 @@ export class GizziDaemonManager {
 
   /** Resolve the gizzi-code binary used by the daemon. */
   resolveBinaryPath(): string | null {
+    const binaryName = process.platform === 'win32' ? 'gizzi-code.exe' : 'gizzi-code';
     const candidates = [
-      // Packaged desktop app
-      path.join(process.resourcesPath, 'bin', 'gizzi-code'),
-      // Dev monorepo
-      path.resolve('cmd/gizzi-code/dist/gizzi-code'),
-      path.resolve('surfaces/allternit-desktop/resources/bin/gizzi-code'),
-      // PATH
-      'gizzi-code',
+      path.join(process.resourcesPath ?? '', 'bin', binaryName),
+      path.resolve('cmd/gizzi-code/dist', binaryName),
+      path.resolve('cmd/gizzi-code/dist/gizzi-code-win32-x64.exe'),
+      path.resolve('surfaces/allternit-desktop/resources/bin', binaryName),
+      binaryName,
     ];
     for (const candidate of candidates) {
       try {
@@ -123,8 +125,12 @@ export class GizziDaemonManager {
         return stdout.trim() === 'enabled';
       }
       if (platform === 'windows') {
-        // TODO: query Windows Service Manager (sc query allternit-gizzi)
-        return false;
+        try {
+          await execFilePromise('schtasks', ['/Query', '/TN', WINDOWS_TASK_NAME]);
+          return true;
+        } catch {
+          return false;
+        }
       }
       return false;
     } catch {
@@ -196,6 +202,14 @@ export class GizziDaemonManager {
       }
     }
 
+    if (platform === 'windows') {
+      const envPath = path.join(windowsDaemonDir(), 'env.cmd');
+      if (!fs.existsSync(envPath)) return null;
+      const text = fs.readFileSync(envPath, 'utf8');
+      const match = text.match(/^set GIZZI_SERVER_PASSWORD=(.*)$/m);
+      return match?.[1]?.trim() || null;
+    }
+
     return null;
   }
 
@@ -206,7 +220,8 @@ export class GizziDaemonManager {
   async install(password: string | null = null, apiUrl: string = URLS.API): Promise<void> {
     const platform = getPlatform();
     if (platform === 'windows') {
-      throw new Error('Windows daemon install is not yet implemented.');
+      await this.installWindows(password, apiUrl);
+      return;
     }
     if (platform === 'unknown') {
       throw new Error(`Unsupported platform: ${process.platform}`);
@@ -265,6 +280,35 @@ export class GizziDaemonManager {
     });
   }
 
+  private async installWindows(password: string | null, apiUrl: string): Promise<void> {
+    const binary = this.resolveBinaryPath();
+    if (!binary) {
+      throw new Error('gizzi-code.exe binary not found.');
+    }
+    const daemonDir = windowsDaemonDir();
+    fs.mkdirSync(daemonDir, { recursive: true });
+    const files = buildWindowsDaemonFiles({
+      daemonDir,
+      sourceBinary: binary,
+      port: DAEMON_PORT,
+      password: password ?? '',
+      apiUrl,
+    });
+    fs.copyFileSync(binary, files.destBinary);
+    fs.writeFileSync(files.runCmdPath, files.runCmd, 'utf8');
+    fs.writeFileSync(files.envCmdPath, files.envCmd, 'utf8');
+    const xmlPath = path.join(daemonDir, 'task.xml');
+    fs.writeFileSync(xmlPath, files.taskXml, 'utf8');
+    try {
+      await execFilePromise('schtasks', ['/Delete', '/TN', WINDOWS_TASK_NAME, '/F']);
+    } catch {
+      /* task may not exist yet */
+    }
+    await execFilePromise('schtasks', ['/Create', '/TN', WINDOWS_TASK_NAME, '/XML', xmlPath, '/F']);
+    await execFilePromise('schtasks', ['/Run', '/TN', WINDOWS_TASK_NAME]);
+    log.info('[GizziDaemonManager] Windows scheduled task installed:', WINDOWS_TASK_NAME);
+  }
+
   /** Start the installed service. */
   async start(): Promise<void> {
     const platform = getPlatform();
@@ -272,6 +316,8 @@ export class GizziDaemonManager {
       await execFilePromise('launchctl', ['start', 'com.allternit.gizzi']);
     } else if (platform === 'linux') {
       await execFilePromise('systemctl', ['start', 'allternit-gizzi']);
+    } else if (platform === 'windows') {
+      await execFilePromise('schtasks', ['/Run', '/TN', WINDOWS_TASK_NAME]);
     } else {
       throw new Error(`Start not implemented for ${platform}`);
     }
@@ -284,6 +330,8 @@ export class GizziDaemonManager {
       await execFilePromise('launchctl', ['stop', 'com.allternit.gizzi']);
     } else if (platform === 'linux') {
       await execFilePromise('systemctl', ['stop', 'allternit-gizzi']);
+    } else if (platform === 'windows') {
+      await execFilePromise('schtasks', ['/End', '/TN', WINDOWS_TASK_NAME]);
     } else {
       throw new Error(`Stop not implemented for ${platform}`);
     }
@@ -298,7 +346,7 @@ export class GizziDaemonManager {
       } else if (platform === 'linux') {
         spawnSync('systemctl', ['stop', 'allternit-gizzi'], { timeout: 5000, stdio: 'ignore' });
       } else if (platform === 'windows') {
-        spawnSync('schtasks', ['/End', '/TN', 'AllternitGizzi'], {
+        spawnSync('schtasks', ['/End', '/TN', WINDOWS_TASK_NAME], {
           timeout: 5000,
           stdio: 'ignore',
           windowsHide: true,
@@ -321,10 +369,69 @@ export class GizziDaemonManager {
       try { await execFilePromise('systemctl', ['disable', 'allternit-gizzi']); } catch { /* ignore */ }
       try { fs.unlinkSync('/etc/systemd/system/allternit-gizzi.service'); } catch { /* ignore */ }
       try { await execFilePromise('systemctl', ['daemon-reload']); } catch { /* ignore */ }
+    } else if (platform === 'windows') {
+      try { await execFilePromise('schtasks', ['/End', '/TN', WINDOWS_TASK_NAME]); } catch { /* ignore */ }
+      try { await execFilePromise('schtasks', ['/Delete', '/TN', WINDOWS_TASK_NAME, '/F']); } catch { /* ignore */ }
+      try { fs.rmSync(windowsDaemonDir(), { recursive: true, force: true }); } catch { /* ignore */ }
     } else {
       throw new Error(`Uninstall not implemented for ${platform}`);
     }
   }
+}
+
+function windowsDaemonDir(): string {
+  const roaming = process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming');
+  try {
+    return path.join(app.getPath('userData'), 'gizzi-daemon');
+  } catch {
+    return path.join(roaming, 'Allternit Desktop', 'gizzi-daemon');
+  }
+}
+
+export function buildWindowsDaemonFiles(opts: {
+  daemonDir: string;
+  sourceBinary: string;
+  port: number;
+  password: string;
+  apiUrl: string;
+}): { destBinary: string; runCmdPath: string; envCmdPath: string; runCmd: string; envCmd: string; taskXml: string } {
+  const destBinary = path.join(opts.daemonDir, 'gizzi-code.exe');
+  const runCmdPath = path.join(opts.daemonDir, 'run.cmd');
+  const envCmdPath = path.join(opts.daemonDir, 'env.cmd');
+  const envCmd = [
+    `@echo off`,
+    `set GIZZI_HOST=127.0.0.1`,
+    `set GIZZI_PORT=${opts.port}`,
+    `set GIZZI_SERVER_PASSWORD=${opts.password.replace(/%/g, '%%')}`,
+    `set ALLTERNIT_API_URL=${opts.apiUrl}`,
+    '',
+  ].join('\r\n');
+  const runCmd = [
+    '@echo off',
+    'setlocal',
+    `cd /d "${opts.daemonDir}"`,
+    'if exist env.cmd call env.cmd',
+    `"${destBinary}" serve --port %GIZZI_PORT% --hostname 127.0.0.1 --print-logs`,
+    '',
+  ].join('\r\n');
+  const taskXml = `<?xml version="1.0" encoding="UTF-8"?>
+<Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+  <RegistrationInfo><Description>Allternit Gizzi always-on daemon</Description></RegistrationInfo>
+  <Triggers><LogonTrigger><Enabled>true</Enabled></LogonTrigger></Triggers>
+  <Principals><Principal id="Author"><LogonType>InteractiveToken</LogonType><RunLevel>LeastPrivilege</RunLevel></Principal></Principals>
+  <Settings>
+    <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+    <AllowStartOnDemand>true</AllowStartOnDemand>
+    <Enabled>true</Enabled>
+    <ExecutionTimeLimit>PT0S</ExecutionTimeLimit>
+    <RestartOnFailure><Interval>PT1M</Interval><Count>3</Count></RestartOnFailure>
+  </Settings>
+  <Actions Context="Author"><Exec><Command>${runCmdPath}</Command></Exec></Actions>
+</Task>
+`;
+  return { destBinary, runCmdPath, envCmdPath, runCmd, envCmd, taskXml };
 }
 
 export const gizziDaemonManager = new GizziDaemonManager();
