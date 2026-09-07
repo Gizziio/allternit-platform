@@ -56,6 +56,40 @@ export interface OfficeEngineSpawnContext {
  * copy was not staged into resources). Pure — kept separate from the manager
  * so it can be unit-tested without spawning anything.
  */
+export function resolveXlsxSidecarBinary(context: OfficeEngineSpawnContext): string | null {
+  const platform = context.platform ?? process.platform;
+  const name = platform === 'win32' ? 'allternit-xlsx-sidecar.exe' : 'allternit-xlsx-sidecar';
+  const candidates = context.packaged
+    ? [
+        path.join(context.resourcesPath ?? '', 'office-engine', 'bin', name),
+        path.join(context.resourcesPath ?? '', 'bin', name),
+      ]
+    : [
+        path.join(
+          context.repoRoot,
+          'packages',
+          '@allternit',
+          'office-xlsx-engine',
+          'crate',
+          'target',
+          'release',
+          name,
+        ),
+        path.join(context.repoRoot, 'target', 'release', name),
+      ];
+  return candidates.find((candidate) => fs.existsSync(candidate)) ?? null;
+}
+
+function spawnExtraEnv(
+  context: OfficeEngineSpawnContext,
+  base: Record<string, string> = {},
+): Record<string, string> {
+  const extraEnv = { ...base };
+  const xlsx = resolveXlsxSidecarBinary(context);
+  if (xlsx) extraEnv.ALLTERNIT_XLSX_SIDECAR_BINARY = xlsx;
+  return extraEnv;
+}
+
 export function resolveOfficeEngineSpawn(context: OfficeEngineSpawnContext): OfficeEngineSpawnSpec | null {
   const platform = context.platform ?? process.platform;
 
@@ -70,7 +104,7 @@ export function resolveOfficeEngineSpawn(context: OfficeEngineSpawnContext): Off
       // Electron binary as plain Node against the bundled service build.
       command: context.execPath ?? process.execPath,
       args: [entry],
-      extraEnv: { ELECTRON_RUN_AS_NODE: '1' },
+      extraEnv: spawnExtraEnv(context, { ELECTRON_RUN_AS_NODE: '1' }),
     };
   }
 
@@ -85,7 +119,12 @@ export function resolveOfficeEngineSpawn(context: OfficeEngineSpawnContext): Off
   if (!fs.existsSync(entry) || !fs.existsSync(tsxBin)) {
     return null;
   }
-  return { command: tsxBin, args: ['src/index.ts'], cwd: serviceDir };
+  return {
+    command: tsxBin,
+    args: ['src/index.ts'],
+    cwd: serviceDir,
+    extraEnv: spawnExtraEnv(context),
+  };
 }
 
 export interface OfficeEngineManagerOptions {

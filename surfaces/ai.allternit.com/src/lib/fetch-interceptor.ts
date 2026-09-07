@@ -15,6 +15,8 @@ import {
   getActiveRuntimeId,
   getRuntimeExecutionTarget,
 } from './runtime-target';
+import { allternitCloudOrigin } from './cloud-api';
+import { isCloudControlPlanePath } from './cloud-control-plane-paths';
 
 let currentTokenGetter: TokenGetter | null = null;
 let originalEventSource: typeof EventSource | null = null;
@@ -39,6 +41,7 @@ function isDesktopShell(): boolean {
 function isRuntimeApiUrl(value: string): boolean {
   try {
     const parsed = new URL(value, window.location.origin);
+    if (isCloudControlPlanePath(parsed.pathname)) return false;
     const loopback = parsed.hostname === '127.0.0.1' || parsed.hostname === 'localhost';
     return isAllowedRuntimePath(parsed.pathname)
       && (value.startsWith('/') || loopback || parsed.origin === window.location.origin);
@@ -123,7 +126,7 @@ function bytesToBase64(bytes: Uint8Array): string {
 }
 
 function cloudApiBaseUrl(): string {
-  return ((import.meta as any).env?.NEXT_PUBLIC_ALLTERNIT_CLOUD_API_URL || 'https://api.allternit.com').replace(/\/$/, '');
+  return allternitCloudOrigin();
 }
 
 async function requestBody(input: RequestInfo | URL, init?: RequestInit): Promise<{ body: string; bodyEncoding: string }> {

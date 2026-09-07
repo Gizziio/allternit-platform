@@ -10,6 +10,7 @@ import { Sliders, MagicWand, Sun, Moon, Scissors,
 import { DesignClipboardSidebar } from "./DesignClipboardSidebar";
 import { useNav } from "../../nav/useNav";
 import { useDesignSessionStore, useDesignSessionActions, createDesignSession } from "./DesignSessionStore";
+import { NativeOriginBanner } from "@/components/native-sessions/NativeOriginBanner";
 import { useDesignTabStore } from "../../stores/design-tab.store";
 import { useDesignProjectStore } from "@/views/project/design/design-project.store";
 import { NewProjectScreen } from './NewProjectScreen';
@@ -580,8 +581,9 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
   } as React.CSSProperties;
 
   return (
-    <div className={designStudioLook ? 'od-design-studio' : ''} style={{ ...tokenStyles, ...themeOverride, display: "flex", height: "100%", width: "100%", background: "var(--shell-view-bg)", fontFamily: "var(--font-sans)", color: "var(--text-primary)", transition: "background 0.3s, color 0.3s" }}>
-      <PanelGroup direction="horizontal">
+    <div className={designStudioLook ? 'od-design-studio' : ''} style={{ ...tokenStyles, ...themeOverride, display: "flex", flexDirection: "column", height: "100%", width: "100%", background: "var(--shell-view-bg)", fontFamily: "var(--font-sans)", color: "var(--text-primary)", transition: "background 0.3s, color 0.3s" }}>
+      <NativeOriginBanner sessionId={activeSessionId} metadata={activeSession?.metadata} />
+      <PanelGroup direction="horizontal" style={{ flex: 1, minHeight: 0 }}>
         <Panel>
           <div style={{ display: "flex", flexDirection: "column", height: "100%", background: "var(--bg-secondary)" }}>
             <header style={{ height: "56px", borderBottom: "1px solid var(--border-subtle)", background: "var(--surface-panel)", display: "flex", alignItems: "center", padding: "0 16px", flexShrink: 0 }}>

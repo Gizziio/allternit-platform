@@ -44,6 +44,7 @@ import { useDesignSessionStore } from '../views/design/DesignSessionStore';
 // Modularized Shell Components
 import { getShellViewRegistry } from './ViewRegistry';
 import { HudShell } from './hud/HudShell';
+import { NativeSessionPickerHost } from '@/components/native-sessions/NativeSessionPicker';
 import { useHudHandoff } from './hud/handoff';
 
 import { useResolvedTheme, useThemeStore } from '../design/ThemeStore';
@@ -121,8 +122,8 @@ function ShellAppInner(): React.ReactNode {
   const active = selectActiveView(nav)!;
 
   const { startSession: startBotSession } = useStartBotSession(
-    useCallback((sessionId: string) => {
-      dispatch({ type: 'OPEN_VIEW', viewType: 'cowork-agent-session', context: { sessionId, originView: active.viewType } });
+    useCallback((sessionId: string, botId: string) => {
+      dispatch({ type: 'OPEN_VIEW', viewType: 'bot-chat-session', context: { sessionId, botId, originView: active.viewType } });
     }, [active.viewType])
   );
   useStackProviders();
@@ -550,12 +551,6 @@ function ShellAppInner(): React.ReactNode {
   }, [open]);
 
   useEffect(() => {
-    const handleOpenProducts = (): void => { open('products'); };
-    window.addEventListener('allternit:open-products', handleOpenProducts);
-    return () => window.removeEventListener('allternit:open-products', handleOpenProducts);
-  }, [open]);
-
-  useEffect(() => {
     const handleOpenView = (e: Event): void => {
       const detail = (e as CustomEvent<{ viewType?: ViewType; allowNew?: boolean; context?: unknown }>).detail;
       logger.info('[ShellApp] allternit:open-view received', { detail, isHudWindow });
@@ -668,7 +663,7 @@ function ShellAppInner(): React.ReactNode {
     return window.localStorage.getItem('allternit-permission-banner-dismissed') === '1';
   });
 
-  const shouldHideRail = active.viewType === 'labs' || active.viewType === 'products';
+  const shouldHideRail = active.viewType === 'labs';
   const effectiveRailCollapsed = isRailCollapsed || shouldHideRail;
   const peekRail = isRailCollapsed && !shouldHideRail && isRailPeekOpen;
 
@@ -684,6 +679,7 @@ function ShellAppInner(): React.ReactNode {
       <VoiceProvider>
       <SessionProvider session={session}>
         <VisionGlass />
+        <NativeSessionPickerHost />
         <VoicePresence compact={false} />
 
         {permissions.isSupported && permissions.anyDenied && !permissionBannerDismissed && (

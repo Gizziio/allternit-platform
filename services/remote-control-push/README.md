@@ -83,7 +83,7 @@ CI deploys automatically on pushes to `main` that touch `services/remote-control
 Set the worker URL in the surface environment:
 
 ```
-VITE_REMOTE_CONTROL_PUSH_URL=https://push.remotecontrol.allternit.com
+VITE_REMOTE_CONTROL_PUSH_URL=https://push.fabrictransport.allternit.com
 ```
 
 For backward compatibility the platform wrapper also reads `NEXT_PUBLIC_ALLTERNIT_PUSH_WORKER_URL`, but `VITE_REMOTE_CONTROL_PUSH_URL` is preferred.

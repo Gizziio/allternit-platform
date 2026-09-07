@@ -473,6 +473,21 @@ async fn deny_pairing(
     Ok(Json(serde_json::json!({ "status": "denied" })))
 }
 
+/// `runtime_devices.kind` is NOT NULL with CHECK (local|paired|provisioned).
+/// Binding SQL NULL (the old `Option` map) violates that constraint even
+/// though the column has a default — PostgreSQL does not apply DEFAULT when
+/// NULL is supplied explicitly — and the exchange 500'd with DATABASE_ERROR
+/// before a desktop handshake could finish.
+fn runtime_device_kind(runtime_type: &str, provisioned_instance_id: Option<&str>) -> &'static str {
+    if provisioned_instance_id.is_some() {
+        crate::services::NodeKind::PROVISIONED
+    } else if runtime_type == "desktop" {
+        crate::services::NodeKind::LOCAL
+    } else {
+        crate::services::NodeKind::PAIRED
+    }
+}
+
 async fn exchange_pairing(
     State(state): State<Arc<ApiState>>,
     Json(request): Json<ExchangePairingRequest>,
@@ -537,30 +552,27 @@ async fn exchange_pairing(
         .clone()
         .ok_or_else(|| ApiError::Internal("Approved pairing has no user".to_string()))?;
 
-    // Enforce quotas before creating the device row.
+    // Check the active-device cap before opening a transaction. The daily
+    // pairing count is recorded *inside* the transaction, after the device
+    // row exists: incrementing first meant a failed insert (or a desktop
+    // poll retry) burned a slot even though the handshake never completed.
     let quota = state.quota_service.ensure_quota(&user_id).await?;
     state
         .quota_service
         .check_active_device_cap(&user_id, &quota)
         .await?;
-    // Server-approved pairings (hosted bootstrap, BYO wizard bootstrap,
-    // provisioned bootstrap) already recorded the daily pairing count at
-    // create time, when the owning user became known; only browser-approved
-    // pairings record it at exchange.
-    if pairing.hosted_instance_id.is_none()
+    let count_daily_pairing = pairing.hosted_instance_id.is_none()
         && pairing.byo_bootstrap_token_id.is_none()
-        && pairing.provisioned_instance_id.is_none()
-    {
-        state
-            .quota_service
-            .record_pairing_created(&user_id, &quota)
-            .await?;
-    }
+        && pairing.provisioned_instance_id.is_none();
 
     let runtime_id = format!("rt_{}", Uuid::new_v4().simple());
     let device_token = format!("{DEVICE_TOKEN_PREFIX}{}", random_secret(48));
     let credential_hash = sha256_hex(device_token.as_bytes());
     let credential_expires_at = Utc::now() + Duration::days(CREDENTIAL_TTL_DAYS);
+    let kind = runtime_device_kind(
+        &pairing.runtime_type,
+        pairing.provisioned_instance_id.as_deref(),
+    );
 
     let mut transaction = state.db.begin().await?;
     sqlx::query(
@@ -585,12 +597,7 @@ async fn exchange_pairing(
     .bind(&pairing.public_key_fingerprint)
     .bind(credential_hash)
     .bind(credential_expires_at)
-    .bind(
-        pairing
-            .provisioned_instance_id
-            .as_ref()
-            .map(|_| crate::services::NodeKind::PROVISIONED),
-    )
+    .bind(kind)
     .execute(&mut *transaction)
     .await?;
     let consumed = sqlx::query(
@@ -647,6 +654,18 @@ async fn exchange_pairing(
         crate::services::bind_device_slot(&mut transaction, provisioned_instance_id, &runtime_id)
             .await?;
         tracing::info!(%provisioned_instance_id, %runtime_id, "provisioned instance link on pairing exchange");
+    }
+    // Server-approved pairings already recorded the daily count at create,
+    // when the owning user became known. Browser-approved desktop pairings
+    // record it here, after the device row is in the same transaction, so a
+    // failed insert or poll retry cannot consume a slot.
+    if count_daily_pairing {
+        crate::services::QuotaService::record_pairing_created_in_tx(
+            &mut transaction,
+            &user_id,
+            &quota,
+        )
+        .await?;
     }
     transaction.commit().await?;
 
@@ -719,7 +738,7 @@ async fn list_runtime_devices(
         .map(|device| {
             let effective_status = if device.status == "online"
                 && device.last_seen_at
-                    .map(|seen| seen < Utc::now() - Duration::minutes(2))
+                    .map(|seen| seen < Utc::now() - Duration::minutes(10))
                     .unwrap_or(true)
             {
                 "offline".to_string()
@@ -1000,11 +1019,16 @@ async fn verify_device_token(
     let token = device_token_from_headers(&headers)
         .ok_or_else(|| ApiError::Unauthorized("Runtime credential required".to_string()))?;
     let device = runtime_device_for_token(&state.db, token, None).await?;
+    let email: Option<String> = sqlx::query_scalar("SELECT email FROM users WHERE id = $1")
+        .bind(&device.user_id)
+        .fetch_optional(&state.db)
+        .await?;
     Ok(Json(serde_json::json!({
         "runtimeId": device.id,
         "userId": device.user_id,
         "name": device.name,
         "status": device.status,
+        "email": email,
     })))
 }
 
@@ -1360,6 +1384,16 @@ pub(crate) fn sha256_hex(value: &[u8]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn desktop_handshake_gets_local_kind_never_null() {
+        assert_eq!(runtime_device_kind("desktop", None), crate::services::NodeKind::LOCAL);
+        assert_eq!(runtime_device_kind("vps", None), crate::services::NodeKind::PAIRED);
+        assert_eq!(
+            runtime_device_kind("desktop", Some("pi_1")),
+            crate::services::NodeKind::PROVISIONED
+        );
+    }
 
     /// Minimal schema for the BYO bootstrap token path: the token table plus
     /// the users table its user_id FK references.

@@ -23,6 +23,7 @@ pub mod hosted_runtimes;
 pub mod instances;
 pub mod inference_keys;
 pub mod jobs;
+pub mod me_usage;
 pub mod mesh;
 pub mod mirror;
 pub mod model_router;

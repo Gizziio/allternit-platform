@@ -62,7 +62,7 @@ const ProjectView          = lazy(() => import('../views/ProjectView').then(m =>
 const ToolsView            = lazy(() => import('../views/code/ToolsView').then(m => ({ default: m.ToolsView })));
 const RunReplayView        = lazy(() => import('../views/code/RunReplayView').then(m => ({ default: m.RunReplayView })));
 const AppsExtensionsView     = lazy(() => import('../views/AppsExtensionsView').then(m => ({ default: m.AppsExtensionsView })));
-const DispatchView           = lazy(() => import('../views/DispatchView').then(m => ({ default: m.DispatchView })));
+const FabricTransportView    = lazy(() => import('../views/FabricTransportView').then(m => ({ default: m.FabricTransportView })));
 const PlaygroundView       = lazy(() => import('../views/PlaygroundView').then(m => ({ default: m.PlaygroundView })));
 const AllternitPlaygroundView = lazy(() => import('../views/AllternitPlaygroundView').then(m => ({ default: m.AllternitPlaygroundView })));
 const AgentStudioView      = lazy(() => import('../views/AgentStudioView').then(m => ({ default: m.AgentStudioView })));
@@ -356,6 +356,11 @@ export function getShellViewRegistry(handlers: {
     ),
     settings: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Settings" />}>
+        <SettingsView />
+      </ErrorBoundary>
+    ),
+    customize: ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Customize" />}>
         <SettingsView />
       </ErrorBoundary>
     ),
@@ -1081,13 +1086,18 @@ export function getShellViewRegistry(handlers: {
       </ErrorBoundary>
     ),
     'dispatch': ({ context }: { context?: ViewContext }) => (
-      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Remote Control" />}>
-        <DispatchView />
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Fabric Transport" />}>
+        <FabricTransportView />
       </ErrorBoundary>
     ),
     'remote-control': ({ context }: { context?: ViewContext }) => (
-      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Remote Control" />}>
-        <DispatchView />
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Fabric Transport" />}>
+        <FabricTransportView />
+      </ErrorBoundary>
+    ),
+    'fabric-session': ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Fabric Transport" />}>
+        <FabricTransportView />
       </ErrorBoundary>
     ),
     'hud': () => (

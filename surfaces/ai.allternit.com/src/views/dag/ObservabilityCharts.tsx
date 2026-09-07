@@ -98,7 +98,7 @@ export function LedgerEventVolume({ ledgerEvents }: { ledgerEvents: LedgerEvent[
       </CardHeader>
       <CardContent>
         <div className="h-[240px]">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height={240} minWidth={8} minHeight={8} debounce={200}>
             <AreaChart data={data} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
               <defs>
                 <linearGradient id="ledgerGradient" x1="0" y1="0" x2="0" y2="1">
@@ -153,7 +153,7 @@ export function ReceiptKindTimeline({ receipts }: { receipts: Receipt[] }) {
       </CardHeader>
       <CardContent>
         <div className="h-[240px]">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height={240} minWidth={8} minHeight={8} debounce={200}>
             <BarChart data={data} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
               <XAxis dataKey="label" tick={{ fontSize: 11 }} angle={-30} textAnchor="end" height={50} />

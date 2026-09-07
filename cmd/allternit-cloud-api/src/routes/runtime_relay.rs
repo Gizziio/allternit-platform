@@ -1323,6 +1323,13 @@ mod tests {
             "/api/v1/agent-sessions/sess_1/compact",
             "/api/v1/agent-sessions/sync",
             "/api/v1/agent-sessions/sync?since=123",
+            "/api/v1/native-sessions",
+            "/api/v1/native-sessions/harnesses",
+            "/api/v1/native-sessions/pickup",
+            "/api/v1/native-sessions/claude/abc",
+            "/api/v1/agent-sessions/sess_1/fetch-origin",
+            "/api/v1/agent-sessions/sess_1/origin",
+            "/api/v1/agent-sessions/sess_1/export-native",
         ] {
             assert!(is_allowed_runtime_path(path), "{path} must relay");
         }

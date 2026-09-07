@@ -8,6 +8,7 @@ import type { Command } from '../../commands'
 const copy = {
   type: 'local-jsx',
   name: 'copy',
+  argumentHint: '[N|path]',
   description:
     "Copy Gizzi's last response to clipboard (or /copy N for the Nth-latest)",
   load: () => import('./copy.js'),

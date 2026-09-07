@@ -2,11 +2,15 @@
 import Fuse from 'fuse.js'
 import {
   type Command,
-  formatDescriptionWithSource,
   getCommand,
   getCommandName,
 } from '../../commands.js'
 import type { SuggestionItem } from '../../components/PromptInput/PromptInputFooterSuggestions.js'
+import {
+  compareCommandsForSlashMenu,
+  getCommandArgumentHint,
+  getCommandSourceTag,
+} from './commandSource.js'
 import { getSkillUsageScore } from './skillUsageTracking.js'
 
 // Treat these characters as word separators for command search
@@ -270,19 +274,14 @@ function createCommandSuggestionItem(
   const commandName = getCommandName(cmd)
   // Only show the alias if the user typed it
   const aliasText = matchedAlias ? ` (${matchedAlias})` : ''
-
-  const isWorkflow = cmd.type === 'prompt' && cmd.kind === 'workflow'
-  const fullDescription =
-    (isWorkflow ? cmd.description : formatDescriptionWithSource(cmd)) +
-    (cmd.type === 'prompt' && cmd.argNames?.length
-      ? ` (arguments: ${cmd.argNames.join(', ')})`
-      : '')
+  const argumentHint = getCommandArgumentHint(cmd)
+  const hintText = argumentHint ? ` ${argumentHint}` : ''
 
   return {
     id: getCommandId(cmd),
-    displayText: `/${commandName}${aliasText}`,
-    tag: isWorkflow ? 'workflow' : undefined,
-    description: fullDescription,
+    displayText: `/${commandName}${aliasText}${hintText}`,
+    tag: getCommandSourceTag(cmd),
+    description: cmd.description,
     metadata: cmd,
   }
 }
@@ -358,11 +357,12 @@ export function generateCommandSuggestions(
       }
     })
 
-    // Sort each category alphabetically
+    // Built-ins follow Grok's category order (Session, Model, Memory, …).
+    // Skills stay alphabetical within their source group.
     const sortAlphabetically = (a: Command, b: Command) =>
       getCommandName(a).localeCompare(getCommandName(b))
 
-    builtinCommands.sort(sortAlphabetically)
+    builtinCommands.sort(compareCommandsForSlashMenu)
     userCommands.sort(sortAlphabetically)
     projectCommands.sort(sortAlphabetically)
     policyCommands.sort(sortAlphabetically)

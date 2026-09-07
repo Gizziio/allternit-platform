@@ -21,7 +21,7 @@
 import type { ArtifactUIPart } from "@/lib/ai/ui-parts.types";
 import { buildAuthHeaders } from "@/lib/agents/api-config";
 import { getActiveRuntimeId, getRuntimeExecutionTarget } from "@/lib/runtime-target";
-import { getCloudApiBaseUrl, isAgentSessionsApiEnabled } from "@/lib/env";
+import { getCloudApiBaseUrl, isAgentSessionsApiEnabled, isDesktopOperatorShell } from "@/lib/env";
 import { createCloudApiEventSource } from "@/lib/cloud-api";
 
 /**
@@ -77,7 +77,7 @@ const getApiV1Base = () => `${getGatewayOrigin()}/api/v1`;
 // routes used by canvasApi.getCanvas/updateCanvas/deleteCanvas are NOT part
 // of that namespace and stay on the gateway base.
 const getAgentSessionBase = () =>
-  isAgentSessionsApiEnabled()
+  isAgentSessionsApiEnabled() && !isDesktopOperatorShell()
     ? `${getCloudApiBaseUrl()}/api/v1/agent-sessions`
     : `${getApiV1Base()}/agent-sessions`;
 
@@ -90,6 +90,8 @@ const getRuntimeBase = () => getApiV1Base();
 // chat: local desktop uses Next.js /api/agent-chat; tunnel rewrites /api/v1/agent-chat → /agent-chat on allternit-api
 // Returns base such that appending /agent-chat gives the correct URL in both environments
 const getAgentChatBase = () => getGatewayOrigin() ? `${getGatewayOrigin()}/api/v1` : '/api';
+const getAgentChatUrl = () =>
+  isDesktopOperatorShell() ? `${getApiV1Base()}/ai/chat` : `${getAgentChatBase()}/agent-chat`;
 
 // ============================================================================
 // Types - Backend API Response Shapes
@@ -720,7 +722,7 @@ export const chatApi = {
     signal?: AbortSignal,
     agentContext?: AgentContext,
   ): Promise<void> {
-    const response = await authFetch(`${getAgentChatBase()}/agent-chat`, {
+    const response = await authFetch(getAgentChatUrl(), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ chatId: sessionId, message, runtimeModelId: modelId, ...(agentContext ?? {}) }),

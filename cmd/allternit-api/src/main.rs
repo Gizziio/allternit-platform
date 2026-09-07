@@ -95,6 +95,7 @@ use allternit_api::playground_routes::playground_router;
 use allternit_api::provider_routes::provider_router;
 use allternit_api::rate_limit::rate_limit_middleware;
 use allternit_api::rails::{rails_router, RailsState};
+use allternit_api::fabric_routes::fabric_router;
 use allternit_api::remote_control_routes::remote_control_router;
 use allternit_api::research_task_routes::research_task_router;
 use allternit_api::rails_client_impl::create_local_rails_client;
@@ -268,7 +269,8 @@ async fn main() {
     // Initialize unified auth configuration and JWKS manager for Clerk JWT verification
     let auth_config = allternit_api::auth::AuthConfig::from_app_config(app_config);
     let jwks = allternit_api::auth::JwksManager::new(&auth_config);
-    info!("JWKS manager initialized");
+    jwks.warmup().await;
+    info!(jwks_ready = jwks.is_ready().await, "JWKS manager initialized");
 
     // Webhook secret for Clerk webhook verification
     let webhook_secret = app_config.clerk_webhook_secret();
@@ -661,6 +663,7 @@ async fn main() {
         .merge(board_stream_router())
         .merge(runtime_backend_router())
         .merge(remote_control_router())
+        .merge(fabric_router())
         .merge(agents_v1_router())
         .merge(
             bot_desktop_router().layer(axum::middleware::from_fn_with_state(

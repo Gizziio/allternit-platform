@@ -34,7 +34,6 @@ import {
   Brain,
   Play,
   DesktopTower,
-  Sparkle,
   Record,
 } from '@phosphor-icons/react';
 import { getPinnedMiniApps, unpinMiniApp, seedDefaultMiniApps } from '../views/aci/mini-app-registry';
@@ -76,6 +75,9 @@ import { BotAvatar } from '@/views/bots/BotAvatar';
 import { BotRoster } from '@/views/bots/BotRoster';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
+import { openNativeSessionPicker } from '@/components/native-sessions/NativeSessionPicker';
+import { NativeSourceBadge } from '@/components/native-sessions/NativeOriginBanner';
+import { sourceRefFromMetadata } from '@/lib/agents/native-sessions-api';
 
 const MINI_APP_CATEGORY_ICONS: Record<string, Icon> = {
   runtime:       Cpu,
@@ -174,6 +176,12 @@ export function ShellRail({
     return () => { cancelled = true; };
   }, []);
   const accountInitial = (currentUserDisplayName ?? '?').trim().charAt(0).toUpperCase() || '?';
+  const accountLabel = useMemo(() => {
+    const raw = (currentUserDisplayName ?? 'Account').trim();
+    const at = raw.indexOf('@');
+    if (at > 1) return raw.slice(0, at);
+    return raw || 'Account';
+  }, [currentUserDisplayName]);
 
   // Chat Store
   const chatStore = useChatStore();
@@ -719,6 +727,15 @@ export function ShellRail({
           <Plus size={16} weight="bold" className={isNewActive ? "text-[var(--accent-primary)]" : "text-[var(--shell-item-muted)] group-hover:text-[var(--accent-primary)] transition-colors"} />
           <span className="text-[12px]">{mode === 'browser' ? 'New Session' : isCodeMode ? 'New Thread' : 'New'}</span>
         </button>
+        {mode !== 'browser' ? (
+          <button
+            type="button"
+            onClick={() => openNativeSessionPicker(isCodeMode ? 'code' : mode === 'cowork' ? 'cowork' : 'chat')}
+            className="mt-1 w-full py-1 px-3 rounded-lg border-none bg-transparent text-[11px] text-[var(--shell-item-muted)] cursor-pointer text-left hover:text-[var(--shell-item-fg)] hover:bg-[var(--surface-hover)]"
+          >
+            Continue CLI session
+          </button>
+        ) : null}
       </div>
 
       {/* SIDEBAR MAIN BODY (Browser tabs + sessions, Home tabs + recents, or Code tabs + threads) */}
@@ -760,7 +777,6 @@ export function ShellRail({
               onCustomize={() => onOpenCustomize?.()}
               onOpenDesign={() => onModeChange?.('design')}
               onOpenAppsExtensions={() => onOpen?.('apps-extensions')}
-              onOpenProducts={() => onOpen?.('products')}
             />
           </div>
 
@@ -900,12 +916,6 @@ export function ShellRail({
         <>
           {/* HOME TABS */}
           <div className="px-2 pb-2 shrink-0 flex flex-col gap-0.5">
-            <RailItem
-              icon={Sparkle}
-              label="Products"
-              isActive={activeViewType === 'products'}
-              onClick={() => onOpen?.('products')}
-            />
             <RailItem
               icon={Robot}
               label="Bot Hub"
@@ -1175,7 +1185,6 @@ export function ShellRail({
               onCustomize={() => onOpenCustomize?.()}
               onOpenDesign={() => onModeChange?.('design')}
               onOpenAppsExtensions={() => onOpen?.('apps-extensions')}
-              onOpenProducts={() => onOpen?.('products')}
             />
           </div>
 
@@ -1366,6 +1375,7 @@ export function ShellRail({
                           >
                             <Cpu size={15} weight={isActive ? 'fill' : 'bold'} />
                             <span className="text-[12px] overflow-hidden text-ellipsis whitespace-nowrap min-w-0 flex-1">{s.name || 'Untitled Session'}</span>
+                            <NativeSourceBadge source={sourceRefFromMetadata(s.metadata as Record<string, unknown>)} />
                           </button>
                           <RecentItemMenu
                             onDelete={() => setDeleteTarget({ id: s.id, title: s.name || 'Untitled Session', kind: 'code' })}
@@ -1396,22 +1406,6 @@ export function ShellRail({
       <div className="flex flex-col border-t border-solid border-[var(--shell-divider)] bg-[var(--shell-rail-bg)] shrink-0">
         <button
           type="button"
-          onClick={() => onOpen?.('products')}
-          className={cn(
-            "w-full flex items-center gap-2.5 p-[10px_16px] cursor-pointer hover:bg-[var(--shell-item-hover)] border-none bg-transparent font-semibold text-[13px] text-left transition-colors",
-            activeViewType === 'products'
-              ? "text-[var(--shell-item-active-fg)]"
-              : "text-[var(--shell-item-fg)]"
-          )}
-        >
-          <Sparkle size={18} weight={activeViewType === 'products' ? 'fill' : 'bold'} className="text-[var(--shell-item-muted)]" />
-          <span>Products</span>
-        </button>
-
-        <div className="h-px bg-[var(--shell-divider)] w-full" />
-
-        <button
-          type="button"
           onClick={() => {
             onModeChange?.('design');
           }}
@@ -1423,21 +1417,24 @@ export function ShellRail({
 
         <div className="h-px bg-[var(--shell-divider)] w-full" />
 
-        <div className="flex items-center p-[10px_16px] gap-2">
-          <SettingsDrilldown>
-            <button
-              type="button"
-              className="flex-1 flex items-center gap-3 border-none bg-transparent cursor-pointer text-left hover:bg-[var(--shell-item-hover)] transition-colors rounded-lg p-[6px_8px] -ml-2"
-            >
-              <div className="size-8 rounded-full bg-gradient-to-br from-[var(--accent-chat)] to-[var(--accent-primary)] shrink-0 flex items-center justify-center text-[var(--bg-primary)] text-[14px] font-bold">
-                {accountInitial}
-              </div>
-              <div className="flex-1 min-w-0 flex items-center gap-1.5 text-[var(--shell-item-fg)] text-[13px] font-semibold">
-                <span className="truncate">{currentUserDisplayName ?? 'Account'}</span>
-                <CaretDown size={12} className="text-[var(--shell-item-muted)] shrink-0" />
-              </div>
-            </button>
-          </SettingsDrilldown>
+        <div className="flex items-center p-[10px_12px] gap-1 min-w-0">
+          <div className="min-w-0 flex-1 overflow-hidden">
+            <SettingsDrilldown>
+              <button
+                type="button"
+                title={currentUserDisplayName ?? 'Account'}
+                className="w-full min-w-0 flex items-center gap-2 border-none bg-transparent cursor-pointer text-left hover:bg-[var(--shell-item-hover)] transition-colors rounded-lg p-[6px_8px] -ml-1"
+              >
+                <div className="size-8 rounded-full bg-gradient-to-br from-[var(--accent-chat)] to-[var(--accent-primary)] shrink-0 flex items-center justify-center text-[var(--bg-primary)] text-[14px] font-bold">
+                  {accountInitial}
+                </div>
+                <div className="min-w-0 flex-1 overflow-hidden flex items-center gap-1 text-[var(--shell-item-fg)] text-[13px] font-semibold">
+                  <span className="truncate">{accountLabel}</span>
+                  <CaretDown size={12} className="text-[var(--shell-item-muted)] shrink-0" />
+                </div>
+              </button>
+            </SettingsDrilldown>
+          </div>
           <button
             type="button"
             onClick={() => onOpen?.('apps-extensions')}
@@ -1885,14 +1882,12 @@ function MoreDropdown({
   onCustomize,
   onOpenDesign,
   onOpenAppsExtensions,
-  onOpenProducts,
 }: {
   tabs: MoreDropdownTab[];
   onToggle: (id: string) => void;
   onCustomize: () => void;
   onOpenDesign: () => void;
   onOpenAppsExtensions: () => void;
-  onOpenProducts?: () => void;
 }): React.ReactNode {
   const [open, setOpen] = useState(false);
   const anyHidden = tabs.some((t) => !t.visible);
@@ -1987,16 +1982,6 @@ function MoreDropdown({
             <DownloadSimple size={14} />
             <span>Apps & Extensions</span>
           </button>
-          {onOpenProducts && (
-            <button
-              type="button"
-              onClick={() => { setOpen(false); onOpenProducts(); }}
-              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg border-none bg-transparent cursor-pointer text-left text-[12px] text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)] transition-colors"
-            >
-              <Sparkle size={14} />
-              <span>Products</span>
-            </button>
-          )}
         </div>
       </PopoverContent>
     </Popover>

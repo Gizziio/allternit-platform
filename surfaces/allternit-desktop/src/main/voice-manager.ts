@@ -15,6 +15,9 @@ class VoiceManager {
   private proc: ChildProcess | null = null;
   private stopping = false;
   private dictationProc: ChildProcess | null = null;
+  private restartAttempts = 0;
+  private preferPython = false;
+  private static readonly MAX_RESTARTS = 1;
 
   async start(): Promise<string> {
     if (this.proc) return URLS.VOICE;
@@ -46,12 +49,27 @@ class VoiceManager {
     this.proc.on('exit', (code) => {
       log.warn(`[VoiceManager] exited (code ${code})`);
       this.proc = null;
-      if (!this.stopping && app.isPackaged) {
-        setTimeout(() => void this.start().catch((error) => log.error('[VoiceManager] restart failed:', error)), 1500);
+      if (this.stopping) return;
+      if (!app.isPackaged) return;
+      if (this.restartAttempts >= VoiceManager.MAX_RESTARTS) {
+        log.warn('[VoiceManager] Voice service failed to start; leaving Voice Mode unavailable');
+        return;
       }
+      this.restartAttempts += 1;
+      setTimeout(() => void this.start().catch((error) => log.error('[VoiceManager] restart failed:', error)), 1500);
     });
 
-    await this.waitUntilReady();
+    try {
+      await this.waitUntilReady();
+    } catch (error) {
+      if (!this.preferPython && this.resolvePythonLauncher()) {
+        this.preferPython = true;
+        this.stop();
+        log.warn('[VoiceManager] Bundled voice binary never became ready; falling back to python launch.py');
+        return this.start();
+      }
+      throw error;
+    }
     log.info(`[VoiceManager] Ready at ${URLS.VOICE}`);
     return URLS.VOICE;
   }
@@ -75,6 +93,14 @@ class VoiceManager {
     const deadline = Date.now() + HEALTH_TIMEOUT_MS;
     while (Date.now() < deadline) {
       if (await this.isHealthy()) return;
+      // PyInstaller/pyexpat mismatch exits immediately. Don't sit on the 90s
+      // health timeout — Voice Mode is optional and the UI already shows
+      // "service not running".
+      if (!this.proc) {
+        throw new Error(
+          'Voice service exited before becoming ready (bundled binary incompatible or python launcher failed; Voice Mode unavailable)',
+        );
+      }
       await new Promise((resolve) => setTimeout(resolve, 300));
     }
     this.stop();
@@ -82,16 +108,68 @@ class VoiceManager {
   }
 
   private resolveCommand(): { file: string; args: string[] } | null {
+    const python = this.resolvePythonLauncher();
+    if (this.preferPython && python) return python;
+
     const binaryName = process.platform === 'win32' ? 'allternit-voice-service.exe' : 'allternit-voice-service';
     if (app.isPackaged) {
       const bundled = path.join(process.resourcesPath, 'bin', binaryName);
-      return fs.existsSync(bundled) ? { file: bundled, args: [] } : null;
+      if (fs.existsSync(bundled) && !this.preferPython) {
+        return { file: bundled, args: [] };
+      }
+    } else {
+      const launcher = path.join(app.getAppPath(), '..', '..', 'services', 'voice', 'launch.py');
+      if (fs.existsSync(launcher)) {
+        return { file: process.env.PYTHON ?? 'python3', args: [launcher, '--port', String(PORTS.VOICE)] };
+      }
     }
 
-    const launcher = path.join(app.getAppPath(), '..', '..', 'services', 'voice', 'launch.py');
-    return fs.existsSync(launcher)
-      ? { file: process.env.PYTHON ?? 'python3', args: [launcher, '--port', String(PORTS.VOICE)] }
-      : null;
+    return python;
+  }
+
+  private resolvePythonLauncher(): { file: string; args: string[] } | null {
+    const python = this.resolvePythonBinary();
+    for (const launcher of this.pythonLauncherCandidates()) {
+      if (fs.existsSync(launcher)) {
+        log.info(`[VoiceManager] Using python voice launcher at ${launcher} with ${python}`);
+        return { file: python, args: [launcher, '--port', String(PORTS.VOICE)] };
+      }
+    }
+    return null;
+  }
+
+  private resolvePythonBinary(): string {
+    if (process.env.PYTHON) return process.env.PYTHON;
+    const names = ['python3.12', 'python3.11', 'python3'];
+    const dirs = ['/opt/homebrew/bin', '/usr/local/bin', path.join(process.env.HOME ?? '', '.local', 'bin'), '/usr/bin'];
+    for (const name of names) {
+      for (const dir of dirs) {
+        const full = path.join(dir, name);
+        if (fs.existsSync(full)) return full;
+      }
+    }
+    return 'python3';
+  }
+
+  private pythonLauncherCandidates(): string[] {
+    const seen = new Set<string>();
+    const addWalk = (start: string | undefined) => {
+      let dir = start;
+      for (let i = 0; i < 12 && dir; i += 1) {
+        seen.add(path.join(dir, 'services', 'voice', 'launch.py'));
+        seen.add(path.join(dir, 'voice', 'launch.py'));
+        const parent = path.dirname(dir);
+        if (parent === dir) break;
+        dir = parent;
+      }
+    };
+    if (process.resourcesPath) {
+      seen.add(path.join(process.resourcesPath, 'voice', 'launch.py'));
+      addWalk(process.resourcesPath);
+    }
+    addWalk(app.getAppPath());
+    addWalk(__dirname);
+    return [...seen];
   }
 
   /**

@@ -3,6 +3,11 @@
 This document describes the environment variables and certificates required to
 produce signed, notarized, and SmartScreen-friendly release artifacts.
 
+**Owner checklist (macOS + Windows + Linux, including what to do while Apple
+Developer Program is in review):** [DISTRIBUTION-CHECKLIST.md](./DISTRIBUTION-CHECKLIST.md).
+
+---
+
 ## macOS
 
 macOS builds require **Apple Developer ID Application** and **Developer ID
@@ -75,8 +80,12 @@ change it without a migration plan, or you will strand installed users.
 
 ## Linux
 
-Linux packages (`.deb` and `.AppImage`) do not require code signing. The
-`linux` block in `package.json` defines:
+Linux packages (`.deb` and `.AppImage`) are not code-signed. Unsigned CI
+artifacts are smoke tests, not production releases — do not publish them as
+the shipping Linux product until package metadata and a distribution channel
+are ready.
+
+The `linux` block in `package.json` defines:
 
 - `executableName`: `allternit`
 - `desktop` entry with `Name`, `Comment`, and `Keywords`
@@ -89,7 +98,7 @@ Electron update feed backed by GitHub Releases. The feed repository is
 configured in `src/main/unified-main.ts` as:
 
 ```ts
-repo: 'allternit/desktop'
+repo: 'Gizziio/desktop'
 ```
 
 and in `package.json` `build.publish` as:
@@ -97,7 +106,7 @@ and in `package.json` `build.publish` as:
 ```json
 {
   "provider": "github",
-  "owner": "allternit",
+  "owner": "Gizziio",
   "repo": "desktop"
 }
 ```

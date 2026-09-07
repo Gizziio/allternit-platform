@@ -1,3 +1,6 @@
+/** @jsxRuntime classic */
+/** @jsx React.createElement */
+/** @jsxFrag React.Fragment */
 'use client';
 
 import React from 'react';
@@ -6,21 +9,25 @@ import {
   AppWindow,
   ArrowLeft,
   ArrowUpRight,
+  Broadcast,
+  Buildings,
   Cpu,
   Desktop,
+  Flask,
   Globe,
   GraduationCap,
-  MicrosoftExcelLogo,
-  MicrosoftPowerpointLogo,
-  MicrosoftWordLogo,
   Play,
   PlugsConnected,
   PuzzlePiece,
+  Robot,
   SquaresFour,
   Storefront,
   TerminalWindow,
+  UsersThree,
+  WebhooksLogo,
 } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
+import { OfficeAppLogo, type OfficeProduct } from '@/views/office/OfficeAppLogo';
 
 /*
  * Apps & Extensions marketplace.
@@ -33,6 +40,16 @@ const INK = '#1F1E1D';
 const MUTED = '#6B685F';
 const HAIRLINE = '#ECEAE3';
 const CARD_BORDER = '#BBB4A1';
+
+const OFFICIAL = {
+  series: 'https://series.allternit.com',
+  facility: 'https://3dfacility.allternit.com',
+  bots: 'https://allternit.com/bots',
+  fabric: 'https://fabrictransport.allternit.com',
+  install: 'https://install.allternit.com',
+  gizziCode: 'https://allternit.com/gizzi-code',
+  office: 'https://office.allternit.com',
+} as const;
 
 function openExternal(url: string): void {
   window.open(url, '_blank', 'noopener,noreferrer');
@@ -60,6 +77,14 @@ function BetaBadge(): React.ReactNode {
   );
 }
 
+function LiveBadge(): React.ReactNode {
+  return (
+    <span className="px-2.5 py-1 rounded-lg bg-[#E7EEE1] text-[#3D5A3C] text-[12px] font-semibold leading-none">
+      Live
+    </span>
+  );
+}
+
 function PillButton({ label, external, dark, onClick }: {
   label: string;
   external?: boolean;
@@ -83,12 +108,17 @@ function PillButton({ label, external, dark, onClick }: {
   );
 }
 
-function InstallRow({ icon: RowIcon, iconColor, label, beta, action }: {
-  icon: Icon;
+function OfficeMark({ product }: { product: OfficeProduct }): React.ReactNode {
+  return <OfficeAppLogo product={product} size={26} />;
+}
+
+function InstallRow({ icon: RowIcon, iconColor, label, beta, action, mark }: {
+  icon?: Icon;
   iconColor?: string;
   label: string;
   beta?: boolean;
   action: React.ReactNode;
+  mark?: React.ReactNode;
 }): React.ReactNode {
   return (
     <div
@@ -96,7 +126,7 @@ function InstallRow({ icon: RowIcon, iconColor, label, beta, action }: {
       style={{ borderColor: HAIRLINE }}
     >
       <div className="flex items-center gap-3 min-w-0">
-        <RowIcon size={26} weight="fill" style={{ color: iconColor ?? INK }} className="shrink-0" />
+        {mark ?? (RowIcon ? <RowIcon size={26} weight="fill" style={{ color: iconColor ?? INK }} className="shrink-0" /> : null)}
         <span className="text-[15px] font-medium truncate" style={{ color: INK }}>{label}</span>
         {beta && <BetaBadge />}
       </div>
@@ -121,11 +151,12 @@ function Card({ children, className }: { children: React.ReactNode; className?: 
   );
 }
 
-function CardHeading({ title, description, beta }: { title: string; description: string; beta?: boolean }): React.ReactNode {
+function CardHeading({ title, description, beta, live }: { title: string; description: string; beta?: boolean; live?: boolean }): React.ReactNode {
   return (
     <>
       <div className="flex items-center gap-2.5 mb-3">
         <h2 className="m-0 text-[22px] font-semibold tracking-[-0.01em]" style={{ color: INK }}>{title}</h2>
+        {live && <LiveBadge />}
         {beta && <BetaBadge />}
       </div>
       <p className="m-0 text-[15px] leading-relaxed" style={{ color: MUTED }}>{description}</p>
@@ -237,11 +268,11 @@ function SpreadsheetMock(): React.ReactNode {
   ];
   return (
     <div className="relative mt-10">
-      <PromptChip text="Which names are the top movers in my portfolio and why?" className="absolute left-2 -top-6" />
+      <PromptChip text="Which names are the top movers in this sheet and why?" className="absolute left-2 -top-6" />
       <MockStage tint="linear-gradient(135deg, #EDF1E8, #F7F6F1)" className="pt-9">
         <div className="rounded-xl border border-solid border-[#E5E2D9] bg-white overflow-hidden shadow-[0_8px_28px_rgba(31,30,29,0.08)]">
           <div className="px-3 py-1.5 text-[9px] font-semibold text-[#8A867C] border-0 border-b border-solid border-[#EFEDE5]">
-            Portfolio Monitoring
+            Allternit Sheets
           </div>
           <table className="w-full border-collapse text-[10px]" style={{ color: INK }}>
             <thead>
@@ -430,6 +461,158 @@ function TerminalMock(): React.ReactNode {
   );
 }
 
+function SeriesTitleCard(): React.ReactNode {
+  return (
+    <div className="relative h-full min-h-[280px] p-8 flex items-center justify-center overflow-hidden">
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            'radial-gradient(ellipse at 30% 20%, rgba(193,95,60,0.28), transparent 55%), linear-gradient(160deg, #1A1816 0%, #2C241E 55%, #141312 100%)',
+        }}
+      />
+      <div className="absolute inset-0 opacity-[0.12] [background-image:repeating-linear-gradient(0deg,transparent,transparent_2px,rgba(255,255,255,0.08)_3px)]" />
+      <div className="relative z-10 text-center px-4">
+        <div className="text-[10px] tracking-[0.28em] uppercase text-[#E8A87C] mb-4 font-semibold">Season One</div>
+        <div
+          className="text-[28px] leading-none font-medium text-[#FDFCFA] tracking-[-0.03em]"
+          style={{ fontFamily: 'var(--font-serif)' }}
+        >
+          ALLTERNIT
+        </div>
+        <div className="mx-auto mt-3 mb-4 h-px w-16 bg-[#C15F3C]" />
+        <div className="text-[13px] tracking-[0.18em] uppercase text-[#E8A87C]/90">The Assistants</div>
+        <div className="mt-5 text-[11px] text-[#B4B0A5]">Intelligence is becoming infrastructure</div>
+      </div>
+    </div>
+  );
+}
+
+function FacilityCampusMock(): React.ReactNode {
+  const rooms: Array<[string, string, string]> = [
+    ['Office', '#F0E4D8'],
+    ['Lab', '#DFE8F2'],
+    ['Yard', '#E7EEE1'],
+    ['Library', '#F2EBDA'],
+  ];
+  return (
+    <div className="relative mt-10">
+      <PromptChip text="Walk my bot into the lab, then the yard." className="absolute left-2 -top-6" />
+      <MockStage tint="linear-gradient(135deg, #F4ECE7, #F7F6F1)" className="pt-9">
+        <div className="grid grid-cols-2 gap-2.5">
+          {rooms.map(([name, tint]) => (
+            <div
+              key={name}
+              className="rounded-xl border border-solid border-[#E5E2D9] px-3 py-3 shadow-[0_4px_14px_rgba(31,30,29,0.06)]"
+              style={{ background: tint }}
+            >
+              <div className="h-10 rounded-lg bg-white/70 border border-solid border-[#E5E2D9] mb-2" />
+              <div className="text-[11px] font-bold" style={{ color: INK }}>{name}</div>
+              <div className="h-1.5 rounded-full bg-white/80 w-2/3 mt-1.5" />
+            </div>
+          ))}
+        </div>
+      </MockStage>
+    </div>
+  );
+}
+
+function BotsThreadMock(): React.ReactNode {
+  const rows: Array<[string, string, string]> = [
+    ['Atlas', 'Weekly recap is drafted. Want me to send it?', '#C15F3C'],
+    ['Mira', 'I have the three open tickets ranked.', '#3B6FDB'],
+    ['You', 'Ship the recap. Hold the tickets.', '#1F1E1D'],
+  ];
+  return (
+    <div className="relative mt-10">
+      <PromptChip text="Give Atlas the weekly recap. Mira takes tickets." className="absolute right-2 -top-6 flex-row-reverse" />
+      <MockStage tint="linear-gradient(135deg, #ECEAF3, #F7F6F1)" className="pt-9">
+        <div className="flex flex-col gap-2.5">
+          {rows.map(([name, text, accent]) => (
+            <div key={name} className="flex items-start gap-2.5 rounded-xl border border-solid border-[#E5E2D9] bg-white px-3.5 py-2.5 shadow-[0_4px_14px_rgba(31,30,29,0.06)]">
+              <span
+                className="size-8 rounded-full flex items-center justify-center text-[11px] font-bold text-white shrink-0"
+                style={{ background: accent }}
+              >
+                {name[0]}
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="text-[11px] font-bold" style={{ color: INK }}>{name}</div>
+                <div className="text-[10px] leading-snug mt-0.5" style={{ color: MUTED }}>{text}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </MockStage>
+    </div>
+  );
+}
+
+function FabricPairMock(): React.ReactNode {
+  return (
+    <div className="relative mt-10">
+      <PromptChip text="Pair my phone to this desktop." className="absolute left-2 -top-6" />
+      <MockStage tint="linear-gradient(135deg, #E8EEF2, #F7F6F1)" className="pt-9">
+        <div className="flex items-center gap-4">
+          <div className="flex-1 rounded-xl border border-solid border-[#E5E2D9] bg-white p-3 shadow-[0_4px_14px_rgba(31,30,29,0.06)]">
+            <div className="flex items-center gap-1.5 mb-2">
+              <span className="size-1.5 rounded-full bg-[#E0655A]" />
+              <span className="size-1.5 rounded-full bg-[#E5B255]" />
+              <span className="size-1.5 rounded-full bg-[#6EBE71]" />
+            </div>
+            <div className="h-1.5 rounded-full bg-[#EFEDE5] w-3/4 mb-1.5" />
+            <div className="h-1.5 rounded-full bg-[#EFEDE5] w-1/2 mb-3" />
+            <div className="rounded-lg bg-[#F2F0E9] h-[54px]" />
+          </div>
+          <div className="w-[72px] rounded-[18px] border border-solid border-[#E5E2D9] bg-white p-2 shadow-[0_8px_24px_rgba(31,30,29,0.10)] shrink-0">
+            <div className="mx-auto mb-2 h-1 w-6 rounded-full bg-[#E5E2D9]" />
+            <div className="aspect-square rounded-lg bg-[#1F1E1D] grid grid-cols-3 gap-[3px] p-1.5">
+              {Array.from({ length: 9 }).map((_, i) => (
+                <span key={`qr-${i}`} className={cn('rounded-[1px]', i % 2 ? 'bg-[#FDFCFA]' : 'bg-[#C15F3C]')} />
+              ))}
+            </div>
+            <div className="mt-2 text-center text-[8px] font-semibold" style={{ color: MUTED }}>Scan</div>
+          </div>
+        </div>
+      </MockStage>
+    </div>
+  );
+}
+
+function ModelLabMock(): React.ReactNode {
+  const models: Array<[string, string, string]> = [
+    ['Qwen 2.5 7B', 'Local', '#E7EEE1'],
+    ['Llama 3.1 8B', 'Studio', '#DFE8F2'],
+    ['Mistral Instruct', 'Cloud', '#F2EBDA'],
+  ];
+  return (
+    <div className="relative mt-10">
+      <PromptChip text="Load the 8B instruct weights and open a chat." className="absolute right-2 -top-6 flex-row-reverse" />
+      <MockStage tint="linear-gradient(135deg, #ECEAF3, #F7F6F1)" className="pt-9">
+        <div className="flex flex-col gap-2.5">
+          {models.map(([name, where, tint]) => (
+            <div key={name} className="flex items-center gap-3 rounded-xl border border-solid border-[#E5E2D9] bg-white px-3.5 py-2.5 shadow-[0_4px_14px_rgba(31,30,29,0.06)]">
+              <span className="size-8 rounded-lg bg-[#F2F0E9] flex items-center justify-center shrink-0">
+                <Flask size={16} weight="duotone" style={{ color: MUTED }} />
+              </span>
+              <div className="flex-1 min-w-0">
+                <div className="text-[11px] font-bold" style={{ color: INK }}>{name}</div>
+                <div className="h-1.5 rounded-full bg-[#EFEDE5] w-1/2 mt-1.5" />
+              </div>
+              <span
+                className="px-2 py-0.5 rounded-md text-[9px] font-bold shrink-0"
+                style={{ background: tint, color: MUTED }}
+              >
+                {where}
+              </span>
+            </div>
+          ))}
+        </div>
+      </MockStage>
+    </div>
+  );
+}
+
 // ─── Main view ────────────────────────────────────────────────────────────────
 
 export function AppsExtensionsView(): React.ReactNode {
@@ -492,31 +675,172 @@ export function AppsExtensionsView(): React.ReactNode {
           </div>
         </Card>
 
+        <Card className="mb-8 overflow-hidden">
+          <div className="grid grid-cols-1 md:grid-cols-2">
+            <div className="p-10 md:p-12 flex flex-col items-start">
+              <div className="flex items-center gap-2.5 mb-4">
+                <h2 className="m-0 text-[24px] font-semibold tracking-[-0.01em]" style={{ color: INK }}>ALLTERNIT — The Series</h2>
+                <LiveBadge />
+              </div>
+              <p className="m-0 mb-1 text-[16px]" style={{ color: MUTED }}>
+                Prestige drama about intelligence becoming infrastructure.
+              </p>
+              <ul className="m-0 mb-10 pl-5 flex flex-col gap-2 text-[16px] list-disc" style={{ color: MUTED }}>
+                <li><strong className="font-semibold" style={{ color: INK }}>Season One</strong> is The Assistants</li>
+                <li><strong className="font-semibold" style={{ color: INK }}>The page</strong> is the public object — not a stream</li>
+                <li><strong className="font-semibold" style={{ color: INK }}>The Facility</strong> is where those assistants walk</li>
+              </ul>
+              <div className="mt-auto flex flex-wrap gap-2.5">
+                <PillButton label="Watch the page" dark external onClick={() => openExternal(OFFICIAL.series)} />
+                <PillButton label="Walk the Facility" external onClick={() => openExternal(OFFICIAL.facility)} />
+              </div>
+            </div>
+            <div className="bg-[#141312] border-0 md:border-l border-solid border-[#E5E2D9]">
+              <SeriesTitleCard />
+            </div>
+          </div>
+        </Card>
+
         {/* Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch">
           <Card className="p-10">
             <CardHeading
-              title="Microsoft 365"
-              description="Analyze data, build presentations, and draft documents — each Office host gets its own Allternit companion."
+              live
+              title="Allternit Facility"
+              description="A living 3D campus — office, lab, data center, library, yard. Create a bot avatar, then walk it in."
             />
             <div className="mt-5">
               <InstallRow
-                icon={MicrosoftExcelLogo}
-                iconColor="#217346"
-                label="Excel"
-                action={<PillButton label="Open" onClick={() => openView('addin-excel')} />}
+                icon={Buildings}
+                label="Enter the Facility"
+                action={<PillButton label="Open" external onClick={() => openExternal(OFFICIAL.facility)} />}
               />
               <InstallRow
-                icon={MicrosoftPowerpointLogo}
-                iconColor="#D24726"
-                label="PowerPoint"
-                action={<PillButton label="Open" onClick={() => openView('addin-ppt')} />}
+                icon={Robot}
+                label="Create a bot avatar"
+                action={<PillButton label="Create" external onClick={() => openExternal(`${OFFICIAL.facility}/#create`)} />}
+              />
+            </div>
+            <div className="mt-auto">
+              <FacilityCampusMock />
+            </div>
+          </Card>
+
+          <Card className="p-10">
+            <CardHeading
+              live
+              title="A:// Bots"
+              description="Give a bot a job, tools, and memory. They run in parallel, keep context, and come back when you need to approve."
+            />
+            <div className="mt-5">
+              <InstallRow
+                icon={Robot}
+                label="Bot Hub"
+                action={<PillButton label="Open" onClick={() => openView('agent-hub')} />}
               />
               <InstallRow
-                icon={MicrosoftWordLogo}
-                iconColor="#2B579A"
-                label="Word"
-                action={<PillButton label="Open" onClick={() => openView('addin-word')} />}
+                icon={UsersThree}
+                label="Group chat"
+                action={<PillButton label="Open" onClick={() => openView('groups-list')} />}
+              />
+              <InstallRow
+                icon={WebhooksLogo}
+                label="Webhooks"
+                action={<PillButton label="Open" onClick={() => openView('agent-hub')} />}
+              />
+              <InstallRow
+                icon={Globe}
+                label="Bots site"
+                action={<PillButton label="Open" external onClick={() => openExternal(OFFICIAL.bots)} />}
+              />
+            </div>
+            <div className="mt-auto">
+              <BotsThreadMock />
+            </div>
+          </Card>
+
+          <Card className="p-10">
+            <CardHeading
+              live
+              title="Fabric Transport"
+              description="Pair a phone or browser to this machine. Scan, install the Fabric Session PWA, and drive the desktop from anywhere."
+            />
+            <div className="mt-5">
+              <InstallRow
+                icon={Broadcast}
+                label="Fabric Session"
+                action={<PillButton label="Open" onClick={() => openView('fabric-session')} />}
+              />
+              <InstallRow
+                icon={Desktop}
+                label="Pairing site"
+                action={<PillButton label="Open" external onClick={() => openExternal(OFFICIAL.fabric)} />}
+              />
+            </div>
+            <div className="mt-auto">
+              <FabricPairMock />
+            </div>
+          </Card>
+
+          <Card className="p-10">
+            <CardHeading
+              live
+              title="Model Lab"
+              description="Catalog, train, and run open-weights models locally or in the cloud — engine, studio, and playground in one place."
+            />
+            <div className="mt-5">
+              <InstallRow
+                icon={Flask}
+                label="Open Model Lab"
+                action={<PillButton label="Open" onClick={() => openView('model-lab')} />}
+              />
+              <InstallRow
+                icon={Cpu}
+                label="Manage models"
+                action={<PillButton label="Open" onClick={() => openView('models-manage')} />}
+              />
+            </div>
+            <div className="mt-auto">
+              <ModelLabMock />
+            </div>
+          </Card>
+
+          <Card className="p-10">
+            <CardHeading
+              live
+              title="Allternit Office"
+              description="Docs, Sheets, Slides, PDF, and Sign. Use it in the app or on the web — no account required."
+            />
+            <div className="mt-5">
+              <InstallRow
+                icon={Globe}
+                label="Use on the web"
+                action={<PillButton label="Open" external onClick={() => openExternal(OFFICIAL.office)} />}
+              />
+              <InstallRow
+                mark={<OfficeMark product="docs" />}
+                label="Allternit Docs"
+                action={<PillButton label="Open" onClick={() => openView('docs')} />}
+              />
+              <InstallRow
+                mark={<OfficeMark product="sheets" />}
+                label="Allternit Sheets"
+                action={<PillButton label="Open" onClick={() => openView('sheets')} />}
+              />
+              <InstallRow
+                mark={<OfficeMark product="slides" />}
+                label="Allternit Slides"
+                action={<PillButton label="Open" onClick={() => openView('slides')} />}
+              />
+              <InstallRow
+                mark={<OfficeMark product="pdf" />}
+                label="Allternit PDF"
+                action={<PillButton label="Open" onClick={() => openView('pdf')} />}
+              />
+              <InstallRow
+                mark={<OfficeMark product="sign" />}
+                label="Allternit Sign"
+                action={<PillButton label="Open" onClick={() => openView('sign')} />}
               />
             </div>
             <div className="mt-auto">
@@ -577,12 +901,12 @@ export function AppsExtensionsView(): React.ReactNode {
               <InstallRow
                 icon={TerminalWindow}
                 label="Terminal"
-                action={<PillButton label="Install" external onClick={() => openExternal('https://allternit.com/cli')} />}
+                action={<PillButton label="Install" external onClick={() => openExternal(OFFICIAL.gizziCode)} />}
               />
               <InstallRow
                 icon={Desktop}
                 label="Desktop app"
-                action={<PillButton label="Download" external onClick={() => openExternal('https://allternit.com/download')} />}
+                action={<PillButton label="Download" external onClick={() => openExternal(OFFICIAL.install)} />}
               />
               <InstallRow
                 icon={Cpu}

@@ -35,6 +35,7 @@ import { CoworkProjectView } from './CoworkProjectView';
 import { PermissionModal } from './PermissionModal';
 import { QuestionModal } from './QuestionModal';
 import { sessionLifecycleApi } from '@/lib/agents/native-agent-api';
+import { NativeOriginBanner } from '@/components/native-sessions/NativeOriginBanner';
 
 // Providers (matching ChatRoot structure)
 import { ChatIdProvider } from '@/providers/chat-id-provider';
@@ -1082,6 +1083,10 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent, onLiveUpd
       position: 'relative',
       overflow: 'hidden',
     }}>
+      <NativeOriginBanner
+        sessionId={embeddedAgentSession?.sessionId}
+        metadata={embeddedAgentSession?.session?.metadata}
+      />
       {/* Desktop Automation Permission Warning */}
       {showPermWarning && (
         <div style={{

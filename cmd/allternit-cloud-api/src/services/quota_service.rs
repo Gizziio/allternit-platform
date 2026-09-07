@@ -153,39 +153,76 @@ impl QuotaService {
         user_id: &str,
         quota: &UserQuota,
     ) -> Result<(), ApiError> {
+        let mut tx = self.db.begin().await?;
+        match Self::record_pairing_created_in_tx(&mut tx, user_id, quota).await {
+            Ok(()) => {
+                tx.commit().await?;
+                Ok(())
+            }
+            Err(error) => {
+                let _ = tx.rollback().await;
+                Err(error)
+            }
+        }
+    }
+
+    /// Same as [`Self::record_pairing_created`], but inside an existing
+    /// transaction so a later rollback (failed device insert, consumed
+    /// pairing, etc.) does not burn a daily slot.
+    ///
+    /// Increments only when the current count is under the cap. Hitting the
+    /// cap returns 403 without changing the stored count.
+    pub async fn record_pairing_created_in_tx(
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        user_id: &str,
+        quota: &UserQuota,
+    ) -> Result<(), ApiError> {
         let today = Utc::now().date_naive();
         let id = Uuid::new_v4().to_string();
 
         sqlx::query(
             r#"
             INSERT INTO user_pairing_usage (id, user_id, usage_date, pairings_created)
-            VALUES ($1, $2, $3, 1)
-            ON CONFLICT(user_id, usage_date) DO UPDATE SET
-                pairings_created = user_pairing_usage.pairings_created + 1,
-                updated_at = CURRENT_TIMESTAMP
+            VALUES ($1, $2, $3, 0)
+            ON CONFLICT (user_id, usage_date) DO NOTHING
             "#,
         )
         .bind(&id)
         .bind(user_id)
         .bind(today)
-        .execute(&self.db)
+        .execute(&mut **tx)
         .await?;
 
-        let created: i64 = sqlx::query_scalar(
+        let created: Option<i64> = sqlx::query_scalar(
+            r#"
+            UPDATE user_pairing_usage
+            SET pairings_created = pairings_created + 1,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE user_id = $1 AND usage_date = $2 AND pairings_created < $3
+            RETURNING pairings_created
+            "#,
+        )
+        .bind(user_id)
+        .bind(today)
+        .bind(quota.max_pairings_per_day)
+        .fetch_optional(&mut **tx)
+        .await?;
+
+        if created.is_some() {
+            return Ok(());
+        }
+
+        let current: i64 = sqlx::query_scalar(
             "SELECT pairings_created FROM user_pairing_usage WHERE user_id = $1 AND usage_date = $2",
         )
         .bind(user_id)
         .bind(today)
-        .fetch_one(&self.db)
+        .fetch_one(&mut **tx)
         .await?;
-
-        if created > quota.max_pairings_per_day {
-            return Err(ApiError::Forbidden(format!(
-                "Daily pairing limit reached ({}/{}). Try again tomorrow or upgrade your plan.",
-                created, quota.max_pairings_per_day
-            )));
-        }
-        Ok(())
+        Err(ApiError::Forbidden(format!(
+            "Daily pairing limit reached ({}/{}). Try again tomorrow or upgrade your plan.",
+            current, quota.max_pairings_per_day
+        )))
     }
 
     /// Record a pairing approval. Used to distinguish created vs approved counts.
@@ -234,6 +271,22 @@ impl QuotaService {
         let today = Utc::now().date_naive();
         let id = Uuid::new_v4().to_string();
 
+        let opened: i64 = sqlx::query_scalar(
+            "SELECT sockets_opened FROM user_relay_usage WHERE user_id = $1 AND usage_date = $2",
+        )
+        .bind(user_id)
+        .bind(today)
+        .fetch_optional(&self.db)
+        .await?
+        .unwrap_or(0);
+
+        if opened >= quota.max_relay_sockets {
+            return Err(ApiError::Forbidden(format!(
+                "Daily relay socket limit reached ({}/{}). Upgrade your plan for more.",
+                opened, quota.max_relay_sockets
+            )));
+        }
+
         sqlx::query(
             r#"
             INSERT INTO user_relay_usage (id, user_id, usage_date, sockets_opened)
@@ -248,21 +301,6 @@ impl QuotaService {
         .bind(today)
         .execute(&self.db)
         .await?;
-
-        let opened: i64 = sqlx::query_scalar(
-            "SELECT sockets_opened FROM user_relay_usage WHERE user_id = $1 AND usage_date = $2",
-        )
-        .bind(user_id)
-        .bind(today)
-        .fetch_one(&self.db)
-        .await?;
-
-        if opened > quota.max_relay_sockets {
-            return Err(ApiError::Forbidden(format!(
-                "Daily relay socket limit reached ({}/{}). Upgrade your plan for more.",
-                opened, quota.max_relay_sockets
-            )));
-        }
 
         let concurrent = self.count_open_relay_sockets(user_id).await?;
         if concurrent >= quota.max_relay_sockets {
@@ -709,6 +747,91 @@ mod tests {
         assert!(
             matches!(result, Err(ApiError::Forbidden(_))),
             "a drained balance must block even with nothing running: {result:?}"
+        );
+    }
+
+    async fn pairing_usage_pool() -> PgPool {
+        let pool = test_pool().await;
+        sqlx::query("DROP TABLE IF EXISTS user_pairing_usage CASCADE")
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query(
+            r#"
+            CREATE TABLE user_pairing_usage (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                usage_date DATE NOT NULL,
+                pairings_created BIGINT NOT NULL DEFAULT 0,
+                pairings_approved BIGINT NOT NULL DEFAULT 0,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                UNIQUE (user_id, usage_date)
+            )
+            "#,
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        pool
+    }
+
+    fn pairing_quota(user_id: &str, max_pairings_per_day: i64) -> UserQuota {
+        let mut quota = quota_for(user_id);
+        quota.max_pairings_per_day = max_pairings_per_day;
+        quota
+    }
+
+    #[tokio::test]
+    async fn pairing_quota_counts_only_successful_increments() {
+        let pool = pairing_usage_pool().await;
+        let quota_service = QuotaService::new(pool.clone());
+        let quota = pairing_quota("user_1", 2);
+
+        quota_service
+            .record_pairing_created("user_1", &quota)
+            .await
+            .expect("first pairing under cap");
+        quota_service
+            .record_pairing_created("user_1", &quota)
+            .await
+            .expect("second pairing at cap");
+
+        let denied = quota_service.record_pairing_created("user_1", &quota).await;
+        assert!(
+            matches!(denied, Err(ApiError::Forbidden(ref msg)) if msg.contains("2/2")),
+            "third pairing must 403 at cap: {denied:?}"
+        );
+
+        let stored: i64 = sqlx::query_scalar(
+            "SELECT pairings_created FROM user_pairing_usage WHERE user_id = 'user_1'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(stored, 2, "a rejected increment must not raise the stored count");
+    }
+
+    #[tokio::test]
+    async fn pairing_quota_rolls_back_with_the_outer_transaction() {
+        let pool = pairing_usage_pool().await;
+        let quota = pairing_quota("user_1", 5);
+
+        let mut tx = pool.begin().await.unwrap();
+        QuotaService::record_pairing_created_in_tx(&mut tx, "user_1", &quota)
+            .await
+            .expect("increment inside txn");
+        tx.rollback().await.unwrap();
+
+        let stored: Option<i64> = sqlx::query_scalar(
+            "SELECT pairings_created FROM user_pairing_usage WHERE user_id = 'user_1'",
+        )
+        .fetch_optional(&pool)
+        .await
+        .unwrap();
+        assert!(
+            stored.unwrap_or(0) == 0,
+            "a rolled-back handshake must not consume a daily pairing slot, stored={stored:?}"
         );
     }
 }

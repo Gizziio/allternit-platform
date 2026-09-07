@@ -116,4 +116,30 @@ if (stagePackage('canvas')) {
   console.warn('[prepare:office-engine] WARNING: canvas not found in node_modules — linkedom DOM canvas APIs unavailable (not used by office-engine today).');
 }
 
+const xlsxName = process.platform === 'win32' ? 'allternit-xlsx-sidecar.exe' : 'allternit-xlsx-sidecar';
+const xlsxSrcCandidates = [
+  path.join(repoRoot, 'target', 'release', xlsxName),
+  path.join(
+    repoRoot,
+    'packages',
+    '@allternit',
+    'office-xlsx-engine',
+    'crate',
+    'target',
+    'release',
+    xlsxName,
+  ),
+];
+const xlsxSrc = xlsxSrcCandidates.find((candidate) => fs.existsSync(candidate));
+if (xlsxSrc) {
+  const xlsxDestDir = path.join(outDir, 'bin');
+  fs.mkdirSync(xlsxDestDir, { recursive: true });
+  fs.copyFileSync(xlsxSrc, path.join(xlsxDestDir, xlsxName));
+  console.log(`[prepare:office-engine] staged xlsx sidecar ${xlsxName}`);
+} else {
+  console.warn(
+    '[prepare:office-engine] WARNING: xlsx sidecar binary not found — run `pnpm --filter @allternit/office-xlsx-engine sidecar:build`. Sheets will stay unavailable.',
+  );
+}
+
 console.log('[prepare:office-engine] done');

@@ -1,9 +1,9 @@
 # Steering checkpoint
 
-Goal: Backend robustness fix package on `session/backend-robust` (audit follow-up): (1) graceful shutdown for cmd/allternit-api main.rs, (2) audit_log writers in cmd/allternit-cloud-api, (3) health.rs returns real 503 on failure.
+Goal: Hotfix gizzi-code 2.0.5 TUI crash (`TypeError: new ColorDiff(...).render is not a function`) triggered by any surface rendering `<StructuredDiff>` with highlighting enabled — confirmed on `/theme`; file-edit permission diffs share the same component.
 
-Just did: All three fixes implemented and verified. cargo check + cargo build pass on both crates; clippy --no-deps on both crates exits 0 with no warnings in touched code (one pre-existing clippy error in untouched allternit-computer-cloud/src/incus_pool.rs:217 never_loop); cargo test -p allternit-cloud-api --lib: 273 passed, 1 failed — contabo_runtime_service test shells out to `docker`, which is not installed (environmental, pre-existing, unrelated).
+Just did: Follow-up on the same branch — the vendored color-diff TS port now implements real rendering instead of falling back: new `syntax.ts` (regex tokenizer for ts/js/py/go/rust/java/c/shell/json/css/html/markdown/config/sql/ruby/php, language detection by extension + shebang, theme palettes mirroring theme.ts diff backgrounds, width-wrapping ANSI emitter). `ColorDiff.render()` emits guttered diff lines (marker + line numbers + tinted added/removed backgrounds + syntax-colored tokens, wrapped); `ColorFile.render()` fixes the same class of latent crash in HighlightedCode (file-write permission previews) and returns guttered highlighted file lines; `getSyntaxTheme()` maps TUI theme names (dark/light/daltonized/ansi) to built-in palettes. 17/17 tests, tsc clean, rebuilt binary verified via pty: /theme picker shows real syntax colors (dark-plus token palette) and stays alive.
 
-Next: Commit on session/backend-robust (awaiting commit gate). No push/merge — package scope only.
+Next: Owner review; merge to main and cut gizzi-code v2.0.6 (release flow + homebrew tap bump). Known gap: word-level intra-line highlights are not emitted by the TS render (the React fallback does word diffs); consider porting that later if users miss it.
 
-Open questions: None blocking. Library-spawned loops in allternit-api (batch worker, capacity monitor, provisioner, queue worker, cowork background) have no shutdown handle; they are aborted at runtime exit after the drain window — a follow-up could thread a CancellationToken through them.
+Open questions: Ship the fallback-only highlight as 2.0.6 now, or bundle a real TS highlighter first? (Recommend: ship now — crash is P0; highlighting parity is cosmetic.)

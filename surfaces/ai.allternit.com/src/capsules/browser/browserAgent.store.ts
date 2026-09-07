@@ -504,6 +504,12 @@ export const useBrowserAgentStore = create<BrowserAgentState>()(
     connectedBotId: null,
     setConnectedBotId: (botId) => set({ connectedBotId: botId }),
     startAciSession: (goal) => {
+      if (get().connectedBotId) {
+        // Bot computers are the cloud-desktop viewport. Do not start a local
+        // CUA run against this Mac while that view is connected.
+        set({ goal, aciSidecarExpanded: true });
+        return;
+      }
       const brain = resolveGizziBrain();
       if (brain) set({ aciModel: brain.aciModel });
       const engine = get().aciEngine;
@@ -735,6 +741,10 @@ export const useBrowserAgentStore = create<BrowserAgentState>()(
     // transport until its capability cells promote to canonical-default.
     // Events streamed via SSE feed screenshot + action state into the sidecar.
     runAcuTask: (task, options = {}) => {
+      if (get().connectedBotId) {
+        set({ goal: task, aciSidecarExpanded: true });
+        return;
+      }
       const runId = `cu-${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}`;
       const sessionId = `sess-${crypto.randomUUID().replace(/-/g, '').slice(0, 8)}`;
       set({

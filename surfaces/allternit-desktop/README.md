@@ -52,6 +52,11 @@ by older docs do not exist. Release builds are produced with
 `install.gizziio.com` per `BUILD.md`; auto-updates will start working once a
 real release repo is published.
 
+CI can emit unsigned smoke artifacts (macOS dmg when certs are present,
+Windows `.exe`, Linux AppImage/deb) — those are **not** production releases:
+no EV cert on Windows (SmartScreen will warn), no Linux distribution channel.
+Do not announce them as shipping.
+
 ## Setup
 
 ### First Launch
@@ -198,7 +203,9 @@ Last verified: 2026-09-03 against a0f8230b5 (scripts/build-desktop.sh and
 package.json scripts confirmed present).
 
 See [docs/SIGNING.md](./docs/SIGNING.md) for codesigning, notarization, and
-auto-update configuration.
+auto-update configuration. The three-platform shipping list (including work
+that can happen before Apple approval) is
+[docs/DISTRIBUTION-CHECKLIST.md](./docs/DISTRIBUTION-CHECKLIST.md).
 
 ## Data & Privacy
 

@@ -75,11 +75,19 @@ fn generate_id() -> String {
 }
 
 fn normalize_scopes(scopes: Vec<String>) -> Vec<String> {
-    scopes
+    let scopes: Vec<String> = scopes
         .into_iter()
         .map(|s| s.trim().to_lowercase())
         .filter(|s| !s.is_empty())
-        .collect()
+        .collect();
+    // Operator keys drive paired nodes (catalog + runtime proxy). An empty
+    // list fails `has_scope("compute")`, so minting without scopes used to
+    // produce a key that could not list devices or proxy.
+    if scopes.is_empty() {
+        vec!["compute".to_string()]
+    } else {
+        scopes
+    }
 }
 
 /// List active (non-revoked) API keys for a user.
@@ -218,5 +226,14 @@ mod tests {
     fn scopes_are_normalized() {
         let scopes = vec!["  Read ".to_string(), "COMPUTE".to_string(), "".to_string()];
         assert_eq!(normalize_scopes(scopes), vec!["read", "compute"]);
+    }
+
+    #[test]
+    fn empty_scopes_default_to_compute() {
+        assert_eq!(normalize_scopes(vec![]), vec!["compute"]);
+        assert_eq!(
+            normalize_scopes(vec!["".to_string(), "  ".to_string()]),
+            vec!["compute"]
+        );
     }
 }

@@ -80,7 +80,14 @@ export async function loadCatalog(
   catalogDir: string = join(process.cwd(), "catalog/apps"),
   options: LoadCatalogOptions = {},
 ): Promise<CatalogStore> {
-  const entries = await readdir(catalogDir, { withFileTypes: true });
+  let entries;
+  try {
+    entries = await readdir(catalogDir, { withFileTypes: true });
+  } catch (error) {
+    const missing = error instanceof Error && "code" in error && error.code === "ENOENT";
+    if (!missing) throw error;
+    return createCatalogStore([], options);
+  }
   const providers = await Promise.all(
     entries
       .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))

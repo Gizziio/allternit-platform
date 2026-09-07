@@ -256,7 +256,7 @@ function SessionAnalyticsDashboard({
           icon={Activity}
           modeColors={modeColors as typeof MODE_COLORS.chat}
         >
-          <ResponsiveContainer width="100%" height={250}>
+          <ResponsiveContainer width="100%" height={250} minWidth={8} minHeight={8} debounce={200}>
             <AreaChart data={analytics.messagesOverTime}>
               <defs>
                 <linearGradient id="colorTokens" x1="0" y1="0" x2="0" y2="1">
@@ -312,7 +312,7 @@ function SessionAnalyticsDashboard({
           icon={Wrench}
           modeColors={modeColors as typeof MODE_COLORS.chat}
         >
-          <ResponsiveContainer width="100%" height={250}>
+          <ResponsiveContainer width="100%" height={250} minWidth={8} minHeight={8} debounce={200}>
             <BarChart data={analytics.toolUsage} layout="vertical">
               <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} horizontal={false} />
               <XAxis 
@@ -351,7 +351,7 @@ function SessionAnalyticsDashboard({
           icon={Clock}
           modeColors={modeColors as typeof MODE_COLORS.chat}
         >
-          <ResponsiveContainer width="100%" height={250}>
+          <ResponsiveContainer width="100%" height={250} minWidth={8} minHeight={8} debounce={200}>
             <AreaChart data={analytics.hourlyDistribution}>
               <defs>
                 <linearGradient id="colorHourly" x1="0" y1="0" x2="0" y2="1">
@@ -401,7 +401,7 @@ function SessionAnalyticsDashboard({
           modeColors={modeColors as typeof MODE_COLORS.chat}
         >
           <div className="flex items-center">
-            <ResponsiveContainer width="50%" height={250}>
+            <ResponsiveContainer width="50%" height={250} minWidth={8} minHeight={8} debounce={200}>
               <PieChart>
                 <Pie
                   data={analytics.modelDistribution}
@@ -468,7 +468,7 @@ function SessionAnalyticsDashboard({
           modeColors={modeColors as typeof MODE_COLORS.chat}
           className="lg:col-span-2"
         >
-          <ResponsiveContainer width="100%" height={200}>
+          <ResponsiveContainer width="100%" height={200} minWidth={8} minHeight={8} debounce={200}>
             <LineChart data={analytics.latencyTrends}>
               <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
               <XAxis 
@@ -753,7 +753,7 @@ function ChartCard({
           </p>
         </div>
       </div>
-      {children}
+      <div className="w-full min-h-[200px]">{children}</div>
     </div>
   );
 }

@@ -34,19 +34,33 @@ const logger = createModuleLogger('ResourceUsageDashboard');
  * warns ("width(-1) and height(-1) should be greater than 0") whenever a chart
  * mounts while its parent has no size — e.g. while the Settings modal that
  * hosts this dashboard is still animating in — so gate charts on real layout.
+ *
+ * Latch to true: oscillating 0↔N (compact maxHeight + flex-1 charts) unmounts
+ * ResponsiveContainer on every frame and trips React #185 (max update depth).
  */
 function useHasSize(ref: React.RefObject<HTMLElement | null>): boolean {
   const [hasSize, setHasSize] = useState(false);
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
+    let raf = 0;
+    const consider = (width: number, height: number) => {
+      if (width >= 8 && height >= 8) setHasSize(true);
+    };
+    consider(el.clientWidth, el.clientHeight);
     const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        setHasSize(entry.contentRect.width > 0 && entry.contentRect.height > 0);
-      }
+      const entry = entries[0];
+      if (!entry) return;
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        consider(entry.contentRect.width, entry.contentRect.height);
+      });
     });
     observer.observe(el);
-    return () => observer.disconnect();
+    return () => {
+      cancelAnimationFrame(raf);
+      observer.disconnect();
+    };
   }, [ref]);
   return hasSize;
 }
@@ -209,7 +223,7 @@ export function ResourceUsageDashboard() {
   const { grandTotal } = data;
 
   return (
-    <div className="bg-[var(--glass-bg)] backdrop-blur-md border border-[var(--border-subtle)] rounded-2xl font-sans overflow-hidden" style={{ maxHeight: 220 }}>
+    <div className="bg-[var(--glass-bg)] backdrop-blur-md border border-[var(--border-subtle)] rounded-2xl font-sans overflow-hidden">
       <div className="flex flex-col h-full">
         {/* Top bar: title, key metrics, controls */}
         <div className="flex items-center gap-4 px-4 py-3 border-b border-[var(--border-subtle)]">
@@ -284,9 +298,9 @@ export function ResourceUsageDashboard() {
             {derived.dailyAsc.length === 0 ? (
               <div className="flex-1 flex items-center justify-center text-[11px] text-[var(--text-tertiary)]">No usage recorded in this range yet.</div>
             ) : (
-              <div ref={dailyChartRef} className="flex-1 min-h-0">
+              <div ref={dailyChartRef} className="h-[96px]">
                 {dailyChartSized && (
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height={96} minWidth={8} minHeight={8} debounce={200}>
                     <BarChart data={derived.dailyAsc.map((d) => ({ date: d.date.slice(5), tokens: d.total.tokens }))} margin={{ left: -20, right: 0, top: 4, bottom: -4 }}>
                       <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-tertiary)', fontSize: 10 }} interval="preserveStartEnd" />
                       <YAxis hide />
@@ -310,9 +324,9 @@ export function ResourceUsageDashboard() {
             {derived.modelRows.length === 0 ? (
               <div className="flex-1 flex items-center justify-center text-[11px] text-[var(--text-tertiary)]">No model usage yet.</div>
             ) : (
-              <div ref={modelsChartRef} className="flex-1 min-h-0">
+              <div ref={modelsChartRef} className="h-[96px]">
                 {modelsChartSized && (
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height={96} minWidth={8} minHeight={8} debounce={200}>
                     <BarChart data={derived.modelRows.slice(0, 5)} layout="vertical" margin={{ left: -20, right: 8, top: 4, bottom: -4 }}>
                       <XAxis type="number" hide />
                       <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-tertiary)', fontSize: 10 }} width={100} />

@@ -27,6 +27,7 @@ import { Command } from "@/runtime/loop/command"
 import { Global } from "@/runtime/context/global"
 import { ProjectRoutes } from "@/runtime/server/routes/project"
 import { SessionRoutes } from "@/runtime/server/routes/session"
+import { NativeSessionRoutes } from "@/runtime/server/routes/native-session"
 import { AutomationsRoutes } from "@/runtime/server/routes/automations"
 import { PtyRoutes } from "@/runtime/server/routes/pty"
 import { McpRoutes } from "@/runtime/server/routes/mcp"
@@ -379,6 +380,7 @@ export namespace Server {
         .route("/config", ConfigRoutes())
         .route("/experimental", ExperimentalRoutes())
         .route("/session", SessionRoutes())
+        .route("/native-session", NativeSessionRoutes())
         .route("/automations", AutomationsRoutes())
         .route("/peers", PeerRoutes())
         .route("/permission", PermissionRoutes())
@@ -472,6 +474,7 @@ export namespace Server {
           new Hono()
             .get("/asyncapi", (c) => c.json(asyncapi()))
             .route("/session", SessionRoutes())
+            .route("/native-session", NativeSessionRoutes())
             .route("/automations", AutomationsRoutes())
             .route("/peers", PeerRoutes())
             .route("/orchestrator", OrchestratorRoutes())

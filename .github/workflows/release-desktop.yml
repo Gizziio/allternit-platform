@@ -144,15 +144,16 @@ jobs:
       # ── Step 3: Bundle Lima (universal limactl binary) ───────────────────────
       - name: Download Lima and create universal binary
         run: |
+          mkdir -p resources/lima/darwin
           node scripts/download-lima.cjs arm64
-          mv resources/lima/limactl resources/lima/limactl-arm64
+          mv resources/lima/darwin/limactl resources/lima/darwin/limactl-arm64
           node scripts/download-lima.cjs x86_64
-          mv resources/lima/limactl resources/lima/limactl-x86_64
-          lipo -create resources/lima/limactl-arm64 resources/lima/limactl-x86_64 \
-               -output resources/lima/limactl
-          chmod +x resources/lima/limactl
-          rm resources/lima/limactl-arm64 resources/lima/limactl-x86_64
-          lipo -info resources/lima/limactl
+          mv resources/lima/darwin/limactl resources/lima/darwin/limactl-x86_64
+          lipo -create resources/lima/darwin/limactl-arm64 resources/lima/darwin/limactl-x86_64 \
+               -output resources/lima/darwin/limactl
+          chmod +x resources/lima/darwin/limactl
+          rm resources/lima/darwin/limactl-arm64 resources/lima/darwin/limactl-x86_64
+          lipo -info resources/lima/darwin/limactl
         working-directory: surfaces/allternit-desktop
 
       # ── Step 3b: Stage mesh-node sidecar ─────────────────────────────────
@@ -419,6 +420,14 @@ jobs:
 
       - name: Install desktop dependencies
         run: npm install
+        working-directory: surfaces/allternit-desktop
+
+      - name: Stage Cua Driver
+        run: npm run prepare:cua-driver
+        working-directory: surfaces/allternit-desktop
+
+      - name: Download Lima
+        run: npm run download:lima
         working-directory: surfaces/allternit-desktop
 
       - name: Build TypeScript

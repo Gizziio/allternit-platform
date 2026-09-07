@@ -4,6 +4,7 @@ import { isEnvTruthy } from '../../utils/envUtils'
 
 const doctor: Command = {
   name: 'doctor',
+  argumentHint: '[fix]',
   description: 'Diagnose and verify your Gizzi Code installation and settings',
   isEnabled: () => !isEnvTruthy(process.env.DISABLE_DOCTOR_COMMAND),
   type: 'local-jsx',

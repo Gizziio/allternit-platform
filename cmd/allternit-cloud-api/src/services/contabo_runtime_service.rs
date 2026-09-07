@@ -589,7 +589,7 @@ if [ -n "$ALLTERNIT_CLOUD_API_URL" ] && [ -n "$ALLTERNIT_BOOTSTRAP_TOKEN" ]; the
     # Create pairing
     PAIRING_RESPONSE="$(curl -fsSL -X POST "$ALLTERNIT_CLOUD_API_URL/api/v1/runtime-pairings" \
         -H "Content-Type: application/json" \
-        -d "{{\"runtimeType\": \"hosted\", \"hostedInstanceId\": \"$ALLTERNIT_INSTANCE_NAME\", \"hostedBootstrapToken\": \"$ALLTERNIT_BOOTSTRAP_TOKEN\", \"publicKey\": \"$PUBLIC_KEY\", \"name\": \"$ALLTERNIT_INSTANCE_NAME\", \"capabilities\": [\"runtime:connect\", \"runtime:execute\", \"runtime:files\", \"runtime:terminal\", \"runtime:remote_control\", \"providers:connect\", \"providers:use\"]}}" 2>/dev/null || echo '{{}}')"
+        -d "{{\"runtimeType\": \"hosted\", \"hostedInstanceId\": \"$ALLTERNIT_INSTANCE_NAME\", \"hostedBootstrapToken\": \"$ALLTERNIT_BOOTSTRAP_TOKEN\", \"publicKey\": \"$PUBLIC_KEY\", \"name\": \"$ALLTERNIT_INSTANCE_NAME\", \"capabilities\": [\"runtime:connect\", \"runtime:execute\", \"runtime:files\", \"runtime:terminal\", \"runtime:remote_control\", \"providers:connect\", \"providers:use\"]}}")"
     
     PAIRING_ID="$(echo "$PAIRING_RESPONSE" | jq -r '.pairingId // empty')"
     DEVICE_CODE="$(echo "$PAIRING_RESPONSE" | jq -r '.deviceCode // empty')"
@@ -607,7 +607,7 @@ if [ -n "$ALLTERNIT_CLOUD_API_URL" ] && [ -n "$ALLTERNIT_BOOTSTRAP_TOKEN" ]; the
         # Exchange for device token
         EXCHANGE_RESPONSE="$(curl -fsSL -X POST "$ALLTERNIT_CLOUD_API_URL/api/v1/runtime-pairings/exchange" \
             -H "Content-Type: application/json" \
-            -d "{{\"pairingId\": \"$PAIRING_ID\", \"deviceCode\": \"$DEVICE_CODE\", \"signature\": \"$SIGNATURE\"}}" 2>/dev/null || echo '{{}}')"
+            -d "{{\"pairingId\": \"$PAIRING_ID\", \"deviceCode\": \"$DEVICE_CODE\", \"signature\": \"$SIGNATURE\"}}")"
         
         DEVICE_TOKEN="$(echo "$EXCHANGE_RESPONSE" | jq -r '.deviceToken // empty')"
         PAIRED_RUNTIME_ID="$(echo "$EXCHANGE_RESPONSE" | jq -r '.runtimeId // empty')"
@@ -632,7 +632,14 @@ if [ -n "$ALLTERNIT_CLOUD_API_URL" ] && [ -n "$ALLTERNIT_BOOTSTRAP_TOKEN" ]; the
             mkdir -p /data/.local/share/gizzi-code
             mv /tmp/runtime-device.json /data/.local/share/gizzi-code/runtime-device.json
             chmod 600 /data/.local/share/gizzi-code/runtime-device.json
+            mkdir -p /root/.config/allternit
+            cp /data/.local/share/gizzi-code/runtime-device.json /root/.config/allternit/runtime-identity.json
+            chmod 600 /root/.config/allternit/runtime-identity.json
         fi
+    fi
+    if [ ! -f /data/.local/share/gizzi-code/runtime-device.json ]; then
+        echo "setup-stage: hosted pairing failed — refusing to mark this box online without a device token" >&2
+        exit 1
     fi
 fi
 
@@ -646,6 +653,9 @@ if [ -f /data/.local/share/gizzi-code/runtime-device.json ]; then
     export ALLTERNIT_CLOUD_API_URL="$ALLTERNIT_CLOUD_API_URL"
     export ALLTERNIT_RUNTIME_IDENTITY_PATH="/data/.local/share/gizzi-code/runtime-device.json"
     export ALLTERNIT_GATEWAY_URL="http://127.0.0.1:8013"
+    printf 'ALLTERNIT_RUNTIME_IDENTITY_PATH=%s\nALLTERNIT_CLOUD_API_URL=%s\nALLTERNIT_GATEWAY_URL=%s\n' \
+      "$ALLTERNIT_RUNTIME_IDENTITY_PATH" "$ALLTERNIT_CLOUD_API_URL" "$ALLTERNIT_GATEWAY_URL" \
+      > /etc/allternit-runtime.env
     cd /opt/agent-daemon
     nohup node index.js > /var/log/agent-daemon.log 2>&1 &
 fi
@@ -682,6 +692,8 @@ echo "Data plane setup complete"
     }
 
     /// Start a stopped workload container. No-op when it is already running.
+    /// If the container was removed, mint a new bootstrap token and recreate it
+    /// so a catalog row without a box can come back.
     pub async fn start(&self, instance_id: &str) -> Result<(), ApiError> {
         let container_name = Self::container_name(instance_id);
         let docker_host = self.docker_host_for_instance(instance_id).await?;
@@ -692,12 +704,49 @@ echo "Data plane setup complete"
             .output()
             .await
             .map_err(|e| ApiError::Internal(format!("docker start failed: {}", e)))?;
-        if !output.status.success() {
-            return Err(ApiError::Internal(format!(
-                "docker start failed: {}",
-                String::from_utf8_lossy(&output.stderr)
-            )));
+        if output.status.success() {
+            return Ok(());
         }
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        if !docker_reports_missing(&stderr) {
+            return Err(ApiError::Internal(format!("docker start failed: {}", stderr)));
+        }
+        self.recreate_missing_container(instance_id).await
+    }
+
+    async fn recreate_missing_container(&self, instance_id: &str) -> Result<(), ApiError> {
+        let memory_mb: i64 = sqlx::query_scalar(
+            "SELECT memory_mb FROM hosted_runtime_instances WHERE id = $1 AND status != 'destroyed'",
+        )
+        .bind(instance_id)
+        .fetch_optional(&self.db)
+        .await
+        .map_err(ApiError::DatabaseError)?
+        .ok_or_else(|| ApiError::NotFound("Hosted runtime not found".to_string()))?;
+        // This instance was stored at 24 GB, which is larger than mail.
+        // Cap the replacement box so recreate cannot OOM the node.
+        let memory_mb = memory_mb.clamp(512, 2048);
+        let bootstrap_token = Uuid::new_v4().to_string();
+        sqlx::query(
+            r#"
+            UPDATE hosted_runtime_instances
+            SET bootstrap_token_hash = $1,
+                runtime_device_id = NULL,
+                status = 'starting',
+                error_message = NULL,
+                stop_reason = NULL,
+                updated_at = NOW()
+            WHERE id = $2
+            "#,
+        )
+        .bind(sha256_hex(bootstrap_token.as_bytes()))
+        .bind(instance_id)
+        .execute(&self.db)
+        .await
+        .map_err(ApiError::DatabaseError)?;
+        tracing::info!(instance_id, "Recreating missing hosted runtime container");
+        self.provision_container(instance_id, memory_mb, &bootstrap_token, &[])
+            .await?;
         Ok(())
     }
 
@@ -740,7 +789,7 @@ echo "Data plane setup complete"
             .map_err(|e| ApiError::Internal(format!("docker inspect failed: {}", e)))?;
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            if stderr.contains("No such") {
+            if docker_reports_missing(&stderr) {
                 return Ok(ContaboContainerState::Removed);
             }
             return Err(ApiError::Internal(format!(
@@ -756,6 +805,10 @@ echo "Data plane setup complete"
             other => ContaboContainerState::Other(other.to_string()),
         })
     }
+}
+
+fn docker_reports_missing(stderr: &str) -> bool {
+    stderr.to_ascii_lowercase().contains("no such")
 }
 
 fn sha256_hex(value: &[u8]) -> String {
@@ -1054,6 +1107,17 @@ mod tests {
             matches!(result, Err(ApiError::ServiceUnavailable(_))),
             "draining/down nodes must never be selected: {result:?}"
         );
+    }
+
+    #[test]
+    fn docker_reports_missing_is_case_insensitive() {
+        assert!(docker_reports_missing(
+            "error: no such object: allternit-rt-hr_contabo_mail_"
+        ));
+        assert!(docker_reports_missing(
+            "Error response from daemon: No such container: allternit-rt-hr_contabo_mail_"
+        ));
+        assert!(!docker_reports_missing("permission denied"));
     }
 
     #[test]

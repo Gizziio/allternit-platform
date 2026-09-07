@@ -11,7 +11,6 @@ import {
   SidebarSimple,
   FileCode,
   Target,
-  Sparkle,
 } from '@phosphor-icons/react';
 
 import { ModeSwitcher } from './ModeSwitcher';
@@ -108,14 +107,9 @@ export function ShellHeader({
           <SidebarSimple size={20} weight={isRailCollapsed ? "fill" : "regular"} />
         </button>
 
-        <button
-          type="button"
-          onClick={() => window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType: 'products' } }))}
-          className="flex items-center ml-2 bg-transparent border-none p-0 cursor-pointer [WebkitAppRegion:no-drag] hover:opacity-80 transition-opacity"
-          title="Open Products"
-        >
+        <div className="flex items-center ml-2">
           <AProtocolWordmark theme="adaptive" height={18} />
-        </button>
+        </div>
       </div>
 
       {/* Left-aligned Mode Switcher */}
@@ -130,16 +124,6 @@ export function ShellHeader({
       </div>
 
       <div className="flex items-center gap-3 [WebkitAppRegion:no-drag]">
-        <button
-          type="button"
-          onClick={() => window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType: 'products' } }))}
-          className="flex items-center gap-1.5 border border-solid border-[var(--border-subtle)] rounded-lg px-2.5 py-1.5 bg-[var(--shell-control-bg)] text-[var(--shell-control-fg)] cursor-pointer [WebkitAppRegion:no-drag] transition-colors hover:bg-[var(--shell-control-active-bg)] hover:text-[var(--shell-control-active-fg)]"
-          title="Open Products"
-        >
-          <Sparkle size={16} weight="fill" />
-          <span className="text-[12px] font-semibold hidden sm:inline">Products</span>
-        </button>
-
         {/* Automation Hub — visible from every mode */}
         <button
           type="button"

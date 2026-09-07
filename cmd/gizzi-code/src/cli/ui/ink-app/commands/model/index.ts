@@ -6,6 +6,7 @@ import { getMainLoopModel, renderModelName } from '../../utils/model/model.js'
 export default {
   type: 'local-jsx',
   name: 'model',
+  aliases: ['m'],
   get description() {
     return `Set the AI model for Gizzi Code (currently ${renderModelName(getMainLoopModel())})`
   },

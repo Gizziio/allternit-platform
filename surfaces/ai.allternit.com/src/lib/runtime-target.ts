@@ -28,6 +28,20 @@ export function getActiveRuntimeId(): string | null {
   return window.localStorage.getItem(ACTIVE_RUNTIME_ID_KEY);
 }
 
+/** Persist `?runtime=rt_…` from a QR / handoff URL as the active pair. */
+export function applyRuntimeIdFromSearch(
+  search = isBrowser() ? window.location.search : '',
+): string | null {
+  if (!isBrowser()) return null;
+  const normalized = search.startsWith('?') ? search.slice(1) : search;
+  const value = new URLSearchParams(normalized).get('runtime');
+  if (value && /^rt_[A-Za-z0-9_-]+$/.test(value)) {
+    window.localStorage.setItem(ACTIVE_RUNTIME_ID_KEY, value);
+    return value;
+  }
+  return null;
+}
+
 export function setRuntimeExecutionTarget(
   target: RuntimeExecutionTarget,
   runtimeId?: string | null,

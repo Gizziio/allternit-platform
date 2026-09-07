@@ -14,7 +14,6 @@ import {
   Clock,
   ArrowsClockwise,
   Images,
-  Sparkle,
 } from '@phosphor-icons/react';
 
 export interface RailSubmenuItem {
@@ -66,12 +65,6 @@ export const RAIL_CONFIG: RailConfigSection[] = [
     id: 'primary',
     title: 'Home',
     items: [
-      {
-        id: 'products',
-        label: 'Products',
-        icon: Sparkle,
-        payload: 'products',
-      },
       { 
         id: 'chat', 
         label: 'Chat', 

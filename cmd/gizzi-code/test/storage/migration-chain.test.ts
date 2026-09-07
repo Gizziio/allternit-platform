@@ -111,6 +111,7 @@ describe("migration chain on a fresh DB (what startup runs)", () => {
       "background_task", // 20260718120300
       "session_trace", // 20260718120400
       "runtime", // 20260818000000
+      "session_source_event", // 20260906180000
     ]) {
       expect(t, `table ${table}`).toContain(table)
     }
@@ -118,7 +119,7 @@ describe("migration chain on a fresh DB (what startup runs)", () => {
     // Real columns added by later ALTER migrations
     expect(columns(sqlite, "project")).toContain("commands") // 20260211171708
     const sessionCols = columns(sqlite, "session")
-    for (const col of ["surface", "harness", "agent_id", "pinned", "permission_mode", "default_model"]) {
+    for (const col of ["surface", "harness", "agent_id", "pinned", "permission_mode", "default_model", "source_harness", "source_session_id", "source_snapshot_hash", "source_export"]) {
       expect(sessionCols, `session.${col}`).toContain(col)
     }
     expect(columns(sqlite, "goal")).toContain("budget") // 20260718120100
@@ -144,11 +145,12 @@ describe("migration chain on an old DB (upgrade regression)", () => {
     expect(appliedCount(sqlite)).toBe(journal.length)
 
     const sessionCols = columns(sqlite, "session")
-    for (const col of ["agent_id", "pinned", "permission_mode", "default_model"]) {
+    for (const col of ["agent_id", "pinned", "permission_mode", "default_model", "source_harness", "source_snapshot_hash"]) {
       expect(sessionCols, `session.${col} after upgrade`).toContain(col)
     }
     expect(columns(sqlite, "goal")).toContain("budget")
     expect(tables(sqlite)).toContain("background_task")
+    expect(tables(sqlite)).toContain("session_source_event")
 
     sqlite.close()
   })

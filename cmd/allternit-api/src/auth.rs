@@ -57,6 +57,16 @@ const ORGANIZATION_SLUG_HEADER: &str = "x-allternit-organization-slug";
 
 const DEFAULT_CLERK_JWKS_URL: &str = "https://clerk.allternit.com/.well-known/jwks.json";
 const DEFAULT_CLERK_ISSUER: &str = "https://clerk.allternit.com";
+/// First-party Clerk proxy used by Fabric Transport. Browser session JWTs
+/// carry this `iss`; cloud-api already accepts it.
+const CLERK_PROXY_ISSUER: &str = "https://allternit.com/__clerk";
+
+fn allowed_clerk_issuers(primary: &str) -> Vec<&str> {
+    let mut list = vec![primary, DEFAULT_CLERK_ISSUER, CLERK_PROXY_ISSUER];
+    list.sort_unstable();
+    list.dedup();
+    list
+}
 
 /// How long to cache JWKS before refreshing
 const JWKS_CACHE_TTL: Duration = Duration::from_secs(3600);
@@ -226,6 +236,24 @@ impl JwksManager {
             !cached.keys.is_empty() || cached.fetched_at.elapsed() < JWKS_CACHE_TTL
         } else {
             false
+        }
+    }
+
+    /// Prefetch Clerk JWKS at boot so `/health` is not `jwks: false` until
+    /// the first Clerk JWT happens to arrive (desktop sessions use device
+    /// tokens and would otherwise stay degraded forever).
+    pub async fn warmup(&self) {
+        match self.fetch_jwks().await {
+            Ok(keys) => {
+                let mut cache = self.cache.write().await;
+                *cache = Some(CachedJwks {
+                    keys,
+                    fetched_at: Instant::now(),
+                });
+            }
+            Err(e) => {
+                warn!("JWKS warmup failed from {}: {}", self.jwks_url, e);
+            }
         }
     }
 
@@ -472,7 +500,8 @@ fn verify_rs256(
     )
     .map_err(|e| AuthError::TokenDecode(e.to_string()))?;
 
-    if claims.get("iss").and_then(|v| v.as_str()) != Some(issuer) {
+    let iss = claims.get("iss").and_then(|v| v.as_str()).unwrap_or("");
+    if !allowed_clerk_issuers(issuer).contains(&iss) {
         return Err(AuthError::TokenDecode("Invalid issuer".to_string()));
     }
     let now = std::time::SystemTime::now()
@@ -831,14 +860,35 @@ pub async fn auth_middleware(
         if let Some(token) = crate::connector_routes::device_token_from_headers(request.headers()) {
             let token = token.to_string();
             return match crate::connector_routes::verify_runtime_device_token(&state, &token).await {
-                Ok(user_id) => {
+                Ok(identity) => {
+                    let header_email = request
+                        .headers()
+                        .get(USER_EMAIL_HEADER)
+                        .and_then(|v| v.to_str().ok())
+                        .filter(|s| !s.is_empty())
+                        .map(|s| s.to_string());
+                    let header_name = request
+                        .headers()
+                        .get("x-allternit-user-name")
+                        .and_then(|v| v.to_str().ok())
+                        .filter(|s| !s.is_empty())
+                        .map(|s| s.to_string());
+                    let header_org = request
+                        .headers()
+                        .get("x-allternit-tenant-id")
+                        .and_then(|v| v.to_str().ok())
+                        .filter(|s| !s.is_empty())
+                        .map(|s| s.to_string());
+                    let email = header_email
+                        .filter(|value| !value.contains("@users.allternit.local"))
+                        .or(identity.email);
                     let mut user = AuthUser {
-                        user_id,
-                        email: None,
-                        name: None,
+                        user_id: identity.user_id,
+                        email,
+                        name: header_name,
                         avatar_url: None,
-                        tenant_id: None,
-                        organization_id: None,
+                        tenant_id: header_org.clone(),
+                        organization_id: header_org,
                         organization_role: None,
                         organization_slug: None,
                     };
