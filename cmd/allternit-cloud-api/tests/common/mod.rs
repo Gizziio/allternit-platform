@@ -84,6 +84,7 @@ impl TestApp {
                 )),
                 quota_service.clone(),
             )),
+            provisioning_service: Arc::new(services::ProvisioningService::new(db.clone())),
             mesh_service: None,
             credential_cipher: None,
             inference_key_service: None,
