@@ -62,6 +62,7 @@ import {
   ScratchpadWriteTool,
 } from "@/runtime/tools/builtins/scratchpad"
 import { GetAgentEmailStatusTool, SendAgentEmailTool } from "@/runtime/tools/builtins/agent-email"
+import { MessageAgentTool } from "@/runtime/tools/builtins/message-agent"
 import { MdxGraphTool } from "@/runtime/tools/builtins/mdx-graph"
 
 export namespace ToolRegistry {
@@ -179,6 +180,10 @@ export namespace ToolRegistry {
       VaultWriteTool,
       SendAgentEmailTool,
       GetAgentEmailStatusTool,
+      // Bot Mode (B4/D5): listed unconditionally — the registry has no session
+      // context. SessionPrompt.resolveTools deletes it from the per-session
+      // tool record unless the session is a canonical bot chat.
+      MessageAgentTool,
       ...(Flag.GIZZI_ENABLE_LSP_TOOL ? [LspTool] : []),
       ...(config.experimental?.batch_tool === true ? [BatchTool] : []),
       ...(Flag.GIZZI_CLIENT === "cli" ? [PlanExitTool, PlanEnterTool] : []),

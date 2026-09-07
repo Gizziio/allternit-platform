@@ -490,6 +490,30 @@ const sessionSwitched = createSignal<[id: SessionId]>()
 export const onSessionSwitch = sessionSwitched.subscribe
 
 /**
+ * Full session-resume pipeline (transcript reload, hooks, plan/file-history
+ * handoff), exposed by REPL via `setResumeHandler`. The /bots pane uses this
+ * to open a bot's canonical chat with the same fidelity as /resume — a bare
+ * switchSession points new turns at the right transcript but leaves the
+ * mounted REPL's message list stale. Type-only imports keep bootstrap a DAG
+ * leaf.
+ */
+export type ResumeSessionHandler = (
+  sessionId: string,
+  log: import('../types/logs.ts').LogOption,
+  entrypoint: import('../types/command.ts').ResumeEntrypoint,
+) => Promise<void>
+
+const RESUME_HANDLER: { current: ResumeSessionHandler | null } = { current: null }
+
+export function setResumeHandler(handler: ResumeSessionHandler | null): void {
+  RESUME_HANDLER.current = handler
+}
+
+export function getResumeHandler(): ResumeSessionHandler | null {
+  return RESUME_HANDLER.current
+}
+
+/**
  * Project directory the current session's transcript lives in, or `null` if
  * the session was created in the current project (common case — derive from
  * originalCwd). See `switchSession()`.

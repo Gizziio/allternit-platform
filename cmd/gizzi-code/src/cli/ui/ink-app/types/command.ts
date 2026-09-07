@@ -104,6 +104,7 @@ export type ResumeEntrypoint =
   | 'slash_command_session_id'
   | 'slash_command_title'
   | 'fork'
+  | 'bots_pane'
 
 export type CommandResultDisplay = 'skip' | 'system' | 'user'
 

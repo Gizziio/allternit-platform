@@ -1,44 +1,67 @@
 # Steering checkpoint
 
 ## Goal
-Port three Grok CLI features into gizzi-code (worktree `allternit-session-7631feda`, branch `session/7631feda-bbb5-492f-97cf-55f243eda42d`):
-1. `/session-info` presentation — DONE (b8675f9ce)
-2. Agent dashboard `/dashboard` — full Grok parity, in-process first — CODE COMPLETE, functionally verified in tmux TUI (b8675f9ce, 07865f0d0, c2f807680, 9b307db69)
-3. `/settings` polish — DONE (b8675f9ce)
+Implement CLI Bot Mode parity (Phases B1–B5 of docs/GIZZI_BOT_MODE_SPEC.md) in
+the gizzi-code CLI, in this worktree (branch `session/befe7aa3`), coordinated
+with — but not overlapping — the parallel platform-track sessions (rail UI
+research in allternit-session-railup / botspec, composer pill tabs, and the
+Phase-0 platform work in the bots-p0x worktrees). CLI track only; no commits
+from child agents — parent lands the branch after steering approval.
 
-Plan file: ~/.kimi-code/sessions/wd_joe_db5f68cf8615/session_7631feda-bbb5-492f-97cf-55f243eda42d/agents/main/plans/icon-kate-bishop-nightning-wing.md (name approximate — search plans/ dir if needed)
+## Just did (2026-09-07) — ALL 5 PHASES CODE-COMPLETE
+- Spec: `docs/GIZZI_BOT_MODE_SPEC.md` (D1–D7 decisions; benchmarked on Hermes
+  Bot Mode docs + platform BOT_TEAMMATES_SPEC; same failure codes, same
+  attribution string).
+- B1: `src/runtime/bots/bot-store.ts` + `gizzi bot` command group (31 tests).
+- B2: `src/runtime/bots/canonical-chat.ts` + `capability-epoch.ts`; persona
+  injection in `src/runtime/session/prompt.ts` (TUI + headless); `/new`→compact
+  composer guard; `gizzi bot chat <name> [message]` (TUI on pinned session /
+  headless print turn). app.tsx now honors `--session` id (pre-existing bug).
+- B3: `src/runtime/bots/bot-routines.ts` — `[bot:<name>]` namespace, cron
+  agent-executor `config.bot` delivery into canonical session (never
+  Session.createNext), catch-up fires, daemon stays non-blocking.
+- B4: `failure-reasons.ts` (13-code port, once/after_compact/never), typed
+  retry on routine delivery, `run.metadata.reason`, `[reason: <code>]` on
+  headless chat errors; `message_agent` tool (canonical chats only, gated in
+  resolveTools), durable `inbox.jsonl` per bot, turn-start pickup with exact
+  platform attribution, `## Teammates` + `## Messaging protocol` prompt
+  sections (epoch already covers roster drift).
+- B5 (agent swarm, 4 parallel): `bot-presence.ts` (90s window, turn-start
+  hook), `bot-roster.ts` (unread = inbox + watermark deltas), `/bots` TUI pane
+  (presence dot, unread badge, open/create/delete/refresh), typecheck baseline
+  fix (stale slash-menu test — dash aliases deliberately removed in 37057ec17).
 
-## Branch state (all pushed to origin)
-- b8675f9ce Phases 1–3: /session-info (aliases info/session-info, auth+turns rows, copy c/y), /settings effort row, dashboard shell + /dashboard command + ctrl+\ binding
-- 07865f0d0 Phase 4: dashboard/{types,topLevelSession,InProcessSource}.ts, functional DashboardScreen (dispatch/stop/pin), REPL wiring (buildDashboardQueryParams + dashboardSource)
-- c2f807680 Phase 5: full UI — peek/reply, needs-input via canUseTool wrapper, search a:/s:/#, Ctrl+G grouping, idle folding + N-more, v details, ? cheatsheet, rename/pin/reorder (dashboard.pinned + dashboard.reorder in GlobalConfig), Esc ladder
-- 9b307db69 CRITICAL FIX: sessionStorage.ts re-exported getProjectDir from projectDir.js without local binding → every call site was a latent ReferenceError when getSessionProjectDir() nullish; dashboard dispatch hit it seconds after TUI start. Added `import { getProjectDir } from './projectDir.js'`. Also: DashboardScreen padLine + opaque boxes (cosmetic, see known delta). CHANGELOG.md Unreleased section written.
+## Verification
+- `bun run typecheck`: zero errors (baseline fixed by swarm).
+- `bun test test/runtime/bots/ test/cli/bot.test.ts test/cli/bots-pane.test.ts`
+  + commands tests: 126+ pass across agents' runs; final combined sweep in
+  progress (background task).
+- Known limits: NONE — the three below were closed in the Fixes section
+  (F1 cron reason column, F2 chat-unread without Instance, F3 REPL reload
+  on pane session switch).
 
-## Verification status
-- `bun run typecheck` green after P4 and P5 (before the 9b307db69 fix; that fix is one import in @ts-nocheck file + JSX props — rerun typecheck to be safe)
-- `bun run test` (ci-smoke-test.sh): 1270 pass / 0 fail / 42 skip
-- tmux TUI smoke (bun run dev in tmux session gizzidash): /dashboard opens; header+leader row render; dispatch spawns session row; query runs (23 tok progress shown); finalize → 'Done'; Enter opens peek (model · permission · state, last response, reply box); reply accepted; p pins (⌖); / search filters; Esc ladder works; exit to prompt works. Debug instrumentation removed after use.
-- Dev-env caveat: TUI runs "Not logged in" with kimi-cli brain — model returns getModelBetas error text but the full pipeline works; pre-existing env issue, not our code.
+## Fixes (2026-09-07, second pass — all three known limitations closed)
+- F1 cron reason column: `reason TEXT` on `runs` (raw-SQL schema in
+  cron/database.ts + drizzle parity in cron.sql.ts), pragma-guarded
+  `ALTER TABLE` migration in `CronDatabase.migrate()`, threaded through
+  saveRun/rowToRun; agent-executor sets `run.reason` on BOTH the bot-routine
+  and generic agent failure paths. Test: fresh + rebuilt-old-db persistence
+  round-trip in bot-routines.test.ts.
+- F2 chat-unread without Instance: new `src/runtime/bots/session-db.ts` —
+  ensures the data dir, then direct drizzle COUNT queries (same store the
+  Instance path uses). canonical-chat pin checks and roster unread now work
+  in thin contexts; roster test seeds a real temp sqlite session store
+  (XDG_DATA_HOME sandbox) and asserts hasCanonicalChat + watermark unread.
+- F3 REPL reload on pane open: `setResumeHandler`/`getResumeHandler` registry
+  in bootstrap/state.ts (type-only imports, DAG leaf preserved); REPL.tsx
+  publishes its full resume pipeline via effect; `openBotCanonicalChat`
+  loads the canonical log (getLastSessionLog/loadFullLog) and hands off with
+  entrypoint `'bots_pane'` (new ResumeEntrypoint member); falls back to
+  switchSession when no handler is published or the chat is fresh. Pane
+  tests cover handler path, fallback path, and unknown-bot no-op.
 
-## Known cosmetic delta (document in ledger)
-- Stale-cell ghosts: when a rendered line shrinks between frames, old cells beyond the new line end linger in the terminal grid. Root cause: ink emit layer `log-update.ts:106` trimEnd()s every line, so trailing-space clearing (padLine) and Box `opaque` fill (plain spaces) never reach the grid; backgroundColor fill also didn't cover (width/emit). NOT dashboard-specific — any shrinking line in this ink. Options later: renderer-level erase-to-EOL for shrunk rows, or accept. Do NOT keep chasing this in this session.
-- tmux capture-pane shows mid-frame/stale states; trust the tee'd stdout log (/tmp/gizzidash.log) over capture-pane for "what did the app render".
-
-## Gotchas (cumulative)
-- Vendored ink Event has NO preventDefault — use event.stopImmediatePropagation().
-- useAppState REQUIRES a selector: useAppState(s => s.tasks) — bare useAppState() crashes (TUI Render Error, process exits).
-- useTerminalSize destructure is `{ rows: termRows, columns }` — root Box must use termRows (a bare `rows` ReferenceError also kills the TUI).
-- Single-char Dashboard chords (q/x/p/r) fire on any keypress — gate dashboard:exit with isActive while inner inputs focused (browsing = focus==='list' && no peek/search/details/cheatsheet).
-- ctrl+letter arrives as key.ctrl && input==='<letter>'; plain '/' is more reliable than Ctrl+/ in terminals.
-- Vendored useInput uses useEventCallback (fresh closures, no stale-closure bugs).
-- TUI crashes (render errors) print "TUI Render Error" to stdout and EXIT — check the tee log, not the pane.
-- Synchronous throws inside dispatch paths get swallowed silently by the input pipeline (no log, no crash) — instrument with appendFileSync to /tmp when debugging handler issues.
-
-## Next (post-compaction resume)
-1. Rerun `bun run typecheck` in cmd/gizzi-code for 9b307db69 (expected green).
-2. Optional quick tmux re-verify of the opaque/padLine render (session gizzidash workflow: tmux new-session -d -s gizzidash -x 220 -y 55 -c <worktree>/cmd/gizzi-code 'bun run dev 2>&1 | tee /tmp/gizzidash.log'; send-keys /dashboard etc.).
-3. Repo ritual wrap-up: agent-ledger/summaries/2026-09-06-HHMM-7631feda-grok-dashboard.md + LEDGER.md entry — only AFTER merge to main per AGENTS.md; merge first, then worktree cleanup (git worktree remove, branch -d), restore original branch.
-4. Joe reviews the branch; merge via GitHub PR or local merge in main checkout with STEER_GUARD_OFF=1.
-
-## Open questions for Joe
-- Merge now or keep the branch for review? Ledger attestation happens post-merge per ritual.
+## Next
+- Parent: review final sweep, commit per commit-gate, merge; write ledger
+  attestation; clean up worktree per AGENTS.md ritual.
+- Future (not this session): group deliberation rooms + cross-machine peer
+  fabric (platform Phases 3/4 first), TUI transcript reload on switch.

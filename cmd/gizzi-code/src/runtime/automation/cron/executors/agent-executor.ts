@@ -8,6 +8,12 @@ import { createLogger } from "../utils/logger";
 import type { CronJob, CronRun } from "../types";
 import { Session } from "@/runtime/session";
 import { SessionPrompt } from "@/runtime/session/prompt";
+import {
+  botRoutineLabel,
+  deliverBotRoutine,
+  type BotRoutineDeliveryDeps,
+} from "@/runtime/bots/bot-routines";
+import { classifyFailure, failureReasonOf } from "@/runtime/bots/failure-reasons";
 
 const log = createLogger("cron-agent-executor");
 
@@ -16,6 +22,8 @@ export interface AgentExecutorConfig {
   defaultCwd: string;
   /** Default model to use (providerID/modelID format) */
   defaultModel?: string;
+  /** Injectable delivery seam for bot routines (tests inject fakes). */
+  botRoutineDeps?: BotRoutineDeliveryDeps;
 }
 
 export class AgentExecutor {
@@ -32,6 +40,7 @@ export class AgentExecutor {
       agentId?: string;
       model?: string;
       context?: string;
+      bot?: string;
     };
 
     log.info("Starting agent job execution", {
@@ -46,6 +55,75 @@ export class AgentExecutor {
 
     signal.addEventListener("abort", () => abortController.abort());
 
+    let model: { providerID: string; modelID: string } | undefined;
+    if (jobConfig.model) {
+      const parts = jobConfig.model.split("/");
+      if (parts.length === 2) {
+        model = { providerID: parts[0]!, modelID: parts[1]! };
+      }
+    }
+
+    // Bot Mode (B3, D3): a routine delivers into the bot's canonical chat
+    // (resume + one marked turn) instead of an ephemeral Session.createNext
+    // session. The persona injection fires automatically because the prompt
+    // pipeline keys off the canonical session id. An unknown bot throws a
+    // structured error here, which the CronService run record captures as a
+    // failed run.
+    if (jobConfig.bot) {
+      const label = botRoutineLabel(job.name);
+      log.info("Delivering bot routine", { jobId: job.id, runId: run.id, bot: jobConfig.bot, label });
+      const startTime = Date.now();
+      try {
+        const delivery = await deliverBotRoutine({
+          botName: jobConfig.bot,
+          label,
+          prompt: jobConfig.prompt,
+          context: jobConfig.context,
+          model,
+          agentId: jobConfig.agentId,
+          projectPath: this.config.defaultCwd,
+          deps: this.config.botRoutineDeps,
+        });
+        run.response = delivery.response;
+        run.output = delivery.response;
+        run.tokensUsed = delivery.tokensUsed;
+        run.agentId = jobConfig.agentId ?? `bot:${jobConfig.bot}`;
+        log.info("Bot routine delivered", {
+          jobId: job.id,
+          runId: run.id,
+          bot: jobConfig.bot,
+          sessionId: delivery.sessionId,
+          createdSession: delivery.createdSession,
+          tokensUsed: run.tokensUsed,
+          duration: Date.now() - startTime,
+        });
+      } catch (error) {
+        // Typed failure taxonomy (B4/D4): persist the closed reason code on
+        // the run record (typed `reason` column + metadata) alongside the
+        // free-text error. deliverBotRoutine annotates the error when it
+        // gives up after its retry policy; fall back to classifying here so
+        // every failure path carries a reason.
+        const reason = failureReasonOf(error) ?? classifyFailure(error);
+        run.reason = reason;
+        run.metadata = { ...run.metadata, reason };
+        log.error("Bot routine delivery failed", {
+          jobId: job.id,
+          runId: run.id,
+          bot: jobConfig.bot,
+          reason,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        throw error;
+      } finally {
+        // The canonical session must survive the run — never delete it the
+        // way cleanupSession deletes ephemeral agent sessions. The entry was
+        // registered with an empty sessionId, so cleanup is already a no-op;
+        // aborting the controller only tears down this run's listeners.
+        await this.cleanupSession(sessionKey);
+      }
+      return;
+    }
+
     try {
       const session = await Session.createNext({ directory: this.config.defaultCwd });
       const sessionId = session.id;
@@ -56,14 +134,6 @@ export class AgentExecutor {
       const fullPrompt = jobConfig.context
         ? `${jobConfig.context}\n\n${jobConfig.prompt}`
         : jobConfig.prompt;
-
-      let model: { providerID: string; modelID: string } | undefined;
-      if (jobConfig.model) {
-        const parts = jobConfig.model.split("/");
-        if (parts.length === 2) {
-          model = { providerID: parts[0]!, modelID: parts[1]! };
-        }
-      }
 
       const startTime = Date.now();
 
@@ -94,9 +164,15 @@ export class AgentExecutor {
         duration: Date.now() - startTime,
       });
     } catch (error) {
+      // Same D4 taxonomy as the bot path: every failed agent run carries a
+      // typed reason code on the run record.
+      const reason = failureReasonOf(error) ?? classifyFailure(error);
+      run.reason = reason;
+      run.metadata = { ...run.metadata, reason };
       log.error("Agent job failed", {
         jobId: job.id,
         runId: run.id,
+        reason,
         error: error instanceof Error ? error.message : String(error),
       });
       throw error;
