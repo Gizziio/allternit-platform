@@ -9,6 +9,7 @@ import { useAvailableBrainModels } from "@/hooks/use-available-brain-models";
 import { useModelDiscovery } from "@/integration/api-client";
 import {
   isMistakenAutoDefault,
+  MODEL_SELECTION_STORAGE_KEY,
   persistModelSelection,
   pickDefaultBrain,
   readPersistedModelSelection,
@@ -36,6 +37,16 @@ interface ModelSelectionContextType {
 }
 
 const ModelSelectionContext = createContext<ModelSelectionContextType | undefined>(undefined);
+
+function isSameSelection(a: ModelSelection | null, b: ModelSelection | null): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  return (
+    a.providerId === b.providerId &&
+    a.profileId === b.profileId &&
+    a.modelId === b.modelId
+  );
+}
 
 interface ModelSelectionProviderProps {
   children: ReactNode;
@@ -110,6 +121,38 @@ export function ModelSelectionProvider({
     setSelection(picked);
     persistModelSelection(picked);
   }, [authStatusKnown, availableModels, authedIds, defaultSelection, isLoading, keepPersisted, plan, selection]);
+
+  // Cross-instance live sync: another surface (or another tab) may change the
+  // persisted brain selection via persistModelSelection. Re-read it and adopt
+  // it when it differs from the current selection — the equality guard makes
+  // our own persists a no-op and never clobbers an in-flight local pick
+  // (selectModel persists synchronously before any external event can land).
+  // Malformed payloads are ignored; a removed key clears the selection.
+  useEffect(() => {
+    const syncFromPersisted = () => {
+      const raw = window.localStorage.getItem(MODEL_SELECTION_STORAGE_KEY);
+      if (raw) {
+        // Malformed payloads read as null — ignore them rather than clobber
+        // a valid in-flight local pick.
+        const next = readPersistedModelSelection();
+        if (next) {
+          setSelection((current) => (isSameSelection(current, next) ? current : next));
+        }
+      } else {
+        // Key cleared in another surface/tab.
+        setSelection((current) => (current === null ? current : null));
+      }
+    };
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === MODEL_SELECTION_STORAGE_KEY) syncFromPersisted();
+    };
+    window.addEventListener("allternit:gizzi-brain-changed", syncFromPersisted);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener("allternit:gizzi-brain-changed", syncFromPersisted);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, []);
 
   // Apply a model selection requested from outside the chat surface (e.g. Model Lab).
   // This runs on mount and whenever a new pending request arrives.

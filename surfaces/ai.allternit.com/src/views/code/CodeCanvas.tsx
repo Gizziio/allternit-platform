@@ -56,7 +56,7 @@ import {
 } from '../chat/ChatComposerEnhancements';
 import { usePendingPermissions, usePendingQuestions } from '@/lib/agents';
 import { useRuntimeExecutionMode } from '@/hooks/useRuntimeExecutionMode';
-import { useDefaultModelSelection } from '@/hooks/use-default-model-selection';
+import { useModelSelection } from '@/providers/model-selection-provider';
 import { SessionTodoDock, useSessionComposerState } from '@/components/session-composer';
 import { gizziBaseUrl } from '@/lib/agents/api-config';
 
@@ -323,24 +323,21 @@ export function CodeCanvas(_props: CodeCanvasProps) {
     [activeWorkspaceId, stateShape],
   );
 
-  const [selectedModel, setSelectedModel] = useState('claude-code');
-  const [selectedModelDisplayName, setSelectedModelDisplayName] = useState(CODE_MODEL_NAMES['claude-code']);
+  // Model selection is owned by the surrounding <ModelSelectionProvider>
+  // (mounted by CodeThreadView) so code mode stays in sync with the platform
+  // brain and with every other surface; we only derive display values here.
+  const { selection: modelSelection, selectModel } = useModelSelection();
+  const selectedModel = useMemo(() => {
+    if (!modelSelection?.providerId) return 'claude-code';
+    return modelSelection.modelId
+      ? modelSelection.modelId.includes('/')
+        ? modelSelection.modelId
+        : `${modelSelection.providerId}/${modelSelection.modelId}`
+      : modelSelection.providerId;
+  }, [modelSelection]);
+  const selectedModelDisplayName =
+    modelSelection?.modelName || modelSelection?.modelId || CODE_MODEL_NAMES['claude-code'];
   const [terminalCanvasOpen, setTerminalCanvasOpen] = useState(false);
-  const userPickedModelRef = useRef(false);
-  const backendDefaultModel = useDefaultModelSelection();
-  // Unified brain: code mode follows the platform's configured default model
-  // (same brain as chat/cowork/design) until the user explicitly picks a
-  // different model in this surface.
-  useEffect(() => {
-    if (userPickedModelRef.current || !backendDefaultModel?.providerId) return;
-    const raw = backendDefaultModel.modelId
-      ? backendDefaultModel.modelId.includes("/")
-        ? backendDefaultModel.modelId
-        : `${backendDefaultModel.providerId}/${backendDefaultModel.modelId}`
-      : backendDefaultModel.providerId;
-    setSelectedModel(raw);
-    setSelectedModelDisplayName(backendDefaultModel.modelName || raw);
-  }, [backendDefaultModel]);
   const [showSessionPicker, setShowSessionPicker] = useState(false);
   const [showWorkspacePicker, setShowWorkspacePicker] = useState(false);
   const [workspaceReady, setWorkspaceReady] = useState(false);
@@ -520,11 +517,17 @@ export function CodeCanvas(_props: CodeCanvasProps) {
       onToggleTerminalCanvas={handleToggleTerminalCanvas}
       terminalCanvasOpen={terminalCanvasOpen}
       onSelectModel={(selection: { modelId: string; modelName?: string }) => {
-        userPickedModelRef.current = true;
-        setSelectedModel(selection.modelId);
-        setSelectedModelDisplayName(
-          selection.modelName || CODE_MODEL_NAMES[selection.modelId] || selection.modelId,
-        );
+        // Route the pick through the provider so it persists and stays in
+        // sync with every other surface (chat/cowork/design).
+        const sep = selection.modelId.indexOf('/');
+        const providerId = sep > 0 ? selection.modelId.slice(0, sep) : selection.modelId;
+        const modelId = sep > 0 ? selection.modelId.slice(sep + 1) : '';
+        selectModel({
+          providerId,
+          profileId: providerId,
+          modelId,
+          modelName: selection.modelName || CODE_MODEL_NAMES[selection.modelId] || selection.modelId,
+        });
       }}
       onPreviewTemplate={(prompt) => applyComposerSeed(prompt)}
       onSelectTemplate={(prompt) => applyComposerSeed(prompt, { closeAction: true })}
