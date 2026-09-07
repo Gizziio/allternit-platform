@@ -277,7 +277,10 @@ export function TerminalSurface({
         cursorBlink: true,
         theme: terminalThemeFromElement(containerRef.current),
         fontSize,
-        fontFamily: 'var(--font-mono)',
+        // SF Mono first: this is the face macOS Terminal.app uses, i.e. the
+        // "regular terminal font" on the desktop. var(--font-mono) does not
+        // parse in canvas font measurement, so keep this a literal stack.
+        fontFamily: '"SF Mono", "Allternit Mono", SFMono-Regular, Menlo, Monaco, Consolas, monospace',
         letterSpacing: 0,
         rows: 24,
         cols: 80,
