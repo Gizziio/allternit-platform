@@ -3,6 +3,11 @@
 This document describes the environment variables and certificates required to
 produce signed, notarized, and SmartScreen-friendly release artifacts.
 
+**Owner checklist (macOS + Windows + Linux, including what to do while Apple
+Developer Program is in review):** [DISTRIBUTION-CHECKLIST.md](./DISTRIBUTION-CHECKLIST.md).
+
+---
+
 ## macOS
 
 macOS builds require **Apple Developer ID Application** and **Developer ID
@@ -25,7 +30,10 @@ APPLE_TEAM_ID="XXXXXXXXXX"                # 10-character team id
 `electron-builder` calls `scripts/notarize.cjs` via the `afterSign` hook. The
 script:
 
-1. Skips silently when `APPLE_ID` is not set (local/CI builds).
+1. Hard-fails (non-zero exit) on CI builds when `APPLE_ID`, `APPLE_ID_PASSWORD`,
+   or `APPLE_TEAM_ID` is missing — an unsigned/unnotarized release build must
+   never pass silently. On local (non-CI) builds it skips with a warning
+   instead, so unsigned local iteration still works.
 2. Uses `@electron/notarize` with `notarytool` and the credentials above.
 3. Staples the ticket to the `.app` bundle.
 
@@ -72,8 +80,12 @@ change it without a migration plan, or you will strand installed users.
 
 ## Linux
 
-Linux packages (`.deb` and `.AppImage`) do not require code signing. The
-`linux` block in `package.json` defines:
+Linux packages (`.deb` and `.AppImage`) are not code-signed. Unsigned CI
+artifacts are smoke tests, not production releases — do not publish them as
+the shipping Linux product until package metadata and a distribution channel
+are ready.
+
+The `linux` block in `package.json` defines:
 
 - `executableName`: `allternit`
 - `desktop` entry with `Name`, `Comment`, and `Keywords`
@@ -86,7 +98,7 @@ Electron update feed backed by GitHub Releases. The feed repository is
 configured in `src/main/unified-main.ts` as:
 
 ```ts
-repo: 'allternit/desktop'
+repo: 'Gizziio/desktop'
 ```
 
 and in `package.json` `build.publish` as:
@@ -94,7 +106,7 @@ and in `package.json` `build.publish` as:
 ```json
 {
   "provider": "github",
-  "owner": "allternit",
+  "owner": "Gizziio",
   "repo": "desktop"
 }
 ```

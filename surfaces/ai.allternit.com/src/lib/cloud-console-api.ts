@@ -7,7 +7,7 @@
  */
 
 import { api, type AllternitApiError } from '@/integration/api-client';
-import { allternitCloudOrigin, cloudApiFetch } from '@/lib/cloud-api';
+import { allternitCloudOrigin, cloudApiFetch, fetchCloudBillingUsage } from '@/lib/cloud-api';
 import { buildAuthHeaders } from '@/lib/agents/api-config';
 import { getProviderMeta } from '@/lib/providers/provider-registry';
 
@@ -201,26 +201,74 @@ export async function getBillingSubscription(): Promise<BillingSubscription | nu
   }
 }
 
+function usageHasMeter(usage: MeUsagePayload): boolean {
+  if (typeof usage.credits === 'number') return true;
+  if (usage.label && usage.plan && usage.plan !== 'free') return true;
+  return false;
+}
+
 export async function getCreditBalance(): Promise<CreditBalance> {
-  const usage = await api.get<MeUsagePayload>('/api/v1/me/usage');
-  const credits = typeof usage.credits === 'number' ? usage.credits : 0;
+  try {
+    const usage = await api.get<MeUsagePayload>('/api/v1/me/usage');
+    if (usageHasMeter(usage)) {
+      const credits = typeof usage.credits === 'number' ? usage.credits : 0;
+      return {
+        organization_id: usage.plan || 'allternit',
+        balance_cents: Math.round(credits * 100),
+        currency: 'USD',
+        plan: usage.plan,
+        planLabel: usage.label,
+        monthToDateUsageUsd: typeof usage.monthToDateUsageUsd === 'number' ? usage.monthToDateUsageUsd : undefined,
+      };
+    }
+  } catch {
+    // Fall through to production billing routes.
+  }
+  const billed = await fetchCloudBillingUsage();
+  if (billed) {
+    return {
+      organization_id: billed.plan || 'allternit',
+      balance_cents: Math.round((billed.credits ?? 0) * 100),
+      currency: 'USD',
+      plan: billed.plan,
+      planLabel: billed.label,
+      monthToDateUsageUsd: billed.monthToDateUsageUsd ?? undefined,
+    };
+  }
   return {
-    organization_id: usage.plan || 'allternit',
-    balance_cents: Math.round(credits * 100),
+    organization_id: 'allternit',
+    balance_cents: 0,
     currency: 'USD',
-    plan: usage.plan,
-    planLabel: usage.label,
-    monthToDateUsageUsd: typeof usage.monthToDateUsageUsd === 'number' ? usage.monthToDateUsageUsd : undefined,
   };
 }
 
 export async function listCreditTransactions(): Promise<CreditTransaction[]> {
-  const usage = await api.get<MeUsagePayload>('/api/v1/me/usage');
-  return (usage.recentTransactions ?? []).map((row, index) => {
+  try {
+    const usage = await api.get<MeUsagePayload>('/api/v1/me/usage');
+    if (usage.recentTransactions && usage.recentTransactions.length > 0) {
+      return usage.recentTransactions.map((row, index) => {
+        const amount = row.amountUsd ?? row.amount_usd ?? 0;
+        return {
+          id: `${row.source || 'txn'}-${index}`,
+          organization_id: usage.plan || 'allternit',
+          transaction_type: row.source || 'usage',
+          amount_cents: Math.round(amount * 100),
+          currency: 'USD',
+          reference_id: row.source || null,
+          idempotency_key: null,
+          created_at: row.createdAt || row.created_at || new Date().toISOString(),
+        };
+      });
+    }
+  } catch {
+    // Fall through to production billing routes.
+  }
+  const billed = await fetchCloudBillingUsage();
+  return (billed?.recentTransactions ?? []).map((row, index) => {
     const amount = row.amountUsd ?? row.amount_usd ?? 0;
     return {
       id: `${row.source || 'txn'}-${index}`,
-      organization_id: usage.plan || 'allternit',
+      organization_id: billed?.plan || 'allternit',
       transaction_type: row.source || 'usage',
       amount_cents: Math.round(amount * 100),
       currency: 'USD',

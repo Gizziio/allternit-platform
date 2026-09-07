@@ -11,6 +11,7 @@ export interface StartBotGroupChatInput {
 
 export interface StartBotGroupChatResult {
   sessionId: string;
+  groupId: string;
 }
 
 /**
@@ -84,5 +85,5 @@ export async function startBotGroupChat(
     },
   });
 
-  return { sessionId };
+  return { sessionId, groupId };
 }

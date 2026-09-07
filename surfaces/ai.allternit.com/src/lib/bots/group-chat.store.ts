@@ -10,7 +10,24 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { createBrowserJSONStorage } from '@/lib/zustand-browser-storage';
+import { api } from '@/integration/api-client';
 import type { GroupChat, GroupChatMember, GroupChatMessage, GroupChatMetadata } from './group-chat.types';
+
+function persistGroupToServer(group: GroupChat): void {
+  void api
+    .put('/api/v1/bot-groups', {
+      id: group.id,
+      name: group.name,
+      image: group.image ?? null,
+      members_json: JSON.stringify(group.members),
+      log_json: JSON.stringify(group.log.slice(-80)),
+      created_at: group.createdAt,
+      updated_at: group.updatedAt,
+    })
+    .catch(() => {
+      /* local persist still holds the room */
+    });
+}
 
 export interface GroupChatState {
   groups: Record<string, GroupChat>;
@@ -73,6 +90,7 @@ export const useGroupChatStore = create<GroupChatState>()(
           activeGroupId: id,
           lastReadAt: { ...state.lastReadAt, [id]: now },
         }));
+        persistGroupToServer(group);
         return id;
       },
 
@@ -88,6 +106,7 @@ export const useGroupChatStore = create<GroupChatState>()(
             lastReadAt: nextLastRead,
           };
         });
+        void api.delete(`/api/v1/bot-groups/${groupId}`).catch(() => undefined);
       },
 
       renameGroup: (groupId, name) => {

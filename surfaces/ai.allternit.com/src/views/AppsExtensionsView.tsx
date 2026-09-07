@@ -489,7 +489,7 @@ function SeriesTitleCard(): React.ReactNode {
 }
 
 function FacilityCampusMock(): React.ReactNode {
-  const rooms: Array<[string, string, string]> = [
+  const rooms: Array<[string, string]> = [
     ['Office', '#F0E4D8'],
     ['Lab', '#DFE8F2'],
     ['Yard', '#E7EEE1'],

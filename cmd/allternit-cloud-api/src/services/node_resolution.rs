@@ -11,7 +11,7 @@
 //!
 //! Health is judged from registry metadata alone: `status = 'online'`, a
 //! `last_seen_at` fresher than the staleness window (env
-//! `ALLTERNIT_NODE_STALE_AFTER_SECS`, default 120s — the same 2-minute
+//! `ALLTERNIT_NODE_STALE_AFTER_SECS`, default 600s — the same 10-minute
 //! heartbeat grace `runtime_pairing::list_runtime_devices` uses), and an
 //! unexpired device credential. Liveness via relay/tailnet probes is a later
 //! tranche; v1 prefers a possibly-stale pick over refusing to route.
@@ -26,9 +26,10 @@ use chrono::{DateTime, Duration, Utc};
 use crate::ApiError;
 
 /// Env override for how fresh `last_seen_at` must be for a node to count as
-/// healthy. Default 120s, matching the pairing UI's online/offline flip.
+/// healthy. Default 600s, matching Desktop's 45s heartbeat plus margin and
+/// the pairing UI's online/offline flip.
 const STALE_AFTER_SECS_ENV: &str = "ALLTERNIT_NODE_STALE_AFTER_SECS";
-const DEFAULT_STALE_AFTER_SECS: u64 = 120;
+const DEFAULT_STALE_AFTER_SECS: u64 = 600;
 
 fn staleness_window() -> Duration {
     std::env::var(STALE_AFTER_SECS_ENV)
@@ -471,7 +472,7 @@ mod tests {
     async fn migration_012_applies_idempotently() {
         let pool = test_pool().await;
         // Stub only what the migration touches: the pre-012 runtime_devices
-        // (as created by migrations/011 via pgloader) and users (FK target).
+        // (as created by the original pgloader import) and users (FK target).
         sqlx::query("CREATE TABLE users (id TEXT PRIMARY KEY)")
             .execute(&pool)
             .await

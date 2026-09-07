@@ -835,7 +835,12 @@ mod tests {
         (url, child)
     }
 
+    // Ignored in CI: spawns the real AllternitOS control-plane binary
+    // (ALLTERNITOS_CONTROL_PLANE_BIN), which this repo's CI does not build.
+    // Run locally with:
+    //   cargo test -p allternit-api --lib -- --ignored
     #[tokio::test]
+    #[ignore = "requires AllternitOS workspace binaries not available in CI"]
     async fn responses_routes_through_real_os_control_plane() {
         let (url, _child) = spawn_real_os_control_plane().await;
         let os_client = crate::fabric::os_client::OsControlPlaneClient::new(url);
@@ -922,7 +927,12 @@ mod tests {
         assert_eq!(inference_event.quantity, 12.0);
     }
 
+    // Ignored in CI: spawns the real AllternitOS control-plane binary and
+    // routes inference through allternitos-runtime (ALLTERNITOS_*_BIN), which
+    // this repo's CI does not build. Run locally with:
+    //   cargo test -p allternit-api --lib -- --ignored
     #[tokio::test]
+    #[ignore = "requires AllternitOS workspace binaries not available in CI"]
     async fn responses_routes_through_real_os_control_plane_with_remote_endpoint() {
         // Full Phase-4 end-to-end journey: the OS fake provider reports a remote
         // endpoint, Cloud stores the canonical placement, and inference executes

@@ -21,10 +21,10 @@ export const DEFAULT_POLICIES: Record<ViewType, SpawnPolicy> = {
   registry: { singleton: true, maxInstances: 1, allowNew: false, surface: "view", ownsTabs: false },
   memory: { singleton: true, maxInstances: 1, allowNew: false, surface: "view", ownsTabs: false },
   settings: { singleton: true, maxInstances: 1, allowNew: false, surface: "view", ownsTabs: false },
+  customize: { singleton: true, maxInstances: 1, allowNew: false, surface: "view", ownsTabs: false },
   "agent-hub": { singleton: true, maxInstances: 1, allowNew: false, surface: "view", ownsTabs: false },
   "bot-home": { singleton: false, maxInstances: 10, allowNew: true, surface: "view", ownsTabs: false },
   "bot-inbox": { singleton: false, maxInstances: 10, allowNew: true, surface: "view", ownsTabs: false },
-  "bot-roster": { singleton: true, maxInstances: 1, allowNew: false, surface: "view", ownsTabs: false },
   "group-chat": { singleton: false, maxInstances: 10, allowNew: true, surface: "view", ownsTabs: false },
   "groups-list": { singleton: true, maxInstances: 1, allowNew: false, surface: "view", ownsTabs: false },
   "bot-chat-session": { singleton: false, maxInstances: 10, allowNew: true, surface: "view", ownsTabs: false },
@@ -158,6 +158,7 @@ export const DEFAULT_POLICIES: Record<ViewType, SpawnPolicy> = {
   'cron': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   'dispatch': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   'remote-control': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
+  'fabric-session': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
 
   // Code views
   'new-file': { singleton: false, maxInstances: 20, allowNew: true, surface: 'view', ownsTabs: false },
@@ -229,4 +230,17 @@ export const DEFAULT_POLICIES: Record<ViewType, SpawnPolicy> = {
 
 export function makeStableViewId(viewType: ViewType, capsuleId?: string) {
   return capsuleId ?? viewType;
+}
+
+/** Rail / test aliases that must still open the real view. */
+const VIEW_TYPE_ALIASES: Record<string, ViewType> = {
+  projects: "project",
+  "remote-control": "fabric-session",
+  dispatch: "fabric-session",
+};
+
+export function resolveViewType(raw: string | undefined | null): ViewType | null {
+  if (!raw) return null;
+  if (raw in DEFAULT_POLICIES) return raw as ViewType;
+  return VIEW_TYPE_ALIASES[raw] ?? null;
 }

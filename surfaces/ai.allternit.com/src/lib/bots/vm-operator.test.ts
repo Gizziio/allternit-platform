@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   createSandbox,
   getSandboxForAgent,
@@ -13,12 +13,7 @@ import {
 import type { AgentVMOperatorConfig } from '@/lib/agents/agent.types';
 
 describe('vm-operator', () => {
-  beforeEach(() => {
-    (globalThis as any).ALLTERNIT_SANDBOX_URL = 'http://localhost:8080';
-  });
-
   afterEach(() => {
-    delete (globalThis as any).ALLTERNIT_SANDBOX_URL;
     vi.restoreAllMocks();
   });
 
@@ -37,7 +32,7 @@ describe('vm-operator', () => {
       id: 'sb-1',
       sandbox_id: 'sb-1',
       status: 'running',
-      provider: 'opensandbox',
+      provider: 'cloud-desktop',
       persistence: 'session',
     });
 
@@ -45,7 +40,7 @@ describe('vm-operator', () => {
       enabled: true,
       provider: 'cloud-desktop',
       computerKind: 'cloud_desktop',
-      image: 'opensandbox/desktop:v1.0.0',
+      image: 'ubuntu/desktop',
       networkPolicy: 'restricted',
       persistence: 'session',
       timeoutMinutes: 30,
@@ -54,18 +49,45 @@ describe('vm-operator', () => {
     const result = await createSandbox('agent-1', config);
     expect(result.ok).toBe(true);
     expect(result.data?.id).toBe('sb-1');
-    expect(result.data?.provider).toBe('opensandbox');
+    expect(result.data?.provider).toBe('cloud-desktop');
     expect(fetch).toHaveBeenCalledWith(
       expect.stringContaining('/api/v1/computers'),
       expect.objectContaining({ method: 'POST' }),
     );
   });
 
+  it('provisions Incus/Tart substrates through the same computers API', async () => {
+    mockFetchJson({
+      id: 'incus-1',
+      sandbox_id: 'incus-1',
+      status: 'running',
+      provider: 'incus',
+      persistence: 'persistent',
+    });
+
+    const config: AgentVMOperatorConfig = {
+      enabled: true,
+      provider: 'incus',
+      computerKind: 'cloud_desktop',
+      persistence: 'persistent',
+    };
+
+    const result = await createSandbox('agent-1', config);
+    expect(result.ok).toBe(true);
+    expect(result.data?.provider).toBe('incus');
+    const body = JSON.parse((fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body);
+    expect(body).toMatchObject({
+      kind: 'cloud_desktop',
+      bot_id: 'agent-1',
+      provider: 'incus',
+    });
+  });
+
   it('creates a sandbox with a template id', async () => {
     mockFetchJson({
       id: 'sb-tpl',
       status: 'creating',
-      provider: 'opensandbox',
+      provider: 'cloud-desktop',
       persistence: 'ephemeral',
     });
 
@@ -96,7 +118,7 @@ describe('vm-operator', () => {
           id: 'sb-existing',
           bot_id: 'agent-1',
           status: 'running',
-          provider: 'opensandbox',
+          provider: 'cloud-desktop',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         },
@@ -130,35 +152,38 @@ describe('vm-operator', () => {
     );
   });
 
-  it('runs a command in a sandbox', async () => {
+  it('runs a command via the computers shell API', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ exitCode: 0, stdout: 'hello', stderr: '' }),
+      json: async () => ({ exit_code: 0, stdout: 'hello', stderr: '' }),
     }));
 
     const result = await runCommand('sb-1', 'echo hello');
     expect(result.ok).toBe(true);
     expect(result.data?.stdout).toBe('hello');
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/v1/computers/sb-1/shell'),
+      expect.objectContaining({ method: 'POST' }),
+    );
   });
 
-  it('runs a browser task in a sandbox', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ success: true, url: 'https://example.com' }),
-    }));
-
+  it('does not expose a dedicated browser-task endpoint', async () => {
     const result = await runBrowserTask('sb-1', 'https://example.com', 'scan the page');
-    expect(result.ok).toBe(true);
-    expect(result.data?.success).toBe(true);
+    expect(result.ok).toBe(false);
+    expect(result.error).toContain('Computer Cloud');
   });
 
-  it('destroys a sandbox', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true }));
+  it('destroys a sandbox via the computers API', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 204 }));
     const result = await destroySandbox('sb-1');
     expect(result.ok).toBe(true);
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/v1/computers/sb-1/delete'),
+      expect.objectContaining({ method: 'POST' }),
+    );
   });
 
-  it('checks sandbox health', async () => {
+  it('checks Computer Cloud health', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({ status: 'ok' }),
@@ -166,37 +191,37 @@ describe('vm-operator', () => {
     const result = await healthCheck();
     expect(result.ok).toBe(true);
     expect(result.data?.status).toBe('ok');
+    expect(fetch).toHaveBeenCalledWith(expect.stringContaining('/api/v1/health'));
   });
 
-  it('creates a snapshot', async () => {
+  it('creates a snapshot through the bot desktop API', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
-        id: 'snap-1',
-        sandboxId: 'sb-1',
-        label: 'before-upgrade',
-        createdAt: new Date().toISOString(),
+        success: true,
+        snapshot_id: 'snap-1',
       }),
     }));
 
-    const result = await snapshotSandbox('sb-1', 'before-upgrade');
+    const result = await snapshotSandbox('sb-1', 'before-upgrade', 'agent-1');
     expect(result.ok).toBe(true);
+    expect(result.data?.id).toBe('snap-1');
     expect(result.data?.label).toBe('before-upgrade');
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/bots/agent-1/desktop/snapshots'),
+      expect.objectContaining({ method: 'POST' }),
+    );
   });
 
-  it('restores a snapshot', async () => {
+  it('restores a snapshot through the bot desktop API', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({
-        id: 'sb-1',
-        agentId: 'agent-1',
-        status: 'running',
-        provider: 'opensandbox',
-      }),
+      json: async () => ({ success: true }),
     }));
 
-    const result = await restoreSandbox('sb-1', 'snap-1');
+    const result = await restoreSandbox('sb-1', 'snap-1', 'agent-1');
     expect(result.ok).toBe(true);
     expect(result.data?.id).toBe('sb-1');
+    expect(result.data?.provider).toBe('cloud-desktop');
   });
 });

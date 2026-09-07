@@ -13,11 +13,22 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ArrowRight, MagnifyingGlass, Terminal as TerminalIcon } from '@phosphor-icons/react';
 import { Modal, ModalBody, ModalHeader } from '@/components/ui/Modal';
 import {
-  deriveSpawnCommand,
   nativeSessionsApi,
   type NativeCatalogSession,
   type NativeHarnessInfo,
 } from '@/lib/agents/native-sessions-api';
+
+/**
+ * Splice a catalogued session id into a harness adapter's resume hint
+ * (e.g. `claude --resume <id>`). Hints without a placeholder launch the CLI's
+ * most recent session interactively. Returns null when no command exists.
+ */
+function deriveSpawnCommand(resumeHint: string | undefined, sessionId: string): string | null {
+  const hint = resumeHint?.trim();
+  if (!hint) return null;
+  if (hint.includes('<id>')) return hint.replace(/<id>/g, sessionId);
+  return hint;
+}
 
 export interface WorkspaceCatalogPick {
   harness: NativeHarnessInfo;

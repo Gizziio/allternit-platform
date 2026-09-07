@@ -2,6 +2,48 @@
 
 ## Unreleased
 
+## 2.0.7 — 2026-09-06
+
+### Changed
+- First-run onboarding always auto-picks the default brain instead of
+  prompting: Allternit Cloud on paid Plus/Super/Ultra plans, otherwise the
+  first installed CLI. Same logic as `gizzi onboarding --defaults`; change
+  anytime with `/model`.
+
+### Fixed
+- `gizzi auto` no longer fails to load in bundled builds: the
+  `TRANSCRIPT_CLASSIFIER` bundle feature was being queried inside an arrow
+  return and a getter (illegal for Bun's `feature()` macro), which broke
+  the command module and the test preload graph.
+- `bun run typecheck` is clean again repo-wide: the native-sessions catalog
+  re-exported `HARNESS_BY_ID` without importing it (TS2552).
+
+## 2.0.6 — 2026-09-06
+
+Fixes a hard TUI crash on any surface that renders a syntax-highlighted
+diff — reported via `/theme`, but file-edit permission previews share the
+same component:
+
+    TypeError: new ColorDiff(...).render is not a function
+
+The vendored TypeScript port of color-diff-napi had only implemented the
+color-math API, so the fast render path was a guaranteed crash. The port
+now renders for real.
+
+### Fixed
+- `/theme` and diff previews no longer crash: the color-diff TS shim
+  accepts the diff-render constructor and `ColorFile` construction used by
+  `HighlightedCode` (file-write permission previews), and both `render()`
+  calls are guarded so any future shim drift degrades to the fallback
+  renderer instead of killing the TUI.
+
+### Added
+- Real syntax highlighting in the compiled binary: a pure-TS tokenizer
+  (ts/js/py/go/rust/java/c/ruby/php/shell/json/css/html/markdown/config/
+  sql), theme-aware diff backgrounds (incl. daltonized + ansi themes),
+  line-number gutters, and width wrapping. The theme picker footer now
+  names the active syntax theme.
+
 ## 2.0.5 — 2026-09-05
 
 `/model` lists Allternit Cloud first, then installed CLIs, then local.

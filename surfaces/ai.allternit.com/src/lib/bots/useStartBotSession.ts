@@ -10,6 +10,7 @@ import {
 } from './vm-operator';
 import { useBotAllternitBusStore } from './bot-allternit-bus';
 import { injectBotMemoryIntoSystemPrompt } from './bot-memory-context';
+import { useBotRosterStore } from './bot-roster.store';
 import type { Agent } from '../agents/agent.types';
 
 export interface UseStartBotSessionReturn {
@@ -60,8 +61,8 @@ function buildVMSystemPrompt(vmConfig: NonNullable<Agent['vmOperator']>, sandbox
  * If the bot has a VM operator configured with autoStart, this creates a
  * sandbox before opening the session and injects VM instructions into the
  * system prompt. The resulting sessionId can be passed to
- * `open('cowork-agent-session', { sessionId })` so the existing chat surface
- * renders it.
+ * `open('bot-chat-session', { sessionId, botId })` so the bot chat surface
+ * renders the canonical conversation plus the computer pane.
  */
 export function useStartBotSession(
   onSessionStarted?: (sessionId: string, botId: string) => void
@@ -96,6 +97,7 @@ function resolveRuntimeModelId(agent: Agent, modelOverride?: string): string | u
         (s.metadata?.agentId === agent.id || s.metadata?.agentName === agent.name),
     );
     if (existingSession) {
+      useBotRosterStore.getState().setCanonicalChatId(agent.id, existingSession.id);
       return { sessionId: existingSession.id };
     }
 
@@ -154,7 +156,8 @@ function resolveRuntimeModelId(agent: Agent, modelOverride?: string): string | u
       agentName: displayName,
       systemPrompt,
       metadata: {
-        isBot: agent.isBot === true,
+        isBot: true,
+        botCanonicalFor: agent.id,
         botProfile: agent.botProfile,
         starterPrompts: agent.botProfile?.starterPrompts,
         model: agent.model,
@@ -180,6 +183,7 @@ function resolveRuntimeModelId(agent: Agent, modelOverride?: string): string | u
       },
     });
 
+    useBotRosterStore.getState().setCanonicalChatId(agent.id, sessionId);
     return { sessionId, sandbox, sandboxError, notice };
   }, []);
 

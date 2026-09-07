@@ -12,6 +12,7 @@ const NATIVE_CSIU_TERMINALS: Record<string, string> = {
 const terminalSetup = {
   type: 'local-jsx',
   name: 'terminal-setup',
+  aliases: ['terminal-check', 'terminal-info'],
   description:
     env.terminal === 'Apple_Terminal'
       ? 'Enable Option+Enter key binding for newlines and visual bell'

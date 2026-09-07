@@ -126,7 +126,17 @@ export async function buildAuthHeaders(): Promise<Record<string, string>> {
     return headers;
   }
 
-  const bearerToken = window.localStorage.getItem('allternit_token');
+  let bearerToken = window.localStorage.getItem('allternit_token');
+  if (!bearerToken) {
+    try {
+      bearerToken = await window.allternit?.auth?.getClerkToken?.() ?? null;
+      if (bearerToken) {
+        window.localStorage.setItem('allternit_token', bearerToken);
+      }
+    } catch {
+      bearerToken = null;
+    }
+  }
   if (bearerToken) {
     headers.Authorization = `Bearer ${bearerToken}`;
   }

@@ -57,8 +57,9 @@ function ProviderIcon({ providerId }: { providerId: string }) {
   const [attempt, setAttempt] = useState(0);
 
   const sources = [
-    getLogosAppsUrl(meta.name),
     meta.icon ? `/assets/runtime-logos/${meta.icon}` : null,
+    getLogosAppsUrl(meta.id),
+    getLogosAppsUrl(meta.name),
   ].filter(Boolean) as string[];
 
   if (attempt >= sources.length) {

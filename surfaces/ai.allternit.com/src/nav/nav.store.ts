@@ -1,4 +1,4 @@
-import { DEFAULT_POLICIES, makeStableViewId } from './nav.policy';
+import { DEFAULT_POLICIES, makeStableViewId, resolveViewType } from './nav.policy';
 import { goBack, goForward, pushHistory } from './nav.history';
 import type { NavEvent, NavState, ViewContext, ViewId, ViewType } from './nav.types';
 
@@ -28,18 +28,19 @@ export function navReducer(state: NavState, ev: NavEvent): NavState {
 
   switch (ev.type) {
     case 'OPEN_VIEW': {
-      const policy = DEFAULT_POLICIES[ev.viewType];
-      // In development, fail fast if policy is missing - this should never happen
-      // as all ViewTypes must have corresponding policies defined
+      const viewType = resolveViewType(ev.viewType) ?? ev.viewType;
+      const policy = DEFAULT_POLICIES[viewType];
+      // Unknown view types used to throw and blank AppRoot (Customize rail,
+      // mistyped open-view events). Stay on the current view instead.
       if (!policy) {
-        throw new Error(
+        console.error(
           `[nav.store] No policy defined for viewType: "${ev.viewType}". ` +
-          `All ViewType values must have a corresponding entry in DEFAULT_POLICIES. ` +
-          `Add the missing policy to nav.policy.ts.`
+          `All ViewType values must have a corresponding entry in DEFAULT_POLICIES.`
         );
+        return state;
       }
 
-      const existing = findExistingByType(state, ev.viewType);
+      const existing = findExistingByType(state, viewType);
 
       const wantNew = Boolean(ev.allowNew);
       if (!wantNew && existing && (policy.singleton || policy.maxInstances === 1)) {
@@ -48,13 +49,13 @@ export function navReducer(state: NavState, ev: NavEvent): NavState {
 
       // Stable identity: viewId = capsuleId ?? viewType
       const capsuleId = ev.capsuleId ?? (policy.singleton ? undefined : crypto.randomUUID());
-      const viewId: ViewId = makeStableViewId(ev.viewType, capsuleId);
+      const viewId: ViewId = makeStableViewId(viewType, capsuleId);
 
       const ctx: ViewContext = { 
         viewId, 
-        viewType: ev.viewType, 
+        viewType, 
         capsuleId, 
-        title: ev.viewType,
+        title: viewType,
         context: ev.context 
       };
       const openViews = { ...state.openViews, [viewId]: ctx };

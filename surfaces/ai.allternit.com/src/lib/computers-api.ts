@@ -53,6 +53,8 @@ export interface CreateComputerInput {
   template_id?: string;
   session_id?: string;
   persistence?: 'ephemeral' | 'session' | 'persistent';
+  /** Substrate hint: incus (Linux/Windows) or tart (macOS). */
+  provider?: string;
 }
 
 export interface CreateComputerResponse {

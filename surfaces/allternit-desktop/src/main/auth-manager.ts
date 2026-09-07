@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, net, safeStorage, session, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, safeStorage, session, shell } from 'electron';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { openClerkOAuthPopup } from './clerk-oauth-popup.js';
@@ -19,11 +19,12 @@ import * as os from 'node:os';
 import log from 'electron-log';
 import WebSocket from 'ws';
 import { URLS } from './config.js';
+import { isDesktopAuthNavigation } from './desktop-auth-url.js';
 
 const RUNTIME_CLIENT_ID = 'allternit-desktop-runtime';
 const PAIRING_TIMEOUT_MS = 10 * 60 * 1000;
 const ROTATION_SKEW_MS = 7 * 24 * 60 * 60 * 1000;
-const HEARTBEAT_INTERVAL_MS = 60 * 1000;
+const HEARTBEAT_INTERVAL_MS = 45 * 1000;
 const SAFE_STORAGE_HEADER = 'allternit-safe-storage-v1\n';
 const LOCAL_STORAGE_HEADER = 'allternit-local-aes-gcm-v1\n';
 
@@ -33,7 +34,7 @@ const LOCAL_STORAGE_HEADER = 'allternit-local-aes-gcm-v1\n';
  * checks and the Turnstile CAPTCHA hostname lock pass legitimately.
  */
 const AUTH_WINDOW_PATH_PREFIX = '/__desktop_auth__';
-const AUTH_SESSION_PARTITION = 'allternit-auth';
+const AUTH_SESSION_PARTITION = 'persist:allternit-auth';
 
 const AUTH_FILE_MIME_TYPES: Record<string, string> = {
   '.html': 'text/html',
@@ -126,6 +127,59 @@ function pairingSignatureMessage(pairingId: string, challenge: string): string {
   return `allternit-runtime-pairing:${pairingId}:${challenge}`;
 }
 
+const SYNTHETIC_EMAIL_SUFFIX = '@users.allternit.local';
+
+interface ClerkSessionPayload {
+  token: string;
+  userId: string;
+  email: string;
+}
+
+function isSyntheticEmail(email: string | null | undefined): boolean {
+  if (!email || !email.includes('@')) return true;
+  return email.endsWith(SYNTHETIC_EMAIL_SUFFIX);
+}
+
+function preferredEmail(...candidates: Array<string | null | undefined>): string | null {
+  for (const value of candidates) {
+    const email = typeof value === 'string' ? value.trim() : '';
+    if (email && !isSyntheticEmail(email)) return email;
+  }
+  return null;
+}
+
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  try {
+    const part = token.split('.')[1];
+    if (!part) return null;
+    return JSON.parse(Buffer.from(part, 'base64url').toString('utf8')) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+function emailFromJwt(token: string | null | undefined): string | null {
+  if (!token) return null;
+  const payload = decodeJwtPayload(token);
+  if (!payload) return null;
+  const direct = [payload.email, payload.email_address, payload.primary_email];
+  const nested = Array.isArray(payload.email_addresses)
+    ? payload.email_addresses.flatMap((entry) => {
+        if (typeof entry === 'string') return [entry];
+        if (entry && typeof entry === 'object' && 'email_address' in entry) {
+          return [String((entry as { email_address?: string }).email_address ?? '')];
+        }
+        return [];
+      })
+    : [];
+  return preferredEmail(...direct.map((value) => typeof value === 'string' ? value : null), ...nested);
+}
+
+function jwtExpiresAt(token: string): number | null {
+  const payload = decodeJwtPayload(token);
+  return typeof payload?.exp === 'number' ? payload.exp * 1000 : null;
+}
+
 function sleep(milliseconds: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
@@ -149,12 +203,16 @@ export class DesktopAuthManager {
   private signInRejecter: ((error: Error) => void) | null = null;
   private startupGateResolver: ((session: DesktopAuthSession) => void) | null = null;
   private splashWindow: BrowserWindow | null = null;
-  private clerkTokenResolver: ((token: string) => void) | null = null;
+  private clerkTokenResolver: ((payload: ClerkSessionPayload) => void) | null = null;
   private clerkTokenRejecter: ((error: Error) => void) | null = null;
   private authWindow: BrowserWindow | null = null;
   private authWindowBaseUrl: string | null = null;
   private authSessionProtocolRegistered = false;
   private oauthPopupInFlight = false;
+  private pendingClerkEmail: string | null = null;
+  private clerkTokenCache: { token: string; expiresAt: number } | null = null;
+  private clerkTokenInFlight: Promise<string | null> | null = null;
+  private clerkTokenFailureUntil = 0;
 
   constructor() {
     ipcMain.on('auth:start-login', () => {
@@ -167,11 +225,21 @@ export class DesktopAuthManager {
     });
 
     ipcMain.handle('auth:clerk-token', (_event, payload: { token: string; userId: string; email: string }) => {
-      log.info('[Auth] Clerk session token received from renderer; resolver present:', Boolean(this.clerkTokenResolver));
-      this.clerkTokenResolver?.(payload.token);
+      const email = preferredEmail(payload?.email, emailFromJwt(payload?.token)) ?? payload?.email ?? '';
+      const normalized: ClerkSessionPayload = {
+        token: payload?.token ?? '',
+        userId: payload?.userId ?? '',
+        email,
+      };
+      log.info('[Auth] Clerk session token received from renderer; resolver present:', Boolean(this.clerkTokenResolver), 'email:', email || '(none)');
+      if (normalized.token) this.cacheClerkToken(normalized.token);
+      if (email) this.applyAccountEmail(email);
+      this.clerkTokenResolver?.(normalized);
       this.clerkTokenResolver = null;
       this.clerkTokenRejecter = null;
     });
+
+    ipcMain.handle('auth:get-clerk-token', () => this.getClerkToken());
 
     ipcMain.handle('auth:clerk-error', (_event, message: string) => {
       log.warn('[Auth] Clerk renderer error:', message);
@@ -194,6 +262,9 @@ export class DesktopAuthManager {
     }
 
     await this.upsertAccountRecord(this.session);
+    if (isSyntheticEmail(this.session.userEmail)) {
+      void this.recoverAccountEmail();
+    }
     this.scheduleHeartbeat();
     this.connectRuntimeRelay();
     void this.refreshSessionIfNeeded()
@@ -476,13 +547,13 @@ export class DesktopAuthManager {
 
     // Native Clerk auth: open a dedicated auth window with context isolation,
     // load the React/Clerk renderer, and wait for the user to sign in.
-    void this.openAuthWindow();
-
     void (async () => {
       try {
-        const clerkToken = await this.waitForClerkToken();
+        const clerk = await this.requestClerkSession({ hidden: false });
         this.closeAuthWindow();
-        await this.completePairingWithClerkToken(clerkToken, pending);
+        this.pendingClerkEmail = preferredEmail(clerk.email, emailFromJwt(clerk.token));
+        this.cacheClerkToken(clerk.token);
+        await this.completePairingWithClerkToken(clerk.token, pending);
       } catch (error) {
         log.warn('[Auth] Pairing with Clerk token failed:', error);
         this.closeAuthWindow();
@@ -493,9 +564,11 @@ export class DesktopAuthManager {
     return promise;
   }
 
-  private async openAuthWindow(): Promise<BrowserWindow> {
+  private async openAuthWindow(options: { hidden?: boolean; preserveSession?: boolean } = {}): Promise<BrowserWindow> {
+    const hidden = options.hidden === true;
+    const preserveSession = options.preserveSession === true || hidden;
     if (this.authWindow && !this.authWindow.isDestroyed()) {
-      this.authWindow.focus();
+      if (!hidden) this.authWindow.focus();
       return this.authWindow;
     }
 
@@ -510,12 +583,14 @@ export class DesktopAuthManager {
     const window = new BrowserWindow({
       width: 560,
       height: 680,
+      show: !hidden,
+      skipTaskbar: hidden,
       resizable: false,
-      alwaysOnTop: true,
+      alwaysOnTop: !hidden,
       titleBarStyle: 'hiddenInset',
       title: 'Allternit — Sign in',
-      parent: this.splashWindow ?? undefined,
-      modal: Boolean(this.splashWindow),
+      parent: hidden ? undefined : this.splashWindow ?? undefined,
+      modal: hidden ? false : Boolean(this.splashWindow),
       webPreferences: {
         preload: join(__dirname, '../preload/auth.js'),
         nodeIntegration: false,
@@ -524,19 +599,21 @@ export class DesktopAuthManager {
       },
     });
 
-    window.webContents.on('console-message', (_event, _level, message, line, sourceId) => {
-      log.info(`[AuthRenderer] ${message} (${sourceId}:${line})`);
+    window.webContents.on('console-message', (event) => {
+      log.info(`[AuthRenderer] ${event.message} (${event.sourceId}:${event.lineNumber})`);
     });
 
-    // Clerk remembers the last auth route in session storage; start each pairing
-    // flow from a clean slate so the embedded renderer controls the experience.
-    await authSession.clearStorageData();
+    // Fresh pairing starts from a clean Clerk client. Email/token refresh
+    // must keep the signed-in cookies in this partition.
+    if (!preserveSession) {
+      await authSession.clearStorageData();
+    }
 
     // Intercept Clerk OAuth navigation so Google/GitHub sign-in opens in a modal
     // popup instead of navigating away from the isolated auth renderer. Also
     // block any other navigation away from the auth page (e.g. Clerk redirecting
-    // to the instance home_url after sign-in), and reload the auth renderer so
-    // TokenBridge can complete the handoff.
+    // to the instance home_url after sign-in). Stay on this document so
+    // TokenBridge can finish; reloading remounts SignIn as signed-out.
     window.webContents.on('will-navigate', (event, url) => {
       if (this.isOAuthProviderUrl(url)) {
         event.preventDefault();
@@ -582,14 +659,29 @@ export class DesktopAuthManager {
       }
 
       const authBaseUrl = this.authWindowBaseUrl;
-      if (authBaseUrl && !url.startsWith(authBaseUrl)) {
+      if (authBaseUrl && !isDesktopAuthNavigation(url, authBaseUrl)) {
         event.preventDefault();
         log.warn('[Auth] Blocking navigation away from auth renderer to:', url);
+        // Bounce back to the auth renderer. Clerk's default after-sign-in URL
+        // is the Account Portal root; the session cookies now live in this
+        // partition, so a reload lets TokenBridge see the signed-in user.
         if (!window.isDestroyed()) {
           window.loadURL(authBaseUrl).catch((err) => {
             log.error('[Auth] Failed to reload auth renderer:', err);
           });
         }
+      }
+    });
+    window.webContents.on('will-redirect', (event, url) => {
+      const authBaseUrl = this.authWindowBaseUrl;
+      if (!authBaseUrl) return;
+      if (this.isOAuthProviderUrl(url) || isDesktopAuthNavigation(url, authBaseUrl)) return;
+      event.preventDefault();
+      log.warn('[Auth] Blocking redirect away from auth renderer to:', url);
+      if (!window.isDestroyed()) {
+        window.loadURL(authBaseUrl).catch((err) => {
+          log.error('[Auth] Failed to reload auth renderer after redirect:', err);
+        });
       }
     });
 
@@ -666,13 +758,49 @@ export class DesktopAuthManager {
       authSession.protocol.handle('https', (request) => {
         const url = new URL(request.url);
         if (url.host !== instanceDomain || !url.pathname.startsWith(AUTH_WINDOW_PATH_PREFIX)) {
-          return net.fetch(request);
+          return this.forwardThroughAuthSession(authSession, request);
         }
         return this.serveAuthFile(authDir, url.pathname.slice(AUTH_WINDOW_PATH_PREFIX.length) || '/');
       });
       this.authSessionProtocolRegistered = true;
     }
     return authSession;
+  }
+
+  /**
+   * Forward intercepted https (Clerk FAPI, CDN, captcha) through the auth
+   * partition. `protocol.handle('https')` owns the whole scheme, so Chromium
+   * does not attach partition cookies to the Request we receive. net.fetch()
+   * also uses the default session — Set-Cookie from GET /v1/client never
+   * lands, POST /attempt_first_factor goes out without `__client`, and Clerk
+   * returns 401 `signed_out` ("You are signed out").
+   */
+  private async forwardThroughAuthSession(
+    authSession: Electron.Session,
+    request: Request,
+  ): Promise<Response> {
+    const headers = new Headers(request.headers);
+    if (!headers.has('cookie')) {
+      const cookies = await authSession.cookies.get({ url: request.url });
+      if (cookies.length > 0) {
+        headers.set(
+          'Cookie',
+          cookies.map((cookie) => `${cookie.name}=${cookie.value}`).join('; '),
+        );
+      }
+    }
+    const init: RequestInit & { bypassCustomProtocolHandlers: boolean } = {
+      method: request.method,
+      headers,
+      bypassCustomProtocolHandlers: true,
+    };
+    if (request.method !== 'GET' && request.method !== 'HEAD') {
+      const body = await request.arrayBuffer();
+      if (body.byteLength > 0) {
+        init.body = body;
+      }
+    }
+    return authSession.fetch(request.url, init);
   }
 
   private serveAuthFile(authDir: string, requestPath: string): Response {
@@ -704,11 +832,120 @@ export class DesktopAuthManager {
     }
   }
 
-  private waitForClerkToken(): Promise<string> {
+  private requestClerkSession(options: { hidden?: boolean; timeoutMs?: number } = {}): Promise<ClerkSessionPayload> {
     return new Promise((resolve, reject) => {
-      this.clerkTokenResolver = resolve;
-      this.clerkTokenRejecter = reject;
+      const timeoutMs = options.timeoutMs ?? PAIRING_TIMEOUT_MS;
+      const timeout = setTimeout(() => {
+        if (this.clerkTokenRejecter !== rejectWithCleanup) return;
+        this.clerkTokenResolver = null;
+        this.clerkTokenRejecter = null;
+        if (options.hidden) this.closeAuthWindow();
+        reject(new Error('Clerk session timed out'));
+      }, timeoutMs);
+      const resolveWithCleanup = (payload: ClerkSessionPayload) => {
+        clearTimeout(timeout);
+        resolve(payload);
+      };
+      const rejectWithCleanup = (error: Error) => {
+        clearTimeout(timeout);
+        reject(error);
+      };
+      this.clerkTokenResolver = resolveWithCleanup;
+      this.clerkTokenRejecter = rejectWithCleanup;
+      void this.openAuthWindow({
+        hidden: options.hidden,
+        preserveSession: options.hidden === true,
+      }).catch(rejectWithCleanup);
     });
+  }
+
+  private cacheClerkToken(token: string): void {
+    if (!token) return;
+    this.clerkTokenFailureUntil = 0;
+    this.clerkTokenCache = {
+      token,
+      expiresAt: jwtExpiresAt(token) ?? Date.now() + 50_000,
+    };
+  }
+
+  async getClerkToken(): Promise<string | null> {
+    if (this.clerkTokenCache && this.clerkTokenCache.expiresAt - 10_000 > Date.now()) {
+      return this.clerkTokenCache.token;
+    }
+    if (Date.now() < this.clerkTokenFailureUntil) return null;
+    if (this.clerkTokenInFlight) return this.clerkTokenInFlight;
+    this.clerkTokenInFlight = this.refreshClerkToken().finally(() => {
+      this.clerkTokenInFlight = null;
+    });
+    return this.clerkTokenInFlight;
+  }
+
+  private async refreshClerkToken(): Promise<string | null> {
+    if (this.pendingPairing) {
+      return this.clerkTokenCache?.token ?? null;
+    }
+    try {
+      const clerk = await this.requestClerkSession({ hidden: true, timeoutMs: 20_000 });
+      this.closeAuthWindow();
+      this.cacheClerkToken(clerk.token);
+      const email = preferredEmail(clerk.email, emailFromJwt(clerk.token));
+      if (email) this.applyAccountEmail(email);
+      return clerk.token;
+    } catch (error) {
+      log.warn('[Auth] Could not refresh Clerk session token:', error);
+      this.closeAuthWindow();
+      this.clerkTokenFailureUntil = Date.now() + 60_000;
+      return this.clerkTokenCache?.token ?? null;
+    }
+  }
+
+  private applyAccountEmail(email: string): void {
+    if (isSyntheticEmail(email) || !this.runtimeIdentity || !this.session) return;
+    if (this.session.userEmail === email) return;
+    log.info('[Auth] Updating account email to', email);
+    this.persistIdentity({ ...this.runtimeIdentity, userEmail: email });
+    void this.upsertAccountRecord(this.session);
+    for (const window of BrowserWindow.getAllWindows()) {
+      if (window.isDestroyed() || window === this.authWindow) continue;
+      window.webContents.send('auth:session-updated', {
+        userId: this.session.userId,
+        userEmail: email,
+      });
+    }
+  }
+
+  private async recoverAccountEmail(): Promise<void> {
+    const verified = await this.emailFromVerifyToken();
+    if (verified) {
+      this.applyAccountEmail(verified);
+      return;
+    }
+    try {
+      const clerk = await this.requestClerkSession({ hidden: true, timeoutMs: 20_000 });
+      this.closeAuthWindow();
+      this.cacheClerkToken(clerk.token);
+      const email = preferredEmail(clerk.email, emailFromJwt(clerk.token));
+      if (email) this.applyAccountEmail(email);
+    } catch (error) {
+      log.warn('[Auth] Could not recover account email from Clerk:', error);
+      this.closeAuthWindow();
+    }
+  }
+
+  private async emailFromVerifyToken(): Promise<string | null> {
+    if (!this.session?.accessToken) return null;
+    try {
+      const response = await fetch(`${cloudApiBaseUrl()}/api/v1/runtime-devices/verify-token`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${this.session.accessToken}` },
+      });
+      if (!response.ok) return null;
+      const body = await response.json() as { email?: string };
+      return preferredEmail(body.email);
+    } catch (error) {
+      log.warn('[Auth] verify-token email lookup failed:', error);
+      return null;
+    }
   }
 
   private async completePairingWithClerkToken(clerkToken: string, pending: PendingPairing): Promise<void> {
@@ -805,7 +1042,7 @@ export class DesktopAuthManager {
         scope: exchange.capabilities.join(' '),
         expiresAt: new Date(exchange.expiresAt).getTime(),
         userId: exchange.userId,
-        userEmail: exchange.userEmail,
+        userEmail: preferredEmail(this.pendingClerkEmail, exchange.userEmail) ?? exchange.userEmail,
         clientId: RUNTIME_CLIENT_ID,
         runtimeId: exchange.runtimeId,
         organizationId: exchange.organizationId,
@@ -816,6 +1053,7 @@ export class DesktopAuthManager {
       };
       this.persistIdentity(identity);
       await this.upsertAccountRecord(identity);
+      this.pendingClerkEmail = null;
       clearTimeout(pending.timeout);
       this.pendingPairing = null;
       pending.resolve(this.toSession(identity));
@@ -886,6 +1124,10 @@ export class DesktopAuthManager {
       this.clearSession();
       await this.clearCurrentAccountFlag();
       this.notifySplash('auth:login-failed', 'This runtime was revoked. Pair it again to continue.');
+      return;
+    }
+    if (response.status === 429) {
+      log.warn('[Auth] Runtime heartbeat rate-limited; will retry on the next interval');
       return;
     }
     if (!response.ok) throw new Error(`Runtime heartbeat failed (${response.status})`);
@@ -1154,7 +1396,7 @@ export class DesktopAuthManager {
       found = true;
       return {
         ...account,
-        userEmail: session.userEmail,
+        userEmail: preferredEmail(session.userEmail, account.userEmail) ?? session.userEmail,
         clientId: session.runtimeId,
         current: true,
         lastSeenAt: now,
@@ -1164,7 +1406,7 @@ export class DesktopAuthManager {
     if (!found) {
       next.push({
         userId: session.userId,
-        userEmail: session.userEmail,
+        userEmail: preferredEmail(session.userEmail) ?? session.userEmail,
         clientId: session.runtimeId,
         lastSignedInAt: now,
         lastSeenAt: now,

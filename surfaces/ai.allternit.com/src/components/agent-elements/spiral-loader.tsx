@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { LottieRefCurrentProps } from "lottie-react";
 import { cn } from "./utils/cn";
 import { spiralFastData, spiralSlowData } from "./spiral-loader-data";
-import { useTheme } from "next-themes";
+import { useThemeStore, useResolvedTheme } from "@/design/ThemeStore";
 
 const FAST_REPEATS = 4;
 const SLOW_REPEATS = 2;
@@ -21,7 +21,8 @@ export function SpiralLoader({ size = 16, className }: SpiralLoaderProps) {
   const repeatCountRef = useRef(0);
   const fastRef = useRef<LottieRefCurrentProps | null>(null);
   const slowRef = useRef<LottieRefCurrentProps | null>(null);
-  const { resolvedTheme } = useTheme();
+  const theme = useThemeStore((s) => s.theme);
+  const resolvedTheme = useResolvedTheme(theme);
 
   useEffect(() => {
     setIsMounted(true);

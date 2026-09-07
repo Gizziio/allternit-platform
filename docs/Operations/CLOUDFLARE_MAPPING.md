@@ -36,6 +36,7 @@ Quick reference for Cloudflare Pages projects and their domains.
 | **allternit-compute** | compute.allternit.com | |
 | **allternit-manufacturing** | manufacturing.allternit.com | |
 | **allternit-robotics** | robotics.allternit.com | |
+| **gizzi-brawl** | gizzi-brawl.pages.dev, brawl.allternit.com | Static Gizzi Brawl game; deployed from `basement-temp/public/games/kombat` |
 
 ## Retired / renamed
 

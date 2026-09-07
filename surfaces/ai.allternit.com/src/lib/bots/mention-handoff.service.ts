@@ -13,6 +13,7 @@
 import type { Agent } from '@/lib/agents/agent.types';
 import { isBot, getBotDisplayName } from '@/lib/bots/bot-profile';
 import type { StackedAgent } from '@/lib/bots/stacked-agent.service';
+import { wakeBot } from '@/lib/bots/bot-wake.service';
 import { createModuleLogger } from '@/lib/logger';
 
 const logger = createModuleLogger('MentionHandoff');
@@ -76,6 +77,8 @@ export interface MentionHandoffOptions {
   acknowledgeMail?: (agentId: string, messageId: string) => Promise<void>;
   /** How long to wait for a native bot mail reply (ms). Default 5000. */
   mailReplyTimeoutMs?: number;
+  /** When true, wait for the woken bot's turn (group rounds). Default false (async wake). */
+  waitForReply?: boolean;
   /** Interval between native bot mail polls (ms). Default 250. */
   mailPollIntervalMs?: number;
 }
@@ -283,30 +286,18 @@ async function handoffToTarget(
   const attributedBody = formatAttributionMessage(sender.name, sender.handle, options.text);
 
   if (target.agent) {
-    // Native bot: send Rails mail and poll for a reply.
-    const fromAgentId = options.activeAgentId ?? 'user';
     const toAgentId = target.agent.id;
-    const subject = `Mention from @${sender.handle}`;
-    const body = attributedBody;
-
-    logger.info({ fromAgentId, toAgentId, sender: sender.handle }, 'Handing off mention to native bot via mail');
-    await options.sendMail(fromAgentId, toAgentId, subject, body);
-
-    // Poll the target bot's inbox until a reply arrives or we time out.
-    const replyMessage = await pollForMailReply(toAgentId, options);
-
-    if (replyMessage?.id && options.acknowledgeMail) {
-      try {
-        await options.acknowledgeMail(toAgentId, replyMessage.id);
-      } catch (err) {
-        logger.warn({ err, toAgentId, messageId: replyMessage.id }, 'Failed to acknowledge mention reply');
-      }
-    }
-
+    logger.info({ toAgentId, sender: sender.handle }, 'Waking native bot (async handoff)');
+    const reply = await wakeBot({
+      botId: toAgentId,
+      botName: displayName,
+      message: attributedBody,
+      waitForReply: options.waitForReply === true,
+    });
     return {
       mention: target.mention,
       displayName,
-      reply: replyMessage?.body ?? '(waiting for reply)',
+      reply: reply ?? (options.waitForReply ? '(pass)' : '(handed off)'),
     };
   }
 

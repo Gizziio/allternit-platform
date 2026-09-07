@@ -46,9 +46,9 @@ export function DispatchSettingsPanel(): React.ReactNode {
 
   return (
     <div className="space-y-6">
-      <SectionHeading>Remote Control</SectionHeading>
+      <SectionHeading>Fabric Transport</SectionHeading>
       <p className="text-[13px] text-[var(--text-secondary)] leading-relaxed -mt-3">
-        Remote Control lets you hand off tasks from the Allternit mobile app to this computer.
+        Fabric Transport lets this computer join the Allternit fabric as a node for peers, leases, and session-worker calls.
       </p>
 
       <SettingsCard title="Permissions">
@@ -59,13 +59,13 @@ export function DispatchSettingsPanel(): React.ReactNode {
         />
         <SettingsCardRow
           label="Keep computer awake"
-          description="Prevent sleep while Remote Control is running."
+          description="Prevent sleep while Fabric Transport is running."
         >
           <Toggle value={keepAwake} onChange={setKeepAwake} />
         </SettingsCardRow>
         <SettingsCardRow
           label="Mobile notifications"
-          description="Show phone-style notifications for Remote Control messages."
+          description="Show phone-style notifications for Fabric Transport messages."
         >
           <Toggle value={notifications} onChange={handleNotificationsToggle} />
         </SettingsCardRow>
@@ -120,7 +120,7 @@ export function DispatchSettingsPanel(): React.ReactNode {
               <Code size={18} className="text-[var(--text-tertiary)]" />
               <div>
                 <div className="text-[14px] font-medium text-[var(--text-primary)]">Code permissions</div>
-                <div className="text-[12px] text-[var(--text-tertiary)]">What to do when Remote Control wants to run code.</div>
+                <div className="text-[12px] text-[var(--text-tertiary)]">What to do when Fabric Transport wants to run code.</div>
               </div>
             </div>
             <CodePermissionsDropdown value={codePermission} onChange={setCodePermission} />

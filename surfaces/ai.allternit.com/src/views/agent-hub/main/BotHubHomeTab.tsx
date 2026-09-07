@@ -63,12 +63,12 @@ export function BotHubHomeTab({ onCreate }: BotHubHomeTabProps) {
 
   const handleStartGroupChat = async (selectedBots: Agent[], name: string) => {
     const result = await startBotGroupChat({ bots: selectedBots, name });
-    if (result?.sessionId) {
+    if (result?.groupId) {
       window.dispatchEvent(
         new CustomEvent("allternit:open-view", {
           detail: {
-            viewType: "chat-group-session",
-            context: { sessionId: result.sessionId },
+            viewType: "group-chat",
+            context: { groupId: result.groupId },
           },
         })
       );
@@ -142,7 +142,7 @@ export function BotHubHomeTab({ onCreate }: BotHubHomeTabProps) {
             <Robot size={48} className="text-[var(--text-tertiary)] opacity-40" />
             <h3 className="text-sm font-normal text-[var(--text-secondary)]">No bots yet.</h3>
             <p className="max-w-xs text-[13px] text-[var(--text-tertiary)]">
-              Create your first bot to get started.
+              Pick a template, give it a name, and you're live — everything else is pre-configured.
             </p>
             <button
               type="button"

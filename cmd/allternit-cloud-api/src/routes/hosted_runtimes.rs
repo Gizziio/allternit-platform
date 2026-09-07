@@ -319,6 +319,10 @@ async fn start_hosted_runtime(
         ));
     }
     if matches!(row.status.as_str(), "running" | "starting") {
+        // docker start is a no-op on a live box. If the container was
+        // removed, start() recreates it so a catalog row without a box
+        // can come back.
+        state.contabo_runtime_service.start(&row.id).await?;
         let response_row = fetch_instance(&state, &id).await?;
         let usage = services::hosted_usage_summary(&state.db, &user.id).await?;
         return Ok(Json(into_response(response_row, &usage)));
@@ -546,11 +550,13 @@ async fn upsert_cloud_user(
 }
 
 fn hosted_idle_timeout_minutes() -> i64 {
+    // 0 = always-on (subscription cloud computer). Idle-stop SKUs set
+    // HOSTED_RUNTIME_IDLE_TIMEOUT_MINUTES to 5 or more.
     std::env::var("HOSTED_RUNTIME_IDLE_TIMEOUT_MINUTES")
         .ok()
         .and_then(|value| value.parse::<i64>().ok())
-        .filter(|value| *value >= 5)
-        .unwrap_or(15)
+        .filter(|value| *value >= 0)
+        .unwrap_or(0)
 }
 
 fn validate_region(region: &str) -> Result<(), ApiError> {

@@ -211,19 +211,13 @@ impl IncusHostPool {
             return Ok(chosen);
         }
 
-        // No capacity data yet: round-robin across weighted hosts.
+        // No capacity data yet: round-robin across weighted hosts. `len` is
+        // nonzero (guarded above and only narrowed by nonempty filters).
         let len = candidates.len();
-        let start = self.next.fetch_add(1, Ordering::Relaxed) % len;
-        for offset in 0..len {
-            let idx = (start + offset) % len;
-            let h = candidates[idx].clone();
-            info!(host = %h.url, "selected Incus host round-robin");
-            return Ok(h);
-        }
-
-        Err(SubstrateError::Request(
-            "no Incus hosts available for spawn".to_string(),
-        ))
+        let idx = self.next.fetch_add(1, Ordering::Relaxed) % len;
+        let h = candidates[idx].clone();
+        info!(host = %h.url, "selected Incus host round-robin");
+        Ok(h)
     }
 
     /// Look up the host that originally owned a VM. Falls back to the first

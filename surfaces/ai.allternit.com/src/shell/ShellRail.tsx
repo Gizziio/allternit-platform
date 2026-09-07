@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { Icon } from '@phosphor-icons/react';
 import { useStoreWithEqualityFn } from 'zustand/traditional';
 import { shallow } from 'zustand/shallow';
@@ -17,7 +17,11 @@ import {
   Plugs,
   PuzzlePiece,
   Globe,
+  PushPin,
   PushPinSlash,
+  PencilSimple,
+  MagnifyingGlass,
+  X,
   Palette,
   House,
   TerminalWindow,
@@ -32,7 +36,6 @@ import {
   DotsThreeVertical,
   Check,
   Brain,
-  Play,
   DesktopTower,
   Record,
 } from '@phosphor-icons/react';
@@ -62,19 +65,15 @@ import { SettingsDrilldown } from './SettingsDrilldown';
 import { getAgentModeSurfaceTheme } from '../views/chat/agentModeSurfaceTheme';
 import type { AgentModeSurface } from '../stores/agent-surface-mode.store';
 import { cn } from '@/lib/utils';
-import { BOT_TEMPLATES } from '@/lib/bots/bots.manifest';
-import { useStartBotSession } from '@/lib/bots/useStartBotSession';
 import { useAgentStore } from '@/lib/agents/agent.store';
-import { useCommRailsUnreadCount } from '@/lib/bots/comrails-mail.store';
 import {
-  getBotTagline,
   isBot,
 } from '@/lib/bots/bot-profile';
-import type { Agent } from '@/lib/agents/agent.types';
-import { BotAvatar } from '@/views/bots/BotAvatar';
-import { BotRoster } from '@/views/bots/BotRoster';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
+import { openNativeSessionPicker } from '@/components/native-sessions/NativeSessionPicker';
+import { NativeSourceBadge } from '@/components/native-sessions/NativeOriginBanner';
+import { sourceRefFromMetadata } from '@/lib/agents/native-sessions-api';
 
 const MINI_APP_CATEGORY_ICONS: Record<string, Icon> = {
   runtime:       Cpu,
@@ -117,6 +116,25 @@ function groupKeyForDate(ts: number): string {
   if (d.getTime() === yesterday.getTime()) return 'Yesterday';
   if (d.getTime() >= lastWeek.getTime()) return 'Previous 7 Days';
   return 'Older';
+}
+
+interface RailRecentItem {
+  id: string;
+  title: string;
+  mode: AppMode;
+  icon: any;
+  isActive: boolean;
+  updatedAt: number;
+  kind: 'chat' | 'cowork' | 'task' | 'agent' | 'browser' | 'code';
+  status: 'active' | 'completed' | 'archived';
+  sessionId?: string | null;
+}
+
+interface PinnedRailEntry {
+  id: string;
+  kind: RailRecentItem['kind'];
+  mode: AppMode;
+  pinnedAt: number;
 }
 
 interface ShellRailProps {
@@ -221,19 +239,36 @@ export function ShellRail({
       return true;
     }
   });
-  const [botsExpanded, setBotsExpanded] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    try {
-      return window.localStorage.getItem('allternit:rail:bots-expanded') === 'true';
-    } catch {
-      return false;
-    }
-  });
-  const [startingBotId, setStartingBotId] = useState<string | null>(null);
   const [typeFilter, setTypeFilter] = useState<'all' | 'chat' | 'cowork' | 'task' | 'agent' | 'browser' | 'code' | 'bb'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'completed' | 'archived'>('all');
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week' | 'month'>('all');
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string; kind: string } | null>(null);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+
+  // Pinned rail entries (favorites) — persisted, pruned visually when the
+  // underlying session/task disappears from recentItems.
+  const [pinnedEntries, setPinnedEntries] = useState<PinnedRailEntry[]>(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const raw = window.localStorage.getItem('allternit:rail:pinned');
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed.filter((p) => p && typeof p.id === 'string') : [];
+    } catch {
+      return [];
+    }
+  });
+  const [pinnedExpanded, setPinnedExpanded] = useState(true);
+
+  // RECENTS overflow: raise the 15-row cap to 50 with in-list search (M7).
+  const [recentsOverflowOpen, setRecentsOverflowOpen] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      return window.localStorage.getItem('allternit:rail:recents-overflow') === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const [recentsSearch, setRecentsSearch] = useState('');
 
   // Code-mode recents filters (code-only, separate from global home/browser recents)
   const [codeRecentsExpanded, setCodeRecentsExpanded] = useState(true);
@@ -282,24 +317,8 @@ export function ShellRail({
     });
   }, []);
 
-  const { startSession: startBotSession } = useStartBotSession(
-    useCallback((sessionId: string, botId: string) => {
-      // Open the dedicated bot chat session view so the rail entry is tied to a
-      // real bot session, not a generic agent chat.
-      onOpen?.('bot-chat-session', { sessionId, botId, originView: activeViewType ?? 'chat' });
-    }, [onOpen, activeViewType])
-  );
-
   const agents = useAgentStore((s) => s.agents);
   const bots = useMemo(() => agents.filter(isBot), [agents]);
-
-  const handleToggleBotsExpanded = useCallback(() => {
-    setBotsExpanded((v) => {
-      const next = !v;
-      try { localStorage.setItem('allternit:rail:bots-expanded', String(next)); } catch {}
-      return next;
-    });
-  }, []);
 
   const handleToggleRecentsExpanded = useCallback(() => {
     setRecentsExpanded((v) => {
@@ -309,38 +328,30 @@ export function ShellRail({
     });
   }, []);
 
-  const handleCreateBot = useCallback(() => {
-    onOpen?.('agent-hub');
-  }, [onOpen]);
+  const togglePinnedEntry = useCallback((item: { id: string; kind: RailRecentItem['kind']; mode: AppMode }) => {
+    setPinnedEntries((prev) => {
+      const exists = prev.some((p) => p.id === item.id);
+      const next = exists
+        ? prev.filter((p) => p.id !== item.id)
+        : [...prev, { id: item.id, kind: item.kind, mode: item.mode, pinnedAt: Date.now() }];
+      try { localStorage.setItem('allternit:rail:pinned', JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }, []);
 
-  const handleStartBot = useCallback(async (bot: Agent) => {
-    setStartingBotId(bot.id);
-    try {
-      await startBotSession(bot);
-      // Bind this bot as the chat surface's selected agent so the composer
-      // shows the bot pill and the mode dock for switching execution modes.
-      useAgentSurfaceModeStore.getState().setSelectedAgent('chat', bot.id);
-    } finally {
-      setStartingBotId(null);
-    }
-  }, [startBotSession]);
+  const isPinned = useCallback((id: string) => pinnedEntries.some((p) => p.id === id), [pinnedEntries]);
 
-  const handleOpenBotHome = useCallback((bot: Agent) => {
-    onOpen?.('bot-home', { botId: bot.id });
-  }, [onOpen]);
+  const toggleRecentsOverflow = useCallback(() => {
+    setRecentsOverflowOpen((v) => {
+      const next = !v;
+      try { localStorage.setItem('allternit:rail:recents-overflow', String(next)); } catch {}
+      return next;
+    });
+    setRecentsSearch('');
+  }, []);
 
   const recentItems = useMemo(() => {
-    const list: {
-      id: string;
-      title: string;
-      mode: AppMode;
-      icon: any;
-      isActive: boolean;
-      updatedAt: number;
-      kind: 'chat' | 'cowork' | 'task' | 'agent' | 'browser' | 'code';
-      status: 'active' | 'completed' | 'archived';
-      sessionId?: string | null;
-    }[] = [];
+    const list: RailRecentItem[] = [];
 
     const botIds = new Set(bots.map((b) => b.id));
     const botNames = new Set(bots.map((b) => b.name.toLowerCase()));
@@ -471,10 +482,37 @@ export function ShellRail({
       return true;
     });
 
-    // Cross-mode recents stay capped; the ACI list is bounded by the store
-    // itself (PAGE_AGENT_SESSION_LIMIT) so it is shown in full.
-    return mode === 'browser' ? filtered : filtered.slice(0, 15);
+    return filtered;
   }, [recentItems, typeFilter, statusFilter, dateFilter, mode]);
+
+  // Pinned rows stay live by intersecting pinned ids with recentItems (status
+  // dots, streaming, unread all keep working). Sorted by pinnedAt desc.
+  const { pinnedVisible, pinnedOverflowCount } = useMemo(() => {
+    if (pinnedEntries.length === 0) return { pinnedVisible: [] as RailRecentItem[], pinnedOverflowCount: 0 };
+    const byId = new Map(recentItems.map((i) => [i.id, i]));
+    const pinned = pinnedEntries
+      .filter((p) => byId.has(p.id))
+      .sort((a, b) => b.pinnedAt - a.pinnedAt)
+      .map((p) => byId.get(p.id)!);
+    return {
+      pinnedVisible: pinned.slice(0, 10),
+      pinnedOverflowCount: Math.max(0, pinned.length - 10),
+    };
+  }, [pinnedEntries, recentItems]);
+
+  // M7: home/code recents show 15 rows plus a "More…" row; opening the
+  // overflow raises the cap to 50 and enables in-list search. ACI/browser
+  // mode recents stay store-bounded and untouched.
+  const visibleRecentItems = useMemo(() => {
+    if (mode === 'browser') return filteredRecentItems;
+    if (!recentsOverflowOpen) return filteredRecentItems.slice(0, 15);
+    const q = recentsSearch.trim().toLowerCase();
+    const searched = q
+      ? filteredRecentItems.filter((i) => i.title.toLowerCase().includes(q))
+      : filteredRecentItems;
+    return searched.slice(0, 50);
+  }, [filteredRecentItems, recentsOverflowOpen, recentsSearch, mode]);
+  const recentsOverflowCount = mode === 'browser' ? 0 : Math.max(0, filteredRecentItems.length - 15);
 
   // Code-mode recents: filter, sort, and group code sessions only
   const codeProjectOptions = useMemo(() => {
@@ -593,6 +631,71 @@ export function ShellRail({
     setSelectedSurfaceAgent,
   ]);
 
+  // Shared "New" behavior for the rail button and the RECENTS header "+".
+  const handleNewSession = useCallback(() => {
+    if (mode === 'browser') {
+      onModeChange?.('browser');
+      onOpen?.('browser');
+    } else if (mode === 'code') {
+      useCodeSessionStore.getState().setActiveSession(null);
+      onOpen?.('code');
+    } else {
+      chatStore.setActiveThread(null);
+      useChatSessionStore.getState().setActiveSession(null);
+      onOpen?.('chat');
+    }
+  }, [mode, chatStore, onModeChange, onOpen]);
+
+  // Same navigation as clicking a recent row — used by row clicks, the
+  // context-menu "Open" item, and PINNED rows.
+  const openRecentItem = useCallback((item: RailRecentItem) => {
+    if (item.mode === 'chat' || item.mode === 'code') {
+      const session = item.mode === 'code'
+        ? codeSessions.find(s => s.id === item.id)
+        : chatSessions.find(s => s.id === item.id);
+      if (session) openNativeSessionSurface(session);
+    } else if (item.kind === 'cowork') {
+      const sessionId = item.id;
+      useCoworkSessionStore.getState().setActiveSession(sessionId);
+      const session = coworkSessions.find(s => s.id === sessionId);
+      const isAgent = session?.metadata?.sessionMode === 'agent';
+      onModeChange?.('cowork');
+      onOpen?.(isAgent ? 'cowork-agent-session' : 'workspace', isAgent ? { sessionId, originView: 'workspace' } : undefined);
+    } else if (item.mode === 'cowork') {
+      coworkStore.setActiveTask(item.id);
+      const coworkTask = coworkStore.tasks.find(t => t.id === item.id);
+      const sessionId = coworkTask?.sessionId ?? null;
+      useCoworkSessionStore.getState().setActiveSession(sessionId);
+      const session = sessionId ? coworkSessions.find(s => s.id === sessionId) : null;
+      const isAgent = session?.metadata?.sessionMode === 'agent' || coworkTask?.mode === 'agent';
+      onModeChange?.('cowork');
+      onOpen?.(isAgent ? 'cowork-agent-session' : 'workspace', isAgent ? { sessionId, originView: 'workspace' } : undefined);
+    } else if (item.mode === 'browser') {
+      onModeChange?.('browser');
+      onOpen?.('browser');
+    }
+  }, [codeSessions, chatSessions, coworkSessions, coworkStore, openNativeSessionSurface, onModeChange, onOpen]);
+
+  // Context-menu rename commit, dispatched per item kind. Browser items get
+  // no rename. Cowork-mode "agent" kind is ambiguous between an agent task
+  // and an agent session, so it is resolved against the task list.
+  const commitRename = useCallback((item: RailRecentItem, name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed || trimmed === item.title) return;
+    const task = item.mode === 'cowork' ? coworkStore.tasks.find(t => t.id === item.id) : undefined;
+    if (item.kind === 'task' || task) {
+      useCoworkStore.getState().renameTask(item.id, trimmed);
+      return;
+    }
+    if (item.mode === 'cowork') {
+      useCoworkSessionStore.getState().updateSession(item.id, { name: trimmed });
+    } else if (item.mode === 'code') {
+      useCodeSessionStore.getState().updateSession(item.id, { name: trimmed });
+    } else {
+      useChatSessionStore.getState().updateSession(item.id, { name: trimmed });
+    }
+  }, [coworkStore.tasks]);
+
   const handleDeleteConfirm = useCallback(() => {
     if (!deleteTarget) return;
     const { id, kind } = deleteTarget;
@@ -701,19 +804,7 @@ export function ShellRail({
       <div className="px-2 pb-2 shrink-0">
         <button
           type="button"
-          onClick={() => {
-            if (mode === 'browser') {
-              onModeChange?.('browser');
-              onOpen?.('browser');
-            } else if (isCodeMode) {
-              useCodeSessionStore.getState().setActiveSession(null);
-              onOpen?.('code');
-            } else {
-              chatStore.setActiveThread(null);
-              useChatSessionStore.getState().setActiveSession(null);
-              onOpen?.('chat');
-            }
-          }}
+          onClick={handleNewSession}
           className={cn(
             "group w-full flex items-center gap-2 py-1.5 px-3 max-md:min-h-11 rounded-xl border-none cursor-pointer text-left transition-colors font-semibold",
             isNewActive
@@ -724,6 +815,15 @@ export function ShellRail({
           <Plus size={16} weight="bold" className={isNewActive ? "text-[var(--accent-primary)]" : "text-[var(--shell-item-muted)] group-hover:text-[var(--accent-primary)] transition-colors"} />
           <span className="text-[12px]">{mode === 'browser' ? 'New Session' : isCodeMode ? 'New Thread' : 'New'}</span>
         </button>
+        {mode !== 'browser' ? (
+          <button
+            type="button"
+            onClick={() => openNativeSessionPicker(isCodeMode ? 'code' : mode === 'cowork' ? 'cowork' : 'chat')}
+            className="mt-1 w-full py-1 px-3 rounded-lg border-none bg-transparent text-[11px] text-[var(--shell-item-muted)] cursor-pointer text-left hover:text-[var(--shell-item-fg)] hover:bg-[var(--surface-hover)]"
+          >
+            Continue CLI session
+          </button>
+        ) : null}
       </div>
 
       {/* SIDEBAR MAIN BODY (Browser tabs + sessions, Home tabs + recents, or Code tabs + threads) */}
@@ -801,6 +901,8 @@ export function ShellRail({
             title="Recents"
             openAllTitle="Open all recents"
             onOpenAll={() => onOpen?.('recents')}
+            onAdd={handleNewSession}
+            addTitle="New Session"
             filter={
               <Popover>
                 <PopoverTrigger asChild>
@@ -868,33 +970,11 @@ export function ShellRail({
               <RecentRailItem
                 key={item.id}
                 item={item}
-                onClick={() => {
-                  if (item.mode === 'chat' || item.mode === 'code') {
-                    const session = item.mode === 'code'
-                      ? codeSessions.find(s => s.id === item.id)
-                      : chatSessions.find(s => s.id === item.id);
-                    if (session) openNativeSessionSurface(session);
-                  } else if (item.kind === 'cowork') {
-                    const sessionId = item.id;
-                    useCoworkSessionStore.getState().setActiveSession(sessionId);
-                    const session = coworkSessions.find(s => s.id === sessionId);
-                    const isAgent = session?.metadata?.sessionMode === 'agent';
-                    onModeChange?.('cowork');
-                    onOpen?.(isAgent ? 'cowork-agent-session' : 'workspace', isAgent ? { sessionId, originView: 'workspace' } : undefined);
-                  } else if (item.mode === 'cowork') {
-                    coworkStore.setActiveTask(item.id);
-                    const coworkTask = coworkStore.tasks.find(t => t.id === item.id);
-                    const sessionId = coworkTask?.sessionId ?? null;
-                    useCoworkSessionStore.getState().setActiveSession(sessionId);
-                    const session = sessionId ? coworkSessions.find(s => s.id === sessionId) : null;
-                    const isAgent = session?.metadata?.sessionMode === 'agent' || coworkTask?.mode === 'agent';
-                    onModeChange?.('cowork');
-                    onOpen?.(isAgent ? 'cowork-agent-session' : 'workspace', isAgent ? { sessionId, originView: 'workspace' } : undefined);
-                  } else if (item.mode === 'browser') {
-                    onModeChange?.('browser');
-                    onOpen?.('browser');
-                  }
-                }}
+                onClick={() => openRecentItem(item)}
+                onRenameCommit={item.kind === 'browser' ? undefined : commitRename}
+                pinned={isPinned(item.id)}
+                onPinToggle={() => togglePinnedEntry(item)}
+                onUnpin={isPinned(item.id) ? () => togglePinnedEntry(item) : undefined}
                 onDelete={() => setDeleteTarget({ id: item.id, title: item.title, kind: item.kind })}
               />
             ))}
@@ -909,6 +989,13 @@ export function ShellRail({
               label="Bot Hub"
               isActive={activeViewType === 'agent-hub'}
               onClick={() => onOpen?.('agent-hub')}
+            />
+            <RailItem
+              id="groups-list"
+              icon={Users}
+              label="Groups"
+              isActive={activeViewType === 'groups-list' || activeViewType === 'group-chat'}
+              onClick={() => onOpen?.('groups-list')}
             />
             <RailItem
               icon={FolderOpen}
@@ -952,52 +1039,33 @@ export function ShellRail({
             />
           </div>
 
-        {/* BOTS SECTION */}
-          <div className="flex flex-col min-h-0 px-2">
-            <div className="group px-1 py-2 flex items-center justify-between text-[var(--shell-item-muted)] select-none">
-              <button
-                type="button"
-                onClick={handleToggleBotsExpanded}
-                className="flex items-center gap-1.5 bg-transparent border-none text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] cursor-pointer"
-              >
-                {botsExpanded ? (
-                  <CaretDown size={12} className="transition-transform duration-200" />
-                ) : (
-                  <CaretRight size={12} className="transition-transform duration-200" />
-                )}
-                <span className="text-[12px] font-extrabold uppercase tracking-[0.08em]">Bots</span>
-              </button>
-            </div>
-            <div className="px-2 pb-1">
-              <RailItem
-                id="groups-list"
-                icon={Users}
-                label="Groups"
-                isActive={activeViewType === 'groups-list' || activeViewType === 'group-chat'}
-                onClick={() => onOpen?.('groups-list')}
-              />
-            </div>
-            {botsExpanded && (
-              <div className="flex-1 min-h-0 flex flex-col -mx-2 px-2">
-                <BotRoster
-                  nested
-                  onNewBot={handleCreateBot}
-                  onStartSession={(botId, sessionId) =>
-                    onOpen?.('bot-chat-session', { sessionId, botId, originView: activeViewType ?? 'chat' })
-                  }
-                  onEditProfile={() => onOpen?.('agent-hub')}
-                  onNavigate={(view, params) => {
-                    if (view === 'agent-hub') onOpen?.('agent-hub');
-                    if (view === 'group-picker' && params?.botId) {
-                      onOpen?.('bot-roster', { botId: params.botId });
-                    }
-                  }}
-                  onSelectGroup={(groupId) => onOpen?.('group-chat', { groupId })}
-                  onNewGroup={(groupId) => onOpen?.('group-chat', { groupId })}
+          {/* HOME PINNED — self-prunes when nothing pinned remains live */}
+          {pinnedVisible.length > 0 && (
+            <RecentsPanel
+              shrink
+              expanded={pinnedExpanded}
+              onToggle={() => setPinnedExpanded((v) => !v)}
+              title="Pinned"
+            >
+              {pinnedVisible.map((item) => (
+                <RecentRailItem
+                  key={item.id}
+                  item={item}
+                  onClick={() => openRecentItem(item)}
+                  onRenameCommit={item.kind === 'browser' ? undefined : commitRename}
+                  pinned
+                  onPinToggle={() => togglePinnedEntry(item)}
+                  onUnpin={() => togglePinnedEntry(item)}
+                  onDelete={() => setDeleteTarget({ id: item.id, title: item.title, kind: item.kind })}
                 />
-              </div>
-            )}
-          </div>
+              ))}
+              {pinnedOverflowCount > 0 && (
+                <div className="px-3 py-1.5 text-[11px] text-[var(--shell-item-muted)]">
+                  {pinnedOverflowCount} more in Recents
+                </div>
+              )}
+            </RecentsPanel>
+          )}
 
         {/* HOME RECENTS */}
           <RecentsPanel
@@ -1006,6 +1074,8 @@ export function ShellRail({
             title="Recents"
             openAllTitle="Open all recents"
             onOpenAll={() => onOpen?.('recents')}
+            onAdd={handleNewSession}
+            addTitle="New session"
             filter={
               <Popover>
                 <PopoverTrigger asChild>
@@ -1081,45 +1151,65 @@ export function ShellRail({
               </Popover>
             }
           >
-            {filteredRecentItems.length === 0 && (
-              <div className="px-3 py-4 text-[12px] text-[var(--shell-item-muted)] text-center">
-                No recent items match your filters
+            {recentsOverflowOpen && (
+              <div className="relative flex items-center px-1 pb-1">
+                <MagnifyingGlass size={12} className="absolute left-3 text-[var(--shell-item-muted)] pointer-events-none" />
+                <input
+                  type="text"
+                  value={recentsSearch}
+                  onChange={(e) => setRecentsSearch(e.target.value)}
+                  placeholder="Search recents"
+                  className="w-full rounded-lg border border-solid border-[var(--border-subtle)] bg-[var(--surface-hover)] py-1.5 pl-7 pr-7 text-[12px] text-[var(--shell-item-fg)] outline-none placeholder:text-[var(--shell-item-muted)] focus:border-[var(--accent-primary)]"
+                />
+                {recentsSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setRecentsSearch('')}
+                    title="Clear search"
+                    className="absolute right-2 size-5 flex items-center justify-center rounded border-none bg-transparent text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] cursor-pointer transition-colors"
+                  >
+                    <X size={11} />
+                  </button>
+                )}
               </div>
             )}
-            {filteredRecentItems.map((item) => (
+            {visibleRecentItems.length === 0 && (
+              <div className="px-3 py-4 text-[12px] text-[var(--shell-item-muted)] text-center">
+                {recentsSearch ? 'No matches' : 'No recent items match your filters'}
+              </div>
+            )}
+            {visibleRecentItems.map((item) => (
               <RecentRailItem
                 key={item.id}
                 item={item}
-                onClick={() => {
-                  if (item.mode === 'chat' || item.mode === 'code') {
-                    const session = item.mode === 'code'
-                      ? codeSessions.find(s => s.id === item.id)
-                      : chatSessions.find(s => s.id === item.id);
-                    if (session) openNativeSessionSurface(session);
-                  } else if (item.kind === 'cowork') {
-                    const sessionId = item.id;
-                    useCoworkSessionStore.getState().setActiveSession(sessionId);
-                    const session = coworkSessions.find(s => s.id === sessionId);
-                    const isAgent = session?.metadata?.sessionMode === 'agent';
-                    onModeChange?.('cowork');
-                    onOpen?.(isAgent ? 'cowork-agent-session' : 'workspace', isAgent ? { sessionId, originView: 'workspace' } : undefined);
-                  } else if (item.mode === 'cowork') {
-                    coworkStore.setActiveTask(item.id);
-                    const coworkTask = coworkStore.tasks.find(t => t.id === item.id);
-                    const sessionId = coworkTask?.sessionId ?? null;
-                    useCoworkSessionStore.getState().setActiveSession(sessionId);
-                    const session = sessionId ? coworkSessions.find(s => s.id === sessionId) : null;
-                    const isAgent = session?.metadata?.sessionMode === 'agent' || coworkTask?.mode === 'agent';
-                    onModeChange?.('cowork');
-                    onOpen?.(isAgent ? 'cowork-agent-session' : 'workspace', isAgent ? { sessionId, originView: 'workspace' } : undefined);
-                  } else if (item.mode === 'browser') {
-                    onModeChange?.('browser');
-                    onOpen?.('browser');
-                  }
-                }}
+                onClick={() => openRecentItem(item)}
+                onRenameCommit={item.kind === 'browser' ? undefined : commitRename}
+                pinned={isPinned(item.id)}
+                onPinToggle={() => togglePinnedEntry(item)}
+                onUnpin={isPinned(item.id) ? () => togglePinnedEntry(item) : undefined}
                 onDelete={() => setDeleteTarget({ id: item.id, title: item.title, kind: item.kind })}
               />
             ))}
+            {!recentsOverflowOpen && recentsOverflowCount > 0 && (
+              <button
+                type="button"
+                onClick={toggleRecentsOverflow}
+                className="w-full flex items-center gap-2.5 py-1.5 px-3 max-md:min-h-11 rounded-xl border-none bg-transparent cursor-pointer text-left transition-colors text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)]"
+              >
+                <CaretRight size={13} />
+                <span className="text-[12px]">More…</span>
+              </button>
+            )}
+            {recentsOverflowOpen && filteredRecentItems.length > 15 && (
+              <button
+                type="button"
+                onClick={toggleRecentsOverflow}
+                className="w-full flex items-center gap-2.5 py-1.5 px-3 max-md:min-h-11 rounded-xl border-none bg-transparent cursor-pointer text-left transition-colors text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)]"
+              >
+                <CaretRight size={13} className="rotate-90" />
+                <span className="text-[12px]">Show less</span>
+              </button>
+            )}
           </RecentsPanel>
         </>
       ) : (
@@ -1183,6 +1273,8 @@ export function ShellRail({
             title="Recents"
             openAllTitle="Open all code recents"
             onOpenAll={() => onOpen?.('code-threads')}
+            onAdd={handleNewSession}
+            addTitle="New Thread"
             filter={
               <Popover>
                 <PopoverTrigger asChild>
@@ -1362,9 +1454,26 @@ export function ShellRail({
                             className="flex-1 min-w-0 flex items-center gap-2.5 bg-transparent border-none p-0 text-left cursor-pointer font-medium"
                           >
                             <Cpu size={15} weight={isActive ? 'fill' : 'bold'} />
-                            <span className="text-[12px] overflow-hidden text-ellipsis whitespace-nowrap min-w-0 flex-1">{s.name || 'Untitled Session'}</span>
+                            {renamingId === s.id ? (
+                              <InlineRenameInput
+                                initialValue={s.name || 'Untitled Session'}
+                                onCommit={(value) => {
+                                  setRenamingId(null);
+                                  const trimmed = value.trim();
+                                  if (trimmed) useCodeSessionStore.getState().updateSession(s.id, { name: trimmed });
+                                }}
+                                onCancel={() => setRenamingId(null)}
+                              />
+                            ) : (
+                              <span className="text-[12px] overflow-hidden text-ellipsis whitespace-nowrap min-w-0 flex-1">{s.name || 'Untitled Session'}</span>
+                            )}
+                            <NativeSourceBadge source={sourceRefFromMetadata(s.metadata as Record<string, unknown>)} />
                           </button>
                           <RecentItemMenu
+                            onOpen={() => openNativeSessionSurface(s)}
+                            onRename={() => setRenamingId(s.id)}
+                            pinned={isPinned(s.id)}
+                            onPinToggle={() => togglePinnedEntry({ id: s.id, kind: 'code', mode: 'code' })}
                             onDelete={() => setDeleteTarget({ id: s.id, title: s.name || 'Untitled Session', kind: 'code' })}
                           />
                         </div>
@@ -1500,23 +1609,22 @@ function useSessionSummary(sessionId?: string | null): SessionSummary {
 function RecentRailItem({
   item,
   onClick,
+  onRenameCommit,
+  pinned,
+  onPinToggle,
+  onUnpin,
   onDelete,
 }: {
-  item: {
-    id: string;
-    title: string;
-    mode: AppMode;
-    icon: any;
-    isActive: boolean;
-    updatedAt: number;
-    kind: 'chat' | 'cowork' | 'task' | 'agent' | 'browser' | 'code';
-    status: 'active' | 'completed' | 'archived';
-    sessionId?: string | null;
-  };
+  item: RailRecentItem;
   onClick: () => void;
+  onRenameCommit?: (item: RailRecentItem, name: string) => void;
+  pinned?: boolean;
+  onPinToggle?: () => void;
+  onUnpin?: () => void;
   onDelete: () => void;
 }): React.ReactNode {
   const IconComponent = item.icon;
+  const [renaming, setRenaming] = useState(false);
   const sessionSummary = useSessionSummary(
     item.sessionId && (item.mode === 'chat' || item.kind === 'agent') ? item.sessionId : null
   );
@@ -1552,9 +1660,17 @@ function RecentRailItem({
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-[12px] overflow-hidden text-ellipsis whitespace-nowrap min-w-0">
-            {item.title}
-          </div>
+          {renaming ? (
+            <InlineRenameInput
+              initialValue={item.title}
+              onCommit={(value) => onRenameCommit?.(item, value)}
+              onCancel={() => setRenaming(false)}
+            />
+          ) : (
+            <div className="text-[12px] overflow-hidden text-ellipsis whitespace-nowrap min-w-0">
+              {item.title}
+            </div>
+          )}
           <div className="flex items-center gap-1.5 text-[11px] text-[var(--shell-item-muted)] overflow-hidden">
             {isStreaming && (
               <span className="relative flex size-1.5">
@@ -1567,103 +1683,23 @@ function RecentRailItem({
           </div>
         </div>
       </button>
-      <RecentItemMenu onDelete={onDelete} />
-    </div>
-  );
-}
-
-function BotMailBadge({ botId }: { botId: string }): React.ReactNode | null {
-  const unread = useCommRailsUnreadCount(botId);
-  if (unread <= 0) return null;
-  return (
-    <span className="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 rounded-full text-[10px] font-bold bg-[var(--accent-primary)] text-[var(--accent-primary-contrast)]">
-      {unread > 99 ? '99+' : unread}
-    </span>
-  );
-}
-
-function BotRailItem({
-  id,
-  bot,
-  name,
-  accentColor,
-  isStarting,
-  badge,
-  onClick,
-  onStart,
-}: {
-  id: string;
-  bot: Agent;
-  name: string;
-  accentColor: string;
-  isStarting: boolean;
-  badge?: React.ReactNode;
-  onClick: () => void;
-  onStart: (e: React.MouseEvent) => void;
-}): React.ReactNode {
-  const sessionId = useStoreWithEqualityFn(
-    useChatSessionStore,
-    useCallback(
-      (state) => {
-        const session = state.sessions
-          .filter((s) => s.metadata?.agentId === id)
-          .sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime())[0];
-        return session?.id ?? null;
-      },
-      [id]
-    ),
-    shallow
-  );
-  const sessionSummary = useSessionSummary(sessionId);
-
-  const { lastMessage, lastMessageAt, isStreaming } = sessionSummary;
-  const statusText = isStarting
-    ? 'Starting…'
-    : isStreaming
-    ? 'Working…'
-    : lastMessage || '';
-  const timeText = !isStarting && !isStreaming && lastMessageAt ? formatRelativeTime(lastMessageAt) : '';
-
-  return (
-    <div
-      data-rail-item={id}
-      className="group w-full flex items-center gap-0.5 py-1.5 px-2 max-md:min-h-11 rounded-xl transition-all duration-200 font-medium bg-transparent text-[var(--shell-item-fg)] hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)]"
-    >
-      <button
-        type="button"
-        disabled={isStarting}
-        onClick={onClick}
-        className="flex flex-1 min-w-0 items-center gap-2.5 border-none bg-transparent p-0 text-left cursor-pointer font-medium text-[var(--shell-item-fg)] hover:text-[var(--accent-primary)] disabled:opacity-50"
-      >
-        <div className="flex shrink-0 items-center justify-center">
-          <BotAvatar bot={bot} size={24} className="rounded-lg" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center text-[12px] overflow-hidden text-ellipsis whitespace-nowrap">
-            <span className="truncate">{name}</span>
-            {badge}
-          </div>
-          <div className="flex items-center gap-1.5 text-[11px] text-[var(--shell-item-muted)] overflow-hidden">
-            {isStreaming && (
-              <span className="relative flex size-1.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--accent-primary)] opacity-75" />
-                <span className="relative inline-flex rounded-full size-1.5 bg-[var(--accent-primary)]" />
-              </span>
-            )}
-            <span className="truncate flex-1">{statusText}</span>
-            {timeText && <span className="shrink-0 text-[10px] opacity-60">{timeText}</span>}
-          </div>
-        </div>
-      </button>
-      <button
-        type="button"
-        onClick={onStart}
-        disabled={isStarting}
-        className="opacity-0 group-hover:opacity-100 shrink-0 rounded-md p-1 text-[var(--shell-item-muted)] hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)] disabled:opacity-50 transition-opacity border-none bg-transparent cursor-pointer"
-        title="Start session"
-      >
-        <Play size={12} weight="fill" />
-      </button>
+      {onUnpin && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onUnpin(); }}
+          title="Unpin from rail"
+          className="opacity-0 max-md:opacity-100 group-hover:opacity-100 shrink-0 -ml-1 size-6 max-md:size-11 rounded-md bg-transparent border-none text-[var(--shell-item-muted)] hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)] cursor-pointer flex items-center justify-center transition-all"
+        >
+          <PushPinSlash size={13} />
+        </button>
+      )}
+      <RecentItemMenu
+        onOpen={onClick}
+        onRename={onRenameCommit ? () => setRenaming(true) : undefined}
+        pinned={pinned}
+        onPinToggle={onPinToggle}
+        onDelete={onDelete}
+      />
     </div>
   );
 }
@@ -1676,6 +1712,9 @@ function RecentsPanel({
   openAllTitle,
   onOpenAll,
   filter,
+  onAdd,
+  addTitle,
+  shrink,
 }: {
   expanded: boolean;
   onToggle: () => void;
@@ -1684,9 +1723,12 @@ function RecentsPanel({
   openAllTitle?: string;
   onOpenAll?: () => void;
   filter?: React.ReactNode;
+  onAdd?: () => void;
+  addTitle?: string;
+  shrink?: boolean;
 }): React.ReactNode {
   return (
-    <div className="flex-1 min-h-0 flex flex-col px-2">
+    <div className={cn("flex flex-col px-2", shrink ? "shrink-0" : "flex-1 min-h-0")}>
       <div className="group px-1 py-2 flex items-center justify-between text-[var(--shell-item-muted)] text-[12px] font-extrabold uppercase tracking-[0.08em] select-none">
         <button
           type="button"
@@ -1703,6 +1745,16 @@ function RecentsPanel({
           <span>{title}</span>
         </button>
         <div className="flex items-center gap-0.5 bg-[var(--shell-rail-bg)] pl-2 pr-1 -mr-1 rounded-md">
+          {onAdd && (
+            <button
+              type="button"
+              onClick={onAdd}
+              className="opacity-0 max-md:opacity-100 group-hover:opacity-100 size-6 max-md:size-11 rounded-md bg-transparent border-none text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)] cursor-pointer flex items-center justify-center transition-all"
+              title={addTitle}
+            >
+              <Plus size={13} weight="bold" />
+            </button>
+          )}
           {onOpenAll && (
             <button
               type="button"
@@ -1729,7 +1781,7 @@ function RecentsPanel({
         </div>
       </div>
       {expanded && (
-        <div className="flex-1 overflow-y-auto flex flex-col gap-0.5 min-h-0">
+        <div className={cn(shrink ? "" : "flex-1 overflow-y-auto min-h-0", "flex flex-col gap-0.5")}>
           <div className="flex flex-col gap-0.5">{children}</div>
         </div>
       )}
@@ -1781,8 +1833,54 @@ function FilterRow({
   );
 }
 
-function RecentItemMenu({ onDelete }: { onDelete: () => void }): React.ReactNode {
+function InlineRenameInput({ initialValue, onCommit, onCancel }: {
+  initialValue: string;
+  onCommit: (value: string) => void;
+  onCancel: () => void;
+}): React.ReactNode {
+  // Enter/blur commit and Esc cancel can both fire for one edit; guard so the
+  // commit runs at most once.
+  const finishedRef = useRef(false);
+  const finish = useCallback((commit: boolean, value: string) => {
+    if (finishedRef.current) return;
+    finishedRef.current = true;
+    if (commit) onCommit(value);
+    else onCancel();
+  }, [onCommit, onCancel]);
+  return (
+    <input
+      type="text"
+      autoFocus
+      defaultValue={initialValue}
+      onFocus={(e) => e.currentTarget.select()}
+      onClick={(e) => e.stopPropagation()}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          finish(true, e.currentTarget.value);
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          finish(false, '');
+        }
+      }}
+      onBlur={(e) => finish(true, e.currentTarget.value)}
+      className="min-w-0 flex-1 rounded-md border border-solid border-[var(--border-subtle)] bg-[var(--surface-hover)] px-1.5 py-0.5 text-[12px] font-medium text-[var(--shell-item-fg)] outline-none focus:border-[var(--accent-primary)]"
+    />
+  );
+}
+
+function RecentItemMenu({ onOpen, onRename, pinned, onPinToggle, onDelete }: {
+  onOpen?: () => void;
+  onRename?: () => void;
+  pinned?: boolean;
+  onPinToggle?: () => void;
+  onDelete: () => void;
+}): React.ReactNode {
   const [open, setOpen] = useState(false);
+  const run = (fn: () => void) => () => {
+    setOpen(false);
+    fn();
+  };
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -1803,9 +1901,40 @@ function RecentItemMenu({ onDelete }: { onDelete: () => void }): React.ReactNode
         collisionPadding={8}
         onClick={(e) => e.stopPropagation()}
       >
+        {onOpen && (
+          <button
+            type="button"
+            onClick={run(onOpen)}
+            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-[13px] text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)] border-none bg-transparent cursor-pointer text-left transition-colors"
+          >
+            <ArrowSquareOut size={14} />
+            Open
+          </button>
+        )}
+        {onRename && (
+          <button
+            type="button"
+            onClick={run(onRename)}
+            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-[13px] text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)] border-none bg-transparent cursor-pointer text-left transition-colors"
+          >
+            <PencilSimple size={14} />
+            Rename
+          </button>
+        )}
+        {onPinToggle && (
+          <button
+            type="button"
+            onClick={run(onPinToggle)}
+            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-[13px] text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)] border-none bg-transparent cursor-pointer text-left transition-colors"
+          >
+            {pinned ? <PushPinSlash size={14} /> : <PushPin size={14} />}
+            {pinned ? 'Unpin' : 'Pin to rail'}
+          </button>
+        )}
+        <div className="h-px bg-[var(--shell-divider)] my-1" />
         <button
           type="button"
-          onClick={() => { setOpen(false); onDelete(); }}
+          onClick={run(onDelete)}
           className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-[13px] text-[var(--status-error)] hover:bg-[var(--shell-danger-soft-bg)] border-none bg-transparent cursor-pointer text-left transition-colors"
         >
           <Trash size={14} />

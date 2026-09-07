@@ -19,6 +19,7 @@ import { useResolvedDefaultModelSelection } from '@/hooks/use-default-model-sele
 import { useCodeModeStore } from './CodeModeStore';
 import { useCodeSessionStore } from './CodeSessionStore';
 import type { CodeWorkspaceRecord } from './CodeModeStore';
+import { NativeOriginBanner } from '@/components/native-sessions/NativeOriginBanner';
 
 const PREVIEW_DEFAULT_WIDTH = 440;
 const PREVIEW_MIN_WIDTH = 260;
@@ -130,6 +131,10 @@ export function CodeThreadView({ workspace }: CodeThreadViewProps) {
         active={codeAgentModeEnabled}
         surface="code"
         dataTestId="agent-mode-code-backdrop"
+      />
+      <NativeOriginBanner
+        sessionId={activeCodeSessionId}
+        metadata={activeCodeSession?.metadata}
       />
 
       {hasSession && isPreviewCollapsed ? (

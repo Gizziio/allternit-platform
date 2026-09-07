@@ -16,6 +16,7 @@
         "@ai-sdk/provider": "2.0.1",
         "@ai-sdk/provider-utils": "3.0.21",
         "@allternit/gizzi-util": "workspace:*",
+        "@allternit/native-sessions": "workspace:*",
         "@allternit/orchestrator": "workspace:*",
         "@allternit/plugin": "workspace:*",
         "@allternit/request-scorer": "workspace:*",
@@ -215,6 +216,10 @@
       "devDependencies": {
         "typescript": "^5.0.0"
       }
+    },
+    "../../packages/@allternit/native-sessions": {
+      "name": "@allternit/native-sessions",
+      "version": "0.1.0"
     },
     "packages/script": {
       "name": "@allternit/script",
@@ -433,6 +438,9 @@
     ],
     "@allternit/gizzi-util": [
       "@allternit/gizzi-util@workspace:packages/gizzi-util"
+    ],
+    "@allternit/native-sessions": [
+      "@allternit/native-sessions@workspace:../../packages/@allternit/native-sessions"
     ],
     "@allternit/governor": [
       "@allternit/governor@workspace:../../../../domains/governance/governor"

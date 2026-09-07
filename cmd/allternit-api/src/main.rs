@@ -95,6 +95,7 @@ use allternit_api::playground_routes::playground_router;
 use allternit_api::provider_routes::provider_router;
 use allternit_api::rate_limit::rate_limit_middleware;
 use allternit_api::rails::{rails_router, RailsState};
+use allternit_api::fabric_routes::fabric_router;
 use allternit_api::remote_control_routes::remote_control_router;
 use allternit_api::research_task_routes::research_task_router;
 use allternit_api::rails_client_impl::create_local_rails_client;
@@ -268,7 +269,8 @@ async fn main() {
     // Initialize unified auth configuration and JWKS manager for Clerk JWT verification
     let auth_config = allternit_api::auth::AuthConfig::from_app_config(app_config);
     let jwks = allternit_api::auth::JwksManager::new(&auth_config);
-    info!("JWKS manager initialized");
+    jwks.warmup().await;
+    info!(jwks_ready = jwks.is_ready().await, "JWKS manager initialized");
 
     // Webhook secret for Clerk webhook verification
     let webhook_secret = app_config.clerk_webhook_secret();
@@ -325,16 +327,27 @@ async fn main() {
         allternit_api::office_cli_routes::load_docs(&app_config),
     ));
 
+    // Process-wide shutdown signal. SIGTERM/SIGINT flips this broadcast; the
+    // background loops below select on a subscribed receiver and exit, and the
+    // HTTP server drains in-flight requests before the runtime aborts whatever
+    // is still running (library-spawned loops without a shutdown handle).
+    let (shutdown_tx, _) = tokio::sync::broadcast::channel::<()>(1);
+
     // Open Design skill cache — daemon-side discovery with hot-reload.
     let design_skill_cache = DesignSkillCache::new();
     {
         let cache = design_skill_cache.clone();
+        let mut shutdown_rx = shutdown_tx.subscribe();
         tokio::spawn(async move {
             let mut interval = tokio::time::interval(Duration::from_secs(5));
             interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
             loop {
-                interval.tick().await;
-                cache.refresh(None).await;
+                tokio::select! {
+                    _ = shutdown_rx.recv() => break,
+                    _ = interval.tick() => {
+                        cache.refresh(None).await;
+                    }
+                }
             }
         });
     }
@@ -394,6 +407,7 @@ async fn main() {
     // Refresh the Private Fabric node provider pool from the DB registry.
     {
         let state = Arc::clone(&state);
+        let mut shutdown_rx = shutdown_tx.subscribe();
         let period = std::time::Duration::from_secs(
             std::env::var("FABRIC_NODE_REFRESH_INTERVAL_SECS")
                 .ok()
@@ -405,10 +419,14 @@ async fn main() {
             let mut interval = tokio::time::interval(period);
             interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
             loop {
-                interval.tick().await;
-                match registry.active_provider_nodes() {
-                    Ok(nodes) => state.fabric_node_provider.sync_nodes(nodes),
-                    Err(e) => tracing::warn!("Failed to refresh fabric node pool: {e}"),
+                tokio::select! {
+                    _ = shutdown_rx.recv() => break,
+                    _ = interval.tick() => {
+                        match registry.active_provider_nodes() {
+                            Ok(nodes) => state.fabric_node_provider.sync_nodes(nodes),
+                            Err(e) => tracing::warn!("Failed to refresh fabric node pool: {e}"),
+                        }
+                    }
                 }
             }
         });
@@ -417,6 +435,7 @@ async fn main() {
     // Periodic Fabric provider health checks.
     {
         let state = Arc::clone(&state);
+        let mut shutdown_rx = shutdown_tx.subscribe();
         let period = std::time::Duration::from_secs(
             std::env::var("FABRIC_PROVIDER_HEALTH_INTERVAL_SECS")
                 .ok()
@@ -427,13 +446,17 @@ async fn main() {
             let mut interval = tokio::time::interval(period);
             interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
             loop {
-                interval.tick().await;
-                for (kind, snapshot) in state.fabric_provider_registry.health_check_all().await {
-                    if snapshot.healthy {
-                        tracing::info!(provider = %kind, "Fabric provider healthy");
-                    } else {
-                        let message = snapshot.message.as_deref().unwrap_or("unhealthy");
-                        tracing::warn!(provider = %kind, %message, "Fabric provider unhealthy");
+                tokio::select! {
+                    _ = shutdown_rx.recv() => break,
+                    _ = interval.tick() => {
+                        for (kind, snapshot) in state.fabric_provider_registry.health_check_all().await {
+                            if snapshot.healthy {
+                                tracing::info!(provider = %kind, "Fabric provider healthy");
+                            } else {
+                                let message = snapshot.message.as_deref().unwrap_or("unhealthy");
+                                tracing::warn!(provider = %kind, %message, "Fabric provider unhealthy");
+                            }
+                        }
                     }
                 }
             }
@@ -444,6 +467,7 @@ async fn main() {
     // into fabric_cost_events and ledger charges.
     {
         let state = Arc::clone(&state);
+        let mut shutdown_rx = shutdown_tx.subscribe();
         let period = std::time::Duration::from_secs(
             std::env::var("FABRIC_USAGE_PROCESS_INTERVAL_SECS")
                 .ok()
@@ -454,22 +478,26 @@ async fn main() {
             let mut interval = tokio::time::interval(period);
             interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
             loop {
-                interval.tick().await;
-                let db = state.db.clone();
-                match tokio::task::spawn_blocking(move || {
-                    let ingestor = allternit_api::fabric::usage::UsageIngestor::new(db.clone());
-                    let ledger = allternit_api::fabric::credits::CreditsLedger::new(db);
-                    ingestor.run_batch(&ledger, 100)
-                })
-                .await
-                {
-                    Ok(Ok(processed)) => {
-                        if processed > 0 {
-                            tracing::info!(processed, "converted usage events to cost events");
+                tokio::select! {
+                    _ = shutdown_rx.recv() => break,
+                    _ = interval.tick() => {
+                        let db = state.db.clone();
+                        match tokio::task::spawn_blocking(move || {
+                            let ingestor = allternit_api::fabric::usage::UsageIngestor::new(db.clone());
+                            let ledger = allternit_api::fabric::credits::CreditsLedger::new(db);
+                            ingestor.run_batch(&ledger, 100)
+                        })
+                        .await
+                        {
+                            Ok(Ok(processed)) => {
+                                if processed > 0 {
+                                    tracing::info!(processed, "converted usage events to cost events");
+                                }
+                            }
+                            Ok(Err(e)) => tracing::warn!(error = %e, "usage-to-cost batch failed"),
+                            Err(e) => tracing::warn!(error = %e, "usage-to-cost task panicked"),
                         }
                     }
-                    Ok(Err(e)) => tracing::warn!(error = %e, "usage-to-cost batch failed"),
-                    Err(e) => tracing::warn!(error = %e, "usage-to-cost task panicked"),
                 }
             }
         });
@@ -478,6 +506,7 @@ async fn main() {
     // Background Fabric provider price-cache refresh.
     {
         let state = Arc::clone(&state);
+        let mut shutdown_rx = shutdown_tx.subscribe();
         let period = std::time::Duration::from_secs(
             std::env::var("FABRIC_PROVIDER_PRICE_INTERVAL_SECS")
                 .ok()
@@ -488,24 +517,28 @@ async fn main() {
             let mut interval = tokio::time::interval(period);
             interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
             loop {
-                interval.tick().await;
-                let db = state.db.clone();
-                let registry = state.fabric_provider_registry.clone();
-                let catalog = state.resource_class_catalog.clone();
-                match allternit_api::fabric::price_cache::refresh_cache(
-                    db,
-                    &registry,
-                    &catalog,
-                    period * 2,
-                )
-                .await
-                {
-                    Ok(written) => {
-                        if written > 0 {
-                            tracing::info!(written, "refreshed Fabric provider price cache");
+                tokio::select! {
+                    _ = shutdown_rx.recv() => break,
+                    _ = interval.tick() => {
+                        let db = state.db.clone();
+                        let registry = state.fabric_provider_registry.clone();
+                        let catalog = state.resource_class_catalog.clone();
+                        match allternit_api::fabric::price_cache::refresh_cache(
+                            db,
+                            &registry,
+                            &catalog,
+                            period * 2,
+                        )
+                        .await
+                        {
+                            Ok(written) => {
+                                if written > 0 {
+                                    tracing::info!(written, "refreshed Fabric provider price cache");
+                                }
+                            }
+                            Err(e) => tracing::warn!(error = %e, "price cache refresh failed"),
                         }
                     }
-                    Err(e) => tracing::warn!(error = %e, "price cache refresh failed"),
                 }
             }
         });
@@ -551,8 +584,12 @@ async fn main() {
     // kills idle watch processes and MCP sessions.
     {
         let state = Arc::clone(&state);
+        let mut shutdown_rx = shutdown_tx.subscribe();
         tokio::spawn(async move {
-            allternit_api::office_cli_routes::reap_idle_sessions(state).await;
+            tokio::select! {
+                _ = shutdown_rx.recv() => {}
+                _ = allternit_api::office_cli_routes::reap_idle_sessions(state) => {}
+            }
         });
     }
 
@@ -626,6 +663,7 @@ async fn main() {
         .merge(board_stream_router())
         .merge(runtime_backend_router())
         .merge(remote_control_router())
+        .merge(fabric_router())
         .merge(agents_v1_router())
         .merge(
             bot_desktop_router().layer(axum::middleware::from_fn_with_state(
@@ -666,6 +704,7 @@ async fn main() {
         .merge(allternit_api::fabric_usage_routes::router())
         .merge(agent_cloud_router())
         .merge(allternit_api::computer_routes::router())
+        .merge(allternit_api::bot_group_routes::router())
         .merge(allternit_api::allternit_vault::router())
         .merge(passkey_router(&state))
         .merge(allternit_api::admin_workspace_routes::router())
@@ -893,18 +932,54 @@ async fn main() {
     // Re-index Open Design skills on SIGHUP in production without restarting.
     {
         let cache = Arc::clone(&state).design_skill_cache.clone();
+        let mut shutdown_rx = shutdown_tx.subscribe();
         tokio::spawn(async move {
             let mut sig = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::hangup())
                 .expect("SIGHUP handler");
             loop {
-                sig.recv().await;
-                info!("SIGHUP received, re-indexing Open Design skills");
-                cache.refresh(None).await;
+                tokio::select! {
+                    _ = shutdown_rx.recv() => break,
+                    _ = sig.recv() => {
+                        info!("SIGHUP received, re-indexing Open Design skills");
+                        cache.refresh(None).await;
+                    }
+                }
             }
         });
     }
 
-    axum::serve(listener, app).await.unwrap();
+    // Graceful shutdown: SIGTERM/SIGINT notifies the background loops above via
+    // the broadcast immediately, then gives in-flight HTTP requests a bounded
+    // drain window before the server stops. Same pattern as
+    // allternit-cloud-api's `start_server` (oneshot + `with_graceful_shutdown`).
+    const DRAIN_TIMEOUT: Duration = Duration::from_secs(10);
+    let (server_shutdown_tx, server_shutdown_rx) = tokio::sync::oneshot::channel::<()>();
+    tokio::spawn(async move {
+        let mut sigterm =
+            tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+                .expect("Failed to create SIGTERM handler");
+        let mut sigint =
+            tokio::signal::unix::signal(tokio::signal::unix::SignalKind::interrupt())
+                .expect("Failed to create SIGINT handler");
+
+        tokio::select! {
+            _ = sigterm.recv() => info!("Received SIGTERM, shutting down gracefully..."),
+            _ = sigint.recv() => info!("Received SIGINT, shutting down gracefully..."),
+        }
+
+        // Stop the background loops first, then let in-flight requests finish.
+        let _ = shutdown_tx.send(());
+        tokio::time::sleep(DRAIN_TIMEOUT).await;
+        let _ = server_shutdown_tx.send(());
+    });
+
+    axum::serve(listener, app)
+        .with_graceful_shutdown(async {
+            let _ = server_shutdown_rx.await;
+        })
+        .await
+        .expect("Server failed");
+    info!("Server stopped");
 }
 
 /// Initialize the cowork background service (autonomous loop) backed by SQLite.
@@ -1230,26 +1305,6 @@ async fn initialize_vm_driver(
                 dynamic: Some(Arc::new(router)),
                 incus: incus_driver,
             };
-        }
-    }
-
-    // If OpenSandbox is explicitly configured, prefer it over the local
-    // platform driver so bots can use a persistent cloud sandbox.
-    if let Ok(open_sandbox_url) = std::env::var("OPEN_SANDBOX_URL") {
-        use allternit_driver_interface::ExecutionDriver;
-        use allternit_opensandbox_driver::{OpenSandboxConfig, OpenSandboxDriver};
-        let config = OpenSandboxConfig::new(open_sandbox_url);
-        let driver = OpenSandboxDriver::new(config);
-        match driver.health_check().await {
-            Ok(health) if health.healthy => {
-                info!("OpenSandbox driver initialized from OPEN_SANDBOX_URL");
-                return VmDriverSet {
-                    dynamic: Some(Arc::new(driver)),
-                    incus: None,
-                };
-            }
-            Ok(health) => warn!("OpenSandbox health check returned unhealthy: {:?}", health),
-            Err(e) => warn!("OpenSandbox health check failed: {}", e),
         }
     }
 

@@ -36,7 +36,6 @@ const DesignModeAgentSession = lazy(() => import('../views/agent-sessions/Design
 const BotInboxView = lazy(() => import('../views/bots/BotInboxView').then(m => ({ default: m.BotInboxView })));
 const BotHomeView = lazy(() => import('../views/bots/BotHomeView').then(m => ({ default: m.BotHomeView })));
 const BotChatSessionView = lazy(() => import('../views/bots/BotChatSessionView').then(m => ({ default: m.BotChatSessionView })));
-import { BotRoster } from '../views/bots/BotRoster';
 import { GroupChatView } from '../views/bots/GroupChatView';
 import { GroupsListView } from '../views/bots/GroupsListView';
 import { useChatSessionStore } from '../views/chat/ChatSessionStore';
@@ -62,7 +61,7 @@ const ProjectView          = lazy(() => import('../views/ProjectView').then(m =>
 const ToolsView            = lazy(() => import('../views/code/ToolsView').then(m => ({ default: m.ToolsView })));
 const RunReplayView        = lazy(() => import('../views/code/RunReplayView').then(m => ({ default: m.RunReplayView })));
 const AppsExtensionsView     = lazy(() => import('../views/AppsExtensionsView').then(m => ({ default: m.AppsExtensionsView })));
-const DispatchView           = lazy(() => import('../views/DispatchView').then(m => ({ default: m.DispatchView })));
+const FabricTransportView    = lazy(() => import('../views/FabricTransportView').then(m => ({ default: m.FabricTransportView })));
 const PlaygroundView       = lazy(() => import('../views/PlaygroundView').then(m => ({ default: m.PlaygroundView })));
 const AllternitPlaygroundView = lazy(() => import('../views/AllternitPlaygroundView').then(m => ({ default: m.AllternitPlaygroundView })));
 const AgentStudioView      = lazy(() => import('../views/AgentStudioView').then(m => ({ default: m.AgentStudioView })));
@@ -359,6 +358,11 @@ export function getShellViewRegistry(handlers: {
         <SettingsView />
       </ErrorBoundary>
     ),
+    customize: ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Customize" />}>
+        <SettingsView />
+      </ErrorBoundary>
+    ),
     'browser-extensions': () => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Office & Extensions" />}>
         <BrowserExtensionsView openView={open} />
@@ -415,8 +419,8 @@ export function getShellViewRegistry(handlers: {
       </ErrorBoundary>
     ),
     'agent-hub': ({ context }: { context?: ViewContext }) => (
-      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Agent | Bot Hub" />}>
-        <AgentHub onSessionStarted={(sessionId) => open('cowork-agent-session', { sessionId })} />
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Bot Hub" />}>
+        <AgentHub onSessionStarted={(sessionId, botId) => open('bot-chat-session', { sessionId, botId })} />
       </ErrorBoundary>
     ),
     'bot-inbox': ({ context }: { context?: ViewContext }) => {
@@ -435,22 +439,6 @@ export function getShellViewRegistry(handlers: {
         </ErrorBoundary>
       );
     },
-    'bot-roster': () => (
-      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Bot Roster" />}>
-        <BotRoster
-          onNewBot={() => open('agent-hub')}
-          onStartSession={(botId, sessionId) =>
-            open('bot-chat-session', { sessionId, botId })
-          }
-          onEditProfile={(botId) => open('bot-home', { botId })}
-          onNavigate={(view) => {
-            if (view === 'agent-hub') open('agent-hub');
-          }}
-          onSelectGroup={(groupId) => open('group-chat', { groupId })}
-          onNewGroup={(groupId) => open('group-chat', { groupId })}
-        />
-      </ErrorBoundary>
-    ),
     'group-chat': ({ context }: { context?: ViewContext }) => {
       const ctx = context?.context as { groupId?: string } | undefined;
       return (
@@ -474,7 +462,7 @@ export function getShellViewRegistry(handlers: {
           <BotChatSessionView
             sessionId={ctx?.sessionId}
             botId={ctx?.botId ?? context?.viewId}
-            onBack={() => open(ctx?.originView ?? 'bot-roster')}
+            onBack={() => open(ctx?.originView ?? 'agent-hub')}
           />
         </ErrorBoundary>
       );
@@ -1081,13 +1069,18 @@ export function getShellViewRegistry(handlers: {
       </ErrorBoundary>
     ),
     'dispatch': ({ context }: { context?: ViewContext }) => (
-      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Remote Control" />}>
-        <DispatchView />
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Fabric Transport" />}>
+        <FabricTransportView />
       </ErrorBoundary>
     ),
     'remote-control': ({ context }: { context?: ViewContext }) => (
-      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Remote Control" />}>
-        <DispatchView />
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Fabric Transport" />}>
+        <FabricTransportView />
+      </ErrorBoundary>
+    ),
+    'fabric-session': ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Fabric Transport" />}>
+        <FabricTransportView />
       </ErrorBoundary>
     ),
     'hud': () => (

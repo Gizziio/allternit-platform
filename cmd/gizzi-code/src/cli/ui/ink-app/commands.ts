@@ -41,6 +41,7 @@ import pr_comments from './commands/pr_comments/index.js'
 import releaseNotes from './commands/release-notes/index.js'
 import rename from './commands/rename/index.js'
 import resume from './commands/resume/index.js'
+import native from './commands/native/index.js'
 import review, { ultrareview } from './commands/review.js'
 import session from './commands/session/index.js'
 import share from './commands/share/index.js'
@@ -166,6 +167,19 @@ import {
 import antTrace from './commands/ant-trace/index.js'
 import perfIssue from './commands/perf-issue/index.js'
 import sandboxToggle from './commands/sandbox-toggle/index.js'
+import alwaysApprove from './commands/always-approve/index.js'
+import autoCommand from './commands/auto/index.js'
+import history from './commands/history/index.js'
+import editPrompt from './commands/edit-prompt/index.js'
+import remember from './commands/remember/index.js'
+import viewPlan from './commands/view-plan/index.js'
+import timestamps from './commands/timestamps/index.js'
+import sessionInfo from './commands/session-info/index.js'
+import recap from './commands/recap/index.js'
+import queue from './commands/queue/index.js'
+import transcript from './commands/transcript/index.js'
+import multiline from './commands/multiline/index.js'
+import cd from './commands/cd/index.js'
 import chrome from './commands/chrome/index.js'
 import stickers from './commands/stickers/index.js'
 import advisor from './commands/advisor.js'
@@ -221,7 +235,10 @@ const usageReport: Command = {
 }
 import oauthRefresh from './commands/oauth-refresh/index.js'
 import debugToolCall from './commands/debug-tool-call/index.js'
-import { getSettingSourceName } from './utils/settings/constants.js'
+import {
+  getCommandArgumentHint,
+  getCommandSourceTag,
+} from './utils/suggestions/commandSource.js'
 import {
   type Command,
   getCommandName,
@@ -276,11 +293,14 @@ export const INTERNAL_ONLY_COMMANDS = [
 // since underlying functions read from config, which can't be read at module initialization time
 const COMMANDS = memoize((): Command[] => [
   addDir,
+  alwaysApprove,
   artifact,
   advisor,
   agents,
+  autoCommand,
   branch,
   btw,
+  cd,
   chrome,
   clear,
   color,
@@ -304,6 +324,7 @@ const COMMANDS = memoize((): Command[] => [
   dash,
   diff,
   doctor,
+  editPrompt,
   effort,
   exit,
   fast,
@@ -313,6 +334,7 @@ const COMMANDS = memoize((): Command[] => [
   grep,
   heapDump,
   help,
+  history,
   h5i,
   ide,
   init,
@@ -325,17 +347,23 @@ const COMMANDS = memoize((): Command[] => [
   mcp,
   memory,
   memorySearch,
+  multiline,
+  remember,
   mobile,
   model,
   outputStyle,
   remoteEnv,
   plugin,
   pr_comments,
+  queue,
+  recap,
   releaseNotes,
   reloadPlugins,
   rename,
   resume,
+  native,
   session,
+  sessionInfo,
   skills,
   stats,
   status,
@@ -343,6 +371,8 @@ const COMMANDS = memoize((): Command[] => [
   stickers,
   tag,
   theme,
+  timestamps,
+  transcript,
   feedback,
   review,
   ultrareview,
@@ -370,6 +400,7 @@ const COMMANDS = memoize((): Command[] => [
   thinkbackPlay,
   permissions,
   plan,
+  viewPlan,
   privacySettings,
   hooks,
   exportCommand,
@@ -694,6 +725,8 @@ export const BRIDGE_SAFE_COMMANDS: Set<Command> = new Set(
     summary, // Summarize conversation
     releaseNotes, // Show changelog
     files, // List tracked files
+    remember, // Append a memory note
+    timestamps, // Toggle message timestamps
   ].filter((c): c is Command => c !== null),
 )
 
@@ -739,6 +772,45 @@ export function hasCommand(commandName: string, commands: Command[]): boolean {
   return findCommand(commandName, commands) !== undefined
 }
 
+export type DisabledCommandReason = 'availability' | 'disabled'
+
+export type DisabledCommandInfo = {
+  command: Command
+  reason: DisabledCommandReason
+}
+
+/**
+ * Finds a command by name in the UNFILTERED registry (built-ins, skill-dir
+ * commands, bundled/plugin skills, workflows) and reports which visibility
+ * gate excluded it: `availability` (auth/provider requirement, e.g. hidden
+ * until /login or /model changes auth state) or `disabled` (isEnabled()
+ * returned false, e.g. a feature flag is off).
+ *
+ * Returns null when the command does not exist at all or is currently
+ * visible (passes both gates).
+ */
+export async function findDisabledCommand(
+  commandName: string,
+  cwd: string,
+): Promise<DisabledCommandInfo | null> {
+  try {
+    const allCommands = await loadAllCommands(cwd)
+    const command = findCommand(commandName, allCommands)
+    if (!command) return null
+    if (!meetsAvailabilityRequirement(command)) {
+      return { command, reason: 'availability' }
+    }
+    if (!isCommandEnabled(command)) {
+      return { command, reason: 'disabled' }
+    }
+    return null
+  } catch (error) {
+    logError(toError(error))
+    return null
+  }
+}
+
+
 export function getCommand(commandName: string, commands: Command[]): Command {
   const command = findCommand(commandName, commands)
   if (!command) {
@@ -764,29 +836,10 @@ export function getCommand(commandName: string, commands: Command[]): Command {
  * For model-facing prompts (like SkillTool), use cmd.description directly.
  */
 export function formatDescriptionWithSource(cmd: Command): string {
-  if (cmd.type !== 'prompt') {
-    return cmd.description
-  }
-
-  if (cmd.kind === 'workflow') {
-    return `${cmd.description} (workflow)`
-  }
-
-  if (cmd.source === 'plugin') {
-    const pluginName = cmd.pluginInfo?.pluginManifest.name
-    if (pluginName) {
-      return `(${pluginName}) ${cmd.description}`
-    }
-    return `${cmd.description} (plugin)`
-  }
-
-  if (cmd.source === 'builtin' || cmd.source === 'mcp') {
-    return cmd.description
-  }
-
-  if (cmd.source === 'bundled') {
-    return `${cmd.description} (bundled)`
-  }
-
-  return `${cmd.description} (${getSettingSourceName(cmd.source)})`
+  const tag = getCommandSourceTag(cmd)
+  const hint = getCommandArgumentHint(cmd)
+  const parts = [tag]
+  if (hint) parts.push(hint)
+  parts.push(cmd.description)
+  return parts.join('  ')
 }

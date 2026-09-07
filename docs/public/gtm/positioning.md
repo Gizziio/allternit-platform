@@ -25,7 +25,7 @@ Allternit gives engineering teams the agentic infrastructure that managed vendor
 ## Self-hosting and BYOC messaging
 
 - **No vendor lock-in.** The full stack is in one repo: API, cloud backend, platform UI, desktop shell, iOS app, and agent runtime.
-- **Bring your own cloud.** Run the cloud backend on Fly.io, Railway, Hetzner, or any VPS with the included Docker image.
+- **Bring your own cloud.** Run the cloud backend on any VPS — a single static Rust binary plus systemd unit, deployed by `cmd/allternit-cloud-api/deploy-contabo.sh` (see `docs/Operations/CLOUD_API_VPS_DEPLOY.md`).
 - **Bring your own keys.** AWS KMS keys are validated locally; Azure and GCP placeholders are ready for provider-side verification.
 - **Bring your own models.** The LLM gateway supports multiple providers behind an OpenAI-compatible `/v1` surface.
 - **Bring your own identity.** Clerk is the default, but self-hosted mode removes the external dependency entirely.

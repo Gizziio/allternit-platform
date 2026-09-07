@@ -51,5 +51,6 @@ describe("getLogosAppsUrl", () => {
     expect(getLogosAppsUrl("Oh-My-Pi")).toBeNull();
     expect(getLogosAppsUrl("Dim")).toBeNull();
     expect(getLogosAppsUrl("Allternit")).toBeNull();
+    expect(getLogosAppsUrl("muse-glimmer")).toBeNull();
   });
 });

@@ -13,7 +13,9 @@ const fs = require('fs');
 const path = require('path');
 
 const desktopDir = path.resolve(__dirname, '..');
+const repoRoot = path.resolve(desktopDir, '..', '..');
 const resourcesDir = path.join(desktopDir, 'resources');
+const connectorCatalogDir = path.join(repoRoot, 'services', 'open-connector', 'catalog', 'apps');
 
 function log(message) {
   process.stdout.write(`[verify-packaged-resources] ${message}\n`);
@@ -49,21 +51,51 @@ const required = [
     label: 'Platform static export',
     buildStep: 'npm run prepare:platform-static (or scripts/build-desktop.sh)',
   },
+  {
+    path: path.join(resourcesDir, 'computer-use', 'acu', 'launch.py'),
+    label: 'ACU computer-use gateway (launch.py)',
+    buildStep: 'npm run prepare:acu-gateway',
+  },
 ];
 
 let failed = false;
 
+const allowMissingApi = process.env.ALLTERNIT_ALLOW_MISSING_API === '1';
+
 for (const item of required) {
   if (fs.existsSync(item.path)) {
     log(`✓ ${item.label}: ${item.path}`);
-  } else {
-    failed = true;
-    process.stderr.write(
-      `[verify-packaged-resources] ✗ Missing ${item.label}\n` +
-      `    Expected at: ${item.path}\n` +
-      `    Build it with: ${item.buildStep}\n`
-    );
+    continue;
   }
+  const isApi = item.path.endsWith(binaryName);
+  if (isApi && allowMissingApi) {
+    process.stderr.write(
+      `[verify-packaged-resources] ⚠ Missing ${item.label} (allowed by ALLTERNIT_ALLOW_MISSING_API=1)\n` +
+      `    Expected at: ${item.path}\n` +
+      `    Packaged app will fail closed at boot until a native CI/OS build stages this binary.\n`
+    );
+    continue;
+  }
+  failed = true;
+  process.stderr.write(
+    `[verify-packaged-resources] ✗ Missing ${item.label}\n` +
+    `    Expected at: ${item.path}\n` +
+    `    Build it with: ${item.buildStep}\n`
+  );
+}
+
+const catalogFiles = fs.existsSync(connectorCatalogDir)
+  ? fs.readdirSync(connectorCatalogDir).filter((name) => name.endsWith('.json'))
+  : [];
+if (catalogFiles.length === 0) {
+  failed = true;
+  process.stderr.write(
+    `[verify-packaged-resources] ✗ Missing connector sidecar catalog\n` +
+    `    Expected JSON files in: ${connectorCatalogDir}\n` +
+    `    Build it with: npm run prepare:connector-catalog\n`
+  );
+} else {
+  log(`✓ Connector sidecar catalog: ${catalogFiles.length} providers (${connectorCatalogDir})`);
 }
 
 if (failed) {

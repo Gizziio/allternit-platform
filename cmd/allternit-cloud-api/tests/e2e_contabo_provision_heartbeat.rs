@@ -97,8 +97,9 @@ async fn scratch_pool(schema: &str) -> PgPool {
 }
 
 /// Minimal schema for the provision → pair → heartbeat chain. Only the tables
-/// and columns the route code on this path actually touches. (`migrations/`
-/// is SQLite-dialect and cannot be applied to Postgres.)
+/// and columns the route code on this path actually touches. (The legacy
+/// SQLite-dialect `migrations/` tree was removed; the canonical schema is
+/// `migrations_pg/`, applied via `sqlx::migrate!`.)
 async fn create_chain_schema(db: &PgPool) {
     let statements = [
         r#"
@@ -332,6 +333,7 @@ fn build_state(db: PgPool, container_api_url: &str) -> Arc<ApiState> {
             )),
             quota_service.clone(),
         )),
+        provisioning_service: Arc::new(services::ProvisioningService::new(db.clone())),
         mesh_service: None,
         credential_cipher: None,
         inference_key_service: None,

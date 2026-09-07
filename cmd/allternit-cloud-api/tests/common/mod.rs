@@ -84,6 +84,7 @@ impl TestApp {
                 )),
                 quota_service.clone(),
             )),
+            provisioning_service: Arc::new(services::ProvisioningService::new(db.clone())),
             mesh_service: None,
             credential_cipher: None,
             inference_key_service: None,
@@ -106,11 +107,12 @@ impl TestApp {
     /// Initialize test database with migrations
     ///
     /// Migrations run in a fresh, uniquely-named schema on the shared test
-    /// database (search_path-scoped per connection). The `public` schema's
-    /// `_sqlx_migrations` bookkeeping reflects the operator-managed
-    /// `migrations_pg` history and must not be mixed with the sqlite-derived
-    /// `migrations/` tree the harness applies — sharing one bookkeeping table
-    /// fails with `VersionMismatch(1)`.
+    /// database (search_path-scoped per connection), so the harness gets its
+    /// own `_sqlx_migrations` bookkeeping table and never collides with the
+    /// `public` schema's operator-managed history (`VersionMismatch` on
+    /// shared bookkeeping). The same embedded `migrations_pg` set the
+    /// library applies is used here — the legacy SQLite-dialect `migrations/`
+    /// tree it replaced cannot run against Postgres.
     async fn init_test_db() -> PgPool {
         let database_url = std::env::var("TEST_DATABASE_URL")
             .unwrap_or_else(|_| "postgres://allternit:allternit_pg_2026@localhost:5432/allternit_test".to_string());
@@ -136,7 +138,7 @@ impl TestApp {
             .expect("Failed to connect to test database");
 
         // Run migrations
-        sqlx::migrate!("./migrations")
+        sqlx::migrate!("./migrations_pg")
             .run(&pool)
             .await
             .expect("Failed to run migrations");

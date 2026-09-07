@@ -33,6 +33,10 @@ import React, {
 } from 'react';
 import { Monitor } from '@phosphor-icons/react';
 import { useBrowserAgentStore } from './browserAgent.store';
+import { useAgentStore } from '@/lib/agents/agent.store';
+import { getBotAccentColor } from '@/lib/bots/bot-profile';
+import { BotComputerViewport } from '@/views/bots/BotComputerViewport';
+import { useBotActiveVm } from '@/views/bots/useBotActiveVm';
 
 // ─────────────────────────────────────────────────────────────
 // Types
@@ -219,6 +223,13 @@ export interface ACIComputerUseViewProps {
 export function ACIComputerUseView({
   agentBarHeight = 54,
 }: ACIComputerUseViewProps) {
+  const connectedBotId = useBrowserAgentStore((s) => s.connectedBotId);
+  const setAciSidecarExpanded = useBrowserAgentStore((s) => s.setAciSidecarExpanded);
+  const connectedBot = useAgentStore((s) =>
+    connectedBotId ? s.agents.find((agent) => agent.id === connectedBotId) ?? null : null,
+  );
+  const botVm = useBotActiveVm(connectedBotId ?? undefined);
+
   const status           = useBrowserAgentStore((s) => s.status);
   const goal             = useBrowserAgentStore((s) => s.goal);
   const currentAction    = useBrowserAgentStore((s) => s.currentAction);
@@ -286,6 +297,20 @@ export function ACIComputerUseView({
     ro.observe(ctr);
     return () => ro.disconnect();
   }, [recalcImgMetrics]);
+
+  if (connectedBot) {
+    return (
+      <div className="absolute inset-0 z-[5] overflow-hidden bg-[var(--bg-primary)]">
+        <BotComputerViewport
+          bot={connectedBot}
+          accentColor={getBotAccentColor(connectedBot) ?? "var(--accent-primary)"}
+          activeVM={botVm}
+          layout="aci"
+          onReturnToChat={() => setAciSidecarExpanded(false)}
+        />
+      </div>
+    );
+  }
 
   // ── Render ──────────────────────────────────────────────────
   return (

@@ -29,7 +29,7 @@ interface DashboardPageProps {
   onInstallClick: () => void;
 }
 
-const PUSH_WORKER_URL = env("VITE_REMOTE_CONTROL_PUSH_URL") ?? "https://push.remotecontrol.allternit.com";
+const PUSH_WORKER_URL = env("VITE_REMOTE_CONTROL_PUSH_URL") ?? "https://push.fabrictransport.allternit.com";
 const PLATFORM_HUB_URL = env("VITE_ALLTERNIT_PLATFORM_URL") ?? "https://platform.allternit.com";
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
@@ -261,9 +261,9 @@ export function DashboardPage({ installPrompt, onInstallClick }: DashboardPagePr
       >
         <div className="max-w-md w-full p-8 text-center rounded-2xl border border-solid border-[var(--border-default)] bg-[var(--bg-elevated)]">
           <DesktopTower size={48} style={{ opacity: 0.6 }} className="mx-auto mb-4" color="var(--accent-primary)" />
-          <h1 className="text-[22px] font-semibold mb-2">Sign in to Remote Control</h1>
+          <h1 className="text-[22px] font-semibold mb-2">Sign in to Fabric Transport</h1>
           <p className="text-[14px] text-[var(--text-secondary)] mb-6">
-            Monitor and manage your agents across machines from any device.
+            Monitor and manage this desktop and other paired runtimes from any device.
           </p>
           <a
             href={`${PLATFORM_HUB_URL}/sign-in?redirect_url=${encodeURIComponent(window.location.href)}`}
@@ -287,9 +287,9 @@ export function DashboardPage({ installPrompt, onInstallClick }: DashboardPagePr
           <div className="flex items-center gap-3">
             <DesktopTower size={32} weight="duotone" color="var(--accent-primary)" />
             <div>
-              <h1 className="text-[24px] font-semibold tracking-tight m-0">Remote Control</h1>
+              <h1 className="text-[24px] font-semibold tracking-tight m-0">Fabric Transport</h1>
               <p className="text-[13px] text-[var(--text-tertiary)] m-0 mt-0.5">
-                Monitor and manage your agents across machines.
+                Monitor and manage this desktop and other paired runtimes.
               </p>
             </div>
           </div>

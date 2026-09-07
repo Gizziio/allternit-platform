@@ -47,6 +47,12 @@ export type BaseTextInputProps = {
   readonly multiline?: boolean
 
   /**
+   * When true, invert Enter behavior: plain Enter inserts a newline and
+   * Shift/Cmd+Enter submits (multiline Enter mode).
+   */
+  readonly multilineEnter?: boolean
+
+  /**
    * Listen to user's input. Useful in case there are multiple input components
    * at the same time and input must be "routed" to a specific component.
    */

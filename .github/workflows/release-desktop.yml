@@ -18,9 +18,38 @@ concurrency:
 permissions: {}
 
 jobs:
+  # Gate: unit tests must pass before any build job starts, so a release
+  # can never be cut with failing unit tests.
+  unit-tests:
+    name: Desktop unit tests (vitest)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install pnpm
+        run: npm install -g pnpm@10.28.0
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run desktop unit tests
+        # vitest.config.ts scopes this to src/main/**/*.test.ts —
+        # Playwright e2e specs in tests/ are NOT run here.
+        run: pnpm --filter @allternit/desktop test
+
   # Build macOS .dmg (arm64 + x64, universal)
   build-macos:
     name: Build macOS
+    needs: unit-tests
     runs-on: macos-latest
     permissions:
       contents: read
@@ -115,15 +144,16 @@ jobs:
       # ── Step 3: Bundle Lima (universal limactl binary) ───────────────────────
       - name: Download Lima and create universal binary
         run: |
+          mkdir -p resources/lima/darwin
           node scripts/download-lima.cjs arm64
-          mv resources/lima/limactl resources/lima/limactl-arm64
+          mv resources/lima/darwin/limactl resources/lima/darwin/limactl-arm64
           node scripts/download-lima.cjs x86_64
-          mv resources/lima/limactl resources/lima/limactl-x86_64
-          lipo -create resources/lima/limactl-arm64 resources/lima/limactl-x86_64 \
-               -output resources/lima/limactl
-          chmod +x resources/lima/limactl
-          rm resources/lima/limactl-arm64 resources/lima/limactl-x86_64
-          lipo -info resources/lima/limactl
+          mv resources/lima/darwin/limactl resources/lima/darwin/limactl-x86_64
+          lipo -create resources/lima/darwin/limactl-arm64 resources/lima/darwin/limactl-x86_64 \
+               -output resources/lima/darwin/limactl
+          chmod +x resources/lima/darwin/limactl
+          rm resources/lima/darwin/limactl-arm64 resources/lima/darwin/limactl-x86_64
+          lipo -info resources/lima/darwin/limactl
         working-directory: surfaces/allternit-desktop
 
       # ── Step 3b: Stage mesh-node sidecar ─────────────────────────────────
@@ -184,6 +214,7 @@ jobs:
   # Build Windows NSIS installer
   build-windows:
     name: Build Windows
+    needs: unit-tests
     runs-on: windows-latest
     permissions:
       contents: read
@@ -300,6 +331,7 @@ jobs:
   # artifacts are NOT attached to the GitHub release)
   build-linux:
     name: Build Linux
+    needs: unit-tests
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -388,6 +420,14 @@ jobs:
 
       - name: Install desktop dependencies
         run: npm install
+        working-directory: surfaces/allternit-desktop
+
+      - name: Stage Cua Driver
+        run: npm run prepare:cua-driver
+        working-directory: surfaces/allternit-desktop
+
+      - name: Download Lima
+        run: npm run download:lima
         working-directory: surfaces/allternit-desktop
 
       - name: Build TypeScript

@@ -79,13 +79,31 @@ async fn create_api_key(
     let created = services::api_keys::create_api_key(
         &state.db,
         services::api_keys::CreateApiKeyInput {
-            user_id: user.id,
+            user_id: user.id.clone(),
             organization_id: user.organization_id,
             name: body.name,
             scopes: body.scopes,
         },
     )
     .await?;
+
+    services::audit::write_audit_log(
+        &state.db,
+        services::audit::AuditEvent {
+            action: "api_key.create".to_string(),
+            resource_type: "api_key".to_string(),
+            resource_id: Some(created.key.id.clone()),
+            user_id: Some(user.id),
+            user_email: user.email,
+            details: Some(serde_json::json!({
+                "name": created.key.name,
+                "prefix": created.key.prefix,
+                "scopes": created.key.scopes,
+            })),
+            success: true,
+        },
+    )
+    .await;
 
     Ok(Json(into_created_response(created)))
 }
@@ -99,6 +117,19 @@ async fn revoke_api_key(
         .await?
         .id;
     services::api_keys::revoke_api_key(&state.db, &user_id, &id).await?;
+    services::audit::write_audit_log(
+        &state.db,
+        services::audit::AuditEvent {
+            action: "api_key.revoke".to_string(),
+            resource_type: "api_key".to_string(),
+            resource_id: Some(id),
+            user_id: Some(user_id),
+            user_email: None,
+            details: None,
+            success: true,
+        },
+    )
+    .await;
     Ok(Json(serde_json::json!({ "ok": true })))
 }
 

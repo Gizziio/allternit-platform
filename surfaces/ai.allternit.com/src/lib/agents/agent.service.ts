@@ -38,6 +38,7 @@ import {
   validateCreateAgentInput,
   safeValidate,
   agentSchema,
+  coerceVmOperatorConfig,
 } from './agent.types';
 import { getDefaultAgentModel } from './agent-models';
 import {
@@ -430,10 +431,12 @@ export function transformAgentFromApi(apiAgent: unknown): Agent {
       a.identityChannels as Agent['identityChannels'],
       config.identityChannels as Agent['identityChannels'],
     ),
-    vmOperator: pick<Agent['vmOperator']>(
-      a.vm_operator as Agent['vmOperator'],
-      a.vmOperator as Agent['vmOperator'],
-      config.vmOperator as Agent['vmOperator'],
+    vmOperator: coerceVmOperatorConfig(
+      pick<Agent['vmOperator']>(
+        a.vm_operator as Agent['vmOperator'],
+        a.vmOperator as Agent['vmOperator'],
+        config.vmOperator as Agent['vmOperator'],
+      ),
     ),
   };
 }

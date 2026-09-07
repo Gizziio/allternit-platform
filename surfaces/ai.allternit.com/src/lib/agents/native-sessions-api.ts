@@ -1,22 +1,13 @@
-/**
- * Native sessions catalog client (read-only subset).
- *
- * Ported from `main` (commit 441ed7495) — the session/ui-session-polish
- * branch predates the native-sessions feature. Only the catalogue reads are
- * vendored here (no pickup/export); the terminal workspace uses this to list
- * harnesses and native CLI sessions and to derive shell spawn commands.
- */
-
-import { buildAuthHeaders } from '@/lib/agents/api-config';
-import { getActiveRuntimeId, getRuntimeExecutionTarget } from '@/lib/runtime-target';
+import { buildAuthHeaders } from "@/lib/agents/api-config";
+import { getActiveRuntimeId, getRuntimeExecutionTarget } from "@/lib/runtime-target";
 
 function getGatewayOrigin(): string {
-  if (typeof window === 'undefined') return '';
-  if (getRuntimeExecutionTarget() === 'cloud' && getActiveRuntimeId()) return '';
+  if (typeof window === "undefined") return "";
+  if (getRuntimeExecutionTarget() === "cloud" && getActiveRuntimeId()) return "";
   const win = window as unknown as Record<string, unknown>;
-  const fromWin = typeof win.__ALLTERNIT_GATEWAY_URL__ === 'string' ? (win.__ALLTERNIT_GATEWAY_URL__ as string) : '';
+  const fromWin = typeof win.__ALLTERNIT_GATEWAY_URL__ === "string" ? (win.__ALLTERNIT_GATEWAY_URL__ as string) : "";
   if (fromWin && !/^https?:\/\/(?:127\.0\.0\.1|localhost)/.test(fromWin)) return fromWin;
-  return '';
+  return "";
 }
 
 const getBase = () => `${getGatewayOrigin()}/api/v1/native-sessions`;
@@ -34,9 +25,7 @@ export interface NativeHarnessInfo {
   label: string;
   reader: string;
   projectable: boolean;
-  /** Template for resuming a session, e.g. "claude --resume <id>". */
   resumeHint: string;
-  /** Resolved harness home directory. */
   home: string;
   present: boolean;
 }
@@ -56,6 +45,30 @@ export interface NativeCatalogSession {
   projectable: boolean;
 }
 
+export interface NativeSourceRef {
+  harness: string;
+  sessionId: string;
+  path: string;
+  snapshotHash: string;
+  snapshotAt: number;
+  eventId?: string;
+  nativeHash?: string;
+  fetchedHash?: string;
+}
+
+export interface PickupResult {
+  session: { id: string; title?: string; directory?: string; sourceRef?: NativeSourceRef };
+  source: NativeSourceRef;
+  warnings: { code: string; message: string }[];
+  eventCount: number;
+}
+
+export interface FetchOriginResult {
+  divergence: "clean" | "native_ahead" | "missing";
+  fetched: number;
+  events: Array<{ kind: string; role?: string; text?: string }>;
+}
+
 export const nativeSessionsApi = {
   async listHarnesses(): Promise<NativeHarnessInfo[]> {
     const res = await authFetch(`${getBase()}/harnesses`);
@@ -66,10 +79,10 @@ export const nativeSessionsApi = {
 
   async list(opts: { cwd?: string; harness?: string } = {}): Promise<NativeCatalogSession[]> {
     const params = new URLSearchParams();
-    if (opts.cwd) params.set('cwd', opts.cwd);
-    if (opts.harness) params.set('harness', opts.harness);
+    if (opts.cwd) params.set("cwd", opts.cwd);
+    if (opts.harness) params.set("harness", opts.harness);
     const qs = params.toString();
-    const res = await authFetch(`${getBase()}${qs ? `?${qs}` : ''}`);
+    const res = await authFetch(`${getBase()}${qs ? `?${qs}` : ""}`);
     if (!res.ok) throw new Error(`native catalog failed: ${res.status}`);
     const data = (await res.json()) as { sessions: NativeCatalogSession[] };
     return data.sessions ?? [];
@@ -77,23 +90,63 @@ export const nativeSessionsApi = {
 
   async show(harness: string, id: string, cwd?: string) {
     const params = new URLSearchParams();
-    if (cwd) params.set('cwd', cwd);
+    if (cwd) params.set("cwd", cwd);
     const qs = params.toString();
-    const res = await authFetch(`${getBase()}/${encodeURIComponent(harness)}/${encodeURIComponent(id)}${qs ? `?${qs}` : ''}`);
+    const res = await authFetch(`${getBase()}/${encodeURIComponent(harness)}/${encodeURIComponent(id)}${qs ? `?${qs}` : ""}`);
     if (!res.ok) throw new Error(`native show failed: ${res.status}`);
     return res.json();
   },
+
+  async pickup(input: {
+    harness: string;
+    sessionId: string;
+    surface?: "chat" | "cowork" | "code" | "browser" | "design";
+    cwd?: string;
+  }): Promise<PickupResult> {
+    const res = await authFetch(`${getBase()}/pickup`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(body || `pickup failed: ${res.status}`);
+    }
+    return res.json() as Promise<PickupResult>;
+  },
+
+  async exportNative(sessionId: string, harness?: string): Promise<{
+    harness: string
+    sessionId: string
+    path: string
+    resumeHint: string
+    at: number
+  }> {
+    const res = await authFetch(`/api/v1/agent-sessions/${encodeURIComponent(sessionId)}/export-native`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ harness }),
+    });
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(body || `export-native failed: ${res.status}`);
+    }
+    return res.json();
+  },
+
+  async fetchOrigin(sessionId: string): Promise<FetchOriginResult> {
+    const res = await authFetch(`/api/v1/agent-sessions/${encodeURIComponent(sessionId)}/fetch-origin`, {
+      method: "POST",
+    });
+    if (!res.ok) throw new Error(`fetch-origin failed: ${res.status}`);
+    return res.json() as Promise<FetchOriginResult>;
+  },
 };
 
-/**
- * Derive a shell launch command for a catalogued native session from the
- * harness resume hint. Hints containing "<id>" get the session id spliced in;
- * hints without a placeholder are bare CLI launches (the harness resumes its
- * most recent session interactively). Returns null when no command exists.
- */
-export function deriveSpawnCommand(resumeHint: string | undefined, sessionId: string): string | null {
-  const hint = resumeHint?.trim();
-  if (!hint) return null;
-  if (hint.includes('<id>')) return hint.replace(/<id>/g, sessionId);
-  return hint;
+export function sourceRefFromMetadata(metadata: Record<string, unknown> | undefined): NativeSourceRef | undefined {
+  const raw = metadata?.sourceRef;
+  if (!raw || typeof raw !== "object") return undefined;
+  const rec = raw as Record<string, unknown>;
+  if (typeof rec.harness !== "string" || typeof rec.sessionId !== "string") return undefined;
+  return rec as unknown as NativeSourceRef;
 }

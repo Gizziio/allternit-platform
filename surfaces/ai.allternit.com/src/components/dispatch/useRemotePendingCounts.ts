@@ -57,10 +57,8 @@ export function useRemotePendingCounts(
       setLoading(false);
     }
     void fetchCounts();
-    const interval = setInterval(fetchCounts, 5000);
     return () => {
       cancelled = true;
-      clearInterval(interval);
     };
   }, [clients]);
 

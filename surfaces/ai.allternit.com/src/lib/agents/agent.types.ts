@@ -417,6 +417,10 @@ export interface BotProfile {
   lifecycle?: 'draft' | 'active' | 'archived' | 'deprecated';
   /** Deterministic bot avatar stored in bot metadata. */
   avatar?: BotAvatar;
+  /** Keep this bot at the top of the roster (synced on the agent record). */
+  pinned?: boolean;
+  /** Hide from the roster without deleting (synced on the agent record). */
+  hidden?: boolean;
 
   /** External platform that owns this bot (e.g. 'hermes', 'openclaw') */
   providerId?: string;
@@ -487,9 +491,10 @@ export type AgentWalletPaymentMethod = 'send' | 'receive' | 'swap' | 'stake' | '
 
 /**
  * VM Operator configuration for agents/bots that run tasks inside a sandboxed
- * virtual computer. This is the schema-level primitive; the actual runtime may
- * dispatch to OpenSandbox, Docker, Kubernetes, or a local runner based on the
- * provider field.
+ * virtual computer. This is the schema-level primitive; the actual runtime
+ * dispatches through `/api/v1/computers` onto Allternit Computer Cloud:
+ * Incus (Linux/Windows), Tart (macOS), Lume (local macOS VM), or host.
+ * `cloud-desktop` is the control-plane alias for the Incus/Tart path.
  */
 export type AgentVMComputerKind =
   | 'local'
@@ -498,18 +503,29 @@ export type AgentVMComputerKind =
   | 'byoc'
   | 'cloud_desktop';
 
+export type AgentVMProviderName =
+  | 'cloud-desktop'
+  | 'incus'
+  | 'tart'
+  | 'lume'
+  | 'docker'
+  | 'kubernetes'
+  | 'local'
+  | 'custom'
+  | 'host';
+
 export interface AgentVMOperatorConfig {
   /** Whether the bot may use a virtual computer to execute tasks */
   enabled: boolean;
   /** Runtime provider that provisions and manages the sandbox */
-  provider: 'opensandbox' | 'docker' | 'kubernetes' | 'local' | 'custom' | 'host' | 'cloud-desktop';
+  provider: AgentVMProviderName;
   /** Unified computer kind used by the control plane (defaults to cloud_desktop) */
   computerKind?: AgentVMComputerKind;
   /** Desktop Cloud template id to use when provisioning */
   templateId?: string;
   /** Cloud desktop control-plane URL (only used when provider is 'cloud-desktop') */
   endpoint?: string;
-  /** Sandbox image / environment (e.g. opensandbox/desktop:v1.0.0) */
+  /** Guest image / environment (e.g. ubuntu/desktop or tart://macos) */
   image?: string;
   /** Resource limits for the sandbox */
   resources?: {
@@ -540,6 +556,23 @@ export type AgentVMProvider = AgentVMOperatorConfig['provider'];
 export type AgentVMComputerKindType = NonNullable<AgentVMOperatorConfig['computerKind']>;
 export type AgentVMNetworkPolicy = NonNullable<AgentVMOperatorConfig['networkPolicy']>;
 export type AgentVMPersistence = NonNullable<AgentVMOperatorConfig['persistence']>;
+
+/** Map leftover stored `opensandbox` records onto Computer Cloud. */
+export function coerceVmProviderName(
+  provider: string | null | undefined,
+): AgentVMProviderName {
+  if (!provider || provider === 'opensandbox') return 'cloud-desktop';
+  return provider as AgentVMProviderName;
+}
+
+export function coerceVmOperatorConfig(
+  config: AgentVMOperatorConfig | undefined | null,
+): AgentVMOperatorConfig | undefined {
+  if (!config) return undefined;
+  const provider = coerceVmProviderName(config.provider);
+  if (provider === config.provider) return config;
+  return { ...config, provider };
+}
 
 // Zod schemas for autonomous bot primitives
 export const agentConnectorBindingSchema = z.object({
@@ -599,7 +632,10 @@ export const agentIdentityChannelsSchema = z.object({
 
 export const agentVMOperatorConfigSchema = z.object({
   enabled: z.boolean(),
-  provider: z.enum(['opensandbox', 'docker', 'kubernetes', 'local', 'custom', 'host', 'cloud-desktop']),
+  provider: z.preprocess(
+    (value) => (value === 'opensandbox' ? 'cloud-desktop' : value),
+    z.enum(['cloud-desktop', 'incus', 'tart', 'lume', 'docker', 'kubernetes', 'local', 'custom', 'host']),
+  ),
   computerKind: z.enum(['local', 'byo_vps', 'managed', 'byoc', 'cloud_desktop']).optional(),
   templateId: z.string().optional(),
   endpoint: z.string().optional(),

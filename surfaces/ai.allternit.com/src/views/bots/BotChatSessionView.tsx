@@ -12,7 +12,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, CircleNotch, Robot, Sparkle } from "@phosphor-icons/react";
+import { ArrowLeft, CircleNotch, Desktop, Robot, Sparkle } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { useChatSessionStore } from "@/views/chat/ChatSessionStore";
 import { useAgentStore } from "@/lib/agents/agent.store";
@@ -24,6 +24,10 @@ import { ChatComposer } from "@/views/chat/ChatComposer";
 import { ModelSelectionProvider, useModelSelection } from "@/providers/model-selection-provider";
 import type { ModelSelection } from "@/components/model-picker";
 import { getProviderMeta } from "@/lib/providers/provider-registry";
+import { BotComputerViewport } from "./BotComputerViewport";
+import { isBotComputerLive, useBotActiveVm } from "./useBotActiveVm";
+import { useBrowserAgentStore } from "@/capsules/browser/browserAgent.store";
+import { useBotOperationalStateStore } from "@/lib/bots/bot-operational-state.store";
 
 export interface BotChatSessionViewProps {
   sessionId?: string;
@@ -166,6 +170,28 @@ function BotChatSessionContent({
   const isStreaming = streamingState?.isStreaming ?? false;
   const messages = session?.messages ?? [];
 
+  const activeVM = useBotActiveVm(botId);
+  const computerState = useBotOperationalStateStore((s) =>
+    botId ? s.projections[botId]?.state.computerState : undefined,
+  );
+  const setConnectedBotId = useBrowserAgentStore((s) => s.setConnectedBotId);
+  const setAciSidecarExpanded = useBrowserAgentStore((s) => s.setAciSidecarExpanded);
+  const aciSidecarExpanded = useBrowserAgentStore((s) => s.aciSidecarExpanded);
+  const [computerOpen, setComputerOpen] = useState(false);
+  const computerLive = isBotComputerLive(activeVM, computerState);
+  const hasVm = Boolean(bot?.vmOperator?.enabled || activeVM);
+
+  useEffect(() => {
+    if (!botId) return;
+    setConnectedBotId(botId);
+    // Keep the live desktop in the chat column until the user hands it to ACI.
+    setAciSidecarExpanded(false);
+  }, [botId, setConnectedBotId, setAciSidecarExpanded]);
+
+  useEffect(() => {
+    if (computerLive) setComputerOpen(true);
+  }, [computerLive]);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -229,6 +255,11 @@ function BotChatSessionContent({
         "Start a task",
       ];
 
+  const handleOpenInAci = useCallback(() => {
+    if (botId) setConnectedBotId(botId);
+    setAciSidecarExpanded(true);
+  }, [botId, setConnectedBotId, setAciSidecarExpanded]);
+
   return (
     <div className="flex h-full flex-col bg-[var(--bg-elevated)] text-[var(--text-primary)] pt-12">
       {/* Header */}
@@ -279,9 +310,24 @@ function BotChatSessionContent({
             )}
           </div>
         </div>
+        {hasVm && (
+          <Button
+            type="button"
+            variant={computerOpen ? "secondary" : "outline"}
+            size="sm"
+            onClick={() => setComputerOpen((open) => !open)}
+            className="gap-1.5 shrink-0"
+            aria-pressed={computerOpen}
+          >
+            <Desktop size={14} />
+            Computer
+          </Button>
+        )}
       </div>
 
+      <div className="flex min-h-0 flex-1">
       {/* Messages */}
+      <div className="flex min-w-0 flex-1 flex-col">
       <div className="flex-1 overflow-y-auto px-4 py-4">
         {messages.length === 0 ? (
           <div className="mx-auto flex h-full max-w-md flex-col items-center justify-center text-center">
@@ -361,6 +407,26 @@ function BotChatSessionContent({
           showTopActions={false}
           showModeToggle={false}
         />
+      </div>
+      </div>
+
+      {computerOpen && bot && (
+        <aside
+          className={cn(
+            "flex min-h-0 w-[min(46%,520px)] shrink-0 flex-col border-l border-[var(--border-subtle)]",
+            aciSidecarExpanded && "opacity-90",
+          )}
+          aria-label={`${botName}'s computer`}
+        >
+          <BotComputerViewport
+            bot={bot}
+            accentColor={accentColor}
+            activeVM={activeVM}
+            layout="pane"
+            onOpenInAci={handleOpenInAci}
+          />
+        </aside>
+      )}
       </div>
     </div>
   );
