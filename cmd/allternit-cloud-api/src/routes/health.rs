@@ -47,23 +47,28 @@ pub struct LivenessResponse {
 /// This endpoint is publicly accessible (no auth required).
 pub async fn health_check(
     State(state): State<Arc<ApiState>>,
-) -> Result<Json<HealthResponse>, Json<HealthResponse>> {
+) -> impl IntoResponse {
     let timestamp = Utc::now().to_rfc3339();
 
     // Check database connectivity
     let db_healthy = sqlx::query("SELECT 1").fetch_one(&state.db).await.is_ok();
 
-    if db_healthy {
-        Ok(Json(HealthResponse {
-            status: "healthy".to_string(),
-            timestamp,
-        }))
+    let response = HealthResponse {
+        status: if db_healthy {
+            "healthy".to_string()
+        } else {
+            "unhealthy".to_string()
+        },
+        timestamp,
+    };
+
+    let status_code = if db_healthy {
+        axum::http::StatusCode::OK
     } else {
-        Err(Json(HealthResponse {
-            status: "unhealthy".to_string(),
-            timestamp,
-        }))
-    }
+        axum::http::StatusCode::SERVICE_UNAVAILABLE
+    };
+
+    (status_code, Json(response))
 }
 
 /// Readiness probe for Kubernetes
