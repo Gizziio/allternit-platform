@@ -136,6 +136,7 @@ export function CodeThreadView({ workspace }: CodeThreadViewProps) {
         <CodeSessionLauncher
           onOpenPane={openSideTab}
           onCanvasMode={workspaceId ? () => setWorkspaceLayoutMode(workspaceId, 'canvas') : undefined}
+          canvasModeActive={workspace?.layoutMode === 'canvas'}
           onRename={renameSession}
           onFork={forkSession}
           onArchive={() => activeCodeSessionId && void useCodeSessionStore.getState().updateSession(activeCodeSessionId, { isActive: false, metadata: { ...activeCodeSession?.metadata, originSurface: 'code', archived: true } })}

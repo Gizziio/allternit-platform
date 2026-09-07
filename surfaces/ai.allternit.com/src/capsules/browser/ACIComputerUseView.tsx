@@ -31,6 +31,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
+import { Monitor } from '@phosphor-icons/react';
 import { useBrowserAgentStore } from './browserAgent.store';
 
 // ─────────────────────────────────────────────────────────────
@@ -226,10 +227,13 @@ export function ACIComputerUseView({
   const currentLayer     = useBrowserAgentStore((s) => s.currentLayer);
   // Screenshot fed by SSE stream via store — no local polling needed
   const screenshotB64    = useBrowserAgentStore((s) => s.screenshot);
+  // Engine health drives the idle hint (ACI engine unreachable vs. waiting)
+  const engineHealthy    = useBrowserAgentStore((s) => s.engineHealthy);
 
   const screenshot   = screenshotB64 ? `data:image/png;base64,${screenshotB64}` : null;
   const isConnecting = status !== 'Idle' && status !== 'Done' && screenshot === null;
   const serviceError = (status as string) === 'Error' ? 'Agent run encountered an error.' : null;
+  const isIdleEmpty  = !isConnecting && !serviceError && screenshot === null;
 
   const [highlights, setHighlights]           = useState<HighlightBox[]>([]);
   const [imgNaturalSize, setImgNaturalSize]   = useState({ w: 0, h: 0 });
@@ -333,6 +337,23 @@ export function ACIComputerUseView({
               </div>
               <div className="text-[12px] text-[#444] leading-[1.5]">
                 Check the agent logs for details.
+              </div>
+            </div>
+          )}
+
+          {/* Idle / empty state — pane open but no live session to show */}
+          {isIdleEmpty && (
+            <div className="flex flex-col items-center gap-3 max-w-[320px] text-center">
+              <div className="size-12 rounded-2xl border border-solid border-[var(--border-subtle)] bg-[var(--surface-panel)] flex items-center justify-center text-[var(--text-tertiary)]">
+                <Monitor size={24} weight="duotone" />
+              </div>
+              <div className="text-[13px] font-semibold text-[var(--text-primary)]">
+                No live computer session
+              </div>
+              <div className="text-[12px] text-[var(--text-secondary)] leading-[1.5]">
+                {engineHealthy === false
+                  ? "The ACI engine isn't reachable. Start the computer-use service, then run a task or connect a bot for a live view."
+                  : 'Run a computer-use task or connect a bot to stream a live view here.'}
               </div>
             </div>
           )}
