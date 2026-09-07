@@ -16,8 +16,8 @@
 //! - `POST /api/v1/billing/portal` (Clerk session or API token): billing-portal session for the user's Stripe
 //!   customer, resolved through `user_billing_accounts`.
 //!
-//! This module also owns the subscription bookkeeping tables (migrations/026,
-//! migrations_pg/005): the upsert/lookup helpers that `routes::billing_webhooks` calls so monthly
+//! This module also owns the subscription bookkeeping tables (created in
+//! `migrations_pg/005_billing_subscriptions.sql`): the upsert/lookup helpers that `routes::billing_webhooks` calls so monthly
 //! credit grants can resolve a Stripe subscription id back to a user and plan.
 
 use axum::{

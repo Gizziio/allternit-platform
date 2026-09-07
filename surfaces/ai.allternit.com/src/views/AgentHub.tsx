@@ -2,12 +2,13 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CaretDown, Check, Plus, Users } from '@phosphor-icons/react';
+import { CaretDown, Check, Plus } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 
 import { TABS, type AgentTab } from './agent-hub/main/AgentHub.constants';
 import { AgentHubContent } from './agent-hub/main/AgentHubContent';
 import { CreateBotForm } from './agent-view/components/CreateBotForm';
+import { openNativeSessionPicker } from '@/components/native-sessions/NativeSessionPicker';
 
 interface AgentHubProps {
   initialTab?: AgentTab;
@@ -51,17 +52,11 @@ export function AgentHub({ initialTab = 'bots', onSessionStarted }: AgentHubProp
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() =>
-                window.dispatchEvent(
-                  new CustomEvent('allternit:open-view', { detail: { viewType: 'bot-roster' } })
-                )
-              }
+              onClick={() => openNativeSessionPicker('chat', 'agent')}
               className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] px-3.5 text-[13px] font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-hover)] hover:text-[var(--text-primary)]"
             >
-              <Users size={16} />
-              Bot Roster
+              Continue CLI
             </button>
-
             <button
               type="button"
               onClick={() => setIsCreateOpen(true)}

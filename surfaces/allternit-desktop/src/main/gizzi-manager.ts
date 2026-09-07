@@ -20,6 +20,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
 import log from 'electron-log';
 import { PORTS, URLS } from './config.js';
+import { meshManager } from './mesh-manager.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -33,6 +34,8 @@ export interface GizziStartConfig {
    * API calls (e.g. brain provisioning). In the desktop shell this is the
    * paired runtime-device token; the renderer never sees it. */
   apiToken?: string | null;
+  /** Paired runtime-device id, used as the fabric relay endpoint. */
+  runtimeId?: string | null;
   /** Extra env vars merged into the spawned process, e.g. connector sidecar
    * tokens from authManager.getConnectorSidecarEnvironment() — gizzi-code
    * hosts the Lens vault MCP server, which needs these to reach the
@@ -108,8 +111,25 @@ export class GizziManager {
       ALLTERNIT_API_URL: URLS.API,
       NODE_ENV: 'production',
       ...(config.apiToken ? { ALLTERNIT_API_TOKEN: config.apiToken } : {}),
+      ...(config.runtimeId ? { GIZZI_RUNTIME_ID: config.runtimeId } : {}),
+      GIZZI_PLATFORM_API_URL: URLS.CLOUD_API,
       ...(config.extraEnv ?? {}),
     };
+
+    const meshBin = meshManager.resolveSidecarPath();
+    if (meshBin) {
+      env.GIZZI_MESH_NODE_BIN = meshBin;
+    }
+    try {
+      const enrollment = await meshManager.enrollForGizzi();
+      if (enrollment) {
+        env.GIZZI_MESH_AUTH_KEY = enrollment.authKey;
+        env.GIZZI_MESH_CONTROL_URL = enrollment.controlUrl;
+        log.info('[GizziManager] Fabric mesh enrollment ready');
+      }
+    } catch (error) {
+      log.warn('[GizziManager] Fabric mesh enrollment skipped:', error);
+    }
 
     log.info(`[GizziManager] Starting gizzi-code on port ${GIZZI_PORT} from ${binaryPath}`);
 
@@ -122,7 +142,11 @@ export class GizziManager {
       log.info(`[GizziManager] allternit-mux at: ${muxBinaryPath}`);
     }
 
-    const proc = spawn(binaryPath, ['serve', '--port', String(GIZZI_PORT), '--hostname', '127.0.0.1', '--print-logs'], {
+    const serveArgs = ['serve', '--port', String(GIZZI_PORT), '--hostname', '127.0.0.1', '--print-logs'];
+    if (env.GIZZI_MESH_AUTH_KEY) {
+      serveArgs.push('--mesh');
+    }
+    const proc = spawn(binaryPath, serveArgs, {
       env,
       stdio: ['ignore', 'pipe', 'pipe'],
       windowsHide: true,

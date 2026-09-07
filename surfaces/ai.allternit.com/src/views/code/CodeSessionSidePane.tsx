@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from 'react';
-import { FolderSimple, GitDiff, Package, Scroll, Terminal, X } from '@phosphor-icons/react';
+import { FolderSimple, GitDiff, Package, Scroll, SquaresFour, Terminal, X } from '@phosphor-icons/react';
+import { useTerminalWorkspaceStore } from '@/stores/terminal-workspace.store';
 import { CodeDiffPanel } from './CodeDiffPanel';
 import { CodeFileEditor } from './CodeFileEditor';
 import { ExplorerView } from './ExplorerView';
@@ -44,6 +45,18 @@ export function CodeSessionSidePane({ activeTab: controlledTab, onTabChange, ses
     setActiveTab('files');
   };
   const closeFile = () => setSelectedFilePath(null);
+  // v1 honesty: the workspace tile starts a FRESH remote PTY in this cwd —
+  // the side pane's existing terminal content is not migrated.
+  const sendToWorkspace = () => {
+    useTerminalWorkspaceStore.getState().addTaggedTile({
+      cwd: workingDir,
+      tag: {
+        surface: 'code',
+        sessionId: sessionId ?? 'unknown',
+        title: terminalContext?.repoName ?? sessionId ?? 'Code session',
+      },
+    });
+  };
   const paneMeta = activeTab === 'terminal'
     ? { label: 'Terminal', icon: Terminal }
     : activeTab === 'diff'
@@ -82,6 +95,30 @@ export function CodeSessionSidePane({ activeTab: controlledTab, onTabChange, ses
       >
         <PaneIcon size={16} weight="duotone" style={{ color: 'var(--accent-code)' }} />
         <span style={{ fontSize: 12, fontWeight: 650, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{paneMeta.label}</span>
+        {activeTab === 'terminal' ? (
+          <button
+            type="button"
+            aria-label="Open in terminal workspace"
+            data-testid="code-side-pane-send-to-workspace"
+            title="Open in terminal workspace (starts a fresh terminal in this folder)"
+            onClick={sendToWorkspace}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 28,
+              height: 28,
+              marginLeft: 'auto',
+              borderRadius: 9,
+              border: 'none',
+              background: 'transparent',
+              color: 'var(--text-secondary)',
+              cursor: 'pointer',
+            }}
+          >
+            <SquaresFour size={14} />
+          </button>
+        ) : null}
         {onClose ? (
           <button
             type="button"

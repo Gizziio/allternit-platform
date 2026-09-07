@@ -43,6 +43,7 @@ import {
   isBot,
 } from "@/lib/bots/bot-profile";
 import { useStartBotSession } from "@/lib/bots/useStartBotSession";
+import { openBotChatView } from "@/lib/bots/bot-canonical-chat.service";
 import { getConnectorLogoUrl } from "@/lib/design/connector-logo";
 import { listWebhookTriggers, type WebhookTrigger } from "@/lib/webhook-api";
 import { cn } from "@/lib/utils";
@@ -123,10 +124,8 @@ export function BotHomeView({ botId }: BotHomeViewProps) {
     isStarting: isStartingBot,
     error: botSessionError,
   } = useStartBotSession(
-    useCallback((sessionId: string) => {
-      window.dispatchEvent(
-        new CustomEvent("allternit:open-view", { detail: { viewType: "chat-agent-session", context: { sessionId } } })
-      );
+    useCallback((sessionId: string, startedBotId: string) => {
+      openBotChatView(sessionId, startedBotId, "bot-home");
     }, [])
   );
 
@@ -225,9 +224,7 @@ export function BotHomeView({ botId }: BotHomeViewProps) {
         },
       });
       setActiveChatSession(sessionId);
-      window.dispatchEvent(
-        new CustomEvent("allternit:open-view", { detail: { viewType: "chat-agent-session", context: { sessionId } } })
-      );
+      openBotChatView(sessionId, bot.id, "bot-home");
     },
     [bot, createChatSession, setActiveChatSession]
   );
@@ -246,9 +243,7 @@ export function BotHomeView({ botId }: BotHomeViewProps) {
 
   const handleOpenSession = useCallback((sessionId: string) => {
     setActiveChatSession(sessionId);
-    window.dispatchEvent(
-      new CustomEvent("allternit:open-view", { detail: { viewType: "chat-agent-session", context: { sessionId } } })
-    );
+    openBotChatView(sessionId, botId, "bot-home");
   }, [setActiveChatSession]);
 
   const handleBackToHub = useCallback(() => {

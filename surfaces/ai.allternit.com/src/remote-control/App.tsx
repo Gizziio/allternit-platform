@@ -16,7 +16,7 @@ export function RemoteControlApp(): React.ReactNode {
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
     const pushWorkerUrl =
-      import.meta.env.VITE_REMOTE_CONTROL_PUSH_URL ?? 'https://push.remotecontrol.allternit.com';
+      import.meta.env.VITE_REMOTE_CONTROL_PUSH_URL ?? 'https://push.fabrictransport.allternit.com';
 
     navigator.serviceWorker
       .register('/remote-control-service-worker.js')

@@ -22,11 +22,13 @@ export function useUnifiedProjects() {
   const codeStore = useCodeModeStore();
   const designStore = useDesignProjectStore();
   const bbStore = useBBProjectStore();
+  const fetchBBProjects = useBBProjectStore((s) => s.fetchProjects);
 
-  // Fetch bb projects on first use of the unified hub.
+  // Fetch once. Subscribing to the whole bb store object retriggers this
+  // effect on every isLoading/error/projects change and 401-storms the kernel.
   useEffect(() => {
-    void bbStore.fetchProjects();
-  }, [bbStore]);
+    void fetchBBProjects();
+  }, [fetchBBProjects]);
 
   const allProjects = useMemo<UnifiedProject[]>(() => {
     const chatProjects: UnifiedProject[] = (chatStore.projects || []).map((p) => {

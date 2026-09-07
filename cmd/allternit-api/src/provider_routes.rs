@@ -340,7 +340,7 @@ static ENV_PROVIDER_SPECS: &[(&str, &str, &str, &[&str])] = &[
 /// their own installed + authenticated CLI tool, and Allternit routes to it.
 static CLI_PROVIDER_SPECS: &[(&str, &str, &str, &str)] = &[
     ("claude-cli", "Claude CLI", "claude", "claude-sonnet-5"),
-    ("codex-cli", "Codex CLI", "codex", "codex-mini-latest"),
+    ("codex-cli", "Codex CLI", "codex", "gpt-6-astra"),
     ("qwen-cli", "Qwen CLI", "qwen", "qwen-plus"),
     ("kimi-cli", "Kimi CLI", "kimi", "kimi-k3"),
     ("antigravity", "Antigravity", "agy", "antigravity"),
@@ -365,6 +365,13 @@ static CLI_PROVIDER_SPECS: &[(&str, &str, &str, &str)] = &[
     ("dim", "Dim", "dim", "dim"),
 ];
 
+fn cli_models_for<'a>(id: &str, default_model: &'a str) -> Vec<&'a str> {
+    match id {
+        "codex-cli" => vec!["gpt-6-astra", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"],
+        _ => vec![default_model],
+    }
+}
+
 /// Per-model display metadata: (model id, description, tier, supports_effort).
 /// Tier is flagship | standard | fast | legacy and drives picker grouping on
 /// clients (the Claude-app sheet layout). Unknown models default to
@@ -375,8 +382,10 @@ static MODEL_METADATA: &[(&str, &str, &str, bool)] = &[
     ("gpt-5", "Latest GPT reasoning", "flagship", false),
     ("gpt-5-mini", "Fast GPT mini", "fast", false),
     ("gpt-4o", "Prior-generation flagship", "legacy", true),
-    ("codex-mini-latest", "Lightweight Codex coding agent", "fast", false),
-    ("codex-latest", "Latest Codex coding agent", "flagship", false),
+    ("gpt-6-astra", "Astra — strongest Codex agent", "flagship", false),
+    ("gpt-5.6-sol", "Sol — complex open-ended work", "flagship", false),
+    ("gpt-5.6-terra", "Terra — everyday coding", "standard", false),
+    ("gpt-5.6-luna", "Luna — fast high-volume tasks", "fast", false),
     ("gemini-2.5-pro", "Long-context reasoning", "flagship", false),
     ("gemini-2.5-flash", "Fastest for quick answers", "fast", false),
     ("sonar-pro", "Web-grounded answers", "standard", false),
@@ -414,7 +423,14 @@ pub fn available_model_catalog() -> Vec<serde_json::Value> {
         }));
     };
     for &(id, name, _binary, model) in CLI_PROVIDER_SPECS {
-        push(&format!("{}/{}", id, model), format!("{} ({})", model, name), id, model);
+        for model_id in cli_models_for(id, model) {
+            push(
+                &format!("{}/{}", id, model_id),
+                format!("{} ({})", model_id, name),
+                id,
+                model_id,
+            );
+        }
     }
     for &(id, name, _env, models) in ENV_PROVIDER_SPECS {
         for model in models {
@@ -605,16 +621,28 @@ fn subprocess_provider_rows(connected: &HashSet<String>) -> Vec<ProviderRow> {
     // signed-in CLI as "missing key" (root-cause correctness, not a fallback).
     for &(id, name, binary, model) in CLI_PROVIDER_SPECS {
         let available = command_on_path(binary).is_some();
-        let authed = connected.contains(id)
-            || subscription_auth_check(id, binary)
-            || (id == "codex-cli" && std::env::var("OPENAI_API_KEY").is_ok());
+        // Gizzi's `connected` list is "binary on PATH", not a live OAuth
+        // session. Claude's `auth status` exits 0 even when loggedIn is
+        // false — only subscription_auth_check parses that.
+        let authed = match id {
+            "claude" | "claude-cli" => subscription_auth_check(id, binary),
+            "codex" | "codex-cli" => {
+                connected.contains(id)
+                    || subscription_auth_check(id, binary)
+                    || std::env::var("OPENAI_API_KEY").is_ok()
+            }
+            _ => connected.contains(id) || subscription_auth_check(id, binary),
+        };
         rows.push(ProviderRow {
             id: id.to_string(),
             name: name.to_string(),
             provider_type: "subprocess".to_string(),
             base_url: None,
             api_key_set: authed,
-            models: vec![model.to_string()],
+            models: cli_models_for(id, model)
+                .into_iter()
+                .map(str::to_string)
+                .collect(),
             status: if available {
                 if authed {
                     "active"
@@ -1049,7 +1077,7 @@ fn provider_capabilities(id: &str) -> serde_json::Value {
         "google" => (true, true, 1_000_000, 65_536, "gemini-2.5-pro"),
         "ollama" | "lmstudio" => (true, false, 128_000, 16_384, "llama3.2:3b"),
         "claude-cli" => (true, true, 200_000, 32_000, "claude-sonnet-5"),
-        "codex-cli" => (true, false, 128_000, 16_384, "codex-mini-latest"),
+        "codex-cli" => (true, false, 1_050_000, 128_000, "gpt-6-astra"),
         "qwen" => (true, false, 128_000, 16_384, "qwen-plus"),
         "kimi" => (true, false, 128_000, 16_384, "kimi-k3"),
         "antigravity" | "agy" => (true, true, 1_000_000, 65_536, "gemini-2.5-pro"),
@@ -1206,13 +1234,40 @@ async fn list_provider_auth_status(
     ) {
         (Ok(providers_payload), Ok(_auth_methods_payload)) => {
             let connected = parse_connected(&providers_payload);
-            let providers: Vec<ProviderAuthStatusRow> = providers_payload
+            let mut providers: Vec<ProviderAuthStatusRow> = providers_payload
                 .get("all")
                 .and_then(|value| value.as_array())
                 .into_iter()
                 .flatten()
                 .filter_map(|provider| auth_status_from_gizzi_provider(provider, &connected))
                 .collect();
+            // Gizzi's catalog is often unauthenticated cloud rows. Union the
+            // CLIs actually on PATH and the local brains on this machine so
+            // Connect can default to a CLI runtime and still list Ollama.
+            let mut extra_rows = subprocess_provider_rows(&connected);
+            extra_rows.push(ollama_provider_row(state.config.ollama_url()));
+            extra_rows.push(ProviderRow {
+                id: "allternit-sidecar".to_string(),
+                name: "Sidecar".to_string(),
+                provider_type: "local".to_string(),
+                base_url: None,
+                api_key_set: false,
+                models: vec![],
+                status: "ready".to_string(),
+            });
+            for row in extra_rows {
+                let live = auth_status_live_from_row(&row);
+                if let Some(existing) = providers.iter_mut().find(|p| p.provider_id == row.id) {
+                    // Local PATH + `claude auth status` is the truth for
+                    // subprocess CLIs. Gizzi's catalog often marks them
+                    // authenticated just because the binary exists.
+                    if row.provider_type == "subprocess" || (live.authenticated && !existing.authenticated) {
+                        *existing = live;
+                    }
+                } else {
+                    providers.push(live);
+                }
+            }
             return Json(json!({ "providers": providers })).into_response();
         }
         (discover_result, auth_result) => {
@@ -1728,15 +1783,36 @@ fn cli_alive(binary: &str, args: &[&str], expect: Option<&str>) -> bool {
     }
 }
 
+/// `claude auth status` exits 0 even when `loggedIn` is false (no subscription
+/// / expired OAuth). Parse the JSON so Home does not default to a dead Claude.
+fn claude_cli_logged_in(binary: &str) -> bool {
+    let output = std::process::Command::new(binary)
+        .args(["auth", "status"])
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::null())
+        .output();
+    let Ok(output) = output else {
+        return false;
+    };
+    if !output.status.success() {
+        return false;
+    }
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    if let Ok(value) = serde_json::from_str::<serde_json::Value>(&stdout) {
+        return value
+            .get("loggedIn")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+    }
+    let lower = stdout.to_lowercase();
+    !lower.contains("\"loggedin\": false")
+        && !lower.contains("not logged")
+        && !lower.contains("logged out")
+}
+
 fn subscription_auth_check(id: &str, binary: &str) -> bool {
     match id {
-        "claude" | "claude-cli" => std::process::Command::new(binary)
-            .args(["auth", "status"])
-            .stdout(std::process::Stdio::null())
-            .stderr(std::process::Stdio::null())
-            .status()
-            .map(|s| s.success())
-            .unwrap_or(false),
+        "claude" | "claude-cli" => claude_cli_logged_in(binary),
         "codex" | "codex-cli" => {
             cli_alive(binary, &["--version"], Some("codex"))
                 && home_file(&[".codex", "auth.json"]).exists()

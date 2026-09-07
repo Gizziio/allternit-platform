@@ -1,8 +1,8 @@
 //! Incus-backed `ExecutionDriver` for the Allternit platform.
 //!
 //! Implements the platform driver-interface so that `cmd/allternit-api` can
-//! provision bot desktops on an Incus host instead of (or alongside) Firecracker
-//! or OpenSandbox. The driver launches an Ubuntu cloud-image container/VM,
+//! provision bot desktops on an Incus host. The driver launches an Ubuntu
+//! cloud-image container/VM,
 //! starts the desktop services via cloud-init, and exposes x11vnc through an
 //! Incus proxy device.
 
@@ -273,6 +273,7 @@ impl IncusDriver {
         tenant
             .0
             .strip_prefix("bot-")
+            .or_else(|| tenant.0.strip_prefix("user-"))
             .unwrap_or(&tenant.0)
             .to_string()
     }
@@ -354,9 +355,19 @@ impl ExecutionDriver for IncusDriver {
     async fn spawn(&self, spec: SpawnSpec) -> Result<ExecutionHandle, DriverError> {
         let bot_id = Self::bot_id_from_tenant(&spec.tenant);
         // Incus instance names must be <= 63 chars. Prefix + uuid is 48 chars,
-        // leaving 15 for the bot id.
+        // leaving 15 for the owner id. User-owned computers are shared across bots.
         let bot_suffix = bot_id.chars().take(15).collect::<String>();
-        let native_id = format!("allternit-bot-{}-{}", bot_suffix, uuid::Uuid::new_v4().simple());
+        let kind = if spec.tenant.0.starts_with("user-") {
+            "user"
+        } else {
+            "bot"
+        };
+        let native_id = format!(
+            "allternit-{}-{}-{}",
+            kind,
+            bot_suffix,
+            uuid::Uuid::new_v4().simple()
+        );
         let computer_spec = self.map_spec(&spec, &native_id);
         let memory_mib = computer_spec.memory_mb;
         let image_alias = normalize_image_alias(&computer_spec.image);

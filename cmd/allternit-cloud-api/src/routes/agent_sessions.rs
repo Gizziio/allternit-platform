@@ -62,6 +62,31 @@ pub fn routes() -> Router<Arc<ApiState>> {
             "/api/v1/agent-sessions/:id/compact",
             post(compact_session),
         )
+        .route(
+            "/api/v1/agent-sessions/:id/fetch-origin",
+            post(fetch_native_origin),
+        )
+        .route(
+            "/api/v1/agent-sessions/:id/origin",
+            get(get_native_origin),
+        )
+        .route(
+            "/api/v1/agent-sessions/:id/export-native",
+            post(export_native_session),
+        )
+        .route(
+            "/api/v1/native-sessions/harnesses",
+            get(list_native_harnesses),
+        )
+        .route("/api/v1/native-sessions", get(list_native_sessions))
+        .route(
+            "/api/v1/native-sessions/pickup",
+            post(pickup_native_session),
+        )
+        .route(
+            "/api/v1/native-sessions/:harness/:id",
+            get(show_native_session),
+        )
 }
 
 /// Universal P1 handler core (shared seam in routes::data_plane): Clerk auth
@@ -203,6 +228,91 @@ async fn compact_session(
     relay_agent_sessions_request(&state, &headers, "POST", format!("/api/v1/agent-sessions/{id}/compact"), &[]).await
 }
 
+async fn fetch_native_origin(
+    State(state): State<Arc<ApiState>>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Response, ApiError> {
+    relay_agent_sessions_request(
+        &state,
+        &headers,
+        "POST",
+        format!("/api/v1/agent-sessions/{id}/fetch-origin"),
+        &[],
+    )
+    .await
+}
+
+async fn export_native_session(
+    State(state): State<Arc<ApiState>>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    body: Bytes,
+) -> Result<Response, ApiError> {
+    relay_agent_sessions_request(
+        &state,
+        &headers,
+        "POST",
+        format!("/api/v1/agent-sessions/{id}/export-native"),
+        &body,
+    )
+    .await
+}
+
+async fn get_native_origin(
+    State(state): State<Arc<ApiState>>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Response, ApiError> {
+    relay_agent_sessions_request(
+        &state,
+        &headers,
+        "GET",
+        format!("/api/v1/agent-sessions/{id}/origin"),
+        &[],
+    )
+    .await
+}
+
+async fn list_native_harnesses(
+    State(state): State<Arc<ApiState>>,
+    headers: HeaderMap,
+) -> Result<Response, ApiError> {
+    relay_agent_sessions_request(&state, &headers, "GET", "/api/v1/native-sessions/harnesses".into(), &[]).await
+}
+
+async fn list_native_sessions(
+    State(state): State<Arc<ApiState>>,
+    headers: HeaderMap,
+    query: RawQuery,
+) -> Result<Response, ApiError> {
+    relay_agent_sessions_request(&state, &headers, "GET", with_query("/api/v1/native-sessions", &query), &[]).await
+}
+
+async fn pickup_native_session(
+    State(state): State<Arc<ApiState>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<Response, ApiError> {
+    relay_agent_sessions_request(&state, &headers, "POST", "/api/v1/native-sessions/pickup".into(), &body).await
+}
+
+async fn show_native_session(
+    State(state): State<Arc<ApiState>>,
+    headers: HeaderMap,
+    Path((harness, id)): Path<(String, String)>,
+    query: RawQuery,
+) -> Result<Response, ApiError> {
+    relay_agent_sessions_request(
+        &state,
+        &headers,
+        "GET",
+        with_query(&format!("/api/v1/native-sessions/{harness}/{id}"), &query),
+        &[],
+    )
+    .await
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -236,6 +346,13 @@ mod tests {
             ("POST", "/api/v1/agent-sessions/sess_1/revert"),
             ("POST", "/api/v1/agent-sessions/sess_1/unrevert"),
             ("POST", "/api/v1/agent-sessions/sess_1/compact"),
+            ("POST", "/api/v1/agent-sessions/sess_1/fetch-origin"),
+            ("GET", "/api/v1/agent-sessions/sess_1/origin"),
+            ("GET", "/api/v1/native-sessions"),
+            ("GET", "/api/v1/native-sessions/harnesses"),
+            ("POST", "/api/v1/native-sessions/pickup"),
+            ("GET", "/api/v1/native-sessions/claude/abc"),
+            ("POST", "/api/v1/agent-sessions/sess_1/export-native"),
         ] {
             let request = Request::builder()
                 .method(method)

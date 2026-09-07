@@ -95,6 +95,7 @@ export default function TextInput(props: Props): React.ReactElement | null {
     focus: props.focus,
     mask: props.mask,
     multiline: props.multiline,
+    multilineEnter: props.multilineEnter,
     cursorChar: props.showCursor ? ' ' : '',
     highlightPastedText: props.highlightPastedText,
     invert,

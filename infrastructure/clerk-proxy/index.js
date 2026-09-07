@@ -99,6 +99,23 @@ export default {
     corsHeaders.set('Access-Control-Allow-Origin', requestOrigin);
     corsHeaders.set('Access-Control-Allow-Credentials', 'true');
 
+    // Clerk 307s clerk-js to the configured proxy host (allternit.com). Keep
+    // the browser on this origin so CSP 'self' and first-party cookies work
+    // on fabrictransport / ai / platform.
+    const location = corsHeaders.get('Location');
+    if (location) {
+      try {
+        const loc = new URL(location);
+        if (loc.pathname.startsWith('/__clerk')) {
+          corsHeaders.set('Location', `${url.origin}${loc.pathname}${loc.search}`);
+        } else if (loc.hostname === FAPI_HOST || loc.hostname === 'allternit.com') {
+          corsHeaders.set('Location', `${url.origin}${PROXY_PATH_PREFIX}${loc.pathname}${loc.search}`);
+        }
+      } catch {
+        /* leave upstream Location */
+      }
+    }
+
     return new Response(response.body, {
       status: response.status,
       statusText: response.statusText,

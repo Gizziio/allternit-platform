@@ -17,12 +17,24 @@ export interface ComputerUseDriverStatus {
 const INSTALLED_CUA_DRIVER = '/Applications/CuaDriver.app/Contents/MacOS/cua-driver';
 const INSTALLED_CUA_SOCKET = path.join(os.homedir(), 'Library/Caches/cua-driver/cua-driver.sock');
 
+export function cuaDriverBinaryName(platform: NodeJS.Platform = process.platform): string {
+  return platform === 'win32' ? 'cua-driver.exe' : 'cua-driver';
+}
+
+export function defaultCuaSocketPath(
+  runtimeDir: string,
+  platform: NodeJS.Platform = process.platform,
+): string {
+  if (platform === 'win32') return String.raw`\\.\pipe\allternit-cua-driver`;
+  return path.join(runtimeDir, 'cua-driver.sock');
+}
+
 function isInstalledCuaDriver(executable: string): boolean {
-  return path.resolve(executable) === path.resolve(INSTALLED_CUA_DRIVER);
+  return process.platform === 'darwin' && path.resolve(executable) === path.resolve(INSTALLED_CUA_DRIVER);
 }
 
 /**
- * Owns Allternit's Cua Driver backend on macOS.
+ * Owns Allternit's Cua Driver backend.
  *
  * On macOS, Computer History admission requires the exact executable inside the
  * verified, installed `/Applications/CuaDriver.app` bundle. A standalone
@@ -31,6 +43,8 @@ function isInstalledCuaDriver(executable: string): boolean {
  * not installed, it falls back to spawning the embedded binary directly so that
  * regular computer-use actions still work (Accessibility/Screen Recording are
  * then attributed to Allternit Desktop when it is signed).
+ *
+ * On Windows and Linux the bundled cua-driver-rs binary is spawned directly.
  */
 class ComputerUseDriverManager {
   private child: ChildProcess | null = null;
@@ -38,13 +52,12 @@ class ComputerUseDriverManager {
   private lastError: string | undefined;
 
   resolveExecutable(): string | null {
+    const binaryName = cuaDriverBinaryName();
     const candidates = [
       process.env.ALLTERNIT_CUA_DRIVER_PATH,
-      // Prefer the installed app bundle; it is the only configuration that
-      // supports Computer History on macOS.
-      INSTALLED_CUA_DRIVER,
-      path.join(process.resourcesPath ?? '', 'computer-use', 'cua-driver'),
-      !app.isPackaged ? path.join(os.homedir(), '.local', 'bin', 'cua-driver') : undefined,
+      process.platform === 'darwin' ? INSTALLED_CUA_DRIVER : undefined,
+      path.join(process.resourcesPath ?? '', 'computer-use', binaryName),
+      !app.isPackaged ? path.join(os.homedir(), '.local', 'bin', binaryName) : undefined,
     ];
     for (const candidate of candidates) {
       if (candidate && fs.existsSync(candidate)) return path.resolve(candidate);
@@ -67,13 +80,11 @@ class ComputerUseDriverManager {
   }
 
   async start(): Promise<ComputerUseDriverStatus> {
-    if (process.platform !== 'darwin') {
-      return { available: false, running: false, embedded: false, error: 'Embedded Cua Driver is currently packaged for macOS only.' };
-    }
-
     const executable = this.resolveExecutable();
     if (!executable) {
-      this.lastError = 'Bundled computer-use driver is missing.';
+      this.lastError = process.platform === 'darwin'
+        ? 'Bundled computer-use driver is missing.'
+        : `Bundled computer-use driver is missing for ${process.platform}.`;
       return this.getStatus();
     }
 
@@ -87,8 +98,6 @@ class ComputerUseDriverManager {
         return this.getStatus();
       }
 
-      // No daemon is running. Try to launch it through LaunchServices so it
-      // receives the correct bundle identity and keychain entitlements.
       log.info('[ComputerUseDriver] launching installed CuaDriver.app daemon');
       const open = spawn('open', ['-n', '-g', '-a', 'CuaDriver', '--args', 'serve'], {
         stdio: 'ignore',
@@ -104,27 +113,26 @@ class ComputerUseDriverManager {
       return this.getStatus();
     }
 
-    // Fall back to the embedded binary. Computer History will not be available
-    // because the standalone executable fails the installed-app admission check.
     const runtimeDir = path.join(app.getPath('userData'), 'computer-use');
     fs.mkdirSync(runtimeDir, { recursive: true, mode: 0o700 });
-    this.socketPath = path.join(runtimeDir, 'cua-driver.sock');
-    fs.rmSync(this.socketPath, { force: true });
+    this.socketPath = defaultCuaSocketPath(runtimeDir);
+    if (process.platform !== 'win32') {
+      fs.rmSync(this.socketPath, { force: true });
+    }
 
     const env = {
       ...process.env,
       CUA_DRIVER_EMBEDDED: '1',
-      CUA_DRIVER_HOST_BUNDLE_ID: 'com.allternit.desktop',
       CUA_DRIVER_RS_TELEMETRY_ENABLED: 'false',
       CUA_TELEMETRY_ENABLED: 'false',
       NO_COLOR: '1',
+      ...(process.platform === 'darwin' ? { CUA_DRIVER_HOST_BUNDLE_ID: 'com.allternit.desktop' } : {}),
     };
-    const child = spawn(executable, [
-      'serve',
-      '--embedded',
-      '--host-bundle-id', 'com.allternit.desktop',
-      '--socket', this.socketPath,
-    ], { env, stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
+    const args = ['serve', '--embedded', '--socket', this.socketPath];
+    if (process.platform === 'darwin') {
+      args.splice(2, 0, '--host-bundle-id', 'com.allternit.desktop');
+    }
+    const child = spawn(executable, args, { env, stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
     this.child = child;
 
     child.stdout?.on('data', (data: Buffer) => log.info('[ComputerUseDriver]', data.toString().trim()));
@@ -149,8 +157,7 @@ class ComputerUseDriverManager {
   stop(): void {
     this.child?.kill('SIGTERM');
     this.child = null;
-    // Only remove sockets we created ourselves; never delete the installed app's socket.
-    if (this.socketPath && !this.socketPath.startsWith(INSTALLED_CUA_SOCKET)) {
+    if (this.socketPath && process.platform !== 'win32' && !this.socketPath.startsWith(INSTALLED_CUA_SOCKET)) {
       fs.rmSync(this.socketPath, { force: true });
     }
     this.socketPath = null;

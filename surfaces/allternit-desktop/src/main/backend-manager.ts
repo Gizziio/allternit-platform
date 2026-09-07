@@ -8,16 +8,14 @@
  * the Rust API now proxies directly to Gizzi (port 4096).
  */
 
-import { app, ipcMain, BrowserWindow } from 'electron';
-import { spawn, ChildProcess, execFile } from 'child_process';
+import { app } from 'electron';
+import { spawn, execFileSync, ChildProcess } from 'child_process';
 import * as crypto from 'crypto';
 import * as fs from 'fs';
-import * as https from 'https';
 import * as path from 'path';
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
 import log from 'electron-log';
-import { getBackendDownloadUrl, getBackendChecksum } from './manifest.js';
 import { PORTS, URLS, webhookReceiverUrl } from './config.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -88,8 +86,16 @@ export class BackendManager {
 
     try {
       await this.waitForUrl(`${this.getUrl()}/health`, 'existing allternit-api');
-      log.info(`[BackendManager] Reusing existing allternit-api at ${this.getUrl()}`);
-      return this.getUrl();
+      if (await this.servesPlatformStatic()) {
+        log.info(`[BackendManager] Reusing existing allternit-api at ${this.getUrl()}`);
+        return this.getUrl();
+      }
+      log.warn(
+        '[BackendManager] Existing allternit-api is healthy but is not serving the platform UI ' +
+          '(GET / is not HTML). Replacing it so the shell does not boot onto a 501 JSON stub.',
+      );
+      this.terminateListenerOnPort();
+      await new Promise((r) => setTimeout(r, 400));
     } catch {
       // No existing backend on the target port; continue with normal startup.
     }
@@ -107,16 +113,11 @@ export class BackendManager {
         binaryPath = 'cargo';
         log.info(`[BackendManager] allternit-api binary not found; using cargo run from ${candidate}`);
       } else {
-        // Attempt auto-download from manifest
-        try {
-          binaryPath = await this.downloadBackend();
-        } catch (e) {
-          log.error('[BackendManager] Auto-download failed:', e);
-          throw new Error(
-            'allternit-api binary not found and auto-download failed. ' +
-            'Please build manually: cargo build --release (in cmd/allternit-api)'
-          );
-        }
+        throw new Error(
+          'allternit-api is not bundled in this install. ' +
+          'Windows and Linux binaries are produced on a native CI runner ' +
+          '(cargo build --release -p allternit-api). Desktop does not download the API at runtime.'
+        );
       }
     }
 
@@ -139,10 +140,11 @@ export class BackendManager {
       ),
       ALLTERNIT_API_PORT: String(API_PORT),
       ALLTERNIT_API_HOST: '127.0.0.1',
-      // The desktop shell always runs a local, per-user backend without Clerk;
-      // self-hosted mode lets localhost-origin requests authenticate as the
-      // default local user instead of failing with 401.
-      ALLTERNIT_SELF_HOSTED: 'true',
+      // Control plane is api.allternit.com. Device tokens from pairing are
+      // introspected there; forcing self-hosted=true skipped that and left
+      // the local API with no cloud gateway, so the UI never came up.
+      ALLTERNIT_CLOUD_API_URL: process.env.ALLTERNIT_CLOUD_API_URL || URLS.CLOUD_API,
+      ALLTERNIT_SELF_HOSTED: process.env.ALLTERNIT_SELF_HOSTED || 'false',
       ALLTERNIT_OPERATOR_API_KEY: this.apiKey,
       ALLTERNIT_DATA_DIR: dataDir,
       ALLTERNIT_VM_DIR: fs.existsSync(vmDir) ? vmDir : '',
@@ -265,6 +267,43 @@ export class BackendManager {
     }
   }
 
+  /** True when GET / returns the packaged platform HTML, not the 501 stub. */
+  private async servesPlatformStatic(): Promise<boolean> {
+    try {
+      const res = await fetch(`${this.getUrl()}/`, { signal: AbortSignal.timeout(2000) });
+      if (!res.ok) return false;
+      const contentType = res.headers.get('content-type') || '';
+      if (contentType.includes('text/html')) return true;
+      const body = await res.text();
+      return /<!doctype html/i.test(body) || /<html[\s>]/i.test(body);
+    } catch {
+      return false;
+    }
+  }
+
+  /** SIGTERM whatever is listening on the operator API port. Packaged Desktop owns :8013. */
+  private terminateListenerOnPort(): void {
+    try {
+      const out = execFileSync(
+        'lsof',
+        ['-nP', `-iTCP:${API_PORT}`, '-sTCP:LISTEN', '-t'],
+        { encoding: 'utf8' },
+      );
+      for (const pidText of out.trim().split(/\s+/).filter(Boolean)) {
+        const pid = Number(pidText);
+        if (!Number.isFinite(pid) || pid <= 0 || pid === process.pid) continue;
+        log.warn(`[BackendManager] Stopping leftover listener pid ${pid} on :${API_PORT}`);
+        try {
+          process.kill(pid, 'SIGTERM');
+        } catch (error) {
+          log.warn(`[BackendManager] Could not stop pid ${pid}:`, error);
+        }
+      }
+    } catch {
+      // lsof missing or nothing listening
+    }
+  }
+
   private async waitForUrl(url: string, label: string): Promise<void> {
     const deadline = Date.now() + HEALTH_TIMEOUT_MS;
 
@@ -288,144 +327,6 @@ export class BackendManager {
     }
 
     throw new Error(`${label} did not start within ${HEALTH_TIMEOUT_MS / 1000}s`);
-  }
-
-  /** Download backend binary from manifest URL if missing. */
-  private async downloadBackend(): Promise<string> {
-    const url = getBackendDownloadUrl();
-    const expectedChecksum = getBackendChecksum();
-    const binaryName = process.platform === 'win32' ? 'allternit-api.exe' : 'allternit-api';
-    const binDir = path.join(app.getPath('userData'), 'bin');
-    const downloadPath = path.join(binDir, `allternit-api-download-${Date.now()}`);
-    const binaryPath = path.join(binDir, binaryName);
-
-    fs.mkdirSync(binDir, { recursive: true });
-
-    log.info(`[BackendManager] Downloading backend from ${url}...`);
-    this.emitDownloadProgress({ stage: 'downloading', percent: 0 });
-
-    await this.downloadFile(url, downloadPath, (percent) => {
-      this.emitDownloadProgress({ stage: 'downloading', percent });
-    });
-
-    log.info('[BackendManager] Download complete. Verifying checksum...');
-    this.emitDownloadProgress({ stage: 'verifying', percent: 100 });
-
-    if (expectedChecksum) {
-      const actualChecksum = await this.sha256File(downloadPath);
-      if (actualChecksum !== expectedChecksum) {
-        fs.unlinkSync(downloadPath);
-        throw new Error(`Checksum mismatch: expected ${expectedChecksum}, got ${actualChecksum}`);
-      }
-      log.info('[BackendManager] Checksum verified.');
-    }
-
-    // Extract archive
-    log.info('[BackendManager] Extracting archive...');
-    this.emitDownloadProgress({ stage: 'extracting', percent: 100 });
-    await this.extractArchive(downloadPath, binDir);
-
-    // Clean up archive
-    if (fs.existsSync(downloadPath)) {
-      fs.unlinkSync(downloadPath);
-    }
-
-    if (!fs.existsSync(binaryPath)) {
-      throw new Error(`Binary not found after extraction: ${binaryPath}`);
-    }
-
-    // Make executable on Unix
-    if (process.platform !== 'win32') {
-      fs.chmodSync(binaryPath, 0o755);
-    }
-
-    log.info(`[BackendManager] Backend ready at ${binaryPath}`);
-    this.emitDownloadProgress({ stage: 'ready', percent: 100 });
-    return binaryPath;
-  }
-
-  private emitDownloadProgress(progress: { stage: string; percent: number }): void {
-    const windows = BrowserWindow.getAllWindows();
-    for (const win of windows) {
-      win.webContents.send('backend:download-progress', progress);
-    }
-  }
-
-  private downloadFile(
-    url: string,
-    dest: string,
-    onProgress: (percent: number) => void
-  ): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const file = fs.createWriteStream(dest);
-      https
-        .get(url, { timeout: 120000 }, (response) => {
-          if (response.statusCode === 302 || response.statusCode === 301) {
-            const redirectUrl = response.headers.location;
-            if (redirectUrl) {
-              file.close();
-              fs.unlinkSync(dest);
-              this.downloadFile(redirectUrl, dest, onProgress).then(resolve).catch(reject);
-              return;
-            }
-          }
-          if (response.statusCode !== 200) {
-            reject(new Error(`Download failed: HTTP ${response.statusCode}`));
-            return;
-          }
-
-          const total = parseInt(response.headers['content-length'] || '0', 10);
-          let downloaded = 0;
-
-          response.on('data', (chunk: Buffer) => {
-            downloaded += chunk.length;
-            if (total > 0) {
-              onProgress(Math.round((downloaded / total) * 100));
-            }
-          });
-
-          response.pipe(file);
-          file.on('finish', () => {
-            file.close();
-            resolve();
-          });
-        })
-        .on('error', (err) => {
-          fs.unlinkSync(dest);
-          reject(err);
-        });
-    });
-  }
-
-  private sha256File(filePath: string): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const hash = crypto.createHash('sha256');
-      const stream = fs.createReadStream(filePath);
-      stream.on('data', (chunk) => hash.update(chunk));
-      stream.on('end', () => resolve(hash.digest('hex')));
-      stream.on('error', reject);
-    });
-  }
-
-  private async extractArchive(archivePath: string, destDir: string): Promise<void> {
-    const ext = path.extname(archivePath);
-    if (ext === '.zip') {
-      // Windows: use PowerShell Expand-Archive
-      await new Promise<void>((resolve, reject) => {
-        execFile(
-          'powershell',
-          ['-Command', `Expand-Archive -Path "${archivePath}" -DestinationPath "${destDir}" -Force`],
-          (err) => (err ? reject(err) : resolve())
-        );
-      });
-    } else {
-      // tar.gz: use tar
-      await new Promise<void>((resolve, reject) => {
-        execFile('tar', ['-xzf', archivePath, '-C', destDir], (err) =>
-          err ? reject(err) : resolve()
-        );
-      });
-    }
   }
 
   private resolveBinaryPath(logDiscovery = true): string | null {

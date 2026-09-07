@@ -41,14 +41,14 @@ export const COWORK_RAIL_CONFIG: RailConfigSection[] = [
   // Agent Hub - Shared section (same as Chat mode)
   {
     id: 'agent-hub',
-    title: 'Agent',
+    title: 'Bot',
     icon: Robot,
     collapsible: false,
     defaultExpanded: true,
     items: [
       {
         id: 'cw-agent-hub',
-        label: 'Agent | Bot Hub',
+        label: 'Bot Hub',
         icon: Robot,
         payload: 'agent-hub',
         shortcut: '⌘⇧A'

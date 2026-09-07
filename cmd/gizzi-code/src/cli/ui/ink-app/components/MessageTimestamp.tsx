@@ -4,6 +4,7 @@ import React from 'react';
 import { stringWidth } from '../ink/stringWidth';
 import { Box, Text } from '../ink';
 import type { NormalizedMessage } from '../types/message';
+import { getGlobalConfig } from '../utils/config';
 type Props = {
   message: NormalizedMessage;
   isTranscriptMode: boolean;
@@ -14,7 +15,7 @@ export function MessageTimestamp(t0) {
     message,
     isTranscriptMode
   } = t0;
-  const shouldShowTimestamp = isTranscriptMode && message.timestamp && message.type === "assistant" && message.message.content.some(_temp);
+  const shouldShowTimestamp = (isTranscriptMode || getGlobalConfig().showMessageTimestamps) && message.timestamp && message.type === "assistant" && message.message.content.some(_temp);
   if (!shouldShowTimestamp) {
     return null;
   }

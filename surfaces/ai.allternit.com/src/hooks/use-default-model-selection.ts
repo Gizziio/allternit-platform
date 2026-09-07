@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { setupApi } from "@/services/setup-api";
+import { useOnboardingStore } from "@/stores/onboarding-store";
 import type { ModelSelection } from "@/components/model-picker";
 
 /**
@@ -38,4 +39,29 @@ export function useDefaultModelSelection(): ModelSelection | null {
     }
     return { providerId: backendDefaultModel, profileId: backendDefaultModel, modelId: "", modelName: "" };
   }, [backendDefaultModel]);
+}
+
+/**
+ * The platform-wide resolved default: the onboarding wizard's preferred
+ * provider (if configured) wins over the backend-configured default. Shared
+ * by every surface that mounts a `<ModelSelectionProvider>` so they all
+ * compute the same starting selection.
+ */
+export function useResolvedDefaultModelSelection(): ModelSelection | null {
+  const onboardingProvider = useOnboardingStore((s) => s.preferences.defaultProvider);
+  const backendDefaultSelection = useDefaultModelSelection();
+
+  return useMemo(() => {
+    if (onboardingProvider) {
+      const raw = onboardingProvider.replace('/', '::');
+      const sep = raw.indexOf('::');
+      if (sep > 0) {
+        const providerId = raw.slice(0, sep);
+        const modelId = raw.slice(sep + 2);
+        return { providerId, profileId: providerId, modelId, modelName: modelId };
+      }
+      return { providerId: raw, profileId: raw, modelId: '', modelName: '' };
+    }
+    return backendDefaultSelection;
+  }, [onboardingProvider, backendDefaultSelection]);
 }

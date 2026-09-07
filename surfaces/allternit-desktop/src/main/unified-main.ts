@@ -64,6 +64,7 @@ import { workerBus } from './workers/worker-bus.js';
 import { mcpHostManager } from './mcp-host-manager.js';
 import { isLimaInstalled, installLima, startVM, stopVM, getVMStatus } from './lima.js';
 import { computerUseDriverManager } from './computer-use-driver-manager.js';
+import { acuGatewayManager } from './acu-gateway-manager.js';
 import {
   createCaptureSession,
   stopCaptureSession,
@@ -261,7 +262,7 @@ let pushServiceState = () => {
 };
 let miniWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
-let activePlatformUrl: string = isDev ? URLS.DEV_UI : 'https://platform.allternit.com';
+let activePlatformUrl: string = isDev ? URLS.DEV_UI : URLS.PRODUCTION_UI;
 
 // Central security policy for this process. App origins are the platform UI
 // (remote or local static export), the HUD/office/design/session windows that
@@ -299,8 +300,6 @@ const QUICK_CHAT_HOTKEY = 'CommandOrControl+Shift+A';
 // muscle memory expects it.
 const HUD_HOTKEY = 'CommandOrControl+Shift+H';
 const HUD_HOTKEY_FALLBACK = 'Alt+Shift+H';
-const HUD_HOTKEY_PRIMARY = 'CommandOrControl+Shift+H';
-const HUD_HOTKEY_ALT = 'Alt+Shift+H';
 const HUD_DEFAULT_WIDTH = 720;
 const HUD_DEFAULT_HEIGHT = 72;
 const MINI_WINDOW_WIDTH = 520;
@@ -355,6 +354,7 @@ async function startGizziRuntime(): Promise<string> {
   return gizziManager.start({
     existingPassword,
     apiToken: session?.accessToken,
+    runtimeId: session?.runtimeId,
     extraEnv: authManager.getConnectorSidecarEnvironment(),
   });
 }
@@ -567,19 +567,20 @@ function createMainWindow(): BrowserWindow {
 
   installWillNavigateGuard(window.webContents);
 
-  // Redirect all /api/* requests from the platform URL (or the public gateway)
-  // to the allternit-api custom protocol. The protocol handler (registered
-  // globally) proxies to the local API URL and injects auth headers. This avoids
-  // mixed-content blocking without allowRunningInsecureContent.
+  // Route /api/* through the allternit-api custom protocol so main can inject
+  // the paired device token. Cloud control-plane calls stay on api.allternit.com
+  // (host `cloud`); same-origin calls from the local static UI stay on loopback.
   const platformOrigin = activePlatformUrl;
-  const publicApiOrigin = 'https://api.allternit.com';
+  const publicApiOrigin = URLS.CLOUD_API;
   window.webContents.session.webRequest.onBeforeRequest((details, callback) => {
-    const apiPrefixes = [`${platformOrigin}/api/`, `${publicApiOrigin}/api/`, `${publicApiOrigin}/api/v1/`];
-    const matchedPrefix = apiPrefixes.find((prefix) => details.url.startsWith(prefix));
-    if (matchedPrefix) {
-      const originToReplace = matchedPrefix.startsWith(publicApiOrigin) ? publicApiOrigin : platformOrigin;
-      const redirectURL = details.url.replace(originToReplace, `allternit-api://localhost:${PORTS.API}`);
-      callback({ redirectURL });
+    if (details.url.startsWith(`${publicApiOrigin}/api/`)) {
+      callback({ redirectURL: details.url.replace(publicApiOrigin, 'allternit-api://cloud') });
+      return;
+    }
+    if (details.url.startsWith(`${platformOrigin}/api/`)) {
+      callback({
+        redirectURL: details.url.replace(platformOrigin, `allternit-api://localhost:${PORTS.API}`),
+      });
       return;
     }
     callback({});
@@ -590,7 +591,10 @@ function createMainWindow(): BrowserWindow {
     let isOperatorApi = false;
     try {
       const target = new URL(details.url);
-      isOperatorApi = target.origin === URLS.API;
+      isOperatorApi =
+        target.origin === URLS.API ||
+        target.origin === URLS.CLOUD_API ||
+        target.protocol === 'allternit-api:';
     } catch {
       isOperatorApi = false;
     }
@@ -754,8 +758,8 @@ function createMainWindow(): BrowserWindow {
   }
   
   // Log console messages
-  window.webContents.on('console-message', (event, level, message, line, sourceId) => {
-    log.info(`[Renderer] ${message} (${sourceId}:${line})`);
+  window.webContents.on('console-message', (event) => {
+    log.info(`[Renderer] ${event.message} (${event.sourceId}:${event.lineNumber})`);
   });
 
   return window;
@@ -850,6 +854,9 @@ async function initializeBundledMode(): Promise<void> {
       log.info('[Main] Gizzi-code started successfully');
       serviceState.gizzi = { status: 'up', detail: `Connected on ${gizziUrl}` };
       pushServiceState();
+      void meshManager.start().catch((error) => {
+        log.warn('[Mesh] Fabric mesh unavailable (relay still works):', error);
+      });
     } catch (gizziErr) {
       log.warn('[Main] Gizzi-code failed to start, continuing without AI runtime:', gizziErr);
       serviceState.gizzi = { status: 'down', detail: `Failed to start on ${PORTS.GIZZI}` };
@@ -904,12 +911,19 @@ async function initializeBundledMode(): Promise<void> {
     if (!computerUseDriver.running) {
       log.warn('[Main] Embedded computer-use driver unavailable:', computerUseDriver.error);
     }
+    const acuUrl = await acuGatewayManager.start();
+    if (acuUrl) {
+      log.info(`[Main] ACU computer-use gateway ready at ${acuUrl}`);
+    } else {
+      log.warn('[Main] ACU computer-use gateway unavailable; Open computer will 502 until it is started');
+    }
     const apiUrl = await backendManager.ensureBackend({
       gizziUrl,
       gizziPassword: gizziManager.getPassword(),
       gizziUsername: 'gizzi',
       extraEnv: {
         ...computerUseDriverManager.getLaunchEnvironment(),
+        ...acuGatewayManager.getLaunchEnvironment(),
         ...authManager.getPlatformEncryptionEnvironment(),
         ...authManager.getConnectorSidecarEnvironment(),
       },
@@ -940,7 +954,7 @@ async function initializeBundledMode(): Promise<void> {
     // mode so local worktree UI builds (e.g. Vite on a non-default port) can be
     // tested without repackaging the desktop.
     let platformUrl: string = process.env.ALLTERNIT_PLATFORM_URL?.trim()
-      || (isDev ? URLS.DEV_UI : 'https://platform.allternit.com');
+      || (isDev ? URLS.DEV_UI : URLS.PRODUCTION_UI);
 
     if (isDev && process.env.ALLTERNIT_DESKTOP_USE_STATIC_UI) {
       const localStaticPath = resolveLocalPlatformStaticPath();
@@ -1191,20 +1205,18 @@ async function initializeRemoteMode(remoteUrl: string): Promise<void> {
     const version = versionData.version;
     
     if (shouldUpdateBackend(version)) {
-      // Show update dialog
       const result = await dialog.showMessageBox({
-        type: 'info',
+        type: 'warning',
         title: 'Allternit Desktop Backend Update Required',
-        message: `Your remote backend (${version}) needs to be updated to match Allternit Desktop ${PLATFORM_MANIFEST.backend.version}.`,
-        buttons: ['Update Now', 'Continue Anyway', 'Switch to Local'],
+        message: `Your remote backend (${version}) does not match Allternit Desktop ${PLATFORM_MANIFEST.backend.version}.`,
+        detail:
+          'Desktop cannot SSH into the remote host. Update allternit-api on that server to ' +
+          `${PLATFORM_MANIFEST.backend.version}, then reconnect. You can keep this mismatched session or switch to the local backend.`,
+        buttons: ['Continue Anyway', 'Switch to Local'],
         defaultId: 0,
-      });      
-      if (result.response === 0) {
-        // Update remote backend (SSH into VPS)
-        // This would need SSH credentials stored securely
-        log.info('[Main] Would update remote backend via SSH');
-      } else if (result.response === 2) {
-        // Switch to local mode
+        cancelId: 0,
+      });
+      if (result.response === 1) {
         store.set('backend.mode', 'bundled');
         await initializeBundledMode();
         return;
@@ -1559,19 +1571,19 @@ async function updateTrayMenu(): Promise<void> {
     },
   };
 
-  const contextMenu = Menu.buildFromTemplate([
+  const template: Electron.MenuItemConstructorOptions[] = [
     { label: 'Allternit Desktop', enabled: false },
     { type: 'separator' },
     { label: `${statusIcon} ${status.running ? 'Running' : 'Stopped'}`, enabled: false },
     { label: `Mode: ${modeLabel}`, enabled: false },
     { type: 'separator' },
-    { 
-      label: 'Connection Settings...', 
+    {
+      label: 'Connection Settings...',
       click: () => {
         showConnectionSettings();
-      }
+      },
     },
-    ...(permItem ? [permItem, { type: 'separator' } as Electron.MenuItemConstructorOptions] : []),
+    ...(permItem ? [permItem, { type: 'separator' as const }] : []),
     { label: 'Show Window', click: () => mainWindow?.show() },
     {
       label: 'Allternit Office',
@@ -1587,9 +1599,9 @@ async function updateTrayMenu(): Promise<void> {
     { label: 'Toggle HUD', accelerator: HUD_HOTKEY, click: () => toggleHudWindow() },
     { type: 'separator' },
     { label: 'Quit', click: () => app.quit() },
-  ] as any);
+  ];
 
-  tray.setContextMenu(contextMenu);
+  tray.setContextMenu(Menu.buildFromTemplate(template));
 }
 
 // ============================================================================
@@ -1754,7 +1766,11 @@ app.whenReady().then(async () => {
   console.log('[Main] Registering allternit-api protocol handler...');
   protocol.handle('allternit-api', async (request) => {
     const url = new URL(request.url);
-    const targetUrl = apiUrl(`${url.pathname}${url.search}`);
+    const pathAndQuery = `${url.pathname}${url.search}`;
+    const targetUrl =
+      url.hostname === 'cloud' || url.host === 'cloud'
+        ? `${URLS.CLOUD_API}${pathAndQuery}`
+        : apiUrl(pathAndQuery);
 
     // CORS preflight for custom-protocol cross-origin requests
     if (request.method === 'OPTIONS') {
@@ -1993,6 +2009,7 @@ app.on('before-quit', async () => {
   voiceManager.stop();
   bonsaiCompanion.stop();
   computerUseDriverManager.stop();
+  acuGatewayManager.stop();
   stopVM().catch(() => {}); // best-effort Lima VM shutdown
   // Remove dev session credentials file so stale credentials don't persist across restarts
   if (isDev) {
@@ -2084,6 +2101,13 @@ ipcMain.handle('app:check-for-updates', async () => {
 });
 handleGuarded('app:install-update', () => {
   autoUpdater.quitAndInstall();
+});
+// Preload uses sendSync at module load; handle() only answers invoke().
+ipcMain.on('app:get-platform-url', (event) => {
+  event.returnValue = {
+    platformUrl: activePlatformUrl,
+    gatewayUrl: URLS.CLOUD_API,
+  };
 });
 ipcMain.handle('app:get-platform-url', () => activePlatformUrl);
 
@@ -2543,7 +2567,7 @@ handleGuarded('shell:hud:annotation:save', async (_event, base64Png: string) => 
   }
 });
 
-ipcMain.handle('shell:open-remote-control', () => {
+function openFabricSessionWindow(): void {
   if (remoteControlWindow && !remoteControlWindow.isDestroyed()) {
     remoteControlWindow.show();
     remoteControlWindow.focus();
@@ -2555,11 +2579,11 @@ ipcMain.handle('shell:open-remote-control', () => {
     height: 840,
     minWidth: 820,
     minHeight: 560,
-    title: 'Allternit Remote Control',
+    title: 'Allternit Fabric Transport',
     titleBarStyle: isMac ? 'hiddenInset' : 'default',
     trafficLightPosition: { x: 16, y: 16 },
     show: false,
-    backgroundColor: '#0F0C0A',
+    backgroundColor: '#FFFFFF',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
@@ -2576,12 +2600,20 @@ ipcMain.handle('shell:open-remote-control', () => {
   });
   remoteControlWindow.once('ready-to-show', () => remoteControlWindow?.show());
   remoteControlWindow.on('closed', () => { remoteControlWindow = null; });
-  const dashboardUrl = process.env.ALLTERNIT_REMOTE_CONTROL_URL
-    ? new URL('/', process.env.ALLTERNIT_REMOTE_CONTROL_URL).toString()
-    : activePlatformUrl.includes('localhost') || activePlatformUrl.includes('127.0.0.1')
-      ? new URL('/remote-control.html', activePlatformUrl).toString()
-      : 'https://remotecontrol.allternit.com';
+  const dashboardUrl = process.env.ALLTERNIT_FABRIC_SESSION_URL
+    ? new URL('/', process.env.ALLTERNIT_FABRIC_SESSION_URL).toString()
+    : process.env.ALLTERNIT_REMOTE_CONTROL_URL
+      ? new URL('/', process.env.ALLTERNIT_REMOTE_CONTROL_URL).toString()
+      : new URL('/fabric-session.html', activePlatformUrl).toString();
   void remoteControlWindow.loadURL(dashboardUrl);
+}
+
+ipcMain.handle('shell:open-remote-control', () => {
+  openFabricSessionWindow();
+});
+
+ipcMain.handle('shell:open-fabric-session', () => {
+  openFabricSessionWindow();
 });
 
 function resolveOfficeUrl(target: OfficeTarget, artifactId?: string): string {

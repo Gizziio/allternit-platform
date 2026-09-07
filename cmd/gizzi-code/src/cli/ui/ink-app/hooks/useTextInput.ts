@@ -49,6 +49,7 @@ export type UseTextInputProps = {
   focus?: boolean
   mask?: string
   multiline?: boolean
+  multilineEnter?: boolean
   cursorChar: string
   highlightPastedText?: boolean
   invert: (text: string) => string
@@ -83,6 +84,7 @@ export function useTextInput({
   onClearInput,
   mask = '',
   multiline = false,
+  multilineEnter = false,
   cursorChar,
   invert,
   columns,
@@ -254,6 +256,18 @@ export function useTextInput({
       // Track that the user has used backslash+return
       markBackslashReturnUsed()
       return cursor.backspace().insert('\n')
+    }
+    if (multilineEnter) {
+      // Inverted behavior: plain Enter inserts a newline, modifier+Enter
+      // submits. Apple Terminal doesn't report shift on return, so fall back
+      // to native macOS modifier detection there.
+      if (key.meta || key.shift) {
+        return onSubmit?.(originalValue)
+      }
+      if (env.terminal === 'Apple_Terminal' && isModifierPressed('shift')) {
+        return onSubmit?.(originalValue)
+      }
+      return cursor.insert('\n')
     }
     // Meta+Enter or Shift+Enter inserts a newline
     if (key.meta || key.shift) {

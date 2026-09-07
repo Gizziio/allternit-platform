@@ -44,6 +44,7 @@ import { useDesignSessionStore } from '../views/design/DesignSessionStore';
 // Modularized Shell Components
 import { getShellViewRegistry } from './ViewRegistry';
 import { HudShell } from './hud/HudShell';
+import { NativeSessionPickerHost } from '@/components/native-sessions/NativeSessionPicker';
 import { useHudHandoff } from './hud/handoff';
 
 import { useResolvedTheme, useThemeStore } from '../design/ThemeStore';
@@ -121,8 +122,8 @@ function ShellAppInner(): React.ReactNode {
   const active = selectActiveView(nav)!;
 
   const { startSession: startBotSession } = useStartBotSession(
-    useCallback((sessionId: string) => {
-      dispatch({ type: 'OPEN_VIEW', viewType: 'cowork-agent-session', context: { sessionId, originView: active.viewType } });
+    useCallback((sessionId: string, botId: string) => {
+      dispatch({ type: 'OPEN_VIEW', viewType: 'bot-chat-session', context: { sessionId, botId, originView: active.viewType } });
     }, [active.viewType])
   );
   useStackProviders();
@@ -678,6 +679,7 @@ function ShellAppInner(): React.ReactNode {
       <VoiceProvider>
       <SessionProvider session={session}>
         <VisionGlass />
+        <NativeSessionPickerHost />
         <VoicePresence compact={false} />
 
         {permissions.isSupported && permissions.anyDenied && !permissionBannerDismissed && (

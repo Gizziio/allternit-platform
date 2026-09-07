@@ -75,6 +75,7 @@ const LOGOS_APPS_ALIASES: Record<string, string | null> = {
   minimaxcode: "minimax",
   mcode: "minimax",
   sidecar: "ollama",
+  openrouter: "openrouter",
 
   // Platform brands with no logos-apps entry — rely on runtime-logos fallback
   zai: null,
@@ -175,8 +176,6 @@ export function getLogosAppsUrl(name: string | undefined | null): string | null 
   if (!normalized) return null;
 
   const alias = LOGOS_APPS_ALIASES[normalized];
-  if (alias === null) return null;
-
-  const slug = alias ?? normalized;
-  return `${LOGOS_APPS_BASE}/${slug}.svg`;
+  if (!alias) return null;
+  return `${LOGOS_APPS_BASE}/${alias}.svg`;
 }

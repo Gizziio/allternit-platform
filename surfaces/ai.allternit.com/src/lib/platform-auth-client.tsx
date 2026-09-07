@@ -44,7 +44,8 @@ const clerkDisabledByEnv = isClerkDisabledByEnv()
 const DESKTOP_BROWSER_AUTH_PATH_PREFIXES = ["/sign-in", "/sign-up", "/pair", "/oauth", "/terminal/clerk", "/clerk_"]
 
 const STATIC_ALLOWED_REDIRECT_ORIGINS = [
-  "https://remotecontrol.allternit.com",
+  "https://fabrictransport.allternit.com",
+  "https://fabric-session.allternit.com",
   "https://platform.allternit.com",
   "https://ai.allternit.com",
 ]
@@ -122,7 +123,7 @@ function useDesktopSession() {
   const [isLoaded, setIsLoaded] = useState(false)
 
   useEffect(() => {
-    if (!desktopAuthEnabled || !isDesktopShell()) {
+    if (!isDesktopShell()) {
       setIsLoaded(true)
       return
     }
@@ -140,8 +141,14 @@ function useDesktopSession() {
         setIsLoaded(true)
       })
 
+    const unsubscribe = window.allternit?.auth?.onSessionUpdated?.((partial) => {
+      if (!active) return
+      setSession((current) => current ? { ...current, ...partial } : current)
+    })
+
     return () => {
       active = false
+      unsubscribe?.()
     }
   }, [])
 
@@ -150,7 +157,7 @@ function useDesktopSession() {
 
 function useDesktopBrowserAuthSurface() {
   const location = useLocation()
-  return desktopAuthEnabled && isDesktopShell() &&
+  return isDesktopShell() &&
     DESKTOP_BROWSER_AUTH_PATH_PREFIXES.some((prefix) => location.pathname === prefix || location.pathname.startsWith(`${prefix}/`))
 }
 
@@ -301,7 +308,7 @@ export function PlatformAuthProvider({ children }: { children: ReactNode }) {
   const selfHosted = companyConfig?.selfHosted ?? false
   const authDisabled = clerkDisabledByEnv || selfHosted || (!desktopAuthEnabled && !publishableKey)
 
-  if (desktopAuthEnabled && isDesktopShell() && !browserAuthSurface) {
+  if (isDesktopShell() && !browserAuthSurface) {
     const value = buildDesktopAuthValue(session, desktopIsLoaded)
     return <PlatformAuthContext.Provider value={value}>{children}</PlatformAuthContext.Provider>
   }
@@ -311,12 +318,20 @@ export function PlatformAuthProvider({ children }: { children: ReactNode }) {
     return <PlatformAuthContext.Provider value={value}>{children}</PlatformAuthContext.Provider>
   }
 
+  const pwaHost = typeof window !== "undefined" && (
+    window.location.hostname === "fabrictransport.allternit.com" ||
+    window.location.hostname === "fabric-session.allternit.com"
+  )
+  const stayUrl = typeof window !== "undefined" ? `${window.location.origin}${window.location.pathname}${window.location.search}` : "/"
+
   return (
     <ClerkProvider
       publishableKey={publishableKey}
       appearance={clerkAppearance}
-      signInUrl={SIGN_IN_PATH}
-      signUpUrl={SIGN_UP_PATH}
+      signInUrl={pwaHost ? stayUrl : SIGN_IN_PATH}
+      signUpUrl={pwaHost ? stayUrl : SIGN_UP_PATH}
+      signInFallbackRedirectUrl={pwaHost ? stayUrl : "/shell"}
+      signUpFallbackRedirectUrl={pwaHost ? stayUrl : "/shell"}
       proxyUrl={getProxyUrl()}
       allowedRedirectOrigins={getAllowedRedirectOrigins()}
     >
@@ -511,9 +526,10 @@ function buildDesktopAuthValue(session: DesktopSession | null, isLoaded: boolean
       orgId: session?.organizationId ?? null,
       orgRole: session?.organizationRole ?? null,
       actor: null as unknown,
-      // Runtime credentials remain in Electron main. Requests to the local API
-      // are authorized by the desktop broker, never by renderer JavaScript.
-      getToken: async () => null,
+      // Local API requests are brokered by Electron main with the device
+      // token. Cloud billing/control-plane calls need the Clerk session JWT
+      // from the auth-window partition.
+      getToken: async () => window.allternit?.auth?.getClerkToken?.() ?? null,
     },
     signOut: async (_options?: unknown) => {
       await window.allternit?.auth?.signOut()
@@ -724,6 +740,7 @@ export function PlatformSignIn(props: {
   forceRedirectUrl?: string
   signUpForceRedirectUrl?: string
   signUpUrl?: string
+  routing?: "path" | "hash" | "virtual"
 }) {
   const location = useLocation()
   const { config: companyConfig } = useCompanyConfig()
@@ -736,7 +753,7 @@ export function PlatformSignIn(props: {
 
   // Inside the desktop shell always offer the browser-backed desktop sign-in,
   // including on /sign-in itself — otherwise a signed-out shell dead-ends here.
-  if (desktopAuthEnabled && isDesktopShell()) {
+  if (isDesktopShell()) {
 
     const handleDesktopSignIn = async () => {
       setError(null)
@@ -785,6 +802,7 @@ export function PlatformSignIn(props: {
 
   const redirectUrl = props.forceRedirectUrl || "/shell"
   const strategy = new URLSearchParams(location.search).get("strategy")
+  const routing = props.routing ?? "path"
   return (
     <>
       {strategy === "oauth_google" ? (
@@ -793,10 +811,11 @@ export function PlatformSignIn(props: {
       <SignIn
         appearance={clerkAppearance}
         forceRedirectUrl={redirectUrl}
-        routing="path"
-        path={SIGN_IN_PATH}
+        fallbackRedirectUrl={redirectUrl}
+        {...(routing === "path"
+          ? { routing, path: SIGN_IN_PATH, signUpUrl: props.signUpUrl || SIGN_UP_PATH }
+          : { routing })}
         signUpForceRedirectUrl={props.signUpForceRedirectUrl || redirectUrl}
-        signUpUrl={props.signUpUrl || SIGN_UP_PATH}
       />
     </>
   )
@@ -814,7 +833,7 @@ export function PlatformSignUp(props: {
   const selfHosted = companyConfig?.selfHosted ?? false
   const authDisabled = clerkDisabledByEnv || selfHosted || (!desktopAuthEnabled && !publishableKey)
 
-  if (desktopAuthEnabled && isDesktopShell() && !browserAuthSurface) {
+  if (isDesktopShell() && !browserAuthSurface) {
     return (
       <DisabledAuthCard
         title="Sign-up is handled on the hosted platform"

@@ -942,6 +942,7 @@ export interface ModeSessionState {
   sessionCanvases: Record<string, string[]>;
 
   createSession: (options?: CreateModeSessionOptions) => Promise<string>;
+  adoptSession: (backend: BackendSession) => string;
   deleteSession: (sessionId: string) => Promise<void>;
   updateSession: (sessionId: string, updates: Partial<ModeSession>) => Promise<void>;
   setActiveSession: (sessionId: string | null) => void;
@@ -1013,6 +1014,17 @@ export function createModeSessionStore(config: StoreConfig) {
           sessionCanvases: {},
           isSyncConnected: false,
           syncError: null,
+
+          adoptSession: (backend) => {
+            const session = mapBackendSession(backend);
+            set((state) => ({
+              sessions: [session, ...state.sessions.filter((s) => s.id !== session.id)],
+              activeSessionId: session.id,
+              isLoading: false,
+              error: null,
+            }));
+            return session.id;
+          },
 
           createSession: async (options = {}) => {
             set({ isLoading: true, error: null });

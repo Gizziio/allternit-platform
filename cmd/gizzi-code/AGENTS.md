@@ -164,6 +164,7 @@ gizzi daemon status     # Show status
 | Vault E2E | `bun test/vault/e2e.ts` | 46/46 passing |
 | Build | `bun run build` | ✅ darwin-arm64 binary |
 | Migration chain | `test/storage/migration-chain.test.ts` (in smoke) | applies all 16 migrations to fresh + old temp DBs, asserts final schema and folder-name ordering |
+| Color-diff shim | `bun test --preload ./test/preload.ts test/vendor/color-diff-napi.test.ts` | 7/7 — regression guard for the `/theme` TUI crash (missing `ColorDiff.render`) |
 
 ---
 

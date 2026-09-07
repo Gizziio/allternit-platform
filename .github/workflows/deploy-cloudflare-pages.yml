@@ -87,6 +87,18 @@ jobs:
             echo "No discovery-pipeline.json found, skipping"
           fi
 
+      - name: Verify Clerk publishable key secret is present
+        # Hard gate: never build/deploy a site with an empty Clerk key again
+        # (the 2026-08-01 silent Clerk outage was an empty secret deploying "green").
+        run: |
+          if [ -z "${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}" ]; then
+            echo "::error ::NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY secret is empty — refusing to build ai.allternit.com without Clerk auth."
+            exit 1
+          fi
+          echo "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is set (${#NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY} chars)."
+        env:
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+
       - name: Build ai.allternit.com static export
         run: pnpm --filter "@allternit/ai..." build
         env:
@@ -130,6 +142,17 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
 
+      - name: Verify Clerk publishable key secret is present
+        # Same hard gate as deploy-ai: platform.allternit.com consumes the same secret.
+        run: |
+          if [ -z "${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}" ]; then
+            echo "::error ::NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY secret is empty — refusing to build platform.allternit.com without Clerk auth."
+            exit 1
+          fi
+          echo "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is set (${#NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY} chars)."
+        env:
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+
       - name: Build platform.allternit.com
         run: pnpm --filter "@allternit/platform-console" build
         env:
@@ -143,3 +166,46 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy surfaces/platform.allternit.com/dist --project-name=allternit-platform --branch=main
+
+  clerk-smoke-ai:
+    name: Post-deploy Clerk smoke (ai.allternit.com)
+    runs-on: ubuntu-latest
+    # Runs after the deploy so it exercises the live hosted site. The smoke
+    # script (surfaces/ai.allternit.com/scripts/clerk-e2e-verify.mjs) has no
+    # soft-fail mode — a failure here fails the workflow on purpose so a
+    # broken Clerk deploy cannot go unnoticed.
+    needs: deploy-ai
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.0
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Install Playwright Chromium
+        working-directory: surfaces/ai.allternit.com
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run Clerk e2e smoke against deployed ai.allternit.com
+        working-directory: surfaces/ai.allternit.com
+        run: pnpm test:clerk:e2e
+        env:
+          CLERK_TARGET_ORIGIN: 'https://ai.allternit.com'
+          CLERK_TEST_EMAIL: ${{ secrets.CLERK_TEST_EMAIL }}
+          CLERK_TEST_PASSWORD: ${{ secrets.CLERK_TEST_PASSWORD }}
+          CLERK_SECONDARY_EMAIL: ${{ secrets.CLERK_TEST_SECONDARY_EMAIL }}
+          CLERK_SECONDARY_PASSWORD: ${{ secrets.CLERK_TEST_SECONDARY_PASSWORD }}
+          HEADLESS: '1'

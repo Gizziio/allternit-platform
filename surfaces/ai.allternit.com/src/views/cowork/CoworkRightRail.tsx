@@ -249,10 +249,10 @@ function parseSkills(files: string[]): string[] {
 
 // ─── Style constants ──────────────────────────────────────────────────────────
 
-const RAIL_TEXT   = 'rgba(210,185,148,0.75)';
-const RAIL_MUTED  = 'rgba(210,185,148,0.38)';
-const RAIL_BORDER = 'rgba(210,185,148,0.08)';
-const RAIL_AMBER  = 'rgba(210,185,148,0.9)';
+const RAIL_TEXT   = 'var(--text-primary)';
+const RAIL_MUTED  = 'var(--text-secondary)';
+const RAIL_BORDER = 'var(--border-subtle)';
+const RAIL_AMBER  = 'var(--accent-cowork)';
 
 // ─── Primitives ───────────────────────────────────────────────────────────────
 
@@ -306,7 +306,7 @@ function StepNumber({ n, status }: { n: number; status: TodoEntry['status'] }) {
     return (
       <span style={{
         width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
-        background: 'rgba(210,185,148,0.18)',
+        background: 'color-mix(in srgb, var(--accent-cowork) 15%, transparent)',
         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
       }}>
         <Check size={11} style={{ color: RAIL_AMBER }} />
@@ -407,9 +407,9 @@ function WorkingFolder({ files, isStreaming }: { files: string[]; isStreaming: b
             type="button"
             onClick={() => handleCopy(p)}
             title={p}
-            style={{ display:'flex', alignItems:'center', gap:8, padding:'4px 6px', background:'rgba(210,185,148,0.04)', border:'1px solid rgba(210,185,148,0.07)', borderRadius:6, cursor:'pointer', width:'100%', textAlign:'left' }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(210,185,148,0.09)')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'rgba(210,185,148,0.04)')}
+            style={{ display:'flex', alignItems:'center', gap:8, padding:'4px 6px', background:'color-mix(in srgb, var(--accent-cowork) 8%, transparent)', border:'1px solid color-mix(in srgb, var(--accent-cowork) 12%, transparent)', borderRadius:6, cursor:'pointer', width:'100%', textAlign:'left' }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'color-mix(in srgb, var(--accent-cowork) 14%, transparent)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'color-mix(in srgb, var(--accent-cowork) 8%, transparent)')}
           >
             <FileIcon filename={name} />
             <span style={{ flex:1, minWidth:0, fontSize:12, color:RAIL_TEXT, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
@@ -494,7 +494,7 @@ const LANG_COLORS: Record<string, string> = {
 };
 
 function langColor(lang: string) {
-  return LANG_COLORS[lang.toLowerCase()] ?? 'rgba(210,185,148,0.5)';
+  return LANG_COLORS[lang.toLowerCase()] ?? 'var(--text-secondary)';
 }
 
 function ArtifactsSection({ artifacts, isStreaming }: { artifacts: ArtifactEntry[]; isStreaming: boolean }) {
@@ -522,11 +522,11 @@ function ArtifactsSection({ artifacts, isStreaming }: { artifacts: ArtifactEntry
           style={{
             display: 'flex', alignItems: 'center', gap: 7,
             padding: '5px 8px', borderRadius: 6, width: '100%', textAlign: 'left',
-            background: 'rgba(210,185,148,0.04)', border: '1px solid rgba(210,185,148,0.08)',
+            background: 'color-mix(in srgb, var(--accent-cowork) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--accent-cowork) 12%, transparent)',
             cursor: 'pointer',
           }}
-          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(210,185,148,0.09)')}
-          onMouseLeave={e => (e.currentTarget.style.background = 'rgba(210,185,148,0.04)')}
+          onMouseEnter={e => (e.currentTarget.style.background = 'color-mix(in srgb, var(--accent-cowork) 14%, transparent)')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'color-mix(in srgb, var(--accent-cowork) 8%, transparent)')}
         >
           <span style={{
             fontSize: 9, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase',
@@ -568,8 +568,8 @@ function AuditLogsSection({ auditLogs }: { auditLogs: any[] }) {
           style={{
             padding: '6px 8px',
             borderRadius: 6,
-            background: 'rgba(210,185,148,0.03)',
-            border: '1px solid rgba(210,185,148,0.06)',
+            background: 'color-mix(in srgb, var(--accent-cowork) 6%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--accent-cowork) 10%, transparent)',
             fontSize: '11px',
             color: RAIL_TEXT,
           }}
@@ -655,7 +655,7 @@ export const CoworkRightRail = memo(function CoworkRightRail({
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:6, flexShrink:0 }}>
           {totalCount > 0 && (
-            <span style={{ fontSize:11, color:RAIL_MUTED, background:'rgba(210,185,148,0.08)', borderRadius:8, padding:'1px 7px', lineHeight:'18px' }}>
+            <span style={{ fontSize:11, color:RAIL_MUTED, background:'color-mix(in srgb, var(--accent-cowork) 12%, transparent)', borderRadius:8, padding:'1px 7px', lineHeight:'18px' }}>
               {completedCount} of {totalCount}
             </span>
           )}

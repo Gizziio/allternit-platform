@@ -12,7 +12,44 @@ on:
   workflow_dispatch:
 
 jobs:
+  # Test gate: the full suite must pass before any deploy. The API is
+  # SQLite-based — its tests spin up throwaway sqlite databases (see
+  # DbHandle::new_memory in src/db.rs), so unlike the cloud-api workflow no
+  # postgres service container is required.
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install protobuf compiler
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-gnu
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-api-contabo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-api-contabo-
+
+      # Full suite in release mode, mirroring the VPS deploy loop and the
+      # cloud-api workflow's test gate.
+      - name: Test
+        run: cargo test --release --target x86_64-unknown-linux-gnu -p allternit-api
+
   deploy:
+    needs: test
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:

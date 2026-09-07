@@ -27,7 +27,9 @@ export const ChatBackground: React.FC<ChatBackgroundProps> = ({
       if (mode === 'cowork') return 'transparent';
       return 'var(--view-chat-bg, var(--surface-canvas))';
     }
-    return 'radial-gradient(circle at top right, color-mix(in srgb, var(--accent-chat) 10%, transparent), transparent 34%), linear-gradient(180deg, color-mix(in srgb, var(--surface-floating) 18%, transparent) 0%, transparent 18%)';
+    // Opaque view base first so the open session matches the white shell views
+    // and occludes the warm agent glow painted by the shell frame behind it.
+    return 'linear-gradient(var(--view-chat-bg, var(--shell-view-bg)), var(--view-chat-bg, var(--shell-view-bg))), radial-gradient(circle at top right, color-mix(in srgb, var(--accent-chat) 10%, transparent), transparent 34%), linear-gradient(180deg, color-mix(in srgb, var(--surface-floating) 18%, transparent) 0%, transparent 18%)';
   };
 
   const getEmbeddedChatBoxShadow = () => {

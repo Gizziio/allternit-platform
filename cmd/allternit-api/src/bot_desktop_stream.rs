@@ -1,7 +1,7 @@
 //! Bot desktop VNC WebSocket proxy
 //!
 //! Proxies binary WebSocket frames between the browser (noVNC or a raw VNC
-//! client) and the OpenSandbox VNC TCP endpoint. Auth is checked before the
+//! client) and the guest VNC TCP endpoint. Auth is checked before the
 //! upgrade and again inside the spawned task.
 
 use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
@@ -361,7 +361,7 @@ async fn verify_bot_ownership(state: &AppState, user_id: &str, bot_id: &str) -> 
     }
 }
 
-/// Parse a TCP host:port from endpoint URLs returned by OpenSandbox.
+/// Parse a TCP host:port from desktop endpoint URLs.
 /// Accepts `tcp://host:port`, `ws://host:port`, `host:port`, or `http://host:port`.
 fn parse_tcp_addr(url: &str) -> Option<String> {
     let url = url.trim();

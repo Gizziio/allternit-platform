@@ -8,12 +8,17 @@
 
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
 
-// Force the platform UI to call the same-origin /api route so the main process
-// can intercept it and proxy to the local Rust API with injected desktop auth.
+// Same-origin gateway (local allternit-api). Main injects the paired device
+// token and the local API introspects it against cloudApiUrl.
 try {
-  const platformUrl = ipcRenderer.sendSync('app:get-platform-url');
+  const info = ipcRenderer.sendSync('app:get-platform-url');
+  const platformUrl =
+    info && typeof info === 'object' ? info.platformUrl : info;
   if (typeof platformUrl === 'string' && platformUrl) {
     (window as any).__ALLTERNIT_GATEWAY_URL__ = platformUrl;
+  }
+  if (info && typeof info === 'object' && typeof info.gatewayUrl === 'string') {
+    (window as any).__ALLTERNIT_CLOUD_API_URL__ = info.gatewayUrl;
   }
 } catch (e) {
   console.warn('[preload] Could not set __ALLTERNIT_GATEWAY_URL__:', e);
@@ -240,6 +245,12 @@ const authAPI = {
     ipcRenderer.invoke('auth:forget-account', userId),
   signOut: (): Promise<void> => ipcRenderer.invoke('auth:sign-out'),
   hardSignOut: (): Promise<void> => ipcRenderer.invoke('auth:sign-out'),
+  getClerkToken: (): Promise<string | null> => ipcRenderer.invoke('auth:get-clerk-token'),
+  onSessionUpdated: (handler: (session: { userId: string; userEmail: string }) => void): (() => void) => {
+    const listener = (_: IpcRendererEvent, session: { userId: string; userEmail: string }) => handler(session);
+    ipcRenderer.on('auth:session-updated', listener);
+    return () => ipcRenderer.removeListener('auth:session-updated', listener);
+  },
 };
 
 // ─── Device Pairing ───────────────────────────────────────────────────────────
@@ -309,6 +320,7 @@ const shellAPI = {
   openExternal: (url: string): Promise<void> => ipcRenderer.invoke('shell:open-external', url),
   openDesign: (): Promise<void> => ipcRenderer.invoke('shell:open-design'),
   openRemoteControl: (): Promise<void> => ipcRenderer.invoke('shell:open-remote-control'),
+  openFabricSession: (): Promise<void> => ipcRenderer.invoke('shell:open-fabric-session'),
   openHud: (): Promise<void> => ipcRenderer.invoke('shell:open-hud'),
   closeHud: (): Promise<void> => ipcRenderer.invoke('shell:close-hud'),
   toggleHud: (): Promise<void> => ipcRenderer.invoke('shell:toggle-hud'),

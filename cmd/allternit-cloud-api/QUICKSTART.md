@@ -7,7 +7,7 @@ The Allternit Cloud API is the hosted control plane for user accounts, runtime p
 ## Prerequisites
 
 - Rust toolchain (1.78+)
-- SQLite for local development, Postgres for production
+- PostgreSQL (the only supported database; `init_db` parses `PgConnectOptions`)
 - A Clerk account and application for `platform.allternit.com`
 
 ---
@@ -26,7 +26,7 @@ The server starts on `http://localhost:8080` by default.
 | Variable | Example | Description |
 |----------|---------|-------------|
 | `PORT` | `8080` | HTTP server port |
-| `DATABASE_URL` | `./data/api.db` | SQLite path or Postgres URL |
+| `DATABASE_URL` | `postgres://allternit:...@localhost:5432/allternit` | PostgreSQL connection URL |
 | `CLERK_ISSUER` | `https://allternit.com/__clerk` | Clerk JWT issuer |
 | `CLERK_JWKS_URL` | `https://allternit.com/__clerk/.well-known/jwks.json` | Clerk signing keys |
 | `ALLTERNIT_PLATFORM_URL` | `https://ai.allternit.com` | Browser pairing origin |
@@ -39,13 +39,17 @@ The server starts on `http://localhost:8080` by default.
 
 ## 2. Run Migrations
 
-Migrations run automatically on startup by default. To run them manually:
+Migrations run automatically on startup: the `migrations_pg/` directory is
+embedded via `sqlx::migrate!("./migrations_pg")` and applied idempotently.
+Set `ALLTERNIT_SKIP_MIGRATIONS=1` to opt out (escape hatch when migrations
+are applied manually). To apply one by hand against a live database:
 
 ```bash
-sqlx migrate run --source cmd/allternit-cloud-api/migrations --database-url $DATABASE_URL
+psql $DATABASE_URL -v ON_ERROR_STOP=1 -f cmd/allternit-cloud-api/migrations_pg/00X.sql
 ```
 
-The runtime-pairing tables are created by `011_runtime_pairing.sql`.
+The runtime-pairing tables are part of the baseline schema snapshot,
+`migrations_pg/001_initial.sql`.
 
 ---
 

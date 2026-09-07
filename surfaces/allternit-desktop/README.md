@@ -1,6 +1,9 @@
 # Allternit Desktop
 
-Self-hosted AI platform desktop client. Connect to your own Allternit instance running on VPS or locally.
+Self-hosted AI platform, fully bundled into one desktop app (~850MB): the Electron
+shell ships with the web UI, the Rust `allternit-api` server, gizzi-code, and the
+supporting services, so it runs the whole stack locally out of the box. You can
+also point it at your own Allternit instance running on a VPS.
 
 ## Architecture
 
@@ -8,18 +11,21 @@ Self-hosted AI platform desktop client. Connect to your own Allternit instance r
 ┌─────────────────────────────────────────────────────────────────┐
 │                     Allternit Desktop (This App)                       │
 │  ┌─────────────────────────────────────────────────────────┐   │
-│  │  • Electron UI (~50MB)                                   │   │
-│  │  • Connection management                                 │   │
-│  │  • Auto-updater (UI only)                               │   │
+│  │  • Electron UI + bundled web build (~850MB total)        │   │
+│  │  • Rust API server (allternit-api, spawned locally)      │   │
+│  │  • gizzi-code brain, allternit-mux, voice service       │   │
+│  │  • vendored ripgrep, Lume, platform static export       │   │
+│  │  • Auto-updater (update-electron-app / Squirrel)        │   │
 │  │  • System tray                                          │   │
 │  └─────────────────────────────────────────────────────────┘   │
-│         │ HTTPS/WebSocket                                      │
+│         │ HTTPS/WebSocket (local: 127.0.0.1:8013 by default)     │
 │         ▼                                                        │
 └─────────────────────────────────────────────────────────────────┘
+   Bundled stack runs locally by default; optionally connect to:
                       │
                       ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│              Your Allternit Backend (Self-Hosted)                      │
+│         Your Own Allternit Backend (Self-Hosted, Optional)             │
 │  ┌─────────────────────────────────────────────────────────┐   │
 │  │  • Allternit Platform (Vite + React SPA)                │   │
 │  │  • API Server (Rust, allternit-api)                     │   │
@@ -39,20 +45,17 @@ Self-hosted AI platform desktop client. Connect to your own Allternit instance r
 
 ### Download
 
-| Platform | Download |
-|----------|----------|
-| macOS | [Allternit-Desktop.dmg](https://github.com/allternit/desktop/releases/latest) |
-| Windows | [Allternit-Desktop-Setup.exe](https://github.com/allternit/desktop/releases/latest) |
-| Linux | [Allternit-Desktop.AppImage](https://github.com/allternit/desktop/releases/latest) |
+There is no public release feed yet — the GitHub release repo
+(`github.com/allternit/desktop`), Homebrew tap, and winget package referenced
+by older docs do not exist. Release builds are produced with
+`./scripts/build-desktop.sh` (see **Development** below) and distributed via
+`install.gizziio.com` per `BUILD.md`; auto-updates will start working once a
+real release repo is published.
 
-```bash
-# macOS (Homebrew)
-brew tap allternit/desktop
-brew install --cask allternit-desktop
-
-# Windows (Winget)
-winget install Allternit.Desktop
-```
+CI can emit unsigned smoke artifacts (macOS dmg when certs are present,
+Windows `.exe`, Linux AppImage/deb) — those are **not** production releases:
+no EV cert on Windows (SmartScreen will warn), no Linux distribution channel.
+Do not announce them as shipping.
 
 ## Setup
 
@@ -102,7 +105,10 @@ Then in Allternit Desktop, select **VPS** mode and enter your URL.
 ## Updating
 
 ### Desktop App (UI)
-Auto-updates automatically via electron-updater.
+Auto-updates use `update-electron-app` (Squirrel) against the GitHub Releases
+feed configured in `src/main/unified-main.ts` / `build.publish`
+(`allternit/desktop`). The feed is not live yet — updates will work once the
+first real release is published to that repo.
 
 ### Backend (Your Server)
 You control when to update your backend:
@@ -197,7 +203,9 @@ Last verified: 2026-09-03 against a0f8230b5 (scripts/build-desktop.sh and
 package.json scripts confirmed present).
 
 See [docs/SIGNING.md](./docs/SIGNING.md) for codesigning, notarization, and
-auto-update configuration.
+auto-update configuration. The three-platform shipping list (including work
+that can happen before Apple approval) is
+[docs/DISTRIBUTION-CHECKLIST.md](./docs/DISTRIBUTION-CHECKLIST.md).
 
 ## Data & Privacy
 
@@ -210,8 +218,8 @@ auto-update configuration.
 
 - **Documentation**: https://docs.allternit.com/desktop
 - **Backend Setup**: https://docs.allternit.com/self-host
-- **Issues**: https://github.com/allternit/desktop/issues
+- **Issues**: no public issue tracker yet (the old `github.com/allternit/desktop` repo does not exist)
 
 ## License
 
-MIT License
+UNLICENSED (as declared in `package.json`; no OSI license is granted).

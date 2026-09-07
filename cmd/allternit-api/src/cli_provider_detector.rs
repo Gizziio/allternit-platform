@@ -80,11 +80,28 @@ async fn detect_codex() -> CliProviderInfo {
     let installed = command_exists(binary).await;
     let authed = installed && (env_key_set("OPENAI_API_KEY") || has_home_file(".openai/token").await);
 
-    let models = vec![CliProviderModel {
-        id: "codex-mini-latest".to_string(),
-        name: "Codex Mini Latest".to_string(),
-        default: Some(true),
-    }];
+    let models = vec![
+        CliProviderModel {
+            id: "gpt-6-astra".to_string(),
+            name: "Astra".to_string(),
+            default: Some(true),
+        },
+        CliProviderModel {
+            id: "gpt-5.6-sol".to_string(),
+            name: "Sol".to_string(),
+            default: None,
+        },
+        CliProviderModel {
+            id: "gpt-5.6-terra".to_string(),
+            name: "Terra".to_string(),
+            default: None,
+        },
+        CliProviderModel {
+            id: "gpt-5.6-luna".to_string(),
+            name: "Luna".to_string(),
+            default: None,
+        },
+    ];
 
     CliProviderInfo {
         id: "codex-cli".to_string(),

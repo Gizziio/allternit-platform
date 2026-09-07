@@ -23,6 +23,9 @@ interface CodeSessionLauncherProps {
   onOpenPane: (pane: CodePaneTarget) => void;
   /** Renders the canvas-mode toggle inline with the other pane widgets. */
   onCanvasMode?: () => void;
+  /** Pressed state for the canvas-mode toggle (thread view is never canvas,
+      but the prop keeps the pill honest when embedded elsewhere). */
+  canvasModeActive?: boolean;
   onRename: () => void;
   onFork: () => void;
   onArchive: () => void;
@@ -41,6 +44,30 @@ const iconButton: React.CSSProperties = {
   background: 'transparent',
   color: 'var(--text-tertiary)',
   cursor: 'pointer',
+};
+
+// Icon + short label pill used by the pane shortcuts; kept compact so the
+// floating launcher stays a pill.
+const labeledButton: React.CSSProperties = {
+  height: 28,
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 5,
+  padding: '0 9px',
+  border: 'none',
+  borderRadius: 999,
+  background: 'transparent',
+  color: 'var(--text-secondary)',
+  fontSize: 11,
+  fontWeight: 600,
+  whiteSpace: 'nowrap',
+  cursor: 'pointer',
+};
+
+// Pressed state for the canvas-mode toggle, from the chat mode-pill tokens.
+const labeledButtonActive: React.CSSProperties = {
+  background: 'var(--chat-mode-pill-active-bg)',
+  color: 'var(--chat-mode-pill-active-fg)',
 };
 
 const menuButtonBase: React.CSSProperties = {
@@ -116,12 +143,23 @@ export function CodeSessionLauncher(props: CodeSessionLauncherProps): React.Reac
       }}
     >
       {props.onCanvasMode ? (
-        <button type="button" data-testid="code-canvas-mode-toggle" aria-label="Switch to canvas mode" title="Switch to canvas mode" onClick={props.onCanvasMode} style={iconButton}><SquaresFour size={16} weight="bold" /></button>
+        <button
+          type="button"
+          data-testid="code-canvas-mode-toggle"
+          aria-label="Switch to canvas mode"
+          aria-pressed={props.canvasModeActive ?? false}
+          title="Switch to canvas mode"
+          onClick={props.onCanvasMode}
+          style={props.canvasModeActive ? { ...labeledButton, ...labeledButtonActive } : labeledButton}
+        >
+          <SquaresFour size={15} weight="bold" />
+          Canvas
+        </button>
       ) : null}
-      <button type="button" aria-label="Open terminal" onClick={() => props.onOpenPane('terminal')} style={iconButton}><TerminalWindow size={16} weight="bold" /></button>
-      <button type="button" aria-label="Open diff" onClick={() => props.onOpenPane('diff')} style={iconButton}><GitDiff size={16} weight="bold" /></button>
-      <button type="button" aria-label="Open ACI" onClick={() => props.onOpenPane('aci')} style={iconButton}><Globe size={16} weight="bold" /></button>
-      <button type="button" aria-label="Session actions" onClick={() => setMenuOpen((value) => !value)} style={iconButton}><DotsThree size={18} weight="bold" /></button>
+      <button type="button" aria-label="Open terminal" title="Open terminal" onClick={() => props.onOpenPane('terminal')} style={labeledButton}><TerminalWindow size={15} weight="bold" />Terminal</button>
+      <button type="button" aria-label="Open diff" title="Open diff" onClick={() => props.onOpenPane('diff')} style={labeledButton}><GitDiff size={15} weight="bold" />Diff</button>
+      <button type="button" aria-label="Open ACI" title="Open computer" onClick={() => props.onOpenPane('aci')} style={labeledButton}><Globe size={15} weight="bold" />Computer</button>
+      <button type="button" aria-label="Session actions" title="Session actions" onClick={() => setMenuOpen((value) => !value)} style={{ ...iconButton, width: 'auto', padding: '0 9px', gap: 5, color: 'var(--text-secondary)', fontSize: 11, fontWeight: 600 }}><DotsThree size={17} weight="bold" />Actions</button>
 
       {menuOpen ? (
         <div style={{ position: 'absolute', top: 42, right: 0, width: 208, padding: 5, border: '1px solid var(--border-subtle)', borderRadius: 11, background: 'var(--surface-floating)', boxShadow: '0 14px 34px rgba(0,0,0,0.22)' }}>

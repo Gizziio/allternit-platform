@@ -294,33 +294,89 @@ async fn aci_run(
 
 // ─── GET /api/aci/stream/:id ──────────────────────────────────────────────────
 
+/// Pull a screenshot payload out of an ACU frame or nested `data`.
+/// Planning-loop events use `screenshot_b64`; some adapters use `screenshot`
+/// or an artifacts array.
+fn screenshot_from_value(value: &serde_json::Value) -> Option<String> {
+    if let Some(s) = value
+        .get("screenshot_b64")
+        .and_then(|v| v.as_str())
+        .filter(|s| !s.is_empty())
+    {
+        return Some(s.to_string());
+    }
+    if let Some(s) = value
+        .get("screenshot")
+        .and_then(|v| v.as_str())
+        .filter(|s| !s.is_empty())
+    {
+        return Some(s.to_string());
+    }
+    if let Some(s) = value
+        .get("data_url")
+        .and_then(|v| v.as_str())
+        .filter(|s| s.starts_with("data:image"))
+    {
+        return Some(s.to_string());
+    }
+    if let Some(arr) = value.get("artifacts").and_then(|v| v.as_array()) {
+        for art in arr {
+            let ty = art.get("type").and_then(|v| v.as_str()).unwrap_or("");
+            if ty != "screenshot" {
+                continue;
+            }
+            if let Some(c) = art
+                .get("content")
+                .and_then(|v| v.as_str())
+                .filter(|s| !s.is_empty())
+            {
+                return Some(c.to_string());
+            }
+        }
+    }
+    value
+        .get("data")
+        .and_then(|inner| inner.is_object().then_some(inner))
+        .and_then(screenshot_from_value)
+}
+
 /// Map one ACU SSE frame (`{event_type, run_id, message, data}`) to the
-/// `/api/aci/stream` envelope the clients decode. Lossy notes: ACU has no
-/// screenshot frames, so `type:"screenshot"` never occurs here; any event
-/// with a human-readable `message` is surfaced as a `trace` row (preserving
-/// the original `event_type` inside `data`), everything else is a `state`
-/// update with the frame's `data` passed through unchanged.
+/// `/api/aci/stream` envelope the clients decode.
+///
+/// ACU planning-loop emits `screenshot.captured` with `screenshot_b64`. That
+/// must become `type:"screenshot"` so Fabric Transport can show the live
+/// computer. Other events with a human-readable `message` are `trace`; the
+/// rest are `state`.
 fn map_acu_frame(frame: &serde_json::Value) -> Option<serde_json::Value> {
     let event_type = frame.get("event_type").and_then(|v| v.as_str())?;
     let data = frame.get("data").cloned().unwrap_or(serde_json::Value::Null);
     let ts = chrono::Utc::now().timestamp_millis();
 
-    let mapped = if event_type == "run.ended" {
-        json!({ "type": "done", "data": data, "ts": ts })
+    if event_type == "run.ended" {
+        return Some(json!({ "type": "done", "data": data, "ts": ts }));
+    }
+
+    if let Some(screenshot) = screenshot_from_value(frame).or_else(|| screenshot_from_value(&data))
+    {
+        return Some(json!({
+            "type": "screenshot",
+            "data": { "screenshot": screenshot },
+            "ts": ts,
+        }));
+    }
+
+    let message = frame
+        .get("message")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+    let mapped = if !message.is_empty() {
+        json!({
+            "type": "trace",
+            "data": { "message": message, "event_type": event_type, "data": data },
+            "ts": ts,
+        })
     } else {
-        let message = frame
-            .get("message")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
-        if !message.is_empty() {
-            json!({
-                "type": "trace",
-                "data": { "message": message, "event_type": event_type, "data": data },
-                "ts": ts,
-            })
-        } else {
-            json!({ "type": "state", "data": data, "ts": ts })
-        }
+        json!({ "type": "state", "data": data, "ts": ts })
     };
     Some(mapped)
 }
@@ -529,5 +585,54 @@ async fn aci_handoff_deny(
             Json(json!({"error": "handoff_not_found", "message": "No such handoff request."})),
         )
             .into_response()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn map_acu_frame_emits_screenshot_from_planning_loop() {
+        let frame = json!({
+            "event_type": "screenshot.captured",
+            "run_id": "run-1",
+            "message": "screenshot.captured",
+            "data": {
+                "type": "screenshot.captured",
+                "run_id": "run-1",
+                "step": 0,
+                "phase": "initial",
+                "screenshot_b64": "iVBORw0KGgo="
+            }
+        });
+        let mapped = map_acu_frame(&frame).expect("mapped");
+        assert_eq!(mapped["type"], "screenshot");
+        assert_eq!(mapped["data"]["screenshot"], "iVBORw0KGgo=");
+    }
+
+    #[test]
+    fn map_acu_frame_ends_on_run_ended() {
+        let frame = json!({
+            "event_type": "run.ended",
+            "run_id": "run-1",
+            "message": "completed",
+            "data": { "status": "completed" }
+        });
+        let mapped = map_acu_frame(&frame).expect("mapped");
+        assert_eq!(mapped["type"], "done");
+    }
+
+    #[test]
+    fn map_acu_frame_keeps_trace_when_no_screenshot() {
+        let frame = json!({
+            "event_type": "plan.created",
+            "run_id": "run-1",
+            "message": "plan.created",
+            "data": { "step": 1 }
+        });
+        let mapped = map_acu_frame(&frame).expect("mapped");
+        assert_eq!(mapped["type"], "trace");
+        assert_eq!(mapped["data"]["event_type"], "plan.created");
     }
 }

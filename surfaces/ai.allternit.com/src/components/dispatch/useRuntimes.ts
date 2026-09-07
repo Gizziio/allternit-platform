@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { usePlatformAuth } from '@/lib/platform-auth-client';
 import { env } from '@/lib/env';
+import { allternitCloudOrigin } from '@/lib/cloud-api';
+import { buildAuthHeaders } from '@/lib/agents/api-config';
 
 export interface RuntimeViewModel {
   id: string;
@@ -25,7 +27,30 @@ interface CloudRuntimeDevice {
   lastSeenAt: string | null;
 }
 
-const API_BASE_URL = env('VITE_ALLTERNIT_API_URL') ?? 'https://api.allternit.com';
+async function thisDesktopRuntime(): Promise<RuntimeViewModel | null> {
+  try {
+    const session = await window.allternit?.auth?.getSession?.();
+    if (!session?.runtimeId) return null;
+    return {
+      id: session.runtimeId,
+      name: 'This desktop',
+      host: `${navigator.platform || 'Desktop'} · Allternit Desktop`,
+      status: 'online',
+      lastHeartbeatAt: Date.now(),
+      capabilities: session.capabilities ?? [],
+    };
+  } catch {
+    return null;
+  }
+}
+
+function mergeRuntimes(devices: RuntimeViewModel[], local: RuntimeViewModel | null): RuntimeViewModel[] {
+  if (!local) return devices;
+  if (devices.some((device) => device.id === local.id)) {
+    return devices.map((device) => (device.id === local.id ? { ...device, ...local, status: 'online' } : device));
+  }
+  return [local, ...devices];
+}
 
 // DEV BYPASS: mock runtimes for local UI iteration when Clerk is disabled.
 const MOCK_RUNTIMES: RuntimeViewModel[] = [
@@ -55,12 +80,25 @@ const MOCK_RUNTIMES: RuntimeViewModel[] = [
   },
 ];
 
+// Cloud-api flips status to offline 2 minutes after last_seen, but Desktop
+// heartbeats every 5 minutes. Treat a recent heartbeat as online so the
+// PWA does not flap between heartbeats.
+const HEARTBEAT_ONLINE_GRACE_MS = 10 * 60 * 1000;
+
+function deviceStatus(device: CloudRuntimeDevice): RuntimeViewModel['status'] {
+  if (device.status === 'busy') return 'busy';
+  if (device.status === 'online') return 'online';
+  const seen = device.lastSeenAt ? Date.now() - new Date(device.lastSeenAt).getTime() : NaN;
+  if (Number.isFinite(seen) && seen >= 0 && seen < HEARTBEAT_ONLINE_GRACE_MS) return 'online';
+  return 'offline';
+}
+
 function deviceToViewModel(device: CloudRuntimeDevice): RuntimeViewModel {
   return {
     id: device.id,
     name: device.name || device.hostname || 'Unnamed machine',
     host: `${device.platform ?? 'Unknown'} · ${device.hostname ?? device.runtimeType}`,
-    status: device.status === 'online' ? 'online' : device.status === 'busy' ? 'busy' : 'offline',
+    status: deviceStatus(device),
     lastHeartbeatAt: device.lastSeenAt ? new Date(device.lastSeenAt).getTime() : undefined,
     capabilities: device.capabilities ?? [],
   };
@@ -84,39 +122,54 @@ export function useRuntimes(): UseRuntimesResult {
   const [lastRefreshedAt, setLastRefreshedAt] = useState<number | null>(null);
 
   const fetchRuntimes = useCallback(async () => {
+    const local = await thisDesktopRuntime();
+    const done = (next?: RuntimeViewModel[]) => {
+      if (next) setRuntimes(next);
+      setError(null);
+      setLoading(false);
+      setLastRefreshedAt(Date.now());
+    };
     try {
+      if (!auth.isSignedIn) {
+        done(local ? [local] : []);
+        return;
+      }
       const token = await auth.getToken();
       // DEV BYPASS: serve mock runtimes only when explicitly enabled in local dev.
       if (token === 'dev-token' && env('ALLTERNIT_LOCAL_DEV_BYPASS') === 'true') {
-        setRuntimes(MOCK_RUNTIMES);
         setIsMock(true);
-        setError(null);
-        setLoading(false);
-        setLastRefreshedAt(Date.now());
+        done(mergeRuntimes(MOCK_RUNTIMES, local));
         return;
       }
-      const res = await fetch(`${API_BASE_URL}/api/v1/runtime-devices`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
+      if (!token) {
+        return;
+      }
+      const headers = await buildAuthHeaders();
+      headers.Authorization = `Bearer ${token}`;
+      const cloudOrigin = allternitCloudOrigin();
+      const res = await fetch(`${cloudOrigin}/api/v1/runtime-devices`, { headers });
       setIsMock(false);
       if (!res.ok) {
-        if (res.status === 401) {
-          setRuntimes([]);
-          setLoading(false);
-          setLastRefreshedAt(Date.now());
+        if (res.status === 401 || res.status === 403) {
+          return;
+        }
+        if (res.status === 404) {
+          done(local ? [local] : []);
           return;
         }
         throw new Error(`Failed to load runtimes (${res.status})`);
       }
       const data = (await res.json()) as { runtimes?: CloudRuntimeDevice[] } | CloudRuntimeDevice[];
       const devices = Array.isArray(data) ? data : data.runtimes ?? [];
-      setRuntimes(devices.map(deviceToViewModel));
-      setError(null);
+      done(mergeRuntimes(devices.map(deviceToViewModel), local));
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setLoading(false);
-      setLastRefreshedAt(Date.now());
+      if (local) {
+        done([local]);
+      } else {
+        setError(err instanceof Error ? err.message : String(err));
+        setLoading(false);
+        setLastRefreshedAt(Date.now());
+      }
     }
   }, [auth]);
 

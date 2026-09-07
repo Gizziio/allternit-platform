@@ -526,13 +526,23 @@ async fn reconcile_hosted_runtimes(state: &ApiState) -> Result<(), ApiError> {
                 .await?;
             }
             Ok(ContaboContainerState::Removed) => {
+                // The box is gone but the instance is still owned. Park it
+                // stopped so start() can recreate; do not destroy the row.
                 sqlx::query(
-                    "UPDATE hosted_runtime_instances SET status = 'destroyed', destroyed_at = COALESCE(destroyed_at, CURRENT_TIMESTAMP), last_synced_at = CURRENT_TIMESTAMP WHERE id = $1",
+                    r#"
+                    UPDATE hosted_runtime_instances
+                    SET status = 'stopped',
+                        stopped_at = COALESCE(stopped_at, CURRENT_TIMESTAMP),
+                        active_since = NULL,
+                        last_synced_at = CURRENT_TIMESTAMP,
+                        stop_reason = 'container_missing'
+                    WHERE id = $1 AND status != 'destroyed'
+                    "#,
                 )
                 .bind(&row.id)
                 .execute(&state.db)
                 .await?;
-                record_runtime_stopped(&state.db, &row.id, "destroyed").await?;
+                record_runtime_stopped(&state.db, &row.id, "container_missing").await?;
             }
             Ok(ContaboContainerState::Other(container_state)) => {
                 debug!(instance_id = %row.id, %container_state, "Unmapped container state");

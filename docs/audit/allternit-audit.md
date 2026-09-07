@@ -98,7 +98,7 @@ Key layout docs:
 | Binary | Path | Purpose |
 |--------|------|---------|
 | `allternit-api` | `cmd/allternit-api/src/main.rs` | Local REST/WebSocket API server (port 8013) |
-| `allternit-cloud-api` | `cmd/allternit-cloud-api/src/main.rs` | Centrally hosted cloud deployment API (Fly/Railway) |
+| `allternit-cloud-api` | `cmd/allternit-cloud-api/src/main.rs` | Centrally hosted cloud deployment API (Contabo VPS, systemd) |
 | `allternit-cloud-wizard` | `cmd/allternit-cloud-wizard/` | Cloud setup wizard library/crate |
 | `allternit-mux` | `cmd/allternit-mux/src/main.rs` | Agent terminal multiplexer daemon/CLI |
 | `allternit-platform` | `services/orchestration/platform-orchestration-service/src/main.rs` | Service orchestrator that starts all services |
@@ -150,12 +150,12 @@ The TUI/CLI exposes a large command set under `cmd/gizzi-code/src/cli/commands/`
 - **Migrations:** 92 numbered SQL migrations in `cmd/allternit-api/migrations/`.
 
 ### 4.2 `cmd/allternit-cloud-api` — Cloud API
-- **Language:** Rust (Axum, SQLx, SQLite default, PostgreSQL capable).
+- **Language:** Rust (Axum, SQLx, PostgreSQL only — `init_db` parses `PgConnectOptions`).
 - **Port:** `8080` in `fly.toml`; `3001` default locally.
-- **Hosted on:** Fly.io (`fly.toml`) and Railway (`railway.json`).
+- **Hosted on:** Contabo VPS `mail` via systemd binary swap (`cmd/allternit-cloud-api/deploy-contabo.sh`, runbook `docs/Operations/CLOUD_API_VPS_DEPLOY.md`). The legacy Fly.io/Railway paths were removed (2026-09 dead-code cleanup) along with the broken `cmd/allternit-cloud-api/Dockerfile`.
 - **Responsibilities:** multi-tenant users, device pairing, hosted runtimes, Clerk webhooks, billing entitlements, Fly runtime lifecycle, cost tracking, quota service, scheduler/executor services.
 - **Key route files:** `src/routes/auth.rs`, `routes/instances.rs`, `routes/hosted_runtimes.rs`, `routes/gizzi_instances.rs`, `routes/providers.rs`, `routes/deployments.rs`, `routes/wizard.rs`, `routes/mesh.rs`, `routes/health.rs`.
-- **Migrations:** 23 SQL migrations in `cmd/allternit-cloud-api/migrations/`.
+- **Migrations:** 14 SQL migrations in `cmd/allternit-cloud-api/migrations_pg/`, embedded and applied via `sqlx::migrate!`.
 
 ### 4.3 `api/` directory
 - `api/core/cloud-backend` — cloud backend components
@@ -259,7 +259,7 @@ The TUI/CLI exposes a large command set under `cmd/gizzi-code/src/cli/commands/`
 - `surfaces/ai.allternit.com/src/lib/db/schema-sqlite.ts`
 - `surfaces/ai.allternit.com/drizzle.config.sqlite.ts`
 - `cmd/allternit-api/migrations/V*__*.sql` (92 migrations)
-- `cmd/allternit-cloud-api/migrations/*.sql` (23 migrations)
+- `cmd/allternit-cloud-api/migrations_pg/*.sql` (14 migrations, embedded via `sqlx::migrate!`)
 - `services/mailflare/drizzle/migrations/`
 
 ---
@@ -300,8 +300,8 @@ The TUI/CLI exposes a large command set under `cmd/gizzi-code/src/cli/commands/`
 ## 9. Infrastructure / Deployment
 
 ### Containers / Docker
-Key Dockerfiles:
-- `cmd/allternit-cloud-api/Dockerfile`
+Key Dockerfiles (the cloud API has none — it deploys as a static binary; its
+old Dockerfile was removed 2026-09 after the Contabo/systemd migration):
 - `cmd/allternit-hosted-runtime/Dockerfile`
 - `cmd/gizzi-code/Dockerfile`
 - `infrastructure/0-infra/docker/Dockerfile.api`
@@ -316,13 +316,15 @@ Key Dockerfiles:
 - `services/voice/Dockerfile.voice`
 
 ### Fly.io
-- `fly.toml` — deploys `allternit-cloud-api` (app `allternit-cloud-api`, region `lax`, SQLite volume mount).
-- `services/open-connector/fly.toml` — OpenConnector Fly deployment.
-- `.github/workflows/deploy-cloud-api-fly.yml`.
+- Removed earlier (Contabo migration, pre-2026-09): root `fly.toml` and
+  `deploy-cloud-api-fly.yml` no longer exist. `services/open-connector/fly.toml`
+  remains for OpenConnector.
 
 ### Railway
-- `railway.json` — builds `cmd/allternit-cloud-api/Dockerfile`, healthcheck `/api/v1/health/live`.
-- `.github/workflows/deploy-cloud-api-railway.yml`.
+- Removed 2026-09 (dead deploy path): `railway.json` built the broken
+  `cmd/allternit-cloud-api/Dockerfile` and `.github/workflows/deploy-cloud-api-railway.yml`
+  deployed it with no test gate. The live path is the Contabo workflow
+  (`deploy-cloud-api-contabo.yml`) per `docs/Operations/CLOUD_API_VPS_DEPLOY.md`.
 
 ### Cloudflare
 - `wrangler.toml` (root) — Cloudflare Pages for `ai.allternit.com`.
@@ -334,7 +336,7 @@ Key Dockerfiles:
 
 ### GitHub Actions
 Selected workflows in `.github/workflows/`:
-- `deploy-cloud-api-fly.yml`, `deploy-cloud-api-railway.yml`
+- `deploy-cloud-api-contabo.yml` (live cloud API deploy; the fly/railway workflows were removed)
 - `deploy-cloudflare-pages.yml`, `deploy-office-cloudflare.yml`, `deploy-remote-control-cloudflare.yml`, `deploy-remote-control-push.yml`, `deploy-docs-cloudflare.yml`
 - `ci-desktop.yml`, `release-desktop.yml`, `publish-gizzi-code-npm.yml`, `release-gizzi-code.yml`
 - `publish-hosted-runtime.yml`, `sync-platform-export.yml`
@@ -367,9 +369,8 @@ Selected workflows in `.github/workflows/`:
 | `bunfig.toml` | Bun scope config |
 | `rust-toolchain.toml` | Rust 1.94.1 |
 | `Makefile` | `make api`, `make build`, `make dev`, `make test` |
-| `fly.toml` | Fly.io deployment for cloud API |
 | `wrangler.toml` | Cloudflare Pages deployment |
-| `railway.json` | Railway deployment config |
+| ~~`fly.toml`~~ / ~~`railway.json`~~ | removed 2026-09 — cloud API deploys to the Contabo VPS via `deploy-cloud-api-contabo.yml` |
 | `.mcp.json` | MCP server registry (rails, dak-runner, sequential-thinking, context7, superpowers, verceldeploy, remotioncard, iosappbuild) |
 | `config/system/`, `resources/company.json` | Company config |
 | `surfaces/ai.allternit.com/.env.example`, `.env.local`, `.env.production` | Web surface env |

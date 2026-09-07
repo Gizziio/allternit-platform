@@ -118,6 +118,7 @@ export function createMentionHandoffAdapter(
         text: `@${member.handle} ${prompt}`,
         senderName: 'Group Chat',
         senderHandle: 'group',
+        waitForReply: true,
       });
       const reply = result.replies[0];
       if (!reply || reply.error) return undefined;

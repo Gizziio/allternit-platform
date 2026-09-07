@@ -57,8 +57,6 @@ export function RemoteSessionPanel({ runtimeId, getToken, baseUrl, direct }: Rem
 
   useEffect(() => {
     void fetchSessions();
-    const interval = setInterval(fetchSessions, 10000);
-    return () => clearInterval(interval);
   }, [fetchSessions]);
 
   useEffect(() => {
@@ -85,8 +83,6 @@ export function RemoteSessionPanel({ runtimeId, getToken, baseUrl, direct }: Rem
 
   useEffect(() => {
     void fetchPendingActions();
-    const interval = setInterval(fetchPendingActions, 3000);
-    return () => clearInterval(interval);
   }, [fetchPendingActions]);
 
   const fetchDetail = useCallback(async () => {

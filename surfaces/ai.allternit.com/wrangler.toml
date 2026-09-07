@@ -8,6 +8,11 @@ compatibility_date = "2025-01-01"
 [vars]
 NEXT_PUBLIC_APP_URL = "https://ai.allternit.com"
 
-# Secrets (set via `wrangler pages secret put` or Cloudflare dashboard):
-# NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
-# ENCRYPTION_KEY
+# NOTE: do NOT add Clerk keys or ENCRYPTION_KEY via `wrangler pages secret put`.
+# This project serves a pure static SPA — public/_routes.json excludes /*, so
+# there are zero Pages Functions and any Pages-bound variable/secret is inert
+# at runtime (nothing executes to read it). The Clerk publishable key is
+# baked into the JS bundle at build time and only exists as the
+# NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY GitHub Actions secret in
+# .github/workflows/deploy-cloudflare-pages.yml. ENCRYPTION_KEY is likewise
+# only consumed by that build step.

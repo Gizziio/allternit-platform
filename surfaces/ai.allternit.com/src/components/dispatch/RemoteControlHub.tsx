@@ -25,7 +25,7 @@ import {
   type DispatchStatusResponse,
 } from '@/lib/dispatch/handoff';
 import { ToastProvider } from '@/components/ui/toast-provider';
-import { openRemoteControlWindow } from '@/lib/open-remote-control-window';
+import { openFabricSessionWindow } from '@/lib/open-fabric-session-window';
 import { MachinesPanel } from './MachinesPanel';
 import { RemoteSessionPanel } from './RemoteSessionPanel';
 import { useRuntimeSelection } from './useRuntimeSelection';
@@ -244,7 +244,7 @@ export function RemoteControlHub(): React.ReactNode {
   const { permissions: pendingPermissions, questions: pendingQuestions } = useRemotePendingCounts(runtimes, auth.getToken);
 
   const handleOpenDashboard = useCallback(() => {
-    openRemoteControlWindow(selectedId ?? undefined);
+    openFabricSessionWindow(selectedId ?? undefined);
   }, [selectedId]);
 
   const lastRefreshedText = lastRefreshedAt
@@ -261,7 +261,7 @@ export function RemoteControlHub(): React.ReactNode {
                 className="text-3xl font-medium tracking-tight m-0"
                 style={{ fontFamily: 'var(--font-serif)' }}
               >
-                Remote Control
+                Fabric Transport
               </h1>
               <p className="m-0 mt-1 text-sm text-[var(--text-secondary)]">
                 Monitor, hand off, and control your agents across machines.

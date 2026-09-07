@@ -18,7 +18,6 @@ export type ViewType =
   | "agent-hub"
   | "bot-home"
   | "bot-inbox"
-  | "bot-roster"
   | "group-chat"
   | "groups-list"
   | "bot-chat-session"
@@ -122,6 +121,7 @@ export type ViewType =
   | "cron"
   | "dispatch"
   | "remote-control"
+  | "fabric-session"
   // Code views
   | "new-file"
   | "code-project"
@@ -194,7 +194,9 @@ export type ViewType =
   // Floating chat HUD
   | "hud"
   // Full-screen annotation overlay
-  | "hud-annotate";
+  | "hud-annotate"
+  // Rail "Customize" — theme / plugins / skills (same surface as Settings)
+  | "customize";
 
 export type ViewId = string;
 
