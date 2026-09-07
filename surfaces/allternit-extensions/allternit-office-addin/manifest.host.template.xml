@@ -16,6 +16,12 @@
   <AppDomains>
     <AppDomain>{{APP_BASE_URL}}</AppDomain>
     <AppDomain>{{PLATFORM_URL}}</AppDomain>
+    <!-- Auth bridge (displayDialogAsync target) signs in through Clerk; the
+         dialog must be allowed to reach these origins. -->
+    <AppDomain>https://clerk.allternit.com</AppDomain>
+    <AppDomain>https://*.clerk.dev</AppDomain>
+    <AppDomain>https://*.accounts.dev</AppDomain>
+    <AppDomain>https://challenges.cloudflare.com</AppDomain>
   </AppDomains>
   <Hosts><Host Name="{{HOST_NAME}}" /></Hosts>
   <DefaultSettings>
