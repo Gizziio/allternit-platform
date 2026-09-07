@@ -5,13 +5,13 @@ on:
     branches: [main]
     paths:
       - 'surfaces/allternit-extensions/allternit-office-addin/**'
+      - 'surfaces/allternit-extensions/extension-shared/**'
       - '.github/workflows/build-office-addin.yml'
-      - 'extension-shared/**'
   pull_request:
     branches: [main]
     paths:
       - 'surfaces/allternit-extensions/allternit-office-addin/**'
-      - 'extension-shared/**'
+      - 'surfaces/allternit-extensions/extension-shared/**'
 
 jobs:
   build:

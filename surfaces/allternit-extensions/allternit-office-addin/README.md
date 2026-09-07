@@ -18,7 +18,7 @@ The add-in uses the same `ExtensionSidepanelShell` as the Allternit Chrome exten
 
 ### 1. Install dependencies
 ```bash
-cd surfaces/extensions/allternit-office-addin
+cd surfaces/allternit-extensions/allternit-office-addin
 npm install
 ```
 

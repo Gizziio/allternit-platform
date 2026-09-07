@@ -180,7 +180,7 @@
     "nanoid": "^5.1.6",
     "node-ssh": "^13.2.0",
     "pdf-lib": "^1.17.1",
-    "pdfjs-dist": "^5.4.624",
+    "pdfjs-dist": "^6.3.289",
     "postgres": "^3.4.8",
     "pptxgenjs": "^4.0.1",
     "pyodide": "^0.29.3",

@@ -3,7 +3,7 @@ import type { CSSProperties, ReactElement, ReactNode, RefObject } from 'react'
 // legacy build: the modern build relies on new APIs like Math.sumPrecise that the current
 // Electron V8 lacks, making embedded font parsing fail and whole pages render as garbled raw char codes
 import { GlobalWorkerOptions, TextLayer, getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs'
-import type { PDFDocumentProxy, RenderTask } from 'pdfjs-dist'
+import type { PDFDocumentLoadingTask, PDFDocumentProxy, RenderTask } from 'pdfjs-dist'
 import workerUrl from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url'
 import { AiPanel, AllternitMark } from './ai/AiPanel'
 import type { PdfAiDeps } from './ai/tools'
@@ -616,6 +616,7 @@ export default function App() {
   const [extractInvalid, setExtractInvalid] = useState(false)
   const coalesceKeyRef = useRef<string | null>(null)
   const passwordRef = useRef<string | undefined>(undefined)
+  const pdfTaskRef = useRef<PDFDocumentLoadingTask | null>(null)
   const fitModeRef = useRef<FitMode>('width')
   const scrollRef = useRef<HTMLDivElement>(null)
   const thumbsRef = useRef<HTMLDivElement>(null)
@@ -679,13 +680,16 @@ export default function App() {
     sidebar === 'thumbs',
   )
 
-  const loadDoc = useCallback(async (path: string, previous: PDFDocumentProxy | null) => {
+  const loadDoc = useCallback(async (path: string) => {
     const data = await window.pdfApi.readFile(path)
-    const loaded = await getDocument({
+    const task = getDocument({
       data: new Uint8Array(data),
       password: passwordRef.current,
       ...DOC_OPTS,
-    }).promise
+    })
+    pdfTaskRef.current?.destroy()
+    pdfTaskRef.current = task
+    const loaded = await task.promise
     const all: PageSize[] = []
     const rots: number[] = []
     for (let i = 1; i <= loaded.numPages; i++) {
@@ -715,7 +719,6 @@ export default function App() {
       (o) => setOutline(o && o.length > 0 ? (o as OutlineNode[]) : null),
       () => setOutline(null),
     )
-    if (previous) void previous.destroy()
   }, [])
 
   const openPath = useCallback(
@@ -724,7 +727,7 @@ export default function App() {
         setFilePath(path)
         // A newly opened file starts outside the autosave gate
         savedOnceRef.current = false
-        await loadDoc(path, null)
+        await loadDoc(path)
         setStatus('ready')
       } catch (err) {
         if ((err as Error | null)?.name === 'PasswordException') {
@@ -1111,7 +1114,7 @@ export default function App() {
       try {
         const el = scrollRef.current
         const scrollTop = el?.scrollTop ?? 0
-        await loadDoc(filePath, doc)
+        await loadDoc(filePath)
         requestAnimationFrame(() => {
           if (scrollRef.current) scrollRef.current.scrollTop = scrollTop
         })
@@ -1391,7 +1394,7 @@ export default function App() {
         opFailed(result.error)
         return
       }
-      if (!('canceled' in result)) await loadDoc(filePath, doc)
+      if (!('canceled' in result)) await loadDoc(filePath)
     })
 
   /** Print: save first (markups/forms/page ops all into the file), then reload from the file to render, avoiding a destroyed old doc */
@@ -1401,11 +1404,12 @@ export default function App() {
       setPrinting(true)
       try {
         const data = await window.pdfApi.readFile(filePath)
-        const pdoc = await getDocument({ data: new Uint8Array(data), ...DOC_OPTS }).promise
+        const ptask = getDocument({ data: new Uint8Array(data), ...DOC_OPTS })
+        const pdoc = await ptask.promise
         try {
           await printPdf(pdoc)
         } finally {
-          void pdoc.destroy()
+          void ptask.destroy()
         }
       } catch (err) {
         opFailed(err instanceof Error ? err.message : String(err))

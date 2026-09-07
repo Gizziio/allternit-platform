@@ -29,7 +29,7 @@ A task pane add-in for Excel, PowerPoint, and Word. Shares the same UI shell and
 Both extensions use the same canonical shell:
 
 ```
-surfaces/shared/extension-sidepanel/
+surfaces/allternit-extensions/extension-shared/extension-sidepanel/
 ├── ExtensionSidepanelShell.tsx       ← shared UI shell
 └── ExtensionSidepanelShell.types.ts  ← ExtensionSidepanelAdapter interface
 ```
@@ -56,7 +56,7 @@ Both extensions use the Allternit sand/nude palette:
 | `--text-primary` | `#2A1F16` | Body text |
 | `--bg-secondary` | `#F5EDE3` | Card backgrounds |
 
-Source of truth: `surfaces/allternit-platform/src/design/theme.css`
+Source of truth: `surfaces/ai.allternit.com/src/design/theme.css`
 
 ---
 

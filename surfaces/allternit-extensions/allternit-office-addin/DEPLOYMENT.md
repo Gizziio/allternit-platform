@@ -7,7 +7,7 @@ Allternit for Word, Allternit for Excel, and Allternit for PowerPoint are three 
 The task-pane application is a static web application hosted at an HTTPS path such as:
 
 ```text
-https://ai.allternit.com/office-addins/
+https://platform.allternit.com/office-addins/
 ```
 
 Developer manifests point to host-specific URLs:
@@ -23,10 +23,10 @@ The product query identifies the companion preview. A live Office.js host remain
 ## Prepare deployment assets
 
 ```bash
-export ALLTERNIT_OFFICE_APP_BASE_URL=https://ai.allternit.com/office-addins
-export ALLTERNIT_PLATFORM_URL=https://ai.allternit.com
+export ALLTERNIT_OFFICE_APP_BASE_URL=https://platform.allternit.com/office-addins
+export ALLTERNIT_PLATFORM_URL=https://platform.allternit.com
 export VITE_ALLTERNIT_GATEWAY_URL=https://api.allternit.com
-export VITE_ALLTERNIT_PLATFORM_URL=https://ai.allternit.com
+export VITE_ALLTERNIT_PLATFORM_URL=https://platform.allternit.com
 export VITE_ALLTERNIT_OFFICE_BASE_PATH=/office-addins/
 ./deploy.sh
 ```
