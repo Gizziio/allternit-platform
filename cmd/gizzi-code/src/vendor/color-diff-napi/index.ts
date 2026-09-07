@@ -1,9 +1,28 @@
 /**
  * Production Color Diff NAPI Module
- * 
+ *
  * Provides syntax highlighting and color diff utilities for terminal output.
  * Implements the full API surface of the original color-diff-napi package.
  */
+
+import {
+  ANSI_RESET,
+  bgAnsi,
+  emitSpans,
+  highlightSpans,
+  mapThemeName,
+  resolveLanguage,
+  wrapSpans,
+} from './syntax.js'
+
+/** Minimal shape of a `diff` package StructuredPatchHunk. */
+interface StructuredPatchHunkLike {
+  oldStart: number
+  oldLines: number
+  newStart: number
+  newLines: number
+  lines: string[]
+}
 
 // ============================================================================
 // Type Definitions
@@ -228,13 +247,74 @@ export class ColorDiff {
 
   /**
    * Render a structured diff hunk as ANSI-highlighted lines, wrapped to
-   * `width`. Part of the original NAPI binding's API surface; the TS port
-   * has no syntax tokenizer, so it returns null and callers fall back to
-   * their React fallback renderer.
+   * `width`. Reproduces the original NAPI binding's layout: a gutter of
+   * `marker + space + right-aligned line number + space` (padded to the max
+   * line-number width + 3), added/removed lines tinted with the theme's diff
+   * background colors, and syntax-highlighted content. Returns null in
+   * color-math mode or when the render inputs are unusable, in which case
+   * callers fall back to their React fallback renderer.
    */
-  render(_theme: string, _width: number, _dim: boolean): string[] | null {
-    if (this.renderPatch === null) return null;
-    return null;
+  render(theme: string, width: number, dim: boolean): string[] | null {
+    const patch = this.renderPatch as StructuredPatchHunkLike | null;
+    if (patch === null || !Array.isArray(patch.lines) || typeof width !== 'number' || width < 12) {
+      return null;
+    }
+
+    const { palette } = mapThemeName(theme);
+    const lang = resolveLanguage(this.renderFilePath, this.renderFirstLine);
+
+    const maxLineNumber = Math.max(
+      patch.oldStart + patch.oldLines - 1,
+      patch.newStart + patch.newLines - 1,
+      1,
+    );
+    const digits = maxLineNumber.toString().length;
+    const gutterWidth = digits + 3;
+    const contentWidth = Math.max(1, width - gutterWidth);
+
+    const addedBg = bgAnsi(dim ? palette.addedDim : palette.added, palette.ansi);
+    const removedBg = bgAnsi(dim ? palette.removedDim : palette.removed, palette.ansi);
+
+    const out: string[] = [];
+    let oldLine = patch.oldStart;
+    let newLine = patch.newStart;
+
+    const blankGutter = ' '.repeat(gutterWidth);
+    const gutter = (marker: string, num: number | null) =>
+      marker + ' ' + (num === null ? ' '.repeat(digits) : String(num).padStart(digits)) + ' ';
+
+    for (const raw of patch.lines) {
+      if (typeof raw !== 'string') continue;
+      // "\ No newline at end of file" — metadata line, no gutter content.
+      if (raw.startsWith('\\')) {
+        out.push(blankGutter + '\x1b[2m' + raw.trimEnd() + ANSI_RESET);
+        continue;
+      }
+      const marker = raw.charAt(0);
+      const code = raw.slice(1);
+      let bg: string | undefined;
+      let num: number;
+      if (marker === '+') {
+        bg = addedBg;
+        num = newLine++;
+      } else if (marker === '-') {
+        bg = removedBg;
+        num = oldLine++;
+      } else {
+        num = newLine++;
+        if (marker === ' ') oldLine++;
+      }
+      const spans = highlightSpans(code, lang, palette, bg, false);
+      const rows = wrapSpans(spans, contentWidth);
+      for (let i = 0; i < rows.length; i++) {
+        // Pad tinted rows to full content width so the background runs to the
+        // edge, matching the React fallback's Box background behaviour.
+        const pad = bg ? contentWidth - rows[i]!.reduce((n, s) => n + s.text.length, 0) : 0;
+        const padSpan = pad > 0 && bg ? [{ text: ' '.repeat(pad), bg }] : [];
+        out.push((i === 0 ? gutter(marker === '+' || marker === '-' || marker === ' ' ? marker : ' ', num) : blankGutter) + emitSpans([...rows[i]!, ...padSpan]));
+      }
+    }
+    return out;
   }
 
   /**
@@ -300,9 +380,52 @@ export class ColorDiff {
 
 export class ColorFile {
   private colors: RGBColor[];
+  // Code-render construction (code, filePath), used by HighlightedCode's fast
+  // path. Mirrors the original NAPI binding, whose ColorFile highlighted a
+  // whole file. `null` in palette mode.
+  private renderCode: string[] | null;
+  private renderLang: string;
 
-  constructor(colors: RGBColor[] = []) {
-    this.colors = colors;
+  constructor(colors?: RGBColor[]);
+  constructor(code: string, filePath?: string);
+  constructor(arg1: RGBColor[] | string = [], filePath: string = '') {
+    if (typeof arg1 === 'string') {
+      this.colors = [];
+      this.renderCode = arg1.length > 0 ? arg1.split('\n') : [''];
+      this.renderLang = resolveLanguage(filePath);
+    } else {
+      this.colors = arg1;
+      this.renderCode = null;
+      this.renderLang = 'text';
+    }
+  }
+
+  /**
+   * Highlight the file as ANSI lines, wrapped to `width`, with a
+   * `space + line number + space` gutter padded to the line-count width + 2
+   * (matching the consumer's gutterWidth calculation). Returns null in
+   * palette mode.
+   */
+  render(theme: string, width: number, dim: boolean): string[] | null {
+    if (this.renderCode === null || typeof width !== 'number' || width < 8) {
+      return null;
+    }
+    const { palette } = mapThemeName(theme);
+    const digits = Math.max(1, String(this.renderCode.length).length);
+    const gutterWidth = digits + 2;
+    const contentWidth = Math.max(1, width - gutterWidth);
+
+    const out: string[] = [];
+    for (let i = 0; i < this.renderCode.length; i++) {
+      const gutter =
+        ' ' + String(i + 1).padStart(digits) + ' ';
+      const spans = highlightSpans(this.renderCode[i]!, this.renderLang, palette, undefined, dim);
+      const rows = wrapSpans(spans, contentWidth);
+      for (let j = 0; j < rows.length; j++) {
+        out.push((j === 0 ? gutter : ' '.repeat(gutterWidth)) + emitSpans(rows[j]!));
+      }
+    }
+    return out;
   }
 
   /**
@@ -546,10 +669,33 @@ const BUILT_IN_THEMES: Record<string, SyntaxTheme> = {
 };
 
 /**
- * Get a syntax theme by name
+ * Get a syntax theme by name. Accepts the TUI theme names
+ * ('dark', 'light', '*-daltonized', '*-ansi') used by useTheme(), mapping
+ * them to the nearest TextMate-style built-in, as well as the built-in
+ * names themselves ('dark-plus', 'light-plus', ...).
  */
 export function getSyntaxTheme(themeName: string): SyntaxTheme | null {
-  return BUILT_IN_THEMES[themeName] || null;
+  const direct = BUILT_IN_THEMES[themeName];
+  if (direct) return withMeta(direct, themeName, 'built-in');
+  // Only recognizable TUI theme names map onto the built-in palettes;
+  // anything else is genuinely unknown.
+  if (!/^(dark|light)(-(daltonized|ansi))?$/.test((themeName || '').toLowerCase())) {
+    return null;
+  }
+  const { syntaxThemeName } = mapThemeName(themeName);
+  const mapped = BUILT_IN_THEMES[syntaxThemeName];
+  if (!mapped) return null;
+  return withMeta(mapped, syntaxThemeName, 'built-in');
+}
+
+function withMeta(theme: SyntaxTheme, name: string, source: string): SyntaxTheme {
+  return {
+    ...theme,
+    name: theme.name || name,
+    // Extra fields surfaced by the theme picker footer (`syntaxTheme.theme`
+    // / `syntaxTheme.source`); not part of the strict SyntaxTheme type.
+    ...( { theme: theme.name || name, source } as object ),
+  } as SyntaxTheme;
 }
 
 /**
