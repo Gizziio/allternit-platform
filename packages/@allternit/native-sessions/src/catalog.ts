@@ -2,7 +2,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs"
 import { homedir } from "node:os"
 import { basename, join } from "node:path"
 import { fingerprintPath, fingerprintPaths } from "./fingerprint.js"
-import { HARNESSES, encodeClaudeCwd, harnessHome } from "./harness.js"
+import { HARNESSES, HARNESS_BY_ID, encodeClaudeCwd, harnessHome } from "./harness.js"
 import { asString, parseJsonlText } from "./jsonl.js"
 import type { CatalogOptions, HarnessId, NativeSession, ReaderKind } from "./types.js"
 

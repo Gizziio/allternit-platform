@@ -174,6 +174,12 @@ import editPrompt from './commands/edit-prompt/index.js'
 import remember from './commands/remember/index.js'
 import viewPlan from './commands/view-plan/index.js'
 import timestamps from './commands/timestamps/index.js'
+import sessionInfo from './commands/session-info/index.js'
+import recap from './commands/recap/index.js'
+import queue from './commands/queue/index.js'
+import transcript from './commands/transcript/index.js'
+import multiline from './commands/multiline/index.js'
+import cd from './commands/cd/index.js'
 import chrome from './commands/chrome/index.js'
 import stickers from './commands/stickers/index.js'
 import advisor from './commands/advisor.js'
@@ -294,6 +300,7 @@ const COMMANDS = memoize((): Command[] => [
   autoCommand,
   branch,
   btw,
+  cd,
   chrome,
   clear,
   color,
@@ -340,6 +347,7 @@ const COMMANDS = memoize((): Command[] => [
   mcp,
   memory,
   memorySearch,
+  multiline,
   remember,
   mobile,
   model,
@@ -347,12 +355,15 @@ const COMMANDS = memoize((): Command[] => [
   remoteEnv,
   plugin,
   pr_comments,
+  queue,
+  recap,
   releaseNotes,
   reloadPlugins,
   rename,
   resume,
   native,
   session,
+  sessionInfo,
   skills,
   stats,
   status,
@@ -361,6 +372,7 @@ const COMMANDS = memoize((): Command[] => [
   tag,
   theme,
   timestamps,
+  transcript,
   feedback,
   review,
   ultrareview,
@@ -759,6 +771,45 @@ export function findCommand(
 export function hasCommand(commandName: string, commands: Command[]): boolean {
   return findCommand(commandName, commands) !== undefined
 }
+
+export type DisabledCommandReason = 'availability' | 'disabled'
+
+export type DisabledCommandInfo = {
+  command: Command
+  reason: DisabledCommandReason
+}
+
+/**
+ * Finds a command by name in the UNFILTERED registry (built-ins, skill-dir
+ * commands, bundled/plugin skills, workflows) and reports which visibility
+ * gate excluded it: `availability` (auth/provider requirement, e.g. hidden
+ * until /login or /model changes auth state) or `disabled` (isEnabled()
+ * returned false, e.g. a feature flag is off).
+ *
+ * Returns null when the command does not exist at all or is currently
+ * visible (passes both gates).
+ */
+export async function findDisabledCommand(
+  commandName: string,
+  cwd: string,
+): Promise<DisabledCommandInfo | null> {
+  try {
+    const allCommands = await loadAllCommands(cwd)
+    const command = findCommand(commandName, allCommands)
+    if (!command) return null
+    if (!meetsAvailabilityRequirement(command)) {
+      return { command, reason: 'availability' }
+    }
+    if (!isCommandEnabled(command)) {
+      return { command, reason: 'disabled' }
+    }
+    return null
+  } catch (error) {
+    logError(toError(error))
+    return null
+  }
+}
+
 
 export function getCommand(commandName: string, commands: Command[]): Command {
   const command = findCommand(commandName, commands)
