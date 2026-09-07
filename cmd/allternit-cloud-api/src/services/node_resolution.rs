@@ -471,7 +471,7 @@ mod tests {
     async fn migration_012_applies_idempotently() {
         let pool = test_pool().await;
         // Stub only what the migration touches: the pre-012 runtime_devices
-        // (as created by migrations/011 via pgloader) and users (FK target).
+        // (as created by the original pgloader import) and users (FK target).
         sqlx::query("CREATE TABLE users (id TEXT PRIMARY KEY)")
             .execute(&pool)
             .await

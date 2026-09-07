@@ -2130,10 +2130,10 @@ The :8013 rails router (`rails/mod.rs:197-277`) is a **different, smaller surfac
 
 | Existing piece | File | What it already gives us |
 |---|---|---|
-| `runtime_devices` | `cmd/allternit-cloud-api/migrations/011_runtime_pairing.sql` (+013/021/022/023) | user-owned node identity: `user_id`, `runtime_type CHECK ('desktop','vps','ios')`, **Ed25519 `public_key` + fingerprint**, revocable device credential (`credential_hash`, rotation grace), `capabilities`, `status ('online','offline','revoked')`, `last_seen_at`, heartbeat endpoint (`runtime_pairing.rs:198-201`) |
-| `runtime_pairings` | same migration | device-code pairing flow, Clerk-approved (`runtime_pairing.rs:176-207`) |
-| `gizzi_instances` | `migrations/018_gizzi_instances.sql` | user-registered node **endpoints** (`url`) — exactly the "local node behind an ephemeral URL" case, but credential-less and parallel |
-| `hosted_runtime_nodes` | `migrations/025_hosted_runtime_nodes.sql` | **capacity metadata** (`docker_host`, `tailnet_ip`, `total_memory_mb`, `status`) for provisioned nodes |
+| `runtime_devices` | `cmd/allternit-cloud-api/migrations_pg/001_initial.sql` (runtime-pairing baseline; `012_data_plane_nodes.sql` adds capacity metadata) | user-owned node identity: `user_id`, `runtime_type CHECK ('desktop','vps','ios')`, **Ed25519 `public_key` + fingerprint**, revocable device credential (`credential_hash`, rotation grace), `capabilities`, `status ('online','offline','revoked')`, `last_seen_at`, heartbeat endpoint (`runtime_pairing.rs:198-201`) |
+| `runtime_pairings` | same baseline snapshot | device-code pairing flow, Clerk-approved (`runtime_pairing.rs:176-207`) |
+| `gizzi_instances` | `migrations_pg/001_initial.sql` (backfill: `013_gizzi_instances_backfill.sql`) | user-registered node **endpoints** (`url`) — exactly the "local node behind an ephemeral URL" case, but credential-less and parallel |
+| `hosted_runtime_nodes` | `migrations_pg/004_hosted_runtime_nodes.sql` | **capacity metadata** (`docker_host`, `tailnet_ip`, `total_memory_mb`, `status`) for provisioned nodes |
 | mesh enrollment | `routes/mesh.rs:1-47` | Headscale preauth keys; one Headscale user per Clerk user; `autogroup:self` isolation — the natural **addressing/routing** layer (`tailnet_ip`) |
 
 ### 4.1 Recommended shape: extend `runtime_devices`, retire the parallel tables

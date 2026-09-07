@@ -47,7 +47,7 @@ The Allternit Cloud control plane has been migrated off Fly.io onto a Contabo VP
 
 ### Known Limitations
 
-- **Migrations**: Embedded SQLite migrations (`cmd/allternit-cloud-api/migrations/*.sql`) are not run against Postgres. The production schema is managed externally via `pgloader`. A proper Postgres migration set should be created for future schema changes.
+- **Migrations**: The legacy SQLite migrations (`cmd/allternit-cloud-api/migrations/*.sql`) were never run against Postgres and were deleted in the 2026-09 dead-code cleanup. The canonical Postgres set is `cmd/allternit-cloud-api/migrations_pg/`, embedded via `sqlx::migrate!` and applied automatically on startup (or by hand per `docs/Operations/CLOUD_API_VPS_DEPLOY.md`).
 - **Tests**: Unit tests currently expect a Postgres test database at `postgres://postgres:postgres@localhost:5432/allternit_test`. Test DDL needs to be converted from SQLite to Postgres syntax.
 
 ## Monitoring and Alerting
