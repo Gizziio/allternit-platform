@@ -54,8 +54,8 @@ Contabo control-plane VPS (`mail`, Tailscale-only SSH):
 - Deploy loop: `scripts/deploy-cloud-api.sh` (repo root; `--fast`, `--dry-run`).
 - Full runbook: [`docs/Operations/CLOUD_API_VPS_DEPLOY.md`](../../docs/Operations/CLOUD_API_VPS_DEPLOY.md).
 - CI/CD: [`.github/workflows/deploy-cloud-api-contabo.yml`](../../.github/workflows/deploy-cloud-api-contabo.yml)
-  (test → cross-build → Tailscale deploy with auto-rollback). A Railway
-  variant (`deploy-cloud-api-railway.yml`) also exists.
+  (test → cross-build → Tailscale deploy with auto-rollback). The legacy
+  Railway/Fly deploy paths were removed with the broken Dockerfile.
 
 ## Testing Locally
 

@@ -64,10 +64,11 @@ and capability set aren't.
   time); a paired iOS device reaches a real instance (local or tunneled)
   the same way. It is **not** a centrally-hosted multi-tenant service — it
   is not even a deployed Fly/Railway app. Local-first, per-device SQLite.
-- `cmd/allternit-cloud-api` — the actual centrally-hosted service (Fly.io,
-  app `allternit-cloud-api`). This is where cross-device tenancy really
+- `cmd/allternit-cloud-api` — the actual centrally-hosted service (Contabo
+  VPS `mail`, systemd unit `allternit-cloud-api`, per
+  `docs/Operations/CLOUD_API_VPS_DEPLOY.md`). This is where cross-device tenancy really
   lives (`users.tenant_id`/`role`/`status`, `api_tokens`, `user_sessions`,
-  `audit_log` — see `migrations/003_auth.sql`), device-token verification,
+  `audit_log` — see `migrations_pg/001_initial.sql`), device-token verification,
   hosted-runtime management, and Clerk webhook sync
   (`src/routes/clerk_webhooks.rs`, added 2026-08-01).
 - **The deployed hosted web build (`ai.allternit.com`) currently has no
