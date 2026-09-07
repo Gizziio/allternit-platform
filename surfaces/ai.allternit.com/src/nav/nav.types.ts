@@ -3,6 +3,7 @@ export type ViewType =
   | "home"
   | "chat"
   | "chat-legacy"
+  | "bot-launchpad"
   | "project"
   | "elements"
   | "playground"

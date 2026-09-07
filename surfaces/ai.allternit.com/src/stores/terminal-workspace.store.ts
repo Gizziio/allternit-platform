@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware';
 import { createBrowserJSONStorage } from '@/lib/zustand-browser-storage';
 import { closeTerminalSession } from '@/lib/terminal-api';
 
-export type TerminalTileSourceSurface = 'code' | 'chat' | 'cowork';
+export type TerminalTileSourceSurface = 'code' | 'chat' | 'cowork' | 'bot';
 
 export interface TerminalTileSourceTag {
   surface: TerminalTileSourceSurface;

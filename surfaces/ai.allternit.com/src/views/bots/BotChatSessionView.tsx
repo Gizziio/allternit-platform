@@ -160,9 +160,10 @@ function BotChatSessionContent({
   useEffect(() => {
     if (sessionId) {
       setActiveSession(sessionId);
-      if (sessionId.startsWith("ses")) {
-        void fetchMessages(sessionId);
-      }
+      // fetchMessages no-ops for locally-created ids (temp-…) inside the
+      // store, so calling it unconditionally keeps local bot sessions usable
+      // without orphaning them from message refresh.
+      void fetchMessages(sessionId);
     }
   }, [sessionId, setActiveSession, fetchMessages]);
 
@@ -278,8 +279,19 @@ function BotChatSessionContent({
             </Button>
           )}
 
-          <div
-            className="flex shrink-0 items-center justify-center rounded-xl"
+          <button
+            type="button"
+            onClick={() => {
+              if (!botId) return;
+              window.dispatchEvent(
+                new CustomEvent("allternit:open-view", {
+                  detail: { viewType: "bot-home", context: { botId } },
+                })
+              );
+            }}
+            aria-label={bot ? `Bot settings for ${botName}` : "Bot settings"}
+            title="Bot settings"
+            className="flex shrink-0 cursor-pointer items-center justify-center rounded-xl border-none bg-transparent p-0 transition-opacity hover:opacity-75"
             style={{
               width: 44,
               height: 44,
@@ -292,7 +304,7 @@ function BotChatSessionContent({
             ) : (
               <Robot size={24} style={{ color: accentColor }} />
             )}
-          </div>
+          </button>
 
           <div className="min-w-0">
             <div className="flex items-center gap-2">

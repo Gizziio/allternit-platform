@@ -36,6 +36,7 @@ const DesignModeAgentSession = lazy(() => import('../views/agent-sessions/Design
 const BotInboxView = lazy(() => import('../views/bots/BotInboxView').then(m => ({ default: m.BotInboxView })));
 const BotHomeView = lazy(() => import('../views/bots/BotHomeView').then(m => ({ default: m.BotHomeView })));
 const BotChatSessionView = lazy(() => import('../views/bots/BotChatSessionView').then(m => ({ default: m.BotChatSessionView })));
+const BotLaunchpadView = lazy(() => import('../views/bots/BotLaunchpadView').then(m => ({ default: m.BotLaunchpadView })));
 import { GroupChatView } from '../views/bots/GroupChatView';
 import { GroupsListView } from '../views/bots/GroupsListView';
 import { useChatSessionStore } from '../views/chat/ChatSessionStore';
@@ -265,6 +266,11 @@ export function getShellViewRegistry(handlers: {
     home: () => <ChatViewWrapper onOpenAgentSession={handleOpenAgentSession} onStartBotSession={handleStartBotSession} />,
     chat: () => <ChatViewWrapper onOpenAgentSession={handleOpenAgentSession} onStartBotSession={handleStartBotSession} />,
     "chat-legacy": () => <ChatViewWrapper onOpenAgentSession={handleOpenAgentSession} onStartBotSession={handleStartBotSession} />,
+    "bot-launchpad": () => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Bots" />}>
+        <BotLaunchpadView />
+      </ErrorBoundary>
+    ),
     project: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Projects" />}>
         <ProjectView />

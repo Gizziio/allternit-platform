@@ -5,6 +5,7 @@ export const DEFAULT_POLICIES: Record<ViewType, SpawnPolicy> = {
   home: { singleton: true, maxInstances: 1, allowNew: false, surface: "view", ownsTabs: false },
   chat: { singleton: false, maxInstances: 20, allowNew: true, surface: "view", ownsTabs: false },
   "chat-legacy": { singleton: false, maxInstances: 20, allowNew: true, surface: "view", ownsTabs: false },
+  "bot-launchpad": { singleton: false, maxInstances: 20, allowNew: true, surface: "view", ownsTabs: false },
   project: { singleton: true, maxInstances: 1, allowNew: false, surface: "view", ownsTabs: false },
   elements: { singleton: true, maxInstances: 1, allowNew: false, surface: "view", ownsTabs: false },
   playground: { singleton: true, maxInstances: 1, allowNew: false, surface: "view", ownsTabs: false },

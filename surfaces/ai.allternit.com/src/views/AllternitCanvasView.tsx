@@ -35,8 +35,8 @@ import { cn } from '@/lib/utils';
 interface AllternitCanvasViewProps {
   /** Initial artifact to display */
   initialArtifactId?: string;
-  /** Parent view context (chat, cowork, code, browser, design) */
-  sourceView: 'chat' | 'cowork' | 'code' | 'browser' | 'design';
+  /** Parent view context (chat, cowork, bot, code, browser, design) */
+  sourceView: 'chat' | 'cowork' | 'bot' | 'code' | 'browser' | 'design';
   /** Session/chat ID for context */
   sessionId?: string;
   /** Enable MoA (Mixture of Agents) mode */

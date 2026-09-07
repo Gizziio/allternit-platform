@@ -146,7 +146,6 @@ pub fn agent_session_router() -> Router<Arc<AppState>> {
 struct CreateSessionBody {
     name: Option<String>,
     agent_id: Option<String>,
-    #[allow(dead_code)]
     agent_name: Option<String>,
     origin_surface: Option<String>,
     /// Incognito chat: an ephemeral session excluded from list responses and
@@ -298,6 +297,48 @@ fn transform_session(info: GizziSessionInfo, db: &DbHandle) -> serde_json::Value
         .or_else(|| info.surface.clone())
         .unwrap_or_default();
 
+    // The client's original metadata bag (bot identity, session mode, system
+    // prompt, …) is persisted in `session_metadata` because the backing Gizzi
+    // record does not preserve it. Stored client metadata wins over the
+    // synthesized fields below.
+    let stored_metadata = db
+        .get_session_metadata(&info.id)
+        .ok()
+        .flatten()
+        .and_then(|value| value.as_object().cloned())
+        .unwrap_or_default();
+
+    let mut metadata = serde_json::Map::new();
+    metadata.insert("project_id".to_string(), json!(info.project_id));
+    metadata.insert("directory".to_string(), json!(info.directory));
+    metadata.insert("version".to_string(), json!(info.version));
+    metadata.insert("agent_id".to_string(), json!(info.agent_id));
+    // camelCase alias: the web client's mapBackendSession reads `agentId`,
+    // not the snake_case gizzi field.
+    metadata.insert(
+        "agentId".to_string(),
+        stored_metadata
+            .get("agentId")
+            .cloned()
+            .or_else(|| info.agent_id.clone().map(|id| json!(id)))
+            .unwrap_or(serde_json::Value::Null),
+    );
+    metadata.insert("surface".to_string(), json!(info.surface));
+    metadata.insert("originSurface".to_string(), json!(origin_surface));
+    metadata.insert("permission".to_string(), json!(info.permission));
+    // Incognito chats (Phase 6): surfaced so clients can filter
+    // defensively even against list responses that predate the
+    // server-side exclusion.
+    metadata.insert(
+        "ephemeral".to_string(),
+        json!(db.is_session_ephemeral(&info.id).unwrap_or(false)),
+    );
+    metadata.insert("sourceRef".to_string(), json!(info.source_ref));
+    metadata.insert("sourceExport".to_string(), json!(info.source_export));
+    for (key, value) in stored_metadata {
+        metadata.insert(key, value);
+    }
+
     json!({
         "id": info.id,
         "name": info.title,
@@ -308,21 +349,7 @@ fn transform_session(info: GizziSessionInfo, db: &DbHandle) -> serde_json::Value
         "message_count": 0,
         "active": info.time.as_ref().and_then(|t| t.archived).is_none(),
         "tags": Vec::<String>::new(),
-        "metadata": {
-            "project_id": info.project_id,
-            "directory": info.directory,
-            "version": info.version,
-            "agent_id": info.agent_id,
-            "surface": info.surface,
-            "originSurface": origin_surface,
-            "permission": info.permission,
-            // Incognito chats (Phase 6): surfaced so clients can filter
-            // defensively even against list responses that predate the
-            // server-side exclusion.
-            "ephemeral": db.is_session_ephemeral(&info.id).unwrap_or(false),
-            "sourceRef": info.source_ref,
-            "sourceExport": info.source_export,
-        }
+        "metadata": serde_json::Value::Object(metadata),
     })
 }
 
@@ -719,7 +746,14 @@ async fn create_session(
     // Resolve platform agent harness config and forward it into the gizzi session.
     if let Some(ref agent_id) = body.agent_id {
         if let Err(err) = agent_allowed_on_surface(&state.db, agent_id, surface.as_deref()) {
-            return (StatusCode::FORBIDDEN, Json(json!({"error": err}))).into_response();
+            return (
+                StatusCode::FORBIDDEN,
+                Json(json!({
+                    "error": "agent_not_allowed_on_surface",
+                    "message": err,
+                })),
+            )
+                .into_response();
         }
         payload.insert("agentID".to_string(), json!(agent_id));
     }
@@ -754,6 +788,25 @@ async fn create_session(
     }
     if ephemeral {
         let _ = state.db.set_session_ephemeral(&session.id);
+    }
+
+    // Persist the client's full metadata bag (bot identity, session mode,
+    // system prompt, …) so list/get responses can restore client-only fields
+    // the gizzi record does not preserve. Accept the top-level `metadata`
+    // object plus flattened agent fields; stored metadata wins on read.
+    if let Some(metadata) = body.metadata {
+        let mut bag = metadata.as_object().cloned().unwrap_or_default();
+        if let Some(ref agent_id) = body.agent_id {
+            bag.entry("agentId".to_string())
+                .or_insert_with(|| json!(agent_id));
+        }
+        if let Some(ref agent_name) = body.agent_name {
+            bag.entry("agentName".to_string())
+                .or_insert_with(|| json!(agent_name));
+        }
+        let _ = state
+            .db
+            .set_session_metadata(&session.id, &serde_json::Value::Object(bag));
     }
 
     (
@@ -821,6 +874,25 @@ async fn update_session(
         Ok(session) => {
             if let Some(ref s) = surface {
                 let _ = state.db.set_session_origin_surface(&session.id, s);
+            }
+            // Merge the client metadata bag into the stored one (new keys
+            // win, previously stored keys are preserved).
+            if let Some(metadata) = body.metadata {
+                if let Some(object) = metadata.as_object() {
+                    let mut bag = state
+                        .db
+                        .get_session_metadata(&session.id)
+                        .ok()
+                        .flatten()
+                        .and_then(|value| value.as_object().cloned())
+                        .unwrap_or_default();
+                    for (key, value) in object {
+                        bag.insert(key.clone(), value.clone());
+                    }
+                    let _ = state
+                        .db
+                        .set_session_metadata(&session.id, &serde_json::Value::Object(bag));
+                }
             }
             Json(transform_session(session, &state.db)).into_response()
         }

@@ -606,6 +606,7 @@ function ShellAppInner(): React.ReactNode {
       useAgentSurfaceModeStore.getState().setSelectedMode('cowork', 'execute');
       open('workspace');
     }
+    if (mode === 'bot') open('bot-launchpad');
     if (mode === 'code') open('code');
     if (mode === 'browser') open('browser');
   }, [setActiveMode, open]);
