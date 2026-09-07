@@ -71,7 +71,7 @@ The Multica+Taskdog absorption successfully **ported UI concepts, a scheduling a
 |---------|--------|----------|
 | Auth middleware (Bearer token) | ✅ Exists | `cmd/allternit-cloud-api/src/auth/middleware.rs` |
 | Permission enums (`runs:read`, `jobs:write`, etc.) | ✅ Exists | `cmd/allternit-cloud-api/src/auth/permissions.rs` |
-| `tenant_id` / `owner_id` fields in DB | ✅ Exists | `migrations/002_cowork_runtime.sql` |
+| `tenant_id` / `owner_id` fields in DB | ✅ Exists | `cmd/allternit-cloud-api/migrations_pg/001_initial.sql` |
 | Tenant isolation enforced in routes | ❌ Missing | `list_runs` sets `tenant_id: None` |
 | Workspace-level RBAC (admin/member/viewer) | ❌ Missing | Only flat permission strings on API tokens |
 | Task-level permissions (who can edit) | ❌ Missing | Not implemented |

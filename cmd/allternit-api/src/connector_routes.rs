@@ -26,7 +26,9 @@ use axum::{
 use rusqlite::params;
 use serde::Deserialize;
 use serde_json::{json, Value};
-use std::sync::Arc;
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex, OnceLock};
+use std::time::{Duration, Instant};
 
 use crate::auth::get_user;
 use crate::AppState;
@@ -125,6 +127,48 @@ async fn mcp_proxy(headers: axum::http::HeaderMap, Json(body): Json<Value>) -> i
 /// allternit_runtime_…`).
 pub(crate) const DEVICE_TOKEN_PREFIX: &str = "allternit_runtime_";
 
+const DEVICE_TOKEN_CACHE_TTL: Duration = Duration::from_secs(300);
+
+struct CachedDeviceUser {
+    user_id: String,
+    email: Option<String>,
+    valid_until: Instant,
+}
+
+pub(crate) struct DeviceIdentity {
+    pub user_id: String,
+    pub email: Option<String>,
+}
+
+fn device_token_cache() -> &'static Mutex<HashMap<String, CachedDeviceUser>> {
+    static CACHE: OnceLock<Mutex<HashMap<String, CachedDeviceUser>>> = OnceLock::new();
+    CACHE.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+fn cached_device_identity(token: &str) -> Option<DeviceIdentity> {
+    let cache = device_token_cache().lock().ok()?;
+    let entry = cache.get(token)?;
+    (Instant::now() < entry.valid_until).then(|| DeviceIdentity {
+        user_id: entry.user_id.clone(),
+        email: entry.email.clone(),
+    })
+}
+
+fn remember_device_identity(token: &str, identity: DeviceIdentity) {
+    if let Ok(mut cache) = device_token_cache().lock() {
+        let now = Instant::now();
+        cache.retain(|_, entry| now < entry.valid_until);
+        cache.insert(
+            token.to_string(),
+            CachedDeviceUser {
+                user_id: identity.user_id,
+                email: identity.email,
+                valid_until: now + DEVICE_TOKEN_CACHE_TTL,
+            },
+        );
+    }
+}
+
 pub(crate) fn device_token_from_headers(headers: &axum::http::HeaderMap) -> Option<&str> {
     headers
         .get(axum::http::header::AUTHORIZATION)
@@ -143,9 +187,13 @@ pub(crate) fn device_token_from_headers(headers: &axum::http::HeaderMap) -> Opti
 pub(crate) async fn verify_runtime_device_token(
     state: &AppState,
     token: &str,
-) -> Result<String, axum::response::Response> {
+) -> Result<DeviceIdentity, axum::response::Response> {
     // Fail closed: without a configured cloud-api URL there is no way to
     // verify a device token, so it cannot authenticate anything.
+    if let Some(identity) = cached_device_identity(token) {
+        return Ok(identity);
+    }
+
     let Some(base) = state.config.cloud_api_url() else {
         return Err((
             StatusCode::UNAUTHORIZED,
@@ -160,24 +208,45 @@ pub(crate) async fn verify_runtime_device_token(
         "{}/api/v1/runtime-devices/verify-token",
         base.trim_end_matches('/')
     );
-    let resp = reqwest::Client::new()
+    let resp = match reqwest::Client::new()
         .post(&url)
         .bearer_auth(token)
         .timeout(std::time::Duration::from_secs(5))
         .send()
         .await
-        .map_err(|e| {
-            (
+    {
+        Ok(resp) => resp,
+        Err(e) => {
+            if let Some(identity) = cached_device_identity(token) {
+                return Ok(identity);
+            }
+            return Err((
                 StatusCode::BAD_GATEWAY,
                 Json(json!({
                     "error": "cloud_api_unavailable",
                     "message": format!("cloud-api token introspection unavailable: {}", e),
                 })),
             )
-                .into_response()
-        })?;
+                .into_response());
+        }
+    };
 
     if !resp.status().is_success() {
+        // Rate-limit / cloud 5xx is not "this runtime is revoked". Reuse a
+        // recent successful verify so chat does not 401-loop.
+        if resp.status() == StatusCode::TOO_MANY_REQUESTS || resp.status().is_server_error() {
+            if let Some(identity) = cached_device_identity(token) {
+                return Ok(identity);
+            }
+            return Err((
+                StatusCode::BAD_GATEWAY,
+                Json(json!({
+                    "error": "cloud_api_unavailable",
+                    "message": format!("cloud-api token introspection {}", resp.status()),
+                })),
+            )
+                .into_response());
+        }
         return Err((
             StatusCode::UNAUTHORIZED,
             Json(json!({"error": "unauthorized"})),
@@ -194,7 +263,8 @@ pub(crate) async fn verify_runtime_device_token(
         )
             .into_response()
     })?;
-    body.get("userId")
+    let user_id = body
+        .get("userId")
         .and_then(|v| v.as_str())
         .filter(|s| !s.is_empty())
         .map(str::to_string)
@@ -207,7 +277,18 @@ pub(crate) async fn verify_runtime_device_token(
                 })),
             )
                 .into_response()
-        })
+        })?;
+    let email = body
+        .get("email")
+        .and_then(|v| v.as_str())
+        .filter(|s| !s.is_empty() && s.contains('@'))
+        .map(str::to_string);
+    let identity = DeviceIdentity { user_id, email };
+    remember_device_identity(token, DeviceIdentity {
+        user_id: identity.user_id.clone(),
+        email: identity.email.clone(),
+    });
+    Ok(identity)
 }
 
 /// Headless variant of the MCP proxy for peer services with no Clerk session —
@@ -239,7 +320,7 @@ pub async fn mcp_proxy_internal(
     let user_id = if let Some(token) = device_token_from_headers(&headers) {
         let token = token.to_string();
         match verify_runtime_device_token(&state, &token).await {
-            Ok(user_id) => user_id,
+            Ok(identity) => identity.user_id,
             Err(resp) => return resp,
         }
     } else {
@@ -2784,13 +2865,17 @@ mod tests {
         let rails = crate::rails::RailsState::new(temp.join("rails"))
             .await
             .expect("test rails");
+        let desktop_host_registry = crate::desktop_host_registry::DesktopHostRegistry::new(db.clone());
         Arc::new(AppState {
             config,
-            db,
+            db: db.clone(),
             data_dir: temp.to_path_buf(),
             jwks,
             auth_config,
             vm_driver: None,
+            incus_driver: None,
+            desktop_host_registry,
+            desktop_host_provisioner: None,
             bot_desktop_sessions: Arc::new(tokio::sync::RwLock::new(std::collections::HashMap::new())),
             rails,
             vm_sessions: crate::vm_session_routes::new_vm_session_store(),
@@ -2808,6 +2893,17 @@ mod tests {
             terminal_sessions: crate::terminal_routes::TerminalSessionStore::new(),
             mcp_dispatcher: crate::mcp_dispatcher::McpDispatcher::new(),
             approval_store: Arc::new(crate::permission_policy::ApprovalStore::new()),
+            passkey_state: None,
+            resource_class_catalog: crate::fabric::sku::ResourceClassCatalog::builtin(),
+            fabric_node_provider: allternit_computer_cloud::providers::fabric_node::FabricNodeProvider::new(
+                std::sync::Arc::new(allternit_computer_cloud::providers::fabric_node::FabricNodePool::new()),
+                "__test__".to_string(),
+            ),
+            fabric_provider_registry: allternit_computer_cloud::fabric::FabricProviderRegistry::empty(),
+            fabric_scheduler: crate::fabric::Scheduler::new(crate::fabric::CostEngine::default_engine()),
+            fabric_price_cache: crate::fabric::PriceCache::new(db.clone()),
+            os_control_plane: None,
+            dp_jwks: crate::auth_dp_jwt::DataPlaneJwks::disabled(),
         })
     }
 

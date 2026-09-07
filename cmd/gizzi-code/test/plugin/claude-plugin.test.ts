@@ -281,12 +281,12 @@ describe("hooks", () => {
           PreToolUse: [
             {
               matcher: "Edit|Write",
-              hooks: [{ type: "command", command: "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/check.py", timeout: 10 }],
+              hooks: [{ type: "command", command: "python3 ${GIZZI_PLUGIN_ROOT}/hooks/check.py", timeout: 10 }],
             },
           ],
           PostToolUse: [
             {
-              hooks: [{ type: "command", command: "bash ${CLAUDE_PLUGIN_ROOT}/hooks/log.sh" }],
+              hooks: [{ type: "command", command: "bash ${GIZZI_PLUGIN_ROOT}/hooks/log.sh" }],
             },
           ],
         },
@@ -406,7 +406,7 @@ describe("mcp", () => {
     await writePlugin(tmp, "mcp-plugin", {
       mcp: {
         "my-server": {
-          command: "${CLAUDE_PLUGIN_ROOT}/servers/server.js",
+          command: "${GIZZI_PLUGIN_ROOT}/servers/server.js",
           args: ["--port", "8080"],
           env: { API_KEY: "${API_KEY}" },
         },
@@ -424,12 +424,12 @@ describe("mcp", () => {
     expect((p.mcpServers["remote-api"] as any).url).toBe("https://api.example.com/mcp")
   })
 
-  test("expands ${CLAUDE_PLUGIN_ROOT} in MCP paths", async () => {
+  test("expands ${GIZZI_PLUGIN_ROOT} in MCP paths", async () => {
     await writePlugin(tmp, "var-expand", {
       mcp: {
         "local": {
-          command: "${CLAUDE_PLUGIN_ROOT}/bin/server",
-          args: ["--root", "${CLAUDE_PLUGIN_ROOT}"],
+          command: "${GIZZI_PLUGIN_ROOT}/bin/server",
+          args: ["--root", "${GIZZI_PLUGIN_ROOT}"],
         },
       },
     })
@@ -438,7 +438,7 @@ describe("mcp", () => {
     const server = p.mcpServers["local"] as any
     expect(server.command).toBe(path.join(p.root, "bin", "server"))
     expect(server.args[1]).toBe(p.root)
-    expect(server.command).not.toContain("${CLAUDE_PLUGIN_ROOT}")
+    expect(server.command).not.toContain("${GIZZI_PLUGIN_ROOT}")
   })
 
   test("empty mcpServers when no .mcp.json", async () => {
@@ -511,7 +511,7 @@ describe("discovery", () => {
   })
 })
 
-// ── real plugins (from ~/.claude/plugins/marketplaces/ — installed via Claude Code) ───
+// ── real plugins (from ~/.claude/plugins/marketplaces/ — installed via gizzi-code) ───
 
 const MARKETPLACE_BASE = path.join(os.homedir(), ".claude", "plugins", "marketplaces", "claude-plugins-official", "plugins")
 const CACHE_BASE = path.join(os.homedir(), ".claude", "plugins", "cache", "claude-plugins-official")
@@ -582,7 +582,7 @@ describe("real official plugins", () => {
     expect(events).toContain("PostToolUse")
     expect(events).toContain("Stop")
     expect(events).toContain("UserPromptSubmit")
-    // CLAUDE_PLUGIN_ROOT is NOT expanded in raw hooksConfig — expansion happens
+    // GIZZI_PLUGIN_ROOT is NOT expanded in raw hooksConfig — expansion happens
     // at execution time inside buildHooks(). The raw JSON is stored as-is.
     const preHook = p.hooksConfig!.hooks.PreToolUse![0].hooks[0]
     expect((preHook as any).command).toContain("pretooluse.py")
@@ -650,22 +650,13 @@ describe("discovery: ~/.claude/plugins/marketplaces/", () => {
 })
 
 // ── discovery: versioned cache scan (3-level deep) ───────────────────────────
+// Canonical cache lives under ~/.gizzi/plugins/cache; the upstream-inherited
+// ~/.claude/plugins/cache remains as a read-only legacy fallback.
 
-describe("discovery: ~/.claude/plugins/cache/ (versioned dirs)", () => {
+describe("discovery: ~/.gizzi/plugins/cache/ (versioned dirs)", () => {
   test("discoverPluginRoots() finds plugin in <marketplace>/<name>/<version>/ structure", async () => {
-    // Synthesize a versioned cache entry in the tmp dir's .claude cache path
-    const fakeCacheDir = path.join(tmp, ".claude", "plugins", "cache", "test-marketplace", "test-pkg", "2.0.0")
-    const fakeMeta = path.join(fakeCacheDir, ".claude-plugin")
-    await fs.mkdir(fakeMeta, { recursive: true })
-    await fs.writeFile(path.join(fakeMeta, "plugin.json"), JSON.stringify({ name: "test-versioned-pkg" }))
-
-    // Override home to point to our tmp so the loader scans it
-    // The loader already uses GIZZI_TEST_HOME (set in beforeEach)
-    const altCacheDir = path.join(tmp, ".claude", "plugins", "cache")
-    await fs.mkdir(altCacheDir, { recursive: true })
-
-    // Write directly to the GIZZI_TEST_HOME-based cache path the loader uses
-    const loaderCacheDir = path.join(tmp, ".claude", "plugins", "cache", "test-mktplace2", "my-pkg", "1.5.0")
+    // Write directly to the GIZZI_TEST_HOME-based canonical cache path the loader uses
+    const loaderCacheDir = path.join(tmp, ".gizzi", "plugins", "cache", "test-mktplace2", "my-pkg", "1.5.0")
     await fs.mkdir(path.join(loaderCacheDir, ".claude-plugin"), { recursive: true })
     await fs.writeFile(
       path.join(loaderCacheDir, ".claude-plugin", "plugin.json"),
@@ -675,6 +666,21 @@ describe("discovery: ~/.claude/plugins/cache/ (versioned dirs)", () => {
     const { discoverPluginRoots } = await import("../../src/runtime/integrations/plugin/claude/loader")
     const roots = await discoverPluginRoots()
     expect(roots).toContain(loaderCacheDir)
+  })
+})
+
+describe("discovery: ~/.claude/plugins/cache/ (legacy read-only fallback)", () => {
+  test("discoverPluginRoots() still finds plugins in the legacy cache location", async () => {
+    const legacyCacheDir = path.join(tmp, ".claude", "plugins", "cache", "legacy-mkt", "legacy-pkg", "2.0.0")
+    await fs.mkdir(path.join(legacyCacheDir, ".claude-plugin"), { recursive: true })
+    await fs.writeFile(
+      path.join(legacyCacheDir, ".claude-plugin", "plugin.json"),
+      JSON.stringify({ name: "legacy-versioned-pkg" }),
+    )
+
+    const { discoverPluginRoots } = await import("../../src/runtime/integrations/plugin/claude/loader")
+    const roots = await discoverPluginRoots()
+    expect(roots).toContain(legacyCacheDir)
   })
 })
 

@@ -21,7 +21,7 @@ const sessions = new Map<string, AssistantSession>()
  * Check if assistant mode is active
  */
 export function isAssistantMode(): boolean {
-  return process.env.CLAUDE_ASSISTANT_MODE === 'true'
+  return process.env.GIZZI_ASSISTANT_MODE === 'true'
 }
 
 /**

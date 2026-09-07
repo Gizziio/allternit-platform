@@ -1,6 +1,6 @@
 // @ts-nocheck
 /**
- * Sandbox types for the Claude Code Agent SDK
+ * Sandbox types for the gizzi-code Agent SDK
  *
  * This file is the single source of truth for sandbox configuration types.
  * Both the SDK and the settings validation import from here.

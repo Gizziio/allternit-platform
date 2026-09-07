@@ -124,6 +124,10 @@ export interface AgentJob extends BaseJob {
     context?: string;      // Additional context
     maxTokens?: number;
     temperature?: number;
+    /** Bot Mode (B3): deliver into this bot's canonical chat (resume + turn)
+     * instead of minting an ephemeral session. Jobs are namespaced
+     * `[bot:<name>] <label>`. */
+    bot?: string;
   };
 }
 
@@ -176,6 +180,7 @@ export interface CronRun {
   // Results
   output?: string;         // stdout/response
   error?: string;          // stderr/error message
+  reason?: string;         // Typed failure code (D4 closed vocabulary) when status = failed
   exitCode?: number;       // For shell jobs
   httpStatus?: number;     // For HTTP jobs
   
@@ -277,6 +282,8 @@ export interface DaemonConfig {
   logLevel: "debug" | "info" | "warn" | "error";
   maxConcurrentJobs: number;
   jobTimeoutSeconds: number;
+  /** Pidfile path for supervision/staleness detection. Absent = no pidfile. */
+  pidfile?: string;
 }
 
 export interface DaemonStatus {

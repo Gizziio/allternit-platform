@@ -34,16 +34,16 @@ allternit-gc-agents = { workspace = true }
 # Internal crates - Execution
 allternit-driver-interface = { path = "../../platform/contracts/driver-interface" }
 allternit-firecracker-driver = { path = "../../drivers/firecracker" }
-allternit-apple-vf-driver = { path = "../../drivers/apple-vf" }
-allternit-opensandbox-driver = { path = "../../drivers/opensandbox" }
 allternit-session-manager = { path = "../../services/session-manager" }
+allternit-computer-cloud = { path = "../../cmd/allternit-computer-cloud" }
+allternitos-cloud-contracts = { workspace = true }
 
 # WebSocket
 tokio-tungstenite = { workspace = true }
 futures = "0.3"
 
 # SQLite
-rusqlite = { version = "0.31", features = ["bundled"] }
+rusqlite = { version = "0.31", features = ["bundled", "chrono"] }
 refinery = { version = "0.9", features = ["rusqlite"] }
 
 # Utilities
@@ -53,7 +53,9 @@ thiserror = "1"
 rand = "0.8"
 anyhow = "1"
 dirs = "5"
-jsonwebtoken = "10"
+# v10 requires an explicit crypto-provider feature; aws_lc_rs matches the
+# provider `auth`'s RS256 path already uses process-wide.
+jsonwebtoken = { version = "10", features = ["aws_lc_rs"] }
 aws-lc-rs = "1"
 async-trait = "0.1"
 hostname = "0.4"
@@ -73,6 +75,8 @@ sha2 = "0.10"
 md5 = "0.7"
 aes-gcm = "0.10"
 ed25519-dalek = { version = "2", features = ["rand_core"] }
+webauthn-rs = "0.5"
+url = "2"
 
 # SSH client
 russh = "0.60"
@@ -87,13 +91,12 @@ base64 = "0.22"
 # PDF Rendering dependencies
 printpdf = "0.6"
 
-[target.'cfg(target_os = "macos")'.dependencies]
-allternit-apple-vf-driver = { path = "../../drivers/apple-vf" }
-
 # Token counting
 tiktoken-rs = "0.12.0"
 
-# Testing
+[target.'cfg(target_os = "macos")'.dependencies]
+allternit-apple-vf-driver = { path = "../../drivers/apple-vf" }
+
 [dev-dependencies]
 axum-test = "14"
 tempfile = "3"

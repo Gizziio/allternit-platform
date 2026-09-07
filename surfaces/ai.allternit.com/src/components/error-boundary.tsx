@@ -10,6 +10,7 @@ import {
 import { cn } from "@/lib/utils";
 
 import { createModuleLogger } from '@/lib/logger';
+import { reportClientError } from '@/lib/client-error-report';
 
 const logger = createModuleLogger('ErrorBoundary');
 
@@ -366,12 +367,18 @@ export function reportError(error: Error, errorInfo?: ErrorInfo, componentName?:
 
   logger.error({ err: report }, '[Error Report]');
 
-  // Send to error tracking service (e.g., Sentry)
-  // if (typeof window !== 'undefined' && window.Sentry) {
-  //   window.Sentry.captureException(error, { 
-  //     extra: { componentStack: errorInfo?.componentStack, componentName } 
-  //   });
-  // }
+  // Fire-and-forget to the platform's client-errors endpoint. No-op when the
+  // endpoint is unavailable (reportClientError self-disables on repeat
+  // failures), and no Sentry bundle is wired yet.
+  reportClientError({
+    kind: 'react-error-boundary',
+    message: error.message,
+    stack: error.stack,
+    source: componentName ?? undefined,
+    location: report.url,
+    userAgent: report.userAgent,
+    timestamp: report.timestamp,
+  });
 
   return report;
 }

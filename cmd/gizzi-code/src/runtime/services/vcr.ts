@@ -1,5 +1,5 @@
 // @ts-nocheck
-import type { BetaContentBlock } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
+import type { BetaContentBlock } from '@allternit/gizzi-sdk/providers/allternit/resources/beta/messages/messages.mjs'
 import { createHash, randomUUID, type UUID } from 'crypto'
 import { mkdir, readFile, writeFile } from 'fs/promises'
 import isPlainObject from 'lodash-es/isPlainObject.js'
@@ -16,7 +16,7 @@ import type {
 } from '@/types/message.js'
 import { getCwd } from '../../shared/utils/cwd.js'
 import { env } from '../../shared/utils/env.js'
-import { getClaudeConfigHomeDir, isEnvTruthy } from '../../shared/utils/envUtils.js'
+import { getLegacyClaudeHomeDir, isEnvTruthy } from '../../shared/utils/envUtils.js'
 import { getErrnoCode } from '../utils/errors.js'
 import { normalizeMessagesForAPI } from '../../shared/utils/messages.js'
 import { jsonParse, jsonStringify } from '../../shared/utils/slowOperations.js'
@@ -298,7 +298,7 @@ function dehydrateValue(s: unknown): unknown {
     return s
   }
   const cwd = getCwd()
-  const configHome = getClaudeConfigHomeDir()
+  const configHome = getLegacyClaudeHomeDir()
   let s1 = s
     .replace(/num_files="\d+"/g, 'num_files="[NUM]"')
     .replace(/duration_ms="\d+"/g, 'duration_ms="[DURATION]"')
@@ -347,7 +347,7 @@ function hydrateValue(s: unknown): unknown {
   return s
     .replaceAll('[NUM]', '1')
     .replaceAll('[DURATION]', '100')
-    .replaceAll('[CONFIG_HOME]', getClaudeConfigHomeDir())
+    .replaceAll('[CONFIG_HOME]', getLegacyClaudeHomeDir())
     .replaceAll('[CWD]', getCwd())
 }
 

@@ -3,6 +3,7 @@ import { UI } from "@/cli/ui"
 import { cmd } from "@/cli/commands/cmd"
 import { withNetworkOptions, resolveNetworkOptions } from "@/cli/network"
 import { Flag } from "@/runtime/context/flag/flag"
+import { assertSafeServerExposure } from "@/cli/server-exposure"
 import open from "open"
 import { networkInterfaces } from "os"
 
@@ -33,10 +34,13 @@ export const WebCommand = cmd({
   builder: (yargs) => withNetworkOptions(yargs),
   describe: "start gizzi server and open web interface",
   handler: async (args) => {
+    const opts = await resolveNetworkOptions(args)
+    // Identical policy to `gizzi serve`: never bind a non-loopback interface
+    // (or mDNS's 0.0.0.0 default) without authentication configured.
+    assertSafeServerExposure({ command: "web", hostname: opts.hostname })
     if (!Flag.GIZZI_SERVER_PASSWORD) {
       UI.println(UI.Style.TEXT_WARNING_BOLD + "!  " + "GIZZI_SERVER_PASSWORD is not set; server is unsecured.")
     }
-    const opts = await resolveNetworkOptions(args)
     const server = Server.listen(opts)
     UI.empty()
     UI.println(UI.logo("  "))
@@ -67,11 +71,12 @@ export const WebCommand = cmd({
         )
       }
 
-      // Open localhost in browser
+      // Open localhost in browser; opening is cosmetic — the URL is printed above.
       open(localhostUrl.toString()).catch(() => {})
     } else {
       const displayUrl = server.url.toString()
       UI.println(UI.Style.TEXT_INFO_BOLD + "  Web interface:    ", UI.Style.TEXT_NORMAL, displayUrl)
+      // Opening is cosmetic — the URL is printed above.
       open(displayUrl).catch(() => {})
     }
 

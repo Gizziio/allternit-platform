@@ -1,6 +1,6 @@
 // @ts-nocheck
-import { APIError } from '@allternit/sdk/providers/anthropic'
-import type { MessageParam } from '@allternit/sdk/providers/anthropic/resources/index.mjs'
+import { APIError } from '@allternit/gizzi-sdk/providers/allternit'
+import type { MessageParam } from '@allternit/gizzi-sdk/providers/allternit/resources/index.mjs'
 import isEqual from 'lodash-es/isEqual.js'
 import { getIsNonInteractiveSession } from '../bootstrap/state.js'
 import { isClaudeAISubscriber } from '../utils/auth.js'
@@ -11,7 +11,7 @@ import { getSmallFastModel } from '../utils/model/model.js'
 import { isEssentialTrafficOnly } from '../utils/privacyLevel.js'
 import type { AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS } from './analytics/index.js'
 import { logEvent } from './analytics/index.js'
-import { getAnthropicClient } from './api/client.js'
+import { getAllternitClient } from './api/client.js'
 import {
   processRateLimitHeaders,
   shouldProcessRateLimits,
@@ -198,7 +198,7 @@ export function emitStatusChange(limits: ClaudeAILimits) {
 
 async function makeTestQuery() {
   const model = getSmallFastModel()
-  const anthropic = await getAnthropicClient({
+  const anthropic = await getAllternitClient({
     maxRetries: 0,
     model,
     source: 'quota_check',

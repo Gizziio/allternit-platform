@@ -23,7 +23,7 @@ import {
 } from '../../../shared/utils/auth.js'
 import { checkHasTrustDialogAccepted } from '../../../shared/utils/config.js'
 import { logForDebugging } from '../../../shared/utils/debug.js'
-import { getClaudeConfigHomeDir } from '../../../shared/utils/envUtils.js'
+import { getLegacyClaudeHomeDir } from '../../../shared/utils/envUtils.js'
 import { errorMessage, isFsInaccessible, toError } from '../../../shared/utils/errors.js'
 import { getAuthHeaders } from '../../../shared/utils/http.js'
 import { readJSONLFile } from '../../../shared/utils/json.js'
@@ -43,7 +43,7 @@ const FILE_PREFIX = '1p_failed_events.'
 
 // Storage directory for failed events - evaluated at runtime to respect CLAUDE_CONFIG_DIR in tests
 function getStorageDir(): string {
-  return path.join(getClaudeConfigHomeDir(), 'telemetry')
+  return path.join(getLegacyClaudeHomeDir(), 'telemetry')
 }
 
 // API envelope - event_data is the JSON output from proto toJSON()
@@ -110,11 +110,11 @@ export class FirstPartyEventLoggingExporter implements LogRecordExporter {
       schedule?: (fn: () => Promise<void>, delayMs: number) => () => void
     } = {},
   ) {
-    // Default: prod, except when ANTHROPIC_BASE_URL is explicitly staging.
+    // Default: prod, except when ALLTERNIT_BASE_URL is explicitly staging.
     // Overridable via tengu_1p_event_batch_config.baseUrl.
     const baseUrl =
       options.baseUrl ||
-      (process.env.ANTHROPIC_BASE_URL === 'https://api-staging.allternit.com'
+      (process.env.ALLTERNIT_BASE_URL === 'https://api-staging.allternit.com'
         ? 'https://api-staging.allternit.com'
         : 'https://api.allternit.com')
 
@@ -313,7 +313,7 @@ export class FirstPartyEventLoggingExporter implements LogRecordExporter {
       const eventLogs = logs.filter(
         // @ts-ignore Property may not exist
         log =>
-          (log as any).instrumentationScope?.name === 'com.anthropic.claude_code.events',
+          (log as any).instrumentationScope?.name === 'com.allternit.gizzi.events',
       )
 
       if (eventLogs.length === 0) {

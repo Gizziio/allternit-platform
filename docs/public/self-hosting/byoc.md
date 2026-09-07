@@ -5,7 +5,7 @@ Allternit is designed to run under your control. The same codebase ships two bin
 | Binary | Use case | Default port | Database |
 |--------|----------|--------------|----------|
 | `allternit-api` | Local-first backend per device | `8013` | SQLite |
-| `allternit-cloud-api` | Centrally hosted cloud backend | `8080` / `3001` | SQLite or PostgreSQL |
+| `allternit-cloud-api` | Centrally hosted cloud backend (`https://api.allternit.com`) | `8082` prod (nginx 443→8082; `8080` code default) | PostgreSQL (SQLite fallback) |
 
 Both support Clerk for identity and can be run on your own infrastructure, under your own cloud accounts, with your own KMS keys.
 
@@ -61,9 +61,16 @@ For fully offline/self-hosted deployments, set `selfHosted: true` in company con
 | `CLERK_JWKS_URL` | Clerk JWKS endpoint | baked into company config |
 | `CLERK_ISSUER` | Expected JWT issuer | baked into company config |
 
-## Cloud-hosted `cmd/allternit-cloud-api` on Fly.io
+## Cloud-hosted `cmd/allternit-cloud-api` on a VPS
 
 `allternit-cloud-api` is the centrally hosted service. It adds multi-tenant auth (`users.tenant_id`, `api_tokens`, `user_sessions`, `audit_log`), device-token verification, hosted-runtime management, and Clerk webhook sync.
+
+> **2026-09-03 correction:** the Fly.io deployment path is retired — there is no
+> `fly.toml` in `cmd/allternit-cloud-api/` anymore. Production runs on the
+> Contabo control-plane VPS (`mail`) as a systemd unit behind nginx, serving
+> `https://api.allternit.com` (port 8082). The canonical runbook is
+> [`docs/Operations/CLOUD_API_VPS_DEPLOY.md`](../../Operations/CLOUD_API_VPS_DEPLOY.md);
+> the codified deploy loop is `scripts/deploy-cloud-api.sh`.
 
 ### Build and deploy
 
@@ -71,29 +78,28 @@ For fully offline/self-hosted deployments, set `selfHosted: true` in company con
 # Local build
 cargo build --release -p allternit-cloud-api
 
-# Fly.io deploy
-fly deploy --config fly.toml
+# Production deploy (Contabo VPS, Tailscale SSH, auto-rollback)
+../../scripts/deploy-cloud-api.sh            # or CI: .github/workflows/deploy-cloud-api-contabo.yml
 ```
 
-The included `fly.toml` uses `cmd/allternit-cloud-api/Dockerfile` and mounts persistent storage at `/data`.
+### Required production secrets
 
-### Required Fly.io secrets
+Set in `/opt/allternit-cloud-api/.env` on the server (chmod 600):
 
 ```bash
-fly secrets set FLY_API_TOKEN="..."
-fly secrets set ALLTERNIT_CREDENTIALS_KEY="..."
+DATABASE_URL="postgres://..."              # PostgreSQL on the VPS
+ALLTERNIT_CREDENTIALS_KEY="..."            # encryption key for provider tokens (required)
 ```
 
 ### Configuration
 
 | Variable | Purpose | Default |
 |----------|---------|---------|
-| `DATABASE_URL` | Database connection | `sqlite:///data/api.db` |
-| `BIND_ADDR` | Listen address | `0.0.0.0:8080` |
+| `DATABASE_URL` | Database connection | `sqlite:///data/api.db` (prod: PostgreSQL) |
+| `BIND_ADDR` | Listen address | `0.0.0.0:8080` (prod: 8082, nginx fronts 443) |
 | `RATE_LIMIT_RPM` | General rate limit | `60` |
 | `PUBLIC_RATE_LIMIT_RPM` | Stricter limit for pairing/relay | `30` |
 | `HOSTED_RUNTIME_IDLE_TIMEOUT_MINUTES` | Idle runtime shutdown | `15` |
-| `FLY_ORG_SLUG` | Fly organization | `allternit` |
 | `ALLTERNIT_CREDENTIALS_KEY` | Encryption key for provider tokens | required in production |
 
 ## Why Allternit is the open alternative
@@ -118,7 +124,7 @@ Managed agent platforms lock your data, your model routing, and your agent logic
                         ┌─────────────────┐
                         │ allternit-cloud-│
                         │ api (optional)  │
-                        │   Fly.io / VPS  │
+                        │  VPS (Contabo)  │
                         └─────────────────┘
 ```
 
@@ -128,4 +134,6 @@ Managed agent platforms lock your data, your model routing, and your agent logic
 2. Configure Clerk or enable self-hosted mode.
 3. Create an organization and admin workspace.
 4. Register an external KMS key and validate it.
-5. Deploy `allternit-cloud-api` to Fly.io if you need centralized tenancy.
+5. Deploy `allternit-cloud-api` to your VPS if you need centralized tenancy — see `docs/Operations/CLOUD_API_VPS_DEPLOY.md`.
+
+_Last verified: 2026-09-03 against a0f8230b5 (`cmd/allternit-cloud-api/fly.toml` confirmed absent; `deploy-contabo.sh` and `scripts/deploy-cloud-api.sh` confirmed present)._

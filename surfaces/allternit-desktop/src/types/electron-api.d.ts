@@ -138,10 +138,20 @@ export interface AppInfo {
   manifest: unknown;
 }
 
+export type UpdateStatus =
+  | { state: 'checking' }
+  | { state: 'available' }
+  | { state: 'up-to-date' }
+  | { state: 'downloaded'; version?: string; releaseNotes?: string; updateURL?: string }
+  | { state: 'error'; message: string };
+
 export interface AppAPI {
   getInfo(): Promise<AppInfo>;
   isFirstLaunch(): Promise<boolean>;
   completeOnboarding(): Promise<boolean>;
+  checkForUpdates(): Promise<{ ok: boolean; reason?: string; message?: string }>;
+  installUpdate(): Promise<void>;
+  onUpdateStatus(handler: (status: UpdateStatus) => void): () => void;
 }
 
 export interface AuthAccount {
@@ -171,6 +181,8 @@ export interface AuthAPI {
   forgetAccount(userId: string): Promise<void>;
   signOut(): Promise<void>;
   hardSignOut(): Promise<void>;
+  getClerkToken(): Promise<string | null>;
+  onSessionUpdated?(handler: (session: { userId: string; userEmail: string }) => void): () => void;
 }
 
 export interface PairingInfo {
@@ -227,6 +239,8 @@ export interface MeshAPI {
 
 export interface ShellAPI {
   openExternal(url: string): Promise<void>;
+  openRemoteControl(): Promise<void>;
+  openFabricSession(): Promise<void>;
   getOfficeHostStatus(): Promise<Record<'word' | 'excel' | 'powerpoint', {
     installed: boolean;
     running: boolean;
@@ -496,6 +510,13 @@ export interface MiniAppRuntimeRegistration {
   oauth?: Record<string, unknown>;
 }
 
+export interface VoiceAPI {
+  isAvailable(): Promise<boolean>;
+  startDictation(): Promise<{ success: boolean; error?: string }>;
+  stopDictation(): Promise<void>;
+  onTranscript(handler: (event: { text: string; isFinal: boolean }) => void): () => void;
+}
+
 export interface AllternitDesktopAPI {
   sdk: { getBackendUrl(): Promise<string> };
   connection: ConnectionAPI;
@@ -525,6 +546,7 @@ export interface AllternitDesktopAPI {
   worker: WorkerAPI;
   hyperframes: HyperframesAPI;
   miniApps: MiniAppsAPI;
+  voice: VoiceAPI;
 }
 
 declare global {

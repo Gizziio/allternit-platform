@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useMemo } from 'react';
 import { DrawerTabs } from './DrawerTabs';
-import { UnifiedTerminal } from '../../../components/workspace/UnifiedTerminal';
+import { TerminalWorkspace } from '@/components/terminal-workspace/TerminalWorkspace';
 import { ArtifactCenter } from '../ArtifactCenter';
 import { CodeDiffPanel } from '../CodeDiffPanel';
 import { MissionControlPanel } from './MissionControlPanel';
@@ -111,17 +111,9 @@ export function DrawerRoot() {
           />
         );
       case 'terminal':
-        return (
-          <UnifiedTerminal
-            sessionId={`drawer:${activeCodeSessionId ?? 'allternit-session'}`}
-            workingDir={activeWorkspace?.root_path}
-            terminalContext={{
-              repoName: activeWorkspace?.display_name,
-              branch: activeWorkspace?.repo_status?.branch,
-              shortSha: activeWorkspace?.repo_status?.last_commit?.slice(0, 7),
-            }}
-          />
-        );
+        // The global multi-terminal workspace fills the drawer content area
+        // (its root is height:100% and scrolls vertically inside the grid).
+        return <TerminalWorkspace />;
       case 'changes':
         return <CodeDiffPanel workingDir={activeWorkspace?.root_path} />;
       case 'artifacts':

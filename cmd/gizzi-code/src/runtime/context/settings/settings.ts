@@ -4,7 +4,7 @@
  * Manages user settings in `.gizzi/settings.json` (project level)
  * and `~/.config/gizzi/settings.json` (global level).
  * 
- * Similar to Claude Code's `.claude.json` system.
+ * Similar to gizzi-code's `.claude.json` system.
  */
 
 import path from "path"

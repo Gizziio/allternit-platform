@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle';
-import type { ToolResultBlockParam } from '@anthropic-ai/sdk/resources/index.mjs';
+import type { ToolResultBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/index.mjs';
 import { copyFile, stat as fsStat, truncate as fsTruncate, link } from 'fs/promises';
 import * as React from 'react';
 import type { CanUseToolFn } from 'src/hooks/useCanUseTool.js';
@@ -18,7 +18,7 @@ import type { AgentId } from '@/runtime/types/ids.js';
 import type { AssistantMessage } from '../../../../types/message.js';
 import { parseForSecurity } from '@/shared/utils/bash/ast.js';
 import { splitCommand_DEPRECATED, splitCommandWithOperators } from '@/shared/utils/bash/commands.js';
-import { extractClaudeCodeHints } from '@/shared/utils/claudeCodeHints.js';
+import { extractGizziHints } from '@/shared/utils/gizziHints.js';
 import { detectCodeIndexingFromCommand } from '@/shared/utils/codeIndexing.js';
 import { isEnvTruthy } from '@/shared/utils/envUtils.js';
 import { isENOENT, ShellError } from '@/shared/utils/errors.js';
@@ -753,7 +753,9 @@ export const BashTool = buildTool({
         // File may already be gone — stdout preview is sufficient
       }
     }
-    const commandType = input.command.split(' ')[0];
+    // Fork: log the basename only — the first token can be an absolute
+    // path (/Users/<name>/bin/tool), which would leak the home directory.
+    const commandType = (input.command.split(' ')[0] ?? '').split('/').pop();
     logEvent('tengu_bash_tool_command_executed', {
       command_type: commandType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       stdout_length: stdout.length,
@@ -773,13 +775,13 @@ export const BashTool = buildTool({
     }
     let strippedStdout = stripEmptyLines(stdout);
 
-    // Gizzi hints protocol: CLIs/SDKs gated on CLAUDECODE=1 emit a
+    // Gizzi hints protocol: CLIs/SDKs gated on GIZZI_CODE=1 emit a
     // `<gizzi-hint />` tag to stderr (merged into stdout here). Scan,
-    // record for useClaudeCodeHintRecommendation to surface, then strip
+    // record for useGizziHintRecommendation to surface, then strip
     // so the model never sees the tag — a zero-token side channel.
     // Stripping runs unconditionally (subagent output must stay clean too);
     // only the dialog recording is main-thread-only.
-    const extracted = extractClaudeCodeHints(strippedStdout, input.command);
+    const extracted = extractGizziHints(strippedStdout, input.command);
     strippedStdout = extracted.stripped;
     if (isMainThread && extracted.hints.length > 0) {
       for (const hint of extracted.hints) maybeRecordPluginHint(hint);

@@ -1,8 +1,11 @@
-<svg
-      fill="currentColor"
-      fillRule="evenodd"
-      height="24"
-      viewBox="0 0 24 24"
-      width="24"
-      xmlns="http://www.w3.org/2000/svg"
-    ><path clipRule="evenodd" d="M1 1h16.5v11H12v5.5H6.5V23H1V1zm5.5 5.5V12H12V6.5H6.5z" /><path d="M17.5 12H23v11h-5.5V12z" /></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ed4abf" />
+      <stop offset=".5" stop-color="#9b4dff" />
+      <stop offset="1" stop-color="#5ad8e6" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="12" fill="#0f0a14" />
+  <path fill="url(#g)" d="M14 16h36v8H40v32h-8V24h-6v22h-8V24h-4z" />
+</svg>

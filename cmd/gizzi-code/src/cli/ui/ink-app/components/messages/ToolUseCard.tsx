@@ -2,7 +2,7 @@
 import * as React from 'react'
 import { Box, Text } from '../../ink'
 import { useAppStateMaybeOutsideOfProvider } from '../../state/AppState'
-import type { ToolUseBlockParam } from '@allternit/sdk/providers/anthropic/resources/index.mjs'
+import type { ToolUseBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/index.mjs'
 
 type Props = {
   param: ToolUseBlockParam
@@ -43,14 +43,14 @@ export function ToolUseCard({
     stateColor = 'yellow'
   } else {
     stateLabel = 'running'
-    stateColor = 'claude'
+    stateColor = 'gizzi'
   }
 
   return (
     <Box
       flexDirection="column"
       borderStyle="single"
-      borderColor={isError ? 'red' : isResolved ? 'inactive' : 'claude'}
+      borderColor={isError ? 'red' : isResolved ? 'inactive' : 'gizzi'}
       paddingX={1}
       paddingY={0}
       width="100%"

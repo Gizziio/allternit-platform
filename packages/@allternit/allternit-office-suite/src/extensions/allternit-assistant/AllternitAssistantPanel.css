@@ -1,0 +1,278 @@
+/* Allternit Assistant extension panel. Tokens come from the suite theme and
+ * are overridden by the platform shell; the layout mirrors the vendored
+ * apps' .ai-panel language (header / chat / composer). */
+
+.aos-assistant {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--color-bg-page, #ffffff);
+  border-right: 1px solid var(--color-border-strong, #d0d3d8);
+  color: var(--color-text-primary, #232425);
+  font-family: var(--gs-font-sans, Arial, sans-serif);
+}
+
+.aos-assistant-header {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--color-border-default, #eaeaea);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.aos-assistant-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.aos-assistant-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.aos-assistant-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-text-secondary, #606366);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.aos-assistant-icon-btn:hover {
+  background: var(--color-bg-subtle, #f5f5f5);
+  color: var(--color-text-primary, #232425);
+}
+
+.aos-assistant-context {
+  flex-shrink: 0;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--color-border-default, #eaeaea);
+  background: var(--color-bg-subtle, #f5f5f5);
+  font-size: 12px;
+  min-width: 0;
+}
+
+.aos-assistant-doc {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--color-text-secondary, #606366);
+}
+
+.aos-assistant-doc-none {
+  color: var(--color-text-tertiary, #909499);
+}
+
+.aos-assistant-chat {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.aos-assistant-empty {
+  margin: auto;
+  text-align: center;
+  color: var(--color-text-secondary, #606366);
+  padding: 16px;
+}
+
+.aos-assistant-empty-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-primary, #232425);
+  margin-bottom: 6px;
+}
+
+.aos-assistant-empty-body {
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.aos-assistant-msg {
+  max-width: 92%;
+  padding: 7px 10px;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: break-word;
+}
+
+.aos-assistant-msg-user {
+  align-self: flex-end;
+  background: var(--accent-primary, #c43e1c);
+  color: #ffffff;
+}
+
+.aos-assistant-msg-assistant {
+  align-self: flex-start;
+  background: var(--color-bg-subtle, #f5f5f5);
+  color: var(--color-text-primary, #232425);
+  border: 1px solid var(--color-border-default, #eaeaea);
+}
+
+.aos-assistant-typing {
+  align-self: flex-start;
+  font-size: 12px;
+  color: var(--color-text-tertiary, #909499);
+}
+
+.aos-assistant-typing-dots {
+  font-size: 8px;
+  vertical-align: 2px;
+}
+
+.aos-assistant-composer {
+  flex-shrink: 0;
+  padding: 8px 10px 10px;
+  border-top: 1px solid var(--color-border-default, #eaeaea);
+}
+
+.aos-assistant-composer textarea {
+  width: 100%;
+  box-sizing: border-box;
+  resize: none;
+  border: 1px solid var(--color-border-strong, #d0d3d8);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: var(--color-bg-page, #ffffff);
+  color: var(--color-text-primary, #232425);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.aos-assistant-composer textarea:focus {
+  outline: 2px solid var(--accent-primary, #c43e1c);
+  outline-offset: -1px;
+}
+
+.aos-assistant-composer-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.aos-assistant-hint {
+  font-size: 11px;
+  color: var(--color-text-tertiary, #909499);
+}
+
+.aos-assistant-send {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: var(--accent-primary, #c43e1c);
+  color: #ffffff;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.aos-assistant-send:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.aos-assistant-stop {
+  background: var(--color-text-primary, #232425);
+}
+
+.aos-assistant-model-picker {
+  position: relative;
+  min-width: 0;
+}
+
+.aos-assistant-model-picker-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 140px;
+  padding: 3px 8px;
+  border: 1px solid var(--color-border-default, #eaeaea);
+  border-radius: 6px;
+  background: var(--color-bg-page, #ffffff);
+  color: var(--color-text-secondary, #606366);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.aos-assistant-model-picker-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.aos-assistant-model-picker-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 30;
+  min-width: 180px;
+  max-width: 240px;
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 4px;
+  border: 1px solid var(--color-border-default, #eaeaea);
+  border-radius: 8px;
+  background: var(--color-bg-page, #ffffff);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
+}
+
+.aos-assistant-model-picker-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--color-text-primary, #232425);
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.aos-assistant-model-picker-option:hover {
+  background: var(--color-bg-subtle, #f5f5f5);
+}
+
+.aos-assistant-model-picker-option.active {
+  background: var(--color-bg-subtle, #f5f5f5);
+  font-weight: 600;
+}
+
+.aos-assistant-model-picker-provider {
+  color: var(--color-text-tertiary, #909499);
+  font-size: 11px;
+}

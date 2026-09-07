@@ -2153,6 +2153,14 @@ async def _register_startup_adapters() -> None:
         except Exception:
             pass  # Chrome not running — skip; waterfall falls to playwright
 
+        # --- Remote CDP adapter (browser.remote-cdp) — drives Chrome in remote desktops ---
+        try:
+            from adapters.browser.remote_cdp_adapter import RemoteCDPAdapter
+            if "browser.remote-cdp" not in executor.registered_adapters():
+                executor.register("browser.remote-cdp", RemoteCDPAdapter())
+        except Exception as exc:
+            _logger.warning("[startup] Remote CDP adapter registration failed: %s", exc)
+
         # --- PyAutoGUI desktop adapter (desktop.pyautogui) ---
         try:
             from adapters.desktop.pyautogui.pyautogui_adapter import PyAutoGUIAdapter

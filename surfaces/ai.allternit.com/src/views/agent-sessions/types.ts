@@ -5,7 +5,7 @@
  */
 
 
-export type AgentSessionMode = 'chat' | 'cowork' | 'code' | 'browser' | 'design';
+export type AgentSessionMode = 'chat' | 'cowork' | 'bot' | 'code' | 'browser' | 'design';
 
 export interface BaseAgentSessionProps {
   /** Session identifier */

@@ -3,8 +3,9 @@ import * as React from 'react'
 import { Box, Text, useInput } from '../../ink'
 import { Dialog } from '../../components/design-system/Dialog'
 import type { LocalJSXCommandCall } from '../../types/command'
+import { ALLTERNIT_GATEWAY_BASE } from '@/shared/constants/allternitGateway'
 
-const API_BASE = 'http://127.0.0.1:8013'
+const API_BASE = ALLTERNIT_GATEWAY_BASE
 
 interface CoworkProject {
   id: string

@@ -1,29 +1,27 @@
-# Steering spec — MLX provider for the memory agent's generation tasks
+# Steering spec — public dual-API content pass
+
+Public docs and website must describe the production control-plane / data-plane split. Source of truth: `docs/architecture/2026-09-03-control-plane-data-plane-decision.md` (D1–D5) and the live services (`api.allternit.com` = cloud-api; `allternit-api` :8013 is never public).
 
 ## Requirements
 
-- [x] R1: WHEN `MEMORY_LLM_BASE_URL` is set (e.g. http://localhost:8080/v1),
-  THE SYSTEM SHALL route generation tasks (ingest, consolidate, query,
-  extract) to the OpenAI-compatible endpoint using the preset model names
-  mapped via `MEMORY_LLM_MODEL` (single model for all generation tasks), and
-  embeddings SHALL remain on Ollama.
-- [x] R2: WHEN `MEMORY_LLM_BASE_URL` is unset, THE SYSTEM SHALL behave exactly
-  as today (Ollama generate path, MODEL_PRESETS names).
-- [x] R3: WHEN the MLX endpoint is unreachable mid-request, THE SYSTEM SHALL
-  fail the request with a clear error (no silent fallback to a different
-  model — wrong-model answers are worse than failed ones).
-- [x] R4: WHEN local-model.ts is changed, THE SYSTEM SHALL keep its existing
-  callers working (http-server.ts, orchestrator.ts) with no signature
-  changes beyond optional config, and unit-test the provider switch.
+- [ ] R1: WHEN a reader opens the API docs, THE SYSTEM SHALL present one public API (`https://api.allternit.com`, Cloud API / `cmd/allternit-cloud-api`) and one private data-plane runtime (Allternit API / `cmd/allternit-api`, port 8013, SQLite, not publicly reachable).
+- [ ] R2: WHEN BYOC / architecture / introduction describe deployment, THE SYSTEM SHALL list three data-plane modes: local desktop, user-paired box, Allternit-provisioned instance — not “control plane = Vercel” or “runtime.yaml on port 8080” as the production story.
+- [ ] R3: WHEN Cloud API env/docs mention `DATABASE_URL`, THE SYSTEM SHALL state production uses Postgres (SQLite is local/dev only).
+- [ ] R4: WHEN agent-sessions / office / beta research are documented as public routes, THE SYSTEM SHALL state they are Cloud API handlers that authenticate with Clerk, resolve the caller’s default node, and relay to that node (HTTP 428 if none is healthy).
+- [ ] R5: WHEN SDK / marketing / platform console examples name a Cloud API host, THE SYSTEM SHALL use `https://api.allternit.com` — never `allternit-cloud-api.fly.dev` or `http://localhost:8013` as the public base URL.
+- [ ] R6: WHEN docs.json is built, THE SYSTEM SHALL list `api/overview`, `api/cloud-api`, and `api/allternit-api` in the API Reference Overview group so the dual-API pages are navigable.
 
-## Acceptance (Gherkin)
+## Acceptance
 
-- Scenario: MLX path used when configured
-  Given MEMORY_LLM_BASE_URL set to a stub OpenAI server
-  When a generate task runs
-  Then the request hits /v1/chat/completions with the MEMORY_LLM_MODEL name,
-  and embeddings still hit Ollama.
-- Scenario: default unchanged
-  Given the env unset
-  When a generate task runs
-  Then Ollama is used with the preset model name.
+- Scenario: public topology
+  Given docs.allternit.com after this merge
+  When a reader opens API Overview
+  Then they see Cloud API vs Allternit API, one public origin, and 8013 as data plane only.
+- Scenario: stale BYOC
+  Given byoc/overview.mdx
+  When a reader opens it
+  Then the diagram is not “Control Plane (Vercel)” / “allternit-runtime :8080”.
+- Scenario: marketing
+  Given allternit.com/docs
+  When the sample client is shown
+  Then the base URL is api.allternit.com.

@@ -189,6 +189,19 @@ export function GlobalKeybindingHandlers({
   useKeybinding('app:toggleTranscript', handleToggleTranscript, {
     context: 'Global'
   });
+  // Dashboard toggle (ctrl+\). Inactive while the dashboard is mounted —
+  // there, the Dashboard context's dashboard:exit owns the chord (both
+  // firing would toggle back in: exit sets 'prompt', toggle re-enters).
+  const handleToggleDashboard = useCallback(() => {
+    logEvent('tengu_toggle_dashboard', {
+      is_entering: screen !== 'dashboard'
+    });
+    setScreen(s => s === 'dashboard' ? 'prompt' : 'dashboard');
+  }, [screen, setScreen]);
+  useKeybinding('app:toggleDashboard', handleToggleDashboard, {
+    context: 'Global',
+    isActive: screen !== 'dashboard'
+  });
   if (feature('KAIROS') || feature('KAIROS_BRIEF')) {
     // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
     useKeybinding('app:toggleBrief', handleToggleBrief, {

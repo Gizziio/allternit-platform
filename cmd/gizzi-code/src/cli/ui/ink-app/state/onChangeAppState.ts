@@ -100,6 +100,9 @@ export function onChangeAppState({
     // Remove from settings
     updateSettingsForSource('userSettings', { model: undefined })
     setMainLoopModelOverride(null)
+    void import('@/runtime/providers/default-brain').then(({ unpinBrain }) =>
+      unpinBrain().catch(() => {}),
+    )
   }
 
   // mainLoopModel: add it to settings?
@@ -110,6 +113,12 @@ export function onChangeAppState({
     // Save to settings
     updateSettingsForSource('userSettings', { model: newState.mainLoopModel })
     setMainLoopModelOverride(newState.mainLoopModel)
+    const pinned = String(newState.mainLoopModel)
+    if (pinned.includes('/')) {
+      void import('@/runtime/providers/default-brain').then(({ pinBrain }) =>
+        pinBrain(pinned).catch(() => {}),
+      )
+    }
   }
 
   // expandedView → persist as showExpandedTodos + showSpinnerTree for backwards compat

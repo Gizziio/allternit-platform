@@ -13,6 +13,10 @@
 import type { Agent } from '@/lib/agents/agent.types';
 import { isBot, getBotDisplayName } from '@/lib/bots/bot-profile';
 import type { StackedAgent } from '@/lib/bots/stacked-agent.service';
+import { wakeBot } from '@/lib/bots/bot-wake.service';
+import { classifyFailure, isAttentionReason } from '@/lib/bots/failure-reasons';
+import type { FailureReason } from '@/lib/bots/failure-reasons';
+import { useAgentStore } from '@/lib/agents/agent.store';
 import { createModuleLogger } from '@/lib/logger';
 
 const logger = createModuleLogger('MentionHandoff');
@@ -34,6 +38,17 @@ export interface MentionReply {
   providerId?: string;
   reply: string;
   error?: string;
+  /** Typed failure reason, when delivery failed (spec AD-3). */
+  reason?: FailureReason;
+}
+
+export interface MentionHandoffFailure {
+  /** Mention text including the @. */
+  target: string;
+  /** Typed failure reason. */
+  reason: FailureReason;
+  /** Free-text error message. */
+  message: string;
 }
 
 export interface MentionHandoffResult {
@@ -45,6 +60,8 @@ export interface MentionHandoffResult {
   replies: MentionReply[];
   /** Ready-to-append handoff note for the active agent */
   handoffNote: string;
+  /** Typed failures per target, when delivery failed. */
+  failures?: MentionHandoffFailure[];
 }
 
 export interface MentionHandoffOptions {
@@ -76,6 +93,8 @@ export interface MentionHandoffOptions {
   acknowledgeMail?: (agentId: string, messageId: string) => Promise<void>;
   /** How long to wait for a native bot mail reply (ms). Default 5000. */
   mailReplyTimeoutMs?: number;
+  /** When true, wait for the woken bot's turn (group rounds). Default false (async wake). */
+  waitForReply?: boolean;
   /** Interval between native bot mail polls (ms). Default 250. */
   mailPollIntervalMs?: number;
 }
@@ -209,18 +228,31 @@ export async function executeMentionHandoff(
   }
 
   const replies: MentionReply[] = [];
+  const failures: MentionHandoffFailure[] = [];
   for (const target of targets) {
     try {
       const reply = await handoffToTarget(target, options, sender);
       replies.push(reply);
+      if (reply.reason) {
+        failures.push({
+          target: target.mention,
+          reason: reply.reason,
+          message: reply.error ?? '',
+        });
+      }
     } catch (err) {
       logger.error({ err, target: target.name }, 'Handoff failed');
+      const reason = classifyFailure(err);
+      noteTargetAttention(target, reason);
+      const message = err instanceof Error ? err.message : String(err);
+      failures.push({ target: target.mention, reason, message });
       replies.push({
         mention: target.mention,
         displayName: getDisplayName(target),
         providerId: target.stacked?.external.providerId,
         reply: '',
-        error: err instanceof Error ? err.message : String(err),
+        error: message,
+        reason,
       });
     }
   }
@@ -238,6 +270,7 @@ export async function executeMentionHandoff(
     targets,
     replies,
     handoffNote,
+    failures: failures.length > 0 ? failures : undefined,
   };
 }
 
@@ -283,30 +316,20 @@ async function handoffToTarget(
   const attributedBody = formatAttributionMessage(sender.name, sender.handle, options.text);
 
   if (target.agent) {
-    // Native bot: send Rails mail and poll for a reply.
-    const fromAgentId = options.activeAgentId ?? 'user';
     const toAgentId = target.agent.id;
-    const subject = `Mention from @${sender.handle}`;
-    const body = attributedBody;
-
-    logger.info({ fromAgentId, toAgentId, sender: sender.handle }, 'Handing off mention to native bot via mail');
-    await options.sendMail(fromAgentId, toAgentId, subject, body);
-
-    // Poll the target bot's inbox until a reply arrives or we time out.
-    const replyMessage = await pollForMailReply(toAgentId, options);
-
-    if (replyMessage?.id && options.acknowledgeMail) {
-      try {
-        await options.acknowledgeMail(toAgentId, replyMessage.id);
-      } catch (err) {
-        logger.warn({ err, toAgentId, messageId: replyMessage.id }, 'Failed to acknowledge mention reply');
-      }
-    }
-
+    logger.info({ toAgentId, sender: sender.handle }, 'Waking native bot (async handoff)');
+    const result = await wakeBot({
+      botId: toAgentId,
+      botName: displayName,
+      message: attributedBody,
+      waitForReply: options.waitForReply === true,
+    });
     return {
       mention: target.mention,
       displayName,
-      reply: replyMessage?.body ?? '(waiting for reply)',
+      reply: result.reply ?? (options.waitForReply ? '(pass)' : '(handed off)'),
+      error: result.error,
+      reason: result.reason,
     };
   }
 
@@ -369,7 +392,8 @@ function buildHandoffNote(targets: MentionTarget[], replies: MentionReply[]): st
 
   for (const reply of replies) {
     if (reply.error) {
-      lines.push(`- ${reply.displayName}: could not deliver (${reply.error}).`);
+      const code = reply.reason ?? classifyFailure(reply.error);
+      lines.push(`- ${reply.displayName}: could not deliver (${reply.error}) [${code}].`);
     } else {
       lines.push(`- ${reply.displayName} replied:\n${reply.reply || '(no reply yet)'}`);
     }
@@ -384,6 +408,22 @@ function getDisplayName(target: MentionTarget): string {
   if (target.agent) return getBotDisplayName(target.agent);
   if (target.stacked) return getBotDisplayName(target.stacked.agent);
   return target.name;
+}
+
+/**
+ * Badge a handoff target whose delivery failed with an attention-class
+ * reason. Native-bot wakes already note attention inside wakeBot; this covers
+ * stacked provider targets and wake setup failures.
+ */
+function noteTargetAttention(target: MentionTarget, reason: FailureReason): void {
+  if (!isAttentionReason(reason)) return;
+  const agentId = target.agent?.id ?? target.stacked?.agent.id;
+  if (!agentId) return;
+  try {
+    useAgentStore.getState().noteBotAttention(agentId, reason);
+  } catch (err) {
+    logger.warn({ err, agentId }, 'Failed to record bot attention');
+  }
 }
 
 function wait(ms: number): Promise<void> {

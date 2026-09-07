@@ -12,7 +12,7 @@ describe("ConfigMarkdown: normal template", () => {
 
      - Adds a "Co-authored-by:" footer which clarifies which AI agent
        helped create this commit, using an appropriate \`noreply@...\`
-       or \`noreply@anthropic.com\` email address.
+       or \`noreply@allternit.com\` email address.
 
   We also need to deal with files followed by @commas, ones
   with @file-extensions.md, even @multiple.extensions.bak,

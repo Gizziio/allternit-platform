@@ -6,7 +6,7 @@ export { HarnessError } from './errors.js';
  * Unified AI interface for BYOK, Cloud, Local, and Subprocess modes
  */
 
-import { AllternitError, APIUserAbortError } from '../providers/anthropic/core/error';
+import { AllternitError, APIUserAbortError } from '../providers/allternit/core/error';
 import type {
   HarnessConfig,
   StreamRequest,
@@ -283,9 +283,9 @@ export class AllternitHarness {
   async listProviders(): Promise<ProviderInfo[]> {
     const providers: ProviderInfo[] = [
       {
-        id: 'anthropic',
-        name: 'Anthropic',
-        description: 'Claude models from Anthropic',
+        id: 'allternit',
+        name: 'Allternit',
+        description: 'Allternit AI models',
         modes: ['byok', 'cloud'],
       },
       {
@@ -361,27 +361,27 @@ export class AllternitHarness {
    */
   private getKnownModels(provider: string): ModelInfo[] {
     const models: Record<string, ModelInfo[]> = {
-      anthropic: [
+      allternit: [
         {
           id: 'claude-3-7-sonnet-20250219',
-          name: 'Claude 3.7 Sonnet',
-          provider: 'anthropic',
+          name: 'Allternit 3.7 Sonnet',
+          provider: 'allternit',
           capabilities: ['text', 'vision', 'tools'],
           context_window: 200000,
           max_output_tokens: 8192,
         },
         {
           id: 'claude-3-opus-20240229',
-          name: 'Claude 3 Opus',
-          provider: 'anthropic',
+          name: 'Allternit 3 Opus',
+          provider: 'allternit',
           capabilities: ['text', 'vision', 'tools'],
           context_window: 200000,
           max_output_tokens: 4096,
         },
         {
           id: 'claude-3-5-haiku-20241022',
-          name: 'Claude 3.5 Haiku',
-          provider: 'anthropic',
+          name: 'Allternit 3.5 Haiku',
+          provider: 'allternit',
           capabilities: ['text', 'vision', 'tools'],
           context_window: 200000,
           max_output_tokens: 8192,

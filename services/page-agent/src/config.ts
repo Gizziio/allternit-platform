@@ -16,12 +16,15 @@ export interface PageAgentBridgeConfig {
 
 export interface BrowserPageAgentConfigSource {
   language?: string;
+  /** @deprecated Extension API keys are not a brain. Use Gizzi runtime selection. */
   extensionApiKey?: string;
   extensionBaseUrl?: string;
   extensionModel?: string;
   extensionMaxSteps?: number | null;
   extensionSystemInstruction?: string;
   extensionExperimentalLlmsTxt?: boolean;
+  gizziProviderId?: string;
+  gizziModelId?: string;
 }
 
 export function normalizePageAgentLanguage(
@@ -36,10 +39,14 @@ export function normalizePageAgentLanguage(
 export function buildPageAgentBridgeConfig(
   source: BrowserPageAgentConfigSource,
 ): PageAgentBridgeConfig {
+  const gizziModel =
+    source.gizziProviderId && source.gizziModelId
+      ? `${source.gizziProviderId}/${source.gizziModelId}`
+      : source.extensionModel;
+
   return {
-    apiKey: source.extensionApiKey,
-    baseURL: source.extensionBaseUrl,
-    model: source.extensionModel,
+    // Never copy an extension API key into the brain. Gizzi owns credentials.
+    model: gizziModel,
     language: normalizePageAgentLanguage(source.language),
     maxSteps: source.extensionMaxSteps ?? null,
     systemInstruction:
@@ -57,13 +64,11 @@ export function hasPageAgentBridgeConfig(
 
   return (
     [
-      config.apiKey,
-      config.baseURL,
       config.model,
       config.language,
       config.maxSteps,
       config.systemInstruction,
-    ].some((value) => value !== undefined) ||
+    ].some((value) => value !== undefined && value !== null) ||
     typeof config.experimentalLlmsTxt === "boolean"
   );
 }

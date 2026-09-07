@@ -1,0 +1,106 @@
+name: Publish Allternit SDK to NPM
+
+on:
+  push:
+    tags:
+      - 'sdk/v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (e.g., 1.3.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node for NPM
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Extract version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "VERSION=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "VERSION=${GITHUB_REF_NAME#sdk/v}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set version in package.json
+        working-directory: sdk/allternit-sdk
+        run: |
+          CURRENT=$(node -p "require('./package.json').version")
+          if [ "$CURRENT" != "${{ steps.version.outputs.VERSION }}" ]; then
+            npm version "${{ steps.version.outputs.VERSION }}" --no-git-tag-version
+          else
+            echo "package.json already at $CURRENT; skipping bump"
+          fi
+
+      - name: Verify dist matches every export subpath
+        # The SDK ships tracked dist/ output; fail if any export entry points
+        # at a missing file, so a dangling export can never reach the registry.
+        working-directory: sdk/allternit-sdk
+        run: |
+          node -e '
+            const fs = require("fs");
+            const path = require("path");
+            const pkg = require("./package.json");
+            const failures = [];
+            for (const [sub, target] of Object.entries(pkg.exports || {})) {
+              const mapped = target && typeof target === "object" ? (target.import || target.require || target.default) : target;
+              if (!mapped) continue;
+              const rel = mapped.replace(/^\.\//, "");
+              if (!fs.existsSync(path.join(process.cwd(), rel))) {
+                failures.push(`${sub} -> ${mapped}`);
+              }
+            }
+            if (failures.length) {
+              console.error("Dangling exports:\n  " + failures.join("\n  "));
+              process.exit(1);
+            }
+            console.log("exports ok:", Object.keys(pkg.exports || {}).length, "entries");
+          '
+
+      - name: Publish to NPM
+        working-directory: sdk/allternit-sdk
+        run: |
+          if npm view "@allternit/sdk@${{ steps.version.outputs.VERSION }}" version >/dev/null 2>&1; then
+            echo "@allternit/sdk@${{ steps.version.outputs.VERSION }} already published; skipping"
+          else
+            npm publish --access public
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Verify published package
+        # Download the just-published tarball and confirm dist/ + exports land.
+        shell: bash
+        run: |
+          set -euo pipefail
+          PKG="@allternit/sdk"
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          TARBALL=""
+          for attempt in 1 2 3 4 5; do
+            TARBALL=$(npm view "$PKG@$VERSION" dist.tarball 2>/dev/null || true)
+            [ -n "$TARBALL" ] && break
+            sleep 10
+          done
+          [ -n "$TARBALL" ] || { echo "::error::could not resolve tarball for $PKG@$VERSION"; exit 1; }
+          TMP=$(mktemp -d)
+          for attempt in 1 2 3 4 5 6 7 8 9 10; do
+            if curl -fsSL "$TARBALL" -o "$TMP/package.tgz" 2>/dev/null; then break; fi
+            echo "tarball download failed (attempt $attempt); sleeping 30s"; sleep 30
+          done
+          test -s "$TMP/package.tgz" || { echo "::error::could not download $TARBALL"; exit 1; }
+          FILES=$(tar -tzf "$TMP/package.tgz")
+          grep -q 'package/dist/' <<< "$FILES" || { echo "::error::published $PKG@$VERSION has no dist/"; exit 1; }
+          echo "Verified: $PKG@$VERSION published with dist/."

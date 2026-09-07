@@ -16,7 +16,7 @@ use axum::{
     Json, Router,
 };
 use serde::{Deserialize, Serialize};
-use sqlx::SqlitePool;
+use sqlx::PgPool;
 use std::sync::Arc;
 
 use crate::{error::ApiError, ApiState};
@@ -54,11 +54,32 @@ pub(crate) struct AppliedEntitlement {
     pub idempotent_replay: bool,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct SyncCreditsRequest {
+    transaction_id: String,
+    user_id: String,
+    amount_usd: f64,
+    source: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SyncCreditsResponse {
+    transaction_id: String,
+    user_id: String,
+    amount_usd: f64,
+    balance_usd: f64,
+    idempotent_replay: bool,
+}
+
 pub fn routes() -> Router<Arc<ApiState>> {
-    Router::new().route(
-        "/api/v1/internal/billing/hosted-entitlement",
-        post(sync_hosted_entitlement),
-    )
+    Router::new()
+        .route(
+            "/api/v1/internal/billing/hosted-entitlement",
+            post(sync_hosted_entitlement),
+        )
+        .route("/api/v1/internal/billing/credits", post(sync_credits))
 }
 
 fn constant_time_eq(left: &str, right: &str) -> bool {
@@ -103,7 +124,7 @@ fn require_billing_secret(headers: &HeaderMap) -> Result<(), ApiError> {
 /// webhook failure cannot grant a plan without recording the event (or the
 /// reverse).
 pub(crate) async fn apply_hosted_entitlement(
-    db: &SqlitePool,
+    db: &PgPool,
     event_id: &str,
     user_id: &str,
     plan_tier_id: &str,
@@ -115,7 +136,7 @@ pub(crate) async fn apply_hosted_entitlement(
         r#"
         SELECT user_id, plan_tier_id, previous_plan_tier_id
         FROM billing_entitlement_events
-        WHERE id = ?
+        WHERE id = $1
         "#,
     )
     .bind(event_id)
@@ -134,7 +155,7 @@ pub(crate) async fn apply_hosted_entitlement(
         });
     }
     let tier_exists: bool =
-        sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM plan_tiers WHERE id = ?)")
+        sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM plan_tiers WHERE id = $1)")
             .bind(plan_tier_id)
             .fetch_one(&mut *transaction)
             .await?;
@@ -151,7 +172,7 @@ pub(crate) async fn apply_hosted_entitlement(
     sqlx::query(
         r#"
         INSERT INTO users (id, email, status, last_login_at)
-        VALUES (?, ?, 'active', CURRENT_TIMESTAMP)
+        VALUES ($1, $2, 'active', CURRENT_TIMESTAMP)
         ON CONFLICT(id) DO UPDATE SET status = 'active'
         "#,
     )
@@ -161,7 +182,7 @@ pub(crate) async fn apply_hosted_entitlement(
     .await?;
 
     let previous_plan_tier_id: Option<String> =
-        sqlx::query_scalar("SELECT plan_tier_id FROM user_runtime_quotas WHERE user_id = ?")
+        sqlx::query_scalar("SELECT plan_tier_id FROM user_runtime_quotas WHERE user_id = $1")
             .bind(user_id)
             .fetch_optional(&mut *transaction)
             .await?;
@@ -169,7 +190,7 @@ pub(crate) async fn apply_hosted_entitlement(
         r#"
         INSERT INTO billing_entitlement_events (
             id, user_id, previous_plan_tier_id, plan_tier_id, source
-        ) VALUES (?, ?, ?, ?, ?)
+        ) VALUES ($1, $2, $3, $4, $5)
         ON CONFLICT(id) DO NOTHING
         "#,
     )
@@ -186,7 +207,7 @@ pub(crate) async fn apply_hosted_entitlement(
             r#"
             SELECT user_id, plan_tier_id, previous_plan_tier_id
             FROM billing_entitlement_events
-            WHERE id = ?
+            WHERE id = $1
             "#,
         )
         .bind(event_id)
@@ -213,13 +234,13 @@ pub(crate) async fn apply_hosted_entitlement(
             can_create_hosted_runtime, max_hosted_runtimes,
             max_hosted_runtime_memory_mb, hard_spend_cap_usd
         )
-        SELECT ?, id,
+        SELECT $1, id,
             max_active_devices, max_pairings_per_day, max_relay_sockets,
             max_relay_mb_per_day, max_hosted_runtime_hours_monthly,
             can_create_hosted_runtime, max_hosted_runtimes,
             max_hosted_runtime_memory_mb, hard_spend_cap_usd
         FROM plan_tiers
-        WHERE id = ?
+        WHERE id = $2
         ON CONFLICT(user_id) DO UPDATE SET
             plan_tier_id = excluded.plan_tier_id,
             max_active_devices = excluded.max_active_devices,
@@ -307,6 +328,66 @@ async fn sync_hosted_entitlement(
             max_memory_mb: quota.max_hosted_runtime_memory_mb,
             max_hours_monthly: quota.max_hosted_runtime_hours_monthly,
             idempotent_replay: applied.idempotent_replay,
+        }),
+    ))
+}
+
+async fn sync_credits(
+    State(state): State<Arc<ApiState>>,
+    headers: HeaderMap,
+    Json(request): Json<SyncCreditsRequest>,
+) -> Result<(StatusCode, Json<SyncCreditsResponse>), ApiError> {
+    require_billing_secret(&headers)?;
+    if request.transaction_id.trim().is_empty() || request.transaction_id.len() > 160 {
+        return Err(ApiError::BadRequest(
+            "transactionId is required and must be 160 characters or fewer.".to_string(),
+        ));
+    }
+    if request.user_id.trim().is_empty() || request.user_id.len() > 160 {
+        return Err(ApiError::BadRequest(
+            "userId is required and must be 160 characters or fewer.".to_string(),
+        ));
+    }
+    if request.amount_usd <= 0.0 {
+        return Err(ApiError::BadRequest(
+            "amountUsd must be positive.".to_string(),
+        ));
+    }
+    let source = request
+        .source
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .unwrap_or("billing")
+        .to_string();
+
+    let existing: Option<String> = sqlx::query_scalar(
+        "SELECT transaction_id FROM credit_transactions WHERE transaction_id = $1"
+    )
+    .bind(&request.transaction_id)
+    .fetch_optional(&state.db)
+    .await
+    .map_err(ApiError::DatabaseError)?;
+    let idempotent_replay = existing.is_some();
+
+    let balance = state
+        .cost_service
+        .add_credits(
+            &request.user_id,
+            request.amount_usd,
+            &request.transaction_id,
+            &source,
+        )
+        .await?;
+
+    Ok((
+        StatusCode::CREATED,
+        Json(SyncCreditsResponse {
+            transaction_id: request.transaction_id,
+            user_id: request.user_id,
+            amount_usd: request.amount_usd,
+            balance_usd: balance,
+            idempotent_replay,
         }),
     ))
 }

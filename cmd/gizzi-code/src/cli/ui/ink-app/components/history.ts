@@ -5,7 +5,7 @@ import { getProjectRoot, getSessionId } from '../bootstrap/state.js'
 import { registerCleanup } from '../../../../shared/utils/cleanupRegistry.js'
 import type { HistoryEntry, PastedContent } from '../utils/config.js'
 import { logForDebugging } from '../utils/debug.js'
-import { getClaudeConfigHomeDir, isEnvTruthy } from '../utils/envUtils.js'
+import { getGizziConfigHomeDir, isEnvTruthy } from '../utils/envUtils.js'
 import { getErrnoCode } from '../utils/errors.js'
 import { readLinesReverse } from '../../../../shared/utils/fsOperations.js'
 import { lock } from '../../../../shared/utils/lockfile.js'
@@ -33,7 +33,7 @@ type StoredPastedContent = {
 }
 
 /**
- * Claude Code parses history for pasted content references to match back to
+ * gizzi-code parses history for pasted content references to match back to
  * pasted content. The references look like:
  *   Text: [Pasted text #1 +10 lines]
  *   Image: [Image #2]
@@ -113,7 +113,7 @@ async function* makeLogEntryReader(): AsyncGenerator<LogEntry> {
   }
 
   // Read from global history file (shared across all projects)
-  const historyPath = join(getClaudeConfigHomeDir(), 'history.jsonl')
+  const historyPath = join(getGizziConfigHomeDir(), 'history.jsonl')
 
   try {
     for await (const line of readLinesReverse(historyPath)) {
@@ -297,7 +297,7 @@ async function immediateFlushHistory(): Promise<void> {
 
   let release
   try {
-    const historyPath = join(getClaudeConfigHomeDir(), 'history.jsonl')
+    const historyPath = join(getGizziConfigHomeDir(), 'history.jsonl')
 
     // Ensure the file exists before acquiring lock (append mode creates if missing)
     await writeFile(historyPath, '', {
@@ -410,9 +410,9 @@ async function addToPromptHistory(
 }
 
 export function addToHistory(command: HistoryEntry | string): void {
-  // Skip history when running in a tmux session spawned by Claude Code's Tungsten tool.
+  // Skip history when running in a tmux session spawned by gizzi-code's Tungsten tool.
   // This prevents verification/test sessions from polluting the user's real command history.
-  if (isEnvTruthy(process.env.CLAUDE_CODE_SKIP_PROMPT_HISTORY)) {
+  if (isEnvTruthy(process.env.GIZZI_CODE_SKIP_PROMPT_HISTORY)) {
     return
   }
 

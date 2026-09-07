@@ -27,6 +27,7 @@ import { Command } from "@/runtime/loop/command"
 import { Global } from "@/runtime/context/global"
 import { ProjectRoutes } from "@/runtime/server/routes/project"
 import { SessionRoutes } from "@/runtime/server/routes/session"
+import { NativeSessionRoutes } from "@/runtime/server/routes/native-session"
 import { AutomationsRoutes } from "@/runtime/server/routes/automations"
 import { PtyRoutes } from "@/runtime/server/routes/pty"
 import { McpRoutes } from "@/runtime/server/routes/mcp"
@@ -188,6 +189,11 @@ export namespace Server {
             origin(input) {
               if (!input) return
 
+              // Development escape hatch: reflect any origin. Gated behind an
+              // explicit env flag (with a startup warning in listen()) so it
+              // can never be on by default in production.
+              if (Flag.GIZZI_DEV_CORS) return input
+
               if (input.startsWith("http://localhost:")) return input
               if (input.startsWith("http://127.0.0.1:")) return input
               if (
@@ -197,8 +203,11 @@ export namespace Server {
               )
                 return input
 
-              // *.gizzi.io (https only, adjust if needed)
-              if (/^https:\/\/([a-z0-9-]+\.)*gizzi\.dev$/.test(input)) {
+              // First-party HTTPS origins only
+              if (/^https:\/\/([a-z0-9-]+\.)*allternit\.com$/.test(input)) {
+                return input
+              }
+              if (/^https:\/\/([a-z0-9-]+\.)*gizziio\.com$/.test(input)) {
                 return input
               }
               if (_corsWhitelist.includes(input)) {
@@ -371,6 +380,7 @@ export namespace Server {
         .route("/config", ConfigRoutes())
         .route("/experimental", ExperimentalRoutes())
         .route("/session", SessionRoutes())
+        .route("/native-session", NativeSessionRoutes())
         .route("/automations", AutomationsRoutes())
         .route("/peers", PeerRoutes())
         .route("/permission", PermissionRoutes())
@@ -464,6 +474,7 @@ export namespace Server {
           new Hono()
             .get("/asyncapi", (c) => c.json(asyncapi()))
             .route("/session", SessionRoutes())
+            .route("/native-session", NativeSessionRoutes())
             .route("/automations", AutomationsRoutes())
             .route("/peers", PeerRoutes())
             .route("/orchestrator", OrchestratorRoutes())
@@ -513,23 +524,23 @@ export namespace Server {
 
           if (!cloudProxyEnabled) {
             log.warn(
-              `No local route for ${c.req.method} ${c.req.path}; cloud proxy is disabled. Set GIZZI_ENABLE_CLOUD_PROXY=true to forward unknown routes to app.gizzi.io.`
+              `No local route for ${c.req.method} ${c.req.path}; cloud proxy is disabled. Set GIZZI_ENABLE_CLOUD_PROXY=true to forward unknown routes to api.allternit.com.`
             )
             return c.json(
               {
                 error: "not_found",
-                message: `No local handler for ${c.req.method} ${c.req.path}. Set GIZZI_ENABLE_CLOUD_PROXY=true to forward unknown routes to app.gizzi.io.`,
+                message: `No local handler for ${c.req.method} ${c.req.path}. Set GIZZI_ENABLE_CLOUD_PROXY=true to forward unknown routes to api.allternit.com.`,
               },
               404
             )
           }
 
           const path = c.req.path
-          const response = await proxy(`https://app.gizzi.io${path}`, {
+          const response = await proxy(`https://api.allternit.com${path}`, {
             ...c.req,
             headers: {
               ...c.req.raw.headers,
-              host: "app.gizzi.io",
+              host: "api.allternit.com",
             },
           })
           response.headers.set(
@@ -628,6 +639,12 @@ export namespace Server {
     _corsWhitelist = opts.cors ?? []
     _hostname = opts.hostname
     _tunnel = opts.tunnel ?? false
+
+    if (Flag.GIZZI_DEV_CORS) {
+      process.stderr.write(
+        "WARNING: GIZZI_DEV_CORS is set — Access-Control-Allow-Origin reflects ANY origin. Development only; never enable in production.\n",
+      )
+    }
 
     if (opts.tunnel && !Tunnel.available()) {
       throw new Error(

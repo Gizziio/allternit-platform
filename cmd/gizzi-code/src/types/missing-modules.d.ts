@@ -9,7 +9,8 @@ declare module '@anthropic-ai/claude-agent-sdk' {
 }
 
 declare module 'execa' {
-  export function execaSync(file: string, args?: string[], options?: any): any
+  export function execa(file: string, args?: any, options?: any): any
+  export function execaSync(file: string, args?: any, options?: any): any
   const _default: any
   export default _default
 }

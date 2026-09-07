@@ -27,7 +27,7 @@ export async function tmpdir<T>(options?: TmpDirOptions<T>) {
     await Bun.write(
       path.join(dirpath, "gizzi.json"),
       JSON.stringify({
-        $schema: "https://gizzi.io/config.json",
+        $schema: "https://docs.gizziio.com/config.json",
         ...options.config,
       }),
     )

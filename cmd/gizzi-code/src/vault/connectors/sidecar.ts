@@ -166,8 +166,10 @@ registerConnector(
 // an app-registration process. Real action id verified against
 // services/open-connector/src/providers/linear/actions.ts.
 //
-// Connect it directly against allternit-api once you have a key:
-//   curl -X PUT http://127.0.0.1:8013/api/v1/connectors/linear/connect \
+// Connect it directly against allternit-api once you have a key (the gateway
+// base defaults to the loopback fallback in
+// src/shared/constants/allternitGateway.ts; override with ALLTERNIT_API_URL):
+//   curl -X PUT "$ALLTERNIT_API_URL/api/v1/connectors/linear/connect" \
 //     -H "Content-Type: application/json" -d '{"via":"api_key","api_key":"lin_api_..."}'
 // ============================================================================
 registerConnector(

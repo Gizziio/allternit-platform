@@ -15,7 +15,7 @@ export namespace ConfigMarkdown {
     return Array.from(template.matchAll(SHELL_REGEX))
   }
 
-  // other coding agents like claude code allow invalid yaml in their
+  // other coding agents like gizzi-code allow invalid yaml in their
   // frontmatter, we need to fallback to a more permissive parser for those cases
   export function fallbackSanitization(content: string): string {
     const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/)

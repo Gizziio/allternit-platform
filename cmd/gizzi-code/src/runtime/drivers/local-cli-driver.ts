@@ -35,6 +35,7 @@ import {
 } from "@agentclientprotocol/sdk"
 import { spawn as nodeSpawn } from "node:child_process"
 import { Readable, Writable } from "node:stream"
+import { ProcessRegistry } from "@/runtime/process-registry"
 
 const log = Log.create({ service: "local-cli-driver" })
 
@@ -228,6 +229,7 @@ export class LocalCliDriver implements RuntimeDriver {
     })
     this.currentProc = proc
     this.currentTaskId = handle.taskId
+    ProcessRegistry.track(proc, { label: `cli:${this.cliName}:json` })
 
     // Capture a bounded stderr tail for diagnostics without blocking exit handling.
     ;(async () => {
@@ -235,7 +237,9 @@ export class LocalCliDriver implements RuntimeDriver {
         for await (const chunk of readStreamChunks(proc.stderr)) {
           stderrTail.append(Buffer.from(chunk))
         }
-      } catch {}
+      } catch {
+        // Stderr stream closed early; the tail is best-effort diagnostics.
+      }
     })()
 
     try {
@@ -302,13 +306,16 @@ export class LocalCliDriver implements RuntimeDriver {
     })
     this.currentProc = proc
     this.currentTaskId = handle.taskId
+    ProcessRegistry.track(proc, { label: `cli:${this.cliName}:text` })
 
     ;(async () => {
       try {
         for await (const chunk of readStreamChunks(proc.stderr)) {
           stderrTail.append(Buffer.from(chunk))
         }
-      } catch {}
+      } catch {
+        // Stderr stream closed early; the tail is best-effort diagnostics.
+      }
     })()
 
     try {
@@ -388,6 +395,7 @@ export class LocalCliDriver implements RuntimeDriver {
     })
     this.currentProc = proc
     this.currentTaskId = handle.taskId
+    ProcessRegistry.track(proc, { label: `cli:${this.cliName}:stream-json` })
 
     // Capture a bounded stderr tail for diagnostics.
     ;(async () => {
@@ -395,7 +403,9 @@ export class LocalCliDriver implements RuntimeDriver {
         for await (const chunk of readStreamChunks(proc.stderr)) {
           stderrTail.append(Buffer.from(chunk))
         }
-      } catch {}
+      } catch {
+        // Stderr stream closed early; the tail is best-effort diagnostics.
+      }
     })()
 
     const stdin = proc.stdin
@@ -529,7 +539,9 @@ export class LocalCliDriver implements RuntimeDriver {
     } finally {
       try {
         await stdin.end()
-      } catch {}
+      } catch {
+        // stdin may already be closed when the process died.
+      }
       terminateProcessTree(proc)
       this.resetCurrentTask()
     }
@@ -558,13 +570,16 @@ export class LocalCliDriver implements RuntimeDriver {
     })
     this.currentProc = proc
     this.currentTaskId = handle.taskId
+    ProcessRegistry.track(proc, { label: `cli:${this.cliName}:openclaw` })
 
     ;(async () => {
       try {
         for await (const chunk of readStreamChunks(proc.stderr)) {
           stderrTail.append(Buffer.from(chunk))
         }
-      } catch {}
+      } catch {
+        // Stderr stream closed early; the tail is best-effort diagnostics.
+      }
     })()
 
     const stdin = proc.stdin
@@ -702,6 +717,7 @@ export class LocalCliDriver implements RuntimeDriver {
     })
     this.currentProc = proc
     this.currentTaskId = handle.taskId
+    ProcessRegistry.track(proc, { label: `cli:${this.cliName}:acp`, group: process.platform !== "win32" })
 
     proc.stderr?.on("data", (data: Buffer) => {
       stderrTail.append(data)
@@ -924,6 +940,7 @@ export class LocalCliDriver implements RuntimeDriver {
     })
     this.currentProc = proc
     this.currentTaskId = handle.taskId
+    ProcessRegistry.track(proc, { label: `cli:${this.cliName}:codex` })
 
     const stdin = proc.stdin
     const send = (msg: Record<string, unknown>) => {
@@ -988,7 +1005,9 @@ export class LocalCliDriver implements RuntimeDriver {
             log.warn("codex_app_server_stderr", { taskId: handle.taskId, data: line.slice(0, 500) })
           }
         }
-      } catch {}
+      } catch {
+        // Stderr stream closed early; the tail is best-effort diagnostics.
+      }
     })()
 
     // Reader task
@@ -1177,7 +1196,9 @@ export class LocalCliDriver implements RuntimeDriver {
     } finally {
       try {
         await stdin.end()
-      } catch {}
+      } catch {
+        // stdin may already be closed when the process died.
+      }
       await readerPromise.catch(() => {})
       terminateProcessTree(proc)
       this.resetCurrentTask()
@@ -1228,7 +1249,7 @@ function modelFlag(modelEnv?: string): string[] {
 }
 
 const CLI_ADAPTERS: Record<string, CliAdapter> = {
-  // Anthropic Claude Code — stream-json.
+  // Anthropic gizzi-code — stream-json.
   "claude-cli": {
     mode: "stream-json",
     buildArgv: ([command], _message, _ctx) => {
@@ -1399,7 +1420,7 @@ const CLI_ADAPTERS: Record<string, CliAdapter> = {
   grok: {
     mode: "acp",
     supportsAttachments: true,
-    buildArgv: ([command]) => [command, "agent", "--always-approve", "stdio"],
+    buildArgv: ([command]) => [command, "agent", "--no-leader", "--always-approve", "stdio"],
   },
 
   // Kiro CLI — ACP stdio.
@@ -1632,21 +1653,19 @@ function mergeEnv(base: NodeJS.ProcessEnv, extra?: Record<string, string>): Node
  *
  * Inherited MULTICA_* overrides are discovery-time configuration for the
  * parent process and must not leak into agent CLIs (they can confuse nested
- * sessions or expose internal path overrides). Claude Code internal runtime
- * markers are also stripped; user-facing CLAUDE_CODE_* config vars are kept.
+ * sessions or expose internal path overrides). Gizzi internal runtime
+ * markers are also stripped; user-facing GIZZI_* config vars are kept.
  */
 function isFilteredChildEnvKey(key: string): boolean {
   const up = key.toUpperCase()
   if (up.startsWith("MULTICA_")) return true
   switch (up) {
-    case "CLAUDECODE":
-    case "CLAUDE_CODE_ENTRYPOINT":
-    case "CLAUDE_CODE_EXECPATH":
-    case "CLAUDE_CODE_SESSION_ID":
-    case "CLAUDE_CODE_SSE_PORT":
+    case "GIZZI_CODE":
+    case "GIZZI_ENTRYPOINT":
+    case "GIZZI_SESSION_ID":
       return true
   }
-  return up.startsWith("CLAUDECODE_")
+  return up.startsWith("GIZZI_CODE_")
 }
 
 function writeToStdin(sink: Bun.FileSink | WritableStream<Uint8Array>, text: string): void {
@@ -1746,7 +1765,9 @@ function terminateProcessTree(proc: KillableProcess, graceMs = 5000): void {
       const timer = setTimeout(() => {
         try {
           process.kill(-proc.pid, "SIGKILL")
-        } catch {}
+        } catch {
+          // Process group already gone.
+        }
       }, graceMs)
       timer.unref?.()
       return
@@ -1761,7 +1782,9 @@ function terminateProcessTree(proc: KillableProcess, graceMs = 5000): void {
 function safeKill(proc: KillableProcess): void {
   try {
     proc.kill()
-  } catch {}
+  } catch {
+    // Already exited.
+  }
 }
 
 interface StreamJsonEvent {

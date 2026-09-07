@@ -15,10 +15,15 @@
 const PORT = parseInt(process.env.PORT ?? "3000");
 const ORIGIN = `http://localhost:${PORT}`;
 const TOKEN_ENV = "ALLTERNIT_TOKEN";
-const CLERK_PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
-    ?? "pk_test_ZWFzeS1oYXdrLTUzLmNsZXJrLmFjY291bnRzLmRldiQ";
-const CLERK_SECRET_KEY = process.env.CLERK_SECRET_KEY
-    ?? "sk_test_37qh7k8rZwwWu3QKPi2doqk10SabkYgIMCXEqkcQzi";
+const CLERK_PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+const CLERK_SECRET_KEY = process.env.CLERK_SECRET_KEY;
+if (!CLERK_PUBLISHABLE_KEY || !CLERK_SECRET_KEY) {
+    process.stderr.write(
+        "Error: NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY and CLERK_SECRET_KEY must be set in the environment.\n" +
+        "       (e.g. NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_... CLERK_SECRET_KEY=sk_... bun run platform:auth)\n",
+    );
+    process.exit(1);
+}
 // Derive frontend API host from publishable key
 // pk_test_<base64(frontendApiHost)> → decode to get the host
 function clerkFrontendApi() {

@@ -39,6 +39,7 @@ export const CronRunTable = sqliteTable(
     finished_at: integer(),
     output: text(),
     error: text(),
+    reason: text(), // typed failure code (D4 closed vocabulary), null on success
   },
   (table) => [
     index("cron_run_job_idx").on(table.job_id),

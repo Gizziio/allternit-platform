@@ -309,7 +309,7 @@ pub async fn task_events_sse(
             r#"
             SELECT e.* FROM task_events e
             JOIN tasks t ON e.task_id = t.id
-            WHERE t.workspace_id = ?
+            WHERE t.workspace_id = $1
             ORDER BY e.created_at DESC
             LIMIT 100
             "#,

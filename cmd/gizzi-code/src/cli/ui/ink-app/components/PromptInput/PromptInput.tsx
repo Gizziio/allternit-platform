@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle';
-import chalk from 'chalk';
+import chalk from '@/shared/util/chalk'
 import * as path from 'path';
 import * as React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
@@ -121,7 +121,7 @@ import { useMaybeTruncateInput } from './useMaybeTruncateInput';
 import { usePromptInputPlaceholder } from './usePromptInputPlaceholder';
 import { useShowFastIconHint } from './useShowFastIconHint';
 import { useSwarmBanner } from './useSwarmBanner';
-import { isNonSpacePrintable, isVimModeEnabled } from './utils';
+import { isNonSpacePrintable, isVimModeEnabled, isMultilineEnterEnabled } from './utils';
 type Props = {
   debug: boolean;
   ideSelection: IDESelection | undefined;
@@ -2157,6 +2157,7 @@ function PromptInput({
   }
   const baseProps: BaseTextInputProps = {
     multiline: true,
+    multilineEnter: isMultilineEnterEnabled(),
     onSubmit,
     onChange,
     value: historyMatch ? getValueFromInput(typeof historyMatch === 'string' ? historyMatch : historyMatch.display) : input,

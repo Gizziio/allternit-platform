@@ -14,8 +14,8 @@ use std::cmp::Ordering;
 
 /// Run execution mode
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(rename_all = "lowercase")]
-#[serde(rename_all = "lowercase")]
+#[sqlx(rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
 pub enum RunMode {
     /// Local VM execution (Apple VF/Firecracker)
     Local,
@@ -33,8 +33,8 @@ impl Default for RunMode {
 
 /// Run status in the lifecycle
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(rename_all = "lowercase")]
-#[serde(rename_all = "lowercase")]
+#[sqlx(rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
 pub enum RunStatus {
     /// Created but not started
     Pending,
@@ -198,8 +198,8 @@ pub struct RunSummary {
 
 /// Job status
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(rename_all = "lowercase")]
-#[serde(rename_all = "lowercase")]
+#[sqlx(rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
 pub enum JobStatus {
     Pending,
     Queued,
@@ -480,8 +480,8 @@ pub struct EventSummary {
 
 /// Client type for attachments
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(rename_all = "lowercase")]
-#[serde(rename_all = "lowercase")]
+#[sqlx(rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
 pub enum ClientType {
     Terminal,
     Web,
@@ -612,8 +612,8 @@ pub struct EventFilter {
 
 /// Approval request status
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(rename_all = "lowercase")]
-#[serde(rename_all = "lowercase")]
+#[sqlx(rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
 pub enum ApprovalStatus {
     /// Waiting for approval
     Pending,
@@ -635,8 +635,8 @@ impl Default for ApprovalStatus {
 
 /// Priority level for approval requests
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(rename_all = "lowercase")]
-#[serde(rename_all = "lowercase")]
+#[sqlx(rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
 pub enum ApprovalPriority {
     Low,
     Normal,
@@ -742,8 +742,8 @@ impl Default for TaskStatus {
 
 /// Assignee type for tasks
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(rename_all = "lowercase")]
-#[serde(rename_all = "lowercase")]
+#[sqlx(rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
 pub enum AssigneeType {
     Human,
     Agent,
@@ -757,8 +757,8 @@ impl Default for AssigneeType {
 
 /// Risk level for tasks
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(rename_all = "lowercase")]
-#[serde(rename_all = "lowercase")]
+#[sqlx(rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
 pub enum TaskRisk {
     Low,
     Medium,
@@ -773,8 +773,8 @@ impl Default for TaskRisk {
 
 /// Task queue status for agent worker queue
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(rename_all = "lowercase")]
-#[serde(rename_all = "lowercase")]
+#[sqlx(rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
 pub enum TaskQueueStatus {
     Pending,
     Claimed,

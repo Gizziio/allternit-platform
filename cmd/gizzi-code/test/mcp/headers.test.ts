@@ -48,13 +48,13 @@ const { MCP } = await import("../../src/runtime/tools/mcp")
 const { Instance } = await import("../../src/project/instance")
 const { tmpdir } = await import("../fixture/fixture")
 
-test.skip("headers are passed to transports when oauth is enabled (default)", async () => {
+test("headers are passed to transports when oauth is enabled (default)", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
       await Bun.write(
         `${dir}/gizzi.json`,
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           mcp: {
             "test-server": {
               type: "remote",
@@ -99,7 +99,7 @@ test.skip("headers are passed to transports when oauth is enabled (default)", as
   })
 })
 
-test.skip("headers are passed to transports when oauth is explicitly disabled", async () => {
+test("headers are passed to transports when oauth is explicitly disabled", async () => {
   await using tmp = await tmpdir()
 
   await Instance.provide({
@@ -130,7 +130,7 @@ test.skip("headers are passed to transports when oauth is explicitly disabled", 
   })
 })
 
-test.skip("no requestInit when headers are not provided", async () => {
+test("no requestInit when headers are not provided", async () => {
   await using tmp = await tmpdir()
 
   await Instance.provide({

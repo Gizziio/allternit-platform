@@ -6,7 +6,7 @@ function readOptions(argv) {
   const options = {
     api:
       process.env.ALLTERNIT_CLOUD_API_URL ||
-      "https://allternit-cloud-api.fly.dev",
+      "https://api.allternit.com",
     token: process.env.ALLTERNIT_CLERK_TOKEN || "",
     runtimeId: "",
     durationSeconds: 60,

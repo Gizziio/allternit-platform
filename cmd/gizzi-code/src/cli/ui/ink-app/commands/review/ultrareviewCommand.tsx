@@ -1,5 +1,5 @@
 // @ts-nocheck
-import type { ContentBlockParam } from '@allternit/sdk/providers/anthropic/resources/messages';
+import type { ContentBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/messages';
 import React from 'react';
 import type { LocalJSXCommandCall, LocalJSXCommandOnDone } from '../../types/command';
 import { checkOverageGate, confirmOverage, launchRemoteReview } from './reviewRemote';
@@ -29,13 +29,13 @@ async function launchAndDone(args: string, context: Parameters<LocalJSXCommandCa
 export const call: LocalJSXCommandCall = async (onDone, context, args) => {
   const gate = await checkOverageGate();
   if (gate.kind === 'not-enabled') {
-    onDone('Free ultrareviews used. Enable Extra Usage at https://claude.ai/settings/billing to continue.', {
+    onDone('Free ultrareviews used. Manage your plan at https://platform.allternit.com/billing to continue.', {
       display: 'system'
     });
     return null;
   }
   if (gate.kind === 'low-balance') {
-    onDone(`Balance too low to launch ultrareview ($${gate.available.toFixed(2)} available, $10 minimum). Top up at https://claude.ai/settings/billing`, {
+    onDone(`Balance too low to launch ultrareview ($${gate.available.toFixed(2)} available, $10 minimum). Top up at https://platform.allternit.com/billing`, {
       display: 'system'
     });
     return null;

@@ -135,7 +135,7 @@ enum AppConfig {
            let url = URL(string: value) {
             return url
         }
-        return URL(string: "https://allternit-cloud-api.fly.dev")!
+        return URL(string: "https://api.allternit.com")!
     }()
 
     /// Relay proxy URL for a paired runtime device:

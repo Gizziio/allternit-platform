@@ -14,6 +14,7 @@ import { Filesystem } from "@/shared/util/filesystem"
 import { fileURLToPath } from "url"
 import { Flag } from "@/runtime/context/flag/flag.ts"
 import { Shell } from "@/runtime/integrations/shell/shell"
+import { ProcessRegistry } from "@/runtime/process-registry"
 
 import { BashArity } from "@/runtime/tools/guard/permission/arity"
 import { Truncate } from "@/runtime/tools/builtins/truncation"
@@ -177,7 +178,7 @@ export const BashTool = Tool.define("bash", async () => {
       // ── VM Session execution ───────────────────────────────────────────────
       // When GIZZI_VM_SESSIONS is enabled (or the session has an active VM),
       // route ALL bash execution through the provisioned VM instead of spawning
-      // a local subprocess. This matches Claude Code's cloud session model where
+      // a local subprocess. This matches gizzi-code's cloud session model where
       // the entire agent session runs inside a dedicated VM.
       //
       // Auto-provision on first bash call when GIZZI_VM_SESSIONS is set.
@@ -273,7 +274,7 @@ export const BashTool = Tool.define("bash", async () => {
 
       // ── Sandbox wrapping ───────────────────────────────────────────────────
       // Sandboxed by default (bwrap on Linux, sandbox-exec on macOS) — same as
-      // Claude Code. GIZZI_SANDBOX_DISABLE (or an explicit per-session /sandbox
+      // gizzi-code. GIZZI_SANDBOX_DISABLE (or an explicit per-session /sandbox
       // toggle) is the only opt-out. If sandboxing is enabled but no isolation
       // driver is available on a platform that's supposed to support one
       // (Linux without bwrap), this fails closed — it throws rather than
@@ -312,6 +313,7 @@ export const BashTool = Tool.define("bash", async () => {
           // Don't use detached with bwrap/sandbox-exec — --die-with-parent handles cleanup
           detached: false,
         })
+        ProcessRegistry.track(proc, { label: "bash-sandbox" })
       } else {
         proc = spawn(params.command, {
           shell,
@@ -320,6 +322,7 @@ export const BashTool = Tool.define("bash", async () => {
           stdio: ["ignore", "pipe", "pipe"],
           detached: process.platform !== "win32",
         })
+        ProcessRegistry.track(proc, { label: "bash", group: process.platform !== "win32" })
       }
       // ── End sandbox wrapping ───────────────────────────────────────────────
 

@@ -3,6 +3,10 @@ title: Installation
 description: Install the Allternit runtime on your infrastructure
 ---
 
+<Note>
+Production pairing uses the [Cloud API](/api/cloud-api) at `https://api.allternit.com`. The data-plane binary is [Allternit API](/api/allternit-api) (`allternit-api` on loopback `:8013`), not a public `allternit-runtime` on port 8080. Fleet and provisioned instances pull `https://api.allternit.com/releases/allternit-api/latest/linux-x86_64.tar.gz`. See [BYOC Overview](/byoc/overview).
+</Note>
+
 ## Quick Install
 
 The fastest way to install the Allternit runtime:

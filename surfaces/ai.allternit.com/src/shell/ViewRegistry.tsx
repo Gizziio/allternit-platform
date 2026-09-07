@@ -35,6 +35,16 @@ const CodeModeAgentSession = lazy(() => import('../views/agent-sessions/CodeMode
 const DesignModeAgentSession = lazy(() => import('../views/agent-sessions/DesignModeAgentSession').then(m => ({ default: m.DesignModeAgentSession })));
 const BotInboxView = lazy(() => import('../views/bots/BotInboxView').then(m => ({ default: m.BotInboxView })));
 const BotHomeView = lazy(() => import('../views/bots/BotHomeView').then(m => ({ default: m.BotHomeView })));
+const BotChatSessionView = lazy(() => import('../views/bots/BotChatSessionView').then(m => ({ default: m.BotChatSessionView })));
+const BotLaunchpadView = lazy(() => import('../views/bots/BotLaunchpadView').then(m => ({ default: m.BotLaunchpadView })));
+import { GroupChatView } from '../views/bots/GroupChatView';
+import { GroupsListView } from '../views/bots/GroupsListView';
+import { useChatSessionStore } from '../views/chat/ChatSessionStore';
+import { useGroupChatStore } from '@/lib/bots/group-chat.store';
+import { useUnifiedRoster } from '@/lib/bots/use-unified-roster';
+import type { GroupChatMember } from '@/lib/bots/group-chat.types';
+
+const GroupChatSessionView = lazy(() => import('../views/bots/GroupChatSessionView').then(m => ({ default: m.GroupChatSessionView })));
 const SwarmADE             = lazy(() => import('../views/swarm').then(m => ({ default: m.SwarmADE })));
 const AllternitCanvasView  = lazy(() => import('../views/AllternitCanvasView').then(m => ({ default: m.AllternitCanvasView })));
 const CoworkRoot           = lazy(() => import('../views/cowork/CoworkRoot').then(m => ({ default: m.CoworkRoot })));
@@ -52,7 +62,7 @@ const ProjectView          = lazy(() => import('../views/ProjectView').then(m =>
 const ToolsView            = lazy(() => import('../views/code/ToolsView').then(m => ({ default: m.ToolsView })));
 const RunReplayView        = lazy(() => import('../views/code/RunReplayView').then(m => ({ default: m.RunReplayView })));
 const AppsExtensionsView     = lazy(() => import('../views/AppsExtensionsView').then(m => ({ default: m.AppsExtensionsView })));
-const DispatchView           = lazy(() => import('../views/DispatchView').then(m => ({ default: m.DispatchView })));
+const FabricTransportView    = lazy(() => import('../views/FabricTransportView').then(m => ({ default: m.FabricTransportView })));
 const PlaygroundView       = lazy(() => import('../views/PlaygroundView').then(m => ({ default: m.PlaygroundView })));
 const AllternitPlaygroundView = lazy(() => import('../views/AllternitPlaygroundView').then(m => ({ default: m.AllternitPlaygroundView })));
 const AgentStudioView      = lazy(() => import('../views/AgentStudioView').then(m => ({ default: m.AgentStudioView })));
@@ -93,6 +103,10 @@ const BudgetDashboardView    = lazy(() => import('../views/runtime/BudgetDashboa
 const ReplayManagerView      = lazy(() => import('../views/runtime/ReplayManagerView').then(m => ({ default: m.ReplayManagerView })));
 const PrewarmManagerView     = lazy(() => import('../views/runtime/PrewarmManagerView').then(m => ({ default: m.PrewarmManagerView })));
 const RuntimeOperationsView  = lazy(() => import('../views/runtime/RuntimeOperationsView').then(m => ({ default: m.RuntimeOperationsView })));
+const DesktopCloudAdminView  = lazy(() => import('../views/desktop-cloud/DesktopCloudAdminView').then(m => ({ default: m.DesktopCloudAdminView })));
+const CloudConsoleView       = lazy(() => import('../views/cloud-console/CloudConsoleView').then(m => ({ default: m.CloudConsoleView })));
+const ModelGatewayView       = lazy(() => import('../views/model-gateway/ModelGatewayView').then(m => ({ default: m.ModelGatewayView })));
+const AgentCloudView         = lazy(() => import('../views/agent-cloud/AgentCloudView').then(m => ({ default: m.AgentCloudView })));
 const HistoryView            = lazy(() => import('../views/HistoryView').then(m => ({ default: m.HistoryView })));
 const ArchivedView           = lazy(() => import('../views/ArchivedView').then(m => ({ default: m.ArchivedView })));
 const RecentsView            = lazy(() => import('../views/RecentsView').then(m => ({ default: m.RecentsView })));
@@ -141,6 +155,106 @@ const MarkdownPreviewView    = lazy(() => import('../views/office/MarkdownPrevie
 const ApiCaptureView         = lazy(() => import('../views/api-capture/ApiCaptureView').then(m => ({ default: m.ApiCaptureView })));
 const NativeSigningView      = lazy(() => import('../views/office/NativeSigningView').then(m => ({ default: m.NativeSigningView })));
 
+interface ChatAgentSessionRouterProps {
+  sessionId?: string;
+  botId?: string;
+  originView?: ViewType;
+  onBack?: () => void;
+}
+
+function ChatAgentSessionRouter({ sessionId, botId, onBack }: ChatAgentSessionRouterProps) {
+  const sessions = useChatSessionStore((s) => s.sessions);
+  const session = React.useMemo(
+    () => sessions.find((s) => s.id === sessionId) ?? null,
+    [sessions, sessionId]
+  );
+
+  const agentIds = React.useMemo(() => {
+    const ids: string[] = [];
+    if (session?.metadata?.agentIds && Array.isArray(session.metadata.agentIds)) {
+      ids.push(...(session.metadata.agentIds as string[]));
+    } else if (session?.metadata?.agentId) {
+      ids.push(session.metadata.agentId as string);
+    }
+    if (botId && !ids.includes(botId)) {
+      ids.push(botId);
+    }
+    return ids;
+  }, [session, botId]);
+
+  if (agentIds.length > 1) {
+    return <MultiBotGroupChatSession agentIds={agentIds} onBack={onBack} />;
+  }
+
+  return (
+    <BotChatSessionView
+      sessionId={sessionId}
+      botId={botId ?? agentIds[0]}
+      onBack={onBack}
+    />
+  );
+}
+
+function MultiBotGroupChatSession({
+  agentIds,
+  onBack,
+}: {
+  agentIds: string[];
+  onBack?: () => void;
+}) {
+  const roster = useUnifiedRoster();
+  const groups = useGroupChatStore((s) => s.groups);
+  const createGroup = useGroupChatStore((s) => s.createGroup);
+  const [groupId, setGroupId] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    const idSet = new Set(agentIds);
+    const existing = Object.values(groups).find((g) => {
+      const memberIds = new Set(g.members.map((m) => m.botId));
+      if (memberIds.size !== idSet.size) return false;
+      for (const id of idSet) {
+        if (!memberIds.has(id)) return false;
+      }
+      return true;
+    });
+
+    if (existing) {
+      setGroupId(existing.id);
+      return;
+    }
+
+    const members = agentIds
+      .map((id) => {
+        const bot = roster.find((b) => b.id === id);
+        if (!bot) return null;
+        return {
+          botId: bot.id,
+          displayName: bot.displayName,
+          handle: bot.handle,
+          source: bot.source,
+          providerId: bot.providerId,
+        } as GroupChatMember;
+      })
+      .filter((m): m is GroupChatMember => Boolean(m));
+
+    if (members.length >= 2) {
+      const name = members.map((m) => m.displayName).join(', ');
+      const id = createGroup(name, members);
+      setGroupId(id);
+    }
+  }, [agentIds, groups, roster, createGroup]);
+
+  if (!groupId) {
+    return (
+      <div className="flex h-full items-center justify-center text-sm text-[var(--text-secondary)]">
+        Creating group chat…
+      </div>
+    );
+  }
+
+  return <GroupChatView groupId={groupId} onBack={onBack} />;
+}
+
 export function getShellViewRegistry(handlers: {
   handleOpenAgentSession: (text: string, surface: AppMode, execution?: { modeId: CanonicalAgentModeId; templateTitle?: string }) => void;
   handleStartBotSession?: (agent: Agent) => void;
@@ -152,6 +266,11 @@ export function getShellViewRegistry(handlers: {
     home: () => <ChatViewWrapper onOpenAgentSession={handleOpenAgentSession} onStartBotSession={handleStartBotSession} />,
     chat: () => <ChatViewWrapper onOpenAgentSession={handleOpenAgentSession} onStartBotSession={handleStartBotSession} />,
     "chat-legacy": () => <ChatViewWrapper onOpenAgentSession={handleOpenAgentSession} onStartBotSession={handleStartBotSession} />,
+    "bot-launchpad": () => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Bots" />}>
+        <BotLaunchpadView />
+      </ErrorBoundary>
+    ),
     project: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Projects" />}>
         <ProjectView />
@@ -245,6 +364,11 @@ export function getShellViewRegistry(handlers: {
         <SettingsView />
       </ErrorBoundary>
     ),
+    customize: ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Customize" />}>
+        <SettingsView />
+      </ErrorBoundary>
+    ),
     'browser-extensions': () => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Office & Extensions" />}>
         <BrowserExtensionsView openView={open} />
@@ -301,8 +425,8 @@ export function getShellViewRegistry(handlers: {
       </ErrorBoundary>
     ),
     'agent-hub': ({ context }: { context?: ViewContext }) => (
-      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Agent | Bot Hub" />}>
-        <AgentHub onSessionStarted={(sessionId) => open('cowork-agent-session', { sessionId })} />
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Bot Hub" />}>
+        <AgentHub onSessionStarted={(sessionId, botId) => open('bot-chat-session', { sessionId, botId })} />
       </ErrorBoundary>
     ),
     'bot-inbox': ({ context }: { context?: ViewContext }) => {
@@ -318,6 +442,34 @@ export function getShellViewRegistry(handlers: {
       return (
         <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Bot Home" />}>
           <BotHomeView botId={ctx?.botId ?? context?.viewId ?? ''} />
+        </ErrorBoundary>
+      );
+    },
+    'group-chat': ({ context }: { context?: ViewContext }) => {
+      const ctx = context?.context as { groupId?: string } | undefined;
+      return (
+        <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Group Chat" />}>
+          <GroupChatView
+            groupId={ctx?.groupId ?? context?.viewId ?? ''}
+            onBack={() => open('groups-list')}
+          />
+        </ErrorBoundary>
+      );
+    },
+    'groups-list': () => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Groups" />}>
+        <GroupsListView onOpenGroup={(groupId) => open('group-chat', { groupId })} />
+      </ErrorBoundary>
+    ),
+    'bot-chat-session': ({ context }: { context?: ViewContext }) => {
+      const ctx = context?.context as { sessionId?: string; botId?: string; originView?: ViewType } | undefined;
+      return (
+        <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Bot Chat Session" />}>
+          <BotChatSessionView
+            sessionId={ctx?.sessionId}
+            botId={ctx?.botId ?? context?.viewId}
+            onBack={() => open(ctx?.originView ?? 'agent-hub')}
+          />
         </ErrorBoundary>
       );
     },
@@ -642,6 +794,26 @@ export function getShellViewRegistry(handlers: {
         <PrewarmManagerView />
       </ErrorBoundary>
     ),
+    "desktop-cloud": ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Desktop Cloud" />}>
+        <DesktopCloudAdminView />
+      </ErrorBoundary>
+    ),
+    "cloud-console": ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Cloud Console" />}>
+        <CloudConsoleView />
+      </ErrorBoundary>
+    ),
+    "model-gateway": ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Model Gateway" />}>
+        <ModelGatewayView />
+      </ErrorBoundary>
+    ),
+    "agent-cloud": ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Agent Cloud" />}>
+        <AgentCloudView />
+      </ErrorBoundary>
+    ),
     history: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="History" />}>
         <HistoryView />
@@ -812,6 +984,17 @@ export function getShellViewRegistry(handlers: {
         </ErrorBoundary>
       );
     },
+    'chat-group-session': ({ context }: { context?: ViewContext }) => {
+      const ctx = context?.context as { sessionId?: string; originView?: ViewType } | undefined;
+      return (
+        <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Group Chat" />}>
+          <GroupChatSessionView
+            sessionId={ctx?.sessionId ?? context!.viewId}
+            onClose={() => open(ctx?.originView ?? 'chat')}
+          />
+        </ErrorBoundary>
+      );
+    },
     // Deprecated alias: the old single-agent chat UI was removed. Chat-mode
     // sessions now open in the group/cowork workspace.
     'chat-agent-session': ({ context }: { context?: ViewContext }) => {
@@ -859,7 +1042,7 @@ export function getShellViewRegistry(handlers: {
       </ErrorBoundary>
     ),
     'site-apis': ({ context }: { context?: ViewContext }) => (
-      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Site APIs" />}>
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Teach" />}>
         <ApiCaptureView />
       </ErrorBoundary>
     ),
@@ -892,13 +1075,18 @@ export function getShellViewRegistry(handlers: {
       </ErrorBoundary>
     ),
     'dispatch': ({ context }: { context?: ViewContext }) => (
-      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Remote Control" />}>
-        <DispatchView />
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Fabric Transport" />}>
+        <FabricTransportView />
       </ErrorBoundary>
     ),
     'remote-control': ({ context }: { context?: ViewContext }) => (
-      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Remote Control" />}>
-        <DispatchView />
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Fabric Transport" />}>
+        <FabricTransportView />
+      </ErrorBoundary>
+    ),
+    'fabric-session': ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Fabric Transport" />}>
+        <FabricTransportView />
       </ErrorBoundary>
     ),
     'hud': () => (

@@ -40,13 +40,9 @@
             gizzi-code = final.callPackage ./nix/gizzi.nix {
               inherit node_modules;
             };
-            desktop = final.callPackage ./nix/desktop.nix {
-              inherit gizzi-code;
-            };
           in
           {
             inherit gizzi-code;
-            gizzi-desktop = desktop;
           };
       };
 
@@ -59,13 +55,10 @@
           gizzi-code = pkgs.callPackage ./nix/gizzi.nix {
             inherit node_modules;
           };
-          desktop = pkgs.callPackage ./nix/desktop.nix {
-            inherit gizzi-code;
-          };
         in
         {
           default = gizzi-code;
-          inherit gizzi-code desktop;
+          inherit gizzi-code;
           # Updater derivation with fakeHash - build fails and reveals correct hash
           node_modules_updater = node_modules.override {
             hash = pkgs.lib.fakeHash;

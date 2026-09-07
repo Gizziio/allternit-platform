@@ -33,6 +33,11 @@ export interface ProviderMeta {
   homepage: string;
   /** One-line description of the provider. */
   description: string;
+  /**
+   * If set, this row is a lookup alias and must not be listed as a second
+   * Connect card. Status/models fold into `aliasOf`.
+   */
+  aliasOf?: string;
 }
 
 export const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
@@ -41,7 +46,7 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
     id: 'anthropic',
     name: 'Anthropic',
     color: '#D97757',
-    icon: 'claude-logo.svg',
+    icon: 'anthropic-logo.svg',
     textColor: '#FFFFFF',
     kind: 'api',
     homepage: 'https://www.anthropic.com/',
@@ -59,6 +64,7 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
     authCommand: 'claude auth login',
     homepage: 'https://claude.ai/',
     description: 'Alias for the Claude Code CLI (subscription or Pro).',
+    aliasOf: 'claude-cli',
   },
   'claude-cli': {
     id: 'claude-cli',
@@ -108,12 +114,13 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
     authCommand: 'codex login',
     homepage: 'https://chatgpt.com/',
     description: 'Alias for the OpenAI Codex CLI.',
+    aliasOf: 'codex-cli',
   },
   google: {
     id: 'google',
     name: 'Google Gemini',
     color: '#4285F4',
-    icon: 'gemini-logo.svg',
+    icon: 'google-logo.svg',
     textColor: '#FFFFFF',
     kind: 'api',
     homepage: 'https://ai.google.dev/',
@@ -128,6 +135,7 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
     kind: 'api',
     homepage: 'https://ai.google.dev/',
     description: 'Alias for Google Gemini (API key).',
+    aliasOf: 'google',
   },
   ollama: {
     id: 'ollama',
@@ -140,6 +148,16 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
     installCommand: 'curl -fsSL https://ollama.com/install.sh | sh',
     homepage: 'https://ollama.com/',
     description: 'Run LLaMA, Mistral, and other open models locally.',
+  },
+  omlx: {
+    id: 'omlx',
+    name: 'oMLX (local)',
+    color: '#22c55e',
+    icon: 'ollama-logo.svg',
+    textColor: '#FFFFFF',
+    kind: 'local',
+    homepage: 'https://allternit.com/',
+    description: 'Apple MLX local models served on this machine.',
   },
   kimi: {
     id: 'kimi',
@@ -155,7 +173,7 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
     id: 'kimi-cli',
     name: 'Kimi CLI',
     color: '#1783FF',
-    icon: 'kimi-logo.svg',
+    icon: 'kimi-cli.svg',
     textColor: '#FFFFFF',
     kind: 'cli',
     cliCommand: 'kimi',
@@ -188,7 +206,7 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
     id: 'qwen-cli',
     name: 'Qwen CLI',
     color: '#551DB0',
-    icon: 'qwen-logo.svg',
+    icon: 'qwen-cli.svg',
     textColor: '#FFFFFF',
     kind: 'cli',
     cliCommand: 'qwen',
@@ -211,7 +229,7 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
     id: 'grok',
     name: 'Grok',
     color: '#000000',
-    icon: 'xai-logo.svg',
+    icon: 'grok-logo.svg',
     textColor: '#FFFFFF',
     kind: 'cli',
     cliCommand: 'grok',
@@ -298,6 +316,7 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
     kind: 'api',
     homepage: 'https://aws.amazon.com/bedrock/',
     description: 'Alias for Amazon Bedrock.',
+    aliasOf: 'amazon-bedrock',
   },
   alibaba: {
     id: 'alibaba',
@@ -332,8 +351,19 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
     installCommand: 'brew install --cask antigravity',
     homepage: 'https://antigravity.google/',
     description: 'Alias for the Antigravity (agy) CLI.',
+    aliasOf: 'antigravity',
   },
   // Agent-runtime CLI tools (Multica-style: user brings their own installed CLI).
+  openrouter: {
+    id: 'openrouter',
+    name: 'OpenRouter',
+    color: '#1E1E1E',
+    icon: 'openrouter.svg',
+    textColor: '#FFFFFF',
+    kind: 'api',
+    homepage: 'https://openrouter.ai/',
+    description: 'Unified API for LLMs via OpenRouter (OPENROUTER_API_KEY).',
+  },
   'cursor-agent': {
     id: 'cursor-agent',
     name: 'Cursor Agent',
@@ -458,7 +488,7 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
     id: 'qoderclicn',
     name: 'Qoder CN',
     color: '#14B8A6',
-    icon: 'qoderclicn.svg',
+    icon: 'qodercli.svg',
     textColor: '#FFFFFF',
     kind: 'cli',
     cliCommand: 'qoderclicn',
@@ -506,7 +536,7 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
     id: 'dsh',
     name: 'DeepSeek Harness',
     color: '#4D6BFA',
-    icon: 'deepseek-logo.svg',
+    icon: 'dsh-logo.svg',
     textColor: '#FFFFFF',
     kind: 'cli',
     cliCommand: 'dsh',
@@ -553,13 +583,13 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
   // ── Built-in / local runtimes ─────────────────────────────────────────────
   allternit: {
     id: 'allternit',
-    name: 'Allternit',
+    name: 'Allternit Cloud',
     color: '#6366F1',
     icon: 'allternit-logo.svg',
     textColor: '#FFFFFF',
-    kind: 'local',
-    homepage: 'https://allternit.com/',
-    description: 'Allternit built-in agent runtime.',
+    kind: 'api',
+    homepage: 'https://platform.allternit.com/models',
+    description: 'Allternit Cloud catalog (Free / Plus / Super / Ultra).',
   },
   'allternit-local-engine': {
     id: 'allternit-local-engine',
@@ -584,14 +614,61 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
 };
 
 /**
+ * Backend / discovery IDs that are the same product as a registry entry.
+ * Not listed as their own Connect cards.
+ */
+const PROVIDER_ID_REMAP: Record<string, string> = {
+  claude: "claude-cli",
+  codex: "codex-cli",
+  agy: "antigravity",
+  gemini: "google",
+  bedrock: "amazon-bedrock",
+  "copilot-cli": "copilot",
+  "ollama-cli": "ollama",
+};
+
+/**
+ * Fold alias IDs (claude vs claude-cli, agy vs antigravity, …) onto one card.
+ */
+export function canonicalProviderId(id: string | undefined | null): string {
+  if (!id) return "allternit";
+  const normalized = id.toLowerCase();
+  if (PROVIDER_ID_REMAP[normalized]) return PROVIDER_ID_REMAP[normalized];
+  const meta = PROVIDER_REGISTRY[normalized];
+  if (meta?.aliasOf) return meta.aliasOf;
+  return normalized;
+}
+
+/** Registry rows that should appear in Connect (no lookup-only aliases). */
+export function listCanonicalProviders(): ProviderMeta[] {
+  return Object.values(PROVIDER_REGISTRY).filter((meta) => !meta.aliasOf);
+}
+
+export function dedupeByCanonicalProvider<T extends { provider_id: string }>(
+  rows: T[],
+): T[] {
+  const seen = new Set<string>();
+  const out: T[] = [];
+  for (const row of rows) {
+    const id = canonicalProviderId(row.provider_id);
+    if (seen.has(id)) continue;
+    seen.add(id);
+    out.push({ ...row, provider_id: id });
+  }
+  return out;
+}
+
+/**
  * Get provider metadata by ID
  */
 export function getProviderMeta(id: string | undefined): ProviderMeta {
   if (!id) return PROVIDER_REGISTRY.allternit;
 
-  const normalized = id.toLowerCase();
+  const canonical = canonicalProviderId(id);
+  const canonicalMeta = PROVIDER_REGISTRY[canonical];
+  if (canonicalMeta) return canonicalMeta;
 
-  // Try direct match
+  const normalized = id.toLowerCase();
   const meta = PROVIDER_REGISTRY[normalized];
   if (meta) return meta;
 

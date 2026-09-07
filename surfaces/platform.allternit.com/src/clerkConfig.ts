@@ -16,7 +16,7 @@ export const CLERK_SIGN_UP_PATH = "/sign-up";
 export const STATIC_ALLOWED_REDIRECT_ORIGINS = [
   "https://platform.allternit.com",
   "https://ai.allternit.com",
-  "https://remotecontrol.allternit.com",
+  "https://fabrictransport.allternit.com",
 ];
 
 export function getAllowedRedirectOrigins(): string[] {

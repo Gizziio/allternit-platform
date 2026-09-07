@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle'
-import chalk from 'chalk'
+import chalk from '@/shared/util/chalk'
 import { spawnSync } from 'child_process'
 import {
   copyFile,
@@ -1358,9 +1358,9 @@ export async function execIntoTmuxWorktree(args: string[]): Promise<{
   // Set env vars for the inner Claude to display tmux info in welcome message
   const tmuxEnv = {
     ...process.env,
-    CLAUDE_CODE_TMUX_SESSION: tmuxSessionName,
-    CLAUDE_CODE_TMUX_PREFIX: tmuxPrefix,
-    CLAUDE_CODE_TMUX_PREFIX_CONFLICTS: prefixConflicts ? '1' : '',
+    GIZZI_CODE_TMUX_SESSION: tmuxSessionName,
+    GIZZI_CODE_TMUX_PREFIX: tmuxPrefix,
+    GIZZI_CODE_TMUX_PREFIX_CONFLICTS: prefixConflicts ? '1' : '',
   }
 
   // Check if session already exists

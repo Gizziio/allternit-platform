@@ -1,6 +1,7 @@
 import React from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { ConsoleLayout } from "@/components/ConsoleLayout";
+import { PublicPageShell } from "@/components/PublicPageShell";
 import { DashboardPage } from "@/pages/DashboardPage";
 import { OrganizationsPage } from "@/pages/OrganizationsPage";
 import { ComputePage } from "@/pages/ComputePage";
@@ -9,16 +10,21 @@ import { BillingPage } from "@/pages/BillingPage";
 import { ApiKeysPage } from "@/pages/ApiKeysPage";
 import { DocsPage } from "@/pages/DocsPage";
 import { SettingsPage } from "@/pages/SettingsPage";
+import { CloudAccountsPage } from "@/pages/CloudAccountsPage";
 import { SignInPage } from "@/pages/SignInPage";
 import { SignUpPage } from "@/pages/SignUpPage";
 import { RunsPage } from "@/pages/RunsPage";
 import { SchedulesPage } from "@/pages/SchedulesPage";
 import { ApprovalsPage } from "@/pages/ApprovalsPage";
 import { FabricPage } from "@/pages/FabricPage";
+import { PortalLandingPage } from "@/pages/PortalLandingPage";
+import { ModelsPage } from "@/pages/ModelsPage";
+import { PlansPage } from "@/pages/PlansPage";
 import { usePlatformAuth } from "@/lib/platform-auth-client";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const auth = usePlatformAuth();
+  const location = useLocation();
 
   if (!auth.isLoaded) {
     return (
@@ -29,7 +35,8 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
   }
 
   if (!auth.isSignedIn) {
-    return <Navigate to="/sign-in" replace />;
+    const returnUrl = encodeURIComponent(location.pathname + location.search);
+    return <Navigate to={`/sign-in?redirect_url=${returnUrl}`} replace />;
   }
 
   return <>{children}</>;
@@ -43,17 +50,61 @@ function ConsoleRoute({ children }: { children: React.ReactNode }) {
   );
 }
 
+function HomeRoute() {
+  const auth = usePlatformAuth();
+
+  if (!auth.isLoaded) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-[var(--bg-primary)]">
+        <div className="size-8 animate-spin rounded-full border-2 border-[var(--accent-primary)] border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (auth.isSignedIn) {
+    return (
+      <ConsoleRoute>
+        <DashboardPage />
+      </ConsoleRoute>
+    );
+  }
+
+  return <PortalLandingPage />;
+}
+
+function BillingRoute() {
+  const auth = usePlatformAuth();
+
+  if (!auth.isLoaded) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-[var(--bg-primary)]">
+        <div className="size-8 animate-spin rounded-full border-2 border-[var(--accent-primary)] border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (auth.isSignedIn) {
+    return (
+      <ConsoleLayout>
+        <BillingPage />
+      </ConsoleLayout>
+    );
+  }
+
+  return (
+    <PublicPageShell>
+      <BillingPage />
+    </PublicPageShell>
+  );
+}
+
 export default function App() {
   return (
     <Routes>
-      <Route
-        path="/"
-        element={
-          <ConsoleRoute>
-            <DashboardPage />
-          </ConsoleRoute>
-        }
-      />
+      <Route path="/" element={<HomeRoute />} />
+      <Route path="/models/*" element={<ModelsPage />} />
+      <Route path="/plans/*" element={<PlansPage />} />
+      <Route path="/billing/*" element={<BillingRoute />} />
       <Route
         path="/organizations/*"
         element={
@@ -103,10 +154,10 @@ export default function App() {
         }
       />
       <Route
-        path="/billing/*"
+        path="/cloud-accounts/*"
         element={
           <ConsoleRoute>
-            <BillingPage />
+            <CloudAccountsPage />
           </ConsoleRoute>
         }
       />
@@ -142,9 +193,8 @@ export default function App() {
           </ConsoleRoute>
         }
       />
-      {/* Clerk's path-routed SignIn/SignUp navigate to sub-routes such as
-          /sign-in/factor-one. Keep wildcards so React Router renders the page
-          on those steps and lets Clerk manage redirects. */}
+      {/* Fallback Clerk path-routed pages. Public marketing pages open the auth modal
+          inline, but /sign-in and /sign-up remain available for direct navigation. */}
       <Route path="/sign-in/*" element={<SignInPage />} />
       <Route path="/sign-up/*" element={<SignUpPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />

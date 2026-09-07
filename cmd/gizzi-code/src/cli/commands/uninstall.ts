@@ -8,18 +8,36 @@ import fs from "fs/promises"
 import path from "path"
 import os from "os"
 import { Filesystem } from "@/shared/util/filesystem"
+import {
+  cleanShellConfigContent,
+  removeMarkedBlock,
+  POWERSHELL_BLOCK_BEGIN,
+  POWERSHELL_BLOCK_END,
+} from "@/cli/commands/uninstallShellConfig"
+import {
+  detectInstallMethod,
+  gizziHome,
+  packageUninstallCommand,
+  planGizziHome,
+  type GizziHomePlan,
+  type InstallMethod,
+} from "@/cli/commands/uninstallPlan"
+import { isDaemonRunning, stopRemoteDaemon } from "@/runtime/automation/cron/daemon"
 
 interface UninstallArgs {
   keepConfig: boolean
   keepData: boolean
   dryRun: boolean
   force: boolean
+  yes: boolean
 }
 
 interface RemovalTargets {
   directories: Array<{ path: string; label: string; keep: boolean }>
   shellConfig: string | null
   binary: string | null
+  gizziHome: GizziHomePlan
+  packageHint: string | null
 }
 
 export const UninstallCommand = {
@@ -49,6 +67,11 @@ export const UninstallCommand = {
         type: "boolean",
         describe: "skip confirmation prompts",
         default: false,
+      })
+      .option("yes", {
+        type: "boolean",
+        describe: "answer yes to the confirmation prompt (required for non-interactive uninstall)",
+        default: false,
       }),
 
   handler: async (args: UninstallArgs) => {
@@ -57,14 +80,31 @@ export const UninstallCommand = {
     UI.empty()
     prompts.intro("Uninstall GIZZI")
 
-    const method = await Installation.method()
+    // Path/argv detection first (authoritative, no subprocess); fall back to
+    // the package-manager probe only when the path is inconclusive.
+    const detectedMethod: InstallMethod = detectInstallMethod(process.execPath, process.argv)
+    const method =
+      detectedMethod !== "unknown" ? (detectedMethod as Installation.Method) : await Installation.method()
     prompts.log.info(`Installation method: ${method}`)
+
+    // A non-interactive terminal cannot answer the confirmation prompt —
+    // require an explicit --yes/--force instead of hanging on stdin.
+    if (
+      process.stdin.isTTY !== true &&
+      !args.force &&
+      !args.yes &&
+      !args.dryRun
+    ) {
+      prompts.log.error("Non-interactive terminal: re-run with --yes to confirm the uninstall.")
+      prompts.outro("Aborted")
+      process.exit(1)
+    }
 
     const targets = await collectRemovalTargets(args, method)
 
     await showRemovalSummary(targets, method)
 
-    if (!args.force && !args.dryRun) {
+    if (!args.force && !args.yes && !args.dryRun) {
       const confirm = await prompts.confirm({
         message: "Are you sure you want to uninstall?",
         initialValue: false,
@@ -93,12 +133,19 @@ async function collectRemovalTargets(args: UninstallArgs, method: Installation.M
     { path: Global.Path.cache, label: "Cache", keep: false },
     { path: Global.Path.config, label: "Config", keep: args.keepConfig },
     { path: Global.Path.state, label: "State", keep: false },
+    // ~/.gizzi: credentials fallback, plugins, curl-install bin, global
+    // workspace, cron state. Removed with Config unless --keep-config.
+    { path: gizziHome(os.homedir()), label: "Home", keep: args.keepConfig },
   ]
 
   const shellConfig = method === "curl" ? await getShellConfigFile() : null
   const binary = method === "curl" ? process.execPath : null
+  const gizziHomePlan = await planGizziHome(os.homedir())
+  const packageHint = packageUninstallCommand(
+    detectInstallMethod(process.execPath, process.argv),
+  )
 
-  return { directories, shellConfig, binary }
+  return { directories, shellConfig, binary, gizziHome: gizziHomePlan, packageHint }
 }
 
 async function showRemovalSummary(targets: RemovalTargets, method: Installation.Method) {
@@ -117,6 +164,12 @@ async function showRemovalSummary(targets: RemovalTargets, method: Installation.
     const prefix = dir.keep ? "○" : "✓"
 
     prompts.log.info(`  ${prefix} ${dir.label}: ${shortenPath(dir.path)} ${UI.Style.TEXT_DIM}(${sizeStr})${status}`)
+
+    if (dir.label === "Home" && targets.gizziHome.exists && !dir.keep) {
+      for (const entry of targets.gizziHome.entries) {
+        prompts.log.info(`      ${shortenPath(entry.path)} ${UI.Style.TEXT_DIM}[${entry.kind}]`)
+      }
+    }
   }
 
   if (targets.binary) {
@@ -127,23 +180,33 @@ async function showRemovalSummary(targets: RemovalTargets, method: Installation.
     prompts.log.info(`  ✓ Shell PATH in ${shortenPath(targets.shellConfig)}`)
   }
 
-  if (method !== "curl" && method !== "unknown") {
-    const cmds: Record<string, string> = {
-      npm: "npm uninstall -g @gizzi/tui",
-      pnpm: "pnpm uninstall -g @gizzi/tui",
-      bun: "bun remove -g @gizzi/tui",
-      yarn: "yarn global remove @gizzi/tui",
-      brew: "brew uninstall gizzi",
-      choco: "choco uninstall gizzi",
-      scoop: "scoop uninstall gizzi",
-    }
-    prompts.log.info(`  ✓ Package: ${cmds[method] || method}`)
+  if (targets.packageHint && method !== "curl" && method !== "unknown") {
+    prompts.log.info(`  ✓ Package: ${targets.packageHint}`)
+  }
+
+  if (process.platform === "win32" && (method === "curl" || method === "unknown")) {
+    prompts.log.warn(
+      "If you installed via install.ps1, remove the gizzi install directory from your User PATH (System Properties → Environment Variables). It is not removed automatically.",
+    )
   }
 }
 
 async function executeUninstall(method: Installation.Method, targets: RemovalTargets) {
   const spinner = prompts.spinner()
   const errors: string[] = []
+
+  // Stop the cron daemon before its database/state directories go away —
+  // otherwise it keeps running with deleted state and a stale port binding.
+  if (await isDaemonRunning(3031)) {
+    spinner.start("Stopping cron daemon...")
+    const stopped = await stopRemoteDaemon(3031)
+    if (stopped) {
+      spinner.stop("Cron daemon stopped")
+    } else {
+      spinner.stop("Failed to stop cron daemon", 1)
+      errors.push("Cron daemon: shutdown request failed — it may need `gizzi cron stop` manually")
+    }
+  }
 
   for (const dir of targets.directories) {
     if (dir.keep) {
@@ -179,17 +242,11 @@ async function executeUninstall(method: Installation.Method, targets: RemovalTar
   }
 
   if (method !== "curl" && method !== "unknown") {
-    const cmds: Record<string, string[]> = {
-      npm: ["npm", "uninstall", "-g", "@gizzi/tui"],
-      pnpm: ["pnpm", "uninstall", "-g", "@gizzi/tui"],
-      bun: ["bun", "remove", "-g", "@gizzi/tui"],
-      yarn: ["yarn", "global", "remove", "@gizzi/tui"],
-      brew: ["brew", "uninstall", "gizzi"],
-      choco: ["choco", "uninstall", "gizzi"],
-      scoop: ["scoop", "uninstall", "gizzi"],
-    }
+    const cmd =
+      targets.packageHint?.split(" ") ??
+      packageUninstallCommand(method as InstallMethod)?.split(" ") ??
+      null
 
-    const cmd = cmds[method]
     if (cmd) {
       spinner.start(`Running ${cmd.join(" ")}...`)
       const result =
@@ -269,7 +326,11 @@ async function getShellConfigFile(): Promise<string | null> {
     if (!exists) continue
 
     const content = await Filesystem.readText(file).catch(() => "")
-    if (content.includes("# gizzi") || content.includes(".gizzi/bin")) {
+    if (
+      content.includes("# gizzi") ||
+      content.includes("# gizzi-code begin") ||
+      content.includes(".gizzi/bin")
+    ) {
       return file
     }
   }
@@ -279,41 +340,41 @@ async function getShellConfigFile(): Promise<string | null> {
 
 async function cleanShellConfig(file: string) {
   const content = await Filesystem.readText(file)
-  const lines = content.split("\n")
 
-  const filtered: string[] = []
-  let skip = false
-
-  for (const line of lines) {
-    const trimmed = line.trim()
-
-    if (trimmed === "# gizzi" || trimmed === "# gizzi") {
-      skip = true
-      continue
-    }
-
-    if (skip) {
-      skip = false
-      if (trimmed.includes(".gizzi/bin") || trimmed.includes("fish_add_path")) {
-        continue
+  // PowerShell $PROFILE: no gizzi installer writes it today, but if one
+  // ever did, remove ONLY the marked block. Markers absent → warn and
+  // leave the file untouched rather than rewriting user content.
+  if (file.endsWith(".ps1")) {
+    const { output, result } = removeMarkedBlock(content, POWERSHELL_BLOCK_BEGIN, POWERSHELL_BLOCK_END)
+    if (output === null) {
+      if (result.status === "unbalanced-begin") {
+        prompts.log.warn(
+          `${shortenPath(file)} has a '${POWERSHELL_BLOCK_BEGIN}' marker without a matching end marker; leaving it untouched.`,
+        )
+      } else if (result.status === "no-markers" && result.gizziReferences) {
+        prompts.log.warn(
+          `${shortenPath(file)} contains gizzi references but no gizzi marker block; leaving it untouched. Remove them manually if desired.`,
+        )
       }
+      return
     }
-
-    if (
-      (trimmed.startsWith("export PATH=") && trimmed.includes(".gizzi/bin")) ||
-      (trimmed.startsWith("fish_add_path") && trimmed.includes(".gizzi"))
-    ) {
-      continue
-    }
-
-    filtered.push(line)
+    await Filesystem.write(file, output)
+    return
   }
 
-  while (filtered.length > 0 && filtered[filtered.length - 1].trim() === "") {
-    filtered.pop()
+  const { output, result } = cleanShellConfigContent(content)
+  if (output === null) {
+    if (result.status === "unbalanced-begin") {
+      prompts.log.warn(
+        `${shortenPath(file)} has a '# gizzi-code begin' marker without a matching end marker; leaving it untouched.`,
+      )
+    } else if (result.status === "no-markers" && result.gizziReferences) {
+      prompts.log.warn(
+        `${shortenPath(file)} contains .gizzi references but no gizzi marker block; leaving it untouched. Remove them manually if desired.`,
+      )
+    }
+    return
   }
-
-  const output = filtered.join("\n") + "\n"
   await Filesystem.write(file, output)
 }
 

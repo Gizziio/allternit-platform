@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Hono } from "hono"
 import { describeRoute, resolver, validator } from "@/runtime/server/openapi"
 import z from "zod/v4"

@@ -72,6 +72,8 @@ export default defineConfig({
       'storage',
       'tabs',
       'nativeMessaging',
+      // memory: browser history ingestion
+      'history',
       // polish features
       'notifications',
       'downloads',

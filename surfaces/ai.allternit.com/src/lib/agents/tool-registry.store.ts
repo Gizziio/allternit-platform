@@ -8,6 +8,7 @@
 
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
+import { isToolsApiEnabled } from "@/lib/env";
 // Tool type definition
 export interface Tool {
   id: string;
@@ -172,6 +173,9 @@ interface ToolsApiResponse {
 
 const TOOLS_API_BASE = `${GATEWAY_BASE_URL}/api/v1/tools`;
 
+const TOOLS_API_DISABLED_MESSAGE =
+  "Tool registry API is disabled in this deployment (set NEXT_PUBLIC_ALLTERNIT_TOOLS_API=1 where the gateway is reachable).";
+
 /**
  * Fetch tools from the Gateway API
  */
@@ -272,6 +276,16 @@ export const useToolRegistryStore = create<ToolRegistryState & ToolRegistryActio
         state.error = null;
       });
 
+      // `/api/v1/tools` is served only by the Rust allternit-api, which is not
+      // publicly reachable from this deployment — fail closed without firing.
+      if (!isToolsApiEnabled()) {
+        set((state) => {
+          state.error = TOOLS_API_DISABLED_MESSAGE;
+          state.isRegistering = false;
+        });
+        throw new Error(TOOLS_API_DISABLED_MESSAGE);
+      }
+
       try {
         // Register with the kernel API
         await registerToolWithApi(tool);
@@ -299,6 +313,14 @@ export const useToolRegistryStore = create<ToolRegistryState & ToolRegistryActio
         state.error = null;
       });
 
+      if (!isToolsApiEnabled()) {
+        set((state) => {
+          state.error = TOOLS_API_DISABLED_MESSAGE;
+          state.isLoading = false;
+        });
+        throw new Error(TOOLS_API_DISABLED_MESSAGE);
+      }
+
       try {
         // Unregister from the kernel API
         await unregisterToolFromApi(toolId);
@@ -321,6 +343,16 @@ export const useToolRegistryStore = create<ToolRegistryState & ToolRegistryActio
         state.isLoading = true;
         state.error = null;
       });
+
+      // Mount-time probe of `/api/v1/tools` — fail closed when the tool API is
+      // disabled instead of firing a request nothing serves.
+      if (!isToolsApiEnabled()) {
+        set((state) => {
+          state.error = TOOLS_API_DISABLED_MESSAGE;
+          state.isLoading = false;
+        });
+        return;
+      }
 
       try {
         // Fetch from the kernel API

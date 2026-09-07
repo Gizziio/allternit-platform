@@ -24,7 +24,7 @@ VITE_CLERK_PUBLISHABLE_KEY=pk_test_... # or pk_live_...
 
 # Optional
 VITE_ALLTERNIT_GATEWAY_URL=https://api.allternit.com
-VITE_ALLTERNIT_CLOUD_API_URL=https://allternit-cloud-api.fly.dev
+VITE_ALLTERNIT_CLOUD_API_URL=https://api.allternit.com
 VITE_DEV_AUTH_BYPASS=1                 # only in local dev; mocks a signed-in user when no Clerk key is present
 ```
 

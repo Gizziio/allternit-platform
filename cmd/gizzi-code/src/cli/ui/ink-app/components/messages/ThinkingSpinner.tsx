@@ -16,5 +16,5 @@ export function ThinkingSpinner(): React.ReactNode {
     return () => clearInterval(interval)
   }, [])
 
-  return <Text color="claude">{FRAMES[frame]}</Text>
+  return <Text color="gizzi">{FRAMES[frame]}</Text>
 }

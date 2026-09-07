@@ -1,5 +1,6 @@
 // @ts-nocheck
 import type { AppState } from '../../state/AppState.js'
+import { readGizziEnv } from '@/shared/utils/gizziEnv.js';
 import { logForDebugging } from '../debug.js'
 import { updateHooksConfigSnapshot } from '../hooks/hooksConfigSnapshot.js'
 import { loadAllPermissionRulesFromDisk } from '../permissions/permissionsLoader.js'
@@ -61,7 +62,7 @@ export function applySettingsChange(
     // Ant-only: re-strip overly broad Bash allow rules after settings sync
     if (
       process.env.USER_TYPE === 'ant' &&
-      process.env.CLAUDE_CODE_ENTRYPOINT !== 'local-agent'
+      readGizziEnv('ENTRYPOINT') !== 'local-agent'
     ) {
       const overlyBroad = getPermissionSetupModule().findOverlyBroadBashPermissions(
         updatedRules,

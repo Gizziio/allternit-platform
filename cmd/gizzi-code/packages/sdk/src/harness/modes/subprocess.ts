@@ -7,8 +7,8 @@ import {
   APIError,
   APIConnectionError,
   APIUserAbortError,
-} from '../../providers/anthropic';
-import { AllternitError } from '../../providers/anthropic/core/error';
+} from '../../providers/allternit';
+import { AllternitError } from '../../providers/allternit/core/error';
 import type {
   SubprocessConfig,
   StreamRequest,

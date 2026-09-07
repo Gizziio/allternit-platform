@@ -2279,6 +2279,7 @@ impl ExecutionDriver for FirecrackerDriver {
             message: Some(message),
             active_executions: active_count,
             available_capacity: self.capabilities().max_resources,
+            capabilities: vec!["linux".to_string()],
         })
     }
 }

@@ -1,0 +1,104 @@
+name: Build Allternit Desktop Image
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'cmd/allternit-computer-cloud/guest/**'
+      - 'cmd/allternit-mux/**'
+      - '.github/workflows/desktop-image.yml'
+  workflow_dispatch:
+    inputs:
+      image_name:
+        description: 'Incus image alias to publish'
+        required: true
+        default: 'allternit-desktop'
+      import_to_vps:
+        description: 'Import the built image into the VPS Incus daemon'
+        required: true
+        default: 'false'
+
+jobs:
+  build-linux-desktop:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Incus
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y snapd
+          sudo snap install incus --classic
+          sudo usermod -aG incus-admin $USER
+          newgrp incus-admin <<'NEWGRP'
+          incus admin init --auto
+          NEWGRP
+
+      - name: Install Rust
+        uses: dtolnay/rust-action@stable
+
+      - name: Build allternit-mux
+        run: |
+          cd cmd/allternit-mux
+          cargo build --release
+
+      - name: Build desktop image
+        env:
+          MUX_SRC_DIR: ${{ github.workspace }}/cmd/allternit-mux
+          IMAGE_NAME: ${{ github.event.inputs.image_name || 'allternit-desktop' }}
+        run: |
+          sudo -E cmd/allternit-computer-cloud/guest/build-image.sh
+
+      - name: Export image artifact
+        run: |
+          mkdir -p artifacts
+          incus image export "${{ github.event.inputs.image_name || 'allternit-desktop' }}" \
+            "artifacts/allternit-desktop-${{ github.run_id }}"
+
+      - name: Upload image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: allternit-desktop-image
+          path: artifacts/*
+          retention-days: 7
+
+  import-to-vps:
+    needs: build-linux-desktop
+    runs-on: ubuntu-24.04
+    if: github.event.inputs.import_to_vps == 'true'
+    steps:
+      - name: Download image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: allternit-desktop-image
+          path: artifacts
+
+      - name: Install SSH key
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/vps.key
+          chmod 600 ~/.ssh/vps.key
+          cat >> ~/.ssh/config <<EOF
+          Host vps
+            HostName $VPS_HOST
+            User root
+            IdentityFile ~/.ssh/vps.key
+            StrictHostKeyChecking no
+          EOF
+
+      - name: Import image into VPS Incus
+        env:
+          IMAGE_NAME: ${{ github.event.inputs.image_name || 'allternit-desktop' }}
+        run: |
+          IMAGE_TAR=$(find artifacts -name '*.tar.gz' | head -n1)
+          if [ -z "$IMAGE_TAR" ]; then
+            echo "No exported image tarball found" >&2
+            exit 1
+          fi
+          scp "$IMAGE_TAR" vps:/tmp/allternit-desktop-image.tar.gz
+          ssh vps "incus image import /tmp/allternit-desktop-image.tar.gz --alias $IMAGE_NAME && rm -f /tmp/allternit-desktop-image.tar.gz"
+          echo "Imported $IMAGE_NAME from $IMAGE_TAR"

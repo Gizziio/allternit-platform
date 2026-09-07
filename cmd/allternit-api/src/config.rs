@@ -72,6 +72,11 @@ pub struct CompanyConfig {
     #[serde(rename = "railsUrl")]
     pub rails_url: Option<String>,
 
+    /// Canonical AllternitOS lease authority. Unset means fabric lease
+    /// issuance returns 503 until production configures it.
+    #[serde(rename = "allternitOSLeaseAuthorityUrl")]
+    pub allternitos_lease_authority_url: Option<String>,
+
     /// Rails workspace ID for this packaged deployment.
     #[serde(rename = "railsWorkspaceId")]
     pub rails_workspace_id: Option<String>,
@@ -102,6 +107,12 @@ pub struct CompanyConfig {
     /// Name of the company-level permission policy that is active by default.
     #[serde(rename = "activePermissionPolicy", default)]
     pub active_permission_policy: Option<String>,
+
+    /// When true, tools that can execute code or mutate the host filesystem
+    /// (shell.exec, file.write, system.env, etc.) are allowed. Defaults to
+    /// false so local-computer access is opt-in.
+    #[serde(rename = "hostControlEnabled", default)]
+    pub host_control_enabled: Option<bool>,
 }
 
 /// User-level configuration. Written by the onboarding wizard and the settings
@@ -176,6 +187,11 @@ pub struct UserConfig {
     /// Name of the active permission policy. Overrides the company-level default.
     #[serde(rename = "activePermissionPolicy", default)]
     pub active_permission_policy: Option<String>,
+
+    /// Per-user override for enabling host-control tools. The company default
+    /// still applies when this is unset.
+    #[serde(rename = "hostControlEnabled", default)]
+    pub host_control_enabled: Option<bool>,
 }
 
 /// Tracks when the first-start / env wizard last ran so the app can prompt
@@ -231,6 +247,14 @@ impl AppConfig {
             .ok()
             .and_then(|p| p.parse().ok())
             .unwrap_or(8013)
+    }
+
+    /// Port the dedicated inbound webhook receiver listens on.
+    pub fn webhook_receiver_port(&self) -> u16 {
+        std::env::var("ALLTERNIT_WEBHOOK_RECEIVER_PORT")
+            .ok()
+            .and_then(|p| p.parse().ok())
+            .unwrap_or(8080)
     }
 
     /// URL the API uses to reach the Gizzi runtime.
@@ -373,6 +397,16 @@ impl AppConfig {
             .filter(|s| !s.is_empty())
     }
 
+    /// One-time setup token for self-hosted deployments. When configured, the
+    /// onboarding wizard can authenticate its save-config call by sending this
+    /// value in the `X-Allternit-Self-Hosted-Token` header, bypassing Clerk JWT
+    /// verification. `None` disables the path.
+    pub fn self_hosted_setup_token(&self) -> Option<String> {
+        std::env::var("ALLTERNIT_SELF_HOSTED_SETUP_TOKEN")
+            .ok()
+            .filter(|s| !s.is_empty())
+    }
+
     /// Secret used to sign enrollment tokens for user-profile consent URLs.
     /// Falls back to the platform encryption key so a packaged deployment has
     /// a stable secret without extra configuration; explicit value preferred.
@@ -389,6 +423,19 @@ impl AppConfig {
             .tenant_id
             .clone()
             .unwrap_or_else(|| "default".to_string())
+    }
+
+    /// URL of the canonical AllternitOS lease authority.
+    pub fn allternitos_lease_authority_url(&self) -> Option<String> {
+        std::env::var("ALLTERNITOS_LEASE_AUTHORITY_URL")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .or_else(|| {
+                self.company
+                    .allternitos_lease_authority_url
+                    .clone()
+                    .filter(|s| !s.is_empty())
+            })
     }
 
     /// URL the frontend should use to reach the API.
@@ -414,6 +461,15 @@ impl AppConfig {
             .ok()
             .map(|v| v.eq_ignore_ascii_case("true") || v == "1")
             .unwrap_or(false)
+    }
+
+    /// Origins allowed to make cross-origin browser calls, from
+    /// `ALLTERNIT_CORS_ORIGINS` (comma-separated). When unset or empty, the
+    /// [`crate::cors::DEFAULT_ALLOWED_ORIGINS`] list is used. Requests without
+    /// an `Origin` header (non-browser clients) are never CORS-gated.
+    pub fn cors_origins(&self) -> Vec<axum::http::HeaderValue> {
+        let raw = std::env::var("ALLTERNIT_CORS_ORIGINS").ok();
+        crate::cors::parse_allowed_origins(raw.as_deref())
     }
 
     /// When true, the app is running in self-hosted mode. Clerk is not required
@@ -563,6 +619,16 @@ impl AppConfig {
         parsed.unwrap_or(26400..=26419)
     }
 
+    /// Cloud desktop control-plane URL. Used by the `cloud-desktop` vmOperator
+    /// provider to provision a remote virtual computer without changing the
+    /// agent's selected brain.
+    pub fn cloud_desktop_url(&self) -> String {
+        std::env::var("ALLTERNIT_CLOUD_DESKTOP_URL")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| "http://localhost:57110".to_string())
+    }
+
     /// Ollama base URL.
     pub fn ollama_url(&self) -> String {
         std::env::var("OLLAMA_URL")
@@ -630,6 +696,19 @@ impl AppConfig {
             .ok()
             .filter(|s| !s.is_empty())
             .unwrap_or_else(|| "http://127.0.0.1:8760".to_string())
+    }
+
+    /// Whether tools that can execute arbitrary code or read sensitive host
+    /// state (shell.exec, file.write, system.env, local VM fallback, etc.) are
+    /// enabled. Local-computer / host-control access is opt-in and defaults to
+    /// false. Resolution order: env > user config > company config > false.
+    pub fn host_control_enabled(&self) -> bool {
+        std::env::var("ALLTERNIT_HOST_CONTROL_ENABLED")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .or(self.user.host_control_enabled)
+            .or(self.company.host_control_enabled)
+            .unwrap_or(false)
     }
 
     /// Office engine (services/office-engine) base URL. The TypeScript Hono
@@ -726,6 +805,13 @@ impl AppConfig {
         if let Ok(v) = std::env::var("ALLTERNIT_PUSH_WORKER_URL") {
             if !v.is_empty() {
                 self.user.push_worker_url = Some(v);
+            }
+        }
+        if let Ok(v) = std::env::var("ALLTERNIT_HOST_CONTROL_ENABLED") {
+            if !v.is_empty() {
+                if let Ok(b) = v.parse::<bool>() {
+                    self.user.host_control_enabled = Some(b);
+                }
             }
         }
     }
@@ -849,6 +935,8 @@ pub struct SaveUserConfigPayload {
     pub cron_daemon_url: Option<String>,
     #[serde(rename = "etridUrl")]
     pub etrid_url: Option<String>,
+    #[serde(rename = "hostControlEnabled")]
+    pub host_control_enabled: Option<bool>,
     #[serde(rename = "wizard")]
     pub wizard: Option<WizardState>,
 }
@@ -871,6 +959,7 @@ impl From<SaveUserConfigPayload> for UserConfig {
             agent_workdir: payload.agent_workdir,
             cron_daemon_url: payload.cron_daemon_url,
             etrid_url: payload.etrid_url,
+            host_control_enabled: payload.host_control_enabled,
             push_worker_url: None,
             wizard: payload.wizard,
             permission_policies: None,

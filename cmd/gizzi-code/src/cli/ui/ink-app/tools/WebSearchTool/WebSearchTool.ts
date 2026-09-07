@@ -2,7 +2,7 @@
 import type {
   BetaContentBlock,
   BetaWebSearchTool20250305,
-} from '@allternit/sdk/providers/anthropic/resources/beta/messages/messages.mjs'
+} from '@allternit/gizzi-sdk/providers/allternit/resources/beta/messages/messages.mjs'
 import { getAPIProvider } from './../../utils/model/providers.ts'
 import type { PermissionResult } from './../../utils/permissions/PermissionResult.ts'
 import { z } from 'zod/v4'
@@ -156,7 +156,7 @@ export const WebSearchTool = buildTool({
   maxResultSizeChars: 100_000,
   shouldDefer: true,
   async description(input) {
-    return `Claude wants to search the web for: ${input.query}`
+    return `Gizzi wants to search the web for: ${input.query}`
   },
   userFacingName() {
     return 'Web Search'

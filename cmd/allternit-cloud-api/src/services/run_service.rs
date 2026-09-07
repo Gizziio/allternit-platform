@@ -9,7 +9,7 @@ use crate::runtime::{ApprovalHook, ApprovalOptions, ApprovalResult};
 use crate::services::EventStore;
 use async_trait::async_trait;
 use chrono::Utc;
-use sqlx::SqlitePool;
+use sqlx::PgPool;
 use std::sync::Arc;
 use tokio::time::Duration;
 use uuid::Uuid;
@@ -151,13 +151,13 @@ pub struct RunListFilter {
 
 /// Implementation of RunService using SQLite/Postgres
 pub struct RunServiceImpl {
-    db: SqlitePool,
+    db: PgPool,
     event_store: Option<Arc<dyn EventStore>>,
 }
 
 impl RunServiceImpl {
     /// Create a new RunServiceImpl
-    pub fn new(db: SqlitePool) -> Self {
+    pub fn new(db: PgPool) -> Self {
         Self {
             db,
             event_store: None,
@@ -165,8 +165,8 @@ impl RunServiceImpl {
     }
 
     /// Create from an existing pool reference
-    pub fn from_arc(db: Arc<SqlitePool>) -> Self {
-        // This is a bit of a workaround - ideally we'd use Arc<SqlitePool> everywhere
+    pub fn from_arc(db: Arc<PgPool>) -> Self {
+        // This is a bit of a workaround - ideally we'd use Arc<PgPool> everywhere
         // For now, we clone the pool (which is cheap for sqlx)
         Self {
             db: (*db).clone(),
@@ -192,7 +192,7 @@ impl RunServiceImpl {
             SELECT ci.provider, ci.region, ci.instance_type
             FROM cloud_instances ci
             JOIN runs r ON ci.run_id = r.id
-            WHERE r.id = ?
+            WHERE r.id = $1
             "#,
         )
         .bind(run_id)
@@ -301,7 +301,7 @@ impl RunServiceImpl {
                 if start.elapsed() >= max {
                     // Update approval status to timed out
                     sqlx::query(
-                        "UPDATE approval_requests SET status = ? WHERE id = ? AND status = ?",
+                        "UPDATE approval_requests SET status = $1 WHERE id = $2 AND status = $3",
                     )
                     .bind(ApprovalStatus::TimedOut)
                     .bind(approval_id)
@@ -330,7 +330,7 @@ impl RunServiceImpl {
 
             // Check approval status
             let status: Option<(ApprovalStatus, Option<String>, Option<sqlx::types::Json<serde_json::Value>>)> = sqlx::query_as(
-                "SELECT status, response_message, action_params FROM approval_requests WHERE id = ?"
+                "SELECT status, response_message, action_params FROM approval_requests WHERE id = $1"
             )
             .bind(approval_id)
             .fetch_optional(&self.db)
@@ -385,7 +385,7 @@ impl RunService for RunServiceImpl {
                 id, name, description, mode, status, step_cursor, total_steps, completed_steps,
                 config, owner_id, tenant_id, runtime_id, runtime_type, schedule_id, region_id,
                 created_at, updated_at, started_at, completed_at, error_message, error_details
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
             RETURNING *
             "#,
         )
@@ -426,7 +426,7 @@ impl RunService for RunServiceImpl {
     }
 
     async fn get(&self, run_id: &str) -> Result<Run, ApiError> {
-        let run = sqlx::query_as::<_, Run>("SELECT * FROM runs WHERE id = ?")
+        let run = sqlx::query_as::<_, Run>("SELECT * FROM runs WHERE id = $1")
             .bind(run_id)
             .fetch_optional(&self.db)
             .await
@@ -485,7 +485,7 @@ impl RunService for RunServiceImpl {
             query.push_str(&conditions.join(" AND "));
         }
 
-        query.push_str(" ORDER BY created_at DESC LIMIT ? OFFSET ?");
+        query.push_str(" ORDER BY created_at DESC LIMIT $1 OFFSET $2");
 
         let mut sql_query = sqlx::query_as::<_, RunSummary>(&query);
 
@@ -545,8 +545,8 @@ impl RunService for RunServiceImpl {
         let updated = sqlx::query_as::<_, Run>(
             r#"
             UPDATE runs 
-            SET name = ?, description = ?, updated_at = ?
-            WHERE id = ?
+            SET name = $1, description = $2, updated_at = $3
+            WHERE id = $4
             RETURNING *
             "#,
         )
@@ -562,7 +562,7 @@ impl RunService for RunServiceImpl {
     }
 
     async fn delete(&self, run_id: &str) -> Result<(), ApiError> {
-        let result = sqlx::query("DELETE FROM runs WHERE id = ?")
+        let result = sqlx::query("DELETE FROM runs WHERE id = $1")
             .bind(run_id)
             .execute(&self.db)
             .await
@@ -604,8 +604,8 @@ impl RunService for RunServiceImpl {
         let updated = sqlx::query_as::<_, Run>(
             r#"
             UPDATE runs 
-            SET status = ?, updated_at = ?, started_at = ?, completed_at = ?
-            WHERE id = ?
+            SET status = $1, updated_at = $2, started_at = $3, completed_at = $4
+            WHERE id = $5
             RETURNING *
             "#,
         )
@@ -728,8 +728,8 @@ impl RunService for RunServiceImpl {
         sqlx::query(
             r#"
             UPDATE approval_requests 
-            SET status = ?, responded_at = ?
-            WHERE run_id = ? AND status = ?
+            SET status = $1, responded_at = $2
+            WHERE run_id = $3 AND status = $4
             "#,
         )
         .bind(ApprovalStatus::Cancelled)
@@ -746,8 +746,8 @@ impl RunService for RunServiceImpl {
         let updated = sqlx::query_as::<_, Run>(
             r#"
             UPDATE runs 
-            SET status = ?, updated_at = ?, completed_at = ?, error_message = ?
-            WHERE id = ?
+            SET status = $1, updated_at = $2, completed_at = $3, error_message = $4
+            WHERE id = $5
             RETURNING *
             "#,
         )
@@ -793,8 +793,8 @@ impl RunService for RunServiceImpl {
         let updated = sqlx::query_as::<_, Run>(
             r#"
             UPDATE runs 
-            SET status = ?, updated_at = ?, completed_at = ?, error_message = ?, error_details = ?
-            WHERE id = ?
+            SET status = $1, updated_at = $2, completed_at = $3, error_message = $4, error_details = $5
+            WHERE id = $6
             RETURNING *
             "#,
         )
@@ -826,8 +826,8 @@ impl RunService for RunServiceImpl {
         let updated = sqlx::query_as::<_, Run>(
             r#"
             UPDATE runs 
-            SET step_cursor = ?, completed_steps = ?, total_steps = ?, updated_at = ?
-            WHERE id = ?
+            SET step_cursor = $1, completed_steps = $2, total_steps = $3, updated_at = $4
+            WHERE id = $5
             RETURNING *
             "#,
         )
@@ -852,8 +852,8 @@ impl RunService for RunServiceImpl {
         let updated = sqlx::query_as::<_, Run>(
             r#"
             UPDATE runs 
-            SET runtime_id = ?, runtime_type = ?, updated_at = ?
-            WHERE id = ?
+            SET runtime_id = $1, runtime_type = $2, updated_at = $3
+            WHERE id = $4
             RETURNING *
             "#,
         )
@@ -894,7 +894,7 @@ impl RunService for RunServiceImpl {
                 reasoning, requested_by, responded_by, response_message,
                 timeout_seconds, created_at, responded_at
             FROM approval_requests
-            WHERE id = ?
+            WHERE id = $1
             "#,
         )
         .bind(approval_id)
@@ -918,7 +918,7 @@ impl RunService for RunServiceImpl {
                 r#"
                 SELECT id, run_id, status, priority, title, action_type, created_at, responded_at
                 FROM approval_requests
-                WHERE run_id = ? AND status = ?
+                WHERE run_id = $1 AND status = $2
                 ORDER BY 
                     CASE priority
                         WHEN 'critical' THEN 1
@@ -939,7 +939,7 @@ impl RunService for RunServiceImpl {
                 r#"
                 SELECT id, run_id, status, priority, title, action_type, created_at, responded_at
                 FROM approval_requests
-                WHERE run_id = ?
+                WHERE run_id = $1
                 ORDER BY 
                     CASE priority
                         WHEN 'critical' THEN 1
@@ -977,8 +977,8 @@ impl RunService for RunServiceImpl {
         sqlx::query(
             r#"
             UPDATE approval_requests
-            SET status = ?, responded_by = ?, response_message = ?, responded_at = ?
-            WHERE id = ? AND status = ?
+            SET status = $1, responded_by = $2, response_message = $3, responded_at = $4
+            WHERE id = $5 AND status = $6
             "#,
         )
         .bind(new_status)
@@ -1027,7 +1027,7 @@ impl RunService for RunServiceImpl {
         request: CreateCheckpointRequest,
     ) -> Result<Checkpoint, ApiError> {
         // Verify run exists
-        let run: Option<Run> = sqlx::query_as("SELECT * FROM runs WHERE id = ?")
+        let run: Option<Run> = sqlx::query_as("SELECT * FROM runs WHERE id = $1")
             .bind(run_id)
             .fetch_optional(&self.db)
             .await
@@ -1045,7 +1045,7 @@ impl RunService for RunServiceImpl {
             INSERT INTO checkpoints (
                 id, run_id, name, description, step_cursor,
                 workspace_state, approval_state, context, resumable, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             "#,
         )
         .bind(&checkpoint_id)
@@ -1063,7 +1063,7 @@ impl RunService for RunServiceImpl {
         .map_err(ApiError::DatabaseError)?;
 
         // Fetch and return the created checkpoint
-        let checkpoint: Checkpoint = sqlx::query_as("SELECT * FROM checkpoints WHERE id = ?")
+        let checkpoint: Checkpoint = sqlx::query_as("SELECT * FROM checkpoints WHERE id = $1")
             .bind(&checkpoint_id)
             .fetch_one(&self.db)
             .await
@@ -1091,7 +1091,7 @@ impl RunService for RunServiceImpl {
             r#"
             SELECT id, name, step_cursor, resumable, created_at
             FROM checkpoints
-            WHERE run_id = ?
+            WHERE run_id = $1
             ORDER BY created_at DESC
             "#,
         )
@@ -1105,7 +1105,7 @@ impl RunService for RunServiceImpl {
 
     async fn get_checkpoint(&self, checkpoint_id: &str) -> Result<Checkpoint, ApiError> {
         let checkpoint: Option<Checkpoint> =
-            sqlx::query_as("SELECT * FROM checkpoints WHERE id = ?")
+            sqlx::query_as("SELECT * FROM checkpoints WHERE id = $1")
                 .bind(checkpoint_id)
                 .fetch_optional(&self.db)
                 .await
@@ -1117,7 +1117,7 @@ impl RunService for RunServiceImpl {
 
     async fn restore_checkpoint(&self, run_id: &str, checkpoint_id: &str) -> Result<Run, ApiError> {
         // Get checkpoint
-        let checkpoint: Checkpoint = sqlx::query_as("SELECT * FROM checkpoints WHERE id = ?")
+        let checkpoint: Checkpoint = sqlx::query_as("SELECT * FROM checkpoints WHERE id = $1")
             .bind(checkpoint_id)
             .fetch_optional(&self.db)
             .await
@@ -1144,8 +1144,8 @@ impl RunService for RunServiceImpl {
         let run: Run = sqlx::query_as(
             r#"
             UPDATE runs
-            SET status = ?, step_cursor = ?, updated_at = ?
-            WHERE id = ?
+            SET status = $1, step_cursor = $2, updated_at = $3
+            WHERE id = $4
             RETURNING *
             "#,
         )
@@ -1158,7 +1158,7 @@ impl RunService for RunServiceImpl {
         .map_err(ApiError::DatabaseError)?;
 
         // Update checkpoint restored_at
-        sqlx::query("UPDATE checkpoints SET restored_at = ? WHERE id = ?")
+        sqlx::query("UPDATE checkpoints SET restored_at = $1 WHERE id = $2")
             .bind(now)
             .bind(checkpoint_id)
             .execute(&self.db)
@@ -1182,7 +1182,7 @@ impl RunService for RunServiceImpl {
     }
 
     async fn delete_checkpoint(&self, checkpoint_id: &str) -> Result<(), ApiError> {
-        let result = sqlx::query("DELETE FROM checkpoints WHERE id = ?")
+        let result = sqlx::query("DELETE FROM checkpoints WHERE id = $1")
             .bind(checkpoint_id)
             .execute(&self.db)
             .await
@@ -1242,7 +1242,7 @@ impl ApprovalHook for RunServiceImpl {
                 id, run_id, step_cursor, status, priority,
                 title, description, action_type, action_params,
                 reasoning, requested_by, timeout_seconds, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
             "#,
         )
         .bind(&approval_id)
@@ -1306,7 +1306,7 @@ impl ApprovalHook for RunServiceImpl {
             Option<String>,
             Option<sqlx::types::Json<serde_json::Value>>,
         )> = sqlx::query_as(
-            "SELECT status, response_message, action_params FROM approval_requests WHERE id = ?",
+            "SELECT status, response_message, action_params FROM approval_requests WHERE id = $1",
         )
         .bind(approval_id)
         .fetch_optional(&self.db)
@@ -1338,8 +1338,8 @@ impl ApprovalHook for RunServiceImpl {
         let result = sqlx::query(
             r#"
             UPDATE approval_requests
-            SET status = ?, responded_at = ?
-            WHERE id = ? AND status = ?
+            SET status = $1, responded_at = $2
+            WHERE id = $3 AND status = $4
             "#,
         )
         .bind(ApprovalStatus::Cancelled)
@@ -1353,7 +1353,7 @@ impl ApprovalHook for RunServiceImpl {
         if result.rows_affected() == 0 {
             // Check if it exists but was already resolved
             let exists: bool =
-                sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM approval_requests WHERE id = ?)")
+                sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM approval_requests WHERE id = $1)")
                     .bind(approval_id)
                     .fetch_one(&self.db)
                     .await

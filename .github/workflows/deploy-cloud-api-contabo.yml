@@ -1,0 +1,131 @@
+name: Deploy Cloud API to Contabo (Tailscale)
+
+# CI/CD for the Allternit Cloud control plane: build + full test suite on every
+# qualifying push, then deploy the Linux binary to the Contabo control plane
+# ("mail", 100.108.37.126) over the Tailscale network. No public SSH exposure.
+#
+# Required GitHub secrets (Tailscale OAuth client — create at
+# https://login.tailscale.com/admin/settings/oauth with the "auth_keys" write
+# scope, tagged tag:ci):
+#   TS_OAUTH_CLIENT_ID      OAuth client ID
+#   TS_OAUTH_CLIENT_SECRET  OAuth client secret
+# Optional:
+#   CONTABO_SSH_KEY   SSH private key for root@mail. Omit when your tailnet
+#                     ACL grants the ci tag Tailscale SSH access to mail.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'cmd/allternit-cloud-api/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.github/workflows/deploy-cloud-api-contabo.yml'
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: allternit
+          POSTGRES_PASSWORD: allternit_pg_2026
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U allternit"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-gnu
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-contabo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-contabo-
+
+      - name: Create test database
+        run: psql "postgres://allternit:allternit_pg_2026@localhost:5432/postgres" -c "CREATE DATABASE allternit_test"
+
+      # Full suite in release mode, mirroring the VPS deploy loop. Docker is
+      # available on the runner, so the contabo provision test runs too.
+      - name: Test
+        run: cargo test --release --target x86_64-unknown-linux-gnu -p allternit-cloud-api --lib
+
+  deploy:
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-gnu
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-contabo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-contabo-
+
+      - name: Build release binary
+        run: cargo build --release --target x86_64-unknown-linux-gnu -p allternit-cloud-api
+
+      - name: Join Tailscale network
+        # Public-IP SSH (CONTABO_SSH_KEY → root@45.84.138.187) is the deploy
+        # path that actually works today. Tailscale SSH to 100.108.37.126 sits
+        # in interactive-check mode and hangs without a tag:ci ACL rule, so
+        # a failed join must not block the swap.
+        continue-on-error: true
+        uses: tailscale/github-action@v3
+        with:
+          oauth_client_id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth_client_secret: ${{ secrets.TS_OAUTH_CLIENT_SECRET }}
+          tags: tag:ci
+
+      - name: Deploy to mail
+        env:
+          # Tailnet IP (100.108.37.126) hangs under Tailscale SSH check-mode.
+          # Public IP + CONTABO_SSH_KEY is the working root path.
+          CONTABO_DEPLOY_HOST: 45.84.138.187
+          CONTABO_DEPLOY_USER: root
+          CONTABO_SSH_KEY: ${{ secrets.CONTABO_SSH_KEY }}
+        run: |
+          if [ -n "$CONTABO_SSH_KEY" ]; then
+            echo "$CONTABO_SSH_KEY" > /tmp/deploy_key
+            chmod 600 /tmp/deploy_key
+            export CONTABO_SSH_KEY=/tmp/deploy_key
+          else
+            echo "No CONTABO_SSH_KEY secret — relying on Tailscale SSH (ACL must allow tag:ci -> root on mail)."
+            unset CONTABO_SSH_KEY
+          fi
+          bash cmd/allternit-cloud-api/deploy-contabo.sh \
+            target/x86_64-unknown-linux-gnu/release/allternit-cloud-api
+          rm -f /tmp/deploy_key

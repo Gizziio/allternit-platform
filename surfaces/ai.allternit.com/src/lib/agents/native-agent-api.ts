@@ -21,6 +21,8 @@
 import type { ArtifactUIPart } from "@/lib/ai/ui-parts.types";
 import { buildAuthHeaders } from "@/lib/agents/api-config";
 import { getActiveRuntimeId, getRuntimeExecutionTarget } from "@/lib/runtime-target";
+import { getCloudApiBaseUrl, isAgentSessionsApiEnabled, isDesktopOperatorShell } from "@/lib/env";
+import { createCloudApiEventSource } from "@/lib/cloud-api";
 
 /**
  * Wrapper around fetch that injects the user's bearer token / desktop session
@@ -69,12 +71,27 @@ function getGatewayOrigin(): string {
 }
 
 const getApiV1Base = () => `${getGatewayOrigin()}/api/v1`;
-const getAgentSessionBase = () => `${getApiV1Base()}/agent-sessions`;
+// When the agent-sessions control-plane flag is on, the agent-sessions
+// namespace is served by the cloud-api control plane (Clerk auth → user's
+// data-plane node → relay), not the 8013 gateway. The `/api/v1/canvases/:id`
+// routes used by canvasApi.getCanvas/updateCanvas/deleteCanvas are NOT part
+// of that namespace and stay on the gateway base.
+const getAgentSessionBase = () =>
+  isAgentSessionsApiEnabled() && !isDesktopOperatorShell()
+    ? `${getCloudApiBaseUrl()}/api/v1/agent-sessions`
+    : `${getApiV1Base()}/agent-sessions`;
+
+// Cache the backend agent-sessions availability so we stop probing an
+// unimplemented endpoint after the first failure.
+let agentSessionsUnavailable = false;
+let listSessionsPromise: Promise<BackendSession[]> | null = null;
 const getToolsBase = () => getApiV1Base();
 const getRuntimeBase = () => getApiV1Base();
 // chat: local desktop uses Next.js /api/agent-chat; tunnel rewrites /api/v1/agent-chat → /agent-chat on allternit-api
 // Returns base such that appending /agent-chat gives the correct URL in both environments
 const getAgentChatBase = () => getGatewayOrigin() ? `${getGatewayOrigin()}/api/v1` : '/api';
+const getAgentChatUrl = () =>
+  isDesktopOperatorShell() ? `${getApiV1Base()}/ai/chat` : `${getAgentChatBase()}/agent-chat`;
 
 // ============================================================================
 // Types - Backend API Response Shapes
@@ -172,8 +189,8 @@ export interface CreateNativeAgentSessionRequest {
   model?: BrainRef;
   tags?: string[];
   metadata?: Record<string, unknown>;
-  /** Origin surface (chat, cowork, code, browser) */
-  origin_surface?: "chat" | "cowork" | "code" | "browser" | "design";
+  /** Origin surface (chat, cowork, bot, code, browser) */
+  origin_surface?: "chat" | "cowork" | "bot" | "code" | "browser" | "design";
   /** Session mode (regular or agent) */
   session_mode?: "regular" | "agent";
   /** Project identifier */
@@ -186,6 +203,8 @@ export interface CreateNativeAgentSessionRequest {
     tools?: boolean;
     automation?: boolean;
   };
+  /** Ephemeral sessions are excluded from lists and purged on abort. */
+  ephemeral?: boolean;
 }
 
 export interface SessionCreatedEvent extends BackendSessionSnapshot {
@@ -462,9 +481,29 @@ export const sessionApi = {
    * GET /api/v1/agent-sessions
    */
   async listSessions(): Promise<BackendSession[]> {
-    const response = await authFetch(getAgentSessionBase());
-    const data = await handleResponse<BackendSessionListResponse>(response);
-    return data.sessions.map(normalizeSessionPayload);
+    if (agentSessionsUnavailable) {
+      return [];
+    }
+    if (listSessionsPromise) {
+      return listSessionsPromise;
+    }
+    listSessionsPromise = (async () => {
+      try {
+        // Authenticated fetch is required: against the cloud-api control
+        // plane (flag on) an unauthenticated list would 401.
+        const response = await authFetch(getAgentSessionBase());
+        const data = await handleResponse<BackendSessionListResponse>(response);
+        return data.sessions.map(normalizeSessionPayload);
+      } catch (error) {
+        if (error instanceof NativeAgentApiError && [501, 502, 503].includes(error.statusCode)) {
+          agentSessionsUnavailable = true;
+        }
+        throw error;
+      } finally {
+        listSessionsPromise = null;
+      }
+    })();
+    return listSessionsPromise;
   },
 
   /**
@@ -520,7 +559,7 @@ export const sessionApi = {
       active?: boolean;
       tags?: string[];
       metadata?: Record<string, unknown>;
-      origin_surface?: "chat" | "cowork" | "code" | "browser" | "design";
+      origin_surface?: "chat" | "cowork" | "bot" | "code" | "browser" | "design";
       session_mode?: "regular" | "agent";
       project_id?: string;
       workspace_scope?: string;
@@ -608,8 +647,15 @@ export const sessionApi = {
   /**
    * Open the session sync SSE channel.
    * GET /api/v1/agent-sessions/sync
+   *
+   * When the control-plane flag is on this streams from cloud-api with
+   * authenticated fetch (cloud-api accepts Bearer only, no session cookie, so
+   * a plain EventSource cannot authenticate).
    */
   createSyncSource(): EventSource {
+    if (isAgentSessionsApiEnabled()) {
+      return createCloudApiEventSource("/api/v1/agent-sessions/sync");
+    }
     return new EventSource(`${getAgentSessionBase()}/sync`);
   },
 };
@@ -676,7 +722,7 @@ export const chatApi = {
     signal?: AbortSignal,
     agentContext?: AgentContext,
   ): Promise<void> {
-    const response = await authFetch(`${getAgentChatBase()}/agent-chat`, {
+    const response = await authFetch(getAgentChatUrl(), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ chatId: sessionId, message, runtimeModelId: modelId, ...(agentContext ?? {}) }),

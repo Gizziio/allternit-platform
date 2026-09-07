@@ -5,20 +5,34 @@
  * This module provides the single source of truth for the plugins directory path.
  * It supports switching between 'plugins' and 'cowork_plugins' directories via:
  * - CLI flag: --cowork
- * - Environment variable: CLAUDE_CODE_USE_COWORK_PLUGINS
+ * - Environment variable: GIZZI_CODE_USE_COWORK_PLUGINS
  *
- * The base directory can be overridden via CLAUDE_CODE_PLUGIN_CACHE_DIR.
+ * The base directory can be overridden via GIZZI_CODE_PLUGIN_CACHE_DIR.
+ *
+ * Canonical location is ~/.gizzi/plugins (gizzi-owned). The upstream-inherited
+ * ~/.claude/plugins location is kept as a READ-ONLY legacy fallback: state
+ * files (known_marketplaces.json, installed_plugins*.json) are read from
+ * legacy when the canonical copy is absent, and `gizzi plugin migrate`
+ * copies legacy content into the canonical location.
  */
 
-import { mkdirSync } from 'fs'
-import { readdir, rm, stat } from 'fs/promises'
-import { delimiter, join } from 'path'
+import { existsSync, mkdirSync } from 'fs'
+import { copyFile, mkdir, readdir, rm, stat } from 'fs/promises'
+import { delimiter, dirname, join } from 'path'
+import memoize from 'lodash-es/memoize.js'
+import { homedir } from 'os'
 import { getUseCoworkPlugins } from '../../bootstrap/state.js'
 import { logForDebugging } from '../debug.js'
-import { getClaudeConfigHomeDir, isEnvTruthy } from '../envUtils.js'
+import { getGizziConfigHomeDir, isEnvTruthy } from '../envUtils.js'
 import { errorMessage, isFsInaccessible } from '../errors.js'
 import { formatFileSize } from '../format.js'
 import { expandTilde } from '../permissions/expandTilde.js'
+
+function getLegacyClaudeHomeDir(): string {
+  return (process.env.CLAUDE_CONFIG_DIR ?? join(homedir(), '.claude')).normalize(
+    'NFC',
+  )
+}
 
 const PLUGINS_DIR = 'plugins'
 const COWORK_PLUGINS_DIR = 'cowork_plugins'
@@ -29,7 +43,7 @@ const COWORK_PLUGINS_DIR = 'cowork_plugins'
  *
  * Priority:
  * 1. Session state (set by CLI flag --cowork)
- * 2. Environment variable CLAUDE_CODE_USE_COWORK_PLUGINS
+ * 2. Environment variable GIZZI_CODE_USE_COWORK_PLUGINS
  * 3. Default: 'plugins'
  */
 function getPluginsDirectoryName(): string {
@@ -38,36 +52,175 @@ function getPluginsDirectoryName(): string {
     return COWORK_PLUGINS_DIR
   }
   // Fall back to env var
-  if (isEnvTruthy(process.env.CLAUDE_CODE_USE_COWORK_PLUGINS)) {
+  if (isEnvTruthy(process.env.GIZZI_CODE_USE_COWORK_PLUGINS)) {
     return COWORK_PLUGINS_DIR
   }
   return PLUGINS_DIR
 }
 
 /**
- * Get the full path to the plugins directory.
+ * Get the full path to the canonical plugins directory.
  *
  * Priority:
- * 1. CLAUDE_CODE_PLUGIN_CACHE_DIR env var (explicit override)
- * 2. Default: ~/.claude/plugins or ~/.claude/cowork_plugins
+ * 1. GIZZI_CODE_PLUGIN_CACHE_DIR env var (explicit override)
+ * 2. Default: ~/.gizzi/plugins or ~/.gizzi/cowork_plugins
  */
 export function getPluginsDirectory(): string {
-  // expandTilde: when CLAUDE_CODE_PLUGIN_CACHE_DIR is set via settings.json
+  // expandTilde: when GIZZI_CODE_PLUGIN_CACHE_DIR is set via settings.json
   // `env` (not shell), ~ is not expanded by the shell. Without this, a value
-  // like "~/.claude/plugins" becomes a literal `~` directory created in the
+  // like "~/.gizzi/plugins" becomes a literal `~` directory created in the
   // cwd of every project (gh-30794 / CC-212).
-  const envOverride = process.env.CLAUDE_CODE_PLUGIN_CACHE_DIR
+  const envOverride = process.env.GIZZI_CODE_PLUGIN_CACHE_DIR
   if (envOverride) {
     return expandTilde(envOverride)
   }
-  return join(getClaudeConfigHomeDir(), getPluginsDirectoryName())
+  return join(getGizziConfigHomeDir(), getPluginsDirectoryName())
+}
+
+/**
+ * The upstream-inherited plugins directory (~/.claude/plugins). Treated as
+ * READ-ONLY: existing installs keep working via fallback reads, but nothing
+ * new is written here.
+ */
+export function getLegacyPluginsDirectory(): string {
+  return join(getLegacyClaudeHomeDir(), getPluginsDirectoryName())
+}
+
+let legacyDeprecationWarned = false
+
+/**
+ * One-time-per-process deprecation notice for the legacy plugins dir.
+ * Called whenever a fallback read actually uses ~/.claude/plugins.
+ */
+export function warnLegacyPluginsDirOnce(reason: string): void {
+  if (legacyDeprecationWarned) return
+  legacyDeprecationWarned = true
+  logForDebugging(
+    `DEPRECATED: plugin state found in ${getLegacyPluginsDirectory()} — ` +
+      `${reason} Run \`gizzi plugin migrate\` to copy it to ` +
+      `${getPluginsDirectory()}. The legacy directory is read-only and will ` +
+      'stop being read in a future release.',
+    { level: 'warn' },
+  )
+}
+
+/**
+ * Resolve a state file inside the plugins directory, preferring the
+ * canonical location and falling back to the legacy one. Used for READS
+ * only — writes always go through getPluginsDirectory().
+ *
+ * @param filename - File name relative to the plugins dir
+ * @returns Absolute path to the file that should be read
+ */
+export function resolvePluginsStateFile(filename: string): string {
+  const canonical = join(getPluginsDirectory(), filename)
+  if (existsSync(canonical)) return canonical
+  const legacy = join(getLegacyPluginsDirectory(), filename)
+  if (existsSync(legacy)) {
+    warnLegacyPluginsDirOnce(`reading ${filename} from the legacy location.`)
+    return legacy
+  }
+  // Neither exists — return canonical so writes/creates land there.
+  return canonical
+}
+
+export type PluginDirsState = {
+  canonicalDir: string
+  legacyDir: string
+  canonicalExists: boolean
+  legacyExists: boolean
+  /** Legacy dir holds any plugin state (files or dirs we care about). */
+  legacyHasState: boolean
+  /** Canonical dir already holds state (i.e. migration has run/partial). */
+  canonicalHasState: boolean
+}
+
+const PLUGIN_STATE_ENTRIES = [
+  'known_marketplaces.json',
+  'installed_plugins.json',
+  'installed_plugins_v2.json',
+  'marketplaces',
+  'cache',
+  'data',
+]
+
+function dirHasAnyState(dir: string): boolean {
+  return PLUGIN_STATE_ENTRIES.some(entry => existsSync(join(dir, entry)))
+}
+
+/**
+ * Snapshot of canonical vs legacy plugin directory state, used by
+ * `gizzi doctor` and the migration prompt.
+ */
+export function getPluginDirsState(): PluginDirsState {
+  const canonicalDir = getPluginsDirectory()
+  const legacyDir = getLegacyPluginsDirectory()
+  const canonicalExists = existsSync(canonicalDir)
+  const legacyExists = existsSync(legacyDir)
+  return {
+    canonicalDir,
+    legacyDir,
+    canonicalExists,
+    legacyExists,
+    legacyHasState: legacyExists && dirHasAnyState(legacyDir),
+    canonicalHasState: canonicalExists && dirHasAnyState(canonicalDir),
+  }
+}
+
+/**
+ * Copy legacy plugin state into the canonical ~/.gizzi/plugins directory.
+ * Copies — never moves — so a bad migration cannot destroy the user's
+ * existing install; the legacy dir remains as the read-only fallback.
+ * Existing canonical files/dirs are never overwritten.
+ *
+ * @returns List of copied entries and list of skipped (already present) entries
+ */
+export async function migrateLegacyPluginsDir(): Promise<{
+  copied: string[]
+  skipped: string[]
+}> {
+  const state = getPluginDirsState()
+  const copied: string[] = []
+  const skipped: string[] = []
+
+  if (!state.legacyExists) {
+    return { copied, skipped: ['(legacy directory not present — nothing to migrate)'] }
+  }
+
+  mkdirSync(state.canonicalDir, { recursive: true })
+
+  for (const entry of PLUGIN_STATE_ENTRIES) {
+    const from = join(state.legacyDir, entry)
+    const to = join(state.canonicalDir, entry)
+    if (!existsSync(from)) continue
+    if (existsSync(to)) {
+      skipped.push(entry)
+      continue
+    }
+    await copyRecursive(from, to)
+    copied.push(entry)
+  }
+  return { copied, skipped }
+}
+
+async function copyRecursive(from: string, to: string): Promise<void> {
+  const info = await stat(from)
+  if (info.isDirectory()) {
+    await mkdir(to, { recursive: true })
+    for (const child of await readdir(from)) {
+      await copyRecursive(join(from, child), join(to, child))
+    }
+  } else {
+    await mkdir(dirname(to), { recursive: true })
+    await copyFile(from, to)
+  }
 }
 
 /**
  * Get the read-only plugin seed directories, if configured.
  *
  * Customers can pre-bake a populated plugins directory into their container
- * image and point CLAUDE_CODE_PLUGIN_SEED_DIR at it. CC will use it as a
+ * image and point GIZZI_CODE_PLUGIN_SEED_DIR at it. CC will use it as a
  * read-only fallback layer under the primary plugins directory — marketplaces
  * and plugin caches found in the seed are used in place without re-cloning.
  *
@@ -76,7 +229,7 @@ export function getPluginsDirectory(): string {
  * seed that contains a given marketplace or plugin cache wins.
  *
  * Seed structure mirrors the primary plugins directory:
- *   $CLAUDE_CODE_PLUGIN_SEED_DIR/
+ *   $GIZZI_CODE_PLUGIN_SEED_DIR/
  *     known_marketplaces.json
  *     marketplaces/<name>/...
  *     cache/<marketplace>/<plugin>/<version>/...
@@ -85,7 +238,7 @@ export function getPluginsDirectory(): string {
  */
 export function getPluginSeedDirs(): string[] {
   // Same tilde-expansion rationale as getPluginsDirectory (gh-30794).
-  const raw = process.env.CLAUDE_CODE_PLUGIN_SEED_DIR
+  const raw = process.env.GIZZI_CODE_PLUGIN_SEED_DIR
   if (!raw) return []
   return raw.split(delimiter).filter(Boolean).map(expandTilde)
 }
@@ -102,13 +255,13 @@ export function pluginDataDirPath(pluginId: string): string {
 
 /**
  * Persistent per-plugin data directory, exposed to plugins as
- * ${CLAUDE_PLUGIN_DATA}. Unlike the version-scoped install cache
- * (${CLAUDE_PLUGIN_ROOT}, which is orphaned and GC'd on every update),
+ * ${GIZZI_PLUGIN_DATA}. Unlike the version-scoped install cache
+ * (${GIZZI_PLUGIN_ROOT}, which is orphaned and GC'd on every update),
  * this survives plugin updates — only removed on last-scope uninstall.
  *
  * Creates the directory on call (mkdir). The *lazy* behavior is at the
  * substitutePluginVariables call site — the DATA pattern uses function-form
- * .replace() so this isn't invoked unless ${CLAUDE_PLUGIN_DATA} is present
+ * .replace() so this isn't invoked unless ${GIZZI_PLUGIN_DATA} is present
  * (ROOT also uses function-form, but for $-pattern safety, not laziness).
  * Env-var export sites (MCP/LSP server env, hook env) call this eagerly
  * since subprocesses may expect the dir to exist before writing to it.

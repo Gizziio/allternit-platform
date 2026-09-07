@@ -30,7 +30,7 @@ import { startPreventSleep, stopPreventSleep } from '../services/preventSleep';
 import { useTerminalNotification } from '../ink/useTerminalNotification';
 import { hasCursorUpViewportYankBug } from '../ink/terminal';
 import { createFileStateCacheWithSizeLimit, mergeFileStateCaches, READ_FILE_STATE_CACHE_SIZE } from '../utils/fileStateCache';
-import { updateLastInteractionTime, getLastInteractionTime, getOriginalCwd, getProjectRoot, getSessionId, switchSession, setCostStateForRestore, getTurnHookDurationMs, getTurnHookCount, resetTurnHookDuration, getTurnToolDurationMs, getTurnToolCount, resetTurnToolDuration, getTurnClassifierDurationMs, getTurnClassifierCount, resetTurnClassifierDuration } from '../bootstrap/state';
+import { updateLastInteractionTime, getLastInteractionTime, getOriginalCwd, getProjectRoot, getSessionId, switchSession, setResumeHandler, setCostStateForRestore, getTurnHookDurationMs, getTurnHookCount, resetTurnHookDuration, getTurnToolDurationMs, getTurnToolCount, resetTurnToolDuration, getTurnClassifierDurationMs, getTurnClassifierCount, resetTurnClassifierDuration, getCwdState } from '../bootstrap/state';
 import { asSessionId, asAgentId } from '../types/ids';
 import { logForDebugging } from '../utils/debug';
 import { QueryGuard } from '../utils/QueryGuard';
@@ -169,8 +169,8 @@ import type { AgentDefinition } from '../tools/AgentTool/loadAgentsDir';
 import { resolveAgentTools } from '../tools/AgentTool/agentToolUtils';
 import { resumeAgentBackground } from '../tools/AgentTool/resumeAgent';
 import { useMainLoopModel } from '../hooks/useMainLoopModel';
-import { useAppState, useSetAppState, useAppStateStore } from '../state/AppState';
-import type { ContentBlockParam, ImageBlockParam } from '@allternit/sdk/providers/anthropic/resources/messages.mjs';
+import { useAppState, useSetAppState, useAppStateStore, type Screen as AppStateScreen } from '../state/AppState';
+import type { ContentBlockParam, ImageBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/messages.mjs';
 import { AllternitHarness } from '@allternit/sdk/harness';
 import { shouldUseHarness, FEATURE_FLAGS } from '../utils/feature-flags';
 import { getHarnessConfig } from '../utils/migration';
@@ -178,7 +178,7 @@ import { getAgentHarnessConfig } from '../services/harness';
 
 // Harness streaming types
 interface StreamRequest {
-  provider: 'anthropic' | 'openai' | 'google';
+  provider: 'allternit' | 'openai' | 'google';
   model: string;
   messages: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>;
   systemPrompt?: string;
@@ -208,10 +208,10 @@ function getAvailableProvidersForMode(mode: HarnessMode): Array<{ id: string; na
     case 'byok':
       // BYOK mode: Show providers with configured API keys
       const providers = [];
-      if (process.env.ANTHROPIC_API_KEY) {
+      if (process.env.ALLTERNIT_API_KEY) {
         providers.push({
-          id: 'anthropic',
-          name: 'Anthropic',
+          id: 'allternit',
+          name: 'Allternit',
           models: ['claude-sonnet-4-5-20251101', 'claude-opus-4-5-20251101', 'claude-sonnet-4-20250514', 'claude-opus-4-20250514']
         });
       }
@@ -235,8 +235,8 @@ function getAvailableProvidersForMode(mode: HarnessMode): Array<{ id: string; na
       // Cloud mode: Show all providers from /v1/ai/models
       return [
         {
-          id: 'anthropic',
-          name: 'Anthropic (Cloud)',
+          id: 'allternit',
+          name: 'Allternit (Cloud)',
           models: ['claude-sonnet-4-5', 'claude-opus-4-5', 'claude-sonnet-4', 'claude-opus-4']
         },
         {
@@ -355,8 +355,8 @@ import { AUTO_MODE_DESCRIPTION } from './../components/AutoModeOptInDialog.tsx';
 import { useLspInitializationNotification } from './../hooks/notifs/useLspInitializationNotification.tsx';
 import { useLspPluginRecommendation } from './../hooks/useLspPluginRecommendation.tsx';
 import { LspRecommendationMenu } from './../components/LspRecommendation/LspRecommendationMenu.tsx';
-import { useClaudeCodeHintRecommendation } from './../hooks/useClaudeCodeHintRecommendation.tsx';
-import { PluginHintMenu } from './../components/ClaudeCodeHint/PluginHintMenu.tsx';
+import { useGizziHintRecommendation } from './../hooks/useGizziHintRecommendation.tsx';
+import { PluginHintMenu } from './../components/GizziHint/PluginHintMenu.tsx';
 import { DesktopUpsellStartup, shouldShowDesktopUpsellStartup } from './../components/DesktopUpsell/DesktopUpsellStartup.tsx';
 import { usePluginInstallationStatus } from './../hooks/notifs/usePluginInstallationStatus.tsx';
 import { usePluginAutoupdateNotification } from './../hooks/notifs/usePluginAutoupdateNotification.tsx';
@@ -388,6 +388,9 @@ import type { RemoteMessageContent } from '../utils/teleport/api';
 import { FullscreenLayout, useUnseenDivider, computeUnseenDivider } from '../components/FullscreenLayout';
 import { isFullscreenEnvEnabled, maybeGetTmuxMouseHint, isMouseTrackingEnabled } from '../utils/fullscreen';
 import { AlternateScreen } from '../ink/components/AlternateScreen';
+import { DashboardScreen } from './DashboardScreen';
+import { BotsPaneScreen } from './bots-pane/BotsPaneScreen';
+import { InProcessDashboardSource } from '../dashboard/InProcessSource';
 import { ScrollKeybindingHandler } from '../components/ScrollKeybindingHandler';
 import { useMessageActions, MessageActionsKeybindings, MessageActionsBar, type MessageActionsState, type MessageActionsNav, type MessageActionCaps } from '../components/messageActions';
 import { setClipboard } from '../ink/termio/osc';
@@ -674,7 +677,7 @@ export type Props = {
   // Thinking configuration to use when thinking is enabled
   thinkingConfig: ThinkingConfig;
 };
-export type Screen = 'prompt' | 'transcript';
+export type Screen = AppStateScreen;
 export function REPL({
   commands: initialCommands,
   debug,
@@ -734,12 +737,12 @@ export function REPL({
 
   // Env-var gates hoisted to mount-time — isEnvTruthy does toLowerCase+trim+
   // includes, and these were on the render path (hot during PageUp spam).
-  const titleDisabled = useMemo(() => isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_TERMINAL_TITLE), []);
-  const moreRightEnabled = useMemo(() => "external" === 'ant' && isEnvTruthy(process.env.CLAUDE_MORERIGHT), []);
-  const disableVirtualScroll = useMemo(() => isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_VIRTUAL_SCROLL), []);
+  const titleDisabled = useMemo(() => isEnvTruthy(process.env.GIZZI_CODE_DISABLE_TERMINAL_TITLE), []);
+  const moreRightEnabled = useMemo(() => "external" === 'ant' && isEnvTruthy(process.env.GIZZI_MORERIGHT), []);
+  const disableVirtualScroll = useMemo(() => isEnvTruthy(process.env.GIZZI_CODE_DISABLE_VIRTUAL_SCROLL), []);
   const disableMessageActions = feature('MESSAGE_ACTIONS') ?
   // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
-  useMemo(() => isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_MESSAGE_ACTIONS), []) : false;
+  useMemo(() => isEnvTruthy(process.env.GIZZI_CODE_DISABLE_MESSAGE_ACTIONS), []) : false;
 
   // Log REPL mount/unmount lifecycle
   useEffect(() => {
@@ -855,10 +858,18 @@ export function REPL({
   const onChangeDynamicMcpConfig = useCallback((config: Record<string, ScopedMcpServerConfig>) => {
     setDynamicMcpConfig(config);
   }, [setDynamicMcpConfig]);
-  const [screen, setScreen] = useState<Screen>('prompt');
+  const screen = useAppState(s => s.screen);
+  // AppState-backed (not useState) so slash commands can switch screens via
+  // context.setAppState. Accepts the same SetStateAction shape as before.
+  const setScreen = useCallback((update: React.SetStateAction<Screen>) => {
+    setAppState(prev => ({
+      ...prev,
+      screen: typeof update === 'function' ? (update as (s: Screen) => Screen)(prev.screen) : update
+    }));
+  }, [setAppState]);
   const [showAllInTranscript, setShowAllInTranscript] = useState(false);
   // [ forces the dump-to-scrollback path inside transcript mode. Separate
-  // from CLAUDE_CODE_NO_FLICKER=0 (which is process-lifetime) — this is
+  // from GIZZI_CODE_NO_FLICKER=0 (which is process-lifetime) — this is
   // ephemeral, reset on transcript exit. Diagnostic escape hatch so
   // terminal/tmux native cmd-F can search the full flat render.
   const [dumpMode, setDumpMode] = useState(false);
@@ -928,7 +939,7 @@ export function REPL({
   const {
     recommendation: hintRecommendation,
     handleResponse: handleHintResponse
-  } = useClaudeCodeHintRecommendation();
+  } = useGizziHintRecommendation();
 
   // Memoize the combined initial tools array to prevent reference changes
   const combinedInitialTools = useMemo(() => {
@@ -2102,6 +2113,15 @@ export function REPL({
     }
   }, [resetLoadingState, setAppState]);
 
+  // Publish the full resume pipeline so non-command surfaces (the /bots
+  // pane's "open canonical chat") can resume with the same fidelity —
+  // transcript reload, hooks, plan/file-history handoff — instead of a bare
+  // switchSession that leaves the mounted message list stale.
+  useEffect(() => {
+    setResumeHandler(resume)
+    return () => setResumeHandler(null)
+  }, [resume])
+
   // Lazy init: useRef(createX()) would call createX on every render and
   // discard the result. LRUCache construction inside FileStateCache is
   // expensive (~170ms), so we use useState's lazy initializer to create
@@ -2652,8 +2672,8 @@ export function REPL({
       onCompactProgress: event => {
         switch (event.type) {
           case 'hooks_start':
-            setSpinnerColor('claudeBlue_FOR_SYSTEM_SPINNER');
-            setSpinnerShimmerColor('claudeBlueShimmer_FOR_SYSTEM_SPINNER');
+            setSpinnerColor('systemSpinner');
+            setSpinnerShimmerColor('systemSpinnerShimmer');
             setSpinnerMessage(event.hookType === 'pre_compact' ? 'Running PreCompact hooks\u2026' : event.hookType === 'post_compact' ? 'Running PostCompact hooks\u2026' : 'Running SessionStart hooks\u2026');
             break;
           case 'compact_start':
@@ -2727,6 +2747,69 @@ export function REPL({
       });
     })();
   }, [abortController, mainLoopModel, toolPermissionContext, mainThreadAgentDefinition, getToolUseContext, customSystemPrompt, appendSystemPrompt, canUseTool, setAppState]);
+
+  // Agent dashboard source: in-process top-level sessions dispatched from
+  // /dashboard. Query params mirror handleBackgroundQuery so dashboard
+  // sessions behave like backgrounded main-session queries (full tool pool,
+  // same system prompt), with the addition of follow-up turns.
+  const buildDashboardQueryParams = useCallback(async () => {
+    const toolUseContext = getToolUseContext(messagesRef.current, [], new AbortController(), mainLoopModel);
+    const [defaultSystemPrompt, userContext, systemContext] = await Promise.all([getSystemPrompt(toolUseContext.options.tools, mainLoopModel, Array.from(toolPermissionContext.additionalWorkingDirectories.keys()), toolUseContext.options.mcpClients), getUserContext(), getSystemContext()]);
+    const systemPrompt = buildEffectiveSystemPrompt({
+      mainThreadAgentDefinition,
+      toolUseContext,
+      customSystemPrompt,
+      defaultSystemPrompt,
+      appendSystemPrompt
+    });
+    toolUseContext.renderedSystemPrompt = systemPrompt;
+    return {
+      systemPrompt,
+      userContext,
+      systemContext,
+      canUseTool,
+      toolUseContext,
+      querySource: getQuerySourceForREPL()
+    };
+  }, [mainLoopModel, toolPermissionContext, mainThreadAgentDefinition, getToolUseContext, customSystemPrompt, appendSystemPrompt, canUseTool]);
+  // Live refs for the dashboard's synthetic main row: getMainRow is called
+  // from DashboardScreen's render (outside this component's own re-render
+  // timing), so it must read current values through refs rather than stale
+  // closure captures.
+  const isLoadingRef = React.useRef(isLoading);
+  isLoadingRef.current = isLoading;
+  const toolUseConfirmQueueRef = React.useRef(toolUseConfirmQueue);
+  toolUseConfirmQueueRef.current = toolUseConfirmQueue;
+  const handleDashboardPermissionDone = React.useCallback((toolUseID: string) => {
+    setToolUseConfirmQueue(q => q.filter(item => item.toolUseID !== toolUseID));
+  }, []);
+
+  const dashboardSource = useMemo(() => new InProcessDashboardSource({
+    getAppState: store.getState,
+    setAppState,
+    buildQueryParams: buildDashboardQueryParams,
+    // Synthetic leader row for the main session with live state: a pending
+    // main-session permission prompt shows 'needs-input', an active query
+    // shows 'working', otherwise 'idle'.
+    getMainRow: () => {
+      const queue = toolUseConfirmQueueRef.current ?? [];
+      const permissionPending = queue.some(item => !item.dashboardTaskId);
+      const loading = isLoadingRef.current;
+      return {
+        id: 'main',
+        source: 'in-process',
+        title: getCurrentSessionTitle(getSessionId()) ?? 'Main session',
+        state: permissionPending ? 'needs-input' : loading ? 'working' : 'idle',
+        activityLine: permissionPending ? 'awaiting input' : loading ? 'working' : '',
+        directory: getCwdState(),
+        model: mainLoopModel?.alias ?? mainLoopModel?.fullName,
+        permissionMode: store.getState().toolPermissionContext?.mode,
+        pinned: true,
+        createdAt: 0,
+        updatedAt: Date.now()
+      };
+    }
+  }), [store, setAppState, buildDashboardQueryParams]);
   const {
     handleBackgroundSession
   } = useSessionBackgrounding({
@@ -3645,8 +3728,8 @@ export function REPL({
     // controls treatment: "dialog" (blocking), "hint" (notification), "off".
     {
       const willowMode = getFeatureValue_CACHED_MAY_BE_STALE('tengu_willow_mode', 'off');
-      const idleThresholdMin = Number(process.env.CLAUDE_CODE_IDLE_THRESHOLD_MINUTES ?? 75);
-      const tokenThreshold = Number(process.env.CLAUDE_CODE_IDLE_TOKEN_THRESHOLD ?? 100_000);
+      const idleThresholdMin = Number(process.env.GIZZI_CODE_IDLE_THRESHOLD_MINUTES ?? 75);
+      const tokenThreshold = Number(process.env.GIZZI_CODE_IDLE_TOKEN_THRESHOLD ?? 100_000);
       if (willowMode !== 'off' && !getGlobalConfig().idleReturnDismissed && !skipIdleCheckRef.current && !speculationAccept && !input.trim().startsWith('/') && lastQueryCompletionTimeRef.current > 0 && getTotalInputTokens() >= tokenThreshold) {
         const idleMs = Date.now() - lastQueryCompletionTimeRef.current;
         const idleMinutes = idleMs / 60_000;
@@ -4304,9 +4387,9 @@ export function REPL({
     const willowMode: string = getFeatureValue_CACHED_MAY_BE_STALE('tengu_willow_mode', 'off');
     if (willowMode !== 'hint' && willowMode !== 'hint_v2') return;
     if (getGlobalConfig().idleReturnDismissed) return;
-    const tokenThreshold = Number(process.env.CLAUDE_CODE_IDLE_TOKEN_THRESHOLD ?? 100_000);
+    const tokenThreshold = Number(process.env.GIZZI_CODE_IDLE_TOKEN_THRESHOLD ?? 100_000);
     if (getTotalInputTokens() < tokenThreshold) return;
-    const idleThresholdMs = Number(process.env.CLAUDE_CODE_IDLE_THRESHOLD_MINUTES ?? 75) * 60_000;
+    const idleThresholdMs = Number(process.env.GIZZI_CODE_IDLE_THRESHOLD_MINUTES ?? 75) * 60_000;
     const elapsed = Date.now() - lastQueryCompletionTime;
     const remaining = idleThresholdMs - elapsed;
     const timer = setTimeout((lqct, addNotif, msgsRef, mode, hintRef) => {
@@ -4844,6 +4927,34 @@ export function REPL({
     return transcriptReturn;
   }
 
+  if (screen === 'dashboard') {
+    // Full-screen agent dashboard (Grok-style). Mounted as its own screen,
+    // same AlternateScreen + KeybindingSetup shape as the transcript
+    // branch so the alt buffer reconciles across toggles.
+    const dashboardReturn = <KeybindingSetup>
+        <AnimatedTerminalTitle isAnimating={titleIsAnimating} title={terminalTitle} disabled={titleDisabled} noPrefix={showStatusInTerminalTab} />
+        <GlobalKeybindingHandlers {...globalKeybindingProps} />
+        <DashboardScreen source={dashboardSource} tools={tools} commands={commands} permissionQueue={toolUseConfirmQueue} onPermissionDone={handleDashboardPermissionDone} />
+      </KeybindingSetup>;
+    return <AlternateScreen mouseTracking={isMouseTrackingEnabled()}>
+        {dashboardReturn}
+      </AlternateScreen>;
+  }
+
+  if (screen === 'bots') {
+    // Full-screen bots roster (Bot Mode B5). Same AlternateScreen +
+    // KeybindingSetup shape as the dashboard branch; the pane exits back
+    // to 'prompt' itself (q/Esc or after opening a canonical chat).
+    const botsReturn = <KeybindingSetup>
+        <AnimatedTerminalTitle isAnimating={titleIsAnimating} title={terminalTitle} disabled={titleDisabled} noPrefix={showStatusInTerminalTab} />
+        <GlobalKeybindingHandlers {...globalKeybindingProps} />
+        <BotsPaneScreen />
+      </KeybindingSetup>;
+    return <AlternateScreen mouseTracking={isMouseTrackingEnabled()}>
+        {botsReturn}
+      </AlternateScreen>;
+  }
+
   // Get viewed agent task (inlined from selectors for explicit data flow).
   // viewedAgentTask: teammate OR local_agent — drives the boolean checks
   // below. viewedTeammateTask: teammate-only narrowed, for teammate-specific
@@ -5248,7 +5359,7 @@ export function REPL({
 
                 {!toolJSX?.shouldHidePromptInput && !focusedInputDialog && !isExiting && !disabled && !cursor && <>
                       {autoRunIssueReason && <AutoRunIssueNotification onRun={handleAutoRunIssue} onCancel={handleCancelAutoRunIssue} reason={getAutoRunIssueReasonText(autoRunIssueReason)} />}
-                      {postCompactSurvey.state !== 'closed' ? <FeedbackSurvey state={postCompactSurvey.state} lastResponse={postCompactSurvey.lastResponse} handleSelect={postCompactSurvey.handleSelect} inputValue={inputValue} setInputValue={setInputValue} onRequestFeedback={handleSurveyRequestFeedback} /> : memorySurvey.state !== 'closed' ? <FeedbackSurvey state={memorySurvey.state} lastResponse={memorySurvey.lastResponse} handleSelect={memorySurvey.handleSelect} handleTranscriptSelect={memorySurvey.handleTranscriptSelect} inputValue={inputValue} setInputValue={setInputValue} onRequestFeedback={handleSurveyRequestFeedback} message="How well did Claude use its memory? (optional)" /> : <FeedbackSurvey state={feedbackSurvey.state} lastResponse={feedbackSurvey.lastResponse} handleSelect={feedbackSurvey.handleSelect} handleTranscriptSelect={feedbackSurvey.handleTranscriptSelect} inputValue={inputValue} setInputValue={setInputValue} onRequestFeedback={didAutoRunIssueRef.current ? undefined : handleSurveyRequestFeedback} />}
+                      {postCompactSurvey.state !== 'closed' ? <FeedbackSurvey state={postCompactSurvey.state} lastResponse={postCompactSurvey.lastResponse} handleSelect={postCompactSurvey.handleSelect} inputValue={inputValue} setInputValue={setInputValue} onRequestFeedback={handleSurveyRequestFeedback} /> : memorySurvey.state !== 'closed' ? <FeedbackSurvey state={memorySurvey.state} lastResponse={memorySurvey.lastResponse} handleSelect={memorySurvey.handleSelect} handleTranscriptSelect={memorySurvey.handleTranscriptSelect} inputValue={inputValue} setInputValue={setInputValue} onRequestFeedback={handleSurveyRequestFeedback} message="How well did Gizzi use its memory? (optional)" /> : <FeedbackSurvey state={feedbackSurvey.state} lastResponse={feedbackSurvey.lastResponse} handleSelect={feedbackSurvey.handleSelect} handleTranscriptSelect={feedbackSurvey.handleTranscriptSelect} inputValue={inputValue} setInputValue={setInputValue} onRequestFeedback={didAutoRunIssueRef.current ? undefined : handleSurveyRequestFeedback} />}
                       {/* Frustration-triggered transcript sharing prompt */}
                       {frustrationDetection.state !== 'closed' && <FeedbackSurvey state={frustrationDetection.state} lastResponse={null} handleSelect={() => {}} handleTranscriptSelect={frustrationDetection.handleTranscriptSelect} inputValue={inputValue} setInputValue={setInputValue} />}
                       {/* Skill improvement survey - appears when improvements detected (ant-only) */}

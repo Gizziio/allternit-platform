@@ -5,19 +5,25 @@ description: 'Create and manage runtime-backed agent sessions on the Allternit p
 
 ## Overview
 
-Agent sessions are conversation threads backed by the Gizzi runtime. The Agent Sessions API translates the frontend session contract (`/api/agent-sessions`) into the Gizzi runtime contract (`/v1/session/*`), so the Rust API remains a thin gateway rather than a competing session database.
+Agent sessions are conversation threads backed by the Gizzi runtime on **your data-plane node**. The public path is on the [Cloud API](/api/cloud-api): it authenticates the Clerk session, resolves your default healthy node, and relays the request to [Allternit API](/api/allternit-api). Session rows live in that node's SQLite, not in Cloud API Postgres.
 
-Sessions support messages, abort, revert/unrevert, compaction, ephemeral incognito chats, and real-time event synchronization via SSE.
+The node translates the session contract (`/api/v1/agent-sessions`) into the Gizzi runtime contract (`/v1/session/*`). Sessions support messages, abort, revert/unrevert, compaction, ephemeral incognito chats, and real-time event synchronization via SSE.
+
+<Note>
+HTTP **428** means this account has no healthy paired or provisioned node. Pair a desktop/VPS or start a provisioned instance, then retry.
+</Note>
 
 ## Base URL
 
 ```
-https://api.allternit.com/api
+https://api.allternit.com/api/v1
 ```
+
+Local data plane (same machine only): `http://127.0.0.1:8013/api/v1`.
 
 ## Authentication
 
-All requests must include a valid bearer token in the `Authorization` header. Gizzi-specific Basic auth is handled internally by the gateway when `GIZZI_PASSWORD` / `GIZZI_SERVER_PASSWORD` is configured.
+All production requests must include a Clerk session JWT in the `Authorization` header. The Cloud API forwards that header to the node. Gizzi-specific Basic auth is handled internally on the node when `GIZZI_PASSWORD` / `GIZZI_SERVER_PASSWORD` is configured.
 
 ## Session object
 
@@ -39,7 +45,7 @@ All requests must include a valid bearer token in the `Authorization` header. Gi
 ### List sessions
 
 ```http
-GET /api/agent-sessions
+GET /api/v1/agent-sessions
 ```
 
 Returns sessions owned by the caller, filtered and searched on the gateway side. Ephemeral sessions are excluded from the list.
@@ -56,7 +62,7 @@ Returns sessions owned by the caller, filtered and searched on the gateway side.
 
 ```bash
 curl -H "Authorization: Bearer $TOKEN" \
-  "https://api.allternit.com/api/agent-sessions?surface=chat&q=auth"
+  "https://api.allternit.com/api/v1/agent-sessions?surface=chat&q=auth"
 ```
 
 #### Example response
@@ -93,7 +99,7 @@ curl -H "Authorization: Bearer $TOKEN" \
 ### Create a session
 
 ```http
-POST /api/agent-sessions
+POST /api/v1/agent-sessions
 ```
 
 Creates a new Gizzi session. The gateway stamps the default model, resolves the agent harness config, and records the original surface so it can be restored later.
@@ -112,7 +118,7 @@ Creates a new Gizzi session. The gateway stamps the default model, resolves the 
 #### Example request
 
 ```bash
-curl -X POST https://api.allternit.com/api/agent-sessions \
+curl -X POST https://api.allternit.com/api/v1/agent-sessions \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -159,14 +165,14 @@ curl -X POST https://api.allternit.com/api/agent-sessions \
 ### Get a session
 
 ```http
-GET /api/agent-sessions/:id
+GET /api/v1/agent-sessions/:id
 ```
 
 #### Example request
 
 ```bash
 curl -H "Authorization: Bearer $TOKEN" \
-  https://api.allternit.com/api/agent-sessions/sess_9c1d...
+  https://api.allternit.com/api/v1/agent-sessions/sess_9c1d...
 ```
 
 #### Example response
@@ -176,7 +182,7 @@ Same shape as the create response.
 ### Update a session
 
 ```http
-PATCH /api/agent-sessions/:id
+PATCH /api/v1/agent-sessions/:id
 ```
 
 Updates the session title, archived state, permission, or surface.
@@ -193,7 +199,7 @@ Updates the session title, archived state, permission, or surface.
 #### Example request
 
 ```bash
-curl -X PATCH https://api.allternit.com/api/agent-sessions/sess_9c1d... \
+curl -X PATCH https://api.allternit.com/api/v1/agent-sessions/sess_9c1d... \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -209,7 +215,7 @@ Same shape as the create response, with `active: false`.
 ### Delete a session
 
 ```http
-DELETE /api/agent-sessions/:id
+DELETE /api/v1/agent-sessions/:id
 ```
 
 Deletes the backing Gizzi session and clears any local ephemeral flag.
@@ -221,7 +227,7 @@ Deletes the backing Gizzi session and clears any local ephemeral flag.
 ### List messages
 
 ```http
-GET /api/agent-sessions/:id/messages
+GET /api/v1/agent-sessions/:id/messages
 ```
 
 Returns the session's messages in gateway-normalized form.
@@ -265,7 +271,7 @@ Returns the session's messages in gateway-normalized form.
 ### Send a message
 
 ```http
-POST /api/agent-sessions/:id/messages
+POST /api/v1/agent-sessions/:id/messages
 ```
 
 Sends a message to the session. Only `role: "user"` messages are forwarded to the runtime; other roles are accepted locally and echoed back immediately.
@@ -282,7 +288,7 @@ Sends a message to the session. Only `role: "user"` messages are forwarded to th
 #### Example request
 
 ```bash
-curl -X POST https://api.allternit.com/api/agent-sessions/sess_9c1d.../messages \
+curl -X POST https://api.allternit.com/api/v1/agent-sessions/sess_9c1d.../messages \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -300,7 +306,7 @@ Same shape as a message from `list messages`.
 ### Abort a session
 
 ```http
-POST /api/agent-sessions/:id/abort
+POST /api/v1/agent-sessions/:id/abort
 ```
 
 Aborts the current turn. For ephemeral sessions, this also hard-deletes the backing session and clears the ephemeral flag.
@@ -316,7 +322,7 @@ Aborts the current turn. For ephemeral sessions, this also hard-deletes the back
 ### Revert a session
 
 ```http
-POST /api/agent-sessions/:id/revert
+POST /api/v1/agent-sessions/:id/revert
 ```
 
 Reverts file changes made during the session back to a given message.
@@ -334,7 +340,7 @@ Same shape as `get session`.
 ### Unrevert a session
 
 ```http
-POST /api/agent-sessions/:id/unrevert
+POST /api/v1/agent-sessions/:id/unrevert
 ```
 
 Undoes a prior revert.
@@ -346,7 +352,7 @@ Same shape as `get session`.
 ### Compact a session
 
 ```http
-POST /api/agent-sessions/:id/compact
+POST /api/v1/agent-sessions/:id/compact
 ```
 
 On-demand context condensation via Gizzi's summarize endpoint.
@@ -362,7 +368,7 @@ On-demand context condensation via Gizzi's summarize endpoint.
 ### Sync sessions (SSE)
 
 ```http
-GET /api/agent-sessions/sync
+GET /api/v1/agent-sessions/sync
 ```
 
 Opens a server-sent event stream that forwards Gizzi bus events in a frontend-friendly shape. Supports `Last-Event-ID` reconnection.
@@ -387,7 +393,7 @@ Opens a server-sent event stream that forwards Gizzi bus events in a frontend-fr
 ```bash
 curl -H "Authorization: Bearer $TOKEN" \
   -H "Accept: text/event-stream" \
-  https://api.allternit.com/api/agent-sessions/sync
+  https://api.allternit.com/api/v1/agent-sessions/sync
 ```
 
 #### Example event

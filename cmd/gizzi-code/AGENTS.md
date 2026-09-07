@@ -2,7 +2,7 @@
 
 ## Agent creation checklist
 
-When spinning up a new agent or agent type in the Allternit platform, follow the canonical checklist at [`../AGENT_CREATION_CHECKLIST.md`](../AGENT_CREATION_CHECKLIST.md). It covers schema, registry contract, harness config, workspace artifacts, mode surface wiring, routines/loops/goals, and verification.
+When spinning up a new agent or agent type in the Allternit platform, follow the canonical checklist at [`../../AGENT_CREATION_CHECKLIST.md`](../../AGENT_CREATION_CHECKLIST.md). It covers schema, registry contract, harness config, workspace artifacts, mode surface wiring, routines/loops/goals, and verification.
 
 ## Database
 
@@ -77,7 +77,10 @@ The daemon (`gizzi daemon`) runs a background cron scheduler on port **3031** wi
 ### Architecture
 
 ```
-Daemon (src/daemon/main.ts)
+Daemon (in-process via `gizzi runtime daemon`,
+        src/runtime/daemon/runtime-daemon.ts — the standalone
+        src/daemon/main.ts entrypoint was removed in the
+        2026-09 dead-code cleanup)
   └── CronDaemon (src/runtime/automation/cron/daemon.ts)
         └── CronService (src/runtime/automation/cron/service.ts)
               ├── SQLite persistence (cron.db)
@@ -160,6 +163,8 @@ gizzi daemon status     # Show status
 |-------|---------|--------|
 | Vault E2E | `bun test/vault/e2e.ts` | 46/46 passing |
 | Build | `bun run build` | ✅ darwin-arm64 binary |
+| Migration chain | `test/storage/migration-chain.test.ts` (in smoke) | applies all 16 migrations to fresh + old temp DBs, asserts final schema and folder-name ordering |
+| Color-diff shim | `bun test --preload ./test/preload.ts test/vendor/color-diff-napi.test.ts` | 7/7 — regression guard for the `/theme` TUI crash (missing `ColorDiff.render`) |
 
 ---
 
@@ -196,14 +201,115 @@ With `GIZZI_EMBEDDING_PROVIDER` set (openai/ollama), semantic cosine-similarity 
 
 ---
 
+## Bot Mode (Phase B1)
+
+`gizzi bot` command group (`src/cli/commands/bot.ts`) — a Bot is a **profile**, not a
+new runtime primitive (spec: `docs/GIZZI_BOT_MODE_SPEC.md`). Bot homes live at
+`~/.gizzi/bots/<name>/` (override with `GIZZI_CONFIG_DIR`): `bot.json` (zod-validated
+identity: name, title, description, model pin, avatar, `canonicalSession`
+{projectPath, sessionId}, capabilityEpoch, timestamps), `SOUL.md` (persona/standing
+instructions), `memory/` (bot-scoped notes). Core logic in
+`src/runtime/bots/bot-store.ts` (no UI/settings imports; covered by
+`test/runtime/bots/bot-store.test.ts` + CLI spawns in `test/cli/bot.test.ts`).
+Config-home resolution follows the pluginDirectories/memdir pattern:
+`GIZZI_CONFIG_DIR ?? ~/.gizzi` (`gizziConfigHome()` in bot-store.ts).
+
+- Phase B1 (done): `create|list|show|edit|clone|delete` + a `chat` stub that only
+  resolves the bot. `cloneBot` never copies `canonicalSession`.
+- Phase B2 (done): canonical bot chat — `src/runtime/bots/canonical-chat.ts`
+  (pointer resolution against the sqlite `Session` store, pin-on-open, lazy
+  re-point, persona injection, `isCanonicalBotSession`) +
+  `src/runtime/bots/capability-epoch.ts` (FNV-1a epoch over identity + SOUL +
+  memory list + roster; drift re-stamps and rebuilds the injection once).
+  `gizzi bot chat <name> [message]` — no message launches the TUI on the
+  pinned session (`-s/--session` path, now honored by `ink-app/app.tsx`);
+  with a message it is a headless print-mode turn (`run -s <id>` semantics)
+  preserving continuity. The persona block is injected per turn in
+  `SessionPrompt` (`src/runtime/session/prompt.ts`), so both TUI and headless
+  paths carry it. Composer guard (D2): `/new|/reset|/clear` inside a canonical
+  bot chat reroutes to `/compact` (`commands/clear/clear.ts`) — runtime
+  compaction never forks the session id, so the pin stays valid. Store
+  primitives: `pinCanonicalSession` / `setCapabilityEpoch` (bot-store.ts).
+  Tests: `test/runtime/bots/canonical-chat.test.ts` + `test/cli/bot.test.ts`.
+- Phase B3 (done): routines — `src/runtime/bots/bot-routines.ts` owns the
+  `[bot:<name>]` job namespace (`botRoutineJobName`/`parseBotRoutineJobName`),
+  routine CRUD over CronService (`addBotRoutine`/`listBotRoutines`/
+  `removeBotRoutine`, prefix-scoped remove; `cronServiceDeps()` is the seam,
+  `GIZZI_CRON_DB_PATH` overrides the db for tests), and the executor delivery
+  path (`deliverBotRoutine` + `BotRoutineDeliveryDeps`): an agent cron job
+  with `config.bot` set resumes (or creates + pins) the bot's canonical
+  session and runs one turn prefixed `[routine: <label>] ` — never
+  `Session.createNext`, and the canonical session is never deleted after the
+  run. Unknown bot → failed run with a structured error (typed D4 reasons
+  land in B4). `AgentExecutorConfig.botRoutineDeps` injects fakes in tests.
+  CLI: `gizzi bot routine add <name> [--label] --schedule <cron-or-interval>
+  --prompt <text>` / `list <name>` / `remove <name> <jobId>`. Routines set
+  `catchUpMissed: true`, so a fire missed while the daemon was off runs on
+  daemon start with the same marker. Tests: `test/runtime/bots/bot-routines.test.ts`
+  + `test/cli/bot.test.ts`.
+- Phase B4 (done): failure taxonomy + message_agent —
+  `src/runtime/bots/failure-reasons.ts` is the faithful port of the platform's
+  13-code closed vocabulary (ordered-rule classifier; auth outranks quota;
+  `classifyRetry` → once/after_compact/never; `ATTENTION_CLASSES` + hints;
+  `annotateFailureReason`/`failureReasonOf` let the typed code ride on the
+  thrown error). `deliverBotRoutine` retries per policy: transient classes
+  once, `context_overflow` via in-place `compactSession` (the pin survives —
+  compaction never forks the session id) then once, never for
+  auth/quota/config/model/blocked; the agent executor records
+  `run.reason` (typed column, with a pragma-guarded `ALTER TABLE` migration
+  in CronDatabase for pre-existing cron.db files) alongside `run.error`.
+  Headless `gizzi bot chat
+  <name> <message>` prints `[reason: <code>]` ahead of error text (bus
+  subscription fires before run.ts renders the same session.error event).
+  `src/runtime/tools/builtins/message-agent.ts` (`message_agent`) is a
+  fire-and-forget DM: validated against the live roster
+  (`matchMessageTarget`, case-insensitive, ambiguity lists exact handles),
+  appended durably to `~/.gizzi/bots/<target>/inbox.jsonl` (0o600, O_APPEND)
+  via `src/runtime/bots/bot-inbox.ts`, acked without waiting. Gating: the
+  registry lists it unconditionally (no session context there) and
+  `SessionPrompt.resolveTools` deletes it from the per-session tool record
+  unless `isCanonicalBotSession` — same gate-and-delete precedent as
+  `applyMobileToolGating`. Turn-start pickup in `SessionPrompt.prompt` drains
+  the inbox and injects each envelope as a synthetic user-role part with the
+  exact platform attribution `Message from 🤖 <sender> (@<sender>): <message>`.
+  The canonical-chat system prompt now carries a `## Teammates` roster (name —
+  title (description), self excluded) plus a `## Messaging protocol` section;
+  the capability epoch already hashed roster names, so roster changes still
+  trigger the one-time drift rebuild. Tests: `test/runtime/bots/failure-reasons.test.ts`,
+  `test/runtime/bots/message-agent.test.ts`, retry cases in
+  `test/runtime/bots/bot-routines.test.ts`.
+- Phase B5 (done): TUI bots pane — `/bots` opens a full-screen roster
+  (`src/cli/ui/ink-app/screens/bots-pane/`, screen wired through
+  `AppStateStore`'s `'bots'` union member + REPL mount, mirroring
+  `/dashboard`). Rows come from `src/runtime/bots/bot-roster.ts`
+  (`getBotRosterRows` / `markBotRead`): name — title, description, model,
+  presence dot, `[n]` unread badge (pending inbox envelopes + canonical-chat
+  watermark deltas; the count is a direct COUNT query via
+  `src/runtime/bots/session-db.ts` — works with or without a bootstrap
+  Instance context, ensuring the data dir itself).
+  Presence: `src/runtime/bots/bot-presence.ts` — `.last-activity` stamp (0o600)
+  hooked at turn start in `SessionPrompt.prompt` via
+  `recordCanonicalChatActivity` (90s half-open window). Keys: ↑/↓/j/k move,
+  Enter opens the canonical chat (`openBotCanonicalChat` = open + markBotRead +
+  REPL's published resume pipeline — `setResumeHandler` in bootstrap/state.ts,
+  registered by REPL.tsx — so the transcript reloads with /resume fidelity;
+  falls back to `switchSession` when no handler is published or the chat was
+  just created), `n` create, `d` delete (double-confirm when pinned), `r`
+  refresh, q/Esc exit. Tests:
+  `test/runtime/bots/bot-presence.test.ts`, `bot-roster.test.ts`,
+  `test/cli/bots-pane.test.ts`.
+- Name rules: lowercase slug `[a-z0-9-]`; reserved subcommand names refused;
+  case-insensitive lookup errors on ambiguity (exact match wins).
+
+---
+
 ## Voice
 
 Local-first voice interface using open-source tools.
 
 | Path | Purpose |
 |------|---------|
-| `src/runtime/voice/voice.ts` | `listen()`, `speak()`, `transcribe()`, `voiceChat()` |
-| `src/cli/commands/voice.ts` | CLI: `listen`, `speak`, `transcribe`, `chat` |
+(voice runtime + CLI command were removed in the 2026-09 dead-code cleanup — they had no live importers)
 
 ### Dependencies
 - **STT**: `openai-whisper` (brew install whisper)
@@ -216,22 +322,25 @@ Voice chat currently echoes transcriptions. Wire to AI runtime via `getResponse`
 
 ## VM Runtime
 
-vfkit-based VM management (replaces deleted Swift VM Manager).
+Lima-based VM management (replaced the deleted Swift VM Manager; the vfkit
+manager is gone — `src/runtime/vm/vfkit-manager.ts` no longer exists).
 
 | Path | Purpose |
 |------|---------|
-| `src/runtime/vm/vfkit-manager.ts` | `VFKitManager` — start/stop/status/exec via vfkit process |
-| `src/runtime/vm/guest-agent-client.ts` | `GuestAgentClient` — VSOCK length-prefixed JSON protocol |
+| `src/runtime/vm/lima-executor.ts` | `executeInVM`, `getVMStatus`, `VM_NAME` ("allternit") — run commands in the Lima VM via `limactl exec` |
+| `src/runtime/vm/lima-setup.ts` | `isLimaInstalled`, `installLima` (brew), `vmExists`, `startVM`, `stopVM`, `LIMA_YAML_PATH` |
+| `src/runtime/vm/allternit.yaml` | Lima instance definition |
 | `src/runtime/vm/index.ts` | Public exports |
-| `src/cli/commands/vm.ts` | CLI: `start`, `stop`, `restart`, `status`, `setup`, `exec` |
+(vm CLI command removed in the 2026-09 dead-code cleanup; Lima runtime modules below are retained)
 
 ### Setup
 ```bash
-brew install vfkit
+brew install lima
 bun run vm:download   # CI-built images
 ```
 
-Architecture: Host vfkit process → Apple VZ VM → VSOCK Unix socket → Guest agent (`allternit-vm-executor`).
+Architecture: host `limactl` → Lima VM (`allternit` instance, defined in
+`allternit.yaml`) → `limactl exec` for guest command execution.
 
 ---
 
@@ -256,7 +365,7 @@ Multi-agent team orchestration (thin CLI over existing 9K+ line system).
 
 | Path | Purpose |
 |------|---------|
-| `src/cli/commands/swarm.ts` | CLI: `list`, `create` (stub → `/team-create`), `delete`, `status` |
+(swarm CLI stub removed in the 2026-09 dead-code cleanup; `src/shared/utils/swarm/` below is retained)
 | `src/shared/utils/swarm/` | iTerm/Tmux/InProcess backends, team memory sync, permission bridge |
 
 Full team spawn requires AI tool invocation (`/team-create`).
@@ -269,11 +378,25 @@ Plugin discovery (thin CLI over existing 4K+ line system).
 
 | Path | Purpose |
 |------|---------|
-| `src/cli/commands/marketplace.ts` | CLI: `list`, `search`, `install`, `update`, `info` (redirects to `gizzi plugin`) |
+(marketplace CLI stub removed in the 2026-09 dead-code cleanup; use `gizzi plugin <cmd>`)
 | `src/shared/utils/plugins/` | Manifest caching, GitHub cloning, install/rollback |
 | `src/runtime/services/plugins/` | Plugin operations |
 
-Use `gizzi plugin <cmd>` for full plugin management.
+Plugin state is canonical under `~/.gizzi/plugins` (gizzi-owned;
+`GIZZI_PLUGIN_CACHE_DIR` / `GIZZI_CONFIG_DIR` overrides). The
+upstream-inherited `~/.claude/plugins` is a READ-ONLY legacy fallback:
+state-file reads fall back to it (see `resolvePluginsStateFile` in
+`pluginDirectories.ts`), and `gizzi plugin migrate` copies (never moves)
+legacy state into the canonical location. `gizzi doctor` reports both
+dirs' state.
+
+No gizzi-owned marketplace endpoint exists yet: the upstream official
+marketplace auto-install is disabled (`marketplace_coming_soon` skip in
+`officialMarketplaceStartupCheck.ts`; opt back in with
+`GIZZI_ENABLE_UPSTREAM_MARKETPLACE=1`), and `gizzi plugin marketplace
+add` refuses the upstream-owned `anthropics/claude-plugins-official`
+source. User/org-owned marketplace sources (own repos, URLs, local
+paths) still work.
 
 ---
 
@@ -290,6 +413,13 @@ bun run build
 # Type check (note: tsc --noEmit is heavy and may OOM on full project)
 bun run typecheck
 ```
+
+**SDK dist preflight:** `bun run typecheck` / `bun run lint` and
+`bash script/ci-smoke-test.sh` first run `script/ensure-sdk-dist.sh`, which
+rebuilds `packages/sdk/dist` when it is missing (fresh clone/worktree — only
+`dist/gen` is tracked) or older than `packages/sdk/src` (stale build). Without
+this, typecheck fails with TS2307 in `packages/sdk/scripts/verify-sdk.ts` and
+tests silently run against a stale SDK. Set `GIZZI_SKIP_SDK_DIST=1` to skip.
 
 ---
 
@@ -311,11 +441,11 @@ gizzi-code integrates with the Allternit Agent System Rails so any local agent s
 
 | Path | Purpose |
 |------|---------|
-| `src/runtime/tools/ListPeersTool/ListPeersTool.ts` | `ListPeers` runtime tool |
-| `src/runtime/tools/SendMessageTool/SendMessageTool.ts` | `SendMessage` runtime tool |
+(removed in the 2026-09 dead-code cleanup)
+(removed in the 2026-09 dead-code cleanup)
 | `src/runtime/gizzi-core/services/railsPeer.ts` | Peer registration + HTTP inbox poller |
 | `src/cli/ui/ink-app/components/RailsInboxBridge.tsx` | Bridges polled Rails envelopes into the TUI mailbox |
-| `src/shared/utils/udsClient.ts` | Node UDS client for direct socket sends |
+(removed in the 2026-09 dead-code cleanup)
 | `src/runtime/services/api/allternitApi.ts` | `listApiPeers`, `registerApiPeer`, `sendApiPeerMessage`, `pollApiPeerInbox` |
 
 ### Enabling
@@ -388,11 +518,46 @@ The runtime learns the active agent's policy via env (same path as
   `surfaces/ai.allternit.com/src/lib/agents/character.service.ts`.
 
 The guard runs in `ToolDispatcher.executeInitialized`
-(`src/runtime/tools/dispatch.ts`) and in both legacy `runToolUse` copies
-(`src/{runtime,cli/ui/ink-app}/services/tools/toolExecution.ts`). Categories
+(`src/runtime/tools/dispatch.ts`) and in the legacy `runToolUse` copy
+(`src/cli/ui/ink-app/services/tools/toolExecution.ts`; the src/runtime copy
+was removed in the 2026-09 dead-code cleanup). Categories
 `email_send` / `external_communication` block: native `send_agent_email`, MCP
 `allternit_mail.send` / direct `*_send_email`/`*_reply_email` tools, and
 connectors-MCP `execute_action` calls whose `actionId` matches
 `gmail.send_email` / `*.send_email` / `*.reply_email`. Denials are structured
 tool results beginning `blocked by agent policy: <category>`. Other categories
 and tools are untouched. Tests: `test/shared/agentHardBans.test.ts`.
+
+---
+
+## Credential storage
+
+Sensitive tokens (API keys, OAuth tokens) must never be written to disk as
+unmarked plaintext. The single write path is the credential store:
+
+| Path | Purpose |
+|------|---------|
+| `src/runtime/context/config/credential-store.ts` | `CredentialWriter` factories. `"auto"` (default) prefers the OS keyring; `"file"` is the marked insecure fallback. |
+| `src/runtime/context/config/keychain-backend.ts` | macOS Keychain `KeyringBackend` (service suffix `-profiles`, hex-encoded JSON blobs per service). |
+| `src/runtime/context/config/auth-profiles.ts` | `config.toml` `[auth]` profiles. `api_key` is NEVER written inline; `migrateInlineApiKeys` moves legacy inline keys into the store on read (chmod 0o600 + warn when impossible). |
+| `src/shared/utils/secureStorage/` | MCP OAuth / plugin secrets. macOS → Keychain; Windows → DPAPI CurrentUser; Linux → hardened plaintext fallback. |
+
+Fallback rules (no OS secure store): single `~/.gizzi/credentials.json` with an
+`"insecureFallback": true` marker, 0o600 file inside a 0o700 directory,
+one-time stderr warning with platform remediation (Linux: install
+libsecret/gnome-keyring), and a deprecation WARN in the session log. Legacy
+per-service `~/.gizzi/credentials/<service>.json` files are migrated on read
+and renamed to `*.migrated`.
+
+Log redaction: `src/shared/util/redact.ts` masks JWTs, `sk-`/`sk-ant-` keys,
+Bearer tokens, and `token=`/`secret=`/`password=`-style pairs in every line
+written by `Log` (`src/shared/util/log.ts`) and `logForDebugging`
+(`src/shared/utils/debug.ts`, plus the ink-app copy).
+
+Tests: `test/config/credential-store.test.ts`, `test/config/auth-profiles.test.ts`,
+`test/util/redact.test.ts`.
+
+Known follow-ups: Linux libsecret backend; the legacy upstream
+`saveApiKey`/`primaryApiKey` path in `src/shared/utils/auth.ts` still persists
+a 0o600 JSON config key. Windows API keys use DPAPI via
+`src/runtime/context/config/windows-dpapi-backend.ts`.

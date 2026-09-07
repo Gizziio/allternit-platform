@@ -53,7 +53,7 @@ The SDK provides a unified interface for all surfaces to communicate with the Br
 import { AllternitClient } from '@allternit/sdk';
 
 const client = new AllternitClient({
-  endpoint: 'http://localhost:8013',
+  endpoint: 'https://api.allternit.com',
   token: process.env.ALLTERNIT_TOKEN,
 });
 
@@ -89,32 +89,44 @@ await ac.channels.publish('agent.events', {
 });
 ```
 
-## Deployment Models
+## Production topology
+
+There is **one public API**. The Cloud API is the control plane. Allternit API is the data plane and is never a public hostname.
+
+```
+Browser / SDK / CLI  →  https://api.allternit.com  (Cloud API, Postgres)
+                              │
+                              │ outbound WebSocket relay
+                              ▼
+                     Allternit API :8013 (SQLite, not public)
+                              │
+                              ▼
+                     Gizzi runtime (local to the node)
+```
+
+| Plane | Binary | Origin | Database |
+|-------|--------|--------|----------|
+| Control | `allternit-cloud-api` | `https://api.allternit.com` | Postgres |
+| Data | `allternit-api` | loopback / tailnet `:8013` | Per-instance SQLite |
+
+Node-affine routes (agent sessions, Office, beta research) are Cloud API handlers that **relay** to the caller's default healthy node. No healthy node → HTTP 428.
+
+Full split: [API Overview](/api/overview).
+
+## Deployment models
 
 <AccordionGroup>
-  <Accordion title="Allternit Cloud (SaaS)">
-    Fully managed deployment on Allternit's infrastructure. Best for:
-    - Quick prototyping
-    - Teams without DevOps resources
-    - Automatic scaling
+  <Accordion title="Local desktop">
+    Allternit Desktop runs Allternit API and Gizzi on the user's machine and pairs the node to the account. Best for day-to-day work on a laptop.
   </Accordion>
-  
-  <Accordion title="BYOC (Bring Your Own Cloud)">
-    Deploy the runtime agent to your own infrastructure:
-    ```bash
-    curl -fsSL https://install.allternit.com | bash
-    ```
-    Best for:
-    - Data privacy requirements
-    - Compliance (SOC2, HIPAA)
-    - Existing infrastructure
+
+  <Accordion title="User-paired (BYOC)">
+    Install Allternit API on a VPS or homelab you own. Approve a pairing code. The node opens an outbound relay — no inbound ports. Best for data residency and existing infrastructure.
   </Accordion>
-  
-  <Accordion title="Hybrid">
-    Control plane on Allternit Cloud, data plane on your infrastructure.
-    Best for:
-    - Sensitive data processing
-    - Cost optimization
-    - Gradual migration
+
+  <Accordion title="Allternit-provisioned">
+    Cloud API creates an isolated instance per subscription. Init installs Allternit API and auto-pairs. Best for teams that want a hosted data plane without running a box.
   </Accordion>
 </AccordionGroup>
+
+See [BYOC Overview](/byoc/overview).

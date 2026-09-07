@@ -40,7 +40,7 @@ export namespace Pty {
     return process.env.ALLTERNIT_MUX_STATE_DIR ?? join(homedir(), ".allternit", "mux")
   }
 
-  // gizzi is a self-contained binary (Claude Code parity): if no mux daemon is
+  // gizzi is a self-contained binary (gizzi-code parity): if no mux daemon is
   // running, spawn one instead of failing. Resolution order for the binary:
   // ALLTERNIT_MUX_BIN → PATH → repo target/debug (dev).
   let spawnAttempt: Promise<void> | undefined
@@ -90,7 +90,7 @@ export namespace Pty {
         process.env.ALLTERNIT_MUX_BIN,
         // 2. Vendored sibling (desktop resources/bin, dist output).
         join(execDir, "allternit-mux"),
-        // 3. npm-style vendor tree (Claude Code ripgrep layout).
+        // 3. npm-style vendor tree (gizzi-code ripgrep layout).
         join(execDir, "vendor", "allternit-mux", platformArch, "allternit-mux"),
         // 4. PATH.
         Bun.which("allternit-mux") ?? undefined,
@@ -109,7 +109,7 @@ export namespace Pty {
               ALLTERNIT_MUX_STATE_DIR: muxStateDir(),
               ALLTERNIT_MUX_SOCKET: muxSocketPath(),
             },
-            detached: true,
+            detached: process.platform !== "win32",
             stdio: "ignore",
           })
           // Bun reports a failed exec on the child's error event, not sync.
@@ -118,7 +118,8 @@ export namespace Pty {
             setTimeout(() => resolve(false), 300)
           })
           if (failed) continue
-          child.unref()
+          const { ProcessRegistry } = await import("@/runtime/process-registry")
+          ProcessRegistry.track(child, { label: "allternit-mux", group: process.platform !== "win32" })
           spawned = true
           log.info("auto-spawned allternit-mux", { bin })
           break

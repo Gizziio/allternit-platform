@@ -6,7 +6,22 @@
  */
 
 import { api, GATEWAY_BASE_URL } from '@/integration/api-client';
+import { isModelLabApiEnabled } from '@/lib/env';
 import { setupApi } from '@/services/setup-api';
+
+// `/api/model-lab/*` is served only by the Rust allternit-api (:8013), which
+// is not publicly reachable from the deployed web surface — every entry point
+// below fails closed when the flag is off instead of firing requests that
+// 404. Set NEXT_PUBLIC_ALLTERNIT_MODEL_LAB_API=1 where the gateway is
+// reachable.
+const MODEL_LAB_DISABLED_MESSAGE =
+  'Model Lab API is disabled in this deployment (set NEXT_PUBLIC_ALLTERNIT_MODEL_LAB_API=1 where the gateway is reachable).';
+
+function assertModelLabApiEnabled(): void {
+  if (!isModelLabApiEnabled()) {
+    throw new Error(MODEL_LAB_DISABLED_MESSAGE);
+  }
+}
 
 // ============================================================================
 // Model Lab job types
@@ -223,11 +238,13 @@ export interface ChatCompletionChunk {
 // ============================================================================
 
 export async function listModelLabJobs(): Promise<ModelJob[]> {
+  assertModelLabApiEnabled();
   const response = await api.get<ModelJobListResponse>('/api/model-lab/jobs');
   return response.jobs ?? [];
 }
 
 export async function getModelLabJob(jobId: string): Promise<ModelJob> {
+  assertModelLabApiEnabled();
   return api.get<ModelJob>(`/api/model-lab/jobs/${encodeURIComponent(jobId)}`);
 }
 
@@ -238,6 +255,7 @@ export interface CreateModelLabJobRequest {
 }
 
 export async function createModelLabJob(request: CreateModelLabJobRequest): Promise<ModelJob> {
+  assertModelLabApiEnabled();
   return api.post<ModelJob>('/api/model-lab/jobs', request);
 }
 
@@ -421,6 +439,10 @@ export interface CatalogModel {
 export interface CatalogResponse {
   models: CatalogModel[];
   count: number;
+  /** Epoch seconds of the last successful HF poll; absent if never polled. */
+  fetched_at?: number;
+  /** Whether the cached poll is missing or older than 30 minutes. */
+  stale?: boolean;
 }
 
 export type RecommendationIntent = 'balanced' | 'smartest' | 'fastest' | 'lightweight';
@@ -468,6 +490,29 @@ export async function assessModel(
     quantization,
     context_length: contextLength,
   });
+}
+
+export interface AssessBatchRequestModel {
+  repo_id: string;
+  quantization?: string;
+  context_length?: number;
+}
+
+export interface AssessBatchResponse {
+  results: ModelAssessment[];
+}
+
+/**
+ * Assess multiple models in a single request. Results are returned in request
+ * order. The engine caps batches at 50 models (400 beyond that).
+ */
+export async function assessModelsBatch(
+  models: AssessBatchRequestModel[],
+): Promise<ModelAssessment[]> {
+  const response = await api.post<AssessBatchResponse>('/api/local-engine/assess/batch', {
+    models,
+  });
+  return response.results ?? [];
 }
 
 export async function recommendModels(

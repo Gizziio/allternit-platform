@@ -12,6 +12,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import type { ArtifactUIPart } from '@/lib/ai/ui-parts.types';
 import { canvasApi, type BackendCanvas } from '@/lib/agents/native-agent-api';
+import { isAgentSessionsApiEnabled } from '@/lib/env';
 import { useArtifactEventListener } from '@/lib/canvas/canvas-artifact-events';
 
 interface UseCanvasStreamOptions {
@@ -82,7 +83,9 @@ export function useCanvasStream({
 
   // Load persisted canvases on mount when a backend session is available
   useEffect(() => {
-    if (!sessionId || !isBackendSessionId(sessionId)) return;
+    // Canvas persistence targets /api/v1/agent-sessions/:id/canvases, served
+    // only by the Rust allternit-api (:8013) — skip when disabled by flag.
+    if (!sessionId || !isBackendSessionId(sessionId) || !isAgentSessionsApiEnabled()) return;
 
     let cancelled = false;
     canvasApi.listCanvases(sessionId)
@@ -112,7 +115,7 @@ export function useCanvasStream({
 
   // Persist artifact changes to backend canvas
   const persistArtifact = useCallback(async (artifact: CanvasArtifact) => {
-    if (!sessionId || !isBackendSessionId(sessionId)) return;
+    if (!sessionId || !isBackendSessionId(sessionId) || !isAgentSessionsApiEnabled()) return;
 
     try {
       const existingCanvasId = pendingCanvasRef.current.get(artifact.id);

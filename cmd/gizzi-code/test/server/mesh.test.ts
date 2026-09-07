@@ -47,6 +47,7 @@ let fakebin: string
 let nodeBin: string
 let record: string
 let originalPath: string | undefined
+const previousFlag: Record<string, string | undefined> = {}
 let Log: typeof import("../../src/shared/util/log").Log
 let Mesh: typeof import("../../src/runtime/server/mesh").Mesh
 
@@ -99,6 +100,18 @@ beforeAll(async () => {
   Log = (await import("../../src/shared/util/log")).Log
   await Log.init({ print: false })
 
+  // Flag consts are frozen at first module import; in the full smoke suite
+  // other files import Flag before this beforeAll runs, so the env overrides
+  // above would be ignored (Bun.which also only sees the process-start PATH,
+  // so the PATH scrub cannot make the fakes discoverable either). The Flag
+  // namespace is runtime-mutable — point the binary overrides at the fakes
+  // directly and restore the previous values in afterAll.
+  const mutableFlag = (await import("../../src/runtime/context/flag/flag")).Flag as unknown as Record<string, string | undefined>
+  for (const key of ["GIZZI_MESH_NODE_BIN", "GIZZI_TAILSCALE_BIN", "GIZZI_TAILSCALED_BIN"]) {
+    previousFlag[key] = mutableFlag[key]
+    mutableFlag[key] = process.env[key]
+  }
+
   Mesh = (await import("../../src/runtime/server/mesh")).Mesh
 })
 
@@ -116,10 +129,14 @@ afterAll(async () => {
   delete process.env.GIZZI_MESH_NODE_BIN
   delete process.env.GIZZI_TAILSCALE_BIN
   delete process.env.GIZZI_TAILSCALED_BIN
+  const mutableFlag = (await import("../../src/runtime/context/flag/flag")).Flag as unknown as Record<string, string | undefined>
+  for (const key of ["GIZZI_MESH_NODE_BIN", "GIZZI_TAILSCALE_BIN", "GIZZI_TAILSCALED_BIN"]) {
+    mutableFlag[key] = previousFlag[key]
+  }
   await fs.rm(home, { recursive: true, force: true })
 })
 
-describe.skip("Mesh join precedence", () => {
+describe("Mesh join precedence", () => {
   test("(a) sidecar wins over a reachable system tailscaled; tailscale CLI is never invoked", async () => {
     await writeExec(nodeBin, MESH_NODE_FAKE)
     await Bun.write(record, "")

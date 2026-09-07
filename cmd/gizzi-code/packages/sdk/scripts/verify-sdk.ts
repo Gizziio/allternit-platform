@@ -8,8 +8,8 @@ import { AllternitHarness } from '../dist/harness/index.js';
 console.log('✓ AllternitHarness imported');
 
 // Test provider imports
-import { AllternitAI } from '../dist/providers/anthropic/index.js';
-console.log('✓ AllternitAI (Anthropic) imported');
+import { AllternitAI } from '../dist/providers/allternit/index.js';
+console.log('✓ AllternitAI (Allternit) imported');
 
 import { AllternitOpenAI } from '../dist/providers/openai/index.js';
 console.log('✓ AllternitOpenAI imported');
@@ -25,7 +25,7 @@ import type { HarnessConfig, StreamRequest } from '../dist/harness/types.js';
 console.log('✓ Harness types imported');
 
 // Test error classes
-import { AllternitError, APIUserAbortError } from '../dist/providers/anthropic/core/error.js';
+import { AllternitError, APIUserAbortError } from '../dist/providers/allternit/core/error.js';
 console.log('✓ Error classes imported');
 
 console.log('\n✅ SDK build verified successfully!');

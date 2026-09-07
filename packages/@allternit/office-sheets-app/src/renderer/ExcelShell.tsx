@@ -20,6 +20,7 @@ import type { ChartSeriesVisualState } from '@allternit/office-suite/xlsx'
 import type { ChangePlan } from '@allternit/office-suite/xlsx'
 import type { AttachmentMeta } from '@allternit/office-suite/xlsx'
 import { AiChatPanel, type AiChatMessage } from './ai/AiChatPanel'
+import { OfficeAiSlot } from '@allternit/office-suite/bridge'
 import {
   PivotDialog,
   type PivotEditSeed,
@@ -424,29 +425,36 @@ export function ExcelShell({
 
       {/* AI panel docks on the left, full height under the ribbon (unified with docs) */}
       <div className="sheet-body">
-        <AiChatPanel
-          isOpen={isCopilotOpen}
-          hasContent={sheetHasContent}
-          chat={chat}
-          {...(historicChat !== undefined ? { historicChat } : {})}
-          attachments={attachments}
-          attachNotice={attachNotice}
-          onPickAttachments={onPickAttachments}
-          onAddAttachmentPaths={onAddAttachmentPaths}
-          onAddPastedImage={onAddPastedImage}
-          onRemoveAttachment={onRemoveAttachment}
-          prompt={prompt}
-          preview={preview}
-          aiBusy={aiBusy}
-          onPromptChange={onPromptChange}
-          onSend={onSend}
-          onStop={onStop}
-          onNewChat={onNewChat}
-          onUndo={onUndo}
-          onExpand={() => setIsCopilotOpen(true)}
-          onCollapse={() => setIsCopilotOpen(false)}
-          modelId={aiModelId}
-          onModelChange={onAiModelChange}
+        <OfficeAiSlot
+          appKey="sheets"
+          collapsed={!isCopilotOpen}
+          close={() => setIsCopilotOpen(false)}
+          fallback={
+            <AiChatPanel
+              isOpen={isCopilotOpen}
+              hasContent={sheetHasContent}
+              chat={chat}
+              {...(historicChat !== undefined ? { historicChat } : {})}
+              attachments={attachments}
+              attachNotice={attachNotice}
+              onPickAttachments={onPickAttachments}
+              onAddAttachmentPaths={onAddAttachmentPaths}
+              onAddPastedImage={onAddPastedImage}
+              onRemoveAttachment={onRemoveAttachment}
+              prompt={prompt}
+              preview={preview}
+              aiBusy={aiBusy}
+              onPromptChange={onPromptChange}
+              onSend={onSend}
+              onStop={onStop}
+              onNewChat={onNewChat}
+              onUndo={onUndo}
+              onExpand={() => setIsCopilotOpen(true)}
+              onCollapse={() => setIsCopilotOpen(false)}
+              modelId={aiModelId}
+              onModelChange={onAiModelChange}
+            />
+          }
         />
         <div className="sheet-main">
           {/* Excel's formula-bar row, Name Box only for now (fx bar TBD). */}

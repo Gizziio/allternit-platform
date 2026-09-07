@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en" class="fabric-session-app">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Allternit Fabric Session</title>
+    <meta name="description" content="Carry your Allternit agents with you across machines." />
+    <link rel="icon" href="/favicon.svg" />
+    <link rel="manifest" href="/fabric-session.webmanifest" />
+    <meta name="theme-color" content="#FFFFFF" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Fabric Session" />
+    <link rel="apple-touch-icon" href="/fabric-session-icon-192.png" />
+    <link rel="apple-touch-startup-image" href="/fabric-session-splash-1170x2532.png" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)" />
+    <style>
+      html.fabric-session-app,
+      html.fabric-session-app body,
+      html.fabric-session-app #root {
+        height: 100%;
+        min-height: 100%;
+      }
+      html.fabric-session-app,
+      html.fabric-session-app body {
+        overflow: hidden !important;
+      }
+      html.fabric-session-app #root {
+        overflow: hidden;
+      }
+    </style>
+    <script>
+      (function () {
+        try {
+          var key = 'allternit-fabric-session-theme-storage';
+          var s = localStorage.getItem(key);
+          var parsed = s ? JSON.parse(s) : null;
+          var t = parsed && parsed.state && parsed.state.theme;
+          // Match the Allternit platform light canvas (#FDF8F3) unless the
+          // user explicitly chose dark. "system" follows OS, but first load
+          // is light so the detached window matches the desktop shell.
+          var systemDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var r = t === 'dark' ? 'dark' : t === 'system' && systemDark ? 'dark' : 'light';
+          if (!t || t === 'system') {
+            localStorage.setItem(key, JSON.stringify({ state: { theme: 'light' }, version: 0 }));
+            r = 'light';
+          }
+          document.documentElement.setAttribute('data-theme', r);
+          document.documentElement.style.colorScheme = r;
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body class="m-0 font-sans">
+    <div id="root"></div>
+    <script type="module" src="/src/fabric-session/main.tsx"></script>
+  </body>
+</html>

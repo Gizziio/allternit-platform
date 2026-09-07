@@ -11,11 +11,11 @@
  * 
  * const harness = new AllternitHarness({
  *   mode: 'byok',
- *   byok: { anthropic: { apiKey: process.env.ANTHROPIC_API_KEY } }
+ *   byok: { allternit: { apiKey: process.env.ALLTERNIT_API_KEY } }
  * });
  * 
  * for await (const chunk of harness.stream({
- *   provider: 'anthropic',
+ *   provider: 'allternit',
  *   model: 'claude-3-haiku',
  *   messages: [{ role: 'user', content: 'Hello!' }]
  * })) {
@@ -60,9 +60,9 @@ export {
 // Providers (15 Total)
 // ============================================================================
 
-// Anthropic (Claude)
-export { AllternitAI } from './providers/anthropic/index.js';
-export type { AllternitAI as default } from './providers/anthropic/index.js';
+// Allternit (Allternit)
+export { AllternitAI } from './providers/allternit/index.js';
+export type { AllternitAI as default } from './providers/allternit/index.js';
 
 // OpenAI (GPT)
 export { AllternitOpenAI } from './providers/openai/index.js';

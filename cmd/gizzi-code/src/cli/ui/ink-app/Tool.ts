@@ -2,7 +2,7 @@
 import type {
   ToolResultBlockParam,
   ToolUseBlockParam,
-} from '@allternit/sdk/providers/anthropic/resources/index.mjs'
+} from '@allternit/gizzi-sdk/providers/allternit/resources/index.mjs'
 import type {
   ElicitRequestURLParams,
   ElicitResult,
@@ -177,6 +177,8 @@ export type ToolUseContext = {
     querySource?: QuerySource
     /** Optional callback to get the latest tools (e.g., after MCP servers connect mid-query) */
     refreshTools?: () => Tools
+    /** Dashboard top-level session that owns this context, if any (stamped by the session's canUseTool wrap so permission confirms can be attributed to a dashboard row). */
+    dashboardTaskId?: string
   }
   abortController: AbortController
   readFileState: FileStateCache
@@ -451,7 +453,7 @@ export type Tool<
   /**
    * For MCP tools: the server and tool names as received from the MCP server (unnormalized).
    * Present on all MCP tools regardless of whether `name` is prefixed (mcp__server__tool)
-   * or unprefixed (CLAUDE_AGENT_SDK_MCP_NO_PREFIX mode).
+   * or unprefixed (GIZZI_AGENT_SDK_MCP_NO_PREFIX mode).
    */
   mcpInfo?: { serverName: string; toolName: string }
   readonly name: string

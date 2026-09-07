@@ -2,7 +2,7 @@
 /**
  * PID-Based Version Locking
  *
- * This module provides PID-based locking for running Claude Code versions.
+ * This module provides PID-based locking for running gizzi-code versions.
  * Unlike mtime-based locking (which can hold locks for 30 days after a crash),
  * PID-based locking can immediately detect when a process is no longer running.
  *
@@ -180,7 +180,7 @@ export function isLockActive(lockFilePath: string): boolean {
   // This helps with PID reuse scenarios
   if (!isClaudeProcess(pid, execPath)) {
     logForDebugging(
-      `Lock PID ${pid} is running but does not appear to be Claude - treating as stale`,
+      `Lock PID ${pid} is running but does not appear to be Gizzi - treating as stale`,
     )
     return false
   }

@@ -170,7 +170,13 @@ function matchesDOW(dayOfWeek: number, expr: string): boolean {
   
   // Handle wildcard
   if (expr === "*") return true;
-  
+
+  // Handle lists like 1,3,5 (Monday, Wednesday, Friday)
+  if (expr.includes(",")) {
+    const values = expr.split(",").map((n) => parseInt(n, 10));
+    return values.includes(dayOfWeek);
+  }
+
   // Handle ranges like 1-5 (Monday-Friday)
   if (expr.includes("-")) {
     const [start, end] = expr.split("-").map((n) => parseInt(n, 10));

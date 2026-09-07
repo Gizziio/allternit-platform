@@ -7,9 +7,16 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 
+import { isToolsApiEnabled } from '@/lib/env';
 import { createModuleLogger } from '@/lib/logger';
 
 const logger = createModuleLogger('Recording');
+
+// GIF recording drives `browser.*_recording` tools through
+// `/api/v1/tools/execute`, which is served only by the Rust allternit-api —
+// fail closed without firing when the tools API is disabled by flag.
+const RECORDING_DISABLED_ERROR =
+  'GIF recording is disabled in this deployment (set NEXT_PUBLIC_ALLTERNIT_TOOLS_API=1 where the gateway is reachable).';
 
 export interface RecordingState {
   // Recording status
@@ -40,6 +47,9 @@ export const useRecordingStore = create<RecordingState>()(
     format: 'gif',
 
     startRecording: async (sessionId?: string, format: string = 'gif', fps: number = 10) => {
+      if (!isToolsApiEnabled()) {
+        throw new Error(RECORDING_DISABLED_ERROR);
+      }
       try {
         const response = await fetch('/api/v1/tools/execute', {
           method: 'POST',
@@ -90,9 +100,13 @@ export const useRecordingStore = create<RecordingState>()(
 
     stopRecording: async () => {
       const recordingId = get().recordingId;
-      
+
       if (!recordingId) {
         throw new Error('No active recording');
+      }
+
+      if (!isToolsApiEnabled()) {
+        throw new Error(RECORDING_DISABLED_ERROR);
       }
 
       try {
@@ -145,8 +159,12 @@ export const useRecordingStore = create<RecordingState>()(
 
     getRecordingStatus: async () => {
       const recordingId = get().recordingId;
-      
+
       if (!recordingId) {
+        return;
+      }
+
+      if (!isToolsApiEnabled()) {
         return;
       }
 

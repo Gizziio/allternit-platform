@@ -12,7 +12,7 @@ export type ReservedShortcut = {
 }
 
 /**
- * Shortcuts that cannot be rebound - they are hardcoded in Claude Code.
+ * Shortcuts that cannot be rebound - they are hardcoded in gizzi-code.
  */
 export const NON_REBINDABLE: ReservedShortcut[] = [
   {

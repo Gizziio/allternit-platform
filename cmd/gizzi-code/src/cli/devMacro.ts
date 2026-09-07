@@ -11,5 +11,6 @@ import pkg from '../../package.json'
 ;(globalThis as any).MACRO ??= {
   VERSION: pkg.version,
   BUILD_TIME: new Date().toISOString(),
+  PACKAGE_URL: pkg.name,
   ISSUES_EXPLAINER: 'https://github.com/Gizziio/ai-allternit/issues',
 }

@@ -45,7 +45,7 @@ pub async fn list_regions(
                 r.capacity - COALESCE(rc.current_runs, 0) - COALESCE(rc.queued_runs, 0) as available_capacity
             FROM regions r
             LEFT JOIN region_capacity rc ON r.id = rc.region_id
-            WHERE r.provider = ?
+            WHERE r.provider = $1
             ORDER BY r.name
             "#
         )
@@ -116,7 +116,7 @@ pub async fn get_region(
     State(state): State<Arc<ApiState>>,
     Path(id): Path<String>,
 ) -> Result<Json<Region>, ApiError> {
-    let region = sqlx::query_as::<_, Region>("SELECT * FROM regions WHERE id = ?")
+    let region = sqlx::query_as::<_, Region>("SELECT * FROM regions WHERE id = $1")
         .bind(&id)
         .fetch_optional(&state.db)
         .await
@@ -133,7 +133,7 @@ pub async fn get_region_capacity(
     Path(id): Path<String>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
     // First check if region exists
-    let exists: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM regions WHERE id = ?)")
+    let exists: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM regions WHERE id = $1)")
         .bind(&id)
         .fetch_one(&state.db)
         .await
@@ -144,14 +144,14 @@ pub async fn get_region_capacity(
     }
 
     let capacity = sqlx::query_as::<_, crate::db::models::RegionCapacity>(
-        "SELECT * FROM region_capacity WHERE region_id = ?",
+        "SELECT * FROM region_capacity WHERE region_id = $1",
     )
     .bind(&id)
     .fetch_optional(&state.db)
     .await
     .map_err(|e| ApiError::DatabaseError(e))?;
 
-    let region = sqlx::query_as::<_, Region>("SELECT capacity FROM regions WHERE id = ?")
+    let region = sqlx::query_as::<_, Region>("SELECT capacity FROM regions WHERE id = $1")
         .bind(&id)
         .fetch_one(&state.db)
         .await

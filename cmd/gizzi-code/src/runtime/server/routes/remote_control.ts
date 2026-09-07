@@ -16,12 +16,17 @@ import { Question } from "@/runtime/integrations/question"
 
 const log = Log.create({ service: "remote-control" })
 
-const RemoteSessionStatus = z.object({
-  session: Session.Info,
-  status: SessionStatus.Info,
-})
+// NOTE: `Session`/`SessionStatus` live in a module that (transitively)
+// imports these routes, so their `.Info` schemas may only be touched inside
+// the lazy factory — module-scope access races the circular import and
+// crashes with "undefined is not an object" at import time.
+export const RemoteControlRoutes = lazy(() => {
+  const RemoteSessionStatus = z.object({
+    session: Session.Info,
+    status: SessionStatus.Info,
+  })
 
-export const RemoteControlRoutes = lazy(() =>
+  return (
   new Hono()
     .get(
       "/sessions",
@@ -213,5 +218,6 @@ export const RemoteControlRoutes = lazy(() =>
           })
         })
       },
-    ),
-)
+    )
+  )
+})

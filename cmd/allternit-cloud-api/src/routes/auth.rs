@@ -31,21 +31,11 @@ pub async fn validate_token(
     State(state): State<Arc<ApiState>>,
     Json(request): Json<ValidateTokenRequest>,
 ) -> Result<Json<TokenInfo>, ApiError> {
-    // Simple hash for lookup
-    let digest = md5::compute(request.token.as_bytes());
-    let token_hash = format!("{:x}", digest);
-
-    let db_token: Option<ApiToken> = sqlx::query_as::<_, ApiToken>(
-        r#"
-        SELECT id, token_hash, name, user_id, permissions, created_at, expires_at, last_used_at, is_revoked
-        FROM api_tokens
-        WHERE token_hash = ? AND is_revoked = FALSE
-        "#
-    )
-    .bind(&token_hash)
-    .fetch_optional(&state.db)
-    .await
-    .map_err(|e| ApiError::DatabaseError(e))?;
+    // Tokens minted after the hashing upgrade are stored as SHA-256; legacy
+    // MD5 rows still validate via `lookup_api_token` (which upgrades them).
+    let db_token: Option<ApiToken> =
+        crate::auth::middleware::lookup_api_token(&state.db, &request.token).await
+            .map_err(|e| ApiError::DatabaseError(e))?;
 
     let token_info = match db_token {
         Some(token) => {
@@ -62,8 +52,17 @@ pub async fn validate_token(
             }
         }
         None => {
-            // Check for dev token
-            if request.token == "dev-api-token" {
+            // Development overrides — all opt-in and default-OFF. The
+            // hardcoded `dev-api-token` requires `ALLTERNIT_ALLOW_DEV_TOKEN`
+            // (audit finding B1, see `auth::dev_token`); the other two are
+            // rejected by default and hard-refused in production (see
+            // auth::middleware::is_dev_api_token and is_legacy_dev_api_token).
+            if crate::auth::dev_token::is_allowed_dev_token(
+                &request.token,
+                crate::auth::dev_token::dev_token_allowed(),
+            ) || crate::auth::middleware::is_dev_api_token(&request.token)
+                || crate::auth::middleware::is_legacy_dev_api_token(&request.token)
+            {
                 TokenInfo {
                     valid: true,
                     token_id: Some("dev-token".to_string()),
@@ -127,7 +126,7 @@ pub async fn list_tokens(
         r#"
         SELECT id, token_hash, name, user_id, permissions, created_at, expires_at, last_used_at, is_revoked
         FROM api_tokens
-        WHERE user_id = ? AND is_revoked = FALSE
+        WHERE user_id = $1 AND is_revoked = FALSE
         ORDER BY created_at DESC
         "#
     )
@@ -186,8 +185,7 @@ pub async fn create_token(
 
     // Generate token
     let token = format!("allternit_{}", generate_secure_random(48));
-    let digest = md5::compute(token.as_bytes());
-    let token_hash = format!("{:x}", digest);
+    let token_hash = crate::services::api_keys::hash_token(&token);
     let token_id = format!("token_{}", generate_secure_random(16));
 
     // Calculate expiration
@@ -202,7 +200,7 @@ pub async fn create_token(
     sqlx::query(
         r#"
         INSERT INTO api_tokens (id, token_hash, name, user_id, permissions, created_at, expires_at, is_revoked)
-        VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, FALSE)
+        VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, $6, FALSE)
         "#
     )
     .bind(&token_id)
@@ -234,7 +232,7 @@ pub async fn revoke_token(
 ) -> Result<Json<serde_json::Value>, ApiError> {
     // Check if user can delete this token (must be owner or have tokens:delete permission)
     let token: Option<ApiToken> =
-        sqlx::query_as::<_, ApiToken>("SELECT * FROM api_tokens WHERE id = ?")
+        sqlx::query_as::<_, ApiToken>("SELECT * FROM api_tokens WHERE id = $1")
             .bind(&token_id)
             .fetch_optional(&state.db)
             .await
@@ -251,7 +249,7 @@ pub async fn revoke_token(
         return Err(ApiError::Forbidden("Cannot revoke this token".to_string()));
     }
 
-    sqlx::query("UPDATE api_tokens SET is_revoked = TRUE WHERE id = ?")
+    sqlx::query("UPDATE api_tokens SET is_revoked = TRUE WHERE id = $1")
         .bind(&token_id)
         .execute(&state.db)
         .await

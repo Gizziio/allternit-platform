@@ -1,5 +1,5 @@
 // @ts-nocheck
-import chalk from 'chalk'
+import chalk from '@/shared/util/chalk'
 import { supportsHyperlinks } from '../ink/supports-hyperlinks.js'
 
 // OSC 8 hyperlink escape sequences

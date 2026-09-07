@@ -1,6 +1,6 @@
 {
   "name": "@allternit/desktop",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Allternit Desktop — Electron shell loading the Allternit platform with local VM management via Apple Virtualization.framework.",
   "main": "dist/main/unified-main.js",
   "type": "module",
@@ -15,22 +15,28 @@
     "prepare:platform-static": "node scripts/prepare-platform-static.cjs",
     "prepare:office-addins": "ALLTERNIT_OFFICE_APP_BASE_URL=https://platform.allternit.com/office-addins ALLTERNIT_PLATFORM_URL=https://platform.allternit.com pnpm --dir ../allternit-extensions/allternit-office-addin manifest:generate",
     "prepare:cua-driver": "node scripts/prepare-cua-driver.cjs",
+    "prepare:acu-gateway": "node scripts/prepare-acu-gateway.cjs",
     "prepare:mesh-node": "node scripts/prepare-mesh-node.cjs",
     "prepare:office-engine": "node scripts/prepare-office-engine.cjs",
+    "prepare:api-binary": "node scripts/prepare-api-binary.cjs",
+    "prepare:connector-catalog": "node scripts/prepare-connector-catalog.cjs",
     "build": "npm run build:auth-renderer && npm run build:main && npm run build:preload",
     "build:auth-renderer": "node scripts/build-auth-renderer.cjs",
     "build:main": "tsc -p src/main/tsconfig.json",
     "build:preload": "tsc -p src/preload/tsconfig.json",
     "download:lima": "node scripts/download-lima.cjs",
     "config:company": "cd ../.. && pnpm run config:company:write",
-    "build:electron": "npm run config:company && npm run prepare:platform-static && npm run prepare:office-addins && npm run prepare:cua-driver && npm run download:lima && npm run prepare:mesh-node && npm run prepare:office-engine && npm run build && electron-builder --mac",
-    "build:electron:dmg": "npm run config:company && npm run prepare:platform-static && npm run prepare:office-addins && npm run prepare:cua-driver && npm run download:lima && npm run prepare:mesh-node && npm run prepare:office-engine && npm run build && electron-builder --mac dmg",
+    "build:electron": "npm run config:company && npm run prepare:platform-static && npm run prepare:office-addins && npm run prepare:cua-driver && npm run prepare:acu-gateway && npm run download:lima && npm run prepare:mesh-node && npm run prepare:office-engine && npm run prepare:api-binary && npm run prepare:connector-catalog && npm run build && npm run verify:packaged-resources && electron-builder --mac",
+    "build:electron:dmg": "npm run config:company && npm run prepare:platform-static && npm run prepare:office-addins && npm run prepare:cua-driver && npm run prepare:acu-gateway && npm run download:lima && npm run prepare:mesh-node && npm run prepare:office-engine && npm run prepare:api-binary && npm run prepare:connector-catalog && npm run build && npm run verify:packaged-resources && electron-builder --mac dmg",
     "start": "electron .",
     "test": "vitest run",
     "typecheck": "tsc --noEmit -p src/main/tsconfig.json && tsc --noEmit -p src/preload/tsconfig.json",
     "test:e2e": "pnpm run build && playwright test",
-    "pack": "npm run prepare:platform-static && npm run prepare:office-addins && npm run prepare:cua-driver && npm run prepare:mesh-node && npm run prepare:office-engine && electron-builder --dir",
-    "dist": "npm run prepare:platform-static && npm run prepare:office-addins && npm run prepare:cua-driver && npm run prepare:mesh-node && npm run prepare:office-engine && npm run build && electron-builder"
+    "pack": "npm run prepare:platform-static && npm run prepare:office-addins && npm run prepare:cua-driver && npm run prepare:acu-gateway && npm run download:lima && npm run prepare:mesh-node && npm run prepare:office-engine && npm run prepare:api-binary && npm run prepare:connector-catalog && npm run verify:packaged-resources && electron-builder --dir",
+    "dist": "npm run prepare:platform-static && npm run prepare:office-addins && npm run prepare:cua-driver && npm run prepare:acu-gateway && npm run download:lima && npm run prepare:mesh-node && npm run prepare:office-engine && npm run prepare:api-binary && npm run prepare:connector-catalog && npm run build && npm run verify:packaged-resources && electron-builder",
+    "verify:packaged-resources": "node scripts/verify-packaged-resources.cjs",
+    "stage:api-binary": "node scripts/stage-api-binary.cjs",
+    "stage:local-engine": "node scripts/stage-local-engine-binary.cjs"
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.30.0",
@@ -70,6 +76,7 @@
   "build": {
     "appId": "com.allternit.desktop",
     "productName": "Allternit Desktop",
+    "asar": true,
     "protocols": [
       {
         "name": "Allternit Protocol",
@@ -101,27 +108,17 @@
         ]
       },
       {
+        "from": "native/dictation-helper/",
+        "to": "native/dictation-helper/",
+        "filter": [
+          "DictationHelper"
+        ]
+      },
+      {
         "from": "resources/platform/",
         "to": "platform/",
         "filter": [
           "**/*"
-        ]
-      },
-      {
-        "from": "resources/lima/",
-        "to": "lima/",
-        "filter": [
-          "**/*"
-        ]
-      },
-      {
-        "from": "resources/computer-use/",
-        "to": "computer-use/",
-        "filter": [
-          "cua-driver",
-          "VERSION.json",
-          "README.md",
-          "LICENSE.cua-driver.txt"
         ]
       },
       {
@@ -172,11 +169,19 @@
         "filter": [
           "*.xml"
         ]
+      },
+      {
+        "from": "build/LICENSE.txt",
+        "to": "licenses/LICENSE.txt"
+      },
+      {
+        "from": "../../THIRD_PARTY_NOTICES.md",
+        "to": "licenses/THIRD_PARTY_NOTICES.md"
       }
     ],
     "asarUnpack": [
-      "resources/bin/**",
-      "resources/lima/**"
+      "bin/**",
+      "lima/**"
     ],
     "fileAssociations": [
       {
@@ -227,13 +232,15 @@
         {
           "target": "dmg",
           "arch": [
-            "arm64"
+            "arm64",
+            "x64"
           ]
         },
         {
           "target": "zip",
           "arch": [
-            "arm64"
+            "arm64",
+            "x64"
           ]
         }
       ],
@@ -244,14 +251,52 @@
       "icon": "build/icon.icns",
       "category": "public.app-category.developer-tools",
       "darkModeSupport": true,
+      "identity": null,
       "binaries": [
         "Contents/Resources/computer-use/cua-driver"
       ],
+      "extraResources": [
+        {
+          "from": "resources/lima/darwin/",
+          "to": "lima/",
+          "filter": [
+            "limactl"
+          ]
+        },
+        {
+          "from": "resources/lima/README.md",
+          "to": "lima/README.md"
+        },
+        {
+          "from": "resources/computer-use/darwin/",
+          "to": "computer-use/",
+          "filter": [
+            "cua-driver"
+          ]
+        },
+        {
+          "from": "resources/computer-use/",
+          "to": "computer-use/",
+          "filter": [
+            "VERSION.json",
+            "README.md",
+            "LICENSE.cua-driver.txt"
+          ]
+        },
+        {
+          "from": "resources/computer-use/acu/",
+          "to": "computer-use/acu/"
+        }
+      ],
       "extendInfo": {
-        "NSAppleEventsUsageDescription": "Allternit uses automation to carry out computer-use actions you approve."
+        "NSAppleEventsUsageDescription": "Allternit uses automation to carry out computer-use actions you approve.",
+        "NSMicrophoneUsageDescription": "Allternit uses the microphone for voice calls and on-device dictation.",
+        "NSSpeechRecognitionUsageDescription": "Allternit uses speech recognition to transcribe your voice during calls."
       }
     },
     "dmg": {
+      "sign": true,
+      "artifactName": "Allternit-Desktop-${version}-${arch}.dmg",
       "title": "Allternit ${version}",
       "icon": "build/icon.icns",
       "background": "build/dmg-background.png",
@@ -281,8 +326,52 @@
       ],
       "icon": "build/icon.png",
       "category": "Development",
+      "executableName": "allternit",
       "synopsis": "Your AI Platform",
-      "description": "Allternit Desktop — fully offline AI platform with local VM execution."
+      "description": "Allternit Desktop — fully offline AI platform with local VM execution.",
+      "maintainer": "Allternit <support@allternit.com>",
+      "vendor": "Allternit",
+      "syncDesktopName": true,
+      "desktop": {
+        "entry": {
+          "Name": "Allternit Desktop",
+          "Comment": "Fully offline AI platform with local VM execution",
+          "Keywords": "AI;Agents;Chat;Productivity;"
+        }
+      },
+      "extraResources": [
+        {
+          "from": "resources/lima/linux/",
+          "to": "lima/",
+          "filter": [
+            "limactl"
+          ]
+        },
+        {
+          "from": "resources/lima/README.md",
+          "to": "lima/README.md"
+        },
+        {
+          "from": "resources/computer-use/linux/",
+          "to": "computer-use/",
+          "filter": [
+            "cua-driver"
+          ]
+        },
+        {
+          "from": "resources/computer-use/",
+          "to": "computer-use/",
+          "filter": [
+            "VERSION.json",
+            "README.md",
+            "LICENSE.cua-driver.txt"
+          ]
+        },
+        {
+          "from": "resources/computer-use/acu/",
+          "to": "computer-use/acu/"
+        }
+      ]
     },
     "appImage": {
       "artifactName": "Allternit-${version}.AppImage"
@@ -299,6 +388,12 @@
           "arch": [
             "x64"
           ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "build/icon.ico",
@@ -307,7 +402,30 @@
           "sha256"
         ],
         "publisherName": "Allternit"
-      }
+      },
+      "verifyUpdateCodeSignature": false,
+      "extraResources": [
+        {
+          "from": "resources/computer-use/win32/",
+          "to": "computer-use/",
+          "filter": [
+            "cua-driver.exe"
+          ]
+        },
+        {
+          "from": "resources/computer-use/",
+          "to": "computer-use/",
+          "filter": [
+            "VERSION.json",
+            "README.md",
+            "LICENSE.cua-driver.txt"
+          ]
+        },
+        {
+          "from": "resources/computer-use/acu/",
+          "to": "computer-use/acu/"
+        }
+      ]
     },
     "nsis": {
       "oneClick": false,

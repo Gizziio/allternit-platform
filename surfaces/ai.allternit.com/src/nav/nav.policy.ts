@@ -5,6 +5,7 @@ export const DEFAULT_POLICIES: Record<ViewType, SpawnPolicy> = {
   home: { singleton: true, maxInstances: 1, allowNew: false, surface: "view", ownsTabs: false },
   chat: { singleton: false, maxInstances: 20, allowNew: true, surface: "view", ownsTabs: false },
   "chat-legacy": { singleton: false, maxInstances: 20, allowNew: true, surface: "view", ownsTabs: false },
+  "bot-launchpad": { singleton: false, maxInstances: 20, allowNew: true, surface: "view", ownsTabs: false },
   project: { singleton: true, maxInstances: 1, allowNew: false, surface: "view", ownsTabs: false },
   elements: { singleton: true, maxInstances: 1, allowNew: false, surface: "view", ownsTabs: false },
   playground: { singleton: true, maxInstances: 1, allowNew: false, surface: "view", ownsTabs: false },
@@ -21,14 +22,19 @@ export const DEFAULT_POLICIES: Record<ViewType, SpawnPolicy> = {
   registry: { singleton: true, maxInstances: 1, allowNew: false, surface: "view", ownsTabs: false },
   memory: { singleton: true, maxInstances: 1, allowNew: false, surface: "view", ownsTabs: false },
   settings: { singleton: true, maxInstances: 1, allowNew: false, surface: "view", ownsTabs: false },
+  customize: { singleton: true, maxInstances: 1, allowNew: false, surface: "view", ownsTabs: false },
   "agent-hub": { singleton: true, maxInstances: 1, allowNew: false, surface: "view", ownsTabs: false },
   "bot-home": { singleton: false, maxInstances: 10, allowNew: true, surface: "view", ownsTabs: false },
   "bot-inbox": { singleton: false, maxInstances: 10, allowNew: true, surface: "view", ownsTabs: false },
+  "group-chat": { singleton: false, maxInstances: 10, allowNew: true, surface: "view", ownsTabs: false },
+  "groups-list": { singleton: true, maxInstances: 1, allowNew: false, surface: "view", ownsTabs: false },
+  "bot-chat-session": { singleton: false, maxInstances: 10, allowNew: true, surface: "view", ownsTabs: false },
 
   // Mode-specific Agent Session views
   // "chat-agent-session" is a deprecated alias to the cowork workspace now that
   // the old single-agent chat UI was removed.
   "chat-agent-session": { singleton: false, maxInstances: 10, allowNew: true, surface: "view", ownsTabs: false },
+  "chat-group-session": { singleton: false, maxInstances: 10, allowNew: true, surface: "view", ownsTabs: false },
   "cowork-agent-session": { singleton: false, maxInstances: 10, allowNew: true, surface: "view", ownsTabs: false },
   "code-agent-session": { singleton: false, maxInstances: 10, allowNew: true, surface: "view", ownsTabs: false },
   "design-agent-session": { singleton: false, maxInstances: 10, allowNew: true, surface: "view", ownsTabs: false },
@@ -124,6 +130,15 @@ export const DEFAULT_POLICIES: Record<ViewType, SpawnPolicy> = {
   'budget-dashboard': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   'replay-manager': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   'prewarm-manager': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
+
+  // Desktop-as-a-Service admin view
+  'desktop-cloud': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
+  // Customer Cloud Console
+  'cloud-console': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
+  // Model Gateway
+  'model-gateway': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
+  // Agent Cloud
+  'agent-cloud': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   // Chat History views
   history: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   archived: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
@@ -144,6 +159,7 @@ export const DEFAULT_POLICIES: Record<ViewType, SpawnPolicy> = {
   'cron': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   'dispatch': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   'remote-control': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
+  'fabric-session': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
 
   // Code views
   'new-file': { singleton: false, maxInstances: 20, allowNew: true, surface: 'view', ownsTabs: false },
@@ -194,13 +210,13 @@ export const DEFAULT_POLICIES: Record<ViewType, SpawnPolicy> = {
   "design-view-compare": { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   "design-marketplace": { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
 
-  // Docs editor (GenOffice)
+  // Docs editor (Allternit Office)
   docs: { singleton: false, maxInstances: 5, allowNew: true, surface: 'view', ownsTabs: false },
-  // Slides editor (GenOffice)
+  // Slides editor (Allternit Office)
   slides: { singleton: false, maxInstances: 5, allowNew: true, surface: 'view', ownsTabs: false },
-  // Sheets editor (GenOffice)
+  // Sheets editor (Allternit Office)
   sheets: { singleton: false, maxInstances: 5, allowNew: true, surface: 'view', ownsTabs: false },
-  // PDF viewer (GenOffice)
+  // PDF viewer (Allternit Office)
   pdf: { singleton: false, maxInstances: 5, allowNew: true, surface: 'view', ownsTabs: false },
   // Markdown preview (anydoc)
   'markdown-preview': { singleton: false, maxInstances: 5, allowNew: true, surface: 'view', ownsTabs: false },
@@ -215,4 +231,17 @@ export const DEFAULT_POLICIES: Record<ViewType, SpawnPolicy> = {
 
 export function makeStableViewId(viewType: ViewType, capsuleId?: string) {
   return capsuleId ?? viewType;
+}
+
+/** Rail / test aliases that must still open the real view. */
+const VIEW_TYPE_ALIASES: Record<string, ViewType> = {
+  projects: "project",
+  "remote-control": "fabric-session",
+  dispatch: "fabric-session",
+};
+
+export function resolveViewType(raw: string | undefined | null): ViewType | null {
+  if (!raw) return null;
+  if (raw in DEFAULT_POLICIES) return raw as ViewType;
+  return VIEW_TYPE_ALIASES[raw] ?? null;
 }

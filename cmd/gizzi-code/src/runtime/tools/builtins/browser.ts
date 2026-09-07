@@ -29,6 +29,7 @@ import { Provider } from "@/runtime/providers/provider"
 import { spawn } from "child_process"
 import { existsSync } from "fs"
 import path from "path"
+import { ProcessRegistry } from "@/runtime/process-registry"
 
 const log = Log.create({ service: "browser-tool" })
 
@@ -69,7 +70,9 @@ async function waitForGateway(timeoutMs = 8000): Promise<boolean> {
         signal: AbortSignal.timeout(1000),
       })
       if (r.ok) return true
-    } catch {}
+    } catch {
+      // Operator down while polling — the retry loop handles refusal/timeouts.
+    }
     await new Promise((r) => setTimeout(r, 500))
   }
   return false
@@ -82,7 +85,9 @@ async function autoStartOperator(): Promise<boolean> {
       signal: AbortSignal.timeout(1500),
     })
     if (r.ok) return true
-  } catch {}
+  } catch {
+    // Not running yet (or unreachable) — fall through and start it.
+  }
 
   const operatorDir = findOperatorDir()
   if (!operatorDir) {
@@ -99,10 +104,10 @@ async function autoStartOperator(): Promise<boolean> {
       cwd: operatorDir,
       env: { ...process.env },
       stdio: "ignore",
-      detached: true,
+      detached: process.platform !== "win32",
     },
   )
-  _operatorProc.unref()
+  ProcessRegistry.track(_operatorProc, { label: "computer-use-gateway", group: process.platform !== "win32" })
 
   const ready = await waitForGateway(10000)
   if (ready) {

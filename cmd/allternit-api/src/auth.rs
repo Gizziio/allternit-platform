@@ -44,6 +44,8 @@ use tracing::{error, info, warn};
 use crate::db::DbHandle;
 
 const DESKTOP_ACCESS_TOKEN_HEADER: &str = "x-allternit-desktop-access-token";
+const SELF_HOSTED_SETUP_TOKEN_HEADER: &str = "x-allternit-self-hosted-token";
+const INTERNAL_SERVICE_TOKEN_HEADER: &str = "x-allternit-internal-token";
 const USER_ID_HEADER: &str = "x-allternit-user-id";
 const USER_EMAIL_HEADER: &str = "x-allternit-user-email";
 const USER_NAME_HEADER: &str = "x-allternit-user-name";
@@ -55,6 +57,16 @@ const ORGANIZATION_SLUG_HEADER: &str = "x-allternit-organization-slug";
 
 const DEFAULT_CLERK_JWKS_URL: &str = "https://clerk.allternit.com/.well-known/jwks.json";
 const DEFAULT_CLERK_ISSUER: &str = "https://clerk.allternit.com";
+/// First-party Clerk proxy used by Fabric Transport. Browser session JWTs
+/// carry this `iss`; cloud-api already accepts it.
+const CLERK_PROXY_ISSUER: &str = "https://allternit.com/__clerk";
+
+fn allowed_clerk_issuers(primary: &str) -> Vec<&str> {
+    let mut list = vec![primary, DEFAULT_CLERK_ISSUER, CLERK_PROXY_ISSUER];
+    list.sort_unstable();
+    list.dedup();
+    list
+}
 
 /// How long to cache JWKS before refreshing
 const JWKS_CACHE_TTL: Duration = Duration::from_secs(3600);
@@ -224,6 +236,24 @@ impl JwksManager {
             !cached.keys.is_empty() || cached.fetched_at.elapsed() < JWKS_CACHE_TTL
         } else {
             false
+        }
+    }
+
+    /// Prefetch Clerk JWKS at boot so `/health` is not `jwks: false` until
+    /// the first Clerk JWT happens to arrive (desktop sessions use device
+    /// tokens and would otherwise stay degraded forever).
+    pub async fn warmup(&self) {
+        match self.fetch_jwks().await {
+            Ok(keys) => {
+                let mut cache = self.cache.write().await;
+                *cache = Some(CachedJwks {
+                    keys,
+                    fetched_at: Instant::now(),
+                });
+            }
+            Err(e) => {
+                warn!("JWKS warmup failed from {}: {}", self.jwks_url, e);
+            }
         }
     }
 
@@ -470,7 +500,8 @@ fn verify_rs256(
     )
     .map_err(|e| AuthError::TokenDecode(e.to_string()))?;
 
-    if claims.get("iss").and_then(|v| v.as_str()) != Some(issuer) {
+    let iss = claims.get("iss").and_then(|v| v.as_str()).unwrap_or("");
+    if !allowed_clerk_issuers(issuer).contains(&iss) {
         return Err(AuthError::TokenDecode("Invalid issuer".to_string()));
     }
     let now = std::time::SystemTime::now()
@@ -645,7 +676,7 @@ fn insert_user_headers(headers: &mut HeaderMap, user: &AuthUser) {
 /// Constant-time comparison — avoids leaking the secret's length/prefix via
 /// early-exit timing (same concern `internal_auth::require_internal_token`
 /// and `token_crypto`'s AEAD tag check handle for their own secrets).
-fn constant_time_eq(a: &str, b: &str) -> bool {
+pub(crate) fn constant_time_eq(a: &str, b: &str) -> bool {
     let (a, b) = (a.as_bytes(), b.as_bytes());
     if a.len() != b.len() {
         return false;
@@ -687,6 +718,58 @@ fn extract_desktop_bootstrap_user(
     })
 }
 
+/// Self-hosted setup-token authentication. When a deployment has no Clerk
+/// tenant, the onboarding wizard proves it was bootstrapped by the operator by
+/// sending the one-time `ALLTERNIT_SELF_HOSTED_SETUP_TOKEN` in a header. This
+/// path is disabled unless both `self_hosted` is true and a setup token is
+/// configured.
+fn extract_self_hosted_setup_user(
+    headers: &HeaderMap,
+    config: &crate::config::AppConfig,
+) -> Option<AuthUser> {
+    if !config.self_hosted() {
+        return None;
+    }
+    let provided_token = extract_header_string(headers, SELF_HOSTED_SETUP_TOKEN_HEADER)?;
+    let expected_token = config.self_hosted_setup_token()?;
+    if !constant_time_eq(&provided_token, &expected_token) {
+        return None;
+    }
+    Some(AuthUser {
+        user_id: "self-hosted-admin".to_string(),
+        email: Some("admin@allternit.local".to_string()),
+        name: Some("Self-Hosted Admin".to_string()),
+        avatar_url: None,
+        tenant_id: Some(config.tenant_id()),
+        organization_id: None,
+        organization_role: None,
+        organization_slug: None,
+    })
+}
+
+/// Internal service-token authentication. Peer services and health probes prove
+/// identity with the shared `ALLTERNIT_INTERNAL_SERVICE_TOKEN`.
+fn extract_internal_service_user(
+    headers: &HeaderMap,
+    config: &crate::config::AppConfig,
+) -> Option<AuthUser> {
+    let provided_token = extract_header_string(headers, INTERNAL_SERVICE_TOKEN_HEADER)?;
+    let expected_token = config.internal_service_token()?;
+    if !constant_time_eq(&provided_token, &expected_token) {
+        return None;
+    }
+    Some(AuthUser {
+        user_id: "internal-service".to_string(),
+        email: Some("internal@allternit.local".to_string()),
+        name: Some("Internal Service".to_string()),
+        avatar_url: None,
+        tenant_id: Some(config.tenant_id()),
+        organization_id: None,
+        organization_role: None,
+        organization_slug: None,
+    })
+}
+
 /// Auth middleware — verifies Clerk JWT and adds user context to request headers.
 /// In local development, falls back to `x-allternit-user-id` header for testing.
 pub async fn auth_middleware(
@@ -707,7 +790,67 @@ pub async fn auth_middleware(
         return next.run(request).await;
     }
 
-    // 2. Cloud-issued runtime-device token (`Authorization: Bearer
+    // 2. Self-hosted setup token (onboarding wizard on a headless VPS).
+    if let Some(mut user) = extract_self_hosted_setup_user(request.headers(), &state.config) {
+        match ensure_user_in_db(&state.db, &user) {
+            Ok(organization_id) => user.organization_id = organization_id,
+            Err(e) => return e.into_response(),
+        }
+
+        let headers = request.headers_mut();
+        insert_user_headers(headers, &user);
+        request.extensions_mut().insert(user);
+        return next.run(request).await;
+    }
+
+    // 2b. Internal service token (service-to-service calls, e.g. health probes).
+    if let Some(mut user) = extract_internal_service_user(request.headers(), &state.config) {
+        match ensure_user_in_db(&state.db, &user) {
+            Ok(organization_id) => user.organization_id = organization_id,
+            Err(e) => return e.into_response(),
+        }
+
+        let headers = request.headers_mut();
+        insert_user_headers(headers, &user);
+        request.extensions_mut().insert(user);
+        return next.run(request).await;
+    }
+
+    // 2c. Cloud-issued data-plane JWT (decision A1): the second hop of the
+    // control-plane → data-plane model. cloud-api mints a short-lived EdDSA
+    // JWT (`sub` = Clerk user id, `aud` = this node's device id) and relays
+    // user calls with it; `state.dp_jwks` verifies it against cloud-api's
+    // published JWKS. Anything that is not a valid DP token (Clerk session
+    // JWTs, access tokens, garbage) returns `None` and falls through to the
+    // bearer paths below, which are unchanged. The `at-` / `allternit_*`
+    // prefixes are skipped up front so those lookups never touch the DP
+    // JWKS cache.
+    if let Some(token) = extract_bearer_token(request.headers()) {
+        if !token.starts_with("at-") && !token.starts_with("allternit_") {
+            if let Some(claims) = state.dp_jwks.authenticate(&token).await {
+                let mut user = AuthUser {
+                    user_id: claims.sub,
+                    email: None,
+                    name: None,
+                    avatar_url: None,
+                    tenant_id: None,
+                    organization_id: None,
+                    organization_role: None,
+                    organization_slug: None,
+                };
+                match ensure_user_in_db(&state.db, &user) {
+                    Ok(organization_id) => user.organization_id = organization_id,
+                    Err(e) => return e.into_response(),
+                }
+                let headers = request.headers_mut();
+                insert_user_headers(headers, &user);
+                request.extensions_mut().insert(user);
+                return next.run(request).await;
+            }
+        }
+    }
+
+    // 4. Cloud-issued runtime-device token (`Authorization: Bearer
     // allternit_runtime_…`), the same mechanism already proven for
     // `mcp_proxy_internal`/`/internal/*`. Introspected against
     // allternit-cloud-api; the token-derived user_id is the identity.
@@ -717,14 +860,35 @@ pub async fn auth_middleware(
         if let Some(token) = crate::connector_routes::device_token_from_headers(request.headers()) {
             let token = token.to_string();
             return match crate::connector_routes::verify_runtime_device_token(&state, &token).await {
-                Ok(user_id) => {
+                Ok(identity) => {
+                    let header_email = request
+                        .headers()
+                        .get(USER_EMAIL_HEADER)
+                        .and_then(|v| v.to_str().ok())
+                        .filter(|s| !s.is_empty())
+                        .map(|s| s.to_string());
+                    let header_name = request
+                        .headers()
+                        .get("x-allternit-user-name")
+                        .and_then(|v| v.to_str().ok())
+                        .filter(|s| !s.is_empty())
+                        .map(|s| s.to_string());
+                    let header_org = request
+                        .headers()
+                        .get("x-allternit-tenant-id")
+                        .and_then(|v| v.to_str().ok())
+                        .filter(|s| !s.is_empty())
+                        .map(|s| s.to_string());
+                    let email = header_email
+                        .filter(|value| !value.contains("@users.allternit.local"))
+                        .or(identity.email);
                     let mut user = AuthUser {
-                        user_id,
-                        email: None,
-                        name: None,
+                        user_id: identity.user_id,
+                        email,
+                        name: header_name,
                         avatar_url: None,
-                        tenant_id: None,
-                        organization_id: None,
+                        tenant_id: header_org.clone(),
+                        organization_id: header_org,
                         organization_role: None,
                         organization_slug: None,
                     };
@@ -820,7 +984,7 @@ pub async fn auth_middleware(
         }
     }
 
-    // 4. Self-hosted / local-dev fallback: when the deployment is local and no
+    // 5. Self-hosted / local-dev fallback: when the deployment is local and no
     // cloud auth succeeded, trust the loopback origin as the default local user.
     // This keeps packaged apps and browser dev flows working without Clerk tokens.
     if (state.config.self_hosted() || state.config.local_dev_bypass())

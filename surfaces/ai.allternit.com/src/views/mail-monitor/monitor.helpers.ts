@@ -3,6 +3,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useUnifiedStore } from "@/lib/agents";
+import { isRailsApiEnabled } from "@/lib/env";
 import type { LedgerEvent, LogEntry, SessionAnalytics } from "@/lib/agents";
 import { useTelemetrySnapshot } from "@/lib/telemetry/useTelemetrySnapshot";
 
@@ -195,6 +196,9 @@ function useMonitorShare(threadId: string | null): void {
 
   const shareMonitor = useCallback(async () => {
     if (!threadId) return null;
+    // Rails mail share (/api/rails/mail/*) is served only by the Rust
+    // allternit-api (:8013) — return null (no share link) when disabled.
+    if (!isRailsApiEnabled()) return null;
     if (shareId) return shareId;
     setIsSharing(true);
     try {

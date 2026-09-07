@@ -31,6 +31,7 @@ import { cn } from '@/lib/utils';
 import type { ViewType } from '@/nav/nav.types';
 import { fetchLibraryItems, useAuthBlobUrl, type LibraryItem } from '@/services/library-api';
 import { canvasApi, sessionApi } from '@/lib/agents/native-agent-api';
+import { isAgentSessionsApiEnabled } from '@/lib/env';
 import { generateMedia, fetchMediaProvidersForMode, type MediaProvider } from '@/services/media-api';
 import { LibraryItemDialog } from './LibraryItemDialog';
 
@@ -110,6 +111,10 @@ export function LibraryView({ openView }: LibraryViewProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [creating, setCreating] = useState(false);
+  // Creating an artifact requires POST /api/v1/agent-sessions (+canvases),
+  // served only by the Rust allternit-api (:8013) — disabled by default on
+  // the deployed web surface, so the control renders disabled with a tooltip.
+  const artifactsEnabled = isAgentSessionsApiEnabled();
 
   const activeFilter = FILTERS.find((f) => f.id === filter) ?? FILTERS[0];
   const activeKind = activeFilter.kind;
@@ -237,7 +242,8 @@ export function LibraryView({ openView }: LibraryViewProps) {
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  disabled={creating}
+                  disabled={creating || !artifactsEnabled}
+                  title={artifactsEnabled ? undefined : 'Artifact creation requires the agent-sessions backend, which is not available in this deployment.'}
                   className="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg bg-[var(--text-primary)] text-[var(--bg-elevated)] text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-60"
                 >
                   {creating ? 'Creating…' : 'New artifact'}
@@ -565,6 +571,12 @@ function pickProvider(providers: MediaProvider[], preferFree = true): MediaProvi
 async function createArtifact(
   type: 'website' | 'document' | 'sheet' | 'slides' | 'image' | 'video'
 ) {
+  if (!isAgentSessionsApiEnabled()) {
+    // The artifact flow POSTs to /api/v1/agent-sessions and /canvases, served
+    // only by the Rust allternit-api (:8013). Fail closed with a deliberate
+    // message instead of firing a request that 404s.
+    throw new Error('Artifact creation is disabled in this deployment (agent-sessions backend unavailable).');
+  }
   const session = await sessionApi.createSession({
     name: `Artifact: ${type}`,
     origin_surface: 'code',

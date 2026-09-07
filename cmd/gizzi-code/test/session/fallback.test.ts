@@ -50,6 +50,9 @@ mock.module("../../src/runtime/providers/provider", () => ({
       }
       return fakeModel(providerID, modelID)
     },
+    createRotationState: () => ({ triedProfileIds: new Set<string>() }),
+    rotateAuth: async () => undefined,
+    prepareAuth: async () => undefined,
   },
 }))
 

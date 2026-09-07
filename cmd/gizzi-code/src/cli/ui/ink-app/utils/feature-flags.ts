@@ -87,7 +87,7 @@ const FEATURE_FLAG_REGISTRY: FeatureFlag<any>[] = [
     description: 'Enable syntax highlighting',
     type: 'boolean',
     defaultValue: true,
-    envVar: 'CLAUDE_CODE_SYNTAX_HIGHLIGHT',
+    envVar: 'GIZZI_CODE_SYNTAX_HIGHLIGHT',
     configKey: 'features.ui.syntaxHighlight',
   },
   {

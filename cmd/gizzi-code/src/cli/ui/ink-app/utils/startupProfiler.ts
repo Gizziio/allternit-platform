@@ -5,7 +5,7 @@
  *
  * Two modes:
  * 1. Sampled logging: 100% of ant users, 0.1% of external users - logs phases to Statsig
- * 2. Detailed profiling: CLAUDE_CODE_PROFILE_STARTUP=1 - full report with memory snapshots
+ * 2. Detailed profiling: GIZZI_CODE_PROFILE_STARTUP=1 - full report with memory snapshots
  *
  * Uses Node.js built-in performance hooks API for standard timing measurement.
  */
@@ -17,14 +17,14 @@ import {
   logEvent,
 } from '../services/analytics/index.js'
 import { logForDebugging } from './debug.js'
-import { getClaudeConfigHomeDir, isEnvTruthy } from './envUtils.js'
+import { getGizziConfigHomeDir, isEnvTruthy } from './envUtils.js'
 import { getFsImplementation } from './fsOperations.js'
 import { formatMs, formatTimelineLine, getPerformance } from './profilerBase.js'
 import { writeFileSync_DEPRECATED } from './slowOperations.js'
 
 // Module-level state - decided once at module load
 // eslint-disable-next-line custom-rules/no-process-env-top-level
-const DETAILED_PROFILING = isEnvTruthy(process.env.CLAUDE_CODE_PROFILE_STARTUP)
+const DETAILED_PROFILING = isEnvTruthy(process.env.GIZZI_CODE_PROFILE_STARTUP)
 
 // Sampling for Statsig logging: 100% ant, 0.5% external
 // Decision made once at startup - non-sampled users pay no profiling cost
@@ -128,7 +128,7 @@ export function profileReport(): void {
   // Log to Statsig (sampled: 100% ant, 0.1% external)
   logStartupPerf()
 
-  // Output detailed report if CLAUDE_CODE_PROFILE_STARTUP=1
+  // Output detailed report if GIZZI_CODE_PROFILE_STARTUP=1
   if (DETAILED_PROFILING) {
     // Write to file
     const path = getStartupPerfLogPath()
@@ -150,7 +150,7 @@ export function isDetailedProfilingEnabled(): boolean {
 }
 
 export function getStartupPerfLogPath(): string {
-  return join(getClaudeConfigHomeDir(), 'startup-perf', `${getSessionId()}.txt`)
+  return join(getGizziConfigHomeDir(), 'startup-perf', `${getSessionId()}.txt`)
 }
 
 /**

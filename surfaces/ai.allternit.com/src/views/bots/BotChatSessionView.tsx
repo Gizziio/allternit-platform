@@ -1,0 +1,541 @@
+"use client";
+
+/**
+ * Bot Chat Session View
+ *
+ * A dedicated 1-on-1 chat surface for a single bot. Uses the same ChatComposer
+ * as the main home screen so the brain picker, attachments, and input chrome
+ * match the rest of the Allternit platform.
+ *
+ * @module BotChatSessionView
+ */
+
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { motion } from "framer-motion";
+import { ArrowLeft, CircleNotch, Desktop, Robot, Sparkle, X } from "@phosphor-icons/react";
+import { Button } from "@/components/ui/button";
+import { useChatSessionStore } from "@/views/chat/ChatSessionStore";
+import { useAgentStore } from "@/lib/agents/agent.store";
+import type { ModeSession, ModeSessionMessage } from "@/lib/agents/mode-session-store";
+import { getBotDisplayName } from "@/lib/bots/bot-profile";
+import { cn } from "@/lib/utils";
+import { BotAvatar } from "./BotAvatar";
+import { ChatComposer } from "@/views/chat/ChatComposer";
+import { ModelSelectionProvider, useModelSelection } from "@/providers/model-selection-provider";
+import type { ModelSelection } from "@/components/model-picker";
+import { getProviderMeta } from "@/lib/providers/provider-registry";
+import { BotComputerViewport } from "./BotComputerViewport";
+import { isBotComputerLive, useBotActiveVm } from "./useBotActiveVm";
+import { useBrowserAgentStore } from "@/capsules/browser/browserAgent.store";
+import { useBotOperationalStateStore } from "@/lib/bots/bot-operational-state.store";
+
+export interface BotChatSessionViewProps {
+  sessionId?: string;
+  botId?: string;
+  onBack?: () => void;
+}
+
+function relativeTime(iso: string | number | undefined): string {
+  if (!iso) return "";
+  const t = typeof iso === "string" ? new Date(iso).getTime() : iso;
+  if (Number.isNaN(t)) return "";
+  const diff = Date.now() - t;
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return "just now";
+  if (min < 60) return `${min}m ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}h ago`;
+  const day = Math.floor(hr / 24);
+  return `${day}d ago`;
+}
+
+function parseRuntimeModelId(runtimeModelId: string): {
+  providerId: string;
+  modelId: string;
+} {
+  const separator = runtimeModelId.indexOf("/");
+  if (separator <= 0) {
+    return { providerId: "allternit", modelId: runtimeModelId };
+  }
+  return {
+    providerId: runtimeModelId.slice(0, separator),
+    modelId: runtimeModelId.slice(separator + 1),
+  };
+}
+
+function runtimeModelToSelection(runtimeModelId?: string): ModelSelection | null {
+  if (!runtimeModelId) return null;
+  const { providerId, modelId } = parseRuntimeModelId(runtimeModelId);
+  const meta = getProviderMeta(providerId);
+  return {
+    providerId,
+    profileId: providerId,
+    modelId,
+    modelName: `${meta.name} · ${modelId}`,
+  };
+}
+
+export function BotChatSessionView({
+  sessionId: sessionIdProp,
+  botId,
+  onBack,
+}: BotChatSessionViewProps) {
+  const sessions = useChatSessionStore((s) => s.sessions);
+  const agents = useAgentStore((s) => s.agents);
+
+  const bot = useMemo(
+    () => agents.find((a) => a.id === botId) ?? null,
+    [agents, botId]
+  );
+
+  const session = useMemo(() => {
+    if (sessionIdProp) {
+      return sessions.find((s) => s.id === sessionIdProp) ?? null;
+    }
+    if (botId) {
+      return (
+        sessions
+          .filter(
+            (s) =>
+              s.metadata?.isBot === true &&
+              (s.metadata?.agentId === botId || s.metadata?.agentName === bot?.name)
+          )
+          .sort(
+            (a, b) =>
+              new Date(b.updatedAt || 0).getTime() -
+              new Date(a.updatedAt || 0).getTime()
+          )[0] ?? null
+      );
+    }
+    return null;
+  }, [sessions, sessionIdProp, botId, bot?.name]);
+
+  const runtimeModelId = useMemo(
+    () =>
+      (session?.metadata?.runtimeModelId as string | undefined) ??
+      (bot?.config?.runtimeModelId as string | undefined) ??
+      (bot?.provider && bot?.model ? `${bot.provider}/${bot.model}` : undefined),
+    [session?.metadata, bot?.config, bot?.provider, bot?.model]
+  );
+
+  const defaultSelection = useMemo(
+    () => runtimeModelToSelection(runtimeModelId),
+    [runtimeModelId]
+  );
+
+  return (
+    <ModelSelectionProvider defaultSelection={defaultSelection}>
+      <BotChatSessionContent
+        session={session}
+        bot={bot}
+        botId={botId}
+        onBack={onBack}
+      />
+    </ModelSelectionProvider>
+  );
+}
+
+interface BotChatSessionContentProps {
+  session: ModeSession | null;
+  bot: import("@/lib/agents/agent.types").Agent | null;
+  botId?: string;
+  onBack?: () => void;
+}
+
+function BotChatSessionContent({
+  session,
+  bot,
+  botId,
+  onBack,
+}: BotChatSessionContentProps) {
+  const setActiveSession = useChatSessionStore((s) => s.setActiveSession);
+  const createSession = useChatSessionStore((s) => s.createSession);
+  const sendMessageStream = useChatSessionStore((s) => s.sendMessageStream);
+  const abortGeneration = useChatSessionStore((s) => s.abortGeneration);
+  const fetchMessages = useChatSessionStore((s) => s.fetchMessages);
+  const streamingBySession = useChatSessionStore((s) => s.streamingBySession);
+  const { selection: modelSelection } = useModelSelection();
+
+  const sessionId = session?.id ?? null;
+  useEffect(() => {
+    if (sessionId) {
+      setActiveSession(sessionId);
+      // fetchMessages no-ops for locally-created ids (temp-…) inside the
+      // store, so calling it unconditionally keeps local bot sessions usable
+      // without orphaning them from message refresh.
+      void fetchMessages(sessionId);
+    }
+  }, [sessionId, setActiveSession, fetchMessages]);
+
+  const streamingState = sessionId ? streamingBySession?.[sessionId] : null;
+  const isStreaming = streamingState?.isStreaming ?? false;
+  const messages = session?.messages ?? [];
+
+  const activeVM = useBotActiveVm(botId);
+  const computerState = useBotOperationalStateStore((s) =>
+    botId ? s.projections[botId]?.state.computerState : undefined,
+  );
+  const setConnectedBotId = useBrowserAgentStore((s) => s.setConnectedBotId);
+  const setAciSidecarExpanded = useBrowserAgentStore((s) => s.setAciSidecarExpanded);
+  const aciSidecarExpanded = useBrowserAgentStore((s) => s.aciSidecarExpanded);
+  const [computerOpen, setComputerOpen] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const computerLive = isBotComputerLive(activeVM, computerState);
+  const hasVm = Boolean(bot?.vmOperator?.enabled || activeVM);
+
+  useEffect(() => {
+    if (!botId) return;
+    setConnectedBotId(botId);
+    // Keep the live desktop in the chat column until the user hands it to ACI.
+    setAciSidecarExpanded(false);
+  }, [botId, setConnectedBotId, setAciSidecarExpanded]);
+
+  useEffect(() => {
+    if (computerLive) setComputerOpen(true);
+  }, [computerLive]);
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages.length, isStreaming]);
+
+  const handleSend = useCallback(
+    async (text: string) => {
+      if (!text.trim() || isStreaming) return;
+
+      setSendError(null);
+
+      const modelId = modelSelection
+        ? `${modelSelection.providerId}/${modelSelection.modelId}`
+        : undefined;
+
+      let sid = sessionId;
+      if (!sid && botId) {
+        sid = await createSession({
+          name: bot ? getBotDisplayName(bot) : "Bot Chat",
+          sessionMode: "agent",
+          agentId: botId,
+          metadata: {
+            isBot: true,
+            agentId: botId,
+            botProfile: bot?.botProfile,
+            originSurface: "chat",
+            runtimeModelId: modelId,
+          },
+        });
+        setActiveSession(sid);
+      }
+      if (!sid) return;
+
+      try {
+        await sendMessageStream(sid, { text, modelId });
+      } catch (err) {
+        // Never leave this as an unhandled rejection — the message silently
+        // never sends and the user has no idea why.
+        const detail = err instanceof Error ? err.message : String(err);
+        setSendError(
+          sid.startsWith("temp-")
+            ? `This bot session is local-only (backend unavailable). Message not sent. ${detail}`
+            : `Message not sent. ${detail}`
+        );
+      }
+    },
+    [isStreaming, sessionId, botId, bot, modelSelection, createSession, setActiveSession, sendMessageStream]
+  );
+
+  const handleStop = useCallback(() => {
+    if (sessionId) {
+      abortGeneration(sessionId);
+    }
+  }, [sessionId, abortGeneration]);
+
+  const botName = (bot ? getBotDisplayName(bot) : null) ?? session?.name ?? "Bot";
+  const botTagline = bot?.botProfile?.tagline ?? session?.description ?? "";
+  const accentColor = bot?.botProfile?.accentColor ?? "var(--accent-primary)";
+
+  const starterPrompts = useMemo(
+    () =>
+      (bot?.botProfile?.starterPrompts as string[] | undefined) ??
+      (session?.metadata?.starterPrompts as string[] | undefined) ??
+      [],
+    [bot, session]
+  );
+
+  const suggestions = starterPrompts.length
+    ? starterPrompts.slice(0, 4)
+    : [
+        "What can you help me with?",
+        "Plan a small feature for me",
+        "Review this idea",
+        "Start a task",
+      ];
+
+  const handleOpenInAci = useCallback(() => {
+    if (botId) setConnectedBotId(botId);
+    setAciSidecarExpanded(true);
+  }, [botId, setConnectedBotId, setAciSidecarExpanded]);
+
+  return (
+    <div className="flex h-full flex-col bg-[var(--bg-elevated)] text-[var(--text-primary)] pt-12">
+      {/* Header */}
+      <div className="flex items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3">
+        <div className="flex items-center gap-3 min-w-0">
+          {onBack && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={onBack}
+              className="shrink-0"
+              aria-label="Back"
+            >
+              <ArrowLeft size={18} />
+            </Button>
+          )}
+
+          <button
+            type="button"
+            onClick={() => {
+              if (!botId) return;
+              window.dispatchEvent(
+                new CustomEvent("allternit:open-view", {
+                  detail: { viewType: "bot-home", context: { botId } },
+                })
+              );
+            }}
+            aria-label={bot ? `Bot settings for ${botName}` : "Bot settings"}
+            title="Bot settings"
+            className="flex shrink-0 cursor-pointer items-center justify-center rounded-xl border-none bg-transparent p-0 transition-opacity hover:opacity-75"
+            style={{
+              width: 44,
+              height: 44,
+              background: `${accentColor}15`,
+              border: `1px solid ${accentColor}30`,
+            }}
+          >
+            {bot ? (
+              <BotAvatar bot={bot} size={36} />
+            ) : (
+              <Robot size={24} style={{ color: accentColor }} />
+            )}
+          </button>
+
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h2 className="truncate text-base font-semibold">{botName}</h2>
+              <span className="flex h-2 w-2 rounded-full bg-[var(--status-success)]" title="Online" />
+            </div>
+            {botTagline ? (
+              <p className="truncate text-xs text-[var(--text-secondary)]">
+                {botTagline}
+              </p>
+            ) : (
+              <p className="truncate text-xs text-[var(--text-tertiary)]">
+                Bot session
+              </p>
+            )}
+          </div>
+        </div>
+        {hasVm && (
+          <Button
+            type="button"
+            variant={computerOpen ? "secondary" : "outline"}
+            size="sm"
+            onClick={() => setComputerOpen((open) => !open)}
+            className="gap-1.5 shrink-0"
+            aria-pressed={computerOpen}
+          >
+            <Desktop size={14} />
+            Computer
+          </Button>
+        )}
+      </div>
+
+      <div className="flex min-h-0 flex-1">
+      {/* Messages */}
+      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex-1 overflow-y-auto px-4 py-4">
+        {messages.length === 0 ? (
+          <div className="mx-auto flex h-full max-w-md flex-col items-center justify-center text-center">
+            <div
+              className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl"
+              style={{
+                background: `${accentColor}12`,
+                border: `1px solid ${accentColor}25`,
+              }}
+            >
+              {bot ? (
+                <BotAvatar bot={bot} size={40} />
+              ) : (
+                <Sparkle size={28} style={{ color: accentColor }} />
+              )}
+            </div>
+            <p className="text-sm font-semibold text-[var(--text-primary)]">
+              Start chatting with {botName}
+            </p>
+            <p className="mt-1 text-xs text-[var(--text-secondary)]">
+              Pick a brain below, then send a message or try a starter.
+            </p>
+            <div className="mt-5 grid w-full grid-cols-2 gap-2">
+              {suggestions.map((suggestion, idx) => (
+                <button
+                  type="button"
+                  key={`bot-chat-suggestion-${idx}`}
+                  onClick={() => {
+                    const textarea = document.querySelector(
+                      '[data-bot-composer] textarea'
+                    ) as HTMLTextAreaElement | null;
+                    if (textarea) {
+                      textarea.focus();
+                      textarea.value = suggestion;
+                      textarea.dispatchEvent(new Event("input", { bubbles: true }));
+                    }
+                  }}
+                  className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-panel)] px-3 py-2 text-left text-xs text-[var(--text-secondary)] transition-colors hover:border-[var(--border-default)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-4">
+            {messages.map((message) => (
+              <BotChatMessage
+                key={message.id}
+                message={message}
+                bot={bot}
+                botName={botName}
+                accentColor={accentColor}
+              />
+            ))}
+            {isStreaming && (
+              <div className="flex items-center justify-center gap-2 py-2 text-xs text-[var(--text-tertiary)]">
+                <CircleNotch size={14} className="animate-spin" />
+                {botName} is thinking…
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+        )}
+      </div>
+
+      {/* Composer — same ChatComposer used by the home screen */}
+      <div
+        data-bot-composer
+        className="border-t border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-3"
+      >
+        {sendError && (
+          <div className="mb-2 flex items-start justify-between gap-2 rounded-xl border border-[var(--status-error)]/30 bg-[var(--status-error)]/8 px-3 py-2 text-xs text-[var(--status-error)]">
+            <span className="min-w-0 whitespace-pre-wrap">{sendError}</span>
+            <button
+              type="button"
+              onClick={() => setSendError(null)}
+              className="shrink-0 rounded p-0.5 opacity-70 transition-opacity hover:opacity-100"
+              aria-label="Dismiss send error"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        )}
+        <ChatComposer
+          onSend={handleSend}
+          isLoading={isStreaming}
+          onStop={handleStop}
+          placeholder={`Message ${botName}…`}
+          showTopActions={false}
+          showModeToggle={false}
+        />
+      </div>
+      </div>
+
+      {computerOpen && bot && (
+        <aside
+          className={cn(
+            "flex min-h-0 w-[min(46%,520px)] shrink-0 flex-col border-l border-[var(--border-subtle)]",
+            aciSidecarExpanded && "opacity-90",
+          )}
+          aria-label={`${botName}'s computer`}
+        >
+          <BotComputerViewport
+            bot={bot}
+            accentColor={accentColor}
+            activeVM={activeVM}
+            layout="pane"
+            onOpenInAci={handleOpenInAci}
+          />
+        </aside>
+      )}
+      </div>
+    </div>
+  );
+}
+
+function BotChatMessage({
+  message,
+  bot,
+  botName,
+  accentColor,
+}: {
+  message: ModeSessionMessage;
+  bot: import("@/lib/agents/agent.types").Agent | null;
+  botName: string;
+  accentColor: string;
+}) {
+  const isUser = message.role === "user";
+  const isError =
+    message.content.startsWith("⚠️") || message.content.startsWith("Chat streaming failed");
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={cn("flex gap-3", isUser ? "flex-row-reverse" : "flex-row")}
+    >
+      <div className="shrink-0 pt-0.5">
+        {isUser ? (
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--accent-primary)] text-[11px] font-semibold text-[var(--ui-text-inverse)]">
+            You
+          </div>
+        ) : bot ? (
+          <BotAvatar bot={bot} size={32} />
+        ) : (
+          <div
+            className="flex h-8 w-8 items-center justify-center rounded-full"
+            style={{ background: `${accentColor}20`, color: accentColor }}
+          >
+            <Robot size={16} />
+          </div>
+        )}
+      </div>
+
+      <div
+        className={cn(
+          "flex max-w-[80%] flex-col",
+          isUser ? "items-end" : "items-start"
+        )}
+      >
+        <div className="flex items-center gap-2 text-[11px] text-[var(--text-tertiary)]">
+          <span className="font-medium text-[var(--text-secondary)]">
+            {isUser ? "You" : botName}
+          </span>
+          <span>{relativeTime(message.timestamp)}</span>
+        </div>
+        <div
+          className={cn(
+            "mt-1 whitespace-pre-wrap rounded-2xl px-4 py-2 text-sm leading-relaxed shadow-sm",
+            isUser
+              ? "rounded-tr-none bg-[var(--accent-chat)] text-[var(--ui-text-inverse)]"
+              : isError
+              ? "rounded-tl-none border border-[var(--status-error)]/30 bg-[var(--status-error)]/8 text-[var(--status-error)]"
+              : "rounded-tl-none border border-[var(--border-subtle)] bg-[var(--surface-panel)] text-[var(--text-primary)]"
+          )}
+        >
+          {message.content}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+export default BotChatSessionView;

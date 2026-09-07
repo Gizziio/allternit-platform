@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { CLAUDE_OPUS_4_6_CONFIG } from '../model/configs'
+import { GIZZI_OPUS_4_6_CONFIG } from '../model/configs'
 import { getAPIProvider } from '../model/providers'
 
 // @[MODEL LAUNCH]: Update the fallback model below.
@@ -7,5 +7,5 @@ import { getAPIProvider } from '../model/providers'
 // use Opus 4.6. Must be provider-aware so Bedrock/Vertex/Foundry customers get
 // the correct model ID.
 export function getHardcodedTeammateModelFallback(): string {
-  return CLAUDE_OPUS_4_6_CONFIG[getAPIProvider()]
+  return GIZZI_OPUS_4_6_CONFIG[getAPIProvider()]
 }

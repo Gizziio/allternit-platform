@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useEffect } from 'react';
 import { useChatStore } from '@/views/chat/ChatStore';
 import { useTaskStore } from '@/views/cowork/useTaskStore';
 import { useCodeModeStore } from '@/views/code/CodeModeStore';
 import { useDesignProjectStore } from '@/views/project/design/design-project.store';
+import { useBBProjectStore } from '@/views/bb/bb-project.store';
 import type { UnifiedProject, ProjectMode, ProjectCategory, ProjectStats } from './types';
 
 const MODE_PREFIX: Record<ProjectMode, string> = {
@@ -12,6 +13,7 @@ const MODE_PREFIX: Record<ProjectMode, string> = {
   cowork: 'cowork',
   code: 'code',
   design: 'design',
+  bb: 'bb',
 };
 
 export function useUnifiedProjects() {
@@ -19,6 +21,14 @@ export function useUnifiedProjects() {
   const taskStore = useTaskStore();
   const codeStore = useCodeModeStore();
   const designStore = useDesignProjectStore();
+  const bbStore = useBBProjectStore();
+  const fetchBBProjects = useBBProjectStore((s) => s.fetchProjects);
+
+  // Fetch once. Subscribing to the whole bb store object retriggers this
+  // effect on every isLoading/error/projects change and 401-storms the kernel.
+  useEffect(() => {
+    void fetchBBProjects();
+  }, [fetchBBProjects]);
 
   const allProjects = useMemo<UnifiedProject[]>(() => {
     const chatProjects: UnifiedProject[] = (chatStore.projects || []).map((p) => {
@@ -108,11 +118,27 @@ export function useUnifiedProjects() {
       description: p.description || `Design — ${p.type}`,
     }));
 
+    const bbProjects: UnifiedProject[] = (bbStore.projects || []).map((p) => ({
+      id: p.id,
+      nativeId: p.nativeId,
+      title: p.name,
+      mode: 'bb',
+      createdAt: p.createdAt,
+      updatedAt: p.updatedAt,
+      isFavorite: false,
+      isArchived: false,
+      threadCount: 0,
+      taskCount: 0,
+      fileCount: 0,
+      description: p.gitRemoteUrl ? `bb — ${p.gitRemoteUrl}` : 'bb project',
+    }));
+
     const list = [
       ...chatProjects,
       ...coworkProjects,
       ...codeProjects,
       ...designProjects,
+      ...bbProjects,
     ];
 
     return list.sort((a, b) => b.updatedAt - a.updatedAt);
@@ -124,6 +150,7 @@ export function useUnifiedProjects() {
     codeStore.workspaces,
     codeStore.sessions,
     designStore.projects,
+    bbStore.projects,
   ]);
 
   const stats = useMemo<ProjectStats>(() => {
@@ -133,6 +160,7 @@ export function useUnifiedProjects() {
       cowork: allProjects.filter((p) => p.mode === 'cowork').length,
       code: allProjects.filter((p) => p.mode === 'code').length,
       design: allProjects.filter((p) => p.mode === 'design').length,
+      bb: allProjects.filter((p) => p.mode === 'bb').length,
       favorite: allProjects.filter((p) => p.isFavorite).length,
       archived: allProjects.filter((p) => p.isArchived).length,
     };
@@ -152,11 +180,13 @@ export function useUnifiedProjects() {
           return codeStore.createWorkspace(title);
         case 'design':
           return designStore.createProject(title).id;
+        case 'bb':
+          return bbStore.createProject(title).then((p) => p.nativeId);
         default:
           return chatStore.createProject(title);
       }
     },
-    [chatStore, taskStore, codeStore, designStore]
+    [chatStore, taskStore, codeStore, designStore, bbStore]
   );
 
   const setActiveProject = useCallback(
@@ -182,6 +212,9 @@ export function useUnifiedProjects() {
         case 'design':
           designStore.setActiveProject(project.nativeId);
           break;
+        case 'bb':
+          // bb uses its own project detail view; no global active project state.
+          break;
       }
     },
     [chatStore, taskStore, codeStore, designStore]
@@ -202,9 +235,12 @@ export function useUnifiedProjects() {
         case 'design':
           designStore.toggleFavorite(project.nativeId);
           break;
+        case 'bb':
+          bbStore.toggleProjectFavorite(project.nativeId);
+          break;
       }
     },
-    [chatStore, taskStore, codeStore, designStore]
+    [chatStore, taskStore, codeStore, designStore, bbStore]
   );
 
   const toggleArchive = useCallback(
@@ -222,9 +258,12 @@ export function useUnifiedProjects() {
         case 'design':
           designStore.toggleArchive(project.nativeId);
           break;
+        case 'bb':
+          bbStore.toggleProjectArchive(project.nativeId);
+          break;
       }
     },
-    [chatStore, taskStore, codeStore, designStore]
+    [chatStore, taskStore, codeStore, designStore, bbStore]
   );
 
   const deleteProject = useCallback(
@@ -242,9 +281,12 @@ export function useUnifiedProjects() {
         case 'design':
           designStore.deleteProject(project.nativeId);
           break;
+        case 'bb':
+          bbStore.deleteProject(project.nativeId);
+          break;
       }
     },
-    [chatStore, taskStore, codeStore, designStore]
+    [chatStore, taskStore, codeStore, designStore, bbStore]
   );
 
   const updateProjectDetails = useCallback(
@@ -268,9 +310,14 @@ export function useUnifiedProjects() {
             description: details.description,
           });
           break;
+        case 'bb':
+          bbStore.updateProjectDetails(project.nativeId, {
+            name: details.title,
+          });
+          break;
       }
     },
-    [chatStore, taskStore, codeStore, designStore]
+    [chatStore, taskStore, codeStore, designStore, bbStore]
   );
 
   const renameProject = useCallback(
@@ -288,9 +335,12 @@ export function useUnifiedProjects() {
         case 'design':
           designStore.renameProject(project.nativeId, title);
           break;
+        case 'bb':
+          bbStore.renameProject(project.nativeId, title);
+          break;
       }
     },
-    [chatStore, taskStore, codeStore, designStore]
+    [chatStore, taskStore, codeStore, designStore, bbStore]
   );
 
   const filterProjects = useCallback(

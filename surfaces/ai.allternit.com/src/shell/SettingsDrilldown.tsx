@@ -146,7 +146,7 @@ export function SettingsDrilldown({ children }: { children?: React.ReactNode }):
     setOpen(false);
     setActiveSubmenuId(null);
     window.dispatchEvent(new CustomEvent('allternit:open-settings', { 
-      detail: { section: section || 'general' } 
+      detail: { section: section || 'appearance' } 
     }));
   };
 
@@ -199,13 +199,13 @@ export function SettingsDrilldown({ children }: { children?: React.ReactNode }):
   ];
 
   const learnItems: MenuItemData[] = [
-    { id: 'api', label: 'API Console', onClick: () => openExternal('https://allternit-cloud-api.fly.dev') },
+    { id: 'api', label: 'API Console', onClick: () => openExternal('https://api.allternit.com') },
     { id: 'about', label: 'About Allternit', onClick: () => { setActiveSubmenuId(null); handleOpenSettings('about'); } },
     { id: 'tutorials', label: 'Tutorials', onClick: () => openExternal('https://docs.allternit.com/tutorials') },
     { id: 'courses', label: 'Courses', onClick: () => openExternal('https://allternit.com/labs') },
     { id: 'usage', label: 'Usage Policy', onClick: () => openExternal('https://allternit.com/usage') },
     { id: 'privacy', label: 'Privacy Policy', onClick: () => openExternal('https://allternit.com/privacy') },
-    { id: 'shortcuts', label: 'Keyboard shortcuts', shortcut: '⌘?', onClick: () => { setActiveSubmenuId(null); handleOpenSettings('shortcuts'); } },
+    { id: 'shortcuts', label: 'Keyboard shortcuts', shortcut: '⌘?', onClick: () => { setActiveSubmenuId(null); handleOpenSettings('about'); } },
   ];
 
   const menuItems: MenuItemData[] = [
@@ -214,7 +214,7 @@ export function SettingsDrilldown({ children }: { children?: React.ReactNode }):
       label: 'Settings', 
       icon: <Gear size={18} weight="regular" />, 
       shortcut: '⌘,',
-      onClick: () => handleOpenSettings('general')
+      onClick: () => handleOpenSettings('appearance')
     },
     { 
       id: 'theme', 

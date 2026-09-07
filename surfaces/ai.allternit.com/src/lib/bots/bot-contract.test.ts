@@ -7,7 +7,7 @@ import {
   describeBotContract,
   botProfileSchema,
 } from './bot-contract';
-import type { Agent } from '@/lib/agents/agent.types';
+import { agentVMOperatorConfigSchema, type Agent } from '@/lib/agents/agent.types';
 
 function makeAgent(overrides: Partial<Agent> = {}): Agent {
   return {
@@ -106,8 +106,8 @@ describe('bot-contract', () => {
       identityChannels: { email: { address: 'bot@allternit.com', provider: 'commrails', sendEnabled: true, receiveEnabled: true } },
       vmOperator: {
         enabled: true,
-        provider: 'opensandbox',
-        image: 'opensandbox/desktop:v1.0.0',
+        provider: 'cloud-desktop',
+        image: 'ubuntu/desktop',
         allowedActions: ['command', 'browser', 'desktop'],
       },
     });
@@ -127,8 +127,8 @@ describe('bot-contract', () => {
       botProfile: { displayName: 'VM Bot' },
       vmOperator: {
         enabled: true,
-        provider: 'opensandbox',
-        image: 'opensandbox/desktop:v1.0.0',
+        provider: 'cloud-desktop',
+        image: 'ubuntu/desktop',
         allowedActions: ['command', 'browser'],
         networkPolicy: 'restricted',
         persistence: 'session',
@@ -139,6 +139,23 @@ describe('bot-contract', () => {
     const result = validateBot(bot);
     expect(result.valid).toBe(true);
     expect(result.errors).toHaveLength(0);
+  });
+
+  it('coerces leftover opensandbox provider to cloud-desktop', () => {
+    const parsed = agentVMOperatorConfigSchema.parse({
+      enabled: true,
+      provider: 'opensandbox',
+    });
+    expect(parsed.provider).toBe('cloud-desktop');
+
+    const bot = {
+      ...makeAgent({
+        isBot: true,
+        botProfile: { displayName: 'Legacy VM Bot' },
+      }),
+      vmOperator: { enabled: true, provider: 'opensandbox' },
+    };
+    expect(validateBot(bot).valid).toBe(true);
   });
 
   it('validates accentColor format', () => {

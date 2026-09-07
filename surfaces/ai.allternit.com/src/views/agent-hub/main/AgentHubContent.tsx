@@ -5,7 +5,7 @@ import type { AgentTab } from "./AgentHub.constants";
 
 interface AgentHubContentProps {
   activeTab: AgentTab;
-  onSessionStarted?: (sessionId: string) => void;
+  onSessionStarted?: (sessionId: string, botId: string) => void;
   onCreate?: () => void;
 }
 

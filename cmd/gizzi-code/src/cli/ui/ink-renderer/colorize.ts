@@ -1,4 +1,4 @@
-import chalk from 'chalk'
+import chalk from '@/shared/util/chalk'
 import type { Color, TextStyles } from './styles.js'
 
 /**

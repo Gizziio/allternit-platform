@@ -9,6 +9,7 @@ import { create } from "zustand";
 import type { RunnerRun, RunnerTraceEntry } from "./runner.types";
 import { api } from "../integration/api-client";
 import { getDefaultAgentModel } from "@/lib/agents/agent-models";
+import { isRunnerAiChatEnabled, isRunnerOperatorModeEnabled, isToolsApiEnabled } from "@/lib/env";
 
 import { createModuleLogger } from '@/lib/logger';
 
@@ -344,6 +345,25 @@ export const useRunnerStore = create<{
     });
 
     if (agentEnabled) {
+      if (!isRunnerOperatorModeEnabled()) {
+        // The operator backend (POST /api/v1/operator/execute + SSE events) does
+        // not exist in either Rust backend. Fail closed with a clear trace
+        // entry instead of firing requests that 401 in the console.
+        set({ isLoading: false, isPlanning: false });
+        set((s) => ({
+          activeRun: s.activeRun
+            ? { ...s.activeRun, state: "error", output: "Operator backend is not available in this deployment." }
+            : s.activeRun,
+        }));
+        get().appendTrace({
+          kind: "error",
+          title: "Operator backend unavailable",
+          detail: "Agent planning requires the operator backend, which is not deployed. Re-run with NEXT_PUBLIC_ALLTERNIT_RUNNER_OPERATOR=1 once the backend ships.",
+          status: "error",
+        });
+        return;
+      }
+
       // PLANNING PHASE - Call real operator API
       get().appendTrace({
         kind: "info",
@@ -482,6 +502,25 @@ export const useRunnerStore = create<{
         status: "running",
       });
 
+      if (!isRunnerAiChatEnabled()) {
+        // The runner chat client targets POST /api/chat, which no backend
+        // serves. Fail closed with a clear trace entry instead of firing a
+        // request that 401s in the console.
+        set({ isLoading: false });
+        set((s) => ({
+          activeRun: s.activeRun
+            ? { ...s.activeRun, state: "error", output: "Runner AI chat is disabled in this deployment." }
+            : s.activeRun,
+        }));
+        get().appendTrace({
+          kind: "error",
+          title: "AI chat unavailable",
+          detail: "The runner AI chat endpoint is not served by any backend. Re-run with NEXT_PUBLIC_ALLTERNIT_RUNNER_CHAT=1 once a compatible endpoint ships.",
+          status: "error",
+        });
+        return;
+      }
+
       const chatId = `runner-${run.id}`;
       let fullResponse = "";
 
@@ -537,6 +576,14 @@ export const useRunnerStore = create<{
     } else {
       // Shell execution
       try {
+        // `POST /api/v1/tools/:id/execute` is served only by the Rust
+        // allternit-api — fail closed with a visible trace error instead of
+        // firing into a deployment that does not serve it.
+        if (!isToolsApiEnabled()) {
+          throw new Error(
+            "Tool execution API is disabled in this deployment (set NEXT_PUBLIC_ALLTERNIT_TOOLS_API=1 where the gateway is reachable).",
+          );
+        }
         const response = await api.executeTool("shell", { command: draft }) as { 
           success: boolean; 
           output?: string; 
@@ -568,6 +615,18 @@ export const useRunnerStore = create<{
   approvePlan: async () => {
     const { activePlan, activeRun } = get();
     if (!activePlan) return;
+
+    if (!isRunnerOperatorModeEnabled()) {
+      // Operator execution backend does not exist (see submit() guard).
+      set({ isLoading: false, isPlanning: false, activePlan: undefined });
+      get().appendTrace({
+        kind: "error",
+        title: "Operator backend unavailable",
+        detail: "Plan execution requires the operator backend, which is not deployed. Re-run with NEXT_PUBLIC_ALLTERNIT_RUNNER_OPERATOR=1 once the backend ships.",
+        status: "error",
+      });
+      return;
+    }
 
     set({ isPlanning: false, isLoading: true });
 

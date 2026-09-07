@@ -6,12 +6,13 @@
   "type": "module",
   "scripts": {
     "manifest:generate": "node ./scripts/build-manifest.mjs",
-    "predev": "npm run manifest:generate && node ./scripts/copy-plugin-skills.mjs",
-    "predev:excel": "npm run manifest:generate && node ./scripts/copy-plugin-skills.mjs",
-    "predev:powerpoint": "npm run manifest:generate && node ./scripts/copy-plugin-skills.mjs",
-    "predev:word": "npm run manifest:generate && node ./scripts/copy-plugin-skills.mjs",
-    "prebuild": "npm run manifest:generate && node ./scripts/copy-plugin-skills.mjs",
-    "prepreview": "npm run manifest:generate && node ./scripts/copy-plugin-skills.mjs",
+    "icons:build": "node ./scripts/build-icons.mjs",
+    "predev": "npm run manifest:generate && node ./scripts/copy-plugin-skills.mjs && npm run icons:build",
+    "predev:excel": "npm run manifest:generate && node ./scripts/copy-plugin-skills.mjs && npm run icons:build",
+    "predev:powerpoint": "npm run manifest:generate && node ./scripts/copy-plugin-skills.mjs && npm run icons:build",
+    "predev:word": "npm run manifest:generate && node ./scripts/copy-plugin-skills.mjs && npm run icons:build",
+    "prebuild": "npm run manifest:generate && node ./scripts/copy-plugin-skills.mjs && npm run icons:build",
+    "prepreview": "npm run manifest:generate && node ./scripts/copy-plugin-skills.mjs && npm run icons:build",
     "dev": "vite --port 3000",
     "dev:excel": "concurrently \"npm run dev\" \"office-addin-debugging start manifests/excel.xml --app excel --dev-server-port 3000\"",
     "dev:powerpoint": "concurrently \"npm run dev\" \"office-addin-debugging start manifests/powerpoint.xml --app powerpoint --dev-server-port 3000\"",
@@ -30,6 +31,7 @@
     "test:binding": "node ./scripts/verify-live-binding.mjs"
   },
   "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
     "@tailwindcss/vite": "^4.0.0",
     "@types/office-js": "^1.0.508",
     "@types/react": "^19.0.0",

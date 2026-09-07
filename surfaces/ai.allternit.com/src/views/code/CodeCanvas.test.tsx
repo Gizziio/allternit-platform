@@ -115,6 +115,20 @@ vi.mock('./CodeUsageDashboard', () => ({
   ),
 }));
 
+vi.mock('@/providers/model-selection-provider', () => ({
+  useModelSelection: () => ({
+    selection: null,
+    availableModels: [],
+    isLoading: false,
+    isSelecting: false,
+    selectModel: vi.fn(),
+    clearSelection: vi.fn(),
+    startSelection: vi.fn(),
+    cancelSelection: vi.fn(),
+  }),
+  ModelSelectionProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
 import { createCodeModeFixtureState, useCodeModeStore, type CodeWorkspaceRecord } from './CodeModeStore';
 import { CodeCanvas } from './CodeCanvas';
 

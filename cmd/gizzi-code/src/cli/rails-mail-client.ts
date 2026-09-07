@@ -16,7 +16,9 @@
  * same as it already is for `rails-bridge.ts`.
  */
 
-const RAILS_BASE = process.env.GIZZI_RAILS_URL ?? "http://127.0.0.1:8013/api/rails"
+import { gatewayUrl } from "@/shared/constants/allternitGateway"
+
+const RAILS_BASE = process.env.GIZZI_RAILS_URL ?? gatewayUrl("/api/rails")
 
 export interface MailThreadSummary {
   thread_id: string

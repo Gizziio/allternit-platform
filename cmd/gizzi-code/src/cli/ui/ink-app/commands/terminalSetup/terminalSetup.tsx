@@ -1,5 +1,5 @@
 // @ts-nocheck
-import chalk from 'chalk';
+import chalk from '@/shared/util/chalk'
 import { randomBytes } from 'crypto';
 import { copyFile, mkdir, readFile, writeFile } from 'fs/promises';
 import { homedir, platform } from 'os';
@@ -73,7 +73,7 @@ function formatPathLink(filePath: string): string {
 }
 export function shouldOfferTerminalSetup(): boolean {
   // iTerm2, WezTerm, Ghostty, Kitty, and Warp natively support CSI u / Kitty
-  // keyboard protocol, which Claude Code already parses. No setup needed for
+  // keyboard protocol, which gizzi-code already parses. No setup needed for
   // these terminals.
   return platform() === 'darwin' && env.terminal === 'Apple_Terminal' || env.terminal === 'vscode' || env.terminal === 'cursor' || env.terminal === 'windsurf' || env.terminal === 'alacritty' || env.terminal === 'zed';
 }

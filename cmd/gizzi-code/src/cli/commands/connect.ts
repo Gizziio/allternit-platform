@@ -302,7 +302,7 @@ export const AuthLoginCommand = cmd({
 
         const priority: Record<string, number> = {
           gizzi: 0,
-          anthropic: 1,
+          allternit: 1,
           openai: 2,
           google: 3,
           openrouter: 4,
@@ -334,7 +334,7 @@ export const AuthLoginCommand = cmd({
                 value: x.id,
                 hint: {
                   gizzi: "recommended",
-                  anthropic: "Claude Max or API key",
+                  allternit: "Allternit API key",
                   openai: "ChatGPT Plus/Pro or API key",
                   alibaba: "Qwen models",
                   moonshotai: "Kimi models",
@@ -394,7 +394,7 @@ export const AuthLoginCommand = cmd({
         }
 
         if (provider === "gizzi" || provider === "gizziio") {
-          prompts.log.info("Create an api key at https://gizzi.io/auth")
+          prompts.log.info("Create an API key at https://platform.allternit.com/api-keys")
         }
 
         if (provider === "alibaba") {
@@ -411,7 +411,7 @@ export const AuthLoginCommand = cmd({
 
         if (["cloudflare", "cloudflare-ai-gateway"].includes(provider)) {
           prompts.log.info(
-            "Cloudflare AI Gateway can be configured with CLOUDFLARE_GATEWAY_ID, CLOUDFLARE_ACCOUNT_ID, and CLOUDFLARE_API_TOKEN environment variables. Read more: https://gizzi.io/docs/providers/#cloudflare-ai-gateway",
+            "Cloudflare AI Gateway can be configured with CLOUDFLARE_GATEWAY_ID, CLOUDFLARE_ACCOUNT_ID, and CLOUDFLARE_API_TOKEN environment variables. Read more: https://docs.gizziio.com",
           )
         }
 

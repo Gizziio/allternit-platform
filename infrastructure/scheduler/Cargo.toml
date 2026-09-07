@@ -20,7 +20,7 @@ futures = { workspace = true }
 async-trait = { workspace = true }
 
 # Database
-sqlx = { workspace = true }
+sqlx = { workspace = true, features = ["postgres"] }
 
 # Serialization
 serde = { workspace = true }

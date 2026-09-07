@@ -120,8 +120,12 @@ final class APIClient: @unchecked Sendable {
         if CommandLine.arguments.contains("-skip-auth") {
             request.setValue("dev-ios-tester", forHTTPHeaderField: "x-allternit-user-id")
             request.setValue("dev", forHTTPHeaderField: "x-allternit-desktop-access-token")
-            if request.value(forHTTPHeaderField: "Authorization") == nil {
-                request.setValue("Bearer dev-api-token", forHTTPHeaderField: "Authorization")
+            // The dev bearer is no longer hardcoded (B1): provide it via the
+            // ALLTERNIT_DEV_API_TOKEN environment variable in your scheme when
+            // pointing `-cloud-url` at a cloud-api with the fallback enabled.
+            if request.value(forHTTPHeaderField: "Authorization") == nil,
+               let devToken = ProcessInfo.processInfo.environment["ALLTERNIT_DEV_API_TOKEN"] {
+                request.setValue("Bearer \(devToken)", forHTTPHeaderField: "Authorization")
             }
         }
         #endif

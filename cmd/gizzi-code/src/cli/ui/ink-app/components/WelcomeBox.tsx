@@ -15,14 +15,15 @@ import { getSessionId } from '../bootstrap/state.js'
 const SAND = '#D4B08C'
 const CORAL = '#D97757'
 const STRUCTURAL = '#8F6F56'
+const EYE = '#111318'
 
-// Full "Architectural Sentinel" mascot (BRAND.md), segmented for coloring.
-// Rendered inside the welcome box at full size — not clipped.
+// Architectural Sentinel — matches gizzi-mascot.svg: coral beacon + A://
+// face, dark eyes, sand body, structural legs.
 const MASCOT: Array<Array<[string, string]>> = [
   [['      ▄▄       ', CORAL]],
   [['   ▄▄▄  ▄▄▄    ', SAND]],
   [[' ▄██████████▄  ', SAND]],
-  [[' █  ', SAND], ['●    ●', CORAL], ['  █ ', SAND]],
+  [[' █  ', SAND], ['●    ●', EYE], ['  █ ', SAND]],
   [[' █  ', SAND], ['A : / /', CORAL], [' █ ', SAND]],
   [['  ▀████████▀   ', SAND]],
   [['   █ █  █ █    ', STRUCTURAL]],

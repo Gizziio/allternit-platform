@@ -1,6 +1,6 @@
 {
   "name": "@allternit/viz",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Allternit Data Visualization - Charts, graphs, and dashboards",
   "type": "module",
   "main": "./dist/index.js",
@@ -9,14 +9,6 @@
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
-    },
-    "./charts": {
-      "import": "./dist/charts/index.js",
-      "types": "./dist/charts/index.d.ts"
-    },
-    "./components": {
-      "import": "./dist/components/index.js",
-      "types": "./dist/components/index.d.ts"
     }
   },
   "scripts": {
@@ -37,5 +29,9 @@
     "dashboards",
     "data"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "files": [
+    "dist",
+    "README.md"
+  ]
 }

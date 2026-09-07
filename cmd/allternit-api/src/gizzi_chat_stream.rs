@@ -6,14 +6,17 @@
 //! event bus, and translates Gizzi events into the SSE format the frontend
 //! expects.
 
-use axum::response::{
-    sse::{Event, KeepAlive, Sse},
-    IntoResponse, Response,
+use axum::{
+    http::HeaderMap,
+    response::{
+        sse::{Event, KeepAlive, Sse},
+        IntoResponse, Response,
+    },
 };
 use futures::StreamExt;
 use reqwest::Client;
 use serde_json::json;
-use std::{convert::Infallible, time::Duration};
+use std::{collections::HashMap, convert::Infallible, time::Duration};
 use tracing::{info, warn};
 
 /// Parse a frontend model reference into a Gizzi `{ providerID, modelID }`
@@ -340,6 +343,7 @@ async fn gizzi_health_ok(client: &Client, base: &str) -> Option<String> {
 /// Send a chat message to a Gizzi session and stream the response back.
 pub async fn stream_chat_through_gizzi(
     gizzi_base: &str,
+    headers: &HeaderMap,
     session_id: &str,
     message: &str,
     system: Option<&str>,
@@ -348,12 +352,12 @@ pub async fn stream_chat_through_gizzi(
     agent_model: Option<&str>,
     _agent_name: Option<&str>,
     harness: Option<&serde_json::Value>,
+    runtime_env: Option<&HashMap<String, String>>,
 ) -> Response {
     let base = gizzi_base.trim_end_matches('/');
-    let client = Client::builder()
-        .timeout(Duration::from_secs(180))
-        .build()
-        .unwrap_or_else(|_| Client::new());
+    // Use the auth-aware Gizzi client so password-protected Gizzi daemons get
+    // the Basic auth credentials they expect (from env or a forwarded header).
+    let client = crate::agent_session_routes::gizzi_client(headers);
 
     if let Some(err) = gizzi_health_ok(&client, base).await {
         warn!(error = %err, "Gizzi health preflight failed");
@@ -428,6 +432,19 @@ pub async fn stream_chat_through_gizzi(
         "parts": [{ "type": "text", "text": message }],
         "model": model,
     });
+    // Forward the agent harness and frontend runtime env so the Gizzi
+    // provider/session env includes variables such as ALLTERNIT_VM_*.
+    if let Some(harness) = harness {
+        message_payload["harness"] = harness.clone();
+    }
+    if let Some(runtime_env) = runtime_env {
+        message_payload["runtimeEnv"] = serde_json::Value::Object(
+            runtime_env
+                .iter()
+                .map(|(k, v)| (k.clone(), serde_json::Value::String(v.clone())))
+                .collect(),
+        );
+    }
     // "+" prefix: APPEND to gizzi's default assembled system prompt rather
     // than replace it.
     if let Some(system) = system.map(str::trim).filter(|s| !s.is_empty()) {

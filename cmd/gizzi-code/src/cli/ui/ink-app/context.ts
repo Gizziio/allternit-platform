@@ -2,8 +2,8 @@
 import { feature } from 'bun:bundle'
 import memoize from 'lodash-es/memoize.js'
 import {
-  getAdditionalDirectoriesForClaudeMd,
-  setCachedClaudeMdContent,
+  getAdditionalDirectoriesForGizziMd,
+  setCachedGizziMdContent,
 } from './bootstrap/state.js'
 import { getLocalISODate } from './constants/common.js'
 import { logForDiagnosticsNoPII } from './utils/diagLogs.js'
@@ -118,7 +118,7 @@ export const getSystemContext = memoize(
 
     // Skip git status in CCR (unnecessary overhead on resume) or when git instructions are disabled
     const gitStatus =
-      isEnvTruthy(process.env.CLAUDE_CODE_REMOTE) ||
+      isEnvTruthy(process.env.GIZZI_CODE_REMOTE) ||
       !shouldIncludeGitInstructions()
         ? null
         : await getGitStatus()
@@ -155,29 +155,29 @@ export const getUserContext = memoize(
     const startTime = Date.now()
     logForDiagnosticsNoPII('info', 'user_context_started')
 
-    // CLAUDE_CODE_DISABLE_CLAUDE_MDS: hard off, always.
+    // GIZZI_DISABLE_GIZZI_MDS: hard off, always.
     // --bare: skip auto-discovery (cwd walk), BUT honor explicit --add-dir.
     // --bare means "skip what I didn't ask for", not "ignore what I asked for".
-    const shouldDisableClaudeMd =
-      isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_CLAUDE_MDS) ||
-      (isBareMode() && getAdditionalDirectoriesForClaudeMd().length === 0)
+    const shouldDisableGizziMd =
+      isEnvTruthy(process.env.GIZZI_DISABLE_GIZZI_MDS) ||
+      (isBareMode() && getAdditionalDirectoriesForGizziMd().length === 0)
     // Await the async I/O (readFile/readdir directory walk) so the event
     // loop yields naturally at the first fs.readFile.
     let claudeMd: string | null = null
-    if (!shouldDisableClaudeMd) {
-      const { filterInjectedMemoryFiles, getClaudeMds, getMemoryFiles } =
+    if (!shouldDisableGizziMd) {
+      const { filterInjectedMemoryFiles, getGizziMds, getMemoryFiles } =
         await import('./utils/gizzimd.js')
-      claudeMd = getClaudeMds(filterInjectedMemoryFiles(await getMemoryFiles()))
+      claudeMd = getGizziMds(filterInjectedMemoryFiles(await getMemoryFiles()))
     }
     // Cache for the auto-mode classifier (yoloClassifier.ts reads this
     // instead of importing claudemd.ts directly, which would create a
     // cycle through permissions/filesystem → permissions → yoloClassifier).
-    setCachedClaudeMdContent(claudeMd || null)
+    setCachedGizziMdContent(claudeMd || null)
 
     logForDiagnosticsNoPII('info', 'user_context_completed', {
       duration_ms: Date.now() - startTime,
       claudemd_length: claudeMd?.length ?? 0,
-      claudemd_disabled: Boolean(shouldDisableClaudeMd),
+      claudemd_disabled: Boolean(shouldDisableGizziMd),
     })
 
     return {

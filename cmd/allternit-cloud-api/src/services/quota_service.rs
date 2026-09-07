@@ -6,7 +6,7 @@
 
 use crate::error::ApiError;
 use chrono::{Datelike, Timelike, Utc};
-use sqlx::SqlitePool;
+use sqlx::PgPool;
 use std::sync::Arc;
 use tracing::debug;
 use uuid::Uuid;
@@ -30,12 +30,12 @@ pub struct UserQuota {
 /// Service that reads and enforces user-level runtime quotas.
 #[derive(Debug, Clone)]
 pub struct QuotaService {
-    db: SqlitePool,
+    db: PgPool,
     default_tier_id: String,
 }
 
 impl QuotaService {
-    pub fn new(db: SqlitePool) -> Self {
+    pub fn new(db: PgPool) -> Self {
         Self {
             db,
             default_tier_id: std::env::var("DEFAULT_PLAN_TIER")
@@ -70,7 +70,7 @@ impl QuotaService {
                 q.max_hosted_runtime_memory_mb,
                 q.hard_spend_cap_usd
             FROM user_runtime_quotas q
-            WHERE q.user_id = ?
+            WHERE q.user_id = $1
             "#,
         )
         .bind(user_id)
@@ -94,13 +94,13 @@ impl QuotaService {
                 can_create_hosted_runtime, max_hosted_runtimes,
                 max_hosted_runtime_memory_mb, hard_spend_cap_usd
             )
-            SELECT ?, id,
+            SELECT $1, id,
                 max_active_devices, max_pairings_per_day, max_relay_sockets,
                 max_relay_mb_per_day, max_hosted_runtime_hours_monthly,
                 can_create_hosted_runtime, max_hosted_runtimes,
                 max_hosted_runtime_memory_mb, hard_spend_cap_usd
             FROM plan_tiers
-            WHERE id = ?
+            WHERE id = $2
             ON CONFLICT(user_id) DO UPDATE SET
                 plan_tier_id = excluded.plan_tier_id,
                 max_active_devices = excluded.max_active_devices,
@@ -132,7 +132,7 @@ impl QuotaService {
         quota: &UserQuota,
     ) -> Result<(), ApiError> {
         let count: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM runtime_devices WHERE user_id = ? AND revoked_at IS NULL",
+            "SELECT COUNT(*) FROM runtime_devices WHERE user_id = $1 AND revoked_at IS NULL",
         )
         .bind(user_id)
         .fetch_one(&self.db)
@@ -153,39 +153,76 @@ impl QuotaService {
         user_id: &str,
         quota: &UserQuota,
     ) -> Result<(), ApiError> {
+        let mut tx = self.db.begin().await?;
+        match Self::record_pairing_created_in_tx(&mut tx, user_id, quota).await {
+            Ok(()) => {
+                tx.commit().await?;
+                Ok(())
+            }
+            Err(error) => {
+                let _ = tx.rollback().await;
+                Err(error)
+            }
+        }
+    }
+
+    /// Same as [`Self::record_pairing_created`], but inside an existing
+    /// transaction so a later rollback (failed device insert, consumed
+    /// pairing, etc.) does not burn a daily slot.
+    ///
+    /// Increments only when the current count is under the cap. Hitting the
+    /// cap returns 403 without changing the stored count.
+    pub async fn record_pairing_created_in_tx(
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        user_id: &str,
+        quota: &UserQuota,
+    ) -> Result<(), ApiError> {
         let today = Utc::now().date_naive();
         let id = Uuid::new_v4().to_string();
 
         sqlx::query(
             r#"
             INSERT INTO user_pairing_usage (id, user_id, usage_date, pairings_created)
-            VALUES (?, ?, ?, 1)
-            ON CONFLICT(user_id, usage_date) DO UPDATE SET
-                pairings_created = pairings_created + 1,
-                updated_at = CURRENT_TIMESTAMP
+            VALUES ($1, $2, $3, 0)
+            ON CONFLICT (user_id, usage_date) DO NOTHING
             "#,
         )
         .bind(&id)
         .bind(user_id)
         .bind(today)
-        .execute(&self.db)
+        .execute(&mut **tx)
         .await?;
 
-        let created: i64 = sqlx::query_scalar(
-            "SELECT pairings_created FROM user_pairing_usage WHERE user_id = ? AND usage_date = ?",
+        let created: Option<i64> = sqlx::query_scalar(
+            r#"
+            UPDATE user_pairing_usage
+            SET pairings_created = pairings_created + 1,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE user_id = $1 AND usage_date = $2 AND pairings_created < $3
+            RETURNING pairings_created
+            "#,
         )
         .bind(user_id)
         .bind(today)
-        .fetch_one(&self.db)
+        .bind(quota.max_pairings_per_day)
+        .fetch_optional(&mut **tx)
         .await?;
 
-        if created > quota.max_pairings_per_day {
-            return Err(ApiError::Forbidden(format!(
-                "Daily pairing limit reached ({}/{}). Try again tomorrow or upgrade your plan.",
-                created, quota.max_pairings_per_day
-            )));
+        if created.is_some() {
+            return Ok(());
         }
-        Ok(())
+
+        let current: i64 = sqlx::query_scalar(
+            "SELECT pairings_created FROM user_pairing_usage WHERE user_id = $1 AND usage_date = $2",
+        )
+        .bind(user_id)
+        .bind(today)
+        .fetch_one(&mut **tx)
+        .await?;
+        Err(ApiError::Forbidden(format!(
+            "Daily pairing limit reached ({}/{}). Try again tomorrow or upgrade your plan.",
+            current, quota.max_pairings_per_day
+        )))
     }
 
     /// Record a pairing approval. Used to distinguish created vs approved counts.
@@ -195,9 +232,9 @@ impl QuotaService {
         sqlx::query(
             r#"
             INSERT INTO user_pairing_usage (id, user_id, usage_date, pairings_approved)
-            VALUES (?, ?, ?, 1)
+            VALUES ($1, $2, $3, 1)
             ON CONFLICT(user_id, usage_date) DO UPDATE SET
-                pairings_approved = pairings_approved + 1,
+                pairings_approved = user_pairing_usage.pairings_approved + 1,
                 updated_at = CURRENT_TIMESTAMP
             "#,
         )
@@ -216,7 +253,7 @@ impl QuotaService {
             SELECT COUNT(*)
             FROM runtime_devices d
             JOIN runtime_relay_sockets s ON s.runtime_id = d.id
-            WHERE d.user_id = ? AND s.closed_at IS NULL
+            WHERE d.user_id = $1 AND s.closed_at IS NULL
             "#,
         )
         .bind(user_id)
@@ -234,12 +271,28 @@ impl QuotaService {
         let today = Utc::now().date_naive();
         let id = Uuid::new_v4().to_string();
 
+        let opened: i64 = sqlx::query_scalar(
+            "SELECT sockets_opened FROM user_relay_usage WHERE user_id = $1 AND usage_date = $2",
+        )
+        .bind(user_id)
+        .bind(today)
+        .fetch_optional(&self.db)
+        .await?
+        .unwrap_or(0);
+
+        if opened >= quota.max_relay_sockets {
+            return Err(ApiError::Forbidden(format!(
+                "Daily relay socket limit reached ({}/{}). Upgrade your plan for more.",
+                opened, quota.max_relay_sockets
+            )));
+        }
+
         sqlx::query(
             r#"
             INSERT INTO user_relay_usage (id, user_id, usage_date, sockets_opened)
-            VALUES (?, ?, ?, 1)
+            VALUES ($1, $2, $3, 1)
             ON CONFLICT(user_id, usage_date) DO UPDATE SET
-                sockets_opened = sockets_opened + 1,
+                sockets_opened = user_relay_usage.sockets_opened + 1,
                 updated_at = CURRENT_TIMESTAMP
             "#,
         )
@@ -248,21 +301,6 @@ impl QuotaService {
         .bind(today)
         .execute(&self.db)
         .await?;
-
-        let opened: i64 = sqlx::query_scalar(
-            "SELECT sockets_opened FROM user_relay_usage WHERE user_id = ? AND usage_date = ?",
-        )
-        .bind(user_id)
-        .bind(today)
-        .fetch_one(&self.db)
-        .await?;
-
-        if opened > quota.max_relay_sockets {
-            return Err(ApiError::Forbidden(format!(
-                "Daily relay socket limit reached ({}/{}). Upgrade your plan for more.",
-                opened, quota.max_relay_sockets
-            )));
-        }
 
         let concurrent = self.count_open_relay_sockets(user_id).await?;
         if concurrent >= quota.max_relay_sockets {
@@ -283,7 +321,7 @@ impl QuotaService {
     ) -> Result<String, ApiError> {
         let id = Uuid::new_v4().to_string();
         sqlx::query(
-            "INSERT INTO runtime_relay_sockets (id, runtime_id, socket_path) VALUES (?, ?, ?)",
+            "INSERT INTO runtime_relay_sockets (id, runtime_id, socket_path) VALUES ($1, $2, $3)",
         )
         .bind(&id)
         .bind(runtime_id)
@@ -300,7 +338,7 @@ impl QuotaService {
         egress_bytes: i64,
     ) -> Result<(), ApiError> {
         sqlx::query(
-            "UPDATE runtime_relay_sockets SET closed_at = CURRENT_TIMESTAMP, egress_bytes = ? WHERE id = ?",
+            "UPDATE runtime_relay_sockets SET closed_at = CURRENT_TIMESTAMP, egress_bytes = $1 WHERE id = $2",
         )
         .bind(egress_bytes)
         .bind(socket_id)
@@ -325,9 +363,9 @@ impl QuotaService {
         sqlx::query(
             r#"
             INSERT INTO user_relay_usage (id, user_id, usage_date, egress_bytes)
-            VALUES (?, ?, ?, ?)
+            VALUES ($1, $2, $3, $4)
             ON CONFLICT(user_id, usage_date) DO UPDATE SET
-                egress_bytes = egress_bytes + excluded.egress_bytes,
+                egress_bytes = user_relay_usage.egress_bytes + excluded.egress_bytes,
                 updated_at = CURRENT_TIMESTAMP
             "#,
         )
@@ -339,7 +377,7 @@ impl QuotaService {
         .await?;
 
         let total_bytes: i64 = sqlx::query_scalar(
-            "SELECT egress_bytes FROM user_relay_usage WHERE user_id = ? AND usage_date = ?",
+            "SELECT egress_bytes FROM user_relay_usage WHERE user_id = $1 AND usage_date = $2",
         )
         .bind(user_id)
         .bind(today)
@@ -357,8 +395,41 @@ impl QuotaService {
     }
 
     /// Check whether the user has hit their hard spend cap.
-    /// Computes the current month spend from run_costs plus relay egress.
+    ///
+    /// Prepaid credits take precedence over the plan spend cap: closed usage
+    /// sessions already deducted their cost from the balance, so the only
+    /// unbilled spend is what open sessions have accrued so far — block when
+    /// that would overrun the remaining balance. Users without a credits row
+    /// fall back to the plan's hard cap against month spend (run_costs plus
+    /// relay egress plus hosted usage).
     pub async fn check_spend_cap(&self, user_id: &str, quota: &UserQuota) -> Result<(), ApiError> {
+        let credit_balance: Option<f64> = sqlx::query_scalar(
+            "SELECT balance_usd FROM user_credits WHERE user_id = $1"
+        )
+        .bind(user_id)
+        .fetch_optional(&self.db)
+        .await
+        .unwrap_or(None);
+
+        if let Some(credits) = credit_balance {
+            let open_accrued = crate::services::open_session_accrued_cost(&self.db, user_id)
+                .await
+                .unwrap_or(0.0);
+            if credits - open_accrued <= 0.0 {
+                return Err(ApiError::Forbidden(format!(
+                    "Credit balance exhausted (${:.2} remaining, ${:.2} accrued by running sessions). Add credits to continue.",
+                    credits, open_accrued
+                )));
+            }
+            debug!(
+                user_id = %user_id,
+                credits = %credits,
+                open_accrued = %open_accrued,
+                "Credit balance check passed"
+            );
+            return Ok(());
+        }
+
         let cap = match quota.hard_spend_cap_usd {
             Some(cap) if cap > 0.0 => cap,
             _ => return Ok(()),
@@ -380,7 +451,7 @@ impl QuotaService {
             SELECT COALESCE(SUM(rc.total_cost), 0)
             FROM run_costs rc
             JOIN runs r ON rc.run_id = r.id
-            WHERE r.owner_id = ? AND rc.started_at >= ?
+            WHERE r.owner_id = $1 AND rc.started_at >= $2
             "#,
         )
         .bind(user_id)
@@ -391,9 +462,9 @@ impl QuotaService {
 
         let relay_egress_mb: i64 = sqlx::query_scalar(
             r#"
-            SELECT COALESCE(SUM(u.egress_bytes), 0) / (1024 * 1024)
+            SELECT (COALESCE(SUM(u.egress_bytes), 0) / (1024 * 1024))::BIGINT
             FROM user_relay_usage u
-            WHERE u.user_id = ? AND u.usage_date >= ?
+            WHERE u.user_id = $1 AND u.usage_date >= $2
             "#,
         )
         .bind(user_id)
@@ -458,7 +529,7 @@ impl QuotaService {
         let active_count: i64 = sqlx::query_scalar(
             r#"
             SELECT COUNT(*) FROM hosted_runtime_instances
-            WHERE user_id = ? AND status NOT IN ('destroying', 'destroyed')
+            WHERE user_id = $1 AND status NOT IN ('destroying', 'destroyed')
             "#,
         )
         .bind(user_id)
@@ -508,7 +579,7 @@ struct UserQuotaRow {
     max_relay_sockets: i64,
     max_relay_mb_per_day: i64,
     max_hosted_runtime_hours_monthly: i64,
-    can_create_hosted_runtime: i64,
+    can_create_hosted_runtime: bool,
     max_hosted_runtimes: i64,
     max_hosted_runtime_memory_mb: i64,
     #[sqlx(default)]
@@ -525,7 +596,7 @@ impl From<UserQuotaRow> for UserQuota {
             max_relay_sockets: row.max_relay_sockets,
             max_relay_mb_per_day: row.max_relay_mb_per_day,
             max_hosted_runtime_hours_monthly: row.max_hosted_runtime_hours_monthly,
-            can_create_hosted_runtime: row.can_create_hosted_runtime != 0,
+            can_create_hosted_runtime: row.can_create_hosted_runtime,
             max_hosted_runtimes: row.max_hosted_runtimes,
             max_hosted_runtime_memory_mb: row.max_hosted_runtime_memory_mb,
             hard_spend_cap_usd: row.hard_spend_cap_usd,
@@ -535,3 +606,232 @@ impl From<UserQuotaRow> for UserQuota {
 
 /// Helper to share a quota service reference.
 pub type SharedQuotaService = Arc<QuotaService>;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Minimal schema for the credit-balance branch of check_spend_cap:
+    /// user_credits plus the open-session accrued-cost query's table.
+    async fn test_pool() -> PgPool {
+        let url = "postgres://allternit:allternit_pg_2026@localhost:5432/allternit_test";
+        let schema = format!("test_{}", uuid::Uuid::new_v4().simple());
+        let schema_for_hook = schema.clone();
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(1)
+            .after_connect(move |conn, _meta| {
+                let schema = schema_for_hook.clone();
+                Box::pin(async move {
+                    sqlx::query(&format!("CREATE SCHEMA IF NOT EXISTS {}", schema))
+                        .execute(&mut *conn)
+                        .await?;
+                    sqlx::query(&format!("SET search_path TO {}", schema))
+                        .execute(&mut *conn)
+                        .await?;
+                    Ok(())
+                })
+            })
+            .connect(url)
+            .await
+            .unwrap();
+        sqlx::query("DROP TABLE IF EXISTS user_credits CASCADE").execute(&pool).await.unwrap();
+        sqlx::query(r#"
+        CREATE TABLE user_credits (
+                user_id TEXT PRIMARY KEY,
+                balance_usd DOUBLE PRECISION NOT NULL DEFAULT 0 CHECK (balance_usd >= 0),
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+            "#,
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        sqlx::query("DROP TABLE IF EXISTS hosted_runtime_usage_sessions CASCADE").execute(&pool).await.unwrap();
+        sqlx::query(r#"
+        CREATE TABLE hosted_runtime_usage_sessions (
+                id TEXT PRIMARY KEY,
+                hosted_instance_id TEXT NOT NULL,
+                user_id TEXT NOT NULL,
+                started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                ended_at TIMESTAMPTZ,
+                duration_seconds BIGINT,
+                cost_per_hour DOUBLE PRECISION NOT NULL DEFAULT 0,
+                estimated_cost_usd DOUBLE PRECISION,
+                stop_reason TEXT
+            )
+            "#,
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        pool
+    }
+
+    fn quota_for(user_id: &str) -> UserQuota {
+        UserQuota {
+            user_id: user_id.to_string(),
+            plan_tier_id: "pro".to_string(),
+            max_active_devices: 5,
+            max_pairings_per_day: 50,
+            max_relay_sockets: 20,
+            max_relay_mb_per_day: 5000,
+            max_hosted_runtime_hours_monthly: 100,
+            can_create_hosted_runtime: true,
+            max_hosted_runtimes: 1,
+            max_hosted_runtime_memory_mb: 1024,
+            hard_spend_cap_usd: Some(100.0),
+        }
+    }
+
+    #[tokio::test]
+    async fn credit_user_is_blocked_when_open_sessions_overrun_the_balance() {
+        let pool = test_pool().await;
+        let quota_service = QuotaService::new(pool.clone());
+        sqlx::query("INSERT INTO user_credits (user_id, balance_usd) VALUES ('user_1', 10.0)")
+            .execute(&pool)
+            .await
+            .unwrap();
+        // Open session accruing $12 so far (2h at $6/h): more than the $10 balance.
+        sqlx::query(
+            "INSERT INTO hosted_runtime_usage_sessions (id, hosted_instance_id, user_id, started_at, cost_per_hour) VALUES ('s_1', 'hr_1', 'user_1', NOW() - INTERVAL '2 hours', 6.0)",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let result = quota_service
+            .check_spend_cap("user_1", &quota_for("user_1"))
+            .await;
+        assert!(
+            matches!(result, Err(ApiError::Forbidden(_))),
+            "open session accruing more than the balance must block: {result:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn credit_user_with_no_open_sessions_is_allowed() {
+        let pool = test_pool().await;
+        let quota_service = QuotaService::new(pool.clone());
+        sqlx::query("INSERT INTO user_credits (user_id, balance_usd) VALUES ('user_1', 10.0)")
+            .execute(&pool)
+            .await
+            .unwrap();
+        // A closed session must not count: its cost already came out of the
+        // balance when it closed.
+        sqlx::query(
+            "INSERT INTO hosted_runtime_usage_sessions (id, hosted_instance_id, user_id, started_at, ended_at, duration_seconds, cost_per_hour, estimated_cost_usd) VALUES ('s_1', 'hr_1', 'user_1', NOW() - INTERVAL '3 hours', NOW() - INTERVAL '1 hour', 7200, 6.0, 12.0)",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        quota_service
+            .check_spend_cap("user_1", &quota_for("user_1"))
+            .await
+            .expect("balance 10 with no open sessions must be allowed");
+    }
+
+    #[tokio::test]
+    async fn credit_user_at_exactly_zero_remaining_is_blocked() {
+        let pool = test_pool().await;
+        let quota_service = QuotaService::new(pool.clone());
+        sqlx::query("INSERT INTO user_credits (user_id, balance_usd) VALUES ('user_1', 0.0)")
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let result = quota_service
+            .check_spend_cap("user_1", &quota_for("user_1"))
+            .await;
+        assert!(
+            matches!(result, Err(ApiError::Forbidden(_))),
+            "a drained balance must block even with nothing running: {result:?}"
+        );
+    }
+
+    async fn pairing_usage_pool() -> PgPool {
+        let pool = test_pool().await;
+        sqlx::query("DROP TABLE IF EXISTS user_pairing_usage CASCADE")
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query(
+            r#"
+            CREATE TABLE user_pairing_usage (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                usage_date DATE NOT NULL,
+                pairings_created BIGINT NOT NULL DEFAULT 0,
+                pairings_approved BIGINT NOT NULL DEFAULT 0,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                UNIQUE (user_id, usage_date)
+            )
+            "#,
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        pool
+    }
+
+    fn pairing_quota(user_id: &str, max_pairings_per_day: i64) -> UserQuota {
+        let mut quota = quota_for(user_id);
+        quota.max_pairings_per_day = max_pairings_per_day;
+        quota
+    }
+
+    #[tokio::test]
+    async fn pairing_quota_counts_only_successful_increments() {
+        let pool = pairing_usage_pool().await;
+        let quota_service = QuotaService::new(pool.clone());
+        let quota = pairing_quota("user_1", 2);
+
+        quota_service
+            .record_pairing_created("user_1", &quota)
+            .await
+            .expect("first pairing under cap");
+        quota_service
+            .record_pairing_created("user_1", &quota)
+            .await
+            .expect("second pairing at cap");
+
+        let denied = quota_service.record_pairing_created("user_1", &quota).await;
+        assert!(
+            matches!(denied, Err(ApiError::Forbidden(ref msg)) if msg.contains("2/2")),
+            "third pairing must 403 at cap: {denied:?}"
+        );
+
+        let stored: i64 = sqlx::query_scalar(
+            "SELECT pairings_created FROM user_pairing_usage WHERE user_id = 'user_1'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(stored, 2, "a rejected increment must not raise the stored count");
+    }
+
+    #[tokio::test]
+    async fn pairing_quota_rolls_back_with_the_outer_transaction() {
+        let pool = pairing_usage_pool().await;
+        let quota = pairing_quota("user_1", 5);
+
+        let mut tx = pool.begin().await.unwrap();
+        QuotaService::record_pairing_created_in_tx(&mut tx, "user_1", &quota)
+            .await
+            .expect("increment inside txn");
+        tx.rollback().await.unwrap();
+
+        let stored: Option<i64> = sqlx::query_scalar(
+            "SELECT pairings_created FROM user_pairing_usage WHERE user_id = 'user_1'",
+        )
+        .fetch_optional(&pool)
+        .await
+        .unwrap();
+        assert!(
+            stored.unwrap_or(0) == 0,
+            "a rolled-back handshake must not consume a daily pairing slot, stored={stored:?}"
+        );
+    }
+}

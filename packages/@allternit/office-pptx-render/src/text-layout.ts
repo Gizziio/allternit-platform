@@ -19,6 +19,7 @@
  *   - bodyPr anchor (t/ctr/b) → the overall vertical offset is added to each line's
  *     top/baselineY.
  */
+/// <reference path="./bidi-js.d.ts" />
 import type { TextBody, Paragraph, TextRun } from '@allternit/office-pptx-engine'
 import type { RenderTextLayout, TextLine, GlyphRun } from './render-tree'
 import bidiFactory from 'bidi-js'

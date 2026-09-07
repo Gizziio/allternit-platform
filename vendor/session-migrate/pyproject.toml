@@ -1,0 +1,84 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "session-migrate"
+version = "0.10.0"
+description = "Migrate native coding-agent sessions across eighteen terminal harnesses"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "xhluca" }]
+keywords = [
+  "antigravity",
+  "claude",
+  "codex",
+  "copilot",
+  "cursor",
+  "mistral",
+  "muse-code",
+  "qwen-code",
+  "kimi-code",
+  "grok",
+  "kilo-code",
+  "openhands",
+  "hermes-agent",
+  "mastracode",
+  "devin-cli",
+  "vibe",
+  "opencode",
+  "pi",
+  "session-migration",
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Topic :: Utilities",
+]
+
+[project.urls]
+Homepage = "https://session-migrate.github.io/"
+Repository = "https://github.com/xhluca/session-migrate"
+Documentation = "https://github.com/xhluca/session-migrate/tree/main/docs"
+Issues = "https://github.com/xhluca/session-migrate/issues"
+
+[project.scripts]
+session-migrate = "session_migrate.cli:main"
+smigrate = "session_migrate.cli:main"
+
+[dependency-groups]
+dev = [
+  "pytest>=8.3",
+  "ruff>=0.9",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/session_migrate"]
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+  "/.claude",
+  "/docs/assets",
+  "/website",
+]
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]

@@ -2,6 +2,8 @@
 
 import React, { useState } from "react";
 import type { ExtensionSidepanelConfigViewProps } from "./ExtensionSidepanelShell.types";
+import { useBrowserAgentStore } from "../browserAgent.store";
+import { ACI_ENGINE_LABEL, type AciEngine } from "@/lib/aci-runtime";
 
 export function BrowserExtensionConfigPanel({
   config,
@@ -14,6 +16,8 @@ export function BrowserExtensionConfigPanel({
   const [maxSteps, setMaxSteps] = useState<number | undefined>(config.maxSteps ?? undefined);
   const [experimentalLlmsTxt, setExperimentalLlmsTxt] = useState(Boolean(config.experimentalLlmsTxt));
   const [saving, setSaving] = useState(false);
+  const aciEngine = useBrowserAgentStore((s) => s.aciEngine);
+  const setAciEngine = useBrowserAgentStore((s) => s.setAciEngine);
 
   const handleSave = async () => {
     setSaving(true);
@@ -71,6 +75,26 @@ export function BrowserExtensionConfigPanel({
           <div className="text-[11px] opacity-60">
             Harness: {config.harnessLabel || "page-agent + computer-use"}
           </div>
+        </div>
+
+        <div className="space-y-1">
+          <div className="text-xs font-medium">Computer-use engine</div>
+          <select
+            aria-label="Computer-use engine"
+            value={aciEngine}
+            onChange={(event) => setAciEngine(event.target.value as AciEngine)}
+            className="w-full rounded-md px-2.5 py-1.5 text-sm outline-none border"
+            style={{ background: "var(--secondary)", color: "var(--foreground)", borderColor: "var(--border)" }}
+          >
+            {(Object.keys(ACI_ENGINE_LABEL) as AciEngine[]).map((engine) => (
+              <option key={engine} value={engine}>
+                {ACI_ENGINE_LABEL[engine]}
+              </option>
+            ))}
+          </select>
+          <p className="text-[11px] opacity-60">
+            Allternit computer-use is the local engine. Sub-agent spawns a worker. Page-agent only attaches this tab.
+          </p>
         </div>
 
         <div className="space-y-1">

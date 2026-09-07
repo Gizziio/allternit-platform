@@ -71,7 +71,7 @@ export namespace Config {
   export const state = Instance.state(async () => {
     const auth = await Auth.all()
 
-    // Config loading order (low -> high precedence): https://gizzi.io/docs/config#precedence-order
+    // Config loading order (low -> high precedence): https://docs.gizziio.com
     // 1) Remote .well-known/gizzi (org defaults)
     // 2) Global config (~/.config/gizzi/gizzi.json{,c})
     // 3) Custom config (GIZZI_CONFIG)
@@ -84,14 +84,23 @@ export namespace Config {
       if (value.type === "wellknown") {
         process.env[value.key] = value.token
         log.debug("fetching remote config", { url: `${key}/.well-known/gizzi` })
-        const response = await fetch(`${key}/.well-known/gizzi`)
-        if (!response.ok) {
-          throw new Error(`failed to fetch remote config from ${key}: ${response.status}`)
+        let wellknown: any
+        try {
+          const response = await fetch(`${key}/.well-known/gizzi`, {
+            signal: AbortSignal.timeout(5000),
+          })
+          if (!response.ok) {
+            log.warn("failed to fetch remote config, skipping", { url: `${key}/.well-known/gizzi`, status: response.status })
+            continue
+          }
+          wellknown = await response.json()
+        } catch (err) {
+          log.warn("failed to fetch remote config, skipping", { url: `${key}/.well-known/gizzi`, error: err })
+          continue
         }
-        const wellknown = (await response.json()) as any
         const remoteConfig = wellknown.config ?? {}
         // Add $schema to prevent load() from trying to write back to a non-existent file
-        if (!remoteConfig.$schema) remoteConfig.$schema = "https://gizzi.io/config.json"
+        if (!remoteConfig.$schema) remoteConfig.$schema = "https://docs.gizziio.com/config.json"
         result = merge(
           result,
           await load(JSON.stringify(remoteConfig), {
@@ -172,12 +181,17 @@ export namespace Config {
         }
       }
 
-      deps.push(
-        iife(async () => {
-          const shouldInstall = await needsInstall(dir)
-          if (shouldInstall) await installDependencies(dir)
-        }),
-      )
+      // Auto-installing plugin dependencies from Config.get() can run `bun install`
+      // on the startup path (and even write package.json into config dirs). That is
+      // an explicit opt-in only; by default the check is skipped entirely.
+      if (process.env.GIZZI_AUTO_INSTALL_DEPS === "1") {
+        deps.push(
+          iife(async () => {
+            const shouldInstall = await needsInstall(dir)
+            if (shouldInstall) await installDependencies(dir)
+          }),
+        )
+      }
 
       result.command = mergeDeep(result.command ?? {}, await loadCommand(dir))
       result.agent = mergeDeep(result.agent, await loadAgent(dir))
@@ -1157,7 +1171,7 @@ export namespace Config {
       mesh_control_url: z
         .string()
         .optional()
-        .describe("Headscale coordination server URL (default https://allternit-headscale.fly.dev)"),
+        .describe("Headscale coordination server URL (default https://headscale.allternit.com)"),
     })
     .strict()
     
@@ -1268,6 +1282,12 @@ export namespace Config {
         .optional()
         .describe("When set, ONLY these providers will be enabled. All other providers will be ignored"),
       model: ModelId.describe("Model to use in the format of provider/model, eg anthropic/claude-2").optional(),
+      model_auto: z
+        .boolean()
+        .optional()
+        .describe(
+          "When true (default), gizzi picks the brain from a paid Allternit Cloud subscription or an installed CLI. Set false to pin a /model choice.",
+        ),
       auth: z
         .object({
           active_profile: z.string().optional(),
@@ -1586,7 +1606,7 @@ export namespace Config {
           await Filesystem.writeJson(path.join(Global.Path.config, "config.json"), result)
           await fs.unlink(legacy)
         })
-        .catch(() => {})
+        .catch((err) => log.warn("legacy config migration failed", { error: err }))
     }
 
     return result
@@ -1689,9 +1709,11 @@ export namespace Config {
     const parsed = Info.safeParse(data)
     if (parsed.success) {
       if (!parsed.data.$schema && isFile) {
-        parsed.data.$schema = "https://gizzi.io/config.json"
-        const updated = original.replace(/^\s*\{/, '{\n  "$schema": "https://gizzi.io/config.json",')
-        await Bun.write(options.path, updated).catch(() => {})
+        parsed.data.$schema = "https://docs.gizziio.com/config.json"
+        const updated = original.replace(/^\s*\{/, '{\n  "$schema": "https://docs.gizziio.com/config.json",')
+        await Bun.write(options.path, updated).catch((err) =>
+          log.warn("failed to persist $schema into config file", { path: options.path, error: err }),
+        )
       }
       const data = parsed.data
       if (data.plugin && isFile) {
@@ -1818,7 +1840,7 @@ export namespace Config {
     })
   }
 
-  export async function updateGlobal(config: Info) {
+  export async function updateGlobal(config: Info, opts?: { reload?: boolean }) {
     const filepath = globalConfigFile()
     const before = await Filesystem.readText(filepath).catch((err: any) => {
       if (err.code === "ENOENT") return "{}"
@@ -1840,6 +1862,8 @@ export namespace Config {
     })()
 
     global.reset()
+
+    if (opts?.reload === false) return next
 
     void Instance.disposeAll()
       .catch(() => undefined)

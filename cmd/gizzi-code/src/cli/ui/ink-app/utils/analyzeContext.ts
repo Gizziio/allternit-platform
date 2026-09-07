@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle'
-import type { AllternitAI } from '@allternit/sdk/providers/anthropic'
+import { readGizziEnv } from '@/shared/utils/gizziEnv.js';
+import type { AllternitAI } from '@allternit/gizzi-sdk/providers/allternit'
 import {
   getSystemPrompt,
   SYSTEM_PROMPT_DYNAMIC_BOUNDARY,
@@ -255,7 +256,7 @@ async function countMemoryFileTokens(): Promise<{
   claudeMdTokens: number
 }> {
   // Simple mode disables CLAUDE.md loading, so don't report tokens for them
-  if (isEnvTruthy(process.env.CLAUDE_CODE_SIMPLE)) {
+  if (isEnvTruthy(readGizziEnv('SIMPLE'))) {
     return { memoryFileDetails: [], claudeMdTokens: 0 }
   }
 
@@ -1008,7 +1009,7 @@ export async function analyzeContextUsage(
     cats.push({
       name: 'Memory files',
       tokens: claudeMdTokens,
-      color: 'claude',
+      color: 'gizzi',
     })
   }
 

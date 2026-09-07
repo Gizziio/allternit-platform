@@ -144,7 +144,7 @@ pub async fn get_instance(
             status, public_ip, private_ip, ssh_key, run_id,
             created_at, updated_at
         FROM cloud_instances
-        WHERE id = ?
+        WHERE id = $1
         "#,
     )
     .bind(&id)
@@ -189,7 +189,7 @@ pub async fn restart_instance(
             status, public_ip, private_ip, ssh_key, run_id,
             created_at, updated_at
         FROM cloud_instances
-        WHERE id = ?
+        WHERE id = $1
         "#,
     )
     .bind(&id)
@@ -231,7 +231,7 @@ pub async fn restart_instance(
         r#"
         UPDATE cloud_instances 
         SET status = 'running', updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
+        WHERE id = $1
         "#,
     )
     .bind(&id)
@@ -255,7 +255,7 @@ pub async fn restart_instance(
             status, public_ip, private_ip, ssh_key, run_id,
             created_at, updated_at
         FROM cloud_instances
-        WHERE id = ?
+        WHERE id = $1
         "#,
     )
     .bind(&id)
@@ -288,7 +288,7 @@ pub async fn destroy_instance(
             status, public_ip, private_ip, ssh_key, run_id,
             created_at, updated_at
         FROM cloud_instances
-        WHERE id = ?
+        WHERE id = $1
         "#,
     )
     .bind(&id)
@@ -320,7 +320,7 @@ pub async fn destroy_instance(
         r#"
         UPDATE cloud_instances
         SET status = 'destroying', updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
+        WHERE id = $1
         "#,
     )
     .bind(&id)
@@ -341,7 +341,7 @@ pub async fn destroy_instance(
     match destroy_result {
         Ok(()) => {
             // Delete from database after successful API call
-            sqlx::query("DELETE FROM cloud_instances WHERE id = ?")
+            sqlx::query("DELETE FROM cloud_instances WHERE id = $1")
                 .bind(&id)
                 .execute(&state.db)
                 .await
@@ -359,7 +359,7 @@ pub async fn destroy_instance(
                 r#"
                 UPDATE cloud_instances
                 SET status = 'error', updated_at = CURRENT_TIMESTAMP
-                WHERE id = ?
+                WHERE id = $1
                 "#,
             )
             .bind(&id)
@@ -379,9 +379,10 @@ pub async fn destroy_instance(
     }
 }
 
-/// Resolve the API token for a provider: the Clerk user's stored token
-/// (encrypted in `provider_tokens`) wins; the platform-level env var is
-/// the fallback for legacy cowork flows that carry no Clerk session.
+/// Resolve the API token for a provider: the authenticated user's stored
+/// token (encrypted in `provider_tokens`) wins — via Clerk session or
+/// `allternit_*` API token; the platform-level env var is the fallback for
+/// legacy cowork flows that carry no user credentials.
 async fn resolve_provider_token(
     state: &ApiState,
     headers: &HeaderMap,
@@ -389,11 +390,17 @@ async fn resolve_provider_token(
 ) -> Result<String, ApiError> {
     let provider_key = provider.to_string();
 
-    if let Ok(user) = clerk::user_from_headers(headers).await {
+    let resolved_user = match clerk::user_from_headers(headers).await {
+        Ok(user) => Some(user.id),
+        Err(_) => crate::auth::resolve_user_id(&state.db, headers)
+            .await
+            .ok(),
+    };
+    if let Some(user_id) = resolved_user {
         if let Some(token) =
-            providers::load_provider_token(state, &user.id, &provider_key).await?
+            providers::load_provider_token(state, &user_id, &provider_key).await?
         {
-            debug!("Using stored {} token for user {}", provider_key, user.id);
+            debug!("Using stored {} token for user {}", provider_key, user_id);
             return Ok(token);
         }
     }

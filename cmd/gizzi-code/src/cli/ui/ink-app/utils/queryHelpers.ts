@@ -1,5 +1,5 @@
 // @ts-nocheck
-import type { ToolUseBlock } from '@allternit/sdk/providers/anthropic/resources/index.mjs'
+import type { ToolUseBlock } from '@allternit/gizzi-sdk/providers/allternit/resources/index.mjs'
 import last from 'lodash-es/last.js'
 import {
   getSessionId,
@@ -161,10 +161,10 @@ export function* normalizeMessage(message: Message): Generator<SDKMessage> {
         message.data.type === 'powershell_progress'
       ) {
         // Filter bash progress to send only one per minute
-        // Only emit for Claude Code Remote for now
+        // Only emit for gizzi-code Remote for now
         if (
-          !isEnvTruthy(process.env.CLAUDE_CODE_REMOTE) &&
-          !process.env.CLAUDE_CODE_CONTAINER_ID
+          !isEnvTruthy(process.env.GIZZI_CODE_REMOTE) &&
+          !process.env.GIZZI_CODE_CONTAINER_ID
         ) {
           break
         }

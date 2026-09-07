@@ -205,7 +205,7 @@ function EnvironmentPill() {
     try {
       const token = await getToken();
       if (!token) throw new Error('Sign in to use cloud sessions');
-      const cloudBase = env('NEXT_PUBLIC_ALLTERNIT_CLOUD_API_URL', 'https://allternit-cloud-api.fly.dev')!.replace(/\/$/, '');
+      const cloudBase = env('NEXT_PUBLIC_ALLTERNIT_CLOUD_API_URL', 'https://api.allternit.com')!.replace(/\/$/, '');
       const response = await fetch(`${cloudBase}/api/v1/runtime-devices`, {
         headers: { Authorization: `Bearer ${token}` },
       });

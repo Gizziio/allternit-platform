@@ -1,6 +1,6 @@
 {
   "name": "@allternit/plugin-sdk",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Universal plugin runtime for LLM platforms - build once, run anywhere",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

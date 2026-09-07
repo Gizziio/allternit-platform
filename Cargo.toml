@@ -7,6 +7,7 @@ members = [
     "cmd/allternit-mux",
     "cmd/allternit-cloud-api",
     "cmd/allternit-cloud-wizard",
+    "cmd/allternit-computer-cloud",
     "cmd/launcher",
     "rails",
     "rails/cli",
@@ -18,7 +19,6 @@ members = [
     "drivers/apple-vf",
     "drivers/firecracker",
     "drivers/firecracker-guest-agent",
-    "drivers/opensandbox",
     "services/session-manager",
     "services/vm-executor",
     "services/self-improve",
@@ -142,7 +142,6 @@ unexpected_cfgs = { level = "allow", check-cfg = ['cfg(ALL_TESTS_DISABLED)'] }
 allternit-driver-interface = { path = "platform/contracts/driver-interface" }
 allternit-apple-vf-driver = { path = "drivers/apple-vf" }
 allternit-firecracker-driver = { path = "drivers/firecracker" }
-allternit-opensandbox-driver = { path = "drivers/opensandbox" }
 allternit-session-manager = { path = "services/session-manager" }
 allternit-vm-executor = { path = "services/vm-executor" }
 allternit-self-improve = { path = "services/self-improve" }
@@ -203,6 +202,8 @@ allternit-tool-registry = { path = "services/orchestration/control-plane/unified
 allternit-scheduler = { path = "infrastructure/scheduler" }
 allternit-cron-parser = { path = "infrastructure/scheduler/cron-parser" }
 allternit-cloud-api = { path = "cmd/allternit-cloud-api" }
+allternit-computer-cloud = { path = "cmd/allternit-computer-cloud" }
+allternitos-cloud-contracts = { path = "platform/protocols/allternit-cloud-contracts" }
 
 allternit-receipts-schema = { path = "domains/governance/evidence-management/receipts-schema" }
 allternit-evals = { path = "domains/governance/security-quality-assurance/evals" }
@@ -257,7 +258,7 @@ anyhow = "1.0"
 thiserror = "1.0"
 async-trait = "0.1"
 tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "1.6", features = ["v4", "serde"] }
 tempfile = "3.8"
@@ -295,7 +296,7 @@ futures-util = "0.3"
 async-stream = "0.3"
 
 # Database
-sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "sqlite"] }
+sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "sqlite", "postgres"] }
 redis = { version = "0.24", features = ["aio", "tokio-comp"] }
 
 lru = "0.12"

@@ -19,10 +19,10 @@ type Props = {
 };
 const WORKFLOWS: WorkflowOption[] = [{
   value: 'claude' as const,
-  label: '@Gizzi Code - Tag @claude in issues and PR comments'
+  label: '@Gizzi Code — tag @gizzi in issues and PR comments'
 }, {
   value: 'claude-review' as const,
-  label: 'Gizzi Code Review - Automated code review on new PRs'
+  label: 'Gizzi Code Review — automated code review on new PRs'
 }];
 function renderInputGuide(exitState: ExitState): React.ReactNode {
   if (exitState.pending) {
@@ -80,7 +80,7 @@ export function WorkflowMultiselectDialog(t0) {
   const handleCancel = t3;
   let t4;
   if ($[4] === Symbol.for("react.memo_cache_sentinel")) {
-    t4 = <Box><Text dimColor={true}>More workflow examples (issue triage, CI fixes, etc.) at:{" "}<Link url="https://github.com/anthropics/claude-code-action/blob/main/examples/">https://github.com/anthropics/claude-code-action/blob/main/examples/</Link></Text></Box>;
+    t4 = <Box><Text dimColor={true}>Workflow setup docs:{" "}<Link url="https://docs.gizziio.com">https://docs.gizziio.com</Link></Text></Box>;
     $[4] = t4;
   } else {
     t4 = $[4];

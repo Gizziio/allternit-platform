@@ -32,8 +32,8 @@ fn jwt_header_kid(token: &str) -> Result<String, ApiError> {
         .ok_or_else(|| ApiError::Unauthorized("Clerk token has no key id".to_string()))
 }
 
-const DEFAULT_CLERK_ISSUER: &str = "https://allternit.com/__clerk";
-const DEFAULT_CLERK_JWKS_URL: &str = "https://allternit.com/__clerk/.well-known/jwks.json";
+const DEFAULT_CLERK_ISSUER: &str = "https://clerk.allternit.com";
+const DEFAULT_CLERK_JWKS_URL: &str = "https://clerk.allternit.com/.well-known/jwks.json";
 const JWKS_TTL: Duration = Duration::from_secs(60 * 60);
 
 #[derive(Clone, Debug)]
@@ -65,7 +65,7 @@ struct CachedKeys {
 struct ClerkVerifier {
     client: reqwest::Client,
     cache: RwLock<Option<CachedKeys>>,
-    issuer: String,
+    issuers: Vec<String>,
     jwks_url: String,
 }
 
@@ -77,8 +77,22 @@ impl ClerkVerifier {
                 .build()
                 .expect("failed to create Clerk HTTP client"),
             cache: RwLock::new(None),
-            issuer: std::env::var("CLERK_ISSUER")
-                .unwrap_or_else(|_| DEFAULT_CLERK_ISSUER.to_string()),
+            // Comma-separated. Include the first-party proxy issuer
+            // (https://allternit.com/__clerk) so browser session JWTs verify.
+            issuers: {
+                let raw = std::env::var("CLERK_ISSUER")
+                    .unwrap_or_else(|_| DEFAULT_CLERK_ISSUER.to_string());
+                let mut list: Vec<String> = raw
+                    .split(',')
+                    .map(|s| s.trim().to_string())
+                    .filter(|s| !s.is_empty())
+                    .collect();
+                let proxy = "https://allternit.com/__clerk";
+                if !list.iter().any(|s| s == proxy) {
+                    list.push(proxy.to_string());
+                }
+                list
+            },
             jwks_url: std::env::var("CLERK_JWKS_URL")
                 .unwrap_or_else(|_| DEFAULT_CLERK_JWKS_URL.to_string()),
         }
@@ -133,7 +147,7 @@ impl ClerkVerifier {
         // verify RS256 + issuer + expiry manually instead.
         let kid = jwt_header_kid(token)?;
         let jwk = self.key(&kid).await?;
-        let claims = verify_rs256(token, &jwk, &self.issuer)?;
+        let claims = verify_rs256(token, &jwk, &self.issuers)?;
 
         let organization_id = claims
             .get("o")
@@ -163,7 +177,7 @@ fn str_claim(claims: &serde_json::Value, key: &str) -> Option<String> {
 /// Verifies an RS256 JWT against a JWKS key and enforces issuer + expiry
 /// (60s leeway), returning the raw claims. See `verify` for why jsonwebtoken
 /// v10 cannot be used on this path.
-fn verify_rs256(token: &str, jwk: &Jwk, issuer: &str) -> Result<serde_json::Value, ApiError> {
+fn verify_rs256(token: &str, jwk: &Jwk, issuers: &[String]) -> Result<serde_json::Value, ApiError> {
     let unauthorized = |msg: &str| ApiError::Unauthorized(msg.to_string());
     let mut parts = token.split('.');
     let (header_b64, payload_b64, signature_b64) = match (parts.next(), parts.next(), parts.next(), parts.next()) {
@@ -195,7 +209,8 @@ fn verify_rs256(token: &str, jwk: &Jwk, issuer: &str) -> Result<serde_json::Valu
     )
     .map_err(|_| unauthorized("Malformed Clerk payload"))?;
 
-    if claims.get("iss").and_then(|v| v.as_str()) != Some(issuer) {
+    let iss = claims.get("iss").and_then(|v| v.as_str()).unwrap_or("");
+    if !issuers.iter().any(|allowed| allowed == iss) {
         return Err(unauthorized("Invalid Clerk issuer"));
     }
     let now = std::time::SystemTime::now()
@@ -220,5 +235,12 @@ pub async fn user_from_headers(headers: &HeaderMap) -> Result<ClerkUser, ApiErro
         .and_then(|value| value.to_str().ok())
         .and_then(|value| value.strip_prefix("Bearer "))
         .ok_or_else(|| ApiError::Unauthorized("A Clerk session is required".to_string()))?;
+    verifier().verify(token).await
+}
+
+/// Verify a raw Clerk session JWT (no header extraction). Used by the run
+/// WebSocket, where the token may arrive via a query param or the
+/// Sec-WebSocket-Protocol header rather than Authorization.
+pub async fn user_from_token(token: &str) -> Result<ClerkUser, ApiError> {
     verifier().verify(token).await
 }

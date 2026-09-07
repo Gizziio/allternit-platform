@@ -1,13 +1,14 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle';
-import type { ContentBlockParam, TextBlockParam } from '@allternit/sdk/providers/anthropic/resources';
+import { readGizziEnv } from '@/shared/utils/gizziEnv.js';
+import type { ContentBlockParam, TextBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources';
 import { randomUUID } from 'crypto';
 import { setPromptId } from './../../bootstrap/state.ts';
-import { builtInCommandNames, type Command, type CommandBase, findCommand, getCommand, getCommandName, hasCommand, type PromptCommand } from './../../commands.ts';
+import { builtInCommandNames, type Command, type CommandBase, findCommand, findDisabledCommand, getCommand, getCommandName, hasCommand, type PromptCommand } from './../../commands.ts';
 import { NO_CONTENT_MESSAGE } from './../../constants/messages.ts';
 import type { SetToolJSXFn, ToolUseContext } from './../../Tool.ts';
 import type { AssistantMessage, AttachmentMessage, Message, NormalizedUserMessage, ProgressMessage, UserMessage } from './../../types/message.ts';
-import { addInvokedSkill, getSessionId } from '../../bootstrap/state';
+import { addInvokedSkill, getCwdState, getSessionId } from '../../bootstrap/state';
 import { COMMAND_MESSAGE_TAG, COMMAND_NAME_TAG } from '../../constants/xml';
 import type { CanUseToolFn } from '../../hooks/useCanUseTool';
 import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, type AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED, logEvent } from '../../services/analytics/index';
@@ -94,7 +95,7 @@ async function executeForkedSlashCommand(command: CommandBase & PromptCommand, a
   // agent turn) cycles blocking user input. With this, N subagents run in
   // parallel and results trickle into the queue as they finish.
   //
-  // Gated on kairosEnabled (not CLAUDE_CODE_BRIEF) because the closed loop
+  // Gated on kairosEnabled (not GIZZI_CODE_BRIEF) because the closed loop
   // depends on assistant-mode invariants: scheduled_tasks.json exists,
   // the main agent knows to pipe results through SendUserMessage, and
   // isMeta prompts are hidden. Outside assistant mode, context:fork commands
@@ -345,7 +346,11 @@ export async function processSlashCommand(inputString: string, precedingInputBlo
       logEvent('tengu_input_slash_invalid', {
         input: commandName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
       });
-      const unknownMessage = `Unknown skill: ${commandName}`;
+      // The name exists in the full registry but is hidden by a gate
+      // (auth/provider availability or isEnabled). Say so instead of the
+      // generic "Unknown skill" message.
+      const disabledInfo = await findDisabledCommand(commandName, getCwdState());
+      const unknownMessage = disabledInfo ? disabledInfo.reason === 'availability' ? `/${commandName} isn't available right now (requires a different login or provider — try /login or /model). Run /help to see available commands.` : `/${commandName} isn't available right now (it is turned off in this session). Run /help to see available commands.` : `Unknown skill: ${commandName}`;
       return {
         messages: [createSyntheticUserCaveatMessage(), ...attachmentMessages, createUserMessage({
           content: prepareUserContent({
@@ -526,8 +531,9 @@ export async function processSlashCommand(inputString: string, precedingInputBlo
 async function getMessagesForSlashCommand(commandName: string, args: string, setToolJSX: SetToolJSXFn, context: ProcessUserInputContext, precedingInputBlocks: ContentBlockParam[], imageContentBlocks: ContentBlockParam[], _isAlreadyProcessing?: boolean, canUseTool?: CanUseToolFn, uuid?: string): Promise<SlashCommandResult> {
   const command = getCommand(commandName, context.options.commands);
 
-  // Track skill usage for ranking (only for prompt commands that are user-invocable)
-  if (command.type === 'prompt' && command.userInvocable !== false) {
+  // Track skill usage for ranking (any user-invocable command type —
+  // prompt, local, and local-jsx all accumulate MRU)
+  if (command.userInvocable !== false) {
     recordSkillUsage(commandName);
   }
 
@@ -541,7 +547,7 @@ async function getMessagesForSlashCommand(commandName: string, args: string, set
           precedingInputBlocks
         })
       }), createUserMessage({
-        content: `This skill can only be invoked by Claude, not directly by users. Ask Claude to use the "${commandName}" skill for you.`
+        content: `This skill can only be invoked by Gizzi, not directly by users. Ask Gizzi to use the "${commandName}" skill for you.`
       })],
       shouldQuery: false,
       command
@@ -831,11 +837,11 @@ async function getMessagesForPromptSlashCommand(command: CommandBase & PromptCom
   // skill content and allowedTools are useless. Instead, send a brief summary
   // telling the coordinator how to delegate this skill to a worker.
   //
-  // Workers run in-process and inherit CLAUDE_CODE_COORDINATOR_MODE from the
+  // Workers run in-process and inherit GIZZI_CODE_COORDINATOR_MODE from the
   // parent env, so we also check !context.agentId: agentId is only set for
   // subagents, letting workers fall through to getPromptForCommand and receive
   // the real skill content when they invoke the Skill tool.
-  if (feature('COORDINATOR_MODE') && isEnvTruthy(process.env.CLAUDE_CODE_COORDINATOR_MODE) && !context.agentId) {
+  if (feature('COORDINATOR_MODE') && isEnvTruthy(readGizziEnv('COORDINATOR_MODE')) && !context.agentId) {
     const metadata = formatCommandLoadingMetadata(command, args);
     const parts: string[] = [`Skill "/${command.name}" is available for workers.`];
     if (command.description) {

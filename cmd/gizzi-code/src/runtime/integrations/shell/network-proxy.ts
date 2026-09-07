@@ -3,7 +3,7 @@
  *
  * A minimal CONNECT-tunneling HTTP proxy giving the sandbox domain-allowlisted
  * network access instead of an all-or-nothing block/allow. No TLS termination
- * — CONNECT requests are tunneled raw, matching Claude Code's default
+ * — CONNECT requests are tunneled raw, matching gizzi-code's default
  * (non-inspecting) behavior; only the CONNECT target hostname / plain-HTTP
  * Host header is checked against the allowlist.
  *

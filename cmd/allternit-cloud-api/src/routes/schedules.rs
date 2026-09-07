@@ -90,9 +90,9 @@ pub async fn list_schedules(
         sqlx::query_as::<_, ScheduleSummary>(
             "SELECT id, name, enabled, cron_expr, natural_lang, next_run_at, run_count 
              FROM schedules 
-             WHERE enabled = ? 
+             WHERE enabled = $1 
              ORDER BY created_at DESC 
-             LIMIT ? OFFSET ?",
+             LIMIT $2 OFFSET $3",
         )
         .bind(enabled)
         .bind(limit)
@@ -105,7 +105,7 @@ pub async fn list_schedules(
             "SELECT id, name, enabled, cron_expr, natural_lang, next_run_at, run_count 
              FROM schedules 
              ORDER BY created_at DESC 
-             LIMIT ? OFFSET ?",
+             LIMIT $1 OFFSET $2",
         )
         .bind(limit)
         .bind(offset)
@@ -134,7 +134,7 @@ pub async fn create_schedule(
     // Validate region if specified
     if let Some(ref region_id) = request.region_id {
         let region_exists: bool = sqlx::query_scalar(
-            "SELECT EXISTS(SELECT 1 FROM regions WHERE id = ? AND active = TRUE)",
+            "SELECT EXISTS(SELECT 1 FROM regions WHERE id = $1 AND active = TRUE)",
         )
         .bind(region_id)
         .fetch_one(&state.db)
@@ -164,7 +164,7 @@ pub async fn create_schedule(
             id, name, description, cron_expr, natural_lang, timezone,
             job_template, enabled, misfire_policy, last_run_at, next_run_at,
             run_count, misfire_count, owner_id, tenant_id, region_id, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
         RETURNING *
         "#,
     )
@@ -199,7 +199,7 @@ pub async fn get_schedule(
     State(state): State<Arc<ApiState>>,
     Path(id): Path<String>,
 ) -> Result<Json<Schedule>, ApiError> {
-    let schedule = sqlx::query_as::<_, Schedule>("SELECT * FROM schedules WHERE id = ?")
+    let schedule = sqlx::query_as::<_, Schedule>("SELECT * FROM schedules WHERE id = $1")
         .bind(&id)
         .fetch_optional(&state.db)
         .await
@@ -217,7 +217,7 @@ pub async fn update_schedule(
     Json(request): Json<UpdateScheduleRequest>,
 ) -> Result<Json<Schedule>, ApiError> {
     // Get existing schedule
-    let schedule = sqlx::query_as::<_, Schedule>("SELECT * FROM schedules WHERE id = ?")
+    let schedule = sqlx::query_as::<_, Schedule>("SELECT * FROM schedules WHERE id = $1")
         .bind(&id)
         .fetch_optional(&state.db)
         .await
@@ -253,9 +253,9 @@ pub async fn update_schedule(
     let updated = sqlx::query_as::<_, Schedule>(
         r#"
         UPDATE schedules 
-        SET name = ?, description = ?, cron_expr = ?, natural_lang = ?, timezone = ?,
-            job_template = ?, enabled = ?, misfire_policy = ?, next_run_at = ?, updated_at = ?
-        WHERE id = ?
+        SET name = $1, description = $2, cron_expr = $3, natural_lang = $4, timezone = $5,
+            job_template = $6, enabled = $7, misfire_policy = $8, next_run_at = $9, updated_at = $10
+        WHERE id = $11
         RETURNING *
         "#,
     )
@@ -282,7 +282,7 @@ pub async fn delete_schedule(
     State(state): State<Arc<ApiState>>,
     Path(id): Path<String>,
 ) -> Result<(), ApiError> {
-    let result = sqlx::query("DELETE FROM schedules WHERE id = ?")
+    let result = sqlx::query("DELETE FROM schedules WHERE id = $1")
         .bind(&id)
         .execute(&state.db)
         .await
@@ -301,7 +301,7 @@ pub async fn enable_schedule(
     Path(id): Path<String>,
 ) -> Result<Json<Schedule>, ApiError> {
     // Get schedule to recalculate next run
-    let schedule = sqlx::query_as::<_, Schedule>("SELECT * FROM schedules WHERE id = ?")
+    let schedule = sqlx::query_as::<_, Schedule>("SELECT * FROM schedules WHERE id = $1")
         .bind(&id)
         .fetch_optional(&state.db)
         .await
@@ -313,8 +313,8 @@ pub async fn enable_schedule(
     let updated = sqlx::query_as::<_, Schedule>(
         r#"
         UPDATE schedules 
-        SET enabled = ?, next_run_at = ?, updated_at = ?
-        WHERE id = ?
+        SET enabled = $1, next_run_at = $2, updated_at = $3
+        WHERE id = $4
         RETURNING *
         "#,
     )
@@ -337,8 +337,8 @@ pub async fn disable_schedule(
     let updated = sqlx::query_as::<_, Schedule>(
         r#"
         UPDATE schedules 
-        SET enabled = ?, next_run_at = ?, updated_at = ?
-        WHERE id = ?
+        SET enabled = $1, next_run_at = $2, updated_at = $3
+        WHERE id = $4
         RETURNING *
         "#,
     )
@@ -359,7 +359,7 @@ pub async fn trigger_schedule(
     Path(id): Path<String>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
     // Get schedule
-    let schedule = sqlx::query_as::<_, Schedule>("SELECT * FROM schedules WHERE id = ?")
+    let schedule = sqlx::query_as::<_, Schedule>("SELECT * FROM schedules WHERE id = $1")
         .bind(&id)
         .fetch_optional(&state.db)
         .await
@@ -376,7 +376,7 @@ pub async fn trigger_schedule(
             id, name, description, mode, status, step_cursor, total_steps, completed_steps,
             config, owner_id, tenant_id, runtime_id, runtime_type, schedule_id, region_id,
             created_at, updated_at, started_at, completed_at, error_message, error_details
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
         RETURNING *
         "#,
     )
@@ -415,7 +415,7 @@ pub async fn trigger_schedule(
 
     // Update schedule run count
     let _ =
-        sqlx::query("UPDATE schedules SET run_count = run_count + 1, last_run_at = ? WHERE id = ?")
+        sqlx::query("UPDATE schedules SET run_count = run_count + 1, last_run_at = $1 WHERE id = $2")
             .bind(now)
             .bind(&id)
             .execute(&state.db)

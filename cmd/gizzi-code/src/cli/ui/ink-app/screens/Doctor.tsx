@@ -6,13 +6,14 @@ import React, { Suspense, use, useCallback, useEffect, useMemo, useState } from 
 import { KeybindingWarnings } from './../components/KeybindingWarnings.tsx';
 import { McpParsingWarnings } from './../components/mcp/McpParsingWarnings.tsx';
 import { getModelMaxOutputTokens } from './../utils/context.ts';
-import { getClaudeConfigHomeDir } from './../utils/envUtils.ts';
+import { getGizziConfigHomeDir } from './../utils/envUtils.ts';
 import type { SettingSource } from './../utils/settings/constants.ts';
 import { getOriginalCwd } from '../bootstrap/state';
 import type { CommandResultDisplay } from '../commands';
 import { Pane } from '../components/design-system/Pane';
 import { PressEnterToContinue } from '../components/PressEnterToContinue';
 import { SandboxDoctorSection } from '../components/sandbox/SandboxDoctorSection';
+import { PluginDirsDoctorSection } from '../components/PluginDirsDoctorSection';
 import { ValidationErrorsList } from '../components/ValidationErrorsList';
 import { useSettingsErrors } from '../hooks/notifs/useSettingsErrors';
 import { useExitOnCtrlCDWithKeybindings } from '../hooks/useExitOnCtrlCDWithKeybindings';
@@ -151,7 +152,7 @@ export function Doctor(t0) {
       default: TASK_MAX_OUTPUT_DEFAULT,
       upperLimit: TASK_MAX_OUTPUT_UPPER_LIMIT
     }, {
-      name: "CLAUDE_CODE_MAX_OUTPUT_TOKENS",
+      name: "GIZZI_CODE_MAX_OUTPUT_TOKENS",
       ...getModelMaxOutputTokens("claude-opus-4-6")
     }];
     t4 = envVars.map(_temp8).filter(_temp9);
@@ -166,7 +167,7 @@ export function Doctor(t0) {
     t5 = () => {
       getDoctorDiagnostic().then(setDiagnostic);
       (async () => {
-        const userAgentsDir = join(getClaudeConfigHomeDir(), "agents");
+        const userAgentsDir = join(getGizziConfigHomeDir(), "agents");
         const projectAgentsDir = join(getOriginalCwd(), ".claude", "agents");
         const {
           activeAgents,
@@ -424,7 +425,7 @@ export function Doctor(t0) {
   let t33;
   let t34;
   if ($[61] === Symbol.for("react.memo_cache_sentinel")) {
-    t31 = <SandboxDoctorSection />;
+    t31 = <><SandboxDoctorSection /><PluginDirsDoctorSection /></>;
     t32 = <McpParsingWarnings />;
     t33 = <KeybindingWarnings />;
     t34 = envValidationErrors.length > 0 && <Box flexDirection="column"><Text bold={true}>Environment Variables</Text>{envValidationErrors.map(_temp11)}</Box>;

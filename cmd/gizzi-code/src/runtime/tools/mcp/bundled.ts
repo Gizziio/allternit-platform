@@ -21,6 +21,7 @@
  */
 
 import type { Config } from "@/runtime/context/config/config"
+import { ALLTERNIT_GATEWAY_BASE } from "@/shared/constants/allternitGateway"
 import { existsSync } from "fs"
 import { createRequire } from "module"
 import path from "path"
@@ -68,7 +69,7 @@ function localServer(entrypoint: string | undefined): Config.Mcp | undefined {
 function allternitConnectorsServer(): Config.Mcp | undefined {
   const token = process.env.ALLTERNIT_INTERNAL_SERVICE_TOKEN
   if (!token) return undefined
-  const base = (process.env.ALLTERNIT_API_URL ?? "http://127.0.0.1:8013").replace(/\/$/, "")
+  const base = ALLTERNIT_GATEWAY_BASE
   return {
     type: "remote",
     url: `${base}/internal/connectors/mcp`,
@@ -100,7 +101,7 @@ function allternitConnectorsServer(): Config.Mcp | undefined {
 function allternitToolsServer(): Config.Mcp | undefined {
   const token = process.env.ALLTERNIT_INTERNAL_SERVICE_TOKEN
   if (!token) return undefined
-  const base = (process.env.ALLTERNIT_API_URL ?? "http://127.0.0.1:8013").replace(/\/$/, "")
+  const base = ALLTERNIT_GATEWAY_BASE
   return {
     type: "remote",
     url: `${base}/internal/tools/mcp`,

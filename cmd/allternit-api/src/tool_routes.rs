@@ -16,6 +16,8 @@ use std::sync::Arc;
 use tracing::{info, warn};
 
 use crate::auth::AuthUser;
+use crate::bot_desktop_input::{KeyboardInput, MouseInput, ShellInput};
+use crate::computer_control::{execute_computer_tool, ComputerControlAction};
 use crate::permission_policy::{evaluate, PermissionAction};
 use crate::AppState;
 
@@ -39,6 +41,52 @@ fn tool_result_cache_control(result: &Value, cache_enabled: bool) -> Option<Valu
     } else {
         None
     }
+}
+
+// ─── Host-control hardening helpers ─────────────────────────────────────────
+
+/// Tools that can execute code, mutate the host filesystem, or read sensitive
+/// host state. These require `config.host_control_enabled()` to be true.
+const HOST_CONTROL_TOOLS: &[&str] = &[
+    "shell.exec",
+    "shell.eval",
+    "bash",
+    "code_execution",
+    "file.write",
+    "file.remove",
+    "system.env",
+];
+
+/// Returns true when a key looks like it carries a secret or credential.
+pub(crate) fn is_secret_key(key: &str) -> bool {
+    let upper = key.to_uppercase();
+    [
+        "SECRET",
+        "TOKEN",
+        "API_KEY",
+        "PASSWORD",
+        "PRIVATE",
+        "CREDENTIAL",
+        "ENCRYPTION_KEY",
+        "AUTH",
+        "PASSPHRASE",
+    ]
+    .iter()
+    .any(|needle| upper.contains(needle))
+}
+
+/// Minimal, safe environment for subprocesses spawned by host-control tools.
+/// Clears the parent environment so provider/API secrets are never inherited.
+pub(crate) fn safe_subprocess_env() -> std::collections::HashMap<String, String> {
+    crate::env_allowlist::minimal_child_env(None)
+}
+
+/// Snapshot of the current process environment with known secret keys removed.
+fn scrubbed_env_snapshot() -> std::collections::HashMap<String, Option<String>> {
+    std::env::vars()
+        .filter(|(k, _)| !is_secret_key(k))
+        .map(|(k, v)| (k, Some(v)))
+        .collect()
 }
 
 // ─── Request/Response Types ─────────────────────────────────────────────────
@@ -256,6 +304,15 @@ pub(crate) async fn execute_tool_internal(
     user_id: &str,
     tenant_id: Option<&str>,
 ) -> Result<Value, String> {
+    // Host-control tools are opt-in. Refuse them with a clear message so callers
+    // know the feature flag must be enabled.
+    if HOST_CONTROL_TOOLS.contains(&request.tool.as_str()) && !state.config.host_control_enabled() {
+        return Err(format!(
+            "Host-control tool '{}' is disabled. Set ALLTERNIT_HOST_CONTROL_ENABLED=true or hostControlEnabled in config to enable.",
+            request.tool
+        ));
+    }
+
     // Server-side tools take precedence over native tools when registered for
     // the caller's organization. They run inside the platform sandbox.
     if let Some(org_id) = tenant_id {
@@ -305,6 +362,14 @@ pub(crate) async fn execute_tool_internal(
         "api_capture_stop" => api_capture_stop(state, request, user_id).await,
         "api_capture_replay" => api_capture_replay(state, request, user_id).await,
 
+        // ── Computer / Desktop Cloud control ─────────────────────────────────
+        "computer_screenshot" => computer_screenshot_tool(state, user_id, &request.args).await,
+        "computer_mouse" => computer_mouse_tool(state, user_id, &request.args).await,
+        "computer_keyboard" => computer_keyboard_tool(state, user_id, &request.args).await,
+        "computer_shell" => computer_shell_tool(state, user_id, &request.args).await,
+        "computer_file_read" => computer_file_read_tool(state, user_id, &request.args).await,
+        "computer_file_write" => computer_file_write_tool(state, user_id, &request.args).await,
+
         // ── Unknown ──────────────────────────────────────────────────────────
         _ => {
             if request.tool.starts_with("mcp:") {
@@ -317,6 +382,119 @@ pub(crate) async fn execute_tool_internal(
             }
         }
     }
+}
+
+// ── Computer control tools ──────────────────────────────────────────────────
+
+fn require_computer_id(args: &Value) -> Result<String, String> {
+    args.get("computer_id")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string())
+        .ok_or_else(|| "Missing 'computer_id' argument".to_string())
+}
+
+async fn computer_screenshot_tool(
+    state: &AppState,
+    user_id: &str,
+    args: &Value,
+) -> Result<Value, String> {
+    let computer_id = require_computer_id(args)?;
+    execute_computer_tool(&state, user_id, &computer_id, ComputerControlAction::Screenshot)
+        .await
+        .map_err(|(_, msg)| msg)
+}
+
+async fn computer_mouse_tool(
+    state: &AppState,
+    user_id: &str,
+    args: &Value,
+) -> Result<Value, String> {
+    let computer_id = require_computer_id(args)?;
+    let input: MouseInput = serde_json::from_value(args.clone())
+        .map_err(|e| format!("invalid mouse input: {}", e))?;
+    execute_computer_tool(&state, user_id, &computer_id, ComputerControlAction::Mouse(input))
+        .await
+        .map_err(|(_, msg)| msg)
+}
+
+async fn computer_keyboard_tool(
+    state: &AppState,
+    user_id: &str,
+    args: &Value,
+) -> Result<Value, String> {
+    let computer_id = require_computer_id(args)?;
+    let input: KeyboardInput = serde_json::from_value(args.clone())
+        .map_err(|e| format!("invalid keyboard input: {}", e))?;
+    execute_computer_tool(
+        &state,
+        user_id,
+        &computer_id,
+        ComputerControlAction::Keyboard(input),
+    )
+    .await
+    .map_err(|(_, msg)| msg)
+}
+
+async fn computer_shell_tool(
+    state: &AppState,
+    user_id: &str,
+    args: &Value,
+) -> Result<Value, String> {
+    let computer_id = require_computer_id(args)?;
+    let input: ShellInput = serde_json::from_value(args.clone())
+        .map_err(|e| format!("invalid shell input: {}", e))?;
+    execute_computer_tool(&state, user_id, &computer_id, ComputerControlAction::Shell(input))
+        .await
+        .map_err(|(_, msg)| msg)
+}
+
+async fn computer_file_read_tool(
+    state: &AppState,
+    user_id: &str,
+    args: &Value,
+) -> Result<Value, String> {
+    let computer_id = require_computer_id(args)?;
+    let path = args
+        .get("path")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| "Missing 'path' argument".to_string())?;
+    execute_computer_tool(
+        &state,
+        user_id,
+        &computer_id,
+        ComputerControlAction::FileRead {
+            path: path.to_string(),
+        },
+    )
+    .await
+    .map_err(|(_, msg)| msg)
+}
+
+async fn computer_file_write_tool(
+    state: &AppState,
+    user_id: &str,
+    args: &Value,
+) -> Result<Value, String> {
+    let computer_id = require_computer_id(args)?;
+    let path = args
+        .get("path")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| "Missing 'path' argument".to_string())?;
+    let content_base64 = args
+        .get("content")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| "Missing 'content' argument (base64)".to_string())?;
+    execute_computer_tool(
+        &state,
+        user_id,
+        &computer_id,
+        ComputerControlAction::FileWrite {
+            path: path.to_string(),
+            content_base64: content_base64.to_string(),
+        },
+    )
+    .await
+    .map_err(|(_, msg)| msg)
 }
 
 // ── Shell ───────────────────────────────────────────────────────────────────
@@ -360,7 +538,10 @@ async fn run_shell(
         .ok_or("Missing 'command' argument")?;
 
     let mut cmd = tokio::process::Command::new("sh");
-    cmd.arg("-c").arg(command);
+    cmd.arg("-c")
+        .arg(command)
+        .env_clear()
+        .envs(safe_subprocess_env());
 
     if let Some(dir) = cwd {
         cmd.current_dir(std::path::PathBuf::from(dir));
@@ -411,7 +592,12 @@ async fn code_execution(request: &ExecuteToolRequest) -> Result<Value, String> {
 
     let output = tokio::time::timeout(
         std::time::Duration::from_secs(timeout_secs),
-        tokio::process::Command::new(program).arg(flag).arg(code).output(),
+        tokio::process::Command::new(program)
+            .arg(flag)
+            .arg(code)
+            .env_clear()
+            .envs(safe_subprocess_env())
+            .output(),
     )
     .await
     .map_err(|_| "Code execution timed out")?
@@ -532,10 +718,17 @@ async fn system_info(_request: &ExecuteToolRequest) -> Result<Value, String> {
 async fn system_env(request: &ExecuteToolRequest) -> Result<Value, String> {
     if let Some(key) = request.args.get("key").and_then(|v| v.as_str()) {
         let value = std::env::var(key).ok();
+        // Never return the real value of a secret-looking variable.
+        let value = value.map(|v| {
+            if is_secret_key(key) {
+                "***".to_string()
+            } else {
+                v
+            }
+        });
         Ok(json!({ "key": key, "value": value }))
     } else {
-        let envs: std::collections::HashMap<String, Option<String>> =
-            std::env::vars().map(|(k, v)| (k, Some(v))).collect();
+        let envs = scrubbed_env_snapshot();
         Ok(json!({ "env": envs }))
     }
 }
@@ -1022,6 +1215,91 @@ async fn list_tools() -> impl IntoResponse {
                 "required": ["contract_id", "endpoint_id"]
             }
         }),
+        json!({
+            "id": "computer_screenshot",
+            "name": "Computer Screenshot",
+            "description": "Capture a PNG screenshot of the bot's cloud desktop computer.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "computer_id": { "type": "string", "description": "ID of the computer to screenshot" }
+                },
+                "required": ["computer_id"]
+            }
+        }),
+        json!({
+            "id": "computer_mouse",
+            "name": "Computer Mouse",
+            "description": "Move or click the mouse on the bot's cloud desktop computer.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "computer_id": { "type": "string", "description": "ID of the computer to control" },
+                    "action": { "type": "string", "enum": ["move", "click", "rightclick", "doubleclick", "mousedown", "mouseup"], "description": "Mouse action" },
+                    "x": { "type": "integer", "description": "X coordinate" },
+                    "y": { "type": "integer", "description": "Y coordinate" },
+                    "button": { "type": "string", "enum": ["left", "middle", "right"], "description": "Mouse button" }
+                },
+                "required": ["computer_id", "action"]
+            }
+        }),
+        json!({
+            "id": "computer_keyboard",
+            "name": "Computer Keyboard",
+            "description": "Type text or press a key on the bot's cloud desktop computer.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "computer_id": { "type": "string", "description": "ID of the computer to control" },
+                    "action": { "type": "string", "enum": ["type", "key"], "description": "Keyboard action" },
+                    "text": { "type": "string", "description": "Text to type when action is type" },
+                    "key": { "type": "string", "description": "Key to press when action is key (e.g. Return, Control_L, F5)" }
+                },
+                "required": ["computer_id", "action"]
+            }
+        }),
+        json!({
+            "id": "computer_shell",
+            "name": "Computer Shell",
+            "description": "Run a shell command inside the bot's cloud desktop computer.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "computer_id": { "type": "string", "description": "ID of the computer" },
+                    "command": { "type": "array", "items": { "type": "string" }, "description": "Command and arguments" },
+                    "env": { "type": "object", "description": "Additional environment variables" },
+                    "timeout": { "type": "integer", "description": "Timeout in seconds" }
+                },
+                "required": ["computer_id", "command"]
+            }
+        }),
+        json!({
+            "id": "computer_file_read",
+            "name": "Computer File Read",
+            "description": "Read a file from the bot's cloud desktop computer (returned as base64).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "computer_id": { "type": "string", "description": "ID of the computer" },
+                    "path": { "type": "string", "description": "Absolute guest path to the file" }
+                },
+                "required": ["computer_id", "path"]
+            }
+        }),
+        json!({
+            "id": "computer_file_write",
+            "name": "Computer File Write",
+            "description": "Write a file to the bot's cloud desktop computer (content must be base64).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "computer_id": { "type": "string", "description": "ID of the computer" },
+                    "path": { "type": "string", "description": "Absolute guest path to write" },
+                    "content": { "type": "string", "description": "Base64-encoded file content" }
+                },
+                "required": ["computer_id", "path", "content"]
+            }
+        }),
     ];
     for tool in markdown_builtin_tools() {
         tools.push(json!({
@@ -1237,6 +1515,9 @@ mod tests {
         };
         state.config.user.permission_policies = Some(vec![policy]);
         state.config.user.active_permission_policy = Some(active.to_string());
+        // Tests exercise host-control tools through the stateful router, so
+        // enable host control for the test fixture.
+        state.config.user.host_control_enabled = Some(true);
         Arc::new(state)
     }
 

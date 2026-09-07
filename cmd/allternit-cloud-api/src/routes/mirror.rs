@@ -94,7 +94,7 @@ async fn create_mirror_session(
     let result = sqlx::query(
         r#"
         INSERT INTO mirror_sessions (id, run_id, user_id, expires_at, status, access_token, pairing_code)
-        VALUES (?, ?, ?, ?, 'active', ?, ?)
+        VALUES ($1, $2, $3, $4, 'active', $5, $6)
         "#,
     )
     .bind(&session_id)
@@ -149,7 +149,7 @@ async fn list_mirror_sessions(State(state): State<Arc<ApiState>>) -> impl IntoRe
         r#"
         SELECT id, run_id, user_id, created_at, expires_at, status, client_count, access_token, pairing_code
         FROM mirror_sessions
-        WHERE user_id = ? AND status = 'active' AND expires_at > datetime('now')
+        WHERE user_id = $1 AND status = 'active' AND expires_at > NOW()
         ORDER BY created_at DESC
         "#,
     )
@@ -182,7 +182,7 @@ async fn get_mirror_session(
         r#"
         SELECT id, run_id, user_id, created_at, expires_at, status, client_count, access_token, pairing_code
         FROM mirror_sessions
-        WHERE id = ?
+        WHERE id = $1
         "#,
     )
     .bind(&session_id)
@@ -217,7 +217,7 @@ async fn delete_mirror_session(
     State(state): State<Arc<ApiState>>,
     Path(session_id): Path<String>,
 ) -> impl IntoResponse {
-    let result = sqlx::query("UPDATE mirror_sessions SET status = 'ended' WHERE id = ?")
+    let result = sqlx::query("UPDATE mirror_sessions SET status = 'ended' WHERE id = $1")
         .bind(&session_id)
         .execute(&state.db)
         .await;
@@ -267,7 +267,7 @@ async fn pair_mobile_device(
         r#"
         SELECT id, run_id, user_id, created_at, expires_at, status, client_count, access_token, pairing_code
         FROM mirror_sessions
-        WHERE pairing_code = ? AND status = 'active' AND expires_at > datetime('now')
+        WHERE pairing_code = $1 AND status = 'active' AND expires_at > NOW()
         "#,
     )
     .bind(&req.pairing_code)
@@ -276,7 +276,7 @@ async fn pair_mobile_device(
 
     match session {
         Ok(Some(s)) => {
-            sqlx::query("UPDATE mirror_sessions SET status = 'paired' WHERE id = ?")
+            sqlx::query("UPDATE mirror_sessions SET status = 'paired' WHERE id = $1")
                 .bind(&s.id)
                 .execute(&state.db)
                 .await
@@ -324,7 +324,7 @@ async fn get_pairing_info(
         r#"
         SELECT id, run_id, user_id, created_at, expires_at, status, client_count, access_token, pairing_code
         FROM mirror_sessions
-        WHERE pairing_code = ? AND status IN ('active', 'paired') AND expires_at > datetime('now')
+        WHERE pairing_code = $1 AND status IN ('active', 'paired') AND expires_at > NOW()
         "#,
     )
     .bind(&code)

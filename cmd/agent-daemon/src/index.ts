@@ -5,7 +5,7 @@ import { dirname, join } from 'node:path';
 import WebSocket, { type RawData } from 'ws';
 import { discoverAgentClis } from './discovery';
 
-const CLOUD_API_URL = (process.env.ALLTERNIT_CLOUD_API_URL || 'https://allternit-cloud-api.fly.dev').replace(/\/$/, '');
+const CLOUD_API_URL = (process.env.ALLTERNIT_CLOUD_API_URL || 'https://api.allternit.com').replace(/\/$/, '');
 const RUNTIME_NAME = process.env.ALLTERNIT_RUNTIME_NAME || `${hostname()} VPS`;
 const IDENTITY_PATH = process.env.ALLTERNIT_RUNTIME_IDENTITY_PATH
   || join(homedir(), '.config', 'allternit', 'runtime-identity.json');

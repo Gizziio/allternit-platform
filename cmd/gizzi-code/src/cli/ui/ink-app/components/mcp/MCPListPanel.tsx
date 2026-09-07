@@ -397,7 +397,7 @@ export function MCPListPanel(t0) {
   }
   let t23;
   if ($[51] !== claudeAiServers || $[52] !== renderServerItem) {
-    t23 = claudeAiServers.length > 0 && <Box flexDirection="column" marginBottom={1}><Box paddingLeft={2}><Text bold={true}>claude.ai</Text></Box>{claudeAiServers.map(server_5 => renderServerItem(server_5))}</Box>;
+    t23 = claudeAiServers.length > 0 && <Box flexDirection="column" marginBottom={1}><Box paddingLeft={2}><Text bold={true}>Hosted connectors</Text></Box>{claudeAiServers.map(server_5 => renderServerItem(server_5))}</Box>;
     $[51] = claudeAiServers;
     $[52] = renderServerItem;
     $[53] = t23;
@@ -432,7 +432,7 @@ export function MCPListPanel(t0) {
   }
   let t27;
   if ($[62] === Symbol.for("react.memo_cache_sentinel")) {
-    t27 = <Text dimColor={true}><Link url="https://code.claude.com/docs/en/mcp">https://code.claude.com/docs/en/mcp</Link>{" "}for help</Text>;
+    t27 = <Text dimColor={true}><Link url="https://docs.gizziio.com/mcp">https://docs.gizziio.com/mcp</Link>{" "}for help</Text>;
     $[62] = t27;
   } else {
     t27 = $[62];

@@ -1,7 +1,9 @@
 import { chromium } from 'playwright';
 const ORIGIN='https://ai.allternit.com';
 const EMAIL='cartlidge.joseph@yahoo.com';
-const PASS='Tyhvix-gafho2-bofxog';
+// Password comes from the environment — never commit it. (Rotated 2026-09-03.)
+const PASS=process.env.ALLTERNIT_TEST_PASSWORD;
+if(!PASS){console.error('Set ALLTERNIT_TEST_PASSWORD');process.exit(1);}
 const browser=await chromium.launch({headless:true});
 const ctx=await browser.newContext({viewport:{width:1440,height:900}});
 const page=await ctx.newPage();

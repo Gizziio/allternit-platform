@@ -72,6 +72,7 @@ const LoopsListPage = lazy(() => import('./pages/LoopsListPage'))
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'))
 const TermsPage = lazy(() => import('./pages/TermsPage'))
 const StatusPage = lazy(() => import('./pages/StatusPage'))
+const BenchmarkLeaderboardPage = lazy(() => import('./pages/BenchmarkLeaderboardPage'))
 const ConnectPage = lazy(() => import('./pages/ConnectPage'))
 const ExtensionInstalledPage = lazy(() => import('./pages/ExtensionInstalledPage'))
 const DebugModePage = lazy(() => import('./pages/DebugModePage'))
@@ -89,6 +90,12 @@ const PdfPage = lazy(() => import('./pages/PdfPage'))
 const MarkdownPreviewPage = lazy(() => import('./pages/MarkdownPreviewPage'))
 const OfficeLauncherPage = lazy(() => import('./pages/OfficeLauncherPage'))
 const SignDocumentPage = lazy(() => import('./pages/SignDocumentPage'))
+const HudPage = lazy(() => import('./pages/HudPage'))
+
+// Debug/test-only pages. Registered only in dev builds — in production these
+// routes are absent, so the wildcard below renders the redirect-to-home 404
+// behavior instead of exposing internal tooling.
+const isDevRouteBuild = Boolean(import.meta.env.DEV)
 
 export default function AppRoutes() {
   const navigate = useNavigate();
@@ -117,6 +124,8 @@ export default function AppRoutes() {
         <Route path="/sign-in/*" element={<SignInPage />} />
         <Route path="/sign-up/*" element={<SignUpPage />} />
         <Route path="/sign-out" element={<SignOutPage />} />
+        <Route path="/sign-in/*" element={<SignInPage />} />
+        <Route path="/sign-up/*" element={<SignUpPage />} />
         <Route path="/pair" element={<RuntimePairingPage />} />
         <Route path="/runtimes" element={<RuntimesPage />} />
         <Route path="/remote" element={<RuntimesPage />} />
@@ -134,12 +143,18 @@ export default function AppRoutes() {
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/status" element={<StatusPage />} />
+        <Route path="/leaderboard" element={<BenchmarkLeaderboardPage />} />
         <Route path="/connect" element={<ConnectPage />} />
         <Route path="/extension/installed" element={<ExtensionInstalledPage />} />
-        <Route path="/debug-mode" element={<DebugModePage />} />
-        <Route path="/gallery-test" element={<GalleryTestPage />} />
-        <Route path="/swarm-preview" element={<SwarmPreviewPage />} />
-        <Route path="/terminal-test" element={<TerminalTestPage />} />
+        {/* Debug/test-only routes — never registered in production builds. */}
+        {isDevRouteBuild && (
+          <>
+            <Route path="/debug-mode" element={<DebugModePage />} />
+            <Route path="/gallery-test" element={<GalleryTestPage />} />
+            <Route path="/swarm-preview" element={<SwarmPreviewPage />} />
+            <Route path="/terminal-test" element={<TerminalTestPage />} />
+          </>
+        )}
         <Route path="/terminal/clerk" element={<TerminalClerkPage />} />
         <Route path="/office-auth-bridge" element={<OfficeAuthBridgePage />} />
         <Route path="/dispatch/join" element={<DispatchJoinPage />} />
@@ -151,6 +166,7 @@ export default function AppRoutes() {
         <Route path="/markdown-preview" element={<MarkdownPreviewPage />} />
         <Route path="/office" element={<OfficeLauncherPage />} />
         <Route path="/sign" element={<SignDocumentPage />} />
+        <Route path="/hud" element={<HudPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>

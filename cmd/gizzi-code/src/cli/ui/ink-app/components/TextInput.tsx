@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle';
-import chalk from 'chalk';
+import chalk from '@/shared/util/chalk'
 import React, { useMemo, useRef } from 'react';
 import { useVoiceState } from '../context/voice';
 import { useClipboardImageHint } from '../hooks/useClipboardImageHint';
@@ -35,7 +35,7 @@ export default function TextInput(props: Props): React.ReactElement | null {
   const [theme] = useTheme();
   const isTerminalFocused = useTerminalFocus();
   // Hoisted to mount-time — this component re-renders on every keystroke.
-  const accessibilityEnabled = useMemo(() => isEnvTruthy(process.env.CLAUDE_CODE_ACCESSIBILITY), []);
+  const accessibilityEnabled = useMemo(() => isEnvTruthy(process.env.GIZZI_CODE_ACCESSIBILITY), []);
   const settings = useSettings();
   const reducedMotion = settings.prefersReducedMotion ?? false;
   const voiceState = feature('VOICE_MODE') ?
@@ -95,6 +95,7 @@ export default function TextInput(props: Props): React.ReactElement | null {
     focus: props.focus,
     mask: props.mask,
     multiline: props.multiline,
+    multilineEnter: props.multilineEnter,
     cursorChar: props.showCursor ? ' ' : '',
     highlightPastedText: props.highlightPastedText,
     invert,

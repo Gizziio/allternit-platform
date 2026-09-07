@@ -946,6 +946,16 @@ export const RunCommand = cmd({
       }
 
       await loopDone
+
+      // Print mode (gizzi exec / -p) is one-shot by definition: once the run
+      // loop finishes, the process MUST terminate. Background runtime
+      // handles — agent communication runtime, lazily re-created Instances,
+      // db watchers — can outlive the answer and would otherwise hold the
+      // event loop open forever (exec hung for minutes after the prompt
+      // completed). Give stdout/stderr 100ms to drain, then exit hard.
+      if (printMode) {
+        setTimeout(() => process.exit(process.exitCode ?? 0), 100)
+      }
     }
 
     if (args.attach) {

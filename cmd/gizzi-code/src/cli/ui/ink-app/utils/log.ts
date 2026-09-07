@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle'
-import type { BetaMessageStreamParams } from '@allternit/sdk/providers/anthropic/resources/beta/messages/messages.mjs'
+import type { BetaMessageStreamParams } from '@allternit/gizzi-sdk/providers/allternit/resources/beta/messages/messages.mjs'
 import { readdir, readFile, stat } from 'fs/promises'
 import memoize from 'lodash-es/memoize.js'
 import { join } from 'path'
@@ -168,9 +168,9 @@ export function logError(error: unknown): void {
     // Check if error reporting should be disabled
     if (
       // Cloud providers (Bedrock/Vertex/Foundry) always disable features
-      isEnvTruthy(process.env.CLAUDE_CODE_USE_BEDROCK) ||
-      isEnvTruthy(process.env.CLAUDE_CODE_USE_VERTEX) ||
-      isEnvTruthy(process.env.CLAUDE_CODE_USE_FOUNDRY) ||
+      isEnvTruthy(process.env.GIZZI_CODE_USE_BEDROCK) ||
+      isEnvTruthy(process.env.GIZZI_CODE_USE_VERTEX) ||
+      isEnvTruthy(process.env.GIZZI_CODE_USE_FOUNDRY) ||
       process.env.DISABLE_ERROR_REPORTING ||
       isEssentialTrafficOnly()
     ) {

@@ -44,5 +44,7 @@ export { CapabilityBuilder, defineCapability } from './plugins/index.js';
 export { CapabilityRegistry } from './plugins/index.js';
 // Runtime
 export { RuntimeClient, RuntimeApiError, } from './runtime/index.js';
+// Generated platform API client (js/script/build.ts emits it into dist/gen/)
+export { AllternitClient, createAllternitClient } from './gen/index.js';
 // Version
 export const VERSION = '1.0.0';

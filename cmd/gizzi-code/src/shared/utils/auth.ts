@@ -1,5 +1,5 @@
 // @ts-nocheck
-import chalk from 'chalk'
+import chalk from '@/shared/util/chalk'
 import { execa } from 'execa'
 import { mkdir, stat } from 'fs/promises'
 import memoize from 'lodash-es/memoize.js'
@@ -32,6 +32,7 @@ import {
   normalizeApiKeyForConfig,
 } from './authPortable.js'
 import { clearBetasCaches } from './betasCache.js'
+import { redactTelemetryString } from './telemetryRedact.js'
 import {
   type AccountInfo,
   checkHasTrustDialogAccepted,
@@ -40,7 +41,7 @@ import {
 } from './config.js'
 import { logAntError, logForDebugging } from './debug.js'
 import {
-  getClaudeConfigHomeDir,
+  getLegacyClaudeHomeDir,
   isBareMode,
   isEnvTruthy,
   isRunningOnHomespace,
@@ -87,7 +88,7 @@ function isManagedOAuthContext(): boolean {
 
 /** Whether we are supporting direct 1P auth. */
 // this code is closely related to getAuthTokenSource
-export function isAnthropicAuthEnabled(): boolean {
+export function isAllternitAuthEnabled(): boolean {
   // --bare: API-key-only, never OAuth.
   if (isBareMode()) return false
 
@@ -107,7 +108,7 @@ export function isAnthropicAuthEnabled(): boolean {
     process.env.GIZZI_API_KEY_FILE_DESCRIPTOR
 
   // Check if API key is from an external source (not managed by /login)
-  const { source: apiKeySource } = getAnthropicApiKeyWithSource({
+  const { source: apiKeySource } = getAllternitApiKeyWithSource({
     skipRetrievingKeyFromApiKeyHelper: true,
   })
   const hasExternalApiKey =
@@ -121,7 +122,7 @@ export function isAnthropicAuthEnabled(): boolean {
 }
 
 /** Where the auth token is being sourced from, if any. */
-// this code is closely related to isAnthropicAuthEnabled
+// this code is closely related to isAllternitAuthEnabled
 export function getAuthTokenSource() {
   // --bare: API-key-only.
   if (isBareMode()) {
@@ -174,19 +175,19 @@ export type ApiKeySource =
   | '/login managed key'
   | 'none'
 
-export function getAnthropicApiKey(): null | string {
-  const { key } = getAnthropicApiKeyWithSource()
+export function getAllternitApiKey(): null | string {
+  const { key } = getAllternitApiKeyWithSource()
   return key
 }
 
-export function hasAnthropicApiKeyAuth(): boolean {
-  const { key, source } = getAnthropicApiKeyWithSource({
+export function hasAllternitApiKeyAuth(): boolean {
+  const { key, source } = getAllternitApiKeyWithSource({
     skipRetrievingKeyFromApiKeyHelper: true,
   })
   return key !== null && source !== 'none'
 }
 
-export function getAnthropicApiKeyWithSource(
+export function getAllternitApiKeyWithSource(
   opts: { skipRetrievingKeyFromApiKeyHelper?: boolean } = {},
 ): {
   key: null | string
@@ -473,8 +474,18 @@ export function prefetchApiKeyFromApiKeyHelperIfSafe(
   void getApiKeyFromApiKeyHelper(isNonInteractiveSession)
 }
 
-/** @private Use {@link getAnthropicApiKey} or {@link getAnthropicApiKeyWithSource} */
-export const getApiKeyFromConfigOrMacOSKeychain = memoize(
+/**
+ * lodash's memoize attaches a `.cache` property, but the `lodash-es/memoize.js`
+ * deep-import types drop it — re-declare the shape we rely on (cache clearing).
+ */
+type MemoizedWithCache<T extends (...args: never[]) => unknown> = T & {
+  cache?: { clear?: () => void }
+}
+
+/** @private Use {@link getAllternitApiKey} or {@link getAllternitApiKeyWithSource} */
+export const getApiKeyFromConfigOrMacOSKeychain: MemoizedWithCache<
+  () => { key: string; source: ApiKeySource } | null
+> = memoize(
   (): { key: string; source: ApiKeySource } | null => {
     if (isBareMode()) return null
     if (process.platform === 'darwin') {
@@ -537,8 +548,11 @@ export async function saveApiKey(apiKey: string): Promise<void> {
     } catch (e) {
       logError(e)
       logEvent('tengu_api_key_keychain_error', {
-        error: errorMessage(
-          e,
+        // Fork: redact at source — OS keychain error strings can contain
+        // absolute paths and usernames. The analytics sink sanitizes again
+        // as defense in depth.
+        error: redactTelemetryString(
+          errorMessage(e),
         ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       })
       logEvent('tengu_api_key_saved_to_config', {})
@@ -653,7 +667,7 @@ export function saveOAuthTokensIfNeeded(tokens: OAuthTokens): {
   }
 }
 
-export const getClaudeAIOAuthTokens = memoize((): OAuthTokens | null => {
+export const getClaudeAIOAuthTokens: MemoizedWithCache<() => OAuthTokens | null> = memoize((): OAuthTokens | null => {
   if (isBareMode()) return null
 
   if (process.env.GIZZI_OAUTH_TOKEN) {
@@ -705,7 +719,7 @@ let lastCredentialsMtimeMs = 0
 async function invalidateOAuthCacheIfDiskChanged(): Promise<void> {
   try {
     const { mtimeMs } = await stat(
-      join(getClaudeConfigHomeDir(), '.credentials.json'),
+      join(getLegacyClaudeHomeDir(), '.credentials.json'),
     )
     if (mtimeMs !== lastCredentialsMtimeMs) {
       lastCredentialsMtimeMs = mtimeMs
@@ -827,7 +841,7 @@ async function checkAndRefreshOAuthTokenIfNeededImpl(
     return false
   }
 
-  const claudeDir = getClaudeConfigHomeDir()
+  const claudeDir = getLegacyClaudeHomeDir()
   await mkdir(claudeDir, { recursive: true })
 
   let release
@@ -903,7 +917,7 @@ async function checkAndRefreshOAuthTokenIfNeededImpl(
 }
 
 export function isClaudeAISubscriber(): boolean {
-  if (!isAnthropicAuthEnabled()) {
+  if (!isAllternitAuthEnabled()) {
     return false
   }
 
@@ -924,7 +938,7 @@ export function is1PApiCustomer(): boolean {
 }
 
 export function getOauthAccountInfo(): AccountInfo | undefined {
-  return isAnthropicAuthEnabled() ? getGlobalConfig().oauthAccount : undefined
+  return isAllternitAuthEnabled() ? getGlobalConfig().oauthAccount : undefined
 }
 
 export function isOverageProvisioningAllowed(): boolean {
@@ -964,7 +978,7 @@ export function getSubscriptionType(): SubscriptionType | null {
     return getMockSubscriptionType()
   }
 
-  if (!isAnthropicAuthEnabled()) {
+  if (!isAllternitAuthEnabled()) {
     return null
   }
   const oauthTokens = getClaudeAIOAuthTokens()
@@ -999,7 +1013,7 @@ export function isProSubscriber(): boolean {
 }
 
 export function getRateLimitTier(): string | null {
-  if (!isAnthropicAuthEnabled()) {
+  if (!isAllternitAuthEnabled()) {
     return null
   }
   const oauthTokens = getClaudeAIOAuthTokens()
@@ -1011,20 +1025,15 @@ export function getRateLimitTier(): string | null {
 }
 
 export function getSubscriptionName(): string {
-  const subscriptionType = getSubscriptionType()
-
-  switch (subscriptionType) {
-    case 'enterprise':
-      return 'Claude Enterprise'
-    case 'team':
-      return 'Claude Team'
-    case 'max':
-      return 'Claude Max'
-    case 'pro':
-      return 'Claude Pro'
-    default:
-      return 'Claude API'
+  try {
+    const { getCachedAllternitPlan, Discovery } = require('../../runtime/providers/discovery/index.js') as typeof import('../../runtime/providers/discovery/index.js')
+    Discovery.prefetch()
+    const plan = getCachedAllternitPlan()
+    if (plan?.label) return `Allternit ${plan.label}`
+  } catch {
+    // Discovery is optional on this path.
   }
+  return 'Allternit'
 }
 
 /** Check if using third-party services */
@@ -1070,7 +1079,7 @@ export function getAccountInformation() {
   } else {
     accountInfo.tokenSource = authTokenSource
   }
-  const { key: apiKey, source: apiKeySource } = getAnthropicApiKeyWithSource()
+  const { key: apiKey, source: apiKeySource } = getAllternitApiKeyWithSource()
   if (apiKey) {
     accountInfo.apiKeySource = apiKeySource
   }
@@ -1104,7 +1113,7 @@ export async function validateForceLoginOrg(): Promise<OrgValidationResult> {
     return { valid: true }
   }
 
-  if (!isAnthropicAuthEnabled()) {
+  if (!isAllternitAuthEnabled()) {
     return { valid: true }
   }
 

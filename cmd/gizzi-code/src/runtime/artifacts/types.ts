@@ -1,7 +1,7 @@
 /**
  * Structured input schema for `generateArtifactHtml` (see generateHtml.ts).
  *
- * Deliberately narrower than Claude Code's project-artifact template (no
+ * Deliberately narrower than gizzi-code's project-artifact template (no
  * free-form markup) — every field here is data, not HTML, so the generator
  * can stay a pure function: byte-identical input always produces
  * byte-identical output. There is no "as of" timestamp, no generated id,

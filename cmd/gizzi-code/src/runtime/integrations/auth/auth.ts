@@ -1,4 +1,3 @@
-// @ts-nocheck
 import path from "path"
 import { Global } from "@/runtime/context/global/index"
 import z from "zod/v4"
@@ -96,7 +95,7 @@ export namespace Auth {
   const profileFilepath = path.join(Global.Path.data, "auth-profiles.json")
 
   async function loadProfiles(): Promise<ProfileStore> {
-    const data = await Filesystem.readJson<ProfileStore>(profileFilepath).catch(() => ({}))
+    const data = await Filesystem.readJson<ProfileStore>(profileFilepath).catch((): ProfileStore => ({ profiles: {} }))
     return {
       profiles: data.profiles ?? {},
       order: data.order,

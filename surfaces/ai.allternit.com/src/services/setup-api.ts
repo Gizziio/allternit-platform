@@ -96,7 +96,11 @@ export const setupApi = {
   },
 
   saveConfig(config: UserConfig): Promise<{ success: boolean }> {
-    return api.post('/api/onboarding/config', config);
+    const selfHostedToken = (import.meta as any).env?.VITE_ALLTERNIT_SELF_HOSTED_TOKEN;
+    const options: RequestInit | undefined = selfHostedToken
+      ? { headers: { 'X-Allternit-Self-Hosted-Token': String(selfHostedToken) } }
+      : undefined;
+    return api.post('/api/onboarding/config', config, options);
   },
 
   discover(): Promise<DiscoveryResponse> {

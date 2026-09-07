@@ -1,10 +1,10 @@
 import memoize from 'lodash-es/memoize.js'
 import { join } from 'path'
-import { getClaudeConfigHomeDir } from './envUtils.js'
+import { getGizziConfigHomeDir } from './envUtils.js'
 import { sanitizePath } from './sessionStoragePortable.js'
 
 export function getProjectsDir(): string {
-  return join(getClaudeConfigHomeDir(), 'projects')
+  return join(getGizziConfigHomeDir(), 'projects')
 }
 
 export const getProjectDir = memoize((projectDir: string): string => {

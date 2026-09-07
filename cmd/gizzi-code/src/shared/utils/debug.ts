@@ -11,9 +11,10 @@ import {
   parseDebugFilter,
   shouldShowDebugMessage,
 } from './debugFilter.js'
-import { getClaudeConfigHomeDir, isEnvTruthy } from './envUtils.js'
+import { getLegacyClaudeHomeDir, isEnvTruthy } from './envUtils.js'
 import { getFsImplementation } from './fsOperations.js'
 import { writeToStderr } from './process.js'
+import { redactSecrets } from '../util/redact.js'
 import { jsonStringify } from './slowOperations.js'
 
 export type DebugLogLevel = 'verbose' | 'debug' | 'info' | 'warn' | 'error'
@@ -219,7 +220,7 @@ export function logForDebugging(
     message = jsonStringify(message)
   }
   const timestamp = new Date().toISOString()
-  const output = `${timestamp} [${level.toUpperCase()}] ${message.trim()}\n`
+  const output = `${timestamp} [${level.toUpperCase()}] ${redactSecrets(message.trim())}\n`
   if (isDebugToStdErr()) {
     writeToStderr(output)
     return
@@ -232,7 +233,7 @@ export function getDebugLogPath(): string {
   return (
     getDebugFilePath() ??
     process.env.GIZZI_DEBUG_LOGS_DIR ??
-    join(getClaudeConfigHomeDir(), 'debug', `${getSessionId()}.txt`)
+    join(getLegacyClaudeHomeDir(), 'debug', `${getSessionId()}.txt`)
   )
 }
 

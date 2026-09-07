@@ -8,6 +8,7 @@
 
 import { CronJobConfig } from "@/components/agents/CronJobWizard";
 import { nativeAgentApi } from "./native-agent-api";
+import { isAgentSessionsApiEnabled } from "@/lib/env";
 
 import { createModuleLogger } from '@/lib/logger';
 
@@ -547,6 +548,21 @@ export async function executeScheduledJob(
 ): Promise<JobExecution> {
   const executionId = `exec-${Date.now()}`;
   const startedAt = new Date().toISOString();
+
+  if (!isAgentSessionsApiEnabled()) {
+    // Job execution creates a session via POST /api/v1/agent-sessions, served
+    // only by the Rust allternit-api (:8013). Fail closed with a deliberate
+    // execution record instead of firing a request that 404s.
+    return {
+      executionId,
+      jobId: jobConfig.id || "unknown",
+      status: "failed",
+      startedAt,
+      completedAt: new Date().toISOString(),
+      error:
+        "Agent sessions backend is disabled in this deployment (set NEXT_PUBLIC_ALLTERNIT_AGENT_SESSIONS_API=1 where the gateway is reachable).",
+    };
+  }
 
   try {
     // Create a new session for this job execution

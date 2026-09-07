@@ -9,6 +9,7 @@
  */
 
 import { CONNECTOR_ICON_FILES } from "./connector-icon-map";
+import { getLogosAppsUrl } from "./logos-apps";
 
 function localIconUrl(provider: string): string | null {
   const file = CONNECTOR_ICON_FILES[provider.toLowerCase()];
@@ -26,8 +27,9 @@ export interface ConnectorLogoResult {
  * Resolve a polished connector logo.
  *
  * Priority:
- * 1. Local brand icon shipped from the connector icon manifest (SVG/PNG)
- * 2. High-res favicon from the site's own faviconkit
+ * 1. SVG logo from the local logos-apps catalog
+ * 2. Local brand icon shipped from the connector icon manifest (SVG/PNG)
+ * 3. High-res favicon from the site's own faviconkit
  */
 export function getConnectorLogoUrl(
   baseUrl: string | undefined | null,
@@ -35,6 +37,9 @@ export function getConnectorLogoUrl(
   _size: number = 64,
 ): ConnectorLogoResult {
   if (provider) {
+    const remote = getLogosAppsUrl(provider);
+    if (remote) return { url: remote, title: provider };
+
     const local = localIconUrl(provider);
     if (local) return { url: local, title: provider };
   }
@@ -92,6 +97,9 @@ export function getConnectorLogoUrl(
       };
       const guessed = domainToProvider[hostname];
       if (guessed) {
+        const remote = getLogosAppsUrl(guessed);
+        if (remote) return { url: remote, title: guessed };
+
         const local = localIconUrl(guessed);
         if (local) return { url: local, title: guessed };
       }

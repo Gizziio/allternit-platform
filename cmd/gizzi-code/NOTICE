@@ -1,0 +1,21 @@
+gizzi-code — attribution notices
+================================
+
+This directory contains Allternit-original code and portions derived from
+Anthropic's Claude Code CLI.
+
+Derived portions
+----------------
+Portions of this software are derived from Anthropic's Claude Code.
+Copyright © Anthropic PBC. All rights reserved. Used under a basis to be
+confirmed by counsel. This NOTICE does not grant a license to those portions
+and does not relicense them under MIT.
+
+Third-party packages
+--------------------
+@anthropic-ai/sdk — MIT License, Copyright Anthropic PBC.
+color-diff-napi — see its package.json / license file.
+
+Nominative / protocol references that remain in the source (API hosts,
+OAuth URLs, model names, package names of real dependencies) are listed in
+docs/anthropic-allowlist.md. They are not product branding.

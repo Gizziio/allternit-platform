@@ -8,6 +8,8 @@ import { FetchInterceptorProvider } from '@/lib/FetchInterceptorProvider'
 import { CompanyConfigProvider } from '@/providers/company-config-provider'
 import AppRoutes from './routes'
 import { validatePlatformEnv } from '@/lib/env'
+import { ErrorBoundary } from '@/components/error-boundary'
+import { initClientErrorReporting, reportReactError } from '@/lib/client-error-report'
 
 // Validate env early so missing required values surface in the console before
 // the first network call. In a future build this can block render with a setup card.
@@ -44,6 +46,10 @@ const queryClient = new QueryClient({
   },
 })
 
+// Global window.onerror / unhandledrejection → console + POST /api/v1/client-errors
+// (fire-and-forget; self-disabling if the endpoint is down).
+initClientErrorReporting();
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <BrowserRouter>
     <QueryClientProvider client={queryClient}>
@@ -51,7 +57,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <CompanyConfigProvider>
           <PlatformAuthProvider>
             <FetchInterceptorProvider>
-              <AppRoutes />
+              <ErrorBoundary componentName="AppRoot" onError={(error) => reportReactError(error)}>
+                <AppRoutes />
+              </ErrorBoundary>
             </FetchInterceptorProvider>
           </PlatformAuthProvider>
         </CompanyConfigProvider>

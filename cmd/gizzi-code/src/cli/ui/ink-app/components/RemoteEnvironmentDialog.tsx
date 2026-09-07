@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
-import chalk from 'chalk';
+import chalk from '@/shared/util/chalk'
 import figures from 'figures';
 import * as React from 'react';
 import { useEffect, useState } from 'react';
@@ -19,7 +19,7 @@ import { Dialog } from './design-system/Dialog';
 import { KeyboardShortcutHint } from './design-system/KeyboardShortcutHint';
 import { LoadingState } from './design-system/LoadingState';
 const DIALOG_TITLE = 'Select Remote Environment';
-const SETUP_HINT = `Configure environments at: https://claude.ai/code`;
+const SETUP_HINT = `Configure environments at: https://ai.allternit.com`;
 type Props = {
   onDone: (message?: string) => void;
 };

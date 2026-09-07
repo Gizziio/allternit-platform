@@ -7,6 +7,7 @@ pub mod auth;
 pub mod db;
 pub mod error;
 pub mod middleware;
+pub mod model_router;
 pub mod routes;
 pub mod runtime;
 pub mod services;
@@ -35,7 +36,7 @@ pub use websocket::DeploymentEvent;
 
 /// API application state
 pub struct ApiState {
-    pub db: sqlx::SqlitePool,
+    pub db: sqlx::PgPool,
     pub ssh_executor: allternit_cloud_ssh::SshExecutor,
     pub event_tx: broadcast::Sender<DeploymentEvent>,
     /// Shared event store for all operations
@@ -48,17 +49,38 @@ pub struct ApiState {
     pub rate_limiter: Arc<RateLimiter>,
     /// Public-route rate limiter for pairing and relay endpoints
     pub public_rate_limiter: Arc<RateLimiter>,
+    /// Tight per-user limiter for the free inference path (no credits row)
+    pub free_inference_rate_limiter: Arc<RateLimiter>,
     /// Cost service for tracking run costs
     pub cost_service: Arc<dyn services::CostService>,
     /// Quota service for free-tier guardrails
     pub quota_service: services::SharedQuotaService,
-    /// Fly runtime service for hosted runtimes
-    pub fly_runtime_service: Option<services::FlyRuntimeService>,
+    /// Contabo runtime service for hosted runtimes (provisions and manages
+    /// workload containers on the Contabo VPS)
+    pub contabo_runtime_service: Arc<services::ContaboRuntimeService>,
+    /// Gateway used by the P1 control-plane namespaces (agent-sessions,
+    /// office, beta; routes::data_plane): resolves the caller's default
+    /// data-plane node and relays through the runtime relay machinery.
+    /// Behind a trait so handler tests can substitute a mock at the service
+    /// boundary.
+    pub data_plane_gateway: Arc<dyn routes::data_plane::DataPlaneGateway>,
+    /// P2 per-subscription provisioning lane (Incus fleet): fleet
+    /// scheduling, per-instance lifecycle (create/start/stop/status/delete),
+    /// pairing bind, and run-interval metering.
+    pub provisioning_service: Arc<services::ProvisioningService>,
     /// Mesh enrollment service (Headscale), absent when HEADSCALE_API_KEY is unset
     pub mesh_service: Option<Arc<routes::mesh::MeshService>>,
     /// AES-256-GCM cipher for provider tokens and wizard checkpoints,
     /// absent (plaintext-at-rest, dev only) when ALLTERNIT_CREDENTIALS_KEY is unset
     pub credential_cipher: Option<Arc<allternit_cloud_core::CredentialCipher>>,
+    /// BYOK inference key store, absent when the credential cipher is absent
+    pub inference_key_service: Option<Arc<services::InferenceKeyService>>,
+    /// Shared metrics state for request tracking
+    pub metrics_state: Arc<crate::middleware::metrics::MetricsState>,
+    /// Model router for dispatching inference requests to upstream providers
+    pub model_router: crate::model_router::ModelRouter,
+    /// Inference pool budgets/circuit breaker for upstream provider spend
+    pub inference_pool_service: Arc<services::InferencePoolService>,
 }
 
 /// Create the API router
@@ -200,8 +222,6 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
         .merge(routes::tasks::task_routes())
         // Mirror session endpoints (merged from api/cloud/allternit-cloud-api)
         .merge(routes::mirror::create_mirror_routes())
-        // WebSocket endpoint for run events
-        .route("/ws/runs/:id", get(websocket::run_ws_handler))
         // Deployment endpoints (existing)
         .route(
             "/api/v1/deployments",
@@ -226,6 +246,11 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
         .route(
             "/api/v1/providers/:id/validate",
             post(routes::providers::validate_credentials),
+        )
+        // Model router chat completions (auth-protected)
+        .route(
+            "/v1/chat/completions",
+            post(routes::model_router::chat_completions),
         )
         // Region endpoints
         .route("/api/v1/regions", get(routes::regions::list_regions))
@@ -293,7 +318,27 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
         // These handlers verify Clerk or billing credentials themselves. They
         // must not pass through the legacy allternit_* API-token middleware.
         .merge(routes::hosted_runtimes::routes())
+        .merge(routes::contabo_hosted_runtimes::routes())
         .merge(routes::hosted_entitlements::routes())
+        // Credit balance verifies the Clerk session per-request, like the
+        // hosted runtime routes.
+        .merge(routes::billing_credits::routes())
+        // Desktop device tokens and Clerk sessions both read Allternit
+        // subscription remaining compute here (plan + credits).
+        .merge(routes::me_usage::routes())
+        // The pack catalog is public; checkout creation verifies the Clerk
+        // session per-request and answers 503 billing_not_configured when
+        // STRIPE_SECRET_KEY is unset.
+        .merge(routes::billing_checkout::routes())
+        // The plan catalog is public; subscribe/portal verify the Clerk session
+        // per-request and answer 503 billing_not_configured when STRIPE_SECRET_KEY
+        // or the plan's STRIPE_PRICE_* id is unset.
+        .merge(routes::billing_subscriptions::routes())
+        // BYOK inference keys verify the Clerk session per-request and answer
+        // 503 inference_keys_not_configured when ALLTERNIT_CREDENTIALS_KEY is unset.
+        .merge(routes::inference_keys::routes())
+        // API keys verify the Clerk session per-request and store only hashes.
+        .merge(routes::api_keys::routes())
         // The Stripe webhook verifies the Stripe-Signature HMAC itself and
         // answers 503 webhook_not_configured when STRIPE_WEBHOOK_SECRET is unset.
         .merge(routes::billing_webhooks::routes())
@@ -305,6 +350,36 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
         // Gizzi instances are self-registered over a per-request Clerk
         // session, like the pairing routes — no allternit_* API token.
         .merge(routes::gizzi_instances::routes())
+        // Agent-sessions control-plane namespace (P1): Clerk session verified
+        // per-request inside each handler (resolve_user_scoped), then proxied
+        // to the caller's default data-plane node via the runtime relay.
+        .merge(routes::agent_sessions::routes())
+        // Office namespace (P1): bindings/bootstrap/runtime-state, relayed to
+        // the caller's default node. Office state is in-memory per :8013
+        // process, so these handlers are node-affine by design (§3.3).
+        .merge(routes::office::routes())
+        // Beta namespace (P1): research tasks + playground sessions, relayed
+        // to the caller's default node. The WS event stream
+        // (/beta/sessions/:id/events/ws) is intentionally not exposed — it
+        // needs the socket-ticket WS relay, not the request relay.
+        .merge(routes::beta::routes())
+        // Canvas namespace (P1, tranche 2): user-wide list plus per-canvas
+        // get/patch/delete, relayed to the caller's default node. The data
+        // plane owns no streaming canvas variant — plain JSON CRUD only.
+        .merge(routes::canvases::routes())
+        // P2 per-subscription provisioning lane: owner-scoped instance
+        // lifecycle (subscription-gated create, start/stop/status/delete,
+        // usage) plus admin-only fleet host management. Control plane only —
+        // the provisioned container is reached via the runtime relay like
+        // any registered node.
+        .merge(routes::provisioned_instances::routes())
+        // Data-plane JWT public key (decision A1): nodes fetch cloud-api's
+        // Ed25519 verifying key at startup. Public, fail-closed 503 when
+        // ALLTERNIT_DP_JWT_SEED is unset.
+        .route(
+            "/api/v1/auth/dp-jwks",
+            get(auth::dataplane_jwt::dp_jwks),
+        )
         // Mesh enrollment verifies the Clerk session per-request and answers
         // 503 mesh_not_configured when HEADSCALE_API_KEY is unset.
         .merge(routes::mesh::routes())
@@ -326,6 +401,22 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
         .route("/api/v1/health/ready", get(routes::health::readiness_check))
         .route("/api/v1/health/live", get(routes::health::liveness_check))
         .route("/api/v1/metrics", get(routes::health::metrics))
+        .with_state(state.clone());
+
+    let public_model_routes = Router::new()
+        // Public model catalog
+        .route("/v1/models", get(routes::model_router::list_models))
+        .with_state(state.clone());
+
+    // Run-event WebSocket: authenticates inside the handler — the legacy
+    // auth_middleware only understands API tokens and would reject browser
+    // clients holding a Clerk session JWT before the upgrade is decided.
+    let run_ws_routes = Router::new()
+        .route("/ws/runs/:id", get(websocket::run_ws_handler))
+        .layer(axum_middleware::from_fn_with_state(
+            state.public_rate_limiter.clone(),
+            crate::middleware::rate_limit::rate_limit_middleware,
+        ))
         .with_state(state.clone());
 
     // Create auth-protected routes (require auth but listed separately for clarity)
@@ -356,13 +447,24 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
         CorsLayer::permissive()
     } else {
         // Production: Restrictive CORS
-        let allowed_origins: Vec<_> = std::env::var("CORS_ALLOWED_ORIGINS")
-            .unwrap_or_else(|_| {
-                "http://localhost:3013,https://platform.allternit.com,https://ai.allternit.com,https://remotecontrol.allternit.com"
-                    .to_string()
-            })
-            .split(',')
-            .filter_map(|s| s.trim().parse::<axum::http::HeaderValue>().ok())
+        let mut origin_list = vec![
+            "http://localhost:3013".to_string(),
+            "https://platform.allternit.com".to_string(),
+            "https://ai.allternit.com".to_string(),
+            "https://fabrictransport.allternit.com".to_string(),
+            "https://fabric-session.allternit.com".to_string(),
+        ];
+        if let Ok(extra) = std::env::var("CORS_ALLOWED_ORIGINS") {
+            for origin in extra.split(',') {
+                let origin = origin.trim();
+                if !origin.is_empty() && !origin_list.iter().any(|existing| existing == origin) {
+                    origin_list.push(origin.to_string());
+                }
+            }
+        }
+        let allowed_origins: Vec<_> = origin_list
+            .iter()
+            .filter_map(|s| s.parse::<axum::http::HeaderValue>().ok())
             .collect();
 
         CorsLayer::new()
@@ -397,17 +499,34 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
     // Combine all routes
     Router::new()
         .merge(public_health_routes)
+        .merge(run_ws_routes)
+        .merge(public_model_routes)
         .merge(public_runtime_routes)
         .merge(auth_routes)
         .merge(protected_routes)
         .layer(DefaultBodyLimit::max(max_body_size))
         .layer(cors)
+        .layer(axum::middleware::from_fn_with_state(
+            state.metrics_state.clone(),
+            crate::middleware::metrics::metrics_middleware,
+        ))
         .with_state(state)
 }
 
-/// Initialize the database with configured connection pooling
-pub async fn init_db(database_url: &str) -> Result<sqlx::SqlitePool, ApiError> {
-    use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+/// Initialize the database with configured connection pooling.
+///
+/// The API targets PostgreSQL in production. After connecting, the embedded
+/// `migrations_pg` directory is applied with `sqlx::migrate!` — every file is
+/// written to be idempotent (IF NOT EXISTS / guarded DO blocks) so the first
+/// run against the already-migrated production database converges instead of
+/// failing. Set `ALLTERNIT_SKIP_MIGRATIONS=1` to opt out (escape hatch for
+/// deploys where migrations are applied manually).
+///
+/// Note: `db::migrations` (the earlier opt-in ordered runner) is superseded
+/// by this path — its `MIGRATIONS` list excludes 001 and predates the
+/// idempotent rewrite of the whole directory.
+pub async fn init_db(database_url: &str) -> Result<sqlx::PgPool, ApiError> {
+    use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
     use std::str::FromStr;
 
     // Get pool configuration from environment
@@ -441,9 +560,9 @@ pub async fn init_db(database_url: &str) -> Result<sqlx::SqlitePool, ApiError> {
         max_connections, min_connections, acquire_timeout_secs, max_lifetime_mins, idle_timeout_mins
     );
 
-    let connect_options = SqliteConnectOptions::from_str(database_url)?.create_if_missing(true);
+    let connect_options = PgConnectOptions::from_str(database_url)?;
 
-    let pool = SqlitePoolOptions::new()
+    let pool = PgPoolOptions::new()
         .max_connections(max_connections)
         .min_connections(min_connections)
         .acquire_timeout(std::time::Duration::from_secs(acquire_timeout_secs))
@@ -452,8 +571,19 @@ pub async fn init_db(database_url: &str) -> Result<sqlx::SqlitePool, ApiError> {
         .connect_with(connect_options)
         .await?;
 
-    // Run migrations
-    sqlx::migrate!("./migrations").run(&pool).await?;
+    if std::env::var("ALLTERNIT_SKIP_MIGRATIONS")
+        .map(|v| v == "1" || v == "true")
+        .unwrap_or(false)
+    {
+        tracing::warn!("ALLTERNIT_SKIP_MIGRATIONS set — skipping embedded Postgres migrations");
+    } else {
+        // Path is relative to the crate root (CARGO_MANIFEST_DIR).
+        sqlx::migrate!("./migrations_pg")
+            .run(&pool)
+            .await
+            .map_err(|e| ApiError::Internal(format!("Postgres migration failed: {e}")))?;
+        tracing::info!("Postgres migrations applied (migrations_pg)");
+    }
 
     tracing::info!(
         "Database pool initialized with {} max connections",
@@ -496,4 +626,25 @@ pub async fn start_server(state: Arc<ApiState>, addr: &str) -> Result<(), ApiErr
 
     tracing::info!("Server shutdown complete");
     Ok(())
+}
+
+#[cfg(test)]
+mod migration_tests {
+    /// Applies the embedded `migrations_pg` directory (the same
+    /// `sqlx::migrate!("./migrations_pg")` call `init_db` makes) against the
+    /// local PG test database. The migrations are idempotent, so this passes
+    /// on an empty database, on a fully-migrated one, and on re-runs — and it
+    /// proves the macro resolves the directory relative to the crate root.
+    #[tokio::test]
+    async fn migrations_pg_applies_cleanly() {
+        let pool = sqlx::PgPool::connect(
+            "postgres://allternit:allternit_pg_2026@localhost:5432/allternit_test",
+        )
+        .await
+        .expect("connect to the local PG test database (allternit_test)");
+        sqlx::migrate!("./migrations_pg")
+            .run(&pool)
+            .await
+            .expect("embedded migrations_pg must apply cleanly and idempotently");
+    }
 }

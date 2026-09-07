@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import { feature } from 'bun:bundle';
-import chalk from 'chalk';
+import chalk from '@/shared/util/chalk'
 import { mkdir } from 'fs/promises';
 import { join } from 'path';
 import * as React from 'react';
@@ -18,7 +18,7 @@ import { useAppState } from '../../state/AppState';
 import { getAgentMemoryDir } from '../../tools/AgentTool/agentMemory';
 import { openPath } from '../../utils/browser';
 import { getMemoryFiles, type MemoryFileInfo } from '../../utils/gizzimd';
-import { getClaudeConfigHomeDir } from '../../utils/envUtils';
+import { getGizziConfigHomeDir } from '../../utils/envUtils';
 import { getDisplayPath } from '../../utils/file';
 import { formatRelativeTimeAgo } from '../../utils/format';
 import { projectIsInGitRepo } from '../../utils/memory/versions';
@@ -49,7 +49,7 @@ export function MemoryFileSelector(t0) {
     onCancel
   } = t0;
   const existingMemoryFiles = use(getMemoryFiles());
-  const userMemoryPath = join(getClaudeConfigHomeDir(), "CLAUDE.md");
+  const userMemoryPath = join(getGizziConfigHomeDir(), "CLAUDE.md");
   const projectMemoryPath = join(getOriginalCwd(), "CLAUDE.md");
   const hasUserMemory = existingMemoryFiles.some(f => f.path === userMemoryPath);
   const hasProjectMemory = existingMemoryFiles.some(f_0 => f_0.path === projectMemoryPath);

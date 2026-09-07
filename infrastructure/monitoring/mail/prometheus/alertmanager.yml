@@ -1,0 +1,33 @@
+# Allternit Cloud control-plane alerting.
+# Mail flows through the local postfix (mail.news.allternit.com).
+global:
+  smtp_smarthost: "localhost:25"
+  smtp_from: "alerts@mail.news.allternit.com"
+  smtp_require_tls: false
+
+route:
+  group_by: ["alertname"]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 3h
+  receiver: "allternit-ops"
+  routes:
+    - matchers:
+        - severity="critical"
+      receiver: "allternit-ops-critical"
+      repeat_interval: 1h
+
+inhibit_rules:
+  - source_matchers: [severity="critical"]
+    target_matchers: [severity="warning"]
+    equal: [alertname]
+
+receivers:
+  - name: "allternit-ops"
+    email_configs:
+      - to: "allternitpbc@gmail.com"
+        send_resolved: true
+  - name: "allternit-ops-critical"
+    email_configs:
+      - to: "allternitpbc@gmail.com"
+        send_resolved: true

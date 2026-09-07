@@ -2,7 +2,10 @@
  * Notarization script for macOS distribution.
  *
  * Called by electron-builder afterSign hook.
- * Skipped silently when APPLE_ID env var is not set (local/CI builds without notarization).
+ *
+ * Fails loudly (non-zero exit) when credentials are missing on CI builds —
+ * a release build that ships unsigned/unnotarized must never pass silently.
+ * Local (non-CI) builds without credentials skip with a warning, as before.
  *
  * Required env vars:
  *   APPLE_ID           — Apple developer account email
@@ -25,9 +28,24 @@ module.exports = async function notarizing(context) {
 
   const { APPLE_ID, APPLE_ID_PASSWORD, APPLE_TEAM_ID } = process.env;
 
-  // Skip if credentials are not present (local builds, CI without notarization)
+  // Missing credentials: hard-fail on CI so unsigned release builds never
+  // pass silently; keep the local unsigned-build escape hatch.
   if (!APPLE_ID || !APPLE_ID_PASSWORD || !APPLE_TEAM_ID) {
-    console.log('[notarize] Skipping notarization — APPLE_ID / APPLE_ID_PASSWORD / APPLE_TEAM_ID not set.');
+    const missing = [
+      ['APPLE_ID', APPLE_ID],
+      ['APPLE_ID_PASSWORD', APPLE_ID_PASSWORD],
+      ['APPLE_TEAM_ID', APPLE_TEAM_ID],
+    ]
+      .filter(([, v]) => !v)
+      .map(([k]) => k)
+      .join(', ');
+    if (process.env.CI) {
+      throw new Error(
+        `[notarize] Refusing to notarize on CI without credentials — missing: ${missing}. ` +
+          'Set APPLE_ID, APPLE_ID_PASSWORD, and APPLE_TEAM_ID secrets on the release workflow.'
+      );
+    }
+    console.log(`[notarize] Skipping notarization — ${missing} not set (local build).`);
     return;
   }
 

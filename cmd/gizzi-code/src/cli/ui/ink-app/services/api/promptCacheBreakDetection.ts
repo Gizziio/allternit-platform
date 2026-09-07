@@ -1,6 +1,6 @@
 // @ts-nocheck
-import type { BetaToolUnion } from '@allternit/sdk/providers/anthropic/resources/beta/messages/messages.mjs'
-import type { TextBlockParam } from '@allternit/sdk/providers/anthropic/resources/index.mjs'
+import type { BetaToolUnion } from '@allternit/gizzi-sdk/providers/allternit/resources/beta/messages/messages.mjs'
+import type { TextBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/index.mjs'
 import { createPatch } from 'diff'
 import { mkdir, writeFile } from 'fs/promises'
 import { join } from 'path'
@@ -57,7 +57,7 @@ type PreviousState = {
   /** Resolved effort (env → options → model default). Goes into output_config
    *  or anthropic_internal.effort_override. */
   effortValue: string
-  /** Hash of getExtraBodyParams() — catches CLAUDE_CODE_EXTRA_BODY and
+  /** Hash of getExtraBodyParams() — catches GIZZI_CODE_EXTRA_BODY and
    *  anthropic_internal changes. */
   extraBodyHash: number
   callCount: number

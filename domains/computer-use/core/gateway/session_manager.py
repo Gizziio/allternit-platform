@@ -8,15 +8,15 @@ Provides persistent sessions across multiple actions.
 from __future__ import annotations
 
 import asyncio
+import os
 import time
-from typing import Dict, Optional, Tuple
-from playwright.async_api import async_playwright, Browser, BrowserContext, Page
+from typing import Dict, Optional, Tuple, Any
 
 
 class SessionInfo:
     """Information about a browser session."""
     
-    def __init__(self, session_id: str, context: BrowserContext, page: Page):
+    def __init__(self, session_id: str, context: Any, page: Any):
         self.session_id = session_id
         self.context = context
         self.current_page = page
@@ -57,8 +57,8 @@ class SessionManager:
         self.idle_timeout = idle_timeout
         self.max_sessions = max_sessions
         
-        self._playwright: Optional[async_playwright] = None
-        self._browser: Optional[Browser] = None
+        self._playwright: Optional[Any] = None
+        self._browser: Optional[Any] = None
         self._sessions: Dict[str, SessionInfo] = {}
         self._lock = asyncio.Lock()
         self._cleanup_task: Optional[asyncio.Task] = None
@@ -73,19 +73,35 @@ class SessionManager:
             if self._initialized:
                 return
             
-            self._playwright = await async_playwright().start()
-            self._browser = await self._playwright.chromium.launch(
-                headless=True,
-                args=[
-                    "--no-sandbox",
-                    "--disable-dev-shm-usage",
-                    "--disable-gpu",
-                    "--disable-web-security",
-                    "--disable-features=IsolateOrigins,site-per-process",
-                ]
+            skip_browser = os.environ.get("ALLTERNIT_ACU_SKIP_BROWSER", "").lower() in (
+                "1",
+                "true",
+                "yes",
             )
+            if not skip_browser:
+                try:
+                    from playwright.async_api import async_playwright
+
+                    self._playwright = await async_playwright().start()
+                    self._browser = await self._playwright.chromium.launch(
+                        headless=True,
+                        args=[
+                            "--no-sandbox",
+                            "--disable-dev-shm-usage",
+                            "--disable-gpu",
+                            "--disable-web-security",
+                            "--disable-features=IsolateOrigins,site-per-process",
+                        ],
+                    )
+                except Exception as exc:
+                    import logging
+
+                    logging.getLogger(__name__).warning(
+                        "Playwright unavailable (%s); host screenshot fallback still works",
+                        exc,
+                    )
             self._initialized = True
-            
+
             # Start background cleanup task
             self._cleanup_task = asyncio.create_task(self._cleanup_loop())
     
@@ -104,7 +120,7 @@ class SessionManager:
     async def get_or_create_session(
         self,
         session_id: str,
-    ) -> Tuple[BrowserContext, Page]:
+    ) -> Tuple[Any, Any]:
         """
         Get existing session or create new one.
         

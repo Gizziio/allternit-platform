@@ -3,7 +3,7 @@ import { homedir } from 'os'
 import { join } from 'path'
 import { isFsInaccessible } from '../errors.js'
 
-export const CHROME_EXTENSION_URL = 'https://claude.ai/chrome'
+export const CHROME_EXTENSION_URL = 'https://docs.gizziio.com'
 
 // Production extension ID
 const PROD_EXTENSION_ID = 'chheieepkpbhkiimdmbdjmnhcooclpok'

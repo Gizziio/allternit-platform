@@ -1,5 +1,9 @@
 # Gizzi Code - Troubleshooting Guide
 
+> **Platform support:** macOS is the primary target (signed/notarized builds
+> planned). Linux and Windows x64 are supported. Windows credentials are
+> stored with DPAPI (CurrentUser). See `README.md` for details.
+
 ## Issue: Gizzi Code Hangs/Freezes on Startup
 
 ### Problem

@@ -1,0 +1,14 @@
+[Unit]
+Description=Allternit Cloud daily billing reconciliation
+After=postgresql.service
+
+[Service]
+Type=oneshot
+User=root
+# RECONCILE_DSN / DAILY_WHOLESALE_ALERT_USD overrides live here when needed.
+EnvironmentFile=-/etc/allternit/reconcile-billing.env
+ExecStart=/usr/bin/python3 /opt/allternit-cloud-api/reconcile_billing.py
+
+# Security hardening (sudo to postgres is required for the default DSN)
+NoNewPrivileges=true
+ProtectHome=true

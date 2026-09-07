@@ -7,6 +7,7 @@ declare module "wxt/browser" {
     | "/"
     | "/background.js"
     | "/content-scripts/appshot-export.js"
+    | "/content-scripts/autofill.js"
     | "/content-scripts/content.js"
     | "/main-world.js"
     | "/sidepanel.html"

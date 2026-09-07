@@ -7,6 +7,7 @@
  */
 
 import { create } from 'zustand';
+import { isModelLabApiEnabled } from '@/lib/env';
 import type {
   CachedModel,
   ChatMessage,
@@ -120,6 +121,12 @@ interface ModelLabState {
 
 const POLL_INTERVAL_MS = 5000;
 
+// `/api/model-lab/*` is served only by the Rust allternit-api — when the flag
+// is off, surface a deliberate disabled state instead of polling a missing
+// endpoint every 5s.
+const MODEL_LAB_DISABLED_MESSAGE =
+  'Model Lab jobs are disabled in this deployment (set NEXT_PUBLIC_ALLTERNIT_MODEL_LAB_API=1 where the gateway is reachable).';
+
 // Module-level polling handle so the store interface stays clean.
 let pollIntervalId: number | null = null;
 
@@ -133,6 +140,10 @@ export const useModelLabStore = create<ModelLabState>((set, get) => ({
   jobsLoading: false,
   jobsError: null,
   fetchJobs: async () => {
+    if (!isModelLabApiEnabled()) {
+      set({ jobs: [], jobsLoading: false, jobsError: MODEL_LAB_DISABLED_MESSAGE });
+      return;
+    }
     set({ jobsLoading: true, jobsError: null });
     try {
       const jobs = await listModelLabJobs();
@@ -146,6 +157,10 @@ export const useModelLabStore = create<ModelLabState>((set, get) => ({
   },
 
   createJob: async (request) => {
+    if (!isModelLabApiEnabled()) {
+      set({ jobsError: MODEL_LAB_DISABLED_MESSAGE });
+      throw new Error(MODEL_LAB_DISABLED_MESSAGE);
+    }
     try {
       const job = await createModelLabJob(request);
       await get().fetchJobs();

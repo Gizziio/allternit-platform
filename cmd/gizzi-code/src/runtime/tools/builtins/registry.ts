@@ -30,6 +30,7 @@ import { Flag } from "@/runtime/context/flag/flag"
 import { Log } from "@/shared/util/log"
 import { LspTool } from "@/runtime/tools/builtins/lsp"
 import { BrowserTool } from "@/runtime/tools/builtins/browser"
+import { DesktopTool } from "@/runtime/tools/builtins/desktop"
 import { Truncate } from "@/runtime/tools/builtins/truncation"
 import { PlanExitTool, PlanEnterTool } from "@/runtime/tools/builtins/plan"
 import { ApplyPatchTool } from "@/runtime/tools/builtins/apply_patch"
@@ -61,6 +62,7 @@ import {
   ScratchpadWriteTool,
 } from "@/runtime/tools/builtins/scratchpad"
 import { GetAgentEmailStatusTool, SendAgentEmailTool } from "@/runtime/tools/builtins/agent-email"
+import { MessageAgentTool } from "@/runtime/tools/builtins/message-agent"
 import { MdxGraphTool } from "@/runtime/tools/builtins/mdx-graph"
 
 export namespace ToolRegistry {
@@ -178,10 +180,15 @@ export namespace ToolRegistry {
       VaultWriteTool,
       SendAgentEmailTool,
       GetAgentEmailStatusTool,
+      // Bot Mode (B4/D5): listed unconditionally — the registry has no session
+      // context. SessionPrompt.resolveTools deletes it from the per-session
+      // tool record unless the session is a canonical bot chat.
+      MessageAgentTool,
       ...(Flag.GIZZI_ENABLE_LSP_TOOL ? [LspTool] : []),
       ...(config.experimental?.batch_tool === true ? [BatchTool] : []),
       ...(Flag.GIZZI_CLIENT === "cli" ? [PlanExitTool, PlanEnterTool] : []),
       ...(Flag.GIZZI_ENABLE_BROWSER_TOOL ? [BrowserTool] : []),
+      ...(Flag.GIZZI_ENABLE_DESKTOP_TOOL ? [DesktopTool] : []),
       ...custom,
     ]
   }

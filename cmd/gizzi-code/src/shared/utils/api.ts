@@ -2,7 +2,7 @@
 import type {
   BetaTool,
   BetaToolUnion,
-} from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
+} from '@allternit/gizzi-sdk/providers/allternit/resources/beta/messages/messages.mjs'
 import { createHash } from 'crypto'
 import { SYSTEM_PROMPT_DYNAMIC_BOUNDARY } from '@/constants/prompts.js'
 import { getSystemContext, getUserContext } from '../../context.js'
@@ -35,7 +35,7 @@ import { isEnvTruthy } from './envUtils.js'
 import { createUserMessage } from './createUserMessage.js'
 import {
   getAPIProvider,
-  isFirstPartyAnthropicBaseUrl,
+  isFirstPartyAllternitBaseUrl,
 } from './model/providers.js'
 import {
   getFileReadIgnorePatterns,
@@ -78,9 +78,9 @@ const SWARM_FIELDS_BY_TOOL: Record<string, string[]> = {
 function filterSwarmFieldsFromSchema(
   toolName: string,
   // @ts-ignore Type access issue
-  schema: Anthropic.Tool['InputSchema'],
+  schema: Allternit.Tool['InputSchema'],
 // @ts-ignore Type access issue
-): Anthropic.Tool['InputSchema'] {
+): Allternit.Tool['InputSchema'] {
   const fieldsToRemove = SWARM_FIELDS_BY_TOOL[toolName]
   if (!fieldsToRemove || fieldsToRemove.length === 0) {
     return schema
@@ -143,7 +143,7 @@ export async function toolToAPISchema(
         ? tool.inputJSONSchema
         : zodToJsonSchema(tool.inputSchema)
     // @ts-ignore Type access issue
-    ) as Anthropic.Tool['InputSchema']
+    ) as Allternit.Tool['InputSchema']
 
     // Filter out swarm-related fields when swarms are not enabled
     // This ensures external non-EAP users don't see swarm features in the schema
@@ -183,7 +183,7 @@ export async function toolToAPISchema(
     // with Claude 4.5 reject this field with 400. See GH#32742, PR #21729.
     if (
       getAPIProvider() === 'firstParty' &&
-      isFirstPartyAnthropicBaseUrl() &&
+      isFirstPartyAllternitBaseUrl() &&
       (getFeatureValue_CACHED_MAY_BE_STALE('tengu_fgts', false) ||
         isEnvTruthy(process.env.GIZZI_ENABLE_FINE_GRAINED_TOOL_STREAMING))
     ) {
@@ -215,7 +215,7 @@ export async function toolToAPISchema(
   }
 
   // GIZZI_DISABLE_EXPERIMENTAL_BETAS is the kill switch for beta API
-  // shapes. Proxy gateways (ANTHROPIC_BASE_URL → LiteLLM → Bedrock) reject
+  // shapes. Proxy gateways (ALLTERNIT_BASE_URL → LiteLLM → Bedrock) reject
   // fields like defer_loading with "Extra inputs are not permitted". The gates
   // above each field are scattered and not all provider-aware, so this strips
   // everything not in the base-tool allowlist at the one choke point all tool
@@ -224,7 +224,7 @@ export async function toolToAPISchema(
   // standard prompt caching (Bedrock/Vertex supported); the beta sub-fields
   // (scope, ttl) are already gated upstream by shouldIncludeFirstPartyOnlyBetas
   // which independently respects this kill switch.
-  // github.com/anthropics/gizzi/issues/20031
+  // github.com/Gizziio/allternit-platform/issues/20031
   if (isEnvTruthy(process.env.GIZZI_DISABLE_EXPERIMENTAL_BETAS)) {
     const allowed = new Set([
       'name',
@@ -321,7 +321,7 @@ export function splitSysPromptPrefix(
     for (const prompt of systemPrompt) {
       if (!prompt) continue
       if (prompt === SYSTEM_PROMPT_DYNAMIC_BOUNDARY) continue // Skip boundary
-      if (prompt.startsWith('x-anthropic-billing-header')) {
+      if (prompt.startsWith('x-allternit-billing-header')) {
         attributionHeader = prompt
       } else if (CLI_SYSPROMPT_PREFIXES.has(prompt)) {
         systemPromptPrefix = prompt
@@ -358,7 +358,7 @@ export function splitSysPromptPrefix(
         const block = systemPrompt[i]
         if (!block || block === SYSTEM_PROMPT_DYNAMIC_BOUNDARY) continue
 
-        if (block.startsWith('x-anthropic-billing-header')) {
+        if (block.startsWith('x-allternit-billing-header')) {
           attributionHeader = block
         } else if (CLI_SYSPROMPT_PREFIXES.has(block)) {
           systemPromptPrefix = block
@@ -400,7 +400,7 @@ export function splitSysPromptPrefix(
   for (const block of systemPrompt) {
     if (!block) continue
 
-    if (block.startsWith('x-anthropic-billing-header')) {
+    if (block.startsWith('x-allternit-billing-header')) {
       attributionHeader = block
     } else if (CLI_SYSPROMPT_PREFIXES.has(block)) {
       systemPromptPrefix = block

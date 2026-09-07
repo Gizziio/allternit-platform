@@ -187,10 +187,10 @@ export const SUBPROCESS_PROVIDERS: SubprocessSpec[] = [
   {
     bin: "claude",
     id: "claude-cli",
-    name: "Claude (CLI — subscription or Pro)",
+    name: "Claude (installed CLI)",
     icon: "claude",
     cmd: "claude -p",
-    probe: { args: ["--version"], expect: /Claude Code/ },
+    probe: { args: ["--version"], expect: /\d+\.\d+/ },
     models: [
       { id: "claude-sonnet-5", name: "Claude Sonnet 5", context: 200000, output: 64000 },
       { id: "claude-opus-5",   name: "Claude Opus 5",   context: 200000, output: 32000 },
@@ -248,9 +248,8 @@ export const SUBPROCESS_PROVIDERS: SubprocessSpec[] = [
     cmd: "gemini -p",
     probe: { args: ["--version"], expect: /\d+\.\d+/ },
     models: [
-      { id: "gemini-2.5-pro",         name: "Gemini 2.5 Pro",        context: 1000000, output: 65536 },
-      { id: "gemini-2.5-flash",       name: "Gemini 2.5 Flash",       context: 1000000, output: 65536 },
-      { id: "gemini-2.5-flash-lite",  name: "Gemini 2.5 Flash Lite",  context: 1000000, output: 65536 },
+      { id: "gemini-1.5-pro-latest",  name: "Gemini 1.5 Pro",  context: 2000000, output: 8192 },
+      { id: "gemini-1.5-flash-latest", name: "Gemini 1.5 Flash", context: 1000000, output: 8192 },
     ],
   },
 
@@ -263,7 +262,7 @@ export const SUBPROCESS_PROVIDERS: SubprocessSpec[] = [
     cmd: "agy -p",
     probe: { args: ["--version"], expect: /\d+\.\d+/ },
     models: [
-      { id: "antigravity", name: "Antigravity (default model)", context: 1000000, output: 65536 },
+      { id: "gemini-3.7-flash-high", name: "Gemini 3.7 Flash", context: 1000000, output: 65536 },
     ],
   },
 
@@ -533,6 +532,25 @@ export const SUBPROCESS_PROVIDERS: SubprocessSpec[] = [
   },
 ]
 
+/**
+ * Max time a probe subprocess may run before we kill it and treat it as unavailable.
+ * Bun's Subprocess.kill() does not reliably close piped stdout (spawned children can
+ * inherit the fd), so we race the read against a timeout instead of relying on the
+ * kill alone to unblock it.
+ */
+const PROBE_TIMEOUT_MS = 5000
+
+async function readWithTimeout(stdout: ReadableStream, kill: () => void): Promise<string | null> {
+  let timer: ReturnType<typeof setTimeout>
+  const timeout = new Promise<null>((resolve) => {
+    timer = setTimeout(() => resolve(null), PROBE_TIMEOUT_MS)
+  })
+  const out = await Promise.race([new Response(stdout).text().catch(() => null), timeout])
+  clearTimeout(timer!)
+  if (out === null) kill()
+  return out
+}
+
 async function runProbe(bin: string, spec: SubprocessSpec): Promise<boolean> {
   if (!spec.probe) return true // presence in PATH is enough
   try {
@@ -540,7 +558,14 @@ async function runProbe(bin: string, spec: SubprocessSpec): Promise<boolean> {
       stdout: "pipe",
       stderr: "pipe",
     })
-    const out = await new Response(proc.stdout).text()
+    const out = await readWithTimeout(proc.stdout, () => {
+      try {
+        proc.kill(9)
+      } catch {
+        // already exited
+      }
+    })
+    if (out === null) return false // timed out — treat as not available
     const { expect } = spec.probe
     return typeof expect === "string" ? out.includes(expect) : expect.test(out)
   } catch {
@@ -551,7 +576,14 @@ async function runProbe(bin: string, spec: SubprocessSpec): Promise<boolean> {
 async function probeOllamaModels(binPath: string): Promise<DiscoveredModel[]> {
   try {
     const proc = Bun.spawn([binPath, "list"], { stdout: "pipe", stderr: "pipe" })
-    const out = await new Response(proc.stdout).text()
+    const out = await readWithTimeout(proc.stdout, () => {
+      try {
+        proc.kill(9)
+      } catch {
+        // already exited
+      }
+    })
+    if (out === null) return [] // timed out — treat as not available
     const lines = out.split("\n").slice(1).filter(Boolean)
     return lines.map((line) => {
       const [id] = line.trim().split(/\s+/)

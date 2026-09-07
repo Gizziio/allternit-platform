@@ -36,6 +36,7 @@ import { Flag } from "@/runtime/context/flag/flag"
 import { Config } from "@/runtime/context/config/config"
 import { ulid } from "ulid"
 import { spawn } from "child_process"
+import { ProcessRegistry } from "@/runtime/process-registry"
 import { Command } from "@/runtime/loop/command"
 import { $, fileURLToPath, pathToFileURL } from "bun"
 import { ConfigMarkdown } from "@/runtime/context/config/markdown"
@@ -57,6 +58,9 @@ import * as WorkspaceContext from "@/runtime/session/session-context"
 import { BackgroundTask } from "@/runtime/session/background-task"
 import { HookDispatcher } from "@/runtime/hooks/dispatcher"
 import { Scratchpad } from "@/runtime/session/scratchpad"
+import * as BotChat from "@/runtime/bots/canonical-chat"
+import * as BotInbox from "@/runtime/bots/bot-inbox"
+import { isMessageAgentSession, MessageAgentTool } from "@/runtime/tools/builtins/message-agent"
 
 // @ts-ignore — suppress ai-sdk stdout warnings (see server.ts for details)
 globalThis.AI_SDK_LOG_WARNINGS = false
@@ -194,6 +198,37 @@ export namespace SessionPrompt {
     if (submitted.decision === "deny") throw new Error(submitted.reason ?? "Prompt blocked by hook")
     if (submitted.message) {
       input.parts.push({ type: "text", text: `<hook_result hook_event="UserPromptSubmit">\n${submitted.message}\n</hook_result>` })
+    }
+
+    // Bot Mode (B5): presence heartbeat. A canonical bot chat counts as
+    // "working" from turn start — record before the model call, not after
+    // success. Bots woken by message_agent land here too (the inbox pickup
+    // below is what wakes them). Best-effort: presence must never break a
+    // turn. Imported lazily to keep the prompt module's static import graph
+    // unchanged for its other importers.
+    try {
+      const { recordCanonicalChatActivity } = await import("@/runtime/bots/bot-presence")
+      await recordCanonicalChatActivity(input.sessionID)
+    } catch (error) {
+      log.warn("bot presence heartbeat failed; continuing", { sessionID: input.sessionID, error })
+    }
+
+    // Bot Mode (B4/D5): turn-start inbox pickup. When this session is a bot's
+    // canonical chat, drain the bot's inbox (message_agent DMs from teammates)
+    // and inject each envelope as an attributed user-role text part in this
+    // turn's user message. Parts are synthetic so the TUI transcript shows the
+    // turn the human submitted, not transport noise; the model still sees the
+    // attributed messages. Runs before createUserMessage so both the TUI and
+    // headless paths (and routine deliveries, which re-enter through prompt)
+    // pick up pending mail exactly once per turn.
+    if (input.parts.length > 0) {
+      const inboxMessages = await BotInbox.collectBotInboxMessages(input.sessionID).catch((error) => {
+        log.warn("bot inbox pickup failed; continuing without injected mail", { sessionID: input.sessionID, error })
+        return [] as string[]
+      })
+      for (const text of inboxMessages) {
+        input.parts.push({ type: "text", text, synthetic: true })
+      }
     }
 
     if (input.backgroundPolicy) {
@@ -378,6 +413,28 @@ const message = await createUserMessage(input)
       }
 
       if (!lastUser) throw new Error("No user message found in stream. This should never happen.")
+
+      if (step === 1 && session.sourceRef) {
+        try {
+          const { NativeSource } = await import("@/runtime/session/native-source")
+          const originText = await NativeSource.originPromptBlock(sessionID)
+          if (originText) {
+            const target = msgs.find((m) => m.info.id === lastUser.id)
+            if (target) {
+              target.parts.push({
+                id: Identifier.ascending("part"),
+                sessionID,
+                messageID: lastUser.id,
+                type: "text",
+                text: originText,
+                synthetic: true,
+              })
+            }
+          }
+        } catch (error) {
+          log.warn("native origin fetch skipped", { sessionID, error })
+        }
+      }
       if (
         lastAssistant?.finish &&
         !["tool-calls", "unknown"].includes(lastAssistant.finish) &&
@@ -756,6 +813,14 @@ const message = await createUserMessage(input)
       // Build system prompt, adding structured output instruction if needed
       // Get workspace context for the session directory (cached)
       const workspaceSystemPrompt = await WorkspaceContext.getWorkspaceSystemPrompt(session.directory)
+      // Bot Mode (B2): when this session is a bot's canonical chat, inject the
+      // bot's identity + SOUL + memory as standing instructions. This builder
+      // runs inside the runtime session pipeline, so both the TUI (worker /
+      // server) and headless (`gizzi run --print`) paths get the injection.
+      const botSystemPrompt = await BotChat.botChatSystemPrompt(sessionID).catch((error) => {
+        log.warn("failed to build bot persona prompt", { sessionID, error })
+        return undefined
+      })
       const scratchpadSystemPrompt = await Scratchpad.instructions(sessionID).catch((error) => {
         log.warn("failed to initialize session scratchpad", { sessionID, error })
         return undefined
@@ -768,6 +833,7 @@ const message = await createUserMessage(input)
               ...(await SystemPrompt.environment(model)),
               ...(await InstructionPrompt.system()),
               ...(workspaceSystemPrompt ? [workspaceSystemPrompt] : []),
+              ...(botSystemPrompt ? [botSystemPrompt] : []),
               ...(scratchpadSystemPrompt ? [scratchpadSystemPrompt] : []),
               // Append system prompt (prefixed with + or via --append-system-prompt)
               ...(lastUser.system?.startsWith("+") ? [lastUser.system.slice(1)] : []),
@@ -1236,6 +1302,17 @@ const message = await createUserMessage(input)
         websearch: "websearch" in tools,
         task: "task" in tools,
       })
+    }
+
+    // Bot Mode (B4/D5): message_agent exists only in canonical bot chats.
+    // Same gate-and-delete precedent as mobile gating above — non-canonical
+    // sessions (regular chats, subagents, coordinator workers) never see it.
+    if (MessageAgentTool.id in tools) {
+      const allowed = await isMessageAgentSession(input.session.id).catch((error) => {
+        log.warn("message_agent gating check failed; hiding tool", { sessionID: input.session.id, error })
+        return false
+      })
+      if (!allowed) delete tools[MessageAgentTool.id]
     }
 
     return tools
@@ -2022,6 +2099,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         TERM: "dumb",
       },
     })
+    ProcessRegistry.track(proc, { label: "prompt-shell", group: process.platform !== "win32" })
 
     let output = ""
 

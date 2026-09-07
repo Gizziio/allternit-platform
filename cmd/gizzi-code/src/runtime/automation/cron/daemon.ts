@@ -13,6 +13,7 @@
 import { CronService, type CronJob, type CronRun, type CreateJobInput, type UpdateJobInput } from "./service";
 import { parseSchedule, describeSchedule } from "./parser";
 import type { DaemonConfig, DaemonStatus } from "./types";
+import { clearPidfile, recordDaemonCrash, validatePidfile, writePidfile } from "./supervision";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // HTTP Server Implementation
@@ -21,6 +22,11 @@ import type { DaemonConfig, DaemonStatus } from "./types";
 interface ServerContext {
   config: DaemonConfig;
   startTime: Date;
+}
+
+function devCorsEnabled(): boolean {
+  const value = process.env.GIZZI_DEV_CORS?.toLowerCase();
+  return value === "true" || value === "1";
 }
 
 export class CronDaemon {
@@ -38,6 +44,7 @@ export class CronDaemon {
         logLevel: config.logLevel ?? "info",
         maxConcurrentJobs: config.maxConcurrentJobs ?? 10,
         jobTimeoutSeconds: config.jobTimeoutSeconds ?? 300,
+        pidfile: config.pidfile,
       },
       startTime: new Date(),
     };
@@ -49,6 +56,17 @@ export class CronDaemon {
   async start(): Promise<void> {
     if (this.isRunning) {
       throw new Error("Daemon is already running");
+    }
+
+    // A previous daemon may have crashed without clearing its pidfile.
+    // Never trust a stale pidfile: validate (and remove) it before taking
+    // over the identity.
+    const pidfile = this.context.config.pidfile;
+    if (pidfile) {
+      const state = await validatePidfile(pidfile);
+      if (state.status === "stale") {
+        console.warn(`[CronDaemon] Removed stale pidfile ${pidfile} (pid ${state.pid})`);
+      }
     }
 
     // Initialize CronService
@@ -72,8 +90,17 @@ export class CronDaemon {
     this.isRunning = true;
     this.context.startTime = new Date();
 
+    if (pidfile) {
+      await writePidfile(pidfile);
+    }
+
     console.log(`[CronDaemon] Started on http://${this.context.config.host}:${this.context.config.port}`);
     console.log(`[CronDaemon] Database: ${this.context.config.dbPath}`);
+    if (devCorsEnabled()) {
+      console.warn(
+        "[CronDaemon] WARNING: GIZZI_DEV_CORS is set — Access-Control-Allow-Origin: * on all responses. Development only; never enable in production.",
+      );
+    }
   }
 
   /**
@@ -92,6 +119,12 @@ export class CronDaemon {
     CronService.close();
 
     this.isRunning = false;
+
+    // A stopped daemon must not leave a pidfile behind claiming it is alive.
+    if (this.context.config.pidfile) {
+      await clearPidfile(this.context.config.pidfile);
+    }
+
     console.log("[CronDaemon] Stopped");
   }
 
@@ -123,12 +156,16 @@ export class CronDaemon {
     const url = new URL(request.url);
     const method = request.method;
 
-    // CORS headers
-    const corsHeaders = {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-    };
+    // CORS headers: none by default (same-origin / no cross-origin reads of
+    // this unauthenticated loopback API). Permissive CORS is development-only
+    // and requires the explicit GIZZI_DEV_CORS flag, warned about at startup.
+    const corsHeaders: Record<string, string> = devCorsEnabled()
+      ? {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type",
+        }
+      : {}
 
     if (method === "OPTIONS") {
       return new Response(null, { headers: corsHeaders });
@@ -492,12 +529,45 @@ export class CronDaemon {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * Start the daemon from CLI
+ * Start the daemon from CLI. Startup failures are recorded as crashes (so
+ * `cron status` can report them) and any pidfile is cleared — a daemon that
+ * never came up must not leave identity behind.
  */
 export async function startDaemon(config: Partial<DaemonConfig> = {}): Promise<CronDaemon> {
   const daemon = new CronDaemon(config);
-  await daemon.start();
+  try {
+    await daemon.start();
+  } catch (e) {
+    if (config.pidfile) await clearPidfile(config.pidfile).catch(() => {});
+    await recordDaemonCrash(e).catch(() => {});
+    throw e;
+  }
   return daemon;
+}
+
+/**
+ * Crash UX for a supervised daemon: an uncaught exception or unhandled
+ * rejection is recorded to the crash log, the pidfile is removed (it must
+ * not claim a dead daemon is alive), and the process exits non-zero so
+ * launchd/systemd can restart it.
+ */
+export function installCronCrashHandlers(pidfile?: string): void {
+  const crash = async (kind: string, error: unknown) => {
+    try {
+      await recordDaemonCrash(error instanceof Error ? error : new Error(String(error)));
+    } catch {
+      // Crash recording is best-effort.
+    }
+    if (pidfile) await clearPidfile(pidfile).catch(() => {});
+    console.error(`[CronDaemon] Fatal ${kind}:`, error);
+    process.exit(1);
+  };
+  process.on("uncaughtException", (error) => {
+    void crash("exception", error);
+  });
+  process.on("unhandledRejection", (reason) => {
+    void crash("rejection", reason);
+  });
 }
 
 /**

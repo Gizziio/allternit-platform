@@ -81,7 +81,9 @@ export namespace RuntimeDaemon {
               log.warn("websocket authentication failed")
               try {
                 send(ws, { type: "error", reqId: "", error: "invalid token" })
-              } catch {}
+              } catch {
+                // Socket may already be closing; ws.close() below is the enforcement.
+              }
               ws.close()
               return
             }
@@ -164,7 +166,9 @@ export namespace RuntimeDaemon {
           if (socketPath && existsSync(socketPath)) {
             try {
               unlinkSync(socketPath)
-            } catch {}
+            } catch {
+              // Stale socket file; nothing left to unlink is fine.
+            }
           }
         }
         RuntimeService.markOffline(state.runtimeId).catch(() => {})
@@ -181,7 +185,9 @@ async function startUdsServer(
   if (existsSync(socketPath)) {
     try {
       unlinkSync(socketPath)
-    } catch {}
+    } catch {
+      // Stale socket file from a previous run; ignore.
+    }
   }
 
   return new Promise((resolve, reject) => {

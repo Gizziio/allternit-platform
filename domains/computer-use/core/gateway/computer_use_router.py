@@ -39,7 +39,7 @@ try:
         PlanningLoopResult,
         StopReason,
     )
-    from core.vision_providers import VisionProviderFactory
+    from core.vision_providers import AllternitGatewayProvider, VisionProviderFactory
     from core.computer_use_executor import get_executor as _get_executor
     from gateway.canonical_router import history_preflight_for_task
     _planning_available = True
@@ -286,14 +286,15 @@ async def _execute_non_claude_path(
     )
 
     vp_override = body.options.get("vision_provider") or loop_config.vision_provider
-    if vp_override:
-        try:
-            vision_provider = VisionProviderFactory.create(vp_override)
-        except Exception as vp_err:
-            logger.warning("vision_provider override %r failed (%s), falling back to env", vp_override, vp_err)
-            vision_provider = VisionProviderFactory.create_from_env()
+    model = body.options.get("model")
+    if vp_override == "mock":
+        vision_provider = VisionProviderFactory.create("mock")
     else:
-        vision_provider = VisionProviderFactory.create_from_env()
+        # Same Gizzi provider/model picker as Home and Code. Do not fall
+        # through to ak- keys, cloud VL, or a CLI subprocess.
+        vision_provider = AllternitGatewayProvider(model=model)
+        if model:
+            logger.info("ACI using platform brain %s", model)
     # Use only in-process executor routes. The retired gateway proxy must not
     # recurse back into this process over HTTP.
     adapter = _get_adapter_for_planning(body.target_scope, body.options.get("adapter_preference"))

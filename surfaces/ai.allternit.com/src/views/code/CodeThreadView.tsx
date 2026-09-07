@@ -15,10 +15,11 @@ import { ChatInputProvider } from '@/providers/chat-input-provider';
 import { PromptInputProvider } from '@/components/ai-elements/prompt-input';
 import { ChatModelsProvider } from '@/providers/chat-models-provider';
 import { ModelSelectionProvider } from '@/providers/model-selection-provider';
-import { useDefaultModelSelection } from '@/hooks/use-default-model-selection';
+import { useResolvedDefaultModelSelection } from '@/hooks/use-default-model-selection';
 import { useCodeModeStore } from './CodeModeStore';
 import { useCodeSessionStore } from './CodeSessionStore';
 import type { CodeWorkspaceRecord } from './CodeModeStore';
+import { NativeOriginBanner } from '@/components/native-sessions/NativeOriginBanner';
 
 const PREVIEW_DEFAULT_WIDTH = 440;
 const PREVIEW_MIN_WIDTH = 260;
@@ -29,7 +30,7 @@ interface CodeThreadViewProps {
 }
 
 export function CodeThreadView({ workspace }: CodeThreadViewProps) {
-  const defaultSelection = useDefaultModelSelection();
+  const defaultSelection = useResolvedDefaultModelSelection();
   // Side pane (Files/Preview/Terminal/Git) is open by default during a
   // session — code mode should look like a coding session, not a bare chat.
   const [isPreviewCollapsed, setIsPreviewCollapsed] = useState(true);
@@ -131,11 +132,16 @@ export function CodeThreadView({ workspace }: CodeThreadViewProps) {
         surface="code"
         dataTestId="agent-mode-code-backdrop"
       />
+      <NativeOriginBanner
+        sessionId={activeCodeSessionId}
+        metadata={activeCodeSession?.metadata}
+      />
 
       {hasSession && isPreviewCollapsed ? (
         <CodeSessionLauncher
           onOpenPane={openSideTab}
           onCanvasMode={workspaceId ? () => setWorkspaceLayoutMode(workspaceId, 'canvas') : undefined}
+          canvasModeActive={workspace?.layoutMode === 'canvas'}
           onRename={renameSession}
           onFork={forkSession}
           onArchive={() => activeCodeSessionId && void useCodeSessionStore.getState().updateSession(activeCodeSessionId, { isActive: false, metadata: { ...activeCodeSession?.metadata, originSurface: 'code', archived: true } })}

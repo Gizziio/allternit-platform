@@ -10,13 +10,11 @@
 //! - Event streaming (WebSocket)
 //! - SSH, Swarm, Workflows, Boards
 
-use axum::http::{header, HeaderName, Method};
 use axum::Router;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
-use tower_http::cors::{AllowOrigin, CorsLayer};
 use tracing::info;
 
 #[cfg(any(target_os = "linux", target_os = "macos"))]
@@ -25,6 +23,7 @@ use tracing::warn;
 // Import from library
 use allternit_api::aci_routes::aci_router;
 use allternit_api::admin_mcp_tunnel_routes::router as admin_mcp_tunnel_router;
+use allternit_api::agent_cloud_routes::router as agent_cloud_router;
 use allternit_api::agent_operations_routes;
 use allternit_api::federation_routes::router as federation_router;
 use allternit_api::outcome_rubric_routes::router as outcome_rubric_router;
@@ -49,8 +48,11 @@ use allternit_api::audit_log_routes::audit_log_router;
 use allternit_api::auth::auth_middleware;
 use allternit_api::automation_routes::automation_router;
 use allternit_api::backend_install_routes::backend_install_router;
+use allternit_api::bb::bb_router;
 use allternit_api::board_routes::board_router;
 use allternit_api::board_stream_routes::board_stream_router;
+use allternit_api::bot_desktop_capacity;
+use allternit_api::bot_desktop_queue;
 use allternit_api::bot_desktop_routes::bot_desktop_router;
 use allternit_api::bot_desktop_stream::bot_desktop_stream_router;
 use allternit_api::brain_routes::{brain_git_router, brain_router};
@@ -69,6 +71,7 @@ use allternit_api::file_routes::file_router;
 use allternit_api::h5i_routes::h5i_router;
 use allternit_api::har_api_routes::har_api_router;
 use allternit_api::health::health_router;
+use allternit_api::inference_router_routes::inference_router_router;
 use allternit_api::hud_routes::hud_router;
 use allternit_api::idempotency::idempotency_middleware;
 use allternit_api::inbox_routes::inbox_router;
@@ -92,7 +95,9 @@ use allternit_api::playground_routes::playground_router;
 use allternit_api::provider_routes::provider_router;
 use allternit_api::rate_limit::rate_limit_middleware;
 use allternit_api::rails::{rails_router, RailsState};
+use allternit_api::fabric_routes::fabric_router;
 use allternit_api::remote_control_routes::remote_control_router;
+use allternit_api::research_task_routes::research_task_router;
 use allternit_api::rails_client_impl::create_local_rails_client;
 use allternit_api::runtime_backend_routes::runtime_backend_router;
 use allternit_api::runtime_discover_routes::runtime_discover_router;
@@ -144,7 +149,14 @@ async fn main() {
     // doesn't build against the pinned versions.
     let filter = tracing_subscriber::EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info,tokio_cron_scheduler=off"));
-    tracing_subscriber::fmt().with_env_filter(filter).init();
+    if std::env::var("ALLTERNIT_LOG_FORMAT").as_deref() == Ok("json") {
+        tracing_subscriber::fmt()
+            .json()
+            .with_env_filter(filter)
+            .init();
+    } else {
+        tracing_subscriber::fmt().with_env_filter(filter).init();
+    }
 
     info!("Allternit API Server starting...");
     info!("Version: 0.1.0");
@@ -184,19 +196,101 @@ async fn main() {
     let db = DbHandle::new(db_path.clone()).expect("Failed to initialize SQLite database");
     info!("Database ready at {}", db_path.display());
 
+    // Initialize passkey / WebAuthn state when configured.
+    let passkey_state = match initialize_passkey_state(db.clone()) {
+        Ok(Some(state)) => {
+            info!("Passkey support enabled");
+            Some(state)
+        }
+        Ok(None) => {
+            info!("Passkey support disabled: ALLTERNIT_PASSKEY_RP_ID and ALLTERNIT_PASSKEY_RP_ORIGIN not both set");
+            None
+        }
+        Err(e) => {
+            tracing::warn!("Passkey support disabled: {e}");
+            None
+        }
+    };
+
     // B5: seed published benchmark scores for LLM routing (idempotent).
     allternit_api::llm_gateway::benchmarks::sync_at_startup(&db);
+
+    // Seed and load the Fabric SKU / capability-class catalog.
+    if let Err(e) = allternit_api::fabric::sku::ResourceClassCatalog::seed_builtin(&db) {
+        tracing::warn!("Failed to seed Fabric resource classes: {e}");
+    }
+    let resource_class_catalog =
+        allternit_api::fabric::sku::ResourceClassCatalog::from_db(&db)
+            .expect("Failed to load Fabric resource class catalog");
+
+    // Seed the Fabric model catalog (OpenAI/Together/Fireworks prices).
+    if let Err(e) = allternit_api::fabric::model_catalog::ModelCatalog::new(db.clone()).seed_builtin()
+    {
+        tracing::warn!("Failed to seed Fabric model catalog: {e}");
+    }
+
+    // Initialize the Private Fabric node provider pool.
+    let fabric_node_pool = Arc::new(
+        allternit_computer_cloud::providers::fabric_node::FabricNodePool::new(),
+    );
+    let fabric_node_provider =
+        allternit_computer_cloud::providers::fabric_node::FabricNodeProvider::new(
+            fabric_node_pool,
+            "__system".to_string(),
+        );
+
+    // Build the Fabric provider registry (live providers from env + Private Fabric nodes).
+    let fabric_provider_registry =
+        allternit_api::fabric::build_provider_registry(fabric_node_provider.clone());
+    info!(
+        "Fabric provider registry initialized with {} provider(s)",
+        fabric_provider_registry.providers().len()
+    );
+
+    // Build the Fabric price cache and scheduler.
+    let fabric_price_cache = allternit_api::fabric::PriceCache::new(db.clone());
+    let fabric_scheduler = allternit_api::fabric::Scheduler::new(
+        allternit_api::fabric::CostEngine::default_engine(),
+    )
+    .with_price_cache(fabric_price_cache.clone());
+    info!("Fabric scheduler initialized with price cache");
+
+    // Optional canonical AllternitOS control-plane URL. When set, Fabric
+    // resource creation goes through the OS lease API instead of the internal
+    // Cloud scheduler.
+    let os_control_plane = std::env::var("ALLTERNITOS_CONTROL_PLANE_URL")
+        .ok()
+        .filter(|s| !s.is_empty())
+        .map(|url| {
+            info!(url = %url, "routing Fabric resource creation to canonical OS control plane");
+            allternit_api::fabric::os_client::OsControlPlaneClient::new(url)
+        });
 
     // Initialize unified auth configuration and JWKS manager for Clerk JWT verification
     let auth_config = allternit_api::auth::AuthConfig::from_app_config(app_config);
     let jwks = allternit_api::auth::JwksManager::new(&auth_config);
-    info!("JWKS manager initialized");
+    jwks.warmup().await;
+    info!(jwks_ready = jwks.is_ready().await, "JWKS manager initialized");
 
     // Webhook secret for Clerk webhook verification
     let webhook_secret = app_config.clerk_webhook_secret();
 
     // Initialize VM driver (platform-specific)
-    let vm_driver = initialize_vm_driver(&app_config).await;
+    let vm_driver_set = initialize_vm_driver(&app_config).await;
+    let vm_driver = vm_driver_set.dynamic;
+    let incus_driver = vm_driver_set.incus;
+    let desktop_host_registry =
+        allternit_api::desktop_host_registry::DesktopHostRegistry::new(db.clone());
+    let desktop_host_provisioner =
+        allternit_computer_cloud::CloudProviderRegistry::from_env()
+            .ok()
+            .map(|providers| {
+                allternit_api::desktop_host_provisioner::DesktopHostProvisioner::new(
+                    desktop_host_registry.clone(),
+                    providers,
+                    incus_driver.clone(),
+                )
+            });
 
     // Initialize Rails service state
     let rails = RailsState::new(data_dir.clone())
@@ -233,19 +327,46 @@ async fn main() {
         allternit_api::office_cli_routes::load_docs(&app_config),
     ));
 
+    // Process-wide shutdown signal. SIGTERM/SIGINT flips this broadcast; the
+    // background loops below select on a subscribed receiver and exit, and the
+    // HTTP server drains in-flight requests before the runtime aborts whatever
+    // is still running (library-spawned loops without a shutdown handle).
+    let (shutdown_tx, _) = tokio::sync::broadcast::channel::<()>(1);
+
     // Open Design skill cache — daemon-side discovery with hot-reload.
     let design_skill_cache = DesignSkillCache::new();
     {
         let cache = design_skill_cache.clone();
+        let mut shutdown_rx = shutdown_tx.subscribe();
         tokio::spawn(async move {
             let mut interval = tokio::time::interval(Duration::from_secs(5));
             interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
             loop {
-                interval.tick().await;
-                cache.refresh(None).await;
+                tokio::select! {
+                    _ = shutdown_rx.recv() => break,
+                    _ = interval.tick() => {
+                        cache.refresh(None).await;
+                    }
+                }
             }
         });
     }
+
+    let capacity_threshold = std::env::var("DESKTOP_AUTOSCALE_CPU_THRESHOLD")
+        .ok()
+        .and_then(|s| s.parse::<f64>().ok())
+        .unwrap_or(0.75)
+        .clamp(0.0, 1.0);
+    let memory_threshold = std::env::var("DESKTOP_AUTOSCALE_MEMORY_THRESHOLD")
+        .ok()
+        .and_then(|s| s.parse::<f64>().ok())
+        .unwrap_or(0.8)
+        .clamp(0.0, 1.0);
+    let _capacity_monitor = bot_desktop_capacity::init_capacity_monitor(capacity_threshold, memory_threshold);
+
+    // Data-plane JWT verifier (cloud-api → node, decision A1): fetches and
+    // caches cloud-api's JWKS; authenticates relayed calls as the JWT's sub.
+    let dp_jwks = allternit_api::auth_dp_jwt::DataPlaneJwks::from_env();
 
     // Create application state
     let state = Arc::new(AppState {
@@ -254,7 +375,11 @@ async fn main() {
         data_dir: data_dir.clone(),
         jwks,
         auth_config,
+        dp_jwks,
         vm_driver,
+        incus_driver,
+        desktop_host_registry,
+        desktop_host_provisioner,
         bot_desktop_sessions: Arc::new(RwLock::new(HashMap::new())),
         rails,
         vm_sessions: new_vm_session_store(),
@@ -270,17 +395,201 @@ async fn main() {
         terminal_sessions: TerminalSessionStore::new(),
         mcp_dispatcher: allternit_api::mcp_dispatcher::McpDispatcher::new(),
         approval_store: Arc::new(ApprovalStore::new()),
+        passkey_state,
+        resource_class_catalog,
+        fabric_node_provider,
+        fabric_provider_registry,
+        fabric_scheduler,
+        fabric_price_cache,
+        os_control_plane,
     });
+
+    // Refresh the Private Fabric node provider pool from the DB registry.
+    {
+        let state = Arc::clone(&state);
+        let mut shutdown_rx = shutdown_tx.subscribe();
+        let period = std::time::Duration::from_secs(
+            std::env::var("FABRIC_NODE_REFRESH_INTERVAL_SECS")
+                .ok()
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(30),
+        );
+        tokio::spawn(async move {
+            let registry = allternit_api::fabric::node_registry::FabricNodeRegistry::new(state.db.clone());
+            let mut interval = tokio::time::interval(period);
+            interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+            loop {
+                tokio::select! {
+                    _ = shutdown_rx.recv() => break,
+                    _ = interval.tick() => {
+                        match registry.active_provider_nodes() {
+                            Ok(nodes) => state.fabric_node_provider.sync_nodes(nodes),
+                            Err(e) => tracing::warn!("Failed to refresh fabric node pool: {e}"),
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Periodic Fabric provider health checks.
+    {
+        let state = Arc::clone(&state);
+        let mut shutdown_rx = shutdown_tx.subscribe();
+        let period = std::time::Duration::from_secs(
+            std::env::var("FABRIC_PROVIDER_HEALTH_INTERVAL_SECS")
+                .ok()
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(60),
+        );
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(period);
+            interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+            loop {
+                tokio::select! {
+                    _ = shutdown_rx.recv() => break,
+                    _ = interval.tick() => {
+                        for (kind, snapshot) in state.fabric_provider_registry.health_check_all().await {
+                            if snapshot.healthy {
+                                tracing::info!(provider = %kind, "Fabric provider healthy");
+                            } else {
+                                let message = snapshot.message.as_deref().unwrap_or("unhealthy");
+                                tracing::warn!(provider = %kind, %message, "Fabric provider unhealthy");
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Background usage-to-cost worker: convert unprocessed fabric_usage_events
+    // into fabric_cost_events and ledger charges.
+    {
+        let state = Arc::clone(&state);
+        let mut shutdown_rx = shutdown_tx.subscribe();
+        let period = std::time::Duration::from_secs(
+            std::env::var("FABRIC_USAGE_PROCESS_INTERVAL_SECS")
+                .ok()
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(60),
+        );
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(period);
+            interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+            loop {
+                tokio::select! {
+                    _ = shutdown_rx.recv() => break,
+                    _ = interval.tick() => {
+                        let db = state.db.clone();
+                        match tokio::task::spawn_blocking(move || {
+                            let ingestor = allternit_api::fabric::usage::UsageIngestor::new(db.clone());
+                            let ledger = allternit_api::fabric::credits::CreditsLedger::new(db);
+                            ingestor.run_batch(&ledger, 100)
+                        })
+                        .await
+                        {
+                            Ok(Ok(processed)) => {
+                                if processed > 0 {
+                                    tracing::info!(processed, "converted usage events to cost events");
+                                }
+                            }
+                            Ok(Err(e)) => tracing::warn!(error = %e, "usage-to-cost batch failed"),
+                            Err(e) => tracing::warn!(error = %e, "usage-to-cost task panicked"),
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Background Fabric provider price-cache refresh.
+    {
+        let state = Arc::clone(&state);
+        let mut shutdown_rx = shutdown_tx.subscribe();
+        let period = std::time::Duration::from_secs(
+            std::env::var("FABRIC_PROVIDER_PRICE_INTERVAL_SECS")
+                .ok()
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(300),
+        );
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(period);
+            interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+            loop {
+                tokio::select! {
+                    _ = shutdown_rx.recv() => break,
+                    _ = interval.tick() => {
+                        let db = state.db.clone();
+                        let registry = state.fabric_provider_registry.clone();
+                        let catalog = state.resource_class_catalog.clone();
+                        match allternit_api::fabric::price_cache::refresh_cache(
+                            db,
+                            &registry,
+                            &catalog,
+                            period * 2,
+                        )
+                        .await
+                        {
+                            Ok(written) => {
+                                if written > 0 {
+                                    tracing::info!(written, "refreshed Fabric provider price cache");
+                                }
+                            }
+                            Err(e) => tracing::warn!(error = %e, "price cache refresh failed"),
+                        }
+                    }
+                }
+            }
+        });
+    }
 
     // Phase 5: start the in-process batch execution/polling worker.
     allternit_api::llm_gateway::batches::spawn_batch_worker(Arc::clone(&state));
+
+    // Desktop capacity monitor and autoscale signaler.
+    {
+        let period = std::time::Duration::from_secs(
+            std::env::var("DESKTOP_CAPACITY_MONITOR_INTERVAL_SECS")
+                .ok()
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(30),
+        );
+        bot_desktop_capacity::spawn_capacity_monitor(Arc::clone(&state), period);
+    }
+
+    // Desktop cloud host provisioner / autoscaler.
+    {
+        let period = std::time::Duration::from_secs(
+            std::env::var("DESKTOP_HOST_PROVISIONER_INTERVAL_SECS")
+                .ok()
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(60),
+        );
+        allternit_api::desktop_host_provisioner::spawn_provisioner(Arc::clone(&state), period);
+    }
+
+    // Desktop provision queue worker: drains queued requests when capacity frees up.
+    {
+        let period = std::time::Duration::from_secs(
+            std::env::var("DESKTOP_QUEUE_WORKER_INTERVAL_SECS")
+                .ok()
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(10),
+        );
+        bot_desktop_queue::spawn_provision_queue_worker(Arc::clone(&state), period);
+    }
 
     // OfficeCLI idle reaper: evicts stale docs, closes idle resident sessions,
     // kills idle watch processes and MCP sessions.
     {
         let state = Arc::clone(&state);
+        let mut shutdown_rx = shutdown_tx.subscribe();
         tokio::spawn(async move {
-            allternit_api::office_cli_routes::reap_idle_sessions(state).await;
+            tokio::select! {
+                _ = shutdown_rx.recv() => {}
+                _ = allternit_api::office_cli_routes::reap_idle_sessions(state) => {}
+            }
         });
     }
 
@@ -334,6 +643,8 @@ async fn main() {
         .merge(webhook_trigger_router())
         .merge(beta_memory_store_router())
         .merge(memory_reconstruction_router())
+        .merge(allternit_api::memory_notes_routes::memory_notes_router())
+        .merge(research_task_router())
         .merge(user_profile_router())
         .merge(canvas_router())
         .merge(v1_router())
@@ -352,14 +663,22 @@ async fn main() {
         .merge(board_stream_router())
         .merge(runtime_backend_router())
         .merge(remote_control_router())
+        .merge(fabric_router())
         .merge(agents_v1_router())
-        .merge(bot_desktop_router())
+        .merge(
+            bot_desktop_router().layer(axum::middleware::from_fn_with_state(
+                state.clone(),
+                allternit_api::bot_desktop_audit::desktop_audit_middleware,
+            )),
+        )
+        .merge(allternit_api::bot_desktop_audit::bot_desktop_audit_router())
         .merge(allternit_api::connector_routes::connector_router())
         .merge(allternit_api::cloud_credentials_routes::cloud_credentials_router())
         .merge(allternit_api::usage_routes::usage_router())
         .merge(allternit_api::upload_routes::upload_router())
         .merge(allternit_api::llm_gateway::gateway_keys_router())
         .merge(allternit_api::llm_gateway::admin_routes::gateway_admin_router())
+        .merge(inference_router_router())
         .merge(allternit_api::enterprise_auth::router())
         .merge(allternit_api::eval_routes::router())
         .merge(allternit_api::eval_metric_routes::router())
@@ -370,7 +689,24 @@ async fn main() {
         .merge(allternit_api::prompt_leak_routes::router())
         .merge(allternit_api::server_tool_routes::router())
         .merge(allternit_api::sandbox_template_routes::router())
+        .merge(allternit_api::skills_routes::skills_router())
+        .merge(allternit_api::long_running_task_routes::long_running_task_router())
+        .merge(allternit_api::bot_desktop_templates::router())
+        .merge(allternit_api::bot_desktop_capacity::router())
+        .merge(allternit_api::bot_desktop_queue::router())
+        .merge(allternit_api::bot_desktop_billing::router())
+        .merge(allternit_api::bot_desktop_admin::router())
+        .merge(allternit_api::desktop_host_admin::router())
+        .merge(allternit_api::fabric_node_routes::admin_router())
+        .merge(allternit_api::fabric_admin_routes::router())
+        .merge(allternit_api::fabric_credits_routes::router())
+        .merge(allternit_api::fabric_resources_routes::router())
+        .merge(allternit_api::fabric_usage_routes::router())
+        .merge(agent_cloud_router())
+        .merge(allternit_api::computer_routes::router())
+        .merge(allternit_api::bot_group_routes::router())
         .merge(allternit_api::allternit_vault::router())
+        .merge(passkey_router(&state))
         .merge(allternit_api::admin_workspace_routes::router())
         .merge(allternit_api::admin_service_account_routes::router())
         .merge(allternit_api::admin_access_token_routes::router())
@@ -402,6 +738,7 @@ async fn main() {
     // ── Protected routes (require authentication) ─────────────────────────────
     let protected = Router::new()
         .nest("/api/v1", v1_routes)
+        .nest("/api/v1", bb_router())
         // The tool registry is also served under /api/v1 because the
         // web/desktop surface (`native-agent-api.ts`, `recording.store.ts`,
         // `tool-registry.store.ts`) calls `/api/v1/tools[/execute]`.
@@ -431,8 +768,10 @@ async fn main() {
         .nest("/api", oauth_router())
         .nest("/api", onboarding_router())
         .nest("/api", aci_router())
+        .nest("/api", allternit_api::bot_assets::bot_assets_router())
         .nest("/api", page_agent_router())
         .nest("/api", analytics_router())
+        .nest("/api", allternit_api::group_rooms::router())
         .nest("/api", playground_router())
         .nest("/api", checkpoints_router())
         .nest("/api", design_connector_router())
@@ -462,6 +801,7 @@ async fn main() {
         .merge(status_router())
         .merge(webhook_router())
         .merge(webhook_trigger_public_router())
+        .merge(allternit_api::benchmark_routes::benchmark_router())
         // Slack signs every request itself (`verify_slack_signature`), so
         // this is public the same way `webhook_router()` above is — no
         // Clerk session exists for a server-to-server call from Slack.
@@ -481,13 +821,34 @@ async fn main() {
         // session, so these are gated by internal_auth::require_internal_token
         // per-handler instead of the Clerk auth_middleware layer above.
         .merge(allternit_api::internal_routes::internal_router())
+        // Desktop Cloud host self-registration from bootstrap cloud-init.
+        .merge(allternit_api::desktop_host_admin::public_router())
+        // Private Fabric node daemon enrollment and heartbeat.
+        .merge(allternit_api::fabric_node_routes::public_router())
         // Brain git smart-HTTP: git clients carry no Clerk JWT — they use
         // `allternit_git_` tokens (Basic password or Bearer), verified
         // per-handler by brain_routes and scoped to these routes only. The
         // management/read brain API stays on the protected router above.
         // Nested under /api/v1 so clone URLs issued by POST /api/v1/brains
         // resolve here.
-        .nest("/api/v1", brain_git_router());
+        .nest("/api/v1", brain_git_router())
+        // Cross-machine bot peer fabric (BOT_TEAMMATES_SPEC Phase 3): mounts
+        // on the public router because inbound peer traffic carries a peer
+        // key, not a Clerk JWT — every handler self-gates (desktop token /
+        // Clerk JWT / registered peer key; fabric endpoints peer-key only).
+        .nest("/api", allternit_api::remote_peers::remote_peers_router());
+
+    // Fabric Model Gateway: OpenAI-shaped /v1 model catalog and the unified
+    // /v1/responses endpoint. It is authenticated with the standard Clerk/
+    // access-token middleware, then merged before the Gizzi LLM gateway so
+    // the Fabric catalog owns /v1/models while /v1/chat/completions falls
+    // through to the existing gateway.
+    public = public.merge(
+        allternit_api::fabric_model_routes::router().layer(axum::middleware::from_fn_with_state(
+            state.clone(),
+            auth_middleware,
+        )),
+    );
 
     // LLM gateway: the OpenAI-compatible /v1 surface (chat completions,
     // models). It carries its own virtual-key middleware chain (llm_key auth
@@ -525,41 +886,24 @@ async fn main() {
         app = app.merge(background_router(Arc::new(bstate)));
     }
 
-    // Apply CORS for local dev. Mirror the request origin and allow
-    // credentials: a wildcard origin is rejected by browsers whenever the
-    // client uses `credentials: 'include'`, which the local UIs do.
-    let app = app.layer(
-        CorsLayer::new()
-            .allow_origin(AllowOrigin::mirror_request())
-            .allow_credentials(true)
-            .allow_methods([
-                Method::GET,
-                Method::POST,
-                Method::PUT,
-                Method::PATCH,
-                Method::DELETE,
-                Method::OPTIONS,
-            ])
-            .allow_headers([
-                header::ACCEPT,
-                header::AUTHORIZATION,
-                header::CONTENT_TYPE,
-                header::ORIGIN,
-                HeaderName::from_static("x-client-version"),
-                HeaderName::from_static("x-allternit-desktop-access-token"),
-                HeaderName::from_static("x-allternit-user-id"),
-                HeaderName::from_static("x-allternit-user-email"),
-                HeaderName::from_static("x-allternit-user-name"),
-                HeaderName::from_static("x-allternit-tenant-id"),
-                // OfficeCLI document upload headers (browser taskpane)
-                HeaderName::from_static("x-office-filename"),
-                HeaderName::from_static("x-office-host"),
-                HeaderName::from_static("x-office-binding-id"),
-                // LLM gateway (OpenAI-compatible /v1 surface)
-                HeaderName::from_static("idempotency-key"),
-                HeaderName::from_static("x-allternit-session-id"),
-            ]),
-    );
+    // Apply the CORS policy (see allternit_api::cors for the matrix). The
+    // gate rejects cross-origin requests from origins outside the allowlist
+    // with 403 and runs OUTSIDE the CORS layer — the layer would otherwise
+    // answer OPTIONS preflights itself before the gate sees them. Allowed
+    // requests pass through to the layer, which decorates responses with the
+    // correct preflight and Vary headers. Credentials stay enabled because
+    // the local UIs use `credentials: 'include'`.
+    let app = if app_config.local_dev_bypass() {
+        // Dev-bypass mode keeps the legacy permissive mirror-any-origin
+        // behavior; no gate is installed.
+        app.layer(allternit_api::cors::cors_layer_from_config(&app_config))
+    } else {
+        app.layer(allternit_api::cors::cors_layer_from_config(&app_config))
+            .layer(axum::middleware::from_fn_with_state(
+                allternit_api::cors::CorsGateState::new(app_config.cors_origins()),
+                allternit_api::cors::origin_gate,
+            ))
+    };
 
     // Record request metrics for all non-preflight requests
     let app = app.layer(axum::middleware::from_fn(
@@ -568,10 +912,12 @@ async fn main() {
 
     // Start server — port from config (env override supported), default 8013
     let port = app_config.api_port();
+    let webhook_receiver_port = app_config.webhook_receiver_port();
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}"))
         .await
         .unwrap();
     info!("Server listening on {}", listener.local_addr().unwrap());
+    info!("Webhook receiver port configured to {}", webhook_receiver_port);
     info!("API Documentation:");
     info!("  - Health:         GET /health");
     info!("  - Status:         GET /status");
@@ -593,18 +939,54 @@ async fn main() {
     // Re-index Open Design skills on SIGHUP in production without restarting.
     {
         let cache = Arc::clone(&state).design_skill_cache.clone();
+        let mut shutdown_rx = shutdown_tx.subscribe();
         tokio::spawn(async move {
             let mut sig = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::hangup())
                 .expect("SIGHUP handler");
             loop {
-                sig.recv().await;
-                info!("SIGHUP received, re-indexing Open Design skills");
-                cache.refresh(None).await;
+                tokio::select! {
+                    _ = shutdown_rx.recv() => break,
+                    _ = sig.recv() => {
+                        info!("SIGHUP received, re-indexing Open Design skills");
+                        cache.refresh(None).await;
+                    }
+                }
             }
         });
     }
 
-    axum::serve(listener, app).await.unwrap();
+    // Graceful shutdown: SIGTERM/SIGINT notifies the background loops above via
+    // the broadcast immediately, then gives in-flight HTTP requests a bounded
+    // drain window before the server stops. Same pattern as
+    // allternit-cloud-api's `start_server` (oneshot + `with_graceful_shutdown`).
+    const DRAIN_TIMEOUT: Duration = Duration::from_secs(10);
+    let (server_shutdown_tx, server_shutdown_rx) = tokio::sync::oneshot::channel::<()>();
+    tokio::spawn(async move {
+        let mut sigterm =
+            tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+                .expect("Failed to create SIGTERM handler");
+        let mut sigint =
+            tokio::signal::unix::signal(tokio::signal::unix::SignalKind::interrupt())
+                .expect("Failed to create SIGINT handler");
+
+        tokio::select! {
+            _ = sigterm.recv() => info!("Received SIGTERM, shutting down gracefully..."),
+            _ = sigint.recv() => info!("Received SIGINT, shutting down gracefully..."),
+        }
+
+        // Stop the background loops first, then let in-flight requests finish.
+        let _ = shutdown_tx.send(());
+        tokio::time::sleep(DRAIN_TIMEOUT).await;
+        let _ = server_shutdown_tx.send(());
+    });
+
+    axum::serve(listener, app)
+        .with_graceful_shutdown(async {
+            let _ = server_shutdown_rx.await;
+        })
+        .await
+        .expect("Server failed");
+    info!("Server stopped");
 }
 
 /// Initialize the cowork background service (autonomous loop) backed by SQLite.
@@ -806,24 +1188,130 @@ async fn initialize_cowork_scheduler(
     }
 }
 
+/// Build a mesh VPN config from environment variables, if any are set.
+fn build_mesh_config_from_env() -> Option<allternit_computer_cloud::MeshConfig> {
+    let provider = std::env::var("ALLTERNIT_MESH_PROVIDER").ok()?;
+    let auth_key = std::env::var("ALLTERNIT_MESH_AUTH_KEY").ok()?;
+    let tags: Vec<String> = std::env::var("ALLTERNIT_MESH_TAGS")
+        .unwrap_or_default()
+        .split(',')
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .collect();
+    match provider.as_str() {
+        "tailscale" => Some(allternit_computer_cloud::MeshConfig::Tailscale { auth_key, tags }),
+        "headscale" => {
+            let server_url = std::env::var("ALLTERNIT_MESH_SERVER_URL").ok()?;
+            Some(allternit_computer_cloud::MeshConfig::Headscale {
+                server_url,
+                auth_key,
+                tags,
+            })
+        }
+        other => {
+            warn!(provider = %other, "Unknown ALLTERNIT_MESH_PROVIDER value");
+            None
+        }
+    }
+}
+
+/// Result of initializing VM drivers.
+struct VmDriverSet {
+    /// Driver exposed to the rest of the API through `ExecutionDriver`.
+    dynamic: Option<Arc<dyn allternit_driver_interface::ExecutionDriver>>,
+    /// Concrete Incus driver, kept separately so the control plane can add and
+    /// remove cloud-provisioned hosts at runtime.
+    incus: Option<Arc<allternit_computer_cloud::IncusDriver>>,
+}
+
 /// Initialize the appropriate VM driver for the platform
 async fn initialize_vm_driver(
     app_config: &allternit_api::config::AppConfig,
-) -> Option<Arc<dyn allternit_driver_interface::ExecutionDriver>> {
-    // If OpenSandbox is explicitly configured, prefer it over the local
-    // platform driver so bots can use a persistent cloud sandbox.
-    if let Ok(open_sandbox_url) = std::env::var("OPEN_SANDBOX_URL") {
-        use allternit_driver_interface::ExecutionDriver;
-        use allternit_opensandbox_driver::{OpenSandboxConfig, OpenSandboxDriver};
-        let config = OpenSandboxConfig::new(open_sandbox_url);
-        let driver = OpenSandboxDriver::new(config);
-        match driver.health_check().await {
-            Ok(health) if health.healthy => {
-                info!("OpenSandbox driver initialized from OPEN_SANDBOX_URL");
-                return Some(Arc::new(driver));
+) -> VmDriverSet {
+    use allternit_driver_interface::ExecutionDriver;
+
+    // Build every configured substrate driver. The heterogeneous router hides
+    // Incus (Linux/Windows) and Tart (macOS) behind one ExecutionDriver handle.
+    let mut incus_driver = None;
+    let incus_urls: Vec<String> = std::env::var("INCUS_URLS")
+        .ok()
+        .filter(|s| !s.is_empty())
+        .map(|s| s.split(',').map(|u| u.trim().to_string()).collect())
+        .or_else(|| std::env::var("INCUS_URL").ok().map(|u| vec![u]))
+        .unwrap_or_default();
+    if !incus_urls.is_empty() {
+        let fallback_vnc_host =
+            std::env::var("INCUS_VNC_HOST").unwrap_or_else(|_| "localhost".to_string());
+        let mesh = build_mesh_config_from_env();
+        let driver_result = if incus_urls.len() == 1 {
+            allternit_computer_cloud::IncusDriver::from_url(
+                incus_urls.into_iter().next().unwrap(),
+                fallback_vnc_host,
+            )
+        } else {
+            allternit_computer_cloud::IncusDriver::from_urls(&incus_urls, fallback_vnc_host)
+        };
+        match driver_result {
+            Ok(driver) => {
+                let driver = if let Some(mesh) = mesh {
+                    driver.with_mesh(mesh)
+                } else {
+                    driver
+                };
+                match driver.health_check().await {
+                    Ok(health) => {
+                        if health.healthy {
+                            info!("Incus driver initialized from INCUS_URL");
+                        } else {
+                            warn!("Incus health check returned unhealthy: {:?}", health);
+                        }
+                        driver.recover_ports().await;
+                        incus_driver = Some(Arc::new(driver));
+                    }
+                    Err(e) => warn!("Incus health check failed: {}", e),
+                }
             }
-            Ok(health) => warn!("OpenSandbox health check returned unhealthy: {:?}", health),
-            Err(e) => warn!("OpenSandbox health check failed: {}", e),
+            Err(e) => warn!("Failed to initialize Incus driver: {}", e),
+        }
+    }
+
+    let mut tart_driver = None;
+    if std::env::var("TART_HOST_URL").is_ok()
+        || std::env::var("TART_HOST_URLS").is_ok()
+        || std::env::var("TART_BIN").map_or(false, |s| !s.is_empty())
+    {
+        let mesh = build_mesh_config_from_env();
+        match allternit_computer_cloud::TartDriver::from_env() {
+            Ok(driver) => {
+                let driver = if let Some(mesh) = mesh {
+                    driver.with_mesh(mesh)
+                } else {
+                    driver
+                };
+                match driver.health_check().await {
+                    Ok(health) => {
+                        if health.healthy {
+                            info!("Tart driver initialized");
+                        } else {
+                            warn!("Tart health check returned unhealthy: {:?}", health);
+                        }
+                        tart_driver = Some(Arc::new(driver));
+                    }
+                    Err(e) => warn!("Tart health check failed: {}", e),
+                }
+            }
+            Err(e) => warn!("Failed to initialize Tart driver: {}", e),
+        }
+    }
+
+    if incus_driver.is_some() || tart_driver.is_some() {
+        let router = allternit_computer_cloud::SubstrateRouter::new(incus_driver.clone(), tart_driver);
+        if router.has_any_driver() {
+            info!("Substrate router initialized");
+            return VmDriverSet {
+                dynamic: Some(Arc::new(router)),
+                incus: incus_driver,
+            };
         }
     }
 
@@ -841,18 +1329,24 @@ async fn initialize_vm_driver(
 
         // Use packaged VM directory if available
         if let Some(dir) = vm_dir {
-            config.images_dir = std::path::PathBuf::from(dir);
+            config.vm_root_dir = std::path::PathBuf::from(dir);
         }
 
         match FirecrackerDriver::new(config).await {
             Ok(driver) => {
                 info!("Firecracker driver initialized");
-                return Some(Arc::new(driver));
+                return VmDriverSet {
+                    dynamic: Some(Arc::new(driver)),
+                    incus: None,
+                };
             }
             Err(e) => {
                 warn!("Failed to initialize Firecracker driver: {}", e);
                 info!("Running without VM execution (visualization only)");
-                return None;
+                return VmDriverSet {
+                    dynamic: None,
+                    incus: None,
+                };
             }
         }
     }
@@ -883,12 +1377,18 @@ async fn initialize_vm_driver(
         match AppleVFDriver::with_config(config) {
             Ok(driver) => {
                 info!("Apple VF driver initialized (powered by Lume)");
-                return Some(Arc::new(driver));
+                return VmDriverSet {
+                    dynamic: Some(Arc::new(driver)),
+                    incus: None,
+                };
             }
             Err(e) => {
                 warn!("Failed to initialize Apple VF driver: {}", e);
                 info!("Running without VM execution (visualization only)");
-                return None;
+                return VmDriverSet {
+                    dynamic: None,
+                    incus: None,
+                };
             }
         }
     }
@@ -896,6 +1396,45 @@ async fn initialize_vm_driver(
     #[cfg(not(any(target_os = "linux", target_os = "macos")))]
     {
         info!("VM execution not supported on this platform");
-        return None;
+        return VmDriverSet {
+            dynamic: None,
+            incus: None,
+        };
+    }
+}
+
+/// Initialize WebAuthn / passkey support when the relying-party env vars are set.
+///
+/// `ALLTERNIT_PASSKEY_RP_ID` is the domain suffix bound to credentials (e.g.
+/// `allternit.com`). `ALLTERNIT_PASSKEY_RP_ORIGIN` is the full origin where
+/// registration/authentication happens (e.g. `https://platform.allternit.com`).
+/// The extension sidepanel cannot itself be an RP origin because it runs under
+/// `chrome-extension://<id>`; the platform page is the primary passkey surface.
+fn initialize_passkey_state(
+    db: allternit_api::db::DbHandle,
+) -> anyhow::Result<Option<allternit_api::passkey_routes::PasskeyState>> {
+    let rp_id = match std::env::var("ALLTERNIT_PASSKEY_RP_ID") {
+        Ok(v) if !v.trim().is_empty() => v.trim().to_owned(),
+        _ => return Ok(None),
+    };
+    let rp_origin_str = match std::env::var("ALLTERNIT_PASSKEY_RP_ORIGIN") {
+        Ok(v) if !v.trim().is_empty() => v.trim().to_owned(),
+        _ => return Ok(None),
+    };
+    let rp_origin = rp_origin_str
+        .parse::<url::Url>()
+        .map_err(|e| anyhow::anyhow!("invalid ALLTERNIT_PASSKEY_RP_ORIGIN: {e}"))?;
+    Ok(Some(allternit_api::passkey_routes::PasskeyState::new(
+        rp_id, rp_origin, db,
+    )?))
+}
+
+/// Return the passkey router when passkey support is enabled, otherwise an empty router.
+fn passkey_router(state: &Arc<AppState>) -> Router<Arc<AppState>> {
+    match state.passkey_state.as_ref() {
+        Some(passkey_state) => {
+            allternit_api::passkey_routes::passkey_router(passkey_state.clone())
+        }
+        None => Router::new(),
     }
 }

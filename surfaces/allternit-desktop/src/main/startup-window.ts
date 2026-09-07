@@ -6,9 +6,14 @@
  * the loading step.
  */
 
-import { BrowserWindow, shell } from 'electron';
+import { BrowserWindow } from 'electron';
 import log from 'electron-log';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 import { PLATFORM_MANIFEST } from './manifest.js';
+import { openExternalAllowlisted } from './security.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export type StartupInitialStep = 'welcome' | 'loading';
 
@@ -87,7 +92,7 @@ function buildStartupHtml(initialStep: StartupInitialStep): string {
       --btn-primary-fg: #faf9f7;
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { height: 100%; }
+    html, body { height: 100%; -webkit-app-region: no-drag; }
     body {
       font-family: 'Allternit Sans', Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background: var(--bg);
@@ -96,12 +101,27 @@ function buildStartupHtml(initialStep: StartupInitialStep): string {
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 48px 48px 32px 48px;
-      -webkit-app-region: drag;
+      padding: 52px 48px 32px 48px;
       user-select: none;
     }
-    button, a { -webkit-app-region: no-drag; }
-    .step { display: none; flex-direction: column; align-items: center; width: 100%; }
+    /* Drag only a title-bar strip. Putting drag on body (a flex container)
+       makes Chromium swallow clicks on child buttons even with no-drag. */
+    .drag-bar {
+      -webkit-app-region: drag;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 52px;
+      z-index: 1;
+    }
+    button, a, .btn {
+      -webkit-app-region: no-drag;
+      pointer-events: auto;
+      position: relative;
+      z-index: 2;
+    }
+    .step { display: none; flex-direction: column; align-items: center; width: 100%; -webkit-app-region: no-drag; }
     .step.active { display: flex; }
     .brand {
       font-family: 'Allternit Serif', Georgia, ui-serif, Cambria, 'Times New Roman', Times, serif;
@@ -210,11 +230,12 @@ function buildStartupHtml(initialStep: StartupInitialStep): string {
   </style>
 </head>
 <body>
+  <div class="drag-bar"></div>
   <div class="step ${initialStep === 'welcome' ? 'active' : ''}" id="step-welcome">
     ${MATRIX_LOGO_SVG}
     <div class="brand">${BRAND_NAME}</div>
     <div class="tagline">${TAGLINE}</div>
-    <button class="btn btn-primary" id="btn-get-started">Get started</button>
+    <button type="button" class="btn btn-primary" id="btn-get-started">Get started</button>
     <div class="footer-legal">
       By continuing, you agree to the
       <a href="${TERMS_URL}" target="_blank" rel="noreferrer">Terms of Service</a>
@@ -243,50 +264,57 @@ function buildStartupHtml(initialStep: StartupInitialStep): string {
   <div class="version">v${PLATFORM_MANIFEST.version}</div>
 
   <script>
-    const { ipcRenderer } = require('electron');
-
-    document.getElementById('btn-get-started').addEventListener('click', () => {
-      ipcRenderer.send('auth:start-login');
-    });
-
-    ipcRenderer.on('auth:login-started', (_, message) => {
-      // When auth starts, the main process will load the Clerk renderer.
-    });
-
-    ipcRenderer.on('services', (_, services) => {
-      const entries = [['api', 'svc-api'], ['gateway', 'svc-gateway'], ['gizzi', 'svc-gizzi'], ['platform', 'svc-platform']];
-      for (const [key, nodeId] of entries) {
-        const node = document.getElementById(nodeId);
-        const state = services && services[key];
-        if (!node || !state) continue;
-        node.textContent = state.detail || state.status;
-        node.className = 'stack-value ' + (state.status === 'up' ? 'up' : state.status === 'down' ? 'down' : '');
+    (function () {
+      var api = window.startup;
+      var btn = document.getElementById('btn-get-started');
+      if (btn) {
+        btn.addEventListener('click', function (event) {
+          event.preventDefault();
+          event.stopPropagation();
+          if (api && typeof api.startLogin === 'function') {
+            api.startLogin();
+          } else {
+            console.error('startup preload is missing; Get started cannot start login');
+          }
+        });
       }
-    });
-
-    ipcRenderer.on('status', (_, message) => {
-      const node = document.getElementById('status');
-      if (node) node.textContent = message;
-    });
-
-    ipcRenderer.on('progress', (_, percent) => {
-      document.getElementById('progress-bar').style.width = percent + '%';
-      document.getElementById('progress-text').textContent = percent > 0 ? percent + '%' : '';
-    });
-
-    ipcRenderer.on('complete', () => {
-      document.getElementById('loading').innerHTML =
-        '<div style="font-size: 24px; margin-bottom: 8px; color: var(--accent); text-align: center;">✓</div>' +
-        '<div style="color: var(--text); text-align: center;">Local backend connected</div>';
-    });
-
-    ipcRenderer.on('error', (_, message) => {
-      const node = document.getElementById('status');
-      if (node) {
-        node.textContent = 'Error: ' + message;
-        node.style.color = 'var(--down)';
+      if (!api) {
+        console.error('window.startup is undefined');
+        return;
       }
-    });
+      api.onServices(function (services) {
+        var entries = [['api', 'svc-api'], ['gateway', 'svc-gateway'], ['gizzi', 'svc-gizzi'], ['platform', 'svc-platform']];
+        for (var i = 0; i < entries.length; i++) {
+          var key = entries[i][0];
+          var nodeId = entries[i][1];
+          var node = document.getElementById(nodeId);
+          var state = services && services[key];
+          if (!node || !state) continue;
+          node.textContent = state.detail || state.status;
+          node.className = 'stack-value ' + (state.status === 'up' ? 'up' : state.status === 'down' ? 'down' : '');
+        }
+      });
+      api.onStatus(function (message) {
+        var node = document.getElementById('status');
+        if (node) node.textContent = message;
+      });
+      api.onProgress(function (percent) {
+        document.getElementById('progress-bar').style.width = percent + '%';
+        document.getElementById('progress-text').textContent = percent > 0 ? percent + '%' : '';
+      });
+      api.onComplete(function () {
+        document.getElementById('loading').innerHTML =
+          '<div style="font-size: 24px; margin-bottom: 8px; color: var(--accent); text-align: center;">✓</div>' +
+          '<div style="color: var(--text); text-align: center;">Local backend connected</div>';
+      });
+      api.onError(function (message) {
+        var node = document.getElementById('status');
+        if (node) {
+          node.textContent = 'Error: ' + message;
+          node.style.color = 'var(--down)';
+        }
+      });
+    })();
   </script>
 </body>
 </html>`;
@@ -302,8 +330,10 @@ export function createStartupWindow(options: StartupWindowOptions): BrowserWindo
     backgroundColor: '#faf9f7',
     show: false,
     webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false,
+      preload: join(__dirname, '../preload/startup.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
     },
   });
 
@@ -311,12 +341,12 @@ export function createStartupWindow(options: StartupWindowOptions): BrowserWindo
     window.show();
   });
 
-  window.webContents.on('console-message', (_event, _level, message, line, sourceId) => {
-    log.info(`[Startup] ${message} (${sourceId}:${line})`);
+  window.webContents.on('console-message', (event) => {
+    log.info(`[Startup] ${event.message} (${event.sourceId}:${event.lineNumber})`);
   });
 
   window.webContents.setWindowOpenHandler(({ url }) => {
-    void shell.openExternal(url);
+    void openExternalAllowlisted(url);
     return { action: 'deny' };
   });
 

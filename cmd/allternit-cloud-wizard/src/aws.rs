@@ -761,7 +761,7 @@ mod tests {
         .unwrap();
         assert_eq!(creds.region, "eu-west-1");
 
-        // Malformed JSON and missing fields both name the expected shape.
+        // Malformed JSONB and missing fields both name the expected shape.
         let err = AwsCredentials::from_token("plain-token").unwrap_err();
         assert!(err.contains("access_key_id"), "got: {}", err);
         let err = AwsCredentials::from_token(
@@ -812,7 +812,7 @@ mod tests {
 
     /// Tiny stub HTTP server: serves one canned Query API response with the
     /// given status line and captures the request for assertions.
-    /// No real AWS calls.
+    /// No DOUBLE PRECISION AWS calls.
     async fn stub_aws_endpoint(
         status_line: &'static str,
         response_xml: &'static str,

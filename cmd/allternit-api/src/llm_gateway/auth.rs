@@ -395,18 +395,33 @@ fn org_spend_limit_cents(
 }
 
 /// Current-calendar-month spend for one organization, in microdollars.
+/// Includes LLM inference and unified computer usage events so the org spend
+/// cap covers Desktop Cloud runtime as well as model calls.
 fn org_month_spend_microdollars(
     conn: &rusqlite::Connection,
     org_id: &str,
 ) -> rusqlite::Result<i64> {
-    conn.query_row(
-        "SELECT COALESCE(SUM(COALESCE(recomputed_cost_microdollars, cost_microdollars)), 0)
-         FROM llm_usage_events
-         WHERE tenant_id = ?1
-           AND created_at >= strftime('%Y-%m-01 00:00:00', 'now')",
-        params![org_id],
-        |row| row.get(0),
-    )
+    let llm_spend: i64 = conn
+        .query_row(
+            "SELECT COALESCE(SUM(COALESCE(recomputed_cost_microdollars, cost_microdollars)), 0)
+             FROM llm_usage_events
+             WHERE tenant_id = ?1
+               AND created_at >= strftime('%Y-%m-01 00:00:00', 'now')",
+            params![org_id],
+            |row| row.get(0),
+        )
+        .unwrap_or(0);
+    let computer_spend_cents: i64 = conn
+        .query_row(
+            "SELECT COALESCE(SUM(computed_cost_cents), 0)
+             FROM usage_events
+             WHERE organization_id = ?1
+               AND started_at >= strftime('%Y-%m-01 00:00:00', 'now')",
+            params![org_id],
+            |row| row.get(0),
+        )
+        .unwrap_or(0);
+    Ok(llm_spend + computer_spend_cents.saturating_mul(10_000))
 }
 
 fn budget_exceeded(message: String) -> OpenAiErrorResponse {

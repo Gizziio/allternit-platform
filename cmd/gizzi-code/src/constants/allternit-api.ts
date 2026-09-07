@@ -82,26 +82,23 @@ export const ALLTERNIT_API = {
   UPSTREAM_PROXY: ALLTERNIT_BASE_URL,
 } as const
 
-// Console URLs
+// Cloud console — platform.allternit.com. There is no console.allternit.com.
 export const ALLTERNIT_CONSOLE = {
-  BASE: 'https://console.allternit.com',
-  KEYS: 'https://console.allternit.com/keys',
-  SIGNUP: 'https://console.allternit.com/signup',
-  LOGIN: 'https://console.allternit.com/login',
-  OAUTH_SUCCESS: 'https://console.allternit.com/oauth/gizzi/success',
-  OAUTH_ERROR: 'https://console.allternit.com/oauth/gizzi/error',
-  BUY_CREDITS: 'https://console.allternit.com/buy_credits',
+  BASE: 'https://platform.allternit.com',
+  KEYS: 'https://platform.allternit.com/api-keys',
+  SIGNUP: 'https://platform.allternit.com/sign-up',
+  LOGIN: 'https://platform.allternit.com/sign-in',
+  PLANS: 'https://platform.allternit.com/plans',
+  BILLING: 'https://platform.allternit.com/billing',
+  MODELS: 'https://platform.allternit.com/models',
 } as const
 
 // Web URLs
 export const ALLTERNIT_WEB = {
   BASE: 'https://allternit.com',
-  CODE: 'https://allternit.com/code',
-  DOCS: 'https://docs.allternit.com',
-  STATUS: 'https://status.allternit.com',
-  SUPPORT: 'https://support.allternit.com',
-  GITHUB_APP: 'https://github.com/apps/gizzi',
-  GITHUB_ACTION: 'https://github.com/allternit/gizzi-action',
+  CODE: 'https://ai.allternit.com',
+  DOCS: 'https://docs.gizziio.com',
+  PLATFORM: 'https://platform.allternit.com',
 } as const
 
 // Environment detection

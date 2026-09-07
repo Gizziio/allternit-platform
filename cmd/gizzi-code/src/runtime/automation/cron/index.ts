@@ -87,7 +87,34 @@ export {
 } from "./utils/timezone";
 
 // Daemon Server
-export { CronDaemon, startDaemon, isDaemonRunning, getRemoteStatus, stopRemoteDaemon } from "./daemon";
+export { CronDaemon, startDaemon, isDaemonRunning, getRemoteStatus, stopRemoteDaemon, installCronCrashHandlers } from "./daemon";
+
+// Daemon supervision (autostart units, pidfile, crash records)
+export {
+  CRON_DAEMON_LABEL,
+  launchdPlist,
+  launchdPlistPath,
+  systemdUserUnit,
+  systemdUnitPath,
+  cronStateDir,
+  pidfilePath,
+  validatePidfile,
+  writePidfile,
+  clearPidfile,
+  recordDaemonCrash,
+  readLastCrash,
+  crashRecordPath,
+  supervisionState,
+  enableSupervision,
+  disableSupervision,
+  isSupervisableExec,
+  type SupervisionState,
+  type SupervisionPlatform,
+  type EnableSupervisionResult,
+  type DisableSupervisionResult,
+  type PidfileState,
+  type CrashRecord,
+} from "./supervision";
 
 // Schedule Parser
 export {

@@ -67,6 +67,13 @@ pub enum ApiError {
     #[error("Bad request: {0}")]
     BadRequest(String),
 
+    /// Deliberate "the caller must do something first" signal — e.g. no
+    /// data-plane node is registered for this user, so control-plane
+    /// proxying cannot proceed until they pair a device. 428 (not 404):
+    /// nothing is missing from the URL, the account is incomplete.
+    #[error("Precondition required: {0}")]
+    PreconditionRequired(String),
+
     #[error("Validation error: {0}")]
     ValidationError(String),
 
@@ -94,7 +101,7 @@ impl IntoResponse for ApiError {
             .unwrap_or(true);
 
         // Log the real error detail server-side before any production sanitization
-        // so fly.io logs show the root cause instead of a generic message.
+        // so server logs show the root cause instead of a generic message.
         warn!(error = %self, "ApiError response");
 
         let (status, error_code, message) = match &self {
@@ -174,6 +181,11 @@ impl IntoResponse for ApiError {
             ),
             ApiError::IoError(e) => (StatusCode::INTERNAL_SERVER_ERROR, "IO_ERROR", e.to_string()),
             ApiError::BadRequest(msg) => (StatusCode::BAD_REQUEST, "BAD_REQUEST", msg.clone()),
+            ApiError::PreconditionRequired(msg) => (
+                StatusCode::PRECONDITION_REQUIRED,
+                "PRECONDITION_REQUIRED",
+                msg.clone(),
+            ),
             ApiError::ValidationError(msg) => (
                 StatusCode::UNPROCESSABLE_ENTITY,
                 "VALIDATION_ERROR",

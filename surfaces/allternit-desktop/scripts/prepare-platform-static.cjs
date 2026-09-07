@@ -91,6 +91,36 @@ function checkRequiredBinaries() {
     process.exit(1);
   }
   log(`voice service present at ${voiceBin}`);
+
+  const apiBin = path.join(resourcesBin, process.platform === 'win32' ? 'allternit-api.exe' : 'allternit-api');
+  if (!fs.existsSync(apiBin)) {
+    if (process.env.ALLTERNIT_ALLOW_MISSING_API === '1') {
+      log('WARNING: resources/bin/allternit-api is missing; continuing because ALLTERNIT_ALLOW_MISSING_API=1.');
+      log('The packaged app will fail closed at boot until a native CI/OS build stages this binary.');
+    } else {
+      log('ERROR: resources/bin/allternit-api is missing — the packaged app would ship without the Rust API backend.');
+      log('Build it first via the canonical pipeline: ../../scripts/build-desktop.sh');
+      log('Cross-packs from macOS cannot produce Windows/Linux allternit-api; set ALLTERNIT_ALLOW_MISSING_API=1 to pack anyway.');
+      process.exit(1);
+    }
+  } else {
+    log(`allternit-api present at ${apiBin}`);
+  }
+
+  const localEngineBin = path.join(resourcesBin, process.platform === 'win32' ? 'allternit-local-engine.exe' : 'allternit-local-engine');
+  if (!fs.existsSync(localEngineBin)) {
+    if (process.env.ALLTERNIT_ALLOW_MISSING_LOCAL_ENGINE === '1') {
+      log('WARNING: resources/bin/allternit-local-engine is missing; continuing because ALLTERNIT_ALLOW_MISSING_LOCAL_ENGINE=1.');
+      log('Model Lab telemetry will show "Unavailable" until a native CI/OS build stages this binary.');
+    } else {
+      log('ERROR: resources/bin/allternit-local-engine is missing — the packaged app would ship without the local model engine.');
+      log('Build it first via the canonical pipeline: ../../scripts/build-desktop.sh');
+      log('Cross-packs from macOS cannot produce Windows/Linux allternit-local-engine; set ALLTERNIT_ALLOW_MISSING_LOCAL_ENGINE=1 to pack anyway.');
+      process.exit(1);
+    }
+  } else {
+    log(`allternit-local-engine present at ${localEngineBin}`);
+  }
 }
 
 function loadCompanyClerkKey() {
@@ -121,9 +151,17 @@ function main() {
   const buildEnv = {
     CLOUDFLARE_PAGES: '1',
     NEXT_PUBLIC_ALLTERNIT_DESKTOP_AUTH: '1',
+    // Operator data plane is the local kernel. Cloud is the control plane only.
+    VITE_ALLTERNIT_GATEWAY_URL: 'http://127.0.0.1:8013',
+    NEXT_PUBLIC_ALLTERNIT_GATEWAY_URL: 'http://127.0.0.1:8013',
     NEXT_PUBLIC_ALLTERNIT_CLOUD_API_URL: 'https://api.allternit.com',
-    NEXT_PUBLIC_CLERK_SIGN_IN_URL: 'https://platform.allternit.com/sign-in',
-    NEXT_PUBLIC_CLERK_SIGN_UP_URL: 'https://platform.allternit.com/sign-up',
+    VITE_CLOUD_API_URL: 'https://api.allternit.com',
+    NEXT_PUBLIC_CLERK_SIGN_IN_URL: '/sign-in',
+    NEXT_PUBLIC_CLERK_SIGN_UP_URL: '/sign-up',
+    // Packaged desktop always ships the voice sidecar. Override .env.local
+    // (which disables the probe for browser-only Vite) so Settings Voice
+    // can reach the local service.
+    VITE_ENABLE_VOICE_SERVICE: 'true',
   };
   if (clerkKey) {
     buildEnv.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = clerkKey;

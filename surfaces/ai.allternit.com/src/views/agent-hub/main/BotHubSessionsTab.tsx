@@ -10,7 +10,7 @@ import { BotAvatar, botInitials } from "@/views/bots/BotAvatar";
 import { cn } from "@/lib/utils";
 
 interface BotHubSessionsTabProps {
-  onSessionStarted?: (sessionId: string) => void;
+  onSessionStarted?: (sessionId: string, botId: string) => void;
 }
 
 interface BotSessionGroup {
@@ -73,6 +73,7 @@ export function BotHubSessionsTab({ onSessionStarted }: BotHubSessionsTabProps) 
 
     for (const session of chatSessions) {
       if (session.metadata?.sessionMode !== "agent") continue;
+      if (session.metadata?.isGroupChat === true) continue;
       const botId = (session.metadata?.agentId as string | undefined) ?? "unknown";
       const list = byBotId.get(botId) ?? [];
       list.push(session);
@@ -124,14 +125,15 @@ export function BotHubSessionsTab({ onSessionStarted }: BotHubSessionsTabProps) 
     );
   };
 
-  const openSession = (session: ModeSession) => {
+  const openSession = (session: ModeSession, botId: string) => {
     setActiveChatSession(session.id);
-    onSessionStarted?.(session.id);
+    onSessionStarted?.(session.id, botId);
+    const isGroupChat = session.metadata?.isGroupChat === true;
     window.dispatchEvent(
       new CustomEvent("allternit:open-view", {
         detail: {
-          viewType: "cowork-agent-session",
-          context: { sessionId: session.id, originView: "chat" },
+          viewType: isGroupChat ? "chat-group-session" : "bot-chat-session",
+          context: { sessionId: session.id, botId, originView: "chat" },
         },
       })
     );
@@ -184,7 +186,7 @@ export function BotHubSessionsTab({ onSessionStarted }: BotHubSessionsTabProps) 
                     <button
                       key={session.id}
                       type="button"
-                      onClick={() => openSession(session)}
+                      onClick={() => openSession(session, group.botId)}
                       className="flex flex-col gap-1 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4 text-left transition-all hover:border-[var(--border-hover)] hover:shadow-sm"
                     >
                       <div className="flex items-center gap-2">

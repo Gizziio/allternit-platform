@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Allternit × OpenMausBot Integration Prototype</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .picker-rail::-webkit-scrollbar { display: none; }
+    .picker-rail { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="bg-neutral-950 text-neutral-100 h-screen overflow-hidden flex text-sm">
+
+  <!-- 1. Bot roster rail (maps to BotRoster.tsx + bot-roster.store.ts) -->
+  <aside class="w-16 md:w-64 border-r border-neutral-800 flex flex-col bg-neutral-900">
+    <div class="h-14 flex items-center px-4 border-b border-neutral-800 font-semibold tracking-tight">
+      <span class="hidden md:inline">Allternit</span>
+      <span class="md:hidden">A</span>
+    </div>
+    <div class="flex-1 overflow-y-auto py-2 space-y-1">
+      <!-- Active bot -->
+      <button class="w-full flex items-center gap-3 px-3 py-2 bg-neutral-800/60 border-l-2 border-blue-500">
+        <div class="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center text-xs font-bold">DS</div>
+        <div class="hidden md:block text-left">
+          <div class="font-medium">Deep Researcher</div>
+          <div class="text-xs text-neutral-400">Claude 4 • working</div>
+        </div>
+      </button>
+      <!-- Bot -->
+      <button class="w-full flex items-center gap-3 px-3 py-2 hover:bg-neutral-800/40 border-l-2 border-transparent">
+        <div class="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-xs font-bold">CR</div>
+        <div class="hidden md:block text-left">
+          <div class="font-medium">Code Reviewer</div>
+          <div class="text-xs text-neutral-400">Codex • idle</div>
+        </div>
+      </button>
+      <!-- Group channel -->
+      <button class="w-full flex items-center gap-3 px-3 py-2 hover:bg-neutral-800/40 border-l-2 border-transparent">
+        <div class="w-9 h-9 rounded-lg bg-neutral-700 flex items-center justify-center text-xs">#</div>
+        <div class="hidden md:block text-left">
+          <div class="font-medium">Engineering</div>
+          <div class="text-xs text-neutral-400">3 bots • 2 unread</div>
+        </div>
+      </button>
+    </div>
+    <div class="p-3 border-t border-neutral-800">
+      <button class="w-full py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium">+ New Bot</button>
+    </div>
+  </aside>
+
+  <!-- 2. Main chat area (maps to ChatSessionStore + ChatComposer) -->
+  <main class="flex-1 flex flex-col min-w-0">
+    <!-- Header -->
+    <header class="h-14 border-b border-neutral-800 flex items-center justify-between px-4 bg-neutral-900/50">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center text-xs font-bold">DS</div>
+        <div>
+          <div class="font-medium">Deep Researcher</div>
+          <div class="text-xs text-neutral-400">Task: "Q3 competitive analysis"</div>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button class="px-3 py-1.5 rounded-md bg-neutral-800 hover:bg-neutral-700 text-xs">Tasks ▾</button>
+        <button class="px-3 py-1.5 rounded-md bg-neutral-800 hover:bg-neutral-700 text-xs">⚙</button>
+      </div>
+    </header>
+
+    <!-- Messages -->
+    <div class="flex-1 overflow-y-auto p-4 space-y-6 bg-neutral-950">
+      <!-- User message -->
+      <div class="flex gap-3">
+        <div class="w-7 h-7 rounded-full bg-neutral-700 flex items-center justify-center text-xs">U</div>
+        <div class="bg-neutral-800 rounded-2xl rounded-tl-none px-4 py-2 max-w-xl">
+          Research how OpenMausBot handles model switching and summarize it for our Pick a Brain work.
+        </div>
+      </div>
+
+      <!-- Bot message -->
+      <div class="flex gap-3">
+        <div class="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center text-xs font-bold">DS</div>
+        <div class="max-w-2xl space-y-3">
+          <div class="text-neutral-100">I'll dig into the OpenMausBot codebase and compare it with our current provider rail.</div>
+          <!-- Activity chip -->
+          <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-neutral-900 border border-neutral-800 text-xs text-neutral-400">
+            <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+            Reading server/drivers/claude.ts and ModelPicker.tsx
+          </div>
+          <!-- Inline approval card -->
+          <div class="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 space-y-3">
+            <div class="flex items-start gap-3">
+              <div class="text-amber-400">⚠</div>
+              <div>
+                <div class="font-medium text-amber-100">Allow shell command?</div>
+                <pre class="mt-1 text-xs font-mono bg-neutral-950 rounded p-2 text-neutral-300">git clone https://github.com/milind-soni/OpenMausBot /tmp/omb</pre>
+              </div>
+            </div>
+            <div class="flex gap-2">
+              <button class="px-4 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-neutral-950 text-xs font-semibold">Allow</button>
+              <button class="px-4 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-xs">Deny</button>
+              <button class="px-4 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-xs">Always allow git</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pick a Brain picker (maps to ModelPicker.tsx + inference router) -->
+    <div class="border-t border-neutral-800 bg-neutral-900/80 px-4 py-3">
+      <div class="text-xs font-medium text-neutral-400 mb-2">Pick a brain</div>
+      <div class="picker-rail flex gap-2 overflow-x-auto pb-2">
+        <button class="flex-shrink-0 px-3 py-1.5 rounded-full bg-blue-600 text-white text-xs font-medium border border-blue-500">Claude Code</button>
+        <button class="flex-shrink-0 px-3 py-1.5 rounded-full bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs border border-neutral-700">Codex</button>
+        <button class="flex-shrink-0 px-3 py-1.5 rounded-full bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs border border-neutral-700">Cursor</button>
+        <button class="flex-shrink-0 px-3 py-1.5 rounded-full bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs border border-neutral-700">OpenRouter</button>
+        <button class="flex-shrink-0 px-3 py-1.5 rounded-full bg-neutral-800/50 text-neutral-500 text-xs border border-neutral-800 cursor-not-allowed" title="Not installed">Grok CLI</button>
+        <button class="flex-shrink-0 px-3 py-1.5 rounded-full bg-neutral-800/50 text-neutral-500 text-xs border border-neutral-800 cursor-not-allowed" title="Local engine offline">Local Engine</button>
+      </div>
+      <div class="flex gap-2 mt-2">
+        <span class="px-2 py-1 rounded bg-neutral-800 text-xs border border-blue-500/50 text-blue-200">claude-4-opus-20250514</span>
+        <span class="px-2 py-1 rounded bg-neutral-800 text-xs text-neutral-400 hover:bg-neutral-700 cursor-pointer">claude-4-sonnet-20250514</span>
+        <span class="px-2 py-1 rounded bg-neutral-800 text-xs text-neutral-400 hover:bg-neutral-700 cursor-pointer">claude-3-7-sonnet-20250219</span>
+      </div>
+    </div>
+
+    <!-- Composer -->
+    <div class="p-4 border-t border-neutral-800 bg-neutral-900">
+      <div class="flex items-end gap-2 rounded-2xl bg-neutral-950 border border-neutral-800 p-2">
+        <textarea class="flex-1 bg-transparent text-neutral-100 placeholder-neutral-500 resize-none outline-none px-2 py-1.5" rows="1" placeholder="Message Deep Researcher..."></textarea>
+        <button class="p-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white">➤</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- 3. Right panel: Computer + Marketplace (maps to BotDesktopView + open-connector) -->
+  <aside class="w-80 border-l border-neutral-800 bg-neutral-900 flex flex-col hidden xl:flex">
+    <!-- Computer panel -->
+    <div class="h-1/2 border-b border-neutral-800 flex flex-col">
+      <div class="h-10 flex items-center justify-between px-3 border-b border-neutral-800 text-xs font-medium">
+        <span>Computer</span>
+        <span class="text-emerald-400">● Running</span>
+      </div>
+      <div class="flex-1 bg-neutral-950 m-3 rounded-lg border border-neutral-800 flex items-center justify-center">
+        <div class="text-center text-neutral-500 text-xs">
+          <div class="mb-2">🖥️</div>
+          Live screenshot feed<br/>(VM operator / computer-use gateway)
+        </div>
+      </div>
+      <div class="px-3 pb-3 flex gap-2">
+        <button class="flex-1 py-1.5 rounded bg-neutral-800 hover:bg-neutral-700 text-xs">Pause</button>
+        <button class="flex-1 py-1.5 rounded bg-neutral-800 hover:bg-neutral-700 text-xs">Open desktop</button>
+        <button class="flex-1 py-1.5 rounded bg-red-900/30 hover:bg-red-900/50 text-red-200 text-xs">Destroy</button>
+      </div>
+    </div>
+
+    <!-- Marketplace -->
+    <div class="h-1/2 flex flex-col">
+      <div class="h-10 flex items-center justify-between px-3 border-b border-neutral-800 text-xs font-medium">
+        <span>Connected Apps</span>
+        <button class="text-blue-400 hover:text-blue-300">+ Add</button>
+      </div>
+      <div class="flex-1 overflow-y-auto p-3 space-y-2">
+        <div class="flex items-center gap-3 p-2 rounded-lg bg-neutral-800/40 border border-neutral-800 hover:border-neutral-700 cursor-pointer">
+          <div class="w-8 h-8 rounded bg-red-600 flex items-center justify-center text-xs font-bold">G</div>
+          <div class="flex-1 min-w-0">
+            <div class="text-xs font-medium">Gmail</div>
+            <div class="text-[10px] text-neutral-400 truncate">Connected • 3 bots can use</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-3 p-2 rounded-lg bg-neutral-800/40 border border-neutral-800 hover:border-neutral-700 cursor-pointer">
+          <div class="w-8 h-8 rounded bg-purple-600 flex items-center justify-center text-xs font-bold">S</div>
+          <div class="flex-1 min-w-0">
+            <div class="text-xs font-medium">Slack</div>
+            <div class="text-[10px] text-neutral-400 truncate">Connect to enable</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-3 p-2 rounded-lg bg-neutral-800/40 border border-neutral-800 hover:border-neutral-700 cursor-pointer">
+          <div class="w-8 h-8 rounded bg-neutral-700 flex items-center justify-center text-xs font-bold">GH</div>
+          <div class="flex-1 min-w-0">
+            <div class="text-xs font-medium">GitHub</div>
+            <div class="text-[10px] text-neutral-400 truncate">Connected • 1 bot can use</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+</body>
+</html>

@@ -21,7 +21,10 @@ import { createLogger } from "../utils/logger";
 
 const log = createLogger("agent-queue-worker");
 
-const API_BASE = process.env.Allternit_API_URL || "http://localhost:3001";
+// TODO: use legacyEnv("ALLTERNIT_API_URL", "Allternit_API_URL") from
+// @/shared/constants/cloudUrls when this worker next changes — left as-is to
+// avoid behavior drift in this pass.
+const API_BASE = (process.env.ALLTERNIT_API_URL ?? process.env.Allternit_API_URL) || "http://localhost:3001";
 
 interface QueueWorkerConfig {
   agentId: string;

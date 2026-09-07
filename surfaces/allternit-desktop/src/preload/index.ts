@@ -8,6 +8,22 @@
 
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
 
+// Same-origin gateway (local allternit-api). Main injects the paired device
+// token and the local API introspects it against cloudApiUrl.
+try {
+  const info = ipcRenderer.sendSync('app:get-platform-url');
+  const platformUrl =
+    info && typeof info === 'object' ? info.platformUrl : info;
+  if (typeof platformUrl === 'string' && platformUrl) {
+    (window as any).__ALLTERNIT_GATEWAY_URL__ = platformUrl;
+  }
+  if (info && typeof info === 'object' && typeof info.gatewayUrl === 'string') {
+    (window as any).__ALLTERNIT_CLOUD_API_URL__ = info.gatewayUrl;
+  }
+} catch (e) {
+  console.warn('[preload] Could not set __ALLTERNIT_GATEWAY_URL__:', e);
+}
+
 // ─── SDK / Backend URL ────────────────────────────────────────────────────────
 
 const sdkAPI = {
@@ -173,6 +189,13 @@ const storeAPI = {
 
 // ─── App info ─────────────────────────────────────────────────────────────────
 
+export type UpdateStatus =
+  | { state: 'checking' }
+  | { state: 'available' }
+  | { state: 'up-to-date' }
+  | { state: 'downloaded'; version?: string; releaseNotes?: string; updateURL?: string }
+  | { state: 'error'; message: string };
+
 const appAPI = {
   getInfo: (): Promise<{
     version: string;
@@ -182,6 +205,14 @@ const appAPI = {
   }> => ipcRenderer.invoke('app:get-info'),
   isFirstLaunch: (): Promise<boolean> => ipcRenderer.invoke('app:is-first-launch'),
   completeOnboarding: (): Promise<boolean> => ipcRenderer.invoke('app:complete-onboarding'),
+  checkForUpdates: (): Promise<{ ok: boolean; reason?: string; message?: string }> =>
+    ipcRenderer.invoke('app:check-for-updates'),
+  installUpdate: (): Promise<void> => ipcRenderer.invoke('app:install-update'),
+  onUpdateStatus: (handler: (status: UpdateStatus) => void): (() => void) => {
+    const listener = (_: IpcRendererEvent, status: UpdateStatus) => handler(status);
+    ipcRenderer.on('app:update-status', listener);
+    return () => ipcRenderer.removeListener('app:update-status', listener);
+  },
 };
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
@@ -214,6 +245,12 @@ const authAPI = {
     ipcRenderer.invoke('auth:forget-account', userId),
   signOut: (): Promise<void> => ipcRenderer.invoke('auth:sign-out'),
   hardSignOut: (): Promise<void> => ipcRenderer.invoke('auth:sign-out'),
+  getClerkToken: (): Promise<string | null> => ipcRenderer.invoke('auth:get-clerk-token'),
+  onSessionUpdated: (handler: (session: { userId: string; userEmail: string }) => void): (() => void) => {
+    const listener = (_: IpcRendererEvent, session: { userId: string; userEmail: string }) => handler(session);
+    ipcRenderer.on('auth:session-updated', listener);
+    return () => ipcRenderer.removeListener('auth:session-updated', listener);
+  },
 };
 
 // ─── Device Pairing ───────────────────────────────────────────────────────────
@@ -283,6 +320,7 @@ const shellAPI = {
   openExternal: (url: string): Promise<void> => ipcRenderer.invoke('shell:open-external', url),
   openDesign: (): Promise<void> => ipcRenderer.invoke('shell:open-design'),
   openRemoteControl: (): Promise<void> => ipcRenderer.invoke('shell:open-remote-control'),
+  openFabricSession: (): Promise<void> => ipcRenderer.invoke('shell:open-fabric-session'),
   openHud: (): Promise<void> => ipcRenderer.invoke('shell:open-hud'),
   closeHud: (): Promise<void> => ipcRenderer.invoke('shell:close-hud'),
   toggleHud: (): Promise<void> => ipcRenderer.invoke('shell:toggle-hud'),
@@ -366,6 +404,11 @@ const shellAPI = {
   }>> => ipcRenderer.invoke('shell:get-office-host-status'),
   showSave: (options: unknown): Promise<unknown> => ipcRenderer.invoke('dialog:show-save', options),
   showOpen: (options: unknown): Promise<unknown> => ipcRenderer.invoke('dialog:show-open', options),
+  moveHud: (delta: { dx: number; dy: number }): Promise<void> =>
+    ipcRenderer.invoke('shell:move-hud', delta),
+  resizeHud: (size: { width?: number; height: number }): Promise<void> =>
+    ipcRenderer.invoke('shell:resize-hud', size),
+  showHud: (): Promise<void> => ipcRenderer.invoke('shell:show-hud'),
 };
 
 // ─── Office programs ─────────────────────────────────────────────────────────
@@ -650,6 +693,22 @@ const miniAppsAPI = {
   },
 };
 
+// ─── Voice call-mode dictation ────────────────────────────────────────────────
+// macOS-first native dictation bridge. When unavailable, the renderer falls
+// back to the browser's Web Speech API through the existing useSTT() hook.
+
+const voiceAPI = {
+  isAvailable: (): Promise<boolean> => ipcRenderer.invoke('voice:is-available'),
+  startDictation: (): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke('voice:start-dictation'),
+  stopDictation: (): Promise<void> => ipcRenderer.invoke('voice:stop-dictation'),
+  onTranscript: (callback: (event: { text: string; isFinal: boolean }) => void): (() => void) => {
+    const handler = (_: IpcRendererEvent, event: { text: string; isFinal: boolean }) => callback(event);
+    ipcRenderer.on('voice:transcript', handler);
+    return () => ipcRenderer.off('voice:transcript', handler);
+  },
+};
+
 // ─── Worker Bus (renderer → main → worker round-trip) ────────────────────────
 
 const workerAPI = {
@@ -720,6 +779,7 @@ const allternitDesktopAPI = {
   hyperframes: hyperframesAPI,
   miniApps: miniAppsAPI,
   browserCapture: browserCaptureAPI,
+  voice: voiceAPI,
 };
 
 contextBridge.exposeInMainWorld('allternit', allternitDesktopAPI);

@@ -2,7 +2,7 @@
  * VM Session Manager
  *
  * Manages per-gizzi-session VMs via the allternit-api /vm-session endpoints.
- * This implements the same model as Claude Code cloud sessions:
+ * This implements the same model as gizzi-code cloud sessions:
  *
  *   Session start  → POST /vm-session   (provision a fresh VM, bootstrap tools + git clone)
  *   Bash tool call → POST /vm-session/:id/execute  (run inside the live VM)

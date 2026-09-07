@@ -73,6 +73,7 @@ import {
   deletePluginDataDir,
   getPluginSeedDirs,
   getPluginsDirectory,
+  resolvePluginsStateFile,
 } from './pluginDirectories.js'
 import { parsePluginIdentifier } from './pluginIdentifier.js'
 import { deletePluginOptions } from './pluginOptionsStorage.js'
@@ -264,7 +265,10 @@ export function saveMarketplaceToSettings(
  */
 export async function loadKnownMarketplacesConfig(): Promise<KnownMarketplacesConfig> {
   const fs = getFsImplementation()
-  const configFile = getKnownMarketplacesFile()
+  // READ path: fall back to the legacy ~/.claude/plugins location when the
+  // canonical ~/.gizzi/plugins copy is absent. Writes (saveKnownMarketplacesConfig)
+  // always target the canonical location via getKnownMarketplacesFile().
+  const configFile = resolvePluginsStateFile('known_marketplaces.json')
 
   try {
     const content = await fs.readFile(configFile, {
@@ -2421,7 +2425,7 @@ export async function refreshMarketplace(
             `(${installLocation}) — expected a path inside ${cacheDir}. ` +
             `This can happen after cross-platform path writes or manual edits ` +
             `to known_marketplaces.json. ` +
-            `Run: claude plugin marketplace remove "${name}" and re-add it.`,
+            `Run: gizzi plugin marketplace remove "${name}" and re-add it.`,
         )
       }
     }
@@ -2534,14 +2538,12 @@ export async function refreshMarketplace(
             ? source.repo
             : redactUrlCredentials(source.url)
         const reason =
-          name === 'gizzi-plugins'
-            ? `We've deprecated "gizzi-plugins" in favor of "claude-plugins-official".`
-            : `This marketplace may have been deprecated or moved to a new location.`
+          `This marketplace may have been deprecated or moved to a new location.`
         throw new Error(
           `The marketplace.json file is no longer present in this repository.\n\n` +
             `${reason}\n` +
             `Source: ${sourceDisplay}\n\n` +
-            `You can remove this marketplace with: claude plugin marketplace remove "${name}"`,
+            `You can remove this marketplace with: gizzi plugin marketplace remove "${name}"`,
         )
       }
     } else if (source.source === 'url') {

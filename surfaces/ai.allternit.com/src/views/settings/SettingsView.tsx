@@ -25,11 +25,8 @@ import {
   PuzzlePiece,
   Trash,
 } from '@phosphor-icons/react';
-import { VPSConnectionsPanel } from './VPSConnectionsPanel';
 import { DevicePairingPanel } from './DevicePairingPanel';
-import { CloudInstancesPanel } from './CloudInstancesPanel';
 import { ComputeBillingPanel } from '@/components/settings/ComputeBillingPanel';
-import { EnterpriseByocPanel } from '@/components/settings/EnterpriseByocPanel';
 import { OrganizationAccessPanel } from '@/components/settings/OrganizationAccessPanel';
 import { ToastProvider } from '@/components/ui/toast-provider';
 import { usePlatformAuth, usePlatformUser, usePlatformSignOut, usePlatformHardSignOut, usePlatformSessions, PlatformSignIn, isPlatformAuthDisabled } from '@/lib/platform-auth-client';
@@ -37,11 +34,10 @@ import { env } from '@/lib/env';
 import { useThemeStore } from '@/design/ThemeStore';
 import { LocalModelManager } from '@/components/models/LocalModelManager';
 import { InfrastructureSettings } from './InfrastructureSettings';
-import { ServiceUrlSettings } from './ServiceUrlSettings';
 import { EnvironmentSettings } from './EnvironmentSettings';
 import { listOwnedConnectors, connectOwned, disconnectOwned, type OwnedConnector, type OwnedConnectStatus } from '@/lib/design/owned-connector';
 import { getConnectorLogoUrl } from '@/lib/design/connector-logo';
-import { SETTINGS_NAV_ITEMS, SETTINGS_NAV_GROUPS, SETTINGS_SECTION_MAP, type SettingsSection } from './settings.config';
+import { SETTINGS_NAV_ITEMS, SETTINGS_NAV_GROUPS, normalizeSettingsSection, type SettingsSection } from './settings.config';
 import { SettingsRow } from '@/components/settings/SettingsRow';
 import { Toggle } from '@/components/settings/Toggle';
 import { SectionHeading } from '@/components/settings/SectionHeading';
@@ -50,7 +46,6 @@ import { PanelHeader } from '@/components/settings/PanelHeader';
 import { Badge } from '@/components/settings/Badge';
 import { SkeletonRow } from '@/components/settings/SkeletonRow';
 import { EmptyState } from '@/components/settings/EmptyState';
-import { SettingsCard, SettingsCardRow } from '@/components/settings/SettingsCard';
 import { MonoChip } from '@/components/settings/MonoChip';
 import { AgentOpsPanel } from './AgentOpsPanel';
 import { SecurityPanel } from './SecurityPanel';
@@ -59,11 +54,13 @@ import { LensSettingsPanel } from './LensSettingsPanel';
 import { PluginsSettingsPanel } from './PluginsSettingsPanel';
 import { WebhooksSettingsPanel } from './WebhooksSettingsPanel';
 import { DispatchSettingsPanel } from './DispatchSettingsPanel';
+import { useAgentMetricsStore } from '@/lib/agents/agent-metrics.store';
+import { railsApi } from '@/lib/agents/rails.service';
 import { CoworkPreferencesPanel } from './CoworkPreferencesPanel';
 import { ResponseStylePanel } from './ResponseStylePanel';
 import { PluginManager } from '../plugins';
 import type { TabId as FullManagerTabId } from '../plugins/PluginManager/types';
-import { QUIET_BUTTON_CLASS, DESTRUCTIVE_BUTTON_CLASS, SETTINGS_SELECT_CLASS } from '@/components/settings/buttonStyles';
+import { QUIET_BUTTON_CLASS, DESTRUCTIVE_BUTTON_CLASS } from '@/components/settings/buttonStyles';
 import { useFeaturePlugins } from '@/plugins/useFeaturePlugins';
 import { cn } from '@/lib/utils';
 
@@ -76,19 +73,6 @@ interface SettingsViewProps {
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
-
-const SHORTCUTS = [
-  { action: 'New Chat', shortcut: '⌘N' },
-  { action: 'Toggle Sidebar', shortcut: '⌘\\' },
-  { action: 'Search', shortcut: '⌘K' },
-  { action: 'Close View', shortcut: '⌘W' },
-  { action: 'Switch Mode (Chat)', shortcut: '⌘1' },
-  { action: 'Switch Mode (Cowork)', shortcut: '⌘2' },
-  { action: 'Switch Mode (Code)', shortcut: '⌘3' },
-  { action: 'Run Agent', shortcut: '⌘R' },
-  { action: 'Toggle Theme', shortcut: '⌘Shift+T' },
-  { action: 'Open Settings', shortcut: '⌘,' },
-];
 
 
 
@@ -206,7 +190,7 @@ function ClerkAuthPanel() {
       const localSession = await window.allternit?.auth?.getSession?.().catch(() => null);
       const clerkToken = await getToken().catch(() => null);
       if (clerkToken) {
-        const cloudBase = env('NEXT_PUBLIC_ALLTERNIT_CLOUD_API_URL', 'https://allternit-cloud-api.fly.dev')!.replace(/\/$/, '');
+        const cloudBase = env('NEXT_PUBLIC_ALLTERNIT_CLOUD_API_URL', 'https://api.allternit.com')!.replace(/\/$/, '');
         const response = await fetch(`${cloudBase}/api/v1/runtime-devices`, {
           headers: { Authorization: `Bearer ${clerkToken}` },
         });
@@ -253,7 +237,7 @@ function ClerkAuthPanel() {
       await window.allternit?.shell?.openExternal?.('https://platform.allternit.com');
       return;
     }
-    const cloudBase = env('NEXT_PUBLIC_ALLTERNIT_CLOUD_API_URL', 'https://allternit-cloud-api.fly.dev')!.replace(/\/$/, '');
+    const cloudBase = env('NEXT_PUBLIC_ALLTERNIT_CLOUD_API_URL', 'https://api.allternit.com')!.replace(/\/$/, '');
     const response = await fetch(`${cloudBase}/api/v1/runtime-devices/${encodeURIComponent(runtimeId)}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${clerkToken}` },
@@ -588,6 +572,11 @@ const PermissionsPanel = () => {
 const DiagnosticsPanel = () => {
   const [appVersion, setAppVersion] = useState<string>('unknown');
   const [backendSummary, setBackendSummary] = useState<{ mode: string; url: string } | null>(null);
+  const [railsHealth, setRailsHealth] = useState<{ ledger: boolean; gate: boolean; leases: boolean } | null>(null);
+  const [railsHealthState, setRailsHealthState] = useState<'loading' | 'ok' | 'error'>('loading');
+  const metricsSummary = useAgentMetricsStore((s) => s.summary);
+  const metricsLoading = useAgentMetricsStore((s) => s.isLoading);
+  const fetchMetrics = useAgentMetricsStore((s) => s.fetchMetrics);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -608,7 +597,49 @@ const DiagnosticsPanel = () => {
     void loadBackend();
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      setRailsHealthState('loading');
+      try {
+        const health = await railsApi.health();
+        if (cancelled) return;
+        setRailsHealth(health.rails ?? null);
+        setRailsHealthState('ok');
+      } catch {
+        if (cancelled) return;
+        setRailsHealth(null);
+        setRailsHealthState('error');
+      }
+    };
+    void load();
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    void fetchMetrics();
+  }, [fetchMetrics]);
+
   const isDesktop = typeof window !== 'undefined' && !!(window as any).allternit?.backend;
+
+  // Aggregate the per-agent summary rows into one overall rollup.
+  const aggregate = metricsSummary.reduce(
+    (acc, s) => ({
+      totalRuns: acc.totalRuns + (s.totalRuns || 0),
+      totalTokens: acc.totalTokens + (s.totalTokens || 0),
+      totalCost: acc.totalCost + (s.totalCost || 0),
+      // Weight latency/success by runs so quiet agents don't skew the average.
+      avgLatency: acc.avgLatency + (s.avgLatency || 0) * (s.totalRuns || 0),
+      successRate: acc.successRate + (s.successRate || 0) * (s.totalRuns || 0),
+    }),
+    { totalRuns: 0, totalTokens: 0, totalCost: 0, avgLatency: 0, successRate: 0 },
+  );
+  const metricCards = [
+    { label: 'Agent runs', value: aggregate.totalRuns },
+    { label: 'Avg latency', value: aggregate.totalRuns > 0 ? `${Math.round(aggregate.avgLatency / aggregate.totalRuns)} ms` : '—' },
+    { label: 'Tokens used', value: aggregate.totalTokens.toLocaleString() },
+    { label: 'Success rate', value: aggregate.totalRuns > 0 ? `${Math.round((aggregate.successRate / aggregate.totalRuns) * 100)}%` : '—' },
+  ];
 
   const telemetryRows: Array<{ label: string; value: string; status?: 'success' | 'warning' | 'error' }> = [
     { label: 'App Version', value: appVersion },
@@ -619,6 +650,16 @@ const DiagnosticsPanel = () => {
   if (backendSummary?.url) {
     telemetryRows.push({ label: 'Backend URL', value: backendSummary.url, status: 'success' });
   }
+
+  const railsRows: Array<{ label: string; value: string; status?: 'success' | 'warning' | 'error' }> = railsHealth
+    ? [
+        { label: 'Ledger', value: railsHealth.ledger ? 'Healthy' : 'Unavailable', status: railsHealth.ledger ? 'success' : 'error' },
+        { label: 'Gate', value: railsHealth.gate ? 'Healthy' : 'Unavailable', status: railsHealth.gate ? 'success' : 'error' },
+        { label: 'Leases', value: railsHealth.leases ? 'Healthy' : 'Unavailable', status: railsHealth.leases ? 'success' : 'error' },
+      ]
+    : railsHealthState === 'error'
+      ? [{ label: 'Rails', value: 'Health check failed', status: 'error' }]
+      : [];
 
   return (
     <div>
@@ -643,9 +684,44 @@ const DiagnosticsPanel = () => {
       </SettingsTable>
 
       <SectionHeading>Session metrics</SectionHeading>
-      <div className="p-4 rounded-xl border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)]/50 text-[13px] text-[var(--text-secondary)]">
-        Real-time session metrics are collected when telemetry is enabled. Enable telemetry in General settings to see memory ingestion, tool success, and recall latency here.
-      </div>
+      {metricsLoading ? (
+        <div className="py-4"><SkeletonRow lines={2} /></div>
+      ) : aggregate.totalRuns === 0 ? (
+        <div className="p-4 rounded-xl border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)]/50 text-[13px] text-[var(--text-secondary)]">
+          No agent runs recorded in the last 7 days. Metrics appear here after agents execute.
+        </div>
+      ) : (
+        <div className="grid grid-cols-4 gap-3">
+          {metricCards.map((card) => (
+            <div key={card.label} className="p-4 rounded-xl border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)] text-center">
+              <div className="text-2xl font-bold tabular-nums">{card.value}</div>
+              <div className="text-[11px] text-[var(--text-tertiary)] uppercase tracking-wider mt-1">{card.label}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <SectionHeading>Rails services</SectionHeading>
+      {railsHealthState === 'loading' ? (
+        <div className="py-4"><SkeletonRow lines={1} /></div>
+      ) : (
+        <SettingsTable columns={['Service', 'Status']}>
+          {railsRows.map((row) => (
+            <tr key={row.label}>
+              <SettingsTableCell className="text-[var(--text-secondary)]">{row.label}</SettingsTableCell>
+              <SettingsTableCell>
+                <span className="flex items-center gap-2">
+                  <span className={cn(
+                    "size-1.5 rounded-full shrink-0",
+                    row.status === 'success' ? "bg-[var(--status-success)]" : row.status === 'warning' ? "bg-[var(--status-warning)]" : "bg-[var(--status-error)]"
+                  )} />
+                  <span className="font-mono text-[12px]">{row.value}</span>
+                </span>
+              </SettingsTableCell>
+            </tr>
+          ))}
+        </SettingsTable>
+      )}
     </div>
   );
 };
@@ -656,8 +732,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   initialTab,
   onClose,
 }) => {
-  // Guard against unknown section ids arriving via event detail
-  const safeInitialSection: SettingsSection = SETTINGS_SECTION_MAP[initialSection ?? ''] ?? 'signin';
+  // Guard against unknown section ids arriving via event detail. Legacy compute
+  // section ids are redirected to the consolidated "compute" section.
+  const safeInitialSection: SettingsSection = normalizeSettingsSection(initialSection) ?? 'signin';
   const [activeSection, setActiveSection] = useState<SettingsSection>(safeInitialSection);
   const [navQuery, setNavQuery] = useState('');
   const [infrastructureTab, setInfrastructureTab] = useState<string | undefined>(initialTab);
@@ -687,9 +764,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   React.useEffect(() => {
     const handleNavigateSettings = (event: CustomEvent<{ section: string; tab?: string }>) => {
-      if (event.detail?.section && SETTINGS_SECTION_MAP[event.detail.section]) {
-        setActiveSection(SETTINGS_SECTION_MAP[event.detail.section]);
-        if (event.detail?.tab && SETTINGS_SECTION_MAP[event.detail.section] === 'infrastructure') {
+      const section = normalizeSettingsSection(event.detail?.section);
+      if (section) {
+        setActiveSection(section);
+        if (event.detail?.tab && section === 'infrastructure') {
           setInfrastructureTab(event.detail.tab);
         }
       }
@@ -703,10 +781,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   }, []);
 
   // State — migrated to persisted localStorage via useSettingsState
-  const [language, setLanguage] = useSettingsState('general.language', 'English');
-  const [timezone, setTimezone] = useSettingsState('general.timezone', 'UTC');
-  const [showSystemMessages, setShowSystemMessages] = useSettingsState('general.showSystemMessages', true);
-  const [enableTelemetry, setEnableTelemetry] = useSettingsState('general.enableTelemetry', true);
   const [autoSave, setAutoSave] = useSettingsState('general.autoSave', true);
   const theme = useThemeStore((state) => state.theme);
   const setTheme = useThemeStore((state) => state.setTheme);
@@ -714,26 +788,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [showSidebarLabels, setTwoSidebarLabels] = useSettingsState('appearance.showSidebarLabels', true);
   const [streaming, setStreaming] = useSettingsState('models.streaming', true);
   const [bypassPermissions, setBypassPermissions] = useSettingsState('gizziio-code.bypassPermissions', false);
-  const [drawAttentionNotifications, setDrawAttentionNotifications] = useSettingsState('gizziio-code.drawAttentionNotifications', true);
   const [gizziRevokeState, setGizziRevokeState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
-  const [autoUpdateExtensions, setAutoUpdateExtensions] = useSettingsState('extensions.autoUpdateExtensions', true);
-  const [useBuiltinNode, setUseBuiltinNode] = useSettingsState('extensions.useBuiltinNode', true);
-
-  // Privacy
-  const [locationMetadata, setLocationMetadata] = useSettingsState('privacy.locationMetadata', false);
-  const [improveModels, setImproveModels] = useSettingsState('privacy.improveModels', true);
 
   // Gizziio Code
-  const [codeThemeLight, setCodeThemeLight] = useSettingsState('gizziio-code.codeThemeLight', 'GitHub Light');
-  const [codeThemeDark, setCodeThemeDark] = useSettingsState('gizziio-code.codeThemeDark', 'Allternit Dark');
-  const [browserTools, setBrowserTools] = useSettingsState('gizziio-code.browserTools', true);
-  const [persistSessions, setPersistSessions] = useSettingsState('gizziio-code.persistSessions', '7 days');
-  const [branchPrefix, setBranchPrefix] = useSettingsState('gizziio-code.branchPrefix', 'allternit');
-  const [autoCreatePRs, setAutoCreatePRs] = useSettingsState('gizziio-code.autoCreatePRs', false);
-  const [autofixPRs, setAutofixPRs] = useSettingsState('gizziio-code.autofixPRs', true);
+  // (general + code appearance + browser + PR controls removed in the
+  // placebo sweep — no consumer read those keys)
 
-  // Cowork
-  const [dispatchEnabled, setDispatchEnabled] = useSettingsState('cowork.dispatchEnabled', false);
+  // Compact density: expose a `data-density` attribute on <html> so theme.css
+  // tightens global spacing when the user enables it.
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    document.documentElement.dataset.density = compactDensity ? 'compact' : 'comfortable';
+  }, [compactDensity]);
 
   // Customize list panels
   const [connectors, setConnectors] = useState<OwnedConnector[]>([]);
@@ -745,32 +811,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [connectorBusy, setConnectorBusy] = useState<string | null>(null);
   const [connectorNote, setConnectorNote] = useState<Record<string, string>>({});
   const CONNECTOR_VISIBLE_STEP = 120;
-
-  const renderGeneralPanel = () => (
-    <div>
-      <SectionHeading>Language & region</SectionHeading>
-      <SettingsRow label="Language" description="Display language for the interface">
-        <select aria-label="Language" value={language} onChange={(e) => setLanguage(e.target.value)} className="p-2 px-3 rounded-lg border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)] text-[var(--ui-text-primary)] text-[13px] font-medium outline-none cursor-pointer focus:border-[var(--accent-primary)]">
-          <option>English</option><option>Spanish</option><option>French</option><option>German</option><option>Japanese</option>
-        </select>
-      </SettingsRow>
-      <SettingsRow label="Timezone" description="Used for timestamps and scheduling">
-        <select aria-label="Timezone" value={timezone} onChange={(e) => setTimezone(e.target.value)} className="p-2 px-3 rounded-lg border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)] text-[var(--ui-text-primary)] text-[13px] font-medium outline-none cursor-pointer focus:border-[var(--accent-primary)]">
-          <option>UTC</option><option>EST</option><option>CST</option><option>PST</option><option>GMT</option>
-        </select>
-      </SettingsRow>
-      <SectionHeading>Behavior</SectionHeading>
-      <SettingsRow label="Show system messages" description="Display internal system operations">
-        <Toggle value={showSystemMessages} onChange={setShowSystemMessages} />
-      </SettingsRow>
-      <SettingsRow label="Enable telemetry" description="Help improve Allternit by sharing usage data">
-        <Toggle value={enableTelemetry} onChange={setEnableTelemetry} />
-      </SettingsRow>
-      <SettingsRow label="Auto-save" description="Automatically save your work">
-        <Toggle value={autoSave} onChange={setAutoSave} />
-      </SettingsRow>
-    </div>
-  );
 
   const renderAppearancePanel = () => (
     <div>
@@ -803,6 +843,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       <SettingsRow label="Show sidebar labels" description="Display text labels in sidebar">
         <Toggle value={showSidebarLabels} onChange={setTwoSidebarLabels} />
       </SettingsRow>
+      <SectionHeading>Composer</SectionHeading>
+      <SettingsRow label="Auto-save chat drafts" description="Automatically save your work">
+        <Toggle value={autoSave} onChange={setAutoSave} />
+      </SettingsRow>
     </div>
   );
 
@@ -811,7 +855,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       <LocalModelManager />
 
       <SectionHeading>Session controls</SectionHeading>
-      <SettingsRow label="Streaming" description="Stream responses in real-time">
+      <SettingsRow label="Streaming (local models)" description="Stream local model responses token-by-token instead of waiting for the full reply">
         <Toggle value={streaming} onChange={setStreaming} />
       </SettingsRow>
     </div>
@@ -827,12 +871,36 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     </div>
   );
 
-  const renderShortcutsPanel = () => (
+  const renderAboutPanel = () => (
     <div>
+      <div className="text-center py-10">
+        <div className="mb-10">
+          <div className="grid grid-cols-4 gap-2 size-40 mx-auto transform hover:rotate-3 transition-transform duration-500">
+            {Array.from({ length: 16 }).map((_, i) => (
+              <div key={`settings-i-${i}`} className="bg-[var(--accent-primary)] rounded-md transition-opacity duration-300" style={{ opacity: i % 3 === 0 ? 0.3 : i % 2 === 0 ? 0.6 : 1 }} />
+            ))}
+          </div>
+        </div>
+        <h1 className="text-3xl font-semibold m-0 mb-2 text-[var(--ui-text-primary)] tracking-tight">Allternit & <span className="text-[var(--accent-primary)]">Coffee</span></h1>
+        <p className="text-[13px] text-[var(--ui-text-muted)] font-mono">v0.9.1-beta</p>
+        <div className="mt-10 flex justify-center gap-6">
+          <button type="button" onClick={() => window.open('https://allternit.com/terms', '_blank', 'noopener,noreferrer')} className="bg-transparent border-none text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-[13px] font-medium cursor-pointer">Terms</button>
+          <button type="button" onClick={() => window.open('https://allternit.com/privacy', '_blank', 'noopener,noreferrer')} className="bg-transparent border-none text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-[13px] font-medium cursor-pointer">Privacy</button>
+          <button type="button" onClick={() => window.open('https://github.com/allternit', '_blank', 'noopener,noreferrer')} className="bg-transparent border-none text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-[13px] font-medium cursor-pointer">GitHub</button>
+        </div>
+      </div>
       <SectionHeading>Keyboard shortcuts</SectionHeading>
+      <p className="text-[13px] text-[var(--text-secondary)] -mt-1 mb-3">
+        Global shortcuts bound by the desktop shell. On Windows and Linux use Ctrl in place of ⌘.
+      </p>
       <SettingsTable columns={['Action', 'Shortcut']}>
-        {SHORTCUTS.map((item, index) => (
-          <tr key={`settings-index-${index}`}>
+        {[
+          { action: 'Toggle Agent Activity', shortcut: '⌘⇧M' },
+          { action: 'Find in page', shortcut: '⌘F' },
+          { action: 'Toggle HUD', shortcut: '⌘⇧H' },
+          { action: 'Toggle Agent Runner', shortcut: '⌘⇧A' },
+        ].map((item) => (
+          <tr key={`shortcut-${item.shortcut}`}>
             <SettingsTableCell>{item.action}</SettingsTableCell>
             <SettingsTableCell>
               <MonoChip>{item.shortcut}</MonoChip>
@@ -840,25 +908,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </tr>
         ))}
       </SettingsTable>
-    </div>
-  );
-
-  const renderAboutPanel = () => (
-    <div className="text-center py-10">
-      <div className="mb-10">
-        <div className="grid grid-cols-4 gap-2 size-40 mx-auto transform hover:rotate-3 transition-transform duration-500">
-          {Array.from({ length: 16 }).map((_, i) => (
-            <div key={`settings-i-${i}`} className="bg-[var(--accent-primary)] rounded-md transition-opacity duration-300" style={{ opacity: i % 3 === 0 ? 0.3 : i % 2 === 0 ? 0.6 : 1 }} />
-          ))}
-        </div>
-      </div>
-      <h1 className="text-3xl font-semibold m-0 mb-2 text-[var(--ui-text-primary)] tracking-tight">Allternit & <span className="text-[var(--accent-primary)]">Coffee</span></h1>
-      <p className="text-[13px] text-[var(--ui-text-muted)] font-mono">v0.9.1-beta</p>
-      <div className="mt-10 flex justify-center gap-6">
-        <button type="button" onClick={() => window.open('https://allternit.com/terms', '_blank', 'noopener,noreferrer')} className="bg-transparent border-none text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-[13px] font-medium cursor-pointer">Terms</button>
-        <button type="button" onClick={() => window.open('https://allternit.com/privacy', '_blank', 'noopener,noreferrer')} className="bg-transparent border-none text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-[13px] font-medium cursor-pointer">Privacy</button>
-        <button type="button" onClick={() => window.open('https://github.com/allternit', '_blank', 'noopener,noreferrer')} className="bg-transparent border-none text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-[13px] font-medium cursor-pointer">GitHub</button>
-      </div>
     </div>
   );
 
@@ -958,75 +1007,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     <div>
       <section className="mb-10">
         <ToastProvider>
-          <ServiceUrlSettings />
+          <EnvironmentSettings />
         </ToastProvider>
       </section>
 
       <SectionHeading>General</SectionHeading>
       <SettingsRow label="Allow bypass permissions mode" description="Bypass all permission checks (Developer only)">
         <Toggle value={bypassPermissions} onChange={setBypassPermissions} />
-      </SettingsRow>
-      <SettingsRow label="Draw attention on notifications" description="Bounce dock icon on important agent notifications">
-        <Toggle value={drawAttentionNotifications} onChange={setDrawAttentionNotifications} />
-      </SettingsRow>
-
-      <SectionHeading>Code appearance</SectionHeading>
-      <SettingsRow label="Light theme" description="Syntax theme used in light mode">
-        <select aria-label="Light code theme" value={codeThemeLight} onChange={(e) => setCodeThemeLight(e.target.value)} className={SETTINGS_SELECT_CLASS}>
-          <option>GitHub Light</option><option>Solarized Light</option><option>One Light</option>
-        </select>
-      </SettingsRow>
-      <SettingsRow label="Dark theme" description="Syntax theme used in dark mode">
-        <select aria-label="Dark code theme" value={codeThemeDark} onChange={(e) => setCodeThemeDark(e.target.value)} className={SETTINGS_SELECT_CLASS}>
-          <option>Allternit Dark</option><option>GitHub Dark</option><option>One Dark</option><option>Dracula</option>
-        </select>
-      </SettingsRow>
-      <div className="grid grid-cols-2 gap-3 py-4">
-        <div className="rounded-lg border border-solid border-[var(--border-subtle)] overflow-hidden">
-          <div className="px-3 py-1.5 text-[11px] font-medium text-zinc-500 bg-zinc-100 border-b border-solid border-zinc-200">Light</div>
-          <div className="p-3 bg-white text-[11px] leading-relaxed font-mono text-zinc-700 overflow-x-auto">
-            <div><span className="text-zinc-400 select-none">12&nbsp;&nbsp;</span><span className="text-purple-600">function</span> greet(name) {'{'}</div>
-            <div className="bg-red-50 text-red-600 -mx-3 px-3"><span className="text-red-300 select-none">13&nbsp;</span>-&nbsp;&nbsp;return "hi " + name;</div>
-            <div className="bg-green-50 text-green-700 -mx-3 px-3"><span className="text-green-400 select-none">13&nbsp;</span>+&nbsp;&nbsp;return 'hello ' + name;</div>
-            <div><span className="text-zinc-400 select-none">14&nbsp;&nbsp;</span>{'}'}</div>
-          </div>
-        </div>
-        <div className="rounded-lg border border-solid border-[var(--border-subtle)] overflow-hidden">
-          <div className="px-3 py-1.5 text-[11px] font-medium text-zinc-400 bg-zinc-800 border-b border-solid border-zinc-700">Dark</div>
-          <div className="p-3 bg-[#0d1117] text-[11px] leading-relaxed font-mono text-zinc-300 overflow-x-auto">
-            <div><span className="text-zinc-600 select-none">12&nbsp;&nbsp;</span><span className="text-purple-400">function</span> greet(name) {'{'}</div>
-            <div className="bg-red-500/10 text-red-300 -mx-3 px-3"><span className="text-red-400/50 select-none">13&nbsp;</span>-&nbsp;&nbsp;return "hi " + name;</div>
-            <div className="bg-green-500/10 text-green-300 -mx-3 px-3"><span className="text-green-400/50 select-none">13&nbsp;</span>+&nbsp;&nbsp;return 'hello ' + name;</div>
-            <div><span className="text-zinc-600 select-none">14&nbsp;&nbsp;</span>{'}'}</div>
-          </div>
-        </div>
-      </div>
-
-      <SectionHeading>Browser</SectionHeading>
-      <SettingsRow label="Browser tools" description="Allow Gizziio Code to drive the built-in browser">
-        <Toggle value={browserTools} onChange={setBrowserTools} />
-      </SettingsRow>
-      <SettingsRow label="Persist sessions" description="How long browser sessions stay alive">
-        <select aria-label="Persist sessions" value={persistSessions} onChange={(e) => setPersistSessions(e.target.value)} className={SETTINGS_SELECT_CLASS}>
-          <option>Don't keep</option><option>1 day</option><option>7 days</option><option>30 days</option>
-        </select>
-      </SettingsRow>
-
-      <SectionHeading>Pull requests</SectionHeading>
-      <SettingsRow label="Branch prefix" description="Prefix used for generated PR branches">
-        <input
-          type="text"
-          value={branchPrefix}
-          onChange={(e) => setBranchPrefix(e.target.value)}
-          aria-label="Branch prefix"
-          className="w-40 p-2 px-3 rounded-lg border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)] text-[var(--ui-text-primary)] text-[13px] font-mono outline-none focus:border-[var(--accent-primary)]"
-        />
-      </SettingsRow>
-      <SettingsRow label="Create pull requests automatically" description="Open a PR when a task completes">
-        <Toggle value={autoCreatePRs} onChange={setAutoCreatePRs} />
-      </SettingsRow>
-      <SettingsRow label="Autofix review comments" description="Apply suggested fixes without asking">
-        <Toggle value={autofixPRs} onChange={setAutofixPRs} />
       </SettingsRow>
 
       <SectionHeading>Authorized API access</SectionHeading>
@@ -1057,15 +1044,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const renderCoworkPanel = () => (
     <div>
       <SectionHeading>Cowork</SectionHeading>
-      <SettingsRow
-        label="Dispatch"
-        description="Let agents hand off background tasks to Cowork sessions"
-      >
-        <span className="flex items-center gap-2">
-          <Badge>Beta</Badge>
-          <Toggle value={dispatchEnabled} onChange={setDispatchEnabled} />
-        </span>
-      </SettingsRow>
       <SettingsRow label="Files location" description="Where Cowork stores shared workspace files">
         <span className="text-[13px] text-[var(--accent-primary)] font-mono">~/Allternit/Cowork</span>
       </SettingsRow>
@@ -1123,21 +1101,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         primaryCta
         onCtaClick={() => window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType: 'marketplace' } }))}
       />
-
-      <SettingsCard title="Extension settings" description="Configure how extensions are installed and updated.">
-        <SettingsCardRow
-          label="Enable auto-updates for extensions"
-          description="Background update all marketplace and sidecar extensions"
-        >
-          <Toggle value={autoUpdateExtensions} onChange={setAutoUpdateExtensions} />
-        </SettingsCardRow>
-        <SettingsCardRow
-          label="Use Built-in Node.js for MCP"
-          description="Ensure stability by using Allternit's verified runtime"
-        >
-          <Toggle value={useBuiltinNode} onChange={setUseBuiltinNode} />
-        </SettingsCardRow>
-      </SettingsCard>
     </div>
   );
 
@@ -1172,24 +1135,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   const renderPrivacyPanel = () => (
     <div>
-      <SectionHeading>Privacy</SectionHeading>
-      {['How we protect your data', 'How we use your data'].map((label) => (
-        <button key={label} type="button"
-          className="w-full flex items-center justify-between py-4 bg-transparent border-none cursor-pointer text-left group"
-        >
-          <span className="text-[14px] font-medium text-[var(--text-primary)]">{label}</span>
-          <CaretRight size={14} className="text-[var(--text-tertiary)] group-hover:text-[var(--text-secondary)]" />
-        </button>
-      ))}
-
-      <SectionHeading>Preferences</SectionHeading>
-      <SettingsRow label="Location metadata" description="Attach coarse location to usage analytics">
-        <Toggle value={locationMetadata} onChange={setLocationMetadata} />
-      </SettingsRow>
-      <SettingsRow label="Help improve our models" description="Allow anonymized usage data to improve Allternit models">
-        <Toggle value={improveModels} onChange={setImproveModels} />
-      </SettingsRow>
-
       <SectionHeading>Your data</SectionHeading>
       <SettingsRow label="Export data" description="Download your local settings and preferences as JSON">
         <button type="button" className={QUIET_BUTTON_CLASS} onClick={handleExportData}>
@@ -1201,6 +1146,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           window.dispatchEvent(new CustomEvent('allternit:close-settings'));
           window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType: 'memory' } }));
         }}>Manage</button>
+      </SettingsRow>
+      <SettingsRow label="Privacy policy" description="Read how Allternit collects, uses, and protects your data">
+        <button type="button" className={QUIET_BUTTON_CLASS} onClick={() => window.open('https://allternit.com/privacy', '_blank', 'noopener,noreferrer')}>
+          Open <CaretRight size={14} />
+        </button>
       </SettingsRow>
     </div>
   );
@@ -1378,11 +1328,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   const renderContent = () => {
     switch (activeSection) {
-      case 'general': return renderGeneralPanel();
       case 'appearance': return renderAppearancePanel();
       case 'models': return renderModelsPanel();
       case 'api-keys': return renderApiKeysPanel();
-      case 'shortcuts': return renderShortcutsPanel();
       case 'permissions': return <PermissionsPanel />;
       case 'remote-control': return <DispatchSettingsPanel />;
       case 'gizziio-code': return renderGizziioCodePanel();
@@ -1393,7 +1341,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       case 'usage': return renderUsagePanel();
       case 'diagnostics': return <DiagnosticsPanel />;
       case 'infrastructure': return <ToastProvider><InfrastructureSettings initialTab={infrastructureTab as any} /></ToastProvider>;
-      case 'environment': return <ToastProvider><EnvironmentSettings /></ToastProvider>;
       case 'security': return <SecurityPanel />;
       case 'agents': return <AgentOpsPanel />;
       case 'webhooks': return <WebhooksSettingsPanel />;
@@ -1405,10 +1352,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       case 'connectors': return renderConnectorsPanel();
       case 'lens': return <LensSettingsPanel />;
       case 'plugins': return renderPluginsPanel();
-      case 'vps': return <ToastProvider><VPSConnectionsPanel /></ToastProvider>;
       case 'devices': return <DevicePairingPanel />;
-      case 'cloud-instances': return <CloudInstancesPanel />;
-      case 'cloud-credentials': return <EnterpriseByocPanel />;
       default: return null;
     }
   };
@@ -1428,7 +1372,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   return (
     <>
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/60 backdrop-blur-[2px] text-[var(--text-primary)] font-sans"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-[2px] text-[var(--text-primary)] font-sans"
       onClick={closeSettings}
     >
       <div
@@ -1436,14 +1380,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         aria-modal="true"
         aria-label="Settings"
         className={cn(
-          "flex w-full min-w-[600px] h-[80vh] rounded-2xl overflow-hidden shadow-2xl shadow-black/40 border border-solid border-white/10",
+          "flex w-[min(1000px,calc(100vw-3rem))] h-[min(80vh,880px)] min-w-0 rounded-2xl overflow-hidden shadow-2xl shadow-black/40 border border-solid border-white/10",
           'max-w-[1000px]'
         )}
         style={{ backgroundColor: 'var(--view-settings-bg, var(--surface-canvas))' }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Sidebar Nav */}
-        <div className="w-[220px] min-w-[180px] h-full bg-transparent p-4 pb-8 overflow-y-auto shrink-0 no-scrollbar border-r border-solid border-white/[0.03]">
+        <div className="hidden sm:block w-[220px] min-w-[180px] h-full bg-transparent p-4 pb-8 overflow-y-auto shrink-0 no-scrollbar border-r border-solid border-white/[0.03]">
           <div className="relative mb-5">
             <MagnifyingGlass size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)] pointer-events-none" />
             <input
@@ -1480,7 +1424,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 min-w-0 h-full relative bg-[radial-gradient(circle_at_top_right,rgba(212,176,140,0.03),transparent_600px)]">
+        <div className="flex-1 min-w-0 h-full relative bg-[radial-gradient(circle_at_top_right,rgba(0,0,0,0.02),transparent_600px)]">
           <div className="h-full overflow-y-auto">
             <div className="p-10 pb-32 w-full max-w-[740px]">
               <h1 className="text-[16px] font-semibold text-[var(--text-primary)] m-0 mb-6">

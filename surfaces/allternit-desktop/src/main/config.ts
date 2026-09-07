@@ -10,22 +10,28 @@ export const PORTS = {
   API: 8013,
   /** Gizzi Code AI runtime terminal server */
   GIZZI: 4096,
-  /** Local development Next.js UI server */
-  DEV_UI: 3013,
+  /** Local development Vite UI server */
+  DEV_UI: 3014,
   /** Rails backend (when running locally) */
   RAILS: 3021,
   /** Chrome extension native-messaging bridge */
   EXTENSION_BRIDGE: 3011,
   /** ACU (Python assistant) extension relay */
   ACU_RELAY: 3012,
+  /** ACU computer-use FastAPI gateway (`/v1/computer-use`, `/health`) */
+  ACU: 8760,
   /** Open Notebook research backend */
   NOTEBOOK: 5055,
   /** Local speech-to-text and text-to-speech service */
   VOICE: 8001,
+  /** Dedicated inbound webhook receiver (bot-owned triggers) */
+  WEBHOOK_RECEIVER: 8080,
   /** open-connector connector sidecar (see services/open-connector) */
   CONNECTOR_SIDECAR: 8014,
   /** Office engine sidecar (services/office-engine) backing /api/office/* */
   OFFICE_ENGINE: 8099,
+  /** Local model engine (services/local-engine) serving Model Lab telemetry */
+  LOCAL_ENGINE: 3015,
 } as const;
 
 export const HOSTS = {
@@ -40,10 +46,13 @@ export const URLS = {
   RAILS: `http://${HOSTS.LOOPBACK}:${PORTS.RAILS}`,
   EXTENSION_BRIDGE: `http://${HOSTS.LOOPBACK}:${PORTS.EXTENSION_BRIDGE}`,
   ACU_RELAY: `http://${HOSTS.LOOPBACK}:${PORTS.ACU_RELAY}`,
+  ACU: `http://${HOSTS.LOOPBACK}:${PORTS.ACU}`,
   NOTEBOOK: `http://${HOSTS.LOOPBACK}:${PORTS.NOTEBOOK}`,
   VOICE: `http://${HOSTS.LOOPBACK}:${PORTS.VOICE}`,
+  WEBHOOK_RECEIVER: `http://${HOSTS.LOOPBACK}:${PORTS.WEBHOOK_RECEIVER}`,
   CONNECTOR_SIDECAR: `http://${HOSTS.LOOPBACK}:${PORTS.CONNECTOR_SIDECAR}`,
   OFFICE_ENGINE: `http://${HOSTS.LOOPBACK}:${PORTS.OFFICE_ENGINE}`,
+  LOCAL_ENGINE: `http://${HOSTS.LOOPBACK}:${PORTS.LOCAL_ENGINE}`,
   /** Canonical Allternit control plane. Human Clerk sessions approve runtime pairing here. */
   CLOUD_API: 'https://api.allternit.com',
   /** Canonical browser experience. Pairing must never follow a local static UI URL. */
@@ -66,6 +75,11 @@ export function gizziUrl(path?: string): string {
 /** Build a URL for the local static platform UI fallback served by the Rust API. */
 export function staticUiUrl(path?: string): string {
   return path ? `${URLS.PLATFORM_STATIC}${path}` : URLS.PLATFORM_STATIC;
+}
+
+/** Build a URL for the dedicated inbound webhook receiver. */
+export function webhookReceiverUrl(path?: string): string {
+  return path ? `${URLS.WEBHOOK_RECEIVER}${path}` : URLS.WEBHOOK_RECEIVER;
 }
 
 /** Build a URL for the development UI server with an optional path. */

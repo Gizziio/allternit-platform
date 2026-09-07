@@ -12,6 +12,11 @@ import {
   shellDoubleQuote,
   buildHermesHandoffCommand,
 } from '../mention-handoff.service';
+import { wakeBot } from '../bot-wake.service';
+
+vi.mock('../bot-wake.service', () => ({
+  wakeBot: vi.fn(),
+}));
 import type { Agent } from '@/lib/agents/agent.types';
 import type { StackedAgent } from '@/lib/bots/stacked-agent.service';
 import type { AgentStackProvider } from '@/lib/bots/stack-providers/types';
@@ -205,6 +210,11 @@ describe('resolveMention', () => {
 });
 
 describe('executeMentionHandoff', () => {
+  beforeEach(() => {
+    vi.mocked(wakeBot).mockReset();
+    vi.mocked(wakeBot).mockResolvedValue({ reply: 'Here is the answer.' });
+  });
+
   it('returns original text when there are no mentions', async () => {
     const result = await executeMentionHandoff({
       text: 'hello world',
@@ -220,7 +230,7 @@ describe('executeMentionHandoff', () => {
     expect(result.handoffNote).toBe('');
   });
 
-  it('hands off to a native bot via Rails mail, returns the reply, and acknowledges it', async () => {
+  it('wakes a native bot asynchronously instead of using mail', async () => {
     const activeAgent = fakeNativeBot({
       id: 'active-agent',
       name: 'coordinator',
@@ -232,16 +242,6 @@ describe('executeMentionHandoff', () => {
       botProfile: { displayName: 'Researcher Bot' },
     });
     const sendMail = vi.fn().mockResolvedValue(undefined);
-    const fetchMail = vi.fn().mockResolvedValue([
-      {
-        id: 'msg-1',
-        fromAgentId: 'native-researcher',
-        body: 'Here is the answer.',
-        subject: 'Re: Mention from chat',
-        status: 'unread',
-      },
-    ]);
-    const acknowledgeMail = vi.fn().mockResolvedValue(undefined);
 
     const result = await executeMentionHandoff({
       text: '@researcher explain this',
@@ -249,17 +249,16 @@ describe('executeMentionHandoff', () => {
       stackedAgents: [],
       activeAgentId: 'active-agent',
       sendMail,
-      fetchMail,
-      acknowledgeMail,
+      fetchMail: vi.fn(),
     });
 
-    expect(sendMail).toHaveBeenCalledWith(
-      'active-agent',
-      'native-researcher',
-      'Mention from @coord',
-      'Message from 🤖 Coordinator Bot (@coord): @researcher explain this',
+    expect(sendMail).not.toHaveBeenCalled();
+    expect(wakeBot).toHaveBeenCalledWith(
+      expect.objectContaining({
+        botId: 'native-researcher',
+        waitForReply: false,
+      }),
     );
-    expect(acknowledgeMail).toHaveBeenCalledWith('native-researcher', 'msg-1');
     expect(result.cleanText).toBe('explain this');
     expect(result.replies).toHaveLength(1);
     expect(result.replies[0].displayName).toBe('Researcher Bot');
@@ -268,65 +267,23 @@ describe('executeMentionHandoff', () => {
     expect(result.handoffNote).toContain('Here is the answer.');
   });
 
-  it('polls native bot mail until a reply arrives', async () => {
-    const native = fakeNativeBot({
-      id: 'native-slow',
-      name: 'slow',
-      botProfile: { displayName: 'Slow Bot' },
-    });
-    const sendMail = vi.fn().mockResolvedValue(undefined);
-    const fetchMail = vi
-      .fn()
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([
-        {
-          id: 'msg-2',
-          fromAgentId: 'native-slow',
-          body: 'Sorry for the delay.',
-          subject: 'Re: Mention from chat',
-          status: 'unread',
-        },
-      ]);
-    const acknowledgeMail = vi.fn().mockResolvedValue(undefined);
-
-    const result = await executeMentionHandoff({
-      text: '@slow hello',
-      nativeAgents: [native],
-      stackedAgents: [],
-      sendMail,
-      fetchMail,
-      acknowledgeMail,
-      mailPollIntervalMs: 10,
-      mailReplyTimeoutMs: 200,
-    });
-
-    expect(fetchMail).toHaveBeenCalledTimes(3);
-    expect(result.replies[0].reply).toBe('Sorry for the delay.');
-    expect(acknowledgeMail).toHaveBeenCalledWith('native-slow', 'msg-2');
-  });
-
-  it('returns a waiting placeholder when native bot mail times out', async () => {
+  it('returns a handed-off placeholder when wake does not wait', async () => {
+    vi.mocked(wakeBot).mockResolvedValueOnce({});
     const native = fakeNativeBot({
       id: 'native-silent',
       name: 'silent',
       botProfile: { displayName: 'Silent Bot' },
     });
-    const sendMail = vi.fn().mockResolvedValue(undefined);
-    const fetchMail = vi.fn().mockResolvedValue([]);
 
     const result = await executeMentionHandoff({
       text: '@silent ping',
       nativeAgents: [native],
       stackedAgents: [],
-      sendMail,
-      fetchMail,
-      mailPollIntervalMs: 10,
-      mailReplyTimeoutMs: 50,
+      sendMail: vi.fn(),
+      fetchMail: vi.fn(),
     });
 
-    expect(fetchMail).toHaveBeenCalled();
-    expect(result.replies[0].reply).toBe('(waiting for reply)');
+    expect(result.replies[0].reply).toBe('(handed off)');
   });
 
   it('hands off to an external stacked bot via provider sendMessage with attribution', async () => {
@@ -388,28 +345,27 @@ describe('executeMentionHandoff', () => {
     expect(result.replies).toHaveLength(2);
     expect(result.replies.map((r) => r.displayName)).toContain('Writer Native');
     expect(result.replies.map((r) => r.displayName)).toContain('Hermes Coder');
-    expect(result.handoffNote).toContain('Done writing.');
+    expect(result.handoffNote).toContain('Here is the answer.');
   });
 
   it('records an error when a native handoff throws', async () => {
+    vi.mocked(wakeBot).mockRejectedValueOnce(new Error('wake failed'));
     const native = fakeNativeBot({
       id: 'native-broken',
       name: 'broken',
       botProfile: { displayName: 'Broken Bot' },
     });
-    const sendMail = vi.fn().mockRejectedValue(new Error('mail down'));
-    const fetchMail = vi.fn();
 
     const result = await executeMentionHandoff({
       text: '@broken help',
       nativeAgents: [native],
       stackedAgents: [],
-      sendMail,
-      fetchMail,
+      sendMail: vi.fn(),
+      fetchMail: vi.fn(),
     });
 
-    expect(result.replies[0].error).toBe('mail down');
-    expect(result.handoffNote).toContain('could not deliver (mail down)');
+    expect(result.replies[0].error).toBe('wake failed');
+    expect(result.handoffNote).toContain('could not deliver (wake failed)');
   });
 
   it('records an error when an external handoff throws', async () => {

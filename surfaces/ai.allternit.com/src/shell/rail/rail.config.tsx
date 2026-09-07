@@ -120,14 +120,14 @@ export const RAIL_CONFIG: RailConfigSection[] = [
   },
   {
     id: 'agent',
-    title: 'Agent',
+    title: 'Bot',
     icon: Robot,
     collapsible: false,
     defaultExpanded: true,
     items: [
       {
         id: 'agent-hub',
-        label: 'Agent | Bot Hub',
+        label: 'Bot Hub',
         icon: Robot,
         payload: 'agent-hub',
         shortcut: '⌘⇧A'

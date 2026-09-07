@@ -71,7 +71,7 @@ function guiGotoArgv(
  * Launch a file in the user's external editor.
  *
  * For GUI editors (code, subl, etc.): spawns detached — the editor opens
- * in a separate window and Claude Code stays interactive.
+ * in a separate window and gizzi-code stays interactive.
  *
  * For terminal editors (vim, nvim, nano, etc.): blocks via Ink's alt-screen
  * handoff until the editor exits. This is the same dance as editFileInEditor()
@@ -152,6 +152,41 @@ export function openFileInExternalEditor(
     }
     if (result.error) {
       logForDebugging(`editor spawn failed: ${result.error}`, {
+        level: 'error',
+      })
+      return false
+    }
+    return true
+  } finally {
+    inkInstance.exitAlternateScreen()
+  }
+}
+
+/**
+ * Run a file through the user's pager ($PAGER, falling back to `less -R`,
+ * then `more`) using the alt-screen + spawnSync(stdio:'inherit') handoff,
+ * the same dance as the terminal-editor branch of openFileInExternalEditor().
+ * Blocks until the pager exits.
+ *
+ * Returns true if the pager was launched, false otherwise (no TTY ink
+ * instance, or the pager binary failed to spawn).
+ */
+export function runInPager(filePath: string): boolean {
+  const envPager = process.env.PAGER?.trim()
+  const pager = envPager ?? (isCommandAvailable('less') ? 'less -R' : 'more')
+
+  const inkInstance = instances.get(process.stdout)
+  if (!inkInstance) return false
+
+  const parts = pager.split(' ')
+  const base = parts[0] ?? pager
+  const pagerArgs = [...parts.slice(1), filePath]
+
+  inkInstance.enterAlternateScreen()
+  try {
+    const result = spawnSync(base, pagerArgs, { stdio: 'inherit' })
+    if (result.error) {
+      logForDebugging(`pager spawn failed: ${result.error}`, {
         level: 'error',
       })
       return false

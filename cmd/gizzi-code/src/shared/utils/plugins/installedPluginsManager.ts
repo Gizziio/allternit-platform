@@ -23,7 +23,10 @@ import {
   jsonStringify,
   writeFileSync_DEPRECATED,
 } from '../slowOperations.js'
-import { getPluginsDirectory } from './pluginDirectories.js'
+import {
+  getPluginsDirectory,
+  resolvePluginsStateFile,
+} from './pluginDirectories.js'
 import {
   type InstalledPlugin,
   InstalledPluginsFileSchemaV1,
@@ -261,7 +264,10 @@ function readInstalledPluginsFileRaw(): {
   data: unknown
 } | null {
   const fs = getFsImplementation()
-  const filePath = getInstalledPluginsFilePath()
+  // READ path: fall back to legacy ~/.claude/plugins when the canonical
+  // ~/.gizzi/plugins copy is absent. Writes go through
+  // getInstalledPluginsFilePath() (canonical) only.
+  const filePath = resolvePluginsStateFile('installed_plugins.json')
 
   let fileContent: string
   try {

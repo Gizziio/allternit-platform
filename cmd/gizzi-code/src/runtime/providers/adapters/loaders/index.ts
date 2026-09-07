@@ -2,17 +2,19 @@
  * Provider Loaders Registry
  *
  * Maps provider IDs to their loader functions.
- * Supported providers: Anthropic, OpenAI, Google, Mistral, Gizzi, Qwen, Kimi, MiniMax, GLM/Zhipu
+ * Supported providers: Allternit, OpenAI, Google, Mistral, Gizzi, Qwen, Kimi, MiniMax, GLM/Zhipu
  */
 
 import type { ProviderLoader } from "../../types"
-import { anthropicLoader } from "./anthropic"
+import { allternitLoader } from "./allternit"
 import { openaiLoader } from "./openai"
 import { gizziLoader, gizziioLoader } from "./misc"
 import { localLoader } from "./local"
 
 export const CUSTOM_LOADERS: Record<string, ProviderLoader> = {
-  "anthropic": anthropicLoader,
+  "allternit": allternitLoader,
+  // models.dev catalog id for Claude models — same Messages-API loader
+  "anthropic": allternitLoader,
   "openai": openaiLoader,
   "gizzi": gizziLoader,
   "gizziio": gizziioLoader,

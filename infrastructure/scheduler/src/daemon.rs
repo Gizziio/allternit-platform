@@ -4,7 +4,7 @@
 
 use anyhow::{Context, Result};
 use chrono::Utc;
-use sqlx::{Pool, Sqlite, SqlitePool};
+use sqlx::{Pool, Postgres, PgPool};
 use std::time::Duration;
 use tokio::time::interval;
 use tracing::{debug, error, info, warn};
@@ -17,7 +17,7 @@ use crate::SchedulerConfig;
 /// Scheduler daemon
 pub struct SchedulerDaemon {
     config: SchedulerConfig,
-    db: Pool<Sqlite>,
+    db: Pool<Postgres>,
     /// HTTP client for API calls
     http_client: reqwest::Client,
 }
@@ -27,7 +27,7 @@ impl SchedulerDaemon {
     pub async fn new(config: SchedulerConfig) -> Result<Self> {
         info!("Connecting to database: {}", config.database_url);
         
-        let db = SqlitePool::connect(&config.database_url)
+        let db = PgPool::connect(&config.database_url)
             .await
             .context("Failed to connect to database")?;
         

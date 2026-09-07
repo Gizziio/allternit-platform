@@ -69,6 +69,8 @@ declare global {
         forgetAccount: (userId: string) => Promise<void>;
         signOut: () => Promise<void>;
         hardSignOut: () => Promise<void>;
+        getClerkToken?: () => Promise<string | null>;
+        onSessionUpdated?: (handler: (session: { userId: string; userEmail: string }) => void) => () => void;
       };
       devicePairing?: {
         lookup: (code: string) => Promise<{
@@ -144,6 +146,7 @@ declare global {
         moveHudBy?: (delta: { x: number; y: number; width: number; height: number }) => Promise<void>;
         setHudBounds?: (bounds: { x?: number; y?: number; width?: number; height?: number }) => Promise<void>;
         openRemoteControl: (runtimeId?: string) => Promise<void>;
+        openFabricSession: (runtimeId?: string) => Promise<void>;
         /** HUD mode: chrome-free floating composer bridge. */
         hud?: {
           open: () => Promise<void>;
@@ -175,12 +178,20 @@ declare global {
             workspaceTransfer: boolean;
           };
         };
+        openRemoteControl: () => Promise<void>;
+        openFabricSession: () => Promise<void>;
         openSession: (options: { sessionId: string; workspaceId?: string; title?: string }) => Promise<void>;
         getOfficeHostStatus: () => Promise<Record<'word' | 'excel' | 'powerpoint', {
           installed: boolean;
           running: boolean;
           bundlePath: string | null;
         }>>;
+        /** Hermes floating HUD controls (Electron only). */
+        moveHud?: (delta: { dx: number; dy: number }) => Promise<void>;
+        resizeHud?: (size: { width?: number; height: number }) => Promise<void>;
+        closeHud?: () => Promise<void>;
+        toggleHud?: () => Promise<void>;
+        showHud?: () => Promise<void>;
       };
       officeAddins?: {
         getStatus: () => Promise<Record<'word' | 'excel' | 'powerpoint', {
@@ -264,7 +275,8 @@ declare global {
     'allternit:close-settings': CustomEvent;
     'allternit:open-labs': CustomEvent;
     'allternit:open-view': CustomEvent<{ viewType: string; allowNew?: boolean; context?: unknown }>;
-    'allternit:switch-mode': CustomEvent<{ mode: 'chat' | 'cowork' | 'code' | 'design' | 'browser' }>;
+    'allternit:switch-mode': CustomEvent<{ mode: 'chat' | 'cowork' | 'bot' | 'code' | 'design' | 'browser' }>;
+    'allternit:open-bot-picker': CustomEvent;
   }
 }
 

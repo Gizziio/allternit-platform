@@ -20,10 +20,43 @@ import {
   renderModelName,
 } from './model/model.js'
 import { getHarnessMode, shouldUseHarness } from './feature-flags.js'
+import {
+  getAuthTokenSource,
+  getAllternitApiKeyWithSource,
+} from './auth.js'
+import { getAPIProvider } from './model/providers.js'
 import { detectWorkspace } from '../../../../runtime/kernel/bridge.js'
 import type { LocalJSXCommandContext } from '../types/command.js'
 
 export const STATUS_SCHEMA_VERSION = 1
+
+/** Human-readable auth method; works for first-party and 3P providers. */
+export function getAuthMethodDescription(): string {
+  const apiProvider = getAPIProvider()
+  if (apiProvider !== 'firstParty') {
+    return apiProvider
+  }
+  const { source, hasToken } = getAuthTokenSource()
+  if (hasToken) {
+    return source
+  }
+  const { key, source: apiKeySource } = getAllternitApiKeyWithSource()
+  if (key) {
+    return apiKeySource
+  }
+  return 'none'
+}
+
+/** Count user turns: non-meta user messages that are not tool results. */
+export function countUserTurns(messages: Array<any> | undefined): number {
+  return (messages ?? []).filter(m => {
+    if (m.type !== 'user' || m.isMeta) {
+      return false
+    }
+    const block = m.message?.content?.[0]
+    return block?.type !== 'tool_result'
+  }).length
+}
 
 export type SessionStatus = {
   schemaVersion: number
@@ -32,6 +65,8 @@ export type SessionStatus = {
   directory: string
   projectDirectory?: string
   sessionId: string
+  authMethod: string
+  turns: number
   context: {
     used: number | null
     total: number
@@ -111,6 +146,8 @@ export async function buildSessionStatus(
     directory: cwd,
     ...(projectDir && projectDir !== cwd ? { projectDirectory: projectDir } : {}),
     sessionId,
+    authMethod: getAuthMethodDescription(),
+    turns: countUserTurns(messages),
     context: {
       used:
         contextPercentages.used !== null && currentUsage

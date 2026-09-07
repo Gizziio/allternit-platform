@@ -5,8 +5,11 @@ import { Command } from "cmdk";
 import { useModelDiscovery, useUsageSummary } from "@/integration/api-client";
 import { useModelSelection } from "@/providers/model-selection-provider";
 import {
+  canonicalProviderId,
+  dedupeByCanonicalProvider,
   getProviderMeta,
   getProviderName,
+  listCanonicalProviders,
   PROVIDER_REGISTRY,
   type ProviderKind,
 } from "@/lib/providers/provider-registry";
@@ -41,6 +44,8 @@ import {
   Terminal,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
+import { getLogosAppsUrl } from "@/lib/design/logos-apps";
+import { isAllternitCloudProviderId } from "@/lib/default-brain";
 import type { ModelOption } from "@/components/prompt-kit/prompt-model-selector";
 import type {
   ProviderAuthStatus,
@@ -54,6 +59,8 @@ export interface ModelSelection {
   profileId: string;
   modelId: string;
   modelName?: string;
+  /** false = user pinned via the picker; auto defaults may switch to Cloud after a paid sub. */
+  modelAuto?: boolean;
 }
 
 interface ModelPickerProps {
@@ -66,7 +73,7 @@ interface ModelPickerProps {
   /** Callback when open state changes */
   onOpenChange?: (open: boolean) => void;
   /** Called when the user wants to connect a new provider */
-  onOpenProviderConnect?: () => void;
+  onOpenProviderConnect?: (providerId?: string) => void;
   /** Called when the user wants to open the Model Lab */
   onOpenModelLab?: () => void;
   /** Enable provider multi-select checkboxes and the "Use selected" footer. */
@@ -86,40 +93,25 @@ function resolveProfileId(
 
 function ProviderIcon({ providerId }: { providerId: string }) {
   const meta = getProviderMeta(providerId);
-  const [error, setError] = useState(false);
-  const src = meta.icon ? `/assets/runtime-logos/${meta.icon}` : "";
+  const [attempt, setAttempt] = useState(0);
 
-  // No fabricated brand marks. Missing logos render a real Terminal icon from
-  // the installed Phosphor icon library (category icon, not a monogram).
-  if (!src || error) {
-    return (
-      <div
-        className="size-8 rounded-lg flex items-center justify-center shrink-0"
-        style={{
-          background: `${meta.color}18`,
-          border: `1px solid ${meta.color}40`,
-        }}
-      >
-        <Terminal size={18} style={{ color: meta.color }} />
-      </div>
-    );
+  const sources = [
+    meta.icon ? `/assets/runtime-logos/${meta.icon}` : null,
+    getLogosAppsUrl(meta.id),
+    getLogosAppsUrl(meta.name),
+  ].filter(Boolean) as string[];
+
+  if (attempt >= sources.length) {
+    return <Terminal size={20} className="text-[var(--ui-text-muted)] shrink-0" />;
   }
 
   return (
-    <div
-      className="size-8 rounded-lg flex items-center justify-center shrink-0"
-      style={{
-        background: `${meta.color}18`,
-        border: `1px solid ${meta.color}40`,
-      }}
-    >
-      <img
-        src={src}
-        alt=""
-        className="size-4 object-contain"
-        onError={() => setError(true)}
-      />
-    </div>
+    <img
+      src={sources[attempt]}
+      alt=""
+      className="size-5 object-contain shrink-0"
+      onError={() => setAttempt((i) => i + 1)}
+    />
   );
 }
 
@@ -191,13 +183,13 @@ function StatusPill({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold border",
+        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[var(--text-xs)] font-medium",
         intent === "success" &&
-          "bg-[var(--status-success)]/10 border-[var(--status-success)]/20 text-[var(--status-success)]",
+          "bg-[var(--status-success)]/10 text-[var(--status-success)]",
         intent === "warning" &&
-          "bg-[var(--status-warning)]/10 border-[var(--status-warning)]/20 text-[var(--status-warning)]",
+          "bg-[var(--status-warning)]/10 text-[var(--status-warning)]",
         intent === "muted" &&
-          "bg-[var(--surface-panel-muted)] border-[var(--ui-border-muted)] text-[var(--ui-text-muted)]"
+          "bg-[var(--surface-panel-muted)] text-[var(--ui-text-muted)]"
       )}
     >
       {intent === "success" ? (
@@ -244,6 +236,7 @@ function ProviderRow({
 }: ProviderRowProps) {
   const kindLabel =
     kind === "cli" ? "CLI runtime" : kind === "local" ? "Local runtime" : "Cloud runtime";
+  const meta = getProviderMeta(providerId);
 
   const subtitle = [
     modelCount > 0 ? `${modelCount} model${modelCount === 1 ? "" : "s"}` : kindLabel,
@@ -270,9 +263,9 @@ function ProviderRow({
       onClick={handleRowClick}
       onKeyDown={handleRowKeyDown}
       className={cn(
-        "group w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-chat)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--bg-elevated)]",
+        "group w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-chat)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--shell-view-bg)]",
         expanded
-          ? "bg-[var(--surface-panel)]"
+          ? "bg-[var(--surface-hover)]"
           : "hover:bg-[var(--surface-hover)]",
         onSelect && "cursor-pointer"
       )}
@@ -294,10 +287,10 @@ function ProviderRow({
       <ProviderIcon providerId={providerId} />
 
       <div className="flex flex-col min-w-0 flex-1">
-        <span className="font-semibold text-sm text-[var(--ui-text-primary)] truncate">
+        <span className="font-semibold text-[var(--text-sm)] text-[var(--ui-text-primary)] truncate">
           {providerName}
         </span>
-        <span className="text-xs text-[var(--ui-text-muted)]">{subtitle}</span>
+        <span className="text-[var(--text-xs)] text-[var(--ui-text-muted)]">{subtitle}</span>
       </div>
 
       <div className="flex items-center gap-2 shrink-0">
@@ -497,8 +490,9 @@ export function ModelPickerUI({
   const modelsByProviderId = useMemo(() => {
     const map = new Map<string, ModelOption[]>();
     availableModels.forEach((model) => {
-      const key = model.providerId || model.provider;
-      if (!key) return;
+      const raw = model.providerId || model.provider;
+      if (!raw) return;
+      const key = canonicalProviderId(raw);
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(model);
     });
@@ -525,7 +519,7 @@ export function ModelPickerUI({
   const runtimeStatusMap = useMemo(() => {
     const map = new Map<string, ProviderInfo["status"]>();
     realModels.forEach((r) => {
-      if (r.id) map.set(r.id, r.status);
+      if (r.id) map.set(canonicalProviderId(r.id), r.status);
     });
     return map;
   }, [realModels]);
@@ -543,24 +537,17 @@ export function ModelPickerUI({
     [runtimeStatus]
   );
 
-  // If the backend is unreachable, fall back to the provider registry so the
-  // modal still shows available CLI/API runtimes instead of an empty list.
-  const allProviders = useMemo<ProviderAuthStatus[]>(() => {
-    if (providers.length > 0) return providers;
-    return Object.values(PROVIDER_REGISTRY).map((meta) => ({
-      provider_id: meta.id,
-      status: (meta.kind === "cli" ? "unknown" : "missing") as ProviderAuthStatus["status"],
-      authenticated: false,
-      auth_required: meta.kind !== "local",
-      auth_profile_id: null,
-      chat_profile_ids: [] as string[],
-    }));
-  }, [providers]);
+  const allProviders = useMemo(
+    () => dedupeByCanonicalProvider(providers),
+    [providers],
+  );
 
   const providersWithModels = useMemo(() => {
     const ids = new Set<string>();
     availableModels.forEach((m) => {
-      ids.add(m.providerId || m.provider || m.providerName || "");
+      const raw = m.providerId || m.provider || "";
+      if (raw) ids.add(canonicalProviderId(raw));
+      ids.add(m.providerName || "");
     });
     return ids;
   }, [availableModels]);
@@ -590,33 +577,119 @@ export function ModelPickerUI({
     [cliProviders, effectiveStatus]
   );
 
-  // API/cloud providers that have discovered models.
+  const allternitCloudProviders = useMemo(() => {
+    const fromAuth = allProviders.filter((p) =>
+      isAllternitCloudProviderId(canonicalProviderId(p.provider_id)),
+    );
+    if (fromAuth.length > 0) return fromAuth;
+    const hasCatalog = availableModels.some((model) =>
+      isAllternitCloudProviderId(canonicalProviderId(model.providerId || model.provider)),
+    );
+    if (!hasCatalog) return [];
+    return [
+      {
+        provider_id: "allternit",
+        status: "ok" as const,
+        authenticated: true,
+        auth_profile_id: null,
+        chat_profile_ids: [],
+      },
+    ];
+  }, [allProviders, availableModels]);
+
+  // BYOK API providers (Anthropic, OpenAI, …), not the Allternit Cloud catalog.
   const apiProviders = useMemo(() => {
     return allProviders.filter((p) => {
       const meta = getProviderMeta(p.provider_id);
-      return meta.kind === "api" && providersWithModels.has(p.provider_id);
+      if (meta.kind !== "api") return false;
+      if (isAllternitCloudProviderId(canonicalProviderId(p.provider_id))) return false;
+      if (p.provider_id === "omlx" || p.details?.provider_type === "local") return false;
+      return providersWithModels.has(p.provider_id);
     });
   }, [allProviders, providersWithModels]);
 
-  // Local runtimes (Ollama / sidecar).
+  // Local runtimes (Ollama / sidecar / oMLX), including models discovered
+  // live even when /providers/auth/status failed or omitted them.
   const localProviders = useMemo(() => {
-    return allProviders.filter((p) => {
+    const fromAuth = allProviders.filter((p) => {
       const meta = getProviderMeta(p.provider_id);
-      return meta.kind === "local";
+      const type = p.details?.provider_type;
+      return (
+        meta.kind === "local" ||
+        type === "local" ||
+        p.provider_id === "omlx" ||
+        p.provider_id === "ollama" ||
+        p.provider_id === "allternit-sidecar"
+      );
     });
-  }, [allProviders]);
+    const known = new Set(fromAuth.map((p) => p.provider_id));
+    const discovered: ProviderAuthStatus[] = [];
+    availableModels.forEach((model) => {
+      const id = model.providerId || model.provider;
+      if (!id || known.has(id)) return;
+      const meta = getProviderMeta(id);
+      const looksLocal =
+        meta.kind === "local" ||
+        id === "ollama" ||
+        id === "omlx" ||
+        id === "allternit-sidecar" ||
+        id === "local-brain";
+      if (isAllternitCloudProviderId(canonicalProviderId(id))) return;
+      if (!looksLocal) return;
+      known.add(id);
+      discovered.push({
+        provider_id: id,
+        status: "ok",
+        authenticated: true,
+        auth_profile_id: null,
+        chat_profile_ids: [],
+      });
+    });
+    return [...fromAuth, ...discovered];
+  }, [allProviders, availableModels]);
+
+  useEffect(() => {
+    if (!open) return;
+    setExpandedProviders((prev) => {
+      const next = new Set(prev);
+      allternitCloudProviders.forEach((p) => next.add(getProviderMeta(p.provider_id).name));
+      installedCli.forEach((p) => next.add(getProviderMeta(p.provider_id).name));
+      localProviders.forEach((p) => next.add(getProviderMeta(p.provider_id).name));
+      return next;
+    });
+  }, [open, allternitCloudProviders, installedCli, localProviders]);
 
   const emptyProviders = useMemo(
     () =>
-      allProviders.filter(
-        (p) =>
-          p.provider_id &&
-          !providersWithModels.has(p.provider_id) &&
-          p.provider_id !== "echo" &&
-          getProviderMeta(p.provider_id).kind !== "cli"
-      ),
+      allProviders.filter((p) => {
+        if (!p.provider_id || p.provider_id === "echo") return false;
+        if (providersWithModels.has(p.provider_id)) return false;
+        const meta = getProviderMeta(p.provider_id);
+        if (meta.kind === "cli" || meta.kind === "local") return false;
+        // Drop the raw Gizzi catalog (tokengo, subconscious, …). Only show
+        // brands the operator can actually connect from our registry.
+        return Boolean(PROVIDER_REGISTRY[p.provider_id]);
+      }),
     [allProviders, providersWithModels]
   );
+
+  // Providers from the registry that the backend has not reported at all.
+  // These are shown in a collapsed "Available providers" section so the user
+  // can install or authenticate them without pretending they are connected.
+  const knownProviderIds = useMemo(
+    () => new Set(allProviders.map((p) => canonicalProviderId(p.provider_id))),
+    [allProviders]
+  );
+  const installableProviders = useMemo(() => {
+    return listCanonicalProviders().filter(
+      (meta) =>
+        !knownProviderIds.has(meta.id) &&
+        meta.id !== "echo" &&
+        meta.id !== "allternit" &&
+        meta.id !== "allternit-local-engine" &&
+        meta.id !== "allternit-sidecar"
+    );
+  }, [knownProviderIds]);
 
   const toggleProvider = useCallback((providerName: string) => {
     setExpandedProviders((prev) => {
@@ -730,11 +803,36 @@ export function ModelPickerUI({
     });
   }, [emptyProviders, search]);
 
+  const filteredInstallable = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    if (!term) return installableProviders;
+    return installableProviders.filter((meta) =>
+      meta.name.toLowerCase().includes(term)
+    );
+  }, [installableProviders, search]);
+
   const hasAnyResults =
-    filteredGroups.length > 0 || filteredEmptyProviders.length > 0;
+    filteredGroups.length > 0 ||
+    filteredEmptyProviders.length > 0 ||
+    filteredInstallable.length > 0;
 
   const usageLine = useMemo(() => {
-    if (!usageSummary) return null;
+    if (!usageSummary || usageSummary.meteringAvailable === false) return null;
+    const planName = usageSummary.planLabel
+      || (usageSummary.plan ? usageSummary.plan.charAt(0).toUpperCase() + usageSummary.plan.slice(1) : null);
+    if (planName && usageSummary.creditsRemaining != null) {
+      const remaining = new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: usageSummary.currency || "USD",
+      }).format(usageSummary.creditsRemaining);
+      const limit = usageSummary.monthlyLimit
+        ? ` of ${new Intl.NumberFormat("en-US", {
+            style: "currency",
+            currency: usageSummary.currency || "USD",
+          }).format(usageSummary.monthlyLimit)}`
+        : "";
+      return `Allternit ${planName} · ${remaining} remaining${limit}`;
+    }
     return [
       `${usageSummary.requests.toLocaleString()} requests`,
       `${formatTokenCount(usageSummary.tokens.total)} tokens`,
@@ -759,7 +857,7 @@ export function ModelPickerUI({
 
     return (
       <div className="mb-4" key={title}>
-        <h3 className="px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--ui-text-muted)]">
+        <h3 className="px-3 py-1 text-[var(--text-xs)] font-semibold uppercase tracking-wider text-[var(--ui-text-muted)]">
           {title}
         </h3>
         <div className="space-y-0.5">
@@ -790,7 +888,7 @@ export function ModelPickerUI({
                     showConnect && onOpenProviderConnect
                       ? () => {
                           setOpen(false);
-                          onOpenProviderConnect();
+                          onOpenProviderConnect(provider.provider_id);
                         }
                       : undefined
                   }
@@ -809,12 +907,12 @@ export function ModelPickerUI({
                   }
                 />
                 {expanded && models.length === 0 && (
-                  <div className="px-3 py-2 text-xs text-[var(--ui-text-muted)]">
+                  <div className="px-3 py-2 text-[var(--text-xs)] text-[var(--ui-text-muted)]">
                     No models discovered for this runtime.
                   </div>
                 )}
                 {expanded && models.length > 0 && (
-                  <div className="grid gap-0.5 mt-1 pl-4 pr-1">
+                  <div className="grid gap-0.5 mt-0.5 pl-3 pr-1">
                     {models.map((model) => {
                       const isSelected = selectedModelId === model.id;
                       const ctx = formatContextWindow(
@@ -828,15 +926,15 @@ export function ModelPickerUI({
                           value={`${model.id} ${model.name} ${providerName}`}
                           onSelect={() => handleSelectModel(model)}
                           className={cn(
-                            "flex w-full items-center gap-3 px-3 py-2 rounded-lg text-left text-sm transition-colors border-l-2",
+                            "flex w-full items-center gap-3 px-3 py-1.5 rounded-lg text-left transition-colors",
                             isSelected
-                              ? "bg-[var(--surface-hover)] text-[var(--ui-text-primary)] border-l-[var(--accent-chat)]"
-                              : "hover:bg-[var(--surface-hover)] text-[var(--ui-text-primary)] border-l-transparent"
+                              ? "bg-[var(--surface-hover)] text-[var(--ui-text-primary)]"
+                              : "hover:bg-[var(--surface-hover)] text-[var(--ui-text-primary)]"
                           )}
                         >
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-medium truncate">
+                              <span className="font-medium text-[var(--text-sm)] truncate">
                                 {model.name}
                               </span>
                               {Array.isArray(model.capabilities) &&
@@ -844,13 +942,13 @@ export function ModelPickerUI({
                                   <Badge
                                     key={cap}
                                     variant="secondary"
-                                    className="text-[10px] px-1.5 py-0 bg-[var(--surface-panel-muted)] text-[var(--ui-text-muted)] border-none"
+                                    className="text-[var(--text-xs)] px-1.5 py-0 bg-[var(--surface-panel-muted)] text-[var(--ui-text-muted)] border-none"
                                   >
                                     {cap}
                                   </Badge>
                                 ))}
                             </div>
-                            <div className="flex items-center gap-2 text-xs text-[var(--ui-text-muted)]">
+                            <div className="flex items-center gap-2 text-[var(--text-xs)] text-[var(--ui-text-muted)]">
                               {model.description && (
                                 <span className="truncate">
                                   {model.description}
@@ -890,9 +988,9 @@ export function ModelPickerUI({
     <Dialog open={open} onOpenChange={setOpen}>
       {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
       <DialogContent
-        className="sm:max-w-[720px] p-0 overflow-hidden border-[var(--ui-border-default)] bg-[var(--bg-elevated)] text-[var(--ui-text-primary)]"
+        className="sm:max-w-[720px] p-0 overflow-hidden border border-[var(--ui-border-default)] bg-[var(--shell-view-bg)] text-[var(--ui-text-primary)] shadow-2xl"
         style={{
-          background: "var(--bg-elevated)",
+          background: "var(--shell-view-bg)",
           borderColor: "var(--ui-border-default)",
         }}
       >
@@ -904,10 +1002,10 @@ export function ModelPickerUI({
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--ui-border-default)]">
             <div className="flex flex-col">
-              <span className="text-base font-semibold text-[var(--ui-text-primary)]">
+              <span className="text-[var(--text-lg)] font-semibold text-[var(--ui-text-primary)]">
                 Select Model
               </span>
-              <span className="text-xs text-[var(--ui-text-muted)]">
+              <span className="text-[var(--text-xs)] text-[var(--ui-text-muted)]">
                 Choose a runtime and model for this message
               </span>
             </div>
@@ -918,7 +1016,7 @@ export function ModelPickerUI({
                 setOpen(false);
                 onOpenProviderConnect?.();
               }}
-              className="gap-1.5 h-8 text-xs border-[var(--ui-border-default)] text-[var(--ui-text-primary)] hover:bg-[var(--surface-hover)]"
+              className="gap-1.5 h-8 text-[var(--text-xs)] border-[var(--ui-border-default)] text-[var(--ui-text-primary)] hover:bg-[var(--surface-hover)]"
             >
               <Plus size={14} />
               Connect provider
@@ -935,7 +1033,7 @@ export function ModelPickerUI({
               placeholder="Search models and providers…"
               value={search}
               onValueChange={setSearch}
-              className="flex h-10 w-full bg-transparent text-sm outline-none placeholder:text-[var(--ui-text-muted)] text-[var(--ui-text-primary)]"
+              className="flex h-10 w-full bg-transparent text-[var(--text-sm)] outline-none placeholder:text-[var(--ui-text-muted)] text-[var(--ui-text-primary)]"
             />
           </div>
 
@@ -944,20 +1042,21 @@ export function ModelPickerUI({
             {isLoading && availableModels.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 gap-3">
                 <CircleNotch className="size-6 animate-spin text-[var(--ui-text-muted)]" />
-                <p className="text-sm text-[var(--ui-text-muted)]">
+                <p className="text-[var(--text-sm)] text-[var(--ui-text-muted)]">
                   Loading models…
                 </p>
               </div>
             ) : (
               <>
-                {renderProviderSection("Installed runtimes", installedCli)}
+                {renderProviderSection("Allternit Cloud", allternitCloudProviders)}
+                {renderProviderSection("Installed CLI", installedCli)}
                 {renderProviderSection(
-                  "Available runtimes",
+                  "Available CLI",
                   availableCli,
                   true
                 )}
-                {renderProviderSection("Cloud providers", apiProviders)}
-                {renderProviderSection("Local models", localProviders)}
+                {renderProviderSection("Local", localProviders)}
+                {renderProviderSection("Cloud accounts", apiProviders)}
 
                 {/* Backends with no discovered models */}
                 {filteredEmptyProviders.map((provider) => {
@@ -969,17 +1068,16 @@ export function ModelPickerUI({
                     >
                       <div
                         className={cn(
-                          "flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl",
-                          "bg-[var(--surface-panel)]/50"
+                          "flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg hover:bg-[var(--surface-hover)] transition-colors"
                         )}
                       >
                         <div className="flex items-center gap-3 min-w-0">
                           <ProviderIcon providerId={provider.provider_id} />
                           <div className="flex flex-col min-w-0">
-                            <span className="font-semibold text-sm text-[var(--ui-text-primary)] truncate">
+                            <span className="font-semibold text-[var(--text-sm)] text-[var(--ui-text-primary)] truncate">
                               {meta.name}
                             </span>
-                            <span className="text-xs text-[var(--ui-text-muted)]">
+                            <span className="text-[var(--text-xs)] text-[var(--ui-text-muted)]">
                               No models discovered
                             </span>
                           </div>
@@ -990,9 +1088,9 @@ export function ModelPickerUI({
                             size="sm"
                             onClick={() => {
                               setOpen(false);
-                              onOpenProviderConnect();
+                              onOpenProviderConnect(provider.provider_id);
                             }}
-                            className="h-7 text-xs border-[var(--ui-border-default)] text-[var(--ui-text-primary)] hover:bg-[var(--surface-hover)]"
+                            className="h-7 text-[var(--text-xs)] border-[var(--ui-border-default)] text-[var(--ui-text-primary)] hover:bg-[var(--surface-hover)]"
                           >
                             Connect
                           </Button>
@@ -1002,8 +1100,59 @@ export function ModelPickerUI({
                   );
                 })}
 
+                {/* Registry providers not reported by the backend — available to install or connect */}
+                {filteredInstallable.length > 0 && (
+                  <div className="mb-4">
+                    <h3 className="px-3 py-1 text-[var(--text-xs)] font-semibold uppercase tracking-wider text-[var(--ui-text-muted)]">
+                      Available providers
+                    </h3>
+                    <div className="space-y-0.5">
+                      {filteredInstallable.map((meta) => {
+                        const isCli = meta.kind === "cli";
+                        return (
+                          <Command.Group
+                            key={meta.id}
+                            className="mb-0.5"
+                          >
+                            <div
+                              className={cn(
+                                "flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg hover:bg-[var(--surface-hover)] transition-colors"
+                              )}
+                            >
+                              <div className="flex items-center gap-3 min-w-0">
+                                <ProviderIcon providerId={meta.id} />
+                                <div className="flex flex-col min-w-0">
+                                  <span className="font-semibold text-[var(--text-sm)] text-[var(--ui-text-primary)] truncate">
+                                    {meta.name}
+                                  </span>
+                                  <span className="text-[var(--text-xs)] text-[var(--ui-text-muted)]">
+                                    {isCli ? "CLI runtime" : "Cloud runtime"}
+                                  </span>
+                                </div>
+                              </div>
+                              {onOpenProviderConnect && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setOpen(false);
+                                    onOpenProviderConnect(meta.id);
+                                  }}
+                                  className="h-7 text-[var(--text-xs)] border-[var(--ui-border-default)] text-[var(--ui-text-primary)] hover:bg-[var(--surface-hover)]"
+                                >
+                                  {isCli ? "Install" : "Connect"}
+                                </Button>
+                              )}
+                            </div>
+                          </Command.Group>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 {!hasAnyResults && !providersLoading && (
-                  <Command.Empty className="py-10 text-center text-sm text-[var(--ui-text-muted)]">
+                  <Command.Empty className="py-10 text-center text-[var(--text-sm)] text-[var(--ui-text-muted)]">
                     <Warning
                       size={32}
                       className="mx-auto mb-3 opacity-60"
@@ -1011,13 +1160,27 @@ export function ModelPickerUI({
                     <p className="text-[var(--ui-text-primary)] font-medium">
                       {search
                         ? "No models match your search"
-                        : "No models discovered"}
+                        : "No runtimes discovered"}
                     </p>
-                    <p className="text-xs text-[var(--ui-text-muted)] mt-1">
+                    <p className="text-[var(--text-xs)] text-[var(--ui-text-muted)] mt-1">
                       {search
                         ? "Try a different term or enter a custom model ID."
-                        : "Connect a provider to see available models, or enter a custom model ID."}
+                        : "Install a CLI agent or add an API key to see available models."}
                     </p>
+                    {onOpenProviderConnect && !search && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setOpen(false);
+                          onOpenProviderConnect();
+                        }}
+                        className="mt-4 h-8 text-[var(--text-xs)] border-[var(--ui-border-default)] text-[var(--ui-text-primary)] hover:bg-[var(--surface-hover)]"
+                      >
+                        <Plus size={14} className="mr-1.5" />
+                        Add provider
+                      </Button>
+                    )}
                   </Command.Empty>
                 )}
 
@@ -1028,30 +1191,22 @@ export function ModelPickerUI({
                       type="button"
                       onClick={() => setCustomExpanded((v) => !v)}
                       className={cn(
-                        "w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-left transition-colors",
+                        "w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg text-left transition-colors",
                         customExpanded
-                          ? "bg-[var(--surface-panel)]"
+                          ? "bg-[var(--surface-hover)]"
                           : "hover:bg-[var(--surface-hover)]"
                       )}
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <div
-                          className="size-8 rounded-lg flex items-center justify-center shrink-0"
-                          style={{
-                            background: "var(--surface-panel-muted)",
-                            border: "1px solid var(--ui-border-default)",
-                          }}
-                        >
-                          <Robot
-                            size={18}
-                            className="text-[var(--ui-text-muted)]"
-                          />
-                        </div>
+                        <Robot
+                          size={20}
+                          className="text-[var(--ui-text-muted)] shrink-0"
+                        />
                         <div className="flex flex-col min-w-0">
-                          <span className="font-semibold text-sm text-[var(--ui-text-primary)] truncate">
+                          <span className="font-semibold text-[var(--text-sm)] text-[var(--ui-text-primary)] truncate">
                             Custom model
                           </span>
-                          <span className="text-xs text-[var(--ui-text-muted)]">
+                          <span className="text-[var(--text-xs)] text-[var(--ui-text-muted)]">
                             Enter a model ID manually
                           </span>
                         </div>
@@ -1066,23 +1221,23 @@ export function ModelPickerUI({
                     </button>
 
                     {customExpanded && (
-                      <div className="mt-2 pl-[52px] pr-1 space-y-3">
+                      <div className="mt-2 pl-9 pr-1 space-y-3">
                         <div className="flex items-center gap-2 flex-wrap">
                           <Sparkle
                             size={14}
                             className="text-[var(--accent-chat)]"
                           />
-                          <Label className="text-[var(--ui-text-secondary)] text-sm font-medium">
+                          <Label className="text-[var(--ui-text-secondary)] text-[var(--text-sm)] font-medium">
                             Runtime
                           </Label>
                           <Select
                             value={customProviderId}
                             onValueChange={setCustomProviderId}
                           >
-                            <SelectTrigger className="h-8 w-auto min-w-[160px] text-xs bg-[var(--surface-panel)] border-[var(--ui-border-default)] text-[var(--ui-text-primary)]">
+                            <SelectTrigger className="h-8 w-auto min-w-[160px] text-[var(--text-xs)] bg-[var(--shell-view-bg)] border-[var(--ui-border-default)] text-[var(--ui-text-primary)]">
                               <SelectValue placeholder="Select provider" />
                             </SelectTrigger>
-                            <SelectContent className="bg-[var(--bg-elevated)] border-[var(--ui-border-default)]">
+                            <SelectContent className="bg-[var(--shell-view-bg)] border-[var(--ui-border-default)]">
                               {authenticatedProviders.map((p) => {
                                 const meta = getProviderMeta(p.provider_id);
                                 return (
@@ -1106,7 +1261,7 @@ export function ModelPickerUI({
                             setValidationAttempted(false);
                           }}
                           className={cn(
-                            "bg-[var(--surface-panel)] border-[var(--ui-border-default)] text-[var(--ui-text-primary)] placeholder:text-[var(--ui-text-muted)]",
+                            "bg-[var(--shell-view-bg)] border-[var(--ui-border-default)] text-[var(--ui-text-primary)] placeholder:text-[var(--ui-text-muted)]",
                             validationResult?.valid && "border-status-success",
                             validationResult?.valid === false &&
                               validationAttempted &&
@@ -1114,7 +1269,7 @@ export function ModelPickerUI({
                           )}
                         />
                         {validationLoading && (
-                          <div className="flex items-center gap-2 text-xs text-[var(--ui-text-muted)]">
+                          <div className="flex items-center gap-2 text-[var(--text-xs)] text-[var(--ui-text-muted)]">
                             <CircleNotch className="size-3 animate-spin" />
                             Validating…
                           </div>
@@ -1124,7 +1279,7 @@ export function ModelPickerUI({
                           validationResult && (
                             <div
                               className={cn(
-                                "text-xs flex items-start gap-2",
+                                "text-[var(--text-xs)] flex items-start gap-2",
                                 validationResult.valid
                                   ? "text-status-success"
                                   : "text-status-error"
@@ -1158,7 +1313,7 @@ export function ModelPickerUI({
                                   <button
                                     key={suggestion}
                                     type="button"
-                                    className="inline-flex items-center rounded px-2 py-0.5 text-xs border border-[var(--ui-border-default)] text-[var(--ui-text-secondary)] bg-[var(--surface-panel)] hover:bg-[var(--surface-hover)] transition-colors"
+                                    className="inline-flex items-center rounded px-2 py-0.5 text-[var(--text-xs)] border border-[var(--ui-border-default)] text-[var(--ui-text-secondary)] bg-[var(--shell-view-bg)] hover:bg-[var(--surface-hover)] transition-colors"
                                     onClick={() => {
                                       setFreeformInput(suggestion);
                                       setValidationAttempted(false);
@@ -1176,7 +1331,7 @@ export function ModelPickerUI({
                             background: "var(--accent-chat)",
                             color: "var(--ui-text-inverse)",
                           }}
-                          className="w-full hover:opacity-90"
+                          className="w-full hover:opacity-90 text-[var(--text-sm)]"
                         >
                           Use Custom Model
                         </Button>
@@ -1193,13 +1348,13 @@ export function ModelPickerUI({
             {multiSelect ? (
               <>
                 <div className="flex flex-col min-w-0">
-                  <span className="text-xs text-[var(--ui-text-secondary)]">
+                  <span className="text-[var(--text-xs)] text-[var(--ui-text-secondary)]">
                     {selectedProviderIds.size} provider
                     {selectedProviderIds.size === 1 ? "" : "s"} selected
                   </span>
                   {usageLine && (
                     <span
-                      className="hidden sm:block text-[11px] text-[var(--ui-text-muted)] truncate"
+                      className="hidden sm:block text-[var(--text-xs)] text-[var(--ui-text-muted)] truncate"
                       title="Real usage this reporting period"
                     >
                       {usageLine}
@@ -1215,7 +1370,7 @@ export function ModelPickerUI({
                         setOpen(false);
                         onCancel();
                       }}
-                      className="border-[var(--ui-border-default)] text-[var(--ui-text-primary)] hover:bg-[var(--surface-hover)]"
+                      className="border-[var(--ui-border-default)] text-[var(--ui-text-primary)] hover:bg-[var(--surface-hover)] text-[var(--text-xs)]"
                     >
                       Cancel
                     </Button>
@@ -1225,7 +1380,7 @@ export function ModelPickerUI({
                     size="sm"
                     onClick={() => setSelectedProviderIds(new Set())}
                     disabled={selectedProviderIds.size === 0}
-                    className="text-xs text-[var(--ui-text-muted)] hover:text-[var(--ui-text-primary)] hover:bg-[var(--surface-hover)]"
+                    className="text-[var(--text-xs)] text-[var(--ui-text-muted)] hover:text-[var(--ui-text-primary)] hover:bg-[var(--surface-hover)]"
                   >
                     Clear
                   </Button>
@@ -1237,7 +1392,7 @@ export function ModelPickerUI({
                       background: "var(--accent-chat)",
                       color: "var(--ui-text-inverse)",
                     }}
-                    className="hover:opacity-90"
+                    className="hover:opacity-90 text-[var(--text-sm)]"
                   >
                     Use selected
                   </Button>
@@ -1253,7 +1408,7 @@ export function ModelPickerUI({
                       setOpen(false);
                       onOpenModelLab();
                     }}
-                    className="gap-1.5 h-8 text-xs text-[var(--ui-text-muted)] hover:text-[var(--ui-text-primary)] hover:bg-[var(--surface-hover)]"
+                    className="gap-1.5 h-8 text-[var(--text-xs)] text-[var(--ui-text-muted)] hover:text-[var(--ui-text-primary)] hover:bg-[var(--surface-hover)]"
                   >
                     <Flask size={14} />
                     Model Lab
@@ -1263,7 +1418,7 @@ export function ModelPickerUI({
                 )}
                 {usageLine && (
                   <span
-                    className="hidden sm:block flex-1 text-center text-[11px] text-[var(--ui-text-muted)] truncate"
+                    className="hidden sm:block flex-1 text-center text-[var(--text-xs)] text-[var(--ui-text-muted)] truncate"
                     title="Real usage this reporting period"
                   >
                     {usageLine}
@@ -1276,7 +1431,7 @@ export function ModelPickerUI({
                       setOpen(false);
                       onCancel();
                     }}
-                    className="border-[var(--ui-border-default)] text-[var(--ui-text-primary)] hover:bg-[var(--surface-hover)]"
+                    className="border-[var(--ui-border-default)] text-[var(--ui-text-primary)] hover:bg-[var(--surface-hover)] text-[var(--text-sm)]"
                   >
                     Cancel
                   </Button>
@@ -1287,7 +1442,7 @@ export function ModelPickerUI({
 
           {providersError && (
             <div className="px-4 pb-3">
-              <div className="flex items-start gap-2 rounded-lg border border-status-error/30 bg-status-error-bg px-3 py-2 text-xs text-status-error">
+              <div className="flex items-start gap-2 rounded-lg border border-status-error/30 bg-status-error-bg px-3 py-2 text-[var(--text-xs)] text-status-error">
                 <Warning size={14} className="mt-0.5 shrink-0" />
                 <span>Failed to load providers. Please try again.</span>
               </div>

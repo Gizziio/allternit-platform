@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { isEnvDefinedFalsy, isEnvTruthy } from '../../utils/envUtils.js'
+import { readGizziEnv } from '@/shared/utils/gizziEnv.js';
 import { AGENT_TOOL_NAME } from '../AgentTool/constants.js'
 import { BASH_TOOL_NAME } from '../BashTool/toolName.js'
 import { FILE_EDIT_TOOL_NAME } from '../FileEditTool/constants.js'
@@ -13,7 +14,7 @@ export const REPL_TOOL_NAME = 'REPL'
 
 /**
  * REPL mode is default-on for ants in the interactive CLI (opt out with
- * CLAUDE_CODE_REPL=0). The legacy CLAUDE_REPL_MODE=1 also forces it on.
+ * GIZZI_CODE_REPL=0). The legacy GIZZI_REPL_MODE=1 also forces it on.
  *
  * SDK entrypoints (sdk-ts, sdk-py, sdk-cli) are NOT defaulted on — SDK
  * consumers script direct tool calls (Bash, Read, etc.) and REPL mode
@@ -22,11 +23,11 @@ export const REPL_TOOL_NAME = 'REPL'
  * of the env the caller passes.
  */
 export function isReplModeEnabled(): boolean {
-  if (isEnvDefinedFalsy(process.env.CLAUDE_CODE_REPL)) return false
-  if (isEnvTruthy(process.env.CLAUDE_REPL_MODE)) return true
+  if (isEnvDefinedFalsy(process.env.GIZZI_CODE_REPL)) return false
+  if (isEnvTruthy(process.env.GIZZI_REPL_MODE)) return true
   return (
     process.env.USER_TYPE === 'ant' &&
-    process.env.CLAUDE_CODE_ENTRYPOINT === 'cli'
+    readGizziEnv('ENTRYPOINT') === 'cli'
   )
 }
 

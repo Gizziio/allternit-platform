@@ -8,7 +8,7 @@ mod embedded {
     embed_migrations!("migrations");
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct DbHandle {
     path: PathBuf,
 }
@@ -25,6 +25,14 @@ impl DbHandle {
         })?;
         info!("SQLite DB ready at {}", path.display());
         Ok(Self { path })
+    }
+
+    /// Open an isolated temporary-file database. Useful for unit tests that need
+    /// the full migration stack and reliable multi-connection semantics.
+    pub fn new_memory() -> SqlResult<Self> {
+        let name = uuid::Uuid::new_v4().to_string();
+        let path = std::env::temp_dir().join(format!("allternit-test-{name}.db"));
+        Self::new(path)
     }
 
     pub fn connect(&self) -> SqlResult<Connection> {
@@ -91,6 +99,46 @@ impl DbHandle {
             rusqlite::params![session_id],
         )?;
         Ok(())
+    }
+
+    /// Store the frontend metadata bag for a session.
+    pub fn set_session_metadata(
+        &self,
+        session_id: &str,
+        metadata: &serde_json::Value,
+    ) -> SqlResult<()> {
+        let conn = self.connect()?;
+        let json = metadata.to_string();
+        conn.execute(
+            "INSERT INTO session_metadata (session_id, metadata)
+             VALUES (?1, ?2)
+             ON CONFLICT(session_id) DO UPDATE SET
+                 metadata = excluded.metadata,
+                 updated_at = CURRENT_TIMESTAMP",
+            rusqlite::params![session_id, json],
+        )?;
+        Ok(())
+    }
+
+    /// Retrieve the frontend metadata bag for a session, if any.
+    pub fn get_session_metadata(
+        &self,
+        session_id: &str,
+    ) -> SqlResult<Option<serde_json::Value>> {
+        let conn = self.connect()?;
+        let mut stmt =
+            conn.prepare("SELECT metadata FROM session_metadata WHERE session_id = ?1")?;
+        let result = stmt.query_row(rusqlite::params![session_id], |row| {
+            let json: String = row.get(0)?;
+            Ok(serde_json::from_str::<serde_json::Value>(&json)
+                .unwrap_or(serde_json::Value::Null))
+        });
+        match result {
+            Ok(value) if !value.is_null() => Ok(Some(value)),
+            Ok(_) => Ok(None),
+            Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+            Err(e) => Err(e),
+        }
     }
 
     // ─── HAR-derived API capture persistence ────────────────────────────────────

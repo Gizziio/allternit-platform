@@ -25,9 +25,13 @@ import { app, ipcMain } from 'electron';
 import { spawn, type ChildProcess } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import log from 'electron-log';
 import { authManager } from './auth-manager.js';
 import { URLS } from './config.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export type MeshState = 'stopped' | 'starting' | 'running' | 'error';
 
@@ -181,6 +185,17 @@ class MeshManager {
     this.starting = undefined;
     this.setState('stopped');
     log.info('[Mesh] Stopped all mesh-node sidecars');
+  }
+
+  resolveSidecarPath(): string | null {
+    return this.resolveBinaryPath();
+  }
+
+  async enrollForGizzi(): Promise<{ authKey: string; controlUrl: string } | null> {
+    const session = await authManager.getSession();
+    if (!session) return null;
+    const enrollment = await this.enroll();
+    return { authKey: enrollment.authKey, controlUrl: enrollment.controlUrl };
   }
 
   /** Binary discovery mirrors gizzi-manager: packaged resources/bin first, then the repo vendor tree, then an env override. */

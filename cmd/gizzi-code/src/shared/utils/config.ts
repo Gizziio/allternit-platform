@@ -19,7 +19,7 @@ import { registerCleanup } from './cleanupRegistry.js'
 import { logForDebugging } from './debug.js'
 import { logForDiagnosticsNoPII } from './diagLogs.js'
 import { getGlobalClaudeFile } from './env.js'
-import { getClaudeConfigHomeDir, isEnvTruthy } from './envUtils.js'
+import { getLegacyClaudeHomeDir, isEnvTruthy } from './envUtils.js'
 import { ConfigParseError, getErrnoCode } from './errors.js'
 import { writeFileSyncAndFlush_DEPRECATED } from './file.js'
 import { getFsImplementation } from './fsOperations.js'
@@ -231,6 +231,8 @@ export type GlobalConfig = {
   oauthAccount?: AccountInfo
   iterm2KeyBindingInstalled?: boolean // Legacy - keeping for backward compatibility
   editorMode?: EditorMode
+  showMessageTimestamps?: boolean
+  multilineEnter?: boolean // When true, plain Enter inserts a newline and Shift/Cmd+Enter submits
   bypassPermissionsModeAccepted?: boolean
   hasUsedBackslashReturn?: boolean
   autoCompactEnabled: boolean // Controls whether auto-compact is enabled
@@ -512,7 +514,7 @@ export type GlobalConfig = {
   // Gizzi hint protocol state (<gizzi-hint /> tags from CLIs/SDKs).
   // Nested by hint type so future types (docs, mcp, ...) slot in without new
   // top-level keys.
-  claudeCodeHints?: {
+  gizziHints?: {
     // Plugin IDs the user has already been prompted for. Show-once semantics:
     // recorded regardless of yes/no response, never re-prompted. Capped at
     // 100 entries to bound config growth — past that, hints stop entirely.
@@ -593,6 +595,8 @@ function createDefaultGlobalConfig(): GlobalConfig {
     preferredNotifChannel: 'auto',
     verbose: false,
     editorMode: 'normal',
+    showMessageTimestamps: false,
+    multilineEnter: false,
     autoCompactEnabled: true,
     showTurnDuration: true,
     hasSeenTasksHint: false,
@@ -636,6 +640,8 @@ export const GLOBAL_CONFIG_KEYS = [
   'preferredNotifChannel',
   'shiftEnterKeyBindingInstalled',
   'editorMode',
+  'showMessageTimestamps',
+  'multilineEnter',
   'hasUsedBackslashReturn',
   'autoCompactEnabled',
   'showTurnDuration',
@@ -1182,7 +1188,7 @@ function saveConfigWithLock<A extends object>(
     const lockTime = Date.now() - startTime
     if (lockTime > 100) {
       logForDebugging(
-        'Lock acquisition took longer than expected - another Claude instance may be running',
+        'Lock acquisition took longer than expected - another Gizzi instance may be running',
       )
       logEvent('tengu_config_lock_contention', {
         lock_time_ms: lockTime,
@@ -1365,7 +1371,7 @@ export function enableConfigs(): void {
  * Uses ~/.claude/backups/ to keep the home directory clean.
  */
 function getConfigBackupDir(): string {
-  return join(getClaudeConfigHomeDir(), 'backups')
+  return join(getLegacyClaudeHomeDir(), 'backups')
 }
 
 /**
@@ -1459,7 +1465,7 @@ function getConfig<A>(
       const backupPath = findMostRecentBackup(file)
       if (backupPath) {
         process.stderr.write(
-          `\nClaude configuration file not found at: ${file}\n` +
+          `\nGizzi configuration file not found at: ${file}\n` +
             `A backup file exists at: ${backupPath}\n` +
             `You can manually restore it by running: cp "${backupPath}" "${file}"\n\n`,
         )
@@ -1506,7 +1512,7 @@ function getConfig<A>(
       }
 
       process.stderr.write(
-        `\nClaude configuration file at ${file} is corrupted: ${error.message}\n`,
+        `\nGizzi configuration file at ${file} is corrupted: ${error.message}\n`,
       )
 
       // Try to backup the corrupted config file (only if not already backed up)
@@ -1824,7 +1830,7 @@ export function getMemoryPath(memoryType: MemoryType): string {
 
   switch (memoryType) {
     case 'User':
-      return pickMemoryFile(join(getClaudeConfigHomeDir(), 'GIZZI.md'), join(getClaudeConfigHomeDir(), 'CLAUDE.md'))
+      return pickMemoryFile(join(getLegacyClaudeHomeDir(), 'GIZZI.md'), join(getLegacyClaudeHomeDir(), 'CLAUDE.md'))
     case 'Local':
       return pickMemoryFile(join(cwd, 'GIZZI.local.md'), join(cwd, 'CLAUDE.local.md'))
     case 'Project':
@@ -1843,12 +1849,12 @@ export function getMemoryPath(memoryType: MemoryType): string {
   return '' // unreachable in external builds where TeamMem is not in MemoryType
 }
 
-export function getManagedClaudeRulesDir(): string {
+export function getManagedGizziRulesDir(): string {
   return join(getManagedFilePath(), '.claude', 'rules')
 }
 
-export function getUserClaudeRulesDir(): string {
-  return join(getClaudeConfigHomeDir(), 'rules')
+export function getUserGizziRulesDir(): string {
+  return join(getLegacyClaudeHomeDir(), 'rules')
 }
 
 // Exported for testing only

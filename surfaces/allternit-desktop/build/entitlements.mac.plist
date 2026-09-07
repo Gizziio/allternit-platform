@@ -26,6 +26,12 @@
   <key>com.apple.security.automation.apple-events</key>
   <true/>
 
+  <!-- Native dictation in call mode. -->
+  <key>com.apple.security.device.microphone</key>
+  <true/>
+  <key>com.apple.security.personal-information.speech-recognition</key>
+  <true/>
+
   <!-- File system access for VM images and user data -->
   <key>com.apple.security.files.user-selected.read-write</key>
   <true/>

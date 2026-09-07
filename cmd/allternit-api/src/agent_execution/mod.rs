@@ -13,6 +13,8 @@ use thiserror::Error;
 use tokio::process::Command;
 use tracing::{debug, warn};
 
+use crate::env_allowlist::minimal_child_env;
+
 use allternit_driver_interface::{
     CommandSpec, EnvironmentSpec, ExecutionDriver, PolicySpec, ResourceSpec, SpawnSpec, TenantId,
 };
@@ -140,7 +142,10 @@ async fn dispatch_via_driver(
 async fn dispatch_via_shell(job: JobSpec) -> Result<JobResult, AgentExecutionError> {
     let start = std::time::Instant::now();
     let mut cmd = Command::new(&job.command);
-    cmd.args(&job.args).envs(&job.env);
+    // Never inherit the API environment; only forward the allowlist plus the
+    // explicit variables supplied in the job spec.
+    cmd.env_clear().envs(minimal_child_env(Some(job.env.clone())));
+    cmd.args(&job.args);
     if let Some(dir) = &job.working_dir {
         cmd.current_dir(dir);
     }

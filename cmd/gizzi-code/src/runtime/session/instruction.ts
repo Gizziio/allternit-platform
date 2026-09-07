@@ -14,7 +14,7 @@ import { ANTI_PATTERNS_FILENAME, pickWinner, ROOT_INSTRUCTION_FILENAMES } from "
 const log = Log.create({ service: "instruction" })
 
 // GIZZI.md is canonical; CLAUDE.md/AGENTS.md/CONTEXT.md are read for compat
-// (crossing over from Claude Code, or the cross-tool AGENTS.md convention).
+// (crossing over from gizzi-code, or the cross-tool AGENTS.md convention).
 // Order matters: this is precedence, not a set of independently-loaded files —
 // see agentFileResolver.ts, the shared source of truth for this order across
 // both this (headless/server) pipeline and the interactive TUI pipeline.
@@ -122,7 +122,7 @@ function globalFiles() {
     files.push(path.join(Flag.GIZZI_CONFIG_DIR, "AGENTS.md"))
   }
   files.push(path.join(Global.Path.config, "AGENTS.md"))
-  if (!Flag.GIZZI_DISABLE_CLAUDE_CODE_PROMPT) {
+  if (!Flag.GIZZI_DISABLE_LEGACY_PROMPT) {
     files.push(path.join(os.homedir(), ".claude", "CLAUDE.md"))
   }
   return files

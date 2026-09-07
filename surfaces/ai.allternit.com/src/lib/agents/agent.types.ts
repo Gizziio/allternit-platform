@@ -20,9 +20,9 @@ const logger = createModuleLogger('Agent');
 export type { AvatarConfig } from './character.types';
 
 // Agent Types
-export type AgentType = 'orchestrator' | 'sub-agent' | 'worker' | 'specialist' | 'reviewer';
+export type AgentType = 'orchestrator' | 'sub-agent' | 'worker' | 'specialist' | 'reviewer' | 'assistant';
 
-export type AppMode = 'chat' | 'cowork' | 'code' | 'design' | 'browser';
+export type AppMode = 'chat' | 'cowork' | 'bot' | 'code' | 'design' | 'browser';
 
 // Harness configuration (canonical @allternit/sdk/harness shape)
 export interface HarnessBYOKProviderConfig {
@@ -413,12 +413,23 @@ export interface BotProfile {
   defaultPresetId?: string;
   /** Functional bot category for filtering in the hub (distinct from agent category) */
   botCategory?: BotCategory;
+  /**
+   * User-managed Bot Hub section this bot belongs to (spec Phase 5).
+   * Defaults to `category:<botCategory>` when unset so existing bots land in
+   * sensible buckets. Membership lives on the bot: deleting a section never
+   * orphans the bot — it falls back to the "All bots" bucket.
+   */
+  sectionId?: string;
   /** Lifecycle state: draft, active, archived, deprecated */
   lifecycle?: 'draft' | 'active' | 'archived' | 'deprecated';
   /** Deterministic bot avatar stored in bot metadata. */
   avatar?: BotAvatar;
+  /** Keep this bot at the top of the roster (synced on the agent record). */
+  pinned?: boolean;
+  /** Hide from the roster without deleting (synced on the agent record). */
+  hidden?: boolean;
 
-  /** External platform that owns this bot (e.g. 'hermes', 'openclaw', 'grok') */
+  /** External platform that owns this bot (e.g. 'hermes', 'openclaw') */
   providerId?: string;
   /** Stable identifier within the external platform's namespace */
   externalId?: string;
@@ -487,16 +498,41 @@ export type AgentWalletPaymentMethod = 'send' | 'receive' | 'swap' | 'stake' | '
 
 /**
  * VM Operator configuration for agents/bots that run tasks inside a sandboxed
- * virtual computer. This is the schema-level primitive; the actual runtime may
- * dispatch to OpenSandbox, Docker, Kubernetes, or a local runner based on the
- * provider field.
+ * virtual computer. This is the schema-level primitive; the actual runtime
+ * dispatches through `/api/v1/computers` onto Allternit Computer Cloud:
+ * Incus (Linux/Windows), Tart (macOS), Lume (local macOS VM), or host.
+ * `cloud-desktop` is the control-plane alias for the Incus/Tart path.
  */
+export type AgentVMComputerKind =
+  | 'local'
+  | 'byo_vps'
+  | 'managed'
+  | 'byoc'
+  | 'cloud_desktop';
+
+export type AgentVMProviderName =
+  | 'cloud-desktop'
+  | 'incus'
+  | 'tart'
+  | 'lume'
+  | 'docker'
+  | 'kubernetes'
+  | 'local'
+  | 'custom'
+  | 'host';
+
 export interface AgentVMOperatorConfig {
   /** Whether the bot may use a virtual computer to execute tasks */
   enabled: boolean;
   /** Runtime provider that provisions and manages the sandbox */
-  provider: 'opensandbox' | 'docker' | 'kubernetes' | 'local' | 'custom';
-  /** Sandbox image / environment (e.g. opensandbox/desktop:v1.0.0) */
+  provider: AgentVMProviderName;
+  /** Unified computer kind used by the control plane (defaults to cloud_desktop) */
+  computerKind?: AgentVMComputerKind;
+  /** Desktop Cloud template id to use when provisioning */
+  templateId?: string;
+  /** Cloud desktop control-plane URL (only used when provider is 'cloud-desktop') */
+  endpoint?: string;
+  /** Guest image / environment (e.g. ubuntu/desktop or tart://macos) */
   image?: string;
   /** Resource limits for the sandbox */
   resources?: {
@@ -524,8 +560,26 @@ export interface AgentVMOperatorConfig {
 
 export type AgentVMAction = NonNullable<AgentVMOperatorConfig['allowedActions']>[number];
 export type AgentVMProvider = AgentVMOperatorConfig['provider'];
+export type AgentVMComputerKindType = NonNullable<AgentVMOperatorConfig['computerKind']>;
 export type AgentVMNetworkPolicy = NonNullable<AgentVMOperatorConfig['networkPolicy']>;
 export type AgentVMPersistence = NonNullable<AgentVMOperatorConfig['persistence']>;
+
+/** Map leftover stored `opensandbox` records onto Computer Cloud. */
+export function coerceVmProviderName(
+  provider: string | null | undefined,
+): AgentVMProviderName {
+  if (!provider || provider === 'opensandbox') return 'cloud-desktop';
+  return provider as AgentVMProviderName;
+}
+
+export function coerceVmOperatorConfig(
+  config: AgentVMOperatorConfig | undefined | null,
+): AgentVMOperatorConfig | undefined {
+  if (!config) return undefined;
+  const provider = coerceVmProviderName(config.provider);
+  if (provider === config.provider) return config;
+  return { ...config, provider };
+}
 
 // Zod schemas for autonomous bot primitives
 export const agentConnectorBindingSchema = z.object({
@@ -585,7 +639,13 @@ export const agentIdentityChannelsSchema = z.object({
 
 export const agentVMOperatorConfigSchema = z.object({
   enabled: z.boolean(),
-  provider: z.enum(['opensandbox', 'docker', 'kubernetes', 'local', 'custom']),
+  provider: z.preprocess(
+    (value) => (value === 'opensandbox' ? 'cloud-desktop' : value),
+    z.enum(['cloud-desktop', 'incus', 'tart', 'lume', 'docker', 'kubernetes', 'local', 'custom', 'host']),
+  ),
+  computerKind: z.enum(['local', 'byo_vps', 'managed', 'byoc', 'cloud_desktop']).optional(),
+  templateId: z.string().optional(),
+  endpoint: z.string().optional(),
   image: z.string().optional(),
   resources: z.object({
     cpu: z.string().optional(),
@@ -607,7 +667,7 @@ export const agentSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1).max(100),
   description: z.string(),
-  type: z.enum(['orchestrator', 'sub-agent', 'worker', 'specialist', 'reviewer']),
+  type: z.enum(['orchestrator', 'sub-agent', 'worker', 'specialist', 'reviewer', 'assistant']),
   parentAgentId: z.string().optional(),
   model: z.string().min(1),
   provider: z.enum(['openai', 'anthropic', 'google', 'local', 'custom']),
@@ -627,7 +687,7 @@ export const agentSchema = z.object({
   source: z.enum(['personal', 'vendor', 'organization']).optional(),
   avatar: z.any().optional(),
   characterLayer: z.any().optional(),
-  trustTier: z.enum(['safe', 'low', 'standard', 'elevated', 'admin', 'critical']).optional(),
+  trustTier: z.enum(['safe', 'low', 'standard', 'elevated', 'admin', 'critical', 'medium']).optional(),
   harness: harnessConfigSchema.optional(),
   allowedSurfaces: z.array(z.enum(['chat', 'cowork', 'code', 'design', 'browser'])).optional(),
   allowedSkills: z.array(z.string()).optional(),
@@ -674,6 +734,7 @@ export const agentSchema = z.object({
     groupChatEnabled: z.boolean().optional(),
     defaultPresetId: z.string().optional(),
     botCategory: z.enum(['research', 'code', 'writing', 'data', 'sales', 'design', 'ops', 'custom']).optional(),
+    sectionId: z.string().optional(),
     lifecycle: z.enum(['draft', 'active', 'archived', 'deprecated']).optional(),
     avatar: z.any().optional(),
   }).optional(),
@@ -682,6 +743,7 @@ export const agentSchema = z.object({
   secretRefs: z.array(agentSecretRefSchema).optional(),
   messagingConfig: agentMessagingConfigSchema.optional(),
   identityChannels: agentIdentityChannelsSchema.optional(),
+  vmOperator: agentVMOperatorConfigSchema.optional(),
 });
 
 // Schema for validating array of agents (API response)
@@ -789,7 +851,7 @@ export interface CreateAgentInput {
 const createAgentInputSchema = z.object({
   name: z.string().min(1).max(100),
   description: z.string(),
-  type: z.enum(['orchestrator', 'sub-agent', 'worker', 'specialist', 'reviewer']).optional(),
+  type: z.enum(['orchestrator', 'sub-agent', 'worker', 'specialist', 'reviewer', 'assistant']).optional(),
   parentAgentId: z.string().optional(),
   model: z.string().min(1),
   provider: z.enum(['openai', 'anthropic', 'google', 'local', 'custom']),
@@ -805,7 +867,7 @@ const createAgentInputSchema = z.object({
   source: z.enum(['personal', 'vendor', 'organization']).optional(),
   avatar: z.any().optional(),
   characterLayer: z.any().optional(),
-  trustTier: z.enum(['safe', 'low', 'standard', 'elevated', 'admin', 'critical']).optional(),
+  trustTier: z.enum(['safe', 'low', 'standard', 'elevated', 'admin', 'critical', 'medium']).optional(),
   harness: harnessConfigSchema.optional(),
   allowedSurfaces: z.array(z.enum(['chat', 'cowork', 'code', 'design', 'browser'])).optional(),
   allowedSkills: z.array(z.string()).optional(),
@@ -824,6 +886,7 @@ const createAgentInputSchema = z.object({
     groupChatEnabled: z.boolean().optional(),
     defaultPresetId: z.string().optional(),
     botCategory: z.enum(['research', 'code', 'writing', 'data', 'sales', 'design', 'ops', 'custom']).optional(),
+    sectionId: z.string().optional(),
   }).optional(),
   brainId: z.string().optional(),
   connectorBindings: z.array(agentConnectorBindingSchema).optional(),

@@ -2,6 +2,13 @@
 
 > **Status**: Updated February 2026 - Post-Consolidation  
 > **Note**: This document reflects the current structure after Rust → TypeScript consolidation. See [MIGRATION.md](../MIGRATION.md) for migration details.
+>
+> **STALE PATHS (verified 2026-09-03, a0f8230b5):** The `6-ui/…` and
+> `7-apps/…` layer directories described below no longer exist in this repo.
+> The live platform UI is a Vite + React SPA at `surfaces/ai.allternit.com/`
+> (dev port 3013) and the cloud console is `surfaces/platform.allternit.com/`
+> (Vite, port 3016). Treat this document as historical context for the
+> service/hook designs, not as a path map.
 
 ---
 

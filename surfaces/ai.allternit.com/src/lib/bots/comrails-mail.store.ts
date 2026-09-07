@@ -8,6 +8,16 @@
 import { createWithEqualityFn } from 'zustand/traditional';
 import { shallow } from 'zustand/shallow';
 import { railsApi, type MailMessage } from '@/lib/agents/rails.service';
+import { isRailsApiEnabled } from '@/lib/env';
+import { classifyFailure, type FailureReason } from '@/lib/bots/failure-reasons';
+
+// Rails mail (/api/rails/mail/*) is served only by the Rust allternit-api
+// (:8013), not publicly reachable from the deployed web surface. When
+// NEXT_PUBLIC_ALLTERNIT_RAILS_API is unset (default), every action below
+// fails closed with this deliberate message instead of firing requests.
+const RAILS_API_DISABLED_MESSAGE =
+  'Rails mail is disabled in this deployment (set NEXT_PUBLIC_ALLTERNIT_RAILS_API=1 where the gateway is reachable).';
+
 import { createModuleLogger } from '@/lib/logger';
 import type { AgentMailMessage, AgentMailThread, SendMailInput } from '@/lib/agents/agent.types';
 
@@ -34,6 +44,13 @@ export interface SendGroupMailInput {
   requiresAck?: boolean;
 }
 
+interface MailDeliveryResult {
+  sent: boolean;
+  messageId?: string;
+  /** Typed failure reason on delivery failure (spec AD-3). */
+  reason?: FailureReason;
+}
+
 interface CommRailsMailActions {
   loadInbox: (agentId: string, limit?: number) => Promise<void>;
   loadThreads: (agentId: string) => Promise<void>;
@@ -41,7 +58,7 @@ interface CommRailsMailActions {
   sendMail: (
     fromAgentId: string,
     input: SendMailInput,
-  ) => Promise<{ sent: boolean; messageId?: string }>;
+  ) => Promise<MailDeliveryResult>;
   createGroupThread: (
     fromAgentId: string,
     input: CreateGroupThreadInput,
@@ -49,7 +66,7 @@ interface CommRailsMailActions {
   sendGroupMail: (
     fromAgentId: string,
     input: SendGroupMailInput,
-  ) => Promise<{ sent: boolean; messageId?: string }>;
+  ) => Promise<MailDeliveryResult>;
   acknowledgeMail: (agentId: string, messageId: string) => Promise<void>;
   getUnreadCount: (agentId: string) => number;
   reset: () => void;
@@ -70,6 +87,7 @@ export const useCommRailsMailStore = createWithEqualityFn<CommRailsMailState & C
     loadInbox: async (agentId: string, limit = 50) => {
       set({ isLoading: true, error: null });
       try {
+        if (!isRailsApiEnabled()) throw new Error(RAILS_API_DISABLED_MESSAGE);
         const response = await railsApi.mail.inbox({ agent_id: agentId, limit });
         const messages = (response.messages || []).map(transformRailsMessage);
         set({ messages, isLoading: false, lastLoadedAt: Date.now() });
@@ -83,6 +101,7 @@ export const useCommRailsMailStore = createWithEqualityFn<CommRailsMailState & C
     loadThreads: async (agentId: string) => {
       set({ isLoading: true, error: null });
       try {
+        if (!isRailsApiEnabled()) throw new Error(RAILS_API_DISABLED_MESSAGE);
         const response = await railsApi.mail.threads();
         const threads = (response.threads || [])
           .filter((t) => t.messages > 0)
@@ -102,6 +121,7 @@ export const useCommRailsMailStore = createWithEqualityFn<CommRailsMailState & C
 
     sendMail: async (fromAgentId: string, input: SendMailInput) => {
       try {
+        if (!isRailsApiEnabled()) throw new Error(RAILS_API_DISABLED_MESSAGE);
         const participants = [fromAgentId, input.toAgentId].filter(Boolean) as string[];
         const thread = await railsApi.mail.ensureThread(input.subject, participants);
         const result = await railsApi.mail.send({
@@ -119,12 +139,13 @@ export const useCommRailsMailStore = createWithEqualityFn<CommRailsMailState & C
         const message = err instanceof Error ? err.message : 'Failed to send mail';
         logger.error({ from: fromAgentId, to: input.toAgentId, err }, message);
         set({ error: message });
-        return { sent: false };
+        return { sent: false, reason: classifyFailure(err) };
       }
     },
 
     createGroupThread: async (fromAgentId: string, input: CreateGroupThreadInput) => {
       try {
+        if (!isRailsApiEnabled()) throw new Error(RAILS_API_DISABLED_MESSAGE);
         const participants = Array.from(new Set([fromAgentId, ...input.memberIds]));
         const thread = await railsApi.mail.ensureThread(input.name, participants);
         return { created: true, threadId: thread.thread_id };
@@ -138,6 +159,7 @@ export const useCommRailsMailStore = createWithEqualityFn<CommRailsMailState & C
 
     sendGroupMail: async (fromAgentId: string, input: SendGroupMailInput) => {
       try {
+        if (!isRailsApiEnabled()) throw new Error(RAILS_API_DISABLED_MESSAGE);
         const result = await railsApi.mail.send({
           thread_id: input.threadId,
           body: input.body,
@@ -151,12 +173,13 @@ export const useCommRailsMailStore = createWithEqualityFn<CommRailsMailState & C
         const message = err instanceof Error ? err.message : 'Failed to send group mail';
         logger.error({ from: fromAgentId, threadId: input.threadId, err }, message);
         set({ error: message });
-        return { sent: false };
+        return { sent: false, reason: classifyFailure(err) };
       }
     },
 
     acknowledgeMail: async (_agentId: string, messageId: string) => {
       try {
+        if (!isRailsApiEnabled()) throw new Error(RAILS_API_DISABLED_MESSAGE);
         const message = get().messages.find((m) => m.id === messageId);
         const threadId = message?.threadId || 'default';
         await railsApi.mail.ack(threadId, messageId);

@@ -14,6 +14,19 @@ const DATADOG_LOGS_ENDPOINT =
   'https://http-intake.logs.us5.datadoghq.com/api/v2/logs'
 const DATADOG_CLIENT_TOKEN = 'pubbbf48e6d78dae54bceaa4acf463299bf'
 const DEFAULT_FLUSH_INTERVAL_MS = 15000
+
+/**
+ * FORK: this sink is disabled by default.
+ *
+ * The intake endpoint and client token above belong to the upstream vendor's
+ * Datadog account, not to Allternit — events sent there would phone home to a
+ * third party the user never consented to. cloudUrls.ts exposes no
+ * Allternit-owned Datadog/telemetry endpoint to repoint to (api.allternit.com
+ * is already served by the first-party event-logging sink), so per the fork's
+ * telemetry policy this sink stays off. Events continue to flow to the
+ * Allternit-owned 1P exporter when telemetry is enabled.
+ */
+const DATADOG_SINK_ENABLED = false
 const MAX_BATCH_SIZE = 100
 const NETWORK_TIMEOUT_MS = 5000
 
@@ -129,7 +142,7 @@ function scheduleFlush(): void {
 }
 
 export const initializeDatadog = memoize(async (): Promise<boolean> => {
-  if (isAnalyticsDisabled()) {
+  if (!DATADOG_SINK_ENABLED || isAnalyticsDisabled()) {
     datadogInitialized = false
     return false
   }
@@ -162,6 +175,9 @@ export async function trackDatadogEvent(
   eventName: string,
   properties: { [key: string]: boolean | number | undefined },
 ): Promise<void> {
+  if (!DATADOG_SINK_ENABLED) {
+    return
+  }
   if (process.env.NODE_ENV !== 'production') {
     return
   }

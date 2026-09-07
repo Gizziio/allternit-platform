@@ -23,7 +23,7 @@ import {
   logEvent,
 } from 'src/services/analytics/index.js'
 import { logForDebugging } from '../debug.js'
-import { getClaudeConfigHomeDir } from '../envUtils.js'
+import { getLegacyClaudeHomeDir } from '../envUtils.js'
 import { getErrnoCode } from '../errors.js'
 import { execFileNoThrow } from '../execFileNoThrow.js'
 import { getInitialSettings } from '../settings/settings.js'
@@ -31,7 +31,7 @@ import { which } from '../which.js'
 import { getUserBinDir, getXDGDataHome } from '../xdg.js'
 import { DEEP_LINK_PROTOCOL } from './parseDeepLink.js'
 
-export const MACOS_BUNDLE_ID = 'com.anthropic.gizzi-url-handler'
+export const MACOS_BUNDLE_ID = 'com.allternit.gizzi-url-handler'
 const APP_NAME = 'Gizzi URL Handler'
 const DESKTOP_FILE_NAME = 'gizzi-url-handler.desktop'
 const MACOS_APP_NAME = 'Gizzi URL Handler.app'
@@ -314,7 +314,7 @@ export async function ensureDeepLinkProtocolRegistered(): Promise<void> {
   // doesn't generate a failure event on every startup. Marker lives in
   // ~/.claude (per-machine, not synced) rather than ~/.claude.json (can sync).
   const failureMarkerPath = path.join(
-    getClaudeConfigHomeDir(),
+    getLegacyClaudeHomeDir(),
     '.deep-link-register-failed',
   )
   try {
@@ -330,6 +330,7 @@ export async function ensureDeepLinkProtocolRegistered(): Promise<void> {
     await registerProtocolHandler(claudePath)
     logEvent('tengu_deep_link_registered', { success: true })
     logForDebugging('Auto-registered claude-cli:// deep link protocol handler')
+    // Marker cleanup is best-effort; a stale marker only re-enables the retry prompt.
     await fs.rm(failureMarkerPath, { force: true }).catch(() => {})
   } catch (error) {
     const code = getErrnoCode(error)
@@ -343,6 +344,7 @@ export async function ensureDeepLinkProtocolRegistered(): Promise<void> {
       { level: 'warn' },
     )
     if (code === 'EACCES' || code === 'ENOSPC') {
+      // Best-effort: without the marker the user just sees the error output.
       await fs.writeFile(failureMarkerPath, '').catch(() => {})
     }
   }

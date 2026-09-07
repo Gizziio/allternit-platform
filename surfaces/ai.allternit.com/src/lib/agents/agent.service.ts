@@ -38,6 +38,7 @@ import {
   validateCreateAgentInput,
   safeValidate,
   agentSchema,
+  coerceVmOperatorConfig,
 } from './agent.types';
 import { getDefaultAgentModel } from './agent-models';
 import {
@@ -56,7 +57,21 @@ export { API_BASE_URL, apiRequest, apiRequestWithError, type ApiResponse };
 
 // Import Rails API for advanced features
 import { railsApi, type WihInfo } from './rails.service';
+import { isRailsApiEnabled } from '@/lib/env';
 import { createModuleLogger } from '@/lib/logger';
+
+/**
+ * The Rails WIH/gate calls below target /api/rails/*, served only by the
+ * Rust allternit-api (:8013) — not publicly reachable from the deployed web
+ * surface. Throw a deliberate error instead of firing a request that 404s.
+ */
+function assertRailsApiEnabled(): void {
+  if (!isRailsApiEnabled()) {
+    throw new Error(
+      'Agent run telemetry is disabled in this deployment (the Rails API is not publicly reachable; set NEXT_PUBLIC_ALLTERNIT_RAILS_API=1 where the gateway is reachable).'
+    );
+  }
+}
 
 const logger = createModuleLogger('AgentService');
 
@@ -245,6 +260,7 @@ export async function createAgent(input: CreateAgentInput): Promise<Agent> {
     secret_refs: input.secretRefs,
     messaging_config: input.messagingConfig,
     identity_channels: input.identityChannels,
+    vm_operator: input.vmOperator,
   };
 
   // Persist bot metadata in config as a fallback for backends that don't have
@@ -265,7 +281,8 @@ export async function createAgent(input: CreateAgentInput): Promise<Agent> {
     input.connectorBindings ||
     input.secretRefs ||
     input.messagingConfig ||
-    input.identityChannels
+    input.identityChannels ||
+    input.vmOperator
   ) {
     apiInput.config = {
       ...(apiInput.config as Record<string, unknown> || {}),
@@ -273,6 +290,7 @@ export async function createAgent(input: CreateAgentInput): Promise<Agent> {
       ...(input.secretRefs ? { secretRefs: input.secretRefs } : {}),
       ...(input.messagingConfig ? { messagingConfig: input.messagingConfig } : {}),
       ...(input.identityChannels ? { identityChannels: input.identityChannels } : {}),
+      ...(input.vmOperator ? { vmOperator: input.vmOperator } : {}),
     };
   }
 
@@ -286,7 +304,7 @@ export async function createAgent(input: CreateAgentInput): Promise<Agent> {
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
         logger.debug(`API call attempt ${attempt + 1}/${maxRetries}`);
-        const response = await api.createAgent(apiInput as Omit<Agent, 'id'>);
+        const response = await api.createAgent(apiInput as Parameters<typeof api.createAgent>[0]);
         logger.debug(`Agent created in ${Date.now() - startTime}ms`);
         // allternit-api's create response only carries { agent: { id } } — no
         // other fields — so merge the generated id over what we already sent
@@ -413,6 +431,13 @@ export function transformAgentFromApi(apiAgent: unknown): Agent {
       a.identityChannels as Agent['identityChannels'],
       config.identityChannels as Agent['identityChannels'],
     ),
+    vmOperator: coerceVmOperatorConfig(
+      pick<Agent['vmOperator']>(
+        a.vm_operator as Agent['vmOperator'],
+        a.vmOperator as Agent['vmOperator'],
+        config.vmOperator as Agent['vmOperator'],
+      ),
+    ),
   };
 }
 
@@ -471,6 +496,7 @@ export async function updateAgent(
   if (updates.secretRefs !== undefined) apiUpdates.secret_refs = updates.secretRefs;
   if (updates.messagingConfig !== undefined) apiUpdates.messaging_config = updates.messagingConfig;
   if (updates.identityChannels !== undefined) apiUpdates.identity_channels = updates.identityChannels;
+  if (updates.vmOperator !== undefined) apiUpdates.vm_operator = updates.vmOperator;
 
   // Mirror bot metadata and autonomous primitives into config so backends
   // without dedicated columns still round-trip them.
@@ -480,7 +506,8 @@ export async function updateAgent(
     updates.connectorBindings !== undefined ||
     updates.secretRefs !== undefined ||
     updates.messagingConfig !== undefined ||
-    updates.identityChannels !== undefined
+    updates.identityChannels !== undefined ||
+    updates.vmOperator !== undefined
   ) {
     apiUpdates.config = {
       ...((apiUpdates.config as Record<string, unknown>) || {}),
@@ -490,6 +517,7 @@ export async function updateAgent(
       ...(updates.secretRefs !== undefined ? { secretRefs: updates.secretRefs } : {}),
       ...(updates.messagingConfig !== undefined ? { messagingConfig: updates.messagingConfig } : {}),
       ...(updates.identityChannels !== undefined ? { identityChannels: updates.identityChannels } : {}),
+      ...(updates.vmOperator !== undefined ? { vmOperator: updates.vmOperator } : {}),
     };
   }
 
@@ -560,6 +588,7 @@ export async function startAgentRun(
  * Get run details by fetching DAG and associated WIHs
  */
 export async function getAgentRun(agentId: string, runId: string): Promise<AgentRun> {
+  assertRailsApiEnabled();
   // Get DAG details from Rails
   const dag = await railsApi.plan.show(runId);
   
@@ -590,6 +619,7 @@ export async function getAgentRun(agentId: string, runId: string): Promise<Agent
  * List agent runs by querying Rails WIHs grouped by DAG
  */
 export async function listAgentRuns(agentId: string): Promise<AgentRun[]> {
+  assertRailsApiEnabled();
   try {
     // Get all WIHs for this agent
     const { wihs } = await railsApi.wihs.list();
@@ -638,6 +668,7 @@ export async function listAgentRuns(agentId: string): Promise<AgentRun[]> {
  * Cancel a run by closing all WIHs
  */
 export async function cancelAgentRun(agentId: string, runId: string): Promise<void> {
+  assertRailsApiEnabled();
   const { wihs } = await railsApi.wihs.list({ dag_id: runId });
   
   // Close all open WIHs in parallel
@@ -657,6 +688,7 @@ export async function cancelAgentRun(agentId: string, runId: string): Promise<vo
  * Pause a run via gate mutation
  */
 export async function pauseAgentRun(agentId: string, runId: string): Promise<void> {
+  assertRailsApiEnabled();
   await railsApi.gate.mutate(runId, 'Pause execution', 'User requested pause', [
     { action: 'set_status', status: 'paused' },
   ]);
@@ -666,6 +698,7 @@ export async function pauseAgentRun(agentId: string, runId: string): Promise<voi
  * Resume a run via gate mutation
  */
 export async function resumeAgentRun(agentId: string, runId: string): Promise<void> {
+  assertRailsApiEnabled();
   await railsApi.gate.mutate(runId, 'Resume execution', 'User requested resume', [
     { action: 'set_status', status: 'running' },
   ]);
@@ -679,6 +712,7 @@ export async function resumeAgentRun(agentId: string, runId: string): Promise<vo
  * List tasks by fetching Rails WIHs
  */
 export async function listAgentTasks(agentId: string, runId?: string): Promise<AgentTask[]> {
+  assertRailsApiEnabled();
   const { wihs } = await railsApi.wihs.list(runId ? { dag_id: runId } : {});
 
   return wihs.map((wih, index) => ({
@@ -698,6 +732,7 @@ export async function listAgentTasks(agentId: string, runId?: string): Promise<A
 }
 
 export async function getAgentTask(agentId: string, taskId: string): Promise<AgentTask> {
+  assertRailsApiEnabled();
   const context = await railsApi.wihs.context(taskId);
   
   return {
@@ -723,6 +758,7 @@ export async function updateTaskStatus(
   result?: string,
   error?: string
 ): Promise<AgentTask> {
+  assertRailsApiEnabled();
   // Map task status to WIH action
   if (status === 'completed' || status === 'failed') {
     await railsApi.wihs.close(taskId, {
@@ -754,6 +790,7 @@ export async function updateTaskStatus(
 // ============================================================================
 
 export async function listCheckpoints(agentId: string, runId?: string): Promise<Checkpoint[]> {
+  assertRailsApiEnabled();
   const { jobs } = await railsApi.vault.status();
   
   return jobs
@@ -801,6 +838,7 @@ export async function restoreCheckpoint(
   agentId: string,
   checkpointId: string
 ): Promise<AgentRun> {
+  assertRailsApiEnabled();
   // In Rails, restoring would create a new DAG from archived state
   const planResponse = await railsApi.plan.new({
     text: `Restore from checkpoint ${checkpointId}`,
@@ -826,6 +864,7 @@ export async function restoreCheckpoint(
 // ============================================================================
 
 export async function listCommits(agentId: string): Promise<Commit[]> {
+  assertRailsApiEnabled();
   // Query ledger for decision events
   const events = await railsApi.ledger.tail(100);
   
@@ -868,6 +907,7 @@ export async function createCommit(
 }
 
 export async function getCommit(agentId: string, commitId: string): Promise<Commit> {
+  assertRailsApiEnabled();
   // Trace ledger for specific decision
   const events = await railsApi.ledger.trace({});
   const event = events.find(e => e.event_id === commitId);
@@ -893,6 +933,7 @@ export async function getCommit(agentId: string, commitId: string): Promise<Comm
 // ============================================================================
 
 export async function listQueueItems(agentId?: string): Promise<QueueItem[]> {
+  assertRailsApiEnabled();
   // Get ready WIHs (queued work)
   const { wihs } = await railsApi.wihs.list({ ready_only: true });
 
@@ -911,6 +952,7 @@ export async function enqueueTask(
   priority: number,
   agentId?: string
 ): Promise<QueueItem> {
+  assertRailsApiEnabled();
   // Create a plan which generates ready WIHs
   const planResponse = await railsApi.plan.new({
     text: content,
@@ -986,6 +1028,7 @@ export async function createExecutionPlan(
   agentId: string,
   steps: Omit<PlanStep, 'id' | 'order'>[]
 ): Promise<ExecutionPlan> {
+  assertRailsApiEnabled();
   // Convert steps to a plan description
   const description = steps.map((s, i) => `${i + 1}. ${s.title}: ${s.description}`).join('\n');
   
@@ -1012,6 +1055,7 @@ export async function createExecutionPlan(
 }
 
 export async function getExecutionPlan(agentId: string, planId: string): Promise<ExecutionPlan> {
+  assertRailsApiEnabled();
   await railsApi.plan.show(planId);
   const { wihs } = await railsApi.wihs.list({ dag_id: planId });
 
@@ -1054,6 +1098,7 @@ export async function submitGateDecision(
   approved: boolean,
   note?: string
 ): Promise<GateDecision> {
+  assertRailsApiEnabled();
   const result = await railsApi.gate.decision(
     approved ? 'Approved' : 'Rejected',
     note,
@@ -1073,6 +1118,7 @@ export async function submitGateDecision(
  * Get gate rules
  */
 export async function getGateRules(): Promise<string | undefined> {
+  assertRailsApiEnabled();
   const result = await railsApi.gate.rules();
   return result.rules;
 }
@@ -1132,6 +1178,7 @@ import type { AgentMailMessage, AgentMailThread, SendMailInput } from './agent.t
  * This is the single CommRails mail implementation; there is no local fallback.
  */
 export async function getAgentInbox(agentId: string, limit: number = 50): Promise<AgentMailMessage[]> {
+  assertRailsApiEnabled();
   // Real endpoint: GET /mail/inbox/:agent_id (issue #16). The old
   // POST /mail/inbox route does not exist on the backend.
   const response = await railsApi.mail.inbox({ agent_id: agentId, limit });
@@ -1173,6 +1220,7 @@ function mapMailPriority(value: unknown): AgentMailMessage['priority'] {
  * Get mail threads for an agent
  */
 export async function getAgentThreads(agentId: string): Promise<AgentMailThread[]> {
+  assertRailsApiEnabled();
   const response = await railsApi.mail.threads();
   const summaries = (response.threads || []) as Array<{ thread_id: string; messages: number; last_ts: string }>;
 
@@ -1251,6 +1299,7 @@ export async function acknowledgeMail(
   messageId: string,
   threadId?: string,
 ): Promise<void> {
+  assertRailsApiEnabled();
   await railsApi.mail.ack(threadId || 'default', messageId);
 }
 

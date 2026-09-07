@@ -240,20 +240,34 @@ export const ModelsCommand = cmd({
           return
         }
 
+        const sourceRank = (id: string) => {
+          const src = discoveredMap[id]?.source
+          if (src === "platform") return 0
+          if (src === "subprocess") return 1
+          if (src === "local") return 2
+          if (id.startsWith("gizzi")) return 3
+          return 4
+        }
         const providerIDs = [...allProviderIDs].sort((a, b) => {
-          const aIsGIZZI = a.startsWith("gizzi")
-          const bIsGIZZI = b.startsWith("gizzi")
-          if (aIsGIZZI && !bIsGIZZI) return -1
-          if (!aIsGIZZI && bIsGIZZI) return 1
-          // discovered CLI/local providers last
-          const aDiscovered = !modelsDev[a] && !configured[a]
-          const bDiscovered = !modelsDev[b] && !configured[b]
-          if (aDiscovered && !bDiscovered) return 1
-          if (!aDiscovered && bDiscovered) return -1
+          const d = sourceRank(a) - sourceRank(b)
+          if (d !== 0) return d
           return a.localeCompare(b)
         })
 
+        let lastGroup = ""
         for (const providerID of providerIDs) {
+          const group =
+            discoveredMap[providerID]?.source === "platform"
+              ? "Allternit Cloud"
+              : discoveredMap[providerID]?.source === "subprocess"
+                ? "installed CLI"
+                : discoveredMap[providerID]?.source === "local"
+                  ? "local"
+                  : "other"
+          if (group !== lastGroup) {
+            UI.println(UI.Style.TEXT_DIM + `# ${group}` + UI.Style.TEXT_NORMAL)
+            lastGroup = group
+          }
           printModels(providerID, args.verbose)
         }
       },

@@ -75,7 +75,7 @@ export function AgentView({ hideCreateButton = false, forceListMode = false, tit
   // Render based on view mode
   if (viewMode === 'create' && !forceListMode) {
     return (
-      <div className="h-full w-full">
+      <div className="h-full w-full bg-[var(--bg-elevated,#fff)]">
         <CreateAgentFlow onClose={() => setIsCreating(false)} />
       </div>
     );

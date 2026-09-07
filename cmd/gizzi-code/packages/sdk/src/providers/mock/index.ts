@@ -87,7 +87,7 @@ export class AllternitMock {
   async listModels(): Promise<Array<{ id: string; name: string }>> {
     return [
       { id: 'mock-gpt', name: 'Mock GPT' },
-      { id: 'mock-claude', name: 'Mock Claude' },
+      { id: 'mock-claude', name: 'Mock Allternit' },
       { id: 'mock-local', name: 'Mock Local' },
     ];
   }

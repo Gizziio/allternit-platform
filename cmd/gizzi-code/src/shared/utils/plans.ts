@@ -15,7 +15,7 @@ import { getPlanSlugCache, getSessionId } from '@/bootstrap/state.js'
 import { EXIT_PLAN_MODE_V2_TOOL_NAME } from '../../cli/ui/ink-app/tools/ExitPlanModeTool/constants.js'
 import { getCwd } from './cwd.js'
 import { logForDebugging } from './debug.js'
-import { getClaudeConfigHomeDir } from './envUtils.js'
+import { getLegacyClaudeHomeDir } from './envUtils.js'
 import { isENOENT } from './errors.js'
 import { getEnvironmentKind } from './filePersistence/outputsScanner.js'
 import { getFsImplementation } from './fsOperations.js'
@@ -92,13 +92,13 @@ export const getPlansDirectory = memoize(function getPlansDirectory(): string {
       logError(
         new Error(`plansDirectory must be within project root: ${settingsDir}`),
       )
-      plansPath = join(getClaudeConfigHomeDir(), 'plans')
+      plansPath = join(getLegacyClaudeHomeDir(), 'plans')
     } else {
       plansPath = resolved
     }
   } else {
     // Default
-    plansPath = join(getClaudeConfigHomeDir(), 'plans')
+    plansPath = join(getLegacyClaudeHomeDir(), 'plans')
   }
 
   // Ensure directory exists (mkdirSync with recursive: true is a no-op if it exists)

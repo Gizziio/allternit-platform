@@ -38,7 +38,7 @@ export function getToolSuggestions(toolName: string): ProactiveSuggestion[] {
  * Check if proactive suggestions are enabled
  */
 export function isProactiveEnabled(): boolean {
-  return process.env.CLAUDE_PROACTIVE_SUGGESTIONS === 'true'
+  return process.env.GIZZI_PROACTIVE_SUGGESTIONS === 'true'
 }
 
 /**

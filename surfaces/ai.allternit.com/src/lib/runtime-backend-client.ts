@@ -1,6 +1,8 @@
 "use client";
 
 import type { RuntimeBackendResponse } from "@/api/infrastructure/runtime-backend";
+import { isRuntimeApiEnabled } from "@/lib/env";
+import { isCloudControlPlaneUrl, isLoopbackUrl } from "@/lib/operator-gateway";
 
 const DEFAULT_GATEWAY_BASE_URL = normalizeBaseUrl(
   process.env.NEXT_PUBLIC_ALLTERNIT_GATEWAY_URL ||
@@ -100,9 +102,21 @@ export function applyRuntimeBackendSnapshot(
   runtimeBackend: (RuntimeBackendResponse & { gateway_token?: string | null }) | null | undefined,
 ): ClientRuntimeBackendSnapshot {
   const fallback = readStoredSnapshot() ?? buildDefaultSnapshot();
-  const resolvedGatewayUrl = normalizeBaseUrl(
+  let resolvedGatewayUrl = normalizeBaseUrl(
     runtimeBackend?.gateway_url || fallback.resolved_gateway_url || DEFAULT_GATEWAY_BASE_URL,
   );
+  // Desktop / loopback UIs must not treat the Clerk-only cloud control plane
+  // as the operator gateway. That snapshot used to overwrite
+  // window.__ALLTERNIT_GATEWAY_URL__ and 401 every providers call.
+  if (isBrowser()) {
+    const origin = window.location.origin;
+    const desktop = Boolean((window as unknown as { allternit?: unknown; allternitSidecar?: unknown }).allternit
+      || (window as unknown as { allternitSidecar?: unknown }).allternitSidecar)
+      || isLoopbackUrl(origin);
+    if (desktop && isCloudControlPlaneUrl(resolvedGatewayUrl)) {
+      resolvedGatewayUrl = normalizeBaseUrl(isLoopbackUrl(origin) ? origin : DEFAULT_GATEWAY_BASE_URL);
+    }
+  }
   const resolvedGatewayWsUrl = normalizeBaseUrl(
     runtimeBackend?.gateway_ws_url || toWsBaseUrl(resolvedGatewayUrl),
   );
@@ -154,6 +168,13 @@ export async function loadRuntimeBackendSnapshot(
   }
 
   if (!isBrowser()) {
+    return cached;
+  }
+
+  // `GET /api/v1/runtime/backend` is served only by the Rust allternit-api —
+  // when the runtime API flag is off, keep the cached/default snapshot
+  // instead of firing a request nothing serves.
+  if (!isRuntimeApiEnabled()) {
     return cached;
   }
 

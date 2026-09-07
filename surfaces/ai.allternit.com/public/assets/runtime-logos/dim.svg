@@ -1,1 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif" font-weight="700" font-size="14">D</text></svg>
+<svg width="128" height="128" viewBox="0 0 128 128" fill="#1FD95E" xmlns="http://www.w3.org/2000/svg">
+  <!-- 与 dimcode.dev 主站 favicon 对齐：无底板、纯绿色块、满幅铺满、透明背景 -->
+  <rect x="33.789" y="2" width="60.422" height="28.633" rx="4.2"/>
+  <rect x="33.789" y="97.367" width="60.422" height="28.633" rx="4.2"/>
+  <rect x="2" y="33.789" width="28.633" height="28.633" rx="4.2"/>
+  <rect x="2" y="65.578" width="28.633" height="28.633" rx="4.2"/>
+  <rect x="97.367" y="33.789" width="28.633" height="28.633" rx="4.2"/>
+  <rect x="97.367" y="65.578" width="28.633" height="28.633" rx="4.2"/>
+</svg>

@@ -11,8 +11,9 @@ import { appendFile, mkdir, readdir } from "node:fs/promises"
 import { homedir } from "node:os"
 import { join } from "node:path"
 import type { OrchestrationEvent } from "@allternit/orchestrator"
+import { gatewayUrl } from "@/shared/constants/allternitGateway"
 
-const RAILS_BASE = process.env.GIZZI_RAILS_URL ?? "http://127.0.0.1:8013/api/rails"
+const RAILS_BASE = process.env.GIZZI_RAILS_URL ?? gatewayUrl("/api/rails")
 const SHARED_CONTEXT_RELATIVE = ".allternit/shared-context.md"
 
 async function railsPost(path: string, body: unknown): Promise<void> {

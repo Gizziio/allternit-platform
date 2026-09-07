@@ -8,10 +8,10 @@ export async function getOauthProfileFromApiKey(): Promise<
   OAuthProfileResponse | undefined
 > {
   // Assumes interactive session
-  const { getAnthropicApiKey } = await import('../../../utils/auth.js')
+  const { getAllternitApiKey } = await import('../../../utils/auth.js')
   const config = getGlobalConfig()
   const accountUuid = config.oauthAccount?.accountUuid
-  const apiKey = getAnthropicApiKey()
+  const apiKey = getAllternitApiKey()
 
   // Need both account UUID and API key to check
   if (!accountUuid || !apiKey) {
@@ -22,7 +22,7 @@ export async function getOauthProfileFromApiKey(): Promise<
     const response = await axios.get<OAuthProfileResponse>(endpoint, {
       headers: {
         'x-api-key': apiKey,
-        'anthropic-beta': OAUTH_BETA_HEADER,
+        'allternit-beta': OAUTH_BETA_HEADER,
       },
       params: {
         account_uuid: accountUuid,

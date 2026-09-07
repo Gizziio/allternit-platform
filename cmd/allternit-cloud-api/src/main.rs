@@ -2,7 +2,7 @@
 //!
 //! Main entry point for the cloud deployment API.
 
-use allternit_cloud_api::{init_db, routes, runtime, services, ApiState};
+use allternit_cloud_api::{init_db, model_router, routes, runtime, services, ApiState};
 use std::sync::Arc;
 use tokio::sync::broadcast;
 
@@ -62,6 +62,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing::info!("Database: {}", database_url);
     tracing::info!("Bind address: {}", bind_addr);
 
+    if allternit_cloud_api::auth::dev_token::dev_token_allowed() {
+        tracing::warn!(
+            "ALLTERNIT_ALLOW_DEV_TOKEN is enabled - the hardcoded 'dev-api-token' bearer \
+             backdoor is ACTIVE (audit finding B1). Never enable this in production."
+        );
+    }
+
     // Initialize database
     tracing::info!("Initializing database...");
     let db = init_db(&database_url).await?;
@@ -118,24 +125,35 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     let public_rate_limiter = allternit_cloud_api::create_rate_limiter(public_rate_limit_config);
 
+    // Tight per-user limiter for the free inference path (users without a
+    // credits row). Paying users never touch it.
+    let free_inference_rate_limit_config = allternit_cloud_api::RateLimitConfig {
+        requests_per_minute: std::env::var("FREE_INFERENCE_RATE_LIMIT_RPM")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(30),
+        window: std::time::Duration::from_secs(60),
+    };
+    tracing::info!(
+        "Free inference rate limiter initialized: {} req/min",
+        free_inference_rate_limit_config.requests_per_minute
+    );
+    let free_inference_rate_limiter =
+        allternit_cloud_api::create_rate_limiter(free_inference_rate_limit_config);
+
     // Create quota service for free-tier guardrails.
     let quota_service = Arc::new(services::QuotaService::new(db.clone()));
     tracing::info!("Quota service initialized");
 
-    // Create Fly runtime service if a token is available.
-    let fly_runtime_service =
-        std::env::var("FLY_API_TOKEN").ok().and_then(
-            |token| match services::FlyRuntimeService::new(token) {
-                Ok(service) => {
-                    tracing::info!("Fly runtime service initialized");
-                    Some(service)
-                }
-                Err(error) => {
-                    tracing::warn!("Failed to initialize Fly runtime service: {}", error);
-                    None
-                }
-            },
-        );
+    // Contabo runtime service for hosted runtimes: provisions and manages
+    // workload containers on the Contabo VPS.
+    let contabo_runtime_service = Arc::new(services::ContaboRuntimeService::new(
+        db.clone(),
+        std::env::var("HEADSCALE_API_KEY").ok(),
+        std::env::var("ALLTERNIT_CLOUD_API_URL")
+            .unwrap_or_else(|_| "https://api.allternit.com".to_string()),
+    ));
+    tracing::info!("Contabo runtime service initialized");
 
     // Create mesh enrollment service if a Headscale API key is available.
     let mesh_service = routes::mesh::MeshService::from_env();
@@ -160,7 +178,70 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         _ => tracing::info!("Credential cipher initialized"),
     }
 
+    // Build the model router.
+    let alias_map = model_router::catalog::starter_catalog();
+    let mut providers: Vec<Arc<dyn model_router::UpstreamProvider>> = Vec::new();
+
+    if let Some(config) = model_router::openrouter::OpenRouterConfig::from_env() {
+        tracing::info!("OpenRouter model router enabled");
+        providers.push(model_router::openrouter::OpenRouterProvider::new(config));
+    }
+
+    // Generic OpenAI-compatible providers. Each is enabled by setting
+    // <PREFIX>_API_KEY. Base URLs default to the provider's known endpoint.
+    let generic_providers: &[(&str, Option<&str>)] = &[
+        ("TOGETHER", Some("https://api.together.xyz/v1")),
+        ("FIREWORKS", Some("https://api.fireworks.ai/inference/v1")),
+        ("DEEPINFRA", Some("https://api.deepinfra.com/v1/openai")),
+        ("GROQ", Some("https://api.groq.com/openai/v1")),
+    ];
+
+    for (prefix, default_base) in generic_providers {
+        if let Some(config) =
+            model_router::generic_openai::GenericOpenAiConfig::from_env_with_default_base(
+                prefix, *default_base,
+            )
+        {
+            tracing::info!(provider = %config.provider_id, "OpenAI-compatible model provider enabled");
+            providers.push(model_router::generic_openai::GenericOpenAiProvider::new(config));
+        }
+    }
+
+    let model_router = if providers.is_empty() {
+        if is_production {
+            tracing::warn!(
+                "No model provider API keys set - model router disabled in production"
+            );
+        } else {
+            tracing::info!(
+                "No model provider API keys set - model router disabled (set OPENROUTER_API_KEY, TOGETHER_API_KEY, etc. to enable /v1/chat/completions)"
+            );
+        }
+        model_router::ModelRouter::disabled(alias_map)
+    } else {
+        model_router::ModelRouter::new(providers, alias_map)
+    };
+
     // Create API state with shared services
+    let inference_pool_service = Arc::new(services::InferencePoolService::new(db.clone()));
+    // BYOK key store rides the same credential cipher as provider tokens.
+    let inference_key_service = credential_cipher
+        .clone()
+        .map(|cipher| Arc::new(services::InferenceKeyService::new(db.clone(), cipher)));
+    if inference_key_service.is_some() {
+        tracing::info!("BYOK inference key store enabled");
+    }
+    // P1 control-plane namespaces (agent-sessions/office/beta): resolves the
+    // caller's default data-plane node and relays through the runtime relay
+    // machinery (routes::data_plane).
+    let data_plane_gateway = Arc::new(routes::data_plane::PgDataPlaneGateway::new(
+        db.clone(),
+        contabo_runtime_service.clone(),
+        quota_service.clone(),
+    ));
+    // P2 per-subscription provisioning lane (Incus fleet): create/start/
+    // stop/status/delete over provisioned_hosts + provisioned_instances.
+    let provisioning_service = Arc::new(services::ProvisioningService::new(db.clone()));
     let state = Arc::new(ApiState {
         db,
         ssh_executor: allternit_cloud_ssh::SshExecutor::new(),
@@ -170,16 +251,32 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         session_manager,
         rate_limiter,
         public_rate_limiter,
+        free_inference_rate_limiter,
         cost_service,
         quota_service,
-        fly_runtime_service,
+        contabo_runtime_service,
+        data_plane_gateway,
+        provisioning_service,
         mesh_service,
         credential_cipher,
+        inference_key_service,
+        metrics_state: Arc::new(allternit_cloud_api::middleware::metrics::MetricsState::new()),
+        model_router,
+        inference_pool_service: inference_pool_service.clone(),
     });
 
-    if state.fly_runtime_service.is_some() {
-        services::start_hosted_runtime_lifecycle_task(state.clone());
+    // Seed one inference pool per configured provider (idempotent; operator
+    // budgets in the DB are never overwritten). Missing table (migrations not
+    // applied yet) must not block startup — the breaker degrades to no-pool.
+    match inference_pool_service.ensure_seeded().await {
+        Ok(seeded) => tracing::info!("Inference pools seeded: {}", seeded.join(", ")),
+        Err(error) => tracing::warn!("Inference pool seeding skipped: {}", error),
     }
+
+    services::start_hosted_runtime_lifecycle_task(state.clone());
+    // P2: keep provisioned instance statuses honest against the Incus hosts
+    // and converge their metering sessions.
+    services::start_provisioning_reconcile_task(state.clone());
 
     // Start scheduler service (background task)
     let scheduler_enabled = std::env::var("SCHEDULER_ENABLED")

@@ -313,7 +313,7 @@ export namespace ProviderTransform {
         )
 
       case "@ai-sdk/anthropic":
-      // https://v5.ai-sdk.dev/providers/ai-sdk-providers/anthropic
+      // https://v5.ai-sdk.dev/providers/ai-sdk-providers/allternit
 
         if (isAnthropicAdaptive) {
           return Object.fromEntries(

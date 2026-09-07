@@ -6,6 +6,15 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./vitest.setup.ts'],
+    // Unit tests exercise the enabled code paths. Production stays fail-closed
+    // except namespaces turned on in `.env.production`.
+    env: {
+      NEXT_PUBLIC_ALLTERNIT_RAILS_API: '1',
+      NEXT_PUBLIC_ALLTERNIT_RUNTIME_API: '1',
+      NEXT_PUBLIC_ALLTERNIT_AGENT_SESSIONS_API: '1',
+      NEXT_PUBLIC_ALLTERNIT_OFFICE_API: '1',
+      NEXT_PUBLIC_ALLTERNIT_BETA_API: '1',
+    },
     exclude: [
       '**/node_modules/**',
       '**/dist/**',
@@ -30,5 +39,10 @@ export default defineConfig({
     'import.meta.env.VITE_GATEWAY_BASE_URL': JSON.stringify('http://localhost:8013'),
     'import.meta.env.DEV': 'true',
     'import.meta.env.PROD': 'false',
+    'import.meta.env.NEXT_PUBLIC_ALLTERNIT_RAILS_API': JSON.stringify('1'),
+    'import.meta.env.NEXT_PUBLIC_ALLTERNIT_RUNTIME_API': JSON.stringify('1'),
+    'import.meta.env.NEXT_PUBLIC_ALLTERNIT_AGENT_SESSIONS_API': JSON.stringify('1'),
+    'import.meta.env.NEXT_PUBLIC_ALLTERNIT_OFFICE_API': JSON.stringify('1'),
+    'import.meta.env.NEXT_PUBLIC_ALLTERNIT_BETA_API': JSON.stringify('1'),
   },
 });

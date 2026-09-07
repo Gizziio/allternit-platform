@@ -1,11 +1,12 @@
 /**
  * Platform API key client.
  *
- * The backend for scoped platform API keys is not yet live, so this module
- * currently persists keys in localStorage and prefixes them with
- * `allternit_platform_test_`. Once the cloud API exposes /api/v1/api-keys,
- * swap this implementation for real API calls.
+ * Talks to the Allternit Cloud API at /api/v1/api-keys. Keys are created,
+ * listed, and revoked server-side; only the full token is returned once at
+ * creation time.
  */
+
+import { api, formatApiError, AllternitApiError } from "@/lib/api-client";
 
 export interface ApiKey {
   id: string;
@@ -21,61 +22,54 @@ export interface CreatedApiKey extends ApiKey {
   token: string;
 }
 
-const STORAGE_KEY = "allternit_platform_api_keys_v1";
-const TOKEN_PREFIX = "allternit_platform_test_";
-
-function readKeys(): ApiKey[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as ApiKey[]) : [];
-  } catch {
-    return [];
-  }
+interface ApiKeyJson {
+  id: string;
+  name: string;
+  prefix: string;
+  scopes: string[];
+  createdAt: string;
+  lastUsedAt?: string | null;
+  revokedAt?: string | null;
 }
 
-function writeKeys(keys: ApiKey[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(keys));
+interface CreatedApiKeyJson extends ApiKeyJson {
+  token: string;
 }
 
-function randomId() {
-  return `key_${Math.random().toString(36).slice(2)}_${Date.now().toString(36)}`;
-}
-
-function randomToken() {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  let token = "";
-  for (let i = 0; i < 48; i++) {
-    token += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return `${TOKEN_PREFIX}${token}`;
+function mapKey(json: ApiKeyJson): ApiKey {
+  return {
+    id: json.id,
+    name: json.name,
+    prefix: json.prefix,
+    scopes: json.scopes,
+    createdAt: json.createdAt,
+    lastUsedAt: json.lastUsedAt,
+    revokedAt: json.revokedAt,
+  };
 }
 
 export async function listApiKeys(): Promise<ApiKey[]> {
-  return readKeys().filter((key) => !key.revokedAt);
+  const data = await api.get<ApiKeyJson[]>("/api/v1/api-keys");
+  return data.map(mapKey);
 }
 
 export async function createApiKey(input: {
   name: string;
   scopes: string[];
 }): Promise<CreatedApiKey> {
-  const token = randomToken();
-  const key: ApiKey = {
-    id: randomId(),
-    name: input.name.trim() || "Unnamed key",
-    prefix: token.slice(0, 16),
-    scopes: input.scopes.length ? input.scopes : ["read"],
-    createdAt: new Date().toISOString(),
-    lastUsedAt: null,
-    revokedAt: null,
+  const json = await api.post<CreatedApiKeyJson>("/api/v1/api-keys", {
+    name: input.name.trim(),
+    scopes: input.scopes,
+  });
+
+  return {
+    ...mapKey(json),
+    token: json.token,
   };
-  writeKeys([key, ...readKeys()]);
-  return { ...key, token };
 }
 
 export async function revokeApiKey(id: string): Promise<void> {
-  const keys = readKeys();
-  const next = keys.map((key) =>
-    key.id === id ? { ...key, revokedAt: new Date().toISOString() } : key
-  );
-  writeKeys(next);
+  await api.delete(`/api/v1/api-keys/${id}`);
 }
+
+export { formatApiError, AllternitApiError };

@@ -11,17 +11,234 @@ on:
         required: true
         type: string
 
+permissions:
+  contents: write
+
 jobs:
-  publish:
+  quality:
+    # Same quality gate as release-gizzi-code.yml: typecheck + CI smoke suite
+    # must pass on the tagged commit before anything is published.
+    name: Quality gates
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.2.21
-      
+          bun-version: 1.3.14
+
+      - name: Install dependencies
+        # Full workspace install: gizzi-code imports packages it doesn't
+        # declare (they resolve via the root node_modules, same as local
+        # builds). A filtered install misses them and typecheck fails.
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.28.0 --activate
+          pnpm install --frozen-lockfile
+
+      - name: Build workspace package dependencies
+        # Nested workspace packages ship gitignored dist/ output; build them
+        # before typechecking. gizzi-sdk is used by imports but never declared
+        # in package.json, so it needs an explicit build invocation.
+        run: |
+          pnpm --filter "@allternit/gizzi-code^..." run build
+          pnpm --filter "@allternit/gizzi-sdk" run build
+
+      - name: Configure git identity
+        # Test fixtures create temp repos and run `git commit`; runners have
+        # no global identity, which fails those tests with exit 128. Local
+        # dev machines pass because the developer's git config exists.
+        run: |
+          git config --global user.email "ci@gizziio.com"
+          git config --global user.name "Gizzi CI"
+
+      - name: Typecheck
+        working-directory: cmd/gizzi-code
+        run: NODE_OPTIONS=--max-old-space-size=8192 bun run typecheck
+
+      - name: CI smoke test
+        working-directory: cmd/gizzi-code
+        shell: bash
+        run: |
+          if [ ! -f script/ci-smoke-test.sh ]; then
+            echo "::error::cmd/gizzi-code/script/ci-smoke-test.sh is missing."
+            echo "::error::Refusing to publish without the CI smoke suite. Restore the script or fix this workflow reference."
+            exit 1
+          fi
+          bash script/ci-smoke-test.sh
+
+  build-platform-packages:
+    # Cross-platform binaries. Bun cannot cross-compile native modules
+    # reliably, so each platform binary is built ON that platform and shipped
+    # as its own npm package (@allternit/gizzi-code-<platform>-<arch>, with
+    # os/cpu constraints so npm only installs the matching one). The main
+    # package references these via optionalDependencies and its launcher shim
+    # resolves them at runtime.
+    needs: quality
+    name: Platform binary ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    # Windows is the product's experimental tier: a failed Windows build must
+    # not block the main package publish. Core platforms stay strict.
+    continue-on-error: ${{ matrix.experimental == true }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: darwin-arm64
+            os: macos-latest
+            node_os: darwin
+            node_cpu: arm64
+          - target: darwin-x64
+            # bun --target cross-compiles darwin-x64 from the arm64 pool;
+            # macos-13 (Intel) runners queue for hours.
+            os: macos-latest
+            node_os: darwin
+            node_cpu: x64
+          - target: linux-x64
+            os: ubuntu-latest
+            node_os: linux
+            node_cpu: x64
+          - target: linux-arm64
+            os: ubuntu-24.04-arm
+            node_os: linux
+            node_cpu: arm64
+          - target: win32-x64
+            # bun --target=win32-x64 from macOS: windows-latest cannot
+            # node-gyp rebuild better-sqlite3 (no VS C++ workload).
+            os: macos-latest
+            node_os: win32
+            node_cpu: x64
+            experimental: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Extract version
+        id: version
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "VERSION=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            VERSION=${GITHUB_REF_NAME#gizzi-code/v}
+            echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install dependencies
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.28.0 --activate
+          pnpm install --frozen-lockfile
+
+      - name: Build workspace package dependencies
+        run: |
+          pnpm --filter "@allternit/gizzi-code^..." run build
+          pnpm --filter "@allternit/gizzi-sdk" run build
+
+      - name: Build ${{ matrix.target }} binary
+        working-directory: cmd/gizzi-code
+        shell: bash
+        run: bun run build --target=${{ matrix.target }}
+
+      - name: Smoke-test the built binary
+        # Catch broken cross-compiles (wrong-arch native modules) before the
+        # binary reaches the registry. Rosetta runs the x64 binary on the
+        # arm64 mac host; failures here warn, core legs are also gated by
+        # the quality job's own suite on matching hardware.
+        working-directory: cmd/gizzi-code
+        shell: bash
+        run: |
+          BIN="dist/gizzi-code-${{ matrix.target }}"
+          [ "${{ matrix.node_os }}" = "win32" ] && BIN="${BIN}.exe"
+          if [ "${{ matrix.node_os }}" = "win32" ] && [[ "$OSTYPE" != "msys" && "$OSTYPE" != "win32" ]]; then
+            # Cross-compiled on macOS: cannot exec a PE here. Confirm it is a
+            # Windows x64 image, then skip --version.
+            file "$BIN" | grep -F 'PE32+ executable' \
+              || echo "::warning::win32 binary is not a PE32+ x86-64 image"
+          elif [[ "$OSTYPE" == "msys" || "$OSTYPE" == "win32" ]]; then
+            "./$BIN" --version || echo "::warning::windows binary smoke test failed"
+          else
+            chmod +x "$BIN"
+            "./$BIN" --version || echo "::warning::binary smoke test failed ($BIN)"
+          fi
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ matrix.target }}
+          path: cmd/gizzi-code/dist/gizzi-code-${{ matrix.target }}*
+          if-no-files-found: error
+
+      - name: Setup Node for NPM
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Publish platform package
+        shell: bash
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          VERSION: ${{ steps.version.outputs.VERSION }}
+          TARGET: ${{ matrix.target }}
+          NODE_OS: ${{ matrix.node_os }}
+          NODE_CPU: ${{ matrix.node_cpu }}
+        run: |
+          set -euo pipefail
+          cd cmd/gizzi-code
+          BIN="dist/gizzi-code-${TARGET}"
+          [ "$NODE_OS" = "win32" ] && BIN="${BIN}.exe"
+          test -f "$BIN"
+          export PKG_DIR="${RUNNER_TEMP}/platform-pkg"
+          mkdir -p "$PKG_DIR"
+          cp "$BIN" "$PKG_DIR/"
+          export BIN_BASENAME=$(basename "$BIN")
+          node -e '
+            const fs = require("fs");
+            const pkg = {
+              name: `@allternit/gizzi-code-${process.env.TARGET}`,
+              version: process.env.VERSION,
+              description: `gizzi-code prebuilt binary for ${process.env.TARGET}`,
+              license: "MIT",
+              os: [process.env.NODE_OS],
+              cpu: [process.env.NODE_CPU],
+              files: [process.env.BIN_BASENAME],
+              repository: {
+                type: "git",
+                url: "https://github.com/Gizziio/allternit-platform.git",
+                directory: "cmd/gizzi-code",
+              },
+            };
+            fs.writeFileSync(`${process.env.PKG_DIR}/package.json`, JSON.stringify(pkg, null, 2) + "\n");
+          '
+          cd "$PKG_DIR"
+          # Idempotent: a re-run (e.g. after another leg failed) must not 409
+          # against platform packages that already published at this version.
+          if npm view "@allternit/gizzi-code-${TARGET}@${VERSION}" version >/dev/null 2>&1; then
+            echo "@allternit/gizzi-code-${TARGET}@${VERSION} already published; skipping"
+          else
+            npm publish --access public
+          fi
+
+  publish:
+    needs: [quality, build-platform-packages]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          # Must match package.json packageManager and the quality gate:
+          # 1.2.x cannot resolve the `bun:bundle` builtin used in src/.
+          bun-version: 1.3.14
+
       - name: Extract version
         id: version
         run: |
@@ -31,28 +248,201 @@ jobs:
             VERSION=${GITHUB_REF_NAME#gizzi-code/v}
             echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
           fi
-      
+
       - name: Install dependencies
+        # Root-level pnpm install (same as the quality gate): bun install in
+        # cmd/gizzi-code cannot resolve workspace:* deps — bun's workspace
+        # discovery does not match this repo's pnpm workspace layout.
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.28.0 --activate
+          pnpm install --frozen-lockfile
+
+      - name: Build workspace package dependencies
+        # Nested workspace packages ship gitignored dist/ output; the build
+        # and typecheck below need them (gizzi-sdk is imported but undeclared).
+        run: |
+          pnpm --filter "@allternit/gizzi-code^..." run build
+          pnpm --filter "@allternit/gizzi-sdk" run build
+
+      - name: Configure git identity
+        # Same fixture requirement as the quality gate: temp-repo commits
+        # need a git identity on the runner.
+        run: |
+          git config --global user.email "ci@gizziio.com"
+          git config --global user.name "Gizzi CI"
+
+      - name: Run test suite
+        # Blocking gate: do not publish a version whose tests fail.
         working-directory: cmd/gizzi-code
-        run: bun install
-      
+        run: bun run test
+
       - name: Build
         working-directory: cmd/gizzi-code
         run: bun run build
-      
+
       - name: Setup Node for NPM
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
-      
+
       - name: Update version in package.json
+        # npm errors "Version not changed" when the version already matches
+        # (package.json is committed at release version) — skip in that case.
         working-directory: cmd/gizzi-code
         run: |
-          npm version ${{ steps.version.outputs.VERSION }} --no-git-tag-version
-      
-      - name: Publish to NPM
+          CURRENT=$(node -p "require('./package.json').version")
+          if [ "$CURRENT" != "${{ steps.version.outputs.VERSION }}" ]; then
+            npm version ${{ steps.version.outputs.VERSION }} --no-git-tag-version
+          else
+            echo "package.json already at $CURRENT; skipping bump"
+          fi
+
+      - name: Add optionalDependencies for platform packages
+        # Injected only into the published tarball, not committed: the
+        # platform packages may not exist in the registry yet when CI runs
+        # `pnpm install --frozen-lockfile`, and a committed reference would
+        # break the monorepo lockfile. npm install -g resolves them for the
+        # end user's platform at install time.
         working-directory: cmd/gizzi-code
-        run: npm publish --access public
+        run: |
+          node -e '
+            const fs = require("fs");
+            const p = JSON.parse(fs.readFileSync("package.json", "utf8"));
+            const platforms = ["darwin-arm64", "darwin-x64", "linux-arm64", "linux-x64", "win32-x64"];
+            p.optionalDependencies = Object.fromEntries(
+              platforms.map((t) => [`@allternit/gizzi-code-${t}`, process.env.VERSION]),
+            );
+            fs.writeFileSync("package.json", JSON.stringify(p, null, 2) + "\n");
+          '
+        env:
+          VERSION: ${{ steps.version.outputs.VERSION }}
+
+      - name: Publish to NPM
+        # Idempotent: a re-run after a late verify failure must not 409
+        # against the already-published version.
+        working-directory: cmd/gizzi-code
+        run: |
+          if npm view "@allternit/gizzi-code@${{ steps.version.outputs.VERSION }}" version >/dev/null 2>&1; then
+            echo "@allternit/gizzi-code@${{ steps.version.outputs.VERSION }} already published; skipping"
+          else
+            npm publish --access public
+          fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Verify published package
+        # npm metadata can appear minutes before the tarball blob is fetchable
+        # via anonymous curl (2.0.2 and 2.0.4 both failed that way). The
+        # helper downloads with `npm pack` (authenticated registry client)
+        # and exponential backoff, then checks dist/, bin entries, and
+        # optional platform packages.
+        working-directory: cmd/gizzi-code
+        shell: bash
+        run: bash script/verify-npm-package.sh "${{ steps.version.outputs.VERSION }}"
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  github-release:
+    # GitHub Release with version-named tar.gz/zip assets + checksums.txt.
+    # This is what curl/install.ps1, Homebrew, Scoop, Chocolatey, and Arch
+    # consume. npm publish above is a separate channel.
+    name: GitHub Release
+    needs: [quality, build-platform-packages]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "VERSION=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "VERSION=${GITHUB_REF_NAME#gizzi-code/v}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download platform binaries
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+          pattern: binary-*
+
+      - name: Pack release assets
+        env:
+          VERSION: ${{ steps.version.outputs.VERSION }}
+        run: |
+          set -euo pipefail
+          mkdir -p release-assets
+          missing=0
+          pack_unix() {
+            local target="$1"
+            local bin="artifacts/gizzi-code-${target}"
+            if [ ! -f "$bin" ]; then
+              echo "::error::missing core binary $bin"
+              missing=1
+              return
+            fi
+            chmod +x "$bin"
+            local stage
+            stage="$(mktemp -d)"
+            cp "$bin" "${stage}/gizzi-code"
+            tar -C "$stage" -czf "release-assets/gizzi-code-v${VERSION}-${target}.tar.gz" gizzi-code
+            rm -rf "$stage"
+          }
+          pack_unix darwin-arm64
+          pack_unix darwin-x64
+          pack_unix linux-x64
+          pack_unix linux-arm64
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+          WIN_BIN="artifacts/gizzi-code-win32-x64.exe"
+          if [ -f "$WIN_BIN" ]; then
+            file "$WIN_BIN" | grep -F 'PE32+ executable' \
+              || echo "::warning::win32 binary is not a PE32+ x86-64 image"
+            stage="$(mktemp -d)"
+            cp "$WIN_BIN" "${stage}/gizzi-code.exe"
+            (cd "$stage" && zip -q "$GITHUB_WORKSPACE/release-assets/gizzi-code-v${VERSION}-windows-x64.zip" gizzi-code.exe)
+            rm -rf "$stage"
+          else
+            echo "::warning::Windows binary missing; GitHub Release will ship unix assets only"
+          fi
+          (cd release-assets && sha256sum * | tee checksums.txt)
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@c95fe1489396fe8a9eb87c0abf8aa5b2ef267fda # v2.2.1
+        with:
+          tag_name: gizzi-code/v${{ steps.version.outputs.VERSION }}
+          name: Gizzi Code v${{ steps.version.outputs.VERSION }}
+          target_commitish: ${{ github.sha }}
+          make_latest: true
+          fail_on_unmatched_files: true
+          body: |
+            ## Gizzi Code v${{ steps.version.outputs.VERSION }}
+
+            AI-powered terminal coding agent for the Allternit ecosystem.
+
+            ### Install
+            ```bash
+            npm install -g @allternit/gizzi-code
+            # or
+            curl -fsSL https://install.gizziio.com/install | bash
+            ```
+
+            ### Assets
+            | Platform | File |
+            |----------|------|
+            | macOS arm64 | `gizzi-code-v${{ steps.version.outputs.VERSION }}-darwin-arm64.tar.gz` |
+            | macOS x64 | `gizzi-code-v${{ steps.version.outputs.VERSION }}-darwin-x64.tar.gz` |
+            | Linux x64 | `gizzi-code-v${{ steps.version.outputs.VERSION }}-linux-x64.tar.gz` |
+            | Linux arm64 | `gizzi-code-v${{ steps.version.outputs.VERSION }}-linux-arm64.tar.gz` |
+            | Windows x64 (experimental) | `gizzi-code-v${{ steps.version.outputs.VERSION }}-windows-x64.zip` |
+
+            Verify downloads against `checksums.txt`.
+          files: |
+            release-assets/*

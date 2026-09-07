@@ -40,7 +40,7 @@ const WorkflowTool = feature('WORKFLOW_SCRIPTS') ? (require('../../tools/Workflo
 const WorkflowPermissionRequest = feature('WORKFLOW_SCRIPTS') ? (require('../../tools/WorkflowTool/WorkflowPermissionRequest.js') as typeof import('../../tools/WorkflowTool/WorkflowPermissionRequest.js')).WorkflowPermissionRequest : null;
 const MonitorTool = feature('MONITOR_TOOL') ? (require('../../tools/MonitorTool/MonitorTool.js') as typeof import('../../tools/MonitorTool/MonitorTool.js')).MonitorTool : null;
 const MonitorPermissionRequest = feature('MONITOR_TOOL') ? (require('./MonitorPermissionRequest/MonitorPermissionRequest.js') as typeof import('./MonitorPermissionRequest/MonitorPermissionRequest.js')).MonitorPermissionRequest : null;
-import type { ContentBlockParam } from '@allternit/sdk/providers/anthropic/resources/messages.mjs';
+import type { ContentBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/messages.mjs';
 /* eslint-enable @typescript-eslint/no-require-imports */
 import type { z } from 'zod/v4';
 import type { PermissionUpdate } from '../../utils/permissions/PermissionUpdateSchema';
@@ -119,6 +119,13 @@ export type ToolUseConfirm<Input extends AnyObject = AnyObject> = {
   classifierAutoApproved?: boolean;
   classifierMatchedRule?: string;
   workerBadge?: WorkerBadgeProps;
+  /**
+   * Set when the permission request originates from a dashboard top-level
+   * session (stamped on toolUseContext.options by the session's canUseTool
+   * wrap). Lets the dashboard render this confirm inline, attributed to the
+   * right row. Absent = main session's own prompt.
+   */
+  dashboardTaskId?: string;
   onUserInteraction(): void;
   onAbort(): void;
   onDismissCheckmark?(): void;

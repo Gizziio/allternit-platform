@@ -131,7 +131,7 @@ export const GlobalRoutes = lazy(() =>
       describeRoute({
         summary: "Get usage + cost summary",
         description:
-          "Aggregated token usage and cost across all providers/brains (Ollama, OpenAI, Anthropic, CLI subprocess). " +
+          "Aggregated token usage and cost across all providers/brains (Ollama, OpenAI, Allternit, CLI subprocess). " +
           "Sourced from SessionUsage, which is recorded at the provider-agnostic finish-step hook and persisted to cache/usage.json.",
         operationId: "global.usage",
         responses: {

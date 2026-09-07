@@ -3,7 +3,7 @@ import { feature } from 'bun:bundle'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/analytics/growthbook.js'
 import {
   getClaudeAIOAuthTokens,
-  isAnthropicAuthEnabled,
+  isAllternitAuthEnabled,
 } from '../utils/auth.js'
 
 /**
@@ -34,10 +34,10 @@ export function hasVoiceAuth(): boolean {
   // Voice mode requires Anthropic OAuth — it uses the voice_stream
   // endpoint on claude.ai which is not available with API keys,
   // Bedrock, Vertex, or Foundry.
-  if (!isAnthropicAuthEnabled()) {
+  if (!isAllternitAuthEnabled()) {
     return false
   }
-  // isAnthropicAuthEnabled only checks the auth *provider*, not whether
+  // isAllternitAuthEnabled only checks the auth *provider*, not whether
   // a token exists. Without this check, the voice UI renders but
   // connectVoiceStream fails silently when the user isn't logged in.
   const tokens = getClaudeAIOAuthTokens()

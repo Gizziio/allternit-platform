@@ -17,7 +17,7 @@ use ed25519_dalek::{Signature, Verifier, VerifyingKey};
 use rand::{Rng, RngCore};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use sqlx::{FromRow, SqlitePool};
+use sqlx::{FromRow, PgPool};
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -63,6 +63,16 @@ pub struct CreatePairingRequest {
     /// One-time bootstrap secret issued to a hosted runtime during provisioning.
     #[serde(default)]
     hosted_bootstrap_token: Option<String>,
+    /// Set only by provisioned per-subscription containers (P2 lane): the
+    /// provisioned_instances row the init script registers against.
+    #[serde(default)]
+    provisioned_instance_id: Option<String>,
+    /// One-time bootstrap code minted by the provisioning service and carried
+    /// to the instance via cloud-init user-data; lets the init script
+    /// self-approve its pairing (runtime_type "provisioned") without a
+    /// Clerk session, mirroring the hosted bootstrap token.
+    #[serde(default)]
+    provisioned_bootstrap_token: Option<String>,
     /// One-time bootstrap secret minted by the BYO-VPS wizard and injected
     /// into the box's env file; lets a wizard-bootstrapped VPS self-approve
     /// its pairing (runtime_type "vps") without a Clerk session.
@@ -161,6 +171,7 @@ struct PairingRow {
     organization_id: Option<String>,
     hosted_instance_id: Option<String>,
     byo_bootstrap_token_id: Option<String>,
+    provisioned_instance_id: Option<String>,
     expires_at: DateTime<Utc>,
 }
 
@@ -240,6 +251,17 @@ async fn create_pairing(
         "vps" if request.byo_bootstrap_token.is_some() => Some(
             validate_byo_bootstrap(&state.db, request.byo_bootstrap_token.as_deref()).await?,
         ),
+        // P2 provisioned lane: the init script self-approves with the one-time
+        // pairing code minted at provisioning time (validated against
+        // provisioned_instances.pairing_code_hash; services::provisioning).
+        "provisioned" => Some(
+            validate_provisioned_bootstrap(
+                &state.db,
+                request.provisioned_instance_id.as_deref(),
+                request.provisioned_bootstrap_token.as_deref(),
+            )
+            .await?,
+        ),
         _ => None,
     };
 
@@ -260,6 +282,9 @@ async fn create_pairing(
     let byo_bootstrap_token_id = bootstrap_approval
         .as_ref()
         .and_then(|approval| approval.byo_bootstrap_token_id.clone());
+    let provisioned_instance_id = bootstrap_approval
+        .as_ref()
+        .and_then(|approval| approval.provisioned_instance_id.clone());
 
     if let Some(ref user_id) = user_id {
         let quota = state.quota_service.ensure_quota(user_id).await?;
@@ -276,8 +301,9 @@ async fn create_pairing(
             id, device_code_hash, user_code, challenge, public_key,
             public_key_fingerprint, name, runtime_type, hostname, platform,
             version, capabilities, status, user_id, organization_id,
-            hosted_instance_id, byo_bootstrap_token_id, expires_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            hosted_instance_id, byo_bootstrap_token_id, provisioned_instance_id,
+            expires_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
         "#,
     )
     .bind(&pairing_id)
@@ -297,6 +323,7 @@ async fn create_pairing(
     .bind(organization_id.as_deref())
     .bind(hosted_instance_id.as_deref())
     .bind(byo_bootstrap_token_id.as_deref())
+    .bind(provisioned_instance_id.as_deref())
     .bind(expires_at)
     .execute(&state.db)
     .await?;
@@ -377,7 +404,7 @@ async fn approve_pairing(
     sqlx::query(
         r#"
         INSERT INTO users (id, email, name, avatar_url, status, last_login_at)
-        VALUES (?, ?, ?, ?, 'active', CURRENT_TIMESTAMP)
+        VALUES ($1, $2, $3, $4, 'active', CURRENT_TIMESTAMP)
         ON CONFLICT(id) DO UPDATE SET
             email = excluded.email,
             name = COALESCE(excluded.name, users.name),
@@ -407,8 +434,8 @@ async fn approve_pairing(
     sqlx::query(
         r#"
         UPDATE runtime_pairings
-        SET status = 'approved', user_id = ?, organization_id = ?, approved_at = CURRENT_TIMESTAMP
-        WHERE id = ? AND status = 'pending'
+        SET status = 'approved', user_id = $1, organization_id = $2, approved_at = CURRENT_TIMESTAMP
+        WHERE id = $3 AND status = 'pending'
         "#,
     )
     .bind(&user.id)
@@ -434,7 +461,7 @@ async fn deny_pairing(
     let _user = approver_from_headers(&state, &headers).await?;
     let code = normalize_user_code(&code);
     let affected = sqlx::query(
-        "UPDATE runtime_pairings SET status = 'denied' WHERE user_code = ? AND status = 'pending'",
+        "UPDATE runtime_pairings SET status = 'denied' WHERE user_code = $1 AND status = 'pending'",
     )
     .bind(code)
     .execute(&state.db)
@@ -446,6 +473,21 @@ async fn deny_pairing(
     Ok(Json(serde_json::json!({ "status": "denied" })))
 }
 
+/// `runtime_devices.kind` is NOT NULL with CHECK (local|paired|provisioned).
+/// Binding SQL NULL (the old `Option` map) violates that constraint even
+/// though the column has a default — PostgreSQL does not apply DEFAULT when
+/// NULL is supplied explicitly — and the exchange 500'd with DATABASE_ERROR
+/// before a desktop handshake could finish.
+fn runtime_device_kind(runtime_type: &str, provisioned_instance_id: Option<&str>) -> &'static str {
+    if provisioned_instance_id.is_some() {
+        crate::services::NodeKind::PROVISIONED
+    } else if runtime_type == "desktop" {
+        crate::services::NodeKind::LOCAL
+    } else {
+        crate::services::NodeKind::PAIRED
+    }
+}
+
 async fn exchange_pairing(
     State(state): State<Arc<ApiState>>,
     Json(request): Json<ExchangePairingRequest>,
@@ -455,9 +497,9 @@ async fn exchange_pairing(
         SELECT id, user_code, challenge, public_key, public_key_fingerprint,
                name, runtime_type, hostname, platform, version, capabilities,
                status, user_id, organization_id, hosted_instance_id,
-               byo_bootstrap_token_id, expires_at
+               byo_bootstrap_token_id, provisioned_instance_id, expires_at
         FROM runtime_pairings
-        WHERE id = ? AND device_code_hash = ?
+        WHERE id = $1 AND device_code_hash = $2
         "#,
     )
     .bind(&request.pairing_id)
@@ -467,7 +509,7 @@ async fn exchange_pairing(
     .ok_or_else(|| ApiError::Unauthorized("Invalid pairing credentials".to_string()))?;
 
     if pairing.expires_at <= Utc::now() {
-        sqlx::query("UPDATE runtime_pairings SET status = 'expired' WHERE id = ?")
+        sqlx::query("UPDATE runtime_pairings SET status = 'expired' WHERE id = $1")
             .bind(&pairing.id)
             .execute(&state.db)
             .await?;
@@ -510,26 +552,27 @@ async fn exchange_pairing(
         .clone()
         .ok_or_else(|| ApiError::Internal("Approved pairing has no user".to_string()))?;
 
-    // Enforce quotas before creating the device row.
+    // Check the active-device cap before opening a transaction. The daily
+    // pairing count is recorded *inside* the transaction, after the device
+    // row exists: incrementing first meant a failed insert (or a desktop
+    // poll retry) burned a slot even though the handshake never completed.
     let quota = state.quota_service.ensure_quota(&user_id).await?;
     state
         .quota_service
         .check_active_device_cap(&user_id, &quota)
         .await?;
-    // Server-approved pairings (hosted bootstrap, BYO wizard bootstrap) already
-    // recorded the daily pairing count at create time, when the owning user
-    // became known; only browser-approved pairings record it at exchange.
-    if pairing.hosted_instance_id.is_none() && pairing.byo_bootstrap_token_id.is_none() {
-        state
-            .quota_service
-            .record_pairing_created(&user_id, &quota)
-            .await?;
-    }
+    let count_daily_pairing = pairing.hosted_instance_id.is_none()
+        && pairing.byo_bootstrap_token_id.is_none()
+        && pairing.provisioned_instance_id.is_none();
 
     let runtime_id = format!("rt_{}", Uuid::new_v4().simple());
     let device_token = format!("{DEVICE_TOKEN_PREFIX}{}", random_secret(48));
     let credential_hash = sha256_hex(device_token.as_bytes());
     let credential_expires_at = Utc::now() + Duration::days(CREDENTIAL_TTL_DAYS);
+    let kind = runtime_device_kind(
+        &pairing.runtime_type,
+        pairing.provisioned_instance_id.as_deref(),
+    );
 
     let mut transaction = state.db.begin().await?;
     sqlx::query(
@@ -537,8 +580,8 @@ async fn exchange_pairing(
         INSERT INTO runtime_devices (
             id, user_id, organization_id, name, runtime_type, hostname, platform,
             version, capabilities, public_key, public_key_fingerprint,
-            credential_hash, credential_expires_at, status, last_seen_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'online', CURRENT_TIMESTAMP)
+            credential_hash, credential_expires_at, status, last_seen_at, kind
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'online', CURRENT_TIMESTAMP, $14)
         "#,
     )
     .bind(&runtime_id)
@@ -554,13 +597,14 @@ async fn exchange_pairing(
     .bind(&pairing.public_key_fingerprint)
     .bind(credential_hash)
     .bind(credential_expires_at)
+    .bind(kind)
     .execute(&mut *transaction)
     .await?;
     let consumed = sqlx::query(
         r#"
         UPDATE runtime_pairings
-        SET status = 'consumed', runtime_id = ?, consumed_at = CURRENT_TIMESTAMP
-        WHERE id = ? AND status = 'approved'
+        SET status = 'consumed', runtime_id = $1, consumed_at = CURRENT_TIMESTAMP
+        WHERE id = $2 AND status = 'approved'
         "#,
     )
     .bind(&runtime_id)
@@ -578,13 +622,13 @@ async fn exchange_pairing(
         let linked = sqlx::query(
             r#"
             UPDATE hosted_runtime_instances
-            SET runtime_device_id = ?, status = 'running',
+            SET runtime_device_id = $1, status = 'running',
                 bootstrap_token_hash = NULL,
                 active_since = COALESCE(active_since, CURRENT_TIMESTAMP),
                 last_activity_at = CURRENT_TIMESTAMP,
                 last_synced_at = CURRENT_TIMESTAMP,
                 error_message = NULL
-            WHERE id = ? AND user_id = ?
+            WHERE id = $2 AND user_id = $3
               AND bootstrap_token_hash IS NOT NULL
               AND runtime_device_id IS NULL
             "#,
@@ -595,6 +639,7 @@ async fn exchange_pairing(
         .execute(&mut *transaction)
         .await?
         .rows_affected();
+        tracing::info!(%hosted_instance_id, %linked, "hosted instance link on pairing exchange");
         if linked != 1 {
             transaction.rollback().await?;
             return Err(ApiError::Unauthorized(
@@ -603,13 +648,56 @@ async fn exchange_pairing(
             ));
         }
     }
+    if let Some(provisioned_instance_id) = pairing.provisioned_instance_id.as_deref() {
+        // Claims the instance's device slot; a racing second exchange rolls
+        // the whole thing back (single-use pairing code semantics).
+        crate::services::bind_device_slot(&mut transaction, provisioned_instance_id, &runtime_id)
+            .await?;
+        tracing::info!(%provisioned_instance_id, %runtime_id, "provisioned instance link on pairing exchange");
+    }
+    // Server-approved pairings already recorded the daily count at create,
+    // when the owning user became known. Browser-approved desktop pairings
+    // record it here, after the device row is in the same transaction, so a
+    // failed insert or poll retry cannot consume a slot.
+    if count_daily_pairing {
+        crate::services::QuotaService::record_pairing_created_in_tx(
+            &mut transaction,
+            &user_id,
+            &quota,
+        )
+        .await?;
+    }
     transaction.commit().await?;
+
+    crate::services::audit::write_audit_log(
+        &state.db,
+        crate::services::audit::AuditEvent {
+            action: "device_pairing.token_issued".to_string(),
+            resource_type: "runtime_device".to_string(),
+            resource_id: Some(runtime_id.clone()),
+            user_id: Some(user_id.clone()),
+            user_email: None,
+            details: Some(serde_json::json!({
+                "pairingId": pairing.id,
+                "runtimeName": pairing.name,
+                "runtimeType": pairing.runtime_type,
+                "hostname": pairing.hostname,
+            })),
+            success: true,
+        },
+    )
+    .await;
 
     if let Some(hosted_instance_id) = pairing.hosted_instance_id.as_deref() {
         crate::services::record_runtime_started(&state.db, hosted_instance_id).await?;
     }
+    if let Some(provisioned_instance_id) = pairing.provisioned_instance_id.as_deref() {
+        // Post-commit: consume the one-time code, flip to running, open the
+        // metering interval (services::provisioning).
+        crate::services::activate_registered_device(&state.db, provisioned_instance_id).await?;
+    }
 
-    let user_email = sqlx::query_scalar::<_, String>("SELECT email FROM users WHERE id = ?")
+    let user_email = sqlx::query_scalar::<_, String>("SELECT email FROM users WHERE id = $1")
         .bind(&user_id)
         .fetch_one(&state.db)
         .await?;
@@ -638,7 +726,7 @@ async fn list_runtime_devices(
                public_key_fingerprint, status, last_seen_at, created_at,
                credential_expires_at
         FROM runtime_devices
-        WHERE user_id = ? AND revoked_at IS NULL
+        WHERE user_id = $1 AND revoked_at IS NULL
         ORDER BY created_at DESC
         "#,
     )
@@ -650,7 +738,7 @@ async fn list_runtime_devices(
         .map(|device| {
             let effective_status = if device.status == "online"
                 && device.last_seen_at
-                    .map(|seen| seen < Utc::now() - Duration::minutes(2))
+                    .map(|seen| seen < Utc::now() - Duration::minutes(10))
                     .unwrap_or(true)
             {
                 "offline".to_string()
@@ -681,16 +769,16 @@ async fn revoke_runtime_device(
     headers: HeaderMap,
     Path(id): Path<String>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
-    let user = clerk::user_from_headers(&headers).await?;
+    let user_id = crate::auth::resolve_user_scoped(&state.db, &headers, "compute").await?.id;
     let affected = sqlx::query(
         r#"
         UPDATE runtime_devices
         SET status = 'revoked', revoked_at = CURRENT_TIMESTAMP
-        WHERE id = ? AND user_id = ? AND revoked_at IS NULL
+        WHERE id = $1 AND user_id = $2 AND revoked_at IS NULL
         "#,
     )
     .bind(&id)
-    .bind(&user.id)
+    .bind(&user_id)
     .execute(&state.db)
     .await?
     .rows_affected();
@@ -707,7 +795,7 @@ async fn runtime_heartbeat(
 ) -> Result<Json<serde_json::Value>, ApiError> {
     let runtime = authenticate_runtime(&state, &headers, &id).await?;
     sqlx::query(
-        "UPDATE runtime_devices SET status = 'online', last_seen_at = CURRENT_TIMESTAMP WHERE id = ?",
+        "UPDATE runtime_devices SET status = 'online', last_seen_at = CURRENT_TIMESTAMP WHERE id = $1",
     )
     .bind(&runtime.id)
     .execute(&state.db)
@@ -741,7 +829,7 @@ async fn rotate_runtime_credential(
 /// replaced current becomes the new previous with a fresh grace, which lets
 /// a stranded second component self-heal.
 async fn rotate_credential(
-    db: &SqlitePool,
+    db: &PgPool,
     runtime_id: &str,
 ) -> Result<(String, DateTime<Utc>), ApiError> {
     let device_token = format!("{DEVICE_TOKEN_PREFIX}{}", random_secret(48));
@@ -750,11 +838,11 @@ async fn rotate_credential(
         r#"
         UPDATE runtime_devices
         SET previous_credential_hash = credential_hash,
-            previous_credential_expires_at = ?,
-            credential_hash = ?,
-            credential_expires_at = ?,
+            previous_credential_expires_at = $1,
+            credential_hash = $2,
+            credential_expires_at = $3,
             last_seen_at = CURRENT_TIMESTAMP
-        WHERE id = ?
+        WHERE id = $4
         "#,
     )
     .bind(Utc::now() + Duration::minutes(ROTATION_GRACE_MINUTES))
@@ -773,7 +861,7 @@ async fn revoke_self(
 ) -> Result<Json<serde_json::Value>, ApiError> {
     let runtime = authenticate_runtime(&state, &headers, &id).await?;
     sqlx::query(
-        "UPDATE runtime_devices SET status = 'revoked', revoked_at = CURRENT_TIMESTAMP WHERE id = ?",
+        "UPDATE runtime_devices SET status = 'revoked', revoked_at = CURRENT_TIMESTAMP WHERE id = $1",
     )
     .bind(&runtime.id)
     .execute(&state.db)
@@ -799,7 +887,7 @@ pub(crate) fn device_token_from_headers(headers: &HeaderMap) -> Option<&str> {
 /// revocation enforced. `expected_id` scopes the lookup to one device when
 /// the route path names it.
 pub(crate) async fn runtime_device_for_token(
-    db: &SqlitePool,
+    db: &PgPool,
     token: &str,
     expected_id: Option<&str>,
 ) -> Result<RuntimeCredentialRow, ApiError> {
@@ -809,7 +897,7 @@ pub(crate) async fn runtime_device_for_token(
             r#"
             SELECT id, user_id, name, credential_expires_at, status
             FROM runtime_devices
-            WHERE credential_hash = ? AND id = ? AND revoked_at IS NULL
+            WHERE credential_hash = $1 AND id = $2 AND revoked_at IS NULL
             "#,
         )
         .bind(&credential_hash)
@@ -820,7 +908,7 @@ pub(crate) async fn runtime_device_for_token(
             r#"
             SELECT id, user_id, name, credential_expires_at, status
             FROM runtime_devices
-            WHERE credential_hash = ? AND revoked_at IS NULL
+            WHERE credential_hash = $1 AND revoked_at IS NULL
             "#,
         )
         .bind(&credential_hash)
@@ -856,7 +944,7 @@ pub(crate) async fn runtime_device_for_token(
 /// (same reason PairingRow.expires_at is checked in Rust). An expired grace
 /// is treated as absent — the row is lazily cleared on the next rotation.
 async fn previous_credential_for_token(
-    db: &SqlitePool,
+    db: &PgPool,
     credential_hash: &str,
     expected_id: Option<&str>,
 ) -> Result<Option<RuntimeCredentialRow>, ApiError> {
@@ -874,7 +962,7 @@ async fn previous_credential_for_token(
             SELECT id, user_id, name, credential_expires_at, status,
                    previous_credential_expires_at
             FROM runtime_devices
-            WHERE previous_credential_hash = ? AND id = ? AND revoked_at IS NULL
+            WHERE previous_credential_hash = $1 AND id = $2 AND revoked_at IS NULL
             "#,
         )
         .bind(credential_hash)
@@ -886,7 +974,7 @@ async fn previous_credential_for_token(
             SELECT id, user_id, name, credential_expires_at, status,
                    previous_credential_expires_at
             FROM runtime_devices
-            WHERE previous_credential_hash = ? AND revoked_at IS NULL
+            WHERE previous_credential_hash = $1 AND revoked_at IS NULL
             "#,
         )
         .bind(credential_hash)
@@ -931,11 +1019,16 @@ async fn verify_device_token(
     let token = device_token_from_headers(&headers)
         .ok_or_else(|| ApiError::Unauthorized("Runtime credential required".to_string()))?;
     let device = runtime_device_for_token(&state.db, token, None).await?;
+    let email: Option<String> = sqlx::query_scalar("SELECT email FROM users WHERE id = $1")
+        .bind(&device.user_id)
+        .fetch_optional(&state.db)
+        .await?;
     Ok(Json(serde_json::json!({
         "runtimeId": device.id,
         "userId": device.user_id,
         "name": device.name,
         "status": device.status,
+        "email": email,
     })))
 }
 
@@ -971,7 +1064,21 @@ async fn approver_from_headers(state: &ApiState, headers: &HeaderMap) -> Result<
             organization_id: None,
         });
     }
-    clerk::user_from_headers(headers).await
+    match clerk::user_from_headers(headers).await {
+        Ok(user) => Ok(user),
+        Err(_) => {
+            // API-token approvers carry no profile — only the id is used
+            // downstream (ownership checks on pairing approval).
+            let user_id = crate::auth::resolve_user_id(&state.db, headers).await?;
+            Ok(ClerkUser {
+                id: user_id,
+                email: None,
+                name: None,
+                image_url: None,
+                organization_id: None,
+            })
+        }
+    }
 }
 
 async fn pairing_by_code(state: &ApiState, code: &str) -> Result<PairingRow, ApiError> {
@@ -980,8 +1087,8 @@ async fn pairing_by_code(state: &ApiState, code: &str) -> Result<PairingRow, Api
         SELECT id, user_code, challenge, public_key, public_key_fingerprint,
                name, runtime_type, hostname, platform, version, capabilities,
                status, user_id, organization_id, hosted_instance_id,
-               byo_bootstrap_token_id, expires_at
-        FROM runtime_pairings WHERE user_code = ?
+               byo_bootstrap_token_id, provisioned_instance_id, expires_at
+        FROM runtime_pairings WHERE user_code = $1
         "#,
     )
     .bind(code)
@@ -994,7 +1101,7 @@ async fn ensure_pairing_live(state: &ApiState, pairing: &PairingRow) -> Result<(
     if pairing.expires_at > Utc::now() {
         return Ok(());
     }
-    sqlx::query("UPDATE runtime_pairings SET status = 'expired' WHERE id = ?")
+    sqlx::query("UPDATE runtime_pairings SET status = 'expired' WHERE id = $1")
         .bind(&pairing.id)
         .execute(&state.db)
         .await?;
@@ -1044,9 +1151,12 @@ fn validate_pairing_request(request: &CreatePairingRequest) -> Result<(), ApiErr
             "Runtime name must be 1-100 characters".to_string(),
         ));
     }
-    if !matches!(request.runtime_type.as_str(), "desktop" | "vps" | "hosted" | "ios") {
+    if !matches!(
+        request.runtime_type.as_str(),
+        "desktop" | "vps" | "hosted" | "provisioned" | "ios"
+    ) {
         return Err(ApiError::BadRequest(
-            "runtimeType must be desktop, vps, hosted, or ios".to_string(),
+            "runtimeType must be desktop, vps, hosted, provisioned, or ios".to_string(),
         ));
     }
     decode_public_key(&request.public_key)?;
@@ -1105,6 +1215,7 @@ fn pairing_signature_message(pairing_id: &str, challenge: &str) -> String {
 struct BootstrapApproval {
     hosted_instance_id: Option<String>,
     byo_bootstrap_token_id: Option<String>,
+    provisioned_instance_id: Option<String>,
     user_id: String,
     organization_id: Option<String>,
 }
@@ -1125,18 +1236,23 @@ async fn validate_hosted_bootstrap(
         r#"
         SELECT user_id, organization_id, bootstrap_token_hash
         FROM hosted_runtime_instances
-        WHERE id = ? AND status IN ('creating', 'starting', 'running', 'stopped')
+        WHERE id = $1 AND status IN ('creating', 'starting', 'running', 'stopped')
         "#,
     )
     .bind(instance_id)
     .fetch_optional(&state.db)
     .await?
-    .ok_or_else(|| ApiError::Unauthorized("Invalid hosted instance".to_string()))?;
+    .ok_or_else(|| {
+        tracing::warn!(%instance_id, "hosted bootstrap rejected: no matching instance row");
+        ApiError::Unauthorized("Invalid hosted instance".to_string())
+    })?;
 
     let expected_hash = row.2.ok_or_else(|| {
+        tracing::warn!(%instance_id, "hosted bootstrap rejected: instance row has no bootstrap token hash");
         ApiError::Unauthorized("Hosted instance has no bootstrap token".to_string())
     })?;
     if expected_hash != sha256_hex(token.as_bytes()) {
+        tracing::warn!(%instance_id, "hosted bootstrap rejected: token hash mismatch");
         return Err(ApiError::Unauthorized(
             "Invalid hosted bootstrap token".to_string(),
         ));
@@ -1145,8 +1261,30 @@ async fn validate_hosted_bootstrap(
     Ok(BootstrapApproval {
         hosted_instance_id: Some(instance_id.to_string()),
         byo_bootstrap_token_id: None,
+        provisioned_instance_id: None,
         user_id: row.0,
         organization_id: row.1,
+    })
+}
+
+/// Validates the P2 provisioned lane's one-time bootstrap code against the
+/// instance row (hash, expiry, unbound) and returns the pre-approval for the
+/// owning user. The code itself is consumed later, at pairing exchange, when
+/// `bind_device_slot` claims the instance's device slot — same single-use
+/// shape as the hosted bootstrap token.
+async fn validate_provisioned_bootstrap(
+    db: &PgPool,
+    instance_id: Option<&str>,
+    token: Option<&str>,
+) -> Result<BootstrapApproval, ApiError> {
+    let user_id =
+        crate::services::validate_provisioned_bootstrap(db, instance_id, token).await?;
+    Ok(BootstrapApproval {
+        hosted_instance_id: None,
+        byo_bootstrap_token_id: None,
+        provisioned_instance_id: instance_id.map(str::to_string),
+        user_id,
+        organization_id: None,
     })
 }
 
@@ -1156,7 +1294,7 @@ async fn validate_hosted_bootstrap(
 /// dies before the exchange simply re-runs — the wizard mints a fresh token
 /// per attempt.
 async fn validate_byo_bootstrap(
-    db: &SqlitePool,
+    db: &PgPool,
     token: Option<&str>,
 ) -> Result<BootstrapApproval, ApiError> {
     let token = token
@@ -1167,7 +1305,7 @@ async fn validate_byo_bootstrap(
         r#"
         SELECT id, user_id, consumed_at, expires_at
         FROM byo_bootstrap_tokens
-        WHERE token_hash = ?
+        WHERE token_hash = $1
         "#,
     )
     .bind(sha256_hex(token.as_bytes()))
@@ -1187,7 +1325,7 @@ async fn validate_byo_bootstrap(
     }
 
     let consumed = sqlx::query(
-        "UPDATE byo_bootstrap_tokens SET consumed_at = CURRENT_TIMESTAMP WHERE id = ? AND consumed_at IS NULL",
+        "UPDATE byo_bootstrap_tokens SET consumed_at = CURRENT_TIMESTAMP WHERE id = $1 AND consumed_at IS NULL",
     )
     .bind(&token_id)
     .execute(db)
@@ -1202,6 +1340,7 @@ async fn validate_byo_bootstrap(
     Ok(BootstrapApproval {
         hosted_instance_id: None,
         byo_bootstrap_token_id: Some(token_id),
+        provisioned_instance_id: None,
         user_id,
         organization_id: None,
     })
@@ -1246,13 +1385,42 @@ pub(crate) fn sha256_hex(value: &[u8]) -> String {
 mod tests {
     use super::*;
 
+    #[test]
+    fn desktop_handshake_gets_local_kind_never_null() {
+        assert_eq!(runtime_device_kind("desktop", None), crate::services::NodeKind::LOCAL);
+        assert_eq!(runtime_device_kind("vps", None), crate::services::NodeKind::PAIRED);
+        assert_eq!(
+            runtime_device_kind("desktop", Some("pi_1")),
+            crate::services::NodeKind::PROVISIONED
+        );
+    }
+
     /// Minimal schema for the BYO bootstrap token path: the token table plus
     /// the users table its user_id FK references.
-    async fn test_pool() -> SqlitePool {
-        let pool = SqlitePool::connect(":memory:").await.unwrap();
-        sqlx::query(
-            r#"
-            CREATE TABLE users (
+    async fn test_pool() -> PgPool {
+        let url = "postgres://allternit:allternit_pg_2026@localhost:5432/allternit_test";
+        let schema = format!("test_{}", uuid::Uuid::new_v4().simple());
+        let schema_for_hook = schema.clone();
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(1)
+            .after_connect(move |conn, _meta| {
+                let schema = schema_for_hook.clone();
+                Box::pin(async move {
+                    sqlx::query(&format!("CREATE SCHEMA IF NOT EXISTS {}", schema))
+                        .execute(&mut *conn)
+                        .await?;
+                    sqlx::query(&format!("SET search_path TO {}", schema))
+                        .execute(&mut *conn)
+                        .await?;
+                    Ok(())
+                })
+            })
+            .connect(url)
+            .await
+            .unwrap();
+        sqlx::query("DROP TABLE IF EXISTS users CASCADE").execute(&pool).await.unwrap();
+        sqlx::query(r#"
+        CREATE TABLE users (
                 id TEXT PRIMARY KEY,
                 email TEXT NOT NULL UNIQUE,
                 status TEXT NOT NULL DEFAULT 'active'
@@ -1262,16 +1430,16 @@ mod tests {
         .execute(&pool)
         .await
         .unwrap();
-        sqlx::query(
-            r#"
-            CREATE TABLE byo_bootstrap_tokens (
+        sqlx::query("DROP TABLE IF EXISTS byo_bootstrap_tokens CASCADE").execute(&pool).await.unwrap();
+        sqlx::query(r#"
+        CREATE TABLE byo_bootstrap_tokens (
                 id TEXT PRIMARY KEY,
                 user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
                 instance_name TEXT NOT NULL,
                 token_hash TEXT NOT NULL UNIQUE,
-                expires_at TIMESTAMP NOT NULL,
-                consumed_at TIMESTAMP,
-                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                expires_at TIMESTAMPTZ NOT NULL,
+                consumed_at TIMESTAMPTZ,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             )
             "#,
         )
@@ -1285,11 +1453,11 @@ mod tests {
         pool
     }
 
-    async fn insert_token(pool: &SqlitePool, id: &str, token: &str, expires_in: Duration) {
+    async fn insert_token(pool: &PgPool, id: &str, token: &str, expires_in: Duration) {
         sqlx::query(
             r#"
             INSERT INTO byo_bootstrap_tokens (id, user_id, instance_name, token_hash, expires_at)
-            VALUES (?, 'user_1', 'byo-vps-1', ?, ?)
+            VALUES ($1, 'user_1', 'byo-vps-1', $2, $3)
             "#,
         )
         .bind(id)
@@ -1346,21 +1514,40 @@ mod tests {
     /// Minimal runtime_devices shape for the rotation-grace tests (mirrors
     /// the gizzi_instances/mesh device-token tests, plus the grace columns
     /// from migration 022).
-    async fn device_pool() -> SqlitePool {
-        let pool = SqlitePool::connect(":memory:").await.unwrap();
-        sqlx::query(
-            r#"
-            CREATE TABLE runtime_devices (
+    async fn device_pool() -> PgPool {
+        let url = "postgres://allternit:allternit_pg_2026@localhost:5432/allternit_test";
+        let schema = format!("test_{}", uuid::Uuid::new_v4().simple());
+        let schema_for_hook = schema.clone();
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(1)
+            .after_connect(move |conn, _meta| {
+                let schema = schema_for_hook.clone();
+                Box::pin(async move {
+                    sqlx::query(&format!("CREATE SCHEMA IF NOT EXISTS {}", schema))
+                        .execute(&mut *conn)
+                        .await?;
+                    sqlx::query(&format!("SET search_path TO {}", schema))
+                        .execute(&mut *conn)
+                        .await?;
+                    Ok(())
+                })
+            })
+            .connect(url)
+            .await
+            .unwrap();
+        sqlx::query("DROP TABLE IF EXISTS runtime_devices CASCADE").execute(&pool).await.unwrap();
+        sqlx::query(r#"
+        CREATE TABLE runtime_devices (
                 id TEXT PRIMARY KEY,
                 user_id TEXT NOT NULL,
                 name TEXT NOT NULL,
                 credential_hash TEXT NOT NULL UNIQUE,
-                credential_expires_at TIMESTAMP NOT NULL,
+                credential_expires_at TIMESTAMPTZ NOT NULL,
                 previous_credential_hash TEXT,
-                previous_credential_expires_at TIMESTAMP,
+                previous_credential_expires_at TIMESTAMPTZ,
                 status TEXT NOT NULL DEFAULT 'offline',
-                last_seen_at TIMESTAMP,
-                revoked_at TIMESTAMP
+                last_seen_at TIMESTAMPTZ,
+                revoked_at TIMESTAMPTZ
             )
             "#,
         )
@@ -1370,13 +1557,13 @@ mod tests {
         pool
     }
 
-    async fn insert_device(pool: &SqlitePool, token: &str) {
+    async fn insert_device(pool: &PgPool, token: &str) {
         sqlx::query(
             r#"
             INSERT INTO runtime_devices (
                 id, user_id, name, credential_hash, credential_expires_at, status
             )
-            VALUES ('rd_1', 'user_9', 'byo-vps-1', ?, ?, 'offline')
+            VALUES ('rd_1', 'user_9', 'byo-vps-1', $1, $2, 'offline')
             "#,
         )
         .bind(sha256_hex(token.as_bytes()))
@@ -1416,7 +1603,7 @@ mod tests {
         insert_device(&pool, &old_token).await;
         rotate_credential(&pool, "rd_1").await.unwrap();
 
-        let grace_before: String =
+        let grace_before: DateTime<Utc> =
             sqlx::query_scalar("SELECT previous_credential_expires_at FROM runtime_devices WHERE id = 'rd_1'")
                 .fetch_one(&pool)
                 .await
@@ -1424,7 +1611,7 @@ mod tests {
         runtime_device_for_token(&pool, &old_token, Some("rd_1"))
             .await
             .unwrap();
-        let grace_after: String =
+        let grace_after: DateTime<Utc> =
             sqlx::query_scalar("SELECT previous_credential_expires_at FROM runtime_devices WHERE id = 'rd_1'")
                 .fetch_one(&pool)
                 .await
@@ -1467,7 +1654,7 @@ mod tests {
         let (new_token, _) = rotate_credential(&pool, "rd_1").await.unwrap();
 
         sqlx::query(
-            "UPDATE runtime_devices SET previous_credential_expires_at = ? WHERE id = 'rd_1'",
+            "UPDATE runtime_devices SET previous_credential_expires_at = $1 WHERE id = 'rd_1'",
         )
         .bind(Utc::now() - Duration::minutes(1))
         .execute(&pool)

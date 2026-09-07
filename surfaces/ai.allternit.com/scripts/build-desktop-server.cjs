@@ -20,8 +20,8 @@ const desktopBuildNodeOptions = existingNodeOptions.includes('--max-old-space-si
   : `${existingNodeOptions} --max-old-space-size=4096`.trim();
 const LOCALHOST_CLERK_PUBLISHABLE_KEY =
   'pk_test_ZWFzeS1oYXdrLTUzLmNsZXJrLmFjY291bnRzLmRldiQ';
-const LOCALHOST_CLERK_SECRET_KEY =
-  'sk_test_37qh7k8rZwwWu3QKPi2doqk10SabkYgIMCXEqkcQzi';
+// Clerk secret key must come from .env.local / the environment — never commit
+// one. (A sk_test default used to live here; rotated 2026-09-03.)
 
 function loadEnvFile(filePath) {
   if (!fs.existsSync(filePath)) return {};
@@ -56,7 +56,15 @@ const desktopBuildEnv = {
 };
 
 if (!desktopBuildEnv.CLERK_SECRET_KEY) {
-  desktopBuildEnv.CLERK_SECRET_KEY = localEnv.CLERK_SECRET_KEY || LOCALHOST_CLERK_SECRET_KEY;
+  desktopBuildEnv.CLERK_SECRET_KEY = localEnv.CLERK_SECRET_KEY;
+}
+
+if (!desktopBuildEnv.CLERK_SECRET_KEY) {
+  console.error(
+    'CLERK_SECRET_KEY is required for the desktop server build. ' +
+      'Set it in .env.local or the environment.'
+  );
+  process.exit(1);
 }
 
 function normalizeAppRoute(routePath) {

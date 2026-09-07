@@ -83,7 +83,7 @@ export function MCPAgentServerMenu({
   const capitalizedServerName = capitalize(String(agentServer.name));
   if (isAuthenticating) {
     return <Box flexDirection="column" gap={1} padding={1}>
-        <Text color="claude">Authenticating with {agentServer.name}…</Text>
+        <Text color="gizzi">Authenticating with {agentServer.name}…</Text>
         <Box>
           <Spinner />
           <Text> A browser window will open for authentication</Text>

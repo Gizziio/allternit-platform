@@ -22,7 +22,7 @@ When the budget is exhausted, the key is blocked until the next billing period. 
 Estimate token count and cost before sending a request:
 
 ```bash
-curl http://localhost:8013/api/v1/estimate \
+curl https://api.allternit.com/api/v1/estimate \
   -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -50,7 +50,7 @@ Response:
 Query usage by key, model, or time range:
 
 ```bash
-curl http://localhost:8013/api/audit/usage \
+curl https://api.allternit.com/api/audit/usage \
   -H "Authorization: Bearer $ALLTERNIT_TOKEN" \
   -G -d "key_id=key_abc123&from=2026-08-01"
 ```
@@ -68,7 +68,7 @@ Each usage event includes:
 Configure webhook alerts when a key approaches its budget limit:
 
 ```bash
-curl -X POST http://localhost:8013/api/admin/webhooks \
+curl -X POST https://api.allternit.com/api/admin/webhooks \
   -H "Authorization: Bearer $ALLTERNIT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{

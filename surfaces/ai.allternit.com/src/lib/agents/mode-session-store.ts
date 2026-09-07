@@ -19,6 +19,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { devtools } from 'zustand/middleware';
 import { createBrowserJSONStorage } from '@/lib/zustand-browser-storage';
+import { isAgentSessionsApiEnabled } from '@/lib/env';
 import {
   sessionApi,
   chatApi,
@@ -31,7 +32,8 @@ import {
 } from './native-agent-api';
 import { useAgentStore } from './agent.store';
 import type { Agent, HarnessConfig } from './agent.types';
-import { subscribeSSE } from '../sse/global-sse-manager';
+import { subscribeSSE, type SSESubscriptionOptions } from '../sse/global-sse-manager';
+import { createCloudApiEventSource } from '@/lib/cloud-api';
 import { createModuleLogger } from '@/lib/logger';
 import { emitArtifact } from '@/lib/canvas/canvas-artifact-events';
 import type { ArtifactUIPart } from '@/lib/ai/ui-parts.types';
@@ -39,10 +41,21 @@ import type { AgentArtifactKind, CanonicalAgentModeId } from './agent-mode-contr
 import { getAgentModeContract, validateAgentModeExecution } from './agent-mode-contracts';
 import { executeAgentMode } from './agent-mode-executor';
 import { gizziBaseUrl } from './api-config';
-import { buildBotRuntimeEnv } from '@/lib/bots/bot-runtime-env';
+import { buildBotRuntimeEnv, resolveModelRef } from '@/lib/bots/bot-runtime-env';
+import { deleteComputer } from '@/lib/computers-api';
 import { memoryClient } from './memory-client';
+import { recallBotMemories } from '@/lib/bots/bot-memory-context';
 
 const logger = createModuleLogger('ModeSessionStore');
+
+// The /api/v1/agent-sessions handlers live only on the Rust allternit-api
+// (:8013), which is not publicly reachable from the deployed web surface.
+// When NEXT_PUBLIC_ALLTERNIT_AGENT_SESSIONS_API is unset (default), every
+// backend call in this store must fail closed with this deliberate message
+// instead of firing requests that 404.
+const AGENT_SESSIONS_DISABLED_MESSAGE =
+  'Agent session sync is disabled in this deployment (set NEXT_PUBLIC_ALLTERNIT_AGENT_SESSIONS_API=1 where the gateway is reachable).';
+
 import type {
   ContextPackOptions,
 } from './agent-context-pack';
@@ -76,8 +89,9 @@ export interface ModeSession {
     [key: string]: unknown;
     sessionMode?: 'regular' | 'agent';
     agentId?: string;
+    agentIds?: string[];
     agentName?: string;
-    originSurface: 'chat' | 'cowork' | 'code' | 'browser' | 'design';
+    originSurface: 'chat' | 'cowork' | 'code' | 'browser' | 'design' | 'bot';
     projectId?: string;
     taskId?: string;
     workspaceId?: string;
@@ -127,6 +141,7 @@ export interface CreateModeSessionOptions {
   description?: string;
   sessionMode?: 'regular' | 'agent';
   agentId?: string;
+  agentIds?: string[];
   agentName?: string;
   model?: BrainRef;
   projectId?: string;
@@ -189,6 +204,7 @@ function mapBackendSession(backend: BackendSession): ModeSession {
       originSurface: metadata.originSurface || 'chat',
       sessionMode: metadata.sessionMode,
       agentId: metadata.agentId,
+      agentIds: metadata.agentIds,
       agentName: metadata.agentName,
       projectId: metadata.projectId,
       taskId: metadata.taskId,
@@ -219,6 +235,14 @@ function mapBackendMessage(backend: BackendMessage): ModeSessionMessage {
 
 function isBackendSessionId(sessionId: string): boolean {
   return sessionId.startsWith('ses');
+}
+
+/** Shallow-copy a metadata bag dropping `undefined` values so spreading it
+ * over an existing bag never wipes a real value with an absent key. */
+function definedEntries(source?: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(source ?? {}).filter(([, value]) => value !== undefined),
+  );
 }
 
 function toAgentElementsToolType(toolName: string): string {
@@ -538,10 +562,37 @@ async function sendMessageWithContext(
   });
 }
 
-async function resolveFallbackRuntimeModelId(): Promise<string | undefined> {
-  // Prefer the backend's configured default model. This matches what the
-  // composer/model picker shows by default and keeps bot sessions on a brain
-  // that actually works (e.g. the gizzi sidecar embedded model in dev).
+/**
+ * Resolve the provider/model string the kernel expects (`provider/modelId`).
+ * Reads the composer's persisted model selection; falls back to the platform's
+ * configured default brain, then to the first local Ollama model.
+ */
+const MODEL_SELECTION_STORAGE_KEY = 'allternit:model-selection';
+
+function resolveRuntimeModelId(): string | null {
+  try {
+    const raw = typeof window !== 'undefined'
+      ? window.localStorage.getItem(MODEL_SELECTION_STORAGE_KEY)
+      : null;
+    if (raw) {
+      const parsed = JSON.parse(raw) as { providerId?: string; modelId?: string } | null;
+      if (parsed?.providerId && parsed?.modelId) {
+        return `${parsed.providerId}/${parsed.modelId}`;
+      }
+    }
+  } catch { /* malformed or unavailable storage */ }
+  return null;
+}
+
+async function resolveFallbackRuntimeModelId(agent?: Agent): Promise<string | null> {
+  // Agent sessions: respect the agent's harness/provider/model selection.
+  // The brain stays harness-selected; cloud-desktop only changes the VM target.
+  const harnessRef = await resolveModelRef(agent);
+  if (harnessRef) {
+    return harnessRef;
+  }
+
+  // Non-agent sessions: prefer the backend's configured default model.
   try {
     const res = await fetch('/api/onboarding/config');
     if (res.ok) {
@@ -553,10 +604,10 @@ async function resolveFallbackRuntimeModelId(): Promise<string | undefined> {
     }
   } catch { /* onboarding config unavailable */ }
 
-  // Last resort: use a locally-pulled Ollama model.
+  // Last resort for non-agent sessions: use a locally-pulled Ollama model.
   try {
     const res = await fetch('/api/local-brain');
-    if (!res.ok) return undefined;
+    if (!res.ok) return null;
     const data = await res.json() as { ollamaRunning?: boolean; modelId?: string; pulledModels?: string[] };
     if (data.ollamaRunning && data.modelId) {
       return `ollama/${data.modelId}`;
@@ -565,7 +616,7 @@ async function resolveFallbackRuntimeModelId(): Promise<string | undefined> {
       return `ollama/${data.pulledModels[0]}`;
     }
   } catch { /* local brain unavailable */ }
-  return undefined;
+  return null;
 }
 
 /**
@@ -579,12 +630,15 @@ async function streamMessageWithContext(
 ): Promise<void> {
   const { text, skipContext, callbacks } = options;
   // The kernel splits runtimeModelId into provider/model. Use an explicit
-  // option first, then fall back to the backend-configured default / local
-  // brain. If nothing is available, omit the field so the runtime can fall
-  // back to its own default instead of sending an invalid hard-coded model.
-  let modelId = options.modelId;
+  // option first, then the persisted composer selection, then the agent's
+  // harness/provider/model. Only fall back to the local Ollama brain when no
+  // harness is configured, so the brain stays harness-selected for bots.
+  const agent = session.metadata.agentId
+    ? useAgentStore.getState().agents.find((a) => a.id === session.metadata.agentId)
+    : undefined;
+  let modelId = options.modelId ?? resolveRuntimeModelId();
   if (!modelId) {
-    modelId = await resolveFallbackRuntimeModelId();
+    modelId = await resolveFallbackRuntimeModelId(agent);
   }
 
   if (
@@ -596,7 +650,12 @@ async function streamMessageWithContext(
     return;
   }
 
-  if (!skipContext && session.metadata.agentModeId) {
+  // Only run the client-side agent-mode executor for sessions that are
+  // explicitly in local-only fallback mode AND the user did not pick a
+  // specific runtime model. Backend-managed sessions (and sessions where the
+  // composer explicitly selected a brain) should route through /api/agent-chat
+  // so the selected runtime (e.g. kimi-cli) and server-side auth are respected.
+  if (!skipContext && session.metadata.agentModeId && session.metadata.executionPersistence === 'local' && !options.modelId) {
     try {
       await executeAgentMode(session.metadata.agentModeId, text, session.metadata.templateTitle, {
         onChunk: (content) => callbacks?.onChunk?.(content),
@@ -617,10 +676,6 @@ async function streamMessageWithContext(
     const contextPack = session._contextPack || await buildContextPackForSession(session);
     if (contextPack) {
       session._contextPack = contextPack;
-      // Look up agent runtime/harness config
-      const agent = session.metadata.agentId
-        ? useAgentStore.getState().agents.find((a) => a.id === session.metadata.agentId)
-        : undefined;
       // Convert to API context format
       const runtimeEnv = buildBotRuntimeEnv({
         harness: agent?.harness,
@@ -701,6 +756,33 @@ async function streamMessageWithContext(
       // Degrade silently if memory recall fails
     }
 
+    // Also inject isolated bot-memory-store promoted/pinned memories when an
+    // agent session is active. The records stay local; only a summary block is
+    // added to the prompt context.
+    try {
+      if (session.metadata.sessionMode === 'agent' && session.metadata.agentId) {
+        const tenantId = (session.metadata.userId as string | undefined)
+          || (session.metadata.tenantId as string | undefined)
+          || 'default';
+        const { contextBlock } = recallBotMemories({
+          tenantId,
+          botId: session.metadata.agentId,
+          query: text,
+          limit: 5,
+        });
+        if (contextBlock) {
+          agentContext = {
+            ...(agentContext ?? {}),
+            systemPrompt: agentContext?.systemPrompt
+              ? `${agentContext.systemPrompt}\n\n${contextBlock}`
+              : contextBlock,
+          };
+        }
+      }
+    } catch {
+      // Degrade silently if bot memory recall fails
+    }
+
     // Retain user turn observation in background
     try {
       void memoryClient.retainTurn('user', text, {
@@ -716,7 +798,7 @@ async function streamMessageWithContext(
   await chatApi.streamChat(
     session.id,
     text,
-    modelId,
+    modelId ?? undefined,
     {
       onChunk: (chunk) => {
         callbacks?.onChunk?.(chunk.chunk);
@@ -845,7 +927,7 @@ function codePermissionRules(mode: 'default' | 'acceptEdits' | 'plan') {
 interface StoreConfig {
   name: string;
   storageKey: string;
-  originSurface: 'chat' | 'cowork' | 'code' | 'browser' | 'design';
+  originSurface: 'chat' | 'cowork' | 'code' | 'browser' | 'design' | 'bot';
   sessionApi?: SessionApi;
   chatApi?: ChatApi;
 }
@@ -868,6 +950,7 @@ export interface ModeSessionState {
   sessionCanvases: Record<string, string[]>;
 
   createSession: (options?: CreateModeSessionOptions) => Promise<string>;
+  adoptSession: (backend: BackendSession) => string;
   deleteSession: (sessionId: string) => Promise<void>;
   updateSession: (sessionId: string, updates: Partial<ModeSession>) => Promise<void>;
   setActiveSession: (sessionId: string | null) => void;
@@ -875,6 +958,7 @@ export interface ModeSessionState {
   sendMessage: (sessionId: string, options: SendMessageOptions) => Promise<void>;
   sendMessageStream: (sessionId: string, options: SendMessageOptions) => Promise<void>;
   abortGeneration: (sessionId: string) => void;
+  setStreamingBySession: (sessionId: string, isStreaming: boolean) => void;
 
   // Session lifecycle (revert / compact / undo / redo)
   revertSession: (sessionId: string, messageId: string) => Promise<void>;
@@ -917,6 +1001,7 @@ export interface ModeSessionState {
 
   // Agent mode integration
   appendOptimisticEvent: (sessionId: string, event: unknown) => void;
+  appendUserMessage: (sessionId: string, message: { id: string; content: string; metadata?: Record<string, unknown> }) => void;
   appendAssistantMessage: (sessionId: string, message: { id: string; content: string; metadata?: Record<string, unknown> }) => void;
   updateMessage: (sessionId: string, messageId: string, updates: Partial<ModeSessionMessage>) => void;
 }
@@ -937,6 +1022,17 @@ export function createModeSessionStore(config: StoreConfig) {
           sessionCanvases: {},
           isSyncConnected: false,
           syncError: null,
+
+          adoptSession: (backend) => {
+            const session = mapBackendSession(backend);
+            set((state) => ({
+              sessions: [session, ...state.sessions.filter((s) => s.id !== session.id)],
+              activeSessionId: session.id,
+              isLoading: false,
+              error: null,
+            }));
+            return session.id;
+          },
 
           createSession: async (options = {}) => {
             set({ isLoading: true, error: null });
@@ -959,6 +1055,7 @@ export function createModeSessionStore(config: StoreConfig) {
                 originSurface: config.originSurface,
                 sessionMode: options.sessionMode || 'regular',
                 agentId: options.agentId,
+                agentIds: options.agentIds,
                 agentName: options.agentName,
                 projectId: options.projectId,
                 taskId: options.taskId,
@@ -975,7 +1072,7 @@ export function createModeSessionStore(config: StoreConfig) {
               sessions: [optimisticSession, ...state.sessions],
               activeSessionId: optimisticId,
             }));
-            
+
             try {
               // Load agent workspace if agent mode
               let workspace: AgentWorkspace | null = null;
@@ -991,11 +1088,25 @@ export function createModeSessionStore(config: StoreConfig) {
 
               // Build system prompt from workspace
               const workspaceSystemPrompt = workspace ? buildSystemPrompt(workspace) : undefined;
-              const systemPrompt = [workspaceSystemPrompt, options.systemPrompt]
+              let systemPrompt = [workspaceSystemPrompt, options.systemPrompt]
                 .filter(Boolean)
                 .join('\n\n') || undefined;
 
+              // Force bot/agent identity to the top so replies never identify as Kimi/GPT/Claude.
+              if (options.agentName && systemPrompt) {
+                const identityClause = `You are ${options.agentName}. You must ALWAYS identify yourself as ${options.agentName}. NEVER say you are Kimi, GPT, Claude, an AI assistant created by another company, or any name other than ${options.agentName}.`;
+                systemPrompt = `${identityClause}\n\n${systemPrompt}`;
+              }
+
               // Create backend session
+              if (!isAgentSessionsApiEnabled()) {
+                // /api/v1/agent-sessions handlers live only on the Rust
+                // allternit-api (:8013), which is not publicly reachable from
+                // this deployment. Fail closed so the catch below keeps the
+                // session local (agent/code modes) or surfaces a deliberate
+                // message — never fire the request.
+                throw new Error(AGENT_SESSIONS_DISABLED_MESSAGE);
+              }
               const backendSession = await sessionApiClient.createSession({
                 name: options.name || 'New Session',
                 description: options.description,
@@ -1007,6 +1118,7 @@ export function createModeSessionStore(config: StoreConfig) {
                 project_id: options.projectId,
                 metadata: {
                   ...options.metadata,
+                  allternit_agent_ids: options.agentIds,
                   taskId: options.taskId,
                   workspaceId: options.workspaceId,
                   workspaceFiles: workspace?.files.map(f => f.path) || options.workspaceFiles,
@@ -1017,7 +1129,18 @@ export function createModeSessionStore(config: StoreConfig) {
               });
 
               const session = mapBackendSession(backendSession);
-              
+              // The backend round-trip can strip client-only metadata (bot
+              // identity, session mode, prompts). Merge the request options
+              // back OVER the mapped session so identity always survives.
+              session.metadata = {
+                ...session.metadata,
+                ...definedEntries(options.metadata),
+                ...(options.agentId ? { agentId: options.agentId } : {}),
+                ...(options.agentName ? { agentName: options.agentName } : {}),
+                ...(options.sessionMode ? { sessionMode: options.sessionMode } : {}),
+                ...(options.systemPrompt ? { systemPrompt: options.systemPrompt } : {}),
+              };
+
               // Replace optimistic session with real one
               set((state) => ({
                 sessions: state.sessions.map((s) =>
@@ -1060,13 +1183,17 @@ export function createModeSessionStore(config: StoreConfig) {
               return session.id;
             } catch (error) {
               const message = error instanceof Error ? error.message : 'Failed to create session';
+              const isBotSession = options.metadata?.isBot === true;
               const localModeId = typeof options.metadata?.agentModeId === 'string'
                 ? options.metadata.agentModeId
                 : config.originSurface === 'code'
                   ? 'code'
                   : null;
-              const canRunLocally = Boolean(localModeId) && (
-                options.sessionMode === 'agent' || config.originSurface === 'code'
+              // Bot sessions must keep a working local session when the
+              // backend is unreachable — deleting the optimistic session and
+              // re-throwing orphans every bot chat click.
+              const canRunLocally = (Boolean(localModeId) || isBotSession) && (
+                options.sessionMode === 'agent' || config.originSurface === 'code' || isBotSession
               );
               if (canRunLocally) {
                 logger.warn({ err: error }, `[${config.name}] Backend session unavailable; running built-in mode locally`);
@@ -1079,7 +1206,7 @@ export function createModeSessionStore(config: StoreConfig) {
                           ...session,
                           metadata: {
                             ...session.metadata,
-                            agentModeId: localModeId as CanonicalAgentModeId,
+                            agentModeId: (localModeId ?? session.metadata?.agentModeId) as CanonicalAgentModeId | undefined,
                             executionPersistence: 'local',
                           },
                         }
@@ -1117,6 +1244,22 @@ export function createModeSessionStore(config: StoreConfig) {
                 coworkIntegration.cleanupAgent(session.metadata.agentId);
               } catch {
                 // Non-fatal cleanup errors don't block deletion
+              }
+            }
+
+            // Destroy ephemeral cloud desktops tied to this session.
+            const vmOperator = session?.metadata.vmOperator as
+              | { persistence?: 'ephemeral' | 'session' | 'persistent' }
+              | undefined;
+            const vmComputerId = session?.metadata.vmComputerId as string | undefined;
+            if (vmOperator?.persistence === 'ephemeral' && vmComputerId) {
+              try {
+                await deleteComputer(vmComputerId);
+              } catch (error) {
+                logger.error(
+                  { err: error, computerId: vmComputerId },
+                  `Failed to delete ephemeral computer for session ${sessionId}`,
+                );
               }
             }
 
@@ -1671,6 +1814,15 @@ export function createModeSessionStore(config: StoreConfig) {
             }));
           },
 
+          setStreamingBySession: (sessionId: string, isStreaming: boolean) => {
+            set((state) => ({
+              streamingBySession: {
+                ...state.streamingBySession,
+                [sessionId]: { isStreaming, error: null, abortController: null },
+              },
+            }));
+          },
+
           revertSession: async (sessionId: string, messageId: string) => {
             set({ isLoading: true, error: null });
             try {
@@ -1854,6 +2006,23 @@ export function createModeSessionStore(config: StoreConfig) {
             }));
           },
 
+          appendUserMessage: (sessionId: string, message) => {
+            const userMsg: ModeSessionMessage = {
+              id: message.id,
+              role: 'user',
+              content: message.content,
+              timestamp: new Date().toISOString(),
+              metadata: message.metadata,
+            };
+            set((state) => ({
+              sessions: state.sessions.map((s) =>
+                s.id === sessionId
+                  ? { ...s, messages: [...s.messages, userMsg], updatedAt: new Date().toISOString() }
+                  : s
+              ),
+            }));
+          },
+
           appendAssistantMessage: (sessionId: string, message) => {
             const assistantMsg: ModeSessionMessage = {
               id: message.id,
@@ -1865,7 +2034,7 @@ export function createModeSessionStore(config: StoreConfig) {
             set((state) => ({
               sessions: state.sessions.map((s) =>
                 s.id === sessionId
-                  ? { ...s, messages: [...s.messages, assistantMsg] }
+                  ? { ...s, messages: [...s.messages, assistantMsg], updatedAt: new Date().toISOString() }
                   : s
               ),
             }));
@@ -1888,6 +2057,14 @@ export function createModeSessionStore(config: StoreConfig) {
 
           loadSessions: async () => {
             set({ isLoading: true, error: null });
+
+            if (!isAgentSessionsApiEnabled()) {
+              // Backend agent-sessions handlers are disabled by flag in this
+              // deployment; keep the persisted in-memory sessions without
+              // probing an endpoint nothing serves.
+              set({ isLoading: false, error: null });
+              return;
+            }
 
             try {
               const backendSessions = await sessionApi.listSessions();
@@ -1925,8 +2102,14 @@ export function createModeSessionStore(config: StoreConfig) {
               const newActiveId = merged.some(s => s.id === currentActiveId) ? currentActiveId : null;
               set({ sessions: merged, activeSessionId: newActiveId, isLoading: false });
             } catch (error) {
-              const message = error instanceof Error ? error.message : 'Failed to load sessions';
-              set({ error: message, isLoading: false });
+              const isUnavailable = error instanceof Error && 'statusCode' in error && [501, 502, 503].includes((error as any).statusCode);
+              if (isUnavailable) {
+                // Backend agent-sessions endpoint is not implemented yet; keep in-memory sessions.
+                set({ isLoading: false, error: null });
+              } else {
+                const message = error instanceof Error ? error.message : 'Failed to load sessions';
+                set({ error: message, isLoading: false });
+              }
             }
           },
 
@@ -2049,6 +2232,17 @@ export function createModeSessionStore(config: StoreConfig) {
 	            // Disconnect any existing connection first
 	            get().disconnectSessionSync();
 
+            if (!isAgentSessionsApiEnabled()) {
+              // Never open the /api/v1/agent-sessions/sync SSE channel (or the
+              // listSessions probe that precedes it) when the backend is
+              // disabled by flag — without this guard the reconnect loop
+              // retries a 404 forever.
+              set({ isSyncConnected: false, syncError: AGENT_SESSIONS_DISABLED_MESSAGE });
+              return () => {
+                set({ isSyncConnected: false });
+              };
+            }
+
             let retryDelay = 1000;
             const MAX_RETRY_DELAY = 30000;
             let cancelled = false;
@@ -2061,7 +2255,7 @@ export function createModeSessionStore(config: StoreConfig) {
 	              void sessionApi.listSessions()
 	                .then(() => {
 	                  if (cancelled) return;
-	                  unsubscribe = subscribeSSE(syncUrl, {
+	                  const syncOptions: SSESubscriptionOptions = {
 	                onOpen: () => {
 	                  set({ isSyncConnected: true, syncError: null });
 	                  retryDelay = 1000; // Reset retry delay on successful connection
@@ -2148,7 +2342,23 @@ export function createModeSessionStore(config: StoreConfig) {
 	                        }, retryDelay);
 	                      }
 	                    },
-	                  });
+	                  };
+	                  if (isAgentSessionsApiEnabled()) {
+	                    // Cloud control plane: authenticated fetch streaming —
+	                    // cloud-api accepts Bearer only, no session cookie, so a
+	                    // plain EventSource cannot authenticate.
+	                    const source = createCloudApiEventSource(syncUrl);
+	                    source.onopen = () => syncOptions.onOpen?.();
+	                    source.onmessage = (event) => {
+	                      let data: unknown;
+	                      try { data = JSON.parse(event.data); } catch { data = event.data; }
+	                      syncOptions.onMessage?.(data, event);
+	                    };
+	                    source.onerror = (event) => syncOptions.onError?.(event);
+	                    unsubscribe = () => source.close();
+	                  } else {
+	                    unsubscribe = subscribeSSE(syncUrl, syncOptions);
+	                  }
 	                })
 	                .catch((error) => {
 	                  unsubscribe?.();
@@ -2160,7 +2370,12 @@ export function createModeSessionStore(config: StoreConfig) {
 	                    });
 	                    return;
 	                  }
-	                  set({ isSyncConnected: false, syncError: 'Sync unavailable — retrying…' });
+                  const isUnavailable = error instanceof NativeAgentApiError && [501, 502, 503].includes(error.statusCode);
+                  if (isUnavailable) {
+                    set({ isSyncConnected: false, syncError: 'Agent session sync unavailable in this environment.' });
+                    return;
+                  }
+                  set({ isSyncConnected: false, syncError: 'Sync unavailable — retrying…' });
 	                  if (!cancelled) {
 	                    setTimeout(() => {
 	                      retryDelay = Math.min(retryDelay * 1.5, MAX_RETRY_DELAY);

@@ -1,6 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { isRuntimeApiEnabled } from "@/lib/env";
+
+const RUNTIME_API_DISABLED_MESSAGE =
+  "Runtime API is disabled in this deployment (set NEXT_PUBLIC_ALLTERNIT_RUNTIME_API=1 where the gateway is reachable).";
 
 export type RuntimeDriverType = "process" | "container" | "microvm" | "wasm";
 export type RuntimeIsolationLevel =
@@ -158,6 +162,16 @@ export function useRuntimeSettings(): UseRuntimeSettingsResult {
     setIsLoading(true);
     setError(null);
 
+    // `/api/v1/runtime/*` is served only by the Rust allternit-api — fail
+    // closed with a deliberate error instead of probing endpoints that 404.
+    if (!isRuntimeApiEnabled()) {
+      setSettings(null);
+      setDrivers([]);
+      setError(new Error(RUNTIME_API_DISABLED_MESSAGE));
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const nextSettings = await handleResponse<RuntimeSettings>(
         await fetch(SETTINGS_ENDPOINT),
@@ -183,6 +197,9 @@ export function useRuntimeSettings(): UseRuntimeSettingsResult {
 
   const updateSettings = useCallback(
     async (patch: RuntimeSettingsPatch): Promise<RuntimeSettings> => {
+      if (!isRuntimeApiEnabled()) {
+        throw new Error(RUNTIME_API_DISABLED_MESSAGE);
+      }
       setIsSaving(true);
       setError(null);
 
@@ -215,6 +232,9 @@ export function useRuntimeSettings(): UseRuntimeSettingsResult {
   );
 
   const resetSettings = useCallback(async (): Promise<RuntimeSettings> => {
+    if (!isRuntimeApiEnabled()) {
+      throw new Error(RUNTIME_API_DISABLED_MESSAGE);
+    }
     setIsResetting(true);
     setError(null);
 
@@ -242,6 +262,9 @@ export function useRuntimeSettings(): UseRuntimeSettingsResult {
 
   const activateDriver = useCallback(
     async (driverType: RuntimeDriverType): Promise<void> => {
+      if (!isRuntimeApiEnabled()) {
+        throw new Error(RUNTIME_API_DISABLED_MESSAGE);
+      }
       setIsActivatingDriver(true);
       setError(null);
 

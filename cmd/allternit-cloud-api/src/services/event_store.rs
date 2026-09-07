@@ -7,7 +7,7 @@ use crate::db::cowork_models::*;
 use crate::error::ApiError;
 use async_trait::async_trait;
 use chrono::Utc;
-use sqlx::SqlitePool;
+use sqlx::PgPool;
 use tokio::sync::broadcast;
 use uuid::Uuid;
 
@@ -63,14 +63,14 @@ pub trait EventStore: Send + Sync {
 
 /// Event store implementation using SQLite
 pub struct EventStoreImpl {
-    db: SqlitePool,
+    db: PgPool,
     /// Broadcast channels for each run (run_id -> sender)
     channels: tokio::sync::RwLock<std::collections::HashMap<String, broadcast::Sender<Event>>>,
 }
 
 impl EventStoreImpl {
     /// Create a new EventStoreImpl
-    pub fn new(db: SqlitePool) -> Self {
+    pub fn new(db: PgPool) -> Self {
         Self {
             db,
             channels: tokio::sync::RwLock::new(std::collections::HashMap::new()),
@@ -99,7 +99,7 @@ impl EventStoreImpl {
     /// Get the next sequence number for a run
     async fn next_sequence(&self, run_id: &str) -> Result<i64, ApiError> {
         let result = sqlx::query_scalar::<_, Option<i64>>(
-            "SELECT MAX(sequence) FROM events WHERE run_id = ?",
+            "SELECT MAX(sequence) FROM events WHERE run_id = $1",
         )
         .bind(run_id)
         .fetch_one(&self.db)
@@ -139,7 +139,7 @@ impl EventStore for EventStoreImpl {
             INSERT INTO events (
                 id, run_id, sequence, event_type, payload,
                 source_client_id, source_client_type, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             RETURNING *
             "#,
         )
@@ -163,7 +163,7 @@ impl EventStore for EventStoreImpl {
     }
 
     async fn get(&self, event_id: &str) -> Result<Event, ApiError> {
-        let event = sqlx::query_as::<_, Event>("SELECT * FROM events WHERE id = ?")
+        let event = sqlx::query_as::<_, Event>("SELECT * FROM events WHERE id = $1")
             .bind(event_id)
             .fetch_optional(&self.db)
             .await
@@ -173,7 +173,7 @@ impl EventStore for EventStoreImpl {
     }
 
     async fn get_for_run(&self, run_id: &str, filter: EventFilter) -> Result<Vec<Event>, ApiError> {
-        let mut query = String::from("SELECT * FROM events WHERE run_id = ?");
+        let mut query = String::from("SELECT * FROM events WHERE run_id = $1");
 
         // Build dynamic query based on filters
         if filter.event_types.is_some() {
@@ -203,7 +203,7 @@ impl EventStore for EventStoreImpl {
         let events = if let Some(cursor) = filter.cursor {
             if let Some(limit) = filter.limit {
                 sqlx::query_as::<_, Event>(
-                    "SELECT * FROM events WHERE run_id = ? AND sequence > ? ORDER BY sequence ASC LIMIT ?"
+                    "SELECT * FROM events WHERE run_id = $1 AND sequence > $2 ORDER BY sequence ASC LIMIT $3"
                 )
                 .bind(run_id)
                 .bind(cursor)
@@ -213,7 +213,7 @@ impl EventStore for EventStoreImpl {
                 .map_err(|e| ApiError::DatabaseError(e))?
             } else {
                 sqlx::query_as::<_, Event>(
-                    "SELECT * FROM events WHERE run_id = ? AND sequence > ? ORDER BY sequence ASC",
+                    "SELECT * FROM events WHERE run_id = $1 AND sequence > $2 ORDER BY sequence ASC",
                 )
                 .bind(run_id)
                 .bind(cursor)
@@ -224,7 +224,7 @@ impl EventStore for EventStoreImpl {
         } else {
             if let Some(limit) = filter.limit {
                 sqlx::query_as::<_, Event>(
-                    "SELECT * FROM events WHERE run_id = ? ORDER BY sequence ASC LIMIT ?",
+                    "SELECT * FROM events WHERE run_id = $1 ORDER BY sequence ASC LIMIT $2",
                 )
                 .bind(run_id)
                 .bind(limit)
@@ -233,7 +233,7 @@ impl EventStore for EventStoreImpl {
                 .map_err(|e| ApiError::DatabaseError(e))?
             } else {
                 sqlx::query_as::<_, Event>(
-                    "SELECT * FROM events WHERE run_id = ? ORDER BY sequence ASC",
+                    "SELECT * FROM events WHERE run_id = $1 ORDER BY sequence ASC",
                 )
                 .bind(run_id)
                 .fetch_all(&self.db)
@@ -253,7 +253,7 @@ impl EventStore for EventStoreImpl {
     ) -> Result<Vec<Event>, ApiError> {
         let events = if let Some(limit) = limit {
             sqlx::query_as::<_, Event>(
-                "SELECT * FROM events WHERE run_id = ? AND sequence >= ? ORDER BY sequence ASC LIMIT ?"
+                "SELECT * FROM events WHERE run_id = $1 AND sequence >= $2 ORDER BY sequence ASC LIMIT $3"
             )
             .bind(run_id)
             .bind(sequence)
@@ -263,7 +263,7 @@ impl EventStore for EventStoreImpl {
             .map_err(|e| ApiError::DatabaseError(e))?
         } else {
             sqlx::query_as::<_, Event>(
-                "SELECT * FROM events WHERE run_id = ? AND sequence >= ? ORDER BY sequence ASC",
+                "SELECT * FROM events WHERE run_id = $1 AND sequence >= $2 ORDER BY sequence ASC",
             )
             .bind(run_id)
             .bind(sequence)
@@ -277,7 +277,7 @@ impl EventStore for EventStoreImpl {
 
     async fn get_latest_sequence(&self, run_id: &str) -> Result<i64, ApiError> {
         let result = sqlx::query_scalar::<_, Option<i64>>(
-            "SELECT MAX(sequence) FROM events WHERE run_id = ?",
+            "SELECT MAX(sequence) FROM events WHERE run_id = $1",
         )
         .bind(run_id)
         .fetch_one(&self.db)
@@ -300,7 +300,7 @@ impl EventStore for EventStoreImpl {
     ) -> Result<Vec<Event>, ApiError> {
         let events = if let Some(limit) = limit {
             sqlx::query_as::<_, Event>(
-                "SELECT * FROM events WHERE run_id = ? AND event_type = ? ORDER BY sequence DESC LIMIT ?"
+                "SELECT * FROM events WHERE run_id = $1 AND event_type = $2 ORDER BY sequence DESC LIMIT $3"
             )
             .bind(run_id)
             .bind(event_type)
@@ -310,7 +310,7 @@ impl EventStore for EventStoreImpl {
             .map_err(|e| ApiError::DatabaseError(e))?
         } else {
             sqlx::query_as::<_, Event>(
-                "SELECT * FROM events WHERE run_id = ? AND event_type = ? ORDER BY sequence DESC",
+                "SELECT * FROM events WHERE run_id = $1 AND event_type = $2 ORDER BY sequence DESC",
             )
             .bind(run_id)
             .bind(event_type)

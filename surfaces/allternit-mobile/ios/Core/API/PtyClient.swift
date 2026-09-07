@@ -84,8 +84,11 @@ final class PtyClient: @unchecked Sendable {
         if CommandLine.arguments.contains("-skip-auth") {
             request.setValue("dev-ios-tester", forHTTPHeaderField: "x-allternit-user-id")
             request.setValue("dev", forHTTPHeaderField: "x-allternit-desktop-access-token")
-            if request.value(forHTTPHeaderField: "Authorization") == nil {
-                request.setValue("Bearer dev-api-token", forHTTPHeaderField: "Authorization")
+            // Dev bearer comes from the environment (see APIClient.swift) —
+            // it is no longer hardcoded (B1).
+            if request.value(forHTTPHeaderField: "Authorization") == nil,
+               let devToken = ProcessInfo.processInfo.environment["ALLTERNIT_DEV_API_TOKEN"] {
+                request.setValue("Bearer \(devToken)", forHTTPHeaderField: "Authorization")
             }
         }
         #endif

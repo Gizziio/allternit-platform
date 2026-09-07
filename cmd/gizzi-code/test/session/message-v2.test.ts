@@ -104,8 +104,8 @@ function basePart(messageID: string, id: string) {
   }
 }
 
-describe.skip("session.message-v2.toModelMessage", () => {
-  test.skip("filters out messages with no parts", () => {
+describe("session.message-v2.toModelMessage", () => {
+  test("filters out messages with no parts", () => {
     const input: MessageV2.WithParts[] = [
       {
         info: userInfo("m-empty"),
@@ -131,7 +131,7 @@ describe.skip("session.message-v2.toModelMessage", () => {
     ])
   })
 
-  test.skip("filters out messages with only ignored parts", () => {
+  test("filters out messages with only ignored parts", () => {
     const messageID = "m-user"
 
     const input: MessageV2.WithParts[] = [
@@ -151,7 +151,7 @@ describe.skip("session.message-v2.toModelMessage", () => {
     expect(MessageV2.toModelMessages(input, model)).toStrictEqual([])
   })
 
-  test.skip("includes synthetic text parts", () => {
+  test("includes synthetic text parts", () => {
     const messageID = "m-user"
 
     const input: MessageV2.WithParts[] = [
@@ -191,7 +191,7 @@ describe.skip("session.message-v2.toModelMessage", () => {
     ])
   })
 
-  test.skip("converts user text/file parts and injects compaction/subtask prompts", () => {
+  test("converts user text/file parts and injects compaction/subtask prompts", () => {
     const messageID = "m-user"
 
     const input: MessageV2.WithParts[] = [
@@ -264,7 +264,7 @@ describe.skip("session.message-v2.toModelMessage", () => {
     ])
   })
 
-  test.skip("converts assistant tool completion into tool-call + tool-result messages with attachments", () => {
+  test("converts assistant tool completion into tool-call + tool-result messages with attachments", () => {
     const userID = "m-user"
     const assistantID = "m-assistant"
 
@@ -356,7 +356,7 @@ describe.skip("session.message-v2.toModelMessage", () => {
     ])
   })
 
-  test.skip("omits provider metadata when assistant model differs", () => {
+  test("omits provider metadata when assistant model differs", () => {
     const userID = "m-user"
     const assistantID = "m-assistant"
 
@@ -431,7 +431,7 @@ describe.skip("session.message-v2.toModelMessage", () => {
     ])
   })
 
-  test.skip("replaces compacted tool output with placeholder", () => {
+  test("replaces compacted tool output with placeholder", () => {
     const userID = "m-user"
     const assistantID = "m-assistant"
 
@@ -498,7 +498,7 @@ describe.skip("session.message-v2.toModelMessage", () => {
     ])
   })
 
-  test.skip("converts assistant tool error into error-text tool result", () => {
+  test("converts assistant tool error into error-text tool result", () => {
     const userID = "m-user"
     const assistantID = "m-assistant"
 
@@ -567,7 +567,7 @@ describe.skip("session.message-v2.toModelMessage", () => {
     ])
   })
 
-  test.skip("filters assistant messages with non-abort errors", () => {
+  test("filters assistant messages with non-abort errors", () => {
     const assistantID = "m-assistant"
 
     const input: MessageV2.WithParts[] = [
@@ -590,7 +590,7 @@ describe.skip("session.message-v2.toModelMessage", () => {
     expect(MessageV2.toModelMessages(input, model)).toStrictEqual([])
   })
 
-  test.skip("includes aborted assistant messages only when they have non-step-start/reasoning content", () => {
+  test("includes aborted assistant messages only when they have non-step-start/reasoning content", () => {
     const assistantID1 = "m-assistant-1"
     const assistantID2 = "m-assistant-2"
 
@@ -641,7 +641,7 @@ describe.skip("session.message-v2.toModelMessage", () => {
     ])
   })
 
-  test.skip("splits assistant messages on step-start boundaries", () => {
+  test("splits assistant messages on step-start boundaries", () => {
     const assistantID = "m-assistant"
 
     const input: MessageV2.WithParts[] = [
@@ -678,7 +678,7 @@ describe.skip("session.message-v2.toModelMessage", () => {
     ])
   })
 
-  test.skip("drops messages that only contain step-start parts", () => {
+  test("drops messages that only contain step-start parts", () => {
     const assistantID = "m-assistant"
 
     const input: MessageV2.WithParts[] = [
@@ -696,7 +696,7 @@ describe.skip("session.message-v2.toModelMessage", () => {
     expect(MessageV2.toModelMessages(input, model)).toStrictEqual([])
   })
 
-  test.skip("converts pending/running tool calls to error results to prevent dangling tool_use", () => {
+  test("converts pending/running tool calls to error results to prevent dangling tool_use", () => {
     const userID = "m-user"
     const assistantID = "m-assistant"
 
@@ -787,8 +787,8 @@ describe.skip("session.message-v2.toModelMessage", () => {
   })
 })
 
-describe.skip("session.message-v2.fromError", () => {
-  test.skip("serializes context_length_exceeded as ContextOverflowError", () => {
+describe("session.message-v2.fromError", () => {
+  test("serializes context_length_exceeded as ContextOverflowError", () => {
     const input = {
       type: "error",
       error: {
@@ -799,6 +799,8 @@ describe.skip("session.message-v2.fromError", () => {
 
     expect(result).toStrictEqual({
       name: "ContextOverflowError",
+      // NamedError.toObject() always emits a top-level message ("" here: the cause is a plain object, not an Error)
+      message: "",
       data: {
         message: "Input exceeds context window of this model",
         responseBody: JSON.stringify(input),
@@ -806,7 +808,7 @@ describe.skip("session.message-v2.fromError", () => {
     })
   })
 
-  test.skip("serializes response error codes", () => {
+  test("serializes response error codes", () => {
     const cases = [
       {
         code: "insufficient_quota",
@@ -834,6 +836,8 @@ describe.skip("session.message-v2.fromError", () => {
 
       expect(result).toStrictEqual({
         name: "APIError",
+        // NamedError.toObject() always emits a top-level message ("" here: the cause is a plain object, not an Error)
+        message: "",
         data: {
           message: item.message,
           isRetryable: false,
@@ -843,6 +847,7 @@ describe.skip("session.message-v2.fromError", () => {
     })
   })
 
+  // SKIPPED: documents github-copilot 403 → reauth-guidance mapping that ProviderError.parseAPICallError does not implement
   test.skip("maps github-copilot 403 to reauth guidance", () => {
     const error = new APICallError({
       message: "forbidden",
@@ -872,7 +877,7 @@ describe.skip("session.message-v2.fromError", () => {
     })
   })
 
-  test.skip("detects context overflow from APICallError provider messages", () => {
+  test("detects context overflow from APICallError provider messages", () => {
     const cases = [
       "prompt is too long: 213462 tokens > 200000 maximum",
       "Your input exceeds the context window of this model",
@@ -896,7 +901,7 @@ describe.skip("session.message-v2.fromError", () => {
     })
   })
 
-  test.skip("does not classify 429 no body as context overflow", () => {
+  test("does not classify 429 no body as context overflow", () => {
     const result = MessageV2.fromError(
       new APICallError({
         message: "429 status code (no body)",
@@ -912,7 +917,7 @@ describe.skip("session.message-v2.fromError", () => {
     expect(MessageV2.APIError.isInstance(result)).toBe(true)
   })
 
-  test.skip("preserves plain provider Error details as a structured APIError", () => {
+  test("preserves plain provider Error details as a structured APIError", () => {
     const result = MessageV2.fromError(
       new Error("Kimi quota exceeded for this billing cycle"),
       { providerID: "kimi-cli" },
@@ -920,9 +925,13 @@ describe.skip("session.message-v2.fromError", () => {
 
     expect(result).toStrictEqual({
       name: "APIError",
+      // top-level message is the cause's message (NamedError.toObject()); fromError() passes statusCode/responseBody explicitly, so they appear as undefined keys
+      message: "Kimi quota exceeded for this billing cycle",
       data: {
         message: "Kimi quota exceeded for this billing cycle",
         isRetryable: false,
+        statusCode: undefined,
+        responseBody: undefined,
         metadata: {
           providerID: "kimi-cli",
           code: "insufficient_balance",
@@ -932,7 +941,7 @@ describe.skip("session.message-v2.fromError", () => {
     })
   })
 
-  test.skip("preserves unrecognized provider stream payloads as structured APIErrors", () => {
+  test("preserves unrecognized provider stream payloads as structured APIErrors", () => {
     const result = MessageV2.fromError(
       {
         type: "error",
@@ -944,10 +953,13 @@ describe.skip("session.message-v2.fromError", () => {
 
     expect(result).toStrictEqual({
       name: "APIError",
+      // top-level message is "" (cause is a plain object); fromError() passes responseBody explicitly, so it appears as an undefined key
+      message: "",
       data: {
         message: "Account is suspended",
         statusCode: 403,
         isRetryable: false,
+        responseBody: undefined,
         metadata: {
           providerID: "example-provider",
           code: "generic",
@@ -956,11 +968,13 @@ describe.skip("session.message-v2.fromError", () => {
     })
   })
 
-  test.skip("serializes unknown inputs", () => {
+  test("serializes unknown inputs", () => {
     const result = MessageV2.fromError(123, { providerID: "test" })
 
     expect(result).toStrictEqual({
       name: "UnknownError",
+      // NamedError.toObject() always emits a top-level message ("" here: the cause is not an Error)
+      message: "",
       data: {
         message: "123",
       },

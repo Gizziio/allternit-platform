@@ -1,10 +1,12 @@
+import { CLOUD_URLS, envOr } from "@/shared/constants/cloudUrls"
+
 function truthy(key: string) {
-  const value = (process.env[key] ?? process.env["GIZZI_" + key.slice(4)])?.toLowerCase()
+  const value = process.env[key]?.toLowerCase()
   return value === "true" || value === "1"
 }
 
 function env(key: string) {
-  return process.env[key] ?? process.env["GIZZI_" + key.slice(4)]
+  return process.env[key]
 }
 
 export namespace Flag {
@@ -25,13 +27,13 @@ export namespace Flag {
   export const GIZZI_ENABLE_EXPERIMENTAL_MODELS = truthy("GIZZI_ENABLE_EXPERIMENTAL_MODELS")
   export const GIZZI_DISABLE_AUTOCOMPACT = truthy("GIZZI_DISABLE_AUTOCOMPACT")
   export const GIZZI_DISABLE_MODELS_FETCH = truthy("GIZZI_DISABLE_MODELS_FETCH")
-  export const GIZZI_DISABLE_CLAUDE_CODE = truthy("GIZZI_DISABLE_CLAUDE_CODE")
-  export const GIZZI_DISABLE_CLAUDE_CODE_PROMPT =
-    GIZZI_DISABLE_CLAUDE_CODE || truthy("GIZZI_DISABLE_CLAUDE_CODE_PROMPT")
-  export const GIZZI_DISABLE_CLAUDE_CODE_SKILLS =
-    GIZZI_DISABLE_CLAUDE_CODE || truthy("GIZZI_DISABLE_CLAUDE_CODE_SKILLS")
+  export const GIZZI_DISABLE_LEGACY_INSTRUCTIONS = truthy("GIZZI_DISABLE_LEGACY_INSTRUCTIONS")
+  export const GIZZI_DISABLE_LEGACY_PROMPT =
+    GIZZI_DISABLE_LEGACY_INSTRUCTIONS || truthy("GIZZI_DISABLE_LEGACY_PROMPT")
+  export const GIZZI_DISABLE_LEGACY_SKILLS =
+    GIZZI_DISABLE_LEGACY_INSTRUCTIONS || truthy("GIZZI_DISABLE_LEGACY_SKILLS")
   export const GIZZI_DISABLE_EXTERNAL_SKILLS =
-    GIZZI_DISABLE_CLAUDE_CODE_SKILLS || truthy("GIZZI_DISABLE_EXTERNAL_SKILLS")
+    GIZZI_DISABLE_LEGACY_SKILLS || truthy("GIZZI_DISABLE_EXTERNAL_SKILLS")
   export declare const GIZZI_DISABLE_PROJECT_CONFIG: boolean
   export const GIZZI_FAKE_VCS = env("GIZZI_FAKE_VCS")
   export declare const GIZZI_CLIENT: string
@@ -44,6 +46,16 @@ export namespace Flag {
   export const GIZZI_CLERK_JWKS_URL = env("GIZZI_CLERK_JWKS_URL")
   export const GIZZI_CLERK_ISSUER = env("GIZZI_CLERK_ISSUER")
   export const GIZZI_REQUIRE_CLERK_AUTH = truthy("GIZZI_REQUIRE_CLERK_AUTH")
+  // Override for the allternit-cloud-api token-validation endpoint used to
+  // authenticate durable `alt_` gateway tokens (default
+  // https://api.allternit.com/api/v1/auth/validate).
+  export const GIZZI_TOKEN_VALIDATE_URL = env("GIZZI_TOKEN_VALIDATE_URL")
+  // Development-only: reflect any Origin in Access-Control-Allow-Origin.
+  // Never set in production — the server CORS policy is an allowlist
+  // (loopback, tauri, *.gizzi.dev, --cors/config entries) by default.
+  // Dynamic getter (defined after the namespace) — tests toggle this
+  // mid-process, so it can't be a frozen const evaluated once at import time.
+  export declare const GIZZI_DEV_CORS: boolean
   // Path override for the cloudflared binary used by `gizzi serve --tunnel`.
   export const GIZZI_CLOUDFLARED_BIN = env("GIZZI_CLOUDFLARED_BIN")
   // Named-tunnel token (`cloudflared tunnel token <name>` / Zero Trust
@@ -64,11 +76,11 @@ export namespace Flag {
   // this env var over storing it in a config file). Implies mesh mode.
   export const GIZZI_MESH_AUTH_KEY = env("GIZZI_MESH_AUTH_KEY")
   // Headscale coordination server URL for `gizzi serve --mesh`. The default
-  // (https://allternit-headscale.fly.dev) lives in Mesh.DEFAULT_CONTROL_URL.
+  // (https://headscale.allternit.com) lives in Mesh.DEFAULT_CONTROL_URL.
   export const GIZZI_MESH_CONTROL_URL = env("GIZZI_MESH_CONTROL_URL")
   // Platform instance registry base URL. `gizzi serve --tunnel` PUTs its public
   // tunnel URL here so signed-in clients (iOS app) can discover the instance.
-  export const GIZZI_PLATFORM_API_URL = env("GIZZI_PLATFORM_API_URL") ?? "https://allternit-cloud-api.fly.dev"
+  export const GIZZI_PLATFORM_API_URL = envOr("GIZZI_PLATFORM_API_URL", CLOUD_URLS.api)
   export const GIZZI_ENABLE_QUESTION_TOOL = truthy("GIZZI_ENABLE_QUESTION_TOOL")
   // Emergency rollback switches for the Kimi-parity runtime rollout. New
   // installations keep these capabilities enabled; flags only suppress the
@@ -109,6 +121,7 @@ export namespace Flag {
   // enabled by default; set this to opt out (mirrors GIZZI_DISABLE_BROWSER_TOOL).
   export const GIZZI_ENABLE_LSP_TOOL = !truthy("GIZZI_DISABLE_LSP_TOOL")
   export const GIZZI_ENABLE_BROWSER_TOOL = !truthy("GIZZI_DISABLE_BROWSER_TOOL")
+  export const GIZZI_ENABLE_DESKTOP_TOOL = truthy("GIZZI_ENABLE_DESKTOP_TOOL")
   export const GIZZI_DISABLE_FILETIME_CHECK = truthy("GIZZI_DISABLE_FILETIME_CHECK")
   export const GIZZI_EXPERIMENTAL_PLAN_MODE = GIZZI_EXPERIMENTAL || truthy("GIZZI_EXPERIMENTAL_PLAN_MODE")
   export const GIZZI_EXPERIMENTAL_MARKDOWN = truthy("GIZZI_EXPERIMENTAL_MARKDOWN")
@@ -124,7 +137,7 @@ export namespace Flag {
   // Set this (or pass --dangerously-skip-sandbox) to run Bash fully unsandboxed.
   export let GIZZI_SANDBOX_DISABLE: boolean = truthy("GIZZI_SANDBOX_DISABLE")
   // When sandbox is on, allow outbound network. Default: denied — agents that
-  // need npm/pip/cargo must opt in explicitly (matches Claude Code's default-deny).
+  // need npm/pip/cargo must opt in explicitly (matches gizzi-code's default-deny).
   export let GIZZI_SANDBOX_ALLOW_NETWORK = truthy("GIZZI_SANDBOX_ALLOW_NETWORK")
   // Comma-separated hostname allowlist. When set (and network is allowed),
   // outbound traffic is restricted to these domains via a local proxy instead
@@ -182,6 +195,15 @@ Object.defineProperty(Flag, "GIZZI_DISABLE_PROJECT_CONFIG", {
 Object.defineProperty(Flag, "GIZZI_CLIENT", {
   get() {
     return env("GIZZI_CLIENT") ?? "cli"
+  },
+  enumerable: true,
+  configurable: false,
+})
+
+// Dynamic getter for GIZZI_DEV_CORS
+Object.defineProperty(Flag, "GIZZI_DEV_CORS", {
+  get() {
+    return truthy("GIZZI_DEV_CORS")
   },
   enumerable: true,
   configurable: false,

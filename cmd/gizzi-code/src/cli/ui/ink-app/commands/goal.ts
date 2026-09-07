@@ -1,5 +1,5 @@
 // @ts-nocheck
-import type { ContentBlockParam } from '@allternit/sdk/providers/anthropic/resources/messages.js'
+import type { ContentBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/messages.js'
 import type { Command } from '../commands.js'
 import { getDirectConnectServerUrl } from '../bootstrap/state.js'
 
@@ -79,6 +79,7 @@ Begin working on the goal immediately by creating a plan and starting the first 
 const goal: Command = {
   type: 'prompt',
   name: 'goal',
+  argumentHint: '<objective|status|pause|resume|clear>',
   description: 'Run a task continuously in an autonomous goal-directed loop until complete',
   progressMessage: 'executing goal loop',
   contentLength: 0,

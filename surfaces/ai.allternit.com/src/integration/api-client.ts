@@ -1,6 +1,7 @@
 "use client";
 
 import { getDefaultAgentModel } from "@/lib/agents/agent-models";
+import { resolveOperatorGatewayUrl } from "@/lib/operator-gateway";
 
 /**
  * Allternit API Client - Canonical Enterprise Implementation
@@ -32,28 +33,24 @@ import { getDefaultAgentModel } from "@/lib/agents/agent-models";
  */
 const DEFAULT_GATEWAY_URL = 'http://127.0.0.1:8013';
 
-function stripTrailingSlash(value: string): string {
-  return value.replace(/\/+$/g, '');
-}
-
-function stripApiV1Suffix(value: string): string {
-  return value.replace(/\/api\/v1\/?$/i, '');
-}
-
-function normalizeGatewayCandidate(value: string): string {
-  return stripTrailingSlash(stripApiV1Suffix(value));
-}
+const SELF_HOSTED_TOKEN = (import.meta as any).env?.VITE_ALLTERNIT_SELF_HOSTED_TOKEN;
 
 function configuredGatewayUrl(): string {
-  // SSR-safe: check for window existence before accessing
   const windowUrl = typeof window !== 'undefined' ? (window as any).__ALLTERNIT_GATEWAY_URL__ : undefined;
-  const configured = windowUrl
-    || (import.meta as any).env?.VITE_ALLTERNIT_GATEWAY_URL
-    || DEFAULT_GATEWAY_URL;
+  const runtimeGatewayUrl = typeof window !== 'undefined'
+    ? (window as any).__ALLTERNIT_RUNTIME_BACKEND__?.resolved_gateway_url
+    : undefined;
+  const isDesktop = typeof window !== 'undefined'
+    && Boolean((window as any).allternit || (window as any).allternitSidecar);
 
-  const normalized = normalizeGatewayCandidate(String(configured).trim());
-
-  return normalized || DEFAULT_GATEWAY_URL;
+  return resolveOperatorGatewayUrl({
+    windowUrl,
+    viteUrl: (import.meta as any).env?.VITE_ALLTERNIT_GATEWAY_URL,
+    runtimeGatewayUrl,
+    locationOrigin: typeof window !== 'undefined' ? window.location.origin : undefined,
+    isDesktop,
+    fallback: DEFAULT_GATEWAY_URL,
+  }) || DEFAULT_GATEWAY_URL;
 }
 
 function gatewayUrl(): string {
@@ -63,8 +60,6 @@ function gatewayUrl(): string {
   // Do NOT redirect to window.location.origin in dev - Vite doesn't proxy to backend
   return normalized || DEFAULT_GATEWAY_URL;
 }
-
-const API_BASE = `${gatewayUrl()}/api`;
 
 // Export for debugging
 export const GATEWAY_BASE_URL = gatewayUrl();
@@ -137,7 +132,7 @@ export interface Agent {
   id: string;
   name: string;
   description: string;
-  type?: 'orchestrator' | 'sub-agent' | 'worker' | 'specialist' | 'reviewer';
+  type?: 'orchestrator' | 'sub-agent' | 'worker' | 'specialist' | 'reviewer' | 'assistant';
   parentAgentId?: string;
   model: string;
   provider: 'openai' | 'anthropic' | 'google' | 'local' | 'custom';
@@ -156,13 +151,32 @@ export interface Agent {
   characterLayer?: unknown;
   trustTier?: 'safe' | 'low' | 'standard' | 'elevated' | 'admin' | 'critical';
   harness?: unknown;
-  allowedSurfaces?: Array<'chat' | 'cowork' | 'code' | 'design' | 'browser'>;
+  allowedSurfaces?: Array<'chat' | 'cowork' | 'bot' | 'code' | 'design' | 'browser'>;
   allowedSkills?: string[];
   allowedTools?: string[];
   category?: 'engineering' | 'design' | 'marketing' | 'product' | 'research' | 'operations' | 'creative' | 'general';
   tags?: string[];
   dataClassification?: string;
   writeScope?: string;
+}
+
+export interface InferenceRouterProviderModel {
+  id: string;
+  name: string;
+  default?: boolean;
+}
+
+export interface InferenceRouterProvider {
+  id: string;
+  name: string;
+  installed: boolean;
+  available: boolean;
+  reason?: string;
+  models?: InferenceRouterProviderModel[];
+}
+
+export interface InferenceRouterCliStatusResponse {
+  providers: InferenceRouterProvider[];
 }
 
 export interface ApiErrorDetails {
@@ -189,6 +203,14 @@ export interface UsageSummary {
   /** Optional reporting window bounds (ISO timestamps). */
   periodStart?: string;
   periodEnd?: string;
+  /** Allternit subscription plan id (free / plus / super / ultra). */
+  plan?: string;
+  planLabel?: string;
+  /** Remaining prepaid credits or free-inference allowance, in USD. */
+  creditsRemaining?: number;
+  monthlyLimit?: number;
+  /** False when the meter could not be loaded (do not render fake $0 Free). */
+  meteringAvailable?: boolean;
 }
 
 /**
@@ -209,18 +231,40 @@ function normalizeUsageSummary(raw: unknown): UsageSummary {
 
   const input = toNumber(tokensRecord.input ?? record.input_tokens ?? record.tokens_input);
   const output = toNumber(tokensRecord.output ?? record.output_tokens ?? record.tokens_output);
-  const total = toNumber(tokensRecord.total ?? record.total_tokens) || input + output;
+  const total = toNumber(tokensRecord.total ?? record.total_tokens ?? record.weeklyUsed) || input + output;
   const cents = toNumber(record.total_cents);
-  const cost = toNumber(record.cost ?? record.cost_usd ?? record.total_cost) || cents / 100;
+  const creditsRemaining = record.credits == null ? undefined : toNumber(record.credits);
+  const cost = toNumber(record.cost ?? record.cost_usd ?? record.total_cost ?? record.monthToDateUsageUsd) || cents / 100;
+  const plan = typeof record.plan === 'string' ? record.plan : undefined;
+  const planLabel = typeof record.label === 'string'
+    ? record.label
+    : typeof record.planLabel === 'string'
+      ? record.planLabel
+      : undefined;
 
   return {
-    requests: toNumber(record.requests ?? record.total_requests ?? record.request_count),
+    requests: toNumber(record.requests ?? record.total_requests ?? record.request_count ?? record.weeklyUsed),
     tokens: { input, output, total },
     cost,
     currency: typeof record.currency === 'string' && record.currency ? record.currency : 'USD',
     periodStart: typeof record.period_start === 'string' ? record.period_start : undefined,
-    periodEnd: typeof record.period_end === 'string' ? record.period_end : undefined,
+    periodEnd: typeof record.period_end === 'string'
+      ? record.period_end
+      : (typeof record.resetsAt === 'string' ? record.resetsAt : undefined),
+    plan,
+    planLabel,
+    creditsRemaining,
+    monthlyLimit: record.weeklyLimit == null ? undefined : toNumber(record.weeklyLimit),
+    meteringAvailable: record.meteringAvailable === false ? false : true,
   };
+}
+
+function isEmptyUsageMeter(summary: UsageSummary): boolean {
+  const noCredits = summary.creditsRemaining == null;
+  const noLimit = !summary.monthlyLimit;
+  const noTraffic = summary.requests === 0 && summary.tokens.total === 0 && summary.cost === 0;
+  const freeOrMissing = !summary.plan || summary.plan === 'free';
+  return freeOrMissing && noCredits && noLimit && noTraffic;
 }
 
 // ============================================================================
@@ -296,13 +340,11 @@ class AllternitApiClient {
   private candidateBaseUrls(): string[] {
     const normalizedPrimary = String(this.baseUrl || '').trim().replace(/\/+$/, '');
     const normalizedConfigured = configuredGatewayUrl();
-    const candidates = [normalizedPrimary];
+    // Prefer the live operator gateway (desktop loopback) over the value
+    // captured at module load, which may still be the baked cloud URL.
+    const candidates = [normalizedConfigured, normalizedPrimary].filter(Boolean);
     const isShellDevBrowser =
       typeof window !== 'undefined' && window.location.port === '5177';
-
-    if (normalizedConfigured && normalizedConfigured !== normalizedPrimary) {
-      candidates.push(normalizedConfigured);
-    }
 
     // If shell-ui proxy is unavailable, fall back to direct API host.
     if (/^https?:\/\/(127\.0\.0\.1|localhost):5177$/i.test(normalizedPrimary)) {
@@ -408,6 +450,7 @@ class AllternitApiClient {
       'Accept': 'application/json',
       'X-Client-Version': '2.0.0',
       ...(this.token ? { 'Authorization': `Bearer ${this.token}` } : {}),
+      ...(SELF_HOSTED_TOKEN ? { 'X-Allternit-Self-Hosted-Token': String(SELF_HOSTED_TOKEN) } : {}),
       ...(options.headers as Record<string, string> || {}),
     };
 
@@ -524,6 +567,67 @@ class AllternitApiClient {
 
   delete<T>(path: string, options?: RequestInit): Promise<T> {
     return this.request<T>('DELETE', path, undefined, options);
+  }
+
+  /**
+   * Make a request and return the raw Response so the caller can handle
+   * binary payloads (screenshots, file downloads) manually.
+   */
+  async raw(path: string, options: RequestInit = {}): Promise<Response> {
+    const pathNormalized = path.startsWith('/') ? path : `/${path}`;
+    const candidateBases = this.candidateBaseUrls();
+
+    const headers: Record<string, string> = {
+      'X-Client-Version': '2.0.0',
+      ...(this.token ? { 'Authorization': `Bearer ${this.token}` } : {}),
+      ...(SELF_HOSTED_TOKEN ? { 'X-Allternit-Self-Hosted-Token': String(SELF_HOSTED_TOKEN) } : {}),
+      ...(options.headers as Record<string, string> || {}),
+    };
+
+    let config: RequestInit = {
+      ...options,
+      headers,
+    };
+
+    for (const interceptor of this.requestInterceptors) {
+      config = interceptor(config);
+    }
+
+    let lastNetworkError: unknown = null;
+    for (const base of candidateBases) {
+      const url = `${base}${pathNormalized}`;
+      try {
+        const response = await this.fetchWithRetry(url, config);
+        if (response.ok) {
+          if (base !== this.baseUrl) {
+            this.baseUrl = base;
+          }
+          return response;
+        }
+        return response;
+      } catch (err) {
+        lastNetworkError = err;
+      }
+    }
+
+    throw new AllternitApiError(
+      `Network error - unable to reach API after multiple attempts`,
+      0,
+      'NETWORK_ERROR'
+    );
+  }
+
+  // ==========================================================================
+  // INFERENCE ROUTER API
+  // ==========================================================================
+
+  async getInferenceRouterCliStatus(
+    options?: RequestInit
+  ): Promise<InferenceRouterCliStatusResponse> {
+    return this.get<InferenceRouterCliStatusResponse>(
+      '/api/v1/inference-router/cli-status',
+      options
+    );
   }
 
   // ==========================================================================
@@ -689,17 +793,6 @@ class AllternitApiClient {
     } finally {
       reader.releaseLock();
     }
-  }
-
-  connectEventStream(sessionId: string): EventSource {
-    const url = `${this.baseUrl}/api/v1/sessions/${sessionId}/events`;
-    const eventSource = new EventSource(url);
-    
-    eventSource.onerror = (error) => {
-      logger.error({ err: error }, 'EventSource error');
-    };
-
-    return eventSource;
   }
 
   // ==========================================================================
@@ -1032,13 +1125,6 @@ class AllternitApiClient {
     return eventSource;
   }
 
-  /**
-   * Get operator health status
-   */
-  async operatorHealth(): Promise<{ status: string; type: string }> {
-    return this.get('/api/v1/operator/health');
-  }
-
   // ==========================================================================
   // USAGE API
   // ==========================================================================
@@ -1047,8 +1133,46 @@ class AllternitApiClient {
    * Get real usage stats (requests, tokens, cost) for the current user.
    */
   async getUsageSummary(): Promise<UsageSummary> {
-    const raw = await this.get<unknown>('/api/v1/usage/summary');
-    return normalizeUsageSummary(raw);
+    // Desktop device-token sessions hit Clerk-only cloud metering as 401.
+    // `/api/v1/me/usage` fail-softs that to empty; `/usage/summary` requires
+    // org+period query params the picker never sends (400). Never throw here
+    // — a missing meter must not blank Connect or 503-loop Home.
+    try {
+      const raw = await this.get<unknown>('/api/v1/me/usage');
+      const summary = normalizeUsageSummary(raw);
+      if (!isEmptyUsageMeter(summary)) return summary;
+      const billed = await this.loadCloudBillingUsage();
+      return billed ?? { ...summary, meteringAvailable: false };
+    } catch (err) {
+      const status = err instanceof AllternitApiError ? err.statusCode : 0;
+      if (status === 401 || status === 403 || status === 404 || status === 422 || status === 503) {
+        const billed = await this.loadCloudBillingUsage();
+        return billed ?? { ...normalizeUsageSummary(null), meteringAvailable: false };
+      }
+      logger.warn({ err }, 'Usage summary unavailable; rendering empty meter');
+      const billed = await this.loadCloudBillingUsage();
+      return billed ?? { ...normalizeUsageSummary(null), meteringAvailable: false };
+    }
+  }
+
+  private async loadCloudBillingUsage(): Promise<UsageSummary | null> {
+    try {
+      const { fetchCloudBillingUsage } = await import('@/lib/cloud-api');
+      const billed = await fetchCloudBillingUsage();
+      if (!billed) return null;
+      return normalizeUsageSummary({
+        plan: billed.plan,
+        label: billed.label,
+        credits: billed.credits,
+        monthToDateUsageUsd: billed.monthToDateUsageUsd,
+        weeklyLimit: billed.weeklyLimit,
+        weeklyUsed: billed.weeklyUsed,
+        recentTransactions: billed.recentTransactions,
+      });
+    } catch (err) {
+      logger.warn({ err }, 'Cloud billing usage fallback unavailable');
+      return null;
+    }
   }
 
   // ==========================================================================
@@ -1078,7 +1202,7 @@ export const api = new AllternitApiClient();
 // React Hooks
 // =============================================================================
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 
 import { createModuleLogger } from '@/lib/logger';
 
@@ -1136,7 +1260,6 @@ export function useSession(sessionId: string | null) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<AllternitApiError | null>(null);
-  const eventSourceRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -1154,61 +1277,6 @@ export function useSession(sessionId: string | null) {
     };
 
     fetchSession();
-  }, [sessionId]);
-
-  useEffect(() => {
-    if (!sessionId) return;
-
-    // Connect to event stream
-    const eventSource = api.connectEventStream(sessionId);
-    eventSourceRef.current = eventSource;
-
-    eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        
-        switch (data.type) {
-          case 'message.delta':
-            // Handle streaming message
-            setMessages(prev => {
-              const last = prev[prev.length - 1];
-              if (last && last.role === 'assistant') {
-                return [
-                  ...prev.slice(0, -1),
-                  { ...last, content: last.content + data.data.content }
-                ];
-              }
-              return [...prev, {
-                id: data.data.id,
-                role: 'assistant',
-                content: data.data.content,
-                timestamp: new Date().toISOString()
-              }];
-            });
-            break;
-          
-          case 'message.completed':
-            // Message complete
-            break;
-          
-          case 'tool.call':
-            // Tool was called
-            console.debug('[useSession] Tool call:', data.data);
-            break;
-          
-          case 'error':
-            setError(new AllternitApiError(data.data.message, 500));
-            break;
-        }
-      } catch (err) {
-        logger.error({ err: err }, 'Failed to parse event');
-      }
-    };
-
-    return () => {
-      eventSource.close();
-      eventSourceRef.current = null;
-    };
   }, [sessionId]);
 
   const sendMessage = useCallback(async (message: string) => {
@@ -1379,8 +1447,9 @@ export function useModelDiscovery() {
       setProvidersError(null);
       
       // Fetch both auth status and real models registry. Cap the wait so a
-      // missing backend never leaves the UI stuck on a spinner.
-      const signal = AbortSignal.timeout(3000);
+      // missing backend never leaves the UI stuck on a spinner. Auth/status
+      // can exceed 3s when hundreds of providers are installed.
+      const signal = AbortSignal.timeout(10000);
       const [authResponse, registryResponse] = await Promise.all([
         api.listProviderAuthStatus({ signal }),
         api.listProviders({ signal }).catch(() => ({ all: [], default: {}, connected: [] }))
@@ -1392,7 +1461,7 @@ export function useModelDiscovery() {
       return authResponse.providers;
     } catch (err) {
       setProvidersError(err as AllternitApiError);
-      return [];
+      return null;
     } finally {
       setProvidersLoading(false);
     }
@@ -1488,127 +1557,6 @@ export function useModelDiscovery() {
     realModels,
   };
 }
-
-// =============================================================================
-// Node Jobs API
-// =============================================================================
-
-export interface CreateJobRequest {
-  name: string;
-  wih: {
-    handler: string;
-    version?: string;
-    task: {
-      type: string;
-      command?: string;
-      working_dir?: string | null;
-      [key: string]: any;
-    };
-    tools?: Array<{ name: string; enabled: boolean; config?: any }>;
-  };
-  resources?: {
-    cpu_cores?: number;
-    memory_gb?: number;
-    disk_gb?: number;
-    gpu?: boolean;
-  };
-  env?: Record<string, string>;
-  priority?: number;
-  timeout_secs?: number;
-  node_id?: string | null;
-}
-
-export interface JobRecord {
-  id: number;
-  job_id: string;
-  node_id: string | null;
-  status: string;
-  priority: number;
-  job_spec: string;
-  result: string | null;
-  created_at: string;
-  started_at: string | null;
-  completed_at: string | null;
-}
-
-export interface JobQueueStats {
-  pending: number;
-  running: number;
-  completed: number;
-  failed: number;
-  cancelled: number;
-}
-
-export const jobsApi = {
-  /**
-   * Create a new job
-   */
-  async createJob(job: CreateJobRequest): Promise<{ job_id: string; status: string }> {
-    const response = await fetch(`${API_BASE}/jobs`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(job),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to create job: ${response.statusText}`);
-    }
-
-    return response.json();
-  },
-
-  /**
-   * Get job by ID
-   */
-  async getJob(jobId: string): Promise<{ job: JobRecord }> {
-    const response = await fetch(`${API_BASE}/jobs/${jobId}`);
-
-    if (!response.ok) {
-      throw new Error(`Failed to get job: ${response.statusText}`);
-    }
-
-    return response.json();
-  },
-
-  /**
-   * List jobs (with stats)
-   */
-  async listJobs(): Promise<{ stats: JobQueueStats }> {
-    const response = await fetch(`${API_BASE}/jobs`);
-
-    if (!response.ok) {
-      throw new Error(`Failed to list jobs: ${response.statusText}`);
-    }
-
-    return response.json();
-  },
-
-  /**
-   * Cancel a job
-   */
-  async cancelJob(jobId: string): Promise<void> {
-    const response = await fetch(`${API_BASE}/jobs/${jobId}/cancel`, {
-      method: 'POST',
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to cancel job: ${response.statusText}`);
-    }
-  },
-
-  /**
-   * Get job queue statistics
-   */
-  async getStats(): Promise<JobQueueStats> {
-    const response = await fetch(`${API_BASE}/jobs/stats`);
-
-    if (!response.ok) {
-      throw new Error(`Failed to get job stats: ${response.statusText}`);
-    }
-
-    return response.json();
-  },
-};
 
 // =============================================================================
 // Default Export

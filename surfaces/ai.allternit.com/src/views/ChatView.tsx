@@ -53,6 +53,7 @@ import { ChatActiveContent } from "./chat/main/ChatActiveContent";
 import { ChatBottomBar } from "./chat/main/ChatBottomBar";
 import { OllamaWarning } from "./chat/main/OllamaWarning";
 import { SendErrorBanner } from "./chat/main/SendErrorBanner";
+import { NativeOriginBanner } from "@/components/native-sessions/NativeOriginBanner";
 
 import { createModuleLogger } from '@/lib/logger';
 
@@ -69,7 +70,7 @@ export function ChatView({
 }: {
   hideEmptyState?: boolean,
   hudMode?: boolean,
-  mode?: 'chat' | 'cowork' | 'code',
+  mode?: 'chat' | 'cowork' | 'bot' | 'code',
   initialMessage?: string,
   onInitialMessageSent?: () => void,
   onOpenAgentSession?: (text: string, surface: AgentModeSurface, execution?: { modeId: CanonicalAgentModeId; templateTitle?: string }) => void;
@@ -77,7 +78,7 @@ export function ChatView({
 }) {
   const { id: chatId } = useChatId();
   const { renameThread } = useChatStore();
-  const agentSurface: AgentModeSurface = mode === 'cowork' ? 'cowork' : mode === 'code' ? 'code' : 'chat';
+  const agentSurface: AgentModeSurface = mode === 'cowork' ? 'cowork' : mode === 'bot' ? 'bot' : mode === 'code' ? 'code' : 'chat';
   const { agentModeEnabled, selectedAgent } =
     useSurfaceAgentSelection(agentSurface);
   
@@ -489,7 +490,7 @@ export function ChatView({
   const isChatEmpty = !isAgentSessionEmbedded && nativeMessages.length === 0;
   const showTopActions = !isAgentSessionEmbedded;
   const useMonolithLogo = mode === 'code';
-  const launchLogo: 'gizzi' | 'matrix' | 'allternit' = mode === 'chat' || mode === 'cowork' || useMonolithLogo ? 'matrix' : 'gizzi';
+  const launchLogo: 'gizzi' | 'matrix' | 'allternit' = mode === 'chat' || mode === 'cowork' || mode === 'bot' || useMonolithLogo ? 'matrix' : 'gizzi';
 
   const embeddedAgentDescriptor = embeddedAgentSession.descriptor;
   // Only sessions actually bound to an agent (agent metadata present) get the
@@ -607,9 +608,14 @@ export function ChatView({
           useMonolithLogo={useMonolithLogo}
           pulseMascot={pulseMascot}
           setLaunchMascotAttention={setLaunchMascotAttention}
+          agent={selectedAgent ?? undefined}
         />
       )}
 
+      <NativeOriginBanner
+        sessionId={activeNativeSessionId}
+        metadata={activeNativeSession?.metadata}
+      />
       <div className={cn('flex flex-row', hudMode ? '' : 'flex-1 min-h-0 overflow-hidden')}>
         <div
           ref={scrollContainerRef}
@@ -706,6 +712,7 @@ export function ChatView({
           useMonolithLogo={useMonolithLogo}
           pulseMascot={pulseMascot}
           setLaunchMascotAttention={setLaunchMascotAttention}
+          agent={selectedAgent ?? undefined}
         />
       )}
 

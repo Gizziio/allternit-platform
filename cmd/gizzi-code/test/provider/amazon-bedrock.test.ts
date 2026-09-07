@@ -16,7 +16,7 @@ test.skip("Bedrock: config region takes precedence over AWS_REGION env var", asy
       await Filesystem.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             "amazon-bedrock": {
               options: {
@@ -48,7 +48,7 @@ test.skip("Bedrock: falls back to AWS_REGION env var when no config region", asy
       await Filesystem.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
         }),
       )
     },
@@ -73,7 +73,7 @@ test.skip("Bedrock: loads when bearer token from auth.json is present", async ()
       await Filesystem.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             "amazon-bedrock": {
               options: {
@@ -141,7 +141,7 @@ test.skip("Bedrock: config profile takes precedence over AWS_PROFILE env var", a
       await Filesystem.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             "amazon-bedrock": {
               options: {
@@ -174,7 +174,7 @@ test.skip("Bedrock: includes custom endpoint in options when specified", async (
       await Filesystem.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             "amazon-bedrock": {
               options: {
@@ -207,7 +207,7 @@ test.skip("Bedrock: autoloads when AWS_WEB_IDENTITY_TOKEN_FILE is present", asyn
       await Filesystem.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             "amazon-bedrock": {
               options: {
@@ -245,14 +245,14 @@ test.skip("Bedrock: model with us. prefix should not be double-prefixed", async 
       await Filesystem.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             "amazon-bedrock": {
               options: {
                 region: "us-east-1",
               },
               models: {
-                "us.anthropic.claude-opus-4-5-20251101-v1:0": {
+                "us.meta.llama3-70b-instruct-v1:0": {
                   name: "Claude Opus 4.5 (US)",
                 },
               },
@@ -271,7 +271,7 @@ test.skip("Bedrock: model with us. prefix should not be double-prefixed", async 
       const providers = await Provider.list()
       expect(providers["amazon-bedrock"]).toBeDefined()
       // The model should exist with the us. prefix
-      expect(providers["amazon-bedrock"].models["us.anthropic.claude-opus-4-5-20251101-v1:0"]).toBeDefined()
+      expect(providers["amazon-bedrock"].models["us.meta.llama3-70b-instruct-v1:0"]).toBeDefined()
     },
   })
 })
@@ -282,14 +282,14 @@ test.skip("Bedrock: model with global. prefix should not be prefixed", async () 
       await Filesystem.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             "amazon-bedrock": {
               options: {
                 region: "us-east-1",
               },
               models: {
-                "global.anthropic.claude-opus-4-5-20251101-v1:0": {
+                "global.meta.llama3-70b-instruct-v1:0": {
                   name: "Claude Opus 4.5 (Global)",
                 },
               },
@@ -307,7 +307,7 @@ test.skip("Bedrock: model with global. prefix should not be prefixed", async () 
     fn: async () => {
       const providers = await Provider.list()
       expect(providers["amazon-bedrock"]).toBeDefined()
-      expect(providers["amazon-bedrock"].models["global.anthropic.claude-opus-4-5-20251101-v1:0"]).toBeDefined()
+      expect(providers["amazon-bedrock"].models["global.meta.llama3-70b-instruct-v1:0"]).toBeDefined()
     },
   })
 })
@@ -318,14 +318,14 @@ test.skip("Bedrock: model with eu. prefix should not be double-prefixed", async 
       await Filesystem.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             "amazon-bedrock": {
               options: {
                 region: "eu-west-1",
               },
               models: {
-                "eu.anthropic.claude-opus-4-5-20251101-v1:0": {
+                "eu.meta.llama3-70b-instruct-v1:0": {
                   name: "Claude Opus 4.5 (EU)",
                 },
               },
@@ -343,7 +343,7 @@ test.skip("Bedrock: model with eu. prefix should not be double-prefixed", async 
     fn: async () => {
       const providers = await Provider.list()
       expect(providers["amazon-bedrock"]).toBeDefined()
-      expect(providers["amazon-bedrock"].models["eu.anthropic.claude-opus-4-5-20251101-v1:0"]).toBeDefined()
+      expect(providers["amazon-bedrock"].models["eu.meta.llama3-70b-instruct-v1:0"]).toBeDefined()
     },
   })
 })
@@ -354,14 +354,14 @@ test.skip("Bedrock: model without prefix in US region should get us. prefix adde
       await Filesystem.write(
         path.join(dir, "gizzi.json"),
         JSON.stringify({
-          $schema: "https://gizzi.io/config.json",
+          $schema: "https://docs.gizziio.com/config.json",
           provider: {
             "amazon-bedrock": {
               options: {
                 region: "us-east-1",
               },
               models: {
-                "anthropic.claude-opus-4-5-20251101-v1:0": {
+                "meta.llama3-70b-instruct-v1:0": {
                   name: "Claude Opus 4.5",
                 },
               },
@@ -380,7 +380,7 @@ test.skip("Bedrock: model without prefix in US region should get us. prefix adde
       const providers = await Provider.list()
       expect(providers["amazon-bedrock"]).toBeDefined()
       // Non-prefixed model should still be registered
-      expect(providers["amazon-bedrock"].models["anthropic.claude-opus-4-5-20251101-v1:0"]).toBeDefined()
+      expect(providers["amazon-bedrock"].models["meta.llama3-70b-instruct-v1:0"]).toBeDefined()
     },
   })
 })
@@ -392,43 +392,43 @@ describe.skip("Bedrock cross-region prefix detection", () => {
   const crossRegionPrefixes = ["global.", "us.", "eu.", "jp.", "apac.", "au."]
 
   test.skip("should detect global. prefix", () => {
-    const modelID = "global.anthropic.claude-opus-4-5-20251101-v1:0"
+    const modelID = "global.meta.llama3-70b-instruct-v1:0"
     const hasPrefix = crossRegionPrefixes.some((prefix) => modelID.startsWith(prefix))
     expect(hasPrefix).toBe(true)
   })
 
   test.skip("should detect us. prefix", () => {
-    const modelID = "us.anthropic.claude-opus-4-5-20251101-v1:0"
+    const modelID = "us.meta.llama3-70b-instruct-v1:0"
     const hasPrefix = crossRegionPrefixes.some((prefix) => modelID.startsWith(prefix))
     expect(hasPrefix).toBe(true)
   })
 
   test.skip("should detect eu. prefix", () => {
-    const modelID = "eu.anthropic.claude-opus-4-5-20251101-v1:0"
+    const modelID = "eu.meta.llama3-70b-instruct-v1:0"
     const hasPrefix = crossRegionPrefixes.some((prefix) => modelID.startsWith(prefix))
     expect(hasPrefix).toBe(true)
   })
 
   test.skip("should detect jp. prefix", () => {
-    const modelID = "jp.anthropic.claude-sonnet-5-v1:0"
+    const modelID = "jp.meta.llama3-70b-instruct-v1:0"
     const hasPrefix = crossRegionPrefixes.some((prefix) => modelID.startsWith(prefix))
     expect(hasPrefix).toBe(true)
   })
 
   test.skip("should detect apac. prefix", () => {
-    const modelID = "apac.anthropic.claude-sonnet-5-v1:0"
+    const modelID = "apac.meta.llama3-70b-instruct-v1:0"
     const hasPrefix = crossRegionPrefixes.some((prefix) => modelID.startsWith(prefix))
     expect(hasPrefix).toBe(true)
   })
 
   test.skip("should detect au. prefix", () => {
-    const modelID = "au.anthropic.claude-sonnet-4-5-20250929-v1:0"
+    const modelID = "au.meta.llama3-70b-instruct-v1:0"
     const hasPrefix = crossRegionPrefixes.some((prefix) => modelID.startsWith(prefix))
     expect(hasPrefix).toBe(true)
   })
 
   test.skip("should NOT detect prefix for non-prefixed model", () => {
-    const modelID = "anthropic.claude-opus-4-5-20251101-v1:0"
+    const modelID = "meta.llama3-70b-instruct-v1:0"
     const hasPrefix = crossRegionPrefixes.some((prefix) => modelID.startsWith(prefix))
     expect(hasPrefix).toBe(false)
   })

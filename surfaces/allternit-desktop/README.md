@@ -1,6 +1,9 @@
 # Allternit Desktop
 
-Self-hosted AI platform desktop client. Connect to your own Allternit instance running on VPS or locally.
+Self-hosted AI platform, fully bundled into one desktop app (~850MB): the Electron
+shell ships with the web UI, the Rust `allternit-api` server, gizzi-code, and the
+supporting services, so it runs the whole stack locally out of the box. You can
+also point it at your own Allternit instance running on a VPS.
 
 ## Architecture
 
@@ -8,21 +11,24 @@ Self-hosted AI platform desktop client. Connect to your own Allternit instance r
 ┌─────────────────────────────────────────────────────────────────┐
 │                     Allternit Desktop (This App)                       │
 │  ┌─────────────────────────────────────────────────────────┐   │
-│  │  • Electron UI (~50MB)                                   │   │
-│  │  • Connection management                                 │   │
-│  │  • Auto-updater (UI only)                               │   │
+│  │  • Electron UI + bundled web build (~850MB total)        │   │
+│  │  • Rust API server (allternit-api, spawned locally)      │   │
+│  │  • gizzi-code brain, allternit-mux, voice service       │   │
+│  │  • vendored ripgrep, Lume, platform static export       │   │
+│  │  • Auto-updater (update-electron-app / Squirrel)        │   │
 │  │  • System tray                                          │   │
 │  └─────────────────────────────────────────────────────────┘   │
-│         │ HTTPS/WebSocket                                      │
+│         │ HTTPS/WebSocket (local: 127.0.0.1:8013 by default)     │
 │         ▼                                                        │
 └─────────────────────────────────────────────────────────────────┘
+   Bundled stack runs locally by default; optionally connect to:
                       │
                       ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│              Your Allternit Backend (Self-Hosted)                      │
+│         Your Own Allternit Backend (Self-Hosted, Optional)             │
 │  ┌─────────────────────────────────────────────────────────┐   │
-│  │  • Allternit Platform (Next.js UI)                            │   │
-│  │  • API Server (Rust)                                    │   │
+│  │  • Allternit Platform (Vite + React SPA)                │   │
+│  │  • API Server (Rust, allternit-api)                     │   │
 │  │  • Kernel Service                                       │   │
 │  │  • All other services                                   │   │
 │  │  • SQLite/PostgreSQL database                           │   │
@@ -39,20 +45,17 @@ Self-hosted AI platform desktop client. Connect to your own Allternit instance r
 
 ### Download
 
-| Platform | Download |
-|----------|----------|
-| macOS | [Allternit-Desktop.dmg](https://github.com/allternit/desktop/releases/latest) |
-| Windows | [Allternit-Desktop-Setup.exe](https://github.com/allternit/desktop/releases/latest) |
-| Linux | [Allternit-Desktop.AppImage](https://github.com/allternit/desktop/releases/latest) |
+There is no public release feed yet — the GitHub release repo
+(`github.com/allternit/desktop`), Homebrew tap, and winget package referenced
+by older docs do not exist. Release builds are produced with
+`./scripts/build-desktop.sh` (see **Development** below) and distributed via
+`install.gizziio.com` per `BUILD.md`; auto-updates will start working once a
+real release repo is published.
 
-```bash
-# macOS (Homebrew)
-brew tap allternit/desktop
-brew install --cask allternit-desktop
-
-# Windows (Winget)
-winget install Allternit.Desktop
-```
+CI can emit unsigned smoke artifacts (macOS dmg when certs are present,
+Windows `.exe`, Linux AppImage/deb) — those are **not** production releases:
+no EV cert on Windows (SmartScreen will warn), no Linux distribution channel.
+Do not announce them as shipping.
 
 ## Setup
 
@@ -67,7 +70,7 @@ winget install Allternit.Desktop
 2. **Open Allternit Desktop**
 
 3. **Configure Connection**:
-   - **Local Mode**: Connect to `localhost:4096` (backend running on same machine)
+   - **Local Mode**: Connect to `localhost:8013` (the Rust `allternit-api` binary; it proxies to Gizzi on 4096)
    - **VPS Mode**: Connect to your VPS URL (e.g., `https://allternit.yourdomain.com`)
 
 4. **Click "Connect"**
@@ -85,7 +88,7 @@ Run the full Allternit stack on your local machine:
 allternit start
 ```
 
-Then in Allternit Desktop, select **Local** mode with port `4096`.
+Then in Allternit Desktop, select **Local** mode with port `8013`.
 
 ### VPS Mode
 Host Allternit on your own VPS:
@@ -102,7 +105,10 @@ Then in Allternit Desktop, select **VPS** mode and enter your URL.
 ## Updating
 
 ### Desktop App (UI)
-Auto-updates automatically via electron-updater.
+Auto-updates use `update-electron-app` (Squirrel) against the GitHub Releases
+feed configured in `src/main/unified-main.ts` / `build.publish`
+(`allternit/desktop`). The feed is not live yet — updates will work once the
+first real release is published to that repo.
 
 ### Backend (Your Server)
 You control when to update your backend:
@@ -113,7 +119,9 @@ ssh user@your-vps
 
 # Update Allternit backend
 cd ~/allternit
-./scripts/update.sh
+git pull
+# Rebuild and restart — cloud API deploy loop: docs/Operations/CLOUD_API_VPS_DEPLOY.md
+# (scripts/deploy-cloud-api.sh, or systemd restart for self-hosted allternit-api)
 
 # Or with Docker
 docker pull allternit/backend:latest
@@ -139,7 +147,7 @@ Settings stored in:
 
 1. Check if backend is running:
    ```bash
-   curl http://localhost:4096/health
+   curl http://localhost:8013/health
    ```
 
 2. Check firewall/VPS security groups
@@ -171,9 +179,33 @@ npm install
 # Run in dev mode
 npm run dev
 
-# Build for production
-npm run build:prod
+# Build main/preload/renderer TypeScript
+npm run build
+
+# Stage the Rust API binary after `cargo build --release -p allternit-api`
+npm run stage:api-binary
+
+# Verify packaged resources before packaging
+npm run verify:packaged-resources
+
+# Build full release artifacts (requires signing certs for signed builds)
+npm run dist
 ```
+
+Full pipeline (platform static export, gizzi-code, allternit-mux, ripgrep,
+voice service, Rust API, Lume, Electron package, checksum patch) in one shot:
+
+```bash
+./scripts/build-desktop.sh          # from the repo root; --skip-platform / --skip-api / --skip-electron
+```
+
+Last verified: 2026-09-03 against a0f8230b5 (scripts/build-desktop.sh and
+package.json scripts confirmed present).
+
+See [docs/SIGNING.md](./docs/SIGNING.md) for codesigning, notarization, and
+auto-update configuration. The three-platform shipping list (including work
+that can happen before Apple approval) is
+[docs/DISTRIBUTION-CHECKLIST.md](./docs/DISTRIBUTION-CHECKLIST.md).
 
 ## Data & Privacy
 
@@ -186,8 +218,8 @@ npm run build:prod
 
 - **Documentation**: https://docs.allternit.com/desktop
 - **Backend Setup**: https://docs.allternit.com/self-host
-- **Issues**: https://github.com/allternit/desktop/issues
+- **Issues**: no public issue tracker yet (the old `github.com/allternit/desktop` repo does not exist)
 
 ## License
 
-MIT License
+UNLICENSED (as declared in `package.json`; no OSI license is granted).

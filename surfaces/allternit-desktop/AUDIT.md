@@ -1,5 +1,12 @@
 # Allternit Desktop Audit
 
+> **STATUS: Partially superseded (2026-09-03).** This is a point-in-time
+> snapshot from 2026-07-03. For the current production-readiness assessment,
+> see [`reports/2026-09-03-production-readiness-gap-analysis.md`](../../reports/2026-09-03-production-readiness-gap-analysis.md).
+> Known-stale items below: the "No bundled services" model (the app now
+> bundles sidecar binaries — see `ARCHITECTURE.md` and `BUILD.md`), and the
+> build/typecheck table (commands have since gained `prepare:*` prerequisites).
+
 Date: 2026-07-03
 Auditor: Kimi Code CLI
 Scope: `surfaces/allternit-desktop` — Electron shell for the Allternit platform.

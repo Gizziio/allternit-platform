@@ -43,6 +43,14 @@ pub fn memory_router() -> Router<Arc<AppState>> {
         .route("/memory/v2/retain", post(retain_turn_v2_handler))
         .route("/memory/v2/facts", get(list_facts_v2_handler))
         .route("/memory/v2/entities", get(list_entities_v2_handler))
+        .route("/memory/browser-history/visit", post(record_browser_visit_handler))
+        .route("/memory/browser-history", get(list_browser_history_handler))
+        .route("/memory/browser-history/search", get(search_browser_history_handler))
+        .route("/memory/procedural", get(list_procedural_memory_handler).post(create_procedural_memory_handler))
+        .route("/memory/procedural/extract", post(extract_procedural_memory_handler))
+        .route("/memory/procedural/match", get(match_procedural_memory_handler))
+        .route("/memory/procedural/:id/use", post(record_procedural_memory_use_handler))
+        .route("/memory/procedural/:id", get(get_procedural_memory_handler).post(update_procedural_memory_handler).delete(delete_procedural_memory_handler))
 }
 
 // ── Health ──────────────────────────────────────────────────────────────────
@@ -1139,6 +1147,349 @@ async fn list_entities_v2_handler(
         Ok(entities) => (StatusCode::OK, Json(json!({"entities": entities, "count": entities.len()}))),
         Err(e) => {
             tracing::warn!("List entities error: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()})))
+        }
+    }
+}
+
+// ── Browser history as memory ───────────────────────────────────────────────
+
+async fn record_browser_visit_handler(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Json(payload): Json<crate::browser_history_service::RecordVisitRequest>,
+) -> impl axum::response::IntoResponse {
+    let user = match get_user(&headers) {
+        Some(u) => u,
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            )
+        }
+    };
+
+    match crate::browser_history_service::record_visit(&state.db, &user.user_id, &payload) {
+        Ok(id) => (StatusCode::CREATED, Json(json!({"id": id, "status": "recorded"}))),
+        Err(crate::browser_history_service::BrowserHistoryError::InvalidUrl(msg)) => {
+            (StatusCode::BAD_REQUEST, Json(json!({"error": "invalid_url", "message": msg})))
+        }
+        Err(e) => {
+            tracing::warn!("Browser history record error: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()})))
+        }
+    }
+}
+
+#[derive(Deserialize)]
+struct BrowserHistoryQuery {
+    agent_id: Option<String>,
+    session_id: Option<String>,
+    domain: Option<String>,
+    since_hours: Option<i64>,
+    limit: Option<usize>,
+}
+
+async fn list_browser_history_handler(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Query(params): Query<BrowserHistoryQuery>,
+) -> impl axum::response::IntoResponse {
+    let user = match get_user(&headers) {
+        Some(u) => u,
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            )
+        }
+    };
+
+    let query = crate::browser_history_service::RecentHistoryQuery {
+        agent_id: params.agent_id,
+        session_id: params.session_id,
+        domain: params.domain,
+        since_hours: params.since_hours,
+        limit: params.limit,
+    };
+
+    match crate::browser_history_service::list_recent(&state.db, &user.user_id, &query) {
+        Ok(items) => (StatusCode::OK, Json(json!({"items": items, "count": items.len()}))),
+        Err(e) => {
+            tracing::warn!("Browser history list error: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()})))
+        }
+    }
+}
+
+#[derive(Deserialize)]
+struct BrowserHistorySearchQuery {
+    q: String,
+    limit: Option<usize>,
+}
+
+async fn search_browser_history_handler(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Query(params): Query<BrowserHistorySearchQuery>,
+) -> impl axum::response::IntoResponse {
+    let user = match get_user(&headers) {
+        Some(u) => u,
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            )
+        }
+    };
+
+    let limit = params.limit.unwrap_or(50);
+    match crate::browser_history_service::search_history(&state.db, &user.user_id, &params.q, limit) {
+        Ok(items) => (StatusCode::OK, Json(json!({"items": items, "count": items.len()}))),
+        Err(e) => {
+            tracing::warn!("Browser history search error: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()})))
+        }
+    }
+}
+
+// ── Site-specific procedural memory ─────────────────────────────────────────
+
+#[derive(Deserialize)]
+struct ExtractProceduralMemoryRequest {
+    agent_id: Option<String>,
+    session_id: String,
+}
+
+async fn extract_procedural_memory_handler(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Json(payload): Json<ExtractProceduralMemoryRequest>,
+) -> impl axum::response::IntoResponse {
+    let user = match get_user(&headers) {
+        Some(u) => u,
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            )
+        }
+    };
+
+    match crate::procedural_memory_service::extract_from_session_history(
+        &state.db,
+        &user.user_id,
+        payload.agent_id.as_deref(),
+        &payload.session_id,
+    ) {
+        Ok(Some(item)) => (StatusCode::CREATED, Json(json!({"memory": item, "extracted": true}))),
+        Ok(None) => (StatusCode::OK, Json(json!({"extracted": false, "message": "insufficient history"}))),
+        Err(e) => {
+            tracing::warn!("Procedural memory extract error: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()})))
+        }
+    }
+}
+
+async fn create_procedural_memory_handler(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Json(payload): Json<crate::procedural_memory_service::CreateProceduralMemoryRequest>,
+) -> impl axum::response::IntoResponse {
+    let user = match get_user(&headers) {
+        Some(u) => u,
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            )
+        }
+    };
+
+    match crate::procedural_memory_service::create_procedural_memory(&state.db, &user.user_id, &payload) {
+        Ok(item) => (StatusCode::CREATED, Json(json!({"memory": item}))),
+        Err(crate::procedural_memory_service::ProceduralMemoryError::InvalidRequest(msg)) => {
+            (StatusCode::BAD_REQUEST, Json(json!({"error": "invalid_request", "message": msg})))
+        }
+        Err(e) => {
+            tracing::warn!("Procedural memory create error: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()})))
+        }
+    }
+}
+
+#[derive(Deserialize)]
+struct ListProceduralMemoryQuery {
+    agent_id: Option<String>,
+    limit: Option<usize>,
+}
+
+async fn list_procedural_memory_handler(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Query(params): Query<ListProceduralMemoryQuery>,
+) -> impl axum::response::IntoResponse {
+    let user = match get_user(&headers) {
+        Some(u) => u,
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            )
+        }
+    };
+
+    let limit = params.limit.unwrap_or(50);
+    match crate::procedural_memory_service::list_procedural_memory(&state.db, &user.user_id, params.agent_id.as_deref(), limit) {
+        Ok(items) => (StatusCode::OK, Json(json!({"memories": items, "count": items.len()}))),
+        Err(e) => {
+            tracing::warn!("Procedural memory list error: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()})))
+        }
+    }
+}
+
+#[derive(Deserialize)]
+struct MatchProceduralMemoryQuery {
+    agent_id: Option<String>,
+    context: String,
+    limit: Option<usize>,
+}
+
+async fn match_procedural_memory_handler(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Query(params): Query<MatchProceduralMemoryQuery>,
+) -> impl axum::response::IntoResponse {
+    let user = match get_user(&headers) {
+        Some(u) => u,
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            )
+        }
+    };
+
+    let limit = params.limit.unwrap_or(10);
+    match crate::procedural_memory_service::find_matching_procedural_memory(
+        &state.db,
+        &user.user_id,
+        params.agent_id.as_deref(),
+        &params.context,
+        limit,
+    ) {
+        Ok(items) => (StatusCode::OK, Json(json!({"memories": items, "count": items.len()}))),
+        Err(e) => {
+            tracing::warn!("Procedural memory match error: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()})))
+        }
+    }
+}
+
+async fn get_procedural_memory_handler(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    axum::extract::Path(id): axum::extract::Path<String>,
+) -> impl axum::response::IntoResponse {
+    let user = match get_user(&headers) {
+        Some(u) => u,
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            )
+        }
+    };
+
+    match crate::procedural_memory_service::get_procedural_memory_by_id(&state.db, &user.user_id, &id) {
+        Ok(Some(item)) => (StatusCode::OK, Json(json!({"memory": item}))),
+        Ok(None) => (StatusCode::NOT_FOUND, Json(json!({"error": "not_found"}))),
+        Err(e) => {
+            tracing::warn!("Procedural memory get error: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()})))
+        }
+    }
+}
+
+async fn update_procedural_memory_handler(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    axum::extract::Path(id): axum::extract::Path<String>,
+    Json(payload): Json<crate::procedural_memory_service::UpdateProceduralMemoryRequest>,
+) -> impl axum::response::IntoResponse {
+    let user = match get_user(&headers) {
+        Some(u) => u,
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            )
+        }
+    };
+
+    match crate::procedural_memory_service::update_procedural_memory(&state.db, &user.user_id, &id, &payload) {
+        Ok(item) => (StatusCode::OK, Json(json!({"memory": item}))),
+        Err(crate::procedural_memory_service::ProceduralMemoryError::NotFound) => {
+            (StatusCode::NOT_FOUND, Json(json!({"error": "not_found"})))
+        }
+        Err(crate::procedural_memory_service::ProceduralMemoryError::InvalidRequest(msg)) => {
+            (StatusCode::BAD_REQUEST, Json(json!({"error": "invalid_request", "message": msg})))
+        }
+        Err(e) => {
+            tracing::warn!("Procedural memory update error: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()})))
+        }
+    }
+}
+
+async fn record_procedural_memory_use_handler(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    axum::extract::Path(id): axum::extract::Path<String>,
+) -> impl axum::response::IntoResponse {
+    let user = match get_user(&headers) {
+        Some(u) => u,
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            )
+        }
+    };
+
+    match crate::procedural_memory_service::record_procedural_memory_use(&state.db, &user.user_id, &id) {
+        Ok(item) => (StatusCode::OK, Json(json!({"memory": item}))),
+        Err(crate::procedural_memory_service::ProceduralMemoryError::NotFound) => {
+            (StatusCode::NOT_FOUND, Json(json!({"error": "not_found"})))
+        }
+        Err(e) => {
+            tracing::warn!("Procedural memory use error: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()})))
+        }
+    }
+}
+
+async fn delete_procedural_memory_handler(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    axum::extract::Path(id): axum::extract::Path<String>,
+) -> impl axum::response::IntoResponse {
+    let user = match get_user(&headers) {
+        Some(u) => u,
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            )
+        }
+    };
+
+    match crate::procedural_memory_service::delete_procedural_memory(&state.db, &user.user_id, &id) {
+        Ok(true) => (StatusCode::NO_CONTENT, Json(json!({}))),
+        Ok(false) => (StatusCode::NOT_FOUND, Json(json!({"error": "not_found"}))),
+        Err(e) => {
+            tracing::warn!("Procedural memory delete error: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()})))
         }
     }

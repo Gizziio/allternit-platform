@@ -34,7 +34,7 @@ import { parse } from 'url'
 import xss from 'xss'
 import { MCP_CLIENT_METADATA_URL } from '@/constants/oauth.js'
 import { openBrowser } from '../../../shared/utils/browser.js'
-import { getClaudeConfigHomeDir } from '../../../shared/utils/envUtils.js'
+import { getLegacyClaudeHomeDir } from '../../../shared/utils/envUtils.js'
 import { errorMessage, getErrnoCode } from '../../../shared/utils/errors.js'
 import * as lockfile from '../../../shared/utils/lockfile.js'
 import { logMCPDebug } from '../../../shared/utils/log.js'
@@ -1382,7 +1382,7 @@ export async function performMCPOAuthFlow(
  * retry → 403 again → aborts with "Server returned 403 after trying upscoping",
  * never reaching redirectToAuthorization where step-up scope is persisted.
  * With this flag set, tokens() omits refresh_token so the SDK falls through
- * to the PKCE flow. See github.com/anthropics/gizzi/issues/28258.
+ * to the PKCE flow. See github.com/Gizziio/allternit-platform/issues/28258.
  */
 export function wrapFetchWithStepUpDetection(
   baseFetch: FetchLike,
@@ -2127,7 +2127,7 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
     refreshToken: string,
   ): Promise<OAuthTokens | undefined> {
     const serverKey = getServerKey(this.serverName, this.serverConfig)
-    const claudeDir = getClaudeConfigHomeDir()
+    const claudeDir = getLegacyClaudeHomeDir()
     await mkdir(claudeDir, { recursive: true })
     const sanitizedKey = serverKey.replace(/[^a-zA-Z0-9]/g, '_')
     const lockfilePath = join(claudeDir, `mcp-refresh-${sanitizedKey}.lock`)

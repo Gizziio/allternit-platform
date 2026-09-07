@@ -3,10 +3,12 @@
 //! Shared state and route handlers for the Allternit API.
 
 pub mod aci_routes;
+pub mod aci_safety;
 pub mod admin_audit_routes;
 pub mod admin_mcp_tunnel_routes;
 pub mod admin_access_token_routes;
 pub mod admin_service_account_routes;
+pub mod fabric;
 pub mod federation_routes;
 pub mod outcome_rubric_routes;
 pub mod page_agent_routes;
@@ -17,6 +19,7 @@ pub mod agent_execution;
 pub mod agent_operations_routes;
 pub mod agent_email_routes;
 pub mod agent_preferences_routes;
+pub mod agent_cloud_routes;
 pub mod agent_routes;
 pub mod agent_runtime_routes;
 pub mod agent_session_routes;
@@ -29,14 +32,32 @@ pub mod analytics_routes;
 pub mod artifact_routes;
 pub mod audit_log_routes;
 pub mod auth;
+pub mod auth_dp_jwt;
+pub mod benchmark_routes;
 pub mod automation_routes;
 pub mod backend_install_routes;
+pub mod bb;
 pub mod beta_deployment_routes;
 pub mod beta_memory_store_routes;
 pub mod beta_session_routes;
 pub mod beta_work_routes;
+pub mod bot_assets;
+pub mod bot_desktop_audit;
+pub mod bot_desktop_billing;
+pub mod bot_desktop_capacity;
+pub mod bot_desktop_input;
+pub mod bot_desktop_mesh;
+pub mod bot_desktop_mux;
+pub mod bot_desktop_quotas;
+pub mod bot_desktop_queue;
 pub mod bot_desktop_routes;
+pub mod bot_desktop_snapshots;
+pub mod bot_desktop_admin;
 pub mod bot_desktop_stream;
+pub mod browser_history_service;
+pub mod procedural_memory_service;
+pub mod bot_desktop_templates;
+pub mod bot_desktop_windows;
 pub mod user_profile_routes;
 pub mod billing;
 pub mod board_routes;
@@ -45,26 +66,44 @@ pub mod brain_routes;
 pub mod canvas_routes;
 pub mod chat_routes;
 pub mod checkpoints_routes;
+pub mod cli_provider_detector;
 pub mod cloud_credentials_routes;
 pub mod compliance_routes;
+pub mod computer_control;
+pub mod computer_routes;
+pub mod computer_screens;
+pub mod bot_group_routes;
 pub mod data_residency_routes;
 pub mod device_attestation_routes;
 pub mod config;
 pub mod connector_routes;
 pub mod conversation_routes;
+pub mod cors;
+pub mod credits;
 pub mod cowork;
 pub mod cowork_preferences_routes;
 pub mod cowork_routes;
 pub mod cowork_team_routes;
 pub mod cron_lite;
 pub mod db;
+pub mod desktop_host_registry;
+pub mod desktop_host_provisioner;
+pub mod desktop_host_admin;
+pub mod fabric_admin_routes;
+pub mod fabric_credits_routes;
+pub mod fabric_model_routes;
+pub mod fabric_node_routes;
+pub mod fabric_resources_routes;
+pub mod fabric_usage_routes;
 pub mod design_connector_routes;
+pub mod env_allowlist;
 pub mod error;
 pub mod enterprise_auth;
 pub mod eval_metric_routes;
 pub mod eval_metrics;
 pub mod eval_routes;
 pub mod external_keys_routes;
+pub mod fabric_routes;
 pub mod fallback_credit_routes;
 pub mod fallback_retry_policy_routes;
 pub mod fallback_routes;
@@ -78,6 +117,7 @@ pub mod gizzi_provider_auth;
 pub mod h5i_routes;
 pub mod har_api_routes;
 pub mod har_api_service;
+pub mod inference_router_routes;
 pub mod health;
 pub mod hud_routes;
 pub mod idempotency;
@@ -88,6 +128,7 @@ pub mod library_routes;
 pub mod llm_gateway;
 pub mod local_brain_routes;
 pub mod local_engine_routes;
+pub mod long_running_task_routes;
 pub mod local_studio_routes;
 pub mod mcp_dispatcher;
 pub mod mcp_routes;
@@ -96,11 +137,13 @@ pub mod mcp_tunnel_auth;
 pub mod marketplace_routes;
 pub mod me_routes;
 pub mod mailflare_client;
+pub mod memory_notes_routes;
 pub mod memory_reconstruction_routes;
 pub mod memory_routes;
 pub mod memory_kernel_service;
 pub mod metrics;
 pub mod oauth_routes;
+pub mod passkey_routes;
 pub mod office_cli_mcp;
 pub mod office_cli_routes;
 pub mod office_engine_routes;
@@ -119,6 +162,8 @@ pub mod rails;
 pub mod remote_control_routes;
 pub mod rate_limit;
 pub mod rails_client_impl;
+pub mod research_task_service;
+pub mod research_task_routes;
 pub mod rbac;
 pub mod rbac_routes;
 pub mod runtime_backend_routes;
@@ -126,6 +171,7 @@ pub mod runtime_discover_routes;
 pub mod sandbox_routes;
 pub mod sandbox_template_routes;
 pub mod scim_routes;
+pub mod skills_routes;
 pub mod server_tool_routes;
 pub mod session_memory_service;
 pub mod slack_webhook_routes;
@@ -151,6 +197,8 @@ pub mod webhook_subscription_routes;
 pub mod webhook_trigger_routes;
 pub mod workflow_routes;
 pub mod workspace_routes;
+pub mod remote_peers;
+pub mod group_rooms;
 
 use allternit_cowork_runtime::RunManager;
 use allternit_cowork_scheduler::Scheduler;
@@ -175,6 +223,21 @@ pub mod test_helpers {
     use std::path::Path;
 
     pub async fn app_state(temp: &Path) -> Arc<AppState> {
+        app_state_with_driver(temp, None).await
+    }
+
+    pub async fn app_state_with_driver(
+        temp: &Path,
+        vm_driver: Option<Arc<dyn allternit_driver_interface::ExecutionDriver>>,
+    ) -> Arc<AppState> {
+        app_state_with_driver_and_os(temp, vm_driver, None).await
+    }
+
+    pub async fn app_state_with_driver_and_os(
+        temp: &Path,
+        vm_driver: Option<Arc<dyn allternit_driver_interface::ExecutionDriver>>,
+        os_control_plane: Option<crate::fabric::os_client::OsControlPlaneClient>,
+    ) -> Arc<AppState> {
         let config = AppConfig {
             company: config::CompanyConfig::default(),
             user: config::UserConfig::default(),
@@ -185,13 +248,31 @@ pub mod test_helpers {
         let rails = RailsState::new(temp.join("rails"))
             .await
             .expect("test rails");
+        let desktop_host_registry = crate::desktop_host_registry::DesktopHostRegistry::new(db.clone());
+        let resource_class_catalog = crate::fabric::sku::ResourceClassCatalog::from_db(&db)
+            .expect("initialize resource class catalog");
+        let fabric_node_pool = std::sync::Arc::new(
+            allternit_computer_cloud::providers::fabric_node::FabricNodePool::new(),
+        );
+        let fabric_node_provider =
+            allternit_computer_cloud::providers::fabric_node::FabricNodeProvider::new(
+                fabric_node_pool,
+                "__system".to_string(),
+            );
+        let fabric_provider_registry = crate::fabric::build_provider_registry(fabric_node_provider.clone());
+        let fabric_price_cache = crate::fabric::PriceCache::new(db.clone());
+        let fabric_scheduler = crate::fabric::Scheduler::new(crate::fabric::CostEngine::default_engine())
+            .with_price_cache(fabric_price_cache.clone());
         Arc::new(AppState {
             config,
             db,
             data_dir: temp.to_path_buf(),
             jwks,
             auth_config,
-            vm_driver: None,
+            vm_driver,
+            incus_driver: None,
+            desktop_host_registry,
+            desktop_host_provisioner: None,
             bot_desktop_sessions: Arc::new(RwLock::new(HashMap::new())),
             rails,
             vm_sessions: vm_session_routes::new_vm_session_store(),
@@ -207,6 +288,14 @@ pub mod test_helpers {
             terminal_sessions: TerminalSessionStore::new(),
             mcp_dispatcher: crate::mcp_dispatcher::McpDispatcher::new(),
             approval_store: Arc::new(permission_policy::ApprovalStore::new()),
+            passkey_state: None,
+            resource_class_catalog,
+            fabric_node_provider,
+            fabric_provider_registry,
+            fabric_scheduler,
+            fabric_price_cache,
+            os_control_plane,
+            dp_jwks: crate::auth_dp_jwt::DataPlaneJwks::disabled(),
         })
     }
 }
@@ -267,10 +356,21 @@ pub struct AppState {
     pub jwks: JwksManager,
     /// Unified auth configuration
     pub auth_config: AuthConfig,
-    /// VM execution driver (Firecracker on Linux, Apple VF on macOS, OpenSandbox)
+    /// Data-plane (cloud-api → node) JWT verifier: JWKS cache + EdDSA
+    /// verification of tokens minted by allternit-cloud-api.
+    pub dp_jwks: crate::auth_dp_jwt::DataPlaneJwks,
+    /// VM execution driver (Incus/Tart Computer Cloud; Firecracker on Linux hosts)
     pub vm_driver: Option<Arc<dyn allternit_driver_interface::ExecutionDriver>>,
+    /// Concrete Incus driver when one is configured; used to add/remove cloud
+    /// provisioned hosts at runtime.
+    pub incus_driver: Option<Arc<allternit_computer_cloud::IncusDriver>>,
+    /// Registry for cloud-provisioned Desktop Cloud Incus hosts.
+    pub desktop_host_registry: crate::desktop_host_registry::DesktopHostRegistry,
+    /// Provisioner / autoscaler for desktop hosts.
+    pub desktop_host_provisioner: Option<crate::desktop_host_provisioner::DesktopHostProvisioner>,
     /// Bot desktop take-over state: bot_id -> session metadata + control state.
     pub bot_desktop_sessions: Arc<RwLock<HashMap<String, BotDesktopSession>>>,
+
     /// Rails service state (Ledger, Gate, Leases, etc.)
     pub rails: RailsState,
     /// Persistent VM sessions — each gizzi-code session gets one VM that stays
@@ -300,6 +400,24 @@ pub struct AppState {
     pub mcp_dispatcher: crate::mcp_dispatcher::McpDispatcher,
     /// Pending/resolved tool-execution approval requests from `ask` policy decisions.
     pub approval_store: Arc<crate::permission_policy::ApprovalStore>,
+    /// Passkey / WebAuthn state for the vault.
+    pub passkey_state: Option<crate::passkey_routes::PasskeyState>,
+    /// Fabric SKU / capability-class catalog, loaded from DB at startup.
+    pub resource_class_catalog: crate::fabric::sku::ResourceClassCatalog,
+    /// Private Fabric node provider pool; refreshed from `FabricNodeRegistry`.
+    pub fabric_node_provider: allternit_computer_cloud::providers::fabric_node::FabricNodeProvider,
+    /// Fabric provider registry exposed to the scheduler. Includes live
+    /// providers (Runpod, Vast.ai) when configured and the Private Fabric node
+    /// provider.
+    pub fabric_provider_registry: allternit_computer_cloud::fabric::FabricProviderRegistry,
+    /// Fabric scheduler with cache-first offer selection and credit holds.
+    pub fabric_scheduler: crate::fabric::Scheduler,
+    /// Fabric provider price cache; refreshed by a background worker.
+    pub fabric_price_cache: crate::fabric::PriceCache,
+    /// Optional canonical AllternitOS control-plane client. When set, Fabric
+    /// resource creation is routed through the OS `POST /v1/leases/issue`
+    /// endpoint instead of the internal Cloud scheduler.
+    pub os_control_plane: Option<crate::fabric::os_client::OsControlPlaneClient>,
 }
 
 /// Return the default LLM provider/model pair used when a request does not

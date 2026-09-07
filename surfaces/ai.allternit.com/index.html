@@ -10,43 +10,9 @@
     <meta name="theme-color" content="#0f0f11" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <script>
-      (function () {
-        try {
-          var s = localStorage.getItem('allternit-theme-storage');
-          var t = s && JSON.parse(s) && JSON.parse(s).state && JSON.parse(s).state.theme;
-          var r = t === 'dark' ? 'dark' : t === 'light' ? 'light' : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-          document.documentElement.setAttribute('data-theme', r);
-          document.documentElement.style.colorScheme = r;
-        } catch (e) {}
-      })();
-    </script>
-    <script>
-      (function () {
-        window.onerror = function (msg, url, line, col, err) {
-          console.error('[APP ERROR]', msg, 'at', url + ':' + line + ':' + col, err);
-        };
-        window.onunhandledrejection = function (e) {
-          console.error('[UNHANDLED REJECTION]', e.reason);
-        };
-      })();
-    </script>
-    <script>
-      (function () {
-        if ('serviceWorker' in navigator) {
-          window.addEventListener('load', function () {
-            navigator.serviceWorker
-              .register('/sw.js')
-              .then(function (registration) {
-                console.log('[SW] registered:', registration.scope);
-              })
-              .catch(function (err) {
-                console.error('[SW] registration failed:', err);
-              });
-          });
-        }
-      })();
-    </script>
+    <!-- Classic early-boot script (theme, pre-module error logging, SW
+         registration). Kept external so the CSP can disallow inline scripts. -->
+    <script src="/boot.js"></script>
   </head>
   <body class="m-0 font-sans">
     <div id="root"></div>

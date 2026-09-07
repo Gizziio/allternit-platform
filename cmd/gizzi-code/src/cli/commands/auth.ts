@@ -13,6 +13,7 @@ import {
   readAuthProfiles,
   removeAuthProfile,
   setActiveAuthProfile,
+  storeApiKeyForProfile,
 } from "@/runtime/context/config/auth-profiles"
 
 const configPath = () => path.join(Global.Path.config, "config.toml")
@@ -23,7 +24,7 @@ const LoginCommand = cmd({
   builder: (yargs) =>
     yargs
       .option("api-key", { type: "string", describe: "API key" })
-      .option("provider", { type: "string", describe: "provider id", default: "anthropic" })
+      .option("provider", { type: "string", describe: "provider id", default: "allternit" })
       .option("profile", { type: "string", describe: "profile name", default: "default" }),
   async handler(args) {
     let apiKey = args.apiKey
@@ -89,7 +90,7 @@ const DiagnoseCommand = cmd({
     UI.println(`Config exists: ${diagnosis.config_exists}`)
     UI.println(`Active method: ${diagnosis.method}`)
     UI.println(`Active profile: ${diagnosis.active_profile ?? "(none)"}`)
-    UI.println(`Credential store: ${diagnosis.credential_store ?? "file (default)"}`)
+    UI.println(`Credential store: ${diagnosis.credential_store ?? "auto (default)"}`)
     UI.println(`Profiles (${diagnosis.profile_count}): ${diagnosis.profile_names.join(", ") || "(none)"}`)
     UI.println(`Runtime auth keys: ${diagnosis.runtime_auth_keys.join(", ") || "(none)"}`)
     UI.println("Environment variables:")
@@ -141,7 +142,7 @@ const ProfileAddCommand = cmd({
     if (interactive) {
       const envAnswer = await prompts.text({
         message: "API key environment variable (optional)",
-        placeholder: "ANTHROPIC_API_KEY",
+        placeholder: "ALLTERNIT_API_KEY",
       })
       if (prompts.isCancel(envAnswer)) throw new UI.CancelledError()
       apiKeyEnv = envAnswer.trim() || undefined
@@ -153,10 +154,13 @@ const ProfileAddCommand = cmd({
     }
     await addAuthProfile(configPath(), args.name, {
       provider,
-      api_key: args.apiKey,
       api_key_env: apiKeyEnv,
       base_url: baseUrl,
     })
+    if (args.apiKey) {
+      // Keys go to the credential store — never inline into config.toml.
+      await storeApiKeyForProfile(configPath(), args.name, args.apiKey)
+    }
     UI.println(`Added auth profile: ${args.name}`)
   },
 })

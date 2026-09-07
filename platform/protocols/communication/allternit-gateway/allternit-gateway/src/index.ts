@@ -167,7 +167,7 @@ app.use('/api/v1/a2ui', async (req, res) => {
 // Generic API Proxy (Catch-all for v1, Rails, and Sessions)
 // ═════════════════════════════════════════════════════════════════════════════
 
-app.use(['/api/v1', '/api/rails', '/api/chat', '/session'], async (req, res) => {
+app.use(['/api/v1', '/api/rails', '/api/chat', '/session', '/v1'], async (req, res) => {
   const apiUrl = process.env.API_URL || 'http://127.0.0.1:3000';
   const kernelUrl = process.env.KERNEL_URL || 'http://127.0.0.1:3004';
   

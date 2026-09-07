@@ -6,6 +6,7 @@ on:
     paths:
       - 'surfaces/ai.allternit.com/**'
       - 'surfaces/platform.allternit.com/**'
+      - 'surfaces/allternit-extensions/allternit-office-addin/**'
       - 'packages/@allternit/**'
       - 'services/runtime/**'
       - '.github/workflows/deploy-cloudflare-pages.yml'
@@ -14,9 +15,45 @@ on:
   workflow_dispatch:
 
 jobs:
+  verify-ai:
+    name: Typecheck + unit tests (ai.allternit.com)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.0
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Generate Prisma client
+        working-directory: surfaces/ai.allternit.com
+        run: pnpm prisma generate
+
+      - name: Typecheck ai.allternit.com
+        working-directory: surfaces/ai.allternit.com
+        run: pnpm typecheck
+
+      - name: Unit tests (ai.allternit.com)
+        working-directory: surfaces/ai.allternit.com
+        run: pnpm test
+
   deploy-ai:
     name: Deploy ai.allternit.com
     runs-on: ubuntu-latest
+    needs: verify-ai
     permissions:
       contents: read
       deployments: write
@@ -51,12 +88,27 @@ jobs:
             echo "No discovery-pipeline.json found, skipping"
           fi
 
+      - name: Verify Clerk publishable key secret is present
+        # Hard gate: never build/deploy a site with an empty Clerk key again
+        # (the 2026-08-01 silent Clerk outage was an empty secret deploying "green").
+        run: |
+          if [ -z "${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}" ]; then
+            echo "::error ::NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY secret is empty — refusing to build ai.allternit.com without Clerk auth."
+            exit 1
+          fi
+          echo "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is set (${#NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY} chars)."
+        env:
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+
       - name: Build ai.allternit.com static export
         run: pnpm --filter "@allternit/ai..." build
         env:
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
           NEXT_PUBLIC_ALLTERNIT_DESKTOP_AUTH: 'true'
           NEXT_PUBLIC_ALLTERNIT_CLOUD_API_URL: 'https://api.allternit.com'
+          NEXT_PUBLIC_ALLTERNIT_AGENT_SESSIONS_API: '1'
+          NEXT_PUBLIC_ALLTERNIT_OFFICE_API: '1'
+          NEXT_PUBLIC_ALLTERNIT_BETA_API: '1'
           VITE_REMOTE_CONTROL_PUSH_URL: ${{ secrets.VITE_REMOTE_CONTROL_PUSH_URL }}
           ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
 
@@ -91,12 +143,58 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
 
+      - name: Verify Clerk publishable key secret is present
+        # Same hard gate as deploy-ai: platform.allternit.com consumes the same secret.
+        run: |
+          if [ -z "${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}" ]; then
+            echo "::error ::NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY secret is empty — refusing to build platform.allternit.com without Clerk auth."
+            exit 1
+          fi
+          echo "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is set (${#NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY} chars)."
+        env:
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+
+      - name: Build Office add-in runtime (Allternit for Word/Excel/PowerPoint)
+        # Canonical home: the isolated allternit-office-addins Pages project
+        # (nothing else deploys there, so the task panes cannot be clobbered
+        # by the allternit-websites platform export that also targets
+        # platform.allternit.com). The platform postbuild additionally embeds
+        # this build at platform.allternit.com/office-addins — see the add-in's
+        # DEPLOYMENT.md.
+        run: pnpm --filter "@allternit/office" build
+        env:
+          ALLTERNIT_OFFICE_APP_BASE_URL: 'https://allternit-office-addins.pages.dev/office-addins'
+          ALLTERNIT_PLATFORM_URL: 'https://platform.allternit.com'
+          VITE_ALLTERNIT_GATEWAY_URL: 'https://api.allternit.com'
+          VITE_ALLTERNIT_PLATFORM_URL: 'https://platform.allternit.com'
+          VITE_ALLTERNIT_OFFICE_BASE_PATH: '/office-addins/'
+
+      - name: Stage Office add-in Pages deploy
+        # Assemble the isolated project's layout: the runtime under
+        # /office-addins/ plus a framing-allow _headers at the root. Staging
+        # under a non-gitignored path keeps wrangler's .gitignore-based asset
+        # filter from dropping the (gitignored) add-in dist contents.
+        run: |
+          STAGING="surfaces/allternit-extensions/allternit-office-addin/pages-deploy"
+          rm -rf "$STAGING"
+          mkdir -p "$STAGING/office-addins"
+          cp -R surfaces/allternit-extensions/allternit-office-addin/dist/. "$STAGING/office-addins/"
+          cp -R surfaces/allternit-extensions/allternit-office-addin/manifests "$STAGING/office-addins/manifests"
+          printf '/*\n  X-Frame-Options: ALLOWALL\n  Content-Security-Policy: frame-ancestors https://*.cloud.microsoft https://*.office.com https://*.officeapps.live.com https://*.microsoft.com https://*.sharepoint.com https://*.onedrive.live.com https://*.live.com\n' > "$STAGING/_headers"
+
+      - name: Deploy Office add-in runtime to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy surfaces/allternit-extensions/allternit-office-addin/pages-deploy --project-name=allternit-office-addins --branch=main
+
       - name: Build platform.allternit.com
         run: pnpm --filter "@allternit/platform-console" build
         env:
           VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
           VITE_ALLTERNIT_GATEWAY_URL: 'https://api.allternit.com'
-          VITE_ALLTERNIT_CLOUD_API_URL: 'https://allternit-cloud-api.fly.dev'
+          VITE_ALLTERNIT_CLOUD_API_URL: 'https://api.allternit.com'
 
       - name: Deploy platform.allternit.com to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
@@ -104,3 +202,46 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy surfaces/platform.allternit.com/dist --project-name=allternit-platform --branch=main
+
+  clerk-smoke-ai:
+    name: Post-deploy Clerk smoke (ai.allternit.com)
+    runs-on: ubuntu-latest
+    # Runs after the deploy so it exercises the live hosted site. The smoke
+    # script (surfaces/ai.allternit.com/scripts/clerk-e2e-verify.mjs) has no
+    # soft-fail mode — a failure here fails the workflow on purpose so a
+    # broken Clerk deploy cannot go unnoticed.
+    needs: deploy-ai
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.0
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Install Playwright Chromium
+        working-directory: surfaces/ai.allternit.com
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run Clerk e2e smoke against deployed ai.allternit.com
+        working-directory: surfaces/ai.allternit.com
+        run: pnpm test:clerk:e2e
+        env:
+          CLERK_TARGET_ORIGIN: 'https://ai.allternit.com'
+          CLERK_TEST_EMAIL: ${{ secrets.CLERK_TEST_EMAIL }}
+          CLERK_TEST_PASSWORD: ${{ secrets.CLERK_TEST_PASSWORD }}
+          CLERK_SECONDARY_EMAIL: ${{ secrets.CLERK_TEST_SECONDARY_EMAIL }}
+          CLERK_SECONDARY_PASSWORD: ${{ secrets.CLERK_TEST_SECONDARY_PASSWORD }}
+          HEADLESS: '1'

@@ -1,14 +1,14 @@
 //! Test harness for integration tests
 //!
 //! Provides a TestApp struct for setting up test environment
-//! with in-memory database and HTTP client.
+//! with Postgres database and HTTP client.
 
 use allternit_cloud_api::{
-    create_rate_limiter, create_router, runtime, services, ApiState, RateLimitConfig,
+    create_rate_limiter, create_router, model_router, runtime, routes, services, ApiState, RateLimitConfig,
     db::cowork_models::*,
 };
 use axum::{body::Body, http::Request, http::StatusCode, response::Response};
-use sqlx::SqlitePool;
+use sqlx::PgPool;
 use std::sync::Arc;
 use tempfile::TempDir;
 use tokio::sync::broadcast;
@@ -16,22 +16,20 @@ use tower::ServiceExt;
 
 /// Test application wrapper
 pub struct TestApp {
-    pub db: SqlitePool,
+    pub db: PgPool,
     pub router: axum::Router,
     pub temp_dir: TempDir,
     pub event_tx: broadcast::Sender<allternit_cloud_api::DeploymentEvent>,
 }
 
 impl TestApp {
-    /// Create a new test application with in-memory database
+    /// Create a new test application with Postgres database
     pub async fn new() -> Self {
-        // Create temp directory for database
+        // Create temp directory for any file-based test artifacts
         let temp_dir = TempDir::new().expect("Failed to create temp directory");
-        let db_path = temp_dir.path().join("test.db");
-        let database_url = format!("sqlite://{}", db_path.display());
 
         // Initialize database
-        let db = Self::init_test_db(&database_url).await;
+        let db = Self::init_test_db().await;
 
         // Create broadcast channel for events
         let (event_tx, _event_rx) = broadcast::channel::<allternit_cloud_api::DeploymentEvent>(100);
@@ -56,7 +54,8 @@ impl TestApp {
             window: std::time::Duration::from_secs(60),
         };
         let rate_limiter = create_rate_limiter(rate_limit_config.clone());
-        let public_rate_limiter = create_rate_limiter(rate_limit_config);
+        let public_rate_limiter = create_rate_limiter(rate_limit_config.clone());
+        let free_inference_rate_limiter = create_rate_limiter(rate_limit_config);
 
         // Create API state
         let state = Arc::new(ApiState {
@@ -68,11 +67,30 @@ impl TestApp {
             session_manager,
             rate_limiter,
             public_rate_limiter,
+            free_inference_rate_limiter,
             cost_service,
-            quota_service,
-            fly_runtime_service: None,
+            quota_service: quota_service.clone(),
+            contabo_runtime_service: Arc::new(services::ContaboRuntimeService::new(
+                db.clone(),
+                None,
+                "https://api.allternit.com".to_string(),
+            )),
+            data_plane_gateway: Arc::new(routes::data_plane::PgDataPlaneGateway::new(
+                db.clone(),
+                Arc::new(services::ContaboRuntimeService::new(
+                    db.clone(),
+                    None,
+                    "https://api.allternit.com".to_string(),
+                )),
+                quota_service.clone(),
+            )),
+            provisioning_service: Arc::new(services::ProvisioningService::new(db.clone())),
             mesh_service: None,
             credential_cipher: None,
+            inference_key_service: None,
+            metrics_state: Arc::new(allternit_cloud_api::middleware::metrics::MetricsState::new()),
+            model_router: model_router::ModelRouter::disabled(model_router::catalog::starter_catalog()),
+            inference_pool_service: Arc::new(services::InferencePoolService::new(db.clone())),
         });
 
         // Create router
@@ -87,20 +105,40 @@ impl TestApp {
     }
 
     /// Initialize test database with migrations
-    async fn init_test_db(database_url: &str) -> SqlitePool {
-        use sqlx::sqlite::SqliteConnectOptions;
-        use std::str::FromStr;
+    ///
+    /// Migrations run in a fresh, uniquely-named schema on the shared test
+    /// database (search_path-scoped per connection), so the harness gets its
+    /// own `_sqlx_migrations` bookkeeping table and never collides with the
+    /// `public` schema's operator-managed history (`VersionMismatch` on
+    /// shared bookkeeping). The same embedded `migrations_pg` set the
+    /// library applies is used here — the legacy SQLite-dialect `migrations/`
+    /// tree it replaced cannot run against Postgres.
+    async fn init_test_db() -> PgPool {
+        let database_url = std::env::var("TEST_DATABASE_URL")
+            .unwrap_or_else(|_| "postgres://allternit:allternit_pg_2026@localhost:5432/allternit_test".to_string());
 
-        let options = SqliteConnectOptions::from_str(database_url)
-            .expect("Invalid test database URL")
-            .create_if_missing(true);
-
-        let pool = sqlx::SqlitePool::connect_with(options)
+        let schema = format!("it_{}", uuid::Uuid::new_v4().simple());
+        let schema_for_hook = schema.clone();
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(5)
+            .after_connect(move |conn, _meta| {
+                let schema = schema_for_hook.clone();
+                Box::pin(async move {
+                    sqlx::query(&format!("CREATE SCHEMA IF NOT EXISTS {}", schema))
+                        .execute(&mut *conn)
+                        .await?;
+                    sqlx::query(&format!("SET search_path TO {}", schema))
+                        .execute(&mut *conn)
+                        .await?;
+                    Ok(())
+                })
+            })
+            .connect(&database_url)
             .await
             .expect("Failed to connect to test database");
 
         // Run migrations
-        sqlx::migrate!("./migrations")
+        sqlx::migrate!("./migrations_pg")
             .run(&pool)
             .await
             .expect("Failed to run migrations");
@@ -162,7 +200,7 @@ impl TestApp {
         let body = axum::body::to_bytes(response.into_body(), usize::MAX)
             .await
             .unwrap();
-        
+
         serde_json::from_slice(&body)
             .unwrap_or_else(|e| {
                 let body_str = String::from_utf8_lossy(&body);

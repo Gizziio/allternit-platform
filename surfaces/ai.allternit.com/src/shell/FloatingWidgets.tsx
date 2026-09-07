@@ -6,12 +6,15 @@ import {
   NotePencil,
   Bell,
   House,
+  Robot,
   TerminalWindow,
   Globe,
 } from '@phosphor-icons/react';
 import type { AppMode } from './ShellHeader';
 import { isElectronShell } from '../lib/platform';
 import { cn } from '@/lib/utils';
+import { openNativeSessionPicker } from '@/components/native-sessions/NativeSessionPicker';
+import { GizziMascot } from '@/components/ai-elements/GizziMascot';
 
 interface RailControlsProps {
   mode: AppMode;
@@ -40,6 +43,7 @@ interface ModeButton {
 
 const MODE_BUTTONS: ModeButton[] = [
   { id: 'chat', label: 'Home', icon: House, accent: 'var(--accent-chat)' },
+  { id: 'bot', label: 'Bots', icon: Robot, accent: 'var(--accent-bot)' },
   { id: 'code', label: 'Code', icon: TerminalWindow, accent: 'var(--accent-code)' },
   { id: 'browser', label: 'ACI', icon: Globe, accent: 'var(--accent-browser)' },
 ];
@@ -82,16 +86,17 @@ export function RailControls({
 
   if (isRailCollapsed) {
     return (
-      <div
-        data-testid="shell-rail-controls"
-        className="fixed top-0 left-0 z-[150] pointer-events-none"
-      >
+      <>
         <div
-          className="h-11 flex items-center pointer-events-auto [WebkitAppRegion:no-drag]"
-          style={{ marginLeft: trafficLightClearance }}
-          onMouseEnter={() => { setCollapsedHovered(true); onCollapsedHover?.(true); }}
-          onMouseLeave={() => { setCollapsedHovered(false); onCollapsedHover?.(false); }}
+          data-testid="shell-rail-controls"
+          className="fixed top-0 left-0 z-[150] pointer-events-none"
         >
+          <div
+            className="h-11 flex items-center pointer-events-auto [WebkitAppRegion:no-drag]"
+            style={{ marginLeft: trafficLightClearance }}
+            onMouseEnter={() => { setCollapsedHovered(true); onCollapsedHover?.(true); }}
+            onMouseLeave={() => { setCollapsedHovered(false); onCollapsedHover?.(false); }}
+          >
           <div
             className={cn(
               "flex items-center gap-0.5 rounded-lg transition-all duration-200",
@@ -155,6 +160,22 @@ export function RailControls({
           </div>
         </div>
       </div>
+
+      {/* Collapsed Agents mascot pill */}
+      <div
+        className="fixed top-[52px] left-0 z-[150] pointer-events-none"
+        style={{ marginLeft: trafficLightClearance }}
+      >
+        <button
+          type="button"
+          onClick={onToggleRail}
+          title="Expand sidebar — Agents"
+          className="pointer-events-auto flex items-center justify-center w-9 h-10 rounded-r-xl border border-l-0 border-solid border-[var(--border-subtle)] bg-[var(--shell-control-bg)] text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)] transition-colors cursor-pointer [WebkitAppRegion:no-drag]"
+        >
+          <GizziMascot size={22} emotion="curious" />
+        </button>
+      </div>
+      </>
     );
   }
 
@@ -204,6 +225,14 @@ export function RailControls({
                   label="New Agent Session"
                   description="Start a durable operator session"
                   onClick={() => { setShowCreateMenu(false); onNewAgentSession(); }}
+                />
+                <CreateMenuButton
+                  label="Continue CLI session"
+                  description="Pick up Claude, Codex, Grok, Kimi, …"
+                  onClick={() => {
+                    setShowCreateMenu(false);
+                    openNativeSessionPicker(mode === 'browser' ? 'chat' : mode, 'regular');
+                  }}
                 />
               </div>
             )}

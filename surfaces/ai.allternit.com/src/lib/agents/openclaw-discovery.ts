@@ -94,6 +94,16 @@ function mapProvider(providerId?: string | null): CreateAgentInput["provider"] {
 export async function discoverOpenClawAgents(): Promise<OpenClawDiscoveryResponse> {
   const isShellDev =
     typeof window !== "undefined" && window.location.port === "5177";
+  const isLocalDev =
+    typeof window !== "undefined" &&
+    (window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1");
+
+  // OpenClaw discovery is not implemented by the local Rust API yet.
+  // Skip the network call in local dev to keep the console clean.
+  if (isLocalDev) {
+    return { agents: [], total: 0, unregistered: 0 };
+  }
 
   if (isShellDev) {
     const devResponse = await fetch("/api/dev/openclaw/agents/discovery", {
@@ -110,6 +120,12 @@ export async function discoverOpenClawAgents(): Promise<OpenClawDiscoveryRespons
   try {
     return (await api.discoverOpenClawAgents()) as unknown as OpenClawDiscoveryResponse;
   } catch (error) {
+    // A 501 means the local backend does not implement OpenClaw discovery.
+    // Treat it as an empty discovery result instead of flooding the console.
+    if (error && typeof error === 'object' && 'statusCode' in error && error.statusCode === 501) {
+      return { agents: [], total: 0, unregistered: 0 };
+    }
+
     if (!isShellDev) {
       throw error;
     }

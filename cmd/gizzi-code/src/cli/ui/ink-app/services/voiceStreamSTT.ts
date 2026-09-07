@@ -4,7 +4,7 @@
 // Only reachable in ant builds (gated by feature('VOICE_MODE') in useVoice.ts import).
 //
 // Connects to Anthropic's voice_stream WebSocket endpoint using the same
-// OAuth credentials as Claude Code.  The endpoint uses conversation_engine
+// OAuth credentials as gizzi-code.  The endpoint uses conversation_engine
 // backed models for speech-to-text.  Designed for hold-to-talk: hold the
 // keybinding to record, release to stop and submit.
 //
@@ -18,7 +18,7 @@ import { getOauthConfig } from '../constants/oauth.js'
 import {
   checkAndRefreshOAuthTokenIfNeeded,
   getClaudeAIOAuthTokens,
-  isAnthropicAuthEnabled,
+  isAllternitAuthEnabled,
 } from '../utils/auth.js'
 import { logForDebugging } from '../utils/debug.js'
 import { getUserAgent } from '../utils/http.js'
@@ -97,10 +97,10 @@ type VoiceStreamMessage =
 // ─── Availability ──────────────────────────────────────────────────────
 
 export function isVoiceStreamAvailable(): boolean {
-  // voice_stream uses the same OAuth as Claude Code — available when the
+  // voice_stream uses the same OAuth as gizzi-code — available when the
   // user is authenticated with Anthropic (Claude.ai subscriber or has
   // valid OAuth tokens).
-  if (!isAnthropicAuthEnabled()) {
+  if (!isAllternitAuthEnabled()) {
     return false
   }
   const tokens = getClaudeAIOAuthTokens()
@@ -123,7 +123,7 @@ export async function connectVoiceStream(
   }
 
   // voice_stream is a private_api route, but /api/ws/ is also exposed on
-  // the api.anthropic.com listener (service_definitions.yaml private-api:
+  // the api.allternit.com listener (service_definitions.yaml private-api:
   // visibility.external: true). We target that host instead of claude.ai
   // because the claude.ai CF zone uses TLS fingerprinting and challenges
   // non-browser clients (anthropics/claude-code#34094). Same private-api

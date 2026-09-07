@@ -6,7 +6,9 @@ import {
   CheckCircle,
   CircleNotch,
   Cloud,
+  Coins,
   ComputerTower,
+  Desktop,
   Gauge,
   HardDrives,
   MapPin,
@@ -19,13 +21,19 @@ import { usePlatformAuth, usePlatformUser } from "@/lib/platform-auth-client";
 import {
   createHostedRuntime,
   destroyHostedRuntime,
+  getBillingCredits,
   getHostedEntitlement,
   listHostedRuntimes,
   startHostedRuntime,
   stopHostedRuntime,
+  type BillingCredits,
   type HostedRuntime,
   type HostedRuntimeEntitlement,
 } from "@/lib/hosted-compute";
+import {
+  getDesktopUsageSummary,
+  type DesktopUsageSummary,
+} from "@/lib/computers-api";
 import { SectionHeading } from "@/components/settings/SectionHeading";
 import { EmptyState } from "@/components/settings/EmptyState";
 import { SkeletonRow } from "@/components/settings/SkeletonRow";
@@ -58,6 +66,30 @@ function formatMemory(memoryMb: number) {
 
 function titleCase(value: string) {
   return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+const CREDIT_SOURCE_LABELS: Record<string, string> = {
+  hosted_runtime_usage: "Hosted runtime",
+  stripe: "Stripe top-up",
+};
+
+function formatCreditSource(source: string) {
+  return CREDIT_SOURCE_LABELS[source] ?? titleCase(source);
+}
+
+function formatCreditAmount(amountUsd: number) {
+  const sign = amountUsd < 0 ? "-" : "+";
+  const magnitude = Math.abs(amountUsd).toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 4,
+  });
+  return `${sign}$${magnitude}`;
+}
+
+function formatCreditDate(createdAt: string) {
+  const date = new Date(createdAt);
+  if (Number.isNaN(date.getTime())) return createdAt;
+  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
 function safePlanUrl(value?: string) {
@@ -119,6 +151,8 @@ export function ComputeBillingPanel() {
   const { isLoaded, isSignedIn } = usePlatformUser();
   const [entitlement, setEntitlement] = useState<HostedRuntimeEntitlement | null>(null);
   const [runtimes, setRuntimes] = useState<HostedRuntime[]>([]);
+  const [credits, setCredits] = useState<BillingCredits | null>(null);
+  const [desktopSummary, setDesktopSummary] = useState<DesktopUsageSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [confirmDestroyId, setConfirmDestroyId] = useState<string | null>(null);
@@ -133,6 +167,8 @@ export function ComputeBillingPanel() {
     if (!isSignedIn) {
       setEntitlement(null);
       setRuntimes([]);
+      setCredits(null);
+      setDesktopSummary(null);
       setLoading(false);
       return;
     }
@@ -141,12 +177,16 @@ export function ComputeBillingPanel() {
     try {
       const token = await getToken();
       if (!token) throw new Error("A web account session is required to manage hosted compute.");
-      const [nextEntitlement, nextRuntimes] = await Promise.all([
+      const [nextEntitlement, nextRuntimes, nextCredits, nextDesktopSummary] = await Promise.all([
         getHostedEntitlement(token),
         listHostedRuntimes(token),
+        getBillingCredits(token).catch(() => null),
+        getDesktopUsageSummary().catch(() => null),
       ]);
       setEntitlement(nextEntitlement);
       setRuntimes(nextRuntimes);
+      setCredits(nextCredits);
+      setDesktopSummary(nextDesktopSummary);
       const allowedRegions = nextEntitlement.allowedRegions?.length
         ? nextEntitlement.allowedRegions
         : ["lax"];
@@ -294,6 +334,56 @@ export function ComputeBillingPanel() {
                 )}
               </div>
 
+              {credits && (
+                <div className="rounded-lg border border-solid border-[var(--border-subtle)] p-3 mb-3">
+                  <div className="flex items-center justify-between gap-3 mb-2">
+                    <span className="inline-flex items-center gap-1 text-[10px] text-[var(--text-secondary)]"><Coins size={12} /> Credit balance</span>
+                    <span className="text-[10px] text-[var(--text-tertiary)]">
+                      ${credits.month_to_date_usage_usd.toFixed(2)} this month
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[20px] font-semibold text-[var(--text-primary)]">
+                      ${credits.balance_usd.toFixed(2)}
+                    </span>
+                    {credits.balance_usd < 1 && (
+                      <Badge className="text-[var(--status-warning)] bg-[var(--status-warning)]/10">
+                        Balance exhausted — add credits to continue
+                      </Badge>
+                    )}
+                    <button
+                      type="button"
+                      className={cn(QUIET_BUTTON_CLASS, "ml-auto")}
+                      onClick={() => window.open(safePlanUrl(entitlement?.upgradeUrl), "_blank", "noopener,noreferrer")}
+                    >
+                      <Plus size={13} /> Add credits
+                    </button>
+                  </div>
+                  {credits.recent_transactions && credits.recent_transactions.length > 0 ? (
+                    <div className="mt-3 space-y-1">
+                      {credits.recent_transactions.slice(0, 8).map((transaction, index) => (
+                        <div key={`${transaction.created_at}-${index}`} className="flex items-center justify-between gap-3 text-[11px]">
+                          <span className="min-w-0 truncate text-[var(--text-secondary)]">
+                            {formatCreditSource(transaction.source)}
+                          </span>
+                          <span className="shrink-0 text-[10px] text-[var(--text-tertiary)]">
+                            {formatCreditDate(transaction.created_at)}
+                          </span>
+                          <span className={cn(
+                            "shrink-0 font-mono w-20 text-right",
+                            transaction.amount_usd < 0 ? "text-[var(--text-secondary)]" : "text-[var(--status-success)]",
+                          )}>
+                            {formatCreditAmount(transaction.amount_usd)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="mt-3 text-[10px] text-[var(--text-tertiary)]">No transactions yet</div>
+                  )}
+                </div>
+              )}
+
               {entitlement && entitlement.maxHoursMonthly > 0 && (
                 <div className="rounded-lg border border-solid border-[var(--border-subtle)] p-3 mb-3">
                   <div className="flex items-center justify-between gap-3 text-[10px] mb-2">
@@ -440,6 +530,42 @@ export function ComputeBillingPanel() {
             <span className="text-[10px] text-[var(--text-tertiary)]">Organization admin access required</span>
             <button type="button" className={QUIET_BUTTON_CLASS} onClick={() => openSettings("cloud-credentials")}>Manage enterprise BYOC</button>
           </div>
+        </ProductCard>
+
+        <ProductCard
+          icon={<Desktop size={18} />}
+          eyebrow="Metered add-on"
+          title="Desktop Cloud"
+          description="On-demand cloud desktops for bots. Billed per minute from your organization credits."
+          active={Boolean(desktopSummary && desktopSummary.total_minutes > 0)}
+        >
+          {!isLoaded || loading ? (
+            <SkeletonRow lines={2} />
+          ) : !isSignedIn ? (
+            <div className="flex items-center justify-between gap-3 rounded-lg border border-solid border-[var(--border-subtle)] px-3 py-2.5">
+              <span className="text-[11px] text-[var(--text-secondary)]">Sign in to view desktop cloud usage.</span>
+              <button type="button" className={QUIET_BUTTON_CLASS} onClick={() => openSettings("signin")}>Sign in</button>
+            </div>
+          ) : desktopSummary ? (
+            <div className="rounded-lg border border-solid border-[var(--border-subtle)] p-3 mb-3">
+              <div className="flex items-center justify-between gap-3 text-[10px] mb-2">
+                <span className="inline-flex items-center gap-1 text-[var(--text-secondary)]"><Gauge size={12} /> Desktop usage</span>
+                <span className="font-mono text-[var(--text-primary)]">
+                  {formatHours(desktopSummary.total_minutes * 60)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-3 text-[10px] text-[var(--text-tertiary)]">
+                <span>{desktopSummary.rows} provider{desktopSummary.rows === 1 ? '' : 's'}/OS</span>
+                <span>${desktopSummary.total_cost.toFixed(2)} estimated</span>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-lg border border-dashed border-[var(--border-subtle)] px-3 py-4 text-center mb-3">
+              <Desktop size={22} weight="thin" className="mx-auto text-[var(--text-tertiary)] mb-1.5" />
+              <div className="text-[11px] font-medium text-[var(--text-primary)]">No desktop usage yet</div>
+              <div className="text-[10px] text-[var(--text-tertiary)] mt-1">Cloud desktop minutes appear here after a bot session ends.</div>
+            </div>
+          )}
         </ProductCard>
       </div>
 

@@ -1,6 +1,6 @@
 // @ts-nocheck
 /**
- * Beta Session Tracing for Claude Code
+ * Beta Session Tracing for gizzi-code
  *
  * This module contains beta tracing features enabled when
  * ENABLE_BETA_TRACING_DETAILED=1 and BETA_TRACING_ENDPOINT are set.

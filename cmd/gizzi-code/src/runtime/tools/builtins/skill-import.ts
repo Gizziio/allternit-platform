@@ -3,7 +3,7 @@ import { Tool } from "@/runtime/tools/builtins/tool"
 import { SkillImporter } from "@/runtime/skills/importer"
 
 export const SkillImportPreviewTool = Tool.define("skill_import_preview", {
-  description: "Build a read-only Claude Code/Codex import plan with exact paths, collisions, and compatibility warnings.",
+  description: "Build a read-only gizzi-code/Codex import plan with exact paths, collisions, and compatibility warnings.",
   parameters: z.object({
     categories: z.array(z.enum(["instructions", "skills", "mcp"])).min(1),
   }),

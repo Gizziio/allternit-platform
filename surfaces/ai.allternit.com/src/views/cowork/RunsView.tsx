@@ -55,7 +55,7 @@ export const RunsView: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<FilterType>('All');
   const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
   const [selectedWorkspace, setSelectedWorkspace] = useState<string>('all');
-  const { runs, loading, error, refresh, startRun, cancelRun, recoverRun, createHandoff } =
+  const { runs, loading, error, unsupported, recoverUnavailable, handoffsUnavailable, refresh, startRun, cancelRun, recoverRun, createHandoff } =
     useCoworkRuns();
 
   useEffect(() => {
@@ -161,6 +161,14 @@ export const RunsView: React.FC = () => {
         </div>
       )}
 
+      {unsupported && (
+        <div style={{ textAlign: 'center', padding: 'var(--spacing-xl)', color: 'var(--text-secondary)' }}>
+          <p style={{ margin: 0, fontSize: '14px' }}>
+            Cowork pipeline runs are not available on this deployment yet.
+          </p>
+        </div>
+      )}
+
       {/* Runs List */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
         {filteredRuns.length === 0 && !loading && (
@@ -258,7 +266,14 @@ export const RunsView: React.FC = () => {
               </div>
 
               {/* Expanded Detail */}
-              {expandedRunId === run.id && <RunDetail run={run} onChange={refresh} />}
+              {expandedRunId === run.id && (
+                <RunDetail
+                  run={run}
+                  onChange={refresh}
+                  recoverUnavailable={recoverUnavailable}
+                  handoffsUnavailable={handoffsUnavailable}
+                />
+              )}
             </div>
           </GlassSurface>
         ))}
@@ -282,7 +297,17 @@ export const RunsView: React.FC = () => {
   );
 };
 
-function RunDetail({ run, onChange }: { run: CoworkRun; onChange: () => void }) {
+function RunDetail({
+  run,
+  onChange,
+  recoverUnavailable,
+  handoffsUnavailable,
+}: {
+  run: CoworkRun;
+  onChange: () => void;
+  recoverUnavailable: boolean;
+  handoffsUnavailable: boolean;
+}) {
   const { startRun, cancelRun, recoverRun, createHandoff } = useCoworkRuns();
   const { jobs } = useCoworkRunJobs(run.id);
   const { handoffs } = useCoworkRunHandoffs(run.id);
@@ -367,7 +392,7 @@ function RunDetail({ run, onChange }: { run: CoworkRun; onChange: () => void }) 
             Cancel
           </ActionButton>
         )}
-        {canRecover && (
+        {canRecover && !recoverUnavailable && (
           <ActionButton onClick={handleRecover} color="var(--status-info)" icon={<ArrowCounterClockwise size={14} weight="fill" />}>
             Recover
           </ActionButton>
@@ -384,6 +409,7 @@ function RunDetail({ run, onChange }: { run: CoworkRun; onChange: () => void }) 
       )}
 
       {/* Handoffs */}
+      {!handoffsUnavailable && (
       <Section title="Handoffs">
         {handoffs.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 'var(--spacing-sm)' }}>
@@ -433,6 +459,7 @@ function RunDetail({ run, onChange }: { run: CoworkRun; onChange: () => void }) 
           </button>
         </div>
       </Section>
+      )}
 
       {/* Event Stream */}
       <Section title="Events">

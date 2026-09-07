@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { Box, Text } from '../../ink.js'
 import { useKeybinding } from '../../keybindings/useKeybinding.js'
 import type { LocalJSXCommandOnDone } from '../../types/command.js'
+import { ALLTERNIT_GATEWAY_BASE } from '@/shared/constants/allternitGateway'
 
 interface OntologyCommandProps {
   onDone: LocalJSXCommandOnDone
@@ -49,7 +50,7 @@ interface OntologyData {
   error: string | null
 }
 
-const API_BASE = process.env.Allternit_API_URL || 'http://127.0.0.1:8013'
+const API_BASE = process.env.Allternit_API_URL || ALLTERNIT_GATEWAY_BASE
 const RAILS_BASE = `${API_BASE}/api/rails`
 
 async function loadOntology(): Promise<OntologyData> {

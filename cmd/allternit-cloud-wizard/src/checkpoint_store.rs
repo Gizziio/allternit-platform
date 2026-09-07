@@ -345,52 +345,52 @@ mod tests {
 }
 
 // ============================================================================
-// SQLite checkpoint store (production, survives restarts)
+// Postgres checkpoint store (production, survives restarts)
 // ============================================================================
 
 use allternit_cloud_core::CredentialCipher;
-use sqlx::SqlitePool;
+use sqlx::PgPool;
 use std::sync::Arc;
 
-/// SQLite-backed checkpoint store over the `wizard_sessions` table (see
-/// `cmd/allternit-cloud-api/migrations/019_wizard.sql`). The serialized
+/// Postgres-backed checkpoint store over the `wizard_sessions` table (see
+/// `cmd/allternit-cloud-api/migrations_pg/001_initial.sql`). The serialized
 /// wizard state carries provider tokens and SSH keys, so when a
-/// [`CredentialCipher`] is configured the state JSON is encrypted at rest.
-pub struct SqliteCheckpointStore {
-    pool: SqlitePool,
+/// [`CredentialCipher`] is configured the state column is encrypted at rest.
+pub struct PgCheckpointStore {
+    pool: PgPool,
     cipher: Option<Arc<CredentialCipher>>,
 }
 
-impl SqliteCheckpointStore {
+impl PgCheckpointStore {
     /// Create a store over an existing pool. `cipher` encrypts the state
     /// column; pass `None` only in tests/dev where plaintext is acceptable.
-    pub fn new(pool: SqlitePool, cipher: Option<Arc<CredentialCipher>>) -> Self {
+    pub fn new(pool: PgPool, cipher: Option<Arc<CredentialCipher>>) -> Self {
         Self { pool, cipher }
     }
 
     fn encode(&self, state: &WizardState) -> Result<String, CheckpointStoreError> {
-        let json = serde_json::to_string(state)?;
+        let JSONB = serde_json::to_string(state)?;
         match &self.cipher {
-            Some(cipher) => Ok(cipher.encrypt(&json)?),
-            None => Ok(json),
+            Some(cipher) => Ok(cipher.encrypt(&JSONB)?),
+            None => Ok(JSONB),
         }
     }
 
     fn decode(&self, stored: &str, deployment_id: &str) -> Result<WizardState, CheckpointStoreError> {
-        let json = match &self.cipher {
+        let JSONB = match &self.cipher {
             Some(cipher) => cipher.decrypt(stored)?,
             None => stored.to_string(),
         };
-        serde_json::from_str(&json)
+        serde_json::from_str(&JSONB)
             .map_err(|e| CheckpointStoreError::Corrupted(format!("{}: {}", deployment_id, e)))
     }
 }
 
 #[async_trait]
-impl CheckpointStore for SqliteCheckpointStore {
+impl CheckpointStore for PgCheckpointStore {
     async fn load(&self, user_id: &str, deployment_id: &str) -> Result<Option<WizardState>, CheckpointStoreError> {
         let row: Option<(String,)> = sqlx::query_as(
-            "SELECT state FROM wizard_sessions WHERE deployment_id = ? AND user_id = ?",
+            "SELECT state FROM wizard_sessions WHERE deployment_id = $1 AND user_id = $2",
         )
         .bind(deployment_id)
         .bind(user_id)
@@ -405,11 +405,11 @@ impl CheckpointStore for SqliteCheckpointStore {
         sqlx::query(
             r#"
             INSERT INTO wizard_sessions (deployment_id, user_id, state)
-            VALUES (?, ?, ?)
+            VALUES ($1, $2, $3)
             ON CONFLICT(deployment_id) DO UPDATE SET
                 user_id = excluded.user_id,
                 state = excluded.state,
-                updated_at = CURRENT_TIMESTAMP
+                updated_at = NOW()
             "#,
         )
         .bind(&state.deployment_id)
@@ -421,7 +421,7 @@ impl CheckpointStore for SqliteCheckpointStore {
     }
 
     async fn delete(&self, user_id: &str, deployment_id: &str) -> Result<(), CheckpointStoreError> {
-        sqlx::query("DELETE FROM wizard_sessions WHERE deployment_id = ? AND user_id = ?")
+        sqlx::query("DELETE FROM wizard_sessions WHERE deployment_id = $1 AND user_id = $2")
             .bind(deployment_id)
             .bind(user_id)
             .execute(&self.pool)
@@ -431,7 +431,7 @@ impl CheckpointStore for SqliteCheckpointStore {
 
     async fn list(&self, user_id: &str) -> Result<Vec<String>, CheckpointStoreError> {
         let rows: Vec<(String,)> = sqlx::query_as(
-            "SELECT deployment_id FROM wizard_sessions WHERE user_id = ? ORDER BY updated_at DESC",
+            "SELECT deployment_id FROM wizard_sessions WHERE user_id = $1 ORDER BY updated_at DESC",
         )
         .bind(user_id)
         .fetch_all(&self.pool)
@@ -441,32 +441,66 @@ impl CheckpointStore for SqliteCheckpointStore {
 }
 
 #[cfg(test)]
-mod sqlite_tests {
+mod pg_tests {
+    //! Tests for [`PgCheckpointStore`] against real PostgreSQL (the store's
+    //! only supported backend — `?` placeholders and `PgPool::connect(":memory:")`
+    //! were SQLite-isms that could never run). Mirrors the cloud-api test
+    //! pattern: one ephemeral schema per test on the shared `allternit_test`
+    //! database, with `search_path` pinned per connection.
     use super::*;
 
-    async fn test_pool() -> SqlitePool {
-        let pool = SqlitePool::connect(":memory:").await.unwrap();
+    const TEST_DB_URL: &str =
+        "postgres://allternit:allternit_pg_2026@localhost:5432/allternit_test";
+
+    async fn connect(schema: &str) -> PgPool {
+        let schema_for_hook = schema.to_string();
+        sqlx::postgres::PgPoolOptions::new()
+            .max_connections(1)
+            .after_connect(move |conn, _meta| {
+                let schema = schema_for_hook.clone();
+                Box::pin(async move {
+                    sqlx::query(&format!("CREATE SCHEMA IF NOT EXISTS {}", schema))
+                        .execute(&mut *conn)
+                        .await?;
+                    sqlx::query(&format!("SET search_path TO {}", schema))
+                        .execute(&mut *conn)
+                        .await?;
+                    Ok(())
+                })
+            })
+            .connect(TEST_DB_URL)
+            .await
+            .unwrap()
+    }
+
+    async fn create_wizard_sessions_table(pool: &PgPool) {
         sqlx::query(
             r#"
             CREATE TABLE wizard_sessions (
                 deployment_id TEXT PRIMARY KEY,
                 user_id TEXT NOT NULL,
                 state TEXT NOT NULL,
-                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             )
             "#,
         )
-        .execute(&pool)
+        .execute(pool)
         .await
         .unwrap();
+    }
+
+    async fn fresh_pool() -> PgPool {
+        let schema = format!("test_{}", uuid::Uuid::new_v4().simple());
+        let pool = connect(&schema).await;
+        create_wizard_sessions_table(&pool).await;
         pool
     }
 
     #[tokio::test]
-    async fn sqlite_store_roundtrip_is_user_scoped() {
-        let pool = test_pool().await;
-        let store = SqliteCheckpointStore::new(pool, None);
+    async fn pg_store_roundtrip_is_user_scoped() {
+        let pool = fresh_pool().await;
+        let store = PgCheckpointStore::new(pool, None);
         let mut state = WizardState::new();
         state.deployment_id = "dep-1".to_string();
 
@@ -485,10 +519,10 @@ mod sqlite_tests {
     }
 
     #[tokio::test]
-    async fn sqlite_store_encrypts_state_at_rest() {
-        let pool = test_pool().await;
+    async fn pg_store_encrypts_state_at_rest() {
+        let pool = fresh_pool().await;
         let cipher = CredentialCipher::new("wizard-test-key");
-        let store = SqliteCheckpointStore::new(pool.clone(), Some(Arc::new(cipher)));
+        let store = PgCheckpointStore::new(pool.clone(), Some(Arc::new(cipher)));
 
         let mut state = WizardState::new();
         state.deployment_id = "dep-secret".to_string();
@@ -510,25 +544,24 @@ mod sqlite_tests {
     }
 
     #[tokio::test]
-    async fn sqlite_store_survives_reopen() {
-        // Shared in-memory database across two "restarts" of the store.
-        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
-        sqlx::query(
-            "CREATE TABLE wizard_sessions (deployment_id TEXT PRIMARY KEY, user_id TEXT NOT NULL, state TEXT NOT NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)",
-        )
-        .execute(&pool)
-        .await
-        .unwrap();
+    async fn pg_store_survives_reopen() {
+        // A brand-new pool (a "restart" of the store) over the same schema
+        // must still see the checkpoint.
+        let schema = format!("test_{}", uuid::Uuid::new_v4().simple());
 
+        let pool = connect(&schema).await;
+        create_wizard_sessions_table(&pool).await;
         let mut state = WizardState::new();
         state.deployment_id = "dep-restart".to_string();
-        SqliteCheckpointStore::new(pool.clone(), None)
+        PgCheckpointStore::new(pool.clone(), None)
             .save("user_a", &state)
             .await
             .unwrap();
         drop(state);
+        drop(pool);
 
-        let loaded = SqliteCheckpointStore::new(pool, None)
+        let pool = connect(&schema).await;
+        let loaded = PgCheckpointStore::new(pool, None)
             .load("user_a", "dep-restart")
             .await
             .unwrap();

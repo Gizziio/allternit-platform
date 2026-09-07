@@ -1,11 +1,12 @@
 Name:           gizzi-code
-Version:        1.0.0
+Version:        2.0.7
 Release:        1%{?dist}
 Summary:        AI-powered terminal interface for the Allternit ecosystem
 
 License:        MIT
-URL:            https://gizzi.sh
-Source0:        https://github.com/Gizziio/gizzi-code/archive/v%{version}.tar.gz
+URL:            https://docs.gizziio.com
+# Binary release asset (version-named tarball, tag gizzi-code/v%{version})
+Source0:        https://github.com/Gizziio/allternit-platform/releases/download/gizzi-code/v%{version}/gizzi-code-v%{version}-linux-x64.tar.gz
 
 %description
 Gizzi Code is an AI-powered terminal interface and runtime
@@ -26,5 +27,26 @@ install -m 755 gizzi-code %{buildroot}/usr/local/bin/gizzi-code
 /usr/local/bin/gizzi-code
 
 %changelog
+* Sat Sep 06 2026 Allternit Technologies <team@allternit.io> - 2.0.7-1
+- Update to 2.0.7; onboarding auto-picks default brain
+
+* Sat Sep 06 2026 Allternit Technologies <team@allternit.io> - 2.0.6-1
+- Update to 2.0.6; fix /theme TUI crash; real TS syntax highlighting
+
+* Fri Sep 05 2026 Allternit Technologies <team@allternit.io> - 2.0.5-1
+- Update to 2.0.5; Cloud-first /model list; npm verify via npm pack
+
+* Fri Sep 05 2026 Allternit Technologies <team@allternit.io> - 2.0.4-1
+- Update to 2.0.4; gizzi onboarding --defaults
+
+* Fri Sep 05 2026 Allternit Technologies <team@allternit.io> - 2.0.3-1
+- Update to 2.0.3; reap session children; CLI brains and Cloud default
+
+* Fri Sep 05 2026 Allternit Technologies <team@allternit.io> - 2.0.2-1
+- Update to 2.0.2; GitHub Release assets at gizzi-code/v%{version}
+
+* Wed Sep 03 2026 Allternit Technologies <team@allternit.io> - 1.0.2-1
+- Update to 1.0.2; point Source0 at the version-named binary release asset
+
 * Mon Apr 07 2025 Allternit Technologies <team@allternit.io> - 1.0.0-1
 - Initial release

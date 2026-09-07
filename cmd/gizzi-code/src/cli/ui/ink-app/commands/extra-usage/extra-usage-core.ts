@@ -102,9 +102,7 @@ export async function runExtraUsage(): Promise<ExtraUsageResult> {
     }
   }
 
-  const url = isTeamOrEnterprise
-    ? 'https://claude.ai/admin-settings/usage'
-    : 'https://claude.ai/settings/usage'
+  const url = 'https://platform.allternit.com/billing'
 
   try {
     const opened = await openBrowser(url)

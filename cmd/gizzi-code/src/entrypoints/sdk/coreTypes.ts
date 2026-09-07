@@ -80,7 +80,7 @@ export type SDKStatus =
 export interface ModelInfo {
   id: string
   name: string
-  provider: 'anthropic' | 'openai' | 'google' | 'amazon'
+  provider: 'allternit' | 'openai' | 'google' | 'amazon'
   contextWindow: number
   maxTokens: number
   supportsThinking?: boolean

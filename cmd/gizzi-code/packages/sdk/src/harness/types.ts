@@ -3,7 +3,7 @@
  * Unified AI interface for BYOK, Cloud, Local, and Subprocess modes
  */
 
-import { AllternitError } from '../providers/anthropic/core/error';
+import { AllternitError } from '../providers/allternit/core/error';
 
 // ============================================================================
 // Configuration Types
@@ -20,13 +20,13 @@ export interface HarnessConfig {
 export interface BYOKConfig {
   /** API keys for different providers */
   keys: {
-    anthropic?: string;
+    allternit?: string;
     openai?: string;
     google?: string;
   };
   /** Optional base URLs for custom endpoints */
   baseURLs?: {
-    anthropic?: string;
+    allternit?: string;
     openai?: string;
     google?: string;
   };
@@ -94,7 +94,7 @@ export interface Tool {
 
 export interface StreamRequest {
   /**
-   * Provider identifier: 'anthropic', 'openai', 'google', etc.
+   * Provider identifier: 'allternit', 'openai', 'google', etc.
    * Pass 'auto' or omit entirely to let the harness route to the cheapest
    * model capable of handling this request.
    */
@@ -165,7 +165,7 @@ export interface ModelInfo {
 // Utility Types
 // ============================================================================
 
-export type ProviderType = 'anthropic' | 'openai' | 'google' | 'ollama';
+export type ProviderType = 'allternit' | 'openai' | 'google' | 'ollama';
 
 export interface SSEEvent {
   event: string | null;

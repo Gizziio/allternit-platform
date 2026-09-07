@@ -22,7 +22,7 @@ export class CommandHookExecutor {
       })
 
       const timer = setTimeout(() => {
-        try { proc.kill() } catch {}
+        try { proc.kill() } catch { /* process may already have exited */ }
       }, timeout)
 
       const exitCode = await proc.exited

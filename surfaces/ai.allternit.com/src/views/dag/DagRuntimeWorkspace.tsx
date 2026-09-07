@@ -10,6 +10,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { MermaidArtifact } from "@/components/ai-elements/mermaid-artifact";
 import { railsApi } from "@/lib/agents/rails.service";
+import { isRailsApiEnabled } from "@/lib/env";
+
+// The /api/rails/* handlers live only on the Rust allternit-api (:8013),
+// which is not publicly reachable from the deployed web surface. When
+// NEXT_PUBLIC_ALLTERNIT_RAILS_API is unset (default), this workspace fails
+// closed with a deliberate banner instead of firing mount-time fetches.
+const RAILS_API_DISABLED_MESSAGE =
+  "DAG runtime is disabled in this deployment (the Rails API is not publicly reachable; set NEXT_PUBLIC_ALLTERNIT_RAILS_API=1 where the gateway is reachable).";
 import { useDakStore } from "@/runner/dak.store";
 import { ContextPackBrowser } from "@/runner/components/ContextPackBrowser";
 import { DagPlanningPanel } from "@/runner/components/DagPlanningPanel";
@@ -82,6 +90,12 @@ function useDagRuntimeData() {
     let cancelled = false;
 
     async function bootstrap() {
+      if (!isRailsApiEnabled()) {
+        // Never fire the mount-time /api/rails fetches when the backend is
+        // disabled by flag — show the deliberate banner instead.
+        setRuntimeError(RAILS_API_DISABLED_MESSAGE);
+        return;
+      }
       setIsRefreshing(true);
       setRuntimeError(null);
       try {
@@ -124,6 +138,10 @@ function useDagRuntimeData() {
   }, [checkHealth, fetchContextPacks, fetchDags, fetchLeases, fetchReceipts, fetchWihs]);
 
   async function refreshAll() {
+    if (!isRailsApiEnabled()) {
+      setRuntimeError(RAILS_API_DISABLED_MESSAGE);
+      return;
+    }
     setIsRefreshing(true);
     setRuntimeError(null);
     try {
@@ -152,6 +170,10 @@ function useDagRuntimeData() {
   }
 
   async function refreshLedger(count = 100) {
+    if (!isRailsApiEnabled()) {
+      setRuntimeError(RAILS_API_DISABLED_MESSAGE);
+      return;
+    }
     try {
       setLedgerEvents(await railsApi.ledger.tail(count));
     } catch (err) {
@@ -160,6 +182,10 @@ function useDagRuntimeData() {
   }
 
   async function traceLedger(query: { nodeId?: string; wihId?: string; promptId?: string }) {
+    if (!isRailsApiEnabled()) {
+      setRuntimeError(RAILS_API_DISABLED_MESSAGE);
+      return;
+    }
     try {
       setLedgerEvents(
         await railsApi.ledger.trace({
@@ -174,6 +200,10 @@ function useDagRuntimeData() {
   }
 
   async function rerunGateVerify() {
+    if (!isRailsApiEnabled()) {
+      setRuntimeError(RAILS_API_DISABLED_MESSAGE);
+      return;
+    }
     try {
       setGateVerify(await railsApi.gate.verify(true));
     } catch (err) {
@@ -182,6 +212,10 @@ function useDagRuntimeData() {
   }
 
   async function rebuildIndex() {
+    if (!isRailsApiEnabled()) {
+      setRuntimeError(RAILS_API_DISABLED_MESSAGE);
+      return;
+    }
     try {
       await railsApi.index.rebuild();
       await refreshLedger();
@@ -191,6 +225,10 @@ function useDagRuntimeData() {
   }
 
   async function archiveWih(wihId: string) {
+    if (!isRailsApiEnabled()) {
+      setRuntimeError(RAILS_API_DISABLED_MESSAGE);
+      return;
+    }
     try {
       await railsApi.vault.archive({ wih_id: wihId });
       const vault = await railsApi.vault.status();
@@ -610,6 +648,15 @@ export function DirectiveCompilerSurface() {
         return;
       }
 
+      if (!isRailsApiEnabled()) {
+        // Deliberate empty state — never call /api/rails/dags/:id/render
+        // when the Rails backend is disabled by flag.
+        if (!cancelled) {
+          setRenderedPlan("");
+        }
+        return;
+      }
+
       try {
         const rendered = await railsApi.plan.render(selectedDag.dagId, renderFormat);
         if (!cancelled) {
@@ -644,6 +691,11 @@ export function DirectiveCompilerSurface() {
 
   async function handleRefine() {
     if (!selectedDag || !refineDelta.trim()) {
+      return;
+    }
+    if (!isRailsApiEnabled()) {
+      // refineDag (store action) and the render refresh below both target
+      // /api/rails — fail closed without firing either.
       return;
     }
 

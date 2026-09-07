@@ -4,15 +4,14 @@ import { xdgData, xdgCache, xdgConfig, xdgState } from "xdg-basedir"
 
 const app = "gizzi-code"
 
-const homePath = process.env.GIZZI_TEST_HOME || os.homedir()
-
-export namespace GlobalPaths {
-  export const data = path.join(xdgData!, app)
-  export const cache = path.join(xdgCache!, app)
-  export const config = path.join(xdgConfig!, app)
-  export const state = path.join(xdgState!, app)
-
-  export const home = homePath
-  export const bin = path.join(data, "bin")
-  export const log = path.join(data, "log")
+export const GlobalPaths = {
+  data: path.join(xdgData!, app),
+  cache: path.join(xdgCache!, app),
+  config: path.join(xdgConfig!, app),
+  state: path.join(xdgState!, app),
+  get home() {
+    return process.env.GIZZI_TEST_HOME || os.homedir()
+  },
+  bin: path.join(xdgData!, app, "bin"),
+  log: path.join(xdgData!, app, "log"),
 }

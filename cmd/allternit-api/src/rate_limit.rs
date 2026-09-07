@@ -11,7 +11,7 @@
 //! `auth_middleware` so `AuthUser` is present in request extensions.
 
 use axum::{
-    extract::{Request, State},
+    extract::{Extension, Request, State},
     http::{header, StatusCode},
     middleware::Next,
     response::{IntoResponse, Response},
@@ -37,6 +37,15 @@ const RATE_WINDOW: Duration = Duration::from_secs(60);
 /// Per-organization sliding-window request timestamps, process-wide. Entries
 /// are pruned on access.
 static RATE_LIMIT_WINDOWS: Lazy<Mutex<HashMap<String, VecDeque<Instant>>>> =
+    Lazy::new(|| Mutex::new(HashMap::new()));
+
+/// Default per-user rate limit for bot-desktop endpoints. Desktop operations
+/// (provision, take-over, etc.) are heavier than normal API calls, so they get
+/// a separate, stricter bucket.
+pub const DEFAULT_BOT_DESKTOP_RATE_LIMIT_RPM: i64 = 30;
+
+/// Per-user sliding window for bot-desktop endpoints.
+static BOT_DESKTOP_RATE_LIMIT_WINDOWS: Lazy<Mutex<HashMap<String, VecDeque<Instant>>>> =
     Lazy::new(|| Mutex::new(HashMap::new()));
 
 fn rate_limit_response(retry_after_secs: u64) -> Response {
@@ -220,11 +229,66 @@ pub fn rate_limit_status(scope: &str, limit: usize) -> RateLimitStatus {
     }
 }
 
+/// Stricter rate-limit middleware for the bot-desktop REST endpoints. Runs
+/// after `auth_middleware`; keys the sliding window by authenticated user id.
+pub async fn bot_desktop_rate_limit_middleware(
+    Extension(user): Extension<AuthUser>,
+    request: Request,
+    next: Next,
+) -> Response {
+    let limit = DEFAULT_BOT_DESKTOP_RATE_LIMIT_RPM.max(1) as usize;
+    let scope = format!("desktop:{}", user.user_id);
+    if !bot_desktop_check_rate_limit(&scope, limit) {
+        let retry_after = bot_desktop_compute_retry_after(&scope);
+        return rate_limit_response(retry_after);
+    }
+    next.run(request).await
+}
+
+fn bot_desktop_check_rate_limit(scope: &str, limit: usize) -> bool {
+    let now = Instant::now();
+    let mut windows = BOT_DESKTOP_RATE_LIMIT_WINDOWS
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let window = windows.entry(scope.to_string()).or_default();
+    while window
+        .front()
+        .map(|t| now.duration_since(*t) > RATE_WINDOW)
+        .unwrap_or(false)
+    {
+        window.pop_front();
+    }
+    if window.len() >= limit {
+        return false;
+    }
+    window.push_back(now);
+    true
+}
+
+fn bot_desktop_compute_retry_after(scope: &str) -> u64 {
+    let now = Instant::now();
+    let windows = BOT_DESKTOP_RATE_LIMIT_WINDOWS
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    windows
+        .get(scope)
+        .and_then(|window| window.front())
+        .map(|oldest| {
+            let elapsed = now.duration_since(*oldest);
+            if elapsed >= RATE_WINDOW {
+                1
+            } else {
+                (RATE_WINDOW - elapsed).as_secs().max(1)
+            }
+        })
+        .unwrap_or(1)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::auth::AuthUser;
-    use axum::{routing::get, Router};
+    use axum::{body::Body, routing::get, Router};
     use tower::ServiceExt;
 
     fn test_user(org_id: Option<&str>) -> AuthUser {
@@ -346,5 +410,71 @@ mod tests {
 
         let second = app.clone().oneshot(request(Some("org-override"))).await.unwrap();
         assert_eq!(second.status(), StatusCode::TOO_MANY_REQUESTS);
+    }
+
+    fn desktop_request(user_id: &str) -> Request<Body> {
+        Request::builder()
+            .method("GET")
+            .uri("/test")
+            .extension(AuthUser {
+                user_id: user_id.to_string(),
+                email: None,
+                name: None,
+                avatar_url: None,
+                tenant_id: None,
+                organization_id: None,
+                organization_role: None,
+                organization_slug: None,
+            })
+            .body(Body::empty())
+            .unwrap()
+    }
+
+    #[tokio::test]
+    async fn bot_desktop_rate_limit_allows_default_then_blocks() {
+        let app = Router::new()
+            .route("/test", get(|| async { StatusCode::NO_CONTENT }))
+            .layer(axum::middleware::from_fn(bot_desktop_rate_limit_middleware));
+
+        let user_id = uuid::Uuid::new_v4().to_string();
+        for i in 0..DEFAULT_BOT_DESKTOP_RATE_LIMIT_RPM as usize {
+            let resp = app.clone().oneshot(desktop_request(&user_id)).await.unwrap();
+            assert_eq!(
+                resp.status(),
+                StatusCode::NO_CONTENT,
+                "request {} should be allowed",
+                i
+            );
+        }
+
+        let blocked = app.clone().oneshot(desktop_request(&user_id)).await.unwrap();
+        assert_eq!(blocked.status(), StatusCode::TOO_MANY_REQUESTS);
+        let retry_after = blocked
+            .headers()
+            .get(header::RETRY_AFTER)
+            .unwrap()
+            .to_str()
+            .unwrap();
+        assert!(!retry_after.is_empty());
+    }
+
+    #[tokio::test]
+    async fn bot_desktop_rate_limit_is_per_user() {
+        let app = Router::new()
+            .route("/test", get(|| async { StatusCode::NO_CONTENT }))
+            .layer(axum::middleware::from_fn(bot_desktop_rate_limit_middleware));
+
+        let user_a = uuid::Uuid::new_v4().to_string();
+        // Exhaust user A.
+        for _ in 0..DEFAULT_BOT_DESKTOP_RATE_LIMIT_RPM as usize {
+            let _ = app.clone().oneshot(desktop_request(&user_a)).await.unwrap();
+        }
+        let blocked = app.clone().oneshot(desktop_request(&user_a)).await.unwrap();
+        assert_eq!(blocked.status(), StatusCode::TOO_MANY_REQUESTS);
+
+        // User B is unaffected.
+        let user_b = uuid::Uuid::new_v4().to_string();
+        let allowed = app.clone().oneshot(desktop_request(&user_b)).await.unwrap();
+        assert_eq!(allowed.status(), StatusCode::NO_CONTENT);
     }
 }

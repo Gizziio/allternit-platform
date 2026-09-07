@@ -1,11 +1,12 @@
 // @ts-nocheck
 import { mkdir, readdir, readFile, unlink, writeFile } from 'fs/promises'
+import { readGizziEnv } from '@/shared/utils/gizziEnv.js';
 import { join } from 'path'
 import { z } from 'zod/v4'
 import { getIsNonInteractiveSession, getSessionId } from '../bootstrap/state.js'
 import { uniq } from './array.js'
 import { logForDebugging } from './debug.js'
-import { getClaudeConfigHomeDir, getTeamsDir, isEnvTruthy } from './envUtils.js'
+import { getGizziConfigHomeDir, getTeamsDir, isEnvTruthy } from './envUtils.js'
 import { errorMessage, getErrnoCode } from './errors.js'
 import { lazySchema } from './lazySchema.js'
 import * as lockfile from './lockfile.js'
@@ -133,7 +134,7 @@ async function writeHighWaterMark(
 
 export function isTodoV2Enabled(): boolean {
   // Force-enable tasks in non-interactive mode (e.g. SDK users who want Task tools over TodoWrite)
-  if (isEnvTruthy(process.env.CLAUDE_CODE_ENABLE_TASKS)) {
+  if (isEnvTruthy(process.env.GIZZI_CODE_ENABLE_TASKS)) {
     return true
   }
   return !getIsNonInteractiveSession()
@@ -191,15 +192,15 @@ export async function resetTaskList(taskListId: string): Promise<void> {
 /**
  * Gets the task list ID based on the current context.
  * Priority:
- * 1. CLAUDE_CODE_TASK_LIST_ID - explicit task list ID
+ * 1. GIZZI_CODE_TASK_LIST_ID - explicit task list ID
  * 2. In-process teammate: leader's team name (so teammates share the leader's task list)
- * 3. CLAUDE_CODE_TEAM_NAME - set when running as a process-based teammate
+ * 3. GIZZI_CODE_TEAM_NAME - set when running as a process-based teammate
  * 4. Leader team name - set when the leader creates a team via TeamCreate
  * 5. Session ID - fallback for standalone sessions
  */
 export function getTaskListId(): string {
-  if (process.env.CLAUDE_CODE_TASK_LIST_ID) {
-    return process.env.CLAUDE_CODE_TASK_LIST_ID
+  if (readGizziEnv('TASK_LIST_ID')) {
+    return readGizziEnv('TASK_LIST_ID')
   }
   // In-process teammates use the leader's team name so they share the same
   // task list that tmux/iTerm2 teammates also resolve to.
@@ -221,7 +222,7 @@ export function sanitizePathComponent(input: string): string {
 
 export function getTasksDir(taskListId: string): string {
   return join(
-    getClaudeConfigHomeDir(),
+    getGizziConfigHomeDir(),
     'tasks',
     sanitizePathComponent(taskListId),
   )

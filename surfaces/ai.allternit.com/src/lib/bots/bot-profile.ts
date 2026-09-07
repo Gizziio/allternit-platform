@@ -131,8 +131,6 @@ export function getProviderLabel(providerId: string): string {
       return 'Hermes';
     case 'openclaw':
       return 'OpenClaw';
-    case 'grok':
-      return 'Grok';
     default:
       return providerId;
   }
@@ -183,6 +181,13 @@ export function agentToBot(agent: Agent): CanonicalBot {
  * templated creation. Runtime-only fields (id, status, timestamps, runs,
  * ratings, etc.) are stripped, and secret values are redacted so the draft is
  * safe to seed the creation wizard.
+ *
+ * Share-auth / duplicate inheritance rule (Hermes): a duplicated bot keeps
+ * only indirect secret references — `value: undefined` — never plaintext. The
+ * new bot therefore inherits the shared secretRef resolution path (the ref is
+ * re-resolved against the store at runtime) instead of copying the parent's
+ * concrete value. Operational history (runs, assigned tasks, checkpoints,
+ * mail) is never inherited: a duplicate starts with a clean identity.
  */
 export function agentToCreateAgentInput(agent: Agent): Partial<CreateAgentInput> {
   const redactedSecrets = (agent.secretRefs ?? []).map((ref) => ({

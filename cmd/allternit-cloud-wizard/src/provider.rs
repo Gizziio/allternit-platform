@@ -1256,7 +1256,7 @@ mod tests {
         use crate::capability::SupportedProvider;
         assert!(driver_for(SupportedProvider::Hetzner, "t".to_string()).is_some());
         assert!(driver_for(SupportedProvider::DigitalOcean, "t".to_string()).is_some());
-        // AWS needs its JSON credential string; anything else falls back to SSH mode.
+        // AWS needs its JSONB credential string; anything else falls back to SSH mode.
         assert!(driver_for(SupportedProvider::Aws, "t".to_string()).is_none());
         let aws_json = r#"{"access_key_id":"AKIA","secret_access_key":"s","region":"us-east-1"}"#;
         assert!(driver_for(SupportedProvider::Aws, aws_json.to_string()).is_some());

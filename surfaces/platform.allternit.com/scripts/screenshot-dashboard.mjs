@@ -2,7 +2,13 @@ import { chromium } from '@playwright/test';
 import { existsSync, mkdirSync } from 'fs';
 
 const EMAIL = 'cartlidge.joseph@yahoo.com';
-const PASSWORD = 'Tyhvix-gafho2-bofxog';
+// Password comes from the environment — never commit it. (A hardcoded password
+// used to live here; it was rotated on 2026-09-03 after being found in git.)
+const PASSWORD = process.env.ALLTERNIT_TEST_PASSWORD;
+if (!PASSWORD) {
+  console.error('Set ALLTERNIT_TEST_PASSWORD in the environment.');
+  process.exit(1);
+}
 const ORIGIN = 'https://platform.allternit.com';
 const OUT_DIR = '/tmp/platform-screens';
 

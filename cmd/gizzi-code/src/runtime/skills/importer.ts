@@ -207,7 +207,7 @@ export namespace SkillImporter {
   }
 
   function markerFor(operation: Pick<Operation, "origin" | "source">, _content: string) {
-    const brand = operation.origin === "claude" ? "Claude Code" : "Codex"
+    const brand = operation.origin === "claude" ? "gizzi-code" : "Codex"
     return {
       start: `<!-- Imported from ${brand}: ${operation.source} -->`,
       end: `<!-- End imported from ${brand}: ${operation.source} -->`,

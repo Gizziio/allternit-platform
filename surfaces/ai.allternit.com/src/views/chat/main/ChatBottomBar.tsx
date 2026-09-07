@@ -7,9 +7,12 @@ import type { AgentModeSurface } from "@/stores/agent-surface-mode.store";
 import type { CanonicalAgentModeId } from "@/lib/agents/agent-mode-contracts";
 import type { PluginMentionTarget } from "@/lib/mentions/use-mention-targets";
 import type { ModelSelection } from "@/components/model-picker";
+import type { Agent } from "@/lib/agents/agent.types";
+import { ModelPicker as BotModelPicker } from "@/views/chat/components/ModelPicker";
+import { VoiceCallButton } from "@/components/ai-elements/voice-call-button";
 
 interface ChatBottomBarProps {
-  mode: 'chat' | 'cowork' | 'code';
+  mode: 'chat' | 'cowork' | 'bot' | 'code';
   isChatEmpty: boolean;
   hideEmptyState: boolean;
   hudMode?: boolean;
@@ -31,6 +34,7 @@ interface ChatBottomBarProps {
   modelSelection?: ModelSelection | null;
   startSelection: () => void;
   selectModel: (selection: ModelSelection) => void;
+  agent?: Agent;
 }
 
 export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
@@ -56,6 +60,7 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
   modelSelection,
   startSelection,
   selectModel,
+  agent,
 }) => {
   if (!(mode === 'cowork' || !isChatEmpty || hideEmptyState || hudMode)) return null;
 
@@ -68,10 +73,20 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
           : 'absolute bottom-0 left-0 right-0 pb-[calc(0.75rem_+_env(safe-area-inset-bottom,0px))]'
       )}
       style={{
-        background: hideEmptyState || mode === 'cowork' || mode === 'chat' || hudMode ? 'transparent' : THEME.bgGradient,
+        background: hideEmptyState || mode === 'cowork' || mode === 'bot' || mode === 'chat' || hudMode ? 'transparent' : THEME.bgGradient,
       }}
     >
       <div className={cn('w-full pointer-events-auto box-border', hudMode ? 'max-w-none' : 'max-w-[760px] px-2 md:px-5')}>
+        {agent && (
+          <div className="mb-2 flex items-center justify-end gap-2">
+            <VoiceCallButton
+              agent={agent}
+              accentColor={agent?.botProfile?.accentColor}
+              onTranscript={handleSend}
+            />
+            <BotModelPicker agent={agent} />
+          </div>
+        )}
         <ChatComposer
           onSend={handleSend}
           onAgentSend={onOpenAgentSession ? (text, execution) => onOpenAgentSession(text, agentSurface, execution) : undefined}

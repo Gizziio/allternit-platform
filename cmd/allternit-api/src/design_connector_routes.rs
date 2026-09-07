@@ -540,10 +540,7 @@ async fn spawn_adapter(
         .map(PathBuf::from)
         .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")));
 
-    let mut env_vars: HashMap<String, String> = std::env::vars().collect();
-    if let Some(extra) = req.env {
-        env_vars.extend(extra);
-    }
+    let env_vars = crate::env_allowlist::minimal_child_env(req.env);
 
     let (program, args) = match kind.id.as_str() {
         "claude-desktop" => (

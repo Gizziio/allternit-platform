@@ -3,6 +3,7 @@ export type ViewType =
   | "home"
   | "chat"
   | "chat-legacy"
+  | "bot-launchpad"
   | "project"
   | "elements"
   | "playground"
@@ -18,6 +19,9 @@ export type ViewType =
   | "agent-hub"
   | "bot-home"
   | "bot-inbox"
+  | "group-chat"
+  | "groups-list"
+  | "bot-chat-session"
   | "native-agent"
   | "registry"
   | "memory"
@@ -92,6 +96,14 @@ export type ViewType =
   | "budget-dashboard"
   | "replay-manager"
   | "prewarm-manager"
+  // Desktop-as-a-Service admin view
+  | "desktop-cloud"
+  // Customer Cloud Console
+  | "cloud-console"
+  // Model Gateway
+  | "model-gateway"
+  // Agent Cloud
+  | "agent-cloud"
   // Chat History views
   | "history"
   | "archived"
@@ -110,6 +122,7 @@ export type ViewType =
   | "cron"
   | "dispatch"
   | "remote-control"
+  | "fabric-session"
   // Code views
   | "new-file"
   | "code-project"
@@ -134,6 +147,7 @@ export type ViewType =
   // Agent Session Views (full-screen agent experiences)
   // "chat-agent-session" is a deprecated alias to the cowork workspace.
   | "chat-agent-session"
+  | "chat-group-session"
   | "cowork-agent-session"
   | "code-agent-session"
   | "design-agent-session"
@@ -160,13 +174,13 @@ export type ViewType =
   | "design-view-market"
   | "design-view-compare"
   | "design-marketplace"
-  // Docs editor (GenOffice)
+  // Docs editor (Allternit Office)
   | "docs"
-  // Slides editor (GenOffice)
+  // Slides editor (Allternit Office)
   | "slides"
-  // Sheets editor (GenOffice)
+  // Sheets editor (Allternit Office)
   | "sheets"
-  // PDF viewer (GenOffice)
+  // PDF viewer (Allternit Office)
   | "pdf"
   // Markdown preview (anydoc conversion)
   | "markdown-preview"
@@ -181,7 +195,9 @@ export type ViewType =
   // Floating chat HUD
   | "hud"
   // Full-screen annotation overlay
-  | "hud-annotate";
+  | "hud-annotate"
+  // Rail "Customize" — theme / plugins / skills (same surface as Settings)
+  | "customize";
 
 export type ViewId = string;
 

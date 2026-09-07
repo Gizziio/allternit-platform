@@ -380,6 +380,7 @@ impl ExecutionDriver for ProcessDriver {
             message: Some("Process driver operational".to_string()),
             active_executions: 0, // Would track actual processes in full impl
             available_capacity: self.capabilities().max_resources,
+            capabilities: vec!["linux".to_string()],
         })
     }
 }

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 import { createAllternitClient } from "@/lib/sdk";
 import { sessionApi } from "@/lib/agents/native-agent-api";
+import { isAgentSessionsApiEnabled } from "@/lib/env";
 
 export interface PermissionRequest {
   id: string;
@@ -131,14 +132,23 @@ export function useSessionComposerState(
 
   const connect = useCallback(() => {
     if (destroyedRef.current) return;
+
+    if (!isAgentSessionsApiEnabled()) {
+      // Fail closed instead of opening the /api/v1/agent-sessions/sync SSE
+      // channel — with the flag off, nothing serves it in this deployment.
+      // Permission/question prompts simply stay inactive.
+      return;
+    }
+
     if (esRef.current) {
       esRef.current.close();
       esRef.current = null;
     }
 
-    // Browser EventSource cannot attach Gizzi's Basic Authorization header.
-    // Stream through the authenticated platform gateway, which owns the Gizzi
-    // credential, instead of connecting cross-origin to port 4096.
+    // sessionApi.createSyncSource() picks the transport: authenticated fetch
+    // streaming against the cloud-api control plane when the agent-sessions
+    // flag is on (cloud-api accepts Bearer only — a plain EventSource cannot
+    // authenticate), or the platform EventSource otherwise.
     const es = sessionApi.createSyncSource();
     esRef.current = es;
 

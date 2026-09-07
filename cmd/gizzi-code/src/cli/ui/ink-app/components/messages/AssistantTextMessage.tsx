@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
-import type { TextBlockParam } from '@allternit/sdk/providers/anthropic/resources/index.mjs';
+import type { TextBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/index.mjs';
 import React, { useContext } from 'react';
 import { ERROR_MESSAGE_USER_ABORT } from './../../services/compact/compact.ts';
 import { isRateLimitErrorMessage } from './../../services/rateLimitMessages.ts';
@@ -101,7 +101,7 @@ export function AssistantTextMessage(t0) {
       {
         let t2;
         if ($[5] === Symbol.for("react.memo_cache_sentinel")) {
-          t2 = <MessageResponse height={1}><Text color="error">Credit balance too low · Add funds: https://platform.claude.com/settings/billing</Text></MessageResponse>;
+          t2 = <MessageResponse height={1}><Text color="error">Credit balance too low · Add funds: https://platform.allternit.com/billing</Text></MessageResponse>;
           $[5] = t2;
         } else {
           t2 = $[5];

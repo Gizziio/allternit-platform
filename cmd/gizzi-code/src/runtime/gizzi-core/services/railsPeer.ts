@@ -31,6 +31,8 @@ let registeredPeer: ApiPeerRegisterResponse | null = null
 let pollIntervalId: ReturnType<typeof setInterval> | null = null
 let seenMessageIds = new Set<number>()
 
+const RAILS_HEARTBEAT_TIMEOUT_MS = 10_000
+
 export type RailsInboxMessageHandler = (command: QueuedCommand) => void
 
 function formatIncomingMessage(envelope: {
@@ -145,9 +147,13 @@ export function startRailsInboxListener(
   }
 
   // Poll immediately, then every 2 seconds.
-  pollOnce().catch(() => {})
+  pollOnce().catch(() => {
+    // Next interval retries; inbox polling must never crash the host process.
+  })
   pollIntervalId = setInterval(() => {
-    pollOnce().catch(() => {})
+    pollOnce().catch(() => {
+    // Next interval retries; inbox polling must never crash the host process.
+  })
   }, 2_000)
 
   // Best-effort heartbeat while the session runs.
@@ -156,7 +162,9 @@ export function startRailsInboxListener(
       clearInterval(heartbeatInterval)
       return
     }
-    heartbeatRailsPeer(registeredPeer.name).catch(() => {})
+    heartbeatRailsPeer(registeredPeer.name).catch(() => {
+      // Best-effort liveness signal; the next interval retries.
+    })
   }, 30_000)
 
   // Stop polling and heartbeat when the process exits.
@@ -182,12 +190,17 @@ async function heartbeatRailsPeer(name: string): Promise<void> {
       `${config.baseUrl}/api/rails/peers/${encodeURIComponent(name)}/heartbeat`,
       {
         method: 'POST',
+        // Best-effort liveness ping: never let a hung gateway hold the
+        // heartbeat (and its interval slot) open indefinitely.
+        signal: AbortSignal.timeout(RAILS_HEARTBEAT_TIMEOUT_MS),
         headers: {
           'Content-Type': 'application/json',
           'x-allternit-user-id': config.userId,
+          // Only send credentials when a real token exists — never fall
+          // back to a hardcoded dev token.
           ...(config.token
             ? { Authorization: `Bearer ${config.token}` }
-            : { 'x-allternit-desktop-access-token': 'gizzi-local-token' }),
+            : {}),
         },
       },
     )

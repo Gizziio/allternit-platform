@@ -32,13 +32,13 @@ function normalizeUrl(url: string): string | undefined {
  * Populates officialUrls for isOfficialMcpUrl lookups.
  */
 export async function prefetchOfficialMcpUrls(): Promise<void> {
-  if (process.env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC) {
+  if (process.env.GIZZI_CODE_DISABLE_NONESSENTIAL_TRAFFIC) {
     return
   }
 
   try {
     const response = await axios.get<RegistryResponse>(
-      'https://api.anthropic.com/mcp-registry/v0/servers?version=latest&visibility=commercial',
+      'https://api.allternit.com/mcp-registry/v0/servers?version=latest&visibility=commercial',
       { timeout: 5000 },
     )
 

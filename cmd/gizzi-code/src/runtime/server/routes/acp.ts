@@ -482,7 +482,7 @@ async function spawnAcpAgentSdk({ connectionId, connection, command, args, env, 
       },
     }
   } catch (error) {
-    try { connection.process?.kill("SIGTERM") } catch {}
+    try { connection.process?.kill("SIGTERM") } catch { /* process may already have exited */ }
     return { success: false, error: error instanceof Error ? error.message : String(error) }
   }
 }

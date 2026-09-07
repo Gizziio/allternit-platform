@@ -15,7 +15,8 @@ import { createStatsStore } from './context/stats'
 import { getAllBaseTools } from './tools'
 import { getCommands } from './commands'
 import { createUserMessage } from './utils/messages'
-import { setCwdState, setOriginalCwd, setSessionTrustAccepted } from './bootstrap/state'
+import { setCwdState, setOriginalCwd, setSessionTrustAccepted, switchSession } from './bootstrap/state'
+import { asSessionId } from './types/ids'
 import { Log } from '../../../shared/util/log'
 import { registerRailsPeer } from '../../../runtime/gizzi-core/services/railsPeer.js'
 import { RailsInboxBridge } from './components/RailsInboxBridge'
@@ -26,6 +27,14 @@ export async function tui(options?: any): Promise<void> {
   setOriginalCwd(currentCwd)
   setCwdState(currentCwd)
   setSessionTrustAccepted(true)
+
+  // Honor -s/--session (e.g. `gizzi bot chat <name>` launches the TUI on the
+  // bot's pinned canonical session): point the ink session id at the pinned
+  // id up front so transcripts, session identity, and the Bot Mode composer
+  // guard (D2: /new reroutes to compact) all see the same session id.
+  if (options?.args?.sessionID) {
+    switchSession(asSessionId(String(options.args.sessionID)))
+  }
 
   enableConfigs()
   enableSharedConfigs()

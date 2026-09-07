@@ -337,6 +337,7 @@ impl VmExecutor {
                                 message: Some(e.to_string()),
                                 active_executions: 0,
                                 available_capacity: driver.capabilities().max_resources,
+                                capabilities: vec![],
                             },
                         );
                     }
@@ -488,6 +489,7 @@ mod tests {
                 message: Some("mock driver healthy".to_string()),
                 active_executions: 0,
                 available_capacity: ResourceSpec::standard(),
+                capabilities: vec![],
             })
         }
     }

@@ -11,7 +11,7 @@ allternit-cloud-hetzner = { path = "../../infrastructure/providers/hetzner" }
 allternit-cloud-core = { path = "../../infrastructure/cloud" }
 
 # Database (durable checkpoint store)
-sqlx = { workspace = true, features = ['chrono'] }
+sqlx = { workspace = true, features = ['chrono', 'postgres'] }
 
 # Web framework
 axum = { workspace = true }

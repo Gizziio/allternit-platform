@@ -14,7 +14,9 @@
  * local allternit-api instance. A remote/authenticated instance is out of scope.
  */
 
-const API_BASE = (process.env.ALLTERNIT_API_URL ?? "http://127.0.0.1:8013").replace(/\/$/, "")
+import { ALLTERNIT_GATEWAY_BASE } from "@/shared/constants/allternitGateway"
+
+const API_BASE = ALLTERNIT_GATEWAY_BASE
 
 /** Shape of `GET /api/v1/agent-email/status`. Fields beyond `configured` are
  * present only when the mailflare rail is configured. */

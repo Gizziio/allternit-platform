@@ -40,6 +40,8 @@ import {
 import { AllternitLogo } from '@/components/AllternitLogo';
 import { MatrixLogo } from '@/components/ai-elements/MatrixLogo';
 import { isElectronShell, getWebProxyUrl } from '@/lib/platform';
+import { isOfficeApiEnabled } from '@/lib/env';
+import { cloudApiFetch } from '@/lib/cloud-api';
 import { cn } from '@/lib/utils';
 
 import {
@@ -1214,11 +1216,16 @@ export function BrowserCapsuleEnhanced({
   useEffect(() => { setFindBarOpen(false); }, [activeTabId]);
 
   useEffect(() => {
+    // Binding refresh polls GET /api/v1/office/bindings. When the flag is on
+    // the handler is served by the cloud-api control plane (Clerk bearer, see
+    // cloudApiFetch); the flag guard below keeps the fail-closed behavior
+    // (tab left unbound) in deployments where it is off.
+    if (!isOfficeApiEnabled()) return;
     if (!activeOfficeHost || !activeTabId || !officeTabAttached) return;
     let cancelled = false;
     const refreshBinding = async () => {
       try {
-        const response = await fetch('/api/v1/office/bindings');
+        const response = await cloudApiFetch('/api/v1/office/bindings');
         if (!response.ok) return;
         const payload = await response.json() as { bindings?: Array<{ id: string; host?: string; title?: string; label?: string; connected?: boolean }> };
         const binding = payload.bindings?.find((item) => item.host === activeOfficeHost);

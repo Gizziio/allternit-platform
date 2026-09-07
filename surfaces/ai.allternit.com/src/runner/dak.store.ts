@@ -7,6 +7,15 @@
 
 import { create } from "zustand";
 import { railsApi } from "@/lib/agents";
+import { isRailsApiEnabled } from "@/lib/env";
+
+// The /api/rails/* handlers live only on the Rust allternit-api (:8013),
+// which is not publicly reachable from the deployed web surface. When
+// NEXT_PUBLIC_ALLTERNIT_RAILS_API is unset (default), every action below
+// fails closed with this deliberate message instead of firing requests
+// that 404.
+const RAILS_API_DISABLED_MESSAGE =
+  "Rails API is disabled in this deployment (set NEXT_PUBLIC_ALLTERNIT_RAILS_API=1 where the gateway is reachable).";
 import type {
   DagDefinition,
   DagExecution,
@@ -188,6 +197,7 @@ export const useDakStore = create<DakStore>((set, get) => ({
   // Connection - Calls Rails Health
   checkHealth: async () => {
     try {
+      if (!isRailsApiEnabled()) throw new Error(RAILS_API_DISABLED_MESSAGE);
       const health = await railsApi.health();
       set({ railsConnected: health.status === "healthy" || health.status === "ok" });
     } catch (err: any) {
@@ -199,6 +209,7 @@ export const useDakStore = create<DakStore>((set, get) => ({
   fetchDags: async () => {
     set({ isLoading: true, error: null });
     try {
+      if (!isRailsApiEnabled()) throw new Error(RAILS_API_DISABLED_MESSAGE);
       const response = await railsApi.plan.list();
       // Transform response to DagDefinition format
       const dags: DagDefinition[] = response.dags.map((d: any) => ({
@@ -219,6 +230,7 @@ export const useDakStore = create<DakStore>((set, get) => ({
   createDagPlan: async (req) => {
     set({ isLoading: true, error: null });
     try {
+      if (!isRailsApiEnabled()) throw new Error(RAILS_API_DISABLED_MESSAGE);
       const response = await railsApi.plan.new({
         text: req.text,
         dag_id: req.dagId,
@@ -247,6 +259,7 @@ export const useDakStore = create<DakStore>((set, get) => ({
   refineDag: async (req) => {
     set({ isLoading: true, error: null });
     try {
+      if (!isRailsApiEnabled()) throw new Error(RAILS_API_DISABLED_MESSAGE);
       await railsApi.plan.refine({
         dag_id: req.dagId,
         delta: req.delta,
@@ -264,6 +277,7 @@ export const useDakStore = create<DakStore>((set, get) => ({
   executeDag: async (dagId) => {
     set({ isLoading: true, error: null });
     try {
+      if (!isRailsApiEnabled()) throw new Error(RAILS_API_DISABLED_MESSAGE);
       const runId = `run_${Date.now()}`;
       await railsApi.plan.execute(dagId, runId);
       
@@ -288,6 +302,7 @@ export const useDakStore = create<DakStore>((set, get) => ({
   
   cancelDag: async (runId) => {
     try {
+      if (!isRailsApiEnabled()) throw new Error(RAILS_API_DISABLED_MESSAGE);
       await railsApi.plan.cancel(runId);
       set((state) => ({
         activeExecutions: state.activeExecutions.map((ex) =>
@@ -306,6 +321,7 @@ export const useDakStore = create<DakStore>((set, get) => ({
   fetchWihs: async (dagId) => {
     set({ isLoading: true, error: null });
     try {
+      if (!isRailsApiEnabled()) throw new Error(RAILS_API_DISABLED_MESSAGE);
       const response = await railsApi.wihs.list({ dag_id: dagId });
       const wihs: WihInfo[] = response.wihs.map((w: any) => ({
         wihId: w.wih_id,
@@ -328,6 +344,7 @@ export const useDakStore = create<DakStore>((set, get) => ({
   pickupWih: async (req) => {
     set({ isLoading: true, error: null });
     try {
+      if (!isRailsApiEnabled()) throw new Error(RAILS_API_DISABLED_MESSAGE);
       const response = await railsApi.wihs.pickup({
         dag_id: req.dagId,
         node_id: req.nodeId,
@@ -358,6 +375,7 @@ export const useDakStore = create<DakStore>((set, get) => ({
   closeWih: async (req) => {
     set({ isLoading: true, error: null });
     try {
+      if (!isRailsApiEnabled()) throw new Error(RAILS_API_DISABLED_MESSAGE);
       await railsApi.wihs.close(req.wihId, {
         status: req.status,
         evidence: req.evidence,
@@ -382,6 +400,7 @@ export const useDakStore = create<DakStore>((set, get) => ({
   fetchLeases: async () => {
     set({ isLoading: true, error: null });
     try {
+      if (!isRailsApiEnabled()) throw new Error(RAILS_API_DISABLED_MESSAGE);
       const response = await railsApi.leases.list();
       const leases: ManagedLease[] = response.leases.map((l: any) => ({
         leaseId: l.lease_id,
@@ -406,6 +425,7 @@ export const useDakStore = create<DakStore>((set, get) => ({
   requestLease: async (req) => {
     set({ isLoading: true, error: null });
     try {
+      if (!isRailsApiEnabled()) throw new Error(RAILS_API_DISABLED_MESSAGE);
       const response = await railsApi.leases.request({
         wih_id: req.wihId,
         agent_id: req.agentId,
@@ -445,6 +465,7 @@ export const useDakStore = create<DakStore>((set, get) => ({
   
   renewLease: async (leaseId) => {
     try {
+      if (!isRailsApiEnabled()) throw new Error(RAILS_API_DISABLED_MESSAGE);
       const response = await railsApi.leases.renew(leaseId, 300);
       if (response.renewed) {
         set((state) => ({
@@ -467,6 +488,7 @@ export const useDakStore = create<DakStore>((set, get) => ({
   
   releaseLease: async (leaseId) => {
     try {
+      if (!isRailsApiEnabled()) throw new Error(RAILS_API_DISABLED_MESSAGE);
       await railsApi.leases.release(leaseId);
       set((state) => ({
         leases: state.leases.filter((l) => l.leaseId !== leaseId),
@@ -482,6 +504,7 @@ export const useDakStore = create<DakStore>((set, get) => ({
   fetchContextPacks: async (query) => {
     set({ isLoading: true, error: null });
     try {
+      if (!isRailsApiEnabled()) throw new Error(RAILS_API_DISABLED_MESSAGE);
       const response = await railsApi.contextPacks.list({
         dag_id: query?.dagId,
         node_id: query?.nodeId,
@@ -514,6 +537,7 @@ export const useDakStore = create<DakStore>((set, get) => ({
   sealContextPack: async (dagId, nodeId, wihId) => {
     set({ isLoading: true, error: null });
     try {
+      if (!isRailsApiEnabled()) throw new Error(RAILS_API_DISABLED_MESSAGE);
       // Fetch dependency receipts first
       const receiptsResponse = await railsApi.receipts.query({
         dag_id: dagId,
@@ -546,6 +570,7 @@ export const useDakStore = create<DakStore>((set, get) => ({
   fetchReceipts: async (query) => {
     set({ isLoading: true, error: null });
     try {
+      if (!isRailsApiEnabled()) throw new Error(RAILS_API_DISABLED_MESSAGE);
       const response = await railsApi.receipts.query({
         dag_id: query?.dagId,
         node_id: query?.nodeId,
@@ -587,6 +612,7 @@ export const useDakStore = create<DakStore>((set, get) => ({
   submitGateDecision: async (checkId, decision, reason) => {
     set({ isLoading: true, error: null });
     try {
+      if (!isRailsApiEnabled()) throw new Error(RAILS_API_DISABLED_MESSAGE);
       await railsApi.gate.decision(
         `Gate ${decision}: ${reason || "No reason provided"}`,
         reason,

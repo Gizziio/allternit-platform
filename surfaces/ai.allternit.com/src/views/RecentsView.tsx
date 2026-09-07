@@ -23,6 +23,9 @@ import { useCoworkSessionStore as useCoworkSessionStoreActions } from './cowork/
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import type { AppMode } from '../shell/ShellHeader';
+import { NativeSourceBadge } from '@/components/native-sessions/NativeOriginBanner';
+import { sourceRefFromMetadata } from '@/lib/agents/native-sessions-api';
+import { openNativeSessionPicker } from '@/components/native-sessions/NativeSessionPicker';
 
 type ItemKind = 'chat' | 'cowork' | 'task' | 'agent' | 'browser' | 'code';
 type ItemStatus = 'active' | 'completed' | 'archived';
@@ -38,6 +41,7 @@ interface RecentItem {
   mode: AppMode;
   sessionId?: string | null;
   projectId?: string;
+  sourceHarness?: string;
 }
 
 const KIND_ICONS: Record<ItemKind, Icon> = {
@@ -126,15 +130,27 @@ export function RecentsView(): React.ReactNode {
     const list: RecentItem[] = [];
 
     chatSessions.forEach((s) => {
-      const isAgent = s.metadata?.sessionMode === 'agent';
+      // Bot/group/agent sessions belong to the Bots section of the shell and
+      // the Bot Hub sessions tab — never to Recents.
+      const md = s.metadata as Record<string, unknown> | undefined;
+      if (
+        md?.isBot === true ||
+        md?.isGroupChat === true ||
+        md?.sessionMode === 'agent' ||
+        md?.agentId != null ||
+        md?.agent_id != null
+      ) {
+        return;
+      }
       list.push({
         id: s.id,
         title: s.name || 'Untitled chat',
-        kind: isAgent ? 'agent' : 'chat',
+        kind: 'chat',
         status: 'active',
         updatedAt: new Date(s.updatedAt || 0).getTime(),
         mode: 'chat',
         sessionId: s.id,
+        sourceHarness: sourceRefFromMetadata(s.metadata as Record<string, unknown>)?.harness,
       });
     });
 
@@ -147,6 +163,7 @@ export function RecentsView(): React.ReactNode {
         updatedAt: new Date(s.updatedAt || 0).getTime(),
         mode: 'code',
         sessionId: s.id,
+        sourceHarness: sourceRefFromMetadata(s.metadata as Record<string, unknown>)?.harness,
       });
     });
 
@@ -240,6 +257,7 @@ export function RecentsView(): React.ReactNode {
     const defaultViewForMode: Record<AppMode, string> = {
       chat: 'chat',
       cowork: 'workspace',
+      bot: 'bot-launchpad',
       code: 'code',
       design: 'design',
       browser: 'browser',
@@ -403,6 +421,13 @@ export function RecentsView(): React.ReactNode {
 
           <button
             type="button"
+            onClick={() => openNativeSessionPicker('chat')}
+            className="px-3 py-1.5 rounded-lg text-[13px] font-medium border border-solid border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-[var(--border-default)] transition-colors"
+          >
+            Continue CLI
+          </button>
+          <button
+            type="button"
             onClick={handleNew}
             className="px-3 py-1.5 rounded-lg text-[13px] font-semibold bg-[var(--text-primary)] text-[var(--bg-primary)] hover:opacity-90 transition-opacity"
           >
@@ -490,6 +515,7 @@ export function RecentsView(): React.ReactNode {
                           />
                           <span className="flex-1 min-w-0 text-[14px] text-[var(--text-primary)] truncate">
                             {item.title}
+                            {item.sourceHarness ? <NativeSourceBadge source={{ harness: item.sourceHarness, sessionId: item.sessionId ?? '', path: '', snapshotHash: '', snapshotAt: 0 }} /> : null}
                           </span>
                           <span className="text-[12px] text-[var(--text-tertiary)] whitespace-nowrap shrink-0">
                             {formatItemDate(item.updatedAt)}

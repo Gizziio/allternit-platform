@@ -95,12 +95,12 @@ async fn mint_handoff(
     headers: HeaderMap,
     Json(body): Json<MintRequest>,
 ) -> Result<Json<MintResponse>, ApiError> {
-    let user = handoff_user(&headers).await?;
+    let user = handoff_user(&state, &headers).await?;
 
     let runtime_id = match body.runtime_id {
         Some(id) => {
             let owned: Option<(String,)> = sqlx::query_as(
-                "SELECT id FROM runtime_devices WHERE id = ? AND user_id = ? AND revoked_at IS NULL",
+                "SELECT id FROM runtime_devices WHERE id = $1 AND user_id = $2 AND revoked_at IS NULL",
             )
             .bind(&id)
             .bind(&user.id)
@@ -113,7 +113,7 @@ async fn mint_handoff(
         }
         None => {
             let runtimes: Vec<(String,)> = sqlx::query_as(
-                "SELECT id FROM runtime_devices WHERE user_id = ? AND revoked_at IS NULL ORDER BY created_at DESC",
+                "SELECT id FROM runtime_devices WHERE user_id = $1 AND revoked_at IS NULL ORDER BY created_at DESC",
             )
             .bind(&user.id)
             .fetch_all(&state.db)
@@ -135,7 +135,7 @@ async fn mint_handoff(
     };
 
     // The FK targets users(id); a Clerk user may not have a row yet.
-    sqlx::query("INSERT OR IGNORE INTO users (id, email, name, avatar_url) VALUES (?, ?, ?, ?)")
+    sqlx::query("INSERT INTO users (id, email, name, avatar_url) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING")
         .bind(&user.id)
         .bind(&user.email)
         .bind(&user.name)
@@ -146,7 +146,7 @@ async fn mint_handoff(
     let token = random_token(24);
     let expires_at = Utc::now() + Duration::minutes(HANDOFF_TTL_MINUTES);
     sqlx::query(
-        "INSERT INTO dispatch_handoff_tokens (token, user_id, runtime_id, expires_at) VALUES (?, ?, ?, ?)",
+        "INSERT INTO dispatch_handoff_tokens (token, user_id, runtime_id, expires_at) VALUES ($1, $2, $3, $4)",
     )
     .bind(&token)
     .bind(&user.id)
@@ -169,7 +169,7 @@ async fn claim_handoff(
     headers: HeaderMap,
     Json(body): Json<ClaimRequest>,
 ) -> Result<Json<ClaimResponse>, ApiError> {
-    let user = handoff_user(&headers).await?;
+    let user = handoff_user(&state, &headers).await?;
     let row = fetch_token(&state, &body.token).await?;
 
     if row.user_id != user.id {
@@ -183,7 +183,7 @@ async fn claim_handoff(
         ));
     }
     if row.claimed_at.is_none() {
-        sqlx::query("UPDATE dispatch_handoff_tokens SET claimed_at = CURRENT_TIMESTAMP WHERE token = ?")
+        sqlx::query("UPDATE dispatch_handoff_tokens SET claimed_at = CURRENT_TIMESTAMP WHERE token = $1")
             .bind(&row.token)
             .execute(&state.db)
             .await?;
@@ -202,7 +202,7 @@ async fn handoff_status(
     headers: HeaderMap,
     Query(query): Query<StatusQuery>,
 ) -> Result<Json<StatusResponse>, ApiError> {
-    let user = handoff_user(&headers).await?;
+    let user = handoff_user(&state, &headers).await?;
     let row = fetch_token(&state, &query.token).await?;
 
     if row.user_id != user.id {
@@ -220,7 +220,7 @@ async fn handoff_status(
 
 async fn fetch_token(state: &Arc<ApiState>, token: &str) -> Result<HandoffRow, ApiError> {
     sqlx::query_as::<_, HandoffRow>(
-        "SELECT token, user_id, runtime_id, expires_at, claimed_at FROM dispatch_handoff_tokens WHERE token = ?",
+        "SELECT token, user_id, runtime_id, expires_at, claimed_at FROM dispatch_handoff_tokens WHERE token = $1",
     )
     .bind(token)
     .fetch_optional(&state.db)
@@ -230,8 +230,15 @@ async fn fetch_token(state: &Arc<ApiState>, token: &str) -> Result<HandoffRow, A
 
 /// Clerk verification with the same development shortcut the legacy auth
 /// middleware honors (auth/middleware.rs) so the handoff loop can be
-/// exercised against a local stack without a real Clerk session.
-async fn handoff_user(headers: &HeaderMap) -> Result<ClerkUser, ApiError> {
+/// exercised against a local stack without a real Clerk session. The
+/// shortcut authenticates only explicitly-enabled development overrides —
+/// the hardcoded `dev-api-token` gated by `ALLTERNIT_ALLOW_DEV_TOKEN`
+/// (default OFF, audit finding B1; see `auth::dev_token`), the
+/// operator-configured `ALLTERNIT_DEV_BEARER` (with
+/// `ALLTERNIT_DEV_MODE=true`), and the legacy literal (with
+/// `ALLTERNIT_ALLOW_DEV_API_TOKEN=true`) — the latter two never in
+/// production. No override is active by default.
+async fn handoff_user(state: &ApiState, headers: &HeaderMap) -> Result<ClerkUser, ApiError> {
     let development_mode = std::env::var("Allternit_API_DEVELOPMENT_MODE")
         .map(|v| v == "true" || v == "1")
         .unwrap_or(false);
@@ -240,7 +247,13 @@ async fn handoff_user(headers: &HeaderMap) -> Result<ClerkUser, ApiError> {
             .get(header::AUTHORIZATION)
             .and_then(|value| value.to_str().ok())
             .and_then(|value| value.strip_prefix("Bearer "))
-            .map(|token| token == "dev-api-token")
+            .map(|t| {
+                crate::auth::dev_token::is_allowed_dev_token(
+                    t,
+                    crate::auth::dev_token::dev_token_allowed(),
+                ) || crate::auth::middleware::is_dev_api_token(t)
+                    || crate::auth::middleware::is_legacy_dev_api_token(t)
+            })
             .unwrap_or(false);
         if is_dev_token {
             return Ok(ClerkUser {
@@ -252,7 +265,21 @@ async fn handoff_user(headers: &HeaderMap) -> Result<ClerkUser, ApiError> {
             });
         }
     }
-    clerk::user_from_headers(headers).await
+    match clerk::user_from_headers(headers).await {
+        Ok(user) => Ok(user),
+        Err(_) => {
+            // API-token callers carry no profile; the handoff insert binds
+            // the optional fields as NULL (same as the dev-user path).
+            let user_id = crate::auth::resolve_user_id(&state.db, headers).await?;
+            Ok(ClerkUser {
+                id: user_id,
+                email: None,
+                name: None,
+                image_url: None,
+                organization_id: None,
+            })
+        }
+    }
 }
 
 fn random_token(bytes: usize) -> String {

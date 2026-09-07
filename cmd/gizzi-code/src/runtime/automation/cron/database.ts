@@ -83,6 +83,7 @@ CREATE TABLE IF NOT EXISTS runs (
   -- Trigger info
   triggered_by TEXT NOT NULL CHECK(triggered_by IN ('schedule', 'manual', 'api', 'retry', 'wake')),
   triggered_by_user TEXT,
+  reason TEXT, -- typed failure code (D4 closed vocabulary), null on success
   metadata TEXT, -- JSON object
   
   FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE
@@ -128,8 +129,18 @@ export class CronDatabase {
     // Open database
     const db = new Database(this.dbPath);
     db.exec(SCHEMA);
-    
+    this.migrate(db);
     return db;
+  }
+
+  // Lightweight column migrations for databases created by older builds.
+  // (The cron schema is hand-managed raw SQL in SCHEMA, not DrizzleKit, so
+  // drift is reconciled here on open.)
+  private migrate(db: Database): void {
+    const columns = db.prepare("PRAGMA table_info(runs)").all() as Array<{ name: string }>;
+    if (!columns.some((c) => c.name === "reason")) {
+      db.exec("ALTER TABLE runs ADD COLUMN reason TEXT");
+    }
   }
 
   close(): void {
@@ -238,8 +249,8 @@ export class CronDatabase {
       INSERT INTO runs (
         id, job_id, status, scheduled_at, started_at, finished_at, duration_ms,
         attempt, retry_of, output, error, exit_code, http_status,
-        agent_id, response, tokens_used, triggered_by, triggered_by_user, metadata
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        agent_id, response, tokens_used, triggered_by, triggered_by_user, reason, metadata
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         status = excluded.status,
         started_at = excluded.started_at,
@@ -252,6 +263,7 @@ export class CronDatabase {
         agent_id = excluded.agent_id,
         response = excluded.response,
         tokens_used = excluded.tokens_used,
+        reason = excluded.reason,
         metadata = excluded.metadata
     `);
 
@@ -274,6 +286,7 @@ export class CronDatabase {
       run.tokensUsed ?? null,
       run.triggeredBy,
       run.triggeredByUser ?? null,
+      run.reason ?? null,
       JSON.stringify(run.metadata)
     );
   }
@@ -452,6 +465,7 @@ export class CronDatabase {
       tokensUsed: row.tokens_used as number | undefined,
       triggeredBy: row.triggered_by as CronRun["triggeredBy"],
       triggeredByUser: row.triggered_by_user as string | undefined,
+      reason: row.reason as string | undefined,
       metadata: JSON.parse((row.metadata as string) ?? "{}"),
     };
   }

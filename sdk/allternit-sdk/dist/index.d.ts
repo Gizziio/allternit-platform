@@ -51,4 +51,5 @@ export { CapabilityRegistry } from './plugins/index.js';
 export type { CapabilityRegistryConfig } from './plugins/index.js';
 export type { CapabilityKind, CapabilityPricing, CapabilityManifest, CapabilityAuthor, CapabilityPermission, CapabilityRegistration, CapabilityLifecycle, CapabilityContext, CapabilityPublishOptions, CapabilityPublishResult, CapabilitySearchOptions, CapabilitySearchResult, } from './plugins/index.js';
 export { RuntimeClient, RuntimeApiError, type RuntimeStatus, type RuntimeTransport, type DiscoveredCli, type RegisteredRuntime, type AgentTask, type TaskHandle, type AgentEvent, type ExecutionLog, type RuntimeClientOptions, } from './runtime/index.js';
+export { AllternitClient, createAllternitClient } from './gen/index.js';
 export declare const VERSION = "1.0.0";

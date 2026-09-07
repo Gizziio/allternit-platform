@@ -809,7 +809,7 @@ mod tests {
 
     fn paired_config() -> BootstrapConfig {
         test_config(true).with_pairing(PairingBootstrap {
-            cloud_api_url: "https://allternit-cloud-api.fly.dev".to_string(),
+            cloud_api_url: "https://api.allternit.com".to_string(),
             bootstrap_token: "byo-bootstrap-secret".to_string(),
         })
     }
@@ -890,7 +890,7 @@ mod tests {
     #[test]
     fn env_file_carries_pairing_bootstrap_token_when_configured() {
         let env = generate_env_file(&paired_config());
-        assert!(env.contains("ALLTERNIT_CLOUD_API_URL=https://allternit-cloud-api.fly.dev"));
+        assert!(env.contains("ALLTERNIT_CLOUD_API_URL=https://api.allternit.com"));
         assert!(env.contains("ALLTERNIT_BYO_BOOTSTRAP_TOKEN=byo-bootstrap-secret"));
         // agent-daemon relay: local gateway it proxies to + its identity path.
         assert!(env.contains(&format!("ALLTERNIT_GATEWAY_URL=http://127.0.0.1:{}", GIZZI_PORT)));

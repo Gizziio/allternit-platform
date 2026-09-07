@@ -8,6 +8,19 @@
 
 Every agent session in this repo works in its OWN linked worktree — never in the shared main checkout. On your first prompt (or SessionStart), a hook injects the ritual: create-or-reuse `<repo>-session-<id>` on branch `session/<id>` and `cd` into it. A PreToolUse guard blocks `git commit/checkout/switch/merge/push/rebase/reset` and `branch -d` in the shared checkout (escape for human/orchestrator merges: `STEER_GUARD_OFF=1`). Rationale: concurrent sessions sharing one HEAD collide on branches, commits, and dirty files. gizzi-code additionally has native `--worktree` support (`src/shared/utils/worktree.ts`); making it default-on is tracked as phase W2. Linked worktrees pass all guards automatically (detected via the git dir path).
 
+## Session lifecycle — the full repo process (do ALL of it, every session)
+
+Agents that stop at "code works in my worktree" leave debt for the next session. A session is not done until all of this is done. Canonical example: session `0f55144a` (2026-09-07, PR #105).
+
+1. **Worktree.** Create `<repo>-session-<id>` on branch `session/<id>` from latest `main`; `cd` into it. Never edit the shared checkout (it may hold other sessions' uncommitted in-flight work — leave that untouched).
+2. **Plan.** After scoping with the owner, write a plan file with concrete, checkable todos. Update `.steering/checkpoint.md` (`Goal` / `Just did` / `Next` / `Open questions`) at every milestone.
+3. **Implement and verify.** Every claim checked before you make it: typecheck, unit tests, `cargo check`/`cargo test` for Rust, and a live smoke test (run the server, `curl` the endpoints) for anything behavioral. Note pre-existing breakage as pre-existing; don't silently fix unrelated files.
+4. **Commit and push.** Logical commits (conventional-ish prefixes: `feat(...)`, `fix(...)`, `docs(ledger): ...`), push the session branch to origin. Never commit directly on main except step 7.
+5. **PR and merge.** `gh pr create` with a real summary + verification evidence, `gh pr merge <n> --merge` (merge commit, not squash — keeps session chunk history). Record the PR number and merge SHA.
+6. **Sync main.** In the shared checkout: `git pull --ff-only` (the pull is allowed; only mutating git verbs are guarded).
+7. **Attest.** In the shared checkout write the dated summary `agent-ledger/summaries/YYYY-MM-DD-HHMM-<session-id>-<agent-family>-<topic>.md` (what was done / how it works / verification evidence / incidents / honest deferrals) and append the one-line entry to `agent-ledger/LEDGER.md`. Commit directly on main as `docs(ledger): attestation for session/<id>` with `STEER_GUARD_OFF=1 git ...` and push. The ledger is a signed record — be honest about what was deferred.
+8. **Clean up.** `git worktree remove`, delete the session branch local AND remote, delete scratch logs/build artifacts you created, and confirm final state (`git status`, `git worktree list`). Resumable-state exception: if the session is interrupted before merge, leave the worktree + branch + checkpoint intact so another agent can resume.
+
 ## Session landing — worktree cleanup
 
 A session's worktree is temporary scaffolding, not a permanent workspace. Clean up so the machine does not accumulate orphaned worktrees, branches, or scratch files.
@@ -387,7 +400,7 @@ Phase 4 added public docs for the agent runtime surfaces. When working on tools,
 - **Canvas Instance:** Free For Teacher, `canvas.instructure.com`
 - **Node Version:** v25.6.1 with `tsx`
 - **Database:** SQLite (`better-sqlite3`) + PostgreSQL (Prisma)
-- **Platform:** Next.js in `surfaces/ai.allternit.com/`
+- **Platform:** Vite + React SPA in `surfaces/ai.allternit.com/` (was Next.js; migrated)
 - **Course IDs:** See catalog table above
 - **Generated modules:** Stored in `alabs-generated-courses/`
 - **Demo site:** `alabs-generated-courses/demos/index.html` — works offline
@@ -408,7 +421,7 @@ Demo HTML files must be copied to the platform's public directory to be served:
 cp alabs-generated-courses/demos/*.html surfaces/ai.allternit.com/public/demos/
 ```
 
-The `LabsView.tsx` "Try Demo" buttons link to `/demos/ALABS-ADV-{COURSE}-module1.html` which resolves to `public/demos/` in Next.js.
+The `LabsView.tsx` "Try Demo" buttons link to `/demos/ALABS-ADV-{COURSE}-module1.html` which resolves to `public/demos/` in the Vite app.
 
 ### Keeping Demos In Sync
 

@@ -1,4 +1,4 @@
-import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
+import type { ContentBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/index.mjs'
 type UUID = string
 import type { CanUseToolFn } from '@/hooks/useCanUseTool.js'
 import type { CompactionResult } from '@/services/compact/compact.js'
@@ -37,7 +37,7 @@ export type PromptCommand = {
   disableNonInteractive?: boolean
   // Hooks to register when this skill is invoked
   hooks?: HooksSettings
-  // Base directory for skill resources (used to set CLAUDE_PLUGIN_ROOT environment variable for skill hooks)
+  // Base directory for skill resources (used to set GIZZI_PLUGIN_ROOT environment variable for skill hooks)
   skillRoot?: string
   // Execution context: 'inline' (default) or 'fork' (run as sub-agent)
   // 'inline' = skill content expands into the current conversation

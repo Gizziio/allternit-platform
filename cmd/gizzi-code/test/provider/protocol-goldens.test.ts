@@ -63,7 +63,7 @@ describe("cross-provider protocol goldens", () => {
       ...base,
       id: "claude-sonnet-4-6",
       providerID: "anthropic",
-      api: { id: "claude-sonnet-4-6", npm: "@ai-sdk/anthropic", url: "https://api.anthropic.com" },
+      api: { id: "claude-sonnet-4-6", npm: "@ai-sdk/anthropic", url: "https://api.allternit.com" },
     }
     const result = ProviderTransform.message([
       { role: "assistant", content: "" },

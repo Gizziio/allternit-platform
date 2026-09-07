@@ -1,11 +1,15 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from 'react';
-import { ArrowsOut, CursorClick, DotsThree, Globe, NotePencil, Terminal as TerminalIcon, X } from '@phosphor-icons/react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowsOut, CursorClick, Desktop, DotsThree, Monitor, NotePencil, Terminal as TerminalIcon, X } from '@phosphor-icons/react';
 import { ACIComputerUseView } from '@/capsules/browser/ACIComputerUseView';
 import { useBrowserAgentStore } from '@/capsules/browser/browserAgent.store';
 import { getPlatformComputerUseBaseUrl } from '@/integration/computer-use-engine';
 import { UnifiedTerminal } from '@/components/workspace/UnifiedTerminal';
+import { useAgentStore } from '@/lib/agents/agent.store';
+import { getBotAccentColor, getBotDisplayName, isBot } from '@/lib/bots/bot-profile';
+import { BotDesktopView } from '@/views/bots/BotDesktopView';
+import { useChatSessionStore } from '@/views/chat/ChatSessionStore';
 import { useCodeModeStore } from './CodeModeStore';
 
 type PersistenceMode = 'dont-keep' | 'shared' | 'separate';
@@ -24,6 +28,34 @@ export function CodeAciPane({ onClose }: { onClose: () => void }): React.ReactNo
   const engineHealthy = useBrowserAgentStore((state) => state.engineHealthy);
   const engineStatusMessage = useBrowserAgentStore((state) => state.engineStatusMessage);
   const setEngineBaseUrl = useBrowserAgentStore((state) => state.setEngineBaseUrl);
+  // Shared "connected bot" — also written by ACIEngineBar, so the pane never
+  // clears it on unmount; it stays connected like the browser-capsule bar.
+  const connectedBotId = useBrowserAgentStore((state) => state.connectedBotId);
+  const setConnectedBotId = useBrowserAgentStore((state) => state.setConnectedBotId);
+  const agents = useAgentStore((state) => state.agents);
+  const chatSessions = useChatSessionStore((state) => state.sessions);
+  const bots = useMemo(() => agents.filter(isBot), [agents]);
+  const connectedBot = bots.find((bot) => bot.id === connectedBotId) ?? null;
+  const botAccentColor = connectedBot
+    ? getBotAccentColor(connectedBot) ?? 'var(--accent-primary)'
+    : 'var(--accent-primary)';
+  // Same vmSandbox scan BotHomeView uses to find a bot's live desktop sandbox.
+  const botActiveVM = useMemo(() => {
+    if (!connectedBot) return null;
+    const sessions = chatSessions.filter(
+      (s) =>
+        s.metadata?.agentId === connectedBot.id ||
+        (connectedBot.name &&
+          String(s.metadata?.agentName).toLowerCase() === connectedBot.name.toLowerCase()),
+    );
+    const session = sessions.find((s) => {
+      const vm = s.metadata?.vmSandbox as { status?: string; id?: string } | undefined;
+      return vm?.status === 'running' || vm?.status === 'creating';
+    });
+    return (session?.metadata?.vmSandbox as
+      | { id: string; provider: string; status: string; vncUrl?: string }
+      | undefined) ?? null;
+  }, [chatSessions, connectedBot]);
   const [menuOpen, setMenuOpen] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const [tool, setTool] = useState<'annotate' | 'select' | null>(null);
@@ -45,6 +77,7 @@ export function CodeAciPane({ onClose }: { onClose: () => void }): React.ReactNo
       const store = useBrowserAgentStore.getState();
       await store.refreshEngineHealth();
       if (cancelled || !useBrowserAgentStore.getState().engineHealthy) return;
+      if (useBrowserAgentStore.getState().connectedBotId) return;
       // Bring up the engine browser session so the pane shows a live view
       // instead of waiting for an agent run to produce screenshots.
       await useBrowserAgentStore.getState().startBrowserSession();
@@ -53,6 +86,7 @@ export function CodeAciPane({ onClose }: { onClose: () => void }): React.ReactNo
       refreshTimer = setInterval(() => {
         const current = useBrowserAgentStore.getState();
         if (!current.engineHealthy) return;
+        if (current.connectedBotId) return;
         // An active run streams its own screenshots over SSE — don't compete.
         if (current.status === 'Running' || current.status === 'WaitingApproval') return;
         void current.startBrowserSession();
@@ -111,9 +145,9 @@ export function CodeAciPane({ onClose }: { onClose: () => void }): React.ReactNo
 
   return (
     <div data-testid="code-aci-pane" style={{ position: fullscreen ? 'fixed' : 'relative', inset: fullscreen ? 10 : undefined, zIndex: fullscreen ? 80 : undefined, height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--surface-canvas)' }}>
-      <div style={{ height: 40, display: 'flex', alignItems: 'center', gap: 3, padding: '0 7px 0 11px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
-        <Globe size={16} weight="duotone" style={{ color: 'var(--accent-browser)' }} />
-        <span style={{ fontSize: 12, fontWeight: 650, marginRight: 'auto' }}>ACI dev server</span>
+      <div style={{ height: 40, display: 'flex', alignItems: 'center', gap: 7, padding: '0 7px 0 11px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
+        <Monitor size={16} weight="duotone" style={{ color: 'var(--accent-code)' }} />
+        <span style={{ fontSize: 12, fontWeight: 650, marginRight: 'auto', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Computer</span>
         <button type="button" aria-label="Annotate" title="Annotate" onClick={() => setTool((value) => value === 'annotate' ? null : 'annotate')} style={{ ...headerButton, background: tool === 'annotate' ? 'var(--surface-active)' : 'transparent' }}><NotePencil size={15} /></button>
         <button type="button" aria-label="Select element" title="Select element" onClick={() => setTool((value) => value === 'select' ? null : 'select')} style={{ ...headerButton, background: tool === 'select' ? 'var(--surface-active)' : 'transparent' }}><CursorClick size={15} /></button>
         <div style={{ position: 'relative' }} ref={menuRef}>
@@ -135,11 +169,50 @@ export function CodeAciPane({ onClose }: { onClose: () => void }): React.ReactNo
         <button type="button" aria-label="Close ACI" onClick={onClose} style={headerButton}><X size={15} /></button>
       </div>
       {!engineHealthy ? <div role="status" style={{ padding: '7px 10px', borderBottom: '1px solid var(--border-subtle)', color: 'var(--status-warning)', fontSize: 11 }}>ACI backend unavailable{engineStatusMessage ? ` · ${engineStatusMessage}` : ''}</div> : null}
+      {bots.length > 0 ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 11px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0, flexWrap: 'wrap' }}>
+          <Desktop size={13} style={{ color: connectedBot ? botAccentColor : 'var(--text-tertiary)' }} />
+          <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Bot computer</span>
+          <select
+            aria-label="Bot computer"
+            value={connectedBotId ?? ''}
+            onChange={(event) => setConnectedBotId(event.target.value || null)}
+            style={{ height: 24, maxWidth: 180, borderRadius: 6, border: '1px solid var(--border-subtle)', background: 'var(--surface-hover)', color: 'var(--text-secondary)', fontSize: 11, padding: '0 6px', outline: 'none' }}
+          >
+            <option value="">None</option>
+            {bots.map((bot) => <option key={bot.id} value={bot.id}>{getBotDisplayName(bot)}</option>)}
+          </select>
+          {connectedBot ? (
+            <button
+              type="button"
+              onClick={() => setConnectedBotId(null)}
+              style={{ border: 'none', background: 'transparent', padding: 0, color: 'var(--text-secondary)', fontSize: 11, cursor: 'pointer' }}
+            >
+              Disconnect
+            </button>
+          ) : (
+            <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>Pick a bot to watch its cloud desktop</span>
+          )}
+        </div>
+      ) : null}
       <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'row', overflow: 'hidden' }}>
         <div onClick={useCanvasTool} style={{ position: 'relative', flex: 1, minWidth: 0, cursor: tool === 'select' ? 'crosshair' : tool === 'annotate' ? 'cell' : 'default' }}>
-          <ACIComputerUseView agentBarHeight={0} />
-          {annotations.map((annotation, index) => <span key={annotation.id} style={{ position: 'absolute', zIndex: 30, left: annotation.x - 9, top: annotation.y - 9, width: 18, height: 18, borderRadius: 9, display: 'grid', placeItems: 'center', background: 'var(--accent-primary)', color: 'var(--surface-canvas)', fontSize: 10, fontWeight: 700, pointerEvents: 'none' }}>{index + 1}</span>)}
-          {selectedPoint ? <span style={{ position: 'absolute', zIndex: 30, left: selectedPoint.x - 12, top: selectedPoint.y - 12, width: 24, height: 24, border: '1px solid var(--accent-primary)', borderRadius: 5, boxShadow: '0 0 0 3px color-mix(in srgb, var(--accent-primary) 18%, transparent)', pointerEvents: 'none' }} /> : null}
+          {connectedBot ? (
+            <div style={{ position: 'absolute', inset: 0, overflow: 'auto', padding: 12 }}>
+              <BotDesktopView
+                bot={connectedBot}
+                accentColor={botAccentColor}
+                activeVM={botActiveVM}
+                onBack={() => setConnectedBotId(null)}
+              />
+            </div>
+          ) : (
+            <>
+              <ACIComputerUseView agentBarHeight={0} />
+              {annotations.map((annotation, index) => <span key={annotation.id} style={{ position: 'absolute', zIndex: 30, left: annotation.x - 9, top: annotation.y - 9, width: 18, height: 18, borderRadius: 9, display: 'grid', placeItems: 'center', background: 'var(--accent-primary)', color: 'var(--surface-canvas)', fontSize: 10, fontWeight: 700, pointerEvents: 'none' }}>{index + 1}</span>)}
+              {selectedPoint ? <span style={{ position: 'absolute', zIndex: 30, left: selectedPoint.x - 12, top: selectedPoint.y - 12, width: 24, height: 24, border: '1px solid var(--accent-primary)', borderRadius: 5, boxShadow: '0 0 0 3px color-mix(in srgb, var(--accent-primary) 18%, transparent)', pointerEvents: 'none' }} /> : null}
+            </>
+          )}
         </div>
         {terminalOpen && (
           <div

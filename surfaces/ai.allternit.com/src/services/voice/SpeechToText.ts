@@ -125,9 +125,10 @@ class SpeechToTextService {
   private lastVoiceActivityAt = 0;
   private hasDetectedSpeech = false;
 
-  // Native SpeechRecognition (disabled - using MediaRecorder + backend instead)
+  // Native SpeechRecognition (Web Speech API) — used for call mode / on-device dictation.
   private recognition: SpeechRecognition | null = null;
-  private useNative = false; // Always use backend STT for reliability
+  private nativeAvailable = false;
+  private preferNative = false;
 
   constructor() {
     this.initNativeRecognition();
@@ -135,15 +136,13 @@ class SpeechToTextService {
 
   private initNativeRecognition(): void {
     if (typeof window === 'undefined') return;
-    
-    // Force MediaRecorder + backend approach - native STT has network issues in Electron
-    // const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    // if (SpeechRecognition) {
-    //   this.recognition = new SpeechRecognition();
-    //   this.useNative = true;
-    //   this.setupNativeRecognition();
-    // }
-    console.debug('[SpeechToText] Using MediaRecorder + backend STT (native disabled for Electron reliability)');
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      this.nativeAvailable = true;
+      // Don't instantiate until needed so we don't request mic permission on load.
+    }
+    console.debug('[SpeechToText] Native SpeechRecognition available:', this.nativeAvailable);
   }
 
   private setupNativeRecognition(): void {
@@ -203,11 +202,19 @@ class SpeechToTextService {
 
   isSupported(): boolean {
     // Support native or MediaRecorder for backend
-    return this.useNative || this.isMediaRecorderSupported();
+    return this.nativeAvailable || this.isMediaRecorderSupported();
   }
 
   isNativeSupported(): boolean {
-    return this.useNative;
+    return this.nativeAvailable;
+  }
+
+  setPreferNative(prefer: boolean): void {
+    this.preferNative = prefer;
+  }
+
+  getPreferNative(): boolean {
+    return this.preferNative;
   }
 
   subscribe(callback: STTCallback): () => void {
@@ -251,7 +258,7 @@ class SpeechToTextService {
   async start(): Promise<boolean> {
     console.debug('[SpeechToText] Starting recording...');
     console.debug('[SpeechToText] isRecording:', this.isRecording);
-    console.debug('[SpeechToText] useNative:', this.useNative);
+    console.debug('[SpeechToText] preferNative:', this.preferNative);
     console.debug('[SpeechToText] recognition:', this.recognition);
     console.debug('[SpeechToText] MediaRecorder supported:', this.isMediaRecorderSupported());
     
@@ -260,15 +267,24 @@ class SpeechToTextService {
       return false;
     }
 
-    // Prefer native recognition
-    if (this.useNative && this.recognition) {
+    // Prefer native recognition when call mode / on-device dictation is requested.
+    if (this.preferNative && this.nativeAvailable) {
       console.debug('[SpeechToText] Using native speech recognition');
-      try {
-        this.recognition.start();
-        console.debug('[SpeechToText] Native recognition.start() called');
-        return true;
-      } catch (err) {
-        console.warn('[SpeechToText] Native speech recognition failed:', err);
+      if (!this.recognition) {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (SpeechRecognition) {
+          this.recognition = new SpeechRecognition();
+          this.setupNativeRecognition();
+        }
+      }
+      if (this.recognition) {
+        try {
+          this.recognition.start();
+          console.debug('[SpeechToText] Native recognition.start() called');
+          return true;
+        } catch (err) {
+          console.warn('[SpeechToText] Native speech recognition failed:', err);
+        }
       }
     }
 

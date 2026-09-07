@@ -3,6 +3,9 @@ import * as React from 'react'
 import { IntelliTaskScreen } from '../../../../../screens/IntelliTaskScreen.js'
 import type { LocalJSXCommandContext } from '../../commands.js'
 import type { LocalJSXCommandOnDone } from '../../types/command.js'
+import { ALLTERNIT_GATEWAY_BASE } from '@/shared/constants/allternitGateway'
+
+const API_BASE = ALLTERNIT_GATEWAY_BASE
 
 interface CoworkCommandWrapperProps {
   onDone: LocalJSXCommandOnDone
@@ -19,7 +22,7 @@ export function CoworkCommandWrapper({
 
   const fetchTasksAndComments = async () => {
     try {
-      const res = await fetch('http://127.0.0.1:8013/api/v1/tasks')
+      const res = await fetch(`${API_BASE}/api/v1/tasks`)
       const data = await res.json()
       const mappedTasks = data.map((t: any) => ({
         id: t.id,
@@ -39,7 +42,7 @@ export function CoworkCommandWrapper({
         mappedTasks.map(async (t: any) => {
           try {
             const cres = await fetch(
-              `http://127.0.0.1:8013/api/v1/tasks/${t.id}/comments`,
+              `${API_BASE}/api/v1/tasks/${t.id}/comments`,
             )
             const cdata = await cres.json()
             commentsMap[t.id] = cdata.map((c: any) => ({
@@ -67,7 +70,7 @@ export function CoworkCommandWrapper({
   }, [])
 
   const handleStatusChange = (taskId: string, status: string) => {
-    fetch(`http://127.0.0.1:8013/api/v1/tasks/${taskId}`, {
+    fetch(`${API_BASE}/api/v1/tasks/${taskId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status }),
@@ -78,7 +81,7 @@ export function CoworkCommandWrapper({
 
   const handleAssign = async (taskId: string, currentAssigneeId?: string) => {
     try {
-      const meRes = await fetch('http://127.0.0.1:8013/api/v1/me')
+      const meRes = await fetch(`${API_BASE}/api/v1/me`)
       const me = await meRes.json()
       const isAssignedToMe = currentAssigneeId === me.id
 
@@ -94,7 +97,7 @@ export function CoworkCommandWrapper({
             assignee_name: me.name || me.email || 'You',
           }
 
-      await fetch(`http://127.0.0.1:8013/api/v1/tasks/${taskId}/assign`, {
+      await fetch(`${API_BASE}/api/v1/tasks/${taskId}/assign`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -125,7 +128,7 @@ export function CoworkCommandWrapper({
   const handleAddComment = async (taskId: string, body: string) => {
     try {
       const res = await fetch(
-        `http://127.0.0.1:8013/api/v1/tasks/${taskId}/comments`,
+        `${API_BASE}/api/v1/tasks/${taskId}/comments`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

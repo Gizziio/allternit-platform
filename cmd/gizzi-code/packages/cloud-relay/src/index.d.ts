@@ -2,7 +2,7 @@
  * Allternit Cloud Relay Service
  *
  * Enables remote access to Allternit sessions from anywhere.
- * Works like Claude Code Remote Control - local sessions accessible via cloud relay.
+ * Works like gizzi-code Remote Control - local sessions accessible via cloud relay.
  *
  * Architecture:
  * ```

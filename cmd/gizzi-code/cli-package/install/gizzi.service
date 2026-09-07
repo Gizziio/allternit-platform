@@ -1,6 +1,6 @@
 [Unit]
 Description=Gizzi AI Terminal Service
-Documentation=https://docs.gizzi.sh
+Documentation=https://docs.gizziio.com
 After=network.target
 
 [Service]

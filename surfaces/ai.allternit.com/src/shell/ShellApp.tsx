@@ -29,11 +29,14 @@ import { ConsoleDrawer } from '../drawers/ConsoleDrawer';
 import { useRunnerStore } from '../runner/runner.store';
 import { useSidecarStore } from '../stores/sidecar-store';
 import { usePendingChatModelStore } from '../stores/pending-chat-model.store';
-import { useAgentStore } from '../lib/agents';
+import { useAgentStore, useAgentsWithSwarms } from '../lib/agents';
 import type { Agent } from '../lib/agents/agent.types';
 import { useAgentBootstrap } from '../lib/agents/useAgentBootstrap';
 import { isBot } from '@/lib/bots/bot-profile';
 import { useStartBotSession } from '@/lib/bots/useStartBotSession';
+import { useRoutineTimer } from '@/lib/bots/use-routine-timer';
+import { useSyncBotWatermarks } from '@/lib/bots/bot-activity-watermark';
+import { useBotActivityToasts } from '@/lib/bots/bot-activity-toasts';
 import { useStackProviders } from '@/lib/bots/use-stack-providers';
 import { NativeAgentApiError } from '../lib/agents/native-agent-api';
 import { useChatSessionStore } from '../views/chat/ChatSessionStore';
@@ -44,6 +47,8 @@ import { useDesignSessionStore } from '../views/design/DesignSessionStore';
 // Modularized Shell Components
 import { getShellViewRegistry } from './ViewRegistry';
 import { HudShell } from './hud/HudShell';
+import { NativeSessionPickerHost } from '@/components/native-sessions/NativeSessionPicker';
+import { BotPickerHost } from '@/views/bots/BotPickerHost';
 import { useHudHandoff } from './hud/handoff';
 
 import { useResolvedTheme, useThemeStore } from '../design/ThemeStore';
@@ -52,6 +57,7 @@ import { useIsMobile } from '../hooks/useMediaQuery';
 import { usePermissionGuide } from '../lib/usePermissionGuide';
 
 import { TooltipProvider } from '../components/ui/tooltip';
+import { ToastProvider } from '@/components/ui/toast-provider';
 import { VoiceProvider } from '../providers/voice-provider';
 import { VoicePresence } from '../components/ai-elements/voice-presence';
 import { AgentActivityPanel } from '../views/agent-activity/AgentActivityPanel';
@@ -105,6 +111,15 @@ const BROWSER_MODE_VIEW_TYPES = new Set<ViewType>([
   'sign',
 ]);
 
+// Bot views drive bot mode (rail sections, bot background, pill highlight)
+// the same way browser views drive browser mode.
+const BOT_MODE_VIEW_TYPES = new Set<ViewType>([
+  'bot-launchpad',
+  'bot-home',
+  'bot-inbox',
+  'bot-chat-session',
+]);
+
 // Inner app component that uses mode context
 function ShellAppInner(): React.ReactNode {
   const navigate = useNavigate();
@@ -121,11 +136,15 @@ function ShellAppInner(): React.ReactNode {
   const active = selectActiveView(nav)!;
 
   const { startSession: startBotSession } = useStartBotSession(
-    useCallback((sessionId: string) => {
-      dispatch({ type: 'OPEN_VIEW', viewType: 'cowork-agent-session', context: { sessionId, originView: active.viewType } });
+    useCallback((sessionId: string, botId: string) => {
+      dispatch({ type: 'OPEN_VIEW', viewType: 'bot-chat-session', context: { sessionId, botId, originView: active.viewType } });
     }, [active.viewType])
   );
   useStackProviders();
+  useRoutineTimer();
+  useBotActivityToasts();
+  // Watermark seeding + focused-chat tracking for bot unread semantics.
+  useSyncBotWatermarks(active.viewType, useAgentsWithSwarms().filter(isBot));
   // When the HUD window closes, resume its active session in the main window.
   useHudHandoff();
   const { mode: activeMode, setMode: setActiveMode, isLoaded: modeLoaded } = useMode();
@@ -334,6 +353,17 @@ function ShellAppInner(): React.ReactNode {
       openDesignWindow();
       return;
     }
+    // Starting a fresh view (e.g. New Chat) must clear any embedded session
+    // so the composer creates a new backend session instead of reusing the
+    // previous agent/thread session.
+    useChatSessionStore.getState().setActiveSession(null);
+    useChatStore.getState().setActiveThread(null);
+    useChatStore.getState().setActiveProject(null);
+    // Starting a fresh chat must also clear any persisted canonical agent mode
+    // (e.g. slides) so the composer routes the next send through regular chat.
+    if (viewType === 'chat') {
+      useAgentSurfaceModeStore.getState().setSelectedMode('chat', null);
+    }
     dispatch({ type: 'OPEN_VIEW', viewType, allowNew: true });
   }, []);
 
@@ -367,6 +397,7 @@ function ShellAppInner(): React.ReactNode {
       useAgentSurfaceModeStore.getState().setSelectedMode('cowork', 'execute');
       open('workspace');
     }
+    else if (activeMode === 'bot') open('bot-launchpad');
     else if (activeMode === 'code') open('code');
     else if (activeMode === 'design') {
       setActiveMode('chat');
@@ -592,6 +623,7 @@ function ShellAppInner(): React.ReactNode {
       useAgentSurfaceModeStore.getState().setSelectedMode('cowork', 'execute');
       open('workspace');
     }
+    if (mode === 'bot') open('bot-launchpad');
     if (mode === 'code') open('code');
     if (mode === 'browser') open('browser');
   }, [setActiveMode, open]);
@@ -615,7 +647,15 @@ function ShellAppInner(): React.ReactNode {
         modeChangeSourceRef.current = 'sync';
         setActiveMode('browser');
       }
+    } else if (BOT_MODE_VIEW_TYPES.has(active.viewType)) {
+      if (activeMode !== 'bot') {
+        modeChangeSourceRef.current = 'sync';
+        setActiveMode('bot');
+      }
     } else if (activeMode === 'browser') {
+      modeChangeSourceRef.current = 'sync';
+      setActiveMode('chat');
+    } else if (activeMode === 'bot') {
       modeChangeSourceRef.current = 'sync';
       setActiveMode('chat');
     }
@@ -667,6 +707,8 @@ function ShellAppInner(): React.ReactNode {
       <VoiceProvider>
       <SessionProvider session={session}>
         <VisionGlass />
+        <NativeSessionPickerHost />
+        <BotPickerHost />
         <VoicePresence compact={false} />
 
         {permissions.isSupported && permissions.anyDenied && !permissionBannerDismissed && (
@@ -780,6 +822,9 @@ function ShellAppInner(): React.ReactNode {
                     useChatSessionStore.getState().setActiveSession(null);
                     useChatStore.getState().setActiveThread(null);
                     useChatStore.getState().setActiveProject(null);
+                    // Start a fresh chat must also clear any persisted canonical agent mode
+                    // (e.g. slides) so the composer routes the next send through regular chat.
+                    useAgentSurfaceModeStore.getState().setSelectedMode('chat', null);
                     handleModeChange('chat');
                   }}
                   onNewAgentSession={async () => {
@@ -981,8 +1026,10 @@ export function ShellApp(): React.ReactNode {
     <AuthGate>
       <ModeProvider>
         <GlobalDropzoneProvider>
-          <OnboardingGate />
-          <ShellAppInner />
+          <ToastProvider>
+            <OnboardingGate />
+            <ShellAppInner />
+          </ToastProvider>
         </GlobalDropzoneProvider>
       </ModeProvider>
     </AuthGate>

@@ -210,9 +210,9 @@ describe('browserAgent.store', () => {
       });
 
     useBrowserAgentStore.getState().runPageAgentGoal('Summarize this page', {
-      apiKey: 'NA',
+      apiKey: 'sk-should-not-be-used',
       baseURL: 'https://api.example.com/v1',
-      model: 'gpt-5.4',
+      model: 'claude-cli/claude-sonnet-4-6',
       language: 'en-US',
       maxSteps: 24,
       systemInstruction: 'Stay on the current page unless you need a new tab.',
@@ -242,6 +242,8 @@ describe('browserAgent.store', () => {
     const body = JSON.parse((messageCall?.[1] as RequestInit).body as string);
     expect(body.parts).toEqual([{ type: 'text', text: 'Summarize this page' }]);
     expect(body.system).toBe('Stay on the current page unless you need a new tab.');
+    expect(body).not.toHaveProperty('apiKey');
+    expect(body).not.toHaveProperty('baseURL');
 
     state = useBrowserAgentStore.getState();
     expect(state.status).toBe('Idle');

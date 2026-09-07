@@ -1,7 +1,24 @@
 # Gizzi Code Installer for Windows
 # Usage: irm https://install.gizziio.com/install.ps1 | iex
+# SOURCE OF TRUTH: cmd/gizzi-code/install.ps1 in the Gizziio/allternit-platform
+# repo — edit there and copy. The copy served from install.gizziio.com must
+# stay byte-identical.
 
 $ErrorActionPreference = "Stop"
+
+# If invoked as a local file under a Restricted execution policy, fail with
+# guidance instead of PowerShell's raw "scripts are disabled" error.
+if ($MyInvocation.MyCommand.Path) {
+    $policy = Get-ExecutionPolicy
+    if ($policy -eq "Restricted") {
+        Write-Host "Execution policy is Restricted; scripts cannot run."
+        Write-Host "Either use the documented pipe-to-iex form:"
+        Write-Host "  irm https://install.gizziio.com/install.ps1 | iex"
+        Write-Host "or allow local scripts for your user:"
+        Write-Host "  Set-ExecutionPolicy -Scope CurrentUser RemoteSigned"
+        exit 1
+    }
+}
 
 # =============================================================================
 # GIZZI BRAND COLORS (from mascot)
@@ -45,7 +62,7 @@ function Print-Mascot {
 $Repo = "Gizziio/allternit-platform"
 $AssetPrefix = "gizzi-code"
 $InstallDir = if ($env:INSTALL_DIR) { $env:INSTALL_DIR } else { "$env:LOCALAPPDATA\gizzi" }
-$Version = if ($env:VERSION) { $env:VERSION } else { "latest" }
+$Version = if ($env:GIZZI_VERSION) { $env:GIZZI_VERSION } elseif ($env:VERSION) { $env:VERSION } else { "latest" }
 $GithubApi = "https://api.github.com/repos/$Repo"
 
 # =============================================================================
@@ -111,7 +128,9 @@ function Get-LatestVersion {
     
     try {
         $response = Invoke-RestMethod -Uri "$GithubApi/releases/latest" -UseBasicParsing
-        $version = $response.tag_name
+        # Tags look like "gizzi-code/0.2.3" (older ones may be "v0.2.3") — accept both.
+        $tag = $response.tag_name
+        $version = ($tag -split '/')[-1] -replace '^v', ''
         Write-Success "Latest version: $Orange$version$Reset"
         return $version
     } catch {
@@ -143,51 +162,130 @@ function Install-Npm {
     }
 }
 
+function Test-Url($Url) {
+    try {
+        $response = Invoke-WebRequest -Uri $Url -Method Head -UseBasicParsing -TimeoutSec 15
+        return $response.StatusCode -eq 200
+    } catch {
+        return $false
+    }
+}
+
 function Install-Binary($Platform, $Arch, $Version) {
     Write-Step "Installing binary for $Beige$Platform-$Arch$Reset..."
-    
-    $BinName = "gizzi-code-$Version-$Platform-$Arch.exe"
-    
-    $DownloadUrl = if ($Version -eq "latest") {
-        "https://github.com/$Repo/releases/latest/download/${AssetPrefix}-windows-x64.exe"
-    } else {
-        "https://github.com/$Repo/releases/download/gizzi-code/$Version/${AssetPrefix}-${Version}-windows-x64.exe"
+
+    # Normalize the version: accept "0.2.3", "v0.2.3", or "gizzi-code/0.2.3"
+    $Version = ($Version -split '/')[-1] -replace '^v', ''
+
+    # Assets are version-named zips: gizzi-code-v<version>-windows-x64.zip.
+    # The release workflow also publishes legacy names for one transition
+    # release, so keep a fallback to those.
+    # Only x64 Windows builds are published; on ARM64 we fetch the x64
+    # build (runs under emulation).
+    if ($Arch -ne "x64") {
+        Write-Info "No $Arch Windows build published; using the x64 build (emulated on ARM64)"
     }
-    
+    $Asset = "${AssetPrefix}-v${Version}-windows-x64.zip"
+    $DownloadUrl = $null
+    foreach ($tag in @("gizzi-code/v$Version", "gizzi-code/$Version")) {
+        $candidate = "https://github.com/$Repo/releases/download/${tag}/${Asset}"
+        if (Test-Url $candidate) {
+            $DownloadUrl = $candidate
+            break
+        }
+    }
+    if (-not $DownloadUrl) {
+        $Asset = "${AssetPrefix}-windows-x64.zip"
+        foreach ($tag in @("gizzi-code/v$Version", "gizzi-code/$Version")) {
+            $candidate = "https://github.com/$Repo/releases/download/${tag}/${Asset}"
+            if (Test-Url $candidate) {
+                $DownloadUrl = $candidate
+                break
+            }
+        }
+    }
+    if (-not $DownloadUrl) {
+        Write-Error "Could not find a Windows x64 zip for $Version"
+        return $false
+    }
+
     Write-Info "Downloading from: $Dim$DownloadUrl$Reset"
-    
+
     New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
-    
-    $TempFile = [System.IO.Path]::GetTempFileName()
-    
+
+    $TempDir = Join-Path ([System.IO.Path]::GetTempPath()) ("gizzi-install-" + [guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Force -Path $TempDir | Out-Null
+    $TempFile = Join-Path $TempDir $Asset
+
     try {
         $ProgressPreference = 'Continue'
         Invoke-WebRequest -Uri $DownloadUrl -OutFile $TempFile -UseBasicParsing
-        
+
+        # Verify sha256 against checksums.txt when the release provides it
+        $ChecksumsUrl = $null
+        foreach ($tag in @("gizzi-code/v$Version", "gizzi-code/$Version")) {
+            $candidate = "https://github.com/$Repo/releases/download/${tag}/checksums.txt"
+            if (Test-Url $candidate) {
+                $ChecksumsUrl = $candidate
+                break
+            }
+        }
+        if ($ChecksumsUrl) {
+            $Checksums = (Invoke-WebRequest -Uri $ChecksumsUrl -UseBasicParsing).Content
+            $Expected = ($Checksums -split "`n" | Where-Object { $_ -match [regex]::Escape($Asset) } | Select-Object -First 1)
+            if ($Expected) {
+                $ExpectedHash = ($Expected -split '\s+')[0].Trim().ToLower()
+                $ActualHash = (Get-FileHash -Path $TempFile -Algorithm SHA256).Hash.ToLower()
+                if ($ActualHash -ne $ExpectedHash) {
+                    Write-Error "SHA256 mismatch for $Asset (expected $ExpectedHash, got $ActualHash)"
+                    return $false
+                }
+                Write-Success "Verified sha256: $ActualHash"
+            } else {
+                Write-Warning "$Asset not listed in checksums.txt; skipping hash verification"
+            }
+        } else {
+            Write-Warning "checksums.txt not found for ${Version}; skipping hash verification"
+        }
+
+        Expand-Archive -Path $TempFile -DestinationPath $TempDir -Force
+        $Exe = Get-ChildItem -Path $TempDir -Recurse -Filter "gizzi-code.exe" | Select-Object -First 1
+        if (-not $Exe) {
+            Write-Error "gizzi-code.exe not found in downloaded archive"
+            return $false
+        }
+
         $TargetPath = Join-Path $InstallDir "gizzi-code.exe"
-        Move-Item -Path $TempFile -Destination $TargetPath -Force
-        
+        Move-Item -Path $Exe.FullName -Destination $TargetPath -Force
+
         Write-Success "Binary installed to $Beige$TargetPath$Reset"
-        
+
+        # Exact, semicolon-delimited PATH comparison — a naive substring
+        # check would both miss equivalent paths and false-positive on
+        # directories that merely contain the install dir as a substring.
         $UserPath = [Environment]::GetEnvironmentVariable("Path", "User")
-        if ($UserPath -notlike "*$InstallDir*") {
+        $pathEntries = @()
+        if ($UserPath) {
+            $pathEntries = $UserPath -split ";" | Where-Object { $_ -ne "" }
+        }
+        if ($InstallDir -notin $pathEntries) {
             [Environment]::SetEnvironmentVariable(
                 "Path",
-                "$UserPath;$InstallDir",
+                ($pathEntries + $InstallDir) -join ";",
                 "User"
             )
             Write-Success "Added $Beige$InstallDir$Reset to PATH"
             Write-Warning "Please restart your terminal to use 'gizzi-code' command"
         }
-        
+
         return $true
     } catch {
         Write-Error "Failed to download or install binary"
         Write-Host $_
         return $false
     } finally {
-        if (Test-Path $TempFile) {
-            Remove-Item $TempFile -ErrorAction SilentlyContinue
+        if (Test-Path $TempDir) {
+            Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue
         }
     }
 }
@@ -238,7 +336,7 @@ function Print-PostInstall {
     Write-Host ""
     
     Write-Host "$Bold$Reset Documentation:$Reset"
-    Write-Host "  $Cyan$Reset https://docs.allternit.com$Reset"
+    Write-Host "  $Cyan$Reset https://docs.gizziio.com$Reset"
     Write-Host "  $Cyan$Reset https://github.com/Gizziio/allternit-platform$Reset"
     Write-Host ""
     

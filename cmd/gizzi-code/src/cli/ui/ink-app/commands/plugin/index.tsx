@@ -4,7 +4,8 @@ const plugin = {
   type: 'local-jsx',
   name: 'plugin',
   aliases: ['plugins', 'marketplace'],
-  description: 'Manage Claude Code plugins',
+  argumentHint: '[marketplace|install|manage]',
+  description: 'Manage Gizzi Code plugins',
   immediate: true,
   load: () => import('./plugin.js')
 } satisfies Command;

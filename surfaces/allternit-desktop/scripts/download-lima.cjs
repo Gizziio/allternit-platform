@@ -1,60 +1,69 @@
 /**
- * Downloads the limactl binary for the current platform/arch and places it at
- * resources/lima/limactl so electron-builder can bundle it into the app.
+ * Downloads limactl for macOS and/or Linux and stages it for electron-builder.
  *
  * Usage:
- *   node scripts/download-lima.cjs              # auto-detects arch
- *   node scripts/download-lima.cjs arm64        # force arm64
- *   node scripts/download-lima.cjs x86_64       # force x86_64
+ *   node scripts/download-lima.cjs                 # host OS (and Linux x86_64 when run on macOS)
+ *   node scripts/download-lima.cjs arm64           # Darwin arm64 (CI universal lipo)
+ *   node scripts/download-lima.cjs x86_64 linux    # Linux x86_64
+ *   ALLTERNIT_PACK_OS=linux node scripts/download-lima.cjs
  *
- * CI: run this before electron-builder so the binary is present for packaging.
+ * Windows builds do not bundle Lima.
  */
 
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
-const LIMA_VERSION = '2.1.2'; // pin — update when you want a newer Lima release
+
+const LIMA_VERSION = '2.1.2';
+const outDir = path.join(__dirname, '..', 'resources', 'lima');
 
 const ARCH_MAP = {
   arm64: 'arm64',
-  aarch64: 'arm64',
+  aarch64: 'aarch64',
   x64: 'x86_64',
   x86_64: 'x86_64',
 };
 
-const rawArch = process.argv[2] || process.arch;
-const arch = ARCH_MAP[rawArch];
-if (!arch) {
-  console.error(`Unsupported arch: ${rawArch}`);
-  process.exit(1);
+function limaOsName(platform) {
+  if (platform === 'darwin') return 'Darwin';
+  if (platform === 'linux') return 'Linux';
+  return null;
 }
 
-const tarballName = `lima-${LIMA_VERSION}-Darwin-${arch}.tar.gz`;
-const url = `https://github.com/lima-vm/lima/releases/download/v${LIMA_VERSION}/${tarballName}`;
-const outDir = path.join(__dirname, '..', 'resources', 'lima');
-const tarballPath = path.join(outDir, tarballName);
-const binaryPath = path.join(outDir, 'limactl');
+function limaArchName(platform, rawArch) {
+  const mapped = ARCH_MAP[rawArch];
+  if (!mapped) return null;
+  if (platform === 'linux' && mapped === 'arm64') return 'aarch64';
+  if (platform === 'darwin' && mapped === 'aarch64') return 'arm64';
+  return mapped;
+}
 
-fs.mkdirSync(outDir, { recursive: true });
+function binaryPathFor(platform) {
+  const dir = platform === 'darwin' ? 'darwin' : 'linux';
+  return path.join(outDir, dir, 'limactl');
+}
 
-// Skip if binary already matches the target version
-if (fs.existsSync(binaryPath)) {
-  try {
-    const ver = execSync(`"${binaryPath}" --version`, { encoding: 'utf8' }).trim();
-    if (ver.includes(LIMA_VERSION)) {
-      console.log(`limactl ${LIMA_VERSION} already present at ${binaryPath} — skipping download`);
-      process.exit(0);
+function alreadyPresent(binaryPath, platform) {
+  if (!fs.existsSync(binaryPath)) return false;
+  if (platform === process.platform) {
+    try {
+      const ver = execSync(`"${binaryPath}" --version`, { encoding: 'utf8' }).trim();
+      return ver.includes(LIMA_VERSION);
+    } catch {
+      return false;
     }
-  } catch { /* fall through and re-download */ }
+  }
+  try {
+    return fs.statSync(binaryPath).size > 1000;
+  } catch {
+    return false;
+  }
 }
-
-console.log(`Downloading ${url}...`);
 
 function download(url, dest, cb) {
   const file = fs.createWriteStream(dest);
   https.get(url, (res) => {
-    // Follow redirects (GitHub releases use one redirect)
     if (res.statusCode === 301 || res.statusCode === 302) {
       file.close();
       fs.unlinkSync(dest);
@@ -68,38 +77,102 @@ function download(url, dest, cb) {
     res.pipe(file);
     file.on('finish', () => file.close(cb));
   }).on('error', (err) => {
-    fs.unlinkSync(dest);
+    try { fs.unlinkSync(dest); } catch { /* ignore */ }
     cb(err);
   });
 }
 
-download(url, tarballPath, (err) => {
-  if (err) { console.error('Download failed:', err.message); process.exit(1); }
-
-  console.log(`Extracting ${tarballName}...`);
+function extractLimactl(tarballPath, binaryPath) {
+  const destDir = path.dirname(binaryPath);
+  fs.mkdirSync(destDir, { recursive: true });
   try {
-    // Extract only bin/limactl from the tarball. Lima 2.1.2 archives have a
-    // leading "./" on every entry, so --strip-components=2 is required to end
-    // up with a flat `limactl` file in outDir.
     execSync(
-      `tar -xzf "${tarballPath}" --strip-components=2 -C "${outDir}" ./bin/limactl`,
+      `tar -xzf "${tarballPath}" --strip-components=2 -C "${destDir}" ./bin/limactl`,
       { stdio: 'pipe' }
     );
-    fs.unlinkSync(tarballPath);
-    fs.chmodSync(binaryPath, 0o755);
-    // Binaries fetched from GitHub carry the com.apple.quarantine extended
-    // attribute on macOS. The attribute causes the kernel to kill the binary
-    // with SIGKILL when the packaged app tries to spawn it, so strip it here.
-    if (process.platform === 'darwin') {
-      try {
-        execSync(`xattr -d com.apple.quarantine "${binaryPath}"`, { stdio: 'pipe' });
-      } catch {
-        // Attribute may already be absent; ignore.
-      }
-    }
-    console.log(`limactl ${LIMA_VERSION} ready at ${binaryPath}`);
-  } catch (e) {
-    console.error('Extraction failed:', e.message);
-    process.exit(1);
+  } catch {
+    execSync(
+      `tar -xzf "${tarballPath}" --strip-components=1 -C "${destDir}" bin/limactl`,
+      { stdio: 'pipe' }
+    );
   }
+  if (!fs.existsSync(binaryPath)) {
+    throw new Error(`limactl was not extracted to ${binaryPath}`);
+  }
+  fs.chmodSync(binaryPath, 0o755);
+  if (process.platform === 'darwin' && binaryPath.includes(`${path.sep}darwin${path.sep}`)) {
+    try {
+      execSync(`xattr -d com.apple.quarantine "${binaryPath}"`, { stdio: 'pipe' });
+    } catch {
+      /* attribute may already be absent */
+    }
+  }
+}
+
+function fetchOne(platform, rawArch) {
+  return new Promise((resolve, reject) => {
+    const osName = limaOsName(platform);
+    const arch = limaArchName(platform, rawArch);
+    if (!osName || !arch) {
+      reject(new Error(`Unsupported Lima target ${platform}/${rawArch}`));
+      return;
+    }
+    const binaryPath = binaryPathFor(platform);
+    if (alreadyPresent(binaryPath, platform)) {
+      console.log(`limactl ${LIMA_VERSION} already present at ${binaryPath} — skipping download`);
+      resolve(binaryPath);
+      return;
+    }
+    const tarballName = `lima-${LIMA_VERSION}-${osName}-${arch}.tar.gz`;
+    const url = `https://github.com/lima-vm/lima/releases/download/v${LIMA_VERSION}/${tarballName}`;
+    const tarballPath = path.join(outDir, tarballName);
+    fs.mkdirSync(outDir, { recursive: true });
+    console.log(`Downloading ${url}...`);
+    download(url, tarballPath, (err) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+      try {
+        extractLimactl(tarballPath, binaryPath);
+        fs.unlinkSync(tarballPath);
+        console.log(`limactl ${LIMA_VERSION} ready at ${binaryPath}`);
+        resolve(binaryPath);
+      } catch (e) {
+        reject(e);
+      }
+    });
+  });
+}
+
+function targets() {
+  const osArg = process.argv[3] || process.env.ALLTERNIT_PACK_OS;
+  const archArg = process.argv[2];
+  if (osArg) {
+    const platform = osArg === 'mac' || osArg === 'macos' ? 'darwin' : osArg;
+    if (platform === 'win32' || platform === 'windows') return [];
+    return [{ platform, arch: archArg || process.arch }];
+  }
+  if (process.platform === 'win32') return [];
+  const list = [{ platform: process.platform, arch: archArg || process.arch }];
+  if (process.platform === 'darwin' && !archArg) {
+    list.push({ platform: 'linux', arch: 'x64' });
+  }
+  return list;
+}
+
+(async () => {
+  fs.mkdirSync(path.join(outDir, 'darwin'), { recursive: true });
+  fs.mkdirSync(path.join(outDir, 'linux'), { recursive: true });
+  const planned = targets();
+  if (planned.length === 0) {
+    console.log('Lima is not bundled on Windows — skipping download');
+    return;
+  }
+  for (const target of planned) {
+    await fetchOne(target.platform, target.arch);
+  }
+})().catch((error) => {
+  console.error('Lima download failed:', error.message || error);
+  process.exit(1);
 });

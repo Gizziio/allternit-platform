@@ -42,6 +42,7 @@ const TYPE_META: Record<
   worker: { label: "Worker", icon: Code, accent: "var(--status-success)" },
   specialist: { label: "Specialist", icon: MagnifyingGlass, accent: "var(--status-warning)" },
   reviewer: { label: "Reviewer", icon: ShieldCheck, accent: "var(--status-error)" },
+  assistant: { label: "Assistant", icon: ChatTeardropText, accent: "var(--accent-secondary)" },
 };
 
 const SOURCE_LABEL: Record<string, string> = {
@@ -54,6 +55,7 @@ const SURFACE_ICONS: Record<AppMode, React.ElementType> = {
   chat: ChatTeardropText,
   code: Code,
   cowork: UsersThree,
+  bot: Robot,
   design: Palette,
   browser: Globe,
 };
@@ -139,6 +141,11 @@ export function AgentGalleryCard({ agent, onClick, index = 0 }: AgentGalleryCard
   const handleDuplicate = (e: React.MouseEvent) => {
     e.stopPropagation();
     setMenuOpen(false);
+    // Hermes history-strip rule: a duplicate inherits identity only —
+    // persona, prompts, botProfile (incl. avatar), connectors, and secretRefs.
+    // Operational history (runs, assigned tasks, checkpoints, mail threads)
+    // is deliberately NOT copied; the copy starts with a clean slate. The
+    // duplicated refs stay indirect and are re-resolved by the new bot.
     setDraftAgent({
       name: `${agent.name} (Copy)`,
       description: agent.description,

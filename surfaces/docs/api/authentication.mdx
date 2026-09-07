@@ -1,13 +1,29 @@
 ---
 title: Authentication
-description: Virtual keys and authentication for the Allternit LLM gateway
+description: Clerk sessions, virtual keys, and runtime device tokens for the Cloud API
 ---
 
 ## Overview
 
-The Allternit LLM gateway uses virtual keys for authentication. Each virtual key is a scoped, rotatable credential that maps to a tenant, organization, or user profile. Virtual keys are used for all public `/v1` gateway routes, including chat completions, embeddings, files, and batches.
+The only public origin is `https://api.allternit.com` ([Cloud API](/api/cloud-api)). Credentials depend on what you are calling.
 
-Organization-scoped admin routes under `/api/v1/gateway/*` require a Clerk JWT and appropriate organization role (owner or admin).
+| Credential | Header | Used for |
+|------------|--------|----------|
+| Clerk session JWT | `Authorization: Bearer <sess>` | Browser console: pairing, relay, agent-sessions, office, beta, billing, provisioned instances |
+| Virtual key (`ak-`) | `Authorization: Bearer ak-…` | LLM gateway `/v1/chat/completions`, embeddings, files, batches |
+| Runtime device token (`allternit_runtime_…`) | `Authorization: Bearer allternit_runtime_…` | Node → Cloud API: heartbeat, relay connect, rotate |
+
+Organization-scoped admin routes under `/api/v1/gateway/*` require a Clerk JWT and an organization owner or admin role.
+
+The [Allternit API](/api/allternit-api) on `:8013` is not a public auth surface. Production clients do not send tokens there. Relayed requests forward the original Clerk `Authorization` header to the node.
+
+<Note>
+Local development may call `http://127.0.0.1:8013` on the same machine. That is the data plane, not a second production API.
+</Note>
+
+## LLM gateway virtual keys
+
+The Allternit LLM gateway uses virtual keys for authentication. Each virtual key is a scoped, rotatable credential that maps to a tenant, organization, or user profile. Virtual keys are used for all public `/v1` gateway routes, including chat completions, embeddings, files, and batches.
 
 ## Virtual keys
 
@@ -22,11 +38,13 @@ curl https://api.allternit.com/v1/chat/completions \
 
 ## Base URL
 
+Public Cloud API (LLM gateway):
+
 ```
 https://api.allternit.com/v1
 ```
 
-For local development:
+Local Allternit API (desktop / `cargo run -p allternit-api` only):
 
 ```
 http://127.0.0.1:8013/v1
@@ -148,6 +166,8 @@ Never commit virtual keys to version control.
 
 ## Related pages
 
+- [API Overview](/api/overview)
+- [Cloud API](/api/cloud-api)
 - [Chat Completions](/api/chat-completions) — primary gateway endpoint
 - [Proxy](/api/proxy) — gateway middleware and request lifecycle
 - [Rate Limits](/api/rate-limits) — quota and budget details

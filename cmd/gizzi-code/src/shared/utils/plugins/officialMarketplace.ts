@@ -1,9 +1,8 @@
 /**
- * Constants for the official Anthropic plugins marketplace.
+ * Constants for the upstream Anthropic plugins marketplace.
  *
- * The official marketplace is hosted on GitHub and provides first-party
- * plugins developed by Anthropic. This file defines the constants needed
- * to install and identify this marketplace.
+ * This is not Gizzi chrome. Auto-install is refused unless
+ * GIZZI_ENABLE_UPSTREAM_MARKETPLACE=1.
  */
 
 import type { MarketplaceSource } from './schemas.js'

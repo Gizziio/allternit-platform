@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { Clock, Plus, Play, Trash, Pencil } from '@phosphor-icons/react';
+import { Clock, Plus, Play, Trash, Pencil, CaretDown, CaretUp } from '@phosphor-icons/react';
 import GlassSurface from '@/design/GlassSurface';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { Routine, ScheduleType, ExecutionDomain, Goal } from '@/lib/agents/automation.types';
+import type { Routine, ScheduleType, ExecutionDomain, Goal, RoutineRun, RoutineRunStatus } from '@/lib/agents/automation.types';
 import {
   listRoutines,
   createRoutine,
@@ -22,6 +22,7 @@ import {
   deleteRoutine,
   runRoutine,
   getRoutineMetrics,
+  listRoutineRuns,
   listGoals,
 } from '@/lib/automation-api';
 import { useAgentStore } from '@/lib/agents';
@@ -50,6 +51,9 @@ export function RoutinesListView({ agentId, title, hideAgentSelector }: Routines
   const [isCreating, setIsCreating] = useState(false);
   const [editingRoutine, setEditingRoutine] = useState<Routine | null>(null);
   const [runningId, setRunningId] = useState<string | null>(null);
+  const [expandedRuns, setExpandedRuns] = useState<Set<string>>(new Set());
+  const [runsByRoutine, setRunsByRoutine] = useState<Record<string, RoutineRun[]>>({});
+  const [runsLoading, setRunsLoading] = useState<Set<string>>(new Set());
 
   const { agents } = useAgentStore();
 
@@ -198,6 +202,48 @@ export function RoutinesListView({ agentId, title, hideAgentSelector }: Routines
       goal_id: routine.goal_id || '',
     });
     setIsCreating(false);
+  };
+
+  const toggleRuns = async (routineId: string) => {
+    setExpandedRuns((prev) => {
+      const next = new Set(prev);
+      if (next.has(routineId)) {
+        next.delete(routineId);
+        return next;
+      }
+      next.add(routineId);
+      return next;
+    });
+
+    if (runsByRoutine[routineId]) return;
+
+    setRunsLoading((prev) => new Set(prev).add(routineId));
+    try {
+      const runs = await listRoutineRuns(routineId);
+      setRunsByRoutine((prev) => ({ ...prev, [routineId]: runs }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load run history');
+    } finally {
+      setRunsLoading((prev) => {
+        const next = new Set(prev);
+        next.delete(routineId);
+        return next;
+      });
+    }
+  };
+
+  const runStatusColor: Record<RoutineRunStatus, string> = {
+    pending: 'var(--status-warning)',
+    running: 'var(--accent-primary)',
+    completed: 'var(--status-success)',
+    failed: 'var(--status-error)',
+    cancelled: 'var(--ui-text-muted)',
+  };
+
+  const formatDuration = (ms?: number) => {
+    if (ms === undefined || ms === null) return '-';
+    if (ms < 1000) return `${ms}ms`;
+    return `${(ms / 1000).toFixed(1)}s`;
   };
 
   return (
@@ -500,6 +546,67 @@ export function RoutinesListView({ agentId, title, hideAgentSelector }: Routines
                   </>
                 )}
                 <span>Updated {formatRelativeTime(routine.updated_at)}</span>
+              </div>
+
+              {/* Run history */}
+              <div className="mt-4 pt-3 border-t border-[var(--border-subtle)]">
+                <button
+                  type="button"
+                  onClick={() => toggleRuns(routine.id)}
+                  className="flex items-center gap-1.5 text-[12px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+                >
+                  {expandedRuns.has(routine.id) ? <CaretUp size={12} /> : <CaretDown size={12} />}
+                  Run history
+                </button>
+
+                {expandedRuns.has(routine.id) && (
+                  <div className="mt-3">
+                    {runsLoading.has(routine.id) ? (
+                      <div className="flex items-center gap-2 text-[12px] text-[var(--text-tertiary)]">
+                        <div className="size-3 border border-solid border-[var(--border-subtle)] border-t-[var(--accent-primary)] rounded-full animate-spin" />
+                        Loading runs…
+                      </div>
+                    ) : runsByRoutine[routine.id]?.length === 0 ? (
+                      <p className="text-[12px] text-[var(--text-tertiary)]">No runs yet.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {(runsByRoutine[routine.id] ?? []).slice(0, 10).map((run) => (
+                          <div
+                            key={run.id}
+                            className="flex items-start justify-between gap-3 rounded-md bg-[var(--bg-primary)] px-3 py-2 text-[12px]"
+                          >
+                            <div className="flex-1 min-w-0 space-y-0.5">
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className="size-2 rounded-full"
+                                  style={{ backgroundColor: runStatusColor[run.status] }}
+                                />
+                                <span className="font-medium text-[var(--text-primary)] capitalize">
+                                  {run.status}
+                                </span>
+                                <span className="text-[var(--text-tertiary)]">·</span>
+                                <span className="text-[var(--text-tertiary)] capitalize">
+                                  {run.triggered_by}
+                                </span>
+                              </div>
+                              {(run.output || run.error) && (
+                                <p className="truncate text-[var(--text-secondary)]">
+                                  {run.error ? `Error: ${run.error}` : run.output}
+                                </p>
+                              )}
+                            </div>
+                            <div className="text-right shrink-0 space-y-0.5 text-[var(--text-tertiary)]">
+                              <div>{formatDuration(run.duration_ms)}</div>
+                              {run.started_at && (
+                                <div>{formatRelativeTime(run.started_at)}</div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </GlassSurface>
           ))}

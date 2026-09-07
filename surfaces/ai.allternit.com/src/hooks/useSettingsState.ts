@@ -1,13 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 const STORAGE_PREFIX = 'allternit.settings.v1.';
+const SETTINGS_CHANGED_EVENT = 'allternit:setting-changed';
 
 /**
  * useState that persists to localStorage under `allternit.settings.v1.<key>`.
  * Drop-in replacement: same [value, setValue] tuple, JSON-serialized values.
  * Falls back to in-memory state when storage is unavailable.
+ *
+ * Writes dispatch `allternit:setting-changed` so other components mounted
+ * elsewhere in the tree (rail, composer, providers) can re-read the value.
  */
 export function useSettingsState<T>(key: string, initial: T): [T, React.Dispatch<React.SetStateAction<T>>] {
   const [value, setValue] = useState<T>(() => {
@@ -25,6 +29,7 @@ export function useSettingsState<T>(key: string, initial: T): [T, React.Dispatch
       const resolved = typeof next === 'function' ? (next as (prev: T) => T)(prev) : next;
       try {
         window.localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(resolved));
+        window.dispatchEvent(new CustomEvent(SETTINGS_CHANGED_EVENT, { detail: { key } }));
       } catch {
         // storage full or unavailable — keep the in-memory update
       }
@@ -33,4 +38,36 @@ export function useSettingsState<T>(key: string, initial: T): [T, React.Dispatch
   };
 
   return [value, setPersistedValue];
+}
+
+/**
+ * Read a settings key reactively: initial value from localStorage, live
+ * updates whenever any useSettingsState writer (or another tab) changes it.
+ */
+export function useSettingsValue<T>(key: string, initial: T): [T, React.Dispatch<React.SetStateAction<T>>] {
+  const [value, setValue] = useSettingsState(key, initial);
+  const setValueRef = useRef(setValue);
+  setValueRef.current = setValue;
+
+  useEffect(() => {
+    const reread = () => {
+      try {
+        const raw = window.localStorage.getItem(STORAGE_PREFIX + key);
+        setValueRef.current(raw === null ? initial : (JSON.parse(raw) as T));
+      } catch {
+        // keep the current in-memory value
+      }
+    };
+    const onChanged = (event: Event) => {
+      if ((event as CustomEvent).detail?.key === key) reread();
+    };
+    window.addEventListener(SETTINGS_CHANGED_EVENT, onChanged);
+    window.addEventListener('storage', reread);
+    return () => {
+      window.removeEventListener(SETTINGS_CHANGED_EVENT, onChanged);
+      window.removeEventListener('storage', reread);
+    };
+  }, [key, initial]);
+
+  return [value, setValue];
 }

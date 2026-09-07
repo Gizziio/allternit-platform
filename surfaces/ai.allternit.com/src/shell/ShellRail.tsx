@@ -1,7 +1,8 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { Icon } from '@phosphor-icons/react';
 import { useStoreWithEqualityFn } from 'zustand/traditional';
 import { shallow } from 'zustand/shallow';
+import { useSettingsValue } from '@/hooks/useSettingsState';
 import type { AppMode } from './ShellHeader';
 import {
   CaretDown,
@@ -12,11 +13,16 @@ import {
   Cpu,
   CheckSquare,
   UsersThree,
+  Users,
   AppWindow,
   Plugs,
   PuzzlePiece,
   Globe,
+  PushPin,
   PushPinSlash,
+  PencilSimple,
+  MagnifyingGlass,
+  X,
   Palette,
   House,
   TerminalWindow,
@@ -31,8 +37,11 @@ import {
   DotsThreeVertical,
   Check,
   Brain,
-  Play,
   DesktopTower,
+  Record,
+  Play,
+  Bell,
+  Checks,
 } from '@phosphor-icons/react';
 import { getPinnedMiniApps, unpinMiniApp, seedDefaultMiniApps } from '../views/aci/mini-app-registry';
 import type { InstalledMiniApp } from '../views/aci/mini-app.types';
@@ -60,20 +69,47 @@ import { SettingsDrilldown } from './SettingsDrilldown';
 import { getAgentModeSurfaceTheme } from '../views/chat/agentModeSurfaceTheme';
 import type { AgentModeSurface } from '../stores/agent-surface-mode.store';
 import { cn } from '@/lib/utils';
-import { BOT_TEMPLATES } from '@/lib/bots/bots.manifest';
-import { useStartBotSession } from '@/lib/bots/useStartBotSession';
-import { useAgentStore } from '@/lib/agents/agent.store';
-import { useCommRailsUnreadCount } from '@/lib/bots/comrails-mail.store';
-import {
-  getBotAccentColor,
-  getBotDisplayName,
-  getBotTagline,
-  isBot,
-} from '@/lib/bots/bot-profile';
+import { useAgentStore, getVisibleAttention, type BotAttentionEntry } from '@/lib/agents/agent.store';
 import type { Agent } from '@/lib/agents/agent.types';
+import {
+  isBot,
+  getBotDisplayName,
+} from '@/lib/bots/bot-profile';
+import { RemotePeersRailSection } from '@/lib/peers/RemotePeersPanel';
+import { useAgentsWithSwarms } from '@/lib/agents';
+import { deriveBotPresence, type BotPresenceState } from '@/lib/bots/bot-presence';
+import {
+  useBotActivityWatermarkStore,
+  useBotHasNewActivity,
+  canonicalActivityAt,
+} from '@/lib/bots/bot-activity-watermark';
+import {
+  getBotActivityToastsPref,
+  setBotActivityToastsPref,
+  BOT_ACTIVITY_TOASTS_CHANGED_EVENT,
+  type BotActivityToastsPref,
+} from '@/lib/bots/bot-activity-toasts';
+import { computeInboxBadge, selectVisibleBotAttention } from '@/lib/bots/bot-inbox';
+import { useBotRosterStore } from '@/lib/bots/bot-roster.store';
+import { useBotRoutineStore } from '@/lib/bots/bot-routine.service';
+import { useCommRailsMailStore } from '@/lib/bots/comrails-mail.store';
+import { openBotCanonicalChat, openBotChatView } from '@/lib/bots/bot-canonical-chat.service';
+import { useGroupChatStore } from '@/lib/bots/group-chat.store';
+import type { GroupChat } from '@/lib/bots/group-chat.types';
+import {
+  refreshGroupEscalations,
+  resolveGroupRoomHold,
+  startGroupRoomsSync,
+  useGroupRoomsSyncStore,
+} from '@/lib/bots/group-rooms-sync';
+import { useStartBotSession } from '@/lib/bots/useStartBotSession';
 import { BotAvatar } from '@/views/bots/BotAvatar';
+import { GroupChatAvatar } from '@/views/bots/GroupChatAvatar';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
+import { openNativeSessionPicker } from '@/components/native-sessions/NativeSessionPicker';
+import { NativeSourceBadge } from '@/components/native-sessions/NativeOriginBanner';
+import { sourceRefFromMetadata } from '@/lib/agents/native-sessions-api';
 
 const MINI_APP_CATEGORY_ICONS: Record<string, Icon> = {
   runtime:       Cpu,
@@ -118,6 +154,25 @@ function groupKeyForDate(ts: number): string {
   return 'Older';
 }
 
+interface RailRecentItem {
+  id: string;
+  title: string;
+  mode: AppMode;
+  icon: any;
+  isActive: boolean;
+  updatedAt: number;
+  kind: 'chat' | 'cowork' | 'task' | 'agent' | 'browser' | 'code';
+  status: 'active' | 'completed' | 'archived';
+  sessionId?: string | null;
+}
+
+interface PinnedRailEntry {
+  id: string;
+  kind: RailRecentItem['kind'];
+  mode: AppMode;
+  pinnedAt: number;
+}
+
 interface ShellRailProps {
   activeViewType?: string;
   onOpen?: (view: string, context?: Record<string, unknown>) => void;
@@ -154,6 +209,10 @@ export function ShellRail({
   const isAgentActive = useSurfaceAgentModeEnabled(currentSurface);
   const surfaceTheme = isAgentActive ? getAgentModeSurfaceTheme(currentSurface) : null;
 
+  // Settings → Appearance → Show sidebar labels (default on). Reacts live to
+  // the toggle via the settings-changed event dispatched by useSettingsState.
+  const [showSidebarLabels] = useSettingsValue('appearance.showSidebarLabels', true);
+
   // The account footer used to show a hardcoded "Joe · Pro" placeholder that
   // never reflected a real signed-in identity. /api/v1/me is backend-resolved
   // and accurate in every auth mode (real Clerk session, desktop bootstrap,
@@ -172,6 +231,12 @@ export function ShellRail({
     return () => { cancelled = true; };
   }, []);
   const accountInitial = (currentUserDisplayName ?? '?').trim().charAt(0).toUpperCase() || '?';
+  const accountLabel = useMemo(() => {
+    const raw = (currentUserDisplayName ?? 'Account').trim();
+    const at = raw.indexOf('@');
+    if (at > 1) return raw.slice(0, at);
+    return raw || 'Account';
+  }, [currentUserDisplayName]);
 
   // Chat Store
   const chatStore = useChatStore();
@@ -209,24 +274,56 @@ export function ShellRail({
   const [recentsExpanded, setRecentsExpanded] = useState(() => {
     if (typeof window === 'undefined') return true;
     try {
-      return window.localStorage.getItem('allternit:rail:bots-expanded') !== 'true';
+      return window.localStorage.getItem('allternit:rail:recents-expanded') !== 'false';
     } catch {
       return true;
     }
   });
-  const [botsExpanded, setBotsExpanded] = useState(() => {
+  const [typeFilter, setTypeFilter] = useState<'all' | 'chat' | 'cowork' | 'task' | 'agent' | 'browser' | 'code' | 'bb'>('all');
+  const [teammatesExpanded, setTeammatesExpanded] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    try {
+      return window.localStorage.getItem('allternit:rail:teammates-expanded') !== 'false';
+    } catch {
+      return true;
+    }
+  });
+  const handleToggleTeammatesExpanded = useCallback(() => {
+    setTeammatesExpanded((prev) => {
+      const next = !prev;
+      try { window.localStorage.setItem('allternit:rail:teammates-expanded', String(next)); } catch {}
+      return next;
+    });
+  }, []);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'completed' | 'archived'>('all');
+  const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week' | 'month'>('all');
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string; kind: string } | null>(null);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+
+  // Pinned rail entries (favorites) — persisted, pruned visually when the
+  // underlying session/task disappears from recentItems.
+  const [pinnedEntries, setPinnedEntries] = useState<PinnedRailEntry[]>(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const raw = window.localStorage.getItem('allternit:rail:pinned');
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed.filter((p) => p && typeof p.id === 'string') : [];
+    } catch {
+      return [];
+    }
+  });
+  const [pinnedExpanded, setPinnedExpanded] = useState(true);
+
+  // RECENTS overflow: raise the 15-row cap to 50 with in-list search (M7).
+  const [recentsOverflowOpen, setRecentsOverflowOpen] = useState(() => {
     if (typeof window === 'undefined') return false;
     try {
-      return window.localStorage.getItem('allternit:rail:bots-expanded') === 'true';
+      return window.localStorage.getItem('allternit:rail:recents-overflow') === 'true';
     } catch {
       return false;
     }
   });
-  const [startingBotId, setStartingBotId] = useState<string | null>(null);
-  const [typeFilter, setTypeFilter] = useState<'all' | 'chat' | 'cowork' | 'task' | 'agent' | 'browser' | 'code'>('all');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'completed' | 'archived'>('all');
-  const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week' | 'month'>('all');
-  const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string; kind: string } | null>(null);
+  const [recentsSearch, setRecentsSearch] = useState('');
 
   // Code-mode recents filters (code-only, separate from global home/browser recents)
   const [codeRecentsExpanded, setCodeRecentsExpanded] = useState(true);
@@ -275,69 +372,101 @@ export function ShellRail({
     });
   }, []);
 
-  const { startSession: startBotSession } = useStartBotSession(
-    useCallback((sessionId: string) => {
-      // Open the bot session view so the rail entry is tied to a real session,
-      // not a generic home chat.
-      onOpen?.('cowork-agent-session', { sessionId, originView: activeViewType ?? 'chat' });
-    }, [onOpen, activeViewType])
-  );
-
   const agents = useAgentStore((s) => s.agents);
   const bots = useMemo(() => agents.filter(isBot), [agents]);
 
-  const handleSelectBots = useCallback(() => {
-    setBotsExpanded(true);
-    setRecentsExpanded(false);
-    try { localStorage.setItem('allternit:rail:bots-expanded', 'true'); } catch {}
-  }, []);
+  // Bot-mode rail data: pinned bots (bot-roster store), canonical-chat recency
+  // for ordering, and group chats with unread counts.
+  const pinnedBotIds = useBotRosterStore((s) => s.pinnedBotIds);
+  const canonicalChatIds = useBotRosterStore((s) => s.canonicalChatIds);
+  const pinBot = useBotRosterStore((s) => s.pinBot);
+  const unpinBot = useBotRosterStore((s) => s.unpinBot);
+  // Drag-to-pin state (raw HTML5 DnD, same pattern as BrowserPane shortcuts).
+  const [draggingBotId, setDraggingBotId] = useState<string | null>(null);
+  const [pinDropActive, setPinDropActive] = useState(false);
+  const groupChats = useGroupChatStore((s) => s.groups);
+  const activeGroupId = useGroupChatStore((s) => s.activeGroupId);
+  const getGroupUnreadCount = useGroupChatStore((s) => s.getUnreadCount);
+  const setActiveGroup = useGroupChatStore((s) => s.setActiveGroup);
 
-  const handleSelectRecents = useCallback(() => {
-    setRecentsExpanded(true);
-    setBotsExpanded(false);
-    try { localStorage.setItem('allternit:rail:bots-expanded', 'false'); } catch {}
-  }, []);
+  // Clicking a bot row starts (or reuses) the bot's canonical session and then
+  // opens the bot-chat-session view — never the bot detail view.
+  const { startSession: startBotSession, isStarting: isBotSessionStarting } = useStartBotSession(
+    useCallback((startedSessionId: string, startedBotId: string) => {
+      openBotChatView(startedSessionId, startedBotId, 'agent-hub');
+    }, [])
+  );
 
-  const handleToggleExpanded = useCallback(() => {
-    if (botsExpanded) {
-      setBotsExpanded((v) => !v);
-    } else {
-      setRecentsExpanded((v) => !v);
-    }
-  }, [botsExpanded]);
-
-  const handleCreateBot = useCallback(() => {
-    onOpen?.('agent-hub');
-  }, [onOpen]);
-
-  const handleStartBot = useCallback(async (bot: Agent) => {
-    setStartingBotId(bot.id);
-    try {
-      await startBotSession(bot);
-      // Bind this bot as the chat surface's selected agent so the composer
-      // shows the bot pill and the mode dock for switching execution modes.
-      useAgentSurfaceModeStore.getState().setSelectedAgent('chat', bot.id);
-    } finally {
-      setStartingBotId(null);
-    }
+  const handleOpenBot = useCallback((bot: Agent) => {
+    void startBotSession(bot);
   }, [startBotSession]);
 
-  const handleOpenBotHome = useCallback((bot: Agent) => {
-    onOpen?.('bot-home', { botId: bot.id });
-  }, [onOpen]);
+  const pinnedBots = useMemo(
+    () =>
+      pinnedBotIds.flatMap((id) => {
+        const bot = bots.find((b) => b.id === id);
+        return bot ? [bot] : [];
+      }),
+    [pinnedBotIds, bots]
+  );
+
+  const sortedBots = useMemo(() => {
+    const activityOf = (bot: Agent): number => {
+      const sid = canonicalChatIds[bot.id];
+      const session = sid ? (chatSessions || []).find((s) => s.id === sid) : null;
+      return session ? new Date(session.updatedAt || 0).getTime() : 0;
+    };
+    return [...bots].sort((a, b) => {
+      const aPinned = pinnedBotIds.includes(a.id) ? 0 : 1;
+      const bPinned = pinnedBotIds.includes(b.id) ? 0 : 1;
+      if (aPinned !== bPinned) return aPinned - bPinned;
+      const diff = activityOf(b) - activityOf(a);
+      if (diff !== 0) return diff;
+      return getBotDisplayName(a).localeCompare(getBotDisplayName(b));
+    });
+  }, [bots, pinnedBotIds, canonicalChatIds, chatSessions]);
+
+  const sortedGroupChats = useMemo(
+    () =>
+      Object.values(groupChats).sort(
+        (a, b) =>
+          new Date(b.updatedAt ?? 0).getTime() - new Date(a.updatedAt ?? 0).getTime()
+      ),
+    [groupChats]
+  );
+
+  const handleToggleRecentsExpanded = useCallback(() => {
+    setRecentsExpanded((v) => {
+      const next = !v;
+      try { localStorage.setItem('allternit:rail:recents-expanded', String(next)); } catch {}
+      return next;
+    });
+  }, []);
+
+  const togglePinnedEntry = useCallback((item: { id: string; kind: RailRecentItem['kind']; mode: AppMode }) => {
+    setPinnedEntries((prev) => {
+      const exists = prev.some((p) => p.id === item.id);
+      const next = exists
+        ? prev.filter((p) => p.id !== item.id)
+        : [...prev, { id: item.id, kind: item.kind, mode: item.mode, pinnedAt: Date.now() }];
+      try { localStorage.setItem('allternit:rail:pinned', JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }, []);
+
+  const isPinned = useCallback((id: string) => pinnedEntries.some((p) => p.id === id), [pinnedEntries]);
+
+  const toggleRecentsOverflow = useCallback(() => {
+    setRecentsOverflowOpen((v) => {
+      const next = !v;
+      try { localStorage.setItem('allternit:rail:recents-overflow', String(next)); } catch {}
+      return next;
+    });
+    setRecentsSearch('');
+  }, []);
 
   const recentItems = useMemo(() => {
-    const list: {
-      id: string;
-      title: string;
-      mode: AppMode;
-      icon: any;
-      isActive: boolean;
-      updatedAt: number;
-      kind: 'chat' | 'cowork' | 'task' | 'agent' | 'browser' | 'code';
-      status: 'active' | 'completed' | 'archived';
-      sessionId?: string | null;
-    }[] = [];
+    const list: RailRecentItem[] = [];
 
     const botIds = new Set(bots.map((b) => b.id));
     const botNames = new Set(bots.map((b) => b.name.toLowerCase()));
@@ -348,7 +477,7 @@ export function ShellRail({
       md?.agent_id != null ||
       (md?.agentName && botNames.has(String(md.agentName).toLowerCase()));
 
-    // Chat sessions (agent/bot sessions live under the Bots panel or Agent | Bot Hub, not Recents)
+    // Chat sessions (bot sessions live under the Bots panel or Bot Hub, not Recents)
     (chatSessions || []).forEach(s => {
       const md = s.metadata as Record<string, unknown> | undefined;
       if (isAgentSession(md)) return;
@@ -366,7 +495,7 @@ export function ShellRail({
       });
     });
 
-    // Code sessions (agent/bot sessions live under the Bots panel or Agent | Bot Hub, not Recents)
+    // Code sessions (bot sessions live under the Bots panel or Bot Hub, not Recents)
     (codeSessions || []).forEach(s => {
       const md = s.metadata as Record<string, unknown> | undefined;
       if (isAgentSession(md)) return;
@@ -468,10 +597,37 @@ export function ShellRail({
       return true;
     });
 
-    // Cross-mode recents stay capped; the ACI list is bounded by the store
-    // itself (PAGE_AGENT_SESSION_LIMIT) so it is shown in full.
-    return mode === 'browser' ? filtered : filtered.slice(0, 15);
+    return filtered;
   }, [recentItems, typeFilter, statusFilter, dateFilter, mode]);
+
+  // Pinned rows stay live by intersecting pinned ids with recentItems (status
+  // dots, streaming, unread all keep working). Sorted by pinnedAt desc.
+  const { pinnedVisible, pinnedOverflowCount } = useMemo(() => {
+    if (pinnedEntries.length === 0) return { pinnedVisible: [] as RailRecentItem[], pinnedOverflowCount: 0 };
+    const byId = new Map(recentItems.map((i) => [i.id, i]));
+    const pinned = pinnedEntries
+      .filter((p) => byId.has(p.id))
+      .sort((a, b) => b.pinnedAt - a.pinnedAt)
+      .map((p) => byId.get(p.id)!);
+    return {
+      pinnedVisible: pinned.slice(0, 10),
+      pinnedOverflowCount: Math.max(0, pinned.length - 10),
+    };
+  }, [pinnedEntries, recentItems]);
+
+  // M7: home/code recents show 15 rows plus a "More…" row; opening the
+  // overflow raises the cap to 50 and enables in-list search. ACI/browser
+  // mode recents stay store-bounded and untouched.
+  const visibleRecentItems = useMemo(() => {
+    if (mode === 'browser') return filteredRecentItems;
+    if (!recentsOverflowOpen) return filteredRecentItems.slice(0, 15);
+    const q = recentsSearch.trim().toLowerCase();
+    const searched = q
+      ? filteredRecentItems.filter((i) => i.title.toLowerCase().includes(q))
+      : filteredRecentItems;
+    return searched.slice(0, 50);
+  }, [filteredRecentItems, recentsOverflowOpen, recentsSearch, mode]);
+  const recentsOverflowCount = mode === 'browser' ? 0 : Math.max(0, filteredRecentItems.length - 15);
 
   // Code-mode recents: filter, sort, and group code sessions only
   const codeProjectOptions = useMemo(() => {
@@ -574,11 +730,12 @@ export function ShellRail({
       cowork: 'workspace',
       code: 'code',
       design: 'design',
+      bot: 'agent-hub',
     };
     const defaultView = defaultViews[originSurface] ?? 'chat';
     const isAgent = descriptor.sessionMode === 'agent';
     const targetView = isAgent ? `${originSurface}-agent-session` : defaultView;
-    onModeChange?.(originSurface === 'design' ? 'design' : originSurface === 'cowork' ? 'cowork' : originSurface === 'code' ? 'code' : 'chat');
+    onModeChange?.(originSurface === 'design' ? 'design' : originSurface === 'cowork' ? 'cowork' : originSurface === 'code' ? 'code' : originSurface === 'bot' ? 'bot' : 'chat');
     onOpen?.(targetView, isAgent ? {
       sessionId: session.id,
       originView: defaultView,
@@ -589,6 +746,84 @@ export function ShellRail({
     setActiveNativeSession,
     setSelectedSurfaceAgent,
   ]);
+
+  // Shared "New" behavior for the rail button and the RECENTS header "+".
+  const handleNewSession = useCallback(() => {
+    if (mode === 'browser') {
+      onModeChange?.('browser');
+      onOpen?.('browser');
+    } else if (mode === 'code') {
+      useCodeSessionStore.getState().setActiveSession(null);
+      onOpen?.('code');
+    } else {
+      // Canonical-chat guard (spec Phase 0): when the active session is a
+      // bot's canonical chat, "New" must not spawn a blank non-bot session
+      // from inside it (the Hermes analog of rerouting /new → /compact).
+      // Reroute to the bot's home instead, leaving the canonical chat intact.
+      const chatState = useChatSessionStore.getState();
+      const activeSession = (chatState.sessions ?? []).find(
+        (s) => s.id === chatState.activeSessionId,
+      );
+      const canonicalBotId = activeSession?.metadata?.botCanonicalFor;
+      if (typeof canonicalBotId === 'string' && canonicalBotId) {
+        onOpen?.('bot-home', { botId: canonicalBotId });
+        return;
+      }
+      chatStore.setActiveThread(null);
+      useChatSessionStore.getState().setActiveSession(null);
+      onOpen?.('chat');
+    }
+  }, [mode, chatStore, onModeChange, onOpen]);
+
+  // Same navigation as clicking a recent row — used by row clicks, the
+  // context-menu "Open" item, and PINNED rows.
+  const openRecentItem = useCallback((item: RailRecentItem) => {
+    if (item.mode === 'chat' || item.mode === 'code') {
+      const session = item.mode === 'code'
+        ? codeSessions.find(s => s.id === item.id)
+        : chatSessions.find(s => s.id === item.id);
+      if (session) openNativeSessionSurface(session);
+    } else if (item.kind === 'cowork') {
+      const sessionId = item.id;
+      useCoworkSessionStore.getState().setActiveSession(sessionId);
+      const session = coworkSessions.find(s => s.id === sessionId);
+      const isAgent = session?.metadata?.sessionMode === 'agent';
+      onModeChange?.('cowork');
+      onOpen?.(isAgent ? 'cowork-agent-session' : 'workspace', isAgent ? { sessionId, originView: 'workspace' } : undefined);
+    } else if (item.mode === 'cowork') {
+      coworkStore.setActiveTask(item.id);
+      const coworkTask = coworkStore.tasks.find(t => t.id === item.id);
+      const sessionId = coworkTask?.sessionId ?? null;
+      useCoworkSessionStore.getState().setActiveSession(sessionId);
+      const session = sessionId ? coworkSessions.find(s => s.id === sessionId) : null;
+      const isAgent = session?.metadata?.sessionMode === 'agent' || coworkTask?.mode === 'agent';
+      onModeChange?.('cowork');
+      onOpen?.(isAgent ? 'cowork-agent-session' : 'workspace', isAgent ? { sessionId, originView: 'workspace' } : undefined);
+    } else if (item.mode === 'browser') {
+      onModeChange?.('browser');
+      onOpen?.('browser');
+    }
+  }, [codeSessions, chatSessions, coworkSessions, coworkStore, openNativeSessionSurface, onModeChange, onOpen]);
+
+  // Context-menu rename commit, dispatched per item kind. Browser items get
+  // no rename. Cowork-mode "agent" kind is ambiguous between an agent task
+  // and an agent session, so it is resolved against the task list.
+  const commitRename = useCallback((item: RailRecentItem, name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed || trimmed === item.title) return;
+    const task = item.mode === 'cowork' ? coworkStore.tasks.find(t => t.id === item.id) : undefined;
+    if (item.kind === 'task' || task) {
+      useCoworkStore.getState().renameTask(item.id, trimmed);
+      return;
+    }
+    if (item.mode === 'cowork') {
+      useCoworkSessionStore.getState().updateSession(item.id, { name: trimmed });
+    } else if (item.mode === 'code') {
+      useCodeSessionStore.getState().updateSession(item.id, { name: trimmed });
+    } else {
+      useChatSessionStore.getState().updateSession(item.id, { name: trimmed });
+    }
+  }, [coworkStore.tasks]);
 
   const handleDeleteConfirm = useCallback(() => {
     if (!deleteTarget) return;
@@ -657,7 +892,7 @@ export function ShellRail({
             )}
           >
             <House size={13} weight={mode === 'chat' ? "fill" : "bold"} />
-            Home
+            {showSidebarLabels ? 'Home' : null}
           </button>
           <button
             type="button"
@@ -673,7 +908,7 @@ export function ShellRail({
             )}
           >
             <TerminalWindow size={13} weight={mode === 'code' ? "fill" : "bold"} />
-            Code
+            {showSidebarLabels ? 'Code' : null}
           </button>
           <button
             type="button"
@@ -689,7 +924,7 @@ export function ShellRail({
             )}
           >
             <Globe size={13} weight={mode === 'browser' ? "fill" : "bold"} />
-            ACI
+            {showSidebarLabels ? 'ACI' : null}
           </button>
         </div>
       </div>
@@ -698,19 +933,7 @@ export function ShellRail({
       <div className="px-2 pb-2 shrink-0">
         <button
           type="button"
-          onClick={() => {
-            if (mode === 'browser') {
-              onModeChange?.('browser');
-              onOpen?.('browser');
-            } else if (isCodeMode) {
-              useCodeSessionStore.getState().setActiveSession(null);
-              onOpen?.('code');
-            } else {
-              chatStore.setActiveThread(null);
-              useChatSessionStore.getState().setActiveSession(null);
-              onOpen?.('chat');
-            }
-          }}
+          onClick={handleNewSession}
           className={cn(
             "group w-full flex items-center gap-2 py-1.5 px-3 max-md:min-h-11 rounded-xl border-none cursor-pointer text-left transition-colors font-semibold",
             isNewActive
@@ -721,6 +944,15 @@ export function ShellRail({
           <Plus size={16} weight="bold" className={isNewActive ? "text-[var(--accent-primary)]" : "text-[var(--shell-item-muted)] group-hover:text-[var(--accent-primary)] transition-colors"} />
           <span className="text-[12px]">{mode === 'browser' ? 'New Session' : isCodeMode ? 'New Thread' : 'New'}</span>
         </button>
+        {mode !== 'browser' ? (
+          <button
+            type="button"
+            onClick={() => openNativeSessionPicker(isCodeMode ? 'code' : mode === 'cowork' ? 'cowork' : 'chat')}
+            className="mt-1 w-full py-1 px-3 rounded-lg border-none bg-transparent text-[11px] text-[var(--shell-item-muted)] cursor-pointer text-left hover:text-[var(--shell-item-fg)] hover:bg-[var(--surface-hover)]"
+          >
+            Continue CLI session
+          </button>
+        ) : null}
       </div>
 
       {/* SIDEBAR MAIN BODY (Browser tabs + sessions, Home tabs + recents, or Code tabs + threads) */}
@@ -746,8 +978,8 @@ export function ShellRail({
             )}
             {browserRailTabs['site-apis'] && (
               <RailItem
-                icon={Plugs}
-                label="Site APIs"
+                icon={Record}
+                label="Teach"
                 isActive={activeViewType === 'site-apis'}
                 onClick={() => onOpen?.('site-apis')}
               />
@@ -756,7 +988,7 @@ export function ShellRail({
               tabs={[
                 { id: 'mini-apps-store', label: 'Mini-apps Store', icon: AppWindow, visible: browserRailTabs['mini-apps-store'] },
                 { id: 'browser-extensions', label: 'Office & Extensions', icon: PuzzlePiece, visible: browserRailTabs['browser-extensions'] },
-                { id: 'site-apis', label: 'Site APIs', icon: Plugs, visible: browserRailTabs['site-apis'] },
+                { id: 'site-apis', label: 'Teach', icon: Record, visible: browserRailTabs['site-apis'] },
               ]}
               onToggle={toggleBrowserRailTab}
               onCustomize={() => onOpenCustomize?.()}
@@ -798,6 +1030,8 @@ export function ShellRail({
             title="Recents"
             openAllTitle="Open all recents"
             onOpenAll={() => onOpen?.('recents')}
+            onAdd={handleNewSession}
+            addTitle="New Session"
             filter={
               <Popover>
                 <PopoverTrigger asChild>
@@ -865,36 +1099,150 @@ export function ShellRail({
               <RecentRailItem
                 key={item.id}
                 item={item}
-                onClick={() => {
-                  if (item.mode === 'chat' || item.mode === 'code') {
-                    const session = item.mode === 'code'
-                      ? codeSessions.find(s => s.id === item.id)
-                      : chatSessions.find(s => s.id === item.id);
-                    if (session) openNativeSessionSurface(session);
-                  } else if (item.kind === 'cowork') {
-                    const sessionId = item.id;
-                    useCoworkSessionStore.getState().setActiveSession(sessionId);
-                    const session = coworkSessions.find(s => s.id === sessionId);
-                    const isAgent = session?.metadata?.sessionMode === 'agent';
-                    onModeChange?.('cowork');
-                    onOpen?.(isAgent ? 'cowork-agent-session' : 'workspace', isAgent ? { sessionId, originView: 'workspace' } : undefined);
-                  } else if (item.mode === 'cowork') {
-                    coworkStore.setActiveTask(item.id);
-                    const coworkTask = coworkStore.tasks.find(t => t.id === item.id);
-                    const sessionId = coworkTask?.sessionId ?? null;
-                    useCoworkSessionStore.getState().setActiveSession(sessionId);
-                    const session = sessionId ? coworkSessions.find(s => s.id === sessionId) : null;
-                    const isAgent = session?.metadata?.sessionMode === 'agent' || coworkTask?.mode === 'agent';
-                    onModeChange?.('cowork');
-                    onOpen?.(isAgent ? 'cowork-agent-session' : 'workspace', isAgent ? { sessionId, originView: 'workspace' } : undefined);
-                  } else if (item.mode === 'browser') {
-                    onModeChange?.('browser');
-                    onOpen?.('browser');
-                  }
-                }}
+                onClick={() => openRecentItem(item)}
+                onRenameCommit={item.kind === 'browser' ? undefined : commitRename}
+                pinned={isPinned(item.id)}
+                onPinToggle={() => togglePinnedEntry(item)}
+                onUnpin={isPinned(item.id) ? () => togglePinnedEntry(item) : undefined}
                 onDelete={() => setDeleteTarget({ id: item.id, title: item.title, kind: item.kind })}
               />
             ))}
+          </RecentsPanel>
+        </>
+      ) : mode === 'bot' ? (
+        <>
+          {/* BOT TABS */}
+          <div className="px-2 pb-2 shrink-0 flex flex-col gap-0.5">
+            <RailItem
+              icon={Robot}
+              label="Bot Hub"
+              isActive={activeViewType === 'agent-hub'}
+              onClick={() =>
+                window.dispatchEvent(
+                  new CustomEvent('allternit:open-view', {
+                    detail: { viewType: 'agent-hub' },
+                  }),
+                )
+              }
+            />
+          </div>
+
+          {/* BOT PINNED — self-prunes when empty; drop zone appears while a bot
+              row is being dragged so users can discover pinning */}
+          {(pinnedBots.length > 0 || draggingBotId !== null) && (
+            <RecentsPanel shrink expanded onToggle={() => {}} title="Pinned Bots">
+              {draggingBotId !== null && (
+                <div
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.dataTransfer.dropEffect = 'move';
+                    setPinDropActive(true);
+                  }}
+                  onDragLeave={() => setPinDropActive(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const droppedId = e.dataTransfer.getData('text/plain') || draggingBotId;
+                    if (droppedId) pinBot(droppedId);
+                    setPinDropActive(false);
+                    setDraggingBotId(null);
+                  }}
+                  className={cn(
+                    "mx-2 mb-1 flex items-center justify-center gap-1.5 rounded-xl border border-dashed px-3 py-2 text-[12px] transition-colors",
+                    pinDropActive
+                      ? "border-[var(--accent-primary)] text-[var(--accent-primary)] bg-[var(--shell-item-hover)]"
+                      : "border-[var(--border-subtle)] text-[var(--shell-item-muted)]"
+                  )}
+                >
+                  <PushPin size={13} />
+                  <span>{pinDropActive ? 'Drop to pin' : 'Drag a bot here to pin'}</span>
+                </div>
+              )}
+              {pinnedBots.length === 0 ? (
+                draggingBotId === null ? (
+                  <div className="px-3 py-3 text-[12px] text-[var(--shell-item-muted)]">
+                    Pin bots from the bot picker
+                  </div>
+                ) : null
+              ) : (
+                pinnedBots.map((bot) => (
+                  <BotRailRow
+                    key={bot.id}
+                    bot={bot}
+                    isActive={
+                      activeViewType === 'bot-chat-session' &&
+                      activeChatSessionId === canonicalChatIds[bot.id]
+                    }
+                    disabled={isBotSessionStarting}
+                    onOpen={() => handleOpenBot(bot)}
+                    onUnpin={() => unpinBot(bot.id)}
+                  />
+                ))
+              )}
+            </RecentsPanel>
+          )}
+
+          {/* BOT LIST — all bots, pinned first, then by canonical chat activity */}
+          <RecentsPanel expanded onToggle={() => {}} title="Bots">
+            {sortedBots.length === 0 && (
+              <div className="px-3 py-3 text-[12px] text-[var(--shell-item-muted)]">
+                No bots yet — create one in Bot Hub
+              </div>
+            )}
+            {sortedBots.map((bot) => (
+              <BotRailRow
+                key={bot.id}
+                bot={bot}
+                isActive={
+                  activeViewType === 'bot-chat-session' &&
+                  activeChatSessionId === canonicalChatIds[bot.id]
+                }
+                disabled={isBotSessionStarting}
+                onOpen={() => handleOpenBot(bot)}
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.setData('text/plain', bot.id);
+                  e.dataTransfer.effectAllowed = 'move';
+                  setDraggingBotId(bot.id);
+                }}
+                onDragEnd={() => {
+                  setDraggingBotId(null);
+                  setPinDropActive(false);
+                }}
+              />
+            ))}
+          </RecentsPanel>
+
+          {/* GROUP CHATS — unread badge convention matches GroupsListView.
+              Always rendered so the empty state and creation affordance stay discoverable */}
+          <RecentsPanel shrink expanded onToggle={() => {}} title="Group Chats">
+            {sortedGroupChats.length === 0 ? (
+              <div className="px-3 py-3 text-[12px] text-[var(--shell-item-muted)]">
+                No group chats yet
+              </div>
+            ) : (
+              sortedGroupChats.map((group) => (
+                <BotGroupRailRow
+                  key={group.id}
+                  group={group}
+                  unread={getGroupUnreadCount(group.id)}
+                  isActive={activeViewType === 'group-chat' && activeGroupId === group.id}
+                  onOpen={() => {
+                    setActiveGroup(group.id);
+                    onOpen?.('group-chat', { groupId: group.id });
+                  }}
+                />
+              ))
+            )}
+            <button
+              type="button"
+              onClick={() => onOpen?.('groups-list')}
+              className="w-full flex items-center gap-2.5 py-1.5 px-3 max-md:min-h-11 rounded-xl bg-transparent border-none cursor-pointer text-left text-[12px] text-[var(--shell-item-muted)] hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)] transition-all"
+            >
+              <Plus size={13} />
+              <span>New group chat</span>
+            </button>
           </RecentsPanel>
         </>
       ) : !isCodeMode ? (
@@ -903,9 +1251,16 @@ export function ShellRail({
           <div className="px-2 pb-2 shrink-0 flex flex-col gap-0.5">
             <RailItem
               icon={Robot}
-              label="Agent | Bot Hub"
+              label="Bot Hub"
               isActive={activeViewType === 'agent-hub'}
               onClick={() => onOpen?.('agent-hub')}
+            />
+            <RailItem
+              id="groups-list"
+              icon={Users}
+              label="Groups"
+              isActive={activeViewType === 'groups-list' || activeViewType === 'group-chat'}
+              onClick={() => onOpen?.('groups-list')}
             />
             <RailItem
               icon={FolderOpen}
@@ -937,9 +1292,9 @@ export function ShellRail({
             />
             <RailItem
               icon={DesktopTower}
-              label="Remote Control"
-              isActive={activeViewType === 'remote-control'}
-              onClick={() => onOpen?.('remote-control')}
+              label="Fabric Transport"
+              isActive={activeViewType === 'fabric-session' || activeViewType === 'remote-control'}
+              onClick={() => onOpen?.('fabric-session')}
             />
             <RailItem
               icon={SlidersHorizontal}
@@ -947,23 +1302,59 @@ export function ShellRail({
               isActive={false}
               onClick={() => onOpenCustomize?.()}
             />
+            <InboxRailItem onOpen={onOpen} />
           </div>
 
-        {/* HOME RECENTS + BOTS */}
+          {/* HOME TEAMMATES — bots with presence, unread mail, or attention.
+              Self-prunes to nothing when quiet (spec Phase 1). */}
+          <TeammatesRailSection
+            expanded={teammatesExpanded}
+            onToggle={handleToggleTeammatesExpanded}
+            onOpen={onOpen}
+          />
+
+          {/* REMOTE PEERS (BOT_TEAMMATES_SPEC Phase 3, cross-machine fabric) —
+              self-contained section: list/add/remove remote peer connections
+              with reachability dots + ghost-row counts. */}
+          <RemotePeersRailSection />
+
+          {/* HOME PINNED — self-prunes when nothing pinned remains live */}
+          {pinnedVisible.length > 0 && (
+            <RecentsPanel
+              shrink
+              expanded={pinnedExpanded}
+              onToggle={() => setPinnedExpanded((v) => !v)}
+              title="Pinned"
+            >
+              {pinnedVisible.map((item) => (
+                <RecentRailItem
+                  key={item.id}
+                  item={item}
+                  onClick={() => openRecentItem(item)}
+                  onRenameCommit={item.kind === 'browser' ? undefined : commitRename}
+                  pinned
+                  onPinToggle={() => togglePinnedEntry(item)}
+                  onUnpin={() => togglePinnedEntry(item)}
+                  onDelete={() => setDeleteTarget({ id: item.id, title: item.title, kind: item.kind })}
+                />
+              ))}
+              {pinnedOverflowCount > 0 && (
+                <div className="px-3 py-1.5 text-[11px] text-[var(--shell-item-muted)]">
+                  {pinnedOverflowCount} more in Recents
+                </div>
+              )}
+            </RecentsPanel>
+          )}
+
+        {/* HOME RECENTS */}
           <RecentsPanel
             expanded={recentsExpanded}
-            onToggle={handleSelectRecents}
+            onToggle={handleToggleRecentsExpanded}
             title="Recents"
             openAllTitle="Open all recents"
             onOpenAll={() => onOpen?.('recents')}
-            botsExpanded={botsExpanded}
-            onBotsToggle={handleSelectBots}
-            onToggleExpanded={handleToggleExpanded}
-            bots={bots}
-            startingBotId={startingBotId}
-            onStartBot={handleStartBot}
-            onOpenBotHome={handleOpenBotHome}
-            onCreateBot={handleCreateBot}
+            onAdd={handleNewSession}
+            addTitle="New session"
             filter={
               <Popover>
                 <PopoverTrigger asChild>
@@ -985,7 +1376,7 @@ export function ShellRail({
                   <div className="flex flex-col gap-3">
                     <FilterRow label="Type" value={typeFilter === 'all' ? 'All' : typeFilter}>
                       <div className="flex flex-col gap-0.5">
-                        {(['all', 'chat', 'cowork', 'task', 'agent', 'browser', 'code'] as const).map((k) => (
+                        {(['all', 'chat', 'cowork', 'task', 'agent', 'browser', 'code', 'bb'] as const).map((k) => (
                           <button
                             key={k}
                             type="button"
@@ -1039,45 +1430,65 @@ export function ShellRail({
               </Popover>
             }
           >
-            {filteredRecentItems.length === 0 && (
-              <div className="px-3 py-4 text-[12px] text-[var(--shell-item-muted)] text-center">
-                No recent items match your filters
+            {recentsOverflowOpen && (
+              <div className="relative flex items-center px-1 pb-1">
+                <MagnifyingGlass size={12} className="absolute left-3 text-[var(--shell-item-muted)] pointer-events-none" />
+                <input
+                  type="text"
+                  value={recentsSearch}
+                  onChange={(e) => setRecentsSearch(e.target.value)}
+                  placeholder="Search recents"
+                  className="w-full rounded-lg border border-solid border-[var(--border-subtle)] bg-[var(--surface-hover)] py-1.5 pl-7 pr-7 text-[12px] text-[var(--shell-item-fg)] outline-none placeholder:text-[var(--shell-item-muted)] focus:border-[var(--accent-primary)]"
+                />
+                {recentsSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setRecentsSearch('')}
+                    title="Clear search"
+                    className="absolute right-2 size-5 flex items-center justify-center rounded border-none bg-transparent text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] cursor-pointer transition-colors"
+                  >
+                    <X size={11} />
+                  </button>
+                )}
               </div>
             )}
-            {filteredRecentItems.map((item) => (
+            {visibleRecentItems.length === 0 && (
+              <div className="px-3 py-4 text-[12px] text-[var(--shell-item-muted)] text-center">
+                {recentsSearch ? 'No matches' : 'No recent items match your filters'}
+              </div>
+            )}
+            {visibleRecentItems.map((item) => (
               <RecentRailItem
                 key={item.id}
                 item={item}
-                onClick={() => {
-                  if (item.mode === 'chat' || item.mode === 'code') {
-                    const session = item.mode === 'code'
-                      ? codeSessions.find(s => s.id === item.id)
-                      : chatSessions.find(s => s.id === item.id);
-                    if (session) openNativeSessionSurface(session);
-                  } else if (item.kind === 'cowork') {
-                    const sessionId = item.id;
-                    useCoworkSessionStore.getState().setActiveSession(sessionId);
-                    const session = coworkSessions.find(s => s.id === sessionId);
-                    const isAgent = session?.metadata?.sessionMode === 'agent';
-                    onModeChange?.('cowork');
-                    onOpen?.(isAgent ? 'cowork-agent-session' : 'workspace', isAgent ? { sessionId, originView: 'workspace' } : undefined);
-                  } else if (item.mode === 'cowork') {
-                    coworkStore.setActiveTask(item.id);
-                    const coworkTask = coworkStore.tasks.find(t => t.id === item.id);
-                    const sessionId = coworkTask?.sessionId ?? null;
-                    useCoworkSessionStore.getState().setActiveSession(sessionId);
-                    const session = sessionId ? coworkSessions.find(s => s.id === sessionId) : null;
-                    const isAgent = session?.metadata?.sessionMode === 'agent' || coworkTask?.mode === 'agent';
-                    onModeChange?.('cowork');
-                    onOpen?.(isAgent ? 'cowork-agent-session' : 'workspace', isAgent ? { sessionId, originView: 'workspace' } : undefined);
-                  } else if (item.mode === 'browser') {
-                    onModeChange?.('browser');
-                    onOpen?.('browser');
-                  }
-                }}
+                onClick={() => openRecentItem(item)}
+                onRenameCommit={item.kind === 'browser' ? undefined : commitRename}
+                pinned={isPinned(item.id)}
+                onPinToggle={() => togglePinnedEntry(item)}
+                onUnpin={isPinned(item.id) ? () => togglePinnedEntry(item) : undefined}
                 onDelete={() => setDeleteTarget({ id: item.id, title: item.title, kind: item.kind })}
               />
             ))}
+            {!recentsOverflowOpen && recentsOverflowCount > 0 && (
+              <button
+                type="button"
+                onClick={toggleRecentsOverflow}
+                className="w-full flex items-center gap-2.5 py-1.5 px-3 max-md:min-h-11 rounded-xl border-none bg-transparent cursor-pointer text-left transition-colors text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)]"
+              >
+                <CaretRight size={13} />
+                <span className="text-[12px]">More…</span>
+              </button>
+            )}
+            {recentsOverflowOpen && filteredRecentItems.length > 15 && (
+              <button
+                type="button"
+                onClick={toggleRecentsOverflow}
+                className="w-full flex items-center gap-2.5 py-1.5 px-3 max-md:min-h-11 rounded-xl border-none bg-transparent cursor-pointer text-left transition-colors text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)]"
+              >
+                <CaretRight size={13} className="rotate-90" />
+                <span className="text-[12px]">Show less</span>
+              </button>
+            )}
           </RecentsPanel>
         </>
       ) : (
@@ -1087,7 +1498,7 @@ export function ShellRail({
             {codeRailTabs['agent-hub'] && (
               <RailItem
                 icon={Robot}
-                label="Agent | Bot Hub"
+                label="Bot Hub"
                 isActive={activeViewType === 'agent-hub'}
                 onClick={() => onOpen?.('agent-hub')}
               />
@@ -1122,7 +1533,7 @@ export function ShellRail({
             )}
             <MoreDropdown
               tabs={[
-                { id: 'agent-hub', label: 'Agent | Bot Hub', icon: Robot, visible: codeRailTabs['agent-hub'] },
+                { id: 'agent-hub', label: 'Bot Hub', icon: Robot, visible: codeRailTabs['agent-hub'] },
                 { id: 'projects', label: 'Projects', icon: FolderOpen, visible: codeRailTabs['projects'] },
                 { id: 'artifacts-library', label: 'Artifacts Library', icon: FileText, visible: codeRailTabs['artifacts-library'] },
                 { id: 'code-automations', label: 'Automation Tasks', icon: Clock, visible: codeRailTabs['code-automations'] },
@@ -1141,6 +1552,8 @@ export function ShellRail({
             title="Recents"
             openAllTitle="Open all code recents"
             onOpenAll={() => onOpen?.('code-threads')}
+            onAdd={handleNewSession}
+            addTitle="New Thread"
             filter={
               <Popover>
                 <PopoverTrigger asChild>
@@ -1320,9 +1733,26 @@ export function ShellRail({
                             className="flex-1 min-w-0 flex items-center gap-2.5 bg-transparent border-none p-0 text-left cursor-pointer font-medium"
                           >
                             <Cpu size={15} weight={isActive ? 'fill' : 'bold'} />
-                            <span className="text-[12px] overflow-hidden text-ellipsis whitespace-nowrap min-w-0 flex-1">{s.name || 'Untitled Session'}</span>
+                            {renamingId === s.id ? (
+                              <InlineRenameInput
+                                initialValue={s.name || 'Untitled Session'}
+                                onCommit={(value) => {
+                                  setRenamingId(null);
+                                  const trimmed = value.trim();
+                                  if (trimmed) useCodeSessionStore.getState().updateSession(s.id, { name: trimmed });
+                                }}
+                                onCancel={() => setRenamingId(null)}
+                              />
+                            ) : (
+                              <span className="text-[12px] overflow-hidden text-ellipsis whitespace-nowrap min-w-0 flex-1">{s.name || 'Untitled Session'}</span>
+                            )}
+                            <NativeSourceBadge source={sourceRefFromMetadata(s.metadata as Record<string, unknown>)} />
                           </button>
                           <RecentItemMenu
+                            onOpen={() => openNativeSessionSurface(s)}
+                            onRename={() => setRenamingId(s.id)}
+                            pinned={isPinned(s.id)}
+                            onPinToggle={() => togglePinnedEntry({ id: s.id, kind: 'code', mode: 'code' })}
                             onDelete={() => setDeleteTarget({ id: s.id, title: s.name || 'Untitled Session', kind: 'code' })}
                           />
                         </div>
@@ -1362,21 +1792,24 @@ export function ShellRail({
 
         <div className="h-px bg-[var(--shell-divider)] w-full" />
 
-        <div className="flex items-center p-[10px_16px] gap-2">
-          <SettingsDrilldown>
-            <button
-              type="button"
-              className="flex-1 flex items-center gap-3 border-none bg-transparent cursor-pointer text-left hover:bg-[var(--shell-item-hover)] transition-colors rounded-lg p-[6px_8px] -ml-2"
-            >
-              <div className="size-8 rounded-full bg-gradient-to-br from-[var(--accent-chat)] to-[var(--accent-primary)] shrink-0 flex items-center justify-center text-[var(--bg-primary)] text-[14px] font-bold">
-                {accountInitial}
-              </div>
-              <div className="flex-1 min-w-0 flex items-center gap-1.5 text-[var(--shell-item-fg)] text-[13px] font-semibold">
-                <span className="truncate">{currentUserDisplayName ?? 'Account'}</span>
-                <CaretDown size={12} className="text-[var(--shell-item-muted)] shrink-0" />
-              </div>
-            </button>
-          </SettingsDrilldown>
+        <div className="flex items-center p-[10px_12px] gap-1 min-w-0">
+          <div className="min-w-0 flex-1 overflow-hidden">
+            <SettingsDrilldown>
+              <button
+                type="button"
+                title={currentUserDisplayName ?? 'Account'}
+                className="w-full min-w-0 flex items-center gap-2 border-none bg-transparent cursor-pointer text-left hover:bg-[var(--shell-item-hover)] transition-colors rounded-lg p-[6px_8px] -ml-1"
+              >
+                <div className="size-8 rounded-full bg-gradient-to-br from-[var(--accent-chat)] to-[var(--accent-primary)] shrink-0 flex items-center justify-center text-[var(--bg-primary)] text-[14px] font-bold">
+                  {accountInitial}
+                </div>
+                <div className="min-w-0 flex-1 overflow-hidden flex items-center gap-1 text-[var(--shell-item-fg)] text-[13px] font-semibold">
+                  <span className="truncate">{accountLabel}</span>
+                  <CaretDown size={12} className="text-[var(--shell-item-muted)] shrink-0" />
+                </div>
+              </button>
+            </SettingsDrilldown>
+          </div>
           <button
             type="button"
             onClick={() => onOpen?.('apps-extensions')}
@@ -1455,23 +1888,22 @@ function useSessionSummary(sessionId?: string | null): SessionSummary {
 function RecentRailItem({
   item,
   onClick,
+  onRenameCommit,
+  pinned,
+  onPinToggle,
+  onUnpin,
   onDelete,
 }: {
-  item: {
-    id: string;
-    title: string;
-    mode: AppMode;
-    icon: any;
-    isActive: boolean;
-    updatedAt: number;
-    kind: 'chat' | 'cowork' | 'task' | 'agent' | 'browser' | 'code';
-    status: 'active' | 'completed' | 'archived';
-    sessionId?: string | null;
-  };
+  item: RailRecentItem;
   onClick: () => void;
+  onRenameCommit?: (item: RailRecentItem, name: string) => void;
+  pinned?: boolean;
+  onPinToggle?: () => void;
+  onUnpin?: () => void;
   onDelete: () => void;
 }): React.ReactNode {
   const IconComponent = item.icon;
+  const [renaming, setRenaming] = useState(false);
   const sessionSummary = useSessionSummary(
     item.sessionId && (item.mode === 'chat' || item.kind === 'agent') ? item.sessionId : null
   );
@@ -1507,9 +1939,17 @@ function RecentRailItem({
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-[12px] overflow-hidden text-ellipsis whitespace-nowrap min-w-0">
-            {item.title}
-          </div>
+          {renaming ? (
+            <InlineRenameInput
+              initialValue={item.title}
+              onCommit={(value) => onRenameCommit?.(item, value)}
+              onCancel={() => setRenaming(false)}
+            />
+          ) : (
+            <div className="text-[12px] overflow-hidden text-ellipsis whitespace-nowrap min-w-0">
+              {item.title}
+            </div>
+          )}
           <div className="flex items-center gap-1.5 text-[11px] text-[var(--shell-item-muted)] overflow-hidden">
             {isStreaming && (
               <span className="relative flex size-1.5">
@@ -1522,104 +1962,709 @@ function RecentRailItem({
           </div>
         </div>
       </button>
-      <RecentItemMenu onDelete={onDelete} />
+      {onUnpin && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onUnpin(); }}
+          title="Unpin from rail"
+          className="opacity-0 max-md:opacity-100 group-hover:opacity-100 shrink-0 -ml-1 size-6 max-md:size-11 rounded-md bg-transparent border-none text-[var(--shell-item-muted)] hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)] cursor-pointer flex items-center justify-center transition-all"
+        >
+          <PushPinSlash size={13} />
+        </button>
+      )}
+      <RecentItemMenu
+        onOpen={onClick}
+        onRename={onRenameCommit ? () => setRenaming(true) : undefined}
+        pinned={pinned}
+        onPinToggle={onPinToggle}
+        onDelete={onDelete}
+      />
     </div>
   );
 }
 
-function BotMailBadge({ botId }: { botId: string }): React.ReactNode | null {
-  const unread = useCommRailsUnreadCount(botId);
-  if (unread <= 0) return null;
+function TeammatesRailSection({
+  expanded,
+  onToggle,
+  onOpen,
+}: {
+  expanded: boolean;
+  onToggle: () => void;
+  onOpen?: (view: string, context?: Record<string, unknown>) => void;
+}): React.ReactNode | null {
+  const agents = useAgentsWithSwarms();
+  const bots = useMemo(() => agents.filter(isBot), [agents]);
+  const attention = useAgentStore((state) => state.attention);
+  const visibleAttention = useMemo(
+    () => getVisibleAttention(attention, agents),
+    [attention, agents],
+  );
+  const sessions = useChatSessionStore((s) => s.sessions);
+  const streamingBySession = useChatSessionStore((s) => s.streamingBySession);
+  const canonicalChatIds = useBotRosterStore((s) => s.canonicalChatIds);
+  const routines = useBotRoutineStore((s) => s.routines);
+  const mailMessages = useCommRailsMailStore((s) => s.messages);
+
+  // Pure presence derivation for every bot, recomputed on store changes.
+  const presenceByBot = useMemo(() => {
+    const map: Record<string, BotPresenceState> = {};
+    for (const bot of bots) {
+      const canonicalId = canonicalChatIds[bot.id];
+      const session = canonicalId ? (sessions ?? []).find((s) => s.id === canonicalId) : undefined;
+      let routineActivityAt = 0;
+      for (const routine of Object.values(routines)) {
+        if (routine.botId !== bot.id) continue;
+        if (routine.lastRunAt && routine.lastRunAt > routineActivityAt) routineActivityAt = routine.lastRunAt;
+      }
+      map[bot.id] = deriveBotPresence({
+        streaming: canonicalId ? (streamingBySession[canonicalId]?.isStreaming ?? false) : false,
+        sessionActivityAt: session ? new Date(session.updatedAt || 0).getTime() : 0,
+        routineActivityAt,
+      });
+    }
+    return map;
+  }, [bots, sessions, streamingBySession, canonicalChatIds, routines]);
+
+  const unreadByBot = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const bot of bots) {
+      map[bot.id] = mailMessages.filter(
+        (m) => m.toAgentId === bot.id && (m.status === 'unread' || m.requiresAck),
+      ).length;
+    }
+    return map;
+  }, [bots, mailMessages]);
+
+  const entries = useMemo(() => {
+    const list = bots
+      .map((bot) => ({
+        bot,
+        presence: presenceByBot[bot.id] ?? { presence: 'idle' as const, lastActivityAt: 0 },
+        attentionEntry: visibleAttention[bot.id] as BotAttentionEntry | undefined,
+        unreadCount: unreadByBot[bot.id] ?? 0,
+      }))
+      .filter(
+        (e) =>
+          e.presence.presence !== 'idle' || e.unreadCount > 0 || Boolean(e.attentionEntry),
+      );
+    const rank = { working: 0, active: 1, idle: 2 } as const;
+    list.sort((a, b) =>
+      rank[a.presence.presence] - rank[b.presence.presence] ||
+      b.presence.lastActivityAt - a.presence.lastActivityAt,
+    );
+    return list;
+  }, [bots, presenceByBot, visibleAttention, unreadByBot]);
+
+  // Self-pruning: render nothing when no bot has anything to show.
+  if (entries.length === 0) return null;
+
+  const visible = entries.slice(0, 6);
+  const overflowCount = entries.length - visible.length;
+
   return (
-    <span className="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 rounded-full text-[10px] font-bold bg-[var(--accent-primary)] text-[var(--accent-primary-contrast)]">
-      {unread > 99 ? '99+' : unread}
-    </span>
+    <RecentsPanel
+      shrink
+      expanded={expanded}
+      onToggle={onToggle}
+      title="Teammates"
+    >
+      {visible.map((entry) => (
+        <TeammatesRailRow
+          key={entry.bot.id}
+          bot={entry.bot}
+          presence={entry.presence}
+          attentionEntry={entry.attentionEntry}
+          unreadCount={entry.unreadCount}
+          onOpen={onOpen}
+        />
+      ))}
+      {overflowCount > 0 && (
+        <button
+          type="button"
+          onClick={() => onOpen?.('agent-hub')}
+          className="px-3 py-1.5 text-left text-[11px] text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] bg-transparent border-none cursor-pointer transition-colors"
+        >
+          All teammates
+        </button>
+      )}
+    </RecentsPanel>
   );
 }
 
-function BotRailItem({
-  id,
+function TeammatesRailRow({
   bot,
-  name,
-  accentColor,
-  isStarting,
-  badge,
-  onClick,
-  onStart,
+  presence,
+  attentionEntry,
+  unreadCount,
+  onOpen,
 }: {
-  id: string;
   bot: Agent;
-  name: string;
-  accentColor: string;
-  isStarting: boolean;
-  badge?: React.ReactNode;
-  onClick: () => void;
-  onStart: (e: React.MouseEvent) => void;
+  presence: BotPresenceState;
+  attentionEntry?: BotAttentionEntry;
+  unreadCount: number;
+  onOpen?: (view: string, context?: Record<string, unknown>) => void;
 }): React.ReactNode {
-  const sessionId = useStoreWithEqualityFn(
-    useChatSessionStore,
-    useCallback(
-      (state) => {
-        const session = state.sessions
-          .filter((s) => s.metadata?.agentId === id)
-          .sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime())[0];
-        return session?.id ?? null;
-      },
-      [id]
-    ),
-    shallow
+  const canonicalChatId = useBotRosterStore((s) => s.canonicalChatIds[bot.id] ?? null);
+  const routines = useBotRoutineStore((s) => s.routines);
+  const sessionSummary = useSessionSummary(canonicalChatId);
+  const { startSession } = useStartBotSession(
+    useCallback((sessionId: string, botId: string) => {
+      openBotChatView(sessionId, botId, 'chat');
+    }, []),
   );
-  const sessionSummary = useSessionSummary(sessionId);
 
-  const { lastMessage, lastMessageAt, isStreaming } = sessionSummary;
-  const statusText = isStarting
-    ? 'Starting…'
-    : isStreaming
+  const handleOpenChat = useCallback(async () => {
+    const sessionId = await openBotCanonicalChat({
+      botId: bot.id,
+      botName: bot.botProfile?.displayName ?? bot.name,
+      setActive: false,
+    });
+    openBotChatView(sessionId, bot.id, 'chat');
+  }, [bot.id, bot.name, bot.botProfile?.displayName]);
+
+  // Status line priority: working > attention > recent routine > last message.
+  const routine = useMemo(() => {
+    let latest: { title: string; lastRunAt?: number } | undefined;
+    for (const r of Object.values(routines)) {
+      if (r.botId !== bot.id || !r.lastRunAt) continue;
+      if (!latest || (r.lastRunAt ?? 0) > (latest.lastRunAt ?? 0)) latest = r;
+    }
+    return latest;
+  }, [routines, bot.id]);
+
+  const working = presence.presence === 'working';
+  // Watermark unread: canonical-chat activity newer than the watermark while
+  // that chat is not focused (refresh-in-place handles the focused case).
+  const hasNewActivity = useBotHasNewActivity(bot.id);
+  const statusText = working
     ? 'Working…'
-    : lastMessage || '';
-  const timeText = !isStarting && !isStreaming && lastMessageAt ? formatRelativeTime(lastMessageAt) : '';
+    : attentionEntry
+      ? attentionEntry.hint
+      : routine
+        ? `⏰ ran ${routine.title} · ${formatRelativeTime(routine.lastRunAt ?? 0)}`
+        : sessionSummary.lastMessage;
 
   return (
-    <div
-      data-rail-item={id}
-      className="group w-full flex items-center gap-0.5 py-1.5 px-2 max-md:min-h-11 rounded-xl transition-all duration-200 font-medium bg-transparent text-[var(--shell-item-fg)] hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)]"
-    >
+    <div className="group relative w-full flex items-center gap-2.5 py-1.5 px-3 max-md:min-h-11 rounded-xl cursor-pointer transition-all duration-200 font-medium bg-transparent text-[var(--shell-item-fg)] hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)]">
       <button
         type="button"
-        disabled={isStarting}
-        onClick={onClick}
-        className="flex flex-1 min-w-0 items-center gap-2.5 border-none bg-transparent p-0 text-left cursor-pointer font-medium text-[var(--shell-item-fg)] hover:text-[var(--accent-primary)] disabled:opacity-50"
+        onClick={handleOpenChat}
+        className="flex-1 min-w-0 flex items-center gap-2.5 bg-transparent border-none p-0 text-left cursor-pointer font-medium"
       >
-        <div className="flex shrink-0 items-center justify-center">
-          <BotAvatar bot={bot} size={24} className="rounded-lg" />
+        <div className="relative shrink-0">
+          <BotAvatar bot={bot} size={24} />
+          {presence.presence !== 'idle' && (
+            <span
+              className={cn(
+                'absolute -right-0.5 -bottom-0.5 size-2 rounded-full border border-[var(--shell-rail-bg)]',
+                working ? 'bg-[var(--accent-primary)]' : 'bg-[var(--status-success)]',
+              )}
+            />
+          )}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center text-[12px] overflow-hidden text-ellipsis whitespace-nowrap">
-            <span className="truncate">{name}</span>
-            {badge}
+          <div className="text-[12px] overflow-hidden text-ellipsis whitespace-nowrap min-w-0">
+            {bot.botProfile?.displayName ?? bot.name}
           </div>
           <div className="flex items-center gap-1.5 text-[11px] text-[var(--shell-item-muted)] overflow-hidden">
-            {isStreaming && (
+            {working && (
               <span className="relative flex size-1.5">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--accent-primary)] opacity-75" />
                 <span className="relative inline-flex rounded-full size-1.5 bg-[var(--accent-primary)]" />
               </span>
             )}
             <span className="truncate flex-1">{statusText}</span>
-            {timeText && <span className="shrink-0 text-[10px] opacity-60">{timeText}</span>}
+            {hasNewActivity && (
+              <span
+                className="shrink-0 size-2 rounded-full bg-[var(--accent-primary)]"
+                title="New activity"
+              />
+            )}
+            {unreadCount > 0 && (
+              <span className="shrink-0 rounded-full bg-[var(--accent-primary)] text-[var(--shell-rail-bg)] text-[9px] font-bold px-1.5 py-px">
+                {unreadCount}
+              </span>
+            )}
           </div>
         </div>
       </button>
       <button
         type="button"
-        onClick={onStart}
-        disabled={isStarting}
-        className="opacity-0 group-hover:opacity-100 shrink-0 rounded-md p-1 text-[var(--shell-item-muted)] hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)] disabled:opacity-50 transition-opacity border-none bg-transparent cursor-pointer"
+        onClick={(e) => { e.stopPropagation(); void startSession(bot); }}
         title="Start session"
+        className="opacity-0 max-md:opacity-100 group-hover:opacity-100 shrink-0 size-6 max-md:size-11 rounded-md bg-transparent border-none text-[var(--shell-item-muted)] hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)] cursor-pointer flex items-center justify-center transition-all"
       >
-        <Play size={12} weight="fill" />
+        <Play size={13} weight="fill" />
       </button>
+      <TeammatesRowMenu
+        onOpenChat={() => void handleOpenChat()}
+        onOpenHome={() => onOpen?.('bot-home', { botId: bot.id })}
+        onStartSession={() => void startSession(bot)}
+      />
     </div>
+  );
+}
+
+function TeammatesRowMenu({
+  onOpenChat,
+  onOpenHome,
+  onStartSession,
+}: {
+  onOpenChat?: () => void;
+  onOpenHome?: () => void;
+  onStartSession?: () => void;
+}): React.ReactNode {
+  const [open, setOpen] = useState(false);
+  const run = (fn?: () => void) => () => {
+    setOpen(false);
+    fn?.();
+  };
+  const itemClass =
+    'w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-[13px] text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)] border-none bg-transparent cursor-pointer text-left transition-colors';
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          onClick={(e) => e.stopPropagation()}
+          className="opacity-0 max-md:opacity-100 group-hover:opacity-100 size-6 max-md:size-11 rounded-md bg-transparent border-none text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)] cursor-pointer flex items-center justify-center transition-all shrink-0"
+          title="More"
+        >
+          <DotsThreeVertical size={14} />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="w-44 p-1.5 bg-[var(--surface-panel)] border-[var(--border-subtle)]"
+        side="bottom"
+        align="end"
+        sideOffset={4}
+        collisionPadding={8}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {onOpenChat && (
+          <button type="button" onClick={run(onOpenChat)} className={itemClass}>
+            <ArrowSquareOut size={14} />
+            Open chat
+          </button>
+        )}
+        {onOpenHome && (
+          <button type="button" onClick={run(onOpenHome)} className={itemClass}>
+            <House size={14} />
+            Bot home
+          </button>
+        )}
+        {onStartSession && (
+          <button type="button" onClick={run(onStartSession)} className={itemClass}>
+            <Play size={14} />
+            Start session
+          </button>
+        )}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function InboxRailItem({
+  onOpen,
+}: {
+  onOpen?: (view: string, context?: Record<string, unknown>) => void;
+}): React.ReactNode {
+  const agents = useAgentsWithSwarms();
+  const bots = useMemo(() => agents.filter(isBot), [agents]);
+  const attention = useAgentStore((state) => state.attention);
+  const sessions = useChatSessionStore((state) => state.sessions);
+  const canonicalChatIds = useBotRosterStore((state) => state.canonicalChatIds);
+  const mailMessages = useCommRailsMailStore((state) => state.messages);
+  const mailThreads = useCommRailsMailStore((state) => state.threads);
+  const loadThreads = useCommRailsMailStore((state) => state.loadThreads);
+  const acknowledgeMail = useCommRailsMailStore((state) => state.acknowledgeMail);
+  const watermarks = useBotActivityWatermarkStore((state) => state.watermarks);
+  const focusedSessionId = useBotActivityWatermarkStore((state) => state.focusedSessionId);
+  const markAllSeen = useBotActivityWatermarkStore((state) => state.markAllSeen);
+  const groupHolds = useGroupRoomsSyncStore((state) => state.holds);
+  const groupsById = useGroupChatStore((state) => state.groups);
+
+  // Server-side group-room sync (pull on focus/reconnect, disband tombstones).
+  useEffect(() => startGroupRoomsSync(), []);
+
+  const [open, setOpen] = useState(false);
+  const [pinned, setPinned] = useState(() => {
+    try {
+      return globalThis.localStorage?.getItem('allternit:rail:inbox-pinned') === '1';
+    } catch {
+      return false;
+    }
+  });
+  const [toastsPref, setToastsPref] = useState<BotActivityToastsPref>(() => getBotActivityToastsPref());
+
+  useEffect(() => {
+    const sync = () => setToastsPref(getBotActivityToastsPref());
+    globalThis.addEventListener?.(BOT_ACTIVITY_TOASTS_CHANGED_EVENT, sync);
+    return () => globalThis.removeEventListener?.(BOT_ACTIVITY_TOASTS_CHANGED_EVENT, sync);
+  }, []);
+
+  const activityByBot = useMemo(() => {
+    const map: Record<string, number> = {};
+    const list = sessions ?? [];
+    for (const bot of bots) {
+      map[bot.id] = canonicalActivityAt(bot.id, list, canonicalChatIds);
+    }
+    return map;
+  }, [bots, sessions, canonicalChatIds]);
+
+  const presenceByBot = useMemo(() => {
+    const map: Record<string, BotPresenceState> = {};
+    const list = sessions ?? [];
+    for (const bot of bots) {
+      const canonicalId = canonicalChatIds[bot.id];
+      const session = canonicalId ? list.find((s) => s.id === canonicalId) : undefined;
+      map[bot.id] = deriveBotPresence({
+        streaming: canonicalId ? (useChatSessionStore.getState().streamingBySession[canonicalId]?.isStreaming ?? false) : false,
+        sessionActivityAt: session ? new Date(session.updatedAt || 0).getTime() : 0,
+        routineActivityAt: 0,
+      });
+    }
+    return map;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bots, sessions, canonicalChatIds]);
+
+  const badge = useMemo(
+    () =>
+      computeInboxBadge({
+        messages: mailMessages,
+        bots,
+        attention,
+        agents,
+        activityByBot,
+        watermarks,
+        focusedSessionId,
+        canonicalChatIds,
+      }),
+    [mailMessages, bots, attention, agents, activityByBot, watermarks, focusedSessionId, canonicalChatIds],
+  );
+
+  const attentionItems = useMemo(
+    () => selectVisibleBotAttention(attention, agents),
+    [attention, agents],
+  );
+
+  const activeBots = useMemo(
+    () =>
+      bots.filter((b) => {
+        const p = presenceByBot[b.id];
+        return p && p.presence !== 'idle';
+      }),
+    [bots, presenceByBot],
+  );
+
+  const threadsNewestFirst = useMemo(
+    () => [...mailThreads].sort((a, b) => b.lastMessageAt.localeCompare(a.lastMessageAt)),
+    [mailThreads],
+  );
+
+  const botById = useMemo(() => {
+    const map: Record<string, Agent> = {};
+    for (const agent of agents) map[agent.id] = agent;
+    return map;
+  }, [agents]);
+
+  const handleOpenChange = (next: boolean) => {
+    if (next) {
+      setOpen(true);
+      // Threads are global; enrich from the first bot's perspective.
+      if (bots.length > 0) void loadThreads(bots[0].id);
+      void refreshGroupEscalations();
+    } else if (!pinned) {
+      setOpen(false);
+    }
+    // Pinned: outside clicks keep the pane open until explicit close/unpin.
+  };
+
+  const togglePinned = () => {
+    setPinned((prev) => {
+      const next = !prev;
+      try {
+        globalThis.localStorage?.setItem('allternit:rail:inbox-pinned', next ? '1' : '0');
+      } catch {
+        // persistence best-effort
+      }
+      return next;
+    });
+  };
+
+  const handleMarkAllRead = () => {
+    const entries: Array<{ botId: string; activityAt: number }> = [];
+    for (const bot of bots) {
+      const activityAt = activityByBot[bot.id] ?? 0;
+      entries.push({ botId: bot.id, activityAt });
+    }
+    markAllSeen(entries);
+    for (const m of mailMessages) {
+      if (m.toAgentId && (m.status === 'unread' || m.requiresAck)) {
+        void acknowledgeMail(m.toAgentId, m.id);
+      }
+    }
+  };
+
+  const openBotChat = useCallback(
+    (bot: Agent) => {
+      const name = bot.botProfile?.displayName ?? bot.name;
+      void openBotCanonicalChat({ botId: bot.id, botName: name, setActive: false }).then((sessionId) =>
+        openBotChatView(sessionId, bot.id, 'chat'),
+      );
+    },
+    [],
+  );
+
+  const handleOpenThread = (thread: (typeof threadsNewestFirst)[number]) => {
+    const botId = thread.participants.find((p) => botById[p] && isBot(botById[p]));
+    if (botId) onOpen?.('bot-inbox', { botId });
+  };
+
+  const showMail = threadsNewestFirst.length > 0;
+  const showAttention = attentionItems.length > 0;
+  const showActive = activeBots.length > 0;
+  const unresolvedGroupHolds = groupHolds.filter((h) => !h.resolved);
+  const showGroupHolds = unresolvedGroupHolds.length > 0;
+
+  const handleOpenGroupHold = (hold: (typeof unresolvedGroupHolds)[number]) => {
+    onOpen?.('group-chat', { groupId: hold.room_id });
+    // Room view opened — resolve fire-and-forget.
+    void resolveGroupRoomHold(hold.room_id, hold.hold_id);
+  };
+
+  return (
+    <Popover
+      open={open}
+      onOpenChange={handleOpenChange}
+    >
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className={cn(
+            'w-full flex items-center gap-2.5 py-1.5 px-3 max-md:min-h-11 rounded-xl border-none cursor-pointer text-left transition-all duration-200 font-medium',
+            open
+              ? 'bg-[var(--shell-item-active-bg)] text-[var(--shell-item-active-fg)] font-semibold shadow-[inset_3px_0_0_0_var(--shell-item-active-fg)]'
+              : 'bg-transparent text-[var(--shell-item-fg)] hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)]',
+          )}
+        >
+          <Bell size={15} weight={open ? 'fill' : 'bold'} />
+          <span className="text-[12px] overflow-hidden text-ellipsis whitespace-nowrap min-w-0 flex-1">Inbox</span>
+          {badge > 0 && (
+            <span className="shrink-0 rounded-full bg-[var(--accent-primary)] text-[var(--shell-rail-bg)] text-[9px] font-bold px-1.5 py-px">
+              {badge > 99 ? '99+' : badge}
+            </span>
+          )}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="w-80 p-0 bg-[var(--surface-panel)] border-[var(--border-subtle)]"
+        side="right"
+        align="start"
+        sideOffset={8}
+        collisionPadding={8}
+      >
+        <div className="flex items-center gap-1 px-3 py-2 border-b border-[var(--border-subtle)]">
+          <span className="text-[13px] font-semibold text-[var(--shell-item-fg)] flex-1">
+            Inbox
+            {badge > 0 && <span className="ml-1.5 text-[11px] text-[var(--shell-item-muted)]">{badge}</span>}
+          </span>
+          <button
+            type="button"
+            onClick={handleMarkAllRead}
+            title="Mark all read"
+            className="p-1 rounded-md bg-transparent border-none text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)] cursor-pointer"
+          >
+            <Checks size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={togglePinned}
+            title={pinned ? 'Unpin inbox' : 'Pin inbox'}
+            className={cn(
+              'p-1 rounded-md bg-transparent border-none cursor-pointer',
+              pinned
+                ? 'text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)]'
+                : 'text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)]',
+            )}
+          >
+            <PushPin size={14} weight={pinned ? 'fill' : 'bold'} />
+          </button>
+          {open && (
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              title="Close"
+              className="p-1 rounded-md bg-transparent border-none text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)] cursor-pointer"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
+        <div className="max-h-96 overflow-y-auto">
+          {showMail && (
+            <div className="py-1">
+              <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--shell-item-muted)]">
+                Mail
+              </div>
+              {threadsNewestFirst.map((thread) => {
+                const bot = thread.participants.map((p) => botById[p]).find((a) => a && isBot(a));
+                return (
+                  <button
+                    key={thread.id}
+                    type="button"
+                    onClick={() => handleOpenThread(thread)}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 bg-transparent border-none cursor-pointer text-left hover:bg-[var(--shell-item-hover)]"
+                  >
+                    {bot ? (
+                      <BotAvatar bot={bot} size={20} />
+                    ) : (
+                      <span className="size-5 rounded-full bg-[var(--shell-item-hover)] shrink-0" />
+                    )}
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[12px] text-[var(--shell-item-fg)] truncate">
+                        {thread.subject}
+                      </span>
+                      <span className="block text-[10px] text-[var(--shell-item-muted)]">
+                        {thread.messageCount} message{thread.messageCount === 1 ? '' : 's'}
+                        {thread.unreadCount > 0 ? ` · ${thread.unreadCount} unread` : ''}
+                      </span>
+                    </span>
+                    <span className="flex items-center gap-1 shrink-0">
+                      <span className="text-[10px] text-[var(--shell-item-muted)]">
+                        {formatRelativeTime(new Date(thread.lastMessageAt).getTime())}
+                      </span>
+                      {thread.unreadCount > 0 && (
+                        <span className="size-1.5 rounded-full bg-[var(--accent-primary)]" />
+                      )}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {showGroupHolds && (
+            <div className="py-1 border-t border-[var(--border-subtle)]">
+              <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--shell-item-muted)]">
+                Group escalations
+              </div>
+              {unresolvedGroupHolds.map((hold) => {
+                const roomName = groupsById[hold.room_id]?.name ?? hold.room_id;
+                const memberBot = botById[hold.member_id];
+                const memberName =
+                  memberBot?.botProfile?.displayName ?? memberBot?.name ?? hold.member_id;
+                return (
+                  <button
+                    key={hold.hold_id}
+                    type="button"
+                    onClick={() => handleOpenGroupHold(hold)}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 bg-transparent border-none cursor-pointer text-left hover:bg-[var(--shell-item-hover)]"
+                  >
+                    <span className="size-5 rounded-full bg-[var(--shell-item-hover)] shrink-0 flex items-center justify-center text-[var(--accent-primary)]">
+                      <UsersThree size={12} weight="bold" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[12px] text-[var(--shell-item-fg)] truncate">
+                        {roomName}
+                      </span>
+                      <span className="block text-[10px] text-[var(--shell-item-muted)] truncate">
+                        {memberName}
+                        {hold.message_excerpt ? ` · ${hold.message_excerpt}` : ' needs you'}
+                      </span>
+                    </span>
+                    <span className="text-[10px] text-[var(--shell-item-muted)] shrink-0">
+                      {formatRelativeTime(new Date(hold.created_at).getTime())}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {showAttention && (
+            <div className="py-1 border-t border-[var(--border-subtle)]">
+              <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--shell-item-muted)]">
+                Needs attention
+              </div>
+              {attentionItems.map(({ bot, entry }) => (
+                <button
+                  key={bot.id}
+                  type="button"
+                  onClick={() => openBotChat(bot)}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 bg-transparent border-none cursor-pointer text-left hover:bg-[var(--shell-item-hover)]"
+                >
+                  <BotAvatar bot={bot} size={20} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[12px] text-[var(--shell-item-fg)] truncate">
+                      {bot.botProfile?.displayName ?? bot.name}
+                    </span>
+                    <span className="block text-[10px] text-[var(--shell-item-muted)] truncate">
+                      {entry.hint}
+                    </span>
+                  </span>
+                  <span className="text-[10px] text-[var(--shell-item-muted)] shrink-0">
+                    {formatRelativeTime(entry.notedAt)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {showActive && (
+            <div className="py-1 border-t border-[var(--border-subtle)]">
+              <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--shell-item-muted)]">
+                Active
+              </div>
+              {activeBots.map((bot) => {
+                const p = presenceByBot[bot.id];
+                return (
+                  <button
+                    key={bot.id}
+                    type="button"
+                    onClick={() => openBotChat(bot)}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 bg-transparent border-none cursor-pointer text-left hover:bg-[var(--shell-item-hover)]"
+                  >
+                    <span className="relative shrink-0">
+                      <BotAvatar bot={bot} size={20} />
+                      <span
+                        className={cn(
+                          'absolute -right-0.5 -bottom-0.5 size-1.5 rounded-full border border-[var(--surface-panel)]',
+                          p?.presence === 'working' ? 'bg-[var(--accent-primary)]' : 'bg-[var(--status-success)]',
+                        )}
+                      />
+                    </span>
+                    <span className="min-w-0 flex-1 text-[12px] text-[var(--shell-item-fg)] truncate">
+                      {bot.botProfile?.displayName ?? bot.name}
+                    </span>
+                    <span className="text-[10px] text-[var(--shell-item-muted)] shrink-0">
+                      {p?.presence === 'working' ? 'Working…' : 'Active'}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {!showMail && !showAttention && !showActive && !showGroupHolds && (
+            <div className="px-3 py-6 text-[12px] text-[var(--shell-item-muted)] text-center">
+              No mail, attention, or active bots right now.
+            </div>
+          )}
+        </div>
+
+        <label className="flex items-center gap-2 px-3 py-2 border-t border-[var(--border-subtle)] text-[11px] text-[var(--shell-item-muted)] cursor-pointer">
+          <input
+            type="checkbox"
+            checked={toastsPref === 'on'}
+            onChange={(e) => setBotActivityToastsPref(e.target.checked ? 'on' : 'off')}
+            className="accent-[var(--accent-primary)]"
+          />
+          Activity toasts (opt-in)
+        </label>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -1631,14 +2676,9 @@ function RecentsPanel({
   openAllTitle,
   onOpenAll,
   filter,
-  botsExpanded,
-  onBotsToggle,
-  onToggleExpanded,
-  bots,
-  startingBotId,
-  onStartBot,
-  onOpenBotHome,
-  onCreateBot,
+  onAdd,
+  addTitle,
+  shrink,
 }: {
   expanded: boolean;
   onToggle: () => void;
@@ -1647,69 +2687,36 @@ function RecentsPanel({
   openAllTitle?: string;
   onOpenAll?: () => void;
   filter?: React.ReactNode;
-  botsExpanded?: boolean;
-  onBotsToggle?: () => void;
-  onToggleExpanded?: () => void;
-  bots?: Agent[];
-  startingBotId?: string | null;
-  onStartBot?: (bot: Agent) => void;
-  onOpenBotHome?: (bot: Agent) => void;
-  onCreateBot?: () => void;
+  onAdd?: () => void;
+  addTitle?: string;
+  shrink?: boolean;
 }): React.ReactNode {
-  const combined = botsExpanded !== undefined && onBotsToggle && bots && onStartBot && onOpenBotHome && onCreateBot;
-  const listExpanded = expanded || (combined && botsExpanded);
   return (
-    <div className="flex-1 min-h-0 flex flex-col px-2">
+    <div className={cn("flex flex-col px-2", shrink ? "shrink-0" : "flex-1 min-h-0")}>
       <div className="group px-1 py-2 flex items-center justify-between text-[var(--shell-item-muted)] text-[12px] font-extrabold uppercase tracking-[0.08em] select-none">
-        {combined ? (
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onBotsToggle}
-              className={cn(
-                "bg-transparent border-none cursor-pointer transition-colors",
-                botsExpanded ? "text-[var(--shell-item-fg)]" : "text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)]"
-              )}
-            >
-              <span>Bots</span>
-            </button>
-            <span className="text-[var(--shell-item-muted)]" aria-hidden="true">|</span>
-            <button
-              type="button"
-              onClick={onToggle}
-              className={cn(
-                "bg-transparent border-none cursor-pointer transition-colors",
-                expanded ? "text-[var(--shell-item-fg)]" : "text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)]"
-              )}
-            >
-              <span>{title}</span>
-            </button>
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={onToggle}
-            className="flex items-center gap-1.5 bg-transparent border-none text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] cursor-pointer"
-          >
-            <CaretRight
-              size={12}
-              className={cn(
-                "transition-transform duration-200",
-                expanded && "rotate-90"
-              )}
-            />
-            <span>{title}</span>
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={onToggle}
+          className="flex items-center gap-1.5 bg-transparent border-none text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] cursor-pointer"
+        >
+          <CaretRight
+            size={12}
+            className={cn(
+              "transition-transform duration-200",
+              expanded && "rotate-90"
+            )}
+          />
+          <span>{title}</span>
+        </button>
         <div className="flex items-center gap-0.5 bg-[var(--shell-rail-bg)] pl-2 pr-1 -mr-1 rounded-md">
-          {combined && (
+          {onAdd && (
             <button
               type="button"
-              onClick={onCreateBot}
+              onClick={onAdd}
               className="opacity-0 max-md:opacity-100 group-hover:opacity-100 size-6 max-md:size-11 rounded-md bg-transparent border-none text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)] cursor-pointer flex items-center justify-center transition-all"
-              title="Create Bot"
+              title={addTitle}
             >
-              <Plus size={13} />
+              <Plus size={13} weight="bold" />
             </button>
           )}
           {onOpenAll && (
@@ -1725,11 +2732,11 @@ function RecentsPanel({
           {filter}
           <button
             type="button"
-            onClick={onToggleExpanded ?? onToggle}
+            onClick={onToggle}
             className="size-6 max-md:size-11 rounded-md bg-transparent border-none text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)] cursor-pointer flex items-center justify-center transition-colors"
-            title={listExpanded ? 'Hide sessions' : 'Show sessions'}
+            title={expanded ? 'Hide sessions' : 'Show sessions'}
           >
-            {listExpanded ? (
+            {expanded ? (
               <CaretDown size={12} className="transition-transform duration-200" />
             ) : (
               <CaretRight size={12} className="transition-transform duration-200" />
@@ -1737,52 +2744,25 @@ function RecentsPanel({
           </button>
         </div>
       </div>
-      {listExpanded && (
-        <div className="flex-1 overflow-y-auto flex flex-col gap-0.5">
-          {combined && botsExpanded && (
-            <div className="flex flex-col gap-0.5 pb-2">
-              {bots.length === 0 && (
-                <div className="px-3 py-2 text-[12px] text-[var(--shell-item-muted)]">
-                  No bots yet.
-                </div>
-              )}
-              {bots.map((bot) => {
-                const displayName = getBotDisplayName(bot);
-                const accentColor = getBotAccentColor(bot) ?? 'var(--accent-primary)';
-                const isStarting = startingBotId === bot.id;
-                return (
-                  <BotRailItem
-                    key={bot.id}
-                    id={bot.id}
-                    bot={bot}
-                    name={displayName}
-                    accentColor={accentColor}
-                    isStarting={isStarting}
-                    badge={<BotMailBadge botId={bot.id} />}
-                    onClick={() => onOpenBotHome(bot)}
-                    onStart={(e) => {
-                      e.stopPropagation();
-                      onStartBot(bot);
-                    }}
-                  />
-                );
-              })}
-            </div>
-          )}
-          {expanded && <div className="flex flex-col gap-0.5">{children}</div>}
+      {expanded && (
+        <div className={cn(shrink ? "" : "flex-1 overflow-y-auto min-h-0", "flex flex-col gap-0.5")}>
+          <div className="flex flex-col gap-0.5">{children}</div>
         </div>
       )}
     </div>
   );
 }
 
-function RailItem({ id, icon: Icon, label, isActive, onClick }: {
+function RailItem({ id, icon: Icon, label, isActive, onClick, badge }: {
   id?: string;
   icon: Icon;
   label: string;
   isActive?: boolean;
   onClick?: () => void;
+  /** Optional count pill (e.g. unified Inbox badge). Hidden when 0. */
+  badge?: number;
 }): React.ReactNode {
+  const [showSidebarLabels] = useSettingsValue('appearance.showSidebarLabels', true);
   return (
     <button type="button"
       onClick={onClick}
@@ -1795,7 +2775,12 @@ function RailItem({ id, icon: Icon, label, isActive, onClick }: {
       )}
     >
       {Icon && <Icon size={15} weight={isActive ? 'fill' : 'bold'} />}
-      <span className="text-[12px] overflow-hidden text-ellipsis whitespace-nowrap min-w-0 flex-1">{label}</span>
+      {showSidebarLabels && <span className="text-[12px] overflow-hidden text-ellipsis whitespace-nowrap min-w-0 flex-1">{label}</span>}
+      {badge !== undefined && badge > 0 && (
+        <span className="shrink-0 rounded-full bg-[var(--accent-primary)] text-[var(--shell-rail-bg)] text-[9px] font-bold px-1.5 py-px">
+          {badge > 99 ? '99+' : badge}
+        </span>
+      )}
     </button>
   );
 }
@@ -1820,8 +2805,54 @@ function FilterRow({
   );
 }
 
-function RecentItemMenu({ onDelete }: { onDelete: () => void }): React.ReactNode {
+function InlineRenameInput({ initialValue, onCommit, onCancel }: {
+  initialValue: string;
+  onCommit: (value: string) => void;
+  onCancel: () => void;
+}): React.ReactNode {
+  // Enter/blur commit and Esc cancel can both fire for one edit; guard so the
+  // commit runs at most once.
+  const finishedRef = useRef(false);
+  const finish = useCallback((commit: boolean, value: string) => {
+    if (finishedRef.current) return;
+    finishedRef.current = true;
+    if (commit) onCommit(value);
+    else onCancel();
+  }, [onCommit, onCancel]);
+  return (
+    <input
+      type="text"
+      autoFocus
+      defaultValue={initialValue}
+      onFocus={(e) => e.currentTarget.select()}
+      onClick={(e) => e.stopPropagation()}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          finish(true, e.currentTarget.value);
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          finish(false, '');
+        }
+      }}
+      onBlur={(e) => finish(true, e.currentTarget.value)}
+      className="min-w-0 flex-1 rounded-md border border-solid border-[var(--border-subtle)] bg-[var(--surface-hover)] px-1.5 py-0.5 text-[12px] font-medium text-[var(--shell-item-fg)] outline-none focus:border-[var(--accent-primary)]"
+    />
+  );
+}
+
+function RecentItemMenu({ onOpen, onRename, pinned, onPinToggle, onDelete }: {
+  onOpen?: () => void;
+  onRename?: () => void;
+  pinned?: boolean;
+  onPinToggle?: () => void;
+  onDelete: () => void;
+}): React.ReactNode {
   const [open, setOpen] = useState(false);
+  const run = (fn: () => void) => () => {
+    setOpen(false);
+    fn();
+  };
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -1842,9 +2873,40 @@ function RecentItemMenu({ onDelete }: { onDelete: () => void }): React.ReactNode
         collisionPadding={8}
         onClick={(e) => e.stopPropagation()}
       >
+        {onOpen && (
+          <button
+            type="button"
+            onClick={run(onOpen)}
+            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-[13px] text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)] border-none bg-transparent cursor-pointer text-left transition-colors"
+          >
+            <ArrowSquareOut size={14} />
+            Open
+          </button>
+        )}
+        {onRename && (
+          <button
+            type="button"
+            onClick={run(onRename)}
+            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-[13px] text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)] border-none bg-transparent cursor-pointer text-left transition-colors"
+          >
+            <PencilSimple size={14} />
+            Rename
+          </button>
+        )}
+        {onPinToggle && (
+          <button
+            type="button"
+            onClick={run(onPinToggle)}
+            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-[13px] text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)] border-none bg-transparent cursor-pointer text-left transition-colors"
+          >
+            {pinned ? <PushPinSlash size={14} /> : <PushPin size={14} />}
+            {pinned ? 'Unpin' : 'Pin to rail'}
+          </button>
+        )}
+        <div className="h-px bg-[var(--shell-divider)] my-1" />
         <button
           type="button"
-          onClick={() => { setOpen(false); onDelete(); }}
+          onClick={run(onDelete)}
           className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-[13px] text-[var(--status-error)] hover:bg-[var(--shell-danger-soft-bg)] border-none bg-transparent cursor-pointer text-left transition-colors"
         >
           <Trash size={14} />
@@ -1891,6 +2953,87 @@ function PinnedMiniAppItem({ app, isActive, onOpen, onUnpin }: {
           <PushPinSlash size={12} />
         </button>
       )}
+    </div>
+  );
+}
+
+function BotRailRow({ bot, isActive, disabled, onOpen, onUnpin, draggable, onDragStart, onDragEnd }: {
+  bot: Agent;
+  isActive?: boolean;
+  disabled?: boolean;
+  onOpen: () => void;
+  onUnpin?: () => void;
+  draggable?: boolean;
+  onDragStart?: (e: React.DragEvent) => void;
+  onDragEnd?: (e: React.DragEvent) => void;
+}): React.ReactNode {
+  return (
+    <div
+      draggable={draggable}
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
+      className={cn(
+        "group relative w-full flex items-center gap-2.5 py-1.5 px-3 max-md:min-h-11 rounded-xl cursor-pointer transition-all duration-200 font-medium",
+        isActive
+          ? "bg-[var(--shell-item-active-bg)] text-[var(--shell-item-active-fg)] font-semibold"
+          : "bg-transparent text-[var(--shell-item-fg)] hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)]"
+      )}
+    >
+      <button
+        type="button"
+        onClick={onOpen}
+        disabled={disabled}
+        className="flex-1 min-w-0 flex items-center gap-2.5 bg-transparent border-none p-0 text-left cursor-pointer font-medium disabled:opacity-60"
+      >
+        <BotAvatar bot={bot} size={22} />
+        <span className="text-[12px] overflow-hidden text-ellipsis whitespace-nowrap min-w-0 flex-1">
+          {getBotDisplayName(bot)}
+        </span>
+      </button>
+      {onUnpin && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onUnpin(); }}
+          title="Unpin from rail"
+          className="opacity-0 max-md:opacity-100 group-hover:opacity-100 shrink-0 -ml-1 size-6 max-md:size-11 rounded-md bg-transparent border-none text-[var(--shell-item-muted)] hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)] cursor-pointer flex items-center justify-center transition-all"
+        >
+          <PushPinSlash size={13} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+function BotGroupRailRow({ group, unread, isActive, onOpen }: {
+  group: GroupChat;
+  unread: number;
+  isActive?: boolean;
+  onOpen: () => void;
+}): React.ReactNode {
+  return (
+    <div
+      className={cn(
+        "group relative w-full flex items-center gap-2.5 py-1.5 px-3 max-md:min-h-11 rounded-xl cursor-pointer transition-all duration-200 font-medium",
+        isActive
+          ? "bg-[var(--shell-item-active-bg)] text-[var(--shell-item-active-fg)] font-semibold"
+          : "bg-transparent text-[var(--shell-item-fg)] hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)]"
+      )}
+    >
+      <button
+        type="button"
+        onClick={onOpen}
+        className="flex-1 min-w-0 flex items-center gap-2.5 bg-transparent border-none p-0 text-left cursor-pointer font-medium"
+      >
+        <GroupChatAvatar name={group.name} members={group.members} size={22} />
+        <span className="text-[12px] overflow-hidden text-ellipsis whitespace-nowrap min-w-0 flex-1">
+          {group.name}
+        </span>
+        {unread > 0 && (
+          <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[var(--accent-primary)] px-1.5 text-[11px] font-semibold text-[var(--ui-text-inverse)]">
+            {unread > 99 ? '99+' : unread}
+          </span>
+        )}
+      </button>
     </div>
   );
 }

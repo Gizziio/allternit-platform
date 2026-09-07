@@ -28,13 +28,11 @@ function AuthFlow() {
         <SignUp
           appearance={clerkAppearance}
           routing="hash"
-          signInForceRedirectUrl={selfRedirectUrl}
         />
       ) : (
         <SignIn
           appearance={clerkAppearance}
           routing="hash"
-          signUpForceRedirectUrl={selfRedirectUrl}
         />
       )}
       <div
@@ -111,12 +109,11 @@ function SignedInView() {
 }
 
 /**
- * URL of the auth page itself (https://accounts.<instance>/__desktop_auth__/). The
- * top-level ClerkProvider uses this as the forced/fallback redirect target so Clerk
- * never navigates the isolated auth window away to the platform website. The embedded
- * <SignIn>/<SignUp> components use hash routing and do NOT set forceRedirectUrl,
- * because that caused a redirect loop: after sign-in Clerk would reload the page, the
- * component would remount, and immediately redirect again.
+ * Stay on the intercepted auth renderer after password success. Without this,
+ * Clerk navigates to the Account Portal root (`https://accounts…/`), we block
+ * it, and `<SignIn>` remounts as signed-out even though FAPI already created
+ * the session. Hash routing on `<SignIn>` is not enough — ClerkProvider still
+ * needs an in-app redirect target.
  */
 const selfRedirectUrl =
   typeof window !== 'undefined' ? window.location.origin + window.location.pathname : '/';
@@ -312,9 +309,22 @@ function SeedAuth() {
  */
 function TokenBridge() {
   const { isSignedIn, getToken } = useAuth();
+  const clerk = useClerk();
   const { user } = useUser();
   const [reported, setReported] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isSignedIn || !clerk.loaded) return;
+    const sessionId =
+      clerk.session?.id ??
+      clerk.client?.activeSessions?.[0]?.id ??
+      clerk.client?.sessions?.[0]?.id;
+    if (!sessionId) return;
+    void clerk.setActive({ session: sessionId }).catch((err) => {
+      console.warn('[TokenBridge] Failed to activate existing Clerk session:', err);
+    });
+  }, [clerk, isSignedIn]);
 
   useEffect(() => {
     if (!isSignedIn || !getToken || reported) return;
@@ -429,14 +439,24 @@ export default function AuthApp() {
     >
       <div
         style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 52,
+          WebkitAppRegion: 'drag',
+        }}
+      />
+      <div
+        style={{
           width: '100%',
           height: '100%',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'flex-start',
-          padding: '48px 32px 24px',
-          WebkitAppRegion: 'drag',
+          padding: '52px 32px 24px',
+          WebkitAppRegion: 'no-drag',
           overflow: 'auto',
         }}
       >

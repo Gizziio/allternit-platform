@@ -13,7 +13,7 @@ export default {
     if (reward) {
       return 'Share a free week of Gizzi Code with friends and earn extra usage'
     }
-    return 'Share a free week of Claude Code with friends'
+    return 'Share a free week of Gizzi Code with friends'
   },
   get isHidden() {
     const { eligible, hasCache } = checkCachedPassesEligibility()

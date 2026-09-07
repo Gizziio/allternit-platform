@@ -1,4 +1,4 @@
-import chalk from 'chalk'
+import chalk from '@/shared/util/chalk'
 import { ctrlOToExpand } from '../../cli/ui/ink-app/components/CtrlOToExpand.js'
 import { stringWidth } from '../../cli/ui/ink-renderer/stringWidth.js'
 import sliceAnsi from './sliceAnsi.js'

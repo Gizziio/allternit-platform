@@ -255,24 +255,26 @@ function getOrdinal(n: number): string {
   return s[(v - 20) % 10] || s[v] || s[0];
 }
 
-export namespace CronParser {
-  export function isValid(expression: string): boolean {
-    const parts = expression.trim().split(/\s+/);
-    if (parts.length === 5 || parts.length === 6) {
-      // Basic validation - check for valid cron syntax
-      const validPattern = /^[\d*,/-?#LW]+$|^(\*|\?)$/;
-      if (parts.every((part) => validPattern.test(part))) {
-        return true;
-      }
-    }
-    
-    // Also check if it's a valid natural language schedule
-    return parseSchedule(expression) !== null;
-  }
+function hasValidCronSyntax(expression: string): boolean {
+  const parts = expression.trim().split(/\s+/);
+  if (parts.length !== 5 && parts.length !== 6) return false;
+  const validPattern = /^[\d*,/?#LW-]+$/;
+  return parts.every((part) => validPattern.test(part));
 }
 
-function isValidCron(expression: string): boolean {
-  return CronParser.isValid(expression);
+function matchesNaturalLanguage(input: string): boolean {
+  const normalized = input.toLowerCase().trim();
+  for (const { pattern, handler } of TIME_PATTERNS) {
+    const match = normalized.match(pattern);
+    if (match && handler(match)) return true;
+  }
+  return false;
+}
+
+export namespace CronParser {
+  export function isValid(expression: string): boolean {
+    return hasValidCronSyntax(expression) || matchesNaturalLanguage(expression);
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -295,7 +297,7 @@ export function parseSchedule(input: string): ParsedSchedule | null {
   }
   
   // Check if it's already a valid cron expression
-  if (isValidCron(input)) {
+  if (hasValidCronSyntax(input)) {
     const parts = input.trim().split(/\s+/);
     return {
       original: input,

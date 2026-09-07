@@ -19,6 +19,9 @@
 
 import { discoverSubprocessProviders } from "./subprocess"
 import { discoverLocalProviders } from "./local"
+import { discoverAllternitCloud } from "./allternit-cloud"
+
+export { getCachedAllternitPlan, refreshAllternitPlan } from "./allternit-cloud"
 
 export interface DiscoveredProvider {
   /** Unique provider ID — shown in /model list */
@@ -48,8 +51,19 @@ export type DiscoveryHook = () => Promise<DiscoveredProvider[]>
 
 // Registry of extension hooks — populated before first state() call
 const _hooks: DiscoveryHook[] = []
+let _last: DiscoveredProvider[] = []
+let _running: Promise<DiscoveredProvider[]> | null = null
+let _attempted = false
 
 export const Discovery = {
+  last(): DiscoveredProvider[] {
+    return _last
+  },
+
+  prefetch(): void {
+    if (_running || _attempted) return
+    void this.run()
+  },
   /**
    * Register an external discovery hook.
    * Called by Allternit platform, enterprise plugins, or custom integrations.
@@ -74,24 +88,35 @@ export const Discovery = {
    * Results are deduplicated by provider ID — first discovery wins.
    */
   async run(): Promise<DiscoveredProvider[]> {
-    const results = await Promise.allSettled([
-      discoverSubprocessProviders(),
-      discoverLocalProviders(),
-      ..._hooks.map((h) => h()),
-    ])
+    if (_running) return _running
+    _attempted = true
+    _running = (async () => {
+      const results = await Promise.allSettled([
+        discoverAllternitCloud(),
+        discoverSubprocessProviders(),
+        discoverLocalProviders(),
+        ..._hooks.map((h) => h()),
+      ])
 
-    const seen = new Set<string>()
-    const providers: DiscoveredProvider[] = []
+      const seen = new Set<string>()
+      const providers: DiscoveredProvider[] = []
 
-    for (const r of results) {
-      if (r.status === "rejected") continue
-      for (const p of r.value) {
-        if (seen.has(p.id)) continue
-        seen.add(p.id)
-        providers.push(p)
+      for (const r of results) {
+        if (r.status === "rejected") continue
+        for (const p of r.value) {
+          if (seen.has(p.id)) continue
+          seen.add(p.id)
+          providers.push(p)
+        }
       }
-    }
 
-    return providers
+      _last = providers
+      return providers
+    })()
+    try {
+      return await _running
+    } finally {
+      _running = null
+    }
   },
 }

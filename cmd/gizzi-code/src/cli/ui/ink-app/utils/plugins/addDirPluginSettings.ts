@@ -9,7 +9,7 @@
 
 import { join } from 'path'
 import type { z } from 'zod/v4'
-import { getAdditionalDirectoriesForClaudeMd } from '../../bootstrap/state.js'
+import { getAdditionalDirectoriesForGizziMd } from '../../bootstrap/state.js'
 import { parseSettingsFile } from '../settings/settings.js'
 import type {
   ExtraKnownMarketplaceSchema,
@@ -36,7 +36,7 @@ export function getAddDirEnabledPlugins(): NonNullable<
   SettingsJson['enabledPlugins']
 > {
   const result: NonNullable<SettingsJson['enabledPlugins']> = {}
-  for (const dir of getAdditionalDirectoriesForClaudeMd()) {
+  for (const dir of getAdditionalDirectoriesForGizziMd()) {
     for (const file of SETTINGS_FILES) {
       const { settings } = parseSettingsFile(join(dir, '.claude', file))
       if (!settings?.enabledPlugins) {
@@ -59,7 +59,7 @@ export function getAddDirExtraMarketplaces(): Record<
   ExtraKnownMarketplace
 > {
   const result: Record<string, ExtraKnownMarketplace> = {}
-  for (const dir of getAdditionalDirectoriesForClaudeMd()) {
+  for (const dir of getAdditionalDirectoriesForGizziMd()) {
     for (const file of SETTINGS_FILES) {
       const { settings } = parseSettingsFile(join(dir, '.claude', file))
       if (!settings?.extraKnownMarketplaces) {

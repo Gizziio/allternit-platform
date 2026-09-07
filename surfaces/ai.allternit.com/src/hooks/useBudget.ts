@@ -1,11 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { isRuntimeApiEnabled } from '@/lib/env';
 import type {
   MeasurementEntry,
   TenantQuota,
   UsageSummary,
 } from '@/types/runtime';
+
+// `/api/v1/runtime/*` is served only by the Rust allternit-api — fail closed
+// with a deliberate error when the runtime API flag is off.
+const RUNTIME_API_DISABLED_MESSAGE =
+  'Runtime API is disabled in this deployment (set NEXT_PUBLIC_ALLTERNIT_RUNTIME_API=1 where the gateway is reachable).';
 
 export type { TenantQuota, UsageSummary, MeasurementEntry as Measurement };
 
@@ -195,6 +201,13 @@ export function useBudget(): UseBudgetReturn {
     setIsLoading(true);
     setError(null);
 
+    if (!isRuntimeApiEnabled()) {
+      setBudget(null);
+      setError(new Error(RUNTIME_API_DISABLED_MESSAGE));
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const res = await fetch('/api/v1/runtime/budget');
 
@@ -245,6 +258,10 @@ export function useBudget(): UseBudgetReturn {
     async (creditsPerHour: number): Promise<RuntimeBudgetQuotaUpdate> => {
       if (!Number.isFinite(creditsPerHour) || creditsPerHour < 0) {
         throw new Error('Quota must be a non-negative number');
+      }
+
+      if (!isRuntimeApiEnabled()) {
+        throw new Error(RUNTIME_API_DISABLED_MESSAGE);
       }
 
       setIsSaving(true);

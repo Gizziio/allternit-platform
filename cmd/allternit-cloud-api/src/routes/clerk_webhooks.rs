@@ -31,7 +31,7 @@ use serde_json::{json, Value};
 use sha2::Sha256;
 use std::sync::Arc;
 
-use crate::{error::ApiError, ApiState};
+use crate::{error::ApiError, services, ApiState};
 
 const SIGNATURE_TOLERANCE_SECONDS: i64 = 300;
 
@@ -144,17 +144,32 @@ async fn handle_user_deleted(state: &ApiState, event: &Value) -> Response {
         return ApiError::BadRequest("user.deleted event missing data.id".to_string()).into_response();
     };
 
-    match sqlx::query("UPDATE users SET status = 'inactive' WHERE id = ?")
+    match sqlx::query("UPDATE users SET status = 'inactive' WHERE id = $1")
         .bind(user_id)
         .execute(&state.db)
         .await
     {
-        Ok(result) => Json(json!({
-            "received": true,
-            "userId": user_id,
-            "matched": result.rows_affected() > 0,
-        }))
-        .into_response(),
+        Ok(result) => {
+            services::audit::write_audit_log(
+                &state.db,
+                services::audit::AuditEvent {
+                    action: "user.deleted".to_string(),
+                    resource_type: "user".to_string(),
+                    resource_id: Some(user_id.to_string()),
+                    user_id: Some(user_id.to_string()),
+                    user_email: None,
+                    details: Some(json!({ "matched": result.rows_affected() > 0 })),
+                    success: true,
+                },
+            )
+            .await;
+            Json(json!({
+                "received": true,
+                "userId": user_id,
+                "matched": result.rows_affected() > 0,
+            }))
+            .into_response()
+        }
         Err(error) => ApiError::from(error).into_response(),
     }
 }

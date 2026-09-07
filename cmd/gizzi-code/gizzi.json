@@ -1,4 +1,4 @@
 {
-  "$schema": "https://gizzi.io/config.json",
+  "$schema": "https://docs.gizziio.com/config.json",
   "model": "moonshotai/kimi-k2-thinking"
 }

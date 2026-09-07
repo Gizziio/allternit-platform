@@ -1,5 +1,5 @@
 import { feature } from 'bun:bundle'
-import chalk from 'chalk'
+import chalk from '@/shared/util/chalk'
 import { spawnSync } from 'child_process'
 import {
   copyFile,
@@ -1255,7 +1255,7 @@ export async function execIntoTmuxWorktree(args: string[]): Promise<{
 
   // Mirror createWorktreeForSession(): hook takes precedence over git so the
   // WorktreeCreate hook substitutes the VCS backend for this fast-path too
-  // (anthropics/gizzi#39281). Git path below runs only when no hook.
+  // (Gizziio/allternit-platform#39281). Git path below runs only when no hook.
   let worktreeDir: string
   let repoName: string
   if (hasWorktreeCreateHook()) {

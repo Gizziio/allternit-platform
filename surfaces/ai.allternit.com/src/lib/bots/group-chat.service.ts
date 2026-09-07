@@ -118,6 +118,7 @@ export function createMentionHandoffAdapter(
         text: `@${member.handle} ${prompt}`,
         senderName: 'Group Chat',
         senderHandle: 'group',
+        waitForReply: true,
       });
       const reply = result.replies[0];
       if (!reply || reply.error) return undefined;
@@ -140,7 +141,7 @@ export async function runGroupChat(
     maxMessages = GROUP_CHAT_DEFAULTS.maxMessages,
   } = options;
 
-  const result: GroupChatRunResult = { rounds: [], settled: false };
+  const result: GroupChatRunResult = { rounds: [], settled: false, failedMemberIds: [] };
   let messageCount = 0;
   let roundOffset = 0;
 
@@ -181,6 +182,10 @@ export async function runGroupChat(
         });
       } catch (err) {
         logger.error({ err, member: member.botId, group: group.id }, 'Member turn failed');
+        result.failedMemberIds = result.failedMemberIds ?? [];
+        if (!result.failedMemberIds.includes(member.botId)) {
+          result.failedMemberIds.push(member.botId);
+        }
       }
     }
 

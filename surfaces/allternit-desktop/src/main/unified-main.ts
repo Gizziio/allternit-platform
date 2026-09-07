@@ -7,7 +7,7 @@
  * - Version-locked: Desktop 1.2.3 = Backend 1.2.3
  */
 
-import { app, BrowserWindow, ipcMain, nativeTheme, safeStorage, shell, Tray, Menu, dialog, globalShortcut, screen, protocol } from 'electron';
+import { app, autoUpdater, BrowserWindow, ipcMain, nativeTheme, safeStorage, session, Tray, Menu, dialog, globalShortcut, screen, protocol, type WebContents } from 'electron';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve, basename } from 'node:path';
 import * as fs from 'node:fs';
@@ -22,6 +22,7 @@ import { updateElectronApp } from 'update-electron-app';
 import fixPath from 'fix-path';
 import { backendManager } from './backend-manager.js';
 import { officeEngineManager } from './office-engine-manager.js';
+import { localEngineManager } from './local-engine-manager.js';
 import {
   editorForFile,
   extractOfficeFileArg,
@@ -56,6 +57,7 @@ import {
   getGuideStatus,
   waitForGuideDismissed,
   runPermissionOnboarding,
+  invalidatePermissionCache,
 } from './permission-guide.js';
 import { featureFlagManager } from './feature-flags.js';
 import { persistedState } from './persisted-state.js';
@@ -63,11 +65,20 @@ import { workerBus } from './workers/worker-bus.js';
 import { mcpHostManager } from './mcp-host-manager.js';
 import { isLimaInstalled, installLima, startVM, stopVM, getVMStatus } from './lima.js';
 import { computerUseDriverManager } from './computer-use-driver-manager.js';
+import { acuGatewayManager } from './acu-gateway-manager.js';
 import {
   createCaptureSession,
   stopCaptureSession,
   isCaptureAvailable,
 } from './browser-capture-manager.js';
+import {
+  configureSecurity,
+  installSessionSecurityHandlers,
+  installWillNavigateGuard,
+  installWindowOpenGuard,
+  openExternalAllowlisted,
+  assertTrustedSender,
+} from './security.js';
 
 // Fix PATH for macOS
 fixPath();
@@ -144,8 +155,81 @@ log.transports.file.resolvePath = () => join(app.getPath('userData'), 'main.log'
 log.initialize();
 log.transports.file.level = 'info';
 
+// Last-resort crash handlers: log everything, keep the process alive where
+// Electron allows it, and surface a fatal dialog only once the app is ready.
+process.on('uncaughtException', (error) => {
+  log.error('[Main] Uncaught exception:', error);
+  if (app.isReady() && !(app as unknown as { isQuitting?: boolean }).isQuitting) {
+    dialog.showErrorBox('Allternit Desktop encountered an error', String(error?.stack ?? error));
+  }
+});
+process.on('unhandledRejection', (reason) => {
+  log.error('[Main] Unhandled rejection:', reason);
+});
+const goneWebContents = new WeakSet<WebContents>();
+app.on('render-process-gone', (_event, webContents, details) => {
+  log.error('[Main] Renderer process gone:', details.reason, details.exitCode);
+  if (details.reason === 'clean-exit' || details.reason === 'killed') return;
+  if (goneWebContents.has(webContents) || webContents.isDestroyed()) return;
+  goneWebContents.add(webContents);
+  try {
+    webContents.reload();
+  } catch (error) {
+    log.error('[Main] Failed to reload crashed renderer:', error);
+  }
+});
+
 // Auto-updater
-updateElectronApp({ logger: log });
+// Defaults read package.json repository, but we make the feed explicit so
+// local/self-hosted builds never accidentally phone home to the wrong repo.
+updateElectronApp({
+  repo: 'allternit/desktop',
+  updateInterval: '1 hour',
+  logger: log,
+  notifyUser: false, // renderer will observe app:update-status and prompt
+});
+
+// Forward updater events to any renderer window so the platform UI can show
+// status and a restart prompt. These are Electron's built-in autoUpdater
+// events (the same channel used by update-electron-app); they carry less
+// detail than electron-updater's events, but they are sufficient for status
+// UI.
+autoUpdater.on('checking-for-update', () => {
+  broadcastUpdateStatus({ state: 'checking' });
+});
+autoUpdater.on('update-available', () => {
+  broadcastUpdateStatus({ state: 'available' });
+});
+autoUpdater.on('update-not-available', () => {
+  broadcastUpdateStatus({ state: 'up-to-date' });
+});
+autoUpdater.on('update-downloaded', (_event, releaseNotes, releaseName, _releaseDate, updateURL) => {
+  broadcastUpdateStatus({
+    state: 'downloaded',
+    version: releaseName,
+    releaseNotes: typeof releaseNotes === 'string' ? releaseNotes : undefined,
+    updateURL,
+  });
+});
+autoUpdater.on('error', (error) => {
+  log.error('[autoUpdater]', error);
+  broadcastUpdateStatus({ state: 'error', message: error?.message ?? String(error) });
+});
+
+function broadcastUpdateStatus(status: UpdateStatus) {
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (!win.isDestroyed()) {
+      win.webContents.send('app:update-status', status);
+    }
+  }
+}
+
+type UpdateStatus =
+  | { state: 'checking' }
+  | { state: 'available' }
+  | { state: 'up-to-date' }
+  | { state: 'downloaded'; version?: string; releaseNotes?: string; updateURL?: string }
+  | { state: 'error'; message: string };
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const isDev = process.env.NODE_ENV === 'development';
@@ -179,7 +263,37 @@ let pushServiceState = () => {
 };
 let miniWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
-let activePlatformUrl: string = isDev ? URLS.DEV_UI : 'https://platform.allternit.com';
+let activePlatformUrl: string = isDev ? URLS.DEV_UI : URLS.PRODUCTION_UI;
+
+// Central security policy for this process. App origins are the platform UI
+// (remote or local static export), the HUD/office/design/session windows that
+// load from the platform origin, and in dev the Vite dev server.
+configureSecurity({
+  isDev,
+  getAppOrigins: () => {
+    const origins = [activePlatformUrl, staticUiUrl(), URLS.PRODUCTION_UI];
+    if (isDev) {
+      origins.push(URLS.DEV_UI, 'http://127.0.0.1:3014');
+    }
+    return origins;
+  },
+});
+
+/**
+ * Wrap an ipcMain.handle registration with a sender-trust check. Every
+ * sensitive channel goes through this so a compromised/misbehaving renderer
+ * (or any non-app frame) cannot invoke main-process powers. Read-only and
+ * window-management channels stay unguarded for performance and compat.
+ */
+function handleGuarded(
+  channel: string,
+  fn: (event: Electron.IpcMainInvokeEvent, ...args: any[]) => unknown,
+): void {
+  ipcMain.handle(channel, (event, ...args) => {
+    assertTrustedSender(event, channel);
+    return fn(event, ...args);
+  });
+}
 
 const QUICK_CHAT_HOTKEY = 'CommandOrControl+Shift+A';
 // Hermes Desktop uses ⌘/Ctrl+Shift+H for its global HUD toggle.  Register that
@@ -187,6 +301,8 @@ const QUICK_CHAT_HOTKEY = 'CommandOrControl+Shift+A';
 // muscle memory expects it.
 const HUD_HOTKEY = 'CommandOrControl+Shift+H';
 const HUD_HOTKEY_FALLBACK = 'Alt+Shift+H';
+const HUD_DEFAULT_WIDTH = 720;
+const HUD_DEFAULT_HEIGHT = 72;
 const MINI_WINDOW_WIDTH = 520;
 const MINI_WINDOW_HEIGHT = 600;
 /** Resolved backend URL — set once the app initializes. Used by sdk:get-backend-url IPC. */
@@ -239,6 +355,7 @@ async function startGizziRuntime(): Promise<string> {
   return gizziManager.start({
     existingPassword,
     apiToken: session?.accessToken,
+    runtimeId: session?.runtimeId,
     extraEnv: authManager.getConnectorSidecarEnvironment(),
   });
 }
@@ -368,6 +485,7 @@ async function getOfficeAddinManager(): Promise<OfficeAddinManager> {
 
 interface StoreSchema {
   windowBounds: { width: number; height: number; x?: number; y?: number };
+  hudBounds: { width: number; height: number; x?: number; y?: number };
   theme: 'light' | 'dark' | 'system';
   backend: {
     mode: 'bundled' | 'remote' | 'development';
@@ -392,9 +510,12 @@ interface StoreSchema {
 const store = new Store<StoreSchema>({
   defaults: {
     windowBounds: { width: 1400, height: 900 },
+    hudBounds: { width: HUD_DEFAULT_WIDTH, height: HUD_DEFAULT_HEIGHT },
     theme: 'system',
     backend: {
-      mode: 'bundled',
+      // Dev builds should default to development mode so a fresh profile opens
+      // the local platform without the bundled-mode onboarding wizard.
+      mode: isDev ? 'development' : 'bundled',
     },
     onboardingComplete: false,
     startupWizardCompleted: false,
@@ -445,15 +566,22 @@ function createMainWindow(): BrowserWindow {
     },
   });
 
-  // Redirect all /api/* requests from the platform URL to the allternit-api
-  // custom protocol. The protocol handler (registered globally) proxies to
-  // the local API URL and injects auth headers. This avoids mixed-content
-  // blocking without allowRunningInsecureContent.
+  installWillNavigateGuard(window.webContents);
+
+  // Route /api/* through the allternit-api custom protocol so main can inject
+  // the paired device token. Cloud control-plane calls stay on api.allternit.com
+  // (host `cloud`); same-origin calls from the local static UI stay on loopback.
   const platformOrigin = activePlatformUrl;
+  const publicApiOrigin = URLS.CLOUD_API;
   window.webContents.session.webRequest.onBeforeRequest((details, callback) => {
+    if (details.url.startsWith(`${publicApiOrigin}/api/`)) {
+      callback({ redirectURL: details.url.replace(publicApiOrigin, 'allternit-api://cloud') });
+      return;
+    }
     if (details.url.startsWith(`${platformOrigin}/api/`)) {
-      const redirectURL = details.url.replace(platformOrigin, `allternit-api://localhost:${PORTS.API}`);
-      callback({ redirectURL });
+      callback({
+        redirectURL: details.url.replace(platformOrigin, `allternit-api://localhost:${PORTS.API}`),
+      });
       return;
     }
     callback({});
@@ -464,7 +592,10 @@ function createMainWindow(): BrowserWindow {
     let isOperatorApi = false;
     try {
       const target = new URL(details.url);
-      isOperatorApi = target.origin === URLS.API;
+      isOperatorApi =
+        target.origin === URLS.API ||
+        target.origin === URLS.CLOUD_API ||
+        target.protocol === 'allternit-api:';
     } catch {
       isOperatorApi = false;
     }
@@ -528,7 +659,7 @@ function createMainWindow(): BrowserWindow {
       const appUrl = new URL(window.webContents.getURL());
 
       if (requestedUrl.origin !== appUrl.origin) {
-        shell.openExternal(url);
+        openExternalAllowlisted(url);
         return { action: 'deny' };
       }
 
@@ -583,7 +714,7 @@ function createMainWindow(): BrowserWindow {
       // Invalid or non-standard URLs fall through to the external browser.
     }
 
-    shell.openExternal(url);
+    openExternalAllowlisted(url);
     return { action: 'deny' };
   });
 
@@ -613,7 +744,7 @@ function createMainWindow(): BrowserWindow {
       try {
         const protocol = new URL(url).protocol;
         if (protocol === 'http:' || protocol === 'https:') {
-          void shell.openExternal(url);
+          void openExternalAllowlisted(url);
         }
       } catch {
         log.warn(`[Main] Ignored malformed Browser Mode popup URL: ${url}`);
@@ -628,8 +759,8 @@ function createMainWindow(): BrowserWindow {
   }
   
   // Log console messages
-  window.webContents.on('console-message', (event, level, message, line, sourceId) => {
-    log.info(`[Renderer] ${message} (${sourceId}:${line})`);
+  window.webContents.on('console-message', (event) => {
+    log.info(`[Renderer] ${event.message} (${event.sourceId}:${event.lineNumber})`);
   });
 
   return window;
@@ -662,10 +793,11 @@ async function initializeApp(): Promise<void> {
   }
 
   // Determine which mode to use
-  if (backendConfig.mode === 'development') {
+  const effectiveMode = backendConfig?.mode ?? (isDev ? 'development' : 'bundled');
+  if (effectiveMode === 'development') {
     // Development mode - connect to the local Gizzi runtime
     await initializeDevelopmentMode();
-  } else if (backendConfig.mode === 'remote' && backendConfig.remoteUrl) {
+  } else if (effectiveMode === 'remote' && backendConfig?.remoteUrl) {
     // Remote mode - connect to user VPS
     await initializeRemoteMode(backendConfig.remoteUrl);
   } else {
@@ -723,6 +855,9 @@ async function initializeBundledMode(): Promise<void> {
       log.info('[Main] Gizzi-code started successfully');
       serviceState.gizzi = { status: 'up', detail: `Connected on ${gizziUrl}` };
       pushServiceState();
+      void meshManager.start().catch((error) => {
+        log.warn('[Mesh] Fabric mesh unavailable (relay still works):', error);
+      });
     } catch (gizziErr) {
       log.warn('[Main] Gizzi-code failed to start, continuing without AI runtime:', gizziErr);
       serviceState.gizzi = { status: 'down', detail: `Failed to start on ${PORTS.GIZZI}` };
@@ -777,12 +912,31 @@ async function initializeBundledMode(): Promise<void> {
     if (!computerUseDriver.running) {
       log.warn('[Main] Embedded computer-use driver unavailable:', computerUseDriver.error);
     }
+    const acuUrl = await acuGatewayManager.start();
+    if (acuUrl) {
+      log.info(`[Main] ACU computer-use gateway ready at ${acuUrl}`);
+    } else {
+      log.warn('[Main] ACU computer-use gateway unavailable; Open computer will 502 until it is started');
+    }
+    // Step 1.7 — local-engine sidecar (services/local-engine, port ${PORTS.LOCAL_ENGINE}).
+    // Serves Model Lab machine telemetry (/status); allternit-api proxies
+    // /api/local-engine/* to it. Non-fatal if it fails (telemetry shows
+    // "Unavailable", same pattern as the office engine above).
+    let localEngineUrl: string | null = null;
+    try {
+      localEngineUrl = await localEngineManager.ensureStarted();
+      log.info(`[Main] Local engine ready at ${localEngineUrl}`);
+    } catch (engineErr) {
+      log.warn('[Main] Local engine failed to start, continuing without it:', engineErr);
+    }
     const apiUrl = await backendManager.ensureBackend({
       gizziUrl,
       gizziPassword: gizziManager.getPassword(),
       gizziUsername: 'gizzi',
       extraEnv: {
+        ...(localEngineUrl ? { LOCAL_ENGINE_URL: localEngineUrl } : {}),
         ...computerUseDriverManager.getLaunchEnvironment(),
+        ...acuGatewayManager.getLaunchEnvironment(),
         ...authManager.getPlatformEncryptionEnvironment(),
         ...authManager.getConnectorSidecarEnvironment(),
       },
@@ -813,7 +967,7 @@ async function initializeBundledMode(): Promise<void> {
     // mode so local worktree UI builds (e.g. Vite on a non-default port) can be
     // tested without repackaging the desktop.
     let platformUrl: string = process.env.ALLTERNIT_PLATFORM_URL?.trim()
-      || (isDev ? URLS.DEV_UI : 'https://platform.allternit.com');
+      || (isDev ? URLS.DEV_UI : URLS.PRODUCTION_UI);
 
     if (isDev && process.env.ALLTERNIT_DESKTOP_USE_STATIC_UI) {
       const localStaticPath = resolveLocalPlatformStaticPath();
@@ -828,8 +982,23 @@ async function initializeBundledMode(): Promise<void> {
     }
 
     if (!isDev) {
+      // If the operator explicitly set ALLTERNIT_PLATFORM_URL, honor it and
+      // skip the local static UI preference. Only fall back to the bundled
+      // static UI when no override is set, or when the override URL is
+      // unreachable.
+      const envPlatformUrl = process.env.ALLTERNIT_PLATFORM_URL;
       const localStaticPath = resolveLocalPlatformStaticPath();
-      if (localStaticPath) {
+      if (envPlatformUrl) {
+        const remoteReachable = await isUrlReachable(envPlatformUrl, 5000);
+        if (remoteReachable) {
+          log.info(`[Main] Using ALLTERNIT_PLATFORM_URL override: ${envPlatformUrl}`);
+          serviceState.platform = { status: 'up', detail: envPlatformUrl };
+        } else {
+          log.warn(`[Main] ALLTERNIT_PLATFORM_URL ${envPlatformUrl} is unreachable — falling back to local static UI`);
+          platformUrl = staticUiUrl();
+          serviceState.platform = { status: 'up', detail: 'Offline mode (local static)' };
+        }
+      } else if (localStaticPath) {
         log.info(`[Main] Using local platform static UI from ${localStaticPath}`);
         platformUrl = staticUiUrl();
         serviceState.platform = { status: 'up', detail: 'Local static UI' };
@@ -1049,20 +1218,18 @@ async function initializeRemoteMode(remoteUrl: string): Promise<void> {
     const version = versionData.version;
     
     if (shouldUpdateBackend(version)) {
-      // Show update dialog
       const result = await dialog.showMessageBox({
-        type: 'info',
+        type: 'warning',
         title: 'Allternit Desktop Backend Update Required',
-        message: `Your remote backend (${version}) needs to be updated to match Allternit Desktop ${PLATFORM_MANIFEST.backend.version}.`,
-        buttons: ['Update Now', 'Continue Anyway', 'Switch to Local'],
+        message: `Your remote backend (${version}) does not match Allternit Desktop ${PLATFORM_MANIFEST.backend.version}.`,
+        detail:
+          'Desktop cannot SSH into the remote host. Update allternit-api on that server to ' +
+          `${PLATFORM_MANIFEST.backend.version}, then reconnect. You can keep this mismatched session or switch to the local backend.`,
+        buttons: ['Continue Anyway', 'Switch to Local'],
         defaultId: 0,
-      });      
-      if (result.response === 0) {
-        // Update remote backend (SSH into VPS)
-        // This would need SSH credentials stored securely
-        log.info('[Main] Would update remote backend via SSH');
-      } else if (result.response === 2) {
-        // Switch to local mode
+        cancelId: 0,
+      });
+      if (result.response === 1) {
         store.set('backend.mode', 'bundled');
         await initializeBundledMode();
         return;
@@ -1104,6 +1271,12 @@ async function initializeDevelopmentMode(): Promise<void> {
   activePlatformUrl = platformUrl;
   log.info('[Main] Development mode', { platformUrl });
   activeBackendUrl = URLS.DEV_UI;
+
+  // Show the platform window immediately so the UI is usable while optional
+  // runtime services start in the background.
+  mainWindow = createMainWindow();
+  mainWindow.loadURL(URLS.DEV_UI);
+  mainWindow.show();
 
   // Adopt or start the local Gizzi runtime so the sidecar can broker
   // credential-injected requests via the allternit-gizzi custom protocol.
@@ -1309,6 +1482,9 @@ function createMiniWindow(): BrowserWindow {
     } : {}),
   });
 
+  installWillNavigateGuard(win.webContents);
+  installWindowOpenGuard(win.webContents);
+
   const platformUrl = isDev
     ? devUiUrl('/?mini=1')
     : `${activePlatformUrl}/?mini=1`;
@@ -1408,19 +1584,19 @@ async function updateTrayMenu(): Promise<void> {
     },
   };
 
-  const contextMenu = Menu.buildFromTemplate([
+  const template: Electron.MenuItemConstructorOptions[] = [
     { label: 'Allternit Desktop', enabled: false },
     { type: 'separator' },
     { label: `${statusIcon} ${status.running ? 'Running' : 'Stopped'}`, enabled: false },
     { label: `Mode: ${modeLabel}`, enabled: false },
     { type: 'separator' },
-    { 
-      label: 'Connection Settings...', 
+    {
+      label: 'Connection Settings...',
       click: () => {
         showConnectionSettings();
-      }
+      },
     },
-    ...(permItem ? [permItem, { type: 'separator' } as Electron.MenuItemConstructorOptions] : []),
+    ...(permItem ? [permItem, { type: 'separator' as const }] : []),
     { label: 'Show Window', click: () => mainWindow?.show() },
     {
       label: 'Allternit Office',
@@ -1436,9 +1612,9 @@ async function updateTrayMenu(): Promise<void> {
     { label: 'Toggle HUD', accelerator: HUD_HOTKEY, click: () => toggleHudWindow() },
     { type: 'separator' },
     { label: 'Quit', click: () => app.quit() },
-  ] as any);
+  ];
 
-  tray.setContextMenu(contextMenu);
+  tray.setContextMenu(Menu.buildFromTemplate(template));
 }
 
 // ============================================================================
@@ -1603,7 +1779,11 @@ app.whenReady().then(async () => {
   console.log('[Main] Registering allternit-api protocol handler...');
   protocol.handle('allternit-api', async (request) => {
     const url = new URL(request.url);
-    const targetUrl = apiUrl(`${url.pathname}${url.search}`);
+    const pathAndQuery = `${url.pathname}${url.search}`;
+    const targetUrl =
+      url.hostname === 'cloud' || url.host === 'cloud'
+        ? `${URLS.CLOUD_API}${pathAndQuery}`
+        : apiUrl(pathAndQuery);
 
     // CORS preflight for custom-protocol cross-origin requests
     if (request.method === 'OPTIONS') {
@@ -1716,6 +1896,9 @@ app.whenReady().then(async () => {
   });
 
   console.log('[Main] Initializing foundation systems...');
+  // Session-wide CSP + default-deny permission handler, scoped to app origins
+  // so Browser Mode webviews and third-party content keep working untouched.
+  installSessionSecurityHandlers(session.defaultSession);
   // Initialize foundation systems before everything else
   featureFlagManager.initialize();
   // Push flag changes to all renderer windows
@@ -1814,6 +1997,15 @@ app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', async () => {
+  // Electron does not await this handler. Reap gizzi before any await or it
+  // survives quit (spawned detached, ppid 1).
+  gizziManager.stop({ reapExternal: true });
+  try {
+    gizziDaemonManager.stopSync();
+  } catch (err) {
+    log.warn('[Main] gizzi daemon stop on quit failed', err);
+  }
+
   if (app.isReady()) {
     globalShortcut.unregisterAll();
   }
@@ -1823,8 +2015,7 @@ app.on('before-quit', async () => {
   await workerBus.shutdown();
   tunnelManager.stop();
   await backendManager.stopBackend();
-
-  gizziManager.stop();
+  await localEngineManager.stop();
   connectorSidecarManager.stop();
   officeEngineManager.stop();
   meshManager.stop().catch(() => {}); // best-effort mesh sidecar shutdown
@@ -1832,6 +2023,7 @@ app.on('before-quit', async () => {
   voiceManager.stop();
   bonsaiCompanion.stop();
   computerUseDriverManager.stop();
+  acuGatewayManager.stop();
   stopVM().catch(() => {}); // best-effort Lima VM shutdown
   // Remove dev session credentials file so stale credentials don't persist across restarts
   if (isDev) {
@@ -1849,9 +2041,12 @@ app.on('before-quit', async () => {
 // SDK — exposes the resolved backend URL so the renderer can init createAllternitClient()
 ipcMain.handle('sdk:get-backend-url', () => activeBackendUrl);
 
+// Voice call-mode native dictation bridge
+voiceManager.registerIpcHandlers();
+
 // Backend management
 ipcMain.handle('backend:get-status', () => backendManager.getStatus());
-ipcMain.handle('backend:restart', async () => {
+handleGuarded('backend:restart', async () => {
   await backendManager.stopBackend();
 
   await computerUseDriverManager.start();
@@ -1868,15 +2063,15 @@ ipcMain.handle('computer-use-driver:get-status', () => computerUseDriverManager.
 
 // Bonsai local image companion (install / lifecycle / removal)
 ipcMain.handle('bonsai:get-status', () => bonsaiCompanion.getStatus());
-ipcMain.handle('bonsai:install', () => bonsaiCompanion.install());
-ipcMain.handle('bonsai:cancel-install', () => bonsaiCompanion.cancelInstall());
-ipcMain.handle('bonsai:start', () => bonsaiCompanion.start());
-ipcMain.handle('bonsai:stop', () => { bonsaiCompanion.stop(); return true; });
-ipcMain.handle('bonsai:remove', () => bonsaiCompanion.remove());
+handleGuarded('bonsai:install', () => bonsaiCompanion.install());
+handleGuarded('bonsai:cancel-install', () => bonsaiCompanion.cancelInstall());
+handleGuarded('bonsai:start', () => bonsaiCompanion.start());
+handleGuarded('bonsai:stop', () => { bonsaiCompanion.stop(); return true; });
+handleGuarded('bonsai:remove', () => bonsaiCompanion.remove());
 
 // Research backend (notebook engine) — lazy start
 ipcMain.handle('research:get-status', () => notebookManager.getStatus());
-ipcMain.handle('research:start', async () => {
+handleGuarded('research:start', async () => {
   const result = await notebookManager.start();
   serviceState.research = result
     ? { status: 'up', detail: `Connected on ${notebookUrl()}` }
@@ -1884,7 +2079,7 @@ ipcMain.handle('research:start', async () => {
   pushServiceState();
   return result;
 });
-ipcMain.handle('research:stop', () => {
+handleGuarded('research:stop', () => {
   notebookManager.stop();
   serviceState.research = { status: 'down', detail: 'Stopped' };
   pushServiceState();
@@ -1892,7 +2087,7 @@ ipcMain.handle('research:stop', () => {
 
 // Store
 ipcMain.handle('store:get', (_event, key: keyof StoreSchema) => store.get(key));
-ipcMain.handle('store:set', (_event, key: keyof StoreSchema, value: unknown) => {
+handleGuarded('store:set', (_event, key: keyof StoreSchema, value: unknown) => {
   store.set(key, value);
 });
 
@@ -1904,9 +2099,35 @@ ipcMain.handle('app:get-info', () => ({
   manifest: PLATFORM_MANIFEST,
 }));
 
+// Auto-update control plane (renderer observes status via app:update-status)
+ipcMain.handle('app:check-for-updates', async () => {
+  if (!app.isPackaged) {
+    log.info('[autoUpdater] Skipping update check in unpackaged dev build');
+    return { ok: false, reason: 'dev-build' } as const;
+  }
+  try {
+    autoUpdater.checkForUpdates();
+    return { ok: true } as const;
+  } catch (error) {
+    log.error('[autoUpdater] Manual check failed:', error);
+    return { ok: false, reason: 'check-failed', message: String(error) } as const;
+  }
+});
+handleGuarded('app:install-update', () => {
+  autoUpdater.quitAndInstall();
+});
+// Preload uses sendSync at module load; handle() only answers invoke().
+ipcMain.on('app:get-platform-url', (event) => {
+  event.returnValue = {
+    platformUrl: activePlatformUrl,
+    gatewayUrl: URLS.CLOUD_API,
+  };
+});
+ipcMain.handle('app:get-platform-url', () => activePlatformUrl);
+
   // Shell
-ipcMain.handle('shell:open-external', (_event, url: string) => {
-  shell.openExternal(url);
+handleGuarded('shell:open-external', (_event, url: string) => {
+  openExternalAllowlisted(url);
 });
 ipcMain.handle('shell:open-design', () => {
   if (designWindow && !designWindow.isDestroyed()) {
@@ -1934,8 +2155,10 @@ ipcMain.handle('shell:open-design', () => {
     },
   });
 
+  installWillNavigateGuard(designWindow.webContents);
+
   designWindow.webContents.setWindowOpenHandler(({ url }) => {
-    void shell.openExternal(url);
+    void openExternalAllowlisted(url);
     return { action: 'deny' };
   });
   designWindow.once('ready-to-show', () => designWindow?.show());
@@ -2011,6 +2234,8 @@ function createHudWindow(): BrowserWindow {
     },
   });
 
+  installWillNavigateGuard(win.webContents);
+
   // Ensure the panel floats above normal windows and appears on all macOS
   // Spaces while fullscreen apps are running.
   win.setAlwaysOnTop(true, isMac ? 'floating' : 'screen-saver');
@@ -2042,7 +2267,7 @@ function openHudWindow(): void {
   log.info('[HUD] HUD window created', { id: hudWindow.id, bounds: hudWindow.getBounds(), visible: hudWindow.isVisible() });
 
   hudWindow.webContents.setWindowOpenHandler(({ url }) => {
-    void shell.openExternal(url);
+    void openExternalAllowlisted(url);
     return { action: 'deny' };
   });
   hudWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription) => {
@@ -2078,8 +2303,9 @@ function toggleHudWindow(): void {
   log.info('[HUD] toggleHudWindow called');
   if (hudWindow && !hudWindow.isDestroyed()) {
     if (hudWindow.isVisible() && hudWindow.isFocused()) {
-      log.info('[HUD] HUD is visible and focused — closing');
-      hudWindow.close();
+      log.info('[HUD] HUD is visible and focused — hiding');
+      hudWindow.hide();
+      pushHudState();
       return;
     }
     log.info('[HUD] HUD exists — showing and focusing');
@@ -2094,17 +2320,34 @@ function toggleHudWindow(): void {
 
 ipcMain.handle('shell:open-hud', openHudWindow);
 ipcMain.handle('shell:close-hud', () => {
+  // Hide, not close: the HUD is a persistent panel and closing it would tear
+  // down its webContents and lose composer state.
   if (hudWindow && !hudWindow.isDestroyed()) {
-    hudWindow.close();
+    hudWindow.hide();
+    pushHudState();
   }
 });
 ipcMain.handle('shell:toggle-hud', toggleHudWindow);
-ipcMain.handle('shell:move-hud', (_event, delta: { x: number; y: number; width: number; height: number }) => {
+ipcMain.handle('shell:show-hud', () => {
+  if (hudWindow && !hudWindow.isDestroyed()) {
+    hudWindow.show();
+    hudWindow.focus();
+    hudWindow.moveTop();
+    pushHudState();
+  } else {
+    openHudWindow();
+  }
+});
+ipcMain.handle('shell:move-hud', (_event, delta: { dx?: number; dy?: number; x?: number; y?: number; width?: number; height?: number }) => {
+  // Two renderer call sites send different shapes: HudApp's drag handler
+  // sends {dx, dy}; composer-drag sends {x, y, width, height} deltas. Accept
+  // both, and only apply a size change when width/height are provided.
   if (!hudWindow || hudWindow.isDestroyed()) return;
-  const dx = Number(delta?.x ?? 0);
-  const dy = Number(delta?.y ?? 0);
-  const width = Number(delta?.width ?? HUD_WIDTH);
-  const height = Number(delta?.height ?? HUD_HEIGHT);
+  const dx = Number(delta?.dx ?? delta?.x ?? 0);
+  const dy = Number(delta?.dy ?? delta?.y ?? 0);
+  const [currentWidth, currentHeight] = hudWindow.getSize();
+  const width = delta?.width !== undefined ? Number(delta.width) : currentWidth;
+  const height = delta?.height !== undefined ? Number(delta.height) : currentHeight;
   if (![dx, dy, width, height].every(Number.isFinite)) return;
   const [x, y] = hudWindow.getPosition();
   // setBounds (not setPosition) keeps a transparent frameless window from
@@ -2261,6 +2504,8 @@ function createAnnotationWindow(): BrowserWindow {
     },
   });
 
+  installWillNavigateGuard(win.webContents);
+
   win.setAlwaysOnTop(true, isMac ? 'floating' : 'screen-saver');
   try {
     win.setVisibleOnAllWorkspaces?.(true, { visibleOnFullScreen: true, skipTransformProcessType: true });
@@ -2283,7 +2528,7 @@ function openAnnotationWindow(): void {
   annotationWindow = createAnnotationWindow();
 
   annotationWindow.webContents.setWindowOpenHandler(({ url }) => {
-    void shell.openExternal(url);
+    void openExternalAllowlisted(url);
     return { action: 'deny' };
   });
   annotationWindow.on('closed', () => {
@@ -2311,7 +2556,7 @@ ipcMain.handle('shell:hud:annotation:close', () => {
 ipcMain.on('shell:hud:annotation:clear', () => {
   annotationWindow?.webContents.send('shell:hud:annotation:clear');
 });
-ipcMain.handle('shell:hud:annotation:save', async (_event, base64Png: string) => {
+handleGuarded('shell:hud:annotation:save', async (_event, base64Png: string) => {
   if (!base64Png || typeof base64Png !== 'string') {
     return { success: false, error: 'No image data provided' };
   }
@@ -2336,7 +2581,7 @@ ipcMain.handle('shell:hud:annotation:save', async (_event, base64Png: string) =>
   }
 });
 
-ipcMain.handle('shell:open-remote-control', () => {
+function openFabricSessionWindow(): void {
   if (remoteControlWindow && !remoteControlWindow.isDestroyed()) {
     remoteControlWindow.show();
     remoteControlWindow.focus();
@@ -2348,11 +2593,11 @@ ipcMain.handle('shell:open-remote-control', () => {
     height: 840,
     minWidth: 820,
     minHeight: 560,
-    title: 'Allternit Remote Control',
+    title: 'Allternit Fabric Transport',
     titleBarStyle: isMac ? 'hiddenInset' : 'default',
     trafficLightPosition: { x: 16, y: 16 },
     show: false,
-    backgroundColor: '#0F0C0A',
+    backgroundColor: '#FFFFFF',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
@@ -2361,18 +2606,28 @@ ipcMain.handle('shell:open-remote-control', () => {
     },
   });
 
+  installWillNavigateGuard(remoteControlWindow.webContents);
+
   remoteControlWindow.webContents.setWindowOpenHandler(({ url }) => {
-    void shell.openExternal(url);
+    void openExternalAllowlisted(url);
     return { action: 'deny' };
   });
   remoteControlWindow.once('ready-to-show', () => remoteControlWindow?.show());
   remoteControlWindow.on('closed', () => { remoteControlWindow = null; });
-  const dashboardUrl = process.env.ALLTERNIT_REMOTE_CONTROL_URL
-    ? new URL('/', process.env.ALLTERNIT_REMOTE_CONTROL_URL).toString()
-    : activePlatformUrl.includes('localhost') || activePlatformUrl.includes('127.0.0.1')
-      ? new URL('/remote-control.html', activePlatformUrl).toString()
-      : 'https://remotecontrol.allternit.com';
+  const dashboardUrl = process.env.ALLTERNIT_FABRIC_SESSION_URL
+    ? new URL('/', process.env.ALLTERNIT_FABRIC_SESSION_URL).toString()
+    : process.env.ALLTERNIT_REMOTE_CONTROL_URL
+      ? new URL('/', process.env.ALLTERNIT_REMOTE_CONTROL_URL).toString()
+      : new URL('/fabric-session.html', activePlatformUrl).toString();
   void remoteControlWindow.loadURL(dashboardUrl);
+}
+
+ipcMain.handle('shell:open-remote-control', () => {
+  openFabricSessionWindow();
+});
+
+ipcMain.handle('shell:open-fabric-session', () => {
+  openFabricSessionWindow();
 });
 
 function resolveOfficeUrl(target: OfficeTarget, artifactId?: string): string {
@@ -2411,8 +2666,10 @@ function openOfficeWindow(target: OfficeTarget = 'launcher', artifactId?: string
     },
   });
 
+  installWillNavigateGuard(window.webContents);
+
   window.webContents.setWindowOpenHandler(({ url }) => {
-    void shell.openExternal(url);
+    void openExternalAllowlisted(url);
     return { action: 'deny' };
   });
   window.webContents.on('did-finish-load', () => {
@@ -2521,6 +2778,8 @@ ipcMain.handle('shell:open-session', (_event, options: { sessionId: string; work
     },
   });
 
+  installWillNavigateGuard(sessionWindow.webContents);
+
   codeSessionWindows.set(options.sessionId, sessionWindow);
 
   // Use /shell so the detached session query params are consumed by ShellApp.
@@ -2533,7 +2792,7 @@ ipcMain.handle('shell:open-session', (_event, options: { sessionId: string; work
   sessionWindow.once('ready-to-show', () => sessionWindow.show());
   sessionWindow.on('closed', () => { codeSessionWindows.delete(options.sessionId); });
   sessionWindow.webContents.setWindowOpenHandler(({ url: target }) => {
-    void shell.openExternal(target);
+    void openExternalAllowlisted(target);
     return { action: 'deny' };
   });
   void sessionWindow.loadURL(url.toString());
@@ -2543,9 +2802,9 @@ ipcMain.handle('office-addins:get-status', async () => {
   const manager = await getOfficeAddinManager();
   return Object.fromEntries((['word', 'excel', 'powerpoint'] as OfficeProductId[]).map((product) => [product, manager.getStatus(product)]));
 });
-ipcMain.handle('office-addins:install', async (_event, product: OfficeProductId) => (await getOfficeAddinManager()).install(product));
-ipcMain.handle('office-addins:repair', async (_event, product: OfficeProductId) => (await getOfficeAddinManager()).repair(product));
-ipcMain.handle('office-addins:remove', async (_event, product: OfficeProductId) => (await getOfficeAddinManager()).remove(product));
+handleGuarded('office-addins:install', async (_event, product: OfficeProductId) => (await getOfficeAddinManager()).install(product));
+handleGuarded('office-addins:repair', async (_event, product: OfficeProductId) => (await getOfficeAddinManager()).repair(product));
+handleGuarded('office-addins:remove', async (_event, product: OfficeProductId) => (await getOfficeAddinManager()).remove(product));
 
 // Desktop auth
 ipcMain.handle('auth:get-session', async () => {
@@ -2564,10 +2823,10 @@ ipcMain.handle('auth:get-session', async () => {
   };
 });
 ipcMain.handle('auth:list-accounts', async () => authManager.listAccounts());
-ipcMain.handle('auth:forget-account', async (_event, userId: string) => {
+handleGuarded('auth:forget-account', async (_event, userId: string) => {
   await authManager.forgetAccount(userId);
 });
-ipcMain.handle('auth:sign-out', async () => {
+handleGuarded('auth:sign-out', async () => {
   await authManager.signOut();
   app.relaunch();
   app.quit();
@@ -2641,7 +2900,7 @@ ipcMain.handle('theme:get', () =>
   nativeTheme.shouldUseDarkColors ? 'dark' : 'light'
 );
 
-ipcMain.handle('theme:set', (_event, theme: 'light' | 'dark' | 'system') => {
+handleGuarded('theme:set', (_event, theme: 'light' | 'dark' | 'system') => {
   nativeTheme.themeSource = theme;
   store.set('theme', theme);
 });
@@ -2658,13 +2917,13 @@ nativeTheme.on('updated', () => {
 // IPC: Dialogs
 // ============================================================================
 
-ipcMain.handle('dialog:show-save', async (_event, options: Electron.SaveDialogOptions) => {
+handleGuarded('dialog:show-save', async (_event, options: Electron.SaveDialogOptions) => {
   const win = mainWindow ?? BrowserWindow.getFocusedWindow();
   if (!win) return { canceled: true };
   return dialog.showSaveDialog(win, options ?? {});
 });
 
-ipcMain.handle('dialog:show-open', async (_event, options: Electron.OpenDialogOptions) => {
+handleGuarded('dialog:show-open', async (_event, options: Electron.OpenDialogOptions) => {
   const win = mainWindow ?? BrowserWindow.getFocusedWindow();
   if (!win) return { canceled: true, filePaths: [] };
   return dialog.showOpenDialog(win, options ?? {});
@@ -2694,7 +2953,7 @@ ipcMain.handle('sidecar:get-api-url', () => (
   gizziManager.isRunning() ? 'allternit-gizzi://runtime' : undefined
 ));
 
-ipcMain.handle('sidecar:start', async () => {
+handleGuarded('sidecar:start', async () => {
   try {
     const url = await startGizziRuntime();
     updateSidecarConfig(url);
@@ -2704,9 +2963,9 @@ ipcMain.handle('sidecar:start', async () => {
   }
 });
 
-ipcMain.handle('sidecar:stop', () => { gizziManager.stop(); return true; });
+handleGuarded('sidecar:stop', () => { gizziManager.stop(); return true; });
 
-ipcMain.handle('sidecar:restart', async () => {
+handleGuarded('sidecar:restart', async () => {
   try {
     gizziManager.stop();
     const url = await startGizziRuntime();
@@ -2723,7 +2982,7 @@ ipcMain.handle('sidecar:restart', async () => {
 
 ipcMain.handle('gizzi-daemon:status', async () => gizziDaemonManager.getStatus());
 
-ipcMain.handle('gizzi-daemon:install', async () => {
+handleGuarded('gizzi-daemon:install', async () => {
   try {
     await installAlwaysOnGizziRuntime();
     return { success: true, status: await gizziDaemonManager.getStatus() };
@@ -2733,7 +2992,7 @@ ipcMain.handle('gizzi-daemon:install', async () => {
   }
 });
 
-ipcMain.handle('gizzi-daemon:start', async () => {
+handleGuarded('gizzi-daemon:start', async () => {
   try {
     await gizziDaemonManager.start();
     return { success: true, status: await gizziDaemonManager.getStatus() };
@@ -2743,7 +3002,7 @@ ipcMain.handle('gizzi-daemon:start', async () => {
   }
 });
 
-ipcMain.handle('gizzi-daemon:stop', async () => {
+handleGuarded('gizzi-daemon:stop', async () => {
   try {
     await gizziDaemonManager.stop();
     return { success: true, status: await gizziDaemonManager.getStatus() };
@@ -2753,7 +3012,7 @@ ipcMain.handle('gizzi-daemon:stop', async () => {
   }
 });
 
-ipcMain.handle('gizzi-daemon:uninstall', async () => {
+handleGuarded('gizzi-daemon:uninstall', async () => {
   try {
     await gizziDaemonManager.uninstall();
     return { success: true, status: await gizziDaemonManager.getStatus() };
@@ -2784,7 +3043,7 @@ ipcMain.handle('connection:get-backend', () => {
   return { mode: backend.mode, url: activeBackendUrl };
 });
 
-ipcMain.handle('connection:set-backend', async (_event, config: { mode: 'bundled' | 'remote' | 'development'; remoteUrl?: string }) => {
+handleGuarded('connection:set-backend', async (_event, config: { mode: 'bundled' | 'remote' | 'development'; remoteUrl?: string }) => {
   const nextBackend = { ...store.get('backend'), ...config };
   store.set('backend', nextBackend);
   void authManager.updateBackendProfile({
@@ -2832,7 +3091,7 @@ ipcMain.handle('vm-setup:check-images-exist', async () => {
 });
 
 // "download-images" now means "install Lima via brew if not present"
-ipcMain.handle('vm-setup:download-images', async (event) => {
+handleGuarded('vm-setup:download-images', async (event) => {
   const alreadyInstalled = await isLimaInstalled();
   if (alreadyInstalled) {
     event.sender.send('vm-setup:download-progress', {
@@ -2859,7 +3118,7 @@ ipcMain.handle('vm-setup:download-images', async (event) => {
   return true;
 });
 
-ipcMain.handle('vm-setup:initialize-vm', async (event) => {
+handleGuarded('vm-setup:initialize-vm', async (event) => {
   const sendProgress = (stage: string, message: string, progress: number) => {
     event.sender.send('vm-setup:init-progress', { stage, message, progress });
   };
@@ -2904,7 +3163,7 @@ ipcMain.handle('extension:send', (_event, message: unknown) => {
 // IPC: Tunnel (Cloudflare Web Access)
 // ============================================================================
 
-ipcMain.handle('tunnel:enable', async () => {
+handleGuarded('tunnel:enable', async () => {
   try {
     const url = await tunnelManager.enableWebAccess();
     return { success: true, url };
@@ -2916,7 +3175,7 @@ ipcMain.handle('tunnel:enable', async () => {
 
 // Start tunnel only — no browser redirect. Used by the in-app onboarding wizard
 // so it can register the backend directly without opening a system browser tab.
-ipcMain.handle('tunnel:start', async () => {
+handleGuarded('tunnel:start', async () => {
   try {
     const url = await tunnelManager.start();
     const token = tunnelManager.getToken();
@@ -2927,7 +3186,7 @@ ipcMain.handle('tunnel:start', async () => {
   }
 });
 
-ipcMain.handle('tunnel:disable', () => {
+handleGuarded('tunnel:disable', () => {
   tunnelManager.stop();
   return { success: true };
 });
@@ -2953,7 +3212,7 @@ ipcMain.handle('app:complete-onboarding', () => {
 
 ipcMain.handle('permission-guide:check', async () => checkPermissions());
 
-ipcMain.handle('permission-guide:present', async (_event, panel: 'accessibility' | 'screen-recording') =>
+handleGuarded('permission-guide:present', async (_event, panel: 'accessibility' | 'screen-recording') =>
   presentGuide(panel)
 );
 
@@ -2962,6 +3221,7 @@ ipcMain.handle('permission-guide:dismiss', () => dismissGuide());
 ipcMain.handle('permission-guide:get-status', () => getGuideStatus());
 
 ipcMain.handle('permission-guide:request-check', async () => {
+  invalidatePermissionCache();
   const status = await checkPermissions();
   store.set('permissions.lastStatus', { ...status, checkedAt: new Date().toISOString() });
   mainWindow?.webContents.send('permission-guide:status', status);
@@ -2972,6 +3232,7 @@ ipcMain.handle('permission-guide:ready-for-check', async () => {
   // Called by the renderer's onboarding wizard when it reaches the permissions step.
   // This allows the platform UI to control exact timing instead of relying on a fixed delay.
   log.info('[Main] Renderer signaled ready for permission check');
+  invalidatePermissionCache();
   const status = await checkPermissions();
   store.set('permissions.lastStatus', { ...status, checkedAt: new Date().toISOString() });
   mainWindow?.webContents.send('permission-guide:status', status);
@@ -2992,7 +3253,7 @@ ipcMain.handle('featureFlags:get', (_event, key?: string) =>
   key ? featureFlagManager.get(key) : featureFlagManager.getAll()
 );
 
-ipcMain.handle('featureFlags:set', (_event, key: string, value: unknown) => {
+handleGuarded('featureFlags:set', (_event, key: string, value: unknown) => {
   featureFlagManager.set(key, value as import('./feature-flags.js').FlagValue);
   return true;
 });
@@ -3003,7 +3264,7 @@ ipcMain.handle('featureFlags:set', (_event, key: string, value: unknown) => {
 
 ipcMain.handle('state:get', (_event, key: string) => persistedState.get(key as never));
 
-ipcMain.handle('state:set', (_event, key: string, value: unknown) => {
+handleGuarded('state:set', (_event, key: string, value: unknown) => {
   persistedState.set(key as never, value as never);
   // Push to all renderer windows
   BrowserWindow.getAllWindows().forEach(w => {
@@ -3012,7 +3273,7 @@ ipcMain.handle('state:set', (_event, key: string, value: unknown) => {
   return true;
 });
 
-ipcMain.handle('state:patch', (_event, key: string, partial: unknown) => {
+handleGuarded('state:patch', (_event, key: string, partial: unknown) => {
   persistedState.patch(key as never, partial as never);
   return true;
 });
@@ -3050,7 +3311,7 @@ ipcMain.handle('locale:get', () => {
   return stored ?? app.getLocale();
 });
 
-ipcMain.handle('locale:set', (_event, locale: string) => {
+handleGuarded('locale:set', (_event, locale: string) => {
   persistedState.patch('prefs', { locale });
   BrowserWindow.getAllWindows().forEach(w => {
     if (!w.isDestroyed()) w.webContents.send('locale:changed', locale);
@@ -3064,7 +3325,7 @@ ipcMain.handle('locale:set', (_event, locale: string) => {
 
 ipcMain.handle('menuBar:getMode', () => persistedState.get('prefs').menuBarMode);
 
-ipcMain.handle('menuBar:setMode', (_event, enabled: boolean) => {
+handleGuarded('menuBar:setMode', (_event, enabled: boolean) => {
   persistedState.patch('prefs', { menuBarMode: enabled });
   if (isMac) {
     if (enabled) {
@@ -3079,7 +3340,7 @@ ipcMain.handle('menuBar:setMode', (_event, enabled: boolean) => {
 
 ipcMain.handle('startup:getOnLogin', () => persistedState.get('prefs').startupOnLogin);
 
-ipcMain.handle('startup:setOnLogin', (_event, enabled: boolean) => {
+handleGuarded('startup:setOnLogin', (_event, enabled: boolean) => {
   persistedState.patch('prefs', { startupOnLogin: enabled });
   if (isMac) app.setLoginItemSettings({ openAtLogin: enabled });
   return true;
@@ -3138,7 +3399,7 @@ ipcMain.handle('mcp:list-servers', () => mcpHostManager.listServers());
 
 ipcMain.handle('mcp:list-tools', (_event, serverId?: string) => mcpHostManager.listTools(serverId));
 
-ipcMain.handle('mcp:call-tool', async (_event, serverId: string, toolName: string, args: unknown) => {
+handleGuarded('mcp:call-tool', async (_event, serverId: string, toolName: string, args: unknown) => {
   try {
     const result = await mcpHostManager.callTool(serverId, toolName, args);
     return { success: true, result };
@@ -3147,7 +3408,7 @@ ipcMain.handle('mcp:call-tool', async (_event, serverId: string, toolName: strin
   }
 });
 
-ipcMain.handle('mcp:add-server', async (_event, id: string, config: unknown) => {
+handleGuarded('mcp:add-server', async (_event, id: string, config: unknown) => {
   try {
     await mcpHostManager.addServer(id, config as import('./mcp-host-manager.js').McpServerConfig);
     return { success: true };
@@ -3156,7 +3417,7 @@ ipcMain.handle('mcp:add-server', async (_event, id: string, config: unknown) => 
   }
 });
 
-ipcMain.handle('mcp:remove-server', async (_event, id: string) => {
+handleGuarded('mcp:remove-server', async (_event, id: string) => {
   try {
     await mcpHostManager.removeServer(id);
     return { success: true };
@@ -3196,7 +3457,7 @@ ipcMain.handle('hyperframes:check', async () => {
   });
 });
 
-ipcMain.handle('hyperframes:render', async (event, html: string, options: {
+handleGuarded('hyperframes:render', async (event, html: string, options: {
   format?: 'mp4' | 'mov' | 'webm';
   fps?: number;
   width?: number;
@@ -3265,19 +3526,19 @@ ipcMain.handle('hyperframes:render', async (event, html: string, options: {
 
 // ─── Mini-apps: install / start / stop / status ───────────────────────────────
 
-ipcMain.handle('miniApps:install', async (event, id: string) => {
+handleGuarded('miniApps:install', async (event, id: string) => {
   return installMiniApp(id, (progress) => {
     event.sender.send('miniApps:install-progress', progress);
   });
 });
 
-ipcMain.handle('miniApps:start', async (event, id: string) => {
+handleGuarded('miniApps:start', async (event, id: string) => {
   return startMiniApp(id, (progress) => {
     event.sender.send('miniApps:install-progress', progress);
   });
 });
 
-ipcMain.handle('miniApps:stop', (_event, id: string) => {
+handleGuarded('miniApps:stop', (_event, id: string) => {
   stopMiniApp(id);
   return { success: true };
 });
@@ -3285,25 +3546,25 @@ ipcMain.handle('miniApps:stop', (_event, id: string) => {
 ipcMain.handle('miniApps:getStatus', (_event, id: string) => getMiniAppStatus(id));
 ipcMain.handle('miniApps:launchDesktop', (_event, id: string) => launchMiniAppDesktop(id));
 ipcMain.handle('miniApps:getApproval', (_event, id: string, registration) => getMiniAppApproval(id, registration));
-ipcMain.handle('miniApps:reviewAndApprove', (_event, registration) => reviewAndApproveMiniApp(registration));
-ipcMain.handle('miniApps:revokeApproval', (_event, id: string) => {
+handleGuarded('miniApps:reviewAndApprove', (_event, registration) => reviewAndApproveMiniApp(registration));
+handleGuarded('miniApps:revokeApproval', (_event, id: string) => {
   revokeMiniAppApproval(id);
   return { success: true };
 });
-ipcMain.handle('miniApps:setSecret', (_event, id: string, name: string, value: string) => setMiniAppSecret(id, name, value));
+handleGuarded('miniApps:setSecret', (_event, id: string, name: string, value: string) => setMiniAppSecret(id, name, value));
 ipcMain.handle('miniApps:listSecrets', (_event, id: string) => listMiniAppSecrets(id));
-ipcMain.handle('miniApps:deleteSecret', (_event, id: string, name: string) => deleteMiniAppSecret(id, name));
-ipcMain.handle('miniApps:removeRuntime', (_event, id: string) => removeMiniAppRuntime(id));
-ipcMain.handle('miniApps:rollbackRuntime', (_event, id: string) => rollbackMiniAppRuntime(id));
+handleGuarded('miniApps:deleteSecret', (_event, id: string, name: string) => deleteMiniAppSecret(id, name));
+handleGuarded('miniApps:removeRuntime', (_event, id: string) => removeMiniAppRuntime(id));
+handleGuarded('miniApps:rollbackRuntime', (_event, id: string) => rollbackMiniAppRuntime(id));
 
 // Versioned marketplace releases (atomic install / rollback / uninstall)
-ipcMain.handle('miniApps:installRelease', async (event, options: { registryUrl: string; id: string; version?: string }) => {
+handleGuarded('miniApps:installRelease', async (event, options: { registryUrl: string; id: string; version?: string }) => {
   return installReleaseFromRegistry(options, (progress) => {
     event.sender.send('miniApps:install-progress', progress);
   });
 });
-ipcMain.handle('miniApps:rollbackRelease', (_event, id: string, registryUrl?: string) => rollbackReleaseInstall(id, registryUrl));
-ipcMain.handle('miniApps:removeRelease', (_event, id: string, registryUrl?: string) => {
+handleGuarded('miniApps:rollbackRelease', (_event, id: string, registryUrl?: string) => rollbackReleaseInstall(id, registryUrl));
+handleGuarded('miniApps:removeRelease', (_event, id: string, registryUrl?: string) => {
   stopMiniApp(id);
   return removeReleaseInstall(id, registryUrl);
 });
@@ -3321,7 +3582,9 @@ function oauthBroker(): MiniAppOAuthBroker {
       return safeStorage.encryptString(value).toString('base64');
     },
     decrypt: (value) => safeStorage.decryptString(Buffer.from(value, 'base64')),
-    openExternal: (url) => shell.openExternal(url),
+    openExternal: (url) => {
+      openExternalAllowlisted(url);
+    },
     storagePath: () => join(app.getPath('userData'), 'mini-app-oauth-tokens.json'),
     logger: (message) => log.info(message),
   });
@@ -3343,11 +3606,11 @@ setMiniAppOAuthTokenResolver(async (appId, providerId) => {
   return result.token ?? null;
 });
 
-ipcMain.handle('miniApps:oauthStart', (_event, appId: string, providerId: string, provider: MiniAppOAuthProvider, accountId: string) =>
+handleGuarded('miniApps:oauthStart', (_event, appId: string, providerId: string, provider: MiniAppOAuthProvider, accountId: string) =>
   oauthBroker().startFlow(appId, providerId, provider, accountId));
 ipcMain.handle('miniApps:oauthCancel', (_event, flowId: string) => oauthBroker().cancelFlow(flowId));
 ipcMain.handle('miniApps:oauthAccounts', (_event, appId: string) => oauthBroker().listAccounts(appId));
-ipcMain.handle('miniApps:oauthDisconnect', (_event, appId: string, providerId: string, accountId: string) =>
+handleGuarded('miniApps:oauthDisconnect', (_event, appId: string, providerId: string, accountId: string) =>
   oauthBroker().disconnect(appId, providerId, accountId));
 
 // ─── Browser API Capture (HAR-derived API client) ───────────────────────────
@@ -3355,7 +3618,7 @@ ipcMain.handle('miniApps:oauthDisconnect', (_event, appId: string, providerId: s
 // archive that the platform ingests to derive reusable API contracts.
 
 ipcMain.handle('browser-capture:is-available', () => isCaptureAvailable());
-ipcMain.handle('browser-capture:start', (_event, options?: { filterUrls?: string[] }) => {
+handleGuarded('browser-capture:start', (_event, options?: { filterUrls?: string[] }) => {
   try {
     const { sessionId } = createCaptureSession(options);
     return { success: true as const, sessionId };

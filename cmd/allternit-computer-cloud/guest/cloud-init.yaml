@@ -1,0 +1,108 @@
+#cloud-config
+#
+# Reproducible Ubuntu 24.04 desktop guest for Allternit Computer Cloud.
+# Designed for Incus containers (works on VMs too). Boots into an XFCE
+# desktop on Xvfb with x11vnc on TCP/5900.
+
+package_update: true
+
+packages:
+  - xfce4
+  - xvfb
+  - x11vnc
+  - scrot
+  - xdotool
+  - dbus-x11
+  - xfonts-base
+  - fonts-dejavu-core
+  - curl
+  - ca-certificates
+  - wget
+  - gnupg
+
+# Let Incus DHCP supply the bridge-local DNS resolver (10.1.x.1). Hard-coding
+# public DNS here broke outbound resolution on this host because the container
+# network is NATed through incusbr0 and the public resolvers are not reachable.
+
+write_files:
+  - path: /opt/allternit-desktop/run.sh
+    owner: root:root
+    permissions: "0755"
+    content: |
+      #!/bin/bash
+      set -e
+      export DISPLAY=:0
+      export HOME=/root
+      mkdir -p /var/log/allternit-desktop
+
+      # Start the in-memory X server.
+      Xvfb :0 -screen 0 1280x720x24 -ac +extension GLX +render -noreset \
+        >/var/log/allternit-desktop/xvfb.log 2>&1 &
+
+      # Give Xvfb a moment to come up.
+      sleep 2
+
+      # Start the XFCE session.
+      xfce4-session >/var/log/allternit-desktop/xfce.log 2>&1 &
+
+      # Share the display over VNC (password = allternit for the MVP).
+      x11vnc -display :0 -rfbport 5900 -forever -shared -passwd allternit \
+        >/var/log/allternit-desktop/x11vnc.log 2>&1 &
+
+      # Keep the service alive so systemd does not kill the cgroup.
+      wait
+
+  - path: /etc/systemd/system/allternit-desktop.service
+    owner: root:root
+    permissions: "0644"
+    content: |
+      [Unit]
+      Description=Allternit agent desktop
+      After=network.target systemd-user-sessions.service
+
+      [Service]
+      Type=simple
+      ExecStart=/opt/allternit-desktop/run.sh
+      ExecStop=/bin/kill -TERM $MAINPID
+      KillMode=mixed
+      Restart=on-failure
+      RestartSec=5
+
+      [Install]
+      WantedBy=multi-user.target
+
+  - path: /etc/systemd/system/allternit-mux.service
+    owner: root:root
+    permissions: "0644"
+    content: |
+      [Unit]
+      Description=Allternit mux guest runtime
+      After=network.target systemd-user-sessions.service
+      ConditionPathExists=/opt/allternit-mux/allternit-mux
+
+      [Service]
+      Type=simple
+      Environment="HOME=/root"
+      ExecStart=/opt/allternit-mux/allternit-mux serve
+      ExecStop=/bin/kill -TERM $MAINPID
+      KillMode=mixed
+      Restart=on-failure
+      RestartSec=5
+
+      [Install]
+      WantedBy=multi-user.target
+
+runcmd:
+  # Install Google Chrome stable for remote CDP browser automation.
+  - wget -q -O /usr/share/keyrings/google-chrome.gpg https://dl-ssl.google.com/linux/linux_signing_key.pub
+  - echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list
+  - apt-get update -y
+  - apt-get install -y google-chrome-stable
+  - systemctl daemon-reload
+  - systemctl enable allternit-desktop.service
+  - systemctl start allternit-desktop.service
+  - systemctl enable allternit-mux.service
+  # Do not start allternit-mux here; the binary is placed by the CI image
+  # pipeline (Phase 15). When present, systemd will start it on next boot.
+
+final_message: "Allternit desktop guest is ready."

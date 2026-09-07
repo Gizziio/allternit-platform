@@ -5,7 +5,7 @@
  *
  * "Env-less" = no Environments API layer. Distinct from "CCR v2" (the
  * /worker/* transport protocol) — the env-based path (replBridge.ts) can also
- * use CCR v2 transport via CLAUDE_CODE_USE_CCR_V2. This file is about removing
+ * use CCR v2 transport via GIZZI_CODE_USE_CCR_V2. This file is about removing
  * the poll/dispatch layer, not about which transport protocol is underneath.
  *
  * Unlike initBridgeCore (env-based, ~2400 lines), this connects directly
@@ -30,6 +30,7 @@
  */
 
 import { feature } from 'bun:bundle'
+import { readGizziEnv } from '@/shared/utils/gizziEnv.js';
 import axios from 'axios'
 import {
   createV2ReplTransport,
@@ -72,7 +73,7 @@ import type {
 } from '../entrypoints/sdk/controlTypes'
 import type { PermissionMode } from '../utils/permissions/PermissionMode'
 
-const ANTHROPIC_VERSION = '2023-06-01'
+const ALLTERNIT_API_VERSION = '2023-06-01'
 
 // Telemetry discriminator for ws_connected. 'initial' is the default and
 // never passed to rebuildTransport (which can only be called post-init);
@@ -83,7 +84,7 @@ function oauthHeaders(accessToken: string): Record<string, string> {
   return {
     Authorization: `Bearer ${accessToken}`,
     'Content-Type': 'application/json',
-    'anthropic-version': ANTHROPIC_VERSION,
+    'allternit-version': ALLTERNIT_API_VERSION,
   }
 }
 
@@ -228,7 +229,7 @@ export async function initEnvLessBridgeCore(
       heartbeatIntervalMs: cfg.heartbeat_interval_ms,
       heartbeatJitterFraction: cfg.heartbeat_jitter_fraction,
       // Per-instance closure — keeps the worker JWT out of
-      // process.env.CLAUDE_CODE_SESSION_ACCESS_TOKEN, which mcp/client.ts
+      // readGizziEnv('SESSION_ACCESS_TOKEN'), which mcp/client.ts
       // reads ungatedly and would otherwise send to user-configured ws/http
       // MCP servers. Frozen-at-construction is correct: transport is fully
       // rebuilt on refresh (rebuildTransport below).
@@ -926,7 +927,7 @@ import {
 } from './codeSessionApi'
 import { getBridgeBaseUrlOverride } from './bridgeConfig'
 
-// CLI-side wrapper that applies the CLAUDE_BRIDGE_BASE_URL dev override and
+// CLI-side wrapper that applies the GIZZI_BRIDGE_BASE_URL dev override and
 // injects the trusted-device token (both are env/GrowthBook reads that the
 // SDK-facing codeSessionApi.ts export must stay free of).
 export async function fetchRemoteCredentials(
@@ -971,7 +972,7 @@ async function archiveSession(
   if (!accessToken) return 'no_token'
   // Archive lives at the compat layer (/v1/sessions/*, not /v1/code/sessions).
   // compat.parseSessionID only accepts TagSession (session_*), so retag cse_*.
-  // anthropic-beta + x-organization-uuid are required — without them the
+  // allternit-beta + x-organization-uuid are required — without them the
   // compat gateway 404s before reaching the handler.
   //
   // Unlike bridgeMain.ts (which caches compatId in sessionCompatIds to keep
@@ -988,7 +989,7 @@ async function archiveSession(
       {
         headers: {
           ...oauthHeaders(accessToken),
-          'anthropic-beta': 'ccr-byoc-2025-07-29',
+          'allternit-beta': 'ccr-byoc-2025-07-29',
           'x-organization-uuid': orgUUID,
         },
         timeout: timeoutMs,

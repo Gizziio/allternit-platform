@@ -6,63 +6,63 @@ export type ModelConfig = Record<APIProvider, ModelName>
 // @[MODEL LAUNCH]: Add a new CLAUDE_*_CONFIG constant here. Double check the correct model strings
 // here since the pattern may change.
 
-export const CLAUDE_3_7_SONNET_CONFIG = {
+export const GIZZI_3_7_SONNET_CONFIG = {
   firstParty: 'claude-3-7-sonnet-20250219',
 } as const satisfies ModelConfig
 
-export const CLAUDE_3_5_V2_SONNET_CONFIG = {
+export const GIZZI_3_5_V2_SONNET_CONFIG = {
   firstParty: 'claude-3-5-sonnet-20241022',
 } as const satisfies ModelConfig
 
-export const CLAUDE_3_5_HAIKU_CONFIG = {
+export const GIZZI_3_5_HAIKU_CONFIG = {
   firstParty: 'claude-3-5-haiku-20241022',
 } as const satisfies ModelConfig
 
-export const CLAUDE_HAIKU_4_5_CONFIG = {
+export const GIZZI_HAIKU_4_5_CONFIG = {
   firstParty: 'claude-haiku-4-5-20251001',
 } as const satisfies ModelConfig
 
-export const CLAUDE_SONNET_4_CONFIG = {
+export const GIZZI_SONNET_4_CONFIG = {
   firstParty: 'claude-sonnet-4-20250514',
 } as const satisfies ModelConfig
 
-export const CLAUDE_SONNET_4_5_CONFIG = {
+export const GIZZI_SONNET_4_5_CONFIG = {
   firstParty: 'claude-sonnet-4-5-20250929',
 } as const satisfies ModelConfig
 
-export const CLAUDE_OPUS_4_CONFIG = {
+export const GIZZI_OPUS_4_CONFIG = {
   firstParty: 'claude-opus-4-20250514',
 } as const satisfies ModelConfig
 
-export const CLAUDE_OPUS_4_1_CONFIG = {
+export const GIZZI_OPUS_4_1_CONFIG = {
   firstParty: 'claude-opus-4-1-20250805',
 } as const satisfies ModelConfig
 
-export const CLAUDE_OPUS_4_5_CONFIG = {
+export const GIZZI_OPUS_4_5_CONFIG = {
   firstParty: 'claude-opus-4-5-20251101',
 } as const satisfies ModelConfig
 
-export const CLAUDE_OPUS_4_6_CONFIG = {
+export const GIZZI_OPUS_4_6_CONFIG = {
   firstParty: 'claude-opus-4-6',
 } as const satisfies ModelConfig
 
-export const CLAUDE_SONNET_4_6_CONFIG = {
+export const GIZZI_SONNET_4_6_CONFIG = {
   firstParty: 'claude-sonnet-4-6',
 } as const satisfies ModelConfig
 
 // @[MODEL LAUNCH]: Register the new config here.
 export const ALL_MODEL_CONFIGS = {
-  haiku35: CLAUDE_3_5_HAIKU_CONFIG,
-  haiku45: CLAUDE_HAIKU_4_5_CONFIG,
-  sonnet35: CLAUDE_3_5_V2_SONNET_CONFIG,
-  sonnet37: CLAUDE_3_7_SONNET_CONFIG,
-  sonnet40: CLAUDE_SONNET_4_CONFIG,
-  sonnet45: CLAUDE_SONNET_4_5_CONFIG,
-  sonnet46: CLAUDE_SONNET_4_6_CONFIG,
-  opus40: CLAUDE_OPUS_4_CONFIG,
-  opus41: CLAUDE_OPUS_4_1_CONFIG,
-  opus45: CLAUDE_OPUS_4_5_CONFIG,
-  opus46: CLAUDE_OPUS_4_6_CONFIG,
+  haiku35: GIZZI_3_5_HAIKU_CONFIG,
+  haiku45: GIZZI_HAIKU_4_5_CONFIG,
+  sonnet35: GIZZI_3_5_V2_SONNET_CONFIG,
+  sonnet37: GIZZI_3_7_SONNET_CONFIG,
+  sonnet40: GIZZI_SONNET_4_CONFIG,
+  sonnet45: GIZZI_SONNET_4_5_CONFIG,
+  sonnet46: GIZZI_SONNET_4_6_CONFIG,
+  opus40: GIZZI_OPUS_4_CONFIG,
+  opus41: GIZZI_OPUS_4_1_CONFIG,
+  opus45: GIZZI_OPUS_4_5_CONFIG,
+  opus46: GIZZI_OPUS_4_6_CONFIG,
 } as const satisfies Record<string, ModelConfig>
 
 export type ModelKey = keyof typeof ALL_MODEL_CONFIGS

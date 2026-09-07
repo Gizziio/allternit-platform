@@ -14,6 +14,7 @@ import os from "os"
 import { Log } from "@/shared/util/log"
 import { GlobalPaths } from "@/runtime/context/global/paths"
 import { Filesystem } from "@/shared/util/filesystem"
+import { killProcessTree, ProcessRegistry } from "@/runtime/process-registry"
 
 const log = Log.create({ service: "sidecar" })
 
@@ -82,7 +83,9 @@ export namespace Sidecar {
           const out = await new Response(proc.stdout).text()
           return out.trim() || candidate
         }
-      } catch {}
+      } catch {
+        // which/spawn failed — try the next candidate.
+      }
 
       // Direct existence check for absolute paths
       if (candidate.startsWith("/")) {
@@ -170,7 +173,9 @@ export namespace Sidecar {
       setTimeout(() => {
         try {
           child.kill()
-        } catch {}
+        } catch {
+          // child may have already exited.
+        }
         log.error("pull timed out", { tag })
         resolve(false)
       }, 600_000)
@@ -208,7 +213,7 @@ export namespace Sidecar {
 
     const child = spawn(ollamaBin, ["serve"], {
       env,
-      detached: true,
+      detached: process.platform !== "win32",
       stdio: ["ignore", "pipe", "pipe"],
     })
 
@@ -223,7 +228,8 @@ export namespace Sidecar {
     // Pipe output to log file
     child.stdout?.on("data", (d) => logFd.write(d))
     child.stderr?.on("data", (d) => logFd.write(d))
-    child.unref()
+    // Stay attached to the session so close/SIGINT reaps the sidecar. Do not unref.
+    ProcessRegistry.track(child, { label: "sidecar-ollama", group: process.platform !== "win32" })
 
     // Wait for server to be ready (up to 15 seconds)
     for (let i = 0; i < 30; i++) {
@@ -247,10 +253,12 @@ export namespace Sidecar {
       const pidStr = await Filesystem.readText(paths.pid)
       const pid = parseInt(pidStr, 10)
       if (!isNaN(pid)) {
-        process.kill(pid, "SIGTERM")
+        killProcessTree(pid, process.platform !== "win32")
         log.info("sidecar stopped", { pid })
       }
-    } catch {}
+    } catch {
+      // No pid file or process already gone — forced cleanup below.
+    }
 
     await fs.rm(paths.pid, { force: true }).catch(() => {})
     await fs.rm(paths.ready, { force: true }).catch(() => {})
@@ -338,6 +346,48 @@ export namespace Sidecar {
     tags?: string[]
     pipeline_tag?: string
     lastModified?: string
+    /** Sum of `.gguf` sibling file sizes from the HF detail API, when fetched in time. */
+    sizeBytes?: number
+  }
+
+  /** Max detail fetches per search when resolving real GGUF sizes. */
+  const SIZE_FETCH_MAX_MODELS = 12
+  /** Overall time budget (ms) for size resolution inside one search. */
+  const SIZE_FETCH_BUDGET_MS = 6000
+
+  interface HfModelDetail {
+    siblings?: Array<{ rfilename?: string; size?: number }>
+  }
+
+  /**
+   * Best-effort real sizes: the HF list endpoint does not include file sizes,
+   * so query the per-repo detail endpoint (`?blobs=true`) for the top results
+   * and sum the `.gguf` siblings. Failures and timeouts leave `sizeBytes`
+   * undefined rather than slowing the search down.
+   */
+  async function attachGgufSizes(models: HuggingFaceGgufResult[]): Promise<void> {
+    const deadline = Date.now() + SIZE_FETCH_BUDGET_MS
+    const targets = models.slice(0, SIZE_FETCH_MAX_MODELS)
+    await Promise.allSettled(
+      targets.map(async (model) => {
+        const remaining = deadline - Date.now()
+        if (remaining <= 0) return
+        const path = model.repoId.split("/").map(encodeURIComponent).join("/")
+        const url = `https://huggingface.co/api/models/${path}?blobs=true`
+        const resp = await fetch(url, {
+          signal: AbortSignal.timeout(Math.min(remaining, SIZE_FETCH_BUDGET_MS)),
+        })
+        if (!resp.ok) return
+        const detail = (await resp.json()) as HfModelDetail
+        let sizeBytes = 0
+        for (const sibling of detail.siblings ?? []) {
+          if (sibling.rfilename?.endsWith(".gguf") && typeof sibling.size === "number") {
+            sizeBytes += sibling.size
+          }
+        }
+        if (sizeBytes > 0) model.sizeBytes = sizeBytes
+      }),
+    )
   }
 
   /**
@@ -367,7 +417,7 @@ export namespace Sidecar {
         pipeline_tag?: string
         lastModified?: string
       }>
-      return data
+      const models: HuggingFaceGgufResult[] = data
         .map((m) => ({
           repoId: m.id ?? m.modelId ?? "",
           downloads: m.downloads ?? 0,
@@ -377,6 +427,8 @@ export namespace Sidecar {
           lastModified: m.lastModified,
         }))
         .filter((m) => m.repoId.length > 0)
+      await attachGgufSizes(models)
+      return models
     } catch (err) {
       log.warn("huggingface search error", { error: err })
       return []

@@ -5,7 +5,6 @@
   bun,
   sysctl,
   makeBinaryWrapper,
-  models-dev,
   ripgrep,
   installShellFiles,
   versionCheckHook,
@@ -27,7 +26,6 @@ stdenvNoCC.mkDerivation (finalAttrs: {
     bun
     installShellFiles
     makeBinaryWrapper
-    models-dev
     writableTmpDirAsHomeHook
   ];
 
@@ -39,7 +37,6 @@ stdenvNoCC.mkDerivation (finalAttrs: {
     runHook postConfigure
   '';
 
-  env.MODELS_DEV_API_JSON = "${models-dev}/dist/_api.json";
   env.GIZZI_DISABLE_MODELS_FETCH = true;
   env.GIZZI_VERSION = finalAttrs.version;
   env.GIZZI_CHANNEL = "local";

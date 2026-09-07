@@ -499,7 +499,6 @@ export namespace Provider {
     // here with lower priority — user config and env always win.
     const discovered = await Discovery.run()
     for (const dp of discovered) {
-      if (providers[dp.id]) continue             // user-configured takes priority
       if (!isProviderAllowed(dp.id)) continue
       const dpModels: Record<string, Model> = {}
       for (const m of dp.models) {
@@ -532,14 +531,25 @@ export namespace Provider {
         }
       }
       if (Object.keys(dpModels).length === 0) continue
+      const existing = providers[dp.id]
+      if (existing) {
+        for (const [modelID, model] of Object.entries(dpModels)) {
+          if (!existing.models[modelID]) existing.models[modelID] = model
+        }
+        if (dp.subprocess_cmd && !existing.subprocess_cmd) existing.subprocess_cmd = dp.subprocess_cmd
+        if (dp.auth_type && !existing.auth_type) existing.auth_type = dp.auth_type
+        log.info("discovered-merged", { providerID: dp.id, source: dp.source, models: Object.keys(dpModels).length })
+        continue
+      }
       providers[dp.id] = {
         id: dp.id,
         name: dp.name,
         source: "custom",
-        env: [],
+        env: dp.id === "allternit" ? ["ALLTERNIT_API_KEY"] : [],
+        key: dp.id === "allternit" ? process.env.ALLTERNIT_API_KEY : undefined,
         auth_type: dp.auth_type,
         subprocess_cmd: dp.subprocess_cmd,
-        options: {},
+        options: dp.base_url ? { baseURL: dp.base_url } : {},
         models: dpModels,
       }
       log.info("discovered", { providerID: dp.id, source: dp.source, models: Object.keys(dpModels).length })
@@ -765,7 +775,10 @@ export namespace Provider {
     const sdk = await getSDK(model, plan)
 
     try {
-      const language = s.modelLoaders[model.providerID]
+      const useCustomLoader =
+        !!s.modelLoaders[model.providerID] &&
+        !String(model.api.npm || "").includes("openai-compatible")
+      const language = useCustomLoader
         ? await s.modelLoaders[model.providerID](sdk, model.api.id, provider?.options ?? {})
         : sdk.languageModel(model.api.id)
       s.models.set(key, language)
@@ -839,7 +852,18 @@ export namespace Provider {
       }
     }
 
-    // 3. Environment variables
+    // 3. Installed CLI brains need no gizzi API key — the CLI is already authed.
+    if (!plan.source) {
+      if (provider?.auth_type === "subprocess" || provider?.subprocess_cmd) {
+        plan.source = "subprocess"
+        plan.authType = "subprocess"
+      } else if (provider?.auth_type === "none") {
+        plan.source = "none"
+        plan.authType = "none"
+      }
+    }
+
+    // 4. Environment variables
     if (!plan.source && provider?.env?.length) {
       const env = Env.all()
       const apiKey = provider.env.map((item) => env[item]).find(Boolean)
@@ -849,7 +873,7 @@ export namespace Provider {
       }
     }
 
-    // 4. Auth-store profiles, in configured order
+    // 5. Auth-store profiles, in configured order
     if (!plan.source) {
       const profiles = await Auth.profilesForProvider(ref.providerID)
       const profile = profiles[0]
@@ -859,7 +883,7 @@ export namespace Provider {
       }
     }
 
-    // 5. Plugin OAuth loaders
+    // 6. Plugin OAuth loaders
     if (!plan.source && provider) {
       for (const plugin of await Plugin.list()) {
         if (!plugin.auth || plugin.auth.provider !== ref.providerID) continue
@@ -877,17 +901,6 @@ export namespace Provider {
           if (loaded.authType) plan.authType = loaded.authType
           break
         }
-      }
-    }
-
-    // 6. subprocess / none auth types
-    if (!plan.source) {
-      if (provider?.auth_type === "subprocess" || provider?.subprocess_cmd) {
-        plan.source = "subprocess"
-        plan.authType = "subprocess"
-      } else if (provider?.auth_type === "none") {
-        plan.source = "none"
-        plan.authType = "none"
       }
     }
 
