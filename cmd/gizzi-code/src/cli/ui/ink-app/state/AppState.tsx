@@ -38,6 +38,7 @@ export {
   type CompletionBoundary,
   getDefaultAppState,
   IDLE_SPECULATION_STATE,
+  type Screen,
   type SpeculationResult,
   type SpeculationState,
 } from './AppStateStore.js';

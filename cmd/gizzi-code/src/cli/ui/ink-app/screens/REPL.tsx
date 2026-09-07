@@ -30,7 +30,7 @@ import { startPreventSleep, stopPreventSleep } from '../services/preventSleep';
 import { useTerminalNotification } from '../ink/useTerminalNotification';
 import { hasCursorUpViewportYankBug } from '../ink/terminal';
 import { createFileStateCacheWithSizeLimit, mergeFileStateCaches, READ_FILE_STATE_CACHE_SIZE } from '../utils/fileStateCache';
-import { updateLastInteractionTime, getLastInteractionTime, getOriginalCwd, getProjectRoot, getSessionId, switchSession, setCostStateForRestore, getTurnHookDurationMs, getTurnHookCount, resetTurnHookDuration, getTurnToolDurationMs, getTurnToolCount, resetTurnToolDuration, getTurnClassifierDurationMs, getTurnClassifierCount, resetTurnClassifierDuration } from '../bootstrap/state';
+import { updateLastInteractionTime, getLastInteractionTime, getOriginalCwd, getProjectRoot, getSessionId, switchSession, setCostStateForRestore, getTurnHookDurationMs, getTurnHookCount, resetTurnHookDuration, getTurnToolDurationMs, getTurnToolCount, resetTurnToolDuration, getTurnClassifierDurationMs, getTurnClassifierCount, resetTurnClassifierDuration, getCwdState } from '../bootstrap/state';
 import { asSessionId, asAgentId } from '../types/ids';
 import { logForDebugging } from '../utils/debug';
 import { QueryGuard } from '../utils/QueryGuard';
@@ -169,7 +169,7 @@ import type { AgentDefinition } from '../tools/AgentTool/loadAgentsDir';
 import { resolveAgentTools } from '../tools/AgentTool/agentToolUtils';
 import { resumeAgentBackground } from '../tools/AgentTool/resumeAgent';
 import { useMainLoopModel } from '../hooks/useMainLoopModel';
-import { useAppState, useSetAppState, useAppStateStore } from '../state/AppState';
+import { useAppState, useSetAppState, useAppStateStore, type Screen as AppStateScreen } from '../state/AppState';
 import type { ContentBlockParam, ImageBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/messages.mjs';
 import { AllternitHarness } from '@allternit/sdk/harness';
 import { shouldUseHarness, FEATURE_FLAGS } from '../utils/feature-flags';
@@ -388,6 +388,8 @@ import type { RemoteMessageContent } from '../utils/teleport/api';
 import { FullscreenLayout, useUnseenDivider, computeUnseenDivider } from '../components/FullscreenLayout';
 import { isFullscreenEnvEnabled, maybeGetTmuxMouseHint, isMouseTrackingEnabled } from '../utils/fullscreen';
 import { AlternateScreen } from '../ink/components/AlternateScreen';
+import { DashboardScreen } from './DashboardScreen';
+import { InProcessDashboardSource } from '../dashboard/InProcessSource';
 import { ScrollKeybindingHandler } from '../components/ScrollKeybindingHandler';
 import { useMessageActions, MessageActionsKeybindings, MessageActionsBar, type MessageActionsState, type MessageActionsNav, type MessageActionCaps } from '../components/messageActions';
 import { setClipboard } from '../ink/termio/osc';
@@ -674,7 +676,7 @@ export type Props = {
   // Thinking configuration to use when thinking is enabled
   thinkingConfig: ThinkingConfig;
 };
-export type Screen = 'prompt' | 'transcript';
+export type Screen = AppStateScreen;
 export function REPL({
   commands: initialCommands,
   debug,
@@ -855,7 +857,15 @@ export function REPL({
   const onChangeDynamicMcpConfig = useCallback((config: Record<string, ScopedMcpServerConfig>) => {
     setDynamicMcpConfig(config);
   }, [setDynamicMcpConfig]);
-  const [screen, setScreen] = useState<Screen>('prompt');
+  const screen = useAppState(s => s.screen);
+  // AppState-backed (not useState) so slash commands can switch screens via
+  // context.setAppState. Accepts the same SetStateAction shape as before.
+  const setScreen = useCallback((update: React.SetStateAction<Screen>) => {
+    setAppState(prev => ({
+      ...prev,
+      screen: typeof update === 'function' ? (update as (s: Screen) => Screen)(prev.screen) : update
+    }));
+  }, [setAppState]);
   const [showAllInTranscript, setShowAllInTranscript] = useState(false);
   // [ forces the dump-to-scrollback path inside transcript mode. Separate
   // from GIZZI_CODE_NO_FLICKER=0 (which is process-lifetime) — this is
@@ -2727,6 +2737,48 @@ export function REPL({
       });
     })();
   }, [abortController, mainLoopModel, toolPermissionContext, mainThreadAgentDefinition, getToolUseContext, customSystemPrompt, appendSystemPrompt, canUseTool, setAppState]);
+
+  // Agent dashboard source: in-process top-level sessions dispatched from
+  // /dashboard. Query params mirror handleBackgroundQuery so dashboard
+  // sessions behave like backgrounded main-session queries (full tool pool,
+  // same system prompt), with the addition of follow-up turns.
+  const buildDashboardQueryParams = useCallback(async () => {
+    const toolUseContext = getToolUseContext(messagesRef.current, [], new AbortController(), mainLoopModel);
+    const [defaultSystemPrompt, userContext, systemContext] = await Promise.all([getSystemPrompt(toolUseContext.options.tools, mainLoopModel, Array.from(toolPermissionContext.additionalWorkingDirectories.keys()), toolUseContext.options.mcpClients), getUserContext(), getSystemContext()]);
+    const systemPrompt = buildEffectiveSystemPrompt({
+      mainThreadAgentDefinition,
+      toolUseContext,
+      customSystemPrompt,
+      defaultSystemPrompt,
+      appendSystemPrompt
+    });
+    toolUseContext.renderedSystemPrompt = systemPrompt;
+    return {
+      systemPrompt,
+      userContext,
+      systemContext,
+      canUseTool,
+      toolUseContext,
+      querySource: getQuerySourceForREPL()
+    };
+  }, [mainLoopModel, toolPermissionContext, mainThreadAgentDefinition, getToolUseContext, customSystemPrompt, appendSystemPrompt, canUseTool]);
+  const dashboardSource = useMemo(() => new InProcessDashboardSource({
+    getAppState: store.getState,
+    setAppState,
+    buildQueryParams: buildDashboardQueryParams,
+    // Synthetic leader row for the main session (Phase 5 wires live state).
+    getMainRow: () => ({
+      id: 'main',
+      source: 'in-process',
+      title: getCurrentSessionTitle(getSessionId()) ?? 'Main session',
+      state: 'idle',
+      activityLine: '',
+      directory: getCwdState(),
+      pinned: true,
+      createdAt: 0,
+      updatedAt: Date.now()
+    })
+  }), [store, setAppState, buildDashboardQueryParams]);
   const {
     handleBackgroundSession
   } = useSessionBackgrounding({
@@ -4842,6 +4894,20 @@ export function REPL({
         </AlternateScreen>;
     }
     return transcriptReturn;
+  }
+
+  if (screen === 'dashboard') {
+    // Full-screen agent dashboard (Grok-style). Mounted as its own screen,
+    // same AlternateScreen + KeybindingSetup shape as the transcript
+    // branch so the alt buffer reconciles across toggles.
+    const dashboardReturn = <KeybindingSetup>
+        <AnimatedTerminalTitle isAnimating={titleIsAnimating} title={terminalTitle} disabled={titleDisabled} noPrefix={showStatusInTerminalTab} />
+        <GlobalKeybindingHandlers {...globalKeybindingProps} />
+        <DashboardScreen source={dashboardSource} />
+      </KeybindingSetup>;
+    return <AlternateScreen mouseTracking={isMouseTrackingEnabled()}>
+        {dashboardReturn}
+      </AlternateScreen>;
   }
 
   // Get viewed agent task (inlined from selectors for explicit data flow).

@@ -1,9 +1,44 @@
 # Steering checkpoint
 
-Goal: Platform UI polish for Allternit Desktop — (1) chat session bg tan→white ✅, (2) cowork progress rail ✅, (3) code-mode model selection sync ✅, (4) code-mode chrome + first-class computer ✅, (5) global multi-terminal workspace ✅ (all committed; Phase 3 being committed at this checkpoint).
+## Goal
+Port three Grok CLI features into gizzi-code (worktree `allternit-session-7631feda`, branch `session/7631feda-bbb5-492f-97cf-55f243eda42d`):
+1. `/session-info` presentation — DONE (b8675f9ce)
+2. Agent dashboard `/dashboard` — full Grok parity, in-process first — CODE COMPLETE, functionally verified in tmux TUI (b8675f9ce, 07865f0d0, c2f807680, 9b307db69)
+3. `/settings` polish — DONE (b8675f9ce)
 
-Just did: Phase 3 — global multi-terminal workspace. New `terminal-workspace.store.ts` (zustand+persist: tiles with label/cwd/spawnCommand/sourceTag, focus zoom, filter; in-memory PTY registry so removeTile disposes the remote session). New `terminal-workspace/` components: workspace grid surface (auto-fill grid, no tile cap, inline rename, focus-zoom overlay w/ Esc, filter chips, theme-token empty state), per-tile PTY lifecycle (lazy create, liveness reattach, spawnCommand injection), and a self-contained catalogue modal (`WorkspaceSessionCatalog`) on a minimal port of main's read-only `native-sessions-api` (`/harnesses|/list|/show` + `deriveSpawnCommand` from harness resumeHint). TerminalView gains a segmented Workspace/Classic toggle (Workspace default). Code-session side pane gets "Open in terminal workspace" (tagged tile, fresh PTY in same cwd — no PTY migration in v1). Typecheck: identical 15-error baseline, zero new; touched tests pass (UnifiedTerminal 1/1, CodeSessionSidePane 2/2).
+Plan file: ~/.kimi-code/sessions/wd_joe_db5f68cf8615/session_7631feda-bbb5-492f-97cf-55f243eda42d/agents/main/plans/icon-kate-bishop-nightning-wing.md (name approximate — search plans/ dir if needed)
 
-Next: Steering gate → commit Phase 3. Then final phase: push branch, open PR / merge per repo ritual, write agent-ledger attestation, worktree cleanup. KNOWN MERGE NOTES: (a) `src/lib/agents/native-sessions-api.ts` was added on BOTH this branch (minimal port) and main (441ed7495, full version) — at merge, keep main's file and adapt WorkspaceSessionCatalog to its API (needs listHarnesses/list/show + resumeHint). (b) `BotComputerViewport` landed on main (7738f09e0) after this branch's base — CodeAciPane wires BotDesktopView here; swap at merge if BotComputerViewport is canonical. (c) AgentModeBackdrop fog warmth — owner review.
+## Branch state (all pushed to origin)
+- b8675f9ce Phases 1–3: /session-info (aliases info/session-info, auth+turns rows, copy c/y), /settings effort row, dashboard shell + /dashboard command + ctrl+\ binding
+- 07865f0d0 Phase 4: dashboard/{types,topLevelSession,InProcessSource}.ts, functional DashboardScreen (dispatch/stop/pin), REPL wiring (buildDashboardQueryParams + dashboardSource)
+- c2f807680 Phase 5: full UI — peek/reply, needs-input via canUseTool wrapper, search a:/s:/#, Ctrl+G grouping, idle folding + N-more, v details, ? cheatsheet, rename/pin/reorder (dashboard.pinned + dashboard.reorder in GlobalConfig), Esc ladder
+- 9b307db69 CRITICAL FIX: sessionStorage.ts re-exported getProjectDir from projectDir.js without local binding → every call site was a latent ReferenceError when getSessionProjectDir() nullish; dashboard dispatch hit it seconds after TUI start. Added `import { getProjectDir } from './projectDir.js'`. Also: DashboardScreen padLine + opaque boxes (cosmetic, see known delta). CHANGELOG.md Unreleased section written.
 
-Open questions: Whether to rebase this branch onto current main before PR (main drifted) or merge as-is and resolve the two notes above in the merge commit.
+## Verification status
+- `bun run typecheck` green after P4 and P5 (before the 9b307db69 fix; that fix is one import in @ts-nocheck file + JSX props — rerun typecheck to be safe)
+- `bun run test` (ci-smoke-test.sh): 1270 pass / 0 fail / 42 skip
+- tmux TUI smoke (bun run dev in tmux session gizzidash): /dashboard opens; header+leader row render; dispatch spawns session row; query runs (23 tok progress shown); finalize → 'Done'; Enter opens peek (model · permission · state, last response, reply box); reply accepted; p pins (⌖); / search filters; Esc ladder works; exit to prompt works. Debug instrumentation removed after use.
+- Dev-env caveat: TUI runs "Not logged in" with kimi-cli brain — model returns getModelBetas error text but the full pipeline works; pre-existing env issue, not our code.
+
+## Known cosmetic delta (document in ledger)
+- Stale-cell ghosts: when a rendered line shrinks between frames, old cells beyond the new line end linger in the terminal grid. Root cause: ink emit layer `log-update.ts:106` trimEnd()s every line, so trailing-space clearing (padLine) and Box `opaque` fill (plain spaces) never reach the grid; backgroundColor fill also didn't cover (width/emit). NOT dashboard-specific — any shrinking line in this ink. Options later: renderer-level erase-to-EOL for shrunk rows, or accept. Do NOT keep chasing this in this session.
+- tmux capture-pane shows mid-frame/stale states; trust the tee'd stdout log (/tmp/gizzidash.log) over capture-pane for "what did the app render".
+
+## Gotchas (cumulative)
+- Vendored ink Event has NO preventDefault — use event.stopImmediatePropagation().
+- useAppState REQUIRES a selector: useAppState(s => s.tasks) — bare useAppState() crashes (TUI Render Error, process exits).
+- useTerminalSize destructure is `{ rows: termRows, columns }` — root Box must use termRows (a bare `rows` ReferenceError also kills the TUI).
+- Single-char Dashboard chords (q/x/p/r) fire on any keypress — gate dashboard:exit with isActive while inner inputs focused (browsing = focus==='list' && no peek/search/details/cheatsheet).
+- ctrl+letter arrives as key.ctrl && input==='<letter>'; plain '/' is more reliable than Ctrl+/ in terminals.
+- Vendored useInput uses useEventCallback (fresh closures, no stale-closure bugs).
+- TUI crashes (render errors) print "TUI Render Error" to stdout and EXIT — check the tee log, not the pane.
+- Synchronous throws inside dispatch paths get swallowed silently by the input pipeline (no log, no crash) — instrument with appendFileSync to /tmp when debugging handler issues.
+
+## Next (post-compaction resume)
+1. Rerun `bun run typecheck` in cmd/gizzi-code for 9b307db69 (expected green).
+2. Optional quick tmux re-verify of the opaque/padLine render (session gizzidash workflow: tmux new-session -d -s gizzidash -x 220 -y 55 -c <worktree>/cmd/gizzi-code 'bun run dev 2>&1 | tee /tmp/gizzidash.log'; send-keys /dashboard etc.).
+3. Repo ritual wrap-up: agent-ledger/summaries/2026-09-06-HHMM-7631feda-grok-dashboard.md + LEDGER.md entry — only AFTER merge to main per AGENTS.md; merge first, then worktree cleanup (git worktree remove, branch -d), restore original branch.
+4. Joe reviews the branch; merge via GitHub PR or local merge in main checkout with STEER_GUARD_OFF=1.
+
+## Open questions for Joe
+- Merge now or keep the branch for review? Ledger attestation happens post-merge per ritual.

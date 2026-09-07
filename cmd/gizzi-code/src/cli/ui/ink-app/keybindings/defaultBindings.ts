@@ -43,6 +43,7 @@ export const DEFAULT_BINDINGS: KeybindingBlock[] = [
       'ctrl+l': 'app:redraw',
       'ctrl+t': 'app:toggleTodos',
       'ctrl+o': 'app:toggleTranscript',
+      'ctrl+\\': 'app:toggleDashboard',
       ...(feature('KAIROS') || feature('KAIROS_BRIEF')
         ? { 'ctrl+shift+b': 'app:toggleBrief' as const }
         : {}),
@@ -167,6 +168,17 @@ export const DEFAULT_BINDINGS: KeybindingBlock[] = [
       // q — pager convention (less, tmux copy-mode). Transcript is a modal
       // reading view with no prompt, so q-as-literal-char has no owner.
       q: 'transcript:exit',
+    },
+  },
+  {
+    context: 'Dashboard',
+    bindings: {
+      // Exit keys are gated by DashboardScreen (isActive) so inner views
+      // (dispatch input, peek reply, search, details) can claim Esc/q
+      // first — child handlers run before these and stopImmediatePropagation.
+      'ctrl+\\': 'dashboard:exit',
+      escape: 'dashboard:exit',
+      q: 'dashboard:exit',
     },
   },
   {

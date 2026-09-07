@@ -18,6 +18,7 @@ import config from './commands/config/index.js'
 import { context, contextNonInteractive } from './commands/context/index.js'
 import cost from './commands/cost/index.js'
 import dash from './commands/dash/index.js'
+import dashboard from './commands/dashboard/index.js'
 import diff from './commands/diff/index.js'
 import ctx_viz from './commands/ctx_viz/index.js'
 import doctor from './commands/doctor/index.js'
@@ -322,6 +323,7 @@ const COMMANDS = memoize((): Command[] => [
   contextNonInteractive,
   cost,
   dash,
+  dashboard,
   diff,
   doctor,
   editPrompt,

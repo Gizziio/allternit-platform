@@ -19,12 +19,16 @@ import {
   calculateContextPercentages,
   getContextWindowForModel,
 } from '../../utils/context.js';
-import { getCurrentUsage } from '../../utils/tokens.js';
+import { getCurrentUsage, getTokenUsage } from '../../utils/tokens.js';
 import {
   getRuntimeMainLoopModel,
   renderModelName,
 } from '../../utils/model/model.js';
-import { buildSessionStatus } from '../../utils/statusModel.js';
+import {
+  buildSessionStatus,
+  countUserTurns,
+  getAuthMethodDescription,
+} from '../../utils/statusModel.js';
 
 const PROGRESS_BAR_WIDTH = 24;
 
@@ -78,6 +82,8 @@ function renderInlineStatus(context: LocalJSXCommandContext): string {
   }
   lines.push(`  Session:   ${sessionId}`);
   lines.push(`  Version:   ${version}`);
+  lines.push(`  Auth:      ${getAuthMethodDescription()}`);
+  lines.push(`  Turns:     ${countUserTurns(messages)}`);
   lines.push('');
 
   lines.push('Context window');
@@ -99,6 +105,7 @@ function renderInlineStatus(context: LocalJSXCommandContext): string {
   lines.push('Session usage');
   lines.push(`  Cost:      $${totalCost.toFixed(4)}`);
   lines.push(`  Duration:  ${formatDuration(totalDuration, { mostSignificantOnly: true })}`);
+  lines.push(`  Requests:  ${messages.filter(m => getTokenUsage(m) !== undefined).length}`);
   lines.push(`  Tokens:    ${formatTokens(totalInput + totalOutput)}`);
   lines.push(`             ${formatTokens(totalInput)} in / ${formatTokens(totalOutput)} out`);
   if (cacheRead > 0 || cacheCreation > 0) {

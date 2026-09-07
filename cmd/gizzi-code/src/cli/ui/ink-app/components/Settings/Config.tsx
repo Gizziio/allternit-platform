@@ -265,6 +265,32 @@ export function Config({
   const settingsItems: Setting[] = [
   // Global settings
   {
+    id: 'effortLevel',
+    label: 'Effort',
+    value: settingsData?.effortLevel ?? 'high',
+    options: ['low', 'medium', 'high', 'max'],
+    type: 'enum' as const,
+    onChange(level: string) {
+      const result = updateSettingsForSource('userSettings', {
+        effortLevel: level
+      });
+      if (result.error) {
+        logError(result.error);
+        return;
+      }
+      setSettingsData(prev => ({
+        ...prev,
+        effortLevel: level
+      }));
+      setChanges(prev => ({
+        ...prev,
+        effortLevel: level
+      }));
+      logEvent('tengu_effort_setting_changed', {
+        level: level as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+      });
+    }
+  }, {
     id: 'autoCompactEnabled',
     label: 'Auto-compact',
     value: globalConfig.autoCompactEnabled,
