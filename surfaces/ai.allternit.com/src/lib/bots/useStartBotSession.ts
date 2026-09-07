@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { useChatSessionStore } from '@/views/chat/ChatSessionStore';
 import { resolveAgentSecrets } from '@/lib/agents/agent-secrets-resolver';
 import { resolveAgentConnectors } from '@/lib/agents/agent-connectors-resolver';
+import { useAgentStore } from '@/lib/agents/agent.store';
 import {
   createSandbox,
   getSandboxForAgent,
@@ -11,6 +12,12 @@ import {
 import { useBotAllternitBusStore } from './bot-allternit-bus';
 import { injectBotMemoryIntoSystemPrompt } from './bot-memory-context';
 import { useBotRosterStore } from './bot-roster.store';
+import { isBot } from './bot-profile';
+import {
+  computeCapabilityEpoch,
+  capabilityEpochLine,
+  type CapabilityRosterEntry,
+} from './bot-capability-epoch';
 import type { Agent } from '../agents/agent.types';
 
 export interface UseStartBotSessionReturn {
@@ -55,6 +62,14 @@ function buildVMSystemPrompt(vmConfig: NonNullable<Agent['vmOperator']>, sandbox
   return lines.filter(Boolean).join('\n');
 }
 
+function buildIdentityPrompt(displayName: string, capabilityEpoch: string): string {
+  return (
+    `You are ${displayName}. You must ALWAYS identify yourself as ${displayName}. ` +
+    `NEVER say you are Kimi, GPT, Claude, an AI assistant created by another company, or any name other than ${displayName}.\n` +
+    capabilityEpochLine(capabilityEpoch)
+  );
+}
+
 /**
  * Start a packaged-bot session using the existing chat session store.
  *
@@ -87,6 +102,14 @@ function resolveRuntimeModelId(agent: Agent, modelOverride?: string): string | u
     const store = useChatSessionStore.getState();
     const runtimeModelId = resolveRuntimeModelId(agent, options?.modelOverride);
 
+    // Capability epoch (spec AD-4): fingerprint the bot's whole capability
+    // surface so persona/skill edits are never stranded in a stale session.
+    const rosterBots: CapabilityRosterEntry[] = useAgentStore
+      .getState()
+      .agents.filter(isBot)
+      .map((a) => ({ name: a.name, handle: a.botProfile?.handle ?? a.name }));
+    const capabilityEpoch = computeCapabilityEpoch(agent, rosterBots);
+
     // Each bot has one persistent chat session. Reuse the latest existing
     // session for this bot instead of creating a new one every time the user
     // clicks the bot in the rail.
@@ -97,6 +120,29 @@ function resolveRuntimeModelId(agent: Agent, modelOverride?: string): string | u
         (s.metadata?.agentId === agent.id || s.metadata?.agentName === agent.name),
     );
     if (existingSession) {
+      // Rebuild-once-per-drift: if the stored epoch differs from the freshly
+      // computed one, refresh the identity/system-prompt injection so edits
+      // to the bot's persona/skills reach the reused session. The rest of
+      // the session content (messages, metadata) is left untouched.
+      const storedEpoch = existingSession.metadata?.capabilityEpoch;
+      if (storedEpoch !== capabilityEpoch) {
+        const basePrompt = agent.systemPrompt ?? '';
+        const identityPrompt = buildIdentityPrompt(displayName, capabilityEpoch);
+        const notice =
+          typeof existingSession.metadata?.vmControlNotice === 'string'
+            ? existingSession.metadata.vmControlNotice
+            : undefined;
+        const systemPrompt = [identityPrompt, basePrompt, notice].filter(Boolean).join('\n\n');
+        await store.updateSession(existingSession.id, {
+          metadata: {
+            ...existingSession.metadata,
+            capabilityEpoch,
+            systemPrompt,
+            botProfile: agent.botProfile,
+            starterPrompts: agent.botProfile?.starterPrompts,
+          },
+        });
+      }
       useBotRosterStore.getState().setCanonicalChatId(agent.id, existingSession.id);
       return { sessionId: existingSession.id };
     }
@@ -145,7 +191,7 @@ function resolveRuntimeModelId(agent: Agent, modelOverride?: string): string | u
     }
 
     const basePrompt = agent.systemPrompt ?? '';
-    const identityPrompt = `You are ${displayName}. You must ALWAYS identify yourself as ${displayName}. NEVER say you are Kimi, GPT, Claude, an AI assistant created by another company, or any name other than ${displayName}.`;
+    const identityPrompt = buildIdentityPrompt(displayName, capabilityEpoch);
     const systemPrompt = [identityPrompt, basePrompt, vmPrompt, notice].filter(Boolean).join('\n\n');
 
     const sessionId = await store.createSession({
@@ -160,6 +206,7 @@ function resolveRuntimeModelId(agent: Agent, modelOverride?: string): string | u
         botCanonicalFor: agent.id,
         botProfile: agent.botProfile,
         starterPrompts: agent.botProfile?.starterPrompts,
+        capabilityEpoch,
         model: agent.model,
         runtimeModelId,
         tags: agent.tags,

@@ -36,10 +36,58 @@ import type {
   CharacterTelemetryEvent,
 } from './character.types';
 import * as characterService from './character.service';
+import {
+  classifyFailure,
+  isAttentionReason,
+  attentionHintFor,
+  type FailureReason,
+} from '@/lib/bots/failure-reasons';
 
 import { createModuleLogger } from '@/lib/logger';
 
 const logger = createModuleLogger('Agent');
+
+// ============================================================================
+// Attention slice (spec Phase 0 — trust foundations)
+// ============================================================================
+
+/**
+ * A persistent failure badge for a bot/agent. Only attention-class reasons
+ * (auth/quota/config/blocked) are recorded; transient failures never badge.
+ * Cleared by the next successful turn/run. Archived or hidden bots still
+ * accumulate entries here — lifecycle filtering happens in the selector so
+ * the badge never reaches the UI for them.
+ */
+export interface BotAttentionEntry {
+  reason: FailureReason;
+  hint: string;
+  notedAt: number;
+}
+
+function isAgentArchivedOrHidden(agent: Agent | undefined): boolean {
+  if (!agent) return true;
+  if (agent.botProfile?.hidden === true) return true;
+  const lifecycle = agent.botProfile?.lifecycle;
+  return lifecycle === 'archived' || lifecycle === 'deprecated';
+}
+
+/**
+ * Lifecycle-aware attention view: entries for archived/deprecated/hidden
+ * bots (or agents not currently loaded) accumulate in state but are filtered
+ * out here so the UI never badges them.
+ */
+export function getVisibleAttention(
+  attention: Record<string, BotAttentionEntry>,
+  agents: Agent[],
+): Record<string, BotAttentionEntry> {
+  const visible: Record<string, BotAttentionEntry> = {};
+  for (const [agentId, entry] of Object.entries(attention)) {
+    const agent = agents.find((a) => a.id === agentId);
+    if (isAgentArchivedOrHidden(agent)) continue;
+    visible[agentId] = entry;
+  }
+  return visible;
+}
 
 // ============================================================================
 // Store State
@@ -97,6 +145,9 @@ interface AgentState {
   pendingReviewCount: Record<string, number>; // keyed by agentId
   selectedReviewId: string | null;
   isLoadingReviews: boolean;
+
+  // Attention badges for bots/agents (persistent failure classes only).
+  attention: Record<string, BotAttentionEntry>; // keyed by agentId
 
   // Character Layer (role card + bans + voice + relationships + progression + avatar)
   character: Record<string, CharacterLayerConfig>; // keyed by agentId
@@ -186,6 +237,10 @@ interface AgentActions {
   submitReviewDecision: (reviewId: string, approved: boolean, note?: string) => Promise<void>;
   selectReview: (reviewId: string | null) => void;
 
+  // Attention actions (spec Phase 0 — only attention-class reasons badge).
+  noteBotAttention: (agentId: string, reason: FailureReason) => void;
+  clearBotAttention: (agentId: string) => void;
+
   // Character Layer actions
   loadCharacterLayer: (agentId: string) => Promise<void>;
   saveCharacterLayer: (agentId: string, config: CharacterLayerConfig) => Promise<void>;
@@ -244,6 +299,7 @@ export const useAgentStore = create<AgentState & AgentActions>()(
       pendingReviewCount: {},
       selectedReviewId: null,
       isLoadingReviews: false,
+      attention: {},
       character: {},
       compiledCharacter: {},
       characterArtifacts: {},
@@ -525,6 +581,8 @@ export const useAgentStore = create<AgentState & AgentActions>()(
             activeRunId: run.id,
             isExecuting: false
           }));
+          // Next good turn clears any attention badge for this agent.
+          get().clearBotAttention(agentId);
           return run;
         } catch (err) {
           get().recordCharacterTelemetry(agentId, {
@@ -534,9 +592,11 @@ export const useAgentStore = create<AgentState & AgentActions>()(
               error: err instanceof Error ? err.message : 'unknown',
             },
           });
-          set({ 
+          // Persistent failures badge the agent; transient ones do not.
+          get().noteBotAttention(agentId, classifyFailure(err));
+          set({
             error: err instanceof Error ? err.message : 'Failed to start run',
-            isExecuting: false 
+            isExecuting: false
           });
           throw err;
         }
@@ -1287,6 +1347,34 @@ export const useAgentStore = create<AgentState & AgentActions>()(
 
       selectReview: (reviewId) => {
         set({ selectedReviewId: reviewId });
+      },
+
+      // ----------------------------------------------------------------------
+      // Attention (spec Phase 0 — persistent failure badges)
+      // ----------------------------------------------------------------------
+
+      noteBotAttention: (agentId, reason) => {
+        // Only persistent classes badge; transient failures never do.
+        if (!isAttentionReason(reason)) return;
+        set((state) => ({
+          attention: {
+            ...state.attention,
+            [agentId]: {
+              reason,
+              hint: attentionHintFor(reason),
+              notedAt: Date.now(),
+            },
+          },
+        }));
+      },
+
+      clearBotAttention: (agentId) => {
+        set((state) => {
+          if (!(agentId in state.attention)) return state;
+          const attention = { ...state.attention };
+          delete attention[agentId];
+          return { attention };
+        });
       },
     }),
     { name: 'agent-store' }

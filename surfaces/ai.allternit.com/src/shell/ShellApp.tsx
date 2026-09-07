@@ -34,6 +34,7 @@ import type { Agent } from '../lib/agents/agent.types';
 import { useAgentBootstrap } from '../lib/agents/useAgentBootstrap';
 import { isBot } from '@/lib/bots/bot-profile';
 import { useStartBotSession } from '@/lib/bots/useStartBotSession';
+import { useRoutineTimer } from '@/lib/bots/use-routine-timer';
 import { useStackProviders } from '@/lib/bots/use-stack-providers';
 import { NativeAgentApiError } from '../lib/agents/native-agent-api';
 import { useChatSessionStore } from '../views/chat/ChatSessionStore';
@@ -127,6 +128,7 @@ function ShellAppInner(): React.ReactNode {
     }, [active.viewType])
   );
   useStackProviders();
+  useRoutineTimer();
   // When the HUD window closes, resume its active session in the main window.
   useHudHandoff();
   const { mode: activeMode, setMode: setActiveMode, isLoaded: modeLoaded } = useMode();

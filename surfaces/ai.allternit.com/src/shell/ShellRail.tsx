@@ -38,6 +38,7 @@ import {
   Brain,
   DesktopTower,
   Record,
+  Play,
 } from '@phosphor-icons/react';
 import { getPinnedMiniApps, unpinMiniApp, seedDefaultMiniApps } from '../views/aci/mini-app-registry';
 import type { InstalledMiniApp } from '../views/aci/mini-app.types';
@@ -65,10 +66,19 @@ import { SettingsDrilldown } from './SettingsDrilldown';
 import { getAgentModeSurfaceTheme } from '../views/chat/agentModeSurfaceTheme';
 import type { AgentModeSurface } from '../stores/agent-surface-mode.store';
 import { cn } from '@/lib/utils';
-import { useAgentStore } from '@/lib/agents/agent.store';
+import { useAgentStore, getVisibleAttention, type BotAttentionEntry } from '@/lib/agents/agent.store';
 import {
   isBot,
 } from '@/lib/bots/bot-profile';
+import { useAgentsWithSwarms } from '@/lib/agents';
+import { deriveBotPresence, type BotPresenceState } from '@/lib/bots/bot-presence';
+import { useBotRosterStore } from '@/lib/bots/bot-roster.store';
+import { useBotRoutineStore } from '@/lib/bots/bot-routine.service';
+import { useCommRailsMailStore } from '@/lib/bots/comrails-mail.store';
+import { openBotCanonicalChat, openBotChatView } from '@/lib/bots/bot-canonical-chat.service';
+import { useStartBotSession } from '@/lib/bots/useStartBotSession';
+import { BotAvatar } from '@/views/bots/BotAvatar';
+import type { Agent } from '@/lib/agents/agent.types';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
 import { openNativeSessionPicker } from '@/components/native-sessions/NativeSessionPicker';
@@ -240,6 +250,21 @@ export function ShellRail({
     }
   });
   const [typeFilter, setTypeFilter] = useState<'all' | 'chat' | 'cowork' | 'task' | 'agent' | 'browser' | 'code' | 'bb'>('all');
+  const [teammatesExpanded, setTeammatesExpanded] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    try {
+      return window.localStorage.getItem('allternit:rail:teammates-expanded') !== 'false';
+    } catch {
+      return true;
+    }
+  });
+  const handleToggleTeammatesExpanded = useCallback(() => {
+    setTeammatesExpanded((prev) => {
+      const next = !prev;
+      try { window.localStorage.setItem('allternit:rail:teammates-expanded', String(next)); } catch {}
+      return next;
+    });
+  }, []);
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'completed' | 'archived'>('all');
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week' | 'month'>('all');
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string; kind: string } | null>(null);
@@ -640,6 +665,19 @@ export function ShellRail({
       useCodeSessionStore.getState().setActiveSession(null);
       onOpen?.('code');
     } else {
+      // Canonical-chat guard (spec Phase 0): when the active session is a
+      // bot's canonical chat, "New" must not spawn a blank non-bot session
+      // from inside it (the Hermes analog of rerouting /new → /compact).
+      // Reroute to the bot's home instead, leaving the canonical chat intact.
+      const chatState = useChatSessionStore.getState();
+      const activeSession = (chatState.sessions ?? []).find(
+        (s) => s.id === chatState.activeSessionId,
+      );
+      const canonicalBotId = activeSession?.metadata?.botCanonicalFor;
+      if (typeof canonicalBotId === 'string' && canonicalBotId) {
+        onOpen?.('bot-home', { botId: canonicalBotId });
+        return;
+      }
       chatStore.setActiveThread(null);
       useChatSessionStore.getState().setActiveSession(null);
       onOpen?.('chat');
@@ -1038,6 +1076,14 @@ export function ShellRail({
               onClick={() => onOpenCustomize?.()}
             />
           </div>
+
+          {/* HOME TEAMMATES — bots with presence, unread mail, or attention.
+              Self-prunes to nothing when quiet (spec Phase 1). */}
+          <TeammatesRailSection
+            expanded={teammatesExpanded}
+            onToggle={handleToggleTeammatesExpanded}
+            onOpen={onOpen}
+          />
 
           {/* HOME PINNED — self-prunes when nothing pinned remains live */}
           {pinnedVisible.length > 0 && (
@@ -1701,6 +1747,278 @@ function RecentRailItem({
         onDelete={onDelete}
       />
     </div>
+  );
+}
+
+function TeammatesRailSection({
+  expanded,
+  onToggle,
+  onOpen,
+}: {
+  expanded: boolean;
+  onToggle: () => void;
+  onOpen?: (view: string, context?: Record<string, unknown>) => void;
+}): React.ReactNode | null {
+  const agents = useAgentsWithSwarms();
+  const bots = useMemo(() => agents.filter(isBot), [agents]);
+  const attention = useAgentStore((state) => state.attention);
+  const visibleAttention = useMemo(
+    () => getVisibleAttention(attention, agents),
+    [attention, agents],
+  );
+  const sessions = useChatSessionStore((s) => s.sessions);
+  const streamingBySession = useChatSessionStore((s) => s.streamingBySession);
+  const canonicalChatIds = useBotRosterStore((s) => s.canonicalChatIds);
+  const routines = useBotRoutineStore((s) => s.routines);
+  const mailMessages = useCommRailsMailStore((s) => s.messages);
+
+  // Pure presence derivation for every bot, recomputed on store changes.
+  const presenceByBot = useMemo(() => {
+    const map: Record<string, BotPresenceState> = {};
+    for (const bot of bots) {
+      const canonicalId = canonicalChatIds[bot.id];
+      const session = canonicalId ? (sessions ?? []).find((s) => s.id === canonicalId) : undefined;
+      let routineActivityAt = 0;
+      for (const routine of Object.values(routines)) {
+        if (routine.botId !== bot.id) continue;
+        if (routine.lastRunAt && routine.lastRunAt > routineActivityAt) routineActivityAt = routine.lastRunAt;
+      }
+      map[bot.id] = deriveBotPresence({
+        streaming: canonicalId ? (streamingBySession[canonicalId]?.isStreaming ?? false) : false,
+        sessionActivityAt: session ? new Date(session.updatedAt || 0).getTime() : 0,
+        routineActivityAt,
+      });
+    }
+    return map;
+  }, [bots, sessions, streamingBySession, canonicalChatIds, routines]);
+
+  const unreadByBot = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const bot of bots) {
+      map[bot.id] = mailMessages.filter(
+        (m) => m.toAgentId === bot.id && (m.status === 'unread' || m.requiresAck),
+      ).length;
+    }
+    return map;
+  }, [bots, mailMessages]);
+
+  const entries = useMemo(() => {
+    const list = bots
+      .map((bot) => ({
+        bot,
+        presence: presenceByBot[bot.id] ?? { presence: 'idle' as const, lastActivityAt: 0 },
+        attentionEntry: visibleAttention[bot.id] as BotAttentionEntry | undefined,
+        unreadCount: unreadByBot[bot.id] ?? 0,
+      }))
+      .filter(
+        (e) =>
+          e.presence.presence !== 'idle' || e.unreadCount > 0 || Boolean(e.attentionEntry),
+      );
+    const rank = { working: 0, active: 1, idle: 2 } as const;
+    list.sort((a, b) =>
+      rank[a.presence.presence] - rank[b.presence.presence] ||
+      b.presence.lastActivityAt - a.presence.lastActivityAt,
+    );
+    return list;
+  }, [bots, presenceByBot, visibleAttention, unreadByBot]);
+
+  // Self-pruning: render nothing when no bot has anything to show.
+  if (entries.length === 0) return null;
+
+  const visible = entries.slice(0, 6);
+  const overflowCount = entries.length - visible.length;
+
+  return (
+    <RecentsPanel
+      shrink
+      expanded={expanded}
+      onToggle={onToggle}
+      title="Teammates"
+    >
+      {visible.map((entry) => (
+        <TeammatesRailRow
+          key={entry.bot.id}
+          bot={entry.bot}
+          presence={entry.presence}
+          attentionEntry={entry.attentionEntry}
+          unreadCount={entry.unreadCount}
+          onOpen={onOpen}
+        />
+      ))}
+      {overflowCount > 0 && (
+        <button
+          type="button"
+          onClick={() => onOpen?.('agent-hub')}
+          className="px-3 py-1.5 text-left text-[11px] text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] bg-transparent border-none cursor-pointer transition-colors"
+        >
+          All teammates
+        </button>
+      )}
+    </RecentsPanel>
+  );
+}
+
+function TeammatesRailRow({
+  bot,
+  presence,
+  attentionEntry,
+  unreadCount,
+  onOpen,
+}: {
+  bot: Agent;
+  presence: BotPresenceState;
+  attentionEntry?: BotAttentionEntry;
+  unreadCount: number;
+  onOpen?: (view: string, context?: Record<string, unknown>) => void;
+}): React.ReactNode {
+  const canonicalChatId = useBotRosterStore((s) => s.canonicalChatIds[bot.id] ?? null);
+  const routines = useBotRoutineStore((s) => s.routines);
+  const sessionSummary = useSessionSummary(canonicalChatId);
+  const { startSession } = useStartBotSession(
+    useCallback((sessionId: string, botId: string) => {
+      openBotChatView(sessionId, botId, 'chat');
+    }, []),
+  );
+
+  const handleOpenChat = useCallback(async () => {
+    const sessionId = await openBotCanonicalChat({
+      botId: bot.id,
+      botName: bot.botProfile?.displayName ?? bot.name,
+      setActive: false,
+    });
+    openBotChatView(sessionId, bot.id, 'chat');
+  }, [bot.id, bot.name, bot.botProfile?.displayName]);
+
+  // Status line priority: working > attention > recent routine > last message.
+  const routine = useMemo(() => {
+    let latest: { title: string; lastRunAt?: number } | undefined;
+    for (const r of Object.values(routines)) {
+      if (r.botId !== bot.id || !r.lastRunAt) continue;
+      if (!latest || (r.lastRunAt ?? 0) > (latest.lastRunAt ?? 0)) latest = r;
+    }
+    return latest;
+  }, [routines, bot.id]);
+
+  const working = presence.presence === 'working';
+  const statusText = working
+    ? 'Working…'
+    : attentionEntry
+      ? attentionEntry.hint
+      : routine
+        ? `⏰ ran ${routine.title} · ${formatRelativeTime(routine.lastRunAt ?? 0)}`
+        : sessionSummary.lastMessage;
+
+  return (
+    <div className="group relative w-full flex items-center gap-2.5 py-1.5 px-3 max-md:min-h-11 rounded-xl cursor-pointer transition-all duration-200 font-medium bg-transparent text-[var(--shell-item-fg)] hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)]">
+      <button
+        type="button"
+        onClick={handleOpenChat}
+        className="flex-1 min-w-0 flex items-center gap-2.5 bg-transparent border-none p-0 text-left cursor-pointer font-medium"
+      >
+        <div className="relative shrink-0">
+          <BotAvatar bot={bot} size={24} />
+          {presence.presence !== 'idle' && (
+            <span
+              className={cn(
+                'absolute -right-0.5 -bottom-0.5 size-2 rounded-full border border-[var(--shell-rail-bg)]',
+                working ? 'bg-[var(--accent-primary)]' : 'bg-[var(--status-success)]',
+              )}
+            />
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-[12px] overflow-hidden text-ellipsis whitespace-nowrap min-w-0">
+            {bot.botProfile?.displayName ?? bot.name}
+          </div>
+          <div className="flex items-center gap-1.5 text-[11px] text-[var(--shell-item-muted)] overflow-hidden">
+            {working && (
+              <span className="relative flex size-1.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--accent-primary)] opacity-75" />
+                <span className="relative inline-flex rounded-full size-1.5 bg-[var(--accent-primary)]" />
+              </span>
+            )}
+            <span className="truncate flex-1">{statusText}</span>
+            {unreadCount > 0 && (
+              <span className="shrink-0 rounded-full bg-[var(--accent-primary)] text-[var(--shell-rail-bg)] text-[9px] font-bold px-1.5 py-px">
+                {unreadCount}
+              </span>
+            )}
+          </div>
+        </div>
+      </button>
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); void startSession(bot); }}
+        title="Start session"
+        className="opacity-0 max-md:opacity-100 group-hover:opacity-100 shrink-0 size-6 max-md:size-11 rounded-md bg-transparent border-none text-[var(--shell-item-muted)] hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)] cursor-pointer flex items-center justify-center transition-all"
+      >
+        <Play size={13} weight="fill" />
+      </button>
+      <TeammatesRowMenu
+        onOpenChat={() => void handleOpenChat()}
+        onOpenHome={() => onOpen?.('bot-home', { botId: bot.id })}
+        onStartSession={() => void startSession(bot)}
+      />
+    </div>
+  );
+}
+
+function TeammatesRowMenu({
+  onOpenChat,
+  onOpenHome,
+  onStartSession,
+}: {
+  onOpenChat?: () => void;
+  onOpenHome?: () => void;
+  onStartSession?: () => void;
+}): React.ReactNode {
+  const [open, setOpen] = useState(false);
+  const run = (fn?: () => void) => () => {
+    setOpen(false);
+    fn?.();
+  };
+  const itemClass =
+    'w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-[13px] text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)] border-none bg-transparent cursor-pointer text-left transition-colors';
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          onClick={(e) => e.stopPropagation()}
+          className="opacity-0 max-md:opacity-100 group-hover:opacity-100 size-6 max-md:size-11 rounded-md bg-transparent border-none text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)] cursor-pointer flex items-center justify-center transition-all shrink-0"
+          title="More"
+        >
+          <DotsThreeVertical size={14} />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="w-44 p-1.5 bg-[var(--surface-panel)] border-[var(--border-subtle)]"
+        side="bottom"
+        align="end"
+        sideOffset={4}
+        collisionPadding={8}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {onOpenChat && (
+          <button type="button" onClick={run(onOpenChat)} className={itemClass}>
+            <ArrowSquareOut size={14} />
+            Open chat
+          </button>
+        )}
+        {onOpenHome && (
+          <button type="button" onClick={run(onOpenHome)} className={itemClass}>
+            <House size={14} />
+            Bot home
+          </button>
+        )}
+        {onStartSession && (
+          <button type="button" onClick={run(onStartSession)} className={itemClass}>
+            <Play size={14} />
+            Start session
+          </button>
+        )}
+      </PopoverContent>
+    </Popover>
   );
 }
 
