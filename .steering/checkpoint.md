@@ -1,93 +1,78 @@
-# Steering checkpoint
+# Steering checkpoint — session/bots-p03 (BOT_TEAMMATES_SPEC Phase 3: Cross-machine fabric)
 
 ## Goal
-Phase 2 — "Visibility layer" from docs/BOT_TEAMMATES_SPEC.md, in worktree
-`/Users/joe/altw/allternit-session-bots-p02` (branch session/bots-p02, main
-@ 5bd4fc589 which includes Phase 0+1). Parent lands the branch — DO NOT
-git commit/push. Verify with: npx tsc --noEmit, npx vitest run,
-bun run build (may still be broken by the other session's univerjs state —
-note only, do not fix), cargo check -p allternit-api.
+Implement Phase 3 (AD-1 direct peer model) in worktree allternit-session-bots-p03:
+remote peer registry (url + keyRef, keys in <data_dir>/.allternit/peers.env), dm/run/status/stop
+over HTTP inbox with idempotency keys + 900s TTL, fail-fast runtime_offline, run
+bookkeeping persisted to peer-runs.json, union roster with ghost retention, and a
+minimal surface panel (src/lib/peers/* + small ShellRail integration point).
+NO git commit/push (orchestrator instruction overrides AGENTS.md session lifecycle).
 
-## Phase 2 status: CODE COMPLETE, verification running
-- D1 DONE: `lib/bots/bot-activity-watermark.ts` — zustand store
-  (watermarks/focusedSessionId), `seedWatermark` (set-if-absent → history
-  never unread), `markSeen` (monotonic), `markAllSeen` (Inbox mark-all-read),
-  `computeHasNewActivity` + `canonicalActivityAt` pure helpers,
-  `useBotHasNewActivity(botId)` (badges when activity > watermark AND chat
-  not focused; focused → markSeen refresh-in-place), `useSyncBotWatermarks(
-  viewType, bots)` mounted in ShellApp.tsx (seeds on mount + new bots,
-  mirrors focused session for chat/bot-chat-session views). Rail dot wired
-  into TeammatesRailRow next to the mail pill.
-- D2 DONE: `lib/bots/bot-activity-toasts.ts` — pref at
-  `allternit:bot-activity-toasts` (default OFF; localStorage with in-memory
-  fallback — this env's jsdom localStorage throws); lifecycle selector
-  `isToastableBot` (archived/deprecated/hidden never toast); `detectBotDmMessage`
-  (metadata botId/fromBotId/botName/botAuthor markers → DM form
-  "🤖 New message for <bot>", undeterminable → generic "<bot> has new
-  activity" per spec fallback); `clipPreview` 140; `useBotActivityToasts()`
-  mounted in ShellApp next to routine timer; reuses the existing
-  ToastProvider/useToast system (ViewRegistry mounts it globally);
-  duration 4s, dismissible (built-in X), stack capped at 3 (oldest removed),
-  "Open chat" action → canonical chat. Pref toggle UI lives in the Inbox
-  pane footer.
-- D3 DONE: `src/shell/ShellRail.tsx` — `InboxRailItem` (Bell) after
-  Customize in HOME TABS; badge via `computeInboxBadge` (mail unread +
-  visible attention + new-activity watermarks, pure helpers in new
-  `lib/bots/bot-inbox.ts`); pin-able popover (side=right, w-80, pinned state
-  at `allternit:rail:inbox-pinned`; pinned ignores outside-click close until
-  explicit close/unpin); sections Mail (threads from loadThreads, newest
-  first, avatar/subject/count/relative/unread dot; click → bot-inbox),
-  Needs attention (getVisibleAttention via selectVisibleBotAttention, click
-  → canonical chat), Active (presence working/active, click → chat);
-  header: Mark all read (acknowledgeMail per unread/ack message +
-  markAllSeen watermarks), pin toggle, close. `RailItem` gained optional
-  `badge` prop. DEVIATION: loadThreads is called once with the first bot's
-  id (railsApi.mail.threads() is global; per-bot concurrent calls would
-  race the store's single threads array) — threads still enriched from that
-  bot's perspective.
-- D4 DONE: `cmd/allternit-api/src/bot_assets.rs` (NEW file — avoids the
-  other session's WIP in agent_session_routes.rs): POST/GET
-  `/bots/:id/avatar` mounted via one-line `.nest("/api", …)` in main.rs +
-  one-line `pub mod bot_assets;` in lib.rs; stores
-  `~/.allternit/bot-assets/<id>.json` (tmp+rename atomic write), id
-  traversal guard, type ∈ geometric|pet|image, data must be object.
-  `cargo check -p allternit-api` PASSED (4m09s, only pre-existing warnings).
-  Surface client `lib/bots/bot-assets-api.ts` (save/get, 404 → null, all
-  failures graceful). Wiring: CreateBotForm saves generated/existing
-  BotAvatar after createAgent (generates deterministic one when absent —
-  form-created bots carry legacy AvatarConfig only); EditAgentForm saves
-  botProfile.avatar after updateAgent when isBot.
+## Just did
+- Rust: NEW cmd/allternit-api/src/remote_peers.rs (~2400 lines incl. tests):
+  - Registry: POST/GET/DELETE /api/peers/remote; keys only via keyRef → env/peers.env
+    (chmod 600); inline `key` accepted at registration and written to peers.env,
+    never echoed. Register kicks a roster refresh.
+  - Ops: dm (synchronous — REMOTE node holds the fabric connection until the local
+    turn finishes; result rides the held connection back) and run (async 202;
+    completion via reply_url callback to ALLTERNIT_PEER_URL/result). status proxies
+    the mirror run on the remote; stop forwards + marks stopped.
+  - Idempotency: (peer,key) → captured response, 900s TTL, replayed at both the
+    management and fabric edges.
+  - Runs: in-memory map + light persistence to peer-runs.json (terminal retention
+    1h, cap 200); restart reconciliation fails orphaned outbound runs with
+    runtime_offline; TTL expiry marks Expired.
+  - Roster: GET /api/peers/roster = live local rails peers + remote connections +
+    fetched rows; refresh on add + 5-min poll; poll failure keeps last-known rows
+    with sourceReachable=false (ghosts); reconcile on reconnect.
+  - Security: fabric endpoints require the registered sender's key (constant-time,
+    401 unauthorized_peer otherwise); management accepts desktop access-token header,
+    registered-peer key, or Clerk JWT. redact() scrubs all known key values from
+    errors; keys never logged. Module state lives in a OnceLock registry keyed off
+    data_dir (AppState untouched); reply watcher spawned from handlers.
+  - Failure codes: runtime_offline (connect), delivery_timeout, peer_rejected,
+    peer_not_found, missing_config, expired, server_error.
+- Wiring: ONE `pub mod remote_peers;` (lib.rs:200) + ONE
+  `.nest("/api", allternit_api::remote_peers::remote_peers_router())` at the END of the
+  public route chain (main.rs:838-844). No Cargo.toml changes (reqwest/tokio/serde/
+  uuid/chrono/hex/sha2/url already present).
+- Rust tests (9, all green): idempotency replay+expiry, TTL expiry, restart
+  reconciliation, key redaction, unknown-sender 401, registry CRUD + missing_config,
+  fail-fast dm to refused port (runtime_offline + idempotent replay of failure),
+  ghost retention → reconcile, and a FULL two-node dm round trip over real axum
+  servers (envelope → bus delivery → simulated gizzi reply via fabric-replies
+  contract → held connection returns the reply).
+- Surface: NEW src/lib/peers/{remote-peers-api.ts, use-remote-peers.ts,
+  RemotePeersPanel.tsx} + 13 vitest tests. ShellRail.tsx: ONE import line + ONE
+  marked <RemotePeersRailSection /> block after TeammatesRailSection.
+- Hook exposes reachabilityByPeer + unreachableSources (ghost-row capability for
+  TEAMMATES rows — rendering left for integration, per plan).
 
-## Tests (new, colocated — all passing in isolation)
-- `lib/bots/bot-activity-watermark.test.ts`: seed set-if-absent, markSeen
-  monotonic, markAllSeen, computeHasNewActivity, canonicalActivityAt,
-  useBotHasNewActivity badge + focused refresh-in-place (renderHook with a
-  zustand stand-in for ChatSessionStore).
-- `lib/bots/bot-activity-toasts.test.ts`: pref default-off roundtrip,
-  isToastableBot suppression, DM detection, clipPreview, dispatch gating
-  (pref off / generic / DM form / archived suppressed / focused suppressed).
-- `lib/bots/bot-inbox.test.ts`: countUnreadBotMail, selectVisibleBotAttention
-  filtering, countNewActivityBots (focused excluded), computeInboxBadge sum.
+## Next
+- Done. Awaiting steering review; orchestrator merges (no commit/push per instruction).
 
-## Verification (final)
-- tsc: clean on all touched files (only the known xterm/univerjs
-  environmental errors remain).
-- Full vitest: 169 files — 1283 passed, 0 failed, 14 skipped. Only 2 failed
-  SUITES: UnifiedTerminal.test.ts + CodeCanvas.test.tsx fail to LOAD (xterm
-  not installed in the shared checkout) — environmental, untouched here. The
-  ComputeBillingPanel/PluginManager pair that flaked in one full run passed
-  in isolation and on the re-run — pre-existing full-suite timing
-  sensitivity, not from this phase.
-- bun run build: STILL FAILS on the same univerjs MISSING_EXPORT
-  (docs-ui@0.25.1 vs core@0.21.1 stale install in the shared checkout, via
-  the vite alias in vite.config.ts:17) — environmental, NOT fixed per
-  instructions (do not touch the other session's dependency state). All
-  modules transform; failure is link-time in node_modules.
-- cargo check -p allternit-api: PASSED (4m09s, pre-existing warnings only).
+## Open questions
+- Reply contract for the receiving agent is a documented protocol footer in the
+  delivered envelope (reply via SendMessage to peer 'fabric-replies' with body
+  `@run <id> <reply>`); gizzi-code auto-reply wiring is deliberately left to
+  integration (same bucket as Hermes desktop-relay adoption).
 
-## Open questions / notes
-- node_modules symlinks (3) are untracked; must not be committed.
-- localStorage is unavailable/throwing in this vitest jsdom env — pref
-  helpers carry an in-memory fallback (prod behavior unchanged).
-- The other session's WIP in agent_session_routes.rs untouched; bot_assets
-  is a new file + two one-line registrations.
+## Deviations
+- surfaces/node_modules symlink skipped: shared checkout has no surfaces/node_modules
+  (only per-surface dirs); created root + surfaces/ai.allternit.com symlinks.
+- dm is held on the REMOTE (receiving) node, not the caller — matches "hold the
+  connection until the remote turn finishes" and removes the need for the caller to
+  know its own public URL for dm (run-completion callbacks still use ALLTERNIT_PEER_URL).
+- tsc shows 19 pre-existing errors in unrelated files (xterm/univerjs/TerminalWorkspace/
+  office views); zero errors in touched files.
+
+## Verification results (final)
+- `cargo check -p allternit-api` ✅ clean, zero warnings in remote_peers.rs.
+- `cargo test -p allternit-api remote_peers` ✅ 9/9 (idempotency replay+expiry,
+  TTL expiry, restart reconciliation, redaction, 401, CRUD+missing_config,
+  runtime_offline fail-fast + replay, ghost→reconcile, two-node dm round trip).
+- `npx tsc --noEmit` ✅ no new errors (19 pre-existing, none in touched files).
+- `npx vitest run` ✅ 1309 passed / 1 failed (fabric-session-kind.test.ts — known
+  pre-existing on main) / 14 skipped; my 13 new tests pass.
+- `bun run build` ❌ known stale univerjs install (DEFAULT_DOCUMENT_PARAGRAPH_SPACE_BELOW
+  missing export) — pre-existing, not fixed per instruction.
