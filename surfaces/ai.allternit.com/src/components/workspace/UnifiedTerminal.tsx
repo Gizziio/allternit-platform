@@ -30,7 +30,7 @@ import {
   createTerminalSession,
   closeTerminalSession,
   probeTerminalSession,
-  sendTerminalInput,
+  queueTerminalInput,
   resizeTerminal,
   subscribeTerminalStream,
 } from '@/lib/terminal-api';
@@ -43,23 +43,33 @@ import {
 const logger = createModuleLogger('UnifiedTerminal');
 
 // Dynamically import xterm only on the client side.
-let Terminal: typeof import('xterm').Terminal | null = null;
-let FitAddon: typeof import('xterm-addon-fit').FitAddon | null = null;
+let Terminal: typeof import('@xterm/xterm').Terminal | null = null;
+let FitAddon: typeof import('@xterm/addon-fit').FitAddon | null = null;
 
 async function loadXterm() {
   if (typeof window === 'undefined') return false;
   if (Terminal && FitAddon) return true;
 
   const [xterm, xtermAddon] = await Promise.all([
-    import('xterm'),
-    import('xterm-addon-fit'),
+    import('@xterm/xterm'),
+    import('@xterm/addon-fit'),
   ]);
 
   Terminal = xterm.Terminal;
   FitAddon = xtermAddon.FitAddon;
 
-  await import('xterm/css/xterm.css');
+  await import('@xterm/xterm/css/xterm.css');
   return true;
+}
+
+async function loadCanvasRenderer(term: import('@xterm/xterm').Terminal): Promise<boolean> {
+  try {
+    const { CanvasAddon } = await import('@xterm/addon-canvas');
+    term.loadAddon(new CanvasAddon());
+    return true;
+  } catch {
+    return false; // DOM renderer stays active.
+  }
 }
 
 export type TerminalMode = 'single' | 'grid';
@@ -188,7 +198,7 @@ function terminalPersistenceKey(sessionId: string): string {
   return `${terminalRuntimeIdentity()}:${sessionId}`;
 }
 
-export function terminalThemeFromElement(_element: HTMLElement): import('xterm').ITheme {
+export function terminalThemeFromElement(_element: HTMLElement): import('@xterm/xterm').ITheme {
   const rootStyle = getComputedStyle(document.documentElement);
   const token = (name: string, fallback: string) =>
     rootStyle.getPropertyValue(name).trim() || fallback;
@@ -231,14 +241,20 @@ export function TerminalSurface({
   remoteSessionId,
   isActive,
   onStatusChange,
+  fontSize = 13,
+  padding = 8,
 }: {
   remoteSessionId: string;
   isActive: boolean;
   onStatusChange: (status: TerminalTabStatus, errorMsg?: string) => void;
+  /** xterm font size in px (workspace tiles pass a smaller default). */
+  fontSize?: number;
+  /** Inner padding around the xterm viewport (workspace tiles use 0). */
+  padding?: number;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const termRef = useRef<import('xterm').Terminal | null>(null);
-  const fitAddonRef = useRef<import('xterm-addon-fit').FitAddon | null>(null);
+  const termRef = useRef<import('@xterm/xterm').Terminal | null>(null);
+  const fitAddonRef = useRef<import('@xterm/addon-fit').FitAddon | null>(null);
   const unsubscribeRef = useRef<(() => void) | null>(null);
   const onStatusChangeRef = useRef(onStatusChange);
   const resizeFrameRef = useRef<number | null>(null);
@@ -254,14 +270,15 @@ export function TerminalSurface({
     let mounted = true;
     let themeObserver: MutationObserver | null = null;
 
-    void loadXterm().then((loaded) => {
+    void loadXterm().then(async (loaded) => {
       if (!loaded || !mounted || !containerRef.current) return;
 
       const term = new Terminal!({
         cursorBlink: true,
         theme: terminalThemeFromElement(containerRef.current),
-        fontSize: 13,
+        fontSize,
         fontFamily: 'var(--font-mono)',
+        letterSpacing: 0,
         rows: 24,
         cols: 80,
         allowProposedApi: true,
@@ -271,6 +288,21 @@ export function TerminalSurface({
 
       const fitAddon = new FitAddon!();
       term.loadAddon(fitAddon);
+
+      // 5.5 ships only the DOM renderer in core; load WebGL (canvas as
+      // fallback) so glyphs draw on the cell grid instead of getting
+      // letter-spacing compensation, which reads as "spaced out" text.
+      try {
+        const { WebglAddon } = await import('@xterm/addon-webgl');
+        const webgl = new WebglAddon();
+        webgl.onContextLoss(() => {
+          webgl.dispose();
+          void loadCanvasRenderer(term);
+        });
+        term.loadAddon(webgl);
+      } catch {
+        void loadCanvasRenderer(term);
+      }
 
       termRef.current = term;
       fitAddonRef.current = fitAddon;
@@ -292,7 +324,7 @@ export function TerminalSurface({
       }
 
       term.onData((data) => {
-        void sendTerminalInput(remoteSessionId, data).catch((error: unknown) => {
+        void queueTerminalInput(remoteSessionId, data).catch((error: unknown) => {
           const message = error instanceof Error ? error.message : 'Terminal input failed';
           onStatusChangeRef.current('error', message);
         });
@@ -360,7 +392,7 @@ export function TerminalSurface({
       termRef.current = null;
       fitAddonRef.current = null;
     };
-  }, [remoteSessionId]);
+  }, [remoteSessionId, fontSize]);
 
   // Refit when the pane becomes active or its container resizes.
   useEffect(() => {
@@ -406,7 +438,7 @@ export function TerminalSurface({
         width: '100%',
         height: '100%',
         minHeight: 80,
-        padding: 8,
+        padding,
         background: 'var(--surface-panel)',
         color: 'var(--text-primary)',
       }}
@@ -651,7 +683,7 @@ export function UnifiedTerminal({
     const remoteSessionId = tab.remoteSessionId;
     // Give the shell a beat to finish its rc startup before typing the command.
     setTimeout(() => {
-      void sendTerminalInput(remoteSessionId, `${command}\n`).catch((error: unknown) => {
+      void queueTerminalInput(remoteSessionId, `${command}\n`).catch((error: unknown) => {
         logger.warn({ error }, 'Startup command injection failed');
       });
     }, 250);

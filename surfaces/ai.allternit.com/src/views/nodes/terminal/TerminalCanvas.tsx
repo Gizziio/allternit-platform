@@ -13,10 +13,10 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { Terminal } from 'xterm';
-import { FitAddon } from 'xterm-addon-fit';
-import { WebLinksAddon } from 'xterm-addon-web-links';
-import { SearchAddon } from 'xterm-addon-search';
+import { Terminal } from '@xterm/xterm';
+import { FitAddon } from '@xterm/addon-fit';
+import { WebLinksAddon } from '@xterm/addon-web-links';
+import { SearchAddon } from '@xterm/addon-search';
 import { nodeTerminalService, type TerminalSession } from './terminal.service';
 import { Button } from '@/components/ui/button';
 import {
@@ -28,7 +28,7 @@ import {
 } from '@phosphor-icons/react';
 const Grid = SquaresFour;
 import { cn } from '@/lib/utils';
-import 'xterm/css/xterm.css';
+import '@xterm/xterm/css/xterm.css';
 import { openInBrowser } from '@/lib/openInBrowser';
 
 import { createModuleLogger } from '@/lib/logger';
@@ -119,6 +119,7 @@ function CanvasTerminal({
       theme: terminalTheme,
       fontSize: 13,
       fontFamily: 'var(--font-mono)',
+      letterSpacing: 0,
       scrollback: 10000,
       // Enable clipboard API
       allowProposedApi: true,

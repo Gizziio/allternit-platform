@@ -14,7 +14,7 @@ declare module '*.module.scss' {
 }
 
 // xterm CSS imports
-declare module 'xterm/css/xterm.css' {
+declare module '@xterm/xterm/css/xterm.css' {
   const content: string;
   export default content;
 }
