@@ -25,7 +25,10 @@ APPLE_TEAM_ID="XXXXXXXXXX"                # 10-character team id
 `electron-builder` calls `scripts/notarize.cjs` via the `afterSign` hook. The
 script:
 
-1. Skips silently when `APPLE_ID` is not set (local/CI builds).
+1. Hard-fails (non-zero exit) on CI builds when `APPLE_ID`, `APPLE_ID_PASSWORD`,
+   or `APPLE_TEAM_ID` is missing — an unsigned/unnotarized release build must
+   never pass silently. On local (non-CI) builds it skips with a warning
+   instead, so unsigned local iteration still works.
 2. Uses `@electron/notarize` with `notarytool` and the credentials above.
 3. Staples the ticket to the `.app` bundle.
 
