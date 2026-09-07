@@ -1,4 +1,4 @@
-import { ChevronDown, Copy, CornerUpLeft, Eye, EyeOff, Loader2, Building2, FolderOpen, KeyRound } from 'lucide-react'
+import { Check, ChevronDown, Copy, CornerUpLeft, Eye, EyeOff, Loader2, Building2, FolderOpen, KeyRound } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import type { OfficeAgentConfig } from '@/agent/useOfficeAgent'
@@ -301,23 +301,23 @@ export function OfficeConfigPanel({ config, onSave, onBack }: Props) {
       </div>
 
       {/* ── Context Section ── */}
-      <div className="flex flex-col gap-2 p-3 rounded-md border" style={{ background: 'var(--bg-secondary)' }}>
+      <div className="flex flex-col gap-2 p-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
         <div className="flex items-center gap-2">
           <KeyRound className="size-3.5 text-muted-foreground" />
-          <label className="text-xs font-medium text-muted-foreground">Allternit Context</label>
+          <label className="text-xs font-semibold text-muted-foreground">Allternit Context</label>
         </div>
-        <p className="text-[10px] text-muted-foreground">
+        <p className="text-[10px] leading-relaxed text-muted-foreground">
           Set your auth token and pick a workspace/project for this document.
         </p>
 
         {/* Auth Token */}
         <div className="flex flex-col gap-1">
           <div className="flex items-center justify-between">
-            <label className="text-[10px] text-muted-foreground">Auth Token</label>
+            <label className="text-[10px] font-medium text-muted-foreground">Auth Token</label>
             <button
               onClick={handleSignIn}
               disabled={signInPending}
-              className="text-[10px] text-[#D97757] hover:underline disabled:opacity-50"
+              className="text-[10px] font-semibold text-[var(--accent-brand)] hover:underline disabled:opacity-50"
             >
               {signInPending ? 'Signing in…' : 'Sign in with Allternit'}
             </button>
@@ -334,7 +334,7 @@ export function OfficeConfigPanel({ config, onSave, onBack }: Props) {
               {showToken ? <EyeOff className="size-3" /> : <Eye className="size-3" />}
             </Button>
             <Button variant="outline" size="icon" className="h-7 w-7 shrink-0" onClick={handleCopyToken} disabled={!authToken}>
-              {copied ? <span className="text-xs">✓</span> : <Copy className="size-3" />}
+              {copied ? <Check className="size-3 text-[var(--status-success)]" /> : <Copy className="size-3" />}
             </Button>
           </div>
         </div>
@@ -342,13 +342,13 @@ export function OfficeConfigPanel({ config, onSave, onBack }: Props) {
         {/* Workspace */}
         <div className="flex flex-col gap-1">
           <div className="flex items-center justify-between">
-            <label className="text-[10px] text-muted-foreground flex items-center gap-1">
+            <label className="text-[10px] font-medium text-muted-foreground flex items-center gap-1">
               <Building2 className="size-3" /> Workspace
             </label>
             <button
               onClick={() => void handleLoadWorkspaces()}
               disabled={loadingWorkspaces}
-              className="text-[10px] text-muted-foreground hover:text-foreground disabled:opacity-50"
+              className="text-[10px] font-semibold text-muted-foreground hover:text-foreground disabled:opacity-50"
             >
               {loadingWorkspaces ? <Loader2 className="size-3 animate-spin inline" /> : 'Load'}
             </button>
@@ -356,8 +356,7 @@ export function OfficeConfigPanel({ config, onSave, onBack }: Props) {
           <select
             value={selectedWorkspaceId}
             onChange={(e) => setSelectedWorkspaceId(e.target.value)}
-            className="h-7 text-xs rounded-md border px-2 outline-none"
-            style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', borderColor: 'var(--border-default)' }}
+            className="field"
           >
             <option value="">— Select workspace —</option>
             {workspaces.map((w) => (
@@ -369,13 +368,13 @@ export function OfficeConfigPanel({ config, onSave, onBack }: Props) {
         {/* Project */}
         <div className="flex flex-col gap-1">
           <div className="flex items-center justify-between">
-            <label className="text-[10px] text-muted-foreground flex items-center gap-1">
+            <label className="text-[10px] font-medium text-muted-foreground flex items-center gap-1">
               <FolderOpen className="size-3" /> Project
             </label>
             <button
               onClick={() => void handleLoadProjects()}
               disabled={loadingProjects}
-              className="text-[10px] text-muted-foreground hover:text-foreground disabled:opacity-50"
+              className="text-[10px] font-semibold text-muted-foreground hover:text-foreground disabled:opacity-50"
             >
               {loadingProjects ? <Loader2 className="size-3 animate-spin inline" /> : 'Load'}
             </button>
@@ -383,8 +382,7 @@ export function OfficeConfigPanel({ config, onSave, onBack }: Props) {
           <select
             value={selectedProjectId}
             onChange={(e) => setSelectedProjectId(e.target.value)}
-            className="h-7 text-xs rounded-md border px-2 outline-none"
-            style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', borderColor: 'var(--border-default)' }}
+            className="field"
           >
             <option value="">— Select project —</option>
             {projects.map((p) => (
@@ -394,7 +392,7 @@ export function OfficeConfigPanel({ config, onSave, onBack }: Props) {
         </div>
 
         {contextError && (
-          <p className="text-[10px] text-red-400">{contextError}</p>
+          <p className="text-[10px] text-[var(--status-error)]">{contextError}</p>
         )}
 
         <Button
@@ -403,7 +401,7 @@ export function OfficeConfigPanel({ config, onSave, onBack }: Props) {
           className="h-7 text-xs cursor-pointer mt-1"
           variant="outline"
         >
-          {contextSaved ? '✓ Saved' : 'Save Context'}
+          {contextSaved ? <><Check className="size-3 text-[var(--status-success)]" /> Saved</> : 'Save Context'}
         </Button>
       </div>
 
@@ -436,8 +434,7 @@ export function OfficeConfigPanel({ config, onSave, onBack }: Props) {
         <select
           value={language}
           onChange={(e) => setLanguage(e.target.value as 'en' | 'zh')}
-          className="h-8 text-xs rounded-md border px-2 cursor-pointer outline-none"
-          style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', borderColor: 'var(--border-default)' }}
+          className="field cursor-pointer"
         >
           <option value="en">English</option>
           <option value="zh">中文</option>
@@ -448,7 +445,7 @@ export function OfficeConfigPanel({ config, onSave, onBack }: Props) {
       <div className="flex items-center justify-between">
         <label className="text-xs text-muted-foreground">OfficeCLI</label>
         <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <span className={`size-1.5 rounded-full ${officeCli?.available ? 'bg-green-500' : 'bg-muted-foreground'}`} />
+          <span className={`size-1.5 rounded-full ${officeCli?.available ? 'bg-[var(--status-success)]' : 'bg-muted-foreground'}`} />
           {officeCli === null ? 'Checking…' : officeCli.label}
         </span>
       </div>
@@ -484,8 +481,7 @@ export function OfficeConfigPanel({ config, onSave, onBack }: Props) {
               value={systemInstruction}
               onChange={(e) => setSystemInstruction(e.target.value)}
               rows={3}
-              className="text-xs rounded-md border px-3 py-2 resize-y min-h-[60px] outline-none"
-              style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', borderColor: 'var(--border-default)' }}
+              className="field min-h-[60px] py-2"
             />
           </div>
         </>
