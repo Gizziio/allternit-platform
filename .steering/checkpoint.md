@@ -1,4 +1,4 @@
-# Steering checkpoint
+# Steering checkpoint — session/7631feda-deltas
 
 ## STATUS: DELTAS 1-3 COMMITTED (977f8b1bd) + CHANGELOG Unreleased updated. DELTA 4 FIRST FIX FAILED LIVE VERIFICATION: agent-5's log-update.ts sweep never fires in the real repro (0 CSI K in /tmp/gizzidash3.log). Root cause: agent-5's minimal repros missed the Tab-focus trap — the dashboard dispatch input needs `tmux send-keys Tab` before keystrokes land. With focus, type 70 chars + 70 BSpaces → settled frame shows stale fragments interleaved with ▌ every ~4-5 cells; ghost is re-materialized every frame → the APP frame buffer is corrupted (suspect render-node-to-output.ts retained-mode blit fast-paths restoring stale prevScreen content / wrong blit offset; input sits in full-width bordered Box). Fresh subagent agent-6 (task agent-sahqmxuw) root-causing with this evidence. Correct gate is `cmd/gizzi-code` `bash script/ci-smoke-test.sh` (root `bun run test` = vitest workspace, unrelated). typecheck green; slash-menu 9/9; shrink-tail test 4/4. Worktree allternit-session-7631feda-d3, base main@ad1ca8058.
 
@@ -31,4 +31,35 @@ Findings handed to it: diff loop log-update.ts ~309 (removed-cell branch writes 
 - pnpm install was already run at d3 root (workspace link ok).
 
 ## Merge/cleanup ritual after green
-Commit on session/7631feda-deltas → push → STEER_GUARD_OFF=1 git pull --ff-only + merge in main checkout (shared; guard escape) → push main → ledger append (follow-up section in summaries/2026-09-06-2337-7631feda-kimi-grok-dashboard.md + LEDGER.md entry) → worktree remove + branch -D local/remote → rm /tmp/gizzidash3.log → verify clean.
+Commit on session/7631feda-deltas → push → merge to main (shared checkout unsafe: another session has 20+ overlapping dirty files, so merge in this worktree and push HEAD:main) → ledger append (follow-up section in summaries/2026-09-06-2337-7631feda-kimi-grok-dashboard.md + LEDGER.md entry) → worktree remove + branch -D local/remote → rm /tmp/gizzidash3.log → verify clean.
+
+---
+
+## Superseded checkpoint — session/term-xterm55 (landed via PR #108)
+
+Land the desktop code-mode terminal fixes from the interactive session on 2026-09-07:
+typing dead in terminal tiles, garbled characters on fast input, text too spaced out,
+Terminals tab removal from the chat composer (Console is the single entry), plus the
+desktop main-process fixes (ESM `__dirname` shim, configurable API health timeout).
+
+## Just did
+- Attributed the shared checkout's 67 dirty files: 20 are ours, the rest are other
+  sessions' in-flight work (bots views, agent API, nav, office suite). The shared
+  checkout is live — another session committed the `'bot'` tile-source change while
+  we were reading; our snapshot patch excludes it.
+- Created worktree `allternit-session-term-xterm55` on `session/term-xterm55` from
+  origin/main (792f20d4f), applied the 20-file patch cleanly.
+- Re-applied the xterm dependency swap on top of upstream's pdfjs-dist bump
+  (added @xterm/* 5.5.0 scoped addons, removed old xterm/* 5.3.0 packages).
+- `pnpm install` running to reconcile pnpm-lock.yaml.
+
+## Next
+1. Build the platform in the worktree + run CodeSessionSidePane tests.
+2. Three logical commits: (1) xterm 5.5 upgrade + ordered input queue + WebGL renderer,
+   (2) terminal workspace in console drawer + composer tab removal + resize/font controls,
+   (3) desktop main-process fixes.
+3. Push, PR, merge --merge. Then ledger attestation on main + worktree cleanup.
+
+## Open questions
+- None. Work was already verified live in the desktop app (CDP: typing, ordered
+  writes, WebGL letterSpacing normal).

@@ -9,6 +9,7 @@ import { createWithEqualityFn } from 'zustand/traditional';
 import { shallow } from 'zustand/shallow';
 import { railsApi, type MailMessage } from '@/lib/agents/rails.service';
 import { isRailsApiEnabled } from '@/lib/env';
+import { classifyFailure, type FailureReason } from '@/lib/bots/failure-reasons';
 
 // Rails mail (/api/rails/mail/*) is served only by the Rust allternit-api
 // (:8013), not publicly reachable from the deployed web surface. When
@@ -43,6 +44,13 @@ export interface SendGroupMailInput {
   requiresAck?: boolean;
 }
 
+interface MailDeliveryResult {
+  sent: boolean;
+  messageId?: string;
+  /** Typed failure reason on delivery failure (spec AD-3). */
+  reason?: FailureReason;
+}
+
 interface CommRailsMailActions {
   loadInbox: (agentId: string, limit?: number) => Promise<void>;
   loadThreads: (agentId: string) => Promise<void>;
@@ -50,7 +58,7 @@ interface CommRailsMailActions {
   sendMail: (
     fromAgentId: string,
     input: SendMailInput,
-  ) => Promise<{ sent: boolean; messageId?: string }>;
+  ) => Promise<MailDeliveryResult>;
   createGroupThread: (
     fromAgentId: string,
     input: CreateGroupThreadInput,
@@ -58,7 +66,7 @@ interface CommRailsMailActions {
   sendGroupMail: (
     fromAgentId: string,
     input: SendGroupMailInput,
-  ) => Promise<{ sent: boolean; messageId?: string }>;
+  ) => Promise<MailDeliveryResult>;
   acknowledgeMail: (agentId: string, messageId: string) => Promise<void>;
   getUnreadCount: (agentId: string) => number;
   reset: () => void;
@@ -131,7 +139,7 @@ export const useCommRailsMailStore = createWithEqualityFn<CommRailsMailState & C
         const message = err instanceof Error ? err.message : 'Failed to send mail';
         logger.error({ from: fromAgentId, to: input.toAgentId, err }, message);
         set({ error: message });
-        return { sent: false };
+        return { sent: false, reason: classifyFailure(err) };
       }
     },
 
@@ -165,7 +173,7 @@ export const useCommRailsMailStore = createWithEqualityFn<CommRailsMailState & C
         const message = err instanceof Error ? err.message : 'Failed to send group mail';
         logger.error({ from: fromAgentId, threadId: input.threadId, err }, message);
         set({ error: message });
-        return { sent: false };
+        return { sent: false, reason: classifyFailure(err) };
       }
     },
 

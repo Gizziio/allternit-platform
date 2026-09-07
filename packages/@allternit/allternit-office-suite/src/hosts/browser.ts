@@ -1,4 +1,11 @@
-import type { OfficeAiClient, OfficeHost, OpenedFile, OpenOptions, RecentFile } from '../bridge/types';
+import type {
+  OfficeAiClient,
+  OfficeExtensionDescriptor,
+  OfficeHost,
+  OpenedFile,
+  OpenOptions,
+  RecentFile,
+} from '../bridge/types';
 import {
   getOfficeModelLabel,
   getOfficeModelOptions,
@@ -19,6 +26,8 @@ export interface BrowserHostOptions {
   getLanguage?: () => string;
   /** Override the default AI client. Defaults to the platform-style office-ai layer. */
   ai?: OfficeAiClient;
+  /** Extensions that occupy the per-app AI chat section (e.g. the Allternit Assistant). */
+  extensions?: OfficeExtensionDescriptor[];
 }
 
 function buildAcceptString(accept?: Record<string, string[]>): string {
@@ -97,5 +106,6 @@ export function createBrowserHost(options: BrowserHostOptions = {}): OfficeHost 
     },
     getRecentFiles: options.getRecentFiles ?? (async () => []),
     ai: options.ai ?? createBrowserAi(),
+    ...(options.extensions ? { extensions: options.extensions } : {}),
   };
 }

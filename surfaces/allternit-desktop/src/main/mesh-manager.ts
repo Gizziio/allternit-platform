@@ -25,9 +25,13 @@ import { app, ipcMain } from 'electron';
 import { spawn, type ChildProcess } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import log from 'electron-log';
 import { authManager } from './auth-manager.js';
 import { URLS } from './config.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export type MeshState = 'stopped' | 'starting' | 'running' | 'error';
 

@@ -6,6 +6,7 @@ on:
     paths:
       - 'surfaces/ai.allternit.com/**'
       - 'surfaces/platform.allternit.com/**'
+      - 'surfaces/allternit-extensions/allternit-office-addin/**'
       - 'packages/@allternit/**'
       - 'services/runtime/**'
       - '.github/workflows/deploy-cloudflare-pages.yml'
@@ -152,6 +153,18 @@ jobs:
           echo "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is set (${#NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY} chars)."
         env:
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+
+      - name: Build Office add-in runtime (served at /office-addins/)
+        # platform.allternit.com hosts the Word/Excel/PowerPoint task panes at
+        # /office-addins/ — see the add-in's DEPLOYMENT.md. The platform
+        # postbuild embeds this build into dist/office-addins before deploy.
+        run: pnpm --filter "@allternit/office" build
+        env:
+          ALLTERNIT_OFFICE_APP_BASE_URL: 'https://platform.allternit.com/office-addins'
+          ALLTERNIT_PLATFORM_URL: 'https://platform.allternit.com'
+          VITE_ALLTERNIT_GATEWAY_URL: 'https://api.allternit.com'
+          VITE_ALLTERNIT_PLATFORM_URL: 'https://platform.allternit.com'
+          VITE_ALLTERNIT_OFFICE_BASE_PATH: '/office-addins/'
 
       - name: Build platform.allternit.com
         run: pnpm --filter "@allternit/platform-console" build

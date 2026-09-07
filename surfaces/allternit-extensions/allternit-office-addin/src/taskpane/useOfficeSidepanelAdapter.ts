@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { useOfficeAgent } from '@/agent/useOfficeAgent'
 import { getBridge } from '@/lib/bridge-factory'
+import { buildLiveDocumentContext } from '@/lib/document-context'
 import { getOfficeHostDisplayName, getOfficeHostPlaceholder, getOfficeHost, getOfficeManifestUrl } from '@/lib/host-detector'
 import { resolveArtifactUrl } from '@/lib/artifact-markers'
 import { useConnectivity } from './hooks/useConnectivity'
@@ -330,14 +331,14 @@ export function useOfficeSidepanelAdapter() {
 
     execute: useCallback(
       (task: string) => {
-        const bridge = getBridge()
-        bridge
-          .getContext()
-          .then((ctx) => agent.execute(task, ctx.summary))
+        // Feed the open document to the agent at conversation start: bridge
+        // summary + markdown export + officecli snapshot note. Assembly is
+        // best-effort — total failure degrades to a no-context note.
+        buildLiveDocumentContext()
+          .then((context) => agent.execute(task, context))
           .catch((err: unknown) => {
-            // context read failed — fall back to executing without context
             void agent.execute(task, 'Document context unavailable.')
-            console.error('[OfficeSidepanel] context read failed', err)
+            console.error('[OfficeSidepanel] document context assembly failed', err)
           })
       },
       [agent],

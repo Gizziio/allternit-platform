@@ -2,13 +2,7 @@
 
 use crate::recommend::RecommendRequest;
 use crate::AppState;
-use axum::{
-    extract::State,
-    http::StatusCode,
-    response::Json,
-    routing::post,
-    Router,
-};
+use axum::{extract::State, http::StatusCode, response::Json, routing::post, Router};
 use serde::Serialize;
 use std::sync::Arc;
 

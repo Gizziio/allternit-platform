@@ -439,6 +439,10 @@ export interface CatalogModel {
 export interface CatalogResponse {
   models: CatalogModel[];
   count: number;
+  /** Epoch seconds of the last successful HF poll; absent if never polled. */
+  fetched_at?: number;
+  /** Whether the cached poll is missing or older than 30 minutes. */
+  stale?: boolean;
 }
 
 export type RecommendationIntent = 'balanced' | 'smartest' | 'fastest' | 'lightweight';
@@ -486,6 +490,29 @@ export async function assessModel(
     quantization,
     context_length: contextLength,
   });
+}
+
+export interface AssessBatchRequestModel {
+  repo_id: string;
+  quantization?: string;
+  context_length?: number;
+}
+
+export interface AssessBatchResponse {
+  results: ModelAssessment[];
+}
+
+/**
+ * Assess multiple models in a single request. Results are returned in request
+ * order. The engine caps batches at 50 models (400 beyond that).
+ */
+export async function assessModelsBatch(
+  models: AssessBatchRequestModel[],
+): Promise<ModelAssessment[]> {
+  const response = await api.post<AssessBatchResponse>('/api/local-engine/assess/batch', {
+    models,
+  });
+  return response.results ?? [];
 }
 
 export async function recommendModels(

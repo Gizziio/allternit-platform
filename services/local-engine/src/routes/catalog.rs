@@ -34,6 +34,11 @@ fn default_limit() -> usize {
 pub struct CatalogResponse {
     pub models: Vec<crate::catalog::CatalogEntry>,
     pub count: usize,
+    /// Epoch seconds of the last successful HF poll; absent if never polled.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fetched_at: Option<u64>,
+    /// Whether the cached poll is missing or older than 30 minutes.
+    pub stale: bool,
 }
 
 /// Refresh response.
@@ -62,9 +67,23 @@ async fn list_catalog(
 ) -> Json<CatalogResponse> {
     let source = CatalogSource::from_str(&query.source);
     let limit = query.limit.max(1).min(200);
+    // Stale-while-revalidate: kick off a background refresh when the cache is
+    // older than 30 minutes, then serve whatever we have immediately. The
+    // `stale` flag reflects the age of the data actually being served.
+    state
+        .catalog
+        .spawn_refresh_if_stale(crate::catalog::STALE_AFTER)
+        .await;
+    let stale = state.catalog.is_stale(crate::catalog::STALE_AFTER).await;
     let models = state.catalog.catalog(source, limit).await;
     let count = models.len();
-    Json(CatalogResponse { models, count })
+    let fetched_at = state.catalog.fetched_at().await;
+    Json(CatalogResponse {
+        models,
+        count,
+        fetched_at,
+        stale,
+    })
 }
 
 async fn refresh_catalog(

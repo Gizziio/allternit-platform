@@ -11,11 +11,14 @@ import {
   bootstrapOfficeRuntime,
   getOfficeBootstrapState,
   getPlatformOrigin,
+  OFFICE_BOOTSTRAP_UPDATED_EVENT,
   resolveOfficeDocumentSnapshot,
   setAuthToken,
   syncOfficeRuntimeState,
   type OfficeBindingSnapshot,
 } from '@/lib/platform-gateway'
+import OfficeSidepanelApp from './OfficeSidepanelApp'
+import { isOfficeRuntimeReady, resolveTaskpaneMode, type TaskpaneRuntimeMode } from './runtime-mode'
 
 type BridgeStatus = 'connecting' | 'connected' | 'error' | 'companion'
 
@@ -67,6 +70,30 @@ const HOST_PRODUCTS = {
 
 export default function App() {
   useSyncDarkClass()
+  const [mode, setMode] = useState<TaskpaneRuntimeMode>(() =>
+    resolveTaskpaneMode({ officeInitialized: isOfficeRuntimeReady(), bootstrap: getOfficeBootstrapState() }),
+  )
+
+  useEffect(() => {
+    const recompute = () =>
+      setMode(resolveTaskpaneMode({ officeInitialized: isOfficeRuntimeReady(), bootstrap: getOfficeBootstrapState() }))
+    // Office.onReady fired late, or the shell pushed a bootstrap context
+    // (token / workspace / project) after first render.
+    window.addEventListener('allternit-office-runtime-ready', recompute)
+    window.addEventListener('allternit-office-auth-token-received', recompute)
+    window.addEventListener(OFFICE_BOOTSTRAP_UPDATED_EVENT, recompute)
+    return () => {
+      window.removeEventListener('allternit-office-runtime-ready', recompute)
+      window.removeEventListener('allternit-office-auth-token-received', recompute)
+      window.removeEventListener(OFFICE_BOOTSTRAP_UPDATED_EVENT, recompute)
+    }
+  }, [])
+
+  if (mode === 'full-ai') return <OfficeSidepanelApp />
+  return <CompanionApp />
+}
+
+function CompanionApp() {
   const liveHost = getOfficeHost()
   const host = getOfficeProductTarget()
   const hostLabel = getOfficeHostDisplayName()

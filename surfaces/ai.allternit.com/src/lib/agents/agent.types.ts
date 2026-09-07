@@ -22,7 +22,7 @@ export type { AvatarConfig } from './character.types';
 // Agent Types
 export type AgentType = 'orchestrator' | 'sub-agent' | 'worker' | 'specialist' | 'reviewer' | 'assistant';
 
-export type AppMode = 'chat' | 'cowork' | 'code' | 'design' | 'browser';
+export type AppMode = 'chat' | 'cowork' | 'bot' | 'code' | 'design' | 'browser';
 
 // Harness configuration (canonical @allternit/sdk/harness shape)
 export interface HarnessBYOKProviderConfig {

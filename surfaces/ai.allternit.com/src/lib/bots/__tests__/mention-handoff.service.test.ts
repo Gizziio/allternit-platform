@@ -212,7 +212,7 @@ describe('resolveMention', () => {
 describe('executeMentionHandoff', () => {
   beforeEach(() => {
     vi.mocked(wakeBot).mockReset();
-    vi.mocked(wakeBot).mockResolvedValue('Here is the answer.');
+    vi.mocked(wakeBot).mockResolvedValue({ reply: 'Here is the answer.' });
   });
 
   it('returns original text when there are no mentions', async () => {
@@ -268,7 +268,7 @@ describe('executeMentionHandoff', () => {
   });
 
   it('returns a handed-off placeholder when wake does not wait', async () => {
-    vi.mocked(wakeBot).mockResolvedValueOnce(undefined);
+    vi.mocked(wakeBot).mockResolvedValueOnce({});
     const native = fakeNativeBot({
       id: 'native-silent',
       name: 'silent',

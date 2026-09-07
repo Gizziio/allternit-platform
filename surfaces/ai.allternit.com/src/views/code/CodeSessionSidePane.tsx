@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { FolderSimple, GitDiff, Package, Scroll, SquaresFour, Terminal, X } from '@phosphor-icons/react';
 import { useTerminalWorkspaceStore } from '@/stores/terminal-workspace.store';
+import { useDrawerStore } from '@/drawers/drawer.store';
 import { CodeDiffPanel } from './CodeDiffPanel';
 import { CodeFileEditor } from './CodeFileEditor';
 import { ExplorerView } from './ExplorerView';
@@ -45,8 +46,9 @@ export function CodeSessionSidePane({ activeTab: controlledTab, onTabChange, ses
     setActiveTab('files');
   };
   const closeFile = () => setSelectedFilePath(null);
-  // v1 honesty: the workspace tile starts a FRESH remote PTY in this cwd —
-  // the side pane's existing terminal content is not migrated.
+  // The multi-terminal workspace lives in the console drawer's terminal tab;
+  // the button spawns a tile tagged with this code session and opens the
+  // drawer there.
   const sendToWorkspace = () => {
     useTerminalWorkspaceStore.getState().addTaggedTile({
       cwd: workingDir,
@@ -56,6 +58,9 @@ export function CodeSessionSidePane({ activeTab: controlledTab, onTabChange, ses
         title: terminalContext?.repoName ?? sessionId ?? 'Code session',
       },
     });
+    const drawerStore = useDrawerStore.getState();
+    drawerStore.openDrawer('console', { tab: 'terminal' });
+    drawerStore.setConsoleTab('terminal');
   };
   const paneMeta = activeTab === 'terminal'
     ? { label: 'Terminal', icon: Terminal }

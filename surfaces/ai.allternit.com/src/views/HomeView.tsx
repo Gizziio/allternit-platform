@@ -73,7 +73,7 @@ export function HomeView({ onAction, context: _context }: HomeViewProps) {
   const codeSessions   = useCodeSessionStore((s) => s.sessions);
   const coworkSessions = useCoworkSessionStore((s) => s.sessions);
   const agents = useAgentStore((s) => s.agents);
-  const { startSession, isStarting } = useStartBotSession(
+  const { startSession, isStarting, error: startSessionError } = useStartBotSession(
     () => {
       window.dispatchEvent(
         new CustomEvent('allternit:open-view', { detail: { viewType: 'chat' } })
@@ -131,7 +131,8 @@ export function HomeView({ onAction, context: _context }: HomeViewProps) {
       if (!bot) return;
       setStartingBotId(botId);
       try {
-        await startSession(bot);
+        const sessionId = await startSession(bot);
+        if (!sessionId) return;
         // Bind the bot to the chat surface so the composer shows the bot pill
         // and the mode selector.
         useAgentSurfaceModeStore.getState().setSelectedAgent('chat', bot.id);
@@ -231,6 +232,11 @@ export function HomeView({ onAction, context: _context }: HomeViewProps) {
                 />
               );
             })}
+            {startSessionError && (
+              <div className="rounded-xl border border-[var(--status-warning)]/30 bg-[var(--status-warning)]/10 p-3 px-5 text-[13px] text-[var(--status-warning)]">
+                {startSessionError}
+              </div>
+            )}
           </div>
         </CollapsibleContent>
       </Collapsible>

@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useCallback, useState } from 'react';
-import { Terminal } from 'xterm';
-import { FitAddon } from 'xterm-addon-fit';
-import { SerializeAddon } from 'xterm-addon-serialize';
+import { Terminal } from '@xterm/xterm';
+import { FitAddon } from '@xterm/addon-fit';
+import { SerializeAddon } from '@xterm/addon-serialize';
 import { nodeTerminalService, type TerminalSession, type TimeoutWarning, type TerminalSnapshotFrame } from './terminal.service';
 import { TerminalFileBrowser, type FileEntry, type FileTransfer } from './TerminalFileBrowser';
 import { Button } from '@/components/ui/button';
@@ -17,7 +17,7 @@ import {
   SidebarSimple as PanelLeftClose,
 } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
-import 'xterm/css/xterm.css';
+import '@xterm/xterm/css/xterm.css';
 
 import { createModuleLogger } from '@/lib/logger';
 
@@ -77,6 +77,7 @@ export function NodeTerminal({
     // Create xterm instance
     const term = new Terminal({
       cursorBlink: true,
+      letterSpacing: 0,
       theme: {
         background: '#0d1117',
         foreground: '#c9d1d9',

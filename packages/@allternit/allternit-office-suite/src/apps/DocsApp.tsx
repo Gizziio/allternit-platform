@@ -1,9 +1,10 @@
-import { useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import {
   DocsApp as VendoredDocsApp,
   type DocsAppProps as VendoredDocsAppProps,
 } from '@allternit/office-docs-app';
 import { useOfficeHostRequired } from '../bridge/OfficeHostContext';
+import { registerActiveDocument } from '../extensions/activeDocument';
 
 export interface DocsAppProps
   extends Omit<VendoredDocsAppProps, 'onSave'> {
@@ -22,6 +23,12 @@ export function DocsApp(props: DocsAppProps): React.ReactNode {
   const host = useOfficeHostRequired();
   const hostRef = useRef(host);
   hostRef.current = host;
+
+  const docName = props.document?.name ?? null;
+  useEffect(() => {
+    registerActiveDocument('docs', docName);
+    return () => registerActiveDocument('docs', null);
+  }, [docName]);
 
   const onSave = useMemo(
     () =>

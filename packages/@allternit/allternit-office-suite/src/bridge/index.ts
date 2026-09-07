@@ -24,4 +24,15 @@ export type {
   OfficeStorageProvider,
   XlsxEngineHost,
   XlsxSessionHandle,
+  OfficeExtensionContext,
+  OfficeExtensionDescriptor,
 } from './types';
+export {
+  OfficeAiSlot,
+  useOfficeExtensions,
+  registerActiveDocument,
+  getActiveDocument,
+  useActiveDocument,
+  createAllternitAssistantExtension,
+} from '../extensions';
+export type { OfficeAiSlotProps } from '../extensions';

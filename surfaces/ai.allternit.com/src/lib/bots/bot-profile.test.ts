@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { agentToBot, createBotAgent } from './bot-profile';
+import { agentToBot, agentToCreateAgentInput, createBotAgent } from './bot-profile';
 import { BotSchema } from './orpc-contracts';
 import type { Agent, BotProfile } from '../agents/agent.types';
 
@@ -75,5 +75,44 @@ describe('bot-profile', () => {
 
     expect((bot as Record<string, unknown>).systemPrompt).toBeUndefined();
     expect((bot as Record<string, unknown>).tools).toBeUndefined();
+  });
+});
+
+describe('agentToCreateAgentInput (share-auth / duplicate inheritance)', () => {
+  it('strips operational history but keeps indirect secret refs', () => {
+    const agent = makeAgent({
+      totalRuns: 7,
+      lastRunAt: '2026-09-01T00:00:00Z',
+      assignedTaskIds: ['task-1', 'task-2'],
+      secretRefs: [
+        {
+          name: 'API Key',
+          key: 'API_KEY',
+          vaultRef: 'vault://team/api-key',
+          required: true,
+          value: 'plaintext-should-not-inherit',
+        },
+      ],
+    });
+
+    const draft = agentToCreateAgentInput(agent) as Record<string, unknown>;
+
+    // Hermes history-strip rule: no runs, tasks, or timestamps follow the copy.
+    expect(draft.totalRuns).toBeUndefined();
+    expect(draft.lastRunAt).toBeUndefined();
+    expect(draft.assignedTaskIds).toBeUndefined();
+    expect(draft.id).toBeUndefined();
+    expect(draft.status).toBeUndefined();
+
+    // Identity + persona DO inherit.
+    expect(draft.systemPrompt).toBe('You are a researcher.');
+    expect(draft.botProfile).toBeDefined();
+
+    // Secret refs stay indirect: the vault reference is preserved but the
+    // plaintext value is redacted so the new bot re-resolves via the store.
+    const refs = draft.secretRefs as Array<Record<string, unknown>>;
+    expect(refs).toHaveLength(1);
+    expect(refs[0].vaultRef).toBe('vault://team/api-key');
+    expect(refs[0].value).toBeUndefined();
   });
 });

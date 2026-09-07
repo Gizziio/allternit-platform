@@ -166,7 +166,10 @@ fn score_candidate(
     .copied()
     .collect();
 
-    let (wc, ws, wf, wm, wp) = weights.get(intent).copied().unwrap_or((1.0, 1.0, 1.0, 1.0, 0.25));
+    let (wc, ws, wf, wm, wp) = weights
+        .get(intent)
+        .copied()
+        .unwrap_or((1.0, 1.0, 1.0, 1.0, 0.25));
 
     let score = (capability_score.powf(wc))
         * (speed_score.powf(ws))

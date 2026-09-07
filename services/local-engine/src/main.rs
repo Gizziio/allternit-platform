@@ -3,8 +3,11 @@ use allternit_local_engine::cache::ModelStore;
 use allternit_local_engine::catalog::CatalogService;
 use allternit_local_engine::hardware;
 use allternit_local_engine::recommend::Recommender;
+use allternit_local_engine::routes::{
+    assess, catalog, chat, health, models, recommend, runtimes, status,
+};
 use allternit_local_engine::runtime::ProcessManager;
-use allternit_local_engine::routes::{assess, catalog, chat, health, models, recommend, runtimes, status};
+use allternit_local_engine::sampler::SystemSampler;
 use allternit_local_engine::AppState;
 use axum::Router;
 use std::path::PathBuf;
@@ -29,6 +32,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let catalog = CatalogService::new(&data_dir);
     let assessor = Assessor::new();
     let recommender = Recommender::new();
+    let sampler = SystemSampler::start();
 
     // Eagerly refresh the catalog on startup, then keep it updated in the
     // background. Errors are logged but do not prevent the service from starting.
@@ -46,6 +50,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         catalog,
         assessor,
         recommender,
+        sampler,
     });
 
     let app = Router::new()
