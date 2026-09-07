@@ -5,7 +5,7 @@
   xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides"
   xsi:type="TaskPaneApp">
   <Id>b765c354-dc5c-4b98-9f54-320e110c42d2</Id>
-  <Version>1.1.2.0</Version>
+  <Version>1.1.3.0</Version>
   <ProviderName>Allternit</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="Allternit for Excel" />
@@ -15,7 +15,7 @@
   <SupportUrl DefaultValue="https://allternit.com" />
   <AppDomains>
     <AppDomain>https://allternit-office-addins.pages.dev/office-addins</AppDomain>
-    <AppDomain>https://platform.allternit.com</AppDomain>
+    <AppDomain>https://ai.allternit.com</AppDomain>
     <!-- Auth bridge (displayDialogAsync target) signs in through Clerk; the
          dialog must be allowed to reach these origins. -->
     <AppDomain>https://clerk.allternit.com</AppDomain>
