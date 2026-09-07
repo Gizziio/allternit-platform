@@ -1154,7 +1154,12 @@ mod tests {
         (url, child)
     }
 
+    // Ignored in CI: spawns the real AllternitOS control-plane binary
+    // (ALLTERNITOS_CONTROL_PLANE_BIN), which this repo's CI does not build.
+    // Run locally with:
+    //   cargo test -p allternit-api --lib -- --ignored
     #[tokio::test]
+    #[ignore = "requires AllternitOS workspace binaries not available in CI"]
     async fn create_resource_routes_through_real_os_control_plane() {
         let (url, _child) = spawn_real_os_control_plane().await;
         let os_client = crate::fabric::os_client::OsControlPlaneClient::new(url);
