@@ -46,3 +46,6 @@
 
 ## Coordination notes
 - Parallel `bots-p01` session (TEAMMATES spec Phase 0+1, ff-merged earlier today) touches adjacent areas (rail teammates section, routines, presence); PR #106 merged with **no conflicts**, but follow-up reconciliation of rail section ordering (Pinned Bots vs TEAMMATES) may be wanted.
+
+## Addendum (same day, PR #110 @ 22b92f5ae)
+Live-debugged follow-up: bot sessions opened but sending silently failed ("Cannot stream a message before a live session exists: temp-…", unhandled). Root cause: the API's sqlite DB (deliberately downgraded by another session, `.bak.before-v132-downgrade-20260906`) contains only 10 seeded agents — no user bots — so the surface gate 403s every bot session create; the local temp fallback then cannot stream. Fix (client-side, DB untouched): ensure-registration before createSession + send error banner. NOTE for future sessions: the desktop preview worktree (`allternit-preview-113399b28`) builds gizzi-code only after manually symlinking `node_modules/@allternit/gizzi-sdk → ../../packages/sdk` and building `packages/sdk` dist — pnpm-only installs can't build cmd/gizzi-code (build-production.js resolves gizzi-sdk via node_modules, not tsconfig paths).
