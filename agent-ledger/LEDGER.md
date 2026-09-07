@@ -21,6 +21,17 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-06 23:37 — kimi — Grok-parity /session-info, /dashboard agent dashboard, /settings effort row (gizzi-code)
+
+- **Session ID / Branch:** `session/7631feda-bbb5-492f-97cf-55f243eda42d` (worktree `allternit-session-7631feda`)
+- **Agent:** kimi
+- **Summary:** Ported three Grok CLI presentation features into gizzi-code: `/status` gained `/info`+`/session-info` aliases with Auth/Turns rows and copy keys; full `/dashboard` agent dashboard (dispatch/peek/reply/search/grouping/folding/details/rename/pin/reorder/stop, `Ctrl+\` toggle, `DashboardSource` seam for a future gizzi-serve source); `/settings` effort row. Plus a critical fix: `sessionStorage.ts` re-exported `getProjectDir` without importing it (latent ReferenceError that broke dashboard dispatch).
+- **Commit:** squash `51f7315532f38c8315b1c4916897a4c46f03acfb` on `main` (PR #103); branch commits `b8675f9ce`, `07865f0d0`, `c2f807680`, `9b307db69`, `323c5bc39`, `7386f48c5`, `581cbe9d6`
+- **How it works:** Dashboard sessions are main-session `local_agent` tasks driven by a multi-turn `pendingMessages`-drain loop (`cmd/gizzi-code/src/cli/ui/ink-app/dashboard/topLevelSession.ts`); the UI talks only to the `DashboardSource` interface (`dashboard/types.ts` + `InProcessSource.ts`), so a remote source is a drop-in replacement. UI lives in `screens/DashboardScreen.tsx`; pin/reorder persist via `dashboard.*` keys in GlobalConfig.
+- **Verification:** typecheck green on merge commit; `bun run test` 1315 pass / 0 fail; tmux TUI functional pass (dispatch→progress→finalize→peek→reply→pin→search→exit). GitHub Code Quality workflow never triggered on the PR (repo-infra quirk); owner approved merge without it.
+- **Outstanding work:** details view is a text excerpt, not the full Messages renderer; no 1–9 needs-input option buttons (answers land in main-session prompt); static working glyph and main-row state; stale-cell ghosts on line shrink are a pre-existing vendored-ink emit issue (`ink/log-update.ts:106`), not dashboard-specific.
+- **Summary file:** [./summaries/2026-09-06-2337-7631feda-kimi-grok-dashboard.md](./summaries/2026-09-06-2337-7631feda-kimi-grok-dashboard.md)
+
 ### 2026-09-06 22:40 — kimi — gizzi-code 2.0.7: onboarding auto-picks the default brain
 
 - **Session ID / Branch:** `session/gc-207` (worktree `allternit-session-gc-207`)
