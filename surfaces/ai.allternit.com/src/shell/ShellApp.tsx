@@ -29,7 +29,7 @@ import { ConsoleDrawer } from '../drawers/ConsoleDrawer';
 import { useRunnerStore } from '../runner/runner.store';
 import { useSidecarStore } from '../stores/sidecar-store';
 import { usePendingChatModelStore } from '../stores/pending-chat-model.store';
-import { useAgentStore } from '../lib/agents';
+import { useAgentStore, useAgentsWithSwarms } from '../lib/agents';
 import type { Agent } from '../lib/agents/agent.types';
 import { useAgentBootstrap } from '../lib/agents/useAgentBootstrap';
 import { isBot } from '@/lib/bots/bot-profile';
