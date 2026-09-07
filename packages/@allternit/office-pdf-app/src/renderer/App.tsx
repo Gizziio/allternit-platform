@@ -6,6 +6,7 @@ import { GlobalWorkerOptions, TextLayer, getDocument } from 'pdfjs-dist/legacy/b
 import type { PDFDocumentLoadingTask, PDFDocumentProxy, RenderTask } from 'pdfjs-dist'
 import workerUrl from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url'
 import { AiPanel, AllternitMark } from './ai/AiPanel'
+import { OfficeAiSlot } from '@allternit/office-suite/bridge'
 import type { PdfAiDeps } from './ai/tools'
 import {
   MARKUP_COLORS,
@@ -2052,7 +2053,12 @@ export default function App() {
               <AllternitMark size={22} />
             </button>
           )}
-          <AiPanel api={aiApi} onCollapse={() => setAiCollapsed(true)} />
+          <OfficeAiSlot
+            appKey="pdf"
+            collapsed={aiCollapsed}
+            close={() => setAiCollapsed(true)}
+            fallback={<AiPanel api={aiApi} onCollapse={() => setAiCollapsed(true)} />}
+          />
         </div>
         {sidebar === 'outline' && outline && (
           <div className="pdf-thumbs pdf-outline-pane">
