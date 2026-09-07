@@ -169,7 +169,7 @@ import type { AgentDefinition } from '../tools/AgentTool/loadAgentsDir';
 import { resolveAgentTools } from '../tools/AgentTool/agentToolUtils';
 import { resumeAgentBackground } from '../tools/AgentTool/resumeAgent';
 import { useMainLoopModel } from '../hooks/useMainLoopModel';
-import { useAppState, useSetAppState, useAppStateStore } from '../state/AppState';
+import { useAppState, useSetAppState, useAppStateStore, type Screen as AppStateScreen } from '../state/AppState';
 import type { ContentBlockParam, ImageBlockParam } from '@allternit/gizzi-sdk/providers/allternit/resources/messages.mjs';
 import { AllternitHarness } from '@allternit/sdk/harness';
 import { shouldUseHarness, FEATURE_FLAGS } from '../utils/feature-flags';
@@ -388,6 +388,7 @@ import type { RemoteMessageContent } from '../utils/teleport/api';
 import { FullscreenLayout, useUnseenDivider, computeUnseenDivider } from '../components/FullscreenLayout';
 import { isFullscreenEnvEnabled, maybeGetTmuxMouseHint, isMouseTrackingEnabled } from '../utils/fullscreen';
 import { AlternateScreen } from '../ink/components/AlternateScreen';
+import { DashboardScreen } from './DashboardScreen';
 import { ScrollKeybindingHandler } from '../components/ScrollKeybindingHandler';
 import { useMessageActions, MessageActionsKeybindings, MessageActionsBar, type MessageActionsState, type MessageActionsNav, type MessageActionCaps } from '../components/messageActions';
 import { setClipboard } from '../ink/termio/osc';
@@ -674,7 +675,7 @@ export type Props = {
   // Thinking configuration to use when thinking is enabled
   thinkingConfig: ThinkingConfig;
 };
-export type Screen = 'prompt' | 'transcript';
+export type Screen = AppStateScreen;
 export function REPL({
   commands: initialCommands,
   debug,
@@ -855,7 +856,15 @@ export function REPL({
   const onChangeDynamicMcpConfig = useCallback((config: Record<string, ScopedMcpServerConfig>) => {
     setDynamicMcpConfig(config);
   }, [setDynamicMcpConfig]);
-  const [screen, setScreen] = useState<Screen>('prompt');
+  const screen = useAppState(s => s.screen);
+  // AppState-backed (not useState) so slash commands can switch screens via
+  // context.setAppState. Accepts the same SetStateAction shape as before.
+  const setScreen = useCallback((update: React.SetStateAction<Screen>) => {
+    setAppState(prev => ({
+      ...prev,
+      screen: typeof update === 'function' ? (update as (s: Screen) => Screen)(prev.screen) : update
+    }));
+  }, [setAppState]);
   const [showAllInTranscript, setShowAllInTranscript] = useState(false);
   // [ forces the dump-to-scrollback path inside transcript mode. Separate
   // from GIZZI_CODE_NO_FLICKER=0 (which is process-lifetime) — this is
@@ -4842,6 +4851,20 @@ export function REPL({
         </AlternateScreen>;
     }
     return transcriptReturn;
+  }
+
+  if (screen === 'dashboard') {
+    // Full-screen agent dashboard (Grok-style). Mounted as its own screen,
+    // same AlternateScreen + KeybindingSetup shape as the transcript
+    // branch so the alt buffer reconciles across toggles.
+    const dashboardReturn = <KeybindingSetup>
+        <AnimatedTerminalTitle isAnimating={titleIsAnimating} title={terminalTitle} disabled={titleDisabled} noPrefix={showStatusInTerminalTab} />
+        <GlobalKeybindingHandlers {...globalKeybindingProps} />
+        <DashboardScreen />
+      </KeybindingSetup>;
+    return <AlternateScreen mouseTracking={isMouseTrackingEnabled()}>
+        {dashboardReturn}
+      </AlternateScreen>;
   }
 
   // Get viewed agent task (inlined from selectors for explicit data flow).

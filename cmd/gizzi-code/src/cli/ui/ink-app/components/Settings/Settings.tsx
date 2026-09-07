@@ -69,14 +69,7 @@ export function Settings(t0) {
   }
   useKeybinding("confirm:no", handleEscape, t3);
   let t4;
-  if ($[5] !== context || $[6] !== diagnosticsPromise) {
-    t4 = <Tab key="status" title="Status"><Status context={context} diagnosticsPromise={diagnosticsPromise} /></Tab>;
-    $[5] = context;
-    $[6] = diagnosticsPromise;
-    $[7] = t4;
-  } else {
-    t4 = $[7];
-  }
+  t4 = <Tab key="status" title="Status"><Status context={context} diagnosticsPromise={diagnosticsPromise} isActiveTab={selectedTab === "Status"} /></Tab>;
   let t5;
   if ($[8] !== contentHeight || $[9] !== context || $[10] !== onClose) {
     t5 = <Tab key="config" title="Config"><Suspense fallback={null}><Config context={context} onClose={onClose} setTabsHidden={setTabsHidden} onIsSearchModeChange={setConfigOwnsEsc} contentHeight={contentHeight} /></Suspense></Tab>;

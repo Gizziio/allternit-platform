@@ -6,21 +6,50 @@ import { Suspense, use } from 'react';
 import { getSessionId } from '../../bootstrap/state';
 import type { LocalJSXCommandContext } from '../../commands';
 import { useIsInsideModal } from '../../context/modalContext';
-import { Box, Text, useTheme } from '../../ink';
+import { Box, Text, useInput, useTheme } from '../../ink';
+import { setClipboard } from '../../ink/termio/osc';
 import { type AppState, useAppState } from '../../state/AppState';
 import { getCwd } from '../../utils/cwd';
 import { getCurrentSessionTitle } from '../../utils/sessionStorage';
 import { buildAccountProperties, buildAPIProviderProperties, buildIDEProperties, buildInstallationDiagnostics, buildInstallationHealthDiagnostics, buildMcpProperties, buildMemoryDiagnostics, buildSandboxProperties, buildSettingSourcesProperties, type Diagnostic, getModelDisplayLabel, type Property } from '../../utils/status';
+import { countUserTurns, getAuthMethodDescription } from '../../utils/statusModel';
 import type { ThemeName } from '../../utils/theme';
 import { ConfigurableShortcutHint } from '../ConfigurableShortcutHint';
 type Props = {
   context: LocalJSXCommandContext;
   diagnosticsPromise: Promise<Diagnostic[]>;
+  isActiveTab?: boolean;
 };
-function buildPrimarySection(): Property[] {
+async function copyToClipboard(text: string): Promise<void> {
+  const raw = await setClipboard(text);
+  if (raw) process.stdout.write(raw);
+}
+function propertiesToText(properties: Property[]): string {
+  const lines: string[] = [];
+  for (const p of properties) {
+    if (p.label === undefined) {
+      continue;
+    }
+    let value = '';
+    if (Array.isArray(p.value)) {
+      value = p.value.join(', ');
+    } else if (typeof p.value === 'string' || typeof p.value === 'number') {
+      value = String(p.value);
+    }
+    lines.push(`${p.label}: ${value}`.trimEnd());
+  }
+  return lines.join('\n');
+}
+function buildPrimarySection(context: LocalJSXCommandContext): Property[] {
   const sessionId = getSessionId();
   const customTitle = getCurrentSessionTitle(sessionId);
   const nameValue = customTitle ?? <Text dimColor>/rename to add a name</Text>;
+  const turns = countUserTurns(context.getAppState().messages);
+  const accountProperties = buildAccountProperties();
+  const authFallback = accountProperties.length === 0 && getAuthMethodDescription() !== 'none' ? [{
+    label: 'Auth method',
+    value: getAuthMethodDescription()
+  }] : [];
   return [{
     label: 'Version',
     value: MACRO.VERSION
@@ -33,7 +62,10 @@ function buildPrimarySection(): Property[] {
   }, {
     label: 'cwd',
     value: getCwd()
-  }, ...buildAccountProperties(), ...buildAPIProviderProperties()];
+  }, {
+    label: 'Turns',
+    value: String(turns)
+  }, ...accountProperties, ...authFallback, ...buildAPIProviderProperties()];
 }
 function buildSecondarySection({
   mainLoopModel,
@@ -101,17 +133,36 @@ function PropertyValue(t0) {
   return value;
 }
 export function Status(t0) {
-  const $ = _c(20);
+  const $ = _c(24);
   const {
     context,
-    diagnosticsPromise
+    diagnosticsPromise,
+    isActiveTab
   } = t0;
+  const tabActive = isActiveTab !== false;
+  const [copiedHint, setCopiedHint] = React.useState(null);
   const mainLoopModel = useAppState(_temp);
   const mcp = useAppState(_temp2);
   const [theme] = useTheme();
+  useInput((input, _key, event) => {
+    if (input === 'c') {
+      event.stopImmediatePropagation();
+      void copyToClipboard(getSessionId());
+      setCopiedHint('Session ID copied to clipboard');
+      setTimeout(() => setCopiedHint(null), 2000);
+    } else if (input === 'y') {
+      event.stopImmediatePropagation();
+      const text = sections.map(propertiesToText).filter(Boolean).join('\n');
+      void copyToClipboard(text);
+      setCopiedHint('Session info copied to clipboard');
+      setTimeout(() => setCopiedHint(null), 2000);
+    }
+  }, {
+    isActive: tabActive
+  });
   let t1;
   if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
-    t1 = buildPrimarySection();
+    t1 = buildPrimarySection(context);
     $[0] = t1;
   } else {
     t1 = $[0];
@@ -175,11 +226,21 @@ export function Status(t0) {
   } else {
     t7 = $[16];
   }
+  let t9;
+  if ($[20] !== copiedHint) {
+    const hintText = copiedHint ?? 'c copy session id · y copy all · click Session ID to copy';
+    t9 = <Box flexDirection="row" gap={2}><Text dimColor={copiedHint === null} color={copiedHint !== null ? "#d4b08c" : undefined}>{hintText}</Text></Box>;
+    $[20] = copiedHint;
+    $[21] = t9;
+  } else {
+    t9 = $[21];
+  }
   let t8;
-  if ($[17] !== grow || $[18] !== t6) {
-    t8 = <Box flexDirection="column" flexGrow={grow}>{t6}{t7}</Box>;
+  if ($[17] !== grow || $[18] !== t6 || $[22] !== t9) {
+    t8 = <Box flexDirection="column" flexGrow={grow}>{t6}{t7}{t9}</Box>;
     $[17] = grow;
     $[18] = t6;
+    $[22] = t9;
     $[19] = t8;
   } else {
     t8 = $[19];
@@ -194,6 +255,11 @@ function _temp3(t0, j) {
     label,
     value
   } = t0;
+  if (label === 'Session ID') {
+    return <Box key={j} flexDirection="row" gap={1} flexShrink={0} onClick={() => {
+      void copyToClipboard(getSessionId());
+    }}><Text bold={true}>{label}:</Text><PropertyValue value={value} /></Box>;
+  }
   return <Box key={j} flexDirection="row" gap={1} flexShrink={0}>{label !== undefined && <Text bold={true}>{label}:</Text>}<PropertyValue value={value} /></Box>;
 }
 function _temp2(s_0) {

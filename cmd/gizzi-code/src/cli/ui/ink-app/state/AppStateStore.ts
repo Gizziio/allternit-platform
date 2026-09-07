@@ -88,6 +88,8 @@ export type FooterItem =
   | 'bridge'
   | 'companion'
 
+export type Screen = 'prompt' | 'transcript' | 'dashboard'
+
 export type AppState = DeepImmutable<{
   settings: SettingsJson
   verbose: boolean
@@ -95,6 +97,9 @@ export type AppState = DeepImmutable<{
   mainLoopModelForSession: ModelSetting
   statusLineText: string | undefined
   expandedView: 'none' | 'tasks' | 'teammates'
+  // Which full-screen view is mounted. REPL-owned; lives in AppState so
+  // slash commands (e.g. /dashboard) can switch screens via setAppState.
+  screen: Screen
   isBriefOnly: boolean
   // Optional - only present when ENABLE_AGENT_SWARMS is true (for dead code elimination)
   showTeammateMessagePreview?: boolean
@@ -477,6 +482,7 @@ export function getDefaultAppState(): AppState {
     mainLoopModelForSession: null,
     statusLineText: undefined,
     expandedView: 'none',
+    screen: 'prompt',
     isBriefOnly: false,
     showTeammateMessagePreview: false,
     selectedIPAgentIndex: -1,
