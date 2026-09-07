@@ -2,4 +2,4 @@
 
 pub mod llamacpp;
 
-pub use llamacpp::{LlamaCppConfig, build_argv, chat_completions_url, health_url};
+pub use llamacpp::{build_argv, chat_completions_url, health_url, LlamaCppConfig};

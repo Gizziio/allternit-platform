@@ -17,8 +17,9 @@ pub mod catalog;
 pub mod download;
 pub mod hardware;
 pub mod recommend;
-pub mod runtime;
 pub mod routes;
+pub mod runtime;
+pub mod sampler;
 
 use std::path::PathBuf;
 
@@ -26,14 +27,11 @@ use std::path::PathBuf;
 pub use assess::{AssessRequest, AssessResponse, Assessor};
 pub use cache::{CachedModel, ModelSource, ModelStatus, ModelStore};
 pub use catalog::{CatalogEntry, CatalogService, CatalogSource};
-pub use recommend::{RecommendRequest, RecommendResponse, Recommender};
-pub use download::{
-    build_cached_model, spawn_download_task, HuggingFaceError, TreeEntry,
-};
+pub use download::{build_cached_model, spawn_download_task, HuggingFaceError, TreeEntry};
 pub use hardware::HardwareProfile;
-pub use runtime::{
-    ProcessManager, RuntimeInfo, RuntimeManagerError, RuntimeRecipe, RuntimeStatus,
-};
+pub use recommend::{RecommendRequest, RecommendResponse, Recommender};
+pub use runtime::{ProcessManager, RuntimeInfo, RuntimeManagerError, RuntimeRecipe, RuntimeStatus};
+pub use sampler::{SystemSample, SystemSampler};
 
 /// Shared application state used by all HTTP routes.
 #[derive(Clone)]
@@ -46,4 +44,5 @@ pub struct AppState {
     pub catalog: CatalogService,
     pub assessor: Assessor,
     pub recommender: Recommender,
+    pub sampler: SystemSampler,
 }

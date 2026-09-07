@@ -48,7 +48,11 @@ async fn proxy_chat_completions(
         }
     };
 
-    let runtime = match state.manager.find_running_runtime_by_model_id(&model_id).await {
+    let runtime = match state
+        .manager
+        .find_running_runtime_by_model_id(&model_id)
+        .await
+    {
         Some(rt) => rt,
         None => {
             return (

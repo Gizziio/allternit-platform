@@ -9,7 +9,9 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::sync::RwLock;
 use tracing::{info, warn};
 
@@ -79,7 +81,13 @@ pub struct CatalogService {
     client: Client,
     seeds: Vec<SeedEntry>,
     cache: Arc<RwLock<PolledCache>>,
+    /// Set while a stale-while-revalidate refresh is running, so concurrent
+    /// `/catalog` requests do not stack duplicate polls.
+    refreshing: Arc<AtomicBool>,
 }
+
+/// How old the cached poll may be before `/catalog` triggers a revalidate.
+pub const STALE_AFTER: Duration = Duration::from_secs(30 * 60);
 
 impl CatalogService {
     /// Create a new catalog service, loading seed entries and any cached poll.
@@ -100,6 +108,7 @@ impl CatalogService {
                 .unwrap_or_default(),
             seeds,
             cache: Arc::new(RwLock::new(cache)),
+            refreshing: Arc::new(AtomicBool::new(false)),
         }
     }
 
@@ -136,6 +145,70 @@ impl CatalogService {
 
     /// Force a refresh from Hugging Face and return the number of polled entries.
     pub async fn refresh(&self) -> Result<usize, CatalogError> {
+        // If a stale-while-revalidate refresh is in flight, give it up to a
+        // minute to finish instead of stacking a duplicate HF poll on top.
+        for _ in 0..120 {
+            if !self.refreshing.load(Ordering::SeqCst) {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(500)).await;
+        }
+        let result = self.refresh_locked().await;
+        self.refreshing.store(false, Ordering::SeqCst);
+        result
+    }
+
+    /// Epoch seconds of the last successful HF poll, or `None` if the cache
+    /// has never been populated (neither from disk nor from the network).
+    pub async fn fetched_at(&self) -> Option<u64> {
+        let polled_at = self.cache.read().await.polled_at;
+        if polled_at == DateTime::UNIX_EPOCH {
+            None
+        } else {
+            Some(polled_at.timestamp() as u64)
+        }
+    }
+
+    /// Whether the cached poll is missing or older than `max_age`.
+    pub async fn is_stale(&self, max_age: Duration) -> bool {
+        let polled_at = self.cache.read().await.polled_at;
+        polled_at == DateTime::UNIX_EPOCH
+            || (Utc::now() - polled_at)
+                .to_std()
+                .map(|age| age > max_age)
+                .unwrap_or(true)
+    }
+
+    /// Stale-while-revalidate entry point used by `GET /catalog`: when the
+    /// cache is stale and no refresh is currently in flight, spawn a
+    /// background refresh and return `true`. The caller serves the current
+    /// cache regardless. Poll failures leave the last good cache untouched.
+    pub async fn spawn_refresh_if_stale(&self, max_age: Duration) -> bool {
+        if !self.is_stale(max_age).await {
+            return false;
+        }
+        if self
+            .refreshing
+            .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+            .is_err()
+        {
+            return false;
+        }
+        let service = self.clone();
+        tokio::spawn(async move {
+            let result = service.refresh_locked().await;
+            service.refreshing.store(false, Ordering::SeqCst);
+            match result {
+                Ok(count) => info!(count, "stale catalog refreshed in background"),
+                Err(err) => {
+                    warn!(error = %err, "background catalog refresh failed; serving last good cache")
+                }
+            }
+        });
+        true
+    }
+
+    async fn refresh_locked(&self) -> Result<usize, CatalogError> {
         let entries = self.poll_huggingface().await?;
         let count = entries.len();
         let cache = PolledCache {
@@ -170,7 +243,12 @@ impl CatalogService {
                 "https://huggingface.co/api/models?filter=gguf&sort={}&direction=-1&limit={}",
                 sort, self.config.poll_limit
             );
-            let res = self.client.get(&url).send().await.map_err(CatalogError::Http)?;
+            let res = self
+                .client
+                .get(&url)
+                .send()
+                .await
+                .map_err(CatalogError::Http)?;
             if !res.status().is_success() {
                 warn!(status = %res.status(), "Hugging Face API returned non-success");
                 continue;
@@ -259,14 +337,38 @@ fn load_seeds() -> Vec<SeedEntry> {
     const SEED_JSON: &str = include_str!("../../catalog_seed.json");
     serde_json::from_str(SEED_JSON).unwrap_or_else(|_| {
         vec![
-            SeedEntry { repo_id: "bartowski/Llama-3.2-3B-Instruct-GGUF".into(), source_tag: "newest".into() },
-            SeedEntry { repo_id: "bartowski/Llama-3.2-1B-Instruct-GGUF".into(), source_tag: "newest".into() },
-            SeedEntry { repo_id: "bartowski/Qwen2.5-7B-Instruct-GGUF".into(), source_tag: "newest".into() },
-            SeedEntry { repo_id: "bartowski/Qwen2.5-14B-Instruct-GGUF".into(), source_tag: "newest".into() },
-            SeedEntry { repo_id: "bartowski/Mistral-7B-Instruct-v0.3-GGUF".into(), source_tag: "newest".into() },
-            SeedEntry { repo_id: "bartowski/DeepSeek-R1-Distill-Qwen-7B-GGUF".into(), source_tag: "newest".into() },
-            SeedEntry { repo_id: "bartowski/Phi-4-mini-instruct-GGUF".into(), source_tag: "newest".into() },
-            SeedEntry { repo_id: "bartowski/gemma-2-9b-it-GGUF".into(), source_tag: "newest".into() },
+            SeedEntry {
+                repo_id: "bartowski/Llama-3.2-3B-Instruct-GGUF".into(),
+                source_tag: "newest".into(),
+            },
+            SeedEntry {
+                repo_id: "bartowski/Llama-3.2-1B-Instruct-GGUF".into(),
+                source_tag: "newest".into(),
+            },
+            SeedEntry {
+                repo_id: "bartowski/Qwen2.5-7B-Instruct-GGUF".into(),
+                source_tag: "newest".into(),
+            },
+            SeedEntry {
+                repo_id: "bartowski/Qwen2.5-14B-Instruct-GGUF".into(),
+                source_tag: "newest".into(),
+            },
+            SeedEntry {
+                repo_id: "bartowski/Mistral-7B-Instruct-v0.3-GGUF".into(),
+                source_tag: "newest".into(),
+            },
+            SeedEntry {
+                repo_id: "bartowski/DeepSeek-R1-Distill-Qwen-7B-GGUF".into(),
+                source_tag: "newest".into(),
+            },
+            SeedEntry {
+                repo_id: "bartowski/Phi-4-mini-instruct-GGUF".into(),
+                source_tag: "newest".into(),
+            },
+            SeedEntry {
+                repo_id: "bartowski/gemma-2-9b-it-GGUF".into(),
+                source_tag: "newest".into(),
+            },
         ]
     })
 }
@@ -300,7 +402,36 @@ mod tests {
 
     #[test]
     fn catalog_source_parsing() {
-        assert!(matches!(CatalogSource::from_str("polled"), CatalogSource::Polled));
+        assert!(matches!(
+            CatalogSource::from_str("polled"),
+            CatalogSource::Polled
+        ));
         assert!(matches!(CatalogSource::from_str("all"), CatalogSource::All));
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn staleness_tracking() {
+        let dir = tempfile::tempdir().unwrap();
+        let service = CatalogService::new(dir.path());
+
+        // Never polled: no fetched_at, treated as stale.
+        assert_eq!(service.fetched_at().await, None);
+        assert!(service.is_stale(STALE_AFTER).await);
+
+        // Fresh in-memory poll: fetched_at present, not stale.
+        {
+            let mut cache = service.cache.write().await;
+            cache.polled_at = Utc::now();
+        }
+        assert!(service.fetched_at().await.is_some());
+        assert!(!service.is_stale(STALE_AFTER).await);
+
+        // Age beyond the threshold: stale again.
+        {
+            let mut cache = service.cache.write().await;
+            cache.polled_at = Utc::now() - chrono::Duration::hours(2);
+        }
+        assert!(service.is_stale(STALE_AFTER).await);
+        assert!(!service.is_stale(Duration::from_secs(24 * 60 * 60)).await);
     }
 }
