@@ -5,7 +5,7 @@
   xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides"
   xsi:type="TaskPaneApp">
   <Id>b765c354-dc5c-4b98-9f54-320e110c42d1</Id>
-  <Version>1.1.0.0</Version>
+  <Version>1.1.1.0</Version>
   <ProviderName>Allternit</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="Allternit for Word" />
@@ -19,7 +19,7 @@
   </AppDomains>
   <Hosts><Host Name="Document" /></Hosts>
   <DefaultSettings>
-    <SourceLocation DefaultValue="https://platform.allternit.com/office-addins/src/taskpane/index.html?product=word" />
+    <SourceLocation DefaultValue="https://platform.allternit.com/office-addins/src/taskpane/?product=word" />
   </DefaultSettings>
   <Permissions>ReadWriteDocument</Permissions>
   <VersionOverrides xmlns="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="VersionOverridesV1_0">
@@ -65,8 +65,8 @@
         <bt:Image id="Icon.80x80" DefaultValue="https://platform.allternit.com/office-addins/icon-80.png" />
       </bt:Images>
       <bt:Urls>
-        <bt:Url id="Commands.Url" DefaultValue="https://platform.allternit.com/office-addins/src/taskpane/index.html?product=word" />
-        <bt:Url id="Taskpane.Url" DefaultValue="https://platform.allternit.com/office-addins/src/taskpane/index.html?product=word" />
+        <bt:Url id="Commands.Url" DefaultValue="https://platform.allternit.com/office-addins/src/taskpane/?product=word" />
+        <bt:Url id="Taskpane.Url" DefaultValue="https://platform.allternit.com/office-addins/src/taskpane/?product=word" />
       </bt:Urls>
       <bt:ShortStrings>
         <bt:String id="CommandsGroup.Label" DefaultValue="Allternit for Word" />
