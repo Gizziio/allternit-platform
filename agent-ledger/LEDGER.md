@@ -21,6 +21,16 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-06 22:40 — kimi — gizzi-code 2.0.7: onboarding auto-picks the default brain
+
+- **Session ID / Branch:** `session/gc-207` (worktree `allternit-session-gc-207`)
+- **Agent:** kimi
+- **Summary:** Shipped `198c83e46` (onboarding auto-pick) as gizzi-code 2.0.7 — version bump across package/npm/homebrew/debian/rpm, CHANGELOG, tag `gizzi-code/v2.0.7`, npm + GitHub assets, homebrew tap bump, owner machine upgraded.
+- **Commit:** `7351779c2` (bump) + `19a7ba5e8` (lockfile fix) on `main`; tag `gizzi-code/v2.0.7`; tap `Gizziio/homebrew-tap@47c28e3`
+- **How it works:** First tag push's publish CI failed on `ERR_PNPM_OUTDATED_LOCKFILE` — the native-sessions feature (`441ed7495`) added a workspace dep to `cmd/gizzi-code/package.json` without updating `pnpm-lock.yaml`. Lockfile-only fix commit, tag re-created at the fix, publish CI green. Verified: `@allternit/gizzi-code@2.0.7` latest on npm with all five platform packages; release has all assets; tap formula sha256s computed from release assets; owner machine `brew upgrade` → 2.0.7 verified.
+- **Outstanding work:** None. Owner's brain default (`kimi-cli/kimi-for-coding`) untouched; `aliyun-qwen` key still broken (pre-existing, owner to re-key).
+- **Summary file:** [./summaries/2026-09-06-2240-session-gc-207-kimi-gizzi-code-2.0.7-onboarding-autopick.md](./summaries/2026-09-06-2240-session-gc-207-kimi-gizzi-code-2.0.7-onboarding-autopick.md)
+
 ### 2026-09-06 22:10 — kimi — gizzi-code onboarding always auto-picks the default brain
 
 - **Session ID / Branch:** `session/gc-onboard` (worktree `allternit-session-gc-onboard`)
