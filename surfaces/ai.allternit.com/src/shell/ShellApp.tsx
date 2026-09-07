@@ -48,6 +48,7 @@ import { useDesignSessionStore } from '../views/design/DesignSessionStore';
 import { getShellViewRegistry } from './ViewRegistry';
 import { HudShell } from './hud/HudShell';
 import { NativeSessionPickerHost } from '@/components/native-sessions/NativeSessionPicker';
+import { BotPickerHost } from '@/views/bots/BotPickerHost';
 import { useHudHandoff } from './hud/handoff';
 
 import { useResolvedTheme, useThemeStore } from '../design/ThemeStore';
@@ -108,6 +109,15 @@ const BROWSER_MODE_VIEW_TYPES = new Set<ViewType>([
   'slides',
   'pdf',
   'sign',
+]);
+
+// Bot views drive bot mode (rail sections, bot background, pill highlight)
+// the same way browser views drive browser mode.
+const BOT_MODE_VIEW_TYPES = new Set<ViewType>([
+  'bot-launchpad',
+  'bot-home',
+  'bot-inbox',
+  'bot-chat-session',
 ]);
 
 // Inner app component that uses mode context
@@ -387,6 +397,7 @@ function ShellAppInner(): React.ReactNode {
       useAgentSurfaceModeStore.getState().setSelectedMode('cowork', 'execute');
       open('workspace');
     }
+    else if (activeMode === 'bot') open('bot-launchpad');
     else if (activeMode === 'code') open('code');
     else if (activeMode === 'design') {
       setActiveMode('chat');
@@ -636,7 +647,15 @@ function ShellAppInner(): React.ReactNode {
         modeChangeSourceRef.current = 'sync';
         setActiveMode('browser');
       }
+    } else if (BOT_MODE_VIEW_TYPES.has(active.viewType)) {
+      if (activeMode !== 'bot') {
+        modeChangeSourceRef.current = 'sync';
+        setActiveMode('bot');
+      }
     } else if (activeMode === 'browser') {
+      modeChangeSourceRef.current = 'sync';
+      setActiveMode('chat');
+    } else if (activeMode === 'bot') {
       modeChangeSourceRef.current = 'sync';
       setActiveMode('chat');
     }
@@ -689,6 +708,7 @@ function ShellAppInner(): React.ReactNode {
       <SessionProvider session={session}>
         <VisionGlass />
         <NativeSessionPickerHost />
+        <BotPickerHost />
         <VoicePresence compact={false} />
 
         {permissions.isSupported && permissions.anyDenied && !permissionBannerDismissed && (

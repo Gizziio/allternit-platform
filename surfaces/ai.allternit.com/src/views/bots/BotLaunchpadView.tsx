@@ -4,8 +4,12 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Gear, Plus, Robot } from "@phosphor-icons/react";
 
 import { ChatComposer } from "@/views/chat/ChatComposer";
-import { useModelSelection } from "@/providers/model-selection-provider";
+import {
+  ModelSelectionProvider,
+  useModelSelection,
+} from "@/providers/model-selection-provider";
 import { ModelPicker } from "@/components/model-picker";
+import { useDefaultModelSelection } from "@/hooks/use-default-model-selection";
 import { useSurfaceAgentModeEnabled } from "@/lib/agents/surface-agent-context";
 import { AgentModeBackdrop } from "@/views/chat/agentModeSurfaceTheme";
 import {
@@ -24,6 +28,7 @@ import { getBots } from "@/lib/bots/bot-profile";
 import { useBotRosterStore } from "@/lib/bots/bot-roster.store";
 import { useStartBotSession } from "@/lib/bots/useStartBotSession";
 import { openBotChatView } from "@/lib/bots/bot-canonical-chat.service";
+import { BotTopDeck } from "./BotTopDeck";
 
 /**
  * Bot-mode home view: transparent background (the shell WorkspaceBackground
@@ -33,6 +38,15 @@ import { openBotChatView } from "@/lib/bots/bot-canonical-chat.service";
  * menu. Background is transparent, exactly like CoworkLaunchpad.
  */
 export function BotLaunchpadView() {
+  const defaultSelection = useDefaultModelSelection();
+  return (
+    <ModelSelectionProvider defaultSelection={defaultSelection}>
+      <BotLaunchpadContent />
+    </ModelSelectionProvider>
+  );
+}
+
+function BotLaunchpadContent() {
   const agentModeEnabled = useSurfaceAgentModeEnabled("bot");
   const { selection: modelSelection, selectModel, startSelection, isSelecting, cancelSelection } =
     useModelSelection();
@@ -109,10 +123,12 @@ export function BotLaunchpadView() {
         surface="bot"
         dataTestId="agent-mode-bot-backdrop"
       />
+      <BotTopDeck />
       <div style={{ width: "100%", maxWidth: "860px", position: "relative", zIndex: 1 }}>
         {/* Shared launch header — same geometry as the Chat/Cowork launch
-            screens so the three-way toggle never shifts the composer. */}
-        <LaunchHeader greeting={BOT_LAUNCH_GREETING} logo="matrix" />
+            screens so the three-way toggle never shifts the composer. Bot
+            mode keeps the gizzi mascot entrance (LaunchHeader default logo). */}
+        <LaunchHeader greeting={BOT_LAUNCH_GREETING} />
 
         {/* Composer — in the 'bot' surface the "+" button opens the
             BotPickerSheet instead of the standard plus menu. */}
