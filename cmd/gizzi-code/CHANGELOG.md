@@ -21,6 +21,25 @@ Grok-style agent dashboard and session-info polish.
   Settings → Status tab.
 - `/settings` Config tab: Effort row (low/medium/high/max).
 
+### Changed
+- Dashboard rows show an animated spinner while a session is working
+  (was a static glyph), the peek panel renders the real permission
+  request inline so tool prompts can be answered without leaving the
+  dashboard (number keys 1-9 pick the option), and the main-session row
+  now reflects live state (working / needs-input) instead of always
+  reading idle.
+
+### Fixed
+- Shrinking lines no longer leave stale trailing characters ("ghosts") on
+  screen. Root cause: the non-TTY full-frame serializer (`renderFullFrame`,
+  used whenever stdout is piped, e.g. `gizzi | tee` — stdin still comes
+  from /dev/tty so the session stays interactive) emitted trimEnd'd rows
+  with no per-row erase, and alt-screen frames re-land on the same region
+  every render, so cells past a shrunken row kept whatever an earlier,
+  longer frame wrote. Every row now ends with erase-to-EOL. Defense in
+  depth: the TTY diff path also sweeps each changed row and emits
+  erase-to-EOL when the painted extent shrinks (no per-frame full clear).
+
 ## 2.0.7 — 2026-09-06
 
 ### Changed

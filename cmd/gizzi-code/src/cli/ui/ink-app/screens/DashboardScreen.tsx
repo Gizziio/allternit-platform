@@ -22,6 +22,7 @@ import { Box, Text, useInput, useTheme } from '../ink';
 import { useKeybinding } from '../keybindings/useKeybinding';
 import { useAppState, useSetAppState } from '../state/AppState';
 import { Messages } from '../components/Messages';
+import { PermissionRequest } from '../components/permissions/PermissionRequest';
 import ScrollBox, { type ScrollBoxHandle } from '../ink/components/ScrollBox';
 import type { DashboardRow, DashboardSource } from '../dashboard/types';
 
@@ -30,6 +31,9 @@ import type { DashboardRow, DashboardSource } from '../dashboard/types';
 // re-render the whole transcript on each dashboard tick.
 const TRANSCRIPT_EMPTY_ARR: unknown[] = [];
 const TRANSCRIPT_NO_TOOL_USES: Set<string> = new Set();
+
+// Braille spinner frames for working rows (was a static ●).
+const SPIN_FRAMES = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
 
 const STATE_ORDER: Record<string, number> = {
   working: 0,
@@ -160,10 +164,17 @@ export function DashboardScreen({
   source,
   tools,
   commands,
+  permissionQueue,
+  onPermissionDone,
 }: {
   source: DashboardSource;
   tools?: unknown[];
   commands?: unknown[];
+  /** Pending tool-permission confirms; items carry dashboardTaskId when
+   *  they belong to a spawned session (absent = main session). */
+  permissionQueue?: unknown[];
+  /** Remove a confirm from the queue after the inline dialog answers it. */
+  onPermissionDone?: (toolUseID: string) => void;
 }): React.ReactNode {
   const { rows: termRows, columns } = useTerminalSize();
   const [theme] = useTheme();
@@ -207,6 +218,29 @@ export function DashboardScreen({
   // ---------------------------------------------------------------------
 
   const allRows = source.list();
+
+  // Animated spinner for working rows. Ticks only while something is
+  // working; the interval tears down otherwise so an idle dashboard
+  // renders nothing per frame.
+  const hasWorkingRows = allRows.some(r => r.state === 'working');
+  const [spinFrame, setSpinFrame] = React.useState(0);
+  React.useEffect(() => {
+    if (!hasWorkingRows) return;
+    const t = setInterval(
+      () => setSpinFrame(f => (f + 1) % SPIN_FRAMES.length),
+      120,
+    );
+    return () => clearInterval(t);
+  }, [hasWorkingRows]);
+
+  // Pending permission prompt attributed to a row (undefined when none).
+  const confirmForRow = React.useCallback(
+    (row: DashboardRow) =>
+      (permissionQueue ?? []).find(
+        (item: any) => (item.dashboardTaskId ?? 'main') === row.id,
+      ),
+    [permissionQueue],
+  );
 
   const filteredRows = React.useMemo(() => {
     if (!searchOpen || !searchQuery.trim()) return allRows;
@@ -521,13 +555,15 @@ export function DashboardScreen({
   const renderRow = (item: { type: 'row'; row: DashboardRow }, itemIndex: number) => {
     const row = item.row;
     const { glyph, color } = stateGlyph(row);
+    const shownGlyph = row.state === 'working' ? SPIN_FRAMES[spinFrame] : glyph;
     const isSelected = itemIndex === selItemIndex;
     const isPeeked = peekFor === row.id;
+    const pendingConfirm = isPeeked ? confirmForRow(row) : undefined;
     return (
       <Box key={row.id} flexDirection="column">
         <Box flexDirection="row" paddingLeft={1}>
           <Text color={theme[color] ?? color}>
-            {glyph}
+            {shownGlyph}
             {row.pinned ? ' ⌖' : '  '}
           </Text>
           <Text
@@ -551,9 +587,24 @@ export function DashboardScreen({
                 {` · ${STATE_LABEL[row.state] ?? row.state}`}
               </Text>
             </Box>
-            {row.state === 'needs-input' && (
-              <Text color={theme.warning}>awaiting input — answer the prompt in the main session</Text>
-            )}
+            {row.state === 'needs-input' &&
+              (pendingConfirm ? (
+                // The REAL permission dialog, inline — per-tool option
+                // buttons with their 1-9 shortcuts work exactly as in the
+                // main session. REPL's own copy doesn't mount while the
+                // dashboard screen owns the render.
+                <PermissionRequest
+                  key={pendingConfirm.toolUseID}
+                  toolUseConfirm={pendingConfirm}
+                  toolUseContext={pendingConfirm.toolUseContext}
+                  onDone={() => onPermissionDone?.(pendingConfirm.toolUseID)}
+                  onReject={() => {}}
+                  verbose={true}
+                  workerBadge={pendingConfirm.workerBadge}
+                />
+              ) : (
+                <Text color={theme.warning}>awaiting input — answer the prompt in the main session</Text>
+              ))}
             {peek?.lastResponseText ? (
               peek.lastResponseText
                 .split('\n')

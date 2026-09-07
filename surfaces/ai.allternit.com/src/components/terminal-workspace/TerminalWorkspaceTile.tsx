@@ -18,7 +18,7 @@ import {
   closeTerminalSession,
   createTerminalSession,
   probeTerminalSession,
-  sendTerminalInput,
+  queueTerminalInput,
 } from '@/lib/terminal-api';
 import { useTerminalWorkspaceStore, type TerminalTile } from '@/stores/terminal-workspace.store';
 
@@ -44,10 +44,29 @@ function writeTileRemoteSession(tileId: string, remoteSessionId: string): void {
   }
 }
 
+function readTileInjectedFor(tileId: string): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    return window.localStorage.getItem(`${TILE_PERSIST_PREFIX}:${tileId}:injected`);
+  } catch {
+    return null;
+  }
+}
+
+function writeTileInjectedFor(tileId: string, remoteSessionId: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(`${TILE_PERSIST_PREFIX}:${tileId}:injected`, remoteSessionId);
+  } catch {
+    // Persistence is best-effort.
+  }
+}
+
 function clearTileRemoteSession(tileId: string): void {
   if (typeof window === 'undefined') return;
   try {
     window.localStorage.removeItem(`${TILE_PERSIST_PREFIX}:${tileId}`);
+    window.localStorage.removeItem(`${TILE_PERSIST_PREFIX}:${tileId}:injected`);
   } catch {
     // Ignore.
   }
@@ -67,6 +86,7 @@ export function TerminalWorkspaceSurface({
   const [attempt, setAttempt] = useState(0);
   const registerTileSession = useTerminalWorkspaceStore((s) => s.registerTileSession);
   const unregisterTileSession = useTerminalWorkspaceStore((s) => s.unregisterTileSession);
+  const fontSize = useTerminalWorkspaceStore((s) => s.fontSize);
   const injectedForRef = useRef<string | null>(null);
 
   // Create or reattach the remote PTY for this tile.
@@ -80,7 +100,12 @@ export function TerminalWorkspaceSurface({
       // Dead ids (backend restarted) degrade to a fresh shell.
       const persisted = readTileRemoteSession(tile.id);
       if (persisted && (await probeTerminalSession(persisted))) {
-        if (!cancelled) setRemoteSessionId(persisted);
+        if (!cancelled) {
+          // A remount (e.g. zoom) must not re-type the spawn command into the
+          // still-running shell; restore the injected marker with the session.
+          injectedForRef.current = readTileInjectedFor(tile.id) ?? null;
+          setRemoteSessionId(persisted);
+        }
         return;
       }
       if (persisted) clearTileRemoteSession(tile.id);
@@ -125,11 +150,12 @@ export function TerminalWorkspaceSurface({
         return;
       }
       injectedForRef.current = remoteSessionId;
+      writeTileInjectedFor(tile.id, remoteSessionId);
       const target = remoteSessionId;
       const command = tile.spawnCommand;
       // Give the shell a beat to finish its rc startup before typing the command.
       setTimeout(() => {
-        void sendTerminalInput(target, `${command}\n`).catch(() => {
+        void queueTerminalInput(target, `${command}\n`).catch(() => {
           // The tile shows stream errors; a failed injection is non-fatal.
         });
       }, 250);
@@ -201,6 +227,8 @@ export function TerminalWorkspaceSurface({
       remoteSessionId={remoteSessionId}
       isActive={isActive}
       onStatusChange={handleStatusChange}
+      fontSize={fontSize}
+      padding={0}
     />
   );
 }

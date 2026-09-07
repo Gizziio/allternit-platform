@@ -177,6 +177,8 @@ export type ToolUseContext = {
     querySource?: QuerySource
     /** Optional callback to get the latest tools (e.g., after MCP servers connect mid-query) */
     refreshTools?: () => Tools
+    /** Dashboard top-level session that owns this context, if any (stamped by the session's canUseTool wrap so permission confirms can be attributed to a dashboard row). */
+    dashboardTaskId?: string
   }
   abortController: AbortController
   readFileState: FileStateCache

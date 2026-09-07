@@ -41,6 +41,7 @@ pub mod beta_deployment_routes;
 pub mod beta_memory_store_routes;
 pub mod beta_session_routes;
 pub mod beta_work_routes;
+pub mod bot_assets;
 pub mod bot_desktop_audit;
 pub mod bot_desktop_billing;
 pub mod bot_desktop_capacity;

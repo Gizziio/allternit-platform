@@ -35,6 +35,8 @@ import { useAgentBootstrap } from '../lib/agents/useAgentBootstrap';
 import { isBot } from '@/lib/bots/bot-profile';
 import { useStartBotSession } from '@/lib/bots/useStartBotSession';
 import { useRoutineTimer } from '@/lib/bots/use-routine-timer';
+import { useSyncBotWatermarks } from '@/lib/bots/bot-activity-watermark';
+import { useBotActivityToasts } from '@/lib/bots/bot-activity-toasts';
 import { useStackProviders } from '@/lib/bots/use-stack-providers';
 import { NativeAgentApiError } from '../lib/agents/native-agent-api';
 import { useChatSessionStore } from '../views/chat/ChatSessionStore';
@@ -54,6 +56,7 @@ import { useIsMobile } from '../hooks/useMediaQuery';
 import { usePermissionGuide } from '../lib/usePermissionGuide';
 
 import { TooltipProvider } from '../components/ui/tooltip';
+import { ToastProvider } from '@/components/ui/toast-provider';
 import { VoiceProvider } from '../providers/voice-provider';
 import { VoicePresence } from '../components/ai-elements/voice-presence';
 import { AgentActivityPanel } from '../views/agent-activity/AgentActivityPanel';
@@ -129,6 +132,9 @@ function ShellAppInner(): React.ReactNode {
   );
   useStackProviders();
   useRoutineTimer();
+  useBotActivityToasts();
+  // Watermark seeding + focused-chat tracking for bot unread semantics.
+  useSyncBotWatermarks(active.viewType, useAgentsWithSwarms().filter(isBot));
   // When the HUD window closes, resume its active session in the main window.
   useHudHandoff();
   const { mode: activeMode, setMode: setActiveMode, isLoaded: modeLoaded } = useMode();
@@ -1000,8 +1006,10 @@ export function ShellApp(): React.ReactNode {
     <AuthGate>
       <ModeProvider>
         <GlobalDropzoneProvider>
-          <OnboardingGate />
-          <ShellAppInner />
+          <ToastProvider>
+            <OnboardingGate />
+            <ShellAppInner />
+          </ToastProvider>
         </GlobalDropzoneProvider>
       </ModeProvider>
     </AuthGate>

@@ -52,10 +52,13 @@ export function WorkspaceSessionCatalog({
   isOpen,
   onClose,
   onPick,
+  zIndex,
 }: {
   isOpen: boolean;
   onClose: () => void;
   onPick: (pick: WorkspaceCatalogPick) => void;
+  /** Stacking base when rendered inside a high z-index container (console drawer). */
+  zIndex?: number;
 }): React.ReactNode {
   const [harnesses, setHarnesses] = useState<NativeHarnessInfo[]>([]);
   const [sessions, setSessions] = useState<NativeCatalogSession[]>([]);
@@ -115,7 +118,7 @@ export function WorkspaceSessionCatalog({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="large">
+    <Modal isOpen={isOpen} onClose={onClose} size="large" zIndex={zIndex}>
       <ModalHeader title="Launch from catalogue" onClose={onClose} />
       <ModalBody className="">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, minHeight: 320 }}>

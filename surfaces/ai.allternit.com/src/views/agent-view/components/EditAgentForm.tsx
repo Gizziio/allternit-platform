@@ -18,6 +18,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { validateAgentCreationChecklist } from "@/lib/agents";
+import { saveBotAvatar } from "@/lib/bots/bot-assets-api";
 import { createModuleLogger } from "@/lib/logger";
 import { ConnectorsStep } from "../steps/ConnectorsStep";
 import { IdentityChannelsStep } from "../steps/IdentityChannelsStep";
@@ -109,6 +110,12 @@ export function EditAgentForm({ agent, onCancel, onSaved }: { agent: Agent; onCa
     setIsSubmitting(true);
     try {
       await updateAgent(agent.id, updates);
+      // Fire-and-forget avatar asset sync (spec Phase 2: identity-only edits
+      // still refresh the stored pfp for mail/inbox surfaces).
+      const avatar = updates.botProfile?.avatar;
+      if (updates.isBot && avatar) {
+        void saveBotAvatar(agent.id, avatar);
+      }
       onSaved?.();
       onCancel();
     } catch (err) {

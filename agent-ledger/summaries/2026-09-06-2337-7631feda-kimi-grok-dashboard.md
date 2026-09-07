@@ -60,3 +60,28 @@ Owner asked to close known-delta #1 immediately. New worktree `allternit-session
 - Known deltas remaining: needs-input 1–9 buttons (answers land in main-session prompt), static working glyph, static main-row state, stale-cell ghosts (pre-existing ink emit issue at `ink/log-update.ts:106`).
 - Verification: typecheck green; smoke suite 1315 pass / 0 fail; tmux TUI pass — /dashboard opens, dispatch works, details view renders the transcript through Messages, scroll keys + Esc ladder work, no render errors.
 - Cleanup: worktree + branch (local/remote) removed, tmux session killed.
+
+## Follow-up 2 (2026-09-07) — all 4 remaining known deltas closed
+
+Owner asked to fix the 4 remaining known deltas (needs-input 1–9 buttons, static working glyph, static main-row state, stale-cell ghosts). Worktree `allternit-session-7631feda-d3`, branch `session/7631feda-deltas`. **Merged to main @ `e0abf92a3`** (merge of origin/main into the branch) via remote `HEAD:main` fast-forward — the shared main checkout was unsafe: another session (term-xterm55's successor) holds 20+ uncommitted files overlapping origin/main's terminal changes; same precedent as office-ext/d641922e/term-xterm55. Local shared checkout untouched; that session pulls when ready.
+
+Commits: `977f8b1bd` (deltas 1–3), `3c7b5d2cc` (delta 4), `e0abf92a3` (merge origin/main, only conflict `.steering/checkpoint.md`).
+
+### Deltas 1–3 (`977f8b1bd`)
+- **Inline permission answers in the dashboard.** The `canUseTool` wrap in `topLevelSession.ts` now stamps `ctx.options.dashboardTaskId = taskId`; `PermissionContext.pushToQueue` copies it onto the `ToolUseConfirm`; the dashboard peek panel renders the real `<PermissionRequest>` for needs-input rows, so option buttons incl. digit keys 1–9 work without leaving the dashboard. Queue items without a tag belong to the main row. Latent bug fixed along the way: the wrap's `try/finally` cleared `awaitingInput` when the permission *promise was returned*, not settled — needs-input detection was broken.
+- **Animated braille spinner** (120 ms tick, only while any row is working) replaces the static working glyph.
+- **Live main leader row** via refs (`isLoadingRef`/`toolUseConfirmQueueRef`): needs-input when a main-session permission prompt is pending, working while the main query runs; adds model + permission mode to the row.
+
+### Delta 4 (`3c7b5d2cc`) — stale-cell ghosts, two-layer fix after a failed first attempt
+- **Attempt 1 (background subagent):** per-row stale-tail CSI K sweep in the TTY diff path of `log-update.ts`. **Live verification failed — 0 CSI K ever emitted.** Two repro traps found: the dashboard dispatch input needs `Tab` focus before keystrokes land (all minimal repros were typing into nowhere), and the tee'd dev session runs with stdout piped, so the app takes the **non-TTY** full-frame path and the TTY sweep never runs.
+- **Attempt 2 (fresh subagent, given the live evidence):** real root cause is `LogUpdate.renderFullFrame` — the non-TTY full-frame serializer used whenever stdout is piped (`gizzi | tee`, with stdin recovered from /dev/tty so the session stays interactive). It emitted trimEnd'd rows with no per-row erase; alt-screen frames anchor with CSI H and re-land on the same region every render, so cells past a shrunken row kept whatever an earlier, longer frame wrote — the ghost. Frame buffers were correct every frame (verified with instrumentation); the emitter was the corrupting layer. **Fix:** append erase-to-EOL to every row in `renderFullFrame`. Attempt 1's TTY sweep kept as defense-in-depth (covers stale tails both frame buffers agree on in real-TTY sessions).
+- User-impact note: the ghost only manifested with piped stdout (captured/logged sessions); interactive real-TTY sessions ran the diff path. Both paths now erase stale tails.
+- Tests: `test/ui/non-tty-full-frame-ghost.test.ts` (render-level e2e through a terminal-grid emulator + mechanism test — both fail without the fix) and `test/ui/log-update-shrink-tail.test.ts` (TTY sweep, 4 tests). Scratch repro `test/tmp-repro-ghost.test.ts` superseded/deleted.
+
+### Verification evidence
+- Live tmux repro of the ghost: 70-char type + 70×BSpace burst → settled input row clean ` ❯ gho▌`, no `▌` interleave, no stale fragments; CSI K count in the tee'd stream 1091 (was 0 before the fix).
+- `bun run typecheck` green; ink/component tests 33/0; smoke suite **1315 pass / 0 fail** on both the fix commit and the post-merge merge commit.
+
+### Honest status
+- Spinner animation, inline-permission rendering, and main-row live states are code-path verified and the dashboard is live-smoke-tested (opens, Tab-dispatch, sessions run to completion, peek/reply), but this dev environment's broken brain (not logged in, getModelBetas error, turns die in <150 ms) made it impossible to capture a live working→needs-input transition. The states are driven by the same refs/queue wiring verified in code.
+- Separate pre-existing issue observed during repro: at >~30 keys/s some keystrokes are lost in the input layer (nonblocking /dev/tty read or the 16 ms render throttle) — the draft stuck at "gho" mid-burst while the terminal rendered it exactly. Not render-path; out of scope here; worth a future issue.

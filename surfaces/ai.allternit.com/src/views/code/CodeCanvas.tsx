@@ -979,8 +979,6 @@ function CodeSessionSurface({
     <CodeBottomStatusBar
       sessionMode={sessionMode}
       onSessionModeChange={handleSessionModeChange}
-      onOpenTerminals={onToggleTerminalCanvas}
-      terminalsOpen={terminalCanvasOpen}
     />
   );
 
