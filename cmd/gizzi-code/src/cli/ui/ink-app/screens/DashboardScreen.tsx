@@ -56,6 +56,12 @@ function truncate(text: string, max: number): string {
   return `${text.slice(0, Math.max(0, max - 1))}…`;
 }
 
+// Ink leaves stale terminal cells behind when a line shrinks between frames;
+// pad input lines to the full width so old content is always overwritten.
+function padLine(text: string, width: number): string {
+  return text.length >= width ? text : text + ' '.repeat(width - text.length);
+}
+
 function stateGlyph(row: DashboardRow): { glyph: string; color: string } {
   switch (row.state) {
     case 'working':
@@ -146,9 +152,9 @@ export function DashboardScreen({ source }: { source: DashboardSource }): React.
   const { rows: termRows, columns } = useTerminalSize();
   const [theme] = useTheme();
   const setAppState = useSetAppState();
-  // Subscribe to the store so task progress triggers re-renders; rows are
-  // read from the source during render (same pattern as TasksDialog).
-  useAppState();
+  // Subscribe to task state so progress triggers re-renders; rows are read
+  // from the source during render (same pattern as TasksDialog).
+  useAppState(s => s.tasks);
 
   const [focus, setFocus] = React.useState<'list' | 'dispatch' | 'reply' | 'rename' | 'search'>('list');
   const [selected, setSelected] = React.useState(0);
@@ -509,7 +515,7 @@ export function DashboardScreen({ source }: { source: DashboardSource }): React.
           </Text>
           <Box flexGrow={1} />
           <Text dimColor wrap="truncate-end">
-            {truncate(row.activityLine || row.state, activityWidth)}
+            {padLine(truncate(row.activityLine || row.state, activityWidth), activityWidth)}
           </Text>
         </Box>
         {isPeeked && (
@@ -537,11 +543,10 @@ export function DashboardScreen({ source }: { source: DashboardSource }): React.
             ) : (
               <Text dimColor>{peek?.lastResponseType && peek.lastResponseType !== 'none' ? `last: ${peek.lastResponseType}` : 'no response yet'}</Text>
             )}
-            <Box flexDirection="row">
+            <Box flexDirection="row" opaque>
               <Text color={theme.gizzi}>{'❯ '}</Text>
               <Text color={focus === 'reply' ? theme.text : theme.inactive}>
-                {replyDraft}
-                {focus === 'reply' ? '▌' : ''}
+                {padLine(`${replyDraft}${focus === 'reply' ? '▌' : ''}`, columns - 6)}
               </Text>
             </Box>
           </Box>
@@ -551,7 +556,7 @@ export function DashboardScreen({ source }: { source: DashboardSource }): React.
   };
 
   const renderCheatsheet = () => (
-    <Box flexDirection="column" paddingLeft={1} marginTop={1}>
+    <Box flexDirection="column" paddingLeft={1} marginTop={1} opaque>
       <Text bold color={theme.gizzi}>Dashboard keys</Text>
       <Text dimColor>{'  ↑/↓ select · Shift+↑/↓ reorder · Enter peek/reply'}</Text>
       <Text dimColor>{'  Tab dispatch · x stop (again: remove) · p pin · r rename'}</Text>
@@ -565,7 +570,7 @@ export function DashboardScreen({ source }: { source: DashboardSource }): React.
     const total = detailsMessages.length;
     const idx = Math.min(detailsIndex, Math.max(0, total - 1));
     return (
-      <Box flexDirection="column" paddingLeft={1} marginTop={1}>
+      <Box flexDirection="column" paddingLeft={1} marginTop={1} opaque>
         <Box flexDirection="row" justifyContent="space-between">
           <Text bold color={theme.gizzi} wrap="truncate-end">
             {truncate(row?.title ?? detailsFor ?? '', titleWidth)}
@@ -598,7 +603,7 @@ export function DashboardScreen({ source }: { source: DashboardSource }): React.
     if (selFlatIdx >= maxItems) start = selFlatIdx - maxItems + 1;
     const windowed = flatIndexes.slice(start, start + maxItems);
     return (
-      <Box flexDirection="column" flexGrow={1} marginTop={1}>
+      <Box flexDirection="column" flexGrow={1} marginTop={1} opaque>
         {windowed.map(i => {
           const item = items[i];
           if (item.type === 'header') {
@@ -635,7 +640,7 @@ export function DashboardScreen({ source }: { source: DashboardSource }): React.
     <Box
       flexDirection="column"
       width={columns}
-      height={rows}
+      height={termRows}
       paddingX={1}
     >
       <Box flexDirection="row" justifyContent="space-between">
@@ -650,30 +655,27 @@ export function DashboardScreen({ source }: { source: DashboardSource }): React.
         </Text>
       </Box>
       {searchOpen && (
-        <Box flexDirection="row" marginTop={1}>
+        <Box flexDirection="row" marginTop={1} opaque>
           <Text color={theme.gizzi}>{'/ '}</Text>
           <Text color={theme.text}>
-            {searchQuery}
-            {'▌'}
+            {padLine(`${searchQuery}▌`, columns - 4)}
           </Text>
         </Box>
       )}
       {showCheatsheet ? renderCheatsheet() : detailsFor ? renderDetails() : renderList()}
       <Box flexDirection="column" marginTop={1}>
         {focus === 'rename' ? (
-          <Box flexDirection="row">
+          <Box flexDirection="row" opaque>
             <Text color={theme.gizzi}>{'✎ '}</Text>
             <Text color={theme.text}>
-              {renameDraft}
-              {'▌'}
+              {padLine(`${renameDraft}▌`, columns - 4)}
             </Text>
           </Box>
         ) : (
-          <Box flexDirection="row">
+          <Box flexDirection="row" opaque>
             <Text color={theme.gizzi}>{'❯ '}</Text>
             <Text color={focus === 'dispatch' ? theme.text : theme.inactive}>
-              {draft}
-              {focus === 'dispatch' ? '▌' : ''}
+              {padLine(`${draft}${focus === 'dispatch' ? '▌' : ''}`, columns - 4)}
             </Text>
           </Box>
         )}

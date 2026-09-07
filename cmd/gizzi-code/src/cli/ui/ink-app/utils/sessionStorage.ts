@@ -198,6 +198,10 @@ export function isEphemeralToolProgress(dataType: unknown): boolean {
   return typeof dataType === 'string' && EPHEMERAL_PROGRESS_TYPES.has(dataType)
 }
 
+// Local binding for the call sites below — the re-export alone does not
+// bring getProjectDir into module scope (ReferenceError when hit).
+import { getProjectDir } from './projectDir.js'
+
 export { getProjectDir, getProjectsDir } from './projectDir.js'
 
 export function getTranscriptPath(): string {

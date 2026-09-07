@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+Grok-style agent dashboard and session-info polish.
+
+### Added
+- `/dashboard` (aliases `/agents-dashboard`, `/sessions`, keybind Ctrl+\):
+  full-screen agent dashboard. Dispatch top-level sessions from the input
+  box, watch state dots (working / awaiting input / done / failed), peek the
+  last response inline and reply (replies queue to running sessions), open a
+  transcript details view (`v`), search (`/`, prefixes `a:` activity,
+  `s:` state, `#` id), group by state or directory (Ctrl+G), rename (`r`),
+  pin (`p`), reorder (Shift+↑/↓), stop/remove (`x`). Pin and order persist
+  under the `dashboard` config key.
+- `/status` gains `/info` and `/session-info` aliases plus Auth method and
+  Turns rows; session id copy (`c`) and whole-block copy (`y`) in the
+  Settings → Status tab.
+- `/settings` Config tab: Effort row (low/medium/high/max).
+
 ## 2.0.5 — 2026-09-05
 
 `/model` lists Allternit Cloud first, then installed CLIs, then local.
