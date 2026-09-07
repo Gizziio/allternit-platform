@@ -3,11 +3,13 @@ import { ClerkProvider, SignInButton, useAuth } from '@clerk/clerk-react'
 import {
   OfficeHostProvider,
   createBrowserHost,
+  createAllternitAssistantExtension,
   DocsApp,
   SheetsApp,
   SlidesApp,
   PdfApp,
   SignApp,
+  OfficeAiSlot,
   type OfficeHost,
   type OpenOptions,
 } from '@allternit/office-suite'
@@ -41,6 +43,80 @@ const ACCEPT_MAP: Record<AppTab, OpenOptions['accept']> = {
   },
   pdf: { 'application/pdf': ['.pdf'] },
   sign: { 'application/pdf': ['.pdf'] },
+}
+
+/**
+ * Sign has no built-in chat surface of its own, so the extension slot is
+ * rendered beside it in a horizontal row. `appKey="pdf"` — Sign operates on
+ * PDFs, and the assistant's model override/context key off the PDF app.
+ */
+function SignWorkspace({ document }: { document: OpenedDoc | null }) {
+  const [aiOpen, setAiOpen] = useState(true)
+  return (
+    <div style={{ display: 'flex', width: '100%', height: '100%' }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <SignApp
+          file={
+            document
+              ? new File([document.bytes as unknown as BlobPart], document.name, {
+                  type: 'application/pdf',
+                })
+              : null
+          }
+        />
+      </div>
+      {aiOpen ? (
+        <div
+          style={{
+            width: 360,
+            flexShrink: 0,
+            borderLeft: '1px solid var(--ui-border-default)',
+            background: 'var(--surface-panel, #fff)',
+          }}
+        >
+          <OfficeAiSlot
+            appKey="pdf"
+            close={() => setAiOpen(false)}
+            fallback={
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  height: '100%',
+                  padding: 24,
+                  textAlign: 'center',
+                  color: 'var(--ui-text-secondary)',
+                  fontSize: 'var(--text-sm)',
+                }}
+              >
+                <span>No built-in assistant in Sign.</span>
+                <span>Switch to the Allternit Assistant tab to chat about the open PDF.</span>
+              </div>
+            }
+          />
+        </div>
+      ) : (
+        <button
+          type="button"
+          className="btn btn-ghost"
+          style={{
+            width: 34,
+            flexShrink: 0,
+            writingMode: 'vertical-rl',
+            borderRadius: 0,
+            borderLeft: '1px solid var(--ui-border-default)',
+          }}
+          title="Open AI assistant"
+          onClick={() => setAiOpen(true)}
+        >
+          AI
+        </button>
+      )}
+    </div>
+  )
 }
 
 function CloudPromptBanner() {
@@ -91,6 +167,7 @@ function OfficeWorkspace({
     return createBrowserHost({
       getLanguage: () => 'en',
       ai,
+      extensions: [createAllternitAssistantExtension()],
     })
   }, [isSignedIn])
 
@@ -220,15 +297,7 @@ function OfficeWorkspace({
             }}
             key={activeTab === 'sign' ? `sign-${mountKey}` : 'sign'}
           >
-            <SignApp
-              file={
-                documentForTab
-                  ? new File([documentForTab.bytes as unknown as BlobPart], documentForTab.name, {
-                      type: 'application/pdf',
-                    })
-                  : null
-              }
-            />
+            <SignWorkspace document={documentForTab ?? null} />
           </div>
         </main>
       </div>

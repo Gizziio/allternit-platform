@@ -1,9 +1,10 @@
-import { useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import {
   SheetsApp as VendoredSheetsApp,
   type SheetsAppProps as VendoredSheetsAppProps,
 } from '@allternit/office-sheets-app';
 import { useOfficeHostRequired } from '../bridge/OfficeHostContext';
+import { registerActiveDocument } from '../extensions/activeDocument';
 
 export interface SheetsAppProps
   extends Omit<VendoredSheetsAppProps, 'onSave'> {
@@ -22,6 +23,12 @@ export function SheetsApp(props: SheetsAppProps): React.ReactNode {
   const host = useOfficeHostRequired();
   const hostRef = useRef(host);
   hostRef.current = host;
+
+  const docName = props.document?.name ?? null;
+  useEffect(() => {
+    registerActiveDocument('sheets', docName);
+    return () => registerActiveDocument('sheets', null);
+  }, [docName]);
 
   const onSave = useMemo(
     () =>

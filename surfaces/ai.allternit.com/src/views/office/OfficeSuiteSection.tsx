@@ -27,7 +27,7 @@ const EDITORS: EditorCard[] = [
   {
     id: 'docs',
     name: 'Allternit Docs',
-    description: 'Word-compatible documents with byte-preserving save, powered by the GenOffice docx engine.',
+    description: 'Word-compatible documents with byte-preserving save, powered by the Allternit docx engine.',
     formats: ['.docx'],
   },
   {

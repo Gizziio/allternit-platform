@@ -9,6 +9,8 @@ import { executeOfficeCliTool, OFFICECLI_DESTRUCTIVE, OFFICECLI_TOOL_SCHEMAS } f
 import { getCapabilities } from '@/lib/officecli-client'
 import { callMcpTool, getMcpTools, initMcp, isDestructiveMcpTool } from '@/lib/mcp-client'
 import { ensureFreshSnapshot, markDirty } from '@/lib/document-sync'
+import { DEFAULT_OFFICE_MODEL } from '@/lib/agent-defaults'
+import { getGatewayOrigin, getOfficeBootstrapState } from '@/lib/platform-gateway'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -75,8 +77,26 @@ interface AIResponse {
 const DEFAULT_CONFIG: OfficeAgentConfig = {
   apiKey: '',
   baseURL: '',
-  model: 'claude-sonnet-4-6',
+  model: DEFAULT_OFFICE_MODEL,
   language: 'en',
+}
+
+/**
+ * Gateway-backed runtime config. When the stored config has no endpoint or
+ * credentials (the normal platform flow — the task pane authenticates to the
+ * Allternit gateway, see DEPLOYMENT.md), the agent calls the gateway's
+ * OpenAI-compatible endpoint directly, using the platform bootstrap token as
+ * the bearer key. Explicit settings (advanced panel) always win.
+ */
+export function resolveRuntimeConfig(config: OfficeAgentConfig | null): OfficeAgentConfig | null {
+  if (!config) return null
+  const token = getOfficeBootstrapState().auth.token
+  return {
+    ...config,
+    baseURL: config.baseURL || getGatewayOrigin(),
+    apiKey: config.apiKey || token || '',
+    model: config.model || DEFAULT_OFFICE_MODEL,
+  }
 }
 
 const STORAGE_KEY = 'allternit-office-config'
@@ -262,12 +282,13 @@ export function useOfficeAgent(): UseOfficeAgentResult {
       tools: OpenAITool[],
       onDelta?: (delta: string) => void,
     ): Promise<AIResponse> => {
-      if (!config?.baseURL || !config?.apiKey) {
-        throw new Error('API key and base URL must be configured.')
+      const runtimeConfig = resolveRuntimeConfig(config)
+      if (!runtimeConfig?.baseURL || !runtimeConfig.apiKey) {
+        throw new Error('Sign in with Allternit, or configure an API key and base URL first.')
       }
 
       const body: Record<string, unknown> = {
-        model: config.model,
+        model: runtimeConfig.model,
         stream: true,
         max_tokens: 4096,
         messages,
@@ -277,11 +298,11 @@ export function useOfficeAgent(): UseOfficeAgentResult {
         body['tool_choice'] = 'auto'
       }
 
-      const response = await fetch(`${config.baseURL}/v1/chat/completions`, {
+      const response = await fetch(`${runtimeConfig.baseURL}/v1/chat/completions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${config.apiKey}`,
+          Authorization: `Bearer ${runtimeConfig.apiKey}`,
         },
         signal: abortRef.current?.signal,
         body: JSON.stringify(body),
@@ -369,11 +390,12 @@ export function useOfficeAgent(): UseOfficeAgentResult {
 
   const execute = useCallback(
     async (task: string, context: string) => {
-      if (!config?.baseURL || !config?.apiKey) {
+      const runtimeConfig = resolveRuntimeConfig(config)
+      if (!runtimeConfig?.baseURL || !runtimeConfig.apiKey) {
         setStatus('error')
         setHistory((prev) => [
           ...prev,
-          { type: 'error', message: 'Configure API key and base URL first.' },
+          { type: 'error', message: 'Sign in with Allternit, or configure an API key and base URL first.' },
         ])
         return
       }

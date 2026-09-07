@@ -34,6 +34,16 @@ const SURFACE_THEMES: Record<AgentModeSurface, AgentModeSurfaceTheme> = {
     panelTint: 'rgba(167,139,250,0.08)',
     shadow: 'rgba(58,42,113,0.14)',
   },
+  bot: {
+    accent: '#2DD4BF',
+    glow: 'rgba(45,212,191,0.26)',
+    soft: 'rgba(45,212,191,0.14)',
+    wash: 'rgba(45,212,191,0.18)',
+    fog: 'rgba(18,110,98,0.2)',
+    edge: 'rgba(45,212,191,0.16)',
+    panelTint: 'rgba(45,212,191,0.08)',
+    shadow: 'rgba(10,74,66,0.14)',
+  },
   code: {
     accent: '#79C47C',
     glow: 'rgba(121,196,124,0.28)',

@@ -5,6 +5,7 @@
  * (the platform surface, a standalone web app, an Electron wrapper, etc.)
  * implements this contract and passes it via `OfficeHostProvider`.
  */
+import type { ReactNode } from 'react';
 
 export interface RecentFile {
   id: string;
@@ -154,6 +155,34 @@ export interface XlsxEngineHost {
 }
 
 /**
+ * Context handed to an extension when it renders inside an app's AI slot.
+ */
+export interface OfficeExtensionContext {
+  /** The office app whose AI chat section the extension occupies. */
+  appKey: OfficeAppKey;
+  /** The embedding host (same instance the app adapters consume). */
+  host: OfficeHost;
+  /** Optional: hide/close the surrounding AI section, when the host surface supports it. */
+  close?: () => void;
+}
+
+/**
+ * Describes an extension that occupies the per-app AI chat section. The host
+ * registers extensions on `OfficeHost.extensions`; `OfficeAiSlot` renders them
+ * as tabs next to the app's built-in AI panel (which remains the fallback).
+ */
+export interface OfficeExtensionDescriptor {
+  /** Stable unique id, e.g. 'allternit-assistant'. */
+  id: string;
+  /** Human-readable name shown on the extension's tab. */
+  name: string;
+  /** Small glyph rendered on the tab (emoji or short text). */
+  icon?: string;
+  /** Render the extension panel. Called inside the slot's React tree. */
+  render: (ctx: OfficeExtensionContext) => ReactNode;
+}
+
+/**
  * Single host contract consumed by all Allternit Office Suite apps.
  */
 export interface OfficeHost {
@@ -183,4 +212,8 @@ export interface OfficeHost {
 
   /** Optional: full Sheets engine. If absent, Sheets uses the lightweight editor path. */
   xlsxEngine?: XlsxEngineHost;
+
+  /** Optional: extensions that occupy the per-app AI chat section. When absent
+   * or empty, every app renders its built-in AI panel exactly as before. */
+  extensions?: OfficeExtensionDescriptor[];
 }

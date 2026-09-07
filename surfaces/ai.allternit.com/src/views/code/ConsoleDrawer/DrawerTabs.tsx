@@ -33,7 +33,7 @@ interface TabDef {
 
 export const DRAWER_TABS: TabDef[] = [
   { id: 'mission-control', label: 'Mission Control', icon: RocketLaunch },
-  { id: 'terminal', label: 'Terminal', icon: Terminal },
+  { id: 'terminal', label: 'Terminals', icon: Terminal },
   { id: 'changes', label: 'Changes', icon: GitDiff },
   { id: 'artifacts', label: 'Artifacts', icon: Package },
 ];

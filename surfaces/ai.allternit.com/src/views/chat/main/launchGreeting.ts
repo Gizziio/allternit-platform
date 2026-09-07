@@ -19,6 +19,18 @@ export const DEFAULT_LAUNCH_GREETING: LaunchGreeting = {
   effectType: 'reveal',
 };
 
+/**
+ * Fixed greeting for the Bot-mode launch screen. Unlike the Chat/Cowork
+ * greeting (randomized once per session so toggling between those two modes
+ * shows the identical header), Bot mode always introduces the same way — the
+ * screen is about the user's roster, not the ritual.
+ */
+export const BOT_LAUNCH_GREETING: LaunchGreeting = {
+  title: 'Your Bots',
+  tagline: 'Always on. Always ready.',
+  effectType: 'reveal',
+};
+
 const TAGLINES = [
   'The Intelligent Workspace',
   'Your Architecture, Amplified',

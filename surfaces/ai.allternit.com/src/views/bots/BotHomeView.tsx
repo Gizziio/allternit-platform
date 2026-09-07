@@ -17,7 +17,6 @@ import {
   CheckCircle,
   Envelope,
   ArrowRight,
-  House,
   CaretLeft,
   Sparkle,
   TrendUp,
@@ -73,7 +72,7 @@ interface BotHomeViewProps {
   botId: string;
 }
 
-type BotHomeTab = "home" | "tasks" | "artifacts" | "runtime" | "desktop" | "automation" | "webhooks" | "config";
+type BotHomeTab = "chat" | "tasks" | "runtime" | "config";
 
 function botInitials(name: string): string {
   return (name || "Bot")
@@ -141,7 +140,7 @@ export function BotHomeView({ botId }: BotHomeViewProps) {
     }, [])
   );
 
-  const [activeTab, setActiveTab] = useState<BotHomeTab>("home");
+  const [activeTab, setActiveTab] = useState<BotHomeTab>("chat");
   const [isCreatingProject, setIsCreatingProject] = useState(false);
   const [isRuntimeModalOpen, setIsRuntimeModalOpen] = useState(false);
   const [runtimeModalSection, setRuntimeModalSection] = useState<"connectors" | "secrets" | "vm" | undefined>(undefined);
@@ -235,6 +234,7 @@ export function BotHomeView({ botId }: BotHomeViewProps) {
           originSurface: "chat",
         },
       });
+      if (!sessionId) return;
       setActiveChatSession(sessionId);
       openBotChatView(sessionId, bot.id, "bot-home");
     },
@@ -287,7 +287,8 @@ export function BotHomeView({ botId }: BotHomeViewProps) {
 
   const handleSubmitTask = useCallback(async () => {
     if (!bot || !taskInput.trim()) return;
-    await startBotTask(bot, taskInput.trim());
+    const sessionId = await startBotTask(bot, taskInput.trim());
+    if (!sessionId) return;
     setIsTaskComposerOpen(false);
     setTaskInput("");
   }, [bot, taskInput, startBotTask]);
@@ -310,14 +311,10 @@ export function BotHomeView({ botId }: BotHomeViewProps) {
   const tagline = getBotTagline(bot);
 
   const tabs = [
-    { id: "home" as const, label: "Home", icon: House },
-    { id: "tasks" as const, label: "Tasks", icon: ChatTeardropText },
-    { id: "artifacts" as const, label: "Artifacts", icon: FolderOpen },
-    { id: "runtime" as const, label: "Runtime", icon: Lightning },
-    { id: "desktop" as const, label: "Desktop", icon: Desktop },
-    { id: "automation" as const, label: "Automation Tasks", icon: ClockCounterClockwise },
-    { id: "webhooks" as const, label: "Webhooks", icon: WebhooksLogo },
-    { id: "config" as const, label: "Config", icon: Gear },
+    { id: "chat" as const, label: "Chat & Sessions", icon: ChatTeardropText },
+    { id: "tasks" as const, label: "Tasks & Automation", icon: ClockCounterClockwise },
+    { id: "runtime" as const, label: "Runtime & Desktop", icon: Lightning },
+    { id: "config" as const, label: "Data & Config", icon: Gear },
   ];
 
   return (
@@ -415,6 +412,12 @@ export function BotHomeView({ botId }: BotHomeViewProps) {
             </div>
           </div>
 
+          {botSessionError && (
+            <div className="mt-4 rounded-lg border border-[var(--status-warning)]/30 bg-[var(--status-warning)]/10 p-3 text-[13px] text-[var(--status-warning)]">
+              {botSessionError}
+            </div>
+          )}
+
           {/* Tabs */}
           <div className="flex items-center gap-1 border-b border-[var(--border-subtle)]">
             {tabs.map((tab) => {
@@ -447,7 +450,7 @@ export function BotHomeView({ botId }: BotHomeViewProps) {
 
         {/* Content */}
         <div className="mt-8">
-          {activeTab === "home" && (
+          {activeTab === "chat" && (
             <HomeTab
               bot={bot}
               accentColor={accentColor}
@@ -463,36 +466,27 @@ export function BotHomeView({ botId }: BotHomeViewProps) {
               onNewProject={handleCreateProject}
               onOpenSession={handleOpenSession}
               onViewTasks={() => setActiveTab("tasks")}
-              onViewArtifacts={() => setActiveTab("artifacts")}
+              onViewArtifacts={() => setActiveTab("config")}
               onViewRuntime={() => setActiveTab("runtime")}
               isStarting={isStartingBot}
               isCreatingProject={isCreatingProject}
             />
           )}
           {activeTab === "tasks" && (
-            <TasksTab
+            <TasksAutomationTab
               bot={bot}
               sessions={botSessions}
               projects={chatProjects}
               onOpenSession={handleOpenSession}
               onNewTask={() => handleCreateProjectSession()}
-              onBack={() => setActiveTab("home")}
               accentColor={accentColor}
-            />
-          )}
-          {activeTab === "artifacts" && (
-            <ArtifactsTab
-              artifacts={botArtifacts}
-              accentColor={accentColor}
-              onBack={() => setActiveTab("home")}
             />
           )}
           {activeTab === "runtime" && (
-            <RuntimeTab
+            <RuntimeDesktopTab
               bot={bot}
               accentColor={accentColor}
               activeVM={activeVM}
-              onBack={() => setActiveTab("home")}
               onEditRuntime={() => {
                 setRuntimeModalSection(undefined);
                 setIsRuntimeModalOpen(true);
@@ -509,28 +503,17 @@ export function BotHomeView({ botId }: BotHomeViewProps) {
                 setRuntimeModalSection("vm");
                 setIsRuntimeModalOpen(true);
               }}
+              onCloudHandoff={handleCloudHandoff}
             />
-          )}
-          {activeTab === "desktop" && (
-            <BotDesktopView
-              bot={bot}
-              accentColor={accentColor}
-              activeVM={activeVM}
-              onBack={() => setActiveTab("home")}
-            />
-          )}
-          {activeTab === "automation" && (
-            <AutomationTasksTab
-              bot={bot}
-              accentColor={accentColor}
-              onBack={() => setActiveTab("home")}
-            />
-          )}
-          {activeTab === "webhooks" && (
-            <BotWebhookTriggersPanel bot={bot} accentColor={accentColor} />
           )}
           {activeTab === "config" && (
-            <BotConfigTab bot={bot} accentColor={accentColor} />
+            <DataConfigTab
+              bot={bot}
+              artifacts={botArtifacts}
+              accentColor={accentColor}
+              onOpenInbox={handleOpenInbox}
+              onEditBot={handleEditBot}
+            />
           )}
         </div>
       </div>
@@ -1168,20 +1151,16 @@ function StatCard({
 }
 
 function TasksTab({
-  bot,
   sessions,
   projects,
   onOpenSession,
   onNewTask,
-  onBack,
   accentColor,
 }: {
-  bot: Agent;
   sessions: ReturnType<typeof useChatSessionStore.getState>["sessions"];
   projects: ReturnType<typeof useChatStore.getState>["projects"];
   onOpenSession: (sessionId: string) => void;
   onNewTask: () => void;
-  onBack: () => void;
   accentColor: string;
 }) {
   const grouped = useMemo(() => {
@@ -1202,20 +1181,6 @@ function TasksTab({
 
   return (
     <div className="space-y-6">
-      <TabHeader
-        icon={ChatTeardropText}
-        title="Tasks"
-        subtitle={`Focused work, runs, and conversations delegated to ${getBotDisplayName(bot)}`}
-        accentColor={accentColor}
-        onBack={onBack}
-        action={
-          <Button variant="outline" size="sm" onClick={onNewTask} className="gap-1.5 shrink-0">
-            <Plus size={14} />
-            New Task
-          </Button>
-        }
-      />
-
       {sessions.length === 0 ? (
         <GlassSurface className="p-10 text-center rounded-xl border border-dashed border-[var(--border-subtle)]">
           <ChatTeardropText size={32} className="mx-auto mb-3 text-[var(--text-tertiary)]" />
@@ -1279,7 +1244,6 @@ function TasksTab({
 function ArtifactsTab({
   artifacts,
   accentColor,
-  onBack,
 }: {
   artifacts: Array<{
     id: string;
@@ -1291,18 +1255,9 @@ function ArtifactsTab({
     updatedAt: string;
   }>;
   accentColor: string;
-  onBack: () => void;
 }) {
   return (
     <div className="space-y-6">
-      <TabHeader
-        icon={FolderOpen}
-        title="Artifacts"
-        subtitle="Code, documents, diagrams, and captures produced by this bot"
-        accentColor={accentColor}
-        onBack={onBack}
-      />
-
       {artifacts.length === 0 ? (
         <GlassSurface className="p-10 text-center rounded-xl border border-dashed border-[var(--border-subtle)]">
           <FolderOpen size={32} className="mx-auto mb-3 text-[var(--text-tertiary)]" />
@@ -1339,7 +1294,6 @@ function RuntimeTab({
   bot,
   accentColor,
   activeVM,
-  onBack,
   onEditRuntime,
   onEditConnectors,
   onEditSecrets,
@@ -1348,7 +1302,6 @@ function RuntimeTab({
   bot: Agent;
   accentColor: string;
   activeVM: { id: string; provider: string; status: string; vncUrl?: string } | null;
-  onBack: () => void;
   onEditRuntime: () => void;
   onEditConnectors: () => void;
   onEditSecrets: () => void;
@@ -1358,20 +1311,6 @@ function RuntimeTab({
 
   return (
     <div className="space-y-6">
-      <TabHeader
-        icon={Lightning}
-        title="Runtime"
-        subtitle="Connectors, secrets, harness, and identity channels this bot can use"
-        accentColor={accentColor}
-        onBack={onBack}
-        action={
-          <Button variant="outline" size="sm" onClick={onEditRuntime} className="gap-1.5 shrink-0">
-            <Plus size={14} />
-            Add connector / secret
-          </Button>
-        }
-      />
-
       {hasMissing && (
         <GlassSurface
           className="p-4 rounded-xl border-l-4"
@@ -1920,24 +1859,54 @@ function SimpleRoutineComposer({ bot, accentColor }: { bot: Agent; accentColor: 
   );
 }
 
-function AutomationTasksTab({
+function SectionHeading({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">
+      {children}
+    </div>
+  );
+}
+
+function TasksAutomationTab({
   bot,
+  sessions,
+  projects,
+  onOpenSession,
+  onNewTask,
   accentColor,
-  onBack,
 }: {
   bot: Agent;
+  sessions: ReturnType<typeof useChatSessionStore.getState>["sessions"];
+  projects: ReturnType<typeof useChatStore.getState>["projects"];
+  onOpenSession: (sessionId: string) => void;
+  onNewTask: () => void;
   accentColor: string;
-  onBack: () => void;
 }) {
   return (
     <div className="space-y-6">
       <TabHeader
         icon={ClockCounterClockwise}
-        title="Automation Tasks"
-        subtitle={`Scheduled work and continuous routines for ${getBotDisplayName(bot)}`}
+        title="Tasks & Automation"
+        subtitle={`Focused work, scheduled routines, and webhook triggers for ${getBotDisplayName(bot)}`}
         accentColor={accentColor}
-        onBack={onBack}
+        action={
+          <Button variant="outline" size="sm" onClick={onNewTask} className="gap-1.5 shrink-0">
+            <Plus size={14} />
+            New Task
+          </Button>
+        }
       />
+
+      <SectionHeading>Tasks</SectionHeading>
+      <TasksTab
+        sessions={sessions}
+        projects={projects}
+        onOpenSession={onOpenSession}
+        onNewTask={onNewTask}
+        accentColor={accentColor}
+      />
+
+      <SectionHeading>Automation</SectionHeading>
       <div className="-mx-2 px-2">
         <SimpleRoutineComposer bot={bot} accentColor={accentColor} />
         <div className="mt-6">
@@ -1951,6 +1920,184 @@ function AutomationTasksTab({
           />
         </div>
       </div>
+
+      <SectionHeading>Webhooks</SectionHeading>
+      <BotWebhookTriggersPanel bot={bot} accentColor={accentColor} />
+    </div>
+  );
+}
+
+function RuntimeDesktopTab({
+  bot,
+  accentColor,
+  activeVM,
+  onEditRuntime,
+  onEditConnectors,
+  onEditSecrets,
+  onEditVM,
+  onCloudHandoff,
+}: {
+  bot: Agent;
+  accentColor: string;
+  activeVM: { id: string; provider: string; status: string; vncUrl?: string } | null;
+  onEditRuntime: () => void;
+  onEditConnectors: () => void;
+  onEditSecrets: () => void;
+  onEditVM: () => void;
+  onCloudHandoff: () => void;
+}) {
+  return (
+    <div className="space-y-6">
+      <TabHeader
+        icon={Lightning}
+        title="Runtime & Desktop"
+        subtitle="Connectors, secrets, harness, virtual computer, and live desktop for this bot"
+        accentColor={accentColor}
+        action={
+          <Button variant="outline" size="sm" onClick={onEditRuntime} className="gap-1.5 shrink-0">
+            <Plus size={14} />
+            Add connector / secret
+          </Button>
+        }
+      />
+
+      <RuntimeTab
+        bot={bot}
+        accentColor={accentColor}
+        activeVM={activeVM}
+        onEditRuntime={onEditRuntime}
+        onEditConnectors={onEditConnectors}
+        onEditSecrets={onEditSecrets}
+        onEditVM={onEditVM}
+      />
+
+      <SectionHeading>Desktop</SectionHeading>
+      <BotDesktopView bot={bot} accentColor={accentColor} activeVM={activeVM} />
+
+      <SectionHeading>Cloud</SectionHeading>
+      <GlassSurface className="p-5 rounded-xl">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div
+              className="flex shrink-0 items-center justify-center rounded-xl"
+              style={{
+                width: 40,
+                height: 40,
+                background: `color-mix(in srgb, ${accentColor} 14%, transparent)`,
+              }}
+            >
+              <Cloud size={20} style={{ color: accentColor }} />
+            </div>
+            <div>
+              <h3 className="text-[14px] font-semibold text-[var(--text-primary)]">
+                Cloud orchestration
+              </h3>
+              <p className="text-[13px] text-[var(--text-secondary)]">
+                Deploy {getBotDisplayName(bot)} to a managed cloud runtime.
+              </p>
+            </div>
+          </div>
+          <Button variant="outline" size="sm" onClick={onCloudHandoff} className="gap-1.5 shrink-0">
+            <Cloud size={14} />
+            Cloud handoff
+          </Button>
+        </div>
+      </GlassSurface>
+    </div>
+  );
+}
+
+function DataConfigTab({
+  bot,
+  artifacts,
+  accentColor,
+  onOpenInbox,
+  onEditBot,
+}: {
+  bot: Agent;
+  artifacts: Array<{
+    id: string;
+    sessionId: string;
+    sessionName: string;
+    type: string;
+    title: string;
+    content: string;
+    updatedAt: string;
+  }>;
+  accentColor: string;
+  onOpenInbox: () => void;
+  onEditBot: () => void;
+}) {
+  return (
+    <div className="space-y-6">
+      <TabHeader
+        icon={Gear}
+        title="Data & Config"
+        subtitle="Artifacts, inbox, settings, and configuration for this bot"
+        accentColor={accentColor}
+      />
+
+      <SectionHeading>Artifacts</SectionHeading>
+      <ArtifactsTab artifacts={artifacts} accentColor={accentColor} />
+
+      <SectionHeading>Inbox</SectionHeading>
+      <GlassSurface className="p-5 rounded-xl">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div
+              className="flex shrink-0 items-center justify-center rounded-xl"
+              style={{
+                width: 40,
+                height: 40,
+                background: `color-mix(in srgb, ${accentColor} 14%, transparent)`,
+              }}
+            >
+              <Envelope size={20} style={{ color: accentColor }} />
+            </div>
+            <div>
+              <h3 className="text-[14px] font-semibold text-[var(--text-primary)]">Inbox</h3>
+              <p className="text-[13px] text-[var(--text-secondary)]">
+                Messages and tasks routed to {getBotDisplayName(bot)}.
+              </p>
+            </div>
+          </div>
+          <Button variant="outline" size="sm" onClick={onOpenInbox} className="gap-1.5 shrink-0">
+            <Envelope size={14} />
+            Open inbox
+          </Button>
+        </div>
+      </GlassSurface>
+
+      <SectionHeading>Settings</SectionHeading>
+      <GlassSurface className="p-5 rounded-xl">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div
+              className="flex shrink-0 items-center justify-center rounded-xl"
+              style={{
+                width: 40,
+                height: 40,
+                background: `color-mix(in srgb, ${accentColor} 14%, transparent)`,
+              }}
+            >
+              <Gear size={20} style={{ color: accentColor }} />
+            </div>
+            <div>
+              <h3 className="text-[14px] font-semibold text-[var(--text-primary)]">Bot settings</h3>
+              <p className="text-[13px] text-[var(--text-secondary)]">
+                Profile, system prompt, starter prompts, and capabilities.
+              </p>
+            </div>
+          </div>
+          <Button variant="outline" size="sm" onClick={onEditBot} className="gap-1.5 shrink-0">
+            <Gear size={14} />
+            Edit bot
+          </Button>
+        </div>
+      </GlassSurface>
+
+      <SectionHeading>Configuration</SectionHeading>
+      <BotConfigTab bot={bot} accentColor={accentColor} />
     </div>
   );
 }

@@ -22,7 +22,7 @@ export function ModeProvider({ children, defaultMode = 'chat', onModeChange }: {
         const savedMode = localStorage.getItem(MODE_STORAGE_KEY) as AppMode | null;
         // Design Studio now launches in the external browser and is no longer
         // restored as an embedded shell view.
-        if (savedMode && ['chat', 'cowork', 'code', 'browser'].includes(savedMode)) {
+        if (savedMode && ['chat', 'cowork', 'bot', 'code', 'browser'].includes(savedMode)) {
           return savedMode;
         }
       } catch {

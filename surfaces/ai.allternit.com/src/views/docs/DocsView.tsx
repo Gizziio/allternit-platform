@@ -14,6 +14,7 @@ import {
   updateArtifactSection,
   type ArtifactDto,
 } from '@/services/artifacts-api';
+import { getOfficeExtensions } from '@/views/office/officeExtensions';
 
 export interface DocsViewProps {
   artifactId?: string;
@@ -196,6 +197,7 @@ export function DocsView({ artifactId, handoffId }: DocsViewProps) {
         saveFile: async (bytes: Uint8Array, name: string) => {
           saveFileRef.current(bytes, name);
         },
+        extensions: getOfficeExtensions(),
       }),
     [],
   );

@@ -18,7 +18,7 @@ import { AProtocolWordmark } from '@/components/AProtocolWordmark';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 
-export type AppMode = 'chat' | 'cowork' | 'code' | 'design' | 'browser';
+export type AppMode = 'chat' | 'cowork' | 'bot' | 'code' | 'design' | 'browser';
 
 interface ShellHeaderProps {
   title?: string;
@@ -84,6 +84,7 @@ export function ShellHeader({
   const modeColors: Record<string, string> = {
     chat: 'var(--accent-chat)',
     cowork: 'var(--accent-cowork)',
+    bot: 'var(--accent-bot)',
     code: 'var(--accent-code)',
     design: 'var(--accent-primary)',
     browser: 'var(--accent-browser)',

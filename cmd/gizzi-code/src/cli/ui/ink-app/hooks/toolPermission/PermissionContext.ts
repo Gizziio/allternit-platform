@@ -336,7 +336,11 @@ function createPermissionContext(
       })
     },
     pushToQueue(item: ToolUseConfirm) {
-      queueOps?.push(item)
+      // Attribute dashboard-session prompts to their row so the dashboard
+      // can render the confirm inline (stamped on options by the session's
+      // canUseTool wrap in topLevelSession.ts). Absent = main session.
+      const taskId = toolUseContext?.options?.dashboardTaskId
+      queueOps?.push(taskId ? { ...item, dashboardTaskId: taskId } : item)
     },
     removeFromQueue() {
       queueOps?.remove(toolUseID)
