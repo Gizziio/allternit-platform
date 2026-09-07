@@ -39,6 +39,8 @@ import {
   DesktopTower,
   Record,
   Play,
+  Bell,
+  Checks,
 } from '@phosphor-icons/react';
 import { getPinnedMiniApps, unpinMiniApp, seedDefaultMiniApps } from '../views/aci/mini-app-registry';
 import type { InstalledMiniApp } from '../views/aci/mini-app.types';
@@ -72,6 +74,18 @@ import {
 } from '@/lib/bots/bot-profile';
 import { useAgentsWithSwarms } from '@/lib/agents';
 import { deriveBotPresence, type BotPresenceState } from '@/lib/bots/bot-presence';
+import {
+  useBotActivityWatermarkStore,
+  useBotHasNewActivity,
+  canonicalActivityAt,
+} from '@/lib/bots/bot-activity-watermark';
+import {
+  getBotActivityToastsPref,
+  setBotActivityToastsPref,
+  BOT_ACTIVITY_TOASTS_CHANGED_EVENT,
+  type BotActivityToastsPref,
+} from '@/lib/bots/bot-activity-toasts';
+import { computeInboxBadge, selectVisibleBotAttention } from '@/lib/bots/bot-inbox';
 import { useBotRosterStore } from '@/lib/bots/bot-roster.store';
 import { useBotRoutineStore } from '@/lib/bots/bot-routine.service';
 import { useCommRailsMailStore } from '@/lib/bots/comrails-mail.store';
@@ -1075,6 +1089,7 @@ export function ShellRail({
               isActive={false}
               onClick={() => onOpenCustomize?.()}
             />
+            <InboxRailItem onOpen={onOpen} />
           </div>
 
           {/* HOME TEAMMATES — bots with presence, unread mail, or attention.
@@ -1900,6 +1915,9 @@ function TeammatesRailRow({
   }, [routines, bot.id]);
 
   const working = presence.presence === 'working';
+  // Watermark unread: canonical-chat activity newer than the watermark while
+  // that chat is not focused (refresh-in-place handles the focused case).
+  const hasNewActivity = useBotHasNewActivity(bot.id);
   const statusText = working
     ? 'Working…'
     : attentionEntry
@@ -1938,6 +1956,12 @@ function TeammatesRailRow({
               </span>
             )}
             <span className="truncate flex-1">{statusText}</span>
+            {hasNewActivity && (
+              <span
+                className="shrink-0 size-2 rounded-full bg-[var(--accent-primary)]"
+                title="New activity"
+              />
+            )}
             {unreadCount > 0 && (
               <span className="shrink-0 rounded-full bg-[var(--accent-primary)] text-[var(--shell-rail-bg)] text-[9px] font-bold px-1.5 py-px">
                 {unreadCount}
@@ -2017,6 +2041,358 @@ function TeammatesRowMenu({
             Start session
           </button>
         )}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function InboxRailItem({
+  onOpen,
+}: {
+  onOpen?: (view: string, context?: Record<string, unknown>) => void;
+}): React.ReactNode {
+  const agents = useAgentsWithSwarms();
+  const bots = useMemo(() => agents.filter(isBot), [agents]);
+  const attention = useAgentStore((state) => state.attention);
+  const sessions = useChatSessionStore((state) => state.sessions);
+  const canonicalChatIds = useBotRosterStore((state) => state.canonicalChatIds);
+  const mailMessages = useCommRailsMailStore((state) => state.messages);
+  const mailThreads = useCommRailsMailStore((state) => state.threads);
+  const loadThreads = useCommRailsMailStore((state) => state.loadThreads);
+  const acknowledgeMail = useCommRailsMailStore((state) => state.acknowledgeMail);
+  const watermarks = useBotActivityWatermarkStore((state) => state.watermarks);
+  const focusedSessionId = useBotActivityWatermarkStore((state) => state.focusedSessionId);
+  const markAllSeen = useBotActivityWatermarkStore((state) => state.markAllSeen);
+
+  const [open, setOpen] = useState(false);
+  const [pinned, setPinned] = useState(() => {
+    try {
+      return globalThis.localStorage?.getItem('allternit:rail:inbox-pinned') === '1';
+    } catch {
+      return false;
+    }
+  });
+  const [toastsPref, setToastsPref] = useState<BotActivityToastsPref>(() => getBotActivityToastsPref());
+
+  useEffect(() => {
+    const sync = () => setToastsPref(getBotActivityToastsPref());
+    globalThis.addEventListener?.(BOT_ACTIVITY_TOASTS_CHANGED_EVENT, sync);
+    return () => globalThis.removeEventListener?.(BOT_ACTIVITY_TOASTS_CHANGED_EVENT, sync);
+  }, []);
+
+  const activityByBot = useMemo(() => {
+    const map: Record<string, number> = {};
+    const list = sessions ?? [];
+    for (const bot of bots) {
+      map[bot.id] = canonicalActivityAt(bot.id, list, canonicalChatIds);
+    }
+    return map;
+  }, [bots, sessions, canonicalChatIds]);
+
+  const presenceByBot = useMemo(() => {
+    const map: Record<string, BotPresenceState> = {};
+    const list = sessions ?? [];
+    for (const bot of bots) {
+      const canonicalId = canonicalChatIds[bot.id];
+      const session = canonicalId ? list.find((s) => s.id === canonicalId) : undefined;
+      map[bot.id] = deriveBotPresence({
+        streaming: canonicalId ? (useChatSessionStore.getState().streamingBySession[canonicalId]?.isStreaming ?? false) : false,
+        sessionActivityAt: session ? new Date(session.updatedAt || 0).getTime() : 0,
+        routineActivityAt: 0,
+      });
+    }
+    return map;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bots, sessions, canonicalChatIds]);
+
+  const badge = useMemo(
+    () =>
+      computeInboxBadge({
+        messages: mailMessages,
+        bots,
+        attention,
+        agents,
+        activityByBot,
+        watermarks,
+        focusedSessionId,
+        canonicalChatIds,
+      }),
+    [mailMessages, bots, attention, agents, activityByBot, watermarks, focusedSessionId, canonicalChatIds],
+  );
+
+  const attentionItems = useMemo(
+    () => selectVisibleBotAttention(attention, agents),
+    [attention, agents],
+  );
+
+  const activeBots = useMemo(
+    () =>
+      bots.filter((b) => {
+        const p = presenceByBot[b.id];
+        return p && p.presence !== 'idle';
+      }),
+    [bots, presenceByBot],
+  );
+
+  const threadsNewestFirst = useMemo(
+    () => [...mailThreads].sort((a, b) => b.lastMessageAt.localeCompare(a.lastMessageAt)),
+    [mailThreads],
+  );
+
+  const botById = useMemo(() => {
+    const map: Record<string, Agent> = {};
+    for (const agent of agents) map[agent.id] = agent;
+    return map;
+  }, [agents]);
+
+  const handleOpenChange = (next: boolean) => {
+    if (next) {
+      setOpen(true);
+      // Threads are global; enrich from the first bot's perspective.
+      if (bots.length > 0) void loadThreads(bots[0].id);
+    } else if (!pinned) {
+      setOpen(false);
+    }
+    // Pinned: outside clicks keep the pane open until explicit close/unpin.
+  };
+
+  const togglePinned = () => {
+    setPinned((prev) => {
+      const next = !prev;
+      try {
+        globalThis.localStorage?.setItem('allternit:rail:inbox-pinned', next ? '1' : '0');
+      } catch {
+        // persistence best-effort
+      }
+      return next;
+    });
+  };
+
+  const handleMarkAllRead = () => {
+    const entries: Array<{ botId: string; activityAt: number }> = [];
+    for (const bot of bots) {
+      const activityAt = activityByBot[bot.id] ?? 0;
+      entries.push({ botId: bot.id, activityAt });
+    }
+    markAllSeen(entries);
+    for (const m of mailMessages) {
+      if (m.toAgentId && (m.status === 'unread' || m.requiresAck)) {
+        void acknowledgeMail(m.toAgentId, m.id);
+      }
+    }
+  };
+
+  const openBotChat = useCallback(
+    (bot: Agent) => {
+      const name = bot.botProfile?.displayName ?? bot.name;
+      void openBotCanonicalChat({ botId: bot.id, botName: name, setActive: false }).then((sessionId) =>
+        openBotChatView(sessionId, bot.id, 'chat'),
+      );
+    },
+    [],
+  );
+
+  const handleOpenThread = (thread: (typeof threadsNewestFirst)[number]) => {
+    const botId = thread.participants.find((p) => botById[p] && isBot(botById[p]));
+    if (botId) onOpen?.('bot-inbox', { botId });
+  };
+
+  const showMail = threadsNewestFirst.length > 0;
+  const showAttention = attentionItems.length > 0;
+  const showActive = activeBots.length > 0;
+
+  return (
+    <Popover
+      open={open}
+      onOpenChange={handleOpenChange}
+    >
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className={cn(
+            'w-full flex items-center gap-2.5 py-1.5 px-3 max-md:min-h-11 rounded-xl border-none cursor-pointer text-left transition-all duration-200 font-medium',
+            open
+              ? 'bg-[var(--shell-item-active-bg)] text-[var(--shell-item-active-fg)] font-semibold shadow-[inset_3px_0_0_0_var(--shell-item-active-fg)]'
+              : 'bg-transparent text-[var(--shell-item-fg)] hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)]',
+          )}
+        >
+          <Bell size={15} weight={open ? 'fill' : 'bold'} />
+          <span className="text-[12px] overflow-hidden text-ellipsis whitespace-nowrap min-w-0 flex-1">Inbox</span>
+          {badge > 0 && (
+            <span className="shrink-0 rounded-full bg-[var(--accent-primary)] text-[var(--shell-rail-bg)] text-[9px] font-bold px-1.5 py-px">
+              {badge > 99 ? '99+' : badge}
+            </span>
+          )}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="w-80 p-0 bg-[var(--surface-panel)] border-[var(--border-subtle)]"
+        side="right"
+        align="start"
+        sideOffset={8}
+        collisionPadding={8}
+      >
+        <div className="flex items-center gap-1 px-3 py-2 border-b border-[var(--border-subtle)]">
+          <span className="text-[13px] font-semibold text-[var(--shell-item-fg)] flex-1">
+            Inbox
+            {badge > 0 && <span className="ml-1.5 text-[11px] text-[var(--shell-item-muted)]">{badge}</span>}
+          </span>
+          <button
+            type="button"
+            onClick={handleMarkAllRead}
+            title="Mark all read"
+            className="p-1 rounded-md bg-transparent border-none text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)] cursor-pointer"
+          >
+            <Checks size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={togglePinned}
+            title={pinned ? 'Unpin inbox' : 'Pin inbox'}
+            className={cn(
+              'p-1 rounded-md bg-transparent border-none cursor-pointer',
+              pinned
+                ? 'text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)]'
+                : 'text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)]',
+            )}
+          >
+            <PushPin size={14} weight={pinned ? 'fill' : 'bold'} />
+          </button>
+          {open && (
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              title="Close"
+              className="p-1 rounded-md bg-transparent border-none text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)] cursor-pointer"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
+        <div className="max-h-96 overflow-y-auto">
+          {showMail && (
+            <div className="py-1">
+              <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--shell-item-muted)]">
+                Mail
+              </div>
+              {threadsNewestFirst.map((thread) => {
+                const bot = thread.participants.map((p) => botById[p]).find((a) => a && isBot(a));
+                return (
+                  <button
+                    key={thread.id}
+                    type="button"
+                    onClick={() => handleOpenThread(thread)}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 bg-transparent border-none cursor-pointer text-left hover:bg-[var(--shell-item-hover)]"
+                  >
+                    {bot ? (
+                      <BotAvatar bot={bot} size={20} />
+                    ) : (
+                      <span className="size-5 rounded-full bg-[var(--shell-item-hover)] shrink-0" />
+                    )}
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[12px] text-[var(--shell-item-fg)] truncate">
+                        {thread.subject}
+                      </span>
+                      <span className="block text-[10px] text-[var(--shell-item-muted)]">
+                        {thread.messageCount} message{thread.messageCount === 1 ? '' : 's'}
+                        {thread.unreadCount > 0 ? ` · ${thread.unreadCount} unread` : ''}
+                      </span>
+                    </span>
+                    <span className="flex items-center gap-1 shrink-0">
+                      <span className="text-[10px] text-[var(--shell-item-muted)]">
+                        {formatRelativeTime(new Date(thread.lastMessageAt).getTime())}
+                      </span>
+                      {thread.unreadCount > 0 && (
+                        <span className="size-1.5 rounded-full bg-[var(--accent-primary)]" />
+                      )}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {showAttention && (
+            <div className="py-1 border-t border-[var(--border-subtle)]">
+              <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--shell-item-muted)]">
+                Needs attention
+              </div>
+              {attentionItems.map(({ bot, entry }) => (
+                <button
+                  key={bot.id}
+                  type="button"
+                  onClick={() => openBotChat(bot)}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 bg-transparent border-none cursor-pointer text-left hover:bg-[var(--shell-item-hover)]"
+                >
+                  <BotAvatar bot={bot} size={20} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[12px] text-[var(--shell-item-fg)] truncate">
+                      {bot.botProfile?.displayName ?? bot.name}
+                    </span>
+                    <span className="block text-[10px] text-[var(--shell-item-muted)] truncate">
+                      {entry.hint}
+                    </span>
+                  </span>
+                  <span className="text-[10px] text-[var(--shell-item-muted)] shrink-0">
+                    {formatRelativeTime(entry.notedAt)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {showActive && (
+            <div className="py-1 border-t border-[var(--border-subtle)]">
+              <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--shell-item-muted)]">
+                Active
+              </div>
+              {activeBots.map((bot) => {
+                const p = presenceByBot[bot.id];
+                return (
+                  <button
+                    key={bot.id}
+                    type="button"
+                    onClick={() => openBotChat(bot)}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 bg-transparent border-none cursor-pointer text-left hover:bg-[var(--shell-item-hover)]"
+                  >
+                    <span className="relative shrink-0">
+                      <BotAvatar bot={bot} size={20} />
+                      <span
+                        className={cn(
+                          'absolute -right-0.5 -bottom-0.5 size-1.5 rounded-full border border-[var(--surface-panel)]',
+                          p?.presence === 'working' ? 'bg-[var(--accent-primary)]' : 'bg-[var(--status-success)]',
+                        )}
+                      />
+                    </span>
+                    <span className="min-w-0 flex-1 text-[12px] text-[var(--shell-item-fg)] truncate">
+                      {bot.botProfile?.displayName ?? bot.name}
+                    </span>
+                    <span className="text-[10px] text-[var(--shell-item-muted)] shrink-0">
+                      {p?.presence === 'working' ? 'Working…' : 'Active'}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {!showMail && !showAttention && !showActive && (
+            <div className="px-3 py-6 text-[12px] text-[var(--shell-item-muted)] text-center">
+              No mail, attention, or active bots right now.
+            </div>
+          )}
+        </div>
+
+        <label className="flex items-center gap-2 px-3 py-2 border-t border-[var(--border-subtle)] text-[11px] text-[var(--shell-item-muted)] cursor-pointer">
+          <input
+            type="checkbox"
+            checked={toastsPref === 'on'}
+            onChange={(e) => setBotActivityToastsPref(e.target.checked ? 'on' : 'off')}
+            className="accent-[var(--accent-primary)]"
+          />
+          Activity toasts (opt-in)
+        </label>
       </PopoverContent>
     </Popover>
   );
@@ -2107,12 +2483,14 @@ function RecentsPanel({
   );
 }
 
-function RailItem({ id, icon: Icon, label, isActive, onClick }: {
+function RailItem({ id, icon: Icon, label, isActive, onClick, badge }: {
   id?: string;
   icon: Icon;
   label: string;
   isActive?: boolean;
   onClick?: () => void;
+  /** Optional count pill (e.g. unified Inbox badge). Hidden when 0. */
+  badge?: number;
 }): React.ReactNode {
   return (
     <button type="button"
@@ -2127,6 +2505,11 @@ function RailItem({ id, icon: Icon, label, isActive, onClick }: {
     >
       {Icon && <Icon size={15} weight={isActive ? 'fill' : 'bold'} />}
       <span className="text-[12px] overflow-hidden text-ellipsis whitespace-nowrap min-w-0 flex-1">{label}</span>
+      {badge !== undefined && badge > 0 && (
+        <span className="shrink-0 rounded-full bg-[var(--accent-primary)] text-[var(--shell-rail-bg)] text-[9px] font-bold px-1.5 py-px">
+          {badge > 99 ? '99+' : badge}
+        </span>
+      )}
     </button>
   );
 }
