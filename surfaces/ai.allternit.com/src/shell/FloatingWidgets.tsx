@@ -12,6 +12,7 @@ import {
 import type { AppMode } from './ShellHeader';
 import { isElectronShell } from '../lib/platform';
 import { cn } from '@/lib/utils';
+import { openNativeSessionPicker } from '@/components/native-sessions/NativeSessionPicker';
 import { GizziMascot } from '@/components/ai-elements/GizziMascot';
 
 interface RailControlsProps {
@@ -222,6 +223,14 @@ export function RailControls({
                   label="New Agent Session"
                   description="Start a durable operator session"
                   onClick={() => { setShowCreateMenu(false); onNewAgentSession(); }}
+                />
+                <CreateMenuButton
+                  label="Continue CLI session"
+                  description="Pick up Claude, Codex, Grok, Kimi, …"
+                  onClick={() => {
+                    setShowCreateMenu(false);
+                    openNativeSessionPicker(mode === 'browser' ? 'chat' : mode, 'regular');
+                  }}
                 />
               </div>
             )}

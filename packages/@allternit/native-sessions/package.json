@@ -1,0 +1,17 @@
+{
+  "name": "@allternit/native-sessions",
+  "version": "0.1.0",
+  "description": "Read-only catalog of native coding-agent CLI sessions, with snapshot identity and inbound fetch. Never writes vendor journals.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "test": "bun test src"
+  }
+}

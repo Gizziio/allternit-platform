@@ -53,6 +53,7 @@ import { ChatActiveContent } from "./chat/main/ChatActiveContent";
 import { ChatBottomBar } from "./chat/main/ChatBottomBar";
 import { OllamaWarning } from "./chat/main/OllamaWarning";
 import { SendErrorBanner } from "./chat/main/SendErrorBanner";
+import { NativeOriginBanner } from "@/components/native-sessions/NativeOriginBanner";
 
 import { createModuleLogger } from '@/lib/logger';
 
@@ -611,6 +612,10 @@ export function ChatView({
         />
       )}
 
+      <NativeOriginBanner
+        sessionId={activeNativeSessionId}
+        metadata={activeNativeSession?.metadata}
+      />
       <div className={cn('flex flex-row', hudMode ? '' : 'flex-1 min-h-0 overflow-hidden')}>
         <div
           ref={scrollContainerRef}

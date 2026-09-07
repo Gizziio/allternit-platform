@@ -10,6 +10,7 @@ export {
   RoutineTable,
   LoopTable,
   GoalTable,
+  SessionSourceEventTable,
 } from "@/runtime/session/session.sql"
 export { SessionShareTable } from "@/runtime/session/share/share.sql"
 export { ProjectTable } from "@/runtime/context/project/project.sql"
