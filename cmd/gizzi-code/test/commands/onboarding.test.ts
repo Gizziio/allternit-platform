@@ -5,6 +5,7 @@ import {
   ONBOARDING_MARKER_FILE,
   markOnboardingComplete,
   onboardingMarkerPath,
+  pickBrain,
   runOnboardingDefaults,
   runOnboardingWizard,
   shouldOfferFirstRunOnboarding,
@@ -170,5 +171,54 @@ describe("runOnboardingDefaults", () => {
     )
     expect(result).toBe("completed")
     expect(brains).toEqual(["allternit/llama-3.1-8b"])
+  })
+})
+
+describe("pickBrain", () => {
+  const cli = (id: string) => ({
+    id,
+    name: id,
+    auth_type: "subprocess" as const,
+    source: "subprocess" as const,
+    models: [{ id: "default", name: `${id} default` }],
+  })
+
+  test("always picks the first installed CLI without prompting", async () => {
+    const brains: string[] = []
+    const summary = await pickBrain(
+      { plan: null, providers: [cli("kimi-cli"), cli("claude-cli")] },
+      async (m) => void brains.push(m),
+    )
+    expect(brains).toEqual(["kimi-cli/default"])
+    expect(summary).toBe("kimi-cli/default")
+  })
+
+  test("paid Allternit plan picks Allternit Cloud over CLIs", async () => {
+    const brains: string[] = []
+    const summary = await pickBrain(
+      {
+        plan: { id: "plus", label: "Plus", plan_tier: "pro", status: "active" },
+        providers: [
+          {
+            id: "allternit",
+            name: "Allternit Cloud",
+            auth_type: "api_key" as const,
+            source: "platform" as const,
+            models: [{ id: "llama-3.1-8b", name: "Llama 3.1 8B" }],
+          },
+          cli("kimi-cli"),
+        ],
+      },
+      async (m) => void brains.push(m),
+    )
+    expect(brains).toEqual(["allternit/llama-3.1-8b"])
+    expect(summary).toContain("Allternit Cloud")
+  })
+
+  test("nothing installed: no pick, summary says so", async () => {
+    let called = 0
+    const summary = await pickBrain({ plan: null, providers: [] }, async () => void called++)
+    expect(called).toBe(0)
+    expect(summary).toContain("none yet")
   })
 })

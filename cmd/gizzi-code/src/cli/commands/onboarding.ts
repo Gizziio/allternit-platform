@@ -186,49 +186,14 @@ export async function runOnboardingWizard(
   }
 
   // ── Default brain ──
-  // Unpaid: first installed CLI (or a pick). Paid Plus/Super/Ultra: Allternit Cloud.
-  // Kept auto so buying a sub later provisions Cloud without another wizard.
+  // Onboarding always picks: Allternit Cloud on paid Plus/Super/Ultra,
+  // otherwise the first installed CLI. Kept auto so buying a sub later
+  // provisions Cloud without another wizard; change anytime with /model.
   let brainSummary = "auto"
   try {
     const catalog = await d.listBrains()
-    const clis = catalog.providers.filter((p) => p.source === "subprocess" && p.models[0])
-    const cloud = catalog.providers.find((p) => p.id === "allternit" && p.source === "platform")
-    if (isPaidAllternitPlan(catalog.plan) && cloud?.models[0]) {
-      const model = `${cloud.id}/${cloud.models[0].id}`
-      await d.setBrain(model)
-      brainSummary = `Allternit Cloud (${catalog.plan?.label ?? "paid"} → ${model})`
-      prompts.log.info(
-        `Allternit ${catalog.plan?.label} is active — default brain is Allternit Cloud. Change anytime with /model.`,
-      )
-    } else if (clis.length > 0) {
-      const options = [
-        {
-          value: "auto",
-          label: "Auto (first installed CLI)",
-          hint: "switches to Allternit Cloud after you subscribe",
-        },
-        ...clis.map((c) => ({
-          value: `${c.id}/${c.models[0]!.id}`,
-          label: c.name,
-          hint: c.models[0]!.name,
-        })),
-      ]
-      const choice = await prompts.select({
-        message: "Default brain — installed CLI, or Cloud after a Plus/Super/Ultra subscription",
-        initialValue: "auto",
-        options,
-      })
-      if (prompts.isCancel(choice)) {
-        prompts.outro("Onboarding cancelled — run `gizzi --onboarding` anytime to finish setup")
-        return "cancelled"
-      }
-      const selected =
-        choice === "auto" ? `${clis[0]!.id}/${clis[0]!.models[0]!.id}` : String(choice)
-      await d.setBrain(selected)
-      brainSummary = selected
-    } else {
-      brainSummary = "none yet — install a CLI or subscribe at platform.allternit.com/plans"
-    }
+    brainSummary = await pickBrain(catalog, d.setBrain)
+    prompts.log.info(`Brain: ${brainSummary} — change anytime with /model.`)
   } catch {
     // Discovery is best-effort; a missing catalog must not block onboarding.
   }
@@ -270,6 +235,31 @@ export async function runOnboardingWizard(
 }
 
 /**
+ * Auto-pick the default brain from a discovery catalog and persist it.
+ * Onboarding always picks — never leaves the choice unmade: Allternit Cloud
+ * on paid Plus/Super/Ultra plans, otherwise the first installed CLI.
+ * Returns the human-readable summary shown by both onboarding paths.
+ */
+export async function pickBrain(
+  catalog: BrainCatalog,
+  setBrain: (model: string) => Promise<void>,
+): Promise<string> {
+  const clis = catalog.providers.filter((p) => p.source === "subprocess" && p.models[0])
+  const cloud = catalog.providers.find((p) => p.id === "allternit" && p.source === "platform")
+  if (isPaidAllternitPlan(catalog.plan) && cloud?.models[0]) {
+    const model = `${cloud.id}/${cloud.models[0].id}`
+    await setBrain(model)
+    return `Allternit Cloud (${catalog.plan?.label ?? "paid"} → ${model})`
+  }
+  if (clis[0]) {
+    const model = `${clis[0].id}/${clis[0].models[0]!.id}`
+    await setBrain(model)
+    return model
+  }
+  return "none yet — install a CLI or subscribe at platform.allternit.com/plans"
+}
+
+/**
  * Non-interactive setup used by `gizzi onboarding --defaults` and CI:
  * telemetry on, auth skipped, brain auto-picked (CLI now, Cloud after a sub).
  */
@@ -283,17 +273,7 @@ export async function runOnboardingDefaults(
   let brainSummary = "none yet"
   try {
     const catalog = await d.listBrains()
-    const clis = catalog.providers.filter((p) => p.source === "subprocess" && p.models[0])
-    const cloud = catalog.providers.find((p) => p.id === "allternit" && p.source === "platform")
-    if (isPaidAllternitPlan(catalog.plan) && cloud?.models[0]) {
-      const model = `${cloud.id}/${cloud.models[0].id}`
-      await d.setBrain(model)
-      brainSummary = `Allternit Cloud (${catalog.plan?.label ?? "paid"} → ${model})`
-    } else if (clis[0]) {
-      const model = `${clis[0].id}/${clis[0].models[0]!.id}`
-      await d.setBrain(model)
-      brainSummary = model
-    }
+    brainSummary = await pickBrain(catalog, d.setBrain)
   } catch {
     // Discovery is best-effort.
   }

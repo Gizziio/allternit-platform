@@ -640,4 +640,4 @@ export function peekJsonlMeta(path: string): Record<string, unknown> | undefined
   }
 }
 
-export { HARNESS_BY_ID }
+export { HARNESS_BY_ID } from "./harness.js"

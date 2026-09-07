@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Changed
+- First-run onboarding always auto-picks the default brain instead of
+  prompting: Allternit Cloud on paid Plus/Super/Ultra plans, otherwise the
+  first installed CLI. Same logic as `gizzi onboarding --defaults`; change
+  anytime with `/model`.
+
 ## 2.0.6 — 2026-09-06
 
 Fixes a hard TUI crash on any surface that renders a syntax-highlighted
