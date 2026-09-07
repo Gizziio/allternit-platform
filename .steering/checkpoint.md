@@ -1,9 +1,9 @@
 # Steering checkpoint
 
-Goal: gizzi-code follow-up — onboarding should always auto-select the default brain (no interactive brain picker in the wizard). Policy: paid plan → Allternit Cloud default model; else first installed CLI brain; nothing installed → tell the user how to get one. `/model` remains the way to change it.
+Goal: Cut gizzi-code 2.0.7 — ship the onboarding auto-pick-brain change (plus the two pre-existing breakage fixes) as a tagged release, same flow as 2.0.6: version bump commit → tag `gizzi-code/v2.0.7` → CI publishes npm + GitHub assets → homebrew tap bump → owner machine upgrade.
 
-Just did: Extracted a shared `pickBrain(catalog, setBrain)` helper in `src/cli/commands/onboarding.ts`; the wizard's brain section now calls it (no `prompts.select`, informs "Brain: … — change anytime with /model.") and `runOnboardingDefaults` delegates to it (identical output strings, existing tests untouched). Added 3 `pickBrain` tests (first-CLI pick, paid-plan prefers cloud, empty catalog → no setBrain). CHANGELOG entry under `## Unreleased`. Also fixed pre-existing main breakage in `src/cli/ui/ink-app/commands/auto/index.ts`: `feature('TRANSCRIPT_CLASSIFIER')` was called inside an arrow return/getter (Bun: "can only be used directly in an if statement or ternary"), which killed the whole test preload graph — now resolved once at module scope. Onboarding tests 14/14 green.
+Just did: Created worktree `allternit-session-gc-207` on branch `session/gc-207` from origin/main `05e9c0c9f`. Bumped 2.0.6 → 2.0.7 in all five versioned spots (cmd/gizzi-code/package.json, cli-package/package.json, cli-package/install/gizzi.rb, debian control, rpm spec + spec %changelog), mirroring commit c2e0d543c (the 2.0.6 bump). CHANGELOG: Unreleased content moved under `## 2.0.7 — 2026-09-06` with a Fixed section for the feature()-macro and native-sessions TS2552 fixes.
 
-Next: `bun run typecheck` clean → commit, push session branch, fast-forward main, ledger attestation, cleanup worktree + branch. Change rides the next release (no new tag; 2.0.6 already shipped).
+Next: Commit → push branch → fast-forward main → tag `gizzi-code/v2.0.7` → push tag → watch release CI → update homebrew tap formula sha256s → upgrade owner's installed binary → ledger + cleanup.
 
-Open questions: None. (Known pre-existing gap, out of scope: the same illegal `feature()` macro pattern exists in `defaultBindings.ts`, `betas.ts`, `prompts.ts` — only fix if a future typecheck/test run complains.)
+Open questions: None.

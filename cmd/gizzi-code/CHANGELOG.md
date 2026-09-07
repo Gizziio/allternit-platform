@@ -2,11 +2,21 @@
 
 ## Unreleased
 
+## 2.0.7 — 2026-09-06
+
 ### Changed
 - First-run onboarding always auto-picks the default brain instead of
   prompting: Allternit Cloud on paid Plus/Super/Ultra plans, otherwise the
   first installed CLI. Same logic as `gizzi onboarding --defaults`; change
   anytime with `/model`.
+
+### Fixed
+- `gizzi auto` no longer fails to load in bundled builds: the
+  `TRANSCRIPT_CLASSIFIER` bundle feature was being queried inside an arrow
+  return and a getter (illegal for Bun's `feature()` macro), which broke
+  the command module and the test preload graph.
+- `bun run typecheck` is clean again repo-wide: the native-sessions catalog
+  re-exported `HARNESS_BY_ID` without importing it (TS2552).
 
 ## 2.0.6 — 2026-09-06
 
