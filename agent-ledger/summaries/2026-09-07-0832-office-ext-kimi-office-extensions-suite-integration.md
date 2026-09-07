@@ -47,7 +47,7 @@ Embedding hosts register extensions: `createBrowserHost({ extensions: [createAll
 
 ## Unfinished / deferred
 
-- **Phase 3 commit + merge to main not yet done** at attestation time — final sweep must pass first, then commit/push, merge, cleanup worktree per AGENTS.md.
+- **Merge to local main deferred:** origin/main (153291895) was merged INTO the session branch (merge commit `5bd788bab`, conflicts in `.steering/checkpoint.md` + `agent-ledger/LEDGER.md` resolved; branch pushed, current with main). The shared main checkout at `~/Desktop/allternit-workspace/allternit` has another session's staged+unstaged work in `pnpm-lock.yaml` and `surfaces/ai.allternit.com/package.json` — both files this branch also changes — so a local-main merge would collide with that session's work. Left for the orchestrator/user: when the main checkout is clean, `git merge --no-ff session/office-ext-20260907`, push, then remove worktree `allternit-session-office-ext-20260907` and branch per AGENTS.md. Post-merge verification sweep (ai build, desktop typecheck, office-surface build, add-in 143/143, extension build) all green at `5bd788bab`.
 - Sideload smoke in real Word/Excel/PowerPoint is manual (documented in add-in README/DEPLOYMENT.md).
 - `ARCHITECTURE.md` (add-in) still philosophically conflicts with the advanced settings panel — needs a product decision.
 - Add-in local `pnpm build` without env vars rewrites tracked manifests to localhost URLs (pre-existing footgun; deploy.sh/CI always set env).
