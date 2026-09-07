@@ -21,6 +21,16 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-06 21:30 — kimi — gizzi-code 2.0.6: /theme TUI crash fix + real TS syntax highlighting
+
+- **Session ID / Branch:** `session/gc-hotfix` (worktree `allternit-session-gc-hotfix`)
+- **Agent:** kimi
+- **Summary:** Fixed the 2.0.5 hard crash on any syntax-highlighted diff surface (`/theme`, file-edit permission previews) and shipped real syntax highlighting in the vendored color-diff TS port.
+- **Commit:** `457c3f3e3` (crash fix) + `132848239` (highlighting) + `c2e0d543c` (2.0.6 bump) on `main`; tag `gizzi-code/v2.0.6`
+- **How it works:** The TS port of color-diff-napi only implemented color-math APIs; `StructuredDiff`/`HighlightedCode` call `render()` from the original Rust binding. Phase 1 made construction/render safe and guarded the call sites (degrade to React fallback renderer). Phase 2 implemented real rendering: regex tokenizer + theme palettes + gutters + wrapping, so compiled binaries get ANSI-highlighted diffs without the fallback. 17/17 tests, tsc clean, pty-verified `/theme` on old (crashes, exact reported TypeError) and new (renders, stays alive) binaries.
+- **Outstanding work:** Homebrew tap formula still pins 2.0.5 sha256s — update after publish CI (run 34076386791) assets land. Word-level intra-line highlights not ported (cosmetic). Owner to re-key `aliyun-qwen` (auth fails) or switch default brain to `kimi-cli/kimi-for-coding` (verified working; its saved `subprocess_cmd` was missing `-p`, fixed in user config).
+- **Summary file:** [./summaries/2026-09-06-2128-session-gc-hotfix-kimi-gizzi-code-2.0.6-theme-crash-fix.md](./summaries/2026-09-06-2128-session-gc-hotfix-kimi-gizzi-code-2.0.6-theme-crash-fix.md)
+
 ### 2026-09-04 19:25 — grok — gizzi-code 2.0.0 npm publish (all 5 platforms)
 
 - **Session ID / Branch:** `main`
