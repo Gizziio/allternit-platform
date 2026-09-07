@@ -1,44 +1,86 @@
 # Steering checkpoint
 
 ## Goal
-Port three Grok CLI features into gizzi-code (worktree `allternit-session-7631feda`, branch `session/7631feda-bbb5-492f-97cf-55f243eda42d`):
-1. `/session-info` presentation — DONE (b8675f9ce)
-2. Agent dashboard `/dashboard` — full Grok parity, in-process first — CODE COMPLETE, functionally verified in tmux TUI (b8675f9ce, 07865f0d0, c2f807680, 9b307db69)
-3. `/settings` polish — DONE (b8675f9ce)
+Phase 1 — "Teammates rail + routines wired" from docs/BOT_TEAMMATES_SPEC.md, in
+worktree `/Users/joe/altw/allternit-session-bots-p01` (branch session/bots-p01).
+Phase 0 was completed and verified earlier in this session. Parent lands the
+branch — DO NOT git commit/push.
 
-Plan file: ~/.kimi-code/sessions/wd_joe_db5f68cf8615/session_7631feda-bbb5-492f-97cf-55f243eda42d/agents/main/plans/icon-kate-bishop-nightning-wing.md (name approximate — search plans/ dir if needed)
+## Phase 1 status: CODE COMPLETE, verification running
+- D1 DONE: `lib/bots/bot-presence.ts` — pure `deriveBotPresence(sources, now)`
+  + `useBotPresence(botId)` hook; ACTIVE_WINDOW_S=90_000; working=streaming,
+  active=session/routine activity within window; attention excluded.
+- D2 DONE: `src/shell/ShellRail.tsx` — `TeammatesRailSection` (membership:
+  presence!=='idle' OR unread mail OR visible attention; sorted
+  working>active then lastActivityAt desc; cap 6; self-prunes; "All
+  teammates" → onOpen?.('agent-hub')) rendered above HOME PINNED in home mode;
+  `TeammatesRailRow` (BotAvatar 24px + presence dot, status priority
+  Working…>attention hint>⏰ ran routine>last message, unread pill, hover Play,
+  row menu Open chat/Bot home/Start session); teammatesExpanded persisted at
+  'allternit:rail:teammates-expanded'.
+- D3 DONE: `lib/bots/bot-routine.service.ts` — frequencies
+  startup/once/hourly/daily/weekdays/weekly/monthly/interval;
+  intervalHours/scheduleText/monitor/simple/lastMonitorHash fields;
+  calculateNextRun exported + tested (weekdays Fri→Mon +3d, Sat→Mon +2d —
+  a Saturday +1d bug was caught by the new tests and FIXED);
+  persist schemaVersion 2 (migrations 0/1 identity); recordRun opts
+  {monitorHash}; executeBotRoutine continuity prepend (2KB cap) + monitor
+  branch (isToolsApiEnabled guard → fail 'Monitor requires local API';
+  api.executeTool('shell'); fnv1aHex hash → silent 'no change' run, else
+  deliver capped 4KB); routinesInFlight Set guard;
+  runDueBotRoutines({includeStartup?}) + runStartupRoutines().
+  `lib/bots/routine-scratchpad.ts` (16KB value / 64KB routine caps).
+  `lib/bots/use-routine-timer.ts` (60s tick + mount sweep) mounted in
+  ShellApp.tsx after useStackProviders().
+- D4 DONE: `src/views/bots/BotHomeView.tsx` — `SimpleRoutineComposer` above
+  AutomationTasksView in AutomationTasksTab: NL textarea, optional title,
+  schedule select (…/Interval N hours/Advanced→scheduleText w/ 'daily'
+  fallback), monitor checkbox+command, Create → createBotRoutine(simple:true);
+  lists simple routines w/ pause/resume/delete + next-run relative + last-run
+  status.
+- D5 DONE (comments only, no behavior change): `agentToCreateAgentInput`
+  docstring now documents the Hermes rule (indirect secretRefs inherited,
+  value redacted, history stripped); `AgentGalleryCard.handleDuplicate`
+  comment documents identity-only inheritance.
+- NOTE: team-import.ts `TeamImportRoutine.frequency` widened to
+  `BotRoutineFrequency` (was the only tsc regression from the frequency
+  union extension).
+- Tests DONE (all passing): `lib/bots/bot-presence.test.ts` (6),
+  `lib/bots/__tests__/bot-routine-delivery.test.ts` (continuity caps,
+  monitor suppress/change/local-API guard/cmd failure, freq mapping,
+  startup inclusion), `lib/bots/__tests__/use-routine-timer.test.tsx`
+  (mount sweep, tick, unmount), `bot-profile.test.ts` appended
+  share-auth/duplicate-strip describe; existing
+  `bot-routine.service.test.ts` updated for the new startup-exclusion
+  contract.
 
-## Branch state (all pushed to origin)
-- b8675f9ce Phases 1–3: /session-info (aliases info/session-info, auth+turns rows, copy c/y), /settings effort row, dashboard shell + /dashboard command + ctrl+\ binding
-- 07865f0d0 Phase 4: dashboard/{types,topLevelSession,InProcessSource}.ts, functional DashboardScreen (dispatch/stop/pin), REPL wiring (buildDashboardQueryParams + dashboardSource)
-- c2f807680 Phase 5: full UI — peek/reply, needs-input via canUseTool wrapper, search a:/s:/#, Ctrl+G grouping, idle folding + N-more, v details, ? cheatsheet, rename/pin/reorder (dashboard.pinned + dashboard.reorder in GlobalConfig), Esc ladder
-- 9b307db69 CRITICAL FIX: sessionStorage.ts re-exported getProjectDir from projectDir.js without local binding → every call site was a latent ReferenceError when getSessionProjectDir() nullish; dashboard dispatch hit it seconds after TUI start. Added `import { getProjectDir } from './projectDir.js'`. Also: DashboardScreen padLine + opaque boxes (cosmetic, see known delta). CHANGELOG.md Unreleased section written.
+## Verification (final)
+- `npx tsc --noEmit`: all touched files clean. One regression from this phase
+  was found and FIXED: team-import.ts TeamImportRoutine.frequency widened to
+  BotRoutineFrequency. Pre-existing ENVIRONMENTAL errors remain, NOT from this
+  phase: (a) xterm/xterm-addon-* not installed in the shared checkout (3
+  terminal files, xterm IS in package.json); (b) univerjs dual-version type
+  errors in the shared checkout's packages/@allternit/office-sheets-app
+  (pulled in via tsconfig path mapping). Both predate Phase 1 (files untouched
+  here); the shared checkout needs a `pnpm install`.
+- `bun run build`: FAILS at chunk-render on @univerjs MISSING_EXPORT — same
+  environmental root cause: the shared checkout's install is stale
+  (require.resolve('@univerjs/core') from office-sheets-app returns
+  core@0.21.1 while its package.json demands ^0.25.1; the surface vite alias
+  then pins the wrong instance). All 25,617 modules including every Phase-1
+  file transformed successfully — the failure is link-time, in node_modules.
+  Phase 0's green build predates whatever disturbed the shared checkout's
+  install.
+- `npx vitest run` full suite: 1263 passed, 0 failed, 14 skipped. The only 2
+  failed SUITES are UnifiedTerminal.test.ts and CodeCanvas.test.tsx, which
+  fail to LOAD (xterm not installed) — pre-existing, environmental. All 32
+  tests in the 5 Phase-1 test files pass, including the 3 test-time bug
+  catches: weekdays Sat→Mon math, startup-exclusion contract in the old
+  routine test, and hoisting-safe api-client mock.
 
-## Verification status
-- `bun run typecheck` green after P4 and P5 (before the 9b307db69 fix; that fix is one import in @ts-nocheck file + JSX props — rerun typecheck to be safe)
-- `bun run test` (ci-smoke-test.sh): 1270 pass / 0 fail / 42 skip
-- tmux TUI smoke (bun run dev in tmux session gizzidash): /dashboard opens; header+leader row render; dispatch spawns session row; query runs (23 tok progress shown); finalize → 'Done'; Enter opens peek (model · permission · state, last response, reply box); reply accepted; p pins (⌖); / search filters; Esc ladder works; exit to prompt works. Debug instrumentation removed after use.
-- Dev-env caveat: TUI runs "Not logged in" with kimi-cli brain — model returns getModelBetas error text but the full pipeline works; pre-existing env issue, not our code.
-
-## Known cosmetic delta (document in ledger)
-- Stale-cell ghosts: when a rendered line shrinks between frames, old cells beyond the new line end linger in the terminal grid. Root cause: ink emit layer `log-update.ts:106` trimEnd()s every line, so trailing-space clearing (padLine) and Box `opaque` fill (plain spaces) never reach the grid; backgroundColor fill also didn't cover (width/emit). NOT dashboard-specific — any shrinking line in this ink. Options later: renderer-level erase-to-EOL for shrunk rows, or accept. Do NOT keep chasing this in this session.
-- tmux capture-pane shows mid-frame/stale states; trust the tee'd stdout log (/tmp/gizzidash.log) over capture-pane for "what did the app render".
-
-## Gotchas (cumulative)
-- Vendored ink Event has NO preventDefault — use event.stopImmediatePropagation().
-- useAppState REQUIRES a selector: useAppState(s => s.tasks) — bare useAppState() crashes (TUI Render Error, process exits).
-- useTerminalSize destructure is `{ rows: termRows, columns }` — root Box must use termRows (a bare `rows` ReferenceError also kills the TUI).
-- Single-char Dashboard chords (q/x/p/r) fire on any keypress — gate dashboard:exit with isActive while inner inputs focused (browsing = focus==='list' && no peek/search/details/cheatsheet).
-- ctrl+letter arrives as key.ctrl && input==='<letter>'; plain '/' is more reliable than Ctrl+/ in terminals.
-- Vendored useInput uses useEventCallback (fresh closures, no stale-closure bugs).
-- TUI crashes (render errors) print "TUI Render Error" to stdout and EXIT — check the tee log, not the pane.
-- Synchronous throws inside dispatch paths get swallowed silently by the input pipeline (no log, no crash) — instrument with appendFileSync to /tmp when debugging handler issues.
-
-## Next (post-compaction resume)
-1. Rerun `bun run typecheck` in cmd/gizzi-code for 9b307db69 (expected green).
-2. Optional quick tmux re-verify of the opaque/padLine render (session gizzidash workflow: tmux new-session -d -s gizzidash -x 220 -y 55 -c <worktree>/cmd/gizzi-code 'bun run dev 2>&1 | tee /tmp/gizzidash.log'; send-keys /dashboard etc.).
-3. Repo ritual wrap-up: agent-ledger/summaries/2026-09-06-HHMM-7631feda-grok-dashboard.md + LEDGER.md entry — only AFTER merge to main per AGENTS.md; merge first, then worktree cleanup (git worktree remove, branch -d), restore original branch.
-4. Joe reviews the branch; merge via GitHub PR or local merge in main checkout with STEER_GUARD_OFF=1.
-
-## Open questions for Joe
-- Merge now or keep the branch for review? Ledger attestation happens post-merge per ritual.
+## Open questions / notes
+- agent.store.attention is in-memory only (Phase 0 decision, flagged already).
+- node_modules symlinks (3) are untracked; must not be committed.
+- AgentGalleryCard.handleDuplicate passes secretRefs unredacted into the
+  draft (agentToCreateAgentInput redacts them). Behavior unchanged per
+  "comments only" scope; flagged as a possible follow-up hardening.
