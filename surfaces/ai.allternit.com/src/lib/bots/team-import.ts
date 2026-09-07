@@ -17,7 +17,7 @@ import { v4 as uuidv4 } from 'uuid';
 import type { Agent, AgentConnectorBinding, CreateAgentInput } from '@/lib/agents/agent.types';
 import { createAgent } from '@/lib/agents/agent.service';
 import { createModuleLogger } from '@/lib/logger';
-import { createBotRoutine, type CreateBotRoutineInput } from './bot-routine.service';
+import { createBotRoutine, type BotRoutineFrequency, type CreateBotRoutineInput } from './bot-routine.service';
 
 const logger = createModuleLogger('TeamImport');
 
@@ -50,7 +50,7 @@ export interface TeamImportPlaybook {
 export interface TeamImportRoutine {
   name: string;
   instruction: string;
-  frequency?: 'startup' | 'daily' | 'weekly' | 'monthly';
+  frequency?: BotRoutineFrequency;
 }
 
 export interface TeamImportRoom {

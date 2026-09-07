@@ -22,6 +22,7 @@ import { updateElectronApp } from 'update-electron-app';
 import fixPath from 'fix-path';
 import { backendManager } from './backend-manager.js';
 import { officeEngineManager } from './office-engine-manager.js';
+import { localEngineManager } from './local-engine-manager.js';
 import {
   editorForFile,
   extractOfficeFileArg,
@@ -917,11 +918,23 @@ async function initializeBundledMode(): Promise<void> {
     } else {
       log.warn('[Main] ACU computer-use gateway unavailable; Open computer will 502 until it is started');
     }
+    // Step 1.7 — local-engine sidecar (services/local-engine, port ${PORTS.LOCAL_ENGINE}).
+    // Serves Model Lab machine telemetry (/status); allternit-api proxies
+    // /api/local-engine/* to it. Non-fatal if it fails (telemetry shows
+    // "Unavailable", same pattern as the office engine above).
+    let localEngineUrl: string | null = null;
+    try {
+      localEngineUrl = await localEngineManager.ensureStarted();
+      log.info(`[Main] Local engine ready at ${localEngineUrl}`);
+    } catch (engineErr) {
+      log.warn('[Main] Local engine failed to start, continuing without it:', engineErr);
+    }
     const apiUrl = await backendManager.ensureBackend({
       gizziUrl,
       gizziPassword: gizziManager.getPassword(),
       gizziUsername: 'gizzi',
       extraEnv: {
+        ...(localEngineUrl ? { LOCAL_ENGINE_URL: localEngineUrl } : {}),
         ...computerUseDriverManager.getLaunchEnvironment(),
         ...acuGatewayManager.getLaunchEnvironment(),
         ...authManager.getPlatformEncryptionEnvironment(),
@@ -2002,6 +2015,7 @@ app.on('before-quit', async () => {
   await workerBus.shutdown();
   tunnelManager.stop();
   await backendManager.stopBackend();
+  await localEngineManager.stop();
   connectorSidecarManager.stop();
   officeEngineManager.stop();
   meshManager.stop().catch(() => {}); // best-effort mesh sidecar shutdown

@@ -25,7 +25,20 @@ export type {
   OfficeStorageProvider,
   XlsxEngineHost,
   XlsxSessionHandle,
+  OfficeExtensionContext,
+  OfficeExtensionDescriptor,
 } from './bridge/types';
+
+// Extension slot for the per-app AI chat section
+export {
+  OfficeAiSlot,
+  useOfficeExtensions,
+  registerActiveDocument,
+  getActiveDocument,
+  useActiveDocument,
+  createAllternitAssistantExtension,
+} from './extensions';
+export type { OfficeAiSlotProps } from './extensions';
 
 // AI configuration
 export type { OfficeAiConfig } from './ai/types';

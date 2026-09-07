@@ -151,7 +151,7 @@ export interface Agent {
   characterLayer?: unknown;
   trustTier?: 'safe' | 'low' | 'standard' | 'elevated' | 'admin' | 'critical';
   harness?: unknown;
-  allowedSurfaces?: Array<'chat' | 'cowork' | 'code' | 'design' | 'browser'>;
+  allowedSurfaces?: Array<'chat' | 'cowork' | 'bot' | 'code' | 'design' | 'browser'>;
   allowedSkills?: string[];
   allowedTools?: string[];
   category?: 'engineering' | 'design' | 'marketing' | 'product' | 'research' | 'operations' | 'creative' | 'general';

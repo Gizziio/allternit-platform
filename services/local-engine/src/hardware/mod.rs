@@ -207,13 +207,7 @@ fn detect_gpu_info(
                         let apple_chip = apple_chip_generation(name);
                         let total = is_apple.then_some(ram_total_bytes);
                         let used = is_apple.then_some(ram_used_bytes);
-                        return (
-                            Some(name.to_string()),
-                            total,
-                            used,
-                            apple_chip,
-                            is_apple,
-                        );
+                        return (Some(name.to_string()), total, used, apple_chip, is_apple);
                     }
                 }
             }
@@ -244,7 +238,13 @@ fn detect_gpu_info(
     {
         if output.status.success() {
             let text = String::from_utf8_lossy(&output.stdout);
-            let parts: Vec<&str> = text.lines().next().unwrap_or("").split(',').map(str::trim).collect();
+            let parts: Vec<&str> = text
+                .lines()
+                .next()
+                .unwrap_or("")
+                .split(',')
+                .map(str::trim)
+                .collect();
             if !parts.is_empty() {
                 let name = parts[0].to_string();
                 let total_mb: Option<u64> = parts.get(1).and_then(|s| s.parse().ok());
@@ -312,15 +312,35 @@ mod tests {
 
     #[test]
     fn hardware_id_is_stable() {
-        let a = stable_hardware_id("Apple M3", 12, 36_000_000_000, Some("Apple M3"), "macos", "aarch64");
-        let b = stable_hardware_id("Apple M3", 12, 36_000_000_000, Some("Apple M3"), "macos", "aarch64");
+        let a = stable_hardware_id(
+            "Apple M3",
+            12,
+            36_000_000_000,
+            Some("Apple M3"),
+            "macos",
+            "aarch64",
+        );
+        let b = stable_hardware_id(
+            "Apple M3",
+            12,
+            36_000_000_000,
+            Some("Apple M3"),
+            "macos",
+            "aarch64",
+        );
         assert_eq!(a, b);
     }
 
     #[test]
     fn apple_chip_parsing() {
-        assert_eq!(apple_chip_generation("Apple M3 Pro"), Some("M3".to_string()));
-        assert_eq!(apple_chip_generation("Apple M4 Max"), Some("M4".to_string()));
+        assert_eq!(
+            apple_chip_generation("Apple M3 Pro"),
+            Some("M3".to_string())
+        );
+        assert_eq!(
+            apple_chip_generation("Apple M4 Max"),
+            Some("M4".to_string())
+        );
         assert_eq!(apple_chip_generation("AMD Radeon"), None);
     }
 }

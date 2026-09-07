@@ -44,7 +44,7 @@ function absoluteUrl(value, name) {
 const appBaseUrl = absoluteUrl(process.env.ALLTERNIT_OFFICE_APP_BASE_URL || defaultBaseUrl(), 'ALLTERNIT_OFFICE_APP_BASE_URL')
 const platformUrl = absoluteUrl(process.env.ALLTERNIT_PLATFORM_URL || 'http://localhost:3013', 'ALLTERNIT_PLATFORM_URL')
 const supportUrl = absoluteUrl(process.env.ALLTERNIT_SUPPORT_URL || 'https://allternit.com', 'ALLTERNIT_SUPPORT_URL')
-const version = process.env.ALLTERNIT_OFFICE_VERSION || '1.0.0.0'
+const version = process.env.ALLTERNIT_OFFICE_VERSION || '1.1.1.0'
 
 mkdirSync(outputDir, { recursive: true })
 
@@ -58,7 +58,9 @@ for (const [key, host] of Object.entries(HOSTS)) {
     HOST_NAME: host.officeName,
     PLATFORM_URL: platformUrl,
     SUPPORT_URL: supportUrl,
-    TASKPANE_URL: `${appBaseUrl}/src/taskpane/index.html?product=${key}`,
+    // No index.html: Cloudflare Pages 308-redirects directory indexes, and
+    // Office task panes must load from a URL that returns 200 directly.
+    TASKPANE_URL: `${appBaseUrl}/src/taskpane/?product=${key}`,
     VERSION: version,
   }
   const rendered = template.replace(/\{\{([A-Z0-9_]+)\}\}/g, (_, token) => {

@@ -22,7 +22,7 @@ interface ArchivedSession {
   title: string;
   messageCount: number;
   archivedAt: Date;
-  mode: 'chat' | 'cowork' | 'code';
+  mode: 'chat' | 'cowork' | 'bot' | 'code';
 }
 
 /**
@@ -31,6 +31,7 @@ interface ArchivedSession {
 const MODE_COLORS = {
   chat: 'var(--status-info)',
   cowork: 'var(--accent-cowork)',
+  bot: 'var(--accent-bot, #2DD4BF)',
   code: 'var(--status-success)',
 } as const;
 

@@ -1,12 +1,7 @@
 //! Service status and diagnostics routes.
 
 use crate::AppState;
-use axum::{
-    extract::State,
-    response::Json,
-    routing::get,
-    Router,
-};
+use axum::{extract::State, response::Json, routing::get, Router};
 use serde::Serialize;
 use std::path::Path;
 use std::sync::Arc;
@@ -71,6 +66,7 @@ pub struct StatusResponse {
     pub cached_models: usize,
     pub platform: PlatformInfo,
     pub cpu: CpuInfo,
+    pub cpu_usage_percent: f32,
     pub ram: RamInfo,
     pub disk: DiskInfo,
     pub gpu: Option<Vec<GpuInfo>>,
@@ -100,7 +96,10 @@ async fn get_status(State(state): State<Arc<AppState>>) -> Json<StatusResponse> 
     let sys = System::new_all();
     let platform = platform_info(&sys);
     let cpu = cpu_info(&sys);
-    let ram = ram_info(&sys);
+    // Live CPU usage and memory pressure come from the background sampler —
+    // a per-request System can only report totals, not usage deltas.
+    let sample = state.sampler.latest();
+    let ram = ram_info(&sys, &sample);
     let gpu = detect_gpu(&ram);
 
     let profile = &state.hardware_profile;
@@ -111,6 +110,7 @@ async fn get_status(State(state): State<Arc<AppState>>) -> Json<StatusResponse> 
         cached_models,
         platform,
         cpu,
+        cpu_usage_percent: sample.global_cpu_usage,
         ram,
         disk,
         gpu,
@@ -149,10 +149,16 @@ fn cpu_info(sys: &System) -> CpuInfo {
     }
 }
 
-fn ram_info(sys: &System) -> RamInfo {
-    // sysinfo 0.30 reports memory in bytes.
-    let total_bytes = sys.total_memory();
-    let used_bytes = sys.used_memory();
+fn ram_info(sys: &System, sample: &crate::sampler::SystemSample) -> RamInfo {
+    // Live used/total memory comes from the background sampler; the
+    // per-request system only backs the totals if the sampler has never
+    // ticked (it is seeded at startup, so this is just a safety net).
+    let total_bytes = if sample.memory_total_bytes > 0 {
+        sample.memory_total_bytes
+    } else {
+        sys.total_memory()
+    };
+    let used_bytes = sample.memory_used_bytes;
 
     RamInfo {
         total_bytes,
@@ -172,9 +178,8 @@ fn disk_info(path: &Path) -> Result<DiskInfo, std::io::Error> {
         .find(|d| target.starts_with(d.mount_point()))
         .or_else(|| disks.iter().next());
 
-    let disk = disk.ok_or_else(|| {
-        std::io::Error::new(std::io::ErrorKind::NotFound, "no disk found")
-    })?;
+    let disk =
+        disk.ok_or_else(|| std::io::Error::new(std::io::ErrorKind::NotFound, "no disk found"))?;
 
     let total = disk.total_space();
     let free = disk.available_space();

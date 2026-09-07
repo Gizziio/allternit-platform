@@ -2772,22 +2772,43 @@ export function REPL({
       querySource: getQuerySourceForREPL()
     };
   }, [mainLoopModel, toolPermissionContext, mainThreadAgentDefinition, getToolUseContext, customSystemPrompt, appendSystemPrompt, canUseTool]);
+  // Live refs for the dashboard's synthetic main row: getMainRow is called
+  // from DashboardScreen's render (outside this component's own re-render
+  // timing), so it must read current values through refs rather than stale
+  // closure captures.
+  const isLoadingRef = React.useRef(isLoading);
+  isLoadingRef.current = isLoading;
+  const toolUseConfirmQueueRef = React.useRef(toolUseConfirmQueue);
+  toolUseConfirmQueueRef.current = toolUseConfirmQueue;
+  const handleDashboardPermissionDone = React.useCallback((toolUseID: string) => {
+    setToolUseConfirmQueue(q => q.filter(item => item.toolUseID !== toolUseID));
+  }, []);
+
   const dashboardSource = useMemo(() => new InProcessDashboardSource({
     getAppState: store.getState,
     setAppState,
     buildQueryParams: buildDashboardQueryParams,
-    // Synthetic leader row for the main session (Phase 5 wires live state).
-    getMainRow: () => ({
-      id: 'main',
-      source: 'in-process',
-      title: getCurrentSessionTitle(getSessionId()) ?? 'Main session',
-      state: 'idle',
-      activityLine: '',
-      directory: getCwdState(),
-      pinned: true,
-      createdAt: 0,
-      updatedAt: Date.now()
-    })
+    // Synthetic leader row for the main session with live state: a pending
+    // main-session permission prompt shows 'needs-input', an active query
+    // shows 'working', otherwise 'idle'.
+    getMainRow: () => {
+      const queue = toolUseConfirmQueueRef.current ?? [];
+      const permissionPending = queue.some(item => !item.dashboardTaskId);
+      const loading = isLoadingRef.current;
+      return {
+        id: 'main',
+        source: 'in-process',
+        title: getCurrentSessionTitle(getSessionId()) ?? 'Main session',
+        state: permissionPending ? 'needs-input' : loading ? 'working' : 'idle',
+        activityLine: permissionPending ? 'awaiting input' : loading ? 'working' : '',
+        directory: getCwdState(),
+        model: mainLoopModel?.alias ?? mainLoopModel?.fullName,
+        permissionMode: store.getState().toolPermissionContext?.mode,
+        pinned: true,
+        createdAt: 0,
+        updatedAt: Date.now()
+      };
+    }
   }), [store, setAppState, buildDashboardQueryParams]);
   const {
     handleBackgroundSession
@@ -4913,7 +4934,7 @@ export function REPL({
     const dashboardReturn = <KeybindingSetup>
         <AnimatedTerminalTitle isAnimating={titleIsAnimating} title={terminalTitle} disabled={titleDisabled} noPrefix={showStatusInTerminalTab} />
         <GlobalKeybindingHandlers {...globalKeybindingProps} />
-        <DashboardScreen source={dashboardSource} tools={tools} commands={commands} />
+        <DashboardScreen source={dashboardSource} tools={tools} commands={commands} permissionQueue={toolUseConfirmQueue} onPermissionDone={handleDashboardPermissionDone} />
       </KeybindingSetup>;
     return <AlternateScreen mouseTracking={isMouseTrackingEnabled()}>
         {dashboardReturn}

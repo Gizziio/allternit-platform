@@ -11,7 +11,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { createBrowserJSONStorage } from '@/lib/zustand-browser-storage';
+import { createVersionedPersistOptions } from '@/lib/bots/versioned-persist';
 
 export type BotRosterSortBy = 'name' | 'lastActive' | 'status';
 
@@ -118,13 +118,18 @@ export const useBotRosterStore = create<BotRosterState>()(
     }),
     {
       name: 'allternit-bot-roster',
-      storage: createBrowserJSONStorage(),
-      partialize: (state) => ({
-        selectedBotId: state.selectedBotId,
-        canonicalChatIds: state.canonicalChatIds,
-        pinnedBotIds: state.pinnedBotIds,
-        hiddenBotIds: state.hiddenBotIds,
-        isCompact: state.isCompact,
+      // schemaVersion 1: identity migration only (future-proofing per the
+      // Hermes BotMeta v1→v2 migration discipline).
+      ...createVersionedPersistOptions<BotRosterState>({
+        schemaVersion: 1,
+        migrations: { 0: (state) => state },
+        partialize: (state) => ({
+          selectedBotId: state.selectedBotId,
+          canonicalChatIds: state.canonicalChatIds,
+          pinnedBotIds: state.pinnedBotIds,
+          hiddenBotIds: state.hiddenBotIds,
+          isCompact: state.isCompact,
+        }),
       }),
     },
   ),

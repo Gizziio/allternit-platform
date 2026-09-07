@@ -41,6 +41,7 @@ pub mod beta_deployment_routes;
 pub mod beta_memory_store_routes;
 pub mod beta_session_routes;
 pub mod beta_work_routes;
+pub mod bot_assets;
 pub mod bot_desktop_audit;
 pub mod bot_desktop_billing;
 pub mod bot_desktop_capacity;
@@ -196,6 +197,8 @@ pub mod webhook_subscription_routes;
 pub mod webhook_trigger_routes;
 pub mod workflow_routes;
 pub mod workspace_routes;
+pub mod remote_peers;
+pub mod group_rooms;
 
 use allternit_cowork_runtime::RunManager;
 use allternit_cowork_scheduler::Scheduler;

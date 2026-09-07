@@ -139,6 +139,25 @@ export async function sendTerminalInput(remoteSessionId: string, data: string): 
   if (!response.ok) throw await responseError(response, 'Terminal input failed');
 }
 
+// Per-session write chains. Every keystroke is its own HTTP POST and the
+// gateway writes to the PTY in arrival order, so concurrent posts can land
+// out of order and garble input ("cheo" for "echo"). Chaining the posts per
+// session preserves keystroke order without blocking the UI on each write.
+const inputWriteQueues = new Map<string, Promise<unknown>>();
+
+export function queueTerminalInput(remoteSessionId: string, data: string): Promise<void> {
+  const pending = inputWriteQueues.get(remoteSessionId) ?? Promise.resolve();
+  const next = pending.then(() => sendTerminalInput(remoteSessionId, data));
+  inputWriteQueues.set(
+    remoteSessionId,
+    next.catch(() => {
+      // The rejection is delivered to the caller through `next`; the stored
+      // chain must stay settled so later writes are not wedged behind a failure.
+    }),
+  );
+  return next;
+}
+
 /**
  * Check whether a remote session is still alive without side effects (an
  * empty input write is a no-op for the shell). Used to validate persisted
@@ -179,6 +198,7 @@ export async function closeTerminalSession(remoteSessionId: string): Promise<voi
     // when the remote runtime has stopped.
   } finally {
     terminalConnections.delete(remoteSessionId);
+    inputWriteQueues.delete(remoteSessionId);
   }
 }
 

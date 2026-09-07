@@ -38,7 +38,7 @@
     "@allternit/office-xlsx-engine": "workspace:*",
     "@phosphor-icons/react": "^2.1.10",
     "pdf-lib": "^1.17.1",
-    "pdfjs-dist": "^5.4.624",
+    "pdfjs-dist": "^6.3.289",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },

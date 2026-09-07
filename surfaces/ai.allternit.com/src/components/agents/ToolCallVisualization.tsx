@@ -456,10 +456,11 @@ function ResultViewer({ result }: { result: unknown }) {
 }
 
 // Helper hook to get surface accent color
-export function getToolCallAccent(surface: "chat" | "cowork" | "code" | "browser" | "design"): string {
+export function getToolCallAccent(surface: "chat" | "cowork" | "bot" | "code" | "browser" | "design"): string {
   const colors = {
     chat: "#D4956A",
     cowork: "#A78BFA",
+    bot: "#2DD4BF",
     code: "#79C47C",
     browser: "#69A8C8",
     design: "#D4B08C",

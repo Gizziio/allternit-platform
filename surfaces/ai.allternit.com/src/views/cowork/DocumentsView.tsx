@@ -6,7 +6,7 @@ import { listDocumentWorkflowDrafts, listPromotedDocumentWorkflows, promoteDocum
 
 /**
  * Cowork Documents view — consolidated onto the unified Documents & Office
- * launcher (the four GenOffice-backed editors). The legacy editor packs
+ * launcher (the four Allternit Office-backed editors). The legacy editor packs
  * (local-storage Univer/proto editors) are superseded by the launcher;
  * this view additionally keeps the reusable-workflows surface.
  */

@@ -21,6 +21,12 @@ interface ModalProps {
   usePortal?: boolean;
   preventBackdropClose?: boolean;
   className?: string;
+  /**
+   * Stacking base for use inside containers that create their own stacking
+   * context above the modal layer (e.g. the console drawer at z-index 900).
+   * Defaults to Z.modalBackdrop.
+   */
+  zIndex?: number;
 }
 
 const SIZE_WIDTHS: Record<string, string> = {
@@ -38,6 +44,7 @@ export function Modal({
   usePortal = true,
   preventBackdropClose = false,
   className = '',
+  zIndex,
 }: ModalProps): React.ReactNode | null {
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -70,7 +77,7 @@ export function Modal({
       style={{
         position: 'fixed',
         inset: 0,
-        zIndex: Z.modalBackdrop,
+        zIndex: zIndex ?? Z.modalBackdrop,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -85,7 +92,7 @@ export function Modal({
         style={{
           position: 'absolute',
           inset: 0,
-          background: 'var(--shell-overlay-backdrop, rgba(42,31,22,0.18))',
+          background: 'var(--shell-overlay-backdrop, rgba(0,0,0,0.18))',
           backdropFilter: 'blur(4px)',
         }}
       />

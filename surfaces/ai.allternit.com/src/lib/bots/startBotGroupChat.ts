@@ -44,12 +44,19 @@ export async function startBotGroupChat(
     };
   });
 
-  const sessionName =
+  const displayName =
     name?.trim() ||
     `${members.map((p) => p.displayName).join(', ').slice(0, 60)}` ||
     'Group Chat';
 
-  const groupId = groupStore.createGroup(sessionName, members);
+  const groupId = groupStore.createGroup(displayName, members);
+
+  // Hermes naming rule: the session NAME is exactly `Group: <roomId>`. A
+  // same-name room recreate mints a new groupId, so the new session's name
+  // can never collide with — and therefore never resume — a stale session
+  // created for the previous room. The human-readable name lives on the
+  // group record, not the session.
+  const sessionName = `Group: ${groupId}`;
 
   const botProfiles = bots.map((bot) => ({
     id: bot.id,

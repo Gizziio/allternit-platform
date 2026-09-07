@@ -82,10 +82,17 @@ impl Assessor {
     }
 
     /// Assess a repo against the provided hardware profile.
-    pub async fn assess(&self, request: AssessRequest, hardware: &HardwareProfile) -> AssessResponse {
+    pub async fn assess(
+        &self,
+        request: AssessRequest,
+        hardware: &HardwareProfile,
+    ) -> AssessResponse {
         let repo_id = request.repo_id.trim().to_string();
         let parsed = parse_repo_id(&repo_id);
-        let quant = parse_quantization(request.quantization.as_deref().unwrap_or(""), &parsed.quant_from_name);
+        let quant = parse_quantization(
+            request.quantization.as_deref().unwrap_or(""),
+            &parsed.quant_from_name,
+        );
 
         let tree = self.fetch_tree(&repo_id).await;
         let has_tree = tree.is_some();
@@ -110,7 +117,10 @@ impl Assessor {
             (0, "guess")
         };
 
-        let active_params_b = parsed.active_params_b.or(parsed.total_params_b).unwrap_or(0.0);
+        let active_params_b = parsed
+            .active_params_b
+            .or(parsed.total_params_b)
+            .unwrap_or(0.0);
         let total_params_b = parsed.total_params_b.unwrap_or(active_params_b);
 
         let context = request.context_length.unwrap_or(4096).max(1);
@@ -222,7 +232,9 @@ fn parse_repo_id(repo_id: &str) -> ParsedRepo {
     }
 
     // Quantization from name.
-    for q in ["q2_k", "q3_k", "q4_k", "q5_k", "q6_k", "q8_0", "fp16", "bf16", "fp32"] {
+    for q in [
+        "q2_k", "q3_k", "q4_k", "q5_k", "q6_k", "q8_0", "fp16", "bf16", "fp32",
+    ] {
         if lower.contains(q) {
             parsed.quant_from_name = Some(q.to_string());
             break;
@@ -256,7 +268,9 @@ fn parse_quantization(input: &str, from_name: &Option<String>) -> QuantInfo {
         Some("fp32") => Some(32.0),
         _ => Some(4.0),
     };
-    QuantInfo { bits_per_param: bits }
+    QuantInfo {
+        bits_per_param: bits,
+    }
 }
 
 fn estimate_bytes_from_params(params_b: f32, bits_per_param: f32) -> u64 {
@@ -284,10 +298,7 @@ fn estimate_loaded_bytes(
 
 fn compute_fit(loaded_bytes: u64, budget_bytes: u64) -> (String, String) {
     if budget_bytes == 0 {
-        return (
-            "no".to_string(),
-            "Hardware memory not detected".to_string(),
-        );
+        return ("no".to_string(), "Hardware memory not detected".to_string());
     }
     // Require 1.5x headroom for weights + activations + OS/services.
     let required = (loaded_bytes as f64 * 1.5) as u64;

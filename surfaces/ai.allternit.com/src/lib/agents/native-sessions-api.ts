@@ -100,7 +100,7 @@ export const nativeSessionsApi = {
   async pickup(input: {
     harness: string;
     sessionId: string;
-    surface?: "chat" | "cowork" | "code" | "browser" | "design";
+    surface?: "chat" | "cowork" | "bot" | "code" | "browser" | "design";
     cwd?: string;
   }): Promise<PickupResult> {
     const res = await authFetch(`${getBase()}/pickup`, {

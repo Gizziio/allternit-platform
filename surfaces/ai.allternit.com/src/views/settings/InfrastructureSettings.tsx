@@ -28,6 +28,9 @@ import {
   Sparkle,
   Spinner,
   WarningCircle,
+  Receipt,
+  Desktop,
+  Buildings,
 } from "@phosphor-icons/react";
 
 // Import real API clients
@@ -55,6 +58,12 @@ import { cn } from '@/lib/utils';
 
 // Import Environment Wizard
 import { EnvironmentWizard } from '../../components/environments/EnvironmentWizard';
+
+// Consolidated compute panels (absorbed the former "Compute & Cloud Desktops"
+// settings section — see settings.config.ts legacy redirects).
+import { ComputeBillingPanel } from '@/components/settings/ComputeBillingPanel';
+import { EnterpriseByocPanel } from '@/components/settings/EnterpriseByocPanel';
+import { DesktopCloudAdminView } from '@/views/desktop-cloud/DesktopCloudAdminView';
 
 import { createModuleLogger } from '@/lib/logger';
 
@@ -96,8 +105,10 @@ interface InfrastructureError {
   providers?: string;
 }
 
+type InfrastructureTab = 'overview' | 'providers' | 'connections' | 'environments' | 'nodes' | 'billing' | 'desktops' | 'byoc';
+
 interface InfrastructureSettingsProps {
-  initialTab?: 'overview' | 'providers' | 'connections' | 'environments' | 'nodes';
+  initialTab?: InfrastructureTab;
 }
 
 export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ initialTab = 'overview' }) => {
@@ -105,7 +116,7 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
   const isClient = useIsClient();
   
   // Tab state
-  const [activeTab, setActiveTab] = useState<'overview' | 'providers' | 'connections' | 'environments' | 'nodes'>(initialTab);
+  const [activeTab, setActiveTab] = useState<InfrastructureTab>(initialTab);
   
   // Inline state adjustment for initialTab change
   const [prevInitialTab, setPrevInitialTab] = useState(initialTab);
@@ -1247,6 +1258,9 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
           { id: 'connections', label: 'VPS Connections', icon: HardDrives },
           { id: 'environments', label: 'Environments', icon: Package },
           { id: 'nodes', label: 'Nodes', icon: Cpu },
+          { id: 'billing', label: 'Billing & Credits', icon: Receipt },
+          { id: 'desktops', label: 'Cloud Desktops', icon: Desktop },
+          { id: 'byoc', label: 'BYOC', icon: Buildings },
         ].map(tab => (
           <button type="button"
             key={tab.id}
@@ -1268,6 +1282,9 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
         {activeTab === 'connections' && renderConnections()}
         {activeTab === 'environments' && renderEnvironments()}
         {activeTab === 'nodes' && renderNodes()}
+        {activeTab === 'billing' && <ComputeBillingPanel />}
+        {activeTab === 'desktops' && <DesktopCloudAdminView />}
+        {activeTab === 'byoc' && <EnterpriseByocPanel />}
       </div>
       
       {/* Environment Wizard Modal */}

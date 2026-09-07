@@ -22,7 +22,7 @@ export type { AvatarConfig } from './character.types';
 // Agent Types
 export type AgentType = 'orchestrator' | 'sub-agent' | 'worker' | 'specialist' | 'reviewer' | 'assistant';
 
-export type AppMode = 'chat' | 'cowork' | 'code' | 'design' | 'browser';
+export type AppMode = 'chat' | 'cowork' | 'bot' | 'code' | 'design' | 'browser';
 
 // Harness configuration (canonical @allternit/sdk/harness shape)
 export interface HarnessBYOKProviderConfig {
@@ -413,6 +413,13 @@ export interface BotProfile {
   defaultPresetId?: string;
   /** Functional bot category for filtering in the hub (distinct from agent category) */
   botCategory?: BotCategory;
+  /**
+   * User-managed Bot Hub section this bot belongs to (spec Phase 5).
+   * Defaults to `category:<botCategory>` when unset so existing bots land in
+   * sensible buckets. Membership lives on the bot: deleting a section never
+   * orphans the bot — it falls back to the "All bots" bucket.
+   */
+  sectionId?: string;
   /** Lifecycle state: draft, active, archived, deprecated */
   lifecycle?: 'draft' | 'active' | 'archived' | 'deprecated';
   /** Deterministic bot avatar stored in bot metadata. */
@@ -727,6 +734,7 @@ export const agentSchema = z.object({
     groupChatEnabled: z.boolean().optional(),
     defaultPresetId: z.string().optional(),
     botCategory: z.enum(['research', 'code', 'writing', 'data', 'sales', 'design', 'ops', 'custom']).optional(),
+    sectionId: z.string().optional(),
     lifecycle: z.enum(['draft', 'active', 'archived', 'deprecated']).optional(),
     avatar: z.any().optional(),
   }).optional(),
@@ -878,6 +886,7 @@ const createAgentInputSchema = z.object({
     groupChatEnabled: z.boolean().optional(),
     defaultPresetId: z.string().optional(),
     botCategory: z.enum(['research', 'code', 'writing', 'data', 'sales', 'design', 'ops', 'custom']).optional(),
+    sectionId: z.string().optional(),
   }).optional(),
   brainId: z.string().optional(),
   connectorBindings: z.array(agentConnectorBindingSchema).optional(),

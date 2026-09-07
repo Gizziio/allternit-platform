@@ -113,6 +113,8 @@ export function WorkspaceBackground(): React.ReactNode {
           ? 'var(--view-browser-bg)'
           : mode === 'cowork'
           ? 'var(--view-cowork-bg)'
+          : mode === 'bot'
+          ? 'var(--view-bot-bg)'
           : 'var(--shell-frame-bg)',
       }}
     >
@@ -131,6 +133,34 @@ export function WorkspaceBackground(): React.ReactNode {
             maskImage: 'linear-gradient(180deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.2) 60%, transparent 100%)',
           }}
         />
+      )}
+
+      {/* Bot mode: sparse dot field with faint orbit orbs in the bot accent —
+          a sibling of cowork's grid, distinct but equally subtle. */}
+      {mode === 'bot' && (
+        <>
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              opacity: 0.35,
+              backgroundImage: `radial-gradient(color-mix(in srgb, var(--accent-bot) 22%, transparent) 1px, transparent 1px)`,
+              backgroundSize: '48px 48px',
+              backgroundPosition: 'center',
+              maskImage: 'radial-gradient(circle at 50% 38%, rgba(0,0,0,0.9) 0%, transparent 72%)',
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background: `
+                radial-gradient(560px 420px at 18% 12%, color-mix(in srgb, var(--accent-bot) 9%, transparent) 0%, transparent 70%),
+                radial-gradient(640px 480px at 84% 78%, color-mix(in srgb, var(--accent-bot) 7%, transparent) 0%, transparent 70%)
+              `,
+            }}
+          />
+        </>
       )}
 
       {/* Very faint vignette to keep the canvas from feeling flat, using neutral shell tones */}

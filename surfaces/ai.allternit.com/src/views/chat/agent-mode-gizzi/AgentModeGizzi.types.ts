@@ -89,6 +89,13 @@ export const SURFACE_CONFIG: Record<AgentModeSurface, SurfaceConfig> = {
     selectedEmotion: 'proud',
     peekEmotion: 'mischief',
   },
+  bot: {
+    entrySide: 'right',
+    mascotSize: 74,
+    baseEmotion: 'curious',
+    selectedEmotion: 'pleased',
+    peekEmotion: 'mischief',
+  },
   code: {
     entrySide: 'left',
     mascotSize: 68,
@@ -132,6 +139,16 @@ export const SURFACE_THOUGHTS: Record<AgentModeSurface, string[]> = {
     "Efficiency is my middle name.",
     "Everything is running smoothly.",
     "I've got the DAG under control.",
+  ],
+  bot: [
+    "Standing by for your bots.",
+    "Which of your bots should we wake up?",
+    "Your bots are ready to work.",
+    "Pin your favorites for quick access.",
+    "A bot for every job, all in one place.",
+    "Need a specialist? I've got a roster.",
+    "Group chats can draft together, too.",
+    "Ready when your bots are.",
   ],
   code: [
     "Debugging brain engaged.",

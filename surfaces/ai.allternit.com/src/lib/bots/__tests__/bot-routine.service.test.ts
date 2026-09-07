@@ -137,12 +137,16 @@ describe('executeBotRoutine', () => {
 });
 
 describe('runDueBotRoutines', () => {
-  it('runs only due routines', async () => {
+  it('excludes startup routines by default; runs them when included', async () => {
     createRoutine('bot-1', 'Due', 'startup');
     createRoutine('bot-1', 'Future', 'monthly');
 
+    // Default sweep skips startup routines (they run once per app launch via
+    // the timer's mount sweep instead).
     await runDueBotRoutines();
+    expect(sendMessageMock).not.toHaveBeenCalled();
 
+    await runDueBotRoutines({ includeStartup: true });
     expect(sendMessageMock).toHaveBeenCalledTimes(1);
   });
 });

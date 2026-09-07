@@ -437,7 +437,7 @@ export function ThreadsView(): React.ReactNode {
       {/* Delete Confirm Modal */}
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="w-full max-w-sm p-5 rounded-2xl bg-[var(--surface-panel)] border border-solid border-[var(--border-subtle)] shadow-[var(--shadow-xl)]">
+          <div className="w-full max-w-sm p-5 rounded-2xl bg-[var(--bg-elevated)] border border-solid border-[var(--border-subtle)] shadow-[var(--shadow-xl)]">
             <h3 className="text-[16px] font-semibold text-[var(--text-primary)] mb-1">Delete Session?</h3>
             <p className="text-[13px] text-[var(--text-secondary)] mb-4">
               Are you sure you want to delete &ldquo;{deleteTarget.name || 'Untitled Session'}&rdquo;? This cannot be undone.

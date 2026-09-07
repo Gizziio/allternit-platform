@@ -252,7 +252,7 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
         initial={{ opacity: 0, scale: 0.96, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.5, ease: [0.2, 0, 0, 1] }}
-        className="w-full max-w-[720px] max-h-[90vh] bg-[var(--surface-panel)] rounded-[24px] border border-solid border-[var(--border-subtle)] shadow-[0_40px_80px_rgba(0,0,0,0.6)] flex flex-col overflow-hidden relative"
+        className="w-full max-w-[720px] max-h-[90vh] bg-[var(--bg-elevated)] rounded-[24px] border border-solid border-[var(--border-subtle)] shadow-[0_40px_80px_rgba(0,0,0,0.6)] flex flex-col overflow-hidden relative"
       >
         {/* Top Bar */}
         <div className="flex items-center justify-between p-[20px_24px_0]">

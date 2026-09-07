@@ -109,10 +109,15 @@ describe('Grok-style slash menu presentation', () => {
 describe('Grok muscle-memory aliases', () => {
   test('session and mode aliases match Grok names', () => {
     expect(rewind.aliases).toContain('undo')
+    // The full-screen agent dashboard owns 'dashboard'/'sessions'; the
+    // session-stats screen keeps only its own name (/dash) — regression
+    // guard for the alias collision that hijacked /dashboard resolution.
     expect(dash.name).toBe('dash')
     expect(dashboard.name).toBe('dashboard')
     expect(dashboard.aliases).toContain('sessions')
     expect(dashboard.aliases).toContain('agents-dashboard')
+    expect((dash as Command).aliases ?? []).not.toContain('dashboard')
+    expect((dash as Command).aliases ?? []).not.toContain('sessions')
     expect(status.aliases).toContain('session-info')
     expect(status.aliases).toContain('info')
     expect(model.aliases).toContain('m')

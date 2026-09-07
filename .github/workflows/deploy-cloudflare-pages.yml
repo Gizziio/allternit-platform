@@ -6,6 +6,7 @@ on:
     paths:
       - 'surfaces/ai.allternit.com/**'
       - 'surfaces/platform.allternit.com/**'
+      - 'surfaces/allternit-extensions/allternit-office-addin/**'
       - 'packages/@allternit/**'
       - 'services/runtime/**'
       - '.github/workflows/deploy-cloudflare-pages.yml'
@@ -152,6 +153,41 @@ jobs:
           echo "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is set (${#NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY} chars)."
         env:
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+
+      - name: Build Office add-in runtime (Allternit for Word/Excel/PowerPoint)
+        # Canonical home: the isolated allternit-office-addins Pages project
+        # (nothing else deploys there, so the task panes cannot be clobbered
+        # by the allternit-websites platform export that also targets
+        # platform.allternit.com). The platform postbuild additionally embeds
+        # this build at platform.allternit.com/office-addins — see the add-in's
+        # DEPLOYMENT.md.
+        run: pnpm --filter "@allternit/office" build
+        env:
+          ALLTERNIT_OFFICE_APP_BASE_URL: 'https://allternit-office-addins.pages.dev/office-addins'
+          ALLTERNIT_PLATFORM_URL: 'https://platform.allternit.com'
+          VITE_ALLTERNIT_GATEWAY_URL: 'https://api.allternit.com'
+          VITE_ALLTERNIT_PLATFORM_URL: 'https://platform.allternit.com'
+          VITE_ALLTERNIT_OFFICE_BASE_PATH: '/office-addins/'
+
+      - name: Stage Office add-in Pages deploy
+        # Assemble the isolated project's layout: the runtime under
+        # /office-addins/ plus a framing-allow _headers at the root. Staging
+        # under a non-gitignored path keeps wrangler's .gitignore-based asset
+        # filter from dropping the (gitignored) add-in dist contents.
+        run: |
+          STAGING="surfaces/allternit-extensions/allternit-office-addin/pages-deploy"
+          rm -rf "$STAGING"
+          mkdir -p "$STAGING/office-addins"
+          cp -R surfaces/allternit-extensions/allternit-office-addin/dist/. "$STAGING/office-addins/"
+          cp -R surfaces/allternit-extensions/allternit-office-addin/manifests "$STAGING/office-addins/manifests"
+          printf '/*\n  X-Frame-Options: ALLOWALL\n  Content-Security-Policy: frame-ancestors https://*.cloud.microsoft https://*.office.com https://*.officeapps.live.com https://*.microsoft.com https://*.sharepoint.com https://*.onedrive.live.com https://*.live.com\n' > "$STAGING/_headers"
+
+      - name: Deploy Office add-in runtime to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy surfaces/allternit-extensions/allternit-office-addin/pages-deploy --project-name=allternit-office-addins --branch=main
 
       - name: Build platform.allternit.com
         run: pnpm --filter "@allternit/platform-console" build

@@ -24,6 +24,7 @@ import {
 import type { AiSettings, OpenFileResult } from '../shared/ipc'
 import { AI_PROVIDERS } from '../shared/ipc'
 import { AiPanel } from './ai/AiPanel'
+import { OfficeAiSlot } from '@allternit/office-suite/bridge'
 import { asianCharCount, countWords, nonAsianWordCount } from './word-count'
 import { toRoman } from './note-format'
 import { CommentsPanel } from './components/CommentsPanel'
@@ -2497,20 +2498,27 @@ export function App() {
         {doc && (
           <div className={`ai-dock${showAi ? '' : ' collapsed'}`}>
             {/* always mounted: collapse must not drop state or in-flight runs */}
-            <AiPanel
-              key={aiPanelKey}
-              editor={editor}
-              blocks={doc.parsed.blocks}
-              settings={settings}
-              docEmpty={wordCount === 0}
-              numIdFallback={
-                doc.isBlank ? { bullet: BLANK_BULLET_NUM_ID, ordered: BLANK_ORDERED_NUM_ID } : null
+            <OfficeAiSlot
+              appKey="docs"
+              collapsed={!showAi}
+              close={() => setShowAi(false)}
+              fallback={
+                <AiPanel
+                  key={aiPanelKey}
+                  editor={editor}
+                  blocks={doc.parsed.blocks}
+                  settings={settings}
+                  docEmpty={wordCount === 0}
+                  numIdFallback={
+                    doc.isBlank ? { bullet: BLANK_BULLET_NUM_ID, ordered: BLANK_ORDERED_NUM_ID } : null
+                  }
+                  preset={aiPreset}
+                  open={showAi}
+                  onExpand={() => setShowAi(true)}
+                  onCollapse={() => setShowAi(false)}
+                  filePath={doc?.filePath ?? null}
+                />
               }
-              preset={aiPreset}
-              open={showAi}
-              onExpand={() => setShowAi(true)}
-              onCollapse={() => setShowAi(false)}
-              filePath={doc?.filePath ?? null}
             />
           </div>
         )}

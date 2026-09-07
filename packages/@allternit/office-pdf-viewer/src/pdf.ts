@@ -16,7 +16,8 @@ export interface PdfDocumentHandle {
 }
 
 export async function openPdf(bytes: Uint8Array): Promise<PdfDocumentHandle> {
-  const doc = await pdfjs.getDocument({ data: bytes }).promise
+  const task = pdfjs.getDocument({ data: bytes })
+  const doc = await task.promise
 
   return {
     pageCount: doc.numPages,
@@ -49,7 +50,7 @@ export async function openPdf(bytes: Uint8Array): Promise<PdfDocumentHandle> {
     },
 
     async destroy() {
-      await doc.destroy()
+      await task.destroy()
     },
   }
 }

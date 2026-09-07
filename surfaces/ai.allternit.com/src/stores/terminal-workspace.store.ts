@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware';
 import { createBrowserJSONStorage } from '@/lib/zustand-browser-storage';
 import { closeTerminalSession } from '@/lib/terminal-api';
 
-export type TerminalTileSourceSurface = 'code' | 'chat' | 'cowork';
+export type TerminalTileSourceSurface = 'code' | 'chat' | 'cowork' | 'bot';
 
 export interface TerminalTileSourceTag {
   surface: TerminalTileSourceSurface;
@@ -21,6 +21,8 @@ export interface TerminalTile {
   spawnCommand?: string;
   /** Set when the tile was spawned from a code/chat/cowork session. */
   sourceTag?: TerminalTileSourceTag;
+  /** Per-tile body height (px) set by dragging the bottom-edge resize handle. */
+  height?: number;
   createdAt: number;
 }
 
@@ -30,11 +32,15 @@ interface TerminalWorkspaceState {
   focusedTileId: string | null;
   /** null = all tiles; otherwise only tiles tagged with this session id. */
   filterTag: string | null;
+  /** xterm font size (px) applied to every tile. */
+  fontSize: number;
 
   addTile: (tile: TerminalTile) => void;
   /** Removes the tile and disposes its remote PTY (if one is registered). */
   removeTile: (id: string) => void;
   renameTile: (id: string, label: string) => void;
+  setTileHeight: (id: string, height: number) => void;
+  setFontSize: (fontSize: number) => void;
   setFocused: (id: string | null) => void;
   setFilterTag: (sessionId: string | null) => void;
 
@@ -67,6 +73,7 @@ export const useTerminalWorkspaceStore = create<TerminalWorkspaceState>()(
       tiles: [],
       focusedTileId: null,
       filterTag: null,
+      fontSize: 12,
 
       addTile: (tile) => {
         set((state) => ({ tiles: [...state.tiles, tile] }));
@@ -90,6 +97,19 @@ export const useTerminalWorkspaceStore = create<TerminalWorkspaceState>()(
         set((state) => ({
           tiles: state.tiles.map((tile) => (tile.id === id ? { ...tile, label: trimmed } : tile)),
         }));
+      },
+
+      setTileHeight: (id, height) => {
+        const clamped = Math.max(120, Math.min(1200, Math.round(height)));
+        set((state) => ({
+          tiles: state.tiles.map((tile) =>
+            tile.id === id ? { ...tile, height: clamped } : tile,
+          ),
+        }));
+      },
+
+      setFontSize: (fontSize) => {
+        set({ fontSize: Math.max(8, Math.min(24, Math.round(fontSize))) });
       },
 
       setFocused: (id) => {
@@ -128,6 +148,7 @@ export const useTerminalWorkspaceStore = create<TerminalWorkspaceState>()(
         tiles: state.tiles,
         focusedTileId: state.focusedTileId,
         filterTag: state.filterTag,
+        fontSize: state.fontSize,
       }),
     },
   ),

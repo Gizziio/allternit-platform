@@ -22,6 +22,7 @@ import {
 } from './screen.js'
 import {
   CURSOR_HOME,
+  eraseToEndOfLine as ERASE_TO_EOL,
   scrollDown as csiScrollDown,
   scrollUp as csiScrollUp,
   RESET_SCROLL_REGION,
@@ -103,7 +104,16 @@ export class LogUpdate {
         line += ansiCodesToString(resetCodes)
         currentStyles = []
       }
-      lines.push(line.trimEnd())
+      // Erase to end of line after the row's content. Non-TTY frames are
+      // emitted whole and re-land on the same screen region every frame
+      // (alt screen: ink.tsx anchors each frame with CSI H + a park patch),
+      // but lines are trimEnd'd — without the erase, cells past the new
+      // (shorter) line end keep whatever an earlier, longer frame wrote
+      // there. Interactive sessions piped through another process (`| tee`)
+      // hit this constantly: stdin comes from /dev/tty and every keystroke
+      // re-renders, so stale tails (ghost cells) accumulate on the terminal.
+      // Styles are reset above, so the erase uses the default background.
+      lines.push(line.trimEnd() + ERASE_TO_EOL())
     }
 
     if (lines.length === 0) {
@@ -303,10 +313,70 @@ export class LogUpdate {
     let currentStyleId = stylePool.none
     let currentHyperlink: Hyperlink = undefined
 
+    // Per-row stale-tail sweep: when a row's painted extent shrinks (prev has
+    // non-empty cells beyond the last non-empty next cell), cells past the
+    // new extent may still show old characters on the physical terminal —
+    // the per-cell diff above only visits cells inside the damage region,
+    // and a damaged prefix can coexist with a stale tail the two frame
+    // buffers agree on (e.g. tail restored by a clean-subtree blit from
+    // prevScreen). Detect the shrink per changed row and erase to
+    // end of line. Cost: one backward scan per changed row, stopping at the
+    // first non-empty cell; no-op for the steady-state no-shrink case.
+    const rowTailState = {
+      y: -1,
+      pending: false,
+    }
+
+    // Last non-empty cell index in row y of screen, scanning leftward from
+    // limit-1, or -1 if the row is empty within [0, limit). Reads packed
+    // words directly — a cell is empty iff both Int32 words are zero.
+    const rowContentEnd = (s: Screen, y: number, limit: number): number => {
+      const w = s.width
+      if (y < 0 || y >= s.height || w <= 0) return -1
+      const max = Math.min(limit, w)
+      let ci = (y * w + max - 1) << 1
+      for (let x = max - 1; x >= 0; x--, ci -= 2) {
+        if (s.cells[ci] !== 0 || s.cells[ci | 1] !== 0) return x
+      }
+      return -1
+    }
+
+    // Emit the erase for the row collected in rowTailState, if its painted
+    // extent shrank. Cursor ends at (nextEnd + 1, y). Styles/hyperlinks are
+    // reset first: CSI K erases with the current SGR background (BCE), and
+    // the last written cell on the row may carry a background style.
+    const flushRowTail = (): void => {
+      if (!rowTailState.pending) return
+      rowTailState.pending = false
+      const { y } = rowTailState
+      const prevEnd = rowContentEnd(prev.screen, y, prev.screen.width)
+      const nextEnd = rowContentEnd(next.screen, y, next.screen.width)
+      if (prevEnd > nextEnd) {
+        moveCursorTo(screen, nextEnd + 1, y)
+        currentStyleId = transitionStyle(
+          screen.diff,
+          stylePool,
+          currentStyleId,
+          stylePool.none,
+        )
+        currentHyperlink = transitionHyperlink(
+          screen.diff,
+          currentHyperlink,
+          undefined,
+        )
+        screen.diff.push({ type: 'stdout', content: ERASE_TO_EOL() })
+      }
+    }
+
     // First pass: render changes to existing rows (rows < prev.screen.height)
     let needsFullReset = false
     let resetTriggerY = -1
     diffEach(prev.screen, next.screen, (x, y, removed, added) => {
+      if (y !== rowTailState.y) {
+        flushRowTail()
+        rowTailState.y = y
+        rowTailState.pending = true
+      }
       // Skip new rows - we'll render them directly after
       if (growing && y >= prev.screen.height) {
         return
@@ -380,6 +450,10 @@ export class LogUpdate {
         })
       }
     })
+    if (!needsFullReset) {
+      // Emit the pending stale-tail erase for the final visited row.
+      flushRowTail()
+    }
     if (needsFullReset) {
       return fullResetSequence_CAUSES_FLICKER(next, 'offscreen', stylePool, {
         triggerY: resetTriggerY,

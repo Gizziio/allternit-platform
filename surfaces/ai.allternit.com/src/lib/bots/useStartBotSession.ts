@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { useChatSessionStore } from '@/views/chat/ChatSessionStore';
 import { resolveAgentSecrets } from '@/lib/agents/agent-secrets-resolver';
 import { resolveAgentConnectors } from '@/lib/agents/agent-connectors-resolver';
+import { useAgentStore } from '@/lib/agents/agent.store';
 import {
   createSandbox,
   getSandboxForAgent,
@@ -11,13 +12,24 @@ import {
 import { useBotAllternitBusStore } from './bot-allternit-bus';
 import { injectBotMemoryIntoSystemPrompt } from './bot-memory-context';
 import { useBotRosterStore } from './bot-roster.store';
-import type { Agent } from '../agents/agent.types';
+import { isBot } from './bot-profile';
+import {
+  computeCapabilityEpoch,
+  capabilityEpochLine,
+  hasEpochDrifted,
+  type CapabilityRosterEntry,
+} from './bot-capability-epoch';
+import { createAgent, getAgent } from '../agents/agent.service';
+import type { Agent, CreateAgentInput } from '../agents/agent.types';
 
 export interface UseStartBotSessionReturn {
   startSession: (agent: Agent, options?: { modeId?: string; modelOverride?: string }) => Promise<string | null>;
   startTask: (agent: Agent, task: string, options?: { modeId?: string; modelOverride?: string }) => Promise<string | null>;
   isStarting: boolean;
   error: string | null;
+  /** Non-fatal notice, e.g. "Running locally — sync pending" when the
+   * backend session could not be created but a local session is live. */
+  warning: string | null;
 }
 
 interface BotSessionStartResult {
@@ -55,6 +67,14 @@ function buildVMSystemPrompt(vmConfig: NonNullable<Agent['vmOperator']>, sandbox
   return lines.filter(Boolean).join('\n');
 }
 
+function buildIdentityPrompt(displayName: string, capabilityEpoch: string): string {
+  return (
+    `You are ${displayName}. You must ALWAYS identify yourself as ${displayName}. ` +
+    `NEVER say you are Kimi, GPT, Claude, an AI assistant created by another company, or any name other than ${displayName}.\n` +
+    capabilityEpochLine(capabilityEpoch)
+  );
+}
+
 /**
  * Start a packaged-bot session using the existing chat session store.
  *
@@ -69,6 +89,7 @@ export function useStartBotSession(
 ): UseStartBotSessionReturn {
   const [isStarting, setIsStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
 
 function resolveRuntimeModelId(agent: Agent, modelOverride?: string): string | undefined {
   if (modelOverride) return modelOverride;
@@ -87,16 +108,47 @@ function resolveRuntimeModelId(agent: Agent, modelOverride?: string): string | u
     const store = useChatSessionStore.getState();
     const runtimeModelId = resolveRuntimeModelId(agent, options?.modelOverride);
 
+    // Capability epoch (spec AD-4): fingerprint the bot's whole capability
+    // surface so persona/skill edits are never stranded in a stale session.
+    const rosterBots: CapabilityRosterEntry[] = useAgentStore
+      .getState()
+      .agents.filter(isBot)
+      .map((a) => ({ name: a.name, handle: a.botProfile?.handle ?? a.name }));
+    const capabilityEpoch = computeCapabilityEpoch(agent, rosterBots);
+
     // Each bot has one persistent chat session. Reuse the latest existing
     // session for this bot instead of creating a new one every time the user
-    // clicks the bot in the rail.
+    // clicks the bot in the rail. Locally-created `temp-…` sessions qualify
+    // too — the metadata match is what makes it canonical, not the id shape.
     const existingSession = store.sessions.find(
       (s) =>
         s.metadata?.isBot === true &&
-        s.id.startsWith('ses') &&
         (s.metadata?.agentId === agent.id || s.metadata?.agentName === agent.name),
     );
     if (existingSession) {
+      // Rebuild-once-per-drift: if the stored epoch differs from the freshly
+      // computed one, refresh the identity/system-prompt injection so edits
+      // to the bot's persona/skills reach the reused session. The rest of
+      // the session content (messages, metadata) is left untouched.
+      const storedEpoch = existingSession.metadata?.capabilityEpoch;
+      if (hasEpochDrifted(storedEpoch, capabilityEpoch)) {
+        const basePrompt = agent.systemPrompt ?? '';
+        const identityPrompt = buildIdentityPrompt(displayName, capabilityEpoch);
+        const notice =
+          typeof existingSession.metadata?.vmControlNotice === 'string'
+            ? existingSession.metadata.vmControlNotice
+            : undefined;
+        const systemPrompt = [identityPrompt, basePrompt, notice].filter(Boolean).join('\n\n');
+        await store.updateSession(existingSession.id, {
+          metadata: {
+            ...existingSession.metadata,
+            capabilityEpoch,
+            systemPrompt,
+            botProfile: agent.botProfile,
+            starterPrompts: agent.botProfile?.starterPrompts,
+          },
+        });
+      }
       useBotRosterStore.getState().setCanonicalChatId(agent.id, existingSession.id);
       return { sessionId: existingSession.id };
     }
@@ -145,8 +197,43 @@ function resolveRuntimeModelId(agent: Agent, modelOverride?: string): string | u
     }
 
     const basePrompt = agent.systemPrompt ?? '';
-    const identityPrompt = `You are ${displayName}. You must ALWAYS identify yourself as ${displayName}. NEVER say you are Kimi, GPT, Claude, an AI assistant created by another company, or any name other than ${displayName}.`;
+    const identityPrompt = buildIdentityPrompt(displayName, capabilityEpoch);
     const systemPrompt = [identityPrompt, basePrompt, vmPrompt, notice].filter(Boolean).join('\n\n');
+
+    // Best-effort: make sure the API's agents table knows about this bot
+    // before createSession runs the surface gate. Bots created while the API
+    // was down live only in the localStorage fallback registry, and the gate
+    // (403 agent_not_allowed_on_surface) rejects sessions for agents the API
+    // has never seen. getAgent swallows 404s and returns an "Unknown Agent"
+    // placeholder, which is our not-registered signal. This must never block
+    // the offline path — any failure falls through to the local temp-session
+    // fallback in createSession.
+    try {
+      const registered = await getAgent(agent.id);
+      const isPlaceholder =
+        registered.name === 'Unknown Agent' && !registered.systemPrompt;
+      if (isPlaceholder) {
+        const input: CreateAgentInput = {
+          name: agent.name,
+          description: agent.description ?? '',
+          type: agent.type,
+          model: agent.model,
+          provider: agent.provider,
+          systemPrompt: agent.systemPrompt,
+          avatar: agent.avatar,
+          isBot: true,
+          botProfile: agent.botProfile,
+          allowedSurfaces: ['chat'],
+          tags: agent.tags,
+          category: agent.category,
+          trustTier: agent.trustTier,
+        };
+        await createAgent(input);
+      }
+    } catch {
+      // Offline or otherwise unavailable — proceed; createSession applies its
+      // own local fallback.
+    }
 
     const sessionId = await store.createSession({
       name: displayName,
@@ -160,6 +247,7 @@ function resolveRuntimeModelId(agent: Agent, modelOverride?: string): string | u
         botCanonicalFor: agent.id,
         botProfile: agent.botProfile,
         starterPrompts: agent.botProfile?.starterPrompts,
+        capabilityEpoch,
         model: agent.model,
         runtimeModelId,
         tags: agent.tags,
@@ -187,10 +275,26 @@ function resolveRuntimeModelId(agent: Agent, modelOverride?: string): string | u
     return { sessionId, sandbox, sandboxError, notice };
   }, []);
 
+  // Creation threw, but the chat store may still hold a locally-created
+  // (temp-…) bot session (e.g. backend unreachable). Open it rather than
+  // orphaning it, and flag that cloud sync is pending.
+  const recoverLocalBotSession = useCallback((agent: Agent): string | null => {
+    const store = useChatSessionStore.getState();
+    const localSession = store.sessions.find(
+      (s) => s.metadata?.isBot === true && s.metadata?.botCanonicalFor === agent.id,
+    );
+    if (!localSession) return null;
+    store.setActiveSession(localSession.id);
+    setWarning('Running locally — sync pending');
+    onSessionStarted?.(localSession.id, agent.id);
+    return localSession.id;
+  }, [onSessionStarted]);
+
   const startSession = useCallback(
     async (agent: Agent, options?: { modeId?: string }): Promise<string | null> => {
       setIsStarting(true);
       setError(null);
+      setWarning(null);
 
       try {
         const result = await prepareBotSession(agent, options);
@@ -199,6 +303,12 @@ function resolveRuntimeModelId(agent: Agent, modelOverride?: string): string | u
         const { sessionId, sandboxError } = result;
         const store = useChatSessionStore.getState();
         store.setActiveSession(sessionId);
+
+        if (!sessionId.startsWith('ses')) {
+          // Local temp-… session: backend creation failed but the store kept
+          // a working local session. Non-fatal — tell the user sync is pending.
+          setWarning('Running locally — sync pending');
+        }
 
         if (sandboxError) {
           // Surface the sandbox error as a system notice in the session metadata
@@ -209,6 +319,8 @@ function resolveRuntimeModelId(agent: Agent, modelOverride?: string): string | u
         onSessionStarted?.(sessionId, agent.id);
         return sessionId;
       } catch (err) {
+        const localSessionId = recoverLocalBotSession(agent);
+        if (localSessionId) return localSessionId;
         const message = err instanceof Error ? err.message : 'Failed to start bot session';
         setError(message);
         return null;
@@ -216,7 +328,7 @@ function resolveRuntimeModelId(agent: Agent, modelOverride?: string): string | u
         setIsStarting(false);
       }
     },
-    [prepareBotSession, onSessionStarted]
+    [prepareBotSession, onSessionStarted, recoverLocalBotSession]
   );
 
   const startTask = useCallback(
@@ -225,6 +337,7 @@ function resolveRuntimeModelId(agent: Agent, modelOverride?: string): string | u
 
       setIsStarting(true);
       setError(null);
+      setWarning(null);
 
       try {
         const result = await prepareBotSession(agent, options);
@@ -233,6 +346,10 @@ function resolveRuntimeModelId(agent: Agent, modelOverride?: string): string | u
         const { sessionId, sandboxError } = result;
         const store = useChatSessionStore.getState();
         store.setActiveSession(sessionId);
+
+        if (!sessionId.startsWith('ses')) {
+          setWarning('Running locally — sync pending');
+        }
 
         // Open the chat surface immediately so the user sees the session and
         // streaming indicator instead of a frozen "Starting..." modal while the
@@ -257,6 +374,8 @@ function resolveRuntimeModelId(agent: Agent, modelOverride?: string): string | u
 
         return sessionId;
       } catch (err) {
+        const localSessionId = recoverLocalBotSession(agent);
+        if (localSessionId) return localSessionId;
         const message = err instanceof Error ? err.message : 'Failed to start bot task';
         setError(message);
         return null;
@@ -264,8 +383,8 @@ function resolveRuntimeModelId(agent: Agent, modelOverride?: string): string | u
         setIsStarting(false);
       }
     },
-    [prepareBotSession, onSessionStarted]
+    [prepareBotSession, onSessionStarted, recoverLocalBotSession]
   );
 
-  return { startSession, startTask, isStarting, error };
+  return { startSession, startTask, isStarting, error, warning };
 }

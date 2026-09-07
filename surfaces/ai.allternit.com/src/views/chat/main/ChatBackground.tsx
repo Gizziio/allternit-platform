@@ -7,7 +7,7 @@ import type { AgentModeSurface } from "@/stores/agent-surface-mode.store";
 
 interface ChatBackgroundProps {
   isAgentSessionEmbedded: boolean;
-  mode: 'chat' | 'cowork' | 'code';
+  mode: 'chat' | 'cowork' | 'bot' | 'code';
   effectiveAgentModeEnabled: boolean;
   agentSurface: AgentModeSurface;
   hudMode?: boolean;
@@ -24,7 +24,7 @@ export const ChatBackground: React.FC<ChatBackgroundProps> = ({
 }) => {
   const getEmbeddedChatBackground = () => {
     if (!isAgentSessionEmbedded) {
-      if (mode === 'cowork') return 'transparent';
+      if (mode === 'cowork' || mode === 'bot') return 'transparent';
       return 'var(--view-chat-bg, var(--surface-canvas))';
     }
     // Opaque view base first so the open session matches the white shell views

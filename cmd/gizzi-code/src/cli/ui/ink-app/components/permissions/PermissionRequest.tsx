@@ -119,6 +119,13 @@ export type ToolUseConfirm<Input extends AnyObject = AnyObject> = {
   classifierAutoApproved?: boolean;
   classifierMatchedRule?: string;
   workerBadge?: WorkerBadgeProps;
+  /**
+   * Set when the permission request originates from a dashboard top-level
+   * session (stamped on toolUseContext.options by the session's canUseTool
+   * wrap). Lets the dashboard render this confirm inline, attributed to the
+   * right row. Absent = main session's own prompt.
+   */
+  dashboardTaskId?: string;
   onUserInteraction(): void;
   onAbort(): void;
   onDismissCheckmark?(): void;

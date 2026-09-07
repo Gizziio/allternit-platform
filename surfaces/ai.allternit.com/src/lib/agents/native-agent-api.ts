@@ -189,8 +189,8 @@ export interface CreateNativeAgentSessionRequest {
   model?: BrainRef;
   tags?: string[];
   metadata?: Record<string, unknown>;
-  /** Origin surface (chat, cowork, code, browser) */
-  origin_surface?: "chat" | "cowork" | "code" | "browser" | "design";
+  /** Origin surface (chat, cowork, bot, code, browser) */
+  origin_surface?: "chat" | "cowork" | "bot" | "code" | "browser" | "design";
   /** Session mode (regular or agent) */
   session_mode?: "regular" | "agent";
   /** Project identifier */
@@ -559,7 +559,7 @@ export const sessionApi = {
       active?: boolean;
       tags?: string[];
       metadata?: Record<string, unknown>;
-      origin_surface?: "chat" | "cowork" | "code" | "browser" | "design";
+      origin_surface?: "chat" | "cowork" | "bot" | "code" | "browser" | "design";
       session_mode?: "regular" | "agent";
       project_id?: string;
       workspace_scope?: string;

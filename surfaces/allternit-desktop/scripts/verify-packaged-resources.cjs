@@ -27,6 +27,7 @@ function errorAndExit(message) {
 }
 
 const binaryName = process.platform === 'win32' ? 'allternit-api.exe' : 'allternit-api';
+const localEngineName = process.platform === 'win32' ? 'allternit-local-engine.exe' : 'allternit-local-engine';
 const gizziName = process.platform === 'win32' ? 'gizzi-code.exe' : 'gizzi-code';
 const voiceName = process.platform === 'win32' ? 'allternit-voice-service.exe' : 'allternit-voice-service';
 
@@ -35,6 +36,11 @@ const required = [
     path: path.join(resourcesDir, 'bin', binaryName),
     label: 'Rust API binary (allternit-api)',
     buildStep: 'scripts/build-desktop.sh (or npm run stage:api-binary)',
+  },
+  {
+    path: path.join(resourcesDir, 'bin', localEngineName),
+    label: 'Local engine binary (allternit-local-engine)',
+    buildStep: 'scripts/build-desktop.sh (or npm run stage:local-engine)',
   },
   {
     path: path.join(resourcesDir, 'bin', gizziName),
@@ -61,6 +67,7 @@ const required = [
 let failed = false;
 
 const allowMissingApi = process.env.ALLTERNIT_ALLOW_MISSING_API === '1';
+const allowMissingLocalEngine = process.env.ALLTERNIT_ALLOW_MISSING_LOCAL_ENGINE === '1';
 
 for (const item of required) {
   if (fs.existsSync(item.path)) {
@@ -73,6 +80,15 @@ for (const item of required) {
       `[verify-packaged-resources] ⚠ Missing ${item.label} (allowed by ALLTERNIT_ALLOW_MISSING_API=1)\n` +
       `    Expected at: ${item.path}\n` +
       `    Packaged app will fail closed at boot until a native CI/OS build stages this binary.\n`
+    );
+    continue;
+  }
+  const isLocalEngine = item.path.endsWith(localEngineName);
+  if (isLocalEngine && allowMissingLocalEngine) {
+    process.stderr.write(
+      `[verify-packaged-resources] ⚠ Missing ${item.label} (allowed by ALLTERNIT_ALLOW_MISSING_LOCAL_ENGINE=1)\n` +
+      `    Expected at: ${item.path}\n` +
+      `    Model Lab telemetry will show "Unavailable" until a native CI/OS build stages this binary.\n`
     );
     continue;
   }
