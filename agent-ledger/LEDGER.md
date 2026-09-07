@@ -21,6 +21,16 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-06 22:10 — kimi — gizzi-code onboarding always auto-picks the default brain
+
+- **Session ID / Branch:** `session/gc-onboard` (worktree `allternit-session-gc-onboard`)
+- **Agent:** kimi
+- **Summary:** The onboarding wizard no longer prompts for a brain — a shared `pickBrain()` helper (paid plan → Allternit Cloud default model, else first installed CLI brain, else "install one" pointer) now serves both the wizard and `--defaults`.
+- **Commit:** `198c83e46` on `main`
+- **How it works:** `pickBrain(catalog, setBrain)` centralizes the auto-pick policy; the wizard logs the pick ("change anytime with /model") instead of showing a select prompt, and `runOnboardingDefaults` delegates to the same helper with identical output strings. 3 new tests; 14/14 onboarding tests pass; `bun run typecheck` exit 0. Also fixed two pre-existing main breakages found during verification: illegal `feature()` macro use in `commands/auto/index.ts` (killed the test preload graph) and a missing-import TS2552 re-export in `native-sessions/catalog.ts` (blocked typecheck repo-wide).
+- **Outstanding work:** None — rides the next release tag. Known pre-existing `feature()` misuses remain in `defaultBindings.ts` / `betas.ts` / `prompts.ts` (out of scope, not blocking).
+- **Summary file:** [./summaries/2026-09-06-2210-session-gc-onboard-kimi-onboarding-autopick-brain.md](./summaries/2026-09-06-2210-session-gc-onboard-kimi-onboarding-autopick-brain.md)
+
 ### 2026-09-06 21:30 — kimi — gizzi-code 2.0.6: /theme TUI crash fix + real TS syntax highlighting
 
 - **Session ID / Branch:** `session/gc-hotfix` (worktree `allternit-session-gc-hotfix`)
