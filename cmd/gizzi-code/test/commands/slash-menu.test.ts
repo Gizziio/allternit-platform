@@ -4,6 +4,7 @@ import agents from '../../src/cli/ui/ink-app/commands/agents/index.ts'
 import cd from '../../src/cli/ui/ink-app/commands/cd/index.ts'
 import config from '../../src/cli/ui/ink-app/commands/config/index.ts'
 import dash from '../../src/cli/ui/ink-app/commands/dash/index.ts'
+import dashboard from '../../src/cli/ui/ink-app/commands/dashboard/index.ts'
 import help from '../../src/cli/ui/ink-app/commands/help/index.ts'
 import model from '../../src/cli/ui/ink-app/commands/model/index.ts'
 import multiline from '../../src/cli/ui/ink-app/commands/multiline/index.ts'
@@ -108,8 +109,14 @@ describe('Grok-style slash menu presentation', () => {
 describe('Grok muscle-memory aliases', () => {
   test('session and mode aliases match Grok names', () => {
     expect(rewind.aliases).toContain('undo')
-    expect(dash.aliases).toContain('dashboard')
-    expect(dash.aliases).toContain('sessions')
+    // The full-screen agent dashboard owns 'dashboard'/'sessions'; the
+    // session-stats screen keeps only its own name (/dash) — regression
+    // guard for the alias collision that hijacked /dashboard resolution.
+    expect(dashboard.name).toBe('dashboard')
+    expect(dashboard.aliases).toContain('sessions')
+    expect(dashboard.aliases).toContain('agents-dashboard')
+    expect((dash as Command).aliases ?? []).not.toContain('dashboard')
+    expect((dash as Command).aliases ?? []).not.toContain('sessions')
     expect(status.aliases).toContain('session-info')
     expect(status.aliases).toContain('info')
     expect(model.aliases).toContain('m')
