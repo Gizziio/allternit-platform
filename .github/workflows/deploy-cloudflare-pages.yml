@@ -164,9 +164,12 @@ jobs:
         run: pnpm --filter "@allternit/office" build
         env:
           ALLTERNIT_OFFICE_APP_BASE_URL: 'https://allternit-office-addins.pages.dev/office-addins'
-          ALLTERNIT_PLATFORM_URL: 'https://platform.allternit.com'
+          # The /office-auth-bridge Clerk sign-in page is served by the AI
+          # surface, so the pane's platform origin must be ai.allternit.com
+          # (also emitted into the manifest AppDomains).
+          ALLTERNIT_PLATFORM_URL: 'https://ai.allternit.com'
           VITE_ALLTERNIT_GATEWAY_URL: 'https://api.allternit.com'
-          VITE_ALLTERNIT_PLATFORM_URL: 'https://platform.allternit.com'
+          VITE_ALLTERNIT_PLATFORM_URL: 'https://ai.allternit.com'
           VITE_ALLTERNIT_OFFICE_BASE_PATH: '/office-addins/'
 
       - name: Stage Office add-in Pages deploy
