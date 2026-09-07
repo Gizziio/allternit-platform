@@ -31,6 +31,15 @@ Append newest entries to the top of the `## Entries` section.
 - **Outstanding work:** None. Owner's brain default (`kimi-cli/kimi-for-coding`) untouched; `aliyun-qwen` key still broken (pre-existing, owner to re-key).
 - **Summary file:** [./summaries/2026-09-06-2240-session-gc-207-kimi-gizzi-code-2.0.7-onboarding-autopick.md](./summaries/2026-09-06-2240-session-gc-207-kimi-gizzi-code-2.0.7-onboarding-autopick.md)
 
+### 2026-09-06 22:18 — kimi — Grok-parity slash commands + menu polish (gizzi-code)
+
+- **Session ID / Branch:** `session/grok-slash` (worktree `allternit-session-grok-slash`, base `441ed7495`)
+- **Commit:** feature `df9ed4c3c`; supporting `a63aecd1c` (native-sessions import fix), `a18be47d3` (pnpm-lock sync)
+- **How it works:** Completes the Grok CLI slash-command port started by a748ccb78. New built-ins in `cmd/gizzi-code/src/cli/ui/ink-app/commands/`: `/session-info` (panel + copy-id), `/recap`, `/queue` (immediate, mid-turn), `/transcript` ($PAGER via shared `runInPager`), `/multiline` (+`/ml`, Enter-swap toggle), `/cd` (session cwd switch), `/fork [--worktree|--no-worktree] [directive]` (FORK_SUBAGENT-gated background peer agent seeded with the forked conversation, optional worktree, Rails-registered, reports back via queue notification), `/rename --auto`. Menu: MRU now records all user-invocable command types; gated commands get an explanatory message via `findDisabledCommand` instead of "Unknown skill". Also fixes a748ccb's `/auto` `feature()` call that broke `bun:bundle` registry builds.
+- **Verification:** `bun run typecheck` EXIT=0; `bun test --preload ./test/preload.ts test/commands/` 12 pass / 0 fail. Not live-verified: `/fork` spawn (flag off in dev builds), `/transcript` pager (needs TTY).
+- **Outstanding work:** deferred per plan — permission-mode toggle design, `/minimal`/`/fullscreen` render modes; `/status` vs `/session-info` alias duplication cleanup; branch awaits rebase + merge (another session is actively committing to `feat/desktop-apps-extensions`).
+- **Summary file:** [2026-09-06-2218-88f19eb6-kimi-grok-slash-commands.md](./summaries/2026-09-06-2218-88f19eb6-kimi-grok-slash-commands.md)
+
 ### 2026-09-06 22:10 — kimi — gizzi-code onboarding always auto-picks the default brain
 
 - **Session ID / Branch:** `session/gc-onboard` (worktree `allternit-session-gc-onboard`)
@@ -249,3 +258,4 @@ Cross-compiled gizzi-code-win32-x64 from macOS (`bun build --target=win32-x64` �
 - Deprecated 12 archived card plugins on npm with pointer to @allternit/gizzi-code (apispec, chatbot, codereview, datatable, documentanalyzer, emailcomposer, imagegen, marketresearch, prdescription, socialmedia, testgenerator, translation). iosappbuild/remotion/verceldeploy plugins were never published — nothing to deprecate. The only commit touching archive/plugins since April was a CI script rename (2bda61382), so republishing dead packages was deliberately NOT done.
 - Combined with earlier today: @allternit/gizzi-code@1.0.2 + all 5 platform packages (incl. hand-cross-compiled win32-x64, PE32+ valid, native modules unverified on real Windows) and @allternit/sdk@1.3.0 via workflow.
 - HOLDS (unchanged): rotate the npm token (pasted in chat twice, currently also a repo secret); `gizzi-sdk` name under legal hold — publish decision pending; plugin-sdk naming consolidation deferred.
+- 2026-09-06 roster-cleanup (kimi): desktop bot UX — removed dead Bot Roster view + its shell-rail section, opaque white create box, template-first skippable bot-creation onboarding (+ fixed latent client-side checklist-gate failure). Branch `session/roster-cleanup` @ 9c2e2e3b6, unmerged. Summary: agent-ledger/summaries/2026-09-06-roster-cleanup-kimi-desktop-bot-ux.md

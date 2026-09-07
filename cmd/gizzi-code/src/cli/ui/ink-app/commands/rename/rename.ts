@@ -34,7 +34,8 @@ export async function call(
   }
 
   let newName: string
-  if (!args || args.trim() === '') {
+  // `--auto` behaves like empty args: force the auto-title generation branch
+  if (!args || args.trim() === '' || args.trim() === '--auto') {
     const generated = await generateSessionName(
       getMessagesAfterCompactBoundary(context.messages),
       context.abortController.signal,

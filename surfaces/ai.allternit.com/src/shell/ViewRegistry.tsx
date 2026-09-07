@@ -36,7 +36,6 @@ const DesignModeAgentSession = lazy(() => import('../views/agent-sessions/Design
 const BotInboxView = lazy(() => import('../views/bots/BotInboxView').then(m => ({ default: m.BotInboxView })));
 const BotHomeView = lazy(() => import('../views/bots/BotHomeView').then(m => ({ default: m.BotHomeView })));
 const BotChatSessionView = lazy(() => import('../views/bots/BotChatSessionView').then(m => ({ default: m.BotChatSessionView })));
-import { BotRoster } from '../views/bots/BotRoster';
 import { GroupChatView } from '../views/bots/GroupChatView';
 import { GroupsListView } from '../views/bots/GroupsListView';
 import { useChatSessionStore } from '../views/chat/ChatSessionStore';
@@ -440,22 +439,6 @@ export function getShellViewRegistry(handlers: {
         </ErrorBoundary>
       );
     },
-    'bot-roster': () => (
-      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Bot Roster" />}>
-        <BotRoster
-          onNewBot={() => open('agent-hub')}
-          onStartSession={(botId, sessionId) =>
-            open('bot-chat-session', { sessionId, botId })
-          }
-          onEditProfile={(botId) => open('bot-home', { botId })}
-          onNavigate={(view) => {
-            if (view === 'agent-hub') open('agent-hub');
-          }}
-          onSelectGroup={(groupId) => open('group-chat', { groupId })}
-          onNewGroup={(groupId) => open('group-chat', { groupId })}
-        />
-      </ErrorBoundary>
-    ),
     'group-chat': ({ context }: { context?: ViewContext }) => {
       const ctx = context?.context as { groupId?: string } | undefined;
       return (
@@ -479,7 +462,7 @@ export function getShellViewRegistry(handlers: {
           <BotChatSessionView
             sessionId={ctx?.sessionId}
             botId={ctx?.botId ?? context?.viewId}
-            onBack={() => open(ctx?.originView ?? 'bot-roster')}
+            onBack={() => open(ctx?.originView ?? 'agent-hub')}
           />
         </ErrorBoundary>
       );

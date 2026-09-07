@@ -15,6 +15,15 @@ export function isVimModeEnabled(): boolean {
   return config.editorMode === 'vim'
 }
 
+/**
+ * Helper function to check if multiline Enter is enabled
+ * @returns boolean indicating if plain Enter inserts a newline instead of submitting
+ */
+export function isMultilineEnterEnabled(): boolean {
+  const config = getGlobalConfig()
+  return config.multilineEnter === true
+}
+
 export function getNewlineInstructions(): string {
   // Apple Terminal on macOS uses native modifier key detection for Shift+Enter
   if (env.terminal === 'Apple_Terminal' && process.platform === 'darwin') {
