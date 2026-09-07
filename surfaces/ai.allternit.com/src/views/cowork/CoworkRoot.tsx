@@ -599,7 +599,7 @@ const coworkStyles = `
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  background: color-mix(in srgb, var(--shell-panel-bg) 88%, transparent);
+  background: color-mix(in srgb, var(--shell-menu-bg) 92%, transparent);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--ui-border-muted);

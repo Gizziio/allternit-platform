@@ -15,7 +15,7 @@ import { ChatInputProvider } from '@/providers/chat-input-provider';
 import { PromptInputProvider } from '@/components/ai-elements/prompt-input';
 import { ChatModelsProvider } from '@/providers/chat-models-provider';
 import { ModelSelectionProvider } from '@/providers/model-selection-provider';
-import { useDefaultModelSelection } from '@/hooks/use-default-model-selection';
+import { useResolvedDefaultModelSelection } from '@/hooks/use-default-model-selection';
 import { useCodeModeStore } from './CodeModeStore';
 import { useCodeSessionStore } from './CodeSessionStore';
 import type { CodeWorkspaceRecord } from './CodeModeStore';
@@ -30,7 +30,7 @@ interface CodeThreadViewProps {
 }
 
 export function CodeThreadView({ workspace }: CodeThreadViewProps) {
-  const defaultSelection = useDefaultModelSelection();
+  const defaultSelection = useResolvedDefaultModelSelection();
   // Side pane (Files/Preview/Terminal/Git) is open by default during a
   // session — code mode should look like a coding session, not a bare chat.
   const [isPreviewCollapsed, setIsPreviewCollapsed] = useState(true);
@@ -141,6 +141,7 @@ export function CodeThreadView({ workspace }: CodeThreadViewProps) {
         <CodeSessionLauncher
           onOpenPane={openSideTab}
           onCanvasMode={workspaceId ? () => setWorkspaceLayoutMode(workspaceId, 'canvas') : undefined}
+          canvasModeActive={workspace?.layoutMode === 'canvas'}
           onRename={renameSession}
           onFork={forkSession}
           onArchive={() => activeCodeSessionId && void useCodeSessionStore.getState().updateSession(activeCodeSessionId, { isActive: false, metadata: { ...activeCodeSession?.metadata, originSurface: 'code', archived: true } })}

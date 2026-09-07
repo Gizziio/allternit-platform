@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useMemo, useRef } from 'react';
-import { useOnboardingStore } from '../stores/onboarding-store';
+import React, { useRef } from 'react';
 import { useChatStore } from '../views/chat/ChatStore';
 import { useChatSessionStore } from '../views/chat/ChatSessionStore';
 import { ChatIdProvider } from '../providers/chat-id-provider';
@@ -13,7 +12,7 @@ import { ChatInputProvider } from '../providers/chat-input-provider';
 import { ChatModelsProvider } from '../providers/chat-models-provider';
 import { ErrorBoundary } from '../components/error-boundary';
 import { ChatErrorFallback } from './ShellFallbacks';
-import { useDefaultModelSelection } from '../hooks/use-default-model-selection';
+import { useResolvedDefaultModelSelection } from '../hooks/use-default-model-selection';
 import type { AppMode } from './ShellHeader';
 import type { CanonicalAgentModeId } from '@/lib/agents/agent-mode-contracts';
 import type { Agent } from '@/lib/agents/agent.types';
@@ -55,22 +54,7 @@ export const ChatViewWrapper = React.memo(function ChatViewWrapper({
     (state) => state.activeSessionId,
   );
 
-  const onboardingProvider = useOnboardingStore((s) => s.preferences.defaultProvider);
-  const backendDefaultSelection = useDefaultModelSelection();
-
-  const defaultModelSelection = useMemo(() => {
-    if (onboardingProvider) {
-      const raw = onboardingProvider.replace('/', '::');
-      const sep = raw.indexOf('::');
-      if (sep > 0) {
-        const providerId = raw.slice(0, sep);
-        const modelId = raw.slice(sep + 2);
-        return { providerId, profileId: providerId, modelId, modelName: modelId };
-      }
-      return { providerId: raw, profileId: raw, modelId: '', modelName: '' };
-    }
-    return backendDefaultSelection;
-  }, [onboardingProvider, backendDefaultSelection]);
+  const defaultModelSelection = useResolvedDefaultModelSelection();
 
   // Lazily-generated once and cached in a ref (not useMemo) so this fallback
   // ID survives re-renders where activeThreadId/embeddedChatSessionId flip

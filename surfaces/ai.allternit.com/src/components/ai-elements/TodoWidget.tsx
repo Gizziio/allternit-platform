@@ -88,10 +88,10 @@ function parseTodoSteps(text: string): TodoStep[] | null {
 // ─── Step icon ────────────────────────────────────────────────────────────────
 
 function StepIcon({ state }: { state: TodoStep["state"] }) {
-  if (state === "running") return <InlineSpinner size={13} color="rgba(212,176,140,0.85)" />;
+  if (state === "running") return <InlineSpinner size={13} color="var(--accent-cowork)" />;
   if (state === "done")    return <CheckCircle size={13} style={{ color: "rgba(74,222,128,0.7)", flexShrink: 0 }} />;
   if (state === "error")   return <Warning size={13} style={{ color: "rgba(248,113,113,0.7)", flexShrink: 0 }} />;
-  return <Circle size={13} style={{ color: "rgba(255,255,255,0.2)", flexShrink: 0 }} />;
+  return <Circle size={13} style={{ color: "var(--text-secondary)", flexShrink: 0 }} />;
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -111,17 +111,17 @@ export const TodoWidget = memo(function TodoWidget({
   const summaryColor = allDone
     ? "rgba(74,222,128,0.6)"
     : runningCount > 0
-    ? "rgba(212,176,140,0.65)"
+    ? "var(--accent-cowork)"
     : errorCount > 0
     ? "rgba(248,113,113,0.65)"
-    : "rgba(255,255,255,0.3)";
+    : "var(--text-secondary)";
 
   return (
     <div style={{
       margin: "8px 0",
       borderRadius: "10px",
       border: "1px solid var(--ui-border-muted)",
-      background: "rgba(255,255,255,0.025)",
+      background: "color-mix(in srgb, var(--text-primary) 3%, transparent)",
       overflow: "hidden",
     }}>
       {/* Header */}
@@ -141,11 +141,11 @@ export const TodoWidget = memo(function TodoWidget({
       >
         {/* Status indicator */}
         {runningCount > 0 ? (
-          <InlineSpinner size={12} color="rgba(212,176,140,0.7)" />
+          <InlineSpinner size={12} color="var(--accent-cowork)" />
         ) : allDone ? (
           <CheckCircle size={12} style={{ color: "rgba(74,222,128,0.55)", flexShrink: 0 }} />
         ) : (
-          <Circle size={12} style={{ color: "rgba(255,255,255,0.25)", flexShrink: 0 }} />
+          <Circle size={12} style={{ color: "var(--text-secondary)", flexShrink: 0 }} />
         )}
 
         {/* Title */}
@@ -163,7 +163,8 @@ export const TodoWidget = memo(function TodoWidget({
         {/* Progress badge */}
         <span style={{
           fontSize: "10px",
-          color: "rgba(255,255,255,0.28)",
+          color: "var(--text-secondary)",
+          opacity: 0.7,
           fontWeight: 500,
           marginRight: "4px",
         }}>
@@ -172,8 +173,8 @@ export const TodoWidget = memo(function TodoWidget({
 
         {/* Expand chevron */}
         {collapsed
-          ? <CaretRight size={11} style={{ color: "rgba(255,255,255,0.2)", flexShrink: 0 }} />
-          : <CaretDown size={11} style={{ color: "rgba(255,255,255,0.2)", flexShrink: 0 }} />
+          ? <CaretRight size={11} style={{ color: "var(--text-secondary)", opacity: 0.7, flexShrink: 0 }} />
+          : <CaretDown size={11} style={{ color: "var(--text-secondary)", opacity: 0.7, flexShrink: 0 }} />
         }
       </button>
 
@@ -211,14 +212,14 @@ export const TodoWidget = memo(function TodoWidget({
                     lineHeight: "1.45",
                     fontWeight: step.state === "running" ? 500 : 400,
                     color: step.state === "running"
-                      ? "rgba(236,236,236,0.85)"
+                      ? "var(--text-primary)"
                       : step.state === "done"
-                      ? "rgba(255,255,255,0.38)"
+                      ? "var(--text-secondary)"
                       : step.state === "error"
                       ? "rgba(248,113,113,0.7)"
-                      : "rgba(255,255,255,0.55)",
+                      : "var(--text-primary)",
                     textDecoration: step.state === "done" ? "line-through" : "none",
-                    textDecorationColor: "rgba(255,255,255,0.2)",
+                    textDecorationColor: "var(--border-subtle)",
                   }}>
                     {step.label}
                   </span>
