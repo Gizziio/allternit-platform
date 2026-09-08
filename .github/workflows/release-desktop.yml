@@ -140,6 +140,10 @@ jobs:
           lipo -info surfaces/allternit-desktop/resources/bin/gizzi-code
 
       # ── Step 3: Build Rust allternit-api for both architectures ─────────────
+      - name: Install protobuf compiler
+        # prost-build (allternit-agent-system-rails) shells out to protoc.
+        run: brew install protobuf
+
       - name: Build allternit-api (x86_64)
         run: cargo build --release --target x86_64-apple-darwin --manifest-path cmd/allternit-api/Cargo.toml
 
@@ -202,7 +206,9 @@ jobs:
 
       # ── Step 5: Build and package Electron app ────────────────────────────────
       - name: Install desktop dependencies
-        run: npm install
+        # Deps are already installed by the earlier workspace-wide pnpm
+        # install; npm postinstalls (husky via update-electron-app) fail on CI.
+        run: npm install --ignore-scripts
         working-directory: surfaces/allternit-desktop
 
       - name: Build TypeScript
@@ -254,6 +260,7 @@ jobs:
         run: |
           choco install visualstudio2022buildtools --yes --no-progress `
             --params "--add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
+          choco install protoc --yes --no-progress
 
       - name: Install pnpm
         run: npm install -g pnpm@10.28.0
@@ -288,14 +295,14 @@ jobs:
           pnpm --filter "@allternit/gizzi-sdk" run build
 
       - name: Build gizzi-code (Windows x64)
-        run: bun run script/build-production.js --target=windows-x64
+        run: bun run script/build-production.js --target=win32-x64
         working-directory: cmd/gizzi-code
 
       - name: Copy gizzi-code binary
         shell: bash
         run: |
           mkdir -p surfaces/allternit-desktop/resources/bin
-          cp cmd/gizzi-code/dist/gizzi-code.exe surfaces/allternit-desktop/resources/bin/gizzi-code.exe
+          cp cmd/gizzi-code/dist/gizzi-code-win32-x64.exe surfaces/allternit-desktop/resources/bin/gizzi-code.exe
 
       - name: Install platform dependencies
         run: pnpm install --frozen-lockfile
@@ -346,7 +353,9 @@ jobs:
         working-directory: surfaces/allternit-desktop
 
       - name: Install desktop dependencies
-        run: npm install
+        # Deps are already installed by the earlier workspace-wide pnpm
+        # install; npm postinstalls (husky via update-electron-app) fail on CI.
+        run: npm install --ignore-scripts
         working-directory: surfaces/allternit-desktop
 
       - name: Build TypeScript
@@ -481,7 +490,9 @@ jobs:
         working-directory: surfaces/allternit-desktop
 
       - name: Install desktop dependencies
-        run: npm install
+        # Deps are already installed by the earlier workspace-wide pnpm
+        # install; npm postinstalls (husky via update-electron-app) fail on CI.
+        run: npm install --ignore-scripts
         working-directory: surfaces/allternit-desktop
 
       - name: Stage Cua Driver
