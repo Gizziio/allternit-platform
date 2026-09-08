@@ -3,6 +3,17 @@
 All notable changes to Allternit Desktop are documented here.
 Releases are tagged `desktop-v<version>`.
 
+## [1.1.1] — 2026-09-08
+
+### Fixed
+- **Native session pickup works out of the box.** Desktop 1.1.0 shipped the
+  "Continue a CLI session" picker, but its bundled `allternit-api` and
+  `gizzi-code` binaries were built ~1 hour before the native-sessions feature
+  merged (2026-09-06 20:21 vs 21:34), so every `/api/v1/native-sessions/*`
+  call fell through to the SPA HTML and the picker showed a JSON parse error.
+  This release bundles current builds of both binaries — verified end-to-end:
+  catalog, pickup, and origin banner all work in the packaged app.
+
 ## [Unreleased]
 
 ### Hardening (production-readiness audit, desktop track)
