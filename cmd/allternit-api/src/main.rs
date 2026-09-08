@@ -279,6 +279,11 @@ async fn main() {
     let vm_driver_set = initialize_vm_driver(&app_config).await;
     let vm_driver = vm_driver_set.dynamic;
     let incus_driver = vm_driver_set.incus;
+
+    // Warm VM pool in front of the sandbox routes: restores pool state from
+    // disk (VMs left checked-out by a previous process are reclaimed) and
+    // starts the idle-TTL / min-idle maintenance task.
+    allternit_api::vm_pool::init_global(vm_driver.clone());
     let desktop_host_registry =
         allternit_api::desktop_host_registry::DesktopHostRegistry::new(db.clone());
     let desktop_host_provisioner =

@@ -91,6 +91,7 @@ pub fn sandbox_router() -> Router<Arc<AppState>> {
         .route("/execute", post(execute_handler))
         .route("/execute/stream", post(execute_stream_handler))
         .route("/capabilities", get(capabilities_handler))
+        .route("/pool", get(pool_status_handler))
         .route("/health", get(health_handler))
 }
 
@@ -114,10 +115,96 @@ async fn execute_handler(
         "VM driver not available".to_string(),
     ))?;
 
+    // Warm pooled path: checkout a health-checked VM, exec, checkin. Pool
+    // errors fail closed below — a checkout failure is a 503, never a silent
+    // unsandboxed fallback.
+    if let Some(pool) = crate::vm_pool::global_pool() {
+        let response = execute_via_pool(&pool, &request)
+            .await
+            .map_err(|e| (e.0, e.1))?;
+        return Ok(Json(response));
+    }
+
     let response = execute_with_driver(driver, &request)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?;
     Ok(Json(response))
+}
+
+/// Execute against a pooled VM. Mirrors `execute_with_driver`'s command
+/// construction; the VM survives the request and is returned to the pool.
+async fn execute_via_pool(
+    pool: &Arc<crate::vm_pool::VmPool>,
+    request: &SandboxExecuteRequest,
+) -> Result<SandboxExecuteResponse, (StatusCode, String)> {
+    use allternit_driver_interface::CommandSpec;
+
+    let checkout = pool
+        .checkout()
+        .await
+        .map_err(|e| (StatusCode::SERVICE_UNAVAILABLE, e.message()))?;
+
+    let command_spec = CommandSpec {
+        command: vec![
+            get_interpreter(&request.language),
+            "-c".to_string(),
+            request.code.clone(),
+        ],
+        env_vars: request.env.clone(),
+        working_dir: request.workdir.clone(),
+        stdin_data: None,
+        capture_stdout: true,
+        capture_stderr: true,
+    };
+
+    let result = pool
+        .exec_on(&checkout, command_spec)
+        .await
+        .map_err(|e| format!("Execution failed: {e}"));
+
+    match result {
+        Ok(exec_result) => {
+            // A completed exec (any exit code) proves the VM is alive; return
+            // it to the warm pool.
+            pool.checkin(checkout.vm_id, true).await;
+            let stdout = exec_result
+                .stdout
+                .map(|v| String::from_utf8_lossy(&v).into_owned())
+                .unwrap_or_default();
+            let stderr = exec_result
+                .stderr
+                .map(|v| String::from_utf8_lossy(&v).into_owned())
+                .unwrap_or_default();
+            Ok(SandboxExecuteResponse {
+                exit_code: exec_result.exit_code,
+                stdout,
+                stderr,
+                duration_ms: exec_result.duration_ms,
+                session_id: Some(checkout.vm_id.to_string()),
+            })
+        }
+        Err(message) => {
+            // Driver-level exec failure usually means a dead VM: destroy it.
+            pool.checkin(checkout.vm_id, false).await;
+            Err((StatusCode::INTERNAL_SERVER_ERROR, message))
+        }
+    }
+}
+
+/// Pool status for operators: warm counts, limits, and state-file location.
+async fn pool_status_handler() -> Response {
+    match crate::vm_pool::global_pool() {
+        Some(pool) => Json(serde_json::to_value(pool.stats()).unwrap_or_default()).into_response(),
+        None => (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(json!({
+                "error": "vm_pool_disabled",
+                "message": "VM pool is disabled or no VM driver is configured.",
+                "enabled": false,
+            })),
+        )
+            .into_response(),
+    }
 }
 
 async fn execute_with_driver(
