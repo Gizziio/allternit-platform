@@ -188,10 +188,39 @@ export class ComputerUseCapability {
       });
 
       if (!response.ok) {
-        throw new Error(`Computer Use gateway error: ${response.statusText}`);
+        const detail = await response.text().catch(() => '');
+        throw new Error(
+          `Computer Use gateway HTTP ${response.status}${response.statusText ? ` ${response.statusText}` : ''}${detail ? `: ${detail.slice(0, 300)}` : ''}`,
+        );
       }
 
       const data = await response.json() as Record<string, unknown>;
+
+      // Never fake success. The gateway reports failures in-band
+      // (status: 'failed' and/or error: {code, message}) with HTTP 200, so
+      // a resolved fetch does not mean the action ran. Surface the error
+      // and any partial state (summary) the gateway did produce.
+      const gatewayError = data.error as
+        | { code?: string; message?: string }
+        | string
+        | null
+        | undefined;
+      if (data.status === 'failed' || gatewayError) {
+        const message =
+          typeof gatewayError === 'string'
+            ? gatewayError
+            : (gatewayError?.message ?? 'unknown gateway error');
+        const code =
+          gatewayError && typeof gatewayError === 'object' && gatewayError.code
+            ? ` (${gatewayError.code})`
+            : '';
+        const partial =
+          typeof data.summary === 'string' && data.summary
+            ? ` Partial state: ${data.summary}`
+            : '';
+        return `Error executing computer action${code}: ${message}.${partial}`;
+      }
+
       if (args.action === 'screenshot') {
         const screenshot = extractScreenshotPayload(data);
         if (!screenshot) throw new Error('Computer Use gateway returned no screenshot data');
@@ -204,7 +233,14 @@ export class ComputerUseCapability {
           },
         }];
       }
-      return typeof data.summary === 'string' ? data.summary : `Action ${args.action} completed.`;
+      // Only a completed run may report success; anything else is surfaced
+      // as an error rather than falling through to a canned completion line.
+      if (data.status !== 'completed') {
+        return `Error executing computer action: gateway run ended with status '${String(data.status)}'.`;
+      }
+      return typeof data.summary === 'string' && data.summary
+        ? data.summary
+        : `Action ${args.action} completed.`;
     } catch (error) {
       return `Error executing computer action: ${error instanceof Error ? error.message : String(error)}`;
     }
