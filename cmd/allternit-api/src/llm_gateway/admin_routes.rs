@@ -37,6 +37,10 @@ pub fn gateway_admin_router() -> Router<Arc<AppState>> {
             get(list_policies).put(put_policy),
         )
         .route("/gateway/dlp/rules", get(list_dlp_rules).put(put_dlp_rule))
+        .route(
+            "/gateway/provider-routing",
+            get(get_provider_routing).put(put_provider_routing),
+        )
         .route("/gateway/budgets", get(list_budgets).put(put_budget))
         .route(
             "/gateway/inference-hooks",
@@ -717,6 +721,78 @@ async fn put_policy(
         };
 
         Ok::<_, ApiError>(policy_row_json(&id, &name, &weights_json, None))
+    })
+    .await;
+
+    respond(result)
+}
+
+// ─── GET/PUT /gateway/provider-routing ──────────────────────────────────────
+
+/// The stored policy (or null) plus the tenant it applies to. The effective
+/// policy for a request also inherits the platform-global (NULL-tenant) row
+/// when no tenant row exists — see `provider_routing::load_policy`.
+async fn get_provider_routing(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+) -> Response {
+    let db = state.db.clone();
+    let result = tokio::task::spawn_blocking(move || {
+        let conn = db.connect().map_err(internal_error)?;
+        let scope = admin_scope(&conn, &user)?;
+        let tenant = scope.config_tenant(&user);
+
+        let row: Option<(String, Option<String>)> = conn
+            .query_row(
+                "SELECT policy, updated_at FROM llm_provider_routing_policies
+                 WHERE tenant_id IS ?1",
+                params![tenant],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .optional()
+            .map_err(internal_error)?;
+
+        let (policy, updated_at) = match row {
+            Some((policy, updated_at)) => (
+                serde_json::from_str::<Value>(&policy).unwrap_or(Value::Null),
+                updated_at,
+            ),
+            None => (Value::Null, None),
+        };
+        Ok::<_, ApiError>(json!({
+            "tenant_id": tenant,
+            "policy": policy,
+            "updated_at": updated_at,
+        }))
+    })
+    .await;
+
+    respond(result)
+}
+
+async fn put_provider_routing(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Json(payload): Json<Value>,
+) -> Response {
+    let policy = match super::provider_routing::validate(&payload) {
+        Ok(policy) => policy,
+        Err(message) => return bad_request(message).into_response(),
+    };
+
+    let db = state.db.clone();
+    let result = tokio::task::spawn_blocking(move || {
+        let conn = db.connect().map_err(internal_error)?;
+        let scope = admin_scope(&conn, &user)?;
+        let tenant = scope.config_tenant(&user);
+
+        super::provider_routing::save_policy(&db, tenant.as_deref(), &policy)
+            .map_err(internal_error)?;
+
+        Ok::<_, ApiError>(json!({
+            "tenant_id": tenant,
+            "policy": serde_json::to_value(&policy).map_err(internal_error)?,
+        }))
     })
     .await;
 

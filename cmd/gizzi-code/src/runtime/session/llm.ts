@@ -127,6 +127,21 @@ export namespace LLM {
         ProviderTransform.providerOptions(input.model, { serviceTier }),
       )
     }
+    // Provider routing from API bridges (Allternit LLM gateway): the resolved
+    // OpenRouter-style `provider` object is injected as a top-level body key.
+    // Scoped to OpenAI-compatible providers (aggregators/OpenRouter); direct
+    // SDKs (Anthropic, Google) must not receive it.
+    const providerRouting = input.user.metadata?.provider_routing
+    if (
+      providerRouting !== null &&
+      typeof providerRouting === "object" &&
+      input.model.api.npm === "@ai-sdk/openai-compatible"
+    ) {
+      options = mergeDeep(
+        options,
+        ProviderTransform.providerOptions(input.model, { provider: providerRouting }),
+      )
+    }
 
     const params = await Plugin.trigger(
       "chat.params",
