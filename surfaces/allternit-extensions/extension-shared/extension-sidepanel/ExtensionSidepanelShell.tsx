@@ -954,6 +954,12 @@ function StepCard({ event }: { event: Extract<ExtensionSidepanelHistoricalEvent,
         Step #{(event.stepIndex ?? 0) + 1}
       </div>
 
+      {event.content && (
+        <p className="mb-2 whitespace-pre-wrap break-words text-xs leading-relaxed text-foreground/90">
+          {event.content}
+        </p>
+      )}
+
       {event.reflection && <ReflectionSection reflection={event.reflection} />}
 
       {event.action && (

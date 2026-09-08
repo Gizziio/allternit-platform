@@ -12,6 +12,9 @@ export type ExtensionSidepanelHistoricalEvent =
   | {
       type: "step";
       stepIndex?: number;
+      /** Plain assistant text for the step (office add-in path). Rendered when
+       *  no structured action is present. */
+      content?: string;
       reflection?: {
         evaluation_previous_goal?: string;
         memory?: string;
