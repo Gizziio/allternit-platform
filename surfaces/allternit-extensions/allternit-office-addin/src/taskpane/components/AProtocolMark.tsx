@@ -70,6 +70,8 @@ export interface AProtocolMarkProps {
   height?: number
   /** extra pixel-letter word after TERNIT (e.g. "OFFICE") */
   suffix?: string
+  /** render only the A:// mark (cols 0–14), without the TERNIT wordmark */
+  markOnly?: boolean
   /** ink color for the letterforms; defaults to the brand ink */
   ink?: string
   className?: string
@@ -78,11 +80,12 @@ export interface AProtocolMarkProps {
 export function AProtocolMark({
   height = 16,
   suffix = '',
+  markOnly = false,
   ink = '#29201A',
   className,
 }: AProtocolMarkProps) {
   const core = '#D97757'
-  const { letters, totalCols } = layout(`TERNIT ${suffix}`.trimEnd())
+  const { letters, totalCols } = layout(markOnly ? '' : `TERNIT ${suffix}`.trimEnd())
   const fullW = (height * totalCols) / ROWS
 
   return (
