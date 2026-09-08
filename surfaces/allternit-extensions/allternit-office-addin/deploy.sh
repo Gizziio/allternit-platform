@@ -33,4 +33,6 @@ cp manifests/*.xml deployment/office-addins/manifests/
 
 echo "Prepared deployment/office-addins"
 echo "Publish that directory at ${ALLTERNIT_OFFICE_APP_BASE_URL}"
+echo "Canonical hosting: platform.allternit.com — its build (surfaces/platform.allternit.com postbuild) embeds"
+echo "deployment/office-addins at dist/office-addins and deploys it to Cloudflare Pages. See DEPLOYMENT.md."
 echo "The three developer manifests remain independently installable."

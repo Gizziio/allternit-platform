@@ -70,7 +70,7 @@ export function ChatView({
 }: {
   hideEmptyState?: boolean,
   hudMode?: boolean,
-  mode?: 'chat' | 'cowork' | 'code',
+  mode?: 'chat' | 'cowork' | 'bot' | 'code',
   initialMessage?: string,
   onInitialMessageSent?: () => void,
   onOpenAgentSession?: (text: string, surface: AgentModeSurface, execution?: { modeId: CanonicalAgentModeId; templateTitle?: string }) => void;
@@ -78,7 +78,7 @@ export function ChatView({
 }) {
   const { id: chatId } = useChatId();
   const { renameThread } = useChatStore();
-  const agentSurface: AgentModeSurface = mode === 'cowork' ? 'cowork' : mode === 'code' ? 'code' : 'chat';
+  const agentSurface: AgentModeSurface = mode === 'cowork' ? 'cowork' : mode === 'bot' ? 'bot' : mode === 'code' ? 'code' : 'chat';
   const { agentModeEnabled, selectedAgent } =
     useSurfaceAgentSelection(agentSurface);
   
@@ -490,7 +490,7 @@ export function ChatView({
   const isChatEmpty = !isAgentSessionEmbedded && nativeMessages.length === 0;
   const showTopActions = !isAgentSessionEmbedded;
   const useMonolithLogo = mode === 'code';
-  const launchLogo: 'gizzi' | 'matrix' | 'allternit' = mode === 'chat' || mode === 'cowork' || useMonolithLogo ? 'matrix' : 'gizzi';
+  const launchLogo: 'gizzi' | 'matrix' | 'allternit' = mode === 'chat' || mode === 'cowork' || mode === 'bot' || useMonolithLogo ? 'matrix' : 'gizzi';
 
   const embeddedAgentDescriptor = embeddedAgentSession.descriptor;
   // Only sessions actually bound to an agent (agent metadata present) get the

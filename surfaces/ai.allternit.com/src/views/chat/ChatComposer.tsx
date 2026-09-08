@@ -22,7 +22,6 @@ import {
   Globe,
   Lightning,
   CursorClick,
-  Check,
   CaretRight,
   Robot,
   Camera,
@@ -61,6 +60,7 @@ import { getProviderMeta } from '@/lib/providers/provider-registry';
 import { useModelSelection } from '@/providers/model-selection-provider';
 import { useRuntimeExecutionMode } from '@/hooks/useRuntimeExecutionMode';
 import { useIsMobile } from '@/hooks/useMediaQuery';
+import { useSettingsValue } from '@/hooks/useSettingsState';
 import type { RuntimeExecutionMode } from '@/lib/agents/native-agent-api';
 
 import {
@@ -87,7 +87,7 @@ import { isToolsApiEnabled } from '@/lib/env';
 import { useBrowserAgentStore } from '@/capsules/browser/browserAgent.store';
 import { useUnifiedStore } from '@/lib/agents/unified.store';
 import { TaskBar } from './components/TaskBar';
-import { ModeDock, MODE_TABS, SURFACE_MODES } from './components/ModeDock';
+import { ModeDock } from './components/ModeDock';
 import { TemplateGallery } from './components/TemplateGallery';
 import { SwarmSubModeTabs } from './components/SwarmSubModeTabs';
 import { ComposerPlusSheet, type ToolAccessLevel, type ResponseStyle } from './components/ComposerPlusSheet';
@@ -353,7 +353,6 @@ export function ChatComposer({
   topInfoBarContent,
   questionBarContent,
   topDeckContent,
-  onStartBotSession,
   selectedModel: externalSelectedModel,
   selectedModelDisplayName: externalSelectedModelDisplayName,
   onSelectModel: externalOnSelectModel,
@@ -433,8 +432,6 @@ export function ChatComposer({
   const chatCreateProject = useChatStore((s) => s.createProject);
   const [githubUrl, setGithubUrl] = useState('');
   const [githubLoading, setGithubLoading] = useState(false);
-  const [showAgentMenu, setShowAgentMenu] = useState(false);
-  const [showModeSelectorMenu, setShowModeSelectorMenu] = useState(false);
   const [showProviderConnect, setShowProviderConnect] = useState(false);
   const [providerConnectInitial, setProviderConnectInitial] = useState<string | null>(null);
   const [showConnectorMarketplace, setShowConnectorMarketplace] = useState(false);
@@ -722,26 +719,6 @@ export function ChatComposer({
     [agents, selectedSurfaceAgentId],
   );
 
-  const handleToggleAgentMode = useCallback(() => {
-    setLocallyEnabled((prev) => {
-      const next = !prev;
-      if (next) {
-        // When a bot is already selected, mount its session in the rail
-        // instead of leaving the user on a generic home chat.
-        if (selectedSurfaceAgent?.isBot && onStartBotSession) {
-          onStartBotSession(selectedSurfaceAgent);
-          return next;
-        }
-        // When turning bot mode on and no bot is selected, open the bot picker
-        // so the user can choose one immediately.
-        if (!selectedSurfaceAgent && agents.some((a) => a.isBot)) {
-          setShowAgentMenu(true);
-        }
-      }
-      return next;
-    });
-  }, [selectedSurfaceAgent, agents, onStartBotSession]);
-
   const selectedWorkspacePreview = useMemo<AgentWorkspacePreview>(() => {
     if (!selectedSurfaceAgent) {
       return {
@@ -897,12 +874,6 @@ export function ChatComposer({
     loadCharacterLayer,
     selectedSurfaceAgent,
   ]);
-
-  useEffect(() => {
-    if (!agentModeEnabled && showAgentMenu) {
-      setShowAgentMenu(false);
-    }
-  }, [agentModeEnabled, showAgentMenu]);
 
   // When a bot is selected as the surface agent, surface it as an @mention chip
   // in the composer so the user sees which bot will handle the message.
@@ -1155,7 +1126,6 @@ export function ChatComposer({
         ),
       );
       closeOpenClawPrompt();
-      setShowAgentMenu(false);
     } catch (error) {
       console.error(`[ChatComposer] Import failed after ${Date.now() - importStart}ms:`, error);
       let errorMessage = 'Failed to import OpenClaw agent';
@@ -1193,13 +1163,58 @@ export function ChatComposer({
     setSelectedSurfaceAgent,
   ]);
 
+  // Settings → Composer → Auto-save chat drafts (default on). When enabled,
+  // the in-progress message is persisted per session so it survives view
+  // switches and app restarts, and restored when the session is reopened.
+  const [autoSaveDrafts] = useSettingsValue('general.autoSave', true);
+  const draftKey = activeSession?.id ? `allternit.drafts.${activeSession.id}` : null;
+
+  // Restore the draft when switching into a session. An injected prompt
+  // (inputValue prop) wins over a stored draft.
+  useEffect(() => {
+    if (!draftKey) return;
+    try {
+      const raw = window.localStorage.getItem(draftKey);
+      if (raw) setInput((prev) => (prev ? prev : raw));
+    } catch {
+      // storage unavailable — drafts simply don't restore
+    }
+    // Only re-read when the session changes, not on every keystroke.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftKey]);
+
+  // Debounce-save the draft as the user types; clear it when emptied.
+  useEffect(() => {
+    if (!autoSaveDrafts || !draftKey) return;
+    const timer = window.setTimeout(() => {
+      try {
+        if (input.trim()) {
+          window.localStorage.setItem(draftKey, input);
+        } else {
+          window.localStorage.removeItem(draftKey);
+        }
+      } catch {
+        // storage full or unavailable — keep the in-memory value
+      }
+    }, 400);
+    return () => window.clearTimeout(timer);
+  }, [input, autoSaveDrafts, draftKey]);
+
   const handleSubmit = async () => {
     if (!canSubmit) return;
     await submitMessage(input);
 
     setInput('');
+    // Sending consumes the draft — clear it immediately rather than waiting
+    // for the debounced empty-input pass.
+    if (draftKey) {
+      try {
+        window.localStorage.removeItem(draftKey);
+      } catch {
+        // storage unavailable — nothing to clear
+      }
+    }
     setActiveCategory(null);
-    setShowAgentMenu(false);
     setSlashMenuVisible(false);
     setSlashFilter('');
     setAgentCommandMenuVisible(false);
@@ -2181,7 +2196,15 @@ export function ChatComposer({
           {!compact && (<div className={cn('flex items-center justify-between', isMobile ? 'p-2' : 'p-3')}>
             <div className="flex items-center gap-1 relative">
               <AttachmentButton
-                onClick={() => { setShowPlusMenu(!showPlusMenu); }}
+                onClick={() => {
+                  if (agentModeSurface === 'bot') {
+                    // Bot surface: the picker drawer is owned by BotPickerHost
+                    // in the shell; ask it to open instead of the plus menu.
+                    window.dispatchEvent(new CustomEvent('allternit:open-bot-picker'));
+                  } else {
+                    setShowPlusMenu(!showPlusMenu);
+                  }
+                }}
                 className={cn(
                   'rounded-full border border-[var(--border-subtle)] bg-[var(--surface-panel)]/40 backdrop-blur-md text-[var(--text-primary)] transition-all hover:scale-105 hover:brightness-110 hover:bg-[var(--surface-panel)]/70',
                   isMobile ? 'size-11' : 'size-8',
@@ -2205,109 +2228,12 @@ export function ChatComposer({
 
               <BottomDock
                 inline
-                selectedModeId={selectedModeId}
                 agentModeSurface={agentModeSurface}
                 agentModeEnabled={agentModeEnabled}
                 agentModeTheme={agentModeTheme}
-                setShowAgentMenu={setShowAgentMenu}
-                showAgentMenu={showAgentMenu}
-                selectedSurfaceAgent={selectedSurfaceAgent}
-                onToggleAgentMode={handleToggleAgentMode}
                 customLeftContent={bottomDockContent}
                 showModeToggle={showModeToggle}
-                sessionLocked={showModeToggle === false}
-                onOpenModeMenu={() => setShowModeSelectorMenu(true)}
-                agents={agents}
-                isLoadingAgents={isLoadingAgents}
-                selectedSurfaceAgentId={selectedSurfaceAgentId}
-                workspaceArtifacts={characterArtifacts}
-                agentError={agentError}
-                openClawCandidatesCount={openClawCandidates.length}
-                onOpenImportWizard={() => setShowOpenClawImportDialog(true)}
-                onSelectAgent={(agent) => {
-                  if (agentModeSurface) setSelectedSurfaceAgent(agentModeSurface, agent.id);
-                  // Selecting a bot from the home-view picker mounts a real bot
-                  // session in the rail rather than just changing the surface agent.
-                  if (agent.isBot && onStartBotSession) {
-                    onStartBotSession(agent);
-                  }
-                }}
-                onClearAgent={() => {
-                  if (agentModeSurface) setSelectedSurfaceAgent(agentModeSurface, null);
-                }}
               />
-
-              {showModeSelectorMenu && agentModeSurface && (
-                <div
-                  className="absolute bottom-[calc(100%+12px)] left-4 mb-2 w-[340px] p-3 bg-menu-bg backdrop-blur-[20px] rounded-2xl border border-menu-border shadow-xl z-200"
-                  onMouseEnter={() => setTrackingAttention(-0.4, 0.5, 'locked-on')}
-                  onMouseLeave={() => {
-                    setShowModeSelectorMenu(false);
-                    setTrackingAttention(0, 0.44);
-                  }}
-                >
-                  <div className="mb-2">
-                    <div className="text-xs font-extrabold text-muted tracking-wider uppercase">
-                      Bot mode
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-4 gap-1.5">
-                    {MODE_TABS.filter((mode) => {
-                      const allowed = agentModeSurface ? SURFACE_MODES[agentModeSurface] : MODE_TABS.map((m) => m.id);
-                      return allowed.includes(mode.id);
-                    }).map((mode) => {
-                      const isSelected = selectedModeId === mode.id;
-                      const ModeIcon = mode.icon;
-                      return (
-                        <button
-                          type="button"
-                          key={mode.id}
-                          onClick={() => {
-                            if (agentModeSurface) {
-                              setSelectedMode(agentModeSurface, mode.id as AgentModeId);
-                              setSelectedTemplateTitle(undefined);
-                              // Explicitly selecting a canonical agent mode enables agent-mode
-                              // send for the current composer surface.
-                              if (isCanonicalAgentMode(mode.id)) {
-                                setLocallyEnabled(true);
-                              }
-                            }
-                            setShowModeSelectorMenu(false);
-                          }}
-                          className={cn(
-                            'group relative flex flex-col items-center gap-1 p-1.5 rounded-xl text-center transition-all',
-                            isSelected ? 'bg-composer-hover' : 'hover:bg-hover'
-                          )}
-                          style={isSelected ? { boxShadow: `inset 0 0 0 1.5px ${mode.color}50` } : undefined}
-                        >
-                          <div
-                            className="flex items-center justify-center size-9 rounded-lg transition-transform group-hover:scale-105"
-                            style={{ background: `${mode.color}18`, color: mode.color }}
-                          >
-                            <ModeIcon size={16} weight={isSelected ? 'fill' : 'bold'} />
-                          </div>
-                          <span
-                            className={cn(
-                              'text-[10px] leading-tight',
-                              isSelected ? 'font-bold text-primary' : 'font-medium text-secondary'
-                            )}
-                          >
-                            {mode.label}
-                          </span>
-                          {isSelected && (
-                            <div
-                              className="absolute top-1 right-1 size-3 rounded-full flex items-center justify-center"
-                              style={{ background: mode.color }}
-                            >
-                              <Check size={7} weight="bold" className="text-white" />
-                            </div>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
 
               <ComposerPlusSheet
                 open={showPlusMenu}

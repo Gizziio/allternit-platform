@@ -24,6 +24,17 @@ const StatCard = ({ label, value, color }: { label: string; value: string | numb
   </div>
 );
 
+const THREAT_LEVELS: Record<string, { label: string; textClass: string; tileClass: string }> = {
+  low: { label: 'LOW', textClass: 'text-emerald-500', tileClass: 'bg-emerald-500/10 text-emerald-500 shadow-emerald-500/10' },
+  medium: { label: 'MEDIUM', textClass: 'text-amber-500', tileClass: 'bg-amber-500/10 text-amber-500 shadow-amber-500/10' },
+  high: { label: 'HIGH', textClass: 'text-rose-500', tileClass: 'bg-rose-500/10 text-rose-500 shadow-rose-500/10' },
+  critical: { label: 'CRITICAL', textClass: 'text-rose-600', tileClass: 'bg-rose-600/10 text-rose-600 shadow-rose-600/10' },
+};
+
+const openView = (viewType: string) => {
+  window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType } }));
+};
+
 export function SecurityPanel() {
   const [securityTab, setSecurityTab] = useState<'overview' | 'policies' | 'gating' | 'purpose' | 'compliance'>('overview');
   const [policies, setPolicies] = useState<any[]>([]);
@@ -31,26 +42,39 @@ export function SecurityPanel() {
   const [approvals, setApprovals] = useState<any[]>([]);
   const [securityEvents, setSecurityEvents] = useState<any[]>([]);
   const [complianceStatus, setComplianceStatus] = useState<any>(null);
+  const [overview, setOverview] = useState<any>(null);
+  const [purposes, setPurposes] = useState<any[]>([]);
+  const [purposeBindings, setPurposeBindings] = useState<any[]>([]);
+  const [purposeViolations, setPurposeViolations] = useState<any[]>([]);
   const [securityLoading, setSecurityLoading] = useState(false);
 
   const fetchSecurityData = useCallback(async () => {
     setSecurityLoading(true);
     try {
-      const { listPolicies, listViolations, listApprovals, listSecurityEvents, getComplianceStatus } = await import('@/lib/governance/policy.service');
-      const [policiesRes, violationsRes, approvalsRes, eventsRes, complianceRes] = await Promise.all([
+      const { listPolicies, listViolations, listApprovals, listSecurityEvents, getComplianceStatus, getSecurityOverview, listPurposes, listAgentPurposeBindings, listPurposeViolations } = await import('@/lib/governance/policy.service');
+      const [policiesRes, violationsRes, approvalsRes, eventsRes, complianceRes, overviewRes, purposesRes, bindingsRes, purposeViolationsRes] = await Promise.all([
         listPolicies(),
         listViolations({ status: 'open' }),
         listApprovals({ status: 'pending' }),
         listSecurityEvents({ pageSize: 20 }),
         getComplianceStatus(),
+        getSecurityOverview(),
+        listPurposes(),
+        listAgentPurposeBindings(),
+        listPurposeViolations(),
       ]);
       setPolicies(policiesRes.policies);
       setViolations(violationsRes.violations);
       setApprovals(approvalsRes.requests);
       setSecurityEvents(eventsRes.events);
       setComplianceStatus(complianceRes);
+      setOverview(overviewRes);
+      setPurposes(purposesRes.purposes);
+      setPurposeBindings(bindingsRes.bindings);
+      setPurposeViolations(purposeViolationsRes.violations);
     } catch {
       setPolicies([]); setViolations([]); setApprovals([]); setSecurityEvents([]); setComplianceStatus(null);
+      setOverview(null); setPurposes([]); setPurposeBindings([]); setPurposeViolations([]);
     }
     setSecurityLoading(false);
   }, []);
@@ -60,6 +84,13 @@ export function SecurityPanel() {
   }, [fetchSecurityData]);
 
   const pendingApprovals = approvals.filter((a: any) => a.status === 'pending');
+
+  // Real threat level from the security overview API; if the overview call
+  // failed, derive it from the number of open violations we did fetch.
+  const openViolationCount = violations.filter((v: any) => v.status === 'open').length;
+  const threatLevel = THREAT_LEVELS[overview?.threatLevel]
+    ?? THREAT_LEVELS[openViolationCount === 0 ? 'low' : openViolationCount <= 4 ? 'medium' : 'high']
+    ?? THREAT_LEVELS.medium;
   const [approvalBusy, setApprovalBusy] = useState<Record<string, boolean>>({});
 
   const handleApprovalDecision = useCallback(async (approvalId: string, approved: boolean) => {
@@ -119,12 +150,12 @@ export function SecurityPanel() {
                   <Shield size={120} weight="fill" />
                 </div>
                 <div className="flex items-center gap-6 relative z-10">
-                  <div className="size-16 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500 shadow-lg shadow-amber-500/10">
+                  <div className={cn("size-16 rounded-2xl flex items-center justify-center shadow-lg", threatLevel.tileClass)}>
                     <Shield size={32} weight="bold" />
                   </div>
                   <div>
                     <div className="text-[12px] text-[var(--ui-text-muted)] font-black uppercase tracking-widest opacity-60">Active Threat Level</div>
-                    <div className="text-3xl font-black text-amber-500 tracking-tight mt-1">MODERATE_RISK</div>
+                    <div className={cn("text-3xl font-black tracking-tight mt-1", threatLevel.textClass)}>{threatLevel.label}</div>
                   </div>
                 </div>
               </div>
@@ -163,7 +194,7 @@ export function SecurityPanel() {
             <div className="flex flex-col gap-4">
               <div className="flex justify-between items-center mb-2">
                 <SectionHeading>Governance policies</SectionHeading>
-                <button type="button" className={QUIET_BUTTON_CLASS}>+ New policy</button>
+                <button type="button" className={QUIET_BUTTON_CLASS} onClick={() => openView('policy')}>+ New policy</button>
               </div>
               {policies.map((policy: any) => (
                 <div key={policy.id} className="p-4 bg-[var(--surface-panel)] rounded-xl border border-solid border-[var(--ui-border-muted)] hover:border-[var(--ui-border-default)] transition-colors">
@@ -238,11 +269,53 @@ export function SecurityPanel() {
           )}
 
           {securityTab === 'purpose' && (
-            <div className="text-center py-24 bg-[var(--surface-panel)] rounded-2xl border border-solid border-[var(--ui-border-muted)]">
-              <Target size={64} className="text-[var(--ui-text-muted)] opacity-20 mx-auto mb-6" weight="thin" />
-              <h3 className="text-lg font-bold text-[var(--ui-text-inverse)] m-0 mb-2">Purpose Binding Architecture</h3>
-              <p className="text-[14px] text-[var(--ui-text-muted)] max-w-sm mx-auto leading-relaxed">Agent goals are restricted to verified project scopes. Configure binding levels in the DAG / Project view.</p>
-              <button type="button" className={cn(QUIET_BUTTON_CLASS, "mt-8")}>Open DAG workspace</button>
+            <div className="flex flex-col gap-6">
+              <div className="grid grid-cols-3 gap-4">
+                <StatCard label="Active Purposes" value={purposes.filter((p: any) => p.status === 'active').length} color="var(--status-success)" />
+                <StatCard label="Agent Bindings" value={purposeBindings.filter((b: any) => b.status === 'active').length} color="var(--status-info)" />
+                <StatCard label="Purpose Violations" value={purposeViolations.filter((v: any) => !v.resolvedAt).length} color="var(--status-error)" />
+              </div>
+              <div>
+                <SectionHeading>Agent-purpose bindings</SectionHeading>
+                <div className="flex flex-col gap-2">
+                  {purposeBindings.map((binding: any) => (
+                    <div key={`${binding.agentId}-${binding.purposeId}`} className="p-4 bg-[var(--surface-panel)] rounded-xl border border-solid border-[var(--ui-border-muted)] flex items-center justify-between group hover:border-[var(--ui-border-default)] transition-colors">
+                      <div className="flex items-center gap-4 min-w-0">
+                        <div className={cn(
+                          "size-11 rounded-xl flex items-center justify-center shadow-lg transition-colors shrink-0",
+                          binding.status === 'active' ? "bg-emerald-500/10 text-emerald-500 shadow-emerald-500/5" : "bg-[var(--bg-tertiary)] text-[var(--ui-text-muted)]"
+                        )}>
+                          <Target size={22} weight={binding.status === 'active' ? "fill" : "regular"} />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-[15px] font-bold text-[var(--ui-text-inverse)] truncate">{binding.agentName}</div>
+                          <div className="text-[12px] text-[var(--ui-text-muted)] mt-0.5 truncate">bound to <span className="text-[var(--accent-primary)] font-bold">{binding.purposeName}</span> • confidence {Math.round((binding.confidence || 0) * 100)}%</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <span className={cn(
+                          "p-1 px-3 rounded-full text-[10px] font-black uppercase tracking-widest",
+                          binding.status === 'active' ? "bg-emerald-500/20 text-emerald-500" : "bg-[var(--bg-tertiary)] text-[var(--ui-text-muted)]"
+                        )}>
+                          {binding.status}
+                        </span>
+                        {binding.violations > 0 && (
+                          <span className="p-1 px-3 bg-rose-500/20 text-rose-500 rounded-full text-[10px] font-black uppercase tracking-widest border border-solid border-rose-500/20">
+                            {binding.violations} violations
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {purposeBindings.length === 0 && (
+                  <EmptyState icon={<Target size={40} weight="thin" />} caption="No agent-purpose bindings yet." />
+                )}
+              </div>
+              <div className="text-center py-10 bg-[var(--surface-panel)] rounded-2xl border border-solid border-[var(--ui-border-muted)]">
+                <p className="text-[14px] text-[var(--ui-text-muted)] max-w-md mx-auto leading-relaxed m-0">Define purposes, bind agents to them, and audit violations in the purpose binding workspace.</p>
+                <button type="button" className={cn(QUIET_BUTTON_CLASS, "mt-6")} onClick={() => openView('purpose')}>Open purpose workspace</button>
+              </div>
             </div>
           )}
 

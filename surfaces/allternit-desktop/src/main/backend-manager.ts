@@ -21,7 +21,11 @@ import { PORTS, URLS, webhookReceiverUrl } from './config.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const API_PORT = PORTS.API;
-const HEALTH_TIMEOUT_MS = 30_000;
+// Debug builds of allternit-api can edge past 30s under a cold start; allow
+// an env override and default to a more generous window in development.
+const HEALTH_TIMEOUT_MS = process.env.ALLTERNIT_API_HEALTH_TIMEOUT_MS
+  ? Number(process.env.ALLTERNIT_API_HEALTH_TIMEOUT_MS)
+  : (!app.isPackaged ? 90_000 : 30_000);
 
 export interface BackendStatus {
   installed: boolean;

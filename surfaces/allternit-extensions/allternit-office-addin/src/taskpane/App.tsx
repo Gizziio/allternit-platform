@@ -1,4 +1,12 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type CSSProperties } from 'react'
+import {
+  AlertTriangle,
+  ArrowUpRight,
+  FileSpreadsheet,
+  FileText,
+  MonitorSmartphone,
+  Presentation,
+} from 'lucide-react'
 import { getBridge } from '@/lib/bridge-factory'
 import { getOfficeHost, getOfficeHostDisplayName, getOfficeManifestUrl, getOfficeProductTarget } from '@/lib/host-detector'
 import {
@@ -11,11 +19,15 @@ import {
   bootstrapOfficeRuntime,
   getOfficeBootstrapState,
   getPlatformOrigin,
+  OFFICE_BOOTSTRAP_UPDATED_EVENT,
   resolveOfficeDocumentSnapshot,
   setAuthToken,
   syncOfficeRuntimeState,
   type OfficeBindingSnapshot,
 } from '@/lib/platform-gateway'
+import OfficeSidepanelApp from './OfficeSidepanelApp'
+import { isOfficeRuntimeReady, resolveTaskpaneMode, type TaskpaneRuntimeMode } from './runtime-mode'
+import { AProtocolMark } from './components/AProtocolMark'
 
 type BridgeStatus = 'connecting' | 'connected' | 'error' | 'companion'
 
@@ -25,22 +37,14 @@ type MarkdownPanelState =
   | { kind: 'ready'; result: MarkdownConversionResult }
   | { kind: 'error'; message: string }
 
-function useSyncDarkClass() {
-  useEffect(() => {
-    const media = window.matchMedia('(prefers-color-scheme: dark)')
-    const sync = () => document.documentElement.classList.toggle('dark', media.matches)
-    sync()
-    media.addEventListener?.('change', sync)
-    return () => media.removeEventListener?.('change', sync)
-  }, [])
-}
-
 const HOST_ACCENTS = {
   word: '#2B579A',
   excel: '#217346',
-  powerpoint: '#D24726',
-  unknown: '#B08D6E',
+  powerpoint: '#D74726',
+  unknown: '#9A7658',
 } as const
+
+type HostKey = keyof typeof HOST_ACCENTS
 
 const HOST_PRODUCTS = {
   word: {
@@ -65,8 +69,45 @@ const HOST_PRODUCTS = {
   },
 } as const
 
+const HOST_ICONS: Record<HostKey, typeof FileText> = {
+  word: FileText,
+  excel: FileSpreadsheet,
+  powerpoint: Presentation,
+  unknown: FileText,
+}
+
+const STATUS_META: Record<BridgeStatus, { label: string; dotClass: string; pulse: boolean }> = {
+  connected: { label: 'Connected', dotClass: 'bg-[var(--status-success)]', pulse: false },
+  connecting: { label: 'Connecting', dotClass: 'bg-[var(--status-warning)]', pulse: true },
+  companion: { label: 'No Office host', dotClass: 'bg-[var(--text-tertiary)]', pulse: false },
+  error: { label: 'Reconnect needed', dotClass: 'bg-[var(--status-error)]', pulse: false },
+}
+
 export default function App() {
-  useSyncDarkClass()
+  const [mode, setMode] = useState<TaskpaneRuntimeMode>(() =>
+    resolveTaskpaneMode({ officeInitialized: isOfficeRuntimeReady(), bootstrap: getOfficeBootstrapState() }),
+  )
+
+  useEffect(() => {
+    const recompute = () =>
+      setMode(resolveTaskpaneMode({ officeInitialized: isOfficeRuntimeReady(), bootstrap: getOfficeBootstrapState() }))
+    // Office.onReady fired late, or the shell pushed a bootstrap context
+    // (token / workspace / project) after first render.
+    window.addEventListener('allternit-office-runtime-ready', recompute)
+    window.addEventListener('allternit-office-auth-token-received', recompute)
+    window.addEventListener(OFFICE_BOOTSTRAP_UPDATED_EVENT, recompute)
+    return () => {
+      window.removeEventListener('allternit-office-runtime-ready', recompute)
+      window.removeEventListener('allternit-office-auth-token-received', recompute)
+      window.removeEventListener(OFFICE_BOOTSTRAP_UPDATED_EVENT, recompute)
+    }
+  }, [])
+
+  if (mode === 'full-ai') return <OfficeSidepanelApp />
+  return <CompanionApp />
+}
+
+function CompanionApp() {
   const liveHost = getOfficeHost()
   const host = getOfficeProductTarget()
   const hostLabel = getOfficeHostDisplayName()
@@ -79,6 +120,8 @@ export default function App() {
   const [markdownPanel, setMarkdownPanel] = useState<MarkdownPanelState>({ kind: 'idle' })
   const platformOrigin = useMemo(() => getPlatformOrigin(), [])
   const product = HOST_PRODUCTS[host]
+  const HostIcon = HOST_ICONS[host]
+  const statusMeta = STATUS_META[status]
 
   const viewAsMarkdown = async () => {
     setMarkdownPanel({ kind: 'loading' })
@@ -200,100 +243,185 @@ export default function App() {
   }, [])
 
   return (
-    <main className="flex h-full min-h-0 flex-col bg-[var(--bg-primary)] text-[var(--text-primary)]">
-      <header className="flex shrink-0 items-center gap-3 border-b border-[var(--border-default)] bg-[var(--glass-bg-thick)] px-4 py-3">
-        <div className="flex size-9 items-center justify-center rounded-xl text-sm font-black" style={{ color: accent, background: `color-mix(in srgb, ${accent} 14%, transparent)` }}>A//</div>
-        <div className="min-w-0 flex-1"><div className="truncate text-sm font-bold">Allternit for {hostLabel}</div><div className="truncate text-[11px] text-[var(--text-tertiary)]">{product.role}</div></div>
-        <span className="flex items-center gap-1.5 rounded-full border border-[var(--border-default)] px-2 py-1 text-[10px] font-semibold text-[var(--text-secondary)]"><span className={`size-1.5 rounded-full ${status === 'connected' ? 'bg-green-500' : status === 'error' ? 'bg-red-500' : 'bg-amber-500 animate-pulse'}`} />{status === 'connected' ? 'Connected' : status === 'connecting' ? 'Connecting' : status === 'companion' ? 'No Office host' : 'Reconnect needed'}</span>
+    <main
+      className="flex h-full min-h-0 flex-col bg-[var(--bg-primary)] text-[var(--text-primary)]"
+      style={{ '--host-accent': accent } as CSSProperties}
+    >
+      {/* ── Header ── */}
+      <header className="flex shrink-0 items-center gap-2 border-b border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-2.5">
+        <AProtocolMark height={12} className="shrink-0" />
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-[12px] font-bold leading-tight">{hostLabel}</div>
+        </div>
+        <span className="flex shrink-0 items-center gap-1 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-1.5 py-0.5 text-[9px] font-semibold text-[var(--text-secondary)]">
+          <span
+            className={`status-dot size-1.5 ${statusMeta.dotClass} ${statusMeta.pulse ? 'is-pulsing' : ''}`}
+          />
+          {statusMeta.label}
+        </span>
       </header>
 
-      <section className="flex min-h-0 flex-1 flex-col justify-between overflow-y-auto p-4">
-        <div className="space-y-4">
-          <div className="rounded-2xl border border-[var(--border-default)] bg-[var(--bg-elevated)] p-4 shadow-[var(--shadow-sm)]">
-            <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-tertiary)]">Attached document</div>
-            <div className="break-words text-sm font-semibold">{documentLabel}</div>
-            <div className="mt-2 flex flex-wrap gap-1.5 text-[10px] text-[var(--text-tertiary)]">
-              <span className="rounded-full bg-[var(--bg-secondary)] px-2 py-1">{hostLabel}</span>
-              {binding?.workspace_id && <span className="rounded-full bg-[var(--bg-secondary)] px-2 py-1">Workspace attached</span>}
-              {binding?.project_id && <span className="rounded-full bg-[var(--bg-secondary)] px-2 py-1">Project attached</span>}
+      {/* ── Body ── */}
+      <section className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
+        {status === 'connecting' && (
+          <div className="card host-border space-y-2.5 p-4" aria-busy="true">
+            <div className="flex items-center gap-2">
+              <span className="host-tint-strong flex size-8 items-center justify-center rounded-lg">
+                <HostIcon className="size-4 host-accent" strokeWidth={1.8} />
+              </span>
+              <div className="flex-1 space-y-1.5">
+                <div className="shimmer h-3 w-3/4" />
+                <div className="shimmer h-2.5 w-1/3" />
+              </div>
             </div>
+            <div className="shimmer h-2.5 w-full" />
+            <p className="pt-1 text-[11px] leading-relaxed text-[var(--text-tertiary)]">
+              Attaching to the open {hostLabel} document…
+            </p>
+          </div>
+        )}
+
+        {(status === 'connected' || status === 'error') && (
+          <div className="card host-border p-4">
+            <div className="eyebrow mb-2.5">Attached document</div>
+            <div className="flex items-start gap-3">
+              <span className="host-tint-strong mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg">
+                <HostIcon className="size-[18px] host-accent" strokeWidth={1.8} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="break-words text-[13px] font-semibold leading-snug">{documentLabel}</div>
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  <span className="chip">{hostLabel}</span>
+                  {binding?.workspace_id && <span className="chip">Workspace attached</span>}
+                  {binding?.project_id && <span className="chip">Project attached</span>}
+                </div>
+              </div>
+            </div>
+
             {status === 'connected' && markdownPanel.kind === 'idle' && (
               <button
                 type="button"
                 onClick={() => void viewAsMarkdown()}
-                className="mt-3 rounded-lg px-3 py-2 text-[11px] font-bold text-white"
-                style={{ background: accent }}
+                className="btn btn-outline mt-3.5 h-8 px-3"
                 data-testid="view-as-markdown"
               >
                 View as Markdown
               </button>
             )}
             {markdownPanel.kind === 'loading' && (
-              <div className="mt-3 text-[11px] text-[var(--text-secondary)]">Converting to Markdown…</div>
+              <div className="mt-3.5 flex items-center gap-2 text-[11px] text-[var(--text-tertiary)]">
+                <span className="status-dot size-1.5 bg-[var(--status-warning)] is-pulsing" />
+                Converting to Markdown…
+              </div>
             )}
             {markdownPanel.kind === 'error' && (
-              <div className="mt-3 rounded-xl border border-red-500/20 bg-red-500/5 p-3 text-[11px] leading-relaxed text-red-600">
+              <div className="notice notice-error mt-3.5 flex-col">
                 <div>{markdownPanel.message}</div>
                 <button
                   type="button"
                   onClick={() => void viewAsMarkdown()}
-                  className="mt-2 rounded-lg px-3 py-1.5 text-[11px] font-bold text-white"
-                  style={{ background: accent }}
+                  className="btn btn-primary mt-1 h-7 self-start px-3 text-[11px]"
                 >
                   Retry
                 </button>
               </div>
             )}
             {markdownPanel.kind === 'ready' && (
-              <div className="mt-3" data-testid="markdown-panel">
+              <div className="mt-3.5" data-testid="markdown-panel">
                 <div className="mb-1.5 flex items-center justify-between gap-2">
-                  <span className="rounded-full bg-[var(--bg-secondary)] px-2 py-1 text-[10px] font-semibold uppercase text-[var(--text-tertiary)]">
+                  <span className="chip uppercase">
                     {markdownPanel.result.format ?? 'markdown'}
                   </span>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2.5">
                     <a
                       href={`${platformOrigin}/markdown-preview`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-[11px] font-semibold underline"
-                      style={{ color: accent }}
+                      className="flex items-center gap-0.5 text-[11px] font-semibold text-[var(--accent-brand)] hover:underline"
                     >
                       Open in platform
+                      <ArrowUpRight className="size-3" />
                     </a>
                     <button
                       type="button"
                       onClick={() => setMarkdownPanel({ kind: 'idle' })}
-                      className="text-[11px] font-semibold text-[var(--text-tertiary)]"
+                      className="text-[11px] font-medium text-[var(--text-tertiary)] transition-colors hover:text-[var(--text-primary)]"
                     >
                       Close
                     </button>
                   </div>
                 </div>
-                <pre className="max-h-72 overflow-auto whitespace-pre-wrap break-words rounded-xl border border-[var(--border-default)] bg-[var(--bg-primary)] p-3 font-mono text-[11px] leading-relaxed text-[var(--text-secondary)]">
+                <pre className="max-h-72 overflow-auto whitespace-pre-wrap break-words rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-3 font-mono text-[11px] leading-relaxed text-[var(--text-secondary)]">
                   {markdownPanel.result.markdown}
                 </pre>
               </div>
             )}
           </div>
+        )}
 
-          <div className="rounded-2xl border border-[var(--border-default)] p-4" style={{ background: `color-mix(in srgb, ${accent} 7%, var(--bg-primary))` }}>
-            <div className="text-xs font-bold">{product.role}</div>
-            <p className="mt-1.5 text-[11px] leading-relaxed text-[var(--text-secondary)]">{product.description} The platform brain owns models, skills, approvals, memory, and execution history.</p>
+        {/* ── What the agent can do here ── */}
+        <div className="host-tint host-border rounded-[var(--radius-xl)] border p-4">
+          <div className="flex items-center gap-2 text-[12px] font-bold">
+            <span className="host-accent font-mono text-[10px] font-bold">A://</span>
+            {product.role}
           </div>
-
-          {product.actions.length > 0 && <div>
-            <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-tertiary)]">Start with Computer Agent</div>
-            <div className="grid grid-cols-2 gap-2">{product.actions.map((action) => <button key={action} type="button" disabled={status !== 'connected'} onClick={() => steerAgent(action)} className="min-h-14 rounded-xl border border-[var(--border-default)] bg-[var(--bg-elevated)] p-2 text-left text-[11px] font-semibold leading-4 text-[var(--text-primary)] transition hover:border-[var(--border-strong)] disabled:cursor-not-allowed disabled:opacity-45">{action}</button>)}</div>
-          </div>}
-
-          {status === 'companion' && <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 text-[11px] leading-relaxed text-[var(--text-secondary)]">Open this add-in from Word, Excel, or PowerPoint. Loading its webpage by itself cannot provide Office document access.</div>}
-          {error && <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-3 text-[11px] leading-relaxed text-red-600">
-            <div>{error}</div>
-            {liveHost !== 'unknown' && <button type="button" onClick={connectAllternit} className="mt-3 rounded-lg px-3 py-2 text-[11px] font-bold text-white" style={{ background: accent }}>Connect Allternit</button>}
-          </div>}
+          <p className="mt-1.5 text-[11.5px] leading-relaxed text-[var(--text-secondary)]">
+            {product.description} The platform brain owns models, skills, approvals, memory, and execution history.
+          </p>
         </div>
 
-        <footer className="mt-5 border-t border-[var(--border-subtle)] pt-3 text-[10px] leading-relaxed text-[var(--text-tertiary)]">Platform brain · Browser/computer-use harness · {binding ? `Binding ${binding.id.slice(0, 8)}` : 'Waiting for binding'}</footer>
+        {/* ── Suggested actions ── */}
+        {product.actions.length > 0 && (
+          <div>
+            <div className="eyebrow mb-2">Start with Computer Agent</div>
+            <div className="grid grid-cols-2 gap-2">
+              {product.actions.map((action) => (
+                <button
+                  key={action}
+                  type="button"
+                  disabled={status !== 'connected'}
+                  onClick={() => steerAgent(action)}
+                  className="card group flex min-h-14 items-center justify-between gap-2 p-3 text-left transition-all hover:shadow-[var(--shadow-md)] disabled:cursor-not-allowed disabled:opacity-45"
+                >
+                  <span className="text-[11.5px] font-semibold leading-4">{action}</span>
+                  <ArrowUpRight className="size-3.5 shrink-0 text-[var(--text-tertiary)] transition-colors group-hover-action" strokeWidth={2} />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── States ── */}
+        {status === 'companion' && (
+          <div className="notice notice-warning">
+            <MonitorSmartphone className="mt-0.5 size-3.5 shrink-0 text-[var(--status-warning)]" strokeWidth={1.8} />
+            <span>
+              Open this add-in from Word, Excel, or PowerPoint. Loading its webpage by itself cannot
+              provide Office document access.
+            </span>
+          </div>
+        )}
+        {error && (
+          <div className="notice notice-error flex-col">
+            <div className="flex gap-2">
+              <AlertTriangle className="mt-0.5 size-3.5 shrink-0" strokeWidth={1.8} />
+              <span>{error}</span>
+            </div>
+            {liveHost !== 'unknown' && (
+              <button
+                type="button"
+                onClick={connectAllternit}
+                className="btn btn-primary mt-1.5 h-8 self-start px-3.5 text-[11.5px]"
+              >
+                Connect Allternit
+              </button>
+            )}
+          </div>
+        )}
+        <footer className="mt-auto pt-1 text-[10px] leading-relaxed text-[var(--text-tertiary)]">
+          Platform brain · Browser/computer-use harness ·{' '}
+          {binding ? `Binding ${binding.id.slice(0, 8)}` : 'Waiting for binding'}
+        </footer>
       </section>
     </main>
   )

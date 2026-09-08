@@ -257,6 +257,7 @@ export function RecentsView(): React.ReactNode {
     const defaultViewForMode: Record<AppMode, string> = {
       chat: 'chat',
       cowork: 'workspace',
+      bot: 'bot-launchpad',
       code: 'code',
       design: 'design',
       browser: 'browser',

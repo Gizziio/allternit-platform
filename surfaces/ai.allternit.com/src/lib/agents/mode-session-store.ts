@@ -91,7 +91,7 @@ export interface ModeSession {
     agentId?: string;
     agentIds?: string[];
     agentName?: string;
-    originSurface: 'chat' | 'cowork' | 'code' | 'browser' | 'design';
+    originSurface: 'chat' | 'cowork' | 'code' | 'browser' | 'design' | 'bot';
     projectId?: string;
     taskId?: string;
     workspaceId?: string;
@@ -235,6 +235,14 @@ function mapBackendMessage(backend: BackendMessage): ModeSessionMessage {
 
 function isBackendSessionId(sessionId: string): boolean {
   return sessionId.startsWith('ses');
+}
+
+/** Shallow-copy a metadata bag dropping `undefined` values so spreading it
+ * over an existing bag never wipes a real value with an absent key. */
+function definedEntries(source?: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(source ?? {}).filter(([, value]) => value !== undefined),
+  );
 }
 
 function toAgentElementsToolType(toolName: string): string {
@@ -919,7 +927,7 @@ function codePermissionRules(mode: 'default' | 'acceptEdits' | 'plan') {
 interface StoreConfig {
   name: string;
   storageKey: string;
-  originSurface: 'chat' | 'cowork' | 'code' | 'browser' | 'design';
+  originSurface: 'chat' | 'cowork' | 'code' | 'browser' | 'design' | 'bot';
   sessionApi?: SessionApi;
   chatApi?: ChatApi;
 }
@@ -1121,7 +1129,18 @@ export function createModeSessionStore(config: StoreConfig) {
               });
 
               const session = mapBackendSession(backendSession);
-              
+              // The backend round-trip can strip client-only metadata (bot
+              // identity, session mode, prompts). Merge the request options
+              // back OVER the mapped session so identity always survives.
+              session.metadata = {
+                ...session.metadata,
+                ...definedEntries(options.metadata),
+                ...(options.agentId ? { agentId: options.agentId } : {}),
+                ...(options.agentName ? { agentName: options.agentName } : {}),
+                ...(options.sessionMode ? { sessionMode: options.sessionMode } : {}),
+                ...(options.systemPrompt ? { systemPrompt: options.systemPrompt } : {}),
+              };
+
               // Replace optimistic session with real one
               set((state) => ({
                 sessions: state.sessions.map((s) =>
@@ -1164,13 +1183,17 @@ export function createModeSessionStore(config: StoreConfig) {
               return session.id;
             } catch (error) {
               const message = error instanceof Error ? error.message : 'Failed to create session';
+              const isBotSession = options.metadata?.isBot === true;
               const localModeId = typeof options.metadata?.agentModeId === 'string'
                 ? options.metadata.agentModeId
                 : config.originSurface === 'code'
                   ? 'code'
                   : null;
-              const canRunLocally = Boolean(localModeId) && (
-                options.sessionMode === 'agent' || config.originSurface === 'code'
+              // Bot sessions must keep a working local session when the
+              // backend is unreachable — deleting the optimistic session and
+              // re-throwing orphans every bot chat click.
+              const canRunLocally = (Boolean(localModeId) || isBotSession) && (
+                options.sessionMode === 'agent' || config.originSurface === 'code' || isBotSession
               );
               if (canRunLocally) {
                 logger.warn({ err: error }, `[${config.name}] Backend session unavailable; running built-in mode locally`);

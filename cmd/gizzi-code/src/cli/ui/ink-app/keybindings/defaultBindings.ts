@@ -182,6 +182,15 @@ export const DEFAULT_BINDINGS: KeybindingBlock[] = [
     },
   },
   {
+    context: 'Bots',
+    bindings: {
+      // Exit keys are gated by BotsPaneScreen (isActive) so the create
+      // input and delete confirm can claim Esc first, same as Dashboard.
+      escape: 'bots:exit',
+      q: 'bots:exit',
+    },
+  },
+  {
     context: 'HistorySearch',
     bindings: {
       'ctrl+r': 'historySearch:next',

@@ -55,6 +55,8 @@ import {
 import { GizziMascot, type GizziEmotion } from "@/components/ai-elements/GizziMascot";
 import { MascotPreview } from "@/views/agent-view/components/AgentMascotPreview";
 import { BOT_CATEGORIES } from "@/lib/bots/bot-profile";
+import { saveBotAvatar } from "@/lib/bots/bot-assets-api";
+import { generateBotAvatar, isBotAvatar } from "@/lib/bots/bot-avatar.service";
 import { api } from "@/integration/api-client";
 import { voiceService, type Voice } from "@/lib/agents/voice.service";
 import { cn } from "@/lib/utils";
@@ -638,6 +640,14 @@ export function CreateBotForm({ isOpen, onClose }: CreateBotFormProps) {
 
     try {
       const created = await createAgent(payload);
+      // Fire-and-forget avatar asset sync so mail/inbox can show real pfps.
+      // Form-created bots may not carry a BotAvatar union yet — generate the
+      // deterministic one as the stored asset.
+      const avatar = created.botProfile?.avatar;
+      void saveBotAvatar(
+        created.id,
+        avatar && isBotAvatar(avatar) ? avatar : generateBotAvatar(created.id),
+      );
       onClose();
       window.dispatchEvent(
         new CustomEvent("allternit:open-view", {

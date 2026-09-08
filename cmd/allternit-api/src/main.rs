@@ -768,8 +768,10 @@ async fn main() {
         .nest("/api", oauth_router())
         .nest("/api", onboarding_router())
         .nest("/api", aci_router())
+        .nest("/api", allternit_api::bot_assets::bot_assets_router())
         .nest("/api", page_agent_router())
         .nest("/api", analytics_router())
+        .nest("/api", allternit_api::group_rooms::router())
         .nest("/api", playground_router())
         .nest("/api", checkpoints_router())
         .nest("/api", design_connector_router())
@@ -829,7 +831,12 @@ async fn main() {
         // management/read brain API stays on the protected router above.
         // Nested under /api/v1 so clone URLs issued by POST /api/v1/brains
         // resolve here.
-        .nest("/api/v1", brain_git_router());
+        .nest("/api/v1", brain_git_router())
+        // Cross-machine bot peer fabric (BOT_TEAMMATES_SPEC Phase 3): mounts
+        // on the public router because inbound peer traffic carries a peer
+        // key, not a Clerk JWT — every handler self-gates (desktop token /
+        // Clerk JWT / registered peer key; fabric endpoints peer-key only).
+        .nest("/api", allternit_api::remote_peers::remote_peers_router());
 
     // Fabric Model Gateway: OpenAI-shaped /v1 model catalog and the unified
     // /v1/responses endpoint. It is authenticated with the standard Clerk/

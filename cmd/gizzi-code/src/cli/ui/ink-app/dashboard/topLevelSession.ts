@@ -409,12 +409,26 @@ async function runSessionTurns(runner: SessionRunner): Promise<void> {
       // Mutating this copy is safe — buildQueryParams is awaited once per
       // runner and each dispatch builds fresh params.
       const originalCanUseTool = queryParams.canUseTool
-      queryParams.canUseTool = (...args: unknown[]) => {
+      queryParams.canUseTool = (tool, input, ctx, ...rest) => {
         awaitingInput.add(taskId)
+        // Stamp the owning dashboard task on the context so the permission
+        // queue can attribute the confirm to this session — the dashboard
+        // renders it inline with the real option buttons (1-9 included).
+        if (ctx && typeof ctx === 'object' && ctx.options) {
+          ctx.options.dashboardTaskId = taskId
+        }
         try {
-          return originalCanUseTool(...args)
-        } finally {
+          const result = originalCanUseTool(tool, input, ctx, ...rest)
+          // originalCanUseTool returns a Promise that stays pending until
+          // the user answers the permission prompt. A plain try/finally
+          // would clear the flag the moment the promise is RETURNED — hold
+          // it for the whole wait.
+          return Promise.resolve(result).finally(() => {
+            awaitingInput.delete(taskId)
+          })
+        } catch (err) {
           awaitingInput.delete(taskId)
+          throw err
         }
       }
       const recentActivities: ToolActivity[] = []

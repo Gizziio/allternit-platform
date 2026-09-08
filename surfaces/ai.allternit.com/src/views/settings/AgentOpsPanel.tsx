@@ -39,9 +39,7 @@ import { PanelHeader } from '@/components/settings/PanelHeader';
 import { Toggle } from '@/components/settings/Toggle';
 import { SettingsCard } from '@/components/settings/SettingsCard';
 import { QUIET_BUTTON_CLASS, DESTRUCTIVE_BUTTON_CLASS } from '@/components/settings/buttonStyles';
-import { AgentView } from '../AgentView';
 import { AgentWorkspacePanel } from '@/components/agent-workspace/AgentWorkspacePanel';
-import { useAgentStore } from '@/lib/agents/agent.store';
 
 const logger = createModuleLogger('AgentOpsPanel');
 
@@ -270,7 +268,6 @@ const ToastContainer = ({ toasts, onRemove }: { toasts: Toast[]; onRemove: (id: 
 
 export function AgentOpsPanel() {
   const [agentOpsTab, setAgentOpsTab] = useState<AgentOpsTab>('setup');
-  const { setIsCreating: setIsCreatingAgent } = useAgentStore();
 
   // Evaluation state
   const [evaluations, setEvaluations] = useState<any[]>([]);
@@ -1021,12 +1018,21 @@ export function AgentOpsPanel() {
       </div>
       {agentOpsTab === 'setup' && (
         <div className="flex flex-col gap-4 min-h-[520px]">
-          <PanelHeader title="My Agents">
-            <button type="button" onClick={() => setIsCreatingAgent(true)} className={QUIET_BUTTON_CLASS}>
-              <Plus size={14} /> Create Agent
+          <PanelHeader title="My Agents" />
+          <div className="flex flex-col items-center justify-center gap-3 flex-1 p-10 rounded-xl border border-dashed border-[var(--border-subtle)] text-center">
+            <p className="text-[13px] text-[var(--text-secondary)] m-0 max-w-[360px]">
+              Agent setup and discovery live in the Agent Hub view — one registry for creating, browsing, and chatting with agents.
+            </p>
+            <button type="button"
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent('allternit:close-settings'));
+                window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType: 'agent-hub' } }));
+              }}
+              className={QUIET_BUTTON_CLASS}
+            >
+              <Robot size={14} /> Open Agent Hub
             </button>
-          </PanelHeader>
-          <AgentView title="Agents" hideHeader showLandingOnEntry={false} compactGrid />
+          </div>
         </div>
       )}
       {agentOpsTab === 'workspace' && (

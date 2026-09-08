@@ -7,6 +7,7 @@ import {
 } from '@allternit/office-suite';
 import { takeFile } from '@/views/office/file-handoff';
 import { fetchArtifactById, type ArtifactDto } from '@/services/artifacts-api';
+import { getOfficeExtensions } from '@/views/office/officeExtensions';
 
 export interface PdfViewProps {
   artifactId?: string;
@@ -85,6 +86,7 @@ export function PdfView({ artifactId, handoffId }: PdfViewProps) {
         saveFile: async () => {
           /* read-only viewer: edits are not persisted back to the artifact */
         },
+        extensions: getOfficeExtensions(),
       }),
     [],
   );

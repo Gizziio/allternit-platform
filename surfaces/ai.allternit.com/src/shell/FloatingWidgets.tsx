@@ -6,6 +6,7 @@ import {
   NotePencil,
   Bell,
   House,
+  Robot,
   TerminalWindow,
   Globe,
 } from '@phosphor-icons/react';
@@ -42,6 +43,7 @@ interface ModeButton {
 
 const MODE_BUTTONS: ModeButton[] = [
   { id: 'chat', label: 'Home', icon: House, accent: 'var(--accent-chat)' },
+  { id: 'bot', label: 'Bots', icon: Robot, accent: 'var(--accent-bot)' },
   { id: 'code', label: 'Code', icon: TerminalWindow, accent: 'var(--accent-code)' },
   { id: 'browser', label: 'ACI', icon: Globe, accent: 'var(--accent-browser)' },
 ];

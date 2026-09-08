@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChatText,
   UsersThree,
+  Robot,
   TerminalWindow,
   Palette,
   Globe,
@@ -39,6 +40,15 @@ const MODES: ModeConfig[] = [
     accentLight: 'var(--shell-mode-cowork-soft)',
     accentDark: 'var(--shell-mode-cowork-strong)',
     description: 'Collaborative workspace with artifacts'
+  },
+  {
+    id: 'bot',
+    label: 'Bots',
+    icon: Robot,
+    accentColor: 'var(--accent-bot)',
+    accentLight: 'var(--shell-mode-bot-soft)',
+    accentDark: 'var(--shell-mode-bot-strong)',
+    description: 'Your bots and group chats'
   },
   {
     id: 'code',
@@ -80,7 +90,7 @@ function useModePersistence(): { mode: AppMode; setMode: (newMode: AppMode) => v
     // Load mode from localStorage on mount
     try {
       const savedMode = localStorage.getItem(MODE_STORAGE_KEY) as AppMode | null;
-      if (savedMode && ['chat', 'cowork', 'code', 'design', 'browser'].includes(savedMode)) {
+      if (savedMode && ['chat', 'cowork', 'bot', 'code', 'design', 'browser'].includes(savedMode)) {
         setMode(savedMode);
       }
     } catch {

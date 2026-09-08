@@ -1154,6 +1154,7 @@ function OfficeCliArtifactGallery({
 
 function ToolExecutionCard({
   event,
+  officeCliArtifacts,
 }: {
   event: Extract<ExtensionSidepanelHistoricalEvent, { type: "tool_execution" }>;
   officeCliArtifacts?: ExtensionSidepanelAdapter["officeCliArtifacts"];

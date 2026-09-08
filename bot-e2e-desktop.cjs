@@ -1,9 +1,19 @@
 const { _electron: electron } = require('@playwright/test');
+const path = require('path');
 
 const fs = require('fs');
-const desktopDir = '/Users/joe/Desktop/allternit-workspace/allternit-session-desktop-cloud-mvp/surfaces/allternit-desktop';
-const userDataDir = '/tmp/allternit-desktop-e2e-v2';
-const PLATFORM_URL = 'http://localhost:3014';
+// Default to THIS repo's desktop shell (surfaces/allternit-desktop, launched
+// with `npm run dev` / electron .). Override with ALLTERNIT_DESKTOP_DIR.
+const desktopDir = process.env.ALLTERNIT_DESKTOP_DIR
+  || path.join(__dirname, 'surfaces', 'allternit-desktop');
+const userDataDir = process.env.ALLTERNIT_E2E_PROFILE
+  || '/tmp/allternit-desktop-e2e-v2';
+// The desktop shell defaults to its DEV_UI (localhost:3014, see
+// surfaces/allternit-desktop/src/main/config.ts) and honors
+// ALLTERNIT_PLATFORM_URL — mirror that convention here.
+const PLATFORM_URL = process.env.ALLTERNIT_PLATFORM_URL
+  || 'http://localhost:3014';
+const platformOrigin = new URL(PLATFORM_URL).origin;
 
 // Start from a clean profile so dev mode defaults apply and rail screenshots are clean.
 try { fs.rmSync(userDataDir, { recursive: true, force: true }); } catch {}
@@ -27,7 +37,7 @@ async function findMainPage(app) {
     for (const w of windows) {
       try {
         const url = await w.url();
-        if (url.includes('localhost:3014') || url.includes('127.0.0.1:3014') || url.includes('ai.allternit.com')) {
+        if (url.startsWith(platformOrigin) || url.includes('ai.allternit.com')) {
           // Don't return until the shell has actually rendered.
           try {
             await w.getByText('Agent | Bot Hub').waitFor({ timeout: 5000 });

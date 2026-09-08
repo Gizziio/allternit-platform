@@ -258,6 +258,11 @@ function isLongLivedCommand(argv: { _: (string | number)[]; print?: boolean }): 
       // `mcp serve` runs an MCP server; add/remove/list/auth/logout/debug
       // are one-shot.
       return sub === "serve"
+    case "bot":
+      // `bot chat` with no message launches the interactive TUI (delegates to
+      // the default $0 command); with a message it is a one-shot headless turn
+      // that self-exits in print mode.
+      return sub === "chat" && argv._.length <= 3
     case "runtime":
       // `runtime daemon` is a WebSocket daemon; list/register/status exit.
       return sub === "daemon"

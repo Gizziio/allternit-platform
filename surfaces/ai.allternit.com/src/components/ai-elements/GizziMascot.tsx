@@ -21,7 +21,7 @@ export interface GizziAttention {
   };
 }
 
-type GizziLocomotionStyle = 'chat' | 'cowork' | 'code' | 'browser';
+type GizziLocomotionStyle = 'chat' | 'cowork' | 'bot' | 'code' | 'browser';
 type GizziLocomotionPhase = 'idle' | 'walk-in' | 'walk-out' | 'crawl';
 
 export interface GizziLocomotion {
@@ -74,6 +74,7 @@ interface EmotionProfile {
 function resolveLocomotionFamily(style: GizziLocomotionStyle) {
   switch (style) {
     case 'cowork':
+    case 'bot':
     case 'browser':
       return 'cowork';
     case 'chat':

@@ -30,7 +30,7 @@ import { startPreventSleep, stopPreventSleep } from '../services/preventSleep';
 import { useTerminalNotification } from '../ink/useTerminalNotification';
 import { hasCursorUpViewportYankBug } from '../ink/terminal';
 import { createFileStateCacheWithSizeLimit, mergeFileStateCaches, READ_FILE_STATE_CACHE_SIZE } from '../utils/fileStateCache';
-import { updateLastInteractionTime, getLastInteractionTime, getOriginalCwd, getProjectRoot, getSessionId, switchSession, setCostStateForRestore, getTurnHookDurationMs, getTurnHookCount, resetTurnHookDuration, getTurnToolDurationMs, getTurnToolCount, resetTurnToolDuration, getTurnClassifierDurationMs, getTurnClassifierCount, resetTurnClassifierDuration, getCwdState } from '../bootstrap/state';
+import { updateLastInteractionTime, getLastInteractionTime, getOriginalCwd, getProjectRoot, getSessionId, switchSession, setResumeHandler, setCostStateForRestore, getTurnHookDurationMs, getTurnHookCount, resetTurnHookDuration, getTurnToolDurationMs, getTurnToolCount, resetTurnToolDuration, getTurnClassifierDurationMs, getTurnClassifierCount, resetTurnClassifierDuration, getCwdState } from '../bootstrap/state';
 import { asSessionId, asAgentId } from '../types/ids';
 import { logForDebugging } from '../utils/debug';
 import { QueryGuard } from '../utils/QueryGuard';
@@ -389,6 +389,7 @@ import { FullscreenLayout, useUnseenDivider, computeUnseenDivider } from '../com
 import { isFullscreenEnvEnabled, maybeGetTmuxMouseHint, isMouseTrackingEnabled } from '../utils/fullscreen';
 import { AlternateScreen } from '../ink/components/AlternateScreen';
 import { DashboardScreen } from './DashboardScreen';
+import { BotsPaneScreen } from './bots-pane/BotsPaneScreen';
 import { InProcessDashboardSource } from '../dashboard/InProcessSource';
 import { ScrollKeybindingHandler } from '../components/ScrollKeybindingHandler';
 import { useMessageActions, MessageActionsKeybindings, MessageActionsBar, type MessageActionsState, type MessageActionsNav, type MessageActionCaps } from '../components/messageActions';
@@ -2112,6 +2113,15 @@ export function REPL({
     }
   }, [resetLoadingState, setAppState]);
 
+  // Publish the full resume pipeline so non-command surfaces (the /bots
+  // pane's "open canonical chat") can resume with the same fidelity —
+  // transcript reload, hooks, plan/file-history handoff — instead of a bare
+  // switchSession that leaves the mounted message list stale.
+  useEffect(() => {
+    setResumeHandler(resume)
+    return () => setResumeHandler(null)
+  }, [resume])
+
   // Lazy init: useRef(createX()) would call createX on every render and
   // discard the result. LRUCache construction inside FileStateCache is
   // expensive (~170ms), so we use useState's lazy initializer to create
@@ -2762,22 +2772,43 @@ export function REPL({
       querySource: getQuerySourceForREPL()
     };
   }, [mainLoopModel, toolPermissionContext, mainThreadAgentDefinition, getToolUseContext, customSystemPrompt, appendSystemPrompt, canUseTool]);
+  // Live refs for the dashboard's synthetic main row: getMainRow is called
+  // from DashboardScreen's render (outside this component's own re-render
+  // timing), so it must read current values through refs rather than stale
+  // closure captures.
+  const isLoadingRef = React.useRef(isLoading);
+  isLoadingRef.current = isLoading;
+  const toolUseConfirmQueueRef = React.useRef(toolUseConfirmQueue);
+  toolUseConfirmQueueRef.current = toolUseConfirmQueue;
+  const handleDashboardPermissionDone = React.useCallback((toolUseID: string) => {
+    setToolUseConfirmQueue(q => q.filter(item => item.toolUseID !== toolUseID));
+  }, []);
+
   const dashboardSource = useMemo(() => new InProcessDashboardSource({
     getAppState: store.getState,
     setAppState,
     buildQueryParams: buildDashboardQueryParams,
-    // Synthetic leader row for the main session (Phase 5 wires live state).
-    getMainRow: () => ({
-      id: 'main',
-      source: 'in-process',
-      title: getCurrentSessionTitle(getSessionId()) ?? 'Main session',
-      state: 'idle',
-      activityLine: '',
-      directory: getCwdState(),
-      pinned: true,
-      createdAt: 0,
-      updatedAt: Date.now()
-    })
+    // Synthetic leader row for the main session with live state: a pending
+    // main-session permission prompt shows 'needs-input', an active query
+    // shows 'working', otherwise 'idle'.
+    getMainRow: () => {
+      const queue = toolUseConfirmQueueRef.current ?? [];
+      const permissionPending = queue.some(item => !item.dashboardTaskId);
+      const loading = isLoadingRef.current;
+      return {
+        id: 'main',
+        source: 'in-process',
+        title: getCurrentSessionTitle(getSessionId()) ?? 'Main session',
+        state: permissionPending ? 'needs-input' : loading ? 'working' : 'idle',
+        activityLine: permissionPending ? 'awaiting input' : loading ? 'working' : '',
+        directory: getCwdState(),
+        model: mainLoopModel?.alias ?? mainLoopModel?.fullName,
+        permissionMode: store.getState().toolPermissionContext?.mode,
+        pinned: true,
+        createdAt: 0,
+        updatedAt: Date.now()
+      };
+    }
   }), [store, setAppState, buildDashboardQueryParams]);
   const {
     handleBackgroundSession
@@ -4903,10 +4934,24 @@ export function REPL({
     const dashboardReturn = <KeybindingSetup>
         <AnimatedTerminalTitle isAnimating={titleIsAnimating} title={terminalTitle} disabled={titleDisabled} noPrefix={showStatusInTerminalTab} />
         <GlobalKeybindingHandlers {...globalKeybindingProps} />
-        <DashboardScreen source={dashboardSource} tools={tools} commands={commands} />
+        <DashboardScreen source={dashboardSource} tools={tools} commands={commands} permissionQueue={toolUseConfirmQueue} onPermissionDone={handleDashboardPermissionDone} />
       </KeybindingSetup>;
     return <AlternateScreen mouseTracking={isMouseTrackingEnabled()}>
         {dashboardReturn}
+      </AlternateScreen>;
+  }
+
+  if (screen === 'bots') {
+    // Full-screen bots roster (Bot Mode B5). Same AlternateScreen +
+    // KeybindingSetup shape as the dashboard branch; the pane exits back
+    // to 'prompt' itself (q/Esc or after opening a canonical chat).
+    const botsReturn = <KeybindingSetup>
+        <AnimatedTerminalTitle isAnimating={titleIsAnimating} title={terminalTitle} disabled={titleDisabled} noPrefix={showStatusInTerminalTab} />
+        <GlobalKeybindingHandlers {...globalKeybindingProps} />
+        <BotsPaneScreen />
+      </KeybindingSetup>;
+    return <AlternateScreen mouseTracking={isMouseTrackingEnabled()}>
+        {botsReturn}
       </AlternateScreen>;
   }
 

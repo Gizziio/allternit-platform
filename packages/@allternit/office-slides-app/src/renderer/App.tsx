@@ -54,6 +54,7 @@ import type { ChartPresetDef, IconDef, SmartArtDef, WordArtPreset } from './inse
 import { AllternitMark, IconAiBeautify, IconAiFactCheck, IconAiImage } from './components/icons'
 import { t, useI18n } from './i18n/locale'
 import { AiPanel } from './ai/AiPanel'
+import { OfficeAiSlot } from '@allternit/office-suite/bridge'
 import { ChartDataDialog } from './components/ChartDataDialog'
 import type { BrushFormat } from './format-brush'
 import { isTextUndoTarget, shouldRouteUndoToDeck } from './undo-routing'
@@ -2347,27 +2348,34 @@ export function App() {
             <div className={`ai-dock${showAi && aiSettings ? '' : ' collapsed'}`}>
               {/* always mounted once settings load: collapse must not drop state or in-flight runs */}
               {aiSettings ? (
-                <AiPanel
-                  key={aiPanelKey}
-                  slides={slides}
-                  current={current}
-                  selectedIds={selectedIds}
-                  deckEmpty={deckEmpty}
-                  images={images}
-                  applySlide={applySlide}
-                  applyDeck={applyDeck}
-                  fitWidthPx={FIT_WIDTH}
-                  settings={aiSettings}
-                  preset={aiPreset}
-                  open={showAi}
-                  onExpand={toggleAi}
-                  onCollapse={toggleAi}
-                  onUndo={() => void undo()}
-                  onPathChange={(p) => {
-                    setPath(p)
-                    setDirty(false)
-                  }}
-                  currentFilePath={path}
+                <OfficeAiSlot
+                  appKey="slides"
+                  collapsed={!showAi}
+                  close={toggleAi}
+                  fallback={
+                    <AiPanel
+                      key={aiPanelKey}
+                      slides={slides}
+                      current={current}
+                      selectedIds={selectedIds}
+                      deckEmpty={deckEmpty}
+                      images={images}
+                      applySlide={applySlide}
+                      applyDeck={applyDeck}
+                      fitWidthPx={FIT_WIDTH}
+                      settings={aiSettings}
+                      preset={aiPreset}
+                      open={showAi}
+                      onExpand={toggleAi}
+                      onCollapse={toggleAi}
+                      onUndo={() => void undo()}
+                      onPathChange={(p) => {
+                        setPath(p)
+                        setDirty(false)
+                      }}
+                      currentFilePath={path}
+                    />
+                  }
                 />
               ) : (
                 <button className="ai-rail" onClick={toggleAi} title={t('appAiRailExpand')}>

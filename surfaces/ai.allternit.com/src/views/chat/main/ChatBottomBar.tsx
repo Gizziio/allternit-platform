@@ -12,7 +12,7 @@ import { ModelPicker as BotModelPicker } from "@/views/chat/components/ModelPick
 import { VoiceCallButton } from "@/components/ai-elements/voice-call-button";
 
 interface ChatBottomBarProps {
-  mode: 'chat' | 'cowork' | 'code';
+  mode: 'chat' | 'cowork' | 'bot' | 'code';
   isChatEmpty: boolean;
   hideEmptyState: boolean;
   hudMode?: boolean;
@@ -73,7 +73,7 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
           : 'absolute bottom-0 left-0 right-0 pb-[calc(0.75rem_+_env(safe-area-inset-bottom,0px))]'
       )}
       style={{
-        background: hideEmptyState || mode === 'cowork' || mode === 'chat' || hudMode ? 'transparent' : THEME.bgGradient,
+        background: hideEmptyState || mode === 'cowork' || mode === 'bot' || mode === 'chat' || hudMode ? 'transparent' : THEME.bgGradient,
       }}
     >
       <div className={cn('w-full pointer-events-auto box-border', hudMode ? 'max-w-none' : 'max-w-[760px] px-2 md:px-5')}>

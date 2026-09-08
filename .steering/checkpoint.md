@@ -1,4 +1,4 @@
-# Steering checkpoint
+# Steering checkpoint — session/11f1b5c8
 
 ## Goal
 Provider Routing v1 (Allternit Brain `Products/ProviderRouting.md`): tenant-scoped
@@ -23,17 +23,21 @@ Worktree `allternit-session-11f1b5c8`, branch `session/11f1b5c8`.
   into the request body (parseProviderOptions strips, but body spread uses raw).
   3 new schema tests pass; typecheck clean for touched files (2 pre-existing
   errors in test/commands/slash-menu.test.ts, untouched by this session).
+- Merge of origin/main resolved (checkpoint conflict — kept this session's;
+  prompt.ts auto-merged clean).
 
-## Verification so far
+## Verification
 - `cargo test -p allternit-api provider_routing`: 9/9 pass.
 - Full `cargo test -p allternit-api`: 658 pass, 4 fail — all in
-  agent_cloud_routes (spawn allternitos_control_plane binary, panic "did not
-  log its listening port"); file untouched by this session; confirming against
-  shared-checkout main as pre-existing.
-- `bun test test/session/provider-routing.test.ts`: 3/3 pass.
+  agent_cloud_routes (hardcoded stale AllternitOS control-plane binary, see
+  ledger); pre-existing, untouched by this session.
+- `bun test test/session/`: 109 pass, 0 fail (incl. 3 new schema tests).
+- Admin API store + round-trip verified live against a dev-bypass server.
+  Owner directed no mock smoke test — shipping to production.
 
 ## Next
-- Repo ritual: commit/push, PR, merge, sync main, agent-ledger attestation, cleanup.
+- Repo ritual: push merge commit, PR #132 merge, sync main, agent-ledger
+  attestation, worktree cleanup.
 
 ## Open questions
 - In-session gizzi fallback switches keep the per-message pin (Rust recomputes

@@ -16,6 +16,7 @@ import { SignUpPage } from "@/pages/SignUpPage";
 import { RunsPage } from "@/pages/RunsPage";
 import { SchedulesPage } from "@/pages/SchedulesPage";
 import { ApprovalsPage } from "@/pages/ApprovalsPage";
+import { FabricPage } from "@/pages/FabricPage";
 import { PortalLandingPage } from "@/pages/PortalLandingPage";
 import { ModelsPage } from "@/pages/ModelsPage";
 import { PlansPage } from "@/pages/PlansPage";
@@ -181,6 +182,14 @@ export default function App() {
         element={
           <ConsoleRoute>
             <SettingsPage />
+          </ConsoleRoute>
+        }
+      />
+      <Route
+        path="/fabric/*"
+        element={
+          <ConsoleRoute>
+            <FabricPage />
           </ConsoleRoute>
         }
       />

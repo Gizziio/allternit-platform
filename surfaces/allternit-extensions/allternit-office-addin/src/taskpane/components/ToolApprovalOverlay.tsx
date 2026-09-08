@@ -29,11 +29,11 @@ export function ToolApprovalOverlay({ approvals, onApprove, onReject }: Props) {
   }, [current?.name])
 
   return (
-    <div className="absolute inset-0 z-50 flex items-end justify-center p-4 bg-black/45 backdrop-blur-sm">
-      <div className="w-full max-w-[420px] rounded-xl border border-[var(--border-default)] bg-[var(--bg-elevated)] p-4 flex flex-col gap-3 shadow-xl">
+    <div className="absolute inset-0 z-50 flex items-end justify-center bg-[rgba(41,32,26,0.35)] p-4 backdrop-blur-[2px]">
+      <div className="card flex w-full max-w-[420px] flex-col gap-3 rounded-[var(--radius-2xl)] p-4 shadow-[var(--shadow-lg)]">
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-[var(--bg-tertiary)] flex items-center justify-center">
-            <AlertTriangle size={14} className="text-[var(--accent-primary)]" />
+          <div className="flex size-8 items-center justify-center rounded-lg bg-[var(--bg-secondary)]">
+            <AlertTriangle size={15} className="text-[var(--status-warning)]" strokeWidth={1.8} />
           </div>
           <div>
             <div className="text-[13px] font-semibold text-[var(--text-primary)]">
@@ -45,26 +45,26 @@ export function ToolApprovalOverlay({ approvals, onApprove, onReject }: Props) {
           </div>
         </div>
 
-        <div className="rounded-lg bg-[var(--bg-secondary)] p-2.5 font-mono text-xs text-[var(--text-secondary)] leading-relaxed break-words">
-          <div className="text-[var(--accent-primary)] font-semibold mb-1">{current.name}</div>
+        <div className="rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-2.5 font-mono text-[11px] leading-relaxed break-words text-[var(--text-secondary)]">
+          <div className="mb-1 font-semibold text-[var(--accent-brand)]">{current.name}</div>
           <pre className="m-0 whitespace-pre-wrap text-[var(--text-tertiary)]">
             {formatToolArgs(current.arguments)}
           </pre>
         </div>
 
-        <div className="flex gap-2.5">
+        <div className="flex gap-2">
           <button
             onClick={() => onReject(current.id)}
-            className="flex-1 py-2 rounded-lg border border-[var(--border-default)] bg-transparent text-[var(--text-tertiary)] text-[13px] font-medium cursor-pointer flex items-center justify-center gap-1.5 hover:bg-[var(--bg-hover)] transition-colors"
+            className="btn btn-outline h-9 flex-1 text-[12.5px]"
           >
-            <X size={14} />
+            <X className="size-3.5" />
             Reject
           </button>
           <button
             onClick={() => onApprove(current.id)}
-            className="flex-1 py-2 rounded-lg border-none bg-[var(--accent-primary)] text-[var(--text-inverse)] text-[13px] font-semibold cursor-pointer flex items-center justify-center gap-1.5 hover:brightness-110 transition-all"
+            className="btn btn-primary h-9 flex-1 text-[12.5px]"
           >
-            <Check size={14} />
+            <Check className="size-3.5" />
             Approve
           </button>
         </div>

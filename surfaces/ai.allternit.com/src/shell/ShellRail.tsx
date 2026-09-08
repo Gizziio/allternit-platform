@@ -2,6 +2,7 @@ import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import type { Icon } from '@phosphor-icons/react';
 import { useStoreWithEqualityFn } from 'zustand/traditional';
 import { shallow } from 'zustand/shallow';
+import { useSettingsValue } from '@/hooks/useSettingsState';
 import type { AppMode } from './ShellHeader';
 import {
   CaretDown,
@@ -39,6 +40,8 @@ import {
   DesktopTower,
   Record,
   Play,
+  Bell,
+  Checks,
 } from '@phosphor-icons/react';
 import { getPinnedMiniApps, unpinMiniApp, seedDefaultMiniApps } from '../views/aci/mini-app-registry';
 import type { InstalledMiniApp } from '../views/aci/mini-app.types';
@@ -67,18 +70,41 @@ import { getAgentModeSurfaceTheme } from '../views/chat/agentModeSurfaceTheme';
 import type { AgentModeSurface } from '../stores/agent-surface-mode.store';
 import { cn } from '@/lib/utils';
 import { useAgentStore, getVisibleAttention, type BotAttentionEntry } from '@/lib/agents/agent.store';
+import type { Agent } from '@/lib/agents/agent.types';
 import {
   isBot,
+  getBotDisplayName,
 } from '@/lib/bots/bot-profile';
+import { RemotePeersRailSection } from '@/lib/peers/RemotePeersPanel';
 import { useAgentsWithSwarms } from '@/lib/agents';
 import { deriveBotPresence, type BotPresenceState } from '@/lib/bots/bot-presence';
+import {
+  useBotActivityWatermarkStore,
+  useBotHasNewActivity,
+  canonicalActivityAt,
+} from '@/lib/bots/bot-activity-watermark';
+import {
+  getBotActivityToastsPref,
+  setBotActivityToastsPref,
+  BOT_ACTIVITY_TOASTS_CHANGED_EVENT,
+  type BotActivityToastsPref,
+} from '@/lib/bots/bot-activity-toasts';
+import { computeInboxBadge, selectVisibleBotAttention } from '@/lib/bots/bot-inbox';
 import { useBotRosterStore } from '@/lib/bots/bot-roster.store';
 import { useBotRoutineStore } from '@/lib/bots/bot-routine.service';
 import { useCommRailsMailStore } from '@/lib/bots/comrails-mail.store';
 import { openBotCanonicalChat, openBotChatView } from '@/lib/bots/bot-canonical-chat.service';
+import { useGroupChatStore } from '@/lib/bots/group-chat.store';
+import type { GroupChat } from '@/lib/bots/group-chat.types';
+import {
+  refreshGroupEscalations,
+  resolveGroupRoomHold,
+  startGroupRoomsSync,
+  useGroupRoomsSyncStore,
+} from '@/lib/bots/group-rooms-sync';
 import { useStartBotSession } from '@/lib/bots/useStartBotSession';
 import { BotAvatar } from '@/views/bots/BotAvatar';
-import type { Agent } from '@/lib/agents/agent.types';
+import { GroupChatAvatar } from '@/views/bots/GroupChatAvatar';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
 import { openNativeSessionPicker } from '@/components/native-sessions/NativeSessionPicker';
@@ -182,6 +208,10 @@ export function ShellRail({
   
   const isAgentActive = useSurfaceAgentModeEnabled(currentSurface);
   const surfaceTheme = isAgentActive ? getAgentModeSurfaceTheme(currentSurface) : null;
+
+  // Settings → Appearance → Show sidebar labels (default on). Reacts live to
+  // the toggle via the settings-changed event dispatched by useSettingsState.
+  const [showSidebarLabels] = useSettingsValue('appearance.showSidebarLabels', true);
 
   // The account footer used to show a hardcoded "Joe · Pro" placeholder that
   // never reflected a real signed-in identity. /api/v1/me is backend-resolved
@@ -344,6 +374,66 @@ export function ShellRail({
 
   const agents = useAgentStore((s) => s.agents);
   const bots = useMemo(() => agents.filter(isBot), [agents]);
+
+  // Bot-mode rail data: pinned bots (bot-roster store), canonical-chat recency
+  // for ordering, and group chats with unread counts.
+  const pinnedBotIds = useBotRosterStore((s) => s.pinnedBotIds);
+  const canonicalChatIds = useBotRosterStore((s) => s.canonicalChatIds);
+  const pinBot = useBotRosterStore((s) => s.pinBot);
+  const unpinBot = useBotRosterStore((s) => s.unpinBot);
+  // Drag-to-pin state (raw HTML5 DnD, same pattern as BrowserPane shortcuts).
+  const [draggingBotId, setDraggingBotId] = useState<string | null>(null);
+  const [pinDropActive, setPinDropActive] = useState(false);
+  const groupChats = useGroupChatStore((s) => s.groups);
+  const activeGroupId = useGroupChatStore((s) => s.activeGroupId);
+  const getGroupUnreadCount = useGroupChatStore((s) => s.getUnreadCount);
+  const setActiveGroup = useGroupChatStore((s) => s.setActiveGroup);
+
+  // Clicking a bot row starts (or reuses) the bot's canonical session and then
+  // opens the bot-chat-session view — never the bot detail view.
+  const { startSession: startBotSession, isStarting: isBotSessionStarting } = useStartBotSession(
+    useCallback((startedSessionId: string, startedBotId: string) => {
+      openBotChatView(startedSessionId, startedBotId, 'agent-hub');
+    }, [])
+  );
+
+  const handleOpenBot = useCallback((bot: Agent) => {
+    void startBotSession(bot);
+  }, [startBotSession]);
+
+  const pinnedBots = useMemo(
+    () =>
+      pinnedBotIds.flatMap((id) => {
+        const bot = bots.find((b) => b.id === id);
+        return bot ? [bot] : [];
+      }),
+    [pinnedBotIds, bots]
+  );
+
+  const sortedBots = useMemo(() => {
+    const activityOf = (bot: Agent): number => {
+      const sid = canonicalChatIds[bot.id];
+      const session = sid ? (chatSessions || []).find((s) => s.id === sid) : null;
+      return session ? new Date(session.updatedAt || 0).getTime() : 0;
+    };
+    return [...bots].sort((a, b) => {
+      const aPinned = pinnedBotIds.includes(a.id) ? 0 : 1;
+      const bPinned = pinnedBotIds.includes(b.id) ? 0 : 1;
+      if (aPinned !== bPinned) return aPinned - bPinned;
+      const diff = activityOf(b) - activityOf(a);
+      if (diff !== 0) return diff;
+      return getBotDisplayName(a).localeCompare(getBotDisplayName(b));
+    });
+  }, [bots, pinnedBotIds, canonicalChatIds, chatSessions]);
+
+  const sortedGroupChats = useMemo(
+    () =>
+      Object.values(groupChats).sort(
+        (a, b) =>
+          new Date(b.updatedAt ?? 0).getTime() - new Date(a.updatedAt ?? 0).getTime()
+      ),
+    [groupChats]
+  );
 
   const handleToggleRecentsExpanded = useCallback(() => {
     setRecentsExpanded((v) => {
@@ -640,11 +730,12 @@ export function ShellRail({
       cowork: 'workspace',
       code: 'code',
       design: 'design',
+      bot: 'agent-hub',
     };
     const defaultView = defaultViews[originSurface] ?? 'chat';
     const isAgent = descriptor.sessionMode === 'agent';
     const targetView = isAgent ? `${originSurface}-agent-session` : defaultView;
-    onModeChange?.(originSurface === 'design' ? 'design' : originSurface === 'cowork' ? 'cowork' : originSurface === 'code' ? 'code' : 'chat');
+    onModeChange?.(originSurface === 'design' ? 'design' : originSurface === 'cowork' ? 'cowork' : originSurface === 'code' ? 'code' : originSurface === 'bot' ? 'bot' : 'chat');
     onOpen?.(targetView, isAgent ? {
       sessionId: session.id,
       originView: defaultView,
@@ -801,7 +892,7 @@ export function ShellRail({
             )}
           >
             <House size={13} weight={mode === 'chat' ? "fill" : "bold"} />
-            Home
+            {showSidebarLabels ? 'Home' : null}
           </button>
           <button
             type="button"
@@ -817,7 +908,7 @@ export function ShellRail({
             )}
           >
             <TerminalWindow size={13} weight={mode === 'code' ? "fill" : "bold"} />
-            Code
+            {showSidebarLabels ? 'Code' : null}
           </button>
           <button
             type="button"
@@ -833,7 +924,7 @@ export function ShellRail({
             )}
           >
             <Globe size={13} weight={mode === 'browser' ? "fill" : "bold"} />
-            ACI
+            {showSidebarLabels ? 'ACI' : null}
           </button>
         </div>
       </div>
@@ -1018,6 +1109,142 @@ export function ShellRail({
             ))}
           </RecentsPanel>
         </>
+      ) : mode === 'bot' ? (
+        <>
+          {/* BOT TABS */}
+          <div className="px-2 pb-2 shrink-0 flex flex-col gap-0.5">
+            <RailItem
+              icon={Robot}
+              label="Bot Hub"
+              isActive={activeViewType === 'agent-hub'}
+              onClick={() =>
+                window.dispatchEvent(
+                  new CustomEvent('allternit:open-view', {
+                    detail: { viewType: 'agent-hub' },
+                  }),
+                )
+              }
+            />
+          </div>
+
+          {/* BOT PINNED — self-prunes when empty; drop zone appears while a bot
+              row is being dragged so users can discover pinning */}
+          {(pinnedBots.length > 0 || draggingBotId !== null) && (
+            <RecentsPanel shrink expanded onToggle={() => {}} title="Pinned Bots">
+              {draggingBotId !== null && (
+                <div
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.dataTransfer.dropEffect = 'move';
+                    setPinDropActive(true);
+                  }}
+                  onDragLeave={() => setPinDropActive(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const droppedId = e.dataTransfer.getData('text/plain') || draggingBotId;
+                    if (droppedId) pinBot(droppedId);
+                    setPinDropActive(false);
+                    setDraggingBotId(null);
+                  }}
+                  className={cn(
+                    "mx-2 mb-1 flex items-center justify-center gap-1.5 rounded-xl border border-dashed px-3 py-2 text-[12px] transition-colors",
+                    pinDropActive
+                      ? "border-[var(--accent-primary)] text-[var(--accent-primary)] bg-[var(--shell-item-hover)]"
+                      : "border-[var(--border-subtle)] text-[var(--shell-item-muted)]"
+                  )}
+                >
+                  <PushPin size={13} />
+                  <span>{pinDropActive ? 'Drop to pin' : 'Drag a bot here to pin'}</span>
+                </div>
+              )}
+              {pinnedBots.length === 0 ? (
+                draggingBotId === null ? (
+                  <div className="px-3 py-3 text-[12px] text-[var(--shell-item-muted)]">
+                    Pin bots from the bot picker
+                  </div>
+                ) : null
+              ) : (
+                pinnedBots.map((bot) => (
+                  <BotRailRow
+                    key={bot.id}
+                    bot={bot}
+                    isActive={
+                      activeViewType === 'bot-chat-session' &&
+                      activeChatSessionId === canonicalChatIds[bot.id]
+                    }
+                    disabled={isBotSessionStarting}
+                    onOpen={() => handleOpenBot(bot)}
+                    onUnpin={() => unpinBot(bot.id)}
+                  />
+                ))
+              )}
+            </RecentsPanel>
+          )}
+
+          {/* BOT LIST — all bots, pinned first, then by canonical chat activity */}
+          <RecentsPanel expanded onToggle={() => {}} title="Bots">
+            {sortedBots.length === 0 && (
+              <div className="px-3 py-3 text-[12px] text-[var(--shell-item-muted)]">
+                No bots yet — create one in Bot Hub
+              </div>
+            )}
+            {sortedBots.map((bot) => (
+              <BotRailRow
+                key={bot.id}
+                bot={bot}
+                isActive={
+                  activeViewType === 'bot-chat-session' &&
+                  activeChatSessionId === canonicalChatIds[bot.id]
+                }
+                disabled={isBotSessionStarting}
+                onOpen={() => handleOpenBot(bot)}
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.setData('text/plain', bot.id);
+                  e.dataTransfer.effectAllowed = 'move';
+                  setDraggingBotId(bot.id);
+                }}
+                onDragEnd={() => {
+                  setDraggingBotId(null);
+                  setPinDropActive(false);
+                }}
+              />
+            ))}
+          </RecentsPanel>
+
+          {/* GROUP CHATS — unread badge convention matches GroupsListView.
+              Always rendered so the empty state and creation affordance stay discoverable */}
+          <RecentsPanel shrink expanded onToggle={() => {}} title="Group Chats">
+            {sortedGroupChats.length === 0 ? (
+              <div className="px-3 py-3 text-[12px] text-[var(--shell-item-muted)]">
+                No group chats yet
+              </div>
+            ) : (
+              sortedGroupChats.map((group) => (
+                <BotGroupRailRow
+                  key={group.id}
+                  group={group}
+                  unread={getGroupUnreadCount(group.id)}
+                  isActive={activeViewType === 'group-chat' && activeGroupId === group.id}
+                  onOpen={() => {
+                    setActiveGroup(group.id);
+                    onOpen?.('group-chat', { groupId: group.id });
+                  }}
+                />
+              ))
+            )}
+            <button
+              type="button"
+              onClick={() => onOpen?.('groups-list')}
+              className="w-full flex items-center gap-2.5 py-1.5 px-3 max-md:min-h-11 rounded-xl bg-transparent border-none cursor-pointer text-left text-[12px] text-[var(--shell-item-muted)] hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)] transition-all"
+            >
+              <Plus size={13} />
+              <span>New group chat</span>
+            </button>
+          </RecentsPanel>
+        </>
       ) : !isCodeMode ? (
         <>
           {/* HOME TABS */}
@@ -1075,6 +1302,7 @@ export function ShellRail({
               isActive={false}
               onClick={() => onOpenCustomize?.()}
             />
+            <InboxRailItem onOpen={onOpen} />
           </div>
 
           {/* HOME TEAMMATES — bots with presence, unread mail, or attention.
@@ -1084,6 +1312,11 @@ export function ShellRail({
             onToggle={handleToggleTeammatesExpanded}
             onOpen={onOpen}
           />
+
+          {/* REMOTE PEERS (BOT_TEAMMATES_SPEC Phase 3, cross-machine fabric) —
+              self-contained section: list/add/remove remote peer connections
+              with reachability dots + ghost-row counts. */}
+          <RemotePeersRailSection />
 
           {/* HOME PINNED — self-prunes when nothing pinned remains live */}
           {pinnedVisible.length > 0 && (
@@ -1900,6 +2133,9 @@ function TeammatesRailRow({
   }, [routines, bot.id]);
 
   const working = presence.presence === 'working';
+  // Watermark unread: canonical-chat activity newer than the watermark while
+  // that chat is not focused (refresh-in-place handles the focused case).
+  const hasNewActivity = useBotHasNewActivity(bot.id);
   const statusText = working
     ? 'Working…'
     : attentionEntry
@@ -1938,6 +2174,12 @@ function TeammatesRailRow({
               </span>
             )}
             <span className="truncate flex-1">{statusText}</span>
+            {hasNewActivity && (
+              <span
+                className="shrink-0 size-2 rounded-full bg-[var(--accent-primary)]"
+                title="New activity"
+              />
+            )}
             {unreadCount > 0 && (
               <span className="shrink-0 rounded-full bg-[var(--accent-primary)] text-[var(--shell-rail-bg)] text-[9px] font-bold px-1.5 py-px">
                 {unreadCount}
@@ -2017,6 +2259,410 @@ function TeammatesRowMenu({
             Start session
           </button>
         )}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function InboxRailItem({
+  onOpen,
+}: {
+  onOpen?: (view: string, context?: Record<string, unknown>) => void;
+}): React.ReactNode {
+  const agents = useAgentsWithSwarms();
+  const bots = useMemo(() => agents.filter(isBot), [agents]);
+  const attention = useAgentStore((state) => state.attention);
+  const sessions = useChatSessionStore((state) => state.sessions);
+  const canonicalChatIds = useBotRosterStore((state) => state.canonicalChatIds);
+  const mailMessages = useCommRailsMailStore((state) => state.messages);
+  const mailThreads = useCommRailsMailStore((state) => state.threads);
+  const loadThreads = useCommRailsMailStore((state) => state.loadThreads);
+  const acknowledgeMail = useCommRailsMailStore((state) => state.acknowledgeMail);
+  const watermarks = useBotActivityWatermarkStore((state) => state.watermarks);
+  const focusedSessionId = useBotActivityWatermarkStore((state) => state.focusedSessionId);
+  const markAllSeen = useBotActivityWatermarkStore((state) => state.markAllSeen);
+  const groupHolds = useGroupRoomsSyncStore((state) => state.holds);
+  const groupsById = useGroupChatStore((state) => state.groups);
+
+  // Server-side group-room sync (pull on focus/reconnect, disband tombstones).
+  useEffect(() => startGroupRoomsSync(), []);
+
+  const [open, setOpen] = useState(false);
+  const [pinned, setPinned] = useState(() => {
+    try {
+      return globalThis.localStorage?.getItem('allternit:rail:inbox-pinned') === '1';
+    } catch {
+      return false;
+    }
+  });
+  const [toastsPref, setToastsPref] = useState<BotActivityToastsPref>(() => getBotActivityToastsPref());
+
+  useEffect(() => {
+    const sync = () => setToastsPref(getBotActivityToastsPref());
+    globalThis.addEventListener?.(BOT_ACTIVITY_TOASTS_CHANGED_EVENT, sync);
+    return () => globalThis.removeEventListener?.(BOT_ACTIVITY_TOASTS_CHANGED_EVENT, sync);
+  }, []);
+
+  const activityByBot = useMemo(() => {
+    const map: Record<string, number> = {};
+    const list = sessions ?? [];
+    for (const bot of bots) {
+      map[bot.id] = canonicalActivityAt(bot.id, list, canonicalChatIds);
+    }
+    return map;
+  }, [bots, sessions, canonicalChatIds]);
+
+  const presenceByBot = useMemo(() => {
+    const map: Record<string, BotPresenceState> = {};
+    const list = sessions ?? [];
+    for (const bot of bots) {
+      const canonicalId = canonicalChatIds[bot.id];
+      const session = canonicalId ? list.find((s) => s.id === canonicalId) : undefined;
+      map[bot.id] = deriveBotPresence({
+        streaming: canonicalId ? (useChatSessionStore.getState().streamingBySession[canonicalId]?.isStreaming ?? false) : false,
+        sessionActivityAt: session ? new Date(session.updatedAt || 0).getTime() : 0,
+        routineActivityAt: 0,
+      });
+    }
+    return map;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bots, sessions, canonicalChatIds]);
+
+  const badge = useMemo(
+    () =>
+      computeInboxBadge({
+        messages: mailMessages,
+        bots,
+        attention,
+        agents,
+        activityByBot,
+        watermarks,
+        focusedSessionId,
+        canonicalChatIds,
+      }),
+    [mailMessages, bots, attention, agents, activityByBot, watermarks, focusedSessionId, canonicalChatIds],
+  );
+
+  const attentionItems = useMemo(
+    () => selectVisibleBotAttention(attention, agents),
+    [attention, agents],
+  );
+
+  const activeBots = useMemo(
+    () =>
+      bots.filter((b) => {
+        const p = presenceByBot[b.id];
+        return p && p.presence !== 'idle';
+      }),
+    [bots, presenceByBot],
+  );
+
+  const threadsNewestFirst = useMemo(
+    () => [...mailThreads].sort((a, b) => b.lastMessageAt.localeCompare(a.lastMessageAt)),
+    [mailThreads],
+  );
+
+  const botById = useMemo(() => {
+    const map: Record<string, Agent> = {};
+    for (const agent of agents) map[agent.id] = agent;
+    return map;
+  }, [agents]);
+
+  const handleOpenChange = (next: boolean) => {
+    if (next) {
+      setOpen(true);
+      // Threads are global; enrich from the first bot's perspective.
+      if (bots.length > 0) void loadThreads(bots[0].id);
+      void refreshGroupEscalations();
+    } else if (!pinned) {
+      setOpen(false);
+    }
+    // Pinned: outside clicks keep the pane open until explicit close/unpin.
+  };
+
+  const togglePinned = () => {
+    setPinned((prev) => {
+      const next = !prev;
+      try {
+        globalThis.localStorage?.setItem('allternit:rail:inbox-pinned', next ? '1' : '0');
+      } catch {
+        // persistence best-effort
+      }
+      return next;
+    });
+  };
+
+  const handleMarkAllRead = () => {
+    const entries: Array<{ botId: string; activityAt: number }> = [];
+    for (const bot of bots) {
+      const activityAt = activityByBot[bot.id] ?? 0;
+      entries.push({ botId: bot.id, activityAt });
+    }
+    markAllSeen(entries);
+    for (const m of mailMessages) {
+      if (m.toAgentId && (m.status === 'unread' || m.requiresAck)) {
+        void acknowledgeMail(m.toAgentId, m.id);
+      }
+    }
+  };
+
+  const openBotChat = useCallback(
+    (bot: Agent) => {
+      const name = bot.botProfile?.displayName ?? bot.name;
+      void openBotCanonicalChat({ botId: bot.id, botName: name, setActive: false }).then((sessionId) =>
+        openBotChatView(sessionId, bot.id, 'chat'),
+      );
+    },
+    [],
+  );
+
+  const handleOpenThread = (thread: (typeof threadsNewestFirst)[number]) => {
+    const botId = thread.participants.find((p) => botById[p] && isBot(botById[p]));
+    if (botId) onOpen?.('bot-inbox', { botId });
+  };
+
+  const showMail = threadsNewestFirst.length > 0;
+  const showAttention = attentionItems.length > 0;
+  const showActive = activeBots.length > 0;
+  const unresolvedGroupHolds = groupHolds.filter((h) => !h.resolved);
+  const showGroupHolds = unresolvedGroupHolds.length > 0;
+
+  const handleOpenGroupHold = (hold: (typeof unresolvedGroupHolds)[number]) => {
+    onOpen?.('group-chat', { groupId: hold.room_id });
+    // Room view opened — resolve fire-and-forget.
+    void resolveGroupRoomHold(hold.room_id, hold.hold_id);
+  };
+
+  return (
+    <Popover
+      open={open}
+      onOpenChange={handleOpenChange}
+    >
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className={cn(
+            'w-full flex items-center gap-2.5 py-1.5 px-3 max-md:min-h-11 rounded-xl border-none cursor-pointer text-left transition-all duration-200 font-medium',
+            open
+              ? 'bg-[var(--shell-item-active-bg)] text-[var(--shell-item-active-fg)] font-semibold shadow-[inset_3px_0_0_0_var(--shell-item-active-fg)]'
+              : 'bg-transparent text-[var(--shell-item-fg)] hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)]',
+          )}
+        >
+          <Bell size={15} weight={open ? 'fill' : 'bold'} />
+          <span className="text-[12px] overflow-hidden text-ellipsis whitespace-nowrap min-w-0 flex-1">Inbox</span>
+          {badge > 0 && (
+            <span className="shrink-0 rounded-full bg-[var(--accent-primary)] text-[var(--shell-rail-bg)] text-[9px] font-bold px-1.5 py-px">
+              {badge > 99 ? '99+' : badge}
+            </span>
+          )}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="w-80 p-0 bg-[var(--surface-panel)] border-[var(--border-subtle)]"
+        side="right"
+        align="start"
+        sideOffset={8}
+        collisionPadding={8}
+      >
+        <div className="flex items-center gap-1 px-3 py-2 border-b border-[var(--border-subtle)]">
+          <span className="text-[13px] font-semibold text-[var(--shell-item-fg)] flex-1">
+            Inbox
+            {badge > 0 && <span className="ml-1.5 text-[11px] text-[var(--shell-item-muted)]">{badge}</span>}
+          </span>
+          <button
+            type="button"
+            onClick={handleMarkAllRead}
+            title="Mark all read"
+            className="p-1 rounded-md bg-transparent border-none text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)] cursor-pointer"
+          >
+            <Checks size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={togglePinned}
+            title={pinned ? 'Unpin inbox' : 'Pin inbox'}
+            className={cn(
+              'p-1 rounded-md bg-transparent border-none cursor-pointer',
+              pinned
+                ? 'text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)]'
+                : 'text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)]',
+            )}
+          >
+            <PushPin size={14} weight={pinned ? 'fill' : 'bold'} />
+          </button>
+          {open && (
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              title="Close"
+              className="p-1 rounded-md bg-transparent border-none text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)] cursor-pointer"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
+        <div className="max-h-96 overflow-y-auto">
+          {showMail && (
+            <div className="py-1">
+              <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--shell-item-muted)]">
+                Mail
+              </div>
+              {threadsNewestFirst.map((thread) => {
+                const bot = thread.participants.map((p) => botById[p]).find((a) => a && isBot(a));
+                return (
+                  <button
+                    key={thread.id}
+                    type="button"
+                    onClick={() => handleOpenThread(thread)}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 bg-transparent border-none cursor-pointer text-left hover:bg-[var(--shell-item-hover)]"
+                  >
+                    {bot ? (
+                      <BotAvatar bot={bot} size={20} />
+                    ) : (
+                      <span className="size-5 rounded-full bg-[var(--shell-item-hover)] shrink-0" />
+                    )}
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[12px] text-[var(--shell-item-fg)] truncate">
+                        {thread.subject}
+                      </span>
+                      <span className="block text-[10px] text-[var(--shell-item-muted)]">
+                        {thread.messageCount} message{thread.messageCount === 1 ? '' : 's'}
+                        {thread.unreadCount > 0 ? ` · ${thread.unreadCount} unread` : ''}
+                      </span>
+                    </span>
+                    <span className="flex items-center gap-1 shrink-0">
+                      <span className="text-[10px] text-[var(--shell-item-muted)]">
+                        {formatRelativeTime(new Date(thread.lastMessageAt).getTime())}
+                      </span>
+                      {thread.unreadCount > 0 && (
+                        <span className="size-1.5 rounded-full bg-[var(--accent-primary)]" />
+                      )}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {showGroupHolds && (
+            <div className="py-1 border-t border-[var(--border-subtle)]">
+              <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--shell-item-muted)]">
+                Group escalations
+              </div>
+              {unresolvedGroupHolds.map((hold) => {
+                const roomName = groupsById[hold.room_id]?.name ?? hold.room_id;
+                const memberBot = botById[hold.member_id];
+                const memberName =
+                  memberBot?.botProfile?.displayName ?? memberBot?.name ?? hold.member_id;
+                return (
+                  <button
+                    key={hold.hold_id}
+                    type="button"
+                    onClick={() => handleOpenGroupHold(hold)}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 bg-transparent border-none cursor-pointer text-left hover:bg-[var(--shell-item-hover)]"
+                  >
+                    <span className="size-5 rounded-full bg-[var(--shell-item-hover)] shrink-0 flex items-center justify-center text-[var(--accent-primary)]">
+                      <UsersThree size={12} weight="bold" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[12px] text-[var(--shell-item-fg)] truncate">
+                        {roomName}
+                      </span>
+                      <span className="block text-[10px] text-[var(--shell-item-muted)] truncate">
+                        {memberName}
+                        {hold.message_excerpt ? ` · ${hold.message_excerpt}` : ' needs you'}
+                      </span>
+                    </span>
+                    <span className="text-[10px] text-[var(--shell-item-muted)] shrink-0">
+                      {formatRelativeTime(new Date(hold.created_at).getTime())}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {showAttention && (
+            <div className="py-1 border-t border-[var(--border-subtle)]">
+              <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--shell-item-muted)]">
+                Needs attention
+              </div>
+              {attentionItems.map(({ bot, entry }) => (
+                <button
+                  key={bot.id}
+                  type="button"
+                  onClick={() => openBotChat(bot)}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 bg-transparent border-none cursor-pointer text-left hover:bg-[var(--shell-item-hover)]"
+                >
+                  <BotAvatar bot={bot} size={20} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[12px] text-[var(--shell-item-fg)] truncate">
+                      {bot.botProfile?.displayName ?? bot.name}
+                    </span>
+                    <span className="block text-[10px] text-[var(--shell-item-muted)] truncate">
+                      {entry.hint}
+                    </span>
+                  </span>
+                  <span className="text-[10px] text-[var(--shell-item-muted)] shrink-0">
+                    {formatRelativeTime(entry.notedAt)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {showActive && (
+            <div className="py-1 border-t border-[var(--border-subtle)]">
+              <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--shell-item-muted)]">
+                Active
+              </div>
+              {activeBots.map((bot) => {
+                const p = presenceByBot[bot.id];
+                return (
+                  <button
+                    key={bot.id}
+                    type="button"
+                    onClick={() => openBotChat(bot)}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 bg-transparent border-none cursor-pointer text-left hover:bg-[var(--shell-item-hover)]"
+                  >
+                    <span className="relative shrink-0">
+                      <BotAvatar bot={bot} size={20} />
+                      <span
+                        className={cn(
+                          'absolute -right-0.5 -bottom-0.5 size-1.5 rounded-full border border-[var(--surface-panel)]',
+                          p?.presence === 'working' ? 'bg-[var(--accent-primary)]' : 'bg-[var(--status-success)]',
+                        )}
+                      />
+                    </span>
+                    <span className="min-w-0 flex-1 text-[12px] text-[var(--shell-item-fg)] truncate">
+                      {bot.botProfile?.displayName ?? bot.name}
+                    </span>
+                    <span className="text-[10px] text-[var(--shell-item-muted)] shrink-0">
+                      {p?.presence === 'working' ? 'Working…' : 'Active'}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {!showMail && !showAttention && !showActive && !showGroupHolds && (
+            <div className="px-3 py-6 text-[12px] text-[var(--shell-item-muted)] text-center">
+              No mail, attention, or active bots right now.
+            </div>
+          )}
+        </div>
+
+        <label className="flex items-center gap-2 px-3 py-2 border-t border-[var(--border-subtle)] text-[11px] text-[var(--shell-item-muted)] cursor-pointer">
+          <input
+            type="checkbox"
+            checked={toastsPref === 'on'}
+            onChange={(e) => setBotActivityToastsPref(e.target.checked ? 'on' : 'off')}
+            className="accent-[var(--accent-primary)]"
+          />
+          Activity toasts (opt-in)
+        </label>
       </PopoverContent>
     </Popover>
   );
@@ -2107,13 +2753,16 @@ function RecentsPanel({
   );
 }
 
-function RailItem({ id, icon: Icon, label, isActive, onClick }: {
+function RailItem({ id, icon: Icon, label, isActive, onClick, badge }: {
   id?: string;
   icon: Icon;
   label: string;
   isActive?: boolean;
   onClick?: () => void;
+  /** Optional count pill (e.g. unified Inbox badge). Hidden when 0. */
+  badge?: number;
 }): React.ReactNode {
+  const [showSidebarLabels] = useSettingsValue('appearance.showSidebarLabels', true);
   return (
     <button type="button"
       onClick={onClick}
@@ -2126,7 +2775,12 @@ function RailItem({ id, icon: Icon, label, isActive, onClick }: {
       )}
     >
       {Icon && <Icon size={15} weight={isActive ? 'fill' : 'bold'} />}
-      <span className="text-[12px] overflow-hidden text-ellipsis whitespace-nowrap min-w-0 flex-1">{label}</span>
+      {showSidebarLabels && <span className="text-[12px] overflow-hidden text-ellipsis whitespace-nowrap min-w-0 flex-1">{label}</span>}
+      {badge !== undefined && badge > 0 && (
+        <span className="shrink-0 rounded-full bg-[var(--accent-primary)] text-[var(--shell-rail-bg)] text-[9px] font-bold px-1.5 py-px">
+          {badge > 99 ? '99+' : badge}
+        </span>
+      )}
     </button>
   );
 }
@@ -2299,6 +2953,87 @@ function PinnedMiniAppItem({ app, isActive, onOpen, onUnpin }: {
           <PushPinSlash size={12} />
         </button>
       )}
+    </div>
+  );
+}
+
+function BotRailRow({ bot, isActive, disabled, onOpen, onUnpin, draggable, onDragStart, onDragEnd }: {
+  bot: Agent;
+  isActive?: boolean;
+  disabled?: boolean;
+  onOpen: () => void;
+  onUnpin?: () => void;
+  draggable?: boolean;
+  onDragStart?: (e: React.DragEvent) => void;
+  onDragEnd?: (e: React.DragEvent) => void;
+}): React.ReactNode {
+  return (
+    <div
+      draggable={draggable}
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
+      className={cn(
+        "group relative w-full flex items-center gap-2.5 py-1.5 px-3 max-md:min-h-11 rounded-xl cursor-pointer transition-all duration-200 font-medium",
+        isActive
+          ? "bg-[var(--shell-item-active-bg)] text-[var(--shell-item-active-fg)] font-semibold"
+          : "bg-transparent text-[var(--shell-item-fg)] hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)]"
+      )}
+    >
+      <button
+        type="button"
+        onClick={onOpen}
+        disabled={disabled}
+        className="flex-1 min-w-0 flex items-center gap-2.5 bg-transparent border-none p-0 text-left cursor-pointer font-medium disabled:opacity-60"
+      >
+        <BotAvatar bot={bot} size={22} />
+        <span className="text-[12px] overflow-hidden text-ellipsis whitespace-nowrap min-w-0 flex-1">
+          {getBotDisplayName(bot)}
+        </span>
+      </button>
+      {onUnpin && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onUnpin(); }}
+          title="Unpin from rail"
+          className="opacity-0 max-md:opacity-100 group-hover:opacity-100 shrink-0 -ml-1 size-6 max-md:size-11 rounded-md bg-transparent border-none text-[var(--shell-item-muted)] hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)] cursor-pointer flex items-center justify-center transition-all"
+        >
+          <PushPinSlash size={13} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+function BotGroupRailRow({ group, unread, isActive, onOpen }: {
+  group: GroupChat;
+  unread: number;
+  isActive?: boolean;
+  onOpen: () => void;
+}): React.ReactNode {
+  return (
+    <div
+      className={cn(
+        "group relative w-full flex items-center gap-2.5 py-1.5 px-3 max-md:min-h-11 rounded-xl cursor-pointer transition-all duration-200 font-medium",
+        isActive
+          ? "bg-[var(--shell-item-active-bg)] text-[var(--shell-item-active-fg)] font-semibold"
+          : "bg-transparent text-[var(--shell-item-fg)] hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)]"
+      )}
+    >
+      <button
+        type="button"
+        onClick={onOpen}
+        className="flex-1 min-w-0 flex items-center gap-2.5 bg-transparent border-none p-0 text-left cursor-pointer font-medium"
+      >
+        <GroupChatAvatar name={group.name} members={group.members} size={22} />
+        <span className="text-[12px] overflow-hidden text-ellipsis whitespace-nowrap min-w-0 flex-1">
+          {group.name}
+        </span>
+        {unread > 0 && (
+          <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[var(--accent-primary)] px-1.5 text-[11px] font-semibold text-[var(--ui-text-inverse)]">
+            {unread > 99 ? '99+' : unread}
+          </span>
+        )}
+      </button>
     </div>
   );
 }

@@ -13,6 +13,7 @@ import {
   updateArtifactSection,
   type ArtifactDto,
 } from '@/services/artifacts-api';
+import { getOfficeExtensions } from '@/views/office/officeExtensions';
 
 export interface SlidesViewProps {
   artifactId?: string;
@@ -155,6 +156,7 @@ export function SlidesView({ artifactId, handoffId }: SlidesViewProps) {
         saveFile: async (bytes: Uint8Array, name: string) => {
           saveFileRef.current(bytes, name);
         },
+        extensions: getOfficeExtensions(),
       }),
     [],
   );

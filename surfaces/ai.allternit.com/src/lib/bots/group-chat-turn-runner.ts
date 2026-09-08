@@ -22,7 +22,14 @@ import { isAgentSessionsApiEnabled } from '@/lib/env';
 import { buildBotRuntimeEnv, resolveModelRef } from './bot-runtime-env';
 import { getBotDisplayName } from './bot-profile';
 import { createModuleLogger } from '@/lib/logger';
-import type { GroupChat, GroupChatMember } from './group-chat.types';
+import {
+  bumpMemberWatermark,
+  computeMemberHistory,
+  createEscalationHold,
+  getMemberWatermarkIndex,
+  pushGroupRoom,
+} from './group-rooms-sync';
+import type { GroupChat, GroupChatMember, GroupChatMessage } from './group-chat.types';
 import type { Agent } from '@/lib/agents/agent.types';
 
 const logger = createModuleLogger('GroupChatTurnRunner');
@@ -80,10 +87,10 @@ function buildMemberHistory(
   group: GroupChat,
   member: GroupChatMember,
   userText: string,
+  historyMessages?: GroupChatMessage[],
 ): string {
   const memberNames = group.members.map((m) => m.displayName).join(', ');
-  const history = group.log
-    .slice(-MAX_HISTORY_MESSAGES)
+  const history = (historyMessages ?? group.log.slice(-MAX_HISTORY_MESSAGES))
     .map((m) => `${m.displayName ?? 'User'}: ${m.text}`)
     .join('\n');
 
@@ -111,6 +118,7 @@ async function runMemberTurn(
   userText: string,
   group: GroupChat,
   agents: Agent[],
+  historyMessages?: GroupChatMessage[],
 ): Promise<{ text: string; botId: string; displayName: string } | null> {
   const bot = agents.find((a) => a.id === member.botId);
   if (!bot) {
@@ -119,7 +127,7 @@ async function runMemberTurn(
   }
 
   const displayName = getBotDisplayName(bot);
-  const prompt = buildMemberHistory(group, member, userText);
+  const prompt = buildMemberHistory(group, member, userText, historyMessages);
   const systemPrompt = [buildMemberSystemPrompt(member), bot.systemPrompt ?? '']
     .filter(Boolean)
     .join('\n\n');
@@ -239,7 +247,17 @@ export async function runGroupChatTurn(sessionId: string, userText: string): Pro
       break;
     }
 
-    const reply = await runMemberTurn(member, userText, group, agents);
+    // Per-member watermark: feed only messages appended since this member's
+    // last turn (cheap deliberation over long histories). Watermark 0 keeps
+    // the legacy last-MAX_HISTORY_MESSAGES window.
+    const freshLog =
+      useGroupChatStore.getState().groups[group.id]?.log ?? group.log;
+    const historyWindow = computeMemberHistory(
+      freshLog,
+      getMemberWatermarkIndex(group.id, member.botId),
+      MAX_HISTORY_MESSAGES,
+    );
+    const reply = await runMemberTurn(member, userText, group, agents, historyWindow);
     if (reply) {
       messageCount++;
       replies.push(reply);
@@ -264,7 +282,16 @@ export async function runGroupChatTurn(sessionId: string, userText: string): Pro
       displayName: reply.displayName,
       text: reply.text,
     });
+    // Member consumed everything up to now — advance its read position.
+    bumpMemberWatermark(group.id, reply.botId);
+    // @user escalation → needs-you hold on the server (Inbox surface).
+    if (parseMentions(reply.text).includes('user')) {
+      void createEscalationHold(group.id, reply.botId, reply.text);
+    }
   }
+
+  // Mirror the updated room to the server projection (fire-and-forget).
+  void pushGroupRoom(group.id);
 
   logger.info(
     { group: group.id, session: sessionId, replies: replies.length },

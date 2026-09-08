@@ -55,6 +55,7 @@ const SURFACE_ICONS: Record<AppMode, React.ElementType> = {
   chat: ChatTeardropText,
   code: Code,
   cowork: UsersThree,
+  bot: Robot,
   design: Palette,
   browser: Globe,
 };

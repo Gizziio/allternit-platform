@@ -95,13 +95,14 @@ export async function pdfToText(bytes: Uint8Array): Promise<string> {
   await import('pdfjs-dist/legacy/build/pdf.worker.mjs')
   const { getDocument } = await import('pdfjs-dist/legacy/build/pdf.mjs')
   const fontUrl = standardFontDataUrl()
-  const doc = await getDocument({
+  const task = getDocument({
     // pdfjs transfers the given buffer, so pass a copy
     data: new Uint8Array(bytes),
     useSystemFonts: true,
     ...(fontUrl ? { standardFontDataUrl: fontUrl } : {}),
     verbosity: 0,
-  }).promise
+  })
+  const doc = await task.promise
   try {
     const pages: string[] = []
     for (let i = 1; i <= doc.numPages; i++) {
@@ -119,6 +120,6 @@ export async function pdfToText(bytes: Uint8Array): Promise<string> {
     }
     return pages.join('\n\n')
   } finally {
-    await doc.destroy()
+    await task.destroy()
   }
 }

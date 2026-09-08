@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { createBrowserJSONStorage } from '@/lib/zustand-browser-storage';
 
-export type AgentModeSurface = 'chat' | 'cowork' | 'code' | 'browser' | 'design';
+export type AgentModeSurface = 'chat' | 'cowork' | 'bot' | 'code' | 'browser' | 'design';
 export type AgentModeId =
   // Core content modes (universal)
   | 'research' | 'data' | 'slides' | 'code' | 'assets' | 'agents' | 'flow' | 'web' | 'computer-use'
@@ -36,6 +36,7 @@ interface AgentSurfaceModeState {
 const DEFAULT_SELECTED_AGENT: SurfaceAgentMap = {
   chat: null,
   cowork: null,
+  bot: null,
   code: null,
   browser: null,
   design: null,
@@ -44,6 +45,7 @@ const DEFAULT_SELECTED_AGENT: SurfaceAgentMap = {
 const DEFAULT_SELECTED_MODE: SurfaceModeMap = {
   chat: null,
   cowork: null,
+  bot: null,
   code: null,
   browser: null,
   design: null,
@@ -52,6 +54,7 @@ const DEFAULT_SELECTED_MODE: SurfaceModeMap = {
 const DEFAULT_SWARM_SUB_MODE: SurfaceSwarmSubModeMap = {
   chat: 'specialist-team',
   cowork: 'specialist-team',
+  bot: 'specialist-team',
   code: 'specialist-team',
   browser: 'specialist-team',
   design: 'specialist-team',

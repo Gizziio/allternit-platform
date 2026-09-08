@@ -5,6 +5,7 @@ export const DEFAULT_POLICIES: Record<ViewType, SpawnPolicy> = {
   home: { singleton: true, maxInstances: 1, allowNew: false, surface: "view", ownsTabs: false },
   chat: { singleton: false, maxInstances: 20, allowNew: true, surface: "view", ownsTabs: false },
   "chat-legacy": { singleton: false, maxInstances: 20, allowNew: true, surface: "view", ownsTabs: false },
+  "bot-launchpad": { singleton: false, maxInstances: 20, allowNew: true, surface: "view", ownsTabs: false },
   project: { singleton: true, maxInstances: 1, allowNew: false, surface: "view", ownsTabs: false },
   elements: { singleton: true, maxInstances: 1, allowNew: false, surface: "view", ownsTabs: false },
   playground: { singleton: true, maxInstances: 1, allowNew: false, surface: "view", ownsTabs: false },
@@ -209,13 +210,13 @@ export const DEFAULT_POLICIES: Record<ViewType, SpawnPolicy> = {
   "design-view-compare": { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   "design-marketplace": { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
 
-  // Docs editor (GenOffice)
+  // Docs editor (Allternit Office)
   docs: { singleton: false, maxInstances: 5, allowNew: true, surface: 'view', ownsTabs: false },
-  // Slides editor (GenOffice)
+  // Slides editor (Allternit Office)
   slides: { singleton: false, maxInstances: 5, allowNew: true, surface: 'view', ownsTabs: false },
-  // Sheets editor (GenOffice)
+  // Sheets editor (Allternit Office)
   sheets: { singleton: false, maxInstances: 5, allowNew: true, surface: 'view', ownsTabs: false },
-  // PDF viewer (GenOffice)
+  // PDF viewer (Allternit Office)
   pdf: { singleton: false, maxInstances: 5, allowNew: true, surface: 'view', ownsTabs: false },
   // Markdown preview (anydoc)
   'markdown-preview': { singleton: false, maxInstances: 5, allowNew: true, surface: 'view', ownsTabs: false },

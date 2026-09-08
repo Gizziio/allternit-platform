@@ -1,0 +1,343 @@
+// @ts-nocheck
+/**
+ * Phase B5 — TUI bots pane: row-list rendering (presence dot, unread badge,
+ * empty state), keybinding dispatch, and the Enter action wiring
+ * (openCanonicalChat + markBotRead + switchSession).
+ *
+ * Runtime bots modules are mocked at the seam; roster rows are plain data.
+ */
+import { afterEach, beforeAll, beforeEach, describe, expect, mock, test } from "bun:test"
+import { Writable } from "node:stream"
+import { join } from "node:path"
+import React from "react"
+import { tmpdir } from "../fixture/fixture"
+
+import {
+  EMPTY_BOTS_MESSAGE,
+  buildBotRowSegments,
+  formatBotRowText,
+  truncate,
+} from "../../src/cli/ui/ink-app/screens/bots-pane/rows"
+import { handleBotsPaneKey } from "../../src/cli/ui/ink-app/screens/bots-pane/keys"
+
+/* ------------------------------------------------------------------------ */
+/* Row formatting                                                           */
+/* ------------------------------------------------------------------------ */
+
+describe("bots pane rows", () => {
+  const baseRow = {
+    name: "scout",
+    title: "Scout",
+    description: "",
+    model: null,
+    hasCanonicalChat: false,
+    active: false,
+    unreadCount: 0,
+  }
+
+  test("presence dot renders only in the active state color", () => {
+    expect(buildBotRowSegments({ ...baseRow, active: true }).glyph).toBe("●")
+    expect(buildBotRowSegments({ ...baseRow, active: true }).glyphColor).toBe("success")
+    expect(buildBotRowSegments(baseRow).glyph).toBe("○")
+    expect(buildBotRowSegments(baseRow).glyphColor).toBe("inactive")
+  })
+
+  test("unread badge only when unreadCount > 0", () => {
+    expect(buildBotRowSegments({ ...baseRow, unreadCount: 3 }).badge).toBe("[3]")
+    expect(buildBotRowSegments({ ...baseRow, unreadCount: 1 }).badge).toBe("[1]")
+    expect(buildBotRowSegments(baseRow).badge).toBe("")
+  })
+
+  test("identity merges name and title, model appended when pinned", () => {
+    const s = buildBotRowSegments({
+      ...baseRow,
+      title: "Night Watch",
+      model: "claude-sonnet-5",
+    })
+    expect(s.identity).toBe("scout — Night Watch")
+    expect(s.model).toBe(" · claude-sonnet-5")
+  })
+
+  test("description is clipped to the row budget", () => {
+    const long = "word ".repeat(30)
+    const s = buildBotRowSegments({ ...baseRow, description: long })
+    expect(s.description.length).toBeLessThanOrEqual(48)
+    expect(s.description.endsWith("…")).toBe(true)
+  })
+
+  test("formatBotRowText assembles dot, identity, description, model, badge", () => {
+    const text = formatBotRowText({
+      ...baseRow,
+      title: "Scout",
+      description: "watches the fleet",
+      model: "gpt-5",
+      active: true,
+      unreadCount: 2,
+    })
+    expect(text).toContain("●")
+    expect(text).toContain("scout — Scout")
+    expect(text).toContain("watches the fleet")
+    expect(text).toContain("gpt-5")
+    expect(text).toContain("[2]")
+  })
+
+  test("empty-state message is exact", () => {
+    expect(EMPTY_BOTS_MESSAGE).toBe("No bots yet — press n to create one.")
+  })
+
+  test("truncate leaves short text alone and marks clipped text", () => {
+    expect(truncate("abc", 10)).toBe("abc")
+    expect(truncate("abcdefghij", 10)).toBe("abcdefghij")
+    expect(truncate("abcdefghijk", 10)).toBe("abcdefghi…")
+  })
+})
+
+/* ------------------------------------------------------------------------ */
+/* Keybindings                                                              */
+/* ------------------------------------------------------------------------ */
+
+function makeHandlers() {
+  const fired: string[] = []
+  const names = [
+    "moveUp",
+    "moveDown",
+    "openSelected",
+    "createNew",
+    "deleteSelected",
+    "refresh",
+    "exit",
+  ]
+  const handlers = Object.fromEntries(names.map(n => [n, () => fired.push(n)]))
+  return { handlers, fired }
+}
+
+describe("bots pane key dispatch", () => {
+  test("arrows and j/k move", () => {
+    const { handlers, fired } = makeHandlers()
+    expect(handleBotsPaneKey("", { upArrow: true }, handlers)).toBe(true)
+    expect(handleBotsPaneKey("", { downArrow: true }, handlers)).toBe(true)
+    expect(handleBotsPaneKey("k", {}, handlers)).toBe(true)
+    expect(handleBotsPaneKey("j", {}, handlers)).toBe(true)
+    expect(fired).toEqual(["moveUp", "moveDown", "moveUp", "moveDown"])
+  })
+
+  test("Enter opens, n creates, d deletes, r refreshes", () => {
+    const { handlers, fired } = makeHandlers()
+    handleBotsPaneKey("", { return: true }, handlers)
+    handleBotsPaneKey("n", {}, handlers)
+    handleBotsPaneKey("d", {}, handlers)
+    handleBotsPaneKey("r", {}, handlers)
+    expect(fired).toEqual(["openSelected", "createNew", "deleteSelected", "refresh"])
+  })
+
+  test("q and Esc exit", () => {
+    const { handlers, fired } = makeHandlers()
+    handleBotsPaneKey("q", {}, handlers)
+    handleBotsPaneKey("", { escape: true }, handlers)
+    expect(fired).toEqual(["exit", "exit"])
+  })
+
+  test("modifier chords and unknown keys are left unclaimed", () => {
+    const { handlers, fired } = makeHandlers()
+    expect(handleBotsPaneKey("q", { ctrl: true }, handlers)).toBe(false)
+    expect(handleBotsPaneKey("n", { meta: true }, handlers)).toBe(false)
+    expect(handleBotsPaneKey("x", {}, handlers)).toBe(false)
+    expect(handleBotsPaneKey("", {}, handlers)).toBe(false)
+    expect(fired).toEqual([])
+  })
+})
+
+/* ------------------------------------------------------------------------ */
+/* Row-list render (mocked roster data, real ink)                           */
+/* ------------------------------------------------------------------------ */
+
+const stripAnsi = (s: string) => s.replace(/\x1B\[[0-?]*[ -/]*[@-~]/g, "")
+
+describe("BotsRowList render", () => {
+  test("renders rows with presence dot, unread badge, and empty state", async () => {
+    const { render } = await import("../../src/cli/ui/ink-app/ink")
+    const { BotsRowList } = await import("../../src/cli/ui/ink-app/screens/bots-pane/BotsRowList")
+    const rows = [
+      {
+        name: "scout",
+        title: "Scout",
+        description: "watches the fleet",
+        model: "gpt-5",
+        hasCanonicalChat: true,
+        active: true,
+        unreadCount: 2,
+      },
+      {
+        name: "scribe",
+        title: "Scribe",
+        description: "",
+        model: null,
+        hasCanonicalChat: false,
+        active: false,
+        unreadCount: 0,
+      },
+    ]
+    let frames = ""
+    const stdout = new Writable({
+      write(chunk, _enc, cb) {
+        frames += chunk.toString()
+        cb()
+      },
+    })
+    const instance = await render(React.createElement(BotsRowList, { rows, selectedIndex: 0 }), {
+      stdout,
+      exitOnCtrlC: false,
+      patchConsole: false,
+    })
+    await new Promise(r => setTimeout(r, 150))
+    instance.unmount()
+    const plain = stripAnsi(frames)
+    expect(plain).toContain("scout — Scout")
+    expect(plain).toContain("watches the fleet")
+    expect(plain).toContain("gpt-5")
+    expect(plain).toContain("[2]")
+    expect(plain).toContain("scribe — Scribe")
+
+    // Empty state.
+    let emptyFrames = ""
+    const emptyStdout = new Writable({
+      write(chunk, _enc, cb) {
+        emptyFrames += chunk.toString()
+        cb()
+      },
+    })
+    const emptyInstance = await render(
+      React.createElement(BotsRowList, { rows: [], selectedIndex: 0 }),
+      { stdout: emptyStdout, exitOnCtrlC: false, patchConsole: false },
+    )
+    await new Promise(r => setTimeout(r, 150))
+    emptyInstance.unmount()
+    expect(stripAnsi(emptyFrames)).toContain(EMPTY_BOTS_MESSAGE)
+  })
+})
+
+/* ------------------------------------------------------------------------ */
+/* Enter action: openCanonicalChat → markBotRead → switchSession            */
+/* ------------------------------------------------------------------------ */
+
+describe("openBotCanonicalChat", () => {
+  let tmp
+  const calls = { open: 0, read: [] as string[], switched: [] as unknown[], resumed: [] as unknown[] }
+
+  beforeEach(async () => {
+    calls.open = 0
+    calls.read = []
+    calls.switched = []
+    calls.resumed = []
+    tmp = await tmpdir()
+    process.env.GIZZI_CONFIG_DIR = join(tmp.path, ".gizzi")
+  })
+
+  afterEach(() => {
+    delete process.env.GIZZI_CONFIG_DIR
+  })
+
+  // DI fakes — open-bot-chat.ts takes every collaborator as an optional dep
+  // precisely so this file never needs bun's mock.module (its registrations
+  // leak process-wide and poison test/runtime/bots/* when co-run).
+  function fakeDeps(overrides: Record<string, unknown> = {}) {
+    return {
+      openCanonicalChat: async (bot: any) => {
+        calls.open++
+        return { projectPath: "/proj/demo", sessionId: "ses_canonical_1", created: false }
+      },
+      markBotRead: async (name: string) => {
+        calls.read.push(name)
+      },
+      getResumeHandler: () => undefined,
+      switchSession: (id: unknown, projectDir: unknown) => {
+        calls.switched.push([id, projectDir])
+      },
+      getLastSessionLog: async (sessionId: string) => ({ sessionId, messages: [] }),
+      isLiteLog: () => false,
+      loadFullLog: async (log: unknown) => log,
+      ...overrides,
+    }
+  }
+
+  test("opens the canonical chat, marks read, switches the ink session", async () => {
+    const { createBot, getBot } = await import("../../src/runtime/bots/bot-store")
+    await createBot({ name: "scout", title: "Scout" })
+
+    const { openBotCanonicalChat } = await import(
+      "../../src/cli/ui/ink-app/screens/bots-pane/open-bot-chat"
+    )
+    const result = await openBotCanonicalChat("scout", {
+      ...fakeDeps(),
+      getBot,
+    })
+
+    expect(calls.open).toBe(1)
+    expect(calls.read).toEqual(["scout"])
+    expect(calls.switched).toEqual([["ses_canonical_1", "/proj/demo"]])
+    expect(result).toEqual({
+      projectPath: "/proj/demo",
+      sessionId: "ses_canonical_1",
+      created: false,
+    })
+  })
+
+  test("throws for an unknown bot without switching anything", async () => {
+    const { getBot } = await import("../../src/runtime/bots/bot-store")
+    const { openBotCanonicalChat } = await import(
+      "../../src/cli/ui/ink-app/screens/bots-pane/open-bot-chat"
+    )
+    await expect(openBotCanonicalChat("ghost", { ...fakeDeps(), getBot })).rejects.toThrow(
+      "not found",
+    )
+    expect(calls.open).toBe(0)
+    expect(calls.read).toEqual([])
+    expect(calls.switched).toEqual([])
+  })
+
+  test("uses the full resume pipeline when REPL publishes one", async () => {
+    const { createBot, getBot } = await import("../../src/runtime/bots/bot-store")
+    await createBot({ name: "scout", title: "Scout" })
+
+    const { openBotCanonicalChat } = await import(
+      "../../src/cli/ui/ink-app/screens/bots-pane/open-bot-chat"
+    )
+    await openBotCanonicalChat("scout", {
+      ...fakeDeps(),
+      getBot,
+      getResumeHandler: () => async (sessionId: string, log: unknown, entrypoint: string) => {
+        calls.resumed.push([sessionId, log, entrypoint])
+      },
+    })
+
+    // the /resume-grade pipeline handles the transcript reload — the bare
+    // switchSession fallback must NOT fire alongside it
+    expect(calls.resumed).toEqual([
+      ["ses_canonical_1", { sessionId: "ses_canonical_1", messages: [] }, "bots_pane"],
+    ])
+    expect(calls.switched).toEqual([])
+  })
+
+  test("freshly created canonical chat (no transcript) falls back to switchSession", async () => {
+    const { createBot, getBot } = await import("../../src/runtime/bots/bot-store")
+    await createBot({ name: "scout", title: "Scout" })
+
+    const { openBotCanonicalChat } = await import(
+      "../../src/cli/ui/ink-app/screens/bots-pane/open-bot-chat"
+    )
+    await openBotCanonicalChat("scout", {
+      ...fakeDeps(),
+      getBot,
+      openCanonicalChat: async (bot: any) => {
+        calls.open++
+        return { projectPath: "/proj/demo", sessionId: "ses_fresh_1", created: true }
+      },
+      getResumeHandler: () => async (...args: unknown[]) => {
+        calls.resumed.push(args)
+      },
+    })
+
+    expect(calls.resumed).toEqual([])
+    expect(calls.switched).toEqual([["ses_fresh_1", "/proj/demo"]])
+  })
+})

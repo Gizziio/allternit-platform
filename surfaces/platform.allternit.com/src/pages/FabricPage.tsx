@@ -1,0 +1,284 @@
+import React, { useCallback, useEffect, useState } from "react";
+import {
+  HardDrives,
+  Key,
+  Receipt,
+  CircleNotch,
+  ArrowsClockwise,
+  WarningCircle,
+  CheckCircle,
+} from "@phosphor-icons/react";
+import { cn } from "@/lib/utils";
+import {
+  type NodeRecord,
+  type LeaseRecord,
+  type ChargeEvent,
+  osApi,
+  formatOSApiError,
+} from "@/lib/allternitos";
+import { EmptyState } from "@/components/settings/EmptyState";
+import { SkeletonRow } from "@/components/settings/SkeletonRow";
+import { Badge } from "@/components/settings/Badge";
+import { QUIET_BUTTON_CLASS } from "@/components/settings/buttonStyles";
+
+function formatLastSeen(iso?: string | null): string {
+  if (!iso) return "Never";
+  const date = new Date(iso);
+  const diff = Date.now() - date.getTime();
+  if (diff < 60_000) return "Just now";
+  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)} min ago`;
+  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)} hr ago`;
+  return date.toLocaleDateString();
+}
+
+export function FabricPage() {
+  const [nodes, setNodes] = useState<NodeRecord[]>([]);
+  const [leases, setLeases] = useState<LeaseRecord[]>([]);
+  const [chargeEvents, setChargeEvents] = useState<ChargeEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [ackBusy, setAckBusy] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [nodeResult, leaseResult, events] = await Promise.all([
+        osApi.listNodes(),
+        osApi.listLeases(),
+        osApi.queryChargeEvents(),
+      ]);
+      setNodes(nodeResult.nodes || []);
+      setLeases(leaseResult.leases || []);
+      setChargeEvents(events || []);
+    } catch (err) {
+      setError(formatOSApiError(err, "Unable to reach AllternitOS control plane"));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const handleAck = useCallback(async (idempotencyKey: string) => {
+    setAckBusy(idempotencyKey);
+    try {
+      await osApi.acknowledgeChargeEvents([idempotencyKey]);
+      setChargeEvents((prev) =>
+        prev.map((ev) =>
+          ev.idempotency_key === idempotencyKey
+            ? { ...ev, acknowledged_at: new Date().toISOString() }
+            : ev
+        )
+      );
+    } catch (err) {
+      setError(formatOSApiError(err, "Unable to acknowledge charge event"));
+    } finally {
+      setAckBusy(null);
+    }
+  }, []);
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-[22px] font-semibold tracking-tight text-[var(--text-primary)]">
+          Fabric
+        </h1>
+        <p className="text-[13px] text-[var(--text-secondary)] mt-1">
+          Inspect AllternitOS nodes, capability leases, and charge events.
+        </p>
+      </div>
+
+      {error && (
+        <div className="rounded-xl border border-solid border-[var(--status-error)]/30 bg-[var(--status-error)]/10 p-3 text-[13px] text-[var(--status-error)]">
+          {error}
+        </div>
+      )}
+
+      {loading ? (
+        <SkeletonRow lines={6} />
+      ) : (
+        <>
+          <section className="space-y-3">
+            <div className="flex items-center gap-2">
+              <HardDrives size={18} className="text-[var(--accent-primary)]" />
+              <h2 className="text-[14px] font-semibold text-[var(--text-primary)]">
+                Nodes ({nodes.length})
+              </h2>
+            </div>
+            {nodes.length === 0 ? (
+              <EmptyState
+                icon={<HardDrives size={32} weight="thin" />}
+                title="No nodes enrolled"
+                caption="Start allternitosd on a machine and enroll it with the control plane."
+              />
+            ) : (
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {nodes.map((node) => (
+                  <div
+                    key={node.node_id}
+                    className="rounded-xl border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)]/40 p-4"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[13px] font-semibold text-[var(--text-primary)] truncate font-mono">
+                        {node.node_id}
+                      </span>
+                      <Badge
+                        className={cn(
+                          node.health === "healthy" &&
+                            "text-[var(--status-success)] bg-[var(--status-success)]/10",
+                          node.health !== "healthy" &&
+                            "text-[var(--status-warning)] bg-[var(--status-warning)]/10"
+                        )}
+                      >
+                        {node.health || "unknown"}
+                      </Badge>
+                    </div>
+                    <div className="text-[11px] text-[var(--text-tertiary)] mt-1">
+                      {node.region || "—"} · {node.zone || "—"} · {node.rack || "—"}
+                    </div>
+                    <div className="text-[11px] text-[var(--text-tertiary)] mt-1">
+                      Last seen {formatLastSeen(node.last_heartbeat_at)}
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 mt-3">
+                      {node.capability_record?.workers?.capabilities?.map((cap) => (
+                        <span
+                          key={cap.capability}
+                          className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-[var(--bg-primary)] text-[var(--text-secondary)] border border-[var(--border-subtle)]"
+                          title={cap.actions.join(", ")}
+                        >
+                          {cap.capability}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Key size={18} className="text-[var(--accent-primary)]" />
+              <h2 className="text-[14px] font-semibold text-[var(--text-primary)]">
+                Leases ({leases.length})
+              </h2>
+            </div>
+            {leases.length === 0 ? (
+              <EmptyState
+                icon={<Key size={32} weight="thin" />}
+                title="No leases"
+                caption="Capability leases issued by workloads will appear here."
+              />
+            ) : (
+              <div className="space-y-2">
+                {leases.map((lease) => (
+                  <div
+                    key={lease.lease_id}
+                    className="rounded-xl border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)]/40 p-4"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[13px] font-semibold text-[var(--text-primary)] font-mono">
+                        {lease.lease_id}
+                      </span>
+                      <Badge
+                        className={cn(
+                          lease.state === "active" &&
+                            "text-[var(--accent-primary)] bg-[var(--accent-primary)]/10",
+                          lease.state === "revoked" &&
+                            "text-[var(--text-tertiary)] bg-[var(--bg-secondary)]"
+                        )}
+                      >
+                        {lease.state}
+                      </Badge>
+                    </div>
+                    <div className="text-[12px] text-[var(--text-secondary)] mt-1">
+                      {lease.capability} → {lease.node_id || "unassigned"}
+                    </div>
+                    <div className="text-[11px] text-[var(--text-tertiary)] mt-1">
+                      Requester {lease.requester_principal_id} · Expires{" "}
+                      {new Date(lease.not_after).toLocaleString()}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Receipt size={18} className="text-[var(--accent-primary)]" />
+              <h2 className="text-[14px] font-semibold text-[var(--text-primary)]">
+                Charge Events ({chargeEvents.length})
+              </h2>
+            </div>
+            {chargeEvents.length === 0 ? (
+              <EmptyState
+                icon={<Receipt size={32} weight="thin" />}
+                title="No charge events"
+                caption="Usage events reconciled by the control plane will appear here."
+              />
+            ) : (
+              <div className="space-y-2">
+                {chargeEvents.map((ev) => (
+                  <div
+                    key={ev.id}
+                    className="rounded-xl border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)]/40 p-4"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[13px] font-semibold text-[var(--text-primary)] font-mono">
+                        {ev.event_type}
+                      </span>
+                      <Badge
+                        className={cn(
+                          ev.acknowledged_at
+                            ? "text-[var(--status-success)] bg-[var(--status-success)]/10"
+                            : "text-[var(--status-warning)] bg-[var(--status-warning)]/10"
+                        )}
+                      >
+                        {ev.acknowledged_at ? "acknowledged" : "unacknowledged"}
+                      </Badge>
+                    </div>
+                    <div className="text-[12px] text-[var(--text-secondary)] mt-1">
+                      {ev.quantity} {ev.unit} · {ev.amount} {ev.currency} · {ev.resource_id}
+                    </div>
+                    <div className="text-[11px] text-[var(--text-tertiary)] mt-1">
+                      Measured {new Date(ev.measured_at).toLocaleString()}
+                    </div>
+                    {!ev.acknowledged_at && (
+                      <button
+                        type="button"
+                        onClick={() => void handleAck(ev.idempotency_key)}
+                        disabled={ackBusy === ev.idempotency_key}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-solid border-[var(--accent-primary)]/30 bg-[var(--accent-primary)]/10 text-[13px] font-medium text-[var(--accent-primary)] cursor-pointer hover:bg-[var(--accent-primary)]/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-3"
+                      >
+                        {ackBusy === ev.idempotency_key && (
+                          <CircleNotch size={12} className="animate-spin" />
+                        )}
+                        <CheckCircle size={13} /> Acknowledge
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <div className="flex justify-end">
+            <button
+              type="button"
+              className={QUIET_BUTTON_CLASS}
+              onClick={() => void load()}
+              disabled={loading}
+            >
+              {loading && <CircleNotch size={13} className="animate-spin" />}
+              <ArrowsClockwise size={13} /> Refresh
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
