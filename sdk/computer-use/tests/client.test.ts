@@ -7,6 +7,7 @@
 import { AllternitComputerUseClient } from '../src/client';
 import { ApprovalHandler, ApprovalPredicates } from '../src/approvals';
 import { normalizeEndpoint, AllternitComputerUseError } from '../src/utils';
+import type { DirectRunResult } from '../src/types';
 
 // Mock fetch for testing
 global.fetch = jest.fn() as unknown as typeof fetch;
@@ -194,6 +195,182 @@ describe('AllternitComputerUseClient', () => {
       expect(requestBody.mode).toBe('direct');
       expect(requestBody.actions).toHaveLength(2);
       expect(requestBody.actions[0].kind).toBe('click');
+    });
+
+    it('matches the PR #152 direct-mode contract exactly (no task key)', async () => {
+      mockedFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          run_id: 'cu-abc',
+          session_id: 'sess-abc',
+          status: 'completed',
+          mode: 'direct',
+          target_scope: 'browser',
+          summary: 'Executed 1/1 actions',
+          result: null,
+          artifacts: [],
+          error: null,
+        }),
+      } as Response);
+
+      const actions = [
+        {
+          kind: 'click',
+          action_id: 'click-go',
+          target: { selector: '#go' },
+          input: { text: 'hello' },
+          expect: {},
+          metadata: {},
+        },
+      ];
+
+      await client.executeDirect(actions, {
+        session_id: 'sess-abc',
+        run_id: 'cu-abc',
+      });
+
+      expect(mockedFetch).toHaveBeenCalledWith(
+        'http://localhost:8080/v1/computer-use/execute',
+        expect.objectContaining({ method: 'POST' })
+      );
+
+      // Field-for-field the gateway ExecuteBody contract: mode='direct' with
+      // a non-empty actions list and NO task key (task is optional when
+      // actions are present).
+      const requestBody = JSON.parse(
+        (mockedFetch.mock.calls[0][1] as { body: string }).body
+      );
+      expect(requestBody).toEqual({
+        mode: 'direct',
+        actions: [
+          {
+            kind: 'click',
+            action_id: 'click-go',
+            target: { selector: '#go' },
+            input: { text: 'hello' },
+            expect: {},
+            metadata: {},
+          },
+        ],
+        session_id: 'sess-abc',
+        run_id: 'cu-abc',
+        target_scope: 'auto',
+        options: {},
+        context: {},
+      });
+      expect('task' in requestBody).toBe(false);
+    });
+
+    it('parses the gateway envelope: per-action results + artifacts', async () => {
+      const gatewayResponse = {
+        run_id: 'cu-1',
+        session_id: 'sess-1',
+        status: 'failed',
+        mode: 'direct',
+        target_scope: 'browser',
+        summary: 'Executed 2/2 actions',
+        result: {
+          task: null,
+          status: 'failed',
+          stop_reason: 'error',
+          actions: [
+            {
+              index: 0,
+              action_id: 'click-go',
+              kind: 'click',
+              status: 'ok',
+              result: { status: 'completed', adapter_id: 'browser.cdp' },
+              error: null,
+            },
+            {
+              index: 1,
+              action_id: 'type-x',
+              kind: 'type',
+              status: 'error',
+              result: null,
+              error: 'element not found',
+            },
+          ],
+          total_steps: 2,
+          succeeded: 1,
+          screenshot_b64: 'aGk=',
+          artifacts: [{ type: 'screenshot', mime: 'image/png', content: 'aGk=' }],
+        },
+        artifacts: [{ type: 'screenshot', mime: 'image/png', content: 'aGk=' }],
+        error: null,
+      };
+
+      mockedFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => gatewayResponse,
+      } as Response);
+
+      const result = await client.executeDirect([{ kind: 'click' }]);
+
+      expect(result.run_id).toBe('cu-1');
+      expect(result.status).toBe('failed');
+
+      const directResult = result.result as unknown as DirectRunResult;
+      expect(directResult.actions).toHaveLength(2);
+      expect(directResult.actions?.[0]).toEqual({
+        index: 0,
+        action_id: 'click-go',
+        kind: 'click',
+        status: 'ok',
+        result: { status: 'completed', adapter_id: 'browser.cdp' },
+        error: null,
+      });
+      expect(directResult.actions?.[1].error).toBe('element not found');
+      expect(directResult.succeeded).toBe(1);
+      expect(directResult.screenshot_b64).toBe('aGk=');
+      expect(result.artifacts).toEqual([
+        { type: 'screenshot', mime: 'image/png', content: 'aGk=' },
+      ]);
+    });
+
+    it('adapts the gateway plain-string error into the EngineError shape', async () => {
+      mockedFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          run_id: 'cu-2',
+          session_id: 'sess-2',
+          status: 'failed',
+          mode: 'intent',
+          target_scope: 'browser',
+          summary: '',
+          result: null,
+          artifacts: [],
+          error: 'planning_loop not available (import error)',
+        }),
+      } as Response);
+
+      const result = await client.executeIntent('do something');
+
+      expect(result.error).toEqual({
+        code: 'gateway_error',
+        message: 'planning_loop not available (import error)',
+      });
+    });
+
+    it('passes through a null gateway error unchanged', async () => {
+      mockedFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          run_id: 'cu-3',
+          session_id: 'sess-3',
+          status: 'completed',
+          mode: 'direct',
+          target_scope: 'browser',
+          summary: 'Executed 1/1 actions',
+          result: null,
+          artifacts: [],
+          error: null,
+        }),
+      } as Response);
+
+      const result = await client.executeDirect([{ kind: 'click' }]);
+
+      expect(result.error).toBeNull();
     });
   });
 

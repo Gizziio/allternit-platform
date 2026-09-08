@@ -308,12 +308,16 @@ export class ApprovalHandler {
 
   /**
    * Check if an event type is terminal.
+   *
+   * `run.ended` is the gateway's end-of-stream sentinel and is terminal even
+   * though it is not itself a run outcome.
    */
   private isTerminalEvent(eventType: EngineEventType): boolean {
     return (
       eventType === 'run.completed' ||
       eventType === 'run.failed' ||
-      eventType === 'run.cancelled'
+      eventType === 'run.cancelled' ||
+      eventType === 'run.ended'
     );
   }
 

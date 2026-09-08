@@ -1,15 +1,16 @@
-# Checkpoint (final — handed to orchestrator for merge)
+# Checkpoint — session/cu7-tsdk
 
 ## Goal
-Fix 3 Python-side computer-use bugs, test, smoke, PR. DONE — PR #152, branch session/cu6-pyfix @ 20d980f31.
+Align sdk/computer-use TS client/stream contracts with the shipped gateway contract from PR #152. PR, do NOT merge. DONE.
 
 ## Just did
-- All 3 fixes + tests + conftest aliasing fix; 123 passed/21 skipped.
-- Live smoke on :8981 verified direct mode (2/2 actions via browser.cdp, real screenshot) + 422s.
-- Committed (fix(computer-use): …), pushed, PR #152 created with full JSON contract at top.
+- Implemented all contract fixes (types/client/events/approvals), 12 new tests, conformance fixture updated.
+- Verified: pnpm test 110 passed (baseline 98), tsc --noEmit clean.
+- Committed fix(sdk) + docs(steering), pushed session/cu7-tsdk, opened PR #154. NOT merged (orchestrator merges).
+- Left worktree intact at ../allternit-session-cu7-tsdk for orchestrator review.
 
-## Next (orchestrator)
-- Review/merge PR #152 (merge commit, not squash). After merge: ledger attestation + worktree/branch cleanup per AGENTS.md steps 6-8.
+## Next
+Orchestrator: review/merge PR #154 after #152. Post-merge ledger attestation + worktree cleanup happen per AGENTS.md session lifecycle (deliberately left for the merge owner).
 
 ## Open questions
-- TS side must adapt: response `error` is a plain string|null, not {code,message} EngineError (pre-existing envelope; documented in PR).
+- None.

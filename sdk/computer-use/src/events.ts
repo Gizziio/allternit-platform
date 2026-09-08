@@ -84,7 +84,14 @@ export class EventStream {
 
   /**
    * Subscribe to events for a run.
-   * 
+   *
+   * Connects to the gateway run-events SSE endpoint
+   * (`{endpoint}/computer-use/runs/{runId}/events`). The gateway sends every
+   * event as a JSON envelope `{event_type, run_id, message, data}` on the
+   * default `message` channel (no named SSE `event:` fields) and closes the
+   * stream with a terminal `run.ended` event. `options.afterIndex` has no
+   * server-side equivalent and is ignored.
+   *
    * @param runId - The run ID to subscribe to
    * @param callback - Function called for each event
    * @param options - Subscription options
@@ -95,15 +102,15 @@ export class EventStream {
     callback: EventHandler,
     options: SubscribeOptions = {}
   ): () => void {
-    const { afterIndex = 0, autoClose = true } = options;
+    const { autoClose = true } = options;
 
     // Check if we already have a subscription for this run
     let subscription = this.subscriptions.get(runId);
 
     if (!subscription) {
       // Create new EventSource connection
-      const url = `${this.endpoint}/stream/${encodeURIComponent(runId)}?after_index=${afterIndex}`;
-      
+      const url = `${this.endpoint}/computer-use/runs/${encodeURIComponent(runId)}/events`;
+
       const eventSource = new EventSourceImpl(url, {
         headers: this.buildHeaders(),
       });
@@ -130,6 +137,36 @@ export class EventStream {
   }
 
   /**
+   * Parse a gateway SSE event envelope into an EngineEvent.
+   *
+   * Gateway envelope: `{event_type, run_id, message, data}`. Fields the
+   * envelope does not carry (session_id, mode, target_scope) are left unset.
+   * Returns null when the payload is not a valid envelope.
+   */
+  private parseEventEnvelope(raw: string, fallbackRunId: string): EngineEvent | null {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      return null;
+    }
+    if (!parsed || typeof parsed !== 'object') return null;
+    const envelope = parsed as {
+      event_type?: unknown;
+      run_id?: unknown;
+      message?: unknown;
+      data?: unknown;
+    };
+    if (typeof envelope.event_type !== 'string') return null;
+    return {
+      run_id: typeof envelope.run_id === 'string' ? envelope.run_id : fallbackRunId,
+      event_type: envelope.event_type as EngineEventType,
+      message: typeof envelope.message === 'string' ? envelope.message : envelope.event_type,
+      data: envelope.data,
+    };
+  }
+
+  /**
    * Set up EventSource event handlers.
    */
   private setupEventSourceHandlers(
@@ -139,20 +176,24 @@ export class EventStream {
   ): void {
     const { eventSource } = subscription;
 
-    // Handle specific event types
+    // The gateway sends all events as `data:` lines with no named SSE
+    // `event:` field, so every event arrives on the 'message' channel.
     eventSource.addEventListener('message', (event: MessageEvent) => {
-      try {
-        const data = JSON.parse(event.data) as EngineEvent;
-        this.notifyCallbacks(runId, data);
-      } catch (error) {
-        console.error('Failed to parse event data:', error);
+      const engineEvent = this.parseEventEnvelope(event.data, runId);
+      if (!engineEvent) {
+        console.error('Failed to parse event envelope:', event.data);
+        return;
       }
-    });
+      try {
+        this.notifyCallbacks(runId, engineEvent);
 
-    // Handle the 'done' event (sent when run completes)
-    eventSource.addEventListener('done', () => {
-      if (autoClose) {
-        this.closeSubscription(runId);
+        // Auto-close on terminal events (run.ended is the gateway's
+        // end-of-stream sentinel)
+        if (autoClose && this.isTerminalEvent(engineEvent.event_type)) {
+          this.closeSubscription(runId);
+        }
+      } catch (error) {
+        console.error('Event callback error:', error);
       }
     });
 
@@ -162,52 +203,6 @@ export class EventStream {
       // Notify all callbacks of the error
       this.notifyError(runId, error);
     };
-
-    // Handle specific engine event types
-    const eventTypes: EngineEventType[] = [
-      'run.started',
-      'policy.resolved',
-      'route.selected',
-      'observe.started',
-      'observe.completed',
-      'plan.created',
-      'action.started',
-      'action.completed',
-      'fallback.triggered',
-      'layer.upgraded',
-      'approval.required',
-      'approval.received',
-      'artifact.created',
-      'run.paused',
-      'run.resumed',
-      'run.completed',
-      'run.failed',
-      'run.cancelled',
-      'search.overflow',
-      'view.refocused',
-      'guard.failed',
-      'context.compacted',
-      'tab.created',
-      'tab.closed',
-      'tab.switched',
-      'tab.updated',
-    ];
-
-    for (const eventType of eventTypes) {
-      eventSource.addEventListener(eventType, (event: MessageEvent) => {
-        try {
-          const data = JSON.parse(event.data) as EngineEvent;
-          this.notifyCallbacks(runId, data);
-
-          // Auto-close on terminal events
-          if (autoClose && this.isTerminalEvent(data.event_type)) {
-            this.closeSubscription(runId);
-          }
-        } catch (error) {
-          console.error('Failed to parse event data:', error);
-        }
-      });
-    }
   }
 
   /**
@@ -217,7 +212,8 @@ export class EventStream {
     return (
       eventType === 'run.completed' ||
       eventType === 'run.failed' ||
-      eventType === 'run.cancelled'
+      eventType === 'run.cancelled' ||
+      eventType === 'run.ended'
     );
   }
 

@@ -150,6 +150,8 @@ export type {
   EngineError,
   EngineExecutionResult,
   EngineEvent,
+  DirectActionOutcome,
+  DirectRunResult,
 
   // HTTP API models
   ExecuteRequest,
