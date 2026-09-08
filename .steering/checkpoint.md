@@ -1,44 +1,18 @@
-# Steering checkpoint — session/11f1b5c8
+# Checkpoint
 
 ## Goal
-Provider Routing v1 (Allternit Brain `Products/ProviderRouting.md`): tenant-scoped
-provider routing policy in allternit-api (sort/only/ignore/order/require_parameters/
-data_collection + per-model overrides), resolved against the active model and
-injected as a top-level `provider` object on outbound OpenAI-compatible wire
-requests, via the Gizzi session-message payload. Plan: `spec/provider-routing/plan.md`.
-Worktree `allternit-session-11f1b5c8`, branch `session/11f1b5c8`.
+cu3-skill: Recording-to-skill compiler path. Producer converting ACU JSONL recordings to BrowserTrajectory, compile through compileBrowserTrajectoryToSkill into skill package, expose via HTTP route, tests with redaction asserted, typecheck verified. Touch only infrastructure/chrome-stream/**.
 
 ## Just did
-- Rust CODE COMPLETE: V133 migration; `llm_gateway/provider_routing.rs`
-  (policy structs, validation, tenant+global load, per-model resolution with
-  spelling-tolerant matching — 9 unit tests pass incl. real-migration roundtrip);
-  admin GET/PUT `/api/v1/gateway/provider-routing`; proxy.rs injects
-  `payload["provider"]` for the primary model and re-resolves per failover
-  attempt in the retry rebuild. `cargo check` clean (65 pre-existing warnings).
-- gizzi-code CODE COMPLETE: PromptInput accepts `provider` (zod record),
-  createUserMessage folds it into per-turn message metadata
-  (`provider_routing`), llm.ts injects it into providerOptions body for
-  `@ai-sdk/openai-compatible` SDKs only. Verified in @ai-sdk/openai-compatible
-  2.0.28 dist: raw providerOptions[providerOptionsName] unknown keys ARE spread
-  into the request body (parseProviderOptions strips, but body spread uses raw).
-  3 new schema tests pass; typecheck clean for touched files (2 pre-existing
-  errors in test/commands/slash-menu.test.ts, untouched by this session).
-- Merge of origin/main resolved (checkpoint conflict — kept this session's;
-  prompt.ts auto-merged clean).
-
-## Verification
-- `cargo test -p allternit-api provider_routing`: 9/9 pass.
-- Full `cargo test -p allternit-api`: 658 pass, 4 fail — all in
-  agent_cloud_routes (hardcoded stale AllternitOS control-plane binary, see
-  ledger); pre-existing, untouched by this session.
-- `bun test test/session/`: 109 pass, 0 fail (incl. 3 new schema tests).
-- Admin API store + round-trip verified live against a dev-bypass server.
-  Owner directed no mock smoke test — shipping to production.
+- Scoped: actual files are src/protocol/skill-factory.ts and src/browser/routes/protocol.ts (brief's paths were approximate).
+- Read ACU recording format (domains/computer-use/core/core/action_recorder.py, read-only): line 0 = manifest `_type:"manifest"` (recording_id, task, session_id, run_id, vision_provider, adapter_id, started_at...), lines 1+ = frames (step, timestamp, action_type, action_target, action_params, reasoning, reflection, action_succeeded, ...).
+- Read protocol schemas: ActionKind enum, BrowserTrajectory, ActionIntent (needs Z-suffixed ISO datetime — Python emits +00:00, must normalize).
+- Tooling: package @allternit/browser, `pnpm --filter @allternit/browser typecheck` / `test` (vitest).
+- Implemented: src/protocol/recording-to-trajectory.ts (JSONL → BrowserTrajectory, action-kind map, provider inference, timestamp normalization, path containment), POST /v1/browser-skills/from-recording route in src/browser/routes/protocol.ts, exports in src/index.ts, tests in src/protocol/recording-to-trajectory.test.ts (fixture → trajectory → skill package, redaction + failed-step exclusion asserted).
+- pnpm install running in worktree (fresh checkout, no node_modules).
 
 ## Next
-- Repo ritual: push merge commit, PR #132 merge, sync main, agent-ledger
-  attestation, worktree cleanup.
+- Commit, push, open PR (do not merge). Work is verified: typecheck clean, 49/49 active tests pass (8 pre-existing skips), route smoke-tested live with redaction + path-escape rejection asserted.
 
 ## Open questions
-- In-session gizzi fallback switches keep the per-message pin (Rust recomputes
-  on its own retry loop per attempt). Accepted v1 semantics; noted for ledger.
+- None blocking. Notes for reviewers: brief's file paths were approximate (actual: src/protocol/skill-factory.ts, src/browser/routes/protocol.ts). Added target-aware redaction to skill-factory.ts (compiler) because ACU recordings carry the secret signal in action_target, not in param keys. Route response omits the raw trajectory (it is unredacted). Unknown ACU action_types map to 'extract' with the original type in input.__acuActionType. pnpm-lock.yaml churn from local install was reverted — not part of the change.
