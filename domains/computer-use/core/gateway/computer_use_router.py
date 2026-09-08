@@ -1,7 +1,7 @@
 """
 Allternit Computer Use — REST API Router
 
-/v1/computer-use/ surface: execute, runs, sessions, adapters, record, health.
+/v1/computer-use/ surface: execute, runs, sessions, adapters, record, recordings, replay, health.
 
 Execution model:
   Claude (native computer tool) → gateway /v1/execute → ACU executor directly
@@ -62,10 +62,11 @@ except ImportError:
     _session_manager_available = False
 
 try:
-    from core.action_recorder import ActionRecorder
+    from core.action_recorder import ActionRecorder, list_recordings
     _recorder_available = True
 except ImportError:
     ActionRecorder = None  # type: ignore[assignment,misc]
+    list_recordings = None  # type: ignore[assignment]
     _recorder_available = False
 
 logger = logging.getLogger(__name__)
@@ -226,15 +227,20 @@ class ApproveBody(BaseModel):
 
 class RecordBody(BaseModel):
     session_id: str
-    action: Literal["start", "stop"] = "start"
+    action: Literal["start", "append", "stop"] = "start"
     recording_id: Optional[str] = None
     name: Optional[str] = None
     record_gif: bool = True
+    # For action="append": recorded frames to append to the in-flight recording.
+    frames: Optional[List[Dict[str, Any]]] = None
 
 
 class ReplayBody(BaseModel):
     recording_id: str
     export_gif: bool = False
+    session_id: Optional[str] = None
+    deviation_threshold: Optional[float] = 0.05
+    wait: bool = False
 
 
 class ExecutionResult(BaseModel):
@@ -601,10 +607,12 @@ _router_recordings: Dict[str, Any] = {}
 @router.post("/record")
 async def record(body: RecordBody) -> Dict[str, Any]:
     """
-    Start or stop an action recording for a session.
+    Start, append frames to, or stop an action recording for a session.
 
-    action="start": creates a new ActionRecorder and returns a recording_id.
-    action="stop":  finalizes the recording and returns frame count + paths.
+    action="start":  creates a new ActionRecorder and returns a recording_id.
+    action="append": appends recorded frames to an in-flight recording (lets
+                     callers build a recording step-by-step over HTTP).
+    action="stop":   finalizes the recording and returns frame count + paths.
     """
     if not _recorder_available or ActionRecorder is None:
         raise HTTPException(status_code=503, detail="ActionRecorder not available")
@@ -626,9 +634,46 @@ async def record(body: RecordBody) -> Dict[str, Any]:
             "status": "recording",
         }
 
-    # action == "stop"
     if not body.recording_id:
-        raise HTTPException(status_code=400, detail="recording_id required to stop")
+        raise HTTPException(status_code=400, detail="recording_id required")
+
+    if body.action == "append":
+        if not body.frames:
+            raise HTTPException(status_code=400, detail="frames required to append")
+        recorder = _router_recordings.get(body.recording_id)
+        if recorder is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Recording {body.recording_id} not found (already stopped or unknown)",
+            )
+        from core.action_recorder import RecordedFrame
+
+        appended = 0
+        for frame_data in body.frames:
+            frame = RecordedFrame(
+                recording_id=body.recording_id,
+                step=frame_data.get("step", appended),
+                action_type=frame_data.get("action_type", ""),
+                action_target=frame_data.get("action_target", ""),
+                action_params=frame_data.get("action_params", {}) or {},
+                before_screenshot_b64=frame_data.get("before_screenshot_b64", ""),
+                after_screenshot_b64=frame_data.get("after_screenshot_b64", ""),
+                reasoning=frame_data.get("reasoning", ""),
+                reflection=frame_data.get("reflection", ""),
+                action_succeeded=frame_data.get("action_succeeded", True),
+                risk_level=frame_data.get("risk_level", "low"),
+                tokens_used=frame_data.get("tokens_used", 0),
+            )
+            await recorder.record_frame(frame)
+            appended += 1
+        return {
+            "recording_id": body.recording_id,
+            "appended": appended,
+            "frames": getattr(recorder, "_frame_count", 0),
+            "status": "recording",
+        }
+
+    # action == "stop"
     recorder = _router_recordings.pop(body.recording_id, None)
     if recorder is None:
         raise HTTPException(status_code=404, detail=f"Recording {body.recording_id} not found")
@@ -643,41 +688,168 @@ async def record(body: RecordBody) -> Dict[str, Any]:
     }
 
 
+@router.get("/recordings")
+async def list_recordings_endpoint() -> Dict[str, Any]:
+    """List recordings on disk (newest first), including completed ones."""
+    if not _recorder_available or list_recordings is None:
+        raise HTTPException(status_code=503, detail="ActionRecorder not available")
+    return {"recordings": list_recordings()}
+
+
 @router.post("/replay")
 async def replay(body: ReplayBody) -> Dict[str, Any]:
     """
-    Replay a completed recording or export its GIF.
+    Replay a completed recording from disk, or export its GIF.
 
-    Looks up the recorder by recording_id. If export_gif=true and a GIF
-    was already generated, returns its path; otherwise returns the JSONL path.
+    The recording is resolved from the in-flight registry first, then from
+    disk under ~/.allternit/recordings/ — so completed recordings replay
+    after their recorder has been stopped and popped.
+
+    The recording is re-executed step-by-step through the adapter layer as a
+    replay run in the run store. After each action the live screen is compared
+    with the recorded after-screenshot; a deviation score above
+    deviation_threshold pauses the run, which can then be resumed or abandoned
+    via POST /runs/{run_id}/approve (decision="approve" resumes,
+    decision="deny" abandons).
+
+    With export_gif=true (and no execution wanted), returns the recording's
+    GIF path when one exists on disk.
+
+    With wait=true, blocks until the replay finishes and returns the full
+    result; otherwise returns immediately with the run_id (poll
+    GET /runs/{run_id} or stream GET /runs/{run_id}/events).
     """
     if not _recorder_available or ActionRecorder is None:
         raise HTTPException(status_code=503, detail="ActionRecorder not available")
 
-    recorder = _router_recordings.get(body.recording_id)
-    if recorder is None:
+    # GIF export for a recording that already has one on disk.
+    if body.export_gif:
+        gif_path = _lookup_gif_on_disk(body.recording_id)
+        if gif_path is None:
+            recorder = _router_recordings.get(body.recording_id)
+            if recorder is not None and recorder.get_gif_path():
+                gif_path = str(recorder.get_gif_path())
+        if gif_path is None:
+            raise HTTPException(status_code=404, detail=f"No GIF for recording {body.recording_id}")
+        return {"recording_id": body.recording_id, "gif_path": gif_path, "status": "exported"}
+
+    # Resolve the recording from the in-flight registry, then from disk.
+    from core.action_recorder import load_recording
+
+    try:
+        manifest, frames, recording_path = load_recording(body.recording_id)
+    except FileNotFoundError:
         raise HTTPException(
             status_code=404,
-            detail=f"Recording {body.recording_id} not found (already stopped or unknown)",
+            detail=f"Recording {body.recording_id} not found (unknown or not on disk)",
         )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid recording: {exc}")
 
-    path = str(recorder.get_path())
-    gif_path = str(recorder.get_gif_path()) if recorder.get_gif_path() else None
+    if not frames:
+        raise HTTPException(status_code=400, detail=f"Recording {body.recording_id} has no frames to replay")
 
-    if body.export_gif and gif_path is None:
-        # Attempt to build the GIF from existing frames
+    session_id = body.session_id or manifest.session_id or f"sess-{uuid.uuid4().hex[:8]}"
+    run_id = f"replay-{uuid.uuid4().hex[:12]}"
+    run_state = _run_store.create(
+        run_id=run_id,
+        session_id=session_id,
+        mode="replay",
+        target_scope="auto",
+    )
+    _run_store.update_status(run_id, "running")
+
+    adapter = _get_adapter_for_planning("auto", None)
+
+    # Deviation pause → approval_future, same pattern as the planning loop.
+    async def replay_approval_callback(deviation: Any) -> bool:
+        loop = asyncio.get_event_loop()
+        future: asyncio.Future = loop.create_future()
+        run_state.approval_future = future
+        _run_store.update_status(run_id, "awaiting_approval")
         try:
-            await recorder._flush_gif()
-            gif_path = str(recorder.get_gif_path()) if recorder.get_gif_path() else None
+            decision_payload = await asyncio.wait_for(future, timeout=120.0)
+        except asyncio.TimeoutError:
+            run_state.approval_future = None
+            run_state.approval_timed_out = True
+            _run_store.update_status(run_id, "running")
+            logger.warning("Replay deviation approval timed out for run %s", run_id)
+            return False
+        finally:
+            if run_state.approval_future is not None:
+                run_state.approval_future = None
+                _run_store.update_status(run_id, "running")
+        return decision_payload.get("decision") == "approve"
+
+    async def on_event(event: Dict[str, Any]) -> None:
+        await _run_store.push_event(run_id, {
+            "event_type": event.get("type", "replay.event"),
+            "run_id": run_id,
+            "message": event.get("type", ""),
+            "data": event,
+        })
+
+    async def run_replay() -> None:
+        from core.replay_engine import ReplayEngine
+
+        engine = ReplayEngine(
+            adapter=adapter,
+            session_id=session_id,
+            deviation_threshold=body.deviation_threshold,
+            approval_callback=replay_approval_callback,
+            on_event=on_event,
+            cancel_event=run_state.cancel_event,
+        )
+        try:
+            result = await engine.replay(recording_path)
+            run_state.status = result.status
+            run_state.result = result.to_dict()
         except Exception as exc:
-            logger.warning("GIF export failed: %s", exc)
+            logger.exception("Replay raised exception: %s", exc)
+            run_state.status = "failed"
+            run_state.error = str(exc)
+        finally:
+            run_state.updated_at = _utcnow()
+            await _run_store.push_event(run_id, {
+                "event_type": "run.ended",
+                "run_id": run_id,
+                "message": run_state.status,
+                "data": run_state.to_dict(),
+            })
+            await _run_store.push_sentinel(run_id)
+
+    task = asyncio.create_task(run_replay())
+
+    if body.wait:
+        await task
+        return {
+            "run_id": run_id,
+            "recording_id": body.recording_id,
+            "status": run_state.status,
+            "path": str(recording_path),
+            "result": run_state.result,
+            "error": run_state.error,
+        }
 
     return {
+        "run_id": run_id,
         "recording_id": body.recording_id,
-        "path": path,
-        "gif_path": gif_path,
-        "frames": getattr(recorder, "_frame_count", 0),
+        "session_id": session_id,
+        "status": "running",
+        "path": str(recording_path),
+        "total_steps": len(frames),
     }
+
+
+def _lookup_gif_on_disk(recording_id: str) -> Optional[str]:
+    """Return the GIF path from a recording's on-disk manifest, if any."""
+    try:
+        from core.action_recorder import load_recording
+
+        manifest, _frames, _path = load_recording(recording_id)
+        return manifest.gif_path
+    except Exception:
+        return None
 
 
 @router.get("/health")
