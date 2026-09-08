@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { resolveRuntimeConfig, type OfficeAgentConfig } from './useOfficeAgent'
-import { DEFAULT_OFFICE_MODEL } from '@/lib/agent-defaults'
+import { DEFAULT_OFFICE_MODEL, LEGACY_OFFICE_MODEL } from '@/lib/agent-defaults'
 import { resetResolvedModelForTests } from '@/lib/model-resolution'
 
 function makeConfig(overrides: Partial<OfficeAgentConfig> = {}): OfficeAgentConfig {
@@ -56,6 +56,21 @@ describe('resolveRuntimeConfig model resolution', () => {
   })
 
   it('treats the legacy hard-coded default as unset and resolves it', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        jsonResponse({ data: [{ id: 'subconscious/glm-5.2' }] }),
+      ),
+    )
+
+    const resolved = await resolveRuntimeConfig(
+      makeConfig({ baseURL: 'http://backend.test', apiKey: 'ak-key', model: LEGACY_OFFICE_MODEL }),
+    )
+
+    expect(resolved?.model).toBe('subconscious/glm-5.2')
+  })
+
+  it('treats a stored value equal to the current default as unset and resolves it', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue(

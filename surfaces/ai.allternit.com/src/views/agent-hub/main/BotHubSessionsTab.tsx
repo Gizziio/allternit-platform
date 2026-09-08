@@ -1,10 +1,15 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { ChatTeardropText, MagnifyingGlass, Robot } from "@phosphor-icons/react";
+import { ChatTeardropText, MagnifyingGlass, PushPin, Robot } from "@phosphor-icons/react";
 import { useAgentStore } from "@/lib/agents/agent.store";
 import { useChatSessionStore } from "@/views/chat/ChatSessionStore";
 import type { ModeSession } from "@/lib/agents/mode-session-store";
+import {
+  isProviderRoutingPin,
+  parseOnlyProvidersInput,
+  toWireProviderRoutingPin,
+} from "@/lib/agents/provider-routing";
 import { getBotDisplayName, getBotTagline, getBotAccentColor } from "@/lib/bots/bot-profile";
 import { BotAvatar, botInitials } from "@/views/bots/BotAvatar";
 import { cn } from "@/lib/utils";
@@ -183,22 +188,27 @@ export function BotHubSessionsTab({ onSessionStarted }: BotHubSessionsTabProps) 
                 />
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {group.sessions.map((session) => (
-                    <button
+                    <div
                       key={session.id}
-                      type="button"
-                      onClick={() => openSession(session, group.botId)}
-                      className="flex flex-col gap-1 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4 text-left transition-all hover:border-[var(--border-hover)] hover:shadow-sm"
+                      className="relative flex flex-col gap-1 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4 text-left transition-all hover:border-[var(--border-hover)] hover:shadow-sm"
                     >
-                      <div className="flex items-center gap-2">
-                        <ChatTeardropText size={14} className="text-[var(--text-tertiary)]" />
-                        <span className="truncate text-[14px] font-medium text-[var(--text-primary)]">
-                          {session.name || "Untitled session"}
+                      <button
+                        type="button"
+                        onClick={() => openSession(session, group.botId)}
+                        className="flex flex-1 flex-col gap-1 text-left"
+                      >
+                        <div className="flex items-center gap-2">
+                          <ChatTeardropText size={14} className="text-[var(--text-tertiary)]" />
+                          <span className="truncate text-[14px] font-medium text-[var(--text-primary)]">
+                            {session.name || "Untitled session"}
+                          </span>
+                        </div>
+                        <span className="text-xs text-[var(--text-tertiary)]">
+                          {relativeTime(session.updatedAt)}
                         </span>
-                      </div>
-                      <span className="text-xs text-[var(--text-tertiary)]">
-                        {relativeTime(session.updatedAt)}
-                      </span>
-                    </button>
+                      </button>
+                      <SessionRoutePinControl session={session} botId={group.botId} />
+                    </div>
                   ))}
                 </div>
               </div>
@@ -252,5 +262,127 @@ function BotGroupHeader({
         </span>
       </div>
     </button>
+  );
+}
+/**
+ * Session-level provider routing pin override. Stored on the session's
+ * metadata bag (`providerRouting`); `null` clears the override so the session
+ * inherits the bot pin again. The store merges metadata shallowly, so passing
+ * a single key never clobbers the rest of the bag.
+ */
+function SessionRoutePinControl({ session, botId }: { session: ModeSession; botId: string }) {
+  const updateSession = useChatSessionStore((s) => s.updateSession);
+  const agent = useAgentStore((s) => s.agents.find((a) => a.id === botId));
+  const sessionPin = isProviderRoutingPin(session.metadata?.providerRouting)
+    ? session.metadata.providerRouting
+    : undefined;
+  const botPin = isProviderRoutingPin(agent?.config?.providerRouting)
+    ? agent.config.providerRouting
+    : undefined;
+  const [open, setOpen] = useState(false);
+  const [onlyDraft, setOnlyDraft] = useState(() =>
+    Array.isArray(sessionPin?.only) ? sessionPin.only.join(", ") : "",
+  );
+  const [status, setStatus] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const overrideActive = sessionPin !== undefined && toWireProviderRoutingPin(sessionPin) !== undefined;
+  const draftSlugs = useMemo(() => parseOnlyProvidersInput(onlyDraft), [onlyDraft]);
+
+  const saveOverride = async () => {
+    if (draftSlugs.length === 0) return;
+    setSaving(true);
+    setStatus(null);
+    try {
+      await updateSession(session.id, { metadata: { providerRouting: { only: draftSlugs } } });
+      setStatus("Pin saved for this session.");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Failed to save pin");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const clearOverride = async () => {
+    setSaving(true);
+    setStatus(null);
+    try {
+      await updateSession(session.id, { metadata: { providerRouting: null } });
+      setOnlyDraft("");
+      setStatus("Using the bot pin.");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Failed to clear pin");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <>
+      <button
+        type="button"
+        aria-label="Route pin"
+        title={overrideActive ? "Session route pin (custom)" : "Route pin"}
+        onClick={() => {
+          setOpen((v) => !v);
+          setStatus(null);
+        }}
+        className={cn(
+          "absolute right-2 top-2 rounded-lg p-1.5 transition-colors",
+          overrideActive
+            ? "text-[var(--accent-primary)] bg-[var(--accent-primary)]/10"
+            : "text-[var(--text-tertiary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]",
+        )}
+      >
+        <PushPin size={14} weight={overrideActive ? "fill" : "regular"} />
+      </button>
+
+      {open && (
+        <div className="mt-2 space-y-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] p-3">
+          <div className="text-[12px] font-semibold text-[var(--text-secondary)]">Route pin</div>
+          <p className="text-[11px] text-[var(--text-tertiary)]">
+            {overrideActive
+              ? `This session is pinned to ${JSON.stringify(toWireProviderRoutingPin(sessionPin))}.`
+              : botPin && toWireProviderRoutingPin(botPin)
+                ? `Inheriting the bot pin ${JSON.stringify(toWireProviderRoutingPin(botPin))}.`
+                : "No pin — provider routing follows the tenant policy."}
+          </p>
+          <input
+            type="text"
+            aria-label="Only providers"
+            placeholder="Only providers, e.g. anthropic, google"
+            value={onlyDraft}
+            onChange={(e) => setOnlyDraft(e.target.value)}
+            className="w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-2.5 py-1.5 text-[12px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-tertiary)] focus:border-[var(--accent-primary)]"
+          />
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={saveOverride}
+              disabled={saving || draftSlugs.length === 0}
+              className={cn(
+                "rounded-lg border border-[var(--border-subtle)] px-2.5 py-1 text-[12px] font-medium transition-colors",
+                saving || draftSlugs.length === 0
+                  ? "cursor-not-allowed text-[var(--text-tertiary)] opacity-60"
+                  : "text-[var(--text-primary)] hover:bg-[var(--surface-hover)]",
+              )}
+            >
+              {saving ? "Saving…" : "Save custom pin"}
+            </button>
+            {overrideActive && (
+              <button
+                type="button"
+                onClick={clearOverride}
+                disabled={saving}
+                className="rounded-lg px-2 py-1 text-[12px] font-medium text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+              >
+                Use bot pin
+              </button>
+            )}
+          </div>
+          {status && <p className="text-[11px] text-[var(--text-tertiary)]">{status}</p>}
+        </div>
+      )}
+    </>
   );
 }

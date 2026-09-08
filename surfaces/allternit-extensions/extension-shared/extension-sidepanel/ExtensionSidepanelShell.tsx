@@ -954,6 +954,12 @@ function StepCard({ event }: { event: Extract<ExtensionSidepanelHistoricalEvent,
         Step #{(event.stepIndex ?? 0) + 1}
       </div>
 
+      {event.content && (
+        <p className="mb-2 whitespace-pre-wrap break-words text-xs leading-relaxed text-foreground/90">
+          {event.content}
+        </p>
+      )}
+
       {event.reflection && <ReflectionSection reflection={event.reflection} />}
 
       {event.action && (
@@ -1296,7 +1302,15 @@ function EventCardInner({
     );
   }
 
-  if (event.type === "step") return <StepCard event={event} />;
+  // Plain-text assistant turn (office add-in chat path): a step with only
+  // content is a chat message, not an agent step — render it as a bubble.
+  if (event.type === "step") {
+    const isStructured = Boolean(event.action || event.reflection || event.rawRequest || event.rawResponse);
+    if (!isStructured && event.content) return <AssistantMessageBubble text={event.content} />;
+    return <StepCard event={event} />;
+  }
+
+  if (event.type === "user") return <UserMessageBubble text={event.content} />;
   if (event.type === "observation") return <ObservationCard event={event} />;
   if (event.type === "tool_execution")
     return <ToolExecutionCard event={event} officeCliArtifacts={officeCliArtifacts} />;
@@ -1329,6 +1343,41 @@ function StreamingCard({ text }: { text: string }) {
           </p>
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Completed plain assistant turn — mirrors StreamingCard (same chrome, no
+ * cursor/ping) so a reply keeps the same look after the stream finishes.
+ * Used for step events that carry only text (no action/reflection/raw data).
+ */
+function AssistantMessageBubble({ text }: { text: string }) {
+  return (
+    <div
+      className="rounded-lg border border-border/80 bg-muted/40 p-3"
+      style={{ animation: "extension-sidepanel-card-enter 0.25s ease-out both" }}
+    >
+      <div className="flex items-start gap-2">
+        <Sparkles className="mt-0.5 size-3.5 shrink-0 text-blue-500" />
+        <p className="min-w-0 flex-1 whitespace-pre-wrap break-words text-xs leading-relaxed text-foreground/90">
+          {text}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/** User chat message — right-aligned, accent-tinted bubble. */
+function UserMessageBubble({ text }: { text: string }) {
+  return (
+    <div
+      className="flex justify-end"
+      style={{ animation: "extension-sidepanel-card-enter 0.25s ease-out both" }}
+    >
+      <p className="max-w-[85%] whitespace-pre-wrap break-words rounded-2xl rounded-br-md bg-[var(--accent-brand,#D97757)] px-3 py-2.5 text-xs leading-relaxed text-white shadow-sm">
+        {text}
+      </p>
     </div>
   );
 }

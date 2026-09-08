@@ -10,8 +10,16 @@ export type ExtensionSidepanelActivity =
 
 export type ExtensionSidepanelHistoricalEvent =
   | {
+      type: "user";
+      /** User chat message (office add-in path) — rendered as a right-aligned bubble. */
+      content: string;
+    }
+  | {
       type: "step";
       stepIndex?: number;
+      /** Plain assistant text for the step (office add-in path). Rendered as a
+       *  chat bubble when the step has no structured action/reflection data. */
+      content?: string;
       reflection?: {
         evaluation_previous_goal?: string;
         memory?: string;

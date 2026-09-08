@@ -128,6 +128,12 @@ export namespace SessionPrompt {
       .describe(
         "Provider routing object (OpenRouter-style `provider` body key: sort/only/ignore/order/require_parameters/data_collection) forwarded by API bridges such as the Allternit LLM gateway. Applied to this message's turn only; injected onto the outbound request body for OpenAI-compatible providers.",
       ),
+    provider_credentials: z
+      .record(z.string(), z.unknown())
+      .optional()
+      .describe(
+        "BYO provider credentials ({ apiKey, baseURL? }) forwarded by API bridges such as the Allternit LLM gateway when the caller's own cloud subscription serves the resolved route. Applied to this message's turn only; overrides the provider's configured key/endpoint for OpenAI-compatible providers. Never persisted on the session.",
+      ),
     agent: z.string().optional(),
     noReply: z.boolean().optional(),
     tools: z
@@ -1441,9 +1447,16 @@ const message = await createUserMessage(input)
       tools: input.tools,
       // Bridge-forwarded provider routing rides the per-turn metadata (same
       // vehicle as `service_tier`); never persisted on the session.
-      metadata: input.provider
-        ? { ...input.metadata, provider_routing: input.provider }
-        : input.metadata,
+      metadata:
+        input.provider || input.provider_credentials
+          ? {
+              ...input.metadata,
+              ...(input.provider ? { provider_routing: input.provider } : {}),
+              ...(input.provider_credentials
+                ? { provider_routing_credentials: input.provider_credentials }
+                : {}),
+            }
+          : input.metadata,
       agent: agent.name,
       model,
       system: input.system,

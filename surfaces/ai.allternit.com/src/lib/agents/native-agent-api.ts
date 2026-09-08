@@ -721,11 +721,19 @@ export const chatApi = {
     callbacks: ChatStreamCallbacks,
     signal?: AbortSignal,
     agentContext?: AgentContext,
+    providerRouting?: Record<string, unknown>,
   ): Promise<void> {
     const response = await authFetch(getAgentChatUrl(), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chatId: sessionId, message, runtimeModelId: modelId, ...(agentContext ?? {}) }),
+      body: JSON.stringify({
+        chatId: sessionId,
+        message,
+        runtimeModelId: modelId,
+        ...(agentContext ?? {}),
+        // Omit entirely when no pin is set so default routing is untouched.
+        ...(providerRouting ? { providerRouting } : {}),
+      }),
       signal,
     });
 
