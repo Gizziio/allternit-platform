@@ -103,8 +103,19 @@ jobs:
         uses: oven-sh/setup-bun@v2
 
       - name: Install gizzi-code dependencies
-        run: bun install
-        working-directory: cmd/gizzi-code
+        # Root-level pnpm install (same pattern as publish-gizzi-code-npm.yml):
+        # gizzi-code's @allternit/* workspace deps resolve via the root install.
+        # A bare `bun install` in cmd/gizzi-code reads the committed bun.lock,
+        # whose workspace paths were recorded from a foreign checkout layout,
+        # and fails with "Workspace dependency not found" on a fresh clone.
+        run: pnpm install --frozen-lockfile
+
+      - name: Build gizzi-code workspace dependencies
+        # Nested workspace packages ship gitignored dist/ output; build them
+        # before bundling (orchestrator, request-scorer, gizzi-sdk, ...).
+        run: |
+          pnpm --filter "@allternit/gizzi-code^..." run build
+          pnpm --filter "@allternit/gizzi-sdk" run build
 
       - name: Build gizzi-code (arm64)
         run: bun run script/build-production.js --target=darwin-arm64
@@ -246,8 +257,19 @@ jobs:
         uses: oven-sh/setup-bun@v2
 
       - name: Install gizzi-code dependencies
-        run: bun install
-        working-directory: cmd/gizzi-code
+        # Root-level pnpm install (same pattern as publish-gizzi-code-npm.yml):
+        # gizzi-code's @allternit/* workspace deps resolve via the root install.
+        # A bare `bun install` in cmd/gizzi-code reads the committed bun.lock,
+        # whose workspace paths were recorded from a foreign checkout layout,
+        # and fails with "Workspace dependency not found" on a fresh clone.
+        run: pnpm install --frozen-lockfile
+
+      - name: Build gizzi-code workspace dependencies
+        # Nested workspace packages ship gitignored dist/ output; build them
+        # before bundling (orchestrator, request-scorer, gizzi-sdk, ...).
+        run: |
+          pnpm --filter "@allternit/gizzi-code^..." run build
+          pnpm --filter "@allternit/gizzi-sdk" run build
 
       - name: Build gizzi-code (Windows x64)
         run: bun run script/build-production.js --target=windows-x64
@@ -363,8 +385,19 @@ jobs:
         uses: oven-sh/setup-bun@v2
 
       - name: Install gizzi-code dependencies
-        run: bun install
-        working-directory: cmd/gizzi-code
+        # Root-level pnpm install (same pattern as publish-gizzi-code-npm.yml):
+        # gizzi-code's @allternit/* workspace deps resolve via the root install.
+        # A bare `bun install` in cmd/gizzi-code reads the committed bun.lock,
+        # whose workspace paths were recorded from a foreign checkout layout,
+        # and fails with "Workspace dependency not found" on a fresh clone.
+        run: pnpm install --frozen-lockfile
+
+      - name: Build gizzi-code workspace dependencies
+        # Nested workspace packages ship gitignored dist/ output; build them
+        # before bundling (orchestrator, request-scorer, gizzi-sdk, ...).
+        run: |
+          pnpm --filter "@allternit/gizzi-code^..." run build
+          pnpm --filter "@allternit/gizzi-sdk" run build
 
       - name: Build gizzi-code (Linux x64)
         run: bun run script/build-production.js --target=linux-x64
