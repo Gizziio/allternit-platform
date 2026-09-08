@@ -37,7 +37,14 @@ export function getPlatformOrigin(): string {
   }
   if (typeof document !== 'undefined' && document.referrer) {
     try {
-      return trimTrailingSlash(new URL(document.referrer).origin)
+      const origin = new URL(document.referrer).origin
+      // Inside an Office task pane the referrer is the host page
+      // (e.g. word-edit.officeapps.live.com) — never an Allternit origin.
+      // Only trust referrers we control; otherwise fall through to the
+      // build-time platform URL.
+      if (/^https:\/\/([a-z0-9-]+\.)*allternit\.com$/.test(origin) || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+        return trimTrailingSlash(origin)
+      }
     } catch {
       // ignore malformed referrer
     }
@@ -129,7 +136,13 @@ function restoreBootstrapState(): void {
 
   if (!bootstrapState.platformOrigin && document.referrer) {
     try {
-      bootstrapState.platformOrigin = new URL(document.referrer).origin
+      const origin = new URL(document.referrer).origin
+      // Same guard as getPlatformOrigin(): inside an Office task pane the
+      // referrer is the host app (e.g. word-edit.officeapps.live.com), which
+      // must never become the platform/auth origin.
+      if (/^https:\/\/([a-z0-9-]+\.)*allternit\.com$/.test(origin) || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+        bootstrapState.platformOrigin = origin
+      }
     } catch {
       // ignore malformed referrer
     }
