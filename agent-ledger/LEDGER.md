@@ -21,6 +21,16 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-08 12:00 — kimi — Python-heavy frontier agents: research report + gizzi-code reorientation spec
+
+- **Session ID / Branch:** `session/pyagents-spec` (worktree `allternit-session-pyagents-spec`)
+- **Agent:** kimi
+- **Summary:** Docs-only research session. `spec/python-heavy-agents/REPORT.md` (Fable 5/5.1 + GPT-6 Astra behavior evidence from primary sources; audit finding that gizzi-code's sandbox is stubbed, headless gateway permissions undefined, SDK code_execution tool insecure) + `SPEC.md` (P0 containment/honesty → P1 `python_exec` + served-model logging → P2 oracle + four-surface exposure).
+- **Commit:** PR #140, merge commit `5260678cb` on `main`
+- **How it works:** Two markdown specs; no code touched, `bun test test/session/` baseline (109) unaffected. Premise correction recorded: gizzi-code is the harness; AllternitOS is future substrate; agent-orchestrator is internal tooling, not the product harness.
+- **Outstanding work:** P0–P2 not implemented; P0.1 fork (restore vs delete sandbox path) needs owner decision; Astra Python-bias unverified (first-party eval needed); Brain-side A://Fe → Fable 5.1 move and agent-orchestrator yolo-table hardening deferred (noted in SPEC.md §6).
+- **Summary file:** [./summaries/2026-09-08-1200-pyagents-spec-kimi-python-heavy-agents.md](./summaries/2026-09-08-1200-pyagents-spec-kimi-python-heavy-agents.md)
+
 ### 2026-09-06 23:55 — kimi — dashboard details view = full Messages renderer + /dashboard alias un-squatted
 
 - **Session ID / Branch:** `session/7631feda-dash-details` (worktree `allternit-session-7631feda-d2`), follow-up to `session/7631feda`
