@@ -38,7 +38,7 @@ pub fn bot_desktop_input_router() -> Router<Arc<AppState>> {
         )
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct MouseInput {
     /// Action to perform: `move`, `click`, `rightclick`, `doubleclick`,
     /// `mousedown`, or `mouseup`.
@@ -209,7 +209,7 @@ pub(crate) fn build_windows_mouse_command(input: &MouseInput) -> Result<Vec<Stri
     Ok(cmd)
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct KeyboardInput {
     /// Action to perform: `type` or `key`.
     pub action: String,
@@ -341,7 +341,7 @@ pub(crate) fn build_windows_keyboard_command(input: &KeyboardInput) -> Result<Ve
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct ShellInput {
     /// Command and arguments to execute inside the guest.
     pub command: Vec<String>,
@@ -457,7 +457,7 @@ pub(crate) async fn run_desktop_shell(
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct FilePathQuery {
     /// Absolute guest path to the file.
     pub path: String,

@@ -1,44 +1,26 @@
-# Steering checkpoint — session/11f1b5c8
+# Checkpoint — session/cu5-approvals
 
 ## Goal
-Provider Routing v1 (Allternit Brain `Products/ProviderRouting.md`): tenant-scoped
-provider routing policy in allternit-api (sort/only/ignore/order/require_parameters/
-data_collection + per-model overrides), resolved against the active model and
-injected as a top-level `provider` object on outbound OpenAI-compatible wire
-requests, via the Gizzi session-message payload. Plan: `spec/provider-routing/plan.md`.
-Worktree `allternit-session-11f1b5c8`, branch `session/11f1b5c8`.
+Product-scoped approvals bound to action hashes (TASK cu5-approvals) — Rust gateway + TS SDK + docs only.
 
 ## Just did
-- Rust CODE COMPLETE: V133 migration; `llm_gateway/provider_routing.rs`
-  (policy structs, validation, tenant+global load, per-model resolution with
-  spelling-tolerant matching — 9 unit tests pass incl. real-migration roundtrip);
-  admin GET/PUT `/api/v1/gateway/provider-routing`; proxy.rs injects
-  `payload["provider"]` for the primary model and re-resolves per failover
-  attempt in the retry rebuild. `cargo check` clean (65 pre-existing warnings).
-- gizzi-code CODE COMPLETE: PromptInput accepts `provider` (zod record),
-  createUserMessage folds it into per-turn message metadata
-  (`provider_routing`), llm.ts injects it into providerOptions body for
-  `@ai-sdk/openai-compatible` SDKs only. Verified in @ai-sdk/openai-compatible
-  2.0.28 dist: raw providerOptions[providerOptionsName] unknown keys ARE spread
-  into the request body (parseProviderOptions strips, but body spread uses raw).
-  3 new schema tests pass; typecheck clean for touched files (2 pre-existing
-  errors in test/commands/slash-menu.test.ts, untouched by this session).
-- Merge of origin/main resolved (checkpoint conflict — kept this session's;
-  prompt.ts auto-merged clean).
-
-## Verification
-- `cargo test -p allternit-api provider_routing`: 9/9 pass.
-- Full `cargo test -p allternit-api`: 658 pass, 4 fail — all in
-  agent_cloud_routes (hardcoded stale AllternitOS control-plane binary, see
-  ledger); pre-existing, untouched by this session.
-- `bun test test/session/`: 109 pass, 0 fail (incl. 3 new schema tests).
-- Admin API store + round-trip verified live against a dev-bypass server.
-  Owner directed no mock smoke test — shipping to production.
+- Implemented everything:
+  - NEW cmd/allternit-api/src/aci_approvals.rs: canonical JSON + SHA-256 action hashing; ActionGrantStore (Pending→Approved/Denied→Consumed, TTL env ALLTERNIT_ACI_GRANT_TTL_SECS default 300s, in-memory receipts capped at 10k); global GRANTS.
+  - aci_safety.rs: ConfirmationClass taxonomy (Reversible/Risky/Irreversible) + classifiers for mouse/keyboard/shell/file-write + enforce_confirmation[_with_mode] (mode-injectable core for hermetic tests).
+  - aci_routes.rs: AciRunBody.approvalId; handoff 202 includes action_hash; retry redeems grant (hash mismatch/other → 403 approval_denied); handoff approve/deny mirror into GRANTS; tests extended.
+  - computer_control.rs: execute_computer_tool now takes approval_id and enforces taxonomy before touching the guest; error payload (StatusCode, Value) so approval_id surfaces; control_action_descriptor + classify_control_action helpers; 4 tests updated to mint grants, 3 new tests (deny-without-grant, hash mismatch, reversible no-grant).
+  - computer_routes.rs: /api/v1/computers/:id/{mouse,keyboard,shell,files/upload} enforce before delegating to bot_desktop_input; ?approval_id / ?approvalId accepted.
+  - tool_routes.rs: computer_* tools pass approval_id from args; error mapping updated.
+  - bot_desktop_input.rs: derive(Clone) on input structs (needed for pre-delegation checks).
+  - sdk/computer-use: server-side-enforcement doc comments in approvals.ts + canonical.ts ComputerApprovalGrant.
+  - docs/public/aci/index.md: new "Server-side approvals" section (taxonomy, hash-bound/single-use/expiring/receipted, flows, UX pre-filter note).
+- cargo check -p allternit-api: clean. cargo test --lib aci*: 26 passed. computer_control: 7 passed.
 
 ## Next
-- Repo ritual: push merge commit, PR #132 merge, sync main, agent-ledger
-  attestation, worktree cleanup.
+- Full cargo test -p allternit-api (running in background) — must be green.
+- pnpm install for sdk/computer-use subtree (background) → jest conformance tests + tsc typecheck.
+- Review diff for scope, commit, push -u origin session/cu5-approvals, gh pr create (no merge).
 
 ## Open questions
-- In-session gizzi fallback switches keep the per-message pin (Rust recomputes
-  on its own retry loop per attempt). Accepted v1 semantics; noted for ledger.
+- Grants are route-scoped by design (route string in descriptor hash) — documented in docs.
+- computer_control deny tests assume Enforce mode (default; env ALLTERNIT_ACI_SAFETY_MODE unset in CI).

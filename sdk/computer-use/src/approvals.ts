@@ -2,6 +2,17 @@
  * Allternit Computer Use Engine - TypeScript SDK Approval Helpers
  * 
  * Utilities for handling approval requests in assist mode.
+ *
+ * IMPORTANT — these predicates are a UX pre-filter ONLY. Approval
+ * enforcement is server-side in the Allternit gateway (design decision D2):
+ * every computer-use entry route (the ACU loop, the direct
+ * `/api/v1/computers/:id/*` control routes, and the `/tools/execute`
+ * capability path) requires an approval grant bound to a SHA-256 hash of the
+ * specific action payload. Grants are single-use, expire after a short TTL,
+ * and every redemption attempt is recorded as a receipt. A client — or a
+ * modified client — cannot approve its own actions by calling these
+ * helpers; a mismatched, expired, consumed, or unapproved grant is denied by
+ * the server. See docs/public/aci/index.md ("Server-side approvals").
  */
 
 import {
@@ -16,6 +27,11 @@ import { AllternitComputerUseClient } from './client';
 
 /**
  * Pre-built approval predicates for common use cases.
+ *
+ * These only decide what the CLIENT auto-answers when the server asks for
+ * confirmation. They are convenience UX and carry no security weight — the
+ * gateway independently enforces hash-bound, single-use, expiring grants for
+ * risky/irreversible actions on every entry route.
  */
 export const ApprovalPredicates = {
   /**
