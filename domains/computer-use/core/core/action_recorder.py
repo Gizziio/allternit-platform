@@ -180,6 +180,14 @@ class ActionRecorder:
         self._frame_count += 1
         await self._write_line(frame.to_dict())
 
+    def feed_gif_frame(self, frame: RecordedFrame) -> None:
+        """Feed a frame's screenshot into the GIF recorder (no-op without one)."""
+        if self._gif_recorder is not None and self._gif_recorder.is_running():
+            b64 = frame.after_screenshot_b64 or frame.before_screenshot_b64
+            if b64:
+                action_label = f"{frame.action_type} on {frame.action_target}"[:60]
+                self._gif_recorder.add_frame_b64(b64, action_label=action_label, step=frame.step)
+
     async def record_frame_from_step(self, step: Any) -> None:
         """Convenience: record from a LoopStep object."""
         frame = RecordedFrame(
@@ -198,13 +206,7 @@ class ActionRecorder:
             tokens_used=step.tokens_used,
         )
         await self.record_frame(frame)
-
-        # Feed the after (or before) screenshot into the GIF recorder
-        if self._gif_recorder is not None and self._gif_recorder.is_running():
-            b64 = step.after_screenshot_b64 or step.before_screenshot_b64
-            if b64:
-                action_label = f"{step.action_type} on {step.action_target}"[:60]
-                self._gif_recorder.add_frame_b64(b64, action_label=action_label, step=step.step)
+        self.feed_gif_frame(frame)
 
     async def stop(self) -> Path:
         """Finalize the recording."""
@@ -261,6 +263,7 @@ class ActionRecorder:
             completed_at=manifest_data.get("completed_at"),
             total_steps=manifest_data.get("total_steps", 0),
             status=manifest_data.get("status", "unknown"),
+            gif_path=manifest_data.get("gif_path"),
         )
         frames = []
         for line in lines[1:]:
