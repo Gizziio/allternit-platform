@@ -1,8 +1,8 @@
-// @ts-nocheck
 import {
   buildComputerUseTools,
   createComputerUseMcpServer,
-} from '@ant/computer-use-mcp'
+} from './engine/index.js'
+import type { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js'
 import { homedir } from 'os'
@@ -19,9 +19,10 @@ import { getComputerUseHostAdapter } from './hostAdapter.js'
 const APP_ENUM_TIMEOUT_MS = 1000
 
 /**
- * Enumerate installed apps, timed. Fails soft — if Spotlight is slow or
- * claude-swift throws, the tool description just omits the list. Resolution
- * happens at call time regardless; the model just doesn't get hints.
+ * Enumerate installed apps, timed. Fails soft — with the engine backend the
+ * executor returns [] immediately (the engine has no app enumeration), so
+ * the tool description just omits the list. Resolution happens at call time
+ * regardless; the model just doesn't get hints.
  */
 async function tryGetInstalledAppNames(): Promise<string[] | undefined> {
   const adapter = getComputerUseHostAdapter()
@@ -45,12 +46,11 @@ async function tryGetInstalledAppNames(): Promise<string[] | undefined> {
 }
 
 /**
- * Construct the in-process server. Delegates to the package's
+ * Construct the in-process server. Delegates to the adapter's
  * `createComputerUseMcpServer` for the Server object + stub CallTool handler,
  * then REPLACES the ListTools handler with one that includes installed-app
- * names in the `request_access` description (the package's factory doesn't
- * take `installedAppNames`, and Cowork builds its own tool array in
- * serverDef.ts for the same reason).
+ * names in the `request_access` description (the factory doesn't take
+ * `installedAppNames`).
  *
  * Async so the 1s app-enumeration timeout doesn't block startup — called from
  * an `await import()` in `client.ts` on first CU connection, not `main.tsx`.
@@ -58,9 +58,7 @@ async function tryGetInstalledAppNames(): Promise<string[] | undefined> {
  * Real dispatch still goes through `wrapper.tsx`'s `.call()` override; this
  * server exists only to answer ListTools.
  */
-export async function createComputerUseMcpServerForCli(): Promise<
-  ReturnType<typeof createComputerUseMcpServer>
-> {
+export async function createComputerUseMcpServerForCli(): Promise<Server> {
   const adapter = getComputerUseHostAdapter()
   const coordinateMode = getChicagoCoordinateMode()
   const server = createComputerUseMcpServer(adapter, coordinateMode)

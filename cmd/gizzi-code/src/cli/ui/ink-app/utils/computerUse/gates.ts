@@ -1,5 +1,4 @@
-// @ts-nocheck
-import type { CoordinateMode, CuSubGates } from '@ant/computer-use-mcp/types'
+import type { CoordinateMode, CuSubGates } from './engine/types.js'
 
 import { getDynamicConfig_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js'
 import { getSubscriptionType } from '../auth.js'
@@ -21,9 +20,10 @@ const DEFAULTS: ChicagoConfig = {
   coordinateMode: 'pixels',
 }
 
-// Spread over defaults so a partial JSON ({"enabled": true} alone) inherits the
-// rest. The generic on getDynamicConfig is a type assertion, not a validator —
-// GB returning a partial object would otherwise surface undefined fields.
+// Spread over defaults so a partial JSON ({"enabled": true} alone) inherits
+// the rest. The generic on getDynamicConfig is a type assertion, not a
+// validator — GB returning a partial object would otherwise surface
+// undefined fields.
 function readConfig(): ChicagoConfig {
   return {
     ...DEFAULTS,
@@ -63,9 +63,10 @@ export function getChicagoSubGates(): CuSubGates {
   return subGates
 }
 
-// Frozen at first read — setup.ts builds tool descriptions and executor.ts
-// scales coordinates off the same value. A live read here lets a mid-session
-// GB flip tell the model "pixels" while transforming clicks as normalized.
+// Frozen at first read — mcpServer.ts builds tool descriptions and the
+// executor scales coordinates off the same value. A live read here lets a
+// mid-session GB flip tell the model "pixels" while transforming clicks as
+// normalized.
 let frozenCoordinateMode: CoordinateMode | undefined
 export function getChicagoCoordinateMode(): CoordinateMode {
   frozenCoordinateMode ??= readConfig().coordinateMode
