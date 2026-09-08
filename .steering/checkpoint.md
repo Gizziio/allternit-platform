@@ -1,19 +1,15 @@
-# Checkpoint — session/cu2-replay
+# Checkpoint — session/cu2-replay (DONE, awaiting orchestrator merge)
 
 ## Goal
-Make deterministic replay real in domains/computer-use.
+Make deterministic replay real in domains/computer-use. DONE.
 
 ## Just did
-- Implemented ReplayEngine + disk load + router rewiring + 22 passing tests (see prior checkpoint).
-- LIVE SMOKE TEST PASSED on :8977 (uvicorn gateway, 5 adapters registered):
-  1. /record start → append 3 frames → stop → GET /recordings listed completed recording from disk (recorder popped).
-  2. /replay wait=true thr=0.05: step 1 executed OK via adapter layer, deviation 0.463 > 0.05 → PAUSED → approval timed out (120s) → abandoned. Deviation pause proven live.
-  3. /replay wait=true thr=0.99: completed, steps 1-3 all ok.
-  4. /replay thr=0.05 async: paused at awaiting_approval → POST /runs/{id}/approve approve → resumed → completed.
-- Server killed, smoke recordings + /tmp scratch deleted.
+- Committed 772452b98 on session/cu2-replay, pushed, opened PR #142 (not merged per instructions).
+- All work verified: 22/22 new tests, 104 passed in core/tests (pre-existing failures only), live smoke test on :8977 (record→replay from disk completed; deviation pause→approve→completed; timeout→abandoned).
+- Server + smoke recordings cleaned up.
 
 ## Next
-- Commit, push session/cu2-replay, open PR (do NOT merge).
+- Orchestrator merges PR #142. Nothing left for this session.
 
 ## Open questions
 - None
