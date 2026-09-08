@@ -1707,6 +1707,20 @@ pub async fn chat_completions(
         Err(response) => return response.into_response(),
     };
 
+    // Provider routing (Products/ProviderRouting.md): the tenant's policy
+    // pins which backend serves the active model. Resolved per model — the
+    // primary below, and each failover attempt re-resolves its own pin in the
+    // retry loop. Org-less keys inherit the platform-global (NULL-tenant) row.
+    let provider_routing_policy = super::provider_routing::load_policy(
+        &state.db,
+        key.tenant_id.as_deref().unwrap_or(""),
+    )
+    .ok()
+    .flatten();
+    let provider_routing_primary = provider_routing_policy.as_ref().and_then(|policy| {
+        super::provider_routing::resolve_for_model(policy, &resolved.provider_id, &resolved.model_id)
+    });
+
     // Per-key model allowlist: the requested string and, for explicit ids,
     // the resolved provider/model form are both accepted.
     let allowed = key.model_allowed(&request.model)
@@ -1881,6 +1895,10 @@ pub async fn chat_completions(
             }))
             .collect::<Vec<_>>());
     }
+    // Provider routing pin for the primary model (empty policy → key omitted).
+    if let Some(provider) = &provider_routing_primary {
+        payload["provider"] = provider.clone();
+    }
     let message_url = format!(
         "{base}/v1/session/{}/message",
         urlencoding::encode(&session_id)
@@ -2035,6 +2053,17 @@ pub async fn chat_completions(
                 .collect();
             if !remaining_fallbacks.is_empty() {
                 payload["fallbackModels"] = json!(remaining_fallbacks);
+            }
+            // Provider routing follows the currently-active model: the
+            // failover attempt re-resolves the pin for `next_model`.
+            if let Some(provider) = provider_routing_policy.as_ref().and_then(|policy| {
+                super::provider_routing::resolve_for_model(
+                    policy,
+                    &next_model.provider_id,
+                    &next_model.model_id,
+                )
+            }) {
+                payload["provider"] = provider;
             }
 
             let message_url = format!(

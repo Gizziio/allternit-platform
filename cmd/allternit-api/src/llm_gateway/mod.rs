@@ -47,6 +47,7 @@ pub mod inference_hooks;
 pub mod keys;
 pub mod llm_pricing;
 pub mod partial;
+pub mod provider_routing;
 pub mod proxy;
 pub mod realtime_audio;
 pub mod refusal;

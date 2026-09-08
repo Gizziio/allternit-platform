@@ -122,6 +122,12 @@ export namespace SessionPrompt {
         }),
       )
       .optional(),
+    provider: z
+      .record(z.string(), z.unknown())
+      .optional()
+      .describe(
+        "Provider routing object (OpenRouter-style `provider` body key: sort/only/ignore/order/require_parameters/data_collection) forwarded by API bridges such as the Allternit LLM gateway. Applied to this message's turn only; injected onto the outbound request body for OpenAI-compatible providers.",
+      ),
     agent: z.string().optional(),
     noReply: z.boolean().optional(),
     tools: z
@@ -1433,7 +1439,11 @@ const message = await createUserMessage(input)
         created: Date.now(),
       },
       tools: input.tools,
-      metadata: input.metadata,
+      // Bridge-forwarded provider routing rides the per-turn metadata (same
+      // vehicle as `service_tier`); never persisted on the session.
+      metadata: input.provider
+        ? { ...input.metadata, provider_routing: input.provider }
+        : input.metadata,
       agent: agent.name,
       model,
       system: input.system,
