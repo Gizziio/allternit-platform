@@ -77,6 +77,33 @@ function buildComputerInputSchema(version: ComputerToolVersion): ToolDefinition[
   };
 }
 
+function extractScreenshotPayload(data: Record<string, unknown>): { data: string; mediaType: string } | undefined {
+  // Gateway canonical shape: screenshot lives in artifacts[] as
+  // { type: 'screenshot', mime?, content? | url? }, where content/url may be a
+  // raw base64 string or a data: URL.
+  const artifacts = Array.isArray(data.artifacts) ? data.artifacts as Record<string, unknown>[] : [];
+  for (const artifact of artifacts) {
+    if (!artifact || artifact.type !== 'screenshot') continue;
+    const raw = typeof artifact.content === 'string'
+      ? artifact.content
+      : typeof artifact.url === 'string' ? artifact.url : undefined;
+    if (!raw) continue;
+    const mediaType = typeof artifact.mime === 'string'
+      ? artifact.mime
+      : typeof data.media_type === 'string' ? data.media_type : 'image/png';
+    const match = /^data:([^;]+);base64,(.*)$/.exec(raw);
+    return { data: match ? match[2] : raw, mediaType: match ? match[1] : mediaType };
+  }
+  // Legacy fallback: gateway versions that returned top-level screenshot/data.
+  const legacy = typeof data.screenshot === 'string'
+    ? data.screenshot
+    : typeof data.data === 'string' ? data.data : undefined;
+  if (!legacy) return undefined;
+  const mediaType = typeof data.media_type === 'string' ? data.media_type : 'image/png';
+  const match = /^data:([^;]+);base64,(.*)$/.exec(legacy);
+  return { data: match ? match[2] : legacy, mediaType: match ? match[1] : mediaType };
+}
+
 export const COMPUTER_USE_TOOL: ToolDefinition = {
   name: 'computer',
   description: 'Control the mouse and keyboard, and capture screenshots to interact with the computer.',
@@ -166,14 +193,14 @@ export class ComputerUseCapability {
 
       const data = await response.json() as Record<string, unknown>;
       if (args.action === 'screenshot') {
-        const screenshot = typeof data.screenshot === 'string' ? data.screenshot : typeof data.data === 'string' ? data.data : undefined;
+        const screenshot = extractScreenshotPayload(data);
         if (!screenshot) throw new Error('Computer Use gateway returned no screenshot data');
         return [{
           type: 'image',
           source: {
             type: 'base64',
-            media_type: typeof data.media_type === 'string' ? data.media_type : 'image/png',
-            data: screenshot.replace(/^data:image\/[^;]+;base64,/, ''),
+            media_type: screenshot.mediaType,
+            data: screenshot.data,
           },
         }];
       }

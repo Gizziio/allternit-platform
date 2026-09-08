@@ -4,6 +4,8 @@ Allternit Computer Use — REST API Router
 /v1/computer-use/ surface: execute, runs, sessions, adapters, record, recordings, replay, health.
 
 Execution model:
+  mode='direct' → /execute dispatches the explicit actions list through the
+                  adapter/executor layer directly (no planning loop, no vision model)
   Claude (native computer tool) → gateway /v1/execute → ACU executor directly
   Non-Claude models (GPT-4o, Gemini, Qwen, etc.) → /execute → PlanningLoop → executor
 
@@ -23,7 +25,7 @@ from typing import Any, Dict, List, Literal, Optional
 
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 # ---------------------------------------------------------------------------
 # Adapter imports — all wrapped so the router loads even if deps are missing
@@ -210,14 +212,34 @@ def _sse_line(event_type: str, run_id: str, message: str, data: Dict[str, Any]) 
 # Pydantic models
 # ---------------------------------------------------------------------------
 
+class DirectAction(BaseModel):
+    """One executable action for mode='direct' (mirrors SDK EngineAction)."""
+    kind: str
+    action_id: Optional[str] = None
+    target: Optional[Dict[str, Any]] = None
+    input: Optional[Dict[str, Any]] = None
+    expect: Optional[Dict[str, Any]] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+
 class ExecuteBody(BaseModel):
     mode: Literal["intent", "direct", "assist"] = "intent"
-    task: str
+    task: Optional[str] = None
+    actions: Optional[List[DirectAction]] = None
     session_id: str = Field(default_factory=lambda: f"sess-{uuid.uuid4().hex[:8]}")
     run_id: str = Field(default_factory=lambda: f"cu-{uuid.uuid4().hex[:12]}")
     target_scope: Literal["browser", "desktop", "hybrid", "auto"] = "browser"
     options: Dict[str, Any] = Field(default_factory=dict)
     context: Dict[str, Any] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def _require_task_or_actions(self) -> "ExecuteBody":
+        if self.mode == "direct":
+            if not self.actions:
+                raise ValueError("mode='direct' requires a non-empty 'actions' list")
+        elif not self.task:
+            raise ValueError("'task' is required unless mode='direct' with actions")
+        return self
 
 
 class ApproveBody(BaseModel):
@@ -251,6 +273,7 @@ class ExecutionResult(BaseModel):
     target_scope: str
     summary: str = ""
     result: Optional[Dict[str, Any]] = None
+    artifacts: List[Dict[str, Any]] = Field(default_factory=list)
     error: Optional[str] = None
 
 
@@ -310,18 +333,45 @@ async def _execute_non_claude_path(
         loop = asyncio.get_event_loop()
         future: asyncio.Future = loop.create_future()
         run_state.approval_future = future
+        _run_store.update_status(run_state.run_id, "awaiting_approval")
+        await _push_approval_event(run_state, "approval.required", {
+            "kind": "planning_loop",
+            "step": getattr(step, "step", None),
+            "risk_level": getattr(step, "risk_level", None),
+            "timeout_seconds": _DIRECT_APPROVAL_TIMEOUT_SECONDS,
+        })
         try:
-            decision_payload = await asyncio.wait_for(future, timeout=120.0)
+            decision_payload = await asyncio.wait_for(future, timeout=_DIRECT_APPROVAL_TIMEOUT_SECONDS)
         except asyncio.TimeoutError:
             run_state.approval_future = None
             run_state.approval_timed_out = True
+            _run_store.update_status(run_state.run_id, "running")
             logger.warning("Approval timed out for run %s step %s", run_state.run_id, getattr(step, "step", "?"))
+            await _push_approval_event(run_state, "approval.resolved", {
+                "kind": "planning_loop",
+                "step": getattr(step, "step", None),
+                "approved": False,
+                "timed_out": True,
+            })
             return False
+        approved = decision_payload.get("decision") == "approve"
         run_state.approval_future = None
-        return decision_payload.get("decision") == "approve"
+        _run_store.update_status(run_state.run_id, "running")
+        await _push_approval_event(run_state, "approval.resolved", {
+            "kind": "planning_loop",
+            "step": getattr(step, "step", None),
+            "approved": approved,
+            "timed_out": False,
+        })
+        return approved
 
     # Cancel check — wire cancel_event into the planning loop
     def event_callback(event: Dict[str, Any]) -> None:
+        # Approval events are owned by the router's approval_callback, which
+        # emits machine-readable approval.required/approval.resolved events
+        # carrying the run status — don't forward the loop's bare copies.
+        if event.get("type") in ("approval.required", "approval.received"):
+            return
         asyncio.create_task(_run_store.push_event(run_state.run_id, {
             "event_type": event.get("type", "unknown"),
             "run_id": run_state.run_id,
@@ -391,6 +441,197 @@ async def _execute_non_claude_path(
 
 
 # ---------------------------------------------------------------------------
+# Direct actions path (mode='direct'): no planning loop, no vision model.
+# Each action is dispatched straight through the adapter/executor layer.
+# ---------------------------------------------------------------------------
+
+_DIRECT_APPROVAL_TIMEOUT_SECONDS = 120.0
+
+
+def _serialize_direct_target(target: Optional[Dict[str, Any]]) -> str:
+    """Flatten a DirectAction.target dict into the adapter target string."""
+    if not target:
+        return ""
+    if isinstance(target, str):
+        return target
+    for key in ("selector", "ref", "url", "text", "id", "role"):
+        value = target.get(key)
+        if isinstance(value, str) and value:
+            return value
+    coords = target.get("coordinates") or target.get("point")
+    if isinstance(coords, (list, tuple)) and len(coords) >= 2:
+        return f"{int(coords[0])},{int(coords[1])}"
+    return json.dumps(target, sort_keys=True)
+
+
+def _serialize_adapter_result(result: Any) -> Any:
+    if result is None:
+        return None
+    if hasattr(result, "to_dict"):
+        try:
+            return result.to_dict()
+        except Exception:
+            pass
+    if isinstance(result, dict):
+        return result
+    if hasattr(result, "__dataclass_fields__"):
+        return {k: getattr(result, k) for k in result.__dataclass_fields__}
+    return str(result)
+
+
+async def _run_direct_action(
+    adapter: Any,
+    body: ExecuteBody,
+    action: DirectAction,
+) -> Any:
+    """Execute one DirectAction through the adapter layer."""
+    if adapter is None:
+        raise RuntimeError("no adapter available for direct execution")
+    params: Dict[str, Any] = dict(action.input or {})
+    if action.expect:
+        params["_expect"] = dict(action.expect)
+    try:
+        from core.base_adapter import ActionRequest
+
+        req = ActionRequest(
+            action_type=action.kind,
+            target=_serialize_direct_target(action.target),
+            parameters=params,
+        )
+    except Exception:
+        req = type("ActionRequest", (), {
+            "action_type": action.kind,
+            "target": _serialize_direct_target(action.target),
+            "parameters": params,
+        })()
+
+    if hasattr(adapter, "registered_adapters"):
+        result = await adapter.execute(req, session_id=body.session_id, run_id=str(uuid.uuid4()))
+    else:
+        result = await adapter.execute(req)
+    return _serialize_adapter_result(result)
+
+
+async def _execute_direct_path(
+    body: ExecuteBody,
+    run_state: RunState,
+) -> None:
+    """Execute an explicit action list against the adapter layer.
+
+    No planning loop and no vision model: each action is dispatched in order,
+    per-action outcomes are recorded, and a final screenshot artifact is
+    captured when any adapter can produce one.
+    """
+    _run_store.update_status(run_state.run_id, "running")
+    adapter = _get_adapter_for_planning(body.target_scope, body.options.get("adapter_preference"))
+
+    actions_out: List[Dict[str, Any]] = []
+    ok_count = 0
+    cancelled = False
+    try:
+        for index, action in enumerate(body.actions or []):
+            if run_state.cancel_event.is_set():
+                cancelled = True
+                break
+            entry: Dict[str, Any] = {
+                "index": index,
+                "action_id": action.action_id or f"act-{index}",
+                "kind": action.kind,
+                "status": "ok",
+                "result": None,
+                "error": None,
+            }
+            await _run_store.push_event(run_state.run_id, {
+                "event_type": "action.started",
+                "run_id": run_state.run_id,
+                "message": f"{action.kind} (#{index})",
+                "data": {"index": index, "action_id": entry["action_id"], "kind": action.kind},
+            })
+            try:
+                entry["result"] = await _run_direct_action(adapter, body, action)
+                ok_count += 1
+            except Exception as exc:
+                logger.warning("Direct action %s (%s) failed: %s", index, action.kind, exc)
+                entry["status"] = "error"
+                entry["error"] = str(exc)
+            actions_out.append(entry)
+            await _run_store.push_event(run_state.run_id, {
+                "event_type": "action.completed",
+                "run_id": run_state.run_id,
+                "message": f"{action.kind} (#{index}): {entry['status']}",
+                "data": {
+                    "index": index,
+                    "action_id": entry["action_id"],
+                    "kind": action.kind,
+                    "status": entry["status"],
+                    "error": entry["error"],
+                },
+            })
+
+        screenshot_b64 = ""
+        if adapter is not None:
+            try:
+                from core.replay_engine import capture_screenshot
+
+                png = await capture_screenshot(adapter, body.session_id)
+                if png:
+                    import base64 as _b64
+
+                    screenshot_b64 = _b64.b64encode(png).decode("ascii")
+            except Exception as exc:
+                logger.warning("Direct path screenshot capture failed: %s", exc)
+
+        total = len(actions_out)
+        run_state.status = "completed" if (not cancelled and ok_count == total and total > 0) else "failed"
+        run_state.result = {
+            "task": body.task,
+            "status": run_state.status,
+            "stop_reason": "done" if run_state.status == "completed" else "error",
+            "actions": actions_out,
+            "total_steps": total,
+            "succeeded": ok_count,
+            "screenshot_b64": screenshot_b64,
+            "summary": (
+                f"Executed {ok_count}/{total} actions"
+                + (" (cancelled)" if cancelled else "")
+            ),
+        }
+        if screenshot_b64:
+            run_state.result["artifacts"] = [{
+                "type": "screenshot",
+                "mime": "image/png",
+                "content": screenshot_b64,
+            }]
+    except Exception as exc:
+        logger.exception("Direct execution raised exception: %s", exc)
+        run_state.status = "failed"
+        run_state.error = str(exc)
+    finally:
+        run_state.updated_at = _utcnow()
+        await _run_store.push_sentinel(run_state.run_id)
+
+
+# ---------------------------------------------------------------------------
+# Approval-gate events (machine-readable, shared by planning + replay paths)
+# ---------------------------------------------------------------------------
+
+async def _push_approval_event(
+    run_state: RunState,
+    event_type: str,
+    data: Dict[str, Any],
+) -> None:
+    """Push an approval.* event whose data always carries the run status."""
+    payload = {"status": run_state.status}
+    payload.update(data)
+    await _run_store.push_event(run_state.run_id, {
+        "event_type": event_type,
+        "run_id": run_state.run_id,
+        "message": event_type,
+        "data": payload,
+    })
+
+
+# ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
 
@@ -399,7 +640,12 @@ async def execute(
     body: ExecuteBody,
     stream: bool = Query(default=False),
 ) -> Any:
-    """Start a planning loop run. stream=true returns SSE."""
+    """Start a run. stream=true returns SSE.
+
+    mode='direct' executes the explicit actions list through the adapter
+    layer with no planning loop; any other mode runs the planning loop on
+    `task`.
+    """
     _run_store.purge_expired()
     run_state = _run_store.create(
         run_id=body.run_id,
@@ -408,9 +654,11 @@ async def execute(
         target_scope=body.target_scope,
     )
 
+    run_impl = _execute_direct_path if body.mode == "direct" else _execute_non_claude_path
+
     if stream:
         # SSE path: launch background task, stream events
-        asyncio.create_task(_execute_non_claude_path(body, run_state))
+        asyncio.create_task(run_impl(body, run_state))
 
         async def event_generator():
             q = _run_store.event_queues[body.run_id]
@@ -435,7 +683,7 @@ async def execute(
         return StreamingResponse(event_generator(), media_type="text/event-stream")
 
     # Non-streaming path: wait for completion
-    await _execute_non_claude_path(body, run_state)
+    await run_impl(body, run_state)
 
     return ExecutionResult(
         run_id=run_state.run_id,
@@ -445,6 +693,7 @@ async def execute(
         target_scope=run_state.target_scope,
         summary=run_state.result.get("summary", "") if run_state.result else "",
         result=run_state.result,
+        artifacts=(run_state.result or {}).get("artifacts", []),
         error=run_state.error,
     )
 
@@ -665,6 +914,7 @@ async def record(body: RecordBody) -> Dict[str, Any]:
                 tokens_used=frame_data.get("tokens_used", 0),
             )
             await recorder.record_frame(frame)
+            recorder.feed_gif_frame(frame)
             appended += 1
         return {
             "recording_id": body.recording_id,
@@ -767,19 +1017,31 @@ async def replay(body: ReplayBody) -> Dict[str, Any]:
         future: asyncio.Future = loop.create_future()
         run_state.approval_future = future
         _run_store.update_status(run_id, "awaiting_approval")
+        deviation_dict = deviation.to_dict() if hasattr(deviation, "to_dict") else dict(deviation or {})
+        await _push_approval_event(run_state, "approval.required", {
+            "kind": "replay.deviation",
+            "deviation": deviation_dict,
+            "timeout_seconds": _DIRECT_APPROVAL_TIMEOUT_SECONDS,
+        })
+        approved = False
+        timed_out = False
         try:
-            decision_payload = await asyncio.wait_for(future, timeout=120.0)
+            decision_payload = await asyncio.wait_for(future, timeout=_DIRECT_APPROVAL_TIMEOUT_SECONDS)
+            approved = decision_payload.get("decision") == "approve"
         except asyncio.TimeoutError:
-            run_state.approval_future = None
             run_state.approval_timed_out = True
-            _run_store.update_status(run_id, "running")
+            timed_out = True
             logger.warning("Replay deviation approval timed out for run %s", run_id)
-            return False
         finally:
-            if run_state.approval_future is not None:
-                run_state.approval_future = None
-                _run_store.update_status(run_id, "running")
-        return decision_payload.get("decision") == "approve"
+            run_state.approval_future = None
+            _run_store.update_status(run_id, "running")
+            await _push_approval_event(run_state, "approval.resolved", {
+                "kind": "replay.deviation",
+                "deviation": deviation_dict,
+                "approved": approved,
+                "timed_out": timed_out,
+            })
+        return approved
 
     async def on_event(event: Dict[str, Any]) -> None:
         await _run_store.push_event(run_id, {
