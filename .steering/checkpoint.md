@@ -1,17 +1,15 @@
-# Checkpoint
+# Checkpoint (final — handed to orchestrator for merge)
 
 ## Goal
-Fix 3 Python-side computer-use bugs (direct-actions execute path, recorder gif_path loss, replay approval event), add tests, live smoke, push PR.
+Fix 3 Python-side computer-use bugs, test, smoke, PR. DONE — PR #152, branch session/cu6-pyfix @ 20d980f31.
 
 ## Just did
-- Direct mode: ExecuteBody.task optional + actions list; _execute_direct_path dispatches per-action through adapter/executor, per-action results + screenshot artifact; 422 validation.
-- Recorder: load() preserves gif_path; new public feed_gif_frame(); /record append now feeds GIF buffer (HTTP-built recordings produce GIFs).
-- Approval gates: router-owned machine-readable approval.required/approval.resolved SSE events with run status for planning + replay paths.
-- Fixed pre-existing tests/ module-aliasing (outer vs inner `core` package) with tests/conftest.py pinning inner core; added tests/test_import_hygiene.py guard.
-- 123 tests pass; live smoke on :8981: direct execute ran 2/2 actions via browser.cdp (real screenshot), 422s confirmed; server killed, artifacts cleaned.
+- All 3 fixes + tests + conftest aliasing fix; 123 passed/21 skipped.
+- Live smoke on :8981 verified direct mode (2/2 actions via browser.cdp, real screenshot) + 422s.
+- Committed (fix(computer-use): …), pushed, PR #152 created with full JSON contract at top.
 
-## Next
-- Final full pytest re-run, review diff, commit, push, PR with contract doc.
+## Next (orchestrator)
+- Review/merge PR #152 (merge commit, not squash). After merge: ledger attestation + worktree/branch cleanup per AGENTS.md steps 6-8.
 
 ## Open questions
-- TS client expects error as {code,message} object; Python envelope keeps error as string (pre-existing shape) — documented in PR contract.
+- TS side must adapt: response `error` is a plain string|null, not {code,message} EngineError (pre-existing envelope; documented in PR).
