@@ -9,7 +9,7 @@ import { executeOfficeCliTool, OFFICECLI_DESTRUCTIVE, OFFICECLI_TOOL_SCHEMAS } f
 import { getCapabilities } from '@/lib/officecli-client'
 import { callMcpTool, getMcpTools, initMcp, isDestructiveMcpTool } from '@/lib/mcp-client'
 import { ensureFreshSnapshot, markDirty } from '@/lib/document-sync'
-import { DEFAULT_OFFICE_MODEL } from '@/lib/agent-defaults'
+import { DEFAULT_OFFICE_MODEL, LEGACY_OFFICE_MODEL } from '@/lib/agent-defaults'
 import { resolveBackendModel } from '@/lib/model-resolution'
 import { getGatewayOrigin, getOfficeBootstrapState, resolveChatBackend } from '@/lib/platform-gateway'
 
@@ -96,11 +96,11 @@ const DEFAULT_CONFIG: OfficeAgentConfig = {
  * Model resolution: an explicit advanced-panel model is honored as-is. An
  * empty model (the default) resolves from the backend's `GET /v1/models`
  * catalog via `resolveBackendModel()` — a stored value equal to
- * `DEFAULT_OFFICE_MODEL` is treated as unset too, because configs saved
- * before model resolution all carry that legacy hard-coded id, which 400s
- * (model_not_found) on backends whose catalog doesn't offer it. When the
- * catalog is unreachable or empty, the hard-coded default remains the last
- * resort.
+ * `DEFAULT_OFFICE_MODEL` or `LEGACY_OFFICE_MODEL` is treated as unset too,
+ * because configs saved before model resolution all carry that legacy
+ * hard-coded id, which 400s (model_not_found) on backends whose catalog
+ * doesn't offer it. When the catalog is unreachable or empty, the
+ * hard-coded default remains the last resort.
  */
 export async function resolveRuntimeConfig(config: OfficeAgentConfig | null): Promise<OfficeAgentConfig | null> {
   if (!config) return null
@@ -108,8 +108,8 @@ export async function resolveRuntimeConfig(config: OfficeAgentConfig | null): Pr
   const backend = await resolveChatBackend()
   const baseURL = config.baseURL || backend?.baseUrl || getGatewayOrigin()
   const apiKey = config.apiKey || backend?.apiKey || token || ''
-  const explicitModel = config.model && config.model !== DEFAULT_OFFICE_MODEL ? config.model : null
-  const model = explicitModel ?? (await resolveBackendModel(baseURL, apiKey)) ?? DEFAULT_OFFICE_MODEL
+  const isUnsetModel = !config.model || config.model === DEFAULT_OFFICE_MODEL || config.model === LEGACY_OFFICE_MODEL
+  const model = isUnsetModel ? (await resolveBackendModel(baseURL, apiKey)) ?? DEFAULT_OFFICE_MODEL : config.model
   return { ...config, baseURL, apiKey, model }
 }
 
