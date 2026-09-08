@@ -18,7 +18,7 @@ use axum::{
 };
 use futures::StreamExt;
 use once_cell::sync::Lazy;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -32,6 +32,7 @@ pub fn aci_router() -> Router<Arc<AppState>> {
         .route("/aci/stream/:id", get(aci_stream))
         .route("/aci/stop/:id", post(aci_stop))
         .route("/aci/approve/:id", post(aci_approve))
+        .route("/aci/approvals/:id", get(aci_approval_status))
         .route("/aci/handoff/:id", get(aci_handoff_status))
         .route("/aci/handoff/:id/approve", post(aci_handoff_approve))
         .route("/aci/handoff/:id/deny", post(aci_handoff_deny))
@@ -77,15 +78,108 @@ async fn forward_acu_error(resp: reqwest::Response) -> Response {
 /// contract (attach any time, see the full history, end with `done`), the run
 /// handler drains the execute stream into this in-process buffer and the
 /// stream endpoint serves from it.
+///
+/// Durability: each buffer is snapshot-throttled to disk (one JSON file per
+/// run id under `<computer_use_dir>/run-buffers/`) and restored at boot, so
+/// SSE late-join and run history survive a gateway restart. The upstream ACU
+/// stream keeps running in the draining task and simply repopulates the
+/// restored buffer.
 struct RunEventBuffer {
     /// Mapped frames (the `/api/aci/stream` envelope), in arrival order.
     frames: Vec<serde_json::Value>,
     /// True once run.ended arrived or the upstream stream closed.
     done: bool,
+    /// Snapshot throttle state.
+    last_snapshot: Option<std::time::Instant>,
+    /// Frames arrived since the last snapshot.
+    dirty: bool,
+}
+
+/// On-disk snapshot shape for one run's buffer.
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+struct RunBufferSnapshot {
+    frames: Vec<serde_json::Value>,
+    done: bool,
+}
+
+/// Minimum interval between on-disk snapshots of one run's buffer.
+const SNAPSHOT_INTERVAL: std::time::Duration = std::time::Duration::from_secs(2);
+
+fn run_buffer_dir() -> std::path::PathBuf {
+    crate::aci_approvals::computer_use_dir().join("run-buffers")
+}
+
+/// Write one run's buffer to its run-id-keyed snapshot file inside `dir`
+/// (tmp + rename so a crash mid-write cannot corrupt the file).
+fn snapshot_run_buffer_in(dir: &std::path::Path, run_id: &str, buf: &RunEventBuffer) {
+    if std::fs::create_dir_all(dir).is_err() {
+        return;
+    }
+    let snapshot = RunBufferSnapshot {
+        frames: buf.frames.clone(),
+        done: buf.done,
+    };
+    let Ok(json) = serde_json::to_string(&snapshot) else {
+        return;
+    };
+    let path = dir.join(format!("{run_id}.json"));
+    let tmp = dir.join(format!("{run_id}.json.tmp"));
+    if std::fs::write(&tmp, json).is_ok() {
+        let _ = std::fs::rename(&tmp, path);
+    }
+}
+
+fn snapshot_run_buffer(run_id: &str, buf: &RunEventBuffer) {
+    snapshot_run_buffer_in(&run_buffer_dir(), run_id, buf);
+}
+
+/// Load every run-buffer snapshot written by a previous gateway process.
+/// Corrupt files are skipped with a warning — a lost history buffer must
+/// never take the gateway down.
+fn restore_run_buffers_from(dir: &std::path::Path) -> HashMap<String, RunEventBuffer> {
+    let mut store = HashMap::new();
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return store;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|e| e.to_str()) != Some("json") {
+            continue;
+        }
+        let Some(run_id) = path
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .map(|s| s.to_string())
+        else {
+            continue;
+        };
+        match std::fs::read_to_string(&path)
+            .ok()
+            .and_then(|text| serde_json::from_str::<RunBufferSnapshot>(&text).ok())
+        {
+            Some(snapshot) => {
+                store.insert(
+                    run_id,
+                    RunEventBuffer {
+                        frames: snapshot.frames,
+                        done: snapshot.done,
+                        last_snapshot: Some(std::time::Instant::now()),
+                        dirty: false,
+                    },
+                );
+            }
+            None => warn!("aci run-buffer restore: skipping unparseable {path:?}"),
+        }
+    }
+    store
+}
+
+fn restore_run_buffers() -> HashMap<String, RunEventBuffer> {
+    restore_run_buffers_from(&run_buffer_dir())
 }
 
 static ACI_RUN_EVENTS: Lazy<Mutex<HashMap<String, RunEventBuffer>>> =
-    Lazy::new(|| Mutex::new(HashMap::new()));
+    Lazy::new(|| Mutex::new(restore_run_buffers()));
 
 /// Cap buffered frames per run so a long loop can't grow memory without
 /// bound; the oldest frames drop first.
@@ -96,8 +190,27 @@ fn buffer_create(run_id: &str) {
         store.entry(run_id.to_string()).or_insert_with(|| RunEventBuffer {
             frames: Vec::new(),
             done: false,
+            last_snapshot: Some(std::time::Instant::now()),
+            dirty: false,
         });
     }
+}
+
+/// Throttled snapshot: flush the buffer to disk at most once per
+/// `SNAPSHOT_INTERVAL` while frames are arriving, always honoring the `done`
+/// flag. Snapshots are best-effort; I/O failures are logged, never fatal.
+fn snapshot_if_due(run_id: &str, buf: &mut RunEventBuffer, force: bool) {
+    let now = std::time::Instant::now();
+    let due = match buf.last_snapshot {
+        None => true,
+        Some(last) => now.duration_since(last) >= SNAPSHOT_INTERVAL,
+    };
+    if !(force || (buf.dirty && due)) {
+        return;
+    }
+    snapshot_run_buffer(run_id, buf);
+    buf.last_snapshot = Some(now);
+    buf.dirty = false;
 }
 
 fn buffer_push(run_id: &str, frame: serde_json::Value, done: bool) {
@@ -107,9 +220,11 @@ fn buffer_push(run_id: &str, frame: serde_json::Value, done: bool) {
                 buf.frames.remove(0);
             }
             buf.frames.push(frame);
+            buf.dirty = true;
             if done {
                 buf.done = true;
             }
+            snapshot_if_due(run_id, buf, done);
         }
     }
 }
@@ -118,6 +233,7 @@ fn buffer_mark_done(run_id: &str) {
     if let Ok(mut store) = ACI_RUN_EVENTS.lock() {
         if let Some(buf) = store.get_mut(run_id) {
             buf.done = true;
+            snapshot_if_due(run_id, buf, true);
         }
     }
 }
@@ -608,6 +724,131 @@ async fn aci_approve(
 
 // ─── Handoff endpoints for sensitive actions ──────────────────────────────────
 
+/// One user-facing approval status model (see `aci_approvals` for the
+/// vocabulary). Resolution order: Rust hash grant → handoff record → proxied
+/// ACU run. Grant and handoff state are in-memory, so after a gateway restart
+/// only the ACU-run lookup can still resolve (matching the Python side, where
+/// `approval_future`s also die with their process).
+#[derive(Debug, Serialize)]
+struct UnifiedApprovalResponse {
+    approval_id: String,
+    status: &'static str,
+    /// Where the answer came from: `hash_grant`, `handoff`, or `acu_run`.
+    source: &'static str,
+    expires_at: Option<i64>,
+    message: Option<String>,
+}
+
+/// Map an ACU run record (GET /v1/computer-use/runs/{id}) to the unified
+/// status. A run awaiting a decision is `pending`; a timed-out
+/// `approval_future` is `expired`; anything else means the approval gate was
+/// resolved (or never needed one) and the run moved on — `consumed`.
+fn unified_status_from_acu_run(run: &serde_json::Value) -> UnifiedApprovalResponse {
+    let status = run.get("status").and_then(|s| s.as_str()).unwrap_or("");
+    let timed_out = run
+        .get("approval_timed_out")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    let unified = if status == "awaiting_approval" {
+        crate::aci_approvals::UnifiedApprovalStatus::Pending
+    } else if timed_out {
+        crate::aci_approvals::UnifiedApprovalStatus::Expired
+    } else {
+        crate::aci_approvals::UnifiedApprovalStatus::Consumed
+    };
+    UnifiedApprovalResponse {
+        approval_id: run
+            .get("run_id")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string(),
+        status: unified.as_str(),
+        source: "acu_run",
+        expires_at: None,
+        message: if status == "awaiting_approval" {
+            Some(format!("run is awaiting approval (run status: {status})"))
+        } else {
+            Some(format!("run status: {status}"))
+        },
+    }
+}
+
+async fn aci_approval_status(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+) -> Response {
+    // 1. Rust hash grant (covers handoffs issued by aci_run: grant and
+    //    handoff record share the same id).
+    if let Some(grant) = crate::aci_approvals::GRANTS.get(&id) {
+        let unified = crate::aci_approvals::unified_status(
+            &grant,
+            chrono::Utc::now().timestamp_millis(),
+        );
+        return Json(UnifiedApprovalResponse {
+            approval_id: id,
+            status: unified.as_str(),
+            source: "hash_grant",
+            expires_at: Some(grant.expires_at),
+            message: None,
+        })
+            .into_response();
+    }
+
+    // 2. Handoff record without a live grant (e.g. grant swept by the
+    //    retention cutoff). Handoff records carry no TTL of their own.
+    if let Some(req) = state.approval_store.get(&id) {
+        let status = match req.status {
+            crate::permission_policy::ApprovalStatus::Pending => {
+                crate::aci_approvals::UnifiedApprovalStatus::Pending
+            }
+            crate::permission_policy::ApprovalStatus::Approved => {
+                crate::aci_approvals::UnifiedApprovalStatus::Approved
+            }
+            crate::permission_policy::ApprovalStatus::Denied => {
+                crate::aci_approvals::UnifiedApprovalStatus::Denied
+            }
+        };
+        return Json(UnifiedApprovalResponse {
+            approval_id: id,
+            status: status.as_str(),
+            source: "handoff",
+            expires_at: None,
+            message: None,
+        })
+            .into_response();
+    }
+
+    // 3. Proxied Python approval_future: the id is an ACU run id.
+    let acu = acu_base(&state);
+    let client = reqwest::Client::new();
+    match client
+        .get(format!("{}/v1/computer-use/runs/{}", acu, id))
+        .send()
+        .await
+    {
+        Ok(r) if r.status().is_success() => match r.json::<serde_json::Value>().await {
+            Ok(run) => Json(unified_status_from_acu_run(&run)).into_response(),
+            Err(_) => (
+                StatusCode::BAD_GATEWAY,
+                Json(json!({"error": "acu_error", "message": "ACU returned an unparseable run record"})),
+            )
+                .into_response(),
+        },
+        // ACU answered but doesn't know this run either — the approval id is
+        // unknown to every backend.
+        Ok(r) if r.status().as_u16() == 404 => (
+            StatusCode::NOT_FOUND,
+            Json(json!({
+                "error": "approval_not_found",
+                "message": "No approval with this id in the Rust grant store, handoff store, or ACU run store.",
+            })),
+        )
+            .into_response(),
+        Ok(r) => forward_acu_error(r).await,
+        Err(e) => acu_unavailable(e),
+    }
+}
+
 async fn aci_handoff_status(State(state): State<Arc<AppState>>, Path(id): Path<String>) -> Response {
     match state.approval_store.get(&id) {
         Some(req) => Json(req).into_response(),
@@ -656,6 +897,102 @@ async fn aci_handoff_deny(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn run_buffer_snapshot_and_restore_roundtrip() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut buf = RunEventBuffer {
+            frames: vec![
+                json!({"type": "trace", "data": {"message": "step 1"}}),
+                json!({"type": "screenshot", "data": {"screenshot": "aGk="}}),
+            ],
+            done: true,
+            last_snapshot: None,
+            dirty: true,
+        };
+        snapshot_run_buffer_in(dir.path(), "run-abc", &buf);
+        // Snapshot resets throttle bookkeeping (caller side), so simulate the
+        // caller: the on-disk copy is what matters.
+        let mut store = HashMap::new();
+        store.insert("run-abc".to_string(), std::mem::replace(&mut buf, RunEventBuffer {
+            frames: vec![],
+            done: false,
+            last_snapshot: None,
+            dirty: false,
+        }));
+        let restored = restore_run_buffers_from(dir.path());
+        let restored = restored.get("run-abc").expect("run-abc restored");
+        assert_eq!(restored.frames.len(), 2);
+        assert_eq!(restored.frames[0]["type"], "trace");
+        assert_eq!(restored.frames[1]["type"], "screenshot");
+        assert!(restored.done);
+        assert!(!restored.dirty);
+    }
+
+    #[test]
+    fn run_buffer_restore_skips_corrupt_files() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("run-good.json"), r#"{"frames":[{"type":"state"}],"done":false}"#).unwrap();
+        std::fs::write(dir.path().join("run-bad.json"), "{not json").unwrap();
+        std::fs::write(dir.path().join("run-bad2.json"), r#"{"frames":"nope","done":false}"#).unwrap();
+        std::fs::write(dir.path().join("ignore.txt"), "not a snapshot").unwrap();
+
+        let restored = restore_run_buffers_from(dir.path());
+        assert_eq!(restored.len(), 1);
+        assert!(restored.contains_key("run-good"));
+    }
+
+    #[test]
+    fn unified_status_from_acu_run_maps_python_approval_lifecycle() {
+        // awaiting_approval → pending
+        let awaiting = json!({"run_id": "r1", "status": "awaiting_approval", "approval_timed_out": false});
+        assert_eq!(unified_status_from_acu_run(&awaiting).status, "pending");
+
+        // Timed-out approval_future → expired
+        let timed_out = json!({"run_id": "r1", "status": "running", "approval_timed_out": true});
+        assert_eq!(unified_status_from_acu_run(&timed_out).status, "expired");
+
+        // Resolved / completed run → consumed
+        let completed = json!({"run_id": "r1", "status": "completed", "approval_timed_out": false});
+        assert_eq!(unified_status_from_acu_run(&completed).status, "consumed");
+    }
+
+    #[test]
+    fn snapshot_throttle_writes_immediately_when_due_and_on_done() {
+        let dir = tempfile::tempdir().unwrap();
+        // Point the snapshot writer at a temp dir for this test.
+        std::env::set_var("ALLTERNIT_COMPUTER_USE_DIR", dir.path());
+        let mut buf = RunEventBuffer {
+            frames: vec![json!({"type": "state"})],
+            done: false,
+            last_snapshot: None,
+            dirty: true,
+        };
+        // First push: last_snapshot is None → snapshot fires.
+        snapshot_if_due("run-throttle", &mut buf, false);
+        assert!(dir.path().join("run-buffers/run-throttle.json").exists());
+        assert!(!buf.dirty);
+
+        // Immediate second push: within the throttle window, not forced → no
+        // rewrite (dirty stays queued).
+        buf.frames.push(json!({"type": "trace"}));
+        buf.dirty = true;
+        snapshot_if_due("run-throttle", &mut buf, false);
+        let on_disk = std::fs::read_to_string(dir.path().join("run-buffers/run-throttle.json")).unwrap();
+        let parsed: RunBufferSnapshot = serde_json::from_str(&on_disk).unwrap();
+        assert_eq!(parsed.frames.len(), 1, "throttled snapshot must not have been rewritten");
+        assert!(buf.dirty, "unsnapshotted frames stay dirty");
+
+        // done=true forces a flush.
+        buf.done = true;
+        snapshot_if_due("run-throttle", &mut buf, true);
+        let on_disk = std::fs::read_to_string(dir.path().join("run-buffers/run-throttle.json")).unwrap();
+        let parsed: RunBufferSnapshot = serde_json::from_str(&on_disk).unwrap();
+        assert_eq!(parsed.frames.len(), 2);
+        assert!(parsed.done);
+        assert!(!buf.dirty);
+        std::env::remove_var("ALLTERNIT_COMPUTER_USE_DIR");
+    }
 
     #[test]
     fn map_acu_frame_emits_screenshot_from_planning_loop() {
