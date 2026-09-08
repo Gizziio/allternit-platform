@@ -10,7 +10,7 @@ import { getCapabilities } from '@/lib/officecli-client'
 import { callMcpTool, getMcpTools, initMcp, isDestructiveMcpTool } from '@/lib/mcp-client'
 import { ensureFreshSnapshot, markDirty } from '@/lib/document-sync'
 import { DEFAULT_OFFICE_MODEL } from '@/lib/agent-defaults'
-import { getGatewayOrigin, getOfficeBootstrapState } from '@/lib/platform-gateway'
+import { getGatewayOrigin, getOfficeBootstrapState, resolveChatBackend } from '@/lib/platform-gateway'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -85,16 +85,20 @@ const DEFAULT_CONFIG: OfficeAgentConfig = {
  * Gateway-backed runtime config. When the stored config has no endpoint or
  * credentials (the normal platform flow — the task pane authenticates to the
  * Allternit gateway, see DEPLOYMENT.md), the agent calls the gateway's
- * OpenAI-compatible endpoint directly, using the platform bootstrap token as
- * the bearer key. Explicit settings (advanced panel) always win.
+ * OpenAI-compatible endpoint. The backend and bearer key come from
+ * `resolveChatBackend()`: desktop runtime tokens route to the local desktop
+ * gateway and are exchanged for an `ak-…` virtual key (the chat endpoint
+ * rejects runtime/session tokens). Explicit settings (advanced panel) always
+ * win.
  */
-export function resolveRuntimeConfig(config: OfficeAgentConfig | null): OfficeAgentConfig | null {
+export async function resolveRuntimeConfig(config: OfficeAgentConfig | null): Promise<OfficeAgentConfig | null> {
   if (!config) return null
   const token = getOfficeBootstrapState().auth.token
+  const backend = await resolveChatBackend()
   return {
     ...config,
-    baseURL: config.baseURL || getGatewayOrigin(),
-    apiKey: config.apiKey || token || '',
+    baseURL: config.baseURL || backend?.baseUrl || getGatewayOrigin(),
+    apiKey: config.apiKey || backend?.apiKey || token || '',
     model: config.model || DEFAULT_OFFICE_MODEL,
   }
 }
@@ -282,7 +286,7 @@ export function useOfficeAgent(): UseOfficeAgentResult {
       tools: OpenAITool[],
       onDelta?: (delta: string) => void,
     ): Promise<AIResponse> => {
-      const runtimeConfig = resolveRuntimeConfig(config)
+      const runtimeConfig = await resolveRuntimeConfig(config)
       if (!runtimeConfig?.baseURL || !runtimeConfig.apiKey) {
         throw new Error('Sign in with Allternit, or configure an API key and base URL first.')
       }
@@ -390,7 +394,7 @@ export function useOfficeAgent(): UseOfficeAgentResult {
 
   const execute = useCallback(
     async (task: string, context: string) => {
-      const runtimeConfig = resolveRuntimeConfig(config)
+      const runtimeConfig = await resolveRuntimeConfig(config)
       if (!runtimeConfig?.baseURL || !runtimeConfig.apiKey) {
         setStatus('error')
         setHistory((prev) => [

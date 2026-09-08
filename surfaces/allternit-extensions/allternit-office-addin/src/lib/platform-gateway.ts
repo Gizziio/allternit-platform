@@ -31,6 +31,61 @@ export function getGatewayApiBaseUrl(): string {
   return `${getGatewayOrigin()}/api/v1`
 }
 
+const DESKTOP_RUNTIME_TOKEN_PREFIX = 'allternit_runtime_'
+const LLM_VIRTUAL_KEY_STORAGE_KEY = 'allternit-office-llm-virtual-key'
+
+/** Desktop-app bootstrap tokens are only valid on the local desktop gateway. */
+export function isDesktopRuntimeToken(token: string | null | undefined): boolean {
+  return !!token && token.startsWith(DESKTOP_RUNTIME_TOKEN_PREFIX)
+}
+
+/**
+ * Resolve the backend the pane's chat should call.
+ *
+ * `/v1/chat/completions` authenticates with `ak-…` virtual keys only; neither
+ * desktop runtime tokens nor Clerk session tokens pass its auth middleware.
+ * Both token kinds ARE accepted by the gateway's `/api/v1/gateway/keys`
+ * endpoint (standard gateway auth middleware), so we mint one virtual key per
+ * user+gateway and cache it. Desktop runtime tokens additionally force the
+ * LOCAL desktop gateway (127.0.0.1:8013): they are minted by the desktop app
+ * and are invalid on the hosted API, even in builds where
+ * VITE_ALLTERNIT_GATEWAY_URL points at api.allternit.com.
+ *
+ * Falls back to the raw bootstrap token against the configured gateway when
+ * minting is unavailable, preserving pre-existing behavior.
+ */
+export async function resolveChatBackend(): Promise<{ baseUrl: string; apiKey: string } | null> {
+  const token = bootstrapState.auth.token
+  if (!token) return null
+  const baseUrl = isDesktopRuntimeToken(token)
+    ? trimTrailingSlash(import.meta.env.VITE_ALLTERNIT_LOCAL_GATEWAY_URL || DEFAULT_GATEWAY_ORIGIN)
+    : getGatewayOrigin()
+  const apiKey = (await ensureLlmVirtualKey(baseUrl, token)) ?? token
+  return { baseUrl, apiKey }
+}
+
+async function ensureLlmVirtualKey(baseUrl: string, token: string): Promise<string | null> {
+  if (token.startsWith('ak-')) return token
+  const storageKey = `${LLM_VIRTUAL_KEY_STORAGE_KEY}:${baseUrl}:${bootstrapState.auth.userId ?? 'anon'}`
+  try {
+    const existing = await officeStorage.get<{ key: string }>(storageKey)
+    if (existing?.key) return existing.key
+    const response = await fetchWithTimeout(`${baseUrl}/api/v1/gateway/keys`, {
+      method: 'POST',
+      headers: buildGatewayHeaders(),
+      timeout: 8000,
+      body: JSON.stringify({ name: `office-addin-${bootstrapState.auth.userId ?? 'pane'}` }),
+    })
+    if (!response.ok) return null
+    const data = (await response.json()) as { key?: string }
+    if (!data.key) return null
+    await officeStorage.set(storageKey, { key: data.key })
+    return data.key
+  } catch {
+    return null
+  }
+}
+
 export function getPlatformOrigin(): string {
   if (bootstrapState.platformOrigin) {
     return trimTrailingSlash(bootstrapState.platformOrigin)
