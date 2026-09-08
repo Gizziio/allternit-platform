@@ -3,13 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="color-scheme" content="light dark" />
-    <title>Allternit</title>
+    <meta name="color-scheme" content="light" />
+    <title>Allternit for Office</title>
     <!-- Office.js must load before our app -->
     <script
       type="text/javascript"
       src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"
     ></script>
+    <style>
+      /* Paint the light canvas before the bundle loads to avoid a dark flash. */
+      html, body { background: #fbf7f1; }
+    </style>
   </head>
   <body>
     <div id="root"></div>
