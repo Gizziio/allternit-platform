@@ -23,3 +23,9 @@ TASK cu10-rust: environment pooling + approval unification + run-buffer durabili
 - Full-binary live boot not feasible: no mock driver selectable via env for the real binary (initialize_vm_driver wires only Incus/Tart, which would provision real VMs). Simulated-restart HTTP smoke covers the same ground at the route layer.
 - Python ACU side untouched (outside sole ownership): its 120s timeout is the documented binding constraint for the aligned TTL.
 - Receipts JSONL is append-only and unbounded on disk by design (audit trail); in-memory cap stays at 10k.
+
+## Done — PR opened
+- PR #164: https://github.com/Gizziio/allternit-platform/pull/164 (OPEN, base main)
+- Rebased onto a35aaa458 mid-session (other sessions merged #159/#162/#163); only .steering/checkpoint.md conflicted, resolved keeping this session's file.
+- Final verification: cargo check clean; cargo test -p allternit-api = 723 passed / 4 failed (4 = pre-existing agent_cloud_routes env fails, identical to main baseline 707/4). 16 new tests all green.
+- Branch session/cu10-rust pushed; worktree left intact for orchestrator merge + resume safety. Not merging (orchestrator owns merge + ledger attestation).
