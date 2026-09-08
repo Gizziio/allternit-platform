@@ -1320,62 +1320,60 @@ function EventCardInner({
   return null;
 }
 
+/**
+ * In-flight assistant text — platform-native flowing text (mirrors
+ * surfaces/ai.allternit.com StreamingChatComposer: the stream renders in the
+ * same style as a completed message, with only a cursor to mark liveness).
+ */
 function StreamingCard({ text }: { text: string }) {
   return (
     <div
-      className="rounded-lg border border-border/80 bg-muted/40 p-3"
+      className="py-1"
       style={{ animation: "extension-sidepanel-card-enter 0.25s ease-out both" }}
     >
-      <div className="flex items-start gap-2">
-        <div className="relative mt-0.5">
-          <Sparkles className="size-3.5 text-blue-500" />
-          <span className="absolute -right-0.5 -top-0.5 size-1.5 rounded-full animate-ping bg-blue-500" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="whitespace-pre-wrap text-xs leading-relaxed text-foreground/90">
-            {text}
-            <span
-              className="ml-0.5 inline-block text-blue-500"
-              style={{ animation: "extension-sidepanel-blink-cursor 1s step-end infinite" }}
-            >
-              |
-            </span>
-          </p>
-        </div>
-      </div>
+      <p className="whitespace-pre-wrap break-words text-base leading-[1.75] text-foreground">
+        {text}
+        <span
+          className="ml-0.5 inline-block text-[var(--accent-brand,#D97757)]"
+          style={{ animation: "extension-sidepanel-blink-cursor 1s step-end infinite" }}
+        >
+          |
+        </span>
+      </p>
     </div>
   );
 }
 
 /**
- * Completed plain assistant turn — mirrors StreamingCard (same chrome, no
- * cursor/ping) so a reply keeps the same look after the stream finishes.
- * Used for step events that carry only text (no action/reflection/raw data).
+ * Completed plain assistant turn — platform-native flowing text, no card
+ * chrome (mirrors the platform assistant message: full-width text in the
+ * content column, text-base/leading-[1.75]). Used for step events that carry
+ * only text (no action/reflection/raw data).
  */
 function AssistantMessageBubble({ text }: { text: string }) {
   return (
     <div
-      className="rounded-lg border border-border/80 bg-muted/40 p-3"
+      className="py-1"
       style={{ animation: "extension-sidepanel-card-enter 0.25s ease-out both" }}
     >
-      <div className="flex items-start gap-2">
-        <Sparkles className="mt-0.5 size-3.5 shrink-0 text-blue-500" />
-        <p className="min-w-0 flex-1 whitespace-pre-wrap break-words text-xs leading-relaxed text-foreground/90">
-          {text}
-        </p>
-      </div>
+      <p className="whitespace-pre-wrap break-words text-base leading-[1.75] text-foreground">
+        {text}
+      </p>
     </div>
   );
 }
 
-/** User chat message — right-aligned, accent-tinted bubble. */
+/**
+ * User chat message — platform UserMessageCard shape: right-aligned soft
+ * bubble (rounded-2xl, muted fill, hairline border), max-w-[85%].
+ */
 function UserMessageBubble({ text }: { text: string }) {
   return (
     <div
-      className="flex justify-end"
+      className="flex justify-end py-1"
       style={{ animation: "extension-sidepanel-card-enter 0.25s ease-out both" }}
     >
-      <p className="max-w-[85%] whitespace-pre-wrap break-words rounded-2xl rounded-br-md bg-[var(--accent-brand,#D97757)] px-3 py-2.5 text-xs leading-relaxed text-white shadow-sm">
+      <p className="max-w-[85%] whitespace-pre-wrap break-words rounded-2xl border border-border bg-muted/50 px-4 py-2.5 text-base leading-[1.75] text-foreground">
         {text}
       </p>
     </div>
