@@ -693,6 +693,22 @@ const miniAppsAPI = {
   },
 };
 
+export interface HermesRoutingExportResult {
+  success: boolean;
+  path: string;
+  backupPath?: string;
+  replaced: boolean;
+  error?: string;
+}
+
+// ACI → Hermes export bridge: the renderer fetches the generated
+// provider_routing YAML from the gateway admin API, the main process splices
+// it into ~/.hermes/config.yaml.
+const hermesRoutingAPI = {
+  export: (routingYaml: string): Promise<HermesRoutingExportResult> =>
+    ipcRenderer.invoke('hermesRouting:export', routingYaml),
+};
+
 // ─── Voice call-mode dictation ────────────────────────────────────────────────
 // macOS-first native dictation bridge. When unavailable, the renderer falls
 // back to the browser's Web Speech API through the existing useSTT() hook.
@@ -778,6 +794,7 @@ const allternitDesktopAPI = {
   worker: workerAPI,
   hyperframes: hyperframesAPI,
   miniApps: miniAppsAPI,
+  hermesRouting: hermesRoutingAPI,
   browserCapture: browserCaptureAPI,
   voice: voiceAPI,
 };

@@ -233,6 +233,9 @@ declare global {
         oauthDisconnect?: (appId: string, providerId: string, accountId: string) => Promise<{ success: boolean; error?: string }>;
         onOAuthComplete?: (handler: (result: { flowId: string; success: boolean; error?: string; scopes?: string[]; expiresAt?: string; appId: string; providerId: string; accountId: string }) => void) => () => void;
       };
+      hermesRouting?: {
+        export: (routingYaml: string) => Promise<{ success: boolean; path: string; backupPath?: string; replaced: boolean; error?: string }>;
+      };
       findInPage?: {
         search: (text: string, options?: { forward?: boolean; matchCase?: boolean }) => Promise<void>;
         next: () => Promise<void>;

@@ -40,6 +40,7 @@ import { installMiniApp, startMiniApp, stopMiniApp, getMiniAppStatus, launchMini
 import { installReleaseFromRegistry, rollbackReleaseInstall, removeReleaseInstall, listReleaseInstalls, getReleaseInstallState } from './mini-app-release-installer.js';
 import { createMiniAppOAuthBroker, type MiniAppOAuthBroker, type MiniAppOAuthProvider } from './mini-app-oauth-broker.js';
 import { setMiniAppSecret, listMiniAppSecrets, deleteMiniAppSecret } from './mini-app-secrets.js';
+import { exportHermesRouting } from './hermes-routing-bridge.js';
 import { OfficeAddinManager, type OfficeProductId } from './office-addin-manager.js';
 
 import { tunnelManager } from './tunnel-manager.js';
@@ -3553,6 +3554,9 @@ handleGuarded('miniApps:revokeApproval', (_event, id: string) => {
 });
 handleGuarded('miniApps:setSecret', (_event, id: string, name: string, value: string) => setMiniAppSecret(id, name, value));
 ipcMain.handle('miniApps:listSecrets', (_event, id: string) => listMiniAppSecrets(id));
+// ACI export bridge: write a gateway-generated provider_routing section into
+// the Hermes mini-app's ~/.hermes/config.yaml (backs up the previous file).
+handleGuarded('hermesRouting:export', (_event, routingYaml: string) => exportHermesRouting(routingYaml));
 handleGuarded('miniApps:deleteSecret', (_event, id: string, name: string) => deleteMiniAppSecret(id, name));
 handleGuarded('miniApps:removeRuntime', (_event, id: string) => removeMiniAppRuntime(id));
 handleGuarded('miniApps:rollbackRuntime', (_event, id: string) => rollbackMiniAppRuntime(id));
