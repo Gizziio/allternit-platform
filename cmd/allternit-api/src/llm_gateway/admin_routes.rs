@@ -10,10 +10,10 @@
 //! Error bodies follow the keys.rs shape: `{"error": code, "message": msg}`.
 
 use axum::{
-    extract::{Extension, Query, State},
-    http::StatusCode,
+    extract::{Extension, Path, Query, State},
+    http::{header::CONTENT_TYPE, HeaderMap, StatusCode},
     response::{IntoResponse, Response},
-    routing::get,
+    routing::{delete, get, post},
     Json, Router,
 };
 use rusqlite::{params, Connection, OptionalExtension};
@@ -40,6 +40,22 @@ pub fn gateway_admin_router() -> Router<Arc<AppState>> {
         .route(
             "/gateway/provider-routing",
             get(get_provider_routing).put(put_provider_routing),
+        )
+        .route(
+            "/gateway/provider-routing/export/hermes",
+            get(export_provider_routing_hermes),
+        )
+        .route(
+            "/gateway/provider-routing/resolve",
+            post(resolve_provider_routing),
+        )
+        .route(
+            "/gateway/route-credentials",
+            get(list_route_credentials).put(put_route_credential),
+        )
+        .route(
+            "/gateway/route-credentials/:provider_id",
+            delete(delete_route_credential),
         )
         .route("/gateway/budgets", get(list_budgets).put(put_budget))
         .route(
@@ -797,6 +813,222 @@ async fn put_provider_routing(
     .await;
 
     respond(result)
+}
+
+/// Render the effective tenant provider routing policy as a Hermes-native
+/// `provider_routing` config.yaml section (ACI export bridge — writes to
+/// `~/.hermes/config.yaml` on the desktop side).
+async fn export_provider_routing_hermes(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+) -> Response {
+    let db = state.db.clone();
+    let result = tokio::task::spawn_blocking(move || -> Result<Response, ApiError> {
+        let conn = db.connect().map_err(internal_error)?;
+        let scope = admin_scope(&conn, &user)?;
+        let tenant = scope.config_tenant(&user);
+
+        let (policy, _source) =
+            super::provider_routing::load_policy_with_source(&db, tenant.as_deref().unwrap_or(""))
+                .map_err(internal_error)?;
+        let Some(policy) = policy else {
+            return Ok((
+                StatusCode::NOT_FOUND,
+                Json(json!({"error": "not_found", "message": "no provider routing policy configured for this tenant"})),
+            )
+                .into_response());
+        };
+        let yaml = super::provider_routing::to_hermes_yaml(&policy);
+        let mut headers = HeaderMap::new();
+        headers.insert(CONTENT_TYPE, "text/yaml; charset=utf-8".parse().unwrap());
+        Ok((headers, yaml).into_response())
+    })
+    .await;
+
+    match result {
+        Ok(Ok(response)) => response,
+        Ok(Err(err)) => err.into_response(),
+        Err(err) => internal_error(err).into_response(),
+    }
+}
+
+/// Answer "which provider serves this model under current policy": the
+/// resolved wire `provider` object, the `models` key that matched, and which
+/// policy row (tenant/global/none) supplied it.
+async fn resolve_provider_routing(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Json(payload): Json<Value>,
+) -> Response {
+    let model = payload
+        .get("model")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|model| !model.is_empty());
+    let Some(model) = model else {
+        return bad_request("`model` is required.").into_response();
+    };
+    let provider = payload
+        .get("provider")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|provider| !provider.is_empty());
+
+    let model = model.to_string();
+    let provider = provider.map(str::to_string);
+
+    let db = state.db.clone();
+    let result = tokio::task::spawn_blocking(move || {
+        let conn = db.connect().map_err(internal_error)?;
+        let scope = admin_scope(&conn, &user)?;
+        let tenant = scope.config_tenant(&user);
+
+        let (provider_id, model_id) = match provider {
+            Some(provider) => (provider.to_string(), model.to_string()),
+            // Bare model id: split a single "provider/model" form, else leave
+            // the provider empty — matching is spelling-tolerant on the model.
+            None => match model.split_once('/') {
+                Some((provider_id, model_id)) => {
+                    (provider_id.to_string(), model_id.to_string())
+                }
+                None => (String::new(), model.to_string()),
+            },
+        };
+
+        let answer = super::provider_routing::resolve_query(
+            &db,
+            tenant.as_deref().unwrap_or(""),
+            &provider_id,
+            &model_id,
+        )
+        .map_err(internal_error)?;
+        Ok::<_, ApiError>(serde_json::to_value(&answer).map_err(internal_error)?)
+    })
+    .await;
+
+    respond(result)
+}
+
+// ─── GET/PUT/DELETE /gateway/route-credentials ───────────────────────────────
+//
+// Per-user BYO ("bring your own subscription") provider credentials. Unlike
+// the policy routes above, these are NOT org-admin gated: any authenticated
+// user manages only their own rows, keyed by user_id.
+
+async fn list_route_credentials(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+) -> Response {
+    let db = state.db.clone();
+    let user_id = user.user_id.clone();
+    let result = tokio::task::spawn_blocking(move || {
+        let credentials = super::route_credentials::list_credentials(&db, &user_id)
+            .map_err(internal_error)?;
+        Ok::<_, ApiError>(json!({ "credentials": credentials }))
+    })
+    .await;
+
+    respond(result)
+}
+
+async fn put_route_credential(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Json(payload): Json<Value>,
+) -> Response {
+    let Some(provider_id) = payload
+        .get("provider_id")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|provider_id| !provider_id.is_empty())
+    else {
+        return bad_request("`provider_id` is required.").into_response();
+    };
+    let Some(api_key) = payload
+        .get("api_key")
+        .and_then(Value::as_str)
+        .filter(|api_key| !api_key.is_empty())
+    else {
+        return bad_request("`api_key` is required.").into_response();
+    };
+    let base_url = payload
+        .get("base_url")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|base_url| !base_url.is_empty());
+    let label = payload
+        .get("label")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|label| !label.is_empty());
+
+    // Validate-then-store: probe the provider's /models endpoint when a
+    // base_url is supplied. Without one there is nothing to probe; the key is
+    // stored as `unvalidated`.
+    let mut validated = false;
+    if let Some(base_url) = base_url {
+        if let Err(message) = super::route_credentials::validate_api_key(base_url, api_key).await {
+            return bad_request(format!("api_key validation failed: {message}")).into_response();
+        }
+        validated = true;
+    }
+
+    let db = state.db.clone();
+    let user_id = user.user_id.clone();
+    let tenant = user.tenant_id.clone().or(user.organization_id.clone());
+    let provider_id = provider_id.to_string();
+    let api_key = api_key.to_string();
+    let base_url = base_url.map(str::to_string);
+    let label = label.map(str::to_string);
+    let result = tokio::task::spawn_blocking(move || {
+        super::route_credentials::upsert_credential(
+            &db,
+            &user_id,
+            tenant.as_deref(),
+            &provider_id,
+            &api_key,
+            base_url.as_deref(),
+            label.as_deref(),
+            validated,
+        )
+        .map_err(|message| (StatusCode::BAD_REQUEST, Json(json!({"error": "invalid_request", "message": message}))))?;
+
+        let credentials = super::route_credentials::list_credentials(&db, &user_id)
+            .map_err(internal_error)?;
+        Ok::<_, ApiError>(json!({ "credentials": credentials }))
+    })
+    .await;
+
+    respond(result)
+}
+
+async fn delete_route_credential(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(provider_id): Path<String>,
+) -> Response {
+    let db = state.db.clone();
+    let user_id = user.user_id.clone();
+    let provider_id = provider_id.trim().to_string();
+    let result = tokio::task::spawn_blocking(move || {
+        let deleted = super::route_credentials::delete_credential(&db, &user_id, &provider_id)
+            .map_err(internal_error)?;
+        if !deleted {
+            return Ok::<_, ApiError>((
+                StatusCode::NOT_FOUND,
+                Json(json!({"error": "not_found", "message": format!("no credential for provider `{provider_id}`")})),
+            )
+                .into_response());
+        }
+        Ok::<_, ApiError>((StatusCode::OK, Json(json!({"deleted": provider_id}))).into_response())
+    })
+    .await;
+
+    match result {
+        Ok(Ok(response)) => response,
+        Ok(Err(err)) => err.into_response(),
+        Err(err) => internal_error(err).into_response(),
+    }
 }
 
 // ─── GET/PUT /gateway/dlp/rules ──────────────────────────────────────────────

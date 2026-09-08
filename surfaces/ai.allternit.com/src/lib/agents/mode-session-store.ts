@@ -45,6 +45,10 @@ import { buildBotRuntimeEnv, resolveModelRef } from '@/lib/bots/bot-runtime-env'
 import { deleteComputer } from '@/lib/computers-api';
 import { memoryClient } from './memory-client';
 import { recallBotMemories } from '@/lib/bots/bot-memory-context';
+import {
+  readConfigProviderRoutingPin,
+  resolveProviderRoutingWirePin,
+} from './provider-routing';
 
 const logger = createModuleLogger('ModeSessionStore');
 
@@ -127,6 +131,11 @@ export interface ModeSession {
     missingConnectors?: string[];
     messagingConfig?: Record<string, unknown>;
     identityChannels?: Record<string, unknown>;
+    /**
+     * Session-level provider routing pin override (wins over the bot pin).
+     * `null` explicitly clears an override so the session inherits again.
+     */
+    providerRouting?: Record<string, unknown> | null;
   };
   // Runtime context pack (not persisted, rebuilt on load)
   _contextPack?: AgentContextPack;
@@ -159,6 +168,11 @@ export interface SendMessageOptions {
   skipContext?: boolean;  // For internal messages
   /** @-mentioned plugin/connector this message targets (from the composer chip). */
   pluginMention?: { kind: 'plugin' | 'connector'; id: string; name: string };
+  /**
+   * Hermes provider-object pin sent per message (already stripped to wire
+   * keys). When unset, the POST body omits `providerRouting` entirely.
+   */
+  providerRouting?: Record<string, unknown>;
   callbacks?: {
     onChunk?: (content: string) => void;
     onThinking?: (thinking: string) => void;
@@ -794,6 +808,15 @@ async function streamMessageWithContext(
     }
   }
   
+  // Provider routing pin: a session override (metadata.providerRouting) wins;
+  // otherwise the bot's pin (agent config.providerRouting) is inherited. The
+  // stored `model` key is display-only and is stripped for the wire object.
+  const providerRouting = options.providerRouting
+    ?? resolveProviderRoutingWirePin(
+      session.metadata.providerRouting,
+      readConfigProviderRoutingPin(agent?.config),
+    );
+
   // Use chat API with context
   await chatApi.streamChat(
     session.id,
@@ -826,7 +849,8 @@ async function streamMessageWithContext(
       },
     },
     signal,
-    agentContext
+    agentContext,
+    providerRouting,
   );
 }
 
@@ -952,7 +976,10 @@ export interface ModeSessionState {
   createSession: (options?: CreateModeSessionOptions) => Promise<string>;
   adoptSession: (backend: BackendSession) => string;
   deleteSession: (sessionId: string) => Promise<void>;
-  updateSession: (sessionId: string, updates: Partial<ModeSession>) => Promise<void>;
+  updateSession: (
+    sessionId: string,
+    updates: Partial<Omit<ModeSession, 'metadata'>> & { metadata?: Partial<ModeSession['metadata']> },
+  ) => Promise<void>;
   setActiveSession: (sessionId: string | null) => void;
   
   sendMessage: (sessionId: string, options: SendMessageOptions) => Promise<void>;
@@ -1271,7 +1298,10 @@ export function createModeSessionStore(config: StoreConfig) {
             }
           },
 
-          updateSession: async (sessionId: string, updates: Partial<ModeSession>) => {
+          updateSession: async (
+            sessionId: string,
+            updates: Partial<Omit<ModeSession, 'metadata'>> & { metadata?: Partial<ModeSession['metadata']> },
+          ) => {
             const currentSession = get().sessions.find((session) => session.id === sessionId);
             set((state) => ({
               sessions: state.sessions.map((session) =>

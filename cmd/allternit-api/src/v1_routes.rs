@@ -642,6 +642,13 @@ async fn agent_chat_bridge(
         .and_then(|v| v.as_str())
         .filter(|s| !s.is_empty())
         .map(str::to_string);
+    // Per-request provider routing pin (Hermes-style provider object) from
+    // Agent Hub pins; forwarded to gizzi as the top-level `provider` body key
+    // (same path the LLM gateway proxy uses).
+    let provider_routing_pin = body_json
+        .get("providerRouting")
+        .filter(|v| v.is_object())
+        .cloned();
 
     if chat_id.is_empty() || message.is_empty() {
         return (
@@ -927,6 +934,9 @@ async fn agent_chat_bridge(
             "parts": parts,
             "model": { "providerID": provider_id, "modelID": model_id },
         });
+        if let Some(pin) = &provider_routing_pin {
+            gizzi_payload["provider"] = pin.clone();
+        }
         if let Some(effort) = effort {
             gizzi_payload["effort"] = json!(effort);
         }

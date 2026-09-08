@@ -8,6 +8,7 @@ import { PersonalityWorkspacePanel } from "@/components/bots/PersonalityWorkspac
 import { BotConnectedAppsPanel } from "@/components/bots/BotConnectedAppsPanel";
 import { ConnectorToolPicker } from "@/components/bots/ConnectorToolPicker";
 import { BotVoiceSettingsPanel } from "@/components/bots/BotVoiceSettingsPanel";
+import { ProviderRoutingCard } from "./ProviderRoutingCard";
 import { TeamImportButton } from "@/components/bots/TeamImportButton";
 import { EditAgentForm } from "@/views/agent-view/components/EditAgentForm";
 import { getBotDisplayName } from "@/lib/bots/bot-profile";
@@ -100,6 +101,7 @@ export function BotConfigTab({ bot, accentColor }: BotConfigTabProps) {
                   value={`${bot.provider.toUpperCase()} · ${bot.model}`}
                   accentColor={accentColor}
                 />
+                <ProviderRoutingCard bot={bot} accentColor={accentColor} />
               </div>
             </div>
           )}
