@@ -79,6 +79,7 @@
               "cli/plugin",
               "cli/runtime",
               "cli/session",
+              "cli/native-sessions",
               "cli/tasks",
               "cli/doctor",
               "cli/context",

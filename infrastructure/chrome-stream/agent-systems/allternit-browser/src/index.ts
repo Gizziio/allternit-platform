@@ -93,6 +93,18 @@ export type {
   BrowserSkillPackage,
   CompileBrowserSkillOptions,
 } from './protocol/skill-factory.js';
+export {
+  acuRecordingJsonlToTrajectory,
+  loadAcuRecordingToTrajectory,
+  mapAcuActionKind,
+  normalizeIsoTimestamp,
+  resolveRecordingPath,
+} from './protocol/recording-to-trajectory.js';
+export type {
+  AcuRecordedFrame,
+  AcuRecordingManifest,
+  AcuRecordingToTrajectoryOptions,
+} from './protocol/recording-to-trajectory.js';
 
 // Canvas Host
 export {

@@ -217,7 +217,9 @@ const entry = await registry.getTool('memory')!.execute!({ operation: 'read', ke
 
 ## Computer use
 
-The `ComputerUseCapability` exposes a `computer` tool that follows the Anthropic `computer_20250124` schema. It forwards actions to the Allternit Computer Use gateway (`ALLTERNIT_COMPUTER_USE_URL`, default `http://127.0.0.1:8760`).
+The `ComputerUseCapability` exposes a `computer` tool implementing the **Allternit Computer Use** contract: `allternitToolType: 'computer'` with `computerToolVersion` selecting the action set. It forwards actions to the Allternit Computer Use gateway (`ALLTERNIT_COMPUTER_USE_URL`, default `http://127.0.0.1:8760`).
+
+The default version `'20250124'` matches the upstream `computer_20250124` action schema; `'20251124'` adds the `zoom` action (with a `region` `[x1, y1, x2, y2]` parameter) when the capability is created with `enableZoom: true`. During the transition, tool metadata also carries `anthropicType` (`computer_20250124` / `computer_20251124`) as a legacy-compat adapter mirroring the upstream tool types — new integrations should read `allternitToolType` / `computerToolVersion` instead.
 
 ```json
 {

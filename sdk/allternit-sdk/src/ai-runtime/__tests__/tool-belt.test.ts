@@ -258,12 +258,52 @@ describe('Native Agent Tool Belt', () => {
     });
     const tool = capability.getTool();
 
-    expect(tool.metadata).toMatchObject({ anthropicType: 'computer_20250124', display_width_px: 1280, display_height_px: 720 });
-    expect(tool.input_schema.properties.action.enum).toContain('scroll');
+    expect(tool.metadata).toMatchObject({
+      allternitToolType: 'computer',
+      computerToolVersion: '20250124',
+      anthropicType: 'computer_20250124',
+      display_width_px: 1280,
+      display_height_px: 720,
+    });
+    const actionEnum = (tool.input_schema.properties as Record<string, { enum?: string[] }>).action.enum!;
+    expect(actionEnum).toContain('scroll');
+    expect(actionEnum).not.toContain('zoom');
+    expect((tool.input_schema.properties as Record<string, unknown>).region).toBeUndefined();
     expect(await tool.execute!({ action: 'screenshot' }, {})).toEqual([{
       type: 'image',
       source: { type: 'base64', media_type: 'image/png', data: 'cG5n' },
     }]);
+  });
+
+  it('supports the computer_20251124 action set with zoom and region', async () => {
+    const capability = new ComputerUseCapability({
+      fetch: async () => Response.json({ summary: 'zoomed' }),
+      toolVersion: '20251124',
+      enableZoom: true,
+      displayWidthPx: 1920,
+      displayHeightPx: 1080,
+    });
+    const tool = capability.getTool();
+    const properties = tool.input_schema.properties as Record<string, { enum?: string[]; minItems?: number; maxItems?: number }>;
+
+    expect(tool.metadata).toMatchObject({
+      allternitToolType: 'computer',
+      computerToolVersion: '20251124',
+      anthropicType: 'computer_20251124',
+      enable_zoom: true,
+      display_width_px: 1920,
+      display_height_px: 1080,
+    });
+    expect(properties.action.enum).toContain('zoom');
+    expect(properties.action.enum).toHaveLength(17);
+    expect(properties.region).toMatchObject({ minItems: 4, maxItems: 4 });
+    expect(await tool.execute!({ action: 'zoom', region: [0, 0, 960, 540] }, {})).toBe('zoomed');
+
+    // 20250124 tools never advertise zoom, even with enableZoom set
+    const legacy = new ComputerUseCapability({ enableZoom: true }).getTool();
+    expect(legacy.metadata).toMatchObject({ computerToolVersion: '20250124', anthropicType: 'computer_20250124' });
+    expect(legacy.metadata?.enable_zoom).toBeUndefined();
+    expect((legacy.input_schema.properties as Record<string, { enum?: string[] }>).action.enum).not.toContain('zoom');
   });
 
   it('namespaces tools and validates strict schemas', () => {

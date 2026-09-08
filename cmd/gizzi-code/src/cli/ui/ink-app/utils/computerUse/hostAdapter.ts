@@ -1,14 +1,13 @@
-// @ts-nocheck
 import type {
   ComputerUseHostAdapter,
   Logger,
-} from '@ant/computer-use-mcp/types'
+  OsPermissionsState,
+} from './engine/types.js'
 import { format } from 'util'
 import { logForDebugging } from '../debug.js'
 import { COMPUTER_USE_MCP_SERVER_NAME } from './common.js'
 import { createCliExecutor } from './executor.js'
 import { getChicagoEnabled, getChicagoSubGates } from './gates.js'
-import { requireComputerUseSwift } from './swiftLoader.js'
 
 class DebugLogger implements Logger {
   silly(message: string, ...args: unknown[]): void {
@@ -31,10 +30,12 @@ class DebugLogger implements Logger {
 let cached: ComputerUseHostAdapter | undefined
 
 /**
- * Process-lifetime singleton. Built once on first CU tool call; native modules
- * (both `@ant/computer-use-input` and `@ant/computer-use-swift`) are loaded
- * here via the executor factory, which throws on load failure — there is no
- * degraded mode.
+ * Process-lifetime singleton. Built once on first CU tool call.
+ *
+ * The native backend probed macOS TCC (Accessibility / Screen Recording)
+ * here via @ant/computer-use-swift. The engine backend has no OS permission
+ * concept — reachability surfaces naturally as a fetch error at dispatch
+ * time with the engine's message — so this always reports granted.
  */
 export function getComputerUseHostAdapter(): ComputerUseHostAdapter {
   if (cached) return cached
@@ -45,25 +46,18 @@ export function getComputerUseHostAdapter(): ComputerUseHostAdapter {
       getMouseAnimationEnabled: () => getChicagoSubGates().mouseAnimation,
       getHideBeforeActionEnabled: () => getChicagoSubGates().hideBeforeAction,
     }),
-    ensureOsPermissions: async () => {
-      const cu = requireComputerUseSwift()
-      const accessibility = cu.tcc.checkAccessibility()
-      const screenRecording = cu.tcc.checkScreenRecording()
-      return accessibility && screenRecording
-        ? { granted: true }
-        : { granted: false, accessibility, screenRecording }
-    },
+    ensureOsPermissions: async (): Promise<OsPermissionsState> => ({
+      granted: true,
+    }),
     isDisabled: () => !getChicagoEnabled(),
     getSubGates: getChicagoSubGates,
-    // cleanup.ts always unhides at turn end — no user preference to disable it.
+    // cleanup.ts never has anything to unhide with the engine backend (it
+    // never hides host apps), but keep the flag for contract parity.
     getAutoUnhideEnabled: () => true,
 
-    // Pixel-validation JPEG decode+crop. MUST be synchronous (the package
-    // does `patch1.equals(patch2)` directly on the return value). Cowork uses
-    // Electron's `nativeImage` (sync); our `image-processor-napi` is
-    // sharp-compatible and async-only. Returning null → validation skipped,
-    // click proceeds — the designed fallback per `PixelCompareResult.skipped`.
-    // The sub-gate defaults to false anyway.
+    // Pixel-validation JPEG decode+crop was never available synchronously on
+    // the native backend either (async-only image processor); null keeps the
+    // designed fallback (validation skipped). The sub-gate defaults to false.
     cropRawPatch: () => null,
   }
   return cached

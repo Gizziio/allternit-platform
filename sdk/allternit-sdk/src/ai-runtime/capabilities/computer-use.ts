@@ -1,15 +1,30 @@
 import type { ToolDefinition } from '../tools/types.js';
 
+/** Allternit Computer Use tool versions. The action sets mirror the upstream
+ * `computer_20250124` / `computer_20251124` shapes that models are trained on. */
+export type ComputerToolVersion = '20250124' | '20251124';
+
+export const COMPUTER_20250124_ACTIONS = [
+  'key', 'type', 'mouse_move', 'left_click', 'left_click_drag',
+  'right_click', 'middle_click', 'double_click', 'triple_click',
+  'left_mouse_down', 'left_mouse_up', 'screenshot', 'cursor_position',
+  'scroll', 'hold_key', 'wait',
+] as const;
+
+/** The 20251124 action set adds `zoom`; the tool must also be created with
+ * `enableZoom: true` so the model is allowed to emit that action. */
+export const COMPUTER_20251124_ACTIONS = [...COMPUTER_20250124_ACTIONS, 'zoom'] as const;
+
 export type ComputerUseAction =
-  | 'key' | 'type' | 'mouse_move' | 'left_click' | 'left_click_drag'
-  | 'right_click' | 'middle_click' | 'double_click' | 'triple_click'
-  | 'left_mouse_down' | 'left_mouse_up' | 'screenshot' | 'cursor_position'
-  | 'scroll' | 'hold_key' | 'wait';
+  | (typeof COMPUTER_20250124_ACTIONS)[number]
+  | (typeof COMPUTER_20251124_ACTIONS)[number];
 
 export interface ComputerUseInput {
   action: ComputerUseAction;
   text?: string;
   coordinate?: [number, number];
+  /** 20251124 only: [x1, y1, x2, y2] pixel region for the "zoom" action. */
+  region?: [number, number, number, number];
   scroll_direction?: 'up' | 'down' | 'left' | 'right';
   scroll_amount?: number;
   duration?: number;
@@ -21,37 +36,59 @@ export interface ComputerUseOptions {
   displayWidthPx?: number;
   displayHeightPx?: number;
   displayNumber?: number;
+  /** Action-set version. Defaults to '20250124'. */
+  toolVersion?: ComputerToolVersion;
+  /** 20251124 only: advertise the "zoom" action and emit `enable_zoom` metadata. */
+  enableZoom?: boolean;
 }
 
-export const COMPUTER_USE_TOOL: ToolDefinition = {
-  name: 'computer',
-  description: 'Control the mouse and keyboard, and capture screenshots to interact with the computer.',
-  input_schema: {
+function buildComputerInputSchema(version: ComputerToolVersion): ToolDefinition['input_schema'] {
+  const actions = version === '20251124' ? COMPUTER_20251124_ACTIONS : COMPUTER_20250124_ACTIONS;
+  return {
     type: 'object',
     properties: {
-      action: { 
-        type: 'string', 
-        enum: ['key', 'type', 'mouse_move', 'left_click', 'left_click_drag', 'right_click', 'middle_click', 'double_click', 'triple_click', 'left_mouse_down', 'left_mouse_up', 'screenshot', 'cursor_position', 'scroll', 'hold_key', 'wait'],
+      action: {
+        type: 'string',
+        enum: [...actions],
         description: 'The computer action to perform'
       },
       text: { type: 'string', description: 'Text to type for the "type" and "key" actions' },
-      coordinate: { 
-        type: 'array', 
+      coordinate: {
+        type: 'array',
         items: { type: 'number' },
         minItems: 2,
         maxItems: 2,
         description: 'The absolute [x, y] pixel coordinates for mouse actions'
       },
+      ...(version === '20251124' ? {
+        region: {
+          type: 'array',
+          items: { type: 'number' },
+          minItems: 4,
+          maxItems: 4,
+          description: 'The absolute [x1, y1, x2, y2] pixel region for the "zoom" action (top-left and bottom-right corners)'
+        },
+      } : {}),
       scroll_direction: { type: 'string', enum: ['up', 'down', 'left', 'right'], description: 'Direction for scroll' },
       scroll_amount: { type: 'integer', description: 'Number of scroll ticks' },
       duration: { type: 'number', description: 'Duration in seconds for hold_key and wait' },
     },
     required: ['action']
-  },
+  };
+}
+
+export const COMPUTER_USE_TOOL: ToolDefinition = {
+  name: 'computer',
+  description: 'Control the mouse and keyboard, and capture screenshots to interact with the computer.',
+  input_schema: buildComputerInputSchema('20250124'),
   metadata: {
     category: 'vision',
     isDestructive: true,
     requiresVision: true,
+    // Vendor-neutral Allternit branding (design decision D3). `anthropicType`
+    // is the legacy upstream-compat adapter, kept during the transition.
+    allternitToolType: 'computer',
+    computerToolVersion: '20250124',
     anthropicType: 'computer_20250124',
     display_width_px: 1024,
     display_height_px: 768,
@@ -72,6 +109,8 @@ export class ComputerUseCapability {
   private readonly displayWidthPx: number;
   private readonly displayHeightPx: number;
   private readonly displayNumber?: number;
+  private readonly toolVersion: ComputerToolVersion;
+  private readonly enableZoom: boolean;
 
   constructor(options: string | ComputerUseOptions = {}) {
     const normalized = typeof options === 'string' ? { gatewayUrl: options } : options;
@@ -80,16 +119,23 @@ export class ComputerUseCapability {
     this.displayWidthPx = normalized.displayWidthPx ?? 1024;
     this.displayHeightPx = normalized.displayHeightPx ?? 768;
     this.displayNumber = normalized.displayNumber;
+    this.toolVersion = normalized.toolVersion ?? '20250124';
+    this.enableZoom = normalized.enableZoom ?? false;
   }
 
   public getTool(): ToolDefinition {
     return {
       ...COMPUTER_USE_TOOL,
+      input_schema: buildComputerInputSchema(this.toolVersion),
       metadata: {
         ...COMPUTER_USE_TOOL.metadata,
+        allternitToolType: 'computer',
+        computerToolVersion: this.toolVersion,
+        anthropicType: `computer_${this.toolVersion}`,
         display_width_px: this.displayWidthPx,
         display_height_px: this.displayHeightPx,
         ...(this.displayNumber === undefined ? {} : { display_number: this.displayNumber }),
+        ...(this.toolVersion === '20251124' && this.enableZoom ? { enable_zoom: true } : {}),
       },
       execute: this.execute.bind(this)
     };
@@ -105,6 +151,7 @@ export class ComputerUseCapability {
           parameters: {
             text: args.text,
             coordinate: args.coordinate,
+            region: args.region,
             scroll_direction: args.scroll_direction,
             scroll_amount: args.scroll_amount,
             duration: args.duration,
