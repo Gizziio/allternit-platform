@@ -46,6 +46,7 @@ export type EngineEventType =
   | 'fallback.triggered'
   | 'layer.upgraded'
   | 'approval.required'
+  | 'approval.resolved'
   | 'approval.received'
   | 'artifact.created'
   | 'run.paused'
@@ -53,6 +54,7 @@ export type EngineEventType =
   | 'run.completed'
   | 'run.failed'
   | 'run.cancelled'
+  | 'run.ended'
   | 'search.overflow'
   | 'view.refocused'
   | 'guard.failed'
@@ -238,15 +240,19 @@ export interface EngineExecutionResult {
 
 /**
  * Engine event for real-time streaming.
+ *
+ * The gateway SSE envelope (GET /v1/computer-use/runs/{id}/events) carries
+ * only event_type, run_id, message, and data — session_id, mode, and
+ * target_scope are absent from stream events and therefore optional here.
  */
 export interface EngineEvent {
   run_id: string;
-  session_id: string;
   event_type: EngineEventType;
-  mode: EngineMode;
-  target_scope: TargetScope;
   message: string;
   data?: unknown;
+  session_id?: string;
+  mode?: EngineMode;
+  target_scope?: TargetScope;
   event_id?: string;
   timestamp?: string;
   layer?: EngineLayer;
@@ -273,9 +279,55 @@ export interface ExecuteRequest {
 }
 
 /**
- * Response from POST /v1/execute
+ * Per-action outcome for mode='direct' runs.
+ * Matches gateway `result.actions[i]` (execute contract, PR #152).
  */
-export interface ExecuteResponse extends EngineExecutionResult {}
+export interface DirectActionOutcome {
+  index: number;
+  action_id: string;
+  kind: string;
+  status: 'ok' | 'error';
+  result?: Record<string, unknown> | null;
+  error?: string | null;
+}
+
+/**
+ * Run `result` payload for a mode='direct' execution.
+ * Matches the gateway direct-path result dict (execute contract, PR #152).
+ */
+export interface DirectRunResult {
+  task?: string | null;
+  status: string;
+  stop_reason?: string;
+  actions?: DirectActionOutcome[];
+  total_steps?: number;
+  succeeded?: number;
+  screenshot_b64?: string;
+  artifacts?: EngineArtifact[];
+  summary?: string;
+}
+
+/**
+ * Response from POST /v1/computer-use/execute.
+ *
+ * Matches the gateway ExecutionResult envelope exactly (execute contract,
+ * PR #152). Note the differences from the legacy EngineExecutionResult:
+ * there is no `selected_route`/`receipts`/`counters`, `result` is the raw
+ * run-result dict (for mode='direct' a DirectRunResult), and the gateway's
+ * `error` — a plain string or null — is adapted by the client into the
+ * EngineError shape ({@link AllternitComputerUseClient.execute}).
+ */
+export interface ExecuteResponse {
+  run_id: string;
+  session_id: string;
+  status: string;
+  mode: EngineMode;
+  target_scope: TargetScope;
+  summary: string;
+  result?: Record<string, unknown> | null;
+  artifacts?: EngineArtifact[];
+  error?: EngineError | null;
+}
 
 /**
  * Request for POST /v1/sessions

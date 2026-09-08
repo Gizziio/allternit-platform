@@ -226,11 +226,6 @@ describe('Error handling', () => {
       mode: 'intent',
       target_scope: 'browser',
       summary: 'Done',
-      selected_route: {
-        target_scope: 'browser',
-        starting_layer: 'semantic',
-        final_layer: 'semantic',
-      },
     };
 
     mockedFetch.mockResolvedValueOnce(mockResponse(successBody, 200));

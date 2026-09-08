@@ -62,6 +62,26 @@ import type {
 } from './canonical';
 
 /**
+ * Adapt the gateway execute envelope to {@link ExecuteResponse}.
+ *
+ * The gateway (computer_use_router.ExecutionResult) returns `error` as a
+ * plain string or null — not the EngineError `{code, message}` shape the SDK
+ * type uses — so string errors are wrapped here.
+ */
+function normalizeExecuteResponse(body: unknown): ExecuteResponse {
+  if (body && typeof body === 'object') {
+    const record = body as Record<string, unknown>;
+    if (typeof record.error === 'string') {
+      record.error = record.error
+        ? { code: 'gateway_error', message: record.error }
+        : null;
+    }
+    return record as unknown as ExecuteResponse;
+  }
+  return body as ExecuteResponse;
+}
+
+/**
  * Main client for the Allternit Computer Use Engine HTTP API.
  */
 export class AllternitComputerUseClient {
@@ -350,7 +370,7 @@ export class AllternitComputerUseClient {
       await handleApiError(response);
     }
 
-    return response.json() as Promise<ExecuteResponse>;
+    return normalizeExecuteResponse(await response.json());
   }
 
   /**
@@ -516,18 +536,19 @@ export class AllternitComputerUseClient {
 
   /**
    * Get the event history for a run.
-   * 
-   * GET /v1/runs/{run_id}/events
-   * 
+   *
+   * GET /v1/computer-use/runs/{run_id}/events (SSE stream)
+   *
    * @param runId - The run ID
-   * @param afterIndex - Start from a specific event index
+   * @param _afterIndex - Unused; the gateway run-events stream takes no
+   *   cursor and replays nothing — it streams events live from connect time
    * @returns Promise resolving to the event history
    */
   async getRunEvents(
     runId: string,
-    afterIndex: number = 0
+    _afterIndex: number = 0
   ): Promise<RunEventsResponse> {
-    const url = `${this.endpoint}/runs/${encodeURIComponent(runId)}/events?after_index=${afterIndex}`;
+    const url = `${this.endpoint}/computer-use/runs/${encodeURIComponent(runId)}/events`;
 
     const response = await fetch(url, {
       method: 'GET',
@@ -576,9 +597,15 @@ export class AllternitComputerUseClient {
 
   /**
    * Pause an active run.
-   * 
+   *
    * POST /v1/runs/{run_id}/pause
-   * 
+   *
+   * @deprecated The gateway exposes no pause route — runs pause only at
+   * approval gates. Subscribe to the run-events stream instead and react to
+   * `approval.required` / `approval.resolved`
+   * (GET /v1/computer-use/runs/{id}/events, see subscribeToRun):
+   * `approval.required` carries `data.status: 'awaiting_approval'`.
+   *
    * @param runId - The run ID
    * @param request - Optional control request with actor_id and comment
    * @returns Promise resolving to the control response
@@ -605,9 +632,15 @@ export class AllternitComputerUseClient {
 
   /**
    * Resume a paused run.
-   * 
+   *
    * POST /v1/runs/{run_id}/resume
-   * 
+   *
+   * @deprecated The gateway exposes no resume route — a paused run resumes
+   * when its approval gate is resolved via approve()
+   * (POST /v1/computer-use/runs/{id}/approve), which emits
+   * `approval.resolved` on the run-events stream
+   * (GET /v1/computer-use/runs/{id}/events, see subscribeToRun).
+   *
    * @param runId - The run ID
    * @param request - Optional control request with actor_id and comment
    * @returns Promise resolving to the control response
@@ -669,6 +702,13 @@ export class AllternitComputerUseClient {
    * Get the pending approval request for a run, if any.
    *
    * GET /v1/runs/{run_id}/approval
+   *
+   * @deprecated The gateway exposes no approval-poller route — approval
+   * state arrives as machine-readable events on the run-events stream:
+   * `approval.required` (data.status 'awaiting_approval') and
+   * `approval.resolved'. Use subscribeToRun /
+   * EventStream.waitForApproval instead
+   * (GET /v1/computer-use/runs/{id}/events).
    *
    * @param runId - The run ID
    * @returns Promise resolving to the pending approval status
@@ -794,9 +834,13 @@ export class AllternitComputerUseClient {
 
   /**
    * Subscribe to events for a run via SSE.
-   * 
-   * GET /v1/stream/{run_id}
-   * 
+   *
+   * GET /v1/computer-use/runs/{run_id}/events
+   *
+   * The gateway streams every event as a JSON envelope
+   * `{event_type, run_id, message, data}` on the default `message` channel
+   * and terminates the stream with a `run.ended` event.
+   *
    * @param runId - The run ID to subscribe to
    * @param callback - Function called for each event
    * @param options - Subscription options
