@@ -35,9 +35,10 @@ use crate::config::AppConfig;
 
 /// Origins allowed to make cross-origin browser calls when
 /// `ALLTERNIT_CORS_ORIGINS` is not set. Covers the public surfaces, local Vite
-/// (5173) / Next.js (3000) dev servers, this API's own UI (8013), and the
+/// (5173) / Next.js (3000) dev servers, this API's own UI (8013), the
 /// packaged desktop launcher UI (`http://127.0.0.1:3456`, see
-/// `cmd/launcher/src/main.rs`).
+/// `cmd/launcher/src/main.rs`), and the desktop shell dev server (3014,
+/// `devUiUrl` when the Electron app runs the UI from Vite in dev mode).
 pub const DEFAULT_ALLOWED_ORIGINS: &[&str] = &[
     "https://platform.allternit.com",
     "https://ai.allternit.com",
@@ -49,6 +50,8 @@ pub const DEFAULT_ALLOWED_ORIGINS: &[&str] = &[
     "http://127.0.0.1:8013",
     "http://localhost:3456",
     "http://127.0.0.1:3456",
+    "http://localhost:3014",
+    "http://127.0.0.1:3014",
 ];
 
 /// Parse a comma-separated origin list (as stored in `ALLTERNIT_CORS_ORIGINS`)
