@@ -38,3 +38,11 @@ Stage 3: measured conformance — `conformance/measured.py` + mock adapter, run 
 
 ## Next
 Stage 4: `core/monitor.py` pluggable monitor (heuristic: prompt-injection keyword scan + identical-action loop detection), PlanningLoop integration after observe (approval.required kind=monitor_flag), tests, commit, full verify, PR.
+
+## Stage 4 (committed)
+- `core/monitor.py`: Monitor protocol (documented swap-in point for a VLM classifier), MonitorDecision, HeuristicMonitor (prompt-injection keyword scan on extracted text + identical-action loop detection, default threshold 5).
+- `planning_loop.py`: `monitor` kwarg; after each OBSERVE phase the monitor may pause with approval.required (reason monitor_flag:…); deny → StopReason.MONITOR_FLAG / status needs_approval; approve → resume. Monitor exceptions never break the loop. extracted_text helper pulls text from adapter_result.extracted_content.
+- `tests/test_monitor.py` 8 passed (unit + integration incl. deny/approve/failing-monitor/no-monitor paths).
+- Full suite: 193 passed / 21 skipped. Note: one run showed 2 env-dependent desktop flakes (tests/integration/test_full_workflows.py TestDesktopWorkflow) — passes consistently in isolation; matches the brief's known env-dependent desktop fails, pre-existing, not touched.
+
+## Status: all 4 stages done. Next: PR.
