@@ -286,30 +286,16 @@ class ActionRecorder:
 
     @staticmethod
     async def replay(recording_path: Path, adapter: Any, session_id: str) -> Dict:
-        """Replay a recording deterministically through an adapter."""
-        manifest, frames = ActionRecorder.load(recording_path)
-        results = []
-        for frame in frames:
-            try:
-                req = type("ActionRequest", (), {
-                    "action_type": frame.action_type,
-                    "target": frame.action_target,
-                    "parameters": frame.action_params,
-                    "session_id": session_id,
-                    "timeout_ms": 10000,
-                    "retry_count": 0,
-                    "action_id": str(uuid.uuid4()),
-                })()
-                result = await adapter.execute(req)
-                results.append({"step": frame.step, "status": "ok"})
-            except Exception as e:
-                results.append({"step": frame.step, "status": "error", "error": str(e)})
-        return {
-            "recording_id": manifest.recording_id,
-            "task": manifest.task,
-            "replayed_steps": len(frames),
-            "results": results,
-        }
+        """Replay a recording deterministically through an adapter.
+
+        Thin wrapper around ReplayEngine with the deviation check disabled.
+        For deviation-paused replays use ReplayEngine directly.
+        """
+        from core.replay_engine import ReplayEngine
+
+        engine = ReplayEngine(adapter=adapter, session_id=session_id, deviation_threshold=None)
+        result = await engine.replay(Path(recording_path))
+        return result.to_dict()
 
 
 def list_recordings(output_dir: Optional[Path] = None) -> List[Dict]:
@@ -333,3 +319,30 @@ def list_recordings(output_dir: Optional[Path] = None) -> List[Dict]:
         except Exception:
             continue
     return sorted(result, key=lambda x: x.get("started_at", ""), reverse=True)
+
+
+def find_recording_path(recording_id: str, output_dir: Optional[Path] = None) -> Path:
+    """Resolve a recording_id to its JSONL path on disk.
+
+    Raises FileNotFoundError when no recording with that id exists.
+    """
+    recordings_dir = output_dir or DEFAULT_RECORDINGS_DIR
+    path = recordings_dir / f"{recording_id}.jsonl"
+    if not path.is_file():
+        raise FileNotFoundError(f"Recording not found: {recording_id} (looked in {recordings_dir})")
+    return path
+
+
+def load_recording(
+    recording_id: str,
+    output_dir: Optional[Path] = None,
+) -> tuple[RecordingManifest, List[RecordedFrame], Path]:
+    """Load a completed recording from disk by recording_id.
+
+    Returns (manifest, frames, path). Raises FileNotFoundError when the
+    recording does not exist and ValueError when the file is not a valid
+    recording.
+    """
+    path = find_recording_path(recording_id, output_dir)
+    manifest, frames = ActionRecorder.load(path)
+    return manifest, frames, path

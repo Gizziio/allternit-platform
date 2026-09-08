@@ -638,164 +638,6 @@ declare module 'usehooks-ts' {
   ): DebouncedFunction<T>
 }
 
-// @ant/* SDK modules
-declare module '@ant/computer-use-mcp' {
-  export function executeComputerUse(options: unknown): Promise<unknown>
-  export function executeComputerUseRequest(request: unknown): Promise<unknown>
-  export function buildComputerUseTools(config: unknown, coordinateMode?: string): unknown[]
-  export function createComputerUseMcpServer(config: unknown): unknown
-  export function bindSessionContext(context: unknown): unknown
-  export function targetImageSize(physW: number, physH: number, params: unknown): [number, number]
-  export const API_RESIZE_PARAMS: unknown
-  
-  export interface ComputerExecutor {
-    execute(command: unknown): Promise<unknown>
-    capabilities?: unknown
-  }
-  
-  export interface DisplayGeometry {
-    width: number
-    height: number
-  }
-  
-  export interface FrontmostApp {
-    name: string
-    bundleId: string
-    pid: number
-    displayName?: string
-  }
-  
-  export interface InstalledApp {
-    name: string
-    bundleId: string
-    path: string
-  }
-  
-  export interface RunningApp {
-    name: string
-    bundleId: string
-    pid: number
-  }
-  
-  export interface ResolvePrepareCaptureResult {
-    success: boolean
-    path?: string
-    error?: string
-  }
-  
-  export interface ScreenshotResult {
-    success: boolean
-    data?: string
-    path?: string
-    error?: string
-  }
-  
-  export interface ScreenshotDims {
-    width: number
-    height: number
-  }
-  
-  export interface ComputerUseSessionContext {
-    sessionId: string
-    geometry: DisplayGeometry
-  }
-  
-  export interface CuCallToolResult {
-    content: Array<{ type: string; text?: string; source?: unknown }>
-    isError?: boolean
-  }
-  
-  export const API_RESIZE_PARAMS: string[]
-  export const targetImageSize: number
-}
-
-declare module '@ant/computer-use-mcp/types' {
-  export interface ComputerUseOptions {}
-  
-  export interface CuPermissionRequest {
-    toolUseId: string
-    appId: string
-    flags: number
-  }
-  
-  export interface CuPermissionResponse {
-    granted: boolean
-    flags: number
-  }
-  
-  export const DEFAULT_GRANT_FLAGS: number
-  
-  export type CoordinateMode = 'absolute' | 'relative'
-  
-  export interface CuSubGates {
-    screenshot?: boolean
-    input?: boolean
-    navigate?: boolean
-  }
-  
-  export interface ComputerUseHostAdapter {
-    getDisplayGeometry(): Promise<DisplayGeometry>
-    getFrontmostApp(): Promise<FrontmostApp>
-    getInstalledApps(): Promise<InstalledApp[]>
-    getRunningApps(): Promise<RunningApp[]>
-    resolvePrepareCapture(): Promise<ResolvePrepareCaptureResult>
-    takeScreenshot(): Promise<ScreenshotResult>
-  }
-  
-  export interface Logger {
-    debug(message: string): void
-    info(message: string): void
-    warn(message: string): void
-    error(message: string): void
-  }
-  
-  export interface DisplayGeometry {
-    width: number
-    height: number
-  }
-  
-  export interface FrontmostApp {
-    name: string
-    bundleId: string
-    pid: number
-  }
-  
-  export interface InstalledApp {
-    name: string
-    bundleId: string
-    path: string
-  }
-  
-  export interface RunningApp {
-    name: string
-    bundleId: string
-    pid: number
-  }
-  
-  export interface ResolvePrepareCaptureResult {
-    success: boolean
-    path?: string
-    error?: string
-  }
-  
-  export interface ScreenshotResult {
-    success: boolean
-    data?: string
-    path?: string
-    error?: string
-  }
-}
-
-declare module '@ant/computer-use-mcp/sentinelApps' {
-  export interface SentinelApp {
-    id: string
-    name: string
-    bundleId: string
-  }
-  export const SENTINEL_APPS: SentinelApp[]
-  export function getSentinelCategory(bundleId: string): string | undefined
-}
-
 declare module '@ant/claude-for-chrome-mcp' {
   export function launchChrome(): Promise<unknown>
   export function createClaudeForChromeMcpServer(config: unknown): unknown
@@ -1478,12 +1320,15 @@ declare module '@modelcontextprotocol/sdk/server/index.js' {
     connect(transport: Transport): Promise<void>
     close(): Promise<void>
     setRequestHandler<T, R>(method: string, handler: (params: T) => R): void
+    setRequestHandler(method: typeof CallToolRequestSchema, handler: (req: CallToolRequest) => Promise<CallToolResult>): void
+    setRequestHandler(method: typeof ListToolsRequestSchema, handler: (req: ListToolsRequest) => Promise<{ tools: Tool[] }>): void
     setNotificationHandler<T extends Record<string, unknown> = Record<string, unknown>>(method: string, handler: (params: T) => void): void
     notification<T extends Record<string, unknown> = Record<string, unknown>>(method: string, params?: T): Promise<void>
   }
-  
+
   import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js'
-  import type { ServerCapabilities } from '@modelcontextprotocol/sdk/types.js'
+  import type { ServerCapabilities, CallToolRequest, CallToolResult, ListToolsRequest, Tool } from '@modelcontextprotocol/sdk/types.js'
+  import type { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js'
 }
 
 declare module '@modelcontextprotocol/sdk/server/stdio.js' {

@@ -52,6 +52,52 @@ describe('compileBrowserTrajectoryToSkill', () => {
     expect(result.manifest.workflowId).toBe(result.workflow.workflowId);
   });
 
+  it('redacts generic value keys when the action target names a secret field', () => {
+    const trajectory = BrowserTrajectorySchema.parse({
+      schemaVersion: COMPUTER_USE_PROTOCOL_VERSION,
+      trajectoryId: 'traj_login',
+      runId: 'run_login',
+      sessionId: 'session_login',
+      objective: 'Log in',
+      createdAt: '2026-07-10T20:00:00.000Z',
+      provider: 'local-playwright',
+      steps: [
+        {
+          stepId: 'enter_password',
+          status: 'committed',
+          action: {
+            schemaVersion: COMPUTER_USE_PROTOCOL_VERSION,
+            actionId: 'action_password',
+            runId: 'run_login',
+            sessionId: 'session_login',
+            kind: 'type',
+            reason: 'Enter the password',
+            targetDescription: 'input[name="password"]',
+            input: { text: 'hunter2-secret' },
+          },
+        },
+        {
+          stepId: 'enter_note',
+          status: 'committed',
+          action: {
+            schemaVersion: COMPUTER_USE_PROTOCOL_VERSION,
+            actionId: 'action_note',
+            runId: 'run_login',
+            sessionId: 'session_login',
+            kind: 'type',
+            reason: 'Type a regular note',
+            targetDescription: 'textarea[name="note"]',
+            input: { text: 'nothing sensitive here' },
+          },
+        },
+      ],
+    });
+    const result = compileBrowserTrajectoryToSkill(trajectory);
+    expect(result.workflow.steps[0].input.text).toBe('{{password}}');
+    expect(result.workflow.steps[1].input.text).toBe('nothing sensitive here');
+    expect(result.workflow.safety.redactions).toEqual(['input.text']);
+  });
+
   it('refuses to compile trajectories with no committed steps', () => {
     const trajectory = BrowserTrajectorySchema.parse({
       schemaVersion: COMPUTER_USE_PROTOCOL_VERSION,

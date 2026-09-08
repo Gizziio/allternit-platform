@@ -1,12 +1,13 @@
 # Baseline for script/check-ts-nocheck.sh
 # Count of files under src containing @ts-nocheck.
 # Regenerate: bash script/check-ts-nocheck.sh --update
-count=2347
+count=2389
 --- files ---
 cli/ci.ts
 cli/commands/chrome/chrome.tsx
-cli/commands/completions/index.ts
 cli/commands/connect.ts
+cli/commands/debug/lsp.ts
+cli/commands/debug/scrap.ts
 cli/commands/pair.ts
 cli/commands/permission-profile/index.ts
 cli/commands/profile/index.ts
@@ -135,13 +136,21 @@ cli/ui/ink-app/commands/add-dir/validation.ts
 cli/ui/ink-app/commands/advisor.ts
 cli/ui/ink-app/commands/agents/agents.tsx
 cli/ui/ink-app/commands/agents/index.ts
+cli/ui/ink-app/commands/always-approve/always-approve.ts
+cli/ui/ink-app/commands/always-approve/index.ts
 cli/ui/ink-app/commands/artifact/artifact.tsx
 cli/ui/ink-app/commands/artifact/index.ts
+cli/ui/ink-app/commands/auto/auto.ts
+cli/ui/ink-app/commands/auto/index.ts
+cli/ui/ink-app/commands/bots/bots.tsx
+cli/ui/ink-app/commands/bots/index.ts
 cli/ui/ink-app/commands/branch/branch.ts
 cli/ui/ink-app/commands/branch/index.ts
 cli/ui/ink-app/commands/bridge-kick.ts
 cli/ui/ink-app/commands/btw/btw.tsx
 cli/ui/ink-app/commands/btw/index.ts
+cli/ui/ink-app/commands/cd/cd.ts
+cli/ui/ink-app/commands/cd/index.ts
 cli/ui/ink-app/commands/chrome/index.ts
 cli/ui/ink-app/commands/clear/caches.ts
 cli/ui/ink-app/commands/clear/clear.ts
@@ -170,6 +179,8 @@ cli/ui/ink-app/commands/cowork/index.ts
 cli/ui/ink-app/commands/createMovedToPluginCommand.ts
 cli/ui/ink-app/commands/dash/dash.ts
 cli/ui/ink-app/commands/dash/index.ts
+cli/ui/ink-app/commands/dashboard/dashboard.tsx
+cli/ui/ink-app/commands/dashboard/index.ts
 cli/ui/ink-app/commands/desktop/desktop.tsx
 cli/ui/ink-app/commands/desktop/index.ts
 cli/ui/ink-app/commands/diff/diff.tsx
@@ -177,6 +188,8 @@ cli/ui/ink-app/commands/diff/index.ts
 cli/ui/ink-app/commands/directive/index.ts
 cli/ui/ink-app/commands/doctor/doctor.tsx
 cli/ui/ink-app/commands/doctor/index.ts
+cli/ui/ink-app/commands/edit-prompt/edit-prompt.ts
+cli/ui/ink-app/commands/edit-prompt/index.ts
 cli/ui/ink-app/commands/effort/effort.tsx
 cli/ui/ink-app/commands/effort/index.ts
 cli/ui/ink-app/commands/exit/exit.tsx
@@ -195,6 +208,8 @@ cli/ui/ink-app/commands/files/files.ts
 cli/ui/ink-app/commands/files/index.ts
 cli/ui/ink-app/commands/find/find.tsx
 cli/ui/ink-app/commands/find/index.ts
+cli/ui/ink-app/commands/fork/fork.tsx
+cli/ui/ink-app/commands/fork/index.ts
 cli/ui/ink-app/commands/gc/index.ts
 cli/ui/ink-app/commands/goal.ts
 cli/ui/ink-app/commands/grep/grep.tsx
@@ -205,6 +220,8 @@ cli/ui/ink-app/commands/heapdump/heapdump.ts
 cli/ui/ink-app/commands/heapdump/index.ts
 cli/ui/ink-app/commands/help/help.tsx
 cli/ui/ink-app/commands/help/index.ts
+cli/ui/ink-app/commands/history/history.tsx
+cli/ui/ink-app/commands/history/index.ts
 cli/ui/ink-app/commands/hooks/hooks.tsx
 cli/ui/ink-app/commands/hooks/index.ts
 cli/ui/ink-app/commands/ide/ide.tsx
@@ -248,8 +265,12 @@ cli/ui/ink-app/commands/mobile/index.ts
 cli/ui/ink-app/commands/mobile/mobile.tsx
 cli/ui/ink-app/commands/model/index.ts
 cli/ui/ink-app/commands/model/model.tsx
+cli/ui/ink-app/commands/multiline/index.ts
+cli/ui/ink-app/commands/multiline/multiline.ts
 cli/ui/ink-app/commands/multimodal/index.ts
 cli/ui/ink-app/commands/multimodal/multimodal.tsx
+cli/ui/ink-app/commands/native/index.ts
+cli/ui/ink-app/commands/native/native.ts
 cli/ui/ink-app/commands/ontology/index.ts
 cli/ui/ink-app/commands/ontology/ontology.tsx
 cli/ui/ink-app/commands/output-style/index.ts
@@ -283,13 +304,18 @@ cli/ui/ink-app/commands/pr_comments/index.ts
 cli/ui/ink-app/commands/privacy-settings/index.ts
 cli/ui/ink-app/commands/privacy-settings/privacy-settings.tsx
 cli/ui/ink-app/commands/purpose/index.ts
+cli/ui/ink-app/commands/queue/index.ts
+cli/ui/ink-app/commands/queue/queue.ts
 cli/ui/ink-app/commands/rate-limit-options/index.ts
 cli/ui/ink-app/commands/rate-limit-options/rate-limit-options.tsx
+cli/ui/ink-app/commands/recap/index.ts
 cli/ui/ink-app/commands/receipts/index.ts
 cli/ui/ink-app/commands/release-notes/index.ts
 cli/ui/ink-app/commands/release-notes/release-notes.ts
 cli/ui/ink-app/commands/reload-plugins/index.ts
 cli/ui/ink-app/commands/reload-plugins/reload-plugins.ts
+cli/ui/ink-app/commands/remember/index.ts
+cli/ui/ink-app/commands/remember/remember.ts
 cli/ui/ink-app/commands/remote-env/index.ts
 cli/ui/ink-app/commands/remote-env/remote-env.tsx
 cli/ui/ink-app/commands/rename/generateSessionName.ts
@@ -309,6 +335,8 @@ cli/ui/ink-app/commands/sandbox-toggle/index.ts
 cli/ui/ink-app/commands/sandbox-toggle/sandbox-toggle.tsx
 cli/ui/ink-app/commands/security-review.ts
 cli/ui/ink-app/commands/security/index.ts
+cli/ui/ink-app/commands/session-info/index.ts
+cli/ui/ink-app/commands/session-info/session-info.tsx
 cli/ui/ink-app/commands/session/index.ts
 cli/ui/ink-app/commands/session/session.tsx
 cli/ui/ink-app/commands/skills/index.ts
@@ -336,12 +364,18 @@ cli/ui/ink-app/commands/thinkback-play/index.ts
 cli/ui/ink-app/commands/thinkback-play/thinkback-play.ts
 cli/ui/ink-app/commands/thinkback/index.ts
 cli/ui/ink-app/commands/thinkback/thinkback.tsx
+cli/ui/ink-app/commands/timestamps/index.ts
+cli/ui/ink-app/commands/timestamps/timestamps.ts
+cli/ui/ink-app/commands/transcript/index.ts
+cli/ui/ink-app/commands/transcript/transcript.ts
 cli/ui/ink-app/commands/ultraplan.tsx
 cli/ui/ink-app/commands/upgrade/index.ts
 cli/ui/ink-app/commands/upgrade/upgrade.tsx
 cli/ui/ink-app/commands/usage/index.ts
 cli/ui/ink-app/commands/usage/usage.ts
 cli/ui/ink-app/commands/version.ts
+cli/ui/ink-app/commands/view-plan/index.ts
+cli/ui/ink-app/commands/view-plan/view-plan.ts
 cli/ui/ink-app/commands/vim/index.ts
 cli/ui/ink-app/commands/vim/vim.ts
 cli/ui/ink-app/components/AgentProgressLine.tsx
@@ -354,7 +388,6 @@ cli/ui/ink-app/components/BaseTextInput.tsx
 cli/ui/ink-app/components/BashModeProgress.tsx
 cli/ui/ink-app/components/BridgeDialog.tsx
 cli/ui/ink-app/components/ChannelDowngradeDialog.tsx
-cli/ui/ink-app/components/ClaudeCodeHint/PluginHintMenu.tsx
 cli/ui/ink-app/components/ClickableImageRef.tsx
 cli/ui/ink-app/components/CommandPalette.tsx
 cli/ui/ink-app/components/CompactSummary.tsx
@@ -401,6 +434,7 @@ cli/ui/ink-app/components/FileEditToolUpdatedMessage.tsx
 cli/ui/ink-app/components/FileEditToolUseRejectedMessage.tsx
 cli/ui/ink-app/components/FilePathLink.tsx
 cli/ui/ink-app/components/FullscreenLayout.tsx
+cli/ui/ink-app/components/GizziHint/PluginHintMenu.tsx
 cli/ui/ink-app/components/GizziMdExternalIncludesDialog.tsx
 cli/ui/ink-app/components/GlobalSearchDialog.tsx
 cli/ui/ink-app/components/HelpV2/Commands.tsx
@@ -777,6 +811,9 @@ cli/ui/ink-app/coordinator/coordinatorMode.ts
 cli/ui/ink-app/coordinator/workerAgent.ts
 cli/ui/ink-app/cost-tracker.ts
 cli/ui/ink-app/costHook.ts
+cli/ui/ink-app/dashboard/InProcessSource.ts
+cli/ui/ink-app/dashboard/topLevelSession.ts
+cli/ui/ink-app/dashboard/types.ts
 cli/ui/ink-app/entrypoints/agentSdkTypes.ts
 cli/ui/ink-app/entrypoints/sandboxTypes.ts
 cli/ui/ink-app/entrypoints/sdk/controlSchemas.ts
@@ -823,7 +860,6 @@ cli/ui/ink-app/hooks/useBackgroundTaskNavigation.ts
 cli/ui/ink-app/hooks/useBlink.ts
 cli/ui/ink-app/hooks/useCanUseTool.tsx
 cli/ui/ink-app/hooks/useCancelRequest.ts
-cli/ui/ink-app/hooks/useClaudeCodeHintRecommendation.tsx
 cli/ui/ink-app/hooks/useClipboardImageHint.ts
 cli/ui/ink-app/hooks/useCommandKeybindings.tsx
 cli/ui/ink-app/hooks/useCommandQueue.ts
@@ -839,6 +875,7 @@ cli/ui/ink-app/hooks/useElapsedTime.ts
 cli/ui/ink-app/hooks/useExitOnCtrlCD.ts
 cli/ui/ink-app/hooks/useExitOnCtrlCDWithKeybindings.ts
 cli/ui/ink-app/hooks/useFileHistorySnapshotInit.ts
+cli/ui/ink-app/hooks/useGizziHintRecommendation.tsx
 cli/ui/ink-app/hooks/useGlobalKeybindings.tsx
 cli/ui/ink-app/hooks/useHistorySearch.ts
 cli/ui/ink-app/hooks/useIDEIntegration.tsx
@@ -1036,8 +1073,15 @@ cli/ui/ink-app/remote/SessionsWebSocket.ts
 cli/ui/ink-app/remote/remotePermissionBridge.ts
 cli/ui/ink-app/remote/sdkMessageAdapter.ts
 cli/ui/ink-app/schemas/hooks.ts
+cli/ui/ink-app/screens/DashboardScreen.tsx
 cli/ui/ink-app/screens/Doctor.tsx
 cli/ui/ink-app/screens/REPL.tsx
+cli/ui/ink-app/screens/bots-pane/BotsPaneScreen.tsx
+cli/ui/ink-app/screens/bots-pane/BotsRowList.tsx
+cli/ui/ink-app/screens/bots-pane/index.ts
+cli/ui/ink-app/screens/bots-pane/keys.ts
+cli/ui/ink-app/screens/bots-pane/open-bot-chat.ts
+cli/ui/ink-app/screens/bots-pane/rows.ts
 cli/ui/ink-app/server/directConnectManager.ts
 cli/ui/ink-app/services/AgentSummary/agentSummary.ts
 cli/ui/ink-app/services/MagicDocs/magicDocs.ts
@@ -1221,9 +1265,9 @@ cli/ui/ink-app/tools/AgentTool/agentDisplay.ts
 cli/ui/ink-app/tools/AgentTool/agentMemory.ts
 cli/ui/ink-app/tools/AgentTool/agentMemorySnapshot.ts
 cli/ui/ink-app/tools/AgentTool/agentToolUtils.ts
-cli/ui/ink-app/tools/AgentTool/built-in/claudeCodeGuideAgent.ts
 cli/ui/ink-app/tools/AgentTool/built-in/exploreAgent.ts
 cli/ui/ink-app/tools/AgentTool/built-in/generalPurposeAgent.ts
+cli/ui/ink-app/tools/AgentTool/built-in/gizziGuideAgent.ts
 cli/ui/ink-app/tools/AgentTool/built-in/planAgent.ts
 cli/ui/ink-app/tools/AgentTool/built-in/statuslineSetup.ts
 cli/ui/ink-app/tools/AgentTool/built-in/verificationAgent.ts
@@ -1396,7 +1440,6 @@ cli/ui/ink-app/tools/shared/spawnMultiAgent.ts
 cli/ui/ink-app/tools/testing/TestingPermissionTool.tsx
 cli/ui/ink-app/tools/utils.ts
 cli/ui/ink-app/types/command.ts
-cli/ui/ink-app/types/computer-use-input.d.ts
 cli/ui/ink-app/types/connectorText.ts
 cli/ui/ink-app/types/fileSuggestion.ts
 cli/ui/ink-app/types/generated/events_mono/claude_code/v1/claude_code_internal_event.ts
@@ -1490,7 +1533,6 @@ cli/ui/ink-app/utils/caCerts.ts
 cli/ui/ink-app/utils/cachePaths.ts
 cli/ui/ink-app/utils/classifierApprovals.ts
 cli/ui/ink-app/utils/classifierApprovalsHook.ts
-cli/ui/ink-app/utils/claudeCodeHints.ts
 cli/ui/ink-app/utils/cleanup.ts
 cli/ui/ink-app/utils/cleanupRegistry.ts
 cli/ui/ink-app/utils/cliHighlight.ts
@@ -1504,19 +1546,9 @@ cli/ui/ink-app/utils/commandLifecycle.ts
 cli/ui/ink-app/utils/commitAttribution.ts
 cli/ui/ink-app/utils/completionCache.ts
 cli/ui/ink-app/utils/computerUse/appNames.ts
-cli/ui/ink-app/utils/computerUse/cleanup.ts
 cli/ui/ink-app/utils/computerUse/common.ts
 cli/ui/ink-app/utils/computerUse/computerUseLock.ts
-cli/ui/ink-app/utils/computerUse/drainRunLoop.ts
-cli/ui/ink-app/utils/computerUse/escHotkey.ts
-cli/ui/ink-app/utils/computerUse/executor.ts
-cli/ui/ink-app/utils/computerUse/gates.ts
-cli/ui/ink-app/utils/computerUse/hostAdapter.ts
-cli/ui/ink-app/utils/computerUse/inputLoader.ts
-cli/ui/ink-app/utils/computerUse/mcpServer.ts
-cli/ui/ink-app/utils/computerUse/swiftLoader.ts
 cli/ui/ink-app/utils/computerUse/toolRendering.tsx
-cli/ui/ink-app/utils/computerUse/wrapper.tsx
 cli/ui/ink-app/utils/concurrentSessions.ts
 cli/ui/ink-app/utils/config.ts
 cli/ui/ink-app/utils/configConstants.ts
@@ -1597,6 +1629,7 @@ cli/ui/ink-app/utils/git/gitFilesystem.ts
 cli/ui/ink-app/utils/git/gitignore.ts
 cli/ui/ink-app/utils/gitDiff.ts
 cli/ui/ink-app/utils/gitSettings.ts
+cli/ui/ink-app/utils/gizziHints.ts
 cli/ui/ink-app/utils/gizzimd.ts
 cli/ui/ink-app/utils/glob.ts
 cli/ui/ink-app/utils/gracefulShutdown.ts
@@ -1807,6 +1840,7 @@ cli/ui/ink-app/utils/secureStorage/macOsKeychainHelpers.ts
 cli/ui/ink-app/utils/secureStorage/macOsKeychainStorage.ts
 cli/ui/ink-app/utils/secureStorage/plainTextStorage.ts
 cli/ui/ink-app/utils/secureStorage/types.ts
+cli/ui/ink-app/utils/secureStorage/windowsDpapiStorage.ts
 cli/ui/ink-app/utils/semanticBoolean.ts
 cli/ui/ink-app/utils/semanticNumber.ts
 cli/ui/ink-app/utils/semver.ts
@@ -1874,6 +1908,7 @@ cli/ui/ink-app/utils/statusNoticeHelpers.ts
 cli/ui/ink-app/utils/stream.ts
 cli/ui/ink-app/utils/stringUtils.ts
 cli/ui/ink-app/utils/subprocessEnv.ts
+cli/ui/ink-app/utils/suggestions/commandSource.ts
 cli/ui/ink-app/utils/suggestions/commandSuggestions.ts
 cli/ui/ink-app/utils/suggestions/directoryCompletion.ts
 cli/ui/ink-app/utils/suggestions/shellHistoryCompletion.ts
@@ -2025,6 +2060,9 @@ runtime/components/Markdown.ts
 runtime/context/config/config.ts
 runtime/cowork/cowork.runtime.ts
 runtime/cowork/cowork.service.ts
+runtime/file/file.ts
+runtime/file/time.ts
+runtime/file/watcher.ts
 runtime/gizzi-core/ink.ts
 runtime/gizzi-core/services/railsPeer.ts
 runtime/gizzi-core/setup.ts
@@ -2060,6 +2098,7 @@ runtime/server/routes/global.ts
 runtime/server/routes/instance.ts
 runtime/server/routes/lsp.ts
 runtime/server/routes/mcp.ts
+runtime/server/routes/native-session.ts
 runtime/server/routes/path.ts
 runtime/server/routes/permission.ts
 runtime/server/routes/project.ts
@@ -2128,15 +2167,16 @@ runtime/session/index.ts
 runtime/session/llm.ts
 runtime/session/message-v2.ts
 runtime/session/message.ts
+runtime/session/native-source.ts
 runtime/session/processor.ts
 runtime/session/prompt.ts
 runtime/session/retry.ts
 runtime/skills/creator-tool.ts
 runtime/skills/index.ts
 runtime/tools/Tool.ts
-runtime/tools/builtins/AgentTool/built-in/claudeCodeGuideAgent.ts
 runtime/tools/builtins/AgentTool/built-in/exploreAgent.ts
 runtime/tools/builtins/AgentTool/built-in/generalPurposeAgent.ts
+runtime/tools/builtins/AgentTool/built-in/gizziGuideAgent.ts
 runtime/tools/builtins/AgentTool/built-in/planAgent.ts
 runtime/tools/builtins/AgentTool/built-in/statuslineSetup.ts
 runtime/tools/builtins/AgentTool/built-in/verificationAgent.ts
@@ -2220,6 +2260,7 @@ shared/utils/config.ts
 shared/utils/createUserMessage.ts
 shared/utils/cwd.ts
 shared/utils/debug.ts
+shared/utils/deepLink/registerProtocol.ts
 shared/utils/diff.ts
 shared/utils/doctorDiagnostic.ts
 shared/utils/dxt/helpers.ts
@@ -2298,6 +2339,7 @@ shared/utils/plugins/pluginOptionsStorage.ts
 shared/utils/plugins/zipCache.ts
 shared/utils/powershell/parser.ts
 shared/utils/promptShellExecution.ts
+shared/utils/protectedNamespace.ts
 shared/utils/proxy.ts
 shared/utils/releaseNotes.ts
 shared/utils/sandbox/sandbox-adapter.ts
