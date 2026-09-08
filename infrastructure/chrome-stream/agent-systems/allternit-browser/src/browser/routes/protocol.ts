@@ -8,6 +8,7 @@ import type { createBrowserRouteContext } from '../server-context.js';
 import { BrowserRunController } from '../../protocol/run-controller.js';
 import { LocalPlaywrightProvider } from '../../protocol/local-provider.js';
 import { compileBrowserTrajectoryToSkill } from '../../protocol/skill-factory.js';
+import { loadAcuRecordingToTrajectory } from '../../protocol/recording-to-trajectory.js';
 
 const StartRunBodySchema = z.object({
   accountId: z.string().min(1).default('local'),
@@ -35,6 +36,13 @@ const CompileSkillBodySchema = z.object({
   title: z.string().min(1).optional(),
   description: z.string().min(1).optional(),
   tags: z.array(z.string().min(1)).optional(),
+});
+
+const CompileFromRecordingBodySchema = CompileSkillBodySchema.extend({
+  recordingId: z.string().min(1).optional(),
+  path: z.string().min(1).optional(),
+}).refine((body) => body.recordingId || body.path, {
+  message: 'Provide either recordingId or path',
 });
 
 const localProvider = new LocalPlaywrightProvider();
@@ -133,6 +141,27 @@ export function registerBrowserProtocolRoutes(
       const body = CompileSkillBodySchema.parse(req.body ?? {});
       const trajectory = controller.toTrajectory(req.params.runId);
       res.json(compileBrowserTrajectoryToSkill(trajectory, body));
+    });
+  });
+
+  app.post('/v1/browser-skills/from-recording', async (req: Request, res: Response) => {
+    await route(res, async () => {
+      const body = CompileFromRecordingBodySchema.parse(req.body ?? {});
+      const trajectory = await loadAcuRecordingToTrajectory(body.recordingId ?? body.path!);
+      const { title, description, tags } = body;
+      const pkg = compileBrowserTrajectoryToSkill(trajectory, { title, description, tags });
+      res.json({
+        ...pkg,
+        // Metadata only — the raw trajectory is intentionally omitted because
+        // it contains the unredacted recording.
+        trajectory: {
+          trajectoryId: trajectory.trajectoryId,
+          runId: trajectory.runId,
+          provider: trajectory.provider,
+          objective: trajectory.objective,
+          committedSteps: trajectory.steps.filter((step) => step.status === 'committed').length,
+        },
+      });
     });
   });
 }

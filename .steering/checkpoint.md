@@ -1,17 +1,18 @@
-# Steering checkpoint
+# Checkpoint
 
 ## Goal
-Research report + engineering spec: reorienting gizzi-code for Python-heavy frontier models (GPT-6 Astra, Claude Fable 5.1). Deliverables only (docs/spec), no implementation in this session.
+cu3-skill: Recording-to-skill compiler path. Producer converting ACU JSONL recordings to BrowserTrajectory, compile through compileBrowserTrajectoryToSkill into skill package, expose via HTTP route, tests with redaction asserted, typecheck verified. Touch only infrastructure/chrome-stream/**.
 
 ## Just did
-- Deep research: model behavior (Fable's documented Python proactivity incl. Willison, RuBench silent Opus fallback, Anthropic code-exec doc; Astra's early-stopping/question-asking profile, 272K pricing cliff, API monitor kills; harness-sensitivity evidence from Endor Labs / Artificial Analysis).
-- Architecture audit of cmd/gizzi-code: sandbox is stubbed (`src/vendor/anthropic-stubs/sandbox-runtime.ts` → all bash runs unsandboxed), no python_exec tool, headless gateway permission resolution undefined, SDK code_execution tool insecure (shell interpolation, inline pip, overclaims isolation), no served-model logging.
-- Wrote `spec/python-heavy-agents/REPORT.md` + `SPEC.md` on session branch `session/pyagents-spec`.
+- Scoped: actual files are src/protocol/skill-factory.ts and src/browser/routes/protocol.ts (brief's paths were approximate).
+- Read ACU recording format (domains/computer-use/core/core/action_recorder.py, read-only): line 0 = manifest `_type:"manifest"` (recording_id, task, session_id, run_id, vision_provider, adapter_id, started_at...), lines 1+ = frames (step, timestamp, action_type, action_target, action_params, reasoning, reflection, action_succeeded, ...).
+- Read protocol schemas: ActionKind enum, BrowserTrajectory, ActionIntent (needs Z-suffixed ISO datetime — Python emits +00:00, must normalize).
+- Tooling: package @allternit/browser, `pnpm --filter @allternit/browser typecheck` / `test` (vitest).
+- Implemented: src/protocol/recording-to-trajectory.ts (JSONL → BrowserTrajectory, action-kind map, provider inference, timestamp normalization, path containment), POST /v1/browser-skills/from-recording route in src/browser/routes/protocol.ts, exports in src/index.ts, tests in src/protocol/recording-to-trajectory.test.ts (fixture → trajectory → skill package, redaction + failed-step exclusion asserted).
+- pnpm install running in worktree (fresh checkout, no node_modules).
 
 ## Next
-- Commit, push, open PR for review. Implementation phases P0–P2 are specced but NOT started.
+- Commit, push, open PR (do not merge). Work is verified: typecheck clean, 49/49 active tests pass (8 pre-existing skips), route smoke-tested live with redaction + path-escape rejection asserted.
 
 ## Open questions
-- P0.1: restore real `@anthropic-ai/sandbox-runtime` dep vs delete the dead sandbox path? (spec prefers restore; un-stubbing may also fix the F-grade computer-use subtree per Products/ComputerUse.md)
-- Is Astra actually Python-heavy? No primary source yet — needs first-party eval on our task corpus (spec'd in Risks).
-- Brain-side: A://Fe should move Fable 5 → Fable 5.1 (cache read pricing 75% cut) — separate change in Allternit Brain.
+- None blocking. Notes for reviewers: brief's file paths were approximate (actual: src/protocol/skill-factory.ts, src/browser/routes/protocol.ts). Added target-aware redaction to skill-factory.ts (compiler) because ACU recordings carry the secret signal in action_target, not in param keys. Route response omits the raw trajectory (it is unredacted). Unknown ACU action_types map to 'extract' with the original type in input.__acuActionType. pnpm-lock.yaml churn from local install was reverted — not part of the change.
