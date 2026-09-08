@@ -37,11 +37,16 @@ use crate::config::AppConfig;
 /// `ALLTERNIT_CORS_ORIGINS` is not set. Covers the public surfaces, local Vite
 /// (5173) / Next.js (3000) dev servers, this API's own UI (8013), the
 /// packaged desktop launcher UI (`http://127.0.0.1:3456`, see
-/// `cmd/launcher/src/main.rs`), and the desktop shell dev server (3014,
-/// `devUiUrl` when the Electron app runs the UI from Vite in dev mode).
+/// `cmd/launcher/src/main.rs`), the desktop shell dev server (3014,
+/// `devUiUrl` when the Electron app runs the UI from Vite in dev mode), and
+/// the hosted Microsoft Office add-in task panes (Word/Excel/PowerPoint),
+/// which deploy to Cloudflare Pages at `allternit-office-addins.pages.dev`
+/// and will move to the `office-addins.allternit.com` custom domain.
 pub const DEFAULT_ALLOWED_ORIGINS: &[&str] = &[
     "https://platform.allternit.com",
     "https://ai.allternit.com",
+    "https://allternit-office-addins.pages.dev",
+    "https://office-addins.allternit.com",
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "http://localhost:3000",
@@ -199,6 +204,18 @@ mod tests {
     fn parse_defaults_when_unset() {
         let origins = parse_allowed_origins(None);
         assert_eq!(origins.len(), DEFAULT_ALLOWED_ORIGINS.len());
+    }
+
+    #[test]
+    fn default_allowlist_includes_office_addin_origins() {
+        let origins = parse_allowed_origins(None);
+        let values: Vec<&str> = origins.iter().map(|v| v.to_str().unwrap()).collect();
+        for required in [
+            "https://allternit-office-addins.pages.dev",
+            "https://office-addins.allternit.com",
+        ] {
+            assert!(values.contains(&required), "missing {required}");
+        }
     }
 
     #[test]
