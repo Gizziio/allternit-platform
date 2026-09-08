@@ -142,6 +142,28 @@ export namespace LLM {
         ProviderTransform.providerOptions(input.model, { provider: providerRouting }),
       )
     }
+    // BYO provider credentials from API bridges (Allternit LLM gateway): a
+    // caller-supplied apiKey/baseURL rides the same per-turn metadata vehicle
+    // as provider routing and overrides the provider's configured credentials
+    // for this request only. SDK config options (not request body), so they
+    // merge directly into `options`.
+    const providerCredentials = input.user.metadata?.provider_routing_credentials
+    if (
+      providerCredentials !== null &&
+      typeof providerCredentials === "object" &&
+      input.model.api.npm === "@ai-sdk/openai-compatible"
+    ) {
+      const override: Record<string, any> = {}
+      if (typeof providerCredentials["apiKey"] === "string") {
+        override["apiKey"] = providerCredentials["apiKey"]
+      }
+      if (typeof providerCredentials["baseURL"] === "string") {
+        override["baseURL"] = providerCredentials["baseURL"]
+      }
+      if (Object.keys(override).length > 0) {
+        options = mergeDeep(options, override)
+      }
+    }
 
     const params = await Plugin.trigger(
       "chat.params",
