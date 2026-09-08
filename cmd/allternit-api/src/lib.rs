@@ -2,6 +2,7 @@
 //!
 //! Shared state and route handlers for the Allternit API.
 
+pub mod aci_approvals;
 pub mod aci_routes;
 pub mod aci_safety;
 pub mod admin_audit_routes;

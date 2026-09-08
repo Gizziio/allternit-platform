@@ -393,15 +393,32 @@ fn require_computer_id(args: &Value) -> Result<String, String> {
         .ok_or_else(|| "Missing 'computer_id' argument".to_string())
 }
 
+/// Optional action-hash grant presented by the caller for risky/irreversible
+/// computer actions (see `aci_approvals`). Enforcement is server-side: a
+/// grant minted elsewhere, already consumed, expired, or bound to a different
+/// action hash is denied by the gateway, not the client.
+fn request_approval_id(args: &Value) -> Option<String> {
+    args.get("approval_id")
+        .or_else(|| args.get("approvalId"))
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string())
+}
+
 async fn computer_screenshot_tool(
     state: &AppState,
     user_id: &str,
     args: &Value,
 ) -> Result<Value, String> {
     let computer_id = require_computer_id(args)?;
-    execute_computer_tool(&state, user_id, &computer_id, ComputerControlAction::Screenshot)
-        .await
-        .map_err(|(_, msg)| msg)
+    execute_computer_tool(
+        &state,
+        user_id,
+        &computer_id,
+        ComputerControlAction::Screenshot,
+        None,
+    )
+    .await
+    .map_err(|(status, body)| format!("computer_screenshot failed ({}): {}", status, body))
 }
 
 async fn computer_mouse_tool(
@@ -410,11 +427,18 @@ async fn computer_mouse_tool(
     args: &Value,
 ) -> Result<Value, String> {
     let computer_id = require_computer_id(args)?;
+    let approval_id = request_approval_id(args);
     let input: MouseInput = serde_json::from_value(args.clone())
         .map_err(|e| format!("invalid mouse input: {}", e))?;
-    execute_computer_tool(&state, user_id, &computer_id, ComputerControlAction::Mouse(input))
-        .await
-        .map_err(|(_, msg)| msg)
+    execute_computer_tool(
+        &state,
+        user_id,
+        &computer_id,
+        ComputerControlAction::Mouse(input),
+        approval_id.as_deref(),
+    )
+    .await
+    .map_err(|(status, body)| format!("computer_mouse failed ({}): {}", status, body))
 }
 
 async fn computer_keyboard_tool(
@@ -423,6 +447,7 @@ async fn computer_keyboard_tool(
     args: &Value,
 ) -> Result<Value, String> {
     let computer_id = require_computer_id(args)?;
+    let approval_id = request_approval_id(args);
     let input: KeyboardInput = serde_json::from_value(args.clone())
         .map_err(|e| format!("invalid keyboard input: {}", e))?;
     execute_computer_tool(
@@ -430,9 +455,10 @@ async fn computer_keyboard_tool(
         user_id,
         &computer_id,
         ComputerControlAction::Keyboard(input),
+        approval_id.as_deref(),
     )
     .await
-    .map_err(|(_, msg)| msg)
+    .map_err(|(status, body)| format!("computer_keyboard failed ({}): {}", status, body))
 }
 
 async fn computer_shell_tool(
@@ -441,11 +467,18 @@ async fn computer_shell_tool(
     args: &Value,
 ) -> Result<Value, String> {
     let computer_id = require_computer_id(args)?;
+    let approval_id = request_approval_id(args);
     let input: ShellInput = serde_json::from_value(args.clone())
         .map_err(|e| format!("invalid shell input: {}", e))?;
-    execute_computer_tool(&state, user_id, &computer_id, ComputerControlAction::Shell(input))
-        .await
-        .map_err(|(_, msg)| msg)
+    execute_computer_tool(
+        &state,
+        user_id,
+        &computer_id,
+        ComputerControlAction::Shell(input),
+        approval_id.as_deref(),
+    )
+    .await
+    .map_err(|(status, body)| format!("computer_shell failed ({}): {}", status, body))
 }
 
 async fn computer_file_read_tool(
@@ -465,9 +498,10 @@ async fn computer_file_read_tool(
         ComputerControlAction::FileRead {
             path: path.to_string(),
         },
+        None,
     )
     .await
-    .map_err(|(_, msg)| msg)
+    .map_err(|(status, body)| format!("computer_file_read failed ({}): {}", status, body))
 }
 
 async fn computer_file_write_tool(
@@ -476,6 +510,7 @@ async fn computer_file_write_tool(
     args: &Value,
 ) -> Result<Value, String> {
     let computer_id = require_computer_id(args)?;
+    let approval_id = request_approval_id(args);
     let path = args
         .get("path")
         .and_then(|v| v.as_str())
@@ -492,9 +527,10 @@ async fn computer_file_write_tool(
             path: path.to_string(),
             content_base64: content_base64.to_string(),
         },
+        approval_id.as_deref(),
     )
     .await
-    .map_err(|(_, msg)| msg)
+    .map_err(|(status, body)| format!("computer_file_write failed ({}): {}", status, body))
 }
 
 // ── Shell ───────────────────────────────────────────────────────────────────

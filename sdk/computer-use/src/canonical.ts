@@ -208,10 +208,17 @@ export interface ComputerTransactionOutcome {
 }
 
 export interface ComputerApprovalGrant {
+  /** Grant id; present this back as `approval_id` / `approvalId` when
+   * retrying the action after a human approves the handoff. */
   approval_id: string;
+  /** SHA-256 (hex) of the canonical action payload the grant is bound to.
+   * Computed and enforced server-side; the client never mints or validates
+   * grants itself. */
   action_hash: string;
   approved_by: string;
   issued_at: number;
+  /** Epoch millis; grants are single-use and expire, after which redemption
+   * is denied with `approval_denied`. */
   expires_at: number;
 }
 

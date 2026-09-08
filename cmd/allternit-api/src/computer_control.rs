@@ -34,52 +34,126 @@ pub(crate) enum ComputerControlAction {
     FileWrite { path: String, content_base64: String },
 }
 
+/// Canonical action descriptor for grant binding. Must be built
+/// deterministically from the request payload only — no ephemeral ids, no
+/// per-call randomness — so the same action always hashes identically.
+pub(crate) fn control_action_descriptor(action: &ComputerControlAction) -> Value {
+    match action {
+        ComputerControlAction::Screenshot => json!({ "route": "computer.screenshot" }),
+        ComputerControlAction::Mouse(input) => json!({
+            "route": "computer.mouse",
+            "action": input.action,
+            "x": input.x,
+            "y": input.y,
+            "button": input.button,
+        }),
+        ComputerControlAction::Keyboard(input) => json!({
+            "route": "computer.keyboard",
+            "action": input.action,
+            "text": input.text,
+            "key": input.key,
+        }),
+        ComputerControlAction::Shell(input) => json!({
+            "route": "computer.shell",
+            "command": input.command,
+        }),
+        ComputerControlAction::FileRead { path } => json!({
+            "route": "computer.file_read",
+            "path": path,
+        }),
+        ComputerControlAction::FileWrite { path, .. } => json!({
+            "route": "computer.file_write",
+            "path": path,
+        }),
+    }
+}
+
+/// Confirmation taxonomy class for a control action (see `aci_safety`).
+pub(crate) fn classify_control_action(action: &ComputerControlAction) -> crate::aci_safety::ConfirmationClass {
+    use crate::aci_safety::ConfirmationClass;
+    match action {
+        ComputerControlAction::Screenshot => ConfirmationClass::Reversible,
+        ComputerControlAction::Mouse(input) => {
+            crate::aci_safety::classify_mouse_action(&input.action)
+        }
+        ComputerControlAction::Keyboard(input) => crate::aci_safety::classify_keyboard_action(
+            &input.action,
+            input.text.as_deref(),
+            input.key.as_deref(),
+        ),
+        ComputerControlAction::Shell(input) => {
+            crate::aci_safety::classify_shell_command(&input.command)
+        }
+        ComputerControlAction::FileRead { .. } => ConfirmationClass::Reversible,
+        ComputerControlAction::FileWrite { path, .. } => {
+            crate::aci_safety::classify_file_write(path)
+        }
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Shared implementation.
 // ---------------------------------------------------------------------------
 
 /// Execute a control action against a single computer.  This is the shared
 /// implementation behind the REST control routes and the `computer_*` tools.
+///
+/// `approval_id` carries an action-hash grant (see `aci_approvals`) for
+/// risky/irreversible actions; without a valid grant those actions are denied
+/// with a `confirmation_required` payload before anything touches the guest.
 pub(crate) async fn execute_computer_tool(
     state: &AppState,
     user_id: &str,
     computer_id: &str,
     action: ComputerControlAction,
-) -> Result<Value, (StatusCode, String)> {
+    approval_id: Option<&str>,
+) -> Result<Value, (StatusCode, Value)> {
+    let class = classify_control_action(&action);
+    if let Err(denial) = crate::aci_safety::enforce_confirmation(
+        &state.approval_store,
+        user_id,
+        "computer.control",
+        class,
+        &control_action_descriptor(&action),
+        approval_id,
+    ) {
+        return Err((denial.status, denial.body));
+    }
+
     let computer = match fetch_computer_for_control(state, user_id, computer_id).await {
         Ok(Some(c)) => c,
-        Ok(None) => return Err((StatusCode::NOT_FOUND, "computer not found".to_string())),
+        Ok(None) => return Err((StatusCode::NOT_FOUND, json!({"error": "computer not found"}))),
         Err(resp) => {
-            return Err((resp.status(), "failed to load computer".to_string()));
+            return Err((resp.status(), json!({"error": "failed to load computer"})));
         }
     };
 
     if computer.kind != ComputerKind::CloudDesktop {
         return Err((
             StatusCode::NOT_IMPLEMENTED,
-            "control actions are only supported for cloud_desktop computers".to_string(),
+            json!({"error": "control actions are only supported for cloud_desktop computers"}),
         ));
     }
 
     let bot_id = computer.bot_id.as_ref().ok_or_else(|| {
         (
             StatusCode::BAD_REQUEST,
-            "cloud_desktop computer has no bot_id".to_string(),
+            json!({"error": "cloud_desktop computer has no bot_id"}),
         )
     })?;
 
     if !crate::bot_desktop_routes::verify_bot_ownership(state, user_id, bot_id).await {
-        return Err((StatusCode::FORBIDDEN, "bot not found or access denied".to_string()));
+        return Err((StatusCode::FORBIDDEN, json!({"error": "bot not found or access denied"})));
     }
 
     let record = match crate::bot_desktop_routes::read_bot_sandbox(&state.db, bot_id) {
         Ok(Some(r)) => r,
         Ok(None) => {
-            return Err((StatusCode::NOT_FOUND, "no desktop sandbox found for this bot".to_string()));
+            return Err((StatusCode::NOT_FOUND, json!({"error": "no desktop sandbox found for this bot"})));
         }
         Err(e) => {
             warn!(bot_id, error = %e, "failed to read bot desktop sandbox");
-            return Err((StatusCode::INTERNAL_SERVER_ERROR, "database error".to_string()));
+            return Err((StatusCode::INTERNAL_SERVER_ERROR, json!({"error": "database error"})));
         }
     };
 
@@ -88,7 +162,7 @@ pub(crate) async fn execute_computer_tool(
         None => {
             return Err((
                 StatusCode::SERVICE_UNAVAILABLE,
-                "No VM driver is configured on this host".to_string(),
+                json!({"error": "No VM driver is configured on this host"}),
             ));
         }
     };
@@ -103,7 +177,7 @@ pub(crate) async fn execute_computer_tool(
         ComputerControlAction::Screenshot => {
             let png = capture_screenshot(&*driver, &record, bot_id)
                 .await
-                .map_err(|(s, m)| (s, m))?;
+                .map_err(|(s, m)| (s, json!({"error": m})))?;
             Ok(json!({
                 "base64": BASE64_STANDARD.encode(&png),
                 "content_type": "image/png",
@@ -112,25 +186,27 @@ pub(crate) async fn execute_computer_tool(
         }
         ComputerControlAction::Mouse(input) => {
             let command = if record.os == "windows" {
-                build_windows_mouse_command(&input).map_err(|m| (StatusCode::BAD_REQUEST, m))?
+                build_windows_mouse_command(&input).map_err(|m| (StatusCode::BAD_REQUEST, json!({"error": m})))?
             } else {
                 build_mouse_command(&input, desktop_display(&record.provider))
-                    .map_err(|m| (StatusCode::BAD_REQUEST, m))?
+                    .map_err(|m| (StatusCode::BAD_REQUEST, json!({"error": m})))?
             };
             run_guest_command(&*driver, &handle, command, "mouse", bot_id, &record.sandbox_id)
                 .await
                 .map(|_| json!({ "success": true }))
+                .map_err(|(s, m)| (s, json!({ "error": m })))
         }
         ComputerControlAction::Keyboard(input) => {
             let command = if record.os == "windows" {
-                build_windows_keyboard_command(&input).map_err(|m| (StatusCode::BAD_REQUEST, m))?
+                build_windows_keyboard_command(&input).map_err(|m| (StatusCode::BAD_REQUEST, json!({"error": m})))?
             } else {
                 build_keyboard_command(&input, desktop_display(&record.provider))
-                    .map_err(|m| (StatusCode::BAD_REQUEST, m))?
+                    .map_err(|m| (StatusCode::BAD_REQUEST, json!({"error": m})))?
             };
             run_guest_command(&*driver, &handle, command, "keyboard", bot_id, &record.sandbox_id)
                 .await
                 .map(|_| json!({ "success": true }))
+                .map_err(|(s, m)| (s, json!({ "error": m })))
         }
         ComputerControlAction::Shell(input) => {
             let cmd_spec = if record.os == "windows" {
@@ -170,7 +246,7 @@ pub(crate) async fn execute_computer_tool(
                 }
                 Err(e) => {
                     warn!(bot_id, sandbox_id = %record.sandbox_id, error = %e, "failed to run computer shell");
-                    Err((StatusCode::SERVICE_UNAVAILABLE, format!("failed to run shell: {}", e)))
+                    Err((StatusCode::SERVICE_UNAVAILABLE, json!({"error": format!("failed to run shell: {}", e)})))
                 }
             }
         }
@@ -183,19 +259,19 @@ pub(crate) async fn execute_computer_tool(
                 })),
                 Err(e) => {
                     warn!(bot_id, sandbox_id = %record.sandbox_id, path = %path, error = %e, "failed to download computer file");
-                    Err((StatusCode::SERVICE_UNAVAILABLE, format!("failed to download file: {}", e)))
+                    Err((StatusCode::SERVICE_UNAVAILABLE, json!({"error": format!("failed to download file: {}", e)})))
                 }
             }
         }
         ComputerControlAction::FileWrite { path, content_base64 } => {
             let bytes = BASE64_STANDARD
                 .decode(&content_base64)
-                .map_err(|e| (StatusCode::BAD_REQUEST, format!("invalid base64 content: {}", e)))?;
+                .map_err(|e| (StatusCode::BAD_REQUEST, json!({"error": format!("invalid base64 content: {}", e)})))?;
             match driver.push_file(&handle, &path, bytes).await {
                 Ok(()) => Ok(json!({ "path": path, "written": true })),
                 Err(e) => {
                     warn!(bot_id, sandbox_id = %record.sandbox_id, path = %path, error = %e, "failed to upload computer file");
-                    Err((StatusCode::SERVICE_UNAVAILABLE, format!("failed to upload file: {}", e)))
+                    Err((StatusCode::SERVICE_UNAVAILABLE, json!({"error": format!("failed to upload file: {}", e)})))
                 }
             }
         }
@@ -623,6 +699,15 @@ mod tests {
         state
     }
 
+    /// Mint an approved, hash-bound grant for `action`, the same shape the
+    /// gateway issues on a `confirmation_required` denial.
+    fn approve_grant_for(user_id: &str, action: &ComputerControlAction) -> String {
+        let hash = crate::aci_approvals::hash_action_payload(&control_action_descriptor(action));
+        let id = crate::aci_approvals::GRANTS.issue(user_id, &hash);
+        assert!(crate::aci_approvals::GRANTS.approve(&id));
+        id
+    }
+
     #[tokio::test]
     async fn screenshot_tool_returns_base64_png() {
         let temp = tempfile::tempdir().unwrap().keep();
@@ -642,6 +727,7 @@ mod tests {
             "user-1",
             "computer-1",
             ComputerControlAction::Screenshot,
+            None,
         )
         .await
         .unwrap();
@@ -664,15 +750,19 @@ mod tests {
         }));
         let state = test_state(&temp, driver.clone()).await;
 
+        // Mutating shell commands sit in the risky tier: they need a grant.
+        let action = ComputerControlAction::Shell(ShellInput {
+            command: vec!["rm".to_string(), "/tmp/scratch-file".to_string()],
+            env: HashMap::new(),
+            timeout: None,
+        });
+        let grant = approve_grant_for("user-1", &action);
         let result = execute_computer_tool(
             &state,
             "user-1",
             "computer-1",
-            ComputerControlAction::Shell(ShellInput {
-                command: vec!["echo".to_string(), "hello".to_string()],
-                env: HashMap::new(),
-                timeout: None,
-            }),
+            action,
+            Some(&grant),
         )
         .await
         .unwrap();
@@ -696,6 +786,7 @@ mod tests {
             ComputerControlAction::FileRead {
                 path: "/tmp/test.txt".to_string(),
             },
+            None,
         )
         .await
         .unwrap();
@@ -711,14 +802,18 @@ mod tests {
         let driver = Arc::new(MockExecutionDriver::new());
         let state = test_state(&temp, driver.clone()).await;
 
+        // File writes are risky-tier: mint a grant bound to this exact action.
+        let action = ComputerControlAction::FileWrite {
+            path: "/tmp/upload.txt".to_string(),
+            content_base64: BASE64_STANDARD.encode(b"uploaded bytes"),
+        };
+        let grant = approve_grant_for("user-1", &action);
         let result = execute_computer_tool(
             &state,
             "user-1",
             "computer-1",
-            ComputerControlAction::FileWrite {
-                path: "/tmp/upload.txt".to_string(),
-                content_base64: BASE64_STANDARD.encode(b"uploaded bytes"),
-            },
+            action,
+            Some(&grant),
         )
         .await
         .unwrap();
@@ -729,5 +824,114 @@ mod tests {
             files.get("/tmp/upload.txt").unwrap().as_slice(),
             b"uploaded bytes"
         );
+    }
+
+    #[tokio::test]
+    async fn risky_action_without_grant_is_denied_before_touching_guest() {
+        let temp = tempfile::tempdir().unwrap().keep();
+        let driver = Arc::new(MockExecutionDriver::new());
+        driver.set_exec_result(Ok(allternit_driver_interface::ExecResult {
+            exit_code: 0,
+            stdout: Some(b"should never run".to_vec()),
+            stderr: None,
+            duration_ms: 1,
+            resource_usage: ResourceConsumption::default(),
+        }));
+        let state = test_state(&temp, driver.clone()).await;
+
+        let (status, body) = execute_computer_tool(
+            &state,
+            "user-1",
+            "computer-1",
+            ComputerControlAction::Shell(ShellInput {
+                command: vec!["rm".to_string(), "/tmp/scratch".to_string()],
+                env: HashMap::new(),
+                timeout: None,
+            }),
+            None,
+        )
+        .await
+        .expect_err("risky shell without a grant must be denied");
+
+        assert_eq!(status, StatusCode::FORBIDDEN);
+        assert_eq!(body["error"], "confirmation_required");
+        assert!(body["approval_id"].as_str().is_some());
+        assert!(body["action_hash"].as_str().is_some());
+        // The guest was never touched.
+        assert!(driver.recorded().is_empty());
+    }
+
+    #[tokio::test]
+    async fn grant_bound_to_other_action_is_denied() {
+        let temp = tempfile::tempdir().unwrap().keep();
+        let driver = Arc::new(MockExecutionDriver::new());
+        driver.set_exec_result(Ok(allternit_driver_interface::ExecResult {
+            exit_code: 0,
+            stdout: Some(b"should never run".to_vec()),
+            stderr: None,
+            duration_ms: 1,
+            resource_usage: ResourceConsumption::default(),
+        }));
+        let state = test_state(&temp, driver.clone()).await;
+
+        // Grant bound to `rm a`, action tries `rm b` — hash mismatch.
+        let granted_action = ComputerControlAction::Shell(ShellInput {
+            command: vec!["rm".to_string(), "a".to_string()],
+            env: HashMap::new(),
+            timeout: None,
+        });
+        let grant = approve_grant_for("user-1", &granted_action);
+
+        let (status, body) = execute_computer_tool(
+            &state,
+            "user-1",
+            "computer-1",
+            ComputerControlAction::Shell(ShellInput {
+                command: vec!["rm".to_string(), "b".to_string()],
+                env: HashMap::new(),
+                timeout: None,
+            }),
+            Some(&grant),
+        )
+        .await
+        .expect_err("hash mismatch must be denied");
+
+        assert_eq!(status, StatusCode::FORBIDDEN);
+        assert_eq!(body["error"], "approval_denied");
+        assert!(body["reason"]
+            .as_str()
+            .unwrap()
+            .contains("does not match"));
+        assert!(driver.recorded().is_empty());
+    }
+
+    #[tokio::test]
+    async fn reversible_shell_command_needs_no_grant() {
+        let temp = tempfile::tempdir().unwrap().keep();
+        let driver = Arc::new(MockExecutionDriver::new());
+        driver.set_exec_result(Ok(allternit_driver_interface::ExecResult {
+            exit_code: 0,
+            stdout: Some(b"listing".to_vec()),
+            stderr: None,
+            duration_ms: 1,
+            resource_usage: ResourceConsumption::default(),
+        }));
+        let state = test_state(&temp, driver.clone()).await;
+
+        let result = execute_computer_tool(
+            &state,
+            "user-1",
+            "computer-1",
+            ComputerControlAction::Shell(ShellInput {
+                command: vec!["ls".to_string(), "-la".to_string()],
+                env: HashMap::new(),
+                timeout: None,
+            }),
+            None,
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(result["stdout"], "listing");
     }
 }
