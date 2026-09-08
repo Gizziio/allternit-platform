@@ -146,33 +146,66 @@ pub fn validate(value: &Value) -> Result<ProviderRoutingPolicy, String> {
     Ok(policy)
 }
 
+/// Which row an effective policy came from: the caller's own tenant row, the
+/// NULL-tenant platform-global row, or no policy at all.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub enum PolicySource {
+    Tenant,
+    Global,
+    None,
+}
+
+impl PolicySource {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            PolicySource::Tenant => "tenant",
+            PolicySource::Global => "global",
+            PolicySource::None => "none",
+        }
+    }
+}
+
 /// Load the provider routing policy for a tenant. A tenant-specific row wins;
 /// absent that, the NULL-tenant (platform-global) row applies. Returns `None`
 /// when neither exists.
 pub fn load_policy(db: &DbHandle, tenant_id: &str) -> Result<Option<ProviderRoutingPolicy>, LoadError> {
+    Ok(load_policy_with_source(db, tenant_id)?.0)
+}
+
+/// Like [`load_policy`] but also reports which row supplied the policy.
+pub fn load_policy_with_source(
+    db: &DbHandle,
+    tenant_id: &str,
+) -> Result<(Option<ProviderRoutingPolicy>, PolicySource), LoadError> {
     let conn = db.connect()?;
-    let stored: Option<String> = match conn
+    let tenant_row: Option<String> = conn
         .query_row(
             "SELECT policy FROM llm_provider_routing_policies WHERE tenant_id = ?1",
             params![tenant_id],
             |row| row.get(0),
         )
-        .optional()?
-    {
-        Some(policy) => Some(policy),
-        None => conn
-            .query_row(
-                "SELECT policy FROM llm_provider_routing_policies WHERE tenant_id IS NULL",
-                [],
-                |row| row.get(0),
-            )
-            .optional()?,
+        .optional()?;
+    let (stored, source) = match tenant_row {
+        Some(policy) => (Some(policy), PolicySource::Tenant),
+        None => {
+            let global_row: Option<String> = conn
+                .query_row(
+                    "SELECT policy FROM llm_provider_routing_policies WHERE tenant_id IS NULL",
+                    [],
+                    |row| row.get(0),
+                )
+                .optional()?;
+            match global_row {
+                Some(policy) => (Some(policy), PolicySource::Global),
+                None => (None, PolicySource::None),
+            }
+        }
     };
     match stored {
-        Some(json) => serde_json::from_str(&json).map(Some).map_err(|err| {
-            LoadError::Json(format!("llm_provider_routing_policies row: {err}"))
-        }),
-        None => Ok(None),
+        Some(json) => serde_json::from_str(&json)
+            .map(|policy| (Some(policy), source))
+            .map_err(|err| LoadError::Json(format!("llm_provider_routing_policies row: {err}"))),
+        None => Ok((None, PolicySource::None)),
     }
 }
 
@@ -220,15 +253,15 @@ fn candidate_ids(provider_id: &str, model_id: &str) -> Vec<String> {
 /// candidate form, then normalized (dash/dot/prefix-insensitive) equality.
 /// Deterministic when several keys normalize equal: lexicographically
 /// smallest key wins.
-fn find_override<'a>(
+fn find_override_entry<'a>(
     models: &'a BTreeMap<String, ModelOverride>,
     provider_id: &str,
     model_id: &str,
-) -> Option<&'a ModelOverride> {
+) -> Option<(&'a String, &'a ModelOverride)> {
     let candidates = candidate_ids(provider_id, model_id);
     for candidate in &candidates {
-        if let Some(override_) = models.get(candidate) {
-            return Some(override_);
+        if let Some(entry) = models.get_key_value(candidate) {
+            return Some(entry);
         }
     }
     let normalized: Vec<String> = candidates.iter().map(|id| normalize_model_id(id)).collect();
@@ -237,7 +270,15 @@ fn find_override<'a>(
         .filter(|(key, _)| normalized.contains(&normalize_model_id(key)))
         .collect();
     matches.sort_by(|a, b| a.0.cmp(b.0));
-    matches.first().map(|(_, override_)| *override_)
+    matches.first().map(|(key, override_)| (*key, *override_))
+}
+
+fn find_override<'a>(
+    models: &'a BTreeMap<String, ModelOverride>,
+    provider_id: &str,
+    model_id: &str,
+) -> Option<&'a ModelOverride> {
+    find_override_entry(models, provider_id, model_id).map(|(_, override_)| override_)
 }
 
 /// Resolve the effective routing for the currently-active model: the model
@@ -285,6 +326,107 @@ pub fn resolve_for_model(policy: &ProviderRoutingPolicy, provider_id: &str, mode
         object.insert("data_collection".into(), json!(data_collection));
     }
     Some(Value::Object(object))
+}
+
+/// Answer to "which provider serves this model under current policy" — the
+/// resolved wire `provider` object, the `models` key that matched (if any),
+/// and which policy row supplied it. `provider` is `None` when no policy (or
+/// an empty one) applies.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct ResolveAnswer {
+    pub provider: Option<Value>,
+    pub matched_override: Option<String>,
+    pub source: PolicySource,
+}
+
+/// Resolve the effective routing for `(provider_id, model_id)` against the
+/// caller's tenant policy (falling back to the platform-global row).
+pub fn resolve_query(
+    db: &DbHandle,
+    tenant_id: &str,
+    provider_id: &str,
+    model_id: &str,
+) -> Result<ResolveAnswer, LoadError> {
+    let (policy, source) = load_policy_with_source(db, tenant_id)?;
+    let Some(policy) = policy else {
+        return Ok(ResolveAnswer {
+            provider: None,
+            matched_override: None,
+            source,
+        });
+    };
+    let matched_override =
+        find_override_entry(&policy.models, provider_id, model_id).map(|(key, _)| key.clone());
+    Ok(ResolveAnswer {
+        provider: resolve_for_model(&policy, provider_id, model_id),
+        matched_override,
+        source,
+    })
+}
+
+fn override_object(override_: &ModelOverride) -> Value {
+    let mut object = serde_json::Map::new();
+    if let Some(sort) = &override_.sort {
+        object.insert("sort".into(), json!(sort));
+    }
+    if !override_.only.is_empty() {
+        object.insert("only".into(), json!(override_.only));
+    }
+    if !override_.ignore.is_empty() {
+        object.insert("ignore".into(), json!(override_.ignore));
+    }
+    if !override_.order.is_empty() {
+        object.insert("order".into(), json!(override_.order));
+    }
+    if let Some(require_parameters) = override_.require_parameters {
+        object.insert("require_parameters".into(), json!(require_parameters));
+    }
+    if let Some(data_collection) = &override_.data_collection {
+        object.insert("data_collection".into(), json!(data_collection));
+    }
+    Value::Object(object)
+}
+
+/// Render a policy as a Hermes-native `provider_routing` section for
+/// `~/.hermes/config.yaml`
+/// (https://hermes-agent.nousresearch.com/docs/user-guide/features/provider-routing).
+/// Keys the policy leaves unset are omitted (Hermes treats absent keys as
+/// defaults). Returns the full YAML document — a single top-level
+/// `provider_routing:` mapping.
+pub fn to_hermes_yaml(policy: &ProviderRoutingPolicy) -> String {
+    let mut section = serde_json::Map::new();
+    if let Some(sort) = &policy.sort {
+        section.insert("sort".into(), json!(sort));
+    }
+    if !policy.only.is_empty() {
+        section.insert("only".into(), json!(policy.only));
+    }
+    if !policy.ignore.is_empty() {
+        section.insert("ignore".into(), json!(policy.ignore));
+    }
+    if !policy.order.is_empty() {
+        section.insert("order".into(), json!(policy.order));
+    }
+    if let Some(require_parameters) = policy.require_parameters {
+        section.insert("require_parameters".into(), json!(require_parameters));
+    }
+    if let Some(data_collection) = &policy.data_collection {
+        section.insert("data_collection".into(), json!(data_collection));
+    }
+    if !policy.models.is_empty() {
+        let models: serde_json::Map<String, Value> = policy
+            .models
+            .iter()
+            .map(|(model, override_)| (model.clone(), override_object(override_)))
+            .collect();
+        section.insert("models".into(), Value::Object(models));
+    }
+    let document = json!({ "provider_routing": Value::Object(section) });
+    let mut yaml = serde_yaml::to_string(&document).expect("provider_routing serializes to YAML");
+    if !yaml.ends_with('\n') {
+        yaml.push('\n');
+    }
+    yaml
 }
 
 #[cfg(test)]
@@ -405,5 +547,98 @@ mod tests {
         save_policy(&db, Some("t9"), &tenant).unwrap();
         let loaded = load_policy(&db, "t9").unwrap().unwrap();
         assert_eq!(loaded.sort, Some(Sort::Throughput));
+    }
+
+    #[test]
+    fn load_with_source_reports_row_origin() {
+        let db = test_db();
+        let (policy, source) = load_policy_with_source(&db, "t1").unwrap();
+        assert!(policy.is_none());
+        assert_eq!(source, PolicySource::None);
+
+        save_policy(&db, None, &validate(&json!({"sort": "latency"})).unwrap()).unwrap();
+        let (policy, source) = load_policy_with_source(&db, "t1").unwrap();
+        assert_eq!(policy.unwrap().sort, Some(Sort::Latency));
+        assert_eq!(source, PolicySource::Global);
+
+        save_policy(&db, Some("t1"), &validate(&json!({"sort": "price"})).unwrap()).unwrap();
+        let (policy, source) = load_policy_with_source(&db, "t1").unwrap();
+        assert_eq!(policy.unwrap().sort, Some(Sort::Price));
+        assert_eq!(source, PolicySource::Tenant);
+    }
+
+    #[test]
+    fn resolve_query_reports_provider_match_and_source() {
+        let db = test_db();
+        save_policy(&db, Some("t1"), &validate(&policy_json()).unwrap()).unwrap();
+
+        // Pinned model: provider object + the exact models key that matched.
+        let answer = resolve_query(&db, "t1", "anthropic", "claude-fable-5.1").unwrap();
+        assert_eq!(answer.source, PolicySource::Tenant);
+        assert_eq!(
+            answer.matched_override.as_deref(),
+            Some("anthropic/claude-fable-5.1")
+        );
+        assert_eq!(answer.provider.unwrap()["only"], json!(["anthropic"]));
+
+        // Unpinned model: flat policy applies, no matched override.
+        let answer = resolve_query(&db, "t1", "openai", "gpt-5").unwrap();
+        assert_eq!(answer.source, PolicySource::Tenant);
+        assert!(answer.matched_override.is_none());
+        assert_eq!(answer.provider.unwrap()["sort"], json!("price"));
+
+        // Unknown tenant without global row: nothing applies.
+        let answer = resolve_query(&db, "t2", "openai", "gpt-5").unwrap();
+        assert_eq!(answer.source, PolicySource::None);
+        assert!(answer.provider.is_none());
+        assert!(answer.matched_override.is_none());
+    }
+
+    #[test]
+    fn hermes_yaml_renders_flat_and_per_model() {
+        let policy = validate(&json!({
+            "sort": "price",
+            "ignore": ["together"],
+            "require_parameters": true,
+            "data_collection": "deny",
+            "models": {
+                "anthropic/claude-fable-5.1": { "only": ["anthropic"] },
+                "moonshotai/kimi-k2.6": { "order": ["moonshotai", "together"], "sort": "throughput" }
+            }
+        }))
+        .unwrap();
+        let yaml = to_hermes_yaml(&policy);
+        assert!(yaml.starts_with("provider_routing:"));
+        // Model ids survive verbatim (round-trip below is the real assertion —
+        // YAML needs no quoting for `/`/`.` in keys when editing the file).
+        assert!(yaml.contains("anthropic/claude-fable-5.1:"));
+        let parsed: Value = serde_yaml::from_str(&yaml).unwrap();
+        let routing = &parsed["provider_routing"];
+        assert_eq!(routing["sort"], json!("price"));
+        assert_eq!(routing["ignore"], json!(["together"]));
+        assert_eq!(routing["require_parameters"], json!(true));
+        assert_eq!(routing["data_collection"], json!("deny"));
+        assert_eq!(
+            routing["models"]["anthropic/claude-fable-5.1"]["only"],
+            json!(["anthropic"])
+        );
+        assert_eq!(
+            routing["models"]["moonshotai/kimi-k2.6"]["order"],
+            json!(["moonshotai", "together"])
+        );
+        // Unset keys are omitted, not emitted as null/empty.
+        assert!(routing.get("only").is_none());
+        assert!(
+            routing["models"]["anthropic/claude-fable-5.1"]
+                .get("order")
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn hermes_yaml_empty_policy_is_empty_section() {
+        let yaml = to_hermes_yaml(&ProviderRoutingPolicy::default());
+        let parsed: Value = serde_yaml::from_str(&yaml).unwrap();
+        assert_eq!(parsed["provider_routing"], json!({}));
     }
 }
