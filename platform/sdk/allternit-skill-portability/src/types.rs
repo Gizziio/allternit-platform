@@ -24,6 +24,12 @@ pub enum LLMType {
     Kimi,
     /// Google Antigravity
     Antigravity,
+    /// Grok CLI
+    Grok,
+    /// Cursor
+    Cursor,
+    /// Gizzi Code
+    Gizzi,
 }
 
 impl LLMType {
@@ -34,6 +40,9 @@ impl LLMType {
             LLMType::Codex => "OpenAI Codex",
             LLMType::Kimi => "Kimi",
             LLMType::Antigravity => "Antigravity",
+            LLMType::Grok => "Grok",
+            LLMType::Cursor => "Cursor",
+            LLMType::Gizzi => "Gizzi Code",
         }
     }
 
@@ -43,7 +52,10 @@ impl LLMType {
             LLMType::Claude => ".claude",
             LLMType::Codex => ".codex",
             LLMType::Kimi => ".kimi",
-            LLMType::Antigravity => ".antigravity",
+            LLMType::Antigravity => ".gemini/antigravity",
+            LLMType::Grok => ".grok",
+            LLMType::Cursor => ".cursor",
+            LLMType::Gizzi => ".gizzi",
         }
     }
 
@@ -54,6 +66,9 @@ impl LLMType {
             LLMType::Codex,
             LLMType::Kimi,
             LLMType::Antigravity,
+            LLMType::Grok,
+            LLMType::Cursor,
+            LLMType::Gizzi,
         ]
     }
 }
