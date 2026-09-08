@@ -42,6 +42,19 @@ Grok-style agent dashboard and session-info polish.
 
 ## 2.0.7 — 2026-09-06
 
+### Added
+- **Native sessions** (alias `/cli-session`): pick up where any CLI coding agent
+  left off. Read-only catalog of 27 native harness stores (Claude Code, Gizzi,
+  Codex, Grok, Kimi, Qwen, OpenCode, Copilot, Cursor, Aider, Gemini, and more):
+  `/native list` / `/native <harness>`, `/native harnesses`. `/native pickup
+  <harness> <id>` snapshots a native session into a new Gizzi session with a
+  first-class `source_ref` — the origin file is never modified, and fetched
+  origin turns arrive as inert history. `/native fetch` pulls later origin
+  turns into `session_source_event` without rewriting Allternit turns.
+  `/native export [ses_id] [harness]` writes a **new** native session (refuses
+  to overwrite the origin). Also exposed over HTTP at `/v1/native-session/*`
+  and in the web/desktop session picker.
+
 ### Changed
 - First-run onboarding always auto-picks the default brain instead of
   prompting: Allternit Cloud on paid Plus/Super/Ultra plans, otherwise the

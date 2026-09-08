@@ -15,7 +15,9 @@ Allternit’s production path (`packages/@allternit/native-sessions`):
 1. Read-only catalog of every harness (installed or not — missing roots list empty).
 2. Snapshot + new Gizzi session with a first-class `source_ref`.
 3. Inbound **fetch** when the native file later changes (origin timeline, not a rewrite of Allternit turns).
-4. Never mutate the source native session. Outbound export to a *new* native id is a later bridge, not v1.
+4. Never mutate the source native session. Outbound export writes a **new** native
+   session id (direct writers: claude, gizzi, qwen, codex, grok, copilot, kimi-cli;
+   all other harnesses go through this vendored bridge via `export_native.py`).
 
 Do not call `smigrate transfer --to <same-id>` against a live store from Allternit.
 

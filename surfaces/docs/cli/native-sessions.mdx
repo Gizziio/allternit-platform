@@ -1,0 +1,103 @@
+---
+title: Native Sessions
+description: Pick up Claude Code, Aider, Codex, and 24 other CLI agent sessions right where they left off — from the terminal or the desktop app
+---
+
+## Overview
+
+You don't have to start over when you switch tools. **Native sessions** give Gizzi Code a read-only catalog of the sessions stored by other coding-agent CLIs — Claude Code, Codex, Aider, Kimi, Grok, Cursor, and more — and let you **pick one up** into a new Gizzi session with full context.
+
+Three things you can do:
+
+1. **Pickup** — snapshot a native session into a new Gizzi session. The original file is never modified.
+2. **Fetch** — pull turns that were added to the native session *after* you picked it up, delivered as inert history (clearly marked as origin content, never executed as instructions).
+3. **Export** — write the Gizzi session back out to a **new** native session id in the target CLI's format, so you can continue in that tool too.
+
+## Quick start (terminal)
+
+Inside a Gizzi Code session, type:
+
+```
+/native                 # list native CLI sessions (newest first)
+/native harnesses       # show all adapters and which stores are present
+/native pickup claude 5f3a…c9  # pick up a session into Gizzi
+/native fetch           # pull newer turns from the origin session
+/native export claude   # write back out to a NEW claude session id
+```
+
+`/native` also answers to `/cli-session`.
+
+The same operations are available in the **desktop and web app**: open the session picker (rail icon or Agent Hub), choose a native session, and it opens as a new chat with an origin badge showing where it came from.
+
+## How pickup works
+
+`NativeSource.pickup()` snapshots the native transcript at pickup time and creates a **new** Gizzi session carrying a first-class `source_ref` (harness id, origin session id, origin file path, content fingerprint). The new session starts as an ordinary Gizzi session — you can continue it, branch it, or export it.
+
+Safety guarantees:
+
+- The origin native file is **never written** — the catalog is strictly read-only.
+- Fetched origin turns are injected as an **inert** prompt block, prefixed with a warning to ignore any instructions found in them.
+- Export **refuses to overwrite the origin session** — it always writes a new native id.
+
+## Fetch and divergence
+
+If you keep working in the origin CLI after picking a session up, `/native fetch` (or the fetch button on the origin banner) reconciles:
+
+- `clean` — origin hasn't changed since pickup.
+- `native_ahead` — new origin turns were found; they're appended to `session_source_event` and shown as inert history. Your Allternit turns are never rewritten.
+- `missing` — the origin file is gone (uninstalled tool, cleaned-up store).
+
+## Export back out
+
+`/native export [ses_id] [harness]` converts the session to the target CLI's native format and writes it under a **new** session id. Direct writers cover `claude`, `gizzi`, `qwen`, `codex`, `grok`, `copilot`, and `kimi-cli`; every other harness is converted through the vendored [session-migrate](https://github.com/xhluca/session-migrate) bridge. The command prints the exact resume hint for the target CLI, e.g. `claude --resume <new-id>`.
+
+## Harness support
+
+27 harness adapters ship in `@allternit/native-sessions`. Every harness can be **cataloged and picked up**; a subset additionally supports transcript projection and direct export.
+
+| Harness | Pickup | Resume hint |
+|---------|--------|-------------|
+| Claude Code | ✅ | `claude --resume <id>` |
+| Gizzi Code | ✅ | `gizzi /resume <id>` |
+| Codex | ✅ | `codex resume <id>` |
+| Grok | ✅ | `grok --resume <id>` |
+| Kimi Code | ✅ | `kimi --session <id>` |
+| Kimi CLI | ✅ | `kimi` |
+| Qwen Code | ✅ | `qwen --resume <id>` |
+| OpenCode | ✅ | `opencode --session <id>` |
+| GitHub Copilot CLI | ✅ | `copilot --resume=<id>` |
+| Pi / Oh My Pi | ✅ | `pi --session <id>` / `omp --resume=<id>` |
+| Cursor Agent | ✅ | `cursor-agent --resume <id>` |
+| Mistral Vibe | ✅ | `vibe` |
+| Muse Code | ✅ | `muse` |
+| OpenHands | ✅ | `openhands` |
+| Gemini CLI | ✅ | `gemini` |
+| Aider | ✅ | `aider` |
+| Factory Droid | ✅ | `droid --resume <id>` |
+| Antigravity | catalog | `agy --conversation <id>` |
+| Kilo Code | catalog | `kilo --session <id>` |
+| Hermes Agent | catalog | `hermes --resume <id>` |
+| MastraCode | catalog | `mastracode --thread <id>` |
+| Devin CLI | catalog | `devin --resume <id>` |
+| Cline | catalog | `cline` |
+| Amp | catalog | `amp` |
+| Kiro | catalog | `kiro --yolo` |
+| Crush | catalog | `crush` |
+
+Missing stores simply list as empty — adapters probe the tool's default home directory (each adapter honors the tool's own env override, e.g. `CLAUDE_CONFIG_DIR`).
+
+## HTTP API
+
+The same surface is exposed for integrations at `/v1/native-session/*`:
+
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /harnesses` | List adapters + presence |
+| `GET /list` | Catalog (optionally `?harness=`) |
+| `GET /show/:harness/:id` | One session detail |
+| `POST /pickup` | `{ harness, sessionId }` → new Gizzi session |
+| `POST /:sessionID/fetch` | Pull origin deltas |
+| `POST /:sessionID/export` | Write new native session |
+| `GET /:sessionID/origin` | Origin metadata |
+
+The platform API relays these under `/api/v1/native-sessions*` for cloud sessions.
