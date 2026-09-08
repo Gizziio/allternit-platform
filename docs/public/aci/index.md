@@ -89,13 +89,16 @@ ACI computer-use tools use absolute pixel coordinates for mouse actions. The SDK
 ```json
 {
   "metadata": {
-    "anthropicType": "computer_20250124",
+    "allternitToolType": "computer",
+    "computerToolVersion": "20250124",
     "display_width_px": 1280,
     "display_height_px": 720,
     "requiresVision": true
   }
 }
 ```
+
+The tool contract is **Allternit Computer Use** (design decision D3): `allternitToolType: "computer"` with `computerToolVersion` selecting the action set (`"20250124"` default, `"20251124"` adds the `zoom` action when the capability is created with `enableZoom: true`). During the transition the metadata still carries `anthropicType` (`computer_20250124` / `computer_20251124`) as a legacy-compat adapter for upstream integrations — nothing user-facing should depend on it.
 
 The UI overlays action bounding boxes on the live screenshot. Boxes are scaled from the natural screenshot resolution to the displayed image size so a coordinate such as `{ "x": 640, "y": 360 }` points to the center of a 1280x720 screen regardless of how the image is rendered in the viewport.
 
@@ -107,5 +110,6 @@ Supported computer actions include:
 | `scroll` | yes | no (uses `scroll_direction` / `scroll_amount`) |
 | `type`, `key`, `hold_key` | no | yes |
 | `screenshot`, `cursor_position`, `wait` | no | no |
+| `zoom` (20251124 only, requires `enableZoom: true`) | no (uses `region` [x1, y1, x2, y2]) | no |
 
 Always combine `screenshot` calls with the bounding box metadata returned in the stream so the model can reason about where the next action will land.

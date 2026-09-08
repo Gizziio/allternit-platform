@@ -1,44 +1,26 @@
-# Steering checkpoint — session/11f1b5c8
+# Checkpoint — cu4-rebrand
 
 ## Goal
-Provider Routing v1 (Allternit Brain `Products/ProviderRouting.md`): tenant-scoped
-provider routing policy in allternit-api (sort/only/ignore/order/require_parameters/
-data_collection + per-model overrides), resolved against the active model and
-injected as a top-level `provider` object on outbound OpenAI-compatible wire
-requests, via the Gizzi session-message payload. Plan: `spec/provider-routing/plan.md`.
-Worktree `allternit-session-11f1b5c8`, branch `session/11f1b5c8`.
+Rebrand the computer-use tool contract to vendor-neutral Allternit branding: add
+`allternitToolType`/`computerToolVersion` alongside legacy `anthropicType`, add
+computer_20251124 action-set support, update tests + 5 docs files. Touch only
+sdk/allternit-sdk/** and docs/public/**.
 
 ## Just did
-- Rust CODE COMPLETE: V133 migration; `llm_gateway/provider_routing.rs`
-  (policy structs, validation, tenant+global load, per-model resolution with
-  spelling-tolerant matching — 9 unit tests pass incl. real-migration roundtrip);
-  admin GET/PUT `/api/v1/gateway/provider-routing`; proxy.rs injects
-  `payload["provider"]` for the primary model and re-resolves per failover
-  attempt in the retry rebuild. `cargo check` clean (65 pre-existing warnings).
-- gizzi-code CODE COMPLETE: PromptInput accepts `provider` (zod record),
-  createUserMessage folds it into per-turn message metadata
-  (`provider_routing`), llm.ts injects it into providerOptions body for
-  `@ai-sdk/openai-compatible` SDKs only. Verified in @ai-sdk/openai-compatible
-  2.0.28 dist: raw providerOptions[providerOptionsName] unknown keys ARE spread
-  into the request body (parseProviderOptions strips, but body spread uses raw).
-  3 new schema tests pass; typecheck clean for touched files (2 pre-existing
-  errors in test/commands/slash-menu.test.ts, untouched by this session).
-- Merge of origin/main resolved (checkpoint conflict — kept this session's;
-  prompt.ts auto-merged clean).
-
-## Verification
-- `cargo test -p allternit-api provider_routing`: 9/9 pass.
-- Full `cargo test -p allternit-api`: 658 pass, 4 fail — all in
-  agent_cloud_routes (hardcoded stale AllternitOS control-plane binary, see
-  ledger); pre-existing, untouched by this session.
-- `bun test test/session/`: 109 pass, 0 fail (incl. 3 new schema tests).
-- Admin API store + round-trip verified live against a dev-bypass server.
-  Owner directed no mock smoke test — shipping to production.
+- computer-use.ts: versioned action enums (20250124 = 16 actions, 20251124 = +zoom),
+  toolVersion/enableZoom options, region param, allternitToolType/computerToolVersion
+  metadata emitted alongside legacy anthropicType (switches with version).
+- Rebuilt tracked dist for the capability only (reverted unrelated pre-existing
+  dist/index.js drift).
+- Tests: updated 20250124 test + added 20251124 zoom/region coverage — both pass.
+- Full tool-belt suite: 24 passed, 2 failed — failures are pre-existing on main
+  (bash/code injectable runner tests), identical in shared checkout.
+- tsc: only pre-existing error (missing generated ./gen) — no new errors.
+- docs-lint: PASS. Updated all 5 docs files (Allternit type primary, upstream
+  types framed as legacy-compat adapters).
 
 ## Next
-- Repo ritual: push merge commit, PR #132 merge, sync main, agent-ledger
-  attestation, worktree cleanup.
+- Commit, push session/cu4-rebrand, open PR (do NOT merge).
 
 ## Open questions
-- In-session gizzi fallback switches keep the per-message pin (Rust recomputes
-  on its own retry loop per attempt). Accepted v1 semantics; noted for ledger.
+- None.
