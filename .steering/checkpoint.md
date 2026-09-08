@@ -29,3 +29,12 @@ Stage 3: measured conformance — `conformance/measured.py` + mock adapter, run 
 
 ## Open questions
 - None blocking. (Skill-store: `skill_id` resolution reads `~/.allternit/browser-skills/<skill_id>.json` if present, else 404 — no canonical skill store exists on the Python side yet.)
+
+## Stage 3 (just committed next)
+- `conformance/mock_browser_adapter.py` (browser.mock, labeled so everywhere), `conformance/measured.py` (discover/execute/write, CLI `python -m conformance.measured [--network] [--desktop]`).
+- Ran measurement live: browser.playwright 8/8 = 100% production (real headless Chromium vs example.com/httpbin), browser.cdp 1/8 = 12.5% experimental (real — its vocabulary lacks goto/observe), browser.mock 8/8, Suite F 6/6. Suites B/C/E written grade:null measured:false honestly. adapter_grades.json rewritten with real numbers.
+- 6 new tests in tests/test_measured_conformance.py; full suite 185 passed / 21 skipped.
+- Note: CDP on :9222 is not a full Chrome (setDownloadBehavior unsupported) but PlaywrightCDPAdapter connects enough to measure 1/8.
+
+## Next
+Stage 4: `core/monitor.py` pluggable monitor (heuristic: prompt-injection keyword scan + identical-action loop detection), PlanningLoop integration after observe (approval.required kind=monitor_flag), tests, commit, full verify, PR.
