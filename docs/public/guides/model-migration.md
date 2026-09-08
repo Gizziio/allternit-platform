@@ -27,7 +27,7 @@ Models marked `deprecated: true` still work during a transition window, but you 
 | Structured output | `tools` + `tool_choice=any` with schema | `response_format.json_schema` | `response_format` |
 | Prompt caching | `cache_control` | `service_tier: flex` + cached-token billing | `cache_control` hints |
 | Vision | `image` content blocks | `image_url` | `image_url` |
-| Computer use | `computer_20250124` tool | custom tool definitions | custom tool definitions |
+| Computer use | Allternit `computer` tool (`allternitToolType`, `computerToolVersion: '20250124' \| '20251124'`) | custom tool definitions | custom tool definitions |
 
 Allternit normalizes these into a single request surface. Provider-specific transforms happen inside the Gizzi runtime, so most migrations only require changing the `model` string.
 

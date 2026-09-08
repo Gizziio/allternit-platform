@@ -30,7 +30,7 @@ console.log(toKimiRequest({ ...request, provider: 'kimi', model: 'kimi-k2' }));
 | `parallel_tool_calls` / `disable_parallel_tool_use` | SDK: `parallelToolCalls`<br>API: `parallel_tool_calls` | `parallelToolCalls: false` sets Anthropic `disable_parallel_tool_use: true`. |
 | Citations (`citations_delta`) | SDK: `citations: true` on `StreamRequest`; chunk type `citation` | Anthropic citation deltas become `CitationChunk` objects with `citedText`, `title`, `url`, `documentIndex`, and character offsets. |
 | Batch API | API: `POST /v1/batches`, `GET /v1/batches/:id`, `POST /v1/batches/:id/cancel`, `GET /v1/batches/:id/results` | Phase 1 stores batch metadata and lifecycle; execution/polling is Phase 2. |
-| `computer_20250124` | SDK: `ComputerUseCapability` / `COMPUTER_USE_TOOL` | `metadata.anthropicType` is `computer_20250124`. Tool name is `computer`, actions include `screenshot`, `mouse_move`, `left_click`, `type`, etc. |
+| `computer_20250124` / `computer_20251124` | SDK: `ComputerUseCapability` / `COMPUTER_USE_TOOL` | The Allternit tool type is `computer` (`metadata.allternitToolType`), with `metadata.computerToolVersion` selecting the action set (`'20250124'` default; `'20251124'` adds `zoom` + `region` and `enable_zoom`). The upstream `computer_20250124` / `computer_20251124` types are legacy-compat adapters: `metadata.anthropicType` mirrors the version during transition. Tool name is `computer`, actions include `screenshot`, `mouse_move`, `left_click`, `type`, etc. |
 | `text_editor_20250124` | SDK: `TextEditorTool` (`str_replace_editor`) | `metadata.anthropicType` is `text_editor_20250124`. Supports `view`, `str_replace`, `create`, `insert`, `undo`, `undo_edit` with workspace containment. |
 
 ## OpenAI → Allternit
