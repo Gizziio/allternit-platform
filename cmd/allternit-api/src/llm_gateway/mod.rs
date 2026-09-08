@@ -50,6 +50,7 @@ pub mod partial;
 pub mod provider_routing;
 pub mod proxy;
 pub mod realtime_audio;
+pub mod route_credentials;
 pub mod refusal;
 pub mod router;
 pub mod safety;
