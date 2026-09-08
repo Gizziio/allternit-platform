@@ -26,6 +26,7 @@ use crate::bot_desktop_input::{
     MouseInput, ShellInput,
 };
 use crate::bot_desktop_routes::DesktopQuery;
+use crate::computer_control::ComputerControlAction;
 use crate::AppState;
 use allternit_driver_interface::CommandSpec;
 use rusqlite::OptionalExtension;
@@ -52,6 +53,15 @@ pub enum ComputerStatus {
     Stopped,
     Error,
     Deleted,
+}
+
+/// Optional query-param carrying an action-hash grant for risky/irreversible
+/// control actions (see `aci_approvals`). `approvalId` camelCase is accepted
+/// for JSON-idiomatic clients.
+#[derive(Debug, Deserialize)]
+pub struct ApprovalQuery {
+    #[serde(default, alias = "approvalId")]
+    pub approval_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -622,8 +632,20 @@ async fn computer_mouse(
     State(state): State<Arc<AppState>>,
     Extension(user): Extension<AuthUser>,
     Path(id): Path<String>,
+    Query(approval): Query<ApprovalQuery>,
     Json(input): Json<MouseInput>,
 ) -> Response {
+    // Product-scoped confirmation policy (D2): risky/irreversible actions on
+    // every computer-use entry route need a hash-bound grant, enforced here
+    // before the request reaches the guest.
+    if let Err(denial) = enforce_control_confirmation(
+        &state,
+        &user.user_id,
+        &ComputerControlAction::Mouse(input.clone()),
+        approval.approval_id.as_deref(),
+    ) {
+        return (denial.status, Json(denial.body)).into_response();
+    }
     let computer = match fetch_computer(&state, &user.user_id, &id).await {
         Ok(Some(c)) => c,
         Ok(None) => return error_response(StatusCode::NOT_FOUND, "computer not found"),
@@ -652,8 +674,17 @@ async fn computer_keyboard(
     State(state): State<Arc<AppState>>,
     Extension(user): Extension<AuthUser>,
     Path(id): Path<String>,
+    Query(approval): Query<ApprovalQuery>,
     Json(input): Json<KeyboardInput>,
 ) -> Response {
+    if let Err(denial) = enforce_control_confirmation(
+        &state,
+        &user.user_id,
+        &ComputerControlAction::Keyboard(input.clone()),
+        approval.approval_id.as_deref(),
+    ) {
+        return (denial.status, Json(denial.body)).into_response();
+    }
     let computer = match fetch_computer(&state, &user.user_id, &id).await {
         Ok(Some(c)) => c,
         Ok(None) => return error_response(StatusCode::NOT_FOUND, "computer not found"),
@@ -682,8 +713,17 @@ async fn computer_shell(
     State(state): State<Arc<AppState>>,
     Extension(user): Extension<AuthUser>,
     Path(id): Path<String>,
+    Query(approval): Query<ApprovalQuery>,
     Json(input): Json<ShellInput>,
 ) -> Response {
+    if let Err(denial) = enforce_control_confirmation(
+        &state,
+        &user.user_id,
+        &ComputerControlAction::Shell(input.clone()),
+        approval.approval_id.as_deref(),
+    ) {
+        return (denial.status, Json(denial.body)).into_response();
+    }
     let computer = match fetch_computer(&state, &user.user_id, &id).await {
         Ok(Some(c)) => c,
         Ok(None) => return error_response(StatusCode::NOT_FOUND, "computer not found"),
@@ -712,9 +752,21 @@ async fn computer_upload_file(
     State(state): State<Arc<AppState>>,
     Extension(user): Extension<AuthUser>,
     Path(id): Path<String>,
+    Query(approval): Query<ApprovalQuery>,
     Query(file_query): Query<FilePathQuery>,
     body: Bytes,
 ) -> Response {
+    if let Err(denial) = enforce_control_confirmation(
+        &state,
+        &user.user_id,
+        &ComputerControlAction::FileWrite {
+            path: file_query.path.clone(),
+            content_base64: String::new(),
+        },
+        approval.approval_id.as_deref(),
+    ) {
+        return (denial.status, Json(denial.body)).into_response();
+    }
     let computer = match fetch_computer(&state, &user.user_id, &id).await {
         Ok(Some(c)) => c,
         Ok(None) => return error_response(StatusCode::NOT_FOUND, "computer not found"),
@@ -738,6 +790,25 @@ async fn computer_upload_file(
     )
     .await
     .into_response()
+}
+
+/// Confirmation-policy gate shared by the `/api/v1/computers/:id/*` control
+/// handlers. Delegates to the product-scoped taxonomy in `aci_safety` so this
+/// route and the ACU loop enforce the same rules.
+fn enforce_control_confirmation(
+    state: &AppState,
+    user_id: &str,
+    action: &ComputerControlAction,
+    approval_id: Option<&str>,
+) -> Result<(), crate::aci_safety::ConfirmationDenial> {
+    crate::aci_safety::enforce_confirmation(
+        &state.approval_store,
+        user_id,
+        "computer.control",
+        crate::computer_control::classify_control_action(action),
+        &crate::computer_control::control_action_descriptor(action),
+        approval_id,
+    )
 }
 
 async fn computer_download_file(

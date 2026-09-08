@@ -2,7 +2,6 @@ import { Check, ChevronDown, Copy, CornerUpLeft, Eye, EyeOff, Loader2, Building2
 import { useEffect, useState } from 'react'
 
 import type { OfficeAgentConfig } from '@/agent/useOfficeAgent'
-import { DEFAULT_OFFICE_MODEL } from '@/lib/agent-defaults'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { getCapabilities } from '@/lib/officecli-client'
@@ -29,7 +28,7 @@ const AUTH_TOKEN_KEY = 'allternit-office-auth-token'
 export function OfficeConfigPanel({ config, onSave, onBack }: Props) {
   const [apiKey, setApiKey] = useState(config?.apiKey ?? '')
   const [baseURL, setBaseURL] = useState(config?.baseURL ?? '')
-  const [model, setModel] = useState(config?.model ?? DEFAULT_OFFICE_MODEL)
+  const [model, setModel] = useState(config?.model ?? '')
   const [language, setLanguage] = useState<'en' | 'zh'>(config?.language ?? 'en')
   const [maxSteps, setMaxSteps] = useState<number | undefined>(config?.maxSteps)
   const [systemInstruction, setSystemInstruction] = useState(config?.systemInstruction ?? '')
@@ -73,7 +72,7 @@ export function OfficeConfigPanel({ config, onSave, onBack }: Props) {
   useEffect(() => {
     setApiKey(config?.apiKey ?? '')
     setBaseURL(config?.baseURL ?? '')
-    setModel(config?.model ?? DEFAULT_OFFICE_MODEL)
+    setModel(config?.model ?? '')
     setLanguage(config?.language ?? 'en')
     setMaxSteps(config?.maxSteps)
     setSystemInstruction(config?.systemInstruction ?? '')
@@ -425,7 +424,7 @@ export function OfficeConfigPanel({ config, onSave, onBack }: Props) {
       {/* Model */}
       <div className="flex flex-col gap-1.5">
         <label className="text-xs text-muted-foreground">Model</label>
-        <Input placeholder={DEFAULT_OFFICE_MODEL} value={model} onChange={(e) => setModel(e.target.value)} className="text-xs h-8" />
+        <Input placeholder="Auto (resolved from backend)" value={model} onChange={(e) => setModel(e.target.value)} className="text-xs h-8" />
       </div>
 
       {/* Language */}

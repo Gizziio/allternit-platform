@@ -166,7 +166,7 @@ async fn drain_acu_events(run_id: String, resp: reqwest::Response) {
 
 // ─── POST /api/aci/run ────────────────────────────────────────────────────────
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 struct AciRunBody {
     goal: String,
@@ -178,6 +178,27 @@ struct AciRunBody {
     /// accept any JSON and pass it through verbatim (contract fidelity —
     /// a bool here 422'd every real client).
     session_persistence: Option<serde_json::Value>,
+    /// Grant id from a prior `handoff_required` response. When the safety
+    /// policy flags the goal as sensitive, presenting a valid grant bound to
+    /// this exact action payload (same hash) authorizes the run; a missing,
+    /// expired, consumed, or hash-mismatched grant is denied.
+    approval_id: Option<String>,
+}
+
+/// Canonical action descriptor for the ACU loop route. Ephemeral ids
+/// (session/run) are excluded so a client retrying the same body after a
+/// handoff approval hashes identically. `approval_id` is never part of the
+/// descriptor — it rides alongside, not inside, the hashed payload.
+fn aci_action_descriptor(body: &AciRunBody, goal: &str) -> serde_json::Value {
+    json!({
+        "route": "aci.run",
+        "goal": goal,
+        "model": body.model,
+        "allowedSites": body.allowed_sites,
+        "openLinksInBrowser": body.open_links_in_browser,
+        "autoVerify": body.auto_verify,
+        "sessionPersistence": body.session_persistence,
+    })
 }
 
 async fn aci_run(
@@ -203,39 +224,79 @@ async fn aci_run(
         &user.user_id
     );
     let decision = crate::aci_safety::evaluate_request(&goal, &actor_key);
+    let mut granted = false;
     if !decision.allowed {
         crate::aci_safety::record_aci_error(&actor_key);
 
         if decision.handoff_required {
-            let approval_id = state.approval_store.create(
-                &user.user_id,
-                "aci.sensitive_action",
-                &json!({
-                    "goal": decision.sanitized_goal,
-                    "sensitive_actions": decision.sensitive_actions,
-                    "reason": decision.reason,
-                }),
-            );
+            // The action payload the grant is bound to: the goal the client
+            // actually submitted, not the (possibly masked) variant.
+            let action_hash =
+                crate::aci_approvals::hash_action_payload(&aci_action_descriptor(&body, &goal));
+
+            // A client retrying after a handoff approval presents the grant
+            // id. Redemption enforces approval state, ownership, expiry,
+            // single-use, and — critically — that this payload hashes to the
+            // granted action hash.
+            if let Some(ref approval_id) = body.approval_id {
+                match crate::aci_approvals::GRANTS.redeem(&user.user_id, approval_id, &action_hash)
+                {
+                    Ok(_) => granted = true,
+                    Err(denial) => {
+                        return (
+                            StatusCode::FORBIDDEN,
+                            Json(json!({
+                                "error": "approval_denied",
+                                "approval_id": approval_id,
+                                "action_hash": action_hash,
+                                "reason": denial.reason(),
+                            })),
+                        )
+                            .into_response();
+                    }
+                }
+            }
+
+            if !granted {
+                let approval_id = state.approval_store.create(
+                    &user.user_id,
+                    "aci.sensitive_action",
+                    &json!({
+                        "goal": decision.sanitized_goal,
+                        "sensitive_actions": decision.sensitive_actions,
+                        "reason": decision.reason,
+                    }),
+                );
+                // Bind the grant to the same id and action hash so approving
+                // the handoff authorizes exactly this payload — and only it.
+                crate::aci_approvals::GRANTS.issue_with_id(
+                    &approval_id,
+                    &user.user_id,
+                    &action_hash,
+                    crate::aci_approvals::grant_ttl_secs(),
+                );
+                return (
+                    StatusCode::ACCEPTED,
+                    Json(json!({
+                        "status": "handoff_required",
+                        "approval_id": approval_id,
+                        "action_hash": action_hash,
+                        "message": decision.reason,
+                        "sensitive_actions": decision.sensitive_actions,
+                    })),
+                )
+                    .into_response();
+            }
+        } else {
             return (
-                StatusCode::ACCEPTED,
+                StatusCode::FORBIDDEN,
                 Json(json!({
-                    "status": "handoff_required",
-                    "approval_id": approval_id,
-                    "message": decision.reason,
-                    "sensitive_actions": decision.sensitive_actions,
+                    "error": "aci_safety_violation",
+                    "message": decision.reason.unwrap_or_else(|| "request blocked by safety policy".to_string()),
                 })),
             )
                 .into_response();
         }
-
-        return (
-            StatusCode::FORBIDDEN,
-            Json(json!({
-                "error": "aci_safety_violation",
-                "message": decision.reason.unwrap_or_else(|| "request blocked by safety policy".to_string()),
-            })),
-        )
-            .into_response();
     }
 
     let run_id = uuid::Uuid::new_v4().to_string();
@@ -563,6 +624,9 @@ async fn aci_handoff_approve(
     Path(id): Path<String>,
 ) -> Response {
     if state.approval_store.approve(&id) {
+        // Mirror the human decision into the action-hash grant so a
+        // subsequent run carrying this approval_id can redeem it.
+        crate::aci_approvals::GRANTS.approve(&id);
         Json(json!({"approval_id": id, "status": "approved"})).into_response()
     } else {
         (
@@ -578,6 +642,7 @@ async fn aci_handoff_deny(
     Path(id): Path<String>,
 ) -> Response {
     if state.approval_store.deny(&id) {
+        crate::aci_approvals::GRANTS.deny(&id);
         Json(json!({"approval_id": id, "status": "denied"})).into_response()
     } else {
         (
@@ -634,5 +699,88 @@ mod tests {
         let mapped = map_acu_frame(&frame).expect("mapped");
         assert_eq!(mapped["type"], "trace");
         assert_eq!(mapped["data"]["event_type"], "plan.created");
+    }
+
+    #[test]
+    fn aci_action_descriptor_is_deterministic_and_excludes_ephemeral_ids() {
+        let body = AciRunBody {
+            goal: "buy tickets example.com".to_string(),
+            model: Some("claude-sonnet-4-6".to_string()),
+            allowed_sites: Some(json!(["example.com"])),
+            open_links_in_browser: Some(true),
+            auto_verify: Some(false),
+            session_persistence: Some(json!("dont-keep")),
+            approval_id: Some("grant-from-a-prior-attempt".to_string()),
+        };
+        let h1 = crate::aci_approvals::hash_action_payload(&aci_action_descriptor(&body, &body.goal));
+
+        // Same body re-submitted after a handoff decision, with a different
+        // (or absent) approval_id, must hash identically.
+        let mut retry = AciRunBody {
+            goal: "buy tickets example.com".to_string(),
+            model: Some("claude-sonnet-4-6".to_string()),
+            allowed_sites: Some(json!(["example.com"])),
+            open_links_in_browser: Some(true),
+            auto_verify: Some(false),
+            session_persistence: Some(json!("dont-keep")),
+            approval_id: None,
+        };
+        let h2 = crate::aci_approvals::hash_action_payload(&aci_action_descriptor(&retry, &retry.goal));
+        assert_eq!(h1, h2);
+
+        // Any payload change changes the hash.
+        retry.goal = "buy tickets evil-example.com".to_string();
+        let h3 = crate::aci_approvals::hash_action_payload(&aci_action_descriptor(&retry, &retry.goal));
+        assert_ne!(h1, h3);
+    }
+
+    #[test]
+    fn handoff_grant_redeems_once_for_matching_hash_only() {
+        // Issue a grant exactly as aci_run does when flagging a sensitive
+        // goal, then exercise the redemption contract the run handler relies
+        // on: approved + same hash → ok; repeat → single-use denial; other
+        // payload → hash-mismatch denial.
+        let store = crate::permission_policy::ApprovalStore::new();
+        let body = AciRunBody {
+            goal: "checkout with credit card on example.com".to_string(),
+            model: None,
+            allowed_sites: None,
+            open_links_in_browser: None,
+            auto_verify: None,
+            session_persistence: None,
+            approval_id: None,
+        };
+        let action_hash = crate::aci_approvals::hash_action_payload(&aci_action_descriptor(&body, &body.goal));
+        let approval_id = store.create("user-1", "aci.sensitive_action", &json!({}));
+        crate::aci_approvals::GRANTS.issue_with_id(
+            &approval_id,
+            "user-1",
+            &action_hash,
+            crate::aci_approvals::grant_ttl_secs(),
+        );
+
+        // Not yet approved by the human.
+        assert_eq!(
+            crate::aci_approvals::GRANTS.redeem("user-1", &approval_id, &action_hash),
+            Err(crate::aci_approvals::GrantDenial::NotApproved)
+        );
+
+        crate::aci_approvals::GRANTS.approve(&approval_id);
+        assert!(crate::aci_approvals::GRANTS
+            .redeem("user-1", &approval_id, &action_hash)
+            .is_ok());
+        assert_eq!(
+            crate::aci_approvals::GRANTS.redeem("user-1", &approval_id, &action_hash),
+            Err(crate::aci_approvals::GrantDenial::AlreadyConsumed)
+        );
+
+        let mut tampered = body.clone();
+        tampered.goal = "checkout with credit card on evil.com".to_string();
+        let other_hash =
+            crate::aci_approvals::hash_action_payload(&aci_action_descriptor(&tampered, &tampered.goal));
+        assert_eq!(
+            crate::aci_approvals::GRANTS.redeem("user-1", &approval_id, &other_hash),
+            Err(crate::aci_approvals::GrantDenial::AlreadyConsumed)
+        );
     }
 }

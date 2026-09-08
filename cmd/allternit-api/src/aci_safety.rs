@@ -4,6 +4,13 @@
 //! compromised or misconfigured client cannot bypass host allowlisting,
 //! sensitive-data masking, or circuit-breaker limits when proxying to the ACU
 //! computer-use gateway.
+//!
+//! Also hosts the product-scoped confirmation taxonomy (design decision D2):
+//! every computer-use entry route — the ACU loop, the direct
+//! `/api/v1/computers/:id/*` control routes, and the `/tools/execute`
+//! capability path — classifies its actions as reversible vs.
+//! risky/irreversible and routes the latter through hash-bound approval
+//! grants (see `aci_approvals`).
 
 use once_cell::sync::Lazy;
 use regex::Regex;
@@ -428,6 +435,233 @@ pub fn record_aci_success(actor_key: &str) {
     BREAKER.record_success(actor_key);
 }
 
+// ─── Confirmation taxonomy (product-scoped, all entry routes) ───────────────
+
+/// How much human confirmation a computer-use action needs. Checked on EVERY
+/// computer-use entry route (ACU loop, direct `/api/v1/computers/:id/*`
+/// control routes, `/tools/execute` `computer_*` capability path), not just
+/// the ACU loop path.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ConfirmationClass {
+    /// Read-only or trivially undoable (move the cursor, read a file).
+    Reversible,
+    /// Mutates state but is usually undoable (click, type + submit, write a
+    /// user file, run a mutating command).
+    Risky,
+    /// Destructive or hard to undo (`rm -rf`, writes to system paths,
+    /// repartitioning, shutdown).
+    Irreversible,
+}
+
+impl ConfirmationClass {
+    pub fn requires_confirmation(&self) -> bool {
+        !matches!(self, Self::Reversible)
+    }
+
+    pub fn label(&self) -> &'static str {
+        match self {
+            Self::Reversible => "reversible",
+            Self::Risky => "risky",
+            Self::Irreversible => "irreversible",
+        }
+    }
+}
+
+/// Classify a mouse input action.
+pub fn classify_mouse_action(action: &str) -> ConfirmationClass {
+    match action.to_lowercase().as_str() {
+        // Moving/hovering/scrolls only change transient UI state.
+        "move" | "hover" | "scroll" => ConfirmationClass::Reversible,
+        // Clicks activate whatever is under the cursor (buttons, submits).
+        _ => ConfirmationClass::Risky,
+    }
+}
+
+/// Classify a keyboard input action.
+pub fn classify_keyboard_action(
+    action: &str,
+    text: Option<&str>,
+    key: Option<&str>,
+) -> ConfirmationClass {
+    match action.to_lowercase().as_str() {
+        "type" => {
+            // A trailing/embedded newline frequently submits the focused form.
+            match text {
+                Some(t) if t.contains('\n') || t.contains('\r') => ConfirmationClass::Risky,
+                _ => ConfirmationClass::Reversible,
+            }
+        }
+        "key" => match key.map(|k| k.to_lowercase()) {
+            Some(k) if k.contains("return") || k.contains("enter") => ConfirmationClass::Risky,
+            Some(_) => ConfirmationClass::Reversible,
+            None => ConfirmationClass::Risky,
+        },
+        // Unknown keyboard actions default to requiring confirmation.
+        _ => ConfirmationClass::Risky,
+    }
+}
+
+/// Classify a guest shell command by its argv.
+pub fn classify_shell_command(command: &[String]) -> ConfirmationClass {
+    let joined = command.join(" ");
+    let lower = joined.to_lowercase();
+
+    // Destructive / hard-to-undo operations.
+    const IRREVERSIBLE: &[&str] = &[
+        "mkfs", "fdisk", "wipefs", "parted", "shutdown", "poweroff", "reboot",
+        "halt", ":(){", "dd if=", "rm -rf /", "rm -rf ~", "rm -rf /*",
+        "format c:", "del /f /s /q c:", "> /dev/sd",
+    ];
+    if IRREVERSIBLE.iter().any(|p| lower.contains(p)) {
+        return ConfirmationClass::Irreversible;
+    }
+
+    // State-mutating or dual-use operations.
+    const RISKY_TOKENS: &[&str] = &[
+        "rm", "rmdir", "del", "delete", "drop", "truncate", "chmod", "chown",
+        "chgrp", "sudo", "doas", "apt", "apt-get", "dnf", "yum", "brew", "pip",
+        "pip3", "npm", "pnpm", "yarn", "gem", "ssh", "scp", "sftp", "kill",
+        "killall", "pkill", "mount", "umount", "crontab", "passwd", "useradd",
+        "userdel", "usermod", "groupadd", "tee", "systemctl", "service",
+        "launchctl", "git", "curl", "wget",
+    ];
+    let tokens: Vec<String> = lower
+        .split(|c: char| !(c.is_alphanumeric() || c == '_' || c == '-' || c == '.'))
+        .filter(|t| !t.is_empty())
+        .map(|t| t.to_string())
+        .collect();
+    if RISKY_TOKENS.iter().any(|t| tokens.iter().any(|tok| tok == t)) {
+        return ConfirmationClass::Risky;
+    }
+    // Shell redirection writes files even when the binary itself is read-only.
+    if lower.contains('>') {
+        return ConfirmationClass::Risky;
+    }
+    ConfirmationClass::Reversible
+}
+
+/// Classify a guest file write by destination path.
+pub fn classify_file_write(path: &str) -> ConfirmationClass {
+    let lower = path.to_lowercase();
+    const SYSTEM_PREFIXES: &[&str] = &[
+        "/etc/", "/usr/", "/bin/", "/sbin/", "/boot/", "/lib/", "/lib64/",
+        "/root/", "~/.ssh", "c:\\windows", "c:\\program files",
+    ];
+    if SYSTEM_PREFIXES.iter().any(|p| lower.starts_with(p)) {
+        return ConfirmationClass::Irreversible;
+    }
+    ConfirmationClass::Risky
+}
+
+/// Denial produced by [`enforce_confirmation`], ready to become an HTTP
+/// response on any entry route.
+pub struct ConfirmationDenial {
+    pub status: axum::http::StatusCode,
+    pub body: serde_json::Value,
+}
+
+/// Enforce the confirmation taxonomy for one action on any computer-use
+/// entry route. `descriptor` is the canonical action payload that gets hashed
+/// into the grant; it must be built deterministically from the request (see
+/// `computer_control::control_action_descriptor`).
+///
+/// Returns `Ok(())` when the action may proceed. When confirmation is required
+/// and no valid grant is presented, returns `Err` with a fresh
+/// `confirmation_required` denial whose `approval_id` the client routes
+/// through the handoff endpoints; when a grant IS presented but does not
+/// match, returns `Err` with an `approval_denied` denial.
+pub fn enforce_confirmation(
+    approval_store: &crate::permission_policy::ApprovalStore,
+    user_id: &str,
+    route: &str,
+    class: ConfirmationClass,
+    descriptor: &serde_json::Value,
+    approval_id: Option<&str>,
+) -> Result<(), ConfirmationDenial> {
+    enforce_confirmation_with_mode(
+        HOST_POLICY.mode,
+        approval_store,
+        user_id,
+        route,
+        class,
+        descriptor,
+        approval_id,
+    )
+}
+
+/// Mode-injectable core of [`enforce_confirmation`], so tests are hermetic
+/// regardless of `ALLTERNIT_ACI_SAFETY_MODE`.
+pub fn enforce_confirmation_with_mode(
+    mode: SafetyMode,
+    approval_store: &crate::permission_policy::ApprovalStore,
+    user_id: &str,
+    route: &str,
+    class: ConfirmationClass,
+    descriptor: &serde_json::Value,
+    approval_id: Option<&str>,
+) -> Result<(), ConfirmationDenial> {
+    use serde_json::json;
+
+    if !class.requires_confirmation() || mode == SafetyMode::Off {
+        return Ok(());
+    }
+    if mode == SafetyMode::Audit {
+        tracing::warn!(
+            actor = %user_id,
+            route = %route,
+            class = %class.label(),
+            descriptor = %descriptor,
+            "aci safety: confirmation-required action allowed in audit mode"
+        );
+        return Ok(());
+    }
+
+    let action_hash = crate::aci_approvals::hash_action_payload(descriptor);
+    if let Some(id) = approval_id {
+        return match crate::aci_approvals::GRANTS.redeem(user_id, id, &action_hash) {
+            Ok(_) => Ok(()),
+            Err(denial) => Err(ConfirmationDenial {
+                status: axum::http::StatusCode::FORBIDDEN,
+                body: json!({
+                    "error": "approval_denied",
+                    "approval_id": id,
+                    "action_hash": action_hash,
+                    "reason": denial.reason(),
+                }),
+            }),
+        };
+    }
+
+    // No grant presented: create the handoff record and the hash-bound grant
+    // under one shared id so `/api/aci/handoff/:id/*` drives both.
+    let approval_id = approval_store.create(
+        user_id,
+        "computer.confirmation_required",
+        &json!({
+            "route": route,
+            "confirmation_class": class.label(),
+            "action_hash": action_hash,
+        }),
+    );
+    crate::aci_approvals::GRANTS.issue_with_id(
+        &approval_id,
+        user_id,
+        &action_hash,
+        crate::aci_approvals::grant_ttl_secs(),
+    );
+    Err(ConfirmationDenial {
+        status: axum::http::StatusCode::FORBIDDEN,
+        body: json!({
+            "error": "confirmation_required",
+            "approval_id": approval_id,
+            "action_hash": action_hash,
+            "confirmation_class": class.label(),
+            "message": format!("{} action requires human approval before execution", class.label()),
+        }),
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -477,5 +711,187 @@ mod tests {
         assert!(breaker.check(key).is_ok());
         assert!(breaker.check(key).is_ok());
         assert!(breaker.check(key).is_err());
+    }
+
+    #[test]
+    fn test_classify_mouse_actions() {
+        assert_eq!(classify_mouse_action("move"), ConfirmationClass::Reversible);
+        assert_eq!(classify_mouse_action("SCROLL"), ConfirmationClass::Reversible);
+        assert_eq!(classify_mouse_action("click"), ConfirmationClass::Risky);
+        assert_eq!(classify_mouse_action("doubleclick"), ConfirmationClass::Risky);
+    }
+
+    #[test]
+    fn test_classify_keyboard_actions() {
+        assert_eq!(
+            classify_keyboard_action("type", Some("hello world"), None),
+            ConfirmationClass::Reversible
+        );
+        assert_eq!(
+            classify_keyboard_action("type", Some("hello\n"), None),
+            ConfirmationClass::Risky
+        );
+        assert_eq!(
+            classify_keyboard_action("key", None, Some("Return")),
+            ConfirmationClass::Risky
+        );
+        assert_eq!(
+            classify_keyboard_action("key", None, Some("Left")),
+            ConfirmationClass::Reversible
+        );
+        assert_eq!(
+            classify_keyboard_action("mash", None, None),
+            ConfirmationClass::Risky
+        );
+    }
+
+    #[test]
+    fn test_classify_shell_commands() {
+        use ConfirmationClass::*;
+        assert_eq!(
+            classify_shell_command(&["ls".into(), "-la".into()]),
+            Reversible
+        );
+        assert_eq!(
+            classify_shell_command(&["cat".into(), "/tmp/log".into()]),
+            Reversible
+        );
+        assert_eq!(
+            classify_shell_command(&["echo".into(), "hi".into()]),
+            Reversible
+        );
+        assert_eq!(
+            classify_shell_command(&["rm".into(), "/tmp/scratch".into()]),
+            Risky
+        );
+        assert_eq!(
+            classify_shell_command(&["apt".into(), "install".into(), "vim".into()]),
+            Risky
+        );
+        assert_eq!(
+            classify_shell_command(&["git".into(), "push".into()]),
+            Risky
+        );
+        assert_eq!(
+            classify_shell_command(&["echo".into(), "x".into(), ">".into(), "/tmp/f".into()]),
+            Risky
+        );
+        assert_eq!(
+            classify_shell_command(&["rm".into(), "-rf".into(), "/".into()]),
+            Irreversible
+        );
+        assert_eq!(
+            classify_shell_command(&["mkfs.ext4".into(), "/dev/sda1".into()]),
+            Irreversible
+        );
+        // Read-only binaries must not trip on substrings (e.g. "delve").
+        assert_eq!(
+            classify_shell_command(&["cat".into(), "deliverable.txt".into()]),
+            Reversible
+        );
+    }
+
+    #[test]
+    fn test_classify_file_writes() {
+        use ConfirmationClass::*;
+        assert_eq!(classify_file_write("/home/user/notes.txt"), Risky);
+        assert_eq!(classify_file_write("C:\\Users\\joe\\out.txt"), Risky);
+        assert_eq!(classify_file_write("/etc/passwd"), Irreversible);
+        assert_eq!(classify_file_write("~/.ssh/authorized_keys"), Irreversible);
+        assert_eq!(classify_file_write("c:\\windows\\system32\\x.dll"), Irreversible);
+    }
+
+    #[test]
+    fn test_enforce_confirmation_reversible_never_blocks() {
+        let store = crate::permission_policy::ApprovalStore::new();
+        let descriptor = serde_json::json!({"route": "computer.mouse", "action": "move"});
+        assert!(enforce_confirmation_with_mode(
+            SafetyMode::Enforce,
+            &store,
+            "user-1",
+            "computer.mouse",
+            ConfirmationClass::Reversible,
+            &descriptor,
+            None,
+        )
+        .is_ok());
+    }
+
+    #[test]
+    fn test_enforce_confirmation_enforce_mode_requires_grant() {
+        let store = crate::permission_policy::ApprovalStore::new();
+        let descriptor = serde_json::json!({"route": "computer.shell", "command": ["rm", "x"]});
+        let denial = enforce_confirmation_with_mode(
+            SafetyMode::Enforce,
+            &store,
+            "user-1",
+            "computer.shell",
+            ConfirmationClass::Risky,
+            &descriptor,
+            None,
+        )
+        .expect_err("risky action without a grant must be denied");
+        assert_eq!(denial.status, axum::http::StatusCode::FORBIDDEN);
+        assert_eq!(denial.body["error"], "confirmation_required");
+        let approval_id = denial.body["approval_id"].as_str().unwrap().to_string();
+
+        // The denial minted a pending grant under the same id; an approved
+        // grant bound to the same hash must redeem cleanly.
+        assert!(crate::aci_approvals::GRANTS.approve(&approval_id));
+        assert!(enforce_confirmation_with_mode(
+            SafetyMode::Enforce,
+            &store,
+            "user-1",
+            "computer.shell",
+            ConfirmationClass::Risky,
+            &descriptor,
+            Some(&approval_id),
+        )
+        .is_ok());
+
+        // Single-use: a second redemption with the same grant is denied.
+        let second = enforce_confirmation_with_mode(
+            SafetyMode::Enforce,
+            &store,
+            "user-1",
+            "computer.shell",
+            ConfirmationClass::Risky,
+            &descriptor,
+            Some(&approval_id),
+        )
+        .expect_err("grant must be single-use");
+        assert_eq!(second.body["error"], "approval_denied");
+
+        // A different payload hash never matches the grant.
+        let other = serde_json::json!({"route": "computer.shell", "command": ["rm", "y"]});
+        let third = enforce_confirmation_with_mode(
+            SafetyMode::Enforce,
+            &store,
+            "user-1",
+            "computer.shell",
+            ConfirmationClass::Risky,
+            &other,
+            Some(&approval_id),
+        )
+        .expect_err("hash mismatch must be denied");
+        assert_eq!(third.body["error"], "approval_denied");
+    }
+
+    #[test]
+    fn test_enforce_confirmation_audit_and_off_modes_allow() {
+        let store = crate::permission_policy::ApprovalStore::new();
+        let descriptor = serde_json::json!({"route": "computer.shell", "command": ["rm", "x"]});
+        for mode in [SafetyMode::Audit, SafetyMode::Off] {
+            assert!(enforce_confirmation_with_mode(
+                mode,
+                &store,
+                "user-1",
+                "computer.shell",
+                ConfirmationClass::Risky,
+                &descriptor,
+                None,
+            )
+            .is_ok());
+        }
     }
 }

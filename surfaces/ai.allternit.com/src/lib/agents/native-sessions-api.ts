@@ -12,12 +12,29 @@ function getGatewayOrigin(): string {
 
 const getBase = () => `${getGatewayOrigin()}/api/v1/native-sessions`;
 
+const STALE_BACKEND_MESSAGE =
+  "Native sessions aren't supported by this backend yet. Update Allternit Desktop (or the backend) to a version that includes the native-sessions API.";
+
 async function authFetch(url: string, options: RequestInit = {}): Promise<Response> {
   const authHeaders = await buildAuthHeaders();
   return fetch(url, {
     ...options,
     headers: { ...authHeaders, ...options.headers },
   });
+}
+
+/** Parse a JSON response body, translating the SPA-HTML fallback (stale backend
+ *  serving index.html with 200) and other non-JSON bodies into actionable errors. */
+async function readJson<T>(res: Response, what: string): Promise<T> {
+  const text = await res.text();
+  if (text.trimStart().startsWith("<")) {
+    throw new Error(`${what}: ${STALE_BACKEND_MESSAGE}`);
+  }
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new Error(`${what}: expected JSON but got an unreadable response. ${STALE_BACKEND_MESSAGE}`);
+  }
 }
 
 export interface NativeHarnessInfo {
@@ -73,7 +90,7 @@ export const nativeSessionsApi = {
   async listHarnesses(): Promise<NativeHarnessInfo[]> {
     const res = await authFetch(`${getBase()}/harnesses`);
     if (!res.ok) throw new Error(`native harnesses failed: ${res.status}`);
-    const data = (await res.json()) as { harnesses: NativeHarnessInfo[] };
+    const data = await readJson<{ harnesses: NativeHarnessInfo[] }>(res, "native harnesses");
     return data.harnesses ?? [];
   },
 
@@ -84,7 +101,7 @@ export const nativeSessionsApi = {
     const qs = params.toString();
     const res = await authFetch(`${getBase()}${qs ? `?${qs}` : ""}`);
     if (!res.ok) throw new Error(`native catalog failed: ${res.status}`);
-    const data = (await res.json()) as { sessions: NativeCatalogSession[] };
+    const data = await readJson<{ sessions: NativeCatalogSession[] }>(res, "native catalog");
     return data.sessions ?? [];
   },
 
@@ -94,7 +111,7 @@ export const nativeSessionsApi = {
     const qs = params.toString();
     const res = await authFetch(`${getBase()}/${encodeURIComponent(harness)}/${encodeURIComponent(id)}${qs ? `?${qs}` : ""}`);
     if (!res.ok) throw new Error(`native show failed: ${res.status}`);
-    return res.json();
+    return readJson(res, "native show");
   },
 
   async pickup(input: {
@@ -112,7 +129,7 @@ export const nativeSessionsApi = {
       const body = await res.text();
       throw new Error(body || `pickup failed: ${res.status}`);
     }
-    return res.json() as Promise<PickupResult>;
+    return readJson<PickupResult>(res, "pickup");
   },
 
   async exportNative(sessionId: string, harness?: string): Promise<{
@@ -131,7 +148,7 @@ export const nativeSessionsApi = {
       const body = await res.text();
       throw new Error(body || `export-native failed: ${res.status}`);
     }
-    return res.json();
+    return readJson(res, "export-native");
   },
 
   async fetchOrigin(sessionId: string): Promise<FetchOriginResult> {
@@ -139,7 +156,7 @@ export const nativeSessionsApi = {
       method: "POST",
     });
     if (!res.ok) throw new Error(`fetch-origin failed: ${res.status}`);
-    return res.json() as Promise<FetchOriginResult>;
+    return readJson<FetchOriginResult>(res, "fetch-origin");
   },
 };
 

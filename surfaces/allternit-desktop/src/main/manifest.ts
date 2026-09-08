@@ -7,14 +7,14 @@
 
 export const PLATFORM_MANIFEST = {
   /** Desktop version */
-  version: '1.1.0',
+  version: '1.1.1',
 
   /** Release timestamp */
-  releasedAt: '2026-09-04T00:00:00Z',
+  releasedAt: '2026-09-08T00:00:00Z',
 
   /** Backend is locked to this exact version */
   backend: {
-    version: '1.1.0',
+    version: '1.1.1',
 
     /** Minimum compatible backend version (grace period for rolling updates) */
     minimumCompatible: '1.0.0',

@@ -191,11 +191,11 @@ for await (const chunk of harness.stream({
 
 ## Computer use and text editor tools
 
-Anthropic's built-in tools are exposed as SDK capabilities:
+Anthropic's built-in tools map onto Allternit SDK capabilities. The computer capability is **Allternit Computer Use**: its vendor-neutral contract is `allternitToolType: 'computer'` with `computerToolVersion: '20250124' | '20251124'` selecting the action set. The upstream tool types below are legacy-compat adapters — the SDK emits `metadata.anthropicType` alongside the Allternit fields during the transition:
 
-| Anthropic tool | Allternit SDK |
+| Anthropic tool (legacy adapter) | Allternit SDK |
 |----------------|---------------|
-| `computer_20250124` | `ComputerUseCapability` / `COMPUTER_USE_TOOL` |
+| `computer_20250124` / `computer_20251124` | `ComputerUseCapability` / `COMPUTER_USE_TOOL` (`allternitToolType: 'computer'`, `computerToolVersion`) |
 | `text_editor_20250124` | `TextEditorTool` (`str_replace_editor`) |
 
 ```typescript

@@ -78,11 +78,11 @@ const EXTENSION_SIDEPANEL_ANIMATIONS = `
 @keyframes extension-sidepanel-overlay-border {
   0%, 100% {
     opacity: 0.58;
-    box-shadow: inset 0 0 0 1px rgba(91, 153, 255, 0.3), 0 0 24px rgba(91, 153, 255, 0.12);
+    box-shadow: inset 0 0 0 1px rgba(217, 119, 87, 0.28), 0 0 24px rgba(217, 119, 87, 0.10);
   }
   50% {
     opacity: 0.9;
-    box-shadow: inset 0 0 0 1px rgba(179, 96, 255, 0.34), 0 0 32px rgba(69, 201, 255, 0.18);
+    box-shadow: inset 0 0 0 1px rgba(176, 141, 110, 0.32), 0 0 32px rgba(107, 154, 123, 0.14);
   }
 }
 
@@ -458,14 +458,59 @@ function timeAgo(ts: number): string {
   return `${days}d ago`;
 }
 
-function Logo({ className }: { className?: string }) {
+/**
+ * Inline Allternit A:// mark — geometry ported from
+ * surfaces/allternit-extensions/allternit-office-addin/src/taskpane/components/AProtocolMark.tsx
+ * (10-unit cells, 8.5 blocks, rx 1.5; mark occupies cols 0–14). The apex core
+ * block renders in Allternit coral (#D97757); the rest uses currentColor so the
+ * mark adapts to its context. Rendered as pure SVG — no image assets, so it
+ * works in every consumer (Office task pane iframe, Chrome sidepanel).
+ */
+const ALLTERNIT_MARK_CELLS: ReadonlyArray<readonly [number, number]> = [
+  [2, 0],
+  [1, 1], [3, 1],
+  [0, 2], [1, 2], [3, 2], [4, 2],
+  [0, 3], [4, 3],
+  [0, 4], [4, 4],
+  [6, 1], [6, 3],
+  [8, 3], [8, 4], [9, 2], [10, 0], [10, 1],
+  [12, 3], [12, 4], [13, 2], [14, 0], [14, 1],
+];
+const ALLTERNIT_CORE_CELL: readonly [number, number] = [2, 2];
+const ALLTERNIT_MARK_COLS = 15;
+const ALLTERNIT_MARK_ROWS = 5;
+
+function AllternitMark({ className, height = 18 }: { className?: string; height?: number }) {
+  const width = (height * ALLTERNIT_MARK_COLS) / ALLTERNIT_MARK_ROWS;
   return (
-    <img
-      src="/assets/page-agent-64.png"
-      alt="Page Agent"
+    <span
       className={className}
-      draggable={false}
-    />
+      aria-label="Allternit"
+      role="img"
+      style={{ display: "inline-block", height, width, verticalAlign: "middle" }}
+    >
+      <svg
+        viewBox="0 0 150 50"
+        width={width}
+        height={height}
+        style={{ display: "block" }}
+        shapeRendering="geometricPrecision"
+      >
+        <g fill="currentColor">
+          {ALLTERNIT_MARK_CELLS.map(([cx, cy]) => (
+            <rect key={`m-${cx}-${cy}`} x={cx * 10 + 0.75} y={cy * 10 + 0.75} width={8.5} height={8.5} rx={1.5} />
+          ))}
+        </g>
+        <rect
+          x={ALLTERNIT_CORE_CELL[0] * 10 + 0.75}
+          y={ALLTERNIT_CORE_CELL[1] * 10 + 0.75}
+          width={8.5}
+          height={8.5}
+          rx={1.5}
+          fill="#D97757"
+        />
+      </svg>
+    </span>
   );
 }
 
@@ -481,14 +526,14 @@ function MotionOverlay({ active }: { active: boolean }) {
         className="absolute inset-0 rounded-[inherit]"
         style={{
           background:
-            "linear-gradient(180deg, rgba(5, 7, 10, 0.04), rgba(5, 7, 10, 0.08)), radial-gradient(circle at 16% 18%, rgba(68, 128, 255, 0.16), transparent 30%), radial-gradient(circle at 84% 82%, rgba(51, 216, 168, 0.12), transparent 30%)",
+            "linear-gradient(180deg, rgba(41, 32, 26, 0.03), rgba(41, 32, 26, 0.06)), radial-gradient(circle at 16% 18%, rgba(217, 119, 87, 0.14), transparent 30%), radial-gradient(circle at 84% 82%, rgba(107, 154, 123, 0.10), transparent 30%)",
         }}
       />
       <div
         className="absolute inset-[-14px] rounded-[inherit] blur-2xl"
         style={{
           background:
-            "conic-gradient(from 180deg, rgba(92, 136, 255, 0.32), rgba(83, 196, 255, 0.12), rgba(179, 96, 255, 0.26), rgba(92, 136, 255, 0.32))",
+            "conic-gradient(from 180deg, rgba(217, 119, 87, 0.26), rgba(212, 176, 140, 0.12), rgba(154, 118, 88, 0.22), rgba(217, 119, 87, 0.26))",
           animation: "extension-sidepanel-overlay-glow-a 4.8s ease-in-out infinite",
         }}
       />
@@ -496,7 +541,7 @@ function MotionOverlay({ active }: { active: boolean }) {
         className="absolute inset-[-14px] rounded-[inherit] blur-2xl"
         style={{
           background:
-            "conic-gradient(from 0deg, rgba(70, 212, 255, 0.22), rgba(92, 136, 255, 0.12), rgba(74, 208, 157, 0.24), rgba(70, 212, 255, 0.22))",
+            "conic-gradient(from 0deg, rgba(212, 176, 140, 0.18), rgba(217, 119, 87, 0.10), rgba(107, 154, 123, 0.18), rgba(212, 176, 140, 0.18))",
           animation: "extension-sidepanel-overlay-glow-b 4.8s ease-in-out infinite",
         }}
       />
@@ -628,17 +673,18 @@ function EmptyState({
 }: {
   copy: ExtensionSidepanelCopy;
   brandIcon?: React.ReactNode;
-}) {
-  const typingWords = useMemo(() => {
+}) {  const typingWords = useMemo(() => {
+    const suggestions = copy.emptyStateSuggestions ?? EMPTY_STATE_TYPING_WORDS;
     const ordered = [
-      EMPTY_STATE_TYPING_WORDS[0],
+      suggestions[0],
       copy.emptyStateDescription,
-      EMPTY_STATE_TYPING_WORDS[1],
-      EMPTY_STATE_TYPING_WORDS[2],
+      ...suggestions.slice(1),
     ];
 
     return ordered.filter((word, index) => ordered.indexOf(word) === index);
-  }, [copy.emptyStateDescription]);
+  }, [copy.emptyStateDescription, copy.emptyStateSuggestions]);
+
+  const showCommunityLinks = copy.communityLinks !== false;
 
   return (
     <div className="flex h-full flex-col items-center justify-center gap-4 px-6 text-center">
@@ -648,7 +694,7 @@ function EmptyState({
           className="absolute inset-0 -m-6 rounded-full blur-2xl"
           style={{
             background:
-              "conic-gradient(from 180deg, oklch(0.55 0.2 280), oklch(0.5 0.15 230), oklch(0.6 0.18 310), oklch(0.55 0.2 280))",
+              "conic-gradient(from 180deg, rgba(217, 119, 87, 0.30), rgba(212, 176, 140, 0.16), rgba(154, 118, 88, 0.26), rgba(217, 119, 87, 0.30))",
             animation: "extension-sidepanel-glow-a 5s ease-in-out infinite",
           }}
         />
@@ -656,12 +702,12 @@ function EmptyState({
           className="absolute inset-0 -m-6 rounded-full blur-2xl"
           style={{
             background:
-              "conic-gradient(from 0deg, oklch(0.55 0.18 160), oklch(0.5 0.2 200), oklch(0.6 0.15 120), oklch(0.55 0.18 160))",
+              "conic-gradient(from 0deg, rgba(107, 154, 123, 0.20), rgba(212, 176, 140, 0.18), rgba(217, 119, 87, 0.18), rgba(107, 154, 123, 0.20))",
             animation: "extension-sidepanel-glow-b 5s ease-in-out infinite",
           }}
         />
         <div className="relative flex items-center justify-center">
-          {brandIcon ?? <Logo className="relative size-20 opacity-80" />}
+          {brandIcon ?? <AllternitMark height={64} className="relative opacity-90" />}
         </div>
       </div>
 
@@ -679,37 +725,39 @@ function EmptyState({
         />
       </div>
 
-      <div className="mt-1 flex items-center gap-3 text-muted-foreground">
-        <a
-          href="https://github.com/alibaba/page-agent"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="transition-colors hover:text-foreground"
-          title="GitHub"
-        >
-          <svg role="img" viewBox="0 0 24 24" className="size-4 fill-current">
-            <path d={GITHUB_ICON_PATH} />
-          </svg>
-        </a>
-        <a
-          href="https://alibaba.github.io/page-agent/docs/features/chrome-extension"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="transition-colors hover:text-foreground"
-          title="Documentation"
-        >
-          <BookOpen className="size-4" />
-        </a>
-        <a
-          href="https://alibaba.github.io/page-agent"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="transition-colors hover:text-foreground"
-          title="Website"
-        >
-          <Globe className="size-4" />
-        </a>
-      </div>
+      {showCommunityLinks && (
+        <div className="mt-1 flex items-center gap-3 text-muted-foreground">
+          <a
+            href="https://github.com/alibaba/page-agent"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="transition-colors hover:text-foreground"
+            title="GitHub"
+          >
+            <svg role="img" viewBox="0 0 24 24" className="size-4 fill-current">
+              <path d={GITHUB_ICON_PATH} />
+            </svg>
+          </a>
+          <a
+            href="https://alibaba.github.io/page-agent/docs/features/chrome-extension"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="transition-colors hover:text-foreground"
+            title="Documentation"
+          >
+            <BookOpen className="size-4" />
+          </a>
+          <a
+            href="https://alibaba.github.io/page-agent"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="transition-colors hover:text-foreground"
+            title="Website"
+          >
+            <Globe className="size-4" />
+          </a>
+        </div>
+      )}
     </div>
   );
 }
@@ -905,6 +953,12 @@ function StepCard({ event }: { event: Extract<ExtensionSidepanelHistoricalEvent,
       <div className="mb-2 text-[11px] font-semibold tracking-wide text-foreground">
         Step #{(event.stepIndex ?? 0) + 1}
       </div>
+
+      {event.content && (
+        <p className="mb-2 whitespace-pre-wrap break-words text-xs leading-relaxed text-foreground/90">
+          {event.content}
+        </p>
+      )}
 
       {event.reflection && <ReflectionSection reflection={event.reflection} />}
 
@@ -1542,8 +1596,10 @@ export function ExtensionSidepanelShell({
   adapter,
   copy,
   brandIcon,
+  emptyStateBrandIcon,
   testId = "extension-sidepanel-shell",
   containerClassName,
+  appearance = "system",
   renderConfigView,
   renderHistoryListView,
   renderHistoryDetailView,
@@ -1552,8 +1608,12 @@ export function ExtensionSidepanelShell({
   adapter: ExtensionSidepanelAdapter;
   copy?: Partial<ExtensionSidepanelCopy>;
   brandIcon?: React.ReactNode;
+  /** Larger brand treatment for the empty state; falls back to brandIcon. */
+  emptyStateBrandIcon?: React.ReactNode;
   testId?: string;
   containerClassName?: string;
+  /** "light"/"dark" pin the theme; "system" follows the OS preference. */
+  appearance?: "system" | "light" | "dark";
   renderConfigView?: (props: ExtensionSidepanelConfigViewProps) => React.ReactNode;
   renderHistoryListView?: (props: ExtensionSidepanelHistoryListViewProps) => React.ReactNode;
   renderHistoryDetailView?: (props: ExtensionSidepanelHistoryDetailViewProps) => React.ReactNode;
@@ -1565,14 +1625,15 @@ export function ExtensionSidepanelShell({
   const historyRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const prefersDark = usePrefersDarkMode();
+  const isDark = appearance === "dark" || (appearance !== "light" && prefersDark);
 
   const themeStyle = useMemo(
     () =>
       ({
-        ...(prefersDark ? DARK_THEME : LIGHT_THEME),
-        colorScheme: prefersDark ? "dark" : "light",
+        ...(isDark ? DARK_THEME : LIGHT_THEME),
+        colorScheme: isDark ? "dark" : "light",
       }) as React.CSSProperties,
-    [prefersDark],
+    [isDark],
   );
 
   const selectedSession = useMemo(() => {
@@ -1633,20 +1694,20 @@ export function ExtensionSidepanelShell({
       data-testid={testId}
       className={cn(
         "relative flex min-h-0 flex-col bg-transparent p-2 text-foreground",
-        prefersDark && "dark",
+        isDark && "dark",
         containerClassName ?? "h-dvh",
       )}
       style={themeStyle}
     >
       {/* Chat view — always mounted, hidden via CSS when inactive */}
-      <div className={cn("h-full", view.name !== "chat" && "hidden")}>
+      <div className={cn("flex h-full min-h-0 flex-col", view.name !== "chat" && "hidden")}>
         <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-[18px] border border-border/80 bg-card shadow-2xl">
           <MotionOverlay active={isRunning} />
 
           <header className="flex items-center justify-between border-b border-border/80 px-4 py-3">
-            <div className="flex items-center gap-2.5">
-              {brandIcon ?? <Logo className="size-5" />}
-              <span className="text-sm font-semibold">{shellCopy.title}</span>
+            <div className="flex min-w-0 items-center gap-2.5">
+              {brandIcon ?? <AllternitMark height={18} />}
+              <span className="truncate text-sm font-semibold">{shellCopy.title}</span>
             </div>
 
             <div className="flex items-center gap-1.5">
@@ -1682,7 +1743,7 @@ export function ExtensionSidepanelShell({
             )}
 
             <div ref={historyRef} className="flex-1 space-y-3 overflow-y-auto p-4">
-              {showEmptyState && <EmptyState copy={shellCopy} brandIcon={brandIcon} />}
+              {showEmptyState && <EmptyState copy={shellCopy} brandIcon={emptyStateBrandIcon ?? brandIcon} />}
               {adapter.history.map((event, index) => (
                 <EventCard
                   key={`extension-event-${index}`}
@@ -1707,8 +1768,12 @@ export function ExtensionSidepanelShell({
             ) : (
               <form
                 onSubmit={handleSubmit}
-                className="relative rounded-[14px] border border-input bg-background/80 shadow-sm"
+                className="relative rounded-[14px] border border-input bg-background/80 shadow-sm transition-[border-color,box-shadow] focus-within:border-[var(--border-focus,color-mix(in_srgb,currentColor_30%,transparent))] focus-within:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent-brand,#D97757)_14%,transparent)]"
               >
+                <AllternitMark
+                  height={12}
+                  className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-foreground/50"
+                />
                 <textarea
                   ref={textareaRef}
                   rows={1}
@@ -1717,7 +1782,7 @@ export function ExtensionSidepanelShell({
                   placeholder={composerPlaceholder}
                   onChange={(event) => setInputValue(event.target.value)}
                   onKeyDown={handleKeyDown}
-                  className="min-h-12 w-full resize-none bg-transparent px-4 py-3 pr-14 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed"
+                  className="min-h-12 w-full resize-none bg-transparent py-3 pl-[52px] pr-14 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed"
                 />
 
                 <button
@@ -1730,7 +1795,7 @@ export function ExtensionSidepanelShell({
                     isRunning
                       ? "bg-destructive text-white hover:opacity-90"
                       : inputValue.trim().length > 0
-                        ? "bg-zinc-300 text-zinc-950 hover:bg-zinc-200"
+                        ? "bg-[var(--accent-brand,#D97757)] text-white shadow-sm hover:opacity-90"
                         : "bg-muted text-muted-foreground",
                   )}
                 >

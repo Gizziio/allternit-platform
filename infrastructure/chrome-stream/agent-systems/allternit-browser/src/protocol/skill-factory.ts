@@ -54,7 +54,7 @@ export function compileBrowserTrajectoryToSkill(
     inputs: [],
     steps: committedSteps.map((step, index) => {
       const action = step.action;
-      const input = sanitizeInput(action.input, redactions);
+      const input = sanitizeInput(action.input, redactions, secretFieldFromTarget(action.targetDescription ?? action.targetRef));
       return {
         id: step.stepId || `step_${index + 1}`,
         kind: action.kind,
@@ -89,11 +89,26 @@ export function compileBrowserTrajectoryToSkill(
   return { workflow, manifest };
 }
 
-function sanitizeInput(input: Record<string, unknown>, redactions: Set<string>): Record<string, unknown> {
+const GENERIC_VALUE_KEYS = new Set(['text', 'value', 'input']);
+
+function sanitizeInput(
+  input: Record<string, unknown>,
+  redactions: Set<string>,
+  secretFieldName: string | null = null,
+): Record<string, unknown> {
   return Object.fromEntries(Object.entries(input).map(([key, value]) => {
     if (SECRET_INPUT_NAMES.test(key)) {
       redactions.add(`input.${key}`);
       return [key, `{{${toInputName(key)}}}`];
+    }
+    if (
+      secretFieldName
+      && GENERIC_VALUE_KEYS.has(toInputName(key))
+      && typeof value === 'string'
+      && value.length > 0
+    ) {
+      redactions.add(`input.${key}`);
+      return [key, `{{${secretFieldName}}}`];
     }
     if (typeof value === 'string' && SENSITIVE_VALUE.test(value)) {
       redactions.add(`input.${key}`);
@@ -103,10 +118,27 @@ function sanitizeInput(input: Record<string, unknown>, redactions: Set<string>):
       return [key, value.map((item) => typeof item === 'string' && SENSITIVE_VALUE.test(item) ? '{{redacted_value}}' : item)];
     }
     if (value && typeof value === 'object') {
-      return [key, sanitizeInput(value as Record<string, unknown>, redactions)];
+      return [key, sanitizeInput(value as Record<string, unknown>, redactions, secretFieldName)];
     }
     return [key, value];
   }));
+}
+
+/**
+ * Extract a secret-ish field name from an action target description such as
+ * `input[name="password"]`, `#api-key`, or `[placeholder="Card number"]`.
+ * Returns the normalized field name, or null when the target names nothing
+ * sensitive. Drives target-aware redaction for recordings where the value
+ * arrives under a generic key (e.g. ACU type_text on a password field).
+ */
+function secretFieldFromTarget(target: string | undefined): string | null {
+  if (!target) return null;
+  for (const match of target.matchAll(/[\w-]+\s*=\s*["']([^"']+)["']/g)) {
+    const normalized = toInputName(match[1] ?? '');
+    if (normalized && SECRET_INPUT_NAMES.test(normalized)) return normalized;
+  }
+  const bare = toInputName(target);
+  return bare && SECRET_INPUT_NAMES.test(bare) ? bare : null;
 }
 
 function toInputName(key: string): string {

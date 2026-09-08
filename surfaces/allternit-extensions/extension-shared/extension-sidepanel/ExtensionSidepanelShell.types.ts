@@ -12,6 +12,9 @@ export type ExtensionSidepanelHistoricalEvent =
   | {
       type: "step";
       stepIndex?: number;
+      /** Plain assistant text for the step (office add-in path). Rendered when
+       *  no structured action is present. */
+      content?: string;
       reflection?: {
         evaluation_previous_goal?: string;
         memory?: string;
@@ -111,6 +114,12 @@ export interface ExtensionSidepanelCopy {
   subtitle: string;
   emptyStateTitle: string;
   emptyStateDescription: string;
+  /** Typing-animation suggestion lines for the empty state. Defaults to the
+   *  generic automation prompts when omitted. */
+  emptyStateSuggestions?: readonly string[];
+  /** Whether to show the community/source links row in the empty state
+   *  (GitHub, docs, website). Defaults to true. */
+  communityLinks?: boolean;
   readyLabel: string;
   contextLabel: string;
   settingsEyebrow: string;
