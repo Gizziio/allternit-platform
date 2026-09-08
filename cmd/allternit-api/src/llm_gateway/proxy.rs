@@ -951,23 +951,36 @@ pub(crate) fn record_usage_event(
     outcome: &RequestOutcome,
     idempotency_key: Option<&str>,
 ) {
+    // BYO-served requests (the caller supplied their own credential for the
+    // provider that served the request) bill the customer's own cloud
+    // console — meter the tokens but charge nothing.
+    let byo = outcome
+        .usage
+        .provider_id
+        .as_deref()
+        .is_some_and(|provider_id| super::route_credentials::has_credential(db, &key.user_id, provider_id));
+
     // B4: recompute cost from the models.dev cache (skipped → NULL when the
     // file or model is unavailable; the Gizzi-reported cost stands alone).
-    let recomputed = match (&outcome.usage.provider_id, &outcome.usage.model_id) {
-        (Some(provider_id), Some(model_id)) => llm_pricing::recompute_cost_microdollars(
-            provider_id,
-            model_id,
-            &TokenBreakdown {
-                input: outcome.usage.prompt_tokens,
-                output: outcome.usage.completion_tokens,
-                reasoning: outcome.usage.reasoning_tokens,
-                cache_read: outcome.usage.cached_tokens,
-                cache_write: outcome.usage.cache_write_tokens,
-            },
-        ),
-        _ => None,
+    let recomputed = if byo {
+        Some(0)
+    } else {
+        match (&outcome.usage.provider_id, &outcome.usage.model_id) {
+            (Some(provider_id), Some(model_id)) => llm_pricing::recompute_cost_microdollars(
+                provider_id,
+                model_id,
+                &TokenBreakdown {
+                    input: outcome.usage.prompt_tokens,
+                    output: outcome.usage.completion_tokens,
+                    reasoning: outcome.usage.reasoning_tokens,
+                    cache_read: outcome.usage.cached_tokens,
+                    cache_write: outcome.usage.cache_write_tokens,
+                },
+            ),
+            _ => None,
+        }
     };
-    let gizzi_cost = outcome.usage.cost_microdollars;
+    let gizzi_cost = if byo { 0 } else { outcome.usage.cost_microdollars };
     let cost_mismatch = recomputed.is_some_and(|re| llm_pricing::is_mismatch(re, gizzi_cost));
     if cost_mismatch {
         warn!(
@@ -1721,6 +1734,29 @@ pub async fn chat_completions(
         super::provider_routing::resolve_for_model(policy, &resolved.provider_id, &resolved.model_id)
     });
 
+    // BYO subscription keys (route_credentials): when the resolved provider
+    // matches one of the caller's own credentials, attach it to the Gizzi
+    // payload so the upstream call bills the customer's own cloud console
+    // instead of Allternit credits. Always a separate payload key — never
+    // inside `provider`, which is forwarded to the aggregator.
+    let byo_primary =
+        super::route_credentials::get_credential(&state.db, &key.user_id, &resolved.provider_id)
+            .ok()
+            .flatten();
+    let attach_byo = |payload: &mut Value, credential: &super::route_credentials::RouteCredential| {
+        let mut object = serde_json::Map::new();
+        object.insert("apiKey".into(), json!(credential.api_key));
+        if let Some(base_url) = &credential.base_url {
+            object.insert("baseURL".into(), json!(base_url));
+        }
+        payload["provider_credentials"] = Value::Object(object);
+    };
+    let clear_byo = |payload: &mut Value| {
+        if let Some(object) = payload.as_object_mut() {
+            object.remove("provider_credentials");
+        }
+    };
+
     // Per-key model allowlist: the requested string and, for explicit ids,
     // the resolved provider/model form are both accepted.
     let allowed = key.model_allowed(&request.model)
@@ -1899,6 +1935,11 @@ pub async fn chat_completions(
     if let Some(provider) = &provider_routing_primary {
         payload["provider"] = provider.clone();
     }
+    // BYO credential for the primary provider, when the caller has one.
+    match &byo_primary {
+        Some(credential) => attach_byo(&mut payload, credential),
+        None => clear_byo(&mut payload),
+    }
     let message_url = format!(
         "{base}/v1/session/{}/message",
         urlencoding::encode(&session_id)
@@ -2064,6 +2105,21 @@ pub async fn chat_completions(
                 )
             }) {
                 payload["provider"] = provider;
+            }
+            // The BYO credential must follow the failover model too — and be
+            // removed when the next provider is not the caller's own, so a
+            // user key never rides along to a provider they did not supply
+            // credentials for.
+            match super::route_credentials::get_credential(
+                &state.db,
+                &key.user_id,
+                &next_model.provider_id,
+            )
+            .ok()
+            .flatten()
+            {
+                Some(credential) => attach_byo(&mut payload, &credential),
+                None => clear_byo(&mut payload),
             }
 
             let message_url = format!(
