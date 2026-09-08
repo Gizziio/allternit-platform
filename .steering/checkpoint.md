@@ -1,9 +1,15 @@
-# Steering checkpoint — session/office-makeover
+# Steering checkpoint — session/cors-3014
 
-Goal: Polished light-theme Allternit task pane makeover (owner request).
+Goal: Add the desktop shell dev-server origins (localhost:3014, 127.0.0.1:3014)
+to `DEFAULT_ALLOWED_ORIGINS` in `cmd/allternit-api/src/cors.rs` so the Remote
+peers / roster fetches from the Electron dev UI (`devUiUrl` = Vite :3014) stop
+getting CORS-blocked without needing `ALLTERNIT_CORS_ORIGINS` set.
 
-State: makeover committed (49bfe127b) — light theme, per-host accents, token-based
-styles.css, component polish; build verified by the authoring agent. Symlink fix
-from PR #127 applied on this branch (26cff31b3); merged origin/main (manifests stay
-at main's v1.1.3.0). Next: PR, merge, CI deploys to allternit-office-addins,
-owner acceptance with new look.
+Just did: worktree `allternit-session-cors3014` on `session/cors-3014` from
+origin/main (c9efe60e0); edited cors.rs allowlist + doc comment.
+
+Next: cargo test the cors module, commit, push, PR, merge, ledger attestation,
+worktree cleanup.
+
+Open questions: none — 2-origin addition, existing tests are self-referential
+(len() vs DEFAULT_ALLOWED_ORIGINS) so they stay green.
