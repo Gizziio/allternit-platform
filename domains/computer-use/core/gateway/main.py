@@ -106,6 +106,19 @@ ActionType = Literal[
     "set_clipboard",
     "find_elements",
     "ax_snapshot",
+    # computer_20250124 / computer_20251124 native action set — the SDK
+    # capability advertises these but they were previously unhandled here
+    # and silently fell through to the stub.
+    "mouse_move",
+    "left_click",
+    "left_click_drag",
+    "middle_click",
+    "left_mouse_down",
+    "left_mouse_up",
+    "cursor_position",
+    "hold_key",
+    "wait",
+    "zoom",
 ]
 
 AdapterPreference = Literal["playwright", "browser-use", "cdp", "desktop"]
@@ -1700,6 +1713,396 @@ async def handle_ax_snapshot(req: ExecuteRequest) -> ExecuteResponse:
         return result
 
 
+def _action_coordinate(req: ExecuteRequest) -> tuple[float | None, float | None]:
+    """Extract [x, y] from the SDK's `coordinate` array or loose x/y parameters."""
+    coord = req.parameters.get("coordinate")
+    if isinstance(coord, (list, tuple)) and len(coord) >= 2:
+        return float(coord[0]), float(coord[1])
+    x, y = req.parameters.get("x"), req.parameters.get("y")
+    if x is not None and y is not None:
+        return float(x), float(y)
+    return None, None
+
+
+def _action_duration_seconds(req: ExecuteRequest, default: float = 1.0) -> float:
+    """Duration in seconds for hold_key/wait, from `duration` or `duration_ms`."""
+    duration = req.parameters.get("duration")
+    if duration is not None:
+        return max(0.0, float(duration))
+    duration_ms = req.parameters.get("duration_ms")
+    if duration_ms is not None:
+        return max(0.0, float(duration_ms) / 1000.0)
+    return default
+
+
+async def handle_mouse_move(req: ExecuteRequest) -> ExecuteResponse:
+    """Move the mouse cursor to an absolute [x, y] pixel coordinate."""
+    trace_id = str(uuid4())
+    frame = await maybe_record_before(req)
+    try:
+        x, y = _action_coordinate(req)
+        if x is None or y is None:
+            raise Exception("coordinate [x, y] is required for mouse_move")
+        page = await session_manager.get_page(req.session_id)
+        if page:
+            await page.mouse.move(x, y)
+        else:
+            try:
+                import pyautogui as _pag
+                _pag.moveTo(x, y)
+            except ImportError:
+                raise Exception("mouse_move requires an active browser session or pyautogui for desktop control")
+        result = ExecuteResponse(
+            run_id=req.run_id, session_id=req.session_id,
+            adapter_id="browser.playwright", family="browser", mode="execute",
+            status="completed", summary=f"Moved mouse to ({x}, {y})",
+            extracted_content={"x": x, "y": y},
+            receipts=[Receipt(action="mouse_move", timestamp=utc_now_iso(), success=True,
+                              details={"x": x, "y": y})],
+            trace_id=trace_id,
+        )
+        await maybe_record_after(frame, result)
+        return result
+    except Exception as e:
+        result = ExecuteResponse(
+            run_id=req.run_id, session_id=req.session_id,
+            adapter_id="browser.playwright", family="browser", mode="execute",
+            status="failed", summary=f"mouse_move failed: {e}",
+            error=ErrorDetail(code="MOUSE_MOVE_ERROR", message=str(e)),
+            receipts=[Receipt(action="mouse_move", timestamp=utc_now_iso(), success=False,
+                              details={"error": str(e)})],
+            trace_id=trace_id,
+        )
+        await maybe_record_failure(frame, e)
+        return result
+
+
+async def _handle_mouse_click_variant(req: ExecuteRequest, action: str, button: str) -> ExecuteResponse:
+    """Shared left/middle click handler; coordinate optional (clicks at current position)."""
+    trace_id = str(uuid4())
+    frame = await maybe_record_before(req)
+    try:
+        x, y = _action_coordinate(req)
+        page = await session_manager.get_page(req.session_id)
+        if page:
+            if x is not None and y is not None:
+                await page.mouse.click(x, y, button=button)
+            else:
+                # Playwright has no real cursor in the browser context — click
+                # at the current virtual mouse position.
+                await page.mouse.down(button=button)
+                await page.mouse.up(button=button)
+        else:
+            try:
+                import pyautogui as _pag
+                if x is not None and y is not None:
+                    _pag.click(x, y, button=button)
+                else:
+                    _pag.click(button=button)
+            except ImportError:
+                raise Exception(f"{action} requires an active browser session or pyautogui for desktop control")
+        where = f"({x}, {y})" if x is not None and y is not None else "current position"
+        result = ExecuteResponse(
+            run_id=req.run_id, session_id=req.session_id,
+            adapter_id="browser.playwright", family="browser", mode="execute",
+            status="completed", summary=f"{button} clicked at {where}",
+            extracted_content={"button": button, "x": x, "y": y},
+            receipts=[Receipt(action=action, timestamp=utc_now_iso(), success=True,
+                              details={"button": button, "x": x, "y": y})],
+            trace_id=trace_id,
+        )
+        await maybe_record_after(frame, result)
+        return result
+    except Exception as e:
+        result = ExecuteResponse(
+            run_id=req.run_id, session_id=req.session_id,
+            adapter_id="browser.playwright", family="browser", mode="execute",
+            status="failed", summary=f"{action} failed: {e}",
+            error=ErrorDetail(code=f"{action.upper()}_ERROR", message=str(e)),
+            receipts=[Receipt(action=action, timestamp=utc_now_iso(), success=False,
+                              details={"error": str(e)})],
+            trace_id=trace_id,
+        )
+        await maybe_record_failure(frame, e)
+        return result
+
+
+async def handle_left_click(req: ExecuteRequest) -> ExecuteResponse:
+    """Left click at [x, y] or at the current cursor position."""
+    return await _handle_mouse_click_variant(req, "left_click", "left")
+
+
+async def handle_middle_click(req: ExecuteRequest) -> ExecuteResponse:
+    """Middle click at [x, y] or at the current cursor position."""
+    return await _handle_mouse_click_variant(req, "middle_click", "middle")
+
+
+async def handle_left_click_drag(req: ExecuteRequest) -> ExecuteResponse:
+    """Drag from the start coordinate to a target path or [to_x, to_y]."""
+    trace_id = str(uuid4())
+    frame = await maybe_record_before(req)
+    try:
+        x, y = _action_coordinate(req)
+        if x is None or y is None:
+            raise Exception("coordinate [x, y] (drag start) is required for left_click_drag")
+        path = req.parameters.get("path")
+        to = req.parameters.get("to")
+        if isinstance(path, (list, tuple)) and path:
+            end = path[-1]
+            to_x, to_y = float(end[0]), float(end[1])
+        elif isinstance(to, (list, tuple)) and len(to) >= 2:
+            to_x, to_y = float(to[0]), float(to[1])
+        else:
+            to_x = req.parameters.get("to_x")
+            to_y = req.parameters.get("to_y")
+        if to_x is None or to_y is None:
+            raise Exception("drag target required: parameters.path, parameters.to [x, y], or to_x/to_y")
+        to_x, to_y = float(to_x), float(to_y)
+        duration_ms = int(req.parameters.get("duration_ms", 500))
+        page = await session_manager.get_page(req.session_id)
+        if page:
+            steps = max(10, duration_ms // 16)
+            await page.mouse.move(x, y)
+            await page.mouse.down()
+            await page.mouse.move(to_x, to_y, steps=steps)
+            await page.mouse.up()
+        else:
+            try:
+                import pyautogui as _pag
+                _pag.moveTo(x, y)
+                _pag.dragTo(to_x, to_y, duration=duration_ms / 1000.0, button="left")
+            except ImportError:
+                raise Exception("left_click_drag requires an active browser session or pyautogui for desktop control")
+        result = ExecuteResponse(
+            run_id=req.run_id, session_id=req.session_id,
+            adapter_id="browser.playwright", family="browser", mode="execute",
+            status="completed", summary=f"Dragged ({x}, {y}) → ({to_x}, {to_y})",
+            extracted_content={"from_x": x, "from_y": y, "to_x": to_x, "to_y": to_y},
+            receipts=[Receipt(action="left_click_drag", timestamp=utc_now_iso(), success=True,
+                              details={"from_x": x, "from_y": y, "to_x": to_x, "to_y": to_y})],
+            trace_id=trace_id,
+        )
+        await maybe_record_after(frame, result)
+        return result
+    except Exception as e:
+        result = ExecuteResponse(
+            run_id=req.run_id, session_id=req.session_id,
+            adapter_id="browser.playwright", family="browser", mode="execute",
+            status="failed", summary=f"left_click_drag failed: {e}",
+            error=ErrorDetail(code="LEFT_CLICK_DRAG_ERROR", message=str(e)),
+            receipts=[Receipt(action="left_click_drag", timestamp=utc_now_iso(), success=False,
+                              details={"error": str(e)})],
+            trace_id=trace_id,
+        )
+        await maybe_record_failure(frame, e)
+        return result
+
+
+async def _handle_mouse_button_state(req: ExecuteRequest, action: str, down: bool) -> ExecuteResponse:
+    """Shared left_mouse_down / left_mouse_up handler."""
+    trace_id = str(uuid4())
+    frame = await maybe_record_before(req)
+    try:
+        x, y = _action_coordinate(req)
+        page = await session_manager.get_page(req.session_id)
+        if page:
+            if x is not None and y is not None:
+                await page.mouse.move(x, y)
+            if down:
+                await page.mouse.down()
+            else:
+                await page.mouse.up()
+        else:
+            try:
+                import pyautogui as _pag
+                if x is not None and y is not None:
+                    _pag.moveTo(x, y)
+                if down:
+                    _pag.mouseDown(button="left")
+                else:
+                    _pag.mouseUp(button="left")
+            except ImportError:
+                raise Exception(f"{action} requires an active browser session or pyautogui for desktop control")
+        state = "pressed" if down else "released"
+        result = ExecuteResponse(
+            run_id=req.run_id, session_id=req.session_id,
+            adapter_id="browser.playwright", family="browser", mode="execute",
+            status="completed", summary=f"Left mouse button {state}",
+            extracted_content={"button": "left", "state": state, "x": x, "y": y},
+            receipts=[Receipt(action=action, timestamp=utc_now_iso(), success=True,
+                              details={"button": "left", "state": state, "x": x, "y": y})],
+            trace_id=trace_id,
+        )
+        await maybe_record_after(frame, result)
+        return result
+    except Exception as e:
+        result = ExecuteResponse(
+            run_id=req.run_id, session_id=req.session_id,
+            adapter_id="browser.playwright", family="browser", mode="execute",
+            status="failed", summary=f"{action} failed: {e}",
+            error=ErrorDetail(code=f"{action.upper()}_ERROR", message=str(e)),
+            receipts=[Receipt(action=action, timestamp=utc_now_iso(), success=False,
+                              details={"error": str(e)})],
+            trace_id=trace_id,
+        )
+        await maybe_record_failure(frame, e)
+        return result
+
+
+async def handle_left_mouse_down(req: ExecuteRequest) -> ExecuteResponse:
+    """Press and hold the left mouse button (at [x, y] if given)."""
+    return await _handle_mouse_button_state(req, "left_mouse_down", down=True)
+
+
+async def handle_left_mouse_up(req: ExecuteRequest) -> ExecuteResponse:
+    """Release the left mouse button (at [x, y] if given)."""
+    return await _handle_mouse_button_state(req, "left_mouse_up", down=False)
+
+
+async def handle_cursor_position(req: ExecuteRequest) -> ExecuteResponse:
+    """Return the current OS cursor position. Desktop-only (pyautogui)."""
+    trace_id = str(uuid4())
+    frame = await maybe_record_before(req)
+    try:
+        try:
+            import pyautogui as _pag
+        except ImportError:
+            raise Exception(
+                "cursor_position is a desktop action and requires pyautogui; "
+                "it is not supported on this platform/backend"
+            )
+        pos = _pag.position()
+        x, y = float(pos[0]), float(pos[1])
+        result = ExecuteResponse(
+            run_id=req.run_id, session_id=req.session_id,
+            adapter_id="desktop.pyautogui", family="desktop", mode="inspect",
+            status="completed", summary=f"Cursor at ({x}, {y})",
+            extracted_content={"x": x, "y": y},
+            receipts=[Receipt(action="cursor_position", timestamp=utc_now_iso(), success=True,
+                              details={"x": x, "y": y})],
+            trace_id=trace_id,
+        )
+        await maybe_record_after(frame, result)
+        return result
+    except Exception as e:
+        result = ExecuteResponse(
+            run_id=req.run_id, session_id=req.session_id,
+            adapter_id="desktop.pyautogui", family="desktop", mode="inspect",
+            status="failed", summary=f"cursor_position failed: {e}",
+            error=ErrorDetail(code="CURSOR_POSITION_ERROR", message=str(e)),
+            receipts=[Receipt(action="cursor_position", timestamp=utc_now_iso(), success=False,
+                              details={"error": str(e)})],
+            trace_id=trace_id,
+        )
+        await maybe_record_failure(frame, e)
+        return result
+
+
+async def handle_hold_key(req: ExecuteRequest) -> ExecuteResponse:
+    """Hold a key down for `duration` seconds (default 1.0)."""
+    trace_id = str(uuid4())
+    frame = await maybe_record_before(req)
+    try:
+        key = req.parameters.get("key") or req.target or req.text
+        if not key:
+            raise Exception("key is required for hold_key")
+        duration = _action_duration_seconds(req, default=1.0)
+        page = await session_manager.get_page(req.session_id)
+        if page:
+            await page.keyboard.down(key)
+            await asyncio.sleep(duration)
+            await page.keyboard.up(key)
+        else:
+            try:
+                import pyautogui as _pag
+                _pag.keyDown(key)
+                await asyncio.sleep(duration)
+                _pag.keyUp(key)
+            except ImportError:
+                raise Exception("hold_key requires an active browser session or pyautogui for desktop control")
+        result = ExecuteResponse(
+            run_id=req.run_id, session_id=req.session_id,
+            adapter_id="browser.playwright", family="browser", mode="execute",
+            status="completed", summary=f"Held {key} for {duration}s",
+            extracted_content={"key": key, "duration": duration},
+            receipts=[Receipt(action="hold_key", timestamp=utc_now_iso(), success=True,
+                              details={"key": key, "duration": duration})],
+            trace_id=trace_id,
+        )
+        await maybe_record_after(frame, result)
+        return result
+    except Exception as e:
+        result = ExecuteResponse(
+            run_id=req.run_id, session_id=req.session_id,
+            adapter_id="browser.playwright", family="browser", mode="execute",
+            status="failed", summary=f"hold_key failed: {e}",
+            error=ErrorDetail(code="HOLD_KEY_ERROR", message=str(e)),
+            receipts=[Receipt(action="hold_key", timestamp=utc_now_iso(), success=False,
+                              details={"error": str(e)})],
+            trace_id=trace_id,
+        )
+        await maybe_record_failure(frame, e)
+        return result
+
+
+async def handle_wait(req: ExecuteRequest) -> ExecuteResponse:
+    """Wait for `duration` seconds (default 1.0). Always available."""
+    trace_id = str(uuid4())
+    frame = await maybe_record_before(req)
+    try:
+        duration = _action_duration_seconds(req, default=1.0)
+        await asyncio.sleep(duration)
+        result = ExecuteResponse(
+            run_id=req.run_id, session_id=req.session_id,
+            adapter_id="browser.playwright", family="browser", mode="execute",
+            status="completed", summary=f"Waited {duration}s",
+            extracted_content={"duration": duration},
+            receipts=[Receipt(action="wait", timestamp=utc_now_iso(), success=True,
+                              details={"duration": duration})],
+            trace_id=trace_id,
+        )
+        await maybe_record_after(frame, result)
+        return result
+    except Exception as e:
+        result = ExecuteResponse(
+            run_id=req.run_id, session_id=req.session_id,
+            adapter_id="browser.playwright", family="browser", mode="execute",
+            status="failed", summary=f"wait failed: {e}",
+            error=ErrorDetail(code="WAIT_ERROR", message=str(e)),
+            receipts=[Receipt(action="wait", timestamp=utc_now_iso(), success=False,
+                              details={"error": str(e)})],
+            trace_id=trace_id,
+        )
+        await maybe_record_failure(frame, e)
+        return result
+
+
+async def handle_zoom(req: ExecuteRequest) -> ExecuteResponse:
+    """computer_20251124 'zoom' — no platform gesture backend on this gateway.
+
+    Fails explicitly rather than silently no-op'ing; models can retry with
+    scroll + cursor_position which are supported.
+    """
+    trace_id = str(uuid4())
+    frame = await maybe_record_before(req)
+    message = (
+        "zoom (computer_20251124) is not supported by this gateway: no platform "
+        "magnification-gesture backend is registered. Use scroll at a coordinate "
+        "or cursor_position + left_click_drag instead."
+    )
+    result = ExecuteResponse(
+        run_id=req.run_id, session_id=req.session_id,
+        adapter_id="browser.stub", family="browser", mode="execute",
+        status="failed", summary="zoom is not supported on this platform",
+        error=ErrorDetail(code="UNSUPPORTED_PLATFORM", message=message),
+        receipts=[Receipt(action="zoom", timestamp=utc_now_iso(), success=False,
+                          details={"error": message})],
+        trace_id=trace_id,
+    )
+    await maybe_record_failure(frame, RuntimeError(message))
+    return result
+
+
 async def handle_stub(req: ExecuteRequest) -> ExecuteResponse:
     """Fallback for unknown/unimplemented actions — always fails explicitly."""
     trace_id = str(uuid4())
@@ -1718,7 +2121,9 @@ async def handle_stub(req: ExecuteRequest) -> ExecuteResponse:
                 "goto, screenshot, click, double_click, right_click, fill, type, extract, "
                 "inspect, close, scroll, key, key_combo, drag, hover, triple_click, "
                 "set_value, toggle, expand, collapse, get_clipboard, set_clipboard, "
-                "find_elements, ax_snapshot"
+                "find_elements, ax_snapshot, mouse_move, left_click, left_click_drag, "
+                "middle_click, left_mouse_down, left_mouse_up, cursor_position, "
+                "hold_key, wait, zoom (explicit unsupported-platform error)"
             ),
         ),
         receipts=[
@@ -1785,6 +2190,16 @@ async def execute(req: ExecuteRequest) -> ExecuteResponse:
         "set_clipboard": handle_set_clipboard,
         "find_elements": handle_find_elements,
         "ax_snapshot": handle_ax_snapshot,
+        "mouse_move": handle_mouse_move,
+        "left_click": handle_left_click,
+        "left_click_drag": handle_left_click_drag,
+        "middle_click": handle_middle_click,
+        "left_mouse_down": handle_left_mouse_down,
+        "left_mouse_up": handle_left_mouse_up,
+        "cursor_position": handle_cursor_position,
+        "hold_key": handle_hold_key,
+        "wait": handle_wait,
+        "zoom": handle_zoom,
     }
 
     action = req.action
