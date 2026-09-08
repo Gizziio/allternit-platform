@@ -21,6 +21,16 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-08 16:20 — kimi — CI: Pages deploy + addin build now trigger on extension-shared changes
+
+- **Session ID / Branch:** `session/deploy-triggers` (worktree `allternit-session-deploy-triggers`)
+- **Agent:** kimi
+- **Summary:** Added `surfaces/allternit-extensions/extension-shared/**` to `on.push.paths` in `.github/workflows/deploy-cloudflare-pages.yml`. Root cause of the stale live pane bundle: PR #151 was extension-shared-only and matched no path in the deploy workflow, so the office-addins Pages staging step never ran. Verified `build-office-addin.yml` already lists the glob in both push and pull_request paths — no change there.
+- **Commit:** PR #153, merge commit `df60f63e7` on `main` (change commit `56cdba1a9`)
+- **How it works:** GitHub Actions push paths-filter is OR-ed over changed files; any main push touching extension-shared code now triggers the deploy workflow including the office-addins Pages deploy. YAML validated via `python3 yaml.safe_load` on both files; diff is 1 file, 1 insertion.
+- **Outstanding work:** Live pane bundle stays stale until the next qualifying push or a manual `workflow_dispatch` rerun — owner ops decision.
+- **Summary file:** [./summaries/2026-09-08-1620-deploy-triggers-kimi-ci-extension-shared-paths.md](./summaries/2026-09-08-1620-deploy-triggers-kimi-ci-extension-shared-paths.md)
+
 ### 2026-09-08 12:00 — kimi — Python-heavy frontier agents: research report + gizzi-code reorientation spec
 
 - **Session ID / Branch:** `session/pyagents-spec` (worktree `allternit-session-pyagents-spec`)
