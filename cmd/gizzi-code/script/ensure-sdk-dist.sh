@@ -57,4 +57,35 @@ if [ "$stale" -eq 1 ]; then
   echo "ensure-sdk-dist: dist rebuilt"
 fi
 
+# ── @allternit/computer-use (sdk/computer-use) ────────────────────────────────
+# The ink-app computerUse subtree imports '@allternit/computer-use'
+# (workspace:*). Like packages/sdk, only its dist is consumable and dist is
+# not tracked — build it when missing or stale so tsc/bun resolve types.
+CU_SDK="../../sdk/computer-use"
+CU_SENTINEL="$CU_SDK/dist/index.js"
+
+if [ ! -d "$CU_SDK/src" ]; then
+  echo "ERROR: ensure-sdk-dist: $CU_SDK/src not found (run from the gizzi-code tree)" >&2
+  exit 1
+fi
+
+cu_stale=0
+if [ ! -f "$CU_SENTINEL" ]; then
+  cu_stale=1
+  cu_reason="missing $CU_SENTINEL"
+elif find "$CU_SDK/src" -type f -name '*.ts' -newer "$CU_SENTINEL" | grep -q .; then
+  cu_stale=1
+  cu_reason="sdk/computer-use/src is newer than $CU_SENTINEL"
+fi
+
+if [ "$cu_stale" -eq 1 ]; then
+  echo "ensure-sdk-dist: rebuilding sdk/computer-use dist ($cu_reason)"
+  (cd "$CU_SDK" && bun run build)
+  if [ ! -f "$CU_SENTINEL" ]; then
+    echo "ERROR: ensure-sdk-dist: build finished but $CU_SENTINEL is still missing" >&2
+    exit 1
+  fi
+  echo "ensure-sdk-dist: computer-use dist rebuilt"
+fi
+
 exit 0

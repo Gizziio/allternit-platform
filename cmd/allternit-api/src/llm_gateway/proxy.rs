@@ -317,7 +317,7 @@ async fn fetch_catalog(
     base: &str,
 ) -> Result<ProviderCatalog, OpenAiErrorResponse> {
     let resp = client
-        .get(format!("{base}/v1/provider/"))
+        .get(format!("{base}/v1/provider"))
         .send()
         .await
         .map_err(|err| {

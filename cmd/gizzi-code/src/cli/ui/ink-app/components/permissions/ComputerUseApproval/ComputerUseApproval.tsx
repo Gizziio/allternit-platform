@@ -1,8 +1,8 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
-import { getSentinelCategory } from '@ant/computer-use-mcp/sentinelApps';
-import type { CuPermissionRequest, CuPermissionResponse } from '@ant/computer-use-mcp/types';
-import { DEFAULT_GRANT_FLAGS } from '@ant/computer-use-mcp/types';
+import { getSentinelCategory } from '../../../utils/computerUse/engine/sentinel.js';
+import type { CuPermissionRequest, CuPermissionResponse } from '../../../utils/computerUse/engine/types.js';
+import { DEFAULT_GRANT_FLAGS } from '../../../utils/computerUse/engine/types.js';
 import figures from 'figures';
 import * as React from 'react';
 import { useMemo, useState } from 'react';
