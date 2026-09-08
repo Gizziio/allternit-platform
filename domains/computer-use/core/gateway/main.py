@@ -2517,6 +2517,14 @@ async def startup_event():
     init_observability()
     await _register_startup_adapters()
     try:
+        from run_persistence import RunPersistence
+        from computer_use_router import _run_store
+
+        _run_store.attach_persistence(RunPersistence())
+        logger.info("Run persistence attached (%s)", _run_store._persistence.path)
+    except Exception as exc:
+        logger.warning("Run persistence unavailable, runs will not survive restart: %s", exc)
+    try:
         import ApplicationServices
         opts = {"AXTrustedCheckOptionPrompt": False}
         _ax_permission_granted = ApplicationServices.AXIsProcessTrustedWithOptions(opts)

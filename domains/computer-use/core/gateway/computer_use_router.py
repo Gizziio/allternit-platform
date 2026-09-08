@@ -146,15 +146,52 @@ class RunStore:
     def __init__(self) -> None:
         self.runs: Dict[str, RunState] = {}
         self.event_queues: Dict[str, asyncio.Queue] = {}
+        self._persistence: Optional[Any] = None
+
+    def attach_persistence(self, persistence: Any) -> None:
+        """Attach a durable backend (run_persistence.RunPersistence).
+
+        Non-terminal runs left behind by a previous process are marked
+        interrupted so historical listings stay honest after a restart.
+        """
+        self._persistence = persistence
+        try:
+            interrupted = persistence.mark_interrupted()
+            if interrupted:
+                logger.info("Marked %d non-terminal run(s) as interrupted after restart", interrupted)
+        except Exception as exc:
+            logger.warning("Run history reconciliation failed: %s", exc)
 
     def create(self, run_id: str, session_id: str, mode: str, target_scope: str) -> RunState:
         state = RunState(run_id, session_id, mode, target_scope)
         self.runs[run_id] = state
         self.event_queues[run_id] = asyncio.Queue()
+        self._persist(state)
         return state
 
     def get(self, run_id: str) -> Optional[RunState]:
-        return self.runs.get(run_id)
+        state = self.runs.get(run_id)
+        if state is not None or self._persistence is None:
+            return state
+        record = self._persistence.get_run(run_id)
+        if record is None:
+            return None
+        # Historical run from a previous process — no live event queue.
+        return _run_state_from_record(record)
+
+    def list_runs(self, limit: int = 200) -> List[Dict[str, Any]]:
+        """Live runs plus durable history (live wins on run_id collision)."""
+        merged: Dict[str, Dict[str, Any]] = {}
+        if self._persistence is not None:
+            try:
+                for record in self._persistence.list_runs(limit):
+                    merged[record["run_id"]] = record
+            except Exception as exc:
+                logger.warning("Run history listing failed: %s", exc)
+        for run_id, state in self.runs.items():
+            merged[run_id] = state.to_dict()
+        runs = sorted(merged.values(), key=lambda r: r.get("updated_at", ""), reverse=True)
+        return runs[:limit]
 
     async def push_event(self, run_id: str, event: Dict[str, Any]) -> None:
         q = self.event_queues.get(run_id)
@@ -183,7 +220,7 @@ class RunStore:
         backend = getattr(self, "_persistence", None)
         if backend is not None:
             try:
-                backend.upsert(state)
+                backend.upsert_run(state)
             except Exception as exc:
                 logger.warning("Run persistence failed for %s: %s", state.run_id, exc)
 
@@ -203,6 +240,55 @@ class RunStore:
 
 
 _run_store = RunStore()
+
+
+def _run_state_from_record(record: Dict[str, Any]) -> RunState:
+    """Reconstruct a RunState from a durable record (no live event queue)."""
+    state = RunState(
+        run_id=record["run_id"],
+        session_id=record.get("session_id", ""),
+        mode=record.get("mode", "unknown"),
+        target_scope=record.get("target_scope", "auto"),
+    )
+    state.status = record.get("status", "unknown")
+    state.created_at = record.get("created_at", state.created_at)
+    state.updated_at = record.get("updated_at", state.updated_at)
+    state.result = record.get("result")
+    state.error = record.get("error")
+    return state
+
+
+def _emit_canonical(event_type: str, *, session_id: str, run_id: Optional[str] = None,
+                    payload: Optional[Dict[str, Any]] = None) -> None:
+    """Append a lifecycle event to the canonical event ledger (no-op on failure).
+
+    The ledger lives in canonical_router (same gateway process); importing it
+    lazily keeps unit tests light and never breaks request handling.
+    """
+    try:
+        try:
+            from canonical_router import _events as events
+        except ImportError:
+            from gateway.canonical_router import _events as events  # type: ignore
+        events.append(
+            event_type,
+            session_id=session_id,
+            run_id=run_id,
+            payload=payload or {},
+        )
+    except Exception as exc:
+        logger.debug("canonical event emission failed (%s): %s", event_type, exc)
+
+
+def _index_recording(**fields: Any) -> None:
+    """Upsert a recording into the durable recordings index (no-op on failure)."""
+    persistence = getattr(_run_store, "_persistence", None)
+    if persistence is None:
+        return
+    try:
+        persistence.upsert_recording(fields)
+    except Exception as exc:
+        logger.debug("recordings index upsert failed: %s", exc)
 
 
 # ---------------------------------------------------------------------------
@@ -355,6 +441,9 @@ async def _execute_non_claude_path(
             "risk_level": getattr(step, "risk_level", None),
             "timeout_seconds": _DIRECT_APPROVAL_TIMEOUT_SECONDS,
         })
+        _emit_canonical("approval.required", session_id=run_state.session_id,
+                        run_id=run_state.run_id,
+                        payload={"kind": "planning_loop", "step": getattr(step, "step", None)})
         try:
             decision_payload = await asyncio.wait_for(future, timeout=_DIRECT_APPROVAL_TIMEOUT_SECONDS)
         except asyncio.TimeoutError:
@@ -378,6 +467,10 @@ async def _execute_non_claude_path(
             "approved": approved,
             "timed_out": False,
         })
+        _emit_canonical("approval.resolved", session_id=run_state.session_id,
+                        run_id=run_state.run_id,
+                        payload={"kind": "planning_loop", "step": getattr(step, "step", None),
+                                 "approved": approved})
         return approved
 
     # Cancel check — wire cancel_event into the planning loop
@@ -438,12 +531,32 @@ async def _execute_non_claude_path(
             gif_path = recorder.get_gif_path()
             if gif_path:
                 result.gif_path = str(gif_path)
+            _index_recording(
+                recording_id=recorder.recording_id,
+                task=recorder.manifest.task,
+                session_id=body.session_id,
+                run_id=body.run_id,
+                status=recorder.manifest.status,
+                started_at=recorder.manifest.started_at,
+                completed_at=recorder.manifest.completed_at,
+                total_steps=recorder.manifest.total_steps,
+                path=str(recorder.get_path()),
+                gif_path=str(gif_path) if gif_path else None,
+            )
         run_state.status = result.status
         run_state.result = result.to_dict()
+        _emit_canonical(
+            "run.completed" if result.status == "completed" else "run.failed",
+            session_id=body.session_id, run_id=body.run_id,
+            payload={"mode": "intent", "status": result.status,
+                     "steps": len(result.steps), "stop_reason": result.stop_reason.value},
+        )
     except Exception as exc:
         logger.exception("Planning loop raised exception: %s", exc)
         run_state.status = "failed"
         run_state.error = str(exc)
+        _emit_canonical("run.failed", session_id=body.session_id, run_id=body.run_id,
+                        payload={"mode": "intent", "error": str(exc)})
         if recorder is not None:
             try:
                 await recorder.stop()
@@ -452,6 +565,7 @@ async def _execute_non_claude_path(
     finally:
         cancel_task.cancel()
         run_state.updated_at = _utcnow()
+        _run_store.finalize(run_state.run_id)
         await _run_store.push_sentinel(run_state.run_id)
 
 
@@ -621,8 +735,14 @@ async def _execute_direct_path(
         logger.exception("Direct execution raised exception: %s", exc)
         run_state.status = "failed"
         run_state.error = str(exc)
+        _emit_canonical("run.failed", session_id=body.session_id, run_id=run_state.run_id,
+                        payload={"mode": "direct", "error": str(exc)})
     finally:
         run_state.updated_at = _utcnow()
+        _run_store.finalize(run_state.run_id)
+        if run_state.status == "completed":
+            _emit_canonical("run.completed", session_id=body.session_id, run_id=run_state.run_id,
+                            payload={"mode": "direct", "actions": len(actions_out)})
         await _run_store.push_sentinel(run_state.run_id)
 
 
@@ -713,6 +833,25 @@ async def execute(
     )
 
 
+@router.get("/runs")
+async def list_runs_endpoint(limit: int = Query(default=200, ge=1, le=1000)) -> Dict[str, Any]:
+    """List runs: live in-memory runs plus durable history from prior processes."""
+    return {"runs": _run_store.list_runs(limit), "count": len(_run_store.list_runs(limit))}
+
+
+@router.get("/recordings/index")
+async def list_recordings_index_endpoint() -> Dict[str, Any]:
+    """List the durable recordings index (maintained on record start/stop)."""
+    persistence = getattr(_run_store, "_persistence", None)
+    if persistence is None:
+        return {"recordings": [], "note": "recordings index not enabled"}
+    try:
+        recordings = persistence.list_recordings_index()
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"recordings index unavailable: {exc}")
+    return {"recordings": recordings, "count": len(recordings)}
+
+
 @router.get("/runs/{run_id}")
 async def get_run(run_id: str) -> Dict[str, Any]:
     """Return current state of a run."""
@@ -728,6 +867,11 @@ async def stream_run_events(run_id: str) -> StreamingResponse:
     state = _run_store.get(run_id)
     if state is None:
         raise HTTPException(status_code=404, detail=f"Run {run_id} not found")
+    if run_id not in _run_store.event_queues:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Run {run_id} finished in a previous process; events no longer available",
+        )
 
     async def event_generator():
         q = _run_store.event_queues[run_id]
@@ -892,6 +1036,15 @@ async def record(body: RecordBody) -> Dict[str, Any]:
         )
         await recorder.start()
         _router_recordings[recording_id] = recorder
+        _index_recording(
+            recording_id=recording_id,
+            task=body.name or f"session-{body.session_id}",
+            session_id=body.session_id,
+            run_id=str(uuid.uuid4()),
+            status="recording",
+            started_at=recorder.manifest.started_at,
+            path=str(recorder.get_path()),
+        )
         return {
             "recording_id": recording_id,
             "path": str(recorder.get_path()),
@@ -944,6 +1097,18 @@ async def record(body: RecordBody) -> Dict[str, Any]:
         raise HTTPException(status_code=404, detail=f"Recording {body.recording_id} not found")
     await recorder.stop()
     gif_path = str(recorder.get_gif_path()) if recorder.get_gif_path() else None
+    _index_recording(
+        recording_id=body.recording_id,
+        task=recorder.manifest.task,
+        session_id=recorder.manifest.session_id,
+        run_id=recorder.manifest.run_id,
+        status=recorder.manifest.status,
+        started_at=recorder.manifest.started_at,
+        completed_at=recorder.manifest.completed_at,
+        total_steps=recorder.manifest.total_steps,
+        path=str(recorder.get_path()),
+        gif_path=gif_path,
+    )
     return {
         "recording_id": body.recording_id,
         "frames": getattr(recorder, "_frame_count", 0),
@@ -1023,6 +1188,8 @@ async def replay(body: ReplayBody) -> Dict[str, Any]:
         target_scope="auto",
     )
     _run_store.update_status(run_id, "running")
+    _emit_canonical("replay.started", session_id=session_id, run_id=run_id,
+                    payload={"recording_id": body.recording_id, "total_steps": len(frames)})
 
     adapter = _get_adapter_for_planning("auto", None)
 
@@ -1038,6 +1205,9 @@ async def replay(body: ReplayBody) -> Dict[str, Any]:
             "deviation": deviation_dict,
             "timeout_seconds": _DIRECT_APPROVAL_TIMEOUT_SECONDS,
         })
+        _emit_canonical("approval.required", session_id=session_id, run_id=run_id,
+                        payload={"kind": "replay.deviation", "step": deviation_dict.get("step"),
+                                 "score": deviation_dict.get("score")})
         approved = False
         timed_out = False
         try:
@@ -1056,6 +1226,9 @@ async def replay(body: ReplayBody) -> Dict[str, Any]:
                 "approved": approved,
                 "timed_out": timed_out,
             })
+            _emit_canonical("approval.resolved", session_id=session_id, run_id=run_id,
+                            payload={"kind": "replay.deviation", "approved": approved,
+                                     "timed_out": timed_out})
         return approved
 
     async def on_event(event: Dict[str, Any]) -> None:
@@ -1081,12 +1254,20 @@ async def replay(body: ReplayBody) -> Dict[str, Any]:
             result = await engine.replay(recording_path)
             run_state.status = result.status
             run_state.result = result.to_dict()
+            _emit_canonical("replay.finished", session_id=session_id, run_id=run_id,
+                            payload={"recording_id": manifest.recording_id,
+                                     "status": result.status,
+                                     "replayed_steps": len(result.steps),
+                                     "deviations": len(result.deviations)})
         except Exception as exc:
             logger.exception("Replay raised exception: %s", exc)
             run_state.status = "failed"
             run_state.error = str(exc)
+            _emit_canonical("run.failed", session_id=session_id, run_id=run_id,
+                            payload={"mode": "replay", "error": str(exc)})
         finally:
             run_state.updated_at = _utcnow()
+            _run_store.finalize(run_id)
             await _run_store.push_event(run_id, {
                 "event_type": "run.ended",
                 "run_id": run_id,
