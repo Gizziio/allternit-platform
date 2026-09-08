@@ -171,6 +171,21 @@ class RunStore:
         if state:
             state.status = status
             state.updated_at = _utcnow()
+            self._persist(state)
+
+    def finalize(self, run_id: str) -> None:
+        """Persist a run's terminal state (result/error) via the optional backend."""
+        state = self.runs.get(run_id)
+        if state is not None:
+            self._persist(state)
+
+    def _persist(self, state: RunState) -> None:
+        backend = getattr(self, "_persistence", None)
+        if backend is not None:
+            try:
+                backend.upsert(state)
+            except Exception as exc:
+                logger.warning("Run persistence failed for %s: %s", state.run_id, exc)
 
     def purge_expired(self) -> int:
         """Remove completed/failed/cancelled runs older than _RUN_TTL_SECONDS."""
