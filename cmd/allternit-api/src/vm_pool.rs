@@ -568,41 +568,54 @@ pub fn init_global(driver: Option<Arc<dyn ExecutionDriver>>) {
     let enabled = std::env::var("ALLTERNIT_VM_POOL_ENABLED")
         .map(|v| v != "false" && v != "0")
         .unwrap_or(true);
-    let pool = match (enabled, driver) {
+    match (enabled, driver) {
         (true, Some(driver)) => {
             let state_path = Some(computer_use_dir().join("pool-state.json"));
-            let pool = VmPool::restore(driver, PoolConfig::from_env(), state_path);
-            info!(
-                idle = pool.stats().idle,
-                pending_reclaim = pool.pending_reclaim(),
-                "VM pool initialized"
-            );
-            Some(pool)
+            init_global_for_test(driver, PoolConfig::from_env(), state_path);
         }
-        _ => None,
-    };
+        _ => {
+            let mut global = GLOBAL_POOL.write().expect("global pool lock");
+            *global = None;
+        }
+    }
+}
+
+/// Same as `init_global` but with explicit configuration and state path —
+/// used by tests to exercise the pool (including restart persistence) without
+/// depending on process env. Returns the activated pool.
+pub fn init_global_for_test(
+    driver: Arc<dyn ExecutionDriver>,
+    config: PoolConfig,
+    state_path: Option<PathBuf>,
+) -> Arc<VmPool> {
+    let pool = VmPool::restore(driver, config, state_path);
+    info!(
+        idle = pool.stats().idle,
+        pending_reclaim = pool.pending_reclaim(),
+        "VM pool initialized"
+    );
 
     {
         let mut global = GLOBAL_POOL.write().expect("global pool lock");
-        *global = pool.clone();
+        *global = Some(pool.clone());
     }
 
-    if let Some(pool) = pool {
-        // Reclaim VMs left checked-out by a previous process lifetime.
-        if pool.pending_reclaim() > 0 {
-            let reclaim_pool = pool.clone();
-            tokio::spawn(async move {
-                reclaim_pool.reclaim_unknown().await;
-            });
-        }
-        // Maintenance: reap idle TTL + top up min_idle.
+    // Reclaim VMs left checked-out by a previous process lifetime.
+    if pool.pending_reclaim() > 0 {
+        let reclaim_pool = pool.clone();
         tokio::spawn(async move {
-            loop {
-                pool.reap_expired().await;
-                tokio::time::sleep(Duration::from_secs(30)).await;
-            }
+            reclaim_pool.reclaim_unknown().await;
         });
     }
+    // Maintenance: reap idle TTL + top up min_idle.
+    let maintenance_pool = pool.clone();
+    tokio::spawn(async move {
+        loop {
+            maintenance_pool.reap_expired().await;
+            tokio::time::sleep(Duration::from_secs(30)).await;
+        }
+    });
+    pool
 }
 
 /// The process-wide pool, if enabled.

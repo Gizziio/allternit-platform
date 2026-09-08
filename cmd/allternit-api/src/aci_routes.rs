@@ -1121,3 +1121,79 @@ mod tests {
         );
     }
 }
+
+#[cfg(test)]
+mod approval_http_tests {
+    use super::*;
+    use axum::body::Body;
+    use axum::http::{Request, StatusCode};
+    use http_body_util::BodyExt;
+    use tower::ServiceExt;
+
+    async fn body_json(body: Body) -> serde_json::Value {
+        let bytes = body.collect().await.unwrap().to_bytes();
+        serde_json::from_slice(&bytes).unwrap_or_else(|_| serde_json::Value::Null)
+    }
+
+    /// HTTP smoke of the unified approval surface: a handoff record resolves
+    /// to pending -> approved via GET /api/aci/approvals/{id}, and an id
+    /// unknown to every backend surfaces a real gateway error (not a decoy
+    /// 200) when ACU is unreachable.
+    #[tokio::test]
+    async fn unified_approval_status_over_http_via_handoff_store() {
+        let temp = tempfile::tempdir().unwrap().keep();
+        let state = crate::test_helpers::app_state(&temp).await;
+
+        // A handoff record without a live hash grant (source: "handoff").
+        let approval_id = state
+            .approval_store
+            .create("user-1", "aci.sensitive_action", &json!({"goal": "buy tickets"}));
+
+        let app = aci_router().with_state(state.clone());
+        let get_status = |id: &str| {
+            let app = app.clone();
+            let id = id.to_string();
+            async move {
+                app.oneshot(
+                    Request::get(format!("/aci/approvals/{id}"))
+                        .body(Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap()
+            }
+        };
+
+        let resp = get_status(&approval_id).await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let json = body_json(resp.into_body()).await;
+        assert_eq!(json["status"], "pending");
+        assert_eq!(json["source"], "handoff");
+        assert_eq!(json["approval_id"], approval_id);
+
+        state.approval_store.approve(&approval_id);
+        let resp = get_status(&approval_id).await;
+        let json = body_json(resp.into_body()).await;
+        assert_eq!(json["status"], "approved");
+
+        state.approval_store.deny(&approval_id);
+        let resp = get_status(&approval_id).await;
+        let json = body_json(resp.into_body()).await;
+        assert_eq!(json["status"], "denied");
+
+        // Unknown id: the proxy leg must fail honestly — 502 acu_unavailable
+        // when ACU is down, or 404 approval_not_found when ACU is up but
+        // doesn't know the run. Never a fabricated 200.
+        let resp = get_status("00000000-0000-0000-0000-000000000000").await;
+        let status = resp.status();
+        assert!(
+            status == StatusCode::BAD_GATEWAY || status == StatusCode::NOT_FOUND,
+            "unknown approval must surface a real error, got {status}"
+        );
+        let json = body_json(resp.into_body()).await;
+        assert!(
+            json["error"] == "acu_unavailable" || json["error"] == "approval_not_found",
+            "unexpected error body: {json}"
+        );
+    }
+}

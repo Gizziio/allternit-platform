@@ -492,3 +492,212 @@ fn get_interpreter(language: &str) -> String {
         _ => language.to_string(),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use allternit_driver_interface::{
+        DriverCapabilities, DriverError, DriverHealth, DriverType, ExecResult, ExecutionHandle,
+        IsolationLevel, ResourceConsumption, SpawnSpec, TenantId,
+    };
+    use axum::body::Body;
+    use axum::http::{Request, StatusCode};
+    use http_body_util::BodyExt;
+    use std::collections::HashMap;
+    use std::sync::{Arc, Mutex};
+    use tower::ServiceExt;
+    use uuid::Uuid;
+
+    /// Minimal driver: every exec succeeds, spawns return fresh handles, and
+    /// spawn/destroy calls are counted so tests can prove pooling.
+    #[derive(Debug, Default)]
+    struct SmokeMockDriver {
+        spawns: Mutex<u32>,
+        destroys: Mutex<u32>,
+    }
+
+    #[async_trait::async_trait]
+    impl allternit_driver_interface::ExecutionDriver for SmokeMockDriver {
+        fn capabilities(&self) -> DriverCapabilities {
+            DriverCapabilities {
+                driver_type: DriverType::Container,
+                isolation: IsolationLevel::Standard,
+                max_resources: ResourceSpec::minimal(),
+                supported_env_specs: vec![],
+                features: Default::default(),
+            }
+        }
+
+        async fn spawn(&self, _spec: SpawnSpec) -> Result<ExecutionHandle, DriverError> {
+            *self.spawns.lock().unwrap() += 1;
+            Ok(ExecutionHandle {
+                id: allternit_driver_interface::ExecutionId(Uuid::new_v4()),
+                tenant: TenantId::new("allternit-vm-pool".to_string()).unwrap(),
+                driver_info: HashMap::new(),
+                env_spec: Default::default(),
+            })
+        }
+
+        async fn pause_vm(&self, _h: &ExecutionHandle) -> Result<(), DriverError> {
+            Ok(())
+        }
+        async fn resume_vm(&self, _h: &ExecutionHandle) -> Result<(), DriverError> {
+            Ok(())
+        }
+
+        async fn exec(
+            &self,
+            _h: &ExecutionHandle,
+            _cmd: CommandSpec,
+        ) -> Result<ExecResult, DriverError> {
+            Ok(ExecResult {
+                exit_code: 0,
+                stdout: Some(b"pooled-ok".to_vec()),
+                stderr: None,
+                duration_ms: 1,
+                resource_usage: ResourceConsumption::default(),
+            })
+        }
+
+        async fn stream_logs(
+            &self,
+            _h: &ExecutionHandle,
+        ) -> Result<Vec<allternit_driver_interface::LogEntry>, DriverError> {
+            Ok(vec![])
+        }
+        async fn get_artifacts(
+            &self,
+            _h: &ExecutionHandle,
+        ) -> Result<Vec<allternit_driver_interface::Artifact>, DriverError> {
+            Ok(vec![])
+        }
+
+        async fn destroy(&self, _h: &ExecutionHandle) -> Result<(), DriverError> {
+            *self.destroys.lock().unwrap() += 1;
+            Ok(())
+        }
+
+        async fn get_consumption(&self, _h: &ExecutionHandle) -> Result<ResourceConsumption, DriverError> {
+            Ok(Default::default())
+        }
+        async fn get_receipt(
+            &self,
+            _h: &ExecutionHandle,
+        ) -> Result<Option<allternit_driver_interface::Receipt>, DriverError> {
+            Ok(None)
+        }
+
+        async fn health_check(&self) -> Result<DriverHealth, DriverError> {
+            Ok(DriverHealth {
+                healthy: true,
+                message: None,
+                active_executions: 0,
+                available_capacity: ResourceSpec::minimal(),
+                capabilities: vec![],
+            })
+        }
+    }
+
+    async fn body_json(body: Body) -> serde_json::Value {
+        let bytes = body.collect().await.unwrap().to_bytes();
+        serde_json::from_slice(&bytes).unwrap_or_else(|_| serde_json::Value::Null)
+    }
+
+    /// Live HTTP smoke of the pooled sandbox path: boot the sandbox router
+    /// over a mock driver, execute twice (second request must reuse the warm
+    /// VM), then "restart" the gateway (re-init the pool from the same state
+    /// file) and confirm the warm VM survived and is reused — never
+    /// respawned, never leaked.
+    #[tokio::test]
+    async fn pooled_execute_over_http_and_restart_reuse() {
+        let temp = tempfile::tempdir().unwrap().keep();
+        let state_path = temp.join("pool-state.json");
+        let driver = Arc::new(SmokeMockDriver::default());
+        let cfg = crate::vm_pool::PoolConfig {
+            min_idle: 0,
+            max_total: 4,
+            idle_ttl: std::time::Duration::from_secs(600),
+        };
+
+        // ── Gateway boot #1 ──
+        let pool = crate::vm_pool::init_global_for_test(
+            driver.clone(),
+            cfg,
+            Some(state_path.clone()),
+        );
+        let state = crate::test_helpers::app_state_with_driver(&temp, Some(driver.clone())).await;
+        let app = sandbox_router().with_state(state);
+
+        let execute = |code: &str| {
+            let app = app.clone();
+            let body = serde_json::json!({
+                "code": code,
+                "language": "bash",
+            });
+            async move {
+                app.oneshot(
+                    Request::post("/execute")
+                        .header("content-type", "application/json")
+                        .body(Body::from(body.to_string()))
+                        .unwrap(),
+                )
+                .await
+                .unwrap()
+            }
+        };
+
+        let resp = execute("echo one").await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let json = body_json(resp.into_body()).await;
+        assert_eq!(json["exit_code"], 0);
+        assert_eq!(json["stdout"], "pooled-ok");
+        assert_eq!(driver.spawns.lock().unwrap().clone(), 1);
+
+        // Second request: the first VM was checked in warm and must be
+        // reused, not respawned.
+        let resp = execute("echo two").await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        assert_eq!(driver.spawns.lock().unwrap().clone(), 1, "warm VM reused");
+        assert_eq!(pool.stats().idle, 1);
+
+        // Pool status route reports the warm VM.
+        let state2 = crate::test_helpers::app_state(&temp).await;
+        let app2 = sandbox_router().with_state(state2);
+        let resp = app2
+            .oneshot(Request::get("/pool").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let json = body_json(resp.into_body()).await;
+        assert_eq!(json["enabled"], true);
+        assert_eq!(json["idle"], 1);
+        assert_eq!(json["max_total"], 4);
+
+        // ── Gateway boot #2 (simulated restart, same state file) ──
+        drop(pool);
+        let pool2 = crate::vm_pool::init_global_for_test(driver.clone(), cfg, Some(state_path));
+        // The checked-in VM from boot #1 is restored as warm; the checked-out
+        // state from boot #1 was empty, so nothing to reclaim.
+        assert_eq!(pool2.stats().idle, 1, "warm VM restored from disk");
+
+        let state3 = crate::test_helpers::app_state_with_driver(&temp, Some(driver.clone())).await;
+        let app3 = sandbox_router().with_state(state3);
+        let resp = app3
+            .oneshot(
+                Request::post("/execute")
+                    .header("content-type", "application/json")
+                    .body(Body::from(
+                        serde_json::json!({"code": "echo three", "language": "bash"}).to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        assert_eq!(
+            driver.spawns.lock().unwrap().clone(),
+            1,
+            "restored warm VM must be reused after restart — no leak, no respawn"
+        );
+    }
+}
