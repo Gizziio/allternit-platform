@@ -46,7 +46,7 @@ These commands use `office-addin-debugging` — equivalent to Chrome's "Load unp
 
 ## Configuration
 
-The task pane's primary path is platform authentication — **no API-key or model-provider setup is required** (see `DEPLOYMENT.md`). Sign in with Allternit; the in-pane agent then calls the platform gateway's OpenAI-compatible endpoint using the bootstrap token, and the model defaults to the gateway-configured default (`agent.default_model`, currently `claude-3-5-sonnet`). Gateway operators can change that default server-side (`ALLTERNIT_DEFAULT_MODEL` / per-user `default_model`).
+The task pane's primary path is platform authentication — **no API-key or model-provider setup is required** (see `DEPLOYMENT.md`). Sign in with Allternit; the in-pane agent then calls the platform gateway's OpenAI-compatible endpoint using the bootstrap token. The model is resolved at runtime: an explicit settings-panel model wins, otherwise the pane asks the backend for its model catalog (`GET /v1/models`), and only when that is unavailable does it fall back to the built-in default `kimi-for-coding` (the `kimi-cli` provider in the Allternit desktop gizzi config). Gateway operators can change the effective default server-side (`agent.default_model` in `config/allternit.json`, `ALLTERNIT_DEFAULT_MODEL` / per-user `default_model`).
 
 The ⚙ settings panel exposes advanced overrides for power users and local dev:
 
