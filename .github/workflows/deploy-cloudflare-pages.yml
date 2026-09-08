@@ -7,6 +7,7 @@ on:
       - 'surfaces/ai.allternit.com/**'
       - 'surfaces/platform.allternit.com/**'
       - 'surfaces/allternit-extensions/allternit-office-addin/**'
+      - 'surfaces/allternit-extensions/extension-shared/**'
       - 'packages/@allternit/**'
       - 'services/runtime/**'
       - '.github/workflows/deploy-cloudflare-pages.yml'
