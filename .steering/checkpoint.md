@@ -1,16 +1,18 @@
-# Checkpoint — session/cu7-tsdk
+# Checkpoint — cu11-tsverify (final)
 
 ## Goal
-Align sdk/computer-use TS client/stream contracts with the shipped gateway contract from PR #152. PR, do NOT merge. DONE.
+1. Live-verify gizzi engine adapter vs real Python gateway ✅ (12/12, transcript /tmp/cu11-live-final.txt)
+2. Stop swallowing executor errors in sdk/allternit-sdk capability ✅ (strict status/error checks, 6 new tests)
+3. Chrome-stream from-recording integration proof vs protocol zod schema ✅ (4 new tests)
++ Found & fixed: SDK dist was CJS while deps ESM-only → dist unloadable outside bundlers (flipped sdk/computer-use to ESM; 110 jest green); gateway has no /vision/screenshot → adapter screenshot() now uses direct screenshot action + artifacts.
 
 ## Just did
-- Implemented all contract fixes (types/client/events/approvals), 12 new tests, conformance fixture updated.
-- Verified: pnpm test 110 passed (baseline 98), tsc --noEmit clean.
-- Committed fix(sdk) + docs(steering), pushed session/cu7-tsdk, opened PR #154. NOT merged (orchestrator merges).
-- Left worktree intact at ../allternit-session-cu7-tsdk for orchestrator review.
+- All stages verified: sdk/computer-use jest 110/110; sdk/allternit-sdk bun test 248 run (11 fail = same pre-existing as main, 6 new pass); chrome-stream vitest 53 pass (49+4), tsc clean; gizzi-code bun run typecheck clean; live 12/12 twice (fresh gateway).
+- Gateway killed? NO — still running on :8986 (task bash-b1fhdtk4); Chrome tab https://example.com left open. Kill before session end.
+- Deleted stray build artifacts in packages/*/src (created by an intermediate build attempt); reverted pnpm-lock churn.
 
 ## Next
-Orchestrator: review/merge PR #154 after #152. Post-merge ledger attestation + worktree cleanup happen per AGENTS.md session lifecycle (deliberately left for the merge owner).
+- 4 stage commits + push + PR. Leave merge to orchestrator.
 
 ## Open questions
 - None.
