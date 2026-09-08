@@ -71,7 +71,7 @@ jobs:
         run: npm install -g pnpm@10.28.0
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@1.91.0
+        uses: dtolnay/rust-toolchain@1.94.1
         with:
           targets: x86_64-apple-darwin,aarch64-apple-darwin
 
@@ -226,7 +226,7 @@ jobs:
   build-windows:
     name: Build Windows
     needs: unit-tests
-    runs-on: windows-latest
+    runs-on: windows-2019
     permissions:
       contents: read
 
@@ -243,7 +243,7 @@ jobs:
         run: npm install -g pnpm@10.28.0
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@1.91.0
+        uses: dtolnay/rust-toolchain@1.94.1
         with:
           targets: x86_64-pc-windows-msvc
 
@@ -371,7 +371,7 @@ jobs:
         run: npm install -g pnpm@10.28.0
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@1.91.0
+        uses: dtolnay/rust-toolchain@1.94.1
         with:
           targets: x86_64-unknown-linux-gnu
 
@@ -425,6 +425,11 @@ jobs:
           rm -rf "$DEST"
           mkdir -p "$DEST"
           cp -r surfaces/ai.allternit.com/dist/. "$DEST/"
+
+      - name: Install protobuf compiler
+        # prost-build (transitive dep of allternit-api) shells out to protoc;
+        # ubuntu runners don't ship it.
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
 
       - name: Build allternit-api (Linux)
         run: cargo build --release --target x86_64-unknown-linux-gnu --manifest-path cmd/allternit-api/Cargo.toml
