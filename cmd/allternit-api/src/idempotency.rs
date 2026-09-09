@@ -468,15 +468,24 @@ mod tests {
     async fn in_progress_request_returns_conflict() {
         let temp = tempfile::tempdir().unwrap();
         let state = crate::test_helpers::app_state(temp.path()).await;
+        let (started_tx, started_rx) = tokio::sync::oneshot::channel::<()>();
+        let started_tx = std::sync::Arc::new(tokio::sync::Mutex::new(Some(started_tx)));
         let (tx, rx) = tokio::sync::oneshot::channel();
         let rx = std::sync::Arc::new(tokio::sync::Mutex::new(Some(rx)));
         let rx2 = rx.clone();
+        let started_tx2 = started_tx.clone();
         let app = Router::new()
             .route(
                 "/test",
                 post(move || {
                     let rx = rx2.clone();
+                    let started_tx = started_tx2.clone();
                     async move {
+                        // The handler only runs after the middleware has
+                        // reserved the in-flight slot, so signalling here
+                        // (instead of sleeping) guarantees the duplicate
+                        // below observes the reservation.
+                        let _ = started_tx.lock().await.take().unwrap().send(());
                         // Block until the test signals us to complete.
                         let _ = rx.lock().await.take().unwrap().await;
                         Json(json!({ "done": true }))
@@ -493,8 +502,11 @@ mod tests {
             app2.oneshot(idem_request(Some("org-1"), "in-flight")).await.unwrap()
         });
 
-        // Wait for the first request to reserve its in-flight slot.
-        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        // Wait for the first request to reserve its in-flight slot. Bounded
+        // only as a hang guard, not as a scheduling assumption.
+        tokio::time::timeout(std::time::Duration::from_secs(10), started_rx)
+            .await
+            .expect("first request did not reach the handler (slot never reserved)");
 
         let duplicate = app.clone().oneshot(idem_request(Some("org-1"), "in-flight")).await.unwrap();
         assert_eq!(duplicate.status(), StatusCode::CONFLICT);
