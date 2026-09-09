@@ -132,6 +132,94 @@ function mapCreateResponseToSandbox(
 }
 
 /**
+ * Default persistent-desktop resources for bots created through the atomic
+ * Create Bot path (spec bot-identity-computer): 2 vCPU / 4 GB RAM / 100 GB disk.
+ */
+export const BOT_DESKTOP_DEFAULT_RESOURCES: NonNullable<
+  AgentVMOperatorConfig['resources']
+> = {
+  cpu: '2',
+  memory: '4096',
+  disk: '102400',
+};
+
+/**
+ * vmOperator config every new Bot gets by default: a persistent Computer Cloud
+ * desktop bound to the bot, provisioned once at create time and reused across
+ * sessions. `autoStart: false` keeps session start from booting extra sandboxes
+ * — the desktop record already exists from Create Bot.
+ */
+export function defaultBotVMOperatorConfig(): AgentVMOperatorConfig {
+  return {
+    enabled: true,
+    provider: 'cloud-desktop',
+    computerKind: 'cloud_desktop',
+    persistence: 'persistent',
+    resources: { ...BOT_DESKTOP_DEFAULT_RESOURCES },
+    allowedActions: ['command', 'browser', 'file', 'desktop'],
+    networkPolicy: 'restricted',
+    autoStart: false,
+  };
+}
+
+export interface EnsureBotComputerOptions {
+  /** Bot display name ("Quinn — Chief of Staff") — becomes the computer name. */
+  displayName?: string;
+}
+
+/**
+ * Ensure a bot has exactly one primary persistent Computer Cloud desktop.
+ *
+ * This is the bind step of the atomic Create Bot contract: list by `bot_id`
+ * first and reuse the newest non-deleted desktop (a stopped persistent desktop
+ * still binds — it is the same computer), otherwise provision a new one
+ * through `/api/v1/computers` with `persistence: 'persistent'`.
+ */
+export async function ensureBotComputer(
+  botId: string,
+  config: AgentVMOperatorConfig,
+  options?: EnsureBotComputerOptions,
+): Promise<VMOperatorResult<Sandbox>> {
+  if (!usesUnifiedComputer(config.provider)) {
+    return notConfigured<Sandbox>();
+  }
+
+  try {
+    const computers = await listComputers({
+      bot_id: botId,
+      kind: config.computerKind ?? 'cloud_desktop',
+    });
+    const bound = computers
+      .filter((c) => c.bot_id === botId && c.status !== 'deleted')
+      .sort(
+        (a, b) =>
+          new Date(b.updated_at || b.created_at).getTime() -
+          new Date(a.updated_at || a.created_at).getTime(),
+      )[0];
+
+    if (bound) {
+      return { ok: true, data: mapComputerToSandbox(bound, botId) };
+    }
+
+    const response = await createComputer({
+      kind: config.computerKind ?? 'cloud_desktop',
+      bot_id: botId,
+      name: options?.displayName?.trim() || undefined,
+      template_id: config.templateId,
+      persistence: config.persistence ?? 'persistent',
+      provider: substrateProvider(config.provider),
+    });
+    return { ok: true, data: mapCreateResponseToSandbox(botId, config, response) };
+  } catch (err) {
+    logger.error({ err, botId }, 'Failed to ensure bot computer');
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : 'Bot computer provisioning failed',
+    };
+  }
+}
+
+/**
  * Create a sandbox for the given bot/agent.
  *
  * Provisions through the unified `/api/v1/computers` control plane so cloud
