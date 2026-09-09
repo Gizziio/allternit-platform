@@ -128,6 +128,8 @@ class PlanningLoopResult:
     summary: str = ""
     total_cost_usd: float = 0.0
     total_tokens: int = 0
+    total_input_tokens: int = 0         # prompt tokens, when providers report the split
+    total_output_tokens: int = 0        # completion tokens, when reported
     duration_ms: int = 0
     final_screenshot_b64: str = ""
     error: Optional[str] = None
@@ -144,6 +146,8 @@ class PlanningLoopResult:
             "summary": self.summary,
             "total_cost_usd": self.total_cost_usd,
             "total_tokens": self.total_tokens,
+            "total_input_tokens": self.total_input_tokens,
+            "total_output_tokens": self.total_output_tokens,
             "duration_ms": self.duration_ms,
             "error": self.error,
             "gif_path": self.gif_path,
@@ -219,6 +223,8 @@ class PlanningLoop:
         start_ms = time.time() * 1000
         total_cost = 0.0
         total_tokens = 0
+        total_input_tokens = 0
+        total_output_tokens = 0
         history: List[Dict] = []
         current_screenshot: bytes = b""
         stop_reason = StopReason.ERROR
@@ -322,6 +328,10 @@ class PlanningLoop:
                             immediate_action=resp.action or VisionAction(type="screenshot", target="screen", reason=""),
                             confidence=resp.confidence,
                             done=False,
+                            tokens_used=getattr(resp, "tokens_used", 0),
+                            cost_usd=getattr(resp, "cost_usd", 0.0),
+                            input_tokens=getattr(resp, "input_tokens", 0),
+                            output_tokens=getattr(resp, "output_tokens", 0),
                         )
                     except Exception as fallback_err:
                         logger.error("vision fallback failed: %s", fallback_err)
@@ -344,6 +354,8 @@ class PlanningLoop:
                 step.cost_usd = getattr(plan, "cost_usd", 0.0)
                 total_tokens += step.tokens_used
                 total_cost += step.cost_usd
+                total_input_tokens += int(getattr(plan, "input_tokens", 0) or 0)
+                total_output_tokens += int(getattr(plan, "output_tokens", 0) or 0)
 
                 self._emit({"type": "plan.created", "run_id": run_id, "step": step_num,
                            "reasoning": plan.reasoning, "action_type": plan.immediate_action.type,
@@ -533,6 +545,8 @@ class PlanningLoop:
             summary=self._build_summary(steps, stop_reason),
             total_cost_usd=total_cost,
             total_tokens=total_tokens,
+            total_input_tokens=total_input_tokens,
+            total_output_tokens=total_output_tokens,
             duration_ms=duration_ms,
             final_screenshot_b64=_bytes_to_b64(current_screenshot) if current_screenshot else "",
             error=error_msg,

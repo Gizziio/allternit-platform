@@ -39,6 +39,7 @@ try:
         _sse_line,
         _utcnow,
         _DIRECT_APPROVAL_TIMEOUT_SECONDS,
+        zero_run_cost,
     )
     _workflow_available = True
 except ImportError:  # pragma: no cover - import guard mirrors computer_use_router
@@ -188,6 +189,8 @@ async def run_workflow(
             result = await runner.run(spec_source)
             run_state.status = result.status
             run_state.result = result.to_dict()
+            # Cost accounting: the workflow path makes no LLM calls — honest zero.
+            run_state.cost = zero_run_cost()
         except Exception as exc:
             logger.exception("Workflow run raised exception: %s", exc)
             run_state.status = "failed"
