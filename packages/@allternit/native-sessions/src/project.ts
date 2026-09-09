@@ -207,6 +207,81 @@ function projectOpenCode(path: string): { events: PortableEvent[]; warnings: Nat
   }
 }
 
+function projectCline(dir: string): { events: PortableEvent[]; warnings: NativeTranscript["warnings"]; lastEventId?: string } {
+  // api_conversation_history.json: OpenAI-style message array. Content may be a
+  // plain string or an array of {type: "text", ...} parts; assistant tool calls
+  // ride in tool_calls, results as role "tool" messages.
+  const history = join(dir, "api_conversation_history.json")
+  const warnings: NativeTranscript["warnings"] = []
+  if (!existsSync(history)) return { events: [], warnings: [{ code: "missing_history", message: "cline api_conversation_history.json not found" }] }
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(readFileSync(history, "utf8"))
+  } catch {
+    return { events: [], warnings: [{ code: "malformed_json", message: "cline api_conversation_history.json is not valid JSON" }] }
+  }
+  if (!Array.isArray(parsed)) return { events: [], warnings: [{ code: "malformed_json", message: "cline api_conversation_history.json is not an array" }] }
+  const events: PortableEvent[] = []
+  let lastEventId: string | undefined
+  parsed.forEach((raw, i) => {
+    const rec = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>
+    const role = (asString(rec.role) as Role | undefined) ?? "user"
+    lastEventId = String(i)
+    if (role === "tool") {
+      events.push(inert({ kind: "tool_result", role: "tool", toolId: asString(rec.tool_call_id), text: contentText(rec.content), recordIndex: i }))
+      return
+    }
+    if (role !== "user" && role !== "assistant" && role !== "system") {
+      events.push(inert({ kind: "opaque", recordIndex: i }))
+      return
+    }
+    if (Array.isArray(rec.tool_calls)) {
+      for (const call of rec.tool_calls) {
+        const c = (call && typeof call === "object" ? call : {}) as Record<string, unknown>
+        const fn = (c.function && typeof c.function === "object" ? c.function : {}) as Record<string, unknown>
+        events.push(inert({ kind: "tool_call", role: "assistant", toolName: asString(fn.name) ?? asString(c.name), toolId: asString(c.id), recordIndex: i }))
+      }
+    }
+    pushMessage(events, role, contentText(rec.content), i)
+  })
+  return { events, warnings, lastEventId }
+}
+
+function projectAmp(path: string): { events: PortableEvent[]; warnings: NativeTranscript["warnings"]; lastEventId?: string } {
+  // threads/T-*.json: { messages: [{role, content: [{type: "text"|"tool_use"|"tool_result", ...}]}] }
+  const warnings: NativeTranscript["warnings"] = []
+  let parsed: Record<string, unknown>
+  try {
+    parsed = JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>
+  } catch {
+    return { events: [], warnings: [{ code: "malformed_json", message: "amp thread is not valid JSON" }] }
+  }
+  if (!Array.isArray(parsed.messages)) return { events: [], warnings: [{ code: "missing_messages", message: "amp thread has no messages array" }] }
+  const events: PortableEvent[] = []
+  let lastEventId: string | undefined
+  parsed.messages.forEach((raw, i) => {
+    const rec = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>
+    const role = (asString(rec.role) as Role | undefined) ?? "user"
+    lastEventId = asString(rec.id) ?? String(i)
+    const blocks = Array.isArray(rec.content) ? rec.content : []
+    if (blocks.length === 0) {
+      if (typeof rec.content === "string") pushMessage(events, role, rec.content, i)
+      else events.push(inert({ kind: "opaque", recordIndex: i }))
+      return
+    }
+    for (const blockRaw of blocks) {
+      const block = (blockRaw && typeof blockRaw === "object" ? blockRaw : {}) as Record<string, unknown>
+      const type = asString(block.type)
+      if (type === "text") pushMessage(events, role, asString(block.text) ?? "", i)
+      else if (type === "tool_use") events.push(inert({ kind: "tool_call", role: "assistant", toolName: asString(block.name), toolId: asString(block.id), recordIndex: i }))
+      else if (type === "tool_result")
+        events.push(inert({ kind: "tool_result", role: "tool", toolId: asString(block.tool_use_id), text: contentText(block.content), recordIndex: i }))
+      else if (type === "thinking") events.push(inert({ kind: "thinking", role: "assistant", recordIndex: i }))
+    }
+  })
+  return { events, warnings, lastEventId }
+}
+
 export function showNativeSession(harness: HarnessId, sessionId: string, opts: CatalogOptions = {}): NativeTranscript {
   const session = getNativeSession(harness, sessionId, opts)
   if (!session) {
@@ -269,6 +344,12 @@ export function showNativeSession(harness: HarnessId, sessionId: string, opts: C
       break
     case "openhands":
       projected = projectOpenHands(session.path)
+      break
+    case "cline":
+      projected = projectCline(session.path)
+      break
+    case "amp":
+      projected = projectAmp(session.path)
       break
     case "opencode":
       projected = projectOpenCode(session.path)

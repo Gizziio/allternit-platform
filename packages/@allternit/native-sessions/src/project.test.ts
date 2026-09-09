@@ -55,4 +55,50 @@ describe("native-sessions projectors", () => {
     expect(delta.events.some((e) => e.sourceId === "u2")).toBe(true)
     expect(eventsAfter(showNativeSession("claude", id, { home }), "a1").some((e) => e.sourceId === "u2")).toBe(true)
   })
+
+  test("projects a Cline task (OpenAI-style history with tool calls)", () => {
+    const home = join(tmpdir(), `cline-proj-${Date.now()}`)
+    const task = join(home, "Library", "Application Support", "Code", "User", "globalStorage", "saoudrizwan.claude-dev", "tasks", "task-9")
+    mkdirSync(task, { recursive: true })
+    writeFileSync(
+      join(task, "api_conversation_history.json"),
+      JSON.stringify([
+        { role: "user", content: "fix the flaky test" },
+        { role: "assistant", content: [{ type: "text", text: "checking the suite" }], tool_calls: [{ id: "call-1", type: "function", function: { name: "run_tests", arguments: "{}" } }] },
+        { role: "tool", tool_call_id: "call-1", content: "2 failed" },
+        { role: "assistant", content: "found the bug" },
+      ]),
+    )
+    const listed = listNativeSessions({ home, harnesses: ["cline"] })
+    expect(listed.some((s) => s.sessionId === "task-9")).toBe(true)
+    const shown = showNativeSession("cline", "task-9", { home })
+    expect(shown.events.some((e) => e.kind === "message" && e.role === "user" && e.text?.includes("flaky"))).toBe(true)
+    expect(shown.events.some((e) => e.kind === "tool_call" && e.toolName === "run_tests")).toBe(true)
+    expect(shown.events.some((e) => e.kind === "tool_result" && e.text === "2 failed")).toBe(true)
+    expect(shown.events.some((e) => e.kind === "message" && e.role === "assistant" && e.text?.includes("found the bug"))).toBe(true)
+  })
+
+  test("projects an Amp thread (Anthropic-style content blocks)", () => {
+    const home = join(tmpdir(), `amp-proj-${Date.now()}`)
+    const threads = join(home, ".local", "share", "amp", "threads")
+    mkdirSync(threads, { recursive: true })
+    const id = "T-652c6d27-8ae1-4e61-923d-a4d40071cb4b"
+    writeFileSync(
+      join(threads, `${id}.json`),
+      JSON.stringify({
+        created_at: "2026-09-01T12:00:00Z",
+        messages: [
+          { role: "user", content: [{ type: "text", text: "rename the module" }] },
+          { role: "assistant", content: [{ type: "text", text: "renaming now" }, { type: "tool_use", id: "tu-1", name: "edit_file", input: {} }] },
+          { role: "user", content: [{ type: "tool_result", tool_use_id: "tu-1", content: "done" }] },
+        ],
+      }),
+    )
+    const listed = listNativeSessions({ home, harnesses: ["amp"] })
+    expect(listed.some((s) => s.sessionId === id)).toBe(true)
+    const shown = showNativeSession("amp", id, { home })
+    expect(shown.events.some((e) => e.kind === "message" && e.role === "user" && e.text?.includes("rename"))).toBe(true)
+    expect(shown.events.some((e) => e.kind === "tool_call" && e.toolName === "edit_file")).toBe(true)
+    expect(shown.events.some((e) => e.kind === "tool_result" && e.text === "done")).toBe(true)
+  })
 })

@@ -48,4 +48,21 @@ describe("native export", () => {
     expect(second.path).not.toBe(first.path)
     expect(readFileSync(first.path, "utf8")).toBe(before)
   })
+
+  test("exports a portable session into Cline and Amp stores and reads it back", () => {
+    const home = join(tmpdir(), `export-cline-amp-${Date.now()}`)
+    const cline = exportPortableSession({ harness: "cline", events, cwd: "/tmp/app", home })
+    expect(cline.path).toContain("saoudrizwan.claude-dev")
+    const clineListed = listNativeSessions({ home, harnesses: ["cline"] })
+    expect(clineListed.some((s) => s.sessionId === cline.sessionId)).toBe(true)
+    const clineShown = showNativeSession("cline", cline.sessionId, { home })
+    expect(clineShown.events.some((e) => e.text?.includes("login"))).toBe(true)
+
+    const amp = exportPortableSession({ harness: "amp", events, cwd: "/tmp/app", home })
+    expect(amp.sessionId).toMatch(/^T-/)
+    const ampListed = listNativeSessions({ home, harnesses: ["amp"] })
+    expect(ampListed.some((s) => s.sessionId === amp.sessionId)).toBe(true)
+    const ampShown = showNativeSession("amp", amp.sessionId, { home })
+    expect(ampShown.events.some((e) => e.text?.includes("login"))).toBe(true)
+  })
 })

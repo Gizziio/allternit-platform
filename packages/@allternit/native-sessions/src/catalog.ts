@@ -3,7 +3,7 @@ import { homedir } from "node:os"
 import { basename, join } from "node:path"
 import { fingerprintPath, fingerprintPaths } from "./fingerprint.js"
 import { HARNESSES, HARNESS_BY_ID, encodeClaudeCwd, harnessHome } from "./harness.js"
-import { asString, parseJsonlText } from "./jsonl.js"
+import { asString, contentText, parseJsonlText } from "./jsonl.js"
 import type { CatalogOptions, HarnessId, NativeSession, ReaderKind } from "./types.js"
 
 function mtimeMs(path: string): number {
@@ -373,6 +373,94 @@ function listVibe(root: string): NativeSession[] {
   return out
 }
 
+function listCline(root: string): NativeSession[] {
+  // VS Code extension (saoudrizwan.claude-dev): one directory per task under
+  // globalStorage .../tasks/<taskId>/ with api_conversation_history.json
+  // (OpenAI-style message array) plus ui_messages.json.
+  const tasks = join(root, "tasks")
+  if (!existsSync(tasks)) return []
+  const out: NativeSession[] = []
+  for (const task of readdirSync(tasks, { withFileTypes: true })) {
+    if (!task.isDirectory()) continue
+    const dir = join(tasks, task.name)
+    const history = join(dir, "api_conversation_history.json")
+    if (!existsSync(history)) continue
+    const ui = join(dir, "ui_messages.json")
+    let title: string | undefined
+    try {
+      const parsed = JSON.parse(readFileSync(history, "utf8")) as unknown
+      if (Array.isArray(parsed)) {
+        const first = parsed.find(
+          (m): m is Record<string, unknown> =>
+            !!m && typeof m === "object" && (m as Record<string, unknown>).role === "user" && typeof (m as Record<string, unknown>).content === "string",
+        )
+        if (typeof first?.content === "string") title = first.content.slice(0, 120)
+      }
+    } catch {
+      /* unparseable history still lists */
+    }
+    out.push(
+      session({
+        harness: "cline",
+        sessionId: task.name,
+        path: dir,
+        title,
+        updatedAt: mtimeMs(history),
+        fingerprint: fingerprintPaths([history, ui].filter(existsSync)),
+        lastEventId: task.name,
+        reader: "directory",
+        projectable: true,
+      }),
+    )
+  }
+  return out
+}
+
+function listAmp(root: string): NativeSession[] {
+  // Amp (Sourcegraph): ~/.local/share/amp/threads/T-*.json, each a JSON
+  // document with an Anthropic-style `messages` array.
+  const threads = join(root, "threads")
+  if (!existsSync(threads)) return []
+  const out: NativeSession[] = []
+  for (const file of listFiles(threads, (n) => n.startsWith("T-") && n.endsWith(".json"))) {
+    const id = basename(file, ".json")
+    let title: string | undefined
+    let createdAt: number | undefined
+    try {
+      const parsed = JSON.parse(readFileSync(file, "utf8")) as Record<string, unknown>
+      if (typeof parsed.created_at === "string") {
+        const t = Date.parse(parsed.created_at)
+        if (Number.isFinite(t)) createdAt = t
+      }
+      if (Array.isArray(parsed.messages)) {
+        const first = parsed.messages.find(
+          (m): m is Record<string, unknown> =>
+            !!m && typeof m === "object" && (m as Record<string, unknown>).role === "user",
+        )
+        const text = first ? contentText((first as Record<string, unknown>).content) : ""
+        if (text) title = text.slice(0, 120)
+      }
+    } catch {
+      /* unparseable thread still lists */
+    }
+    out.push(
+      session({
+        harness: "amp",
+        sessionId: id,
+        path: file,
+        title,
+        createdAt,
+        updatedAt: mtimeMs(file),
+        fingerprint: fingerprintPath(file),
+        lastEventId: id,
+        reader: "directory",
+        projectable: true,
+      }),
+    )
+  }
+  return out
+}
+
 function listSqliteInventory(harness: HarnessId, dbPath: string, projectable: boolean): NativeSession[] {
   if (!existsSync(dbPath)) return []
   try {
@@ -598,6 +686,12 @@ export function listNativeSessions(opts: CatalogOptions = {}): NativeSession[] {
         break
       case "devin":
         out.push(...listSqliteInventory("devin", join(root, "sessions.db"), false))
+        break
+      case "cline":
+        out.push(...listCline(root))
+        break
+      case "amp":
+        out.push(...listAmp(root))
         break
       default:
         break

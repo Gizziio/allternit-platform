@@ -180,7 +180,48 @@ function exportKimiCli(input: ExportInput, sessionId: string): NativeExport {
   return { harness: "kimi-cli", sessionId, path: file, resumeHint: "kimi", at: Date.now() }
 }
 
-export const DIRECT_EXPORT_HARNESSES: HarnessId[] = ["claude", "gizzi", "qwen", "codex", "grok", "copilot", "kimi-cli"]
+function exportCline(input: ExportInput, sessionId: string): NativeExport {
+  const home = rootFor("cline", input)
+  const dir = join(home, "tasks", sessionId)
+  const history = join(dir, "api_conversation_history.json")
+  assertNewPath(history, input.forbidPath)
+  const rows: unknown[] = []
+  for (const event of input.events) {
+    if (event.kind === "message" && event.text) {
+      const role = event.role === "assistant" ? "assistant" : event.role === "system" ? "system" : "user"
+      rows.push({ role, content: event.text })
+    } else if (event.kind === "tool_call") {
+      rows.push({ role: "assistant", content: "", tool_calls: [{ id: event.toolId ?? randomUUID(), type: "function", function: { name: event.toolName ?? "call", arguments: "{}" } }] })
+    } else if (event.kind === "tool_result") {
+      rows.push({ role: "tool", tool_call_id: event.toolId ?? "", content: event.text ?? "" })
+    }
+  }
+  mkdirSync(dir, { recursive: true })
+  writeFileSync(history, JSON.stringify(rows, null, 2), { flag: "wx" })
+  return { harness: "cline", sessionId, path: history, resumeHint: "cline (reopen the task in VS Code)", at: Date.now() }
+}
+
+function exportAmp(input: ExportInput, sessionId: string): NativeExport {
+  const home = rootFor("amp", input)
+  const threadId = `T-${sessionId}`
+  const file = join(home, "threads", `${threadId}.json`)
+  assertNewPath(file, input.forbidPath)
+  const messages: unknown[] = []
+  for (const event of input.events) {
+    if (event.kind === "message" && event.text) {
+      messages.push({ role: event.role === "assistant" ? "assistant" : "user", content: [{ type: "text", text: event.text }] })
+    } else if (event.kind === "tool_call") {
+      messages.push({ role: "assistant", content: [{ type: "tool_use", id: event.toolId ?? randomUUID(), name: event.toolName ?? "call", input: {} }] })
+    } else if (event.kind === "tool_result") {
+      messages.push({ role: "user", content: [{ type: "tool_result", tool_use_id: event.toolId ?? "", content: event.text ?? "" }] })
+    }
+  }
+  mkdirSync(join(home, "threads"), { recursive: true })
+  writeFileSync(file, JSON.stringify({ messages }, null, 2), { flag: "wx" })
+  return { harness: "amp", sessionId: threadId, path: file, resumeHint: `amp threads continue ${threadId}`, at: Date.now() }
+}
+
+export const DIRECT_EXPORT_HARNESSES: HarnessId[] = ["claude", "gizzi", "qwen", "codex", "grok", "copilot", "kimi-cli", "cline", "amp"]
 
 function exportViaSessionMigrate(input: ExportInput): NativeExport {
   const script = join(dirname(fileURLToPath(import.meta.url)), "..", "scripts", "export_native.py")
@@ -230,6 +271,10 @@ export function exportPortableSession(input: ExportInput): NativeExport {
       return exportCopilot(input, sessionId)
     case "kimi-cli":
       return exportKimiCli(input, sessionId)
+    case "cline":
+      return exportCline(input, sessionId)
+    case "amp":
+      return exportAmp(input, sessionId)
     default:
       return exportViaSessionMigrate(input)
   }
