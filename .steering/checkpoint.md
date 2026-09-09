@@ -1,23 +1,28 @@
-# Checkpoint — session/cu19-sandbox-env
+# Session checkpoint — office-nav
 
-## Goal
-Wire ACU-side consumption of the `sandbox_env` credential-injection channel (Rust PR #177): accept the top-level `sandbox_env` field on /v1/computer-use/execute, thread it into the run's child-process environment, and leak-proof it.
+Goal: Add a floating top-left Back/Home control row (mirroring shell RailControls) to the
+standalone office page routes (/docs, /sheets, /slides, /pdf, /office) so the owner can get
+back to the main screen. Root cause: those routes render standalone pages outside the shell,
+so RailControls (FloatingWidgets.tsx, fixed top-0 left-0 z-[150]) never mounts.
 
-## Just did
-- New `core/sandbox_env.py`: validate_sandbox_env (key-only errors), sandbox_env_context (os.environ set/restore), scrub_secrets (recursive *** replace).
-- `gateway/computer_use_router.py`: ExecuteBody.sandbox_env field + masked __repr__/__str__; RunState/RunStore carry sandbox_secrets (never serialized); execute endpoint validates (400, key-only message) and wraps run_impl in sandbox_env_context; push_event scrubs frames; result/error assignments + canonical payloads + log lines scrubbed.
-- `core/replay_engine.py`: capture_screenshot(_capture_via_action) gained optional `secrets` param scrubbing its two warning logs (replay callers default None → unchanged).
-- Documented: no Python VM/microVM session path exists (Firecracker sandbox/ is separate provisioning; the cloud-VM /etc/environment bootstrap is Rust-side vm_session_routes only) — run-scoped os.environ injection is the whole Python-side channel.
+Just did:
+- Scouted the shell: RailControls + TitleBarButton in src/shell/FloatingWidgets.tsx
+  (TitleBarButton is not exported — replicate style, do not refactor the shell file).
+- Confirmed isElectronShell() in src/lib/platform; trafficLightClearance = 72 : 4.
+- Built src/shell/OfficePageChrome.tsx + mounted in 5 pages (flex-col layout).
+- DEVIATION from brief: the brief asked for a `fixed top-0 left-0` floating row, but
+  measurement showed the vendored editors always render their File ribbon tab at
+  x=84–130 on mac (ribbon-tabs-mac padding, File tab visible in every env because
+  installDesktopBridge always sets __allternitBrowserBridge) — a floating pill at
+  marginLeft 72 would cover it. Docked a 44px bar in normal flow instead: no overlap
+  by construction, same pill/button visual language, same traffic-light clearance,
+  plus a drag region for the frameless Electron window. Flagged in PR.
 
-## Verification
-- New tests: `cd domains/computer-use/core/gateway && PYTHONPATH=".." python -m pytest tests/test_sandbox_env.py -q` → 15 passed.
-- Existing suite (from core/): `python -m pytest tests/ -q --ignore=tests/test_e2e.py --ignore=tests/test_real_adapters.py` → 227 passed, 21 skipped, 2 env-dependent desktop flakes (both pass in isolation; baseline on clean main had 1; flake set varies run to run and none touch this change).
+Next:
+1. Create src/shell/OfficePageChrome.tsx (fixed top-left pill: Back + Home, WebkitAppRegion:no-drag).
+2. Mount in DocsPage/SheetsPage/SlidesPage/PdfPage/OfficeLauncherPage (src/pages/ only).
+3. Add vitest test next to FloatingWidgets.test.tsx conventions.
+4. Typecheck + test, visual check, commit/push/PR/merge, ledger attestation, cleanup.
 
-## Next
-Commit, push, open PR, stop (orchestrator merges).
-
-## Open questions
-- Concurrent runs share os.environ for overlapping windows (documented v1 tradeoff in core/sandbox_env.py).
-
-## Done
-- PR #187 opened (https://github.com/Gizziio/allternit-platform/pull/187), branch session/cu19-sandbox-env, single commit b091b4932. Stopped here per instructions — orchestrator merges.
+Open questions:
+- None — scope fixed by owner: no main-nav entry, no views/office edits (agent-20 owns that).
