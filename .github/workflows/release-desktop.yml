@@ -207,8 +207,11 @@ jobs:
       # ── Step 5: Build and package Electron app ────────────────────────────────
       - name: Install desktop dependencies
         # Deps are already installed by the earlier workspace-wide pnpm
-        # install; npm postinstalls (husky via update-electron-app) fail on CI.
-        run: npm install --ignore-scripts
+        # install. Use pnpm (not npm): npm reifies over pnpm's symlinked
+        # node_modules and runs update-electron-app's `prepare` (husky) even
+        # with --ignore-scripts (run 5 failure); pnpm never runs registry
+        # deps' prepare scripts.
+        run: pnpm install --frozen-lockfile --ignore-scripts
         working-directory: surfaces/allternit-desktop
 
       - name: Build TypeScript
@@ -354,8 +357,11 @@ jobs:
 
       - name: Install desktop dependencies
         # Deps are already installed by the earlier workspace-wide pnpm
-        # install; npm postinstalls (husky via update-electron-app) fail on CI.
-        run: npm install --ignore-scripts
+        # install. Use pnpm (not npm): npm reifies over pnpm's symlinked
+        # node_modules and runs update-electron-app's `prepare` (husky) even
+        # with --ignore-scripts (run 5 failure); pnpm never runs registry
+        # deps' prepare scripts.
+        run: pnpm install --frozen-lockfile --ignore-scripts
         working-directory: surfaces/allternit-desktop
 
       - name: Build TypeScript
@@ -491,8 +497,11 @@ jobs:
 
       - name: Install desktop dependencies
         # Deps are already installed by the earlier workspace-wide pnpm
-        # install; npm postinstalls (husky via update-electron-app) fail on CI.
-        run: npm install --ignore-scripts
+        # install. Use pnpm (not npm): npm reifies over pnpm's symlinked
+        # node_modules and runs update-electron-app's `prepare` (husky) even
+        # with --ignore-scripts (run 5 failure); pnpm never runs registry
+        # deps' prepare scripts.
+        run: pnpm install --frozen-lockfile --ignore-scripts
         working-directory: surfaces/allternit-desktop
 
       - name: Stage Cua Driver

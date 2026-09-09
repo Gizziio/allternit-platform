@@ -9,7 +9,6 @@ license = "MIT OR Apache-2.0"
 # Internal dependencies
 allternit-driver-interface = { path = "../../platform/contracts/driver-interface" }
 allternit-process-driver = { path = "../process-driver" }
-allternit-firecracker-driver = { path = "../../drivers/firecracker" }
 
 # Core async
 tokio = { version = "1", features = ["full"] }
@@ -44,6 +43,11 @@ dirs = "5"
 # Apple Virtualization.framework driver (macOS only)
 [target.'cfg(target_os = "macos")'.dependencies]
 allternit-apple-vf-driver = { path = "../../drivers/apple-vf" }
+
+# Firecracker driver (Unix only; uses tokio::net::UnixStream + nix and does
+# not compile for Windows)
+[target.'cfg(unix)'.dependencies]
+allternit-firecracker-driver = { path = "../../drivers/firecracker" }
 
 [dev-dependencies]
 tokio-test = "0.4"
