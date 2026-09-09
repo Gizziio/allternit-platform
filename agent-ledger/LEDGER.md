@@ -21,6 +21,16 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-09 02:15 — grok — TTS product spec (draft, not implemented)
+
+- **Session ID / Branch:** `session/tts-spec` (worktree `allternit-session-tts-spec`)
+- **Agent:** grok
+- **Summary:** Wrote `docs/specs/tts-product.md` — ten-engine landscape, vetoes, bake-off, full-product bar. No TTS code.
+- **Commit:** PR #196, merge commit `a5f0b7d95` on `main`
+- **How it works:** Handoff for a later agent. Engine is not picked.
+- **Outstanding work:** Bake-off + human pick + implementation. Cloning gated.
+- **Summary file:** [./summaries/2026-09-09-0215-session-tts-spec-grok-tts-product-spec.md](./summaries/2026-09-09-0215-session-tts-spec-grok-tts-product-spec.md)
+
 ### 2026-09-09 01:55 — grok — Drop unused Python/Chatterbox/pyinstaller voice tree
 
 - **Session ID / Branch:** `session/voice-cleanup` (worktree `allternit-session-voice-cleanup`)
