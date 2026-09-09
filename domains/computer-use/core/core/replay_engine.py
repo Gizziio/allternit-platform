@@ -18,7 +18,7 @@ import sys
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Sequence
 
 from core.action_recorder import ActionRecorder, RecordedFrame, RecordingManifest
 
@@ -87,12 +87,21 @@ def _bytes_to_b64(data: bytes) -> str:
 # Screenshot capture (mirrors PlanningLoop._capture_screenshot)
 # ---------------------------------------------------------------------------
 
-async def capture_screenshot(adapter: Any, session_id: str) -> bytes:
+async def capture_screenshot(
+    adapter: Any,
+    session_id: str,
+    secrets: Optional[Sequence[str]] = None,
+) -> bytes:
     """Capture the current screen as PNG bytes.
 
     Order: direct adapter.screenshot() for plain adapters, then a screenshot
     action through the adapter/executor, then the host display (macOS
     screencapture) as a last resort. Returns b"" when nothing worked.
+
+    `secrets`: optional credential values (run sandbox_env) used only to
+    scrub exception text in this module's warning logs — an adapter failure
+    that echoes its own environment must not write credential values to
+    the log stream.
     """
     # Plain (non-executor) adapters may expose a direct screenshot method.
     if adapter is not None and hasattr(adapter, "screenshot") and not hasattr(adapter, "registered_adapters"):
@@ -101,19 +110,26 @@ async def capture_screenshot(adapter: Any, session_id: str) -> bytes:
             if png:
                 return png
         except Exception as exc:
-            logger.warning("[replay] adapter.screenshot failed: %s", exc)
+            logger.warning(
+                "[replay] adapter.screenshot failed: %s",
+                _scrub(str(exc), secrets),
+            )
 
     # Executor / duck-typed adapter: run a "screenshot" action and unpack the
     # result envelope (data_url in extracted_content, or a screenshot artifact).
     if adapter is not None:
-        png = await _capture_via_action(adapter, session_id)
+        png = await _capture_via_action(adapter, session_id, secrets)
         if png:
             return png
 
     return _capture_host()
 
 
-async def _capture_via_action(adapter: Any, session_id: str) -> bytes:
+async def _capture_via_action(
+    adapter: Any,
+    session_id: str,
+    secrets: Optional[Sequence[str]] = None,
+) -> bytes:
     try:
         req = _make_request("screenshot", "", {})
         if hasattr(adapter, "registered_adapters"):
@@ -143,8 +159,21 @@ async def _capture_via_action(adapter: Any, session_id: str) -> bytes:
                     return handle.read()
         return b""
     except Exception as exc:
-        logger.warning("[replay] screenshot action failed: %s", exc)
+        logger.warning(
+            "[replay] screenshot action failed: %s",
+            _scrub(str(exc), secrets),
+        )
         return b""
+
+
+def _scrub(text: str, secrets: Optional[Sequence[str]]) -> str:
+    """Replace any run credential value in log-bound exception text."""
+    if not secrets:
+        return text
+    for secret in secrets:
+        if secret and secret in text:
+            text = text.replace(secret, "***")
+    return text
 
 
 def _capture_host() -> bytes:
