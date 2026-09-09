@@ -23,7 +23,7 @@ deviations:
   - Executor died after D2/D3/D4 completed (D3/D4 self-committed; D1 MCP + D2 CLI finished on disk but uncommitted). Orchestrator verified everything directly (MCP build + stdio smoke, CLI tsx --test 13 checks, SDK vitest + Python unittest 19, cargo check + 55 computer-module tests), then committed milestones 3 (CLI) and 4 (MCP + API catalog) itself per the repo orchestrator-escape precedent.
   - assets/novnc/ is a committed build artifact of scripts/vendor-novnc.mjs (noCDN requirement); regenerable, committed so the embed page works without a build step.
 remaining:
-  - Live smoke owed: real embed iframe render + VNC ws against a running computer (same class of debt as Phases 2/4).
+  - Live smoke owed: real embed iframe render + VNC ws against a running computer, plus the read_only=false vnc-token ACI handoff flow end-to-end (same class of debt as Phases 2/4).
   - allternit computers ssh uses the PTY ws-token path; full tty passthrough quality depends on terminal client — documented in the command help.
 ---
 
