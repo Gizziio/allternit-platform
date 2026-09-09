@@ -170,7 +170,7 @@ export function AgentActivityDetailView({ threadId }: AgentActivityDetailViewPro
   return (
     <div className="h-full w-full flex flex-col bg-[var(--bg-elevated)] text-[var(--text-primary)] overflow-hidden">
       <div className="flex items-center gap-3 px-6 py-4 border-b border-solid border-[var(--border-subtle)] shrink-0">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/agent-activity")} aria-label="Back to Agent Activity">
+        <Button variant="ghost" size="icon" onClick={() => navigate("/agent-activity")} aria-label="Back to Bot Activity">
           <ArrowLeft size={18} />
         </Button>
         <div className="min-w-0 flex-1">

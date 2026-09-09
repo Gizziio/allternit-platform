@@ -41,8 +41,7 @@ vi.mock('@/views/chat/ChatSessionStore', () => ({
 }));
 
 vi.mock('./bot-canonical-chat.service', () => ({
-  openBotCanonicalChat: vi.fn(async () => 'session-mock'),
-  openBotChatView: vi.fn(),
+  openBotSessionInChat: vi.fn(async () => 'session-mock'),
 }));
 
 // Bots are supplied through the agents hook, the same idiom the rail uses.

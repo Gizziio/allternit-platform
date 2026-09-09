@@ -2,82 +2,64 @@
 
 **Goal:** P3 ao Fabric node (spec: Allternit Brain/Research/specs/ao-fabric-node.md, spike: Research/drafts/spike-p3-clerk-device-auth.md). Make `ao` a Fabric Transport node: `ao fabric pair|serve|status`. Binding: own 3-leg Ed25519 pairing (NOT Clerk OAuth), node never holds Clerk token; loopback axum shim on 127.0.0.1:8014 translating /v1/remote-control/* + /v1/{session,permission,question} to the engine socket API (session `ao`); line-faithful Rust port of cmd/agent-daemon relay client. Worktree allternit-ao-fabric-node, branch ao/fabric-node.
 
-**Plan:** (1) tiny server PR first: runtimeType "ao" in cmd/allternit-cloud-api/src/routes/runtime_pairing.rs:1154-1161 (own branch ao/runtime-type-ao-enum). (2) ao-engine additive src/ao/fabric/* modules: identity (Ed25519, ~/.agent-orchestrator/fabric/identity.json 0600), pair (create/poll-exchange/heartbeat/rotate/revoke), wire (serde envelopes + golden tests), shim (axum 127.0.0.1:8014), relay (faithful agent-daemon port), cli. (3) Build+tests. (4) Live verify pair vs api.allternit.com (human approval needed — prints URL+code), serve, PWA hard gate. (5) docs/AO_FABRIC_NODE_NOTES.md + PRs.
+**Just did:** Server enum PR #220 open (ao/runtime-type-ao-enum). Fabric modules implemented + committed (gate-approved 6a5777398) + keep-alive pooling fix (c9aa10578): live pairing proved create works but the first exchange poll died on a reused dead keep-alive connection — `pool_max_idle_per_host(0)` fixed it; poller now runs the full 10-min window. Build clean, 16/16 fabric unit tests, detect::manifest parallel flakes confirmed as the documented pre-existing class (59/59 serial).
 
-**Just did:** Read spec+spike, port source (agent-daemon 446-line index.ts), engine API schema, PWA/SDK wire contract (RemoteControlClient paths /v1/remote-control/*, bare-array responses, socket-ticket WS events). Corrected spec path: enum lives in allternit-cloud-api, not allternit-api. runtime_device_kind: "ao" falls to PAIRED via else branch — no change needed there.
+**Next:** Live pair awaiting Eoj's browser approval (code RTX6-JNQ6) → `ao fabric serve` → PWA hard gate. Then AO_FABRIC_NODE_NOTES.md + node PR + ledger.
 
-**Next:** Server enum PR, then fabric modules.
-
-**Open questions:** Live pairing approval needs Eoj's browser (Clerk JWT) — if not available this session, capture how far it got + exact remaining steps. runtimeType "ao" needs the enum PR deployed; until then pair with --runtime-type desktop (D2 fallback, single client constant).
+**Open questions:** Three pairings expired unapproved — if the approve page errors, Eoj to say what it shows. runtimeType "ao" needs PR #220 deployed; until then pair with --runtime-type desktop (D2 fallback).
 
 ---
 
-<!-- P3 checkpoint end; prior checkpoints below -->
+<!-- merged checkpoint from ao/runtime-type-ao-enum + P3 checkpoint above; session/3a37a822 checkpoint below -->
 
-**Goal:** WebMCP-shaped tool layer + semantic tool-call logging + timeline playback viewer — now with real video capture and a video-synced tool-call track.
+**Goal:** Fix three Allternit Desktop bot-session UI bugs in `surfaces/ai.allternit.com`: (1) nav trap — no way home from a bot session, "New" bounces back; (2) two competing bot session views — route everything to the Gizzi in-chat view (`ChatView` embedded bot session) and decouple `BotChatSessionView` so it can be deleted later; (3) "local-only (backend unavailable) / Cannot stream before a live session exists: temp-…" on send, despite the bundled allternit-api running on :8013.
+>>>>>>> origin/main
 
-**Just did:** Milestone 4 — video capture + tool-call track.
-- `src/protocol/video-recorder.ts` (new): prepare/finalize helpers; video start epoch captured at context creation (`offset_ms = frame_ts - startedAtEpoch`); artifacts land as `<id>.webm` in `~/.allternit/recordings/`.
-- `LocalPlaywrightProvider.startRecordedSession/stopRecordedSession/getVideoArtifact`: recordVideo on a Playwright-created context (works over CDP — verified empirically on playwright 1.58.2 with chromium-1234, headless; existing Chrome-created profile tabs stay video-less by Playwright design). Session binding re-points at the recorded tab; other contexts' pages are closed so the CDP action primitives resolve the recorded tab unambiguously.
-- `launcher.connectViaCDP`: prefer the first context that has pages.
-- Run controller `recordArtifact` → `artifact.created` events; browser server routes `POST /v1/browser-runs/:runId/video/start|stop`.
-- Python ACU core: `RecordingManifest.video_path`/`video_start_epoch`; `POST /record` accepts them at start/stop; detail route adds `video_url`; new `GET /recordings/{id}/video` (webm, same containment hardening as GIF).
-- Surface: `buildToolCallTrack` pure export in recording-timeline.ts; manifest video fields parsed; `recordings.ts` client fetches video like GIF; `AciRecordingTimelineView` gains a `<video>` pane (gateway artifact or "Open video…" file picker) with bidirectional scrubbing — track click seeks the video, `timeupdate` highlights the nearest track entry; screenshot mode remains the fallback.
+**Just did:** Phases 1–4 complete, all three bugs verified fixed in the live dev app (vite :3013 + dev Electron CDP 9225). Bug 3 root-caused live: Gizzi never registered with the bundled API (renderer sent `avatar` as an object → create 4xx; even if it succeeded the API minted a fresh uuid while the renderer kept the local id, so the `agent_allowed_on_surface` gate 403'd every `POST /api/v1/agent-sessions` → temp session → sendMessageStream throws). Fixes: API `CreateAgentBody` accepts optional client-stable `id` and `create_agent` is idempotent (`agent_routes.rs`, `cargo check`/`build` green); renderer `createAgent` stringifies object avatars and passes `id`; new `lib/bots/start-bot-session.ts` core with `ensureBotRegisteredWithApi` (warns on failure, no longer silent); `useStartBotSession` thinned to the core. Bug 2: new `openBotSessionInChat`/`openChatView` in bot-canonical-chat.service; all entry points repointed (ShellRail, BotPickerSheet, BotLaunchpad, BotTopDeck, BotHomeView, AgentHub, toasts, ShellApp, HUD handoff, BotHubSessionsTab, SearchView); legacy `openBotChatView` deleted; `bot-chat-session` removed from nav.types/nav.policy/ViewRegistry/watermark set (BotChatSessionView.tsx stays on disk unreferenced per owner decision). Bug 1: canonical-chat guard in ShellRail `handleNewSession` deleted ("New" always opens a fresh home chat); ChatView gained a slim persistent "← Back | <bot>" bar rendered for EVERY bot session — first version gated on `!showAgentCard` was hidden exactly when the Gizzi context card is open; fixed by dropping that condition and rendering the bar alongside (not `??`-behind) the agent context strip. Live verification (CDP-driven, screenshots in /tmp/3a37a822-*.png): Bot Hub → Gizzi → Chat opens the single in-chat session view; Back bar visible with card open; Back → home; rail New inside a session → home (no more bounce-back); `openBotSessionInChat` returns real `ses_*` id (not temp-); `sendMessageStream` resolved (no "Cannot stream before a live session exists"). Bonus fixes found during live verification: (a) PRE-EXISTING main breakage — `/desktop-templates/by-ref/{*ref}` (bot_desktop_templates.rs:28, 97a4b39f3) and `/computers/:id/proxy/{*path}` (computer_ws.rs:240, 64a464257) use axum-0.8 brace catch-all syntax on axum 0.7/matchit 0.7.3 → API panics at startup on ANY fresh build from main; fixed to `*ref`/`*path` (installed .app works only because its binary predates both commits). (b) Duplicate Gizzi tiles — bootstrap cold-start timeout created an API gizzi with server-minted uuid while the stale localStorage row merged back; fixed by same-lowercase-name dedupe in `mergeAgentCatalog` (remote wins, 2 new tests) + stable `id: 'gizzi-packaged-assistant'` in GIZZI_SEED. Store now shows exactly one gizzi. Phase 4 re-check after final edits: typecheck clean, 14/14 touched-file tests pass (full-suite 3 pre-existing failures verified identical at base).
 
-**Verification:** allternit-browser `tsc --noEmit` clean; package vitest 89 passed / 8 skipped (incl. new recordVideo launch+CDP smoke and full provider drive-the-recorded-tab test); surface aci vitest 50 passed (19 timeline tests incl. 7 new track-export tests); Python `test_recordings_routes.py` 20 passed (6 new video tests) via scratch uv venv at /tmp/webmcp-test-venv. Pre-existing failures noted, not introduced: surface `tsc --noEmit` has 6 missing-module errors (mermaid/yjs/storybook/immer — none in touched files); `core/tests/test_replay.py` fails identically at HEAD; one stale committed assertion in test_recordings_routes.py (`kind: "action"` in route but not test) fixed in-place.
-
-**Next:** Parent review; session wrap (commit/PR/ledger happen outside this subagent per instructions).
-
-**Open questions:** None.
+**Next:** Phase 5 — commit logical units, sync to origin/main (at f3e176648), `node scripts/release-preflight.mjs` safety check, push, PR with verification evidence, merge (--merge), ledger attestation on main checkout (STEER_GUARD_OFF=1), cleanup worktree + scratch cdp scripts + /tmp pngs, kill vite/electron dev tasks, relaunch user's installed app.
 
 ---
 
-<!-- merged checkpoint from branch ao/tui-machines (P2, landed 2026-09-09) -->
+# Steering checkpoint (prior: session/webmcp-playback)
 
-# Steering checkpoint — ao/tui-machines (P2 executor)
+**Goal:** Rebuild the Create Bot wizard (session/create-bot-wizard, 2026-09-09): Allternit-branded, 4-step click-through with a live Bot Hub card preview rail, real gating, single real template catalog (`BOT_TEMPLATES`), visible desktop provisioning, and an optional describe-to-prefill accelerator. Approved plan: `.steering/plan-create-bot-wizard.md`.
 
-## Goal
-P2 of ao v3 (spec: Allternit Brain/Research/specs/ao-tui-machines.md): rebrand vendored
-herdr TUI to ao face, add `ao machine connect`, ship Allternit DEFAULT_CONFIG, verify
-(grep/test parity/fork-diff) + Mac+Linux pilot. Deliverable: docs/AO_TUI_MACHINES_NOTES.md
-+ branch pushed.
+**Just did:** Milestone 5 + polish committed as `5e5a3e20b`: `describeBot.ts` (one call on the platform's existing `/api/chat/completions` route — playground request shape, `getDefaultAgentModel().id`, forced JSON + defensive validation; null on any failure incl. 20s abort), Start-step "Describe the bot you want" prefill box (suggested template defaults underneath, blank card otherwise, silent fallback), Job-step "Refine from my description" (same call, replaces systemPrompt on success). Polish: identity auto-focus, Esc-closes-only-when-idle, copy Register 1 sweep. Verified: typecheck:fast = exactly the 15 pre-existing errors; vitest src/lib/bots 431/432 (same 1 pre-existing vm-operator failure); create-bot tests 29/29 (12 new). Two commits on `session/create-bot-wizard`, not pushed.
 
-## Just did
-- Rebrand landed (work resumed after delegated subagent was stopped; finished + audited
-  every edit myself). ~66 files, +713/−641, all user-visible brand strings: clap name/about,
-  all CLI usage/help/diagnostics, window-title fallback, onboarding, shell labels, config
-  diagnostics, remote install/hints, log file names, socket-busy/server errors, protocol
-  version errors, tracing messages, DEFAULT_CONFIG (incl. Allternit [theme.custom] palette
-  + window_title), SKILL.md (HERDR_ENV kept). app_dir_name() → ao/ao-dev (config
-  ~/.config/ao, state ~/.local/state/ao, worktrees ~/.ao/worktrees). Install suffix
-  .local/bin/ao. `ao machine connect <profile-id> [--keybindings local|server]` (~75 lines,
-  maps catalog profile → remote::run_remote, best-effort select_ssh).
-- Kept per binding decisions: HERDR_* env vars, toast serde value, right-click enum value,
-  protocol tokens herdr:*, socket file names, herdr-plugin.toml, integration marker blocks,
-  upstream github URLs, update.rs install detection, identifiers.
-- Verify: build green. cargo test parity: rerun shows only the 9 pre-existing
-  detect::manifest parallel flakes + same SIGPIPE harness death (baseline identical);
-  detect serial 111/111. 4 test expectations fixed (they tracked renamed strings).
-  Fork-diff guardrail: only non-brand changes = connect fn + DEFAULT_CONFIG theme block. PASS.
-- Branding evidence: `ao --version` → "ao 0.9.0"; machine --help lists connect;
-  --default-config header + theme block confirmed.
-- Pilot prep: Linux host `vps` reachable (Ubuntu, glibc 2.39, x86_64). Cross-building
-  ao for x86_64-unknown-linux-gnu via zig linker (for HERDR_REMOTE_BINARY seed).
+**Next:** PR + merge + ledger attestation per session ritual (owner drives merge); milestones 1–6 all landed.
 
-## Next
-- DONE: pilot complete (machine add/list/connect/remove round-trip vps,
-  combined list, reconnect ~22s, connect proof). Docs written
-  (docs/AO_TUI_MACHINES_NOTES.md). Remaining: commit/push/PR.
-- machine_setup 5/5 + bin unit 2409 passed (pre-existing SIGPIPE death) after
-  status rehome. zig@0.15 keg required for builds; host/cross builds share
-  vendor zig-out and cannot run concurrently (documented in notes).
+**Open questions:** None — plan approved by owner.
 
-## Open questions
-- Integration marker blocks keep the herdr name on purpose (documented).
-- FOUND + FIXED (resumed session): P1's ao contract shadows engine `status`,
-  which broke `ao machine add` (remote probe `status server --json` hit the
-  contract parser: "'--json' is not a number"). Rehomed engine status forms
-  (--json/server/client/help) inside ao::status. Small additive routing fix
-  beyond the rebrand list — required by spec Verify "machine add round-trip".
-- Cross-build binary pre-seeded to vps ~/.local/bin/ao via scp (install prompt
-  needs a tty; pty attempt raced). Remote runs ao 0.9.0.
+---
+
+<!-- merged checkpoint from origin/main (session/shell-rail-home-cleanup) below -->
+
+# Steering checkpoint — session/shell-rail-home-cleanup
+
+Goal: Home-mode shell rail cleanup in the Allternit desktop surface
+(`surfaces/ai.allternit.com`): remove collapsed-rail mascot pill, move Groups
+to a bot-mode-only tab, fold Inbox into the (renamed) Bot Activity widget, move
+Remote peers into the Fabric Transport view, inline the New button with the
+tabs, move "Continue CLI session" into Recents (home + code), sticky tab
+highlights, rename Agent Activity → Bot Activity everywhere user-visible.
+
+Just did: re-applied the full edit set on top of newer origin/main
+(2c7d3c990) after an outside process checked out origin/main in this worktree
+and wiped the first (never-committed) pass. Reconciled with upstream
+effe862b5 (mascot pill had been folded into the 44px collapsed-controls row —
+removed from there) and kept upstream's `aci-recordings` browser view type.
+Verification: typecheck:fast clean except the pre-existing unrelated error set
+(office-* asset declarations, UnifiedTerminal xterm css); 31/31 targeted
+vitest pass. A packaged build of the first pass exists at
+`surfaces/allternit-desktop/release/Allternit-Desktop-1.1.0-arm64.dmg`
+(unsigned, arm64) and was bundle-verified.
+
+Next: commit on `session/shell-rail-home-cleanup`; user decides on PR/merge.
+Packaged binary from the first pass predates the rebase but is functionally
+identical (re-application verified equivalent); rebuild after merge if wanted.
+
+Open questions: whether to PR/merge per the normal ritual (user said
+edits + binary only so far). Note: the vite.config.ts PREVIEW-ONLY univerjs
+patch from the earlier preview session did not survive the checkout — the
+build of this branch may need that path fix re-staged locally.

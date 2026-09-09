@@ -9,7 +9,7 @@ import {
   Globe,
 } from '@phosphor-icons/react';
 
-const MASCOT_TEMPLATES: Record<MascotTemplate, {
+export const MASCOT_TEMPLATES: Record<MascotTemplate, {
   name: string;
   description: string;
   defaultColors: string[];

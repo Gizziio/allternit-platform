@@ -11,7 +11,7 @@ import { getBots, getBotDisplayName, getBotTagline } from "@/lib/bots/bot-profil
 import { useBotRosterStore } from "@/lib/bots/bot-roster.store";
 import { useGroupChatStore } from "@/lib/bots/group-chat.store";
 import { useStartBotSession } from "@/lib/bots/useStartBotSession";
-import { openBotChatView } from "@/lib/bots/bot-canonical-chat.service";
+import { openChatView } from "@/lib/bots/bot-canonical-chat.service";
 import { startBotGroupChat } from "@/lib/bots/startBotGroupChat";
 import { BotAvatar } from "@/views/bots/BotAvatar";
 import { CreateBotForm } from "@/views/agent-view/components/CreateBotForm";
@@ -27,7 +27,7 @@ interface BotPickerSheetProps {
  * `agentModeSurface === 'bot'`. Modeled on ComposerPlusSheet (same grabber
  * header, glass styling, and open/close animation) but anchored to the bottom
  * of the screen. Selecting a bot starts (or reopens) its canonical session and
- * lands in the bot-chat-session view — no overlays stack on top.
+ * lands in the unified chat view — no overlays stack on top.
  */
 export function BotPickerSheet({ open, onClose }: BotPickerSheetProps) {
   const { agents } = useAgentStore();
@@ -74,7 +74,7 @@ export function BotPickerSheet({ open, onClose }: BotPickerSheetProps) {
     useAgentSurfaceModeStore.getState().setSelectedAgent("bot", bot.id);
     const sessionId = await startSession(bot);
     if (sessionId) {
-      openBotChatView(sessionId, bot.id, "bot-launchpad");
+      openChatView();
     }
   };
 
