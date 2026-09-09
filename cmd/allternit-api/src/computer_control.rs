@@ -32,6 +32,10 @@ pub(crate) enum ComputerControlAction {
     Shell(ShellInput),
     FileRead { path: String },
     FileWrite { path: String, content_base64: String },
+    /// Enable the authenticated in-VM HTTP proxy on `port` (Phase 3).
+    ProxyEnable { port: u16 },
+    /// Disable the in-VM HTTP proxy (Phase 3).
+    ProxyDisable,
 }
 
 /// Canonical action descriptor for grant binding. Must be built
@@ -65,6 +69,13 @@ pub(crate) fn control_action_descriptor(action: &ComputerControlAction) -> Value
             "route": "computer.file_write",
             "path": path,
         }),
+        ComputerControlAction::ProxyEnable { port } => json!({
+            "route": "computer.proxy_enable",
+            "port": port,
+        }),
+        ComputerControlAction::ProxyDisable => json!({
+            "route": "computer.proxy_disable",
+        }),
     }
 }
 
@@ -87,6 +98,12 @@ pub(crate) fn classify_control_action(action: &ComputerControlAction) -> crate::
         ComputerControlAction::FileRead { .. } => ConfirmationClass::Reversible,
         ComputerControlAction::FileWrite { path, .. } => {
             crate::aci_safety::classify_file_write(path)
+        }
+        // Enabling the proxy exposes an in-guest port to the authenticated
+        // caller; disabling removes that exposure. Both mutate state but are
+        // directly undoable, so they sit in the risky (approval-gated) tier.
+        ComputerControlAction::ProxyEnable { .. } | ComputerControlAction::ProxyDisable => {
+            ConfirmationClass::Risky
         }
     }
 }
@@ -275,6 +292,13 @@ pub(crate) async fn execute_computer_tool(
                 }
             }
         }
+        // Proxy enable/disable are ACI-gated REST actions managed by the
+        // computer proxy routes (computer_ws); they never execute on the
+        // guest tool surface.
+        ComputerControlAction::ProxyEnable { .. } | ComputerControlAction::ProxyDisable => Err((
+            StatusCode::BAD_REQUEST,
+            json!({"error": "proxy actions are managed via the computer proxy routes"}),
+        )),
     }
 }
 

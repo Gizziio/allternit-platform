@@ -74,6 +74,13 @@ async fn bot_desktop_ws_handler(
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DesktopTokenClaims {
     pub bot_id: String,
+    /// Set for computer-scoped tokens (Phase 3 `/ws/computers/*`); bot tokens
+    /// leave this unset.
+    #[serde(default)]
+    pub computer_id: Option<String>,
+    /// Token purpose discriminator for computer tokens ("pty" | "events").
+    #[serde(default)]
+    pub purpose: Option<String>,
     pub sandbox_id: String,
     pub user_id: String,
     pub exp: u64,
@@ -91,6 +98,10 @@ pub enum DesktopTokenError {
     Json,
     #[error("invalid signature")]
     Signature,
+    #[error("token is not scoped to this computer")]
+    ComputerMismatch,
+    #[error("token purpose does not match this endpoint")]
+    PurposeMismatch,
 }
 
 /// Return the configured desktop WS secret, or a deterministic dev fallback.
@@ -120,6 +131,8 @@ pub fn sign_desktop_token(
     let header = serde_json::json!({"alg": "HS256", "typ": "DT"});
     let claims = DesktopTokenClaims {
         bot_id: bot_id.to_string(),
+        computer_id: None,
+        purpose: None,
         sandbox_id: sandbox_id.to_string(),
         user_id: user_id.to_string(),
         exp: chrono::Utc::now().timestamp() as u64 + expires_in_seconds,
@@ -131,6 +144,55 @@ pub fn sign_desktop_token(
     let signature = hmac_sign(secret, &signing_input);
 
     format!("{}.{}", signing_input, signature)
+}
+
+/// Sign a short-lived computer-scoped WebSocket token (Phase 3
+/// `/ws/computers/:id/*`). The claims carry `computer_id` + `purpose` instead
+/// of a bot id; bots never accept these (bot validation requires a bot_id
+/// match against the path).
+pub fn sign_computer_token(
+    secret: &str,
+    computer_id: &str,
+    sandbox_id: &str,
+    user_id: &str,
+    expires_in_seconds: u64,
+    purpose: &str,
+) -> String {
+    let header = serde_json::json!({"alg": "HS256", "typ": "DT"});
+    let claims = DesktopTokenClaims {
+        bot_id: String::new(),
+        computer_id: Some(computer_id.to_string()),
+        purpose: Some(purpose.to_string()),
+        sandbox_id: sandbox_id.to_string(),
+        user_id: user_id.to_string(),
+        exp: chrono::Utc::now().timestamp() as u64 + expires_in_seconds,
+    };
+
+    let header_b64 = b64_encode(&serde_json::to_vec(&header).unwrap_or_default());
+    let payload_b64 = b64_encode(&serde_json::to_vec(&claims).unwrap_or_default());
+    let signing_input = format!("{}.{}", header_b64, payload_b64);
+    let signature = hmac_sign(secret, &signing_input);
+
+    format!("{}.{}", signing_input, signature)
+}
+
+/// Verify a computer-scoped WebSocket token: signature, expiry, and that the
+/// claims name this computer and purpose. Bot tokens (no `computer_id`) are
+/// rejected with `ComputerMismatch`.
+pub fn verify_computer_token(
+    secret: &str,
+    token: &str,
+    computer_id: &str,
+    purpose: &str,
+) -> Result<DesktopTokenClaims, DesktopTokenError> {
+    let claims = verify_desktop_token(secret, token)?;
+    if claims.computer_id.as_deref() != Some(computer_id) {
+        return Err(DesktopTokenError::ComputerMismatch);
+    }
+    if claims.purpose.as_deref() != Some(purpose) {
+        return Err(DesktopTokenError::PurposeMismatch);
+    }
+    Ok(claims)
 }
 
 /// Verify a desktop WebSocket token and return its claims.
@@ -160,7 +222,7 @@ pub fn verify_desktop_token(secret: &str, token: &str) -> Result<DesktopTokenCla
     Ok(claims)
 }
 
-fn hmac_sign(secret: &str, input: &str) -> String {
+pub(crate) fn hmac_sign(secret: &str, input: &str) -> String {
     type HmacSha256 = Hmac<Sha256>;
     let mut mac = HmacSha256::new_from_slice(secret.as_bytes()).expect("HMAC can take key of any size");
     mac.update(input.as_bytes());
@@ -168,17 +230,17 @@ fn hmac_sign(secret: &str, input: &str) -> String {
     b64_encode(&result.into_bytes())
 }
 
-fn b64_encode(input: &[u8]) -> String {
+pub(crate) fn b64_encode(input: &[u8]) -> String {
     use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
     URL_SAFE_NO_PAD.encode(input)
 }
 
-fn b64_decode(input: &str) -> Result<Vec<u8>, base64::DecodeError> {
+pub(crate) fn b64_decode(input: &str) -> Result<Vec<u8>, base64::DecodeError> {
     use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
     URL_SAFE_NO_PAD.decode(input)
 }
 
-fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
+pub(crate) fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
     if a.len() != b.len() {
         return false;
     }
@@ -363,7 +425,7 @@ async fn verify_bot_ownership(state: &AppState, user_id: &str, bot_id: &str) -> 
 
 /// Parse a TCP host:port from desktop endpoint URLs.
 /// Accepts `tcp://host:port`, `ws://host:port`, `host:port`, or `http://host:port`.
-fn parse_tcp_addr(url: &str) -> Option<String> {
+pub(crate) fn parse_tcp_addr(url: &str) -> Option<String> {
     let url = url.trim();
 
     // Strip known schemes.
@@ -445,5 +507,66 @@ mod tests {
         assert_eq!(parse_tcp_addr("host:5900"), Some("host:5900".to_string()));
         assert_eq!(parse_tcp_addr("http://host:5900/path"), Some("host:5900".to_string()));
         assert_eq!(parse_tcp_addr("host"), None);
+    }
+
+    #[test]
+    fn computer_token_round_trip() {
+        let token = sign_computer_token(TEST_SECRET, "computer-1", "sandbox-1", "user-1", 60, "pty");
+        let claims = verify_computer_token(TEST_SECRET, &token, "computer-1", "pty").unwrap();
+        assert_eq!(claims.computer_id.as_deref(), Some("computer-1"));
+        assert_eq!(claims.purpose.as_deref(), Some("pty"));
+        assert_eq!(claims.sandbox_id, "sandbox-1");
+        assert_eq!(claims.user_id, "user-1");
+        assert_eq!(claims.bot_id, "");
+    }
+
+    #[test]
+    fn computer_token_rejects_wrong_computer_and_purpose() {
+        let token = sign_computer_token(TEST_SECRET, "computer-1", "sandbox-1", "user-1", 60, "pty");
+        let err = verify_computer_token(TEST_SECRET, &token, "computer-2", "pty").unwrap_err();
+        assert!(matches!(err, DesktopTokenError::ComputerMismatch));
+        let err = verify_computer_token(TEST_SECRET, &token, "computer-1", "events").unwrap_err();
+        assert!(matches!(err, DesktopTokenError::PurposeMismatch));
+    }
+
+    #[test]
+    fn computer_token_rejects_expired() {
+        let token = sign_computer_token(TEST_SECRET, "computer-1", "sandbox-1", "user-1", 1, "pty");
+        std::thread::sleep(std::time::Duration::from_secs(2));
+        let err = verify_computer_token(TEST_SECRET, &token, "computer-1", "pty").unwrap_err();
+        assert!(matches!(err, DesktopTokenError::Expired));
+    }
+
+    #[test]
+    fn bot_tokens_remain_valid_and_are_not_computer_tokens() {
+        let bot_token = sign_desktop_token(TEST_SECRET, "bot-1", "sandbox-1", "user-1", 60);
+        // Existing bot validation is unchanged.
+        let claims = verify_desktop_token(TEST_SECRET, &bot_token).unwrap();
+        assert_eq!(claims.bot_id, "bot-1");
+        assert!(claims.computer_id.is_none());
+        assert!(claims.purpose.is_none());
+        // A bot token must not be usable as a computer token.
+        let err = verify_computer_token(TEST_SECRET, &bot_token, "bot-1", "pty").unwrap_err();
+        assert!(matches!(err, DesktopTokenError::ComputerMismatch));
+        // And a computer token must not validate as a bot token claim shape
+        // with a bot id (it carries an empty bot_id).
+        let computer_token = sign_computer_token(TEST_SECRET, "computer-1", "sandbox-1", "user-1", 60, "pty");
+        let claims = verify_desktop_token(TEST_SECRET, &computer_token).unwrap();
+        assert_eq!(claims.bot_id, "");
+    }
+
+    #[test]
+    fn legacy_token_without_new_claims_still_validates() {
+        // A token minted before the computer_id/purpose fields existed
+        // (payload without those keys) must still verify.
+        let header = b64_encode(br#"{"alg":"HS256","typ":"DT"}"#);
+        let payload = b64_encode(br#"{"bot_id":"bot-9","sandbox_id":"s","user_id":"u","exp":9999999999}"#);
+        let signing_input = format!("{}.{}", header, payload);
+        let signature = hmac_sign(TEST_SECRET, &signing_input);
+        let legacy = format!("{}.{}", signing_input, signature);
+        let claims = verify_desktop_token(TEST_SECRET, &legacy).unwrap();
+        assert_eq!(claims.bot_id, "bot-9");
+        assert!(claims.computer_id.is_none());
+        assert!(claims.purpose.is_none());
     }
 }

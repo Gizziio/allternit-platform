@@ -1,53 +1,58 @@
-# Session checkpoint — office-dedup
+# Session checkpoint — cloud-computer-orgo-p3 (Phase 3 real-time plane)
 
-Goal: Remove the duplicate standalone office suite. Keep the shell ACI "Office & Extensions"
-hub (browser-extensions view) as the SINGLE office surface. (a) Desktop: drop the per-program
-office BrowserWindows; deliver office opens (menu, file association, shell:open-office IPC) to
-the main window via preload channel (new office:open-target sibling of office:open-file).
-(b) Platform: delete /office route + OfficeLauncherPage (keep /office → redirect /), keep
-editor routes and OfficePageChrome; extend desktop-bridge.ts to route into the SHELL
-(allternit:open-view) when ShellApp is mounted ('/' or /shell), else navigate to the editor
-route (fallback). Do NOT touch views/office, views/docs|sheets|slides, BrowserExtensionsView,
-cowork/design embeds, add-ins, or PR #188 assistant work.
+Goal: Execute docs/CLOUD_COMPUTER_PHASE_3_TASK.md exactly (spec rq-20260909-004
+Phase 3). Design ref: docs/CLOUD_COMPUTER_PHASE_3_DESIGN.md (verified vs main
+08ecef8ac). Do NOT start Phase 4. Deliverables: ws tokens + pty ws + events
+stream + in-VM proxy + V137 audit/proxy migration + tests + sentinel notes,
+commit, push, report branch SHA. Branch: ao/cloud-computer-orgo-p3.
 
 Just did:
-- unified-main.ts: officeWindows/openOfficeWindow/resolveOfficeUrl removed; new
-  deliverToMainWindow + pendingOfficeDeliveries queue flushed on main-window
-  did-finish-load (registered in createMainWindow); openOfficeTarget;
-  shell:open-docs/shell:open-office/file-assoc/OPEN_DOCS_ON_START all deliver to
-  main window; tray 'Allternit Office' is now a single item opening the hub
-  ('launcher' target → browser-extensions view in the bridge).
-- preload: office.onOpenTarget added (office:open-target channel); onOpenFile kept.
-- desktop-bridge.ts: in-shell open via allternit:open-view when ShellApp mounted
-  ('/' or /shell), route-navigation fallback otherwise; file bytes via stashFile;
-  'launcher' → browser-extensions hub.
-- routes.tsx: /office route removed → redirect to '/'; OfficeLauncherPage deleted.
-- Tests: desktop office-windows/docs-window rewritten for main-window delivery
-  (context().addInitScript seeds onboarding key); platform office-launcher.spec
-  → redirect + hub flows via new tests/helpers/office-hub.ts; office-markdown.spec
-  repointed through the hub (URL assertions dropped, in-shell instead).
-- docs office-suite.mdx updated (hub is the entry point; /office redirects).
+- V137 migration: computer_access_logs table (+computer_id index) and
+  computer_cloud_desktop + proxy_port/proxy_paths columns.
+- driver-interface: guest_service_url(handle, guest_port) default NotSupported.
+- Incus impl: reuse existing proxy device for guest_port via get_config scan
+  (parse_proxy_port_for_guest), else allocate via expose_port_on on the
+  handle's own host; returns http://{vnc_host}:{port}. Mock HTTP tests for
+  reuse + allocation paths.
+- bot_desktop_stream: DesktopTokenClaims + computer_id/purpose (serde
+  default, bot tokens unchanged); sign_computer_token /
+  verify_computer_token (+ComputerMismatch/PurposeMismatch); helpers now
+  pub(crate); tests incl. legacy-payload back-compat.
+- computer_control: ProxyEnable{port}/ProxyDisable variants, descriptors,
+  classified Risky (reversible state-changing); tool-surface arms reject.
+- computer_audit: fire-and-forget computer_access_logs inserts (+in-memory
+  sqlite test).
+- computer_ws (new): PTY bridge + events collector embedded python, lazy
+  nohup bootstrap with per-computer in-memory bridge tokens (AppState
+  computer_guest_tokens, ECONNREFUSED → re-bootstrap once), /ws/computers/:id/pty
+  (resize control messages), /ws/computers/:id/events (tail loop + ping +
+  last_activity touch), GET history (limit≤500, 501 NotSupported), ws-token
+  issue POST (300s, purpose pty|events, audited), proxy enable/disable (ACI
+  gated) + GET config + ANY /proxy/{*path} forwarder (10MB cap, hop-by-hop
+  filter, 30s reqwest, audit per request). Pure fns + tests.
+- Wiring: lib.rs mods + AppState.computer_guest_tokens; main.rs mounts
+  /ws/computers + /api/v1 computer_ws router; test_helpers updated.
 
 Next:
-1. VERIFY Playwright: DONE for platform — all 9 specs in office-launcher.spec.ts +
-   office-markdown.spec.ts PASS (chromium via pw.scratch.config.ts executablePath →
-   chromium-1234 build on port 5199; scratch config deleted after). Shared
-   ms-playwright cache for pinned rev 1208 was churned by session webmcp-play;
-   headless shell never completed. Fix applied during verification: hub pdf tests use
-   getByText('hello.pdf').first() (strict-mode violation in-shell, 3 matches).
-   NOTE: first cold-run pdf failures were cold-start flake; warm runs pass in ~20s.
-2. Desktop electron specs (rewritten for main-window delivery; build:main +
-   build:preload compiled clean): ATTEMPT RUNNING NOW in background task
-   bash-w7via1vw (electron binary present via pnpm store). If it fails on
-   environment (sidecars/ports), note honestly in PR.
-3. Then: rm pw.scratch leftovers (done), commit/push/PR/merge, ledger, cleanup.
+1. cargo check -p allternit-api green (running), fix loop.
+2. cargo test -p allternit-api computer + computer_audit + computer_ws +
+   bot_desktop_stream; cargo test -p allternit-computer-cloud.
+3. Evidence → ~/.agent-orchestrator/evidence/cloud-computer-orgo-p3/;
+   .allternit/shared-context.md milestone append.
+4. Sentinel docs/CLOUD_COMPUTER_PHASE_3_NOTES.md, commit feat(computers),
+   push, report SHA.
 
-STATUS so far (all verified):
-- Desktop typecheck (main+preload): PASS. Desktop vitest office-programs: 5/5 PASS.
-- Platform typecheck: PASS. Platform vitest src/shell + src/views/office: 20/20 PASS.
-- Platform vite build: PASS (11s).
-- Code complete on both surfaces + docs mdx + tests rewritten.
-
-Open questions:
-- officePathFor stays exported+tested in office-programs.ts though now unused by main (pure
-  helper module; kept deliberately).
+STATUS (final):
+- cargo check -p allternit-api -p allternit-computer-cloud -p allternit-driver-interface: PASS
+- cargo test -p allternit-api computer: 41/41 PASS
+- cargo test -p allternit-api bot_desktop_stream (tokens): 11/11 PASS
+- cargo test -p allternit-api computer_ws: 8/8 PASS; computer_audit: 1/1 PASS
+- cargo test -p allternit-computer-cloud: 96/96 + 6/6 PASS (guest_service_url reuse + alloc)
+- py_compile both embedded guest scripts: OK
+- Fixed en route: 19 literal AppState test constructors needed the new
+  computer_guest_tokens field; incus mock tests derive vnc_host from the
+  substrate URL (spec behavior); allowlist test documents naive prefix
+  semantics; proxy config test seeds the parent computers row (FK).
+- Live smoke: deferred (no Incus here); 501/503 paths unit-tested.
+- Evidence: ~/.agent-orchestrator/evidence/cloud-computer-orgo-p3/verification.txt
+- Next: sentinel notes written; commit feat(computers), push, report SHA.
