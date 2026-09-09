@@ -1,18 +1,19 @@
-# Checkpoint — cu11-tsverify (final)
+# Steering checkpoint — session/cu12-conf
 
 ## Goal
-1. Live-verify gizzi engine adapter vs real Python gateway ✅ (12/12, transcript /tmp/cu11-live-final.txt)
-2. Stop swallowing executor errors in sdk/allternit-sdk capability ✅ (strict status/error checks, 6 new tests)
-3. Chrome-stream from-recording integration proof vs protocol zod schema ✅ (4 new tests)
-+ Found & fixed: SDK dist was CJS while deps ESM-only → dist unloadable outside bundlers (flipped sdk/computer-use to ESM; 110 jest green); gateway has no /vision/screenshot → adapter screenshot() now uses direct screenshot action + artifacts.
+Finish honest remaining items in domains/computer-use (sole ownership).
 
 ## Just did
-- All stages verified: sdk/computer-use jest 110/110; sdk/allternit-sdk bun test 248 run (11 fail = same pre-existing as main, 6 new pass); chrome-stream vitest 53 pass (49+4), tsc clean; gizzi-code bun run typecheck clean; live 12/12 twice (fresh gateway).
-- Gateway killed? NO — still running on :8986 (task bash-b1fhdtk4); Chrome tab https://example.com left open. Kill before session end.
-- Deleted stray build artifacts in packages/*/src (created by an intermediate build attempt); reverted pnpm-lock churn.
+- CDP adapter: added `goto` (alias of navigate), `eval`, `observe` actions + screenshot Artifact population in envelope.
+- suites.py: added Suite B (browser-adaptive-v1, 3 tests: envelope/clean-failure/goal-forwarding); Suite C = retrieval-v1 (was R, 5 tests, build_suite_r kept as alias); Suite E = hybrid-v1 (was H, 3 tests, build_suite_h alias); gateway/main.py imports still valid.
+- measured.py: discovers hybrid.orchestrator always (offline, browser.mock sub-adapter, note says so); retrieval crawler + browser-use discovery; per-adapter suite routing; honest unmeasured fallbacks.
+- core/monitor.py: VLMMonitor behind Monitor protocol — env config ACU_MONITOR_VLM_PROVIDER/MODEL/ENDPOINT, stdlib urllib client, injectable client for tests, heuristic pre-filter, errors→continue; docstring documents swap-in.
+- tests: 11 new VLMMonitor tests (fake provider), updated measured-conformance tests for new B/C/E reality.
+- pytest (venv-acu311, excl. pre-existing collection-error modules): 207 passed / 21 skipped / 0 failed. 3 transient desktop-mouse flakes on first run, green on rerun; pass in isolation.
 
 ## Next
-- 4 stage commits + push + PR. Leave merge to orchestrator.
+- Launch headless Chrome w/ CDP port 9222 (brief, cleanup), run `python -m conformance.measured --network`, regenerate adapter_grades.json with real numbers; verify browser.cdp improvement.
+- Commit, push, PR.
 
 ## Open questions
 - None.
