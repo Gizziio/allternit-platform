@@ -18,3 +18,6 @@ Commit, push, open PR, stop (orchestrator merges).
 
 ## Open questions
 - Concurrent runs share os.environ for overlapping windows (documented v1 tradeoff in core/sandbox_env.py).
+
+## Done
+- PR #187 opened (https://github.com/Gizziio/allternit-platform/pull/187), branch session/cu19-sandbox-env, single commit b091b4932. Stopped here per instructions — orchestrator merges.
