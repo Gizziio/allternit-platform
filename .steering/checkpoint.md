@@ -1,51 +1,42 @@
-# Steering checkpoint — session/5c233b1c
+# Steering checkpoint — ao/ao-engine-parity (P1)
 
 ## Goal
-Phase 2 follow-up of spec bot-identity-computer (user-directed, 2026-09-09): (1) remove the
-replaced bot-creation path in CreateAgentForm (bot mode + forge theater) since CreateBotForm
-is canonical; (2) size presets UI on the Create Bot Computer step; (3) fleet "provision
-computers" action on the Bots hub; (4) watch/takeover desktop UX polish.
+P1 of the ao v3 runtime plan (queue rq-20260908-028): on the P0-vendored herdr engine in
+`infrastructure/executor/ao-engine/`, implement `ao spawn|send|watch|status|kill|doctor` with
+byte-level contract parity to the bash scripts in `~/.claude/skills/agent-orchestrator/scripts/`,
+plus one additive engine patch (PTY-tee transcripts). Spec: Allternit Brain
+`Research/specs/ao-engine-parity.md` (verify section is the hard gate); binding memo
+`Research/drafts/prep-p1-socket-parity.md` (12 design decisions; PTY-tee is the only allowed
+engine diff). Engine runs as named session `ao`.
 
 ## Just did
-- All four items implemented and verified: 432/432 tests in src/lib/bots pass (incl. new
-  fleet-provision + size-preset tests); typecheck zero errors in touched files (15 total,
-  all pre-existing env issues vs main's 24).
-- Fixed a real crash: `BotDesktopStatus` type lacked `'creating'`, so the statusBadge lookup
-  at BotComputerViewport would throw while a desktop is provisioning. Type widened + badge +
-  provisioning panel added.
-- Big Five sliders KEPT in agent creation: agent.service.ts:1511 reads config.personality at
-  runtime, so they are runtime-effective, not theater. Only bot-mode duplication + forge
-  animation removed. VMOperatorStep kept in EditAgentForm.
+- Read spec + parity memo + all six contract scripts (byte-level contract captured).
+- Deep-surveyed the vendored crate via 3 explore agents: PTY output flow (hook: on_read closure
+  in pane.rs:2343 / PtyIoActorConfig), CLI dispatch (hand-rolled in cli.rs, add src/cli/ao.rs),
+  full RPC schema reference. Key finding: `events.wait` does NOT support pane_exited matches
+  (only pane_agent_status_changed) — spec decision #5's events.wait arm is disproven by source;
+  probe-based liveness survives. No liveness field anywhere; exited panes keep stale shell_pid
+  in process_info (spike must confirm against running server).
+- Found P0 commit is unbuildable from a fresh checkout: repo .gitignore `build/` swallowed
+  `vendor/libghostty-vt/src/build/` (+ gtk/build) at commit time. Restored both from upstream
+  ghostty@c5a21edfc (verified the only vendor diffs vs that commit are the two documented herdr
+  patches), added .gitignore negations.
 
 ## Next
-1. Commit, push, PR, merge (expect checkpoint.md conflict with main — keep mine).
-2. Ledger attestation on main; queue history event + dashboard; brain draft (no confirm).
-3. Remove worktree + branch; verify clean state.
+1. Commit vendor repair (fix(ao-engine)), push; then build the engine and boot it as session ao.
+2. Run the 3-item spike (post-exit pane.get/read/process_info; placeholder-tab side effects;
+   read-after-exit) + exercise worktree.create/remove churn; record findings in P1 NOTES.
+3. Implement the PTY-tee patch, then src/cli/ao.rs six subcommands, then the golden parity test.
 
 ## Open questions
-- None blocking. Honest deferral: no live Incus desktop was booted; watch/takeover changes
-  verified by static analysis, not a runtime repro.
+- events.wait pane_exited unsupported at v0.9.0 (source-verified) → watch/status liveness will be
+  probe-based (process_info shell_pid + kill(pid,0)) per memo fallback; will record as a
+  spike-settled deviation if the running engine confirms.
+- layout.apply rejects tab_id+workspace_id together (invalid_target) → spike must confirm the
+  correct invocation shape (tab_id only).
+- Decision #3 (engine worktree.create/remove) vs git-subprocess parity: will exercise in spike
+  and record; git subprocess may win on byte-parity grounds.
 
 ---
 
-<!-- merged checkpoint from branch ao/allternit-runtime-fork (P0 engine fork, completed 2026-09-09) -->
-
-# Steering checkpoint — ao/allternit-runtime-fork (P0)
-
-## Goal
-Phase P0 of the ao v3 engine fork (queue rq-20260908-028, decision fork_reskin): vendor herdr v0.9.0 into `infrastructure/executor/ao-engine/`, gut the herdr.dev phone-home surface, build as `ao` binary, keep diff mergeable with upstream. Spec: docs/ALLTERNIT_RUNTIME_MAP.md + docs/ALLTERNIT_RUNTIME_P0_TASK.md.
-
-## Just did
-- Vendored herdr v0.9.0 (SHA b99002ac99b09e00b4ca692436cb15a6b0d676f1) into infrastructure/executor/ao-engine/ (src/, tests/, vendor/ incl. patched portable-pty + libghostty-vt, build.rs, LICENSE, build-referenced assets/docs/skills). Excluded .git, rust-toolchain.toml (conflict documented).
-- Workspace wiring: member added; `[[bin]] name = "ao"`; portable-pty [patch.crates-io] at workspace root (version-specific 0.9.x, other members on 0.8 unaffected).
-- Gut list applied: update.rs trimmed to residue (Version + pkg-manager path detection, no network); product_announcements.rs deleted + wiring neutralized (UI/API surface left inert); manifest_update.rs remote catalog fetch removed (offline local-cache verification; local override cache mechanism kept); remote/attach.rs release-asset download from herdr.dev manifests removed (offline error with HERDR_REMOTE_BINARY guidance); `herdr update` + `herdr channel` subcommands removed.
-- Remaining herdr.dev hits: comments/docs + `herdr:devin` protocol identifier only (grep evidence pending in build evidence step).
-- THIRD_PARTY_NOTICES.md herdr entry added.
-
-## Next
-- DONE: final commit (docs/ALLTERNIT_RUNTIME_P0_NOTES.md) + push. P0 complete; NOTES is the deliverable sentinel.
-
-## Open questions
-- RESOLVED: katakana test regression was workspace dep drift, not the gut — ratatui-core 0.1.2 breaks it (bisected; ratatui 0.30.2/line-clipping 0.3.8/unicode-segmentation 1.13.3/compact_str 0.9.1 all PASS). Pinned ratatui =0.30.0 + ratatui-core =0.1.0 in ao-engine; test passes in-workspace now.
-- RESOLVED: unit-suite SIGPIPE death is pre-existing — pristine herdr v0.9.0 (built standalone, rustc 1.94.1) dies identically (signal 13 after ~2185 ok; also env failure plugin_link_creates_stable_config_and_state_dirs which passes in isolation). Documented, not fixed (out of scope: unrelated pre-existing breakage).
-- rustc 1.94.1 compiles herdr 0.9.0 cleanly; the 1.96.1 pin is not needed. zig 0.15.2 required (ZIG env var or PATH; /opt/homebrew/opt/zig@0.15/bin/zig).
+<!-- previous checkpoints below -->

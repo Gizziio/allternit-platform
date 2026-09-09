@@ -37,6 +37,9 @@ _tmp_*/
 _archive/
 coverage/
 build/
+# vendored libghostty-vt ships Zig source dirs literally named `build/` — keep them
+!infrastructure/executor/ao-engine/vendor/libghostty-vt/src/build/
+!infrastructure/executor/ao-engine/vendor/libghostty-vt/src/apprt/gtk/build/
 out/
 .vercel
 .next/
