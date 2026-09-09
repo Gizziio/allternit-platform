@@ -16,6 +16,7 @@ import {
   type AvatarPickerConfig,
 } from "@/views/agent-view/components/AgentAvatarPicker";
 import type { BotTemplate } from "@/lib/bots/bots.manifest";
+import { getBotTemplate } from "@/lib/bots/bots.manifest";
 import { BOT_CATEGORY_DEFAULT_TOOLS } from "@/lib/bots/bot-tool-registry";
 import { defaultBotVMOperatorConfig } from "@/lib/bots/vm-operator";
 import { api } from "@/integration/api-client";
@@ -28,10 +29,12 @@ import {
   WIZARD_STEPS,
   canNavigateTo,
   createChecklistFor,
+  deriveHandle,
   stepGateMet,
   type WizardStepId,
 } from "./wizard-state";
 import { useCreateBotSubmit } from "./useCreateBotSubmit";
+import { describeBot, refineSystemPrompt } from "./describeBot";
 import { WizardPreview } from "./WizardPreview";
 import { StartStep, BLANK_TEMPLATE_ID } from "./steps/StartStep";
 import { IdentityStep } from "./steps/IdentityStep";
@@ -110,6 +113,8 @@ export function CreateBotWizard({ isOpen, onClose, draft }: CreateBotWizardProps
   const [step, setStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const [describing, setDescribing] = useState(false);
+  const [refining, setRefining] = useState(false);
 
   const [formData, setFormData] = useState<Partial<CreateAgentInput>>(() => buildInitialFormData());
 
@@ -209,6 +214,8 @@ export function CreateBotWizard({ isOpen, onClose, draft }: CreateBotWizardProps
     setGizziEmotion("pleased");
     setImageDataUrl(null);
     setPetUrl("");
+    setDescribing(false);
+    setRefining(false);
     submit.reset();
   }, [isOpen, draft, submit.reset]);
 
@@ -332,6 +339,80 @@ export function CreateBotWizard({ isOpen, onClose, draft }: CreateBotWizardProps
     },
     [avatarMode, draft, updateBotProfile],
   );
+
+  /**
+   * Describe-to-prefill (milestone 5): one LLM call, then seed the wizard
+   * from the parsed result. The suggested template's defaults (accent,
+   * avatar color, category tools) are applied underneath first; parsed
+   * fields win on top. No match → blank card. Null result → silent no-op,
+   * the selected template's state is untouched.
+   */
+  const handleDescribe = async (text: string) => {
+    if (describing) return;
+    setDescribing(true);
+    try {
+      const result = await describeBot({ description: text });
+      if (!result) return;
+      const suggested = result.suggestedTemplateId
+        ? getBotTemplate(result.suggestedTemplateId)
+        : undefined;
+      applyTemplate(suggested ?? null);
+      setFormData((prev) => ({
+        ...prev,
+        description: result.description || prev.description,
+        systemPrompt: result.systemPrompt || prev.systemPrompt,
+        allowedTools: result.allowedTools?.length ? result.allowedTools : prev.allowedTools,
+      }));
+      const profilePatch: Partial<NonNullable<CreateAgentInput["botProfile"]>> = {};
+      if (result.displayName) profilePatch.displayName = result.displayName;
+      if (result.tagline) profilePatch.tagline = result.tagline;
+      if (result.welcomeMessage) profilePatch.welcomeMessage = result.welcomeMessage;
+      if (result.starterPrompts?.length) profilePatch.starterPrompts = result.starterPrompts;
+      if (result.botCategory) profilePatch.botCategory = result.botCategory;
+      if (Object.keys(profilePatch).length > 0) updateBotProfile(profilePatch);
+      if (result.displayName) {
+        setFormData((prev) => ({
+          ...prev,
+          name: prev.name || deriveHandle(result.displayName!),
+        }));
+      }
+    } catch {
+      // Silent by contract — never block the wizard on the accelerator.
+    } finally {
+      setDescribing(false);
+    }
+  };
+
+  /** Job-step refine: rewrite the system prompt from name + description. */
+  const handleRefine = async () => {
+    if (refining) return;
+    setRefining(true);
+    try {
+      const result = await refineSystemPrompt({
+        description: formData.description || formData.botProfile?.tagline || "",
+        displayName: formData.botProfile?.displayName || undefined,
+        currentSystemPrompt: formData.systemPrompt || undefined,
+      });
+      if (result?.systemPrompt) {
+        setFormData((prev) => ({ ...prev, systemPrompt: result.systemPrompt! }));
+      }
+    } catch {
+      // Silent by contract.
+    } finally {
+      setRefining(false);
+    }
+  };
+
+  // Esc closes the wizard, but never while a submit is in flight (old
+  // behavior: close is blocked while creating).
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && submit.phase === "idle") onClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isOpen, onClose, submit.phase]);
 
   const handleVoicePreview = async () => {
     if (isPlaying) return;
@@ -519,6 +600,8 @@ export function CreateBotWizard({ isOpen, onClose, draft }: CreateBotWizardProps
                     <StartStep
                       selectedTemplateId={selectedTemplateId}
                       onSelectTemplate={applyTemplate}
+                      describing={describing}
+                      onDescribe={handleDescribe}
                     />
                   )}
                   {stepId === "identity" && (
@@ -531,7 +614,14 @@ export function CreateBotWizard({ isOpen, onClose, draft }: CreateBotWizardProps
                       {...avatarState}
                     />
                   )}
-                  {stepId === "job" && <JobStep formData={formData} setFormData={setFormData} />}
+                  {stepId === "job" && (
+                    <JobStep
+                      formData={formData}
+                      setFormData={setFormData}
+                      refining={refining}
+                      onRefine={handleRefine}
+                    />
+                  )}
                   {stepId === "computer" && (
                     <ComputerRuntimeStep
                       formData={formData}

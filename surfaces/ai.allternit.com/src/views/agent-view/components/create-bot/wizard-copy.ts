@@ -20,8 +20,12 @@ export const WIZARD_COPY = {
         "Templates arrive pre-filled with a real job description, tools, and starter prompts. Pick one and edit it, or start blank.",
       blankCardLabel: "Blank",
       blankCardDescription: "Start from scratch with zero-config defaults.",
-      describeSlotNote:
-        'Milestone 5 plugs the "Describe the bot you want" LLM prefill box in here.',
+      describeToggle: "Describe the bot you want",
+      describeDescription:
+        "One sentence is enough. We pre-fill the steps from it — you keep clicking through to adjust.",
+      describePlaceholder: "e.g. A bot that checks our competitors' pricing every morning and sends me a summary…",
+      describeAction: "Prefill",
+      describeWorking: "Working…",
     },
     identity: {
       label: "Identity",
@@ -56,6 +60,8 @@ export const WIZARD_COPY = {
       description:
         "What this bot does, and what it is allowed to use. Saved with the bot when you create it.",
       systemPromptLabel: "Job instructions",
+      refineAction: "Refine from my description",
+      refineWorking: "Working…",
       systemPromptPlaceholder: "Your job: …\n\nYou do:\n- …\n\nYou do not:\n- …",
       systemPromptHint:
         "This becomes the bot's system prompt. State the job plainly — what it does and what it does not do. Optional: the platform adds identity and computer context at runtime.",

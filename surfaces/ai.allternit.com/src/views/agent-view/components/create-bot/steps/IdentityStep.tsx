@@ -81,6 +81,7 @@ export function IdentityStep({
           {copy.displayNameLabel}
         </Label>
         <Input
+          autoFocus
           value={botProfile.displayName || ""}
           onChange={(e) => {
             const value = e.target.value;

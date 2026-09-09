@@ -1,21 +1,25 @@
 "use client";
 
 import React from "react";
-import { CheckCircle, Circle } from "@phosphor-icons/react";
+import { CheckCircle, Circle, CircleNotch } from "@phosphor-icons/react";
 import type { CreateAgentInput } from "@/lib/agents/agent.types";
 import { BOT_NATIVE_TOOLS, toggleBotTool } from "@/lib/bots/bot-tool-registry";
 import { cn } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { WIZARD_COPY } from "../wizard-copy";
 
 interface JobStepProps {
   formData: Partial<CreateAgentInput>;
   setFormData: React.Dispatch<React.SetStateAction<Partial<CreateAgentInput>>>;
+  /** "Refine from my description" — same LLM call as the Start-step accelerator. */
+  refining: boolean;
+  onRefine: () => Promise<void>;
 }
 
 /** Step 3 — job instructions (system prompt) and the tool allowlist. */
-export function JobStep({ formData, setFormData }: JobStepProps) {
+export function JobStep({ formData, setFormData, refining, onRefine }: JobStepProps) {
   const copy = WIZARD_COPY.steps.job;
   const allowedTools = formData.allowedTools ?? [];
 
@@ -27,11 +31,30 @@ export function JobStep({ formData, setFormData }: JobStepProps) {
       </div>
 
       <div>
-        <Label className="text-[14px] font-medium text-[var(--text-primary)] mb-2 block">
-          {copy.systemPromptLabel}
-        </Label>
-        {/* MILESTONE 5: the "refine from my description" helper plugs in next to
-            this textarea (same LLM call as the Start-step accelerator). */}
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <Label className="text-[14px] font-medium text-[var(--text-primary)]">
+            {copy.systemPromptLabel}
+          </Label>
+          {/* Refine helper: rewrites the system prompt from the bot's name and
+              description. Null result → no-op (see describeBot.ts). */}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => void onRefine()}
+            disabled={refining}
+            className="gap-1.5"
+          >
+            {refining ? (
+              <>
+                <CircleNotch size={12} className="animate-spin" />
+                {copy.refineWorking}
+              </>
+            ) : (
+              copy.refineAction
+            )}
+          </Button>
+        </div>
         <Textarea
           value={formData.systemPrompt || ""}
           onChange={(e) => setFormData((prev) => ({ ...prev, systemPrompt: e.target.value }))}

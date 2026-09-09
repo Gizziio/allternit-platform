@@ -1,9 +1,11 @@
 "use client";
 
-import React from "react";
-import { CheckCircle, Sparkle } from "@phosphor-icons/react";
+import React, { useState } from "react";
+import { CaretDown, CaretRight, CheckCircle, CircleNotch, Sparkle } from "@phosphor-icons/react";
 import { BOT_TEMPLATES, type BotTemplate } from "@/lib/bots/bots.manifest";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { WIZARD_COPY } from "../wizard-copy";
 
 export const BLANK_TEMPLATE_ID = "blank";
@@ -11,6 +13,9 @@ export const BLANK_TEMPLATE_ID = "blank";
 interface StartStepProps {
   selectedTemplateId: string | null;
   onSelectTemplate: (template: BotTemplate | null) => void;
+  /** Describe-to-prefill accelerator (milestone 5). */
+  describing: boolean;
+  onDescribe: (text: string) => Promise<void>;
 }
 
 /**
@@ -20,8 +25,12 @@ interface StartStepProps {
  * job, tools, AND the template's authored system prompt — the wizard's
  * applyTemplate does the seeding; this component only renders the gallery.
  */
-export function StartStep({ selectedTemplateId, onSelectTemplate }: StartStepProps) {
+export function StartStep({ selectedTemplateId, onSelectTemplate, describing, onDescribe }: StartStepProps) {
   const copy = WIZARD_COPY.steps.start;
+  const [describeOpen, setDescribeOpen] = useState(false);
+  const [describeText, setDescribeText] = useState("");
+
+  const canPrefill = describeText.trim().length > 0 && !describing;
 
   return (
     <section>
@@ -30,13 +39,48 @@ export function StartStep({ selectedTemplateId, onSelectTemplate }: StartStepPro
         <p className="text-[14px] text-[var(--text-secondary)] mt-1">{copy.description}</p>
       </div>
 
-      {/* ------------------------------------------------------------------ */}
-      {/* MILESTONE 5 SLOT — "Describe the bot you want" accelerator.         */}
-      {/* One platform LLM call (chat-completions client, forced JSON         */}
-      {/* matching Partial<CreateAgentInput>) prefills identity/job/tools and */}
-      {/* picks the nearest template. Renders here, above the gallery, as a   */}
-      {/* collapsible box. Failure falls back to template defaults silently.  */}
-      {/* ------------------------------------------------------------------ */}
+      {/* Describe-to-prefill accelerator: one platform LLM call seeds the
+          wizard from a sentence. Failure falls back to template defaults
+          silently — see describeBot.ts. */}
+      <div className="mb-6 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)]">
+        <button
+          type="button"
+          onClick={() => setDescribeOpen((v) => !v)}
+          className="flex w-full items-center gap-2 px-4 py-3 text-left text-[14px] font-medium text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+        >
+          {describeOpen ? <CaretDown size={14} /> : <CaretRight size={14} />}
+          {copy.describeToggle}
+        </button>
+        {describeOpen && (
+          <div className="space-y-3 px-4 pb-4">
+            <p className="text-[12px] text-[var(--text-muted)]">{copy.describeDescription}</p>
+            <Textarea
+              value={describeText}
+              onChange={(e) => setDescribeText(e.target.value)}
+              placeholder={copy.describePlaceholder}
+              rows={3}
+              className="bg-[var(--bg-primary)] border-[var(--border-subtle)] text-[var(--text-primary)] resize-none"
+            />
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                onClick={() => void onDescribe(describeText)}
+                disabled={!canPrefill}
+                className="gap-1.5 bg-[var(--accent-primary)] text-[var(--ui-text-inverse,#fff)] border-none hover:opacity-90"
+              >
+                {describing ? (
+                  <>
+                    <CircleNotch size={14} className="animate-spin" />
+                    {copy.describeWorking}
+                  </>
+                ) : (
+                  copy.describeAction
+                )}
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
         {BOT_TEMPLATES.map((template) => {
