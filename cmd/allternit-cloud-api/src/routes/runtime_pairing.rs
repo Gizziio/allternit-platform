@@ -1153,10 +1153,10 @@ fn validate_pairing_request(request: &CreatePairingRequest) -> Result<(), ApiErr
     }
     if !matches!(
         request.runtime_type.as_str(),
-        "desktop" | "vps" | "hosted" | "provisioned" | "ios"
+        "desktop" | "vps" | "hosted" | "provisioned" | "ios" | "ao"
     ) {
         return Err(ApiError::BadRequest(
-            "runtimeType must be desktop, vps, hosted, provisioned, or ios".to_string(),
+            "runtimeType must be desktop, vps, hosted, provisioned, ios, or ao".to_string(),
         ));
     }
     decode_public_key(&request.public_key)?;
