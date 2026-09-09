@@ -25,7 +25,7 @@ pub fn router() -> Router<Arc<AppState>> {
         .route("/desktop-templates", get(list_templates))
         .route("/desktop-templates", post(create_template))
         .route("/desktop-templates/import", post(import_template))
-        .route("/desktop-templates/by-ref/{*ref}", get(get_template_by_ref))
+        .route("/desktop-templates/by-ref/*ref", get(get_template_by_ref))
         .route("/desktop-templates/:id", get(get_template))
         .route("/desktop-templates/:id", delete(delete_template))
         .route("/desktop-templates/:id/export", get(export_template))
@@ -823,7 +823,7 @@ async fn import_template(
     }
 }
 
-/// GET /api/v1/desktop-templates/by-ref/{*ref} — resolve a curated
+/// GET /api/v1/desktop-templates/by-ref/*ref — resolve a curated
 /// `system/...` template ref to its row.
 async fn get_template_by_ref(
     State(state): State<Arc<AppState>>,
