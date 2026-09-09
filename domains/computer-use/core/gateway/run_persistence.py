@@ -27,6 +27,15 @@ logger = logging.getLogger(__name__)
 
 TERMINAL_STATUSES = {"completed", "failed", "cancelled", "abandoned", "deviated", "needs_approval"}
 
+# Cost-accounting columns added after the initial schema. Existing databases
+# get them via the guarded ALTER TABLE in RunPersistence.__init__.
+_COST_COLUMNS = (
+    ("input_tokens", "INTEGER NOT NULL DEFAULT 0"),
+    ("output_tokens", "INTEGER NOT NULL DEFAULT 0"),
+    ("total_tokens", "INTEGER NOT NULL DEFAULT 0"),
+    ("est_cost_usd", "REAL NOT NULL DEFAULT 0"),
+)
+
 
 def default_state_dir() -> Path:
     return Path(os.environ.get("ALLTERNIT_COMPUTER_STATE_DIR", "~/.allternit/computer-use")).expanduser()
@@ -53,10 +62,22 @@ class RunPersistence:
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL,
                 result_json TEXT,
-                error TEXT
+                error TEXT,
+                input_tokens INTEGER NOT NULL DEFAULT 0,
+                output_tokens INTEGER NOT NULL DEFAULT 0,
+                total_tokens INTEGER NOT NULL DEFAULT 0,
+                est_cost_usd REAL NOT NULL DEFAULT 0
             )
             """
         )
+        # Migrate databases created before cost accounting existed.
+        # SQLite raises OperationalError on duplicate column — that means the
+        # column is already there, so swallow it.
+        for column, ddl in _COST_COLUMNS:
+            try:
+                self._connection.execute(f"ALTER TABLE runs ADD COLUMN {column} {ddl}")
+            except sqlite3.OperationalError:
+                pass
         self._connection.execute(
             """
             CREATE TABLE IF NOT EXISTS recordings_index (
@@ -89,12 +110,14 @@ class RunPersistence:
                 result_json = json.dumps(state.result, sort_keys=True, default=str)
             except Exception as exc:
                 logger.warning("run result serialization failed for %s: %s", state.run_id, exc)
+        cost = getattr(state, "cost", None) or {}
         with self._lock, self._connection:
             self._connection.execute(
                 """
                 INSERT INTO runs (run_id, session_id, mode, target_scope, status,
-                                  created_at, updated_at, result_json, error)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                  created_at, updated_at, result_json, error,
+                                  input_tokens, output_tokens, total_tokens, est_cost_usd)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(run_id) DO UPDATE SET
                     session_id=excluded.session_id,
                     mode=excluded.mode,
@@ -102,7 +125,11 @@ class RunPersistence:
                     status=excluded.status,
                     updated_at=excluded.updated_at,
                     result_json=excluded.result_json,
-                    error=excluded.error
+                    error=excluded.error,
+                    input_tokens=excluded.input_tokens,
+                    output_tokens=excluded.output_tokens,
+                    total_tokens=excluded.total_tokens,
+                    est_cost_usd=excluded.est_cost_usd
                 """,
                 (
                     state.run_id,
@@ -114,6 +141,10 @@ class RunPersistence:
                     state.updated_at,
                     result_json,
                     getattr(state, "error", None),
+                    int(cost.get("input_tokens") or 0),
+                    int(cost.get("output_tokens") or 0),
+                    int(cost.get("total_tokens") or 0),
+                    float(cost.get("est_cost_usd") or 0.0),
                 ),
             )
 
@@ -131,6 +162,43 @@ class RunPersistence:
                 "SELECT * FROM runs ORDER BY updated_at DESC LIMIT ?", (bounded,)
             ).fetchall()
         return [self._row_to_run(row) for row in rows]
+
+    def cost_summary(self) -> Dict[str, Any]:
+        """Aggregate cost observability across all persisted runs.
+
+        Success rate counts only terminal outcomes; avg cost/task averages
+        est_cost_usd over completed runs (runs that never produced token
+        data contribute an honest 0.0 to the average).
+        """
+        with self._lock:
+            row = self._connection.execute(
+                """
+                SELECT COUNT(*),
+                       SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END),
+                       SUM(CASE WHEN status IN ('completed','failed','cancelled',
+                                                'abandoned','deviated','interrupted')
+                                THEN 1 ELSE 0 END),
+                       SUM(est_cost_usd),
+                       SUM(CASE WHEN status = 'completed' THEN est_cost_usd ELSE 0 END),
+                       SUM(total_tokens)
+                FROM runs
+                """
+            ).fetchone()
+        total_runs = int(row[0] or 0)
+        completed = int(row[1] or 0)
+        terminal = int(row[2] or 0)
+        total_est_cost = float(row[3] or 0.0)
+        completed_cost = float(row[4] or 0.0)
+        total_tokens = int(row[5] or 0)
+        return {
+            "total_runs": total_runs,
+            "completed": completed,
+            "terminal_runs": terminal,
+            "success_rate": round(completed / terminal, 4) if terminal else 0.0,
+            "total_est_cost_usd": round(total_est_cost, 8),
+            "avg_cost_per_task_usd": round(completed_cost / completed, 8) if completed else 0.0,
+            "avg_tokens_per_run": round(total_tokens / total_runs, 2) if total_runs else 0.0,
+        }
 
     def mark_interrupted(self) -> int:
         """Mark non-terminal runs as interrupted (called at startup after a crash)."""
@@ -157,6 +225,10 @@ class RunPersistence:
             "updated_at": row[6],
             "result": json.loads(row[7]) if row[7] else None,
             "error": row[8],
+            "input_tokens": row[9] or 0,
+            "output_tokens": row[10] or 0,
+            "total_tokens": row[11] or 0,
+            "est_cost_usd": row[12] or 0.0,
         }
         return run
 

@@ -45,4 +45,4 @@ ACI captures the configured display exposed by the computer-use gateway at its n
 - A screenshot is a point-in-time image; capture again after navigation or animation.
 - Use browser-tools for a full-page web capture because a desktop screenshot only records the visible viewport.
 
-See [ACI vision coordinates](../aci/index.md#vision-coordinates) and [Native Tool Belt computer use](../tools/tool-belt.md#computer-use).
+See [ACI action space and coordinates](../aci/guide.md#action-space-and-tool-versions) and [Native Tool Belt computer use](../tools/tool-belt.md#computer-use).
