@@ -78,15 +78,21 @@ pub struct DesktopTokenClaims {
     /// leave this unset.
     #[serde(default)]
     pub computer_id: Option<String>,
-    /// Token purpose discriminator for computer tokens ("pty" | "events").
+    /// Token purpose discriminator for computer tokens
+    /// ("pty" | "events" | "vnc" | "embed").
     #[serde(default)]
     pub purpose: Option<String>,
+    /// VNC-only: when true, the ws proxy suppresses the client->TCP direction
+    /// so the viewer cannot inject input (view-only). Absent on legacy tokens
+    /// and non-VNC purposes; defaults to false.
+    #[serde(default)]
+    pub read_only: bool,
     pub sandbox_id: String,
     pub user_id: String,
     pub exp: u64,
 }
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub enum DesktopTokenError {
     #[error("token has expired")]
     Expired,
@@ -133,6 +139,7 @@ pub fn sign_desktop_token(
         bot_id: bot_id.to_string(),
         computer_id: None,
         purpose: None,
+        read_only: false,
         sandbox_id: sandbox_id.to_string(),
         user_id: user_id.to_string(),
         exp: chrono::Utc::now().timestamp() as u64 + expires_in_seconds,
@@ -149,7 +156,8 @@ pub fn sign_desktop_token(
 /// Sign a short-lived computer-scoped WebSocket token (Phase 3
 /// `/ws/computers/:id/*`). The claims carry `computer_id` + `purpose` instead
 /// of a bot id; bots never accept these (bot validation requires a bot_id
-/// match against the path).
+/// match against the path). `read_only` marks view-only VNC tokens (embed
+/// tokens are always signed read-only).
 pub fn sign_computer_token(
     secret: &str,
     computer_id: &str,
@@ -157,12 +165,14 @@ pub fn sign_computer_token(
     user_id: &str,
     expires_in_seconds: u64,
     purpose: &str,
+    read_only: bool,
 ) -> String {
     let header = serde_json::json!({"alg": "HS256", "typ": "DT"});
     let claims = DesktopTokenClaims {
         bot_id: String::new(),
         computer_id: Some(computer_id.to_string()),
         purpose: Some(purpose.to_string()),
+        read_only,
         sandbox_id: sandbox_id.to_string(),
         user_id: user_id.to_string(),
         exp: chrono::Utc::now().timestamp() as u64 + expires_in_seconds,
@@ -511,18 +521,31 @@ mod tests {
 
     #[test]
     fn computer_token_round_trip() {
-        let token = sign_computer_token(TEST_SECRET, "computer-1", "sandbox-1", "user-1", 60, "pty");
+        let token = sign_computer_token(TEST_SECRET, "computer-1", "sandbox-1", "user-1", 60, "pty", false);
         let claims = verify_computer_token(TEST_SECRET, &token, "computer-1", "pty").unwrap();
         assert_eq!(claims.computer_id.as_deref(), Some("computer-1"));
         assert_eq!(claims.purpose.as_deref(), Some("pty"));
         assert_eq!(claims.sandbox_id, "sandbox-1");
         assert_eq!(claims.user_id, "user-1");
         assert_eq!(claims.bot_id, "");
+        // pty tokens are interactive: never read-only.
+        assert!(!claims.read_only);
+    }
+
+    #[test]
+    fn computer_token_read_only_round_trip() {
+        let token = sign_computer_token(TEST_SECRET, "computer-1", "sandbox-1", "user-1", 60, "vnc", true);
+        let claims = verify_computer_token(TEST_SECRET, &token, "computer-1", "vnc").unwrap();
+        assert!(claims.read_only);
+        // read_only defaults to false when absent (legacy tokens).
+        let token = sign_computer_token(TEST_SECRET, "computer-1", "sandbox-1", "user-1", 60, "vnc", false);
+        let claims = verify_computer_token(TEST_SECRET, &token, "computer-1", "vnc").unwrap();
+        assert!(!claims.read_only);
     }
 
     #[test]
     fn computer_token_rejects_wrong_computer_and_purpose() {
-        let token = sign_computer_token(TEST_SECRET, "computer-1", "sandbox-1", "user-1", 60, "pty");
+        let token = sign_computer_token(TEST_SECRET, "computer-1", "sandbox-1", "user-1", 60, "pty", false);
         let err = verify_computer_token(TEST_SECRET, &token, "computer-2", "pty").unwrap_err();
         assert!(matches!(err, DesktopTokenError::ComputerMismatch));
         let err = verify_computer_token(TEST_SECRET, &token, "computer-1", "events").unwrap_err();
@@ -531,7 +554,7 @@ mod tests {
 
     #[test]
     fn computer_token_rejects_expired() {
-        let token = sign_computer_token(TEST_SECRET, "computer-1", "sandbox-1", "user-1", 1, "pty");
+        let token = sign_computer_token(TEST_SECRET, "computer-1", "sandbox-1", "user-1", 1, "pty", false);
         std::thread::sleep(std::time::Duration::from_secs(2));
         let err = verify_computer_token(TEST_SECRET, &token, "computer-1", "pty").unwrap_err();
         assert!(matches!(err, DesktopTokenError::Expired));
@@ -550,9 +573,24 @@ mod tests {
         assert!(matches!(err, DesktopTokenError::ComputerMismatch));
         // And a computer token must not validate as a bot token claim shape
         // with a bot id (it carries an empty bot_id).
-        let computer_token = sign_computer_token(TEST_SECRET, "computer-1", "sandbox-1", "user-1", 60, "pty");
+        let computer_token = sign_computer_token(TEST_SECRET, "computer-1", "sandbox-1", "user-1", 60, "pty", false);
         let claims = verify_desktop_token(TEST_SECRET, &computer_token).unwrap();
         assert_eq!(claims.bot_id, "");
+    }
+
+    #[test]
+    fn legacy_token_without_read_only_still_validates() {
+        // A computer token minted before the read_only field existed (payload
+        // without the key) must still verify, defaulting to read_only=false.
+        let header = b64_encode(br#"{"alg":"HS256","typ":"DT"}"#);
+        let payload = b64_encode(
+            br#"{"bot_id":"","computer_id":"computer-1","purpose":"vnc","sandbox_id":"s","user_id":"u","exp":9999999999}"#,
+        );
+        let signing_input = format!("{}.{}", header, payload);
+        let signature = hmac_sign(TEST_SECRET, &signing_input);
+        let legacy = format!("{}.{}", signing_input, signature);
+        let claims = verify_computer_token(TEST_SECRET, &legacy, "computer-1", "vnc").unwrap();
+        assert!(!claims.read_only);
     }
 
     #[test]

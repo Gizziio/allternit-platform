@@ -227,6 +227,7 @@ pub fn computer_ws_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/:id/pty", get(computer_pty_ws_handler))
         .route("/:id/events", get(computer_events_ws_handler))
+        .route("/:id/vnc", get(computer_vnc_ws_handler))
 }
 
 /// REST routes, merged under `/api/v1`.
@@ -328,6 +329,65 @@ async fn validate_ws_request(
     }
     require_driver(state)?;
     Ok(computer)
+}
+
+/// Decide VNC proxy access from token claims. Purpose "vnc" honors the
+/// claim's `read_only` flag (full control by default, view-only when the
+/// token says so); purpose "embed" is ALWAYS read-only — embed viewers can
+/// never inject input. Any other purpose is rejected. Returns the effective
+/// `read_only` flag.
+fn resolve_vnc_access(
+    claims: &crate::bot_desktop_stream::DesktopTokenClaims,
+) -> Result<bool, crate::bot_desktop_stream::DesktopTokenError> {
+    match claims.purpose.as_deref() {
+        Some("vnc") => Ok(claims.read_only),
+        Some("embed") => Ok(true),
+        _ => Err(crate::bot_desktop_stream::DesktopTokenError::PurposeMismatch),
+    }
+}
+
+/// Pre-upgrade validation for the VNC ws handler. Like `validate_ws_request`
+/// but accepts two purposes: "vnc" (honors the claim's read_only flag) and
+/// "embed" (always forced read-only — see `resolve_vnc_access`). Returns the
+/// computer plus the effective read_only flag.
+async fn validate_vnc_ws_request(
+    state: &Arc<AppState>,
+    user: &AuthUser,
+    id: &str,
+    token: &str,
+) -> Result<(ComputerResponse, bool), Response> {
+    let secret = crate::bot_desktop_stream::desktop_ws_secret(state).ok_or_else(|| {
+        warn!("desktop ws secret not configured");
+        crate::computer_routes::error_response(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "desktop ws not configured",
+        )
+    })?;
+    let claims = crate::bot_desktop_stream::verify_desktop_token(&secret, token).map_err(|e| {
+        warn!(error = %e, computer_id = id, "invalid computer websocket token");
+        crate::computer_routes::error_response(StatusCode::FORBIDDEN, "invalid token")
+    })?;
+    let read_only = resolve_vnc_access(&claims).map_err(|_| {
+        warn!(computer_id = id, purpose = ?claims.purpose, "token purpose does not allow vnc access");
+        crate::computer_routes::error_response(StatusCode::FORBIDDEN, "invalid token")
+    })?;
+    if claims.computer_id.as_deref() != Some(id) || claims.user_id != user.user_id {
+        return Err(crate::computer_routes::error_response(
+            StatusCode::FORBIDDEN,
+            "token mismatch",
+        ));
+    }
+    let computer = fetch_computer(state, user, id)
+        .await?
+        .ok_or_else(|| crate::computer_routes::error_response(StatusCode::NOT_FOUND, "computer not found"))?;
+    if computer.status != ComputerStatus::Running {
+        return Err(crate::computer_routes::error_response(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "computer is not running",
+        ));
+    }
+    require_driver(state)?;
+    Ok((computer, read_only))
 }
 
 /// Map a driver error for the proxy surface: unsupported substrate → 501,
@@ -629,7 +689,166 @@ fn parse_resize_message(text: &str) -> Option<(u16, u16)> {
     Some((cols as u16, rows as u16))
 }
 
-// ── B. Guest event stream ────────────────────────────────────────────────────
+// ── C. VNC desktop stream (binary WS proxy) ──────────────────────────────────
+
+async fn computer_vnc_ws_handler(
+    ws: WebSocketUpgrade,
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(id): Path<String>,
+    Query(query): Query<ComputerWsQuery>,
+) -> impl IntoResponse {
+    match validate_vnc_ws_request(&state, &user, &id, &query.token).await {
+        Ok((computer, read_only)) => {
+            ws.on_upgrade(move |socket| handle_vnc_socket(socket, state, computer, read_only))
+        }
+        Err(response) => response.into_response(),
+    }
+}
+
+/// Binary WS <-> TCP pump to the guest VNC endpoint, mirroring
+/// `handle_bot_desktop_socket` in `bot_desktop_stream.rs`. Standalone
+/// computers have no bot-style `BotDesktopControlState` arbitration (no bot
+/// can hold the desktop), so there is no takeover gate here — the owner
+/// always controls their own computer, and any viewer they admit is either
+/// full-control (purpose "vnc", read_only=false claim) or view-only
+/// (`read_only`). When `read_only` is set the client->TCP direction is
+/// suppressed entirely: read-only viewers cannot inject input, while the
+/// screen (TCP->browser) still flows. Approval/ACI gating on the control
+/// surfaces is untouched — this route is view-or-control streaming only.
+async fn handle_vnc_socket(
+    socket: WebSocket,
+    state: Arc<AppState>,
+    computer: ComputerResponse,
+    read_only: bool,
+) {
+    let driver = match require_driver(&state) {
+        Ok(d) => d,
+        Err(_) => {
+            let _ = socket.close().await;
+            return;
+        }
+    };
+    let sandbox_id = computer
+        .native_id
+        .clone()
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| computer.id.clone());
+
+    let endpoint = match driver.get_desktop_endpoint_by_native_id(&sandbox_id).await {
+        Ok(Some(ep)) => ep,
+        Ok(None) => {
+            warn!(computer_id = %computer.id, %sandbox_id, "no desktop endpoint found");
+            let _ = socket.close().await;
+            return;
+        }
+        Err(e) => {
+            error!(error = %e, computer_id = %computer.id, %sandbox_id, "failed to resolve desktop endpoint");
+            let _ = socket.close().await;
+            return;
+        }
+    };
+
+    if !matches!(
+        endpoint.protocol,
+        allternit_driver_interface::DesktopProtocol::Vnc
+    ) {
+        warn!(protocol = ?endpoint.protocol, "only raw VNC over TCP is supported for WebSocket proxy");
+        let _ = socket.close().await;
+        return;
+    }
+
+    let tcp_addr = match crate::bot_desktop_stream::parse_tcp_addr(&endpoint.url) {
+        Some(addr) => addr,
+        None => {
+            error!(url = %endpoint.url, "could not parse VNC URL as TCP address");
+            let _ = socket.close().await;
+            return;
+        }
+    };
+
+    info!(computer_id = %computer.id, %tcp_addr, read_only, "Opening VNC WebSocket proxy");
+
+    let tcp = match TcpStream::connect(&tcp_addr).await {
+        Ok(stream) => stream,
+        Err(e) => {
+            error!(error = %e, %tcp_addr, "failed to connect to VNC endpoint");
+            let _ = socket.close().await;
+            return;
+        }
+    };
+
+    let (mut ws_sender, mut ws_receiver) = socket.split();
+    let (mut tcp_read, mut tcp_write) = tokio::io::split(tcp);
+
+    // Channel for messages that need to go to the browser.
+    let (ws_tx, mut ws_rx) = mpsc::channel::<Message>(128);
+    let ws_tx2 = ws_tx.clone();
+
+    // Forward channel -> WebSocket sender.
+    let forward_to_ws = tokio::spawn(async move {
+        while let Some(msg) = ws_rx.recv().await {
+            if ws_sender.send(msg).await.is_err() {
+                break;
+            }
+        }
+    });
+
+    // Forward WebSocket receiver -> TCP. In read-only mode binary (input)
+    // frames are dropped instead of forwarded — the viewer can watch but
+    // cannot inject keyboard/mouse/paste. Control frames (ping/pong/close)
+    // are still honored so the connection stays healthy.
+    let ws_to_tcp = tokio::spawn(async move {
+        while let Some(msg) = ws_receiver.next().await {
+            match msg {
+                Ok(Message::Binary(data)) => {
+                    if !read_only && tcp_write.write_all(&data).await.is_err() {
+                        break;
+                    }
+                }
+                Ok(Message::Close(_)) => break,
+                Ok(Message::Ping(data)) => {
+                    let _ = ws_tx2.send(Message::Pong(data)).await;
+                }
+                Ok(Message::Pong(_)) => {}
+                Err(e) => {
+                    debug!(error = %e, "VNC WebSocket receive error");
+                    break;
+                }
+                _ => {}
+            }
+        }
+    });
+
+    // Forward TCP -> WebSocket channel.
+    let tcp_to_ws = tokio::spawn(async move {
+        let mut buf = vec![0u8; 16384];
+        loop {
+            match tcp_read.read(&mut buf).await {
+                Ok(0) => break,
+                Ok(n) => {
+                    if ws_tx.send(Message::Binary(buf[..n].to_vec())).await.is_err() {
+                        break;
+                    }
+                }
+                Err(e) => {
+                    debug!(error = %e, "VNC TCP read error");
+                    break;
+                }
+            }
+        }
+    });
+
+    tokio::select! {
+        _ = forward_to_ws => {},
+        _ = ws_to_tcp => {},
+        _ = tcp_to_ws => {},
+    }
+
+    info!(computer_id = %computer.id, "VNC WebSocket proxy closed");
+}
+
+// ── D. Guest event stream ────────────────────────────────────────────────────
 
 async fn computer_events_ws_handler(
     ws: WebSocketUpgrade,
@@ -885,6 +1104,7 @@ async fn issue_ws_token(
         &user.user_id,
         WS_TOKEN_TTL_SECONDS,
         &body.purpose,
+        false,
     );
     crate::computer_audit::log_computer_access(
         &state.db,
@@ -1289,6 +1509,44 @@ async fn proxy_forward(
 mod tests {
     use super::*;
     use axum::http::HeaderValue;
+
+    const TEST_SECRET: &str = "test-ws-secret-for-unit-tests";
+
+    #[test]
+    fn vnc_access_resolution() {
+        use crate::bot_desktop_stream::{sign_computer_token, verify_desktop_token, DesktopTokenError};
+
+        // Purpose "vnc" honors the claim's read_only flag.
+        let token = sign_computer_token(TEST_SECRET, "computer-1", "s", "user-1", 60, "vnc", false);
+        let claims = verify_desktop_token(TEST_SECRET, &token).unwrap();
+        assert_eq!(resolve_vnc_access(&claims), Ok(false));
+        let token = sign_computer_token(TEST_SECRET, "computer-1", "s", "user-1", 60, "vnc", true);
+        let claims = verify_desktop_token(TEST_SECRET, &token).unwrap();
+        assert_eq!(resolve_vnc_access(&claims), Ok(true));
+
+        // Purpose "embed" is ALWAYS read-only, even if the claim says false.
+        let token = sign_computer_token(TEST_SECRET, "computer-1", "s", "user-1", 60, "embed", false);
+        let claims = verify_desktop_token(TEST_SECRET, &token).unwrap();
+        assert_eq!(resolve_vnc_access(&claims), Ok(true));
+
+        // Other purposes are rejected on the VNC surface.
+        for purpose in ["pty", "events"] {
+            let token = sign_computer_token(TEST_SECRET, "computer-1", "s", "user-1", 60, purpose, false);
+            let claims = verify_desktop_token(TEST_SECRET, &token).unwrap();
+            assert!(matches!(
+                resolve_vnc_access(&claims),
+                Err(DesktopTokenError::PurposeMismatch)
+            ));
+        }
+
+        // Bot-shaped tokens (no purpose) are rejected too.
+        let bot_token = crate::bot_desktop_stream::sign_desktop_token(TEST_SECRET, "bot-1", "s", "user-1", 60);
+        let claims = verify_desktop_token(TEST_SECRET, &bot_token).unwrap();
+        assert!(matches!(
+            resolve_vnc_access(&claims),
+            Err(DesktopTokenError::PurposeMismatch)
+        ));
+    }
 
     #[test]
     fn resize_message_parsing() {
