@@ -1,34 +1,47 @@
-# Steering checkpoint — session/relfix6-20260908
+# Steering checkpoint — ao/tui-machines (P2 executor)
 
 ## Goal
-Get the `desktop-v1.1.1` release tag to a green CI run (repo Gizziio/allternit-platform). Run 10
-failed preflight before any build: the workflow still referenced the deleted Python/PyInstaller
-voice tree (PR #194 voice-cleanup) and had no step producing the REQUIRED `whisper-cli` sidecar.
+P2 of ao v3 (spec: Allternit Brain/Research/specs/ao-tui-machines.md): rebrand vendored
+herdr TUI to ao face, add `ao machine connect`, ship Allternit DEFAULT_CONFIG, verify
+(grep/test parity/fork-diff) + Mac+Linux pilot. Deliverable: docs/AO_TUI_MACHINES_NOTES.md
++ branch pushed.
 
 ## Just did
-- Merged origin/main (`0e923fe3a`+) into the session branch.
-- Replaced both PyInstaller voice steps in release-desktop.yml with cargo builds of the Rust
-  voice crate (`cargo build --release -p voice-service`, lipo universal on macOS →
-  `resources/bin/allternit-voice-service`, `.exe` copy on Windows), plus whisper-cli sidecar
-  steps (macOS: `services/voice/build-whisper.sh`; Windows: clone whisper.cpp + cmake with the
-  VS2022 toolset already installed via choco).
-- Updated scripts/release-preflight.mjs: dropped the three deleted python paths from the
-  implicit existence list (added services/voice/Cargo.toml + build-whisper.sh), replaced the
-  PyInstaller/Python-pin toolchain check with a "job cargo-builds voice-service" check, and
-  noted the run-11 update in the header.
-- Verified: `node scripts/release-preflight.mjs` → 26 passed, 0 failed. Local
-  `cargo build --release -p voice-service` running to confirm the bin name (`voice-service`).
+- Rebrand landed (work resumed after delegated subagent was stopped; finished + audited
+  every edit myself). ~66 files, +713/−641, all user-visible brand strings: clap name/about,
+  all CLI usage/help/diagnostics, window-title fallback, onboarding, shell labels, config
+  diagnostics, remote install/hints, log file names, socket-busy/server errors, protocol
+  version errors, tracing messages, DEFAULT_CONFIG (incl. Allternit [theme.custom] palette
+  + window_title), SKILL.md (HERDR_ENV kept). app_dir_name() → ao/ao-dev (config
+  ~/.config/ao, state ~/.local/state/ao, worktrees ~/.ao/worktrees). Install suffix
+  .local/bin/ao. `ao machine connect <profile-id> [--keybindings local|server]` (~75 lines,
+  maps catalog profile → remote::run_remote, best-effort select_ssh).
+- Kept per binding decisions: HERDR_* env vars, toast serde value, right-click enum value,
+  protocol tokens herdr:*, socket file names, herdr-plugin.toml, integration marker blocks,
+  upstream github URLs, update.rs install detection, identifiers.
+- Verify: build green. cargo test parity: rerun shows only the 9 pre-existing
+  detect::manifest parallel flakes + same SIGPIPE harness death (baseline identical);
+  detect serial 111/111. 4 test expectations fixed (they tracked renamed strings).
+  Fork-diff guardrail: only non-brand changes = connect fn + DEFAULT_CONFIG theme block. PASS.
+- Branding evidence: `ao --version` → "ao 0.9.0"; machine --help lists connect;
+  --default-config header + theme block confirmed.
+- Pilot prep: Linux host `vps` reachable (Ubuntu, glibc 2.39, x86_64). Cross-building
+  ao for x86_64-unknown-linux-gnu via zig linker (for HERDR_REMOTE_BINARY seed).
 
 ## Next
-- Wait for run 12 macOS/Linux to finish (keep their signal; Windows already
-  covered by PR #202's GYP_MSVS_VERSION=2022 pin), then repoint desktop-v1.1.1
-  tag → run 13 and re-arm the cron with the new run id.
-- On green: final report (release URL, install-over-/Applications reminder, unsigned note),
-  ledger attestation (runs 1–13 + deferrals), then cleanup (worktree, branch local+remote, cron).
+- DONE: pilot complete (machine add/list/connect/remove round-trip vps,
+  combined list, reconnect ~22s, connect proof). Docs written
+  (docs/AO_TUI_MACHINES_NOTES.md). Remaining: commit/push/PR.
+- machine_setup 5/5 + bin unit 2409 passed (pre-existing SIGPIPE death) after
+  status rehome. zig@0.15 keg required for builds; host/cross builds share
+  vendor zig-out and cannot run concurrently (documented in notes).
 
 ## Open questions
-- Windows whisper-cli cmake build is untested on the runner (cmake is preinstalled on
-  windows-latest; VS2022 via choco + now GYP_MSVS_VERSION pinned). If it fails, fallback:
-  ALLTERNIT_ALLOW_MISSING_WHISPER opt-out mirroring local-engine, recorded as a deferral.
-- Run 12 note: Build Windows failed at deps install — windows-latest image now ships VS18
-  which breaks node-gyp auto-detection; fixed in PR #202. macOS/Linux were still in progress.
+- Integration marker blocks keep the herdr name on purpose (documented).
+- FOUND + FIXED (resumed session): P1's ao contract shadows engine `status`,
+  which broke `ao machine add` (remote probe `status server --json` hit the
+  contract parser: "'--json' is not a number"). Rehomed engine status forms
+  (--json/server/client/help) inside ao::status. Small additive routing fix
+  beyond the rebrand list — required by spec Verify "machine add round-trip".
+- Cross-build binary pre-seeded to vps ~/.local/bin/ao via scp (install prompt
+  needs a tty; pty attempt raced). Remote runs ao 0.9.0.

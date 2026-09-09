@@ -745,6 +745,18 @@ fn mark_dead(session: &str) {
 // ---------------------------------------------------------------------------
 
 fn status(args: &[String]) -> std::io::Result<i32> {
+    // The ao contract shadows the engine's `status` word at the dispatcher
+    // (see cli.rs). Engine status forms are rehomed here so both vocabularies
+    // work: `ao status --json`, `ao status server [--json]`,
+    // `ao status client [--json]`, and `ao status help`. Everything else
+    // stays on the ao contract (`ao status [slug] [lines]`). The remote
+    // machine machinery probes `status server --json`, so without this
+    // rehome `ao machine add` cannot inspect a remote server.
+    match args.first().map(String::as_str) {
+        Some("--json") | Some("server") | Some("client") | Some("help") | Some("--help")
+        | Some("-h") => return super::status::run_status_command(args),
+        _ => {}
+    }
     let client = ApiClient::local();
     if args.is_empty() {
         let mut rows: Vec<(String, String, String)> = Vec::new();
