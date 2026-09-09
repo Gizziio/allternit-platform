@@ -731,18 +731,60 @@ export function BotComputerViewport({
           <div className="px-3 py-2 text-[12px] text-[var(--status-error)]">{error}</div>
         )}
         {!vm?.sandbox_id ? (
-          <div className="flex flex-1 items-center justify-center p-6 text-center">
-            <div>
-              <Desktop size={28} className="mx-auto mb-2 text-[var(--text-tertiary)]" />
-              <p className="text-[13px] text-[var(--text-secondary)]">No virtual computer yet.</p>
+          <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
+            <Desktop size={28} className="text-[var(--text-tertiary)]" />
+            <p className="text-[13px] text-[var(--text-secondary)]">No virtual computer yet.</p>
+            <Button
+              size="sm"
+              onClick={handleProvision}
+              disabled={isProvisioning}
+              className="gap-1.5"
+              style={{ background: accentColor, color: "#fff" }}
+            >
+              {isProvisioning ? (
+                <Spinner size={14} className="animate-spin" />
+              ) : (
+                <Play size={14} weight="fill" />
+              )}
+              {isProvisioning ? "Provisioning..." : "Provision computer"}
+            </Button>
+          </div>
+        ) : statusValue === "creating" ? (
+          <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
+            <Spinner size={24} className="animate-spin text-[var(--accent-primary)]" />
+            <p className="text-[13px] text-[var(--text-secondary)]">
+              Provisioning {displayName}&rsquo;s computer…
+            </p>
+          </div>
+        ) : statusValue === "running" ? (
+          screen
+        ) : (
+          <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
+            <Desktop size={28} className="text-[var(--text-tertiary)]" />
+            <p className="text-[13px] text-[var(--text-secondary)]">
+              Computer is {statusBadge.label.toLowerCase()}.
+            </p>
+            <div className="flex items-center gap-2">
+              {isStopped && (
+                <Button size="sm" variant="outline" onClick={handleResume} disabled={isLoading} className="gap-1.5">
+                  <Play size={14} weight="fill" />
+                  Resume
+                </Button>
+              )}
+              {(isStopped || statusValue === "off") && (
+                <Button
+                  size="sm"
+                  onClick={handleStart}
+                  disabled={isLoading}
+                  className="gap-1.5"
+                  style={{ background: accentColor, color: "#fff" }}
+                >
+                  <Power size={14} />
+                  Start
+                </Button>
+              )}
             </div>
           </div>
-        ) : statusValue !== "running" && statusValue !== "off" ? (
-          <div className="flex flex-1 items-center justify-center p-6 text-center">
-            <p className="text-[13px] text-[var(--text-secondary)]">Desktop is {statusBadge.label.toLowerCase()}.</p>
-          </div>
-        ) : (
-          screen
         )}
       </div>
     );

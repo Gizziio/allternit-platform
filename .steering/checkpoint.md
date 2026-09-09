@@ -1,45 +1,35 @@
-# Checkpoint — session/office-agent-ui (agent-22, 2026-09-09)
+# Checkpoint — session/bot-computer-panel (kimi-code, 2026-09-09)
 
-## Task: office-agent-ui (consolidate Allternit Office UI, full repo ritual)
+## Goal
+Fix the bot computer right-side panel in the Allternit desktop app (platform SPA):
+(1) it enters the screen on startup, (2) polish/spacing wrong + hard-coded tan,
+(3) panel is blank — the computer never lands, (4) must be bots-only, opened via
+the bot chat top-right icon.
 
-Worktree: `~/Desktop/allternit-workspace/allternit-session-office-agent-ui`, branch `session/office-agent-ui` from origin/main @ fcf42e286.
+## Just did
+- Scouted root causes in shared checkout (read-only):
+  - `browserAgent.store.ts` persists `connectedBotId`; `aciSidecarExpanded` defaults true;
+    global `ACIComputerUseSidecar` slides in on launch from the restored id (blank/tan
+    ACI branch when bot or VM missing).
+  - `BotChatSessionView.tsx:193` auto-opens the chat-side pane when `computerLive`.
+  - `BotComputerViewport` compact mode has no provision/start affordance → dead panel.
+- Created worktree `allternit-session-bot-computer`, branch `session/bot-computer-panel` @ 4ec879766.
+- Wrote plan: docs/plans/plan-bot-computer-panel-fix.md
 
-## The 7 items
-1. One chat pane only — remove "Built-in" tab from editor AI panel.
-2. Rename all user-facing "Allternit Assistant"/"Allternit AI" strings in office suite + 4 vendored apps to "Allternit Office Agent". Do NOT rename platform-wide refs.
-3. Real brand icons (AProtocolWordmark / favicon.svg) for panel + chat icon, not phosphor.
-4. Wire dead "AI Summarize"/"AI Polish" ribbon buttons through the assistant pipeline (activeDocument registry, PR #188) with streamed reply in agent pane. Fix icons. Sheets/slides/pdf: wire or remove equivalents.
-5. Collapsed-rail collision fix in FloatingWidgets.tsx (top row spacing vs collapsed-rail icons).
-6. Same setup across docs/sheets/slides/pdf apps.
-7. Remove OfficeLauncherView embeds from DocumentsView + DesignModeView; delete component if unused.
+## Next
+Verify: pnpm install (bg) → typecheck + vitest → commit → PR.
 
-## Progress
-- [x] worktree created at origin/main fcf42e286
-- [ ] scouting reads
-- [ ] tasks 1–4 + 6 (suite + vendored apps)
-- [ ] task 5 (collapsed rail)
-- [ ] task 7 (launcher embeds)
-- [ ] verify: typecheck, vitest, vite build, playwright smoke
-- [ ] PR → merge → ledger → cleanup
+## Update (implement done)
+All four files changed in the worktree:
+- browserAgent.store.ts: `aciSidecarExpanded` default false; `connectedBotId` removed
+  from partialize + persist version 1 migrate strips stale stored id.
+- BotChatSessionView.tsx: auto-open effect deleted; connects to global sidecar only
+  when bot hasVm; clears connectedBotId on unmount.
+- ACIComputerUseSidecar.tsx: botComputerActive gated on vmOperator.enabled || botVm;
+  bot-mode header = avatar + name + running dot + close (ACI chrome/engine bar hidden);
+  hard-coded tan rgba(212,176,140,…) replaced with design tokens.
+- BotComputerViewport.tsx: compact mode now has Provision CTA (no VM), provisioning
+  spinner, and Start/Resume actions (off/stopped) instead of dead text/black box.
 
-## Guardrails
-- Never edit shared checkout allternit/ or other sessions' worktrees.
-- Don't regress PR #188 (activeDocument, assistant panel model-id logic).
-- PR merges conflict only ever on .steering/checkpoint.md → checkout --ours.
-- Desktop electron e2e defer if owner's app is running.
-
-## Update 10:20
-- All 7 tasks implemented in worktree.
-- Task 5 root cause measured: office ribbons drop their tab row to y=44 when
-  html[data-rail-collapsed] (shell attribute), but RailControls rendered a
-  second fixed row (Agents mascot pill) at top-[52px] x∈[4,40] which landed
-  on the ribbon tab row (y∈[50,85]). Fix: mascot folded into the single 44px
-  controls row (FloatingWidgets.tsx). Verified: controls+ mascot x[0,124]×y[0,44],
-  ribbon tabs y≥50, no overlap; src/shell vitest 20/20.
-- vite.config.scratch-verify.ts (leaked to main from PR #203) deleted.
-- design-view-docs route + design rail Documents entry + nav types/policy removed.
-- office-ai.spec.ts: tool-execution e2e REMOVED (built-in sheets tool panel
-  unreachable on extension-registered hosts); streaming tests rewritten to the
-  agent pane. New office-agent.spec.ts: single-pane assertion + Summarize wiring
-  (prompt + document context + streamed reply).
-- Verify in flight: platform build (bg), playwright office-launcher+office-agent (bg).
+## Open questions
+- ACI (non-bot) task sidecar auto-open: keeping as-is (out of scope).

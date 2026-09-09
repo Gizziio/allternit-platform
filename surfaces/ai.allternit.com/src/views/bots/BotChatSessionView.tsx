@@ -25,9 +25,8 @@ import { ModelSelectionProvider, useModelSelection } from "@/providers/model-sel
 import type { ModelSelection } from "@/components/model-picker";
 import { getProviderMeta } from "@/lib/providers/provider-registry";
 import { BotComputerViewport } from "./BotComputerViewport";
-import { isBotComputerLive, useBotActiveVm } from "./useBotActiveVm";
+import { useBotActiveVm } from "./useBotActiveVm";
 import { useBrowserAgentStore } from "@/capsules/browser/browserAgent.store";
-import { useBotOperationalStateStore } from "@/lib/bots/bot-operational-state.store";
 
 export interface BotChatSessionViewProps {
   sessionId?: string;
@@ -172,27 +171,23 @@ function BotChatSessionContent({
   const messages = session?.messages ?? [];
 
   const activeVM = useBotActiveVm(botId);
-  const computerState = useBotOperationalStateStore((s) =>
-    botId ? s.projections[botId]?.state.computerState : undefined,
-  );
   const setConnectedBotId = useBrowserAgentStore((s) => s.setConnectedBotId);
   const setAciSidecarExpanded = useBrowserAgentStore((s) => s.setAciSidecarExpanded);
   const aciSidecarExpanded = useBrowserAgentStore((s) => s.aciSidecarExpanded);
   const [computerOpen, setComputerOpen] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
-  const computerLive = isBotComputerLive(activeVM, computerState);
   const hasVm = Boolean(bot?.vmOperator?.enabled || activeVM);
 
+  // The computer pane is user-driven only: it opens via the top-right
+  // "Computer" button, never on its own. Connect the bot to the global
+  // sidecar only while this chat is mounted and only if the bot actually has
+  // a computer; disconnect on leave so the right-side panel cannot linger.
   useEffect(() => {
-    if (!botId) return;
+    if (!botId || !hasVm) return;
     setConnectedBotId(botId);
-    // Keep the live desktop in the chat column until the user hands it to ACI.
     setAciSidecarExpanded(false);
-  }, [botId, setConnectedBotId, setAciSidecarExpanded]);
-
-  useEffect(() => {
-    if (computerLive) setComputerOpen(true);
-  }, [computerLive]);
+    return () => setConnectedBotId(null);
+  }, [botId, hasVm, setConnectedBotId, setAciSidecarExpanded]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
