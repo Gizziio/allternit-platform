@@ -1,18 +1,20 @@
-# Checkpoint — cu11-tsverify (final)
+# cu13-rust checkpoint
 
-## Goal
-1. Live-verify gizzi engine adapter vs real Python gateway ✅ (12/12, transcript /tmp/cu11-live-final.txt)
-2. Stop swallowing executor errors in sdk/allternit-sdk capability ✅ (strict status/error checks, 6 new tests)
-3. Chrome-stream from-recording integration proof vs protocol zod schema ✅ (4 new tests)
-+ Found & fixed: SDK dist was CJS while deps ESM-only → dist unloadable outside bundlers (flipped sdk/computer-use to ESM; 110 jest green); gateway has no /vision/screenshot → adapter screenshot() now uses direct screenshot action + artifacts.
+Goal: fix pre-existing flake in `idempotency::tests::in_progress_request_returns_conflict` (sleep-50ms scheduling assumption) without weakening assertions; audit idempotency module for same pattern.
 
-## Just did
-- All stages verified: sdk/computer-use jest 110/110; sdk/allternit-sdk bun test 248 run (11 fail = same pre-existing as main, 6 new pass); chrome-stream vitest 53 pass (49+4), tsc clean; gizzi-code bun run typecheck clean; live 12/12 twice (fresh gateway).
-- Gateway killed? NO — still running on :8986 (task bash-b1fhdtk4); Chrome tab https://example.com left open. Kill before session end.
-- Deleted stray build artifacts in packages/*/src (created by an intermediate build attempt); reverted pnpm-lock churn.
+## 2026-09-08 — milestone 0: worktree ritual
+- Worktree: `../allternit-session-cu13-rust` on branch `session/cu13-rust` from `main` (335b3badc).
+- Sole ownership: `cmd/allternit-api/**` only.
+
+## milestone 1: root cause + fix
+- Root cause: `idempotency.rs` test slept 50ms and assumed req 1 had reserved its in-flight DB slot. Under load the duplicate could reserve first → 200 instead of 409 (test asserts 409).
+- Fix: handler now signals `started_tx` when it begins (handler only runs after middleware reserves the slot); test awaits that signal instead of sleeping. 10s timeout is a hang guard only, not a scheduling assumption. Assertion unchanged: duplicate → 409, first → 200.
+- Audit: only one wall-clock sync assumption in the module (line 497). `IN_PROGRESS_STALE_SECS`/`datetime('now')` in prod code is TTL semantics, not test sync. No other instances.
 
 ## Next
-- 4 stage commits + push + PR. Leave merge to orchestrator.
+- Full suite running: `cargo test -p allternit-api` (expect 723 pass / 4 pre-existing agent_cloud_routes env fails).
+- Commit `fix(allternit-api):`, push, PR.
 
-## Open questions
-- None.
+## milestone 2: verification (partial)
+- `cargo test -p allternit-api idempotency` 10/10 runs green (7 passed each).
+- No new rustfmt drift from my lines (pre-existing drift elsewhere in crate left untouched).
