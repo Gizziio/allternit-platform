@@ -45,6 +45,9 @@ function runBuild(cwd, script, envExtra = {}) {
   try {
     execFileSync('pnpm', ['run', script], {
       cwd,
+      // Windows resolves pnpm only as a .cmd shim, which execFileSync can't
+      // spawn without a shell (spawnSync pnpm ENOENT in CI).
+      shell: true,
       stdio: 'inherit',
       env: {
         ...process.env,
