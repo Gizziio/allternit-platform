@@ -9,6 +9,18 @@ import { BrowserRunController } from '../../protocol/run-controller.js';
 import { LocalPlaywrightProvider } from '../../protocol/local-provider.js';
 import { compileBrowserTrajectoryToSkill } from '../../protocol/skill-factory.js';
 import { loadAcuRecordingToTrajectory } from '../../protocol/recording-to-trajectory.js';
+import { SiteToolRegistry } from '../site-tools/registry.js';
+import { loadGitHubSiteTools } from '../site-tools/adapters/github.js';
+import { loadGmailSiteTools } from '../site-tools/adapters/gmail.js';
+import { loadNotionSiteTools } from '../site-tools/adapters/notion.js';
+
+function buildSiteToolRegistry(): SiteToolRegistry {
+  const registry = new SiteToolRegistry();
+  registry.registerAll(loadGitHubSiteTools());
+  registry.registerAll(loadGmailSiteTools());
+  registry.registerAll(loadNotionSiteTools());
+  return registry;
+}
 
 const StartRunBodySchema = z.object({
   accountId: z.string().min(1).default('local'),
@@ -46,9 +58,16 @@ const CompileFromRecordingBodySchema = CompileSkillBodySchema.extend({
 });
 
 const localProvider = new LocalPlaywrightProvider();
+const siteToolRegistry = buildSiteToolRegistry();
 const controller = new BrowserRunController({
   providers: [localProvider],
   sourceSurface: 'api',
+  siteTools: siteToolRegistry,
+  resolveToolContext: (run) => {
+    const binding = localProvider.getBinding(run.sessionId);
+    if (!binding) throw new Error(`No local browser binding for session ${run.sessionId}`);
+    return { cdpUrl: binding.cdpUrl, targetId: binding.targetId };
+  },
 });
 
 export function registerBrowserProtocolRoutes(
@@ -118,6 +137,33 @@ export function registerBrowserProtocolRoutes(
         return;
       }
       const result = await controller.execute({ lease, action });
+      res.json(result);
+    });
+  });
+
+  app.get('/v1/browser-runs/:runId/tools', (req: Request, res: Response) => {
+    routeSync(res, () => {
+      if (!controller.getRun(req.params.runId)) return res.status(404).json({ error: 'Run not found' });
+      res.json(controller.availableTools(req.params.runId));
+    });
+  });
+
+  app.post('/v1/browser-runs/:runId/tools/:toolName', async (req: Request, res: Response) => {
+    await route(res, async () => {
+      const body = z.object({
+        lease: z.unknown(),
+        args: z.record(z.string(), z.unknown()).default({}),
+      }).parse(req.body ?? {});
+      const lease = ExecutionLeaseSchema.parse(body.lease);
+      if (lease.runId !== req.params.runId) {
+        res.status(400).json({ error: 'Lease runId does not match route runId' });
+        return;
+      }
+      const result = await controller.executeTool({
+        lease,
+        toolName: req.params.toolName,
+        args: body.args,
+      });
       res.json(result);
     });
   });

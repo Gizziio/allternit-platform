@@ -48,6 +48,10 @@ export class LocalPlaywrightProvider implements BrowserProvider {
     this.bindings.set(binding.sessionId, binding);
   }
 
+  getBinding(sessionId: string): LocalBrowserSessionBinding | undefined {
+    return this.bindings.get(sessionId);
+  }
+
   async observe(sessionId: string): Promise<BrowserObservation> {
     const binding = this.requireBinding(sessionId);
     const result = await snapshotRoleViaPlaywright({

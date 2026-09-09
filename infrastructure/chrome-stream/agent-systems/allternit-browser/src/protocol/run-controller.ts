@@ -8,6 +8,7 @@ import {
   PolicyDecisionSchema,
   ReceiptSchema,
   SessionSpecSchema,
+  SiteToolCallSchema,
   type ActionIntent,
   type ApprovalRequest,
   type BrowserEvent,
@@ -19,13 +20,19 @@ import {
   type ProviderKind,
   type Receipt,
   type SessionSpec,
+  type SiteToolCall,
   type Surface,
 } from '@allternit/computer-use-protocol';
+import { SiteToolRegistry, originMatches, type SiteToolContext } from '../browser/site-tools/registry.js';
+import { planResolution, type ResolutionPlan } from '../browser/site-tools/resolver.js';
 
 export interface BrowserRunControllerOptions {
   providers: BrowserProvider[];
   sourceSurface?: Surface;
   policy?: (action: ActionIntent) => Promise<PolicyDecision> | PolicyDecision;
+  siteTools?: SiteToolRegistry;
+  /** Maps a run to the CDP binding site tool handlers drive their browser primitives through. */
+  resolveToolContext?: (run: BrowserRun) => SiteToolContext;
   now?: () => Date;
 }
 
@@ -52,6 +59,20 @@ export interface ExecuteBrowserActionResult {
   receipt?: Receipt;
 }
 
+export interface ExecuteSiteToolInput {
+  lease: ExecutionLease;
+  toolName: string;
+  args?: Record<string, unknown>;
+}
+
+export interface ExecuteSiteToolResult {
+  run: BrowserRun;
+  events: BrowserEvent[];
+  toolCall: SiteToolCall;
+}
+
+type StepLogEntry = { kind: 'action'; actionId: string } | { kind: 'tool_call'; toolCallId: string };
+
 export class BrowserRunController {
   private readonly providers = new Map<ProviderKind, BrowserProvider>();
   private readonly sessions = new Map<string, SessionSpec>();
@@ -62,6 +83,11 @@ export class BrowserRunController {
   private readonly receipts = new Map<string, Receipt[]>();
   private readonly policy: NonNullable<BrowserRunControllerOptions['policy']>;
   private readonly sourceSurface?: Surface;
+  private readonly siteTools?: SiteToolRegistry;
+  private readonly resolveToolContext?: (run: BrowserRun) => SiteToolContext;
+  private readonly lastOrigins = new Map<string, string>();
+  private readonly stepLog = new Map<string, StepLogEntry[]>();
+  private readonly toolCalls = new Map<string, SiteToolCall[]>();
   private readonly now: () => Date;
 
   constructor(options: BrowserRunControllerOptions) {
@@ -75,6 +101,8 @@ export class BrowserRunController {
       risk: 'low',
     }));
     this.sourceSurface = options.sourceSurface;
+    this.siteTools = options.siteTools;
+    this.resolveToolContext = options.resolveToolContext;
     this.now = options.now ?? (() => new Date());
   }
 
@@ -131,8 +159,19 @@ export class BrowserRunController {
     const run = this.requireRun(runId);
     const provider = this.getProvider(run.provider);
     const observation = await provider.observe(run.sessionId);
+    this.lastOrigins.set(run.runId, observation.url);
     const event = this.appendEvent(run.runId, run.sessionId, 'observation.created', { observation });
     return { run: this.requireRun(runId), events: [event] };
+  }
+
+  /**
+   * Site tools available for the run's active tab origin, plus the resolver
+   * preference order. Surfaced to the model before falling back to ref-based
+   * (DOM refs) and then vision actions.
+   */
+  availableTools(runId: string): ResolutionPlan {
+    if (!this.siteTools) return { order: ['dom-refs', 'vision'], tools: [] };
+    return planResolution(this.siteTools.list(), this.lastOrigins.get(runId) ?? null);
   }
 
   async execute(input: ExecuteBrowserActionInput): Promise<ExecuteBrowserActionResult> {
@@ -140,6 +179,7 @@ export class BrowserRunController {
     const action = ActionIntentSchema.parse(input.action);
     const run = this.requireRun(action.runId);
     this.actions.set(run.runId, [...(this.actions.get(run.runId) ?? []), action]);
+    this.logStep(run.runId, { kind: 'action', actionId: action.actionId });
     this.assertRunCanExecute(run);
     this.assertLease(run, lease);
     if (action.sessionId !== run.sessionId) {
@@ -188,6 +228,71 @@ export class BrowserRunController {
     return { run: this.requireRun(run.runId), events: [policyEvent, ...acceptedProviderEvents, receiptEvent], receipt };
   }
 
+  /**
+   * Invoke a registered site tool for a run. The tool boundary (registry)
+   * enforces the plugin's blockedActions — a blocked call is refused and
+   * logged, never attempted. Every invocation is recorded as a SiteToolCall
+   * and emitted on the run's event stream as 'tool.called'.
+   */
+  async executeTool(input: ExecuteSiteToolInput): Promise<ExecuteSiteToolResult> {
+    if (!this.siteTools) throw new Error('No site tool registry configured on this controller');
+    const lease = ExecutionLeaseSchema.parse(input.lease);
+    const run = this.requireRun(lease.runId);
+    this.assertRunCanExecute(run);
+    this.assertLease(run, lease);
+
+    const tool = this.siteTools.get(input.toolName);
+    if (!tool) {
+      throw new Error(`Unknown site tool: ${input.toolName}`);
+    }
+    const origin = this.lastOrigins.get(run.runId) ?? null;
+    if (origin && !originMatches(origin, tool.allowedDomains)) {
+      throw new Error(
+        `Site tool ${input.toolName} is not allowed for origin ${origin}; allowed domains: ${tool.allowedDomains.join(', ')}`,
+      );
+    }
+
+    const binding = this.resolveToolContext ? this.resolveToolContext(run) : undefined;
+    if (!binding) {
+      throw new Error(`No site tool context resolver configured for run ${run.runId}`);
+    }
+    const startedAt = Date.now();
+    let result = { ok: true as boolean, summary: '' as string | undefined, error: undefined as string | undefined };
+    try {
+      const outcome = await this.siteTools.invoke(input.toolName, input.args ?? {}, binding);
+      result = {
+        ok: outcome.ok,
+        summary: outcome.summary,
+        error: outcome.ok ? undefined : (outcome.reason ?? outcome.summary),
+      };
+    } catch (error) {
+      result = {
+        ok: false,
+        summary: undefined,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+    const latencyMs = Date.now() - startedAt;
+
+    const toolCall = SiteToolCallSchema.parse({
+      schemaVersion: COMPUTER_USE_PROTOCOL_VERSION,
+      toolCallId: crypto.randomUUID(),
+      runId: run.runId,
+      sessionId: run.sessionId,
+      toolName: input.toolName,
+      args: input.args ?? {},
+      resultSummary: result.summary,
+      latencyMs,
+      error: result.error,
+      redacted: false,
+      invokedAt: this.nowIso(),
+    });
+    this.toolCalls.set(run.runId, [...(this.toolCalls.get(run.runId) ?? []), toolCall]);
+    this.logStep(run.runId, { kind: 'tool_call', toolCallId: toolCall.toolCallId });
+    const event = this.appendEvent(run.runId, run.sessionId, 'tool.called', { toolCall });
+    return { run: this.requireRun(run.runId), events: [event], toolCall };
+  }
+
   completeRun(runId: string): { run: BrowserRun; events: BrowserEvent[] } {
     const run = this.transitionRun(runId, 'completed');
     const event = this.appendEvent(run.runId, run.sessionId, 'run.completed', {});
@@ -220,6 +325,30 @@ export class BrowserRunController {
     const run = this.requireRun(runId);
     const actions = this.actions.get(runId) ?? [];
     const receipts = this.receipts.get(runId) ?? [];
+    const toolCalls = this.toolCalls.get(runId) ?? [];
+    const log = this.stepLog.get(runId) ?? [];
+    const steps: BrowserTrajectory['steps'] = log.map((entry, index) => {
+      if (entry.kind === 'tool_call') {
+        const toolCall = toolCalls.find((candidate) => candidate.toolCallId === entry.toolCallId);
+        if (!toolCall) throw new Error(`Step log references unknown tool call ${entry.toolCallId}`);
+        return {
+          kind: 'tool_call' as const,
+          stepId: `step_${index + 1}`,
+          toolCall,
+          status: toolCall.error ? 'failed' as const : 'committed' as const,
+        };
+      }
+      const action = actions.find((candidate) => candidate.actionId === entry.actionId);
+      if (!action) throw new Error(`Step log references unknown action ${entry.actionId}`);
+      const receipt = receipts.find((candidate) => candidate.actionId === action.actionId);
+      return {
+        kind: 'action' as const,
+        stepId: `step_${index + 1}`,
+        action,
+        receiptId: receipt?.receiptId,
+        status: receipt?.outcome === 'committed' ? 'committed' as const : receipt?.outcome === 'failed' ? 'failed' as const : 'skipped' as const,
+      };
+    });
     return {
       schemaVersion: COMPUTER_USE_PROTOCOL_VERSION,
       trajectoryId: `trajectory_${run.runId}`,
@@ -228,18 +357,14 @@ export class BrowserRunController {
       objective: run.objective,
       createdAt: run.createdAt,
       provider: run.provider,
-      steps: actions.map((action, index) => {
-        const receipt = receipts.find((candidate) => candidate.actionId === action.actionId);
-        return {
-          stepId: `step_${index + 1}`,
-          action,
-          receiptId: receipt?.receiptId,
-          status: receipt?.outcome === 'committed' ? 'committed' : receipt?.outcome === 'failed' ? 'failed' : 'skipped',
-        };
-      }),
+      steps,
       observations: [],
       receipts,
     };
+  }
+
+  private logStep(runId: string, entry: StepLogEntry): void {
+    this.stepLog.set(runId, [...(this.stepLog.get(runId) ?? []), entry]);
   }
 
   private appendProviderEvent(run: BrowserRun, event: BrowserEvent): BrowserEvent {
