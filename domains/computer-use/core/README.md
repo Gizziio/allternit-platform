@@ -132,6 +132,21 @@ curl http://localhost:8760/health
 curl http://localhost:8760/v1/computer-use/health
 ```
 
+### One-command demo (no Docker, no API key)
+
+```bash
+cd domains/computer-use/core
+~/.venv-acu311/bin/python demo.py
+```
+
+`demo.py` picks a free localhost port, starts the gateway with the mock
+vision provider (`ALLTERNIT_VISION_PROVIDER=mock`; set that env var
+yourself first to demo with a real provider), mounts a self-contained demo
+UI at `/demo`, prints the URL, and opens it in your browser. The page lists
+runs, starts a canned demo run ("open example.com and screenshot"), and
+watches run events live over SSE. Flags: `--port N` (fixed port),
+`--no-open` (print the URL only). `Ctrl+C` stops the gateway.
+
 ### Run a task
 
 ```bash
@@ -753,6 +768,39 @@ pip install Pillow imageio
 | `KEY_ERROR` | `key` |
 | `TYPE_ERROR` | `type` |
 | `UNKNOWN_ACTION` | Unrecognized action type |
+
+### Cost observability (not billing)
+
+Every run carries a `cost` record — token counts and an estimated USD
+cost — persisted alongside the run in `runs.sqlite3` and exposed over HTTP:
+
+```bash
+# per-run cost
+curl http://localhost:8760/v1/computer-use/runs/<run_id>/cost
+
+# aggregate: total runs, completed, success rate, avg cost per task
+curl http://localhost:8760/v1/computer-use/cost/summary
+```
+
+```json
+{
+  "run_id": "cu-…",
+  "cost": {
+    "input_tokens": 200, "output_tokens": 100, "total_tokens": 300,
+    "est_cost_usd": 0.003, "pricing": "estimated",
+    "by_stage": { "vision_planning": { "total_tokens": 300, "cost_usd": 0.0 } },
+    "model": "gpt-4o", "provider": "OpenAIVisionProvider"
+  }
+}
+```
+
+`pricing` is `provider-reported` when the vision provider returns a cost,
+`estimated` when only token counts are available (blended model rate from
+`core/cost_accounting.py`), and `unavailable` with all zeros when a path
+makes no LLM calls at all (direct, replay, and workflow runs — the
+planning loop's plan call is accounted as the single `vision_planning`
+stage). The monitor stage consumes no tokens unless a VLM monitor is wired
+in. This is observability only: it never gates execution or invoices.
 
 ---
 

@@ -1,19 +1,19 @@
-# Steering checkpoint — session/cu12-conf
+# Session checkpoint — cu14-demo-cost
 
 ## Goal
-Finish honest remaining items in domains/computer-use (sole ownership).
+TASK cu14-demo-cost — domains/computer-use SOLE ownership. Two features:
+- A: one-command Docker-free demo (gateway on free port, mock vision, self-contained demo UI, README + docs/public/aci/index.md)
+- B: per-run token/cost accounting persisted to runs.sqlite3 + GET endpoint per-run cost + aggregate summary; wired through planning/replay/workflow/direct paths; honest zero when unavailable.
 
 ## Just did
-- CDP adapter: added `goto` (alias of navigate), `eval`, `observe` actions + screenshot Artifact population in envelope.
-- suites.py: added Suite B (browser-adaptive-v1, 3 tests: envelope/clean-failure/goal-forwarding); Suite C = retrieval-v1 (was R, 5 tests, build_suite_r kept as alias); Suite E = hybrid-v1 (was H, 3 tests, build_suite_h alias); gateway/main.py imports still valid.
-- measured.py: discovers hybrid.orchestrator always (offline, browser.mock sub-adapter, note says so); retrieval crawler + browser-use discovery; per-adapter suite routing; honest unmeasured fallbacks.
-- core/monitor.py: VLMMonitor behind Monitor protocol — env config ACU_MONITOR_VLM_PROVIDER/MODEL/ENDPOINT, stdlib urllib client, injectable client for tests, heuristic pre-filter, errors→continue; docstring documents swap-in.
-- tests: 11 new VLMMonitor tests (fake provider), updated measured-conformance tests for new B/C/E reality.
-- pytest (venv-acu311, excl. pre-existing collection-error modules): 207 passed / 21 skipped / 0 failed. 3 transient desktop-mouse flakes on first run, green on rerun; pass in isolation.
+- Feature B implemented + verified: core/cost_accounting.py (new), vision_providers input/output split, planning_loop aggregation, run_persistence columns+migration+cost_summary, router RunState.cost + 4-path wiring + GET /runs/{id}/cost + GET /cost/summary.
+- Feature A implemented + verified: demo.py launcher, gateway/demo_ui.py (self-contained page), main.py env-gated mount; README + docs/public/aci/index.md sections written.
+- 22 new tests pass; targeted regression run 135 passed.
+- Full suite: 232 passed / 21 skipped / 23 failed — 22 failures pre-existing (conformance/integration httpx-connect), +1 flaky desktop-mouse integration tests (nondeterministic pass/fail on identical code, confirmed by re-running).
+- Live smoke on port 8991: /demo HTML, /demo/status (vision mock), health, canned run completed 2/2 (real navigate to example.com via playwright), SSE events streamed, per-run cost honest zero, aggregate summary correct, planning run with mock → honest zero. Server + headless Chrome killed, /tmp artifacts removed.
 
-## Done — PR opened, awaiting orchestrator merge
-
-- PR #168: https://github.com/Gizziio/allternit-platform/pull/168 (branch session/cu12-conf, 3 commits pushed). Per task contract, NOT merged — orchestrator merges.
+## Next
+- Commit, push session/cu14, open PR with evidence. Do NOT merge (orchestrator).
 
 ## Open questions
 - None.
