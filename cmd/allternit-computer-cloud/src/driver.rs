@@ -221,6 +221,18 @@ impl IncusDriver {
         // know the owning host; default to the first host. Multi-host callers
         // should route through the handle-aware APIs instead.
         let substrate = &self.pool.hosts()[0].substrate;
+        self.expose_port_on(substrate, native_id, device_name, guest_port)
+            .await
+    }
+
+    /// Allocate a proxy device on a specific host's substrate.
+    async fn expose_port_on(
+        &self,
+        substrate: &Arc<IncusSubstrate>,
+        native_id: &str,
+        device_name: &str,
+        guest_port: u16,
+    ) -> Result<u16, DriverError> {
         for _ in 0..128 {
             let port = self.next_port.fetch_add(1, Ordering::Relaxed) as u16;
             let listen = format!("tcp:0.0.0.0:{}", port);
@@ -242,6 +254,23 @@ impl IncusDriver {
                 native_id, guest_port
             ),
         })
+    }
+
+    /// Reuse an existing proxy device that forwards to `guest_port`, if one is
+    /// already configured on the instance. Returns the host listen port.
+    async fn existing_proxy_port(
+        &self,
+        substrate: &Arc<IncusSubstrate>,
+        native_id: &str,
+        guest_port: u16,
+    ) -> Option<u16> {
+        match substrate.get_config(native_id).await {
+            Ok(config) => parse_proxy_port_for_guest(&config, guest_port),
+            Err(e) => {
+                warn!(native_id, error = %e, "failed to read instance config looking for proxy device");
+                None
+            }
+        }
     }
 
     /// Poll the substrate until the instance reports `Running`.
@@ -759,6 +788,27 @@ impl ExecutionDriver for IncusDriver {
                     .collect()
             })
     }
+
+    async fn guest_service_url(
+        &self,
+        handle: &ExecutionHandle,
+        guest_port: u16,
+    ) -> Result<String, DriverError> {
+        let native_id = native_id(handle)?;
+        let host = self.pool.host_for_handle(handle);
+        // Reuse an existing proxy device for this guest port when one exists.
+        if let Some(port) = self
+            .existing_proxy_port(&host.substrate, native_id, guest_port)
+            .await
+        {
+            return Ok(format!("http://{}:{}", host.vnc_host, port));
+        }
+        let device_name = format!("svc{}", guest_port);
+        let port = self
+            .expose_port_on(&host.substrate, native_id, &device_name, guest_port)
+            .await?;
+        Ok(format!("http://{}:{}", host.vnc_host, port))
+    }
 }
 
 fn native_id(handle: &ExecutionHandle) -> Result<&str, DriverError> {
@@ -783,6 +833,41 @@ fn parse_vnc_port_from_config(config: &serde_json::Value) -> Option<u16> {
         .and_then(|v| v.get("listen"))
         .and_then(|l| l.as_str())?;
     listen.rsplit(':').next()?.parse().ok()
+}
+
+/// Find an existing proxy device whose `connect` targets `guest_port` and
+/// return its host-side `listen` port. Incus wraps instance config in
+/// `metadata` (or `data` on older daemons).
+fn parse_proxy_port_for_guest(config: &serde_json::Value, guest_port: u16) -> Option<u16> {
+    let payload = config
+        .get("metadata")
+        .or_else(|| config.get("data"))
+        .or_else(|| Some(config));
+    let devices = payload?.get("devices")?.as_object()?;
+    for device in devices.values() {
+        if device.get("type").and_then(|t| t.as_str()) != Some("proxy") {
+            continue;
+        }
+        let connect = device
+            .get("connect")
+            .and_then(|c| c.as_str())
+            .unwrap_or_default();
+        if port_from_addr(connect) == Some(guest_port) {
+            if let Some(port) = device
+                .get("listen")
+                .and_then(|l| l.as_str())
+                .and_then(port_from_addr)
+            {
+                return Some(port);
+            }
+        }
+    }
+    None
+}
+
+/// Extract the port from a `tcp:host:port` / `host:port` address string.
+fn port_from_addr(addr: &str) -> Option<u16> {
+    addr.rsplit(':').next()?.parse().ok()
 }
 
 /// Strip the `local:` / `images:` prefix so we can compare cached aliases.
@@ -1071,5 +1156,54 @@ mod phase_two_http_tests {
         assert_eq!(calls[0].0, reqwest::Method::PATCH);
         assert_eq!(calls[0].2, Some(json!({"config":{"limits.cpu":"8"}})));
         assert_eq!(calls[1].1, "/1.0/operations/resize/wait?timeout=60");
+    }
+
+    #[tokio::test]
+    async fn guest_service_url_reuses_existing_proxy_device() {
+        let (driver, calls) = driver(vec![(
+            200,
+            json!({"metadata":{"devices":{
+                "vnc": {"type":"proxy","listen":"tcp:0.0.0.0:35900","connect":"tcp:127.0.0.1:5900"},
+                "svc6010": {"type":"proxy","listen":"tcp:0.0.0.0:36010","connect":"tcp:127.0.0.1:6010"}
+            }}}),
+        )]);
+        // The reachable host is derived from the substrate URL config.
+        let host = driver.pool.hosts()[0].vnc_host.clone();
+        let url = driver
+            .guest_service_url(&handle(), 6010)
+            .await
+            .expect("guest service url");
+        assert_eq!(url, format!("http://{host}:36010"));
+        let calls = calls.lock().unwrap();
+        assert_eq!(calls.len(), 1);
+        assert_eq!(calls[0].0, reqwest::Method::GET);
+        assert_eq!(calls[0].1, "/1.0/instances/source");
+    }
+
+    #[tokio::test]
+    async fn guest_service_url_allocates_proxy_device_when_missing() {
+        let (driver, calls) = driver(vec![
+            (
+                200,
+                json!({"metadata":{"devices":{
+                    "vnc": {"type":"proxy","listen":"tcp:0.0.0.0:35900","connect":"tcp:127.0.0.1:5900"}
+                }}}),
+            ),
+            (200, json!({})),
+        ]);
+        let host = driver.pool.hosts()[0].vnc_host.clone();
+        let url = driver
+            .guest_service_url(&handle(), 6010)
+            .await
+            .expect("guest service url");
+        assert_eq!(url, format!("http://{host}:30000"));
+        let calls = calls.lock().unwrap();
+        assert_eq!(calls.len(), 2);
+        assert_eq!(calls[1].0, reqwest::Method::PATCH);
+        assert_eq!(calls[1].1, "/1.0/instances/source");
+        let patch = calls[1].2.as_ref().unwrap();
+        assert_eq!(patch["devices"]["svc6010"]["type"], "proxy");
+        assert_eq!(patch["devices"]["svc6010"]["listen"], "tcp:0.0.0.0:30000");
+        assert_eq!(patch["devices"]["svc6010"]["connect"], "tcp:127.0.0.1:6010");
     }
 }

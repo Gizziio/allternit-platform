@@ -742,6 +742,22 @@ pub trait ExecutionDriver: Send + Sync + fmt::Debug {
             feature: "snapshot list".to_string(),
         })
     }
+
+    /// Server-reachable base URL for a TCP service inside the guest.
+    ///
+    /// Drivers that can expose an in-guest TCP port on a host-reachable address
+    /// (e.g. Incus proxy devices) return an `http://host:port` base URL the
+    /// control plane can open downstream connections against. The default
+    /// returns `NotSupported`.
+    async fn guest_service_url(
+        &self,
+        _handle: &ExecutionHandle,
+        _guest_port: u16,
+    ) -> std::result::Result<String, DriverError> {
+        Err(DriverError::NotSupported {
+            feature: "guest service url".to_string(),
+        })
+    }
 }
 
 /// Snapshot metadata for a desktop execution environment.
