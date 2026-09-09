@@ -109,6 +109,7 @@ use allternit_api::stream::stream_router;
 use allternit_api::swarm_routes::swarm_router;
 use allternit_api::task_routes;
 use allternit_api::team_skill_routes::team_skill_router;
+#[cfg(unix)]
 use allternit_api::terminal_routes::{terminal_router, TerminalSessionStore};
 use allternit_api::permission_policy::ApprovalStore;
 use allternit_api::tool_routes;
@@ -397,6 +398,7 @@ async fn main() {
         office_cli_watches: Arc::new(RwLock::new(HashMap::new())),
         office_cli_mcp_sessions: Arc::new(RwLock::new(HashMap::new())),
         design_skill_cache,
+        #[cfg(unix)]
         terminal_sessions: TerminalSessionStore::new(),
         mcp_dispatcher: allternit_api::mcp_dispatcher::McpDispatcher::new(),
         approval_store: Arc::new(ApprovalStore::new()),
@@ -763,7 +765,6 @@ async fn main() {
         .nest("/api/rails", rails_router())
         .nest("/stream", stream_router())
         .nest("/ws/bots", bot_desktop_stream_router())
-        .nest("/terminal", terminal_router())
         .nest(
             "/mcp",
             mcp_router().merge(allternit_api::mcp_server_routes::mcp_server_router()),
@@ -875,8 +876,12 @@ async fn main() {
         public = public.merge(fallback_router());
     }
 
-    // Combine protected + public, then apply state
-    let mut app = protected.merge(public).with_state(state.clone());
+    // Combine protected + public; terminal routes are Unix-only (mux
+    // communicates over a UDS) and must be nested before `with_state`.
+    let combined = protected.merge(public);
+    #[cfg(unix)]
+    let combined = combined.nest("/terminal", terminal_router());
+    let mut app = combined.with_state(state.clone());
 
     // Mount cowork scheduler routes if scheduler is active
     if let Some(sstate) = scheduler_state {
@@ -937,11 +942,14 @@ async fn main() {
     info!("  - VM Sessions:    POST|GET|DELETE /vm-session/*");
     info!("  - Rails System:   GET|POST /rails/*");
     info!("  - Event Stream:   WS /stream/ws/*");
+    #[cfg(unix)]
     info!("  - Terminal:       POST /terminal/*");
     info!("  - Webhooks:       POST /webhooks/clerk/*");
     info!("  - LLM Gateway:    POST /v1/chat/completions, GET /v1/models (Bearer ak-...)");
 
     // Re-index Open Design skills on SIGHUP in production without restarting.
+    // (Unix-only; Windows has no SIGHUP.)
+    #[cfg(unix)]
     {
         let cache = Arc::clone(&state).design_skill_cache.clone();
         let mut shutdown_rx = shutdown_tx.subscribe();
@@ -964,19 +972,30 @@ async fn main() {
     // the broadcast immediately, then gives in-flight HTTP requests a bounded
     // drain window before the server stops. Same pattern as
     // allternit-cloud-api's `start_server` (oneshot + `with_graceful_shutdown`).
+    // Windows has no SIGTERM/SIGINT delivery to services, so it listens for
+    // Ctrl+C / CTRL_CLOSE_EVENT instead (console ctrl handler).
     const DRAIN_TIMEOUT: Duration = Duration::from_secs(10);
     let (server_shutdown_tx, server_shutdown_rx) = tokio::sync::oneshot::channel::<()>();
     tokio::spawn(async move {
-        let mut sigterm =
-            tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
-                .expect("Failed to create SIGTERM handler");
-        let mut sigint =
-            tokio::signal::unix::signal(tokio::signal::unix::SignalKind::interrupt())
-                .expect("Failed to create SIGINT handler");
+        #[cfg(unix)]
+        {
+            let mut sigterm =
+                tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+                    .expect("Failed to create SIGTERM handler");
+            let mut sigint =
+                tokio::signal::unix::signal(tokio::signal::unix::SignalKind::interrupt())
+                    .expect("Failed to create SIGINT handler");
 
-        tokio::select! {
-            _ = sigterm.recv() => info!("Received SIGTERM, shutting down gracefully..."),
-            _ = sigint.recv() => info!("Received SIGINT, shutting down gracefully..."),
+            tokio::select! {
+                _ = sigterm.recv() => info!("Received SIGTERM, shutting down gracefully..."),
+                _ = sigint.recv() => info!("Received SIGINT, shutting down gracefully..."),
+            }
+        }
+
+        #[cfg(not(unix))]
+        {
+            let _ = tokio::signal::ctrl_c().await;
+            info!("Received Ctrl+C, shutting down gracefully...");
         }
 
         // Stop the background loops first, then let in-flight requests finish.

@@ -1,18 +1,33 @@
-# Checkpoint — cu11-tsverify (final)
+# Session checkpoint — session/relfix6-20260908
 
 ## Goal
-1. Live-verify gizzi engine adapter vs real Python gateway ✅ (12/12, transcript /tmp/cu11-live-final.txt)
-2. Stop swallowing executor errors in sdk/allternit-sdk capability ✅ (strict status/error checks, 6 new tests)
-3. Chrome-stream from-recording integration proof vs protocol zod schema ✅ (4 new tests)
-+ Found & fixed: SDK dist was CJS while deps ESM-only → dist unloadable outside bundlers (flipped sdk/computer-use to ESM; 110 jest green); gateway has no /vision/screenshot → adapter screenshot() now uses direct screenshot action + artifacts.
+Round 6 of the desktop-v1.1.1 release-pipeline repair: fix run 5 failures so the
+tagged release CI goes green. Run 5 (`34288813328`) failed on all 3 platform jobs:
+- macOS + Linux: "Install desktop dependencies" — `npm install --ignore-scripts`
+  ran update-electron-app's `prepare` (husky) anyway because npm reified over the
+  pnpm-managed (symlinked) node_modules; clean-tree repro passes, pnpm-tree fails.
+- Windows: "Build allternit-api (Windows)" — `allternit-firecracker-driver`
+  (tokio::net::UnixStream, nix) is Unix-only and was an unconditional dependency;
+  api's own unix-only code (terminal_routes UDS mux, SIGHUP/SIGTERM handlers)
+  was also ungated.
 
 ## Just did
-- All stages verified: sdk/computer-use jest 110/110; sdk/allternit-sdk bun test 248 run (11 fail = same pre-existing as main, 6 new pass); chrome-stream vitest 53 pass (49+4), tsc clean; gizzi-code bun run typecheck clean; live 12/12 twice (fresh gateway).
-- Gateway killed? NO — still running on :8986 (task bash-b1fhdtk4); Chrome tab https://example.com left open. Kill before session end.
-- Deleted stray build artifacts in packages/*/src (created by an intermediate build attempt); reverted pnpm-lock churn.
+- Worktree `allternit-session-relfix6-20260908` on `session/relfix6-20260908` from origin/main (576d14309).
+- Workflow: 3x `npm install --ignore-scripts` → `pnpm install --frozen-lockfile --ignore-scripts` (pnpm never runs registry deps' prepare; desktop deps already installed by the workspace-wide root install; electron is in onlyBuiltDependencies so its postinstall runs).
+- Cargo: `allternit-firecracker-driver` moved to `[target.'cfg(unix)'.dependencies]` in cmd/allternit-api + services/session-manager (mirrors existing apple-vf gating).
+- session-manager manager.rs: cfg(unix)-gated use/field/enum variant/initializers.
+- api: `terminal_routes` module, AppState field, router mount, /terminal info line cfg(unix)-gated; SIGHUP handler cfg(unix); graceful shutdown uses SIGTERM/SIGINT on unix, Ctrl+C on Windows; 20 test AppState literals gated.
+- session-manager `protocol` module (GuestAgentClient, UDS) cfg(unix)-gated; no in-repo consumers.
+- Verified: all remaining unix-symbol hits are inside cfg(test) or already cfg-gated; workflow YAML parses.
 
 ## Next
-- 4 stage commits + push + PR. Leave merge to orchestrator.
+1. `cargo check -p allternit-api -p allternit-session-manager` on macOS (running in background) must pass.
+2. Commit, push, PR, merge `--merge`.
+3. Repoint tag `desktop-v1.1.1` at merge SHA, push (force), confirm run 6 triggers.
+4. Re-arm 9-min monitor cron; on terminal state report per standing instructions.
+5. On green: release URL to user, ledger attestation (consolidated, referencing PRs #156/#159/#162/#163/#165/#166 + runs 1-6), worktree+branch cleanup.
 
 ## Open questions
-- None.
+- None. Windows-only deferral (documented in PR): /terminal routes absent on
+  Windows (mux is UDS); office_cli test-module unix permissions helper is
+  test-only.

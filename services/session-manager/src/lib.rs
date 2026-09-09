@@ -22,11 +22,15 @@
 
 pub mod manager;
 pub mod types;
+// Guest-agent protocol talks to VMs over UDS (tokio::net::UnixStream) —
+// Unix-only. No in-repo consumers on other platforms.
+#[cfg(unix)]
 pub mod protocol;
 
 // Re-export main types
 pub use manager::{SessionManager, ManagerConfig, SessionManagerError};
 pub use types::*;
+#[cfg(unix)]
 pub use protocol::GuestAgentClient;
 
 /// Version of this crate

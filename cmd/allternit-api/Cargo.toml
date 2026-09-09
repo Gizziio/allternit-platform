@@ -39,7 +39,6 @@ allternit-gc-agents = { workspace = true }
 
 # Internal crates - Execution
 allternit-driver-interface = { path = "../../platform/contracts/driver-interface" }
-allternit-firecracker-driver = { path = "../../drivers/firecracker" }
 allternit-session-manager = { path = "../../services/session-manager" }
 allternit-computer-cloud = { path = "../../cmd/allternit-computer-cloud" }
 allternitos-cloud-contracts = { workspace = true }
@@ -102,6 +101,11 @@ tiktoken-rs = "0.12.0"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 allternit-apple-vf-driver = { path = "../../drivers/apple-vf" }
+
+# Firecracker is Unix-only (tokio::net::UnixStream, nix); the driver never
+# compiles for Windows and the api only mounts it under cfg(target_os = "linux").
+[target.'cfg(unix)'.dependencies]
+allternit-firecracker-driver = { path = "../../drivers/firecracker" }
 
 [dev-dependencies]
 axum-test = "14"
