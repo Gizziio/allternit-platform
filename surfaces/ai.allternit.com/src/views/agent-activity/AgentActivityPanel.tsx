@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { railsApi } from "@/lib/agents";
 import { isRailsApiEnabled } from "@/lib/env";
 import { useMonitorThreads } from "@/views/mail-monitor/monitor.helpers";
-import { AgentActivityListView, type AgentActivityTab } from "./AgentActivityListView";
+import { AgentActivityListView, type AgentActivityPanelSection, type AgentActivityTab } from "./AgentActivityListView";
 
 export interface AgentActivityPanelProps {
   open: boolean;
@@ -28,6 +28,7 @@ export function AgentActivityPanel({ open, onClose }: AgentActivityPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const { threads, refresh, setThreadArchived } = useMonitorThreads();
   const [tab, setTab] = useState<AgentActivityTab>("all");
+  const [section, setSection] = useState<AgentActivityPanelSection>("activity");
   const [focusedId, setFocusedId] = useState<string | null>(null);
 
   const visible = useMemo(() => {
@@ -70,6 +71,10 @@ export function AgentActivityPanel({ open, onClose }: AgentActivityPanelProps) {
         return;
       }
 
+      // j/k/arrows/Enter/1/2/a only apply to the Activity list; the Inbox
+      // section has its own interactive rows.
+      if (section !== "activity") return;
+
       const index = focusedId ? visible.findIndex((t) => t.threadId === focusedId) : -1;
 
       if (event.key === "ArrowDown" || event.key === "j") {
@@ -110,7 +115,7 @@ export function AgentActivityPanel({ open, onClose }: AgentActivityPanelProps) {
 
     window.addEventListener("keydown", handleKeydown);
     return () => window.removeEventListener("keydown", handleKeydown);
-  }, [open, visible, focusedId, refresh, setThreadArchived, onClose]);
+  }, [open, visible, focusedId, refresh, setThreadArchived, onClose, section]);
 
   if (!open) return null;
 
@@ -134,6 +139,11 @@ export function AgentActivityPanel({ open, onClose }: AgentActivityPanelProps) {
           activeTab={tab}
           onTabChange={(next) => {
             setTab(next);
+            setFocusedId(null);
+          }}
+          activeSection={section}
+          onSectionChange={(next) => {
+            setSection(next);
             setFocusedId(null);
           }}
         />

@@ -14,7 +14,6 @@ import type { AppMode } from './ShellHeader';
 import { isElectronShell } from '../lib/platform';
 import { cn } from '@/lib/utils';
 import { openNativeSessionPicker } from '@/components/native-sessions/NativeSessionPicker';
-import { GizziMascot } from '@/components/ai-elements/GizziMascot';
 
 interface RailControlsProps {
   mode: AppMode;
@@ -116,18 +115,6 @@ export function RailControls({
             >
               <SidebarSimple size={15} weight="bold" />
             </TitleBarButton>
-            {/* Agents mascot — kept inside the 44px title strip: canvas views
-                (office ribbons et al.) drop their top row to y=44 when the
-                rail collapses, so the old second row at top-[52px] landed on
-                their tab row. */}
-            <button
-              type="button"
-              onClick={onToggleRail}
-              title="Expand sidebar — Agents"
-              className="flex items-center justify-center w-11 h-11 md:w-7 md:h-7 rounded-lg border-none bg-transparent cursor-pointer transition-all duration-150 [WebkitAppRegion:no-drag] hover:bg-[var(--shell-item-hover)]"
-            >
-              <GizziMascot size={20} emotion="curious" />
-            </button>
             {collapsedHovered && (
               <>
                 <div className="w-px h-4 bg-[var(--shell-divider)]" />
@@ -234,7 +221,7 @@ export function RailControls({
           </div>
 
           <div className="relative">
-            <TitleBarButton onClick={onAgentActivityOpen} title="Agent Activity (⌘⇧M)">
+            <TitleBarButton onClick={onAgentActivityOpen} title="Bot Activity (⌘⇧M)">
               <Bell size={15} weight="bold" />
             </TitleBarButton>
             {agentActivityUnreadCount > 0 && (

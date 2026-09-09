@@ -519,7 +519,7 @@ export function ComposerPlusSheet({
               />
               <ListRow
                 icon={<ChatTeardropText size={16} weight="duotone" />}
-                title="Agent Activity"
+                title="Bot Activity"
                 subtitle="Watch running agent sessions"
                 onClick={handleOpenAgentActivity}
               />
