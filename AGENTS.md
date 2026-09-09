@@ -2,7 +2,18 @@
 
 > **STATUS:** Production-ready. 10 courses, 65 modules, 0 audit issues.
 >
-> **LAST UPDATED:** 2026-04-17
+> **LAST UPDATED:** 2026-09-09
+
+## Commandment: desktop-v1.1.1 release lock
+
+`desktop-v1.1.1` (2026-09-09) is the **locked, known-running desktop release** — the first release whose bundled `allternit-api` + `gizzi-code` include the native-sessions routes, and the product of a 14-run repair night (see `agent-ledger/summaries/2026-09-09-0601-relfix6-20260908-kimi-code-desktop-release-repair.md`). It cost that much because each breakage was only visible after the previous one burned a 40–60 min CI run. The rules below exist so that never happens again:
+
+1. **Never repoint, move, or delete the `desktop-v1.1.1` tag.** It is the reference known-good state. New releases get new tags (`desktop-v*`).
+2. **Any change touching the desktop release path must keep the release workflow green before merge.** This includes `.github/workflows/release-desktop.yml`, `surfaces/allternit-desktop/` (electron-builder config in `package.json`, `scripts/prepare-*.cjs`, `scripts/notarize.cjs`, `build/`), `services/voice/`, `services/local-engine/`, `cmd/gizzi-code/script/build-production.js`, and the workspace deps those builds rely on. Run `node scripts/release-preflight.mjs` from the repo root before merging such a change — if it is not 26/0, the release is broken; do not merge.
+3. **Sidecars are hard requirements, not extras.** `prepare-platform-static.cjs` requires `allternit-api`, `gizzi-code`, `allternit-voice-service`, `whisper-cli`, and `mesh-node` in `resources/bin/` per platform. If you change how one is built (or delete its source tree, as the voice-cleanup did), you must update the producing workflow step AND `scripts/release-preflight.mjs` in the same PR. A workflow that references a nonexistent file is a release failure even if unit tests pass.
+4. **New features must compile in the production configurations, not just dev.** gizzi-code is bundled by `bun run script/build-production.js` (Bun.build — which does NOT apply tsconfig `paths` to dynamic imports; optional native packages are resolved via `bundlePlugin.onResolve` stubs). Rust sidecars are built per-target in CI (`x86_64-apple-darwin`, `aarch64-apple-darwin`, `x86_64-pc-windows-msvc`) — verify `cargo build --release` for your crate locally before merging.
+5. **Windows-specific gotchas are load-bearing:** node-gyp needs `GYP_MSVS_VERSION=2022` (the runner's VS18 is invisible to it), pnpm spawns need `shell: true` (.cmd shims), and NSIS hard-fails on any missing `extraFiles`/`license` path. Do not "clean up" these without a green Windows run.
+6. If a merge to main breaks the release workflow, **the fix is mandatory before any further release work** — repoint the latest `desktop-v*` tag only after the run is green, never to dodge a failure.
 
 ## Session worktrees (default for ALL repo work)
 
