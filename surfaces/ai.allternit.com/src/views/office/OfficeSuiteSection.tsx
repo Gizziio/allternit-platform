@@ -1,8 +1,9 @@
-import React, { useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LinkSimple, UploadSimple } from '@phosphor-icons/react';
+import { FilePdf, LinkSimple, UploadSimple } from '@phosphor-icons/react';
 import { stashFile } from './file-handoff';
 import { OfficeAppLogo } from './OfficeAppLogo';
+import { fetchArtifacts, type ArtifactDto } from '@/services/artifacts-api';
 
 export interface OfficeSuiteSectionProps {
   /**
@@ -45,7 +46,8 @@ const EDITORS: EditorCard[] = [
   {
     id: 'pdf',
     name: 'Allternit PDF',
-    description: 'PDF viewing with pdf.js rendering, page navigation, zoom, and text extraction.',
+    description:
+      'Full PDF viewer with AI Q&A over the open file — text search, outlines, annotations, form filling, stamps, and signatures, all locally in the browser.',
     formats: ['.pdf'],
   },
   {
@@ -86,6 +88,17 @@ const ACCEPT = Object.keys(ROUTE_BY_EXT)
   .map((ext) => `.${ext}`)
   .join(',')
 
+const RECENT_PDFS_MAX = 4
+
+/** An artifact counts as a PDF when it carries pdf bytes in any known section shape. */
+function isPdfArtifact(artifact: ArtifactDto): boolean {
+  return artifact.sections.some(
+    (s) =>
+      s.kind === 'pdf-viewer/binary' ||
+      (s.kind === 'pdf' && s.body?.startsWith('data:application/pdf')),
+  )
+}
+
 /**
  * The Allternit Office suite section: the four editor cards plus open-a-file.
  * Shared by the standalone /office launcher and the shell's
@@ -96,6 +109,36 @@ const ACCEPT = Object.keys(ROUTE_BY_EXT)
 export function OfficeSuiteSection({ openView }: OfficeSuiteSectionProps) {
   const navigate = useNavigate()
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const [recentPdfs, setRecentPdfs] = useState<ArtifactDto[]>([])
+
+  // PDFs opened through the launcher are transient, but PDFs saved as
+  // artifacts (e.g. signed via Allternit Sign) persist — surface them so the
+  // card is a library, not just a file picker. Failure just means no strip.
+  useEffect(() => {
+    let cancelled = false
+    fetchArtifacts()
+      .then((artifacts) => {
+        if (cancelled) return
+        setRecentPdfs(
+          artifacts
+            .filter(isPdfArtifact)
+            .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))
+            .slice(0, RECENT_PDFS_MAX),
+        )
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const openPdfArtifact = (artifactId: string) => {
+    if (openView) {
+      openView('pdf', { artifactId })
+    } else {
+      navigate(`/pdf/${encodeURIComponent(artifactId)}`)
+    }
+  }
 
   const openEditor = (editor: RouteTarget, handoffId?: string) => {
     if (openView) {
@@ -158,6 +201,27 @@ export function OfficeSuiteSection({ openView }: OfficeSuiteSectionProps) {
               {editor.description}
             </p>
             <p className="mt-2 text-[11px] font-medium text-[var(--text-tertiary)]">{editor.formats.join(' · ')}</p>
+            {editor.id === 'pdf' && recentPdfs.length > 0 && (
+              <div className="mt-3 border-t border-[var(--border-subtle)] pt-2" data-testid="office-pdf-recents">
+                <div className="text-[11px] font-medium text-[var(--text-tertiary)]">Recent PDFs</div>
+                <ul className="mt-1 space-y-0.5">
+                  {recentPdfs.map((artifact) => (
+                    <li key={artifact.id}>
+                      <button
+                        type="button"
+                        title={artifact.title}
+                        data-testid={`office-pdf-recent-${artifact.id}`}
+                        onClick={() => openPdfArtifact(artifact.id)}
+                        className="inline-flex h-7 w-full items-center gap-1.5 rounded-md px-1.5 text-left text-[12px] text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-subtle)] hover:text-[var(--text-primary)]"
+                      >
+                        <FilePdf size={13} className="shrink-0" />
+                        <span className="min-w-0 truncate">{artifact.title}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             <button
               type="button"
               onClick={() => {

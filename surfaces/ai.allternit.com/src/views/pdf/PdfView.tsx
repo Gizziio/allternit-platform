@@ -15,15 +15,28 @@ export interface PdfViewProps {
 }
 
 // Artifact mapping: the real PDF bytes are the source of truth, stored base64
-// in a `pdf-viewer/binary` section. The Allternit PDF surface is a viewer,
-// so edits are not persisted back to the artifact.
+// in a `pdf-viewer/binary` section. Sign-produced artifacts instead carry a
+// `pdf` section whose body is a data: URL — both decode to the same bytes.
+// The Allternit PDF surface is a viewer, so edits are not persisted back.
 const BINARY_KIND = 'pdf-viewer/binary';
+const DATAURL_KIND = 'pdf';
 
 function fromBase64(value: string): Uint8Array {
   const binary = atob(value);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
   return bytes;
+}
+
+/** Pull the PDF bytes out of an artifact section, whichever encoding it uses. */
+function bytesFromSection(section: { kind?: string; body?: string } | undefined): Uint8Array | null {
+  if (!section?.body) return null;
+  if (section.kind === BINARY_KIND) return fromBase64(section.body);
+  if (section.kind === DATAURL_KIND && section.body.startsWith('data:application/pdf')) {
+    const comma = section.body.indexOf(',');
+    if (comma >= 0) return fromBase64(section.body.slice(comma + 1));
+  }
+  return null;
 }
 
 export function PdfView({ artifactId, handoffId }: PdfViewProps) {
@@ -59,9 +72,10 @@ export function PdfView({ artifactId, handoffId }: PdfViewProps) {
       .then((next) => {
         if (cancelled) return;
         setArtifact(next);
-        const binary = next.sections.find((s) => s.kind === BINARY_KIND);
-        if (binary?.body) {
-          setInitialBytes(fromBase64(binary.body));
+        const binary = bytesFromSection(next.sections.find((s) => s.kind === BINARY_KIND))
+          ?? bytesFromSection(next.sections.find((s) => s.kind === DATAURL_KIND));
+        if (binary) {
+          setInitialBytes(binary);
         }
         setInitialName(`${next.title.replace(/\s+/g, '_')}.pdf`);
         setLoaded(true);

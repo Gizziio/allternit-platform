@@ -27,6 +27,13 @@ interface ChatEntry {
 
 /** Cap on document text embedded into the assistant's context per run. */
 const DOCUMENT_CONTEXT_MAX_CHARS = 4000;
+/**
+ * PDFs are read-only and page-oriented, so they get a larger excerpt — a
+ * 4000-char cap can miss the back half of a report the agent is asked about.
+ */
+const DOCUMENT_CONTEXT_MAX_CHARS_BY_APP: Partial<Record<OfficeAppKey, number>> = {
+  pdf: 8000,
+};
 
 /**
  * Context block sent with every assistant run: the open document's name plus a
@@ -41,8 +48,9 @@ export function buildAssistantContext(appKey: OfficeAppKey, appLabel: string): s
     const content = doc.content?.() ?? null;
     const text = content?.trim();
     if (text) {
-      const excerpt = text.length > DOCUMENT_CONTEXT_MAX_CHARS
-        ? `${text.slice(0, DOCUMENT_CONTEXT_MAX_CHARS)}\n…(truncated)`
+      const maxChars = DOCUMENT_CONTEXT_MAX_CHARS_BY_APP[appKey] ?? DOCUMENT_CONTEXT_MAX_CHARS;
+      const excerpt = text.length > maxChars
+        ? `${text.slice(0, maxChars)}\n…(truncated)`
         : text;
       context += `\n\nCurrent document content:\n${excerpt}`;
     }
