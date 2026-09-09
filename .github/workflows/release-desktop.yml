@@ -257,6 +257,11 @@ jobs:
       - name: Package with electron-builder
         # --publish never: publishing happens ONLY in the release job, which
         # collects artifacts from all build jobs. Never publish here.
+        # Heap headroom: electron-builder walks/copies multi-GB resources
+        # (platform export, sidecars) and died silently after "searching for
+        # node modules" on the default heap in run 34311188333.
+        env:
+          NODE_OPTIONS: --max-old-space-size=12288
         run: npm run build:electron -- --publish never
         working-directory: surfaces/allternit-desktop
 
@@ -432,6 +437,7 @@ jobs:
         # sidecar. Follow-up: make local-engine compile for windows and drop this.
         env:
           ALLTERNIT_ALLOW_MISSING_LOCAL_ENGINE: "1"
+          NODE_OPTIONS: --max-old-space-size=12288
         run: npm run dist -- --publish never
         working-directory: surfaces/allternit-desktop
 
