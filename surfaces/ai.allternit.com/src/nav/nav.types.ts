@@ -22,7 +22,6 @@ export type ViewType =
   | "bot-inbox"
   | "group-chat"
   | "groups-list"
-  | "bot-chat-session"
   | "native-agent"
   | "registry"
   | "memory"

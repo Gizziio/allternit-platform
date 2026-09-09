@@ -26,7 +26,9 @@ function openSessionView(sessionId: string): void {
   window.dispatchEvent(
     new CustomEvent('allternit:open-view', {
       detail: {
-        viewType: isBot ? 'bot-chat-session' : 'cowork-agent-session',
+        // Bot sessions render inside the unified chat view; only non-bot
+        // (cowork agent) sessions get their dedicated view.
+        viewType: isBot ? 'chat' : 'cowork-agent-session',
         context: isBot
           ? { sessionId, botId, originView: 'chat' }
           : { sessionId, originView: 'chat' },

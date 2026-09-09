@@ -93,7 +93,7 @@ import { computeInboxBadge, selectVisibleBotAttention } from '@/lib/bots/bot-inb
 import { useBotRosterStore } from '@/lib/bots/bot-roster.store';
 import { useBotRoutineStore } from '@/lib/bots/bot-routine.service';
 import { useCommRailsMailStore } from '@/lib/bots/comrails-mail.store';
-import { openBotCanonicalChat, openBotChatView } from '@/lib/bots/bot-canonical-chat.service';
+import { openBotSessionInChat } from '@/lib/bots/bot-canonical-chat.service';
 import { useGroupChatStore } from '@/lib/bots/group-chat.store';
 import type { GroupChat } from '@/lib/bots/group-chat.types';
 import {
@@ -390,10 +390,10 @@ export function ShellRail({
   const setActiveGroup = useGroupChatStore((s) => s.setActiveGroup);
 
   // Clicking a bot row starts (or reuses) the bot's canonical session and then
-  // opens the bot-chat-session view — never the bot detail view.
+  // opens it in the standard chat surface — never the bot detail view.
   const { startSession: startBotSession, isStarting: isBotSessionStarting } = useStartBotSession(
-    useCallback((startedSessionId: string, startedBotId: string) => {
-      openBotChatView(startedSessionId, startedBotId, 'agent-hub');
+    useCallback((_startedSessionId: string, startedBotId: string) => {
+      void openBotSessionInChat(startedBotId);
     }, [])
   );
 
@@ -756,19 +756,6 @@ export function ShellRail({
       useCodeSessionStore.getState().setActiveSession(null);
       onOpen?.('code');
     } else {
-      // Canonical-chat guard (spec Phase 0): when the active session is a
-      // bot's canonical chat, "New" must not spawn a blank non-bot session
-      // from inside it (the Hermes analog of rerouting /new → /compact).
-      // Reroute to the bot's home instead, leaving the canonical chat intact.
-      const chatState = useChatSessionStore.getState();
-      const activeSession = (chatState.sessions ?? []).find(
-        (s) => s.id === chatState.activeSessionId,
-      );
-      const canonicalBotId = activeSession?.metadata?.botCanonicalFor;
-      if (typeof canonicalBotId === 'string' && canonicalBotId) {
-        onOpen?.('bot-home', { botId: canonicalBotId });
-        return;
-      }
       chatStore.setActiveThread(null);
       useChatSessionStore.getState().setActiveSession(null);
       onOpen?.('chat');
@@ -1171,7 +1158,7 @@ export function ShellRail({
                     key={bot.id}
                     bot={bot}
                     isActive={
-                      activeViewType === 'bot-chat-session' &&
+                      activeViewType === 'chat' &&
                       activeChatSessionId === canonicalChatIds[bot.id]
                     }
                     disabled={isBotSessionStarting}
@@ -1195,7 +1182,7 @@ export function ShellRail({
                 key={bot.id}
                 bot={bot}
                 isActive={
-                  activeViewType === 'bot-chat-session' &&
+                  activeViewType === 'chat' &&
                   activeChatSessionId === canonicalChatIds[bot.id]
                 }
                 disabled={isBotSessionStarting}
@@ -2108,19 +2095,14 @@ function TeammatesRailRow({
   const routines = useBotRoutineStore((s) => s.routines);
   const sessionSummary = useSessionSummary(canonicalChatId);
   const { startSession } = useStartBotSession(
-    useCallback((sessionId: string, botId: string) => {
-      openBotChatView(sessionId, botId, 'chat');
+    useCallback((_sessionId: string, botId: string) => {
+      void openBotSessionInChat(botId);
     }, []),
   );
 
   const handleOpenChat = useCallback(async () => {
-    const sessionId = await openBotCanonicalChat({
-      botId: bot.id,
-      botName: bot.botProfile?.displayName ?? bot.name,
-      setActive: false,
-    });
-    openBotChatView(sessionId, bot.id, 'chat');
-  }, [bot.id, bot.name, bot.botProfile?.displayName]);
+    await openBotSessionInChat(bot.id);
+  }, [bot.id]);
 
   // Status line priority: working > attention > recent routine > last message.
   const routine = useMemo(() => {
@@ -2408,10 +2390,7 @@ function InboxRailItem({
 
   const openBotChat = useCallback(
     (bot: Agent) => {
-      const name = bot.botProfile?.displayName ?? bot.name;
-      void openBotCanonicalChat({ botId: bot.id, botName: name, setActive: false }).then((sessionId) =>
-        openBotChatView(sessionId, bot.id, 'chat'),
-      );
+      void openBotSessionInChat(bot.id);
     },
     [],
   );

@@ -118,7 +118,6 @@ const BOT_MODE_VIEW_TYPES = new Set<ViewType>([
   'bot-launchpad',
   'bot-home',
   'bot-inbox',
-  'bot-chat-session',
 ]);
 
 // Inner app component that uses mode context
@@ -137,9 +136,9 @@ function ShellAppInner(): React.ReactNode {
   const active = selectActiveView(nav)!;
 
   const { startSession: startBotSession } = useStartBotSession(
-    useCallback((sessionId: string, botId: string) => {
-      dispatch({ type: 'OPEN_VIEW', viewType: 'bot-chat-session', context: { sessionId, botId, originView: active.viewType } });
-    }, [active.viewType])
+    useCallback(() => {
+      dispatch({ type: 'OPEN_VIEW', viewType: 'chat' });
+    }, [])
   );
   useStackProviders();
   useRoutineTimer();
