@@ -1,18 +1,15 @@
-# cu16-replayui checkpoint
+# cu16-replayui checkpoint — COMPLETE
 
 ## Goal
 Session replay as product surface in surfaces/ai.allternit.com (SOLE ownership; sdk/computer-use read-only): Recordings view — list, steps, inline GIF, Replay w/ deviation threshold, Run-as-workflow w/ compile-first hint, run polling, approval banner.
 
 ## Just did
-- API layer + 15 tests (green) + RecordingsPanel UI + DashboardPage wiring (all files listed in previous checkpoint).
-- Fixed icon imports (Phosphor: Workflow→FlowArrow, added missing Play).
-- `pnpm run typecheck` (tsc --noEmit): PASS, zero errors.
-- ESLint: broken in this repo env (typescript-eslint not resolvable from eslint.config.js) — verified identical breakage in the shared main checkout; pre-existing, no lint script in package.json.
+- Implemented: src/remote-control/api/recordings.ts (+15 tests), src/remote-control/recordings/RecordingsPanel.tsx, DashboardPage wiring.
+- Verified: typecheck PASS (0 errors); new tests 15/15; full suite 1424 passed + 1 pre-existing failure (fabric-session-kind, fails on untouched main); remote-control vite build clean (artifact removed).
+- Committed c257bce46, pushed session/cu16, opened PR #173. Not merging (orchestrator merges).
 
 ## Next
-- Full `pnpm test` (vitest run) in flight — confirm no regressions, classify any failures as pre-existing if unrelated.
-- Remote-control vite bundle build smoke in flight.
-- Then: commit, push -u origin session/cu16, gh pr create.
+- Orchestrator merge + ledger attestation per repo AGENTS.md (steps 6-8) after merge.
 
 ## Open questions
-- Gateway lacks recordings detail/file/gif routes on main — UI degrades gracefully; deferral flagged for the gateway-owning session.
+- Gateway recordings detail/file/gif routes don't exist on main; UI degrades gracefully. If the gateway-owning sprint session adds them under different paths, the client paths in recordings.ts are the single place to adjust.
