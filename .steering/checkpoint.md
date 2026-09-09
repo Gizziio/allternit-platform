@@ -1,5 +1,19 @@
 # Steering checkpoint
 
+**Goal:** P3 ao Fabric node (spec: Allternit Brain/Research/specs/ao-fabric-node.md, spike: Research/drafts/spike-p3-clerk-device-auth.md). Make `ao` a Fabric Transport node: `ao fabric pair|serve|status`. Binding: own 3-leg Ed25519 pairing (NOT Clerk OAuth), node never holds Clerk token; loopback axum shim on 127.0.0.1:8014 translating /v1/remote-control/* + /v1/{session,permission,question} to the engine socket API (session `ao`); line-faithful Rust port of cmd/agent-daemon relay client. Worktree allternit-ao-fabric-node, branch ao/fabric-node.
+
+**Plan:** (1) tiny server PR first: runtimeType "ao" in cmd/allternit-cloud-api/src/routes/runtime_pairing.rs:1154-1161 (own branch ao/runtime-type-ao-enum). (2) ao-engine additive src/ao/fabric/* modules: identity (Ed25519, ~/.agent-orchestrator/fabric/identity.json 0600), pair (create/poll-exchange/heartbeat/rotate/revoke), wire (serde envelopes + golden tests), shim (axum 127.0.0.1:8014), relay (faithful agent-daemon port), cli. (3) Build+tests. (4) Live verify pair vs api.allternit.com (human approval needed — prints URL+code), serve, PWA hard gate. (5) docs/AO_FABRIC_NODE_NOTES.md + PRs.
+
+**Just did:** Read spec+spike, port source (agent-daemon 446-line index.ts), engine API schema, PWA/SDK wire contract (RemoteControlClient paths /v1/remote-control/*, bare-array responses, socket-ticket WS events). Corrected spec path: enum lives in allternit-cloud-api, not allternit-api. runtime_device_kind: "ao" falls to PAIRED via else branch — no change needed there.
+
+**Next:** Server enum PR, then fabric modules.
+
+**Open questions:** Live pairing approval needs Eoj's browser (Clerk JWT) — if not available this session, capture how far it got + exact remaining steps. runtimeType "ao" needs the enum PR deployed; until then pair with --runtime-type desktop (D2 fallback, single client constant).
+
+---
+
+<!-- P3 checkpoint end; prior checkpoints below -->
+
 **Goal:** WebMCP-shaped tool layer + semantic tool-call logging + timeline playback viewer — now with real video capture and a video-synced tool-call track.
 
 **Just did:** Milestone 4 — video capture + tool-call track.

@@ -7,3 +7,5 @@
 //! `cli/ao.rs` for the client side of the contract.
 
 pub(crate) mod transcript;
+
+pub(crate) mod fabric;
