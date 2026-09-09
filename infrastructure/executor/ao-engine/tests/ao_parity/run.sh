@@ -8,6 +8,12 @@
 #   2. ao-doctor's extra `ao-engine:` transport line (asserted separately)
 #   3. PANE-DEAD timing tolerance = watch poll interval (both worlds poll;
 #      asserted as exit code + identical message, not wall-clock instant)
+#   4. spawn-exit tolerance: the instant-exit probe fires at +0.5s in both
+#      worlds; the script world's script(1)+tmux teardown can keep the session
+#      observable past the probe while the engine's pane is already gone.
+#      Asserted as: both agree strictly, OR script exit 0 + session line AND
+#      ao exit 1 + "exited immediately" error whose transcript tail carries the
+#      fixture marker. ao is deterministic-strict; the wrapper is timing-flaky.
 #
 # Usage: run.sh [-v]   (builds the engine first unless AO_BIN is set)
 set -uo pipefail
@@ -35,7 +41,8 @@ mkdir -p "$REPO" "$BURST_REPO"
 # shell runner line ("$*"), so embedded shell syntax would diverge; real
 # orchestrator usage passes simple argv (kimi --yolo, codex exec, ...).
 printf '#!/bin/sh\necho AGENT-READY\nexec cat\n' > "$TDIR/agent-cat.sh"
-printf '#!/bin/sh\necho DIED-IMMEDIATELY-LINE\nexit 7\n' > "$TDIR/agent-exit.sh"
+EXIT_MARKER="DIED-IMMEDIATELY-LINE"
+printf '#!/bin/sh\necho %s\nexit 7\n' "$EXIT_MARKER" > "$TDIR/agent-exit.sh"
 printf '#!/bin/sh\necho WT-AGENT-READY\nexec cat\n' > "$TDIR/agent-wt.sh"
 printf '#!/bin/sh\ni=0\nwhile [ $i -lt 2000 ]; do echo "burst-line-$i-payload-abcdefghijklmnopqrstuvwxyz0123456789"; i=$((i+1)); done\necho BURST-END\nsleep 300\n' > "$TDIR/agent-burst.sh"
 PASS=0; FAIL=0
@@ -173,7 +180,6 @@ for f in spawn.out spawn.err spawn.code dup.out dup.err dup.code \
          watch-dead.out watch-dead.err watch-dead.code \
          kill.out kill.err kill.code status-after.err status-after.code \
          kill-again.out kill-again.err kill-again.code \
-         spawn-exit.out spawn-exit.err spawn-exit.code \
          usage-spawn.err usage-spawn.code usage-send.err usage-send.code \
          usage-watch.err usage-watch.code usage-kill.err usage-kill.code \
          send-missing.err send-missing.code status-missing.err status-missing.code \
@@ -184,6 +190,39 @@ done
 compare status.out normalize_scenario
 compare status-after.out normalize_scenario
 compare status-tail.out normalize_tail
+
+# spawn-exit (instant-exit detection): strict parity if both worlds agree
+# exactly; otherwise accept ONLY the documented timing divergence — script
+# world exited 0 with its normal session-line stdout (tmux+script(1) teardown
+# lingering past the +0.5s probe), ao world exited 1 with the identical
+# "exited immediately" contract error on stderr AND that error's transcript
+# tail carries the fixture marker. Anything else is still a hard failure.
+compare_spawn_exit() {
+  if cmp -s <(normalize "$TDIR/script/spawn-exit.out") <(normalize "$TDIR/ao/spawn-exit.out") \
+     && cmp -s <(normalize "$TDIR/script/spawn-exit.err") <(normalize "$TDIR/ao/spawn-exit.err") \
+     && cmp -s "$TDIR/script/spawn-exit.code" "$TDIR/ao/spawn-exit.code"; then
+    PASS=$((PASS+3)); [ $VERBOSE -eq 1 ] && echo "  ok: spawn-exit (strict parity)"
+    return
+  fi
+  local s_out s_code a_err a_code
+  s_out="$(normalize "$TDIR/script/spawn-exit.out")"
+  s_code="$(cat "$TDIR/script/spawn-exit.code")"
+  a_err="$(normalize "$TDIR/ao/spawn-exit.err")"
+  a_code="$(cat "$TDIR/ao/spawn-exit.code")"
+  if [ "$s_code" = 0 ] \
+     && printf '%s\n' "$s_out" | grep -Eq '^ao-golddx[[:space:]].*\.log$' \
+     && [ "$a_code" = 1 ] \
+     && printf '%s\n' "$a_err" | grep -q 'agent exited immediately' \
+     && printf '%s\n' "$a_err" | grep -qF "$EXIT_MARKER"; then
+    PASS=$((PASS+3)); echo "  ok: spawn-exit (documented timing divergence — ao strict, script lingered)"
+  else
+    FAIL=$((FAIL+1)); echo "  MISMATCH: spawn-exit"
+    diff <(normalize "$TDIR/script/spawn-exit.out") <(normalize "$TDIR/ao/spawn-exit.out") | head -10 | sed 's/^/    /'
+    diff <(normalize "$TDIR/script/spawn-exit.err") <(normalize "$TDIR/ao/spawn-exit.err") | head -10 | sed 's/^/    /'
+    echo "    codes: script=$(cat "$TDIR/script/spawn-exit.code") ao=$(cat "$TDIR/ao/spawn-exit.code")"
+  fi
+}
+compare_spawn_exit
 
 # doctor: ao world carries one extra transport line; verify the rest is identical
 grep -v 'ao-engine:' "$TDIR/ao/doctor.out" > "$TDIR/ao/doctor.stripped"
