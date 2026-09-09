@@ -13,11 +13,11 @@ pub(crate) fn idle_candidates(
     let mut stmt=conn.prepare("SELECT c.id, c.kind, c.provider, c.status, c.owner_type, c.owner_id,
         c.bot_id, c.session_id, c.name, c.os, c.cpu_cores, c.memory_mb, c.disk_mb,
         c.region, c.host, c.native_id, c.template_id, c.billing_source, c.created_at, c.updated_at,
-        c.idle_timeout_secs, c.last_activity_at, c.group_id, COALESCE(d.control_state='human_controls', 0)
+        c.idle_timeout_secs, c.last_activity_at, c.group_id, c.role, COALESCE(d.control_state='human_controls', 0)
         FROM computers c LEFT JOIN computer_cloud_desktop d ON d.computer_id=c.id
         WHERE c.status='running' AND c.idle_timeout_secs IS NOT NULL AND c.last_activity_at IS NOT NULL
         AND c.last_activity_at < datetime('now', '-' || c.idle_timeout_secs || ' seconds')")?;
-    let rows = stmt.query_map([], |r| Ok((computer_from_row(r)?, r.get(23)?)))?;
+    let rows = stmt.query_map([], |r| Ok((computer_from_row(r)?, r.get(24)?)))?;
     rows.collect()
 }
 

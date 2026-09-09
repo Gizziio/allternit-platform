@@ -493,6 +493,66 @@ pub(crate) async fn provision_desktop_internal(
         }
     };
 
+    // Ready golden build: clone the stored golden snapshot (the holder stays
+    // stopped; cloning from the snapshot, not the live instance, so no fresh
+    // stateful snapshot is needed or left behind).
+    if let Some(golden) = spec.golden.clone() {
+        let handle = build_handle(
+            &golden.holder_native_id,
+            Some(&golden.holder_os),
+            Some(&golden.holder_provider),
+        );
+        let new_native_id = format!("allternit-tplbot-{}", uuid::Uuid::new_v4().simple());
+        // Identity env must match the requesting bot: the golden image baked
+        // in the template owner's ALLTERNIT_USER_ID, and the clone config's
+        // environment.* keys override it for this instance.
+        let mut clone_env = spec.env.clone();
+        clone_env.insert("ALLTERNIT_BOT_ID".to_string(), bot_id.to_string());
+        clone_env.insert("ALLTERNIT_USER_ID".to_string(), user.user_id.clone());
+        clone_env.insert("ALLTERNIT_DESKTOP_OS".to_string(), spec.os.clone());
+        if let Some(ref provider) = query.provider {
+            clone_env.insert("ALLTERNIT_DESKTOP_PROVIDER".to_string(), provider.clone());
+        }
+        let resources = allternit_driver_interface::ResourceSpec {
+            cpu_millis: spec.cpu_millis,
+            memory_mib: spec.memory_mib,
+            disk_mib: spec.disk_mib,
+            network_egress_kib: None,
+            gpu_count: None,
+        };
+        let cloned = match driver
+            .clone_from_snapshot(
+                &handle,
+                &golden.snapshot_id,
+                &new_native_id,
+                Some(&resources),
+                &clone_env,
+            )
+            .await
+        {
+            Ok(h) => h,
+            Err(e) => {
+                warn!(bot_id, error = %e, "Failed to clone golden snapshot for bot desktop");
+                return Err((
+                    StatusCode::SERVICE_UNAVAILABLE,
+                    Json(json!({"error": format!("failed to clone golden snapshot: {e}")})),
+                )
+                    .into_response());
+            }
+        };
+        let info = cloned.driver_info;
+        let sandbox_id = info
+            .get("native_id")
+            .cloned()
+            .unwrap_or(new_native_id);
+        let host = info.get("host").cloned();
+        let provider = info
+            .get("provider")
+            .cloned()
+            .unwrap_or(golden.holder_provider);
+        return finish_bot_provision(state, user, bot_id, &spec, sandbox_id, provider, host).await;
+    }
+
     let mut env_vars = spec.env.clone();
     env_vars.insert("ALLTERNIT_BOT_ID".to_string(), bot_id.to_string());
     env_vars.insert("ALLTERNIT_USER_ID".to_string(), user.user_id.clone());
@@ -566,6 +626,20 @@ pub(crate) async fn provision_desktop_internal(
 
     // Both Incus and Tart drivers now block in spawn() until the guest reports
     // Running/running, so we can truthfully store the sandbox as active.
+    finish_bot_provision(state, user, bot_id, &spec, sandbox_id, provider, host).await
+}
+
+/// Persist and record a bot desktop after its VM exists (spawned or
+/// golden-cloned).
+async fn finish_bot_provision(
+    state: &Arc<AppState>,
+    user: &AuthUser,
+    bot_id: &str,
+    spec: &crate::bot_desktop_templates::ProvisionSpec,
+    sandbox_id: String,
+    provider: String,
+    host: Option<String>,
+) -> Result<ProvisionDesktopResponse, axum::response::Response> {
     if let Err(e) = upsert_bot_sandbox(
         &state.db,
         bot_id,

@@ -691,6 +691,28 @@ pub trait ExecutionDriver: Send + Sync + fmt::Debug {
         })
     }
 
+    /// Clone a new instance from a previously captured snapshot. Unlike
+    /// `clone_vm`, no fresh snapshot is taken of the source: the stored
+    /// snapshot is used as-is, so the source may be stopped (golden template
+    /// holders are stopped after their stateful snapshot) and no intermediate
+    /// `clone-<uuid>` snapshot is left behind. `resources`, when given,
+    /// overrides the snapshot's inherited limits; `env` is applied as instance
+    /// `environment.*` config on substrates that support it.
+    ///
+    /// Default implementation returns `NotSupported`.
+    async fn clone_from_snapshot(
+        &self,
+        _handle: &ExecutionHandle,
+        _snapshot_id: &str,
+        _new_native_id: &str,
+        _resources: Option<&ResourceSpec>,
+        _env: &HashMap<String, String>,
+    ) -> Result<ExecutionHandle, DriverError> {
+        Err(DriverError::NotSupported {
+            feature: "clone_from_snapshot".into(),
+        })
+    }
+
     /// Create a snapshot of the execution environment's disk state.
     ///
     /// Default implementation returns `NotSupported`.

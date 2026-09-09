@@ -87,6 +87,9 @@ pub struct ComputerResponse {
     pub idle_timeout_secs: Option<i64>,
     pub last_activity_at: Option<String>,
     pub group_id: Option<String>,
+    /// 'user' or 'golden' (template build holder; hidden from default listings).
+    #[serde(default)]
+    pub role: String,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -110,6 +113,8 @@ pub struct CreateComputerRequest {
     pub name: Option<String>,
     pub os: Option<String>,
     pub template_id: Option<String>,
+    /// Curated `system/...` template ref; exactly one of template_id/template_ref.
+    pub template_ref: Option<String>,
     pub session_id: Option<String>,
     pub persistence: Option<Persistence>,
     /// Substrate hint for Computer Cloud: "incus" (Linux/Windows) or "tart" (macOS).
@@ -121,6 +126,19 @@ pub struct ListComputersQuery {
     pub bot_id: Option<String>,
     pub kind: Option<ComputerKind>,
     pub group_id: Option<String>,
+    /// Include non-user roles (e.g. golden template-build holders). Accepts
+    /// true-ish values ("1", "true", "yes", case-insensitive) — the TS client
+    /// serializes booleans as 1/0, which serde_urlencoded won't parse as bool.
+    pub include_roles: Option<String>,
+}
+
+fn truthy_flag(value: Option<&str>) -> bool {
+    value.is_some_and(|v| {
+        matches!(
+            v.trim().to_ascii_lowercase().as_str(),
+            "1" | "true" | "yes"
+        )
+    })
 }
 
 #[derive(Debug, Serialize)]
@@ -275,7 +293,7 @@ async fn list_computers(
             "SELECT c.id, c.kind, c.provider, c.status, c.owner_type, c.owner_id, \
              c.bot_id, c.session_id, c.name, c.os, c.cpu_cores, c.memory_mb, c.disk_mb, \
              c.region, c.host, c.native_id, c.template_id, c.billing_source, \
-             c.created_at, c.updated_at, c.idle_timeout_secs, c.last_activity_at, c.group_id \
+             c.created_at, c.updated_at, c.idle_timeout_secs, c.last_activity_at, c.group_id, c.role \
              FROM computers c \
              LEFT JOIN agents a ON a.id = c.bot_id \
              WHERE {VISIBILITY} AND c.status != 'deleted'",
@@ -287,6 +305,11 @@ async fn list_computers(
         );
         if let Some(org_id) = org_id {
             params.push(Box::new(org_id));
+        }
+        // Golden template-build holders are infra, not user computers: hidden
+        // unless the caller explicitly asks for them.
+        if !truthy_flag(query.include_roles.as_deref()) {
+            sql.push_str(" AND c.role = 'user'");
         }
         if let Some(bot_id) = bot_id_filter {
             sql.push_str(&format!(" AND c.bot_id = ?{}", params.len() + 1));
@@ -372,7 +395,7 @@ pub(crate) async fn fetch_computer_including_deleted(
             "SELECT c.id, c.kind, c.provider, c.status, c.owner_type, c.owner_id, \
              c.bot_id, c.session_id, c.name, c.os, c.cpu_cores, c.memory_mb, c.disk_mb, \
              c.region, c.host, c.native_id, c.template_id, c.billing_source, \
-             c.created_at, c.updated_at, c.idle_timeout_secs, c.last_activity_at, c.group_id \
+             c.created_at, c.updated_at, c.idle_timeout_secs, c.last_activity_at, c.group_id, c.role \
              FROM computers c \
              LEFT JOIN agents a ON a.id = c.bot_id \
              WHERE c.id = ?1 AND {VISIBILITY}",
@@ -419,8 +442,34 @@ pub(crate) async fn fetch_computer_including_deleted(
 async fn create_computer(
     State(state): State<Arc<AppState>>,
     Extension(user): Extension<AuthUser>,
-    Json(req): Json<CreateComputerRequest>,
+    Json(mut req): Json<CreateComputerRequest>,
 ) -> impl IntoResponse {
+    // Exactly one of template_id / template_ref. Refs resolve to ids up front
+    // so downstream paths only ever see template_id.
+    match (req.template_id.is_some(), req.template_ref.is_some()) {
+        (true, true) => {
+            return error_response(
+                StatusCode::BAD_REQUEST,
+                "pass exactly one of template_id or template_ref",
+            )
+        }
+        (false, true) => {
+            let reference = req.template_ref.clone().unwrap_or_default();
+            match crate::bot_desktop_templates::resolve_template_by_ref(
+                &state.db,
+                &user,
+                &reference,
+            )
+            .await
+            {
+                Some(t) => req.template_id = Some(t.id),
+                None => {
+                    return error_response(StatusCode::NOT_FOUND, "template ref not found");
+                }
+            }
+        }
+        _ => {}
+    }
     match req.kind {
         ComputerKind::Managed => error_response(
             StatusCode::GONE,
@@ -681,27 +730,112 @@ async fn create_standalone_desktop(
             "The configured VM driver does not expose a remote desktop stream",
         );
     }
+    // Ready golden build: clone the golden snapshot instead of spawning from
+    // the base image. (Not for local/Tart kinds.)
+    if !local {
+        if let Some(golden) = spec.golden.clone() {
+            return create_standalone_from_golden(&state, &user, &req, &owner, &spec, golden).await;
+        }
+    }
+    // NOTE: on the image-spawn fallback path, template `packages` are NOT
+    // installed (honest non-goal — that is what builds are for).
+    let id = format!("computer-{}", uuid::Uuid::new_v4().simple());
+    let name = req
+        .name
+        .clone()
+        .unwrap_or_else(|| format!("Computer {}", &id[9..17]));
+    let persistence = req.persistence.unwrap_or(Persistence::Session);
+    let spawned = match spawn_desktop_for_owner(
+        &state,
+        &user,
+        &spec,
+        &name,
+        &owner.0,
+        &owner.1,
+        "user",
+        kind_to_str(&req.kind),
+        if local { Some("local") } else { None },
+        req.template_id.as_deref(),
+        req.session_id.as_deref(),
+        if local {
+            Some("tart")
+        } else {
+            req.provider.as_deref()
+        },
+        if local {
+            "free"
+        } else {
+            "credits"
+        },
+        persistence,
+    )
+    .await
+    {
+        Ok(s) => s,
+        Err(resp) => return resp,
+    };
+    if local && spawned.provider != "tart" {
+        let _ = driver.destroy(&spawned.handle).await;
+        return error_response(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "local computers require Tart; configured driver selected another substrate",
+        );
+    }
+    let response = json!({"id": id, "sandbox_id": spawned.sandbox_id, "status": "running", "provider": spawned.provider, "host": spawned.host,
+        "owner_type": owner.0, "owner_id": owner.1, "cpu_cores": spec.cpu_millis / 1000, "memory_mb": spec.memory_mib,
+        "disk_mb": spec.disk_mib, "resolution": req.resolution, "persistence": persistence});
+    (StatusCode::CREATED, Json(response)).into_response()
+}
+
+/// A desktop spawned by the shared spawn internals, with its persisted row.
+pub(crate) struct SpawnedDesktop {
+    pub handle: allternit_driver_interface::ExecutionHandle,
+    pub computer_id: String,
+    pub sandbox_id: String,
+    pub provider: String,
+    pub host: Option<String>,
+}
+
+/// Shared spawn+persist core used by standalone desktop creation AND template
+/// golden builds (role='golden'). Callers do their own credit/kind checks.
+#[allow(clippy::too_many_arguments)]
+pub(crate) async fn spawn_desktop_for_owner(
+    state: &Arc<AppState>,
+    user: &AuthUser,
+    spec: &crate::bot_desktop_templates::ProvisionSpec,
+    name: &str,
+    owner_type: &str,
+    owner_id: &str,
+    role: &str,
+    kind: &str,
+    region: Option<&str>,
+    template_id: Option<&str>,
+    session_id: Option<&str>,
+    provider_hint: Option<&str>,
+    billing_source: &str,
+    persistence: Persistence,
+) -> Result<SpawnedDesktop, Response> {
+    use allternit_driver_interface::{
+        EnvSpecType, EnvironmentSpec, NetworkPolicy, PolicySpec, ResourceSpec, SpawnSpec, TenantId,
+    };
+    let driver = require_driver(state)?;
     let tenant = match TenantId::new(format!(
         "user-{}",
         user.user_id.chars().take(50).collect::<String>()
     )) {
         Ok(t) => t,
         Err(e) => {
-            return error_response(
+            return Err(error_response(
                 StatusCode::BAD_REQUEST,
                 format!("invalid user tenant id: {e}"),
-            )
+            ))
         }
     };
     let mut env_vars = spec.env.clone();
     env_vars.remove("ALLTERNIT_BOT_ID");
     env_vars.insert("ALLTERNIT_USER_ID".into(), user.user_id.clone());
     env_vars.insert("ALLTERNIT_DESKTOP_OS".into(), spec.os.clone());
-    if let Some(provider) = if local {
-        Some("tart")
-    } else {
-        req.provider.as_deref()
-    } {
+    if let Some(provider) = provider_hint {
         env_vars.insert("ALLTERNIT_DESKTOP_PROVIDER".into(), provider.into());
     }
     let mut policy = PolicySpec::default_permissive();
@@ -741,10 +875,10 @@ async fn create_standalone_desktop(
     {
         Ok(h) => h,
         Err(e) => {
-            return error_response(
+            return Err(error_response(
                 StatusCode::SERVICE_UNAVAILABLE,
                 format!("failed to provision desktop sandbox: {e}"),
-            )
+            ))
         }
     };
     let sandbox_id = handle
@@ -756,39 +890,144 @@ async fn create_standalone_desktop(
         .driver_info
         .get("provider")
         .cloned()
-        .unwrap_or_else(|| if local { "tart" } else { "incus" }.into());
-    if local && provider != "tart" {
-        let _ = driver.destroy(&handle).await;
-        return error_response(
-            StatusCode::SERVICE_UNAVAILABLE,
-            "local computers require Tart; configured driver selected another substrate",
-        );
-    }
+        .unwrap_or_else(|| "incus".into());
     let host = handle.driver_info.get("host").cloned();
+    let id = format!("computer-{}", uuid::Uuid::new_v4().simple());
+    let computer_id = id.clone();
+    let row_sandbox_id = sandbox_id.clone();
+    let row_provider = provider.clone();
+    let row_host = host.clone();
+    let db = state.db.clone();
+    let name = name.to_string();
+    let owner_type = owner_type.to_string();
+    let owner_id = owner_id.to_string();
+    let role = role.to_string();
+    let kind = kind.to_string();
+    let region = region.map(|s| s.to_string());
+    let template_id = template_id.map(|s| s.to_string());
+    let session_id = session_id.map(|s| s.to_string());
+    let billing_source = billing_source.to_string();
+    let persistence_str = persistence_to_str(&persistence).to_string();
+    let os = spec.os.clone();
+    let cpu_cores = spec.cpu_millis / 1000;
+    let memory_mib = spec.memory_mib;
+    let disk_mib = spec.disk_mib;
+    let inserted = tokio::task::spawn_blocking(move || {
+        let mut conn = db.connect()?;
+        let tx = conn.transaction()?;
+        tx.execute("INSERT INTO computers (id, kind, provider, status, owner_type, owner_id, session_id, name, os, cpu_cores, memory_mb, disk_mb, region, host, native_id, template_id, billing_source, role) VALUES (?1, ?16, ?2, 'running', ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?17, ?11, ?12, ?13, ?14, ?15)",
+            rusqlite::params![id, row_provider, owner_type, owner_id, session_id, name, os, cpu_cores, memory_mib, disk_mib, row_host, row_sandbox_id, template_id, billing_source, role, kind, region])?;
+        tx.execute("INSERT INTO computer_cloud_desktop (computer_id, sandbox_id, control_state, ws_url, protocol) VALUES (?1, ?2, 'human_controls', NULL, ?3)", rusqlite::params![id, row_sandbox_id, persistence_str])?;
+        tx.commit()
+    }).await;
+    match inserted {
+        Ok(Ok(())) => Ok(SpawnedDesktop {
+            handle,
+            computer_id,
+            sandbox_id,
+            provider,
+            host,
+        }),
+        failure => {
+            warn!(?failure, "failed to persist spawned desktop");
+            if let Err(e) = driver.destroy(&handle).await {
+                warn!(error = %e, "failed to clean up unpersisted desktop");
+            }
+            Err(error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "failed to persist computer",
+            ))
+        }
+    }
+}
+
+/// Provision a standalone desktop by cloning a ready template's golden
+/// snapshot (fast boot). The golden holder stays stopped.
+async fn create_standalone_from_golden(
+    state: &Arc<AppState>,
+    user: &AuthUser,
+    req: &CreateComputerRequest,
+    owner: &(String, String),
+    spec: &crate::bot_desktop_templates::ProvisionSpec,
+    golden: crate::bot_desktop_templates::GoldenSource,
+) -> Response {
+    let driver = match require_driver(state) {
+        Ok(d) => d,
+        Err(e) => return e,
+    };
+    let handle = crate::bot_desktop_routes::build_handle(
+        &golden.holder_native_id,
+        Some(&golden.holder_os),
+        Some(&golden.holder_provider),
+    );
+    let new_native_id = format!("allternit-tpl-{}", uuid::Uuid::new_v4().simple());
+    // Identity env must match the requesting user: the golden image baked in
+    // the template owner's ALLTERNIT_USER_ID, and the clone config's
+    // environment.* keys override it for this instance.
+    let mut clone_env = spec.env.clone();
+    clone_env.remove("ALLTERNIT_BOT_ID");
+    clone_env.insert("ALLTERNIT_USER_ID".to_string(), user.user_id.clone());
+    clone_env.insert("ALLTERNIT_DESKTOP_OS".to_string(), spec.os.clone());
+    let resources = allternit_driver_interface::ResourceSpec {
+        cpu_millis: spec.cpu_millis,
+        memory_mib: spec.memory_mib,
+        disk_mib: spec.disk_mib,
+        network_egress_kib: None,
+        gpu_count: None,
+    };
+    let cloned = match driver
+        .clone_from_snapshot(
+            &handle,
+            &golden.snapshot_id,
+            &new_native_id,
+            Some(&resources),
+            &clone_env,
+        )
+        .await
+    {
+        Ok(h) => h,
+        Err(e) => return lifecycle_driver_error("clone", &golden.holder_provider, e),
+    };
+    let provider = cloned
+        .driver_info
+        .get("provider")
+        .cloned()
+        .unwrap_or_else(|| golden.holder_provider.clone());
+    let host = cloned.driver_info.get("host").cloned();
     let id = format!("computer-{}", uuid::Uuid::new_v4().simple());
     let name = req
         .name
         .clone()
         .unwrap_or_else(|| format!("Computer {}", &id[9..17]));
     let persistence = req.persistence.unwrap_or(Persistence::Session);
-    let response = json!({"id": id, "sandbox_id": sandbox_id, "status": "running", "provider": provider, "host": host,
+    let row_native_id = new_native_id.clone();
+    let response = json!({"id": id, "sandbox_id": new_native_id, "status": "running", "provider": provider, "host": host,
         "owner_type": owner.0, "owner_id": owner.1, "cpu_cores": spec.cpu_millis / 1000, "memory_mb": spec.memory_mib,
         "disk_mb": spec.disk_mib, "resolution": req.resolution, "persistence": persistence});
     let db = state.db.clone();
+    let os = spec.os.clone();
+    let template_id = req.template_id.clone();
+    let session_id = req.session_id.clone();
+    let owner_type = owner.0.clone();
+    let owner_id = owner.1.clone();
+    let persistence_str = persistence_to_str(&persistence).to_string();
+    let cpu_cores = spec.cpu_millis / 1000;
+    let memory_mib = spec.memory_mib;
+    let disk_mib = spec.disk_mib;
     let inserted = tokio::task::spawn_blocking(move || {
         let mut conn = db.connect()?;
         let tx = conn.transaction()?;
-        tx.execute("INSERT INTO computers (id, kind, provider, status, owner_type, owner_id, session_id, name, os, cpu_cores, memory_mb, disk_mb, region, host, native_id, template_id, billing_source) VALUES (?1, ?2, ?3, 'running', ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)",
-            rusqlite::params![id, kind_to_str(&req.kind), provider, owner.0, owner.1, req.session_id, name, spec.os, spec.cpu_millis / 1000, spec.memory_mib, spec.disk_mib, if local { Some("local") } else { None }, host, sandbox_id, req.template_id, if local { "free" } else { "credits" }])?;
-        tx.execute("INSERT INTO computer_cloud_desktop (computer_id, sandbox_id, control_state, ws_url, protocol) VALUES (?1, ?2, 'human_controls', NULL, ?3)", rusqlite::params![id, sandbox_id, persistence_to_str(&persistence)])?;
+        tx.execute("INSERT INTO computers (id, kind, provider, status, owner_type, owner_id, session_id, name, os, cpu_cores, memory_mb, disk_mb, region, host, native_id, template_id, billing_source, role) VALUES (?1, 'cloud_desktop', ?2, 'running', ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, NULL, ?11, ?12, ?13, 'credits', 'user')",
+            rusqlite::params![id, provider, owner_type, owner_id, session_id, name, os, cpu_cores, memory_mib, disk_mib, host, row_native_id, template_id])?;
+        tx.execute("INSERT INTO computer_cloud_desktop (computer_id, sandbox_id, control_state, ws_url, protocol) VALUES (?1, ?2, 'human_controls', NULL, ?3)", rusqlite::params![id, row_native_id, persistence_str])?;
         tx.commit()
     }).await;
     match inserted {
         Ok(Ok(())) => (StatusCode::CREATED, Json(response)).into_response(),
         failure => {
-            warn!(?failure, "failed to persist standalone computer");
-            if let Err(e) = driver.destroy(&handle).await {
-                warn!(error = %e, "failed to clean up unpersisted computer");
+            warn!(?failure, "failed to persist golden-clone computer");
+            if let Err(e) = driver.destroy(&cloned).await {
+                warn!(error = %e, "failed to clean up unpersisted golden clone");
             }
             error_response(
                 StatusCode::INTERNAL_SERVER_ERROR,
@@ -2049,6 +2288,9 @@ pub(crate) fn computer_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<Com
         idle_timeout_secs: row.get(20)?,
         last_activity_at: row.get(21)?,
         group_id: row.get(22)?,
+        role: row
+            .get::<_, Option<String>>(23)?
+            .unwrap_or_else(|| "user".to_string()),
     })
 }
 
@@ -2305,6 +2547,7 @@ async fn clone_computer(
         disk_mib: source.disk_mb.map(|v| v as u32),
         network_enabled: true,
         env: Default::default(),
+        golden: None,
     };
     if let Err(e) = check_computer_credits(&state, &user, &spec).await {
         return e;
@@ -2368,6 +2611,8 @@ pub(crate) fn phase_two_test_db() -> rusqlite::Connection {
     ))
     .unwrap();
     conn.execute_batch(include_str!("../migrations/V136__computer_groups.sql"))
+        .unwrap();
+    conn.execute_batch(include_str!("../migrations/V139__computers_role.sql"))
         .unwrap();
     conn
 }
@@ -2495,6 +2740,7 @@ mod computer_phase_two_tests {
                 bot_id: None,
                 kind: None,
                 group_id: Some("unknown".into()),
+                include_roles: None,
             }),
         )
         .await
