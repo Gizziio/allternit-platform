@@ -84,6 +84,9 @@ pub struct ComputerResponse {
     pub billing_source: String,
     pub created_at: String,
     pub updated_at: String,
+    pub idle_timeout_secs: Option<i64>,
+    pub last_activity_at: Option<String>,
+    pub group_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -117,6 +120,7 @@ pub struct CreateComputerRequest {
 pub struct ListComputersQuery {
     pub bot_id: Option<String>,
     pub kind: Option<ComputerKind>,
+    pub group_id: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -131,7 +135,12 @@ pub struct ComputersListResponse {
 pub fn router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/computers", get(list_computers).post(create_computer))
-        .route("/computers/:id", get(get_computer))
+        .route("/computers/:id", get(get_computer).patch(update_computer))
+        .route(
+            "/computers/:id/resize",
+            axum::routing::patch(resize_computer),
+        )
+        .route("/computers/:id/clone", post(clone_computer))
         .route("/computers/:id/start", post(start_computer))
         .route("/computers/:id/restart", post(restart_computer))
         .route(
@@ -199,7 +208,7 @@ fn require_driver(
     }
 }
 
-fn resolve_org_id(user: &AuthUser) -> Option<String> {
+pub(crate) fn resolve_org_id(user: &AuthUser) -> Option<String> {
     user.organization_id
         .clone()
         .or_else(|| user.tenant_id.clone())
@@ -234,7 +243,7 @@ fn check_org_spend_limit(
 // Handlers.
 // ---------------------------------------------------------------------------
 
-fn computer_visibility_clause(user_param: usize, org_param: Option<usize>) -> String {
+pub(crate) fn computer_visibility_clause(user_param: usize, org_param: Option<usize>) -> String {
     let org = org_param
         .map(|p| format!(" OR (c.owner_type = 'org' AND c.owner_id = ?{p})"))
         .unwrap_or_default();
@@ -246,9 +255,17 @@ async fn list_computers(
     Extension(user): Extension<AuthUser>,
     Query(query): Query<ListComputersQuery>,
 ) -> impl IntoResponse {
+    if let Some(group_id) = &query.group_id {
+        if let Err(response) =
+            crate::computer_groups::require_visible_group(&state, &user, group_id).await
+        {
+            return response;
+        }
+    }
     let db = state.db.clone();
     let user_id = user.user_id.clone();
     let org_id = resolve_org_id(&user);
+    let group_filter = query.group_id.clone();
     let bot_id_filter = query.bot_id.clone();
     let kind_filter = query.kind.map(|k| kind_to_str(&k).to_string());
 
@@ -258,7 +275,7 @@ async fn list_computers(
             "SELECT c.id, c.kind, c.provider, c.status, c.owner_type, c.owner_id, \
              c.bot_id, c.session_id, c.name, c.os, c.cpu_cores, c.memory_mb, c.disk_mb, \
              c.region, c.host, c.native_id, c.template_id, c.billing_source, \
-             c.created_at, c.updated_at \
+             c.created_at, c.updated_at, c.idle_timeout_secs, c.last_activity_at, c.group_id \
              FROM computers c \
              LEFT JOIN agents a ON a.id = c.bot_id \
              WHERE {VISIBILITY} AND c.status != 'deleted'",
@@ -279,39 +296,16 @@ async fn list_computers(
             sql.push_str(&format!(" AND c.kind = ?{}", params.len() + 1));
             params.push(Box::new(kind));
         }
+        if let Some(group_id) = group_filter {
+            sql.push_str(&format!(" AND c.group_id = ?{}", params.len() + 1));
+            params.push(Box::new(group_id));
+        }
         sql.push_str(" ORDER BY c.updated_at DESC, c.created_at DESC");
 
         let mut stmt = conn.prepare(&sql)?;
         let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
         let rows = stmt.query_map(rusqlite::params_from_iter(param_refs), |row| {
-            Ok(ComputerResponse {
-                id: row.get(0)?,
-                kind: match row.get::<_, String>(1)?.as_str() {
-                    "cloud_desktop" => ComputerKind::CloudDesktop,
-                    "managed" => ComputerKind::Managed,
-                    "byo_vps" => ComputerKind::ByoVps,
-                    "byoc" => ComputerKind::Byoc,
-                    _ => ComputerKind::Local,
-                },
-                provider: row.get(2)?,
-                status: status_from_str(&row.get::<_, String>(3)?),
-                owner_type: row.get(4)?,
-                owner_id: row.get(5)?,
-                bot_id: row.get(6)?,
-                session_id: row.get(7)?,
-                name: row.get(8)?,
-                os: row.get(9)?,
-                cpu_cores: row.get(10)?,
-                memory_mb: row.get(11)?,
-                disk_mb: row.get(12)?,
-                region: row.get(13)?,
-                host: row.get(14)?,
-                native_id: row.get(15)?,
-                template_id: row.get(16)?,
-                billing_source: row.get(17)?,
-                created_at: row.get(18)?,
-                updated_at: row.get(19)?,
-            })
+            computer_from_row(row)
         })?;
 
         let mut computers = Vec::new();
@@ -352,7 +346,7 @@ async fn get_computer(
     }
 }
 
-async fn fetch_computer(
+pub(crate) async fn fetch_computer(
     state: &Arc<AppState>,
     user: &AuthUser,
     id: &str,
@@ -362,7 +356,7 @@ async fn fetch_computer(
         .filter(|c| c.status != ComputerStatus::Deleted))
 }
 
-async fn fetch_computer_including_deleted(
+pub(crate) async fn fetch_computer_including_deleted(
     state: &Arc<AppState>,
     user: &AuthUser,
     id: &str,
@@ -378,7 +372,7 @@ async fn fetch_computer_including_deleted(
             "SELECT c.id, c.kind, c.provider, c.status, c.owner_type, c.owner_id, \
              c.bot_id, c.session_id, c.name, c.os, c.cpu_cores, c.memory_mb, c.disk_mb, \
              c.region, c.host, c.native_id, c.template_id, c.billing_source, \
-             c.created_at, c.updated_at \
+             c.created_at, c.updated_at, c.idle_timeout_secs, c.last_activity_at, c.group_id \
              FROM computers c \
              LEFT JOIN agents a ON a.id = c.bot_id \
              WHERE c.id = ?1 AND {VISIBILITY}",
@@ -393,34 +387,7 @@ async fn fetch_computer_including_deleted(
         }
         let mut stmt = conn.prepare(&sql)?;
         let row = stmt.query_row(rusqlite::params_from_iter(params.iter()), |row| {
-            Ok(ComputerResponse {
-                id: row.get(0)?,
-                kind: match row.get::<_, String>(1)?.as_str() {
-                    "cloud_desktop" => ComputerKind::CloudDesktop,
-                    "managed" => ComputerKind::Managed,
-                    "byo_vps" => ComputerKind::ByoVps,
-                    "byoc" => ComputerKind::Byoc,
-                    _ => ComputerKind::Local,
-                },
-                provider: row.get(2)?,
-                status: status_from_str(&row.get::<_, String>(3)?),
-                owner_type: row.get(4)?,
-                owner_id: row.get(5)?,
-                bot_id: row.get(6)?,
-                session_id: row.get(7)?,
-                name: row.get(8)?,
-                os: row.get(9)?,
-                cpu_cores: row.get(10)?,
-                memory_mb: row.get(11)?,
-                disk_mb: row.get(12)?,
-                region: row.get(13)?,
-                host: row.get(14)?,
-                native_id: row.get(15)?,
-                template_id: row.get(16)?,
-                billing_source: row.get(17)?,
-                created_at: row.get(18)?,
-                updated_at: row.get(19)?,
-            })
+            computer_from_row(row)
         });
         match row {
             Ok(c) => Ok(Some(c)),
@@ -896,6 +863,7 @@ async fn computer_screenshot(
         Ok(None) => return error_response(StatusCode::NOT_FOUND, "computer not found"),
         Err(resp) => return resp,
     };
+    touch_computer_activity(&state.db, &id);
     let bot_id = computer.bot_id.as_deref();
     let record = match computer_sandbox(&state, &computer) {
         Ok(Some(r)) => r,
@@ -1002,6 +970,7 @@ async fn computer_mouse(
         Ok(None) => return error_response(StatusCode::NOT_FOUND, "computer not found"),
         Err(resp) => return resp,
     };
+    touch_computer_activity(&state.db, &id);
     let sandbox_id = match computer.native_id.as_deref() {
         Some(id) => id,
         None => return error_response(StatusCode::BAD_REQUEST, "computer has no native_id"),
@@ -1037,6 +1006,7 @@ async fn computer_keyboard(
         Ok(None) => return error_response(StatusCode::NOT_FOUND, "computer not found"),
         Err(resp) => return resp,
     };
+    touch_computer_activity(&state.db, &id);
     let sandbox_id = match computer.native_id.as_deref() {
         Some(id) => id,
         None => return error_response(StatusCode::BAD_REQUEST, "computer has no native_id"),
@@ -1072,6 +1042,7 @@ async fn computer_shell(
         Ok(None) => return error_response(StatusCode::NOT_FOUND, "computer not found"),
         Err(resp) => return resp,
     };
+    touch_computer_activity(&state.db, &id);
     let sandbox_id = match computer.native_id.as_deref() {
         Some(id) => id,
         None => return error_response(StatusCode::BAD_REQUEST, "computer has no native_id"),
@@ -1111,6 +1082,7 @@ async fn computer_upload_file(
         Ok(None) => return error_response(StatusCode::NOT_FOUND, "computer not found"),
         Err(resp) => return resp,
     };
+    touch_computer_activity(&state.db, &id);
     let sandbox_id = match computer.native_id.as_deref() {
         Some(id) => id,
         None => return error_response(StatusCode::BAD_REQUEST, "computer has no native_id"),
@@ -1157,6 +1129,7 @@ async fn computer_download_file(
         Ok(None) => return error_response(StatusCode::NOT_FOUND, "computer not found"),
         Err(resp) => return resp,
     };
+    touch_computer_activity(&state.db, &id);
     let sandbox_id = match computer.native_id.as_deref() {
         Some(id) => id,
         None => return error_response(StatusCode::BAD_REQUEST, "computer has no native_id"),
@@ -1177,12 +1150,19 @@ fn computer_sandbox(
     computer: &ComputerResponse,
 ) -> Result<Option<crate::bot_desktop_routes::BotDesktopSandboxRecord>, Response> {
     if let Some(bot_id) = &computer.bot_id {
-        return crate::bot_desktop_routes::read_bot_sandbox(&state.db, bot_id).map_err(|e| {
-            error_response(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("database error: {e}"),
-            )
-        });
+        let record =
+            crate::bot_desktop_routes::read_bot_sandbox(&state.db, bot_id).map_err(|e| {
+                error_response(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("database error: {e}"),
+                )
+            })?;
+        if record
+            .as_ref()
+            .is_some_and(|r| Some(r.sandbox_id.as_str()) == computer.native_id.as_deref())
+        {
+            return Ok(record);
+        }
     }
     let sandbox_id = computer
         .native_id
@@ -1220,6 +1200,7 @@ async fn restart_computer(
         Ok(None) => return error_response(StatusCode::NOT_FOUND, "computer not found"),
         Err(e) => return e,
     };
+    touch_computer_activity(&state.db, &id);
     if !matches!(
         computer.kind,
         ComputerKind::CloudDesktop | ComputerKind::Local
@@ -1252,6 +1233,7 @@ async fn start_computer(
         Ok(None) => return error_response(StatusCode::NOT_FOUND, "computer not found"),
         Err(resp) => return resp,
     };
+    touch_computer_activity(&state.db, &id);
 
     match computer.kind {
         ComputerKind::CloudDesktop | ComputerKind::Local => {
@@ -1290,6 +1272,7 @@ async fn start_cloud_desktop(state: &Arc<AppState>, computer: &ComputerResponse)
     match driver.resume_vm(&handle).await {
         Ok(()) => {
             let _ = update_computer_status(&state.db, &computer.id, "running");
+            touch_computer_activity(&state.db, &computer.id);
             Json(json!({
                 "id": computer.id,
                 "status": "running",
@@ -1318,9 +1301,16 @@ async fn stop_computer(
         Err(resp) => return resp,
     };
 
+    stop_computer_inner(&state, &computer).await
+}
+
+pub(crate) async fn stop_computer_inner(
+    state: &Arc<AppState>,
+    computer: &ComputerResponse,
+) -> Response {
     match computer.kind {
         ComputerKind::CloudDesktop | ComputerKind::Local => {
-            stop_cloud_desktop(&state, &computer).await
+            stop_cloud_desktop(state, computer).await
         }
         _ => error_response(
             StatusCode::NOT_IMPLEMENTED,
@@ -1355,6 +1345,19 @@ async fn stop_cloud_desktop(state: &Arc<AppState>, computer: &ComputerResponse) 
     match driver.pause_vm(&handle).await {
         Ok(()) => {
             let _ = update_computer_status(&state.db, &computer.id, "stopped");
+            if let Some(bot_id) = &computer.bot_id {
+                // A bot clone has the same owner but a distinct sandbox. Do not end the source session.
+                if crate::bot_desktop_routes::read_bot_sandbox(&state.db, bot_id)
+                    .ok()
+                    .flatten()
+                    .is_some_and(|r| r.sandbox_id == record.sandbox_id)
+                {
+                    crate::bot_desktop_quotas::record_end(state, bot_id).await;
+                    if let Ok(conn) = state.db.connect() {
+                        let _ = conn.execute("UPDATE bot_desktop_sandboxes SET status = 'stopped' WHERE bot_id = ?1 AND sandbox_id = ?2", rusqlite::params![bot_id, record.sandbox_id]);
+                    }
+                }
+            }
             Json(json!({
                 "id": computer.id,
                 "status": "stopped",
@@ -1411,7 +1414,13 @@ async fn delete_cloud_desktop(state: &Arc<AppState>, computer: &ComputerResponse
     };
 
     // Mark deleted immediately; destroy in the background.
-    if let Some(ref bot_id) = bot_id {
+    let primary_bot = bot_id.as_ref().filter(|bot_id| {
+        crate::bot_desktop_routes::read_bot_sandbox(&state.db, bot_id)
+            .ok()
+            .flatten()
+            .is_some_and(|r| r.sandbox_id == record.sandbox_id)
+    });
+    if let Some(bot_id) = primary_bot {
         delete_bot_sandbox_and_computer(state.clone(), bot_id, &computer.id);
     } else {
         if let Err(e) = mark_computer_deleted(&state.db, &computer.id) {
@@ -1523,6 +1532,7 @@ async fn create_computer_snapshot(
         Ok(v) => v,
         Err(resp) => return resp,
     };
+    touch_computer_activity(&state.db, &id);
 
     let snapshot_id = format!("snap-{}", uuid::Uuid::new_v4().simple());
     match driver
@@ -1592,6 +1602,7 @@ async fn restore_computer_snapshot(
         Ok(v) => v,
         Err(resp) => return resp,
     };
+    touch_computer_activity(&state.db, &id);
 
     info!(computer_id = %id, %snapshot_id, "Restoring desktop snapshot");
     match driver.restore_snapshot(&handle, &snapshot_id).await {
@@ -1621,6 +1632,7 @@ async fn delete_computer_snapshot(
         Ok(v) => v,
         Err(resp) => return resp,
     };
+    touch_computer_activity(&state.db, &id);
 
     match driver.delete_snapshot(&handle, &snapshot_id).await {
         Ok(()) => Json(SnapshotActionResponse {
@@ -2003,5 +2015,618 @@ mod computer_phase_one_tests {
                 .collect();
             assert_eq!(ids, expected);
         }
+    }
+}
+
+pub(crate) fn computer_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<ComputerResponse> {
+    Ok(ComputerResponse {
+        id: row.get(0)?,
+        kind: match row.get::<_, String>(1)?.as_str() {
+            "cloud_desktop" => ComputerKind::CloudDesktop,
+            "managed" => ComputerKind::Managed,
+            "byo_vps" => ComputerKind::ByoVps,
+            "byoc" => ComputerKind::Byoc,
+            _ => ComputerKind::Local,
+        },
+        provider: row.get(2)?,
+        status: status_from_str(&row.get::<_, String>(3)?),
+        owner_type: row.get(4)?,
+        owner_id: row.get(5)?,
+        bot_id: row.get(6)?,
+        session_id: row.get(7)?,
+        name: row.get(8)?,
+        os: row.get(9)?,
+        cpu_cores: row.get(10)?,
+        memory_mb: row.get(11)?,
+        disk_mb: row.get(12)?,
+        region: row.get(13)?,
+        host: row.get(14)?,
+        native_id: row.get(15)?,
+        template_id: row.get(16)?,
+        billing_source: row.get(17)?,
+        created_at: row.get(18)?,
+        updated_at: row.get(19)?,
+        idle_timeout_secs: row.get(20)?,
+        last_activity_at: row.get(21)?,
+        group_id: row.get(22)?,
+    })
+}
+
+/// Schedule a best-effort activity write without delaying a control handler.
+pub(crate) fn touch_computer_activity(db: &crate::DbHandle, id: &str) {
+    let db = db.clone();
+    let id = id.to_owned();
+    tokio::spawn(async move {
+        let result = tokio::task::spawn_blocking(move || {
+            let conn = db.connect()?;
+            touch_activity_row(&conn, &id)
+        })
+        .await;
+        if !matches!(result, Ok(Ok(_))) {
+            warn!(?result, "failed to touch computer activity");
+        }
+    });
+}
+
+fn touch_activity_row(conn: &rusqlite::Connection, id: &str) -> rusqlite::Result<usize> {
+    conn.execute(
+        "UPDATE computers SET last_activity_at = CURRENT_TIMESTAMP WHERE id = ?1",
+        [id],
+    )
+}
+
+#[derive(Debug, Deserialize)]
+struct ResizeComputerRequest {
+    cpu_cores: Option<i64>,
+    memory_mb: Option<i64>,
+    disk_mb: Option<i64>,
+}
+
+fn validate_resize(
+    req: &ResizeComputerRequest,
+    status: ComputerStatus,
+) -> Result<(), (StatusCode, String)> {
+    use crate::bot_desktop_templates::{
+        VALIDATED_CPU_CORES, VALIDATED_DISK_MB, VALIDATED_MEMORY_MB,
+    };
+    if req.cpu_cores.is_none() && req.memory_mb.is_none() && req.disk_mb.is_none() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            "at least one resize field is required".into(),
+        ));
+    }
+    for (field, value, allowed) in [
+        ("cpu_cores", req.cpu_cores, VALIDATED_CPU_CORES),
+        ("memory_mb", req.memory_mb, VALIDATED_MEMORY_MB),
+        ("disk_mb", req.disk_mb, VALIDATED_DISK_MB),
+    ] {
+        if value.is_some_and(|v| !allowed.contains(&v)) {
+            return Err((
+                StatusCode::BAD_REQUEST,
+                format!("{field} must be one of {allowed:?}"),
+            ));
+        }
+    }
+    if !matches!(status, ComputerStatus::Running | ComputerStatus::Stopped) {
+        return Err((
+            StatusCode::CONFLICT,
+            "cannot resize a creating, deleted, or error computer".into(),
+        ));
+    }
+    if req.disk_mb.is_some() && status != ComputerStatus::Stopped {
+        return Err((
+            StatusCode::CONFLICT,
+            "disk resize requires a stopped computer".into(),
+        ));
+    }
+    Ok(())
+}
+
+fn lifecycle_driver_error(
+    operation: &str,
+    provider: &str,
+    error: allternit_driver_interface::DriverError,
+) -> Response {
+    match error {
+        allternit_driver_interface::DriverError::NotSupported { feature } => error_response(
+            StatusCode::NOT_IMPLEMENTED,
+            format!("{operation} is not supported on the {provider} substrate: {feature}"),
+        ),
+        error => error_response(
+            StatusCode::SERVICE_UNAVAILABLE,
+            format!("{operation} failed: {error}"),
+        ),
+    }
+}
+
+async fn resize_computer(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(id): Path<String>,
+    Json(req): Json<ResizeComputerRequest>,
+) -> Response {
+    let computer = match fetch_computer_including_deleted(&state, &user, &id).await {
+        Ok(Some(c)) => c,
+        Ok(None) => return error_response(StatusCode::NOT_FOUND, "computer not found"),
+        Err(e) => return e,
+    };
+    if let Err((code, message)) = validate_resize(&req, computer.status) {
+        return error_response(code, message);
+    }
+    if computer.kind != ComputerKind::CloudDesktop {
+        return error_response(
+            StatusCode::NOT_IMPLEMENTED,
+            format!(
+                "resize is not supported on the {} substrate",
+                computer.provider
+            ),
+        );
+    }
+    let driver = match require_driver(&state) {
+        Ok(d) => d,
+        Err(e) => return e,
+    };
+    let Some(native_id) = &computer.native_id else {
+        return error_response(StatusCode::BAD_REQUEST, "computer has no native_id");
+    };
+    let handle = crate::bot_desktop_routes::build_handle(
+        native_id,
+        computer.os.as_deref(),
+        Some(&computer.provider),
+    );
+    let resources = allternit_driver_interface::ResourceSpec {
+        cpu_millis: req.cpu_cores.unwrap_or(0) as u32 * 1000,
+        memory_mib: req.memory_mb.unwrap_or(0) as u32,
+        disk_mib: req.disk_mb.map(|v| v as u32),
+        ..Default::default()
+    };
+    if let Err(e) = driver.resize_vm(&handle, &resources).await {
+        return lifecycle_driver_error("resize", &computer.provider, e);
+    }
+    let response = json!({"id": id, "status": computer.status, "cpu_cores": req.cpu_cores.or(computer.cpu_cores), "memory_mb": req.memory_mb.or(computer.memory_mb), "disk_mb": req.disk_mb.or(computer.disk_mb)});
+    let db = state.db.clone();
+    match tokio::task::spawn_blocking(move || {
+        db.connect()?.execute("UPDATE computers SET cpu_cores = COALESCE(?1, cpu_cores), memory_mb = COALESCE(?2, memory_mb), disk_mb = COALESCE(?3, disk_mb), updated_at = CURRENT_TIMESTAMP WHERE id = ?4", rusqlite::params![req.cpu_cores, req.memory_mb, req.disk_mb, id])
+    }).await {
+        Ok(Ok(_)) => Json(response).into_response(),
+        e => { warn!(?e, "resize succeeded but row update failed"); error_response(StatusCode::INTERNAL_SERVER_ERROR, "resize applied but failed to persist resources") }
+    }
+}
+
+fn validate_idle_timeout(value: Option<i64>) -> Result<(), &'static str> {
+    if value.is_some_and(|v| !(60..=86400).contains(&v)) {
+        return Err("idle_timeout_secs must be between 60 and 86400, or null");
+    }
+    Ok(())
+}
+
+async fn update_computer(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(id): Path<String>,
+    Json(body): Json<Value>,
+) -> Response {
+    let computer = match fetch_computer_including_deleted(&state, &user, &id).await {
+        Ok(Some(c)) => c,
+        Ok(None) => return error_response(StatusCode::NOT_FOUND, "computer not found"),
+        Err(e) => return e,
+    };
+    if matches!(
+        computer.status,
+        ComputerStatus::Creating | ComputerStatus::Deleted
+    ) {
+        return error_response(
+            StatusCode::CONFLICT,
+            "cannot update a creating or deleted computer",
+        );
+    }
+    let timeout = match body.get("idle_timeout_secs") {
+        Some(Value::Null) => None,
+        Some(v) if v.as_i64().is_some() => v.as_i64(),
+        _ => {
+            return error_response(
+                StatusCode::BAD_REQUEST,
+                "idle_timeout_secs is required and must be an integer or null",
+            )
+        }
+    };
+    if let Err(e) = validate_idle_timeout(timeout) {
+        return error_response(StatusCode::BAD_REQUEST, e);
+    }
+    let db = state.db.clone();
+    let row_id = id.clone();
+    match tokio::task::spawn_blocking(move || {
+        db.connect()?.execute("UPDATE computers SET idle_timeout_secs = ?1, last_activity_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?2", rusqlite::params![timeout, row_id])
+    }).await {
+        Ok(Ok(_)) => get_computer(State(state), Extension(user), Path(id)).await.into_response(),
+        e => { warn!(?e, "failed to update computer idle timeout"); error_response(StatusCode::INTERNAL_SERVER_ERROR, "failed to update computer") }
+    }
+}
+
+#[derive(Deserialize)]
+struct CloneComputerRequest {
+    name: Option<String>,
+}
+
+/// Copy domain rows atomically, resetting transient takeover/connection state for the new instance.
+fn insert_computer_clone(
+    conn: &mut rusqlite::Connection,
+    source: &ComputerResponse,
+    id: &str,
+    native_id: &str,
+    name: &str,
+) -> rusqlite::Result<()> {
+    let tx = conn.transaction()?;
+    let inserted = tx.execute("INSERT INTO computers (id, kind, provider, status, owner_type, owner_id, bot_id, session_id, name, os, cpu_cores, memory_mb, disk_mb, region, host, native_id, template_id, billing_source, idle_timeout_secs, last_activity_at, group_id) SELECT ?1, kind, provider, 'running', owner_type, owner_id, bot_id, session_id, ?2, os, cpu_cores, memory_mb, disk_mb, region, host, ?3, template_id, billing_source, idle_timeout_secs, CURRENT_TIMESTAMP, group_id FROM computers WHERE id = ?4 AND status != 'deleted'", rusqlite::params![id, name, native_id, source.id])?;
+    if inserted != 1 {
+        return Err(rusqlite::Error::QueryReturnedNoRows);
+    }
+    let inserted = tx.execute("INSERT INTO computer_cloud_desktop (computer_id, sandbox_id, control_state, protocol) SELECT ?1, ?2, control_state, protocol FROM computer_cloud_desktop WHERE computer_id = ?3", rusqlite::params![id, native_id, source.id])?;
+    if inserted != 1 {
+        return Err(rusqlite::Error::QueryReturnedNoRows);
+    }
+    tx.commit()
+}
+
+async fn clone_computer(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(id): Path<String>,
+    Json(req): Json<CloneComputerRequest>,
+) -> Response {
+    let source = match fetch_computer(&state, &user, &id).await {
+        Ok(Some(c)) => c,
+        Ok(None) => return error_response(StatusCode::NOT_FOUND, "computer not found"),
+        Err(e) => return e,
+    };
+    if source.kind != ComputerKind::CloudDesktop {
+        return error_response(
+            StatusCode::NOT_IMPLEMENTED,
+            format!(
+                "clone is not supported on the {} substrate",
+                source.provider
+            ),
+        );
+    }
+    if !matches!(
+        source.status,
+        ComputerStatus::Running | ComputerStatus::Stopped
+    ) {
+        return error_response(
+            StatusCode::CONFLICT,
+            "cannot clone a creating or error computer",
+        );
+    }
+    let spec = crate::bot_desktop_templates::ProvisionSpec {
+        os: source.os.clone().unwrap_or_else(|| "linux".into()),
+        image: String::new(),
+        cpu_millis: source.cpu_cores.unwrap_or(2) as u32 * 1000,
+        memory_mib: source.memory_mb.unwrap_or(4096) as u32,
+        disk_mib: source.disk_mb.map(|v| v as u32),
+        network_enabled: true,
+        env: Default::default(),
+    };
+    if let Err(e) = check_computer_credits(&state, &user, &spec).await {
+        return e;
+    }
+    let driver = match require_driver(&state) {
+        Ok(d) => d,
+        Err(e) => return e,
+    };
+    let Some(native_id) = &source.native_id else {
+        return error_response(StatusCode::BAD_REQUEST, "computer has no native_id");
+    };
+    let handle = crate::bot_desktop_routes::build_handle(
+        native_id,
+        source.os.as_deref(),
+        Some(&source.provider),
+    );
+    let new_id = format!("computer-{}", uuid::Uuid::new_v4().simple());
+    let new_native_id = format!("allternit-clone-{}", uuid::Uuid::new_v4().simple());
+    let cloned = match driver.clone_vm(&handle, &new_native_id).await {
+        Ok(h) => h,
+        Err(e) => return lifecycle_driver_error("clone", &source.provider, e),
+    };
+    let response = json!({"id": new_id, "sandbox_id": new_native_id, "status": "running", "provider": source.provider, "host": source.host,
+        "owner_type": source.owner_type, "owner_id": source.owner_id, "cpu_cores": source.cpu_cores, "memory_mb": source.memory_mb, "disk_mb": source.disk_mb});
+    let name = req
+        .name
+        .unwrap_or_else(|| format!("{} (copy)", source.name));
+    let db = state.db.clone();
+    match tokio::task::spawn_blocking(move || {
+        insert_computer_clone(&mut db.connect()?, &source, &new_id, &new_native_id, &name)
+    })
+    .await
+    {
+        Ok(Ok(())) => (StatusCode::CREATED, Json(response)).into_response(),
+        e => {
+            warn!(?e, "failed to persist clone");
+            if let Err(e) = driver.destroy(&cloned).await {
+                warn!(error = %e, "failed to destroy unpersisted clone");
+            }
+            error_response(StatusCode::INTERNAL_SERVER_ERROR, "failed to persist clone")
+        }
+    }
+}
+
+#[cfg(test)]
+pub(crate) fn phase_two_test_db() -> rusqlite::Connection {
+    let conn = rusqlite::Connection::open_in_memory().unwrap();
+    conn.execute_batch(
+        "PRAGMA foreign_keys=ON; CREATE TABLE agents (id TEXT PRIMARY KEY, user_id TEXT);",
+    )
+    .unwrap();
+    conn.execute_batch(
+        include_str!("../migrations/V99__computers.sql")
+            .split("-- Backfill")
+            .next()
+            .unwrap(),
+    )
+    .unwrap();
+    conn.execute_batch(include_str!(
+        "../migrations/V135__computer_idle_autostop.sql"
+    ))
+    .unwrap();
+    conn.execute_batch(include_str!("../migrations/V136__computer_groups.sql"))
+        .unwrap();
+    conn
+}
+
+#[cfg(test)]
+mod computer_phase_two_tests {
+    use super::*;
+    #[tokio::test]
+    async fn computer_phase_two_handlers_preserve_auth_and_patch_semantics() {
+        let temp = tempfile::tempdir().unwrap();
+        let state = crate::test_helpers::app_state(temp.path()).await;
+        let user = AuthUser {
+            user_id: "u".into(),
+            organization_id: None,
+            tenant_id: None,
+            email: None,
+            name: None,
+            avatar_url: None,
+            organization_role: None,
+            organization_slug: None,
+        };
+        state.db.connect().unwrap().execute_batch("INSERT INTO computers (id,kind,provider,status,owner_type,owner_id,name,native_id) VALUES ('ours','cloud_desktop','incus','running','user','u','Ours','ours'),('other','cloud_desktop','incus','running','user','v','Other','other'),('gone','cloud_desktop','incus','deleted','user','u','Gone','gone'),('local','local','tart','running','user','u','Local','local');").unwrap();
+        let response = update_computer(
+            State(state.clone()),
+            Extension(user.clone()),
+            Path("other".into()),
+            Json(json!({"idle_timeout_secs":60})),
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+        let response = update_computer(
+            State(state.clone()),
+            Extension(user.clone()),
+            Path("gone".into()),
+            Json(json!({"idle_timeout_secs":60})),
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::CONFLICT);
+        for invalid in [
+            json!({}),
+            json!({"idle_timeout_secs":"60"}),
+            json!({"idle_timeout_secs":59}),
+            json!({"idle_timeout_secs":60.5}),
+        ] {
+            assert_eq!(
+                update_computer(
+                    State(state.clone()),
+                    Extension(user.clone()),
+                    Path("ours".into()),
+                    Json(invalid)
+                )
+                .await
+                .status(),
+                StatusCode::BAD_REQUEST
+            );
+        }
+        for timeout in [json!(60), Value::Null] {
+            assert_eq!(
+                update_computer(
+                    State(state.clone()),
+                    Extension(user.clone()),
+                    Path("ours".into()),
+                    Json(json!({"idle_timeout_secs":timeout}))
+                )
+                .await
+                .status(),
+                StatusCode::OK
+            );
+            let row = fetch_computer(&state, &user, "ours")
+                .await
+                .unwrap()
+                .unwrap();
+            assert_eq!(json!(row.idle_timeout_secs), timeout);
+            assert!(row.last_activity_at.is_some());
+        }
+        let resize = |body| serde_json::from_value::<ResizeComputerRequest>(body).unwrap();
+        assert_eq!(
+            resize_computer(
+                State(state.clone()),
+                Extension(user.clone()),
+                Path("ours".into()),
+                Json(resize(json!({"disk_mb":40960})))
+            )
+            .await
+            .status(),
+            StatusCode::CONFLICT
+        );
+        assert_eq!(
+            resize_computer(
+                State(state.clone()),
+                Extension(user.clone()),
+                Path("local".into()),
+                Json(resize(json!({"cpu_cores":4})))
+            )
+            .await
+            .status(),
+            StatusCode::NOT_IMPLEMENTED
+        );
+        assert_eq!(
+            clone_computer(
+                State(state.clone()),
+                Extension(user.clone()),
+                Path("local".into()),
+                Json(CloneComputerRequest { name: None })
+            )
+            .await
+            .status(),
+            StatusCode::NOT_IMPLEMENTED
+        );
+        assert_eq!(
+            clone_computer(
+                State(state.clone()),
+                Extension(user.clone()),
+                Path("other".into()),
+                Json(CloneComputerRequest { name: None })
+            )
+            .await
+            .status(),
+            StatusCode::NOT_FOUND
+        );
+        let response = list_computers(
+            State(state.clone()),
+            Extension(user.clone()),
+            Query(ListComputersQuery {
+                bot_id: None,
+                kind: None,
+                group_id: Some("unknown".into()),
+            }),
+        )
+        .await
+        .into_response();
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+        state
+            .db
+            .connect()
+            .unwrap()
+            .execute(
+                "UPDATE computers SET last_activity_at = NULL WHERE id='ours'",
+                [],
+            )
+            .unwrap();
+        touch_computer_activity(&state.db, "ours");
+        tokio::time::timeout(std::time::Duration::from_secs(2), async {
+            loop {
+                if fetch_computer(&state, &user, "ours")
+                    .await
+                    .unwrap()
+                    .unwrap()
+                    .last_activity_at
+                    .is_some()
+                {
+                    break;
+                }
+                tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+            }
+        })
+        .await
+        .expect("activity write completed");
+    }
+
+    #[test]
+    fn computer_resize_validation_and_status() {
+        let req = |v| serde_json::from_value::<ResizeComputerRequest>(v).unwrap();
+        for value in [
+            json!({}),
+            json!({"cpu_cores":3}),
+            json!({"memory_mb":0}),
+            json!({"disk_mb":-1}),
+        ] {
+            assert_eq!(
+                validate_resize(&req(value), ComputerStatus::Stopped)
+                    .unwrap_err()
+                    .0,
+                StatusCode::BAD_REQUEST
+            );
+        }
+        for status in [
+            ComputerStatus::Creating,
+            ComputerStatus::Error,
+            ComputerStatus::Deleted,
+        ] {
+            assert_eq!(
+                validate_resize(&req(json!({"cpu_cores":4})), status)
+                    .unwrap_err()
+                    .0,
+                StatusCode::CONFLICT
+            );
+        }
+        assert_eq!(
+            validate_resize(&req(json!({"disk_mb":40960})), ComputerStatus::Running).unwrap_err(),
+            (
+                StatusCode::CONFLICT,
+                "disk resize requires a stopped computer".into()
+            )
+        );
+        assert!(validate_resize(
+            &req(json!({"cpu_cores":8,"memory_mb":65536})),
+            ComputerStatus::Running
+        )
+        .is_ok());
+        assert!(validate_resize(&req(json!({"disk_mb":81920})), ComputerStatus::Stopped).is_ok());
+    }
+    #[test]
+    fn computer_idle_timeout_boundaries() {
+        for value in [None, Some(60), Some(86400)] {
+            assert!(validate_idle_timeout(value).is_ok());
+        }
+        for value in [-1, 0, 59, 86401, i64::MAX] {
+            assert!(validate_idle_timeout(Some(value)).is_err());
+        }
+    }
+    #[test]
+    fn computer_activity_touch_is_scoped() {
+        let conn = phase_two_test_db();
+        conn.execute_batch("INSERT INTO computers (id,kind,provider,owner_type,owner_id,name) VALUES ('a','local','tart','user','u','A'),('b','local','tart','user','u','B');").unwrap();
+        assert_eq!(touch_activity_row(&conn, "a").unwrap(), 1);
+        assert_eq!(touch_activity_row(&conn, "missing").unwrap(), 0);
+        let touched: bool = conn
+            .query_row(
+                "SELECT last_activity_at IS NOT NULL FROM computers WHERE id='a'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        let untouched: bool = conn
+            .query_row(
+                "SELECT last_activity_at IS NULL FROM computers WHERE id='b'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert!(touched && untouched);
+    }
+    #[test]
+    fn computer_clone_mirrors_owner_resources_and_billing_without_takeover() {
+        let mut conn = phase_two_test_db();
+        conn.execute_batch("INSERT INTO agents VALUES ('bot','u');
+            INSERT INTO computers (id,kind,provider,status,owner_type,owner_id,bot_id,name,cpu_cores,memory_mb,disk_mb,billing_source,native_id,idle_timeout_secs)
+            VALUES ('source','cloud_desktop','incus','running','bot','bot','bot','Original',4,8192,40960,'provider_direct','vm-source',120);
+            INSERT INTO computer_cloud_desktop (computer_id,sandbox_id,control_state,protocol,taken_over_by_user_id) VALUES ('source','vm-source','human_controls','persistent','u');").unwrap();
+        let source: ComputerResponse=serde_json::from_value(json!({"id":"source","kind":"cloud_desktop","provider":"incus","status":"running","owner_type":"bot","owner_id":"bot","name":"Original","billing_source":"provider_direct","created_at":"now","updated_at":"now"})).unwrap();
+        insert_computer_clone(&mut conn, &source, "copy", "vm-copy", "Original (copy)").unwrap();
+        let actual:(String,String,String,i64,i64,String,String)=conn.query_row("SELECT owner_id,bot_id,billing_source,cpu_cores,memory_mb,native_id,status FROM computers WHERE id='copy'",[],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?,r.get(4)?,r.get(5)?,r.get(6)?))).unwrap();
+        assert_eq!(
+            actual,
+            (
+                "bot".into(),
+                "bot".into(),
+                "provider_direct".into(),
+                4,
+                8192,
+                "vm-copy".into(),
+                "running".into()
+            )
+        );
+        let side:(String,String,Option<String>)=conn.query_row("SELECT sandbox_id,protocol,taken_over_by_user_id FROM computer_cloud_desktop WHERE computer_id='copy'",[],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?))).unwrap();
+        assert_eq!(side, ("vm-copy".into(), "persistent".into(), None));
+        assert!(
+            insert_computer_clone(&mut conn, &source, "copy", "vm-other", "Duplicate").is_err()
+        );
     }
 }

@@ -408,6 +408,7 @@ async fn main() {
         fabric_price_cache,
         os_control_plane,
     });
+    allternit_api::computer_idle::spawn_idle_sweeper(state.clone(), shutdown_tx.subscribe());
 
     // Refresh the Private Fabric node provider pool from the DB registry.
     {
@@ -709,6 +710,7 @@ async fn main() {
         .merge(allternit_api::fabric_usage_routes::router())
         .merge(agent_cloud_router())
         .merge(allternit_api::computer_routes::router())
+        .merge(allternit_api::computer_groups::router())
         .merge(allternit_api::bot_group_routes::router())
         .merge(allternit_api::allternit_vault::router())
         .merge(passkey_router(&state))

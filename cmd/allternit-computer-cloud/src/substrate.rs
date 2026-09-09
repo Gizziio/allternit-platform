@@ -104,10 +104,7 @@ pub trait Substrate: Send + Sync {
         native_id: &str,
         snapshot_id: &str,
     ) -> Result<(), SubstrateError>;
-    async fn list_snapshots(
-        &self,
-        native_id: &str,
-    ) -> Result<Vec<SnapshotInfo>, SubstrateError>;
+    async fn list_snapshots(&self, native_id: &str) -> Result<Vec<SnapshotInfo>, SubstrateError>;
 }
 
 /// Result of a command executed inside a computer.
@@ -563,7 +560,7 @@ impl Substrate for IncusSubstrate {
         if !is_success(status) {
             return Err(SubstrateError::from_status(status, json.to_string()));
         }
-        let _ = wait_operation(&*self.client, &json).await;
+        wait_operation(&*self.client, &json).await?;
         Ok(())
     }
 
@@ -608,10 +605,7 @@ impl Substrate for IncusSubstrate {
         Ok(())
     }
 
-    async fn list_snapshots(
-        &self,
-        native_id: &str,
-    ) -> Result<Vec<SnapshotInfo>, SubstrateError> {
+    async fn list_snapshots(&self, native_id: &str) -> Result<Vec<SnapshotInfo>, SubstrateError> {
         let (status, json) = self
             .client
             .request(
@@ -658,8 +652,48 @@ impl IncusSubstrate {
         if !is_success(status) {
             return Err(SubstrateError::from_status(status, json.to_string()));
         }
-        let _ = wait_operation(&*self.client, &json).await;
+        wait_operation(&*self.client, &json).await?;
         self.get(native_id).await
+    }
+
+    /// Patch instance limits/devices and wait for Incus to finish applying them.
+    pub async fn patch_config(
+        &self,
+        native_id: &str,
+        config: serde_json::Value,
+    ) -> Result<(), SubstrateError> {
+        let (status, json) = self
+            .client
+            .request(
+                reqwest::Method::PATCH,
+                &format!("/1.0/instances/{native_id}"),
+                Some(config),
+            )
+            .await?;
+        if !is_success(status) {
+            return Err(SubstrateError::from_status(status, json.to_string()));
+        }
+        wait_operation(&*self.client, &json).await?;
+        Ok(())
+    }
+
+    pub async fn clone_from_snapshot(
+        &self,
+        source: &str,
+        snapshot: &str,
+        name: &str,
+        config: serde_json::Value,
+    ) -> Result<(), SubstrateError> {
+        let body = serde_json::json!({"name": name, "source": {"type": "snapshot", "name": format!("{source}/{snapshot}")}, "config": config});
+        let (status, json) = self
+            .client
+            .request(reqwest::Method::POST, "/1.0/instances", Some(body))
+            .await?;
+        if !is_success(status) {
+            return Err(SubstrateError::from_status(status, json.to_string()));
+        }
+        wait_operation(&*self.client, &json).await?;
+        Ok(())
     }
 
     /// Add a proxy device to a running instance.

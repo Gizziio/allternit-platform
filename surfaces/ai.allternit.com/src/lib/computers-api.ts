@@ -43,6 +43,11 @@ export interface Computer {
   billing_source: string;
   created_at: string;
   updated_at: string;
+  idle_timeout_secs?: number | null;
+  last_activity_at?: string | null;
+  group_id?: string | null;
+  /** Camel-case alias populated by list/get/update. */
+  groupId?: string | null;
 }
 
 export interface CreateComputerInput {
@@ -99,19 +104,23 @@ export interface DesktopUsageSummary {
 export async function listComputers(filters?: {
   bot_id?: string;
   kind?: ComputerKind;
+  groupId?: string;
+  group_id?: string;
 }): Promise<Computer[]> {
   const params = new URLSearchParams();
   if (filters?.bot_id) params.set('bot_id', filters.bot_id);
   if (filters?.kind) params.set('kind', filters.kind);
+  const groupId = filters?.groupId ?? filters?.group_id;
+  if (groupId) params.set('group_id', groupId);
   const query = params.toString();
   const result = await api.get<ListComputersResponse>(
     `/api/v1/computers${query ? `?${query}` : ''}`,
   );
-  return result.computers ?? [];
+  return (result.computers ?? []).map(normalizeComputer);
 }
 
 export async function getComputer(id: string): Promise<Computer> {
-  return api.get<Computer>(`/api/v1/computers/${id}`);
+  return normalizeComputer(await api.get<Computer>(`/api/v1/computers/${encodeURIComponent(id)}`));
 }
 
 export async function createComputer(
@@ -235,4 +244,67 @@ async function computerRaw(path: string, options?: RequestInit): Promise<Respons
     throw new Error(`Computer API returned ${response.status}: ${await response.text()}`);
   }
   return response;
+}
+
+
+function normalizeComputer(computer: Computer): Computer {
+  return { ...computer, groupId: computer.group_id ?? null };
+}
+
+export type ResizeComputerInput = Pick<CreateComputerInput, 'cpu_cores' | 'memory_mb' | 'disk_mb'>;
+export interface ResizeComputerResponse {
+  id: string;
+  status: ComputerStatus;
+  cpu_cores: number | null;
+  memory_mb: number | null;
+  disk_mb: number | null;
+}
+export async function resizeComputer(id: string, input: ResizeComputerInput): Promise<ResizeComputerResponse> {
+  return api.patch(computerPath(id, 'resize'), input);
+}
+export async function cloneComputer(id: string, name?: string): Promise<CreateComputerResponse> {
+  return api.post(computerPath(id, 'clone'), { name });
+}
+export interface UpdateComputerInput { idle_timeout_secs: number | null }
+export async function updateComputer(id: string, input: UpdateComputerInput): Promise<Computer> {
+  return normalizeComputer(await api.patch<Computer>(`/api/v1/computers/${encodeURIComponent(id)}`, input));
+}
+export interface ComputerGroup {
+  id: string;
+  owner_type: 'user' | 'org';
+  owner_id: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
+  member_count: number;
+}
+export interface ListComputerGroupsResponse { groups: ComputerGroup[] }
+export interface ComputerGroupMembershipResponse {
+  computer_id: string;
+  group_id: string | null;
+  moved_from?: string;
+}
+function groupPath(id: string, computerId?: string): string {
+  return `/api/v1/computer-groups/${encodeURIComponent(id)}${computerId === undefined ? '' : `/computers/${encodeURIComponent(computerId)}`}`;
+}
+export async function listComputerGroups(): Promise<ComputerGroup[]> {
+  return (await api.get<ListComputerGroupsResponse>('/api/v1/computer-groups')).groups;
+}
+export async function createComputerGroup(name: string): Promise<ComputerGroup> {
+  return api.post('/api/v1/computer-groups', { name });
+}
+export async function getComputerGroup(id: string): Promise<ComputerGroup> {
+  return api.get(groupPath(id));
+}
+export async function renameComputerGroup(id: string, name: string): Promise<ComputerGroup> {
+  return api.patch(groupPath(id), { name });
+}
+export async function deleteComputerGroup(id: string): Promise<void> {
+  await computerRaw(groupPath(id), { method: 'DELETE' });
+}
+export async function attachComputerToGroup(id: string, computerId: string): Promise<ComputerGroupMembershipResponse> {
+  return api.post(groupPath(id, computerId));
+}
+export async function detachComputerFromGroup(id: string, computerId: string): Promise<ComputerGroupMembershipResponse> {
+  return api.delete(groupPath(id, computerId));
 }

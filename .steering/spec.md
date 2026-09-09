@@ -1,12 +1,13 @@
-# Cloud Computer Phase 1 acceptance
-Source: docs/CLOUD_COMPUTER_PHASE_1_TASK.md (final decisions supersede map).
-- Any-owner creation: bot-default verified; user/org/session mapping authenticated; V99 CHECK unchanged.
-- Resource allowlists and explicit > template > defaults for cpu/memory/disk; guest resolution env and create echo only.
-- Standalone spawn, shared org credits gate, human control row, transactional persistence; local forces Tart/free/local.
-- Bot-optional input cores, screenshots/lifecycle, bot quota cleanup retained; unchanged ACI gate.
-- Restart pause/resume, stopped starts, creating/deleted/error 409.
-- Managed 410; future providers 501; org visibility in list/get.
-- Four snapshot routes and drag/scroll including Windows 501.
-- Typed TS lifecycle/control/files/snapshots; bytes upload and blob download; applicable call-site migration.
-- Required size/owner/visibility/restart tests; cargo check/test, surface TS; best-effort live smoke with honest failure evidence.
-- NOTES frontmatter, milestone log/evidence; approved commit/push only this branch. No Phase 2 or main/merge operations.
+# Cloud Computer Phase 2 plan and verification
+Source of truth: docs/CLOUD_COMPUTER_PHASE_2_TASK.md; reference docs/CLOUD_COMPUTER_PHASE_2_DESIGN.md.
+- [x] Resize: validated PATCH, Incus live limits/stopped root disk, unsupported 501, default false capabilities.
+- [x] Clone: credit gate, stateful snapshot/create/start, transactional owner/resource/billing mirror, retained restore snapshot, isolated native instance.
+- [x] Idle: nullable timeout PATCH, activity touches, shutdown-aware sweeper, human-controls skip/recheck, shared stop and bot usage cleanup.
+- [x] Groups: owner-scoped CRUD/counts, single-group attach/move/detach, foreign-key null-on-delete, visible-group list filter.
+- [x] TypeScript client methods, exported types, groupId normalization/filter and focused tsconfig.
+- [x] Required cargo check and tests; scoped tsc; SQL and HTTP regression tests; unchanged ACI/bot handlers verified.
+- [x] Live availability probe captured. Actual VM smoke deferred: no Phase 2 API or configured Incus; no dev server started.
+- [x] Prepare NOTES sentinel with files, deviations, remaining items and verification.
+- [ ] Gated commit and push ao/cloud-computer-orgo-p2; record final SHA in external evidence and final response. No merge or Phase 3.
+
+Necessary migration deviation: V133/V134 already exist in HEAD for provider routing policies/user credentials. Using them caused refinery UNIQUE(version) failures. Phase 2 migrations are V135/V136; original migrations untouched. Exact required SQL retained.

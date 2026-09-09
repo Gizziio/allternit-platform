@@ -89,7 +89,10 @@ impl IncusDriver {
             let substrate = Arc::new(IncusSubstrate::new(url)?);
             hosts.push(Arc::new(IncusHost::new(url, substrate)));
         }
-        Ok(Self::from_pool(IncusHostPool::new(hosts), fallback_vnc_host))
+        Ok(Self::from_pool(
+            IncusHostPool::new(hosts),
+            fallback_vnc_host,
+        ))
     }
 
     /// Access the underlying pool for dynamic host management.
@@ -333,6 +336,8 @@ fn map_error(e: SubstrateError) -> DriverError {
 impl ExecutionDriver for IncusDriver {
     fn capabilities(&self) -> DriverCapabilities {
         DriverCapabilities {
+            resize: true,
+            clone: true,
             driver_type: DriverType::Container,
             isolation: IsolationLevel::Standard,
             max_resources: ResourceSpec {
@@ -625,6 +630,75 @@ impl ExecutionDriver for IncusDriver {
             .map_err(map_error)
     }
 
+    async fn resize_vm(
+        &self,
+        handle: &ExecutionHandle,
+        resources: &ResourceSpec,
+    ) -> Result<(), DriverError> {
+        let native_id = native_id(handle)?;
+        let substrate = self.substrate_for(handle);
+        let current = if resources.disk_mib.is_some() {
+            substrate.get_config(native_id).await.map_err(map_error)?
+        } else {
+            serde_json::json!({})
+        };
+        let patch = resize_patch(resources, &current)?;
+        substrate
+            .patch_config(native_id, patch)
+            .await
+            .map_err(map_error)
+    }
+
+    async fn clone_vm(
+        &self,
+        handle: &ExecutionHandle,
+        new_native_id: &str,
+    ) -> Result<ExecutionHandle, DriverError> {
+        let source = native_id(handle)?;
+        let substrate = self.substrate_for(handle);
+        let current = substrate.get_config(source).await.map_err(map_error)?;
+        let current = current.get("metadata").unwrap_or(&current);
+        let mut limits = serde_json::Map::new();
+        for key in ["limits.cpu", "limits.memory"] {
+            if let Some(value) = current["config"].get(key) {
+                limits.insert(key.into(), value.clone());
+            }
+        }
+        let snapshot = format!("clone-{}", uuid::Uuid::new_v4().simple());
+        substrate
+            .create_snapshot(source, &snapshot, true)
+            .await
+            .map_err(map_error)?;
+        substrate
+            .clone_from_snapshot(source, &snapshot, new_native_id, limits.into())
+            .await
+            .map_err(map_error)?;
+        // The snapshot is deliberately retained as the clone's restore point.
+        // A copied proxy retains the source listen port. Replace it before starting.
+        let vnc_port = match self.expose_vnc(&substrate, new_native_id).await {
+            Ok(port) => port,
+            Err(error) => {
+                if let Err(cleanup) = substrate.delete(new_native_id).await {
+                    warn!(%cleanup, new_native_id, "failed to clean up clone after proxy failure");
+                }
+                return Err(error);
+            }
+        };
+        if let Err(error) = substrate.start(new_native_id).await {
+            let _ = substrate.delete(new_native_id).await;
+            return Err(map_error(error));
+        }
+        let mut cloned = handle.clone();
+        cloned.id = ExecutionId::new();
+        cloned
+            .driver_info
+            .insert("native_id".into(), new_native_id.into());
+        cloned
+            .driver_info
+            .insert("vnc_port".into(), vnc_port.to_string());
+        Ok(cloned)
+    }
+
     async fn create_snapshot(
         &self,
         handle: &ExecutionHandle,
@@ -756,5 +830,246 @@ mod tests {
             }
         });
         assert_eq!(parse_vnc_port_from_config(&config), Some(35900));
+    }
+}
+
+/// Build a limits patch without overwriting unrelated devices or root disk fields.
+fn resize_patch(
+    resources: &ResourceSpec,
+    current: &serde_json::Value,
+) -> Result<serde_json::Value, DriverError> {
+    let mut limits = serde_json::Map::new();
+    if resources.cpu_millis > 0 {
+        limits.insert(
+            "limits.cpu".into(),
+            (resources.cpu_millis / 1000).to_string().into(),
+        );
+    }
+    if resources.memory_mib > 0 {
+        limits.insert(
+            "limits.memory".into(),
+            format!("{}MiB", resources.memory_mib).into(),
+        );
+    }
+    let mut patch = serde_json::json!({"config": limits});
+    if let Some(disk) = resources.disk_mib {
+        let current = current.get("metadata").unwrap_or(current);
+        let mut devices = current["devices"].as_object().cloned().unwrap_or_default();
+        let root = devices
+            .values_mut()
+            .find(|d| d["type"] == "disk" && d["path"] == "/")
+            .ok_or_else(|| DriverError::NotSupported {
+                feature: "disk resize: instance has no root disk device entry".into(),
+            })?;
+        root["size"] = format!("{disk}MiB").into();
+        patch["devices"] = devices.into();
+    }
+    Ok(patch)
+}
+
+#[cfg(test)]
+mod phase_two_tests {
+    use super::*;
+    #[test]
+    fn resize_limits_and_disk_preserve_device_config() {
+        let current = serde_json::json!({"metadata":{"devices":{"root":{"type":"disk","path":"/","pool":"default","size":"20480MiB"},"eth0":{"type":"nic","network":"incusbr0"}}}});
+        let patch = resize_patch(
+            &ResourceSpec {
+                cpu_millis: 4000,
+                memory_mib: 8192,
+                disk_mib: Some(40960),
+                ..Default::default()
+            },
+            &current,
+        )
+        .unwrap();
+        assert_eq!(patch["config"]["limits.cpu"], "4");
+        assert_eq!(patch["config"]["limits.memory"], "8192MiB");
+        assert_eq!(patch["devices"]["root"]["size"], "40960MiB");
+        assert_eq!(patch["devices"]["root"]["pool"], "default");
+        assert_eq!(
+            patch["devices"]["eth0"],
+            current["metadata"]["devices"]["eth0"]
+        );
+        let patch = resize_patch(
+            &ResourceSpec {
+                memory_mib: 16384,
+                ..Default::default()
+            },
+            &serde_json::json!({}),
+        )
+        .unwrap();
+        assert!(patch.get("devices").is_none());
+        assert!(patch["config"].get("limits.cpu").is_none());
+        assert!(matches!(
+            resize_patch(
+                &ResourceSpec {
+                    disk_mib: Some(40960),
+                    ..Default::default()
+                },
+                &serde_json::json!({})
+            ),
+            Err(DriverError::NotSupported { .. })
+        ));
+    }
+}
+
+#[cfg(test)]
+mod phase_two_http_tests {
+    use super::*;
+    use crate::substrate::HttpClient;
+    use serde_json::{json, Value};
+    use std::sync::Mutex;
+    type Calls = Arc<Mutex<Vec<(reqwest::Method, String, Option<Value>)>>>;
+    struct ScriptedClient {
+        responses: Mutex<std::collections::VecDeque<(u16, Value)>>,
+        calls: Calls,
+    }
+    #[async_trait]
+    impl HttpClient for ScriptedClient {
+        async fn request(
+            &self,
+            method: reqwest::Method,
+            path: &str,
+            body: Option<Value>,
+        ) -> Result<(u16, Value), SubstrateError> {
+            self.calls.lock().unwrap().push((method, path.into(), body));
+            Ok(self
+                .responses
+                .lock()
+                .unwrap()
+                .pop_front()
+                .expect("unexpected HTTP request"))
+        }
+        async fn request_bytes(
+            &self,
+            _: reqwest::Method,
+            _: &str,
+            _: Option<Value>,
+        ) -> Result<(u16, Vec<u8>), SubstrateError> {
+            panic!("unexpected bytes request")
+        }
+        async fn request_bytes_with_body(
+            &self,
+            _: reqwest::Method,
+            _: &str,
+            _: Vec<u8>,
+        ) -> Result<(u16, Vec<u8>), SubstrateError> {
+            panic!("unexpected bytes request")
+        }
+    }
+    fn driver(responses: Vec<(u16, Value)>) -> (IncusDriver, Calls) {
+        let calls = Arc::new(Mutex::new(Vec::new()));
+        let substrate = IncusSubstrate::with_client(Box::new(ScriptedClient {
+            responses: Mutex::new(responses.into()),
+            calls: calls.clone(),
+        }));
+        (IncusDriver::new(Arc::new(substrate), "127.0.0.1"), calls)
+    }
+    fn handle() -> ExecutionHandle {
+        ExecutionHandle {
+            id: ExecutionId::new(),
+            tenant: TenantId::new("user-test").unwrap(),
+            driver_info: HashMap::from([
+                ("native_id".into(), "source".into()),
+                ("provider".into(), "incus".into()),
+            ]),
+            env_spec: Default::default(),
+        }
+    }
+    #[tokio::test]
+    async fn tart_keeps_default_resize_and_clone_unsupported() {
+        let tart = crate::tart::TartDriver::new("http://127.0.0.1:1", "localhost");
+        assert!(!tart.capabilities().resize && !tart.capabilities().clone);
+        assert!(matches!(
+            tart.resize_vm(&handle(), &ResourceSpec::standard()).await,
+            Err(DriverError::NotSupported { .. })
+        ));
+        assert!(matches!(
+            tart.clone_vm(&handle(), "copy").await,
+            Err(DriverError::NotSupported { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn clone_snapshot_copy_limits_new_proxy_and_start() {
+        let (driver, calls) = driver(vec![
+            (
+                200,
+                json!({"metadata":{"config":{"limits.cpu":"4","limits.memory":"8192MiB","unrelated":"not-copied"}}}),
+            ),
+            (202, json!({"operation":"/1.0/operations/snapshot"})),
+            (200, json!({"metadata":{"status":"Success"}})),
+            (202, json!({"operation":"/1.0/operations/clone"})),
+            (200, json!({"metadata":{"status":"Success"}})),
+            (200, json!({})), // new proxy
+            (202, json!({"operation":"/1.0/operations/start"})),
+            (200, json!({"metadata":{"status":"Success"}})),
+            (200, json!({"metadata":{"name":"copy","status":"Running"}})),
+        ]);
+        let source = handle();
+        let cloned = driver.clone_vm(&source, "copy").await.unwrap();
+        assert_ne!(cloned.id, source.id);
+        assert_eq!(cloned.driver_info["native_id"], "copy");
+        assert!(cloned.driver_info.contains_key("vnc_port"));
+        let calls = calls.lock().unwrap();
+        assert_eq!(calls[1].0, reqwest::Method::POST);
+        assert_eq!(calls[1].1, "/1.0/instances/source/snapshots");
+        let snapshot = calls[1].2.as_ref().unwrap();
+        assert_eq!(snapshot["stateful"], true);
+        assert!(snapshot["name"].as_str().unwrap().starts_with("clone-"));
+        assert_eq!(calls[3].1, "/1.0/instances");
+        let create = calls[3].2.as_ref().unwrap();
+        assert_eq!(create["name"], "copy");
+        assert_eq!(create["source"]["type"], "snapshot");
+        assert_eq!(
+            create["source"]["name"],
+            format!("source/{}", snapshot["name"].as_str().unwrap())
+        );
+        assert_eq!(
+            create["config"],
+            json!({"limits.cpu":"4","limits.memory":"8192MiB"})
+        );
+        assert_eq!(calls[5].1, "/1.0/instances/copy");
+        assert_eq!(calls[6].1, "/1.0/instances/copy/state");
+        assert_eq!(calls[6].2.as_ref().unwrap()["action"], "start");
+        assert!(!calls.iter().any(|(m, _, _)| m == reqwest::Method::DELETE));
+    }
+    #[tokio::test]
+    async fn clone_snapshot_operation_failure_does_not_create_instance() {
+        let (driver, calls) = driver(vec![
+            (200, json!({"metadata":{"config":{}}})),
+            (202, json!({"operation":"/1.0/operations/snapshot"})),
+            (
+                200,
+                json!({"metadata":{"status":"Failure","err":"cannot checkpoint"}}),
+            ),
+        ]);
+        assert!(driver.clone_vm(&handle(), "copy").await.is_err());
+        assert_eq!(calls.lock().unwrap().len(), 3);
+    }
+    #[tokio::test]
+    async fn resize_waits_for_operation_and_propagates_failure() {
+        let (driver, calls) = driver(vec![
+            (202, json!({"operation":"/1.0/operations/resize"})),
+            (
+                200,
+                json!({"metadata":{"status":"Failure","err":"cannot change limits"}}),
+            ),
+        ]);
+        assert!(driver
+            .resize_vm(
+                &handle(),
+                &ResourceSpec {
+                    cpu_millis: 8000,
+                    ..Default::default()
+                }
+            )
+            .await
+            .is_err());
+        let calls = calls.lock().unwrap();
+        assert_eq!(calls[0].0, reqwest::Method::PATCH);
+        assert_eq!(calls[0].2, Some(json!({"config":{"limits.cpu":"8"}})));
+        assert_eq!(calls[1].1, "/1.0/operations/resize/wait?timeout=60");
     }
 }
