@@ -19,6 +19,7 @@ import {
   Plus,
   ShieldCheck,
   Faders,
+  FilmStrip,
 } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -575,6 +576,15 @@ export function AciMiniAppsView() {
               aria-label="Review console"
             >
               <ShieldCheck size={14} />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => openView('aci-recordings')}
+              title="Recording timeline"
+              aria-label="Recording timeline"
+            >
+              <FilmStrip size={14} />
             </Button>
             <Button onClick={() => setAddOpen(true)}>
               <Plus size={14} />

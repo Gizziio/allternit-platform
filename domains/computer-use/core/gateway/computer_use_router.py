@@ -1404,10 +1404,28 @@ def _manifest_to_dict(manifest: Any) -> Dict[str, Any]:
 
 
 def _frame_to_step(frame: Any, index: int) -> Dict[str, Any]:
-    """Map a RecordedFrame to the RecordedStep TS contract (no screenshots)."""
+    """Map a recorder frame to the RecordedStep TS contract (no screenshots).
+
+    Handles both classic action frames and ToolCallFrame (``_type ==
+    "tool_call"``) — the latter surface as a step with ``kind == "tool_call"``.
+    """
+    if getattr(frame, "frame_type", None) == "tool_call" or hasattr(frame, "tool_name"):
+        return {
+            "step": getattr(frame, "step", None) or index + 1,
+            "timestamp": frame.timestamp,
+            "kind": "tool_call",
+            "tool_name": frame.tool_name,
+            "args": getattr(frame, "args", None) or {},
+            "result_summary": getattr(frame, "result_summary", None),
+            "latency_ms": getattr(frame, "latency_ms", None),
+            "error": getattr(frame, "error", None),
+            "action_succeeded": not getattr(frame, "error", None),
+            "risk_level": "low",
+        }
     return {
         "step": getattr(frame, "step", None) or index + 1,
         "timestamp": frame.timestamp,
+        "kind": "action",
         "action_type": frame.action_type,
         "action_target": frame.action_target,
         "action_params": frame.action_params or {},
