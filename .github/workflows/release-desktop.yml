@@ -206,7 +206,7 @@ jobs:
         # Mirrors scripts/build-desktop.sh step 2b via the committed spec.
         run: |
           python3 -m venv /tmp/voice-venv
-          /tmp/voice-venv/bin/pip install --upgrade pip pyinstaller
+          /tmp/voice-venv/bin/pip install pyinstaller
           /tmp/voice-venv/bin/pip install -r services/voice/api/requirements.txt
           /tmp/voice-venv/bin/pip install services/voice/voice
           cd services/voice
@@ -215,6 +215,19 @@ jobs:
           cp dist/allternit-voice-service ../../surfaces/allternit-desktop/resources/bin/
           chmod +x ../../surfaces/allternit-desktop/resources/bin/allternit-voice-service
           ls -lh ../../surfaces/allternit-desktop/resources/bin/allternit-voice-service
+
+      # ── Step 3d: Build local-engine sidecar (Rust) ──────────────────────────
+      - name: Build local-engine sidecar
+        # prepare-platform-static also hard-requires resources/bin/allternit-local-engine
+        # (services/local-engine; cargo bin name is local-engine). Both macOS
+        # targets are already installed for the allternit-api build above.
+        run: |
+          cargo build --release --target x86_64-apple-darwin --manifest-path services/local-engine/Cargo.toml
+          cargo build --release --target aarch64-apple-darwin --manifest-path services/local-engine/Cargo.toml
+          mkdir -p surfaces/allternit-desktop/resources/bin
+          lipo -create             target/x86_64-apple-darwin/release/local-engine             target/aarch64-apple-darwin/release/local-engine             -output surfaces/allternit-desktop/resources/bin/allternit-local-engine
+          chmod +x surfaces/allternit-desktop/resources/bin/allternit-local-engine
+          lipo -info surfaces/allternit-desktop/resources/bin/allternit-local-engine
 
       # ── Step 4: Patch checksums into manifest.ts ─────────────────────────────
       - name: Patch manifest.ts checksums
@@ -389,7 +402,7 @@ jobs:
         shell: pwsh
         run: |
           python -m venv "$env:TEMP\voice-venv"
-          & "$env:TEMP\voice-venv\Scripts\pip.exe" install --upgrade pip pyinstaller
+          & "$env:TEMP\voice-venv\Scripts\pip.exe" install pyinstaller
           & "$env:TEMP\voice-venv\Scripts\pip.exe" install -r services/voice/api/requirements.txt
           & "$env:TEMP\voice-venv\Scripts\pip.exe" install services/voice/voice
           Set-Location services/voice
@@ -414,6 +427,11 @@ jobs:
       - name: Package with electron-builder
         # --publish never: publishing happens ONLY in the release job, which
         # collects artifacts from all build jobs. Never publish here.
+        # ALLTERNIT_ALLOW_MISSING_LOCAL_ENGINE: the local-engine crate's unix-only
+        # deps are untested on the windows runner; 1.1.0 shipped without this
+        # sidecar. Follow-up: make local-engine compile for windows and drop this.
+        env:
+          ALLTERNIT_ALLOW_MISSING_LOCAL_ENGINE: "1"
         run: npm run dist -- --publish never
         working-directory: surfaces/allternit-desktop
 
