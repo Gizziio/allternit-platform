@@ -36,6 +36,7 @@ pub fn aci_router() -> Router<Arc<AppState>> {
         .route("/aci/handoff/:id", get(aci_handoff_status))
         .route("/aci/handoff/:id/approve", post(aci_handoff_approve))
         .route("/aci/handoff/:id/deny", post(aci_handoff_deny))
+        .merge(crate::aci_credentials::credential_routes())
 }
 
 fn acu_base(state: &AppState) -> String {
@@ -213,7 +214,13 @@ fn snapshot_if_due(run_id: &str, buf: &mut RunEventBuffer, force: bool) {
     buf.dirty = false;
 }
 
-fn buffer_push(run_id: &str, frame: serde_json::Value, done: bool) {
+fn buffer_push(run_id: &str, mut frame: serde_json::Value, done: bool) {
+    // Scrub credential values before a frame can enter the buffer (and its
+    // on-disk snapshot): a sandbox that echoes its own environment must not
+    // be able to smuggle a bound value into streamed/replayed output.
+    if let Some(binding) = crate::aci_credentials::RUN_BINDINGS.get(run_id) {
+        crate::aci_credentials::scrub_frame(&mut frame, binding.secrets());
+    }
     if let Ok(mut store) = ACI_RUN_EVENTS.lock() {
         if let Some(buf) = store.get_mut(run_id) {
             if buf.frames.len() >= MAX_BUFFERED_FRAMES {
@@ -299,13 +306,29 @@ struct AciRunBody {
     /// this exact action payload (same hash) authorizes the run; a missing,
     /// expired, consumed, or hash-mismatched grant is denied.
     approval_id: Option<String>,
+    /// Names of vault credentials (`POST /api/aci/credentials`) to bind to
+    /// this run. Only names travel from the client: values are resolved
+    /// server-side at provision time and injected into the sandbox
+    /// environment (`sandbox_env`) — never into `task`/model context, never
+    /// into logs, receipts, or stream frames (see `aci_credentials`).
+    credential_names: Option<Vec<String>>,
 }
 
 /// Canonical action descriptor for the ACU loop route. Ephemeral ids
 /// (session/run) are excluded so a client retrying the same body after a
 /// handoff approval hashes identically. `approval_id` is never part of the
 /// descriptor — it rides alongside, not inside, the hashed payload.
+/// Credential NAMES (never values) are included so approving a run bound to
+/// credentials {A, B} cannot be replayed with {A, C}.
 fn aci_action_descriptor(body: &AciRunBody, goal: &str) -> serde_json::Value {
+    let mut credential_names: Vec<&String> = body
+        .credential_names
+        .as_deref()
+        .unwrap_or_default()
+        .iter()
+        .collect();
+    credential_names.sort();
+    credential_names.dedup();
     json!({
         "route": "aci.run",
         "goal": goal,
@@ -314,6 +337,7 @@ fn aci_action_descriptor(body: &AciRunBody, goal: &str) -> serde_json::Value {
         "openLinksInBrowser": body.open_links_in_browser,
         "autoVerify": body.auto_verify,
         "sessionPersistence": body.session_persistence,
+        "credentialNames": credential_names,
     })
 }
 
@@ -418,17 +442,63 @@ async fn aci_run(
     let run_id = uuid::Uuid::new_v4().to_string();
     let acu = acu_base(&state);
 
+    // Credential binding: resolve names → plaintext material server-side.
+    // The client never sees values; they flow only into the sandbox env of
+    // the execute payload. Unknown names fail the run before ACU is called
+    // (names only in the error — never values). TOTP seeds are resolved but
+    // excluded from the sandbox env by CredentialStore::sandbox_env.
+    let credential_names: Vec<String> = {
+        let mut names: Vec<String> = body
+            .credential_names
+            .clone()
+            .unwrap_or_default()
+            .into_iter()
+            .map(|name| name.trim().to_string())
+            .filter(|name| !name.is_empty())
+            .collect();
+        names.sort();
+        names.dedup();
+        names
+    };
+    let bound_credentials = if credential_names.is_empty() {
+        Vec::new()
+    } else {
+        match crate::aci_credentials::CREDENTIALS.resolve(&user.user_id, &credential_names) {
+            Ok(resolved) => resolved,
+            Err(missing) => {
+                return (
+                    StatusCode::BAD_REQUEST,
+                    Json(json!({
+                        "error": "unknown_credentials",
+                        "message": "Some credential names do not exist in your vault.",
+                        "missing": missing,
+                    })),
+                )
+                    .into_response();
+            }
+        }
+    };
+    let sandbox_env = crate::aci_credentials::CredentialStore::sandbox_env(&bound_credentials);
+    crate::aci_credentials::record_run_binding(&run_id, &user.user_id, &bound_credentials);
+
     // Start the run in ACU's streaming mode: the planning loop launches in
     // the gateway's background and the HTTP response is an SSE stream of
     // progress. We drain that stream into ACI_RUN_EVENTS (see the buffer
     // comment) so /api/aci/stream/:id can replay it to any number of clients
     // regardless of when they attach.
+    //
+    // `sandbox_env` is the credential-injection channel: the sandbox/VM
+    // provision layer writes these variables into the run environment (the
+    // `extra_env` → /etc/environment pattern from vm_session_routes). It is
+    // deliberately a top-level field, separate from `options` and `task`, so
+    // the planning loop's model context never carries credential values.
     let payload = json!({
         "mode": "intent",
         "task": decision.sanitized_goal,
         "session_id": run_id,
         "run_id": run_id,
         "target_scope": "browser",
+        "sandbox_env": sandbox_env,
         "options": {
             "model": body.model,
             "allowedSites": body.allowed_sites,
@@ -1048,6 +1118,7 @@ mod tests {
             auto_verify: Some(false),
             session_persistence: Some(json!("dont-keep")),
             approval_id: Some("grant-from-a-prior-attempt".to_string()),
+            credential_names: None,
         };
         let h1 = crate::aci_approvals::hash_action_payload(&aci_action_descriptor(&body, &body.goal));
 
@@ -1061,6 +1132,7 @@ mod tests {
             auto_verify: Some(false),
             session_persistence: Some(json!("dont-keep")),
             approval_id: None,
+            credential_names: None,
         };
         let h2 = crate::aci_approvals::hash_action_payload(&aci_action_descriptor(&retry, &retry.goal));
         assert_eq!(h1, h2);
@@ -1086,6 +1158,7 @@ mod tests {
             auto_verify: None,
             session_persistence: None,
             approval_id: None,
+            credential_names: None,
         };
         let action_hash = crate::aci_approvals::hash_action_payload(&aci_action_descriptor(&body, &body.goal));
         let approval_id = store.create("user-1", "aci.sensitive_action", &json!({}));
@@ -1195,5 +1268,294 @@ mod approval_http_tests {
             json["error"] == "acu_unavailable" || json["error"] == "approval_not_found",
             "unexpected error body: {json}"
         );
+    }
+}
+
+#[cfg(test)]
+mod credential_binding_http_tests {
+    //! End-to-end run binding: `/aci/run` with `credentialNames` resolves
+    //! values server-side, injects them into the sandbox env of the ACU
+    //! execute payload, and guarantees the value never reaches the model
+    //! context (`task`), the run-event buffer, its on-disk snapshot, or
+    //! approval receipts. A mock ACU gateway stands in for the Python
+    //! planning loop via `ALLTERNIT_ACU_URL`.
+
+    use super::*;
+    use axum::body::Body;
+    use axum::http::{Request, StatusCode};
+    use http_body_util::BodyExt;
+    use std::sync::{Arc, Mutex as StdMutex};
+    use tower::ServiceExt;
+
+    const E2E_USER: &str = "user-cu17-e2e";
+    const E2E_CRED: &str = "session-tok";
+    const E2E_VALUE: &str = "e2e-sekrit-token-value";
+
+    fn e2e_user() -> crate::auth::AuthUser {
+        crate::auth::AuthUser {
+            user_id: E2E_USER.to_string(),
+            email: None,
+            name: None,
+            avatar_url: None,
+            tenant_id: None,
+            organization_id: None,
+            organization_role: None,
+            organization_slug: None,
+        }
+    }
+
+    fn ensure_e2e_key() {
+        use std::sync::Once;
+        static ONCE: Once = Once::new();
+        ONCE.call_once(|| {
+            if std::env::var("ALLTERNIT_ENCRYPTION_KEY").is_err() {
+                std::env::set_var(
+                    "ALLTERNIT_ENCRYPTION_KEY",
+                    "aci-credentials-test-key-0123456789abcdef",
+                );
+            }
+        });
+    }
+
+    async fn body_json(body: Body) -> serde_json::Value {
+        let bytes = body.collect().await.unwrap().to_bytes();
+        serde_json::from_slice(&bytes).unwrap_or_else(|_| serde_json::Value::Null)
+    }
+
+    type Capture = Arc<StdMutex<Vec<serde_json::Value>>>;
+
+    /// Minimal mock of the ACU gateway: captures the execute payload and
+    /// streams back one trace frame that deliberately echoes a bound
+    /// credential value (a sandbox leaking its own env), then run.ended.
+    async fn start_mock_acu() -> (String, Capture) {
+        let capture: Capture = Arc::new(StdMutex::new(Vec::new()));
+        let state = capture.clone();
+        let app = axum::Router::new()
+            .route(
+                "/v1/computer-use/execute",
+                axum::routing::post(
+                    move |body: axum::body::Bytes| {
+                        let state = state.clone();
+                        async move {
+                            if let Ok(value) =
+                                serde_json::from_slice::<serde_json::Value>(&body)
+                            {
+                                state.lock().unwrap().push(value);
+                            }
+                            let sse = format!(
+                                "data: {}\n\ndata: {}\n\n",
+                                serde_json::json!({
+                                    "event_type": "plan.created",
+                                    "run_id": "r",
+                                    "message": format!("sandbox env echo: {E2E_VALUE}"),
+                                    "data": {},
+                                }),
+                                serde_json::json!({
+                                    "event_type": "run.ended",
+                                    "run_id": "r",
+                                    "message": "completed",
+                                    "data": {"status": "completed"},
+                                }),
+                            );
+                            (
+                                [("content-type", "text/event-stream")],
+                                sse,
+                            )
+                        }
+                    },
+                ),
+            )
+            .fallback(|| async { StatusCode::NOT_FOUND });
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        tokio::spawn(async move {
+            let _ = axum::serve(listener, app).await;
+        });
+        (format!("http://{addr}"), capture)
+    }
+
+    async fn post_run(
+        app: &axum::Router,
+        goal: &str,
+        credential_names: &[&str],
+        approval_id: Option<&str>,
+    ) -> axum::response::Response {
+        let mut body = serde_json::json!({
+            "goal": goal,
+            "credentialNames": credential_names,
+        });
+        if let Some(id) = approval_id {
+            body["approvalId"] = serde_json::Value::String(id.to_string());
+        }
+        app.clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/aci/run")
+                    .extension(e2e_user())
+                    .header("content-type", "application/json")
+                    .body(Body::from(serde_json::to_string(&body).unwrap()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap()
+    }
+
+    async fn wait_for_done(run_id: &str) -> Vec<serde_json::Value> {
+        for _ in 0..100 {
+            if let Ok(store) = ACI_RUN_EVENTS.lock() {
+                if let Some(buf) = store.get(run_id) {
+                    if buf.done {
+                        return buf.frames.clone();
+                    }
+                }
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        }
+        panic!("run {run_id} did not finish in time");
+    }
+
+    #[tokio::test]
+    async fn run_binds_credentials_into_sandbox_env_and_leaks_nowhere() {
+        ensure_e2e_key();
+        let temp = tempfile::tempdir().unwrap().keep();
+        // Redirect gateway state (run buffers, credential vault) at the temp
+        // dir before the run. Left in place for the whole test (races with
+        // the remove_var in older tests are pre-existing behavior).
+        std::env::set_var("ALLTERNIT_COMPUTER_USE_DIR", &temp);
+
+        // The global store persists across test processes on this machine;
+        // delete first so re-runs don't trip DuplicateName.
+        let _ = crate::aci_credentials::CREDENTIALS.delete(E2E_USER, E2E_CRED);
+        crate::aci_credentials::CREDENTIALS
+            .create(E2E_USER, E2E_CRED, crate::aci_credentials::CredentialType::Token, E2E_VALUE)
+            .expect("seed credential");
+
+        let (acu_url, capture) = start_mock_acu().await;
+        std::env::set_var("ALLTERNIT_ACU_URL", &acu_url);
+
+        let state = crate::test_helpers::app_state(&temp).await;
+        let app = aci_router().with_state(state);
+
+        // ── Plain run: value goes to sandbox_env, never the model context.
+        let resp = post_run(&app, "check my order status", &[E2E_CRED], None).await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        let run_id = body["sessionId"].as_str().unwrap().to_string();
+
+        // Give the drain task a beat, then inspect what ACU received.
+        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+        let payloads = capture.lock().unwrap().clone();
+        assert_eq!(payloads.len(), 1, "mock ACU should have seen one execute");
+        let payload = &payloads[0];
+        assert_eq!(
+            payload["sandbox_env"]["ACI_CRED_SESSION_TOK"].as_str(),
+            Some(E2E_VALUE),
+            "value must be injected as sandbox env material"
+        );
+        let task = payload["task"].as_str().unwrap_or("");
+        assert!(
+            !task.contains(E2E_VALUE),
+            "model context (task) must never carry the value"
+        );
+        assert!(
+            !payload["options"].to_string().contains(E2E_VALUE),
+            "options must never carry the value"
+        );
+
+        // Stream frames: the mock echoed the value; the buffer must be scrubbed.
+        let frames = wait_for_done(&run_id).await;
+        assert!(!frames.is_empty());
+        for frame in &frames {
+            assert!(
+                !frame.to_string().contains(E2E_VALUE),
+                "run-event buffer leaked the value: {frame}"
+            );
+        }
+        assert!(
+            frames
+                .iter()
+                .any(|frame| frame.to_string().contains("***")),
+            "echoed value should be replaced with ***"
+        );
+
+        // On-disk snapshot of the buffer must be scrubbed too. Snapshot
+        // directly into a temp dir (private fn, same module) instead of
+        // polling the shared run-buffer dir — parallel tests mutate
+        // ALLTERNIT_COMPUTER_USE_DIR, so polling the filesystem races them.
+        let (frames_for_snapshot, done_for_snapshot) = {
+            let store = ACI_RUN_EVENTS.lock().unwrap();
+            let buf = store.get(&run_id).expect("buffer present");
+            (buf.frames.clone(), buf.done)
+        };
+        let snapshot_dir = temp.join("snapshot-check");
+        snapshot_run_buffer_in(
+            &snapshot_dir,
+            &run_id,
+            &RunEventBuffer {
+                frames: frames_for_snapshot,
+                done: done_for_snapshot,
+                last_snapshot: None,
+                dirty: false,
+            },
+        );
+        let snapshot =
+            std::fs::read_to_string(snapshot_dir.join(format!("{run_id}.json"))).unwrap();
+        assert!(
+            !snapshot.contains(E2E_VALUE),
+            "on-disk run snapshot leaked the value"
+        );
+
+        // Binding record: names only.
+        assert_eq!(
+            crate::aci_credentials::RUN_BINDINGS.audit_line(&run_id),
+            Some(vec![E2E_CRED.to_string()]),
+            "binding audit carries names, not values"
+        );
+
+        // ── Sensitive run with approval: receipts must not carry values.
+        let goal = "checkout with credit card on example.com";
+        let resp = post_run(&app, goal, &[E2E_CRED], None).await;
+        assert_eq!(resp.status(), StatusCode::ACCEPTED, "sensitive goal needs handoff");
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["status"], "handoff_required");
+        assert!(!body.to_string().contains(E2E_VALUE));
+        let approval_id = body["approval_id"].as_str().unwrap().to_string();
+
+        // Descriptor hash covers credential names: retrying the approved
+        // grant with a different set is denied (403 approval_denied, hash
+        // mismatch) WITHOUT consuming the grant — the corrected retry below
+        // still redeems it.
+        crate::aci_approvals::GRANTS.approve(&approval_id);
+        let resp = post_run(&app, goal, &["nonexistent-credential"], Some(&approval_id)).await;
+        assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["error"], "approval_denied");
+
+        // Approved retry with the same names redeems the grant and runs.
+        let resp = post_run(&app, goal, &[E2E_CRED], Some(&approval_id)).await;
+        assert_eq!(resp.status(), StatusCode::OK, "approved retry should run");
+        let body = body_json(resp.into_body()).await;
+        let run_id_2 = body["sessionId"].as_str().unwrap().to_string();
+        let frames_2 = wait_for_done(&run_id_2).await;
+        for frame in &frames_2 {
+            assert!(!frame.to_string().contains(E2E_VALUE));
+        }
+
+        // Every redemption receipt for this grant: hash + names vocabulary
+        // only, value nowhere.
+        let receipts = crate::aci_approvals::GRANTS
+            .receipts()
+            .into_iter()
+            .filter(|receipt| receipt.grant_id == approval_id)
+            .collect::<Vec<_>>();
+        assert!(!receipts.is_empty(), "redemption attempts must be receipted");
+        for receipt in &receipts {
+            let text = serde_json::to_string(receipt).unwrap();
+            assert!(
+                !text.contains(E2E_VALUE),
+                "receipt leaked the value: {text}"
+            );
+        }
     }
 }
