@@ -4,6 +4,7 @@ use crate::types::*;
 use allternit_driver_interface::*;
 use allternit_driver_interface::{EnvironmentSpec, EnvSpecType};
 use allternit_process_driver::ProcessDriver;
+#[cfg(unix)]
 use allternit_firecracker_driver::FirecrackerDriver;
 
 #[cfg(target_os = "macos")]
@@ -67,6 +68,7 @@ pub struct ManagerConfig {
     /// Session cleanup interval in seconds
     pub cleanup_interval_secs: u64,
     /// Firecracker configuration (if using MicroVMs)
+    #[cfg(unix)]
     pub firecracker_config: Option<allternit_firecracker_driver::FirecrackerConfig>,
     /// Apple VF configuration (macOS only)
     #[cfg(target_os = "macos")]
@@ -84,6 +86,7 @@ impl Default for ManagerConfig {
             default_working_dir: PathBuf::from("/workspace"),
             max_sessions: 100,
             cleanup_interval_secs: 60,
+            #[cfg(unix)]
             firecracker_config: None,
             #[cfg(target_os = "macos")]
             apple_vf_config: None,
@@ -104,6 +107,7 @@ pub enum DriverConfig {
     /// Process-based execution (development)
     Process,
     /// Firecracker MicroVM (Linux production)
+    #[cfg(unix)]
     Firecracker(allternit_firecracker_driver::FirecrackerConfig),
     /// Apple Virtualization Framework (macOS production)
     #[cfg(target_os = "macos")]
@@ -121,6 +125,7 @@ pub struct SessionManager {
     /// Process driver (always available)
     process_driver: Arc<ProcessDriver>,
     /// Firecracker driver (Linux only)
+    #[cfg(unix)]
     _firecracker_driver: Option<Arc<FirecrackerDriver>>,
     /// Apple VF driver (macOS only)
     #[cfg(target_os = "macos")]
@@ -157,7 +162,7 @@ impl SessionManager {
             None
         };
 
-        #[cfg(not(target_os = "linux"))]
+        #[cfg(all(unix, not(target_os = "linux")))]
         let firecracker_driver: Option<Arc<FirecrackerDriver>> = None;
 
         // Initialize Apple VF driver (macOS)
@@ -179,6 +184,7 @@ impl SessionManager {
             db,
             config,
             process_driver,
+            #[cfg(unix)]
             _firecracker_driver: firecracker_driver,
             #[cfg(target_os = "macos")]
             apple_vf_driver,
