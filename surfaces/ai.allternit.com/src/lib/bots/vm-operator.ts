@@ -143,6 +143,51 @@ export const BOT_DESKTOP_DEFAULT_RESOURCES: NonNullable<
   disk: '102400',
 };
 
+/** Size presets for the Create Bot Computer step (overridable per bot). */
+export interface BotDesktopPreset {
+  id: 'small' | 'medium' | 'large';
+  label: string;
+  resources: NonNullable<AgentVMOperatorConfig['resources']>;
+}
+
+export const BOT_DESKTOP_PRESETS: BotDesktopPreset[] = [
+  {
+    id: 'small',
+    label: 'Small',
+    resources: { cpu: '1', memory: '2048', disk: '51200' },
+  },
+  {
+    id: 'medium',
+    label: 'Medium',
+    resources: { cpu: '2', memory: '4096', disk: '102400' },
+  },
+  {
+    id: 'large',
+    label: 'Large',
+    resources: { cpu: '4', memory: '8192', disk: '204800' },
+  },
+];
+
+export function describeDesktopResources(
+  resources?: AgentVMOperatorConfig['resources'],
+): string {
+  const cpu = resources?.cpu ?? '2';
+  const memoryGb = Math.round(Number(resources?.memory ?? '4096') / 1024) || 4;
+  const diskGb = Math.round(Number(resources?.disk ?? '102400') / 1024) || 100;
+  return `${cpu} vCPU · ${memoryGb} GB RAM · ${diskGb} GB disk`;
+}
+
+export function presetIdForResources(
+  resources?: AgentVMOperatorConfig['resources'],
+): BotDesktopPreset['id'] {
+  return BOT_DESKTOP_PRESETS.find(
+    (p) =>
+      p.resources.cpu === (resources?.cpu ?? '2') &&
+      p.resources.memory === (resources?.memory ?? '4096') &&
+      p.resources.disk === (resources?.disk ?? '102400'),
+  )?.id ?? 'medium';
+}
+
 /**
  * vmOperator config every new Bot gets by default: a persistent Computer Cloud
  * desktop bound to the bot, provisioned once at create time and reused across
@@ -217,6 +262,44 @@ export async function ensureBotComputer(
       error: err instanceof Error ? err.message : 'Bot computer provisioning failed',
     };
   }
+}
+
+/**
+ * Fleet action (spec bot-identity-computer Phase 2): ensure every bot with a
+ * VM operator configured has its persistent desktop bound. Runs sequentially
+ * on purpose — parallel provisioning would fry the host.
+ */
+export interface FleetProvisionResult {
+  botId: string;
+  ok: boolean;
+  skipped?: boolean;
+  computerId?: string;
+  status?: string;
+  error?: string;
+}
+
+export async function provisionFleetComputers(
+  bots: Array<{ id: string; vmOperator?: AgentVMOperatorConfig }>,
+  options?: { displayNameFor?: (botId: string) => string | undefined },
+): Promise<FleetProvisionResult[]> {
+  const results: FleetProvisionResult[] = [];
+  for (const bot of bots) {
+    if (bot.vmOperator?.enabled !== true) {
+      results.push({ botId: bot.id, ok: true, skipped: true });
+      continue;
+    }
+    const result = await ensureBotComputer(bot.id, bot.vmOperator, {
+      displayName: options?.displayNameFor?.(bot.id),
+    });
+    results.push({
+      botId: bot.id,
+      ok: result.ok,
+      computerId: result.data?.id,
+      status: result.data?.status,
+      error: result.error,
+    });
+  }
+  return results;
 }
 
 /**
@@ -518,7 +601,7 @@ function pausedResult<T>(): VMOperatorResult<T> {
 }
 
 export interface BotDesktopStatus {
-  status: 'running' | 'stopped' | 'off' | 'error';
+  status: 'creating' | 'running' | 'stopped' | 'off' | 'error';
   control_state: 'bot_controls' | 'human_controls' | 'human_observing';
   ws_url?: string;
   protocol: 'vnc' | 'novnc' | 'none';

@@ -38,7 +38,6 @@ import { RuntimeStep } from "../steps/RuntimeStep";
 import { HarnessStep } from "../steps/HarnessStep";
 import { ConnectorsStep } from "../steps/ConnectorsStep";
 import { IdentityChannelsStep } from "../steps/IdentityChannelsStep";
-import { VMOperatorStep } from "../steps/VMOperatorStep";
 import { ReviewStep } from "../steps/ReviewStep";
 import type { AvatarPickerConfig } from "./AgentAvatarPicker";
 
@@ -96,17 +95,9 @@ const CREATE_FLOW_STEPS: StepInfo[] = [
   { id: "review", label: "Review", description: "Final confirmation" },
 ];
 
-const BOT_FLOW_STEPS: StepInfo[] = [
-  { id: "identity", label: "Identity", description: "Bot name, handle, and tagline" },
-  { id: "character", label: "Character", description: "Personality and role" },
-  { id: "avatar", label: "Avatar", description: "Visual representation" },
-  { id: "runtime", label: "Runtime", description: "Model and voice settings" },
-  { id: "connectors", label: "Connectors", description: "Integrations and secrets" },
-  { id: "identityChannels", label: "Channels", description: "Email, phone, and wallet" },
-  { id: "vmOperator", label: "Computer", description: "Virtual computer and sandbox" },
-  { id: "harness", label: "Package", description: "Bot profile and surfaces" },
-  { id: "review", label: "Review", description: "Preview and launch" },
-];
+// Bot creation was removed from this wizard (spec bot-identity-computer):
+// CreateBotForm is the canonical, atomic Create Bot flow. This wizard is
+// agent-only.
 
 const DEFAULT_LAYER_CONFIG: WorkspaceLayerConfig = {
   cognitive: true,
@@ -237,7 +228,6 @@ export function CreateAgentForm({ onClose, onSuccess }: CreateAgentFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [workspaceWarning, setWorkspaceWarning] = useState<string | null>(null);
   const [browserWarningDismissed, setBrowserWarningDismissed] = useState(false);
-  const [isForgeQueued, setIsForgeQueued] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   
   // Local state for draft/preview
@@ -326,18 +316,12 @@ export function CreateAgentForm({ onClose, onSuccess }: CreateAgentFormProps) {
       allowedTools: draftAgent.allowedTools ?? prev.allowedTools,
       tags: draftAgent.tags ?? prev.tags,
       harness: draftAgent.harness ?? prev.harness,
-      isBot: draftAgent.isBot ?? prev.isBot,
-      botProfile: draftAgent.botProfile ?? prev.botProfile,
     }));
     clearDraftAgent();
   }, []);
 
-  const isBotMode = formData.isBot === true;
-  const flowSteps = isBotMode ? BOT_FLOW_STEPS : CREATE_FLOW_STEPS;
-
-  // If the user toggles "Package as Bot" mid-flow, the active step may no longer
-  // exist in the new flow (e.g. "vmOperator" disappears when switching to agent
-  // mode). Reset to the first step in that case to avoid out-of-bounds footers.
+  // This wizard is agent-only; bots go through CreateBotForm (atomic create).
+  const flowSteps = CREATE_FLOW_STEPS;
   const activeStepIndex = flowSteps.findIndex((s) => s.id === activeStep);
   const safeActiveStepIndex = activeStepIndex >= 0 ? activeStepIndex : 0;
   const currentStepDescription = flowSteps[safeActiveStepIndex]?.description;
@@ -370,7 +354,6 @@ export function CreateAgentForm({ onClose, onSuccess }: CreateAgentFormProps) {
 
   const isReadyForCreate = useMemo(() => checklist.isValid, [checklist.isValid]);
 
-  const botProfileItem = checklist.items.find((i) => i.id === 'botProfile');
   const stepValidation = useMemo(() => ({
     identity: !!(formData.name && formData.name.length >= 3 && formData.description && formData.description.length >= 10),
     character: !!(blueprint.setup && blueprint.specialtySkills.length >= 1),
@@ -379,9 +362,9 @@ export function CreateAgentForm({ onClose, onSuccess }: CreateAgentFormProps) {
     connectors: true,
     identityChannels: true,
     vmOperator: true,
-    harness: Boolean(formData.harness?.mode) && (formData.allowedSurfaces || []).length > 0 && (!isBotMode || botProfileItem?.satisfied !== false),
-    review: isReadyForCreate && (!isBotMode || botProfileItem?.satisfied === true),
-  }) as Record<string, boolean>, [formData.name, formData.description, blueprint, formData.harness, formData.allowedSurfaces, isReadyForCreate, isBotMode, botProfileItem]);
+    harness: Boolean(formData.harness?.mode) && (formData.allowedSurfaces || []).length > 0,
+    review: isReadyForCreate,
+  }) as Record<string, boolean>, [formData.name, formData.description, blueprint, formData.harness, formData.allowedSurfaces, isReadyForCreate]);
 
   // Methods
   const canJumpToStep = (stepId: string) => {
@@ -498,7 +481,7 @@ export function CreateAgentForm({ onClose, onSuccess }: CreateAgentFormProps) {
       return;
     }
 
-    if (isForgeQueued || isCreating) {
+    if (isCreating) {
       return;
     }
 
@@ -561,7 +544,6 @@ export function CreateAgentForm({ onClose, onSuccess }: CreateAgentFormProps) {
     // Create agent immediately — no artificial delay
     setWorkspaceWarning(null);
     setSubmitStatus(null);
-    setIsForgeQueued(false);
     
     (async () => {
       let createdAgent: Agent | null = null;
@@ -648,7 +630,7 @@ export function CreateAgentForm({ onClose, onSuccess }: CreateAgentFormProps) {
     })();
   };
 
-  const isBusy = isCreating || isForgeQueued;
+  const isBusy = isCreating;
 
   return (
     <div className="flex h-full max-h-screen p-6 overflow-auto bg-[var(--bg-elevated,#fff)] gap-6">
@@ -746,7 +728,6 @@ export function CreateAgentForm({ onClose, onSuccess }: CreateAgentFormProps) {
                 personality={personality}
                 setPersonality={setPersonality}
                 orchestrators={orchestrators}
-                isBotMode={isBotMode}
               />
             )}
             {activeStep === "character" && (
@@ -784,7 +765,6 @@ export function CreateAgentForm({ onClose, onSuccess }: CreateAgentFormProps) {
               <ConnectorsStep
                 formData={formData}
                 setFormData={setFormData}
-                isBotMode={isBotMode}
               />
             )}
             {activeStep === "identityChannels" && (
@@ -797,14 +777,10 @@ export function CreateAgentForm({ onClose, onSuccess }: CreateAgentFormProps) {
                 }
               />
             )}
-            {activeStep === "vmOperator" && (
-              <VMOperatorStep formData={formData} setFormData={setFormData} />
-            )}
             {activeStep === "harness" && (
               <HarnessStep
                 formData={formData}
                 setFormData={setFormData}
-                isBotMode={isBotMode}
               />
             )}
             {activeStep === "review" && (
@@ -813,7 +789,6 @@ export function CreateAgentForm({ onClose, onSuccess }: CreateAgentFormProps) {
                 blueprint={blueprint}
                 cardSeed={cardSeed}
                 projectedStats={projectedStats}
-                isBotMode={isBotMode}
               />
             )}
           </motion.div>
@@ -848,12 +823,12 @@ export function CreateAgentForm({ onClose, onSuccess }: CreateAgentFormProps) {
                 {isBusy ? (
                   <>
                     <CircleNotch size={16} className="animate-spin" />
-                    {isForgeQueued ? "Queuing..." : "Creating..."}
+                    Creating...
                   </>
                 ) : (
                   <>
                     <CheckCircle size={16} />
-                    {isBotMode ? "Package & Launch Bot" : "Finalize & Launch"}
+                    Finalize & Launch
                   </>
                 )}
               </button>

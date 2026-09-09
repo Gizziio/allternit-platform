@@ -1,28 +1,27 @@
-# Session checkpoint — office-nav
+# Steering checkpoint — session/5c233b1c
 
-Goal: Add a floating top-left Back/Home control row (mirroring shell RailControls) to the
-standalone office page routes (/docs, /sheets, /slides, /pdf, /office) so the owner can get
-back to the main screen. Root cause: those routes render standalone pages outside the shell,
-so RailControls (FloatingWidgets.tsx, fixed top-0 left-0 z-[150]) never mounts.
+## Goal
+Phase 2 follow-up of spec bot-identity-computer (user-directed, 2026-09-09): (1) remove the
+replaced bot-creation path in CreateAgentForm (bot mode + forge theater) since CreateBotForm
+is canonical; (2) size presets UI on the Create Bot Computer step; (3) fleet "provision
+computers" action on the Bots hub; (4) watch/takeover desktop UX polish.
 
-Just did:
-- Scouted the shell: RailControls + TitleBarButton in src/shell/FloatingWidgets.tsx
-  (TitleBarButton is not exported — replicate style, do not refactor the shell file).
-- Confirmed isElectronShell() in src/lib/platform; trafficLightClearance = 72 : 4.
-- Built src/shell/OfficePageChrome.tsx + mounted in 5 pages (flex-col layout).
-- DEVIATION from brief: the brief asked for a `fixed top-0 left-0` floating row, but
-  measurement showed the vendored editors always render their File ribbon tab at
-  x=84–130 on mac (ribbon-tabs-mac padding, File tab visible in every env because
-  installDesktopBridge always sets __allternitBrowserBridge) — a floating pill at
-  marginLeft 72 would cover it. Docked a 44px bar in normal flow instead: no overlap
-  by construction, same pill/button visual language, same traffic-light clearance,
-  plus a drag region for the frameless Electron window. Flagged in PR.
+## Just did
+- All four items implemented and verified: 432/432 tests in src/lib/bots pass (incl. new
+  fleet-provision + size-preset tests); typecheck zero errors in touched files (15 total,
+  all pre-existing env issues vs main's 24).
+- Fixed a real crash: `BotDesktopStatus` type lacked `'creating'`, so the statusBadge lookup
+  at BotComputerViewport would throw while a desktop is provisioning. Type widened + badge +
+  provisioning panel added.
+- Big Five sliders KEPT in agent creation: agent.service.ts:1511 reads config.personality at
+  runtime, so they are runtime-effective, not theater. Only bot-mode duplication + forge
+  animation removed. VMOperatorStep kept in EditAgentForm.
 
-Next:
-1. Create src/shell/OfficePageChrome.tsx (fixed top-left pill: Back + Home, WebkitAppRegion:no-drag).
-2. Mount in DocsPage/SheetsPage/SlidesPage/PdfPage/OfficeLauncherPage (src/pages/ only).
-3. Add vitest test next to FloatingWidgets.test.tsx conventions.
-4. Typecheck + test, visual check, commit/push/PR/merge, ledger attestation, cleanup.
+## Next
+1. Commit, push, PR, merge (expect checkpoint.md conflict with main — keep mine).
+2. Ledger attestation on main; queue history event + dashboard; brain draft (no confirm).
+3. Remove worktree + branch; verify clean state.
 
-Open questions:
-- None — scope fixed by owner: no main-nav entry, no views/office edits (agent-20 owns that).
+## Open questions
+- None blocking. Honest deferral: no live Incus desktop was booted; watch/takeover changes
+  verified by static analysis, not a runtime repro.
