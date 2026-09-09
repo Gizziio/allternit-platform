@@ -277,7 +277,7 @@ describe('Native Agent Tool Belt', () => {
 
   it('supports the computer_20251124 action set with zoom and region', async () => {
     const capability = new ComputerUseCapability({
-      fetch: async () => Response.json({ summary: 'zoomed' }),
+      fetch: async () => Response.json({ status: 'completed', summary: 'zoomed' }),
       toolVersion: '20251124',
       enableZoom: true,
       displayWidthPx: 1920,

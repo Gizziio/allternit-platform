@@ -5,13 +5,13 @@
  * `@ant/computer-use-swift` ScreenCaptureKit) with calls to the Allternit
  * Computer Use Engine via `@allternit/computer-use`.
  *
- * Honest capability boundary: the engine exposes input actions
- * (click/type/key/scroll/drag/hover/wait) and screenshots. Host-app
- * management (hide/unhide, enumeration, activation) and display geometry are
- * NOT engine concepts — those methods either no-op (hide: the engine never
- * hides host apps) or throw a clear "not supported by the engine backend"
- * error. Clipboard stays local via pbpaste/pbcopy on macOS, matching the
- * original CLI behavior.
+ * Honest capability boundary: the engine dispatches the Claude native
+ * action set (left/right/middle/double click, drag, type, key, scroll,
+ * screenshot) plus wait. Actions with no engine equivalent — hover/mouse
+ * move, mouse button phases, key hold, display geometry, host-app
+ * management — throw a clear "not supported by the engine backend" error
+ * instead of silently no-op'ing. Clipboard stays local via pbpaste/pbcopy
+ * on macOS, matching the original CLI behavior.
  */
 
 import { AllternitComputerUseClient } from '@allternit/computer-use'
@@ -73,13 +73,55 @@ export function createEngineExecutor(
     apiKey: opts.apiKey,
   })
 
-  /** Run one direct-mode batch; throws with the engine's error message. */
+  /**
+   * Run one direct-mode batch; throws with the engine's error message.
+   *
+   * Per-action failures are checked at two levels because the gateway's
+   * direct path counts a failed adapter envelope as an "ok" action entry:
+   *   - outcome.status === 'error'  → the adapter raised
+   *   - outcome.result.status === 'failed' → the adapter returned a failed
+   *     ResultEnvelope (e.g. UNSUPPORTED_ACTION) without raising
+   * Neither may be silently swallowed: a resolved promise means every action
+   * genuinely executed.
+   */
   async function runActions(actions: EngineAction[]): Promise<void> {
     const result = await client.executeDirect(actions)
     if (result.error) {
       throw new Error(
         `Engine error (${result.error.code}): ${result.error.message}`,
       )
+    }
+    if (result.status !== 'completed') {
+      throw new Error(
+        `Engine run ${result.status}: ${result.summary || 'no summary'}`,
+      )
+    }
+    const outcomes =
+      (result.result as { actions?: Array<Record<string, unknown>> } | null)
+        ?.actions ?? []
+    const failures = outcomes.filter((outcome) => {
+      if (outcome.status !== 'ok') return true
+      const envelope = outcome.result as
+        | { status?: string; error?: { message?: string } | null }
+        | null
+        | undefined
+      return envelope?.status === 'failed'
+    })
+    if (failures.length > 0) {
+      const details = failures
+        .map((outcome) => {
+          const envelope = outcome.result as
+            | { error?: { message?: string } | null }
+            | null
+            | undefined
+          const message =
+            (typeof outcome.error === 'string' && outcome.error) ||
+            envelope?.error?.message ||
+            'unknown error'
+          return `#${String(outcome.index)} ${String(outcome.kind)}: ${message}`
+        })
+        .join('; ')
+      throw new Error(`Engine action(s) failed: ${details}`)
     }
   }
 
@@ -148,9 +190,29 @@ export function createEngineExecutor(
     // ── Capture ──────────────────────────────────────────────────────────────
 
     async screenshot(): Promise<ScreenshotResult> {
-      const { screenshot } = await client.visionScreenshot()
-      const [width, height] = pngDimensions(screenshot)
-      return { base64: screenshot, width, height, mimeType: 'image/png' }
+      // Direct-mode 'screenshot' action through the adapter layer; the run
+      // result carries the PNG in artifacts[] (fallback: result.screenshot_b64).
+      // The legacy /vision/screenshot route does not exist on the gateway.
+      const result = await client.executeDirect([
+        { kind: 'screenshot', action_id: 'engine-screenshot' },
+      ])
+      const artifact = (result.artifacts ?? []).find(
+        (a) => a.type === 'screenshot',
+      )
+      const raw =
+        (typeof artifact?.content === 'string' && artifact.content) ||
+        (typeof artifact?.url === 'string' && artifact.url) ||
+        (typeof result.result?.screenshot_b64 === 'string' &&
+          result.result.screenshot_b64) ||
+        null
+      if (!raw) {
+        throw new Error(
+          `Engine screenshot produced no image (run ${result.run_id} status ${result.status})`,
+        )
+      }
+      const base64 = raw.replace(/^data:image\/[a-z+]+;base64,/, '')
+      const [width, height] = pngDimensions(base64)
+      return { base64, width, height, mimeType: 'image/png' }
     },
 
     async zoom(): Promise<{ base64: string; width: number; height: number }> {
@@ -161,19 +223,20 @@ export function createEngineExecutor(
 
     async key(keySequence: string, repeat = 1): Promise<void> {
       const actions = Array.from({ length: repeat }, () => ({
+        // The engine executor dispatches the Claude native action set;
+        // adapters read `key` (CDP) or `keys` (pyautogui) — send both.
         kind: 'key',
-        input: { keys: keySequence },
+        input: { key: keySequence, keys: keySequence },
       }))
       await runActions(actions)
     },
 
     async holdKey(keyNames: string[], durationMs: number): Promise<void> {
-      await runActions([
-        {
-          kind: 'key',
-          input: { keys: keyNames.join('+'), hold_ms: durationMs },
-        },
-      ])
+      // No engine adapter implements key-hold; a 'key' action with hold_ms
+      // would be accepted and silently not held. Fail loudly instead.
+      throw notSupported(
+        `Key hold (${keyNames.join('+')} for ${durationMs}ms)`,
+      )
     },
 
     async type(
@@ -198,7 +261,9 @@ export function createEngineExecutor(
     // ── Mouse ────────────────────────────────────────────────────────────────
 
     async moveMouse(x: number, y: number): Promise<void> {
-      await runActions([{ kind: 'hover', target: { x, y } }])
+      // The engine executor has no hover/mouse_move in its native action
+      // set; faking it with a click would be worse than an honest error.
+      throw notSupported(`Mouse move/hover to (${x}, ${y})`)
     },
 
     async click(
@@ -208,25 +273,31 @@ export function createEngineExecutor(
       count: 1 | 2 | 3,
       modifiers?: string[],
     ): Promise<void> {
-      await runActions([
-        {
-          kind: 'click',
-          target: { x, y },
-          input: { button, click_count: count, modifiers },
-        },
-      ])
+      // Map to the engine's native click vocabulary. Adapters read pixel
+      // coordinates from input.x/input.y.
+      const kind =
+        count === 2 && button === 'left'
+          ? 'double_click'
+          : button === 'left'
+            ? 'left_click'
+            : button === 'right'
+              ? 'right_click'
+              : 'middle_click'
+      const single = count === 3 ? 3 : 1
+      const actions = Array.from({ length: single }, () => ({
+        kind,
+        input: { x, y, button, modifiers },
+      }))
+      await runActions(actions)
     },
 
     async mouseDown(): Promise<void> {
-      await runActions([
-        { kind: 'click', input: { button: 'left', phase: 'down' } },
-      ])
+      // No engine adapter implements button phases; fail loudly.
+      throw notSupported('Mouse button hold (down/up phases)')
     },
 
     async mouseUp(): Promise<void> {
-      await runActions([
-        { kind: 'click', input: { button: 'left', phase: 'up' } },
-      ])
+      throw notSupported('Mouse button hold (down/up phases)')
     },
 
     async getCursorPosition(): Promise<{ x: number; y: number }> {
@@ -237,15 +308,14 @@ export function createEngineExecutor(
       from: { x: number; y: number } | undefined,
       to: { x: number; y: number },
     ): Promise<void> {
+      if (!from) {
+        throw notSupported('Drag without an explicit start coordinate')
+      }
+      // Engine native drag; the CDP adapter reads startX/startY/endX/endY.
       await runActions([
         {
-          kind: 'drag',
-          input: {
-            from_x: from?.x,
-            from_y: from?.y,
-            to_x: to.x,
-            to_y: to.y,
-          },
+          kind: 'left_click_drag',
+          input: { startX: from.x, startY: from.y, endX: to.x, endY: to.y },
         },
       ])
     },
@@ -256,8 +326,9 @@ export function createEngineExecutor(
       dx: number,
       dy: number,
     ): Promise<void> {
+      // The CDP adapter reads x/y + deltaX/deltaY from input.
       await runActions([
-        { kind: 'scroll', target: { x, y }, input: { delta_x: dx, delta_y: dy } },
+        { kind: 'scroll', input: { x, y, deltaX: dx, deltaY: dy } },
       ])
     },
 

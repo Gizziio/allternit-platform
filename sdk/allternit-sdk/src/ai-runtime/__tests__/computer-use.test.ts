@@ -82,6 +82,7 @@ describe('ComputerUseCapability screenshot response parsing', () => {
   it('leaves non-screenshot actions on the summary path unchanged', async () => {
     const capability = new ComputerUseCapability({
       fetch: async () => Response.json({
+        status: 'completed',
         summary: 'Moved mouse to (10, 20)',
         artifacts: [{ type: 'screenshot', content: 'ignored' }],
       }),
@@ -89,5 +90,73 @@ describe('ComputerUseCapability screenshot response parsing', () => {
 
     const result = await capability.getTool().execute!({ action: 'mouse_move', coordinate: [10, 20] }, {});
     expect(result).toBe('Moved mouse to (10, 20)');
+  });
+});
+
+describe('ComputerUseCapability error surfacing (never fakes success)', () => {
+  it('surfaces an in-band gateway failure (HTTP 200, status failed, error object)', async () => {
+    const capability = new ComputerUseCapability({
+      fetch: async () => Response.json({
+        status: 'failed',
+        summary: 'Reached step limit',
+        error: { code: 'ADAPTER_FAILURE', message: 'All adapters failed' },
+      }),
+    });
+
+    const result = await capability.getTool().execute!({ action: 'left_click', coordinate: [10, 20] }, {});
+    expect(result).toBe(
+      'Error executing computer action (ADAPTER_FAILURE): All adapters failed. Partial state: Reached step limit',
+    );
+  });
+
+  it('does not emit the canned completion line when a completed run lacks a summary', async () => {
+    // Completed run, no summary: the fallback completion line is honest only
+    // because status === 'completed' was confirmed above it.
+    const capability = new ComputerUseCapability({
+      fetch: async () => Response.json({ status: 'completed', summary: null }),
+    });
+
+    const result = await capability.getTool().execute!({ action: 'key', text: 'Tab' }, {});
+    expect(result).toBe('Action key completed.');
+  });
+
+  it('surfaces a non-completed, non-failed run status instead of claiming success', async () => {
+    const capability = new ComputerUseCapability({
+      fetch: async () => Response.json({ status: 'pending', summary: null }),
+    });
+
+    const result = await capability.getTool().execute!({ action: 'type', text: 'hi' }, {});
+    expect(result).toBe(
+      "Error executing computer action: gateway run ended with status 'pending'.",
+    );
+  });
+
+  it('surfaces a plain-string gateway error', async () => {
+    const capability = new ComputerUseCapability({
+      fetch: async () => Response.json({ status: 'failed', error: 'engine exploded' }),
+    });
+
+    const result = await capability.getTool().execute!({ action: 'scroll', coordinate: [1, 1] }, {});
+    expect(result).toBe('Error executing computer action: engine exploded.');
+  });
+
+  it('includes HTTP status and body detail when the gateway request itself fails', async () => {
+    const capability = new ComputerUseCapability({
+      fetch: async () => new Response('{"detail":"auth required"}', { status: 401, statusText: 'Unauthorized' }),
+    });
+
+    const result = await capability.getTool().execute!({ action: 'left_click', coordinate: [1, 1] }, {});
+    expect(result).toContain('Error executing computer action:');
+    expect(result).toContain('401');
+    expect(result).toContain('auth required');
+  });
+
+  it('surfaces fetch-level (network) failures as errors', async () => {
+    const capability = new ComputerUseCapability({
+      fetch: async () => { throw new TypeError('fetch failed'); },
+    });
+
+    const result = await capability.getTool().execute!({ action: 'left_click', coordinate: [1, 1] }, {});
+    expect(result).toBe('Error executing computer action: fetch failed');
   });
 });
