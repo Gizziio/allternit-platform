@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
-cd "$(dirname "$0")/.."
-rm -rf packages/@allternit/office-pptx-render/dist
-pnpm --filter '@allternit/office*' build
-pnpm --filter '@allternit/office*' typecheck
-pnpm --filter '@allternit/office*' test
+# Phase 1 evidence only: do not rerun unrelated inherited Office builds.
+evidence_dir="$HOME/.agent-orchestrator/evidence/cloud-computer-orgo-p1"
+for name in cargo-check-final.log cargo-test-computer-final.log cargo-test-bot-input.log tsc-with-dependencies.log; do
+  echo "$name"
+  tail -n 12 "$evidence_dir/$name"
+done
