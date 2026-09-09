@@ -1,3 +1,17 @@
+# Steering checkpoint
+
+**Goal:** Rebuild the Create Bot wizard (session/create-bot-wizard, 2026-09-09): Allternit-branded, 4-step click-through with a live Bot Hub card preview rail, real gating, single real template catalog (`BOT_TEMPLATES`), visible desktop provisioning, and an optional describe-to-prefill accelerator. Approved plan: `.steering/plan-create-bot-wizard.md`.
+
+**Just did:** Milestones 1–4 implemented in `surfaces/ai.allternit.com/src/views/agent-view/components/create-bot/`: 4-step wizard shell (left rail / center / live BotHubCard preview rail), Start step from real `BOT_TEMPLATES` (inline START_TEMPLATES deleted), Identity (incl. 5 lifted avatar modes) + Job steps, Computer & Runtime step (presets, brain/model/provider, advanced voice), real gating via `validateAgentCreationChecklist` on the exact submit payload, visible provisioning state polling `/api/v1/computers?bot_id=…` with 60s cap + inline retry. `CreateBotForm.tsx` is now a thin wrapper; all 5 call sites untouched. Verified: `typecheck:fast` = exactly the 15 pre-existing office-app/UnifiedTerminal errors; `vitest run src/lib/bots` 431/432 (1 pre-existing vm-operator snapshot failure, confirmed on clean HEAD); new `create-bot/__tests__` 17/17 pass. Local commit `feat(create-bot)` on `session/create-bot-wizard` (not pushed).
+
+**Next:** Milestone 5 (describeBot accelerator + refine helper + its tests), then 6 (polish), PR + ledger per session ritual.
+
+**Open questions:** None — plan approved by owner.
+
+---
+
+<!-- prior checkpoint below -->
+
 # Checkpoint — session/pdf-surface
 
 Goal: Make the Allternit PDF surface earn its place — agent can read the open
