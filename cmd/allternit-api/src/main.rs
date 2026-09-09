@@ -385,6 +385,7 @@ async fn main() {
         desktop_host_registry,
         desktop_host_provisioner,
         bot_desktop_sessions: Arc::new(RwLock::new(HashMap::new())),
+        computer_guest_tokens: Arc::new(RwLock::new(HashMap::new())),
         rails,
         vm_sessions: new_vm_session_store(),
         cowork_scheduler,
@@ -408,6 +409,7 @@ async fn main() {
         fabric_price_cache,
         os_control_plane,
     });
+    allternit_api::computer_idle::spawn_idle_sweeper(state.clone(), shutdown_tx.subscribe());
 
     // Refresh the Private Fabric node provider pool from the DB registry.
     {
@@ -709,6 +711,8 @@ async fn main() {
         .merge(allternit_api::fabric_usage_routes::router())
         .merge(agent_cloud_router())
         .merge(allternit_api::computer_routes::router())
+        .merge(allternit_api::computer_groups::router())
+        .merge(allternit_api::computer_ws::computer_api_router())
         .merge(allternit_api::bot_group_routes::router())
         .merge(allternit_api::allternit_vault::router())
         .merge(passkey_router(&state))
@@ -763,6 +767,10 @@ async fn main() {
         .nest("/api/rails", rails_router())
         .nest("/stream", stream_router())
         .nest("/ws/bots", bot_desktop_stream_router())
+        .nest(
+            "/ws/computers",
+            allternit_api::computer_ws::computer_ws_router(),
+        )
         .nest(
             "/mcp",
             mcp_router().merge(allternit_api::mcp_server_routes::mcp_server_router()),

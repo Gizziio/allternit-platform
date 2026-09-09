@@ -12,6 +12,7 @@ const NESTED_HERDR_MESSAGES: [&str; 6] = [
 ];
 
 mod agent_resume;
+mod ao;
 mod api;
 mod app;
 mod build_info;
@@ -557,6 +558,12 @@ fn main() -> io::Result<()> {
         println!("       herdr --remote <ssh-target> [--session <name>]");
         println!("       herdr session attach <name>");
         println!("       herdr completion zsh");
+        println!("       ao spawn [--worktree] <slug> <repo-dir> <agent-cmd...>");
+        println!("       ao send <slug> <prompt...> | ao send <slug> -f <file>");
+        println!("       ao watch <slug> <sentinel-file> [timeout] [interval]");
+        println!("       ao status [slug] [lines=25]");
+        println!("       ao kill <slug> [--rm-worktree]");
+        println!("       ao doctor");
         println!("       herdr machine <subcommand> ...");
         println!("       herdr server stop");
         println!("       herdr server reload-config");
@@ -703,6 +710,11 @@ fn main() -> io::Result<()> {
                 "pane",
                 "session",
                 "integration",
+                "spawn",
+                "send",
+                "watch",
+                "kill",
+                "doctor",
             ]
             .contains(&arg.as_str())
         {

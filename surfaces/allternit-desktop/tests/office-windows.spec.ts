@@ -1,5 +1,5 @@
 import { test, expect, _electron as electron } from '@playwright/test';
-import type { Page } from '@playwright/test';
+import type { ElectronApplication, Page } from '@playwright/test';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -11,7 +11,11 @@ const EDITORS = [
   { target: 'pdf', route: '/pdf', selector: '.app' },
 ] as const;
 
-test('desktop opens office program windows for all editors via shell:open-office', async () => {
+/** Launch the desktop app pointed at the platform dev server, with the
+ *  onboarding portal pre-dismissed (same seed as the platform's
+ *  office-extensions-view.spec). Office opens are delivered to the MAIN
+ *  window now — there are no separate office windows. */
+async function launchApp(): Promise<ElectronApplication> {
   const app = await electron.launch({
     args: ['.'],
     cwd: packageDir,
@@ -21,10 +25,35 @@ test('desktop opens office program windows for all editors via shell:open-office
       ELECTRON_ENABLE_LOGGING: '1',
     },
   });
+  await app.context().addInitScript(() => {
+    window.localStorage.setItem('allternit-platform-mode', 'chat');
+  });
+  return app;
+}
+
+/** The main window loads the platform SPA root; the splash window does not. */
+async function mainWindowPage(app: ElectronApplication): Promise<Page> {
+  let page: Page | undefined;
+  await expect
+    .poll(
+      () => {
+        page = app.windows().find((w) => w.url().includes('localhost:3013'));
+        return Boolean(page);
+      },
+      { timeout: 60000, intervals: [500, 1000, 2000] },
+    )
+    .toBe(true);
+  if (!page) throw new Error('main platform window not found');
+  return page;
+}
+
+test('shell:open-office delivers each editor to the main window (no separate office windows)', async () => {
+  const app = await launchApp();
 
   try {
+    const mainPage = await mainWindowPage(app);
+
     for (const editor of EDITORS) {
-      let editorPage: Page | undefined;
       // Retry the emit: the IPC handler registers in app.whenReady, which may
       // not have run yet when the test starts.
       await expect
@@ -36,50 +65,41 @@ test('desktop opens office program windows for all editors via shell:open-office
               },
               editor.target,
             );
-            editorPage = app.windows().find((w) => w.url().includes(editor.route));
-            return Boolean(editorPage);
+            // In-shell editor view mounts inside the main window; the app must
+            // NOT open a separate window on the editor route.
+            const editorWindow = app.windows().find((w) => w.url().includes(editor.route));
+            return !editorWindow && (await mainPage.locator(editor.selector).first().isVisible());
           },
           { timeout: 60000, intervals: [1000, 2000, 3000] },
         )
         .toBe(true);
-      if (!editorPage) throw new Error(`${editor.target} window not found`);
-
-      await expect(editorPage.locator(editor.selector).first()).toBeVisible({ timeout: 60000 });
     }
   } finally {
     await app.close();
   }
 });
 
-test('desktop launcher window loads the office launcher', async () => {
-  const app = await electron.launch({
-    args: ['.'],
-    cwd: packageDir,
-    env: {
-      ...process.env,
-      ALLTERNIT_PLATFORM_URL: 'http://localhost:3013',
-      ELECTRON_ENABLE_LOGGING: '1',
-    },
-  });
+test('shell:open-office launcher target opens the Office & Extensions hub in the main window', async () => {
+  const app = await launchApp();
 
   try {
-    let launcherPage: Page | undefined;
+    const mainPage = await mainWindowPage(app);
+
     await expect
       .poll(
         async () => {
           await app.evaluate(({ ipcMain }) => {
             ipcMain.emit('shell:open-office', {}, 'launcher');
           });
-          launcherPage = app.windows().find((w) => w.url().includes('/office'));
-          return Boolean(launcherPage);
+          const launcherWindow = app.windows().find((w) => w.url().includes('/office'));
+          return (
+            !launcherWindow &&
+            (await mainPage.getByTestId('office-suite-block').isVisible())
+          );
         },
         { timeout: 60000, intervals: [1000, 2000, 3000] },
       )
       .toBe(true);
-    if (!launcherPage) throw new Error('launcher window not found');
-
-    await expect(launcherPage.getByTestId('office-launcher')).toBeVisible({ timeout: 30000 });
-    await expect(launcherPage.getByTestId('office-card-docs')).toBeVisible();
   } finally {
     await app.close();
   }

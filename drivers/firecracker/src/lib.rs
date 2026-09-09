@@ -1542,6 +1542,8 @@ impl fmt::Debug for FirecrackerDriver {
 impl ExecutionDriver for FirecrackerDriver {
     fn capabilities(&self) -> DriverCapabilities {
         DriverCapabilities {
+            resize: false,
+            clone: false,
             driver_type: DriverType::MicroVM,
             isolation: IsolationLevel::Maximum,
             max_resources: ResourceSpec {

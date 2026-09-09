@@ -48,7 +48,10 @@ impl SubstrateRouter {
         self.incus.is_some() || self.tart.is_some()
     }
 
-    fn choose_spawn_driver(&self, spec: &SpawnSpec) -> Result<Arc<dyn ExecutionDriver>, DriverError> {
+    fn choose_spawn_driver(
+        &self,
+        spec: &SpawnSpec,
+    ) -> Result<Arc<dyn ExecutionDriver>, DriverError> {
         let os = spec.env.env_vars.get(OS_ENV_KEY).map(|s| s.as_str());
         let preferred = spec
             .env
@@ -113,20 +116,24 @@ impl SubstrateRouter {
             PROVIDER_INCUS => self.incus.clone().map(|d| d as Arc<dyn ExecutionDriver>).ok_or_else(
                 || DriverError::NotSupported {
                     feature: "Incus substrate".to_string(),
-                },
-            ),
-            PROVIDER_TART => self.tart.clone().map(|d| d as Arc<dyn ExecutionDriver>).ok_or_else(
-                || DriverError::NotSupported {
+                }),
+            PROVIDER_TART => self
+                .tart
+                .clone()
+                .map(|d| d as Arc<dyn ExecutionDriver>)
+                .ok_or_else(|| DriverError::NotSupported {
                     feature: "Tart substrate".to_string(),
-                },
-            ),
+                }),
             _ => Err(DriverError::NotSupported {
                 feature: format!("unknown provider '{}'", provider),
             }),
         }
     }
 
-    fn choose_handle_driver(&self, handle: &ExecutionHandle) -> Result<Arc<dyn ExecutionDriver>, DriverError> {
+    fn choose_handle_driver(
+        &self,
+        handle: &ExecutionHandle,
+    ) -> Result<Arc<dyn ExecutionDriver>, DriverError> {
         match handle.driver_info.get("provider").map(|s| s.as_str()) {
             Some(PROVIDER_INCUS) => self
                 .incus
@@ -199,6 +206,8 @@ impl ExecutionDriver for SubstrateRouter {
             .collect();
 
         DriverCapabilities {
+            resize: false,
+            clone: false,
             driver_type: DriverType::MicroVM,
             isolation: IsolationLevel::Maximum,
             max_resources,
@@ -233,7 +242,11 @@ impl ExecutionDriver for SubstrateRouter {
         driver.destroy(handle).await
     }
 
-    async fn exec(&self, handle: &ExecutionHandle, cmd: CommandSpec) -> Result<ExecResult, DriverError> {
+    async fn exec(
+        &self,
+        handle: &ExecutionHandle,
+        cmd: CommandSpec,
+    ) -> Result<ExecResult, DriverError> {
         let driver = self.choose_handle_driver(handle)?;
         driver.exec(handle, cmd).await
     }
@@ -248,7 +261,10 @@ impl ExecutionDriver for SubstrateRouter {
         driver.get_artifacts(handle).await
     }
 
-    async fn get_consumption(&self, handle: &ExecutionHandle) -> Result<ResourceConsumption, DriverError> {
+    async fn get_consumption(
+        &self,
+        handle: &ExecutionHandle,
+    ) -> Result<ResourceConsumption, DriverError> {
         let driver = self.choose_handle_driver(handle)?;
         driver.get_consumption(handle).await
     }
@@ -402,14 +418,43 @@ impl ExecutionDriver for SubstrateRouter {
         Ok(())
     }
 
-    async fn pull_file(&self, handle: &ExecutionHandle, path: &str) -> Result<Vec<u8>, DriverError> {
+    async fn pull_file(
+        &self,
+        handle: &ExecutionHandle,
+        path: &str,
+    ) -> Result<Vec<u8>, DriverError> {
         let driver = self.choose_handle_driver(handle)?;
         driver.pull_file(handle, path).await
     }
 
-    async fn push_file(&self, handle: &ExecutionHandle, path: &str, content: Vec<u8>) -> Result<(), DriverError> {
+    async fn push_file(
+        &self,
+        handle: &ExecutionHandle,
+        path: &str,
+        content: Vec<u8>,
+    ) -> Result<(), DriverError> {
         let driver = self.choose_handle_driver(handle)?;
         driver.push_file(handle, path, content).await
+    }
+
+    async fn resize_vm(
+        &self,
+        handle: &ExecutionHandle,
+        resources: &ResourceSpec,
+    ) -> Result<(), DriverError> {
+        self.choose_handle_driver(handle)?
+            .resize_vm(handle, resources)
+            .await
+    }
+
+    async fn clone_vm(
+        &self,
+        handle: &ExecutionHandle,
+        new_native_id: &str,
+    ) -> Result<ExecutionHandle, DriverError> {
+        self.choose_handle_driver(handle)?
+            .clone_vm(handle, new_native_id)
+            .await
     }
 
     async fn create_snapshot(

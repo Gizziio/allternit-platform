@@ -457,6 +457,10 @@ pub struct DriverFeatures {
 /// Driver capabilities advertisement
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct DriverCapabilities {
+    #[serde(default)]
+    pub resize: bool,
+    #[serde(default)]
+    pub clone: bool,
     pub driver_type: DriverType,
     pub isolation: IsolationLevel,
     pub max_resources: ResourceSpec,
@@ -549,10 +553,16 @@ pub trait ExecutionDriver: Send + Sync + fmt::Debug {
     ) -> std::result::Result<ExecResult, DriverError>;
 
     /// Stream logs from the environment
-    async fn stream_logs(&self, handle: &ExecutionHandle) -> std::result::Result<Vec<LogEntry>, DriverError>;
+    async fn stream_logs(
+        &self,
+        handle: &ExecutionHandle,
+    ) -> std::result::Result<Vec<LogEntry>, DriverError>;
 
     /// Get artifacts produced by the execution
-    async fn get_artifacts(&self, handle: &ExecutionHandle) -> std::result::Result<Vec<Artifact>, DriverError>;
+    async fn get_artifacts(
+        &self,
+        handle: &ExecutionHandle,
+    ) -> std::result::Result<Vec<Artifact>, DriverError>;
 
     /// Destroy the execution environment
     async fn destroy(&self, handle: &ExecutionHandle) -> std::result::Result<(), DriverError>;
@@ -564,7 +574,10 @@ pub trait ExecutionDriver: Send + Sync + fmt::Debug {
     ) -> std::result::Result<ResourceConsumption, DriverError>;
 
     /// Get execution receipt
-    async fn get_receipt(&self, handle: &ExecutionHandle) -> std::result::Result<Option<Receipt>, DriverError>;
+    async fn get_receipt(
+        &self,
+        handle: &ExecutionHandle,
+    ) -> std::result::Result<Option<Receipt>, DriverError>;
 
     /// Health check
     async fn health_check(&self) -> std::result::Result<DriverHealth, DriverError>;
@@ -656,6 +669,28 @@ pub trait ExecutionDriver: Send + Sync + fmt::Debug {
         })
     }
 
+    /// Resize resources. Zero CPU/memory means unchanged; None disk means unchanged.
+    async fn resize_vm(
+        &self,
+        _handle: &ExecutionHandle,
+        _resources: &ResourceSpec,
+    ) -> Result<(), DriverError> {
+        Err(DriverError::NotSupported {
+            feature: "resize_vm".into(),
+        })
+    }
+
+    /// Clone an instance, preserving the intermediate snapshot as a restore point.
+    async fn clone_vm(
+        &self,
+        _handle: &ExecutionHandle,
+        _new_native_id: &str,
+    ) -> Result<ExecutionHandle, DriverError> {
+        Err(DriverError::NotSupported {
+            feature: "clone_vm".into(),
+        })
+    }
+
     /// Create a snapshot of the execution environment's disk state.
     ///
     /// Default implementation returns `NotSupported`.
@@ -705,6 +740,22 @@ pub trait ExecutionDriver: Send + Sync + fmt::Debug {
     ) -> std::result::Result<Vec<SnapshotInfo>, DriverError> {
         Err(DriverError::NotSupported {
             feature: "snapshot list".to_string(),
+        })
+    }
+
+    /// Server-reachable base URL for a TCP service inside the guest.
+    ///
+    /// Drivers that can expose an in-guest TCP port on a host-reachable address
+    /// (e.g. Incus proxy devices) return an `http://host:port` base URL the
+    /// control plane can open downstream connections against. The default
+    /// returns `NotSupported`.
+    async fn guest_service_url(
+        &self,
+        _handle: &ExecutionHandle,
+        _guest_port: u16,
+    ) -> std::result::Result<String, DriverError> {
+        Err(DriverError::NotSupported {
+            feature: "guest service url".to_string(),
         })
     }
 }

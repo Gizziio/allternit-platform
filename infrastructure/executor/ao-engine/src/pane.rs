@@ -138,6 +138,10 @@ impl PaneLaunchEnv {
 fn apply_pane_launch_env(cmd: &mut CommandBuilder, launch_env: &PaneLaunchEnv) {
     cmd.env_remove("CODEX_THREAD_ID");
     for (key, value) in &launch_env.extra {
+        // Spawn-time ao transcript configuration; the agent must not inherit it.
+        if key == crate::ao::transcript::TRANSCRIPT_ENV_VAR {
+            continue;
+        }
         cmd.env(key, value);
     }
     cmd.env(crate::HERDR_ENV_VAR, crate::HERDR_ENV_VALUE);
@@ -1973,6 +1977,7 @@ impl PaneRuntime {
             render_notify,
             render_dirty,
             cmd,
+            launch_env,
             "failed to spawn shell",
             SpawnInitialState {
                 detected_agent: None,
@@ -2015,6 +2020,7 @@ impl PaneRuntime {
             render_notify,
             render_dirty,
             cmd,
+            launch_env,
             "failed to spawn command pane",
             SpawnInitialState::default(),
             agent_detection,
@@ -2062,6 +2068,7 @@ impl PaneRuntime {
             render_notify,
             render_dirty,
             cmd,
+            launch_env,
             "failed to spawn argv command pane",
             SpawnInitialState::default(),
             agent_detection,
@@ -2255,11 +2262,16 @@ impl PaneRuntime {
         render_notify: Arc<Notify>,
         render_dirty: Arc<RenderSignal>,
         cmd: CommandBuilder,
+        launch_env: &PaneLaunchEnv,
         spawn_error_message: &'static str,
         initial_state: SpawnInitialState<'_>,
         agent_detection: AgentDetection,
     ) -> std::io::Result<Self> {
         crate::logging::pane_spawn_started(pane_id.raw(), rows, cols, scrollback_limit_bytes);
+
+        // ao transcript tee (additive `src/ao/` patch): raw output bytes are
+        // written from the on_read closure below, before parsing/filtering.
+        let mut transcript_tee = crate::ao::transcript::tee_from_launch_env(&launch_env.extra);
 
         let (response_tx, _response_rx) = mpsc::channel::<Bytes>(1);
         let mut terminal = crate::ghostty::Terminal::new(cols, rows, scrollback_limit_bytes)
@@ -2341,6 +2353,9 @@ impl PaneRuntime {
             let compression_wake = compression.notifier();
             let rt = tokio::runtime::Handle::current();
             let on_read = Box::new(move |bytes: &[u8]| {
+                if let Some(tee) = transcript_tee.as_mut() {
+                    tee.write(bytes);
+                }
                 let _content_write_guard = match content_write_lock.lock() {
                     Ok(guard) => guard,
                     Err(poisoned) => poisoned.into_inner(),

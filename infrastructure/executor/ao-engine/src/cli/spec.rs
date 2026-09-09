@@ -29,6 +29,7 @@ pub(super) fn command() -> Command {
                 .help("Print version and exit"),
         )
         .subcommand(completion::command())
+        .subcommand(ao_command())
         .subcommand(update_command())
         .subcommand(status_command())
         .subcommand(config_command())
@@ -116,6 +117,58 @@ fn update_command() -> Command {
     Command::new("update")
         .about("Download and install the latest version")
         .arg(flag("handoff").help("Try live handoff after installing"))
+}
+
+fn ao_command() -> Command {
+    Command::new("ao")
+        .about("Allternit agent orchestrator contract (spawn/send/watch/status/kill/doctor)")
+        .subcommand(
+            Command::new("spawn")
+                .about("Spawn an agent session (engine workspace ao-<slug>)")
+                .arg(flag("worktree").help("Run in a new git worktree <repo>-ao-<slug> on branch ao/<slug>"))
+                .arg(Arg::new("slug").required(true).help("Session slug"))
+                .arg(Arg::new("repo-dir").required(true).help("Working directory"))
+                .arg(
+                    Arg::new("agent-cmd")
+                        .required(true)
+                        .num_args(1..)
+                        .trailing_var_arg(true)
+                        .help("Agent command and arguments"),
+                ),
+        )
+        .subcommand(
+            Command::new("send")
+                .about("Verified bracketed-paste prompt injection")
+                .arg(Arg::new("slug").required(true))
+                .arg(
+                    Arg::new("prompt")
+                        .required(true)
+                        .num_args(1..)
+                        .trailing_var_arg(true)
+                        .help("Prompt text, or -f <file>"),
+                ),
+        )
+        .subcommand(
+            Command::new("watch")
+                .about("Block until a sentinel file exists, the pane dies, or a timeout")
+                .arg(Arg::new("slug").required(true))
+                .arg(Arg::new("sentinel-file").required(true))
+                .arg(Arg::new("timeout").help("Seconds (default 3600)"))
+                .arg(Arg::new("interval").help("Poll seconds (default 20)")),
+        )
+        .subcommand(
+            Command::new("status")
+                .about("List ao-* sessions or show a session's last N pane lines")
+                .arg(Arg::new("slug"))
+                .arg(Arg::new("lines").help("Lines (default 25)")),
+        )
+        .subcommand(
+            Command::new("kill")
+                .about("Kill a session; --rm-worktree also removes its worktree (branch kept)")
+                .arg(Arg::new("slug").required(true))
+                .arg(flag("rm-worktree")),
+        )
+        .subcommand(Command::new("doctor").about("Verify the delegation toolchain"))
 }
 
 fn status_command() -> Command {

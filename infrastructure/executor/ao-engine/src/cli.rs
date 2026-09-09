@@ -23,6 +23,7 @@ macro_rules! println {
 }
 
 mod agent;
+mod ao;
 mod api;
 mod completion;
 mod integration;
@@ -35,6 +36,7 @@ mod runtime;
 mod server;
 mod server_not_running;
 mod spec;
+#[allow(dead_code)] // engine status is shadowed by the ao contract (P1); kept for a P2+ rehome
 mod status;
 mod tab;
 mod workspace;
@@ -103,6 +105,9 @@ pub fn maybe_run(args: &[String]) -> std::io::Result<CommandOutcome> {
     }
 
     let exit_code = match command {
+        // ao contract commands take priority over the engine's own words
+        // (notably `status`); see src/cli/ao.rs.
+        "spawn" | "send" | "watch" | "status" | "kill" | "doctor" => ao::run_ao_command(&args[1..])?,
         "server" => {
             let Some(exit_code) = server::run_server_command(&args[2..])? else {
                 return Ok(CommandOutcome::NotCli);
@@ -110,7 +115,8 @@ pub fn maybe_run(args: &[String]) -> std::io::Result<CommandOutcome> {
             exit_code
         }
         "api" => api::run_api_command(&args[2..])?,
-        "status" => status::run_status_command(&args[2..])?,
+        // Engine `status` is shadowed by the ao contract (see the ao arm above);
+        // the module is kept for a future P2+ rehome.
         "completion" | "completions" => completion::run_completion_command(&args[2..])?,
         "config" => run_config_command(&args[2..])?,
         "machine" => machine::run_machine_command(&args[2..])?,

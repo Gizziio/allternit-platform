@@ -73,7 +73,11 @@ pub mod cloud_credentials_routes;
 pub mod compliance_routes;
 pub mod computer_control;
 pub mod computer_routes;
+pub mod computer_groups;
+pub mod computer_idle;
 pub mod computer_screens;
+pub mod computer_audit;
+pub mod computer_ws;
 pub mod bot_group_routes;
 pub mod data_residency_routes;
 pub mod device_attestation_routes;
@@ -280,6 +284,7 @@ pub mod test_helpers {
             desktop_host_registry,
             desktop_host_provisioner: None,
             bot_desktop_sessions: Arc::new(RwLock::new(HashMap::new())),
+            computer_guest_tokens: Arc::new(RwLock::new(HashMap::new())),
             rails,
             vm_sessions: vm_session_routes::new_vm_session_store(),
             cowork_scheduler: None,
@@ -377,6 +382,10 @@ pub struct AppState {
     pub desktop_host_provisioner: Option<crate::desktop_host_provisioner::DesktopHostProvisioner>,
     /// Bot desktop take-over state: bot_id -> session metadata + control state.
     pub bot_desktop_sessions: Arc<RwLock<HashMap<String, BotDesktopSession>>>,
+    /// Phase 3 guest bridge tokens: "{computer_id}:{pty|events}" -> token.
+    /// In-memory only; a stale bridge is re-bootstrapped on connection
+    /// refusal.
+    pub computer_guest_tokens: Arc<RwLock<HashMap<String, String>>>,
 
     /// Rails service state (Ledger, Gate, Leases, etc.)
     pub rails: RailsState,
