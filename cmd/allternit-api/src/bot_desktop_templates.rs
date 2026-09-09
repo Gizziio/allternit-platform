@@ -70,10 +70,18 @@ pub struct CreateTemplateRequest {
     pub public: bool,
 }
 
-fn default_cpu() -> u32 { 2000 }
-fn default_memory() -> u32 { 4096 }
-fn default_disk() -> u32 { 20480 }
-fn default_true() -> bool { true }
+fn default_cpu() -> u32 {
+    2000
+}
+fn default_memory() -> u32 {
+    4096
+}
+fn default_disk() -> u32 {
+    20480
+}
+fn default_true() -> bool {
+    true
+}
 
 #[derive(Debug, Deserialize)]
 pub struct ListTemplatesQuery {
@@ -126,7 +134,7 @@ async fn list_templates(
             "SELECT id, org_id, user_id, name, description, os, image, cpu_millis, \
              memory_mib, disk_mib, network_enabled, env_json, packages_json, tags_json, public \
              FROM desktop_templates \
-             WHERE (public = 1 OR user_id = ?1"
+             WHERE (public = 1 OR user_id = ?1",
         );
         let mut params: Vec<Box<dyn rusqlite::ToSql>> = vec![Box::new(user_id.clone())];
         if let Some(ref org) = org_id {
@@ -157,14 +165,24 @@ async fn list_templates(
     .await;
 
     match result {
-        Ok(Ok(templates)) => (StatusCode::OK, Json(json!({ "templates": templates }))).into_response(),
+        Ok(Ok(templates)) => {
+            (StatusCode::OK, Json(json!({ "templates": templates }))).into_response()
+        }
         Ok(Err(e)) => {
             warn!(error = %e, "failed to list desktop templates");
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": format!("database error: {}", e)}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": format!("database error: {}", e)})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!(error = %e, "task panicked listing desktop templates");
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -218,11 +236,19 @@ async fn create_template(
         }
         Ok(Err(e)) => {
             warn!(error = %e, "failed to create desktop template");
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": format!("database error: {}", e)}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": format!("database error: {}", e)})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!(error = %e, "task panicked creating desktop template");
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -234,7 +260,11 @@ async fn get_template(
 ) -> impl IntoResponse {
     match resolve_template(&state.db, &user, &id).await {
         Some(t) => (StatusCode::OK, Json(json!(t))).into_response(),
-        None => (StatusCode::NOT_FOUND, Json(json!({"error": "template not found"}))).into_response(),
+        None => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "template not found"})),
+        )
+            .into_response(),
     }
 }
 
@@ -256,15 +286,27 @@ async fn delete_template(
     .await;
 
     match result {
-        Ok(Ok(0)) => (StatusCode::NOT_FOUND, Json(json!({"error": "template not found or access denied"}))).into_response(),
+        Ok(Ok(0)) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "template not found or access denied"})),
+        )
+            .into_response(),
         Ok(Ok(_)) => (StatusCode::NO_CONTENT, ()).into_response(),
         Ok(Err(e)) => {
             warn!(error = %e, "failed to delete desktop template");
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": format!("database error: {}", e)}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": format!("database error: {}", e)})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!(error = %e, "task panicked deleting desktop template");
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -274,6 +316,37 @@ async fn delete_template(
 pub struct ProvisionRequest {
     pub os: Option<String>,
     pub template_id: Option<String>,
+    pub cpu_cores: Option<i64>,
+    pub memory_mb: Option<i64>,
+    pub disk_mb: Option<i64>,
+    pub resolution: Option<String>,
+}
+
+pub(crate) const VALIDATED_CPU_CORES: &[i64] = &[2, 4, 8];
+pub(crate) const VALIDATED_MEMORY_MB: &[i64] = &[4096, 8192, 16384, 32768, 65536];
+pub(crate) const VALIDATED_DISK_MB: &[i64] = &[20480, 40960, 81920];
+pub(crate) const VALIDATED_RESOLUTIONS: &[&str] = &["1280x720", "1920x1080", "2560x1440"];
+
+pub(crate) fn validate_provision_request(req: &ProvisionRequest) -> Result<(), String> {
+    for (name, value, allowed) in [
+        ("cpu_cores", req.cpu_cores, VALIDATED_CPU_CORES),
+        ("memory_mb", req.memory_mb, VALIDATED_MEMORY_MB),
+        ("disk_mb", req.disk_mb, VALIDATED_DISK_MB),
+    ] {
+        if value.is_some_and(|v| !allowed.contains(&v)) {
+            return Err(format!("{name} must be one of {allowed:?}"));
+        }
+    }
+    if req
+        .resolution
+        .as_deref()
+        .is_some_and(|v| !VALIDATED_RESOLUTIONS.contains(&v))
+    {
+        return Err(format!(
+            "resolution must be one of {VALIDATED_RESOLUTIONS:?}"
+        ));
+    }
+    Ok(())
 }
 
 /// Resolved provisioning parameters after applying an optional template.
@@ -294,6 +367,8 @@ pub async fn resolve_provision_spec(
     user: &AuthUser,
     req: &ProvisionRequest,
 ) -> Result<ProvisionSpec, (StatusCode, Json<serde_json::Value>)> {
+    validate_provision_request(req)
+        .map_err(|e| (StatusCode::BAD_REQUEST, Json(json!({"error": e}))))?;
     let mut os = req.os.as_deref().unwrap_or("linux").to_lowercase();
     let mut image = std::env::var("BOT_DESKTOP_IMAGE")
         .ok()
@@ -327,6 +402,19 @@ pub async fn resolve_provision_spec(
                 ));
             }
         }
+    }
+
+    if let Some(v) = req.cpu_cores {
+        cpu_millis = (v * 1000) as u32;
+    }
+    if let Some(v) = req.memory_mb {
+        memory_mib = v as u32;
+    }
+    if let Some(v) = req.disk_mb {
+        disk_mib = Some(v as u32);
+    }
+    if let Some(v) = &req.resolution {
+        env.insert("ALLTERNIT_DESKTOP_RESOLUTION".into(), v.clone());
     }
 
     Ok(ProvisionSpec {
@@ -474,5 +562,48 @@ mod tests {
 
         let other = test_user("other-user", None);
         assert!(resolve_template(&db, &other, &id).await.is_none());
+    }
+}
+
+#[cfg(test)]
+mod computer_spec_tests {
+    use super::*;
+
+    #[test]
+    fn computer_size_validation() {
+        for (field, allowed) in [
+            ("cpu", VALIDATED_CPU_CORES),
+            ("memory", VALIDATED_MEMORY_MB),
+            ("disk", VALIDATED_DISK_MB),
+        ] {
+            for value in allowed.iter().copied().chain([-1, 0, 1, i64::MAX]) {
+                let mut req = ProvisionRequest::default();
+                match field {
+                    "cpu" => req.cpu_cores = Some(value),
+                    "memory" => req.memory_mb = Some(value),
+                    _ => req.disk_mb = Some(value),
+                }
+                assert_eq!(
+                    validate_provision_request(&req).is_ok(),
+                    allowed.contains(&value),
+                    "{field} {value}"
+                );
+            }
+        }
+        for value in VALIDATED_RESOLUTIONS
+            .iter()
+            .copied()
+            .chain(["", "800x600", "1920X1080"])
+        {
+            let req = ProvisionRequest {
+                resolution: Some(value.into()),
+                ..Default::default()
+            };
+            assert_eq!(
+                validate_provision_request(&req).is_ok(),
+                VALIDATED_RESOLUTIONS.contains(&value)
+            );
+        }
+        assert!(validate_provision_request(&ProvisionRequest::default()).is_ok());
     }
 }

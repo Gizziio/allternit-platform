@@ -471,6 +471,7 @@ pub fn spawn_provision_queue_worker(state: Arc<AppState>, period: Duration) {
                     os: entry.os.clone(),
                     template_id: entry.template_id.clone(),
                     provider: entry.provider.clone(),
+                    ..Default::default()
                 };
                 match provision_desktop_internal(&state, &user, &entry.bot_id, &query).await {
                     Ok(resp) => {
