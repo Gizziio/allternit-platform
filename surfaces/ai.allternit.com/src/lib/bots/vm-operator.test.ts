@@ -11,6 +11,7 @@ import {
   healthCheck,
   defaultBotVMOperatorConfig,
   ensureBotComputer,
+  provisionFleetComputers,
 } from './vm-operator';
 import type { AgentVMOperatorConfig } from '@/lib/agents/agent.types';
 
@@ -182,6 +183,53 @@ describe('vm-operator', () => {
       expect(result.ok).toBe(true);
       expect(result.data?.id).toBe('sb-replacement');
       expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('provisionFleetComputers (Phase 2 fleet action)', () => {
+    it('provisions each enabled bot sequentially and skips bots without a computer', async () => {
+      // bot-1: has a bound desktop (GET only); bot-2: none (GET+POST); bot-3: no vmOperator.
+      const fetchMock = mockFetchSequence(
+        {
+          computers: [
+            {
+              id: 'sb-1',
+              bot_id: 'bot-1',
+              kind: 'cloud_desktop',
+              status: 'running',
+              provider: 'cloud-desktop',
+              created_at: '2026-09-09T00:00:00Z',
+              updated_at: '2026-09-09T00:05:00Z',
+            },
+          ],
+        },
+        { computers: [] },
+        {
+          id: 'sb-2',
+          sandbox_id: 'sb-2',
+          status: 'creating',
+          provider: 'cloud-desktop',
+          persistence: 'persistent',
+        },
+      );
+
+      const results = await provisionFleetComputers([
+        { id: 'bot-1', vmOperator: defaultBotVMOperatorConfig() },
+        { id: 'bot-2', vmOperator: defaultBotVMOperatorConfig() },
+        { id: 'bot-3' },
+      ]);
+
+      expect(results).toHaveLength(3);
+      expect(results[0]).toMatchObject({ botId: 'bot-1', ok: true, computerId: 'sb-1' });
+      expect(results[1]).toMatchObject({ botId: 'bot-2', ok: true, computerId: 'sb-2' });
+      expect(results[2]).toMatchObject({ botId: 'bot-3', ok: true, skipped: true });
+      // 3 fetch calls for 2 enabled bots, one of which needed a POST —
+      // i.e. sequential, no duplicate provisioning.
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+      const postCalls = fetchMock.mock.calls.filter((c) => c[1]?.method === 'POST');
+      expect(postCalls).toHaveLength(1);
+      const body = JSON.parse(postCalls[0][1].body);
+      expect(body).toMatchObject({ kind: 'cloud_desktop', bot_id: 'bot-2', persistence: 'persistent' });
     });
   });
 

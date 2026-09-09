@@ -511,6 +511,12 @@ export function BotComputerViewport({
       label: "Running",
       pulse: true,
     },
+    creating: {
+      bg: "color-mix(in srgb, var(--status-warning) 14%, transparent)",
+      color: "var(--status-warning)",
+      label: "Provisioning",
+      pulse: true,
+    },
     stopped: {
       bg: "color-mix(in srgb, var(--status-warning) 14%, transparent)",
       color: "var(--status-warning)",
@@ -769,7 +775,9 @@ export function BotComputerViewport({
           <div>
             <h2 className="text-[20px] font-semibold text-[var(--text-primary)]">Desktop</h2>
             <p className="text-[13px] text-[var(--text-secondary)]">
-              {isRunning
+              {statusValue === "creating"
+                ? `${displayName}'s virtual computer is provisioning`
+                : isRunning
                 ? isHumanControl
                   ? `You are controlling ${displayName}'s virtual computer`
                   : isObserving
@@ -930,6 +938,15 @@ export function BotComputerViewport({
         <GlassSurface className="p-10 text-center rounded-xl">
           <Spinner size={24} className="animate-spin mx-auto mb-3 text-[var(--accent-primary)]" />
           <p className="text-[13px] text-[var(--text-secondary)]">Connecting to desktop...</p>
+        </GlassSurface>
+      ) : statusValue === "creating" ? (
+        <GlassSurface className="p-10 text-center rounded-xl border border-dashed border-[var(--border-subtle)]">
+          <Spinner size={24} className="animate-spin mx-auto mb-3 text-[var(--accent-primary)]" />
+          <h3 className="text-[15px] font-semibold text-[var(--text-primary)]">Desktop is provisioning</h3>
+          <p className="text-[13px] text-[var(--text-secondary)] mt-1 max-w-md mx-auto">
+            The computer is being prepared on Computer Cloud. This page updates on its own — no
+            need to restart anything.
+          </p>
         </GlassSurface>
       ) : statusValue !== "running" ? (
         <GlassSurface className="p-10 text-center rounded-xl border border-dashed border-[var(--border-subtle)]">
