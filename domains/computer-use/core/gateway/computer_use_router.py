@@ -44,6 +44,7 @@ try:
     from core.vision_providers import AllternitGatewayProvider, VisionProviderFactory
     from core.computer_use_executor import get_executor as _get_executor
     from gateway.canonical_router import history_preflight_for_task
+    from core.cost_accounting import cost_dict_from_planning_result, zero_run_cost
     _planning_available = True
 except ImportError:
     PlanningLoop = None  # type: ignore[assignment,misc]
@@ -54,6 +55,22 @@ except ImportError:
     _get_executor = None  # type: ignore[assignment]
     history_preflight_for_task = None  # type: ignore[assignment,misc]
     _planning_available = False
+
+    def zero_run_cost() -> Dict[str, Any]:  # type: ignore[misc]
+        """Fallback when core.cost_accounting is unavailable (honest zero)."""
+        return {
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "total_tokens": 0,
+            "est_cost_usd": 0.0,
+            "pricing": "unavailable",
+            "by_stage": {},
+            "model": None,
+            "provider": None,
+        }
+
+    def cost_dict_from_planning_result(result: Any, provider: Any = None) -> Dict[str, Any]:  # type: ignore[misc]
+        return zero_run_cost()
 
 # Playwright-based adapter (inline stub that delegates to session_manager)
 try:
@@ -120,6 +137,9 @@ class RunState:
         self.updated_at: str = _utcnow()
         self.result: Optional[Dict[str, Any]] = None
         self.error: Optional[str] = None
+        # Per-run token/cost accounting (observability only). Honest zero
+        # until an execution path records real usage.
+        self.cost: Dict[str, Any] = zero_run_cost()
         self.approval_future: Optional[asyncio.Future] = None
         self.approval_timed_out: bool = False
         self.cancel_event: asyncio.Event = asyncio.Event()
@@ -135,6 +155,7 @@ class RunState:
             "updated_at": self.updated_at,
             "result": self.result,
             "error": self.error,
+            "cost": self.cost,
             "approval_timed_out": self.approval_timed_out,
         }
 
@@ -255,6 +276,14 @@ def _run_state_from_record(record: Dict[str, Any]) -> RunState:
     state.updated_at = record.get("updated_at", state.updated_at)
     state.result = record.get("result")
     state.error = record.get("error")
+    # Rebuild the cost record from the persisted columns.
+    state.cost = zero_run_cost()
+    state.cost["input_tokens"] = int(record.get("input_tokens") or 0)
+    state.cost["output_tokens"] = int(record.get("output_tokens") or 0)
+    state.cost["total_tokens"] = int(record.get("total_tokens") or 0)
+    state.cost["est_cost_usd"] = float(record.get("est_cost_usd") or 0.0)
+    if state.cost["total_tokens"] > 0:
+        state.cost["pricing"] = "estimated"
     return state
 
 
@@ -525,6 +554,8 @@ async def _execute_non_claude_path(
             session_id=body.session_id,
             run_id=body.run_id,
         )
+        # Cost accounting: tokens/cost from the planning loop's vision calls.
+        run_state.cost = cost_dict_from_planning_result(result, vision_provider)
         # Finalize recorder and attach gif_path to result
         if recorder is not None:
             await recorder.stop()
@@ -653,6 +684,9 @@ async def _execute_direct_path(
     """
     _run_store.update_status(run_state.run_id, "running")
     adapter = _get_adapter_for_planning(body.target_scope, body.options.get("adapter_preference"))
+
+    # Cost accounting: the direct path makes no LLM calls — honest zero.
+    run_state.cost = zero_run_cost()
 
     actions_out: List[Dict[str, Any]] = []
     ok_count = 0
@@ -859,6 +893,54 @@ async def get_run(run_id: str) -> Dict[str, Any]:
     if state is None:
         raise HTTPException(status_code=404, detail=f"Run {run_id} not found")
     return state.to_dict()
+
+
+@router.get("/runs/{run_id}/cost")
+async def get_run_cost(run_id: str) -> Dict[str, Any]:
+    """Per-run token/cost accounting (observability; zeros when unavailable)."""
+    state = _run_store.get(run_id)
+    if state is None:
+        raise HTTPException(status_code=404, detail=f"Run {run_id} not found")
+    return {"run_id": run_id, "cost": state.cost}
+
+
+@router.get("/cost/summary")
+async def cost_summary_endpoint() -> Dict[str, Any]:
+    """Aggregate cost observability across runs (total, completed, success
+    rate, avg cost per completed task). Falls back to live in-memory runs
+    when no durable backend is attached."""
+    persistence = getattr(_run_store, "_persistence", None)
+    if persistence is not None:
+        try:
+            return {"summary": persistence.cost_summary()}
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"cost summary unavailable: {exc}")
+
+    runs = _run_store.list_runs(2000)
+    total = len(runs)
+    completed = sum(1 for r in runs if r.get("status") == "completed")
+    terminal = sum(
+        1 for r in runs
+        if r.get("status") in ("completed", "failed", "cancelled", "abandoned",
+                               "deviated", "interrupted")
+    )
+    costs = [
+        float((r.get("cost") or {}).get("est_cost_usd") or 0.0)
+        for r in runs if r.get("status") == "completed"
+    ]
+    return {
+        "summary": {
+            "total_runs": total,
+            "completed": completed,
+            "terminal_runs": terminal,
+            "success_rate": round(completed / terminal, 4) if terminal else 0.0,
+            "total_est_cost_usd": round(
+                sum(float((r.get("cost") or {}).get("est_cost_usd") or 0.0) for r in runs), 8
+            ),
+            "avg_cost_per_task_usd": round(sum(costs) / completed, 8) if completed else 0.0,
+            "avg_tokens_per_run": 0.0,
+        }
+    }
 
 
 @router.get("/runs/{run_id}/events")
@@ -1254,6 +1336,8 @@ async def replay(body: ReplayBody) -> Dict[str, Any]:
             result = await engine.replay(recording_path)
             run_state.status = result.status
             run_state.result = result.to_dict()
+            # Cost accounting: replay makes no LLM calls — honest zero.
+            run_state.cost = zero_run_cost()
             _emit_canonical("replay.finished", session_id=session_id, run_id=run_id,
                             payload={"recording_id": manifest.recording_id,
                                      "status": result.status,
