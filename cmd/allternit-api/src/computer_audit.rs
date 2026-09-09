@@ -10,6 +10,7 @@ use tracing::warn;
 use uuid::Uuid;
 
 pub const KIND_WS_TOKEN: &str = "ws_token";
+pub const KIND_EMBED_TOKEN: &str = "embed_token";
 pub const KIND_PROXY_ENABLE: &str = "proxy_enable";
 pub const KIND_PROXY_DISABLE: &str = "proxy_disable";
 pub const KIND_PROXY: &str = "proxy";

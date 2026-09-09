@@ -713,6 +713,7 @@ async fn main() {
         .merge(allternit_api::computer_routes::router())
         .merge(allternit_api::computer_groups::router())
         .merge(allternit_api::computer_ws::computer_api_router())
+        .merge(allternit_api::computer_embed::api_router())
         .merge(allternit_api::bot_group_routes::router())
         .merge(allternit_api::allternit_vault::router())
         .merge(passkey_router(&state))
@@ -844,6 +845,22 @@ async fn main() {
         // Nested under /api/v1 so clone URLs issued by POST /api/v1/brains
         // resolve here.
         .nest("/api/v1", brain_git_router())
+        // Public embeddable computer viewer (Phase 5): the embed token IS the
+        // credential (HMAC, computer-bound, expiring, read-only) — no Clerk
+        // session exists for an iframe visitor. Mounted before the platform
+        // `/` fallback below. frame-ancestors allowlist via
+        // ALLTERNIT_EMBED_FRAME_ANCESTORS (default "*", v1 self-host).
+        .merge(allternit_api::computer_embed::public_router())
+        // Public VNC desktop stream (Phase 5): like the embed viewer page,
+        // the HMAC computer token IS the credential — purpose "embed" tokens
+        // are minted for anonymous iframe viewers with no Clerk session, and
+        // purpose "vnc" tokens self-gate on an authenticated user matching
+        // the token (see `validate_vnc_ws_request`). Mounted here, OUTSIDE
+        // the auth middleware; only the single `/:id/vnc` route is exposed.
+        .nest(
+            "/ws/computers",
+            allternit_api::computer_ws::computer_vnc_public_router(),
+        )
         // Cross-machine bot peer fabric (BOT_TEAMMATES_SPEC Phase 3): mounts
         // on the public router because inbound peer traffic carries a peer
         // key, not a Clerk JWT — every handler self-gates (desktop token /

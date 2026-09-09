@@ -276,7 +276,7 @@ pub async fn mcp_tools_internal(
 /// Shared JSON-RPC core behind both the Clerk-gated `/mcp/server` route and
 /// the internal-token-gated `/internal/tools/mcp` route.
 async fn handle_rpc_inner(
-    state: &AppState,
+    state: &Arc<AppState>,
     user_id: &str,
     org_id: Option<&str>,
     req: JsonRpcRequest,
