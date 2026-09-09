@@ -1,19 +1,20 @@
-# Steering checkpoint — session/cu12-conf
+# Steering checkpoint — ao/allternit-runtime-fork (P0)
 
 ## Goal
-Finish honest remaining items in domains/computer-use (sole ownership).
+Phase P0 of the ao v3 engine fork (queue rq-20260908-028, decision fork_reskin): vendor herdr v0.9.0 into `infrastructure/executor/ao-engine/`, gut the herdr.dev phone-home surface, build as `ao` binary, keep diff mergeable with upstream. Spec: docs/ALLTERNIT_RUNTIME_MAP.md + docs/ALLTERNIT_RUNTIME_P0_TASK.md.
 
 ## Just did
-- CDP adapter: added `goto` (alias of navigate), `eval`, `observe` actions + screenshot Artifact population in envelope.
-- suites.py: added Suite B (browser-adaptive-v1, 3 tests: envelope/clean-failure/goal-forwarding); Suite C = retrieval-v1 (was R, 5 tests, build_suite_r kept as alias); Suite E = hybrid-v1 (was H, 3 tests, build_suite_h alias); gateway/main.py imports still valid.
-- measured.py: discovers hybrid.orchestrator always (offline, browser.mock sub-adapter, note says so); retrieval crawler + browser-use discovery; per-adapter suite routing; honest unmeasured fallbacks.
-- core/monitor.py: VLMMonitor behind Monitor protocol — env config ACU_MONITOR_VLM_PROVIDER/MODEL/ENDPOINT, stdlib urllib client, injectable client for tests, heuristic pre-filter, errors→continue; docstring documents swap-in.
-- tests: 11 new VLMMonitor tests (fake provider), updated measured-conformance tests for new B/C/E reality.
-- pytest (venv-acu311, excl. pre-existing collection-error modules): 207 passed / 21 skipped / 0 failed. 3 transient desktop-mouse flakes on first run, green on rerun; pass in isolation.
+- Vendored herdr v0.9.0 (SHA b99002ac99b09e00b4ca692436cb15a6b0d676f1) into infrastructure/executor/ao-engine/ (src/, tests/, vendor/ incl. patched portable-pty + libghostty-vt, build.rs, LICENSE, build-referenced assets/docs/skills). Excluded .git, rust-toolchain.toml (conflict documented).
+- Workspace wiring: member added; `[[bin]] name = "ao"`; portable-pty [patch.crates-io] at workspace root (version-specific 0.9.x, other members on 0.8 unaffected).
+- Gut list applied: update.rs trimmed to residue (Version + pkg-manager path detection, no network); product_announcements.rs deleted + wiring neutralized (UI/API surface left inert); manifest_update.rs remote catalog fetch removed (offline local-cache verification; local override cache mechanism kept); remote/attach.rs release-asset download from herdr.dev manifests removed (offline error with HERDR_REMOTE_BINARY guidance); `herdr update` + `herdr channel` subcommands removed.
+- Remaining herdr.dev hits: comments/docs + `herdr:devin` protocol identifier only (grep evidence pending in build evidence step).
+- THIRD_PARTY_NOTICES.md herdr entry added.
 
-## Done — PR opened, awaiting orchestrator merge
-
-- PR #168: https://github.com/Gizziio/allternit-platform/pull/168 (branch session/cu12-conf, 3 commits pushed). Per task contract, NOT merged — orchestrator merges.
+## Next
+- Final full test run + evidence capture (in progress).
+- Commit + push; write docs/ALLTERNIT_RUNTIME_P0_NOTES.md.
 
 ## Open questions
-- None.
+- RESOLVED: katakana test regression was workspace dep drift, not the gut — ratatui-core 0.1.2 breaks it (bisected; ratatui 0.30.2/line-clipping 0.3.8/unicode-segmentation 1.13.3/compact_str 0.9.1 all PASS). Pinned ratatui =0.30.0 + ratatui-core =0.1.0 in ao-engine; test passes in-workspace now.
+- RESOLVED: unit-suite SIGPIPE death is pre-existing — pristine herdr v0.9.0 (built standalone, rustc 1.94.1) dies identically (signal 13 after ~2185 ok; also env failure plugin_link_creates_stable_config_and_state_dirs which passes in isolation). Documented, not fixed (out of scope: unrelated pre-existing breakage).
+- rustc 1.94.1 compiles herdr 0.9.0 cleanly; the 1.96.1 pin is not needed. zig 0.15.2 required (ZIG env var or PATH; /opt/homebrew/opt/zig@0.15/bin/zig).

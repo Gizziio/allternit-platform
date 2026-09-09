@@ -48,6 +48,19 @@ This file contains notices for open-source software incorporated into this produ
 
 ---
 
+## herdr (ao engine)
+**License:** Apache-2.0
+
+**Copyright:** Copyright (c) herdr contributors
+
+**Source:** https://github.com/herdrdev/herdr (tag v0.9.0, commit b99002ac99b09e00b4ca692436cb15a6b0d676f1)
+
+**Used in:** `infrastructure/executor/ao-engine/`
+
+**Terminal workspace engine for AI coding agents, vendored as the `ao` engine fork (internal crate name `herdr` retained for upstream mergeability). Upstream is Apache-2.0 since 0.8.0; the herdr.dev self-updater, product announcements, and remote manifest fetches were removed per the P0 gut list (no runtime upstream URLs remain). LICENSE preserved in-crate.**
+
+---
+
 ## Turndown
 **License:** MIT
 
