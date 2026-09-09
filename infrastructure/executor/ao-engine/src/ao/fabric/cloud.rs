@@ -24,8 +24,25 @@ pub(crate) const DEFAULT_CAPABILITIES: [&str; 7] = [
 fn http() -> Result<reqwest::Client, String> {
     reqwest::Client::builder()
         .user_agent(format!("ao-fabric-node/{}", env!("CARGO_PKG_VERSION")))
+        // The cloud closes idle keep-alive connections aggressively; a
+        // reused dead pooled connection fails the next POST with an
+        // "error sending request" transport error (seen live 2026-09-09:
+        // pairing create succeeded, the first exchange poll failed).
+        .pool_max_idle_per_host(0)
         .build()
         .map_err(|err| format!("cannot build http client: {err}"))
+}
+
+/// Format a reqwest error with its full source chain for diagnosis.
+fn request_error(context: &str, err: &reqwest::Error) -> String {
+    use std::error::Error as _;
+    let mut message = format!("{context}: {err}");
+    let mut source = err.source();
+    while let Some(cause) = source {
+        message.push_str(&format!(" | caused by: {cause}"));
+        source = cause.source();
+    }
+    message
 }
 
 pub(crate) struct CloudClient {
@@ -78,7 +95,7 @@ impl CloudClient {
             .json(&body)
             .send()
             .await
-            .map_err(|err| format!("pairing create request failed: {err}"))?;
+            .map_err(|err| request_error("pairing create request failed", &err))?;
         let status = response.status();
         if status != reqwest::StatusCode::CREATED {
             let text = response.text().await.unwrap_or_default();
@@ -111,7 +128,7 @@ impl CloudClient {
             .json(&body)
             .send()
             .await
-            .map_err(|err| format!("pairing exchange request failed: {err}"))?;
+            .map_err(|err| request_error("pairing exchange request failed", &err))?;
         let status = response.status();
         if status == reqwest::StatusCode::OK {
             let session = response
