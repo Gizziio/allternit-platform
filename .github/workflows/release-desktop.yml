@@ -33,7 +33,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Install pnpm
         run: npm install -g pnpm@10.28.0
@@ -65,7 +65,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Install pnpm
         run: npm install -g pnpm@10.28.0
@@ -289,7 +289,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Install VS2022 C++ build tools (node-gyp)
         # windows-latest images no longer include a node-gyp-detectable Visual
@@ -461,7 +461,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Install pnpm
         run: npm install -g pnpm@10.28.0
