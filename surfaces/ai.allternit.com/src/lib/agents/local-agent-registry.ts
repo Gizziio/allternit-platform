@@ -395,7 +395,16 @@ export function mergeAgentCatalog(
     const duplicate = remoteAgents.some(
       (remoteAgent) =>
         remoteAgent.id === localAgent.id ||
-        isSameOpenClawBinding(remoteAgent, localAgent),
+        isSameOpenClawBinding(remoteAgent, localAgent) ||
+        // Bots are canonical by name, not by id: the packaged gizzi assistant
+        // exists in the local fallback registry (created while the API was
+        // unreachable) and is later registered with an API-minted id. Without
+        // the name match the merge surfaces both rows and the Bot Hub shows
+        // duplicate tiles for the same bot.
+        (remoteAgent.isBot === true &&
+          localAgent.isBot === true &&
+          remoteAgent.name.trim().toLowerCase() ===
+            localAgent.name.trim().toLowerCase()),
     );
 
     if (!duplicate) {

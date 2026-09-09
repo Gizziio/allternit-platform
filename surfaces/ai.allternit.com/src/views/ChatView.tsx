@@ -56,6 +56,7 @@ import { SendErrorBanner } from "./chat/main/SendErrorBanner";
 import { NativeOriginBanner } from "@/components/native-sessions/NativeOriginBanner";
 
 import { createModuleLogger } from '@/lib/logger';
+import { ArrowLeft } from "lucide-react";
 
 const logger = createModuleLogger('ChatView');
 
@@ -276,6 +277,13 @@ export function ChatView({
     // and left the user with no way to continue the conversation.
     setAgentCardDismissed(true);
   }, []);
+
+  const closeBotSession = useCallback(() => {
+    // Leave the bot session without deleting it — it stays in recents and can
+    // be reopened from bot home or search. Clearing the active session returns
+    // the chat surface to its home empty state.
+    setActiveNativeSession(null);
+  }, [setActiveNativeSession]);
 
   const handleScroll = useCallback(() => {
     if (!scrollContainerRef.current) return;
@@ -576,6 +584,27 @@ export function ChatView({
     />
   ) : null;
 
+  // Bot sessions had no way back home: the full context card can be dismissed
+  // (or never shown), leaving the session stranded. Keep a slim bar with a
+  // Back button for every bot session so the escape hatch is always present,
+  // even while the context card is open.
+  const botSessionBar = isBotSession && !hudMode ? (
+    <div className="mb-4 flex w-full items-center gap-3 rounded-2xl border border-[var(--border-default)] bg-[var(--bg-elevated)] px-3 py-2">
+      <button
+        type="button"
+        onClick={closeBotSession}
+        aria-label="Back to home"
+        className="flex items-center gap-1.5 rounded-lg border-none bg-transparent px-2 py-1.5 text-[13px] font-medium text-[var(--text-secondary)] cursor-pointer transition-colors hover:bg-[var(--bg-surface)] hover:text-[var(--text-primary)]"
+      >
+        <ArrowLeft size={15} />
+        Back
+      </button>
+      <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-[var(--text-primary)]">
+        {selectedAgent?.name ?? embeddedAgentSession.session?.name ?? 'Bot session'}
+      </span>
+    </div>
+  ) : null;
+
   return (
     <ChatBackground
       isAgentSessionEmbedded={isAgentSessionEmbedded}
@@ -655,7 +684,12 @@ export function ChatView({
             />
           ) : (
             <ChatActiveContent
-              embeddedAgentStrip={embeddedAgentStrip}
+              embeddedAgentStrip={
+                <>
+                  {botSessionBar}
+                  {embeddedAgentStrip}
+                </>
+              }
               isAgentSessionEmbedded={isAgentSessionEmbedded}
               chatId={chatId}
               linkedAgentSessionIds={linkedAgentSessionIds}

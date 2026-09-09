@@ -18,7 +18,7 @@ import { isBot } from '@/lib/bots/bot-profile';
 import { useChatSessionStore } from '@/views/chat/ChatSessionStore';
 import { useBotRosterStore } from './bot-roster.store';
 import { useBotActivityWatermarkStore } from './bot-activity-watermark';
-import { openBotCanonicalChat, openBotChatView } from './bot-canonical-chat.service';
+import { openBotSessionInChat } from './bot-canonical-chat.service';
 import type { ModeSessionMessage } from '@/lib/agents/mode-session-store';
 
 export const BOT_ACTIVITY_TOASTS_PREF_KEY = 'allternit:bot-activity-toasts';
@@ -155,9 +155,7 @@ export function useBotActivityToasts(): void {
         action: {
           label: 'Open chat',
           onClick: () => {
-            void openBotCanonicalChat({ botId: bot.id, botName: name, setActive: false }).then(
-              (sessionId) => openBotChatView(sessionId, bot.id, 'chat'),
-            );
+            void openBotSessionInChat(bot.id);
           },
         },
       });

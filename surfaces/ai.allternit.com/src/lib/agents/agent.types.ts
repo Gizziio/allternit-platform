@@ -796,6 +796,12 @@ export interface AgentWorkspaceLayers {
 
 // Agent creation input
 export interface CreateAgentInput {
+  /**
+   * Client-stable id. Renderer-seeded packaged bots (e.g. Gizzi) pass their
+   * existing local id so the API row matches every session/metadata reference;
+   * the API is idempotent on this id. Omit to let the server mint a uuid.
+   */
+  id?: string;
   name: string;
   description: string;
   type?: AgentType;
@@ -849,6 +855,7 @@ export interface CreateAgentInput {
 
 // Zod Schema for CreateAgentInput
 const createAgentInputSchema = z.object({
+  id: z.string().optional(),
   name: z.string().min(1).max(100),
   description: z.string(),
   type: z.enum(['orchestrator', 'sub-agent', 'worker', 'specialist', 'reviewer', 'assistant']).optional(),

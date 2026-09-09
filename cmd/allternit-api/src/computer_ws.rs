@@ -237,7 +237,7 @@ pub fn computer_api_router() -> Router<Arc<AppState>> {
         .route("/computers/:id/proxy", get(get_proxy_config))
         .route("/computers/:id/proxy/enable", post(enable_proxy))
         .route("/computers/:id/proxy/disable", post(disable_proxy))
-        .route("/computers/:id/proxy/{*path}", any(proxy_forward))
+        .route("/computers/:id/proxy/*path", any(proxy_forward))
         .layer(DefaultBodyLimit::max(PROXY_BODY_LIMIT))
 }
 
@@ -1147,7 +1147,7 @@ fn proxy_client() -> &'static reqwest::Client {
     })
 }
 
-/// ANY /api/v1/computers/:id/proxy/{*path} — forward to the guest port the
+/// ANY /api/v1/computers/:id/proxy/*path — forward to the guest port the
 /// owner opted into. Auth'd; every request is audit-logged.
 async fn proxy_forward(
     State(state): State<Arc<AppState>>,

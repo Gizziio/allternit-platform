@@ -8,7 +8,7 @@
  * dropdown panel with Create new Bot / Create group chat actions and a
  * numbered list of all bots. Selecting a bot binds it to the 'bot' surface
  * (useAgentSurfaceModeStore) and opens its chat session via the same
- * useStartBotSession + openBotChatView services BotLaunchpadView uses.
+ * useStartBotSession + openChatView services BotLaunchpadView uses.
  *
  * @module BotTopDeck
  */
@@ -21,7 +21,7 @@ import type { Bot } from "@/lib/agents/agent.types";
 import { useAgentSurfaceModeStore } from "@/stores/agent-surface-mode.store";
 import { getBots, getBotDisplayName } from "@/lib/bots/bot-profile";
 import { useStartBotSession } from "@/lib/bots/useStartBotSession";
-import { openBotChatView } from "@/lib/bots/bot-canonical-chat.service";
+import { openChatView } from "@/lib/bots/bot-canonical-chat.service";
 import { useGroupChatStore } from "@/lib/bots/group-chat.store";
 import { CreateBotForm } from "@/views/agent-view/components/CreateBotForm";
 import {
@@ -74,7 +74,7 @@ export function BotTopDeck(): React.ReactNode {
     setPanelOpen(false);
     const sessionId = await startSession(bot);
     if (sessionId) {
-      openBotChatView(sessionId, bot.id, "bot-launchpad");
+      openChatView();
     }
   };
 

@@ -18,7 +18,7 @@ import {
 import { computeInboxBadge, selectVisibleBotAttention } from '@/lib/bots/bot-inbox';
 import { useBotRosterStore } from '@/lib/bots/bot-roster.store';
 import { useCommRailsMailStore } from '@/lib/bots/comrails-mail.store';
-import { openBotCanonicalChat, openBotChatView } from '@/lib/bots/bot-canonical-chat.service';
+import { openBotSessionInChat } from '@/lib/bots/bot-canonical-chat.service';
 import { useGroupChatStore } from '@/lib/bots/group-chat.store';
 import {
   refreshGroupEscalations,
@@ -216,10 +216,7 @@ export function BotInboxContent({ onOpen }: BotInboxContentProps): React.ReactNo
 
   const openBotChat = useCallback(
     (bot: Agent) => {
-      const name = bot.botProfile?.displayName ?? bot.name;
-      void openBotCanonicalChat({ botId: bot.id, botName: name, setActive: false }).then((sessionId) =>
-        openBotChatView(sessionId, bot.id, 'chat'),
-      );
+      void openBotSessionInChat(bot.id);
     },
     [],
   );

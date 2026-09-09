@@ -304,6 +304,12 @@ async fn list_agents(
 
 #[derive(Deserialize)]
 struct CreateAgentBody {
+    /// Optional client-stable id. Renderer-seeded packaged bots (e.g. Gizzi)
+    /// already have sessions and metadata referencing their local id; without
+    /// this, the server mints a new uuid and every later agent-scoped call
+    /// (like the agent-sessions surface gate) misses the row. Idempotent: an
+    /// existing row with this id is returned unchanged.
+    id: Option<String>,
     name: String,
     description: Option<String>,
     #[serde(rename = "type")]
@@ -611,9 +617,13 @@ async fn create_agent(
         return (StatusCode::BAD_REQUEST, Json(json!({"error": err}))).into_response();
     }
 
-    let id = uuid::Uuid::new_v4().to_string();
+    let requested_id: Option<String> = body
+        .id
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty() && s.len() <= 64)
+        .map(str::to_string);
     let db = state.db.clone();
-    let id2 = id.clone();
     let user_id = user.user_id;
     let user_id_for_db = user_id.clone();
 
@@ -639,6 +649,23 @@ async fn create_agent(
 
     let result = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
+
+        // Idempotency: a renderer re-registering a seeded bot must not 500 on
+        // the UNIQUE(id) constraint — return the existing row instead.
+        if let Some(requested) = requested_id.as_deref() {
+            let existing: Option<String> = conn
+                .query_row(
+                    "SELECT id FROM agents WHERE id = ?1",
+                    params![requested],
+                    |row| row.get(0),
+                )
+                .ok();
+            if let Some(existing_id) = existing {
+                return Ok(existing_id);
+            }
+        }
+
+        let final_id = requested_id.unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
         conn.execute(
             "INSERT INTO agents (id, user_id, name, description, type, parent_agent_id, model, provider,
                                 capabilities, system_prompt, tools, max_iterations, temperature, config,
@@ -648,7 +675,7 @@ async fn create_agent(
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18,
                      ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28, ?29)",
             params![
-                id2,
+                final_id,
                 user_id_for_db,
                 body.name,
                 body.description,
@@ -679,14 +706,14 @@ async fn create_agent(
                 body.mode.unwrap_or_else(|| "primary".to_string()),
             ],
         )?;
-        persist_agent_secrets(&conn, &id2, &user_id_for_db, secret_refs.as_ref())?;
-        persist_agent_identity_channels(&conn, &id2, &user_id_for_db, identity_channels.as_ref())?;
-        Ok::<_, rusqlite::Error>(())
+        persist_agent_secrets(&conn, &final_id, &user_id_for_db, secret_refs.as_ref())?;
+        persist_agent_identity_channels(&conn, &final_id, &user_id_for_db, identity_channels.as_ref())?;
+        Ok::<_, rusqlite::Error>(final_id)
     })
     .await;
 
     match result {
-        Ok(Ok(())) => {
+        Ok(Ok(id)) => {
             // Append agent creation event to Rails ledger for audit/traceability
             let ledger_event = allternit_agent_system_rails::AllternitEvent {
                 event_id: String::new(),

@@ -27,7 +27,7 @@ import type { Bot } from "@/lib/agents/agent.types";
 import { getBots } from "@/lib/bots/bot-profile";
 import { useBotRosterStore } from "@/lib/bots/bot-roster.store";
 import { useStartBotSession } from "@/lib/bots/useStartBotSession";
-import { openBotChatView } from "@/lib/bots/bot-canonical-chat.service";
+import { openChatView } from "@/lib/bots/bot-canonical-chat.service";
 import { BotTopDeck } from "./BotTopDeck";
 
 /**
@@ -77,7 +77,7 @@ function BotLaunchpadContent() {
   const handleOpenBotSession = async (bot: Bot) => {
     const sessionId = await startSession(bot);
     if (sessionId) {
-      openBotChatView(sessionId, bot.id, "bot-launchpad");
+      openChatView();
     }
   };
 
@@ -98,7 +98,7 @@ function BotLaunchpadContent() {
     }
     void startTask(bot, text).then((sessionId) => {
       if (sessionId) {
-        openBotChatView(sessionId, bot.id, "bot-launchpad");
+        openChatView();
       }
     });
   };

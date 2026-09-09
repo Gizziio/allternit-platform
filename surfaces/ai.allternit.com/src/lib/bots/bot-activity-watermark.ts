@@ -114,7 +114,7 @@ export function useBotHasNewActivity(botId: string | null): boolean {
   return computeHasNewActivity(activityAt, watermark);
 }
 
-const FOCUSED_CHAT_VIEWS = new Set(['chat', 'bot-chat-session']);
+const FOCUSED_CHAT_VIEWS = new Set(['chat']);
 
 /**
  * Mount once in the shell: seeds watermarks for every bot (history never

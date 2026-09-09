@@ -10,6 +10,11 @@ const logger = createModuleLogger('useAgentBootstrap');
 const BOOTSTRAP_KEY = 'allternit:agent-bootstrap:v1';
 
 const GIZZI_SEED: AgentDefinition = {
+  // Client-stable id: the API create is idempotent on id (see agent.service
+  // createAgent + the API's CreateAgentBody.id), so the packaged assistant
+  // gets ONE row with a predictable identity instead of a fresh uuid whenever
+  // the bootstrap runs before the agent store has hydrated.
+  id: 'gizzi-packaged-assistant',
   name: 'gizzi',
   description: 'Your personal Allternit platform assistant. Always here to help.',
   instructions: 'You are Gizzi, the friendly platform assistant for Allternit. Help users navigate and use the platform effectively.',

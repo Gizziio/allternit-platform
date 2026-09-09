@@ -218,6 +218,8 @@ export async function createAgent(input: CreateAgentInput): Promise<Agent> {
   
   // Transform camelCase to snake_case for API
   const apiInput: Record<string, unknown> = {
+    // Preserve a client-stable id when provided (packaged-bot re-registration).
+    id: input.id,
     name: input.name,
     description: input.description,
     type: input.type || 'worker',
@@ -242,7 +244,12 @@ export async function createAgent(input: CreateAgentInput): Promise<Agent> {
     config: input.source ? { ...(input.config || {}), agentSource: input.source } : (input.config || {}),
     workspace_id: input.workspaceId,
     owner_id: input.ownerId,
-    avatar: input.avatar,
+    // The API stores avatar as TEXT (Option<String>): an object here fails
+    // JSON deserialization with a 4xx, which is exactly how renderer-seeded
+    // bots with mascot avatars (Gizzi) never reached the agents table.
+    avatar: input.avatar
+      ? (typeof input.avatar === 'string' ? input.avatar : JSON.stringify(input.avatar))
+      : undefined,
     character_json: input.characterLayer,
     trust_tier: input.trustTier,
     harness_config: input.harness,

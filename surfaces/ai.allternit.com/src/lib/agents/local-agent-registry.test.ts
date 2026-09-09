@@ -110,6 +110,71 @@ describe("local-agent-registry", () => {
     expect(merged[0]?.id).toBe("agent-registry-main");
   });
 
+  it("dedupes a locally-registered bot against its API-registered twin by name", () => {
+    const localGizzi = createLocalAgent({
+      name: "gizzi",
+      description: "Local fallback copy",
+      type: "worker",
+      model: "openai/gpt-5-mini",
+      provider: "openai",
+      capabilities: ["chat"],
+      isBot: true,
+    });
+
+    const remoteGizzi: Agent = {
+      id: "api-minted-gizzi-id",
+      name: "gizzi",
+      description: "API copy",
+      type: "worker",
+      model: "openai/gpt-5-mini",
+      provider: "openai",
+      capabilities: ["chat"],
+      isBot: true,
+      tools: [],
+      maxIterations: 10,
+      temperature: 0.7,
+      status: "idle",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    const merged = mergeAgentCatalog([remoteGizzi], [localGizzi]);
+
+    expect(merged).toHaveLength(1);
+    expect(merged[0]?.id).toBe("api-minted-gizzi-id");
+  });
+
+  it("keeps distinct non-bot agents that merely share a name", () => {
+    const localAgent = createLocalAgent({
+      name: "Helper",
+      description: "Local helper",
+      type: "worker",
+      model: "openai/gpt-5-mini",
+      provider: "openai",
+      capabilities: ["chat"],
+    });
+
+    const remoteAgent: Agent = {
+      id: "remote-helper-id",
+      name: "Helper",
+      description: "Remote helper",
+      type: "worker",
+      model: "openai/gpt-5-mini",
+      provider: "openai",
+      capabilities: ["chat"],
+      tools: [],
+      maxIterations: 10,
+      temperature: 0.7,
+      status: "idle",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    const merged = mergeAgentCatalog([remoteAgent], [localAgent]);
+
+    expect(merged).toHaveLength(2);
+  });
+
   it("allows fallback on local shell when the registry request fails", () => {
     expect(
       shouldUseLocalAgentRegistryFallback({
