@@ -358,6 +358,13 @@ jobs:
         # A bare `bun install` in cmd/gizzi-code reads the committed bun.lock,
         # whose workspace paths were recorded from a foreign checkout layout,
         # and fails with "Workspace dependency not found" on a fresh clone.
+        env:
+          # windows-latest now also ships VS18 ("unknown version" to node-gyp
+          # 11.x) and its PowerShell-based auto-detection crashes with a
+          # maxBuffer RangeError before it ever considers the choco VS2022
+          # build tools (run 12). Pinning GYP_MSVS_VERSION makes node-gyp go
+          # straight to vswhere for the 17.x toolset we installed above.
+          GYP_MSVS_VERSION: "2022"
         run: pnpm install --frozen-lockfile
 
       - name: Build gizzi-code workspace dependencies
