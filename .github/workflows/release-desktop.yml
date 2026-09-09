@@ -208,7 +208,7 @@ jobs:
           python3 -m venv /tmp/voice-venv
           /tmp/voice-venv/bin/pip install --upgrade pip pyinstaller
           /tmp/voice-venv/bin/pip install -r services/voice/api/requirements.txt
-          /tmp/voice-venv/bin/pip install services/voice
+          /tmp/voice-venv/bin/pip install services/voice/voice
           cd services/voice
           /tmp/voice-venv/bin/pyinstaller --noconfirm --clean allternit-voice-service.spec
           mkdir -p ../../surfaces/allternit-desktop/resources/bin
@@ -391,7 +391,7 @@ jobs:
           python -m venv "$env:TEMP\voice-venv"
           & "$env:TEMP\voice-venv\Scripts\pip.exe" install --upgrade pip pyinstaller
           & "$env:TEMP\voice-venv\Scripts\pip.exe" install -r services/voice/api/requirements.txt
-          & "$env:TEMP\voice-venv\Scripts\pip.exe" install services/voice
+          & "$env:TEMP\voice-venv\Scripts\pip.exe" install services/voice/voice
           Set-Location services/voice
           & "$env:TEMP\voice-venv\Scripts\pyinstaller.exe" --noconfirm --clean allternit-voice-service.spec
           New-Item -ItemType Directory -Force ..\..\surfaces\allternit-desktop\resources\bin | Out-Null
