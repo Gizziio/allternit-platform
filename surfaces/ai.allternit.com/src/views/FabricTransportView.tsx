@@ -14,6 +14,7 @@ import {
 import { openFabricSessionWindow } from "@/lib/open-fabric-session-window";
 import { FabricSessionQrCard } from "@/components/dispatch/FabricSessionQrCard";
 import { fabricSessionPwaUrl } from "@/lib/fabric-session-pwa";
+import { RemotePeersPanel } from "@/lib/peers/RemotePeersPanel";
 
 type FabricEndpoint = {
   transport?: string;
@@ -433,6 +434,10 @@ export function FabricTransportView(): React.ReactNode {
             </ul>
           )}
         </section>
+
+        <div className="mt-4">
+          <RemotePeersPanel />
+        </div>
 
         {directory.data && (
           <details className="mt-4 rounded-2xl border border-solid border-[var(--border-default)] bg-white p-5">

@@ -1,23 +1,21 @@
-/**
- * RemotePeersRailSection — minimal "Remote peers" rail panel for the
- * cross-machine fabric (BOT_TEAMMATES_SPEC Phase 3).
- *
- * Self-contained on purpose: ShellRail's integration point is a single marked
- * block rendering this section next to TEAMMATES. Self-prunes to nothing when
- * no remote peer is configured (until the user opens the add form).
- *
- * Ghost-row awareness: peers whose union-roster source failed its last poll
- * render muted with an "unreachable" tooltip; bots reported by an unreachable
- * source are exposed via `useRemotePeers().unreachableSources` for TEAMMATES
- * row rendering (wired at integration).
- */
-
 import React, { useCallback, useState } from 'react';
-import { CaretRight, Plus, Trash, Globe } from '@phosphor-icons/react';
+import { Globe, Plus, Trash } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import { useRemotePeers } from './use-remote-peers';
 
-export function RemotePeersRailSection(): React.ReactNode {
+/**
+ * RemotePeersPanel — wide-view "Remote peers" card for the cross-machine
+ * fabric (BOT_TEAMMATES_SPEC Phase 3).
+ *
+ * Renders configured remote peer connections (reachability dot, URL, ghost
+ * roster counts) with inline add/remove, styled for a full view rather than
+ * the rail: surfaced inside FabricTransportView.
+ *
+ * Ghost-row awareness: peers whose union-roster source failed its last poll
+ * render muted with an "unreachable" tooltip; bots reported by an unreachable
+ * source are exposed via `useRemotePeers().unreachableSources`.
+ */
+export function RemotePeersPanel(): React.ReactNode {
   const {
     peers,
     roster,
@@ -26,7 +24,6 @@ export function RemotePeersRailSection(): React.ReactNode {
     removePeer,
     reachabilityByPeer,
   } = useRemotePeers();
-  const [expanded, setExpanded] = useState(false);
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState('');
   const [url, setUrl] = useState('');
@@ -58,32 +55,45 @@ export function RemotePeersRailSection(): React.ReactNode {
     }
   }, [name, url, key, addPeer]);
 
-  // Self-pruning: nothing configured and the form is closed → render nothing.
-  if (peers.length === 0 && !adding) {
-    return (
-      <RemotePeersHeader expanded={expanded} onToggle={() => setExpanded((v) => !v)} onAdd={() => setAdding(true)} />
-    );
-  }
-
   return (
-    <div className="flex flex-col px-2 shrink-0" data-testid="remote-peers-section">
-      <RemotePeersHeader
-        expanded={expanded}
-        onToggle={() => setExpanded((v) => !v)}
-        onAdd={() => setAdding((v) => !v)}
-      />
-      {expanded && (
-        <div className="flex flex-col gap-0.5 pb-1">
+    <section
+      className="rounded-2xl border border-solid border-[var(--border-default)] bg-white p-5"
+      data-testid="remote-peers-section"
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 text-[13px] font-semibold">
+          <Globe size={16} />
+          Remote peers
+          <span className="text-[12px] font-normal text-[var(--text-secondary)]">
+            {peers.length}
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={() => setAdding((v) => !v)}
+          className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-solid border-[var(--border-default)] bg-white px-3 text-[12px] font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-hover)] hover:text-[var(--text-primary)]"
+        >
+          <Plus size={13} weight="bold" />
+          Add peer
+        </button>
+      </div>
+
+      {peers.length === 0 && !adding && (
+        <p className="mt-3 text-[13px] text-[var(--text-tertiary)]">
+          No remote peers configured. Connect another machine's Allternit node
+          to share bots across the fabric.
+        </p>
+      )}
+
+      {peers.length > 0 && (
+        <ul className="mt-3 divide-y divide-[var(--border-subtle)]">
           {peers.map((peer) => {
             const reachable = reachabilityByPeer[peer.name] ?? peer.reachable;
             const ghostCount = roster.filter(
               (r) => r.kind === 'peer' && r.source === peer.name && !r.sourceReachable,
             ).length;
             return (
-              <div
-                key={peer.name}
-                className="group flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-[var(--shell-item-hover)]"
-              >
+              <li key={peer.name} className="group flex items-center gap-3 py-3 first:pt-0 last:pb-0">
                 <span
                   className={cn(
                     'size-2 rounded-full shrink-0',
@@ -92,24 +102,24 @@ export function RemotePeersRailSection(): React.ReactNode {
                   title={reachable ? 'reachable' : 'unreachable'}
                   data-testid={`peer-dot-${peer.name}`}
                 />
-                <Globe size={13} className="text-[var(--shell-item-muted)] shrink-0" />
+                <Globe size={14} className="text-[var(--text-secondary)] shrink-0" />
                 <div className="flex-1 min-w-0">
                   <div
                     className={cn(
-                      'text-[12px] truncate',
-                      reachable
-                        ? 'text-[var(--shell-item-fg)]'
-                        : 'text-[var(--shell-item-muted)] line-through decoration-dotted',
+                      'text-[13px] font-medium truncate',
+                      !reachable && 'text-[var(--text-tertiary)] line-through decoration-dotted',
                     )}
                     title={reachable ? peer.url : 'unreachable'}
                   >
                     {peer.name}
                   </div>
-                  <div className="text-[10px] text-[var(--shell-item-muted)] truncate">{peer.url}</div>
+                  <div className="font-mono text-[11px] text-[var(--text-tertiary)] truncate">
+                    {peer.url}
+                  </div>
                 </div>
                 {ghostCount > 0 && (
                   <span
-                    className="text-[10px] text-[var(--shell-item-muted)]"
+                    className="text-[11px] text-[var(--text-tertiary)] shrink-0"
                     title={`${ghostCount} known peer(s) on ${peer.name} currently unreachable`}
                   >
                     {ghostCount} ghost
@@ -118,94 +128,60 @@ export function RemotePeersRailSection(): React.ReactNode {
                 <button
                   type="button"
                   onClick={() => void removePeer(peer.name)}
-                  className="opacity-0 group-hover:opacity-100 size-6 rounded-md bg-transparent border-none text-[var(--shell-item-muted)] hover:text-red-400 cursor-pointer flex items-center justify-center"
+                  className="size-7 rounded-md bg-transparent border-none text-[var(--text-tertiary)] hover:text-red-500 cursor-pointer flex items-center justify-center transition-colors"
                   title={`Remove ${peer.name}`}
                 >
-                  <Trash size={12} />
+                  <Trash size={13} />
                 </button>
-              </div>
+              </li>
             );
           })}
-          {error && (
-            <div className="px-2 py-1 text-[11px] text-red-400">{error}</div>
-          )}
-          {adding && (
-            <div className="flex flex-col gap-1.5 px-2 py-2 border-t border-[var(--shell-border)]">
-              <input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Peer name"
-                className="px-2 py-1 text-[12px] bg-[var(--shell-rail-bg)] border border-[var(--shell-border)] rounded-md text-[var(--shell-item-fg)] outline-none"
-              />
-              <input
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                placeholder="http://host:8013"
-                className="px-2 py-1 text-[12px] bg-[var(--shell-rail-bg)] border border-[var(--shell-border)] rounded-md text-[var(--shell-item-fg)] outline-none"
-              />
-              <input
-                value={key}
-                onChange={(e) => setKey(e.target.value)}
-                placeholder="Shared key (stored in daemon peers.env)"
-                type="password"
-                className="px-2 py-1 text-[12px] bg-[var(--shell-rail-bg)] border border-[var(--shell-border)] rounded-md text-[var(--shell-item-fg)] outline-none"
-              />
-              {formError && <div className="text-[11px] text-red-400">{formError}</div>}
-              <div className="flex gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => void handleAdd()}
-                  disabled={busy}
-                  className="px-2 py-1 text-[11px] rounded-md bg-[var(--shell-item-hover)] border-none text-[var(--shell-item-fg)] cursor-pointer disabled:opacity-50"
-                >
-                  {busy ? 'Adding…' : 'Add peer'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAdding(false)}
-                  className="px-2 py-1 text-[11px] rounded-md bg-transparent border-none text-[var(--shell-item-muted)] cursor-pointer"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          )}
+        </ul>
+      )}
+
+      {error && <p className="mt-3 text-[12px] text-red-500">{error}</p>}
+
+      {adding && (
+        <div className="mt-3 flex flex-col gap-2 rounded-xl border border-solid border-[var(--border-subtle)] p-3">
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Peer name"
+            className="rounded-lg border border-solid border-[var(--border-default)] bg-transparent px-2.5 py-1.5 text-[12px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-tertiary)] focus:border-[var(--accent-primary)]"
+          />
+          <input
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder="http://host:8013"
+            className="rounded-lg border border-solid border-[var(--border-default)] bg-transparent px-2.5 py-1.5 font-mono text-[12px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-tertiary)] focus:border-[var(--accent-primary)]"
+          />
+          <input
+            value={key}
+            onChange={(e) => setKey(e.target.value)}
+            placeholder="Shared key (stored in daemon peers.env)"
+            type="password"
+            className="rounded-lg border border-solid border-[var(--border-default)] bg-transparent px-2.5 py-1.5 text-[12px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-tertiary)] focus:border-[var(--accent-primary)]"
+          />
+          {formError && <p className="text-[11px] text-red-500">{formError}</p>}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => void handleAdd()}
+              disabled={busy}
+              className="rounded-lg border border-solid border-[var(--border-default)] bg-white px-3 py-1.5 text-[12px] font-medium text-[var(--text-primary)] cursor-pointer transition-colors hover:border-[var(--border-hover)] disabled:opacity-50"
+            >
+              {busy ? 'Adding…' : 'Add peer'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setAdding(false)}
+              className="rounded-lg border-none bg-transparent px-3 py-1.5 text-[12px] text-[var(--text-secondary)] cursor-pointer hover:text-[var(--text-primary)]"
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       )}
-    </div>
-  );
-}
-
-function RemotePeersHeader({
-  expanded,
-  onToggle,
-  onAdd,
-}: {
-  expanded: boolean;
-  onToggle: () => void;
-  onAdd: () => void;
-}): React.ReactNode {
-  return (
-    <div className="group px-1 py-2 flex items-center justify-between text-[var(--shell-item-muted)] text-[12px] font-extrabold uppercase tracking-[0.08em] select-none">
-      <button
-        type="button"
-        onClick={onToggle}
-        className="flex items-center gap-1.5 bg-transparent border-none text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] cursor-pointer"
-      >
-        <CaretRight
-          size={12}
-          className={cn('transition-transform duration-200', expanded && 'rotate-90')}
-        />
-        <span>Remote peers</span>
-      </button>
-      <button
-        type="button"
-        onClick={onAdd}
-        className="opacity-0 max-md:opacity-100 group-hover:opacity-100 size-6 max-md:size-11 rounded-md bg-transparent border-none text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)] cursor-pointer flex items-center justify-center transition-all"
-        title="Add remote peer"
-      >
-        <Plus size={13} weight="bold" />
-      </button>
-    </div>
+    </section>
   );
 }

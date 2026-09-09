@@ -279,8 +279,8 @@ export function useMonitorThreads(): UseMonitorThreadsResult {
     try {
       await Promise.all([fetchMailThreads(), fetchLedgerEvents(200)]);
     } catch (err) {
-      logger.error({ err }, "Failed to load agent activity threads");
-      setError(err instanceof Error ? err.message : "Failed to load agent activity");
+      logger.error({ err }, "Failed to load bot activity threads");
+      setError(err instanceof Error ? err.message : "Failed to load bot activity");
     } finally {
       setLoading(false);
     }

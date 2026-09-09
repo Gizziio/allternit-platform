@@ -895,7 +895,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       </p>
       <SettingsTable columns={['Action', 'Shortcut']}>
         {[
-          { action: 'Toggle Agent Activity', shortcut: '⌘⇧M' },
+          { action: 'Toggle Bot Activity', shortcut: '⌘⇧M' },
           { action: 'Find in page', shortcut: '⌘F' },
           { action: 'Toggle HUD', shortcut: '⌘⇧H' },
           { action: 'Toggle Agent Runner', shortcut: '⌘⇧A' },
