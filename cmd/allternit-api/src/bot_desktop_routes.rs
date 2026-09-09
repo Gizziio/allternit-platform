@@ -1353,6 +1353,8 @@ mod tests {
     impl allternit_driver_interface::ExecutionDriver for MockExecutionDriver {
         fn capabilities(&self) -> allternit_driver_interface::DriverCapabilities {
             allternit_driver_interface::DriverCapabilities {
+                resize: false,
+                clone: false,
                 driver_type: allternit_driver_interface::DriverType::Container,
                 isolation: allternit_driver_interface::IsolationLevel::Standard,
                 max_resources: ResourceSpec {

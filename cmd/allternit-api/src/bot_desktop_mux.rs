@@ -225,6 +225,8 @@ mod tests {
                 ResourceSpec,
             };
             DriverCapabilities {
+                resize: false,
+                clone: false,
                 driver_type: DriverType::Container,
                 isolation: IsolationLevel::Standard,
                 max_resources: ResourceSpec {

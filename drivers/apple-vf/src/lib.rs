@@ -257,6 +257,8 @@ impl fmt::Debug for AppleVFDriver {
 impl ExecutionDriver for AppleVFDriver {
     fn capabilities(&self) -> DriverCapabilities {
         DriverCapabilities {
+            resize: false,
+            clone: false,
             driver_type: DriverType::MicroVM,
             isolation: IsolationLevel::Maximum,
             max_resources: ResourceSpec {

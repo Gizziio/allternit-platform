@@ -520,6 +520,8 @@ mod tests {
     impl allternit_driver_interface::ExecutionDriver for SmokeMockDriver {
         fn capabilities(&self) -> DriverCapabilities {
             DriverCapabilities {
+                resize: false,
+                clone: false,
                 driver_type: DriverType::Container,
                 isolation: IsolationLevel::Standard,
                 max_resources: ResourceSpec::minimal(),
