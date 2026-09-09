@@ -28,7 +28,7 @@ export interface Computer {
   kind: ComputerKind;
   provider: string;
   status: ComputerStatus;
-  owner_type: 'user' | 'org' | 'bot';
+  owner_type: 'user' | 'org' | 'bot' | 'session';
   owner_id: string;
   bot_id?: string | null;
   session_id?: string | null;

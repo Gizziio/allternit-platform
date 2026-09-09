@@ -12,7 +12,7 @@ function client(command: Command): ApiClient {
 
 function output(command: Command, value: unknown): void {
   const json = command.optsWithGlobals<GlobalOptions>().json;
-  process.stdout.write(`${JSON.stringify(value, null, json ? 2 : 2)}\n`);
+  process.stdout.write(`${JSON.stringify(value, null, json ? 0 : 2)}\n`);
 }
 
 async function run(command: Command, request: () => Promise<unknown>): Promise<void> {

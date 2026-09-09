@@ -851,6 +851,16 @@ async fn main() {
         // `/` fallback below. frame-ancestors allowlist via
         // ALLTERNIT_EMBED_FRAME_ANCESTORS (default "*", v1 self-host).
         .merge(allternit_api::computer_embed::public_router())
+        // Public VNC desktop stream (Phase 5): like the embed viewer page,
+        // the HMAC computer token IS the credential — purpose "embed" tokens
+        // are minted for anonymous iframe viewers with no Clerk session, and
+        // purpose "vnc" tokens self-gate on an authenticated user matching
+        // the token (see `validate_vnc_ws_request`). Mounted here, OUTSIDE
+        // the auth middleware; only the single `/:id/vnc` route is exposed.
+        .nest(
+            "/ws/computers",
+            allternit_api::computer_ws::computer_vnc_public_router(),
+        )
         // Cross-machine bot peer fabric (BOT_TEAMMATES_SPEC Phase 3): mounts
         // on the public router because inbound peer traffic carries a peer
         // key, not a Clerk JWT — every handler self-gates (desktop token /

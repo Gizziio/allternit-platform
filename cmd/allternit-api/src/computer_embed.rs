@@ -49,10 +49,10 @@ use crate::auth::AuthUser;
 use crate::computer_routes::{fetch_computer, ComputerStatus};
 use crate::AppState;
 
-/// TTL for embed tokens. Longer than the 5-minute interactive ws tokens
-/// because an iframe should survive a viewer lingering on a page; still
-/// short-lived so a leaked token self-expires.
-const EMBED_TOKEN_TTL_SECONDS: u64 = 3600;
+/// TTL for embed tokens: 15 minutes — long enough for an iframe viewer to
+/// linger on a page, short enough that a leaked token (it travels in URLs)
+/// self-expires quickly. Interactive ws tokens live 5 minutes.
+const EMBED_TOKEN_TTL_SECONDS: u64 = 900;
 
 /// Standalone computers have no bot-style control-state arbitration; the
 /// owner always controls their own computer. This is the documented static
@@ -83,6 +83,13 @@ pub fn api_router() -> Router<Arc<AppState>> {
 /// Public routes (no Clerk auth; the embed token IS the credential).
 /// Mounted on the public router BEFORE the platform `/` fallback.
 pub fn public_router() -> Router<Arc<AppState>> {
+    if !novnc_assets_dir().is_dir() {
+        warn!(
+            path = %novnc_assets_dir().display(),
+            "vendored noVNC assets not found; the embed viewer page will load with 404 assets \
+             (run scripts/vendor-novnc.mjs or ship assets/novnc/ next to the binary)"
+        );
+    }
     Router::new()
         .route("/embed/computers/:id", get(embed_viewer_page))
         .route("/embed/assets/{*path}", get(serve_novnc_asset))

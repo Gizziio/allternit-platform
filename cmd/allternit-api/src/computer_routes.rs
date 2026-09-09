@@ -379,6 +379,54 @@ pub(crate) async fn fetch_computer(
         .filter(|c| c.status != ComputerStatus::Deleted))
 }
 
+/// Fetch a computer by id with NO ownership scoping. Only for callers whose
+/// authorization already comes from elsewhere (the HMAC computer ws token on
+/// the public VNC route) — the token, not the request identity, proves access.
+pub(crate) async fn fetch_computer_any_owner(
+    state: &Arc<AppState>,
+    id: &str,
+) -> Result<Option<ComputerResponse>, Response> {
+    let db = state.db.clone();
+    let id_owned = id.to_string();
+    let id_for_error = id.to_string();
+    let result = tokio::task::spawn_blocking(move || {
+        let conn = db.connect()?;
+        let mut stmt = conn.prepare(
+            "SELECT c.id, c.kind, c.provider, c.status, c.owner_type, c.owner_id, \
+             c.bot_id, c.session_id, c.name, c.os, c.cpu_cores, c.memory_mb, c.disk_mb, \
+             c.region, c.host, c.native_id, c.template_id, c.billing_source, \
+             c.created_at, c.updated_at, c.idle_timeout_secs, c.last_activity_at, c.group_id, c.role \
+             FROM computers c \
+             WHERE c.id = ?1",
+        )?;
+        let row = stmt.query_row(rusqlite::params![id_owned], computer_from_row);
+        match row {
+            Ok(c) => Ok(Some(c)),
+            Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+            Err(e) => Err(e),
+        }
+    })
+    .await;
+
+    match result {
+        Ok(Ok(computer)) => Ok(computer),
+        Ok(Err(e)) => {
+            warn!(computer_id = %id_for_error, error = %e, "failed to fetch computer");
+            Err(error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("database error: {}", e),
+            ))
+        }
+        Err(e) => {
+            warn!(computer_id = %id_for_error, error = %e, "task panicked fetching computer");
+            Err(error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal error",
+            ))
+        }
+    }
+}
+
 pub(crate) async fn fetch_computer_including_deleted(
     state: &Arc<AppState>,
     user: &AuthUser,

@@ -23,17 +23,23 @@ export interface McpToolSpec {
   /** JSON Schema for the tool's input parameters. */
   inputSchema: Record<string, unknown>;
   /**
-   * True when the underlying route enforces the ACI confirmation policy
-   * (`enforce_control_confirmation` / `enforce_confirmation`). Such tools
-   * accept an optional `approvalId` that is threaded as the `?approval_id=`
-   * query param. The server NEVER auto-obtains approvals; a missing or
-   * invalid grant surfaces the API's denial message in the tool result.
+   * True when the tool accepts an optional `approvalId`, threaded verbatim as
+   * the `?approval_id=` query param. Enforcement varies by surface — this
+   * server never auto-obtains approvals, and a missing or invalid grant
+   * surfaces the API's denial message in the tool result:
+   *
+   * - Control routes (mouse/keyboard/shell/files.upload) and template builds
+   *   enforce ACI confirmation server-side, so `approvalId` is load-bearing.
+   * - The lifecycle REST routes (create/start/stop/restart/resize/clone/
+   *   delete) currently perform no ACI check, so `approvalId` is accepted but
+   *   inert there; the API-hosted tool catalog (`/api/v1/tools`) DOES gate
+   *   the same lifecycle actions with `enforce_confirmation`.
    */
-  requiresApproval: boolean;
+  acceptsApproval: boolean;
 }
 
 // =============================================================================
-// Tool name union — 24 tools
+// Tool name union — 22 tools
 // =============================================================================
 
 export type McpToolName =
@@ -93,7 +99,7 @@ export const COMPUTER_TOOL_SPECS: McpToolSpec[] = [
   // ── Lifecycle ──────────────────────────────────────────────────────────────
   {
     name: 'computers.create',
-    requiresApproval: true,
+    acceptsApproval: true,
     description:
       'Create a standalone cloud_desktop or local (Tart) computer. POST /api/v1/computers.',
     inputSchema: {
@@ -129,7 +135,7 @@ export const COMPUTER_TOOL_SPECS: McpToolSpec[] = [
   },
   {
     name: 'computers.list',
-    requiresApproval: false,
+    acceptsApproval: false,
     description: 'List visible computers. GET /api/v1/computers.',
     inputSchema: {
       type: 'object',
@@ -146,7 +152,7 @@ export const COMPUTER_TOOL_SPECS: McpToolSpec[] = [
   },
   {
     name: 'computers.get',
-    requiresApproval: false,
+    acceptsApproval: false,
     description: 'Get one computer by id. GET /api/v1/computers/:id.',
     inputSchema: {
       type: 'object',
@@ -156,7 +162,7 @@ export const COMPUTER_TOOL_SPECS: McpToolSpec[] = [
   },
   {
     name: 'computers.start',
-    requiresApproval: true,
+    acceptsApproval: true,
     description: 'Start (resume) a stopped cloud_desktop or local computer. POST /api/v1/computers/:id/start.',
     inputSchema: {
       type: 'object',
@@ -166,7 +172,7 @@ export const COMPUTER_TOOL_SPECS: McpToolSpec[] = [
   },
   {
     name: 'computers.stop',
-    requiresApproval: true,
+    acceptsApproval: true,
     description: 'Stop (pause) a cloud_desktop or local computer. POST /api/v1/computers/:id/stop.',
     inputSchema: {
       type: 'object',
@@ -176,7 +182,7 @@ export const COMPUTER_TOOL_SPECS: McpToolSpec[] = [
   },
   {
     name: 'computers.restart',
-    requiresApproval: true,
+    acceptsApproval: true,
     description: 'Restart a running/stopped cloud_desktop or local computer. POST /api/v1/computers/:id/restart.',
     inputSchema: {
       type: 'object',
@@ -186,7 +192,7 @@ export const COMPUTER_TOOL_SPECS: McpToolSpec[] = [
   },
   {
     name: 'computers.resize',
-    requiresApproval: true,
+    acceptsApproval: true,
     description:
       'Resize CPU/memory/disk of a cloud_desktop. PATCH /api/v1/computers/:id/resize. Disk resize requires a stopped computer.',
     inputSchema: {
@@ -203,7 +209,7 @@ export const COMPUTER_TOOL_SPECS: McpToolSpec[] = [
   },
   {
     name: 'computers.clone',
-    requiresApproval: true,
+    acceptsApproval: true,
     description: 'Clone a running/stopped cloud_desktop into a new computer. POST /api/v1/computers/:id/clone.',
     inputSchema: {
       type: 'object',
@@ -217,7 +223,7 @@ export const COMPUTER_TOOL_SPECS: McpToolSpec[] = [
   },
   {
     name: 'computers.delete',
-    requiresApproval: true,
+    acceptsApproval: true,
     description:
       'Delete a cloud_desktop or local computer (204 on success; already-missing is also 204). POST /api/v1/computers/:id/delete.',
     inputSchema: {
@@ -230,7 +236,7 @@ export const COMPUTER_TOOL_SPECS: McpToolSpec[] = [
   // ── Control ────────────────────────────────────────────────────────────────
   {
     name: 'computers.screenshot',
-    requiresApproval: false,
+    acceptsApproval: false,
     description:
       'Capture a PNG screenshot of the computer desktop. GET /api/v1/computers/:id/screenshot. Returns base64-encoded PNG.',
     inputSchema: {
@@ -241,7 +247,7 @@ export const COMPUTER_TOOL_SPECS: McpToolSpec[] = [
   },
   {
     name: 'computers.mouse',
-    requiresApproval: true,
+    acceptsApproval: true,
     description:
       'Move/click/drag the mouse on the computer desktop. POST /api/v1/computers/:id/mouse (ACI-gated).',
     inputSchema: {
@@ -265,7 +271,7 @@ export const COMPUTER_TOOL_SPECS: McpToolSpec[] = [
   },
   {
     name: 'computers.keyboard',
-    requiresApproval: true,
+    acceptsApproval: true,
     description:
       'Type text or press a key on the computer desktop. POST /api/v1/computers/:id/keyboard (ACI-gated).',
     inputSchema: {
@@ -282,7 +288,7 @@ export const COMPUTER_TOOL_SPECS: McpToolSpec[] = [
   },
   {
     name: 'computers.shell',
-    requiresApproval: true,
+    acceptsApproval: true,
     description:
       'Run a shell command inside the computer guest. POST /api/v1/computers/:id/shell (ACI-gated).',
     inputSchema: {
@@ -299,7 +305,7 @@ export const COMPUTER_TOOL_SPECS: McpToolSpec[] = [
   },
   {
     name: 'computers.files.upload',
-    requiresApproval: true,
+    acceptsApproval: true,
     description:
       'Upload a file into the computer guest. POST /api/v1/computers/:id/files/upload?path=… with raw application/octet-stream bytes (ACI-gated). Content is decoded from base64 before sending.',
     inputSchema: {
@@ -315,7 +321,7 @@ export const COMPUTER_TOOL_SPECS: McpToolSpec[] = [
   },
   {
     name: 'computers.files.download',
-    requiresApproval: false,
+    acceptsApproval: false,
     description:
       'Download a file from the computer guest. GET /api/v1/computers/:id/files/download?path=…. Returns base64-encoded content.',
     inputSchema: {
@@ -331,7 +337,7 @@ export const COMPUTER_TOOL_SPECS: McpToolSpec[] = [
   // ── Snapshots ──────────────────────────────────────────────────────────────
   {
     name: 'computers.snapshots.list',
-    requiresApproval: false,
+    acceptsApproval: false,
     description: 'List snapshots of a computer. GET /api/v1/computers/:id/snapshots.',
     inputSchema: {
       type: 'object',
@@ -341,7 +347,7 @@ export const COMPUTER_TOOL_SPECS: McpToolSpec[] = [
   },
   {
     name: 'computers.snapshots.create',
-    requiresApproval: false,
+    acceptsApproval: false,
     description: 'Create a snapshot of a computer. POST /api/v1/computers/:id/snapshots.',
     inputSchema: {
       type: 'object',
@@ -354,7 +360,7 @@ export const COMPUTER_TOOL_SPECS: McpToolSpec[] = [
   },
   {
     name: 'computers.snapshots.restore',
-    requiresApproval: false,
+    acceptsApproval: false,
     description:
       'Restore a computer from a snapshot. POST /api/v1/computers/:id/snapshots/:snapshot_id/restore.',
     inputSchema: {
@@ -365,7 +371,7 @@ export const COMPUTER_TOOL_SPECS: McpToolSpec[] = [
   },
   {
     name: 'computers.snapshots.delete',
-    requiresApproval: false,
+    acceptsApproval: false,
     description: 'Delete a computer snapshot. DELETE /api/v1/computers/:id/snapshots/:snapshot_id.',
     inputSchema: {
       type: 'object',
@@ -377,7 +383,7 @@ export const COMPUTER_TOOL_SPECS: McpToolSpec[] = [
   // ── Desktop templates (Phase 4) ────────────────────────────────────────────
   {
     name: 'templates.list',
-    requiresApproval: false,
+    acceptsApproval: false,
     description:
       'List visible desktop templates (public, own, or org). GET /api/v1/desktop-templates.',
     inputSchema: {
@@ -390,7 +396,7 @@ export const COMPUTER_TOOL_SPECS: McpToolSpec[] = [
   },
   {
     name: 'templates.import',
-    requiresApproval: false,
+    acceptsApproval: false,
     description:
       'Create/replace a desktop template from a canonical apiVersion: allternit.ai/v1 ComputerTemplate doc (YAML or JSON). POST /api/v1/desktop-templates/import.',
     inputSchema: {
@@ -406,7 +412,7 @@ export const COMPUTER_TOOL_SPECS: McpToolSpec[] = [
   },
   {
     name: 'templates.build',
-    requiresApproval: true,
+    acceptsApproval: true,
     description:
       'Build a desktop template into a golden snapshot (async; 202 on start). POST /api/v1/desktop-templates/:id/build (ACI-gated).',
     inputSchema: {
