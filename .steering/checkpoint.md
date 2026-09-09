@@ -1,34 +1,45 @@
-# Steering checkpoint — session/relfix6-20260908
+# Checkpoint — session/office-agent-ui (agent-22, 2026-09-09)
 
-## Goal
-Get the `desktop-v1.1.1` release tag to a green CI run (repo Gizziio/allternit-platform). Run 10
-failed preflight before any build: the workflow still referenced the deleted Python/PyInstaller
-voice tree (PR #194 voice-cleanup) and had no step producing the REQUIRED `whisper-cli` sidecar.
+## Task: office-agent-ui (consolidate Allternit Office UI, full repo ritual)
 
-## Just did
-- Merged origin/main (`0e923fe3a`+) into the session branch.
-- Replaced both PyInstaller voice steps in release-desktop.yml with cargo builds of the Rust
-  voice crate (`cargo build --release -p voice-service`, lipo universal on macOS →
-  `resources/bin/allternit-voice-service`, `.exe` copy on Windows), plus whisper-cli sidecar
-  steps (macOS: `services/voice/build-whisper.sh`; Windows: clone whisper.cpp + cmake with the
-  VS2022 toolset already installed via choco).
-- Updated scripts/release-preflight.mjs: dropped the three deleted python paths from the
-  implicit existence list (added services/voice/Cargo.toml + build-whisper.sh), replaced the
-  PyInstaller/Python-pin toolchain check with a "job cargo-builds voice-service" check, and
-  noted the run-11 update in the header.
-- Verified: `node scripts/release-preflight.mjs` → 26 passed, 0 failed. Local
-  `cargo build --release -p voice-service` running to confirm the bin name (`voice-service`).
+Worktree: `~/Desktop/allternit-workspace/allternit-session-office-agent-ui`, branch `session/office-agent-ui` from origin/main @ fcf42e286.
 
-## Next
-- Wait for run 12 macOS/Linux to finish (keep their signal; Windows already
-  covered by PR #202's GYP_MSVS_VERSION=2022 pin), then repoint desktop-v1.1.1
-  tag → run 13 and re-arm the cron with the new run id.
-- On green: final report (release URL, install-over-/Applications reminder, unsigned note),
-  ledger attestation (runs 1–13 + deferrals), then cleanup (worktree, branch local+remote, cron).
+## The 7 items
+1. One chat pane only — remove "Built-in" tab from editor AI panel.
+2. Rename all user-facing "Allternit Assistant"/"Allternit AI" strings in office suite + 4 vendored apps to "Allternit Office Agent". Do NOT rename platform-wide refs.
+3. Real brand icons (AProtocolWordmark / favicon.svg) for panel + chat icon, not phosphor.
+4. Wire dead "AI Summarize"/"AI Polish" ribbon buttons through the assistant pipeline (activeDocument registry, PR #188) with streamed reply in agent pane. Fix icons. Sheets/slides/pdf: wire or remove equivalents.
+5. Collapsed-rail collision fix in FloatingWidgets.tsx (top row spacing vs collapsed-rail icons).
+6. Same setup across docs/sheets/slides/pdf apps.
+7. Remove OfficeLauncherView embeds from DocumentsView + DesignModeView; delete component if unused.
 
-## Open questions
-- Windows whisper-cli cmake build is untested on the runner (cmake is preinstalled on
-  windows-latest; VS2022 via choco + now GYP_MSVS_VERSION pinned). If it fails, fallback:
-  ALLTERNIT_ALLOW_MISSING_WHISPER opt-out mirroring local-engine, recorded as a deferral.
-- Run 12 note: Build Windows failed at deps install — windows-latest image now ships VS18
-  which breaks node-gyp auto-detection; fixed in PR #202. macOS/Linux were still in progress.
+## Progress
+- [x] worktree created at origin/main fcf42e286
+- [ ] scouting reads
+- [ ] tasks 1–4 + 6 (suite + vendored apps)
+- [ ] task 5 (collapsed rail)
+- [ ] task 7 (launcher embeds)
+- [ ] verify: typecheck, vitest, vite build, playwright smoke
+- [ ] PR → merge → ledger → cleanup
+
+## Guardrails
+- Never edit shared checkout allternit/ or other sessions' worktrees.
+- Don't regress PR #188 (activeDocument, assistant panel model-id logic).
+- PR merges conflict only ever on .steering/checkpoint.md → checkout --ours.
+- Desktop electron e2e defer if owner's app is running.
+
+## Update 10:20
+- All 7 tasks implemented in worktree.
+- Task 5 root cause measured: office ribbons drop their tab row to y=44 when
+  html[data-rail-collapsed] (shell attribute), but RailControls rendered a
+  second fixed row (Agents mascot pill) at top-[52px] x∈[4,40] which landed
+  on the ribbon tab row (y∈[50,85]). Fix: mascot folded into the single 44px
+  controls row (FloatingWidgets.tsx). Verified: controls+ mascot x[0,124]×y[0,44],
+  ribbon tabs y≥50, no overlap; src/shell vitest 20/20.
+- vite.config.scratch-verify.ts (leaked to main from PR #203) deleted.
+- design-view-docs route + design rail Documents entry + nav types/policy removed.
+- office-ai.spec.ts: tool-execution e2e REMOVED (built-in sheets tool panel
+  unreachable on extension-registered hosts); streaming tests rewritten to the
+  agent pane. New office-agent.spec.ts: single-pane assertion + Summarize wiring
+  (prompt + document context + streamed reply).
+- Verify in flight: platform build (bg), playwright office-launcher+office-agent (bg).
