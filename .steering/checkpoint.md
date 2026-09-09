@@ -1,58 +1,34 @@
-# Session checkpoint — cloud-computer-orgo-p3 (Phase 3 real-time plane)
+# Steering checkpoint — session/relfix6-20260908
 
-Goal: Execute docs/CLOUD_COMPUTER_PHASE_3_TASK.md exactly (spec rq-20260909-004
-Phase 3). Design ref: docs/CLOUD_COMPUTER_PHASE_3_DESIGN.md (verified vs main
-08ecef8ac). Do NOT start Phase 4. Deliverables: ws tokens + pty ws + events
-stream + in-VM proxy + V137 audit/proxy migration + tests + sentinel notes,
-commit, push, report branch SHA. Branch: ao/cloud-computer-orgo-p3.
+## Goal
+Get the `desktop-v1.1.1` release tag to a green CI run (repo Gizziio/allternit-platform). Run 10
+failed preflight before any build: the workflow still referenced the deleted Python/PyInstaller
+voice tree (PR #194 voice-cleanup) and had no step producing the REQUIRED `whisper-cli` sidecar.
 
-Just did:
-- V137 migration: computer_access_logs table (+computer_id index) and
-  computer_cloud_desktop + proxy_port/proxy_paths columns.
-- driver-interface: guest_service_url(handle, guest_port) default NotSupported.
-- Incus impl: reuse existing proxy device for guest_port via get_config scan
-  (parse_proxy_port_for_guest), else allocate via expose_port_on on the
-  handle's own host; returns http://{vnc_host}:{port}. Mock HTTP tests for
-  reuse + allocation paths.
-- bot_desktop_stream: DesktopTokenClaims + computer_id/purpose (serde
-  default, bot tokens unchanged); sign_computer_token /
-  verify_computer_token (+ComputerMismatch/PurposeMismatch); helpers now
-  pub(crate); tests incl. legacy-payload back-compat.
-- computer_control: ProxyEnable{port}/ProxyDisable variants, descriptors,
-  classified Risky (reversible state-changing); tool-surface arms reject.
-- computer_audit: fire-and-forget computer_access_logs inserts (+in-memory
-  sqlite test).
-- computer_ws (new): PTY bridge + events collector embedded python, lazy
-  nohup bootstrap with per-computer in-memory bridge tokens (AppState
-  computer_guest_tokens, ECONNREFUSED → re-bootstrap once), /ws/computers/:id/pty
-  (resize control messages), /ws/computers/:id/events (tail loop + ping +
-  last_activity touch), GET history (limit≤500, 501 NotSupported), ws-token
-  issue POST (300s, purpose pty|events, audited), proxy enable/disable (ACI
-  gated) + GET config + ANY /proxy/{*path} forwarder (10MB cap, hop-by-hop
-  filter, 30s reqwest, audit per request). Pure fns + tests.
-- Wiring: lib.rs mods + AppState.computer_guest_tokens; main.rs mounts
-  /ws/computers + /api/v1 computer_ws router; test_helpers updated.
+## Just did
+- Merged origin/main (`0e923fe3a`+) into the session branch.
+- Replaced both PyInstaller voice steps in release-desktop.yml with cargo builds of the Rust
+  voice crate (`cargo build --release -p voice-service`, lipo universal on macOS →
+  `resources/bin/allternit-voice-service`, `.exe` copy on Windows), plus whisper-cli sidecar
+  steps (macOS: `services/voice/build-whisper.sh`; Windows: clone whisper.cpp + cmake with the
+  VS2022 toolset already installed via choco).
+- Updated scripts/release-preflight.mjs: dropped the three deleted python paths from the
+  implicit existence list (added services/voice/Cargo.toml + build-whisper.sh), replaced the
+  PyInstaller/Python-pin toolchain check with a "job cargo-builds voice-service" check, and
+  noted the run-11 update in the header.
+- Verified: `node scripts/release-preflight.mjs` → 26 passed, 0 failed. Local
+  `cargo build --release -p voice-service` running to confirm the bin name (`voice-service`).
 
-Next:
-1. cargo check -p allternit-api green (running), fix loop.
-2. cargo test -p allternit-api computer + computer_audit + computer_ws +
-   bot_desktop_stream; cargo test -p allternit-computer-cloud.
-3. Evidence → ~/.agent-orchestrator/evidence/cloud-computer-orgo-p3/;
-   .allternit/shared-context.md milestone append.
-4. Sentinel docs/CLOUD_COMPUTER_PHASE_3_NOTES.md, commit feat(computers),
-   push, report SHA.
+## Next
+- Wait for run 12 macOS/Linux to finish (keep their signal; Windows already
+  covered by PR #202's GYP_MSVS_VERSION=2022 pin), then repoint desktop-v1.1.1
+  tag → run 13 and re-arm the cron with the new run id.
+- On green: final report (release URL, install-over-/Applications reminder, unsigned note),
+  ledger attestation (runs 1–13 + deferrals), then cleanup (worktree, branch local+remote, cron).
 
-STATUS (final):
-- cargo check -p allternit-api -p allternit-computer-cloud -p allternit-driver-interface: PASS
-- cargo test -p allternit-api computer: 41/41 PASS
-- cargo test -p allternit-api bot_desktop_stream (tokens): 11/11 PASS
-- cargo test -p allternit-api computer_ws: 8/8 PASS; computer_audit: 1/1 PASS
-- cargo test -p allternit-computer-cloud: 96/96 + 6/6 PASS (guest_service_url reuse + alloc)
-- py_compile both embedded guest scripts: OK
-- Fixed en route: 19 literal AppState test constructors needed the new
-  computer_guest_tokens field; incus mock tests derive vnc_host from the
-  substrate URL (spec behavior); allowlist test documents naive prefix
-  semantics; proxy config test seeds the parent computers row (FK).
-- Live smoke: deferred (no Incus here); 501/503 paths unit-tested.
-- Evidence: ~/.agent-orchestrator/evidence/cloud-computer-orgo-p3/verification.txt
-- Next: sentinel notes written; commit feat(computers), push, report SHA.
+## Open questions
+- Windows whisper-cli cmake build is untested on the runner (cmake is preinstalled on
+  windows-latest; VS2022 via choco + now GYP_MSVS_VERSION pinned). If it fails, fallback:
+  ALLTERNIT_ALLOW_MISSING_WHISPER opt-out mirroring local-engine, recorded as a deferral.
+- Run 12 note: Build Windows failed at deps install — windows-latest image now ships VS18
+  which breaks node-gyp auto-detection; fixed in PR #202. macOS/Linux were still in progress.

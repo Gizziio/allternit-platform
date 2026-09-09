@@ -37,6 +37,10 @@ _tmp_*/
 _archive/
 coverage/
 build/
+# electron-builder resources live under surfaces/allternit-desktop/build/
+# (icons, installer art, LICENSE.txt) — the NSIS license field hard-fails
+# without build/LICENSE.txt (desktop-v1.1.1 run 13).
+!surfaces/allternit-desktop/build/
 # vendored libghostty-vt ships Zig source dirs literally named `build/` — keep them
 !infrastructure/executor/ao-engine/vendor/libghostty-vt/src/build/
 !infrastructure/executor/ao-engine/vendor/libghostty-vt/src/apprt/gtk/build/
