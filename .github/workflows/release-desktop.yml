@@ -193,6 +193,29 @@ jobs:
         run: node scripts/prepare-mesh-node.cjs
         working-directory: surfaces/allternit-desktop
 
+      # ── Step 3c: Build voice service sidecar (PyInstaller) ────────────────
+      - name: Setup Python (voice service)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Build voice service sidecar
+        # prepare-platform-static (2026-09-07 sidecar-lifecycle hardening)
+        # requires resources/bin/allternit-voice-service; the release workflow
+        # never built it, so macOS/Windows packaging failed at build:electron.
+        # Mirrors scripts/build-desktop.sh step 2b via the committed spec.
+        run: |
+          python3 -m venv /tmp/voice-venv
+          /tmp/voice-venv/bin/pip install --upgrade pip pyinstaller
+          /tmp/voice-venv/bin/pip install -r services/voice/api/requirements.txt
+          /tmp/voice-venv/bin/pip install services/voice
+          cd services/voice
+          /tmp/voice-venv/bin/pyinstaller --noconfirm --clean allternit-voice-service.spec
+          mkdir -p ../../surfaces/allternit-desktop/resources/bin
+          cp dist/allternit-voice-service ../../surfaces/allternit-desktop/resources/bin/
+          chmod +x ../../surfaces/allternit-desktop/resources/bin/allternit-voice-service
+          ls -lh ../../surfaces/allternit-desktop/resources/bin/allternit-voice-service
+
       # ── Step 4: Patch checksums into manifest.ts ─────────────────────────────
       - name: Patch manifest.ts checksums
         run: |
@@ -354,6 +377,26 @@ jobs:
         # extraResources packing (src/main/mesh-manager.ts resolves it).
         run: node scripts/prepare-mesh-node.cjs
         working-directory: surfaces/allternit-desktop
+
+      - name: Setup Python (voice service)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Build voice service sidecar
+        # Same PyInstaller sidecar as the macOS job; .exe is what
+        # prepare-platform-static looks for on win32.
+        shell: pwsh
+        run: |
+          python -m venv "$env:TEMP\voice-venv"
+          & "$env:TEMP\voice-venv\Scripts\pip.exe" install --upgrade pip pyinstaller
+          & "$env:TEMP\voice-venv\Scripts\pip.exe" install -r services/voice/api/requirements.txt
+          & "$env:TEMP\voice-venv\Scripts\pip.exe" install services/voice
+          Set-Location services/voice
+          & "$env:TEMP\voice-venv\Scripts\pyinstaller.exe" --noconfirm --clean allternit-voice-service.spec
+          New-Item -ItemType Directory -Force ..\..\surfaces\allternit-desktop\resources\bin | Out-Null
+          Copy-Item dist\allternit-voice-service.exe ..\..\surfaces\allternit-desktop\resources\bin\
+          Get-Item ..\..\surfaces\allternit-desktop\resources\bin\allternit-voice-service.exe | Select-Object Name,Length
 
       - name: Install desktop dependencies
         # Deps are already installed by the earlier workspace-wide pnpm
