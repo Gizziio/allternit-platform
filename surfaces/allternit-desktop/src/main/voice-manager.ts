@@ -131,7 +131,9 @@ class VoiceManager {
    * under `Resources/native/dictation-helper/DictationHelper`.
    */
   async transcribe(wav: Buffer | ArrayBuffer | Uint8Array): Promise<{ text?: string; error?: string }> {
-    const bytes = Buffer.isBuffer(wav) ? wav : Buffer.from(wav);
+    const bytes = Buffer.isBuffer(wav)
+      ? wav
+      : Buffer.from(wav instanceof ArrayBuffer ? new Uint8Array(wav) : wav);
     try {
       if (!(await this.isHealthy())) {
         await this.start();
