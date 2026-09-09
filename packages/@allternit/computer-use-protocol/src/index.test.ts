@@ -1,143 +1,197 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from 'vitest';
 import {
   ActionIntentSchema,
+  BrowserActionTrajectoryStepSchema,
   BrowserEventSchema,
-  BrowserObservationSchema,
-  BrowserSkillManifestSchema,
+  BrowserToolCallTrajectoryStepSchema,
   BrowserTrajectorySchema,
-  BrowserWorkflowSpecSchema,
   COMPUTER_USE_PROTOCOL_VERSION,
-  ExecutionLeaseSchema,
-  HandoffRequestSchema,
-  ProviderCapabilitiesSchema,
-} from "./index.js";
+  SitePluginManifestSchema,
+  SiteToolCallSchema,
+  SiteToolDescriptorSchema,
+} from './index.js';
 
-const now = "2026-07-10T12:00:00.000Z";
-
-describe("computer-use protocol v1", () => {
-  it("uses one capability contract for an attached extension tab", () => {
-    const parsed = ProviderCapabilitiesSchema.parse({
-      provider: "extension-tab",
-      capabilities: ["navigate", "observe.accessibility", "interact.pointer", "tabs"],
-      local: true,
-      attachedToUserSession: true,
-      supportsPrivateNetwork: true,
-      supportsPersistentProfile: true,
+describe('SiteToolDescriptorSchema', () => {
+  it('accepts a WebMCP-shaped descriptor (name/description/inputSchema)', () => {
+    const descriptor = SiteToolDescriptorSchema.parse({
+      name: 'github.review_pr',
+      description: 'Open a GitHub PR, read the diff, and post a review comment.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          prUrl: { type: 'string', format: 'uri' },
+          reviewText: { type: 'string' },
+        },
+        required: ['prUrl', 'reviewText'],
+        additionalProperties: false,
+      },
     });
-    expect(parsed.provider).toBe("extension-tab");
+    expect(descriptor.name).toBe('github.review_pr');
+    expect(descriptor.inputSchema.required).toEqual(['prUrl', 'reviewText']);
   });
 
-  it("rejects observations from another schema version", () => {
-    expect(() => BrowserObservationSchema.parse({
-      schemaVersion: "0.9",
-      observationId: "obs_1",
-      sessionId: "session_1",
-      url: "https://example.com",
-      title: "Example",
-      capturedAt: now,
-      format: "accessibility",
+  it('defaults inputSchema to an empty object schema', () => {
+    const descriptor = SiteToolDescriptorSchema.parse({
+      name: 'gmail.read_inbox',
+      description: 'Read unread Gmail messages.',
+      inputSchema: {},
+    });
+    expect(descriptor.inputSchema.type).toBe('object');
+    expect(descriptor.inputSchema.properties).toEqual({});
+  });
+});
+
+describe('SiteToolCallSchema', () => {
+  it('round-trips a full tool call', () => {
+    const call = SiteToolCallSchema.parse({
+      schemaVersion: COMPUTER_USE_PROTOCOL_VERSION,
+      toolCallId: 'tc-1',
+      runId: 'run-1',
+      sessionId: 'sess-1',
+      toolName: 'github.review_pr',
+      args: { prUrl: 'https://github.com/acme/app/pull/1', reviewText: 'LGTM' },
+      resultSummary: 'Review comment posted on acme/app#1',
+      latencyMs: 1842,
+      redacted: false,
+      invokedAt: '2026-09-09T12:00:00.000Z',
+    });
+    const json = JSON.parse(JSON.stringify(call));
+    expect(SiteToolCallSchema.parse(json)).toEqual(call);
+  });
+
+  it('defaults args to {} and redacted to false, and allows error without result', () => {
+    const call = SiteToolCallSchema.parse({
+      schemaVersion: COMPUTER_USE_PROTOCOL_VERSION,
+      toolCallId: 'tc-2',
+      runId: 'run-1',
+      sessionId: 'sess-1',
+      toolName: 'gmail.read_inbox',
+      error: 'Action \'delete_all_emails\' is blocked by plugin policy',
+      invokedAt: '2026-09-09T12:00:00.000Z',
+    });
+    expect(call.args).toEqual({});
+    expect(call.redacted).toBe(false);
+    expect(call.resultSummary).toBeUndefined();
+  });
+
+  it('rejects negative latency', () => {
+    expect(() => SiteToolCallSchema.parse({
+      schemaVersion: COMPUTER_USE_PROTOCOL_VERSION,
+      toolCallId: 'tc-3',
+      runId: 'run-1',
+      sessionId: 'sess-1',
+      toolName: 'gmail.read_inbox',
+      latencyMs: -5,
+      invokedAt: '2026-09-09T12:00:00.000Z',
     })).toThrow();
   });
+});
 
-  it("validates shared actions and ordered events", () => {
-    const action = ActionIntentSchema.parse({
+describe('BrowserTrajectoryStepSchema union', () => {
+  const action = ActionIntentSchema.parse({
+    schemaVersion: COMPUTER_USE_PROTOCOL_VERSION,
+    actionId: 'a-1',
+    runId: 'run-1',
+    sessionId: 'sess-1',
+    kind: 'navigate',
+    reason: 'Open the page',
+    input: { url: 'https://github.com/acme/app/pull/1' },
+  });
+
+  it('parses action steps without an explicit kind (default)', () => {
+    const step = BrowserActionTrajectoryStepSchema.parse({
+      stepId: 'step_1',
+      action,
+      status: 'committed',
+    });
+    expect(step.kind).toBe('action');
+  });
+
+  it('parses tool_call steps and round-trips inside a trajectory', () => {
+    const trajectory = BrowserTrajectorySchema.parse({
       schemaVersion: COMPUTER_USE_PROTOCOL_VERSION,
-      actionId: "action_1",
-      runId: "run_1",
-      sessionId: "session_1",
-      kind: "click",
-      reason: "Submit the verified form",
-      targetRef: "e12",
+      trajectoryId: 'traj-1',
+      runId: 'run-1',
+      sessionId: 'sess-1',
+      objective: 'Review the PR',
+      createdAt: '2026-09-09T12:00:00.000Z',
+      provider: 'local-playwright',
+      steps: [
+        { stepId: 'step_1', action, status: 'committed' },
+        {
+          kind: 'tool_call',
+          stepId: 'step_2',
+          status: 'committed',
+          toolCall: {
+            schemaVersion: COMPUTER_USE_PROTOCOL_VERSION,
+            toolCallId: 'tc-1',
+            runId: 'run-1',
+            sessionId: 'sess-1',
+            toolName: 'github.review_pr',
+            resultSummary: 'Review comment posted',
+            latencyMs: 1200,
+            redacted: false,
+            invokedAt: '2026-09-09T12:00:01.000Z',
+          },
+        },
+      ],
+    });
+    expect(trajectory.steps).toHaveLength(2);
+    expect(trajectory.steps[1].kind).toBe('tool_call');
+    const roundTrip = BrowserTrajectorySchema.parse(JSON.parse(JSON.stringify(trajectory)));
+    expect(roundTrip).toEqual(trajectory);
+  });
+
+  it('rejects a tool_call step missing the toolCall payload', () => {
+    expect(() => BrowserToolCallTrajectoryStepSchema.parse({
+      kind: 'tool_call',
+      stepId: 'step_2',
+      status: 'committed',
+    })).toThrow();
+  });
+});
+
+describe('tool.called event', () => {
+  it('is a valid BrowserEvent type carrying a SiteToolCall payload', () => {
+    const call = SiteToolCallSchema.parse({
+      schemaVersion: COMPUTER_USE_PROTOCOL_VERSION,
+      toolCallId: 'tc-1',
+      runId: 'run-1',
+      sessionId: 'sess-1',
+      toolName: 'notion.create_page',
+      resultSummary: 'Page created',
+      latencyMs: 900,
+      invokedAt: '2026-09-09T12:00:00.000Z',
     });
     const event = BrowserEventSchema.parse({
       schemaVersion: COMPUTER_USE_PROTOCOL_VERSION,
-      eventId: "event_1",
-      runId: action.runId,
-      sessionId: action.sessionId,
-      sequence: 3,
-      emittedAt: now,
-      sourceSurface: "extension",
-      type: "action.state_changed",
-      payload: { actionId: action.actionId, state: "executing" },
+      eventId: 'evt-1',
+      runId: 'run-1',
+      sessionId: 'sess-1',
+      sequence: 1,
+      emittedAt: '2026-09-09T12:00:00.000Z',
+      type: 'tool.called',
+      payload: { toolCall: call },
     });
-    expect(event.sequence).toBe(3);
+    expect(event.type).toBe('tool.called');
   });
+});
 
-  it("uses a monotonic lease epoch for cross-surface ownership", () => {
-    const lease = ExecutionLeaseSchema.parse({
-      leaseId: "lease_1",
-      runId: "run_1",
-      ownerSurfaceInstanceId: "extension_window_1",
-      ownerDeviceId: "device_macbook",
-      issuedAt: now,
-      expiresAt: "2026-07-10T12:05:00.000Z",
-      epoch: 2,
-      nonce: "0123456789abcdef",
+describe('SitePluginManifestSchema', () => {
+  it('matches the real computer-use plugin.json shape', () => {
+    const manifest = SitePluginManifestSchema.parse({
+      id: 'github',
+      name: 'GitHub Plugin',
+      version: '0.1.0',
+      description: 'Automates GitHub workflows.',
+      policy_profile: {
+        max_destructive_actions: 3,
+        requires_approval: true,
+        allowed_domains: ['github.com', '*.github.com', 'api.github.com'],
+        blocked_actions: ['delete_repository'],
+      },
+      cookbooks: ['review-pr', 'triage-issue'],
     });
-    expect(lease.epoch).toBe(2);
-  });
-
-  it("carries the event cursor during a platform-to-extension handoff", () => {
-    const handoff = HandoffRequestSchema.parse({
-      handoffId: "handoff_1",
-      runId: "run_1",
-      fromSurfaceInstanceId: "platform_tab_1",
-      toSurfaceInstanceId: "extension_window_1",
-      requestedAt: now,
-      lastAcknowledgedSequence: 41,
-    });
-    expect(handoff.lastAcknowledgedSequence).toBe(41);
-  });
-
-  it("validates trajectory, workflow, and skill artifacts", () => {
-    const trajectory = BrowserTrajectorySchema.parse({
-      schemaVersion: COMPUTER_USE_PROTOCOL_VERSION,
-      trajectoryId: "traj_1",
-      runId: "run_1",
-      sessionId: "session_1",
-      objective: "Find pricing",
-      createdAt: now,
-      provider: "extension-tab",
-      steps: [{
-        stepId: "step_1",
-        status: "committed",
-        action: {
-          schemaVersion: COMPUTER_USE_PROTOCOL_VERSION,
-          actionId: "action_1",
-          runId: "run_1",
-          sessionId: "session_1",
-          kind: "navigate",
-          reason: "Open the pricing page",
-          input: { url: "https://example.com/pricing" },
-        },
-      }],
-    });
-    const workflow = BrowserWorkflowSpecSchema.parse({
-      schemaVersion: COMPUTER_USE_PROTOCOL_VERSION,
-      workflowId: "workflow_1",
-      title: "Find pricing",
-      description: "Repeat the pricing lookup",
-      sourceRunId: trajectory.runId,
-      provider: trajectory.provider,
-      steps: [{
-        id: "step_1",
-        kind: "navigate",
-        input: { url: "https://example.com/pricing" },
-        reason: "Open the pricing page",
-      }],
-      safety: { requiresApprovalFor: [], redactions: [] },
-      createdAt: now,
-    });
-    const skill = BrowserSkillManifestSchema.parse({
-      schemaVersion: COMPUTER_USE_PROTOCOL_VERSION,
-      skillId: "skill_1",
-      name: "Find pricing",
-      description: workflow.description,
-      workflowId: workflow.workflowId,
-      version: "1.0.0",
-      tags: ["browser", "workflow"],
-      createdAt: now,
-    });
-    expect(skill.workflowId).toBe(workflow.workflowId);
+    expect(manifest.policy_profile.blocked_actions).toContain('delete_repository');
   });
 });

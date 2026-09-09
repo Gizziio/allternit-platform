@@ -11,6 +11,7 @@ export type ViewType =
   | "browser"
   | "mini-apps-store"
   | "mini-app-review"
+  | "aci-recordings"
   | "mini-app"
   | "addin-word"
   | "addin-excel"

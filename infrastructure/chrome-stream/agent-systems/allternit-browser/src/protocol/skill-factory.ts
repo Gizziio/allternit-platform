@@ -3,6 +3,7 @@ import {
   BrowserWorkflowSpecSchema,
   COMPUTER_USE_PROTOCOL_VERSION,
   type ActionKind,
+  type BrowserActionTrajectoryStep,
   type BrowserSkillManifest,
   type BrowserTrajectory,
   type BrowserWorkflowSpec,
@@ -39,7 +40,9 @@ export function compileBrowserTrajectoryToSkill(
   options: CompileBrowserSkillOptions = {},
 ): BrowserSkillPackage {
   const now = (options.now ?? (() => new Date()))().toISOString();
-  const committedSteps = trajectory.steps.filter((step) => step.status === 'committed');
+  const committedSteps = trajectory.steps.filter(
+    (step): step is BrowserActionTrajectoryStep => step.kind === 'action' && step.status === 'committed',
+  );
   if (committedSteps.length === 0) {
     throw new Error(`Trajectory ${trajectory.trajectoryId} has no committed steps to compile`);
   }

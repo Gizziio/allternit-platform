@@ -10,6 +10,7 @@
  *   GET  /v1/computer-use/recordings/{id}       → detail { manifest, steps, gif_url? } (when present)
  *   GET  /v1/computer-use/recordings/{id}/file  → raw JSONL (fallback when no detail route)
  *   GET  /v1/computer-use/recordings/{id}/gif   → GIF bytes (when present)
+ *   GET  /v1/computer-use/recordings/{id}/video → WebM video bytes (when present)
  *   POST /v1/computer-use/replay                → { run_id, status } (deviation_threshold)
  *   GET  /v1/computer-use/runs/{run_id}         → run status (poll)
  *   POST /v1/computer-use/runs/{run_id}/approve → { decision: 'approve' | 'deny' }
@@ -44,6 +45,8 @@ export interface RecordingManifest {
   total_steps: number;
   status: string;
   gif_path?: string | null;
+  video_path?: string | null;
+  video_start_epoch?: number | null;
 }
 
 export interface RecordedStep {
@@ -62,6 +65,8 @@ export interface RecordingDetail {
   steps: RecordedStep[];
   /** Browser-usable object URL when the gateway serves the GIF, else null. */
   gifUrl: string | null;
+  /** Browser-usable object URL when the gateway serves the video, else null. */
+  videoUrl: string | null;
 }
 
 export interface RunRef {
@@ -175,6 +180,8 @@ export function parseRecordingJsonl(text: string): RecordingDetail {
     total_steps: typeof manifestData.total_steps === "number" ? manifestData.total_steps : 0,
     status: asString(manifestData.status, "unknown"),
     gif_path: typeof manifestData.gif_path === "string" ? manifestData.gif_path : null,
+    video_path: typeof manifestData.video_path === "string" ? manifestData.video_path : null,
+    video_start_epoch: typeof manifestData.video_start_epoch === "number" ? manifestData.video_start_epoch : null,
   };
   const steps: RecordedStep[] = lines.slice(1).map((line, index) => {
     const data = asRecord(JSON.parse(line));
@@ -189,7 +196,7 @@ export function parseRecordingJsonl(text: string): RecordingDetail {
       risk_level: asString(data.risk_level, "low"),
     };
   });
-  return { manifest, steps, gifUrl: null };
+  return { manifest, steps, gifUrl: null, videoUrl: null };
 }
 
 // ============================================================================
@@ -217,6 +224,20 @@ async function fetchRecordingGif(recordingId: string): Promise<string | null> {
   }
 }
 
+async function fetchRecordingVideo(recordingId: string): Promise<string | null> {
+  try {
+    const response = await fetch(
+      `${gatewayBase()}/v1/computer-use/recordings/${encodeURIComponent(recordingId)}/video`,
+    );
+    if (!response.ok) return null;
+    const blob = await response.blob();
+    if (blob.size === 0) return null;
+    return URL.createObjectURL(blob);
+  } catch {
+    return null;
+  }
+}
+
 function normalizeDetailPayload(
   recordingId: string,
   body: Record<string, unknown>,
@@ -232,6 +253,8 @@ function normalizeDetailPayload(
     total_steps: typeof manifestData.total_steps === "number" ? manifestData.total_steps : 0,
     status: asString(manifestData.status, "unknown"),
     gif_path: typeof manifestData.gif_path === "string" ? manifestData.gif_path : null,
+    video_path: typeof manifestData.video_path === "string" ? manifestData.video_path : null,
+    video_start_epoch: typeof manifestData.video_start_epoch === "number" ? manifestData.video_start_epoch : null,
   };
   const rawSteps = Array.isArray(body.steps) ? body.steps : Array.isArray(body.frames) ? body.frames : [];
   const steps: RecordedStep[] = rawSteps.map((raw, index) => {
@@ -248,7 +271,8 @@ function normalizeDetailPayload(
     };
   });
   const gifUrl = typeof body.gif_url === "string" && body.gif_url ? body.gif_url : null;
-  return { manifest, steps, gifUrl };
+  const videoUrl = typeof body.video_url === "string" && body.video_url ? body.video_url : null;
+  return { manifest, steps, gifUrl, videoUrl };
 }
 
 /**
@@ -274,6 +298,7 @@ export async function getRecordingDetail(recordingId: string): Promise<Recording
     }
     const detail = normalizeDetailPayload(recordingId, body);
     detail.gifUrl = detail.gifUrl ?? (await fetchRecordingGif(recordingId));
+    detail.videoUrl = detail.videoUrl ?? (await fetchRecordingVideo(recordingId));
     return detail;
   }
 
@@ -282,6 +307,7 @@ export async function getRecordingDetail(recordingId: string): Promise<Recording
     if (fileResponse.ok) {
       const detail = parseRecordingJsonl(await fileResponse.text());
       detail.gifUrl = await fetchRecordingGif(recordingId);
+      detail.videoUrl = await fetchRecordingVideo(recordingId);
       return detail;
     }
   } catch {

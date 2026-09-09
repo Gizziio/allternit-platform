@@ -2,7 +2,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { BrowserTrajectorySchema } from '@allternit/computer-use-protocol';
+import { BrowserTrajectorySchema, type BrowserActionTrajectoryStep, type BrowserTrajectory } from '@allternit/computer-use-protocol';
 import { compileBrowserTrajectoryToSkill } from './skill-factory.js';
 import {
   acuRecordingJsonlToTrajectory,
@@ -11,6 +11,11 @@ import {
   normalizeIsoTimestamp,
   resolveRecordingPath,
 } from './recording-to-trajectory.js';
+
+/** ACU recordings only produce action steps; narrow the step union for assertions. */
+function actionSteps(trajectory: BrowserTrajectory): BrowserActionTrajectoryStep[] {
+  return trajectory.steps.filter((step): step is BrowserActionTrajectoryStep => step.kind === 'action');
+}
 
 const FIXTURE_JSONL = [
   {
@@ -94,17 +99,18 @@ describe('acuRecordingJsonlToTrajectory', () => {
     expect(trajectory.provider).toBe('local-playwright');
     expect(trajectory.createdAt).toBe('2026-09-01T10:00:00.123Z');
     expect(trajectory.steps).toHaveLength(5);
-    expect(trajectory.steps.map((step) => step.action.kind)).toEqual([
+    const steps = actionSteps(trajectory);
+    expect(steps.map((step) => step.action.kind)).toEqual([
       'navigate',
       'type',
       'type',
       'click',
       'click',
     ]);
-    expect(trajectory.steps[4].status).toBe('failed');
-    expect(trajectory.steps[0].status).toBe('committed');
-    expect(trajectory.steps[1].action.targetDescription).toBe('input[name="email"]');
-    expect(trajectory.steps[4].action.reason).toContain('Element never appeared');
+    expect(steps[4].status).toBe('failed');
+    expect(steps[0].status).toBe('committed');
+    expect(steps[1].action.targetDescription).toBe('input[name="email"]');
+    expect(steps[4].action.reason).toContain('Element never appeared');
   });
 
   it('maps unknown ACU action types to extract and preserves the original type', () => {
@@ -113,8 +119,9 @@ describe('acuRecordingJsonlToTrajectory', () => {
       JSON.stringify({ step: 1, action_type: 'move_mouse', action_params: { x: 10, y: 20 } }),
     ].join('\n');
     const trajectory = acuRecordingJsonlToTrajectory(jsonl);
-    expect(trajectory.steps[0].action.kind).toBe('extract');
-    expect(trajectory.steps[0].action.input.__acuActionType).toBe('move_mouse');
+    const steps = actionSteps(trajectory);
+    expect(steps[0].action.kind).toBe('extract');
+    expect(steps[0].action.input.__acuActionType).toBe('move_mouse');
   });
 
   it('rejects empty and malformed recordings', () => {
