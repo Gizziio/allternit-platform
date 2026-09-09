@@ -2,8 +2,9 @@
 Allternit Computer Use — Measured conformance tests
 
 Covers conformance.measured: real suite execution against the mock adapter,
-honest grade computation, adapter_grades.json writing, and the
-not-implemented honesty rules for suites B/C/E.
+honest grade computation, adapter_grades.json writing, the implemented
+suites B/C/E, and the honesty rules for adapters whose runtime is
+unavailable (browser-use) or that need --network (retrieval, live browser).
 """
 
 import json
@@ -29,13 +30,18 @@ if _existing_core is not None:
 from conformance import ConformanceRunner  # noqa: E402
 from conformance.measured import (  # noqa: E402
     GRADING_SCALE,
-    NOT_IMPLEMENTED,
     main,
     run_measurement,
     write_grades,
 )
 from conformance.mock_browser_adapter import MockBrowserAdapter  # noqa: E402
-from conformance.suites import build_suite_a, build_suite_f  # noqa: E402
+from conformance.suites import (  # noqa: E402
+    build_suite_a,
+    build_suite_b,
+    build_suite_c,
+    build_suite_e,
+    build_suite_f,
+)
 
 
 class TestMockAdapterMeasuresSuiteA:
@@ -76,6 +82,36 @@ class TestMockAdapterMeasuresSuiteA:
         assert result.grade == "beta"  # 50-89% band
 
 
+class TestSuitesBCE:
+    """Suites B/C/E are implemented with real, runnable test functions."""
+
+    @pytest.mark.parametrize("builder,expected", [
+        (build_suite_b, 3),
+        (build_suite_c, 5),
+        (build_suite_e, 3),
+    ])
+    def test_suites_have_real_tests(self, builder, expected):
+        suite = builder()
+        tests = suite.list_tests()
+        assert len(tests) == expected
+        assert all(t.test_fn is not None for t in tests)
+
+    @pytest.mark.asyncio
+    async def test_suite_e_passes_offline_with_mock_sub_adapter(self):
+        """Hybrid orchestration semantics are measurable without a network."""
+        from adapters.hybrid.orchestrator import HybridOrchestrator
+
+        orchestrator = HybridOrchestrator()
+        orchestrator.register_adapter("browser.mock", MockBrowserAdapter())
+        await orchestrator.initialize()
+        runner = ConformanceRunner()
+        runner.register_suite(build_suite_e())
+        result = await runner.run_suite("hybrid-v1", orchestrator)
+        assert result.total == 3
+        assert result.passed == 3, [r.to_dict() for r in result.results if r.status != "pass"]
+        assert result.grade == "production"
+
+
 class TestGradesWriting:
     @pytest.mark.asyncio
     async def test_write_grades_has_real_numbers(self, tmp_path):
@@ -92,13 +128,27 @@ class TestGradesWriting:
         assert routing["measured"] is True
         assert routing["pass_rate"] == 100.0
 
-        # Suites B/C/E honestly ungraded
-        for adapter_id in NOT_IMPLEMENTED:
-            entry = document[adapter_id]
-            assert entry["measured"] is False
-            assert entry["grade"] is None
-            assert entry["pass_rate"] is None
-            assert "not implemented" in entry["note"]
+        # Suite E is measured offline against the orchestrator with a mock
+        # sub-adapter, and the note says so explicitly.
+        hybrid = document["hybrid.orchestrator"]
+        assert hybrid["measured"] is True
+        assert hybrid["suite"] == "hybrid-v1"
+        assert hybrid["tests_total"] == 3
+        assert hybrid["tests_pass"] == 3
+        assert "mock" in hybrid["note"]
+
+        # browser-use runtime is unavailable in this environment — honest null.
+        browser_use = document["browser.browser-use"]
+        assert browser_use["measured"] is False
+        assert browser_use["grade"] is None
+        assert browser_use["pass_rate"] is None
+        assert "browser-use" in browser_use["note"]
+
+        # Retrieval needs --network — honestly unmeasured without it.
+        retrieval = document["retrieval.playwright-crawler"]
+        assert retrieval["measured"] is False
+        assert retrieval["grade"] is None
+        assert "--network" in retrieval["note"]
 
         # File on disk parses and matches
         loaded = json.loads(grades_path.read_text())

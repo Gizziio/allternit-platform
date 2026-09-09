@@ -892,6 +892,15 @@ class PlaywrightCDPAdapter(_CDPBase):
             result_data = await self._dispatch(action)
             env.status = "completed"
             env.extracted_content = result_data or None
+            if action.action_type == "screenshot" and isinstance(result_data, dict):
+                from core.base_adapter import Artifact as _Artifact
+
+                env.artifacts.append(_Artifact(
+                    type="screenshot",
+                    path=f"screenshots/{run_id}.png",
+                    size_bytes=result_data.get("size_bytes", 0),
+                    media_type="image/png",
+                ))
             env.completed_at = datetime.now(_tz.utc).isoformat()
             self._emit_receipt(env, action, result_data or {})
         except Exception as exc:
@@ -932,7 +941,7 @@ class PlaywrightCDPAdapter(_CDPBase):
             b64 = base64.b64encode(raw).decode()
             return {"data_url": f"data:image/png;base64,{b64}", "size_bytes": len(raw)}
 
-        if at == "navigate":
+        if at in ("navigate", "goto"):
             url = action.target or p.get("url", "")
             await self._page.goto(url, wait_until=p.get("wait_until", "domcontentloaded"))
             return {"url": self._page.url, "title": await self._page.title()}
@@ -1020,6 +1029,24 @@ class PlaywrightCDPAdapter(_CDPBase):
             else:
                 content = await self._page.evaluate("() => ({title: document.title, url: location.href})")
             return {"content": content, "format": fmt}
+
+        if at == "eval":
+            expression = p.get("expression", action.target or "")
+            value = await self._page.evaluate(
+                expression if expression.strip().startswith("(") else f"() => ({expression})"
+            )
+            return {"result": value}
+
+        if at == "observe":
+            state = await self._page.evaluate("""() => ({
+                url: location.href,
+                title: document.title,
+                text: document.body ? document.body.innerText.slice(0, 2000) : "",
+                link_count: document.querySelectorAll('a[href]').length,
+                input_count: document.querySelectorAll('input, textarea, select').length,
+                viewport: {width: window.innerWidth, height: window.innerHeight},
+            })""")
+            return state
 
         if at == "fill":
             sel = action.target or p.get("selector", "")
