@@ -16,8 +16,6 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 use tracing::info;
-
-#[cfg(any(target_os = "linux", target_os = "macos"))]
 use tracing::warn;
 
 // Import from library
