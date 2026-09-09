@@ -3,9 +3,11 @@
  *
  * Called by electron-builder afterSign hook.
  *
- * Fails loudly (non-zero exit) when credentials are missing on CI builds —
- * a release build that ships unsigned/unnotarized must never pass silently.
- * Local (non-CI) builds without credentials skip with a warning, as before.
+ * Fails loudly (non-zero exit) when notarization itself errors. When
+ * credentials are missing, CI builds skip with a prominent console.warn —
+ * the repo currently carries no APPLE_* secrets, so release DMGs are
+ * unsigned/unnotarized and must be visibly marked as such in the logs.
+ * Restore the hard fail (see below) once the secrets are provisioned.
  *
  * Required env vars:
  *   APPLE_ID           — Apple developer account email
@@ -39,13 +41,17 @@ module.exports = async function notarizing(context) {
       .filter(([, v]) => !v)
       .map(([k]) => k)
       .join(', ');
-    if (process.env.CI) {
-      throw new Error(
-        `[notarize] Refusing to notarize on CI without credentials — missing: ${missing}. ` +
-          'Set APPLE_ID, APPLE_ID_PASSWORD, and APPLE_TEAM_ID secrets on the release workflow.'
-      );
-    }
-    console.log(`[notarize] Skipping notarization — ${missing} not set (local build).`);
+    // The repo does not carry Apple notarization secrets; releases are
+    // currently dev-distributed (unsigned/unnotarized, Gatekeeper bypassed
+    // via right-click → Open on the developer's machine). Skip loudly —
+    // an unnotarized build must be VISIBLE in the logs, never silent.
+    // Re-arm the hard fail by restoring the throw below once
+    // APPLE_ID / APPLE_ID_PASSWORD / APPLE_TEAM_ID secrets are set.
+    console.warn(
+      `[notarize] CI build WITHOUT Apple credentials (missing: ${missing}). ` +
+        'Skipping notarization — the DMG is UNSIGNED/UNNOTARIZED and will be ' +
+        'Gatekeeper-blocked for other users. Set the APPLE_* secrets to restore notarized releases.'
+    );
     return;
   }
 
