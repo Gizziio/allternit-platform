@@ -8,7 +8,9 @@
 
 pub mod socket;
 
-pub use crate::peer::socket::{DeliveryReceipt, PeerEnvelope, PeerSocket, send_envelope};
+pub use crate::peer::socket::{DeliveryReceipt, PeerEnvelope, send_envelope};
+#[cfg(unix)]
+pub use crate::peer::socket::PeerSocket;
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};

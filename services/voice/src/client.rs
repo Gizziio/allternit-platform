@@ -1,3 +1,4 @@
+//! HTTP client for the local Rust voice sidecar.
 use anyhow::{Context, Result};
 use reqwest::Client;
 use std::path::Path;

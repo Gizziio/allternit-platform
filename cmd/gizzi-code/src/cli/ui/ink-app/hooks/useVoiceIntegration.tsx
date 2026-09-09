@@ -1,5 +1,4 @@
 // @ts-nocheck
-import { feature } from 'bun:bundle';
 import * as React from 'react';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useNotifications } from '../../../../context/notifications';
@@ -20,17 +19,9 @@ import { useVoiceEnabled } from './useVoiceEnabled';
 // object, so `voiceNs.useVoice(...)` resolves to the spy even if this module
 // was loaded before the spy was installed (test ordering independence).
 const voiceNs: {
-  useVoice: typeof import('./useVoice.js').useVoice;
-} = feature('VOICE_MODE') ? require('./useVoice.js') : {
-  useVoice: ({
-    enabled: _e
-  }: {
-    onTranscript: (t: string) => void;
-    enabled: boolean;
-  }) => ({
-    state: 'idle' as const,
-    handleKeyEvent: (_fallbackMs?: number) => {}
-  })
+  useVoice: typeof import('./useLocalVoice.js').useLocalVoice;
+} = {
+  useVoice: require('./useLocalVoice.js').useLocalVoice
 };
 /* eslint-enable @typescript-eslint/no-require-imports */
 
@@ -77,14 +68,24 @@ function matchesKeyboardEvent(e: KeyboardEvent, target: ParsedKeystroke): boolea
 // headless/test contexts). NOT used when the provider exists and the
 // lookup returns null — that means the user null-unbound or reassigned
 // space, and falling back to space would pick a dead or conflicting key.
-const DEFAULT_VOICE_KEYSTROKE: ParsedKeystroke = {
-  key: ' ',
-  ctrl: false,
-  alt: false,
-  shift: false,
-  meta: false,
-  super: false
-};
+const DEFAULT_VOICE_KEYSTROKES: ParsedKeystroke[] = [
+  {
+    key: ' ',
+    ctrl: true,
+    alt: false,
+    shift: false,
+    meta: false,
+    super: false
+  },
+  {
+    key: 'f8',
+    ctrl: false,
+    alt: false,
+    shift: false,
+    meta: false,
+    super: false
+  }
+];
 type InsertTextHandle = {
   insert: (text: string) => void;
   setInputWithCursor: (value: string, cursor: number) => void;
@@ -222,18 +223,13 @@ export function useVoiceIntegration({
   // auth + GB kill-switch, with the auth half memoized on authVersion so
   // render loops never hit a cold keychain spawn.
   // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
-  const voiceEnabled = feature('VOICE_MODE') ? useVoiceEnabled() : false;
-  const voiceState = feature('VOICE_MODE') ?
-  // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
-  useVoiceState(s => s.voiceState) : 'idle' as const;
-  const voiceInterimTranscript = feature('VOICE_MODE') ?
-  // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
-  useVoiceState(s_0 => s_0.voiceInterimTranscript) : '';
+  const voiceEnabled = useVoiceEnabled();
+  const voiceState = useVoiceState(s => s.voiceState);
+  const voiceInterimTranscript = useVoiceState(s_0 => s_0.voiceInterimTranscript);
 
   // Set the voice anchor for focus mode (where recording starts via terminal
   // focus, not key hold). Key-hold sets the anchor in stripTrailing.
   useEffect(() => {
-    if (!feature('VOICE_MODE')) return;
     if (voiceState === 'recording' && voicePrefixRef.current === null) {
       const input = inputValueRef.current;
       const offset_0 = insertTextRef.current?.cursorOffset ?? input.length;
@@ -252,7 +248,6 @@ export function useVoiceIntegration({
   // transcribes speech. The prefix (user-typed text before the cursor) is
   // preserved and the transcript is inserted between prefix and suffix.
   useEffect(() => {
-    if (!feature('VOICE_MODE')) return;
     if (voicePrefixRef.current === null) return;
     const prefix_0 = voicePrefixRef.current;
     const suffix_0 = voiceSuffixRef.current;
@@ -280,7 +275,6 @@ export function useVoiceIntegration({
     lastSetInputRef.current = newValue_0;
   }, [voiceInterimTranscript, setInputValueRaw, inputValueRef, insertTextRef]);
   const handleVoiceTranscript = useCallback((text: string) => {
-    if (!feature('VOICE_MODE')) return;
     const prefix_1 = voicePrefixRef.current;
     // No voice anchor — voice was reset (or never started). Nothing to do.
     if (prefix_1 === null) return;
@@ -327,7 +321,6 @@ export function useVoiceIntegration({
   // Compute the character range of interim (not-yet-finalized) transcript
   // text in the input value, so the UI can dim it.
   const interimRange = useMemo((): InterimRange | null => {
-    if (!feature('VOICE_MODE')) return null;
     if (voicePrefixRef.current === null) return null;
     if (voiceInterimTranscript.length === 0) return null;
     const prefix_2 = voicePrefixRef.current;
@@ -389,10 +382,8 @@ export function useVoiceKeybindingHandler({
   const keybindingContext = useOptionalKeybindingContext();
   const isModalOverlayActive = useIsModalOverlayActive();
   // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
-  const voiceEnabled = feature('VOICE_MODE') ? useVoiceEnabled() : false;
-  const voiceState = feature('VOICE_MODE') ?
-  // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
-  useVoiceState(s => s.voiceState) : 'idle';
+  const voiceEnabled = useVoiceEnabled();
+  const voiceState = useVoiceState(s => s.voiceState);
 
   // Find the configured key for voice:pushToTalk from keybinding context.
   // Forward iteration with last-wins (matching the resolver): if a later
@@ -403,22 +394,26 @@ export function useVoiceKeybindingHandler({
   // when there's no provider at all. Context filter is required — space
   // is also bound in Settings/Confirmation/Plugin (select:accept etc.);
   // without the filter those would null out the default.
-  const voiceKeystroke = useMemo((): ParsedKeystroke | null => {
-    if (!keybindingContext) return DEFAULT_VOICE_KEYSTROKE;
-    let result: ParsedKeystroke | null = null;
+  const voiceKeystrokes = useMemo((): ParsedKeystroke[] => {
+    if (!keybindingContext) return DEFAULT_VOICE_KEYSTROKES;
+    const found: ParsedKeystroke[] = [];
     for (const binding of keybindingContext.bindings) {
       if (binding.context !== 'Chat') continue;
       if (binding.chord.length !== 1) continue;
       const ks = binding.chord[0];
       if (!ks) continue;
       if (binding.action === 'voice:pushToTalk') {
-        result = ks;
-      } else if (result !== null && keystrokesEqual(ks, result)) {
-        // A later binding overrides this chord (null unbind or reassignment)
-        result = null;
+        found.push(ks);
+      } else {
+        for (let i = found.length - 1; i >= 0; i--) {
+          const existing = found[i];
+          if (existing && keystrokesEqual(ks, existing)) {
+            found.splice(i, 1);
+          }
+        }
       }
     }
-    return result;
+    return found;
   }, [keybindingContext]);
 
   // If the binding is a bare (unmodified) single printable char, terminal
@@ -427,7 +422,8 @@ export function useVoiceKeybindingHandler({
   // Modifier combos (meta+k, ctrl+x) also auto-repeat (the letter part
   // repeats) but don't insert text, so they're swallowed from the first
   // press with no stripping needed. matchesKeyboardEvent handles those.
-  const bareChar = voiceKeystroke !== null && voiceKeystroke.key.length === 1 && !voiceKeystroke.ctrl && !voiceKeystroke.alt && !voiceKeystroke.shift && !voiceKeystroke.meta && !voiceKeystroke.super ? voiceKeystroke.key : null;
+  const sole = voiceKeystrokes.length === 1 ? voiceKeystrokes[0] : null;
+  const bareChar = sole !== null && sole.key.length === 1 && !sole.ctrl && !sole.alt && !sole.shift && !sole.meta && !sole.super ? sole.key : null;
   const rapidCountRef = useRef(0);
   // How many rapid chars we intentionally let through to the text
   // input (the first WARMUP_THRESHOLD). The activation strip removes
@@ -482,7 +478,7 @@ export function useVoiceKeybindingHandler({
     // null means the user overrode the default (null-unbind/reassign) —
     // hold-to-talk is disabled via binding. To toggle the feature
     // itself, use /voice.
-    if (voiceKeystroke === null) return;
+    if (voiceKeystrokes.length === 0) return;
 
     // Match the configured key. Bare chars match by content (handles
     // batched auto-repeat like "vvv") with a modifier reject so e.g.
@@ -501,7 +497,7 @@ export function useVoiceKeybindingHandler({
       if (normalized.length > 1 && normalized !== bareChar.repeat(normalized.length)) return;
       repeatCount = normalized.length;
     } else {
-      if (!matchesKeyboardEvent(e, voiceKeystroke)) return;
+      if (!voiceKeystrokes.some(ks => matchesKeyboardEvent(e, ks))) return;
       repeatCount = 1;
     }
 

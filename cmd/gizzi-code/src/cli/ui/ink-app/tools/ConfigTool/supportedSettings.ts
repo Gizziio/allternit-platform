@@ -142,15 +142,11 @@ export const SUPPORTED_SETTINGS: Record<string, SettingConfig> = {
         },
       }
     : {}),
-  ...(feature('VOICE_MODE')
-    ? {
-        voiceEnabled: {
-          source: 'settings' as const,
-          type: 'boolean' as const,
-          description: 'Enable voice dictation (hold-to-talk)',
-        },
-      }
-    : {}),
+  voiceEnabled: {
+    source: 'settings' as const,
+    type: 'boolean' as const,
+    description: 'Enable local voice dictation (hold Ctrl+Space or F8)',
+  },
   ...(feature('BRIDGE_MODE')
     ? {
         remoteControlAtStartup: {

@@ -167,7 +167,7 @@ build_all_rust_services() {
     
     # AI/ML services
     if [[ "$MODE" == "full" ]] || [[ "$MODE" == "standard" ]]; then
-        build_rust_service "voice-service" "4-services/ml-ai-services/voice-service" "voice-service"
+        build_rust_service "voice-service" "services/voice" "voice-service"
         build_rust_service "webvm-service" "3-adapters/bridge-systems/allternit-webvm" "webvm-service"
     fi
     

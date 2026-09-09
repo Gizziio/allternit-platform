@@ -9,7 +9,9 @@ export { OfficeAiSlot, type OfficeAiSlotProps } from './OfficeAiSlot';
 export { useOfficeExtensions } from './useOfficeExtensions';
 export {
   registerActiveDocument,
+  reportActiveDocument,
   getActiveDocument,
   useActiveDocument,
 } from './activeDocument';
+export type { ActiveDocumentInfo } from './activeDocument';
 export { createAllternitAssistantExtension } from './allternit-assistant';

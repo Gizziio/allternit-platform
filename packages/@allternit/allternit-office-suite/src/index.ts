@@ -34,11 +34,12 @@ export {
   OfficeAiSlot,
   useOfficeExtensions,
   registerActiveDocument,
+  reportActiveDocument,
   getActiveDocument,
   useActiveDocument,
   createAllternitAssistantExtension,
 } from './extensions';
-export type { OfficeAiSlotProps } from './extensions';
+export type { OfficeAiSlotProps, ActiveDocumentInfo } from './extensions';
 
 // AI configuration
 export type { OfficeAiConfig } from './ai/types';

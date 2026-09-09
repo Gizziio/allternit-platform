@@ -33,7 +33,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Install pnpm
         run: npm install -g pnpm@10.28.0
@@ -46,10 +46,34 @@ jobs:
         # Playwright e2e specs in tests/ are NOT run here.
         run: pnpm --filter @allternit/desktop test
 
+  # Preflight: catch packaging/configuration errors (missing sidecar build
+  # steps, wrong toolchain pins, missing script paths, notarize hard-fail)
+  # BEFORE the 40-60 minute per-platform builds start. See
+  # scripts/release-preflight.mjs for the check list and the desktop-v1.1.1
+  # incident it guards against.
+  release-preflight:
+    name: Release preflight
+    needs: unit-tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Run release preflight checks
+        run: node scripts/release-preflight.mjs
+
   # Build macOS .dmg (arm64 + x64, universal)
   build-macos:
     name: Build macOS
-    needs: unit-tests
+    needs: [unit-tests, release-preflight]
     runs-on: macos-latest
     permissions:
       contents: read
@@ -65,7 +89,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Install pnpm
         run: npm install -g pnpm@10.28.0
@@ -193,6 +217,42 @@ jobs:
         run: node scripts/prepare-mesh-node.cjs
         working-directory: surfaces/allternit-desktop
 
+      # ── Step 3c: Build voice service sidecar (PyInstaller) ────────────────
+      - name: Setup Python (voice service)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Build voice service sidecar
+        # prepare-platform-static (2026-09-07 sidecar-lifecycle hardening)
+        # requires resources/bin/allternit-voice-service; the release workflow
+        # never built it, so macOS/Windows packaging failed at build:electron.
+        # Mirrors scripts/build-desktop.sh step 2b via the committed spec.
+        run: |
+          python3 -m venv /tmp/voice-venv
+          /tmp/voice-venv/bin/pip install pyinstaller
+          /tmp/voice-venv/bin/pip install -r services/voice/api/requirements.txt
+          /tmp/voice-venv/bin/pip install services/voice/voice
+          cd services/voice
+          /tmp/voice-venv/bin/pyinstaller --noconfirm --clean allternit-voice-service.spec
+          mkdir -p ../../surfaces/allternit-desktop/resources/bin
+          cp dist/allternit-voice-service ../../surfaces/allternit-desktop/resources/bin/
+          chmod +x ../../surfaces/allternit-desktop/resources/bin/allternit-voice-service
+          ls -lh ../../surfaces/allternit-desktop/resources/bin/allternit-voice-service
+
+      # ── Step 3d: Build local-engine sidecar (Rust) ──────────────────────────
+      - name: Build local-engine sidecar
+        # prepare-platform-static also hard-requires resources/bin/allternit-local-engine
+        # (services/local-engine; cargo bin name is local-engine). Both macOS
+        # targets are already installed for the allternit-api build above.
+        run: |
+          cargo build --release --target x86_64-apple-darwin --manifest-path services/local-engine/Cargo.toml
+          cargo build --release --target aarch64-apple-darwin --manifest-path services/local-engine/Cargo.toml
+          mkdir -p surfaces/allternit-desktop/resources/bin
+          lipo -create             target/x86_64-apple-darwin/release/local-engine             target/aarch64-apple-darwin/release/local-engine             -output surfaces/allternit-desktop/resources/bin/allternit-local-engine
+          chmod +x surfaces/allternit-desktop/resources/bin/allternit-local-engine
+          lipo -info surfaces/allternit-desktop/resources/bin/allternit-local-engine
+
       # ── Step 4: Patch checksums into manifest.ts ─────────────────────────────
       - name: Patch manifest.ts checksums
         run: |
@@ -221,6 +281,11 @@ jobs:
       - name: Package with electron-builder
         # --publish never: publishing happens ONLY in the release job, which
         # collects artifacts from all build jobs. Never publish here.
+        # Heap headroom: electron-builder walks/copies multi-GB resources
+        # (platform export, sidecars) and died silently after "searching for
+        # node modules" on the default heap in run 34311188333.
+        env:
+          NODE_OPTIONS: --max-old-space-size=12288
         run: npm run build:electron -- --publish never
         working-directory: surfaces/allternit-desktop
 
@@ -238,7 +303,7 @@ jobs:
   # Build Windows NSIS installer
   build-windows:
     name: Build Windows
-    needs: unit-tests
+    needs: [unit-tests, release-preflight]
     # windows-latest ships only VS2026 (major 18), which node-gyp 11.x cannot
     # detect; windows-2019 is no longer provisioned. Install the VS2022 C++
     # build tools so native modules (better-sqlite3) can compile.
@@ -253,7 +318,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Install VS2022 C++ build tools (node-gyp)
         # windows-latest images no longer include a node-gyp-detectable Visual
@@ -355,6 +420,26 @@ jobs:
         run: node scripts/prepare-mesh-node.cjs
         working-directory: surfaces/allternit-desktop
 
+      - name: Setup Python (voice service)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Build voice service sidecar
+        # Same PyInstaller sidecar as the macOS job; .exe is what
+        # prepare-platform-static looks for on win32.
+        shell: pwsh
+        run: |
+          python -m venv "$env:TEMP\voice-venv"
+          & "$env:TEMP\voice-venv\Scripts\pip.exe" install pyinstaller
+          & "$env:TEMP\voice-venv\Scripts\pip.exe" install -r services/voice/api/requirements.txt
+          & "$env:TEMP\voice-venv\Scripts\pip.exe" install services/voice/voice
+          Set-Location services/voice
+          & "$env:TEMP\voice-venv\Scripts\pyinstaller.exe" --noconfirm --clean allternit-voice-service.spec
+          New-Item -ItemType Directory -Force ..\..\surfaces\allternit-desktop\resources\bin | Out-Null
+          Copy-Item dist\allternit-voice-service.exe ..\..\surfaces\allternit-desktop\resources\bin\
+          Get-Item ..\..\surfaces\allternit-desktop\resources\bin\allternit-voice-service.exe | Select-Object Name,Length
+
       - name: Install desktop dependencies
         # Deps are already installed by the earlier workspace-wide pnpm
         # install. Use pnpm (not npm): npm reifies over pnpm's symlinked
@@ -371,6 +456,12 @@ jobs:
       - name: Package with electron-builder
         # --publish never: publishing happens ONLY in the release job, which
         # collects artifacts from all build jobs. Never publish here.
+        # ALLTERNIT_ALLOW_MISSING_LOCAL_ENGINE: the local-engine crate's unix-only
+        # deps are untested on the windows runner; 1.1.0 shipped without this
+        # sidecar. Follow-up: make local-engine compile for windows and drop this.
+        env:
+          ALLTERNIT_ALLOW_MISSING_LOCAL_ENGINE: "1"
+          NODE_OPTIONS: --max-old-space-size=12288
         run: npm run dist -- --publish never
         working-directory: surfaces/allternit-desktop
 
@@ -388,7 +479,7 @@ jobs:
   # artifacts are NOT attached to the GitHub release)
   build-linux:
     name: Build Linux
-    needs: unit-tests
+    needs: [unit-tests, release-preflight]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -400,7 +491,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Install pnpm
         run: npm install -g pnpm@10.28.0
@@ -533,7 +624,7 @@ jobs:
   # Publish GitHub Release
   release:
     name: Create GitHub Release
-    needs: [build-macos, build-windows, build-linux]
+    needs: [release-preflight, build-macos, build-windows, build-linux]
     runs-on: ubuntu-latest
     permissions:
       contents: write

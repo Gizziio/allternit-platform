@@ -160,6 +160,25 @@ export function modelOptionToSelection(model: ModelOption): ModelSelection {
 }
 
 /**
+ * Repair a selection whose `modelId` was persisted with the provider prefix
+ * already baked in (`kimi-cli/kimi-for-coding` under provider `kimi-cli`).
+ * Every consumer composes `providerId/modelId`, so a prefixed modelId doubles
+ * the prefix and the gateway rejects it with ProviderModelNotFoundError.
+ */
+export function normalizePersistedModelSelection(selection: ModelSelection): ModelSelection {
+  const prefix = `${selection.providerId}/`;
+  if (!selection.modelId.startsWith(prefix)) return selection;
+  return {
+    ...selection,
+    modelId: selection.modelId.slice(prefix.length),
+    modelName:
+      selection.modelName && !selection.modelName.includes("/")
+        ? selection.modelName
+        : selection.modelId.slice(prefix.length),
+  };
+}
+
+/**
  * Paid Plus / Super / Ultra (and admin Ultra): Allternit Cloud.
  * Unpaid: first installed CLI runtime. Local Ollama / sidecar stay choices.
  */
@@ -221,8 +240,9 @@ export function readPersistedModelSelection(): ModelSelection | null {
       return null;
     }
     const migrated = migrateRetiredCodexSelection(selection);
-    if (migrated.modelId !== selection.modelId) persistModelSelection(migrated);
-    return migrated;
+    const normalized = normalizePersistedModelSelection(migrated);
+    if (normalized.modelId !== selection.modelId) persistModelSelection(normalized);
+    return normalized;
   } catch {
     return null;
   }

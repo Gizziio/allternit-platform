@@ -132,6 +132,177 @@ function mapCreateResponseToSandbox(
 }
 
 /**
+ * Default persistent-desktop resources for bots created through the atomic
+ * Create Bot path (spec bot-identity-computer): 2 vCPU / 4 GB RAM / 100 GB disk.
+ */
+export const BOT_DESKTOP_DEFAULT_RESOURCES: NonNullable<
+  AgentVMOperatorConfig['resources']
+> = {
+  cpu: '2',
+  memory: '4096',
+  disk: '102400',
+};
+
+/** Size presets for the Create Bot Computer step (overridable per bot). */
+export interface BotDesktopPreset {
+  id: 'small' | 'medium' | 'large';
+  label: string;
+  resources: NonNullable<AgentVMOperatorConfig['resources']>;
+}
+
+export const BOT_DESKTOP_PRESETS: BotDesktopPreset[] = [
+  {
+    id: 'small',
+    label: 'Small',
+    resources: { cpu: '1', memory: '2048', disk: '51200' },
+  },
+  {
+    id: 'medium',
+    label: 'Medium',
+    resources: { cpu: '2', memory: '4096', disk: '102400' },
+  },
+  {
+    id: 'large',
+    label: 'Large',
+    resources: { cpu: '4', memory: '8192', disk: '204800' },
+  },
+];
+
+export function describeDesktopResources(
+  resources?: AgentVMOperatorConfig['resources'],
+): string {
+  const cpu = resources?.cpu ?? '2';
+  const memoryGb = Math.round(Number(resources?.memory ?? '4096') / 1024) || 4;
+  const diskGb = Math.round(Number(resources?.disk ?? '102400') / 1024) || 100;
+  return `${cpu} vCPU · ${memoryGb} GB RAM · ${diskGb} GB disk`;
+}
+
+export function presetIdForResources(
+  resources?: AgentVMOperatorConfig['resources'],
+): BotDesktopPreset['id'] {
+  return BOT_DESKTOP_PRESETS.find(
+    (p) =>
+      p.resources.cpu === (resources?.cpu ?? '2') &&
+      p.resources.memory === (resources?.memory ?? '4096') &&
+      p.resources.disk === (resources?.disk ?? '102400'),
+  )?.id ?? 'medium';
+}
+
+/**
+ * vmOperator config every new Bot gets by default: a persistent Computer Cloud
+ * desktop bound to the bot, provisioned once at create time and reused across
+ * sessions. `autoStart: false` keeps session start from booting extra sandboxes
+ * — the desktop record already exists from Create Bot.
+ */
+export function defaultBotVMOperatorConfig(): AgentVMOperatorConfig {
+  return {
+    enabled: true,
+    provider: 'cloud-desktop',
+    computerKind: 'cloud_desktop',
+    persistence: 'persistent',
+    resources: { ...BOT_DESKTOP_DEFAULT_RESOURCES },
+    allowedActions: ['command', 'browser', 'file', 'desktop'],
+    networkPolicy: 'restricted',
+    autoStart: false,
+  };
+}
+
+export interface EnsureBotComputerOptions {
+  /** Bot display name ("Quinn — Chief of Staff") — becomes the computer name. */
+  displayName?: string;
+}
+
+/**
+ * Ensure a bot has exactly one primary persistent Computer Cloud desktop.
+ *
+ * This is the bind step of the atomic Create Bot contract: list by `bot_id`
+ * first and reuse the newest non-deleted desktop (a stopped persistent desktop
+ * still binds — it is the same computer), otherwise provision a new one
+ * through `/api/v1/computers` with `persistence: 'persistent'`.
+ */
+export async function ensureBotComputer(
+  botId: string,
+  config: AgentVMOperatorConfig,
+  options?: EnsureBotComputerOptions,
+): Promise<VMOperatorResult<Sandbox>> {
+  if (!usesUnifiedComputer(config.provider)) {
+    return notConfigured<Sandbox>();
+  }
+
+  try {
+    const computers = await listComputers({
+      bot_id: botId,
+      kind: config.computerKind ?? 'cloud_desktop',
+    });
+    const bound = computers
+      .filter((c) => c.bot_id === botId && c.status !== 'deleted')
+      .sort(
+        (a, b) =>
+          new Date(b.updated_at || b.created_at).getTime() -
+          new Date(a.updated_at || a.created_at).getTime(),
+      )[0];
+
+    if (bound) {
+      return { ok: true, data: mapComputerToSandbox(bound, botId) };
+    }
+
+    const response = await createComputer({
+      kind: config.computerKind ?? 'cloud_desktop',
+      bot_id: botId,
+      name: options?.displayName?.trim() || undefined,
+      template_id: config.templateId,
+      persistence: config.persistence ?? 'persistent',
+      provider: substrateProvider(config.provider),
+    });
+    return { ok: true, data: mapCreateResponseToSandbox(botId, config, response) };
+  } catch (err) {
+    logger.error({ err, botId }, 'Failed to ensure bot computer');
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : 'Bot computer provisioning failed',
+    };
+  }
+}
+
+/**
+ * Fleet action (spec bot-identity-computer Phase 2): ensure every bot with a
+ * VM operator configured has its persistent desktop bound. Runs sequentially
+ * on purpose — parallel provisioning would fry the host.
+ */
+export interface FleetProvisionResult {
+  botId: string;
+  ok: boolean;
+  skipped?: boolean;
+  computerId?: string;
+  status?: string;
+  error?: string;
+}
+
+export async function provisionFleetComputers(
+  bots: Array<{ id: string; vmOperator?: AgentVMOperatorConfig }>,
+  options?: { displayNameFor?: (botId: string) => string | undefined },
+): Promise<FleetProvisionResult[]> {
+  const results: FleetProvisionResult[] = [];
+  for (const bot of bots) {
+    if (bot.vmOperator?.enabled !== true) {
+      results.push({ botId: bot.id, ok: true, skipped: true });
+      continue;
+    }
+    const result = await ensureBotComputer(bot.id, bot.vmOperator, {
+      displayName: options?.displayNameFor?.(bot.id),
+    });
+    results.push({
+      botId: bot.id,
+      ok: result.ok,
+      computerId: result.data?.id,
+      status: result.data?.status,
+      error: result.error,
+    });
+  }
+  return results;
+}
+
+/**
  * Create a sandbox for the given bot/agent.
  *
  * Provisions through the unified `/api/v1/computers` control plane so cloud
@@ -430,7 +601,7 @@ function pausedResult<T>(): VMOperatorResult<T> {
 }
 
 export interface BotDesktopStatus {
-  status: 'running' | 'stopped' | 'off' | 'error';
+  status: 'creating' | 'running' | 'stopped' | 'off' | 'error';
   control_state: 'bot_controls' | 'human_controls' | 'human_observing';
   ws_url?: string;
   protocol: 'vnc' | 'novnc' | 'none';

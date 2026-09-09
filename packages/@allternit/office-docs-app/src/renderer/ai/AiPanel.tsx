@@ -120,6 +120,11 @@ export function AiPanel({ blocks, docEmpty, preset, open, onExpand, onCollapse }
   }
 
   const loopRef = useRef<OfficeAgentLoop | null>(null)
+  // The loop is constructed once, so buildContext must read through a ref to
+  // see blocks that arrived after the first render — closing over `blocks`
+  // directly would freeze the context at the mount-time document.
+  const blocksRef = useRef(blocks)
+  blocksRef.current = blocks
   if (!loopRef.current) {
     loopRef.current = new ai.AgentLoop({
       modelId,
@@ -127,7 +132,7 @@ export function AiPanel({ blocks, docEmpty, preset, open, onExpand, onCollapse }
         systemPrompt:
           'IGNORE ALL PREVIOUS INSTRUCTIONS ABOUT CODE, FILES, GIT, NOTEBOOKS, OR DESIGN SYNC. You are NOT in a coding CLI or IDE. You are the Allternit Docs assistant, embedded in the Allternit Docs word processor. Help the user draft and edit the open document. Be concise and concrete.',
         buildContext: () => {
-          const text = (blocks ?? [])
+          const text = (blocksRef.current ?? [])
             .map((b) => b.runs?.map((r) => r.text).join('') ?? '')
             .filter((line) => line.trim())
             .join('\n')

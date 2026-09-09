@@ -16,7 +16,6 @@ class VoiceManager {
   private stopping = false;
   private dictationProc: ChildProcess | null = null;
   private restartAttempts = 0;
-  private preferPython = false;
   private static readonly MAX_RESTARTS = 1;
 
   async start(): Promise<string> {
@@ -29,12 +28,15 @@ class VoiceManager {
     }
 
     this.stopping = false;
+    const binDir = path.join(process.resourcesPath ?? '', 'bin');
+    const whisperCli = path.join(binDir, process.platform === 'win32' ? 'whisper-cli.exe' : 'whisper-cli');
     const env = {
       ...process.env,
       PORT: String(PORTS.VOICE),
       AUDIO_OUTPUT_DIR: path.join(app.getPath('userData'), 'voice-audio'),
       PRELOAD_MODEL: 'false',
-      PATH: `${path.join(process.resourcesPath ?? '', 'bin')}${path.delimiter}${process.env.PATH ?? ''}`,
+      PATH: `${binDir}${path.delimiter}${process.env.PATH ?? ''}`,
+      ...(fs.existsSync(whisperCli) ? { WHISPER_CLI: whisperCli } : {}),
     };
     fs.mkdirSync(env.AUDIO_OUTPUT_DIR, { recursive: true });
 
@@ -62,12 +64,6 @@ class VoiceManager {
     try {
       await this.waitUntilReady();
     } catch (error) {
-      if (!this.preferPython && this.resolvePythonLauncher()) {
-        this.preferPython = true;
-        this.stop();
-        log.warn('[VoiceManager] Bundled voice binary never became ready; falling back to python launch.py');
-        return this.start();
-      }
       throw error;
     }
     log.info(`[VoiceManager] Ready at ${URLS.VOICE}`);
@@ -98,7 +94,7 @@ class VoiceManager {
       // "service not running".
       if (!this.proc) {
         throw new Error(
-          'Voice service exited before becoming ready (bundled binary incompatible or python launcher failed; Voice Mode unavailable)',
+          'Voice service exited before becoming ready (Rust sidecar / whisper-cli missing; Voice Mode unavailable)',
         );
       }
       await new Promise((resolve) => setTimeout(resolve, 300));
@@ -108,68 +104,21 @@ class VoiceManager {
   }
 
   private resolveCommand(): { file: string; args: string[] } | null {
-    const python = this.resolvePythonLauncher();
-    if (this.preferPython && python) return python;
-
-    const binaryName = process.platform === 'win32' ? 'allternit-voice-service.exe' : 'allternit-voice-service';
-    if (app.isPackaged) {
-      const bundled = path.join(process.resourcesPath, 'bin', binaryName);
-      if (fs.existsSync(bundled) && !this.preferPython) {
-        return { file: bundled, args: [] };
-      }
-    } else {
-      const launcher = path.join(app.getAppPath(), '..', '..', 'services', 'voice', 'launch.py');
-      if (fs.existsSync(launcher)) {
-        return { file: process.env.PYTHON ?? 'python3', args: [launcher, '--port', String(PORTS.VOICE)] };
-      }
-    }
-
-    return python;
-  }
-
-  private resolvePythonLauncher(): { file: string; args: string[] } | null {
-    const python = this.resolvePythonBinary();
-    for (const launcher of this.pythonLauncherCandidates()) {
-      if (fs.existsSync(launcher)) {
-        log.info(`[VoiceManager] Using python voice launcher at ${launcher} with ${python}`);
-        return { file: python, args: [launcher, '--port', String(PORTS.VOICE)] };
+    const names =
+      process.platform === 'win32'
+        ? ['allternit-voice-service.exe', 'voice-service.exe']
+        : ['allternit-voice-service', 'voice-service'];
+    const dirs: string[] = [];
+    if (process.resourcesPath) dirs.push(path.join(process.resourcesPath, 'bin'));
+    dirs.push(path.join(app.getAppPath(), '..', '..', 'target', 'release'));
+    dirs.push(path.join(app.getAppPath(), '..', '..', 'services', 'voice', 'dist'));
+    for (const dir of dirs) {
+      for (const name of names) {
+        const full = path.join(dir, name);
+        if (fs.existsSync(full)) return { file: full, args: [] };
       }
     }
     return null;
-  }
-
-  private resolvePythonBinary(): string {
-    if (process.env.PYTHON) return process.env.PYTHON;
-    const names = ['python3.12', 'python3.11', 'python3'];
-    const dirs = ['/opt/homebrew/bin', '/usr/local/bin', path.join(process.env.HOME ?? '', '.local', 'bin'), '/usr/bin'];
-    for (const name of names) {
-      for (const dir of dirs) {
-        const full = path.join(dir, name);
-        if (fs.existsSync(full)) return full;
-      }
-    }
-    return 'python3';
-  }
-
-  private pythonLauncherCandidates(): string[] {
-    const seen = new Set<string>();
-    const addWalk = (start: string | undefined) => {
-      let dir = start;
-      for (let i = 0; i < 12 && dir; i += 1) {
-        seen.add(path.join(dir, 'services', 'voice', 'launch.py'));
-        seen.add(path.join(dir, 'voice', 'launch.py'));
-        const parent = path.dirname(dir);
-        if (parent === dir) break;
-        dir = parent;
-      }
-    };
-    if (process.resourcesPath) {
-      seen.add(path.join(process.resourcesPath, 'voice', 'launch.py'));
-      addWalk(process.resourcesPath);
-    }
-    addWalk(app.getAppPath());
-    addWalk(__dirname);
-    return [...seen];
   }
 
   /**
@@ -181,6 +130,34 @@ class VoiceManager {
    * app's userData directory. In packaged builds a prebuilt binary is expected
    * under `Resources/native/dictation-helper/DictationHelper`.
    */
+  async transcribe(wav: Buffer | ArrayBuffer | Uint8Array): Promise<{ text?: string; error?: string }> {
+    const bytes = Buffer.isBuffer(wav)
+      ? wav
+      : Buffer.from(wav instanceof ArrayBuffer ? new Uint8Array(wav) : wav);
+    try {
+      if (!(await this.isHealthy())) {
+        await this.start();
+      }
+      const body = new FormData();
+      body.append('audio', new Blob([new Uint8Array(bytes)], { type: 'audio/wav' }), 'utterance.wav');
+      body.append('language', 'en');
+      const response = await fetch(`${URLS.VOICE}/v1/stt`, {
+        method: 'POST',
+        body,
+        signal: AbortSignal.timeout(60_000),
+      });
+      if (!response.ok) {
+        return { error: `Voice sidecar HTTP ${response.status}` };
+      }
+      const json = (await response.json()) as { text?: string };
+      return { text: (json.text ?? '').trim() };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      log.error('[VoiceManager] transcribe failed:', message);
+      return { error: message };
+    }
+  }
+
   isNativeDictationAvailable(): boolean {
     if (process.platform !== 'darwin') return false;
     try {
@@ -401,9 +378,12 @@ class VoiceManager {
   }
 
   registerIpcHandlers(): void {
-    ipcMain.handle('voice:is-available', () => this.isNativeDictationAvailable());
+    ipcMain.handle('voice:is-available', () => this.isHealthy());
     ipcMain.handle('voice:start-dictation', () => this.startNativeDictation());
     ipcMain.handle('voice:stop-dictation', () => this.stopNativeDictation());
+    ipcMain.handle('voice:transcribe', (_event, wav: ArrayBuffer | Uint8Array | Buffer) =>
+      this.transcribe(wav),
+    );
   }
 }
 

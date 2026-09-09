@@ -1,0 +1,2 @@
+# cu16 — session replay as product surface (PR #173 → ede718db)
+RecordingsPanel in remote-control dashboard: recordings grid, step detail, inline GIF, Replay (deviation threshold input) + Run-as-workflow (compile-first hint), run polling, approve/deny banner. Surface-owned typed API client. Verified: typecheck 0 errors, 15 new tests, build clean. Gateway detail/file/GIF routes don't exist yet — client degrades gracefully; adding them is domains scope (follow-up).

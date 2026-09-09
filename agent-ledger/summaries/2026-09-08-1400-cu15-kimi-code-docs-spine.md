@@ -1,0 +1,2 @@
+# cu15 — docs quickstart spine + llms.txt (PR #171 → 7087933)
+aci docs restructured: index (intro/TOC) + quickstart (real curl flow; demo + teach marked coming-soon placeholders) + guide (integration modes, action space 20250124/20251124, server-side approvals, VM pool, replay, monitoring) + recipes + changelog. llms.txt at root, all links verified. 27/27 factual strings preserved; docs-lint identical to baseline.

@@ -514,6 +514,7 @@ export interface VoiceAPI {
   isAvailable(): Promise<boolean>;
   startDictation(): Promise<{ success: boolean; error?: string }>;
   stopDictation(): Promise<void>;
+  transcribe(wav: ArrayBuffer): Promise<{ text?: string; error?: string }>;
   onTranscript(handler: (event: { text: string; isFinal: boolean }) => void): () => void;
 }
 

@@ -149,6 +149,37 @@ function resolveRuntimeModelId(agent: Agent, modelOverride?: string): string | u
           },
         });
       }
+      // Persistent computer (spec bot-identity-computer): reopening a bot
+      // must land on the same desktop that Create Bot provisioned — resolve
+      // by bot_id and refresh the session's computer reference. Never create
+      // here; provisioning is part of the atomic create, and autoStart stays
+      // off so opening a session never boots a replacement sandbox.
+      if (agent.vmOperator?.enabled === true && !isBotDesktopPaused(agent.id)) {
+        try {
+          const bound = await getSandboxForAgent(agent.id, agent.vmOperator);
+          if (
+            bound.ok &&
+            bound.data &&
+            bound.data.id !== existingSession.metadata?.vmComputerId
+          ) {
+            await store.updateSession(existingSession.id, {
+              metadata: {
+                ...existingSession.metadata,
+                vmSandbox: {
+                  id: bound.data.id,
+                  provider: bound.data.provider,
+                  status: bound.data.status,
+                  vncUrl: bound.data.vncUrl,
+                },
+                vmComputerId: bound.data.id,
+                vmOperator: agent.vmOperator,
+              },
+            });
+          }
+        } catch {
+          // Non-fatal: the session opens without a refreshed computer reference.
+        }
+      }
       useBotRosterStore.getState().setCanonicalChatId(agent.id, existingSession.id);
       return { sessionId: existingSession.id };
     }
@@ -163,22 +194,26 @@ function resolveRuntimeModelId(agent: Agent, modelOverride?: string): string | u
     let notice: string | undefined;
     const vmConfig = agent.vmOperator;
     const isDesktopPaused = isBotDesktopPaused(agent.id);
-    const shouldStartSandbox =
-      vmConfig?.enabled === true && vmConfig?.autoStart !== false && !isDesktopPaused;
+    // Resolve the bot's persistent desktop whenever a VM operator is
+    // configured. Creating a replacement sandbox is gated on autoStart: bots
+    // created through the atomic Create Bot path already have a desktop bound
+    // via bot_id (autoStart stays off so opening a session never boots a new
+    // one), while older agents with autoStart unset keep get-or-create.
+    const shouldResolveSandbox = vmConfig?.enabled === true && !isDesktopPaused;
 
     if (isDesktopPaused) {
       notice =
         'Desktop is under human control. The bot will resume autonomous computer use after you hand the desktop back.';
     }
 
-    if (shouldStartSandbox) {
+    if (shouldResolveSandbox) {
       // Prefer the bot's existing persistent computer so state (toolchain,
       // files, browser sessions) survives across sessions. Only create a new
-      // sandbox if none exists yet.
+      // sandbox if none exists yet and the config allows auto-start.
       const existing = await getSandboxForAgent(agent.id, vmConfig);
       if (existing.ok && existing.data) {
         sandbox = existing.data;
-      } else {
+      } else if (vmConfig.autoStart !== false) {
         const result = await createSandbox(agent.id, vmConfig);
         if (result.ok && result.data) {
           sandbox = result.data;

@@ -16,6 +16,7 @@ tracing-subscriber = { workspace = true }
 uuid = { workspace = true, features = ["v4", "serde"] }
 chrono = { workspace = true, features = ["serde"] }
 tower-http = { workspace = true, features = ["cors"] }
+tempfile = { workspace = true }
 
 [dev-dependencies]
 tower = { workspace = true }

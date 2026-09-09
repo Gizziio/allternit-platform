@@ -49,6 +49,17 @@ interface DiscoveryModel {
   providerName?: string | undefined
 }
 
+/**
+ * Strip a leading `<providerId>/` from a model id. Some writers persist the
+ * full `provider/model` runtime id as `modelId`; composing `providerId/modelId`
+ * from such a value would double the prefix (`kimi-cli/kimi-cli/kimi-for-coding`)
+ * and the gateway rejects it with ProviderModelNotFoundError.
+ */
+export function stripProviderPrefix(providerId: string, modelId: string): string {
+  const prefix = `${providerId}/`
+  return modelId.startsWith(prefix) ? modelId.slice(prefix.length) : modelId
+}
+
 /** Read the platform's selected model and return it as `provider/modelId`. */
 export function resolvePlatformModelId(): string | undefined {
   try {
@@ -56,7 +67,7 @@ export function resolvePlatformModelId(): string | undefined {
     if (raw) {
       const parsed = JSON.parse(raw) as PlatformModelSelection | null
       if (parsed?.providerId && parsed?.modelId) {
-        return `${parsed.providerId}/${parsed.modelId}`
+        return `${parsed.providerId}/${stripProviderPrefix(parsed.providerId, parsed.modelId)}`
       }
     }
   } catch {

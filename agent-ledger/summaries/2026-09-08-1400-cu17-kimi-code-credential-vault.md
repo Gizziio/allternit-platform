@@ -1,0 +1,2 @@
+# cu17 — credential vault + TOTP (PR #177 → f3c717db)
+/api/aci/credentials CRUD, AES-256-GCM sealed via token_crypto (no plaintext fallback, 503 without key, metadata-only responses). Run binding: credential_names → sandbox_env injection only, never model context/logs/receipts/frames (scrubbed); names bound into action-hash descriptor. RFC 6238 TOTP endpoint validated against RFC vectors. 12 new tests incl. negative leakage assertions. Deferrals: ACU-side sandbox_env consumption (contract defined); retention sweep v2.

@@ -24,9 +24,12 @@ if (!fs.existsSync(path.join(connectorDir, 'package.json'))) {
 }
 
 log(`Generating catalog in ${connectorDir}...`);
+// shell: true so `npm` resolves on Windows, where it is an npm.cmd shim that
+// execFile cannot find (ENOENT spawnSync npm — run 9 Windows packaging failure).
 execFileSync('npm', ['run', 'generate:catalog'], {
   cwd: connectorDir,
   stdio: 'inherit',
+  shell: true,
 });
 
 const jsonFiles = fs.existsSync(catalogDir)

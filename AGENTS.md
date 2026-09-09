@@ -392,6 +392,7 @@ Phase 4 added public docs for the agent runtime surfaces. When working on tools,
 - [`docs/public/tools/tool-belt.md`](./docs/public/tools/tool-belt.md) — Native Tool Belt: `web_search`, `web_fetch`, `bash`, `code_execution`, `memory`, `str_replace_editor`, and `computer`.
 - [`docs/public/tools/mcp.md`](./docs/public/tools/mcp.md) — Attaching MCP servers, server-side execution, bundled/remote directory pattern, and tunnel security.
 - [`docs/public/tools/strict-tool-use.md`](./docs/public/tools/strict-tool-use.md) — Strict JSON Schema validation and grammar-constrained inputs.
+- [`docs/public/tools/native-sessions.md`](./docs/public/tools/native-sessions.md) — Native sessions: picking up CLI agent sessions (Claude Code, Codex, Kimi, …) in gizzi-code, Desktop, and the web app; pickup/fetch/export and supported CLIs. Operator/API reference: [`docs/NATIVE_SESSIONS.md`](./docs/NATIVE_SESSIONS.md).
 - [`docs/public/aci/index.md`](./docs/public/aci/index.md) — Allternit Computer Interface overview, browser automation, and vision coordinates.
 - [`docs/public/guides/build-a-tool.md`](./docs/public/guides/build-a-tool.md) — Step-by-step guide for registering custom tools.
 

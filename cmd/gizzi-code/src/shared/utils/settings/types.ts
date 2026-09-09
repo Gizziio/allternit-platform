@@ -876,14 +876,10 @@ export const SettingsSchema = lazySchema(() =>
               ),
           }
         : {}),
-      ...(feature('VOICE_MODE')
-        ? {
-            voiceEnabled: z
-              .boolean()
-              .optional()
-              .describe('Enable voice mode (hold-to-talk dictation)'),
-          }
-        : {}),
+      voiceEnabled: z
+        .boolean()
+        .optional()
+        .describe('Enable local voice dictation (hold Ctrl+Space or F8)'),
       ...(feature('KAIROS')
         ? {
             assistant: z

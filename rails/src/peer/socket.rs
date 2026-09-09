@@ -7,10 +7,15 @@
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use anyhow::{bail, Context, Result};
+#[cfg(unix)]
+use anyhow::{bail, Context};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
+#[cfg(unix)]
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+#[cfg(unix)]
 use tokio::net::{UnixListener, UnixStream};
+#[cfg(unix)]
 use tokio::time::timeout;
 
 use crate::core::ids::create_event_id;
@@ -56,12 +61,14 @@ pub struct DeliveryReceipt {
     pub error: Option<String>,
 }
 
-/// A bound UDS listener for one peer.
+/// A bound UDS listener for one peer (Unix only).
+#[cfg(unix)]
 pub struct PeerSocket {
     listener: UnixListener,
     socket_path: PathBuf,
 }
 
+#[cfg(unix)]
 impl PeerSocket {
     /// Bind to `socket_path`.  Removes any stale socket file first.
     pub async fn bind(socket_path: impl AsRef<Path>) -> Result<Self> {
@@ -101,6 +108,7 @@ impl PeerSocket {
 }
 
 /// Deliver an envelope to `socket_path`, waiting at most `timeout_duration`.
+#[cfg(unix)]
 pub async fn send_envelope(
     socket_path: &Path,
     envelope: &PeerEnvelope,
@@ -142,6 +150,7 @@ pub async fn send_envelope(
     }
 }
 
+#[cfg(unix)]
 async fn read_envelope(stream: UnixStream) -> Result<PeerEnvelope> {
     let mut reader = BufReader::new(stream);
     let mut line = String::new();
@@ -154,6 +163,7 @@ async fn read_envelope(stream: UnixStream) -> Result<PeerEnvelope> {
     Ok(envelope)
 }
 
+#[cfg(unix)]
 fn ensure_socket_dir(socket_path: &Path) -> Result<()> {
     if let Some(parent) = socket_path.parent() {
         std::fs::create_dir_all(parent)?;
@@ -163,6 +173,7 @@ fn ensure_socket_dir(socket_path: &Path) -> Result<()> {
 
 /// macOS limits UDS paths to about 104 bytes.  If `socket_path` is too long,
 /// mirror it under `/tmp/allternit-peers/` using the basename.
+#[cfg(unix)]
 fn short_socket_path(socket_path: &Path) -> PathBuf {
     const MAX_LEN: usize = 100;
     let s = socket_path.to_string_lossy();
@@ -179,7 +190,22 @@ fn short_socket_path(socket_path: &Path) -> PathBuf {
     tmp
 }
 
-#[cfg(test)]
+/// Non-Unix platforms have no UDS in tokio. Delivery reports as failed so
+/// callers surface a useful message; peers still receive messages via the
+/// durable Bus inbox + HTTP polling fallback.
+#[cfg(not(unix))]
+pub async fn send_envelope(
+    _socket_path: &Path,
+    _envelope: &PeerEnvelope,
+    _timeout_duration: Duration,
+) -> Result<DeliveryReceipt> {
+    Ok(DeliveryReceipt {
+        delivered: false,
+        error: Some("uds peer delivery is not supported on this platform".to_string()),
+    })
+}
+
+#[cfg(all(test, unix))]
 mod tests {
     use super::*;
     use tempfile::TempDir;

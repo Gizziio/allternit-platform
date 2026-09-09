@@ -55,6 +55,18 @@ import {
 import { GizziMascot, type GizziEmotion } from "@/components/ai-elements/GizziMascot";
 import { MascotPreview } from "@/views/agent-view/components/AgentMascotPreview";
 import { BOT_CATEGORIES } from "@/lib/bots/bot-profile";
+import {
+  BOT_CATEGORY_DEFAULT_TOOLS,
+  BOT_NATIVE_TOOLS,
+  toggleBotTool,
+} from "@/lib/bots/bot-tool-registry";
+import {
+  BOT_DESKTOP_PRESETS,
+  defaultBotVMOperatorConfig,
+  describeDesktopResources,
+  ensureBotComputer,
+  presetIdForResources,
+} from "@/lib/bots/vm-operator";
 import { saveBotAvatar } from "@/lib/bots/bot-assets-api";
 import { generateBotAvatar, isBotAvatar } from "@/lib/bots/bot-avatar.service";
 import { api } from "@/integration/api-client";
@@ -81,9 +93,15 @@ const logger = createModuleLogger("CreateBotForm");
 interface CreateBotFormProps {
   isOpen: boolean;
   onClose: () => void;
+  /**
+   * Optional prefill (bot templates, duplicates). Create Bot stays atomic —
+   * a draft only seeds the form; the single submit still writes all four
+   * Bot fields and provisions the persistent desktop.
+   */
+  draft?: Partial<CreateAgentInput>;
 }
 
-type StepId = "start" | "identity" | "avatar" | "runtime" | "review";
+type StepId = "start" | "identity" | "avatar" | "job" | "computer" | "runtime" | "review";
 
 interface StepInfo {
   id: StepId;
@@ -93,8 +111,10 @@ interface StepInfo {
 
 const STEPS: StepInfo[] = [
   { id: "start", label: "Start", description: "Pick a template — or start blank" },
-  { id: "identity", label: "Identity", description: "Name your bot" },
+  { id: "identity", label: "Identity", description: "Name your bot (Name — Role)" },
   { id: "avatar", label: "Avatar", description: "Visual identity and mascot" },
+  { id: "job", label: "Job & Tools", description: "What the bot does, and what it may use" },
+  { id: "computer", label: "Computer", description: "Persistent Computer Cloud desktop" },
   { id: "runtime", label: "Runtime (optional)", description: "Pre-selected for you" },
   { id: "review", label: "Review", description: "Preview and launch" },
 ];
@@ -334,43 +354,51 @@ function buildDefaultCharacterLayer(
   };
 }
 
-export function CreateBotForm({ isOpen, onClose }: CreateBotFormProps) {
+function buildInitialFormData(draft?: Partial<CreateAgentInput>): Partial<CreateAgentInput> {
+  return {
+    name: draft?.name || "",
+    description: draft?.description || "",
+    type: draft?.type ?? "worker",
+    model: draft?.model ?? getDefaultAgentModel().id,
+    provider: draft?.provider ?? getDefaultAgentModel().provider,
+    capabilities: draft?.capabilities ?? [],
+    tools: draft?.tools ?? [],
+    maxIterations: draft?.maxIterations ?? 10,
+    temperature: draft?.temperature ?? 0.7,
+    trustTier: draft?.trustTier ?? "standard",
+    writeScope: draft?.writeScope ?? "workspace",
+    dataClassification: draft?.dataClassification ?? "internal",
+    allowedSurfaces: draft?.allowedSurfaces ?? ["chat"],
+    allowedSkills: draft?.allowedSkills ?? [],
+    allowedTools: draft?.allowedTools ?? [],
+    category: draft?.category ?? "general",
+    tags: draft?.tags ?? [],
+    harness: draft?.harness ?? { mode: "cloud" },
+    isBot: true,
+    // Atomic Bot contract: every bot carries a JOB system prompt and a
+    // persistent Computer Cloud desktop config from the moment it is created.
+    systemPrompt: draft?.systemPrompt || "",
+    vmOperator: draft?.vmOperator ?? defaultBotVMOperatorConfig(),
+    botProfile: {
+      displayName: draft?.botProfile?.displayName || "",
+      tagline: draft?.botProfile?.tagline || "",
+      welcomeMessage: draft?.botProfile?.welcomeMessage || "",
+      starterPrompts: draft?.botProfile?.starterPrompts || [],
+      accentColor: draft?.botProfile?.accentColor || "#D4956A",
+      groupChatEnabled: draft?.botProfile?.groupChatEnabled ?? true,
+      botCategory: draft?.botProfile?.botCategory || "custom",
+    },
+    brainId: draft?.brainId || "",
+  };
+}
+
+export function CreateBotForm({ isOpen, onClose, draft }: CreateBotFormProps) {
   const { createAgent, isCreating } = useAgentStore();
   const [step, setStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
 
-  const [formData, setFormData] = useState<Partial<CreateAgentInput>>(() => ({
-    name: "",
-    description: "",
-    type: "worker",
-    model: getDefaultAgentModel().id,
-    provider: getDefaultAgentModel().provider,
-    capabilities: [],
-    tools: [],
-    maxIterations: 10,
-    temperature: 0.7,
-    trustTier: "standard",
-    writeScope: "workspace",
-    dataClassification: "internal",
-    allowedSurfaces: ["chat"],
-    allowedSkills: [],
-    allowedTools: [],
-    category: "general",
-    tags: [],
-    harness: { mode: "cloud" },
-    isBot: true,
-    botProfile: {
-      displayName: "",
-      tagline: "",
-      welcomeMessage: "",
-      starterPrompts: [],
-      accentColor: "#D4956A",
-      groupChatEnabled: true,
-      botCategory: "custom",
-    },
-    brainId: "",
-  }));
+  const [formData, setFormData] = useState<Partial<CreateAgentInput>>(() => buildInitialFormData());
 
   const [avatarMode, setAvatarMode] = useState<"initials" | "gizzi" | "mascot" | "image" | "pet">("gizzi");
   const [avatarPicker, setAvatarPicker] = useState<AvatarPickerConfig>(() =>
@@ -393,43 +421,13 @@ export function CreateBotForm({ isOpen, onClose }: CreateBotFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const stepId = STEPS[step].id;
 
-  // Reset when reopened
+  // Reset when reopened (applying the optional draft prefill)
   useEffect(() => {
     if (!isOpen) return;
     setStep(0);
     setError(null);
     setSelectedTemplateId(null);
-    setFormData({
-      name: "",
-      description: "",
-      type: "worker",
-      model: getDefaultAgentModel().id,
-      provider: getDefaultAgentModel().provider,
-      capabilities: [],
-      tools: [],
-      maxIterations: 10,
-      temperature: 0.7,
-      trustTier: "standard",
-      writeScope: "workspace",
-      dataClassification: "internal",
-      allowedSurfaces: ["chat"],
-      allowedSkills: [],
-      allowedTools: [],
-      category: "general",
-      tags: [],
-      harness: { mode: "cloud" },
-      isBot: true,
-      botProfile: {
-        displayName: "",
-        tagline: "",
-        welcomeMessage: "",
-        starterPrompts: [],
-        accentColor: "#D4956A",
-        groupChatEnabled: true,
-        botCategory: "custom",
-      },
-      brainId: "",
-    });
+    setFormData(buildInitialFormData(draft));
     setAvatarMode("gizzi");
     setAvatarPicker(createDefaultAvatarPickerConfig(""));
     setMascotTemplate("gizzi");
@@ -437,7 +435,7 @@ export function CreateBotForm({ isOpen, onClose }: CreateBotFormProps) {
     setGizziEmotion("pleased");
     setImageDataUrl(null);
     setPetUrl("");
-  }, [isOpen]);
+  }, [isOpen, draft]);
 
   // Load brains, models, voices
   useEffect(() => {
@@ -581,9 +579,13 @@ export function CreateBotForm({ isOpen, onClose }: CreateBotFormProps) {
       if (avatarMode === "gizzi") setGizziColor(template.accentColor);
       // Seed the purpose/description from the tagline when the user hasn't
       // written one yet; handleCreate also synthesizes a fallback at submit.
+      // Seed a real tool allowlist for the lane (overridable on the Job step).
       setFormData((prev) => ({
         ...prev,
         description: prev.description || template.tagline,
+        allowedTools: prev.allowedTools?.length
+          ? prev.allowedTools
+          : [...(BOT_CATEGORY_DEFAULT_TOOLS[template.botCategory] ?? [])],
       }));
     },
     [avatarMode, updateBotProfile]
@@ -640,6 +642,21 @@ export function CreateBotForm({ isOpen, onClose }: CreateBotFormProps) {
 
     try {
       const created = await createAgent(payload);
+      // Atomic Bot contract: the persistent Computer Cloud desktop is bound to
+      // the bot right here, in the same submit. We do not block on the VM
+      // reaching "running" — the bots rail streams provisioning/running/stopped
+      // status from /api/v1/computers?bot_id=… (spec bot-identity-computer).
+      const vmConfig = payload.vmOperator;
+      if (vmConfig?.enabled) {
+        void ensureBotComputer(created.id, vmConfig, { displayName }).then((result) => {
+          if (!result.ok) {
+            logger.warn(
+              { botId: created.id, error: result.error },
+              "Bot computer provisioning failed"
+            );
+          }
+        });
+      }
       // Fire-and-forget avatar asset sync so mail/inbox can show real pfps.
       // Form-created bots may not carry a BotAvatar union yet — generate the
       // deterministic one as the stored asset.
@@ -683,6 +700,8 @@ export function CreateBotForm({ isOpen, onClose }: CreateBotFormProps) {
       { id: "name", label: "Bot handle (auto-derived)", satisfied: hasText(formData.name) },
       { id: "description", label: "Purpose / tagline", satisfied: hasText(formData.description) || hasText(formData.botProfile?.tagline) },
       { id: "avatar", label: "Avatar", satisfied: true },
+      { id: "job", label: "Job instructions (optional)", satisfied: (formData.systemPrompt?.trim().length || 0) >= 10 },
+      { id: "computer", label: "Persistent computer", satisfied: formData.vmOperator?.enabled === true },
       { id: "model", label: "Model configured", satisfied: Boolean(formData.model) },
       { id: "brain", label: "Brain / runtime (pre-selected)", satisfied: true },
     ];
@@ -751,7 +770,7 @@ export function CreateBotForm({ isOpen, onClose }: CreateBotFormProps) {
             {/* Step grid */}
             <div className="px-6 pt-5 pb-2">
               <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-4">
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-3">
                   {STEPS.map((s, idx) => {
                     const selected = idx === step;
                     const completed = idx < step;
@@ -840,6 +859,12 @@ export function CreateBotForm({ isOpen, onClose }: CreateBotFormProps) {
                       fileInputRef={fileInputRef}
                       onImageUpload={handleImageUpload}
                     />
+                  )}
+                  {stepId === "job" && (
+                    <JobStep formData={formData} setFormData={setFormData} />
+                  )}
+                  {stepId === "computer" && (
+                    <ComputerStep formData={formData} setFormData={setFormData} />
                   )}
                   {stepId === "runtime" && (
                     <RuntimeStep
@@ -1105,11 +1130,12 @@ function IdentityStep({
             updateBotProfile({ displayName: value });
             setFormData((prev) => ({ ...prev, name: prev.name || deriveHandle(value) }));
           }}
-          placeholder="e.g. Research Assistant"
+          placeholder="e.g. Quinn — Chief of Staff"
           className="bg-[var(--bg-primary)] border-[var(--border-subtle)] text-[var(--text-primary)] text-[16px] py-3"
         />
         <p className="text-[11px] text-[var(--text-muted)] mt-1.5">
-          Handle: @{formData.name || "bot"} (auto-derived from the name)
+          Use the format <span className="text-[var(--text-secondary)]">Name — Role</span>. Handle: @
+          {formData.name || "bot"} (auto-derived from the name)
         </p>
       </div>
 
@@ -1480,6 +1506,230 @@ function AvatarStep({
 }
 
 /* -------------------------------------------------------------------------- */
+/* Job & Tools step — Instructions (JOB system prompt) + tool allowlist       */
+/* -------------------------------------------------------------------------- */
+
+function JobStep({
+  formData,
+  setFormData,
+}: {
+  formData: Partial<CreateAgentInput>;
+  setFormData: React.Dispatch<React.SetStateAction<Partial<CreateAgentInput>>>;
+}) {
+  const allowedTools = formData.allowedTools ?? [];
+
+  return (
+    <section className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-6">
+      <div className="mb-6">
+        <h2 className="text-[18px] font-semibold text-[var(--text-primary)] flex items-center gap-2">
+          <Wrench size={20} className="text-[var(--accent-primary)]" />
+          Job & Tools
+        </h2>
+        <p className="text-[14px] text-[var(--text-secondary)] mt-1">
+          What this bot does, and what it is allowed to use. Saved with the bot when you create it.
+        </p>
+      </div>
+
+      <div className="mb-6">
+        <Label className="text-[14px] font-medium text-[var(--text-primary)] mb-2 block">
+          Job instructions
+        </Label>
+        <Textarea
+          value={formData.systemPrompt || ""}
+          onChange={(e) => setFormData((prev) => ({ ...prev, systemPrompt: e.target.value }))}
+          placeholder={
+            "Your job: …\n\nYou do:\n- …\n\nYou do not:\n- …"
+          }
+          rows={8}
+          className="bg-[var(--bg-primary)] border-[var(--border-subtle)] text-[var(--text-primary)] resize-none font-mono text-[13px]"
+        />
+        <p className="text-[11px] text-[var(--text-muted)] mt-1.5">
+          This becomes the bot's system prompt. State the job plainly — what it does and what it
+          does not do. Optional: the platform adds identity and computer context at runtime.
+        </p>
+      </div>
+
+      <div>
+        <Label className="text-[14px] font-medium text-[var(--text-primary)] mb-2 block">
+          Tools
+        </Label>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {BOT_NATIVE_TOOLS.map((tool) => {
+            const checked = allowedTools.includes(tool.id);
+            return (
+              <button
+                key={tool.id}
+                type="button"
+                onClick={() =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    allowedTools: toggleBotTool(prev.allowedTools ?? [], tool.id),
+                  }))
+                }
+                className={cn(
+                  "flex items-start gap-3 rounded-xl border p-3 text-left transition-all",
+                  checked
+                    ? "border-[var(--accent-primary)] bg-[var(--accent-primary)]/10"
+                    : "border-[var(--border-subtle)] bg-[var(--bg-elevated)] hover:border-[var(--border-hover)]"
+                )}
+              >
+                {checked ? (
+                  <CheckCircle size={16} className="mt-0.5 shrink-0 text-[var(--accent-primary)]" />
+                ) : (
+                  <Circle size={16} className="mt-0.5 shrink-0 text-[var(--text-muted)]" />
+                )}
+                <span>
+                  <span className="block text-[13px] font-medium text-[var(--text-primary)]">
+                    {tool.label}
+                  </span>
+                  <span className="block text-[12px] text-[var(--text-muted)]">
+                    {tool.description}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Computer step — persistent Computer Cloud desktop                          */
+/* -------------------------------------------------------------------------- */
+
+function ComputerStep({
+  formData,
+  setFormData,
+}: {
+  formData: Partial<CreateAgentInput>;
+  setFormData: React.Dispatch<React.SetStateAction<Partial<CreateAgentInput>>>;
+}) {
+  const vmConfig = formData.vmOperator;
+  const enabled = vmConfig?.enabled === true;
+  const resources = vmConfig?.resources;
+
+  const toggle = (checked: boolean) =>
+    setFormData((prev) => ({
+      ...prev,
+      vmOperator: {
+        ...defaultBotVMOperatorConfig(),
+        ...(prev.vmOperator ?? {}),
+        enabled: checked,
+      },
+    }));
+
+  return (
+    <section className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-6">
+      <div className="mb-6">
+        <h2 className="text-[18px] font-semibold text-[var(--text-primary)] flex items-center gap-2">
+          <ComputerTower size={20} className="text-[var(--accent-primary)]" />
+          Computer
+        </h2>
+        <p className="text-[14px] text-[var(--text-secondary)] mt-1">
+          A bot can own a persistent desktop in Computer Cloud. The same computer is reused every
+          time you open the bot — files, tools, and browser state persist.
+        </p>
+      </div>
+
+      <div className="flex items-center justify-between p-4 rounded-xl border border-[var(--border-subtle)] mb-4">
+        <div className="flex items-center gap-3">
+          {enabled ? (
+            <ComputerTower size={20} className="text-[var(--status-success)]" />
+          ) : (
+            <ComputerTower size={20} className="text-[var(--text-muted)]" />
+          )}
+          <div>
+            <div className="font-medium text-[var(--text-primary)]">Persistent computer</div>
+            <div className="text-[13px] text-[var(--text-secondary)]">
+              Provisioned when you create the bot, bound to it by id.
+            </div>
+          </div>
+        </div>
+        <Switch checked={enabled} onCheckedChange={toggle} />
+      </div>
+
+      {enabled && (
+        <div className="mb-4">
+          <Label className="text-[13px] font-medium text-[var(--text-primary)] mb-2 block">Size</Label>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            {BOT_DESKTOP_PRESETS.map((preset) => {
+              const selected = presetIdForResources(vmConfig?.resources) === preset.id;
+              return (
+                <button
+                  key={preset.id}
+                  type="button"
+                  onClick={() =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      vmOperator: {
+                        ...defaultBotVMOperatorConfig(),
+                        ...(prev.vmOperator ?? {}),
+                        resources: { ...preset.resources },
+                      },
+                    }))
+                  }
+                  className={cn(
+                    "rounded-xl border p-3 text-left transition-all",
+                    selected
+                      ? "border-[var(--accent-primary)] bg-[var(--accent-primary)]/10"
+                      : "border-[var(--border-subtle)] bg-[var(--bg-elevated)] hover:border-[var(--border-hover)]"
+                  )}
+                >
+                  <span className="block text-[13px] font-semibold text-[var(--text-primary)]">
+                    {preset.label}
+                  </span>
+                  <span className="block text-[12px] text-[var(--text-muted)]">
+                    {describeDesktopResources(preset.resources)}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {enabled && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4">
+            <div className="text-[11px] uppercase tracking-wider text-[var(--text-muted)] mb-1">
+              Provider
+            </div>
+            <div className="text-[13px] font-medium text-[var(--text-primary)]">
+              Computer Cloud · Incus Linux desktop
+            </div>
+          </div>
+          <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4">
+            <div className="text-[11px] uppercase tracking-wider text-[var(--text-muted)] mb-1">
+              Resources
+            </div>
+            <div className="text-[13px] font-medium text-[var(--text-primary)]">
+              {describeDesktopResources(resources)}
+            </div>
+          </div>
+          <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4">
+            <div className="text-[11px] uppercase tracking-wider text-[var(--text-muted)] mb-1">
+              Persistence
+            </div>
+            <div className="text-[13px] font-medium text-[var(--text-primary)]">
+              Persistent — survives across sessions
+            </div>
+          </div>
+        </div>
+      )}
+
+      {enabled && (
+        <p className="mt-4 text-[12px] text-[var(--text-muted)]">
+          The desktop starts provisioning when you hit Create bot. You can watch its status on the
+          bot card; opening the bot later reuses the same computer, not a fresh sandbox.
+        </p>
+      )}
+    </section>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
 /* Runtime step                                                               */
 /* -------------------------------------------------------------------------- */
 
@@ -1810,6 +2060,12 @@ function ReviewStep({
   const botProfile = formData.botProfile!;
   const accentColor = botProfile.accentColor || STUDIO_THEME.accent;
 
+  const vmResources = formData.vmOperator?.resources;
+  const computerSummary =
+    formData.vmOperator?.enabled === true
+      ? `Persistent desktop · ${describeDesktopResources(vmResources)}`
+      : "No computer";
+
   const avatarLabel =
     avatarMode === "image"
       ? "Custom image"
@@ -1889,6 +2145,18 @@ function ReviewStep({
         <ReviewRow label="Harness" value={formData.harness?.mode || "cloud"} />
         <ReviewRow label="Voice" value={formData.voice?.enabled ? "Enabled" : "Disabled"} />
         <ReviewRow label="Max iterations" value={String(formData.maxIterations)} />
+        <ReviewRow
+          label="Job instructions"
+          value={(formData.systemPrompt?.trim().length || 0) >= 10 ? "Set" : "Not set"}
+        />
+        <ReviewRow
+          label="Tools"
+          value={formData.allowedTools?.length ? formData.allowedTools.join(", ") : "None"}
+        />
+        <ReviewRow
+          label="Computer"
+          value={computerSummary}
+        />
       </div>
     </section>
   );
