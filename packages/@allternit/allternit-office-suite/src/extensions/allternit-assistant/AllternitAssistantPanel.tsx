@@ -23,6 +23,33 @@ interface ChatEntry {
   streaming?: boolean;
 }
 
+/** Cap on document text embedded into the assistant's context per run. */
+const DOCUMENT_CONTEXT_MAX_CHARS = 4000;
+
+/**
+ * Context block sent with every assistant run: the open document's name plus a
+ * bounded plain-text excerpt when the app reports one. Reads the registry at
+ * call time so runs always see the current document, never a mount snapshot.
+ */
+export function buildAssistantContext(appKey: OfficeAppKey, appLabel: string): string {
+  const doc = getActiveDocument(appKey);
+  if (!doc) return `No document is currently open in Allternit ${appLabel}.`;
+  let context = `The user currently has "${doc.name}" open in Allternit ${appLabel}.`;
+  try {
+    const content = doc.content?.() ?? null;
+    const text = content?.trim();
+    if (text) {
+      const excerpt = text.length > DOCUMENT_CONTEXT_MAX_CHARS
+        ? `${text.slice(0, DOCUMENT_CONTEXT_MAX_CHARS)}\n…(truncated)`
+        : text;
+      context += `\n\nCurrent document content:\n${excerpt}`;
+    }
+  } catch {
+    /* content is best-effort */
+  }
+  return context;
+}
+
 /**
  * First-party "Allternit Assistant" extension panel.
  *
@@ -30,14 +57,15 @@ interface ChatEntry {
  * client through `useOfficeAi()` (inheriting whatever the embedding host
  * provides), streams through the host's AgentLoop, and persists the model
  * choice through the host's per-app model override. The only context it takes
- * from the surrounding app is the open document name, via the module-level
- * active-document registry.
+ * from the surrounding app is the open document — name plus a text excerpt —
+ * via the module-level active-document registry.
  */
 export function AllternitAssistantPanel({ ctx }: { ctx: OfficeExtensionContext }): ReactNode {
   const ai = useOfficeAi();
   const appKey = ctx.appKey;
   const appLabel = APP_LABELS[appKey] ?? appKey;
-  const docName = useActiveDocument(appKey);
+  const docInfo = useActiveDocument(appKey);
+  const docName = docInfo?.name ?? null;
   const [chat, setChat] = useState<ChatEntry[]>([]);
   const [prompt, setPrompt] = useState('');
   const [busy, setBusy] = useState(false);
@@ -65,12 +93,7 @@ export function AllternitAssistantPanel({ ctx }: { ctx: OfficeExtensionContext }
           `You are the Allternit Assistant, embedded in the Allternit ${appLabel} app as a ` +
           'first-class extension. Help the user with their work in this app: answer questions, ' +
           'explain concepts, draft and refine content. Be concise and concrete.',
-        buildContext: () => {
-          const doc = getActiveDocument(appKey);
-          return doc
-            ? `The user currently has "${doc}" open in Allternit ${appLabel}.`
-            : `No document is currently open in Allternit ${appLabel}.`;
-        },
+        buildContext: () => buildAssistantContext(appKey, appLabel),
       },
       events: {
         onText: (text) => {

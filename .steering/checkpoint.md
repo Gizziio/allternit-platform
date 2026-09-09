@@ -1,23 +1,14 @@
-# Checkpoint — session/cu19-sandbox-env
+# Session checkpoint — suite-assistant-fix
 
-## Goal
-Wire ACU-side consumption of the `sandbox_env` credential-injection channel (Rust PR #177): accept the top-level `sandbox_env` field on /v1/computer-use/execute, thread it into the run's child-process environment, and leak-proof it.
+**Goal:** Fix two verified bugs in the Allternit Desktop office suite AI assistant: (1) doubled provider prefix in `runtimeModelId` (`kimi-cli/kimi-cli/kimi-for-coding`) causing 400s on `/api/agent-chat`; (2) assistant chat panel missing active document context despite an open autosaved document.
 
-## Just did
-- New `core/sandbox_env.py`: validate_sandbox_env (key-only errors), sandbox_env_context (os.environ set/restore), scrub_secrets (recursive *** replace).
-- `gateway/computer_use_router.py`: ExecuteBody.sandbox_env field + masked __repr__/__str__; RunState/RunStore carry sandbox_secrets (never serialized); execute endpoint validates (400, key-only message) and wraps run_impl in sandbox_env_context; push_event scrubs frames; result/error assignments + canonical payloads + log lines scrubbed.
-- `core/replay_engine.py`: capture_screenshot(_capture_via_action) gained optional `secrets` param scrubbing its two warning logs (replay callers default None → unchanged).
-- Documented: no Python VM/microVM session path exists (Firecracker sandbox/ is separate provisioning; the cloud-VM /etc/environment bootstrap is Rust-side vm_session_routes only) — run-scoped os.environ injection is the whole Python-side channel.
+**Just did:**
+- Live-confirmed both bugs via CDP 9224: localStorage `allternit:model-selection` has `modelId: "kimi-cli/kimi-for-coding"` (prefixed), and the Assistant banner reads "Allternit Docs — no document open" on /docs with Untitled.docx open.
+- Bug 1 fixed at four layers: `office-ai/src/model-selection.ts` (`resolvePlatformModelId` strips a baked-in provider prefix; fixes already-corrupted storage), platform `components/model-picker.tsx` (3 handlers persist short modelId), `lib/default-brain.ts` (`normalizePersistedModelSelection` on read + re-persist), `lib/agents/mode-session-store.ts` (`resolveRuntimeModelId` guard).
+- Bug 2 fixed: `activeDocument.ts` is now a two-layer registry (`reportActiveDocument` app-reported wins over `registerActiveDocument` prop name; lazy content getter; stable snapshots for useSyncExternalStore). Vendored docs app (`office-docs-app/src/renderer/App.tsx`) reports real `doc.fileName` + live editor text. Assistant panel `buildAssistantContext` emits title + bounded excerpt (4000 chars). Also fixed stale-`blocks` closure in the vendored `AiPanel`.
+- Tests: office-ai 6/6 (vitest added), office-suite 13/13 (vitest added: registry 8 + context builder 5), ai.allternit.com default-brain 19/19 incl. 2 new regression tests. Typecheck clean: office-ai, office-suite, office-docs-app, ai.allternit.com.
 
-## Verification
-- New tests: `cd domains/computer-use/core/gateway && PYTHONPATH=".." python -m pytest tests/test_sandbox_env.py -q` → 15 passed.
-- Existing suite (from core/): `python -m pytest tests/ -q --ignore=tests/test_e2e.py --ignore=tests/test_real_adapters.py` → 227 passed, 21 skipped, 2 env-dependent desktop flakes (both pass in isolation; baseline on clean main had 1; flake set varies run to run and none touch this change).
+**Next:** full ai.allternit.com suite (background), live re-run feasibility (needs repackage via session/desktop-package — assess), commit + push + PR.
 
-## Next
-Commit, push, open PR, stop (orchestrator merges).
-
-## Open questions
-- Concurrent runs share os.environ for overlapping windows (documented v1 tradeoff in core/sandbox_env.py).
-
-## Done
-- PR #187 opened (https://github.com/Gizziio/allternit-platform/pull/187), branch session/cu19-sandbox-env, single commit b091b4932. Stopped here per instructions — orchestrator merges.
+**Open questions:**
+- Live verification requires rebuilding the platform static export into the desktop bundle; the running app serves yesterday's build. If packaging is slow, defer with exact steps documented in the PR + ledger.

@@ -8,6 +8,7 @@ export {
 export {
   resolvePlatformModelId,
   resolvePlatformModelName,
+  stripProviderPrefix,
   getOfficeModelOverride,
   setOfficeModelOverride,
   resolveOfficeModelId,

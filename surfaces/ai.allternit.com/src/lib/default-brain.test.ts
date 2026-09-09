@@ -1,9 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   isMistakenAutoDefault,
   isPaidAllternitPlan,
   migrateRetiredCodexSelection,
+  normalizePersistedModelSelection,
   pickDefaultBrain,
+  readPersistedModelSelection,
   shouldKeepPersistedSelection,
 } from "./default-brain";
 import type { ModelOption } from "@/components/prompt-kit/prompt-model-selector";
@@ -114,6 +116,64 @@ describe("retired Codex model ids", () => {
       modelId: "gpt-6-astra",
       modelName: "Astra",
     });
+  });
+});
+
+describe("normalizePersistedModelSelection", () => {
+  it("strips a provider prefix baked into the persisted modelId", () => {
+    expect(
+      normalizePersistedModelSelection({
+        providerId: "kimi-cli",
+        profileId: "kimi-cli-acp",
+        modelId: "kimi-cli/kimi-for-coding",
+        modelName: "Kimi for Coding",
+        modelAuto: false,
+      }),
+    ).toEqual({
+      providerId: "kimi-cli",
+      profileId: "kimi-cli-acp",
+      modelId: "kimi-for-coding",
+      modelName: "Kimi for Coding",
+      modelAuto: false,
+    });
+  });
+
+  it("leaves a short modelId untouched", () => {
+    const selection: ModelSelection = {
+      providerId: "kimi-cli",
+      profileId: "kimi-cli",
+      modelId: "kimi-for-coding",
+      modelName: "Kimi for Coding",
+    };
+    expect(normalizePersistedModelSelection(selection)).toBe(selection);
+  });
+});
+
+describe("readPersistedModelSelection", () => {
+  it("repairs a double-prefixed modelId and re-persists the short form", () => {
+    // Regression: the model picker stored the full runtime id as modelId, so
+    // every `providerId/modelId` consumer composed
+    // kimi-cli/kimi-cli/kimi-for-coding and the gateway rejected the chat.
+    // vitest.setup.ts mocks localStorage globally; drive the mock directly.
+    const stored = JSON.stringify({
+      providerId: "kimi-cli",
+      profileId: "kimi-cli-acp",
+      modelId: "kimi-cli/kimi-for-coding",
+      modelName: "Kimi for Coding",
+      modelAuto: false,
+    });
+    (window.localStorage.getItem as ReturnType<typeof vi.fn>).mockReturnValue(stored);
+    const setItem = window.localStorage.setItem as ReturnType<typeof vi.fn>;
+    setItem.mockClear();
+
+    const selection = readPersistedModelSelection();
+    expect(selection?.modelId).toBe("kimi-for-coding");
+
+    expect(setItem).toHaveBeenCalledWith(
+      "allternit:model-selection",
+      expect.stringContaining('"modelId":"kimi-for-coding"'),
+    );
+    (window.localStorage.getItem as ReturnType<typeof vi.fn>).mockReturnValue(null);
   });
 });
 
