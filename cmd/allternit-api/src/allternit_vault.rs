@@ -62,6 +62,44 @@ impl AllternitVault {
     }
 }
 
+/// Resolve a `vault://org/{org_id}/{cred_name}` reference at template-build
+/// time. Access rule mirrors `find_vault`: org vaults are readable by any
+/// member of that org, so the requester must belong to `reference.org_id`.
+/// Returns the decrypted value, or `None` when no live credential matches.
+/// The caller is responsible for never persisting the returned value.
+pub(crate) fn resolve_org_vault_secret(
+    db: &DbHandle,
+    requester: &AuthUser,
+    reference: &crate::bot_desktop_templates::VaultSecretRef,
+) -> Result<Option<String>, String> {
+    let requester_org = requester
+        .organization_id
+        .as_deref()
+        .or(requester.tenant_id.as_deref());
+    if requester_org != Some(reference.org_id.as_str()) {
+        return Err(format!(
+            "no vault access to organization {:?} (requester org {:?})",
+            reference.org_id, requester_org
+        ));
+    }
+    let conn = db.connect().map_err(|e| e.to_string())?;
+    let sealed: Option<String> = conn
+        .query_row(
+            "SELECT c.encrypted_value FROM allternit_vault_credentials c \
+             JOIN allternit_vaults v ON v.id = c.vault_id \
+             WHERE v.organization_id = ?1 AND c.provider = ?2 AND c.revoked_at IS NULL \
+               AND (c.expires_at IS NULL OR c.expires_at > CURRENT_TIMESTAMP) \
+             ORDER BY c.updated_at DESC LIMIT 1",
+            params![reference.org_id, reference.name],
+            |row| row.get(0),
+        )
+        .optional()
+        .map_err(|e| e.to_string())?;
+    Ok(sealed
+        .map(|value| crate::token_crypto::open(&value))
+        .filter(|value| !value.is_empty()))
+}
+
 pub fn router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/vault/credentials", post(put_legacy_credential))
