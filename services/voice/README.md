@@ -6,6 +6,9 @@ STT is [whisper.cpp](https://github.com/ggml-org/whisper.cpp) (`whisper-cli` +
 `ggml-tiny.en.bin`, MIT). No Python, no pyinstaller, no cloud STT.
 
 TTS endpoints exist for contract compatibility and return metadata only.
+A **full TTS product** (real audio, speak button, Gizzi `/speak`, packaging)
+is specified in [`docs/specs/tts-product.md`](../../docs/specs/tts-product.md)
+and is **not implemented**. Next agent: bake-off, then ship. Do not add a stub.
 
 ## Running
 
