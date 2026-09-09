@@ -719,10 +719,15 @@ export function ModelPickerUI({
     (model: ModelOption) => {
       const providerId = model.providerId || model.provider || "allternit";
       const profileId = resolveProfileId(providerId, authenticatedProviders);
+      // Catalog ids are full `provider/model` runtime ids; persist the short
+      // model id so `providerId/modelId` composition never double-prefixes.
+      const modelId = model.id.includes("/")
+        ? model.id.split("/").slice(1).join("/")
+        : model.id;
       const next: ModelSelection = {
         providerId,
         profileId,
-        modelId: model.id,
+        modelId,
         modelName: model.name,
       };
       onSelect(next);
@@ -735,11 +740,16 @@ export function ModelPickerUI({
     if (!customProviderId || !freeformInput) return;
     if (!validationResult?.valid) return;
     const profileId = resolveProfileId(customProviderId, authenticatedProviders);
+    // Freeform ids may be pasted as full `provider/model` runtime ids; store
+    // the short model id so `providerId/modelId` composition never doubles.
+    const shortModelId = freeformInput.includes("/")
+      ? freeformInput.split("/").slice(1).join("/")
+      : freeformInput;
     const next: ModelSelection = {
       providerId: customProviderId,
       profileId,
-      modelId: freeformInput,
-      modelName: validationResult.model?.name || freeformInput,
+      modelId: shortModelId,
+      modelName: validationResult.model?.name || shortModelId,
     };
     onSelect(next);
     setOpen(false);
@@ -760,10 +770,15 @@ export function ModelPickerUI({
       if (models.length === 0) return;
       const model = models[0];
       const profileId = resolveProfileId(providerId, authenticatedProviders);
+      // Same short-id rule as handleSelectModel: catalog ids carry the
+      // provider prefix; persisted modelId must not.
+      const modelId = model.id.includes("/")
+        ? model.id.split("/").slice(1).join("/")
+        : model.id;
       selections.push({
         providerId,
         profileId,
-        modelId: model.id,
+        modelId,
         modelName: model.name,
       });
     });

@@ -591,7 +591,13 @@ function resolveRuntimeModelId(): string | null {
     if (raw) {
       const parsed = JSON.parse(raw) as { providerId?: string; modelId?: string } | null;
       if (parsed?.providerId && parsed?.modelId) {
-        return `${parsed.providerId}/${parsed.modelId}`;
+        // Some writers persist the full `provider/model` id as modelId; strip a
+        // leading provider prefix so the composed ref is never double-prefixed.
+        const prefix = `${parsed.providerId}/`;
+        const modelId = parsed.modelId.startsWith(prefix)
+          ? parsed.modelId.slice(prefix.length)
+          : parsed.modelId;
+        return `${parsed.providerId}/${modelId}`;
       }
     }
   } catch { /* malformed or unavailable storage */ }
