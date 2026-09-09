@@ -118,7 +118,6 @@ export function AgentHub({ initialTab = 'bots', onSessionStarted }: AgentHubProp
       <AgentHubContent
         activeTab={activeTab}
         onSessionStarted={onSessionStarted}
-        onCreate={() => setIsCreateOpen(true)}
       />
 
       <CreateBotForm isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} />

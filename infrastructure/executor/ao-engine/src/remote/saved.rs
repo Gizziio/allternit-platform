@@ -40,7 +40,7 @@ pub(crate) fn connect_saved_ssh(
 
 pub(crate) fn saved_ssh_bootstrap_command(target: &str, session: &str) -> String {
     format!(
-        "herdr --remote {} --session {}",
+        "ao --remote {} --session {}",
         super::shell_quote(target),
         super::shell_quote(session)
     )
@@ -112,7 +112,7 @@ mod tests {
     fn bootstrap_command_preserves_the_explicit_remote_session() {
         assert_eq!(
             saved_ssh_bootstrap_command("build host", "agent work"),
-            "herdr --remote 'build host' --session 'agent work'"
+            "ao --remote 'build host' --session 'agent work'"
         );
     }
 
@@ -121,7 +121,7 @@ mod tests {
         for message in [
             "Permission denied (publickey)",
             "Host key verification failed",
-            "matching Herdr is not ready; install or update",
+            "matching ao is not ready; install or update",
             "handshake rejected",
         ] {
             assert!(saved_ssh_failure_needs_attention(&io::Error::other(

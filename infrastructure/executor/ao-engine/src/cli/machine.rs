@@ -3,18 +3,20 @@ use serde::Serialize;
 use crate::client::endpoint::{EndpointCatalog, ProfileId};
 
 const HELP: &str = "Usage:
-  herdr machine list [--json]
-  herdr machine add <ssh-target> --label <label> [--remote-session <name>]
-  herdr machine rename <profile-id> --label <label>
-  herdr machine remove <profile-id>
-  herdr machine enable <profile-id>
-  herdr machine disable <profile-id>
+  ao machine list [--json]
+  ao machine add <ssh-target> --label <label> [--remote-session <name>]
+  ao machine connect <profile-id> [--keybindings local|server]
+  ao machine rename <profile-id> --label <label>
+  ao machine remove <profile-id>
+  ao machine enable <profile-id>
+  ao machine disable <profile-id>
 
-Add prepares the remote Herdr installation and starts its server before saving.
+Add prepares the remote ao installation and starts its server before saving.
 Missing or incompatible installations require approval in an interactive terminal.
-Changes apply automatically to open local Herdr clients.
+connect attaches through the saved SSH profile and its remote session.
+Changes apply automatically to open local ao clients.
 Removing or disabling a machine leaves its remote sessions running.
-Saved machines contain only a label, SSH target, explicit Herdr session, and enabled state.
+Saved machines contain only a label, SSH target, explicit ao session, and enabled state.
 SSH credentials and key material remain owned by OpenSSH.";
 
 #[derive(Serialize)]
@@ -31,6 +33,7 @@ pub(super) fn run_machine_command(args: &[String]) -> std::io::Result<i32> {
     match args.first().map(String::as_str) {
         Some("list") => list(&args[1..]),
         Some("add") => add(&args[1..]),
+        Some("connect") => connect(&args[1..]),
         Some("rename") => rename(&args[1..]),
         Some("remove") => remove(&args[1..]),
         Some("enable") => set_enabled(&args[1..], true),
@@ -51,7 +54,7 @@ fn list(args: &[String]) -> std::io::Result<i32> {
         [] => false,
         [flag] if flag == "--json" => true,
         _ => {
-            eprintln!("usage: herdr machine list [--json]");
+            eprintln!("usage: ao machine list [--json]");
             return Ok(2);
         }
     };
@@ -93,7 +96,7 @@ fn add(args: &[String]) -> std::io::Result<i32> {
     let args = super::expand_equals_args(args, &["--label", "--remote-session"]);
     let Some(target) = args.first().filter(|value| !value.starts_with('-')) else {
         eprintln!(
-            "usage: herdr machine add <ssh-target> --label <label> [--remote-session <name>]"
+            "usage: ao machine add <ssh-target> --label <label> [--remote-session <name>]"
         );
         return Ok(2);
     };
@@ -166,18 +169,76 @@ fn add(args: &[String]) -> std::io::Result<i32> {
         ))
     })?;
     println!("Saved SSH machine {id}. Remote server is ready.");
-    println!("Open Herdr clients connect automatically.");
+    println!("Open ao clients connect automatically.");
+    Ok(0)
+}
+
+fn connect(args: &[String]) -> std::io::Result<i32> {
+    const USAGE: &str = "usage: ao machine connect <profile-id> [--keybindings local|server]";
+    let args = super::expand_equals_args(args, &["--keybindings"]);
+    let mut keybindings = crate::remote::RemoteKeybindings::Local;
+    let mut positional = Vec::with_capacity(args.len());
+    let mut index = 0;
+    while index < args.len() {
+        if args[index] == "--keybindings" {
+            let Some(value) = args.get(index + 1) else {
+                eprintln!("missing value for --keybindings");
+                eprintln!("{USAGE}");
+                return Ok(2);
+            };
+            keybindings = match value.as_str() {
+                "local" => crate::remote::RemoteKeybindings::Local,
+                "server" => crate::remote::RemoteKeybindings::Server,
+                _ => {
+                    eprintln!("--keybindings must be 'local' or 'server'");
+                    eprintln!("{USAGE}");
+                    return Ok(2);
+                }
+            };
+            index += 2;
+            continue;
+        }
+        positional.push(args[index].clone());
+        index += 1;
+    }
+    let [raw_id] = positional.as_slice() else {
+        eprintln!("{USAGE}");
+        return Ok(2);
+    };
+    let id = match ProfileId::parse(raw_id.clone()) {
+        Ok(id) => id,
+        Err(error) => {
+            eprintln!("error: {error}");
+            eprintln!("{USAGE}");
+            return Ok(2);
+        }
+    };
+    let mut catalog = load_catalog()?;
+    let Some(profile) = catalog.ssh.iter().find(|profile| profile.id == id) else {
+        eprintln!("machine profile {id} was not found");
+        return Ok(1);
+    };
+    let target = profile.target.clone();
+    // Selection is a hint for future TUI opens; ignore storage errors.
+    let _ = catalog.select_ssh(&id);
+    let _ = catalog.store_selection();
+    let remote = crate::remote::RemoteLaunch {
+        target,
+        keybindings,
+        live_handoff: false,
+    };
+    crate::remote::run_remote(remote)?;
     Ok(0)
 }
 
 fn rename(args: &[String]) -> std::io::Result<i32> {
     let args = super::expand_equals_args(args, &["--label"]);
     let [raw_id, flag, label] = args.as_slice() else {
-        eprintln!("usage: herdr machine rename <profile-id> --label <label>");
+        eprintln!("usage: ao machine rename <profile-id> --label <label>");
         return Ok(2);
     };
     if flag != "--label" {
-        eprintln!("usage: herdr machine rename <profile-id> --label <label>");
+        eprintln!("usage: ao machine rename <profile-id> --label <label>");
         return Ok(2);
     }
     let id = match ProfileId::parse(raw_id.clone()) {
@@ -205,7 +266,7 @@ fn rename(args: &[String]) -> std::io::Result<i32> {
 }
 
 fn remove(args: &[String]) -> std::io::Result<i32> {
-    let Some(id) = one_profile_id(args, "usage: herdr machine remove <profile-id>")? else {
+    let Some(id) = one_profile_id(args, "usage: ao machine remove <profile-id>")? else {
         return Ok(2);
     };
     let mut catalog = load_catalog()?;
@@ -224,7 +285,7 @@ fn remove(args: &[String]) -> std::io::Result<i32> {
 
 fn set_enabled(args: &[String], enabled: bool) -> std::io::Result<i32> {
     let action = if enabled { "enable" } else { "disable" };
-    let usage = format!("usage: herdr machine {action} <profile-id>");
+    let usage = format!("usage: ao machine {action} <profile-id>");
     let Some(id) = one_profile_id(args, &usage)? else {
         return Ok(2);
     };

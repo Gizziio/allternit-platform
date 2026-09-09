@@ -457,6 +457,19 @@ impl ExecutionDriver for SubstrateRouter {
             .await
     }
 
+    async fn clone_from_snapshot(
+        &self,
+        handle: &ExecutionHandle,
+        snapshot_id: &str,
+        new_native_id: &str,
+        resources: Option<&ResourceSpec>,
+        env: &std::collections::HashMap<String, String>,
+    ) -> Result<ExecutionHandle, DriverError> {
+        self.choose_handle_driver(handle)?
+            .clone_from_snapshot(handle, snapshot_id, new_native_id, resources, env)
+            .await
+    }
+
     async fn create_snapshot(
         &self,
         handle: &ExecutionHandle,

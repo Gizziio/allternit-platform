@@ -8,7 +8,6 @@ import {
   Eye,
   EyeSlash,
   MagnifyingGlass,
-  Plus,
   Robot,
   Users,
   X,
@@ -20,7 +19,6 @@ import { provisionFleetComputers } from "@/lib/bots/vm-operator";
 import type { BotCategory, Agent } from "@/lib/agents/agent.types";
 import {
   ALL_BOTS_SECTION_ID,
-  createCustomSection,
   deleteBotHubSection,
   groupBotsBySection,
   loadBotHubSections,
@@ -34,11 +32,7 @@ import { BotGroupChatModal } from "./BotGroupChatModal";
 import { startBotGroupChat } from "@/lib/bots/startBotGroupChat";
 import { cn } from "@/lib/utils";
 
-interface BotHubHomeTabProps {
-  onCreate?: () => void;
-}
-
-export function BotHubHomeTab({ onCreate }: BotHubHomeTabProps) {
+export function BotHubHomeTab() {
   const { agents, isLoadingAgents, updateAgent } = useAgentStore();
   const chatSessions = useChatSessionStore((s) => s.sessions ?? []);
   const [searchQuery, setSearchQuery] = useState("");
@@ -47,8 +41,6 @@ export function BotHubHomeTab({ onCreate }: BotHubHomeTabProps) {
   const [fleetBusy, setFleetBusy] = useState(false);
   const [fleetSummary, setFleetSummary] = useState<string | null>(null);
   const [sections, setSections] = useState<BotHubSection[]>(() => loadBotHubSections());
-  const [newSectionName, setNewSectionName] = useState("");
-  const [addingSection, setAddingSection] = useState(false);
 
   // HTML5 drag state: which card is in flight and which heading is a live
   // drop target. Esc cancels (drop targets stop accepting until dragend).
@@ -278,14 +270,6 @@ export function BotHubHomeTab({ onCreate }: BotHubHomeTabProps) {
                 {fleetBusy ? "Provisioning…" : "Provision computers"}
               </button>
             )}
-            <button
-              type="button"
-              onClick={onCreate}
-              className="inline-flex h-11 items-center justify-center gap-1.5 rounded-lg bg-[var(--text-primary)] px-4 text-[13px] font-medium text-[var(--bg-elevated)] transition-opacity hover:opacity-90"
-            >
-              <Plus size={16} />
-              Create bot
-            </button>
           </div>
 
           {fleetSummary && (
@@ -320,14 +304,6 @@ export function BotHubHomeTab({ onCreate }: BotHubHomeTabProps) {
             <p className="max-w-xs text-[13px] text-[var(--text-tertiary)]">
               Pick a template, give it a name, and you're live — everything else is pre-configured.
             </p>
-            <button
-              type="button"
-              onClick={onCreate}
-              className="mt-2 inline-flex h-9 items-center gap-1.5 rounded-lg bg-[var(--text-primary)] px-4 text-[13px] font-medium text-[var(--bg-elevated)] transition-opacity hover:opacity-90"
-            >
-              <Plus size={16} />
-              Create bot
-            </button>
           </div>
         ) : filteredBots.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-3 py-24 text-center">
@@ -407,56 +383,6 @@ export function BotHubHomeTab({ onCreate }: BotHubHomeTabProps) {
                 {layout.allBots.length > 0 && renderBotGrid(layout.allBots)}
               </section>
             )}
-
-            <div className="flex items-center gap-2">
-              {addingSection ? (
-                <form
-                  className="flex items-center gap-2"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    const name = newSectionName.trim();
-                    if (!name) {
-                      setAddingSection(false);
-                      return;
-                    }
-                    patchSections(createCustomSection(sections, name));
-                    setNewSectionName("");
-                    setAddingSection(false);
-                  }}
-                >
-                  <input
-                    autoFocus
-                    aria-label="New section name"
-                    type="text"
-                    placeholder="Section name…"
-                    value={newSectionName}
-                    onChange={(e) => setNewSectionName(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Escape") {
-                        setAddingSection(false);
-                        setNewSectionName("");
-                      }
-                    }}
-                    className="h-9 rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] px-3 text-[13px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary)]"
-                  />
-                  <button
-                    type="submit"
-                    className="h-9 rounded-lg bg-[var(--text-primary)] px-3 text-[13px] font-medium text-[var(--bg-elevated)] transition-opacity hover:opacity-90"
-                  >
-                    Add
-                  </button>
-                </form>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setAddingSection(true)}
-                  className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-dashed border-[var(--border-default)] px-3 text-[13px] font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--accent-primary)] hover:text-[var(--accent-primary)]"
-                >
-                  <Plus size={14} />
-                  New section
-                </button>
-              )}
-            </div>
           </div>
         )}
       </div>

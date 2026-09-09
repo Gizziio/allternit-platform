@@ -6,19 +6,17 @@ import type { AgentTab } from "./AgentHub.constants";
 interface AgentHubContentProps {
   activeTab: AgentTab;
   onSessionStarted?: (sessionId: string, botId: string) => void;
-  onCreate?: () => void;
 }
 
 export const AgentHubContent: React.FC<AgentHubContentProps> = ({
   activeTab,
   onSessionStarted,
-  onCreate,
 }) => {
   switch (activeTab) {
     case 'bots':
       return (
         <div className="flex-1 overflow-hidden">
-          <BotHubHomeTab onCreate={onCreate} />
+          <BotHubHomeTab />
         </div>
       );
     case 'sessions':

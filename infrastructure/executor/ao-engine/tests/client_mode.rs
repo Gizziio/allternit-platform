@@ -244,9 +244,9 @@ fn first_pane_id_in_workspace(socket_path: &PathBuf, workspace_id: &str) -> Stri
 
 fn app_dir_name() -> &'static str {
     if cfg!(debug_assertions) {
-        "herdr-dev"
+        "ao-dev"
     } else {
-        "herdr"
+        "ao"
     }
 }
 

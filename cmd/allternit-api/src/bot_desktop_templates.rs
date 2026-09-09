@@ -4,8 +4,9 @@
 //! provisioning time so callers can pass `?template_id=` instead of raw image
 //! aliases.
 
+use axum::body::Bytes;
 use axum::extract::{Extension, Path, Query, State};
-use axum::http::StatusCode;
+use axum::http::{header, StatusCode};
 use axum::response::IntoResponse;
 use axum::routing::{delete, get, post};
 use axum::{Json, Router};
@@ -23,8 +24,12 @@ pub fn router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/desktop-templates", get(list_templates))
         .route("/desktop-templates", post(create_template))
+        .route("/desktop-templates/import", post(import_template))
+        .route("/desktop-templates/by-ref/{*ref}", get(get_template_by_ref))
         .route("/desktop-templates/:id", get(get_template))
         .route("/desktop-templates/:id", delete(delete_template))
+        .route("/desktop-templates/:id/export", get(export_template))
+        .route("/desktop-templates/:id/build", post(build_template))
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -44,6 +49,22 @@ pub struct DesktopTemplate {
     pub packages: Vec<String>,
     pub tags: Vec<String>,
     pub public: bool,
+    /// Canonical `apiVersion: allternit.ai/v1` `ComputerTemplate` doc (YAML).
+    /// Source of truth on write; the columns above are the resolved view.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub spec_yaml: Option<String>,
+    /// Curated `system/...` ref. Seeded by migration; never user-writable.
+    #[serde(rename = "ref", skip_serializing_if = "Option::is_none")]
+    pub ref_: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub golden_snapshot_id: Option<String>,
+    /// NULL = never built, otherwise pending|building|ready|failed.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub build_status: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub build_error: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub built_at: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -114,8 +135,18 @@ fn row_to_template(row: &rusqlite::Row<'_>) -> rusqlite::Result<DesktopTemplate>
         packages: json_vec(&row.get::<_, String>(12)?),
         tags: json_vec(&row.get::<_, String>(13)?),
         public: row.get::<_, i64>(14)? == 1,
+        spec_yaml: row.get(15)?,
+        ref_: row.get(16)?,
+        golden_snapshot_id: row.get(17)?,
+        build_status: row.get(18)?,
+        build_error: row.get(19)?,
+        built_at: row.get(20)?,
     })
 }
+
+const TEMPLATE_COLUMNS: &str = "id, org_id, user_id, name, description, os, image, cpu_millis, \
+     memory_mib, disk_mib, network_enabled, env_json, packages_json, tags_json, public, \
+     spec_yaml, ref, golden_snapshot_id, build_status, build_error, built_at";
 
 async fn list_templates(
     State(state): State<Arc<AppState>>,
@@ -132,7 +163,8 @@ async fn list_templates(
         let conn = db.connect()?;
         let mut sql = String::from(
             "SELECT id, org_id, user_id, name, description, os, image, cpu_millis, \
-             memory_mib, disk_mib, network_enabled, env_json, packages_json, tags_json, public \
+             memory_mib, disk_mib, network_enabled, env_json, packages_json, tags_json, public, \
+             spec_yaml, ref, golden_snapshot_id, build_status, build_error, built_at \
              FROM desktop_templates \
              WHERE (public = 1 OR user_id = ?1",
         );
@@ -311,6 +343,646 @@ async fn delete_template(
     }
 }
 
+// ---------------------------------------------------------------------------
+// Templates as code: the `apiVersion: allternit.ai/v1` `ComputerTemplate` doc.
+// ---------------------------------------------------------------------------
+
+pub const TEMPLATE_API_VERSION: &str = "allternit.ai/v1";
+pub const TEMPLATE_KIND: &str = "ComputerTemplate";
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TemplateMetadata {
+    pub name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub tags: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TemplateOs {
+    #[serde(default = "default_template_os_name")]
+    pub name: String,
+    /// "" means "the default image for this os" (resolved at provision time).
+    #[serde(default)]
+    pub image: String,
+}
+
+impl Default for TemplateOs {
+    fn default() -> Self {
+        Self {
+            name: default_template_os_name(),
+            image: String::new(),
+        }
+    }
+}
+
+fn default_template_os_name() -> String {
+    "linux".to_string()
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TemplateHardware {
+    #[serde(default = "default_cpu_cores")]
+    pub cpu_cores: i64,
+    #[serde(default = "default_memory_mb")]
+    pub memory_mb: i64,
+    #[serde(default = "default_disk_mb")]
+    pub disk_mb: i64,
+    /// [width, height]; validated against VALIDATED_RESOLUTIONS.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub resolution: Option<[i64; 2]>,
+}
+
+impl Default for TemplateHardware {
+    fn default() -> Self {
+        Self {
+            cpu_cores: default_cpu_cores(),
+            memory_mb: default_memory_mb(),
+            disk_mb: default_disk_mb(),
+            resolution: None,
+        }
+    }
+}
+
+fn default_cpu_cores() -> i64 {
+    2
+}
+fn default_memory_mb() -> i64 {
+    4096
+}
+fn default_disk_mb() -> i64 {
+    20480
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TemplateService {
+    pub name: String,
+    pub command: String,
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub env: HashMap<String, String>,
+    #[serde(default)]
+    pub autostart: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TemplateSecret {
+    /// Env var name injected into services/hooks at build time.
+    pub name: String,
+    /// Only `vault://org/{org_id}/{cred_name}` in v1. Value never stored.
+    #[serde(rename = "ref")]
+    pub ref_: String,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct TemplateHooks {
+    #[serde(default, rename = "postCreate")]
+    pub post_create: Vec<String>,
+}
+
+/// Declarative template doc (YAML; JSON is a subset so serde_yaml parses both).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ComputerTemplateSpec {
+    #[serde(rename = "apiVersion")]
+    pub api_version: String,
+    pub kind: String,
+    pub metadata: TemplateMetadata,
+    #[serde(default)]
+    pub os: TemplateOs,
+    #[serde(default)]
+    pub hardware: TemplateHardware,
+    #[serde(default)]
+    pub packages: Vec<String>,
+    #[serde(default)]
+    pub services: Vec<TemplateService>,
+    #[serde(default)]
+    pub secrets: Vec<TemplateSecret>,
+    #[serde(default)]
+    pub hooks: TemplateHooks,
+}
+
+/// A parsed `vault://org/{org_id}/{cred_name}` secret reference.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct VaultSecretRef {
+    pub org_id: String,
+    pub name: String,
+}
+
+pub fn parse_vault_secret_ref(reference: &str) -> Result<VaultSecretRef, String> {
+    let rest = reference
+        .strip_prefix("vault://org/")
+        .ok_or_else(|| format!("secret ref must start with vault://org/: {reference}"))?;
+    let (org_id, name) = rest
+        .split_once('/')
+        .ok_or_else(|| format!("secret ref must be vault://org/{{org_id}}/{{name}}: {reference}"))?;
+    if org_id.is_empty() || name.is_empty() || name.contains('/') {
+        return Err(format!("secret ref must be vault://org/{{org_id}}/{{name}}: {reference}"));
+    }
+    Ok(VaultSecretRef {
+        org_id: org_id.to_string(),
+        name: name.to_string(),
+    })
+}
+
+fn valid_env_name(name: &str) -> bool {
+    !name.is_empty()
+        && name
+            .chars()
+            .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == '_')
+}
+
+fn valid_unit_name(name: &str) -> bool {
+    !name.is_empty()
+        && name.len() <= 128
+        && name
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '-' | '.'))
+}
+
+impl ComputerTemplateSpec {
+    /// Structural validation. Returns the first problem found; handlers map it
+    /// to 422.
+    pub fn validate(&self) -> Result<(), String> {
+        if self.api_version != TEMPLATE_API_VERSION {
+            return Err(format!(
+                "unknown apiVersion {:?}; expected {TEMPLATE_API_VERSION:?}",
+                self.api_version
+            ));
+        }
+        if self.kind != TEMPLATE_KIND {
+            return Err(format!(
+                "unknown kind {:?}; expected {TEMPLATE_KIND:?}",
+                self.kind
+            ));
+        }
+        let name = self.metadata.name.trim();
+        if name.is_empty() || name.len() > 128 {
+            return Err("metadata.name must be 1-128 characters".to_string());
+        }
+        match self.os.name.as_str() {
+            "linux" | "windows" | "macos" => {}
+            other => return Err(format!("unknown os {other:?}; expected linux, windows, or macos")),
+        }
+        let hw = &self.hardware;
+        if !VALIDATED_CPU_CORES.contains(&hw.cpu_cores) {
+            return Err(format!(
+                "hardware.cpu_cores must be one of {VALIDATED_CPU_CORES:?}"
+            ));
+        }
+        if !VALIDATED_MEMORY_MB.contains(&hw.memory_mb) {
+            return Err(format!(
+                "hardware.memory_mb must be one of {VALIDATED_MEMORY_MB:?}"
+            ));
+        }
+        if !VALIDATED_DISK_MB.contains(&hw.disk_mb) {
+            return Err(format!(
+                "hardware.disk_mb must be one of {VALIDATED_DISK_MB:?}"
+            ));
+        }
+        if let Some([w, h]) = hw.resolution {
+            let resolution = format!("{w}x{h}");
+            if !VALIDATED_RESOLUTIONS.contains(&resolution.as_str()) {
+                return Err(format!(
+                    "hardware.resolution must be one of {VALIDATED_RESOLUTIONS:?}"
+                ));
+            }
+        }
+        for package in &self.packages {
+            if package.trim().is_empty()
+                || package
+                    .chars()
+                    .any(|c| c.is_whitespace() || c == ';' || c == '|' || c == '&')
+            {
+                return Err(format!("invalid package name {package:?}"));
+            }
+        }
+        for service in &self.services {
+            if !valid_unit_name(&service.name) {
+                return Err(format!("invalid service name {:?}", service.name));
+            }
+            if service.command.trim().is_empty() {
+                return Err(format!("service {:?} has an empty command", service.name));
+            }
+            for key in service.env.keys() {
+                if !valid_env_name(key) {
+                    return Err(format!("invalid env var name {key:?} on service {:?}", service.name));
+                }
+            }
+        }
+        for secret in &self.secrets {
+            if !valid_env_name(&secret.name) {
+                return Err(format!("invalid secret env var name {:?}", secret.name));
+            }
+            parse_vault_secret_ref(&secret.ref_)?;
+        }
+        for hook in &self.hooks.post_create {
+            if hook.trim().is_empty() {
+                return Err("hooks.postCreate entries must be non-empty".to_string());
+            }
+        }
+        Ok(())
+    }
+
+    /// The resolved/effective view persisted into the legacy columns. The spec
+    /// doc stays the source of truth; these columns are what provisioning reads.
+    pub fn effective_view(&self) -> TemplateEffectiveView {
+        let mut env = HashMap::new();
+        if let Some([w, h]) = self.hardware.resolution {
+            env.insert(
+                "ALLTERNIT_DESKTOP_RESOLUTION".to_string(),
+                format!("{w}x{h}"),
+            );
+        }
+        TemplateEffectiveView {
+            name: self.metadata.name.trim().to_string(),
+            description: self
+                .metadata
+                .description
+                .as_ref()
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty()),
+            os: self.os.name.to_lowercase(),
+            image: self.os.image.trim().to_string(),
+            cpu_millis: (self.hardware.cpu_cores * 1000) as u32,
+            memory_mib: self.hardware.memory_mb as u32,
+            disk_mib: self.hardware.disk_mb as u32,
+            env,
+            packages: self.packages.clone(),
+            tags: self.metadata.tags.clone(),
+        }
+    }
+
+    /// Serialize to the canonical YAML form stored in `spec_yaml`.
+    pub fn to_yaml(&self) -> Result<String, String> {
+        serde_yaml::to_string(self).map_err(|e| format!("failed to serialize template doc: {e}"))
+    }
+}
+
+/// Reconstruct a canonical doc from a stored row (used by export when the row
+/// predates spec_yaml — e.g. the seeded system presets).
+pub fn spec_doc_from_template(t: &DesktopTemplate) -> ComputerTemplateSpec {
+    let resolution = t
+        .env
+        .get("ALLTERNIT_DESKTOP_RESOLUTION")
+        .and_then(|v| v.split_once('x'))
+        .and_then(|(w, h)| {
+            let w: i64 = w.parse().ok()?;
+            let h: i64 = h.parse().ok()?;
+            Some([w, h])
+        });
+    ComputerTemplateSpec {
+        api_version: TEMPLATE_API_VERSION.to_string(),
+        kind: TEMPLATE_KIND.to_string(),
+        metadata: TemplateMetadata {
+            name: t.name.clone(),
+            description: t.description.clone(),
+            tags: t.tags.clone(),
+        },
+        os: TemplateOs {
+            name: t.os.clone(),
+            image: t.image.clone(),
+        },
+        hardware: TemplateHardware {
+            cpu_cores: (t.cpu_millis / 1000) as i64,
+            memory_mb: t.memory_mib as i64,
+            disk_mb: t.disk_mib as i64,
+            resolution,
+        },
+        packages: t.packages.clone(),
+        services: vec![],
+        secrets: vec![],
+        hooks: TemplateHooks::default(),
+    }
+}
+
+pub struct TemplateEffectiveView {
+    pub name: String,
+    pub description: Option<String>,
+    pub os: String,
+    pub image: String,
+    pub cpu_millis: u32,
+    pub memory_mib: u32,
+    pub disk_mib: u32,
+    pub env: HashMap<String, String>,
+    pub packages: Vec<String>,
+    pub tags: Vec<String>,
+}
+
+// ---------------------------------------------------------------------------
+// Golden builds: state machine + provision-source selection.
+// ---------------------------------------------------------------------------
+
+pub const BUILD_STATUS_PENDING: &str = "pending";
+pub const BUILD_STATUS_BUILDING: &str = "building";
+pub const BUILD_STATUS_READY: &str = "ready";
+pub const BUILD_STATUS_FAILED: &str = "failed";
+
+/// Allowed `build_status` transitions. `None` = never built.
+/// Rebuild (→ building) is allowed from any terminal-or-never state; the build
+/// pipeline deletes the old golden holder first.
+pub fn build_transition_allowed(from: Option<&str>, to: &str) -> bool {
+    match (from, to) {
+        (Some(BUILD_STATUS_BUILDING), BUILD_STATUS_BUILDING) => false,
+        (_, BUILD_STATUS_BUILDING) => true,
+        (Some(BUILD_STATUS_BUILDING), BUILD_STATUS_READY) => true,
+        (Some(BUILD_STATUS_BUILDING), BUILD_STATUS_FAILED) => true,
+        (None, BUILD_STATUS_PENDING) => true,
+        _ => false,
+    }
+}
+
+/// A ready golden snapshot plus its (stopped) holder VM, ready to be cloned.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GoldenSource {
+    pub snapshot_id: String,
+    pub holder_native_id: String,
+    pub holder_provider: String,
+    pub holder_os: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ProvisionSource {
+    /// Clone the golden snapshot (fast boot).
+    Golden(GoldenSource),
+    /// Spawn from the base image (today's behavior).
+    Image,
+}
+
+/// Decide how a computer for this template should come into being. Pure so the
+/// state machine is unit-testable without a driver.
+pub fn select_provision_source(
+    build_status: Option<&str>,
+    golden_snapshot_id: Option<&str>,
+    holder: Option<GoldenSource>,
+) -> ProvisionSource {
+    if build_status == Some(BUILD_STATUS_READY)
+        && golden_snapshot_id.is_some()
+        && holder.is_some()
+    {
+        return ProvisionSource::Golden(holder.expect("checked above"));
+    }
+    ProvisionSource::Image
+}
+
+/// POST /api/v1/desktop-templates/import — create/replace-by-name for the
+/// caller from a canonical template doc. YAML or JSON body (YAML is a JSON
+/// superset; one serde_yaml deserializer handles both).
+async fn import_template(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    body: Bytes,
+) -> impl IntoResponse {
+    // Reject curated-ref writes before deserialization: `ref` is seeded-only.
+    let raw: serde_yaml::Value = match serde_yaml::from_slice(&body) {
+        Ok(v) => v,
+        Err(e) => {
+            return (
+                StatusCode::UNPROCESSABLE_ENTITY,
+                Json(json!({"error": format!("invalid template doc: {e}")})),
+            )
+                .into_response()
+        }
+    };
+    let has_ref = raw.get("ref").is_some()
+        || raw
+            .get("metadata")
+            .and_then(|m| m.get("ref"))
+            .is_some();
+    if has_ref {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(json!({"error": "ref is curated-only and cannot be set via import"})),
+        )
+            .into_response();
+    }
+    let spec: ComputerTemplateSpec = match serde_yaml::from_value(raw) {
+        Ok(s) => s,
+        Err(e) => {
+            return (
+                StatusCode::UNPROCESSABLE_ENTITY,
+                Json(json!({"error": format!("invalid template doc: {e}")})),
+            )
+                .into_response()
+        }
+    };
+    if let Err(e) = spec.validate() {
+        return (
+            StatusCode::UNPROCESSABLE_ENTITY,
+            Json(json!({"error": e})),
+        )
+            .into_response();
+    }
+    let spec_yaml = match spec.to_yaml() {
+        Ok(y) => y,
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e})),
+            )
+                .into_response()
+        }
+    };
+    let db = state.db.clone();
+    let org_id = user.organization_id.clone();
+    let user_id = user.user_id.clone();
+    let user_id_for_log = user_id.clone();
+    let name = spec.metadata.name.clone();
+    let result = tokio::task::spawn_blocking(move || {
+        let conn = db.connect()?;
+        let id = upsert_template_from_spec(&conn, org_id.as_deref(), &user_id, &spec, &spec_yaml)?;
+        conn.query_row(
+            &format!("SELECT {TEMPLATE_COLUMNS} FROM desktop_templates WHERE id = ?1"),
+            rusqlite::params![id],
+            row_to_template,
+        )
+        .map(|t| (id, t))
+    })
+    .await;
+
+    match result {
+        Ok(Ok((id, template))) => {
+            info!(template_id = %id, user_id = %user_id_for_log, name = %name, "imported desktop template");
+            (StatusCode::OK, Json(json!(template))).into_response()
+        }
+        Ok(Err(e)) => {
+            warn!(error = %e, "failed to import desktop template");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": format!("database error: {}", e)})),
+            )
+                .into_response()
+        }
+        Err(e) => {
+            warn!(error = %e, "task panicked importing desktop template");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
+        }
+    }
+}
+
+/// GET /api/v1/desktop-templates/by-ref/{*ref} — resolve a curated
+/// `system/...` template ref to its row.
+async fn get_template_by_ref(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(reference): Path<String>,
+) -> impl IntoResponse {
+    match resolve_template_by_ref(&state.db, &user, &reference).await {
+        Some(t) => (StatusCode::OK, Json(json!(t))).into_response(),
+        None => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "template ref not found"})),
+        )
+            .into_response(),
+    }
+}
+
+/// GET /api/v1/desktop-templates/:id/export — the canonical YAML doc. Rows
+/// that predate spec docs (system presets) are exported as a synthesized doc
+/// built from their resolved view.
+async fn export_template(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(id): Path<String>,
+) -> impl IntoResponse {
+    match resolve_template(&state.db, &user, &id).await {
+        Some(t) => {
+            let yaml = match t.spec_yaml.clone() {
+                Some(yaml) => yaml,
+                None => match spec_doc_from_template(&t).to_yaml() {
+                    Ok(y) => y,
+                    Err(e) => {
+                        return (
+                            StatusCode::INTERNAL_SERVER_ERROR,
+                            Json(json!({"error": e})),
+                        )
+                            .into_response()
+                    }
+                },
+            };
+            (
+                StatusCode::OK,
+                [(header::CONTENT_TYPE, "application/yaml")],
+                yaml,
+            )
+                .into_response()
+        }
+        None => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "template not found"})),
+        )
+            .into_response(),
+    }
+}
+
+/// POST /api/v1/desktop-templates/:id/build — build the template into a golden
+/// snapshot (async; 202 immediately, progress via build_status/build_error).
+/// Build start is ACI-approval-gated like other risky computer control actions.
+async fn build_template(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(id): Path<String>,
+    Query(approval): Query<crate::computer_routes::ApprovalQuery>,
+) -> impl IntoResponse {
+    let template = match resolve_template(&state.db, &user, &id).await {
+        Some(t) => t,
+        None => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(json!({"error": "template not found"})),
+            )
+                .into_response()
+        }
+    };
+    if template.user_id != user.user_id && user.user_id != "system" {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(json!({"error": "only the template owner can build it"})),
+        )
+            .into_response();
+    }
+    let descriptor = json!({
+        "route": "desktop_templates.build",
+        "template_id": template.id,
+    });
+    if let Err(denial) = crate::aci_safety::enforce_confirmation(
+        &state.approval_store,
+        &user.user_id,
+        "desktop_templates.build",
+        crate::aci_safety::ConfirmationClass::Risky,
+        &descriptor,
+        approval.approval_id.as_deref(),
+    ) {
+        return (denial.status, Json(denial.body)).into_response();
+    }
+
+    let db = state.db.clone();
+    let template_id = template.id.clone();
+    let row_template_id = template_id.clone();
+    let set = tokio::task::spawn_blocking(move || {
+        let conn = db.connect()?;
+        let current: Option<String> = conn
+            .query_row(
+                "SELECT build_status FROM desktop_templates WHERE id = ?1",
+                rusqlite::params![row_template_id],
+                |row| row.get(0),
+            )
+            .optional()?;
+        if !build_transition_allowed(current.as_deref(), BUILD_STATUS_BUILDING) {
+            return Ok::<bool, rusqlite::Error>(false);
+        }
+        conn.execute(
+            "UPDATE desktop_templates SET build_status = ?1, build_error = NULL, \
+             golden_snapshot_id = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?2",
+            rusqlite::params![BUILD_STATUS_BUILDING, row_template_id],
+        )?;
+        Ok::<bool, rusqlite::Error>(true)
+    })
+    .await;
+
+    match set {
+        Ok(Ok(true)) => {
+            crate::computer_audit::log_computer_access(
+                &state.db,
+                &template.id,
+                &user.user_id,
+                crate::desktop_template_build::KIND_BUILD_START,
+                "template build started",
+            );
+            crate::desktop_template_build::start_build(state, user, template);
+            (
+                StatusCode::ACCEPTED,
+                Json(json!({"id": template_id, "build_status": BUILD_STATUS_BUILDING})),
+            )
+                .into_response()
+        }
+        Ok(Ok(false)) => (
+            StatusCode::CONFLICT,
+            Json(json!({"error": "a build is already running for this template"})),
+        )
+            .into_response(),
+        Ok(Err(e)) => {
+            warn!(error = %e, "failed to mark template building");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": format!("database error: {}", e)})),
+            )
+                .into_response()
+        }
+        Err(e) => {
+            warn!(error = %e, "task panicked marking template building");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
+        }
+    }
+}
+
 /// Raw provisioning request used by the desktop router.
 #[derive(Debug, Clone, Default)]
 pub struct ProvisionRequest {
@@ -359,6 +1031,48 @@ pub struct ProvisionSpec {
     pub disk_mib: Option<u32>,
     pub network_enabled: bool,
     pub env: HashMap<String, String>,
+    /// Ready golden build for the resolved template, if one exists. When set,
+    /// create paths clone the golden snapshot instead of spawning from `image`.
+    pub golden: Option<GoldenSource>,
+}
+
+/// Look up the golden holder VM for a template, if the template has a ready
+/// golden build.
+fn find_golden_holder(
+    conn: &rusqlite::Connection,
+    template_id: &str,
+    golden_snapshot_id: Option<&str>,
+    build_status: Option<&str>,
+) -> Option<GoldenSource> {
+    match select_provision_source(build_status, golden_snapshot_id, None) {
+        ProvisionSource::Image => return None,
+        ProvisionSource::Golden(_) => {}
+    }
+    let holder = conn
+        .query_row(
+            "SELECT native_id, provider, os FROM computers \
+             WHERE template_id = ?1 AND role = 'golden' AND status != 'deleted' \
+             ORDER BY created_at DESC LIMIT 1",
+            rusqlite::params![template_id],
+            |row| {
+                Ok((
+                    row.get::<_, Option<String>>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, Option<String>>(2)?,
+                ))
+            },
+        )
+        .optional()
+        .ok()
+        .flatten()?;
+    let (native_id, provider, os) = holder;
+    let snapshot_id = golden_snapshot_id?.to_string();
+    Some(GoldenSource {
+        snapshot_id,
+        holder_native_id: native_id?,
+        holder_provider: provider,
+        holder_os: os.unwrap_or_else(|| "linux".to_string()),
+    })
 }
 
 /// Resolve the final provisioning spec from a raw request and optional template.
@@ -383,17 +1097,37 @@ pub async fn resolve_provision_spec(
     let mut disk_mib = Some(20480u32);
     let mut network_enabled = true;
     let mut env = HashMap::new();
+    let mut golden = None;
 
     if let Some(ref template_id) = req.template_id {
         match resolve_template(&state.db, user, template_id).await {
             Some(t) => {
                 os = t.os;
-                image = t.image;
+                // Spec docs may leave the image empty = "default for this os".
+                if !t.image.is_empty() {
+                    image = t.image;
+                }
                 cpu_millis = t.cpu_millis;
                 memory_mib = t.memory_mib;
                 disk_mib = Some(t.disk_mib);
                 network_enabled = t.network_enabled;
                 env = t.env;
+                let db = state.db.clone();
+                let template_id = t.id.clone();
+                let golden_snapshot_id = t.golden_snapshot_id.clone();
+                let build_status = t.build_status.clone();
+                golden = tokio::task::spawn_blocking(move || {
+                    let conn = db.connect().ok()?;
+                    find_golden_holder(
+                        &conn,
+                        &template_id,
+                        golden_snapshot_id.as_deref(),
+                        build_status.as_deref(),
+                    )
+                })
+                .await
+                .ok()
+                .flatten();
             }
             None => {
                 return Err((
@@ -425,6 +1159,7 @@ pub async fn resolve_provision_spec(
         disk_mib,
         network_enabled,
         env,
+        golden,
     })
 }
 
@@ -443,7 +1178,8 @@ pub async fn resolve_template(
         let conn = db.connect().ok()?;
         conn.query_row(
             "SELECT id, org_id, user_id, name, description, os, image, cpu_millis, \
-             memory_mib, disk_mib, network_enabled, env_json, packages_json, tags_json, public \
+             memory_mib, disk_mib, network_enabled, env_json, packages_json, tags_json, public, \
+             spec_yaml, ref, golden_snapshot_id, build_status, build_error, built_at \
              FROM desktop_templates \
              WHERE id = ?1 AND (public = 1 OR user_id = ?2 OR org_id = ?3)",
             rusqlite::params![id, user_id, org_id],
@@ -456,6 +1192,113 @@ pub async fn resolve_template(
     .await
     .ok()
     .flatten()
+}
+
+/// Resolve a template by its curated `system/...` ref (same visibility rules as
+/// id resolution).
+pub async fn resolve_template_by_ref(
+    db: &crate::db::DbHandle,
+    user: &AuthUser,
+    reference: &str,
+) -> Option<DesktopTemplate> {
+    let db = db.clone();
+    let reference = reference.to_string();
+    let user_id = user.user_id.clone();
+    let org_id = user.organization_id.clone();
+
+    tokio::task::spawn_blocking(move || {
+        let conn = db.connect().ok()?;
+        conn.query_row(
+            "SELECT id, org_id, user_id, name, description, os, image, cpu_millis, \
+             memory_mib, disk_mib, network_enabled, env_json, packages_json, tags_json, public, \
+             spec_yaml, ref, golden_snapshot_id, build_status, build_error, built_at \
+             FROM desktop_templates \
+             WHERE ref = ?1 AND (public = 1 OR user_id = ?2 OR org_id = ?3)",
+            rusqlite::params![reference, user_id, org_id],
+            row_to_template,
+        )
+        .optional()
+        .ok()
+        .flatten()
+    })
+    .await
+    .ok()
+    .flatten()
+}
+
+/// Persist (create or replace-by-name for this owner) a validated template doc.
+/// `spec_yaml` must be the canonical serialization of `spec`. Replaces reset
+/// any previous golden build — the doc is the source of truth and it changed.
+pub fn upsert_template_from_spec(
+    conn: &rusqlite::Connection,
+    org_id: Option<&str>,
+    user_id: &str,
+    spec: &ComputerTemplateSpec,
+    spec_yaml: &str,
+) -> Result<String, rusqlite::Error> {
+    let view = spec.effective_view();
+    let env_json = serde_json::to_string(&view.env).unwrap_or_default();
+    let packages_json = serde_json::to_string(&view.packages).unwrap_or_default();
+    let tags_json = serde_json::to_string(&view.tags).unwrap_or_default();
+    let existing: Option<String> = conn
+        .query_row(
+            "SELECT id FROM desktop_templates WHERE name = ?1 AND user_id = ?2 AND org_id IS ?3",
+            rusqlite::params![view.name, user_id, org_id],
+            |row| row.get(0),
+        )
+        .optional()?;
+    if let Some(id) = existing {
+        // The v1 doc has no network/public fields: on replace, reset them to
+        // import semantics (network on, caller-private). public stays
+        // user-controlled via the legacy endpoint afterwards.
+        conn.execute(
+            "UPDATE desktop_templates SET description = ?2, os = ?3, image = ?4, \
+             cpu_millis = ?5, memory_mib = ?6, disk_mib = ?7, network_enabled = 1, \
+             public = 0, env_json = ?8, \
+             packages_json = ?9, tags_json = ?10, spec_yaml = ?11, \
+             golden_snapshot_id = NULL, build_status = NULL, build_error = NULL, \
+             built_at = NULL, updated_at = CURRENT_TIMESTAMP \
+             WHERE id = ?1",
+            rusqlite::params![
+                id,
+                view.description,
+                view.os,
+                view.image,
+                view.cpu_millis as i64,
+                view.memory_mib as i64,
+                view.disk_mib as i64,
+                env_json,
+                packages_json,
+                tags_json,
+                spec_yaml,
+            ],
+        )?;
+        return Ok(id);
+    }
+    let id = format!("dtpl-{}", uuid::Uuid::new_v4().simple());
+    conn.execute(
+        "INSERT INTO desktop_templates \
+         (id, org_id, user_id, name, description, os, image, cpu_millis, memory_mib, disk_mib, \
+          network_enabled, env_json, packages_json, tags_json, public, spec_yaml) \
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, 1, ?11, ?12, ?13, 0, ?14)",
+        rusqlite::params![
+            id,
+            org_id,
+            user_id,
+            view.name,
+            view.description,
+            view.os,
+            view.image,
+            view.cpu_millis as i64,
+            view.memory_mib as i64,
+            view.disk_mib as i64,
+            env_json,
+            packages_json,
+            tags_json,
+            spec_yaml,
+        ],
+    )?;
+    Ok(id)
 }
 
 #[cfg(test)]
@@ -562,6 +1405,282 @@ mod tests {
 
         let other = test_user("other-user", None);
         assert!(resolve_template(&db, &other, &id).await.is_none());
+    }
+}
+
+#[cfg(test)]
+mod phase_four_spec_tests {
+    use super::*;
+    use crate::auth::AuthUser;
+    use crate::db::DbHandle;
+
+    fn test_user(user_id: &str, org_id: Option<&str>) -> AuthUser {
+        AuthUser {
+            user_id: user_id.to_string(),
+            email: None,
+            name: None,
+            avatar_url: None,
+            tenant_id: None,
+            organization_id: org_id.map(|s| s.to_string()),
+            organization_role: None,
+            organization_slug: None,
+        }
+    }
+
+    fn test_db() -> DbHandle {
+        let path = std::env::temp_dir().join(format!(
+            "allternit-template-spec-test-{}.db",
+            uuid::Uuid::new_v4()
+        ));
+        DbHandle::new(path).expect("test db")
+    }
+
+    const GOOD_DOC: &str = r#"
+apiVersion: allternit.ai/v1
+kind: ComputerTemplate
+metadata:
+  name: node-20-builder
+  description: Node 20 CI builder
+  tags: [node, ci]
+os:
+  name: linux
+  image: ""
+hardware:
+  cpu_cores: 4
+  memory_mb: 8192
+  disk_mb: 40960
+  resolution: [1920, 1080]
+packages: [nodejs, npm]
+services:
+  - name: app
+    command: node /opt/app/server.js
+    env:
+      PORT: "8080"
+    autostart: true
+secrets:
+  - name: NPM_TOKEN
+    ref: vault://org/org-1/npm_token
+hooks:
+  postCreate:
+    - npm ci --prefix /opt/app
+"#;
+
+    #[test]
+    fn good_doc_parses_and_validates() {
+        let spec: ComputerTemplateSpec = serde_yaml::from_str(GOOD_DOC).expect("doc parses");
+        spec.validate().expect("doc validates");
+        let view = spec.effective_view();
+        assert_eq!(view.name, "node-20-builder");
+        assert_eq!(view.os, "linux");
+        assert_eq!(view.image, "");
+        assert_eq!(view.cpu_millis, 4000);
+        assert_eq!(view.memory_mib, 8192);
+        assert_eq!(view.disk_mib, 40960);
+        assert_eq!(
+            view.env.get("ALLTERNIT_DESKTOP_RESOLUTION"),
+            Some(&"1920x1080".to_string())
+        );
+        assert_eq!(view.packages, vec!["nodejs", "npm"]);
+    }
+
+    #[test]
+    fn bad_size_fails_validation() {
+        let doc = GOOD_DOC.replace("cpu_cores: 4", "cpu_cores: 3");
+        let spec: ComputerTemplateSpec = serde_yaml::from_str(&doc).expect("doc parses");
+        let err = spec.validate().unwrap_err();
+        assert!(err.contains("cpu_cores"), "unexpected error: {err}");
+
+        let doc = GOOD_DOC.replace("resolution: [1920, 1080]", "resolution: [800, 600]");
+        let spec: ComputerTemplateSpec = serde_yaml::from_str(&doc).expect("doc parses");
+        assert!(spec.validate().unwrap_err().contains("resolution"));
+    }
+
+    #[test]
+    fn bad_secret_ref_fails_validation() {
+        let doc = GOOD_DOC
+            .replace("vault://org/org-1/npm_token", "http://example.com/secret");
+        let spec: ComputerTemplateSpec = serde_yaml::from_str(&doc).expect("doc parses");
+        assert!(spec.validate().unwrap_err().contains("vault://org/"));
+
+        let doc = GOOD_DOC.replace("vault://org/org-1/npm_token", "vault://org/org-1");
+        let spec: ComputerTemplateSpec = serde_yaml::from_str(&doc).expect("doc parses");
+        assert!(spec.validate().is_err());
+
+        let doc = GOOD_DOC.replace("vault://org/org-1/npm_token", "vault://org//npm_token");
+        let spec: ComputerTemplateSpec = serde_yaml::from_str(&doc).expect("doc parses");
+        assert!(spec.validate().is_err());
+    }
+
+    #[test]
+    fn wrong_api_version_or_kind_fails() {
+        let doc = GOOD_DOC.replace("allternit.ai/v1", "allternit.ai/v2");
+        let spec: ComputerTemplateSpec = serde_yaml::from_str(&doc).expect("doc parses");
+        assert!(spec.validate().unwrap_err().contains("apiVersion"));
+
+        let doc = GOOD_DOC.replace("kind: ComputerTemplate", "kind: SomethingElse");
+        let spec: ComputerTemplateSpec = serde_yaml::from_str(&doc).expect("doc parses");
+        assert!(spec.validate().unwrap_err().contains("kind"));
+    }
+
+    #[test]
+    fn json_doc_parses_too() {
+        let doc = r#"{"apiVersion":"allternit.ai/v1","kind":"ComputerTemplate","metadata":{"name":"j"}}"#;
+        let spec: ComputerTemplateSpec = serde_yaml::from_str(doc).expect("json parses");
+        spec.validate().expect("json doc validates");
+    }
+
+    #[test]
+    fn canonical_yaml_uses_camel_case_keys() {
+        let spec: ComputerTemplateSpec = serde_yaml::from_str(GOOD_DOC).unwrap();
+        let yaml = spec.to_yaml().unwrap();
+        assert!(yaml.contains("apiVersion: allternit.ai/v1"), "{yaml}");
+        assert!(yaml.contains("postCreate:"), "{yaml}");
+        assert!(yaml.contains("ref: vault://org/org-1/npm_token"), "{yaml}");
+        // round-trip
+        let reparsed: ComputerTemplateSpec = serde_yaml::from_str(&yaml).unwrap();
+        reparsed.validate().unwrap();
+        assert_eq!(reparsed, spec);
+    }
+
+    #[test]
+    fn build_state_machine_transitions() {
+        use crate::bot_desktop_templates::*;
+        // never-built → building, rebuild from terminal states, building → ready/failed
+        assert!(build_transition_allowed(None, BUILD_STATUS_BUILDING));
+        assert!(build_transition_allowed(Some(BUILD_STATUS_FAILED), BUILD_STATUS_BUILDING));
+        assert!(build_transition_allowed(Some(BUILD_STATUS_READY), BUILD_STATUS_BUILDING));
+        assert!(build_transition_allowed(
+            Some(BUILD_STATUS_BUILDING),
+            BUILD_STATUS_READY
+        ));
+        assert!(build_transition_allowed(
+            Some(BUILD_STATUS_BUILDING),
+            BUILD_STATUS_FAILED
+        ));
+        // illegal: double-build, skipping the building state, ready→failed
+        assert!(!build_transition_allowed(
+            Some(BUILD_STATUS_BUILDING),
+            BUILD_STATUS_BUILDING
+        ));
+        assert!(!build_transition_allowed(None, BUILD_STATUS_READY));
+        assert!(!build_transition_allowed(
+            Some(BUILD_STATUS_FAILED),
+            BUILD_STATUS_READY
+        ));
+        assert!(!build_transition_allowed(Some(BUILD_STATUS_READY), BUILD_STATUS_FAILED));
+    }
+
+    #[test]
+    fn provision_source_selection() {
+        use crate::bot_desktop_templates::*;
+        let holder = GoldenSource {
+            snapshot_id: "golden".to_string(),
+            holder_native_id: "allternit-x".to_string(),
+            holder_provider: "incus".to_string(),
+            holder_os: "linux".to_string(),
+        };
+        // ready + golden snapshot + holder → clone
+        match select_provision_source(
+            Some(BUILD_STATUS_READY),
+            Some("golden"),
+            Some(holder.clone()),
+        ) {
+            ProvisionSource::Golden(g) => assert_eq!(g.snapshot_id, "golden"),
+            ProvisionSource::Image => panic!("expected golden"),
+        }
+        // not ready → image, even with a snapshot recorded
+        assert_eq!(
+            select_provision_source(Some(BUILD_STATUS_BUILDING), Some("golden"), Some(holder.clone())),
+            ProvisionSource::Image
+        );
+        // ready but no golden_snapshot_id persisted → image (the F1 fallback:
+        // a build that never recorded its snapshot id must not take the
+        // golden path)
+        assert_eq!(
+            select_provision_source(Some(BUILD_STATUS_READY), None, Some(holder.clone())),
+            ProvisionSource::Image
+        );
+        // ready but holder row missing → image (honest fallback)
+        assert_eq!(
+            select_provision_source(Some(BUILD_STATUS_READY), Some("golden"), None),
+            ProvisionSource::Image
+        );
+        // never built → image
+        assert_eq!(
+            select_provision_source(None, None, None),
+            ProvisionSource::Image
+        );
+    }
+
+    #[tokio::test]
+    async fn by_ref_resolves_seeded_system_presets() {
+        let db = test_db();
+        let user = test_user("random-user", None);
+        let t = resolve_template_by_ref(&db, &user, "system/preset-linux-ubuntu")
+            .await
+            .expect("preset resolves by ref");
+        assert_eq!(t.id, "preset-linux-ubuntu");
+        assert_eq!(t.ref_.as_deref(), Some("system/preset-linux-ubuntu"));
+
+        assert!(
+            resolve_template_by_ref(&db, &user, "system/does-not-exist")
+                .await
+                .is_none()
+        );
+    }
+
+    #[tokio::test]
+    async fn import_upserts_by_name_and_resets_build_state() {
+        let db = test_db();
+        let user = test_user("owner-1", Some("org-1"));
+        let spec: ComputerTemplateSpec = serde_yaml::from_str(GOOD_DOC).unwrap();
+        let yaml = spec.to_yaml().unwrap();
+
+        let id = {
+            let conn = db.connect().unwrap();
+            upsert_template_from_spec(&conn, Some("org-1"), "owner-1", &spec, &yaml).unwrap()
+        };
+        let resolved = resolve_template(&db, &user, &id).await.unwrap();
+        assert_eq!(resolved.name, "node-20-builder");
+        assert_eq!(resolved.cpu_millis, 4000);
+        assert_eq!(resolved.packages, vec!["nodejs", "npm"]);
+        assert!(resolved.spec_yaml.is_some());
+
+        // Simulate a finished build, then re-import: the golden state resets.
+        {
+            let conn = db.connect().unwrap();
+            conn.execute(
+                "UPDATE desktop_templates SET build_status = 'ready', golden_snapshot_id = 'golden', \
+                 network_enabled = 0, public = 1 WHERE id = ?1",
+                rusqlite::params![id],
+            )
+            .unwrap();
+        }
+        let spec2: ComputerTemplateSpec =
+            serde_yaml::from_str(&GOOD_DOC.replace("Node 20 CI builder", "Node 22 CI builder"))
+                .unwrap();
+        let id2 = {
+            let conn = db.connect().unwrap();
+            upsert_template_from_spec(
+                &conn,
+                Some("org-1"),
+                "owner-1",
+                &spec2,
+                &spec2.to_yaml().unwrap(),
+            )
+            .unwrap()
+        };
+        assert_eq!(id, id2, "replace-by-name keeps the id");
+        let re = resolve_template(&db, &user, &id).await.unwrap();
+        assert_eq!(
+            re.description.as_deref(),
+            Some("Node 22 CI builder"),
+            "description updated"
+        );
+        assert_eq!(re.build_status, None, "build state reset on replace");
+        assert_eq!(re.golden_snapshot_id, None);
+        assert!(re.network_enabled, "network reset to the doc-default on replace");
+        assert!(!re.public, "import is caller-private unless set via the legacy endpoint");
     }
 }
 
