@@ -531,7 +531,9 @@ export const useBrowserAgentStore = create<BrowserAgentState>()(
     },
     isBrowserCapsuleMounted: false,
     setIsBrowserCapsuleMounted: (mounted) => set({ isBrowserCapsuleMounted: mounted }),
-    aciSidecarExpanded: true,
+    // The sidecar must never open on its own — only via explicit user action
+    // (bot chat "Computer" button, ACI bar expand, or a started ACI task).
+    aciSidecarExpanded: false,
     setAciSidecarExpanded: (expanded) => set({ aciSidecarExpanded: expanded }),
     toggleAciSidecar: () => set((s) => ({ aciSidecarExpanded: !s.aciSidecarExpanded })),
 
@@ -1142,11 +1144,20 @@ export const useBrowserAgentStore = create<BrowserAgentState>()(
     _simulateExecution: () => {},
   })), {
     name: 'allternit.browser.agent-sessions',
+    version: 1,
+    migrate: (persisted) => {
+      // v0 → v1: drop the persisted connectedBotId so the right-side computer
+      // panel can no longer self-open from stale storage on app launch.
+      const state = persisted as Record<string, unknown>;
+      delete state.connectedBotId;
+      return state;
+    },
     partialize: (state) => ({
       pageAgentSessions: state.pageAgentSessions,
       aciModel: state.aciModel,
       aciEngine: state.aciEngine,
-      connectedBotId: state.connectedBotId,
+      // connectedBotId is deliberately NOT persisted: a restored bot id would
+      // re-open the right-side computer panel on every app launch.
     }),
   })
 );

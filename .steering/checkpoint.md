@@ -1,32 +1,35 @@
-# Checkpoint — session/pane-header (agent-22, 2026-09-09)
+# Checkpoint — session/bot-computer-panel (kimi-code, 2026-09-09)
 
-## Task: pane-header follow-up to PR #211 (agent pane header duplication)
+## Goal
+Fix the bot computer right-side panel in the Allternit desktop app (platform SPA):
+(1) it enters the screen on startup, (2) polish/spacing wrong + hard-coded tan,
+(3) panel is blank — the computer never lands, (4) must be bots-only, opened via
+the bot chat top-right icon.
 
-Worktree: `~/Desktop/allternit-workspace/allternit-session-pane-header`, branch `session/pane-header` from origin/main @ 4ec879766.
+## Just did
+- Scouted root causes in shared checkout (read-only):
+  - `browserAgent.store.ts` persists `connectedBotId`; `aciSidecarExpanded` defaults true;
+    global `ACIComputerUseSidecar` slides in on launch from the restored id (blank/tan
+    ACI branch when bot or VM missing).
+  - `BotChatSessionView.tsx:193` auto-opens the chat-side pane when `computerLive`.
+  - `BotComputerViewport` compact mode has no provision/start affordance → dead panel.
+- Created worktree `allternit-session-bot-computer`, branch `session/bot-computer-panel` @ 4ec879766.
+- Wrote plan: docs/plans/plan-bot-computer-panel-fix.md
 
-## Problem (owner screenshot, saved at ~/Desktop/allternit-workspace/user-shot-pane-header.png)
-Agent pane shows the name TWICE: row 1 = slot tab strip (brand + "Allternit Office Agent"), row 2 = panel header (brand + name + Platform model dropdown + refresh + close), row 3 = context banner.
+## Next
+Verify: pnpm install (bg) → typecheck + vitest → commit → PR.
 
-## Fix
-Remove the OfficeAiSlot tab strip entirely (single-extension hosts don't need tabs). The surviving single header row is the panel header in AllternitAssistantPanel (brand + name left; model picker / new-chat / close right — controls already there). Context banner unchanged. Collapsed branded rail from #211 must keep working. ONE change in @allternit/allternit-office-suite.
+## Update (implement done)
+All four files changed in the worktree:
+- browserAgent.store.ts: `aciSidecarExpanded` default false; `connectedBotId` removed
+  from partialize + persist version 1 migrate strips stale stored id.
+- BotChatSessionView.tsx: auto-open effect deleted; connects to global sidecar only
+  when bot hasVm; clears connectedBotId on unmount.
+- ACIComputerUseSidecar.tsx: botComputerActive gated on vmOperator.enabled || botVm;
+  bot-mode header = avatar + name + running dot + close (ACI chrome/engine bar hidden);
+  hard-coded tan rgba(212,176,140,…) replaced with design tokens.
+- BotComputerViewport.tsx: compact mode now has Provision CTA (no VM), provisioning
+  spinner, and Start/Resume actions (off/stopped) instead of dead text/black box.
 
-## Progress
-- [x] worktree created at origin/main 4ec879766
-- [ ] implement slot strip removal
-- [ ] typecheck suite + 4 apps; suite vitest
-- [ ] update office-agent.spec.ts selectors (no more .office-ext-tab); run office e2e specs
-- [ ] PR → merge → ledger → cleanup
-
-## Guardrails
-- Never edit shared checkout or other sessions' worktrees/branches.
-- Owner app may be running → desktop electron e2e defer.
-
-## Update 10:50
-- OfficeAiSlot tab strip removed entirely (single agent pane's own header
-  identifies it; controls already live there). CSS tab rules removed.
-- Collapsed branded rail (#211) untouched — e2e still exercises it.
-- office-agent.spec.ts: asserts zero .office-ext-tab, exactly one header name
-  in the dock, model picker + close in the header row.
-- VERIFY: typecheck suite+4 apps+platform clean; suite vitest 13/13;
-  Playwright 11/11 (office-agent 2, office-ai 4, office-launcher 4+1);
-  after-screenshot matches owner ask (single white header row).
+## Open questions
+- ACI (non-bot) task sidecar auto-open: keeping as-is (out of scope).

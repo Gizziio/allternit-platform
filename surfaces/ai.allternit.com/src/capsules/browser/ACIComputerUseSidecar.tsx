@@ -31,7 +31,8 @@ import { ACIEngineBar } from './ACIEngineBar';
 import { ContextWindowCard } from '@/components/ai-elements/ContextWindowCard';
 import { cn } from '@/lib/utils';
 import { useAgentStore } from '@/lib/agents/agent.store';
-import { getBotAccentColor } from '@/lib/bots/bot-profile';
+import { getBotAccentColor, getBotDisplayName } from '@/lib/bots/bot-profile';
+import { BotAvatar } from '@/views/bots/BotAvatar';
 import { BotComputerViewport } from '@/views/bots/BotComputerViewport';
 import { useBotActiveVm } from '@/views/bots/useBotActiveVm';
 
@@ -269,7 +270,12 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
     connectedBotId ? s.agents.find((agent) => agent.id === connectedBotId) ?? null : null,
   );
   const botVm = useBotActiveVm(connectedBotId ?? undefined);
-  const botComputerActive = Boolean(connectedBot);
+  // Only bots with an actual computer capability (configured VM operator or a
+  // live sandbox) may host the panel — otherwise a stale connectedBotId would
+  // spawn an empty "NO SIGNAL" shell.
+  const botComputerActive = Boolean(
+    connectedBot && (connectedBot.vmOperator?.enabled || botVm),
+  );
 
   // Screenshot fed via SSE → store; no local polling
   const screenshotB64  = useBrowserAgentStore((s) => s.screenshot);
@@ -456,6 +462,27 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
       >
         {/* ── Header ── */}
         <div className="h-[42px] bg-[var(--surface-panel)] border-b border-solid border-[var(--ui-border-muted)] flex items-center p-0 px-3 gap-2 shrink-0">
+          {botComputerActive && connectedBot ? (
+            <>
+              <BotAvatar bot={connectedBot} size={20} />
+              <span className="flex-1 text-[12px] font-semibold text-[var(--ui-text-primary)] truncate">
+                {getBotDisplayName(connectedBot)}&rsquo;s computer
+              </span>
+              {botVm?.status === 'running' && (
+                <span className="size-1.5 rounded-full bg-[var(--status-success)] shrink-0" title="Computer running" />
+              )}
+              <button type="button"
+                onClick={() => setAciSidecarExpanded(false)}
+                title="Close panel"
+                className="size-[22px] flex items-center justify-center bg-[var(--surface-hover)] border border-solid border-[var(--ui-border-muted)] rounded-[5px] cursor-pointer shrink-0 transition-colors hover:bg-[var(--surface-active)] text-[var(--ui-text-muted)]"
+              >
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                  <path d="M2.5 2.5l5 5M7.5 2.5l-5 5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                </svg>
+              </button>
+            </>
+          ) : (
+          <>
           {/* Status dot */}
           <div 
             className={cn(
@@ -593,9 +620,11 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
               <path d="M3 5h4M7 5L5 3M7 5L5 7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </button>
+          </>
+          )}
         </div>
 
-        <ACIEngineBar />
+        {!botComputerActive && <ACIEngineBar />}
 
         {/* ── Screen area ── */}
         {botComputerActive && connectedBot ? (
@@ -634,17 +663,17 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
                   />
                 ) : isConnecting ? (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-                    <div className="size-8 border-2 border-solid border-[rgba(212,176,140,0.15)] border-t-[rgba(212,176,140,0.6)] rounded-full animate-[aci-sidecar-spin_0.9s_linear_infinite]" />
-                    <span className="text-[12px] text-[rgba(212,176,140,0.3)] font-mono tracking-[0.1em]">
+                    <div className="size-8 border-2 border-solid border-[var(--ui-border-default)] border-t-[var(--accent-primary)] rounded-full animate-[aci-sidecar-spin_0.9s_linear_infinite]" />
+                    <span className="text-[12px] text-[var(--text-tertiary)] font-mono tracking-[0.1em]">
                       CONNECTING…
                     </span>
                   </div>
                 ) : serviceError ? (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-5">
-                    <span className="text-[12px] text-[rgba(239,68,68,0.7)] font-mono text-center">
+                    <span className="text-[12px] text-[var(--status-error)]/70 font-mono text-center">
                       {serviceError}
                     </span>
-                    <span className="text-[12px] text-[rgba(212,176,140,0.3)] font-mono text-center">
+                    <span className="text-[12px] text-[var(--text-tertiary)] font-mono text-center">
                       Check the agent logs for details.
                     </span>
                   </div>
