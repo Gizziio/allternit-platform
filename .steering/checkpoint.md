@@ -20,13 +20,14 @@ voice tree (PR #194 voice-cleanup) and had no step producing the REQUIRED `whisp
   `cargo build --release -p voice-service` running to confirm the bin name (`voice-service`).
 
 ## Next
-- Confirm local release build produces target/release/voice-service.
-- Commit, push, PR, `gh pr merge --merge`; repoint the desktop-v1.1.1 tag to the new main;
-  confirm run 11; re-arm the */9 monitor cron with the new run id.
+- Confirm local production build passes with the audio-capture-napi resolver fix,
+  then commit/push/PR/merge, repoint desktop-v1.1.1 tag again (run 12).
 - On green: final report (release URL, install-over-/Applications reminder, unsigned note),
-  ledger attestation (runs 1–11 + deferrals), then cleanup (worktree, branch local+remote, cron).
+  ledger attestation (runs 1–12 + deferrals), then cleanup (worktree, branch local+remote, cron).
 
 ## Open questions
 - Windows whisper-cli cmake build is untested on the runner (cmake is preinstalled on
   windows-latest; VS2022 via choco). If it fails, fallback: ALLTERNIT_ALLOW_MISSING_WHISPER
   opt-out mirroring local-engine, recorded as a deferral.
+- Run 11 note: macOS/Windows jobs were still in progress when Linux failed; they will
+  likely hit the same bundling error and need the same fix (run 12).
