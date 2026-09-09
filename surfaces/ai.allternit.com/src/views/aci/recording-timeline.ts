@@ -20,6 +20,10 @@ export interface RecordingTimelineManifest {
   completed_at: string | null;
   total_steps: number;
   status: string;
+  /** Chrome-stream provider video artifact, when one was recorded. */
+  video_path: string | null;
+  /** Epoch ms when the video started — converts frame timestamps to offsets. */
+  video_start_epoch: number | null;
 }
 
 export interface TimelineToolCallFrame {
@@ -79,6 +83,11 @@ function asNumberOrNull(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
+function asEpochOrNull(value: unknown): number | null {
+  const num = asNumberOrNull(value);
+  return num !== null && num > 0 ? num : null;
+}
+
 function toScreenshotDataUrl(before: string, after: string): string | null {
   const raw = before || after;
   if (!raw) return null;
@@ -96,6 +105,8 @@ function parseManifest(data: Record<string, unknown>): RecordingTimelineManifest
     completed_at: asOptionalString(data.completed_at),
     total_steps: asNumberOrNull(data.total_steps) ?? 0,
     status: asString(data.status, 'unknown'),
+    video_path: asOptionalString(data.video_path),
+    video_start_epoch: asEpochOrNull(data.video_start_epoch),
   };
 }
 
@@ -210,4 +221,47 @@ export function frameLabel(frame: TimelineFrame): string {
 
 export function frameSucceeded(frame: TimelineFrame): boolean {
   return frame.kind === 'tool_call' ? frame.error === null : frame.succeeded;
+}
+
+/** One entry of the exported tool-call/action track, relative to video start. */
+export interface ToolCallTrackEntry {
+  /** ms between video start (video_start_epoch) and the frame timestamp. */
+  offsetMs: number;
+  label: string;
+  ok: boolean;
+  /** Error text for failed frames, else null. */
+  error: string | null;
+  /** Position in the parsed frame list, for round-tripping to selection. */
+  index: number;
+}
+
+/**
+ * Export a scrubbable track for video playback: every frame converted to a
+ * video-relative offset using the recording's video start epoch
+ * (offset_ms = frame_timestamp_ms - video_start_epoch), sorted by offset.
+ *
+ * Frames whose timestamp cannot be parsed are skipped. When
+ * videoStartEpoch is null, offsets fall back to the manifest's started_at
+ * (offset from recording start — still scrubbable, just not video-aligned).
+ */
+export function buildToolCallTrack(
+  frames: TimelineFrame[],
+  videoStartEpoch: number | null,
+  startedAt?: string | null,
+): ToolCallTrackEntry[] {
+  const fallbackStart = startedAt ? Date.parse(startedAt) : NaN;
+  const epoch = videoStartEpoch ?? (Number.isFinite(fallbackStart) ? fallbackStart : null);
+  const track: ToolCallTrackEntry[] = [];
+  for (const frame of frames) {
+    const at = Date.parse(frame.timestamp);
+    if (epoch === null || !Number.isFinite(at)) continue;
+    track.push({
+      offsetMs: Math.max(0, Math.round(at - epoch)),
+      label: frameLabel(frame),
+      ok: frameSucceeded(frame),
+      error: frame.kind === 'tool_call' ? frame.error : frame.succeeded ? null : 'action failed',
+      index: frame.index,
+    });
+  }
+  return track.sort((a, b) => a.offsetMs - b.offsetMs);
 }

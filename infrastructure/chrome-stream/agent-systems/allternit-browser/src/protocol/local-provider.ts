@@ -17,11 +17,40 @@ import {
   waitForViaPlaywright,
 } from '../browser/playwright/actions.js';
 import { snapshotRoleViaPlaywright } from '../browser/playwright/snapshot.js';
+import {
+  defaultRecordingsRoot,
+  finalizeVideoRecording,
+  prepareVideoRecording,
+  recordVideoOptions,
+  type FinalizedVideo,
+} from './video-recorder.js';
 
 export interface LocalBrowserSessionBinding {
   sessionId: string;
   cdpUrl: string;
   targetId: string;
+}
+
+export interface StartRecordedSessionInput {
+  sessionId: string;
+  cdpUrl: string;
+  /** Recording/run id used to name the artifact (<id>.webm in recordingsRoot). */
+  recordingId?: string;
+  recordingsRoot?: string;
+  size?: { width: number; height: number };
+}
+
+export interface StartedRecordedSession {
+  binding: LocalBrowserSessionBinding;
+  startedAtEpoch: number;
+}
+
+interface RecordedSessionHandle {
+  browser: import('playwright').Browser;
+  context: import('playwright').BrowserContext;
+  artifactName: string;
+  recordingsRoot: string;
+  startedAtEpoch: number;
 }
 
 export class LocalPlaywrightProvider implements BrowserProvider {
@@ -43,6 +72,8 @@ export class LocalPlaywrightProvider implements BrowserProvider {
   private readonly bindings = new Map<string, LocalBrowserSessionBinding>();
   private readonly refs = new Map<string, Record<string, string>>();
   private readonly sequences = new Map<string, number>();
+  private readonly recordedSessions = new Map<string, RecordedSessionHandle>();
+  private readonly finalizedVideos = new Map<string, FinalizedVideo>();
 
   bind(binding: LocalBrowserSessionBinding): void {
     this.bindings.set(binding.sessionId, binding);
@@ -50,6 +81,88 @@ export class LocalPlaywrightProvider implements BrowserProvider {
 
   getBinding(sessionId: string): LocalBrowserSessionBinding | undefined {
     return this.bindings.get(sessionId);
+  }
+
+  /**
+   * Bind the session to a fresh Playwright-created context with video
+   * recording. Only Playwright-created contexts support recordVideo, so this
+   * replaces any existing binding for the session. Works over CDP-attach
+   * connections (verified on playwright 1.58.2); the profile's own
+   * externally-created tab keeps running but is no longer the bound target.
+   */
+  async startRecordedSession(input: StartRecordedSessionInput): Promise<StartedRecordedSession> {
+    const { chromium } = await import('playwright');
+    const recordingsRoot = input.recordingsRoot ?? defaultRecordingsRoot();
+    const artifactName = input.recordingId ?? input.sessionId;
+    const browser = await chromium.connectOverCDP(input.cdpUrl);
+    try {
+      const start = await prepareVideoRecording(recordingsRoot, artifactName);
+      const context = await browser.newContext(recordVideoOptions(start, input.size));
+      const page = await context.newPage();
+      // The CDP action primitives resolve "the page" as the first context
+      // with pages; close the profile tab so the recorded tab is unambiguous
+      // (the session binding is re-pointed at it below regardless).
+      for (const other of browser.contexts()) {
+        if (other === context) continue;
+        for (const existing of other.pages()) await existing.close().catch(() => {});
+      }
+      this.recordedSessions.set(input.sessionId, {
+        browser,
+        context,
+        artifactName,
+        recordingsRoot,
+        startedAtEpoch: start.startedAtEpoch,
+      });
+      // targetId is a page URL in this binding's convention; pageIdentity
+      // falls back to the first page when no URL matches.
+      this.bind({ sessionId: input.sessionId, cdpUrl: input.cdpUrl, targetId: page.url() });
+      return {
+        binding: this.requireBinding(input.sessionId),
+        startedAtEpoch: start.startedAtEpoch,
+      };
+    } catch (error) {
+      await browser.close().catch(() => {});
+      throw error;
+    }
+  }
+
+  getRecordedSessionStart(sessionId: string): number | undefined {
+    return this.recordedSessions.get(sessionId)?.startedAtEpoch;
+  }
+
+  hasRecordedSession(sessionId: string): boolean {
+    return this.recordedSessions.has(sessionId);
+  }
+
+  /**
+   * Stop the session's video recording: closing the context finalizes the
+   * .webm, which is then moved to <recordingsRoot>/<artifactName>.webm.
+   */
+  async stopRecordedSession(sessionId: string): Promise<FinalizedVideo | null> {
+    const handle = this.recordedSessions.get(sessionId);
+    if (!handle) return null;
+    this.recordedSessions.delete(sessionId);
+    try {
+      const video = handle.context.pages()[0]?.video() ?? null;
+      await handle.context.close();
+      const stagedPath = video ? await video.path() : null;
+      if (!stagedPath) return null;
+      const finalized = await finalizeVideoRecording(
+        stagedPath,
+        handle.recordingsRoot,
+        handle.artifactName,
+        handle.startedAtEpoch,
+      );
+      this.finalizedVideos.set(sessionId, finalized);
+      return finalized;
+    } finally {
+      await handle.browser.close().catch(() => {});
+    }
+  }
+
+  /** Artifact metadata for a finalized recording, when stop has run. */
+  getVideoArtifact(sessionId: string): FinalizedVideo | undefined {
+    return this.finalizedVideos.get(sessionId);
   }
 
   async observe(sessionId: string): Promise<BrowserObservation> {

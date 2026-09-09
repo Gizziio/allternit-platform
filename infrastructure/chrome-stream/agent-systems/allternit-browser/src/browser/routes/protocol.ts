@@ -168,6 +168,54 @@ export function registerBrowserProtocolRoutes(
     });
   });
 
+  app.post('/v1/browser-runs/:runId/video/start', async (req: Request, res: Response) => {
+    await route(res, async () => {
+      const body = z.object({
+        recordingId: z.string().min(1).optional(),
+        size: z.object({ width: z.number().int().positive(), height: z.number().int().positive() }).optional(),
+      }).parse(req.body ?? {});
+      const run = controller.getRun(req.params.runId);
+      if (!run) {
+        res.status(404).json({ error: 'Run not found' });
+        return;
+      }
+      const binding = localProvider.getBinding(run.sessionId);
+      if (!binding) {
+        res.status(400).json({ error: `No local browser binding for session ${run.sessionId}` });
+        return;
+      }
+      const started = await localProvider.startRecordedSession({
+        sessionId: run.sessionId,
+        cdpUrl: binding.cdpUrl,
+        recordingId: body.recordingId ?? run.runId,
+        size: body.size,
+      });
+      controller.recordArtifact(run.runId, {
+        kind: 'video_recording_started',
+        startedAtEpoch: started.startedAtEpoch,
+        targetId: started.binding.targetId,
+      });
+      res.json(started);
+    });
+  });
+
+  app.post('/v1/browser-runs/:runId/video/stop', async (req: Request, res: Response) => {
+    await route(res, async () => {
+      const run = controller.getRun(req.params.runId);
+      if (!run) {
+        res.status(404).json({ error: 'Run not found' });
+        return;
+      }
+      const video = await localProvider.stopRecordedSession(run.sessionId);
+      if (!video) {
+        res.status(400).json({ error: `No video recording active for session ${run.sessionId}` });
+        return;
+      }
+      controller.recordArtifact(run.runId, { kind: 'video', ...video });
+      res.json({ video });
+    });
+  });
+
   app.post('/v1/browser-runs/:runId/complete', (req: Request, res: Response) => {
     routeSync(res, () => {
       const _body = CompleteBodySchema.parse(req.body ?? {});

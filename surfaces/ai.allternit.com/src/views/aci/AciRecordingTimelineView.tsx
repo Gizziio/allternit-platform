@@ -12,6 +12,7 @@ import {
   XCircle,
   Robot,
   Wrench,
+  VideoCamera,
 } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -24,6 +25,7 @@ import {
   formatOffset,
   frameLabel,
   frameSucceeded,
+  buildToolCallTrack,
 } from './recording-timeline';
 import type { RecordingTimeline, TimelineFrame } from './recording-timeline';
 
@@ -36,6 +38,11 @@ async function fetchRecordingJsonl(recordingId: string): Promise<string> {
   );
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
   return response.text();
+}
+
+function gatewayVideoUrl(recordingId: string): string {
+  const base = getPlatformComputerUseBaseUrl().replace(/\/+$/, '');
+  return `${base}/v1/computer-use/recordings/${encodeURIComponent(recordingId)}/video`;
 }
 
 function StatusBadge({ ok }: { ok: boolean }) {
@@ -103,9 +110,21 @@ export function AciRecordingTimelineView() {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [loadingRecording, setLoadingRecording] = useState(false);
   const [recordingError, setRecordingError] = useState<string | null>(null);
+  const [videoSrc, setVideoSrc] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
   const stripRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  const revokeVideo = useCallback(() => {
+    setVideoSrc((current) => {
+      if (current?.startsWith('blob:')) URL.revokeObjectURL(current);
+      return null;
+    });
+  }, []);
+
+  useEffect(() => revokeVideo, [revokeVideo]);
 
   useEffect(() => {
     let cancelled = false;
@@ -145,17 +164,23 @@ export function AciRecordingTimelineView() {
       setRecordingError(null);
       try {
         loadText(await fetchRecordingJsonl(recordingId));
+        revokeVideo();
+        // Point the video pane at the gateway artifact (when the gateway
+        // serves one); the <video> onError handler falls back to
+        // screenshot mode if the route 404s.
+        setVideoSrc(gatewayVideoUrl(recordingId));
       } catch (error) {
         setRecordingError(error instanceof Error ? error.message : String(error));
       } finally {
         setLoadingRecording(false);
       }
     },
-    [loadText],
+    [loadText, revokeVideo],
   );
 
   const handleFile = useCallback(
     (file: File) => {
+      revokeVideo();
       setLoadingRecording(true);
       file
         .text()
@@ -165,8 +190,15 @@ export function AciRecordingTimelineView() {
         })
         .finally(() => setLoadingRecording(false));
     },
-    [loadText],
+    [loadText, revokeVideo],
   );
+
+  const handleVideoFile = useCallback((file: File) => {
+    setVideoSrc((current) => {
+      if (current?.startsWith('blob:')) URL.revokeObjectURL(current);
+      return URL.createObjectURL(file);
+    });
+  }, []);
 
   // Bidirectional scrubbing: keep the strip thumb and the track row for the
   // selected frame scrolled into view.
@@ -183,6 +215,44 @@ export function AciRecordingTimelineView() {
     const start = timeline.manifest?.started_at ?? '';
     return timeline.frames.map((frame) => frameOffsetSeconds(start, frame.timestamp));
   }, [timeline]);
+
+  // Video-aligned track: offsets are relative to the video start epoch when
+  // the manifest carries one, else to the recording start.
+  const track = useMemo(
+    () =>
+      timeline
+        ? buildToolCallTrack(
+            timeline.frames,
+            timeline.manifest?.video_start_epoch ?? null,
+            timeline.manifest?.started_at,
+          )
+        : [],
+    [timeline],
+  );
+
+  const selectFrame = useCallback(
+    (index: number) => {
+      setSelectedIndex(index);
+      const entry = track.find((candidate) => candidate.index === index);
+      const video = videoRef.current;
+      if (video && entry) video.currentTime = entry.offsetMs / 1000;
+    },
+    [track],
+  );
+
+  // Video → track direction: highlight the nearest track entry as playback
+  // scrubs. Selection changes scroll the strip/track into view via the
+  // existing effect.
+  const handleVideoTimeUpdate = useCallback(() => {
+    const video = videoRef.current;
+    if (!video || track.length === 0) return;
+    const ms = video.currentTime * 1000;
+    let nearest = track[0];
+    for (const entry of track) {
+      if (Math.abs(entry.offsetMs - ms) < Math.abs(nearest.offsetMs - ms)) nearest = entry;
+    }
+    setSelectedIndex((current) => (current === nearest.index ? current : nearest.index));
+  }, [track]);
 
   const stepTo = useCallback(
     (delta: number) => {
@@ -216,6 +286,21 @@ export function AciRecordingTimelineView() {
             <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
               <FolderOpen size={14} />
               Open JSONL…
+            </Button>
+            <input
+              ref={videoInputRef}
+              type="file"
+              accept="video/webm,video/mp4,video/*,.webm,.mp4,.mov"
+              className="hidden"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) handleVideoFile(file);
+                event.target.value = '';
+              }}
+            />
+            <Button variant="outline" onClick={() => videoInputRef.current?.click()}>
+              <VideoCamera size={14} />
+              Open video…
             </Button>
             <Button
               onClick={() => loadRecording(selectedRecordingId)}
@@ -280,6 +365,16 @@ export function AciRecordingTimelineView() {
               {timeline.manifest && <span>status: {timeline.manifest.status}</span>}
               <span>{timeline.frames.length} frames</span>
               <span>{timeline.toolCalls.length} tool calls</span>
+              {videoSrc && (
+                <span className="inline-flex items-center gap-1 text-[var(--accent-primary)]">
+                  <VideoCamera size={11} /> video
+                  {timeline.manifest?.video_start_epoch
+                    ? ' (epoch-aligned)'
+                    : timeline.manifest?.started_at
+                      ? ' (start-aligned)'
+                      : ''}
+                </span>
+              )}
               {timeline.toolCalls.length === 0 && (
                 <span className="text-[var(--text-tertiary)]">classic action-only recording</span>
               )}
@@ -304,7 +399,7 @@ export function AciRecordingTimelineView() {
                       key={index}
                       type="button"
                       data-frame-index={index}
-                      onClick={() => setSelectedIndex(index)}
+                      onClick={() => selectFrame(index)}
                       className={cn(
                         'flex w-28 shrink-0 flex-col gap-1 rounded-md border p-1 text-left',
                         index === selectedIndex
@@ -354,7 +449,18 @@ export function AciRecordingTimelineView() {
                     </Button>
                   </div>
                   <div className="min-h-72 flex-1 overflow-hidden rounded-md border border-[var(--border-subtle)] bg-[var(--bg-primary)]">
-                    {selectedFrame && <FrameViewer frame={selectedFrame} />}
+                    {videoSrc ? (
+                      <video
+                        ref={videoRef}
+                        src={videoSrc}
+                        controls
+                        className="h-full max-h-[28rem] w-full bg-black object-contain"
+                        onTimeUpdate={handleVideoTimeUpdate}
+                        onError={() => revokeVideo()}
+                      />
+                    ) : (
+                      selectedFrame && <FrameViewer frame={selectedFrame} />
+                    )}
                   </div>
                 </div>
 
@@ -365,7 +471,7 @@ export function AciRecordingTimelineView() {
                       key={index}
                       type="button"
                       data-frame-index={index}
-                      onClick={() => setSelectedIndex(index)}
+                      onClick={() => selectFrame(index)}
                       className={cn(
                         'flex w-full items-center gap-3 border-b border-[var(--border-subtle)] px-3 py-2 text-left text-sm last:border-b-0',
                         index === selectedIndex

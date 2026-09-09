@@ -60,6 +60,11 @@ export async function connectViaCDP(cdpUrl: string, contextTimeoutMs = 5_000) {
     context = browser.contexts()[0];
   }
   if (!context) context = await browser.newContext();
+  // When a Playwright-created side context exists (e.g. a video-recorded
+  // session), the profile's default context can be present but page-less —
+  // prefer a context that actually has pages.
+  const withPages = browser.contexts().find((candidate) => candidate.pages().length > 0);
+  if (withPages) context = withPages;
 
   return { browser, context };
 }

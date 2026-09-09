@@ -67,7 +67,20 @@ export {
 } from './browser/playwright/snapshot.js';
 export { pdfViaPlaywright } from './browser/playwright/pdf.js';
 export { LocalPlaywrightProvider } from './protocol/local-provider.js';
-export type { LocalBrowserSessionBinding } from './protocol/local-provider.js';
+export type {
+  LocalBrowserSessionBinding,
+  StartRecordedSessionInput,
+  StartedRecordedSession,
+} from './protocol/local-provider.js';
+export {
+  defaultRecordingsRoot,
+  finalizeVideoRecording,
+  prepareVideoRecording,
+  recordVideoOptions,
+  recordingArtifactPath,
+  recordingStagingDir,
+} from './protocol/video-recorder.js';
+export type { FinalizedVideo, VideoRecordingStart } from './protocol/video-recorder.js';
 export { BrowserRunController } from './protocol/run-controller.js';
 export type {
   BrowserRunControllerOptions,

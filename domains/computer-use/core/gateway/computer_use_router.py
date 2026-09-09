@@ -438,6 +438,10 @@ class RecordBody(BaseModel):
     record_gif: bool = True
     # For action="append": recorded frames to append to the in-flight recording.
     frames: Optional[List[Dict[str, Any]]] = None
+    # Optional video artifact metadata (chrome-stream provider recordVideo).
+    # Usable on start (pre-known path) or stop (path known after finalizing).
+    video_path: Optional[str] = None
+    video_start_epoch: Optional[int] = None
 
 
 class ReplayBody(BaseModel):
@@ -1201,6 +1205,10 @@ async def record(body: RecordBody) -> Dict[str, Any]:
             run_id=str(uuid.uuid4()),
             record_gif=body.record_gif,
         )
+        if body.video_path:
+            recorder.manifest.video_path = body.video_path
+        if body.video_start_epoch is not None:
+            recorder.manifest.video_start_epoch = body.video_start_epoch
         await recorder.start()
         _router_recordings[recording_id] = recorder
         _index_recording(
@@ -1262,6 +1270,10 @@ async def record(body: RecordBody) -> Dict[str, Any]:
     recorder = _router_recordings.pop(body.recording_id, None)
     if recorder is None:
         raise HTTPException(status_code=404, detail=f"Recording {body.recording_id} not found")
+    if body.video_path:
+        recorder.manifest.video_path = body.video_path
+    if body.video_start_epoch is not None:
+        recorder.manifest.video_start_epoch = body.video_start_epoch
     await recorder.stop()
     gif_path = str(recorder.get_gif_path()) if recorder.get_gif_path() else None
     _index_recording(
@@ -1370,6 +1382,36 @@ def _resolve_recording_gif_path(recording_id: str, manifest: Any) -> Optional[Pa
     return None
 
 
+def _resolve_recording_video_path(recording_id: str, manifest: Any) -> Optional[Path]:
+    """Locate a recording's video on disk, constrained to the recordings root.
+
+    Candidates, in order: the manifest's video_path, then a video named after
+    the recording id, then the chrome-stream artifact convention
+    (<recording_id>.webm / session-<run_id>.webm) — all under the recordings
+    root, mirroring the GIF lookup.
+    """
+    try:
+        root = _recordings_root().resolve()
+    except Exception:
+        return None
+    candidates: List[Path] = []
+    video_path = getattr(manifest, "video_path", None)
+    if video_path:
+        candidates.append(Path(video_path))
+    candidates.append(root / f"{recording_id}.webm")
+    run_id = getattr(manifest, "run_id", "") or ""
+    if run_id:
+        candidates.append(root / f"session-{run_id}.webm")
+    for candidate in candidates:
+        try:
+            resolved = candidate.resolve()
+        except Exception:
+            continue
+        if resolved.is_file() and resolved.is_relative_to(root):
+            return resolved
+    return None
+
+
 def _load_recording_or_raise(recording_id: str) -> tuple[Any, List[Any], Path]:
     """Load manifest + frames + path, mapping filesystem errors to HTTP errors."""
     path = _resolve_recording_path(recording_id)
@@ -1400,6 +1442,8 @@ def _manifest_to_dict(manifest: Any) -> Dict[str, Any]:
         "total_steps": manifest.total_steps,
         "status": manifest.status,
         "gif_path": manifest.gif_path,
+        "video_path": getattr(manifest, "video_path", None),
+        "video_start_epoch": getattr(manifest, "video_start_epoch", None),
     }
 
 
@@ -1442,11 +1486,15 @@ async def get_recording_detail(recording_id: str) -> Dict[str, Any]:
         raise HTTPException(status_code=503, detail="ActionRecorder not available")
     manifest, frames, _path = _load_recording_or_raise(recording_id)
     gif = _resolve_recording_gif_path(recording_id, manifest)
+    video = _resolve_recording_video_path(recording_id, manifest)
     return {
         "manifest": _manifest_to_dict(manifest),
         "steps": [_frame_to_step(frame, i) for i, frame in enumerate(frames)],
         "gif_url": (
             f"/v1/computer-use/recordings/{recording_id}/gif" if gif is not None else None
+        ),
+        "video_url": (
+            f"/v1/computer-use/recordings/{recording_id}/video" if video is not None else None
         ),
     }
 
@@ -1480,6 +1528,21 @@ async def get_recording_gif(recording_id: str) -> Response:
             detail=f"No GIF for recording {recording_id}",
         )
     return Response(content=gif.read_bytes(), media_type="image/gif")
+
+
+@router.get("/recordings/{recording_id}/video")
+async def get_recording_video(recording_id: str) -> Response:
+    """WebM video bytes for a recording, when one exists on disk."""
+    if not _recorder_available or ActionRecorder is None:
+        raise HTTPException(status_code=503, detail="ActionRecorder not available")
+    manifest, _frames, _path = _load_recording_or_raise(recording_id)
+    video = _resolve_recording_video_path(recording_id, manifest)
+    if video is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No video for recording {recording_id}",
+        )
+    return Response(content=video.read_bytes(), media_type="video/webm")
 
 
 @router.post("/replay")

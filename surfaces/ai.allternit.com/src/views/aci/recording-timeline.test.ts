@@ -5,6 +5,7 @@ import {
   formatOffset,
   frameLabel,
   frameSucceeded,
+  buildToolCallTrack,
 } from './recording-timeline';
 
 const manifestLine = JSON.stringify({
@@ -168,5 +169,70 @@ describe('frame helpers', () => {
     expect(frameSucceeded(timeline.frames[1])).toBe(false);
     expect(frameSucceeded(timeline.frames[2])).toBe(true);
     expect(frameSucceeded(timeline.frames[3])).toBe(false);
+  });
+});
+
+describe('manifest video metadata', () => {
+  it('parses video_path and video_start_epoch when present', () => {
+    const line = JSON.stringify({
+      ...JSON.parse(manifestLine),
+      video_path: '/home/u/.allternit/recordings/rec-test123.webm',
+      video_start_epoch: 1757395200000,
+    });
+    const timeline = parseRecordingTimelineJsonl([line, toolCallLine].join('\n'));
+    expect(timeline.manifest?.video_path).toBe('/home/u/.allternit/recordings/rec-test123.webm');
+    expect(timeline.manifest?.video_start_epoch).toBe(1757395200000);
+  });
+
+  it('defaults video fields to null when absent (classic recordings)', () => {
+    const timeline = parseRecordingTimelineJsonl(mixedJsonl);
+    expect(timeline.manifest?.video_path).toBeNull();
+    expect(timeline.manifest?.video_start_epoch).toBeNull();
+  });
+});
+
+describe('buildToolCallTrack', () => {
+  const videoStartEpoch = Date.parse('2026-09-09T12:00:00+00:00');
+
+  it('emits video-relative offsets, labels, and ok/error, sorted by offset', () => {
+    const timeline = parseRecordingTimelineJsonl(mixedJsonl);
+    const track = buildToolCallTrack(timeline.frames, videoStartEpoch);
+    expect(track).toEqual([
+      { offsetMs: 10_000, label: 'gmail.github.review_pr', ok: true, error: null, index: 0 },
+      { offsetMs: 20_000, label: 'gmail.github.merge_pr', ok: false, error: 'merge conflict', index: 1 },
+      { offsetMs: 30_000, label: 'click — button#merge', ok: true, error: null, index: 2 },
+      { offsetMs: 40_000, label: 'type — input#comment', ok: false, error: 'action failed', index: 3 },
+    ]);
+    const offsets = track.map((entry) => entry.offsetMs);
+    expect([...offsets].sort((a, b) => a - b)).toEqual(offsets);
+  });
+
+  it('falls back to the manifest started_at when no video epoch is set', () => {
+    const timeline = parseRecordingTimelineJsonl(mixedJsonl);
+    const track = buildToolCallTrack(timeline.frames, null, timeline.manifest?.started_at);
+    expect(track[0]?.offsetMs).toBe(10_000);
+  });
+
+  it('skips frames with unparseable timestamps', () => {
+    const bad = JSON.stringify({ ...JSON.parse(toolCallLine), timestamp: 'not-a-date' });
+    const timeline = parseRecordingTimelineJsonl([manifestLine, bad, toolCallLine].join('\n'));
+    const track = buildToolCallTrack(timeline.frames, videoStartEpoch);
+    expect(track).toHaveLength(1);
+    expect(track[0].label).toBe('gmail.github.review_pr');
+  });
+
+  it('returns an empty track when no epoch or started_at is available', () => {
+    const timeline = parseRecordingTimelineJsonl([toolCallLine, actionLine].join('\n'));
+    expect(buildToolCallTrack(timeline.frames, null)).toEqual([]);
+  });
+
+  it('clamps pre-video frames to offset 0', () => {
+    const early = JSON.stringify({
+      ...JSON.parse(toolCallLine),
+      timestamp: '2026-09-09T11:59:50+00:00',
+    });
+    const timeline = parseRecordingTimelineJsonl([manifestLine, early].join('\n'));
+    const track = buildToolCallTrack(timeline.frames, videoStartEpoch);
+    expect(track[0].offsetMs).toBe(0);
   });
 });

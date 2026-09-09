@@ -309,6 +309,16 @@ export class BrowserRunController {
     return (this.events.get(runId) ?? []).filter((event) => event.sequence > afterSequence);
   }
 
+  /**
+   * Record a session artifact (e.g. a finalized video) on the run's event
+   * stream as 'artifact.created'. The payload is free-form; video artifacts
+   * carry { kind: 'video', path, startedAtEpoch, sizeBytes }.
+   */
+  recordArtifact(runId: string, artifact: Record<string, unknown>): BrowserEvent {
+    const run = this.requireRun(runId);
+    return this.appendEvent(run.runId, run.sessionId, 'artifact.created', { artifact });
+  }
+
   getRun(runId: string): BrowserRun | undefined {
     return this.runs.get(runId);
   }

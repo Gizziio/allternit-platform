@@ -140,6 +140,11 @@ class RecordingManifest:
     total_steps: int = 0
     status: str = "recording"
     gif_path: Optional[str] = None
+    # Optional video artifact (chrome-stream provider recordVideo). The start
+    # epoch (Date.now()-style epoch ms) lets viewers convert frame timestamps
+    # to video offsets: offset_ms = frame_ts_ms - video_start_epoch.
+    video_path: Optional[str] = None
+    video_start_epoch: Optional[int] = None
 
     def to_dict(self) -> Dict:
         return {
@@ -155,6 +160,8 @@ class RecordingManifest:
             "total_steps": self.total_steps,
             "status": self.status,
             "gif_path": self.gif_path,
+            "video_path": self.video_path,
+            "video_start_epoch": self.video_start_epoch,
         }
 
 
@@ -362,6 +369,8 @@ class ActionRecorder:
             total_steps=manifest_data.get("total_steps", 0),
             status=manifest_data.get("status", "unknown"),
             gif_path=manifest_data.get("gif_path"),
+            video_path=manifest_data.get("video_path"),
+            video_start_epoch=manifest_data.get("video_start_epoch"),
         )
         frames = []
         for line in lines[1:]:
