@@ -27,8 +27,10 @@ Plus tests/gateway/tests/test_recordings_routes.py (TestClient), all green.
   unmodified main. No regressions.
 
 ## Next
-1. Commit + push session branch.
-2. gh pr create with summary + verification evidence. STOP — orchestrator merges.
+1. DONE: committed (3f3f32a8a) and pushed session/cu18-recordings.
+2. DONE: PR #186 opened — https://github.com/Gizziio/allternit-platform/pull/186
+3. STOPPED per instructions — orchestrator merges; worktree + branch left intact
+   (resumable state) for merge/attest/cleanup.
 
 ## Open questions
 - None. GIF candidates: manifest.gif_path, then <id>.gif, then session-<run_id>.gif
