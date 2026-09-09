@@ -268,7 +268,7 @@ pub(crate) fn computer_visibility_clause(user_param: usize, org_param: Option<us
     format!("(c.owner_id = ?{user_param} OR (c.kind = 'cloud_desktop' AND a.user_id = ?{user_param}){org})")
 }
 
-async fn list_computers(
+pub(crate) async fn list_computers(
     State(state): State<Arc<AppState>>,
     Extension(user): Extension<AuthUser>,
     Query(query): Query<ListComputersQuery>,
@@ -439,7 +439,7 @@ pub(crate) async fn fetch_computer_including_deleted(
     }
 }
 
-async fn create_computer(
+pub(crate) async fn create_computer(
     State(state): State<Arc<AppState>>,
     Extension(user): Extension<AuthUser>,
     Json(mut req): Json<CreateComputerRequest>,
@@ -1462,7 +1462,7 @@ async fn restart_computer(
     start_cloud_desktop(&state, &computer).await
 }
 
-async fn start_computer(
+pub(crate) async fn start_computer(
     State(state): State<Arc<AppState>>,
     Extension(user): Extension<AuthUser>,
     Path(id): Path<String>,
@@ -1529,7 +1529,7 @@ async fn start_cloud_desktop(state: &Arc<AppState>, computer: &ComputerResponse)
     }
 }
 
-async fn stop_computer(
+pub(crate) async fn stop_computer(
     State(state): State<Arc<AppState>>,
     Extension(user): Extension<AuthUser>,
     Path(id): Path<String>,
@@ -2318,10 +2318,10 @@ fn touch_activity_row(conn: &rusqlite::Connection, id: &str) -> rusqlite::Result
 }
 
 #[derive(Debug, Deserialize)]
-struct ResizeComputerRequest {
-    cpu_cores: Option<i64>,
-    memory_mb: Option<i64>,
-    disk_mb: Option<i64>,
+pub(crate) struct ResizeComputerRequest {
+    pub cpu_cores: Option<i64>,
+    pub memory_mb: Option<i64>,
+    pub disk_mb: Option<i64>,
 }
 
 fn validate_resize(
@@ -2381,7 +2381,7 @@ fn lifecycle_driver_error(
     }
 }
 
-async fn resize_computer(
+pub(crate) async fn resize_computer(
     State(state): State<Arc<AppState>>,
     Extension(user): Extension<AuthUser>,
     Path(id): Path<String>,
@@ -2485,9 +2485,9 @@ async fn update_computer(
     }
 }
 
-#[derive(Deserialize)]
-struct CloneComputerRequest {
-    name: Option<String>,
+#[derive(Debug, Deserialize)]
+pub(crate) struct CloneComputerRequest {
+    pub name: Option<String>,
 }
 
 /// Copy domain rows atomically, resetting transient takeover/connection state for the new instance.
@@ -2510,7 +2510,7 @@ fn insert_computer_clone(
     tx.commit()
 }
 
-async fn clone_computer(
+pub(crate) async fn clone_computer(
     State(state): State<Arc<AppState>>,
     Extension(user): Extension<AuthUser>,
     Path(id): Path<String>,
