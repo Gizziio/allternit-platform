@@ -9,6 +9,14 @@ without running anything.
 What gets measured:
   * Suite A (browser-deterministic-v1) against browser.mock always, and
     against browser.cdp when a CDP endpoint is reachable (--network).
+  * Suite B (browser-adaptive-v1) against browser.browser-use only when a
+    browser-use runtime (native import or known venv) is available.
+  * Suite C (retrieval-v1) against retrieval.playwright-crawler with
+    --network (headless Chromium crawl of real sites).
+  * Suite E (hybrid-v1) against hybrid.orchestrator always, offline, with
+    browser.mock registered as the sub-adapter — this measures orchestration
+    semantics (delegation, workflow chaining, envelope), not real cross-family
+    execution; the grade note says so explicitly.
   * Suite F (routing-policy-v1) — adapter-free; always measured.
   * Suite D (desktop-v1) only with --desktop (env-dependent, pyautogui).
 
@@ -16,9 +24,9 @@ Honesty rules:
   * Grades are written under the adapter id that was actually executed.
     Mock results are labeled browser.mock and never upgrade a real
     adapter's grade.
-  * Suites with no runnable implementation (B browser-adaptive,
-    C retrieval, E hybrid) are written with grade/pass_rate null and
-    measured=false — no invented numbers.
+  * Adapters whose runtime is unavailable (e.g. browser-use not installed)
+    are written with grade/pass_rate null and measured=false — no invented
+    numbers.
 
 Run:  python -m conformance.measured [--network] [--desktop]
 """
@@ -35,7 +43,14 @@ from typing import Any, Dict, List, Optional
 
 from conformance import ConformanceRunner, SuiteResult
 from conformance.mock_browser_adapter import MockBrowserAdapter
-from conformance.suites import build_suite_a, build_suite_d, build_suite_f
+from conformance.suites import (
+    build_suite_a,
+    build_suite_b,
+    build_suite_c,
+    build_suite_d,
+    build_suite_e,
+    build_suite_f,
+)
 
 GRADES_PATH = Path(__file__).resolve().parent / "adapter_grades.json"
 
@@ -45,26 +60,47 @@ GRADING_SCALE = {
     "production": ">= 90% pass rate",
 }
 
-# Suites with no runnable implementation stay honestly ungraded.
-NOT_IMPLEMENTED: Dict[str, Dict[str, str]] = {
-    "browser.browser-use": {
-        "suite": "browser-adaptive-v1",
-        "note": "Suite B (browser adaptive) not implemented — no measured grade available.",
-    },
-    "retrieval.playwright-crawler": {
-        "suite": "retrieval-v1",
-        "note": "Suite C (retrieval) not implemented — no measured grade available.",
-    },
-    "hybrid.orchestrator": {
-        "suite": "hybrid-v1",
-        "note": "Suite E (hybrid orchestrator) not implemented — no measured grade available.",
-    },
+# Suite each adapter id is measured against.
+ADAPTER_SUITE = {
+    "desktop.pyautogui": "desktop-v1",
+    "retrieval.playwright-crawler": "retrieval-v1",
+    "hybrid.orchestrator": "hybrid-v1",
+    "browser.browser-use": "browser-adaptive-v1",
 }
 
 
+def _browser_use_available() -> bool:
+    """True when a browser-use runtime exists (native import or known venv)."""
+    try:
+        from adapters.browser.browser_use import (  # noqa: F401
+            _BROWSER_USE_NATIVE,
+            _BROWSER_USE_PYTHON,
+        )
+
+        return bool(_BROWSER_USE_NATIVE or _BROWSER_USE_PYTHON is not None)
+    except Exception:
+        return False
+
+
+async def _discover_hybrid() -> Optional[Any]:
+    """Hybrid orchestrator with browser.mock registered as sub-adapter (offline)."""
+    try:
+        from adapters.hybrid.orchestrator import HybridOrchestrator
+
+        orchestrator = HybridOrchestrator()
+        orchestrator.register_adapter("browser.mock", MockBrowserAdapter())
+        await orchestrator.initialize()
+        return orchestrator
+    except Exception:
+        return None
+
+
 async def discover_adapters(network: bool = False) -> Dict[str, Any]:
-    """Adapters available right now: mock always; live browser adapters with network=True."""
+    """Adapters available right now: mock + hybrid always; live browser adapters with network=True."""
     adapters: Dict[str, Any] = {"browser.mock": MockBrowserAdapter()}
+    hybrid = await _discover_hybrid()
+    if hybrid is not None:
+        adapters["hybrid.orchestrator"] = hybrid
     if network:
         # Headless Playwright — launches local Chromium, Suite A hits real sites.
         playwright_adapter = None
@@ -96,6 +132,37 @@ async def discover_adapters(network: bool = False) -> Dict[str, Any]:
                 adapters["browser.cdp"] = cdp
         except Exception:
             pass  # CDP unavailable — measured grades will reflect that
+        # Retrieval crawler — headless Chromium, crawls real sites. The package
+        # directory is hyphenated ("playwright-crawler"), which Python cannot
+        # import directly, so load it from its __init__.py by file path.
+        try:
+            import importlib.util as _ilu
+
+            crawler_init = (
+                Path(__file__).resolve().parents[1]
+                / "adapters" / "retrieval" / "playwright-crawler" / "__init__.py"
+            )
+            spec = _ilu.spec_from_file_location("acu_playwright_crawler", crawler_init)
+            mod = _ilu.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+            crawler = mod.PlaywrightCrawlerAdapter()
+            await crawler.initialize()
+            if crawler._browser is not None:
+                adapters["retrieval.playwright-crawler"] = crawler
+            else:
+                await crawler.close()
+        except Exception:
+            pass
+    # Adaptive browser-use — only when its runtime actually exists.
+    if _browser_use_available():
+        try:
+            from adapters.browser.browser_use import BrowserUseAdapter
+
+            bu = BrowserUseAdapter()
+            await bu.initialize()
+            adapters["browser.browser-use"] = bu
+        except Exception:
+            pass  # runtime vanished between check and init — stay honest
     return adapters
 
 
@@ -108,19 +175,17 @@ async def measure_adapters(
     results: Dict[str, List[SuiteResult]] = {}
     runner = ConformanceRunner()
 
-    suite_a = build_suite_a()
-    suite_f = build_suite_f()
-    runner.register_suite(suite_a)
-    runner.register_suite(suite_f)
+    runner.register_suite(build_suite_a())
+    runner.register_suite(build_suite_b())
+    runner.register_suite(build_suite_c())
+    runner.register_suite(build_suite_e())
+    runner.register_suite(build_suite_f())
     if include_desktop:
         runner.register_suite(build_suite_d())
 
     for adapter_id, adapter in adapters.items():
-        if adapter_id in ("desktop.pyautogui",):
-            entry = [await runner.run_suite("desktop-v1", adapter)]
-        else:
-            entry = [await runner.run_suite("browser-deterministic-v1", adapter)]
-        results[adapter_id] = entry
+        suite_id = ADAPTER_SUITE.get(adapter_id, "browser-deterministic-v1")
+        results[adapter_id] = [await runner.run_suite(suite_id, adapter)]
 
     # Suite F is adapter-free (policy/routing modules); run once under its
     # pseudo-adapter id.
@@ -166,10 +231,38 @@ def write_grades(
 
     for adapter_id, suite_results in results.items():
         for result in suite_results:
-            document[adapter_id] = _suite_result_entry(result, adapter_id)
+            entry = _suite_result_entry(result, adapter_id)
+            if adapter_id == "hybrid.orchestrator":
+                entry["note"] = (
+                    "Measured by executing hybrid-v1 suite case(s) against "
+                    "hybrid.orchestrator with browser.mock as the registered "
+                    "sub-adapter (offline) — orchestration semantics only, "
+                    "not real cross-family execution."
+                )
+            document[adapter_id] = entry
 
-    # Honest not-implemented entries — grade null, never invented.
-    for adapter_id, info in NOT_IMPLEMENTED.items():
+    # Honest unmeasured entries — grade null, never invented.
+    unmeasured: Dict[str, Dict[str, str]] = {
+        "browser.browser-use": {
+            "suite": "browser-adaptive-v1",
+            "note": (
+                "browser-use runtime unavailable at measurement time — install "
+                "browser-use (or place a venv at ~/browser-use/venv/) and rerun: "
+                "python -m conformance.measured"
+            ),
+        },
+        "retrieval.playwright-crawler": {
+            "suite": "retrieval-v1",
+            "note": "Crawl not measured at measurement time — run: python -m conformance.measured --network",
+        },
+        "hybrid.orchestrator": {
+            "suite": "hybrid-v1",
+            "note": "Hybrid orchestrator failed to initialize at measurement time.",
+        },
+    }
+    for adapter_id, info in unmeasured.items():
+        if adapter_id in results:
+            continue
         document[adapter_id] = {
             "suite": info["suite"],
             "tests_total": None,

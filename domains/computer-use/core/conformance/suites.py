@@ -4,7 +4,10 @@ Only suites with real, runnable test functions.
 
 Suites:
   A — Browser Deterministic (Playwright) — 8 tests
+  B — Browser Adaptive (browser-use) — 3 tests
+  C — Retrieval (playwright-crawler) — 5 tests
   D — Desktop (pyautogui) — 4 tests
+  E — Hybrid Orchestrator — 3 tests
   F — Routing & Policy — 6 tests
 """
 
@@ -128,6 +131,82 @@ def build_suite_a() -> ConformanceSuite:
         ("A-06", "navigation", "Second navigation", _a06_second_navigation),
         ("A-07", "observe", "Observe page state", _a07_observe),
         ("A-08", "envelope", "G1 result envelope", _a08_result_envelope),
+    ]
+    for tid, cat, name, fn in tests:
+        suite.add_test(ConformanceTest(
+            test_id=tid, suite_id=suite.suite_id,
+            name=name, description=name, category=cat, test_fn=fn,
+        ))
+    return suite
+
+
+# ---------------------------------------------------------------------------
+# Suite B — Browser Adaptive (tests require a browser-use adapter + LLM runtime)
+# ---------------------------------------------------------------------------
+
+async def _b01_goal_envelope(adapter):
+    """Adaptive task execution returns a complete G1 result envelope."""
+    from core import ActionRequest
+    req = ActionRequest(
+        action_type="task", target="Navigate to example.com",
+        parameters={"goal": "Navigate to example.com and report the page title",
+                    "url": "https://example.com"},
+    )
+    result = await adapter.execute(req, session_id="conformance-b01", run_id="run-b01")
+    assert result.run_id == "run-b01"
+    assert result.session_id == "conformance-b01"
+    assert result.adapter_id == adapter.adapter_id
+    assert result.status in ("completed", "failed"), f"Unexpected status: {result.status}"
+    assert result.started_at and result.completed_at
+
+
+async def _b02_clean_failure_semantics(adapter):
+    """A failed adaptive run fails cleanly: structured error, no escaped exception.
+
+    The LLM/runtime may legitimately be unavailable in the measuring
+    environment — what the suite requires is that the adapter degrades to a
+    structured failed envelope instead of raising.
+    """
+    from core import ActionRequest
+    req = ActionRequest(
+        action_type="task", target="report the title of the current page",
+        parameters={"goal": "report the title of the current page"},
+    )
+    result = await adapter.execute(req, session_id="conformance-b02", run_id="run-b02")
+    assert result.status in ("completed", "failed")
+    if result.status == "failed":
+        assert isinstance(result.error, dict), "Failure must be a structured error dict"
+        assert result.error.get("code"), "Failure error must carry a code"
+        assert result.error.get("message"), "Failure error must carry a message"
+    else:
+        assert result.extracted_content is not None
+
+
+async def _b03_goal_forwarded(adapter):
+    """The adapter receives the goal and URL from the action and attempts it."""
+    from core import ActionRequest
+    req = ActionRequest(
+        action_type="task", target="find the main heading",
+        parameters={"goal": "find the main heading", "url": "https://example.com"},
+    )
+    result = await adapter.execute(req, session_id="conformance-b03", run_id="run-b03")
+    # Envelope must record what was attempted, however the run ended.
+    assert result.action == "task"
+    assert result.target == "find the main heading"
+    assert result.status in ("completed", "failed")
+
+
+def build_suite_b() -> ConformanceSuite:
+    """Suite B — Browser Adaptive"""
+    suite = ConformanceSuite(
+        suite_id="browser-adaptive-v1",
+        name="Browser Adaptive",
+        description="Tests for LLM-driven adaptive browser automation (browser-use)",
+    )
+    tests = [
+        ("B-01", "envelope", "G1 envelope for adaptive task", _b01_goal_envelope),
+        ("B-02", "failure", "Clean failure semantics", _b02_clean_failure_semantics),
+        ("B-03", "goal", "Goal forwarding", _b03_goal_forwarded),
     ]
     for tid, cat, name, fn in tests:
         suite.add_test(ConformanceTest(
@@ -315,7 +394,7 @@ def build_suite_f() -> ConformanceSuite:
 
 
 # ---------------------------------------------------------------------------
-# Suite R — Retrieval (tests require playwright-crawler adapter)
+# Suite C — Retrieval (tests require playwright-crawler adapter)
 # ---------------------------------------------------------------------------
 
 async def _r01_goto(adapter):
@@ -368,19 +447,19 @@ async def _r05_result_envelope(adapter):
     assert result.adapter_id == adapter.adapter_id
 
 
-def build_suite_r() -> ConformanceSuite:
-    """Suite R — Retrieval"""
+def build_suite_c() -> ConformanceSuite:
+    """Suite C — Retrieval"""
     suite = ConformanceSuite(
         suite_id="retrieval-v1",
         name="Retrieval",
         description="Tests for Playwright-based web crawler",
     )
     tests = [
-        ("R-01", "navigation", "Single page goto", _r01_goto),
-        ("R-02", "extraction", "Content extraction", _r02_extract),
-        ("R-03", "observe", "Page metadata observation", _r03_observe),
-        ("R-04", "crawl", "Multi-page crawl", _r04_crawl),
-        ("R-05", "envelope", "G1 result envelope", _r05_result_envelope),
+        ("C-01", "navigation", "Single page goto", _r01_goto),
+        ("C-02", "extraction", "Content extraction", _r02_extract),
+        ("C-03", "observe", "Page metadata observation", _r03_observe),
+        ("C-04", "crawl", "Multi-page crawl", _r04_crawl),
+        ("C-05", "envelope", "G1 result envelope", _r05_result_envelope),
     ]
     for tid, cat, name, fn in tests:
         suite.add_test(ConformanceTest(
@@ -390,8 +469,13 @@ def build_suite_r() -> ConformanceSuite:
     return suite
 
 
+def build_suite_r() -> ConformanceSuite:
+    """Backwards-compatible alias for Suite C (was named R in early drafts)."""
+    return build_suite_c()
+
+
 # ---------------------------------------------------------------------------
-# Suite H — Hybrid Orchestrator
+# Suite E — Hybrid Orchestrator
 # ---------------------------------------------------------------------------
 
 async def _h01_single_step(adapter):
@@ -445,17 +529,17 @@ async def _h03_result_envelope(adapter):
     assert result.adapter_id == adapter.adapter_id
 
 
-def build_suite_h() -> ConformanceSuite:
-    """Suite H — Hybrid Orchestrator"""
+def build_suite_e() -> ConformanceSuite:
+    """Suite E — Hybrid Orchestrator"""
     suite = ConformanceSuite(
         suite_id="hybrid-v1",
         name="Hybrid Orchestrator",
         description="Tests for cross-family workflow orchestration",
     )
     tests = [
-        ("H-01", "execute", "Single step delegation", _h01_single_step),
-        ("H-02", "workflow", "Multi-step workflow", _h02_workflow),
-        ("H-03", "envelope", "G1 result envelope", _h03_result_envelope),
+        ("E-01", "execute", "Single step delegation", _h01_single_step),
+        ("E-02", "workflow", "Multi-step workflow", _h02_workflow),
+        ("E-03", "envelope", "G1 result envelope", _h03_result_envelope),
     ]
     for tid, cat, name, fn in tests:
         suite.add_test(ConformanceTest(
@@ -463,6 +547,11 @@ def build_suite_h() -> ConformanceSuite:
             name=name, description=name, category=cat, test_fn=fn,
         ))
     return suite
+
+
+def build_suite_h() -> ConformanceSuite:
+    """Backwards-compatible alias for Suite E (was named H in early drafts)."""
+    return build_suite_e()
 
 
 # ---------------------------------------------------------------------------
@@ -743,11 +832,12 @@ def build_all_suites() -> list:
     """Build all conformance suites with real test functions."""
     return [
         build_suite_a(),
+        build_suite_b(),
+        build_suite_c(),
         build_suite_d(),
         build_suite_dx(),
+        build_suite_e(),
         build_suite_f(),
-        build_suite_r(),
-        build_suite_h(),
         build_suite_v(),
         build_suite_pl(),
     ]

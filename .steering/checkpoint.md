@@ -1,10 +1,19 @@
-# cu13-rust checkpoint
+# Steering checkpoint — session/cu12-conf
 
-Goal: fix pre-existing flake in `idempotency::tests::in_progress_request_returns_conflict` (sleep-50ms scheduling assumption) without weakening assertions; audit idempotency module for same pattern.
+## Goal
+Finish honest remaining items in domains/computer-use (sole ownership).
 
-## Status: DONE — PR #167 open (https://github.com/Gizziio/allternit-platform/pull/167), NOT merged (orchestrator merges).
+## Just did
+- CDP adapter: added `goto` (alias of navigate), `eval`, `observe` actions + screenshot Artifact population in envelope.
+- suites.py: added Suite B (browser-adaptive-v1, 3 tests: envelope/clean-failure/goal-forwarding); Suite C = retrieval-v1 (was R, 5 tests, build_suite_r kept as alias); Suite E = hybrid-v1 (was H, 3 tests, build_suite_h alias); gateway/main.py imports still valid.
+- measured.py: discovers hybrid.orchestrator always (offline, browser.mock sub-adapter, note says so); retrieval crawler + browser-use discovery; per-adapter suite routing; honest unmeasured fallbacks.
+- core/monitor.py: VLMMonitor behind Monitor protocol — env config ACU_MONITOR_VLM_PROVIDER/MODEL/ENDPOINT, stdlib urllib client, injectable client for tests, heuristic pre-filter, errors→continue; docstring documents swap-in.
+- tests: 11 new VLMMonitor tests (fake provider), updated measured-conformance tests for new B/C/E reality.
+- pytest (venv-acu311, excl. pre-existing collection-error modules): 207 passed / 21 skipped / 0 failed. 3 transient desktop-mouse flakes on first run, green on rerun; pass in isolation.
 
-- Fix: handler signals `started_tx` oneshot when it begins (handler runs only after middleware reserves the in-flight slot); test awaits signal instead of sleeping. 10s timeout = hang guard only. Assertions unchanged (duplicate → 409, first → 200).
-- Audit: only one wall-clock sync assumption in module (the sleep). `IN_PROGRESS_STALE_SECS`/`datetime('now')` is prod TTL semantics, not test sync.
-- Verification: idempotency tests 10/10 runs green; full suite 723 passed / 4 failed = the 4 pre-existing agent_cloud_routes env fails (matches baseline). No new rustfmt drift.
-- Commit: 29d44885c on `session/cu13-rust`, pushed. Worktree + branch left intact for orchestrator merge (per task: do NOT merge).
+## Done — PR opened, awaiting orchestrator merge
+
+- PR #168: https://github.com/Gizziio/allternit-platform/pull/168 (branch session/cu12-conf, 3 commits pushed). Per task contract, NOT merged — orchestrator merges.
+
+## Open questions
+- None.
