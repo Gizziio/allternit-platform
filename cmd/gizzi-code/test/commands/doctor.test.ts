@@ -6,6 +6,7 @@ import {
   checkCronDaemon,
   checkGatewayReachability,
   checkProjectInstructions,
+  checkVoiceEngine,
 } from "../../src/cli/commands/doctorChecks"
 import { readAuthProfiles } from "../../src/runtime/context/config/auth-profiles"
 
@@ -171,5 +172,41 @@ describe("checkCredentialSecurity", () => {
       configTomlPath: configPath,
     })
     expect(results.find((r) => r.id === "config-inline-api-key")?.status).toBe("pass")
+  })
+})
+
+describe("checkVoiceEngine", () => {
+  test("passes when the sidecar health endpoint is ok", async () => {
+    const original = globalThis.fetch
+    globalThis.fetch = (async () =>
+      new Response(JSON.stringify({ engine: "whisper.cpp", cli_ok: true, model_ok: true }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      })) as unknown as typeof fetch
+    try {
+      const result = await checkVoiceEngine()
+      expect(result.status).toBe("pass")
+      expect(result.message).toContain("whisper.cpp")
+    } finally {
+      globalThis.fetch = original
+    }
+  })
+
+  test("warns when the sidecar is down and whisper-cli is missing", async () => {
+    const original = globalThis.fetch
+    const origCli = process.env.WHISPER_CLI
+    process.env.WHISPER_CLI = "/tmp/definitely-missing-whisper-cli"
+    globalThis.fetch = (async () => {
+      throw new Error("connection refused")
+    }) as unknown as typeof fetch
+    try {
+      const result = await checkVoiceEngine()
+      expect(result.status).toBe("warn")
+      expect(result.section).toBe("Voice")
+    } finally {
+      globalThis.fetch = original
+      if (origCli === undefined) delete process.env.WHISPER_CLI
+      else process.env.WHISPER_CLI = origCli
+    }
   })
 })

@@ -41,12 +41,12 @@ export function VoiceProvider(t0) {
 function _temp() {
   return createStore(DEFAULT_STATE);
 }
+let fallbackStore: VoiceStore | null = null;
 function useVoiceStore() {
   const store = useContext(VoiceContext);
-  if (!store) {
-    throw new Error("useVoiceState must be used within a VoiceProvider");
-  }
-  return store;
+  if (store) return store;
+  fallbackStore ??= createStore(DEFAULT_STATE);
+  return fallbackStore;
 }
 
 /**

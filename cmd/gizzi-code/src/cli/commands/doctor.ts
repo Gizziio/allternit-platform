@@ -12,6 +12,7 @@ import {
   checkCronDaemon,
   checkGatewayReachability,
   checkProjectInstructions,
+  checkVoiceEngine,
   type DoctorCheck,
 } from "@/cli/commands/doctorChecks"
 import { isDaemonRunning } from "@/runtime/automation/cron/daemon"
@@ -186,6 +187,7 @@ export const DoctorCommand = cmd({
 
       // ── Cloud gateway reachability ──
       checks.push(await checkGatewayReachability())
+      checks.push(await checkVoiceEngine())
 
       // ── Project ──
       {

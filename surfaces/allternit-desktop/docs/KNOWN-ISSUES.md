@@ -6,16 +6,12 @@ Log evidence lives in `~/Library/Application Support/@allternit/desktop/main.log
 
 ---
 
-## 1. Voice service binary crashes at startup
+## 1. Voice service binary crashes at startup — **replaced**
 
-- **Symptom:** The pyinstaller-bundled `allternit-voice-service` crashes on import; Voice Mode is unavailable in the app. Log line from the packaging run:
-  ```
-  ImportError: dlopen(.../_pyexpat.cpython-3xx-darwin.so, ...): Symbol not found ... (built for macOS 26.0, running macOS 23.6)
-  ```
-- **Root cause:** The bundled pyexpat `.so` inside the pyinstaller bundle was built on a macOS 26.0 host, but the runtime host runs macOS 23.6 — the shared library's minimum-target symbols don't exist on the older OS.
-- **Evidence:** `~/Library/Application Support/@allternit/desktop/main.log` (voice-service spawn/exit entries during app start).
-- **Suggested fix:** Rebuild `services/voice` (pyinstaller) on a macOS 23.x host so the bundled native modules target the oldest supported runtime, and gate the voice packaging step on a host-OS check.
-- **Pre-existing:** Yes — same crash in the 2026-09-05 build.
+- **Was:** The pyinstaller-bundled `allternit-voice-service` crashed on import (`pyexpat` built for macOS 26.0, host 23.6); Voice Mode unavailable.
+- **Now:** Desktop spawns the Rust `voice-service` sidecar, which shells out to `whisper-cli` (whisper.cpp, MIT) for local STT. Python/pyinstaller is no longer the primary path. Gizzi Code and the desktop composer expose `/voice` (Ctrl+Space / F8 hold-to-talk). The ggml-tiny.en model downloads on first use into `~/.allternit/models/whisper/` (not git-vendored).
+- **Evidence:** Previous packaging-run log still shows the pyexpat ImportError for old builds; current `VoiceManager` resolves `allternit-voice-service` / `voice-service` from `resources/bin` and does not spawn `launch.py`.
+- **Remaining:** TTS/Chatterbox is out of scope. First-run needs network once to fetch `ggml-tiny.en.bin` unless the model is already on disk.
 
 ## 2. ACU computer-use gateway exits immediately
 

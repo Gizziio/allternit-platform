@@ -38,16 +38,12 @@ export default function TextInput(props: Props): React.ReactElement | null {
   const accessibilityEnabled = useMemo(() => isEnvTruthy(process.env.GIZZI_CODE_ACCESSIBILITY), []);
   const settings = useSettings();
   const reducedMotion = settings.prefersReducedMotion ?? false;
-  const voiceState = feature('VOICE_MODE') ?
-  // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
-  useVoiceState(s => s.voiceState) : 'idle' as const;
+  const voiceState = useVoiceState(s => s.voiceState);
   const isVoiceRecording = voiceState === 'recording';
-  const audioLevels = feature('VOICE_MODE') ?
-  useVoiceState(s_0 => s_0.voiceAudioLevels) : [];
+  const audioLevels = useVoiceState(s_0 => s_0.voiceAudioLevels);
   const smoothedRef = useRef<number[]>(new Array(CURSOR_WAVEFORM_WIDTH).fill(0));
   const needsAnimation = isVoiceRecording && !reducedMotion;
-  const [animRef, animTime] = feature('VOICE_MODE') ?
-  useAnimationFrame(needsAnimation ? 50 : null) : [() => {}, 0];
+  const [animRef, animTime] = useAnimationFrame(needsAnimation ? 50 : null);
   // Show hint when terminal regains focus and clipboard has an image
   useClipboardImageHint(isTerminalFocused, !!props.onImagePaste);
   // Cursor invert function: mini waveform during voice recording,

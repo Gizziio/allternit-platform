@@ -89,6 +89,7 @@ import terminalSetup from './commands/terminalSetup/index.js'
 import usage from './commands/usage/index.js'
 import theme from './commands/theme/index.js'
 import vim from './commands/vim/index.js'
+import voice from './commands/voice/index.js'
 import { feature } from 'bun:bundle'
 // Dead code elimination: conditional imports
 /* eslint-disable @typescript-eslint/no-require-imports */
@@ -110,9 +111,7 @@ const remoteControlServerCommand =
   feature('DAEMON') && feature('BRIDGE_MODE')
     ? safeRequire('./commands/remoteControlServer/index.js')?.default
     : null
-const voiceCommand = feature('VOICE_MODE')
-  ? safeRequire('./commands/voice/index.js')?.default
-  : null
+
 const forceSnip = feature('HISTORY_SNIP')
   ? safeRequire('./commands/force-snip.js')?.default
   : null
@@ -398,7 +397,7 @@ const COMMANDS = memoize((): Command[] => [
   ...(assistantCommand ? [assistantCommand] : []),
   ...(bridge ? [bridge] : []),
   ...(remoteControlServerCommand ? [remoteControlServerCommand] : []),
-  ...(voiceCommand ? [voiceCommand] : []),
+  voice,
   think,
   thinkback,
   thinkbackPlay,

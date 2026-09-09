@@ -55,6 +55,42 @@ async fn get_voice_returns_404_for_unknown() {
 }
 
 #[tokio::test]
+async fn stt_rejects_empty_audio() {
+    let response = app()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/v1/stt")
+                .header(
+                    "content-type",
+                    "multipart/form-data; boundary=----allternit",
+                )
+                .body(Body::from(
+                    "------allternit\r\nContent-Disposition: form-data; name=\"language\"\r\n\r\nen\r\n------allternit--\r\n",
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn health_reports_whisper_engine() {
+    let response = app()
+        .oneshot(Request::builder().uri("/health").body(Body::empty()).unwrap())
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(json["engine"], "whisper.cpp");
+    assert!(json.get("cli_ok").is_some());
+    assert!(json.get("model_ok").is_some());
+}
+
+#[tokio::test]
 async fn text_to_speech_returns_audio_url() {
     let response = app()
         .oneshot(

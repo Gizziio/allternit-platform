@@ -14,7 +14,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::info;
+use tracing::{info, warn};
+
+use crate::whisper::WhisperEngine;
 
 /// Voice Service State
 #[derive(Clone)]
@@ -27,6 +29,8 @@ pub struct VoiceServiceState {
     stt_models: Arc<RwLock<Vec<SttModel>>>,
     /// Request counter for metrics
     request_count: Arc<RwLock<u64>>,
+    /// Local whisper.cpp engine (CLI + ggml model)
+    whisper: Arc<WhisperEngine>,
 }
 
 impl VoiceServiceState {
@@ -67,6 +71,7 @@ impl VoiceServiceState {
             tts_models: Arc::new(RwLock::new(tts_models)),
             stt_models: Arc::new(RwLock::new(stt_models)),
             request_count: Arc::new(RwLock::new(0)),
+            whisper: Arc::new(WhisperEngine::resolve()),
         }
     }
 }
@@ -190,13 +195,19 @@ pub fn create_router(state: VoiceServiceState) -> Router {
 }
 
 /// Health check endpoint
-async fn health_check() -> Json<serde_json::Value> {
+async fn health_check(State(state): State<VoiceServiceState>) -> Json<serde_json::Value> {
+    let whisper = state.whisper.health();
     Json(serde_json::json!({
         "service": "voice",
         "status": "healthy",
         "version": env!("CARGO_PKG_VERSION"),
         "timestamp": chrono::Utc::now().timestamp_millis(),
         "features": ["tts", "stt", "streaming"],
+        "engine": "whisper.cpp",
+        "cli": whisper.cli,
+        "model": whisper.model,
+        "cli_ok": whisper.cli_ok,
+        "model_ok": whisper.model_ok,
     }))
 }
 
@@ -281,24 +292,36 @@ async fn speech_to_text(
     State(state): State<VoiceServiceState>,
     mut multipart: Multipart,
 ) -> Result<Json<SttResponse>, StatusCode> {
-    // Increment request counter
     {
         let mut count = state.request_count.write().await;
         *count += 1;
     }
 
-    // Process multipart form data
     let mut audio_data = Vec::new();
     let mut language = None;
 
-    while let Some(field) = multipart.next_field().await.unwrap() {
-        let name = field.name().unwrap_or("").to_string();
-        let data = field.bytes().await.unwrap();
-
-        match name.as_str() {
-            "audio" => audio_data = data.to_vec(),
-            "language" => language = Some(String::from_utf8_lossy(&data).to_string()),
-            _ => {}
+    loop {
+        match multipart.next_field().await {
+            Ok(Some(field)) => {
+                let name = field.name().unwrap_or("").to_string();
+                let data = match field.bytes().await {
+                    Ok(bytes) => bytes,
+                    Err(err) => {
+                        warn!("STT multipart field read failed: {err}");
+                        return Err(StatusCode::BAD_REQUEST);
+                    }
+                };
+                match name.as_str() {
+                    "audio" | "file" => audio_data = data.to_vec(),
+                    "language" => language = Some(String::from_utf8_lossy(&data).to_string()),
+                    _ => {}
+                }
+            }
+            Ok(None) => break,
+            Err(err) => {
+                warn!("STT multipart parse failed: {err}");
+                return Err(StatusCode::BAD_REQUEST);
+            }
         }
     }
 
@@ -306,24 +329,31 @@ async fn speech_to_text(
         return Err(StatusCode::BAD_REQUEST);
     }
 
-    let audio_duration = audio_data.len() as f32 / 16000.0 / 2.0; // Assuming 16kHz 16-bit mono
-
+    let audio_duration = audio_data.len() as f32 / 16000.0 / 2.0;
+    let lang = language.clone().unwrap_or_else(|| "en".to_string());
     info!("STT request: {} bytes -> {:.2}s audio", audio_data.len(), audio_duration);
 
-    // Simulate STT result
-    Ok(Json(SttResponse {
-        text: "This is a simulated transcription result from the voice service.".to_string(),
-        confidence: 0.95,
-        language: language.unwrap_or_else(|| "en".to_string()),
-        segments: vec![
-            TranscriptSegment {
+    match state
+        .whisper
+        .transcribe(&audio_data, language.as_deref())
+        .await
+    {
+        Ok(text) => Ok(Json(SttResponse {
+            text: text.clone(),
+            confidence: if text.is_empty() { 0.0 } else { 0.9 },
+            language: lang.clone(),
+            segments: vec![TranscriptSegment {
                 start_time: 0.0,
                 end_time: audio_duration,
-                text: "Simulated transcription".to_string(),
-                confidence: 0.95,
-            }
-        ],
-    }))
+                text,
+                confidence: 0.9,
+            }],
+        })),
+        Err(err) => {
+            warn!("STT failed: {err}");
+            Err(StatusCode::SERVICE_UNAVAILABLE)
+        }
+    }
 }
 
 /// Speech-to-text streaming
