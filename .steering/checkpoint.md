@@ -1,19 +1,21 @@
-# Steering checkpoint — session/cu12-conf
+# Steering checkpoint — session/cu15
 
 ## Goal
-Finish honest remaining items in domains/computer-use (sole ownership).
+Restructure docs/public/aci/** into a quickstart spine (Quickstart / Guide / Recipes / Changelog); add llms.txt at repo root. Keep every existing factual claim; move, don't delete. Sole ownership: docs/public/** + llms.txt. Do NOT merge — orchestrator merges.
 
 ## Just did
-- CDP adapter: added `goto` (alias of navigate), `eval`, `observe` actions + screenshot Artifact population in envelope.
-- suites.py: added Suite B (browser-adaptive-v1, 3 tests: envelope/clean-failure/goal-forwarding); Suite C = retrieval-v1 (was R, 5 tests, build_suite_r kept as alias); Suite E = hybrid-v1 (was H, 3 tests, build_suite_h alias); gateway/main.py imports still valid.
-- measured.py: discovers hybrid.orchestrator always (offline, browser.mock sub-adapter, note says so); retrieval crawler + browser-use discovery; per-adapter suite routing; honest unmeasured fallbacks.
-- core/monitor.py: VLMMonitor behind Monitor protocol — env config ACU_MONITOR_VLM_PROVIDER/MODEL/ENDPOINT, stdlib urllib client, injectable client for tests, heuristic pre-filter, errors→continue; docstring documents swap-in.
-- tests: 11 new VLMMonitor tests (fake provider), updated measured-conformance tests for new B/C/E reality.
-- pytest (venv-acu311, excl. pre-existing collection-error modules): 207 passed / 21 skipped / 0 failed. 3 transient desktop-mouse flakes on first run, green on rerun; pass in isolation.
+- Restructured docs/public/aci/ from a single index.md into a 5-page spine:
+  - index.md — intro, ACI vs managed sandboxes table, doc-set TOC.
+  - quickstart.md — manual one-call quickstart (real, from main) + clearly-marked "Coming soon — not yet available on main" placeholder for the cu14 `demo` command.
+  - guide.md — integration modes (ACU run loop / direct control routes / capability path), action space + tool versions 20250124/20251124, approvals + server-side enforcement (D2, grants taxonomy), environments + VM driver, recording/replay (SSE replay buffer), monitoring, vision coordinates pointer.
+  - recipes.md — drive my browser, replay a recording (SSE replay buffer), run a taught workflow (marked not-yet-available), approve a risky action (handoff flow).
+  - changelog.md — tool contract: 20250124 initial set (default), 20251124 adds zoom (enableZoom), legacy anthropicType adapter note.
+- Added llms.txt at repo root (all 30+ links verified to resolve on disk).
+- Updated stale anchor link docs/public/parity/appshots.md → aci/guide.md#action-space-and-tool-versions.
+- Verification: docs-lint output identical to pre-change baseline (only pre-existing FAILs in surfaces/docs/cli/native-sessions.mdx competitor mentions, outside scope); 27/27 key factual strings from old index.md confirmed present in new pages; all in-spine relative links valid.
 
-## Done — PR opened, awaiting orchestrator merge
-
-- PR #168: https://github.com/Gizziio/allternit-platform/pull/168 (branch session/cu12-conf, 3 commits pushed). Per task contract, NOT merged — orchestrator merges.
+## Next
+- Commit (docs(aci): ...), push -u origin session/cu15, gh pr create with before/after TOC + evidence. Do NOT merge.
 
 ## Open questions
 - None.
