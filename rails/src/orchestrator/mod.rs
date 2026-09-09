@@ -332,22 +332,26 @@ impl Orchestrator {
         executors.push(probe_executor("claude", "claude", &["--dangerously-skip-permissions"], &["-p", "--dangerously-skip-permissions"]).await);
         executors.push(probe_executor("agy", "agy", &["--dangerously-skip-permissions"], &[]).await);
 
-        // Loopback UDS round-trip.
-        let loopback_peer = self
-            .registry
-            .register("ao-doctor-loopback", self.root_dir.clone(), "rails")?;
-        let mut listener = crate::peer::PeerSocket::bind(&loopback_peer.inbox_socket).await?;
-        let listen_path = loopback_peer.inbox_socket.clone();
-        let handle = tokio::spawn(async move {
-            listener.accept_envelope().await.ok()
-        });
-        let env = PeerEnvelope::new("doctor", &loopback_peer.name, "loopback");
-        let delivered = send_envelope(&listen_path, &env, Duration::from_secs(2))
-            .await
-            .map(|r| r.delivered)
-            .unwrap_or(false);
-        let _ = handle.await;
-        self.registry.unregister(&loopback_peer.peer_id).ok();
+        // Loopback UDS round-trip (Unix only).
+        #[cfg(unix)]
+        let delivered = {
+            let loopback_peer = self
+                .registry
+                .register("ao-doctor-loopback", self.root_dir.clone(), "rails")?;
+            let mut listener = crate::peer::PeerSocket::bind(&loopback_peer.inbox_socket).await?;
+            let listen_path = loopback_peer.inbox_socket.clone();
+            let handle = tokio::spawn(async move {
+                listener.accept_envelope().await.ok()
+            });
+            let env = PeerEnvelope::new("doctor", &loopback_peer.name, "loopback");
+            let delivered = send_envelope(&listen_path, &env, Duration::from_secs(2))
+                .await
+                .map(|r| r.delivered)
+                .unwrap_or(false);
+            let _ = handle.await;
+            self.registry.unregister(&loopback_peer.peer_id).ok();
+            delivered
+        };
 
         let report = DoctorReport {
             transport_ok,
@@ -369,10 +373,13 @@ impl Orchestrator {
                 e.vendor, e.binary, e.installed, e.interactive_flags_ok, e.headless_flags_ok, e.version
             );
         }
+        #[cfg(unix)]
         println!(
             "orchestrator doctor: uds loopback={}",
             if delivered { "OK" } else { "FAILED" }
         );
+        #[cfg(not(unix))]
+        println!("orchestrator doctor: uds loopback=UNSUPPORTED (http inbox polling only)");
         if !transport_ok {
             bail!("TRANSPORT BROKEN");
         }

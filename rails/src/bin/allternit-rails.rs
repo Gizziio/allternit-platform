@@ -30,10 +30,14 @@ use allternit_agent_system_rails::work::types::DagState;
 use allternit_agent_system_rails::{
     AllternitEvent, Actor, ActorType, DagMutation, EventScope, Gate, Index, IndexOptions, LeaseRequest,
     Leases, Ledger, LedgerQuery, Mail, MailOptions, Orchestrator, PeerEnvelope, PeerRegistry,
-    PeerSocket, ReceiptStore, ReceiptStoreOptions, SpawnOptions, Steer, Vault, VaultOptions, WatchOutcome,
+    ReceiptStore, ReceiptStoreOptions, SpawnOptions, Steer, Vault, VaultOptions, WatchOutcome,
     WorkOps, send_envelope,
 };
+#[cfg(unix)]
+use allternit_agent_system_rails::PeerSocket;
+#[cfg(unix)]
 use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader};
+#[cfg(unix)]
 use tokio::net::UnixStream;
 use tokio::process::Command;
 use tokio::sync::OnceCell;
@@ -128,7 +132,8 @@ enum PeerCmd {
     Heartbeat {
         id_or_name: String,
     },
-    /// Listen on a peer's inbox socket and print incoming envelopes.
+    /// Listen on a peer's inbox socket and print incoming envelopes. (Unix only)
+    #[cfg(unix)]
     Inbox {
         id_or_name: String,
     },
@@ -479,6 +484,8 @@ enum BusCmd {
         #[arg(long)]
         watch: bool,
     },
+    /// Run a socket transport (UDS). Unix only.
+    #[cfg(unix)]
     SocketRunner {
         socket: String,
         #[arg(long)]
@@ -1149,6 +1156,7 @@ async fn main() -> Result<()> {
                 let pane_name = pane.unwrap_or_else(|| session.clone());
                 run_tmux_transport(transport_root.clone(), bus, pane_name, watch).await?;
             }
+            #[cfg(unix)]
             BusCmd::SocketRunner { socket, watch } => {
                 let bus = stores.bus().await?;
                 run_socket_transport(
@@ -1327,6 +1335,7 @@ async fn run_peer_command(root: &Path, cmd: PeerCmd) -> Result<()> {
             registry.heartbeat(&id_or_name)?;
             println!("ok");
         }
+        #[cfg(unix)]
         PeerCmd::Inbox { id_or_name } => {
             let peer = registry
                 .resolve(&id_or_name)
@@ -1769,6 +1778,7 @@ async fn ensure_tmux_pane(pane: &str) -> Result<()> {
     Ok(())
 }
 
+#[cfg(unix)]
 async fn run_socket_transport(
     root: Arc<PathBuf>,
     bus: Arc<Bus>,
