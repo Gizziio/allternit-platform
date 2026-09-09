@@ -21,6 +21,16 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-09 01:55 — grok — Drop unused Python/Chatterbox/pyinstaller voice tree
+
+- **Session ID / Branch:** `session/voice-cleanup` (worktree `allternit-session-voice-cleanup`)
+- **Agent:** grok
+- **Summary:** Removed the unused FastAPI/Chatterbox/pyinstaller voice stack. `services/voice/` is now only the Rust + whisper.cpp sidecar from PR #192.
+- **Commit:** PR #194, merge commit `13c331ead` on `main`
+- **How it works:** `start.sh` is `cargo run -p voice-service`. Dev start scripts no longer create a Python venv for voice.
+- **Outstanding work:** TTS remains a stub. Historical docs/archive still mention the old path.
+- **Summary file:** [./summaries/2026-09-09-0155-session-voice-cleanup-grok-drop-python-voice.md](./summaries/2026-09-09-0155-session-voice-cleanup-grok-drop-python-voice.md)
+
 ### 2026-09-09 01:35 — grok — Local whisper.cpp STT and /voice on Gizzi + Desktop
 
 - **Session ID / Branch:** `session/voice-slash` (worktree `allternit-session-voice-slash`)
