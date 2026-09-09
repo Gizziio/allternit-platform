@@ -35,7 +35,7 @@ import { TokenWarning } from '../TokenWarning';
 import { SandboxPromptFooterHint } from './SandboxPromptFooterHint';
 
 /* eslint-disable @typescript-eslint/no-require-imports */
-const VoiceIndicator: typeof import('./VoiceIndicator.js').VoiceIndicator = feature('VOICE_MODE') ? require('./VoiceIndicator.js').VoiceIndicator : () => null;
+const VoiceIndicator: typeof import('./VoiceIndicator.js').VoiceIndicator = require('./VoiceIndicator.js').VoiceIndicator;
 /* eslint-enable @typescript-eslint/no-require-imports */
 
 export const FOOTER_TEMPORARY_STATUS_TIMEOUT = 5000;
@@ -267,21 +267,16 @@ function NotificationContent({
   }, []);
 
   // Voice state (VOICE_MODE builds only, runtime-gated by GrowthBook)
-  const voiceState = feature('VOICE_MODE') ?
-  // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
-  useVoiceState(s => s.voiceState) : 'idle' as const;
-  // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
-  const voiceEnabled = feature('VOICE_MODE') ? useVoiceEnabled() : false;
-  const voiceError = feature('VOICE_MODE') ?
-  // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
-  useVoiceState(s_0 => s_0.voiceError) : null;
+  const voiceState = useVoiceState(s => s.voiceState);
+  const voiceEnabled = useVoiceEnabled();
+  const voiceError = useVoiceState(s_0 => s_0.voiceError);
   const isBriefOnly = feature('KAIROS') || feature('KAIROS_BRIEF') ?
   // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
   useAppState(s_1 => s_1.isBriefOnly) : false;
 
   // When voice is actively recording or processing, replace all
   // notifications with just the voice indicator.
-  if (feature('VOICE_MODE') && voiceEnabled && (voiceState === 'recording' || voiceState === 'processing')) {
+  if (voiceEnabled && (voiceState === 'recording' || voiceState === 'processing')) {
     return <VoiceIndicator voiceState={voiceState} />;
   }
   return <>
@@ -321,11 +316,11 @@ function NotificationContent({
         </Box>}
       {!isBriefOnly && <TokenWarning tokenUsage={tokenUsage} model={mainLoopModel} />}
       {shouldShowAutoUpdater && <AutoUpdaterWrapper verbose={verbose} onAutoUpdaterResult={onAutoUpdaterResult} autoUpdaterResult={autoUpdaterResult} isUpdating={isAutoUpdating} onChangeIsUpdating={onChangeIsUpdating} showSuccessMessage={!isShowingCompactMessage} />}
-      {feature('VOICE_MODE') ? voiceEnabled && voiceError && <Box>
+      {voiceEnabled && voiceError && <Box>
               <Text color="error" wrap="truncate">
                 {voiceError}
               </Text>
-            </Box> : null}
+            </Box>}
       <MemoryUsageIndicator />
       <SandboxPromptFooterHint />
     </>;

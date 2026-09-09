@@ -98,31 +98,24 @@ cp "$RG_SRC" "$RESOURCES_DIR/bin/vendor/ripgrep/$RG_LAYOUT/rg"
 chmod +x "$RESOURCES_DIR/bin/vendor/ripgrep/$RG_LAYOUT/rg"
 ok "ripgrep → $RESOURCES_DIR/bin/vendor/ripgrep/$RG_LAYOUT/rg"
 
-# ── 2b. Build Voice Service Sidecar ─────────────────────────────────────────
-step "Building bundled voice service…"
-VOICE_VENV="$VOICE_DIR/.packaging-venv"
-"$PYTHON_BIN" -m venv "$VOICE_VENV"
-"$VOICE_VENV/bin/pip" install --upgrade pip pyinstaller
-"$VOICE_VENV/bin/pip" install -r "$VOICE_DIR/api/requirements.txt"
-"$VOICE_VENV/bin/pip" install "$VOICE_DIR/voice"
-cd "$VOICE_DIR"
-"$VOICE_VENV/bin/pyinstaller" \
-  --noconfirm \
-  --clean \
-  --onefile \
-  --name allternit-voice-service \
-  --paths "$VOICE_DIR" \
-  --collect-all whisper \
-  --collect-all chatterbox \
-  --collect-all imageio_ffmpeg \
-  packaged_main.py
-
-VOICE_BIN="$VOICE_DIR/dist/allternit-voice-service"
+# ── 2b. Build Voice Service Sidecar (Rust + whisper.cpp) ────────────────────
+step "Building bundled voice service (whisper.cpp)…"
+export MACOSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-13.0}"
+cd "$WORKSPACE_ROOT"
+cargo build --release -p voice-service
+VOICE_BIN="$WORKSPACE_ROOT/target/release/voice-service"
+[ -f "$VOICE_BIN" ] || VOICE_BIN="$WORKSPACE_ROOT/target/release/allternit-voice-service"
 [ -f "$VOICE_BIN" ] || die "Voice service build failed — binary not found at $VOICE_BIN"
 cp "$VOICE_BIN" "$RESOURCES_DIR/bin/allternit-voice-service"
 chmod +x "$RESOURCES_DIR/bin/allternit-voice-service"
 
-ok "voice service → $RESOURCES_DIR/bin/allternit-voice-service"
+bash "$VOICE_DIR/build-whisper.sh"
+WHISPER_CLI="$VOICE_DIR/dist/whisper-cli"
+[ -x "$WHISPER_CLI" ] || die "whisper-cli build failed — binary not found at $WHISPER_CLI"
+cp "$WHISPER_CLI" "$RESOURCES_DIR/bin/whisper-cli"
+chmod +x "$RESOURCES_DIR/bin/whisper-cli"
+
+ok "voice service → $RESOURCES_DIR/bin/allternit-voice-service + whisper-cli"
 
 # ── 3. Build Rust API ────────────────────────────────────────────────────────
 if [ "$SKIP_API" = false ]; then

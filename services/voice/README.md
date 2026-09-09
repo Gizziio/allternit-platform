@@ -1,8 +1,13 @@
 # Voice Service
 
-HTTP API service for voice synthesis and recognition. The Rust implementation
-in this crate provides a lightweight, simulated voice API that mirrors the
-contract of the full Python/Chatterbox voice wrapper in `api/main.py`.
+HTTP API service for voice synthesis and recognition. STT is local
+[whisper.cpp](https://github.com/ggml-org/whisper.cpp) (`whisper-cli` +
+`ggml-tiny.en.bin`). TTS remains a contract stub; the Python/Chatterbox
+tree is not spawned by desktop.
+
+Build the CLI with `./build-whisper.sh` (macOS deployment target 13.0).
+The model is downloaded on first `POST /v1/stt` into
+`~/.allternit/models/whisper/` unless `WHISPER_MODEL` is set.
 
 ## Scope
 

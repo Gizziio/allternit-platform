@@ -30,6 +30,7 @@ const binaryName = process.platform === 'win32' ? 'allternit-api.exe' : 'alltern
 const localEngineName = process.platform === 'win32' ? 'allternit-local-engine.exe' : 'allternit-local-engine';
 const gizziName = process.platform === 'win32' ? 'gizzi-code.exe' : 'gizzi-code';
 const voiceName = process.platform === 'win32' ? 'allternit-voice-service.exe' : 'allternit-voice-service';
+const whisperName = process.platform === 'win32' ? 'whisper-cli.exe' : 'whisper-cli';
 
 const required = [
   {
@@ -49,8 +50,13 @@ const required = [
   },
   {
     path: path.join(resourcesDir, 'bin', voiceName),
-    label: 'Voice service binary (allternit-voice-service)',
+    label: 'Voice service binary (allternit-voice-service, Rust + whisper.cpp)',
     buildStep: 'scripts/build-desktop.sh',
+  },
+  {
+    path: path.join(resourcesDir, 'bin', whisperName),
+    label: 'whisper-cli (local STT engine)',
+    buildStep: 'services/voice/build-whisper.sh (via scripts/build-desktop.sh)',
   },
   {
     path: path.join(resourcesDir, 'platform', 'index.html'),

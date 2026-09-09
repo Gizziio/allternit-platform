@@ -22,6 +22,56 @@ export type DoctorCheck = {
  * CLAUDE.md/AGENTS.md/CONTEXT.md names are accepted but reported so projects
  * can migrate.
  */
+export async function checkVoiceEngine(): Promise<DoctorCheck> {
+  const sidecar =
+    (process.env.ALLTERNIT_VOICE_URL || process.env.VOICE_URL || "http://127.0.0.1:8001").replace(
+      /\/+$/,
+      "",
+    )
+  try {
+    const res = await fetch(`${sidecar}/health`, { signal: AbortSignal.timeout(1500) })
+    if (res.ok) {
+      const json = (await res.json().catch(() => ({}))) as {
+        engine?: string
+        cli_ok?: boolean
+        model_ok?: boolean
+      }
+      const engine = json.engine ?? "unknown"
+      const ready = json.cli_ok !== false && json.model_ok !== false
+      return {
+        id: "voice-engine",
+        section: "Voice",
+        status: ready ? "pass" : "warn",
+        message: ready
+          ? `Local voice sidecar healthy (${engine} at ${sidecar})`
+          : `Voice sidecar up at ${sidecar} but whisper-cli/model not ready`,
+      }
+    }
+  } catch {
+    // Fall through to CLI probe.
+  }
+  const cli =
+    process.env.WHISPER_CLI ||
+    ["/opt/homebrew/bin/whisper-cli", "/usr/local/bin/whisper-cli"].find((p) =>
+      fs.existsSync(p),
+    )
+  if (cli && fs.existsSync(cli)) {
+    return {
+      id: "voice-engine",
+      section: "Voice",
+      status: "pass",
+      message: `whisper-cli found at ${cli} (sidecar not running)`,
+    }
+  }
+  return {
+    id: "voice-engine",
+    section: "Voice",
+    status: "warn",
+    message:
+      "Local voice engine not found. Start Allternit Desktop or install whisper.cpp (whisper-cli).",
+  }
+}
+
 export async function checkProjectInstructions(
   cwd: string,
   exists: (p: string) => boolean = fs.existsSync,

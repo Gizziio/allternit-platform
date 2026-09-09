@@ -1,4 +1,5 @@
 node_modules/
+services/voice/.whisper.cpp/
 services/open-connector/data/
 services/vault-viewer/data/
 services/vault-viewer/server/public/

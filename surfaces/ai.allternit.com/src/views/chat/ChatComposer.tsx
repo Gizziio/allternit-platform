@@ -4,6 +4,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDropTarget, type FileWithData } from '@/components/GlobalDropzone';
+import { DEFAULT_VOICE_SLASH, useComposerVoice } from '@/views/chat/useComposerVoice';
 import {
   Plus,
   Square,
@@ -490,6 +491,23 @@ export function ChatComposer({
   const [showAgentGuidePadding, setShowAgentGuidePadding] = useState(
     Boolean(agentModeEnabled && showAgentRailGuide),
   );
+  const effectiveSlashCommands = useMemo(() => {
+    const extra = slashCommands ?? [];
+    if (extra.some((cmd) => cmd.command === '/voice')) return extra;
+    return [DEFAULT_VOICE_SLASH, ...extra];
+  }, [slashCommands]);
+
+  const voice = useComposerVoice({
+    enabled: true,
+    onTranscript: (text) => {
+      setInput((prev) => {
+        const needsSpace = prev.length > 0 && !/\s$/.test(prev);
+        return prev + (needsSpace ? ' ' : '') + text;
+      });
+      window.requestAnimationFrame(() => textareaRef.current?.focus());
+    },
+  });
+
   const [slashMenuVisible, setSlashMenuVisible] = useState(false);
   const [slashFilter, setSlashFilter] = useState('');
   const [agentCommandMenuVisible, setAgentCommandMenuVisible] = useState(false);
@@ -1234,14 +1252,14 @@ export function ChatComposer({
   };
 
   const filteredSlashCommands = useMemo(() => {
-    if (!slashCommands || !slashMenuVisible) return [];
-    if (!slashFilter) return slashCommands;
-    return slashCommands.filter(
+    if (!effectiveSlashCommands || !slashMenuVisible) return [];
+    if (!slashFilter) return effectiveSlashCommands;
+    return effectiveSlashCommands.filter(
       (cmd) =>
         cmd.command.toLowerCase().includes(slashFilter.toLowerCase()) ||
         cmd.label.toLowerCase().includes(slashFilter.toLowerCase()),
     );
-  }, [slashCommands, slashMenuVisible, slashFilter]);
+  }, [effectiveSlashCommands, slashMenuVisible, slashFilter]);
   const filteredAgentCommands = useMemo(() => {
     if (!agentCommandMenuVisible) return [];
     if (!agentCommandFilter) return AGENT_COMMANDS;
@@ -1395,6 +1413,10 @@ export function ChatComposer({
     setSlashFilter('');
 
     switch (cmd.command) {
+      case '/voice':
+        voice.toggle();
+        setInput('');
+        break;
       case '/screenshot':
         void handleCaptureScreenshot();
         break;
@@ -1419,7 +1441,7 @@ export function ChatComposer({
         setInput('');
         break;
     }
-  }, [handleCaptureScreenshot, onSend]);
+  }, [handleCaptureScreenshot, onSend, voice]);
 
   const handleAgentCommand = useCallback((cmd: AgentCommand) => {
     setInput(`${cmd.command} `);
@@ -1512,6 +1534,10 @@ export function ChatComposer({
         }
         return;
       }
+    }
+    if ((e.ctrlKey && e.code === 'Space') || e.key === 'F8') {
+      e.preventDefault();
+      return;
     }
     if (slashMenuVisible && filteredSlashCommands.length > 0) {
       if (e.key === 'Escape') {
@@ -1868,7 +1894,7 @@ export function ChatComposer({
                   onChange={(e) => {
                     const val = e.target.value;
                     setInput(val);
-                    if (slashCommands && slashCommands.length > 0) {
+                    if (effectiveSlashCommands.length > 0) {
                       if (val.startsWith('/')) {
                         setSlashMenuVisible(true);
                         setSlashFilter(val);
@@ -1887,7 +1913,13 @@ export function ChatComposer({
                     parseMention(val);
                   }}
                   onKeyDown={handleTextareaKeyDown}
-                  placeholder={placeholder}
+                  placeholder={
+                    voice.listening
+                      ? 'Listening… release Ctrl+Space or run /voice to stop'
+                      : voice.processing
+                        ? 'Transcribing…'
+                        : placeholder
+                  }
                   rows={1}
                   onFocus={() => setTrackingAttention(0, 0.34, 'locked-on')}
                   className={cn(
@@ -2081,7 +2113,7 @@ export function ChatComposer({
                 onChange={(e) => {
                   const val = e.target.value;
                   setInput(val);
-                  if (slashCommands && slashCommands.length > 0) {
+                  if (effectiveSlashCommands.length > 0) {
                     if (val.startsWith('/')) {
                       setSlashMenuVisible(true);
                       setSlashFilter(val);
