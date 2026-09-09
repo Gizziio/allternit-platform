@@ -88,6 +88,8 @@ class ActionPlan:
     done: bool = False                # True when task is complete
     tokens_used: int = 0              # input+output tokens consumed by this plan call
     cost_usd: float = 0.0             # estimated cost for this plan call
+    input_tokens: int = 0             # prompt tokens, when the provider reports the split
+    output_tokens: int = 0            # completion tokens, when reported
 
 
 @dataclass
@@ -99,6 +101,8 @@ class VisionResponse:
     raw_response: Optional[str] = None
     tokens_used: int = 0
     cost_usd: float = 0.0
+    input_tokens: int = 0             # prompt tokens, when the provider reports the split
+    output_tokens: int = 0            # completion tokens, when reported
 
 
 class VisionProvider(ABC):
@@ -159,6 +163,8 @@ class VisionProvider(ABC):
             done=False,
             tokens_used=response.tokens_used,
             cost_usd=response.cost_usd,
+            input_tokens=response.input_tokens,
+            output_tokens=response.output_tokens,
         )
 
     async def analyze_screenshot(self, screenshot_b64: str, task: str, **kwargs) -> "VisionResponse":
@@ -276,6 +282,8 @@ class OpenAIVisionClient(VisionProvider):
             output_tokens = getattr(usage, "completion_tokens", 0) if usage else 0
             result = self._parse_vision_response(content)
             result.tokens_used = input_tokens + output_tokens
+            result.input_tokens = input_tokens
+            result.output_tokens = output_tokens
             # GPT-4o pricing: $5/1M input, $15/1M output
             result.cost_usd = (input_tokens * 5 + output_tokens * 15) / 1_000_000
             return result
@@ -418,6 +426,8 @@ class AnthropicVisionClient(VisionProvider):
             output_tokens = getattr(response.usage, "output_tokens", 0) if response.usage else 0
             result = self._parse_vision_response(content)
             result.tokens_used = input_tokens + output_tokens
+            result.input_tokens = input_tokens
+            result.output_tokens = output_tokens
             # Claude 3 Opus pricing: $15/1M input, $75/1M output
             result.cost_usd = (input_tokens * 15 + output_tokens * 75) / 1_000_000
             return result

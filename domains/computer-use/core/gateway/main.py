@@ -2624,6 +2624,12 @@ app.include_router(canonical_computer_router)
 from cloud_credentials_router import router as cloud_credentials_router
 app.include_router(cloud_credentials_router)
 
+# Demo UI — mounted only when started via the demo launcher (demo.py sets
+# ALLTERNIT_ACU_DEMO=1). Serves the self-contained page at GET /demo.
+if os.environ.get("ALLTERNIT_ACU_DEMO") == "1":
+    from demo_ui import router as demo_ui_router
+    app.include_router(demo_ui_router)
+
 # ---------------------------------------------------------------------------
 # /v1/computer — Claude native computer tool endpoint
 #
