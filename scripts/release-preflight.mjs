@@ -10,8 +10,15 @@
  *      → packaging dry-run: every binary prepare-platform-static.cjs
  *        hard-requires must have a producing step (or an ALLOW_MISSING
  *        env opt-out) in each platform job.
+ *        (Update, run 11: voice is a Rust crate since PR #194's voice-cleanup;
+ *        the PyInstaller steps were replaced by `cargo build -p voice-service`
+ *        plus a whisper-cli cmake build. The packaging dry-run still guards
+ *        the sidecars; the toolchain check now asserts a job cargo-builds
+ *        the crate.)
  *   2. pip install services/voice failed (package is at services/voice/voice)
  *      → script existence: services/voice/voice/pyproject.toml must exist.
+ *        (Update, run 11: the Python tree is gone — the check now asserts
+ *        services/voice/Cargo.toml and services/voice/build-whisper.sh exist.)
  *   3. Missing allternit-local-engine binary on macOS
  *      → packaging dry-run: macOS job must build local-engine or set
  *        ALLTERNIT_ALLOW_MISSING_LOCAL_ENGINE.
@@ -106,7 +113,7 @@ function checkScriptExistence(workflowText) {
     }
   }
 
-  // Paths the workflow uses implicitly (npm scripts, spec, pip target).
+  // Paths the workflow uses implicitly (npm scripts, cargo manifests, build helpers).
   const implicit = [
     'surfaces/allternit-desktop/scripts/prepare-platform-static.cjs',
     'surfaces/allternit-desktop/scripts/notarize.cjs',
@@ -118,9 +125,8 @@ function checkScriptExistence(workflowText) {
     'surfaces/allternit-desktop/scripts/prepare-office-engine.cjs',
     'surfaces/allternit-desktop/scripts/verify-packaged-resources.cjs',
     'surfaces/allternit-desktop/scripts/stage-local-engine-binary.cjs',
-    'services/voice/allternit-voice-service.spec',
-    'services/voice/voice/pyproject.toml', // pip install target (inner package dir)
-    'services/voice/api/requirements.txt',
+    'services/voice/Cargo.toml', // voice-service sidecar (Rust crate; bin name voice-service)
+    'services/voice/build-whisper.sh', // whisper-cli sidecar builder
     'services/open-connector/scripts/generate-provider-registry.ts',
     'services/local-engine/Cargo.toml',
     'cmd/allternit-api/Cargo.toml',
@@ -194,25 +200,23 @@ function checkToolchain(jobs) {
     );
   }
 
-  // Voice service PyInstaller step: the spec targets CPython 3.11.
-  let checkedPython = 0;
-  for (const [name, text] of Object.entries(jobs)) {
-    if (!/pyinstaller/i.test(text)) continue;
-    checkedPython++;
-    if (!/python-version:\s*['"]3\.11['"]/.test(text)) {
-      fail(
-        `toolchain: job \`${name}\` runs PyInstaller for the voice service but does not ` +
-          `pin python-version '3.11' — the spec and requirements are built for 3.11.`
-      );
-    } else {
-      pass(`toolchain: job \`${name}\` pins Python 3.11 for the voice-service sidecar`);
-    }
-  }
-  if (checkedPython === 0) {
+  // Voice service sidecar: since the voice-cleanup (Python/PyInstaller tree
+  // deleted, PR #194) the voice service is the Rust crate `voice-service` at
+  // services/voice (Cargo bin name voice-service, staged as
+  // allternit-voice-service). Each platform job must cargo-build it (or the
+  // packaging dry-run below already fails it for a missing sidecar).
+  const voiceJobs = Object.entries(jobs).filter(([, text]) =>
+    /cargo build[^\n]*voice-service/.test(text)
+  );
+  if (voiceJobs.length === 0) {
     fail(
-      'toolchain: no PyInstaller step found in any job — the voice-service sidecar ' +
-        '(allternit-voice-service.spec) is never built.'
+      'toolchain: no job cargo-builds the voice-service crate — the voice sidecar ' +
+        '(services/voice, bin voice-service → allternit-voice-service) is never built.'
     );
+  } else {
+    for (const [name] of voiceJobs) {
+      pass(`toolchain: job \`${name}\` cargo-builds the voice-service crate`);
+    }
   }
 }
 

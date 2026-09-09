@@ -17,7 +17,9 @@ use std::sync::Arc;
 use tracing::warn;
 
 use crate::auth::AuthUser;
-use crate::bot_desktop_routes::{build_handle, read_bot_sandbox, verify_bot_ownership, DesktopQuery};
+use crate::bot_desktop_routes::{
+    build_handle, read_bot_sandbox, verify_bot_ownership, DesktopQuery,
+};
 use crate::bot_desktop_windows;
 use crate::AppState;
 use allternit_driver_interface::CommandSpec;
@@ -26,7 +28,10 @@ use allternit_driver_interface::CommandSpec;
 pub fn bot_desktop_input_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/bots/:bot_id/desktop/mouse", post(send_desktop_mouse))
-        .route("/bots/:bot_id/desktop/keyboard", post(send_desktop_keyboard))
+        .route(
+            "/bots/:bot_id/desktop/keyboard",
+            post(send_desktop_keyboard),
+        )
         .route("/bots/:bot_id/desktop/shell", post(run_desktop_shell))
         .route(
             "/bots/:bot_id/desktop/files/download",
@@ -49,6 +54,9 @@ pub struct MouseInput {
     pub y: Option<i32>,
     /// Mouse button: `left`, `middle`, or `right`. Defaults to `left`.
     pub button: Option<String>,
+    pub end_x: Option<i32>,
+    pub end_y: Option<i32>,
+    pub amount: Option<i32>,
 }
 
 pub(crate) fn desktop_display(provider: &str) -> &'static str {
@@ -73,7 +81,7 @@ pub(crate) async fn send_desktop_mouse(
             .into_response();
     }
 
-    let driver = match &state.vm_driver {
+    let _driver = match &state.vm_driver {
         Some(d) => d.clone(),
         None => {
             return (
@@ -102,8 +110,44 @@ pub(crate) async fn send_desktop_mouse(
                 .into_response();
         }
     };
+    send_desktop_mouse_core(
+        &state,
+        &query.sandbox_id,
+        &record.os,
+        &record.provider,
+        Some(&bot_id),
+        input,
+    )
+    .await
+}
 
-    let command = if record.os == "windows" {
+pub(crate) async fn send_desktop_mouse_core(
+    state: &Arc<AppState>,
+    sandbox_id: &str,
+    os: &str,
+    provider: &str,
+    bot_id: Option<&str>,
+    input: MouseInput,
+) -> axum::response::Response {
+    if os == "windows" && matches!(input.action.to_lowercase().as_str(), "drag" | "scroll") {
+        return (
+            StatusCode::NOT_IMPLEMENTED,
+            Json(json!({"error": "windows input path supports move and click only"})),
+        )
+            .into_response();
+    }
+    let driver = match &state.vm_driver {
+        Some(d) => d.clone(),
+        None => {
+            return (
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(json!({"error": "No VM driver is configured on this host"})),
+            )
+                .into_response();
+        }
+    };
+
+    let command = if os == "windows" {
         match build_windows_mouse_command(&input) {
             Ok(cmd) => cmd,
             Err(err) => {
@@ -111,7 +155,7 @@ pub(crate) async fn send_desktop_mouse(
             }
         }
     } else {
-        match build_mouse_command(&input, desktop_display(&record.provider)) {
+        match build_mouse_command(&input, desktop_display(provider)) {
             Ok(cmd) => cmd,
             Err(err) => {
                 return (StatusCode::BAD_REQUEST, Json(json!({"error": err}))).into_response();
@@ -119,21 +163,80 @@ pub(crate) async fn send_desktop_mouse(
         }
     };
 
-    run_guest_command(
-        &*driver,
-        &record.sandbox_id,
-        &record.os,
-        &record.provider,
-        command,
-        "mouse",
-        &bot_id,
-    )
-    .await
+    run_guest_command(&*driver, sandbox_id, os, provider, command, "mouse", bot_id).await
 }
 
-pub(crate) fn build_mouse_command(input: &MouseInput, display: &str) -> Result<Vec<String>, String> {
+pub(crate) fn build_mouse_command(
+    input: &MouseInput,
+    display: &str,
+) -> Result<Vec<String>, String> {
     let action = input.action.to_lowercase();
-    let button_num = match input.button.as_deref().unwrap_or("left").to_lowercase().as_str() {
+    if !matches!(
+        action.as_str(),
+        "move"
+            | "click"
+            | "rightclick"
+            | "doubleclick"
+            | "mousedown"
+            | "mouseup"
+            | "drag"
+            | "scroll"
+    ) {
+        return Err("valid mouse actions: move, click, rightclick, doubleclick, mousedown, mouseup, drag, scroll".into());
+    }
+    if action == "scroll" {
+        let button = match input.button.as_deref().unwrap_or("down") {
+            "up" => "4",
+            "down" => "5",
+            _ => return Err("scroll button must be up or down".into()),
+        };
+        let amount = input.amount.unwrap_or(3);
+        if amount <= 0 {
+            return Err("scroll amount must be positive".into());
+        }
+        return Ok(vec![
+            "env".into(),
+            format!("DISPLAY={display}"),
+            "xdotool".into(),
+            "click".into(),
+            "--repeat".into(),
+            amount.to_string(),
+            button.into(),
+        ]);
+    }
+    if action == "drag" {
+        let (Some(x), Some(y), Some(ex), Some(ey)) = (input.x, input.y, input.end_x, input.end_y)
+        else {
+            return Err("drag requires x, y, end_x, end_y".into());
+        };
+        let mut cmd = vec![
+            "env".into(),
+            format!("DISPLAY={display}"),
+            "xdotool".into(),
+            "mousemove".into(),
+            x.to_string(),
+            y.to_string(),
+            "mousedown".into(),
+            "1".into(),
+        ];
+        for step in 1..=10i64 {
+            cmd.extend([
+                "mousemove".into(),
+                "--sync".into(),
+                (x as i64 + (ex as i64 - x as i64) * step / 10).to_string(),
+                (y as i64 + (ey as i64 - y as i64) * step / 10).to_string(),
+            ]);
+        }
+        cmd.extend(["mouseup".into(), "1".into()]);
+        return Ok(cmd);
+    }
+    let button_num = match input
+        .button
+        .as_deref()
+        .unwrap_or("left")
+        .to_lowercase()
+        .as_str()
+    {
         "left" => "1",
         "middle" => "2",
         "right" => "3",
@@ -187,14 +290,31 @@ pub(crate) fn build_mouse_command(input: &MouseInput, display: &str) -> Result<V
         other => return Err(format!("unsupported mouse action: {}", other)),
     };
 
-    Ok(vec!["env".to_string(), format!("DISPLAY={}", display), "xdotool".to_string()]
-        .into_iter()
-        .chain(args)
-        .collect())
+    Ok(vec![
+        "env".to_string(),
+        format!("DISPLAY={}", display),
+        "xdotool".to_string(),
+    ]
+    .into_iter()
+    .chain(args)
+    .collect())
 }
 
 pub(crate) fn build_windows_mouse_command(input: &MouseInput) -> Result<Vec<String>, String> {
     let action = input.action.to_lowercase();
+    if !matches!(
+        action.as_str(),
+        "move"
+            | "click"
+            | "rightclick"
+            | "doubleclick"
+            | "mousedown"
+            | "mouseup"
+            | "drag"
+            | "scroll"
+    ) {
+        return Err("valid mouse actions: move, click, rightclick, doubleclick, mousedown, mouseup, drag, scroll".into());
+    }
     let x = input.x.unwrap_or(0);
     let y = input.y.unwrap_or(0);
     let cmd = match action.as_str() {
@@ -234,7 +354,7 @@ pub(crate) async fn send_desktop_keyboard(
             .into_response();
     }
 
-    let driver = match &state.vm_driver {
+    let _driver = match &state.vm_driver {
         Some(d) => d.clone(),
         None => {
             return (
@@ -263,8 +383,37 @@ pub(crate) async fn send_desktop_keyboard(
                 .into_response();
         }
     };
+    send_desktop_keyboard_core(
+        &state,
+        &query.sandbox_id,
+        &record.os,
+        &record.provider,
+        Some(&bot_id),
+        input,
+    )
+    .await
+}
 
-    let command = if record.os == "windows" {
+pub(crate) async fn send_desktop_keyboard_core(
+    state: &Arc<AppState>,
+    sandbox_id: &str,
+    os: &str,
+    provider: &str,
+    bot_id: Option<&str>,
+    input: KeyboardInput,
+) -> axum::response::Response {
+    let driver = match &state.vm_driver {
+        Some(d) => d.clone(),
+        None => {
+            return (
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(json!({"error": "No VM driver is configured on this host"})),
+            )
+                .into_response();
+        }
+    };
+
+    let command = if os == "windows" {
         match build_windows_keyboard_command(&input) {
             Ok(cmd) => cmd,
             Err(err) => {
@@ -272,7 +421,7 @@ pub(crate) async fn send_desktop_keyboard(
             }
         }
     } else {
-        match build_keyboard_command(&input, desktop_display(&record.provider)) {
+        match build_keyboard_command(&input, desktop_display(provider)) {
             Ok(cmd) => cmd,
             Err(err) => {
                 return (StatusCode::BAD_REQUEST, Json(json!({"error": err}))).into_response();
@@ -281,18 +430,15 @@ pub(crate) async fn send_desktop_keyboard(
     };
 
     run_guest_command(
-        &*driver,
-        &record.sandbox_id,
-        &record.os,
-        &record.provider,
-        command,
-        "keyboard",
-        &bot_id,
+        &*driver, sandbox_id, os, provider, command, "keyboard", bot_id,
     )
     .await
 }
 
-pub(crate) fn build_keyboard_command(input: &KeyboardInput, display: &str) -> Result<Vec<String>, String> {
+pub(crate) fn build_keyboard_command(
+    input: &KeyboardInput,
+    display: &str,
+) -> Result<Vec<String>, String> {
     let action = input.action.to_lowercase();
     match action.as_str() {
         "type" => {
@@ -358,7 +504,7 @@ pub(crate) async fn run_desktop_shell(
     State(state): State<Arc<AppState>>,
     Extension(user): Extension<AuthUser>,
     Path(bot_id): Path<String>,
-    Query(query): Query<DesktopQuery>,
+    Query(_query): Query<DesktopQuery>,
     Json(input): Json<ShellInput>,
 ) -> impl IntoResponse {
     if !verify_bot_ownership(&state, &user.user_id, &bot_id).await {
@@ -377,7 +523,7 @@ pub(crate) async fn run_desktop_shell(
             .into_response();
     }
 
-    let driver = match &state.vm_driver {
+    let _driver = match &state.vm_driver {
         Some(d) => d.clone(),
         None => {
             return (
@@ -406,13 +552,49 @@ pub(crate) async fn run_desktop_shell(
                 .into_response();
         }
     };
+    run_desktop_shell_core(
+        &state,
+        &record.sandbox_id,
+        &record.os,
+        &record.provider,
+        Some(&bot_id),
+        input,
+    )
+    .await
+}
 
-    let handle = build_handle(&record.sandbox_id, Some(&record.os), Some(&record.provider));
-    let cmd_spec = if record.os == "windows" {
+pub(crate) async fn run_desktop_shell_core(
+    state: &Arc<AppState>,
+    sandbox_id: &str,
+    os: &str,
+    provider: &str,
+    bot_id: Option<&str>,
+    input: ShellInput,
+) -> axum::response::Response {
+    if input.command.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "command must not be empty"})),
+        )
+            .into_response();
+    }
+    let driver = match &state.vm_driver {
+        Some(d) => d.clone(),
+        None => {
+            return (
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(json!({"error": "No VM driver is configured on this host"})),
+            )
+                .into_response();
+        }
+    };
+
+    let handle = build_handle(sandbox_id, Some(os), Some(provider));
+    let cmd_spec = if os == "windows" {
         bot_desktop_windows::shell_command(&input.command.join(" "))
     } else {
         let mut env_vars = HashMap::new();
-        env_vars.insert("DISPLAY".to_string(), desktop_display(&record.provider).to_string());
+        env_vars.insert("DISPLAY".to_string(), desktop_display(provider).to_string());
         env_vars.extend(input.env);
         // Inline DISPLAY (and any other env vars) into the command so the
         // execution works even with drivers that do not transmit env_vars.
@@ -447,7 +629,7 @@ pub(crate) async fn run_desktop_shell(
                 .into_response()
         }
         Err(e) => {
-            warn!(bot_id, sandbox_id = %query.sandbox_id, error = %e, "Failed to run desktop shell");
+            warn!(bot_id, sandbox_id = %sandbox_id, error = %e, "Failed to run desktop shell");
             (
                 StatusCode::SERVICE_UNAVAILABLE,
                 Json(json!({"error": format!("failed to run shell: {}", e)})),
@@ -478,7 +660,7 @@ pub(crate) async fn download_desktop_file(
             .into_response();
     }
 
-    let driver = match &state.vm_driver {
+    let _driver = match &state.vm_driver {
         Some(d) => d.clone(),
         None => {
             return (
@@ -507,8 +689,37 @@ pub(crate) async fn download_desktop_file(
                 .into_response();
         }
     };
+    download_desktop_file_core(
+        &state,
+        &query.sandbox_id,
+        &record.os,
+        &record.provider,
+        Some(&bot_id),
+        file_query,
+    )
+    .await
+}
 
-    let handle = build_handle(&query.sandbox_id, Some(&record.os), Some(&record.provider));
+pub(crate) async fn download_desktop_file_core(
+    state: &Arc<AppState>,
+    sandbox_id: &str,
+    os: &str,
+    provider: &str,
+    bot_id: Option<&str>,
+    file_query: FilePathQuery,
+) -> axum::response::Response {
+    let driver = match &state.vm_driver {
+        Some(d) => d.clone(),
+        None => {
+            return (
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(json!({"error": "No VM driver is configured on this host"})),
+            )
+                .into_response();
+        }
+    };
+
+    let handle = build_handle(sandbox_id, Some(os), Some(provider));
     match driver.pull_file(&handle, &file_query.path).await {
         Ok(bytes) => (
             StatusCode::OK,
@@ -517,7 +728,7 @@ pub(crate) async fn download_desktop_file(
         )
             .into_response(),
         Err(e) => {
-            warn!(bot_id, sandbox_id = %query.sandbox_id, path = %file_query.path, error = %e, "Failed to download desktop file");
+            warn!(bot_id, sandbox_id = %sandbox_id, path = %file_query.path, error = %e, "Failed to download desktop file");
             (
                 StatusCode::SERVICE_UNAVAILABLE,
                 Json(json!({"error": format!("failed to download file: {}", e)})),
@@ -551,7 +762,7 @@ pub(crate) async fn upload_desktop_file(
             .into_response();
     }
 
-    let driver = match &state.vm_driver {
+    let _driver = match &state.vm_driver {
         Some(d) => d.clone(),
         None => {
             return (
@@ -580,12 +791,53 @@ pub(crate) async fn upload_desktop_file(
                 .into_response();
         }
     };
+    upload_desktop_file_core(
+        &state,
+        &query.sandbox_id,
+        &record.os,
+        &record.provider,
+        Some(&bot_id),
+        file_query,
+        body,
+    )
+    .await
+}
 
-    let handle = build_handle(&query.sandbox_id, Some(&record.os), Some(&record.provider));
-    match driver.push_file(&handle, &file_query.path, body.to_vec()).await {
+pub(crate) async fn upload_desktop_file_core(
+    state: &Arc<AppState>,
+    sandbox_id: &str,
+    os: &str,
+    provider: &str,
+    bot_id: Option<&str>,
+    file_query: FilePathQuery,
+    body: Bytes,
+) -> axum::response::Response {
+    if body.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "upload body must not be empty"})),
+        )
+            .into_response();
+    }
+    let driver = match &state.vm_driver {
+        Some(d) => d.clone(),
+        None => {
+            return (
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(json!({"error": "No VM driver is configured on this host"})),
+            )
+                .into_response();
+        }
+    };
+
+    let handle = build_handle(sandbox_id, Some(os), Some(provider));
+    match driver
+        .push_file(&handle, &file_query.path, body.to_vec())
+        .await
+    {
         Ok(()) => (StatusCode::OK, Json(json!({"success": true}))).into_response(),
         Err(e) => {
-            warn!(bot_id, sandbox_id = %query.sandbox_id, path = %file_query.path, error = %e, "Failed to upload desktop file");
+            warn!(bot_id, sandbox_id = %sandbox_id, path = %file_query.path, error = %e, "Failed to upload desktop file");
             (
                 StatusCode::SERVICE_UNAVAILABLE,
                 Json(json!({"error": format!("failed to upload file: {}", e)})),
@@ -602,7 +854,7 @@ async fn run_guest_command(
     provider: &str,
     command: Vec<String>,
     command_kind: &str,
-    bot_id: &str,
+    bot_id: Option<&str>,
 ) -> axum::response::Response {
     let handle = build_handle(sandbox_id, Some(os), Some(provider));
     let mut env_vars = std::collections::HashMap::new();
@@ -659,7 +911,9 @@ mod tests {
     #[derive(Debug)]
     struct MockExecutionDriver {
         calls: Arc<Mutex<Vec<String>>>,
-        exec_result: Arc<Mutex<Option<std::result::Result<ExecResult, allternit_driver_interface::DriverError>>>>,
+        exec_result: Arc<
+            Mutex<Option<std::result::Result<ExecResult, allternit_driver_interface::DriverError>>>,
+        >,
         files: Arc<Mutex<HashMap<String, Vec<u8>>>>,
     }
 
@@ -696,6 +950,8 @@ mod tests {
                 ResourceSpec,
             };
             DriverCapabilities {
+                resize: false,
+                clone: false,
                 driver_type: DriverType::Container,
                 isolation: IsolationLevel::Standard,
                 max_resources: ResourceSpec {
@@ -718,8 +974,10 @@ mod tests {
         async fn spawn(
             &self,
             _spec: allternit_driver_interface::SpawnSpec,
-        ) -> std::result::Result<allternit_driver_interface::ExecutionHandle, allternit_driver_interface::DriverError>
-        {
+        ) -> std::result::Result<
+            allternit_driver_interface::ExecutionHandle,
+            allternit_driver_interface::DriverError,
+        > {
             Err(allternit_driver_interface::DriverError::NotSupported {
                 feature: "spawn".to_string(),
             })
@@ -746,7 +1004,10 @@ mod tests {
         ) -> std::result::Result<ExecResult, allternit_driver_interface::DriverError> {
             self.calls.lock().unwrap().push(format!(
                 "exec:{}",
-                handle.driver_info.get("native_id").unwrap_or(&"?".to_string())
+                handle
+                    .driver_info
+                    .get("native_id")
+                    .unwrap_or(&"?".to_string())
             ));
             match self.exec_result.lock().unwrap().take() {
                 Some(result) => result,
@@ -759,8 +1020,10 @@ mod tests {
         async fn stream_logs(
             &self,
             _handle: &allternit_driver_interface::ExecutionHandle,
-        ) -> std::result::Result<Vec<allternit_driver_interface::LogEntry>, allternit_driver_interface::DriverError>
-        {
+        ) -> std::result::Result<
+            Vec<allternit_driver_interface::LogEntry>,
+            allternit_driver_interface::DriverError,
+        > {
             Err(allternit_driver_interface::DriverError::NotSupported {
                 feature: "stream_logs".to_string(),
             })
@@ -769,8 +1032,10 @@ mod tests {
         async fn get_artifacts(
             &self,
             _handle: &allternit_driver_interface::ExecutionHandle,
-        ) -> std::result::Result<Vec<allternit_driver_interface::Artifact>, allternit_driver_interface::DriverError>
-        {
+        ) -> std::result::Result<
+            Vec<allternit_driver_interface::Artifact>,
+            allternit_driver_interface::DriverError,
+        > {
             Ok(vec![])
         }
 
@@ -784,16 +1049,20 @@ mod tests {
         async fn get_consumption(
             &self,
             _handle: &allternit_driver_interface::ExecutionHandle,
-        ) -> std::result::Result<allternit_driver_interface::ResourceConsumption, allternit_driver_interface::DriverError>
-        {
+        ) -> std::result::Result<
+            allternit_driver_interface::ResourceConsumption,
+            allternit_driver_interface::DriverError,
+        > {
             Ok(allternit_driver_interface::ResourceConsumption::default())
         }
 
         async fn get_receipt(
             &self,
             _handle: &allternit_driver_interface::ExecutionHandle,
-        ) -> std::result::Result<Option<allternit_driver_interface::Receipt>, allternit_driver_interface::DriverError>
-        {
+        ) -> std::result::Result<
+            Option<allternit_driver_interface::Receipt>,
+            allternit_driver_interface::DriverError,
+        > {
             Ok(None)
         }
 
@@ -804,7 +1073,10 @@ mod tests {
         ) -> std::result::Result<Vec<u8>, allternit_driver_interface::DriverError> {
             self.calls.lock().unwrap().push(format!(
                 "pull_file:{}:{}",
-                handle.driver_info.get("native_id").unwrap_or(&"?".to_string()),
+                handle
+                    .driver_info
+                    .get("native_id")
+                    .unwrap_or(&"?".to_string()),
                 path
             ));
             self.files
@@ -825,7 +1097,10 @@ mod tests {
         ) -> std::result::Result<(), allternit_driver_interface::DriverError> {
             self.calls.lock().unwrap().push(format!(
                 "push_file:{}:{}",
-                handle.driver_info.get("native_id").unwrap_or(&"?".to_string()),
+                handle
+                    .driver_info
+                    .get("native_id")
+                    .unwrap_or(&"?".to_string()),
                 path
             ));
             self.files.lock().unwrap().insert(path.to_string(), content);
@@ -834,8 +1109,10 @@ mod tests {
 
         async fn health_check(
             &self,
-        ) -> std::result::Result<allternit_driver_interface::DriverHealth, allternit_driver_interface::DriverError>
-        {
+        ) -> std::result::Result<
+            allternit_driver_interface::DriverHealth,
+            allternit_driver_interface::DriverError,
+        > {
             Ok(allternit_driver_interface::DriverHealth {
                 healthy: true,
                 message: Some("mock".to_string()),
@@ -956,6 +1233,9 @@ mod tests {
             x: Some(0),
             y: Some(0),
             button: None,
+            end_x: None,
+            end_y: None,
+            amount: None,
         };
         assert!(build_mouse_command(&input, ":0").is_err());
     }
@@ -1029,7 +1309,9 @@ mod tests {
         let bytes = response.into_body().collect().await.unwrap().to_bytes();
         assert_eq!(bytes.as_ref(), b"file contents");
         let calls = driver.recorded();
-        assert!(calls.iter().any(|c| c == "pull_file:sandbox-abc:/tmp/test.txt"));
+        assert!(calls
+            .iter()
+            .any(|c| c == "pull_file:sandbox-abc:/tmp/test.txt"));
     }
 
     #[tokio::test]
@@ -1054,8 +1336,41 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
         let files = driver.files.lock().unwrap();
-        assert_eq!(files.get("/tmp/upload.txt").unwrap().as_slice(), b"uploaded bytes");
+        assert_eq!(
+            files.get("/tmp/upload.txt").unwrap().as_slice(),
+            b"uploaded bytes"
+        );
         let calls = driver.recorded();
-        assert!(calls.iter().any(|c| c == "push_file:sandbox-abc:/tmp/upload.txt"));
+        assert!(calls
+            .iter()
+            .any(|c| c == "push_file:sandbox-abc:/tmp/upload.txt"));
+    }
+}
+
+#[cfg(test)]
+mod computer_mouse_tests {
+    use super::*;
+    #[test]
+    fn computer_drag_and_scroll_commands() {
+        let drag: MouseInput =
+            serde_json::from_value(json!({"action":"drag", "x":10,"y":20,"end_x":100,"end_y":200}))
+                .unwrap();
+        let cmd = build_mouse_command(&drag, ":99").unwrap();
+        assert!(cmd.windows(2).any(|w| w == ["mousedown", "1"]));
+        assert_eq!(&cmd[cmd.len() - 2..], ["mouseup", "1"]);
+        assert!(cmd.windows(2).any(|w| w == ["100", "200"]));
+        let missing: MouseInput = serde_json::from_value(json!({"action":"drag"})).unwrap();
+        assert!(build_mouse_command(&missing, ":0").is_err());
+        let scroll: MouseInput = serde_json::from_value(json!({"action":"scroll"})).unwrap();
+        assert_eq!(
+            &build_mouse_command(&scroll, ":0").unwrap()[3..],
+            ["click", "--repeat", "3", "5"]
+        );
+        let up: MouseInput =
+            serde_json::from_value(json!({"action":"scroll", "button":"up", "amount":2})).unwrap();
+        assert_eq!(
+            &build_mouse_command(&up, ":0").unwrap()[3..],
+            ["click", "--repeat", "2", "4"]
+        );
     }
 }

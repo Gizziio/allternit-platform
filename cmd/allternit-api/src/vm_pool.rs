@@ -679,6 +679,8 @@ mod tests {
     impl ExecutionDriver for MockDriver {
         fn capabilities(&self) -> DriverCapabilities {
             DriverCapabilities {
+                resize: false,
+                clone: false,
                 driver_type: DriverType::Container,
                 isolation: IsolationLevel::Standard,
                 max_resources: ResourceSpec::minimal(),

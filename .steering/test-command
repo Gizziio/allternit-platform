@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
-cd "$(dirname "$0")/.."
-rm -rf packages/@allternit/office-pptx-render/dist
-pnpm --filter '@allternit/office*' build
-pnpm --filter '@allternit/office*' typecheck
-pnpm --filter '@allternit/office*' test
+# Read Phase 2 evidence; never start servers or run unrelated builds from a hook.
+evidence_dir="$HOME/.agent-orchestrator/evidence/cloud-computer-orgo-p2"
+for name in cargo-check-final.log cargo-test-api.log cargo-test-cloud.log tsc-final.log smoke.log; do
+  echo "$name"
+  if [[ -f "$evidence_dir/$name" ]]; then tail -n 12 "$evidence_dir/$name"; else echo 'Pending'; fi
+done

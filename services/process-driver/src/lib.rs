@@ -145,6 +145,8 @@ impl fmt::Debug for ProcessDriver {
 impl ExecutionDriver for ProcessDriver {
     fn capabilities(&self) -> DriverCapabilities {
         DriverCapabilities {
+            resize: false,
+            clone: false,
             driver_type: DriverType::Process,
             isolation: IsolationLevel::Limited,
             max_resources: ResourceSpec {

@@ -366,10 +366,14 @@ async fn get_desktop_screenshot(
         .into_response()
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Default, Deserialize)]
 pub(crate) struct ProvisionDesktopQuery {
     pub os: Option<String>,
     pub template_id: Option<String>,
+    pub cpu_cores: Option<i64>,
+    pub memory_mb: Option<i64>,
+    pub disk_mb: Option<i64>,
+    pub resolution: Option<String>,
     /// Force a specific substrate provider, e.g. "incus" or "tart".
     pub provider: Option<String>,
 }
@@ -394,34 +398,42 @@ pub(crate) async fn provision_desktop_internal(
         }
     };
 
-    // Grok parity: reuse the account computer and assign this bot a screen.
-    if let Ok(Some((computer, screen))) =
-        crate::computer_screens::attach_bot_to_user_computer(state, user, bot_id).await
+    // Preserve account-computer reuse for legacy requests. Explicit resource or
+    // resolution requests require a fresh spawn so their settings are honored.
+    if query.cpu_cores.is_none()
+        && query.memory_mb.is_none()
+        && query.disk_mb.is_none()
+        && query.resolution.is_none()
     {
-        if let Err(e) = upsert_bot_sandbox(
-            &state.db,
-            bot_id,
-            &computer.native_id,
-            &computer.provider,
-            computer.host.as_deref(),
-            &computer.status,
-            "linux",
-        ) {
-            warn!(bot_id, error = %e, "Failed to persist shared bot desktop mapping");
+        // Grok parity: reuse the account computer and assign this bot a screen.
+        if let Ok(Some((computer, screen))) =
+            crate::computer_screens::attach_bot_to_user_computer(state, user, bot_id).await
+        {
+            if let Err(e) = upsert_bot_sandbox(
+                &state.db,
+                bot_id,
+                &computer.native_id,
+                &computer.provider,
+                computer.host.as_deref(),
+                &computer.status,
+                "linux",
+            ) {
+                warn!(bot_id, error = %e, "Failed to persist shared bot desktop mapping");
+            }
+            info!(
+                bot_id,
+                sandbox_id = %computer.native_id,
+                display_index = screen.display_index,
+                "Attached bot to shared account computer"
+            );
+            return Ok(ProvisionDesktopResponse {
+                sandbox_id: computer.native_id,
+                status: computer.status,
+                provider: computer.provider,
+                host: computer.host,
+                display_index: Some(screen.display_index),
+            });
         }
-        info!(
-            bot_id,
-            sandbox_id = %computer.native_id,
-            display_index = screen.display_index,
-            "Attached bot to shared account computer"
-        );
-        return Ok(ProvisionDesktopResponse {
-            sandbox_id: computer.native_id,
-            status: computer.status,
-            provider: computer.provider,
-            host: computer.host,
-            display_index: Some(screen.display_index),
-        });
     }
 
     if !driver.supports_desktop() {
@@ -456,6 +468,10 @@ pub(crate) async fn provision_desktop_internal(
     let req = ProvisionRequest {
         os: query.os.clone(),
         template_id: query.template_id.clone(),
+        cpu_cores: query.cpu_cores,
+        memory_mb: query.memory_mb,
+        disk_mb: query.disk_mb,
+        resolution: query.resolution.clone(),
     };
     let spec = match crate::bot_desktop_templates::resolve_provision_spec(state, user, &req).await {
         Ok(s) => s,
@@ -1337,6 +1353,8 @@ mod tests {
     impl allternit_driver_interface::ExecutionDriver for MockExecutionDriver {
         fn capabilities(&self) -> allternit_driver_interface::DriverCapabilities {
             allternit_driver_interface::DriverCapabilities {
+                resize: false,
+                clone: false,
                 driver_type: allternit_driver_interface::DriverType::Container,
                 isolation: allternit_driver_interface::IsolationLevel::Standard,
                 max_resources: ResourceSpec {

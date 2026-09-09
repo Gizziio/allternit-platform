@@ -13,6 +13,9 @@ import { useChatSessionStore } from '@/views/chat/ChatSessionStore';
 import { createModuleLogger } from '@/lib/logger';
 import {
   createComputer,
+  createComputerSnapshot,
+  restoreComputerSnapshot,
+  runComputerShell,
   deleteComputer,
   listComputers,
   type Computer,
@@ -408,36 +411,19 @@ export async function getSandboxForAgent(
 
 /**
  * Create a snapshot of a sandbox for rollback / reproducibility.
- * Snapshots are taken through the bot-desktop driver, which requires the
- * owning bot id — pass it as `agentId`.
+ * Uses the unified computer id returned by the lifecycle API.
  */
 export async function snapshotSandbox(
   sandboxId: string,
   label?: string,
   agentId?: string,
 ): Promise<VMOperatorResult<SandboxSnapshot>> {
-  if (!agentId) return notConfigured<SandboxSnapshot>();
-
   try {
-    const res = await fetch(
-      `${API_BASE_URL}/bots/${encodeURIComponent(agentId)}/desktop/snapshots`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ stateful: false, label: label || `snapshot-${Date.now()}` }),
-      },
-    );
-
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`Platform returned ${res.status}: ${text}`);
-    }
-
-    const data = (await res.json()) as { snapshot_id?: string; id?: string };
+    const data = await createComputerSnapshot(sandboxId);
     return {
       ok: true,
       data: {
-        id: data.snapshot_id || data.id || '',
+        id: data.snapshot_id,
         sandboxId,
         label,
         createdAt: new Date().toISOString(),
@@ -460,16 +446,7 @@ export async function restoreSandbox(
   if (!agentId) return notConfigured<Sandbox>();
 
   try {
-    const res = await fetch(
-      `${API_BASE_URL}/bots/${encodeURIComponent(agentId)}/desktop/snapshots/${encodeURIComponent(snapshotId)}/restore`,
-      { method: 'POST' },
-    );
-
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`Platform returned ${res.status}: ${text}`);
-    }
-
+    await restoreComputerSnapshot(sandboxId, snapshotId);
     return {
       ok: true,
       data: {
@@ -499,30 +476,11 @@ export async function runCommand(
   }
 
   try {
-    const res = await fetch(
-      `${API_BASE_URL}/computers/${encodeURIComponent(sandboxId)}/shell`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ command: ['sh', '-c', command] }),
-      },
-    );
-
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`Platform returned ${res.status}: ${text}`);
-    }
-
-    const data = (await res.json()) as {
-      exitCode?: number;
-      exit_code?: number;
-      stdout?: string;
-      stderr?: string;
-    };
+    const data = await runComputerShell(sandboxId, { command: ['sh', '-c', command] });
     return {
       ok: true,
       data: {
-        exitCode: data.exitCode ?? data.exit_code ?? 0,
+        exitCode: data.exit_code,
         stdout: data.stdout ?? '',
         stderr: data.stderr ?? '',
       },
