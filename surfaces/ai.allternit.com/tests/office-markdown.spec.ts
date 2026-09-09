@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { buildBlankDocx, parseDocx, saveDocx } from '@allternit/office-docx-engine';
+import { openOfficeHub } from './helpers/office-hub';
 
 const NOW = '2026-01-01T00:00:00.000Z';
 
@@ -50,14 +51,14 @@ test('launcher hands a .rtf to the markdown preview', async ({ page }) => {
   test.setTimeout(180_000);
   await proxyMarkdownToEngine(page);
 
-  await page.goto('/office');
+  await openOfficeHub(page);
   await page.getByTestId('office-launcher-file-input').setInputFiles({
     name: 'memo.rtf',
     mimeType: 'application/rtf',
     buffer: makeSampleRtf(),
   });
 
-  await expect(page).toHaveURL(/\/markdown-preview$/, { timeout: 30000 });
+  // In-shell: the preview mounts without route navigation.
   await expect(page.getByTestId('markdown-preview')).toBeVisible({ timeout: 60000 });
   await expect(page.getByTestId('markdown-preview-filename')).toHaveText('memo.rtf', { timeout: 60000 });
   await expect(page.getByTestId('markdown-preview-format')).toHaveText('rtf');
@@ -68,14 +69,13 @@ test('launcher hands a .rtf to the markdown preview', async ({ page }) => {
 
 test('a .docx still opens in Allternit Docs (routing not hijacked)', async ({ page }) => {
   test.setTimeout(180_000);
-  await page.goto('/office');
+  await openOfficeHub(page);
   await page.getByTestId('office-launcher-file-input').setInputFiles({
     name: 'report.docx',
     mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     buffer: await makeSampleDocx(),
   });
 
-  await expect(page).toHaveURL(/\/docs$/, { timeout: 90000 });
   await expect(page.locator('.ProseMirror')).toBeVisible({ timeout: 90000 });
   await expect(page.locator('.ProseMirror')).toContainText('Docs Routing Fixture', { timeout: 30000 });
 });
@@ -113,14 +113,13 @@ test('save-as-artifact posts the converted markdown as a section', async ({ page
     await route.fallback();
   });
 
-  await page.goto('/office');
+  await openOfficeHub(page);
   await page.getByTestId('office-launcher-file-input').setInputFiles({
     name: 'memo.rtf',
     mimeType: 'application/rtf',
     buffer: makeSampleRtf(),
   });
 
-  await expect(page).toHaveURL(/\/markdown-preview$/, { timeout: 30000 });
   await expect(page.getByTestId('markdown-preview-content')).toContainText('Hello anydoc preview', {
     timeout: 90000,
   });
@@ -164,10 +163,9 @@ test('open URL as Markdown posts the url and renders the converted page', async 
     });
   });
 
-  await page.goto('/office');
+  await openOfficeHub(page);
   await page.getByTestId('office-launcher-open-url').click();
 
-  await expect(page).toHaveURL(/\/markdown-preview$/, { timeout: 30000 });
   await expect(page.getByTestId('markdown-preview-url-input')).toBeVisible({ timeout: 60000 });
   await page.getByTestId('markdown-preview-url-input').fill('https://example.com/article');
   await page.getByTestId('markdown-preview-url-open').click();

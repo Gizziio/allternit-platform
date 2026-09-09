@@ -413,9 +413,10 @@ const shellAPI = {
 
 // ─── Office programs ─────────────────────────────────────────────────────────
 // File-association delivery: the main process sends `office:open-file` with
-// { name, bytes } after the editor window loads; the platform surface's
+// { name, bytes } after the main window loads; the platform surface's
 // office desktop bridge registers a handler here and routes the bytes via
-// its file-handoff store.
+// its file-handoff store. `office:open-target` is the sibling channel for
+// target/artifact opens (app menu, shell:open-office IPC).
 
 const officeAPI = {
   onOpenFile: (
@@ -426,6 +427,18 @@ const officeAPI = {
     ipcRenderer.on('office:open-file', listener);
     return () => {
       ipcRenderer.removeListener('office:open-file', listener);
+    };
+  },
+  onOpenTarget: (
+    callback: (payload: { target: string; artifactId?: string | null }) => void,
+  ): (() => void) => {
+    const listener = (
+      _event: Electron.IpcRendererEvent,
+      payload: { target: string; artifactId?: string | null },
+    ) => callback(payload);
+    ipcRenderer.on('office:open-target', listener);
+    return () => {
+      ipcRenderer.removeListener('office:open-target', listener);
     };
   },
 };

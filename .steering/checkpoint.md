@@ -1,33 +1,53 @@
-# Steering checkpoint — session/relfix6-20260908
+# Session checkpoint — office-dedup
 
-## Goal
-Get the `desktop-v1.1.1` release tag to a green CI run (repo Gizziio/allternit-platform). Run 10
-failed preflight before any build: the workflow still referenced the deleted Python/PyInstaller
-voice tree (PR #194 voice-cleanup) and had no step producing the REQUIRED `whisper-cli` sidecar.
+Goal: Remove the duplicate standalone office suite. Keep the shell ACI "Office & Extensions"
+hub (browser-extensions view) as the SINGLE office surface. (a) Desktop: drop the per-program
+office BrowserWindows; deliver office opens (menu, file association, shell:open-office IPC) to
+the main window via preload channel (new office:open-target sibling of office:open-file).
+(b) Platform: delete /office route + OfficeLauncherPage (keep /office → redirect /), keep
+editor routes and OfficePageChrome; extend desktop-bridge.ts to route into the SHELL
+(allternit:open-view) when ShellApp is mounted ('/' or /shell), else navigate to the editor
+route (fallback). Do NOT touch views/office, views/docs|sheets|slides, BrowserExtensionsView,
+cowork/design embeds, add-ins, or PR #188 assistant work.
 
-## Just did
-- Merged origin/main (`0e923fe3a`+) into the session branch.
-- Replaced both PyInstaller voice steps in release-desktop.yml with cargo builds of the Rust
-  voice crate (`cargo build --release -p voice-service`, lipo universal on macOS →
-  `resources/bin/allternit-voice-service`, `.exe` copy on Windows), plus whisper-cli sidecar
-  steps (macOS: `services/voice/build-whisper.sh`; Windows: clone whisper.cpp + cmake with the
-  VS2022 toolset already installed via choco).
-- Updated scripts/release-preflight.mjs: dropped the three deleted python paths from the
-  implicit existence list (added services/voice/Cargo.toml + build-whisper.sh), replaced the
-  PyInstaller/Python-pin toolchain check with a "job cargo-builds voice-service" check, and
-  noted the run-11 update in the header.
-- Verified: `node scripts/release-preflight.mjs` → 26 passed, 0 failed. Local
-  `cargo build --release -p voice-service` running to confirm the bin name (`voice-service`).
+Just did:
+- unified-main.ts: officeWindows/openOfficeWindow/resolveOfficeUrl removed; new
+  deliverToMainWindow + pendingOfficeDeliveries queue flushed on main-window
+  did-finish-load (registered in createMainWindow); openOfficeTarget;
+  shell:open-docs/shell:open-office/file-assoc/OPEN_DOCS_ON_START all deliver to
+  main window; tray 'Allternit Office' is now a single item opening the hub
+  ('launcher' target → browser-extensions view in the bridge).
+- preload: office.onOpenTarget added (office:open-target channel); onOpenFile kept.
+- desktop-bridge.ts: in-shell open via allternit:open-view when ShellApp mounted
+  ('/' or /shell), route-navigation fallback otherwise; file bytes via stashFile;
+  'launcher' → browser-extensions hub.
+- routes.tsx: /office route removed → redirect to '/'; OfficeLauncherPage deleted.
+- Tests: desktop office-windows/docs-window rewritten for main-window delivery
+  (context().addInitScript seeds onboarding key); platform office-launcher.spec
+  → redirect + hub flows via new tests/helpers/office-hub.ts; office-markdown.spec
+  repointed through the hub (URL assertions dropped, in-shell instead).
+- docs office-suite.mdx updated (hub is the entry point; /office redirects).
 
-## Next
-- Confirm local production build passes with the audio-capture-napi resolver fix,
-  then commit/push/PR/merge, repoint desktop-v1.1.1 tag again (run 12).
-- On green: final report (release URL, install-over-/Applications reminder, unsigned note),
-  ledger attestation (runs 1–12 + deferrals), then cleanup (worktree, branch local+remote, cron).
+Next:
+1. VERIFY Playwright: DONE for platform — all 9 specs in office-launcher.spec.ts +
+   office-markdown.spec.ts PASS (chromium via pw.scratch.config.ts executablePath →
+   chromium-1234 build on port 5199; scratch config deleted after). Shared
+   ms-playwright cache for pinned rev 1208 was churned by session webmcp-play;
+   headless shell never completed. Fix applied during verification: hub pdf tests use
+   getByText('hello.pdf').first() (strict-mode violation in-shell, 3 matches).
+   NOTE: first cold-run pdf failures were cold-start flake; warm runs pass in ~20s.
+2. Desktop electron specs (rewritten for main-window delivery; build:main +
+   build:preload compiled clean): ATTEMPT RUNNING NOW in background task
+   bash-w7via1vw (electron binary present via pnpm store). If it fails on
+   environment (sidecars/ports), note honestly in PR.
+3. Then: rm pw.scratch leftovers (done), commit/push/PR/merge, ledger, cleanup.
 
-## Open questions
-- Windows whisper-cli cmake build is untested on the runner (cmake is preinstalled on
-  windows-latest; VS2022 via choco). If it fails, fallback: ALLTERNIT_ALLOW_MISSING_WHISPER
-  opt-out mirroring local-engine, recorded as a deferral.
-- Run 11 note: macOS/Windows jobs were still in progress when Linux failed; they will
-  likely hit the same bundling error and need the same fix (run 12).
+STATUS so far (all verified):
+- Desktop typecheck (main+preload): PASS. Desktop vitest office-programs: 5/5 PASS.
+- Platform typecheck: PASS. Platform vitest src/shell + src/views/office: 20/20 PASS.
+- Platform vite build: PASS (11s).
+- Code complete on both surfaces + docs mdx + tests rewritten.
+
+Open questions:
+- officePathFor stays exported+tested in office-programs.ts though now unused by main (pure
+  helper module; kept deliberately).

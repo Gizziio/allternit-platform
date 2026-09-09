@@ -88,7 +88,6 @@ const SlidesPage = lazy(() => import('./pages/SlidesPage'))
 const SheetsPage = lazy(() => import('./pages/SheetsPage'))
 const PdfPage = lazy(() => import('./pages/PdfPage'))
 const MarkdownPreviewPage = lazy(() => import('./pages/MarkdownPreviewPage'))
-const OfficeLauncherPage = lazy(() => import('./pages/OfficeLauncherPage'))
 const SignDocumentPage = lazy(() => import('./pages/SignDocumentPage'))
 const HudPage = lazy(() => import('./pages/HudPage'))
 
@@ -164,7 +163,11 @@ export default function AppRoutes() {
         <Route path="/sheets/:artifactId?" element={<SheetsPage />} />
         <Route path="/pdf/:artifactId?" element={<PdfPage />} />
         <Route path="/markdown-preview" element={<MarkdownPreviewPage />} />
-        <Route path="/office" element={<OfficeLauncherPage />} />
+        {/* The standalone office launcher was retired — the single office
+            surface is the shell's ACI "Office & Extensions" hub. Keep the
+            path alive as a redirect so old bookmarks/desktop shortcuts and
+            the desktop's openOffice('launcher') don't 404. */}
+        <Route path="/office" element={<Navigate to="/" replace />} />
         <Route path="/sign" element={<SignDocumentPage />} />
         <Route path="/hud" element={<HudPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
