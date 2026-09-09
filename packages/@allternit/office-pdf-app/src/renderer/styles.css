@@ -242,6 +242,21 @@ html[data-rail-collapsed='true'] .ribbon-tabs {
   font-weight: 500;
 }
 
+.ai-feature-icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  color: #0f7fff;
+}
+
+.ai-feature-icon svg {
+  /* 28px like the other tall-button glyphs; the 24-unit viewBox's 1.5 stroke
+     scales to 1.75px, keeping the 1:16 stroke standard (same as docs) */
+  width: 28px;
+  height: 28px;
+}
+
 .rb-big.rb-ai > span:not(.rb-big-icon) {
   margin-top: -1px;
 }

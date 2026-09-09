@@ -22,6 +22,7 @@ import { initBrowserSurfaceBridge } from '../integration/execution/browser.bridg
 import { installDesktopStreamingGuard } from '../lib/sse/desktop-streaming-guard';
 import { useAllternitHotkeys, PLATFORM_SHORTCUTS } from '../vendor/hotkeys';
 import { createInitialNavState, navReducer } from '../nav/nav.store';
+import { makeStableViewId } from '../nav/nav.policy';
 import { selectActiveView } from '../nav/nav.selectors';
 import { ViewHost } from '../views/ViewHost';
 import type { ViewType } from '../nav/nav.types';
@@ -68,6 +69,7 @@ import { SessionProvider } from '../providers/session-provider';
 import { RailControls } from './FloatingWidgets';
 import { FindInPageOverlay } from './FindInPageOverlay';
 import { ArtifactSidecar } from './ArtifactSidecar';
+import { useInboxBadgeCount } from '@/lib/bots/BotInboxContent';
 
 import { createModuleLogger } from '@/lib/logger';
 import { openDesignWindow } from '@/lib/open-design-window';
@@ -118,6 +120,8 @@ const BOT_MODE_VIEW_TYPES = new Set<ViewType>([
   'bot-launchpad',
   'bot-home',
   'bot-inbox',
+  'groups-list',
+  'group-chat',
 ]);
 
 // Inner app component that uses mode context
@@ -381,6 +385,8 @@ function ShellAppInner(): React.ReactNode {
   // Sync view to persisted mode once mode is loaded from localStorage, or when
   // the user explicitly changes mode. Do not override a view that was just
   // opened because the mode-sync effect changed mode in response to that view.
+  const navRef = useRef(nav);
+  navRef.current = nav;
   useEffect(() => {
     if (!modeLoaded) return;
     if (typeof window !== 'undefined' && window.location.pathname === '/shell/recents') {
@@ -390,6 +396,17 @@ function ShellAppInner(): React.ReactNode {
     if (modeChangeSourceRef.current === 'sync') {
       modeChangeSourceRef.current = 'initial';
       return;
+    }
+    if (modeChangeSourceRef.current === 'initial') {
+      // First load after mode hydration: only seed the mode's default view
+      // when nothing beyond the reducer's seeded chat view is open, so a rail
+      // tab the user already clicked on first paint keeps its view.
+      const seededChatId = makeStableViewId('chat');
+      const onlySeededChat =
+        navRef.current.activeViewId === seededChatId &&
+        Object.keys(navRef.current.openViews).length === 1 &&
+        Boolean(navRef.current.openViews[seededChatId]);
+      if (!onlySeededChat) return;
     }
     if (activeMode === 'chat') open('chat');
     else if (activeMode === 'cowork') {
@@ -684,6 +701,8 @@ function ShellAppInner(): React.ReactNode {
 
   const [agentActivityPanelOpen, setAgentActivityPanelOpen] = useState(false);
   const { unreadCount: agentActivityUnreadCount } = useMonitorThreads();
+  const inboxBadgeCount = useInboxBadgeCount();
+  const bellUnreadCount = agentActivityUnreadCount + inboxBadgeCount;
   const [isControlCenterOpen, setIsControlCenterOpen] = useState(false);
   const permissions = usePermissionGuide();
   const [permissionBannerDismissed, setPermissionBannerDismissed] = useState(() => {
@@ -816,7 +835,7 @@ function ShellAppInner(): React.ReactNode {
                   }}
                   railWidth={railWidth}
                   onAgentActivityOpen={() => setAgentActivityPanelOpen(true)}
-                  agentActivityUnreadCount={agentActivityUnreadCount}
+                  agentActivityUnreadCount={bellUnreadCount}
                   onModeHover={setHoveredModeIcon}
                   onNewChat={() => {
                     useChatSessionStore.getState().setActiveSession(null);

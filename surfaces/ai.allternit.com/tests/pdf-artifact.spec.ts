@@ -118,6 +118,35 @@ test('pdf viewer selection shows Copy popup in read-only mode', async ({ page })
   await expect(popup.getByRole('button', { name: 'Strikethrough' })).toHaveCount(0);
 });
 
+test('pdf viewer opens a Sign-style data-url pdf artifact', async ({ page }) => {
+  const base64 = makeHelloPdf().toString('base64');
+  const artifact = makeArtifact('', { id: 'pdf-sign' });
+  artifact.sections = [
+    {
+      id: 'sec-signed',
+      artifactId: 'pdf-sign',
+      heading: 'Signed PDF',
+      kind: 'pdf',
+      body: `data:application/pdf;base64,${base64}`,
+      position: 0,
+      createdAt: NOW,
+      updatedAt: NOW,
+    },
+  ];
+
+  await page.route('**/api/v1/artifacts/pdf-sign', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ artifact }),
+    });
+  });
+
+  await page.goto('/pdf/pdf-sign');
+  await expect(page.locator('.app')).toBeVisible({ timeout: 30000 });
+  await expect(page.locator('canvas').first()).toBeVisible({ timeout: 30000 });
+});
+
 test('pdf viewer without artifact stays standalone (no artifact save)', async ({ page }) => {
   const artifactWrites: string[] = [];
   await page.route('**/api/v1/artifacts/**', (route) => {

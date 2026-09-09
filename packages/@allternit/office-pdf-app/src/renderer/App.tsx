@@ -7,7 +7,7 @@ import type { PDFDocumentLoadingTask, PDFDocumentProxy, RenderTask } from 'pdfjs
 import workerUrl from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url'
 import { AiPanel } from './ai/AiPanel'
 import { AllternitBrandMark } from '@allternit/office-suite/bridge'
-import { OfficeAiSlot } from '@allternit/office-suite/bridge'
+import { OfficeAiSlot, reportActiveDocument, requestAssistantPreset } from '@allternit/office-suite/bridge'
 import type { PdfAiDeps } from './ai/tools'
 import {
   MARKUP_COLORS,
@@ -616,6 +616,8 @@ export default function App() {
   const [extractDlg, setExtractDlg] = useState(false)
   const [extractInput, setExtractInput] = useState('')
   const [extractInvalid, setExtractInvalid] = useState(false)
+  /** True once the current document's text has been extracted (presets need it). */
+  const [textReady, setTextReady] = useState(false)
   const coalesceKeyRef = useRef<string | null>(null)
   const passwordRef = useRef<string | undefined>(undefined)
   const pdfTaskRef = useRef<PDFDocumentLoadingTask | null>(null)
@@ -627,6 +629,8 @@ export default function App() {
     null,
   )
   const searchJumpRef = useRef<{ matches: SearchMatch[]; cur: number } | null>(null)
+  /** Full extracted text, one entry per loaded doc; feeds the office agent's context. */
+  const extractedTextRef = useRef<{ doc: PDFDocumentProxy; text: string | null } | null>(null)
 
   /** Visible pages (with unsaved reorder, deleted pages hidden): position → original page index */
   const visList = useMemo(() => {
@@ -933,6 +937,39 @@ export default function App() {
     }
     return searchIndexRef.current.promise
   }, [doc])
+
+  // Extract the full text once per loaded document so the Allternit Office
+  // Agent can actually read the PDF (the registry getter is synchronous, so
+  // the async extraction result is cached here). Reuses the search index —
+  // same per-page text, no second pass over the pages. Keyed by doc identity,
+  // so opening another file (or a save reload) invalidates the cache.
+  useEffect(() => {
+    if (!doc) {
+      extractedTextRef.current = null
+      return
+    }
+    const current = doc
+    extractedTextRef.current = { doc: current, text: null }
+    setTextReady(false)
+    void getSearchIndex()?.then((index) => {
+      if (extractedTextRef.current?.doc !== current) return
+      extractedTextRef.current = { doc: current, text: index.map((p) => p.text).join('\n\n') }
+      setTextReady(true)
+    })
+  }, [doc, getSearchIndex])
+
+  // Report the open PDF to the office suite's active-document registry — name
+  // plus the extracted text — so the agent pane's context line and runs see
+  // the real document, not just a file name (PR #188 two-layer registry; the
+  // suite PdfApp adapter only registers the prop name).
+  useEffect(() => {
+    if (!doc || !fileName || status !== 'ready') return
+    reportActiveDocument('pdf', {
+      name: fileName,
+      content: () => (extractedTextRef.current?.doc === doc ? extractedTextRef.current.text : null),
+    })
+    return () => reportActiveDocument('pdf', null)
+  }, [doc, fileName, status])
 
   useEffect(() => {
     if (!searchOpen || !searchQuery.trim()) {
@@ -2027,6 +2064,57 @@ export default function App() {
           {/* ---- AI assistant (same far-right Allternit entry as the docs ribbon) ---- */}
           <div className="ribbon-group">
             <div className="ribbon-group-items">
+              <button
+                className="rb-big ai-entry"
+                disabled={!textReady}
+                title={t('aiQuickSummaryPrompt')}
+                onClick={() => {
+                  setAiCollapsed(false)
+                  requestAssistantPreset('pdf', t('aiQuickSummaryPrompt'))
+                }}
+              >
+                <span className="rb-big-icon">
+                  <span className="ai-feature-icon" aria-hidden="true">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <rect x="4.5" y="3.5" width="15" height="17" rx="2" />
+                      <path d="M8 8.5h8M8 12h8M8 15.5h4.5" strokeLinecap="round" />
+                    </svg>
+                  </span>
+                </span>
+                <span>{t('aiQuickSummary')}</span>
+              </button>
+              <button
+                className="rb-big ai-entry"
+                disabled={!textReady}
+                title={t('aiQuickKeyPointsPrompt')}
+                onClick={() => {
+                  setAiCollapsed(false)
+                  requestAssistantPreset('pdf', t('aiQuickKeyPointsPrompt'))
+                }}
+              >
+                <span className="rb-big-icon">
+                  <span className="ai-feature-icon" aria-hidden="true">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M12 3.5 14.2 8.8 20 9.3 15.7 13.1 17 18.8 12 15.7 7 18.8 8.3 13.1 4 9.3 9.8 8.8Z" />
+                    </svg>
+                  </span>
+                </span>
+                <span>{t('aiQuickKeyPoints')}</span>
+              </button>
               <button
                 className={`rb-big rb-ai${aiCollapsed ? '' : ' active'}`}
                 title={t('ribbonAiAssistantTip')}
