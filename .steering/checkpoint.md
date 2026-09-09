@@ -1,25 +1,28 @@
-# Steering checkpoint — session/50d4cec6
+# Session checkpoint — office-nav
 
-## Goal
-Ship Phase 1 of spec `bot-identity-computer` (Allternit Brain Research/specs/bot-identity-computer.md): atomic Create Bot = Identity (Name — Role) + Instructions (JOB system prompt) + persistent Computer Cloud desktop bound via bot_id (default 2 vCPU / 4 GB / 100 GB) + Tools (real allowlist), in `~/Desktop/allternit-workspace/allternit`. Reuse `provisionBotDesktop` / `/api/v1/computers` / `vmOperator`. No Orgo, no Docker-required path, no paid deps, no pricing, no fleet provisioning.
+Goal: Add a floating top-left Back/Home control row (mirroring shell RailControls) to the
+standalone office page routes (/docs, /sheets, /slides, /pdf, /office) so the owner can get
+back to the main screen. Root cause: those routes render standalone pages outside the shell,
+so RailControls (FloatingWidgets.tsx, fixed top-0 left-0 z-[150]) never mounts.
 
-## Just did
-- Worktree `allternit-session-50d4cec6` on `session/50d4cec6` (from origin/main 83de96076).
-- `vm-operator.ts`: added `defaultBotVMOperatorConfig()` (persistent, 2/4096/102400, autoStart false) + `ensureBotComputer(botId, config, {displayName})` — list-by-bot_id, bind newest non-deleted (stopped counts), else POST /api/v1/computers with persistence persistent.
-- New `bot-tool-registry.ts`: 8 real native tools + per-category defaults + toggle; template apply seeds allowlist.
-- `CreateBotForm.tsx`: new "Job & Tools" step (systemPrompt + tool checkboxes) and "Computer" step (persistent-desktop switch + summary); formData carries systemPrompt + vmOperator defaults; handleCreate fire-and-forgets `ensureBotComputer` after createAgent (returns immediately, rail streams status); identity placeholder now "Name — Role"; review step shows all four fields; checklist + step grid updated for 7 steps.
-- `useStartBotSession.ts`: reopen path resolves the bound desktop by bot_id and refreshes session metadata (never creates); new-session path resolves existing sandbox always, creates only when autoStart !== false.
-- New `useBotComputer.ts` hook (polls computers?bot_id, maps creating→provisioning); `BotHubCard` shows live computer status chip.
-- `BOT_AGENT_CONTRACT.md`: added "Atomic create rule" section.
-- Tests: ensureBotComputer suite (defaults, provision, bind stopped, create→reopen same id, deleted skip) in vm-operator.test.ts; bot-tool-registry.test.ts (registry integrity, toggle, status map).
+Just did:
+- Scouted the shell: RailControls + TitleBarButton in src/shell/FloatingWidgets.tsx
+  (TitleBarButton is not exported — replicate style, do not refactor the shell file).
+- Confirmed isElectronShell() in src/lib/platform; trafficLightClearance = 72 : 4.
+- Built src/shell/OfficePageChrome.tsx + mounted in 5 pages (flex-col layout).
+- DEVIATION from brief: the brief asked for a `fixed top-0 left-0` floating row, but
+  measurement showed the vendored editors always render their File ribbon tab at
+  x=84–130 on mac (ribbon-tabs-mac padding, File tab visible in every env because
+  installDesktopBridge always sets __allternitBrowserBridge) — a floating pill at
+  marginLeft 72 would cover it. Docked a 44px bar in normal flow instead: no overlap
+  by construction, same pill/button visual language, same traffic-light clearance,
+  plus a drag region for the frameless Electron window. Flagged in PR.
 
-## Next
-1. pnpm install finishes → run vitest for touched tests + typecheck:fast.
-2. Commit, push, PR, merge, ledger attestation, cleanup per AGENTS.md ritual.
+Next:
+1. Create src/shell/OfficePageChrome.tsx (fixed top-left pill: Back + Home, WebkitAppRegion:no-drag).
+2. Mount in DocsPage/SheetsPage/SlidesPage/PdfPage/OfficeLauncherPage (src/pages/ only).
+3. Add vitest test next to FloatingWidgets.test.tsx conventions.
+4. Typecheck + test, visual check, commit/push/PR/merge, ledger attestation, cleanup.
 
-## Open questions (resolved per spec recommendations)
-- Return-immediately + stream status: implemented (fire-and-forget provision, rail polls).
-- Incus Linux default: provider 'cloud-desktop' → backend default Incus; no Tart path added.
-- Bots default persistent on, non-bot agents unchanged: implemented.
-- Theater: Create Bot path is CreateBotForm, which has no RPG/Big Five/forge steps (theater lives only in the separate CreateAgentForm agent wizard — left untouched, out of Phase 1 scope; documented in contract).
-=======
+Open questions:
+- None — scope fixed by owner: no main-nav entry, no views/office edits (agent-20 owns that).
