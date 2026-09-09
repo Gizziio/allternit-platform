@@ -5,7 +5,7 @@ description: Allternit's unified document workspace — Docs, Sheets, Slides, PD
 
 ## Overview
 
-The **Allternit Office Suite** is a family of document surfaces built on the `@allternit/office-*` engine and editor packages. Every editor runs inside the platform shell as a first-class ACI view, on dedicated desktop windows for "Open with" workflows, and inside the iOS read-only viewer. A single artifact contract stores the real file bytes, so the same `.docx`, `.xlsx`, `.pptx`, or `.pdf` can move between web, desktop, and mobile without conversion.
+The **Allternit Office Suite** is a family of document surfaces built on the `@allternit/office-*` engine and editor packages. Every editor runs inside the platform shell as a first-class ACI view, delivered to the desktop app's main window for "Open with" workflows, and inside the iOS read-only viewer. A single artifact contract stores the real file bytes, so the same `.docx`, `.xlsx`, `.pptx`, or `.pdf` can move between web, desktop, and mobile without conversion.
 
 <CardGroup cols={2}>
   <Card title="Allternit Docs" icon="file-text">
@@ -25,7 +25,7 @@ The **Allternit Office Suite** is a family of document surfaces built on the `@a
   </Card>
 </CardGroup>
 
-All five surfaces are reachable from the unified launcher at **`/office`**, which is also embedded in the shell's **Office & Extensions** hub.
+All surfaces are reachable from the shell's **Office & Extensions** hub (the `browser-extensions` ACI view), the single office entry point since the standalone `/office` launcher page was retired — `/office` now redirects to the shell home so old bookmarks keep working.
 
 ## Routes and shell view types
 
@@ -36,7 +36,7 @@ All five surfaces are reachable from the unified launcher at **`/office`**, whic
 | **Allternit Slides** | `/slides/:artifactId?` | `slides` | Blank deck, artifact ID, or file handoff |
 | **Allternit PDF** | `/pdf/:artifactId?` | `pdf` | Artifact ID or file handoff (viewer only) |
 | **Allternit Sign** | `/sign` | `sign` | Upload a PDF or receive a handoff from the PDF viewer |
-| **Office Launcher** | `/office` | `browser-extensions` / standalone | Create-new cards and "Open a file" for any supported format |
+| **Office & Extensions hub** | `/` (ACI → Office & Extensions) | `browser-extensions` | Create-new cards and "Open a file" for any supported format (the retired `/office` path redirects home) |
 
 Each route is optional-`artifactId`, so `/docs` opens a blank document and `/docs/art_018f3a7c...` loads that artifact directly.
 
@@ -58,9 +58,9 @@ Every editor persists (or reads) the same artifact payload, regardless of whethe
 
 ## Desktop integration
 
-On the Electron desktop app (`surfaces/allternit-desktop`), the suite follows a **shell-first** model. In normal use, Docs, Sheets, Slides, and PDF open as ACI shell views using the same `docs`/`sheets`/`slides`/`pdf` view types as the web platform. The Office launcher at `/office` — and the shell's **Office & Extensions** hub — reuses a single `OfficeSuiteSection` component that calls the registry's `open` to launch in-shell editors.
+On the Electron desktop app (`surfaces/allternit-desktop`), the suite follows a **shell-first, single-window** model. Docs, Sheets, Slides, and PDF always open as ACI shell views in the app's main window, using the same `docs`/`sheets`/`slides`/`pdf` view types as the web platform. The shell's **Office & Extensions** hub — and the cowork/design embeds — reuse a single `OfficeSuiteSection` component that calls the registry's `open` to launch in-shell editors.
 
-Dedicated desktop windows are reserved for two cases: **"Open with Allternit"** file associations and explicit pop-out / multi-window use. The desktop registers `fileAssociations` for `.docx`, `.xlsx`, `.pptx`, and `.pdf`; macOS `open-file`, Windows `second-instance`, and cold-start argv are all routed through `openOfficeWithFile()`. The payload is delivered to the renderer over `office:open-file` IPC, the platform's `desktop-bridge.ts` stashes it in the one-shot file handoff, and the launcher navigates to the correct editor route.
+**"Open with Allternit"** file associations route into the same main window — there are no separate per-program office windows. The desktop registers `fileAssociations` for `.docx`, `.xlsx`, `.pptx`, and `.pdf`; macOS `open-file`, Windows `second-instance`, cold-start argv, the app menu, and `shell:open-office` IPC are all routed through the main window over the `office:open-file` / `office:open-target` preload channels (queued until the window has loaded). The platform's `desktop-bridge.ts` stashes file bytes in the one-shot file handoff and opens the editor as an in-shell view, falling back to the editor route when the shell isn't mounted.
 
 Because the same artifact section contract drives routes, shell views, desktop windows, and mobile, a document saved on the web opens byte-for-byte identically on desktop and iOS.
 
@@ -115,7 +115,7 @@ const handoffId = stashFile({ name: 'report.docx', bytes: docxUint8Array });
 open('docs', { handoffId });
 ```
 
-The launcher uses the same `stashFile`/`takeFile` one-shot handoff, so desktop file associations and the **Open a file** button flow through the exact same path.
+The hub's suite section uses the same `stashFile`/`takeFile` one-shot handoff, so desktop file associations and the **Open a file** button flow through the exact same path.
 
 ### Direct route navigation
 
@@ -124,8 +124,11 @@ If you are outside the shell (for example, in a standalone page or a test), navi
 ```typescript
 navigate('/docs/art_018f3a7c...');
 navigate('/sheets', { state: { handoffId } });
-navigate('/office');
 ```
+
+<Note>
+  The retired `/office` launcher path redirects to `/` (the shell home) — use the **Office & Extensions** hub as the office entry point instead.
+</Note>
 
 ## Related pages
 
