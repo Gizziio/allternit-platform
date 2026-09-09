@@ -1,10 +1,28 @@
 // @ts-nocheck
-// Stub for the optional native `audio-capture-napi` package (voice capture).
-// It is only loaded dynamically by the voice service; importing this stub
-// throws a loud, actionable error that the voice service's existing fallback
-// path catches.
+// Stub for the optional native `audio-capture-napi` package (voice capture),
+// bundled by build-production.js when the real native module is absent.
+// It must export the full module shape: every caller gates native capture
+// behind `isNativeAudioAvailable()`, so reporting "unavailable" routes voice
+// to the sox/arecord fallback exactly as a machine without the native module.
 
-throw new Error(
-  'audio-capture-napi is not bundled in this build. Voice capture is unavailable; ' +
-    'install the native package to enable it.',
-)
+export function isNativeAudioAvailable(): boolean {
+  return false
+}
+
+export function isNativeRecordingActive(): boolean {
+  return false
+}
+
+export async function startNativeRecording(): Promise<void> {
+  throw new Error(
+    'audio-capture-napi is not bundled in this build; native capture is unavailable',
+  )
+}
+
+export async function stopNativeRecording(): Promise<void> {}
+
+export async function captureAudio() {
+  throw new Error(
+    'audio-capture-napi is not bundled in this build; native capture is unavailable',
+  )
+}
