@@ -21,6 +21,16 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-09-09 01:35 — grok — Local whisper.cpp STT and /voice on Gizzi + Desktop
+
+- **Session ID / Branch:** `session/voice-slash` (worktree `allternit-session-voice-slash`)
+- **Agent:** grok
+- **Summary:** Replaced the pyinstaller voice sidecar with Rust `voice-service` + whisper.cpp. Added always-on `/voice` (Ctrl+Space / F8) in Gizzi Code and the desktop composer.
+- **Commit:** PR #192, merge commit `bfe134675` on `main`
+- **How it works:** Local STT only. Sidecar `POST /v1/stt` runs `whisper-cli`; model downloads once to `~/.allternit/models/whisper/`. Desktop no longer spawns `launch.py`.
+- **Outstanding work:** Live mic smoke needs `whisper-cli` on PATH or a desktop rebuild. TTS, ACU uvicorn, port 8014, mesh 502 not in this PR.
+- **Summary file:** [./summaries/2026-09-09-0135-session-voice-slash-grok-local-voice.md](./summaries/2026-09-09-0135-session-voice-slash-grok-local-voice.md)
+
 ### 2026-09-08 16:20 — kimi — CI: Pages deploy + addin build now trigger on extension-shared changes
 
 - **Session ID / Branch:** `session/deploy-triggers` (worktree `allternit-session-deploy-triggers`)
