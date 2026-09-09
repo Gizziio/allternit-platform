@@ -7,21 +7,24 @@ const SSE_BODY = [
   '',
 ].join('\n');
 
-test('docs editor shows a single Allternit Office Agent pane (no Built-in tab)', async ({ page }) => {
+test('docs editor shows a single Allternit Office Agent header row (no tab strip)', async ({ page }) => {
   await page.goto('/docs');
   await expect(page.locator('.ribbon')).toBeVisible({ timeout: 30000 });
 
   const rail = page.locator('.office-ext-rail');
   if (await rail.isVisible().catch(() => false)) await rail.click();
 
-  // Exactly one chat pane: the Allternit Office Agent tab, no Built-in fallback.
-  await expect(page.locator('.office-ext-tab')).toHaveCount(1);
-  await expect(page.locator('.office-ext-tab')).toHaveText('Allternit Office Agent');
-  await expect(page.getByText('Built-in')).toHaveCount(0);
+  // The slot renders no tab strip — the panel header is the ONE header row.
+  await expect(page.locator('.office-ext-tab')).toHaveCount(0);
+  const dock = page.locator('.ai-dock');
+  await expect(dock.getByText('Allternit Office Agent', { exact: true })).toHaveCount(1);
   await expect(page.locator('.aos-assistant')).toBeVisible();
 
-  // Brand mark renders in the pane header (pixel-A svg, not a text glyph).
+  // Brand mark renders in the pane header (pixel-A svg, not a text glyph)…
   await expect(page.locator('.aos-assistant-title svg')).toBeVisible();
+  // …and the functional controls live in that same row.
+  await expect(page.locator('.aos-assistant-model-picker-trigger')).toBeVisible();
+  await expect(page.locator('.aos-assistant-header-actions button[title="Close panel"]')).toBeVisible();
 });
 
 test('docs AI Summarize routes through the agent pane with document context', async ({ page }) => {
