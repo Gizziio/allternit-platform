@@ -1,21 +1,15 @@
-# Steering checkpoint — session/cu15
+# cu16-replayui checkpoint — COMPLETE
 
 ## Goal
-Restructure docs/public/aci/** into a quickstart spine (Quickstart / Guide / Recipes / Changelog); add llms.txt at repo root. Keep every existing factual claim; move, don't delete. Sole ownership: docs/public/** + llms.txt. Do NOT merge — orchestrator merges.
+Session replay as product surface in surfaces/ai.allternit.com (SOLE ownership; sdk/computer-use read-only): Recordings view — list, steps, inline GIF, Replay w/ deviation threshold, Run-as-workflow w/ compile-first hint, run polling, approval banner.
 
 ## Just did
-- Restructured docs/public/aci/ from a single index.md into a 5-page spine:
-  - index.md — intro, ACI vs managed sandboxes table, doc-set TOC.
-  - quickstart.md — manual one-call quickstart (real, from main) + clearly-marked "Coming soon — not yet available on main" placeholder for the cu14 `demo` command.
-  - guide.md — integration modes (ACU run loop / direct control routes / capability path), action space + tool versions 20250124/20251124, approvals + server-side enforcement (D2, grants taxonomy), environments + VM driver, recording/replay (SSE replay buffer), monitoring, vision coordinates pointer.
-  - recipes.md — drive my browser, replay a recording (SSE replay buffer), run a taught workflow (marked not-yet-available), approve a risky action (handoff flow).
-  - changelog.md — tool contract: 20250124 initial set (default), 20251124 adds zoom (enableZoom), legacy anthropicType adapter note.
-- Added llms.txt at repo root (all 30+ links verified to resolve on disk).
-- Updated stale anchor link docs/public/parity/appshots.md → aci/guide.md#action-space-and-tool-versions.
-- Verification: docs-lint output identical to pre-change baseline (only pre-existing FAILs in surfaces/docs/cli/native-sessions.mdx competitor mentions, outside scope); 27/27 key factual strings from old index.md confirmed present in new pages; all in-spine relative links valid.
+- Implemented: src/remote-control/api/recordings.ts (+15 tests), src/remote-control/recordings/RecordingsPanel.tsx, DashboardPage wiring.
+- Verified: typecheck PASS (0 errors); new tests 15/15; full suite 1424 passed + 1 pre-existing failure (fabric-session-kind, fails on untouched main); remote-control vite build clean (artifact removed).
+- Committed c257bce46, pushed session/cu16, opened PR #173. Not merging (orchestrator merges).
 
 ## Next
-- Commit (docs(aci): ...), push -u origin session/cu15, gh pr create with before/after TOC + evidence. Do NOT merge.
+- Orchestrator merge + ledger attestation per repo AGENTS.md (steps 6-8) after merge.
 
 ## Open questions
-- None.
+- Gateway recordings detail/file/gif routes don't exist on main; UI degrades gracefully. If the gateway-owning sprint session adds them under different paths, the client paths in recordings.ts are the single place to adjust.
