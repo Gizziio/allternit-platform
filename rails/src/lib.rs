@@ -61,8 +61,10 @@ pub use crate::mail::{
 };
 pub use crate::orchestrator::{ExecutorProbe, Orchestrator, SpawnOptions, WatchOutcome};
 pub use crate::peer::{
-    DeliveryReceipt, Peer, PeerEnvelope, PeerRegistry, PeerSocket, PeerStatus, send_envelope,
+    DeliveryReceipt, Peer, PeerEnvelope, PeerRegistry, PeerStatus, send_envelope,
 };
+#[cfg(unix)]
+pub use crate::peer::PeerSocket;
 pub use crate::prompt::{project_prompt, PromptTimeline};
 pub use crate::receipts::{ReceiptStore, ReceiptStoreOptions};
 pub use crate::steer::{CheckpointResult, ConsultResult, Steer};
