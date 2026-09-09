@@ -18,13 +18,15 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import re
 import sys
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional
 
 from fastapi import APIRouter, HTTPException, Query
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel, Field, model_validator
 
 # ---------------------------------------------------------------------------
@@ -1289,6 +1291,177 @@ async def list_recordings_endpoint() -> Dict[str, Any]:
     if not _recorder_available or list_recordings is None:
         raise HTTPException(status_code=503, detail="ActionRecorder not available")
     return {"recordings": list_recordings()}
+
+
+# ---------------------------------------------------------------------------
+# Recording detail / file / GIF routes
+#
+# Contract: surfaces/ai.allternit.com/src/remote-control/api/recordings.ts
+# (RecordingManifest / RecordedStep / RecordingDetail).
+# ---------------------------------------------------------------------------
+
+# recording_id becomes a filesystem lookup — allowlist plus resolved-path
+# containment below are both required before touching disk.
+_RECORDING_ID_RE = re.compile(r"^[A-Za-z0-9._-]+$")
+
+
+def _recordings_root() -> Path:
+    from core.action_recorder import DEFAULT_RECORDINGS_DIR
+
+    return DEFAULT_RECORDINGS_DIR
+
+
+def _resolve_recording_path(recording_id: str) -> Path:
+    """Resolve a recording_id to its on-disk JSONL path, or raise 404.
+
+    Defense in depth: regex allowlist on the id, then resolve the candidate
+    path and verify it stays inside the recordings root. Never follows ids
+    containing '/', '..', or absolute paths.
+    """
+    if not _RECORDING_ID_RE.match(recording_id):
+        raise HTTPException(
+            status_code=404,
+            detail=f"Recording {recording_id} not found",
+        )
+    from core.action_recorder import find_recording_path
+
+    root = _recordings_root().resolve()
+    try:
+        path = find_recording_path(recording_id).resolve()
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Recording {recording_id} not found",
+        )
+    if not path.is_relative_to(root):
+        raise HTTPException(
+            status_code=404,
+            detail=f"Recording {recording_id} not found",
+        )
+    return path
+
+
+def _resolve_recording_gif_path(recording_id: str, manifest: Any) -> Optional[Path]:
+    """Locate a recording's GIF on disk, constrained to the recordings root.
+
+    Candidates, in order: the manifest's gif_path, then a GIF named after the
+    recording id, then the ActionRecorder convention (session-<run_id>.gif)
+    — all alongside the JSONL under the recordings root.
+    """
+    try:
+        root = _recordings_root().resolve()
+    except Exception:
+        return None
+    candidates: List[Path] = []
+    gif_path = getattr(manifest, "gif_path", None)
+    if gif_path:
+        candidates.append(Path(gif_path))
+    run_id = getattr(manifest, "run_id", "") or ""
+    candidates.append(root / f"{recording_id}.gif")
+    if run_id:
+        candidates.append(root / f"session-{run_id}.gif")
+    for candidate in candidates:
+        try:
+            resolved = candidate.resolve()
+        except Exception:
+            continue
+        if resolved.is_file() and resolved.is_relative_to(root):
+            return resolved
+    return None
+
+
+def _load_recording_or_raise(recording_id: str) -> tuple[Any, List[Any], Path]:
+    """Load manifest + frames + path, mapping filesystem errors to HTTP errors."""
+    path = _resolve_recording_path(recording_id)
+    try:
+        manifest, frames = ActionRecorder.load(path)
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Recording {recording_id} not found",
+        )
+    except (ValueError, json.JSONDecodeError) as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid recording {recording_id}: {exc}",
+        )
+    return manifest, frames, path
+
+
+def _manifest_to_dict(manifest: Any) -> Dict[str, Any]:
+    """Map the on-disk manifest to the RecordingManifest TS contract."""
+    return {
+        "recording_id": manifest.recording_id,
+        "task": manifest.task,
+        "session_id": manifest.session_id,
+        "run_id": manifest.run_id,
+        "started_at": manifest.started_at,
+        "completed_at": manifest.completed_at,
+        "total_steps": manifest.total_steps,
+        "status": manifest.status,
+        "gif_path": manifest.gif_path,
+    }
+
+
+def _frame_to_step(frame: Any, index: int) -> Dict[str, Any]:
+    """Map a RecordedFrame to the RecordedStep TS contract (no screenshots)."""
+    return {
+        "step": getattr(frame, "step", None) or index + 1,
+        "timestamp": frame.timestamp,
+        "action_type": frame.action_type,
+        "action_target": frame.action_target,
+        "action_params": frame.action_params or {},
+        "reasoning": frame.reasoning,
+        "action_succeeded": frame.action_succeeded is not False,
+        "risk_level": frame.risk_level or "low",
+    }
+
+
+@router.get("/recordings/{recording_id}")
+async def get_recording_detail(recording_id: str) -> Dict[str, Any]:
+    """Recording detail: manifest + parsed steps + gif_url (contract: recordings.ts)."""
+    if not _recorder_available or ActionRecorder is None:
+        raise HTTPException(status_code=503, detail="ActionRecorder not available")
+    manifest, frames, _path = _load_recording_or_raise(recording_id)
+    gif = _resolve_recording_gif_path(recording_id, manifest)
+    return {
+        "manifest": _manifest_to_dict(manifest),
+        "steps": [_frame_to_step(frame, i) for i, frame in enumerate(frames)],
+        "gif_url": (
+            f"/v1/computer-use/recordings/{recording_id}/gif" if gif is not None else None
+        ),
+    }
+
+
+@router.get("/recordings/{recording_id}/file")
+async def get_recording_file(recording_id: str) -> Response:
+    """Raw recording JSONL bytes (manifest line first, then frame lines)."""
+    if not _recorder_available or ActionRecorder is None:
+        raise HTTPException(status_code=503, detail="ActionRecorder not available")
+    path = _resolve_recording_path(recording_id)
+    try:
+        content = path.read_bytes()
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Recording {recording_id} not found",
+        )
+    return Response(content=content, media_type="application/x-ndjson")
+
+
+@router.get("/recordings/{recording_id}/gif")
+async def get_recording_gif(recording_id: str) -> Response:
+    """GIF replay bytes for a recording, when one exists on disk."""
+    if not _recorder_available or ActionRecorder is None:
+        raise HTTPException(status_code=503, detail="ActionRecorder not available")
+    manifest, _frames, _path = _load_recording_or_raise(recording_id)
+    gif = _resolve_recording_gif_path(recording_id, manifest)
+    if gif is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No GIF for recording {recording_id}",
+        )
+    return Response(content=gif.read_bytes(), media_type="image/gif")
 
 
 @router.post("/replay")
