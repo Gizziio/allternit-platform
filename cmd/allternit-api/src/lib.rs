@@ -193,6 +193,7 @@ pub mod upload_routes;
 pub mod usage_routes;
 pub mod v1_routes;
 pub mod viz_routes;
+pub mod vm_pool;
 pub mod vm_session_routes;
 pub mod web_proxy_routes;
 pub mod webhook_routes;

@@ -112,7 +112,7 @@ export async function handleApiError(response: Response): Promise<never> {
     message,
     response.status,
     code,
-    errorData as Record<string, unknown> | undefined
+    errorData as unknown as Record<string, unknown> | undefined
   );
 }
 

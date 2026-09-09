@@ -2,8 +2,16 @@
   "name": "@allternit/computer-use",
   "version": "0.1.0",
   "description": "TypeScript SDK for the Allternit Computer Use Engine - thin HTTP client over the canonical engine API",
+  "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
   "files": [
     "dist/**/*",
     "README.md",

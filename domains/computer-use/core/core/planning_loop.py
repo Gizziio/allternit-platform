@@ -33,6 +33,7 @@ class StopReason(Enum):
     TIMEOUT = "timeout"
     ERROR = "error"
     APPROVAL_DENIED = "approval_denied"
+    MONITOR_FLAG = "monitor_flag"
     CANCELLED = "cancelled"
 
 
@@ -192,6 +193,7 @@ class PlanningLoop:
         event_callback: Optional[Callable[[Dict], None]] = None,
         approval_callback: Optional[Callable[[LoopStep], bool]] = None,
         history_preflight: Optional[Callable[[str], Awaitable[Optional[Dict]]]] = None,
+        monitor: Optional[Any] = None,  # core.monitor.Monitor implementation
     ):
         self.vision_provider = vision_provider
         # Accept ComputerUseExecutor directly — it has the same execute() interface
@@ -202,7 +204,9 @@ class PlanningLoop:
         self.event_callback = event_callback
         self.approval_callback = approval_callback
         self.history_preflight = history_preflight
+        self.monitor = monitor
         self._cancelled = False
+        self._monitor_history: List[Dict[str, Any]] = []
 
     def cancel(self) -> None:
         """Cancel a running loop."""
@@ -469,6 +473,29 @@ class PlanningLoop:
                 if len(history) > 8:
                     history = history[-8:]
 
+                # MONITOR: after each observe step, the monitor may pause the run
+                self._monitor_history.append({
+                    "action_type": step.action_type,
+                    "action_target": step.action_target,
+                })
+                monitor_decision = await self._run_monitor(
+                    step=step_num, run_id=run_id, session_id=session_id,
+                    screenshot_b64=step.after_screenshot_b64,
+                    extracted_text=_extracted_text_of(step.adapter_result),
+                )
+                if monitor_decision is not None:
+                    self._emit({"type": "approval.required", "run_id": run_id, "step": step_num,
+                               "action_preview": step.to_dict(),
+                               "reason": f"monitor_flag: {monitor_decision.reason}",
+                               "monitor_flag": monitor_decision.flag})
+                    approved = await self._request_approval(step)
+                    if not approved:
+                        stop_reason = StopReason.MONITOR_FLAG
+                        steps.append(step)
+                        break
+                    self._emit({"type": "approval.received", "run_id": run_id, "step": step_num,
+                               "approved": True, "monitor_flag": monitor_decision.flag})
+
                 # Record step
                 if self.recorder:
                     await self.recorder.record_frame_from_step(step)
@@ -491,6 +518,7 @@ class PlanningLoop:
             StopReason.TIMEOUT: "failed",
             StopReason.ERROR: "failed",
             StopReason.APPROVAL_DENIED: "needs_approval",
+            StopReason.MONITOR_FLAG: "needs_approval",
             StopReason.CANCELLED: "cancelled",
         }
         status = status_map.get(stop_reason, "failed")
@@ -701,6 +729,44 @@ class PlanningLoop:
                 return False
         return True
 
+    async def _run_monitor(self, *, step: int, run_id: str, session_id: str,
+                           screenshot_b64: str, extracted_text: str) -> Optional[Any]:
+        """Evaluate the pluggable monitor after an observe step.
+
+        Never raises: a failing monitor must not break the loop.
+        Returns a MonitorDecision with action "pause", or None.
+        """
+        if self.monitor is None:
+            return None
+        try:
+            try:
+                from .monitor import MonitorDecision
+            except Exception:
+                MonitorDecision = None  # type: ignore[assignment]
+            decision = await self.monitor.evaluate(
+                screenshot_b64=screenshot_b64 or "",
+                extracted_text=extracted_text,
+                action_type=self._monitor_history[-1].get("action_type", "") if self._monitor_history else "",
+                action_target=self._monitor_history[-1].get("action_target", "") if self._monitor_history else "",
+                step=step,
+                run_id=run_id,
+                session_id=session_id,
+                history=list(self._monitor_history),
+            )
+            if decision is None:
+                return None
+            if MonitorDecision is not None and isinstance(decision, MonitorDecision):
+                if decision.action != "pause":
+                    return None
+                return decision
+            # Duck-typed decision (any object with action/reason/flag).
+            if getattr(decision, "action", "continue") != "pause":
+                return None
+            return decision
+        except Exception as exc:
+            logger.debug("Monitor evaluation failed at step %s: %s", step, exc)
+            return None
+
     def _should_consult_history(self, task: str) -> bool:
         """Trigger history consultation for continuation / recent-work requests."""
         text = task.lower()
@@ -773,3 +839,20 @@ class PlanningLoop:
 def _bytes_to_b64(data: bytes) -> str:
     import base64
     return base64.b64encode(data).decode("utf-8") if data else ""
+
+
+def _extracted_text_of(adapter_result: Optional[Dict]) -> str:
+    """Best-effort text extraction from an adapter result dict for monitor scans."""
+    if not isinstance(adapter_result, dict):
+        return ""
+    content = adapter_result.get("extracted_content")
+    if isinstance(content, str):
+        return content
+    if isinstance(content, dict):
+        parts = []
+        for key in ("text", "content", "title", "result", "url"):
+            value = content.get(key)
+            if isinstance(value, str):
+                parts.append(value)
+        return "\n".join(parts)
+    return ""
