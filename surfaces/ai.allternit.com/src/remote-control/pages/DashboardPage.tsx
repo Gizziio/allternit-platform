@@ -15,6 +15,7 @@ import { env } from "@/lib/env";
 import { useToast } from "@/hooks/use-toast";
 import { MachinesPanel } from "@/components/dispatch/MachinesPanel";
 import { RemoteSessionPanel } from "@/components/dispatch/RemoteSessionPanel";
+import { RecordingsPanel } from "../recordings/RecordingsPanel";
 import { useRuntimes, type RuntimeViewModel } from "@/components/dispatch/useRuntimes";
 import { useRuntimeSelection } from "@/components/dispatch/useRuntimeSelection";
 import { useRemotePendingCounts } from "@/components/dispatch/useRemotePendingCounts";
@@ -375,6 +376,11 @@ export function DashboardPage({ installPrompt, onInstallClick }: DashboardPagePr
             <RemoteSessionPanel runtimeId={selected.id} getToken={auth.getToken} />
           </div>
         )}
+
+        <section className="mt-10">
+          <h2 className="text-[16px] font-semibold mb-3">Recordings</h2>
+          <RecordingsPanel />
+        </section>
       </div>
     </div>
   );

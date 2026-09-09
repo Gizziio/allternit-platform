@@ -1,19 +1,18 @@
-# Steering checkpoint — session/cu12-conf
+# cu16-replayui checkpoint
 
 ## Goal
-Finish honest remaining items in domains/computer-use (sole ownership).
+Session replay as product surface in surfaces/ai.allternit.com (SOLE ownership; sdk/computer-use read-only): Recordings view — list, steps, inline GIF, Replay w/ deviation threshold, Run-as-workflow w/ compile-first hint, run polling, approval banner.
 
 ## Just did
-- CDP adapter: added `goto` (alias of navigate), `eval`, `observe` actions + screenshot Artifact population in envelope.
-- suites.py: added Suite B (browser-adaptive-v1, 3 tests: envelope/clean-failure/goal-forwarding); Suite C = retrieval-v1 (was R, 5 tests, build_suite_r kept as alias); Suite E = hybrid-v1 (was H, 3 tests, build_suite_h alias); gateway/main.py imports still valid.
-- measured.py: discovers hybrid.orchestrator always (offline, browser.mock sub-adapter, note says so); retrieval crawler + browser-use discovery; per-adapter suite routing; honest unmeasured fallbacks.
-- core/monitor.py: VLMMonitor behind Monitor protocol — env config ACU_MONITOR_VLM_PROVIDER/MODEL/ENDPOINT, stdlib urllib client, injectable client for tests, heuristic pre-filter, errors→continue; docstring documents swap-in.
-- tests: 11 new VLMMonitor tests (fake provider), updated measured-conformance tests for new B/C/E reality.
-- pytest (venv-acu311, excl. pre-existing collection-error modules): 207 passed / 21 skipped / 0 failed. 3 transient desktop-mouse flakes on first run, green on rerun; pass in isolation.
+- API layer + 15 tests (green) + RecordingsPanel UI + DashboardPage wiring (all files listed in previous checkpoint).
+- Fixed icon imports (Phosphor: Workflow→FlowArrow, added missing Play).
+- `pnpm run typecheck` (tsc --noEmit): PASS, zero errors.
+- ESLint: broken in this repo env (typescript-eslint not resolvable from eslint.config.js) — verified identical breakage in the shared main checkout; pre-existing, no lint script in package.json.
 
-## Done — PR opened, awaiting orchestrator merge
-
-- PR #168: https://github.com/Gizziio/allternit-platform/pull/168 (branch session/cu12-conf, 3 commits pushed). Per task contract, NOT merged — orchestrator merges.
+## Next
+- Full `pnpm test` (vitest run) in flight — confirm no regressions, classify any failures as pre-existing if unrelated.
+- Remote-control vite bundle build smoke in flight.
+- Then: commit, push -u origin session/cu16, gh pr create.
 
 ## Open questions
-- None.
+- Gateway lacks recordings detail/file/gif routes on main — UI degrades gracefully; deferral flagged for the gateway-owning session.
