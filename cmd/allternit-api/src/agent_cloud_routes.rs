@@ -934,6 +934,7 @@ mod tests {
             desktop_host_registry,
             desktop_host_provisioner: None,
             bot_desktop_sessions: Arc::new(RwLock::new(HashMap::new())),
+            computer_guest_tokens: Arc::new(RwLock::new(HashMap::new())),
             rails,
             vm_sessions: crate::vm_session_routes::new_vm_session_store(),
             cowork_scheduler: None,

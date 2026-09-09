@@ -1,138 +1,40 @@
 # Voice Service
 
-HTTP API service for voice synthesis and recognition. STT is local
-[whisper.cpp](https://github.com/ggml-org/whisper.cpp) (`whisper-cli` +
-`ggml-tiny.en.bin`). TTS remains a contract stub; the Python/Chatterbox
-tree is not spawned by desktop.
+Local speech-to-text sidecar for Gizzi Code and Allternit Desktop.
 
-Build the CLI with `./build-whisper.sh` (macOS deployment target 13.0).
-The model is downloaded on first `POST /v1/stt` into
-`~/.allternit/models/whisper/` unless `WHISPER_MODEL` is set.
+STT is [whisper.cpp](https://github.com/ggml-org/whisper.cpp) (`whisper-cli` +
+`ggml-tiny.en.bin`, MIT). No Python, no pyinstaller, no cloud STT.
 
-## Scope
-
-- **Text-to-Speech (TTS)** — generate simulated speech metadata.
-- **Speech-to-Text (STT)** — accept audio uploads and return simulated
-  transcriptions.
-- **Session management** — create and track TTS/STT sessions.
-- **Model introspection** — list TTS voices and STT models.
-
-The `api/` directory still contains the Python FastAPI service backed by
-Chatterbox, XTTS, Piper, and Whisper. The Rust service here is the standalone
-Cargo package and is what `cargo build --workspace` produces.
+TTS endpoints exist for contract compatibility and return metadata only.
+A **full TTS product** (real audio, speak button, Gizzi `/speak`, packaging)
+is specified in [`docs/specs/tts-product.md`](../../docs/specs/tts-product.md)
+and is **not implemented**. Next agent: bake-off, then ship. Do not add a stub.
 
 ## Running
 
 ```bash
-# Run the Rust service on port 8001
+# From the repo root
 cargo run -p voice-service
 
-# Run tests
-cargo test -p voice-service
+# Or
+./services/voice/start.sh
 ```
 
-The service binds to `0.0.0.0:8001` by default.
-
-## API Endpoints
-
-### Health
-
-```bash
-GET /health
-GET /v1/health
-```
-
-### TTS
-
-List voices:
-
-```bash
-GET /v1/voices
-GET /v1/voices/:id
-```
-
-Text-to-speech:
-
-```bash
-POST /v1/tts
-{
-  "text": "Hello world",
-  "voice_id": "default"
-}
-```
-
-Streaming TTS:
-
-```bash
-POST /v1/tts/stream
-{
-  "text": "Hello world"
-}
-```
-
-### STT
-
-List models:
-
-```bash
-GET /v1/stt/models
-```
-
-Speech-to-text (multipart):
-
-```bash
-POST /v1/stt
-Content-Type: multipart/form-data
-audio: <audio_bytes>
-language: en
-```
-
-Streaming STT:
-
-```bash
-POST /v1/stt/stream
-```
-
-### Sessions
-
-```bash
-GET    /v1/sessions
-POST   /v1/sessions        { "mode": "tts" }
-GET    /v1/sessions/:id
-DELETE /v1/sessions/:id
-```
-
-### Stats
-
-```bash
-GET /v1/stats
-```
-
-See [spec/API.md](./spec/API.md) for the full API contract.
-
-## Rust Client
-
-The crate also exposes a small HTTP client for the Python voice service in
-`src/client.rs`:
-
-```rust
-use voice_service::{VoiceClient, TTSRequest};
-
-let client = VoiceClient::default();
-let request = TTSRequest {
-    text: "Hello from Rust".to_string(),
-    voice: "default".to_string(),
-    format: "wav".to_string(),
-    use_paralinguistic: true,
-};
-let response = client.text_to_speech(request).await?;
-```
-
-## Testing
+Binds `127.0.0.1:${PORT:-8001}`. Build `whisper-cli` with `./build-whisper.sh`
+(macOS deployment target 13.0). The ggml model downloads on first
+`POST /v1/stt` into `~/.allternit/models/whisper/` unless `WHISPER_MODEL` is set.
 
 ```bash
 cargo test -p voice-service
 ```
 
-Integration tests live in `tests/integration.rs` and exercise the router via
-Tower's `ServiceExt::oneshot`, so no network port is required.
+## API
+
+```
+GET  /health
+GET  /v1/voices
+POST /v1/stt          multipart: audio, language
+POST /v1/tts          JSON stub
+```
+
+See [spec/API.md](./spec/API.md) for the full contract.

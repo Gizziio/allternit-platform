@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   CaretDown,
   CaretRight,
+  ComputerTower,
   Eye,
   EyeSlash,
   MagnifyingGlass,
@@ -14,7 +15,8 @@ import {
 } from "@phosphor-icons/react";
 import { useAgentStore } from "@/lib/agents/agent.store";
 import { useChatSessionStore } from "@/views/chat/ChatSessionStore";
-import { getBots, BOT_CATEGORIES } from "@/lib/bots/bot-profile";
+import { getBots, getBotDisplayName, BOT_CATEGORIES } from "@/lib/bots/bot-profile";
+import { provisionFleetComputers } from "@/lib/bots/vm-operator";
 import type { BotCategory, Agent } from "@/lib/agents/agent.types";
 import {
   ALL_BOTS_SECTION_ID,
@@ -42,6 +44,8 @@ export function BotHubHomeTab({ onCreate }: BotHubHomeTabProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<BotCategory | "all">("all");
   const [groupChatOpen, setGroupChatOpen] = useState(false);
+  const [fleetBusy, setFleetBusy] = useState(false);
+  const [fleetSummary, setFleetSummary] = useState<string | null>(null);
   const [sections, setSections] = useState<BotHubSection[]>(() => loadBotHubSections());
   const [newSectionName, setNewSectionName] = useState("");
   const [addingSection, setAddingSection] = useState(false);
@@ -116,6 +120,35 @@ export function BotHubHomeTab({ onCreate }: BotHubHomeTabProps) {
         detail: { viewType: "bot-home", context: { botId } },
       })
     );
+  };
+
+  // Fleet action (spec bot-identity-computer Phase 2): make sure every bot
+  // with a computer configured actually has its persistent desktop bound.
+  // Sequential on purpose — parallel provisioning would fry the host.
+  const handleProvisionFleet = async () => {
+    if (fleetBusy) return;
+    setFleetBusy(true);
+    setFleetSummary(null);
+    try {
+      const results = await provisionFleetComputers(bots, {
+        displayNameFor: (botId) => {
+          const bot = bots.find((b) => b.id === botId);
+          return bot ? getBotDisplayName(bot) : undefined;
+        },
+      });
+      const ok = results.filter((r) => r.ok && !r.skipped).length;
+      const skipped = results.filter((r) => r.skipped).length;
+      const failed = results.filter((r) => !r.ok).length;
+      setFleetSummary(
+        failed > 0
+          ? `Fleet provision done: ${ok} ready, ${skipped} skipped (no computer configured), ${failed} failed.`
+          : `Fleet provision done: ${ok} ready, ${skipped} skipped (no computer configured).`
+      );
+    } catch (err) {
+      setFleetSummary(err instanceof Error ? `Fleet provision failed: ${err.message}` : "Fleet provision failed.");
+    } finally {
+      setFleetBusy(false);
+    }
   };
 
   const handleStartGroupChat = async (selectedBots: Agent[], name: string) => {
@@ -233,6 +266,18 @@ export function BotHubHomeTab({ onCreate }: BotHubHomeTabProps) {
               <Users size={16} />
               New group chat
             </button>
+            {bots.some((b) => b.vmOperator?.enabled === true) && (
+              <button
+                type="button"
+                onClick={handleProvisionFleet}
+                disabled={fleetBusy}
+                title="Ensure every bot with a computer configured has its persistent desktop"
+                className="hidden h-11 items-center justify-center gap-1.5 rounded-lg border border-[var(--border-default)] bg-transparent px-4 text-[13px] font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--accent-primary)] hover:text-[var(--accent-primary)] disabled:opacity-50 sm:inline-flex"
+              >
+                <ComputerTower size={16} className={fleetBusy ? "animate-pulse" : undefined} />
+                {fleetBusy ? "Provisioning…" : "Provision computers"}
+              </button>
+            )}
             <button
               type="button"
               onClick={onCreate}
@@ -242,6 +287,10 @@ export function BotHubHomeTab({ onCreate }: BotHubHomeTabProps) {
               Create bot
             </button>
           </div>
+
+          {fleetSummary && (
+            <p className="text-[12px] text-[var(--text-secondary)]">{fleetSummary}</p>
+          )}
 
           <div className="flex flex-wrap items-center gap-2">
             <FilterChip

@@ -27,8 +27,6 @@ import {
   editorForFile,
   extractOfficeFileArg,
   isOfficeTarget,
-  officePathFor,
-  officeTitleFor,
   type OfficeTarget,
 } from './office-programs.js';
 import { bonsaiCompanion } from './bonsai-companion-manager.js';
@@ -247,8 +245,13 @@ let annotationWindow: BrowserWindow | null = null;
 let remoteControlWindow: BrowserWindow | null = null;
 /** Active session id reported by the HUD renderer for app-window handoff. */
 let hudSessionId: string | null = null;
-/** One office editor window per target (docs/sheets/slides/pdf/launcher). */
-const officeWindows = new Map<OfficeTarget, BrowserWindow>();
+/**
+ * Office opens are delivered to the main window's renderer, not to separate
+ * office windows: the single office surface is the shell's ACI "Office &
+ * Extensions" hub (in-shell editor views). Deliveries that arrive before the
+ * main window has finished loading queue here and flush on did-finish-load.
+ */
+const pendingOfficeDeliveries: { channel: string; payload: unknown }[] = [];
 let splashWindow: BrowserWindow | null = null;
 
 // Service state for splash screen progress (module-level so IPC handlers can update it)
@@ -568,6 +571,12 @@ function createMainWindow(): BrowserWindow {
   });
 
   installWillNavigateGuard(window.webContents);
+
+  // Flush any office opens that were requested before the main window
+  // finished loading (cold-start file associations, app-menu clicks).
+  window.webContents.on('did-finish-load', () => {
+    flushPendingOfficeDeliveries();
+  });
 
   // Route /api/* through the allternit-api custom protocol so main can inject
   // the paired device token. Cloud control-plane calls stay on api.allternit.com
@@ -1600,14 +1609,11 @@ async function updateTrayMenu(): Promise<void> {
     ...(permItem ? [permItem, { type: 'separator' as const }] : []),
     { label: 'Show Window', click: () => mainWindow?.show() },
     {
+      // The standalone office launcher is gone — the single office surface is
+      // the shell's ACI "Office & Extensions" hub. This menu opens it in the
+      // main window.
       label: 'Allternit Office',
-      submenu: [
-        { label: 'Launcher', click: () => openOfficeWindow('launcher') },
-        { label: 'Docs', click: () => openOfficeWindow('docs') },
-        { label: 'Sheets', click: () => openOfficeWindow('sheets') },
-        { label: 'Slides', click: () => openOfficeWindow('slides') },
-        { label: 'PDF', click: () => openOfficeWindow('pdf') },
-      ],
+      click: () => openOfficeTarget('launcher'),
     },
     { label: 'Quick Chat', accelerator: QUICK_CHAT_HOTKEY, click: () => toggleMiniWindow() },
     { label: 'Toggle HUD', accelerator: HUD_HOTKEY, click: () => toggleHudWindow() },
@@ -1748,10 +1754,11 @@ app.on('open-file', (event, filePath) => {
 app.whenReady().then(async () => {
   console.log('[Main] App is ready...');
 
-  // Phase 0 convenience hook: open the Allternit Docs editor window on startup
-  // when explicitly requested (e.g. dev smoke test).
+  // Phase 0 convenience hook: open the Allternit Docs editor on startup
+  // when explicitly requested (e.g. dev smoke test). Delivered to the main
+  // window (queued until it has loaded).
   if (process.env.ALLTERNIT_OPEN_DOCS_ON_START) {
-    openDocsWindow();
+    openOfficeTarget('docs');
   }
 
   // Cold-start file association (Windows/Linux first instance).
@@ -2631,66 +2638,42 @@ ipcMain.handle('shell:open-fabric-session', () => {
   openFabricSessionWindow();
 });
 
-function resolveOfficeUrl(target: OfficeTarget, artifactId?: string): string {
-  // The office editors live on the platform surface (same pattern as the
-  // design window). ALLTERNIT_PLATFORM_URL overrides the platform base
-  // (e.g. for e2e tests pointing at a local dev server).
-  const base = process.env.ALLTERNIT_PLATFORM_URL || activePlatformUrl;
-  return new URL(officePathFor(target, artifactId), base).toString();
+/**
+ * Deliver an office payload to the main window's renderer over a preload
+ * channel (`office:open-target` / `office:open-file`). The renderer's office
+ * desktop bridge routes it into the shell's office surface (in-shell editor
+ * view when the shell is mounted, otherwise the editor route).
+ *
+ * Queues while the main window is missing or still loading; the queue flushes
+ * on did-finish-load (registered in createMainWindow). There are no separate
+ * office windows anymore — one office surface, one window.
+ */
+function deliverToMainWindow(channel: string, payload: unknown): void {
+  if (!mainWindow || mainWindow.isDestroyed() || mainWindow.webContents.isLoading()) {
+    pendingOfficeDeliveries.push({ channel, payload });
+    return;
+  }
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.show();
+  mainWindow.focus();
+  mainWindow.webContents.send(channel, payload);
 }
 
-function openOfficeWindow(target: OfficeTarget = 'launcher', artifactId?: string): BrowserWindow {
-  const existing = officeWindows.get(target);
-  if (existing && !existing.isDestroyed()) {
-    void existing.loadURL(resolveOfficeUrl(target, artifactId));
-    existing.show();
-    existing.focus();
-    return existing;
+function flushPendingOfficeDeliveries(): void {
+  const pending = pendingOfficeDeliveries.splice(0, pendingOfficeDeliveries.length);
+  for (const delivery of pending) {
+    deliverToMainWindow(delivery.channel, delivery.payload);
   }
+}
 
-  const title = officeTitleFor(target);
-  const window = new BrowserWindow({
-    width: 1280,
-    height: 900,
-    minWidth: 800,
-    minHeight: 600,
-    title,
-    titleBarStyle: isMac ? 'hiddenInset' : 'default',
-    trafficLightPosition: { x: 16, y: 16 },
-    show: false,
-    backgroundColor: '#0F0C0A',
-    webPreferences: {
-      preload: join(__dirname, '../preload/index.js'),
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true,
-    },
-  });
-
-  installWillNavigateGuard(window.webContents);
-
-  window.webContents.setWindowOpenHandler(({ url }) => {
-    void openExternalAllowlisted(url);
-    return { action: 'deny' };
-  });
-  window.webContents.on('did-finish-load', () => {
-    log.info(`[Office] ${title} window finished loading:`, window.webContents.getURL());
-  });
-  window.webContents.on('did-fail-load', (_event, errorCode, errorDescription) => {
-    log.error(`[Office] ${title} window failed to load:`, errorCode, errorDescription);
-  });
-  window.once('ready-to-show', () => window.show());
-  window.on('closed', () => { officeWindows.delete(target); });
-  officeWindows.set(target, window);
-  const url = resolveOfficeUrl(target, artifactId);
-  log.info(`[Office] Loading ${title} URL:`, url);
-  void window.loadURL(url);
-  return window;
+/** Open an office target in the main window (hub launcher target included). */
+function openOfficeTarget(target: OfficeTarget, artifactId?: string): void {
+  deliverToMainWindow('office:open-target', { target, artifactId: artifactId ?? null });
 }
 
 /**
  * Open a file from a file-association ("Open with Allternit") in its editor.
- * The bytes are delivered to the platform surface over IPC after load; the
+ * The bytes are delivered to the main window over IPC after load; the
  * web app's office desktop bridge stashes and routes them (file-handoff).
  */
 function openOfficeWithFile(filePath: string): void {
@@ -2706,33 +2689,15 @@ function openOfficeWithFile(filePath: string): void {
     log.error('[Office] Failed to read associated file:', filePath, error);
     return;
   }
-  const payload = { name: basename(filePath), bytes };
-  const window = openOfficeWindow(editor);
-  const deliver = () => {
-    if (!window.isDestroyed()) {
-      window.webContents.send('office:open-file', payload);
-      window.show();
-      window.focus();
-    }
-  };
-  if (window.webContents.isLoading()) {
-    window.webContents.once('did-finish-load', deliver);
-  } else {
-    deliver();
-  }
-}
-
-/** Back-compat wrapper: the docs window is an office window for 'docs'. */
-function openDocsWindow(artifactId?: string): void {
-  openOfficeWindow('docs', artifactId);
+  deliverToMainWindow('office:open-file', { name: basename(filePath), bytes });
 }
 
 ipcMain.handle('shell:open-docs', (_event, artifactId?: unknown) => {
-  openDocsWindow(typeof artifactId === 'string' && artifactId ? artifactId : undefined);
+  openOfficeTarget('docs', typeof artifactId === 'string' && artifactId ? artifactId : undefined);
 });
 
 const openOfficeFromIpc = (target?: unknown, artifactId?: unknown) => {
-  openOfficeWindow(
+  openOfficeTarget(
     isOfficeTarget(target) ? target : 'launcher',
     typeof artifactId === 'string' && artifactId ? artifactId : undefined,
   );

@@ -115,7 +115,7 @@ function downloadMarkdown(result: ConversionResult) {
  * editor (legacy .doc/.ppt/.xls, ODF, .rtf, .epub, .csv) to GFM markdown
  * through the office engine's anydoc endpoint and renders the result with the
  * platform Markdown component. Layout follows the standard shell-view recipe
- * (same as OfficeLauncherView).
+ * (same as the other shell views).
  */
 export function MarkdownPreviewView({ handoffId, sourceUrl }: MarkdownPreviewViewProps) {
   const [state, setState] = useState<ViewState>({ kind: 'idle' });

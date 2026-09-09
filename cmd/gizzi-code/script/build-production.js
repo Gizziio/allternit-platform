@@ -264,6 +264,14 @@ const bundlePlugin = {
         build.onResolve({ filter: /^@allternit\/extension$/ }, () => ({
             path: resolve("src/vendor/anthropic-stubs/allternit-extension.ts"),
         }));
+        // Redirect audio-capture-napi (optional native voice capture) to its
+        // throwing stub: Bun.build does not apply tsconfig `paths` to dynamic
+        // import(), so the worker bundle fails with "Could not resolve"
+        // (desktop release run 11). The voice service catches the throw and
+        // falls back at runtime.
+        build.onResolve({ filter: /^audio-capture-napi$/ }, () => ({
+            path: resolve("src/vendor/anthropic-stubs/audio-capture-napi.ts"),
+        }));
         // Resolve @allternit workspace packages to their source or dist
         build.onResolve({ filter: /^@allternit\/(plugin|script|sdk|util|gizzi-util)/ }, (args) => {
             const parts = args.path.split("/");

@@ -8,6 +8,8 @@ import type {
   OfficeModelOption,
 } from '../../bridge/types';
 import { getActiveDocument, useActiveDocument } from '../activeDocument';
+import { onAssistantPreset } from '../assistantPreset';
+import { AllternitBrandMark } from '../../components/AllternitBrandMark';
 import './AllternitAssistantPanel.css';
 
 const APP_LABELS: Record<OfficeAppKey, string> = {
@@ -51,14 +53,16 @@ export function buildAssistantContext(appKey: OfficeAppKey, appLabel: string): s
 }
 
 /**
- * First-party "Allternit Assistant" extension panel.
+ * First-party "Allternit Office Agent" extension panel.
  *
  * Deliberately mirrors the built-in panels' wiring: it consumes the host AI
  * client through `useOfficeAi()` (inheriting whatever the embedding host
  * provides), streams through the host's AgentLoop, and persists the model
  * choice through the host's per-app model override. The only context it takes
  * from the surrounding app is the open document — name plus a text excerpt —
- * via the module-level active-document registry.
+ * via the module-level active-document registry. Ribbon AI actions
+ * (Summarize / Polish / …) arrive through the assistantPreset bus and run
+ * through the same path as a typed message.
  */
 export function AllternitAssistantPanel({ ctx }: { ctx: OfficeExtensionContext }): ReactNode {
   const ai = useOfficeAi();
@@ -90,7 +94,7 @@ export function AllternitAssistantPanel({ ctx }: { ctx: OfficeExtensionContext }
       modelId,
       skill: {
         systemPrompt:
-          `You are the Allternit Assistant, embedded in the Allternit ${appLabel} app as a ` +
+          `You are the Allternit Office Agent, embedded in the Allternit ${appLabel} app as a ` +
           'first-class extension. Help the user with their work in this app: answer questions, ' +
           'explain concepts, draft and refine content. Be concise and concrete.',
         buildContext: () => buildAssistantContext(appKey, appLabel),
@@ -136,10 +140,22 @@ export function AllternitAssistantPanel({ ctx }: { ctx: OfficeExtensionContext }
     setPrompt('');
   }, []);
 
+  // Ribbon AI actions (Summarize / Polish / context-menu presets) submit
+  // through the assistantPreset bus; run them exactly like a typed message.
+  useEffect(() => {
+    return onAssistantPreset(({ appKey: targetApp, instruction }) => {
+      if (targetApp !== appKey) return;
+      run(instruction);
+    });
+  }, [appKey, run]);
+
   return (
     <div className="aos-assistant">
       <header className="aos-assistant-header">
-        <span className="aos-assistant-title">✦ Allternit Assistant</span>
+        <span className="aos-assistant-title">
+          <AllternitBrandMark size={14} />
+          Allternit Office Agent
+        </span>
         <div className="aos-assistant-header-actions">
           <AssistantModelPicker
             value={modelId}
@@ -185,7 +201,7 @@ export function AllternitAssistantPanel({ ctx }: { ctx: OfficeExtensionContext }
       <div className="aos-assistant-chat" ref={chatRef} onScroll={onChatScroll}>
         {chat.length === 0 ? (
           <div className="aos-assistant-empty">
-            <div className="aos-assistant-empty-title">Ask the Allternit Assistant</div>
+            <div className="aos-assistant-empty-title">Ask the Allternit Office Agent</div>
             <div className="aos-assistant-empty-body">
               {docName
                 ? `Chat with context on "${docName}".`

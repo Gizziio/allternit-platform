@@ -2,18 +2,16 @@
 
 ## Overview
 
-The Rust voice service provides a simulated HTTP API for text-to-speech (TTS),
-speech-to-text (STT), voice session management, and service introspection. It
-mirrors the shape of the Python/Chatterbox voice service so that callers can
-integrate against a stable contract while the heavy inference logic runs in the
-Python wrapper or a downstream model host.
+The Rust voice service is the only in-tree voice sidecar. STT is local
+whisper.cpp (`whisper-cli`). TTS, session, and introspection endpoints keep
+the existing HTTP shape for callers; TTS returns metadata only.
 
 ## Transport
 
 - HTTP/1.1
 - JSON request/response bodies
 - Multipart form data for STT audio uploads
-- Default bind address: `0.0.0.0:8001`
+- Default bind address: `127.0.0.1:8001`
 
 ## Resources
 

@@ -32,6 +32,10 @@ pub(crate) enum ComputerControlAction {
     Shell(ShellInput),
     FileRead { path: String },
     FileWrite { path: String, content_base64: String },
+    /// Enable the authenticated in-VM HTTP proxy on `port` (Phase 3).
+    ProxyEnable { port: u16 },
+    /// Disable the in-VM HTTP proxy (Phase 3).
+    ProxyDisable,
 }
 
 /// Canonical action descriptor for grant binding. Must be built
@@ -65,6 +69,13 @@ pub(crate) fn control_action_descriptor(action: &ComputerControlAction) -> Value
             "route": "computer.file_write",
             "path": path,
         }),
+        ComputerControlAction::ProxyEnable { port } => json!({
+            "route": "computer.proxy_enable",
+            "port": port,
+        }),
+        ComputerControlAction::ProxyDisable => json!({
+            "route": "computer.proxy_disable",
+        }),
     }
 }
 
@@ -87,6 +98,12 @@ pub(crate) fn classify_control_action(action: &ComputerControlAction) -> crate::
         ComputerControlAction::FileRead { .. } => ConfirmationClass::Reversible,
         ComputerControlAction::FileWrite { path, .. } => {
             crate::aci_safety::classify_file_write(path)
+        }
+        // Enabling the proxy exposes an in-guest port to the authenticated
+        // caller; disabling removes that exposure. Both mutate state but are
+        // directly undoable, so they sit in the risky (approval-gated) tier.
+        ComputerControlAction::ProxyEnable { .. } | ComputerControlAction::ProxyDisable => {
+            ConfirmationClass::Risky
         }
     }
 }
@@ -275,6 +292,13 @@ pub(crate) async fn execute_computer_tool(
                 }
             }
         }
+        // Proxy enable/disable are ACI-gated REST actions managed by the
+        // computer proxy routes (computer_ws); they never execute on the
+        // guest tool surface.
+        ComputerControlAction::ProxyEnable { .. } | ComputerControlAction::ProxyDisable => Err((
+            StatusCode::BAD_REQUEST,
+            json!({"error": "proxy actions are managed via the computer proxy routes"}),
+        )),
     }
 }
 
@@ -293,7 +317,7 @@ async fn fetch_computer_for_control(
             "SELECT c.id, c.kind, c.provider, c.status, c.owner_type, c.owner_id, \
              c.bot_id, c.session_id, c.name, c.os, c.cpu_cores, c.memory_mb, c.disk_mb, \
              c.region, c.host, c.native_id, c.template_id, c.billing_source, \
-             c.created_at, c.updated_at \
+             c.created_at, c.updated_at, c.idle_timeout_secs, c.last_activity_at, c.group_id \
              FROM computers c \
              LEFT JOIN agents a ON a.id = c.bot_id \
              WHERE c.id = ?1 AND (c.owner_id = ?2 OR (c.kind = 'cloud_desktop' AND a.user_id = ?2)) AND c.status != 'deleted'"
@@ -326,6 +350,9 @@ async fn fetch_computer_for_control(
                 billing_source: row.get(17)?,
                 created_at: row.get(18)?,
                 updated_at: row.get(19)?,
+                idle_timeout_secs: row.get(20)?,
+                last_activity_at: row.get(21)?,
+                group_id: row.get(22)?,
             })
         });
         match row {
@@ -560,6 +587,8 @@ mod tests {
     impl allternit_driver_interface::ExecutionDriver for MockExecutionDriver {
         fn capabilities(&self) -> DriverCapabilities {
             DriverCapabilities {
+                resize: false,
+                clone: false,
                 driver_type: DriverType::Container,
                 isolation: IsolationLevel::Standard,
                 max_resources: ResourceSpec {

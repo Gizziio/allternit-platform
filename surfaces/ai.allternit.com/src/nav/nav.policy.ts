@@ -203,7 +203,6 @@ export const DEFAULT_POLICIES: Record<ViewType, SpawnPolicy> = {
   "design-view-questions": { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   "design-view-mobile": { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   "design-view-video": { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
-  "design-view-docs": { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   "design-view-handoff": { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   "design-view-graph": { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   "design-view-pipeline": { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },

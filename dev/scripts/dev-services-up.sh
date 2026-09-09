@@ -102,7 +102,7 @@ wait_http() {
   return 1
 }
 
-VOICE_CMD="cd '$ROOT_DIR/4-services/ml-ai-services/voice-service' && python3 launch.py"
+VOICE_CMD="cd '$ROOT_DIR' && cargo run -p voice-service"
 KERNEL_CMD="cd '$ROOT_DIR' && export PATH='$VENV_DIR/bin':\$PATH && cargo run -p kernel"
 API_CMD="cd '$ROOT_DIR/7-apps/api' && Allternit_DB_PATH='$ROOT_DIR/workspace/allternit-api.db' Allternit_LEDGER_PATH='$ROOT_DIR/workspace/allternit-api.jsonl' Allternit_KERNEL_URL='http://127.0.0.1:3004' Allternit_API_POLICY_ENFORCE='false' cargo run"
 SHELL_UI_CMD="cd '$ROOT_DIR' && pnpm --dir 7-apps/shell-ui dev"

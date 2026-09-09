@@ -1,5 +1,9 @@
 # ChatGPT Voice parity
 
+> TTS product spec (not implemented): [`docs/specs/tts-product.md`](../../specs/tts-product.md).
+> STT is live (whisper.cpp). TTS is a stub. Do not follow the Python Chatterbox
+> path below — that tree was removed in PR #194.
+
 ChatGPT Voice is a live spoken conversation that can combine microphone input, spoken responses, visual context, and delegated work. Allternit provides self-hosted STT/TTS services and ordinary agent orchestration, but the polished duplex consumer voice UI is still **roadmap**.
 
 ## Start talking

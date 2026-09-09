@@ -217,28 +217,33 @@ jobs:
         run: node scripts/prepare-mesh-node.cjs
         working-directory: surfaces/allternit-desktop
 
-      # ── Step 3c: Build voice service sidecar (PyInstaller) ────────────────
-      - name: Setup Python (voice service)
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
+      # ── Step 3c: Build voice service sidecar (Rust) + whisper-cli ─────────
       - name: Build voice service sidecar
-        # prepare-platform-static (2026-09-07 sidecar-lifecycle hardening)
-        # requires resources/bin/allternit-voice-service; the release workflow
-        # never built it, so macOS/Windows packaging failed at build:electron.
-        # Mirrors scripts/build-desktop.sh step 2b via the committed spec.
+        # Voice is a Rust crate now (services/voice, bin name voice-service;
+        # the Python/PyInstaller tree was deleted in the voice-cleanup).
+        # prepare-platform-static hard-requires resources/bin/allternit-voice-service.
+        # Both apple targets are already installed for the allternit-api build.
         run: |
-          python3 -m venv /tmp/voice-venv
-          /tmp/voice-venv/bin/pip install pyinstaller
-          /tmp/voice-venv/bin/pip install -r services/voice/api/requirements.txt
-          /tmp/voice-venv/bin/pip install services/voice/voice
-          cd services/voice
-          /tmp/voice-venv/bin/pyinstaller --noconfirm --clean allternit-voice-service.spec
-          mkdir -p ../../surfaces/allternit-desktop/resources/bin
-          cp dist/allternit-voice-service ../../surfaces/allternit-desktop/resources/bin/
-          chmod +x ../../surfaces/allternit-desktop/resources/bin/allternit-voice-service
-          ls -lh ../../surfaces/allternit-desktop/resources/bin/allternit-voice-service
+          cargo build --release -p voice-service --target x86_64-apple-darwin
+          cargo build --release -p voice-service --target aarch64-apple-darwin
+          mkdir -p surfaces/allternit-desktop/resources/bin
+          lipo -create \
+            target/x86_64-apple-darwin/release/voice-service \
+            target/aarch64-apple-darwin/release/voice-service \
+            -output surfaces/allternit-desktop/resources/bin/allternit-voice-service
+          chmod +x surfaces/allternit-desktop/resources/bin/allternit-voice-service
+          lipo -info surfaces/allternit-desktop/resources/bin/allternit-voice-service
+
+      - name: Build whisper-cli sidecar
+        # prepare-platform-static also hard-requires resources/bin/whisper-cli
+        # (local /voice dictation shells out to it; the model ggml-tiny.en.bin
+        # is downloaded at runtime). build-whisper.sh cmake-builds
+        # ggml-org/whisper.cpp for the host.
+        run: |
+          services/voice/build-whisper.sh
+          cp services/voice/dist/whisper-cli surfaces/allternit-desktop/resources/bin/whisper-cli
+          chmod +x surfaces/allternit-desktop/resources/bin/whisper-cli
+          ls -lh surfaces/allternit-desktop/resources/bin/whisper-cli
 
       # ── Step 3d: Build local-engine sidecar (Rust) ──────────────────────────
       - name: Build local-engine sidecar
@@ -353,6 +358,13 @@ jobs:
         # A bare `bun install` in cmd/gizzi-code reads the committed bun.lock,
         # whose workspace paths were recorded from a foreign checkout layout,
         # and fails with "Workspace dependency not found" on a fresh clone.
+        env:
+          # windows-latest now also ships VS18 ("unknown version" to node-gyp
+          # 11.x) and its PowerShell-based auto-detection crashes with a
+          # maxBuffer RangeError before it ever considers the choco VS2022
+          # build tools (run 12). Pinning GYP_MSVS_VERSION makes node-gyp go
+          # straight to vswhere for the 17.x toolset we installed above.
+          GYP_MSVS_VERSION: "2022"
         run: pnpm install --frozen-lockfile
 
       - name: Build gizzi-code workspace dependencies
@@ -420,25 +432,34 @@ jobs:
         run: node scripts/prepare-mesh-node.cjs
         working-directory: surfaces/allternit-desktop
 
-      - name: Setup Python (voice service)
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
+      - name: Build voice service sidecar (Windows)
+        # Voice is a Rust crate now (services/voice, bin name voice-service;
+        # the Python/PyInstaller tree was deleted in the voice-cleanup).
+        # prepare-platform-static requires resources/bin/allternit-voice-service.exe
+        # on win32. The x86_64-pc-windows-msvc target is installed by the
+        # dtolnay/rust-toolchain step above.
+        shell: bash
+        run: |
+          cargo build --release -p voice-service --target x86_64-pc-windows-msvc
+          mkdir -p surfaces/allternit-desktop/resources/bin
+          cp target/x86_64-pc-windows-msvc/release/voice-service.exe \
+             surfaces/allternit-desktop/resources/bin/allternit-voice-service.exe
+          ls -lh surfaces/allternit-desktop/resources/bin/allternit-voice-service.exe
 
-      - name: Build voice service sidecar
-        # Same PyInstaller sidecar as the macOS job; .exe is what
-        # prepare-platform-static looks for on win32.
+      - name: Build whisper-cli sidecar (Windows)
+        # prepare-platform-static also hard-requires resources/bin/whisper-cli.exe.
+        # cmake and the VS2022 toolset (choco, above) are both present on the
+        # windows-latest runner; ggml-org/whisper.cpp builds out of the box.
         shell: pwsh
         run: |
-          python -m venv "$env:TEMP\voice-venv"
-          & "$env:TEMP\voice-venv\Scripts\pip.exe" install pyinstaller
-          & "$env:TEMP\voice-venv\Scripts\pip.exe" install -r services/voice/api/requirements.txt
-          & "$env:TEMP\voice-venv\Scripts\pip.exe" install services/voice/voice
-          Set-Location services/voice
-          & "$env:TEMP\voice-venv\Scripts\pyinstaller.exe" --noconfirm --clean allternit-voice-service.spec
-          New-Item -ItemType Directory -Force ..\..\surfaces\allternit-desktop\resources\bin | Out-Null
-          Copy-Item dist\allternit-voice-service.exe ..\..\surfaces\allternit-desktop\resources\bin\
-          Get-Item ..\..\surfaces\allternit-desktop\resources\bin\allternit-voice-service.exe | Select-Object Name,Length
+          git clone --depth 1 https://github.com/ggml-org/whisper.cpp.git "$env:TEMP\whisper.cpp"
+          cmake -S "$env:TEMP\whisper.cpp" -B "$env:TEMP\whisper.cpp\build" -DCMAKE_BUILD_TYPE=Release
+          cmake --build "$env:TEMP\whisper.cpp\build" --config Release --target whisper-cli
+          New-Item -ItemType Directory -Force surfaces\allternit-desktop\resources\bin | Out-Null
+          $bin = Get-ChildItem -Path "$env:TEMP\whisper.cpp\build" -Recurse -Filter whisper-cli.exe | Select-Object -First 1
+          if (-not $bin) { throw "whisper-cli.exe not found under build tree" }
+          Copy-Item $bin.FullName surfaces\allternit-desktop\resources\bin\whisper-cli.exe
+          Get-Item surfaces\allternit-desktop\resources\bin\whisper-cli.exe | Select-Object Name,Length
 
       - name: Install desktop dependencies
         # Deps are already installed by the earlier workspace-wide pnpm

@@ -60,7 +60,13 @@ import {
   BOT_NATIVE_TOOLS,
   toggleBotTool,
 } from "@/lib/bots/bot-tool-registry";
-import { defaultBotVMOperatorConfig, ensureBotComputer } from "@/lib/bots/vm-operator";
+import {
+  BOT_DESKTOP_PRESETS,
+  defaultBotVMOperatorConfig,
+  describeDesktopResources,
+  ensureBotComputer,
+  presetIdForResources,
+} from "@/lib/bots/vm-operator";
 import { saveBotAvatar } from "@/lib/bots/bot-assets-api";
 import { generateBotAvatar, isBotAvatar } from "@/lib/bots/bot-avatar.service";
 import { api } from "@/integration/api-client";
@@ -87,6 +93,12 @@ const logger = createModuleLogger("CreateBotForm");
 interface CreateBotFormProps {
   isOpen: boolean;
   onClose: () => void;
+  /**
+   * Optional prefill (bot templates, duplicates). Create Bot stays atomic —
+   * a draft only seeds the form; the single submit still writes all four
+   * Bot fields and provisions the persistent desktop.
+   */
+  draft?: Partial<CreateAgentInput>;
 }
 
 type StepId = "start" | "identity" | "avatar" | "job" | "computer" | "runtime" | "review";
@@ -342,47 +354,51 @@ function buildDefaultCharacterLayer(
   };
 }
 
-export function CreateBotForm({ isOpen, onClose }: CreateBotFormProps) {
+function buildInitialFormData(draft?: Partial<CreateAgentInput>): Partial<CreateAgentInput> {
+  return {
+    name: draft?.name || "",
+    description: draft?.description || "",
+    type: draft?.type ?? "worker",
+    model: draft?.model ?? getDefaultAgentModel().id,
+    provider: draft?.provider ?? getDefaultAgentModel().provider,
+    capabilities: draft?.capabilities ?? [],
+    tools: draft?.tools ?? [],
+    maxIterations: draft?.maxIterations ?? 10,
+    temperature: draft?.temperature ?? 0.7,
+    trustTier: draft?.trustTier ?? "standard",
+    writeScope: draft?.writeScope ?? "workspace",
+    dataClassification: draft?.dataClassification ?? "internal",
+    allowedSurfaces: draft?.allowedSurfaces ?? ["chat"],
+    allowedSkills: draft?.allowedSkills ?? [],
+    allowedTools: draft?.allowedTools ?? [],
+    category: draft?.category ?? "general",
+    tags: draft?.tags ?? [],
+    harness: draft?.harness ?? { mode: "cloud" },
+    isBot: true,
+    // Atomic Bot contract: every bot carries a JOB system prompt and a
+    // persistent Computer Cloud desktop config from the moment it is created.
+    systemPrompt: draft?.systemPrompt || "",
+    vmOperator: draft?.vmOperator ?? defaultBotVMOperatorConfig(),
+    botProfile: {
+      displayName: draft?.botProfile?.displayName || "",
+      tagline: draft?.botProfile?.tagline || "",
+      welcomeMessage: draft?.botProfile?.welcomeMessage || "",
+      starterPrompts: draft?.botProfile?.starterPrompts || [],
+      accentColor: draft?.botProfile?.accentColor || "#D4956A",
+      groupChatEnabled: draft?.botProfile?.groupChatEnabled ?? true,
+      botCategory: draft?.botProfile?.botCategory || "custom",
+    },
+    brainId: draft?.brainId || "",
+  };
+}
+
+export function CreateBotForm({ isOpen, onClose, draft }: CreateBotFormProps) {
   const { createAgent, isCreating } = useAgentStore();
   const [step, setStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
 
-  const [formData, setFormData] = useState<Partial<CreateAgentInput>>(() => ({
-    name: "",
-    description: "",
-    type: "worker",
-    model: getDefaultAgentModel().id,
-    provider: getDefaultAgentModel().provider,
-    capabilities: [],
-    tools: [],
-    maxIterations: 10,
-    temperature: 0.7,
-    trustTier: "standard",
-    writeScope: "workspace",
-    dataClassification: "internal",
-    allowedSurfaces: ["chat"],
-    allowedSkills: [],
-    allowedTools: [],
-    category: "general",
-    tags: [],
-    harness: { mode: "cloud" },
-    isBot: true,
-    // Atomic Bot contract: every bot carries a JOB system prompt and a
-    // persistent Computer Cloud desktop config from the moment it is created.
-    systemPrompt: "",
-    vmOperator: defaultBotVMOperatorConfig(),
-    botProfile: {
-      displayName: "",
-      tagline: "",
-      welcomeMessage: "",
-      starterPrompts: [],
-      accentColor: "#D4956A",
-      groupChatEnabled: true,
-      botCategory: "custom",
-    },
-    brainId: "",
-  }));
+  const [formData, setFormData] = useState<Partial<CreateAgentInput>>(() => buildInitialFormData());
 
   const [avatarMode, setAvatarMode] = useState<"initials" | "gizzi" | "mascot" | "image" | "pet">("gizzi");
   const [avatarPicker, setAvatarPicker] = useState<AvatarPickerConfig>(() =>
@@ -405,45 +421,13 @@ export function CreateBotForm({ isOpen, onClose }: CreateBotFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const stepId = STEPS[step].id;
 
-  // Reset when reopened
+  // Reset when reopened (applying the optional draft prefill)
   useEffect(() => {
     if (!isOpen) return;
     setStep(0);
     setError(null);
     setSelectedTemplateId(null);
-    setFormData({
-      name: "",
-      description: "",
-      type: "worker",
-      model: getDefaultAgentModel().id,
-      provider: getDefaultAgentModel().provider,
-      capabilities: [],
-      tools: [],
-      maxIterations: 10,
-      temperature: 0.7,
-      trustTier: "standard",
-      writeScope: "workspace",
-      dataClassification: "internal",
-      allowedSurfaces: ["chat"],
-      allowedSkills: [],
-      allowedTools: [],
-      category: "general",
-      tags: [],
-      harness: { mode: "cloud" },
-      isBot: true,
-      systemPrompt: "",
-      vmOperator: defaultBotVMOperatorConfig(),
-      botProfile: {
-        displayName: "",
-        tagline: "",
-        welcomeMessage: "",
-        starterPrompts: [],
-        accentColor: "#D4956A",
-        groupChatEnabled: true,
-        botCategory: "custom",
-      },
-      brainId: "",
-    });
+    setFormData(buildInitialFormData(draft));
     setAvatarMode("gizzi");
     setAvatarPicker(createDefaultAvatarPickerConfig(""));
     setMascotTemplate("gizzi");
@@ -451,7 +435,7 @@ export function CreateBotForm({ isOpen, onClose }: CreateBotFormProps) {
     setGizziEmotion("pleased");
     setImageDataUrl(null);
     setPetUrl("");
-  }, [isOpen]);
+  }, [isOpen, draft]);
 
   // Load brains, models, voices
   useEffect(() => {
@@ -1667,6 +1651,46 @@ function ComputerStep({
       </div>
 
       {enabled && (
+        <div className="mb-4">
+          <Label className="text-[13px] font-medium text-[var(--text-primary)] mb-2 block">Size</Label>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            {BOT_DESKTOP_PRESETS.map((preset) => {
+              const selected = presetIdForResources(vmConfig?.resources) === preset.id;
+              return (
+                <button
+                  key={preset.id}
+                  type="button"
+                  onClick={() =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      vmOperator: {
+                        ...defaultBotVMOperatorConfig(),
+                        ...(prev.vmOperator ?? {}),
+                        resources: { ...preset.resources },
+                      },
+                    }))
+                  }
+                  className={cn(
+                    "rounded-xl border p-3 text-left transition-all",
+                    selected
+                      ? "border-[var(--accent-primary)] bg-[var(--accent-primary)]/10"
+                      : "border-[var(--border-subtle)] bg-[var(--bg-elevated)] hover:border-[var(--border-hover)]"
+                  )}
+                >
+                  <span className="block text-[13px] font-semibold text-[var(--text-primary)]">
+                    {preset.label}
+                  </span>
+                  <span className="block text-[12px] text-[var(--text-muted)]">
+                    {describeDesktopResources(preset.resources)}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {enabled && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4">
             <div className="text-[11px] uppercase tracking-wider text-[var(--text-muted)] mb-1">
@@ -1681,8 +1705,7 @@ function ComputerStep({
               Resources
             </div>
             <div className="text-[13px] font-medium text-[var(--text-primary)]">
-              {resources?.cpu ?? "2"} vCPU · {Math.round(Number(resources?.memory ?? "4096") / 1024) || 4} GB RAM ·{" "}
-              {Math.round(Number(resources?.disk ?? "102400") / 1024) || 100} GB disk
+              {describeDesktopResources(resources)}
             </div>
           </div>
           <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4">
@@ -2040,9 +2063,7 @@ function ReviewStep({
   const vmResources = formData.vmOperator?.resources;
   const computerSummary =
     formData.vmOperator?.enabled === true
-      ? `Persistent desktop · ${vmResources?.cpu ?? "2"} vCPU / ${
-          Math.round(Number(vmResources?.memory ?? "4096") / 1024) || 4
-        } GB / ${Math.round(Number(vmResources?.disk ?? "102400") / 1024) || 100} GB`
+      ? `Persistent desktop · ${describeDesktopResources(vmResources)}`
       : "No computer";
 
   const avatarLabel =
