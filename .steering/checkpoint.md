@@ -1,19 +1,31 @@
-# Steering checkpoint — session/cu12-conf
+# Steering checkpoint — session/nsverify-20260908
 
 ## Goal
-Finish honest remaining items in domains/computer-use (sole ownership).
+Verify gizzi-code v2.0.7 "native sessions" in production against real native stores
+on this machine; determine allternit-desktop integration status; close docs gaps with a
+feature doc; land via PR + ledger per repo ritual.
 
 ## Just did
-- CDP adapter: added `goto` (alias of navigate), `eval`, `observe` actions + screenshot Artifact population in envelope.
-- suites.py: added Suite B (browser-adaptive-v1, 3 tests: envelope/clean-failure/goal-forwarding); Suite C = retrieval-v1 (was R, 5 tests, build_suite_r kept as alias); Suite E = hybrid-v1 (was H, 3 tests, build_suite_h alias); gateway/main.py imports still valid.
-- measured.py: discovers hybrid.orchestrator always (offline, browser.mock sub-adapter, note says so); retrieval crawler + browser-use discovery; per-adapter suite routing; honest unmeasured fallbacks.
-- core/monitor.py: VLMMonitor behind Monitor protocol — env config ACU_MONITOR_VLM_PROVIDER/MODEL/ENDPOINT, stdlib urllib client, injectable client for tests, heuristic pre-filter, errors→continue; docstring documents swap-in.
-- tests: 11 new VLMMonitor tests (fake provider), updated measured-conformance tests for new B/C/E reality.
-- pytest (venv-acu311, excl. pre-existing collection-error modules): 207 passed / 21 skipped / 0 failed. 3 transient desktop-mouse flakes on first run, green on rerun; pass in isolation.
+- Worktree `allternit-session-nsverify-20260908` on `session/nsverify-20260908` from origin/main.
+- Task 1 (LIVE-VERIFIED, evidence in PR body): `gizzi serve --port 4899` exercised full
+  `/v1/native-session/*` surface against real stores (kimi 351, claude 272, codex 2480,
+  grok 59 sessions). Pickup → `ses_f7c4...` with full source_ref; SHA-256 of quiescent
+  claude origin identical before/after; fetch reported native_ahead=152 turns on a live
+  kimi origin then clean; export wrote NEW UUID claude files (2x) with origin untouched;
+  404s on unknown ids. Read-only guarantee structural (wx + forbidPath + random UUID).
+- Task 1b: `gizzi session --help` has NO native subcommands — pickup/fetch/export are
+  TUI-only (verified limitation, documented).
+- Task 2: picker lives in surfaces/ai.allternit.com shell (`nativeSessionsApi` → gateway
+  `/api/v1/native-sessions/*` → cmd/allternit-api proxy → gizzi `/v1/native-session/*`).
+  Desktop hosts that SPA + binaries (desktop CHANGELOG 1.1.1 fixed stale binaries);
+  desktop repo itself has zero native-session code — changelog claim verified accurate.
+- Task 3: wrote `docs/public/cli/native-sessions.md` (concepts, TUI + HTTP reference,
+  harness table, web/desktop status, limitations). Found + documented: aider/cline/amp/kiro
+  are registry-only (no catalog reader). CHANGELOG 2.0.7 left untouched (claims verified).
 
-## Done — PR opened, awaiting orchestrator merge
-
-- PR #168: https://github.com/Gizziio/allternit-platform/pull/168 (branch session/cu12-conf, 3 commits pushed). Per task contract, NOT merged — orchestrator merges.
+## Next
+Commit doc + checkpoint, push, PR with verification evidence, merge --merge, ledger
+attestation on main, worktree cleanup.
 
 ## Open questions
-- None.
+None.
