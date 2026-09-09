@@ -23,7 +23,7 @@ import { renderSlidesToPngBase64 } from '../export-render'
 import { isQcEnabled, mergeQcPages, qcSlidePage, QC_MAX_PAGES } from './slide-qc'
 import { useI18n, t as tGlobal, aiLangDirective, type TFunc } from '../i18n/locale'
 import { Markdown } from '../../stubs/ui'
-import { AllternitMark } from '../components/icons'
+import { AllternitBrandMark } from '@allternit/office-suite/bridge'
 import sendEnterOn from '../assets/send-enter-on.png'
 import sendEnterOff from '../assets/send-enter-off.png'
 import sendStop from '../assets/send-stop.png'
@@ -1393,7 +1393,7 @@ export function AiPanel({
   if (!open) {
     return (
       <button className="ai-rail" title={t('appAiRailExpand')} onClick={onExpand}>
-        <AllternitMark size={22} />
+        <AllternitBrandMark size={18} />
       </button>
     )
   }
@@ -1420,11 +1420,11 @@ export function AiPanel({
         onPointerDown={startResize}
         role="separator"
         aria-orientation="vertical"
-        aria-label="Allternit AI"
+        aria-label="Allternit Office Agent"
       />
       <div className="ai-panel-header">
         <span className="ai-panel-title">
-          <AllternitMark size={22} />
+          <AllternitBrandMark size={16} />
           {t('aiPanelTitle')}
         </span>
         <div className="ai-panel-header-actions">

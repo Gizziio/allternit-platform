@@ -561,11 +561,6 @@ export function getShellViewRegistry(handlers: {
         <DesignModeView openView={open} initialTab="video" />
       </ErrorBoundary>
     ),
-    "design-view-docs": ({ context }: { context?: ViewContext }) => (
-      <ErrorBoundary fallback={<div>Failed to load Documents View</div>}>
-        <DesignModeView openView={open} initialTab="docs" />
-      </ErrorBoundary>
-    ),
     "design-view-handoff": ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<div>Failed to load Handoff View</div>}>
         <DesignModeView openView={open} initialTab="handoff" />

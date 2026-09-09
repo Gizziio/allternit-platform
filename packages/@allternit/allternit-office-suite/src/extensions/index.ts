@@ -2,8 +2,9 @@
  * Extension slot for the per-app AI chat section.
  *
  * Hosts register `OfficeExtensionDescriptor`s on `OfficeHost.extensions`;
- * `OfficeAiSlot` occupies the app's AI chat section with a tab strip of
- * extensions plus the app's built-in panel as the "Built-in" fallback tab.
+ * `OfficeAiSlot` occupies the app's AI chat section with the registered
+ * agent panes (no built-in fallback tab). With no registered extensions the
+ * app's own panel renders unchanged.
  */
 export { OfficeAiSlot, type OfficeAiSlotProps } from './OfficeAiSlot';
 export { useOfficeExtensions } from './useOfficeExtensions';
@@ -15,3 +16,7 @@ export {
 } from './activeDocument';
 export type { ActiveDocumentInfo } from './activeDocument';
 export { createAllternitAssistantExtension } from './allternit-assistant';
+export { requestAssistantPreset, onAssistantPreset } from './assistantPreset';
+export type { AssistantPresetDetail } from './assistantPreset';
+export { AllternitBrandMark } from '../components/AllternitBrandMark';
+export type { AllternitBrandMarkProps } from '../components/AllternitBrandMark';

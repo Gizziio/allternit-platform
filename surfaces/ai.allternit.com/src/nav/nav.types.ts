@@ -167,7 +167,6 @@ export type ViewType =
   | "design-view-questions"
   | "design-view-mobile"
   | "design-view-video"
-  | "design-view-docs"
   | "design-view-handoff"
   | "design-view-graph"
   | "design-view-pipeline"

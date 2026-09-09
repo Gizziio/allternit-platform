@@ -51,8 +51,8 @@ import {
 } from './ribbon-tabs'
 import { WRAP_OPTIONS } from './ContextMenu'
 import { CropDialog, CutoutDialog } from './PictureDialogs'
+import { AllternitBrandMark } from '@allternit/office-suite/bridge'
 import {
-  GensparkMark,
   IconAlignCenter,
   IconAlignJustify,
   IconAlignLeft,
@@ -1644,7 +1644,7 @@ function RibbonInner({
           </div>
         ) : tab === 'home' ? (
           <>
-            {/* ---- Genspark AI (first slot: entry + one-click AI actions) ---- */}
+            {/* ---- Allternit Office Agent (first slot: entry + one-click AI actions) ---- */}
             <div className="ribbon-group">
               <div className="ribbon-group-items">
                 <button
@@ -1653,9 +1653,9 @@ function RibbonInner({
                   onClick={onToggleAi}
                 >
                   <span className="rb-big-icon">
-                    <GensparkMark size={26} />
+                    <AllternitBrandMark size={24} />
                   </span>
-                  <span>Allternit AI</span>
+                  <span>Allternit Office Agent</span>
                 </button>
                 <button
                   className="rb-big ai-entry"
@@ -1712,7 +1712,7 @@ function RibbonInner({
                   <span>{t('aiPolishBtn')}</span>
                 </button>
               </div>
-              <div className="ribbon-group-label">Allternit AI</div>
+              <div className="ribbon-group-label">Allternit Office Agent</div>
             </div>
 
             <div className="ribbon-sep" />

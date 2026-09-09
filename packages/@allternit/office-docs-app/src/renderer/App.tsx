@@ -24,7 +24,7 @@ import {
 import type { AiSettings, OpenFileResult } from '../shared/ipc'
 import { AI_PROVIDERS } from '../shared/ipc'
 import { AiPanel } from './ai/AiPanel'
-import { OfficeAiSlot, reportActiveDocument } from '@allternit/office-suite/bridge'
+import { OfficeAiSlot, reportActiveDocument, requestAssistantPreset } from '@allternit/office-suite/bridge'
 import { asianCharCount, countWords, nonAsianWordCount } from './word-count'
 import { toRoman } from './note-format'
 import { CommentsPanel } from './components/CommentsPanel'
@@ -2333,6 +2333,10 @@ export function App() {
     onAiPreset: (text: string) => {
       // Word's Editor / Translate start working as soon as they're clicked
       setShowAi(true)
+      // Hosted surfaces: route the preset into the Allternit Office Agent
+      // pane (the only chat surface when extensions are registered).
+      requestAssistantPreset('docs', text)
+      // Standalone surfaces keep feeding the built-in panel.
       setAiPreset({ text, nonce: Date.now(), autoRun: true })
     },
     onHeader: (next: HeaderFooter) => {
@@ -2520,6 +2524,7 @@ export function App() {
             <OfficeAiSlot
               appKey="docs"
               collapsed={!showAi}
+              expand={() => setShowAi(true)}
               close={() => setShowAi(false)}
               fallback={
                 <AiPanel

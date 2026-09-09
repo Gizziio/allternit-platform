@@ -5,7 +5,8 @@ import type { CSSProperties, ReactElement, ReactNode, RefObject } from 'react'
 import { GlobalWorkerOptions, TextLayer, getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs'
 import type { PDFDocumentLoadingTask, PDFDocumentProxy, RenderTask } from 'pdfjs-dist'
 import workerUrl from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url'
-import { AiPanel, AllternitMark } from './ai/AiPanel'
+import { AiPanel } from './ai/AiPanel'
+import { AllternitBrandMark } from '@allternit/office-suite/bridge'
 import { OfficeAiSlot } from '@allternit/office-suite/bridge'
 import type { PdfAiDeps } from './ai/tools'
 import {
@@ -2032,7 +2033,7 @@ export default function App() {
                 onClick={() => setAiCollapsed((v) => !v)}
               >
                 <span className="rb-big-icon">
-                  <AllternitMark size={28} />
+                  <AllternitBrandMark size={24} />
                 </span>
                 <span>{t('ribbonAiAssistant')}</span>
               </button>
@@ -2044,18 +2045,10 @@ export default function App() {
         {/* dock wrapper animates the width between panel and rail (docs-style 180ms ease);
             the panel stays mounted while collapsed so the chat history survives */}
         <div className={`ai-dock${aiCollapsed ? ' collapsed' : ''}`}>
-          {aiCollapsed && (
-            <button
-              className="ai-rail"
-              title={t('aiOpenAssistant')}
-              onClick={() => setAiCollapsed(false)}
-            >
-              <AllternitMark size={22} />
-            </button>
-          )}
           <OfficeAiSlot
             appKey="pdf"
             collapsed={aiCollapsed}
+            expand={() => setAiCollapsed(false)}
             close={() => setAiCollapsed(true)}
             fallback={<AiPanel api={aiApi} onCollapse={() => setAiCollapsed(true)} />}
           />

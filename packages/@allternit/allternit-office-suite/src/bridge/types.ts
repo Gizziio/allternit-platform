@@ -169,15 +169,16 @@ export interface OfficeExtensionContext {
 /**
  * Describes an extension that occupies the per-app AI chat section. The host
  * registers extensions on `OfficeHost.extensions`; `OfficeAiSlot` renders them
- * as tabs next to the app's built-in AI panel (which remains the fallback).
+ * as the app's only chat panes (with no registered extensions the app's
+ * built-in AI panel renders unchanged).
  */
 export interface OfficeExtensionDescriptor {
   /** Stable unique id, e.g. 'allternit-assistant'. */
   id: string;
   /** Human-readable name shown on the extension's tab. */
   name: string;
-  /** Small glyph rendered on the tab (emoji or short text). */
-  icon?: string;
+  /** Small brand glyph rendered on the tab (emoji, short text, or element). */
+  icon?: ReactNode;
   /** Render the extension panel. Called inside the slot's React tree. */
   render: (ctx: OfficeExtensionContext) => ReactNode;
 }
