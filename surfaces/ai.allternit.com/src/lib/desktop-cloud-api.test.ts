@@ -3,6 +3,11 @@ import { api } from '@/integration/api-client';
 import {
   listAgents,
   listTemplates,
+  getTemplate,
+  getTemplateByRef,
+  importTemplate,
+  exportTemplate,
+  buildTemplate,
   getCapacity,
   getUsageSummary,
   listUsage,
@@ -18,6 +23,7 @@ vi.mock('@/integration/api-client', () => ({
     listAgents: vi.fn(),
     get: vi.fn(),
     post: vi.fn(),
+    raw: vi.fn(),
   },
   AllternitApiError: class AllternitApiError extends Error {
     constructor(message: string, public statusCode: number) {
@@ -53,6 +59,72 @@ describe('desktop-cloud-api', () => {
     mockApi.get.mockResolvedValue({ templates: [] });
     await listTemplates({ os: 'linux', tag: 'dev' });
     expect(mockApi.get).toHaveBeenCalledWith('/api/v1/desktop-templates?os=linux&tag=dev');
+  });
+
+  it('getTemplate fetches by id', async () => {
+    mockApi.get.mockResolvedValue({ id: 'tpl-1', name: 'T', build_status: 'ready' });
+    const t = await getTemplate('tpl-1');
+    expect(mockApi.get).toHaveBeenCalledWith('/api/v1/desktop-templates/tpl-1');
+    expect(t.build_status).toBe('ready');
+  });
+
+  it('getTemplateByRef resolves curated refs with slashes', async () => {
+    mockApi.get.mockResolvedValue({ id: 'preset-linux-ubuntu', ref: 'system/preset-linux-ubuntu' });
+    const t = await getTemplateByRef('system/preset-linux-ubuntu');
+    expect(mockApi.get).toHaveBeenCalledWith('/api/v1/desktop-templates/by-ref/system/preset-linux-ubuntu');
+    expect(t.id).toBe('preset-linux-ubuntu');
+  });
+
+  it('importTemplate posts the doc as YAML', async () => {
+    mockApi.raw.mockResolvedValue({
+      ok: true,
+      json: async () => ({ id: 'tpl-2', name: 'node-builder' }),
+    });
+    const doc = 'apiVersion: allternit.ai/v1\nkind: ComputerTemplate\nmetadata:\n  name: node-builder\n';
+    const t = await importTemplate(doc);
+    expect(mockApi.raw).toHaveBeenCalledWith('/api/v1/desktop-templates/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/yaml' },
+      body: doc,
+    });
+    expect(t.id).toBe('tpl-2');
+  });
+
+  it('importTemplate accepts a spec object', async () => {
+    mockApi.raw.mockResolvedValue({
+      ok: true,
+      json: async () => ({ id: 'tpl-3' }),
+    });
+    await importTemplate({
+      apiVersion: 'allternit.ai/v1',
+      kind: 'ComputerTemplate',
+      metadata: { name: 'j' },
+    });
+    const call = mockApi.raw.mock.calls[0][1] as { body: string };
+    expect(JSON.parse(call.body)).toMatchObject({ metadata: { name: 'j' } });
+  });
+
+  it('exportTemplate returns the canonical YAML text', async () => {
+    mockApi.raw.mockResolvedValue({ ok: true, text: async () => 'apiVersion: allternit.ai/v1\n' });
+    const yaml = await exportTemplate('tpl-1');
+    expect(mockApi.raw).toHaveBeenCalledWith('/api/v1/desktop-templates/tpl-1/export', {
+      method: 'GET',
+      headers: { Accept: 'application/yaml' },
+    });
+    expect(yaml).toContain('apiVersion: allternit.ai/v1');
+  });
+
+  it('buildTemplate posts the build endpoint with optional approval', async () => {
+    mockApi.post.mockResolvedValue({ id: 'tpl-1', build_status: 'building' });
+    const result = await buildTemplate('tpl-1', 'approval-1');
+    expect(mockApi.post).toHaveBeenCalledWith('/api/v1/desktop-templates/tpl-1/build?approval_id=approval-1');
+    expect(result.build_status).toBe('building');
+  });
+
+  it('buildTemplate omits the query without an approval id', async () => {
+    mockApi.post.mockResolvedValue({ id: 'tpl-1', build_status: 'building' });
+    await buildTemplate('tpl-1');
+    expect(mockApi.post).toHaveBeenCalledWith('/api/v1/desktop-templates/tpl-1/build');
   });
 
   it('getCapacity calls /api/v1/desktop-capacity', async () => {

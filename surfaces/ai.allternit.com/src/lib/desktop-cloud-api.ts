@@ -13,6 +13,8 @@ import type { Agent } from '@/lib/agents/agent.types';
 // Types
 // ============================================================================
 
+export type TemplateBuildStatus = 'pending' | 'building' | 'ready' | 'failed';
+
 export interface DesktopTemplate {
   id: string;
   org_id?: string | null;
@@ -29,6 +31,51 @@ export interface DesktopTemplate {
   packages: string[];
   tags: string[];
   public: boolean;
+  /** Canonical `apiVersion: allternit.ai/v1` `ComputerTemplate` doc (YAML). */
+  spec_yaml?: string | null;
+  /** Curated `system/...` ref; seeded-only, never user-writable. */
+  ref?: string | null;
+  golden_snapshot_id?: string | null;
+  build_status?: TemplateBuildStatus | null;
+  build_error?: string | null;
+  built_at?: string | null;
+}
+
+/** Declarative ComputerTemplate spec doc (YAML or JSON). */
+export interface ComputerTemplateSpec {
+  apiVersion: 'allternit.ai/v1';
+  kind: 'ComputerTemplate';
+  metadata: {
+    name: string;
+    description?: string;
+    tags?: string[];
+  };
+  os?: {
+    name?: 'linux' | 'windows' | 'macos';
+    /** '' = default image for the os. */
+    image?: string;
+  };
+  hardware?: {
+    cpu_cores?: 2 | 4 | 8;
+    memory_mb?: 4096 | 8192 | 16384 | 32768 | 65536;
+    disk_mb?: 20480 | 40960 | 81920;
+    resolution?: [number, number];
+  };
+  packages?: string[];
+  services?: Array<{
+    name: string;
+    command: string;
+    env?: Record<string, string>;
+    autostart?: boolean;
+  }>;
+  /** Refs only — values are resolved at build time and never stored. */
+  secrets?: Array<{
+    name: string;
+    ref: `vault://org/${string}/${string}`;
+  }>;
+  hooks?: {
+    postCreate?: string[];
+  };
 }
 
 export interface CapacitySnapshot {
@@ -110,6 +157,60 @@ export async function listTemplates(filters?: { os?: string; tag?: string }): Pr
   const query = params.toString();
   const result = await api.get<{ templates: DesktopTemplate[] }>(`/api/v1/desktop-templates${query ? `?${query}` : ''}`);
   return result.templates ?? [];
+}
+
+export async function getTemplate(id: string): Promise<DesktopTemplate> {
+  return api.get<DesktopTemplate>(`/api/v1/desktop-templates/${encodeURIComponent(id)}`);
+}
+
+/** Resolve a curated `system/...` template ref to its row. */
+export async function getTemplateByRef(ref: string): Promise<DesktopTemplate> {
+  return api.get<DesktopTemplate>(`/api/v1/desktop-templates/by-ref/${ref}`);
+}
+
+/**
+ * Import a template doc (create/replace-by-name for the caller). The doc may
+ * be YAML or JSON text; `ref` fields are rejected by the API (curated-only).
+ */
+export async function importTemplate(doc: string | ComputerTemplateSpec): Promise<DesktopTemplate> {
+  const body = typeof doc === 'string' ? doc : JSON.stringify(doc);
+  const response = await api.raw('/api/v1/desktop-templates/import', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/yaml' },
+    body,
+  });
+  if (!response.ok) {
+    throw new Error(`template import failed: ${response.status}: ${await response.text()}`);
+  }
+  return response.json();
+}
+
+/** Export the canonical YAML doc for a template. */
+export async function exportTemplate(id: string): Promise<string> {
+  const response = await api.raw(`/api/v1/desktop-templates/${encodeURIComponent(id)}/export`, {
+    method: 'GET',
+    headers: { Accept: 'application/yaml' },
+  });
+  if (!response.ok) {
+    throw new Error(`template export failed: ${response.status}: ${await response.text()}`);
+  }
+  return response.text();
+}
+
+/**
+ * Start a golden build (ACI-approval-gated; pass the approvalId once the human
+ * approves). Returns 202 semantics — poll getTemplate() for build_status.
+ */
+export async function buildTemplate(
+  id: string,
+  approvalId?: string,
+): Promise<{ id: string; build_status: TemplateBuildStatus }> {
+  const params = new URLSearchParams();
+  if (approvalId) params.set('approval_id', approvalId);
+  const query = params.toString();
+  return api.post(
+    `/api/v1/desktop-templates/${encodeURIComponent(id)}/build${query ? `?${query}` : ''}`,
+  );
 }
 
 // ============================================================================

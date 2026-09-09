@@ -48,6 +48,8 @@ export interface Computer {
   group_id?: string | null;
   /** Camel-case alias populated by list/get/update. */
   groupId?: string | null;
+  /** 'user' or 'golden' (template build holder; hidden unless include_roles=1). */
+  role?: string;
 }
 
 export interface CreateComputerInput {
@@ -62,6 +64,8 @@ export interface CreateComputerInput {
   name?: string;
   os?: string;
   template_id?: string;
+  /** Curated `system/...` template ref; exactly one of template_id/template_ref. */
+  template_ref?: string;
   session_id?: string;
   persistence?: 'ephemeral' | 'session' | 'persistent';
   /** Substrate hint: incus (Linux/Windows) or tart (macOS). */
@@ -106,12 +110,15 @@ export async function listComputers(filters?: {
   kind?: ComputerKind;
   groupId?: string;
   group_id?: string;
+  /** Include non-user roles (e.g. golden template-build holders). */
+  include_roles?: boolean;
 }): Promise<Computer[]> {
   const params = new URLSearchParams();
   if (filters?.bot_id) params.set('bot_id', filters.bot_id);
   if (filters?.kind) params.set('kind', filters.kind);
   const groupId = filters?.groupId ?? filters?.group_id;
   if (groupId) params.set('group_id', groupId);
+  if (filters?.include_roles) params.set('include_roles', '1');
   const query = params.toString();
   const result = await api.get<ListComputersResponse>(
     `/api/v1/computers${query ? `?${query}` : ''}`,
