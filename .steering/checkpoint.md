@@ -11,8 +11,7 @@ Phase P0 of the ao v3 engine fork (queue rq-20260908-028, decision fork_reskin):
 - THIRD_PARTY_NOTICES.md herdr entry added.
 
 ## Next
-- Final full test run + evidence capture (in progress).
-- Commit + push; write docs/ALLTERNIT_RUNTIME_P0_NOTES.md.
+- DONE: final commit (docs/ALLTERNIT_RUNTIME_P0_NOTES.md) + push. P0 complete; NOTES is the deliverable sentinel.
 
 ## Open questions
 - RESOLVED: katakana test regression was workspace dep drift, not the gut — ratatui-core 0.1.2 breaks it (bisected; ratatui 0.30.2/line-clipping 0.3.8/unicode-segmentation 1.13.3/compact_str 0.9.1 all PASS). Pinned ratatui =0.30.0 + ratatui-core =0.1.0 in ao-engine; test passes in-workspace now.
